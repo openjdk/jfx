@@ -1,0 +1,11 @@
+/**
+ * This rule is required so that we can force CSS to be dirty whenever the
+ * index changes, so as to test some scenarios.
+ */
+.indexed-cell:odd {
+    text-fill: BLUE
+}
+
+.indexed-cell {
+    text-fill: BLACK
+}

@@ -1,0 +1,334 @@
+/*
+ * Copyright (c) 2010, 2011, Oracle and/or its affiliates. All rights reserved.
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ * This code is free software; you can redistribute it and/or modify it
+ * under the terms of the GNU General Public License version 2 only, as
+ * published by the Free Software Foundation.  Oracle designates this
+ * particular file as subject to the "Classpath" exception as provided
+ * by Oracle in the LICENSE file that accompanied this code.
+ *
+ * This code is distributed in the hope that it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+ * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
+ * version 2 for more details (a copy is included in the LICENSE file that
+ * accompanied this code).
+ *
+ * You should have received a copy of the GNU General Public License version
+ * 2 along with this work; if not, write to the Free Software Foundation,
+ * Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301 USA.
+ *
+ * Please contact Oracle, 500 Oracle Parkway, Redwood Shores, CA 94065 USA
+ * or visit www.oracle.com if you need additional information or have any
+ * questions.
+ */
+
+package javafx.scene.control;
+
+
+import javafx.beans.property.ObjectProperty;
+import javafx.beans.property.ObjectPropertyBase;
+import javafx.beans.property.SimpleObjectProperty;
+import javafx.beans.value.ChangeListener;
+import javafx.beans.value.ObservableValue;
+import javafx.collections.FXCollections;
+import javafx.collections.ListChangeListener;
+import javafx.collections.ObservableList;
+import com.sun.javafx.css.StyleManager;
+import javafx.beans.property.ReadOnlyBooleanProperty;
+import javafx.beans.property.ReadOnlyBooleanWrapper;
+
+/**
+ * The ChoiceBox is used for presenting the user with a relatively small set of
+ * predefined choices from which they may choose. The ChoiceBox, when "showing",
+ * will display to the user these choices and allow them to pick exactly one
+ * choice. When not showing, the current choice is displayed.
+ * <p>
+ * The ChoiceBox can be configured either to support <code>null</code> as a
+ * valid choice, or to prohibit it. In the case that it is prohibited, there
+ * will always be some item that is selected, as long as there is at least
+ * one item defined. By default, no item is selected unless
+ * otherwise specified. In the case that <code>null</code> is acceptable,
+ * a default entry may be inserted into the list of choices at the top,
+ * with a name similar to "None" and localized for different Locales.
+ * <p>
+ * Although the ChoiceBox will only allow a user to select from the predefined
+ * list, it is possible for the developer to specify the selected item to be
+ * something other than what is available in the predefined list. This is
+ * required for several important use cases.
+ * <p>
+ * It means configuration of the ChoiceBox is order independent. You
+ * may either specify the items and then the selected item, or you may
+ * specify the selected item and then the items. Either way will function
+ * correctly.
+ * <p>
+ *
+ * <pre>
+ * import javafx.scene.control.ChoiceBox;
+ *
+ * ChoiceBox cb = new ChoiceBox();
+ * cb.getItems().addAll("item1", "item2", "item3");
+ * </pre>
+ */
+public class ChoiceBox<T> extends Control {
+    /***************************************************************************
+     *                                                                         *
+     * Constructors                                                            *
+     *                                                                         *
+     **************************************************************************/
+
+    /**
+     * Create a new ChoiceBox which has an empty list of items.
+     */
+    public ChoiceBox() {
+        this(FXCollections.<T>observableArrayList());
+    }
+
+    /**
+     * Create a new ChoiceBox with the given set of items. Since it is observable,
+     * the content of this list may change over time and the ChoiceBox will
+     * be updated accordingly.
+     * @param items
+     */
+    public ChoiceBox(ObservableList<T> items) {
+        getStyleClass().setAll("choice-box");
+        setItems(items);
+        setSelectionModel(new ChoiceBoxSelectionModel<T>(this));
+    }
+
+    /***************************************************************************
+     *                                                                         *
+     * Properties                                                              *
+     *                                                                         *
+     **************************************************************************/
+
+    /**
+     * The selection model for the ChoiceBox. Only a single choice can be made,
+     * hence, the ChoiceBox supports only a SingleSelectionModel. Generally, the
+     * main interaction with the selection model is to explicitly set which item
+     * in the items list should be selected, or to listen to changes in the
+     * selection to know which item has been chosen.
+     */
+    private ObjectProperty<SingleSelectionModel<T>> selectionModel = new SimpleObjectProperty<SingleSelectionModel<T>>(this, "selectionModel");
+    public final void setSelectionModel(SingleSelectionModel<T> value) { selectionModel.set(value); }
+    public final SingleSelectionModel<T> getSelectionModel() { return selectionModel.get(); }
+    public final ObjectProperty<SingleSelectionModel<T>> selectionModelProperty() { return selectionModel; }
+
+
+    /**
+     * Indicates whether the drop down is displaying the list of choices to the
+     * user. This is a readonly property which should be manipulated by means of
+     * the #show and #hide methods.
+     */
+    private ReadOnlyBooleanWrapper showing = new ReadOnlyBooleanWrapper() {
+        @Override protected void invalidated() {
+            impl_pseudoClassStateChanged("showing");
+        }
+
+        @Override
+        public Object getBean() {
+            return ChoiceBox.this;
+        }
+
+        @Override
+        public String getName() {
+            return "showing";
+        }
+    };
+    public final boolean isShowing() { return showing.get(); }
+    public final ReadOnlyBooleanProperty showingProperty() { return showing.getReadOnlyProperty(); }
+
+    /**
+     * The items to display in the choice box. The selected item (as indicated in the
+     * selection model) must always be one of these items.
+     */
+    private ObjectProperty<ObservableList<T>> items = new ObjectPropertyBase<ObservableList<T>>() {
+        ObservableList<T> old;
+        @Override protected void invalidated() {
+            final ObservableList<T> newItems = get();
+            if (old != newItems) {
+                // Add and remove listeners
+                if (old != null) old.removeListener(itemsListener);
+                if (newItems != null) newItems.addListener(itemsListener);
+                // Clear the selection model
+                final SingleSelectionModel<T> sm = getSelectionModel();
+                if (sm != null) {
+                    if (newItems != null && newItems.isEmpty()) {
+                        sm.setSelectedIndex(-1);
+                    } else if (sm.getSelectedIndex() == -1 && sm.getSelectedItem() != null) {
+                        int newIndex = getItems().indexOf(sm.getSelectedItem());
+                        if (newIndex != -1) {
+                            sm.setSelectedIndex(newIndex);
+                        }
+                    } else sm.clearSelection();
+                }
+//                if (sm != null) sm.setSelectedIndex(-1);
+                // Save off the old items
+                old = newItems;
+            }
+        }
+
+        @Override
+        public Object getBean() {
+            return ChoiceBox.this;
+        }
+
+        @Override
+        public String getName() {
+            return "items";
+        }
+    };
+    public final void setItems(ObservableList<T> value) { items.set(value); }
+    public final ObservableList<T> getItems() { return items.get(); }
+    public final ObjectProperty<ObservableList<T>> itemsProperty() { return items; }
+
+    private final ListChangeListener<T> itemsListener = new ListChangeListener<T>() {
+        @Override public void onChanged(Change<? extends T> c) {
+            final SingleSelectionModel<T> sm = getSelectionModel();
+            if (sm != null) {
+                // Look for the selected item as having been removed. If it has been,
+                // then we need to clear the selection in the selection model.
+                final T selectedItem = sm.getSelectedItem();
+                while (c.next()) {
+                    if (selectedItem != null && c.getRemoved().contains(selectedItem)) {
+                        sm.clearSelection();
+                        break;
+                    }
+                }
+            }
+        }
+    };
+
+    /***************************************************************************
+     *                                                                         *
+     * Methods                                                                 *
+     *                                                                         *
+     **************************************************************************/
+
+    /**
+     * Opens the list of choices.
+     */
+    public void show() {
+        if (!isDisabled()) showing.set(true);
+    }
+
+    /**
+     * Closes the list of choices.
+     */
+    public void hide() {
+        showing.set(false);
+    }
+
+    /***************************************************************************
+     *                                                                         *
+     * Stylesheet Handling                                                     *
+     *                                                                         *
+     **************************************************************************/
+
+    private static final long SHOWING_PSEUDOCLASS_STATE =
+            StyleManager.getInstance().getPseudoclassMask("showing");
+
+    /**
+     * @treatasprivate implementation detail
+     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
+     */
+    @Deprecated @Override public long impl_getPseudoClassState() {
+        long mask = super.impl_getPseudoClassState();
+        if (isShowing()) mask |= SHOWING_PSEUDOCLASS_STATE;
+        return mask;
+    }
+
+    // package for testing
+    static class ChoiceBoxSelectionModel<T> extends SingleSelectionModel<T> {
+        private final ChoiceBox<T> choiceBox;
+
+        public ChoiceBoxSelectionModel(final ChoiceBox<T> cb) {
+            if (cb == null) {
+                throw new NullPointerException("ChoiceBox can not be null");
+            }
+            this.choiceBox = cb;
+       
+            /*
+             * The following two listeners are used in conjunction with
+             * SelectionModel.select(T obj) to allow for a developer to select
+             * an item that is not actually in the data model. When this occurs,
+             * we actively try to find an index that matches this object, going
+             * so far as to actually watch for all changes to the items list,
+             * rechecking each time.
+             */
+
+            // watching for changes to the items list content
+            final ListChangeListener<T> itemsContentObserver = new ListChangeListener<T>() {
+                @Override public void onChanged(Change<? extends T> c) {
+                    if (choiceBox.getItems() == null || choiceBox.getItems().isEmpty()) {
+                        setSelectedIndex(-1);
+                    } else if (getSelectedIndex() == -1 && getSelectedItem() != null) {
+                        int newIndex = choiceBox.getItems().indexOf(getSelectedItem());
+                        if (newIndex != -1) {
+                            setSelectedIndex(newIndex);
+                        }
+                    }
+                }
+            };
+            if (this.choiceBox.getItems() != null) {
+                this.choiceBox.getItems().addListener(itemsContentObserver);
+            }
+
+            // watching for changes to the items list
+            ChangeListener<ObservableList<T>> itemsObserver = new ChangeListener<ObservableList<T>>() {
+                @Override
+                public void changed(ObservableValue<? extends ObservableList<T>> valueModel, ObservableList<T> oldList, ObservableList<T> newList) {
+                    if (oldList != null) {
+                        oldList.removeListener(itemsContentObserver);
+                    }
+                    if (newList != null) {
+                        newList.addListener(itemsContentObserver);
+                    }
+                    setSelectedIndex(-1);
+                    if (getSelectedItem() != null) {
+                        int newIndex = choiceBox.getItems().indexOf(getSelectedItem());
+                        if (newIndex != -1) {
+                            setSelectedIndex(newIndex);
+                        }
+                    }
+                }
+            };
+            this.choiceBox.itemsProperty().addListener(itemsObserver);
+        }
+
+        // API Implementation
+        @Override protected T getModelItem(int index) {
+            final ObservableList<T> items = choiceBox.getItems();
+            if (items == null) return null;
+            if (index < 0 || index >= items.size()) return null;
+            return items.get(index);
+        }
+
+        @Override protected int getItemCount() {
+            final ObservableList<T> items = choiceBox.getItems();
+            return items == null ? 0 : items.size();
+        }
+
+        /**
+         * Selects the given row. Since the SingleSelectionModel can only support having
+         * a single row selected at a time, this also causes any previously selected
+         * row to be unselected.
+         * This method is overridden here so that we can move past a Separator
+         * in a ChoiceBox and select the next valid menuitem.
+         */
+        @Override public void select(int index) {
+            final int rowCount = getItemCount();
+            if (rowCount == 0 || index < 0 || index >= rowCount) return;
+            final T value = getModelItem(index);
+            if (value instanceof Separator) {
+                select(++index);
+            } else {
+                super.select(index);
+            }
+            
+            if (choiceBox.isShowing()) {
+                choiceBox.hide();
+            }
+        }
+    }
+}

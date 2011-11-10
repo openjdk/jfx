@@ -1,0 +1,453 @@
+/*
+ * Copyright (c) 2011, Oracle and/or its affiliates. All rights reserved.
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ * This code is free software; you can redistribute it and/or modify it
+ * under the terms of the GNU General Public License version 2 only, as
+ * published by the Free Software Foundation.  Oracle designates this
+ * particular file as subject to the "Classpath" exception as provided
+ * by Oracle in the LICENSE file that accompanied this code.
+ *
+ * This code is distributed in the hope that it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+ * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
+ * version 2 for more details (a copy is included in the LICENSE file that
+ * accompanied this code).
+ *
+ * You should have received a copy of the GNU General Public License version
+ * 2 along with this work; if not, write to the Free Software Foundation,
+ * Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301 USA.
+ *
+ * Please contact Oracle, 500 Oracle Parkway, Redwood Shores, CA 94065 USA
+ * or visit www.oracle.com if you need additional information or have any
+ * questions.
+ */
+
+package com.sun.javafx.scene.control.skin;
+
+import javafx.animation.KeyFrame;
+import javafx.animation.Timeline;
+import javafx.beans.binding.BooleanBinding;
+import javafx.beans.binding.ObjectBinding;
+import javafx.beans.property.BooleanProperty;
+import javafx.beans.property.ObjectProperty;
+import javafx.beans.property.SimpleBooleanProperty;
+import javafx.beans.property.SimpleObjectProperty;
+import javafx.beans.value.ObservableBooleanValue;
+import javafx.beans.value.ObservableObjectValue;
+import javafx.collections.ObservableList;
+import javafx.event.ActionEvent;
+import javafx.event.EventHandler;
+import javafx.geometry.Point2D;
+import javafx.geometry.Rectangle2D;
+import javafx.scene.Node;
+import javafx.scene.Scene;
+import javafx.scene.control.IndexRange;
+import javafx.scene.control.TextInputControl;
+import javafx.scene.input.InputMethodEvent;
+import javafx.scene.input.InputMethodHighlight;
+import javafx.scene.input.InputMethodRequests;
+import javafx.scene.input.InputMethodTextRun;
+import javafx.scene.paint.Color;
+import javafx.scene.paint.Paint;
+import javafx.scene.shape.ClosePath;
+import javafx.scene.shape.HLineTo;
+import javafx.scene.shape.Line;
+import javafx.scene.shape.LineTo;
+import javafx.scene.shape.MoveTo;
+import javafx.scene.shape.Path;
+import javafx.scene.shape.PathElement;
+import javafx.scene.shape.Shape;
+import javafx.scene.shape.VLineTo;
+import javafx.scene.text.Font;
+import javafx.stage.Window;
+import javafx.util.Duration;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
+
+import com.sun.javafx.css.Styleable;
+import com.sun.javafx.css.StyleableProperty;
+import com.sun.javafx.scene.control.behavior.TextInputControlBehavior;
+import com.sun.javafx.tk.FontMetrics;
+import com.sun.javafx.tk.Toolkit;
+
+/**
+ * Abstract base class for text input skins.
+ */
+public abstract class TextInputControlSkin<T extends TextInputControl, B extends TextInputControlBehavior<T>> extends SkinBase<T, B> {
+
+    private static final boolean macOS = com.sun.javafx.PlatformUtil.isMac();
+    /**
+     * The font to use with this control. In 1.3 and prior we had a font property
+     * on the TextInputControl itself, however now we just do it via CSS
+     */
+    @Styleable(property="-fx-font", inherits=true)
+    protected final ObjectProperty<Font> font = new SimpleObjectProperty<Font>(this, "font", Font.getDefault());
+    protected final ObservableObjectValue<FontMetrics> fontMetrics = new ObjectBinding<FontMetrics>() {
+        { bind(font); }
+        @Override protected FontMetrics computeValue() {
+            return Toolkit.getToolkit().getFontLoader().getFontMetrics(font.get());
+        }
+    };
+
+    /**
+     * The fill to use for the text under normal conditions
+     */
+    @Styleable(property="-fx-text-fill", initial="black")
+    protected final ObjectProperty<Paint> textFill = new SimpleObjectProperty<Paint>(this, "textFill", Color.BLACK);
+    @Styleable(property="-fx-prompt-text-fill", initial="gray")
+    protected final ObjectProperty<Paint> promptTextFill = new SimpleObjectProperty<Paint>(this, "promptTextFill", Color.GRAY);
+    /**
+     * The fill to use for the text when highlighted.
+     */
+    @Styleable(property="-fx-highlight-fill", initial="dodgerblue")
+    protected final ObjectProperty<Paint> highlightFill = new SimpleObjectProperty<Paint>(this, "highlightFill", Color.DODGERBLUE);
+    @Styleable(property="-fx-highlight-text-fill", initial="white")
+    protected final ObjectProperty<Paint> highlightTextFill = new SimpleObjectProperty<Paint>(this, "highlightTextFill", Color.WHITE);
+    @Styleable(property="-fx-display-caret", initial="true")
+    protected final BooleanProperty displayCaret = new SimpleBooleanProperty(this, "displayCaret", true);
+
+    private BooleanProperty blink = new SimpleBooleanProperty(this, "blink", true);
+    protected ObservableBooleanValue caretVisible;
+    private Timeline caretTimeline = new Timeline();
+    /**
+     * A path, provided by the textNode, which represents the caret.
+     * I assume this has to be updated whenever the caretPosition
+     * changes. Perhaps more frequently (including text changes),
+     * but I'm not sure.
+     */
+    protected final Path caretPath = new Path();
+
+    public TextInputControlSkin(final T textInput, final B behavior) {
+        super(textInput, behavior);
+
+        caretTimeline = new Timeline();
+        caretTimeline.setCycleCount(Timeline.INDEFINITE);
+        caretTimeline.getKeyFrames().addAll(
+            new KeyFrame(Duration.ZERO, new EventHandler<ActionEvent>() {
+                @Override public void handle(ActionEvent event) {
+                    blink.set(false);
+                }
+            }),
+            new KeyFrame(Duration.seconds(.5), new EventHandler<ActionEvent>() {
+                @Override public void handle(ActionEvent event) {
+                    blink.set(true);
+                }
+            }),
+            new KeyFrame(Duration.seconds(1))
+        );
+
+        /**
+         * The caret is visible when the text box is focused AND when the selection
+         * is empty. If the selection is non empty or the text box is not focused
+         * then we don't want to show the caret. Also, we show the caret while
+         * performing some operations such as most key strokes. In that case we
+         * simply toggle its opacity.
+         * <p>
+         */
+        caretVisible = new BooleanBinding() {
+            { bind(textInput.focusedProperty(), textInput.anchorProperty(), textInput.caretPositionProperty(),
+                    textInput.disabledProperty(), textInput.editableProperty(), displayCaret, blink);}
+            @Override protected boolean computeValue() {
+                // RT-10682: On mac, we hide the caret during selection, but on windows we show it
+                return !blink.get() && displayCaret.get() && textInput.isFocused() &&
+                        (!macOS || (textInput.getCaretPosition() == textInput.getAnchor())) &&
+                        !textInput.isDisabled() &&
+                        textInput.isEditable();
+            }
+        };
+
+        if (textInput.getOnInputMethodTextChanged() == null) {
+            textInput.setOnInputMethodTextChanged(new EventHandler<InputMethodEvent>() {
+                @Override public void handle(InputMethodEvent event) {
+                    handleInputMethodEvent(event);
+                }
+            });
+        }
+
+        textInput.setInputMethodRequests(new InputMethodRequests() {
+            @Override public Point2D getTextLocation(int offset) {
+                Scene scene = getScene();
+                Window window = scene.getWindow();
+                Rectangle2D characterBounds = getCharacterBounds(imstart + offset);
+                Point2D p = localToScene(characterBounds.getMinX(), characterBounds.getMaxY());
+                // TODO: Find out where these offsets come from
+                Point2D location = new Point2D(window.getX() + scene.getX() + p.getX() -  6,
+                                               window.getY() + scene.getY() + p.getY() - 42);
+                return location;
+            }
+
+            @Override
+            public int getLocationOffset(int x, int y) {
+                return getInsertionPoint(x, y);
+            }
+
+            @Override
+            public void cancelLatestCommittedText() {
+                // TODO
+            }
+
+            @Override
+            public String getSelectedText() {
+                TextInputControl textInput = getSkinnable();
+                IndexRange selection = textInput.getSelection();
+
+                return textInput.getText(selection.getStart(), selection.getEnd());
+            }
+        });
+    }
+
+    @Override public void dispose() {
+        caretTimeline.stop();
+        caretTimeline = null;
+    }
+
+    /**
+     * Returns the character at a given offset.
+     *
+     * @param index
+     */
+    public char getCharacter(int index) { return '\0'; }
+
+    /**
+     * Returns the insertion point for a given location.
+     *
+     * @param x
+     * @param y
+     */
+    public int getInsertionPoint(double x, double y) { return 0; }
+
+    /**
+     * Returns the bounds of the character at a given index.
+     *
+     * @param index
+     */
+    public Rectangle2D getCharacterBounds(int index) { return null; }
+
+    /**
+     * Ensures that the character at a given index is visible.
+     *
+     * @param index
+     */
+    public void scrollCharacterToVisible(int index) {}
+
+    protected void updateTextFill() {};
+    protected void updateHighlightFill() {};
+    protected void updateHighlightTextFill() {};
+
+    // Start/Length of the text under input method composition
+    private int imstart;
+    private int imlength;
+    // Holds concrete attributes for the composition runs
+    private List<Shape> imattrs = new java.util.ArrayList<Shape>();
+
+    protected void handleInputMethodEvent(InputMethodEvent event) {
+        final TextInputControl textInput = getSkinnable();
+        if (textInput.isEditable() && !textInput.textProperty().isBound() && !textInput.isDisabled()) {
+
+            // remove previous input method text (if any) or selected text
+            if (imlength != 0) {
+                removeHighlight(imattrs);
+                imattrs.clear();
+                textInput.selectRange(imstart, imstart + imlength);
+            }
+
+            // Insert committed text
+            if (event.getCommitted().length() != 0) {
+                String committed = event.getCommitted();
+                textInput.replaceText(textInput.getSelection(), committed);
+            }
+
+            // Insert composed text
+            imstart = textInput.getSelection().getStart();
+            StringBuilder composed = new StringBuilder();
+            for (InputMethodTextRun run : event.getComposed()) {
+                composed.append(run.getText());
+            }
+            imlength = composed.length();
+            if (imlength != 0) {
+                textInput.replaceText(textInput.getSelection(), composed.toString());
+                int pos = imstart;
+                for (InputMethodTextRun run : event.getComposed()) {
+                    int endPos = pos + run.getText().length();
+                    createInputMethodAttributes(run.getHighlight(), pos, endPos);
+                    pos = endPos;
+                }
+                addHighlight(imattrs, imstart);
+
+                // Set caret position in composed text
+                int caretPos = event.getCaretPosition();
+                if (caretPos >= 0 && caretPos < imlength) {
+                    textInput.selectRange(imstart + caretPos, imstart + caretPos);
+                }
+            }
+        }
+    }
+
+    protected abstract PathElement[] getUnderlineShape(int start, int end);
+    protected abstract PathElement[] getRangeShape(int start, int end);
+    protected abstract void addHighlight(List<? extends Node> nodes, int start);
+    protected abstract void removeHighlight(List<? extends Node> nodes);
+
+    private void createInputMethodAttributes(InputMethodHighlight highlight, int start, int end) {
+        double minX = 0f;
+        double maxX = 0f;
+        double minY = 0f;
+        double maxY = 0f;
+
+        for (PathElement pe: getUnderlineShape(start, end)) {
+            if (pe instanceof MoveTo) {
+                minX = maxX = ((MoveTo)pe).getX();
+                minY = maxY = ((MoveTo)pe).getY();
+            } else if (pe instanceof LineTo) {
+                minX = (minX < ((LineTo)pe).getX() ? minX : ((LineTo)pe).getX());
+                maxX = (maxX > ((LineTo)pe).getX() ? maxX : ((LineTo)pe).getX());
+                minY = (minY < ((LineTo)pe).getY() ? minY : ((LineTo)pe).getY());
+                maxY = (maxY > ((LineTo)pe).getY() ? maxY : ((LineTo)pe).getY());
+            } else if (pe instanceof HLineTo) {
+                minX = (minX < ((HLineTo)pe).getX() ? minX : ((HLineTo)pe).getX());
+                maxX = (maxX > ((HLineTo)pe).getX() ? maxX : ((HLineTo)pe).getX());
+            } else if (pe instanceof VLineTo) {
+                minY = (minY < ((VLineTo)pe).getY() ? minY : ((VLineTo)pe).getY());
+                maxY = (maxY > ((VLineTo)pe).getY() ? maxY : ((VLineTo)pe).getY());
+            } else if (pe instanceof ClosePath) {
+                // Now, create the attribute.
+                Shape attr = null;
+                if (highlight == InputMethodHighlight.SELECTED_RAW) {
+                    // blue background
+                    attr = new Path();
+                    ((Path)attr).getElements().addAll(getRangeShape(start, end));
+                    attr.setFill(Color.BLUE);
+                    attr.setOpacity(0.3f);
+                } else if (highlight == InputMethodHighlight.UNSELECTED_RAW) {
+                    // dash underline.
+                    attr = new Line(minX + 2, maxY + 1, maxX - 2, maxY + 1);
+                    attr.setStroke(textFill.get());
+                    attr.setStrokeWidth(maxY - minY);
+                    ObservableList<Double> dashArray = attr.getStrokeDashArray();
+                    dashArray.add(Double.valueOf(2f));
+                    dashArray.add(Double.valueOf(2f));
+                } else if (highlight == InputMethodHighlight.SELECTED_CONVERTED) {
+                    // thick underline.
+                    attr = new Line(minX + 2, maxY + 1, maxX - 2, maxY + 1);
+                    attr.setStroke(textFill.get());
+                    attr.setStrokeWidth((maxY - minY) * 3);
+                } else if (highlight == InputMethodHighlight.UNSELECTED_CONVERTED) {
+                    // single underline.
+                    attr = new Line(minX + 2, maxY + 1, maxX - 2, maxY + 1);
+                    attr.setStroke(textFill.get());
+                    attr.setStrokeWidth(maxY - minY);
+                }
+                attr.setManaged(false);
+                attr.setSmooth(false);
+                imattrs.add(attr);
+            }
+        }
+    }
+
+    public void setCaretAnimating(boolean value) {
+        if (value) {
+            caretTimeline.play();
+        } else {
+            caretTimeline.stop();
+            blink.set(true);
+        }
+    }
+
+    private static class StyleableProperties {
+        private static final StyleableProperty FONT =
+           new StyleableProperty(TextInputControlSkin.class, "font", StyleableProperty.FONT.getSubProperties());
+        private static final StyleableProperty TEXT_FILL =
+            new StyleableProperty(TextInputControlSkin.class, "textFill");
+        private static final StyleableProperty PROMPT_TEXT_FILL =
+            new StyleableProperty(TextInputControlSkin.class, "promptTextFill");
+        private static final StyleableProperty HIGHLIGHT_FILL =
+            new StyleableProperty(TextInputControlSkin.class, "highlightFill");
+        private static final StyleableProperty HIGHLIGHT_TEXT_FILL =
+            new StyleableProperty(TextInputControlSkin.class, "highlightTextFill");
+        private static final StyleableProperty DISPLAY_CARET =
+            new StyleableProperty(TextInputControlSkin.class, "displayCaret");
+
+        private static final List<StyleableProperty> STYLEABLES;
+        private static final int[] bitIndices;
+        static {
+            List<StyleableProperty> styleables = new ArrayList<StyleableProperty>(SkinBase.impl_CSS_STYLEABLES());
+            Collections.addAll(styleables,
+                FONT,
+                TEXT_FILL,
+                PROMPT_TEXT_FILL,
+                HIGHLIGHT_FILL,
+                HIGHLIGHT_TEXT_FILL,
+                DISPLAY_CARET
+            );
+
+            STYLEABLES = Collections.unmodifiableList(styleables);
+
+            bitIndices = new int[StyleableProperty.getMaxIndex()];
+            java.util.Arrays.fill(bitIndices, -1);
+            for (int bitIndex = 0; bitIndex < STYLEABLES.size(); bitIndex++) {
+                bitIndices[STYLEABLES.get(bitIndex).getIndex()] = bitIndex;
+            }
+        }
+    }
+
+    /**
+     * @treatasprivate implementation detail
+     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
+     */
+    @Deprecated
+     @Override protected int[] impl_cssStyleablePropertyBitIndices() {
+         return StyleableProperties.bitIndices;
+     }
+
+    /**
+     * @treatasprivate implementation detail
+     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
+     */
+    @Deprecated
+     public static List<StyleableProperty> impl_CSS_STYLEABLES() {
+         return StyleableProperties.STYLEABLES;
+     }
+
+    /**
+     * @treatasprivate implementation detail
+     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
+     */
+    @Deprecated
+    @Override
+    protected boolean impl_cssSet(String property, Object value) {
+        if ("-fx-font".equals(property)) {
+            font.set((Font) value);
+        } else if ("-fx-text-fill".equals(property)) {
+            textFill.set((Paint)value);
+        } else if ("-fx-prompt-text-fill".equals(property)) {
+            promptTextFill.set((Paint)value);
+        } else if ("-fx-highlight-fill".equals(property)) {
+            highlightFill.set((Paint)value);
+        } else if ("-fx-highlight-text-fill".equals(property)) {
+            highlightTextFill.set((Paint)value);
+        } else if ("-fx-display-caret".equals(property)) {
+            displayCaret.set((Boolean)value);
+        } else {
+            return super.impl_cssSet(property, value);
+        }
+
+        return true;
+    }
+
+    /**
+     * @treatasprivate implementation detail
+     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
+     */
+    @Deprecated
+    @Override protected boolean impl_cssSettable(String property) {
+        return ("-fx-font".equals(property)
+             || "-fx-text-fill".equals(property)
+             || "-fx-prompt-text-fill".equals(property)
+             || "-fx-highlight-fill".equals(property)
+             || "-fx-highlight-text-fill".equals(property)
+             || "-fx-display-caret".equals(property)
+             || super.impl_cssSettable(property));
+    }
+}

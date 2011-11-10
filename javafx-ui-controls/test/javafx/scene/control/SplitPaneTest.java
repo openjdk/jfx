@@ -1,0 +1,229 @@
+/*
+ * Copyright (c) 2010, Oracle and/or its affiliates. All rights reserved.
+ */
+
+package javafx.scene.control;
+
+import static javafx.scene.control.ControlTestUtils.*;
+import com.sun.javafx.pgstub.StubToolkit;
+import com.sun.javafx.tk.Toolkit;
+import javafx.beans.property.DoubleProperty;
+import javafx.beans.property.ObjectProperty;
+import javafx.beans.property.SimpleDoubleProperty;
+import javafx.beans.property.SimpleObjectProperty;
+import javafx.geometry.Orientation;
+import static org.junit.Assert.*;
+
+
+import org.junit.Before;
+import org.junit.Test;
+
+/**
+ *
+ * @author srikalyc
+ */
+public class SplitPaneTest {
+    private SplitPane splitPane;//Empty string
+    private SplitPane.Divider divider1;
+    private SplitPane.Divider divider2;
+    private Toolkit tk;
+
+    @Before public void setup() {
+        tk = (StubToolkit)Toolkit.getToolkit();//This step is not needed (Just to make sure StubToolkit is loaded into VM)
+        splitPane = new SplitPane();
+        divider1 = new SplitPane.Divider();
+        divider2 = new SplitPane.Divider();
+    }
+    
+    /*********************************************************************
+     * Helper methods (NOTE TESTS)                                       *
+     ********************************************************************/
+    private void add2NodesToSplitPane() {
+        splitPane.getItems().add(new Button("Button One"));
+        splitPane.getItems().add(new Button("Button Two"));
+    }
+    private void add3NodesToSplitPane() {
+        add2NodesToSplitPane();
+        splitPane.getItems().add(new Button("Button Three"));
+    }
+    
+    private void add4NodesToSplitPane() {
+        add3NodesToSplitPane();
+        splitPane.getItems().add(new Button("Button Four"));
+    }
+    /*********************************************************************
+     * Tests for default values                                         *
+     ********************************************************************/
+    
+    @Test public void defaultConstructorShouldSetStyleClassTo_splitpane() {
+        assertStyleClassContains(splitPane, "split-pane");
+    }
+    
+    @Test public void defaultFocusTraversibleIsFalse() {
+        assertFalse(splitPane.isFocusTraversable());
+    }
+
+    @Test public void defaultOrientation() {
+        assertSame(splitPane.getOrientation(), Orientation.HORIZONTAL);
+    }
+
+    @Test public void defaultDividerPosition() {
+        assertEquals(divider1.getPosition(), 0.5, 0.0);
+    }
+
+    @Test public void defaultPositionOf_N_DividersAddedToSplitPaneWhenNewNodeAreAdded() {
+        add4NodesToSplitPane();
+        assertEquals(splitPane.getDividers().get(0).getPosition(), 0.5, 0.0);
+        assertEquals(splitPane.getDividers().get(1).getPosition(), 0.5, 0.0);
+        assertEquals(splitPane.getDividers().get(1).getPosition(), 0.5, 0.0);
+    }
+    
+    /*********************************************************************
+     * Tests for property binding                                        *
+     ********************************************************************/
+    
+    @Test public void checkHBarPolicyPropertyBind() {
+        ObjectProperty objPr = new SimpleObjectProperty<Orientation>(Orientation.VERTICAL);
+        splitPane.orientationProperty().bind(objPr);
+        assertSame("orientationProperty cannot be bound", splitPane.orientationProperty().getValue(), Orientation.VERTICAL);
+        objPr.setValue(Orientation.HORIZONTAL);
+        assertSame("orientationProperty cannot be bound", splitPane.orientationProperty().getValue(), Orientation.HORIZONTAL);
+    }
+    
+    @Test public void checkDividerPositionPropertyBind() {
+        DoubleProperty objPr = new SimpleDoubleProperty(0.6);
+        divider1.positionProperty().bind(objPr);
+        assertEquals("positionProperty cannot be bound", divider1.positionProperty().getValue(), 0.6, 0.0);
+        objPr.setValue(0.9);
+        assertEquals("positionProperty cannot be bound", divider1.positionProperty().getValue(), 0.9, 0.0);
+    }
+
+    @Test public void checkOrientationPropertyBind() {
+        ObjectProperty objPr = new SimpleObjectProperty<Orientation>(Orientation.HORIZONTAL);
+        splitPane.orientationProperty().bind(objPr);
+        assertSame("orientationProperty cannot be bound", splitPane.orientationProperty().getValue(), Orientation.HORIZONTAL);
+        objPr.setValue(Orientation.VERTICAL);
+        assertSame("orientationProperty cannot be bound", splitPane.orientationProperty().getValue(), Orientation.VERTICAL);
+    }
+
+    @Test public void orientationPropertyHasBeanReference() {
+        assertSame(splitPane, splitPane.orientationProperty().getBean());
+    }
+
+    @Test public void orientationPropertyHasName() {
+        assertEquals("orientation", splitPane.orientationProperty().getName());
+    }
+
+    @Test public void positionPropertyHasBeanReference() {
+        assertSame(divider1, divider1.positionProperty().getBean());
+    }
+
+    @Test public void positionPropertyHasName() {
+        assertEquals("position", divider1.positionProperty().getName());
+    }
+
+    
+    
+    /*********************************************************************
+     * Check for Pseudo classes                                          *
+     ********************************************************************/
+    @Test public void settingVerticalOrientationSetsVerticalPseudoClass() {
+        splitPane.setOrientation(Orientation.VERTICAL);
+        assertPseudoClassExists(splitPane, "vertical");
+        assertPseudoClassDoesNotExist(splitPane, "horizontal");
+    }
+
+    @Test public void clearingVerticalOrientationClearsVerticalPseudoClass() {
+        splitPane.setOrientation(Orientation.VERTICAL);
+        splitPane.setOrientation(Orientation.HORIZONTAL);
+        assertPseudoClassDoesNotExist(splitPane, "vertical");
+        assertPseudoClassExists(splitPane, "horizontal");
+    }
+
+    @Test public void settingHorizontalOrientationSetsHorizontalPseudoClass() {
+        splitPane.setOrientation(Orientation.HORIZONTAL);
+        assertPseudoClassExists(splitPane, "horizontal");
+        assertPseudoClassDoesNotExist(splitPane, "vertical");
+    }
+
+    @Test public void clearingHorizontalOrientationClearsHorizontalPseudoClass() {
+        splitPane.setOrientation(Orientation.HORIZONTAL);
+        splitPane.setOrientation(Orientation.VERTICAL);
+        assertPseudoClassDoesNotExist(splitPane, "horizontal");
+        assertPseudoClassExists(splitPane, "vertical");
+    }
+
+
+    
+    /*********************************************************************
+     * CSS related Tests                                                 *
+     ********************************************************************/
+    @Test public void whenOrientationIsBound_impl_cssSettable_ReturnsFalse() {
+        assertTrue(splitPane.impl_cssSettable("-fx-orientation"));
+        ObjectProperty<Orientation> other = new SimpleObjectProperty<Orientation>(Orientation.VERTICAL);
+        splitPane.orientationProperty().bind(other);
+        assertFalse(splitPane.impl_cssSettable("-fx-orientation"));
+    }
+
+    @Test public void whenOrientationIsSpecifiedViaCSSAndIsNotBound_impl_cssSettable_ReturnsTrue() {
+        splitPane.impl_cssSet("-fx-orientation", Orientation.VERTICAL);
+        assertTrue(splitPane.impl_cssSettable("-fx-orientation"));
+    }
+
+    @Test public void canSpecifyOrientationViaCSS() {
+        splitPane.impl_cssSet("-fx-orientation", Orientation.VERTICAL);
+        assertSame(Orientation.VERTICAL, splitPane.getOrientation());
+    }
+
+    /*********************************************************************
+     * Miscellaneous Tests                                         *
+     ********************************************************************/
+    @Test public void setOrientationAndSeeValueIsReflectedInModel() {
+        splitPane.setOrientation(Orientation.HORIZONTAL);
+        assertSame(splitPane.orientationProperty().getValue(), Orientation.HORIZONTAL);
+    }
+    
+    @Test public void setOrientationAndSeeValue() {
+        splitPane.setOrientation(Orientation.VERTICAL);
+        assertSame(splitPane.getOrientation(), Orientation.VERTICAL);
+    }
+    
+    @Test public void setPositionAndSeeValueIsReflectedInModel() {
+        divider1.setPosition(0.2);
+        assertEquals(divider1.positionProperty().getValue(), 0.2, 0.0);
+    }
+    
+    @Test public void setPositionAndSeeValue() {
+        divider1.setPosition(0.3);
+        assertEquals(divider1.getPosition(), 0.3, 0.0);
+    }
+    
+    @Test public void addingNnodesToSplitPaneCreatesNminus1Dividers() {
+        add3NodesToSplitPane();
+        assertNotNull(splitPane.getDividers());
+        assertEquals(splitPane.getDividers().size(), 2, 0.0);
+    }
+    
+    @Test public void setMultipleDividerPositionsAndValidate() {
+        add3NodesToSplitPane();
+        splitPane.setDividerPosition(0, 0.4);
+        splitPane.setDividerPosition(1, 0.6);
+        assertNotNull(splitPane.getDividers());
+        assertEquals(splitPane.getDividers().size(), 2, 0.0);
+        assertEquals(splitPane.getDividers().get(0).getPosition(), 0.4, 0.0);
+        assertEquals(splitPane.getDividers().get(1).getPosition(), 0.6, 0.0);
+    }
+    
+    @Test public void addingNonExistantDividerPositionToSplitPaneCachesItAndAppliesWhenNewNodeAreAdded() {
+        add2NodesToSplitPane();
+        splitPane.setDividerPosition(2, 0.4);//2 is a non existant divider position, but still position value 0.4 is cached
+
+        splitPane.getItems().add(new Button("Button Three"));
+        splitPane.getItems().add(new Button("Button Four"));
+        assertNotNull(splitPane.getDividers());
+        assertEquals(splitPane.getDividers().size(), 3, 0.0);
+        assertEquals(splitPane.getDividers().get(2).getPosition(), 0.4, 0.0);
+    }
+    
+    
+}
