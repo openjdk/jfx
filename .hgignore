@@ -1,0 +1,15 @@
+\.orig$
+\.DS_Store$
+\.orig\..*$
+\.chg\..*$
+\.rej$
+\.conflict\~$
+^\.ant-targets.*$
+\.idea/workspace.xml$
+build/
+bin/
+dist/
+^webrev/
+^webrev\.zip$
+nbproject/private/
+^.*~$
