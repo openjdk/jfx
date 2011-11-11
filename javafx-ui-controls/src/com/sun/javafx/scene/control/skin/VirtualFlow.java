@@ -1216,7 +1216,13 @@ public class VirtualFlow extends Region {
 
         if (lengthBar.isVisible()) {
             lengthBar.setMax(1);
-            lengthBar.setVisibleAmount(numCellsVisibleOnScreen / (float) getCellCount());
+            
+            if (numCellsVisibleOnScreen == 0) {
+                // special case to help resolve RT-17701
+                lengthBar.setVisibleAmount(flowLength / sumCellLength);
+            } else {
+                lengthBar.setVisibleAmount(numCellsVisibleOnScreen / (float) getCellCount());
+            }
 
             // Fix for RT-11873. If this isn't here, we can have a situation where
             // the scrollbar scrolls endlessly. This is possible when the cell

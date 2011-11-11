@@ -59,6 +59,8 @@ import javafx.scene.input.KeyEvent;
 import javafx.scene.input.MouseEvent;
 
 import com.sun.javafx.PlatformUtil;
+import javafx.collections.ListChangeListener;
+import javafx.collections.ListChangeListener.Change;
 import javafx.util.Callback;
 
 /**
@@ -96,7 +98,7 @@ public class ListViewBehavior<T> extends BehaviorBase<ListView<T>> {
             LIST_VIEW_BINDINGS.add(new KeyBinding(A, "SelectAll").meta());
             LIST_VIEW_BINDINGS.add(new KeyBinding(HOME, "FocusFirstRow").meta());
             LIST_VIEW_BINDINGS.add(new KeyBinding(END, "FocusLastRow").meta());
-            LIST_VIEW_BINDINGS.add(new KeyBinding(SPACE, "toggleFocusOwnerSelection").meta());
+            LIST_VIEW_BINDINGS.add(new KeyBinding(SPACE, "toggleFocusOwnerSelection").ctrl().meta());
             LIST_VIEW_BINDINGS.add(new KeyBinding(PAGE_UP, "FocusPageUp").meta());
             LIST_VIEW_BINDINGS.add(new KeyBinding(PAGE_DOWN, "FocusPageDown").meta());
         } else {
@@ -218,8 +220,6 @@ public class ListViewBehavior<T> extends BehaviorBase<ListView<T>> {
     private boolean isShiftDown = false;
     private boolean isCtrlDown = false;
     
-    private int anchor = -1;
-    
     private Callback<Void, Integer> onScrollPageUp;
     private Callback<Void, Integer> onScrollPageDown;
     private Runnable onFocusPreviousRow;
@@ -240,14 +240,36 @@ public class ListViewBehavior<T> extends BehaviorBase<ListView<T>> {
 
     public ListViewBehavior(ListView control) {
         super(control);
+        
+        control.getItems().addListener(new ListChangeListener() {
+            @Override public void onChanged(Change c) {
+                int oldAnchor = getAnchor();
+                while (c.next()) {
+                    if (c.wasAdded() && c.getFrom() <= getAnchor()) {
+                        setAnchor(getAnchor() + c.getAddedSize());
+                    } else if (c.wasRemoved() && c.getFrom() <= getAnchor()) {
+                        setAnchor(getAnchor() - c.getRemovedSize());
+                    }
+                }
+            }
+        });
+    }
+    
+    private void setAnchor(int anchor) {
+        ListCellBehavior.setAnchor(getControl(), anchor);
+    }
+    
+    private int getAnchor() {
+        return ListCellBehavior.getAnchor(getControl());
     }
 
     @Override public void mousePressed(MouseEvent e) {
         super.mousePressed(e);
         
-        // FIXME can't assume (yet) cells.get(0) is necessarily the lead cell
-        int index = getControl().getSelectionModel().getSelectedIndex();
-        anchor = index;
+        if (! e.isShiftDown()) {
+            int index = getControl().getSelectionModel().getSelectedIndex();
+            setAnchor(index);
+        }
         
         if (! getControl().isFocused() && getControl().isFocusTraversable()) {
             getControl().requestFocus();
@@ -309,8 +331,8 @@ public class ListViewBehavior<T> extends BehaviorBase<ListView<T>> {
         
         fm.focusPrevious();
         
-        if (! isCtrlDown || anchor == -1) {
-            anchor = fm.getFocusedIndex();
+        if (! isCtrlDown || getAnchor() == -1) {
+            setAnchor(fm.getFocusedIndex());
         }
         
         if (onFocusPreviousRow != null) onFocusPreviousRow.run();
@@ -325,8 +347,8 @@ public class ListViewBehavior<T> extends BehaviorBase<ListView<T>> {
         
         fm.focusNext();
         
-        if (! isCtrlDown || anchor == -1) {
-            anchor = fm.getFocusedIndex();
+        if (! isCtrlDown || getAnchor() == -1) {
+            setAnchor(fm.getFocusedIndex());
         }
         
         if (onFocusNextRow != null) onFocusNextRow.run();
@@ -357,14 +379,14 @@ public class ListViewBehavior<T> extends BehaviorBase<ListView<T>> {
         
         final int focusIndex = fm.getFocusedIndex();
         
-        if (isShiftDown && anchor != -1) {
+        if (isShiftDown && getAnchor() != -1) {
             int newRow = fm.getFocusedIndex() - 1;
-            clearSelectionOutsideRange(anchor, newRow);
+            clearSelectionOutsideRange(getAnchor(), newRow);
 
-            if (anchor > newRow) {
-                sm.selectRange(anchor, newRow - 1);
+            if (getAnchor() > newRow) {
+                sm.selectRange(getAnchor(), newRow - 1);
             } else {
-                sm.selectRange(anchor, newRow + 1);
+                sm.selectRange(getAnchor(), newRow + 1);
             }
         } else {
             sm.selectPrevious();
@@ -380,16 +402,14 @@ public class ListViewBehavior<T> extends BehaviorBase<ListView<T>> {
         MultipleSelectionModel sm = getControl().getSelectionModel();
         if (sm == null) return;
         
-        final int focusIndex = fm.getFocusedIndex();
-        
-        if (isShiftDown && anchor != -1) {
+        if (isShiftDown && getAnchor() != -1) {
             int newRow = fm.getFocusedIndex() + 1;
-            clearSelectionOutsideRange(anchor, newRow);
+            clearSelectionOutsideRange(getAnchor(), newRow);
 
-            if (anchor > newRow) {
-                sm.selectRange(anchor, newRow - 1);
+            if (getAnchor() > newRow) {
+                sm.selectRange(getAnchor(), newRow - 1);
             } else {
-                sm.selectRange(anchor, newRow + 1);
+                sm.selectRange(getAnchor(), newRow + 1);
             }
         } else {
             sm.selectNext();
@@ -424,7 +444,7 @@ public class ListViewBehavior<T> extends BehaviorBase<ListView<T>> {
             return;
         }
 
-        anchor = focusIndex - 1;
+        setAnchor(focusIndex - 1);
         getControl().getSelectionModel().clearAndSelect(focusIndex - 1);
         onSelectPreviousRow.run();
     }
@@ -441,7 +461,7 @@ public class ListViewBehavior<T> extends BehaviorBase<ListView<T>> {
         MultipleSelectionModel sm = getControl().getSelectionModel();
         if (sm == null) return;
         
-        anchor = focusIndex + 1;
+        setAnchor(focusIndex + 1);
         sm.clearAndSelect(focusIndex + 1);
         if (onSelectNextRow != null) onSelectNextRow.run();
     }
@@ -464,8 +484,8 @@ public class ListViewBehavior<T> extends BehaviorBase<ListView<T>> {
 
         int leadIndex = fm.getFocusedIndex();
         if (isShiftDown) {
-            leadIndex = anchor == -1 ? leadIndex : anchor;
-            anchor = leadIndex;
+            leadIndex = getAnchor() == -1 ? leadIndex : getAnchor();
+            setAnchor(leadIndex);
         }
         
         int leadSelectedIndex = onScrollPageUp.call(null);
@@ -483,8 +503,8 @@ public class ListViewBehavior<T> extends BehaviorBase<ListView<T>> {
         
         int leadIndex = fm.getFocusedIndex();
         if (isShiftDown) {
-            leadIndex = anchor == -1 ? leadIndex : anchor;
-            anchor = leadIndex;
+            leadIndex = getAnchor() == -1 ? leadIndex : getAnchor();
+            setAnchor(leadIndex);
         }
         
         int leadSelectedIndex = onScrollPageDown.call(null);
@@ -503,8 +523,8 @@ public class ListViewBehavior<T> extends BehaviorBase<ListView<T>> {
         int leadIndex = sm.getSelectedIndex();
         
         if (isShiftDown) {
-            leadIndex = anchor == -1 ? sm.getSelectedIndex() : anchor;
-            anchor = leadIndex;
+            leadIndex = getAnchor() == -1 ? sm.getSelectedIndex() : getAnchor();
+            setAnchor(leadIndex);
         }
 
         sm.clearSelection();
@@ -521,8 +541,8 @@ public class ListViewBehavior<T> extends BehaviorBase<ListView<T>> {
         int leadIndex = sm.getSelectedIndex();
         
         if (isShiftDown) {
-            leadIndex = anchor == -1 ? sm.getSelectedIndex() : anchor;
-            anchor = leadIndex;
+            leadIndex = getAnchor() == -1 ? sm.getSelectedIndex() : getAnchor();
+            setAnchor(leadIndex);
         }
         
         sm.clearSelection();
@@ -579,6 +599,8 @@ public class ListViewBehavior<T> extends BehaviorBase<ListView<T>> {
         } else {
             sm.select(focusedIndex);
         }
+        
+        setAnchor(focusedIndex);
     }
 
     private static class ListViewKeyBinding extends OrientedKeyBinding {

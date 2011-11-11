@@ -125,7 +125,7 @@ public class TableViewBehavior<T> extends BehaviorBase<TableView<T>> {
             TABLE_VIEW_BINDINGS.add(new KeyBinding(A, "SelectAll").meta());
             TABLE_VIEW_BINDINGS.add(new KeyBinding(HOME, "FocusFirstRow").meta());
             TABLE_VIEW_BINDINGS.add(new KeyBinding(END, "FocusLastRow").meta());
-            TABLE_VIEW_BINDINGS.add(new KeyBinding(SPACE, "toggleFocusOwnerSelection").meta());
+            TABLE_VIEW_BINDINGS.add(new KeyBinding(SPACE, "toggleFocusOwnerSelection").ctrl().meta());
             TABLE_VIEW_BINDINGS.add(new KeyBinding(PAGE_UP, "FocusPageUp").meta());
             TABLE_VIEW_BINDINGS.add(new KeyBinding(PAGE_DOWN, "FocusPageDown").meta());
         } else {
@@ -349,7 +349,9 @@ public class TableViewBehavior<T> extends BehaviorBase<TableView<T>> {
     private void focusFirstRow() {
         TableViewFocusModel fm = getControl().getFocusModel();
         if (fm == null) return;
-        fm.focus(0);
+        
+        TableColumn tc = fm.getFocusedCell() == null ? null : fm.getFocusedCell().getTableColumn();
+        fm.focus(0, tc);
         
         if (onMoveToFirstCell != null) onMoveToFirstCell.run();
     }
@@ -357,7 +359,9 @@ public class TableViewBehavior<T> extends BehaviorBase<TableView<T>> {
     private void focusLastRow() {
         TableViewFocusModel fm = getControl().getFocusModel();
         if (fm == null) return;
-        fm.focus(getItemCount() - 1);
+        
+        TableColumn tc = fm.getFocusedCell() == null ? null : fm.getFocusedCell().getTableColumn();
+        fm.focus(getItemCount() - 1, tc);
         
         if (onMoveToLastCell != null) onMoveToLastCell.run();
     }
@@ -831,6 +835,8 @@ public class TableViewBehavior<T> extends BehaviorBase<TableView<T>> {
         } else {
             sm.select(focusedCell.getRow(), focusedCell.getTableColumn());
         }
+        
+        setAnchor(focusedCell.getRow(), focusedCell.getTableColumn());
     }
     
     // This functionality was added, but then removed when it was realised by 
