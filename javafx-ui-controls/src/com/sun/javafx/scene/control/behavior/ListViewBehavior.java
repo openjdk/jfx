@@ -579,6 +579,8 @@ public class ListViewBehavior<T> extends BehaviorBase<ListView<T>> {
         } else {
             sm.select(focusedIndex);
         }
+        
+        anchor = focusedIndex;
     }
 
     private static class ListViewKeyBinding extends OrientedKeyBinding {

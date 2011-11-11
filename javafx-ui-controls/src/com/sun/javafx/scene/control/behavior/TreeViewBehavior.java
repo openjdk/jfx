@@ -504,5 +504,7 @@ public class TreeViewBehavior<T> extends BehaviorBase<TreeView<T>> {
         } else {
             sm.select(focusedIndex);
         }
+        
+        selectPos = focusedIndex;
     }
 }

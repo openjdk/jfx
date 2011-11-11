@@ -835,6 +835,8 @@ public class TableViewBehavior<T> extends BehaviorBase<TableView<T>> {
         } else {
             sm.select(focusedCell.getRow(), focusedCell.getTableColumn());
         }
+        
+        setAnchor(focusedCell.getRow(), focusedCell.getTableColumn());
     }
     
     // This functionality was added, but then removed when it was realised by 
