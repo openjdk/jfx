@@ -133,8 +133,8 @@
      */
     -fx-text-background-color: ladder(
         -fx-background,
-        -fx-light-text-color 30%,
-        -fx-dark-text-color  31%,
+        -fx-light-text-color 45%,
+        -fx-dark-text-color  46%,
         -fx-dark-text-color  59%,
         -fx-mid-text-color   60%
      );
@@ -252,8 +252,8 @@
      */
     -fx-text-base-color: ladder(
         -fx-color,
-        -fx-light-text-color 30%,
-        -fx-dark-text-color  31%,
+        -fx-light-text-color 45%,
+        -fx-dark-text-color  46%,
         -fx-dark-text-color  59%,
         -fx-mid-text-color   60%
     );
@@ -263,8 +263,8 @@
      */
     -fx-text-inner-color: ladder(
         -fx-control-inner-background,
-        -fx-light-text-color 30%,
-        -fx-dark-text-color  31%,
+        -fx-light-text-color 45%,
+        -fx-dark-text-color  46%,
         -fx-dark-text-color  59%,
         -fx-mid-text-color   60%
     );
