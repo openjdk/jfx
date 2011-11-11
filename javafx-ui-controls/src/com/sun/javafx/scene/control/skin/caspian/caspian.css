@@ -509,14 +509,13 @@
 .button:armed {
     -fx-color: -fx-pressed-base;
 }
-
+ 
 .button:default {
     -fx-base: -fx-accent;
 }
 
 .button:cancel {
-     -fx-base: -fx-accent;
- }
+}
 
 .button:disabled {
     -fx-opacity: -fx-disabled-opacity;
