@@ -73,6 +73,16 @@ public class TextAreaSkin extends TextInputControlSkin<TextArea, TextAreaBehavio
     // *** NOTE: Multiple node mode is not yet fully implemented *** //
     private final boolean USE_MULTIPLE_NODES = false;
 
+    private double computedPrefWidth = Double.NEGATIVE_INFINITY;
+    private double computedPrefHeight = Double.NEGATIVE_INFINITY;
+    private double widthForComputedPrefHeight = Double.NEGATIVE_INFINITY;
+
+    @Override protected void invalidateMetrics() {
+        computedPrefWidth = Double.NEGATIVE_INFINITY;
+        computedPrefHeight = Double.NEGATIVE_INFINITY;
+    }
+
+
     private class ContentView extends Region {
         {
             getStyleClass().add("content");
@@ -107,6 +117,8 @@ public class TextAreaSkin extends TextInputControlSkin<TextArea, TextAreaBehavio
 
         @Override
         protected double computePrefWidth(double height) {
+          if (computedPrefWidth < 0) {
+
             Insets padding = getInsets();
 
             double prefWidth = 0;
@@ -121,11 +133,21 @@ public class TextAreaSkin extends TextInputControlSkin<TextArea, TextAreaBehavio
 
             prefWidth += padding.getLeft() + padding.getRight();
 
-            return Math.max(prefWidth, scrollPane.getViewportBounds().getWidth());
+            computedPrefWidth = Math.max(prefWidth, scrollPane.getViewportBounds().getWidth());
+
+          }
+          return computedPrefWidth;
         }
 
         @Override
         protected double computePrefHeight(double width) {
+          if (width != widthForComputedPrefHeight) {
+              invalidateMetrics();
+              widthForComputedPrefHeight = width;
+          }
+
+          if (computedPrefHeight < 0) {
+
             Insets padding = getInsets();
 
             double wrappingWidth;
@@ -149,7 +171,10 @@ public class TextAreaSkin extends TextInputControlSkin<TextArea, TextAreaBehavio
 
             prefHeight += padding.getTop() + padding.getBottom();
 
-            return Math.max(prefHeight, scrollPane.getViewportBounds().getHeight());
+            computedPrefHeight = Math.max(prefHeight, scrollPane.getViewportBounds().getHeight());
+
+          }
+          return computedPrefHeight;
         }
 
         @Override
@@ -358,6 +383,7 @@ public class TextAreaSkin extends TextInputControlSkin<TextArea, TextAreaBehavio
         textArea.wrapTextProperty().addListener(new ChangeListener<Boolean>() {
             @Override
             public void changed(ObservableValue<? extends Boolean> observable, Boolean oldValue, Boolean newValue) {
+                invalidateMetrics();
                 scrollPane.setFitToWidth(newValue);
             }
         });
@@ -365,6 +391,7 @@ public class TextAreaSkin extends TextInputControlSkin<TextArea, TextAreaBehavio
         textArea.prefColumnCountProperty().addListener(new ChangeListener<Number>() {
             @Override
             public void changed(ObservableValue<? extends Number> observable, Number oldValue, Number newValue) {
+                invalidateMetrics();
                 updatePrefViewportWidth();
             }
         });
@@ -372,6 +399,7 @@ public class TextAreaSkin extends TextInputControlSkin<TextArea, TextAreaBehavio
         textArea.prefRowCountProperty().addListener(new ChangeListener<Number>() {
             @Override
             public void changed(ObservableValue<? extends Number> observable, Number oldValue, Number newValue) {
+                invalidateMetrics();
                 updatePrefViewportHeight();
             }
         });
@@ -434,6 +462,7 @@ public class TextAreaSkin extends TextInputControlSkin<TextArea, TextAreaBehavio
       } else {
         textArea.textProperty().addListener(new InvalidationListener() {
             @Override public void invalidated(Observable observable) {
+                invalidateMetrics();
                 ((Text)paragraphNodes.getChildren().get(0)).setText(textArea.getText());
                 contentView.requestLayout();
             }

@@ -87,6 +87,7 @@ public abstract class TextInputControlSkin<T extends TextInputControl, B extends
     protected final ObservableObjectValue<FontMetrics> fontMetrics = new ObjectBinding<FontMetrics>() {
         { bind(font); }
         @Override protected FontMetrics computeValue() {
+            invalidateMetrics();
             return Toolkit.getToolkit().getFontLoader().getFontMetrics(font.get());
         }
     };
@@ -231,6 +232,9 @@ public abstract class TextInputControlSkin<T extends TextInputControl, B extends
      * @param index
      */
     public void scrollCharacterToVisible(int index) {}
+
+    protected void invalidateMetrics() {
+    }
 
     protected void updateTextFill() {};
     protected void updateHighlightFill() {};
