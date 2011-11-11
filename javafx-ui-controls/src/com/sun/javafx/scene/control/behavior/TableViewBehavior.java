@@ -349,7 +349,9 @@ public class TableViewBehavior<T> extends BehaviorBase<TableView<T>> {
     private void focusFirstRow() {
         TableViewFocusModel fm = getControl().getFocusModel();
         if (fm == null) return;
-        fm.focus(0);
+        
+        TableColumn tc = fm.getFocusedCell() == null ? null : fm.getFocusedCell().getTableColumn();
+        fm.focus(0, tc);
         
         if (onMoveToFirstCell != null) onMoveToFirstCell.run();
     }
@@ -357,7 +359,9 @@ public class TableViewBehavior<T> extends BehaviorBase<TableView<T>> {
     private void focusLastRow() {
         TableViewFocusModel fm = getControl().getFocusModel();
         if (fm == null) return;
-        fm.focus(getItemCount() - 1);
+        
+        TableColumn tc = fm.getFocusedCell() == null ? null : fm.getFocusedCell().getTableColumn();
+        fm.focus(getItemCount() - 1, tc);
         
         if (onMoveToLastCell != null) onMoveToLastCell.run();
     }
