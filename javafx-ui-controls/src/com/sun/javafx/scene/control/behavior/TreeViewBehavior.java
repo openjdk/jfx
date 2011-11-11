@@ -467,8 +467,16 @@ public class TreeViewBehavior<T> extends BehaviorBase<TreeView<T>> {
         
         // Fix for RT-17233 where we could hide all items in a tree with no visible
         // root by pressing the left-arrow key too many times
-        if (! getControl().isShowRoot() && ! treeItem.isExpanded() && root.equals(treeItem.getParent())) return;
-
+        if (! getControl().isShowRoot() && ! treeItem.isExpanded() && root.equals(treeItem.getParent())) {
+            return;
+        }
+        
+        // Fix for RT-17833 where the selection highlight could disappear unexpectedly from
+        // the root node in certain circumstances
+        if (root.equals(treeItem) && (! root.isExpanded() || root.getChildren().isEmpty())) {
+            return;
+        }
+        
         // If we're on a leaf or the branch is not expanded, move up to the parent,
         // otherwise collapse the branch.
         if (treeItem.isLeaf() || ! treeItem.isExpanded()) {
