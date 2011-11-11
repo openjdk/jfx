@@ -96,7 +96,7 @@ public class ListViewBehavior<T> extends BehaviorBase<ListView<T>> {
             LIST_VIEW_BINDINGS.add(new KeyBinding(A, "SelectAll").meta());
             LIST_VIEW_BINDINGS.add(new KeyBinding(HOME, "FocusFirstRow").meta());
             LIST_VIEW_BINDINGS.add(new KeyBinding(END, "FocusLastRow").meta());
-            LIST_VIEW_BINDINGS.add(new KeyBinding(SPACE, "toggleFocusOwnerSelection").meta());
+            LIST_VIEW_BINDINGS.add(new KeyBinding(SPACE, "toggleFocusOwnerSelection").ctrl().meta());
             LIST_VIEW_BINDINGS.add(new KeyBinding(PAGE_UP, "FocusPageUp").meta());
             LIST_VIEW_BINDINGS.add(new KeyBinding(PAGE_DOWN, "FocusPageDown").meta());
         } else {

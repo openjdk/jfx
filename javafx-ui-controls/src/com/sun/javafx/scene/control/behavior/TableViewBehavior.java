@@ -125,7 +125,7 @@ public class TableViewBehavior<T> extends BehaviorBase<TableView<T>> {
             TABLE_VIEW_BINDINGS.add(new KeyBinding(A, "SelectAll").meta());
             TABLE_VIEW_BINDINGS.add(new KeyBinding(HOME, "FocusFirstRow").meta());
             TABLE_VIEW_BINDINGS.add(new KeyBinding(END, "FocusLastRow").meta());
-            TABLE_VIEW_BINDINGS.add(new KeyBinding(SPACE, "toggleFocusOwnerSelection").meta());
+            TABLE_VIEW_BINDINGS.add(new KeyBinding(SPACE, "toggleFocusOwnerSelection").ctrl().meta());
             TABLE_VIEW_BINDINGS.add(new KeyBinding(PAGE_UP, "FocusPageUp").meta());
             TABLE_VIEW_BINDINGS.add(new KeyBinding(PAGE_DOWN, "FocusPageDown").meta());
         } else {
