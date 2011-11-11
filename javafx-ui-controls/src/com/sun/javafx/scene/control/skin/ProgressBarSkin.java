@@ -214,6 +214,12 @@ public class ProgressBarSkin extends SkinBase<ProgressBar, ProgressBarBehavior<P
         requestLayout();
     }
 
+    @Override
+    public double getBaselineOffset() {
+        double height = getSkinnable().getHeight();        
+        return getInsets().getTop() + height;
+    }
+    
     @Override public void dispose() {
         super.dispose();
         

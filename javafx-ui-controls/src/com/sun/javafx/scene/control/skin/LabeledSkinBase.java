@@ -25,6 +25,8 @@
 
 package com.sun.javafx.scene.control.skin;
 
+import com.sun.javafx.tk.Toolkit;
+import com.sun.javafx.tk.FontMetrics;
 import javafx.beans.InvalidationListener;
 import javafx.beans.Observable;
 import javafx.collections.ObservableList;
@@ -736,8 +738,24 @@ public abstract class LabeledSkinBase<C extends Labeled, B extends BehaviorBase<
     }
 
     @Override public double getBaselineOffset() {
-        updateDisplayedText();
-        return text.getLayoutBounds().getMinY() + text.getLayoutY() + text.getBaselineOffset();
+        Font font = text.getFont();
+        FontMetrics fontMetrics = Toolkit.getToolkit().getFontLoader().getFontMetrics(font);
+        float ascent = fontMetrics.getAscent();
+        double h = ascent;
+        final Labeled labeled = getSkinnable();
+        final Node g = labeled.getGraphic();
+        if (!isIgnoreGraphic()) {
+            if (labeled.getContentDisplay() == ContentDisplay.TOP
+                || labeled.getContentDisplay() == ContentDisplay.BOTTOM) {
+                h = g.prefHeight(-1) + labeled.getGraphicTextGap() + ascent;
+            } else {
+                h = Math.max(ascent, g.prefHeight(-1));
+            }
+        }
+                
+        Insets padding = getInsets();
+        Insets labelPadding = labeled.getLabelPadding();
+        return padding.getTop() + labelPadding.getTop() + h;
     }
 
     public TextBinding bindings;

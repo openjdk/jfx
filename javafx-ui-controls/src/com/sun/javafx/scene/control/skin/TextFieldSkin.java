@@ -367,11 +367,8 @@ public class TextFieldSkin extends TextInputControlSkin<TextField, TextFieldBeha
 
     @Override
     public double getBaselineOffset() {
-        FontMetrics fontMetrics = super.fontMetrics.get();
-        float ascent = fontMetrics.getAscent();
-        double lineHeight = fontMetrics.getLineHeight();
-
-        return (getHeight() - lineHeight) / 2 + ascent;
+        FontMetrics fontMetrics = super.fontMetrics.get();       
+        return getInsets().getTop() + fontMetrics.getAscent();
     }
 
     // should be called when the padding changes, or the text box width, or
