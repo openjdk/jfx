@@ -61,20 +61,22 @@ public class TreeCellBehavior extends CellBehaviorBase<TreeCell<?>> {
     public TreeCellBehavior(final TreeCell control) {
         super(control);
         
-        // Fix for RT-16565
-        control.getTreeView().selectionModelProperty().addListener(new ChangeListener<MultipleSelectionModel>() {
-            @Override public void changed(ObservableValue observable, MultipleSelectionModel oldValue, MultipleSelectionModel newValue) {
-                if (oldValue != null) {
-                    oldValue.getSelectedIndices().removeListener(selectedIndicesListener);
-                }
-                if (newValue != null) {
-                    newValue.getSelectedIndices().addListener(selectedIndicesListener);
-                }
-            }
-        });
-        if (control.getTreeView().getSelectionModel() != null) {
-            control.getTreeView().getSelectionModel().getSelectedIndices().addListener(selectedIndicesListener);
-        }
+//        // Fix for RT-16565
+        // Currently this fix is commented out, on account of the performance
+        // regression at RT-17926
+//        control.getTreeView().selectionModelProperty().addListener(new ChangeListener<MultipleSelectionModel>() {
+//            @Override public void changed(ObservableValue observable, MultipleSelectionModel oldValue, MultipleSelectionModel newValue) {
+//                if (oldValue != null) {
+//                    oldValue.getSelectedIndices().removeListener(selectedIndicesListener);
+//                }
+//                if (newValue != null) {
+//                    newValue.getSelectedIndices().addListener(selectedIndicesListener);
+//                }
+//            }
+//        });
+//        if (control.getTreeView().getSelectionModel() != null) {
+//            control.getTreeView().getSelectionModel().getSelectedIndices().addListener(selectedIndicesListener);
+//        }
     }
 
     @Override public void mousePressed(MouseEvent e) {

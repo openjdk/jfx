@@ -43,34 +43,36 @@ public class TableCellBehavior extends CellBehaviorBase<TableCell> {
     // resolving RT-11446
     private static final Map<TableView, TablePosition> map = new HashMap<TableView, TablePosition>();
     
-    private ListChangeListener<Integer> selectedIndicesListener = new ListChangeListener<Integer>() {
-        @Override public void onChanged(ListChangeListener.Change c) {
-            while (c.next()) {
-                // there are no selected items, so lets clear out the anchor
-                if (c.getList().isEmpty()) {
-                    map.remove(getControl().getTableView());
-                }
-            }
-        }
-    };
+//    private ListChangeListener<Integer> selectedIndicesListener = new ListChangeListener<Integer>() {
+//        @Override public void onChanged(ListChangeListener.Change c) {
+//            while (c.next()) {
+//                // there are no selected items, so lets clear out the anchor
+//                if (c.getList().isEmpty()) {
+//                    map.remove(getControl().getTableView());
+//                }
+//            }
+//        }
+//    };
 
     public TableCellBehavior(TableCell control) {
         super(control);
         
-        // Fix for RT-16565
-        control.getTableView().selectionModelProperty().addListener(new ChangeListener<MultipleSelectionModel>() {
-            @Override public void changed(ObservableValue observable, MultipleSelectionModel oldValue, MultipleSelectionModel newValue) {
-                if (oldValue != null) {
-                    oldValue.getSelectedIndices().removeListener(selectedIndicesListener);
-                }
-                if (newValue != null) {
-                    newValue.getSelectedIndices().addListener(selectedIndicesListener);
-                }
-            }
-        });
-        if (control.getTableView().getSelectionModel() != null) {
-            control.getTableView().getSelectionModel().getSelectedIndices().addListener(selectedIndicesListener);
-        }
+//        // Fix for RT-16565
+        // Currently this fix is commented out, on account of the performance
+        // regression at RT-17926
+//        control.getTableView().selectionModelProperty().addListener(new ChangeListener<MultipleSelectionModel>() {
+//            @Override public void changed(ObservableValue observable, MultipleSelectionModel oldValue, MultipleSelectionModel newValue) {
+//                if (oldValue != null) {
+//                    oldValue.getSelectedIndices().removeListener(selectedIndicesListener);
+//                }
+//                if (newValue != null) {
+//                    newValue.getSelectedIndices().addListener(selectedIndicesListener);
+//                }
+//            }
+//        });
+//        if (control.getTableView().getSelectionModel() != null) {
+//            control.getTableView().getSelectionModel().getSelectedIndices().addListener(selectedIndicesListener);
+//        }
     }
 
     @Override public void mousePressed(MouseEvent e) {

@@ -71,6 +71,8 @@ public class ListCellBehavior extends CellBehaviorBase<ListCell> {
         super(control);
         
 //        // Fix for RT-16565
+        // Currently this fix is commented out, on account of the performance
+        // regression at RT-17926
 //        control.getListView().selectionModelProperty().addListener(new ChangeListener<MultipleSelectionModel>() {
 //            @Override public void changed(ObservableValue observable, MultipleSelectionModel oldValue, MultipleSelectionModel newValue) {
 //                if (oldValue != null) {
