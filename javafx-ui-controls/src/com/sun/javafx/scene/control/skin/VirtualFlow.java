@@ -1079,9 +1079,9 @@ public class VirtualFlow extends Region {
         double lengthBarBreadth = isVertical() ? vbar.prefWidth(-1) : hbar.prefHeight(-1);
 
         // If there has been a switch between the virtualized bar, then we
-        // will want to do some stuff.
-        breadthBar.setVirtual(! isVertical());
-        lengthBar.setVirtual(isVertical());
+        // will want to do some stuff TODO.
+        breadthBar.setVirtual(false);
+        lengthBar.setVirtual(true);
 
         // We need to determine whether the hbar and vbar are necessary. If the
         // flow has been scrolled in the virtual direction, then we know for
