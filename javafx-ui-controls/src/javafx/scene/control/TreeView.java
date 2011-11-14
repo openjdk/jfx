@@ -1234,7 +1234,7 @@ public class TreeView<T> extends Control {
                 // don't shift focus if the event occurred on a tree item after
                 // the focused row
                 int row = treeView.getRow(e.getTreeItem());
-                if (row >= getFocusedIndex()) return;
+                if (row > getFocusedIndex()) return;
                 
                 int shift = 0;
                 if (e.wasExpanded()) {

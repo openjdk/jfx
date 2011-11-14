@@ -2366,7 +2366,7 @@ public class TableView<S> extends Control {
         private final ListChangeListener<S> itemsContentListener = new ListChangeListener<S>() {
             @Override public void onChanged(Change<? extends S> c) {
                 c.next();
-                if (c.getFrom() >= getFocusedIndex()) return;
+                if (c.getFrom() > getFocusedIndex()) return;
                 c.reset();
                 boolean added = false;
                 boolean removed = false;
