@@ -1121,7 +1121,7 @@ public class ListView<T> extends Control {
             @Override public void onChanged(Change<? extends T> c) {
                 c.next();
                 // looking at the first change
-                if (getFocusedIndex() == -1 || c.getFrom() >= getFocusedIndex()) {
+                if (getFocusedIndex() == -1 || c.getFrom() > getFocusedIndex()) {
                     return;
                 }
                 

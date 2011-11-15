@@ -59,8 +59,11 @@ import javafx.scene.input.KeyEvent;
 import javafx.scene.input.MouseEvent;
 
 import com.sun.javafx.PlatformUtil;
+import javafx.beans.value.ChangeListener;
+import javafx.beans.value.ObservableValue;
 import javafx.collections.ListChangeListener;
 import javafx.collections.ListChangeListener.Change;
+import javafx.scene.control.*;
 import javafx.util.Callback;
 
 /**
@@ -237,13 +240,23 @@ public class ListViewBehavior<T> extends BehaviorBase<ListView<T>> {
     public void setOnSelectNextRow(Runnable r) { onSelectNextRow = r; }
     public void setOnMoveToFirstCell(Runnable r) { onMoveToFirstCell = r; }
     public void setOnMoveToLastCell(Runnable r) { onMoveToLastCell = r; }
+    
+    private ListChangeListener<Integer> selectedIndicesListener = new ListChangeListener<Integer>() {
+        @Override public void onChanged(ListChangeListener.Change c) {
+            while (c.next()) {
+                // there are no selected items, so lets clear out the anchor
+                if (c.getList().isEmpty()) {
+                    setAnchor(-1);
+                }
+            }
+        }
+    };
 
     public ListViewBehavior(ListView control) {
         super(control);
         
         control.getItems().addListener(new ListChangeListener() {
             @Override public void onChanged(Change c) {
-                int oldAnchor = getAnchor();
                 while (c.next()) {
                     if (c.wasAdded() && c.getFrom() <= getAnchor()) {
                         setAnchor(getAnchor() + c.getAddedSize());
@@ -253,6 +266,24 @@ public class ListViewBehavior<T> extends BehaviorBase<ListView<T>> {
                 }
             }
         });
+        
+        // Fix for RT-16565
+        getControl().selectionModelProperty().addListener(new ChangeListener<MultipleSelectionModel<T>>() {
+            @Override
+            public void changed(ObservableValue<? extends MultipleSelectionModel<T>> observable, 
+                        MultipleSelectionModel<T> oldValue, 
+                        MultipleSelectionModel<T> newValue) {
+                if (oldValue != null) {
+                    oldValue.getSelectedIndices().removeListener(selectedIndicesListener);
+                }
+                if (newValue != null) {
+                    newValue.getSelectedIndices().addListener(selectedIndicesListener);
+                }
+            }
+        });
+        if (control.getSelectionModel() != null) {
+            control.getSelectionModel().getSelectedIndices().addListener(selectedIndicesListener);
+        }
     }
     
     private void setAnchor(int anchor) {

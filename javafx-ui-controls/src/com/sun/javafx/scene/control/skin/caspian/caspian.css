@@ -1712,7 +1712,7 @@
 }
 
 /* When the ListView is _not_ focused, we show alternate selection colors */
-.list-cell:filled:selected:focused, .list-cell:filled:selected {
+.list-cell:filled:selected:focused, .list-cell:filled:selected, .list-view:horizontal .list-cell:filled:selected {
     -fx-background-color: lightgray;
     -fx-text-fill: -fx-selection-bar-text;
 }

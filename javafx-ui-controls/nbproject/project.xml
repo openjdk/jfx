@@ -9,8 +9,6 @@
             <!-- Do not use Project Properties customizer when editing this file manually. -->
             <name>javafx-ui-controls</name>
             <properties>
-                <property name="import.lombok.jar">../../import/lombok-0.9.3/lombok-0.9.3.jar</property>
-                <property name="jfx.checkstyle.jar">../../import/checkstyle-5.1/checkstyle-5.1.jar</property>
                 <property-file>../base.properties</property-file>
                 <property-file>project.properties</property-file>
                 <property-file>../common.properties</property-file>
@@ -141,7 +139,7 @@
         <java-data xmlns="http://www.netbeans.org/ns/freeform-project-java/3">
             <compilation-unit>
                 <package-root>${src.dir}</package-root>
-                <classpath mode="compile">${runtime.dist.root.dir}/javafx-beans/dist/javafx-beans.jar:${runtime.dist.root.dir}/javafx-geom/dist/javafx-geom.jar:${runtime.dist.root.dir}/javafx-collections/dist/javafx-collections.jar:${runtime.dist.root.dir}/javafx-anim/dist/javafx-anim.jar:${runtime.dist.root.dir}/javafx-common/dist/javafx-common.jar:${runtime.dist.root.dir}/javafx-ui-common/dist/javafx-ui-common.jar:${runtime.dist.root.dir}/javafx-sg-common/dist/javafx-sg-common.jar:../../import/lombok-0.9.3/lombok-0.9.3.jar:../../import/checkstyle-5.1/checkstyle-5.1.jar:../../build-tools/checkstyle/dist/javafx-checkstyle.jar:${runtime.dist.root.dir}/javafx-logging/dist/javafx-logging.jar</classpath>
+                <classpath mode="compile">${JFXRT_HOME}/jfxrt.jar</classpath>
                 <built-to>dist/javafx-ui-controls.jar</built-to>
                 <source-level>1.6</source-level>
             </compilation-unit>

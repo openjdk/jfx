@@ -47,36 +47,23 @@ public class TreeCellBehavior extends CellBehaviorBase<TreeCell<?>> {
     // resolving RT-11446
     private static final Map<TreeView, Integer> map = new HashMap<TreeView, Integer>();
     
-    private ListChangeListener<Integer> selectedIndicesListener = new ListChangeListener<Integer>() {
-        @Override public void onChanged(ListChangeListener.Change c) {
-            while (c.next()) {
-                // there are no selected items, so lets clear out the anchor
-                if (c.getList().isEmpty()) {
-                    map.remove(getControl().getTreeView());
-                }
-            }
+    static int getAnchor(TreeView tree) {
+        FocusModel fm = tree.getFocusModel();
+        if (fm == null) return -1;
+        
+        return map.containsKey(tree) ? map.get(tree) : fm.getFocusedIndex();
+    }
+    
+    static void setAnchor(TreeView tree, int anchor) {
+        if (tree != null && anchor < 0) {
+            map.remove(tree);
+        } else {
+            map.put(tree, anchor);
         }
-    };
+    }
     
     public TreeCellBehavior(final TreeCell control) {
         super(control);
-        
-//        // Fix for RT-16565
-        // Currently this fix is commented out, on account of the performance
-        // regression at RT-17926
-//        control.getTreeView().selectionModelProperty().addListener(new ChangeListener<MultipleSelectionModel>() {
-//            @Override public void changed(ObservableValue observable, MultipleSelectionModel oldValue, MultipleSelectionModel newValue) {
-//                if (oldValue != null) {
-//                    oldValue.getSelectedIndices().removeListener(selectedIndicesListener);
-//                }
-//                if (newValue != null) {
-//                    newValue.getSelectedIndices().addListener(selectedIndicesListener);
-//                }
-//            }
-//        });
-//        if (control.getTreeView().getSelectionModel() != null) {
-//            control.getTreeView().getSelectionModel().getSelectedIndices().addListener(selectedIndicesListener);
-//        }
     }
 
     @Override public void mousePressed(MouseEvent e) {
