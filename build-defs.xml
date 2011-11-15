@@ -8,7 +8,19 @@
     </description>
 
     <import file="../build-defs.xml"/>
-
+    
+    <!-- 
+        Bring in environment properties (if not already done).
+        If the environment variable JFXRT_HOME is not set, we set it here to 
+        point to a sane default location. We also create a slightly nicer to
+        understand JFXRT_HOME property to use elsewhere.
+    -->
+    <!--
+    <property environment="env"/>
+    <property name="env.JFXRT_HOME" value="${runtime.dist.root.dir}/../artifacts/sdk/rt/lib" />
+    <property name="JFXRT_HOME" value="${env.JFXRT_HOME}" />
+    -->
+    
     <!--
         Note that .properties files are loaded relative to the basedir of
         the caller script, i.e., the <subproject>/build.xml file.  The order

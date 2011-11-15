@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<project name="javafx-ui-controls" default="jar" basedir=".">
-    <description>Builds, tests, and runs the project javafx-ui-controls.</description>
+<project name="openjfx-javafx-ui-controls" default="jar" basedir=".">
+    <description>Builds, tests, and runs the OpenJFX javafx-ui-controls project.</description>
 
     <import file="../build-defs.xml"/>
 
