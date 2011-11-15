@@ -31,7 +31,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import com.javafx.buildtools.checkstyle.annotations.IgnoreCodeChecks;
 import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
 import javafx.beans.value.WeakChangeListener;
@@ -292,7 +291,6 @@ public abstract class SkinBase<C extends Control, B extends BehaviorBase<C>> ext
      * Skin subclasses will override this method to handle changes in corresponding
      * control's properties.
      */
-    @IgnoreCodeChecks
     protected void handleControlPropertyChanged(String propertyReference) {
         if (STYLE_PROPERTY_REF.equals(propertyReference)) {
             setStyle(getSkinnable().getStyle());

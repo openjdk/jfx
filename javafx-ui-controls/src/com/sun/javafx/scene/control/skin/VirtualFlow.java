@@ -52,8 +52,6 @@ import javafx.scene.shape.Rectangle;
 import com.sun.javafx.runnable.Runnable0;
 import com.sun.javafx.runnable.Runnable1;
 
-import com.javafx.buildtools.checkstyle.annotations.IgnoreCodeChecks;
-
 /**
  * Implementation of a virtualized container using a cell based mechanism.
  */
@@ -697,7 +695,6 @@ public class VirtualFlow extends Region {
      * vertical, createCell, and configCell) then we need to notify the
      * parent.
      */
-    @IgnoreCodeChecks
     @Override public void requestLayout() {
         if (getScene() != null && !isNeedsLayout()) {
             getScene().addToDirtyLayoutList(this);
