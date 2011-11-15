@@ -133,8 +133,8 @@ public class TextAreaSkin extends TextInputControlSkin<TextArea, TextAreaBehavio
 
             prefWidth += padding.getLeft() + padding.getRight();
 
-            computedPrefWidth = Math.max(prefWidth, scrollPane.getViewportBounds().getWidth());
-
+            Bounds viewPortBounds = scrollPane.getViewportBounds();
+            computedPrefWidth = Math.max(prefWidth, (viewPortBounds != null) ? viewPortBounds.getWidth() : 0);
           }
           return computedPrefWidth;
         }
@@ -171,8 +171,8 @@ public class TextAreaSkin extends TextInputControlSkin<TextArea, TextAreaBehavio
 
             prefHeight += padding.getTop() + padding.getBottom();
 
-            computedPrefHeight = Math.max(prefHeight, scrollPane.getViewportBounds().getHeight());
-
+            Bounds viewPortBounds = scrollPane.getViewportBounds();
+            computedPrefHeight = Math.max(prefHeight, (viewPortBounds != null) ? viewPortBounds.getHeight() : 0);
           }
           return computedPrefHeight;
         }
@@ -408,6 +408,14 @@ public class TextAreaSkin extends TextInputControlSkin<TextArea, TextAreaBehavio
             @Override public void invalidated(Observable valueModel) {
                 updatePrefViewportWidth();
                 updatePrefViewportHeight();
+            }
+        });
+
+        scrollPane.viewportBoundsProperty().addListener(new InvalidationListener() {
+            @Override public void invalidated(Observable valueModel) {
+                if (scrollPane.getViewportBounds() != null) {
+                    invalidateMetrics();
+                }
             }
         });
 
