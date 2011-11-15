@@ -3061,3 +3061,141 @@
     -fx-border-color: null;
 }
 
+/* -------------- CODE  FOR THE NON-EDITABLE COMBO-BOX -------------- */
+
+/* ------- MAIN BUTTON ------- */
+.combo-box  {
+    -fx-skin: "com.sun.javafx.scene.control.skin.ComboBoxSkin";
+    -fx-background-color: -fx-shadow-highlight-color, -fx-outer-border, -fx-inner-border, -fx-body-color;
+    -fx-background-radius: 5, 5, 4, 3;
+    -fx-background-insets: 0 0 -1 0, 0, 1, 2;
+    -fx-padding: 0;
+}
+
+.combo-box:armed, .combo-box:hover:armed {
+    -fx-color: -fx-pressed-base;
+}
+
+.combo-box:hover {
+    -fx-color: -fx-hover-base;
+}
+
+.combo-box .list-cell {
+    -fx-background: transparent;
+    -fx-background-color: transparent;
+    -fx-text-fill: -fx-text-base-color;
+    -fx-padding: 0 0 0 7;
+}
+
+.combo-box-popup {
+    -fx-skin: "com.sun.javafx.scene.control.skin.ComboBoxListViewPopupSkin";
+}
+
+/* This needs to work - problem is that CSS doesn't pass through Popup */
+.combo-box-popup .list-view {
+    -fx-background-color: -fx-box-border, -fx-control-inner-background;
+    -fx-background-insets: 0, 1;
+    -fx-effect: dropshadow( three-pass-box , rgba(0,0,0,0.6) , 8, 0.0 , 0 , 0 );
+}
+
+.combo-box-popup .list-view .list-cell {
+    -fx-cell-size: 14;
+    -fx-padding: 4 0 4 5;
+    
+    /* No alternate highlighting */
+    -fx-background-color: -fx-control-inner-background;
+}
+
+.combo-box-popup .list-view .list-cell:selected {
+/*    -fx-background-color: -fx-control-inner-background;*/
+    -fx-text-fill: -fx-text-inner-color;
+}
+
+/* Hover effect is just the selection bar color */
+.combo-box-popup .list-view .list-cell:filled:hover {
+    -fx-background: -fx-accent;
+    -fx-background-color: -fx-selection-bar;
+    -fx-text-fill: -fx-selection-bar-text;
+}
+
+/*------- THIS SPECIFIES THE BUTTON COLOR WHEN THE POPUP MENU IS SHOWING -------*/
+.combo-box:showing {
+    -fx-color: -fx-pressed-base;
+}
+
+.combo-box:focused {
+    -fx-background-color: -fx-focus-color, -fx-outer-border, -fx-inner-border, -fx-body-color;
+    -fx-background-radius: 6.4, 4, 5, 3;
+    -fx-background-insets: -1.4, 0, 1, 2;
+}
+
+.combo-box:disabled {
+    -fx-opacity: .4;
+}
+
+/* ------- OPEN BUTTON ------- */
+.combo-box .arrow-button {
+    -fx-background-color: -fx-outer-border, -fx-inner-border, -fx-body-color;
+    -fx-background-insets: 0, 1, 2;
+    -fx-background-radius: 0 5 5 0, 0 4 4 0, 0 3 3 0;
+    -fx-padding: 0.5em 0.416667em 0.5em 0.416667em; /* 6 5 6 5 */
+}
+
+/* ------- ARROW* ------- */
+.combo-box .arrow {
+    -fx-background-insets: 1 0 -1 0, 0;
+    -fx-background-color: -fx-mark-highlight-color, -fx-mark-color;
+    -fx-padding: 0.166667em 0.333333em 0.166667em 0.333333em; /* 2 4 2 4 */
+    -fx-shape: "M 0 0 h 7 l -3.5 4 z";
+}
+
+/* ------- POPUP MENU ------- */
+/* --- .combo-box .popup-menu, .combo-box .menu-item, .combo-box .popup-menu .menu-item-radio
+all inherit from Menu Control's popup-menu. --- */
+
+
+/* -------------- CODE  FOR THE EDITABLE COMBO-BOX -------------- */
+
+/* ------- TEXTBOX SEGMENT OF COMBO BOX ------- */
+/*--- The editable ComboBox TextBox inherits its properties from the TextBox Control.
+Only the properties with values that are different from the TextBox are specified here. ---*/
+
+.combo-box:editable .text-field {
+    -fx-padding: 4 5 4 5;
+    -fx-background-radius: 4 5 5 4, 3 4 4 3, 2 3 3 2;
+    -fx-background-insets: 0 0 -1 0, 0, 1;
+    -fx-vpos: CENTER;
+    -fx-graphic-vpos: CENTER;
+}
+
+/*.combo-box:editable .text-box:focused {
+    -fx-background-color: -fx-shadow-highlight-color, -fx-text-box-border, -fx-control-inner-background;
+    -fx-background-insets: 0, 1, 2;
+    -fx-background-radius: 3, 2, 2;
+}*/
+
+.combo-box:editable .text-field:hover {
+    -fx-text-fill: derive(-fx-control-inner-background,-60%);
+}
+
+.combo-box:editable .text-field:focused {
+    -fx-background-color: -fx-focus-color, -fx-outer-border, white;
+    -fx-background-radius: 5.4, 3, 2;
+    -fx-background-insets: -1.4, 0, 1;
+}
+
+.combo-box:editable:focused {
+    -fx-background-color: -fx-shadow-highlight-color, -fx-outer-border, -fx-inner-border, -fx-body-color;
+    -fx-background-radius: 5, 5, 4, 3;
+    -fx-background-insets: 0 0 -1 0, 0, 1, 2;
+}
+
+
+/** --- Make the arrow area background transparent until the mouse hovers */
+.combo-box:editable .arrow-button {
+    -fx-background-color: null;
+}
+
+.combo-box:editable:hover .arrow-button, .combo-box:editable:showing .arrow-button {
+    -fx-background-color: -fx-outer-border, -fx-inner-border, -fx-body-color;
+}
