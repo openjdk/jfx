@@ -524,9 +524,21 @@ public class TreeViewBehavior<T> extends BehaviorBase<TreeView<T>> {
     }
 
     private void expandRow() {
-        TreeItem<?> treeItem = getControl().getSelectionModel().getSelectedItem();
-        if (treeItem == null) return;
-        treeItem.setExpanded(true);
+        MultipleSelectionModel<TreeItem<T>> sm = getControl().getSelectionModel();
+        if (sm == null) return;
+        
+        TreeItem<T> treeItem = sm.getSelectedItem();
+        if (treeItem == null || treeItem.isLeaf()) return;
+        
+        if (treeItem.isExpanded()) {
+            // move selection to the first child (RT-17978)
+            List<TreeItem<T>> children = treeItem.getChildren();
+            if (! children.isEmpty()) {
+                sm.clearAndSelect(getControl().getRow(children.get(0)));
+            }
+        } else {
+            treeItem.setExpanded(true);
+        }
     }
     
     private void expandAll() {
