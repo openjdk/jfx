@@ -47,14 +47,6 @@ public class ComboBoxListViewPopup<T> extends PopupControl {
     public ComboBoxListViewPopup(ComboBox<T> comboBox) {
         this.comboBox = comboBox;
         getStyleClass().add("combo-box-popup");
-        
-        focusedProperty().addListener(new InvalidationListener() {
-            @Override public void invalidated(Observable o) {
-                if (isFocused()) {
-                    getListView().requestFocus();
-                }
-            }
-        });
     }
 
     public ComboBox<T> getComboBox() {

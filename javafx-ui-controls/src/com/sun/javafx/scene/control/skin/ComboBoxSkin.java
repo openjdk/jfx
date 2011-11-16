@@ -233,7 +233,6 @@ public class ComboBoxSkin<T> extends SkinBase<ComboBox<T>, ComboBoxBehavior<T>> 
                 label.setGraphic(newNode);
             }
         } else {
-            System.out.println(item + " is " + (item == null ? null : item.getClass()));
             label.setText(item == null ? "" : item.toString());
         }
     }
@@ -285,6 +284,7 @@ public class ComboBoxSkin<T> extends SkinBase<ComboBox<T>, ComboBoxBehavior<T>> 
     private void show() {
         if (!popup.isShowing()) {
             popup.show(this);
+            
         }
     }
 

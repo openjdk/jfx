@@ -40,6 +40,7 @@ import java.util.List;
 import javafx.beans.InvalidationListener;
 import javafx.geometry.Point2D;
 import javafx.scene.Node;
+import javafx.scene.control.SelectionModel;
 import javafx.scene.input.MouseButton;
 
 public class ComboBoxBehavior<T> extends BehaviorBase<ComboBox<T>> {
@@ -83,7 +84,13 @@ public class ComboBoxBehavior<T> extends BehaviorBase<ComboBox<T>> {
 
     protected static final List<KeyBinding> BUTTON_BINDINGS = new ArrayList<KeyBinding>();
     static {
-        BUTTON_BINDINGS.addAll(TRAVERSAL_BINDINGS);
+        BUTTON_BINDINGS.add(new KeyBinding(F4, "showPopup"));
+        BUTTON_BINDINGS.add(new KeyBinding(UP, "showPopup").alt());
+        BUTTON_BINDINGS.add(new KeyBinding(DOWN, "showPopup").alt());
+        
+        BUTTON_BINDINGS.add(new KeyBinding(UP, "selectPrevious"));
+        BUTTON_BINDINGS.add(new KeyBinding(DOWN, "selectNext"));
+        
         if (Utils.isWindows()) {
             BUTTON_BINDINGS.add(new KeyBinding(ENTER, KEY_PRESSED, PRESS_ACTION));
             BUTTON_BINDINGS.add(new KeyBinding(ENTER, KEY_RELEASED, RELEASE_ACTION));
@@ -93,6 +100,8 @@ public class ComboBoxBehavior<T> extends BehaviorBase<ComboBox<T>> {
             BUTTON_BINDINGS.add(new KeyBinding(SPACE, KEY_PRESSED, PRESS_ACTION));
             BUTTON_BINDINGS.add(new KeyBinding(SPACE, KEY_RELEASED, RELEASE_ACTION));
         }
+        
+        BUTTON_BINDINGS.addAll(TRAVERSAL_BINDINGS);
     }
 
     @Override protected List<KeyBinding> createKeyBindings() {
@@ -104,6 +113,12 @@ public class ComboBoxBehavior<T> extends BehaviorBase<ComboBox<T>> {
             keyPressed();
         } else if (RELEASE_ACTION.equals(name)) {
             keyReleased();
+        } else if ("showPopup".equals(name)) {
+            show();
+        } else if ("selectPrevious".equals(name)) {
+            selectPrevious();
+        } else if ("selectNext".equals(name)) {
+            selectNext();
         } else {
             super.callAction(name);
         }
@@ -202,6 +217,12 @@ public class ComboBoxBehavior<T> extends BehaviorBase<ComboBox<T>> {
         }
     }
     
+    public void show() {
+        if (! getControl().isShowing()) {
+            getControl().show();
+        }
+    }
+    
     public void hide() {
         if (getControl().isShowing()) {
             getControl().hide();
@@ -218,6 +239,18 @@ public class ComboBoxBehavior<T> extends BehaviorBase<ComboBox<T>> {
         if (! keyDown && getControl().isArmed()) {
             getControl().disarm();
         }
+    }
+    
+    private void selectPrevious() {
+        SelectionModel sm = getControl().getSelectionModel();
+        if (sm == null) return;
+        sm.selectPrevious();
+    }
+    
+    private void selectNext() {
+        SelectionModel sm = getControl().getSelectionModel();
+        if (sm == null) return;
+        sm.selectNext();
     }
     
     

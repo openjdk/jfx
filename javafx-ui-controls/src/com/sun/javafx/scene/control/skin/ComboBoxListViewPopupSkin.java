@@ -26,12 +26,8 @@
 package com.sun.javafx.scene.control.skin;
 
 import com.javafx.preview.control.ComboBox;
-import com.sun.javafx.scene.control.skin.ListViewSkin;
-import com.sun.javafx.scene.control.skin.VirtualContainerBase;
-import com.sun.javafx.scene.control.skin.VirtualFlow;
 import javafx.beans.InvalidationListener;
 import javafx.beans.Observable;
-import javafx.beans.value.ObservableValue;
 import javafx.collections.ObservableList;
 import javafx.event.EventHandler;
 import javafx.scene.Node;
@@ -39,6 +35,8 @@ import javafx.scene.control.ListView;
 import javafx.scene.control.PopupControl;
 import javafx.scene.control.SelectionMode;
 import javafx.scene.control.Skin;
+import javafx.scene.input.KeyCode;
+import javafx.scene.input.KeyEvent;
 import javafx.scene.input.MouseEvent;
 
 public class ComboBoxListViewPopupSkin<T> implements Skin<ComboBoxListViewPopup<T>> {
@@ -115,6 +113,15 @@ public class ComboBoxListViewPopupSkin<T> implements Skin<ComboBoxListViewPopup<
         listView.setOnMouseReleased(new EventHandler<MouseEvent>() {
             @Override public void handle(MouseEvent t) {
                 comboBox.hide();
+            }
+        });
+        
+        listView.setOnKeyPressed(new EventHandler<KeyEvent>() {
+            @Override public void handle(KeyEvent t) {
+                // TODO move to behavior, when (or if) this class becomes a SkinBase
+                if (t.getCode() == KeyCode.ENTER || t.getCode() == KeyCode.SPACE) {
+                    comboBox.hide();
+                }
             }
         });
     }
