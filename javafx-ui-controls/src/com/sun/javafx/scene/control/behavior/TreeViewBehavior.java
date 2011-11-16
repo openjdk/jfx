@@ -25,26 +25,7 @@
 
 package com.sun.javafx.scene.control.behavior;
 
-import static javafx.scene.input.KeyCode.A;
-import static javafx.scene.input.KeyCode.BACK_SLASH;
-import static javafx.scene.input.KeyCode.DOWN;
-import static javafx.scene.input.KeyCode.END;
-import static javafx.scene.input.KeyCode.ENTER;
-import static javafx.scene.input.KeyCode.ESCAPE;
-import static javafx.scene.input.KeyCode.F2;
-import static javafx.scene.input.KeyCode.HOME;
-import static javafx.scene.input.KeyCode.KP_DOWN;
-import static javafx.scene.input.KeyCode.KP_LEFT;
-import static javafx.scene.input.KeyCode.KP_RIGHT;
-import static javafx.scene.input.KeyCode.KP_UP;
-import static javafx.scene.input.KeyCode.LEFT;
-import static javafx.scene.input.KeyCode.PAGE_DOWN;
-import static javafx.scene.input.KeyCode.PAGE_UP;
-import static javafx.scene.input.KeyCode.RIGHT;
-import static javafx.scene.input.KeyCode.TAB;
-import static javafx.scene.input.KeyCode.UP;
-import static javafx.scene.input.KeyCode.SLASH;
-import static javafx.scene.input.KeyCode.SPACE;
+import static javafx.scene.input.KeyCode.*;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -60,6 +41,7 @@ import com.sun.javafx.PlatformUtil;
 import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
 import javafx.collections.ListChangeListener;
+import javafx.scene.input.KeyCode;
 import javafx.util.Callback;
 
 public class TreeViewBehavior<T> extends BehaviorBase<TreeView<T>> {
@@ -108,6 +90,10 @@ public class TreeViewBehavior<T> extends BehaviorBase<TreeView<T>> {
         TREE_VIEW_BINDINGS.add(new KeyBinding(KP_LEFT, "CollapseRow"));
         TREE_VIEW_BINDINGS.add(new KeyBinding(RIGHT, "ExpandRow"));
         TREE_VIEW_BINDINGS.add(new KeyBinding(KP_RIGHT, "ExpandRow"));
+        
+        TREE_VIEW_BINDINGS.add(new KeyBinding(ASTERISK, "ExpandAll"));
+        TREE_VIEW_BINDINGS.add(new KeyBinding(PLUS, "ExpandRow"));
+        TREE_VIEW_BINDINGS.add(new KeyBinding(MINUS, "CollapseRow"));
 
         TREE_VIEW_BINDINGS.add(new KeyBinding(UP, "SelectPreviousRow"));
         TREE_VIEW_BINDINGS.add(new KeyBinding(KP_UP, "SelectPreviousRow"));
@@ -141,6 +127,7 @@ public class TreeViewBehavior<T> extends BehaviorBase<TreeView<T>> {
         else if ("ScrollDown".equals(name)) scrollDown();
         else if ("ExpandRow".equals(name)) expandRow();
         else if ("CollapseRow".equals(name)) collapseRow();
+        else if ("ExpandAll".equals(name)) expandAll();
 //        else if ("ExpandOrCollapseRow".equals(name)) expandOrCollapseRow();
         else if ("Edit".equals(name)) edit();
         else if ("CancelEdit".equals(name)) cancelEdit();
@@ -496,6 +483,28 @@ public class TreeViewBehavior<T> extends BehaviorBase<TreeView<T>> {
         TreeItem<?> treeItem = getControl().getSelectionModel().getSelectedItem();
         if (treeItem == null) return;
         treeItem.setExpanded(true);
+    }
+    
+    private void expandAll() {
+        TreeItem root = getControl().getRoot();
+        if (root == null) return;
+        
+        root.setExpanded(true);
+        expandChildren(root);
+    }
+    
+    private void expandChildren(TreeItem node) {
+        if (node == null) return;
+        List<TreeItem> children = node.getChildren();
+        if (children == null) return;
+        
+        for (int i = 0; i < children.size(); i++) {
+            TreeItem child = children.get(i);
+            if (child == null || child.isLeaf()) continue;
+            
+            child.setExpanded(true);
+            expandChildren(child);
+        }
     }
 
     private void collapseRow() {
