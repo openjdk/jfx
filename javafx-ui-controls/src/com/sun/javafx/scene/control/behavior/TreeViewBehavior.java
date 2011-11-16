@@ -77,6 +77,8 @@ public class TreeViewBehavior<T> extends BehaviorBase<TreeView<T>> {
             TREE_VIEW_BINDINGS.add(new KeyBinding(SPACE, "toggleFocusOwnerSelection").ctrl().meta());
             TREE_VIEW_BINDINGS.add(new KeyBinding(PAGE_UP, "FocusPageUp").meta());
             TREE_VIEW_BINDINGS.add(new KeyBinding(PAGE_DOWN, "FocusPageDown").meta());
+            TREE_VIEW_BINDINGS.add(new KeyBinding(UP, "FocusPreviousRow").meta());
+            TREE_VIEW_BINDINGS.add(new KeyBinding(DOWN, "FocusNextRow").meta());
         } else {
             TREE_VIEW_BINDINGS.add(new KeyBinding(A, "SelectAll").ctrl());
             TREE_VIEW_BINDINGS.add(new KeyBinding(BACK_SLASH, "ClearSelection").ctrl());
@@ -84,6 +86,8 @@ public class TreeViewBehavior<T> extends BehaviorBase<TreeView<T>> {
             TREE_VIEW_BINDINGS.add(new KeyBinding(SPACE, "toggleFocusOwnerSelection").ctrl());
             TREE_VIEW_BINDINGS.add(new KeyBinding(PAGE_UP, "FocusPageUp").ctrl());
             TREE_VIEW_BINDINGS.add(new KeyBinding(PAGE_DOWN, "FocusPageDown").ctrl());
+            TREE_VIEW_BINDINGS.add(new KeyBinding(UP, "FocusPreviousRow").ctrl());
+            TREE_VIEW_BINDINGS.add(new KeyBinding(DOWN, "FocusNextRow").ctrl());
         }
 
         TREE_VIEW_BINDINGS.add(new KeyBinding(LEFT, "CollapseRow"));
@@ -137,6 +141,8 @@ public class TreeViewBehavior<T> extends BehaviorBase<TreeView<T>> {
         else if ("SelectAllToFocus".equals(name)) selectAllToFocus();
         else if ("FocusPageUp".equals(name)) focusPageUp();
         else if ("FocusPageDown".equals(name)) focusPageDown();
+        else if ("FocusPreviousRow".equals(name)) focusPreviousRow();
+        else if ("FocusNextRow".equals(name)) focusNextRow();
         else super.callAction(name);
     }
 
@@ -149,7 +155,7 @@ public class TreeViewBehavior<T> extends BehaviorBase<TreeView<T>> {
         // so that we know when they enter/leave multiple selection mode. This
         // changes what happens when certain key combinations are pressed.
         isShiftDown = e.getEventType() == KeyEvent.KEY_PRESSED && e.isShiftDown();
-//        isCtrlDown = e.getEventType() == KeyEvent.KEY_PRESSED && e.isControlDown();
+        isCtrlDown = e.getEventType() == KeyEvent.KEY_PRESSED && e.isControlDown();
         
         super.callActionForEvent(e);
     }
@@ -159,7 +165,7 @@ public class TreeViewBehavior<T> extends BehaviorBase<TreeView<T>> {
      *************************************************************************/
 
     private boolean isShiftDown = false;
-//    private boolean isCtrlDown = false;
+    private boolean isCtrlDown = false;
     
     // Support for RT-13826:
     // set when focus is moved by keyboard to allow for proper selection positions
@@ -182,6 +188,12 @@ public class TreeViewBehavior<T> extends BehaviorBase<TreeView<T>> {
 
     private Runnable onMoveToLastCell;
     public void setOnMoveToLastCell(Runnable r) { onMoveToLastCell = r; }
+    
+    private Runnable onFocusPreviousRow;
+    public void setOnFocusPreviousRow(Runnable r) { onFocusPreviousRow = r; }
+    
+    private Runnable onFocusNextRow;
+    public void setOnFocusNextRow(Runnable r) { onFocusNextRow = r; }
     
     private ListChangeListener<Integer> selectedIndicesListener = new ListChangeListener<Integer>() {
         @Override public void onChanged(ListChangeListener.Change c) {
@@ -277,6 +289,38 @@ public class TreeViewBehavior<T> extends BehaviorBase<TreeView<T>> {
         fm.focus(getControl().impl_getTreeItemCount() - 1);
         
         if (onMoveToLastCell != null) onMoveToLastCell.run();
+    }
+    
+    private void focusPreviousRow() {
+        FocusModel fm = getControl().getFocusModel();
+        if (fm == null) return;
+        
+        MultipleSelectionModel sm = getControl().getSelectionModel();
+        if (sm == null) return;
+        
+        fm.focusPrevious();
+        
+        if (! isCtrlDown || getAnchor() == -1) {
+            setAnchor(fm.getFocusedIndex());
+        }
+        
+        if (onFocusPreviousRow != null) onFocusPreviousRow.run();
+    }
+
+    private void focusNextRow() {
+        FocusModel fm = getControl().getFocusModel();
+        if (fm == null) return;
+        
+        MultipleSelectionModel sm = getControl().getSelectionModel();
+        if (sm == null) return;
+        
+        fm.focusNext();
+        
+        if (! isCtrlDown || getAnchor() == -1) {
+            setAnchor(fm.getFocusedIndex());
+        }
+        
+        if (onFocusNextRow != null) onFocusNextRow.run();
     }
     
     private void focusPageUp() {

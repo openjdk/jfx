@@ -44,6 +44,7 @@ import com.sun.javafx.runnable.Runnable1;
 import com.sun.javafx.scene.control.WeakEventHandler;
 import com.sun.javafx.scene.control.behavior.TreeViewBehavior;
 import java.lang.ref.WeakReference;
+import javafx.scene.control.*;
 import javafx.util.Callback;
 
 public class TreeViewSkin<T> extends VirtualContainerBase<TreeView<T>, TreeViewBehavior<T>, TreeCell<T>> {
@@ -84,6 +85,12 @@ public class TreeViewSkin<T> extends VirtualContainerBase<TreeView<T>, TreeViewB
         flow.getHbar().addEventFilter(MouseEvent.MOUSE_PRESSED, ml);
 
         // init the behavior 'closures'
+        getBehavior().setOnFocusPreviousRow(new Runnable() {
+            @Override public void run() { onFocusPreviousCell(); }
+        });
+        getBehavior().setOnFocusNextRow(new Runnable() {
+            @Override public void run() { onFocusNextCell(); }
+        });
         getBehavior().setOnMoveToFirstCell(new Runnable() {
             @Override public void run() { onMoveToFirstCell(); }
         });
@@ -299,6 +306,18 @@ public class TreeViewSkin<T> extends VirtualContainerBase<TreeView<T>, TreeViewB
             needItemCountUpdate = false;
         }
         super.layoutChildren();
+    }
+    
+    private void onFocusPreviousCell() {
+        FocusModel fm = getSkinnable().getFocusModel();
+        if (fm == null) return;
+        flow.show(fm.getFocusedIndex());
+    }
+
+    private void onFocusNextCell() {
+        FocusModel fm = getSkinnable().getFocusModel();
+        if (fm == null) return;
+        flow.show(fm.getFocusedIndex());
     }
 
     private void onSelectPreviousCell() {
