@@ -3064,67 +3064,35 @@
 /* -------------- CODE  FOR THE NON-EDITABLE COMBO-BOX -------------- */
 
 /* ------- MAIN BUTTON ------- */
-.combo-box  {
-    -fx-skin: "com.sun.javafx.scene.control.skin.ComboBoxSkin";
+.combo-box-base  {
+    -fx-skin: "com.sun.javafx.scene.control.skin.ComboBoxBaseSkin";
     -fx-background-color: -fx-shadow-highlight-color, -fx-outer-border, -fx-inner-border, -fx-body-color;
     -fx-background-radius: 5, 5, 4, 3;
     -fx-background-insets: 0 0 -1 0, 0, 1, 2;
     -fx-padding: 0;
 }
 
-.combo-box:hover {
+.combo-box-base:hover {
     -fx-color: -fx-hover-base;
 }
 
-.combo-box .list-cell {
-    -fx-background: transparent;
-    -fx-background-color: transparent;
-    -fx-text-fill: -fx-text-base-color;
-    -fx-padding: 0 0 0 7;
-}
-
-.combo-box-popup {
-    -fx-skin: "com.sun.javafx.scene.control.skin.ComboBoxListViewPopupSkin";
-}
-
-.combo-box-popup .list-view {
-    -fx-background-color: -fx-box-border, -fx-control-inner-background;
-    -fx-background-insets: 0, 1;
-    -fx-effect: dropshadow( three-pass-box , rgba(0,0,0,0.6) , 8, 0.0 , 0 , 0 );
-}
-
-.combo-box-popup .list-view .list-cell {
-    -fx-cell-size: 14;
-    -fx-padding: 4 0 4 5;
-    
-    /* No alternate highlighting */
-    -fx-background-color: -fx-control-inner-background;
-}
-
-/* Hover effect is just the selection bar color */
-.combo-box-popup .list-view .list-cell:selected, .combo-box-popup .list-view .list-cell:filled:hover {
-    -fx-background: -fx-accent;
-    -fx-background-color: -fx-selection-bar;
-    -fx-text-fill: -fx-selection-bar-text;
-}
-
 /*------- THIS SPECIFIES THE BUTTON COLOR WHEN THE POPUP MENU IS SHOWING -------*/
-.combo-box:showing {
+.combo-box-base:showing {
     -fx-color: -fx-pressed-base;
 }
 
-.combo-box:focused {
+.combo-box-base:focused {
     -fx-background-color: -fx-focus-color, -fx-outer-border, -fx-inner-border, -fx-body-color;
     -fx-background-radius: 6.4, 4, 5, 3;
     -fx-background-insets: -1.4, 0, 1, 2;
 }
 
-.combo-box:disabled {
+.combo-box-base:disabled {
     -fx-opacity: .4;
 }
 
 /* ------- OPEN BUTTON ------- */
-.combo-box .arrow-button {
+.combo-box-base .arrow-button {
     -fx-background-color: -fx-outer-border, -fx-inner-border, -fx-body-color;
     -fx-background-insets: 0, 1, 2;
     -fx-background-radius: 0 5 5 0, 0 4 4 0, 0 3 3 0;
@@ -3132,7 +3100,7 @@
 }
 
 /* ------- ARROW* ------- */
-.combo-box .arrow {
+.combo-box-base .arrow {
     -fx-background-insets: 1 0 -1 0, 0;
     -fx-background-color: -fx-mark-highlight-color, -fx-mark-color;
     -fx-padding: 0.166667em 0.333333em 0.166667em 0.333333em; /* 2 4 2 4 */
@@ -3150,7 +3118,7 @@ all inherit from Menu Control's popup-menu. --- */
 /*--- The editable ComboBox TextBox inherits its properties from the TextBox Control.
 Only the properties with values that are different from the TextBox are specified here. ---*/
 
-.combo-box:editable .text-field {
+.combo-box-base:editable .text-field {
     -fx-padding: 4 5 4 5;
     -fx-background-radius: 4 5 5 4, 3 4 4 3, 2 3 3 2;
     -fx-background-insets: 0 0 -1 0, 0, 1;
@@ -3164,18 +3132,55 @@ Only the properties with values that are different from the TextBox are specifie
     -fx-background-radius: 3, 2, 2;
 }*/
 
-.combo-box:editable .text-field:hover {
+.combo-box-base:editable .text-field:hover {
     -fx-text-fill: derive(-fx-control-inner-background,-60%);
 }
 
-.combo-box:editable .text-field:focused {
+.combo-box-base:editable .text-field:focused {
     -fx-background-color: -fx-focus-color, -fx-outer-border, white;
     -fx-background-radius: 5.4, 3, 2;
     -fx-background-insets: -1.4, 0, 1;
 }
 
-.combo-box:editable:focused {
+.combo-box-base:editable:focused {
     -fx-background-color: -fx-shadow-highlight-color, -fx-outer-border, -fx-inner-border, -fx-body-color;
     -fx-background-radius: 5, 5, 4, 3;
     -fx-background-insets: 0 0 -1 0, 0, 1, 2;
+}
+
+
+/* -------------- CODE  FOR THE DEFAULT LISTVIEW-BASED COMBOBOX ------------- */
+.combo-box {
+    -fx-popup-class: "com.sun.javafx.scene.control.skin.ComboBoxListViewPopup";
+}
+.combo-box .list-cell {
+    -fx-background: transparent;
+    -fx-background-color: transparent;
+    -fx-text-fill: -fx-text-base-color;
+    -fx-padding: 0 0 0 7;
+}
+
+.combo-box-list-view-popup {
+    -fx-skin: "com.sun.javafx.scene.control.skin.ComboBoxListViewPopupSkin";
+}
+
+.combo-box-list-view-popup .list-view {
+    -fx-background-color: -fx-box-border, -fx-control-inner-background;
+    -fx-background-insets: 0, 1;
+    -fx-effect: dropshadow( three-pass-box , rgba(0,0,0,0.6) , 8, 0.0 , 0 , 0 );
+}
+
+.combo-box-list-view-popup .list-view .list-cell {
+    -fx-cell-size: 14;
+    -fx-padding: 4 0 4 5;
+    
+    /* No alternate highlighting */
+    -fx-background-color: -fx-control-inner-background;
+}
+
+/* Hover effect is just the selection bar color */
+.combo-box-list-view-popup .list-view .list-cell:selected, .combo-box-list-view-popup .list-view .list-cell:filled:hover {
+    -fx-background: -fx-accent;
+    -fx-background-color: -fx-selection-bar;
+    -fx-text-fill: -fx-selection-bar-text;
 }

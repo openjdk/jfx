@@ -26,43 +26,90 @@
 package com.sun.javafx.scene.control.skin;
 
 import com.javafx.preview.control.ComboBox;
-import com.sun.javafx.Utils;
+import com.javafx.preview.control.ComboBoxContent;
 import javafx.beans.InvalidationListener;
 import javafx.beans.Observable;
-import javafx.beans.value.ObservableValue;
 import javafx.event.Event;
 import javafx.event.EventHandler;
 import javafx.geometry.HPos;
 import javafx.geometry.Point2D;
 import javafx.geometry.VPos;
 import javafx.scene.Node;
-import javafx.scene.control.ListView;
-import javafx.scene.control.PopupControl;
-import javafx.scene.control.Skin;
-import javafx.scene.input.MouseEvent;
+import javafx.scene.control.*;
+import javafx.scene.input.KeyCode;
+import javafx.scene.input.KeyEvent;
+import javafx.util.Callback;
+import javafx.util.StringConverter;
 
-public class ComboBoxListViewPopup<T> extends PopupControl {
-    private ComboBox<T> comboBox;
+public class ComboBoxListViewPopup<T> extends PopupControl implements ComboBoxContent<T> {
+    private final ComboBox<T> comboBox;
+    
+    private ListCell<T> listCellLabel;
+    private TextField textField;
 
-    public ComboBoxListViewPopup(ComboBox<T> comboBox) {
+    public ComboBoxListViewPopup(final ComboBox<T> comboBox) {
+        getStyleClass().add("combo-box-list-view-popup");
         this.comboBox = comboBox;
-        getStyleClass().add("combo-box-popup");
+        setAutoHide(true);
+        setHideOnEscape(true);
+        setOnAutoHide(new EventHandler<Event>() {
+            @Override public void handle(Event t) {
+                comboBox.hide();
+            }
+        });
+    }
+    
+    @Override public double computePrefWidth(double height) {
+        ListView listView = getListView();
+        return listView == null ? 0 : listView.prefWidth(height);
+    }
+    
+    @Override public void showPopup() {
+        if (comboBox == null) {
+            throw new IllegalStateException("ComboBox is null");
+        }
+        if (getSkin().getNode() == null) {
+            throw new IllegalStateException("Node is null");
+        }
+        
+        if (!isShowing()) {
+            if (getSkin() == null) {
+                getScene().getRoot().impl_processCSS(true);
+            }
+
+            Point2D p = com.sun.javafx.Utils.pointRelativeTo(comboBox, getSkin().getNode(), HPos.CENTER, VPos.BOTTOM, -7, -10, false);
+            show(comboBox.getScene().getWindow(), p.getX(), p.getY());
+        }
+    }
+
+    @Override public void hidePopup() {
+        if (isShowing()) {
+            hide();
+        }
+    }
+    
+    private ListCell<T> getListCellLabel() {
+        if (listCellLabel != null) return listCellLabel;
+        
+        ListView<T> listView = getListView();
+        if (listView == null) return null;
+        
+        Callback<ListView<T>, ListCell<T>> cellFactory = listView.getCellFactory();
+        listCellLabel = cellFactory != null ? cellFactory.call(listView) : new ListCell<T>() {
+            @Override public void updateItem(T item, boolean empty) {
+                super.updateItem(item, empty);
+                updateDisplayText(item, empty);
+            }
+        };
+        
+        return listCellLabel;
     }
 
     public ComboBox<T> getComboBox() {
         return comboBox;
     }
 
-    public void show(Node parent) {
-        if (getSkin() == null) {
-            getScene().getRoot().impl_processCSS(true);
-        }
-
-        Point2D p = Utils.pointRelativeTo(parent, getSkin().getNode(), HPos.CENTER, VPos.BOTTOM, -7, -10, false);
-        super.show(parent.getScene().getWindow(), p.getX(), p.getY());
-    }
-    
-    public ListView<T> getListView() {
+    private ListView<T> getListView() {
         if (getSkin() == null) {
             getScene().getRoot().impl_processCSS(true);
         }
@@ -76,12 +123,74 @@ public class ComboBoxListViewPopup<T> extends PopupControl {
         return null;
     }
     
-    public double getPrefWidth(double height) {
-        ListView lv = getListView();
-        if (lv != null) {
-            return lv.prefWidth(height);
+    @Override public Node getDisplayNode() {
+        Node displayNode;
+        if (comboBox.isEditable()) {
+            if (textField == null) {
+                textField = getEditableInputNode();
+            }
+            displayNode = textField;
+        } else {
+            if (listCellLabel == null) {
+                listCellLabel = getListCellLabel();
+            }
+            displayNode = listCellLabel;
         }
         
-        return super.getPrefWidth();
+        updateDisplayNode();
+        
+        return displayNode;
+    }
+    
+    private TextField getEditableInputNode() {
+        if (textField != null) return textField;
+        
+        textField = new TextField();
+
+        // When the user hits the enter key, set the value in the 
+        // ComboBox value property
+        textField.setOnKeyPressed(new EventHandler<KeyEvent>() {
+            @Override public void handle(KeyEvent t) {
+                if (t.getCode() == KeyCode.ENTER) {
+                    StringConverter<T> c = comboBox.getConverter();
+                    if (c == null) return;
+                    T value = c.fromString(textField.getText());
+                    comboBox.setValue(value);
+                }
+            }
+        });
+        
+        return textField;
+    }
+    
+    private void updateDisplayNode() {
+        StringConverter<T> c = comboBox.getConverter();
+        if (c == null) return;
+                        
+        T item = comboBox.getSelectionModel().getSelectedItem();
+        int index = comboBox.getSelectionModel().getSelectedIndex();        
+        
+        if (comboBox.isEditable()) {
+            textField.setText(c.toString(item));
+        } else {
+            listCellLabel.updateListView(getListView());
+            listCellLabel.updateIndex(index);
+        }
+    }
+    
+    private void updateDisplayText(T item, boolean empty) {
+        if (empty) {
+            listCellLabel.setText(null);
+            listCellLabel.setGraphic(null);
+        } else if (item instanceof Node) {
+            Node currentNode = listCellLabel.getGraphic();
+            Node newNode = (Node) item;
+            if (currentNode == null || ! currentNode.equals(newNode)) {
+                listCellLabel.setText(null);
+                listCellLabel.setGraphic(newNode);
+            }
+        } else {
+            listCellLabel.setText(item == null ? "" : item.toString());
+        }
     }
 }

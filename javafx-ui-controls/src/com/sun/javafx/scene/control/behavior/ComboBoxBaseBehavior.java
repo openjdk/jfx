@@ -25,7 +25,7 @@
 
 package com.sun.javafx.scene.control.behavior;
 
-import com.javafx.preview.control.ComboBox;
+import com.javafx.preview.control.ComboBoxBase;
 import javafx.beans.Observable;
 import static javafx.scene.input.KeyCode.*;
 import static javafx.scene.input.KeyEvent.*;
@@ -43,14 +43,18 @@ import javafx.scene.Node;
 import javafx.scene.control.SelectionModel;
 import javafx.scene.input.MouseButton;
 
-public class ComboBoxBehavior<T> extends BehaviorBase<ComboBox<T>> {
+public class ComboBoxBaseBehavior<T> extends BehaviorBase<ComboBoxBase<T>> {
 
     /***************************************************************************
      *                                                                         *
      * Constructors                                                            *
      *                                                                         *
      **************************************************************************/
-    public ComboBoxBehavior(final ComboBox<T> comboBox) {
+    
+    /**
+     * 
+     */
+    public ComboBoxBaseBehavior(final ComboBoxBase<T> comboBox) {
         super(comboBox);
         InvalidationListener focusListener = new InvalidationListener() {
             @Override public void invalidated(Observable o) {
@@ -242,43 +246,14 @@ public class ComboBoxBehavior<T> extends BehaviorBase<ComboBox<T>> {
     }
     
     private void selectPrevious() {
-        SelectionModel sm = getControl().getSelectionModel();
-        if (sm == null) return;
-        sm.selectPrevious();
+//        SelectionModel sm = getControl().getSelectionModel();
+//        if (sm == null) return;
+//        sm.selectPrevious();
     }
     
     private void selectNext() {
-        SelectionModel sm = getControl().getSelectionModel();
-        if (sm == null) return;
-        sm.selectNext();
+//        SelectionModel sm = getControl().getSelectionModel();
+//        if (sm == null) return;
+//        sm.selectNext();
     }
-    
-    
-    /**************************************************************************
-     *                                                                        *
-     * Key Events                                                             *
-     *                                                                        *
-     *************************************************************************/
-//    protected static final List<KeyBinding> BUTTON_BINDINGS = new ArrayList<KeyBinding>();
-//    static {
-//        BUTTON_BINDINGS.addAll(TRAVERSAL_BINDINGS);
-//        
-//        BUTTON_BINDINGS.add(new KeyBinding(KeyCode.ENTER, "EnterPressed"));
-//    }
-//
-//    @Override protected List<KeyBinding> createKeyBindings() {
-//        return BUTTON_BINDINGS;
-//    }
-//
-//    @Override protected void callAction(String name) {
-//        if ("EnterPressed".equals(name)) {
-//            enterPressed();
-//        } else {
-//            super.callAction(name);
-//        }
-//    }
-//    
-//    private void enterPressed() {
-//        getControl().fire();
-//    }
 }
