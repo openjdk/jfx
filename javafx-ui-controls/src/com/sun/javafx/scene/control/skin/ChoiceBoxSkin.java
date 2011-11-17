@@ -96,6 +96,7 @@ public class ChoiceBoxSkin extends SkinBase<ChoiceBox, ChoiceBoxBehavior> {
                         addPopupItem(obj, i);
                         i++;
                     }
+                    requestLayout(); // RT-18052
                     return;
                 }
                 for (int i = c.getFrom(); i < c.getTo(); i++) {
@@ -104,6 +105,7 @@ public class ChoiceBoxSkin extends SkinBase<ChoiceBox, ChoiceBoxBehavior> {
                 }
             }
             updateSelection();
+            requestLayout(); // RT-18052 resize of choicebox should happen immediately.
         }
     };
     
