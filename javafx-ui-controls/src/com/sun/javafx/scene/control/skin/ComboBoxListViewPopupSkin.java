@@ -116,7 +116,9 @@ public class ComboBoxListViewPopupSkin<T> implements Skin<ComboBoxListViewPopup<
         listView.setOnKeyPressed(new EventHandler<KeyEvent>() {
             @Override public void handle(KeyEvent t) {
                 // TODO move to behavior, when (or if) this class becomes a SkinBase
-                if (t.getCode() == KeyCode.ENTER || t.getCode() == KeyCode.SPACE) {
+                if (t.getCode() == KeyCode.ENTER || 
+                        t.getCode() == KeyCode.SPACE || 
+                        t.getCode() == KeyCode.ESCAPE) {
                     comboBox.hide();
                 }
             }
