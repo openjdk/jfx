@@ -95,9 +95,9 @@ public class TreeViewBehavior<T> extends BehaviorBase<TreeView<T>> {
         TREE_VIEW_BINDINGS.add(new KeyBinding(RIGHT, "ExpandRow"));
         TREE_VIEW_BINDINGS.add(new KeyBinding(KP_RIGHT, "ExpandRow"));
         
-        TREE_VIEW_BINDINGS.add(new KeyBinding(ASTERISK, "ExpandAll"));
-        TREE_VIEW_BINDINGS.add(new KeyBinding(PLUS, "ExpandRow"));
-        TREE_VIEW_BINDINGS.add(new KeyBinding(MINUS, "CollapseRow"));
+        TREE_VIEW_BINDINGS.add(new KeyBinding(MULTIPLY, "ExpandAll"));
+        TREE_VIEW_BINDINGS.add(new KeyBinding(ADD, "ExpandRow"));
+        TREE_VIEW_BINDINGS.add(new KeyBinding(SUBTRACT, "CollapseRow"));
 
         TREE_VIEW_BINDINGS.add(new KeyBinding(UP, "SelectPreviousRow"));
         TREE_VIEW_BINDINGS.add(new KeyBinding(KP_UP, "SelectPreviousRow"));

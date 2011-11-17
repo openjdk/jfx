@@ -50,12 +50,8 @@ public class ComboBoxListViewPopupSkin<T> implements Skin<ComboBoxListViewPopup<
         this.comboBox = control.getComboBox();
 
         createListView();
-        
-//        listView.idProperty().bind(control.idProperty());
-//        listView.styleProperty().bind(control.styleProperty());
-//        listView.getStyleClass().addAll(control.getStyleClass()); // TODO needs to handle updates
     }
-    
+
     public ListView<T> getListView() {
         return listView;
     }
@@ -77,7 +73,7 @@ public class ComboBoxListViewPopupSkin<T> implements Skin<ComboBoxListViewPopup<
             listView.setItems(items);
         }
     }
-    
+
     private void createListView() {
         listView = new ListView<T>() {
             @Override protected double computePrefWidth(double height) {
@@ -94,11 +90,11 @@ public class ComboBoxListViewPopupSkin<T> implements Skin<ComboBoxListViewPopup<
                 return Math.min(ch, 200);
             }
         };
-        
+
         listView.itemsProperty().bind(comboBox.itemsProperty());
         listView.cellFactoryProperty().bind(comboBox.cellFactoryProperty());
         listView.getSelectionModel().setSelectionMode(SelectionMode.SINGLE);
-        
+
 //        listView.minHeightProperty().bind(comboBox.popupHeightProperty());
 //        listView.prefHeightProperty().bind(comboBox.popupHeightProperty());
 //        listView.maxHeightProperty().bind(comboBox.popupHeightProperty());
@@ -107,6 +103,7 @@ public class ComboBoxListViewPopupSkin<T> implements Skin<ComboBoxListViewPopup<
             @Override public void invalidated(Observable o) {
                 int index = listView.getSelectionModel().getSelectedIndex();
                 comboBox.getSelectionModel().select(index);
+                comboBox.setValue(listView.getSelectionModel().getSelectedItem());
             }
         });
 
@@ -115,7 +112,7 @@ public class ComboBoxListViewPopupSkin<T> implements Skin<ComboBoxListViewPopup<
                 comboBox.hide();
             }
         });
-        
+
         listView.setOnKeyPressed(new EventHandler<KeyEvent>() {
             @Override public void handle(KeyEvent t) {
                 // TODO move to behavior, when (or if) this class becomes a SkinBase
