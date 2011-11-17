@@ -29,6 +29,8 @@ import static com.sun.javafx.Utils.clamp;
 import static com.sun.javafx.scene.control.skin.Utils.boundedSize;
 import javafx.beans.InvalidationListener;
 import javafx.beans.Observable;
+import javafx.beans.value.ChangeListener;
+import javafx.beans.value.ObservableValue;
 import javafx.event.EventHandler;
 import javafx.geometry.BoundingBox;
 import javafx.geometry.Bounds;
@@ -122,16 +124,75 @@ public class ScrollPaneSkin extends SkinBase<ScrollPane, ScrollPaneBehavior> imp
 
     private final InvalidationListener nodeListener = new InvalidationListener() {
         @Override public void invalidated(Observable valueModel) {
-            // if new size causes scrollbar visibility to change, then need to relayout
-            if (vsbvis != determineVerticalSBVisible() || hsbvis != determineHorizontalSBVisible()) {
-                requestLayout();
-            } else {
-                // otherwise just update scrollbars based on new scrollNode size
-                updateVerticalSB();
-                updateHorizontalSB();
+            if (nodeWidth != -1.0 && nodeHeight != -1.0) {
+                // if new size causes scrollbar visibility to change, then need to relayout
+                if (vsbvis != determineVerticalSBVisible() || hsbvis != determineHorizontalSBVisible()) {
+                    requestLayout();
+                } else {
+                    // otherwise just update scrollbars based on new scrollNode size
+                    updateVerticalSB();
+                    updateHorizontalSB();
+                }
             }
         }
     };
+
+
+    /*
+    ** The content of the ScrollPane has just changed bounds, check scrollBar positions.
+    */
+    private final ChangeListener<Bounds> boundsChangeListener = new ChangeListener<Bounds>() {
+        @Override public void changed(ObservableValue<? extends Bounds> observable, Bounds oldBounds, Bounds newBounds) {
+            /*
+            ** For a height change then we want to reduce
+            ** viewport vertical jumping as much as possible. 
+            ** We set a new vsb value to try to keep the same
+            ** content position at the top of the viewport
+            */
+            double oldHeight = oldBounds.getHeight();
+            double newHeight = newBounds.getHeight();
+            if (oldHeight != newHeight) {
+                double oldPositionY = (snapPosition(getInsets().getTop() - posY / (vsb.getMax() - vsb.getMin()) * (oldHeight - contentHeight)));
+                double newPositionY = (snapPosition(getInsets().getTop() - posY / (vsb.getMax() - vsb.getMin()) * (newHeight - contentHeight)));
+                
+                double newValueY = (oldPositionY/newPositionY)*vsb.getValue();
+                if (newValueY < 0.0) {
+                    vsb.setValue(0.0);
+                }
+                else if (newValueY < 1.0) {
+                    vsb.setValue(newValueY);
+                }
+                else if (newValueY > 1.0) {
+                    vsb.setValue(1.0);
+                }
+            }
+
+            /*
+            ** For a width change then we want to reduce
+            ** viewport horizontal jumping as much as possible. 
+            ** We set a new hsb value to try to keep the same
+            ** content position to the left of the viewport
+            */
+            double oldWidth = oldBounds.getWidth();
+            double newWidth = newBounds.getWidth();
+            if (oldWidth != newWidth) {
+                double oldPositionX = (snapPosition(getInsets().getLeft() - posX / (hsb.getMax() - hsb.getMin()) * (oldWidth - contentWidth)));
+                double newPositionX = (snapPosition(getInsets().getLeft() - posX / (hsb.getMax() - hsb.getMin()) * (newWidth - contentWidth)));
+
+                double newValueX = (oldPositionX/newPositionX)*hsb.getValue();
+                if (newValueX < 0.0) {
+                    hsb.setValue(0.0);
+                }
+                else if (newValueX < 1.0) {
+                    hsb.setValue(newValueX);
+                }
+                else if (newValueX > 1.0) {
+                    hsb.setValue(1.0);
+                }
+            }
+        }
+   };
+
 
     private void initialize() {
         // requestLayout calls below should not trigger requestLayout above ScrollPane
@@ -142,6 +203,7 @@ public class ScrollPaneSkin extends SkinBase<ScrollPane, ScrollPaneBehavior> imp
 
         if (scrollNode != null) {
             scrollNode.layoutBoundsProperty().addListener(nodeListener);
+            scrollNode.layoutBoundsProperty().addListener(boundsChangeListener);
         }
 
         viewRect = new StackPane() {
@@ -253,7 +315,7 @@ public class ScrollPaneSkin extends SkinBase<ScrollPane, ScrollPaneBehavior> imp
                    /*
                    ** we only drag if not all of the content is visible.
                    */
-                   if (hsb.getVisibleAmount() < hsb.getMax()) {
+                   if (hsb.getVisibleAmount() > 0.0 && hsb.getVisibleAmount() < hsb.getMax()) {
                        if (Math.abs(deltaX) > PAN_THRESHOLD) {
                            double newHVal = (ohvalue + deltaX / (nodeWidth - viewRect.getWidth()) * (hsb.getMax() - hsb.getMin()));
                            if (newHVal > hsb.getMax()) {
@@ -268,7 +330,7 @@ public class ScrollPaneSkin extends SkinBase<ScrollPane, ScrollPaneBehavior> imp
                    /*
                    ** we only drag if not all of the content is visible.
                    */
-                   if (vsb.getVisibleAmount() < vsb.getMax()) {
+                   if (vsb.getVisibleAmount() > 0.0 && vsb.getVisibleAmount() < vsb.getMax()) {
                        if (Math.abs(deltaY) > PAN_THRESHOLD) {
                            double newVVal = (ovvalue + deltaY / (nodeHeight - viewRect.getHeight()) * (vsb.getMax() - vsb.getMin()));
                            if (newVVal > vsb.getMax()) {
@@ -324,7 +386,8 @@ public class ScrollPaneSkin extends SkinBase<ScrollPane, ScrollPaneBehavior> imp
             if (scrollNode != getSkinnable().getContent()) {
                 if (scrollNode != null) {
                     scrollNode.layoutBoundsProperty().removeListener(nodeListener);
-                      viewRect.getChildren().remove(scrollNode);
+                    scrollNode.layoutBoundsProperty().removeListener(boundsChangeListener);
+                    viewRect.getChildren().remove(scrollNode);
                 }
                 scrollNode = getSkinnable().getContent();
                 if (scrollNode != null) {
@@ -332,6 +395,7 @@ public class ScrollPaneSkin extends SkinBase<ScrollPane, ScrollPaneBehavior> imp
                     nodeHeight = Math.floor(scrollNode.getLayoutBounds().getHeight());
                     viewRect.getChildren().setAll(scrollNode);
                     scrollNode.layoutBoundsProperty().addListener(nodeListener);
+                    scrollNode.layoutBoundsProperty().addListener(boundsChangeListener);
                 }
             }
             requestLayout();

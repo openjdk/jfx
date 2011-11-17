@@ -5,6 +5,8 @@ package com.sun.javafx.scene.control.skin;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
+import javafx.beans.value.ChangeListener;
+import javafx.beans.value.ObservableValue;
 import javafx.event.Event;
 import javafx.event.EventType;
 import javafx.scene.Group;
@@ -12,6 +14,7 @@ import javafx.scene.Scene;
 import javafx.scene.control.ScrollPane;
 import javafx.scene.input.MouseButton;
 import javafx.scene.input.MouseEvent;
+import javafx.scene.layout.Pane;
 import javafx.scene.layout.StackPane;
 import javafx.stage.Stage;
 
@@ -106,6 +109,123 @@ public class ScrollPaneSkinTest {
 
     }
 
+
+    boolean continueTest;
+    class myPane extends Pane {
+        public void growH() {
+            setHeight(300);
+        }
+       public void growW() {
+            setWidth(300);
+        }        
+                
+    }
+    myPane pInner;
+    
+    /*
+    ** check if scrollPane content vertical position compensates for content size change
+    */
+    @Test public void checkPositionOnContentSizeChangeHeight() {
+        pInner = new myPane();
+        pInner.setPrefWidth(200);
+        pInner.setPrefHeight(200);
+
+        scrollPane.setContent(pInner);
+        scrollPane.setPrefWidth(100);
+        scrollPane.setPrefHeight(100);
+
+        Scene scene = new Scene(new Group(), 400, 400);
+        ((Group) scene.getRoot()).getChildren().clear();
+        ((Group) scene.getRoot()).getChildren().add(scrollPane);
+        Stage stage = new Stage();
+        stage.setScene(scene);
+        stage.show();
+
+        double originalValue = 0.5; 
+        scrollPane.setVvalue(originalValue);
+
+        continueTest = false;
+        scrollPane.vvalueProperty().addListener(new ChangeListener() {
+            @Override public void changed(ObservableValue observable, Object oldBounds, Object newBounds) {
+                continueTest = true;
+            }
+        });
+        
+        /*
+        ** increase the height of the content
+        */
+        pInner.growH();
+
+        int count = 0;
+        while (continueTest == false && count < 10) {
+            try {
+                Thread.sleep(100);
+            }
+            catch (Exception e) {}
+            count++;
+        }
+        
+        /*
+        ** did it work?
+        */
+        assertTrue(originalValue > scrollPane.getVvalue() && scrollPane.getVvalue() > 0.0);
+    }
+    
+    
+    /*
+    ** check if scrollPane content Horizontal position compensates for content size change
+    */
+    @Test public void checkPositionOnContentSizeChangeWidth() {
+
+        pInner = new myPane();
+        pInner.setPrefWidth(200);
+        pInner.setPrefHeight(200);
+
+        scrollPane.setContent(pInner);
+        scrollPane.setPrefWidth(100);
+        scrollPane.setPrefHeight(100);
+
+        Scene scene = new Scene(new Group(), 400, 400);
+        ((Group) scene.getRoot()).getChildren().clear();
+        ((Group) scene.getRoot()).getChildren().add(scrollPane);
+        Stage stage = new Stage();
+        stage.setScene(scene);
+        stage.show();
+
+        double originalValue = 0.5; 
+        scrollPane.setHvalue(originalValue);
+
+        continueTest = false;
+        scrollPane.hvalueProperty().addListener(new ChangeListener() {
+            @Override public void changed(ObservableValue observable, Object oldBounds, Object newBounds) {
+                continueTest = true;
+            }
+        });
+        
+        /*
+        ** increase the width of the content
+        */
+        pInner.growW();
+
+        int count = 0;
+        while (continueTest == false && count < 10) {
+            try {
+                Thread.sleep(100);
+            }
+            catch (Exception e) {}
+            count++;
+        }
+        
+        /*
+        ** did it work?
+        */
+        assertTrue(originalValue > scrollPane.getHvalue() && scrollPane.getHvalue() > 0.0);
+    }
+    
+    
+    
+    
+    
     public static final class ScrollPaneSkinMock extends ScrollPaneSkin {
         boolean propertyChanged = false;
         int propertyChangeCount = 0;
