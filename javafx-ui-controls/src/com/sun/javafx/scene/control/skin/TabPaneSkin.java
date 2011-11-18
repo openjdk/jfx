@@ -118,9 +118,9 @@ public class TabPaneSkin extends SkinBase<TabPane, TabPaneBehavior> {
     boolean focusTraversable = true;
     private Tab selectedTab;
     private Tab previousSelectedTab;
-    private boolean isSelectingTab;
+    private boolean isSelectingTab;    
 
-    public TabPaneSkin(TabPane tabPane) {
+    public TabPaneSkin(TabPane tabPane) {        
         super(tabPane, new TabPaneBehavior(tabPane));
 
         clipRect = new Rectangle();
@@ -171,40 +171,47 @@ public class TabPaneSkin extends SkinBase<TabPane, TabPaneBehavior> {
         }
     }
 
+    private Tab closedTab;
+    private Timeline closedTabTimeline;
+    
     private void initializeTabListener() {
         getSkinnable().getTabs().addListener(new ListChangeListener<Tab>() {
             @Override public void onChanged(final Change<? extends Tab> c) {
                 while (c.next()) {
-                    for (final Tab closedTab : c.getRemoved()) {
+                    for (final Tab tab : c.getRemoved()) {
+                        closedTab = tab;
                         // Animate the tab removal
-                        final TabHeaderSkin tabRegion = tabHeaderArea.getTabHeaderSkin(closedTab);
+                        final TabHeaderSkin tabRegion = tabHeaderArea.getTabHeaderSkin(tab);
                         if (tabRegion != null) {
                             tabRegion.animating = true;
-                            createTimeline(tabRegion, Duration.millis(ANIMATION_SPEED * 1.5F), 0.0F, new EventHandler<ActionEvent>() {
+                            closedTabTimeline = createTimeline(tabRegion, Duration.millis(ANIMATION_SPEED * 1.5F), 0.0F, new EventHandler<ActionEvent>() {
 
                                 @Override
                                 public void handle(ActionEvent event) {
-                                    tabHeaderArea.removeTab(closedTab);
-                                    removeTabContent(closedTab);
-                                    tabRegion.animating = false;
-                                    tabHeaderArea.requestLayout();
-                                    if (c.getList().size() == 0) {
+                                    removeTab(tab);                                    
+                                    if (getSkinnable().getTabs().isEmpty()) {
                                         tabHeaderArea.setVisible(false);
                                     }
                                 }
-                            }).play();
+                            });
+                            closedTabTimeline.play();
                         }
                     }
 
-                    for (final Tab newTab : c.getAddedSubList()) {
+                    for (final Tab tab : c.getAddedSubList()) {
+                        // Handle the case where we are removing and adding the same tab.
+                        if (tab.equals(closedTab)) {
+                            closedTabTimeline.stop();
+                            removeTab(closedTab);
+                        }
                         // A new tab was added - animate it out
                         if (!tabHeaderArea.isVisible()) {
                             tabHeaderArea.setVisible(true);
                         }
                         //final Tab newTab = c.getAddedSubList().get(0);
-                        tabHeaderArea.addTab(newTab, c.getFrom(), false);
-                        addTabContent(newTab);
-                        final TabHeaderSkin tabRegion = tabHeaderArea.getTabHeaderSkin(newTab);
+                        tabHeaderArea.addTab(tab, c.getFrom(), false);
+                        addTabContent(tab);
+                        final TabHeaderSkin tabRegion = tabHeaderArea.getTabHeaderSkin(tab);
                         if (tabRegion != null) {
                             tabRegion.animateNewTab = new Runnable() {
 
@@ -250,6 +257,15 @@ public class TabPaneSkin extends SkinBase<TabPane, TabPaneBehavior> {
         }
     }
 
+    private void removeTab(Tab tab) {
+        final TabHeaderSkin tabRegion = tabHeaderArea.getTabHeaderSkin(tab);
+        tabHeaderArea.removeTab(tab);
+        removeTabContent(tab);
+        tabRegion.animating = false;
+        tabHeaderArea.requestLayout();
+        tab = null;
+    }
+    
     private void updateTabPosition() {
         tabHeaderArea.setScrollOffset(0.0F);
         impl_reapplyCSS();
