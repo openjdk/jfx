@@ -94,26 +94,12 @@ public class Utils {
         // the available maximum width to fit chars into. This is essentially
         // the width minus the space required for the E ellipsis string
         final double availableWidth = width - ellipsisWidth;
-        // if the width is <= ellipsisWidth, then we know that there
-        // is not enough room to display any of the text, and thus the clipped
-        // text to display is simply the ellipsis string. This holds true for
-        // any of the ellipsis modes.
-        // What I need to do is only send one dot, two dots, or three dots
-        // depending on what can be displayed. The problem is that I don't want
-        // a partial "dot" to be visible. Since the Text node can have a
-        // fractional width that would clip half of a "dot", I need to only
-        // return chars from this method that can be displayed in their
-        // entirety
-        if (width <= ellipsisWidth) {
-            int index = 0;
-            for (int i = 0; i <= ellipsis.length() - 1; i++) {
-                index = i;
-                if (computeTextWidth(font, ellipsis.substring(0, i + 1), 0) > width) {
-                    break;
-                }
-            }
-            return ellipsis.substring(0, index);
+
+        if (width < ellipsisWidth) {
+            // The ellipsis doesn't fit.
+            return "";
         }
+
         // if we got here, then we must clip the text with an ellipsis.
         // this can be pretty expensive depending on whether "complex" text
         // layout needs to be taken into account. So each ellipsis option has
@@ -280,6 +266,11 @@ public class Utils {
         int eLen = ellipsis.length();
         // Do this before using helper, as it's not reentrant.
         double eWidth = computeTextWidth(font, ellipsis, 0);
+
+        if (width < eWidth) {
+            // The ellipsis doesn't fit.
+            return "";
+        }
 
         helper.setText(text);
         helper.setFont(font);
