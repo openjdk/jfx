@@ -28,6 +28,7 @@ package com.sun.javafx.scene.control.behavior;
 import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
 import javafx.scene.control.TextArea;
+import javafx.scene.input.MouseButton;
 import javafx.scene.input.MouseEvent;
 
 import java.util.ArrayList;
@@ -58,6 +59,17 @@ public class TextAreaBehavior extends TextInputControlBehavior<TextArea> {
         TEXT_AREA_BINDINGS.add(new KeyBinding(PAGE_DOWN, KEY_PRESSED, "NextPage")); // new
         TEXT_AREA_BINDINGS.add(new KeyBinding(ENTER, KEY_PRESSED, "InsertNewLine")); // changed
         TEXT_AREA_BINDINGS.add(new KeyBinding(TAB, KEY_PRESSED, "InsertTab")); // changed
+
+        TEXT_AREA_BINDINGS.add(new KeyBinding(UP, KEY_PRESSED, "ParagraphStart").ctrl());
+        TEXT_AREA_BINDINGS.add(new KeyBinding(KP_UP, KEY_PRESSED, "ParagraphStart").ctrl());
+        TEXT_AREA_BINDINGS.add(new KeyBinding(DOWN, KEY_PRESSED, "ParagraphEnd").ctrl());
+        TEXT_AREA_BINDINGS.add(new KeyBinding(KP_DOWN, KEY_PRESSED, "ParagraphEnd").ctrl());
+
+        TEXT_AREA_BINDINGS.add(new KeyBinding(UP, KEY_PRESSED, "SelectParagraphStart").ctrl().shift());
+        TEXT_AREA_BINDINGS.add(new KeyBinding(KP_UP, KEY_PRESSED, "SelectParagraphStart").ctrl().shift());
+        TEXT_AREA_BINDINGS.add(new KeyBinding(DOWN, KEY_PRESSED, "SelectParagraphEnd").ctrl().shift());
+        TEXT_AREA_BINDINGS.add(new KeyBinding(KP_DOWN, KEY_PRESSED, "SelectParagraphEnd").ctrl().shift());
+
         TEXT_AREA_BINDINGS.add(new KeyBinding(UP, KEY_PRESSED, "SelectPreviousLine").shift()); // changed
         TEXT_AREA_BINDINGS.add(new KeyBinding(KP_UP, KEY_PRESSED, "SelectPreviousLine").shift()); // changed
         TEXT_AREA_BINDINGS.add(new KeyBinding(DOWN, KEY_PRESSED, "SelectNextLine").shift()); // changed
@@ -141,6 +153,12 @@ public class TextAreaBehavior extends TextInputControlBehavior<TextArea> {
             else if ("NextLine".equals(name)) skin.nextLine(false);
             else if ("SelectPreviousLine".equals(name)) skin.previousLine(true);
             else if ("SelectNextLine".equals(name)) skin.nextLine(true);
+
+            else if ("ParagraphStart".equals(name)) skin.paragraphStart(true, false);
+            else if ("ParagraphEnd".equals(name)) skin.paragraphEnd(true, false);
+            else if ("SelectParagraphStart".equals(name)) skin.paragraphStart(true, true);
+            else if ("SelectParagraphEnd".equals(name)) skin.paragraphEnd(true, true);
+
             else if ("PreviousPage".equals(name)) skin.previousPage(false);
             else if ("NextPage".equals(name)) skin.nextPage(false);
             else if ("SelectPreviousPage".equals(name)) skin.previousPage(true);
@@ -211,7 +229,7 @@ public class TextAreaBehavior extends TextInputControlBehavior<TextArea> {
 //            setCaretOpacity(if (textInputControl.dot == textInputControl.mark) then 1.0 else 0.0);
 
             // if the primary button was pressed
-            if (e.isPrimaryButtonDown() && !(e.isMiddleButtonDown() || e.isSecondaryButtonDown())) {
+            if (e.getButton() == MouseButton.PRIMARY && !(e.isMiddleButtonDown() || e.isSecondaryButtonDown())) {
                 HitInfo hit = skin.getIndex(e);
                 int i = hit.getInsertionIndex();
 //                 int i = skin.getInsertionPoint(e.getX(), e.getY());
@@ -263,7 +281,7 @@ public class TextAreaBehavior extends TextInputControlBehavior<TextArea> {
         // we never respond to events if disabled, but we do notify any onXXX
         // event listeners on the control
         if (!textArea.isDisabled() && !deferClick) {
-            if (e.isPrimaryButtonDown() && !(e.isMiddleButtonDown() || e.isSecondaryButtonDown())) {
+            if (e.getButton() == MouseButton.PRIMARY && !(e.isMiddleButtonDown() || e.isSecondaryButtonDown())) {
                 if (!(e.isControlDown() || e.isAltDown() || e.isShiftDown() || e.isMetaDown())) {
                     skin.positionCaret(skin.getIndex(e), true);
                 }
@@ -299,8 +317,8 @@ public class TextAreaBehavior extends TextInputControlBehavior<TextArea> {
 
     protected void mouseTripleClick(HitInfo hit) {
         // select the line
-        skin.lineStart(false);
-        skin.lineEnd(true);
+        skin.paragraphStart(false, false);
+        skin.paragraphEnd(false, true);
     }
 
     //    public function mouseWheelMove(e:MouseEvent):Void {

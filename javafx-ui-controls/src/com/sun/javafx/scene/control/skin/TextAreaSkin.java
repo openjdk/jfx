@@ -878,6 +878,53 @@ public class TextAreaSkin extends TextInputControlSkin<TextArea, TextAreaBehavio
     }
 
 
+    public void paragraphStart(boolean previousIfAtStart, boolean select) {
+        TextArea textArea = getSkinnable();
+        String text = textArea.getText();
+        int pos = textArea.getCaretPosition();
+
+        if (pos > 0) {
+            if (previousIfAtStart && text.codePointAt(pos-1) == 0x0a) {
+                // We are at the beginning of a paragraph.
+                // Back up to the previous paragraph.
+                pos--;
+            }
+            // Back up to the beginning of this paragraph
+            while (pos > 0 && text.codePointAt(pos-1) != 0x0a) {
+                pos--;
+            }
+            if (select) {
+                textArea.selectPositionCaret(pos);
+            } else {
+                textArea.positionCaret(pos);
+            }
+        }
+    }
+
+    public void paragraphEnd(boolean nextIfAtEnd, boolean select) {
+        TextArea textArea = getSkinnable();
+        String text = textArea.getText();
+        int pos = textArea.getCaretPosition();
+        int len = text.length();
+
+        if (pos < len - 1) {
+            if (nextIfAtEnd && text.codePointAt(pos) == 0x0a) {
+                // We are at the end of a paragraph.
+                // Move to the next paragraph.
+                pos++;
+            }
+            // Go to the end of this paragraph
+            while (pos < len - 1 && text.codePointAt(pos) != 0x0a) {
+                pos++;
+            }
+            if (select) {
+                textArea.selectPositionCaret(pos);
+            } else {
+                textArea.positionCaret(pos);
+            }
+        }
+    }
+
     @Override protected PathElement[] getUnderlineShape(int start, int end) {
         int pStart = 0;
         for (Node node : paragraphNodes.getChildren()) {
