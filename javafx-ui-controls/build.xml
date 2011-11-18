@@ -1,33 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<project name="openjfx-javafx-ui-controls" default="jar" basedir=".">
+<project name="javafx-ui-controls" default="jar" basedir=".">
     <description>Builds, tests, and runs the OpenJFX javafx-ui-controls project.</description>
 
     <import file="../build-defs.xml"/>
-
-    <target name="check-binary-css">
-        <uptodate property="binaryCssUpToDate" targetfile="${build.dir}/classes/com/sun/javafx/scene/control/skin/caspian/caspian.bss">
-            <srcfiles dir="${src.dir}/com/sun/javafx/scene/control/skin/caspian" includes="caspian.css"/>
-        </uptodate>
-    </target> 
-
-    <target name="-pre-init" depends="check-binary-css" unless="binaryCssUpToDate">
-        <mkdir dir="${build.dir}/classes/com/sun/javafx/scene/control/skin/caspian"/>
-        <java classname="com.sun.javafx.css.parser.Css2Bin" fork="true" failonerror="true">
-          <jvmarg value="-Djavafx.toolkit=com.sun.javafx.tk.DummyToolkit"/>
-          <classpath> 
-            <pathelement location="${runtime.dist.root.dir}/javafx-ui-common/dist/javafx-ui-common.jar"/>
-            <pathelement location="${runtime.dist.root.dir}/javafx-beans/dist/javafx-beans.jar"/>
-            <pathelement location="${runtime.dist.root.dir}/javafx-anim/dist/javafx-anim.jar"/>
-            <pathelement location="${runtime.dist.root.dir}/javafx-common/dist/javafx-common.jar"/>
-            <pathelement location="${runtime.dist.root.dir}/javafx-logging/dist/javafx-logging.jar"/>
-          </classpath> 
-          <arg value="${src.dir}/com/sun/javafx/scene/control/skin/caspian/caspian.css"/>
-          <arg value="${build.dir}/classes/com/sun/javafx/scene/control/skin/caspian/caspian.bss"/>
-        </java>
-    </target>
-
-    <target name="debug-test-file" depends="jar">
-        <echo message="${run.test.classpath}" />
-        <debug-selected-file-in-test/>
-    </target>
+    <import file="build-common.xml"/>
 </project>
