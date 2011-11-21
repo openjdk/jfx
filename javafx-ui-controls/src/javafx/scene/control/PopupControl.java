@@ -42,10 +42,15 @@ import java.util.Collections;
 import java.util.List;
 
 import com.sun.javafx.collections.TrackableObservableList;
+import com.sun.javafx.css.StyleManager;
 import com.sun.javafx.css.Styleable;
 import com.sun.javafx.css.StyleableProperty;
 import com.sun.javafx.logging.PlatformLogger;
 import com.sun.javafx.scene.control.Logging;
+import com.sun.javafx.scene.control.skin.SkinBase;
+import java.net.URL;
+import java.security.AccessController;
+import java.security.PrivilegedAction;
 
 /**
  * An extension of PopupWindow that allows for CSS styling.
@@ -67,6 +72,12 @@ public class PopupControl extends PopupWindow implements Skinnable {
       * computeMaxWidth(), or computeMaxHeight().
       */
     public static final double USE_COMPUTED_SIZE = -1;
+    
+    // Ensures that the caspian.css file is set as the user agent style sheet
+    // when the first popupcontrol is created.
+    static {
+        UAStylesheetLoader.doLoad();
+    }
 
     /**
      * We need a special root node, except we can't replace the special

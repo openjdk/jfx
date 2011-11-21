@@ -92,14 +92,7 @@ public abstract class Control extends Parent implements Skinnable {
     static {
         // Ensures that the caspian.css file is set as the user agent style sheet
         // when the first control is created.
-        AccessController.doPrivileged(new PrivilegedAction() {
-            @Override
-            public Object run() {
-                URL url = SkinBase.class.getResource("caspian/caspian.css");
-                StyleManager.getInstance().setDefaultUserAgentStylesheet(url.toExternalForm());
-                return null;
-            }
-        });    
+        UAStylesheetLoader.doLoad();
     }
     
     
