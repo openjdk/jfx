@@ -634,6 +634,9 @@ public class SplitPaneSkin extends SkinBase<SplitPane, BehaviorBase<SplitPane>> 
     }
 
     @Override protected void layoutChildren() {
+        if (!getSkinnable().isVisible()) {
+            return;
+        }
         if (contentDividers.size() > 0 && previousSize != -1 && previousSize != (horizontal ? getWidth() : getHeight())) {
             resizeSplitPane();
             previousSize = horizontal ? getWidth() : getHeight();
