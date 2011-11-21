@@ -88,9 +88,9 @@ public class ComboBoxBaseBehavior<T> extends BehaviorBase<ComboBoxBase<T>> {
 
     protected static final List<KeyBinding> BUTTON_BINDINGS = new ArrayList<KeyBinding>();
     static {
-        BUTTON_BINDINGS.add(new KeyBinding(F4, "showPopup"));
-        BUTTON_BINDINGS.add(new KeyBinding(UP, "showPopup").alt());
-        BUTTON_BINDINGS.add(new KeyBinding(DOWN, "showPopup").alt());
+        BUTTON_BINDINGS.add(new KeyBinding(F4, "togglePopup"));
+        BUTTON_BINDINGS.add(new KeyBinding(UP, "togglePopup").alt());
+        BUTTON_BINDINGS.add(new KeyBinding(DOWN, "togglePopup").alt());
         
         BUTTON_BINDINGS.add(new KeyBinding(UP, "selectPrevious"));
         BUTTON_BINDINGS.add(new KeyBinding(DOWN, "selectNext"));
@@ -119,6 +119,9 @@ public class ComboBoxBaseBehavior<T> extends BehaviorBase<ComboBoxBase<T>> {
             keyReleased();
         } else if ("showPopup".equals(name)) {
             show();
+        } else if ("togglePopup".equals(name)) {
+            if (getControl().isShowing()) hide();
+            else show();
         } else if ("selectPrevious".equals(name)) {
             selectPrevious();
         } else if ("selectNext".equals(name)) {
