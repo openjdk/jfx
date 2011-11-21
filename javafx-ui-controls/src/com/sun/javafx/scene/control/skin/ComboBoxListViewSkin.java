@@ -28,6 +28,8 @@ package com.sun.javafx.scene.control.skin;
 import com.javafx.preview.control.ComboBox;
 import javafx.beans.InvalidationListener;
 import javafx.beans.Observable;
+import javafx.beans.value.ChangeListener;
+import javafx.beans.value.ObservableValue;
 import javafx.event.EventHandler;
 import javafx.scene.Node;
 import javafx.scene.control.*;
@@ -50,6 +52,15 @@ public class ComboBoxListViewSkin<T> extends ComboBoxPopupControl<T> {
         super(comboBox);
         this.comboBox = comboBox;
         this.listView = createListView();
+        
+        // move focus in to the textfield if the comboBox is editable
+        comboBox.focusedProperty().addListener(new ChangeListener<Boolean>() {
+            @Override public void changed(ObservableValue<? extends Boolean> ov, Boolean t, Boolean t1) {
+                if (comboBox.isFocused() && textField != null) {
+                    textField.requestFocus();
+                }
+            }
+        });
     }
     
     @Override public Node getDisplayNode() {
@@ -75,6 +86,7 @@ public class ComboBoxListViewSkin<T> extends ComboBoxPopupControl<T> {
         if (textField != null) return textField;
         
         textField = new TextField();
+        textField.setFocusTraversable(true);
 
         // When the user hits the enter key, set the value in the 
         // ComboBox value property

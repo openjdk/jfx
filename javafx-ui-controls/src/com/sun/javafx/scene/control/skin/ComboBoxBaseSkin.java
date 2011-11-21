@@ -49,10 +49,12 @@ public abstract class ComboBoxBaseSkin<T> extends SkinBase<ComboBoxBase<T>, Comb
         
         // open button / arrow
         arrow = new StackPane();
+        arrow.setFocusTraversable(false);
         arrow.getStyleClass().setAll("arrow");
         arrow.setMaxWidth(USE_PREF_SIZE);
         arrow.setMaxHeight(USE_PREF_SIZE);
         arrowButton = new StackPane();
+        arrowButton.setFocusTraversable(false);
         arrowButton.getStyleClass().setAll("arrow-button");
         arrowButton.getChildren().add(arrow);
         getChildren().add(arrowButton);
