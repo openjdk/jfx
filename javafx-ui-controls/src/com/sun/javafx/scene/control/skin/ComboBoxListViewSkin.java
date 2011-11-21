@@ -61,6 +61,16 @@ public class ComboBoxListViewSkin<T> extends ComboBoxPopupControl<T> {
                 }
             }
         });
+        
+        registerChangeListener(comboBox.promptTextProperty(), "PROMPT_TEXT");
+    }
+
+    @Override protected void handleControlPropertyChanged(String p) {
+        super.handleControlPropertyChanged(p);
+        
+        if ("PROMPT_TEXT".equals(p)) {
+            updateDisplayNode();
+        }
     }
     
     @Override public Node getDisplayNode() {
@@ -87,6 +97,7 @@ public class ComboBoxListViewSkin<T> extends ComboBoxPopupControl<T> {
         
         textField = new TextField();
         textField.setFocusTraversable(true);
+        textField.promptTextProperty().bind(comboBox.promptTextProperty());
 
         // When the user hits the enter key, set the value in the 
         // ComboBox value property
@@ -121,8 +132,8 @@ public class ComboBoxListViewSkin<T> extends ComboBoxPopupControl<T> {
     
     private void updateDisplayText(T item, boolean empty) {
         if (empty) {
-            listCellLabel.setText(null);
             listCellLabel.setGraphic(null);
+            listCellLabel.setText(comboBox.getPromptText() == null ? null : comboBox.getPromptText());
         } else if (item instanceof Node) {
             Node currentNode = listCellLabel.getGraphic();
             Node newNode = (Node) item;
