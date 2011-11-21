@@ -3149,10 +3149,12 @@ Only the properties with values that are different from the TextBox are specifie
 }
 
 
-/* -------------- CODE  FOR THE DEFAULT LISTVIEW-BASED COMBOBOX ------------- */
+/* -------------- STYLES FOR THE DEFAULT LISTVIEW-BASED COMBOBOX ------------- */
 .combo-box {
-    -fx-popup-class: "com.sun.javafx.scene.control.skin.ComboBoxListViewPopup";
+    -fx-skin: "com.sun.javafx.scene.control.skin.ComboBoxListViewSkin";
 }
+
+/* Customie the ListCell that appears in the ComboBox button itself */
 .combo-box .list-cell {
     -fx-background: transparent;
     -fx-background-color: transparent;
@@ -3160,17 +3162,13 @@ Only the properties with values that are different from the TextBox are specifie
     -fx-padding: 0 0 0 7;
 }
 
-.combo-box-list-view-popup {
-    -fx-skin: "com.sun.javafx.scene.control.skin.ComboBoxListViewPopupSkin";
-}
-
-.combo-box-list-view-popup .list-view {
+.combo-box-popup .list-view {
     -fx-background-color: -fx-box-border, -fx-control-inner-background;
     -fx-background-insets: 0, 1;
     -fx-effect: dropshadow( three-pass-box , rgba(0,0,0,0.6) , 8, 0.0 , 0 , 0 );
 }
 
-.combo-box-list-view-popup .list-view .list-cell {
+.combo-box-popup .list-view .list-cell {
     -fx-cell-size: 14;
     -fx-padding: 4 0 4 5;
     
@@ -3179,7 +3177,7 @@ Only the properties with values that are different from the TextBox are specifie
 }
 
 /* Hover effect is just the selection bar color */
-.combo-box-list-view-popup .list-view .list-cell:selected, .combo-box-list-view-popup .list-view .list-cell:filled:hover {
+.combo-box-popup .list-view .list-cell:selected, .combo-box-popup .list-view .list-cell:filled:hover {
     -fx-background: -fx-accent;
     -fx-background-color: -fx-selection-bar;
     -fx-text-fill: -fx-selection-bar-text;
