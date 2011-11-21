@@ -191,7 +191,7 @@ public class Slider extends Control {
      */
     private DoubleProperty value;
     public final void setValue(double value) {
-        valueProperty().set(value);
+        if (!valueProperty().isBound()) valueProperty().set(value);
     }
 
     public final double getValue() {

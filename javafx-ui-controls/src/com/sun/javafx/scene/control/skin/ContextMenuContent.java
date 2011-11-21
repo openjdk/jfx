@@ -71,7 +71,8 @@ import javafx.util.Duration;
 
 import com.sun.javafx.css.StyleableProperty;
 import com.sun.javafx.css.StyleManager;
-import javafx.scene.control.Separator;
+import java.util.Iterator;
+import javafx.stage.Window;
 
 /**
  * This is a the SkinBase for PopupMenu based controls so that the CSS parts
