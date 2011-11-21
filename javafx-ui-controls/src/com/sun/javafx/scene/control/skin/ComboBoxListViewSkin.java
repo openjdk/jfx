@@ -26,101 +26,30 @@
 package com.sun.javafx.scene.control.skin;
 
 import com.javafx.preview.control.ComboBox;
-import com.javafx.preview.control.ComboBoxContent;
 import javafx.beans.InvalidationListener;
 import javafx.beans.Observable;
-import javafx.event.Event;
 import javafx.event.EventHandler;
-import javafx.geometry.HPos;
-import javafx.geometry.Point2D;
-import javafx.geometry.VPos;
 import javafx.scene.Node;
 import javafx.scene.control.*;
 import javafx.scene.input.KeyCode;
 import javafx.scene.input.KeyEvent;
+import javafx.scene.input.MouseEvent;
 import javafx.util.Callback;
 import javafx.util.StringConverter;
 
-public class ComboBoxListViewPopup<T> extends PopupControl implements ComboBoxContent<T> {
+public class ComboBoxListViewSkin<T> extends ComboBoxPopupControl<T> {
+    
     private final ComboBox<T> comboBox;
     
     private ListCell<T> listCellLabel;
     private TextField textField;
-
-    public ComboBoxListViewPopup(final ComboBox<T> comboBox) {
-        getStyleClass().add("combo-box-list-view-popup");
+    
+    private final ListView<T> listView;
+    
+    public ComboBoxListViewSkin(final ComboBox<T> comboBox) {
+        super(comboBox);
         this.comboBox = comboBox;
-        setAutoHide(true);
-        setHideOnEscape(true);
-        setOnAutoHide(new EventHandler<Event>() {
-            @Override public void handle(Event t) {
-                comboBox.hide();
-            }
-        });
-    }
-    
-    @Override public double computePrefWidth(double height) {
-        ListView listView = getListView();
-        return listView == null ? 0 : listView.prefWidth(height);
-    }
-    
-    @Override public void showPopup() {
-        if (comboBox == null) {
-            throw new IllegalStateException("ComboBox is null");
-        }
-        if (getSkin().getNode() == null) {
-            throw new IllegalStateException("Node is null");
-        }
-        
-        if (!isShowing()) {
-            if (getSkin() == null) {
-                getScene().getRoot().impl_processCSS(true);
-            }
-
-            Point2D p = com.sun.javafx.Utils.pointRelativeTo(comboBox, getSkin().getNode(), HPos.CENTER, VPos.BOTTOM, -7, -10, false);
-            show(comboBox.getScene().getWindow(), p.getX(), p.getY());
-        }
-    }
-
-    @Override public void hidePopup() {
-        if (isShowing()) {
-            hide();
-        }
-    }
-    
-    private ListCell<T> getListCellLabel() {
-        if (listCellLabel != null) return listCellLabel;
-        
-        ListView<T> listView = getListView();
-        if (listView == null) return null;
-        
-        Callback<ListView<T>, ListCell<T>> cellFactory = listView.getCellFactory();
-        listCellLabel = cellFactory != null ? cellFactory.call(listView) : new ListCell<T>() {
-            @Override public void updateItem(T item, boolean empty) {
-                super.updateItem(item, empty);
-                updateDisplayText(item, empty);
-            }
-        };
-        
-        return listCellLabel;
-    }
-
-    public ComboBox<T> getComboBox() {
-        return comboBox;
-    }
-
-    private ListView<T> getListView() {
-        if (getSkin() == null) {
-            getScene().getRoot().impl_processCSS(true);
-        }
-        
-        Skin s = getSkin();
-        
-        if (s instanceof ComboBoxListViewPopupSkin) {
-            return ((ComboBoxListViewPopupSkin)s).getListView();
-        }
-        
-        return null;
+        this.listView = createListView();
     }
     
     @Override public Node getDisplayNode() {
@@ -173,7 +102,7 @@ public class ComboBoxListViewPopup<T> extends PopupControl implements ComboBoxCo
         if (comboBox.isEditable()) {
             textField.setText(c.toString(item));
         } else {
-            listCellLabel.updateListView(getListView());
+            listCellLabel.updateListView(listView);
             listCellLabel.updateIndex(index);
         }
     }
@@ -192,5 +121,86 @@ public class ComboBoxListViewPopup<T> extends PopupControl implements ComboBoxCo
         } else {
             listCellLabel.setText(item == null ? "" : item.toString());
         }
+    }
+    
+    
+    
+    private ListCell<T> getListCellLabel() {
+        if (listCellLabel != null) return listCellLabel;
+        
+        Callback<ListView<T>, ListCell<T>> cellFactory = listView.getCellFactory();
+        listCellLabel = cellFactory != null ? cellFactory.call(listView) : new ListCell<T>() {
+            @Override public void updateItem(T item, boolean empty) {
+                super.updateItem(item, empty);
+                updateDisplayText(item, empty);
+            }
+        };
+        
+        return listCellLabel;
+    }
+
+    @Override public Node getPopupContent() {
+        return listView;
+    }
+    
+    private ListView<T> createListView() {
+        final ListView<T> listView = new ListView<T>() {
+            @Override protected double computePrefWidth(double height) {
+                if (getSkin() == null) {
+                    // if the skin is null, it means that the css related to the
+                    // listview skin hasn't been loaded yet, so we force it here.
+                    // This ensures the combobox button is the correct width
+                    // when it is first displayed, before the listview is shown.
+                    getPopup().getScene().getRoot().impl_processCSS(true);
+                }
+                
+                if (getSkin() instanceof VirtualContainerBase) {
+                    VirtualContainerBase skin = (VirtualContainerBase)getSkin();
+                    return skin.getVirtualFlowPreferredWidth(height) + 10;
+                } else {
+                    return Math.max(100, comboBox.getWidth());
+                }
+            }
+
+            @Override protected double computePrefHeight(double width) {
+                double ch = comboBox.getItems().size() * 25;
+                return Math.min(ch, 200);
+            }
+        };
+
+        listView.itemsProperty().bind(comboBox.itemsProperty());
+        listView.cellFactoryProperty().bind(comboBox.cellFactoryProperty());
+        listView.getSelectionModel().setSelectionMode(SelectionMode.SINGLE);
+
+        listView.getSelectionModel().selectedIndexProperty().addListener(new InvalidationListener() {
+            @Override public void invalidated(Observable o) {
+                int index = listView.getSelectionModel().getSelectedIndex();
+                comboBox.getSelectionModel().select(index);
+                comboBox.setValue(listView.getSelectionModel().getSelectedItem());
+            }
+        });
+
+        listView.setOnMouseReleased(new EventHandler<MouseEvent>() {
+            @Override public void handle(MouseEvent t) {
+                comboBox.hide();
+            }
+        });
+
+        listView.setOnKeyPressed(new EventHandler<KeyEvent>() {
+            @Override public void handle(KeyEvent t) {
+                // TODO move to behavior, when (or if) this class becomes a SkinBase
+                if (t.getCode() == KeyCode.ENTER || 
+                        t.getCode() == KeyCode.SPACE || 
+                        t.getCode() == KeyCode.ESCAPE) {
+                    comboBox.hide();
+                }
+            }
+        });
+        
+        return listView;
+    }
+
+    @Override protected double computePrefWidth(double height) {
+        return listView.prefWidth(height);
     }
 }

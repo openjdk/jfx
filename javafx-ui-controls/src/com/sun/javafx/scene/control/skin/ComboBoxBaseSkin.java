@@ -25,35 +25,22 @@
 
 package com.sun.javafx.scene.control.skin;
 
-import com.javafx.preview.control.ComboBox;
 import com.javafx.preview.control.ComboBoxBase;
-import com.javafx.preview.control.ComboBoxContent;
-import com.sun.javafx.css.Styleable;
-import com.sun.javafx.css.StyleableProperty;
-import com.sun.javafx.scene.control.Logging;
 import com.sun.javafx.scene.control.behavior.ComboBoxBaseBehavior;
-import java.lang.reflect.Constructor;
-import java.lang.reflect.InvocationTargetException;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
 import javafx.event.EventHandler;
 import javafx.geometry.HPos;
 import javafx.geometry.Insets;
-import javafx.geometry.Point2D;
 import javafx.geometry.VPos;
 import javafx.scene.Node;
 import javafx.scene.input.MouseEvent;
 import javafx.scene.layout.StackPane;
 
-public class ComboBoxBaseSkin<T> extends SkinBase<ComboBoxBase<T>, ComboBoxBaseBehavior<T>> {
+public abstract class ComboBoxBaseSkin<T> extends SkinBase<ComboBoxBase<T>, ComboBoxBaseBehavior<T>> {
     
-    private Node displayNode; // this is always either label or textField
+    private Node displayNode; // this is normally either label or textField
     
-    private StackPane arrowButton;
-    private StackPane arrow;
-    
-    private ComboBoxContent popup;
+    protected StackPane arrowButton;
+    protected StackPane arrow;
     
     public ComboBoxBaseSkin(final ComboBoxBase<T> comboBox) {
         // Call the super method with the button we were just given in the 
@@ -88,15 +75,26 @@ public class ComboBoxBaseSkin<T> extends SkinBase<ComboBoxBase<T>, ComboBoxBaseB
         registerChangeListener(comboBox.showingProperty(), "SHOWING");
         registerChangeListener(comboBox.focusedProperty(), "FOCUSED");
         registerChangeListener(comboBox.valueProperty(), "VALUE");
-//        registerChangeListener(comboBox.cellFactoryProperty(), "CELL_FACTORY");
-//        registerChangeListener(comboBox.itemsProperty(), "ITEMS");
-        
-//        registerChangeListener(comboBox.selectionModelProperty(), "SELECTION_MODEL");
-//        if (comboBox.getSelectionModel() != null) {
-//            registerChangeListener(comboBox.getSelectionModel().selectedItemProperty(), "SELECTED_ITEM");
-//        }
     }
+    
+    /**
+     * This method should return a Node that will be positioned within the
+     * ComboBox 'button' area.
+     */
+    public abstract Node getDisplayNode();
 
+    /**
+     * This method will be called when the ComboBox popup should be displayed.
+     * It is up to specific skin implementations to determine how this is handled.
+     */
+    public abstract void show();
+ 
+    /**
+     * This method will be called when the ComboBox popup should be hidden.
+     * It is up to specific skin implementations to determine how this is handled.
+     */
+    public abstract void hide();
+    
      /**
      * Handles changes to properties of the MenuButton.
      */
@@ -113,8 +111,6 @@ public class ComboBoxBaseSkin<T> extends SkinBase<ComboBoxBase<T>, ComboBoxBaseB
             updateDisplayArea();
         } else if (p == "VALUE") {
             updateDisplayArea();
-//        } else if (p == "SELECTION_MODEL") {
-//            
         }
     }
     
@@ -123,19 +119,15 @@ public class ComboBoxBaseSkin<T> extends SkinBase<ComboBoxBase<T>, ComboBoxBaseB
             getChildren().remove(displayNode);
             displayNode = null;
         }
-        displayNode = popup.getDisplayNode();
+        displayNode = getDisplayNode();
         getChildren().add(0, displayNode);
     }
     
-    private void show() {
-        popup.showPopup();
-    }
-
-    private void hide() {
-        popup.hidePopup();
-    }
-    
     @Override protected void layoutChildren() {
+        if (displayNode == null) {
+            updateDisplayArea();
+        }
+        
         final Insets padding = getPadding();
         final Insets arrowButtonPadding = arrowButton.getPadding();
 
@@ -148,7 +140,9 @@ public class ComboBoxBaseSkin<T> extends SkinBase<ComboBoxBase<T>, ComboBoxBaseB
         final double arrowWidth = arrow.prefWidth(-1);
         final double arrowButtonWidth = arrowButtonPadding.getLeft() + arrowWidth + arrowButtonPadding.getRight();
         
-        displayNode.resizeRelocate(x, y, w, h);
+        if (displayNode != null) {
+            displayNode.resizeRelocate(x, y, w, h);
+        }
         
         arrowButton.resize(arrowButtonWidth, getHeight());
         positionInArea(arrowButton, getWidth() - padding.getRight() - arrowButtonWidth, 0, 
@@ -156,17 +150,18 @@ public class ComboBoxBaseSkin<T> extends SkinBase<ComboBoxBase<T>, ComboBoxBaseB
     }
     
     @Override protected double computePrefWidth(double height) {
-        if (popup == null) return 100;
-        return popup.computePrefWidth(height);
+        return displayNode == null ? 100 : displayNode.prefWidth(height);
     }
-
+    
     @Override protected double computePrefHeight(double width) {
         final Insets padding = getPadding();
         final Insets arrowButtonPadding = arrowButton.getPadding();
         double arrowHeight = arrowButtonPadding.getTop() + arrow.prefHeight(-1) + arrowButtonPadding.getBottom();
+
+        double ph = displayNode == null ? 24 : displayNode.prefHeight(width);
         
         return padding.getTop()
-                + Math.max(displayNode.prefHeight(width), arrowHeight)
+                + Math.max(ph, arrowHeight)
                 + padding.getBottom();
     }
 
@@ -176,136 +171,5 @@ public class ComboBoxBaseSkin<T> extends SkinBase<ComboBoxBase<T>, ComboBoxBaseB
 
     @Override protected double computeMaxHeight(double width) {
         return getSkinnable().prefHeight(width);
-    }
-    
-    
-    private void loadPopupClass(String className) {
-        // we don't reload the skin class if it is the same as the last class name
-        if (popupClass != null && popupClass.equals(className)) {
-            return;
-        }
-        popupClass = className;
-
-        if (className == null || className.isEmpty()) {
-            Logging.getControlsLogger().severe("Empty -fx-popup-class property specified for ComboBox: " + this);
-            return;
-        }
-
-        try {
-            Class<?> skinClass;
-            // RT-17525 : Use context class loader only if Class.forName fails.
-            try {
-                skinClass = Class.forName(className);
-            } catch (ClassNotFoundException clne) {
-                if (Thread.currentThread().getContextClassLoader() != null) {
-                    skinClass = Thread.currentThread().getContextClassLoader().loadClass(className);
-                } else {
-                    throw clne;
-                }
-            }
-            
-            Constructor<?>[] constructors = skinClass.getConstructors();
-            Constructor<?> constructor = null;
-            for (Constructor<?> c : constructors) {
-                Class<?>[] parameterTypes = c.getParameterTypes();
-                if (parameterTypes.length == 1 && ComboBoxBase.class.isAssignableFrom(parameterTypes[0])) {
-                    constructor = c;
-                    break;
-                }
-            }
-
-            if (constructor == null) {
-                Logging.getControlsLogger().severe(
-                "No valid constructor defined in '" + className + "' for control " + this +
-                         ".\r\nYou must provide a constructor that accepts a single "
-                         + "ComboBoxBase parameter in " + className + ".",
-                new NullPointerException());
-            } else {
-                popup = (ComboBoxContent) constructor.newInstance(getSkinnable());
-                updateDisplayArea();
-            }
-        } catch (InvocationTargetException e) {
-            Logging.getControlsLogger().severe(
-                "Failed to load ComboBoxContent class '" + className + "' for control " + this,
-                e.getCause());
-        } catch (Exception e) {
-            Logging.getControlsLogger().severe(
-                "Failed to load ComboBoxContent class '" + className + "' for control " + this, e);
-        }
-}
-    
-    
-    /***************************************************************************
-     *                                                                         *
-     *                         Stylesheet Handling                             *
-     *                                                                         *
-     **************************************************************************/
-    
-    @Styleable(property="-fx-popup-class")
-    private String popupClass;
-
-    /** @treatasprivate */
-    private static class StyleableProperties {
-        private static final StyleableProperty POPUP_CLASS = new StyleableProperty(ComboBoxBaseSkin.class, "popupClass");
-            
-        private static final List<StyleableProperty> STYLEABLES;
-        private static final int[] bitIndices;
-        static {
-            final List<StyleableProperty> styleables =
-                new ArrayList<StyleableProperty>(CellSkinBase.impl_CSS_STYLEABLES());
-            Collections.addAll(styleables,
-                POPUP_CLASS
-            );
-            STYLEABLES = Collections.unmodifiableList(styleables);
-            
-            bitIndices = new int[StyleableProperty.getMaxIndex()];
-            java.util.Arrays.fill(bitIndices, -1);
-            for(int bitIndex=0; bitIndex<STYLEABLES.size(); bitIndex++) {
-                bitIndices[STYLEABLES.get(bitIndex).getIndex()] = bitIndex;
-            }
-        }
-    }
-
-    /**
-     * @treatasprivate implementation detail
-     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
-     */
-    @Deprecated
-    @Override protected int[] impl_cssStyleablePropertyBitIndices() {
-        return ComboBoxBaseSkin.StyleableProperties.bitIndices;
-    }
-
-    /**
-     * @treatasprivate implementation detail
-     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
-     */
-    @Deprecated
-    public static List<StyleableProperty> impl_CSS_STYLEABLES() {
-        return ComboBoxBaseSkin.StyleableProperties.STYLEABLES;
-    }
-
-    /**
-     * @treatasprivate implementation detail
-     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
-     */
-    @Deprecated
-    @Override protected boolean impl_cssSet(String property, Object value) {
-        if ("-fx-popup-class".equals(property)) {
-            loadPopupClass((String)value);
-        }
-        return super.impl_cssSet(property, value);
-    }
-
-    /**
-     * @treatasprivate implementation detail
-     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
-     */
-    @Deprecated
-    @Override protected boolean impl_cssSettable(String property) {
-        if ("-fx-popup-class".equals(property)) {
-            return true;
-        }
-
-        return super.impl_cssSettable(property);
     }
 }
