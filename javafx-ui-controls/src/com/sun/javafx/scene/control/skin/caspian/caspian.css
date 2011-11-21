@@ -3176,9 +3176,13 @@ Only the properties with values that are different from the TextBox are specifie
     -fx-background-color: -fx-control-inner-background;
 }
 
-/* Hover effect is just the selection bar color */
-.combo-box-popup .list-view .list-cell:selected, .combo-box-popup .list-view .list-cell:filled:hover {
+.combo-box-popup .list-view .list-cell:filled:selected, .combo-box-popup .list-view .list-cell:filled:selected:hover {
     -fx-background: -fx-accent;
     -fx-background-color: -fx-selection-bar;
     -fx-text-fill: -fx-selection-bar-text;
+}
+
+.combo-box-popup .list-view .list-cell:filled:hover {
+    -fx-background-color: -fx-cell-hover-color;
+    -fx-text-fill: -fx-text-inner-color;
 }

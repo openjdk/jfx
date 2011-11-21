@@ -26,10 +26,7 @@
 package com.javafx.preview.control;
 
 import com.sun.javafx.css.StyleManager;
-import javafx.beans.property.BooleanProperty;
-import javafx.beans.property.ObjectProperty;
-import javafx.beans.property.SimpleBooleanProperty;
-import javafx.beans.property.SimpleObjectProperty;
+import javafx.beans.property.*;
 import javafx.scene.control.Control;
 
 public abstract class ComboBoxBase<T> extends Control {
@@ -80,6 +77,26 @@ public abstract class ComboBoxBase<T> extends Control {
             impl_pseudoClassStateChanged(PSEUDO_CLASS_SHOWING);
         }
     };
+    
+    
+    // --- prompt text
+    /**
+     * The {@code ComboBox} prompt text to display, or <tt>null</tt> if no 
+     * prompt text is displayed.
+     */
+    private StringProperty promptText = new SimpleStringProperty(this, "promptText", "") {
+        @Override protected void invalidated() {
+            // Strip out newlines
+            String txt = get();
+            if (txt != null && txt.contains("\n")) {
+                txt = txt.replace("\n", "");
+                set(txt);
+            }
+        }
+    };
+    public final StringProperty promptTextProperty() { return promptText; }
+    public final String getPromptText() { return promptText.get(); }
+    public final void setPromptText(String value) { promptText.set(value); }
     
     
     // --- armed
