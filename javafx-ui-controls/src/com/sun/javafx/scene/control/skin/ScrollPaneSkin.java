@@ -31,6 +31,9 @@ import javafx.beans.InvalidationListener;
 import javafx.beans.Observable;
 import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
+import javafx.event.Event;
+import javafx.event.EventDispatcher;
+import javafx.event.EventDispatchChain;
 import javafx.event.EventHandler;
 import javafx.geometry.BoundingBox;
 import javafx.geometry.Bounds;
@@ -346,7 +349,49 @@ public class ScrollPaneSkin extends SkinBase<ScrollPane, ScrollPaneBehavior> imp
            }
         });
 
-        viewRect.addEventFilter(ScrollEvent.SCROLL, new EventHandler<javafx.scene.input.ScrollEvent>() {
+
+        /*
+        ** don't allow the ScrollBar to handle the ScrollEvent,
+        ** In a ScrollPane a vertical scroll should scroll on the vertical only,
+        ** whereas in a horizontal ScrollBar it can scroll horizontally.
+        */ 
+        final EventDispatcher blockEventDispatcher = new EventDispatcher() {
+           @Override public Event dispatchEvent(Event event, EventDispatchChain tail) {
+               // block the event from being passed down to children
+               return event;
+           }
+        };
+        // block ScrollEvent from being passed down to scrollbar's skin
+        final EventDispatcher oldHsbEventDispatcher = hsb.getEventDispatcher();
+        hsb.setEventDispatcher(new EventDispatcher() {
+           @Override public Event dispatchEvent(Event event, EventDispatchChain tail) {
+               if (event.getEventType() == ScrollEvent.SCROLL) {
+                   tail = tail.prepend(blockEventDispatcher);
+                   tail = tail.prepend(oldHsbEventDispatcher);
+                   return tail.dispatchEvent(event);
+               }
+               return oldHsbEventDispatcher.dispatchEvent(event, tail);
+           }
+        });
+        // block ScrollEvent from being passed down to scrollbar's skin
+        final EventDispatcher oldVsbEventDispatcher = vsb.getEventDispatcher();
+        vsb.setEventDispatcher(new EventDispatcher() {
+           @Override public Event dispatchEvent(Event event, EventDispatchChain tail) {
+               if (event.getEventType() == ScrollEvent.SCROLL) {
+                   tail = tail.prepend(blockEventDispatcher);
+                   tail = tail.prepend(oldVsbEventDispatcher);
+                   return tail.dispatchEvent(event);
+               }
+               return oldVsbEventDispatcher.dispatchEvent(event, tail);
+           }
+        });
+
+        /*
+        ** listen for ScrollEvents over the whole of the ScrollPane
+        ** area, the above dispatcher having removed the ScrollBars
+        ** scroll event handling.
+        */
+        setOnScroll(new EventHandler<javafx.scene.input.ScrollEvent>() {
             @Override public void handle(ScrollEvent event) {
                 /*
                 ** if we're completely visible then do nothing....
