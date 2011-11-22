@@ -62,7 +62,6 @@ public abstract class SelectionModel<T> {
      * {@link MultipleSelectionModel#getSelectedIndices()} to be informed whenever
      * the selection changes, and this will also work in the case of single selection.
      */
-    // FIXME this should be read-only (writable by subclasses only)
     public final ReadOnlyIntegerProperty selectedIndexProperty() { return selectedIndex.getReadOnlyProperty(); }
     private ReadOnlyIntegerWrapper selectedIndex = new ReadOnlyIntegerWrapper(this, "selectedIndex", -1);
     protected final void setSelectedIndex(int value) { selectedIndex.set(value); }

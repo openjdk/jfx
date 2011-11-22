@@ -210,7 +210,7 @@ public class TableColumnHeader extends StackPane {
 
     private void initUI() {
         sortArrowGrid = new GridPane();
-        sortArrowGrid.setPadding(new Insets(0, 3, 0, 0)); // TODO move to CSS
+        sortArrowGrid.setPadding(new Insets(0, 3, 0, 0));
         
         // TableColumn will be null if we are dealing with the root NestedTableColumnHeader
         if (column == null) return;
@@ -239,10 +239,6 @@ public class TableColumnHeader extends StackPane {
         setOnMouseReleased(new EventHandler<MouseEvent>() {
             @Override public void handle(MouseEvent me) {
                 if (MouseEvent.impl_getPopupTrigger(me)) {
-                    // FIXME this isn't rendering properly at present unless
-                    // the PopupMenu is in the scenegraph, but in other applications
-                    // it works fine, so I wonder whether there is something
-                    // specifically wrong here, and the CSS is not making it through
                     ContextMenu menu = getTableColumn().getContextMenu();
                     if (menu != null) {
                         menu.show(TableColumnHeader.this, me.getScreenX(), me.getScreenY());

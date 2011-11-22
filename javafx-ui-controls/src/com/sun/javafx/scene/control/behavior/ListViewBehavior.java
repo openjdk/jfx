@@ -319,8 +319,6 @@ public class ListViewBehavior<T> extends BehaviorBase<ListView<T>> {
     }
 
     private void scrollPageUp() {
-        // TODO need list.scrollUp()
-        
         int newSelectedIndex = onScrollPageUp.call(null);
         
         MultipleSelectionModel sm = getControl().getSelectionModel();
@@ -329,7 +327,6 @@ public class ListViewBehavior<T> extends BehaviorBase<ListView<T>> {
     }
 
     private void scrollPageDown() {
-        // TODO need list.scrollDown()
         int newSelectedIndex = onScrollPageDown.call(null);
         
         MultipleSelectionModel sm = getControl().getSelectionModel();

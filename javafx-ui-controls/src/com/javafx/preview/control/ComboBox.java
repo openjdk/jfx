@@ -38,10 +38,6 @@ import javafx.scene.control.*;
 import javafx.util.Callback;
 import javafx.util.StringConverter;
 
-/*
- * TODO:
- *   * Mouse wheel scrolling doesn't work in listview popup
- */
 public class ComboBox<T> extends ComboBoxBase<T> {
     
     public ComboBox() {

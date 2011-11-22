@@ -258,8 +258,6 @@ public class TableColumnTest {
         assertNull(child.tableViewProperty().get());
     }
 
-    // TODO file RFE: Should we throw exception if column is added to two parents?
-
     @Test public void visibleIsUpdatedWhenParentColumnVisibleChanges() {
         TableColumn child = new TableColumn();
         column.getColumns().add(child);

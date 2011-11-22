@@ -1484,17 +1484,7 @@ public class VirtualFlow extends Region {
      * fallen off the flow's start.
      */
     private void addToPile(IndexedCell cell) {
-        // TODO if this code is enabled, there is a heap more churn on the
-        // cell.onUpdate callback. For now this will be disabled and I'll wait
-        // to hear what people think
-//        cell.updateItem(null, true);
-//        if (cell.getOnUpdate() != null) {
-//            cell.getOnUpdate().run();
-//        }
-
         cell.setVisible(false);
-//        cell.setLayoutX(0);
-//        cell.setLayoutY(0);
         pile.addLast(cell);
     }
 
