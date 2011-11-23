@@ -1196,7 +1196,6 @@ public class TreeView<T> extends Control {
      * 
      * @param <T> 
      */
-    // TODO add support for shifting focus when the tree contents change
     static class TreeViewFocusModel<T> extends FocusModel<TreeItem<T>> {
 
         private final TreeView<T> treeView;

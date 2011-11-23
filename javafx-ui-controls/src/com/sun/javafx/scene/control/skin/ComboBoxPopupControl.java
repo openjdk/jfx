@@ -93,10 +93,11 @@ public abstract class ComboBoxPopupControl<T> extends ComboBoxBaseSkin<T> {
         };
         popup.getStyleClass().add("combo-box-popup");
         popup.setAutoHide(true);
+        popup.setAutoFix(true);
         popup.setHideOnEscape(true);
         popup.setOnAutoHide(new EventHandler<Event>() {
-            @Override public void handle(Event t) {
-                getSkinnable().hide();
+            @Override public void handle(Event e) {
+                getBehavior().onAutoHide();
             }
         });
     }

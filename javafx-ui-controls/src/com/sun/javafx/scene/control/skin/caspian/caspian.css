@@ -2352,7 +2352,6 @@
 .table-view .column-resize-line {
     -fx-background: -fx-accent;
     -fx-background-color: -fx-selection-bar;
-    /* FIXME: I'm using padding here to be the width of the line, which is wrong*/
     -fx-padding: 0.0em 0.0416667em 0.0em 0.0416667em; /* 0 0.571429 0 0.571429 */
 }
 

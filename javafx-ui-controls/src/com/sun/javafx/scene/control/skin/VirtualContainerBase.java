@@ -116,4 +116,14 @@ public abstract class VirtualContainerBase<C extends Control, B extends Behavior
     double getVirtualFlowPreferredWidth(double height) {
         return getInsets().getLeft() + flow.computePrefWidth(height) + getInsets().getRight();
     }
+    
+    double getVirtualFlowPreferredHeight(int rows) {
+        double height = 1.0;
+        
+        for (int i = 0; i < rows && i < getItemCount(); i++) {
+            height += flow.getCellLength(i);
+        }
+        
+        return height + getInsets().getTop() + getInsets().getBottom();
+    }
 }

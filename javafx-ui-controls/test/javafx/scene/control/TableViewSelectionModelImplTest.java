@@ -574,7 +574,7 @@ public class TableViewSelectionModelImplTest {
 
         focusModel.focusAboveCell();
         assertEquals(new TablePosition(tableView, 2, col1), focusModel.getFocusedCell());
-        //TODO not sure about this - a row probably shouldn't be focused when we've given it specifically to a cell
+        // not sure about this - a row probably shouldn't be focused when we've given it specifically to a cell
         assertTrue(focusedCell(), focusModel.isFocused(2));
         assertTrue(focusedCell(), focusModel.isFocused(2, col1));
     }

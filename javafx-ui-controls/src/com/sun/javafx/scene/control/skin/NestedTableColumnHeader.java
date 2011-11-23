@@ -261,9 +261,6 @@ class NestedTableColumnHeader extends TableColumnHeader {
                         // rather than refer to the rect variable, we just grab
                         // it from the source to prevent a small memory leak.
                         Rectangle innerRect = (Rectangle) me.getSource();
-                        
-                        // FIXME Random magic number (+2) - need to work out where this
-                        // value should go
                         double startX = getTableHeaderRow().sceneToLocal(innerRect.localToScene(innerRect.getBoundsInLocal())).getMinX() + 2;
                         dragAnchorX = me.getSceneX();
                         columnResizingStarted(startX);
@@ -302,21 +299,7 @@ class NestedTableColumnHeader extends TableColumnHeader {
     }
 
     private void columnResizing(TableColumn col, MouseEvent me) {
-        // Need to handle case where the drag goes outside the bounds.
-        // In this case the drag should actually force the table to
-        // scroll to enable the resizing to continue.
         double draggedX = me.getSceneX() - dragAnchorX;
-//        double x = getTableHeaderRow().getColumnReorderLine().getLayoutX() + draggedX;
-//        if (x <= 0 || x >= getTableHeaderRow().getTableWidth()) {
-//            // TODO
-//            // increase width of the flow within the table and scroll horizontally
-//        } else {
-//            getTableHeaderRow().getColumnReorderLine().setTranslateX(draggedX);
-//        }
-
-        // FIXME this isn't quite perfect - it's possible that allowed be
-        // false and when the mouse drag is allowed again that it doesn't
-        // perfectly line up to the column header edge.
         double delta = draggedX - lastX;
         boolean allowed = getTableView().resizeColumn(col, delta);
         if (allowed) {

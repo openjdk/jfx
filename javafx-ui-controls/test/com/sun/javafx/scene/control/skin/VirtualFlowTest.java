@@ -681,7 +681,7 @@ public class VirtualFlowTest {
 
         flow.setVertical(false);
         flow.resize(flow.getWidth(), 50);
-        // TODO Run this test without the pulse and it fails!
+        // NOTE Run this test without the pulse and it fails!
         pulse();
         flow.setPosition(.28);
         pulse();
@@ -752,7 +752,6 @@ public class VirtualFlowTest {
 //     * be cells left in a state where they need their CSS applied.
 //     */
 //    @Test public void testCellLifeCycle_CSSUpdatesHappenDuringLayout() {
-//        // TODO
 //        flow.setPosition(.35);
 //        pulse();
 //        for (int i = 0; i < flow.cells.size(); i++) {

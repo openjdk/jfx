@@ -195,7 +195,6 @@ public class TableViewBehavior<T> extends BehaviorBase<TableView<T>> {
         else super.callAction(name);
     }
 
-    // TODO
     @Override protected List<KeyBinding> createKeyBindings() {
         return TABLE_VIEW_BINDINGS;
     }
@@ -402,7 +401,6 @@ public class TableViewBehavior<T> extends BehaviorBase<TableView<T>> {
         if (onMoveToLastCell != null) onMoveToLastCell.run();
     }
 
-    // TODO need table.scrollDown()
     private void focusPreviousRow() {
         TableView.TableViewSelectionModel sm = getControl().getSelectionModel();
         if (sm == null) return;

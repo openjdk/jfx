@@ -28,7 +28,9 @@ package com.javafx.preview.control;
 import com.sun.javafx.css.StyleManager;
 import javafx.beans.InvalidationListener;
 import javafx.beans.Observable;
+import javafx.beans.property.IntegerProperty;
 import javafx.beans.property.ObjectProperty;
+import javafx.beans.property.SimpleIntegerProperty;
 import javafx.beans.property.SimpleObjectProperty;
 import javafx.collections.FXCollections;
 import javafx.collections.ListChangeListener;
@@ -38,10 +40,6 @@ import javafx.scene.control.*;
 import javafx.util.Callback;
 import javafx.util.StringConverter;
 
-/*
- * TODO:
- *   * Mouse wheel scrolling doesn't work in listview popup
- */
 public class ComboBox<T> extends ComboBoxBase<T> {
     
     public ComboBox() {
@@ -101,6 +99,19 @@ public class ComboBox<T> extends ComboBoxBase<T> {
     protected final void setSelectionModel(SelectionModel<T> value) { selectionModel.set(value); }
     public final SelectionModel<T> getSelectionModel() { return selectionModel.get(); }
     public final ObjectProperty<SelectionModel<T>> selectionModelProperty() { return selectionModel; }
+    
+    
+    // --- Visible Row Count
+    /**
+     * The maximum number of rows to be visible in the ComboBox popup when it is
+     * showing. By default this value is 10, but this can be changed to increase
+     * or decrease the height of the popup.
+     */
+    private IntegerProperty visibleRowCount
+            = new SimpleIntegerProperty(this, "visibleRowCount", 10);
+    public final void setVisibleRowCount(int value) { visibleRowCount.set(value); }
+    public final int getVisibleRowCount() { return visibleRowCount.get(); }
+    public final IntegerProperty visibleRowCountProperty() { return visibleRowCount; }
     
     
     /***************************************************************************
