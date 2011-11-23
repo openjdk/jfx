@@ -169,13 +169,7 @@ public class ComboBoxListViewSkin<T> extends ComboBoxPopupControl<T> {
     private ListView<T> createListView() {
         final ListView<T> listView = new ListView<T>() {
             @Override protected double computePrefWidth(double height) {
-                if (getSkin() == null) {
-                    // if the skin is null, it means that the css related to the
-                    // listview skin hasn't been loaded yet, so we force it here.
-                    // This ensures the combobox button is the correct width
-                    // when it is first displayed, before the listview is shown.
-                    getPopup().getScene().getRoot().impl_processCSS(true);
-                }
+                doCSSCheck();
                 
                 if (getSkin() instanceof VirtualContainerBase) {
                     VirtualContainerBase skin = (VirtualContainerBase)getSkin();
@@ -186,8 +180,26 @@ public class ComboBoxListViewSkin<T> extends ComboBoxPopupControl<T> {
             }
 
             @Override protected double computePrefHeight(double width) {
-                double ch = comboBox.getItems().size() * 25;
-                return Math.min(ch, 200);
+                doCSSCheck();
+                
+                if (getSkin() instanceof VirtualContainerBase) {
+                    int maxRows = comboBox.getVisibleRowCount();
+                    VirtualContainerBase skin = (VirtualContainerBase)getSkin();
+                    return skin.getVirtualFlowPreferredHeight(maxRows);
+                } else {
+                    double ch = comboBox.getItems().size() * 25;
+                    return Math.min(ch, 200);
+                }
+            }
+            
+            private void doCSSCheck() {
+                if (getSkin() == null) {
+                    // if the skin is null, it means that the css related to the
+                    // listview skin hasn't been loaded yet, so we force it here.
+                    // This ensures the combobox button is the correct width
+                    // when it is first displayed, before the listview is shown.
+                    getPopup().getScene().getRoot().impl_processCSS(true);
+                }
             }
         };
 
