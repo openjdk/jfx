@@ -36,6 +36,16 @@ public class KeystrokeUtils {
             return "";
         }
         
+        KeyCode keyCode = null;
+        if (kc instanceof KeyCodeCombination) {
+            keyCode = ((KeyCodeCombination)kc).getCode();
+        } else if (kc instanceof KeyCharacterCombination) {
+            keyCode = KeyCode.getKeyCode(((KeyCharacterCombination)kc).getCharacter());
+        }
+        if (keyCode == null) {
+            return "";
+        }
+        
         StringBuilder stringBuilder = new StringBuilder();
         if (com.sun.javafx.PlatformUtil.isMac()) {
             // Macs have a different convention for keyboard accelerators -
@@ -53,21 +63,25 @@ public class KeystrokeUtils {
             if (kc.getMeta() == KeyCombination.ModifierValue.DOWN) {
                 stringBuilder.append("\u2318");
             }
-            
             // TODO refer to RT-14486 for remaining glyphs
-            
-            // get the character(s) and attach to string
-            String chars = "";
-            if (kc instanceof KeyCodeCombination) {
-                KeyCode keyCode = ((KeyCodeCombination)kc).getCode();
-                chars = KeyCodeUtils.getAccelerator(keyCode);
-            } else if (kc instanceof KeyCharacterCombination) {
-                chars = ((KeyCharacterCombination)kc).getCharacter();
-            }
-                    
-            return kc.getName() + chars;
-        } else {
-            return kc.getName();
         }
+        else {
+            if (kc.getControl() == KeyCombination.ModifierValue.DOWN) {
+                stringBuilder.append("Ctrl+");
+            }
+            if (kc.getAlt() == KeyCombination.ModifierValue.DOWN) {
+                stringBuilder.append("Alt+");
+            }
+            if (kc.getShift() == KeyCombination.ModifierValue.DOWN) {
+                stringBuilder.append("Shift+");
+            }
+            if (kc.getMeta() == KeyCombination.ModifierValue.DOWN) {
+                stringBuilder.append("Meta+");
+            }
+        }
+        
+        stringBuilder.append(keyCode.getName());
+
+        return stringBuilder.toString();
     }
 }
