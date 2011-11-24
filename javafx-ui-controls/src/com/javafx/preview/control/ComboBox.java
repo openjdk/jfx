@@ -26,12 +26,20 @@
 package com.javafx.preview.control;
 
 import com.sun.javafx.css.StyleManager;
+import com.sun.javafx.scene.control.WeakListChangeListener;
+import com.sun.javafx.scene.control.skin.ListViewSkin;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
 import javafx.beans.InvalidationListener;
 import javafx.beans.Observable;
 import javafx.beans.property.IntegerProperty;
 import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.SimpleIntegerProperty;
 import javafx.beans.property.SimpleObjectProperty;
+import javafx.beans.value.ChangeListener;
+import javafx.beans.value.ObservableValue;
+import javafx.beans.value.WeakChangeListener;
 import javafx.collections.FXCollections;
 import javafx.collections.ListChangeListener;
 import javafx.collections.ListChangeListener.Change;
@@ -88,6 +96,32 @@ import javafx.util.StringConverter;
  * @see StringConverter
  */
 public class ComboBox<T> extends ComboBoxBase<T> {
+    
+    /***************************************************************************
+     *                                                                         *
+     * Static properties and methods                                           *
+     *                                                                         *
+     **************************************************************************/
+    
+    private static <T> StringConverter<T> defaultStringConverter() {
+        return new StringConverter<T>() {
+            @Override public String toString(T t) {
+                return t == null ? null : t.toString();
+            }
+
+            @Override public T fromString(String string) {
+                return (T) string;
+            }
+        };
+    }
+    
+    
+    
+    /***************************************************************************
+     *                                                                         *
+     * Constructors                                                            *
+     *                                                                         *
+     **************************************************************************/
 
     /**
      * Creates a default ComboBox instance with an empty 
@@ -108,13 +142,27 @@ public class ComboBox<T> extends ComboBoxBase<T> {
         setSelectionModel(new ComboBoxSelectionModel<T>(this));
     }
     
+ 
+    
+    /***************************************************************************
+     *                                                                         *
+     * Properties                                                              *
+     *                                                                         *
+     **************************************************************************/
     
     // --- items
     /**
      * The list of items to show within the ComboBox popup.
      */
-    private ObjectProperty<ObservableList<T>> items = 
-            new SimpleObjectProperty<ObservableList<T>>(this, "items");
+    private ObjectProperty<ObservableList<T>> items = new SimpleObjectProperty<ObservableList<T>>(this, "items") {
+        @Override protected void invalidated() {
+            // FIXME temporary fix for RT-15793. This will need to be
+            // properly fixed when time permits
+            if (getSelectionModel() instanceof ComboBoxSelectionModel) {
+                ((ComboBoxSelectionModel)getSelectionModel()).updateItemsObserver(null, getItems());
+            }
+        }
+    };
     public final void setItems(ObservableList<T> value) { itemsProperty().set(value); }
     public final ObservableList<T> getItems() {return items.get(); }
     public ObjectProperty<ObservableList<T>> itemsProperty() { return items; }
@@ -154,8 +202,19 @@ public class ComboBox<T> extends ComboBoxBase<T> {
      * means that the actual implementation may be SelectionModel, or a subclass
      * (such as {@link SingleSelectionModel} or {@link MultipleSelectionModel}).
      */
-    private ObjectProperty<SelectionModel<T>> selectionModel 
-            = new SimpleObjectProperty<SelectionModel<T>>(this, "selectionModel");
+    private ObjectProperty<SelectionModel<T>> selectionModel = new SimpleObjectProperty<SelectionModel<T>>(this, "selectionModel") {
+        private SelectionModel<T> oldSM = null;
+        @Override protected void invalidated() {
+            if (oldSM != null) {
+                oldSM.selectedItemProperty().removeListener(selectedItemListener);
+            }
+            SelectionModel sm = get();
+            oldSM = sm;
+            if (sm != null) {
+                sm.selectedItemProperty().addListener(selectedItemListener);
+            }
+        }                
+    };
     public final void setSelectionModel(SelectionModel<T> value) { selectionModel.set(value); }
     public final SelectionModel<T> getSelectionModel() { return selectionModel.get(); }
     public final ObjectProperty<SelectionModel<T>> selectionModelProperty() { return selectionModel; }
@@ -174,30 +233,22 @@ public class ComboBox<T> extends ComboBoxBase<T> {
     public final IntegerProperty visibleRowCountProperty() { return visibleRowCount; }
     
     
+
     /***************************************************************************
      *                                                                         *
-     * Methods                                                                 *
+     * Callbacks and Events                                                    *
      *                                                                         *
-     **************************************************************************/
-
-    private static <T> StringConverter<T> defaultStringConverter() {
-        return new StringConverter<T>() {
-            @Override public String toString(T t) {
-                return t == null ? "" : t.toString();
+     **************************************************************************/    
+    
+    private ChangeListener<T> selectedItemListener = new ChangeListener<T>() {
+        @Override public void changed(ObservableValue<? extends T> ov, T t, T t1) {
+            if (! valueProperty().isBound()) {
+                setValue(t1);
             }
+        }
+    };
 
-            @Override public T fromString(String string) {
-                try {
-                    return (T) string;
-                } catch (ClassCastException e) {
-                    String s = "Can not convert user input into generic type. "
-                            + "Please provide a custom ComboBox converter to "
-                            + "support this form of user input.";
-                    throw new RuntimeException(s);
-                }
-            }
-        };
-    }
+    
     
     /***************************************************************************
      *                                                                         *
@@ -216,6 +267,14 @@ public class ComboBox<T> extends ComboBoxBase<T> {
                 throw new NullPointerException("ComboBox can not be null");
             }
             this.comboBox = cb;
+            
+            selectedIndexProperty().addListener(new InvalidationListener() {
+                @Override public void invalidated(Observable valueModel) {
+                    // we used to lazily retrieve the selected item, but now we just
+                    // do it when the selection changes.
+                    setSelectedItem(getModelItem(getSelectedIndex()));
+                }
+            });
 
             /*
              * The following two listeners are used in conjunction with
@@ -226,35 +285,60 @@ public class ComboBox<T> extends ComboBoxBase<T> {
              * rechecking each time.
              */
 
-            // watching for changes to the items list content
-            final ListChangeListener<T> itemsContentObserver = new ListChangeListener<T>() {
-                @Override public void onChanged(Change<? extends T> c) {
-                    if (getSelectedIndex() == -1 && getSelectedItem() != null) {
-                        int newIndex = comboBox.getItems().indexOf(getSelectedItem());
-                        if (newIndex != -1) {
-                            setSelectedIndex(newIndex);
-                        }
+            this.comboBox.itemsProperty().addListener(weakItemsObserver);
+            if (comboBox.getItems() != null) {
+                this.comboBox.getItems().addListener(weakItemsContentObserver);
+            }
+        }
+        
+        // watching for changes to the items list content
+        private final ListChangeListener<T> itemsContentObserver = new ListChangeListener<T>() {
+            @Override public void onChanged(Change<? extends T> c) {
+                if (comboBox.getItems() == null || comboBox.getItems().isEmpty()) {
+                    setSelectedIndex(-1);
+                } else if (getSelectedIndex() == -1 && getSelectedItem() != null) {
+                    int newIndex = comboBox.getItems().indexOf(getSelectedItem());
+                    if (newIndex != -1) {
+                        setSelectedIndex(newIndex);
                     }
                 }
-            };
-            if (this.comboBox.getItems() != null) {
-                this.comboBox.getItems().addListener(itemsContentObserver);
+                
+                while (c.next()) {
+                    if (getSelectedIndex() != -1 && (c.wasAdded() || c.wasRemoved())) {
+                        int shift = c.wasAdded() ? c.getAddedSize() : -c.getRemovedSize();
+                        clearAndSelect(getSelectedIndex() + shift);
+                    }
+                }
+            }
+        };
+        
+        // watching for changes to the items list
+        private final ChangeListener<ObservableList<T>> itemsObserver = new ChangeListener<ObservableList<T>>() {
+            @Override
+            public void changed(ObservableValue<? extends ObservableList<T>> valueModel, 
+                ObservableList<T> oldList, ObservableList<T> newList) {
+                    updateItemsObserver(oldList, newList);
+            }
+        };
+        
+        private WeakListChangeListener weakItemsContentObserver =
+                new WeakListChangeListener(itemsContentObserver);
+        
+        private WeakChangeListener weakItemsObserver = 
+                new WeakChangeListener(itemsObserver);
+        
+        private void updateItemsObserver(ObservableList<T> oldList, ObservableList<T> newList) {
+            // update listeners
+            if (oldList != null) {
+                oldList.removeListener(weakItemsContentObserver);
+            }
+            if (newList != null) {
+                newList.addListener(weakItemsContentObserver);
             }
 
-            // watching for changes to the items list
-            InvalidationListener itemsObserver = new InvalidationListener() {
-                private ObservableList<T> oldList;
-                @Override public void invalidated(Observable o) {
-                    if (oldList != null) {
-                        oldList.removeListener(itemsContentObserver);
-                    }
-                    this.oldList = cb.getItems();
-                    if (oldList != null) {
-                        oldList.addListener(itemsContentObserver);
-                    }
-                }
-            };
-            this.comboBox.itemsProperty().addListener(itemsObserver);
+            // when the items list totally changes, we should clear out
+            // the selection and focus
+            setSelectedIndex(-1);
         }
 
         // API Implementation
