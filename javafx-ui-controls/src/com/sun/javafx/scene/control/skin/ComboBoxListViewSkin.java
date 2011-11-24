@@ -119,12 +119,16 @@ public class ComboBoxListViewSkin<T> extends ComboBoxPopupControl<T> {
         StringConverter<T> c = comboBox.getConverter();
         if (c == null) return;
                         
-        T item = comboBox.getSelectionModel().getSelectedItem();
-        int index = comboBox.getSelectionModel().getSelectedIndex();        
-        
         if (comboBox.isEditable()) {
-            textField.setText(c.toString(item));
+            T value = comboBox.getValue();
+            String stringValue = c.toString(value);
+            if (value == null || stringValue == null) {
+                textField.setText("");
+            } else if (! stringValue.equals(textField.getText())) {
+                textField.setText(stringValue);
+            }
         } else {
+            int index = comboBox.getSelectionModel().getSelectedIndex();        
             listCellLabel.updateListView(listView);
             listCellLabel.updateIndex(index);
         }
