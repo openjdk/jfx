@@ -40,26 +40,65 @@ import javafx.scene.control.*;
 import javafx.util.Callback;
 import javafx.util.StringConverter;
 
+/**
+ * An implementation of the {@link ComboBoxBase} abstract class for the most common
+ * form of ComboBox, where a popup list is shown to users providing them with
+ * a choice that they may select from. For more information around the general
+ * concepts and API of ComboBox, refer to the {@link ComboBoxBase} class 
+ * documentation.
+ * 
+ * <p>On top of ComboBoxBase, the ComboBox class introduces additional API. Most
+ * importantly, it adds an {@link #itemsProperty() items} property that works in
+ * much the same way as the ListView {@link ListView#itemsProperty() items}
+ * property. In other words, it is the content of the items list that is displayed
+ * to users when they click on the ComboBox button.
+ * 
+ * <p>By default, when the popup list is showing, the maximum number of rows
+ * visible is 10, but this can be changed by modifying the 
+ * {@link #visibleRowCountProperty() visibleRowCount} property. If the number of
+ * items in the ComboBox is less than the value of <code>visibleRowCount</code>,
+ * then the items size will be used instead so that the popup list is not
+ * exceedingly long.
+ * 
+ * <p>As with ListView, it is possible to modify the 
+ * {@link javafx.scene.control.SelectionModel SelectionModel} that is used, 
+ * although this is likely to be rarely changed. The default
+ * SelectionModel used in ComboBox is a {@link SingleSelectionModel}, but this
+ * can be switched out by developers to instead allow for multiple selection to 
+ * occur, or to alter the behavior of the various methods provided in these APIs.
+ * 
+ * <p>As the ComboBox internally renders content with a ListView, API exists in
+ * the ComboBox class to allow for a custom cell factory to be set. For more
+ * information on cell factories, refer to the {@link Cell} and {@link ListCell}
+ * classes.
+ * 
+ * <p>Because a ComboBox can be {@link #editableProperty() editable}, and the
+ * default means of allowing user input is via a {@link TextField}, a 
+ * {@link #converterProperty() string converter} property is provided to allow
+ * for developers to specify how to translate a users string into an object of
+ * type T, such that the {@link #valueProperty() value} property may contain it.
+ * By default the converter simply returns the String input as the user typed it,
+ * which therefore assumes that the type of the editable ComboBox is String. If 
+ * a different type is specified and the ComboBox is to be editable, it is 
+ * necessary to specify a custom {@link StringConverter}.
+ * 
+ * @see ComboBoxBase
+ * @see Cell
+ * @see ListCell
+ * @see StringConverter
+ */
 public class ComboBox<T> extends ComboBoxBase<T> {
-    
+
+    /**
+     * Creates a default ComboBox instance with an empty 
+     * {@link #itemsProperty() items} list and default 
+     * {@link #selectionModelProperty() selection model}.
+     */
     public ComboBox() {
         getStyleClass().add(DEFAULT_STYLE_CLASS);
         setItems(FXCollections.<T>observableArrayList());
         setSelectionModel(new ComboBoxSelectionModel<T>(this));
     }
-    
-    
-    // --- string converter
-    /**
-     * Converts the user-typed input (when the ComboBox is editable) to an
-     * object of type T, such that the input may be retrieved via the 
-     * {@link #valueProperty() value} property.
-     */
-    public ObjectProperty<StringConverter<T>> converterProperty() { return converter; }
-    private ObjectProperty<StringConverter<T>> converter = 
-            new SimpleObjectProperty<StringConverter<T>>(this, "converter", defaultStringConverter());
-    public final void setConverter(StringConverter<T> value) { converterProperty().set(value); }
-    public final StringConverter<T> getConverter() {return converterProperty().get(); }
     
     
     // --- items
@@ -71,6 +110,19 @@ public class ComboBox<T> extends ComboBoxBase<T> {
     public final void setItems(ObservableList<T> value) { itemsProperty().set(value); }
     public final ObservableList<T> getItems() {return items.get(); }
     public ObjectProperty<ObservableList<T>> itemsProperty() { return items; }
+    
+    
+    // --- string converter
+    /**
+     * Converts the user-typed input (when the ComboBox is 
+     * {@link #editableProperty() editable}) to an object of type T, such that 
+     * the input may be retrieved via the  {@link #valueProperty() value} property.
+     */
+    public ObjectProperty<StringConverter<T>> converterProperty() { return converter; }
+    private ObjectProperty<StringConverter<T>> converter = 
+            new SimpleObjectProperty<StringConverter<T>>(this, "converter", ComboBox.<T>defaultStringConverter());
+    public final void setConverter(StringConverter<T> value) { converterProperty().set(value); }
+    public final StringConverter<T> getConverter() {return converterProperty().get(); }
     
     
     // --- cell factory
@@ -88,15 +140,15 @@ public class ComboBox<T> extends ComboBoxBase<T> {
     
     // --- Selection Model
     /**
-     * The selection model for the ComboBox. Generally, only a single choice 
-     * can be made in a ComboBox, and therefore implementations of ComboBoxBase
-     * will tend to return a {@link SingleSelectionModel} instance. However,
-     * because this can not be guaranteed, it is important to confirm the class
-     * type if you intend to use API that is not part of {@link SelectionModel}.
+     * The selection model for the ComboBox. In general a ComboBox supports only
+     * single selection, but this is not necessarily always the case. Because of this,
+     * the selection model in ComboBox is of type {@link SelectionModel}, which
+     * means that the actual implementation may be SelectionModel, or a subclass
+     * (such as {@link SingleSelectionModel} or {@link MultipleSelectionModel}).
      */
     private ObjectProperty<SelectionModel<T>> selectionModel 
             = new SimpleObjectProperty<SelectionModel<T>>(this, "selectionModel");
-    protected final void setSelectionModel(SelectionModel<T> value) { selectionModel.set(value); }
+    public final void setSelectionModel(SelectionModel<T> value) { selectionModel.set(value); }
     public final SelectionModel<T> getSelectionModel() { return selectionModel.get(); }
     public final ObjectProperty<SelectionModel<T>> selectionModelProperty() { return selectionModel; }
     
@@ -120,7 +172,7 @@ public class ComboBox<T> extends ComboBoxBase<T> {
      *                                                                         *
      **************************************************************************/
 
-    private StringConverter<T> defaultStringConverter() {
+    private static <T> StringConverter<T> defaultStringConverter() {
         return new StringConverter<T>() {
             @Override public String toString(T t) {
                 return t == null ? "" : t.toString();
