@@ -85,6 +85,7 @@ public abstract class ComboBoxBase<T> extends Control {
     private ObjectProperty<T> value = new SimpleObjectProperty<T>(this, "value") {
         @Override protected void invalidated() {
             super.invalidated();
+            fireEvent(new ActionEvent());
         }
     };
     public final void setValue(T value) { valueProperty().set(value); }
@@ -156,6 +157,36 @@ public abstract class ComboBoxBase<T> extends Control {
     private BooleanProperty armed = new SimpleBooleanProperty(this, "armed", false) {
         @Override protected void invalidated() {
             impl_pseudoClassStateChanged(PSEUDO_CLASS_ARMED);
+        }
+    };
+    
+    
+    // --- On Action
+    /**
+     * The ComboBox action, which is invoked whenever the ComboBox 
+     * {@link #valueProperty() value} property is changed. This
+     * may be due to the value property being programmatically changed, when the
+     * user selects an item in a popup list or dialog, or, in the case of 
+     * {@link #editableProperty() editable} ComboBoxes, it may be when the user 
+     * provides their own input (be that via a {@link TextField} or some other
+     * input mechanism.
+     */
+    public final ObjectProperty<EventHandler<ActionEvent>> onActionProperty() { return onAction; }
+    public final void setOnAction(EventHandler<ActionEvent> value) { onActionProperty().set(value); }
+    public final EventHandler<ActionEvent> getOnAction() { return onActionProperty().get(); }
+    private ObjectProperty<EventHandler<ActionEvent>> onAction = new ObjectPropertyBase<EventHandler<ActionEvent>>() {
+        @Override protected void invalidated() {
+            setEventHandler(ActionEvent.ACTION, get());
+        }
+
+        @Override
+        public Object getBean() {
+            return ComboBoxBase.this;
+        }
+
+        @Override
+        public String getName() {
+            return "onAction";
         }
     };
     
