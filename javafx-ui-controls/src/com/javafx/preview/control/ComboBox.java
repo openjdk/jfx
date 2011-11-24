@@ -95,8 +95,16 @@ public class ComboBox<T> extends ComboBoxBase<T> {
      * {@link #selectionModelProperty() selection model}.
      */
     public ComboBox() {
+        this(FXCollections.<T>observableArrayList());
+    }
+    
+    /**
+     * Creates a default ComboBox instance with the provided items list and
+     * a default {@link #selectionModelProperty() selection model}.
+     */
+    public ComboBox(ObservableList<T> items) {
         getStyleClass().add(DEFAULT_STYLE_CLASS);
-        setItems(FXCollections.<T>observableArrayList());
+        setItems(items);
         setSelectionModel(new ComboBoxSelectionModel<T>(this));
     }
     
