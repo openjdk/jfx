@@ -57,6 +57,7 @@ import javafx.scene.shape.Rectangle;
 import javafx.scene.text.Text;
 import java.util.List;
 
+import com.sun.javafx.Utils;
 import com.sun.javafx.scene.control.behavior.TextFieldBehavior;
 import com.sun.javafx.scene.text.HitInfo;
 import com.sun.javafx.tk.FontMetrics;
@@ -137,6 +138,13 @@ public class TextFieldSkin extends TextInputControlSkin<TextField, TextFieldBeha
      * Right edge of the text region sans padding
      */
     protected ObservableDoubleValue textRight;
+
+    @Override public void showContextMenu() {
+        Bounds caretBounds = caretPath.getLayoutBounds();
+        Point2D p = Utils.pointRelativeTo(textNode, null, caretBounds.getMinX(),
+                                          caretBounds.getMaxY(), false);
+        showContextMenu(p.getX(), p.getY());
+    }
 
     /**
      * Create a new TextFieldSkin.
@@ -338,11 +346,6 @@ public class TextFieldSkin extends TextInputControlSkin<TextField, TextFieldBeha
         } else {
             super.handleControlPropertyChanged(propertyReference);
         }
-    }
-
-    // For PasswordFieldSkin
-    protected String maskText(String txt) {
-        return txt;
     }
 
     @Override

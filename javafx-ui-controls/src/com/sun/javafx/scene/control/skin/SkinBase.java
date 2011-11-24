@@ -176,12 +176,9 @@ public abstract class SkinBase<C extends Control, B extends BehaviorBase<C>> ext
         // that may be set on the Control
         this.addEventHandler(MouseEvent.MOUSE_RELEASED, new EventHandler<MouseEvent>() {
             @Override public void handle(MouseEvent event) {
-                if (event.getButton() != MouseButton.SECONDARY) return;
-                    
-                ContextMenu menu = getSkinnable().getContextMenu();
-                if (menu == null) return;
-                
-                menu.show(control, event.getScreenX(), event.getScreenY());
+                if (event.getButton() == MouseButton.SECONDARY) {
+                    showContextMenu(event.getScreenX(), event.getScreenY());
+                }
             }
         });
 
@@ -192,6 +189,22 @@ public abstract class SkinBase<C extends Control, B extends BehaviorBase<C>> ext
     public B getBehavior() {
         return behavior;
     }
+
+    /**
+     * Called for key events with no specific mouse location.
+     *
+     * Subclasses override this to decide location and call showContextMenu(x, y).
+     */
+    public void showContextMenu() {
+    }
+
+    protected void showContextMenu(double x, double y) {
+        ContextMenu menu = getSkinnable().getContextMenu();
+        if (menu != null) {
+            menu.show(control, x, y);
+        }
+    }
+
 
     /***************************************************************************
      * Specialization of the Region                                            *

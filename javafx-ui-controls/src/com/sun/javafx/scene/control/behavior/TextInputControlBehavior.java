@@ -32,6 +32,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 import com.sun.javafx.PlatformUtil;
+import com.sun.javafx.scene.control.skin.SkinBase;
 
 import static javafx.scene.input.KeyEvent.KEY_PRESSED;
 
@@ -107,7 +108,7 @@ public abstract class TextInputControlBehavior<T extends TextInputControl> exten
         super.callActionForEvent(e);
     }
 
-    @Override protected void callAction(String name) {
+    @Override public void callAction(String name) {
         TextInputControl textInputControl = getControl();
         if (textInputControl.isEditable()) {
             setCaretAnimating(false);
@@ -126,12 +127,14 @@ public abstract class TextInputControlBehavior<T extends TextInputControl> exten
             else if ("End".equals(name)) textInputControl.end();
             else if ("DeletePreviousChar".equals(name)) deletePreviousChar();
             else if ("DeleteNextChar".equals(name)) deleteNextChar();
+            else if ("DeleteSelection".equals(name)) deleteSelection();
             else if ("Forward".equals(name)) textInputControl.forward();
             else if ("Backward".equals(name)) textInputControl.backward();
             else if ("Fire".equals(name)) fire(lastEvent);
             else if ("Unselect".equals(name)) textInputControl.deselect();
             else if ("SelectHome".equals(name)) selectHome();
             else if ("SelectEnd".equals(name)) selectEnd();
+            else if ("ShowContextMenu".equals(name)) showContextMenu();
             else super.callAction(name);
             setCaretAnimating(true);
         } else if ("Copy".equals(name)) {
@@ -197,6 +200,12 @@ public abstract class TextInputControlBehavior<T extends TextInputControl> exten
         deleteChar(false);
     }
 
+    private void deleteSelection() {
+        if (getControl().getSelection().getLength() > 0) {
+            deleteChar(false);
+        }
+    }
+
     private void selectNextWord() {
         TextInputControl textInputControl = getControl();
         if (macOS) {
@@ -223,6 +232,12 @@ public abstract class TextInputControlBehavior<T extends TextInputControl> exten
             textInputControl.extendSelection(0);
         } else {
             textInputControl.selectHome();
+        }
+    }
+
+    public void showContextMenu() {
+        if (getControl().getSkin() instanceof SkinBase) {
+            ((SkinBase)getControl().getSkin()).showContextMenu();
         }
     }
 

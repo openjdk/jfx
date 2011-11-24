@@ -38,12 +38,17 @@ import javafx.beans.value.ObservableObjectValue;
 import javafx.collections.ObservableList;
 import javafx.event.ActionEvent;
 import javafx.event.EventHandler;
+import javafx.geometry.Bounds;
 import javafx.geometry.Point2D;
 import javafx.geometry.Rectangle2D;
 import javafx.scene.Node;
 import javafx.scene.Scene;
+import javafx.scene.control.ContextMenu;
 import javafx.scene.control.IndexRange;
+import javafx.scene.control.MenuItem;
+import javafx.scene.control.SeparatorMenuItem;
 import javafx.scene.control.TextInputControl;
+import javafx.scene.input.Clipboard;
 import javafx.scene.input.InputMethodEvent;
 import javafx.scene.input.InputMethodHighlight;
 import javafx.scene.input.InputMethodRequests;
@@ -61,6 +66,7 @@ import javafx.scene.shape.Shape;
 import javafx.scene.shape.VLineTo;
 import javafx.scene.text.Font;
 import javafx.stage.Window;
+import javafx.stage.WindowEvent;
 import javafx.util.Duration;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -71,6 +77,8 @@ import com.sun.javafx.css.StyleableProperty;
 import com.sun.javafx.scene.control.behavior.TextInputControlBehavior;
 import com.sun.javafx.tk.FontMetrics;
 import com.sun.javafx.tk.Toolkit;
+
+import static com.sun.javafx.scene.control.skin.resources.ControlResources.*;
 
 /**
  * Abstract base class for text input skins.
@@ -159,6 +167,42 @@ public abstract class TextInputControlSkin<T extends TextInputControl, B extends
             }
         };
 
+        if (textInput.getContextMenu() == null) {
+            class ContextMenuItem extends MenuItem {
+                ContextMenuItem(final String action) {
+                    super(getString("TextInputControl.menu." + action));
+                    setOnAction(new EventHandler<ActionEvent>() {
+                        @Override public void handle(ActionEvent e) {
+                            behavior.callAction(action);
+                        }
+                    });
+                }
+            }
+
+            final MenuItem cutMI    = new ContextMenuItem("Cut");
+            final MenuItem copyMI   = new ContextMenuItem("Copy");
+            final MenuItem pasteMI  = new ContextMenuItem("Paste");
+            final MenuItem deleteMI = new ContextMenuItem("DeleteSelection");
+            final MenuItem selectMI = new ContextMenuItem("SelectAll");
+
+            final ContextMenu cm = new ContextMenu(cutMI, copyMI, pasteMI, deleteMI,
+                                                   new SeparatorMenuItem(), selectMI);
+
+            cm.setOnShowing(new EventHandler<WindowEvent>() {
+                public void handle(WindowEvent e) {
+                    boolean hasSelection = (textInput.getSelection().getLength() > 0);
+                    boolean maskText = (maskText("A") != "A");
+
+                    cutMI.setDisable(maskText || !hasSelection);
+                    copyMI.setDisable(maskText || !hasSelection);
+                    pasteMI.setDisable(!Clipboard.getSystemClipboard().hasString());
+                    deleteMI.setDisable(!hasSelection);
+                }
+            });
+
+            textInput.setContextMenu(cm);
+        }
+
         if (textInput.getOnInputMethodTextChanged() == null) {
             textInput.setOnInputMethodTextChanged(new EventHandler<InputMethodEvent>() {
                 @Override public void handle(InputMethodEvent event) {
@@ -204,7 +248,13 @@ public abstract class TextInputControlSkin<T extends TextInputControl, B extends
         caretTimeline = null;
     }
 
-    /**
+    // For PasswordFieldSkin
+    protected String maskText(String txt) {
+        return txt;
+    }
+
+ 
+   /**
      * Returns the character at a given offset.
      *
      * @param index

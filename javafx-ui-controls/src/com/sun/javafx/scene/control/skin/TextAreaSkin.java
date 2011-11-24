@@ -62,6 +62,7 @@ import javafx.scene.text.Text;
 import javafx.util.Duration;
 import java.util.List;
 
+import com.sun.javafx.Utils;
 import com.sun.javafx.scene.control.behavior.TextAreaBehavior;
 import com.sun.javafx.scene.text.HitInfo;
 
@@ -327,6 +328,11 @@ public class TextAreaSkin extends TextInputControlSkin<TextArea, TextAreaBehavio
         scrollPane.setFitToWidth(textArea.isWrapText());
         scrollPane.setContent(contentView);
         getChildren().add(scrollPane);
+
+        // Workaround
+        if (textArea.getContextMenu() != null) {
+            scrollPane.setContextMenu(textArea.getContextMenu());
+        }
 
         // Add selection
         selectionHighlightGroup.setManaged(false);
@@ -673,6 +679,13 @@ public class TextAreaSkin extends TextInputControlSkin<TextArea, TextAreaBehavio
         }
 
         return new Rectangle2D(x, y, width, height);
+    }
+
+    @Override public void showContextMenu() {
+        Bounds caretBounds = caretPath.getLayoutBounds();
+        Point2D p = Utils.pointRelativeTo(contentView, null, caretBounds.getMinX(),
+                                          caretBounds.getMaxY(), false);
+        showContextMenu(p.getX(), p.getY());
     }
 
     @Override public void scrollCharacterToVisible(final int index) {

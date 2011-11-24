@@ -70,6 +70,10 @@ public class TextInputControlBindings {
         BINDINGS.add(new KeyBinding(DOWN, KEY_PRESSED,        "SelectEnd").shift());
         BINDINGS.add(new KeyBinding(KP_DOWN, KEY_PRESSED,     "SelectEnd").shift());
         BINDINGS.add(new KeyBinding(END, KEY_PRESSED,         "SelectEnd").shift());
+        // context menu
+        BINDINGS.add(new KeyBinding(CONTEXT_MENU, KEY_PRESSED, "ShowContextMenu"));
+        BINDINGS.add(new KeyBinding(F10, KEY_PRESSED,          "ShowContextMenu").shift());
+
         // platform specific settings
         if (PlatformUtil.isMac()) {
             BINDINGS.add(new KeyBinding(LEFT, KEY_PRESSED,       "Home").meta());

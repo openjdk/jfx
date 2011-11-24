@@ -147,7 +147,7 @@ public class TextAreaBehavior extends TextInputControlBehavior<TextArea> {
         return TEXT_AREA_BINDINGS;
     }
 
-    @Override protected void callAction(String name) {
+    @Override public void callAction(String name) {
         final TextArea textInputControl = getControl();
 
         if (textInputControl.isEditable()) {
