@@ -3125,16 +3125,6 @@ Only the properties with values that are different from the TextBox are specifie
     -fx-graphic-vpos: CENTER;
 }
 
-/*.combo-box:editable .text-box:focused {
-    -fx-background-color: -fx-shadow-highlight-color, -fx-text-box-border, -fx-control-inner-background;
-    -fx-background-insets: 0, 1, 2;
-    -fx-background-radius: 3, 2, 2;
-}*/
-
-.combo-box-base:editable .text-field:hover {
-    -fx-text-fill: derive(-fx-control-inner-background,-60%);
-}
-
 .combo-box-base:editable .text-field:focused {
     -fx-background-color: -fx-focus-color, -fx-outer-border, white;
     -fx-background-radius: 5.4, 3, 2;
