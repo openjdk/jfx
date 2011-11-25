@@ -515,11 +515,11 @@ public class TreeViewBehavior<T> extends BehaviorBase<TreeView<T>> {
         if (fm == null) return;
 
         int focusIndex = fm.getFocusedIndex();
-        int selectIndex = sm.getSelectedIndex();
+        int anchor = getAnchor();
         
         sm.clearSelection();
-        int startPos = selectIndex;
-        int endPos = selectIndex > focusIndex ? focusIndex - 1 : focusIndex + 1;
+        int startPos = anchor;
+        int endPos = anchor > focusIndex ? focusIndex - 1 : focusIndex + 1;
         sm.selectRange(startPos, endPos);
     }
 
