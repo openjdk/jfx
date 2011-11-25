@@ -62,18 +62,49 @@ public class TreeCellBehavior extends CellBehaviorBase<TreeCell<?>> {
         }
     }
     
+    // For RT-17456: have selection occur as fast as possible with mouse input.
+    // The idea is (consistently with some native applications we've tested) to 
+    // do the action as soon as you can. It takes a bit more coding but provides
+    // the best feel:
+    //  - when you click on a not-selected item, you can select immediately on press
+    //  - when you click on a selected item, you need to wait whether DragDetected or Release comes first 
+    private boolean selected = false;
+    private boolean latePress = false;
+    
     public TreeCellBehavior(final TreeCell control) {
         super(control);
     }
 
-    @Override public void mousePressed(MouseEvent e) {
+    @Override public void mousePressed(MouseEvent event) {
+        if (selected) {
+            latePress = true;
+            return;
+        }
+        
+        doSelect(event);
+    }
+    
+    @Override public void mouseReleased(MouseEvent event) {
+        if (latePress) {
+            latePress = false;
+            doSelect(event);
+        }
+        event.consume();
+    }
+    
+    @Override public void mouseDragged(MouseEvent event) {
+        latePress = false;
+        event.consume();
+    }
+    
+    private void doSelect(MouseEvent event) {
         // we update the cell to point to the new tree node
         TreeCell<?> treeCell = getControl();
         TreeView treeView = treeCell.getTreeView();
 
         // If the mouse event is not contained within this TreeCell, then
         // we don't want to react to it.
-        if (treeCell.isEmpty() || ! treeCell.contains(e.getX(), e.getY())) {
+        if (treeCell.isEmpty() || ! treeCell.contains(event.getX(), event.getY())) {
             final PlatformLogger logger = Logging.getControlsLogger();
             if (treeCell.isEmpty() && logger.isLoggable(PlatformLogger.WARNING)) {
 //                logger.warning("TreeCell is empty, so mouse pressed event is "
@@ -95,7 +126,7 @@ public class TreeCellBehavior extends CellBehaviorBase<TreeCell<?>> {
         // than expand/collapse the tree item (if applicable). We do not do editing!
         Node disclosureNode = treeCell.getDisclosureNode();
         if (disclosureNode != null) {
-            if (disclosureNode.getBoundsInParent().contains(e.getX(), e.getY())) {
+            if (disclosureNode.getBoundsInParent().contains(event.getX(), event.getY())) {
                 if (treeCell.getTreeItem() != null) {
                     treeCell.getTreeItem().setExpanded(! treeCell.getTreeItem().isExpanded());
                 }
@@ -107,7 +138,7 @@ public class TreeCellBehavior extends CellBehaviorBase<TreeCell<?>> {
         // recorded, we record the focus index now so that subsequent shift+clicks
         // result in the correct selection occuring (whilst the focus index moves
         // about).
-        if (e.isShiftDown()) {
+        if (event.isShiftDown()) {
             if (! map.containsKey(treeView)) {
                 map.put(treeView, fm.getFocusedIndex());
             }
@@ -116,9 +147,9 @@ public class TreeCellBehavior extends CellBehaviorBase<TreeCell<?>> {
         }
 
         if (sm.getSelectionMode() == SelectionMode.SINGLE) {
-            simpleSelect(e);
+            simpleSelect(event);
         } else {
-            if (e.isControlDown() || e.isMetaDown()) {
+            if (event.isControlDown() || event.isMetaDown()) {
                 if (selected) {
                     // we remove this row from the current selection
                     sm.clearSelection(index);
@@ -126,7 +157,7 @@ public class TreeCellBehavior extends CellBehaviorBase<TreeCell<?>> {
                     // We add this row to the current selection
                     sm.select(index);
                 }
-            } else if (e.isShiftDown()) {
+            } else if (event.isShiftDown()) {
                 // we add all rows between the current selection focus and
                 // this row (inclusive) to the current selection.
                 final int focusedIndex = map.containsKey(treeView) ? map.get(treeView) : fm.getFocusedIndex();
@@ -141,12 +172,12 @@ public class TreeCellBehavior extends CellBehaviorBase<TreeCell<?>> {
                 
                 fm.focus(index);
             } else {
-                simpleSelect(e);
+                simpleSelect(event);
             }
         }
     }
 
-    private void simpleSelect(MouseEvent e) {
+    private void simpleSelect(MouseEvent event) {
         TreeView tv = getControl().getTreeView();
         int index = getControl().getIndex();
         MultipleSelectionModel sm = tv.getSelectionModel();
@@ -155,12 +186,12 @@ public class TreeCellBehavior extends CellBehaviorBase<TreeCell<?>> {
         tv.getSelectionModel().clearAndSelect(index);
 
         // handle editing
-        if (e.getClickCount() == 1 && isAlreadySelected) {
+        if (event.getClickCount() == 1 && isAlreadySelected) {
             tv.edit(getControl().getTreeItem());
-        } else if (e.getClickCount() == 1) {
+        } else if (event.getClickCount() == 1) {
             // cancel editing
             tv.edit(null);
-        } else if (e.getClickCount() == 2 && getControl().isEditable()) {
+        } else if (event.getClickCount() == 2 && getControl().isEditable()) {
             // try to expand/collapse tree item
             getControl().getTreeItem().setExpanded(! getControl().getTreeItem().isExpanded());
         }
