@@ -99,19 +99,15 @@ abstract class MultipleSelectionModelBase<T> extends MultipleSelectionModel<T> {
         };
         
         final MappingChange.Map<Integer,?> map = new MappingChange.Map<Integer,Object>() {
-
-            @Override
-            public Object map(Integer f) {
+            @Override public Object map(Integer f) {
                 return getModelItem(f);
             }
         };
         
         selectedIndicesSeq.addListener(new ListChangeListener<Integer>() {
-            @Override
-            public void onChanged(final Change<? extends Integer> c) {
+            @Override public void onChanged(final Change<? extends Integer> c) {
                 // when the selectedIndices ObservableList changes, we manually call
                 // the observers of the selectedItems ObservableList.
-
                 selectedItemsSeq.callObservers(new MappingChange(c, map, selectedItemsSeq));
                 c.reset();
             }
@@ -408,7 +404,12 @@ abstract class MultipleSelectionModelBase<T> extends MultipleSelectionModel<T> {
     @Override public void clearSelection(int index) {
         // TODO shouldn't directly access like this
         // TODO might need to update focus and / or selected index/item
+        boolean wasEmpty = selectedIndices.isEmpty();
         selectedIndices.clear(index);
+        
+        if (! wasEmpty && selectedIndices.isEmpty()) {
+            clearSelection();
+        }
 
 //            updateLeadSelection();
 //            support.fireChangedEvent(SELECTED_INDICES);
