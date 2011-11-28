@@ -195,7 +195,6 @@ public class TableViewBehavior<T> extends BehaviorBase<TableView<T>> {
         else super.callAction(name);
     }
 
-    // TODO
     @Override protected List<KeyBinding> createKeyBindings() {
         return TABLE_VIEW_BINDINGS;
     }
@@ -402,7 +401,6 @@ public class TableViewBehavior<T> extends BehaviorBase<TableView<T>> {
         if (onMoveToLastCell != null) onMoveToLastCell.run();
     }
 
-    // TODO need table.scrollDown()
     private void focusPreviousRow() {
         TableView.TableViewSelectionModel sm = getControl().getSelectionModel();
         if (sm == null) return;
@@ -739,16 +737,16 @@ public class TableViewBehavior<T> extends BehaviorBase<TableView<T>> {
 
         TablePosition focusedCell = fm.getFocusedCell();
         int focusIndex = focusedCell.getRow();
-        int selectIndex = sm.getSelectedIndex();
+        int anchor = getAnchor().getRow();
         
         sm.clearSelection();
         if (! sm.isCellSelectionEnabled()) {
-            int startPos = selectIndex;
-            int endPos = selectIndex > focusIndex ? focusIndex - 1 : focusIndex + 1;
+            int startPos = anchor;
+            int endPos = anchor > focusIndex ? focusIndex - 1 : focusIndex + 1;
             sm.selectRange(startPos, endPos);
         } else {
-            int min = Math.min(selectIndex, focusIndex);
-            int max = Math.max(selectIndex, focusIndex);
+            int min = Math.min(anchor, focusIndex);
+            int max = Math.max(anchor, focusIndex);
             
             for (int i = min; i <= max; i++) {
                 sm.select(i, focusedCell.getTableColumn());

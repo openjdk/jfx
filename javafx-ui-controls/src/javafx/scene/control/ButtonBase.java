@@ -88,7 +88,6 @@ public abstract class ButtonBase extends Labeled {
      * also takes into account whether the mouse is actually over the
      * button and pressed.
      */
-    // TODO Armed should not be able to be bound, methinks.
     public final ReadOnlyBooleanProperty armedProperty() { return armed.getReadOnlyProperty(); }
     private void setArmed(boolean value) { armed.set(value); }
     public final boolean isArmed() { return armedProperty().get(); }

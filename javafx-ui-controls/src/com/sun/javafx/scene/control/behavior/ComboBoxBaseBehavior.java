@@ -92,9 +92,6 @@ public class ComboBoxBaseBehavior<T> extends BehaviorBase<ComboBoxBase<T>> {
         BUTTON_BINDINGS.add(new KeyBinding(UP, "togglePopup").alt());
         BUTTON_BINDINGS.add(new KeyBinding(DOWN, "togglePopup").alt());
         
-        BUTTON_BINDINGS.add(new KeyBinding(UP, "selectPrevious"));
-        BUTTON_BINDINGS.add(new KeyBinding(DOWN, "selectNext"));
-        
         if (Utils.isWindows()) {
             BUTTON_BINDINGS.add(new KeyBinding(ENTER, KEY_PRESSED, PRESS_ACTION));
             BUTTON_BINDINGS.add(new KeyBinding(ENTER, KEY_RELEASED, RELEASE_ACTION));
@@ -122,10 +119,6 @@ public class ComboBoxBaseBehavior<T> extends BehaviorBase<ComboBoxBase<T>> {
         } else if ("togglePopup".equals(name)) {
             if (getControl().isShowing()) hide();
             else show();
-        } else if ("selectPrevious".equals(name)) {
-            selectPrevious();
-        } else if ("selectNext".equals(name)) {
-            selectNext();
         } else {
             super.callAction(name);
         }
@@ -163,22 +156,6 @@ public class ComboBoxBaseBehavior<T> extends BehaviorBase<ComboBoxBase<T>> {
      * Mouse Events                                                           *
      *                                                                        *
      *************************************************************************/
- 
-    public void arrowPressed(MouseEvent e) {
-        getFocus();
-        arm(e);
-    }
-    
-    public void arrowReleased(MouseEvent e) {
-        disarm();
-        
-        Point2D p = ((Node)e.getSource()).localToParent(e.getX(), e.getY());
-        if (getControl().isShowing()) {
-            getControl().hide();
-        } else if (getControl().contains(p.getX(), p.getY())) {
-            getControl().show();
-        }
-    }
     
     @Override public void mousePressed(MouseEvent e) {
         super.mousePressed(e);
@@ -191,19 +168,28 @@ public class ComboBoxBaseBehavior<T> extends BehaviorBase<ComboBoxBase<T>> {
         
         disarm();
         
+        // The wasComboBoxButtonClickedForAutoHide boolean was added to resolve
+        // RT-18151: namely, clicking on the comboBox button shouldn't hide, 
+        // and then immediately show the popup, which was occuring because we 
+        // didn't know where the popup autohide was occurring. Another comment
+        // appears below in the autoHide() method.
         if (getControl().isShowing()) {
             hide();
-        } else if (getControl().contains(e.getX(), e.getY())) {
-            getControl().show();
+        } else if (! wasComboBoxButtonClickedForAutoHide && getControl().contains(e.getX(), e.getY())) {
+            show();
+        } else {
+            wasComboBoxButtonClickedForAutoHide = false;
         }
     }
 
     @Override public void mouseEntered(MouseEvent e) {
+        mouseInsideButton = true;
         super.mouseEntered(e);
         arm();
     }
 
     @Override public void mouseExited(MouseEvent e) {
+        mouseInsideButton = false;
         super.mouseExited(e);
         disarm();
     }
@@ -236,6 +222,17 @@ public class ComboBoxBaseBehavior<T> extends BehaviorBase<ComboBoxBase<T>> {
         }
     }
     
+    private boolean wasComboBoxButtonClickedForAutoHide = false;
+    private boolean mouseInsideButton = false;
+    public void onAutoHide() {
+        // if the ComboBox button was clicked, and it was this that forced the
+        // popup to disappear, we don't want the popup to immediately reappear,
+        // so we set wasComboBoxButtonClickedForAutoHide to reflect whether the
+        // mouse was within the comboBox button at the time of autohide occuring.
+        wasComboBoxButtonClickedForAutoHide = mouseInsideButton;
+        hide();
+    }
+    
     public void arm() {
         if (getControl().isPressed()) {
             getControl().arm();
@@ -246,17 +243,5 @@ public class ComboBoxBaseBehavior<T> extends BehaviorBase<ComboBoxBase<T>> {
         if (! keyDown && getControl().isArmed()) {
             getControl().disarm();
         }
-    }
-    
-    private void selectPrevious() {
-//        SelectionModel sm = getControl().getSelectionModel();
-//        if (sm == null) return;
-//        sm.selectPrevious();
-    }
-    
-    private void selectNext() {
-//        SelectionModel sm = getControl().getSelectionModel();
-//        if (sm == null) return;
-//        sm.selectNext();
     }
 }

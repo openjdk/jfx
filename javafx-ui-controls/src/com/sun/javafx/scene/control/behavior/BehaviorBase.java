@@ -92,17 +92,11 @@ public class BehaviorBase<C extends Control> {
         TRAVERSAL_BINDINGS.add(new KeyBinding(RIGHT, "TraverseRight").shift().alt().ctrl());
         TRAVERSAL_BINDINGS.add(new KeyBinding(TAB, "TraverseNext").shift().alt().ctrl());
         TRAVERSAL_BINDINGS.add(new KeyBinding(TAB, "TraversePrevious").alt().ctrl());
-
-        // TODO XXX DEBUGGING ONLY
-        TRAVERSAL_BINDINGS.add(new KeyBinding(F4, "TraverseDebug").shift().alt().ctrl());
     }
 
     /**
      * The Control with which this Behavior is used. This must be specified in
      * the constructor and must not be null.
-     * TODO Should we have a dispose method on Behavior with similar semantics
-     * as that on Skin? Should control be set to null when the behavior is
-     * no longer used?
      */
     private C control;
 
@@ -145,8 +139,6 @@ public class BehaviorBase<C extends Control> {
 
     public final C getControl() { return control; }
 
-    //TODO(aim): TextInputControlBehavior needs to override this to track "last" event
-    //so removed finality until we can resolve it there's another way to meet TICB's needs.
     protected /*final*/ void callActionForEvent(KeyEvent e) {
         KeyBinding match = null;
         int specificity = 0;
@@ -184,7 +176,6 @@ public class BehaviorBase<C extends Control> {
         else if ("TraverseRight".equals(name)) traverseRight();
         else if ("TraverseNext".equals(name)) traverseNext();
         else if ("TraversePrevious".equals(name)) traversePrevious();
-        else if ("TraverseDebug".equals(name)) traverseDebug();
     }
 
     /***************************************************************************
@@ -241,11 +232,6 @@ public class BehaviorBase<C extends Control> {
      */
     public void traversePrevious() {
         traverse(control, com.sun.javafx.scene.traversal.Direction.PREVIOUS);
-    }
-
-    // TODO XXX DEBUGGING ONLY
-    void traverseDebug() {
-//        TraversalEngine.debug(skin.control);
     }
 
     /***************************************************************************

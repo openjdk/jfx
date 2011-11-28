@@ -61,13 +61,13 @@ public abstract class ComboBoxBaseSkin<T> extends SkinBase<ComboBoxBase<T>, Comb
         
         arrowButton.setOnMousePressed(new EventHandler<MouseEvent>() {
             @Override public void handle(MouseEvent e) {
-                getBehavior().arrowPressed(e);
+                getBehavior().mousePressed(e);
                 e.consume();
             }
         });
         arrowButton.setOnMouseReleased(new EventHandler<MouseEvent>() {
             @Override public void handle(MouseEvent e) {
-                getBehavior().arrowReleased(e);
+                getBehavior().mouseReleased(e);
                 e.consume();
             }
         });

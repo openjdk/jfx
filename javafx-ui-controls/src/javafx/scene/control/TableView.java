@@ -647,7 +647,7 @@ public class TableView<S> extends Control {
             }
         });
 
-        // FIXME hacky - we're watching for changes to the content width such
+        // We're watching for changes to the content width such
         // that the resize policy can be run if necessary. This comes from
         // TreeViewSkin.
         getProperties().addListener(new MapChangeListener<Object, Object>() {
@@ -1154,9 +1154,6 @@ public class TableView<S> extends Control {
      */
     public void scrollTo(int index) {
        getProperties().put(VirtualContainerBase.SCROLL_TO_INDEX, index);
-
-       // TODO enter edit mode for the given row?
-       // TODO offer a scrollToCell(row, cell) method as well?
     }
 
     /**

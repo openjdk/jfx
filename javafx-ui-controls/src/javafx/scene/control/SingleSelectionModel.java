@@ -133,6 +133,10 @@ public abstract class SingleSelectionModel<T> extends SelectionModel<T> {
      * index to be unselected.
      */
     @Override public void select(int index) {
+        if (index == -1) {
+            clearSelection();
+            return;
+        }
         final int itemCount = getItemCount();
         if (itemCount == 0 || index < 0 || index >= itemCount) return;
         updateSelectedIndex(index);

@@ -209,8 +209,6 @@ public class TableColumn<S,T> implements EventTarget {
      * <code>toString()</code> if it is not null, setting the resulting string
      * inside the {@link Cell#textProperty() text} property.
      */
-    // TODO eventually we can fill this default cell factory with a tonne of different
-    // default renderers/editors based on the type of cell.item.
     public static final Callback<TableColumn<?,?>, TableCell<?,?>> DEFAULT_CELL_FACTORY = new Callback<TableColumn<?,?>, TableCell<?,?>>() {
         @Override public TableCell<?,?> call(TableColumn<?,?> param) {
             return new TableCell() {

@@ -250,9 +250,7 @@ class TableHeaderRow extends StackPane {
                 double imageWidth = padding.getLeft() + padding.getRight();
                 double imageHeight = padding.getTop() + padding.getBottom();
                 
-                // FIXME -3 magic number here to shift the + upwards based on
-                // UI feedback
-                 image.resize(imageWidth, imageHeight);
+                image.resize(imageWidth, imageHeight);
                 positionInArea(image, 0, 0, getWidth(), getHeight() - 3, 
                         0, HPos.CENTER, VPos.CENTER);
             }

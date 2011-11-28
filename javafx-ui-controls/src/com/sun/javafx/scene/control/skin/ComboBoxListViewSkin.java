@@ -119,12 +119,16 @@ public class ComboBoxListViewSkin<T> extends ComboBoxPopupControl<T> {
         StringConverter<T> c = comboBox.getConverter();
         if (c == null) return;
                         
-        T item = comboBox.getSelectionModel().getSelectedItem();
-        int index = comboBox.getSelectionModel().getSelectedIndex();        
-        
         if (comboBox.isEditable()) {
-            textField.setText(c.toString(item));
+            T value = comboBox.getValue();
+            String stringValue = c.toString(value);
+            if (value == null || stringValue == null) {
+                textField.setText("");
+            } else if (! stringValue.equals(textField.getText())) {
+                textField.setText(stringValue);
+            }
         } else {
+            int index = comboBox.getSelectionModel().getSelectedIndex();        
             listCellLabel.updateListView(listView);
             listCellLabel.updateIndex(index);
         }
@@ -169,13 +173,7 @@ public class ComboBoxListViewSkin<T> extends ComboBoxPopupControl<T> {
     private ListView<T> createListView() {
         final ListView<T> listView = new ListView<T>() {
             @Override protected double computePrefWidth(double height) {
-                if (getSkin() == null) {
-                    // if the skin is null, it means that the css related to the
-                    // listview skin hasn't been loaded yet, so we force it here.
-                    // This ensures the combobox button is the correct width
-                    // when it is first displayed, before the listview is shown.
-                    getPopup().getScene().getRoot().impl_processCSS(true);
-                }
+                doCSSCheck();
                 
                 if (getSkin() instanceof VirtualContainerBase) {
                     VirtualContainerBase skin = (VirtualContainerBase)getSkin();
@@ -186,8 +184,26 @@ public class ComboBoxListViewSkin<T> extends ComboBoxPopupControl<T> {
             }
 
             @Override protected double computePrefHeight(double width) {
-                double ch = comboBox.getItems().size() * 25;
-                return Math.min(ch, 200);
+                doCSSCheck();
+                
+                if (getSkin() instanceof VirtualContainerBase) {
+                    int maxRows = comboBox.getVisibleRowCount();
+                    VirtualContainerBase skin = (VirtualContainerBase)getSkin();
+                    return skin.getVirtualFlowPreferredHeight(maxRows);
+                } else {
+                    double ch = comboBox.getItems().size() * 25;
+                    return Math.min(ch, 200);
+                }
+            }
+            
+            private void doCSSCheck() {
+                if (getSkin() == null) {
+                    // if the skin is null, it means that the css related to the
+                    // listview skin hasn't been loaded yet, so we force it here.
+                    // This ensures the combobox button is the correct width
+                    // when it is first displayed, before the listview is shown.
+                    getPopup().getScene().getRoot().impl_processCSS(true);
+                }
             }
         };
 

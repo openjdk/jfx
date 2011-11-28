@@ -57,12 +57,43 @@ public class TableCellBehavior extends CellBehaviorBase<TableCell> {
             map.put(table, anchor);
         }
     }
+    
+    // For RT-17456: have selection occur as fast as possible with mouse input.
+    // The idea is (consistently with some native applications we've tested) to 
+    // do the action as soon as you can. It takes a bit more coding but provides
+    // the best feel:
+    //  - when you click on a not-selected item, you can select immediately on press
+    //  - when you click on a selected item, you need to wait whether DragDetected or Release comes first 
+    private boolean selected = false;
+    private boolean latePress = false;
 
     public TableCellBehavior(TableCell control) {
         super(control);
     }
+    
+    @Override public void mousePressed(MouseEvent event) {
+        if (selected) {
+            latePress = true;
+            return;
+        }
+        
+        doSelect(event);
+    }
+    
+    @Override public void mouseReleased(MouseEvent event) {
+        if (latePress) {
+            latePress = false;
+            doSelect(event);
+        }
+        event.consume();
+    }
+    
+    @Override public void mouseDragged(MouseEvent event) {
+        latePress = false;
+        event.consume();
+    }
 
-    @Override public void mousePressed(MouseEvent e) {
+    private void doSelect(MouseEvent e) {
         // Note that table.select will reset selection
         // for out of bounds indexes. So, need to check
         final TableCell tableCell = getControl();

@@ -4,11 +4,7 @@
 package javafx.scene.control;
 
 import static javafx.scene.control.ControlTestUtils.assertStyleClassContains;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertSame;
-
+import static org.junit.Assert.*;
 import java.util.Arrays;
 
 import javafx.beans.property.ObjectProperty;
@@ -224,5 +220,82 @@ public class ListViewTest {
         assertEquals(0, lv.getSelectionModel().getSelectedIndex());
         list.remove(0);
         assertEquals(-1, lv.getSelectionModel().getSelectedIndex());
+    }
+    
+    @Test public void test_rt17522_focusShouldMoveWhenItemAddedAtFocusIndex() {
+        final ListView lv = new ListView();
+        FocusModel fm = lv.getFocusModel();
+        lv.getItems().add("row1");
+        fm.focus(0);
+        assertTrue(fm.isFocused(0));
+        
+        lv.getItems().add(0, "row0");
+        assertTrue(fm.isFocused(1));
+    }
+    
+    @Test public void test_rt17522_focusShouldMoveWhenItemAddedBeforeFocusIndex() {
+        final ListView lv = new ListView();
+        FocusModel fm = lv.getFocusModel();
+        lv.getItems().addAll("row1", "row2");
+        fm.focus(1);
+        assertTrue(fm.isFocused(1));
+        assertEquals("row2", fm.getFocusedItem());
+        
+        lv.getItems().add(1, "row0");
+        assertTrue(fm.isFocused(2));
+        assertEquals("row2", fm.getFocusedItem());
+        assertFalse(fm.isFocused(1));
+    }
+    
+    @Test public void test_rt17522_focusShouldNotMoveWhenItemAddedAfterFocusIndex() {
+        final ListView lv = new ListView();
+        FocusModel fm = lv.getFocusModel();
+        lv.getItems().addAll("row1");
+        fm.focus(0);
+        assertTrue(fm.isFocused(0));
+        assertEquals("row1", fm.getFocusedItem());
+        
+        lv.getItems().add(1, "row2");
+        assertTrue(fm.isFocused(0));
+        assertEquals("row1", fm.getFocusedItem());
+        assertFalse(fm.isFocused(1));
+    }
+    
+    @Test public void test_rt17522_focusShouldBeResetWhenFocusedItemIsRemoved() {
+        final ListView lv = new ListView();
+        FocusModel fm = lv.getFocusModel();
+        lv.getItems().add("row1");
+        fm.focus(0);
+        assertTrue(fm.isFocused(0));
+        
+        lv.getItems().remove("row1");
+        assertTrue(fm.getFocusedIndex() == -1);
+        assertNull(fm.getFocusedItem());
+    }
+    
+    @Test public void test_rt17522_focusShouldMoveWhenItemRemovedBeforeFocusIndex() {
+        final ListView lv = new ListView();
+        FocusModel fm = lv.getFocusModel();
+        lv.getItems().addAll("row1", "row2");
+        fm.focus(1);
+        assertTrue(fm.isFocused(1));
+        assertEquals("row2", fm.getFocusedItem());
+        
+        lv.getItems().remove("row1");
+        assertTrue(fm.isFocused(0));
+        assertEquals("row2", fm.getFocusedItem());
+    }
+    
+    @Test public void test_rt17522_focusShouldNotMoveWhenItemRemovedAfterFocusIndex() {
+        final ListView lv = new ListView();
+        FocusModel fm = lv.getFocusModel();
+        lv.getItems().addAll("row1", "row2");
+        fm.focus(0);
+        assertTrue(fm.isFocused(0));
+        assertEquals("row1", fm.getFocusedItem());
+        
+        lv.getItems().remove("row2");
+        assertTrue(fm.isFocused(0));
+        assertEquals("row1", fm.getFocusedItem());
     }
 }

@@ -1093,7 +1093,6 @@ public class TreeView<T> extends Control {
                     }
                 }
                 
-//                System.out.println("shift " + shift + " starting from " + startRow);
                 shiftSelection(startRow, shift);
             }
         };
@@ -1196,7 +1195,6 @@ public class TreeView<T> extends Control {
      * 
      * @param <T> 
      */
-    // TODO add support for shifting focus when the tree contents change
     static class TreeViewFocusModel<T> extends FocusModel<TreeItem<T>> {
 
         private final TreeView<T> treeView;
@@ -1234,22 +1232,42 @@ public class TreeView<T> extends Control {
                 // don't shift focus if the event occurred on a tree item after
                 // the focused row
                 int row = treeView.getRow(e.getTreeItem());
-                if (row > getFocusedIndex()) return;
                 
                 int shift = 0;
                 if (e.wasExpanded()) {
-                    // need to shuffle selection by the number of visible children
-                    shift = e.getTreeItem().getExpandedDescendentCount() - 1;
+                    if (row > getFocusedIndex()) {
+                        // need to shuffle selection by the number of visible children
+                        shift = e.getTreeItem().getExpandedDescendentCount() - 1;
+                    }
                 } else if (e.wasCollapsed()) {
-                    // need to shuffle selection by the number of visible children
-                    // that were just hidden
-                    shift = - e.getTreeItem().previousExpandedDescendentCount + 1;
+                    if (row > getFocusedIndex()) {
+                        // need to shuffle selection by the number of visible children
+                        // that were just hidden
+                        shift = - e.getTreeItem().previousExpandedDescendentCount + 1;
+                    }
                 } else if (e.wasAdded()) {
-                    // shuffle selection by the number of added items
-                    shift = e.getTreeItem().isExpanded() ? e.getAddedSize() : 0;
+                    for (int i = 0; i < e.getAddedChildren().size(); i++) {
+                        TreeItem item = e.getAddedChildren().get(i);
+                        row = treeView.getRow(item);
+                        
+                        if (row <= getFocusedIndex()) {
+//                            shift = e.getTreeItem().isExpanded() ? e.getAddedSize() : 0;
+                            shift += item.getExpandedDescendentCount();
+                        }
+                    }
                 } else if (e.wasRemoved()) {
-                    // shuffle selection by the number of removed items
-                    shift = e.getTreeItem().isExpanded() ? -e.getRemovedSize() : 0;
+                    for (int i = 0; i < e.getRemovedChildren().size(); i++) {
+                        TreeItem item = e.getRemovedChildren().get(i);
+                        if (item != null && item.equals(getFocusedItem())) {
+                            focus(-1);
+                            return;
+                        }
+                    }
+                    
+                    if (row <= getFocusedIndex()) {
+                        // shuffle selection by the number of removed items
+                        shift = e.getTreeItem().isExpanded() ? -e.getRemovedSize() : 0;
+                    }
                 }
                 
                 focus(getFocusedIndex() + shift);

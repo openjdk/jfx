@@ -549,8 +549,6 @@ public class TreeItem<T> implements EventTarget {
      * leaf can not be expanded by the user, and as such will not show a
      * disclosure node or respond to expansion requests.
      */
-     // FIXME this should be final, but for subclasses that want to override this, 
-     // we need to allow this to be overridden.
     public boolean isLeaf() { return leaf.getValue(); }
     
     /**
