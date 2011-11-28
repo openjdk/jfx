@@ -215,6 +215,7 @@ abstract class MultipleSelectionModelBase<T> extends MultipleSelectionModel<T> {
     void shiftSelection(int position, int shift) {
         // with no check here, we get RT-15024
         if (position < 0) return;
+        if (shift == 0) return;
         
         if (shift > 0) {
             for (int iter = 0; iter < shift; iter++) {
@@ -232,9 +233,12 @@ abstract class MultipleSelectionModelBase<T> extends MultipleSelectionModel<T> {
         }
         
         // This ensure that the selection remains accurate when a shift occurs.
-         if (getFocusedIndex() >= position && getFocusedIndex() > -1 && getFocusedIndex() + shift > -1) {
-             setSelectedIndex(getFocusedIndex() + shift);
-         }
+        if (getFocusedIndex() >= position && getFocusedIndex() > -1 && getFocusedIndex() + shift > -1) {
+            setSelectedIndex(getFocusedIndex() + shift);
+        }
+         
+        // TODO this isn't correct
+        selectedIndicesSeq.callObservers(new NonIterableChange.SimplePermutationChange<Integer>(0, getItemCount() - 1, new int[] { }, selectedIndicesSeq));
     }
 
     @Override public void clearAndSelect(int row) {

@@ -1121,7 +1121,8 @@ public class ListView<T> extends Control {
             @Override public void onChanged(Change<? extends T> c) {
                 c.next();
                 // looking at the first change
-                if (getFocusedIndex() == -1 || c.getFrom() > getFocusedIndex()) {
+                int from = c.getFrom();
+                if (getFocusedIndex() == -1 || from > getFocusedIndex()) {
                     return;
                 }
                 
@@ -1136,6 +1137,7 @@ public class ListView<T> extends Control {
                     addedSize += c.getAddedSize();
                     removedSize += c.getRemovedSize();
                 }
+                
                 if (added && !removed) {
                     focus(getFocusedIndex() + addedSize);
                 } else if (!added && removed) {
