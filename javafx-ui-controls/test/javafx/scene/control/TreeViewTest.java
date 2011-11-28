@@ -3,12 +3,10 @@
  */
 package javafx.scene.control;
 
+import javafx.beans.InvalidationListener;
+import javafx.beans.Observable;
 import static javafx.scene.control.ControlTestUtils.assertStyleClassContains;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertSame;
-import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.*;
 import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.SimpleObjectProperty;
 
@@ -258,4 +256,128 @@ public class TreeViewTest {
         // assert the there are no selected items any longer
         assertTrue("items: " + sm.getSelectedItem(), sm.getSelectedItems().isEmpty());
     }
+    
+    /*********************************************************************
+     * Tests from bug reports                                            *
+     ********************************************************************/  
+    @Ignore @Test public void test_rt17112() {
+        TreeItem<String> root1 = new TreeItem<String>("Root");
+        root1.setExpanded(true);
+        addChildren(root1, "child");
+        for (TreeItem child : root1.getChildren()) {
+            addChildren(child, (String)child.getValue());
+            child.setExpanded(true);
+        }
+
+        final TreeView treeView1 = new TreeView();
+        final MultipleSelectionModel sm = treeView1.getSelectionModel();
+        sm.setSelectionMode(SelectionMode.MULTIPLE);
+        treeView1.setRoot(root1);
+        
+        final TreeItem<String> rt17112_child1 = root1.getChildren().get(1);
+        final TreeItem<String> rt17112_child1_0 = rt17112_child1.getChildren().get(0);
+        final TreeItem<String> rt17112_child2 = root1.getChildren().get(2);
+        
+        sm.getSelectedItems().addListener(new InvalidationListener() {
+            int count = 0;
+            @Override public void invalidated(Observable observable) {
+                if (count == 0) {
+                    assertEquals(rt17112_child1_0, sm.getSelectedItem());
+                    assertEquals(1, sm.getSelectedIndices().size());
+                    assertEquals(6, sm.getSelectedIndex());
+                    assertTrue(treeView1.getFocusModel().isFocused(6));
+                } else if (count == 1) {
+                    assertEquals(rt17112_child1, sm.getSelectedItem());
+                    assertFalse(sm.getSelectedItems().contains(rt17112_child2));
+                    assertEquals(1, sm.getSelectedIndices().size());
+                    assertTrue(treeView1.getFocusModel().isFocused(5));
+                }
+                count++;
+            }
+        });
+        
+        // this triggers the first callback above, so that count == 0
+        sm.select(rt17112_child1_0);
+
+        // this triggers the second callback above, so that count == 1
+        rt17112_child1.setExpanded(false);
+    }
+    private void addChildren(TreeItem parent, String name) {
+        for (int i=0; i<3; i++) {
+            TreeItem<String> ti = new TreeItem<String>(name+"-"+i);
+            parent.getChildren().add(ti);
+        }
+    }
+    
+    @Test public void test_rt17522_focusShouldMoveWhenItemAddedAtFocusIndex() {
+        installChildren();
+        FocusModel fm = treeView.getFocusModel();
+        fm.focus(1);    // focus on child1
+        assertTrue(fm.isFocused(1));
+        assertEquals(child1, fm.getFocusedItem());
+        
+        TreeItem child0 = new TreeItem("child0");
+        root.getChildren().add(0, child0);  // 0th index == position of child1 in root
+        
+        assertEquals(child1, fm.getFocusedItem());
+        assertTrue(fm.isFocused(2));
+    }
+    
+    @Test public void test_rt17522_focusShouldMoveWhenItemAddedBeforeFocusIndex() {
+        installChildren();
+        FocusModel fm = treeView.getFocusModel();
+        fm.focus(1);    // focus on child1
+        assertTrue(fm.isFocused(1));
+        
+        TreeItem child0 = new TreeItem("child0");
+        root.getChildren().add(0, child0);
+        assertTrue("Focused index: " + fm.getFocusedIndex(), fm.isFocused(2));
+    }
+    
+    @Test public void test_rt17522_focusShouldNotMoveWhenItemAddedAfterFocusIndex() {
+        installChildren();
+        FocusModel fm = treeView.getFocusModel();
+        fm.focus(1);    // focus on child1
+        assertTrue(fm.isFocused(1));
+        
+        TreeItem child4 = new TreeItem("child4");
+        root.getChildren().add(3, child4);
+        assertTrue("Focused index: " + fm.getFocusedIndex(), fm.isFocused(1));
+    }
+    
+    @Test public void test_rt17522_focusShouldBeResetWhenFocusedItemIsRemoved() {
+        installChildren();
+        FocusModel fm = treeView.getFocusModel();
+        fm.focus(1);
+        assertTrue(fm.isFocused(1));
+        
+        root.getChildren().remove(child1);
+        assertEquals(-1, fm.getFocusedIndex());
+        assertNull(fm.getFocusedItem());
+    }
+    
+    @Test public void test_rt17522_focusShouldMoveWhenItemRemovedBeforeFocusIndex() {
+        installChildren();
+        FocusModel fm = treeView.getFocusModel();
+        fm.focus(2);
+        assertTrue(fm.isFocused(2));
+        
+        root.getChildren().remove(child1);
+        assertTrue(fm.isFocused(1));
+        assertEquals(child2, fm.getFocusedItem());
+    }
+
+//    This test fails as, in TreeView FocusModel, we do not know the index of the
+//    removed tree items, which means we don't know whether they existed before
+//    or after the focused item.
+//    @Test public void test_rt17522_focusShouldNotMoveWhenItemRemovedAfterFocusIndex() {
+//        installChildren();
+//        FocusModel fm = treeView.getFocusModel();
+//        fm.focus(1);
+//        assertTrue(fm.isFocused(1));
+//        
+//        root.getChildren().remove(child3);
+//        assertTrue("Focused index: " + fm.getFocusedIndex(), fm.isFocused(1));
+//        assertEquals(child1, fm.getFocusedItem());
+//    }
 }
