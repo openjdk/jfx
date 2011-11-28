@@ -38,9 +38,6 @@ import java.util.ArrayList;
 import java.util.List;
 
 import javafx.beans.InvalidationListener;
-import javafx.geometry.Point2D;
-import javafx.scene.Node;
-import javafx.scene.control.SelectionModel;
 import javafx.scene.input.MouseButton;
 
 public class ComboBoxBaseBehavior<T> extends BehaviorBase<ComboBoxBase<T>> {
