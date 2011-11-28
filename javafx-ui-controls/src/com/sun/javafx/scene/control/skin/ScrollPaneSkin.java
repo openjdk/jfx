@@ -731,10 +731,19 @@ public class ScrollPaneSkin extends SkinBase<ScrollPane, ScrollPaneBehavior> imp
     }
 
     private void updateHorizontalSB() {
-        if (hsb.isVisible()) {
-            hsb.setVisibleAmount(contentWidth / nodeWidth * (hsb.getMax() - hsb.getMin()));
+        double contentRatio = nodeWidth * (hsb.getMax() - hsb.getMin());
+        if (contentRatio > 0.0) {
+            hsb.setVisibleAmount(contentWidth / contentRatio);
             hsb.setBlockIncrement(0.9 * hsb.getVisibleAmount());
             hsb.setUnitIncrement(0.1 * hsb.getVisibleAmount());
+        }
+        else {
+            hsb.setVisibleAmount(0.0);
+            hsb.setBlockIncrement(0.0);
+            hsb.setUnitIncrement(0.0);
+        }
+
+        if (hsb.isVisible()) {
             updatePosX();
         } else {
             if (nodeWidth > contentWidth) {
@@ -746,10 +755,19 @@ public class ScrollPaneSkin extends SkinBase<ScrollPane, ScrollPaneBehavior> imp
     }
     
     private void updateVerticalSB() {
-        if (vsb.isVisible()) {
-            vsb.setVisibleAmount(contentHeight / nodeHeight * (vsb.getMax() - vsb.getMin()));
+        double contentRatio = nodeHeight * (vsb.getMax() - vsb.getMin());
+        if (contentRatio > 0.0) {
+            vsb.setVisibleAmount(contentHeight / contentRatio);
             vsb.setBlockIncrement(0.9 * vsb.getVisibleAmount());
             vsb.setUnitIncrement(0.1 * vsb.getVisibleAmount());
+        }
+        else {
+            vsb.setVisibleAmount(0.0);
+            vsb.setBlockIncrement(0.0);
+            vsb.setUnitIncrement(0.0);
+        }
+
+        if (vsb.isVisible()) {
             updatePosY();
         } else {
             if (nodeHeight > contentHeight) {
