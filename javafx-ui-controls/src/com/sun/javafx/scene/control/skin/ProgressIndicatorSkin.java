@@ -186,6 +186,17 @@ public class ProgressIndicatorSkin extends SkinBase<ProgressIndicator, ProgressI
         }
     }
 
+    @Override protected void layoutChildren() {
+        if (getSkinnable().isIndeterminate()) {
+            spinner.layoutChildren();
+            spinner.resizeRelocate(0, 0, getSkinnable().getWidth(), getSkinnable().getHeight());
+        }
+        else {
+            determinateIndicator.layoutChildren();
+            determinateIndicator.resizeRelocate(0, 0, getSkinnable().getWidth(), getSkinnable().getHeight());
+        }
+    }
+
     /***************************************************************************
      *                                                                         *
      * DeterminateIndicator                                                    *
@@ -406,7 +417,12 @@ public class ProgressIndicatorSkin extends SkinBase<ProgressIndicator, ProgressI
             childrenG.getTransforms().clear();
             childrenG.getTransforms().addAll(scaleTransform, rotateTransform);
 
-            childrenG.resizeRelocate(0, 0, control.getWidth(), control.getHeight());
+            double diameter = radius*2;
+            childrenG.resize(diameter, diameter);
+            final double y = (getHeight() - diameter) / 2;
+
+            childrenG.setLayoutX((getWidth() - diameter) / 2);
+            childrenG.setLayoutY(y);
         }
 
         private Timeline indeterminateTimeline;
