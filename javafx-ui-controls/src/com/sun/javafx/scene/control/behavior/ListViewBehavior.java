@@ -241,11 +241,13 @@ public class ListViewBehavior<T> extends BehaviorBase<ListView<T>> {
     public void setOnMoveToFirstCell(Runnable r) { onMoveToFirstCell = r; }
     public void setOnMoveToLastCell(Runnable r) { onMoveToLastCell = r; }
     
+    private boolean selectionChanging = false;
+    
     private ListChangeListener<Integer> selectedIndicesListener = new ListChangeListener<Integer>() {
         @Override public void onChanged(ListChangeListener.Change c) {
             while (c.next()) {
                 // there are no selected items, so lets clear out the anchor
-                if (c.getList().isEmpty()) {
+                if (! selectionChanging && c.getList().isEmpty()) {
                     setAnchor(-1);
                 }
             }
@@ -455,12 +457,14 @@ public class ListViewBehavior<T> extends BehaviorBase<ListView<T>> {
         
         List<Integer> indices = new ArrayList<Integer>(sm.getSelectedIndices());
         
+        selectionChanging = true;
         for (int i = 0; i < indices.size(); i++) {
             int index = indices.get(i);
             if (index < min || index >= max) {
                 sm.clearSelection(index);
             }
         }
+        selectionChanging = false;
     }
 
     private void selectPreviousRow() {

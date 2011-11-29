@@ -213,11 +213,13 @@ public class TableViewBehavior<T> extends BehaviorBase<TableView<T>> {
      *                         State and Functions                            *
      *************************************************************************/
     
+    private boolean selectionChanging = false;
+    
     private ListChangeListener<Integer> selectedIndicesListener = new ListChangeListener<Integer>() {
         @Override public void onChanged(ListChangeListener.Change c) {
             while (c.next()) {
                 // there are no selected items, so lets clear out the anchor
-                if (c.getList().isEmpty()) {
+                if (!selectionChanging && c.getList().isEmpty()) {
                     setAnchor(null);
                 }
             }
@@ -571,12 +573,14 @@ public class TableViewBehavior<T> extends BehaviorBase<TableView<T>> {
         
         List<Integer> indices = new ArrayList<Integer>(sm.getSelectedIndices());
         
+        selectionChanging = true;
         for (int i = 0; i < indices.size(); i++) {
             int index = indices.get(i);
             if (index < min || index >= max) {
                 sm.clearSelection(index);
             }
         }
+        selectionChanging = false;
     }
 
     private void alsoSelectLeftCell() {
