@@ -27,13 +27,7 @@ package com.sun.javafx.scene.control.behavior;
 
 import com.sun.javafx.logging.PlatformLogger;
 import com.sun.javafx.scene.control.Logging;
-import java.util.HashMap;
-import java.util.Map;
-import javafx.beans.InvalidationListener;
-import javafx.beans.Observable;
-import javafx.beans.value.ChangeListener;
-import javafx.beans.value.ObservableValue;
-import javafx.collections.ListChangeListener;
+import java.util.WeakHashMap;
 
 import javafx.scene.Node;
 import javafx.scene.control.*;
@@ -45,7 +39,7 @@ public class TreeCellBehavior extends CellBehaviorBase<TreeCell<?>> {
     // global map used to store the focus index for a tree view when it is first
     // shift-clicked. This allows for proper keyboard interactions, in particular
     // resolving RT-11446
-    private static final Map<TreeView, Integer> map = new HashMap<TreeView, Integer>();
+    private static final WeakHashMap<TreeView, Integer> map = new WeakHashMap<TreeView, Integer>();
     
     static int getAnchor(TreeView tree) {
         FocusModel fm = tree.getFocusModel();

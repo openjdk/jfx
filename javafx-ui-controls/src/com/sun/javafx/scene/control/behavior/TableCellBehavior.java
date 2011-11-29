@@ -24,12 +24,8 @@
  */
 package com.sun.javafx.scene.control.behavior;
 
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
-import javafx.beans.value.ChangeListener;
-import javafx.beans.value.ObservableValue;
-import javafx.collections.ListChangeListener;
+import java.util.WeakHashMap;
 
 import javafx.scene.control.*;
 import javafx.scene.control.TableView.TableViewFocusModel;
@@ -41,7 +37,7 @@ public class TableCellBehavior extends CellBehaviorBase<TableCell> {
     // global map used to store the focus cell for a table view when it is first
     // shift-clicked. This allows for proper keyboard interactions, in particular
     // resolving RT-11446
-    private static final Map<TableView, TablePosition> map = new HashMap<TableView, TablePosition>();
+    private static final WeakHashMap<TableView, TablePosition> map = new WeakHashMap<TableView, TablePosition>();
     
     static TablePosition getAnchor(TableView table) {
         TableViewFocusModel fm = table.getFocusModel();

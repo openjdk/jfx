@@ -27,8 +27,7 @@ package com.sun.javafx.scene.control.behavior;
 
 import com.sun.javafx.logging.PlatformLogger;
 import com.sun.javafx.scene.control.Logging;
-import java.util.HashMap;
-import java.util.Map;
+import java.util.WeakHashMap;
 
 import javafx.scene.control.FocusModel;
 import javafx.scene.control.ListCell;
@@ -43,7 +42,7 @@ public class ListCellBehavior extends CellBehaviorBase<ListCell> {
     // global map used to store the focus index for a list view when it is first
     // shift-clicked. This allows for proper keyboard interactions, in particular
     // resolving RT-11446
-    private static final Map<ListView, Integer> map = new HashMap<ListView, Integer>();
+    private static final WeakHashMap<ListView, Integer> map = new WeakHashMap<ListView, Integer>();
     
     static int getAnchor(ListView list) {
         FocusModel fm = list.getFocusModel();
