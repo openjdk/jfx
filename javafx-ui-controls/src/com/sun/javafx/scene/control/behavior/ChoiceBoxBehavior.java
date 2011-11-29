@@ -72,6 +72,7 @@ public class ChoiceBoxBehavior extends BehaviorBase<ChoiceBox> {
         else if (name.equals("Press")) keyPressed();
         else if (name.equals("Release")) keyReleased();
         else if (name.equals("Down")) showPopup();
+        else super.callAction(name);
     }
 
     public ChoiceBoxBehavior(ChoiceBox control) {
