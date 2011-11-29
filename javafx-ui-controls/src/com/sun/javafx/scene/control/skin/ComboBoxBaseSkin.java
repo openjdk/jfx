@@ -59,19 +59,6 @@ public abstract class ComboBoxBaseSkin<T> extends SkinBase<ComboBoxBase<T>, Comb
         arrowButton.getChildren().add(arrow);
         getChildren().add(arrowButton);
         
-        arrowButton.setOnMousePressed(new EventHandler<MouseEvent>() {
-            @Override public void handle(MouseEvent e) {
-                getBehavior().mousePressed(e);
-                e.consume();
-            }
-        });
-        arrowButton.setOnMouseReleased(new EventHandler<MouseEvent>() {
-            @Override public void handle(MouseEvent e) {
-                getBehavior().mouseReleased(e);
-                e.consume();
-            }
-        });
-        
         // Register listeners
         registerChangeListener(comboBox.editableProperty(), "EDITABLE");
         registerChangeListener(comboBox.showingProperty(), "SHOWING");

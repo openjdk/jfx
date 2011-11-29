@@ -162,6 +162,7 @@ public class ComboBoxListViewSkin<T> extends ComboBoxPopupControl<T> {
                 updateDisplayText(item, empty);
             }
         };
+        listCellLabel.setMouseTransparent(true);
         
         return listCellLabel;
     }
@@ -216,11 +217,6 @@ public class ComboBoxListViewSkin<T> extends ComboBoxPopupControl<T> {
                 int index = listView.getSelectionModel().getSelectedIndex();
                 comboBox.getSelectionModel().select(index);
                 comboBox.setValue(listView.getSelectionModel().getSelectedItem());
-            }
-        });
-
-        listView.setOnMouseReleased(new EventHandler<MouseEvent>() {
-            @Override public void handle(MouseEvent t) {
                 comboBox.hide();
             }
         });
