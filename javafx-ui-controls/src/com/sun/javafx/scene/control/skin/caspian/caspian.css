@@ -1691,23 +1691,38 @@
     -fx-opacity: 1;
 }
 
-.list-cell:focused {
-    -fx-background-color: -fx-focus-color, -fx-control-inner-background;
-    -fx-background-insets: 0, 1.4;
-}
-
 .list-cell:odd {
     -fx-background-color: derive(-fx-control-inner-background,-5%);
 }
 
-.list-cell:focused:odd {
+.list-view:focused .list-cell:focused {
+    -fx-background-color: -fx-focus-color, -fx-control-inner-background;
+    -fx-background-insets: 0, 1.4;
+}
+
+.list-view:focused .list-cell:focused:odd {
     -fx-background-color: -fx-focus-color, derive(-fx-control-inner-background,-5%);
     -fx-background-insets: 0, 1.4;
+}
+
+/* When the list-cell is selected and focused */
+.list-view:focused .list-cell:filled:focused:selected {
+    -fx-background-color: -fx-focus-color, -fx-selection-bar;
+    -fx-background-insets: 0, 1.4;
+    -fx-background: -fx-accent;
+    -fx-text-fill: -fx-selection-bar-text;
 }
 
 .list-view:focused .list-cell:filled:selected, .list-view:focused .list-cell:filled:selected:hover {
     -fx-background: -fx-accent;
     -fx-background-color: -fx-selection-bar;
+    -fx-text-fill: -fx-selection-bar-text;
+}
+
+.list-view:focused .list-cell:filled:focused:selected:hover {
+    -fx-background: -fx-accent;
+    -fx-background-color: -fx-focus-color, -fx-selection-bar;
+    -fx-background-insets: 0, 1.4;
     -fx-text-fill: -fx-selection-bar-text;
 }
 
@@ -1723,6 +1738,12 @@
 
 .list-cell:filled:hover {
     -fx-background-color: -fx-cell-hover-color;
+    -fx-text-fill: -fx-text-inner-color;
+}
+
+.list-view:focused .list-cell:filled:focused:hover {
+    -fx-background-color: -fx-focus-color, -fx-cell-hover-color;
+    -fx-background-insets: 0, 1.4;
     -fx-text-fill: -fx-text-inner-color;
 }
 
