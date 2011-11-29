@@ -26,6 +26,7 @@
 package com.sun.javafx.scene.control.skin;
 
 import com.javafx.preview.control.ComboBox;
+import com.sun.javafx.scene.control.behavior.ComboBoxListViewBehavior;
 import javafx.beans.InvalidationListener;
 import javafx.beans.Observable;
 import javafx.beans.value.ChangeListener;
@@ -49,7 +50,7 @@ public class ComboBoxListViewSkin<T> extends ComboBoxPopupControl<T> {
     private final ListView<T> listView;
     
     public ComboBoxListViewSkin(final ComboBox<T> comboBox) {
-        super(comboBox);
+        super(comboBox, new ComboBoxListViewBehavior<T>(comboBox));
         this.comboBox = comboBox;
         this.listView = createListView();
         

@@ -83,27 +83,27 @@ public class ComboBoxBaseBehavior<T> extends BehaviorBase<ComboBoxBase<T>> {
     private static final String PRESS_ACTION = "Press";
     private static final String RELEASE_ACTION = "Release";
 
-    protected static final List<KeyBinding> BUTTON_BINDINGS = new ArrayList<KeyBinding>();
+    protected static final List<KeyBinding> COMBO_BOX_BASE_BINDINGS = new ArrayList<KeyBinding>();
     static {
-        BUTTON_BINDINGS.add(new KeyBinding(F4, "togglePopup"));
-        BUTTON_BINDINGS.add(new KeyBinding(UP, "togglePopup").alt());
-        BUTTON_BINDINGS.add(new KeyBinding(DOWN, "togglePopup").alt());
+        COMBO_BOX_BASE_BINDINGS.add(new KeyBinding(F4, "togglePopup"));
+        COMBO_BOX_BASE_BINDINGS.add(new KeyBinding(UP, "togglePopup").alt());
+        COMBO_BOX_BASE_BINDINGS.add(new KeyBinding(DOWN, "togglePopup").alt());
         
         if (Utils.isWindows()) {
-            BUTTON_BINDINGS.add(new KeyBinding(ENTER, KEY_PRESSED, PRESS_ACTION));
-            BUTTON_BINDINGS.add(new KeyBinding(ENTER, KEY_RELEASED, RELEASE_ACTION));
-            BUTTON_BINDINGS.add(new KeyBinding(SPACE, KEY_PRESSED, PRESS_ACTION));
-            BUTTON_BINDINGS.add(new KeyBinding(SPACE, KEY_RELEASED, RELEASE_ACTION));
+            COMBO_BOX_BASE_BINDINGS.add(new KeyBinding(ENTER, KEY_PRESSED, PRESS_ACTION));
+            COMBO_BOX_BASE_BINDINGS.add(new KeyBinding(ENTER, KEY_RELEASED, RELEASE_ACTION));
+            COMBO_BOX_BASE_BINDINGS.add(new KeyBinding(SPACE, KEY_PRESSED, PRESS_ACTION));
+            COMBO_BOX_BASE_BINDINGS.add(new KeyBinding(SPACE, KEY_RELEASED, RELEASE_ACTION));
         } else {
-            BUTTON_BINDINGS.add(new KeyBinding(SPACE, KEY_PRESSED, PRESS_ACTION));
-            BUTTON_BINDINGS.add(new KeyBinding(SPACE, KEY_RELEASED, RELEASE_ACTION));
+            COMBO_BOX_BASE_BINDINGS.add(new KeyBinding(SPACE, KEY_PRESSED, PRESS_ACTION));
+            COMBO_BOX_BASE_BINDINGS.add(new KeyBinding(SPACE, KEY_RELEASED, RELEASE_ACTION));
         }
         
-        BUTTON_BINDINGS.addAll(TRAVERSAL_BINDINGS);
+        COMBO_BOX_BASE_BINDINGS.addAll(TRAVERSAL_BINDINGS);
     }
 
     @Override protected List<KeyBinding> createKeyBindings() {
-        return BUTTON_BINDINGS;
+        return COMBO_BOX_BASE_BINDINGS;
     }
 
     @Override protected void callAction(String name) {
