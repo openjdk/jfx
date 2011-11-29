@@ -195,11 +195,13 @@ public class TreeViewBehavior<T> extends BehaviorBase<TreeView<T>> {
     private Runnable onFocusNextRow;
     public void setOnFocusNextRow(Runnable r) { onFocusNextRow = r; }
     
+    private boolean selectionChanging = false;
+    
     private ListChangeListener<Integer> selectedIndicesListener = new ListChangeListener<Integer>() {
         @Override public void onChanged(ListChangeListener.Change c) {
             while (c.next()) {
                 // there are no selected items, so lets clear out the anchor
-                if (c.getList().isEmpty()) {
+                if (! selectionChanging && c.getList().isEmpty()) {
                     setAnchor(-1);
                 }
             }
@@ -239,7 +241,10 @@ public class TreeViewBehavior<T> extends BehaviorBase<TreeView<T>> {
     @Override public void mousePressed(MouseEvent e) {
         super.mousePressed(e);
         
-        setAnchor(-1);
+        if (! e.isShiftDown()) {
+            int index = getControl().getSelectionModel().getSelectedIndex();
+            setAnchor(index);
+        }
         
         if (! getControl().isFocused() && getControl().isFocusTraversable()) {
             getControl().requestFocus();
@@ -348,18 +353,16 @@ public class TreeViewBehavior<T> extends BehaviorBase<TreeView<T>> {
         
         final int focusIndex = fm.getFocusedIndex();
         
-        if (getAnchor() > -1) {
-            // Support for RT-13826 and RT-14673
-            int endPos = getAnchor() < focusIndex ? focusIndex : focusIndex - 2;
-            sm.selectRange(getAnchor(), endPos);
-            setAnchor(-1);
-        } else if (isShiftDown && sm.isSelected(focusIndex - 1)) {
-            sm.clearSelection(focusIndex);
-            fm.focus(focusIndex - 1);
-        } else {
-            if (! sm.isSelected(focusIndex)) {
-                sm.select(focusIndex);
+        if (isShiftDown && getAnchor() != -1) {
+            int newRow = fm.getFocusedIndex() - 1;
+            clearSelectionOutsideRange(getAnchor(), newRow);
+
+            if (getAnchor() > newRow) {
+                sm.selectRange(getAnchor(), newRow - 1);
+            } else {
+                sm.selectRange(getAnchor(), newRow + 1);
             }
+        } else {
             sm.selectPrevious();
         }
         
@@ -373,24 +376,38 @@ public class TreeViewBehavior<T> extends BehaviorBase<TreeView<T>> {
         MultipleSelectionModel sm = getControl().getSelectionModel();
         if (sm == null) return;
         
-        final int focusIndex = fm.getFocusedIndex();
-        
-        if (getAnchor() > -1) {
-            // Support for RT-13826 and RT-14673
-            int endPos = getAnchor() > focusIndex ? focusIndex : focusIndex + 2;
-            sm.selectRange(getAnchor(), endPos);
-            setAnchor(-1);
-        } else if (isShiftDown && sm.isSelected(focusIndex + 1)) {
-            sm.clearSelection(focusIndex);
-            fm.focus(focusIndex);
-        } else {
-            if (! sm.isSelected(focusIndex)) {
-                sm.select(focusIndex);
+        if (isShiftDown && getAnchor() != -1) {
+            int newRow = fm.getFocusedIndex() + 1;
+            clearSelectionOutsideRange(getAnchor(), newRow);
+
+            if (getAnchor() > newRow) {
+                sm.selectRange(getAnchor(), newRow - 1);
+            } else {
+                sm.selectRange(getAnchor(), newRow + 1);
             }
+        } else {
             sm.selectNext();
         }
         
         onSelectNextRow.run();
+    }
+    
+    private void clearSelectionOutsideRange(int start, int end) {
+        if (getControl().getSelectionModel() == null) return;
+        
+        int min = Math.min(start, end);
+        int max = Math.max(start, end);
+        
+        List<Integer> indices = new ArrayList<Integer>(getControl().getSelectionModel().getSelectedIndices());
+        
+        selectionChanging = true;
+        for (int i = 0; i < indices.size(); i++) {
+            int index = indices.get(i);
+            if (index < min || index >= max) {
+                getControl().getSelectionModel().clearSelection(index);
+            }
+        }
+        selectionChanging = false;
     }
 
     private void selectPreviousRow() {
@@ -402,6 +419,7 @@ public class TreeViewBehavior<T> extends BehaviorBase<TreeView<T>> {
             return;
         }
 
+        setAnchor(focusIndex - 1);
         getControl().getSelectionModel().clearAndSelect(focusIndex - 1);
         onSelectPreviousRow.run();
     }
@@ -415,6 +433,7 @@ public class TreeViewBehavior<T> extends BehaviorBase<TreeView<T>> {
             return;
         }
 
+        setAnchor(focusIndex + 1);
         getControl().getSelectionModel().clearAndSelect(focusIndex + 1);
         onSelectNextRow.run();
     }

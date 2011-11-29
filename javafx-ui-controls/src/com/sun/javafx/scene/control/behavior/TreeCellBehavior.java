@@ -154,7 +154,7 @@ public class TreeCellBehavior extends CellBehaviorBase<TreeCell<?>> {
             } else if (event.isShiftDown()) {
                 // we add all rows between the current selection focus and
                 // this row (inclusive) to the current selection.
-                final int focusedIndex = map.containsKey(treeView) ? map.get(treeView) : fm.getFocusedIndex();
+                final int focusedIndex = getAnchor(treeView);
 
                 // and then determine all row and columns which must be selected
                 int minRow = Math.min(focusedIndex, index);

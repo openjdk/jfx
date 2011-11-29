@@ -407,8 +407,6 @@ public class ListViewBehavior<T> extends BehaviorBase<ListView<T>> {
         MultipleSelectionModel sm = getControl().getSelectionModel();
         if (sm == null) return;
         
-        final int focusIndex = fm.getFocusedIndex();
-        
         if (isShiftDown && getAnchor() != -1) {
             int newRow = fm.getFocusedIndex() - 1;
             clearSelectionOutsideRange(getAnchor(), newRow);
