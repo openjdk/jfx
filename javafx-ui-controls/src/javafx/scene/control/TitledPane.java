@@ -39,6 +39,7 @@ import javafx.scene.Node;
 import com.sun.javafx.css.Styleable;
 import com.sun.javafx.css.StyleManager;
 import com.sun.javafx.css.StyleableProperty;
+import javafx.beans.DefaultProperty;
 
 /**
  * <p>A TitledPane is a panel with a title that can be opened and closed.</p>
@@ -57,7 +58,7 @@ import com.sun.javafx.css.StyleableProperty;
  * </code></pre>
  *
  */
-
+@DefaultProperty("content")
 public class TitledPane extends Labeled {
 
     /***************************************************************************

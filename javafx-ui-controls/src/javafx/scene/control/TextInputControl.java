@@ -47,10 +47,12 @@ import java.text.BreakIterator;
 
 import com.sun.javafx.Utils;
 import com.sun.javafx.binding.ExpressionHelper;
+import javafx.beans.DefaultProperty;
 
 /**
  * Abstract base class for text input controls.
  */
+@DefaultProperty("text")
 public abstract class TextInputControl extends Control {
     /**
      * Interface representing a text input's content. Since it is an ObservableStringValue,

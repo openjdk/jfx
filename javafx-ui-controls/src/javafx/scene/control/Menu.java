@@ -39,6 +39,7 @@ import javafx.scene.Node;
 import com.sun.javafx.collections.TrackableObservableList;
 import com.sun.javafx.event.EventHandlerManager;
 import com.sun.javafx.scene.control.Logging;
+import javafx.beans.DefaultProperty;
 import javafx.beans.property.ReadOnlyBooleanProperty;
 import javafx.beans.property.ReadOnlyBooleanWrapper;
 
@@ -80,6 +81,7 @@ import javafx.beans.property.ReadOnlyBooleanWrapper;
  * @see MenuBar
  * @see MenuItem
  */
+@DefaultProperty("items")
 public class Menu extends MenuItem {
 
     /**

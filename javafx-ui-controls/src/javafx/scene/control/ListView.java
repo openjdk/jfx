@@ -52,6 +52,7 @@ import com.sun.javafx.css.StyleableProperty;
 import com.sun.javafx.scene.control.WeakListChangeListener;
 import com.sun.javafx.scene.control.skin.ListViewSkin;
 import com.sun.javafx.scene.control.skin.VirtualContainerBase;
+import javafx.beans.DefaultProperty;
 import javafx.beans.property.ReadOnlyIntegerProperty;
 import javafx.beans.property.ReadOnlyIntegerWrapper;
 import javafx.beans.property.BooleanProperty;
@@ -131,6 +132,7 @@ import javafx.beans.property.SimpleBooleanProperty;
  *          and {@link #focusModelProperty() focus model}.
  */
 // TODO add code examples
+@DefaultProperty("items")
 public class ListView<T> extends Control {
     
     /***************************************************************************
