@@ -325,6 +325,8 @@
     
     /* The color to use in ListView/TreeView/TableView to indicate hover. */
     -fx-cell-hover-color: #cce3f4;
+    
+    -fx-cell-focus-inner-border: #85b9de;
 }
 
 .mnemonic-underline {
@@ -1696,19 +1698,19 @@
 }
 
 .list-view:focused .list-cell:focused {
-    -fx-background-color: -fx-focus-color, -fx-control-inner-background;
-    -fx-background-insets: 0, 1.4;
+    -fx-background-color: -fx-focus-color, -fx-cell-focus-inner-border, -fx-control-inner-background;
+    -fx-background-insets: 0, 1, 2;
 }
 
 .list-view:focused .list-cell:focused:odd {
-    -fx-background-color: -fx-focus-color, derive(-fx-control-inner-background,-5%);
-    -fx-background-insets: 0, 1.4;
+    -fx-background-color: -fx-focus-color, -fx-cell-focus-inner-border, derive(-fx-control-inner-background,-5%);
+    -fx-background-insets: 0, 1, 2;
 }
 
 /* When the list-cell is selected and focused */
 .list-view:focused .list-cell:filled:focused:selected {
-    -fx-background-color: -fx-focus-color, -fx-selection-bar;
-    -fx-background-insets: 0, 1.4;
+    -fx-background-color: -fx-focus-color, -fx-cell-focus-inner-border, -fx-selection-bar;
+    -fx-background-insets: 0, 1, 2;
     -fx-background: -fx-accent;
     -fx-text-fill: -fx-selection-bar-text;
 }
@@ -1721,8 +1723,8 @@
 
 .list-view:focused .list-cell:filled:focused:selected:hover {
     -fx-background: -fx-accent;
-    -fx-background-color: -fx-focus-color, -fx-selection-bar;
-    -fx-background-insets: 0, 1.4;
+    -fx-background-color: -fx-focus-color, -fx-cell-focus-inner-border, -fx-selection-bar;
+    -fx-background-insets: 0, 1, 2;
     -fx-text-fill: -fx-selection-bar-text;
 }
 
@@ -1742,8 +1744,8 @@
 }
 
 .list-view:focused .list-cell:filled:focused:hover {
-    -fx-background-color: -fx-focus-color, -fx-cell-hover-color;
-    -fx-background-insets: 0, 1.4;
+    -fx-background-color: -fx-focus-color, -fx-cell-focus-inner-border, -fx-cell-hover-color;
+    -fx-background-insets: 0, 1, 2;
     -fx-text-fill: -fx-text-inner-color;
 }
 
@@ -1809,25 +1811,30 @@
     -fx-padding: 0.0em 0.0em 0.0em 0.25em; /* 0 0 0 3 */
 }
 
-.tree-cell:focused {
-    -fx-background-color: -fx-focus-color, -fx-control-inner-background;
-    -fx-background-insets: 0, 1.4;
+
+
+.tree-view:focused .tree-cell:focused {
+    -fx-background-color: -fx-focus-color, -fx-cell-focus-inner-border, -fx-control-inner-background;
+    -fx-background-insets: 0, 1, 2;
 }
 
-/*
-.tree-cell:odd {
-    -fx-background-color: derive(-fx-control-inner-background,-5%);
+.tree-view:focused .tree-cell:filled:focused:selected {
+    -fx-background-color: -fx-focus-color, -fx-cell-focus-inner-border, -fx-selection-bar;
+    -fx-background-insets: 0, 1, 2;
+    -fx-background: -fx-accent;
+    -fx-text-fill: -fx-selection-bar-text;
 }
 
-.tree-cell:focused:odd {
-    -fx-background-color: -fx-focus-color, derive(-fx-control-inner-background,-5%);
-    -fx-background-insets: 0, 1.4;
-}
-*/
-
-.tree-view:focused .tree-cell:filled:selected:focused, .tree-view:focused .tree-cell:filled:selected, .tree-view:focused .tree-cell:filled:selected:hover {
+.tree-view:focused .tree-cell:filled:selected, .tree-view:focused .tree-cell:filled:selected:hover {
     -fx-background: -fx-accent;
     -fx-background-color: -fx-selection-bar;
+    -fx-text-fill: -fx-selection-bar-text;
+}
+
+.tree-view:focused .tree-cell:filled:focused:selected:hover {
+    -fx-background: -fx-accent;
+    -fx-background-color: -fx-focus-color, -fx-cell-focus-inner-border, -fx-selection-bar;
+    -fx-background-insets: 0, 1, 2;
     -fx-text-fill: -fx-selection-bar-text;
 }
 
@@ -1872,6 +1879,12 @@
 
 .tree-cell:filled:hover .tree-disclosure-node .arrow {
     -fx-background-color: -fx-mark-color;
+}
+
+.tree-view:focused .tree-cell:filled:focused:hover {
+    -fx-background-color: -fx-focus-color, -fx-cell-focus-inner-border, -fx-cell-hover-color;
+    -fx-background-insets: 0, 1, 2;
+    -fx-text-fill: -fx-text-inner-color;
 }
 
 .tree-cell:filled:selected:hover .tree-disclosure-node .arrow {
@@ -2286,9 +2299,34 @@
     -fx-background-insets: 0, 0 0 1 0;
 }
 
-.table-view:focused .table-row-cell:selected:focused, .table-view:focused .table-row-cell:selected, .table-view:row-selection .table-row-cell:filled:hover:selected {
+.table-row-cell:focused {
+    -fx-background-color: -fx-focus-color, -fx-cell-focus-inner-border, -fx-control-inner-background;
+    -fx-background-insets: 0, 1, 2;
+}
+
+.table-row-cell:focused:odd {
+    -fx-background-color: -fx-focus-color, -fx-cell-focus-inner-border, derive(-fx-control-inner-background,-5%);
+    -fx-background-insets: 0, 1, 2;
+}
+
+/* When the table-row-cell is selected and focused */
+.table-view:focused .table-row-cell:filled:focused:selected {
+    -fx-background-color: -fx-focus-color, -fx-cell-focus-inner-border, -fx-selection-bar;
+    -fx-background-insets: 0, 1, 2;
+    -fx-background: -fx-accent;
+    -fx-text-fill: -fx-selection-bar-text;
+}
+
+.table-view:focused .table-row-cell:filled:selected, .table-view:row-selection .table-row-cell:filled:hover:selected {
     -fx-background: -fx-accent;
     -fx-background-color: -fx-selection-bar;
+    -fx-text-fill: -fx-selection-bar-text;
+}
+
+.table-view:focused .table-row-cell:filled:focused:selected:hover {
+    -fx-background: -fx-accent;
+    -fx-background-color: -fx-focus-color, -fx-cell-focus-inner-border, -fx-selection-bar;
+    -fx-background-insets: 0, 1, 2;
     -fx-text-fill: -fx-selection-bar-text;
 }
 
@@ -2302,14 +2340,15 @@
     -fx-opacity: -fx-disabled-opacity;
 }
 
-.table-row-cell:focused {
-    -fx-background-color: -fx-focus-color, -fx-control-inner-background;
-    -fx-background-insets: 0, 1.4;
-}
-
 .table-view:row-selection .table-row-cell:filled:hover { 
     -fx-background-color: -fx-table-cell-border-color, -fx-cell-hover-color;
     -fx-background-insets: 0, 0 0 1 0;
+    -fx-text-fill: -fx-text-inner-color;
+}
+
+.table-view:row-selection .table-row-cell:filled:focused:hover { 
+    -fx-background-color: -fx-table-cell-border-color, -fx-focus-color, -fx-cell-focus-inner-border, -fx-cell-hover-color;
+    -fx-background-insets: 0, 0 0 1 0, 1 1 2 1, 2 2 3 2, 3 3 4 3;
     -fx-text-fill: -fx-text-inner-color;
 }
 
@@ -2343,9 +2382,28 @@
     -fx-border-insets: 0 1 1 1, 0 0 0 0;
 }
 
-.table-view:focused .table-cell:selected:focused, .table-view:focused .table-cell:selected, .table-view:cell-selection .table-cell:filled:hover:selected {
+.table-view:focused .table-cell:focused {
+    -fx-background-color: -fx-focus-color, -fx-cell-focus-inner-border, -fx-control-inner-background;
+    -fx-background-insets: 0 1 0 0, 1 2 1 1, 2 3 2 2;
+}
+
+.table-view:focused .table-cell:filled:focused:selected {
+    -fx-background-color: -fx-focus-color, -fx-cell-focus-inner-border, -fx-selection-bar;
+    -fx-background-insets: 0 1 0 0, 1 2 1 1, 2 3 2 2;
+    -fx-background: -fx-accent;
+    -fx-text-fill: -fx-selection-bar-text;
+}
+
+.table-view:focused .table-cell:filled:selected, .table-view:cell-selection .table-cell:filled:hover:selected {
     -fx-background: -fx-accent;
     -fx-background-color: -fx-selection-bar;
+    -fx-text-fill: -fx-selection-bar-text;
+}
+
+.table-view:focused .table-cell:filled:focused:selected:hover {
+    -fx-background: -fx-accent;
+    -fx-background-color: -fx-focus-color, -fx-cell-focus-inner-border, -fx-selection-bar;
+    -fx-background-insets: 0 1 0 0, 1 2 1 1, 2 3 2 2;
     -fx-text-fill: -fx-selection-bar-text;
 }
 
@@ -2359,13 +2417,19 @@
     -fx-opacity: -fx-disabled-opacity;
 }
 
-.table-cell:focused {
+/*.table-cell:focused {
     -fx-background-color: -fx-focus-color, -fx-control-inner-background;
     -fx-background-insets: 0, 1.4;
-}
+}*/
 
 .table-view:cell-selection .table-cell:filled:hover {
     -fx-background-color: -fx-cell-hover-color;
+    -fx-text-fill: -fx-text-inner-color;
+}
+
+.table-view:cell-selection .table-cell:filled:focused:hover {
+    -fx-background-color: -fx-focus-color, -fx-cell-focus-inner-border, -fx-cell-hover-color;
+    -fx-background-insets: 0 1 0 0, 1 2 1 1, 2 3 2 2;
     -fx-text-fill: -fx-text-inner-color;
 }
 

@@ -26,6 +26,7 @@
 package com.sun.javafx.scene.control.skin;
 
 import com.javafx.preview.control.ComboBoxBase;
+import com.sun.javafx.scene.control.behavior.ComboBoxBaseBehavior;
 import javafx.event.Event;
 import javafx.event.EventHandler;
 import javafx.geometry.HPos;
@@ -40,8 +41,8 @@ public abstract class ComboBoxPopupControl<T> extends ComboBoxBaseSkin<T> {
     
     private PopupControl popup;
 
-    public ComboBoxPopupControl(ComboBoxBase<T> comboBox) {
-        super(comboBox);
+    public ComboBoxPopupControl(ComboBoxBase<T> comboBox, final ComboBoxBaseBehavior behavior) {
+        super(comboBox, behavior);
     }
     
     /**
