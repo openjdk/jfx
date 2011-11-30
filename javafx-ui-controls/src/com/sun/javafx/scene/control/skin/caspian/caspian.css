@@ -164,7 +164,7 @@
     -fx-text-box-border: ladder(
         -fx-background,
         black 10%,
-        derive(-fx-background, -15%)
+        derive(-fx-background, -15%) 30%
     );
 
     /* Typically lighter than -fx-background and used to provide a small
