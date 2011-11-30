@@ -387,6 +387,7 @@ public abstract class LabeledSkinBase<C extends Labeled, B extends BehaviorBase<
 
             double availableWidth = labeled.getWidth() - padding.getLeft() - padding.getRight() -
                                     labelPadding.getLeft() - labelPadding.getRight();
+            availableWidth = Math.max(availableWidth, 0);
 
             if (w == -1) {
                 w = availableWidth;
@@ -405,6 +406,7 @@ public abstract class LabeledSkinBase<C extends Labeled, B extends BehaviorBase<
 
             double availableHeight = labeled.getHeight() - padding.getTop() - padding.getBottom() -
                                      labelPadding.getTop() - labelPadding.getBottom();
+            availableHeight = Math.max(availableHeight, 0);
 
             if (h == -1) {
                 h = availableHeight;

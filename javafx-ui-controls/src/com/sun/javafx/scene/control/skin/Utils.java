@@ -266,8 +266,9 @@ public class Utils {
         int eLen = ellipsis.length();
         // Do this before using helper, as it's not reentrant.
         double eWidth = computeTextWidth(font, ellipsis, 0);
+        double eHeight = computeTextHeight(font, ellipsis, 0);
 
-        if (width < eWidth) {
+        if (width < eWidth || height < eHeight) {
             // The ellipsis doesn't fit.
             return "";
         }
