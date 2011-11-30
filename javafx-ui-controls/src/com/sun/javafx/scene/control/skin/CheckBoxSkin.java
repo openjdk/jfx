@@ -59,12 +59,12 @@ public class CheckBoxSkin extends LabeledSkinBase<CheckBox, ButtonBehavior<Check
     }
 
     @Override protected double computePrefWidth(double height) {
-        return super.computePrefWidth(height) + snapSize(box.prefWidth(height));
+        return super.computePrefWidth(height) + snapSize(box.prefWidth(-1));
     }
 
     @Override protected double computePrefHeight(double width) {
-        return Math.max(super.computePrefHeight(width),
-                        getInsets().getTop() + box.prefHeight(width) + getInsets().getBottom());
+        return Math.max(super.computePrefHeight(width - box.prefWidth(-1)),
+                        getInsets().getTop() + box.prefHeight(-1) + getInsets().getBottom());
     }
 
 
