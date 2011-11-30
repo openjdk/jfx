@@ -218,6 +218,11 @@ public class ComboBoxListViewSkin<T> extends ComboBoxPopupControl<T> {
                 int index = listView.getSelectionModel().getSelectedIndex();
                 comboBox.getSelectionModel().select(index);
                 comboBox.setValue(listView.getSelectionModel().getSelectedItem());
+            }
+        });
+        
+        listView.addEventFilter(MouseEvent.MOUSE_RELEASED, new EventHandler<MouseEvent>() {
+            @Override public void handle(MouseEvent t) {
                 comboBox.hide();
             }
         });
