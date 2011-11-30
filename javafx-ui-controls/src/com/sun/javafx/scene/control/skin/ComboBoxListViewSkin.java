@@ -174,28 +174,39 @@ public class ComboBoxListViewSkin<T> extends ComboBoxPopupControl<T> {
     
     private ListView<T> createListView() {
         final ListView<T> listView = new ListView<T>() {
+
+            @Override protected double computeMinHeight(double width) {
+                return 30;
+            }
+            
             @Override protected double computePrefWidth(double height) {
                 doCSSCheck();
                 
+                double pw;
                 if (getSkin() instanceof VirtualContainerBase) {
                     VirtualContainerBase skin = (VirtualContainerBase)getSkin();
-                    return skin.getVirtualFlowPreferredWidth(height) + 10;
+                    pw = skin.getVirtualFlowPreferredWidth(height) + 10;
                 } else {
-                    return Math.max(100, comboBox.getWidth());
+                    pw = Math.max(100, comboBox.getWidth());
                 }
+                
+                return Math.max(50, pw);
             }
 
             @Override protected double computePrefHeight(double width) {
                 doCSSCheck();
                 
+                Double ph;
                 if (getSkin() instanceof VirtualContainerBase) {
                     int maxRows = comboBox.getVisibleRowCount();
                     VirtualContainerBase skin = (VirtualContainerBase)getSkin();
-                    return skin.getVirtualFlowPreferredHeight(maxRows);
+                    ph = skin.getVirtualFlowPreferredHeight(maxRows);
                 } else {
                     double ch = comboBox.getItems().size() * 25;
-                    return Math.min(ch, 200);
+                    ph = Math.min(ch, 200);
                 }
+                
+                return ph;
             }
             
             private void doCSSCheck() {
@@ -243,5 +254,9 @@ public class ComboBoxListViewSkin<T> extends ComboBoxPopupControl<T> {
 
     @Override protected double computePrefWidth(double height) {
         return listView.prefWidth(height);
+    }
+    
+    @Override protected double computeMinWidth(double height) {
+        return 50;
     }
 }
