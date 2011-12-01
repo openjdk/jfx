@@ -890,24 +890,22 @@ public class LabelSkinTest {
         assertEquals(14 + textWidth, label.prefWidth(-1), 0);
     }
 
-    @Ignore ("Need to decide whether the gap should be included here or not")
-    @Test public void whenTextIsNullAndGraphicIsSetWithRIGHTContentDisplay_computePrefWidth_ReturnsGraphicPlusGapPlusPadding() {
+    @Test public void whenTextIsNullAndGraphicIsSetWithRIGHTContentDisplay_computePrefWidth_ReturnsGraphicPlusPaddingNotIncludingGap() {
         label.setText(null);
         label.setGraphic(new Rectangle(0, 0, 20, 20));
         label.setGraphicTextGap(6.5);
         label.setContentDisplay(ContentDisplay.RIGHT);
         skin.setPadding(new Insets(7, 7, 7, 7));
-        assertEquals(14 + 6.5 + 20, label.prefWidth(-1), 0);
+        assertEquals(20 + 14, label.prefWidth(-1), 0);
     }
-    
-    @Ignore ("Need to decide whether the gap should be included here or not")
-    @Test public void whenTextIsEmptyAndGraphicIsSetWithRIGHTContentDisplay_computePrefWidth_ReturnsGraphicPlusGapPlusPadding() {
+
+    @Test public void whenTextIsEmptyAndGraphicIsSetWithRIGHTContentDisplay_computePrefWidth_ReturnsGraphicPlusPaddingNotIncludingGap() {
         label.setText("");
         label.setGraphic(new Rectangle(0, 0, 20, 20));
         label.setGraphicTextGap(6.5);
         label.setContentDisplay(ContentDisplay.RIGHT);
         skin.setPadding(new Insets(7, 7, 7, 7));
-        assertEquals(14 + 6.5 + 20, label.prefWidth(-1), 0);
+        assertEquals(20 + 14, label.prefWidth(-1), 0);
     }
     
     @Test public void whenTextIsSetAndGraphicIsSetWithRIGHTContentDisplay_computePrefWidth_ReturnsTextWidthPlusGraphicWidthPlusGapPlusPadding() {
@@ -957,24 +955,22 @@ public class LabelSkinTest {
         assertEquals(14 + textWidth, label.prefWidth(-1), 0);
     }
 
-    @Ignore ("Need to decide whether the gap should be included here or not")
-    @Test public void whenTextIsNullAndGraphicIsSetWithLEFTContentDisplay_computePrefWidth_ReturnsGraphicPlusGapPlusPadding() {
+    @Test public void whenTextIsNullAndGraphicIsSetWithLEFTContentDisplay_computePrefWidth_ReturnsGraphicPlusPaddingNotIncludingGap() {
         label.setText(null);
         label.setGraphic(new Rectangle(0, 0, 20, 20));
         label.setGraphicTextGap(6.5);
         label.setContentDisplay(ContentDisplay.LEFT);
         skin.setPadding(new Insets(7, 7, 7, 7));
-        assertEquals(14 + 6.5 + 20, label.prefWidth(-1), 0);
+        assertEquals(20 + 14, label.prefWidth(-1), 0);
     }
-    
-    @Ignore ("Need to decide whether the gap should be included here or not")
-    @Test public void whenTextIsEmptyAndGraphicIsSetWithLEFTContentDisplay_computePrefWidth_ReturnsGraphicPlusGapPlusPadding() {
+
+    @Test public void whenTextIsEmptyAndGraphicIsSetWithLEFTContentDisplay_computePrefWidth_ReturnsGraphicPlusPaddingNotIncludingGap() {
         label.setText("");
         label.setGraphic(new Rectangle(0, 0, 20, 20));
         label.setGraphicTextGap(6.5);
         label.setContentDisplay(ContentDisplay.LEFT);
         skin.setPadding(new Insets(7, 7, 7, 7));
-        assertEquals(14 + 6.5 + 20, label.prefWidth(-1), 0);
+        assertEquals(20 + 14, label.prefWidth(-1), 0);
     }
     
     @Test public void whenTextIsSetAndGraphicIsSetWithLEFTContentDisplay_computePrefWidth_ReturnsTextWidthPlusGraphicWidthPlusGapPlusPadding() {
@@ -1469,24 +1465,22 @@ public class LabelSkinTest {
         assertEquals(14 + textWidth, label.maxWidth(-1), 0);
     }
 
-    @Ignore ("Need to decide whether the gap should be included here or not")
-    @Test public void whenTextIsNullAndGraphicIsSetWithRIGHTContentDisplay_computeMaxWidth_ReturnsGraphicPlusGapPlusPadding() {
+    @Test public void whenTextIsNullAndGraphicIsSetWithRIGHTContentDisplay_computeMaxWidth_ReturnsGraphicPlusPaddingNotIncludingGap() {
         label.setText(null);
         label.setGraphic(new Rectangle(0, 0, 20, 20));
         label.setGraphicTextGap(6.5);
         label.setContentDisplay(ContentDisplay.RIGHT);
         skin.setPadding(new Insets(7, 7, 7, 7));
-        assertEquals(14 + 6.5 + 20, label.maxWidth(-1), 0);
+        assertEquals(20 + 14, label.maxWidth(-1), 0);
     }
-    
-    @Ignore ("Need to decide whether the gap should be included here or not")
-    @Test public void whenTextIsEmptyAndGraphicIsSetWithRIGHTContentDisplay_computeMaxWidth_ReturnsGraphicPlusGapPlusPadding() {
+
+    @Test public void whenTextIsEmptyAndGraphicIsSetWithRIGHTContentDisplay_computeMaxWidth_ReturnsGraphicPlusPaddingNotIncludingGap() {
         label.setText("");
         label.setGraphic(new Rectangle(0, 0, 20, 20));
         label.setGraphicTextGap(6.5);
         label.setContentDisplay(ContentDisplay.RIGHT);
         skin.setPadding(new Insets(7, 7, 7, 7));
-        assertEquals(14 + 6.5 + 20, label.maxWidth(-1), 0);
+        assertEquals(20 + 14, label.maxWidth(-1), 0);
     }
     
     @Test public void whenTextIsSetAndGraphicIsSetWithRIGHTContentDisplay_computeMaxWidth_ReturnsTextWidthPlusGraphicWidthPlusGapPlusPadding() {
@@ -1536,24 +1530,22 @@ public class LabelSkinTest {
         assertEquals(14 + textWidth, label.maxWidth(-1), 0);
     }
 
-    @Ignore ("Need to decide whether the gap should be included here or not")
-    @Test public void whenTextIsNullAndGraphicIsSetWithLEFTContentDisplay_computeMaxWidth_ReturnsGraphicPlusGapPlusPadding() {
+    @Test public void whenTextIsNullAndGraphicIsSetWithLEFTContentDisplay_computeMaxWidth_ReturnsGraphicPlusPaddingNotIncludingGap() {
         label.setText(null);
         label.setGraphic(new Rectangle(0, 0, 20, 20));
         label.setGraphicTextGap(6.5);
         label.setContentDisplay(ContentDisplay.LEFT);
         skin.setPadding(new Insets(7, 7, 7, 7));
-        assertEquals(14 + 6.5 + 20, label.maxWidth(-1), 0);
+        assertEquals(20 + 14, label.maxWidth(-1), 0);
     }
-    
-    @Ignore ("Need to decide whether the gap should be included here or not")
-    @Test public void whenTextIsEmptyAndGraphicIsSetWithLEFTContentDisplay_computeMaxWidth_ReturnsGraphicPlusGapPlusPadding() {
+
+    @Test public void whenTextIsEmptyAndGraphicIsSetWithLEFTContentDisplay_computeMaxWidth_ReturnsGraphicPlusPaddingNotIncludingGap() {
         label.setText("");
         label.setGraphic(new Rectangle(0, 0, 20, 20));
         label.setGraphicTextGap(6.5);
         label.setContentDisplay(ContentDisplay.LEFT);
         skin.setPadding(new Insets(7, 7, 7, 7));
-        assertEquals(14 + 6.5 + 20, label.maxWidth(-1), 0);
+        assertEquals(20 + 14, label.maxWidth(-1), 0);
     }
     
     @Test public void whenTextIsSetAndGraphicIsSetWithLEFTContentDisplay_computeMaxWidth_ReturnsTextWidthPlusGraphicWidthPlusGapPlusPadding() {
