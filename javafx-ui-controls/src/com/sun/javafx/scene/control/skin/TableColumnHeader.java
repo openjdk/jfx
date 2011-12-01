@@ -249,7 +249,7 @@ public class TableColumnHeader extends StackPane {
         setOnMouseReleased(new EventHandler<MouseEvent>() {
             @Override public void handle(MouseEvent me) {
                 ContextMenu menu = getTableColumn().getContextMenu();
-                if (menu.isShowing()) return;
+                if (menu != null && menu.isShowing()) return;
                 if (getTableHeaderRow().isReordering() && isColumnReorderingEnabled()) {
                     columnReorderingComplete(me);
                 } else {
