@@ -2387,20 +2387,21 @@
     -fx-background-insets: 0 1 0 0, 1 2 1 1, 2 3 2 2;
 }
 
-.table-view:focused .table-cell:filled:focused:selected {
+.table-view:focused .table-row-cell:filled .table-cell:focused:selected {
     -fx-background-color: -fx-focus-color, -fx-cell-focus-inner-border, -fx-selection-bar;
     -fx-background-insets: 0 1 0 0, 1 2 1 1, 2 3 2 2;
     -fx-background: -fx-accent;
     -fx-text-fill: -fx-selection-bar-text;
 }
 
-.table-view:focused .table-cell:filled:selected, .table-view:cell-selection .table-cell:filled:hover:selected {
+.table-view:focused .table-row-cell:filled .table-cell:selected, .table-view:cell-selection .table-row-cell:filled .table-cell:hover:selected {
     -fx-background: -fx-accent;
     -fx-background-color: -fx-selection-bar;
     -fx-text-fill: -fx-selection-bar-text;
+    -fx-background-insets: 0 0 1 0;
 }
 
-.table-view:focused .table-cell:filled:focused:selected:hover {
+.table-view:focused .table-row-cell:filled .table-cell:focused:selected:hover {
     -fx-background: -fx-accent;
     -fx-background-color: -fx-focus-color, -fx-cell-focus-inner-border, -fx-selection-bar;
     -fx-background-insets: 0 1 0 0, 1 2 1 1, 2 3 2 2;
@@ -2408,7 +2409,7 @@
 }
 
 /* When the TableView is _not_ focused, we show alternate selection colors */
-.table-cell:filled:selected:focused, .table-cell:filled:selected {
+ .table-row-cell:filled .table-cell:selected:focused,  .table-row-cell:filled .table-cell:selected {
     -fx-background-color: lightgray;
     -fx-text-fill: -fx-selection-bar-text;
 }
@@ -2422,12 +2423,13 @@
     -fx-background-insets: 0, 1.4;
 }*/
 
-.table-view:cell-selection .table-cell:filled:hover {
+.table-view:cell-selection  .table-row-cell:filled .table-cell:hover {
     -fx-background-color: -fx-cell-hover-color;
     -fx-text-fill: -fx-text-inner-color;
+    -fx-background-insets: 0 0 1 0;
 }
 
-.table-view:cell-selection .table-cell:filled:focused:hover {
+.table-view:cell-selection .table-row-cell:filled .table-cell:focused:hover {
     -fx-background-color: -fx-focus-color, -fx-cell-focus-inner-border, -fx-cell-hover-color;
     -fx-background-insets: 0 1 0 0, 1 2 1 1, 2 3 2 2;
     -fx-text-fill: -fx-text-inner-color;

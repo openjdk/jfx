@@ -369,7 +369,16 @@ public class TableCell<S,T> extends IndexedCell<T> {
      * Overriding methods                                                      *
      *                                                                         *
      **************************************************************************/
-    
+
+    /** {@inheritDoc} */
+    @Override public void updateSelected(boolean selected) {
+        // copied from Cell, with the first conditional clause below commented 
+        // out, as it is valid for an empty TableCell to be selected, as long 
+        // as the parent TableRow is not empty (see RT-15529).
+        /*if (selected && isEmpty()) return;*/
+        if (getTableRow() == null || getTableRow().isEmpty()) return;
+        setSelected(selected);
+    }
 
 
     /* *************************************************************************
