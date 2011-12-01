@@ -34,7 +34,6 @@ import java.util.Map;
 import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
 import javafx.beans.value.WeakChangeListener;
-import javafx.collections.ListChangeListener.Change;
 import javafx.event.EventHandler;
 import javafx.event.EventType;
 import javafx.scene.Node;
@@ -42,7 +41,7 @@ import javafx.scene.Parent;
 import javafx.scene.control.ContextMenu;
 import javafx.scene.control.Control;
 import javafx.scene.control.Skin;
-import javafx.scene.input.MouseButton;
+import javafx.scene.input.ContextMenuEvent;
 import javafx.scene.input.MouseEvent;
 import javafx.scene.layout.StackPane;
 
@@ -136,6 +135,8 @@ public abstract class SkinBase<C extends Control, B extends BehaviorBase<C>> ext
         this.removeEventHandler(MouseEvent.MOUSE_PRESSED, mouseHandler);
         this.removeEventHandler(MouseEvent.MOUSE_RELEASED, mouseHandler);
         this.removeEventHandler(MouseEvent.MOUSE_DRAGGED, mouseHandler);
+        
+        control.removeEventHandler(ContextMenuEvent.CONTEXT_MENU_REQUESTED, contextMenuHandler);
 
         this.control = null;
         this.behavior = null;
@@ -172,15 +173,9 @@ public abstract class SkinBase<C extends Control, B extends BehaviorBase<C>> ext
         this.addEventHandler(MouseEvent.MOUSE_RELEASED, mouseHandler);
         this.addEventHandler(MouseEvent.MOUSE_DRAGGED, mouseHandler);
         
-        // we add a listener for mouse released events to show the context menu
+        // we add a listener for menu request events to show the context menu
         // that may be set on the Control
-        this.addEventHandler(MouseEvent.MOUSE_RELEASED, new EventHandler<MouseEvent>() {
-            @Override public void handle(MouseEvent event) {
-                if (event.getButton() == MouseButton.SECONDARY) {
-                    showContextMenu(event.getScreenX(), event.getScreenY());
-                }
-            }
-        });
+        control.addEventHandler(ContextMenuEvent.CONTEXT_MENU_REQUESTED, contextMenuHandler);
 
         // Default behavior for controls is to consume all mouse events
         consumeMouseEvents(true);
@@ -190,19 +185,21 @@ public abstract class SkinBase<C extends Control, B extends BehaviorBase<C>> ext
         return behavior;
     }
 
+    public ContextMenu getContextMenu() {
+        return getSkinnable().getContextMenu();
+    }
+    
     /**
      * Called for key events with no specific mouse location.
      *
-     * Subclasses override this to decide location and call showContextMenu(x, y).
+     * Subclasses override this to decide location and call show the context menu.
      */
-    public void showContextMenu() {
-    }
-
-    protected void showContextMenu(double x, double y) {
-        ContextMenu menu = getSkinnable().getContextMenu();
+    public boolean showContextMenu(ContextMenu menu, double x, double y, boolean isKeyboardTrigger) {
         if (menu != null) {
             menu.show(control, x, y);
+            return true;
         }
+        return false;
     }
 
 
@@ -330,6 +327,21 @@ public abstract class SkinBase<C extends Control, B extends BehaviorBase<C>> ext
             else if (type == MouseEvent.MOUSE_DRAGGED) behavior.mouseDragged(e);
             else { // no op
                 throw new AssertionError("Unsupported event type received");
+            }
+        }
+    };
+    
+    /**
+     * Handles conext menu requests by popping up the menu.
+     * Note that we use this pattern to remove some of the anonymous inner
+     * classes which we'd otherwise have to create. When lambda expressions
+     * are supported, we could do it that way instead (or use MethodHandles).
+     */
+    private final EventHandler<ContextMenuEvent> contextMenuHandler = new EventHandler<ContextMenuEvent>() {
+        @Override public void handle(ContextMenuEvent event) {
+            // If a context menu was shown, consume the event to prevent multiple context menus
+            if (showContextMenu(getContextMenu (), event.getScreenX(), event.getScreenY(), event.isKeyboardTrigger())) {
+                event.consume();
             }
         }
     };

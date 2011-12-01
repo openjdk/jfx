@@ -43,6 +43,7 @@ import javafx.scene.control.TableColumn;
 import static javafx.scene.control.TableColumn.SortType.ASCENDING;
 import static javafx.scene.control.TableColumn.SortType.DESCENDING;
 import javafx.scene.control.TableView;
+import javafx.scene.input.ContextMenuEvent;
 import javafx.scene.input.MouseEvent;
 import javafx.scene.layout.GridPane;
 import javafx.scene.layout.HBox;
@@ -236,14 +237,19 @@ public class TableColumnHeader extends StackPane {
                 me.consume();
             }
         });
+        setOnContextMenuRequested(new EventHandler<ContextMenuEvent>() {
+            @Override public void handle(ContextMenuEvent me) {
+                 ContextMenu menu = getTableColumn().getContextMenu();
+                 if (menu != null) {
+                     menu.show(TableColumnHeader.this, me.getScreenX(), me.getScreenY());
+                     me.consume();
+                }
+            }
+        });
         setOnMouseReleased(new EventHandler<MouseEvent>() {
             @Override public void handle(MouseEvent me) {
-                if (MouseEvent.impl_getPopupTrigger(me)) {
-                    ContextMenu menu = getTableColumn().getContextMenu();
-                    if (menu != null) {
-                        menu.show(TableColumnHeader.this, me.getScreenX(), me.getScreenY());
-                    }
-                } else if (getTableHeaderRow().isReordering() && isColumnReorderingEnabled()) {
+                if (MouseEvent.impl_getPopupTrigger(me)) return;
+                if (getTableHeaderRow().isReordering() && isColumnReorderingEnabled()) {
                     columnReorderingComplete(me);
                 } else {
                     sortColumn(getTableColumn(), me.isShiftDown());
