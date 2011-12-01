@@ -86,12 +86,10 @@ public class ListCellBehavior extends CellBehaviorBase<ListCell> {
             latePress = false;
             doSelect(event);
         }
-        event.consume();
     }
     
     @Override public void mouseDragged(MouseEvent event) {
         latePress = false;
-        event.consume();
     }
     
     private void doSelect(MouseEvent e) {
