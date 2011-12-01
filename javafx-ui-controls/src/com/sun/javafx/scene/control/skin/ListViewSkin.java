@@ -168,7 +168,7 @@ public class ListViewSkin<T> extends VirtualContainerBase<ListView<T>, ListViewB
         return listViewItems == null ? 0 : listViewItems.size();
     }
 
-    private void updateCellCount() {
+    void updateCellCount() {
         if (flow == null) return;
         
         // we're about to recreate all cells - but before that we detach them

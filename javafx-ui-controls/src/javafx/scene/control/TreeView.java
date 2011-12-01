@@ -1252,7 +1252,7 @@ public class TreeView<T> extends Control {
                         TreeItem item = e.getAddedChildren().get(i);
                         row = treeView.getRow(item);
                         
-                        if (row <= getFocusedIndex()) {
+                        if (item != null && row <= getFocusedIndex()) {
 //                            shift = e.getTreeItem().isExpanded() ? e.getAddedSize() : 0;
                             shift += item.getExpandedDescendentCount();
                         }

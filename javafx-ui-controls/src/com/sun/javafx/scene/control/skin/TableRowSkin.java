@@ -222,9 +222,10 @@ public class TableRowSkin<T> extends CellSkinBase<TableRow<T>, CellBehaviorBase<
             // we must create a TableCell for each table column
             TableCell cell = (TableCell) col.getCellFactory().call(col);
 
-            // we set it's TableColumn and TableView
+            // we set it's TableColumn, TableView and TableRow
             cell.updateTableColumn(col);
             cell.updateTableView(table);
+            cell.updateTableRow(getSkinnable());
 
             // and store this in our HashMap until needed
             cellsMap.put(col, cell);
