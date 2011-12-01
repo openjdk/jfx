@@ -257,6 +257,7 @@ public class ComboBoxListViewSkin<T> extends ComboBoxPopupControl<T> {
                 int index = listView.getSelectionModel().getSelectedIndex();
                 comboBox.getSelectionModel().select(index);
                 comboBox.setValue(listView.getSelectionModel().getSelectedItem());
+                updateDisplayNode();
             }
         });
         
