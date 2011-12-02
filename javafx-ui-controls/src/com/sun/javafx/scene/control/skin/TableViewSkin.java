@@ -523,7 +523,8 @@ public class TableViewSkin<T> extends VirtualContainerBase<TableView<T>, TableVi
             newList.addListener(weakRowCountListener);
         }
 
-        updateRowCount();
+        rowCountDirty = true;
+        requestLayout();
     }
 
     /**
@@ -602,7 +603,8 @@ public class TableViewSkin<T> extends VirtualContainerBase<TableView<T>, TableVi
     }
 
     private void refreshView() {
-        updateRowCount();
+        rowCountDirty = true;
+        requestLayout();
     }
 
     private void reconfigureCells() {
@@ -611,24 +613,23 @@ public class TableViewSkin<T> extends VirtualContainerBase<TableView<T>, TableVi
 
     private void updateRowCount() {
         updatePlaceholderRegionVisibility();
-        
-        // we're about to recreate all cells - but before that we detach them
-        // from the TableView, such that their listeners can be uninstalled.
-        // If we don't do this, we start to get multiple events firing when
-        // properties on the TableView trigger listeners in the cells.
-        for (int i = 0; i < flow.cells.size(); i++) {
-            ((TableRow)flow.cells.get(i)).updateTableView(null);
-        }
 
+        int oldCount = flow.getCellCount();
+        int newCount = getItemCount();
+        
         // if this is not called even when the count is the same, we get a 
         // memory leak in VirtualFlow.sheet.children. This can probably be 
         // optimised in the future when time permits.
-        flow.setCellCount(getItemCount());
+        flow.setCellCount(newCount);
         
-        // FIXME updateRowCount is called _a lot_. Perhaps we can make recreateCells
-        // smarter. Imagine if items has one million items added - do we really
-        // need to recreateCells a million times?
-        flow.recreateCells();
+        if (newCount != oldCount) {
+            // FIXME updateRowCount is called _a lot_. Perhaps we can make recreateCells
+            // smarter. Imagine if items has one million items added - do we really
+            // need to recreateCells a million times?
+            flow.recreateCells();
+        } else {
+            flow.reconfigureCells();
+        }
     }
 
     private void onFocusPreviousCell() {

@@ -82,11 +82,15 @@ public class TableRow<T> extends IndexedCell<T> {
 
     private InvalidationListener indexInvalidationListener = new InvalidationListener() {
         @Override public void invalidated(Observable valueModel) {
-            updateItem();
+            indexChanged();
             updateSelection();
             updateFocus();
         }
     };
+    
+    @Override void indexChanged() {
+        updateItem();
+    }
     
 
     /***************************************************************************
@@ -230,7 +234,7 @@ public class TableRow<T> extends IndexedCell<T> {
         List<T> items = tv.getItems();
 
         // Compute whether the index for this cell is for a real item
-        boolean valid = getIndex() >=0 && getIndex() < items.size();
+        boolean valid = getIndex() >= 0 && getIndex() < items.size();
 
         // Cause the cell to update itself
         if (valid) {

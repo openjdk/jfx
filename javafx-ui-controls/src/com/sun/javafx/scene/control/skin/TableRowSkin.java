@@ -90,8 +90,8 @@ public class TableRowSkin<T> extends CellSkinBase<TableRow<T>, CellBehaviorBase<
 
         initBindings();
 
+        registerChangeListener(tableRow.itemProperty(), "ITEM");
         registerChangeListener(tableRow.editingProperty(), "EDITING");
-        registerChangeListener(tableRow.indexProperty(), "ROW");
         registerChangeListener(tableRow.tableViewProperty(), "TABLE_VIEW");
     }
 
@@ -105,9 +105,10 @@ public class TableRowSkin<T> extends CellSkinBase<TableRow<T>, CellBehaviorBase<
 
         super.handleControlPropertyChanged(p);
 
-        if (p == "ROW") {
+        if (p == "ITEM") {
             updateCells = true;
             requestLayout();
+            layout();
         } else if (p == "TABLE_VIEW") {
             for (int i = 0; i < getChildren().size(); i++) {
                 Node n = getChildren().get(i);
@@ -162,8 +163,6 @@ public class TableRowSkin<T> extends CellSkinBase<TableRow<T>, CellBehaviorBase<
         
         if (showColumns && ! table.getVisibleLeafColumns().isEmpty()) {
             // layout the individual column cells
-            TableColumn<T,?> col;
-            TableCell cell;
             double x = getInsets().getLeft();
             double width;
             double height;
@@ -172,10 +171,8 @@ public class TableRowSkin<T> extends CellSkinBase<TableRow<T>, CellBehaviorBase<
             double verticalPadding = getInsets().getTop() + getInsets().getBottom();
             double horizontalPadding = getInsets().getLeft() + getInsets().getRight();
             
-            for (int i = 0; i < leafColumns.size(); i++) {
-                col = leafColumns.get(i);
-                cell = cellsMap.get(col);
-                if (cell == null) continue;
+            for (int i = 0; i < getChildren().size(); i++) {
+                TableCell cell = (TableCell) getChildren().get(i);
 
                 width = snapSize(cell.prefWidth(-1) - horizontalPadding);
                 height = Math.max(getHeight(), cell.prefHeight(-1));

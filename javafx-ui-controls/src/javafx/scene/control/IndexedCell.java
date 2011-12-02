@@ -110,6 +110,11 @@ public class IndexedCell<T> extends Cell<T> {
      */
     public void updateIndex(int i) { 
         index.set(i);
+        indexChanged();
+    }
+    
+    void indexChanged() { 
+        // no-op
     }
     
     /* *************************************************************************
