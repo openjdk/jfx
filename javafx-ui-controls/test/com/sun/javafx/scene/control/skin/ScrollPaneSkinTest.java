@@ -19,7 +19,19 @@ import javafx.scene.layout.StackPane;
 import javafx.stage.Stage;
 
 import org.junit.Before;
+import org.junit.Ignore;
 import org.junit.Test;
+
+import com.sun.javafx.pgstub.StubScene;
+import javafx.event.EventHandler;
+import javafx.scene.Group;
+import javafx.scene.Scene;
+import javafx.scene.shape.Rectangle;
+import javafx.stage.Stage;
+import org.junit.Test;
+import static org.junit.Assert.*;
+
+import javafx.scene.input.ScrollEvent;
 
 /**
  * @author mickf
@@ -223,8 +235,115 @@ public class ScrollPaneSkinTest {
     }
     
     
+    private boolean scrolled;
+    /*
+    ** check if scrollPane content Horizontal position compensates for content size change
+    */
+    @Test public void checkIfScrollPaneWithinScrollPaneGetsScrollEvents() {
+
+        scrolled = false;
+
+        Rectangle rect = new Rectangle(100, 100, 100, 100);
+        rect.setOnScroll(new EventHandler<ScrollEvent>() {
+            @Override public void handle(ScrollEvent event) {
+                scrolled = true;
+            }
+        });
+        
+        final ScrollPane scrollPaneInner = new ScrollPane();
+        scrollPaneInner.setSkin(new com.sun.javafx.scene.control.skin.ScrollPaneSkin(scrollPaneInner));
+        scrollPaneInner.setHbarPolicy(ScrollPane.ScrollBarPolicy.ALWAYS);
+        scrollPaneInner.setVbarPolicy(ScrollPane.ScrollBarPolicy.ALWAYS);
+        scrollPaneInner.setPrefWidth(100);
+        scrollPaneInner.setPrefHeight(100);
+        scrollPaneInner.setPannable(true);
+        scrollPaneInner.setContent(rect);
+  
+        Pane pOuter = new Pane();
+        pOuter.setPrefWidth(600);
+        pOuter.setPrefHeight(600);
+        pOuter.getChildren().add(scrollPaneInner);
+        
+        final ScrollPane scrollPaneOuter = new ScrollPane();
+        scrollPaneOuter.setSkin(new com.sun.javafx.scene.control.skin.ScrollPaneSkin(scrollPaneOuter));
+        scrollPaneOuter.setHbarPolicy(ScrollPane.ScrollBarPolicy.ALWAYS);
+        scrollPaneOuter.setVbarPolicy(ScrollPane.ScrollBarPolicy.ALWAYS);
+        scrollPaneOuter.setPrefWidth(500);
+        scrollPaneOuter.setPrefHeight(500);
+        scrollPaneOuter.setPannable(true);
+        scrollPaneOuter.setOnScroll(new EventHandler<ScrollEvent>() {
+            @Override public void handle(ScrollEvent event) {
+                scrolled = true;
+            }
+        });
+        scrollPaneOuter.setContent(pOuter);
+                
+        Scene scene = new Scene(new Group(), 700, 700);
+        ((Group) scene.getRoot()).getChildren().clear();
+        ((Group) scene.getRoot()).getChildren().add(scrollPaneOuter);
+        scrolled = false;
+
+        Stage stage = new Stage();
+        stage.setScene(scene);
+        stage.show();
+ 
+        Event.fireEvent(rect, 
+              ScrollEvent.impl_scrollEvent(
+                          0.0, -50.0,
+                          ScrollEvent.HorizontalTextScrollUnits.NONE, 10.0,
+                          ScrollEvent.VerticalTextScrollUnits.NONE, 10.0,
+                          50, 50,
+                          50, 50,
+                          false, false, false, false));
+
+        /*
+        ** did it work?
+        */
+        assertTrue(scrollPaneInner.getVvalue() > 0.0);
+    }
     
-    
+
+    boolean sceneClicked = false;
+    /*
+    ** check if unconsumed MouseClicked events on a scrollPane reach it's parent.
+    */
+    @Test public void checkIfScrollPaneConsumesMouseClickedEvents() {
+        ScrollPane scrollPaneInner = new ScrollPane();
+        scrollPaneInner.setSkin(new com.sun.javafx.scene.control.skin.ScrollPaneSkin(scrollPaneInner));
+        scrollPaneInner.setHbarPolicy(ScrollPane.ScrollBarPolicy.ALWAYS);
+        scrollPaneInner.setVbarPolicy(ScrollPane.ScrollBarPolicy.ALWAYS);
+        scrollPaneInner.setTranslateX(70);
+        scrollPaneInner.setTranslateY(30);
+        scrollPaneInner.setPrefWidth(100);
+        scrollPaneInner.setPrefHeight(100);
+        scrollPaneInner.setPannable(true);     
+
+        Scene scene = new Scene(new Group(), 400, 400);
+        scene.setOnMouseClicked(new EventHandler<MouseEvent>() {
+            public void handle(MouseEvent me) {
+                sceneClicked = true;
+            }
+        });
+        
+        ((Group) scene.getRoot()).getChildren().clear();
+        ((Group) scene.getRoot()).getChildren().add(scrollPaneInner);
+
+        Stage stage = new Stage();
+        stage.setScene(scene);     
+        stage.show();
+
+        Event.fireEvent(scrollPaneInner,
+              MouseEvent.impl_mouseEvent(50.0, 50.0, 50.0, 50.0,
+                         MouseButton.PRIMARY, 1,
+                         false, false, false, false, false,
+                         true, false, false,
+                         MouseEvent.MOUSE_CLICKED));
+
+        /*
+        ** did it work?
+        */
+        assertTrue(sceneClicked == true);
+    }
     
     public static final class ScrollPaneSkinMock extends ScrollPaneSkin {
         boolean propertyChanged = false;
