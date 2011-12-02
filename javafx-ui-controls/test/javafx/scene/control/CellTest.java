@@ -43,6 +43,15 @@ public class CellTest {
 
     @Before public void setup() throws Exception {
         cell = (Cell<String>) type.newInstance();
+        
+        // Empty TableCells can be selected, as long as the row they exist in
+        // is not empty, so here we set a TableRow to ensure testing works 
+        // properly
+        if (cell instanceof TableCell) {
+            TableRow tableRow = new TableRow();
+            tableRow.updateItem("TableRow", false);
+            ((TableCell)cell).updateTableRow(tableRow);
+        }
     }
 
     /*********************************************************************

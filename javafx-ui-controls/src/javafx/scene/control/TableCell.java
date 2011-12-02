@@ -92,13 +92,20 @@ public class TableCell<S,T> extends IndexedCell<T> {
      *                                                                         *
      **************************************************************************/
     
+    private boolean itemDirty = false;
+    
     private InvalidationListener indexListener = new InvalidationListener() {
         @Override public void invalidated(Observable valueModel) {
-            updateItem();
+            indexChanged();
             updateSelection();
             updateFocus();
         }
     };
+    
+    @Override void indexChanged() {
+        itemDirty = true;
+        requestLayout();
+    }
 
     /*
      * This is the list observer we use to keep an eye on the SelectedCells
@@ -122,7 +129,8 @@ public class TableCell<S,T> extends IndexedCell<T> {
     // same as above, but for for changes to the properties on TableRow
     private final InvalidationListener tableRowUpdateObserver = new InvalidationListener() {
         @Override public void invalidated(Observable value) {
-            updateItem();
+            itemDirty = true;
+            requestLayout();
         }
     };
 
@@ -369,7 +377,16 @@ public class TableCell<S,T> extends IndexedCell<T> {
      * Overriding methods                                                      *
      *                                                                         *
      **************************************************************************/
-    
+
+    /** {@inheritDoc} */
+    @Override public void updateSelected(boolean selected) {
+        // copied from Cell, with the first conditional clause below commented 
+        // out, as it is valid for an empty TableCell to be selected, as long 
+        // as the parent TableRow is not empty (see RT-15529).
+        /*if (selected && isEmpty()) return;*/
+        if (getTableRow() == null || getTableRow().isEmpty()) return;
+        setSelected(selected);
+    }
 
 
     /* *************************************************************************
@@ -520,6 +537,15 @@ public class TableCell<S,T> extends IndexedCell<T> {
         observableValue.addListener(weaktableRowUpdateObserver);
     }
 
+    @Override protected void layoutChildren() {
+        if (itemDirty) {
+            updateItem();
+            itemDirty = false;
+        }
+        super.layoutChildren();
+    }
+
+    
 
 
     /***************************************************************************

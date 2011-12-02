@@ -161,7 +161,8 @@ public class ListViewSkin<T> extends VirtualContainerBase<ListView<T>, ListViewB
             listViewItems.addListener(weakListViewItemsListener);
         }
 
-        updateCellCount();
+        itemCountDirty = true;
+        requestLayout();
     }
 
     @Override public int getItemCount() {
@@ -171,16 +172,16 @@ public class ListViewSkin<T> extends VirtualContainerBase<ListView<T>, ListViewB
     void updateCellCount() {
         if (flow == null) return;
         
-        // we're about to recreate all cells - but before that we detach them
-        // from the ListView, such that their listeners can be uninstalled.
-        // If we don't do this, we start to get multiple events firing when
-        // properties on the ListView trigger listeners in the cells.
-        for (int i = 0; i < flow.cells.size(); i++) {
-            ((ListCell)flow.cells.get(i)).updateListView(null);
-        }
+        int oldCount = flow.getCellCount();
+        int newCount = getItemCount();
         
         flow.setCellCount(getItemCount());
-        flow.recreateCells();
+        
+        if (newCount != oldCount) {
+            flow.recreateCells();
+        } else {
+            flow.reconfigureCells();
+        }
     }
 
     @Override public ListCell<T> createCell() {
