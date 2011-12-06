@@ -283,9 +283,9 @@ public class TextFieldSkin extends TextInputControlSkin<TextField, TextFieldBeha
         });
         // updated by listener on caretPosition to ensure order
         textNode.impl_caretPositionProperty().set(textField.getCaretPosition());
-        textField.selectionProperty().addListener(new ChangeListener<IndexRange>() {
-            @Override
-            public void changed(ObservableValue<? extends IndexRange> observable, IndexRange oldValue, IndexRange newValue) {
+        textField.selectionProperty().addListener(new InvalidationListener() {
+            @Override public void invalidated(Observable observable) {
+                IndexRange newValue = getSkinnable().getSelection();
                 if (newValue == null || newValue.getLength() == 0) {
                     textNode.impl_selectionStartProperty().set(-1);
                     textNode.impl_selectionEndProperty().set(-1);
