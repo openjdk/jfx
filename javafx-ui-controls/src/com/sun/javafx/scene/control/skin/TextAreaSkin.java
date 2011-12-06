@@ -48,6 +48,7 @@ import javafx.geometry.VPos;
 import javafx.geometry.VerticalDirection;
 import javafx.scene.Group;
 import javafx.scene.Node;
+import javafx.scene.control.ContextMenu;
 import javafx.scene.control.IndexRange;
 import javafx.scene.control.ScrollPane;
 import javafx.scene.control.TextArea;
@@ -681,11 +682,15 @@ public class TextAreaSkin extends TextInputControlSkin<TextArea, TextAreaBehavio
         return new Rectangle2D(x, y, width, height);
     }
 
-    @Override public void showContextMenu() {
-        Bounds caretBounds = caretPath.getLayoutBounds();
-        Point2D p = Utils.pointRelativeTo(contentView, null, caretBounds.getMinX(),
-                                          caretBounds.getMaxY(), false);
-        showContextMenu(p.getX(), p.getY());
+    @Override public boolean showContextMenu(ContextMenu menu, double x, double y, boolean isKeyboardTrigger) {
+        if (isKeyboardTrigger) {
+            Bounds caretBounds = caretPath.getLayoutBounds();
+            Point2D p = Utils.pointRelativeTo(contentView, null, caretBounds.getMinX(),
+                                              caretBounds.getMaxY(), false);
+            x = p.getX();
+            y = p.getY();
+        }
+        return super.showContextMenu(menu, x, y, isKeyboardTrigger);
     }
 
     @Override public void scrollCharacterToVisible(final int index) {

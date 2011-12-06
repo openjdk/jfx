@@ -346,6 +346,11 @@ public class ScrollPaneSkin extends SkinBase<ScrollPane, ScrollPaneBehavior> imp
                        }
                    }
                }
+               /*
+               ** we need to consume drag events, as we don't want
+               ** the scrollpane itself to be dragged on every mouse click
+               */
+               e.consume();
            }
         });
 
@@ -423,7 +428,11 @@ public class ScrollPaneSkin extends SkinBase<ScrollPane, ScrollPaneBehavior> imp
         TraversalEngine traversalEngine = new TraversalEngine(this, false);
         traversalEngine.addTraverseListener(this);
         setImpl_traversalEngine(traversalEngine);
+
+        // ScrollPanes do not block all MouseEvents by default, unlike most other UI Controls.
+        consumeMouseEvents(false);
     }
+
 
     @Override protected void handleControlPropertyChanged(String p) {
         super.handleControlPropertyChanged(p);

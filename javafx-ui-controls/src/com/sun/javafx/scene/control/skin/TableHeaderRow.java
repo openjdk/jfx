@@ -45,6 +45,7 @@ import javafx.scene.control.ContextMenu;
 import javafx.scene.control.Label;
 import javafx.scene.control.TableColumn;
 import javafx.scene.control.TableView;
+import javafx.scene.input.ContextMenuEvent;
 import javafx.scene.input.MouseEvent;
 import javafx.scene.layout.Pane;
 import javafx.scene.layout.Region;
@@ -264,10 +265,11 @@ class TableHeaderRow extends StackPane {
                 requestLayout();
             }
         });
-        cornerRegion.setOnMouseReleased(new EventHandler<MouseEvent>() {
-            @Override public void handle(MouseEvent me) {
+        cornerRegion.setOnContextMenuRequested(new EventHandler<ContextMenuEvent>() {
+            @Override public void handle(ContextMenuEvent me) {
                 // show a popupMenu which lists all columns
                 columnPopupMenu.show(cornerRegion, Side.BOTTOM, 0, 0);
+                me.consume();
             }
         });
 

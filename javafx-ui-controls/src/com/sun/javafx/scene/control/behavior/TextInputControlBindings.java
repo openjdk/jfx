@@ -70,12 +70,11 @@ public class TextInputControlBindings {
         BINDINGS.add(new KeyBinding(DOWN, KEY_PRESSED,        "SelectEnd").shift());
         BINDINGS.add(new KeyBinding(KP_DOWN, KEY_PRESSED,     "SelectEnd").shift());
         BINDINGS.add(new KeyBinding(END, KEY_PRESSED,         "SelectEnd").shift());
-        // context menu
-        BINDINGS.add(new KeyBinding(CONTEXT_MENU, KEY_PRESSED, "ShowContextMenu"));
-        BINDINGS.add(new KeyBinding(F10, KEY_PRESSED,          "ShowContextMenu").shift());
 
         // platform specific settings
         if (PlatformUtil.isMac()) {
+            BINDINGS.add(new KeyBinding(HOME, KEY_PRESSED,       "Home").meta());
+            BINDINGS.add(new KeyBinding(END, KEY_PRESSED,        "End").meta());
             BINDINGS.add(new KeyBinding(LEFT, KEY_PRESSED,       "Home").meta());
             BINDINGS.add(new KeyBinding(KP_LEFT, KEY_PRESSED,    "Home").meta());
             BINDINGS.add(new KeyBinding(RIGHT, KEY_PRESSED,      "End").meta());
@@ -88,6 +87,8 @@ public class TextInputControlBindings {
             BINDINGS.add(new KeyBinding(C, KEY_PRESSED,          "Copy").meta());
             BINDINGS.add(new KeyBinding(INSERT, KEY_PRESSED,     "Copy").meta());
             BINDINGS.add(new KeyBinding(V, KEY_PRESSED,          "Paste").meta());
+            BINDINGS.add(new KeyBinding(HOME, KEY_PRESSED,       "SelectHome").shift().meta());
+            BINDINGS.add(new KeyBinding(END, KEY_PRESSED,        "SelectEnd").shift().meta());
             BINDINGS.add(new KeyBinding(LEFT, KEY_PRESSED,       "SelectHome").shift().meta());
             BINDINGS.add(new KeyBinding(KP_LEFT, KEY_PRESSED,    "SelectHome").shift().meta());
             BINDINGS.add(new KeyBinding(RIGHT, KEY_PRESSED,      "SelectEnd").shift().meta());

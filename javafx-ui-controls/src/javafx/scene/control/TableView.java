@@ -61,6 +61,7 @@ import com.sun.javafx.scene.control.WeakListChangeListener;
 import com.sun.javafx.scene.control.skin.TableViewSkin;
 import com.sun.javafx.scene.control.skin.VirtualContainerBase;
 import java.util.HashMap;
+import javafx.beans.DefaultProperty;
 import javafx.beans.WeakInvalidationListener;
 import javafx.beans.property.ReadOnlyObjectProperty;
 import javafx.beans.property.ReadOnlyObjectWrapper;
@@ -200,6 +201,7 @@ import javafx.scene.control.cell.PropertyValueFactory;
  * @see TablePosition
  * @param <S> The type of the objects contained within the TableView items list.
  */
+@DefaultProperty("items")
 public class TableView<S> extends Control {
     
     /***************************************************************************

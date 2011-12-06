@@ -43,6 +43,7 @@ import javafx.geometry.Side;
 import com.sun.javafx.css.Styleable;
 import com.sun.javafx.css.StyleManager;
 import com.sun.javafx.css.StyleableProperty;
+import javafx.beans.DefaultProperty;
 
 /**
  * <p>A control that allows switching between a group of {@link Tab Tabs}.  Only one tab
@@ -75,6 +76,7 @@ import com.sun.javafx.css.StyleableProperty;
  *
  * @see Tab
  */
+@DefaultProperty("tabs")
 public class TabPane extends Control {
     private static final double DEFAULT_TAB_MIN_WIDTH = 0;
 

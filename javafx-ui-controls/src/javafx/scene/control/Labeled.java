@@ -51,6 +51,7 @@ import javafx.scene.text.TextAlignment;
 
 import com.sun.javafx.css.Styleable;
 import com.sun.javafx.css.StyleableProperty;
+import javafx.beans.DefaultProperty;
 import javafx.beans.property.ReadOnlyObjectProperty;
 import javafx.beans.property.ReadOnlyObjectWrapper;
 
@@ -78,6 +79,7 @@ import javafx.beans.property.ReadOnlyObjectWrapper;
  * @see Label
  * @see ToggleButton
  */
+@DefaultProperty("text")
 public abstract class Labeled extends Control {
 
     /***************************************************************************

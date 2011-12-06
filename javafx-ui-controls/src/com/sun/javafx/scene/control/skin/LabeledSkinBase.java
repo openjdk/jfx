@@ -52,8 +52,8 @@ import javafx.scene.text.Text;
 import com.sun.javafx.scene.control.behavior.BehaviorBase;
 import com.sun.javafx.scene.control.behavior.TextBinding;
 
+import static javafx.scene.control.ContentDisplay.*;
 import static javafx.scene.control.OverrunStyle.*;
-import static com.sun.javafx.scene.control.skin.Utils.*;
 
 public abstract class LabeledSkinBase<C extends Labeled, B extends BehaviorBase<C>> extends SkinBase<C, B> {
 
@@ -385,10 +385,14 @@ public abstract class LabeledSkinBase<C extends Labeled, B extends BehaviorBase<
             Insets padding = getInsets();
             Insets labelPadding = labeled.getLabelPadding();
 
+            double availableWidth = labeled.getWidth() - padding.getLeft() - padding.getRight() -
+                                    labelPadding.getLeft() - labelPadding.getRight();
+            availableWidth = Math.max(availableWidth, 0);
+
             if (w == -1) {
-                w = labeled.getWidth() - padding.getLeft() - padding.getRight() - labelPadding.getLeft() - labelPadding.getRight();
+                w = availableWidth;
             }
-            double minW = Math.min(minWidth(-1), labeled.getWidth());
+            double minW = Math.min(minWidth(-1), availableWidth);
             if (horizontalPosition && !isIgnoreGraphic()) {
                 double graphicW = (labeled.getGraphic().getLayoutBounds().getWidth() + labeled.getGraphicTextGap());
                 w -= graphicW;
@@ -400,10 +404,14 @@ public abstract class LabeledSkinBase<C extends Labeled, B extends BehaviorBase<
                     (labeled.getContentDisplay() == ContentDisplay.TOP ||
                     labeled.getContentDisplay() == ContentDisplay.BOTTOM);
 
+            double availableHeight = labeled.getHeight() - padding.getTop() - padding.getBottom() -
+                                     labelPadding.getTop() - labelPadding.getBottom();
+            availableHeight = Math.max(availableHeight, 0);
+
             if (h == -1) {
-                h = labeled.getHeight() - padding.getTop() - padding.getBottom() - labelPadding.getTop() - labelPadding.getBottom();
+                h = availableHeight;
             }
-            double minH = minHeight(w);
+            double minH = Math.min(minHeight(w), availableHeight);
             if (verticalPosition && labeled.getGraphic() != null) {
                 double graphicH = labeled.getGraphic().getLayoutBounds().getHeight() + labeled.getGraphicTextGap();
                 h -= graphicH;
@@ -604,6 +612,13 @@ public abstract class LabeledSkinBase<C extends Labeled, B extends BehaviorBase<
         OverrunStyle truncationStyle = labeled.getTextOverrun();
         final String string = labeled.getText();
         final boolean emptyText = string == null || string.isEmpty();
+        final ContentDisplay contentDisplay = labeled.getContentDisplay();
+        final double gap = labeled.getGraphicTextGap();
+        final Insets padding = getInsets();
+        final Insets labelPadding = labeled.getLabelPadding();
+        final double widthPadding = padding.getLeft() + padding.getRight() +
+                                    labelPadding.getLeft() + labelPadding.getRight();
+
         double minTextWidth = 0;
         if (!emptyText) {
             // We only want to recompute the full text width if the font or text changed
@@ -627,16 +642,18 @@ public abstract class LabeledSkinBase<C extends Labeled, B extends BehaviorBase<
 
         // Now inspect the graphic and the hpos to determine the the minWidth
         final Node graphic = labeled.getGraphic();
+        double width;
         if (isIgnoreGraphic()) {
-            return minTextWidth;
+            width = minTextWidth;
         } else if (isIgnoreText()) {
-            return graphic.minWidth(-1);
-        } else if (labeled.getContentDisplay() == ContentDisplay.LEFT
-                || labeled.getContentDisplay() == ContentDisplay.RIGHT){
-            return (minTextWidth + graphic.minWidth(-1) + labeled.getGraphicTextGap());
+            width = graphic.minWidth(-1);
+        } else if (contentDisplay == LEFT || contentDisplay == RIGHT){
+            width = (minTextWidth + graphic.minWidth(-1) + gap);
         } else {
-            return Math.max(minTextWidth, graphic.minWidth(-1));
+            width = Math.max(minTextWidth, graphic.minWidth(-1));
         }
+
+        return width + widthPadding;
     }
 
     @Override protected double computeMinHeight(double width) {
@@ -701,12 +718,24 @@ public abstract class LabeledSkinBase<C extends Labeled, B extends BehaviorBase<
     @Override protected double computePrefHeight(double width) {
         final Labeled labeled = getSkinnable();
         final Font font = text.getFont();
+        final ContentDisplay contentDisplay = labeled.getContentDisplay();
+        final double gap = labeled.getGraphicTextGap();
+        final Insets padding = getInsets();
+        final Insets labelPadding = labeled.getLabelPadding();
+        final double widthPadding = padding.getLeft() + padding.getRight() + labelPadding.getLeft() + labelPadding.getRight();
 
         String str = labeled.getText();
         if (str != null && str.endsWith("\n")) {
             // Strip ending newline so we don't count another row.
             str = str.substring(0, str.length() - 1);
         }
+
+        if (!isIgnoreGraphic() &&
+            (contentDisplay == LEFT || contentDisplay == RIGHT)) {
+            width -= (graphic.prefWidth(-1) + gap);
+        }
+
+        width -= widthPadding;
 
         // TODO figure out how to cache this effectively.
         final double textHeight = Utils.computeTextHeight(font, str,
@@ -716,16 +745,13 @@ public abstract class LabeledSkinBase<C extends Labeled, B extends BehaviorBase<
         double h = textHeight;
         if (!isIgnoreGraphic()) {
             final Node graphic = labeled.getGraphic();
-            if (labeled.getContentDisplay() == ContentDisplay.TOP
-                || labeled.getContentDisplay() == ContentDisplay.BOTTOM) {
-                h = graphic.prefHeight(-1) + labeled.getGraphicTextGap() + textHeight;
+            if (contentDisplay == TOP || contentDisplay == BOTTOM) {
+                h = graphic.prefHeight(-1) + gap + textHeight;
             } else {
                 h = Math.max(textHeight, graphic.prefHeight(-1));
             }
         }
 
-        Insets padding = getInsets();
-        Insets labelPadding = labeled.getLabelPadding();
         return padding.getTop() + h + padding.getBottom() + labelPadding.getTop() + labelPadding.getBottom();
     }
 
@@ -854,14 +880,14 @@ public abstract class LabeledSkinBase<C extends Labeled, B extends BehaviorBase<
             if (graphic.isResizable()) {
                 Orientation contentBias = graphic.getContentBias();
                 if (contentBias == Orientation.HORIZONTAL) {
-                    graphicWidth  = boundedSize(w, graphic.minWidth(-1), graphic.maxWidth(-1));
-                    graphicHeight = boundedSize(h, graphic.minHeight(graphicWidth), graphic.maxHeight(graphicWidth));
+                    graphicWidth  = Utils.boundedSize(w, graphic.minWidth(-1), graphic.maxWidth(-1));
+                    graphicHeight = Utils.boundedSize(h, graphic.minHeight(graphicWidth), graphic.maxHeight(graphicWidth));
                 } else if (contentBias == Orientation.VERTICAL) {
-                    graphicHeight = boundedSize(h, graphic.minHeight(-1), graphic.maxHeight(-1));
-                    graphicWidth  = boundedSize(w, graphic.minWidth(graphicHeight), graphic.maxHeight(graphicHeight));
+                    graphicHeight = Utils.boundedSize(h, graphic.minHeight(-1), graphic.maxHeight(-1));
+                    graphicWidth  = Utils.boundedSize(w, graphic.minWidth(graphicHeight), graphic.maxWidth(graphicHeight));
                 } else {
-                    graphicWidth  = boundedSize(w, graphic.minWidth(-1), graphic.maxWidth(-1));
-                    graphicHeight = boundedSize(h, graphic.minHeight(-1), graphic.maxHeight(-1));
+                    graphicWidth  = Utils.boundedSize(w, graphic.minWidth(-1), graphic.maxWidth(-1));
+                    graphicHeight = Utils.boundedSize(h, graphic.minHeight(-1), graphic.maxHeight(-1));
                 }
                 graphic.resize(graphicWidth, graphicHeight);
             } else {

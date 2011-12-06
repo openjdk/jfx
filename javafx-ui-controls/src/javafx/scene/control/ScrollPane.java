@@ -44,6 +44,7 @@ import javafx.scene.Node;
 import com.sun.javafx.css.Styleable;
 import com.sun.javafx.css.StyleManager;
 import com.sun.javafx.css.StyleableProperty;
+import javafx.beans.DefaultProperty;
 
 /**
  * A Control that provides a scrolled, clipped viewport of its contents. It
@@ -81,6 +82,7 @@ import com.sun.javafx.css.StyleableProperty;
  *
  * Implementation of ScrollPane According to JavaFX UI Control API Specification
  */
+@DefaultProperty("content")
 public class ScrollPane extends Control {
 
     /***************************************************************************

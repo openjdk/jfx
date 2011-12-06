@@ -105,11 +105,15 @@ public class ListCell<T> extends IndexedCell<T> {
      */
     private InvalidationListener indexListener = new InvalidationListener() {
         @Override public void invalidated(Observable valueModel) {
-            updateItem();
-            updateSelection();
-            updateFocus();
-        }
-    };
+            indexChanged();
+         }
+     };
+    
+    @Override void indexChanged() {
+        updateItem();
+        updateSelection();
+        updateFocus();
+    }
 
     /**
      * Listens to the editing index on the ListView. It is possible for the developer

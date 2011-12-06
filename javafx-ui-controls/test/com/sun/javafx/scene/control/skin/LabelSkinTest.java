@@ -50,11 +50,13 @@ public class LabelSkinTest {
      *                                                                          *
      ***************************************************************************/
     
-    @Test public void widthChangesOnLabelShouldInvoke_handleControlPropertyChanged() {
+    @Test public void sizeChangesOnLabelShouldInvoke_handleControlPropertyChanged() {
         assertFalse(skin.propertyChanged); // sanity check
         label.resize(500, label.getHeight());
         assertTrue(skin.propertyChanged);
         assertEquals(1, skin.propertyChangeCount); // sanity check
+        label.resize(label.getWidth(), label.prefHeight(label.getWidth()));
+        assertEquals(2, skin.propertyChangeCount); // sanity check
     }
     
     @Test public void textFillChangesOnLabelShouldInvoke_handleControlPropertyChanged() {
@@ -157,7 +159,8 @@ public class LabelSkinTest {
         // wider than the label's available width.
         label.setText("A long line which is wider than 100 pixels.");
         label.setWrapText(true);
-        label.layout();
+        label.autosize();
+        //label.layout();
         skin.updateDisplayedText();
         
         final double oldWrappingWidth = text.getWrappingWidth();
@@ -290,215 +293,239 @@ public class LabelSkinTest {
      ***************************************************************************/
 
     @Test public void whenTextIsNullAndNoGraphic_computeMinWidth_ReturnsZero() {
+        skin.setPadding(new Insets(7, 7, 7, 7));
         label.setText(null);
-        assertEquals(0.0, label.minWidth(-1), 0);
+        assertEquals(0.0 + 14, label.minWidth(-1), 0);
     }
     
     @Test public void whenTextIsEmptyAndNoGraphic_computeMinWidth_ReturnsZero() {
+        skin.setPadding(new Insets(7, 7, 7, 7));
         label.setText("");
-        assertEquals(0.0, label.minWidth(-1), 0);
+        assertEquals(0.0 + 14, label.minWidth(-1), 0);
     }
     
     @Test public void whenTextIsShorterThanEllipsisAndNoGraphic_computeMinWidth_ReturnsTextWidth() {
+        skin.setPadding(new Insets(7, 7, 7, 7));
         label.setText(".");
         assertTrue(label.minWidth(-1) >= 0);
-        assertEquals(skin.textWidth, label.minWidth(-1), 0);
+        assertEquals(skin.textWidth + 14, label.minWidth(-1), 0);
     }
 
     @Test public void whenTextIsGreaterThanEllipsisAndNoGraphic_computeMinWidth_ReturnsEllipsisWidth() {
+        skin.setPadding(new Insets(7, 7, 7, 7));
         label.setText("These are the times that try men's souls.");
         assertTrue(label.minWidth(-1) >= 0);
-        assertEquals(skin.ellipsisWidth, label.minWidth(-1), 0);
+        assertEquals(skin.ellipsisWidth + 14, label.minWidth(-1), 0);
     }
 
     @Test public void whenTextIsNullAndGraphicIsUnmanaged_computeMinWidth_ReturnsZero() {
+        skin.setPadding(new Insets(7, 7, 7, 7));
         Rectangle r = new Rectangle(23, 500);
         r.setManaged(false);
         label.setGraphic(r);
         label.setText(null);
-        assertEquals(0.0, label.minWidth(-1), 0);
+        assertEquals(0.0 + 14, label.minWidth(-1), 0);
     }
     
     @Test public void whenTextIsEmptyAndGraphicIsUnmanaged_computeMinWidth_ReturnsZero() {
+        skin.setPadding(new Insets(7, 7, 7, 7));
         Rectangle r = new Rectangle(23, 500);
         r.setManaged(false);
         label.setGraphic(r);
         label.setText("");
-        assertEquals(0.0, label.minWidth(-1), 0);
+        assertEquals(0.0 + 14, label.minWidth(-1), 0);
     }
     
     @Test public void whenTextIsShorterThanEllipsisAndGraphicIsUnmanaged_computeMinWidth_ReturnsTextWidth() {
+        skin.setPadding(new Insets(7, 7, 7, 7));
         Rectangle r = new Rectangle(23, 500);
         r.setManaged(false);
         label.setGraphic(r);
         label.setText(".");
         assertTrue(label.minWidth(-1) >= 0);
-        assertEquals(skin.textWidth, label.minWidth(-1), 0);
+        assertEquals(skin.textWidth + 14, label.minWidth(-1), 0);
     }
 
     @Test public void whenTextIsGreaterThanEllipsisAndGraphicIsUnmanaged_computeMinWidth_ReturnsEllipsisWidth() {
+        skin.setPadding(new Insets(7, 7, 7, 7));
         Rectangle r = new Rectangle(23, 500);
         r.setManaged(false);
         label.setGraphic(r);
         label.setText("These are the times that try men's souls.");
         assertTrue(label.minWidth(-1) >= 0);
-        assertEquals(skin.ellipsisWidth, label.minWidth(-1), 0);
+        assertEquals(skin.ellipsisWidth + 14, label.minWidth(-1), 0);
     }
 
     @Test public void whenTextIsNullAndGraphicIsSet_computeMinWidth_ReturnsGraphicWidth() {
+        skin.setPadding(new Insets(7, 7, 7, 7));
         Rectangle r = new Rectangle(23, 23);
         label.setGraphic(r);
         label.setText(null);
         assertTrue(label.minWidth(-1) >= 0);
-        assertEquals(23, label.minWidth(-1), 0);
+        assertEquals(23 + 14, label.minWidth(-1), 0);
     }
     
     @Test public void whenTextIsEmptyAndGraphicIsSet_computeMinWidth_ReturnsGraphicWidth() {
+        skin.setPadding(new Insets(7, 7, 7, 7));
         Rectangle r = new Rectangle(23, 23);
         label.setGraphic(r);
         label.setText("");
         assertTrue(label.minWidth(-1) >= 0);
-        assertEquals(23, label.minWidth(-1), 0);
+        assertEquals(23 + 14, label.minWidth(-1), 0);
     }
 
     @Test public void whenTextIsShorterThanEllipsisAndGraphicIsSetAndContentDisplayIsLEFT_computeMinWidth_ReturnsGraphicWidthPlusGraphicTextGapPlusTextWidth() {
+        skin.setPadding(new Insets(7, 7, 7, 7));
         Rectangle r = new Rectangle(23, 23);
         label.setGraphicTextGap(2);
         label.setGraphic(r);
         label.setContentDisplay(ContentDisplay.LEFT);
         label.setText(".");
         assertTrue(label.minWidth(-1) >= 0);
-        assertEquals(23 + 2 + skin.textWidth, label.minWidth(-1), 0);
+        assertEquals(23 + 2 + skin.textWidth + 14, label.minWidth(-1), 0);
     }
 
     @Test public void whenTextIsLongThanEllipsisAndGraphicIsSetAndContentDisplayIsLEFT_computeMinWidth_ReturnsGraphicWidthPlusGraphicTextGapPlusEllipsisWidth() {
+        skin.setPadding(new Insets(7, 7, 7, 7));
         Rectangle r = new Rectangle(23, 23);
         label.setGraphicTextGap(2);
         label.setGraphic(r);
         label.setContentDisplay(ContentDisplay.LEFT);
         label.setText("Wherefore art thou Romeo?");
         assertTrue(label.minWidth(-1) >= 0);
-        assertEquals(23 + 2 + skin.ellipsisWidth, label.minWidth(-1), 0);
+        assertEquals(23 + 2 + skin.ellipsisWidth + 14, label.minWidth(-1), 0);
     }
 
     @Test public void whenTextIsShorterThanEllipsisAndGraphicIsSetAndContentDisplayIsRIGHT_computeMinWidth_ReturnsGraphicWidthPlusGraphicTextGapPlusTextWidth() {
+        skin.setPadding(new Insets(7, 7, 7, 7));
         Rectangle r = new Rectangle(23, 23);
         label.setGraphicTextGap(2);
         label.setGraphic(r);
         label.setContentDisplay(ContentDisplay.RIGHT);
         label.setText(".");
         assertTrue(label.minWidth(-1) >= 0);
-        assertEquals(23 + 2 + skin.textWidth, label.minWidth(-1), 0);
+        assertEquals(23 + 2 + skin.textWidth + 14, label.minWidth(-1), 0);
     }
 
     @Test public void whenTextIsLongThanEllipsisAndGraphicIsSetAndContentDisplayIsRIGHT_computeMinWidth_ReturnsGraphicWidthPlusGraphicTextGapPlusEllipsisWidth() {
+        skin.setPadding(new Insets(7, 7, 7, 7));
         Rectangle r = new Rectangle(23, 23);
         label.setGraphicTextGap(2);
         label.setGraphic(r);
         label.setContentDisplay(ContentDisplay.RIGHT);
         label.setText("Wherefore art thou Romeo?");
         assertTrue(label.minWidth(-1) >= 0);
-        assertEquals(23 + 2 + skin.ellipsisWidth, label.minWidth(-1), 0);
+        assertEquals(23 + 2 + skin.ellipsisWidth + 14, label.minWidth(-1), 0);
     }
 
     @Test public void whenTextIsShorterThanEllipsisAndGraphicIsSetAndContentDisplayIsCENTER_computeMinWidth_ReturnsRightAnswer() {
+        skin.setPadding(new Insets(7, 7, 7, 7));
         Rectangle r = new Rectangle(23, 23);
         label.setGraphicTextGap(2);
         label.setGraphic(r);
         label.setContentDisplay(ContentDisplay.CENTER);
         label.setText(".");
         assertTrue(label.minWidth(-1) >= 0);
-        assertEquals(Math.max(23, skin.textWidth), label.minWidth(-1), 0);
+        assertEquals(Math.max(23, skin.textWidth) + 14, label.minWidth(-1), 0);
     }
 
     @Test public void whenTextIsLongThanEllipsisAndGraphicIsSetAndContentDisplayIsCENTER_computeMinWidth_ReturnsRightAnswer() {
+        skin.setPadding(new Insets(7, 7, 7, 7));
         Rectangle r = new Rectangle(23, 23);
         label.setGraphicTextGap(2);
         label.setGraphic(r);
         label.setContentDisplay(ContentDisplay.CENTER);
         label.setText("Wherefore art thou Romeo?");
         assertTrue(label.minWidth(-1) >= 0);
-        assertEquals(Math.max(23, skin.ellipsisWidth), label.minWidth(-1), 0);
+        assertEquals(Math.max(23, skin.ellipsisWidth) + 14, label.minWidth(-1), 0);
     }
 
     @Test public void whenTextIsShorterThanEllipsisAndGraphicIsSetAndContentDisplayIsTOP_computeMinWidth_ReturnsRightAnswer() {
+        skin.setPadding(new Insets(7, 7, 7, 7));
         Rectangle r = new Rectangle(23, 23);
         label.setGraphicTextGap(2);
         label.setGraphic(r);
         label.setContentDisplay(ContentDisplay.TOP);
         label.setText(".");
         assertTrue(label.minWidth(-1) >= 0);
-        assertEquals(Math.max(23, skin.textWidth), label.minWidth(-1), 0);
+        assertEquals(Math.max(23, skin.textWidth) + 14, label.minWidth(-1), 0);
     }
 
     @Test public void whenTextIsLongThanEllipsisAndGraphicIsSetAndContentDisplayIsTOP_computeMinWidth_ReturnsRightAnswer() {
+        skin.setPadding(new Insets(7, 7, 7, 7));
         Rectangle r = new Rectangle(23, 23);
         label.setGraphicTextGap(2);
         label.setGraphic(r);
         label.setContentDisplay(ContentDisplay.TOP);
         label.setText("Wherefore art thou Romeo?");
         assertTrue(label.minWidth(-1) >= 0);
-        assertEquals(Math.max(23, skin.ellipsisWidth), label.minWidth(-1), 0);
+        assertEquals(Math.max(23, skin.ellipsisWidth) + 14, label.minWidth(-1), 0);
     }
 
     @Test public void whenTextIsShorterThanEllipsisAndGraphicIsSetAndContentDisplayIsBOTTOM_computeMinWidth_ReturnsRightAnswer() {
+        skin.setPadding(new Insets(7, 7, 7, 7));
         Rectangle r = new Rectangle(23, 23);
         label.setGraphicTextGap(2);
         label.setGraphic(r);
         label.setContentDisplay(ContentDisplay.BOTTOM);
         label.setText(".");
         assertTrue(label.minWidth(-1) >= 0);
-        assertEquals(Math.max(23, skin.textWidth), label.minWidth(-1), 0);
+        assertEquals(Math.max(23, skin.textWidth) + 14, label.minWidth(-1), 0);
     }
 
     @Test public void whenTextIsLongThanEllipsisAndGraphicIsSetAndContentDisplayIsBOTTOM_computeMinWidth_ReturnsRightAnswer() {
+        skin.setPadding(new Insets(7, 7, 7, 7));
         Rectangle r = new Rectangle(23, 23);
         label.setGraphicTextGap(2);
         label.setGraphic(r);
         label.setContentDisplay(ContentDisplay.BOTTOM);
         label.setText("Wherefore art thou Romeo?");
         assertTrue(label.minWidth(-1) >= 0);
-        assertEquals(Math.max(23, skin.ellipsisWidth), label.minWidth(-1), 0);
+        assertEquals(Math.max(23, skin.ellipsisWidth) + 14, label.minWidth(-1), 0);
     }
 
     @Test public void whenTextIsShorterThanEllipsisAndGraphicIsSetAndContentDisplayIsGRAPHIC_ONLY_computeMinWidth_ReturnsRightAnswer() {
+        skin.setPadding(new Insets(7, 7, 7, 7));
         Rectangle r = new Rectangle(3, 3);
         label.setGraphicTextGap(2);
         label.setGraphic(r);
         label.setContentDisplay(ContentDisplay.GRAPHIC_ONLY);
         label.setText(".");
         assertTrue(label.minWidth(-1) >= 0);
-        assertEquals(3, label.minWidth(-1), 0);
+        assertEquals(3 + 14, label.minWidth(-1), 0);
     }
 
     @Test public void whenTextIsLongThanEllipsisAndGraphicIsSetAndContentDisplayIsGRAPHIC_ONLY_computeMinWidth_ReturnsRightAnswer() {
+        skin.setPadding(new Insets(7, 7, 7, 7));
         Rectangle r = new Rectangle(3, 3);
         label.setGraphicTextGap(2);
         label.setGraphic(r);
         label.setContentDisplay(ContentDisplay.GRAPHIC_ONLY);
         label.setText("Wherefore art thou Romeo?");
         assertTrue(label.minWidth(-1) >= 0);
-        assertEquals(3, label.minWidth(-1), 0);
+        assertEquals(3 + 14, label.minWidth(-1), 0);
     }
 
     @Test public void whenTextIsShorterThanEllipsisAndGraphicIsSetAndContentDisplayIsTEXT_ONLY_computeMinWidth_ReturnsRightAnswer() {
+        skin.setPadding(new Insets(7, 7, 7, 7));
         Rectangle r = new Rectangle(230, 230);
         label.setGraphicTextGap(2);
         label.setGraphic(r);
         label.setContentDisplay(ContentDisplay.TEXT_ONLY);
         label.setText(".");
         assertTrue(label.minWidth(-1) >= 0);
-        assertEquals(skin.textWidth, label.minWidth(-1), 0);
+        assertEquals(skin.textWidth + 14, label.minWidth(-1), 0);
     }
 
     @Test public void whenTextIsLongThanEllipsisAndGraphicIsSetAndContentDisplayIsTEXT_ONLY_computeMinWidth_ReturnsRightAnswer() {
+        skin.setPadding(new Insets(7, 7, 7, 7));
         Rectangle r = new Rectangle(230, 230);
         label.setGraphicTextGap(2);
         label.setGraphic(r);
         label.setContentDisplay(ContentDisplay.TEXT_ONLY);
         label.setText("Wherefore art thou Romeo?");
         assertTrue(label.minWidth(-1) >= 0);
-        assertEquals(skin.ellipsisWidth, label.minWidth(-1), 0);
+        assertEquals(skin.ellipsisWidth + 14, label.minWidth(-1), 0);
     }
 
     /****************************************************************************
@@ -863,24 +890,22 @@ public class LabelSkinTest {
         assertEquals(14 + textWidth, label.prefWidth(-1), 0);
     }
 
-    @Ignore ("Need to decide whether the gap should be included here or not")
-    @Test public void whenTextIsNullAndGraphicIsSetWithRIGHTContentDisplay_computePrefWidth_ReturnsGraphicPlusGapPlusPadding() {
+    @Test public void whenTextIsNullAndGraphicIsSetWithRIGHTContentDisplay_computePrefWidth_ReturnsGraphicPlusPaddingNotIncludingGap() {
         label.setText(null);
         label.setGraphic(new Rectangle(0, 0, 20, 20));
         label.setGraphicTextGap(6.5);
         label.setContentDisplay(ContentDisplay.RIGHT);
         skin.setPadding(new Insets(7, 7, 7, 7));
-        assertEquals(14 + 6.5 + 20, label.prefWidth(-1), 0);
+        assertEquals(20 + 14, label.prefWidth(-1), 0);
     }
-    
-    @Ignore ("Need to decide whether the gap should be included here or not")
-    @Test public void whenTextIsEmptyAndGraphicIsSetWithRIGHTContentDisplay_computePrefWidth_ReturnsGraphicPlusGapPlusPadding() {
+
+    @Test public void whenTextIsEmptyAndGraphicIsSetWithRIGHTContentDisplay_computePrefWidth_ReturnsGraphicPlusPaddingNotIncludingGap() {
         label.setText("");
         label.setGraphic(new Rectangle(0, 0, 20, 20));
         label.setGraphicTextGap(6.5);
         label.setContentDisplay(ContentDisplay.RIGHT);
         skin.setPadding(new Insets(7, 7, 7, 7));
-        assertEquals(14 + 6.5 + 20, label.prefWidth(-1), 0);
+        assertEquals(20 + 14, label.prefWidth(-1), 0);
     }
     
     @Test public void whenTextIsSetAndGraphicIsSetWithRIGHTContentDisplay_computePrefWidth_ReturnsTextWidthPlusGraphicWidthPlusGapPlusPadding() {
@@ -930,24 +955,22 @@ public class LabelSkinTest {
         assertEquals(14 + textWidth, label.prefWidth(-1), 0);
     }
 
-    @Ignore ("Need to decide whether the gap should be included here or not")
-    @Test public void whenTextIsNullAndGraphicIsSetWithLEFTContentDisplay_computePrefWidth_ReturnsGraphicPlusGapPlusPadding() {
+    @Test public void whenTextIsNullAndGraphicIsSetWithLEFTContentDisplay_computePrefWidth_ReturnsGraphicPlusPaddingNotIncludingGap() {
         label.setText(null);
         label.setGraphic(new Rectangle(0, 0, 20, 20));
         label.setGraphicTextGap(6.5);
         label.setContentDisplay(ContentDisplay.LEFT);
         skin.setPadding(new Insets(7, 7, 7, 7));
-        assertEquals(14 + 6.5 + 20, label.prefWidth(-1), 0);
+        assertEquals(20 + 14, label.prefWidth(-1), 0);
     }
-    
-    @Ignore ("Need to decide whether the gap should be included here or not")
-    @Test public void whenTextIsEmptyAndGraphicIsSetWithLEFTContentDisplay_computePrefWidth_ReturnsGraphicPlusGapPlusPadding() {
+
+    @Test public void whenTextIsEmptyAndGraphicIsSetWithLEFTContentDisplay_computePrefWidth_ReturnsGraphicPlusPaddingNotIncludingGap() {
         label.setText("");
         label.setGraphic(new Rectangle(0, 0, 20, 20));
         label.setGraphicTextGap(6.5);
         label.setContentDisplay(ContentDisplay.LEFT);
         skin.setPadding(new Insets(7, 7, 7, 7));
-        assertEquals(14 + 6.5 + 20, label.prefWidth(-1), 0);
+        assertEquals(20 + 14, label.prefWidth(-1), 0);
     }
     
     @Test public void whenTextIsSetAndGraphicIsSetWithLEFTContentDisplay_computePrefWidth_ReturnsTextWidthPlusGraphicWidthPlusGapPlusPadding() {
@@ -1442,24 +1465,22 @@ public class LabelSkinTest {
         assertEquals(14 + textWidth, label.maxWidth(-1), 0);
     }
 
-    @Ignore ("Need to decide whether the gap should be included here or not")
-    @Test public void whenTextIsNullAndGraphicIsSetWithRIGHTContentDisplay_computeMaxWidth_ReturnsGraphicPlusGapPlusPadding() {
+    @Test public void whenTextIsNullAndGraphicIsSetWithRIGHTContentDisplay_computeMaxWidth_ReturnsGraphicPlusPaddingNotIncludingGap() {
         label.setText(null);
         label.setGraphic(new Rectangle(0, 0, 20, 20));
         label.setGraphicTextGap(6.5);
         label.setContentDisplay(ContentDisplay.RIGHT);
         skin.setPadding(new Insets(7, 7, 7, 7));
-        assertEquals(14 + 6.5 + 20, label.maxWidth(-1), 0);
+        assertEquals(20 + 14, label.maxWidth(-1), 0);
     }
-    
-    @Ignore ("Need to decide whether the gap should be included here or not")
-    @Test public void whenTextIsEmptyAndGraphicIsSetWithRIGHTContentDisplay_computeMaxWidth_ReturnsGraphicPlusGapPlusPadding() {
+
+    @Test public void whenTextIsEmptyAndGraphicIsSetWithRIGHTContentDisplay_computeMaxWidth_ReturnsGraphicPlusPaddingNotIncludingGap() {
         label.setText("");
         label.setGraphic(new Rectangle(0, 0, 20, 20));
         label.setGraphicTextGap(6.5);
         label.setContentDisplay(ContentDisplay.RIGHT);
         skin.setPadding(new Insets(7, 7, 7, 7));
-        assertEquals(14 + 6.5 + 20, label.maxWidth(-1), 0);
+        assertEquals(20 + 14, label.maxWidth(-1), 0);
     }
     
     @Test public void whenTextIsSetAndGraphicIsSetWithRIGHTContentDisplay_computeMaxWidth_ReturnsTextWidthPlusGraphicWidthPlusGapPlusPadding() {
@@ -1509,24 +1530,22 @@ public class LabelSkinTest {
         assertEquals(14 + textWidth, label.maxWidth(-1), 0);
     }
 
-    @Ignore ("Need to decide whether the gap should be included here or not")
-    @Test public void whenTextIsNullAndGraphicIsSetWithLEFTContentDisplay_computeMaxWidth_ReturnsGraphicPlusGapPlusPadding() {
+    @Test public void whenTextIsNullAndGraphicIsSetWithLEFTContentDisplay_computeMaxWidth_ReturnsGraphicPlusPaddingNotIncludingGap() {
         label.setText(null);
         label.setGraphic(new Rectangle(0, 0, 20, 20));
         label.setGraphicTextGap(6.5);
         label.setContentDisplay(ContentDisplay.LEFT);
         skin.setPadding(new Insets(7, 7, 7, 7));
-        assertEquals(14 + 6.5 + 20, label.maxWidth(-1), 0);
+        assertEquals(20 + 14, label.maxWidth(-1), 0);
     }
-    
-    @Ignore ("Need to decide whether the gap should be included here or not")
-    @Test public void whenTextIsEmptyAndGraphicIsSetWithLEFTContentDisplay_computeMaxWidth_ReturnsGraphicPlusGapPlusPadding() {
+
+    @Test public void whenTextIsEmptyAndGraphicIsSetWithLEFTContentDisplay_computeMaxWidth_ReturnsGraphicPlusPaddingNotIncludingGap() {
         label.setText("");
         label.setGraphic(new Rectangle(0, 0, 20, 20));
         label.setGraphicTextGap(6.5);
         label.setContentDisplay(ContentDisplay.LEFT);
         skin.setPadding(new Insets(7, 7, 7, 7));
-        assertEquals(14 + 6.5 + 20, label.maxWidth(-1), 0);
+        assertEquals(20 + 14, label.maxWidth(-1), 0);
     }
     
     @Test public void whenTextIsSetAndGraphicIsSetWithLEFTContentDisplay_computeMaxWidth_ReturnsTextWidthPlusGraphicWidthPlusGapPlusPadding() {

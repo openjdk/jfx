@@ -25,6 +25,7 @@
 
 package javafx.scene.control;
 
+import javafx.beans.DefaultProperty;
 import javafx.beans.InvalidationListener;
 import javafx.beans.Observable;
 import javafx.beans.binding.IntegerBinding;
@@ -47,10 +48,12 @@ import java.text.BreakIterator;
 
 import com.sun.javafx.Utils;
 import com.sun.javafx.binding.ExpressionHelper;
+import com.sun.javafx.css.StyleManager;
 
 /**
  * Abstract base class for text input controls.
  */
+@DefaultProperty("text")
 public abstract class TextInputControl extends Control {
     /**
      * Interface representing a text input's content. Since it is an ObservableStringValue,
@@ -172,7 +175,11 @@ public abstract class TextInputControl extends Control {
     /**
      * Indicates whether this TextInputControl can be edited by the user.
      */
-    private BooleanProperty editable = new SimpleBooleanProperty(this, "editable", true);
+    private BooleanProperty editable = new SimpleBooleanProperty(this, "editable", true) {
+        @Override protected void invalidated() {
+            impl_pseudoClassStateChanged(PSEUDO_CLASS_READONLY);
+        }
+    };
     public final boolean isEditable() { return editable.getValue(); }
     public final void setEditable(boolean value) { editable.setValue(value); }
     public final BooleanProperty editableProperty() { return editable; }
@@ -1019,5 +1026,28 @@ public abstract class TextInputControl extends Control {
                 doSet(observable.getValue());
             }
         }
+    }
+
+    /***************************************************************************
+     *                                                                         *
+     * Stylesheet Handling                                                     *
+     *                                                                         *
+     **************************************************************************/
+
+    private static final String PSEUDO_CLASS_READONLY = "readonly";
+
+    private static final long PSEUDO_CLASS_READONLY_MASK
+            = StyleManager.getInstance().getPseudoclassMask(PSEUDO_CLASS_READONLY);
+
+    /**
+     * @treatasprivate implementation detail
+     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
+     */
+    @Deprecated @Override public long impl_getPseudoClassState() {
+        long mask = super.impl_getPseudoClassState();
+
+        if (!isEditable()) mask |= PSEUDO_CLASS_READONLY_MASK;
+
+        return mask;
     }
 }

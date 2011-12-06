@@ -77,12 +77,12 @@ public class RadioButtonSkin extends LabeledSkinBase<RadioButton, ButtonBehavior
      **************************************************************************/
 
     @Override protected double computePrefWidth(double height) {
-        return super.computePrefWidth(height) + snapSize(radio.prefWidth(height));
+        return super.computePrefWidth(height) + snapSize(radio.prefWidth(-1));
     }
 
     @Override protected double computePrefHeight(double width) {
-        return Math.max(snapSize(super.computePrefHeight(width)),
-                        getInsets().getTop() + radio.prefHeight(width) + getInsets().getBottom());
+        return Math.max(snapSize(super.computePrefHeight(width - radio.prefWidth(-1))),
+                        getInsets().getTop() + radio.prefHeight(-1) + getInsets().getBottom());
     }
 
     @Override protected void layoutChildren() {

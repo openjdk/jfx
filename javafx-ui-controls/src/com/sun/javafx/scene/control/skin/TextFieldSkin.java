@@ -47,6 +47,7 @@ import javafx.geometry.Point2D;
 import javafx.geometry.Rectangle2D;
 import javafx.scene.Group;
 import javafx.scene.Node;
+import javafx.scene.control.ContextMenu;
 import javafx.scene.control.IndexRange;
 import javafx.scene.control.TextField;
 import javafx.scene.input.MouseEvent;
@@ -139,11 +140,15 @@ public class TextFieldSkin extends TextInputControlSkin<TextField, TextFieldBeha
      */
     protected ObservableDoubleValue textRight;
 
-    @Override public void showContextMenu() {
-        Bounds caretBounds = caretPath.getLayoutBounds();
-        Point2D p = Utils.pointRelativeTo(textNode, null, caretBounds.getMinX(),
-                                          caretBounds.getMaxY(), false);
-        showContextMenu(p.getX(), p.getY());
+    @Override public boolean showContextMenu(ContextMenu menu, double x, double y, boolean isKeyboardTrigger) {
+        if (isKeyboardTrigger) {
+            Bounds caretBounds = caretPath.getLayoutBounds();
+            Point2D p = Utils.pointRelativeTo(textNode, null, caretBounds.getMinX(),
+                                              caretBounds.getMaxY(), false);
+            x = p.getX();
+            y = p.getY();
+        }
+        return super.showContextMenu(menu, x, y, isKeyboardTrigger);
     }
 
     /**

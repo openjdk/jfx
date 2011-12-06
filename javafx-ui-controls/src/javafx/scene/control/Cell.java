@@ -398,7 +398,7 @@ public class Cell<T> extends Labeled {
      */
     public final ReadOnlyBooleanProperty selectedProperty() { return selected.getReadOnlyProperty(); }
 
-    private void setSelected(boolean value) { selected.set(value); }
+    void setSelected(boolean value) { selected.set(value); }
     
     /**
      * Returns whether this cell is currently selected or not.

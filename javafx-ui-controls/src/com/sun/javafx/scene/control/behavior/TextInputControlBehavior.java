@@ -134,7 +134,6 @@ public abstract class TextInputControlBehavior<T extends TextInputControl> exten
             else if ("Unselect".equals(name)) textInputControl.deselect();
             else if ("SelectHome".equals(name)) selectHome();
             else if ("SelectEnd".equals(name)) selectEnd();
-            else if ("ShowContextMenu".equals(name)) showContextMenu();
             else super.callAction(name);
             setCaretAnimating(true);
         } else if ("Copy".equals(name)) {
@@ -232,12 +231,6 @@ public abstract class TextInputControlBehavior<T extends TextInputControl> exten
             textInputControl.extendSelection(0);
         } else {
             textInputControl.selectHome();
-        }
-    }
-
-    public void showContextMenu() {
-        if (getControl().getSkin() instanceof SkinBase) {
-            ((SkinBase)getControl().getSkin()).showContextMenu();
         }
     }
 

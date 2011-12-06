@@ -25,6 +25,7 @@
 
 package javafx.scene.control;
 
+import javafx.beans.DefaultProperty;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 
@@ -54,6 +55,7 @@ import javafx.collections.ObservableList;
  * @see Menu
  * @see MenuItem
  */
+@DefaultProperty("menus")
 public class MenuBar extends Control {
 
     /***************************************************************************

@@ -55,6 +55,7 @@ import javafx.scene.control.TabPane.TabClosingPolicy;
 import javafx.scene.control.Tooltip;
 import javafx.scene.effect.DropShadow;
 import javafx.scene.image.ImageView;
+import javafx.scene.input.ContextMenuEvent;
 import javafx.scene.input.MouseButton;
 import javafx.scene.input.MouseEvent;
 import javafx.scene.layout.Pane;
@@ -998,6 +999,14 @@ public class TabPaneSkin extends SkinBase<TabPane, TabPaneBehavior> {
             getSkinnable().tabMinHeightProperty().addListener(controlListener);
             getSkinnable().tabMaxHeightProperty().addListener(controlListener);
 
+            setOnContextMenuRequested(new EventHandler<ContextMenuEvent>() {
+                @Override public void handle(ContextMenuEvent me) {
+                   if (getTab().getContextMenu() != null) {
+                        getTab().getContextMenu().show(inner, me.getScreenX(), me.getScreenY());
+                        me.consume();
+                    }
+                }
+            });
             setOnMouseReleased(new EventHandler<MouseEvent>() {
                 @Override public void handle(MouseEvent me) {
                     if (me.getButton().equals(MouseButton.MIDDLE)) {
@@ -1007,8 +1016,6 @@ public class TabPaneSkin extends SkinBase<TabPane, TabPaneBehavior> {
                         }
                     } else if (me.getButton().equals(MouseButton.PRIMARY)) {
                         getBehavior().selectTab(getTab());
-                    } else if (me.getButton().equals(MouseButton.SECONDARY) && getTab().getContextMenu() != null) {
-                        getTab().getContextMenu().show(inner, me.getScreenX(), me.getScreenY());
                     }
                 }
             });

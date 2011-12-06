@@ -47,6 +47,7 @@ import com.sun.javafx.css.StyleableProperty;
 import com.sun.javafx.scene.control.WeakEventHandler;
 import com.sun.javafx.scene.control.skin.VirtualContainerBase;
 import java.lang.ref.WeakReference;
+import javafx.beans.DefaultProperty;
 import javafx.beans.property.SimpleBooleanProperty;
 import javafx.beans.property.ReadOnlyObjectProperty;
 import javafx.beans.property.ReadOnlyObjectWrapper;
@@ -94,6 +95,7 @@ import javafx.beans.value.WeakChangeListener;
  * @param <T> The type of the item contained within the {@link TreeItem} value
  *      property for all tree items in this TreeView.
  */
+@DefaultProperty("root")
 public class TreeView<T> extends Control {
     
     /***************************************************************************
@@ -1250,7 +1252,7 @@ public class TreeView<T> extends Control {
                         TreeItem item = e.getAddedChildren().get(i);
                         row = treeView.getRow(item);
                         
-                        if (row <= getFocusedIndex()) {
+                        if (item != null && row <= getFocusedIndex()) {
 //                            shift = e.getTreeItem().isExpanded() ? e.getAddedSize() : 0;
                             shift += item.getExpandedDescendentCount();
                         }
