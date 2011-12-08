@@ -103,8 +103,7 @@ public class TableCell<S,T> extends IndexedCell<T> {
     };
     
     @Override void indexChanged() {
-        itemDirty = true;
-        requestLayout();
+        updateItem();
     }
 
     /*
