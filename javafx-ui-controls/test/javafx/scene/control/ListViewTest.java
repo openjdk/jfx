@@ -306,4 +306,16 @@ public class ListViewTest {
         assertEquals(1, listView.getSelectionModel().getSelectedIndices().size());
         assertEquals(1, listView.getSelectionModel().getSelectedItems().size());
     }
+    
+    @Test public void test_rt18339_onlyEditWhenListViewIsEditable_editableIsFalse() {
+        listView.setEditable(false);
+        listView.edit(1);
+        assertEquals(-1, listView.getEditingIndex());
+    }
+    
+    @Test public void test_rt18339_onlyEditWhenListViewIsEditable_editableIsTrue() {
+        listView.setEditable(true);
+        listView.edit(1);
+        assertEquals(1, listView.getEditingIndex());
+    }
 }

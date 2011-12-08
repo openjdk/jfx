@@ -389,4 +389,16 @@ public class TreeViewTest {
         assertEquals(1, treeView.getSelectionModel().getSelectedIndices().size());
         assertEquals(1, treeView.getSelectionModel().getSelectedItems().size());
     }
+    
+    @Test public void test_rt18339_onlyEditWhenTreeViewIsEditable_editableIsFalse() {
+        treeView.setEditable(false);
+        treeView.edit(root);
+        assertEquals(null, treeView.getEditingItem());
+    }
+    
+    @Test public void test_rt18339_onlyEditWhenTreeViewIsEditable_editableIsTrue() {
+        treeView.setEditable(true);
+        treeView.edit(root);
+        assertEquals(root, treeView.getEditingItem());
+    }
 }

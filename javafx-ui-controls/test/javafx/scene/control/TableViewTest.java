@@ -369,4 +369,40 @@ public class TableViewTest {
         assertEquals(1, table.getSelectionModel().getSelectedItems().size());
         assertEquals(1, table.getSelectionModel().getSelectedCells().size());
     }
+    
+    @Test public void test_rt18339_onlyEditWhenTableViewIsEditable_tableEditableIsFalse_columnEditableIsFalse() {
+        TableColumn<String,String> first = new TableColumn<String,String>("first");
+        first.setEditable(false);
+        table.getColumns().add(first);
+        table.setEditable(false);
+        table.edit(1, first);
+        assertEquals(null, table.getEditingCell());
+    }
+    
+    @Test public void test_rt18339_onlyEditWhenTableViewIsEditable_tableEditableIsFalse_columnEditableIsTrue() {
+        TableColumn<String,String> first = new TableColumn<String,String>("first");
+        first.setEditable(true);
+        table.getColumns().add(first);
+        table.setEditable(false);
+        table.edit(1, first);
+        assertEquals(null, table.getEditingCell());
+    }
+    
+    @Test public void test_rt18339_onlyEditWhenTableViewIsEditable_tableEditableIsTrue_columnEditableIsFalse() {
+        TableColumn<String,String> first = new TableColumn<String,String>("first");
+        first.setEditable(false);
+        table.getColumns().add(first);
+        table.setEditable(true);
+        table.edit(1, first);
+        assertEquals(null, table.getEditingCell());
+    }
+    
+    @Test public void test_rt18339_onlyEditWhenTableViewIsEditable_tableEditableIsTrue_columnEditableIsTrue() {
+        TableColumn<String,String> first = new TableColumn<String,String>("first");
+        first.setEditable(true);
+        table.getColumns().add(first);
+        table.setEditable(true);
+        table.edit(1, first);
+        assertEquals(new TablePosition(table, 1, first), table.getEditingCell());
+    }
 }
