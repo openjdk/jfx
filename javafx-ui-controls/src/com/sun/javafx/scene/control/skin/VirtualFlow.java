@@ -1147,12 +1147,14 @@ public class VirtualFlow extends Region {
 
     @Override protected void setWidth(double value) {
         super.setWidth(value);
-        layoutChildren();
+        setNeedsLayout(true);
+        requestLayout();
     }
     
     @Override protected void setHeight(double value) {
         super.setHeight(value);
-        layoutChildren();
+        setNeedsLayout(true);
+        requestLayout();
     }
 
     private void updateScrollBarsAndViewport(double lastViewportLength) {

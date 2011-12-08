@@ -1843,12 +1843,11 @@ public class TableView<S> extends Control {
                     if (position < 0) return;
                     
                     List<TablePosition> newIndices = new ArrayList<TablePosition>(selectedCells.size());
-                    int m = Math.min(position, selectedCells.size());
-                    newIndices.addAll(selectedCells.subList(0, m));
         
                     for (int i = 0; i < selectedCells.size(); i++) {
                         TablePosition old = selectedCells.get(i);
-                        newIndices.add(new TablePosition(getTableView(), old.getRow() + shift, old.getTableColumn()));
+                        int newRow = old.getRow() < position ? old.getRow() : old.getRow() + shift;
+                        newIndices.add(new TablePosition(getTableView(), newRow, old.getTableColumn()));
                     }
                     
                     quietClearSelection();
@@ -1935,6 +1934,7 @@ public class TableView<S> extends Control {
 //            if (! isCellSelectionEnabled() && column != null) return;
 
             TablePosition pos = new TablePosition(getTableView(), row, column);
+            
             if (getSelectionMode() == SelectionMode.SINGLE) {
                 quietClearSelection();
             }

@@ -360,4 +360,13 @@ public class TableViewTest {
         assertTrue(fm.isFocused(0));
         assertEquals("row1", fm.getFocusedItem());
     }
+    
+    @Test public void test_rt18385() {
+        table.getItems().addAll("row1", "row2", "row3");
+        table.getSelectionModel().select(1);
+        table.getItems().add("Another Row");
+        assertEquals(1, table.getSelectionModel().getSelectedIndices().size());
+        assertEquals(1, table.getSelectionModel().getSelectedItems().size());
+        assertEquals(1, table.getSelectionModel().getSelectedCells().size());
+    }
 }
