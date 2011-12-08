@@ -151,10 +151,14 @@ public class TableCellBehavior extends CellBehaviorBase<TableCell> {
                 sm.clearSelection();
 
                 // and then perform the selection
-                for (int _row = minRow; _row <= maxRow; _row++) {
-                    for (int _col = minColumn; _col <= maxColumn; _col++) {
-                        sm.select(_row, tableView.getVisibleLeafColumn(_col));
+                if (sm.isCellSelectionEnabled()) {
+                    for (int _row = minRow; _row <= maxRow; _row++) {
+                        for (int _col = minColumn; _col <= maxColumn; _col++) {
+                            sm.select(_row, tableView.getVisibleLeafColumn(_col));
+                        }
                     }
+                } else {
+                    sm.selectRange(minRow, maxRow + 1);
                 }
 
                 // return selection back to the focus owner

@@ -1933,9 +1933,7 @@ public class TableView<S> extends Control {
 //            // if a column is given, I return
 //            if (! isCellSelectionEnabled() && column != null) return;
 
-            TablePosition pos = isCellSelectionEnabled() ? 
-                    new TablePosition(getTableView(), row, column) :
-                    new TablePosition(getTableView(), row, null);
+            TablePosition pos = new TablePosition(getTableView(), row, column);
             
             if (getSelectionMode() == SelectionMode.SINGLE) {
                 quietClearSelection();
