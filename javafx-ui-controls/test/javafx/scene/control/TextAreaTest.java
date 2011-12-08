@@ -307,18 +307,18 @@ public class TextAreaTest {
     }
 
     @Test public void insertAndCheckSubRangeInText() {
-        dummyTxtArea.getContent().insert(0, "x");
+        dummyTxtArea.getContent().insert(0, "x", true);
         assertEquals("x", dummyTxtArea.getText().substring(0,1));
     }
 
     @Test public void insertAndCheckSubRangeInContent() {
-        dummyTxtArea.getContent().insert(0, "x");
+        dummyTxtArea.getContent().insert(0, "x", true);
         assertEquals("x", dummyTxtArea.getContent().get(0, 1));
     }
 
     @Test public void deleteAndCheckText() {
-        dummyTxtArea.getContent().insert(0, "x");
-        dummyTxtArea.getContent().delete(1, dummyTxtArea.getLength());
+        dummyTxtArea.getContent().insert(0, "x", false);
+        dummyTxtArea.getContent().delete(1, dummyTxtArea.getLength(), true);
         assertEquals("x", dummyTxtArea.getText());
     }
 

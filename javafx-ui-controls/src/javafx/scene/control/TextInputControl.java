@@ -74,7 +74,7 @@ public abstract class TextInputControl extends Control {
          * @param index
          * @param text
          */
-        public void insert(int index, String text);
+        public void insert(int index, String text, boolean notifyListeners);
 
         /**
          * Removes a sequence of characters from the content.
@@ -82,7 +82,7 @@ public abstract class TextInputControl extends Control {
          * @param start
          * @param end
          */
-        public void delete(int start, int end);
+        public void delete(int start, int end, boolean notifyListeners);
 
         /**
          * Returns the number of characters represented by the content.
@@ -341,8 +341,8 @@ public abstract class TextInputControl extends Control {
         }
 
         if (!this.text.isBound()) {
-            getContent().delete(start, end);
-            getContent().insert(start, text);
+            getContent().delete(start, end, text.isEmpty());
+            getContent().insert(start, text, true);
 
             start += text.length();
             selectRange(start, start);
@@ -833,7 +833,11 @@ public abstract class TextInputControl extends Control {
      */
     public void replaceSelection(String replacement) {
         if (text.isBound()) return;
-        
+
+        if (replacement == null) {
+            throw new NullPointerException();
+        }
+
         final int dot = getCaretPosition();
         final int mark = getAnchor();
         int start = Math.min(dot, mark);
@@ -849,9 +853,13 @@ public abstract class TextInputControl extends Control {
             deselect();
             // RT-16566: Need to take into account stripping of chars into caret pos
             doNotAdjustCaret = true;
-            if (start != end) deleteText(start, end < getLength() ? end : getLength());
-            final int oldLength = getLength();
-            getContent().insert(start, replacement);
+            int oldLength = getLength();
+            end = Math.min(end, oldLength);
+            if (end > start) {
+                getContent().delete(start, end, replacement.isEmpty());
+                oldLength -= (end - start);
+            }
+            getContent().insert(start, replacement, true);
             // RT-16566: Need to take into account stripping of chars into caret pos
             final int p = start + getLength() - oldLength;
             selectRange(p, p);
@@ -1007,8 +1015,8 @@ public abstract class TextInputControl extends Control {
             textIsNull = value == null;
             if (value == null) value = "";
             // Update the content
-            content.delete(0, content.length());
-            content.insert(0, value);
+            content.delete(0, content.length(), value.isEmpty());
+            content.insert(0, value, true);
             if (!doNotAdjustCaret) {
                 selectRange(0, 0);
                 textUpdated();
