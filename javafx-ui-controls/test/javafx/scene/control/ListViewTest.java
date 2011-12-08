@@ -298,4 +298,12 @@ public class ListViewTest {
         assertTrue(fm.isFocused(0));
         assertEquals("row1", fm.getFocusedItem());
     }
+    
+    @Test public void test_rt18385() {
+        listView.getItems().addAll("row1", "row2", "row3");
+        listView.getSelectionModel().select(1);
+        listView.getItems().add("Another Row");
+        assertEquals(1, listView.getSelectionModel().getSelectedIndices().size());
+        assertEquals(1, listView.getSelectionModel().getSelectedItems().size());
+    }
 }

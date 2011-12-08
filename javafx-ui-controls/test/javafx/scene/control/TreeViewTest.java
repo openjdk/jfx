@@ -380,4 +380,13 @@ public class TreeViewTest {
 //        assertTrue("Focused index: " + fm.getFocusedIndex(), fm.isFocused(1));
 //        assertEquals(child1, fm.getFocusedItem());
 //    }
+    
+    @Test public void test_rt18385() {
+        installChildren();
+//        table.getItems().addAll("row1", "row2", "row3");
+        treeView.getSelectionModel().select(1);
+        treeView.getRoot().getChildren().add(new TreeItem("Another Row"));
+        assertEquals(1, treeView.getSelectionModel().getSelectedIndices().size());
+        assertEquals(1, treeView.getSelectionModel().getSelectedItems().size());
+    }
 }
