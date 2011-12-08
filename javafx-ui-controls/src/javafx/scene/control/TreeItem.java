@@ -722,7 +722,7 @@ public class TreeItem<T> implements EventTarget {
         if (this.getParent() != other.getParent() && (this.getParent() == null || !this.getParent().equals(other.getParent()))) {
             return false;
         }
-        if (this.getChildren() != other.getChildren() && (this.getChildren() == null || !this.getChildren().equals(other.getChildren()))) {
+        if (this.children != other.children && (this.children == null || !this.children.equals(other.children))) {
             return false;
         }
         return true;

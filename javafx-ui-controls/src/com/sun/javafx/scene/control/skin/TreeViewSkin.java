@@ -209,12 +209,19 @@ public class TreeViewSkin<T> extends VirtualContainerBase<TreeView<T>, TreeViewB
             ((TreeCell)flow.cells.get(i)).updateTreeView(null);
         }
         
-        flow.setCellCount(getItemCount());
-
-        // This needs to be recreateCells here (rather than reconfigureCells)
-        // otherwise issues appear when expanding/collapsing branches. For example,
-        // see RT-14013.
-        flow.recreateCells();
+        int oldCount = flow.getCellCount();
+        int newCount = getItemCount();
+        
+        // if this is not called even when the count is the same, we get a 
+        // memory leak in VirtualFlow.sheet.children. This can probably be 
+        // optimised in the future when time permits.
+        flow.setCellCount(newCount);
+        
+        if (newCount != oldCount) {
+            flow.recreateCells();
+        } else {
+            flow.reconfigureCells();
+        }
     }
 
     @Override public TreeCell<T> createCell() {
