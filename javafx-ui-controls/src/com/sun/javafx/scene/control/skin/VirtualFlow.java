@@ -1145,15 +1145,15 @@ public class VirtualFlow extends Region {
         updateScrollBarsAndViewport(lastViewportLength);
     }
 
-    @Override protected void setWidth(double value) {
-        super.setWidth(value);
-        layoutChildren();
-    }
-    
-    @Override protected void setHeight(double value) {
-        super.setHeight(value);
-        layoutChildren();
-    }
+//    @Override protected void setWidth(double value) {
+//        super.setWidth(value);
+//        layoutChildren();
+//    }
+//    
+//    @Override protected void setHeight(double value) {
+//        super.setHeight(value);
+//        layoutChildren();
+//    }
 
     private void updateScrollBarsAndViewport(double lastViewportLength) {
         // Assign the hbar and vbar to the breadthBar and lengthBar so as
