@@ -870,6 +870,7 @@ public class TableViewBehavior<T> extends BehaviorBase<TableView<T>> {
         
         if (sm.isSelected(focusedCell.getRow(), focusedCell.getTableColumn())) {
             sm.clearSelection(focusedCell.getRow(), focusedCell.getTableColumn());
+            fm.focus(focusedCell.getRow(), focusedCell.getTableColumn());
         } else {
             sm.select(focusedCell.getRow(), focusedCell.getTableColumn());
         }
