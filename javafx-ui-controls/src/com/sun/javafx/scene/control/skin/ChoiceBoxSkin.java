@@ -147,7 +147,6 @@ public class ChoiceBoxSkin extends SkinBase<ChoiceBox, ChoiceBoxBehavior> {
         });
         if (popup.getScene().getRoot() != null) {
             popup.getScene().getRoot().getStyleClass().addAll(((ChoiceBox)getSkinnable()).getStyleClass());
-            System.out.println("Setting Popup scene's styleclass to : "+popup.getScene().getRoot().getStyleClass());
         }
         // TODO remove this id once bug RT-7542 is fixed.
         popup.setId("choice-box-popup-menu");
