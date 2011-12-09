@@ -26,13 +26,13 @@
 package com.sun.javafx.scene.control.skin;
 
 import com.sun.javafx.Utils;
-import com.sun.javafx.runnable.Runnable1;
 import javafx.beans.property.DoubleProperty;
 import javafx.beans.property.IntegerProperty;
 import javafx.beans.property.ReadOnlyDoubleProperty;
 import javafx.beans.property.ReadOnlyDoubleWrapper;
 import javafx.beans.property.SimpleDoubleProperty;
 import javafx.beans.property.SimpleIntegerProperty;
+import javafx.util.Callback;
 
 /**
  * Base implementation of a helper class used by virtualized Controls such as
@@ -121,9 +121,9 @@ public class PositionMapper {
      * item size would be the height of the cell, whereas in a horizontal
      * list the item size would be the width of the cell.
      */
-    private Runnable1<Double, Integer> itemSize;
-    private Runnable1<Double, Integer> getItemSize() { return itemSize; }
-    public void setGetItemSize(Runnable1<Double, Integer> itemSize) {
+    private Callback<Integer, Double> itemSize;
+    private Callback<Integer, Double> getItemSize() { return itemSize; }
+    public void setGetItemSize(Callback<Integer, Double> itemSize) {
         this.itemSize = itemSize;
     }
 
@@ -140,7 +140,7 @@ public class PositionMapper {
         double fractionalPosition = p * count;
         int cellIndex = (int) fractionalPosition;
         double fraction = fractionalPosition - cellIndex;
-        double cellSize = getItemSize().run(cellIndex);
+        double cellSize = getItemSize().call(cellIndex);
         double pixelOffset = cellSize * fraction;
         double viewportOffset = getViewportSize() * p;
         return pixelOffset - viewportOffset;
@@ -191,7 +191,7 @@ public class PositionMapper {
         double fractionalPosition = getPosition() * count;
         int cellIndex = (int) fractionalPosition;
         if (forward && cellIndex == count) return;
-        double cellSize = getItemSize().run(cellIndex);
+        double cellSize = getItemSize().call(cellIndex);
         double fraction = fractionalPosition - cellIndex;
         double pixelOffset = cellSize * fraction;
 
@@ -225,7 +225,7 @@ public class PositionMapper {
         while (n > remaining && ((forward && cellIndex < count - 1) || (! forward && cellIndex > 0))) {
             if (forward) cellIndex++; else cellIndex--;
             n -= remaining;
-            cellSize = getItemSize().run(cellIndex);
+            cellSize = getItemSize().call(cellIndex);
             start = computeOffsetForCell(cellIndex);
             end = cellSize + computeOffsetForCell(cellIndex + 1);
             remaining = end - start;

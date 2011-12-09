@@ -665,7 +665,8 @@ public class ListView<T> extends Control {
      **************************************************************************/
 
     /**
-     * Instructs the ListView to begin editing the item in the given index. Once
+     * Instructs the ListView to begin editing the item in the given index, if 
+     * the ListView is {@link #editableProperty() editable}. Once
      * this method is called, if the current {@link #cellFactoryProperty()} is
      * set up to support editing, the Cell will switch its visual state to enable
      * for user input to take place.
@@ -674,6 +675,7 @@ public class ListView<T> extends Control {
      *     edited.
      */
     public void edit(int itemIndex) {
+        if (!isEditable()) return;
         setEditingIndex(itemIndex);
     }
 

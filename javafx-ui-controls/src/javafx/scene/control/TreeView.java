@@ -730,7 +730,8 @@ public class TreeView<T> extends Control {
     
     
     /**
-     * Instructs the TreeView to begin editing the given TreeItem. Once
+     * Instructs the TreeView to begin editing the given TreeItem, if 
+     * the TreeView is {@link #editableProperty() editable}. Once
      * this method is called, if the current 
      * {@link #cellFactoryProperty() cell factory} is set up to support editing,
      * the Cell will switch its visual state to enable the user input to take place.
@@ -738,6 +739,7 @@ public class TreeView<T> extends Control {
      * @param item The TreeItem in the TreeView that should be edited.
      */
     public void edit(TreeItem<T> item) {
+        if (!isEditable()) return;
         setEditingItem(item);
     }
     
