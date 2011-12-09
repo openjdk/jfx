@@ -37,7 +37,6 @@ import javafx.collections.ObservableList;
 import javafx.event.EventHandler;
 import javafx.geometry.Insets;
 import javafx.scene.Node;
-import javafx.scene.control.IndexedCell;
 import javafx.scene.control.Label;
 import javafx.scene.control.SelectionModel;
 import javafx.scene.control.TableColumn;
@@ -49,7 +48,6 @@ import javafx.scene.layout.Region;
 import javafx.scene.layout.StackPane;
 import javafx.util.Callback;
 
-import com.sun.javafx.runnable.Runnable0;
 import com.sun.javafx.scene.control.behavior.TableViewBehavior;
 import com.sun.javafx.scene.control.WeakListChangeListener;
 import com.sun.javafx.scene.control.skin.resources.ControlResources;
@@ -65,8 +63,8 @@ public class TableViewSkin<T> extends VirtualContainerBase<TableView<T>, TableVi
         flow = new VirtualFlow();
         flow.setPannable(false);
         flow.setFocusTraversable(getSkinnable().isFocusTraversable());
-        flow.setCreateCell(new Runnable0<TableRow>() {
-            @Override public TableRow run() {
+        flow.setCreateCell(new Callback<VirtualFlow, TableRow>() {
+            @Override public TableRow call(VirtualFlow flow) {
                 return TableViewSkin.this.createCell();
             }
         });

@@ -26,11 +26,8 @@
 package com.sun.javafx.scene.control.skin;
 
 import javafx.event.EventHandler;
-import javafx.geometry.Pos;
 import javafx.scene.Node;
 import javafx.scene.control.IndexedCell;
-import javafx.scene.control.Label;
-import javafx.scene.control.SelectionModel;
 import javafx.scene.control.TreeCell;
 import javafx.scene.control.TreeItem;
 import javafx.scene.control.TreeItem.TreeModificationEvent;
@@ -39,8 +36,6 @@ import javafx.scene.input.MouseEvent;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.StackPane;
 
-import com.sun.javafx.runnable.Runnable0;
-import com.sun.javafx.runnable.Runnable1;
 import com.sun.javafx.scene.control.WeakEventHandler;
 import com.sun.javafx.scene.control.behavior.TreeViewBehavior;
 import java.lang.ref.WeakReference;
@@ -56,8 +51,8 @@ public class TreeViewSkin<T> extends VirtualContainerBase<TreeView<T>, TreeViewB
         flow = new VirtualFlow();
         flow.setPannable(false);
         flow.setFocusTraversable(getSkinnable().isFocusTraversable());
-        flow.setCreateCell(new Runnable0<TreeCell>() {
-            @Override public TreeCell run() {
+        flow.setCreateCell(new Callback<VirtualFlow, TreeCell>() {
+            @Override public TreeCell call(VirtualFlow flow) {
                 return TreeViewSkin.this.createCell();
             }
         });
