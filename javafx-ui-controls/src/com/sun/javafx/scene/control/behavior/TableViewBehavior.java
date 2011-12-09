@@ -836,8 +836,10 @@ public class TableViewBehavior<T> extends BehaviorBase<TableView<T>> {
         TableView.TableViewSelectionModel sm = getControl().getSelectionModel();
         if (sm == null) return;
         
+        selectionChanging = true;
         sm.clearSelection();
         sm.selectRange(leadSelectedIndex, leadIndex + 1);
+        selectionChanging = false;
     }
     
     private void selectAllPageDown() {
@@ -855,8 +857,10 @@ public class TableViewBehavior<T> extends BehaviorBase<TableView<T>> {
         TableView.TableViewSelectionModel sm = getControl().getSelectionModel();
         if (sm == null) return;
         
+        selectionChanging = true;
         sm.clearSelection();
         sm.selectRange(leadIndex, leadSelectedIndex + 1);
+        selectionChanging = false;
     }
     
     private void toggleFocusOwnerSelection() {

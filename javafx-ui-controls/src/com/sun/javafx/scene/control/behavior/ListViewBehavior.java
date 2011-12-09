@@ -523,8 +523,10 @@ public class ListViewBehavior<T> extends BehaviorBase<ListView<T>> {
         MultipleSelectionModel sm = getControl().getSelectionModel();
         if (sm == null) return;
         
+        selectionChanging = true;
         sm.clearSelection();
         sm.selectRange(leadSelectedIndex, leadIndex + 1);
+        selectionChanging = false;
     }
     
     private void selectAllPageDown() {
@@ -542,8 +544,10 @@ public class ListViewBehavior<T> extends BehaviorBase<ListView<T>> {
         MultipleSelectionModel sm = getControl().getSelectionModel();
         if (sm == null) return;
         
+        selectionChanging = true;
         sm.clearSelection();
         sm.selectRange(leadIndex, leadSelectedIndex + 1);
+        selectionChanging = false;
     }
 
     private void selectAllToFirstRow() {
