@@ -576,7 +576,7 @@ public class ListViewBehavior<T> extends BehaviorBase<ListView<T>> {
         }
         
         sm.clearSelection();
-        sm.selectRange(leadIndex, getRowCount() - 1);
+        sm.selectRange(leadIndex, getRowCount());
 
         if (onMoveToLastCell != null) onMoveToLastCell.run();
     }
