@@ -405,4 +405,11 @@ public class TableViewTest {
         table.edit(1, first);
         assertEquals(new TablePosition(table, 1, first), table.getEditingCell());
     }
+    
+    @Test public void test_rt14451() {
+        table.getItems().addAll("Apple", "Orange", "Banana");
+        table.getSelectionModel().setSelectionMode(SelectionMode.MULTIPLE);
+        table.getSelectionModel().selectRange(0, 2); // select from 0 (inclusive) to 2 (exclusive)
+        assertEquals(2, table.getSelectionModel().getSelectedIndices().size());
+    }
 }

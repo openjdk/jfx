@@ -401,4 +401,11 @@ public class TreeViewTest {
         treeView.edit(root);
         assertEquals(root, treeView.getEditingItem());
     }
+    
+    @Test public void test_rt14451() {
+        installChildren();
+        treeView.getSelectionModel().setSelectionMode(SelectionMode.MULTIPLE);
+        treeView.getSelectionModel().selectRange(0, 2); // select from 0 (inclusive) to 2 (exclusive)
+        assertEquals(2, treeView.getSelectionModel().getSelectedIndices().size());
+    }
 }

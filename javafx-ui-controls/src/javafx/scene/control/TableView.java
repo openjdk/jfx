@@ -2014,7 +2014,7 @@ public class TableView<S> extends Control {
                 int lastIndex = -1;
                 List<TablePosition> positions = new ArrayList<TablePosition>();
 
-                if (row > 0 && row < rowCount) {
+                if (row >= 0 && row < rowCount) {
                     positions.add(new TablePosition(getTableView(), row, null));
                     lastIndex = row;
                 }

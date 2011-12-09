@@ -318,4 +318,11 @@ public class ListViewTest {
         listView.edit(1);
         assertEquals(1, listView.getEditingIndex());
     }
+    
+    @Test public void test_rt14451() {
+        listView.getItems().addAll("Apple", "Orange", "Banana");
+        listView.getSelectionModel().setSelectionMode(SelectionMode.MULTIPLE);
+        listView.getSelectionModel().selectRange(0, 2); // select from 0 (inclusive) to 2 (exclusive)
+        assertEquals(2, listView.getSelectionModel().getSelectedIndices().size());
+    }
 }
