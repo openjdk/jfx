@@ -593,7 +593,7 @@ public class TextAreaSkin extends TextInputControlSkin<TextArea, TextAreaBehavio
         return index;
     }
 
-    public void positionCaret(HitInfo hit, boolean select) {
+    public void positionCaret(HitInfo hit, boolean select, boolean extendSelection) {
         int pos = hit.getInsertionIndex();
         boolean isNewLine =
                (pos > 0 &&
@@ -607,7 +607,11 @@ public class TextAreaSkin extends TextInputControlSkin<TextArea, TextAreaBehavio
         }
 
         if (select) {
-            getSkinnable().selectPositionCaret(pos);
+            if (extendSelection) {
+                getSkinnable().extendSelection(pos);
+            } else {
+                getSkinnable().selectPositionCaret(pos);
+            }
         } else {
             getSkinnable().positionCaret(pos);
         }
@@ -845,7 +849,7 @@ public class TextAreaSkin extends TextInputControlSkin<TextArea, TextAreaBehavio
      */
     double targetCaretX = -1;
 
-    protected void downLines(int nLines, boolean select) {
+    protected void downLines(int nLines, boolean select, boolean extendSelection) {
         Text textNode = getTextNode();
         Bounds caretBounds = caretPath.getLayoutBounds();
         double midY = (caretBounds.getMinY() + caretBounds.getMaxY()) / 2 + nLines * fontMetrics.get().getLineHeight();
@@ -862,36 +866,38 @@ public class TextAreaSkin extends TextInputControlSkin<TextArea, TextAreaBehavio
                 hit.setCharIndex(pos - 1);
             }
         }
-        positionCaret(hit, select);
+        positionCaret(hit, select, extendSelection);
         targetCaretX = x;
     }
 
     public void previousLine(boolean select) {
-        downLines(-1, select);
+        downLines(-1, select, false);
     }
 
     public void nextLine(boolean select) {
-        downLines(1, select);
+        downLines(1, select, false);
     }
 
     public void previousPage(boolean select) {
-        downLines(-(int)(scrollPane.getViewportBounds().getHeight() / fontMetrics.get().getLineHeight()), select);
+        downLines(-(int)(scrollPane.getViewportBounds().getHeight() / fontMetrics.get().getLineHeight()),
+                  select, false);
     }
 
     public void nextPage(boolean select) {
-        downLines((int)(scrollPane.getViewportBounds().getHeight() / fontMetrics.get().getLineHeight()), select);
+        downLines((int)(scrollPane.getViewportBounds().getHeight() / fontMetrics.get().getLineHeight()),
+                  select, false);
     }
 
-    public void lineStart(boolean select) {
+    public void lineStart(boolean select, boolean extendSelection) {
         Bounds caretBounds = caretPath.getLayoutBounds();
         double midY = (caretBounds.getMinY() + caretBounds.getMaxY()) / 2;
         HitInfo hit = getTextNode().impl_hitTestChar(translateCaretPosition(new Point2D(getTextLeft(), midY)));
-        positionCaret(hit, select);
+        positionCaret(hit, select, extendSelection);
     }
 
-    public void lineEnd(boolean select) {
+    public void lineEnd(boolean select, boolean extendSelection) {
         targetCaretX = Double.MAX_VALUE;
-        downLines(0, select);
+        downLines(0, select, extendSelection);
         targetCaretX = -1;
     }
 

@@ -134,6 +134,8 @@ public abstract class TextInputControlBehavior<T extends TextInputControl> exten
             else if ("Unselect".equals(name)) textInputControl.deselect();
             else if ("SelectHome".equals(name)) selectHome();
             else if ("SelectEnd".equals(name)) selectEnd();
+            else if ("SelectHomeExtend".equals(name)) selectHomeExtend();
+            else if ("SelectEndExtend".equals(name)) selectEndExtend();
             else super.callAction(name);
             setCaretAnimating(true);
         } else if ("Copy".equals(name)) {
@@ -226,20 +228,19 @@ public abstract class TextInputControlBehavior<T extends TextInputControl> exten
     protected void fire(KeyEvent event) { } // TODO move to TextFieldBehavior
 
     private void selectHome() {
-        TextInputControl textInputControl = getControl();
-        if (macOS) {
-            textInputControl.extendSelection(0);
-        } else {
-            textInputControl.selectHome();
-        }
+        getControl().selectHome();
     }
 
     private void selectEnd() {
+        getControl().selectEnd();
+    }
+
+    private void selectHomeExtend() {
+        getControl().extendSelection(0);
+    }
+
+    private void selectEndExtend() {
         TextInputControl textInputControl = getControl();
-        if (macOS) {
-            textInputControl.extendSelection(textInputControl.getLength());
-        } else {
-            textInputControl.selectEnd();
-        }
+        textInputControl.extendSelection(textInputControl.getLength());
     }
 }
