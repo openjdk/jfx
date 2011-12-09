@@ -563,7 +563,9 @@ public class ListViewBehavior<T> extends BehaviorBase<ListView<T>> {
 
         sm.clearSelection();
         sm.selectRange(0, leadIndex + 1);
-//        getControl().getFocusModel().focus(0);
+        
+        // RT-18413: Focus must go to first row
+        getControl().getFocusModel().focus(0);
 
         if (onMoveToFirstCell != null) onMoveToFirstCell.run();
     }
