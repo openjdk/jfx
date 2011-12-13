@@ -20,6 +20,7 @@ import javafx.scene.shape.Rectangle;
 
 import org.junit.Before;
 import org.junit.Test;
+import org.junit.Ignore;
 
 /**
  */
@@ -83,8 +84,9 @@ public class ButtonBaseTest {
         assertFalse(btn.isArmed());
     }
     
+    @Ignore("impl_cssSet API removed")
     @Test public void cannotSpecifyArmedViaCSS() {
-        btn.impl_cssSet("-fx-armed", true);
+//        btn.impl_cssSet("-fx-armed", true);
         assertFalse(btn.isArmed());
     }
     

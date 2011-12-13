@@ -35,7 +35,7 @@ public class ProgressIndicatorSkinTest {
         stage.setScene(scene);
         stage.show();
 
-        assertEquals(Color.GREEN, skin.progressColor);
+        assertEquals(Color.GREEN, skin.getProgressColor());
     }
     
     public static final class ProgressIndicatorSkinMock extends ProgressIndicatorSkin {

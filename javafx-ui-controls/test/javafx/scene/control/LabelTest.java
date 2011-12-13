@@ -3,6 +3,7 @@
  */
 package javafx.scene.control;
 
+import com.sun.javafx.css.StyleableProperty;
 import static javafx.scene.control.ControlTestUtils.*;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
@@ -120,7 +121,8 @@ public class LabelTest {
     }
     
     @Test public void impl_cssSettable_AlwaysReturnsFalseForLabelFor() {
-        assertFalse(label.impl_cssSettable("-fx-label-for"));
+        StyleableProperty styleable = StyleableProperty.getStyleableProperty(label.labelForProperty());
+        assertNull(styleable);
     }
     
     @Test public void labelForBeanIsCorrect() {

@@ -3,6 +3,7 @@
  */
 package javafx.scene.control;
 
+import com.sun.javafx.css.StyleableProperty;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNull;
@@ -159,16 +160,20 @@ public class TextInputControlTest {
         assertEquals("Oranges", textInput.getText());
     }
 
+    @Ignore("getStyleableProperty will return null for textProperty")
     @Test public void impl_cssSettable_ReturnsFalseForTextAlways() {
-        assertFalse(textInput.impl_cssSettable("-fx-text"));
+        StyleableProperty styleable = StyleableProperty.getStyleableProperty(textInput.textProperty());
+        assertTrue(styleable.isSettable(textInput));
         StringProperty other = new SimpleStringProperty("Apples");
         textInput.textProperty().bind(other);
-        assertFalse(textInput.impl_cssSettable("-fx-text"));
+        assertFalse(styleable.isSettable(textInput));
     }
 
     @Test public void cannotSpecifyTextViaCSS() {
-        textInput.impl_cssSet("-fx-text", "Hello");
-        assertFalse("Hello".equals(textInput.getText()));
+        StyleableProperty styleable = StyleableProperty.getStyleableProperty(textInput.textProperty());
+        assertNull(styleable);
+//        styleable.set(textInput,"Hello");
+//        assertFalse("Hello".equals(textInput.getText()));
     }
 
     @Test public void settingTextNotifiesOfChange() {
@@ -239,16 +244,20 @@ public class TextInputControlTest {
         assertTrue(textInput.isEditable());
     }
     
+    @Ignore("getStyleableProperty will return null for editableProperty")
     @Test public void impl_cssSettable_ReturnsFalseForEditableAlways() {
-        assertFalse(textInput.impl_cssSettable("-fx-editable"));
-        BooleanProperty other = new SimpleBooleanProperty(false);
-        textInput.editableProperty().bind(other);
-        assertFalse(textInput.impl_cssSettable("-fx-editable"));
+        StyleableProperty styleable = StyleableProperty.getStyleableProperty(textInput.editableProperty());
+        assertTrue(styleable.isSettable(textInput));
+        StringProperty other = new SimpleStringProperty("Apples");
+        textInput.textProperty().bind(other);
+        assertFalse(styleable.isSettable(textInput));
     }
 
     @Test public void cannotSpecifyEditableViaCSS() {
-        textInput.impl_cssSet("-fx-editable", "false");
-        assertTrue(textInput.isEditable());
+        StyleableProperty styleable = StyleableProperty.getStyleableProperty(textInput.editableProperty());
+        assertNull(styleable);
+//        styleable.set(textInput,"Hello");
+//        assertFalse("Hello".equals(textInput.getText()));
     }
 
     @Test public void settingEditableNotifiesOfChange() {

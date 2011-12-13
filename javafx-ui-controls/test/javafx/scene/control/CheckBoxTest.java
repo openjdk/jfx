@@ -13,6 +13,7 @@ import org.junit.Test;
 
 import static javafx.scene.control.ControlTestUtils.*;
 import static org.junit.Assert.*;
+import org.junit.Ignore;
 
 /**
  */
@@ -160,8 +161,9 @@ public class CheckBoxTest {
         assertPseudoClassDoesNotExist(btn, "indeterminate");
     }
 
+    @Ignore("impl_cssSet API removed")
     @Test public void cannotSpecifyIndeterminateViaCSS() {
-        btn.impl_cssSet("-fx-indeterminate", true);
+//        btn.impl_cssSet("-fx-indeterminate", true);
         assertFalse(btn.isIndeterminate());
     }
 
@@ -228,8 +230,9 @@ public class CheckBoxTest {
         assertPseudoClassDoesNotExist(btn, "selected");
     }
 
+    @Ignore("impl_cssSet API removed")
     @Test public void cannotSpecifySelectedViaCSS() {
-        btn.impl_cssSet("-fx-selected", true);
+//        btn.impl_cssSet("-fx-selected", true);
         assertFalse(btn.isSelected());
     }
 
@@ -272,8 +275,9 @@ public class CheckBoxTest {
         assertEquals("allowIndeterminate", btn.allowIndeterminateProperty().getName());
     }
 
+    @Ignore("impl_cssSet API removed")
     @Test public void cannotSpecifyAllowIndeterminateViaCSS() {
-        btn.impl_cssSet("-fx-allow-indeterminate", true);
+//        btn.impl_cssSet("-fx-allow-indeterminate", true);
         assertFalse(btn.isAllowIndeterminate());
     }
 

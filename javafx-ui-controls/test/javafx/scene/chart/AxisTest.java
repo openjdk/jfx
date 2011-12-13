@@ -4,6 +4,7 @@
 
 package javafx.scene.chart;
 
+import com.sun.javafx.css.StyleableProperty;
 import java.util.List;
 import static javafx.scene.control.ControlTestUtils.*;
 import javafx.beans.property.BooleanProperty;
@@ -297,121 +298,142 @@ public class AxisTest {
      * CSS related Tests                                                 *
      ********************************************************************/
     @Test public void whenSideIsBound_impl_cssSettable_ReturnsFalse() {
-        assertTrue(axis.impl_cssSettable("-fx-side"));
+        StyleableProperty styleable = StyleableProperty.getStyleableProperty(axis.sideProperty());
+        assertTrue(styleable.isSettable(axis));
         ObjectProperty<Side> other = new SimpleObjectProperty<Side>(Side.LEFT);
         axis.sideProperty().bind(other);
-        assertFalse(axis.impl_cssSettable("-fx-side"));
+        assertFalse(styleable.isSettable(axis));
     }
 
     @Test public void whenSideIsSpecifiedViaCSSAndIsNotBound_impl_cssSettable_ReturnsTrue() {
-        axis.impl_cssSet("-fx-side", Side.RIGHT);
-        assertTrue(axis.impl_cssSettable("-fx-side"));
+        StyleableProperty styleable = StyleableProperty.getStyleableProperty(axis.sideProperty());
+        styleable.set(axis,Side.RIGHT);
+        assertTrue(styleable.isSettable(axis));
     }
 
     @Test public void canSpecifySideViaCSS() {
-        axis.impl_cssSet("-fx-side", Side.BOTTOM);
+        StyleableProperty styleable = StyleableProperty.getStyleableProperty(axis.sideProperty());
+        styleable.set(axis,Side.BOTTOM);
         assertSame(Side.BOTTOM, axis.getSide());
     }
 
     @Test public void whenTickMarkVisibleIsBound_impl_cssSettable_ReturnsFalse() {
-        assertTrue(axis.impl_cssSettable("-fx-tick-mark-visible"));
+        StyleableProperty styleable = StyleableProperty.getStyleableProperty(axis.tickMarkVisibleProperty());
+        assertTrue(styleable.isSettable(axis));
         BooleanProperty other = new SimpleBooleanProperty();
         axis.tickMarkVisibleProperty().bind(other);
-        assertFalse(axis.impl_cssSettable("-fx-tick-mark-visible"));
+        assertFalse(styleable.isSettable(axis));
     }
 
     @Test public void whenTickMarkVisibleIsSpecifiedViaCSSAndIsNotBound_impl_cssSettable_ReturnsTrue() {
-        axis.impl_cssSet("-fx-tick-mark-visible", false);
-        assertTrue(axis.impl_cssSettable("-fx-tick-mark-visible"));
+        StyleableProperty styleable = StyleableProperty.getStyleableProperty(axis.tickMarkVisibleProperty());
+        styleable.set(axis,false);
+        assertTrue(styleable.isSettable(axis));
     }
 
     @Test public void canSpecifyTickMarkVisibleViaCSS() {
-        axis.impl_cssSet("-fx-tick-mark-visible", true);
+        StyleableProperty styleable = StyleableProperty.getStyleableProperty(axis.tickMarkVisibleProperty());
+        styleable.set(axis,true);
         assertSame(true, axis.isTickMarkVisible());
     }
 
     @Test public void whenTickLabelsVisibleIsBound_impl_cssSettable_ReturnsFalse() {
-        assertTrue(axis.impl_cssSettable("-fx-tick-labels-visible"));
+        StyleableProperty styleable = StyleableProperty.getStyleableProperty(axis.tickLabelsVisibleProperty());
+        assertTrue(styleable.isSettable(axis));
         BooleanProperty other = new SimpleBooleanProperty();
         axis.tickLabelsVisibleProperty().bind(other);
-        assertFalse(axis.impl_cssSettable("-fx-tick-labels-visible"));
+        assertFalse(styleable.isSettable(axis));
     }
 
     @Test public void whenTickLabelsVisibleIsSpecifiedViaCSSAndIsNotBound_impl_cssSettable_ReturnsTrue() {
-        axis.impl_cssSet("-fx-tick-labels-visible", false);
-        assertTrue(axis.impl_cssSettable("-fx-tick-labels-visible"));
+        StyleableProperty styleable = StyleableProperty.getStyleableProperty(axis.tickLabelsVisibleProperty());
+        styleable.set(axis,false);
+        assertTrue(styleable.isSettable(axis));
     }
 
     @Test public void canSpecifyTickLabelsVisibleViaCSS() {
-        axis.impl_cssSet("-fx-tick-labels-visible", true);
-        assertSame(true, axis.isTickLabelsVisible());
+        StyleableProperty styleable = StyleableProperty.getStyleableProperty(axis.tickLabelsVisibleProperty());
+        styleable.set(axis,true);
+        assertSame(true, axis.isTickMarkVisible());
     }
 
     @Test public void whenTickLengthIsBound_impl_cssSettable_ReturnsFalse() {
-        assertTrue(axis.impl_cssSettable("-fx-tick-length"));
+        StyleableProperty styleable = StyleableProperty.getStyleableProperty(axis.tickLengthProperty());
+        assertTrue(styleable.isSettable(axis));
         DoubleProperty other = new SimpleDoubleProperty();
         axis.tickLengthProperty().bind(other);
-        assertFalse(axis.impl_cssSettable("-fx-tick-length"));
+        assertFalse(styleable.isSettable(axis));
     }
 
     @Test public void whenTickLengthIsSpecifiedViaCSSAndIsNotBound_impl_cssSettable_ReturnsTrue() {
-        axis.impl_cssSet("-fx-tick-length", 10.9);
-        assertTrue(axis.impl_cssSettable("-fx-tick-length"));
+        StyleableProperty styleable = StyleableProperty.getStyleableProperty(axis.tickLengthProperty());
+        styleable.set(axis,10.9);
+        assertTrue(styleable.isSettable(axis));
     }
 
     @Test public void canSpecifyTickLengthViaCSS() {
-        axis.impl_cssSet("-fx-tick-length", 10.34);
-        assertEquals(10.34, axis.getTickLength(), 0.0);
+        StyleableProperty styleable = StyleableProperty.getStyleableProperty(axis.tickLengthProperty());
+        styleable.set(axis,10.34);
+        assertSame(true, axis.isTickMarkVisible());
     }
 
     @Test public void whenTickLabelFontIsBound_impl_cssSettable_ReturnsFalse() {
-        assertTrue(axis.impl_cssSettable("-fx-tick-label-font"));
+        StyleableProperty styleable = StyleableProperty.getStyleableProperty(axis.tickLabelFontProperty());
+        assertTrue(styleable.isSettable(axis));
         ObjectProperty<Font> other = new SimpleObjectProperty<Font>(Font.getDefault());
         axis.tickLabelFontProperty().bind(other);
-        assertFalse(axis.impl_cssSettable("-fx-tick-label-font"));
+        assertFalse(styleable.isSettable(axis));
     }
 
     @Test public void whenTickLabelFontIsSpecifiedViaCSSAndIsNotBound_impl_cssSettable_ReturnsTrue() {
-        axis.impl_cssSet("-fx-tick-label-font", Font.getDefault());
-        assertTrue(axis.impl_cssSettable("-fx-tick-label-font"));
+        StyleableProperty styleable = StyleableProperty.getStyleableProperty(axis.tickLabelFontProperty());
+        styleable.set(axis,Font.getDefault());
+        assertTrue(styleable.isSettable(axis));
     }
 
     @Test public void canSpecifyTickLabelFontViaCSS() {
-        axis.impl_cssSet("-fx-tick-label-font", Font.getDefault());
+        StyleableProperty styleable = StyleableProperty.getStyleableProperty(axis.tickLabelFontProperty());
+        styleable.set(axis,Font.getDefault());
         assertSame(Font.getDefault(), axis.getTickLabelFont());
     }
 
     @Test public void whenTickLabelFillIsBound_impl_cssSettable_ReturnsFalse() {
-        assertTrue(axis.impl_cssSettable("-fx-tick-label-font"));
+        StyleableProperty styleable = StyleableProperty.getStyleableProperty(axis.tickLabelFillProperty());
+        assertTrue(styleable.isSettable(axis));
         ObjectProperty<Color> other = new SimpleObjectProperty<Color>(Color.BROWN);
         axis.tickLabelFillProperty().bind(other);
-        assertFalse(axis.impl_cssSettable("-fx-tick-label-fill"));
+        assertFalse(styleable.isSettable(axis));
     }
 
     @Test public void whenTickLabelFillIsSpecifiedViaCSSAndIsNotBound_impl_cssSettable_ReturnsTrue() {
-        axis.impl_cssSet("-fx-tick-label-fill", Color.BROWN);
-        assertTrue(axis.impl_cssSettable("-fx-tick-label-fill"));
+        StyleableProperty styleable = StyleableProperty.getStyleableProperty(axis.tickLabelFillProperty());
+        styleable.set(axis,Color.BROWN);
+        assertTrue(styleable.isSettable(axis));
     }
 
     @Test public void canSpecifyTickLabelFillViaCSS() {
-        axis.impl_cssSet("-fx-tick-label-fill", Color.BROWN);
+        StyleableProperty styleable = StyleableProperty.getStyleableProperty(axis.tickLabelFillProperty());
+        styleable.set(axis,Color.BROWN);
         assertSame(Color.BROWN, axis.getTickLabelFill());
     }
 
     @Test public void whenTickLabelGapIsBound_impl_cssSettable_ReturnsFalse() {
-        assertTrue(axis.impl_cssSettable("-fx-tick-label-gap"));
+        StyleableProperty styleable = StyleableProperty.getStyleableProperty(axis.tickLabelGapProperty());
+        assertTrue(styleable.isSettable(axis));
         DoubleProperty other = new SimpleDoubleProperty();
         axis.tickLabelGapProperty().bind(other);
-        assertFalse(axis.impl_cssSettable("-fx-tick-label-gap"));
+        assertFalse(styleable.isSettable(axis));
     }
 
     @Test public void whenTickLabelGapIsSpecifiedViaCSSAndIsNotBound_impl_cssSettable_ReturnsTrue() {
-        axis.impl_cssSet("-fx-tick-label-gap", 10.9);
-        assertTrue(axis.impl_cssSettable("-fx-tick-label-gap"));
+        StyleableProperty styleable = StyleableProperty.getStyleableProperty(axis.tickLabelGapProperty());
+        styleable.set(axis, 9.0);
+        assertTrue(styleable.isSettable(axis));
     }
 
     @Test public void canSpecifyTickLabelGapViaCSS() {
-        axis.impl_cssSet("-fx-tick-label-gap", 10.34);
+        StyleableProperty styleable = StyleableProperty.getStyleableProperty(axis.tickLabelGapProperty());
+        styleable.set(axis,10.34);
         assertEquals(10.34, axis.getTickLabelGap(), 0.0);
     }
 

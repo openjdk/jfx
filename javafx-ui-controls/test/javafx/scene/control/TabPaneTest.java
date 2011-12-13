@@ -4,6 +4,7 @@
 
 package javafx.scene.control;
 
+import com.sun.javafx.css.StyleableProperty;
 import static javafx.scene.control.ControlTestUtils.*;
 import com.sun.javafx.pgstub.StubToolkit;
 import com.sun.javafx.tk.Toolkit;
@@ -254,70 +255,82 @@ public class TabPaneTest {
      * CSS related Tests                                                 *
      ********************************************************************/
     @Test public void whenTabMinWidthIsBound_impl_cssSettable_ReturnsFalse() {
-        assertTrue(tabPane.impl_cssSettable("-fx-tab-min-width"));
+        StyleableProperty styleable = StyleableProperty.getStyleableProperty(tabPane.tabMinWidthProperty());
+        assertTrue(styleable.isSettable(tabPane));        
         DoubleProperty other = new SimpleDoubleProperty(30.0);
         tabPane.tabMinWidthProperty().bind(other);
-        assertFalse(tabPane.impl_cssSettable("-fx-tab-min-width"));
+        assertFalse(styleable.isSettable(tabPane));        
     }
 
     @Test public void whenTabMinWidthIsSpecifiedViaCSSAndIsNotBound_impl_cssSettable_ReturnsTrue() {
-        tabPane.impl_cssSet("-fx-tab-min-width", 43.0);
-        assertTrue(tabPane.impl_cssSettable("-fx-tab-min-width"));
+        StyleableProperty styleable = StyleableProperty.getStyleableProperty(tabPane.tabMinWidthProperty());
+        styleable.set(tabPane, 43.0);
+        assertTrue(styleable.isSettable(tabPane));        
     }
 
     @Test public void canSpecifyTabMinWidthViaCSS() {
-        tabPane.impl_cssSet("-fx-tab-min-width", 34.0);
+        StyleableProperty styleable = StyleableProperty.getStyleableProperty(tabPane.tabMinWidthProperty());
+        styleable.set(tabPane, 34.0);
         assertEquals(34.0, tabPane.getTabMinWidth(), 0.0);
     }
 
     @Test public void whenTabMaxWidthIsBound_impl_cssSettable_ReturnsFalse() {
-        assertTrue(tabPane.impl_cssSettable("-fx-tab-max-width"));
+        StyleableProperty styleable = StyleableProperty.getStyleableProperty(tabPane.tabMaxWidthProperty());
+        assertTrue(styleable.isSettable(tabPane));        
         DoubleProperty other = new SimpleDoubleProperty(30.0);
         tabPane.tabMaxWidthProperty().bind(other);
-        assertFalse(tabPane.impl_cssSettable("-fx-tab-max-width"));
+        assertFalse(styleable.isSettable(tabPane));        
     }
 
     @Test public void whenTabMaxWidthIsSpecifiedViaCSSAndIsNotBound_impl_cssSettable_ReturnsTrue() {
-        tabPane.impl_cssSet("-fx-tab-max-width", 43.0);
-        assertTrue(tabPane.impl_cssSettable("-fx-tab-max-width"));
+        StyleableProperty styleable = StyleableProperty.getStyleableProperty(tabPane.tabMaxWidthProperty());
+        styleable.set(tabPane, 43.0);
+        assertTrue(styleable.isSettable(tabPane));        
     }
 
     @Test public void canSpecifyTabMaxWidthViaCSS() {
-        tabPane.impl_cssSet("-fx-tab-max-width", 34.0);
+        StyleableProperty styleable = StyleableProperty.getStyleableProperty(tabPane.tabMaxWidthProperty());
+        styleable.set(tabPane, 34.0);
         assertEquals(34.0, tabPane.getTabMaxWidth(), 0.0);
     }
 
     @Test public void whenTabMinHeightIsBound_impl_cssSettable_ReturnsFalse() {
-        assertTrue(tabPane.impl_cssSettable("-fx-tab-min-height"));
+        StyleableProperty styleable = StyleableProperty.getStyleableProperty(tabPane.tabMinHeightProperty());
+        assertTrue(styleable.isSettable(tabPane));
         DoubleProperty other = new SimpleDoubleProperty(30.0);
         tabPane.tabMinHeightProperty().bind(other);
-        assertFalse(tabPane.impl_cssSettable("-fx-tab-min-height"));
+        assertFalse(styleable.isSettable(tabPane));
     }
 
     @Test public void whenTabMinHeightIsSpecifiedViaCSSAndIsNotBound_impl_cssSettable_ReturnsTrue() {
-        tabPane.impl_cssSet("-fx-tab-min-height", 43.0);
-        assertTrue(tabPane.impl_cssSettable("-fx-tab-min-height"));
+        StyleableProperty styleable = StyleableProperty.getStyleableProperty(tabPane.tabMinHeightProperty());
+        styleable.set(tabPane, 43.0);
+        assertTrue(styleable.isSettable(tabPane));        
     }
 
     @Test public void canSpecifyTabMinHeightViaCSS() {
-        tabPane.impl_cssSet("-fx-tab-min-height", 34.0);
+        StyleableProperty styleable = StyleableProperty.getStyleableProperty(tabPane.tabMinHeightProperty());
+        styleable.set(tabPane, 34.0);
         assertEquals(34.0, tabPane.getTabMinHeight(), 0.0);
     }
 
     @Test public void whenTabMaxHeightIsBound_impl_cssSettable_ReturnsFalse() {
-        assertTrue(tabPane.impl_cssSettable("-fx-tab-max-height"));
+        StyleableProperty styleable = StyleableProperty.getStyleableProperty(tabPane.tabMaxHeightProperty());
+        assertTrue(styleable.isSettable(tabPane));
         DoubleProperty other = new SimpleDoubleProperty(30.0);
         tabPane.tabMaxHeightProperty().bind(other);
-        assertFalse(tabPane.impl_cssSettable("-fx-tab-max-height"));
+        assertFalse(styleable.isSettable(tabPane));
     }
 
     @Test public void whenTabMaxHeightIsSpecifiedViaCSSAndIsNotBound_impl_cssSettable_ReturnsTrue() {
-        tabPane.impl_cssSet("-fx-tab-max-height", 43.0);
-        assertTrue(tabPane.impl_cssSettable("-fx-tab-max-height"));
+        StyleableProperty styleable = StyleableProperty.getStyleableProperty(tabPane.tabMaxHeightProperty());
+        styleable.set(tabPane, 43.0);
+        assertTrue(styleable.isSettable(tabPane));        
     }
 
     @Test public void canSpecifyTabMaxHeightViaCSS() {
-        tabPane.impl_cssSet("-fx-tab-max-height", 34.0);
+        StyleableProperty styleable = StyleableProperty.getStyleableProperty(tabPane.tabMaxHeightProperty());
+        styleable.set(tabPane, 34.0);
         assertEquals(34.0, tabPane.getTabMaxHeight(), 0.0);
     }
 

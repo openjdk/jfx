@@ -18,6 +18,7 @@ import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 
 import org.junit.Before;
+import org.junit.Ignore;
 import org.junit.Test;
 
 public class ChoiceBoxTest {
@@ -219,8 +220,9 @@ public class ChoiceBoxTest {
         assertFalse(box.isShowing());
     }
     
+    @Ignore("impl_cssSet API removed")
     @Test public void cannotSpecifyShowingViaCSS() {
-        box.impl_cssSet("-fx-showing", true);
+//        box.impl_cssSet("-fx-showing", true);
         assertFalse(box.isShowing());
     }
     

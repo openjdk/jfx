@@ -25,6 +25,8 @@
 
 package javafx.scene.control;
 
+import com.sun.javafx.css.*;
+import com.sun.javafx.css.converters.StringConverter;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
 import java.util.ArrayList;
@@ -35,24 +37,18 @@ import javafx.beans.property.DoubleProperty;
 import javafx.beans.property.DoublePropertyBase;
 import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.ObjectPropertyBase;
+import javafx.beans.property.ReadOnlyDoubleProperty;
+import javafx.beans.property.ReadOnlyDoubleWrapper;
 import javafx.beans.property.SimpleObjectProperty;
+import javafx.beans.property.StringProperty;
+import javafx.beans.value.WritableValue;
 import javafx.geometry.BoundingBox;
 import javafx.geometry.Bounds;
 import javafx.scene.Node;
 import javafx.scene.Parent;
 
-import com.sun.javafx.css.StyleManager;
-import com.sun.javafx.css.Styleable;
-import com.sun.javafx.css.StyleableProperty;
 import com.sun.javafx.logging.PlatformLogger;
 import com.sun.javafx.scene.control.Logging;
-import com.sun.javafx.scene.control.skin.SkinBase;
-
-import java.net.URL;
-import java.security.AccessController;
-import java.security.PrivilegedAction;
-import javafx.beans.property.ReadOnlyDoubleProperty;
-import javafx.beans.property.ReadOnlyDoubleWrapper;
 
 /**
  * Base class for all user interface controls. A "Control" is a node in the
@@ -117,8 +113,7 @@ public abstract class Control extends Parent implements Skinnable {
     @Override public final ObjectProperty<Skin<?>> skinProperty() { return skin; }
     @Override public final void setSkin(Skin<?> value) { skinProperty().setValue(value); }
     @Override public final Skin<?> getSkin() { return skinProperty().getValue(); }
-    @Styleable(property="-fx-skin", converter="com.sun.javafx.css.converters.StringConverter")
-    private ObjectProperty<Skin<?>> skin = new ObjectPropertyBase<Skin<?>>() {
+    private ObjectProperty<Skin<?>> skin = new StyleableObjectProperty<Skin<?>>() {
         // We store a reference to the oldValue so that we can handle
         // changes in the skin properly in the case of binding. This is
         // only needed because invalidated() does not currently take
@@ -126,8 +121,7 @@ public abstract class Control extends Parent implements Skinnable {
         private Skin<?> oldValue;
 
         @Override protected void invalidated() {
-            // Let CSS know that this property has been manually changed
-            impl_cssPropertyInvalidated(StyleableProperties.SKIN);
+
             // Dispose of the old skin
             if (oldValue != null) oldValue.dispose();
             // Get the new value, and save it off as the new oldValue
@@ -135,7 +129,8 @@ public abstract class Control extends Parent implements Skinnable {
             // Collect the name of the currently installed skin class. We do this
             // so that subsequent updates from CSS to the same skin class will not
             // result in reinstalling the skin
-            currentSkinClass = skin == null ? null : skin.getClass().getName();
+            if (skin == null) setSkinClassName(null);
+            else setSkinClassName(skin.getClass().getName());
             // Update the children list with the new skin node
             updateChildren();
             // DEBUG: Log that we've changed the skin
@@ -145,6 +140,11 @@ public abstract class Control extends Parent implements Skinnable {
             }
         }
 
+        @Override 
+        public StyleableProperty getStyleableProperty() {
+            return StyleableProperties.SKIN;
+        }
+        
         @Override
         public Object getBean() {
             return Control.this;
@@ -873,29 +873,61 @@ public abstract class Control extends Parent implements Skinnable {
 
     /**
      * Keeps a reference to the name of the class currently acting as the skin.
-     * This is used so that we do not end up reapplying the same skin repeatedly
-     * from CSS every time we reapply CSS.
      */
-    private String currentSkinClass;
-    private void loadSkinClass(String skinClassName) {
-        // we don't reload the skin class if it is the same as the last class name
-        if (currentSkinClass != null && currentSkinClass.equals(skinClassName)) {
-            return;
-        }
+    private StringProperty skinClassName;
+    protected StringProperty skinClassNameProperty() {
+        if (skinClassName == null) {
+            skinClassName = new StyleableStringProperty() {
 
-        if (skinClassName == null || skinClassName.isEmpty()) {
+               @Override
+                public void invalidated() {
+                    final Skin currentSkin = skinProperty().get();
+                    if (currentSkin == null || !currentSkin.getClass().getName().equals(get()) ) {
+                        loadSkinClass();
+                    }
+                }
+                
+                @Override
+                public Object getBean() {
+                    return Control.this;
+                }
+
+                @Override
+                public String getName() {
+                    return "skinClassName";
+                }
+
+                @Override
+                public StyleableProperty getStyleableProperty() {
+                    return StyleableProperties.SKIN;
+                }
+                
+            };
+        }
+        return skinClassName;
+    }
+    
+    protected void setSkinClassName(String skinClassName) {
+        skinClassNameProperty().set(skinClassName);        
+    }
+    
+    private void loadSkinClass() {
+        
+        if (skinClassName == null 
+                || skinClassName.get() == null 
+                || skinClassName.get().isEmpty()) {
             Logging.getControlsLogger().severe("Empty -fx-skin property specified for control " + this);
             return;
         }
-
+        
         try {
             Class<?> skinClass;
             // RT-17525 : Use context class loader only if Class.forName fails.
             try {
-                skinClass = Class.forName(skinClassName);
+                skinClass = Class.forName(skinClassName.get());
             } catch (ClassNotFoundException clne) {
                 if (Thread.currentThread().getContextClassLoader() != null) {
-                    skinClass = Thread.currentThread().getContextClassLoader().loadClass(skinClassName);
+                    skinClass = Thread.currentThread().getContextClassLoader().loadClass(skinClassName.get());
                 } else {
                     throw clne;
                 }
@@ -928,7 +960,19 @@ public abstract class Control extends Parent implements Skinnable {
         } catch (Exception e) {
             Logging.getControlsLogger().severe(
                 "Failed to load skin '" + skinClassName + "' for control " + this, e);
+            Node parent = this;
+            int n = 0;
+            while (parent != null) {
+                for(int j=0; j<n*2; j++) {
+                    System.err.print(' ');
+                }
+                n+=1;
+                System.err.println(parent);
+                parent = parent.getParent();
+            }
+            
         }
+        return;
     }
 
     
@@ -950,10 +994,22 @@ public abstract class Control extends Parent implements Skinnable {
     }
 
     private static class StyleableProperties {
-        private static final StyleableProperty SKIN = new StyleableProperty(Control.class, "skin");
+        private static final StyleableProperty<Control,String> SKIN = 
+            new StyleableProperty<Control,String>("-fx-skin",
+                StringConverter.getInstance()) {
+
+            @Override
+            public boolean isSettable(Control n) {
+                return n.skin == null || !n.skin.isBound();
+            }
+
+            @Override
+            public WritableValue<String> getWritableValue(Control n) {
+                return n.skinClassNameProperty();
+            }
+        };
 
         private static final List<StyleableProperty> STYLEABLES;
-        private static final int[] bitIndices;
         static {
             final List<StyleableProperty> styleables =
                 new ArrayList<StyleableProperty>(Parent.impl_CSS_STYLEABLES());
@@ -961,22 +1017,7 @@ public abstract class Control extends Parent implements Skinnable {
                 SKIN
             );
             STYLEABLES = Collections.unmodifiableList(styleables);
-
-            bitIndices = new int[StyleableProperty.getMaxIndex()];
-            java.util.Arrays.fill(bitIndices, -1);
-            for(int bitIndex=0; bitIndex<STYLEABLES.size(); bitIndex++) {
-                bitIndices[STYLEABLES.get(bitIndex).getIndex()] = bitIndex;
-            }
         }
-    }
-
-    /**
-     * @treatasprivate implementation detail
-     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
-     */
-    @Deprecated
-    @Override protected int[] impl_cssStyleablePropertyBitIndices() {
-        return Control.StyleableProperties.bitIndices;
     }
 
     /**
@@ -986,31 +1027,6 @@ public abstract class Control extends Parent implements Skinnable {
     @Deprecated
     public static List<StyleableProperty> impl_CSS_STYLEABLES() {
         return Control.StyleableProperties.STYLEABLES;
-    }
-
-    /**
-     * @treatasprivate implementation detail
-     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
-     */
-    @Deprecated
-    @Override
-    protected boolean impl_cssSet(String property, Object value) {
-        if ("-fx-skin".equals(property)) {
-            loadSkinClass((String)value);
-        }
-
-        return super.impl_cssSet(property,value);
-    }
-
-    /**
-     * @treatasprivate implementation detail
-     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
-     */
-    @Deprecated
-    @Override
-    protected boolean impl_cssSettable(String property) {
-        if ("-fx-skin".equals(property)) return !skinProperty().isBound();
-        return super.impl_cssSettable(property);
     }
 
     /**

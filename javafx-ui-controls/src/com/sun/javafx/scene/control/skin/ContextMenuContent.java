@@ -776,11 +776,9 @@ public class ContextMenuContent extends StackPane {
      /** @treatasprivate */
     private static class StyleableProperties {
 
-        private static final StyleableProperty EFFECT;
         private static final List<StyleableProperty> STYLEABLES;
         static {
 
-            StyleableProperty effect = null;
             final List<StyleableProperty> styleables =
                 new ArrayList<StyleableProperty>(SkinBase.impl_CSS_STYLEABLES());
 
@@ -791,13 +789,11 @@ public class ContextMenuContent extends StackPane {
             final List<StyleableProperty> nodeStyleables = Node.impl_CSS_STYLEABLES();
             for(int n=0, max=nodeStyleables.size(); n<max; n++) {
                 StyleableProperty styleable = nodeStyleables.get(n);
-                if ("effect".equals(styleable.getFieldName())) {
-                    effect = styleable;
-                    styleables.add(effect);
+                if ("effect".equals(styleable.getProperty())) {
+                    styleables.add(styleable);
                     break;
                 }
             }
-            EFFECT = effect;
             STYLEABLES = Collections.unmodifiableList(styleables);
         }
     }
@@ -811,33 +807,6 @@ public class ContextMenuContent extends StackPane {
         return StyleableProperties.STYLEABLES;
     }
 
-    /**
-     * @treatasprivate implementation detail
-     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
-     */
-    @Deprecated
-    @Override protected boolean impl_cssSet(String property, Object value) {
-         if ("-fx-effect".equals(property) ) {
-            setEffect((javafx.scene.effect.Effect)value);
-        } else {
-            return super.impl_cssSet(property,value);
-        }
-        return true;
-    }
-
-    /**
-     * @treatasprivate implementation detail
-     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
-     */
-    @Deprecated
-    @Override protected boolean impl_cssSettable(String property) {
-        if ( "-fx-effect".equals(property) ) {
-            //not isReadOnly(effect)
-            return true;
-        } else {
-            return super.impl_cssSettable(property);
-        }
-    }
     
     protected Label getLabelAt(int index) {
         return (Label)((MenuItemContainer)itemsContainer.getChildren().get(index)).getLabel();
