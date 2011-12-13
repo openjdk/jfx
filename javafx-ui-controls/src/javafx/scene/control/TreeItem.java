@@ -364,8 +364,8 @@ public class TreeItem<T> implements EventTarget {
 
     // Made static based on findings of RT-18344 - EventHandlerManager is an
     // expensive class and should be reused amongst classes if at all possible.
-    private static final EventHandlerManager eventHandlerManager =
-            new EventHandlerManager(TreeItem.class);
+    private final EventHandlerManager eventHandlerManager =
+            new EventHandlerManager(this);
 
     
     // Rather than have the TreeView need to (pretty well) constantly determine
