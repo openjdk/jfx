@@ -503,7 +503,7 @@ public class TableViewBehavior<T> extends BehaviorBase<TableView<T>> {
             TablePosition focusedCell = fm.getFocusedCell();
             if (isShiftDown && sm.isSelected(focusedCell.getRow() - 1, focusedCell.getTableColumn())) {
                 int newFocusOwner = focusedCell.getRow() - 1;
-                sm.clearSelection(fm.getFocusedIndex(), focusedCell.getTableColumn());
+                sm.clearSelection(newFocusOwner, focusedCell.getTableColumn());
                 fm.focus(newFocusOwner, focusedCell.getTableColumn());
             } else {
                 if (! sm.isSelected(focusIndex, focusedCell.getTableColumn())) {
@@ -541,7 +541,7 @@ public class TableViewBehavior<T> extends BehaviorBase<TableView<T>> {
             TablePosition focusedCell = fm.getFocusedCell();
             if (isShiftDown && sm.isSelected(focusedCell.getRow() + 1, focusedCell.getTableColumn())) {
                 int newFocusOwner = focusedCell.getRow() + 1;
-                sm.clearSelection(fm.getFocusedIndex(), focusedCell.getTableColumn());
+                sm.clearSelection(newFocusOwner, focusedCell.getTableColumn());
                 fm.focus(newFocusOwner, focusedCell.getTableColumn());
             } else {
                 sm.selectBelowCell();
@@ -599,7 +599,7 @@ public class TableViewBehavior<T> extends BehaviorBase<TableView<T>> {
         if (isShiftDown && getAnchor() != null && 
             sm.isSelected(fc.getRow(), leftColumn) &&
             ! (fc.getRow() == getAnchor().getRow() && fc.getTableColumn().equals(leftColumn))) {
-                sm.clearSelection(fc.getRow(), fc.getTableColumn());
+                sm.clearSelection(fc.getRow(), leftColumn);
                 fm.focus(fc.getRow(), leftColumn);
         } else {
             sm.selectLeftCell();
@@ -622,7 +622,7 @@ public class TableViewBehavior<T> extends BehaviorBase<TableView<T>> {
         if (isShiftDown && getAnchor() != null && 
             sm.isSelected(fc.getRow(), rightColumn) &&
             ! (fc.getRow() == getAnchor().getRow() && fc.getTableColumn().equals(rightColumn))) {
-                sm.clearSelection(fc.getRow(), fc.getTableColumn());
+                sm.clearSelection(fc.getRow(), rightColumn);
                 fm.focus(fc.getRow(), rightColumn);
         } else {
             sm.selectRightCell();
