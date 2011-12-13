@@ -30,23 +30,22 @@ import java.util.Collections;
 import java.util.List;
 
 import javafx.beans.property.BooleanProperty;
-import javafx.beans.property.BooleanPropertyBase;
 import javafx.beans.property.DoubleProperty;
 import javafx.beans.property.DoublePropertyBase;
 import javafx.beans.property.IntegerProperty;
-import javafx.beans.property.IntegerPropertyBase;
 import javafx.beans.property.ObjectProperty;
-import javafx.beans.property.ObjectPropertyBase;
 import javafx.beans.property.SimpleBooleanProperty;
 import javafx.beans.property.SimpleObjectProperty;
+import javafx.beans.value.WritableValue;
 
 import javafx.geometry.Orientation;
 import javafx.util.StringConverter;
 
 import com.sun.javafx.Utils;
-import com.sun.javafx.css.Styleable;
-import com.sun.javafx.css.StyleManager;
-import com.sun.javafx.css.StyleableProperty;
+import com.sun.javafx.css.*;
+import com.sun.javafx.css.converters.BooleanConverter;
+import com.sun.javafx.css.converters.EnumConverter;
+import com.sun.javafx.css.converters.SizeConverter;
 
 /**
  * The Slider Control is used to display a continuous or discrete range of
@@ -250,7 +249,6 @@ public class Slider extends Control {
      * The orientation of the {@code Slider} can either be horizontal
      * or vertical.
      */
-    @Styleable(property="-fx-orientation", initial="vertical")
     private ObjectProperty<Orientation> orientation;
     public final void setOrientation(Orientation value) {
         orientationProperty().set(value);
@@ -262,11 +260,15 @@ public class Slider extends Control {
 
     public final ObjectProperty<Orientation> orientationProperty() {
         if (orientation == null) {
-            orientation = new ObjectPropertyBase<Orientation>(Orientation.HORIZONTAL) {
+            orientation = new StyleableObjectProperty<Orientation>(Orientation.HORIZONTAL) {
                 @Override protected void invalidated() {
-                    impl_cssPropertyInvalidated(StyleableProperties.ORIENTATION);
                     impl_pseudoClassStateChanged(PSEUDO_CLASS_VERTICAL);
                     impl_pseudoClassStateChanged(PSEUDO_CLASS_HORIZONTAL);
+                }
+                
+                @Override 
+                public StyleableProperty getStyleableProperty() {
+                    return StyleableProperties.ORIENTATION;
                 }
 
                 @Override
@@ -289,7 +291,6 @@ public class Slider extends Control {
      * {@link Skin} implementation will only show labels if
      * {@link #showTickMarksProperty() showTickMarks} is also true.
      */
-    @Styleable(property="-fx-show-tick-labels", initial="false")
     private BooleanProperty showTickLabels;
     public final void setShowTickLabels(boolean value) {
         showTickLabelsProperty().set(value);
@@ -301,11 +302,12 @@ public class Slider extends Control {
 
     public final BooleanProperty showTickLabelsProperty() {
         if (showTickLabels == null) {
-            showTickLabels = new BooleanPropertyBase(false) {
+            showTickLabels = new StyleableBooleanProperty(false) {
 
-                @Override
-                public void invalidated() {
-                    impl_cssPropertyInvalidated(StyleableProperties.SHOW_TICK_LABELS);
+                
+                @Override 
+                public StyleableProperty getStyleableProperty() {
+                    return StyleableProperties.SHOW_TICK_LABELS;
                 }
 
                 @Override
@@ -324,7 +326,6 @@ public class Slider extends Control {
     /**
      * Specifies whether the {@link Skin} implementation should show tick marks.
      */
-    @Styleable(property="-fx-show-tick-marks", initial="false")
     private BooleanProperty showTickMarks;
     public final void setShowTickMarks(boolean value) {
         showTickMarksProperty().set(value);
@@ -336,11 +337,12 @@ public class Slider extends Control {
 
     public final BooleanProperty showTickMarksProperty() {
         if (showTickMarks == null) {
-            showTickMarks = new BooleanPropertyBase(false) {
+            showTickMarks = new StyleableBooleanProperty(false) {
 
-                @Override
-                public void invalidated() {
-                    impl_cssPropertyInvalidated(StyleableProperties.SHOW_TICK_MARKS);
+                
+                @Override 
+                public StyleableProperty getStyleableProperty() {
+                    return StyleableProperties.SHOW_TICK_MARKS;
                 }
 
                 @Override
@@ -367,7 +369,6 @@ public class Slider extends Control {
      * span. Out of range values are essentially the same as disabling
      * tick marks.
      */
-    @Styleable(property="-fx-major-tick-unit", initial="25")
     private DoubleProperty majorTickUnit;
     public final void setMajorTickUnit(double value) {
         if (value <= 0) {
@@ -382,14 +383,17 @@ public class Slider extends Control {
 
     public final DoubleProperty majorTickUnitProperty() {
         if (majorTickUnit == null) {
-            majorTickUnit = new DoublePropertyBase(25) {
+            majorTickUnit = new StyleableDoubleProperty(25) {
                 @Override
                 public void invalidated() {
                     if (get() <= 0) {
                         throw new IllegalArgumentException("MajorTickUnit cannot be less than or equal to 0.");
                     }
-
-                    impl_cssPropertyInvalidated(StyleableProperties.MAJOR_TICK_UNIT);
+                }
+                
+                @Override 
+                public StyleableProperty getStyleableProperty() {
+                    return StyleableProperties.MAJOR_TICK_UNIT;
                 }
 
                 @Override
@@ -410,7 +414,6 @@ public class Slider extends Control {
      * number should be positive or zero. Out of range values will disable
      * disable minor ticks, as will a value of zero.
      */
-    @Styleable(property="-fx-minor-tick-count", initial="3")
     private IntegerProperty minorTickCount;
     public final void setMinorTickCount(int value) {
         minorTickCountProperty().set(value);
@@ -422,11 +425,12 @@ public class Slider extends Control {
 
     public final IntegerProperty minorTickCountProperty() {
         if (minorTickCount == null) {
-            minorTickCount = new IntegerPropertyBase(3) {
+            minorTickCount = new StyleableIntegerProperty(3) {
 
-                @Override
-                public void invalidated() {
-                    impl_cssPropertyInvalidated(StyleableProperties.MINOR_TICK_COUNT);
+                
+                @Override 
+                public StyleableProperty getStyleableProperty() {
+                    return StyleableProperties.MINOR_TICK_COUNT;
                 }
 
                 @Override
@@ -447,7 +451,6 @@ public class Slider extends Control {
      * be aligned with the tick marks. This is honored even if the tick marks
      * are not shown.
      */
-    @Styleable(property="-fx-snap-to-ticks", initial="false")
     private BooleanProperty snapToTicks;
     public final void setSnapToTicks(boolean value) {
         snapToTicksProperty().set(value);
@@ -459,11 +462,11 @@ public class Slider extends Control {
 
     public final BooleanProperty snapToTicksProperty() {
         if (snapToTicks == null) {
-            snapToTicks = new BooleanPropertyBase(false) {
-
-                @Override
-                public void invalidated() {
-                    impl_cssPropertyInvalidated(StyleableProperties.SNAP_TO_TICKS);
+            snapToTicks = new StyleableBooleanProperty(false) {
+                
+                @Override 
+                public StyleableProperty getStyleableProperty() {
+                    return StyleableProperties.SNAP_TO_TICKS;
                 }
 
                 @Override
@@ -507,7 +510,6 @@ public class Slider extends Control {
      * {@link #snapToTicksProperty() snapToTicks} is true then the nearest tick mark to the adjusted
      * value will be used.
      */
-    @Styleable(property="-fx-block-increment", initial="10")
     private DoubleProperty blockIncrement;
     public final void setBlockIncrement(double value) {
         blockIncrementProperty().set(value);
@@ -519,11 +521,11 @@ public class Slider extends Control {
 
     public final DoubleProperty blockIncrementProperty() {
         if (blockIncrement == null) {
-            blockIncrement = new DoublePropertyBase(10) {
+            blockIncrement = new StyleableDoubleProperty(10) {
 
-                @Override
-                public void invalidated() {
-                    impl_cssPropertyInvalidated(StyleableProperties.BLOCK_INCREMENT);
+                @Override 
+                public StyleableProperty getStyleableProperty() {
+                    return StyleableProperties.BLOCK_INCREMENT;
                 }
 
                 @Override
@@ -627,23 +629,113 @@ public class Slider extends Control {
     private static final String PSEUDO_CLASS_HORIZONTAL = "horizontal";
 
     private static class StyleableProperties {
-        private static final StyleableProperty BLOCK_INCREMENT =
-            new StyleableProperty(Slider.class, "blockIncrement");
-        private static final StyleableProperty SHOW_TICK_LABELS =
-            new StyleableProperty(Slider.class, "showTickLabels");
-        private static final StyleableProperty SHOW_TICK_MARKS =
-            new StyleableProperty(Slider.class, "showTickMarks");
-        private static final StyleableProperty SNAP_TO_TICKS =
-            new StyleableProperty(Slider.class, "snapToTicks");
-        private static final StyleableProperty MAJOR_TICK_UNIT =
-            new StyleableProperty(Slider.class, "majorTickUnit");
-        private static final StyleableProperty MINOR_TICK_COUNT =
-            new StyleableProperty(Slider.class, "minorTickCount");
-        private static final StyleableProperty ORIENTATION =
-            new StyleableProperty(Slider.class, "orientation");
+        private static final StyleableProperty<Slider,Number> BLOCK_INCREMENT =
+            new StyleableProperty<Slider,Number>("-fx-block-increment",
+                SizeConverter.getInstance(), 10.0) {
+
+            @Override
+            public boolean isSettable(Slider n) {
+                return n.blockIncrement == null || !n.blockIncrement.isBound();
+            }
+
+            @Override
+            public WritableValue<Number> getWritableValue(Slider n) {
+                return n.blockIncrementProperty();
+            }
+        };
+        
+        private static final StyleableProperty<Slider,Boolean> SHOW_TICK_LABELS =
+            new StyleableProperty<Slider,Boolean>("-fx-show-tick-labels",
+                BooleanConverter.getInstance(), Boolean.FALSE) {
+
+            @Override
+            public boolean isSettable(Slider n) {
+                return n.showTickLabels == null || !n.showTickLabels.isBound();
+            }
+
+            @Override
+            public WritableValue<Boolean> getWritableValue(Slider n) {
+                return n.showTickLabelsProperty();
+            }
+        };
+                    
+        private static final StyleableProperty<Slider,Boolean> SHOW_TICK_MARKS =
+            new StyleableProperty<Slider,Boolean>("-fx-show-tick-marks",
+                BooleanConverter.getInstance(), Boolean.FALSE) {
+
+            @Override
+            public boolean isSettable(Slider n) {
+                return n.showTickMarks == null || !n.showTickMarks.isBound();
+            }
+
+            @Override
+            public WritableValue<Boolean> getWritableValue(Slider n) {
+                return n.showTickMarksProperty();
+            }
+        };
+            
+        private static final StyleableProperty<Slider,Boolean> SNAP_TO_TICKS =
+            new StyleableProperty<Slider,Boolean>("-fx-snap-to-ticks",
+                BooleanConverter.getInstance(), Boolean.FALSE) {
+
+            @Override
+            public boolean isSettable(Slider n) {
+                return n.snapToTicks == null || !n.snapToTicks.isBound();
+            }
+
+            @Override
+            public WritableValue<Boolean> getWritableValue(Slider n) {
+                return n.snapToTicksProperty();
+            }
+        };
+        
+        private static final StyleableProperty<Slider,Number> MAJOR_TICK_UNIT =
+            new StyleableProperty<Slider,Number>("-fx-major-tick-unit",
+                SizeConverter.getInstance(), 25.0) {
+
+            @Override
+            public boolean isSettable(Slider n) {
+                return n.majorTickUnit == null || !n.majorTickUnit.isBound();
+            }
+
+            @Override
+            public WritableValue<Number> getWritableValue(Slider n) {
+                return n.majorTickUnitProperty();
+            }
+        };
+        
+        private static final StyleableProperty<Slider,Number> MINOR_TICK_COUNT =
+            new StyleableProperty<Slider,Number>("-fx-minor-tick-count",
+                SizeConverter.getInstance(), 3.0) {
+
+            @Override
+            public boolean isSettable(Slider n) {
+                return n.minorTickCount == null || !n.minorTickCount.isBound();
+            }
+
+            @Override
+            public WritableValue<Number> getWritableValue(Slider n) {
+                return n.minorTickCountProperty();
+            }
+        };
+        
+        private static final StyleableProperty<Slider,Orientation> ORIENTATION =
+            new StyleableProperty<Slider,Orientation>("-fx-orientation",
+                new EnumConverter<Orientation>(Orientation.class), 
+                Orientation.HORIZONTAL) {
+
+            @Override
+            public boolean isSettable(Slider n) {
+                return n.orientation == null || !n.orientation.isBound();
+            }
+
+            @Override
+            public WritableValue<Orientation> getWritableValue(Slider n) {
+                return n.orientationProperty();
+            }
+        };
 
         private static final List<StyleableProperty> STYLEABLES;
-        private static final int[] bitIndices;
         static {
             final List<StyleableProperty> styleables = 
                 new ArrayList<StyleableProperty>(Control.impl_CSS_STYLEABLES());
@@ -657,22 +749,7 @@ public class Slider extends Control {
                 ORIENTATION
             );
             STYLEABLES = Collections.unmodifiableList(styleables);
-
-            bitIndices = new int[StyleableProperty.getMaxIndex()];
-            java.util.Arrays.fill(bitIndices, -1);
-            for(int bitIndex=0; bitIndex<STYLEABLES.size(); bitIndex++) {
-                bitIndices[STYLEABLES.get(bitIndex).getIndex()] = bitIndex;
-            }
         }
-    }
-
-    /**
-     * @treatasprivate implementation detail
-     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
-     */
-    @Deprecated
-    @Override protected int[] impl_cssStyleablePropertyBitIndices() {
-        return Slider.StyleableProperties.bitIndices;
     }
 
     /**
@@ -699,51 +776,5 @@ public class Slider extends Control {
             VERTICAL_PSEUDOCLASS_STATE : HORIZONTAL_PSEUDOCLASS_STATE;
         return mask;
     }
-    /**
-     * @treatasprivate implementation detail
-     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
-     */
-    @Deprecated
-    @Override protected boolean impl_cssSet(String property, Object value) {
-        if ("-fx-block-increment".equals(property) ) {
-            setBlockIncrement((Double)value);
-        }  else if ( "-fx-show-tick-labels".equals(property) ) {
-            setShowTickLabels((Boolean)value);
-        }  else if ( "-fx-show-tick-marks".equals(property) ) {
-            setShowTickMarks((Boolean)value);
-        }  else if ( "-fx-snap-to-ticks".equals(property) ) {
-            setSnapToTicks((Boolean)value);
-        }  else if ( "-fx-major-tick-unit".equals(property) ) {
-            setMajorTickUnit((Double)value);
-        }  else if ( "-fx-minor-tick-count".equals(property) ) {
-            setMinorTickCount((int)((Double)value).doubleValue());
-        } else if ("-fx-orientation".equals(property)) {
-            setOrientation((Orientation) value);
-        }
-        return super.impl_cssSet(property,value);
-    }
 
-    /**
-     * @treatasprivate implementation detail
-     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
-     */
-    @Deprecated
-    @Override protected boolean impl_cssSettable(String property) {
-        if ( "-fx-block-increment".equals(property) )
-            return blockIncrement == null || !blockIncrement.isBound();
-        else if ( "-fx-show-tick-labels".equals(property) )
-            return showTickLabels == null || !showTickLabels.isBound();
-        else if ( "-fx-show-tick-marks".equals(property) )
-            return showTickMarks == null || !showTickMarks.isBound();
-        else if ( "-fx-snap-to-ticks".equals(property) )
-            return snapToTicks == null || !snapToTicks.isBound();
-        else if ( "-fx-major-tick-unit".equals(property) )
-            return majorTickUnit == null || !majorTickUnit.isBound();
-        else if ( "-fx-minor-tick-count".equals(property) )
-            return minorTickCount == null || !minorTickCount.isBound();
-        else if ("-fx-orientation".equals(property))
-            return orientation == null || !orientation.isBound();
-        else
-            return super.impl_cssSettable(property);
-   }
 }

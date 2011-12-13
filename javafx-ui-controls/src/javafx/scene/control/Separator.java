@@ -30,15 +30,15 @@ import java.util.Collections;
 import java.util.List;
 
 import javafx.beans.property.ObjectProperty;
-import javafx.beans.property.ObjectPropertyBase;
-import javafx.beans.property.SimpleObjectProperty;
+import javafx.beans.value.WritableValue;
 import javafx.geometry.HPos;
 import javafx.geometry.Orientation;
 import javafx.geometry.VPos;
 
-import com.sun.javafx.css.Styleable;
 import com.sun.javafx.css.StyleManager;
+import com.sun.javafx.css.StyleableObjectProperty;
 import com.sun.javafx.css.StyleableProperty;
+import com.sun.javafx.css.converters.EnumConverter;
 
 /**
  * A horizontal or vertical separator line. The visual appearance of this
@@ -101,31 +101,29 @@ public class Separator extends Control {
      * The orientation of the {@code Separator} can either be horizontal
      * or vertical.
      */
-    @Styleable(property="-fx-orientation", initial="vertical")
-    private ObjectProperty<Orientation> orientation = new ObjectPropertyBase<Orientation>(Orientation.HORIZONTAL) {
-        // We have to ensure that the cssPropertyInvalidated flag is called
-        // even when the old value == the new value.
-        @Override public void set(Orientation value) {
-            super.set(value);
-            impl_cssPropertyInvalidated(StyleableProperties.ORIENTATION);
-        }
+    private ObjectProperty<Orientation> orientation = 
+        new StyleableObjectProperty<Orientation>(Orientation.HORIZONTAL) {
 
-        @Override protected void invalidated() {
-            impl_cssPropertyInvalidated(StyleableProperties.ORIENTATION);
-            impl_pseudoClassStateChanged(PSEUDO_CLASS_VERTICAL);
-            impl_pseudoClassStateChanged(PSEUDO_CLASS_HORIZONTAL);
-        }
+            @Override protected void invalidated() {
+                impl_pseudoClassStateChanged(PSEUDO_CLASS_VERTICAL);
+                impl_pseudoClassStateChanged(PSEUDO_CLASS_HORIZONTAL);
+            }
 
-        @Override
-        public Object getBean() {
-            return Separator.this;
-        }
+            @Override 
+            public StyleableProperty getStyleableProperty() {
+                return StyleableProperties.ORIENTATION;
+            }
 
-        @Override
-        public String getName() {
-            return "orientation";
-        }
-    };
+            @Override
+            public Object getBean() {
+                return Separator.this;
+            }
+
+            @Override
+            public String getName() {
+                return "orientation";
+            }
+        };
     public final void setOrientation(Orientation value) { orientation.set(value); }
     public final Orientation getOrientation() { return orientation.get(); }
     public final ObjectProperty<Orientation> orientationProperty() { return orientation; }
@@ -135,7 +133,6 @@ public class Separator extends Control {
      * separator line within the separator control's space. Ignored for
      * horizontal separators.
      */
-    @Styleable(property="-fx-halignment", initial="center")
     private ObjectProperty<HPos> halignment;
 
     public final void setHalignment(HPos value) {
@@ -148,7 +145,24 @@ public class Separator extends Control {
 
     public final ObjectProperty<HPos> halignmentProperty() {
         if (halignment == null) {
-            halignment = new CSSProperty<HPos>(this, "halignment", HPos.CENTER, StyleableProperties.HPOS);
+            halignment = new StyleableObjectProperty(HPos.CENTER) {
+
+                @Override
+                public Object getBean() {
+                    return Separator.this;
+                }
+
+                @Override
+                public String getName() {
+                    return "halignment";
+                }
+
+                @Override
+                public StyleableProperty getStyleableProperty() {
+                    return StyleableProperties.HALIGNMENT;
+                }
+                
+            };
         }
         return halignment;
     }
@@ -158,7 +172,6 @@ public class Separator extends Control {
      * separator line within the separator control's space. Ignored for
      * vertical separators.
      */
-    @Styleable(property="-fx-valignment", initial="center")
     private ObjectProperty<VPos> valignment;
     public final void setValignment(VPos value) {
         valignmentProperty().set(value);
@@ -170,7 +183,24 @@ public class Separator extends Control {
 
     public final ObjectProperty<VPos> valignmentProperty() {
         if (valignment == null) {
-            valignment = new CSSProperty<VPos>(this, "valignment", VPos.CENTER, StyleableProperties.VPOS);
+            valignment = new StyleableObjectProperty(VPos.CENTER) {
+
+                @Override
+                public Object getBean() {
+                    return Separator.this;
+                }
+
+                @Override
+                public String getName() {
+                    return "valignment";
+                }
+
+                @Override
+                public StyleableProperty getStyleableProperty() {
+                    return StyleableProperties.VALIGNMENT;
+                }
+                
+            };
         }
         return valignment;
     }
@@ -187,37 +217,65 @@ public class Separator extends Control {
     private static final String PSEUDO_CLASS_HORIZONTAL = "horizontal";
 
     private static class StyleableProperties {
-        private static final StyleableProperty ORIENTATION = new StyleableProperty(Separator.class, "orientation");
-        private static final StyleableProperty HPOS = new StyleableProperty(Separator.class, "halignment");
-        private static final StyleableProperty VPOS = new StyleableProperty(Separator.class, "valignment");
+        private static final StyleableProperty<Separator,Orientation> ORIENTATION = 
+                new StyleableProperty<Separator,Orientation>("-fx-orientation",
+                new EnumConverter<Orientation>(Orientation.class),
+                Orientation.HORIZONTAL) {
+
+            @Override
+            public boolean isSettable(Separator n) {
+                return n.orientation == null || !n.orientation.isBound();
+            }
+
+            @Override
+            public WritableValue<Orientation> getWritableValue(Separator n) {
+                return n.orientationProperty();
+            }
+        };
+        
+        private static final StyleableProperty<Separator,HPos> HALIGNMENT = 
+                new StyleableProperty<Separator,HPos>("-fx-halignment",
+                new EnumConverter<HPos>(HPos.class),
+                HPos.CENTER) {
+
+            @Override
+            public boolean isSettable(Separator n) {
+                return n.halignment == null || !n.halignment.isBound();
+            }
+
+            @Override
+            public WritableValue<HPos> getWritableValue(Separator n) {
+                return n.halignmentProperty();
+            }
+        };
+        
+        private static final StyleableProperty<Separator,VPos> VALIGNMENT = 
+                new StyleableProperty<Separator,VPos>("-fx-valignment",
+                new EnumConverter<VPos>(VPos.class),
+                VPos.CENTER){
+
+            @Override
+            public boolean isSettable(Separator n) {
+                return n.valignment == null || !n.valignment.isBound();
+            }
+
+            @Override
+            public WritableValue<VPos> getWritableValue(Separator n) {
+                return n.valignmentProperty();
+            }
+        };
 
         private static final List<StyleableProperty> STYLEABLES;
-        private static final int[] bitIndices;
         static {
             final List<StyleableProperty> styleables =
                 new ArrayList<StyleableProperty>(Control.impl_CSS_STYLEABLES());
             Collections.addAll(styleables,
                 ORIENTATION,
-                HPOS,
-                VPOS
+                HALIGNMENT,
+                VALIGNMENT
             );
             STYLEABLES = Collections.unmodifiableList(styleables);
-
-            bitIndices = new int[StyleableProperty.getMaxIndex()];
-            java.util.Arrays.fill(bitIndices, -1);
-            for(int bitIndex=0; bitIndex<STYLEABLES.size(); bitIndex++) {
-                bitIndices[STYLEABLES.get(bitIndex).getIndex()] = bitIndex;
-            }
         }
-    }
-
-    /**
-     * @treatasprivate implementation detail
-     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
-     */
-    @Deprecated
-    @Override protected int[] impl_cssStyleablePropertyBitIndices() {
-        return Separator.StyleableProperties.bitIndices;
     }
 
     /**
@@ -227,40 +285,6 @@ public class Separator extends Control {
     @Deprecated
     public static List<StyleableProperty> impl_CSS_STYLEABLES() {
         return Separator.StyleableProperties.STYLEABLES;
-    }
-
-    /**
-     * @treatasprivate implementation detail
-     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
-     */
-    @Deprecated
-    @Override protected boolean impl_cssSet(String property, Object value) {
-        if ("-fx-orientation".equals(property)) {
-            setOrientation((Orientation) value);
-        } else if ("-fx-halignment".equals(property)) {
-            setHalignment((HPos) value);
-        } else if ("-fx-valignment".equals(property)) {
-            setValignment((VPos) value);
-        }
-        return super.impl_cssSet(property,value);
-    }
-
-    /**
-     * @treatasprivate implementation detail
-     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
-     */
-    @Deprecated
-    @Override protected boolean impl_cssSettable(String property) {
-        if ("-fx-orientation".equals(property)) {
-            return orientation == null || !orientation.isBound();
-        } else if ("-fx-halignment".equals(property)) {
-            return halignment == null || !halignment.isBound();
-        } else if ("-fx-valignment".equals(property)) {
-            return valignment == null || !valignment.isBound();
-
-        }
-
-        return super.impl_cssSettable(property);
     }
 
     private static final long VERTICAL_PSEUDOCLASS_STATE = StyleManager.getInstance().getPseudoclassMask("vertical");
@@ -277,30 +301,4 @@ public class Separator extends Control {
         return mask;
     }
 
-    /**
-     * Used to reduce the number of inner classes by having a single property which
-     * knows how to invalidate the correct CSS property whenever it is changed.
-     * This trades static for dynamic footprint, and is used only in cases where
-     * a few extra bytes don't matter (like most control's properties).
-     * @param <T>
-     */
-    private final class CSSProperty<T> extends SimpleObjectProperty<T> {
-        private StyleableProperty property;
-
-        private CSSProperty(Object bean, String propertyName, T defaultValue, StyleableProperty p) {
-            super(bean, propertyName, defaultValue);
-            this.property = p;
-        }
-
-        // We have to ensure that the cssPropertyInvalidated flag is called
-        // even when the old value == the new value.
-        @Override public void set(T value) {
-            super.set(value);
-            impl_cssPropertyInvalidated(StyleableProperties.ORIENTATION);
-        }
-
-        @Override public void invalidated() {
-            impl_cssPropertyInvalidated(property);
-        }
-    }
 }

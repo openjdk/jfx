@@ -30,12 +30,17 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 
+import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.ObjectPropertyBase;
+import javafx.beans.property.ReadOnlyIntegerProperty;
+import javafx.beans.property.ReadOnlyIntegerWrapper;
+import javafx.beans.property.SimpleBooleanProperty;
 import javafx.beans.property.SimpleObjectProperty;
 import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
 import javafx.beans.value.WeakChangeListener;
+import javafx.beans.value.WritableValue;
 import javafx.collections.FXCollections;
 import javafx.collections.ListChangeListener;
 import javafx.collections.ListChangeListener.Change;
@@ -46,17 +51,14 @@ import javafx.event.EventType;
 import javafx.geometry.Orientation;
 import javafx.util.Callback;
 
-import com.sun.javafx.css.Styleable;
 import com.sun.javafx.css.StyleManager;
+import com.sun.javafx.css.StyleableObjectProperty;
 import com.sun.javafx.css.StyleableProperty;
+import com.sun.javafx.css.converters.EnumConverter;
 import com.sun.javafx.scene.control.WeakListChangeListener;
 import com.sun.javafx.scene.control.skin.ListViewSkin;
 import com.sun.javafx.scene.control.skin.VirtualContainerBase;
 import javafx.beans.DefaultProperty;
-import javafx.beans.property.ReadOnlyIntegerProperty;
-import javafx.beans.property.ReadOnlyIntegerWrapper;
-import javafx.beans.property.BooleanProperty;
-import javafx.beans.property.SimpleBooleanProperty;
 
 /**
  * A ListView displays a horizontal or vertical list of items from which the
@@ -368,7 +370,6 @@ public class ListView<T> extends Control {
     
     
     // --- Orientation
-    @Styleable(property="-fx-orientation", initial="vertical")
     private ObjectProperty<Orientation> orientation;
     
     /**
@@ -393,13 +394,17 @@ public class ListView<T> extends Control {
      */
     public final ObjectProperty<Orientation> orientationProperty() {
         if (orientation == null) {
-            orientation = new ObjectPropertyBase<Orientation>(Orientation.VERTICAL) {
+            orientation = new StyleableObjectProperty<Orientation>(Orientation.VERTICAL) {
                 @Override public void invalidated() {
-                    impl_cssPropertyInvalidated(StyleableProperties.ORIENTATION);
                     impl_pseudoClassStateChanged(PSEUDO_CLASS_VERTICAL);
                     impl_pseudoClassStateChanged(PSEUDO_CLASS_HORIZONTAL);
                 }
 
+                @Override 
+                public StyleableProperty getStyleableProperty() {
+                    return StyleableProperties.ORIENTATION;
+                }
+                
                 @Override
                 public Object getBean() {
                     return ListView.this;
@@ -712,10 +717,23 @@ public class ListView<T> extends Control {
 
     /** @treatasprivate */
     private static class StyleableProperties {
-        private static final StyleableProperty ORIENTATION = new StyleableProperty(ListView.class, "orientation");
+        private static final StyleableProperty<ListView,Orientation> ORIENTATION = 
+            new StyleableProperty<ListView,Orientation>("-fx-orientation",
+                new EnumConverter<Orientation>(Orientation.class), 
+                Orientation.VERTICAL) {
+
+            @Override
+            public boolean isSettable(ListView n) {
+                return n.orientation == null || !n.orientation.isBound();
+            }
+
+            @Override
+            public WritableValue<Orientation> getWritableValue(ListView n) {
+                return n.orientationProperty();
+            }
+        };
             
         private static final List<StyleableProperty> STYLEABLES;
-        private static final int[] bitIndices;
         static {
             final List<StyleableProperty> styleables =
                 new ArrayList<StyleableProperty>(Control.impl_CSS_STYLEABLES());
@@ -723,22 +741,7 @@ public class ListView<T> extends Control {
                 ORIENTATION
             );
             STYLEABLES = Collections.unmodifiableList(styleables);
-            
-            bitIndices = new int[StyleableProperty.getMaxIndex()];
-            java.util.Arrays.fill(bitIndices, -1);
-            for(int bitIndex=0; bitIndex<STYLEABLES.size(); bitIndex++) {
-                bitIndices[STYLEABLES.get(bitIndex).getIndex()] = bitIndex;
-            }
         }
-    }
-
-    /**
-     * @treatasprivate implementation detail
-     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
-     */
-    @Deprecated
-    @Override protected int[] impl_cssStyleablePropertyBitIndices() {
-        return ListView.StyleableProperties.bitIndices;
     }
 
     /**
@@ -748,40 +751,6 @@ public class ListView<T> extends Control {
     @Deprecated
     public static List<StyleableProperty> impl_CSS_STYLEABLES() {
         return ListView.StyleableProperties.STYLEABLES;
-    }
-
-    /**
-     * @treatasprivate implementation detail
-     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
-     */
-//    @Deprecated
-//    @Override public StyleableProperty[] impl_cssStyleableProperties() {
-//        return ListView.impl_CSS_STYLEABLES();
-//    }
-
-    /**
-     * @treatasprivate implementation detail
-     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
-     */
-    @Deprecated
-    @Override protected boolean impl_cssSet(String property, Object value) {
-        if ("-fx-orientation".equals(property)) {
-            setOrientation((Orientation) value);
-        }
-        return super.impl_cssSet(property, value);
-    }
-
-    /**
-     * @treatasprivate implementation detail
-     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
-     */
-    @Deprecated
-    @Override protected boolean impl_cssSettable(String property) {
-        if ("-fx-orientation".equals(property)) {
-            return orientation == null || !orientation.isBound();
-        }
-
-        return super.impl_cssSettable(property);
     }
 
     private static final long VERTICAL_PSEUDOCLASS_STATE =

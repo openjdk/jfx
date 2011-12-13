@@ -31,12 +31,13 @@ import java.util.List;
 import javafx.animation.KeyFrame;
 import javafx.animation.KeyValue;
 import javafx.beans.property.BooleanProperty;
-import javafx.beans.property.BooleanPropertyBase;
 import javafx.beans.property.DoubleProperty;
-import javafx.beans.property.DoublePropertyBase;
 import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.ObjectPropertyBase;
+import javafx.beans.property.ReadOnlyDoubleProperty;
+import javafx.beans.property.ReadOnlyDoubleWrapper;
 import javafx.beans.property.SimpleDoubleProperty;
+import javafx.beans.value.WritableValue;
 import javafx.collections.FXCollections;
 import javafx.collections.ListChangeListener;
 import javafx.collections.ObservableList;
@@ -45,11 +46,12 @@ import javafx.geometry.Side;
 import javafx.util.Duration;
 
 import com.sun.javafx.charts.ChartLayoutAnimator;
-import com.sun.javafx.css.Styleable;
+import com.sun.javafx.css.StyleableBooleanProperty;
+import com.sun.javafx.css.StyleableDoubleProperty;
 import com.sun.javafx.css.StyleableProperty;
+import com.sun.javafx.css.converters.BooleanConverter;
+import com.sun.javafx.css.converters.SizeConverter;
 import java.util.Collections;
-import javafx.beans.property.ReadOnlyDoubleProperty;
-import javafx.beans.property.ReadOnlyDoubleWrapper;
 
 /**
  * A axis implementation that will works on string categories where each 
@@ -72,12 +74,15 @@ public final class CategoryAxis extends Axis<String> {
     // -------------- PUBLIC PROPERTIES ----------------------------------------
 
     /** The margin between the axis start and the first tick-mark */
-    @Styleable(property="-fx-start-margin", initial="5")
-    private DoubleProperty startMargin = new DoublePropertyBase(5) {
+    private DoubleProperty startMargin = new StyleableDoubleProperty(5) {
         @Override protected void invalidated() {
             requestAxisLayout();
         }
 
+        @Override public StyleableProperty getStyleableProperty() {
+            return StyleableProperties.START_MARGIN;
+        }
+        
         @Override
         public Object getBean() {
             return CategoryAxis.this;
@@ -93,10 +98,14 @@ public final class CategoryAxis extends Axis<String> {
     public final DoubleProperty startMarginProperty() { return startMargin; }
 
     /** The margin between the last tick mark and the axis end */
-    @Styleable(property="-fx-end-margin", initial="5")
-    private DoubleProperty endMargin = new DoublePropertyBase(5) {
+    private DoubleProperty endMargin = new StyleableDoubleProperty(5) {
         @Override protected void invalidated() {
             requestAxisLayout();
+        }
+
+
+        @Override public StyleableProperty getStyleableProperty() {
+            return StyleableProperties.END_MARGIN;
         }
 
         @Override
@@ -116,12 +125,16 @@ public final class CategoryAxis extends Axis<String> {
     /** If this is true then half the space between ticks is left at the start
      * and end
      */
-    @Styleable(property="-fx-gap-start-and-end", initial="true")
-    private BooleanProperty gapStartAndEnd = new BooleanPropertyBase(true) {
+    private BooleanProperty gapStartAndEnd = new StyleableBooleanProperty(true) {
         @Override protected void invalidated() {
             requestAxisLayout();
         }
 
+
+        @Override public StyleableProperty getStyleableProperty() {
+            return StyleableProperties.GAP_START_AND_END;
+        }
+        
         @Override
         public Object getBean() {
             return CategoryAxis.this;
@@ -462,15 +475,52 @@ public final class CategoryAxis extends Axis<String> {
 
     /** @treatasprivate implementation detail */
     private static class StyleableProperties {
-        private static final StyleableProperty START_MARGIN =
-            new StyleableProperty(CategoryAxis.class, "startMargin");
-        private static final StyleableProperty END_MARGIN =
-            new StyleableProperty(CategoryAxis.class, "endMargin");
-        private static final StyleableProperty GAP_START_AND_END =
-            new StyleableProperty(CategoryAxis.class, "gapStartAndEnd");
+        private static final StyleableProperty<CategoryAxis,Number> START_MARGIN =
+            new StyleableProperty<CategoryAxis,Number>("-fx-start-margin",
+                SizeConverter.getInstance(), 5.0) {
+
+            @Override
+            public boolean isSettable(CategoryAxis n) {
+                return n.startMargin == null || !n.startMargin.isBound();
+            }
+
+            @Override
+            public WritableValue<Number> getWritableValue(CategoryAxis n) {
+                return n.startMarginProperty();
+            }
+        };
+        
+        private static final StyleableProperty<CategoryAxis,Number> END_MARGIN =
+            new StyleableProperty<CategoryAxis,Number>("-fx-end-margin",
+                SizeConverter.getInstance(), 5.0) {
+
+            @Override
+            public boolean isSettable(CategoryAxis n) {
+                return n.endMargin == null || !n.endMargin.isBound();
+            }
+
+            @Override
+            public WritableValue<Number> getWritableValue(CategoryAxis n) {
+                return n.endMarginProperty();
+            }
+        };
+        
+        private static final StyleableProperty<CategoryAxis,Boolean> GAP_START_AND_END =
+            new StyleableProperty<CategoryAxis,Boolean>("-fx-gap-start-and-end",
+                BooleanConverter.getInstance(), Boolean.TRUE) {
+
+            @Override
+            public boolean isSettable(CategoryAxis n) {
+                return n.gapStartAndEnd == null || !n.gapStartAndEnd.isBound();
+            }
+
+            @Override
+            public WritableValue<Boolean> getWritableValue(CategoryAxis n) {
+                return n.gapStartAndEndProperty();
+            }
+        };
 
         private static final List<StyleableProperty> STYLEABLES;
-        private static final int[] bitIndices;
         static {
         final List<StyleableProperty> styleables =
             new ArrayList<StyleableProperty>(Axis.impl_CSS_STYLEABLES());
@@ -480,24 +530,8 @@ public final class CategoryAxis extends Axis<String> {
                 GAP_START_AND_END
             );
             STYLEABLES = Collections.unmodifiableList(styleables);
-
-            bitIndices = new int[StyleableProperty.getMaxIndex()];
-            java.util.Arrays.fill(bitIndices, -1);
-            for(int bitIndex=0; bitIndex<STYLEABLES.size(); bitIndex++) {
-                bitIndices[STYLEABLES.get(bitIndex).getIndex()] = bitIndex;
-            }
         }
     }
-
-    /**
-     * @treatasprivate implementation detail
-     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
-     */
-    @Deprecated
-    @Override protected int[] impl_cssStyleablePropertyBitIndices() {
-        return CategoryAxis.StyleableProperties.bitIndices;
-    }
-
 
     /**
      * @treatasprivate implementation detail
@@ -508,39 +542,5 @@ public final class CategoryAxis extends Axis<String> {
         return CategoryAxis.StyleableProperties.STYLEABLES;
     }
 
-    /**
-     * @treatasprivate implementation detail
-     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
-     */
-    @Deprecated
-    @Override protected boolean impl_cssSet(String property, Object value) {
-        if ("-fx-start-margin".equals(property)) {
-            setStartMargin((Double) value);
-        } else if ("-fx-end-margin".equals(property)) {
-            setEndMargin((Double) value);
-        } else if ("-fx-gap-start-and-end".equals(property)) {
-            setGapStartAndEnd((Boolean) value);
-        } else {
-            return super.impl_cssSet(property, value);
-        }
-        return true;
-    }
-
-    /**
-     * @treatasprivate implementation detail
-     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
-     */
-    @Deprecated
-    @Override protected boolean impl_cssSettable(String property) {
-         if ("-fx-start-margin".equals(property)) {
-            return startMargin == null || !startMargin.isBound();
-        } else if ("-fx-end-margin".equals(property)) {
-            return endMargin == null || !endMargin.isBound();
-        } else if ("-fx-gap-start-and-end".equals(property)) {
-            return gapStartAndEnd == null || !gapStartAndEnd.isBound();
-        } else {
-            return super.impl_cssSettable(property);
-        }
-    }
 }
 

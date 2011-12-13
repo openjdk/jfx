@@ -51,10 +51,13 @@ import javafx.scene.layout.StackPane;
 import javafx.scene.paint.Color;
 import javafx.scene.shape.Rectangle;
 
-import com.sun.javafx.css.Styleable;
+import com.sun.javafx.css.StyleableDoubleProperty;
 import com.sun.javafx.css.StyleableProperty;
+import com.sun.javafx.css.converters.SizeConverter;
 import com.sun.javafx.scene.control.WeakListChangeListener;
 import javafx.beans.WeakInvalidationListener;
+import javafx.beans.property.DoubleProperty;
+import javafx.beans.value.WritableValue;
 
 
 /**
@@ -158,8 +161,39 @@ public class TableColumnHeader extends StackPane {
     private final TableView table;
     protected TableView getTableView() { return table; }
 
-    @Styleable(property="-fx-size", initial="20")
-    private double size;
+    private DoubleProperty size;
+    private double getSize() { 
+        return size == null ? 20.0 : size.doubleValue();
+    }
+    private DoubleProperty sizeProperty() {
+        if (size == null) {
+            size = new StyleableDoubleProperty(20) {
+
+                @Override
+                public void set(double v) {
+                    // guard against a 0 or negative size
+                    super.set(((v <= 0) ? 20.0 : v));
+                }
+
+                @Override
+                public Object getBean() {
+                    return TableColumnHeader.this;
+                }
+
+                @Override
+                public String getName() {
+                    return "size";
+                }
+
+                @Override
+                public StyleableProperty getStyleableProperty() {
+                    return StyleableProperties.SIZE;
+                }
+                
+            };
+        }
+        return size;
+    }
 
     private NestedTableColumnHeader nestedColumnHeader;
     NestedTableColumnHeader getNestedColumnHeader() { return nestedColumnHeader; }
@@ -521,7 +555,7 @@ public class TableColumnHeader extends StackPane {
     /** {@inheritDoc} */
     @Override protected double computePrefHeight(double width) {
         if (getTableColumn() == null) return 0;
-        return Math.max(size, label.prefHeight(-1));
+        return Math.max(getSize(), label.prefHeight(-1));
     }
 
     
@@ -655,8 +689,20 @@ public class TableColumnHeader extends StackPane {
       * @treatasprivate implementation detail
       */
      private static class StyleableProperties {
-         private static final StyleableProperty SIZE =
-            new StyleableProperty(TableColumnHeader.class, "size");
+         private static final StyleableProperty<TableColumnHeader,Number> SIZE =
+            new StyleableProperty<TableColumnHeader,Number>("-fx-size",
+                 SizeConverter.getInstance(), 20.0) {
+
+            @Override
+            public boolean isSettable(TableColumnHeader n) {
+                return n.size == null || !n.size.isBound();
+            }
+
+            @Override
+            public WritableValue<Number> getWritableValue(TableColumnHeader n) {
+                return n.sizeProperty();
+            }
+        };
 
          private static final List<StyleableProperty> STYLEABLES;
          static {
@@ -680,30 +726,4 @@ public class TableColumnHeader extends StackPane {
         return StyleableProperties.STYLEABLES;
     };
 
-    /**
-     * @treatasprivate implementation detail
-     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
-     */
-    @Deprecated
-    @Override
-    protected boolean impl_cssSet(String property, Object value) {
-        if ("-fx-size".equals(property)) {
-            final double newSize = (Double) value;
-            // guard against a 0 or negative size
-            this.size = (newSize <= 0) ? (20.0F) : (newSize);
-        } else {
-            return super.impl_cssSet(property, value);
-        }
-        return true;
-    }
-
-    /**
-     * @treatasprivate implementation detail
-     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
-     */
-    @Deprecated
-    @Override
-    protected boolean impl_cssSettable(String property) {
-        return property.equals("-fx-size") ? true : super.impl_cssSettable(property);
-    }
 }

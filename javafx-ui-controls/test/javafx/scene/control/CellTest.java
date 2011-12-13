@@ -172,8 +172,9 @@ public class CellTest {
         assertTrue(cell.isEditable());
     }
 
+    @Ignore("impl_cssSet API removed")
     @Test public void cannotSpecifyEditableViaCSS() {
-        cell.impl_cssSet("-fx-editable", false);
+//        cell.impl_cssSet("-fx-editable", false);
         assertTrue(cell.isEditable());
     }
 

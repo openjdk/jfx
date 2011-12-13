@@ -4,6 +4,7 @@
 
 package javafx.scene.control;
 
+import com.sun.javafx.css.StyleableProperty;
 import static javafx.scene.control.ControlTestUtils.*;
 import com.sun.javafx.pgstub.StubToolkit;
 import com.sun.javafx.tk.Toolkit;
@@ -159,19 +160,22 @@ public class SplitPaneTest {
      * CSS related Tests                                                 *
      ********************************************************************/
     @Test public void whenOrientationIsBound_impl_cssSettable_ReturnsFalse() {
-        assertTrue(splitPane.impl_cssSettable("-fx-orientation"));
+        StyleableProperty styleable = StyleableProperty.getStyleableProperty(splitPane.orientationProperty());
+        assertTrue(styleable.isSettable(splitPane));
         ObjectProperty<Orientation> other = new SimpleObjectProperty<Orientation>(Orientation.VERTICAL);
         splitPane.orientationProperty().bind(other);
-        assertFalse(splitPane.impl_cssSettable("-fx-orientation"));
+        assertFalse(styleable.isSettable(splitPane));
     }
 
     @Test public void whenOrientationIsSpecifiedViaCSSAndIsNotBound_impl_cssSettable_ReturnsTrue() {
-        splitPane.impl_cssSet("-fx-orientation", Orientation.VERTICAL);
-        assertTrue(splitPane.impl_cssSettable("-fx-orientation"));
+        StyleableProperty styleable = StyleableProperty.getStyleableProperty(splitPane.orientationProperty());
+        styleable.set(splitPane, Orientation.VERTICAL);
+        assertTrue(styleable.isSettable(splitPane));
     }
 
     @Test public void canSpecifyOrientationViaCSS() {
-        splitPane.impl_cssSet("-fx-orientation", Orientation.VERTICAL);
+        StyleableProperty styleable = StyleableProperty.getStyleableProperty(splitPane.orientationProperty());
+        styleable.set(splitPane, Orientation.VERTICAL);
         assertSame(Orientation.VERTICAL, splitPane.getOrientation());
     }
 

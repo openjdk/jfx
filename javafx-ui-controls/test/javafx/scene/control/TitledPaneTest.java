@@ -4,6 +4,7 @@
 
 package javafx.scene.control;
 
+import com.sun.javafx.css.StyleableProperty;
 import static javafx.scene.control.ControlTestUtils.*;
 import com.sun.javafx.pgstub.StubToolkit;
 import com.sun.javafx.tk.Toolkit;
@@ -157,27 +158,31 @@ public class TitledPaneTest {
      * CSS related Tests                                                 *
      ********************************************************************/
     @Test public void whenAnimatedIsBound_impl_cssSettable_ReturnsFalse() {
-        assertTrue(titledPane.impl_cssSettable("-fx-animated"));
+        StyleableProperty styleable = StyleableProperty.getStyleableProperty(titledPane.animatedProperty());
+        assertTrue(styleable.isSettable(titledPane));
         BooleanProperty other = new SimpleBooleanProperty();
         titledPane.animatedProperty().bind(other);
-        assertFalse(titledPane.impl_cssSettable("-fx-animated"));
+        assertFalse(styleable.isSettable(titledPane));
     }
 
     @Test public void whenAnimatedIsSpecifiedViaCSSAndIsNotBound_impl_cssSettable_ReturnsTrue() {
-        titledPane.impl_cssSet("-fx-animated", false);
-        assertTrue(titledPane.impl_cssSettable("-fx-animated"));
+        StyleableProperty styleable = StyleableProperty.getStyleableProperty(titledPane.animatedProperty());
+        styleable.set(titledPane, false);
+        assertTrue(styleable.isSettable(titledPane));
     }
 
     @Test public void whenCollapsibleIsBound_impl_cssSettable_ReturnsFalse() {
-        assertTrue(titledPane.impl_cssSettable("-fx-collapsible"));
+        StyleableProperty styleable = StyleableProperty.getStyleableProperty(titledPane.collapsibleProperty());
+        assertTrue(styleable.isSettable(titledPane));
         BooleanProperty other = new SimpleBooleanProperty();
         titledPane.collapsibleProperty().bind(other);
-        assertFalse(titledPane.impl_cssSettable("-fx-collapsible"));
+        assertFalse(styleable.isSettable(titledPane));
     }
 
     @Test public void whenCollapsibleIsSpecifiedViaCSSAndIsNotBound_impl_cssSettable_ReturnsTrue() {
-        titledPane.impl_cssSet("-fx-collapsible", false);
-        assertTrue(titledPane.impl_cssSettable("-fx-collapsible"));
+        StyleableProperty styleable = StyleableProperty.getStyleableProperty(titledPane.collapsibleProperty());
+        styleable.set(titledPane, false);
+        assertTrue(styleable.isSettable(titledPane));
     }
 
 

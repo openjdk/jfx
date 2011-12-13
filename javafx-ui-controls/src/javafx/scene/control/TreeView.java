@@ -891,39 +891,7 @@ public class TreeView<T> extends Control {
      *                                                                         *
      **************************************************************************/
 
-    private static class StyleableProperties {
-        private static final List<StyleableProperty> STYLEABLES;
-        private static final int[] bitIndices;
-        static {
-            final List<StyleableProperty> styleables = 
-                new ArrayList<StyleableProperty>(Control.impl_CSS_STYLEABLES());
-            STYLEABLES = Collections.unmodifiableList(styleables);
-            
-            bitIndices = new int[StyleableProperty.getMaxIndex()];
-            java.util.Arrays.fill(bitIndices, -1);
-            for(int bitIndex=0; bitIndex<STYLEABLES.size(); bitIndex++) {
-                bitIndices[STYLEABLES.get(bitIndex).getIndex()] = bitIndex;
-            }
-        }
-    }
-
-    /**
-     * @treatasprivate implementation detail
-     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
-     */
-    @Deprecated
-    @Override protected int[] impl_cssStyleablePropertyBitIndices() {
-        return TreeView.StyleableProperties.bitIndices;
-    }
-
-    /**
-     * @treatasprivate implementation detail
-     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
-     */
-    @Deprecated
-    public static List<StyleableProperty> impl_CSS_STYLEABLES() {
-        return TreeView.StyleableProperties.STYLEABLES;
-    }
+ 
 
     /***************************************************************************
      *                                                                         *

@@ -4,6 +4,7 @@
 
 package javafx.scene.control;
 
+import com.sun.javafx.css.StyleableProperty;
 import static javafx.scene.control.ControlTestUtils.*;
 import com.sun.javafx.pgstub.StubToolkit;
 import com.sun.javafx.tk.Toolkit;
@@ -378,87 +379,102 @@ public class ScrollPaneTest {
      * CSS related Tests                                                 *
      ********************************************************************/
     @Test public void whenHbarPolicyIsBound_impl_cssSettable_ReturnsFalse() {
-        assertTrue(scrollPane.impl_cssSettable("-fx-hbar-policy"));
+        StyleableProperty styleable = StyleableProperty.getStyleableProperty(scrollPane.hbarPolicyProperty());
+        assertTrue(styleable.isSettable(scrollPane));
         ObjectProperty<ScrollPane.ScrollBarPolicy> other = new SimpleObjectProperty<ScrollPane.ScrollBarPolicy>(ScrollPane.ScrollBarPolicy.AS_NEEDED);
         scrollPane.hbarPolicyProperty().bind(other);
-        assertFalse(scrollPane.impl_cssSettable("-fx-hbar-policy"));
+        assertFalse(styleable.isSettable(scrollPane));
     }
 
     @Test public void whenHbarPolicyIsSpecifiedViaCSSAndIsNotBound_impl_cssSettable_ReturnsTrue() {
-        scrollPane.impl_cssSet("-fx-hbar-policy", ScrollPane.ScrollBarPolicy.ALWAYS);
-        assertTrue(scrollPane.impl_cssSettable("-fx-hbar-policy"));
+        StyleableProperty styleable = StyleableProperty.getStyleableProperty(scrollPane.hbarPolicyProperty());
+        styleable.set(scrollPane, ScrollPane.ScrollBarPolicy.ALWAYS);
+        assertTrue(styleable.isSettable(scrollPane));
     }
 
     @Test public void canSpecifyHbarPolicyViaCSS() {
-        scrollPane.impl_cssSet("-fx-hbar-policy", ScrollPane.ScrollBarPolicy.NEVER);
-        assertSame(ScrollPane.ScrollBarPolicy.NEVER, scrollPane.getHbarPolicy());
+        StyleableProperty styleable = StyleableProperty.getStyleableProperty(scrollPane.hbarPolicyProperty());
+        styleable.set(scrollPane, ScrollPane.ScrollBarPolicy.NEVER);
+        assertTrue(styleable.isSettable(scrollPane));
     }
 
     @Test public void whenVbarPolicyIsBound_impl_cssSettable_ReturnsFalse() {
-        assertTrue(scrollPane.impl_cssSettable("-fx-vbar-policy"));
+        StyleableProperty styleable = StyleableProperty.getStyleableProperty(scrollPane.vbarPolicyProperty());
+        assertTrue(styleable.isSettable(scrollPane));
         ObjectProperty<ScrollPane.ScrollBarPolicy> other = new SimpleObjectProperty<ScrollPane.ScrollBarPolicy>(ScrollPane.ScrollBarPolicy.AS_NEEDED);
         scrollPane.vbarPolicyProperty().bind(other);
-        assertFalse(scrollPane.impl_cssSettable("-fx-vbar-policy"));
+        assertFalse(styleable.isSettable(scrollPane));
     }
 
     @Test public void whenVbarPolicyIsSpecifiedViaCSSAndIsNotBound_impl_cssSettable_ReturnsTrue() {
-        scrollPane.impl_cssSet("-fx-vbar-policy", ScrollPane.ScrollBarPolicy.ALWAYS);
-        assertTrue(scrollPane.impl_cssSettable("-fx-vbar-policy"));
+        StyleableProperty styleable = StyleableProperty.getStyleableProperty(scrollPane.vbarPolicyProperty());
+        styleable.set(scrollPane, ScrollPane.ScrollBarPolicy.ALWAYS);
+        assertTrue(styleable.isSettable(scrollPane));
     }
 
     @Test public void canSpecifyVbarPolicyViaCSS() {
-        scrollPane.impl_cssSet("-fx-vbar-policy", ScrollPane.ScrollBarPolicy.NEVER);
+        StyleableProperty styleable = StyleableProperty.getStyleableProperty(scrollPane.vbarPolicyProperty());
+        styleable.set(scrollPane, ScrollPane.ScrollBarPolicy.NEVER);
         assertSame(ScrollPane.ScrollBarPolicy.NEVER, scrollPane.getVbarPolicy());
     }
 
     @Test public void whenFitToWidthIsBound_impl_cssSettable_ReturnsFalse() {
-        assertTrue(scrollPane.impl_cssSettable("-fx-fit-to-width"));
+        StyleableProperty styleable = StyleableProperty.getStyleableProperty(scrollPane.fitToWidthProperty());
+        assertTrue(styleable.isSettable(scrollPane));
         BooleanProperty other = new SimpleBooleanProperty();
         scrollPane.fitToWidthProperty().bind(other);
-        assertFalse(scrollPane.impl_cssSettable("-fx-fit-to-width"));
+        assertFalse(styleable.isSettable(scrollPane));
     }
 
     @Test public void whenFitToWidthIsSpecifiedViaCSSAndIsNotBound_impl_cssSettable_ReturnsTrue() {
-        scrollPane.impl_cssSet("-fx-fit-to-width", false);
-        assertTrue(scrollPane.impl_cssSettable("-fx-fit-to-width"));
+        StyleableProperty styleable = StyleableProperty.getStyleableProperty(scrollPane.fitToWidthProperty());
+        styleable.set(scrollPane, false);
+        assertTrue(styleable.isSettable(scrollPane));
     }
 
     @Test public void canSpecifyFitToWidthViaCSS() {
-        scrollPane.impl_cssSet("-fx-fit-to-width", true);
+        StyleableProperty styleable = StyleableProperty.getStyleableProperty(scrollPane.fitToWidthProperty());
+        styleable.set(scrollPane, true);
         assertSame(true, scrollPane.isFitToWidth());
     }
 
     @Test public void whenFitToHeightIsBound_impl_cssSettable_ReturnsFalse() {
-        assertTrue(scrollPane.impl_cssSettable("-fx-fit-to-height"));
+        StyleableProperty styleable = StyleableProperty.getStyleableProperty(scrollPane.fitToHeightProperty());
+        assertTrue(styleable.isSettable(scrollPane));
         BooleanProperty other = new SimpleBooleanProperty();
         scrollPane.fitToHeightProperty().bind(other);
-        assertFalse(scrollPane.impl_cssSettable("-fx-fit-to-height"));
+        assertFalse(styleable.isSettable(scrollPane));
     }
 
     @Test public void whenFitToHeightIsSpecifiedViaCSSAndIsNotBound_impl_cssSettable_ReturnsTrue() {
-        scrollPane.impl_cssSet("-fx-fit-to-height", false);
-        assertTrue(scrollPane.impl_cssSettable("-fx-fit-to-height"));
+        StyleableProperty styleable = StyleableProperty.getStyleableProperty(scrollPane.fitToHeightProperty());
+        styleable.set(scrollPane, false);
+        assertTrue(styleable.isSettable(scrollPane));
     }
 
     @Test public void canSpecifyFitToHeightViaCSS() {
-        scrollPane.impl_cssSet("-fx-fit-to-height", true);
+        StyleableProperty styleable = StyleableProperty.getStyleableProperty(scrollPane.fitToHeightProperty());
+        styleable.set(scrollPane, true);
         assertSame(true, scrollPane.isFitToHeight());
     }
 
     @Test public void whenPannableIsBound_impl_cssSettable_ReturnsFalse() {
-        assertTrue(scrollPane.impl_cssSettable("-fx-pannable"));
+        StyleableProperty styleable = StyleableProperty.getStyleableProperty(scrollPane.pannableProperty());
+        assertTrue(styleable.isSettable(scrollPane));
         BooleanProperty other = new SimpleBooleanProperty();
         scrollPane.pannableProperty().bind(other);
-        assertFalse(scrollPane.impl_cssSettable("-fx-pannable"));
+        assertFalse(styleable.isSettable(scrollPane));
     }
 
     @Test public void whenPannableIsSpecifiedViaCSSAndIsNotBound_impl_cssSettable_ReturnsTrue() {
-        scrollPane.impl_cssSet("-fx-pannable", false);
-        assertTrue(scrollPane.impl_cssSettable("-fx-pannable"));
+        StyleableProperty styleable = StyleableProperty.getStyleableProperty(scrollPane.pannableProperty());
+        styleable.set(scrollPane, false);
+        assertTrue(styleable.isSettable(scrollPane));
     }
 
     @Test public void canSpecifyPannableViaCSS() {
-        scrollPane.impl_cssSet("-fx-pannable", true);
+        StyleableProperty styleable = StyleableProperty.getStyleableProperty(scrollPane.pannableProperty());
+        styleable.set(scrollPane, true);
         assertSame(true, scrollPane.isPannable());
     }
 

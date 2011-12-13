@@ -25,22 +25,24 @@
 
 package javafx.scene.control;
 
+import com.sun.javafx.css.*;
+import com.sun.javafx.css.converters.BooleanConverter;
+import com.sun.javafx.css.converters.EnumConverter;
+import com.sun.javafx.css.converters.SizeConverter;
+import com.sun.javafx.css.converters.StringConverter;
+import java.net.MalformedURLException;
+import java.net.URL;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
 import javafx.animation.KeyFrame;
 import javafx.animation.Timeline;
-import javafx.beans.property.BooleanProperty;
-import javafx.beans.property.BooleanPropertyBase;
-import javafx.beans.property.DoubleProperty;
-import javafx.beans.property.DoublePropertyBase;
-import javafx.beans.property.ObjectProperty;
-import javafx.beans.property.ObjectPropertyBase;
-import javafx.beans.property.SimpleStringProperty;
-import javafx.beans.property.StringProperty;
+import javafx.beans.property.*;
+import javafx.beans.value.WritableValue;
 import javafx.event.ActionEvent;
 import javafx.event.EventHandler;
+import javafx.scene.Group;
 import javafx.scene.Node;
 import javafx.scene.Parent;
 import javafx.scene.Scene;
@@ -52,10 +54,6 @@ import javafx.scene.text.TextAlignment;
 import javafx.stage.Window;
 import javafx.util.Duration;
 
-import com.sun.javafx.css.Styleable;
-import com.sun.javafx.css.StyleableProperty;
-import javafx.beans.property.ReadOnlyBooleanProperty;
-import javafx.beans.property.ReadOnlyBooleanWrapper;
 
 /**
  * Tooltips are common UI elements which are typically used for showing
@@ -121,17 +119,19 @@ public class Tooltip extends PopupControl {
     public static void uninstall(Node node, Tooltip t) {
         BEHAVIOR.uninstall(node);
     }
-
+    
     /***************************************************************************
      *                                                                         *
      * Constructors                                                            *
      *                                                                         *
      **************************************************************************/
-
+    
     /**
      * Creates a tooltip with an empty string for its text.
      */
     public Tooltip() {
+        super();
+        this.bridge = new CSSBridge();
         initialize();
     }
 
@@ -141,11 +141,26 @@ public class Tooltip extends PopupControl {
      * @param text A text string for the tooltip.
      */
     public Tooltip(String text) {
+        bridge = new CSSBridge();
         setText(text);
         initialize();
     }
 
     private void initialize() {
+        
+        // undo PopupControl's bridge and replace it with Tooltip's
+        if (bridge != null) {
+            getContent().clear();
+            bridge.idProperty().unbind();
+            bridge.styleProperty().unbind();
+        }
+        // Bind up these two properties. Note that the third, styleClass, is
+        // handled in the onChange listener for that list.
+        bridge.idProperty().bind(idProperty());
+        bridge.styleProperty().bind(styleProperty());
+
+        getContent().add(bridge);
+        
         getStyleClass().setAll("tooltip");
     }
 
@@ -176,118 +191,56 @@ public class Tooltip extends PopupControl {
      * Unlike {@link #contentDisplay} which affects the graphic and text, this setting
      * only affects multiple lines of text relative to the text bounds.
      */
-    @Styleable(property="-fx-text-alignment", initial="left")
-    private ObjectProperty<TextAlignment> textAlignment;
     public final void setTextAlignment(TextAlignment value) { textAlignmentProperty().setValue(value); }
-    public final TextAlignment getTextAlignment() { return textAlignment == null ? TextAlignment.LEFT : textAlignment.getValue(); }
-    public final ObjectProperty<TextAlignment> textAlignmentProperty() {
-        if (textAlignment == null) {
-            textAlignment = new ObjectPropertyBase<TextAlignment>(TextAlignment.LEFT) {
-                @Override public void invalidated() {
-                    impl_cssPropertyInvalidated(StyleableProperties.TEXT_ALIGNMENT);
-                }
-
-                @Override
-                public Object getBean() {
-                    return Tooltip.this;
-                }
-
-                @Override
-                public String getName() {
-                    return "textAlignment";
-                }
-            };
-        }
-        return textAlignment;
+    public final TextAlignment getTextAlignment() { 
+        return ((Tooltip.CSSBridge)bridge).textAlignment == null 
+                ? TextAlignment.LEFT 
+                : ((Tooltip.CSSBridge)bridge).textAlignment.getValue(); 
     }
-
+    public final ObjectProperty<TextAlignment> textAlignmentProperty() {
+        return ((Tooltip.CSSBridge)bridge).textAlignmentProperty();
+    }
+    
+    public final void setTextOverrun(OverrunStyle value) { textOverrunProperty().setValue(value); }
+    public final OverrunStyle getTextOverrun() { 
+        return ((Tooltip.CSSBridge)bridge).textOverrun == null 
+                ? OverrunStyle.ELLIPSIS 
+                : ((Tooltip.CSSBridge)bridge).textOverrun.getValue(); 
+    }
     /**
      * Specifies the behavior to use if the text of the {@code Tooltip}
      * exceeds the available space for rendering the text.
      */
-    @Styleable(property="-fx-text-overrun", initial="ellipsis")
-    private ObjectProperty<OverrunStyle> textOverrun;
-    public final void setTextOverrun(OverrunStyle value) { textOverrunProperty().setValue(value); }
-    public final OverrunStyle getTextOverrun() { return textOverrun == null ? OverrunStyle.ELLIPSIS : textOverrun.getValue(); }
     public final ObjectProperty<OverrunStyle> textOverrunProperty() {
-        if (textOverrun == null) {
-            textOverrun = new ObjectPropertyBase<OverrunStyle>(OverrunStyle.ELLIPSIS) {
-                @Override public void invalidated() {
-                    impl_cssPropertyInvalidated(StyleableProperties.TEXT_OVERRUN);
-                }
-
-                @Override
-                public Object getBean() {
-                    return Tooltip.this;
-                }
-
-                @Override
-                public String getName() {
-                    return "textOverrun";
-                }
-            };
-        }
-        return textOverrun;
+        return ((Tooltip.CSSBridge)bridge).textOverrunProperty();
     }
 
+    public final void setWrapText(boolean value) { wrapTextProperty().setValue(value); }
+    public final boolean isWrapText() { 
+        return ((Tooltip.CSSBridge)bridge).wrapText == null 
+                ? false 
+                : ((Tooltip.CSSBridge)bridge).wrapText.getValue(); }
     /**
      * If a run of text exceeds the width of the Tooltip, then this variable
      * indicates whether the text should wrap onto another line.
      */
-    @Styleable(property="-fx-wrap-text", initial="false")
-    private BooleanProperty wrapText;
-    public final void setWrapText(boolean value) { wrapTextProperty().setValue(value); }
-    public final boolean isWrapText() { return wrapText == null ? false : wrapText.getValue(); }
     public final BooleanProperty wrapTextProperty() {
-        if (wrapText == null) {
-            wrapText = new BooleanPropertyBase() {
-                @Override public void invalidated() {
-                    impl_cssPropertyInvalidated(StyleableProperties.WRAP_TEXT);
-                }
-
-                @Override
-                public Object getBean() {
-                    return Tooltip.this;
-                }
-
-                @Override
-                public String getName() {
-                    return "wrapText";
-                }
-            };
-        }
-        return wrapText;
+        return ((Tooltip.CSSBridge)bridge).wrapTextProperty();
     }
 
+    public final void setFont(Font value) { fontProperty().setValue(value); }
+    public final Font getFont() { 
+        return ((Tooltip.CSSBridge)bridge).font == null 
+                ? Font.getDefault() 
+                : ((Tooltip.CSSBridge)bridge).font.getValue(); }
     /**
      * The default font to use for text in the Tooltip. If the Tooltip's text is
      * rich text then this font may or may not be used depending on the font
      * information embedded in the rich text, but in any case where a default
      * font is required, this font will be used.
      */
-    @Styleable(property="-fx-font", inherits=true)
-    private ObjectProperty<Font> font;
-    public final void setFont(Font value) { fontProperty().setValue(value); }
-    public final Font getFont() { return font == null ? Font.getDefault() : font.getValue(); }
     public final ObjectProperty<Font> fontProperty() {
-        if (font == null) {
-            font = new ObjectPropertyBase<Font>(Font.getDefault()) {
-                @Override public void invalidated() {
-                    impl_cssPropertyInvalidated(StyleableProperties.FONT);
-                }
-
-                @Override
-                public Object getBean() {
-                    return Tooltip.this;
-                }
-
-                @Override
-                public String getName() {
-                    return "font";
-                }
-            };
-        }
-        return font;
+        return ((Tooltip.CSSBridge)bridge).fontProperty();
     }
 
     /**
@@ -297,19 +250,14 @@ public class Tooltip extends PopupControl {
      * scene graph, otherwise the {@code IllegalArgumentException} is thrown.
      * See the class description of {@link javafx.scene.Node Node} for more detail.
      */
-    @Styleable(property="-fx-graphic", converter="com.sun.javafx.css.converters.URLConverter")
     private ObjectProperty<Node> graphic;
     public final void setGraphic(Node value) {
         graphicProperty().setValue(value);
-        cachedImageUrl = null;
     }
     public final Node getGraphic() { return graphic == null ? null : graphic.getValue(); }
     public final ObjectProperty<Node> graphicProperty() {
         if (graphic == null) {
             graphic = new ObjectPropertyBase<Node>() {
-                @Override public void invalidated() {
-                    impl_cssPropertyInvalidated(StyleableProperties.GRAPHIC);
-                }
 
                 @Override
                 public Object getBean() {
@@ -325,60 +273,28 @@ public class Tooltip extends PopupControl {
         return graphic;
     }
 
+    public final void setContentDisplay(ContentDisplay value) { contentDisplayProperty().setValue(value); }
+    public final ContentDisplay getContentDisplay() { 
+        return ((Tooltip.CSSBridge)bridge).contentDisplay == null 
+                ? ContentDisplay.LEFT 
+                : ((Tooltip.CSSBridge)bridge).contentDisplay.getValue(); }
     /**
      * Specifies the positioning of the graphic relative to the text.
      */
-    @Styleable(property="-fx-content-display", initial="left")
-    private ObjectProperty<ContentDisplay> contentDisplay;
-    public final void setContentDisplay(ContentDisplay value) { contentDisplayProperty().setValue(value); }
-    public final ContentDisplay getContentDisplay() { return contentDisplay == null ? ContentDisplay.LEFT : contentDisplay.getValue(); }
     public final ObjectProperty<ContentDisplay> contentDisplayProperty() {
-        if (contentDisplay == null) {
-            contentDisplay = new ObjectPropertyBase<ContentDisplay>(ContentDisplay.LEFT) {
-                @Override public void invalidated() {
-                    impl_cssPropertyInvalidated(StyleableProperties.CONTENT_DISPLAY);
-                }
-
-                @Override
-                public Object getBean() {
-                    return Tooltip.this;
-                }
-
-                @Override
-                public String getName() {
-                    return "contentDisplay";
-                }
-            };
-        }
-        return contentDisplay;
+        return ((Tooltip.CSSBridge)bridge).contentDisplayProperty();
     }
 
+    public final void setGraphicTextGap(double value) { graphicTextGapProperty().setValue(value); }
+    public final double getGraphicTextGap() { 
+        return ((Tooltip.CSSBridge)bridge).graphicTextGap == null 
+                ? 4 
+                : ((Tooltip.CSSBridge)bridge).graphicTextGap.getValue(); }
     /**
      * The amount of space between the graphic and text
      */
-    @Styleable(property="-fx-graphic-text-gap", initial="4")
-    private DoubleProperty graphicTextGap;
-    public final void setGraphicTextGap(double value) { graphicTextGapProperty().setValue(value); }
-    public final double getGraphicTextGap() { return graphicTextGap == null ? 4 : graphicTextGap.getValue(); }
     public final DoubleProperty graphicTextGapProperty() {
-        if (graphicTextGap == null) {
-            graphicTextGap = new DoublePropertyBase(4) {
-                @Override public void invalidated() {
-                    impl_cssPropertyInvalidated(StyleableProperties.GRAPHIC_TEXT_GAP);
-                }
-
-                @Override
-                public Object getBean() {
-                    return Tooltip.this;
-                }
-
-                @Override
-                public String getName() {
-                    return "graphicTextGap";
-                }
-            };
-        }
-        return graphicTextGap;
+        return ((Tooltip.CSSBridge)bridge).graphicTextGapProperty();
     }
 
     /**
@@ -399,15 +315,114 @@ public class Tooltip extends PopupControl {
      **************************************************************************/
 
     private static class StyleableProperties {
-        private static final StyleableProperty FONT = new StyleableProperty(Tooltip.class, "font", StyleableProperty.FONT.getSubProperties());
-        private static final StyleableProperty TEXT_ALIGNMENT = new StyleableProperty(Tooltip.class, "textAlignment");
-        private static final StyleableProperty TEXT_OVERRUN = new StyleableProperty(Tooltip.class, "textOverrun");
-        private static final StyleableProperty WRAP_TEXT = new StyleableProperty(Tooltip.class, "wrapText");
-        private static final StyleableProperty GRAPHIC = new StyleableProperty(Tooltip.class, "graphic");
-        private static final StyleableProperty CONTENT_DISPLAY = new StyleableProperty(Tooltip.class, "contentDisplay");
-        private static final StyleableProperty GRAPHIC_TEXT_GAP = new StyleableProperty(Tooltip.class, "graphicTextGap");
+        private static final StyleableProperty<CSSBridge,Font> FONT = 
+            new StyleableProperty.FONT<CSSBridge>("-fx-font", Font.getDefault()) {
+
+            @Override
+            public boolean isSettable(CSSBridge n) {
+                return n.font == null || !n.font.isBound();
+            }
+
+            @Override
+            public WritableValue<Font> getWritableValue(CSSBridge n) {
+                return n.fontProperty();
+            }
+        };
+        
+        private static final StyleableProperty<CSSBridge,TextAlignment> TEXT_ALIGNMENT = 
+            new StyleableProperty<CSSBridge,TextAlignment>("-fx-text-alignment",
+                new EnumConverter<TextAlignment>(TextAlignment.class), 
+                TextAlignment.LEFT) {
+
+            @Override
+            public boolean isSettable(CSSBridge n) {
+                return n.textAlignment == null || !n.textAlignment.isBound();
+            }
+
+            @Override
+            public WritableValue<TextAlignment> getWritableValue(CSSBridge n) {
+                return n.textAlignmentProperty();
+            }
+        };
+        
+        private static final StyleableProperty<CSSBridge,OverrunStyle> TEXT_OVERRUN = 
+            new StyleableProperty<CSSBridge,OverrunStyle>("-fx-text-overrun",
+                new EnumConverter<OverrunStyle>(OverrunStyle.class),
+                OverrunStyle.ELLIPSIS) {
+
+            @Override
+            public boolean isSettable(CSSBridge n) {
+                return n.textOverrun == null || !n.textOverrun.isBound();
+            }
+
+            @Override
+            public WritableValue<OverrunStyle> getWritableValue(CSSBridge n) {
+                return n.textOverrunProperty();
+            }
+        };
+        
+        private static final StyleableProperty<CSSBridge,Boolean> WRAP_TEXT = 
+            new StyleableProperty<CSSBridge,Boolean>("-fx-wrap-text",
+                BooleanConverter.getInstance(), Boolean.FALSE) {
+
+            @Override
+            public boolean isSettable(CSSBridge n) {
+                return n.wrapText == null || !n.wrapText.isBound();
+            }
+
+            @Override
+            public WritableValue<Boolean> getWritableValue(CSSBridge n) {
+                return n.wrapTextProperty();
+            }
+        };
+        
+        private static final StyleableProperty<CSSBridge,String> GRAPHIC = 
+            new StyleableProperty<CSSBridge,String>("-fx-graphic",
+                StringConverter.getInstance()) {
+
+            @Override
+            public boolean isSettable(CSSBridge n) {
+                return n.imageUrl == null || !n.imageUrl.isBound();
+            }
+
+            @Override
+            public WritableValue<String> getWritableValue(CSSBridge n) {
+                return n.imageUrlProperty();
+            }
+        };
+        
+        private static final StyleableProperty<CSSBridge,ContentDisplay> CONTENT_DISPLAY = 
+            new StyleableProperty<CSSBridge,ContentDisplay>("-fx-content-display",
+                new EnumConverter<ContentDisplay>(ContentDisplay.class),
+                ContentDisplay.LEFT) {
+
+            @Override
+            public boolean isSettable(CSSBridge n) {
+                return n.contentDisplay == null || !n.contentDisplay.isBound();
+            }
+
+            @Override
+            public WritableValue<ContentDisplay> getWritableValue(CSSBridge n) {
+                return n.contentDisplayProperty();
+            }
+        };
+    
+        private static final StyleableProperty<CSSBridge,Number> GRAPHIC_TEXT_GAP = 
+            new StyleableProperty<CSSBridge,Number>("-fx-graphic-text-gap",
+                SizeConverter.getInstance(), 4.0) {
+
+            @Override
+            public boolean isSettable(CSSBridge n) {
+                return n.graphicTextGap == null || !n.graphicTextGap.isBound();
+            }
+
+            @Override
+            public WritableValue<Number> getWritableValue(CSSBridge n) {
+                return n.graphicTextGapProperty();
+            }
+        };
+    
         private static final List<StyleableProperty> STYLEABLES;
-        private static final int[] bitIndices;
         static {
             final List<StyleableProperty> styleables =
                 new ArrayList<StyleableProperty>(PopupControl.impl_CSS_STYLEABLES());
@@ -421,22 +436,7 @@ public class Tooltip extends PopupControl {
                 GRAPHIC_TEXT_GAP
             );
             STYLEABLES = Collections.unmodifiableList(styleables);
-
-            bitIndices = new int[StyleableProperty.getMaxIndex()];
-            java.util.Arrays.fill(bitIndices, -1);
-            for(int bitIndex=0; bitIndex<STYLEABLES.size(); bitIndex++) {
-                bitIndices[STYLEABLES.get(bitIndex).getIndex()] = bitIndex;
-            }
         }
-    }
-
-    /**
-     * @treatasprivate implementation detail
-     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
-     */
-    @Deprecated
-    @Override protected int[] impl_cssStyleablePropertyBitIndices() {
-        return Tooltip.StyleableProperties.bitIndices;
     }
 
     /**
@@ -447,58 +447,207 @@ public class Tooltip extends PopupControl {
     public static List<StyleableProperty> impl_CSS_STYLEABLES() {
         return Tooltip.StyleableProperties.STYLEABLES;
     }
-
-    private String cachedImageUrl = null;
-    /**
-     * @treatasprivate implementation detail
-     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
-     */
-    @Deprecated
-    @Override protected boolean impl_cssSet(String property, Object value) {
-        if ("-fx-text-alignment".equals(property)) {
-            setTextAlignment((TextAlignment)value);
-        } else if ("-fx-text-overrun".equals(property)) {
-            setTextOverrun((OverrunStyle)value);
-        } else if ("-fx-wrap-text".equals(property)) {
-            setWrapText((Boolean) value);
-        } else if ("-fx-font".equals(property)) {
-            setFont((Font)value);
-        } else if ("-fx-graphic".equals(property)) {
-            String imageUrl = (String)value;
-            if (imageUrl != null && !imageUrl.equals(cachedImageUrl)) {
-                setGraphic(new ImageView(new Image(imageUrl)));
-            }
-            cachedImageUrl = imageUrl;
-        } else if ("-fx-content-display".equals(property)) {
-            setContentDisplay((ContentDisplay)value);
-        } else if ("-fx-graphic-text-gap".equals(property)) {
-            setGraphicTextGap((Double) value);
+   
+    private final class CSSBridge extends PopupControl.CSSBridge {
+        
+        @Override public void impl_pseudoClassStateChanged(String s) {
+            super.impl_pseudoClassStateChanged(s);
         }
-        return super.impl_cssSet(property, value);
-    }
+        
+        @Override public Class impl_getClassToStyle() {
+            return Tooltip.this.getClass();
+        }
+        
+        private ObjectProperty<TextAlignment> textAlignment;
+        private final ObjectProperty<TextAlignment> textAlignmentProperty() {        
+            if (textAlignment == null) {
+                textAlignment = new StyleableObjectProperty<TextAlignment>(TextAlignment.LEFT) {
+                    @Override 
+                    public StyleableProperty getStyleableProperty() {
+                        return StyleableProperties.TEXT_ALIGNMENT;
+                    }
 
-    /**
-     * @treatasprivate implementation detail
-     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
-     */
-    @Deprecated
-    @Override protected boolean impl_cssSettable(String property) {
-        if ("-fx-text-alignment".equals(property))
-            return textAlignment == null || !textAlignment.isBound();
-        else if ("-fx-text-overrun".equals(property))
-            return textOverrun == null || !textOverrun.isBound();
-        else if ("-fx-wrap-text".equals(property))
-            return wrapText == null || !wrapText.isBound();
-        else if ("-fx-font".equals(property))
-            return font == null || !font.isBound();
-        else if ("-fx-graphic".equals(property))
-            return graphic == null || !graphic.isBound();
-        else if ("-fx-content-display".equals(property))
-            return contentDisplay == null || !contentDisplay.isBound();
-        else if ("-fx-graphic-text-gap".equals(property))
-            return graphicTextGap == null || !graphicTextGap.isBound();
-        else
-            return super.impl_cssSettable(property);
+                    @Override
+                    public Object getBean() {
+                        return CSSBridge.this;
+                    }
+
+                    @Override
+                    public String getName() {
+                        return "textAlignment";
+                    }
+                };
+            }
+            return textAlignment;
+        }
+
+        private ObjectProperty<OverrunStyle> textOverrun;
+        private final ObjectProperty<OverrunStyle> textOverrunProperty() {
+            if (textOverrun == null) {
+                textOverrun = new StyleableObjectProperty<OverrunStyle>(OverrunStyle.ELLIPSIS) {
+                    @Override 
+                    public StyleableProperty getStyleableProperty() {
+                        return StyleableProperties.TEXT_OVERRUN;
+                    }
+
+                    @Override
+                    public Object getBean() {
+                        return CSSBridge.this;
+                    }
+
+                    @Override
+                    public String getName() {
+                        return "textOverrun";
+                    }
+                };
+            }
+            return textOverrun;
+        }
+
+        private BooleanProperty wrapText;
+        private final BooleanProperty wrapTextProperty() {
+            if (wrapText == null) {
+                wrapText = new StyleableBooleanProperty(false) {
+                    @Override 
+                    public StyleableProperty getStyleableProperty() {
+                        return StyleableProperties.WRAP_TEXT;
+                    }
+
+                    @Override
+                    public Object getBean() {
+                        return CSSBridge.this;
+                    }
+
+                    @Override
+                    public String getName() {
+                        return "wrapText";
+                    }
+                };
+            }
+            return wrapText;
+        }        
+
+        private ObjectProperty<Font> font;
+        private final ObjectProperty<Font> fontProperty() {
+            if (font == null) {
+                font = new StyleableObjectProperty<Font>(Font.getDefault()) {
+                    @Override 
+                    public StyleableProperty getStyleableProperty() {
+                        return StyleableProperties.FONT;
+                    }
+
+                    @Override
+                    public Object getBean() {
+                        return CSSBridge.this;
+                    }
+
+                    @Override
+                    public String getName() {
+                        return "font";
+                    }
+                };
+            }
+            return font;
+        }        
+        
+        private StringProperty imageUrl = null;
+        /**
+        * The imageUrl property is set from CSS and then the graphic property is
+        * set from the invalidated method. This ensures that the same image isn't
+        * reloaded. 
+        */
+        private StringProperty imageUrlProperty() {
+            if (imageUrl == null) {
+                imageUrl = new StyleableStringProperty() {
+
+                    @Override
+                    protected void invalidated() {
+
+                        String imageUrl = null;
+                        if (get() != null) {
+                            URL url = null;
+                            try {
+                                url = new URL(get());
+                            } catch (MalformedURLException malf) {
+                                // This may be a relative URL, so try resolving
+                                // it using the application classloader
+                                final ClassLoader cl = Thread.currentThread().getContextClassLoader();
+                                url = cl.getResource(get());
+                            }
+                            if (url != null) {
+                                setGraphic(new ImageView(new Image(url.toExternalForm())));                            
+                            }
+                        } else {
+                            setGraphic(null);
+                        }                    
+                    }
+
+                    @Override
+                    public Object getBean() {
+                        return CSSBridge.this;
+                    }
+
+                    @Override
+                    public String getName() {
+                        return "imageUrl";
+                    }
+
+                    @Override
+                    public StyleableProperty getStyleableProperty() {
+                        return Tooltip.StyleableProperties.GRAPHIC;
+                    }
+
+                };
+            }
+            return imageUrl;
+        }
+
+        private ObjectProperty<ContentDisplay> contentDisplay;
+        private final ObjectProperty<ContentDisplay> contentDisplayProperty() {
+            if (contentDisplay == null) {
+                contentDisplay = new StyleableObjectProperty<ContentDisplay>(ContentDisplay.LEFT) {
+                    @Override 
+                    public StyleableProperty getStyleableProperty() {
+                        return StyleableProperties.CONTENT_DISPLAY;
+                    }
+
+                    @Override
+                    public Object getBean() {
+                        return CSSBridge.this;
+                    }
+
+                    @Override
+                    public String getName() {
+                        return "contentDisplay";
+                    }
+                };
+            }
+            return contentDisplay;
+        }
+    
+        private DoubleProperty graphicTextGap;
+        private final DoubleProperty graphicTextGapProperty() {
+            if (graphicTextGap == null) {
+                graphicTextGap = new StyleableDoubleProperty(4) {
+                    @Override 
+                    public StyleableProperty getStyleableProperty() {
+                        return StyleableProperties.GRAPHIC_TEXT_GAP;
+                    }
+
+                    @Override
+                    public Object getBean() {
+                        return CSSBridge.this;
+                    }
+
+                    @Override
+                    public String getName() {
+                        return "graphicTextGap";
+                    }
+                };
+            }
+            return graphicTextGap;
+        }
+        
     }
 
     private static class TooltipBehavior {

@@ -29,16 +29,15 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import javafx.beans.property.DoubleProperty;
-import javafx.beans.property.DoublePropertyBase;
 import javafx.beans.property.ObjectProperty;
-import javafx.beans.property.ObjectPropertyBase;
 import javafx.beans.property.SimpleDoubleProperty;
+import javafx.beans.value.WritableValue;
 import javafx.geometry.Orientation;
 
 import com.sun.javafx.Utils;
-import com.sun.javafx.css.Styleable;
-import com.sun.javafx.css.StyleManager;
-import com.sun.javafx.css.StyleableProperty;
+import com.sun.javafx.css.*;
+import com.sun.javafx.css.converters.EnumConverter;
+import com.sun.javafx.css.converters.SizeConverter;
 import com.sun.javafx.scene.control.skin.ScrollBarSkin;
 
 
@@ -147,7 +146,6 @@ public class ScrollBar extends Control {
      * The orientation of the {@code ScrollBar} can either be {@link javafx.geometry.Orientation#HORIZONTAL HORIZONTAL}
      * or {@link javafx.geometry.Orientation#VERTICAL VERTICAL}.
      */
-    @Styleable(property="-fx-orientation", initial="vertical")
     private ObjectProperty<Orientation> orientation;
     public final void setOrientation(Orientation value) {
         orientationProperty().set(value);
@@ -159,13 +157,17 @@ public class ScrollBar extends Control {
 
     public final ObjectProperty<Orientation> orientationProperty() {
         if (orientation == null) {
-            orientation = new ObjectPropertyBase<Orientation>(Orientation.HORIZONTAL) {
+            orientation = new StyleableObjectProperty<Orientation>(Orientation.HORIZONTAL) {
                 @Override protected void invalidated() {
-                    impl_cssPropertyInvalidated(StyleableProperties.ORIENTATION);
                     impl_pseudoClassStateChanged(PSEUDO_CLASS_VERTICAL);
                     impl_pseudoClassStateChanged(PSEUDO_CLASS_HORIZONTAL);
                 }
 
+                @Override 
+                public StyleableProperty getStyleableProperty() {
+                    return StyleableProperties.ORIENTATION;
+                }
+                    
                 @Override
                 public Object getBean() {
                     return ScrollBar.this;
@@ -184,7 +186,6 @@ public class ScrollBar extends Control {
      * The amount by which to adjust the ScrollBar when the {@link #increment() increment} or
      * {@link #decrement() decrement} methods are called.
      */
-    @Styleable(property="-fx-unit-increment", initial="1")
     private DoubleProperty unitIncrement;
     public final void setUnitIncrement(double value) {
         unitIncrementProperty().set(value);
@@ -196,11 +197,11 @@ public class ScrollBar extends Control {
 
     public final DoubleProperty unitIncrementProperty() {
         if (unitIncrement == null) {
-            unitIncrement = new DoublePropertyBase(1) {
+            unitIncrement = new StyleableDoubleProperty(1) {
 
                 @Override
-                public void invalidated() {
-                    impl_cssPropertyInvalidated(StyleableProperties.UNIT_INCREMENT);
+                public StyleableProperty getStyleableProperty() {
+                    return StyleableProperties.UNIT_INCREMENT;
                 }
 
                 @Override
@@ -220,7 +221,6 @@ public class ScrollBar extends Control {
      * The amount by which to adjust the scrollbar if the track of the bar is
      * clicked.
      */
-    @Styleable(property="-fx-block-increment", initial="10")
     private DoubleProperty blockIncrement;
     public final void setBlockIncrement(double value) {
         blockIncrementProperty().set(value);
@@ -232,11 +232,11 @@ public class ScrollBar extends Control {
 
     public final DoubleProperty blockIncrementProperty() {
         if (blockIncrement == null) {
-            blockIncrement = new DoublePropertyBase(10) {
+            blockIncrement = new StyleableDoubleProperty(10) {
 
                 @Override
-                public void invalidated() {
-                    impl_cssPropertyInvalidated(StyleableProperties.BLOCK_INCREMENT);
+                public StyleableProperty getStyleableProperty() {
+                    return StyleableProperties.BLOCK_INCREMENT;
                 }
 
                 @Override
@@ -356,12 +356,55 @@ public class ScrollBar extends Control {
     private static final String PSEUDO_CLASS_HORIZONTAL = "horizontal";
 
     private static class StyleableProperties {
-        private static final StyleableProperty ORIENTATION = new StyleableProperty(ScrollBar.class, "orientation");
-        private static final StyleableProperty UNIT_INCREMENT = new StyleableProperty(ScrollBar.class, "unitIncrement");
-        private static final StyleableProperty BLOCK_INCREMENT = new StyleableProperty(ScrollBar.class, "blockIncrement");
+        private static final StyleableProperty<ScrollBar,Orientation> ORIENTATION = 
+            new StyleableProperty<ScrollBar,Orientation>("-fx-orientation",
+                new EnumConverter<Orientation>(Orientation.class),
+                Orientation.VERTICAL) {
 
+            @Override
+            public boolean isSettable(ScrollBar n) {
+                return n.orientation == null || !n.orientation.isBound();
+            }
+
+            @Override
+            public WritableValue<Orientation> getWritableValue(ScrollBar n) {
+                return n.orientationProperty();
+            }
+        };
+        
+        private static final StyleableProperty<ScrollBar,Number> UNIT_INCREMENT = 
+            new StyleableProperty<ScrollBar,Number>("-fx-unit-increment",
+                SizeConverter.getInstance(), 1.0) {
+
+            @Override
+            public boolean isSettable(ScrollBar n) {
+                return n.unitIncrement == null || !n.unitIncrement.isBound();
+            }
+
+            @Override
+            public WritableValue<Number> getWritableValue(ScrollBar n) {
+                return n.unitIncrementProperty();
+            }
+                    
+        };
+        
+        private static final StyleableProperty<ScrollBar,Number> BLOCK_INCREMENT = 
+            new StyleableProperty<ScrollBar,Number>("-fx-block-increment",
+                SizeConverter.getInstance(), 10.0) {
+
+            @Override
+            public boolean isSettable(ScrollBar n) {
+                return n.blockIncrement == null || !n.blockIncrement.isBound();
+            }
+
+            @Override
+            public WritableValue<Number> getWritableValue(ScrollBar n) {
+                return n.blockIncrementProperty();
+            }
+                    
+        };
+        
         private static final List<StyleableProperty> STYLEABLES;
-        private static final int[] bitIndices;
         static {
             final List<StyleableProperty> styleables = 
                 new ArrayList<StyleableProperty>(Control.impl_CSS_STYLEABLES());
@@ -371,22 +414,7 @@ public class ScrollBar extends Control {
                 BLOCK_INCREMENT
             );
             STYLEABLES = Collections.unmodifiableList(styleables);
-
-            bitIndices = new int[StyleableProperty.getMaxIndex()];
-            java.util.Arrays.fill(bitIndices, -1);
-            for(int bitIndex=0; bitIndex<STYLEABLES.size(); bitIndex++) {
-                bitIndices[STYLEABLES.get(bitIndex).getIndex()] = bitIndex;
-            }
         }
-    }
-
-    /**
-     * @treatasprivate implementation detail
-     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
-     */
-    @Deprecated
-    @Override protected int[] impl_cssStyleablePropertyBitIndices() {
-        return ScrollBar.StyleableProperties.bitIndices;
     }
 
     /**
@@ -412,36 +440,5 @@ public class ScrollBar extends Control {
         mask |= (getOrientation() == Orientation.VERTICAL) ?
             VERTICAL_PSEUDOCLASS_STATE : HORIZONTAL_PSEUDOCLASS_STATE;
         return mask;
-    }
-    /**
-     * @treatasprivate implementation detail
-     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
-     */
-    @Deprecated
-    @Override protected boolean impl_cssSet(String property, Object value) {
-        if ("-fx-orientation".equals(property)) {
-            setOrientation((Orientation) value);
-        } else if ("-fx-unit-increment".equals(property)) {
-            setUnitIncrement((Double)value);
-        } else if ("-fx-block-increment".equals(property)) {
-            setBlockIncrement((Double)value);
-        }
-        return super.impl_cssSet(property, value);
-    }
-
-    /**
-     * @treatasprivate implementation detail
-     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
-     */
-    @Deprecated
-    @Override protected boolean impl_cssSettable(String property) {
-        if ("-fx-orientation".equals(property))
-            return orientation == null || !orientation.isBound();
-        else if ("-fx-unit-increment".equals(property))
-            return unitIncrement == null || !unitIncrement.isBound();
-        else if ("-fx-block-increment".equals(property))
-            return blockIncrement == null || !blockIncrement.isBound();
-        else
-            return super.impl_cssSettable(property);
     }
 }

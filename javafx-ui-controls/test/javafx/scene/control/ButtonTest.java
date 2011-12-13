@@ -16,6 +16,7 @@ import javafx.event.EventHandler;
 import javafx.scene.shape.Rectangle;
 
 import org.junit.Before;
+import org.junit.Ignore;
 import org.junit.Test;
 
 /**
@@ -132,8 +133,9 @@ public class ButtonTest {
         assertPseudoClassDoesNotExist(btn, "default");
     }
 
+    @Ignore("impl_cssSet API removed")
     @Test public void cannotSpecifyDefaultButtonViaCSS() {
-        btn.impl_cssSet("-fx-default-button", true);
+//        btn.impl_cssSet("-fx-default-button", true);
         assertFalse(btn.isDefaultButton());
     }
 
@@ -200,8 +202,9 @@ public class ButtonTest {
         assertPseudoClassDoesNotExist(btn, "cancel");
     }
 
+    @Ignore("impl_cssSet API removed")
     @Test public void cannotSpecifyCancelButtonViaCSS() {
-        btn.impl_cssSet("-fx-cancel-button", true);
+//        btn.impl_cssSet("-fx-cancel-button", true);
         assertFalse(btn.isCancelButton());
     }
 

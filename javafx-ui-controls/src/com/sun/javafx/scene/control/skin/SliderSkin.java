@@ -228,8 +228,8 @@ public class SliderSkin extends SkinBase<Slider, SliderBehavior> {
         thumbHeight = thumb.prefHeight(-1);
         thumb.resize(thumbWidth, thumbHeight);
         // we are assuming the is common radius's for all corners on the track
-        double trackRadius = (track.impl_getBackgroundFills() != null && track.impl_getBackgroundFills().length > 0) ?
-            track.impl_getBackgroundFills()[0].getTopLeftCornerRadius() : 0;
+        double trackRadius = (track.impl_getBackgroundFills() != null && track.impl_getBackgroundFills().size() > 0) ?
+            track.impl_getBackgroundFills().get(0).getTopLeftCornerRadius() : 0;
 
         if (getSkinnable().getOrientation() == Orientation.HORIZONTAL) {
             double tickLineHeight =  (showTickMarks) ? tickLine.prefHeight(-1) : 0;

@@ -4,6 +4,7 @@
 
 package javafx.scene.control;
 
+import com.sun.javafx.css.StyleableProperty;
 import static javafx.scene.control.ControlTestUtils.assertPseudoClassDoesNotExist;
 import static javafx.scene.control.ControlTestUtils.assertPseudoClassExists;
 import static javafx.scene.control.ControlTestUtils.assertStyleClassContains;
@@ -23,6 +24,7 @@ import javafx.scene.Cursor;
 import javafx.scene.shape.Rectangle;
 
 import org.junit.Before;
+import org.junit.Ignore;
 import org.junit.Test;
 
 public class HyperlinkTest {
@@ -140,20 +142,33 @@ public class HyperlinkTest {
         assertTrue(link.isVisited());
     }
     
+    @Test public void visitedPropertyIsNotStyleable() {
+        StyleableProperty styleable = StyleableProperty.getStyleableProperty(link.visitedProperty());
+        assertNull(styleable);
+    }
+    
+    @Ignore ("replaced by visitedPropertyIsNotStyleable")
     @Test public void whenVisitedIsBound_impl_cssSettable_ReturnsFalse() {
-        assertFalse(link.impl_cssSettable("-fx-visited"));
+        // will return null!
+        StyleableProperty styleable = StyleableProperty.getStyleableProperty(link.visitedProperty());
+        assertFalse(styleable.isSettable(link));
         BooleanProperty other = new SimpleBooleanProperty(true);
         link.visitedProperty().bind(other);
-        assertFalse(link.impl_cssSettable("-fx-visited"));
     }
     
+    @Ignore ("replaced by visitedPropertyIsNotStyleable")
     @Test public void whenVisitedIsSpecifiedViaCSSAndIsNotBound_impl_cssSettable_ReturnsFalse() {
-        link.impl_cssSet("-fx-visited", true);
-        assertFalse(link.impl_cssSettable("-fx-visited"));
+        // will return null!
+        StyleableProperty styleable = StyleableProperty.getStyleableProperty(link.visitedProperty());
+        styleable.set(link,true);
+        assertFalse(styleable.isSettable(link));
     }
     
-    @Test public void cannotSpecifyTextFillViaCSS() {
-        link.impl_cssSet("-fx-visited", true);
+    @Ignore ("replaced by visitedPropertyIsNotStyleable")
+    @Test public void cannotSpecifyVisitedViaCSS() {
+        // will return null!
+        StyleableProperty styleable = StyleableProperty.getStyleableProperty(link.visitedProperty());
+        styleable.set(link,true);
         assertFalse(link.isVisited());
     }
     

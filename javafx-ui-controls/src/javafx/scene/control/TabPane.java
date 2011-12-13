@@ -29,20 +29,20 @@ import java.util.Collections;
 import java.util.List;
 import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.DoubleProperty;
-import javafx.beans.property.DoublePropertyBase;
-
 import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.ObjectPropertyBase;
 import javafx.beans.property.SimpleBooleanProperty;
 import javafx.beans.property.SimpleObjectProperty;
+import javafx.beans.value.WritableValue;
 import javafx.collections.FXCollections;
 import javafx.collections.ListChangeListener;
 import javafx.collections.ObservableList;
 import javafx.geometry.Side;
 
-import com.sun.javafx.css.Styleable;
 import com.sun.javafx.css.StyleManager;
+import com.sun.javafx.css.StyleableDoubleProperty;
 import com.sun.javafx.css.StyleableProperty;
+import com.sun.javafx.css.converters.SizeConverter;
 import javafx.beans.DefaultProperty;
 
 /**
@@ -286,7 +286,6 @@ public class TabPane extends Control {
         return rotateGraphic;
     }
 
-    @Styleable(property="-fx-tab-min-width", initial="0")
     private DoubleProperty tabMinWidth;
 
     /**
@@ -316,11 +315,11 @@ public class TabPane extends Control {
      */
     public final DoubleProperty tabMinWidthProperty() {
         if (tabMinWidth == null) {
-            tabMinWidth = new DoublePropertyBase(DEFAULT_TAB_MIN_WIDTH) {
+            tabMinWidth = new StyleableDoubleProperty(DEFAULT_TAB_MIN_WIDTH) {
 
                 @Override
-                public void invalidated() {
-                    impl_cssPropertyInvalidated(StyleableProperties.TAB_MIN_WIDTH);
+                public StyleableProperty getStyleableProperty() {
+                    return StyleableProperties.TAB_MIN_WIDTH;
                 }
 
                 @Override
@@ -345,7 +344,6 @@ public class TabPane extends Control {
      *
      * This value can also be set via CSS using {@code -fx-tab-max-width}.</p>
      */
-    @Styleable(property="-fx-tab-max-width")
     private DoubleProperty tabMaxWidth;
     public final void setTabMaxWidth(double value) {
         tabMaxWidthProperty().setValue(value);
@@ -365,11 +363,11 @@ public class TabPane extends Control {
      */
     public final DoubleProperty tabMaxWidthProperty() {
         if (tabMaxWidth == null) {
-            tabMaxWidth = new DoublePropertyBase(DEFAULT_TAB_MAX_WIDTH) {
+            tabMaxWidth = new StyleableDoubleProperty(DEFAULT_TAB_MAX_WIDTH) {
 
                 @Override
-                public void invalidated() {
-                    impl_cssPropertyInvalidated(StyleableProperties.TAB_MAX_WIDTH);
+                public StyleableProperty getStyleableProperty() {
+                    return StyleableProperties.TAB_MAX_WIDTH;
                 }
 
                 @Override
@@ -386,7 +384,6 @@ public class TabPane extends Control {
         return tabMaxWidth;
     }
 
-    @Styleable(property="-fx-tab-min-height", initial="0")
     private DoubleProperty tabMinHeight;
 
     /**
@@ -415,11 +412,11 @@ public class TabPane extends Control {
      */
     public final DoubleProperty tabMinHeightProperty() {
         if (tabMinHeight == null) {
-            tabMinHeight = new DoublePropertyBase(DEFAULT_TAB_MIN_HEIGHT) {
+            tabMinHeight = new StyleableDoubleProperty(DEFAULT_TAB_MIN_HEIGHT) {
 
                 @Override
-                public void invalidated() {
-                    impl_cssPropertyInvalidated(StyleableProperties.TAB_MIN_HEIGHT);
+                public StyleableProperty getStyleableProperty() {
+                    return StyleableProperties.TAB_MIN_HEIGHT;
                 }
 
                 @Override
@@ -444,7 +441,6 @@ public class TabPane extends Control {
      * This value can also be set via CSS using -fx-tab-max-height
      * </p>
      */
-    @Styleable(property="-fx-tab-max-height")
     private DoubleProperty tabMaxHeight;
     public final void setTabMaxHeight(double value) {
         tabMaxHeightProperty().setValue(value);
@@ -464,11 +460,11 @@ public class TabPane extends Control {
      */
     public final DoubleProperty tabMaxHeightProperty() {
         if (tabMaxHeight == null) {
-            tabMaxHeight = new DoublePropertyBase(DEFAULT_TAB_MAX_HEIGHT) {
+            tabMaxHeight = new StyleableDoubleProperty(DEFAULT_TAB_MAX_HEIGHT) {
 
                 @Override
-                public void invalidated() {
-                    impl_cssPropertyInvalidated(StyleableProperties.TAB_MAX_HEIGHT);
+                public StyleableProperty getStyleableProperty() {
+                    return StyleableProperties.TAB_MAX_HEIGHT;
                 }
 
                 @Override
@@ -492,13 +488,67 @@ public class TabPane extends Control {
      **************************************************************************/
 
     private static class StyleableProperties {
-        private static final StyleableProperty TAB_MIN_WIDTH = new StyleableProperty(TabPane.class, "tabMinWidth");
-        private static final StyleableProperty TAB_MAX_WIDTH = new StyleableProperty(TabPane.class, "tabMaxWidth");
-        private static final StyleableProperty TAB_MIN_HEIGHT = new StyleableProperty(TabPane.class, "tabMinHeight");
-        private static final StyleableProperty TAB_MAX_HEIGHT = new StyleableProperty(TabPane.class, "tabMaxHeight");
+        private static final StyleableProperty<TabPane,Number> TAB_MIN_WIDTH = 
+                new StyleableProperty<TabPane,Number>("-fx-tab-min-width", 
+                SizeConverter.getInstance(), DEFAULT_TAB_MIN_WIDTH) {
+
+            @Override
+            public boolean isSettable(TabPane n) {
+                return n.tabMinWidth == null || !n.tabMinWidth.isBound();
+            }
+
+            @Override
+            public WritableValue<Number> getWritableValue(TabPane n) {
+                return n.tabMinWidthProperty();
+            }
+        };
+        
+        private static final StyleableProperty<TabPane,Number> TAB_MAX_WIDTH = 
+                new StyleableProperty<TabPane,Number>("-fx-tab-max-width", 
+                SizeConverter.getInstance(), DEFAULT_TAB_MAX_WIDTH) {
+
+            @Override
+            public boolean isSettable(TabPane n) {
+                return n.tabMaxWidth == null || !n.tabMaxWidth.isBound();
+            }
+
+            @Override
+            public WritableValue<Number> getWritableValue(TabPane n) {
+                return n.tabMaxWidthProperty();
+            }
+        };
+        
+        private static final StyleableProperty<TabPane,Number> TAB_MIN_HEIGHT = 
+                new StyleableProperty<TabPane,Number>("-fx-tab-min-height", 
+                SizeConverter.getInstance(), DEFAULT_TAB_MIN_HEIGHT) {
+
+            @Override
+            public boolean isSettable(TabPane n) {
+                return n.tabMinHeight == null || !n.tabMinHeight.isBound();
+            }
+
+            @Override
+            public WritableValue<Number> getWritableValue(TabPane n) {
+                return n.tabMinHeightProperty();
+            }
+        };
+        
+        private static final StyleableProperty<TabPane,Number> TAB_MAX_HEIGHT = 
+                new StyleableProperty<TabPane,Number>("-fx-tab-max-height", 
+                SizeConverter.getInstance(), DEFAULT_TAB_MAX_HEIGHT) {
+
+            @Override
+            public boolean isSettable(TabPane n) {
+                return n.tabMaxHeight == null || !n.tabMaxHeight.isBound();
+            }
+
+            @Override
+            public WritableValue<Number> getWritableValue(TabPane n) {
+                return n.tabMaxHeightProperty();
+            }
+        };
 
         private static final List<StyleableProperty> STYLEABLES;
-        private static final int[] bitIndices;
         static {
             final List<StyleableProperty> styleables =
                 new ArrayList<StyleableProperty>(Control.impl_CSS_STYLEABLES());
@@ -509,22 +559,7 @@ public class TabPane extends Control {
                 TAB_MAX_HEIGHT
             );
             STYLEABLES = Collections.unmodifiableList(styleables);
-
-            bitIndices = new int[StyleableProperty.getMaxIndex()];
-            java.util.Arrays.fill(bitIndices, -1);
-            for(int bitIndex=0; bitIndex<STYLEABLES.size(); bitIndex++) {
-                bitIndices[STYLEABLES.get(bitIndex).getIndex()] = bitIndex;
-            }
         }
-    }
-
-    /**
-     * @treatasprivate implementation detail
-     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
-     */
-    @Deprecated
-    @Override protected int[] impl_cssStyleablePropertyBitIndices() {
-        return TabPane.StyleableProperties.bitIndices;
     }
 
     /**
@@ -568,51 +603,6 @@ public class TabPane extends Control {
         return mask;
     }
 
-    /**
-     * @treatasprivate implementation detail
-     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
-     */
-    @Deprecated
-    @Override protected boolean impl_cssSet(String property, Object value) {
-        if (property.equals("-fx-tab-min-width")) {
-            // guard against a 0 or negative size
-            double size = (Double)value;
-            setTabMinWidth(size <= 0? DEFAULT_TAB_MIN_WIDTH : size);
-        } else if (property.equals("-fx-tab-max-width")) {
-            // guard against a 0 or negative size
-            double size = (Double)value;
-            setTabMaxWidth(size <= 0? DEFAULT_TAB_MAX_WIDTH : size);
-        } else if (property.equals("-fx-tab-min-height")) {
-            // guard against a 0 or negative size
-            double size = (Double)value;
-            setTabMinHeight(size <= 0? DEFAULT_TAB_MIN_HEIGHT : size);
-        } else if (property.equals("-fx-tab-max-height")) {
-            // guard against a 0 or negative size
-            double size = (Double)value;
-            setTabMaxHeight(size <= 0? DEFAULT_TAB_MAX_HEIGHT : size);
-        } else {
-            return super.impl_cssSet(property, value);
-        }
-        return true;
-    }
-
-    /**
-     * @treatasprivate implementation detail
-     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
-     */
-    @Deprecated
-    @Override protected boolean impl_cssSettable(String property) {
-        if (property.equals("-fx-tab-min-width")) {
-            return tabMinWidth == null || !tabMinWidth.isBound();
-        } else if (property.equals("-fx-tab-max-width")) {
-            return tabMaxWidth == null || !tabMaxWidth.isBound();
-        } else if (property.equals("-fx-tab-min-height")) {
-            return tabMinHeight == null || !tabMinHeight.isBound();
-        } else if (property.equals("-fx-tab-max-height")) {
-            return tabMaxHeight == null || !tabMaxHeight.isBound();
-        }
-        return super.impl_cssSettable(property);
-    }
 
     static class TabPaneSelectionModel extends SingleSelectionModel<Tab> {
         private final TabPane tabPane;

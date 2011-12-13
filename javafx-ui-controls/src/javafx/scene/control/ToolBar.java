@@ -30,15 +30,16 @@ import java.util.Collections;
 import java.util.List;
 
 import javafx.beans.property.ObjectProperty;
-import javafx.beans.property.ObjectPropertyBase;
+import javafx.beans.value.WritableValue;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.geometry.Orientation;
 import javafx.scene.Node;
 
-import com.sun.javafx.css.Styleable;
 import com.sun.javafx.css.StyleManager;
+import com.sun.javafx.css.StyleableObjectProperty;
 import com.sun.javafx.css.StyleableProperty;
+import com.sun.javafx.css.converters.EnumConverter;
 
 /**
  * <p>
@@ -128,7 +129,6 @@ public class ToolBar extends Control {
      * The orientation of the {@code ToolBar} - this can either be horizontal
      * or vertical.
      */
-    @Styleable(property="-fx-orientation", initial="horizontal")
     private ObjectProperty<Orientation> orientation;
     public final void setOrientation(Orientation value) {
         orientationProperty().set(value);
@@ -138,9 +138,8 @@ public class ToolBar extends Control {
     }
     public final ObjectProperty<Orientation> orientationProperty() {
         if (orientation == null) {
-            orientation = new ObjectPropertyBase<Orientation>(Orientation.HORIZONTAL) {
+            orientation = new StyleableObjectProperty<Orientation>(Orientation.HORIZONTAL) {
                 @Override public void invalidated() {
-                    impl_cssPropertyInvalidated(StyleableProperties.ORIENTATION);
                     impl_pseudoClassStateChanged(PSEUDO_CLASS_VERTICAL);
                     impl_pseudoClassStateChanged(PSEUDO_CLASS_HORIZONTAL);
                 }
@@ -153,6 +152,11 @@ public class ToolBar extends Control {
                 @Override
                 public String getName() {
                     return "orientation";
+                }
+
+                @Override
+                public StyleableProperty getStyleableProperty() {
+                    return StyleableProperties.ORIENTATION;
                 }
             };
         }
@@ -170,10 +174,23 @@ public class ToolBar extends Control {
     private static final String PSEUDO_CLASS_HORIZONTAL = "horizontal";
 
     private static class StyleableProperties {
-        private static final StyleableProperty ORIENTATION = new StyleableProperty(ToolBar.class, "orientation");
+        private static final StyleableProperty<ToolBar,Orientation> ORIENTATION = 
+                new StyleableProperty<ToolBar,Orientation>("-fx-orientation",
+                new EnumConverter<Orientation>(Orientation.class), 
+                Orientation.HORIZONTAL) {
+
+            @Override
+            public boolean isSettable(ToolBar n) {
+                return n.orientation == null || !n.orientation.isBound();
+            }
+
+            @Override
+            public WritableValue<Orientation> getWritableValue(ToolBar n) {
+                return n.orientationProperty();
+            }
+        };
 
         private static final List<StyleableProperty> STYLEABLES;
-        private static final int[] bitIndices;
         static {
             final List<StyleableProperty> styleables =
                 new ArrayList<StyleableProperty>(Control.impl_CSS_STYLEABLES());
@@ -181,22 +198,7 @@ public class ToolBar extends Control {
                 ORIENTATION
             );
             STYLEABLES = Collections.unmodifiableList(styleables);
-
-            bitIndices = new int[StyleableProperty.getMaxIndex()];
-            java.util.Arrays.fill(bitIndices, -1);
-            for(int bitIndex=0; bitIndex<STYLEABLES.size(); bitIndex++) {
-                bitIndices[STYLEABLES.get(bitIndex).getIndex()] = bitIndex;
-            }
         }
-    }
-
-    /**
-     * @treatasprivate implementation detail
-     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
-     */
-    @Deprecated
-    @Override protected int[] impl_cssStyleablePropertyBitIndices() {
-        return ToolBar.StyleableProperties.bitIndices;
     }
 
     /**
@@ -206,37 +208,6 @@ public class ToolBar extends Control {
     @Deprecated
     public static List<StyleableProperty> impl_CSS_STYLEABLES() {
         return ToolBar.StyleableProperties.STYLEABLES;
-    }
-
-
-//    @Override public StyleableProperty[] impl_cssStyleableProperties() {
-//        return ToolBar.impl_CSS_STYLEABLES();
-//    }
-
-    /**
-     * @treatasprivate implementation detail
-     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
-     */
-    @Deprecated
-    @Override protected boolean impl_cssSet(String property, Object value) {
-        if ("-fx-orientation".equals(property)) {
-            setOrientation((Orientation) value);
-        }
-
-        return super.impl_cssSet(property,value);
-    }
-
-    /**
-     * @treatasprivate implementation detail
-     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
-     */
-    @Deprecated
-    @Override protected boolean impl_cssSettable(String property) {
-        if ("-fx-orientation".equals(property)) {
-            return orientation == null || !orientation.isBound();
-        }
-
-        return super.impl_cssSettable(property);
     }
 
     private static final long VERTICAL_PSEUDOCLASS_STATE = StyleManager.getInstance().getPseudoclassMask("vertical");

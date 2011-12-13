@@ -30,6 +30,7 @@ import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.ObjectPropertyBase;
 import javafx.beans.property.SimpleStringProperty;
 import javafx.beans.property.StringProperty;
+import javafx.beans.value.WritableValue;
 import javafx.collections.ListChangeListener.Change;
 import javafx.collections.ObservableList;
 import javafx.scene.Group;
@@ -42,15 +43,11 @@ import java.util.Collections;
 import java.util.List;
 
 import com.sun.javafx.collections.TrackableObservableList;
-import com.sun.javafx.css.StyleManager;
-import com.sun.javafx.css.Styleable;
 import com.sun.javafx.css.StyleableProperty;
+import com.sun.javafx.css.StyleableStringProperty;
+import com.sun.javafx.css.converters.StringConverter;
 import com.sun.javafx.logging.PlatformLogger;
 import com.sun.javafx.scene.control.Logging;
-import com.sun.javafx.scene.control.skin.SkinBase;
-import java.net.URL;
-import java.security.AccessController;
-import java.security.PrivilegedAction;
 
 /**
  * An extension of PopupWindow that allows for CSS styling.
@@ -89,26 +86,19 @@ public class PopupControl extends PopupWindow implements Skinnable {
      * values from the PopupControl, and then apply CSS state to that
      * special node. The node will then be able to pass impl_cssSet calls
      * along, such that any subclass of PopupControl will be able to
-     * use the @Styleable annotations and we'll be able to style it from
+     * use the Styleable properties  and we'll be able to style it from
      * CSS, in such a way that it participates and applies to the skin,
      * exactly the way that normal Skin's work for normal Controls.
      */
-    private final CSSBridge bridge;
-
-    /**
-     * Keeps a reference to the name of the class currently acting as the skin.
-     * This is used so that we do not end up reapplying the same skin repeatedly
-     * from CSS every time we reapply CSS.
-     */
-    private String currentSkinClass;
-
+    protected CSSBridge bridge;
+    
     /**
      * Create a new empty PopupControl.
      */
     public PopupControl() {
         super();
+        this.bridge = new CSSBridge();
 
-        bridge = new CSSBridge();
         // Bind up these two properties. Note that the third, styleClass, is
         // handled in the onChange listener for that list.
         bridge.idProperty().bind(idProperty());
@@ -192,57 +182,11 @@ public class PopupControl extends PopupWindow implements Skinnable {
     public final String getStyle() { return style.get(); }
     public final StringProperty styleProperty() { return style; }
 
-    /**
-     * Skin is responsible for rendering this {@code PopupControl}. From the
-     * perspective of the {@code PopupControl}, the {@code Skin} is a black box.
-     * It listens and responds to changes in state in a {@code PopupControl}.
-     * <p>
-     * There is a one-to-one relationship between a {@code PopupControl} and its
-     * {@code Skin}. Every {@code Skin} maintains a back reference to the
-     * {@code PopupControl}.
-     * <p>
-     * A skin may be null.
-     */
-    @Styleable(property="-fx-skin", converter="com.sun.javafx.css.converters.StringConverter")
-    private ObjectProperty<Skin<?>> skin = new ObjectPropertyBase<Skin<?>>() {
-        // We store a reference to the oldValue so that we can handle
-        // changes in the skin properly in the case of binding. This is
-        // only needed because invalidated() does not currently take
-        // a reference to the old value.
-        private Skin<?> oldValue;
-
-        @Override protected void invalidated() {
-            // Let CSS know that this property has been manually changed
-            impl_cssPropertyInvalidated(StyleableProperties.SKIN);
-            // Dispose of the old skin
-            if (oldValue != null) oldValue.dispose();
-            // Get the new value, and save it off as the new oldValue
-            final Skin<?> skin = oldValue = getValue();
-            // Collect the name of the currently installed skin class. We do this
-            // so that subsequent updates from CSS to the same skin class will not
-            // result in reinstalling the skin
-            currentSkinClass = skin == null ? null : skin.getClass().getName();
-            // Update the children list with the new skin node
-            updateChildren();
-            // DEBUG: Log that we've changed the skin
-            final PlatformLogger logger = Logging.getControlsLogger();
-            if (logger.isLoggable(PlatformLogger.FINEST)) {
-                logger.finest("Stored skin[" + getValue() + "] on " + this);
-            }
-        }
-
-        @Override
-        public Object getBean() {
-            return PopupControl.this;
-        }
-
-        @Override
-        public String getName() {
-            return "skin";
-        }
-    };
-    @Override public final ObjectProperty<Skin<?>> skinProperty() { return skin; }
-    @Override public final void setSkin(Skin<?> value) { skinProperty().setValue(value); }
+    @Override public final ObjectProperty<Skin<?>> skinProperty() { 
+        return bridge.skin; }
+    @Override public final void setSkin(Skin<?> value) { 
+        skinProperty().set(value); 
+    }
     @Override public final Skin<?> getSkin() {
             if (getScene() != null && getScene().getRoot() != null) {
                 // RT-14094, RT-16754: We need the skins of the popup
@@ -682,60 +626,6 @@ public class PopupControl extends PopupWindow implements Skinnable {
         else bridge.getChildren().clear();
     }
 
-    private void loadSkinClass(String skinClassName) {
-        // we don't reload the skin class if it is the same as the last class name
-        if (currentSkinClass != null && currentSkinClass.equals(skinClassName)) {
-            return;
-        }
-
-        if (skinClassName == null || skinClassName.isEmpty()) {
-            Logging.getControlsLogger().severe("Empty -fx-skin property specified for popup control " + this);
-            return;
-        }
-
-        try {
-            Class<?> skinClass;
-            // RT-17525 : Use context class loader only if Class.forName fails.
-            try {
-                skinClass = Class.forName(skinClassName);
-            } catch (ClassNotFoundException clne) {
-                if (Thread.currentThread().getContextClassLoader() != null) {
-                        skinClass = Thread.currentThread().getContextClassLoader().loadClass(skinClassName);
-                } else {
-                    throw clne;
-                }
-            }
-            Constructor<?>[] constructors = skinClass.getConstructors();
-            Constructor<?> skinConstructor = null;
-            for (Constructor<?> c : constructors) {
-                Class<?>[] parameterTypes = c.getParameterTypes();
-                if (parameterTypes.length == 1 && PopupControl.class.isAssignableFrom(parameterTypes[0])) {
-                    skinConstructor = c;
-                    break;
-                }
-            }
-
-            if (skinConstructor == null) {
-                final NullPointerException npe = new NullPointerException();
-                Logging.getControlsLogger().severe(
-                "No valid constructor defined in '" + skinClassName + "' for popup control " + this +
-                         ".\r\nYou must provide a constructor that accepts a single "
-                         + "PopupControl parameter in " + skinClassName + ".", npe);
-                throw npe;
-            }
-
-            Skin<?> skinInstance = (Skin<?>) skinConstructor.newInstance(this);
-            setSkin(skinInstance);
-        } catch (InvocationTargetException e) {
-            Logging.getControlsLogger().severe(
-                "Failed to load skin '" + skinClassName + "' for popup control " + this,
-                e.getCause());
-        } catch (Exception e) {
-            Logging.getControlsLogger().severe(
-                "Failed to load skin '" + skinClassName + "' for popup control " + this, e);
-        }
-    }
-
     /***************************************************************************
      *                                                                         *
      *                         StyleSheet Handling                             *
@@ -743,10 +633,22 @@ public class PopupControl extends PopupWindow implements Skinnable {
      **************************************************************************/
 
     private static class StyleableProperties {
-        private static final StyleableProperty SKIN = new StyleableProperty(PopupControl.class, "skin");
+        private static final StyleableProperty<CSSBridge,String> SKIN = 
+            new StyleableProperty<CSSBridge,String>("-fx-skin",
+                StringConverter.getInstance()) {
+
+            @Override
+            public boolean isSettable(CSSBridge n) {
+                return n.skin == null || !n.skin.isBound();
+            }
+
+            @Override
+            public WritableValue<String> getWritableValue(CSSBridge n) {
+                return n.skinClassNameProperty();
+            }
+        };
 
         private static final List<StyleableProperty> STYLEABLES;
-        private static final int[] bitIndices;
         static {
             final List<StyleableProperty> styleables =
                 new ArrayList<StyleableProperty>();
@@ -754,53 +656,16 @@ public class PopupControl extends PopupWindow implements Skinnable {
                 SKIN
             );
             STYLEABLES = Collections.unmodifiableList(styleables);
-
-            bitIndices = new int[StyleableProperty.getMaxIndex()];
-            java.util.Arrays.fill(bitIndices, -1);
-            for(int bitIndex=0; bitIndex<STYLEABLES.size(); bitIndex++) {
-                bitIndices[STYLEABLES.get(bitIndex).getIndex()] = bitIndex;
-            }
         }
     }
-
-    /**
-     * @treatasprivate implementation detail
-     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
-     */
-    @Deprecated
-    protected int[] impl_cssStyleablePropertyBitIndices() {
-        return PopupControl.StyleableProperties.bitIndices;
-    }
-
+    
     /**
      * @treatasprivate implementation detail
      * @deprecated This is an internal API that is not intended for use and will be removed in the next version
      */
     @Deprecated
     public static List<StyleableProperty> impl_CSS_STYLEABLES() {
-        return PopupControl.StyleableProperties.STYLEABLES;
-    }
-
-    /**
-     * @treatasprivate implementation detail
-     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
-     */
-    @Deprecated
-    protected boolean impl_cssSet(String property, Object value) {
-        if ("-fx-skin".equals(property)) {
-            loadSkinClass((String)value);
-        }
-
-        return true;
-    }
-
-    /**
-     * @treatasprivate implementation detail
-     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
-     */
-    @Deprecated
-    protected boolean impl_cssSettable(String property) {
-        return "-fx-skin".equals(property) && !skinProperty().isBound();
+        return StyleableProperties.STYLEABLES;
     }
 
     /**
@@ -812,33 +677,177 @@ public class PopupControl extends PopupWindow implements Skinnable {
         bridge.impl_pseudoClassStateChanged(s);
     }
 
-    /**
-     * @treatasprivate implementation detail
-     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
-     */
-    @Deprecated
-    protected void impl_cssPropertyInvalidated(StyleableProperty styleable) {
-        bridge.impl_cssPropertyInvalidated1(styleable);
-    }
 
-    private final class CSSBridge extends Group {
+    protected class CSSBridge extends Group {
+        
         @Override public void impl_pseudoClassStateChanged(String s) {
             super.impl_pseudoClassStateChanged(s);
         }
-        @Override protected int[] impl_cssStyleablePropertyBitIndices() {
-            return PopupControl.this.impl_cssStyleablePropertyBitIndices();
-        }
+        
         @Override public Class impl_getClassToStyle() {
             return PopupControl.this.getClass();
         }
-        @Override protected boolean impl_cssSet(String property, Object value) {
-            return PopupControl.this.impl_cssSet(property, value);
+
+        /**
+        * Skin is responsible for rendering this {@code PopupControl}. From the
+        * perspective of the {@code PopupControl}, the {@code Skin} is a black box.
+        * It listens and responds to changes in state in a {@code PopupControl}.
+        * <p>
+        * There is a one-to-one relationship between a {@code PopupControl} and its
+        * {@code Skin}. Every {@code Skin} maintains a back reference to the
+        * {@code PopupControl}.
+        * <p>
+        * A skin may be null.
+        */
+        private ObjectProperty<Skin<?>> skin = new ObjectPropertyBase<Skin<?>>() {
+            // We store a reference to the oldValue so that we can handle
+            // changes in the skin properly in the case of binding. This is
+            // only needed because invalidated() does not currently take
+            // a reference to the old value.
+            private Skin<?> oldValue;
+
+            @Override protected void invalidated() {
+                // Let CSS know that this property has been manually changed
+                // Dispose of the old skin
+                if (oldValue != null) oldValue.dispose();
+                // Get the new value, and save it off as the new oldValue
+                final Skin<?> skin = oldValue = getValue();
+                // Collect the name of the currently installed skin class. We do this
+                // so that subsequent updates from CSS to the same skin class will not
+                // result in reinstalling the skin
+                if (skin == null) {
+                    WritableValue writable = skinClassNameProperty();
+                    skinClassNameProperty().set(null);
+                } else {
+                    WritableValue writable = skinClassNameProperty();
+                    writable.setValue(skin.getClass().getName());
+                }
+                // Update the children list with the new skin node
+                updateChildren();
+                // DEBUG: Log that we've changed the skin
+                final PlatformLogger logger = Logging.getControlsLogger();
+                if (logger.isLoggable(PlatformLogger.FINEST)) {
+                    logger.finest("Stored skin[" + getValue() + "] on " + this);
+                }
+            }
+
+            @Override
+            public Object getBean() {
+                return PopupControl.CSSBridge.this;
+            }
+
+            @Override
+            public String getName() {
+                return "skin";
+            }
+        };
+        
+        /**
+        * Keeps a reference to the name of the class currently acting as the skin.
+        */
+        private StringProperty skinClassName;
+        private StringProperty skinClassNameProperty() {
+            if (skinClassName == null) {
+                skinClassName = new StyleableStringProperty() {
+
+                    @Override
+                    public void invalidated() {
+
+                        final Skin currentSkin = skinProperty().get();
+
+                        //
+                        // if the current skin is not null, then 
+                        // see if then check to see if the current skin's class name
+                        // is the same as skinClassName. If it is, then there is
+                        // no need to load the skin class. Note that the only time 
+                        // this would be the case is if someone called setSkin since
+                        // the skin would be set ahead of the skinClassName 
+                        // (skinClassName is set from the skinProperty's invalidated
+                        // method, so the skin would be set, then the skinClassName).
+                        // If the skinClassName is set first (via CSS), then this
+                        // invalidated method won't get called unless the value
+                        // has changed (thus, we won't reload the same skin).
+                        // 
+                        if ((currentSkin != null &&
+                            currentSkin.getClass().getName().equals(get()) ) ||
+                            (currentSkin == null && get() == null))
+                            return;
+
+                        loadSkinClass();
+                    }
+
+                    @Override
+                    public Object getBean() {
+                        return PopupControl.CSSBridge.this;
+                    }
+
+                    @Override
+                    public String getName() {
+                        return "currentSkinClass";
+                    }
+
+                    @Override
+                    public StyleableProperty getStyleableProperty() {
+                        return StyleableProperties.SKIN;
+                    }
+
+                };
+            }
+            return skinClassName;
+        }        
+
+        private void loadSkinClass() {
+
+
+            if (skinClassName == null
+                || skinClassName.get() == null 
+                || skinClassName.get().isEmpty()) {
+                Logging.getControlsLogger().severe("Empty -fx-skin property specified for popup control " + this);
+                return;
+            }
+
+            try {
+                Class<?> skinClass;
+                // RT-17525 : Use context class loader only if Class.forName fails.
+                try {
+                    skinClass = Class.forName(skinClassName.get());
+                } catch (ClassNotFoundException clne) {
+                    if (Thread.currentThread().getContextClassLoader() != null) {
+                            skinClass = Thread.currentThread().getContextClassLoader().loadClass(skinClassName.get());
+                    } else {
+                        throw clne;
+                    }
+                }
+                Constructor<?>[] constructors = skinClass.getConstructors();
+                Constructor<?> skinConstructor = null;
+                for (Constructor<?> c : constructors) {
+                    Class<?>[] parameterTypes = c.getParameterTypes();
+                    if (parameterTypes.length == 1 && PopupControl.class.isAssignableFrom(parameterTypes[0])) {
+                        skinConstructor = c;
+                        break;
+                    }
+                }
+
+                if (skinConstructor == null) {
+                    final NullPointerException npe = new NullPointerException();
+                    Logging.getControlsLogger().severe(
+                    "No valid constructor defined in '" + skinClassName + "' for popup control " + this +
+                            ".\r\nYou must provide a constructor that accepts a single "
+                            + "PopupControl parameter in " + skinClassName + ".", npe);
+                    throw npe;
+                }
+
+                Skin<?> skinInstance = (Skin<?>) skinConstructor.newInstance(PopupControl.this);
+                setSkin(skinInstance);
+            } catch (InvocationTargetException e) {
+                Logging.getControlsLogger().severe(
+                    "Failed to load skin '" + skinClassName + "' for popup control " + this,
+                    e.getCause());
+            } catch (Exception e) {
+                Logging.getControlsLogger().severe(
+                    "Failed to load skin '" + skinClassName + "' for popup control " + this, e);
+            }
         }
-        @Override public boolean impl_cssSettable(String styleable) {
-            return PopupControl.this.impl_cssSettable(styleable);
-        }
-        private void impl_cssPropertyInvalidated1(StyleableProperty styleable) {
-            super.impl_cssPropertyInvalidated(styleable);
-        }
+        
     }
 }

@@ -4,6 +4,7 @@
 
 package javafx.scene.control;
 
+import com.sun.javafx.css.StyleableProperty;
 import static javafx.scene.control.ControlTestUtils.*;
 import com.sun.javafx.pgstub.StubToolkit;
 import com.sun.javafx.scene.control.skin.ScrollBarSkin;
@@ -239,53 +240,62 @@ public class ScrollBarTest {
      * CSS related Tests                                                 *
      ********************************************************************/
     @Test public void whenOrientationIsBound_impl_cssSettable_ReturnsFalse() {
-        assertTrue(scrollBar.impl_cssSettable("-fx-orientation"));
+        StyleableProperty styleable = StyleableProperty.getStyleableProperty(scrollBar.orientationProperty());
+        assertTrue(styleable.isSettable(scrollBar));
         ObjectProperty<Orientation> other = new SimpleObjectProperty<Orientation>(Orientation.VERTICAL);
         scrollBar.orientationProperty().bind(other);
-        assertFalse(scrollBar.impl_cssSettable("-fx-orientation"));
+        assertFalse(styleable.isSettable(scrollBar));
     }
 
     @Test public void whenOrientationIsSpecifiedViaCSSAndIsNotBound_impl_cssSettable_ReturnsTrue() {
-        scrollBar.impl_cssSet("-fx-orientation", Orientation.VERTICAL);
-        assertTrue(scrollBar.impl_cssSettable("-fx-orientation"));
+        StyleableProperty styleable = StyleableProperty.getStyleableProperty(scrollBar.orientationProperty());
+        styleable.set(scrollBar, Orientation.VERTICAL);
+        assertTrue(styleable.isSettable(scrollBar));
     }
 
     @Test public void canSpecifyOrientationViaCSS() {
-        scrollBar.impl_cssSet("-fx-orientation", Orientation.VERTICAL);
-        assertSame(Orientation.VERTICAL, scrollBar.getOrientation());
+        StyleableProperty styleable = StyleableProperty.getStyleableProperty(scrollBar.orientationProperty());
+        styleable.set(scrollBar, Orientation.VERTICAL);
+        assertTrue(styleable.isSettable(scrollBar));
     }
 
     @Test public void whenUnitIncIsBound_impl_cssSettable_ReturnsFalse() {
-        assertTrue(scrollBar.impl_cssSettable("-fx-unit-increment"));
+        StyleableProperty styleable = StyleableProperty.getStyleableProperty(scrollBar.unitIncrementProperty());
+        assertTrue(styleable.isSettable(scrollBar));
         DoubleProperty other = new SimpleDoubleProperty(2.0);
         scrollBar.unitIncrementProperty().bind(other);
-        assertFalse(scrollBar.impl_cssSettable("-fx-unit-increment"));
+        assertFalse(styleable.isSettable(scrollBar));
     }
 
     @Test public void whenUnitIncIsSpecifiedViaCSSAndIsNotBound_impl_cssSettable_ReturnsTrue() {
-        scrollBar.impl_cssSet("-fx-unit-increment", 5.0);
-        assertTrue(scrollBar.impl_cssSettable("-fx-unit-increment"));
+        StyleableProperty styleable = StyleableProperty.getStyleableProperty(scrollBar.unitIncrementProperty());
+        styleable.set(scrollBar, 5.0);
+        assertTrue(styleable.isSettable(scrollBar));
     }
 
     @Test public void canSpecifyUnitIncViaCSS() {
-        scrollBar.impl_cssSet("-fx-unit-increment", 6.0);
+        StyleableProperty styleable = StyleableProperty.getStyleableProperty(scrollBar.unitIncrementProperty());
+        styleable.set(scrollBar, 6.0);
         assertEquals(6.0, scrollBar.getUnitIncrement(), 0.0);
     }
 
     @Test public void whenBlockIncIsBound_impl_cssSettable_ReturnsFalse() {
-        assertTrue(scrollBar.impl_cssSettable("-fx-block-increment"));
+        StyleableProperty styleable = StyleableProperty.getStyleableProperty(scrollBar.blockIncrementProperty());
+        assertTrue(styleable.isSettable(scrollBar));
         DoubleProperty other = new SimpleDoubleProperty(2.0);
         scrollBar.blockIncrementProperty().bind(other);
-        assertFalse(scrollBar.impl_cssSettable("-fx-block-increment"));
+        assertFalse(styleable.isSettable(scrollBar));
     }
 
     @Test public void whenBlockIncIsSpecifiedViaCSSAndIsNotBound_impl_cssSettable_ReturnsTrue() {
-        scrollBar.impl_cssSet("-fx-block-increment", 5.0);
-        assertTrue(scrollBar.impl_cssSettable("-fx-block-increment"));
+        StyleableProperty styleable = StyleableProperty.getStyleableProperty(scrollBar.blockIncrementProperty());
+        styleable.set(scrollBar, 5.0);
+        assertTrue(styleable.isSettable(scrollBar));
     }
 
     @Test public void canSpecifyBlockIncViaCSS() {
-        scrollBar.impl_cssSet("-fx-block-increment", 6.0);
+        StyleableProperty styleable = StyleableProperty.getStyleableProperty(scrollBar.blockIncrementProperty());
+        styleable.set(scrollBar, 6.0);
         assertEquals(6.0, scrollBar.getBlockIncrement(), 0.0);
     }
 

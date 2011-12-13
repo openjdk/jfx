@@ -32,9 +32,9 @@ import java.util.List;
 import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.ObjectPropertyBase;
 import javafx.beans.property.DoubleProperty;
-import javafx.beans.property.DoublePropertyBase;
 import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
+import javafx.beans.value.WritableValue;
 import javafx.collections.FXCollections;
 import javafx.collections.ListChangeListener;
 import javafx.collections.ObservableList;
@@ -60,8 +60,9 @@ import javafx.scene.layout.Pane;
 import javafx.scene.layout.StackPane;
 import javafx.scene.layout.VBox;
 
-import com.sun.javafx.css.Styleable;
+import com.sun.javafx.css.StyleableDoubleProperty;
 import com.sun.javafx.css.StyleableProperty;
+import com.sun.javafx.css.converters.SizeConverter;
 import com.sun.javafx.scene.control.behavior.ToolBarBehavior;
 import com.sun.javafx.scene.traversal.Direction;
 import com.sun.javafx.scene.traversal.TraversalEngine;
@@ -132,7 +133,6 @@ public class ToolBarSkin extends SkinBase<ToolBar, ToolBarBehavior> implements T
         });        
     }
 
-    @Styleable(property="-fx-spacing", initial="0.0")
     private DoubleProperty spacing;
     public final void setSpacing(double value) {
         spacingProperty().set(snapSpace(value));
@@ -144,7 +144,7 @@ public class ToolBarSkin extends SkinBase<ToolBar, ToolBarBehavior> implements T
 
     public final DoubleProperty spacingProperty() {
         if (spacing == null) {
-            spacing = new DoublePropertyBase() {
+            spacing = new StyleableDoubleProperty() {
 
                 @Override
                 protected void invalidated() {
@@ -164,6 +164,11 @@ public class ToolBarSkin extends SkinBase<ToolBar, ToolBarBehavior> implements T
                 @Override
                 public String getName() {
                     return "spacing";
+                }
+
+                @Override
+                public StyleableProperty getStyleableProperty() {
+                    return StyleableProperties.SPACING;
                 }
             };
         }
@@ -603,8 +608,20 @@ public class ToolBarSkin extends SkinBase<ToolBar, ToolBarBehavior> implements T
       * @treatasprivate implementation detail
       */
      private static class StyleableProperties {
-         private static final StyleableProperty SPACING =
-             new StyleableProperty(ToolBarSkin.class, "spacing");
+         private static final StyleableProperty<ToolBarSkin,Number> SPACING =
+             new StyleableProperty<ToolBarSkin,Number>("-fx-spacing",
+                 SizeConverter.getInstance(), 0.0) {
+
+            @Override
+            public boolean isSettable(ToolBarSkin n) {
+                return n.spacing == null || !n.spacing.isBound();
+            }
+
+            @Override
+            public WritableValue<Number> getWritableValue(ToolBarSkin n) {
+                return n.spacingProperty();
+            }
+        };
 
          private static final List<StyleableProperty> STYLEABLES;
          static {
@@ -628,32 +645,4 @@ public class ToolBarSkin extends SkinBase<ToolBar, ToolBarBehavior> implements T
         return StyleableProperties.STYLEABLES;
     };
 
-    /**
-     * @treatasprivate implementation detail
-     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
-     */
-    @Deprecated
-    @Override protected boolean impl_cssSet(String property, Object value) {
-        if ("-fx-spacing".equals(property)) {
-            double spc = (value != null) ?
-                ((Number)value).doubleValue() : 0;
-            setSpacing(spc);
-        } else if ("-fx-alignment".equals(property)) {
-            setBoxAlignment((Pos)value);
-        } else {
-            return super.impl_cssSet(property, value);
-        }
-        return true;
-    }
-
-    /**
-     * @treatasprivate implementation detail
-     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
-     */
-    @Deprecated
-    @Override protected boolean impl_cssSettable(String property) {
-        // always return true as spacing is a skin only property that
-        // can't be bound
-        return true;
-    }
 }

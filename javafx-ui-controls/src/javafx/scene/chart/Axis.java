@@ -24,6 +24,11 @@
  */
 package javafx.scene.chart;
 
+import com.sun.javafx.css.*;
+import com.sun.javafx.css.converters.BooleanConverter;
+import com.sun.javafx.css.converters.EnumConverter;
+import com.sun.javafx.css.converters.PaintConverter;
+import com.sun.javafx.css.converters.SizeConverter;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -32,17 +37,8 @@ import javafx.animation.FadeTransition;
 import javafx.beans.binding.DoubleExpression;
 import javafx.beans.binding.ObjectExpression;
 import javafx.beans.binding.StringExpression;
-import javafx.beans.property.BooleanProperty;
-import javafx.beans.property.BooleanPropertyBase;
-import javafx.beans.property.DoubleProperty;
-import javafx.beans.property.DoublePropertyBase;
-import javafx.beans.property.ObjectProperty;
-import javafx.beans.property.ObjectPropertyBase;
-import javafx.beans.property.SimpleBooleanProperty;
-import javafx.beans.property.SimpleDoubleProperty;
-import javafx.beans.property.SimpleObjectProperty;
-import javafx.beans.property.StringProperty;
-import javafx.beans.property.StringPropertyBase;
+import javafx.beans.property.*;
+import javafx.beans.value.WritableValue;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.event.ActionEvent;
@@ -64,9 +60,6 @@ import javafx.scene.transform.Rotate;
 import javafx.scene.transform.Translate;
 import javafx.util.Duration;
 
-import com.sun.javafx.css.Styleable;
-import com.sun.javafx.css.StyleableProperty;
-import com.sun.javafx.css.StyleManager;
 
 /**
  * Base class for all axes in JavaFX that represents an axis drawn on a chart area.
@@ -102,16 +95,19 @@ public abstract class Axis<T> extends Region {
     public ObservableList<TickMark<T>> getTickMarks() { return unmodifiableTickMarks; }
 
     /** The side of the plot which this axis is being drawn on */
-    @Styleable(property="-fx-side")
-    private ObjectProperty<Side> side = new ObjectPropertyBase<Side>(){
+    private ObjectProperty<Side> side = new StyleableObjectProperty<Side>(){
         @Override protected void invalidated() {
-            impl_cssPropertyInvalidated(StyleableProperties.SIDE);
             // cause refreshTickMarks
             impl_pseudoClassStateChanged(PSEUDO_CLASS_TOP);
             impl_pseudoClassStateChanged(PSEUDO_CLASS_RIGHT);
             impl_pseudoClassStateChanged(PSEUDO_CLASS_BOTTOM);
             impl_pseudoClassStateChanged(PSEUDO_CLASS_LEFT);
             requestAxisLayout();
+        }
+        
+        @Override
+        public StyleableProperty getStyleableProperty() {
+            return StyleableProperties.SIDE;
         }
 
         @Override
@@ -150,13 +146,16 @@ public abstract class Axis<T> extends Region {
     public final ObjectProperty<String> labelProperty() { return label; }
 
     /** true if tick marks should be displayed */
-    @Styleable(property="-fx-tick-mark-visible", initial="true")
-    private BooleanProperty tickMarkVisible = new BooleanPropertyBase(true) {
+    private BooleanProperty tickMarkVisible = new StyleableBooleanProperty(true) {
         @Override protected void invalidated() {
             tickMarkPath.setVisible(get());
             requestAxisLayout();
         }
 
+        @Override
+        public StyleableProperty getStyleableProperty() {
+            return StyleableProperties.TICK_MARK_VISIBLE;
+        }
         @Override
         public Object getBean() {
             return Axis.this;
@@ -172,14 +171,18 @@ public abstract class Axis<T> extends Region {
     public final BooleanProperty tickMarkVisibleProperty() { return tickMarkVisible; }
 
     /** true if tick mark labels should be displayed */
-    @Styleable(property="-fx-tick-labels-visible", initial="true")
-    private BooleanProperty tickLabelsVisible = new BooleanPropertyBase(true) {
+    private BooleanProperty tickLabelsVisible = new StyleableBooleanProperty(true) {
         @Override protected void invalidated() {
             // update textNode visibility for each tick
             for (TickMark<T> tick : tickMarks) {
                 tick.setTextVisible(get());
             }
             requestAxisLayout();
+        }
+        
+        @Override
+        public StyleableProperty getStyleableProperty() {
+            return StyleableProperties.TICK_LABELS_VISIBLE;
         }
 
         @Override
@@ -198,14 +201,16 @@ public abstract class Axis<T> extends Region {
     public final BooleanProperty tickLabelsVisibleProperty() { return tickLabelsVisible; }
 
     /** The length of tick mark lines */
-    @Styleable(property="-fx-tick-length", initial="8")
-    private DoubleProperty tickLength = new DoublePropertyBase(8) {
+    private DoubleProperty tickLength = new StyleableDoubleProperty(8) {
         @Override protected void invalidated() {
-            impl_cssPropertyInvalidated(StyleableProperties.TICK_MARK_LENGTH);
             // this effects preferred size so request layout
             requestAxisLayout();
         }
 
+        @Override
+        public StyleableProperty getStyleableProperty() {
+            return StyleableProperties.TICK_LENGTH;
+        }        
         @Override
         public Object getBean() {
             return Axis.this;
@@ -245,16 +250,19 @@ public abstract class Axis<T> extends Region {
     public final BooleanProperty autoRangingProperty() { return autoRanging; }
 
     /** The font for all tick labels */
-    @Styleable(property="-fx-tick-label-font", initial="8 System", inherits=true)
-    private ObjectProperty<Font> tickLabelFont = new ObjectPropertyBase<Font>(Font.font("System",8)) {
+    private ObjectProperty<Font> tickLabelFont = new StyleableObjectProperty<Font>(Font.font("System",8)) {
         @Override protected void invalidated() {
-            impl_cssPropertyInvalidated(StyleableProperties.TICK_LABEL_FONT);
             Font f = get();
             measure.setFont(f);
             for(TickMark<T> tick: tickMarks) tick.textNode.setFont(f);
             requestAxisLayout();
         }
 
+        @Override 
+        public StyleableProperty getStyleableProperty() {
+            return StyleableProperties.TICK_LABEL_FONT;
+        }
+        
         @Override
         public Object getBean() {
             return Axis.this;
@@ -270,14 +278,17 @@ public abstract class Axis<T> extends Region {
     public final ObjectProperty<Font> tickLabelFontProperty() { return tickLabelFont; }
 
     /** The fill for all tick labels */
-    @Styleable(property="-fx-tick-label-fill", initial="black")
-    private ObjectProperty<Paint> tickLabelFill = new ObjectPropertyBase<Paint>(Color.BLACK) {
+    private ObjectProperty<Paint> tickLabelFill = new StyleableObjectProperty<Paint>(Color.BLACK) {
         @Override protected void invalidated() {
-            impl_cssPropertyInvalidated(StyleableProperties.TICK_LABEL_FILL);
             Paint fill = get();
             for(TickMark<T> tick: tickMarks) tick.textNode.setFill(fill);
         }
 
+        @Override
+        public StyleableProperty getStyleableProperty() {
+            return StyleableProperties.TICK_LABEL_FILL;
+        }
+        
         @Override
         public Object getBean() {
             return Axis.this;
@@ -293,13 +304,16 @@ public abstract class Axis<T> extends Region {
     public final ObjectProperty<Paint> tickLabelFillProperty() { return tickLabelFill; }
 
     /** The gap between tick labels and the tick mark lines */
-    @Styleable(property="-fx-tick-label-gap", initial="5")
-    private DoubleProperty tickLabelGap = new DoublePropertyBase(3) {
+    private DoubleProperty tickLabelGap = new StyleableDoubleProperty(3) {
         @Override protected void invalidated() {
-           impl_cssPropertyInvalidated(StyleableProperties.TICK_LABEL_TICK_GAP);
            requestAxisLayout();
         }
 
+        @Override
+        public StyleableProperty getStyleableProperty() {
+            return StyleableProperties.TICK_LABEL_TICK_GAP;
+        }
+        
         @Override
         public Object getBean() {
             return Axis.this;
@@ -1016,29 +1030,118 @@ public abstract class Axis<T> extends Region {
 
     /** @treatasprivate implementation detail */
     private static class StyleableProperties {
-        private static final StyleableProperty SIDE =
-            new StyleableProperty(Axis.class, "side");
-        private static final StyleableProperty TICK_MARK_LENGTH =
-            new StyleableProperty(Axis.class, "tickLength");
-        private static final StyleableProperty TICK_LABEL_FONT =
-            new StyleableProperty(Axis.class, "tickLabelFont", StyleableProperty.createFontSubProperties("-fx-tick-label-font"));
-        private static final StyleableProperty TICK_LABEL_FILL =
-            new StyleableProperty(Axis.class, "tickLabelFill");
-        private static final StyleableProperty TICK_LABEL_TICK_GAP =
-            new StyleableProperty(Axis.class, "tickLabelGap");
-        private static final StyleableProperty TICK_MARK_VISIBLE =
-            new StyleableProperty(Axis.class, "tickMarkVisible");
-        private static final StyleableProperty TICK_LABELS_VISIBLE =
-            new StyleableProperty(Axis.class, "tickLabelsVisible");
+        private static final StyleableProperty<Axis,Side> SIDE =
+            new StyleableProperty<Axis,Side>("-fx-side",
+                new EnumConverter<Side>(Side.class)) {
+
+            @Override
+            public boolean isSettable(Axis n) {
+                return n.side == null || !n.side.isBound();
+            }
+
+            @Override
+            public WritableValue<Side> getWritableValue(Axis n) {
+                return n.sideProperty();
+            }
+        };
+        
+        private static final StyleableProperty<Axis,Number> TICK_LENGTH =
+            new StyleableProperty<Axis,Number>("-fx-tick-length",
+                SizeConverter.getInstance(), 8.0) {
+
+            @Override
+            public boolean isSettable(Axis n) {
+                return n.tickLength == null || !n.tickLength.isBound();
+            }
+
+            @Override
+            public WritableValue<Number> getWritableValue(Axis n) {
+                return n.tickLengthProperty();
+            }
+        };
+        
+        private static final StyleableProperty<Axis,Font> TICK_LABEL_FONT =
+            new StyleableProperty.FONT<Axis>("-fx-tick-label-font",
+                Font.font("system", 8.0)) {
+
+            @Override
+            public boolean isSettable(Axis n) {
+                return n.tickLabelFont == null || !n.tickLabelFont.isBound();
+            }
+
+            @Override
+            public WritableValue<Font> getWritableValue(Axis n) {
+                return n.tickLabelFontProperty();
+            }
+        };
+
+        private static final StyleableProperty<Axis,Paint> TICK_LABEL_FILL =
+            new StyleableProperty<Axis,Paint>("-fx-tick-label-fill",
+                PaintConverter.getInstance(), Color.BLACK) {
+
+            @Override
+            public boolean isSettable(Axis n) {
+                return n.tickLabelFill == null | !n.tickLabelFill.isBound();
+            }
+
+            @Override
+            public WritableValue<Paint> getWritableValue(Axis n) {
+                return n.tickLabelFillProperty();
+            }
+        };
+        
+        private static final StyleableProperty<Axis,Number> TICK_LABEL_TICK_GAP =
+            new StyleableProperty<Axis,Number>("-fx-tick-label-gap",
+                SizeConverter.getInstance(), 5.0) {
+
+            @Override
+            public boolean isSettable(Axis n) {
+                return n.tickLabelGap == null || !n.tickLabelGap.isBound();
+            }
+
+            @Override
+            public WritableValue<Number> getWritableValue(Axis n) {
+                return n.tickLabelGapProperty();
+            }
+        };
+        
+        private static final StyleableProperty<Axis,Boolean> TICK_MARK_VISIBLE =
+            new StyleableProperty<Axis,Boolean>("-fx-tick-mark-visible",
+                BooleanConverter.getInstance(), Boolean.TRUE) {
+
+            @Override
+            public boolean isSettable(Axis n) {
+                return n.tickMarkVisible == null || !n.tickMarkVisible.isBound();
+            }
+
+            @Override
+            public WritableValue<Boolean> getWritableValue(Axis n) {
+                return n.tickMarkVisibleProperty();
+            }
+        };
+        
+        private static final StyleableProperty<Axis,Boolean> TICK_LABELS_VISIBLE =
+            new StyleableProperty<Axis,Boolean>("-fx-tick-labels-visible",
+                BooleanConverter.getInstance(), Boolean.TRUE) {
+
+            @Override
+            public boolean isSettable(Axis n) {
+                return n.tickLabelsVisible == null || !n.tickLabelsVisible.isBound();
+            }
+
+            @Override
+            public WritableValue<Boolean> getWritableValue(Axis n) {
+                return n.tickLabelsVisibleProperty();
+            }
+        };
 
         private static final List<StyleableProperty> STYLEABLES;
-        private static final int[] bitIndices;
         static {
         final List<StyleableProperty> styleables =
             new ArrayList<StyleableProperty>(Region.impl_CSS_STYLEABLES());
             Collections.addAll(styleables,
                 SIDE,
-                TICK_MARK_LENGTH,
+                TICK_LENGTH,
                 TICK_LABEL_FONT,
                 TICK_LABEL_FILL,
                 TICK_LABEL_TICK_GAP,
@@ -1046,12 +1149,6 @@ public abstract class Axis<T> extends Region {
                 TICK_LABELS_VISIBLE
             );
             STYLEABLES = Collections.unmodifiableList(styleables);
-
-            bitIndices = new int[StyleableProperty.getMaxIndex()];
-            java.util.Arrays.fill(bitIndices, -1);
-            for(int bitIndex=0; bitIndex<STYLEABLES.size(); bitIndex++) {
-                bitIndices[STYLEABLES.get(bitIndex).getIndex()] = bitIndex;
-            }
         }
     }
                                 
@@ -1060,69 +1157,8 @@ public abstract class Axis<T> extends Region {
      * @deprecated This is an internal API that is not intended for use and will be removed in the next version
      */
     @Deprecated
-    @Override protected int[] impl_cssStyleablePropertyBitIndices() {
-        return Axis.StyleableProperties.bitIndices;
-    }
-
-
-    /**
-     * @treatasprivate implementation detail
-     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
-     */
-    @Deprecated
     public static List<StyleableProperty> impl_CSS_STYLEABLES() {
         return Axis.StyleableProperties.STYLEABLES;
-    }
-
-    /**
-     * @treatasprivate implementation detail
-     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
-     */
-    @Deprecated
-    @Override protected boolean impl_cssSet(String property, Object value) {
-        if ("-fx-side".equals(property)) {
-            setSide((Side) value);
-        } else if ("-fx-tick-length".equals(property)) {
-            setTickLength((Double) value);
-        } else if ("-fx-tick-label-font".equals(property)) {
-            setTickLabelFont((Font) value);
-        } else if ("-fx-tick-label-fill".equals(property)) {
-            setTickLabelFill((Paint) value);
-        } else if ("-fx-tick-label-gap".equals(property)) {
-            setTickLabelGap((Double) value);
-        } else if ("-fx-tick-mark-visible".equals(property)) {
-            setTickMarkVisible((Boolean) value);
-        } else if ("-fx-tick-labels-visible".equals(property)) {
-            setTickLabelsVisible((Boolean) value);
-        } else {
-            return super.impl_cssSet(property, value);
-        }
-        return true;
-    }
-
-    /**
-     * @treatasprivate implementation detail
-     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
-     */
-    @Deprecated
-    @Override protected boolean impl_cssSettable(String property) {
-         if ("-fx-side".equals(property)) {
-            return side == null || !side.isBound();
-        } else if ("-fx-tick-length".equals(property)) {
-            return tickLength == null || !tickLength.isBound();
-        } else if ("-fx-tick-label-font".equals(property)) {
-            return tickLabelFont == null || !tickLabelFont.isBound();
-        } else if ("-fx-tick-label-fill".equals(property)) {
-            return tickLabelFill == null || !tickLabelFill.isBound();
-        } else if ("-fx-tick-label-gap".equals(property)) {
-            return tickLabelGap == null || !tickLabelGap.isBound();
-        } else if ("-fx-tick-mark-visible".equals(property)) {
-            return tickMarkVisible == null || !tickMarkVisible.isBound();
-        } else if ("-fx-tick-labels-visible".equals(property)) {
-            return tickLabelsVisible == null || !tickLabelsVisible.isBound();
-        } else {
-            return super.impl_cssSettable(property);
-        }
     }
 
     private static final long TOP_PSEUDOCLASS_STATE =
