@@ -505,6 +505,15 @@ public class TableViewBehavior<T> extends BehaviorBase<TableView<T>> {
                 int newFocusOwner = focusedCell.getRow() - 1;
                 sm.clearSelection(newFocusOwner, focusedCell.getTableColumn());
                 fm.focus(newFocusOwner, focusedCell.getTableColumn());
+            } else if (isShiftDown && getAnchor() != null) {
+                int newRow = fm.getFocusedIndex() - 1;
+                
+                int start = Math.min(getAnchor().getRow(), newRow);
+                int end = Math.max(getAnchor().getRow(), newRow);
+                for (int _row = start; _row <= end; _row++) {
+                    sm.select(_row, focusedCell.getTableColumn());
+                }
+                fm.focus(newRow, focusedCell.getTableColumn());
             } else {
                 if (! sm.isSelected(focusIndex, focusedCell.getTableColumn())) {
                     sm.select(focusIndex, focusedCell.getTableColumn());
@@ -543,6 +552,15 @@ public class TableViewBehavior<T> extends BehaviorBase<TableView<T>> {
                 int newFocusOwner = focusedCell.getRow() + 1;
                 sm.clearSelection(newFocusOwner, focusedCell.getTableColumn());
                 fm.focus(newFocusOwner, focusedCell.getTableColumn());
+            } else if (isShiftDown && getAnchor() != null) {
+                int newRow = fm.getFocusedIndex() + 1;
+                
+                int start = Math.min(getAnchor().getRow(), newRow);
+                int end = Math.max(getAnchor().getRow(), newRow);
+                for (int _row = start; _row <= end; _row++) {
+                    sm.select(_row, focusedCell.getTableColumn());
+                }
+                fm.focus(newRow, focusedCell.getTableColumn());
             } else {
                 sm.selectBelowCell();
             }
