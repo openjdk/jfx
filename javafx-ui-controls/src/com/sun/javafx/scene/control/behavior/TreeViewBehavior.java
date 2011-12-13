@@ -503,8 +503,10 @@ public class TreeViewBehavior<T> extends BehaviorBase<TreeView<T>> {
         MultipleSelectionModel sm = getControl().getSelectionModel();
         if (sm == null) return;
         
+        selectionChanging = true;
         sm.clearSelection();
         sm.selectRange(leadSelectedIndex, leadIndex + 1);
+        selectionChanging = false;
     }
     
     private void selectAllPageDown() {
@@ -522,8 +524,10 @@ public class TreeViewBehavior<T> extends BehaviorBase<TreeView<T>> {
         MultipleSelectionModel sm = getControl().getSelectionModel();
         if (sm == null) return;
         
+        selectionChanging = true;
         sm.clearSelection();
         sm.selectRange(leadIndex, leadSelectedIndex + 1);
+        selectionChanging = false;
     }
     
     private void selectAllToFocus() {

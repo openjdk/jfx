@@ -1180,9 +1180,11 @@ public class TableView<S> extends Control {
 
     /**
      * Causes the cell at the given row/column view indexes to switch into
-     * its editing state, if it is not already in it.
+     * its editing state, if it is not already in it, and assuming that the 
+     * TableView and column are also editable.
      */
     public void edit(int row, TableColumn<S,?> column) {
+        if (!isEditable() || (column != null && ! column.isEditable())) return;
         setEditingCell(new TablePosition(this, row, column));
     }
     
@@ -1843,12 +1845,11 @@ public class TableView<S> extends Control {
                     if (position < 0) return;
                     
                     List<TablePosition> newIndices = new ArrayList<TablePosition>(selectedCells.size());
-                    int m = Math.min(position, selectedCells.size());
-                    newIndices.addAll(selectedCells.subList(0, m));
         
                     for (int i = 0; i < selectedCells.size(); i++) {
                         TablePosition old = selectedCells.get(i);
-                        newIndices.add(new TablePosition(getTableView(), old.getRow() + shift, old.getTableColumn()));
+                        int newRow = old.getRow() < position ? old.getRow() : old.getRow() + shift;
+                        newIndices.add(new TablePosition(getTableView(), newRow, old.getTableColumn()));
                     }
                     
                     quietClearSelection();
@@ -1935,6 +1936,7 @@ public class TableView<S> extends Control {
 //            if (! isCellSelectionEnabled() && column != null) return;
 
             TablePosition pos = new TablePosition(getTableView(), row, column);
+            
             if (getSelectionMode() == SelectionMode.SINGLE) {
                 quietClearSelection();
             }
@@ -2012,7 +2014,7 @@ public class TableView<S> extends Control {
                 int lastIndex = -1;
                 List<TablePosition> positions = new ArrayList<TablePosition>();
 
-                if (row > 0 && row < rowCount) {
+                if (row >= 0 && row < rowCount) {
                     positions.add(new TablePosition(getTableView(), row, null));
                     lastIndex = row;
                 }

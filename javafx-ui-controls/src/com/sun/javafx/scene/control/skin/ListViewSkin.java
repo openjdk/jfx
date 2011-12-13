@@ -37,7 +37,6 @@ import javafx.scene.control.ListView;
 import javafx.scene.control.SelectionModel;
 import javafx.scene.input.MouseEvent;
 
-import com.sun.javafx.runnable.Runnable0;
 import com.sun.javafx.scene.control.WeakListChangeListener;
 import com.sun.javafx.scene.control.behavior.ListViewBehavior;
 import javafx.util.Callback;
@@ -59,8 +58,8 @@ public class ListViewSkin<T> extends VirtualContainerBase<ListView<T>, ListViewB
         flow.setPannable(false);
         flow.setVertical(getSkinnable().getOrientation() == Orientation.VERTICAL);
         flow.setFocusTraversable(getSkinnable().isFocusTraversable());
-        flow.setCreateCell(new Runnable0<ListCell>() {
-            @Override public ListCell run() {
+        flow.setCreateCell(new Callback<VirtualFlow, ListCell>() {
+            @Override public ListCell call(VirtualFlow flow) {
                 return ListViewSkin.this.createCell();
             }
         });

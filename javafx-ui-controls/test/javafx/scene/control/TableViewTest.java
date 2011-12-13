@@ -360,4 +360,56 @@ public class TableViewTest {
         assertTrue(fm.isFocused(0));
         assertEquals("row1", fm.getFocusedItem());
     }
+    
+    @Test public void test_rt18385() {
+        table.getItems().addAll("row1", "row2", "row3");
+        table.getSelectionModel().select(1);
+        table.getItems().add("Another Row");
+        assertEquals(1, table.getSelectionModel().getSelectedIndices().size());
+        assertEquals(1, table.getSelectionModel().getSelectedItems().size());
+        assertEquals(1, table.getSelectionModel().getSelectedCells().size());
+    }
+    
+    @Test public void test_rt18339_onlyEditWhenTableViewIsEditable_tableEditableIsFalse_columnEditableIsFalse() {
+        TableColumn<String,String> first = new TableColumn<String,String>("first");
+        first.setEditable(false);
+        table.getColumns().add(first);
+        table.setEditable(false);
+        table.edit(1, first);
+        assertEquals(null, table.getEditingCell());
+    }
+    
+    @Test public void test_rt18339_onlyEditWhenTableViewIsEditable_tableEditableIsFalse_columnEditableIsTrue() {
+        TableColumn<String,String> first = new TableColumn<String,String>("first");
+        first.setEditable(true);
+        table.getColumns().add(first);
+        table.setEditable(false);
+        table.edit(1, first);
+        assertEquals(null, table.getEditingCell());
+    }
+    
+    @Test public void test_rt18339_onlyEditWhenTableViewIsEditable_tableEditableIsTrue_columnEditableIsFalse() {
+        TableColumn<String,String> first = new TableColumn<String,String>("first");
+        first.setEditable(false);
+        table.getColumns().add(first);
+        table.setEditable(true);
+        table.edit(1, first);
+        assertEquals(null, table.getEditingCell());
+    }
+    
+    @Test public void test_rt18339_onlyEditWhenTableViewIsEditable_tableEditableIsTrue_columnEditableIsTrue() {
+        TableColumn<String,String> first = new TableColumn<String,String>("first");
+        first.setEditable(true);
+        table.getColumns().add(first);
+        table.setEditable(true);
+        table.edit(1, first);
+        assertEquals(new TablePosition(table, 1, first), table.getEditingCell());
+    }
+    
+    @Test public void test_rt14451() {
+        table.getItems().addAll("Apple", "Orange", "Banana");
+        table.getSelectionModel().setSelectionMode(SelectionMode.MULTIPLE);
+        table.getSelectionModel().selectRange(0, 2); // select from 0 (inclusive) to 2 (exclusive)
+        assertEquals(2, table.getSelectionModel().getSelectedIndices().size());
+    }
 }

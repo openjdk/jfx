@@ -298,4 +298,31 @@ public class ListViewTest {
         assertTrue(fm.isFocused(0));
         assertEquals("row1", fm.getFocusedItem());
     }
+    
+    @Test public void test_rt18385() {
+        listView.getItems().addAll("row1", "row2", "row3");
+        listView.getSelectionModel().select(1);
+        listView.getItems().add("Another Row");
+        assertEquals(1, listView.getSelectionModel().getSelectedIndices().size());
+        assertEquals(1, listView.getSelectionModel().getSelectedItems().size());
+    }
+    
+    @Test public void test_rt18339_onlyEditWhenListViewIsEditable_editableIsFalse() {
+        listView.setEditable(false);
+        listView.edit(1);
+        assertEquals(-1, listView.getEditingIndex());
+    }
+    
+    @Test public void test_rt18339_onlyEditWhenListViewIsEditable_editableIsTrue() {
+        listView.setEditable(true);
+        listView.edit(1);
+        assertEquals(1, listView.getEditingIndex());
+    }
+    
+    @Test public void test_rt14451() {
+        listView.getItems().addAll("Apple", "Orange", "Banana");
+        listView.getSelectionModel().setSelectionMode(SelectionMode.MULTIPLE);
+        listView.getSelectionModel().selectRange(0, 2); // select from 0 (inclusive) to 2 (exclusive)
+        assertEquals(2, listView.getSelectionModel().getSelectedIndices().size());
+    }
 }

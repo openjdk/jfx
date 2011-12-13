@@ -115,7 +115,7 @@ public class TextArea extends TextInputControl {
 
         @Override
         @SuppressWarnings("unchecked")
-        public void insert(int index, String text) {
+        public void insert(int index, String text, boolean notifyListeners) {
             if (index < 0
                 || index > contentLength) {
                 throw new IndexOutOfBoundsException();
@@ -188,11 +188,13 @@ public class TextArea extends TextInputControl {
 
                 // Update content length
                 contentLength += length;
-                ExpressionHelper.fireValueChangedEvent(helper);
+                if (notifyListeners) {
+                    ExpressionHelper.fireValueChangedEvent(helper);
+                }
             }
         }
 
-        @Override public void delete(int start, int end) {
+        @Override public void delete(int start, int end, boolean notifyListeners) {
             if (start > end) {
                 throw new IllegalArgumentException();
             }
@@ -270,7 +272,9 @@ public class TextArea extends TextInputControl {
 
                 // Update content length
                 contentLength -= length;
-                ExpressionHelper.fireValueChangedEvent(helper);
+                if (notifyListeners) {
+                    ExpressionHelper.fireValueChangedEvent(helper);
+                }
             }
         }
 

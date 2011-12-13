@@ -51,7 +51,6 @@ public class TextInputControlBindings {
         BINDINGS.add(new KeyBinding(ENTER, KEY_PRESSED,       "Fire"));
         // deletion
         BINDINGS.add(new KeyBinding(BACK_SPACE, KEY_PRESSED,  "DeletePreviousChar"));
-        BINDINGS.add(new KeyBinding(BACK_SPACE, KEY_PRESSED,  "DeletePreviousChar").shift());
         BINDINGS.add(new KeyBinding(DELETE, KEY_PRESSED,      "DeleteNextChar"));
         // cut/copy/paste
         BINDINGS.add(new KeyBinding(CUT, KEY_PRESSED,         "Cut"));
@@ -66,13 +65,17 @@ public class TextInputControlBindings {
         BINDINGS.add(new KeyBinding(KP_LEFT, KEY_PRESSED,     "SelectBackward").shift());
         BINDINGS.add(new KeyBinding(UP, KEY_PRESSED,          "SelectHome").shift());
         BINDINGS.add(new KeyBinding(KP_UP, KEY_PRESSED,       "SelectHome").shift());
-        BINDINGS.add(new KeyBinding(HOME, KEY_PRESSED,        "SelectHome").shift());
         BINDINGS.add(new KeyBinding(DOWN, KEY_PRESSED,        "SelectEnd").shift());
         BINDINGS.add(new KeyBinding(KP_DOWN, KEY_PRESSED,     "SelectEnd").shift());
-        BINDINGS.add(new KeyBinding(END, KEY_PRESSED,         "SelectEnd").shift());
+
+        BINDINGS.add(new KeyBinding(BACK_SPACE, KEY_PRESSED,  "DeletePreviousChar").shift());
+        BINDINGS.add(new KeyBinding(DELETE, KEY_PRESSED,      "DeleteNextChar").shift());
 
         // platform specific settings
         if (PlatformUtil.isMac()) {
+            BINDINGS.add(new KeyBinding(HOME, KEY_PRESSED,       "SelectHomeExtend").shift());
+            BINDINGS.add(new KeyBinding(END, KEY_PRESSED,        "SelectEndExtend").shift());
+
             BINDINGS.add(new KeyBinding(HOME, KEY_PRESSED,       "Home").meta());
             BINDINGS.add(new KeyBinding(END, KEY_PRESSED,        "End").meta());
             BINDINGS.add(new KeyBinding(LEFT, KEY_PRESSED,       "Home").meta());
@@ -89,17 +92,19 @@ public class TextInputControlBindings {
             BINDINGS.add(new KeyBinding(V, KEY_PRESSED,          "Paste").meta());
             BINDINGS.add(new KeyBinding(HOME, KEY_PRESSED,       "SelectHome").shift().meta());
             BINDINGS.add(new KeyBinding(END, KEY_PRESSED,        "SelectEnd").shift().meta());
-            BINDINGS.add(new KeyBinding(LEFT, KEY_PRESSED,       "SelectHome").shift().meta());
-            BINDINGS.add(new KeyBinding(KP_LEFT, KEY_PRESSED,    "SelectHome").shift().meta());
-            BINDINGS.add(new KeyBinding(RIGHT, KEY_PRESSED,      "SelectEnd").shift().meta());
-            BINDINGS.add(new KeyBinding(KP_RIGHT, KEY_PRESSED,   "SelectEnd").shift().meta());
+            BINDINGS.add(new KeyBinding(LEFT, KEY_PRESSED,       "SelectHomeExtend").shift().meta());
+            BINDINGS.add(new KeyBinding(KP_LEFT, KEY_PRESSED,    "SelectHomeExtend").shift().meta());
+            BINDINGS.add(new KeyBinding(RIGHT, KEY_PRESSED,      "SelectEndExtend").shift().meta());
+            BINDINGS.add(new KeyBinding(KP_RIGHT, KEY_PRESSED,   "SelectEndExtend").shift().meta());
             BINDINGS.add(new KeyBinding(A, KEY_PRESSED,          "SelectAll").meta());
-            BINDINGS.add(new KeyBinding(BACK_SLASH, KEY_PRESSED, "UnSelect").meta());
             BINDINGS.add(new KeyBinding(LEFT, KEY_PRESSED,       "SelectPreviousWord").shift().alt());
             BINDINGS.add(new KeyBinding(KP_LEFT, KEY_PRESSED,    "SelectPreviousWord").shift().alt());
             BINDINGS.add(new KeyBinding(RIGHT, KEY_PRESSED,      "SelectNextWord").shift().alt());
             BINDINGS.add(new KeyBinding(KP_RIGHT, KEY_PRESSED,   "SelectNextWord").shift().alt());
         } else {
+            BINDINGS.add(new KeyBinding(HOME, KEY_PRESSED,       "SelectHome").shift());
+            BINDINGS.add(new KeyBinding(END, KEY_PRESSED,        "SelectEnd").shift());
+
             BINDINGS.add(new KeyBinding(HOME, KEY_PRESSED,       "Home").ctrl());
             BINDINGS.add(new KeyBinding(END, KEY_PRESSED,        "End").ctrl());
             BINDINGS.add(new KeyBinding(LEFT, KEY_PRESSED,       "PreviousWord").ctrl());

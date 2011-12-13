@@ -339,14 +339,15 @@ public class TreeItem<T> implements EventTarget {
         setValue(value);
         setGraphic(graphic);
         
-        addEventHandler(TreeItem.<T>treeItemCountChangeEvent(), 
-            new EventHandler<TreeModificationEvent<T>>() {
-                @Override public void handle(TreeModificationEvent<T> event) {
-                    updateExpandedDescendentCount();
-                }
-        });
+        addEventHandler(TreeItem.<Object>treeItemCountChangeEvent(), itemListener);
     }
-
+    
+    private final EventHandler<TreeModificationEvent<Object>> itemListener = 
+        new EventHandler<TreeModificationEvent<Object>>() {
+            @Override public void handle(TreeModificationEvent event) {
+                updateExpandedDescendentCount();
+            }
+    };
 
 
     /***************************************************************************
@@ -361,8 +362,10 @@ public class TreeItem<T> implements EventTarget {
     // a very expensive call.
     private ObservableList<TreeItem<T>> children;
 
-    private final EventHandlerManager eventHandlerManager =
-            new EventHandlerManager(this);
+    // Made static based on findings of RT-18344 - EventHandlerManager is an
+    // expensive class and should be reused amongst classes if at all possible.
+    private static final EventHandlerManager eventHandlerManager =
+            new EventHandlerManager(TreeItem.class);
 
     
     // Rather than have the TreeView need to (pretty well) constantly determine
@@ -386,8 +389,7 @@ public class TreeItem<T> implements EventTarget {
 
     // called whenever the contents of the children sequence changes
     private ListChangeListener<TreeItem<T>> childrenListener = new ListChangeListener<TreeItem<T>>() {
-        @Override
-        public void onChanged(Change<? extends TreeItem<T>> c) {
+        @Override public void onChanged(Change<? extends TreeItem<T>> c) {
             while (c.next()) {
                 updateChildren(c.getAddedSubList(), c.getRemoved());
             }
@@ -427,13 +429,11 @@ public class TreeItem<T> implements EventTarget {
                     fireEvent(new TreeModificationEvent<T>(VALUE_CHANGED_EVENT, TreeItem.this, get()));
                 }
 
-                @Override
-                public Object getBean() {
+                @Override public Object getBean() {
                     return TreeItem.this;
                 }
 
-                @Override
-                public String getName() {
+                @Override public String getName() {
                     return "value";
                 }
             };
@@ -496,12 +496,15 @@ public class TreeItem<T> implements EventTarget {
      * toggling this property is that visually the children will either become 
      * visible or hidden, based on whether expanded is set to true or false.
      * 
-     * @param expanded If this TreeItem has children, calling setExpanded with
+     * @param value If this TreeItem has children, calling setExpanded with
      *      <code>true</code> will result in the children becoming visible.
      *      Calling setExpanded with <code>false</code> will hide any children
      *      belonging to the TreeItem.
      */
-    public final void setExpanded(boolean expanded) { expandedProperty().setValue(expanded); }
+    public final void setExpanded(boolean value) { 
+        if (! value && expanded == null) return;
+        expandedProperty().setValue(value); 
+    }
     
     /**
      * Returns the expanded state of this TreeItem. 
@@ -539,8 +542,15 @@ public class TreeItem<T> implements EventTarget {
 
 
     // --- Leaf
-    private ReadOnlyBooleanWrapper leaf = new ReadOnlyBooleanWrapper(this, "leaf", true);
-    private void setLeaf(boolean value) { leaf.setValue(value); }
+    private ReadOnlyBooleanWrapper leaf;
+    private void setLeaf(boolean value) { 
+        if (value && leaf == null) {
+            return;
+        } else if (leaf == null) {
+            leaf = new ReadOnlyBooleanWrapper(this, "leaf", true);
+        }
+        leaf.setValue(value); 
+    }
 
     /**
      * A TreeItem is a leaf if it has no children. The isLeaf method may of
@@ -549,12 +559,17 @@ public class TreeItem<T> implements EventTarget {
      * leaf can not be expanded by the user, and as such will not show a
      * disclosure node or respond to expansion requests.
      */
-    public boolean isLeaf() { return leaf.getValue(); }
+    public boolean isLeaf() { return leaf == null ? true : leaf.getValue(); }
     
     /**
      * Represents the TreeItem leaf property, which is true if the TreeItem has no children.
      */
-    public final ReadOnlyBooleanProperty leafProperty() {  return leaf.getReadOnlyProperty(); }
+    public final ReadOnlyBooleanProperty leafProperty() {  
+        if (leaf == null) {
+            leaf = new ReadOnlyBooleanWrapper(this, "leaf", true);
+        }
+        return leaf.getReadOnlyProperty(); 
+    }
 
 
     // --- Parent
@@ -591,7 +606,7 @@ public class TreeItem<T> implements EventTarget {
      */
     public ObservableList<TreeItem<T>> getChildren() {
         if (children == null) {
-            children = FXCollections.<TreeItem<T>>observableArrayList();
+            children = FXCollections.observableArrayList();
             children.addListener(childrenListener);
         }
         return children;
@@ -722,9 +737,10 @@ public class TreeItem<T> implements EventTarget {
         if (this.getParent() != other.getParent() && (this.getParent() == null || !this.getParent().equals(other.getParent()))) {
             return false;
         }
-        if (this.getChildren() != other.getChildren() && (this.getChildren() == null || !this.getChildren().equals(other.getChildren()))) {
-            return false;
-        }
+        // we do NOT test the children
+//        if (this.children != other.children && (this.children == null || !this.children.equals(other.children))) {
+//            return false;
+//        }
         return true;
     }
 
@@ -809,11 +825,7 @@ public class TreeItem<T> implements EventTarget {
         return expandedDescendentCount;
     }
     
-    boolean isRunning = false;
     private void updateExpandedDescendentCount() {
-        if (isRunning) return;
-        isRunning = true;
-        
         previousExpandedDescendentCount = expandedDescendentCount;
         expandedDescendentCount = 1;
         
@@ -823,8 +835,6 @@ public class TreeItem<T> implements EventTarget {
                 expandedDescendentCount += child.getExpandedDescendentCount();
             }
         }
-        
-        isRunning = false;
     }
 
     private void updateChildren(List<? extends TreeItem<T>> added, List<? extends TreeItem<T>> removed) {
@@ -833,7 +843,7 @@ public class TreeItem<T> implements EventTarget {
         // update the relationships such that all added children point to
         // this node as the parent (and all removed children point to null)
         updateChildrenParent(removed, null);
-        updateChildrenParent(added, TreeItem.this);
+        updateChildrenParent(added, this);
 
         // fire an event up the parent hierarchy such that any listening
         // TreeViews (which only listen to their root node) can redraw
@@ -843,7 +853,7 @@ public class TreeItem<T> implements EventTarget {
 
     // Convenience method to set the parent of all children in the given list to 
     // the given parent TreeItem
-    private void updateChildrenParent(List<? extends TreeItem<T>> treeItems, final TreeItem<T> parent) {
+    private static <T> void updateChildrenParent(List<? extends TreeItem<T>> treeItems, final TreeItem<T> parent) {
         if (treeItems == null) return;
         for (final TreeItem<T> treeItem : treeItems) {
             if (treeItem == null) continue;
@@ -942,6 +952,10 @@ public class TreeItem<T> implements EventTarget {
             this.removed = removed;
             this.wasExpanded = false;
             this.wasCollapsed = false;
+        }
+
+        @Override public Object getSource() {
+            return this.treeItem;
         }
         
         /** 

@@ -21,11 +21,10 @@ import org.junit.Before;
 import org.junit.Ignore;
 import org.junit.Test;
 
-import com.sun.javafx.runnable.Runnable0;
-import com.sun.javafx.runnable.Runnable1;
 import com.sun.javafx.scene.CSSFlags;
 import com.sun.javafx.scene.control.skin.VirtualFlow.ArrayLinkedList;
 import java.util.List;
+import javafx.util.Callback;
 
 /**
  * Tests for the VirtualFlow class. VirtualFlow is the guts of the ListView,
@@ -53,8 +52,8 @@ public class VirtualFlowTest {
         flow = new VirtualFlow();
 //        flow.setManaged(false);
         flow.setVertical(true);
-        flow.setCreateCell(new Runnable0<IndexedCell>() {
-            @Override public IndexedCell run() {
+        flow.setCreateCell(new Callback<VirtualFlow, IndexedCell>() {
+            @Override public IndexedCell call(VirtualFlow p) {
                 return new CellStub(flow) {
                     @Override protected double computeMinWidth(double height) { return computePrefWidth(height); }
                     @Override protected double computeMaxWidth(double height) { return computePrefWidth(height); }
@@ -838,8 +837,8 @@ public class VirtualFlowTest {
         assertFalse(flow.isNeedsLayout());
         flow.getCellLength(49); // forces accum cell to be created
         assertNotNull("Accum cell was null", flow.accumCell);
-        flow.setCreateCell(new Runnable0<IndexedCell>() {
-            @Override public IndexedCell run() {
+        flow.setCreateCell(new Callback<VirtualFlow, IndexedCell>() {
+            @Override public IndexedCell call(VirtualFlow p) {
                 return new CellStub(flow);
             }
         });

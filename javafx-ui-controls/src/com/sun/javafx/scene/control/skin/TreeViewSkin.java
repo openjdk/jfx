@@ -26,11 +26,8 @@
 package com.sun.javafx.scene.control.skin;
 
 import javafx.event.EventHandler;
-import javafx.geometry.Pos;
 import javafx.scene.Node;
 import javafx.scene.control.IndexedCell;
-import javafx.scene.control.Label;
-import javafx.scene.control.SelectionModel;
 import javafx.scene.control.TreeCell;
 import javafx.scene.control.TreeItem;
 import javafx.scene.control.TreeItem.TreeModificationEvent;
@@ -39,8 +36,6 @@ import javafx.scene.input.MouseEvent;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.StackPane;
 
-import com.sun.javafx.runnable.Runnable0;
-import com.sun.javafx.runnable.Runnable1;
 import com.sun.javafx.scene.control.WeakEventHandler;
 import com.sun.javafx.scene.control.behavior.TreeViewBehavior;
 import java.lang.ref.WeakReference;
@@ -56,8 +51,8 @@ public class TreeViewSkin<T> extends VirtualContainerBase<TreeView<T>, TreeViewB
         flow = new VirtualFlow();
         flow.setPannable(false);
         flow.setFocusTraversable(getSkinnable().isFocusTraversable());
-        flow.setCreateCell(new Runnable0<TreeCell>() {
-            @Override public TreeCell run() {
+        flow.setCreateCell(new Callback<VirtualFlow, TreeCell>() {
+            @Override public TreeCell call(VirtualFlow flow) {
                 return TreeViewSkin.this.createCell();
             }
         });
@@ -209,12 +204,19 @@ public class TreeViewSkin<T> extends VirtualContainerBase<TreeView<T>, TreeViewB
             ((TreeCell)flow.cells.get(i)).updateTreeView(null);
         }
         
-        flow.setCellCount(getItemCount());
-
-        // This needs to be recreateCells here (rather than reconfigureCells)
-        // otherwise issues appear when expanding/collapsing branches. For example,
-        // see RT-14013.
-        flow.recreateCells();
+        int oldCount = flow.getCellCount();
+        int newCount = getItemCount();
+        
+        // if this is not called even when the count is the same, we get a 
+        // memory leak in VirtualFlow.sheet.children. This can probably be 
+        // optimised in the future when time permits.
+        flow.setCellCount(newCount);
+        
+        if (newCount != oldCount) {
+            flow.recreateCells();
+        } else {
+            flow.reconfigureCells();
+        }
     }
 
     @Override public TreeCell<T> createCell() {

@@ -325,8 +325,22 @@ public class ProgressIndicatorSkin extends SkinBase<ProgressIndicator, ProgressI
             tick.setLayoutY(indicator.getLayoutY() + (indicator.getHeight() / 2) - (tick.getHeight() / 2));
             tick.setVisible(control.getProgress() >= 1);
 
-            text.setLayoutY(y + indicator.getHeight() + textGap);
-            text.setLayoutX(indicator.getLayoutX() + (indicator.getWidth() - text.getLayoutBounds().getWidth()) / 2);
+            /*
+            ** if the % text can't fit anywhere in the bounds then don't display it
+            */
+            if (control.getWidth() >= com.sun.javafx.scene.control.skin.Utils.computeTextWidth(font, text.getText(), 0.0) &&
+                control.getHeight() >= com.sun.javafx.scene.control.skin.Utils.computeTextHeight(font, text.getText(), 0.0)) {
+                if (!text.isVisible()) {
+                    text.setVisible(true);
+                }
+                text.setLayoutY(y + indicator.getHeight() + textGap);
+                text.setLayoutX(indicator.getLayoutX() + (indicator.getWidth() - text.getLayoutBounds().getWidth()) / 2);
+            }
+            else {
+                if (text.isVisible()) {
+                    text.setVisible(false);
+                }
+            }
         }
 
         @Override protected double computePrefWidth(double height) {

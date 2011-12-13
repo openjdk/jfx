@@ -135,6 +135,9 @@ public class ComboBoxListViewSkin<T> extends ComboBoxPopupControl<T> {
                     if (c == null) return;
                     T value = c.fromString(textField.getText());
                     comboBox.setValue(value);
+                } else if (t.getCode() == KeyCode.F4) {
+                    if (comboBox.isShowing()) comboBox.hide();
+                    else comboBox.show();
                 }
             }
         });

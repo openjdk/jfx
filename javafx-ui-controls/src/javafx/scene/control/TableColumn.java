@@ -380,7 +380,9 @@ public class TableColumn<S,T> implements EventTarget {
     // Contains any children columns that should be nested within this column
     private final ObservableList<TableColumn<S,?>> columns = FXCollections.<TableColumn<S,?>>observableArrayList();
     
-    private final EventHandlerManager eventHandlerManager = new EventHandlerManager(this);
+    // Made static based on findings of RT-18344 - EventHandlerManager is an
+    // expensive class and should be reused amongst classes if at all possible.
+    private static final EventHandlerManager eventHandlerManager = new EventHandlerManager(TableColumn.class);
     
     
     

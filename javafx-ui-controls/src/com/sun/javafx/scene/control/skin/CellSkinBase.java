@@ -48,7 +48,7 @@ public class CellSkinBase<C extends Cell, B extends CellBehaviorBase<C>> extends
      * this is the height, for a horizontal ListView this is the width. This
      * is settable from CSS
      */
-    @Styleable(property="-fx-cell-size", initial="15", converter="com.sun.javafx.css.converters.SizeConverter")
+    @Styleable(property="-fx-cell-size", initial="24", converter="com.sun.javafx.css.converters.SizeConverter")
     private ReadOnlyDoubleWrapper cellSize;
 
     private void setCellSize(double value) {
@@ -89,7 +89,7 @@ public class CellSkinBase<C extends Cell, B extends CellBehaviorBase<C>> extends
      *                                                                         *
      **************************************************************************/
 
-    private static final int DEFAULT_CELL_SIZE = 15;
+    static final int DEFAULT_CELL_SIZE = 24;
 
      /**
       * Super-lazy instantiation pattern from Bill Pugh.

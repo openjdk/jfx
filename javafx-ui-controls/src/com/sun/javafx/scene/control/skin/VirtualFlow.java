@@ -49,8 +49,7 @@ import javafx.scene.layout.Region;
 import javafx.scene.layout.StackPane;
 import javafx.scene.shape.Rectangle;
 
-import com.sun.javafx.runnable.Runnable0;
-import com.sun.javafx.runnable.Runnable1;
+import javafx.util.Callback;
 
 /**
  * Implementation of a virtualized container using a cell based mechanism.
@@ -266,9 +265,9 @@ public class VirtualFlow extends Region {
      * IndexedCell. The VirtualFlow attempts to reuse cells whenever possible
      * and only creates the minimal number of cells necessary.
      */
-    private Runnable0<? extends IndexedCell> createCell;
-    public Runnable0<? extends IndexedCell> getCreateCell() { return createCell; }
-    protected void setCreateCell(Runnable0<? extends IndexedCell> cc) {
+    private Callback<VirtualFlow, ? extends IndexedCell> createCell;
+    public Callback<VirtualFlow, ? extends IndexedCell> getCreateCell() { return createCell; }
+    protected void setCreateCell(Callback<VirtualFlow, ? extends IndexedCell> cc) {
         this.createCell = cc;
 
         if (createCell != null) {
@@ -471,8 +470,8 @@ public class VirtualFlow extends Region {
 
     public VirtualFlow() {
         mapper = new PositionMapper();
-        mapper.setGetItemSize(new Runnable1<Double, Integer>() {
-            @Override public Double run(Integer itemIndex) {
+        mapper.setGetItemSize(new Callback<Integer, Double>() {
+            @Override public Double call(Integer itemIndex) {
                 return getCellLength(itemIndex);
             }
         });
@@ -1147,12 +1146,14 @@ public class VirtualFlow extends Region {
 
     @Override protected void setWidth(double value) {
         super.setWidth(value);
-        layoutChildren();
+        setNeedsLayout(true);
+        requestLayout();
     }
     
     @Override protected void setHeight(double value) {
         super.setHeight(value);
-        layoutChildren();
+        setNeedsLayout(true);
+        requestLayout();
     }
 
     private void updateScrollBarsAndViewport(double lastViewportLength) {
@@ -1362,7 +1363,7 @@ public class VirtualFlow extends Region {
 
         // We need to use the accumCell and return that
         if (accumCell == null && getCreateCell() != null) {
-            accumCell = getCreateCell().run();
+            accumCell = getCreateCell().call(this);
             accumCellParent.getChildren().add(accumCell);
         }
         setCellIndex(accumCell, index);
@@ -1495,7 +1496,7 @@ public class VirtualFlow extends Region {
             if (pile.size() > 0) {
                 cell = pile.removeFirst();
             } else {
-                cell = createCell.run();
+                cell = createCell.call(this);
             }
         }
         

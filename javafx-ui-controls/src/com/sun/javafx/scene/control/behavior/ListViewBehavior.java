@@ -523,8 +523,10 @@ public class ListViewBehavior<T> extends BehaviorBase<ListView<T>> {
         MultipleSelectionModel sm = getControl().getSelectionModel();
         if (sm == null) return;
         
+        selectionChanging = true;
         sm.clearSelection();
         sm.selectRange(leadSelectedIndex, leadIndex + 1);
+        selectionChanging = false;
     }
     
     private void selectAllPageDown() {
@@ -542,8 +544,10 @@ public class ListViewBehavior<T> extends BehaviorBase<ListView<T>> {
         MultipleSelectionModel sm = getControl().getSelectionModel();
         if (sm == null) return;
         
+        selectionChanging = true;
         sm.clearSelection();
         sm.selectRange(leadIndex, leadSelectedIndex + 1);
+        selectionChanging = false;
     }
 
     private void selectAllToFirstRow() {
@@ -559,7 +563,9 @@ public class ListViewBehavior<T> extends BehaviorBase<ListView<T>> {
 
         sm.clearSelection();
         sm.selectRange(0, leadIndex + 1);
-//        getControl().getFocusModel().focus(0);
+        
+        // RT-18413: Focus must go to first row
+        getControl().getFocusModel().focus(0);
 
         if (onMoveToFirstCell != null) onMoveToFirstCell.run();
     }
@@ -576,7 +582,7 @@ public class ListViewBehavior<T> extends BehaviorBase<ListView<T>> {
         }
         
         sm.clearSelection();
-        sm.selectRange(leadIndex, getRowCount() - 1);
+        sm.selectRange(leadIndex, getRowCount());
 
         if (onMoveToLastCell != null) onMoveToLastCell.run();
     }

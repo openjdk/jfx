@@ -64,15 +64,19 @@ public class TextField extends TextInputControl {
             return characters.substring(start, end);
         }
 
-        @Override public void insert(int index, String text) {
+        @Override public void insert(int index, String text, boolean notifyListeners) {
             text = TextInputControl.filterInput(text, true, true);
             characters.insert(index, text);
-            ExpressionHelper.fireValueChangedEvent(helper);
+            if (notifyListeners) {
+                ExpressionHelper.fireValueChangedEvent(helper);
+            }
         }
 
-        @Override public void delete(int start, int end) {
+        @Override public void delete(int start, int end, boolean notifyListeners) {
             characters.delete(start, end);
-            ExpressionHelper.fireValueChangedEvent(helper);
+            if (notifyListeners) {
+                ExpressionHelper.fireValueChangedEvent(helper);
+            }
         }
 
         @Override public int length() {

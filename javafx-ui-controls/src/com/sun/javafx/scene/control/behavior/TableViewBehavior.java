@@ -503,8 +503,17 @@ public class TableViewBehavior<T> extends BehaviorBase<TableView<T>> {
             TablePosition focusedCell = fm.getFocusedCell();
             if (isShiftDown && sm.isSelected(focusedCell.getRow() - 1, focusedCell.getTableColumn())) {
                 int newFocusOwner = focusedCell.getRow() - 1;
-                sm.clearSelection(fm.getFocusedIndex(), focusedCell.getTableColumn());
+                sm.clearSelection(newFocusOwner, focusedCell.getTableColumn());
                 fm.focus(newFocusOwner, focusedCell.getTableColumn());
+            } else if (isShiftDown && getAnchor() != null) {
+                int newRow = fm.getFocusedIndex() - 1;
+                
+                int start = Math.min(getAnchor().getRow(), newRow);
+                int end = Math.max(getAnchor().getRow(), newRow);
+                for (int _row = start; _row <= end; _row++) {
+                    sm.select(_row, focusedCell.getTableColumn());
+                }
+                fm.focus(newRow, focusedCell.getTableColumn());
             } else {
                 if (! sm.isSelected(focusIndex, focusedCell.getTableColumn())) {
                     sm.select(focusIndex, focusedCell.getTableColumn());
@@ -541,8 +550,17 @@ public class TableViewBehavior<T> extends BehaviorBase<TableView<T>> {
             TablePosition focusedCell = fm.getFocusedCell();
             if (isShiftDown && sm.isSelected(focusedCell.getRow() + 1, focusedCell.getTableColumn())) {
                 int newFocusOwner = focusedCell.getRow() + 1;
-                sm.clearSelection(fm.getFocusedIndex(), focusedCell.getTableColumn());
+                sm.clearSelection(newFocusOwner, focusedCell.getTableColumn());
                 fm.focus(newFocusOwner, focusedCell.getTableColumn());
+            } else if (isShiftDown && getAnchor() != null) {
+                int newRow = fm.getFocusedIndex() + 1;
+                
+                int start = Math.min(getAnchor().getRow(), newRow);
+                int end = Math.max(getAnchor().getRow(), newRow);
+                for (int _row = start; _row <= end; _row++) {
+                    sm.select(_row, focusedCell.getTableColumn());
+                }
+                fm.focus(newRow, focusedCell.getTableColumn());
             } else {
                 sm.selectBelowCell();
             }
@@ -599,7 +617,7 @@ public class TableViewBehavior<T> extends BehaviorBase<TableView<T>> {
         if (isShiftDown && getAnchor() != null && 
             sm.isSelected(fc.getRow(), leftColumn) &&
             ! (fc.getRow() == getAnchor().getRow() && fc.getTableColumn().equals(leftColumn))) {
-                sm.clearSelection(fc.getRow(), fc.getTableColumn());
+                sm.clearSelection(fc.getRow(), leftColumn);
                 fm.focus(fc.getRow(), leftColumn);
         } else {
             sm.selectLeftCell();
@@ -622,7 +640,7 @@ public class TableViewBehavior<T> extends BehaviorBase<TableView<T>> {
         if (isShiftDown && getAnchor() != null && 
             sm.isSelected(fc.getRow(), rightColumn) &&
             ! (fc.getRow() == getAnchor().getRow() && fc.getTableColumn().equals(rightColumn))) {
-                sm.clearSelection(fc.getRow(), fc.getTableColumn());
+                sm.clearSelection(fc.getRow(), rightColumn);
                 fm.focus(fc.getRow(), rightColumn);
         } else {
             sm.selectRightCell();
@@ -836,8 +854,10 @@ public class TableViewBehavior<T> extends BehaviorBase<TableView<T>> {
         TableView.TableViewSelectionModel sm = getControl().getSelectionModel();
         if (sm == null) return;
         
+        selectionChanging = true;
         sm.clearSelection();
         sm.selectRange(leadSelectedIndex, leadIndex + 1);
+        selectionChanging = false;
     }
     
     private void selectAllPageDown() {
@@ -855,8 +875,10 @@ public class TableViewBehavior<T> extends BehaviorBase<TableView<T>> {
         TableView.TableViewSelectionModel sm = getControl().getSelectionModel();
         if (sm == null) return;
         
+        selectionChanging = true;
         sm.clearSelection();
         sm.selectRange(leadIndex, leadSelectedIndex + 1);
+        selectionChanging = false;
     }
     
     private void toggleFocusOwnerSelection() {
@@ -870,6 +892,7 @@ public class TableViewBehavior<T> extends BehaviorBase<TableView<T>> {
         
         if (sm.isSelected(focusedCell.getRow(), focusedCell.getTableColumn())) {
             sm.clearSelection(focusedCell.getRow(), focusedCell.getTableColumn());
+            fm.focus(focusedCell.getRow(), focusedCell.getTableColumn());
         } else {
             sm.select(focusedCell.getRow(), focusedCell.getTableColumn());
         }

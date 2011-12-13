@@ -380,4 +380,32 @@ public class TreeViewTest {
 //        assertTrue("Focused index: " + fm.getFocusedIndex(), fm.isFocused(1));
 //        assertEquals(child1, fm.getFocusedItem());
 //    }
+    
+    @Test public void test_rt18385() {
+        installChildren();
+//        table.getItems().addAll("row1", "row2", "row3");
+        treeView.getSelectionModel().select(1);
+        treeView.getRoot().getChildren().add(new TreeItem("Another Row"));
+        assertEquals(1, treeView.getSelectionModel().getSelectedIndices().size());
+        assertEquals(1, treeView.getSelectionModel().getSelectedItems().size());
+    }
+    
+    @Test public void test_rt18339_onlyEditWhenTreeViewIsEditable_editableIsFalse() {
+        treeView.setEditable(false);
+        treeView.edit(root);
+        assertEquals(null, treeView.getEditingItem());
+    }
+    
+    @Test public void test_rt18339_onlyEditWhenTreeViewIsEditable_editableIsTrue() {
+        treeView.setEditable(true);
+        treeView.edit(root);
+        assertEquals(root, treeView.getEditingItem());
+    }
+    
+    @Test public void test_rt14451() {
+        installChildren();
+        treeView.getSelectionModel().setSelectionMode(SelectionMode.MULTIPLE);
+        treeView.getSelectionModel().selectRange(0, 2); // select from 0 (inclusive) to 2 (exclusive)
+        assertEquals(2, treeView.getSelectionModel().getSelectedIndices().size());
+    }
 }

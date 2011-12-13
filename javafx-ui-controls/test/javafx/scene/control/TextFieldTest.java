@@ -196,12 +196,12 @@ public class TextFieldTest {
     }
 
     @Test public void insertAndCheckSubRangeInText() {
-        dummyTxtField.getContent().insert(0, "x");
+        dummyTxtField.getContent().insert(0, "x", true);
         assertEquals("x", dummyTxtField.getText().substring(0,1));
     }
 
     @Test public void insertAndCheckSubRangeInContent() {
-        dummyTxtField.getContent().insert(0, "x");
+        dummyTxtField.getContent().insert(0, "x", true);
         assertEquals("x", dummyTxtField.getContent().get(0, 1));
     }
 
@@ -216,8 +216,8 @@ public class TextFieldTest {
     }
 
     @Test public void deleteAndCheckText() {
-        dummyTxtField.getContent().insert(0, "x");
-        dummyTxtField.getContent().delete(1, dummyTxtField.getLength());
+        dummyTxtField.getContent().insert(0, "x", false);
+        dummyTxtField.getContent().delete(1, dummyTxtField.getLength(), true);
         assertEquals("x", dummyTxtField.getText());
     }
 

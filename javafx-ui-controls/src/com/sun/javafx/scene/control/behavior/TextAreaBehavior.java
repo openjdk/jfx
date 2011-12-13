@@ -76,19 +76,29 @@ public class TextAreaBehavior extends TextInputControlBehavior<TextArea> {
             TEXT_AREA_BINDINGS.add(new KeyBinding(KP_LEFT, KEY_PRESSED, "LineStart").meta()); // changed
             TEXT_AREA_BINDINGS.add(new KeyBinding(RIGHT, KEY_PRESSED, "LineEnd").meta()); // changed
             TEXT_AREA_BINDINGS.add(new KeyBinding(KP_RIGHT, KEY_PRESSED, "LineEnd").meta()); // changed
-            TEXT_AREA_BINDINGS.add(new KeyBinding(LEFT, KEY_PRESSED, "SelectLineStart").shift().meta()); // changed
-            TEXT_AREA_BINDINGS.add(new KeyBinding(KP_LEFT, KEY_PRESSED, "SelectLineStart").shift().meta()); // changed
-            TEXT_AREA_BINDINGS.add(new KeyBinding(RIGHT, KEY_PRESSED, "SelectLineEnd").shift().meta()); // changed
-            TEXT_AREA_BINDINGS.add(new KeyBinding(KP_RIGHT, KEY_PRESSED, "SelectLineEnd").shift().meta()); // changed
+            TEXT_AREA_BINDINGS.add(new KeyBinding(UP, KEY_PRESSED, "Home").meta());
+            TEXT_AREA_BINDINGS.add(new KeyBinding(KP_UP, KEY_PRESSED, "Home").meta());
+            TEXT_AREA_BINDINGS.add(new KeyBinding(DOWN, KEY_PRESSED, "End").meta());
+            TEXT_AREA_BINDINGS.add(new KeyBinding(KP_DOWN, KEY_PRESSED, "End").meta());
 
-            TEXT_AREA_BINDINGS.add(new KeyBinding(UP, KEY_PRESSED, "ParagraphStart").meta());
-            TEXT_AREA_BINDINGS.add(new KeyBinding(KP_UP, KEY_PRESSED, "ParagraphStart").meta());
-            TEXT_AREA_BINDINGS.add(new KeyBinding(DOWN, KEY_PRESSED, "ParagraphEnd").meta());
-            TEXT_AREA_BINDINGS.add(new KeyBinding(KP_DOWN, KEY_PRESSED, "ParagraphEnd").meta());
-            TEXT_AREA_BINDINGS.add(new KeyBinding(UP, KEY_PRESSED, "SelectParagraphStart").meta().shift());
-            TEXT_AREA_BINDINGS.add(new KeyBinding(KP_UP, KEY_PRESSED, "SelectParagraphStart").meta().shift());
-            TEXT_AREA_BINDINGS.add(new KeyBinding(DOWN, KEY_PRESSED, "SelectParagraphEnd").meta().shift());
-            TEXT_AREA_BINDINGS.add(new KeyBinding(KP_DOWN, KEY_PRESSED, "SelectParagraphEnd").meta().shift());
+            TEXT_AREA_BINDINGS.add(new KeyBinding(LEFT, KEY_PRESSED, "SelectLineStartExtend").shift().meta()); // changed
+            TEXT_AREA_BINDINGS.add(new KeyBinding(KP_LEFT, KEY_PRESSED, "SelectLineStartExtend").shift().meta()); // changed
+            TEXT_AREA_BINDINGS.add(new KeyBinding(RIGHT, KEY_PRESSED, "SelectLineEndExtend").shift().meta()); // changed
+            TEXT_AREA_BINDINGS.add(new KeyBinding(KP_RIGHT, KEY_PRESSED, "SelectLineEndExtend").shift().meta()); // changed
+            TEXT_AREA_BINDINGS.add(new KeyBinding(UP, KEY_PRESSED, "SelectHomeExtend").meta().shift());
+            TEXT_AREA_BINDINGS.add(new KeyBinding(KP_UP, KEY_PRESSED, "SelectHomeExtend").meta().shift());
+            TEXT_AREA_BINDINGS.add(new KeyBinding(DOWN, KEY_PRESSED, "SelectEndExtend").meta().shift());
+            TEXT_AREA_BINDINGS.add(new KeyBinding(KP_DOWN, KEY_PRESSED, "SelectEndExtend").meta().shift());
+
+            TEXT_AREA_BINDINGS.add(new KeyBinding(UP, KEY_PRESSED, "ParagraphStart").alt());
+            TEXT_AREA_BINDINGS.add(new KeyBinding(KP_UP, KEY_PRESSED, "ParagraphStart").alt());
+            TEXT_AREA_BINDINGS.add(new KeyBinding(DOWN, KEY_PRESSED, "ParagraphEnd").alt());
+            TEXT_AREA_BINDINGS.add(new KeyBinding(KP_DOWN, KEY_PRESSED, "ParagraphEnd").alt());
+
+            TEXT_AREA_BINDINGS.add(new KeyBinding(UP, KEY_PRESSED, "SelectParagraphStart").alt().shift());
+            TEXT_AREA_BINDINGS.add(new KeyBinding(KP_UP, KEY_PRESSED, "SelectParagraphStart").alt().shift());
+            TEXT_AREA_BINDINGS.add(new KeyBinding(DOWN, KEY_PRESSED, "SelectParagraphEnd").alt().shift());
+            TEXT_AREA_BINDINGS.add(new KeyBinding(KP_DOWN, KEY_PRESSED, "SelectParagraphEnd").alt().shift());
         } else {
             TEXT_AREA_BINDINGS.add(new KeyBinding(UP, KEY_PRESSED, "ParagraphStart").ctrl());
             TEXT_AREA_BINDINGS.add(new KeyBinding(KP_UP, KEY_PRESSED, "ParagraphStart").ctrl());
@@ -152,10 +162,12 @@ public class TextAreaBehavior extends TextInputControlBehavior<TextArea> {
         if (textInputControl.isEditable()) {
 //            fnCaretAnim(false);
 //            setCaretOpacity(1.0);
-            if ("LineStart".equals(name)) skin.lineStart(false);
-            else if ("LineEnd".equals(name)) skin.lineEnd(false);
-            else if ("SelectLineStart".equals(name)) skin.lineStart(true);
-            else if ("SelectLineEnd".equals(name)) skin.lineEnd(true);
+            if ("LineStart".equals(name)) skin.lineStart(false, false);
+            else if ("LineEnd".equals(name)) skin.lineEnd(false, false);
+            else if ("SelectLineStart".equals(name)) skin.lineStart(true, false);
+            else if ("SelectLineStartExtend".equals(name)) skin.lineStart(true, true);
+            else if ("SelectLineEnd".equals(name)) skin.lineEnd(true, false);
+            else if ("SelectLineEndExtend".equals(name)) skin.lineEnd(true, true);
             else if ("PreviousLine".equals(name)) skin.previousLine(false);
             else if ("NextLine".equals(name)) skin.nextLine(false);
             else if ("SelectPreviousLine".equals(name)) skin.previousLine(true);
@@ -257,7 +269,7 @@ public class TextAreaBehavior extends TextInputControlBehavior<TextArea> {
                     // to indicate the text can be dragged, etc.
                 } else if (!(e.isControlDown() || e.isAltDown() || e.isShiftDown() || e.isMetaDown())) {
                     switch (e.getClickCount()) {
-                      case 1: skin.positionCaret(hit, false); break;
+                      case 1: skin.positionCaret(hit, false, false); break;
                       case 2: mouseDoubleClick(hit); break;
                       case 3: mouseTripleClick(hit); break;
                     }
@@ -273,7 +285,7 @@ public class TextAreaBehavior extends TextInputControlBehavior<TextArea> {
                     if(macOS) {
                         textArea.extendSelection(i);
                     } else {
-                        skin.positionCaret(hit, true);
+                        skin.positionCaret(hit, true, false);
                     }
                 }
 //                 skin.setForwardBias(hit.isLeading());
@@ -290,7 +302,7 @@ public class TextAreaBehavior extends TextInputControlBehavior<TextArea> {
         if (!textArea.isDisabled() && !deferClick) {
             if (e.getButton() == MouseButton.PRIMARY && !(e.isMiddleButtonDown() || e.isSecondaryButtonDown())) {
                 if (!(e.isControlDown() || e.isAltDown() || e.isShiftDown() || e.isMetaDown())) {
-                    skin.positionCaret(skin.getIndex(e), true);
+                    skin.positionCaret(skin.getIndex(e), true, false);
                 }
             }
         }
@@ -305,7 +317,7 @@ public class TextAreaBehavior extends TextInputControlBehavior<TextArea> {
             setCaretAnimating(false);
             if (deferClick) {
                 deferClick = false;
-                skin.positionCaret(skin.getIndex(e), shiftDown);
+                skin.positionCaret(skin.getIndex(e), shiftDown, false);
                 shiftDown = false;
             }
             setCaretAnimating(true);

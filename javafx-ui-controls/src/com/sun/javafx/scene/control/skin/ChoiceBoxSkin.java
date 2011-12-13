@@ -78,6 +78,7 @@ public class ChoiceBoxSkin extends SkinBase<ChoiceBox, ChoiceBoxBehavior> {
 
     private final ToggleGroup toggleGroup = new ToggleGroup();
 
+    private boolean firstShow = false;
     /*
      * Watch for if the user changes the selected index, and if so, we toggle
      * the selection in the toggle group (so the check shows in the right place)
@@ -144,6 +145,9 @@ public class ChoiceBoxSkin extends SkinBase<ChoiceBox, ChoiceBoxBehavior> {
                 }
             }
         });
+        if (popup.getScene().getRoot() != null) {
+            popup.getScene().getRoot().getStyleClass().addAll(((ChoiceBox)getSkinnable()).getStyleClass());
+        }
         // TODO remove this id once bug RT-7542 is fixed.
         popup.setId("choice-box-popup-menu");
 //        popup.getItems().clear();
@@ -233,6 +237,7 @@ public class ChoiceBoxSkin extends SkinBase<ChoiceBox, ChoiceBoxBehavior> {
                 // TODO will need to do this, but for now, if I do this, then the
                 // choice box changes size when the popup is shown
                 // popup.setWidth(getWidth());
+                
                 popup.show(getSkinnable(), Side.BOTTOM, 0, y);
             } else {
                 popup.hide();
