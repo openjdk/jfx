@@ -293,6 +293,14 @@ public class TableRowSkin<T> extends CellSkinBase<TableRow<T>, CellBehaviorBase<
         doUpdateCheck();
         
         if (showColumns) {
+            // Support for RT-18467: making it easier to specify a height for
+            // cells via CSS, where the desired height is less than the height
+            // of the TableCells. Essentially, -fx-cell-size is given higher
+            // precedence now
+            if (getCellSize() < CellSkinBase.DEFAULT_CELL_SIZE) {
+                return getCellSize();
+            }
+            
             // FIXME according to profiling, this method is slow and should
             // be optimised
             double prefHeight = 0.0f;
@@ -306,4 +314,5 @@ public class TableRowSkin<T> extends CellSkinBase<TableRow<T>, CellBehaviorBase<
             return super.computePrefHeight(width);
         }
     }
+    
 }
