@@ -124,6 +124,9 @@ public class ToolBarSkin extends SkinBase<ToolBar, ToolBarBehavior> implements T
             @Override
             public void onChanged(Change<? extends Node> c) {
                 while (c.next()) {
+                    for (Node n: c.getRemoved()) {
+                        box.getChildren().remove(n);
+                    }
                     box.getChildren().addAll(c.getAddedSubList());
                 }
                 needsUpdate = true;
