@@ -149,6 +149,7 @@ public class TableColumn<S,T> implements EventTarget {
      *                                                                         *
      **************************************************************************/
     
+    // NOTE: If these numbers change, update the copy of this value in TableColumnHeader
     private static final double DEFAULT_WIDTH = 80.0F;
     private static final double DEFAULT_MIN_WIDTH = 10.0F;
     private static final double DEFAULT_MAX_WIDTH = 5000.0F;
@@ -382,7 +383,7 @@ public class TableColumn<S,T> implements EventTarget {
     
     // Made static based on findings of RT-18344 - EventHandlerManager is an
     // expensive class and should be reused amongst classes if at all possible.
-    private static final EventHandlerManager eventHandlerManager = new EventHandlerManager(TableColumn.class);
+    private final EventHandlerManager eventHandlerManager = new EventHandlerManager(this);
     
     
     

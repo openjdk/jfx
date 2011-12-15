@@ -998,7 +998,8 @@ public class TabPaneSkin extends SkinBase<TabPane, TabPaneBehavior> {
             getSkinnable().tabMaxWidthProperty().addListener(controlListener);
             getSkinnable().tabMinHeightProperty().addListener(controlListener);
             getSkinnable().tabMaxHeightProperty().addListener(controlListener);
-
+            getProperties().put(Tab.class, tab);
+            
             setOnContextMenuRequested(new EventHandler<ContextMenuEvent>() {
                 @Override public void handle(ContextMenuEvent me) {
                    if (getTab().getContextMenu() != null) {

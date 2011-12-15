@@ -215,12 +215,31 @@ public class TableViewBehavior<T> extends BehaviorBase<TableView<T>> {
     
     private boolean selectionChanging = false;
     
-    private ListChangeListener<Integer> selectedIndicesListener = new ListChangeListener<Integer>() {
+    private ListChangeListener<TablePosition> selectedCellsListener = new ListChangeListener<TablePosition>() {
         @Override public void onChanged(ListChangeListener.Change c) {
             while (c.next()) {
+                if (selectionChanging) continue;
+                
+                TableView.TableViewSelectionModel sm = getControl().getSelectionModel();
+                if (sm == null) return;
+                
+                TablePosition anchor = getAnchor();
+                boolean cellSelectionEnabled = sm.isCellSelectionEnabled();
+                
                 // there are no selected items, so lets clear out the anchor
-                if (!selectionChanging && c.getList().isEmpty()) {
+                if (c.getList().isEmpty()) {
                     setAnchor(null);
+                } else if (anchor != null && cellSelectionEnabled && ! selectionPathDeviated) {
+                    // check if the selection is on the same row or column, 
+                    // otherwise set selectionPathDeviated to true
+                    
+                    for (int i = 0; i < c.getAddedSize(); i++) {
+                        TablePosition tp = (TablePosition) c.getAddedSubList().get(i);
+                        if (tp.getRow() != anchor.getRow() && tp.getColumn() != anchor.getColumn()) {
+                            selectionPathDeviated = true;
+                            break;
+                        }
+                    }
                 }
             }
         }
@@ -242,27 +261,27 @@ public class TableViewBehavior<T> extends BehaviorBase<TableView<T>> {
         }
         
         // Fix for RT-16565
-        getControl().selectionModelProperty().addListener(new ChangeListener<MultipleSelectionModel<T>>() {
+        getControl().selectionModelProperty().addListener(new ChangeListener<TableView.TableViewSelectionModel<T>>() {
             @Override
-            public void changed(ObservableValue<? extends MultipleSelectionModel<T>> observable, 
-                        MultipleSelectionModel<T> oldValue, 
-                        MultipleSelectionModel<T> newValue) {
+            public void changed(ObservableValue<? extends TableView.TableViewSelectionModel<T>> observable, 
+                        TableView.TableViewSelectionModel<T> oldValue, 
+                        TableView.TableViewSelectionModel<T> newValue) {
                 if (oldValue != null) {
-                    oldValue.getSelectedIndices().removeListener(selectedIndicesListener);
+                    oldValue.getSelectedCells().removeListener(selectedCellsListener);
                 }
                 if (newValue != null) {
-                    newValue.getSelectedIndices().addListener(selectedIndicesListener);
+                    newValue.getSelectedCells().addListener(selectedCellsListener);
                 }
             }
         });
         if (getControl().getSelectionModel() != null) {
-            getControl().getSelectionModel().getSelectedIndices().addListener(selectedIndicesListener);
+            getControl().getSelectionModel().getSelectedCells().addListener(selectedCellsListener);
         }
     }
     
     private boolean isCtrlDown = false;
     private boolean isShiftDown = false;
-    
+    private boolean selectionPathDeviated = false;
     
     
     /*
@@ -292,9 +311,12 @@ public class TableViewBehavior<T> extends BehaviorBase<TableView<T>> {
     private void setAnchor(int row, TableColumn col) {
         setAnchor(row == -1 && col == null ? null : 
                 new TablePosition(getControl(), row, col));
+        
+        selectionPathDeviated = false;
     }
     private void setAnchor(TablePosition tp) {
         TableCellBehavior.setAnchor(getControl(), tp);
+        selectionPathDeviated = false;
     }
     private TablePosition getAnchor() {
         return TableCellBehavior.getAnchor(getControl());
@@ -489,98 +511,6 @@ public class TableViewBehavior<T> extends BehaviorBase<TableView<T>> {
 
         sm.clearSelection();
     }
-
-    private void alsoSelectPrevious() {
-        TableView.TableViewSelectionModel sm = getControl().getSelectionModel();
-        if (sm == null || sm.getSelectionMode() == SelectionMode.SINGLE) return;
-        
-        TableViewFocusModel fm = getControl().getFocusModel();
-        if (fm == null) return;
-        
-        final int focusIndex = fm.getFocusedIndex();
-
-        if (sm.isCellSelectionEnabled()) {
-            TablePosition focusedCell = fm.getFocusedCell();
-            if (isShiftDown && sm.isSelected(focusedCell.getRow() - 1, focusedCell.getTableColumn())) {
-                int newFocusOwner = focusedCell.getRow() - 1;
-                sm.clearSelection(newFocusOwner, focusedCell.getTableColumn());
-                fm.focus(newFocusOwner, focusedCell.getTableColumn());
-            } else if (isShiftDown && getAnchor() != null) {
-                int newRow = fm.getFocusedIndex() - 1;
-                
-                int start = Math.min(getAnchor().getRow(), newRow);
-                int end = Math.max(getAnchor().getRow(), newRow);
-                for (int _row = start; _row <= end; _row++) {
-                    sm.select(_row, focusedCell.getTableColumn());
-                }
-                fm.focus(newRow, focusedCell.getTableColumn());
-            } else {
-                if (! sm.isSelected(focusIndex, focusedCell.getTableColumn())) {
-                    sm.select(focusIndex, focusedCell.getTableColumn());
-                }
-                sm.selectAboveCell();
-            }
-        } else {
-            if (isShiftDown && getAnchor() != null) {
-                int newRow = fm.getFocusedIndex() - 1;
-
-                clearSelectionOutsideRange(getAnchor().getRow(), newRow);
-                
-                if (getAnchor().getRow() > newRow) {
-                    sm.selectRange(getAnchor().getRow(), newRow - 1);
-                } else {
-                    sm.selectRange(getAnchor().getRow(), newRow + 1);
-                }
-            } else {
-                sm.selectPrevious();
-            }
-        }
-
-        onSelectPreviousRow.run();
-    }
-
-    private void alsoSelectNext() {
-        TableView.TableViewSelectionModel sm = getControl().getSelectionModel();
-        if (sm == null || sm.getSelectionMode() == SelectionMode.SINGLE) return;
-        
-        TableViewFocusModel fm = getControl().getFocusModel();
-        if (fm == null) return;
-
-        if (sm.isCellSelectionEnabled()) {
-            TablePosition focusedCell = fm.getFocusedCell();
-            if (isShiftDown && sm.isSelected(focusedCell.getRow() + 1, focusedCell.getTableColumn())) {
-                int newFocusOwner = focusedCell.getRow() + 1;
-                sm.clearSelection(newFocusOwner, focusedCell.getTableColumn());
-                fm.focus(newFocusOwner, focusedCell.getTableColumn());
-            } else if (isShiftDown && getAnchor() != null) {
-                int newRow = fm.getFocusedIndex() + 1;
-                
-                int start = Math.min(getAnchor().getRow(), newRow);
-                int end = Math.max(getAnchor().getRow(), newRow);
-                for (int _row = start; _row <= end; _row++) {
-                    sm.select(_row, focusedCell.getTableColumn());
-                }
-                fm.focus(newRow, focusedCell.getTableColumn());
-            } else {
-                sm.selectBelowCell();
-            }
-        } else {
-            if (isShiftDown && getAnchor() != null) {
-                int newRow = fm.getFocusedIndex() + 1;
-
-                clearSelectionOutsideRange(getAnchor().getRow(), newRow);
-                
-                if (getAnchor().getRow() > newRow) {
-                    sm.selectRange(getAnchor().getRow(), newRow - 1);
-                } else {
-                    sm.selectRange(getAnchor().getRow(), newRow + 1);
-                }
-            } else {
-                sm.selectNext();
-            }
-        }
-        onSelectNextRow.run();
-    }
     
     private void clearSelectionOutsideRange(int start, int end) {
         TableView.TableViewSelectionModel<T> sm = getControl().getSelectionModel();
@@ -601,50 +531,150 @@ public class TableViewBehavior<T> extends BehaviorBase<TableView<T>> {
         selectionChanging = false;
     }
 
-    private void alsoSelectLeftCell() {
+    private void alsoSelectPrevious() {
         TableView.TableViewSelectionModel sm = getControl().getSelectionModel();
         if (sm == null || sm.getSelectionMode() == SelectionMode.SINGLE) return;
-
+        
         TableViewFocusModel fm = getControl().getFocusModel();
         if (fm == null) return;
         
-        TablePosition fc = fm.getFocusedCell();
-        if (fc == null || fc.getTableColumn() == null) return;
-        
-        TableColumn leftColumn = getColumn(fc.getTableColumn(), -1);
-        if (leftColumn == null) return;
-        
-        if (isShiftDown && getAnchor() != null && 
-            sm.isSelected(fc.getRow(), leftColumn) &&
-            ! (fc.getRow() == getAnchor().getRow() && fc.getTableColumn().equals(leftColumn))) {
-                sm.clearSelection(fc.getRow(), leftColumn);
-                fm.focus(fc.getRow(), leftColumn);
+        if (sm.isCellSelectionEnabled()) {
+            updateCellVerticalSelection(-1, new Runnable() {
+                @Override public void run() {
+                    getControl().getSelectionModel().selectAboveCell();
+                }
+            });
         } else {
-            sm.selectLeftCell();
+            if (isShiftDown && getAnchor() != null) {
+                updateRowSelection(-1);
+            } else {
+                sm.selectPrevious();
+            }
         }
+        onSelectPreviousRow.run();
+    }
+    
+    private void alsoSelectNext() {
+        TableView.TableViewSelectionModel sm = getControl().getSelectionModel();
+        if (sm == null || sm.getSelectionMode() == SelectionMode.SINGLE) return;
+        
+        TableViewFocusModel fm = getControl().getFocusModel();
+        if (fm == null) return;
+
+        if (sm.isCellSelectionEnabled()) {
+            updateCellVerticalSelection(1, new Runnable() {
+                @Override public void run() {
+                    getControl().getSelectionModel().selectBelowCell();
+                }
+            });
+        } else {
+            if (isShiftDown && getAnchor() != null) {
+                updateRowSelection(1);
+            } else {
+                sm.selectNext();
+            }
+        }
+        onSelectNextRow.run();
+    }
+    
+    private void alsoSelectLeftCell() {
+        updateCellHorizontalSelection(-1, new Runnable() {
+            @Override public void run() { 
+                getControl().getSelectionModel().selectLeftCell();
+            }
+        });
     }
 
     private void alsoSelectRightCell() {
+        updateCellHorizontalSelection(1, new Runnable() {
+            @Override public void run() { 
+                getControl().getSelectionModel().selectRightCell();
+            }
+        });
+    }
+    
+    private void updateRowSelection(int delta) {
+        TableView.TableViewSelectionModel sm = getControl().getSelectionModel();
+        if (sm == null || sm.getSelectionMode() == SelectionMode.SINGLE) return;
+        
+        TableViewFocusModel fm = getControl().getFocusModel();
+        if (fm == null) return;
+        
+        int newRow = fm.getFocusedIndex() + delta;
+
+        clearSelectionOutsideRange(getAnchor().getRow(), newRow);
+
+        if (getAnchor().getRow() > newRow) {
+            sm.selectRange(getAnchor().getRow(), newRow - 1);
+        } else {
+            sm.selectRange(getAnchor().getRow(), newRow + 1);
+        }
+    }
+    
+    private void updateCellVerticalSelection(int delta, Runnable defaultAction) {
+        TableView.TableViewSelectionModel sm = getControl().getSelectionModel();
+        if (sm == null || sm.getSelectionMode() == SelectionMode.SINGLE) return;
+        
+        TableViewFocusModel fm = getControl().getFocusModel();
+        if (fm == null) return;
+        
+        TablePosition focusedCell = fm.getFocusedCell();
+        if (isShiftDown && sm.isSelected(focusedCell.getRow() + delta, focusedCell.getTableColumn())) {
+            int newFocusOwner = focusedCell.getRow() + delta;
+            sm.clearSelection(selectionPathDeviated ? newFocusOwner : focusedCell.getRow(), focusedCell.getTableColumn());
+            fm.focus(newFocusOwner, focusedCell.getTableColumn());
+        } else if (isShiftDown && getAnchor() != null && ! selectionPathDeviated) {
+            int newRow = fm.getFocusedIndex() + delta;
+
+            int start = Math.min(getAnchor().getRow(), newRow);
+            int end = Math.max(getAnchor().getRow(), newRow);
+            for (int _row = start; _row <= end; _row++) {
+                sm.select(_row, focusedCell.getTableColumn());
+            }
+            fm.focus(newRow, focusedCell.getTableColumn());
+        } else {
+            final int focusIndex = fm.getFocusedIndex();
+            if (! sm.isSelected(focusIndex, focusedCell.getTableColumn())) {
+                sm.select(focusIndex, focusedCell.getTableColumn());
+            }
+            defaultAction.run();
+        }
+    }
+    
+    private void updateCellHorizontalSelection(int delta, Runnable defaultAction) {
         TableView.TableViewSelectionModel sm = getControl().getSelectionModel();
         if (sm == null || sm.getSelectionMode() == SelectionMode.SINGLE) return;
 
         TableViewFocusModel fm = getControl().getFocusModel();
         if (fm == null) return;
         
-        TablePosition fc = fm.getFocusedCell();
-        if (fc == null || fc.getTableColumn() == null) return;
+        TablePosition focusedCell = fm.getFocusedCell();
+        if (focusedCell == null || focusedCell.getTableColumn() == null) return;
         
-        TableColumn rightColumn = getColumn(fc.getTableColumn(), 1);
-        if (rightColumn == null) return;
+        TableColumn adjacentColumn = getColumn(focusedCell.getTableColumn(), delta);
+        if (adjacentColumn == null) return;
         
         if (isShiftDown && getAnchor() != null && 
-            sm.isSelected(fc.getRow(), rightColumn) &&
-            ! (fc.getRow() == getAnchor().getRow() && fc.getTableColumn().equals(rightColumn))) {
-                sm.clearSelection(fc.getRow(), rightColumn);
-                fm.focus(fc.getRow(), rightColumn);
+            sm.isSelected(focusedCell.getRow(), adjacentColumn) &&
+            ! (focusedCell.getRow() == getAnchor().getRow() && focusedCell.getTableColumn().equals(adjacentColumn))) {
+                sm.clearSelection(focusedCell.getRow(),selectionPathDeviated ? adjacentColumn : focusedCell.getTableColumn());
+                fm.focus(focusedCell.getRow(), adjacentColumn);
+        } else if (isShiftDown && getAnchor() != null && ! selectionPathDeviated) {
+            int newColumn = focusedCell.getColumn() + delta;
+
+            int start = Math.min(getAnchor().getColumn(), newColumn);
+            int end = Math.max(getAnchor().getColumn(), newColumn);
+            for (int _col = start; _col <= end; _col++) {
+                sm.select(focusedCell.getRow(), getColumn(_col));
+            }
+            fm.focus(focusedCell.getRow(), getColumn(newColumn));
         } else {
-            sm.selectRightCell();
+            defaultAction.run();
         }
+    }
+    
+    private TableColumn getColumn(int index) {
+        return getControl().getVisibleLeafColumn(index);
     }
     
     private TableColumn getColumn(TableColumn tc, int delta) {
@@ -706,7 +736,7 @@ public class TableViewBehavior<T> extends BehaviorBase<TableView<T>> {
         if (rowDiff < 0 && currentRow == 0) return;
         else if (rowDiff > 0 && currentRow == getItemCount() - 1) return;
         else if (columnDiff < 0 && currentColumn == 0) return;
-        else if (columnDiff > 0 && currentColumn == getVisibleLeafColumnCount(getControl().getColumns(), 0) - 1) return;
+        else if (columnDiff > 0 && currentColumn == getControl().getVisibleLeafColumns().size() - 1) return;
 
         TableColumn tc = focusedCell.getTableColumn();
         tc = getColumn(tc, columnDiff);
@@ -714,22 +744,6 @@ public class TableViewBehavior<T> extends BehaviorBase<TableView<T>> {
         int row = focusedCell.getRow() + rowDiff;
         sm.clearAndSelect(row, tc);
         setAnchor(row, tc);
-    }
-
-    // copied from TableView
-    private int getVisibleLeafColumnCount(List cols, int count) {
-        if (cols == null || cols.isEmpty()) return count;
-
-        for (int i = 0; i < cols.size(); i++) {
-            TableColumn col = (TableColumn) cols.get(i);
-            if (col.getColumns() != null && col.getColumns().isEmpty()) {
-                count++;
-            } else {
-                count += getVisibleLeafColumnCount(col.getColumns(), count);
-            }
-        }
-
-        return count;
     }
     
     private void cancelEdit() {
