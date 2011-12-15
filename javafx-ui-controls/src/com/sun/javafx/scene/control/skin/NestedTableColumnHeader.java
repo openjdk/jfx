@@ -256,7 +256,7 @@ class NestedTableColumnHeader extends TableColumnHeader {
                     if (me.getClickCount() == 2 && me.isPrimaryButtonDown()) {
                         // the user wants to resize the column such that its 
                         // width is equal to the widest element in the column
-                        resizeToFit(c);
+                        resizeToFit(c, -1);
                     } else {
                         // rather than refer to the rect variable, we just grab
                         // it from the source to prevent a small memory leak.
@@ -314,51 +314,6 @@ class NestedTableColumnHeader extends TableColumnHeader {
         lastX = 0.0F;
     }
     
-    /*
-     * FIXME: Naive implementation ahead
-     * Attempts to resize column based on the pref width of all items contained
-     * in this column. This can be potentially very expensive if the number of
-     * rows is large.
-     */
-    private void resizeToFit(TableColumn col) {
-        List<?> items = getTableView().getItems();
-        if (items == null) return;
-        
-        Callback cellFactory = col.getCellFactory();
-        if (cellFactory == null) return;
-        
-        TableCell cell = (TableCell) cellFactory.call(col);
-        if (cell == null) return;
-        
-        // set this property to tell the TableCell we want to know its actual
-        // preferred width, not the width of the associated TableColumn
-        cell.getProperties().put(TableCellSkin.DEFER_TO_PARENT_PREF_WIDTH, Boolean.TRUE);
-        
-        // determine cell padding
-        double padding = 10;
-        Node n = cell.getSkin() == null ? null : cell.getSkin().getNode();
-        if (n instanceof Region) {
-            Region r = (Region) n;
-            padding = r.getInsets().getLeft() + r.getInsets().getRight();
-        } 
-        
-        int rows = items.size();
-        double maxWidth = 0;
-        for (int row = 0; row < rows; row++) {
-            cell.updateTableColumn(col);
-            cell.updateTableView(getTableView());
-            cell.updateIndex(row);
-            
-            if ((cell.getText() != null && !cell.getText().isEmpty()) || cell.getGraphic() != null) {
-                getChildren().add(cell);
-                cell.impl_processCSS(false);
-                maxWidth = Math.max(maxWidth, cell.prefWidth(20));
-                getChildren().remove(cell);
-            }
-        }
-        
-        col.impl_setWidth(maxWidth + padding);
-    }
 
     /* **************************/
     /* END OF COLUMN RESIZING   */

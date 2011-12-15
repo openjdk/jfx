@@ -55,7 +55,12 @@ import javafx.scene.shape.Rectangle;
 import com.sun.javafx.css.Styleable;
 import com.sun.javafx.css.StyleableProperty;
 import com.sun.javafx.scene.control.WeakListChangeListener;
+import com.sun.javafx.tk.Toolkit;
 import javafx.beans.WeakInvalidationListener;
+import javafx.scene.Node;
+import javafx.scene.control.*;
+import javafx.scene.layout.*;
+import javafx.util.Callback;
 
 
 /**
@@ -63,13 +68,19 @@ import javafx.beans.WeakInvalidationListener;
  */
 public class TableColumnHeader extends StackPane {
     
+    // Copied from TableColumn. The value here should always be in-sync with
+    // the value in TableColumn
+    private static final double DEFAULT_WIDTH = 80.0F;
+    
+    private boolean autoSizeComplete = false;
+    
     /***************************************************************************
      *                                                                         *
      * Constructor                                                             *
      *                                                                         *
      **************************************************************************/
 
-    public TableColumnHeader(TableView table, TableColumn tc) {
+    public TableColumnHeader(final TableView table, final TableColumn tc) {
         this.column = tc;
         this.table = table;
 
@@ -91,6 +102,25 @@ public class TableColumnHeader extends StackPane {
             getTableColumn().visibleProperty().addListener(weakVisibleListener);
             getTableColumn().widthProperty().addListener(weakWidthListener);
         }
+        
+        // RT-17684: If the TableColumn widths are all currently the default,
+        // we attempt to 'auto-size' based on the preferred width of the first
+        // n rows (we can't do all rows, as that could conceivably be an unlimited
+        // number of rows retrieved from a very slow (e.g. remote) data source.
+        // Obviously, the bigger the value of n, the more likely the default 
+        // width will be suitable for most values in the column
+        final int n = 30;
+        sceneProperty().addListener(new InvalidationListener() {
+            @Override public void invalidated(Observable o) {
+                if (! autoSizeComplete) {
+                    if (tc == null || tc.getPrefWidth() != DEFAULT_WIDTH || getScene() == null) {
+                        return;
+                    }
+                    resizeToFit(tc, n);
+                    autoSizeComplete = true;
+                }
+            }
+        });
     }
     
     
@@ -464,7 +494,51 @@ public class TableColumnHeader extends StackPane {
         }
     }
     
-    
+    /*
+     * FIXME: Naive implementation ahead
+     * Attempts to resize column based on the pref width of all items contained
+     * in this column. This can be potentially very expensive if the number of
+     * rows is large.
+     */
+    protected void resizeToFit(TableColumn col, int maxRows) {
+        List<?> items = getTableView().getItems();
+        if (items == null) return;
+        
+        Callback cellFactory = col.getCellFactory();
+        if (cellFactory == null) return;
+        
+        TableCell cell = (TableCell) cellFactory.call(col);
+        if (cell == null) return;
+        
+        // set this property to tell the TableCell we want to know its actual
+        // preferred width, not the width of the associated TableColumn
+        cell.getProperties().put(TableCellSkin.DEFER_TO_PARENT_PREF_WIDTH, Boolean.TRUE);
+        
+        // determine cell padding
+        double padding = 10;
+        Node n = cell.getSkin() == null ? null : cell.getSkin().getNode();
+        if (n instanceof Region) {
+            Region r = (Region) n;
+            padding = r.getInsets().getLeft() + r.getInsets().getRight();
+        } 
+        
+        int rows = maxRows == -1 ? items.size() : maxRows;
+        double maxWidth = 0;
+        for (int row = 0; row < rows; row++) {
+            cell.updateTableColumn(col);
+            cell.updateTableView(getTableView());
+            cell.updateIndex(row);
+            
+            if ((cell.getText() != null && !cell.getText().isEmpty()) || cell.getGraphic() != null) {
+                getChildren().add(cell);
+                cell.impl_processCSS(false);
+                maxWidth = Math.max(maxWidth, cell.prefWidth(-1));
+                getChildren().remove(cell);
+            }
+        }
+        
+        col.impl_setWidth(maxWidth + padding);
+    }
     
     /***************************************************************************
      *                                                                         *
