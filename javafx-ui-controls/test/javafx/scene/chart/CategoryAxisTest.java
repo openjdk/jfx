@@ -4,6 +4,7 @@
 
 package javafx.scene.chart;
 
+import com.sun.javafx.css.StyleableProperty;
 import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.DoubleProperty;
 import javafx.beans.property.ReadOnlyDoubleProperty;
@@ -137,54 +138,63 @@ public class CategoryAxisTest {
      * CSS related Tests                                                 *
      ********************************************************************/
     @Test public void whenStartMarginIsBound_impl_cssSettable_ReturnsFalse() {
-        assertTrue(axis.impl_cssSettable("-fx-start-margin"));
+        StyleableProperty styleable = StyleableProperty.getStyleableProperty(axis.startMarginProperty());
+        assertTrue(styleable.isSettable(axis));
         DoubleProperty other = new SimpleDoubleProperty();
         axis.startMarginProperty().bind(other);
-        assertFalse(axis.impl_cssSettable("-fx-start-margin"));
+        assertFalse(styleable.isSettable(axis));
     }
 
     @Test public void whenStartMarginIsSpecifiedViaCSSAndIsNotBound_impl_cssSettable_ReturnsTrue() {
-        axis.impl_cssSet("-fx-start-margin", 10.9);
-        assertTrue(axis.impl_cssSettable("-fx-start-margin"));
+        StyleableProperty styleable = StyleableProperty.getStyleableProperty(axis.startMarginProperty());
+        styleable.set(axis,10.9);
+        assertTrue(styleable.isSettable(axis));
     }
 
     @Test public void canSpecifyStartMarginViaCSS() {
-        axis.impl_cssSet("-fx-start-margin", 10.34);
+        StyleableProperty styleable = StyleableProperty.getStyleableProperty(axis.startMarginProperty());
+        styleable.set(axis,10.34);
         assertEquals(10.34, axis.getStartMargin(), 0.0);
     }
 
     @Test public void whenEndMarginIsBound_impl_cssSettable_ReturnsFalse() {
-        assertTrue(axis.impl_cssSettable("-fx-end-margin"));
+        StyleableProperty styleable = StyleableProperty.getStyleableProperty(axis.endMarginProperty());
+        assertTrue(styleable.isSettable(axis));
         DoubleProperty other = new SimpleDoubleProperty();
         axis.endMarginProperty().bind(other);
-        assertFalse(axis.impl_cssSettable("-fx-end-margin"));
+        assertFalse(styleable.isSettable(axis));
     }
 
     @Test public void whenEndMarginIsSpecifiedViaCSSAndIsNotBound_impl_cssSettable_ReturnsTrue() {
-        axis.impl_cssSet("-fx-end-margin", 10.9);
-        assertTrue(axis.impl_cssSettable("-fx-end-margin"));
+        StyleableProperty styleable = StyleableProperty.getStyleableProperty(axis.endMarginProperty());
+        styleable.set(axis,10.9);
+        assertTrue(styleable.isSettable(axis));
     }
 
     @Test public void canSpecifyEndMarginViaCSS() {
-        axis.impl_cssSet("-fx-end-margin", 10.34);
+        StyleableProperty styleable = StyleableProperty.getStyleableProperty(axis.endMarginProperty());
+        styleable.set(axis,10.34);
         assertEquals(10.34, axis.getEndMargin(), 0.0);
     }
 
 
     @Test public void whenGapStartAndEndIsBound_impl_cssSettable_ReturnsFalse() {
-        assertTrue(axis.impl_cssSettable("-fx-gap-start-and-end"));
+        StyleableProperty styleable = StyleableProperty.getStyleableProperty(axis.gapStartAndEndProperty());
+        assertTrue(styleable.isSettable(axis));
         BooleanProperty other = new SimpleBooleanProperty();
         axis.gapStartAndEndProperty().bind(other);
-        assertFalse(axis.impl_cssSettable("-fx-gap-start-and-end"));
+        assertFalse(styleable.isSettable(axis));
     }
 
     @Test public void whenGapStartAndEndIsSpecifiedViaCSSAndIsNotBound_impl_cssSettable_ReturnsTrue() {
-        axis.impl_cssSet("-fx-gap-start-and-end", false);
-        assertTrue(axis.impl_cssSettable("-fx-gap-start-and-end"));
+        StyleableProperty styleable = StyleableProperty.getStyleableProperty(axis.gapStartAndEndProperty());
+        styleable.set(axis,false);
+        assertTrue(styleable.isSettable(axis));
     }
 
     @Test public void canGapStartAndEndViaCSS() {
-        axis.impl_cssSet("-fx-gap-start-and-end", true);
+        StyleableProperty styleable = StyleableProperty.getStyleableProperty(axis.gapStartAndEndProperty());
+        styleable.set(axis,true);
         assertSame(true, axis.isGapStartAndEnd());
     }
 

@@ -32,7 +32,6 @@ import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.event.ActionEvent;
 import javafx.event.EventHandler;
-import javafx.geometry.Insets;
 import javafx.geometry.VPos;
 import javafx.scene.Group;
 import javafx.scene.control.ProgressIndicator;
@@ -55,10 +54,13 @@ import java.util.Collections;
 import java.util.List;
 
 import com.sun.javafx.Utils;
-import com.sun.javafx.css.Styleable;
+import com.sun.javafx.css.StyleableObjectProperty;
 import com.sun.javafx.css.StyleableProperty;
+import com.sun.javafx.css.converters.PaintConverter;
 import com.sun.javafx.scene.control.behavior.ProgressIndicatorBehavior;
 import com.sun.javafx.scene.control.skin.resources.ControlResources;
+import javafx.beans.property.ObjectProperty;
+import javafx.beans.value.WritableValue;
 
 public class ProgressIndicatorSkin extends SkinBase<ProgressIndicator, ProgressIndicatorBehavior<ProgressIndicator>> {
 
@@ -461,37 +463,6 @@ public class ProgressIndicatorSkin extends SkinBase<ProgressIndicator, ProgressI
         @Override protected double computeMaxHeight(double width) {
             return computePrefHeight(-1);
         }
-
-        // *********** Stylesheet Handling *****************************************
-
-
-        /**
-         * @treatasprivate implementation detail
-         * @deprecated This is an internal API that is not intended for use and will be removed in the next version
-         */
-        @Deprecated
-        @Override protected boolean impl_cssSet(String property, Object value) {
-            if ("-fx-padding".equals(property) ) {
-//                spinnerPadding = (Insets) value;
-            } else {
-                return super.impl_cssSet(property,value);
-            }
-            return true;
-        }
-
-        /**
-         * @treatasprivate implementation detail
-         * @deprecated This is an internal API that is not intended for use and will be removed in the next version
-         */
-        @Deprecated
-        @Override protected boolean impl_cssSettable(String property) {
-            if ("-fx-padding".equals(property) ) {
-                return true;
-            } else {
-                return super.impl_cssSettable(property);
-            }
-        }
-
     }
 
     private ObservableList<Color> segmentColors;
@@ -524,59 +495,67 @@ public class ProgressIndicatorSkin extends SkinBase<ProgressIndicator, ProgressI
         }
     }
 
-    private Paint getProgressColor() {
-        return progressColor;
-    }
-
-
-    // *********** Stylesheet Handling *****************************************
-
-    /**
-     * @treatasprivate implementation detail
-     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
-     */
-    @Deprecated
-    @Override protected boolean impl_cssSet(String property, Object value) {
-        if ("-fx-progress-color".equals(property)) {
-            progressColor = (Paint) value;
-            if (progressColor instanceof Color) {
-                setColors((Color)progressColor);
-            }
-            else {
-                setColors(Color.DODGERBLUE);
-            }
-        } else {
-            return super.impl_cssSet(property,value);
-        }
-        return true;
-    }
-
-    /**
-     * @treatasprivate implementation detail
-     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
-     */
-    @Deprecated
-    @Override protected boolean impl_cssSettable(String property) {
-        if ("-fx-progress-color".equals(property) ) {
-            return true;
-        } else {
-            return super.impl_cssSettable(property);
-        }
+    public Paint getProgressColor() {
+        return progressColor.get();
     }
 
     /**
      * The colour of the progress segment
      */
-    @Styleable(property="-fx-progress-color", initial="Color.DODGERBLUE")
-    public Paint progressColor = Color.DODGERBLUE;
+    private ObjectProperty<Paint> progressColor =            
+            new StyleableObjectProperty<Paint>(Color.DODGERBLUE) {
+
+        @Override public void set(Paint newProgressColor) {
+            final Paint color = (newProgressColor instanceof Color)
+                    ? newProgressColor 
+                    : Color.DODGERBLUE;
+            super.set(color);
+        }
         
+        @Override
+        protected void invalidated() {
+            setColors((Color)progressColor.get());
+        }
+
+        @Override
+        public Object getBean() {
+            return ProgressIndicatorSkin.this;
+        }
+
+        @Override
+        public String getName() {
+            return "progressColorProperty";
+        }
+
+        @Override
+        public StyleableProperty getStyleableProperty() {
+            return StyleableProperties.PROGRESS_COLOR;
+        }
+    };
+        
+
+    // *********** Stylesheet Handling *****************************************
+    
     /**
      * Super-lazy instantiation pattern from Bill Pugh.
      * @treatasprivate implementation detail
      */
     private static class StyleableProperties {
-        private static final StyleableProperty PROGRESS_COLOR =
-            new StyleableProperty(ProgressIndicatorSkin.class, "progressColor");
+        private static final StyleableProperty<ProgressIndicatorSkin,Paint> PROGRESS_COLOR =
+            new StyleableProperty<ProgressIndicatorSkin,Paint>("-fx-progress-color",
+                PaintConverter.getInstance(), Color.DODGERBLUE) {
+
+            @Override
+            public boolean isSettable(ProgressIndicatorSkin n) {
+                return n.progressColor == null || 
+                        !n.progressColor.isBound();
+            }
+
+            @Override
+            public WritableValue<Paint> getWritableValue(ProgressIndicatorSkin n) {
+                return n.progressColor;
+            }
+        };
 
         public static final List<StyleableProperty> STYLEABLES;
         static {
@@ -584,7 +563,7 @@ public class ProgressIndicatorSkin extends SkinBase<ProgressIndicator, ProgressI
                 new ArrayList<StyleableProperty>(SkinBase.impl_CSS_STYLEABLES());
             Collections.addAll(styleables,
                                PROGRESS_COLOR
-                               );
+            );
             STYLEABLES = Collections.unmodifiableList(styleables);
         }
     }

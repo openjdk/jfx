@@ -238,41 +238,6 @@ import com.sun.javafx.css.StyleableProperty;
     private static final String DEFAULT_STYLE_CLASS = "toggle-button";
     private static final String PSEUDO_CLASS_SELECTED = "selected";
 
-    private static class StyleableProperties {
-        private static final List<StyleableProperty> STYLEABLES;
-        private static final int[] bitIndices;
-        static {
-            final List<StyleableProperty> styleables =
-                new ArrayList<StyleableProperty>();
-            styleables.addAll(ButtonBase.impl_CSS_STYLEABLES());
-            STYLEABLES = Collections.unmodifiableList(styleables);
-
-            bitIndices = new int[StyleableProperty.getMaxIndex()];
-            java.util.Arrays.fill(bitIndices, -1);
-            for(int bitIndex=0; bitIndex<STYLEABLES.size(); bitIndex++) {
-                bitIndices[STYLEABLES.get(bitIndex).getIndex()] = bitIndex;
-            }
-        }
-    }
-
-    /**
-     * @treatasprivate implementation detail
-     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
-     */
-    @Deprecated
-    @Override protected int[] impl_cssStyleablePropertyBitIndices() {
-        return ToggleButton.StyleableProperties.bitIndices;
-    }
-
-    /**
-     * @treatasprivate implementation detail
-     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
-     */
-    @Deprecated
-    public static List<StyleableProperty> impl_CSS_STYLEABLES() {
-        return ToggleButton.StyleableProperties.STYLEABLES;
-    }
-
     private static final long SELECTED_PSEUDOCLASS_STATE = StyleManager.getInstance().getPseudoclassMask("selected");
 
     /**

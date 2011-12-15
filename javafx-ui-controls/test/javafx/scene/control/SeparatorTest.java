@@ -4,6 +4,7 @@
 
 package javafx.scene.control;
 
+import com.sun.javafx.css.StyleableProperty;
 import static javafx.scene.control.ControlTestUtils.assertPseudoClassExists;
 import static javafx.scene.control.ControlTestUtils.assertStyleClassContains;
 import static org.junit.Assert.assertEquals;
@@ -114,19 +115,22 @@ public class SeparatorTest {
     }
 
     @Test public void whenOrientationIsBound_impl_cssSettable_ReturnsFalse() {
-        assertTrue(separator.impl_cssSettable("-fx-orientation"));
+        StyleableProperty styleable = StyleableProperty.getStyleableProperty(separator.orientationProperty());
+        assertTrue(styleable.isSettable(separator));
         ObjectProperty<Orientation> other = new SimpleObjectProperty<Orientation>(Orientation.VERTICAL);
         separator.orientationProperty().bind(other);
-        assertFalse(separator.impl_cssSettable("-fx-orientation"));
+        assertFalse(styleable.isSettable(separator));
     }
 
     @Test public void whenOrientationIsSpecifiedViaCSSAndIsNotBound_impl_cssSettable_ReturnsTrue() {
-        separator.impl_cssSet("-fx-orientation", Orientation.VERTICAL);
-        assertTrue(separator.impl_cssSettable("-fx-orientation"));
+        StyleableProperty styleable = StyleableProperty.getStyleableProperty(separator.orientationProperty());
+        styleable.set(separator, Orientation.VERTICAL);
+        assertTrue(styleable.isSettable(separator));
     }
 
     @Test public void canSpecifyOrientationViaCSS() {
-        separator.impl_cssSet("-fx-orientation", Orientation.VERTICAL);
+        StyleableProperty styleable = StyleableProperty.getStyleableProperty(separator.orientationProperty());
+        styleable.set(separator, Orientation.VERTICAL);
         assertSame(Orientation.VERTICAL, separator.getOrientation());
     }
 
@@ -134,8 +138,10 @@ public class SeparatorTest {
             "of the function instead of the other, and no check is made " +
             "for bits set")
     @Test public void whenSettingOrientationToItsExistingValue_impl_cssSettable_ReturnsFalse() {
+        StyleableProperty styleable = StyleableProperty.getStyleableProperty(separator.orientationProperty());
+        assertTrue(styleable.isSettable(separator));
         separator.setOrientation(Orientation.HORIZONTAL);
-        assertFalse(separator.impl_cssSettable("-fx-orientation"));
+        assertFalse(styleable.isSettable(separator));
     }
 
     @Test public void settingOrientationToVERTICALChangesPseudoclassTo_vertical() {
@@ -188,19 +194,22 @@ public class SeparatorTest {
     }
 
     @Test public void whenHalignmentIsBound_impl_cssSettable_ReturnsFalse() {
-        assertTrue(separator.impl_cssSettable("-fx-halignment"));
+        StyleableProperty styleable = StyleableProperty.getStyleableProperty(separator.halignmentProperty());
+        assertTrue(styleable.isSettable(separator));
         ObjectProperty<HPos> other = new SimpleObjectProperty<HPos>(HPos.RIGHT);
         separator.halignmentProperty().bind(other);
-        assertFalse(separator.impl_cssSettable("-fx-halignment"));
+        assertFalse(styleable.isSettable(separator));
     }
 
     @Test public void whenHalignmentIsSpecifiedViaCSSAndIsNotBound_impl_cssSettable_ReturnsTrue() {
-        separator.impl_cssSet("-fx-halignment", HPos.RIGHT);
-        assertTrue(separator.impl_cssSettable("-fx-halignment"));
+        StyleableProperty styleable = StyleableProperty.getStyleableProperty(separator.halignmentProperty());
+        styleable.set(separator, HPos.RIGHT);
+        assertTrue(styleable.isSettable(separator));
     }
 
     @Test public void canSpecifyHalignmentViaCSS() {
-        separator.impl_cssSet("-fx-halignment", HPos.RIGHT);
+        StyleableProperty styleable = StyleableProperty.getStyleableProperty(separator.halignmentProperty());
+        styleable.set(separator, HPos.RIGHT);
         assertSame(HPos.RIGHT, separator.getHalignment());
     }
 
@@ -244,19 +253,22 @@ public class SeparatorTest {
     }
 
     @Test public void whenValignmentIsBound_impl_cssSettable_ReturnsFalse() {
-        assertTrue(separator.impl_cssSettable("-fx-valignment"));
+        StyleableProperty styleable = StyleableProperty.getStyleableProperty(separator.valignmentProperty());
+        assertTrue(styleable.isSettable(separator));
         ObjectProperty<VPos> other = new SimpleObjectProperty<VPos>(VPos.BASELINE);
         separator.valignmentProperty().bind(other);
-        assertFalse(separator.impl_cssSettable("-fx-valignment"));
+        assertFalse(styleable.isSettable(separator));
     }
 
     @Test public void whenValignmentIsSpecifiedViaCSSAndIsNotBound_impl_cssSettable_ReturnsTrue() {
-        separator.impl_cssSet("-fx-valignment", VPos.BASELINE);
-        assertTrue(separator.impl_cssSettable("-fx-valignment"));
+        StyleableProperty styleable = StyleableProperty.getStyleableProperty(separator.valignmentProperty());
+        styleable.set(separator, VPos.BASELINE);
+        assertTrue(styleable.isSettable(separator));
     }
 
     @Test public void canSpecifyValignmentViaCSS() {
-        separator.impl_cssSet("-fx-valignment", VPos.BASELINE);
+        StyleableProperty styleable = StyleableProperty.getStyleableProperty(separator.valignmentProperty());
+        styleable.set(separator, VPos.BASELINE);
         assertSame(VPos.BASELINE, separator.getValignment());
     }
 }

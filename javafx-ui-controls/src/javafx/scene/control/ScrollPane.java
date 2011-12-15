@@ -25,25 +25,24 @@
 
 package javafx.scene.control;
 
+import com.sun.javafx.css.*;
+import com.sun.javafx.css.converters.BooleanConverter;
+import com.sun.javafx.css.converters.EnumConverter;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
 import javafx.beans.property.BooleanProperty;
-import javafx.beans.property.BooleanPropertyBase;
 import javafx.beans.property.DoubleProperty;
 import javafx.beans.property.ObjectProperty;
-import javafx.beans.property.ObjectPropertyBase;
 import javafx.beans.property.SimpleDoubleProperty;
 import javafx.beans.property.SimpleObjectProperty;
+import javafx.beans.value.WritableValue;
 
 import javafx.geometry.BoundingBox;
 import javafx.geometry.Bounds;
 import javafx.scene.Node;
 
-import com.sun.javafx.css.Styleable;
-import com.sun.javafx.css.StyleManager;
-import com.sun.javafx.css.StyleableProperty;
 import javafx.beans.DefaultProperty;
 
 /**
@@ -106,7 +105,6 @@ public class ScrollPane extends Control {
     /**
      * Specifies the policy for showing the horizontal scroll bar.
      */
-    @Styleable(property="-fx-hbar-policy", initial="as-needed")
     private ObjectProperty<ScrollBarPolicy> hbarPolicy;
     public final void setHbarPolicy(ScrollBarPolicy value) {
         hbarPolicyProperty().set(value);
@@ -118,11 +116,11 @@ public class ScrollPane extends Control {
 
     public final ObjectProperty<ScrollBarPolicy> hbarPolicyProperty() {
         if (hbarPolicy == null) {
-            hbarPolicy = new ObjectPropertyBase<ScrollBarPolicy>(ScrollBarPolicy.AS_NEEDED) {
+            hbarPolicy = new StyleableObjectProperty<ScrollBarPolicy>(ScrollBarPolicy.AS_NEEDED) {
 
                 @Override
-                public void invalidated() {
-                    impl_cssPropertyInvalidated(StyleableProperties.HBAR_POLICY);
+                public StyleableProperty getStyleableProperty() {
+                    return StyleableProperties.HBAR_POLICY;
                 }
 
                 @Override
@@ -141,7 +139,6 @@ public class ScrollPane extends Control {
     /**
      * Specifies the policy for showing the vertical scroll bar.
      */
-    @Styleable(property="-fx-vbar-policy", initial="as-needed")
     private ObjectProperty<ScrollBarPolicy> vbarPolicy;
     public final void setVbarPolicy(ScrollBarPolicy value) {
         vbarPolicyProperty().set(value);
@@ -153,11 +150,11 @@ public class ScrollPane extends Control {
 
     public final ObjectProperty<ScrollBarPolicy> vbarPolicyProperty() {
         if (vbarPolicy == null) {
-            vbarPolicy = new ObjectPropertyBase<ScrollBarPolicy>(ScrollBarPolicy.AS_NEEDED) {
+            vbarPolicy = new StyleableObjectProperty<ScrollBarPolicy>(ScrollBarPolicy.AS_NEEDED) {
 
                 @Override
-                public void invalidated() {
-                    impl_cssPropertyInvalidated(StyleableProperties.VBAR_POLICY);
+                public StyleableProperty getStyleableProperty() {
+                    return StyleableProperties.VBAR_POLICY;
                 }
 
                 @Override
@@ -333,7 +330,6 @@ public class ScrollPane extends Control {
      * kept resized to match the width of the ScrollPane's viewport. If the
      * contained node is not a Resizable, this value is ignored.
      */
-    @Styleable(property="-fx-fit-to-width", initial="false")
     private BooleanProperty fitToWidth;
     public final void setFitToWidth(boolean value) {
         fitToWidthProperty().set(value);
@@ -343,10 +339,14 @@ public class ScrollPane extends Control {
     }
     public final BooleanProperty fitToWidthProperty() {
         if (fitToWidth == null) {
-            fitToWidth = new BooleanPropertyBase() {
+            fitToWidth = new StyleableBooleanProperty(false) {
                 @Override public void invalidated() {
-                    impl_cssPropertyInvalidated(StyleableProperties.FIT_TO_WIDTH);
                     impl_pseudoClassStateChanged(PSEUDO_CLASS_FIT_TO_WIDTH);
+                }
+                
+                @Override
+                public StyleableProperty getStyleableProperty() {
+                    return StyleableProperties.FIT_TO_WIDTH;
                 }
 
                 @Override
@@ -367,7 +367,6 @@ public class ScrollPane extends Control {
      * kept resized to match the height of the ScrollPane's viewport. If the
      * contained node is not a Resizable, this value is ignored.
      */
-    @Styleable(property="-fx-fit-to-height", initial="false")
     private BooleanProperty fitToHeight;
     public final void setFitToHeight(boolean value) {
         fitToHeightProperty().set(value);
@@ -377,10 +376,14 @@ public class ScrollPane extends Control {
     }
     public final BooleanProperty fitToHeightProperty() {
         if (fitToHeight == null) {
-            fitToHeight = new BooleanPropertyBase() {
+            fitToHeight = new StyleableBooleanProperty(false) {
                 @Override public void invalidated() {
-                    impl_cssPropertyInvalidated(StyleableProperties.FIT_TO_HEIGHT);
                     impl_pseudoClassStateChanged(PSEUDO_CLASS_FIT_TO_HEIGHT);
+                }
+
+                @Override
+                public StyleableProperty getStyleableProperty() {
+                    return StyleableProperties.FIT_TO_HEIGHT;
                 }
 
                 @Override
@@ -403,7 +406,6 @@ public class ScrollPane extends Control {
      * then {@link #pannableProperty pannable} is consulted to determine if the events should be
      * used for panning.
      */
-    @Styleable(property="-fx-pannable", initial="false")
     private BooleanProperty pannable;
     public final void setPannable(boolean value) {
         pannableProperty().set(value);
@@ -413,12 +415,16 @@ public class ScrollPane extends Control {
     }
     public final BooleanProperty pannableProperty() {
         if (pannable == null) {
-            pannable = new BooleanPropertyBase() {
+            pannable = new StyleableBooleanProperty(false) {
                 @Override public void invalidated() {
-                    impl_cssPropertyInvalidated(StyleableProperties.PANNABLE);
                     impl_pseudoClassStateChanged(PSEUDO_CLASS_PANNABLE);
                 }
 
+                @Override
+                public StyleableProperty getStyleableProperty() {
+                    return StyleableProperties.PANNABLE;
+                }
+                
                 @Override
                 public Object getBean() {
                     return ScrollPane.this;
@@ -579,19 +585,84 @@ public class ScrollPane extends Control {
      * @treatasprivate
      */
     private static class StyleableProperties {
-        private static final StyleableProperty HBAR_POLICY =
-            new StyleableProperty(ScrollPane.class, "hbarPolicy");
-        private static final StyleableProperty VBAR_POLICY =
-            new StyleableProperty(ScrollPane.class, "vbarPolicy");
-        private static final StyleableProperty FIT_TO_WIDTH =
-            new StyleableProperty(ScrollPane.class, "fitToWidth");
-        private static final StyleableProperty FIT_TO_HEIGHT =
-            new StyleableProperty(ScrollPane.class, "fitToHeight");
-        private static final StyleableProperty PANNABLE =
-            new StyleableProperty(ScrollPane.class, "pannable");
+        private static final StyleableProperty<ScrollPane,ScrollBarPolicy> HBAR_POLICY =
+            new StyleableProperty<ScrollPane,ScrollBarPolicy>("-fx-hbar-policy",
+                 new EnumConverter<ScrollBarPolicy>(ScrollBarPolicy.class),
+                        ScrollBarPolicy.AS_NEEDED){
+
+            @Override
+            public boolean isSettable(ScrollPane n) {
+                return n.hbarPolicy == null || !n.hbarPolicy.isBound();
+            }
+
+            @Override
+            public WritableValue<ScrollBarPolicy> getWritableValue(ScrollPane n) {
+                return n.hbarPolicyProperty();
+            }
+        };
+                
+        private static final StyleableProperty<ScrollPane,ScrollBarPolicy> VBAR_POLICY =
+            new StyleableProperty<ScrollPane,ScrollBarPolicy>("-fx-vbar-policy",
+                new EnumConverter<ScrollBarPolicy>(ScrollBarPolicy.class),
+                        ScrollBarPolicy.AS_NEEDED){
+
+            @Override
+            public boolean isSettable(ScrollPane n) {
+                return n.vbarPolicy == null || !n.vbarPolicy.isBound();
+            }
+
+            @Override
+            public WritableValue<ScrollBarPolicy> getWritableValue(ScrollPane n) {
+                return n.vbarPolicyProperty();
+            }
+        };
+                
+        private static final StyleableProperty<ScrollPane,Boolean> FIT_TO_WIDTH =
+            new StyleableProperty<ScrollPane, Boolean>("-fx-fit-to-width",
+                BooleanConverter.getInstance(), Boolean.FALSE){
+
+            @Override
+            public boolean isSettable(ScrollPane n) {
+                return n.fitToWidth == null || !n.fitToWidth.isBound();
+            }
+
+            @Override
+            public WritableValue<Boolean> getWritableValue(ScrollPane n) {
+                return n.fitToWidthProperty();
+            }
+        };
+                
+        private static final StyleableProperty<ScrollPane,Boolean> FIT_TO_HEIGHT =
+            new StyleableProperty<ScrollPane, Boolean>("-fx-fit-to-height",
+                BooleanConverter.getInstance(), Boolean.FALSE){
+
+            @Override
+            public boolean isSettable(ScrollPane n) {
+                return n.fitToHeight == null || !n.fitToHeight.isBound();
+            }
+
+            @Override
+            public WritableValue<Boolean> getWritableValue(ScrollPane n) {
+                return n.fitToHeightProperty();
+            }
+        };
+                
+        private static final StyleableProperty<ScrollPane,Boolean> PANNABLE =
+            new StyleableProperty<ScrollPane, Boolean>("-fx-pannable",
+                BooleanConverter.getInstance(), Boolean.FALSE){
+
+            @Override
+            public boolean isSettable(ScrollPane n) {
+                return n.pannable == null || !n.pannable.isBound();
+            }
+
+            @Override
+            public WritableValue<Boolean> getWritableValue(ScrollPane n) {
+                return n.pannableProperty();
+            }
+        };
 
         private static final List<StyleableProperty> STYLEABLES;
-        private static final int[] bitIndices;
         static {
             final List<StyleableProperty> styleables = 
                 new ArrayList<StyleableProperty>(Control.impl_CSS_STYLEABLES());
@@ -603,22 +674,7 @@ public class ScrollPane extends Control {
                 PANNABLE
             );
             STYLEABLES = Collections.unmodifiableList(styleables);
-
-            bitIndices = new int[StyleableProperty.getMaxIndex()];
-            java.util.Arrays.fill(bitIndices, -1);
-            for(int bitIndex=0; bitIndex<STYLEABLES.size(); bitIndex++) {
-                bitIndices[STYLEABLES.get(bitIndex).getIndex()] = bitIndex;
-            }
         }
-    }
-
-    /**
-     * @treatasprivate implementation detail
-     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
-     */
-    @Deprecated
-    @Override protected int[] impl_cssStyleablePropertyBitIndices() {
-        return ScrollPane.StyleableProperties.bitIndices;
     }
 
     /**
@@ -654,48 +710,6 @@ public class ScrollPane extends Control {
         }
         return mask;
     }
-    /**
-     * @treatasprivate implementation detail
-     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
-     */
-    @Deprecated
-    @Override protected boolean impl_cssSet(String property, Object value) {
-        if ("-fx-hbar-policy".equals(property)) {
-            setHbarPolicy((ScrollBarPolicy) value);
-        } else if ("-fx-vbar-policy".equals(property)) {
-            setVbarPolicy((ScrollBarPolicy) value);
-        } else if ("-fx-fit-to-width".equals(property)) {
-            setFitToWidth((Boolean) value);
-        } else if ("-fx-fit-to-height".equals(property)) {
-            setFitToHeight((Boolean) value);
-        } else if ("-fx-pannable".equals(property)) {
-            setPannable((Boolean) value);
-        }
-        return super.impl_cssSet(property, value);
-    }
-
-    /**
-     * @treatasprivate implementation detail
-     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
-     */
-    @Deprecated
-    @Override protected boolean impl_cssSettable(String property) {
-        if ("-fx-hbar-policy".equals(property)) {
-            return hbarPolicy == null || !hbarPolicy.isBound();
-        } else if ("-fx-vbar-policy".equals(property)) {
-            return vbarPolicy == null || !vbarPolicy.isBound();
-        } else if ("-fx-fit-to-width".equals(property)) {
-            return fitToWidth == null || !fitToWidth.isBound();
-        } else if ("-fx-fit-to-height".equals(property)) {
-            return fitToHeight == null || !fitToHeight.isBound();
-        } else if ("-fx-pannable".equals(property)) {
-            return pannable == null || !pannable.isBound();
-        } else {
-            return super.impl_cssSettable(property);
-        }
-    }
-
-    
     
     /**
      * An enumeration denoting the policy to be used by a scrollable

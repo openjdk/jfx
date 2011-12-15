@@ -35,19 +35,20 @@ import javafx.animation.KeyValue;
 import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.BooleanPropertyBase;
 import javafx.beans.property.DoubleProperty;
-import javafx.beans.property.DoublePropertyBase;
 import javafx.beans.property.IntegerProperty;
 import javafx.beans.property.SimpleIntegerProperty;
 import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
+import javafx.beans.value.WritableValue;
 import javafx.geometry.Dimension2D;
 import javafx.geometry.Side;
 import javafx.util.Duration;
 import javafx.util.StringConverter;
 
 import com.sun.javafx.charts.ChartLayoutAnimator;
-import com.sun.javafx.css.Styleable;
+import com.sun.javafx.css.StyleableDoubleProperty;
 import com.sun.javafx.css.StyleableProperty;
+import com.sun.javafx.css.converters.SizeConverter;
 
 /**
  * A axis class that plots a range of numbers with major tick marks every "tickUnit". You can use any Number type with
@@ -103,14 +104,17 @@ public final class NumberAxis extends ValueAxis<Number> {
     public final BooleanProperty forceZeroInRangeProperty() { return forceZeroInRange; }
 
     /**  The value between each major tick mark in data units. This is automatically set if we are auto-ranging. */
-    @Styleable(property="-fx-tick-unit", initial="5")
-    private DoubleProperty tickUnit = new DoublePropertyBase(5) {
+    private DoubleProperty tickUnit = new StyleableDoubleProperty(5) {
         @Override protected void invalidated() {
-            impl_cssPropertyInvalidated(StyleableProperties.TICK_UNIT);
             if(!isAutoRanging()) {
                 invalidateRange();
                 requestAxisLayout();
             }
+        }
+        
+        @Override
+        public StyleableProperty getStyleableProperty() {
+            return StyleableProperties.TICK_UNIT;
         }
 
         @Override
@@ -408,11 +412,22 @@ public final class NumberAxis extends ValueAxis<Number> {
 
      /** @treatasprivate implementation detail */
     private static class StyleableProperties {
-        private static final StyleableProperty TICK_UNIT =
-            new StyleableProperty(NumberAxis.class, "tickUnit");
+        private static final StyleableProperty<NumberAxis,Number> TICK_UNIT =
+            new StyleableProperty<NumberAxis,Number>("-fx-tick-unit",
+                SizeConverter.getInstance(), 5.0) {
+
+            @Override
+            public boolean isSettable(NumberAxis n) {
+                return n.tickUnit == null || !n.tickUnit.isBound();
+            }
+
+            @Override
+            public WritableValue<Number> getWritableValue(NumberAxis n) {
+                return n.tickUnitProperty();
+            }
+        };
 
         private static final List<StyleableProperty> STYLEABLES;
-        private static final int[] bitIndices;
         static {
            final List<StyleableProperty> styleables = 
                new ArrayList<StyleableProperty>(ValueAxis.impl_CSS_STYLEABLES());
@@ -420,22 +435,7 @@ public final class NumberAxis extends ValueAxis<Number> {
                 TICK_UNIT
             );
            STYLEABLES = Collections.unmodifiableList(styleables);
-
-           bitIndices = new int[StyleableProperty.getMaxIndex()];
-            java.util.Arrays.fill(bitIndices, -1);
-           for(int bitIndex=0; bitIndex<STYLEABLES.size(); bitIndex++) {
-               bitIndices[STYLEABLES.get(bitIndex).getIndex()] = bitIndex;
-            }
         }
-    }
-
-    /**
-     * @treatasprivate implementation detail
-     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
-     */
-    @Deprecated
-    @Override protected int[] impl_cssStyleablePropertyBitIndices() {
-        return NumberAxis.StyleableProperties.bitIndices;
     }
 
     /**
@@ -446,33 +446,6 @@ public final class NumberAxis extends ValueAxis<Number> {
     @SuppressWarnings({"JavaDoc"})
     public static List<StyleableProperty> impl_CSS_STYLEABLES() {
         return NumberAxis.StyleableProperties.STYLEABLES;
-    }
-
-    /**
-     * @treatasprivate implementation detail
-     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
-     */
-    @Deprecated
-    @Override protected boolean impl_cssSet(String property, Object value) {
-        if ("-fx-tick-unit".equals(property)) {
-            setTickUnit((Double) value);
-        } else {
-            return super.impl_cssSet(property, value);
-        }
-        return true;
-    }
-
-    /**
-     * @treatasprivate implementation detail
-     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
-     */
-    @Deprecated
-    @Override protected boolean impl_cssSettable(String property) {
-        if ("-fx-tick-unit".equals(property)) {
-            return tickUnitProperty() == null || !tickUnitProperty().isBound();
-        } else {
-            return super.impl_cssSettable(property);
-        }
     }
 
     // -------------- INNER CLASSES ------------------------------------------------------------------------------------

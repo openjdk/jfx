@@ -25,19 +25,23 @@
 
 package javafx.scene.control;
 
+import com.sun.javafx.css.*;
+import com.sun.javafx.css.converters.*;
+import java.net.MalformedURLException;
+import java.net.URL;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
 import javafx.beans.property.BooleanProperty;
-import javafx.beans.property.BooleanPropertyBase;
 import javafx.beans.property.DoubleProperty;
-import javafx.beans.property.DoublePropertyBase;
 import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.ObjectPropertyBase;
+import javafx.beans.property.ReadOnlyObjectProperty;
 import javafx.beans.property.SimpleBooleanProperty;
 import javafx.beans.property.SimpleStringProperty;
 import javafx.beans.property.StringProperty;
+import javafx.beans.value.WritableValue;
 import javafx.geometry.Insets;
 import javafx.geometry.Orientation;
 import javafx.geometry.Pos;
@@ -49,11 +53,7 @@ import javafx.scene.paint.Paint;
 import javafx.scene.text.Font;
 import javafx.scene.text.TextAlignment;
 
-import com.sun.javafx.css.Styleable;
-import com.sun.javafx.css.StyleableProperty;
 import javafx.beans.DefaultProperty;
-import javafx.beans.property.ReadOnlyObjectProperty;
-import javafx.beans.property.ReadOnlyObjectWrapper;
 
 
 /**
@@ -135,16 +135,10 @@ public abstract class Labeled extends Control {
      */
     public final ObjectProperty<Pos> alignmentProperty() {
         if (alignment == null) {
-            alignment = new ObjectPropertyBase<Pos>(Pos.CENTER_LEFT) {
-                // We have to ensure that the cssPropertyInvalidated flag is called
-                // even when the old value == the new value.
-                @Override public void set(Pos value) {
-                    super.set(value);
-                    impl_cssPropertyInvalidated(StyleableProperties.ALIGNMENT);
-                }
+            alignment = new StyleableObjectProperty<Pos>(Pos.CENTER_LEFT) {
 
-                @Override public void invalidated() {
-                    impl_cssPropertyInvalidated(StyleableProperties.ALIGNMENT);
+                @Override public StyleableProperty getStyleableProperty() {
+                    return StyleableProperties.ALIGNMENT;
                 }
 
                 @Override
@@ -160,7 +154,6 @@ public abstract class Labeled extends Control {
         }
         return alignment;
     }
-    @Styleable(property="-fx-alignment", initial="center_left")
     private ObjectProperty<Pos> alignment;
     public final void setAlignment(Pos value) { alignmentProperty().set(value); }
     public final Pos getAlignment() { return alignment == null ? Pos.CENTER_LEFT : alignment.get(); }
@@ -173,9 +166,11 @@ public abstract class Labeled extends Control {
      */
     public final ObjectProperty<TextAlignment> textAlignmentProperty() {
         if (textAlignment == null) {
-            textAlignment = new ObjectPropertyBase<TextAlignment>(TextAlignment.LEFT) {
-                @Override public void invalidated() {
-                    impl_cssPropertyInvalidated(StyleableProperties.TEXT_ALIGNMENT);
+            textAlignment = new StyleableObjectProperty<TextAlignment>(TextAlignment.LEFT) {
+                
+                @Override 
+                public StyleableProperty getStyleableProperty() {
+                    return StyleableProperties.TEXT_ALIGNMENT;
                 }
 
                 @Override
@@ -191,7 +186,6 @@ public abstract class Labeled extends Control {
         }
         return textAlignment;
     }
-    @Styleable(property="-fx-text-alignment", initial="left")
     private ObjectProperty<TextAlignment> textAlignment;
     public final void setTextAlignment(TextAlignment value) { textAlignmentProperty().setValue(value); }
     public final TextAlignment getTextAlignment() { return textAlignment == null ? TextAlignment.LEFT : textAlignment.getValue(); }
@@ -202,9 +196,11 @@ public abstract class Labeled extends Control {
      */
     public final ObjectProperty<OverrunStyle> textOverrunProperty() {
         if (textOverrun == null) {
-            textOverrun = new ObjectPropertyBase<OverrunStyle>(OverrunStyle.ELLIPSIS) {
-                @Override public void invalidated() {
-                    impl_cssPropertyInvalidated(StyleableProperties.TEXT_OVERRUN);
+            textOverrun = new StyleableObjectProperty<OverrunStyle>(OverrunStyle.ELLIPSIS) {
+                
+                @Override 
+                public StyleableProperty getStyleableProperty() {
+                    return StyleableProperties.TEXT_OVERRUN;
                 }
 
                 @Override
@@ -220,7 +216,6 @@ public abstract class Labeled extends Control {
         }
         return textOverrun;
     }
-    @Styleable(property="-fx-text-overrun", initial="ellipsis")
     private ObjectProperty<OverrunStyle> textOverrun;
     public final void setTextOverrun(OverrunStyle value) { textOverrunProperty().setValue(value); }
     public final OverrunStyle getTextOverrun() { return textOverrun == null ? OverrunStyle.ELLIPSIS : textOverrun.getValue(); }
@@ -231,9 +226,11 @@ public abstract class Labeled extends Control {
      */
     public final BooleanProperty wrapTextProperty() {
         if (wrapText == null) {
-            wrapText = new BooleanPropertyBase() {
-                @Override public void invalidated() {
-                    impl_cssPropertyInvalidated(StyleableProperties.WRAP_TEXT);
+            wrapText = new StyleableBooleanProperty() {
+                
+                @Override 
+                public StyleableProperty getStyleableProperty() {
+                    return StyleableProperties.WRAP_TEXT;
                 }
 
                 @Override
@@ -249,7 +246,6 @@ public abstract class Labeled extends Control {
         }
         return wrapText;
     }
-    @Styleable(property="-fx-wrap-text", initial="false")
     private BooleanProperty wrapText;
     public final void setWrapText(boolean value) { wrapTextProperty().setValue(value); }
     public final boolean isWrapText() { return wrapText == null ? false : wrapText.getValue(); }
@@ -270,9 +266,11 @@ public abstract class Labeled extends Control {
      */
     public final ObjectProperty<Font> fontProperty() {
         if (font == null) {
-            font = new ObjectPropertyBase<Font>(Font.getDefault()) {
-                @Override public void invalidated() {
-                    impl_cssPropertyInvalidated(StyleableProperties.FONT);
+            font = new StyleableObjectProperty<Font>(Font.getDefault()) {
+                
+                @Override 
+                public StyleableProperty getStyleableProperty() {
+                    return StyleableProperties.FONT;
                 }
 
                 @Override
@@ -289,7 +287,6 @@ public abstract class Labeled extends Control {
         return font;
     }
 
-    @Styleable(property="-fx-font", inherits=true)
     private ObjectProperty<Font> font;
     public final void setFont(Font value) { fontProperty().setValue(value); }
     public final Font getFont() { return font == null ? Font.getDefault() : font.getValue(); }
@@ -304,10 +301,7 @@ public abstract class Labeled extends Control {
     public final ObjectProperty<Node> graphicProperty() {
         if (graphic == null) {
             graphic = new ObjectPropertyBase<Node>() {
-                @Override public void invalidated() {
-                    impl_cssPropertyInvalidated(StyleableProperties.GRAPHIC);
-                }
-
+                
                 @Override
                 public Object getBean() {
                     return Labeled.this;
@@ -321,24 +315,89 @@ public abstract class Labeled extends Control {
         }
         return graphic;
     }
-    @Styleable(property="-fx-graphic", converter="com.sun.javafx.css.converters.URLConverter")
     private ObjectProperty<Node> graphic;
     public final void setGraphic(Node value) {
         graphicProperty().setValue(value);
-        cachedImageUrl = null;
     }
     public final Node getGraphic() { return graphic == null ? null : graphic.getValue(); }
 
+    private StringProperty imageUrl = null;
+    /**
+     * The imageUrl property is set from CSS and then the graphic property is
+     * set from the invalidated method. This ensures that the same image isn't
+     * reloaded. 
+     */
+    private StringProperty imageUrlProperty() {
+        if (imageUrl == null) {
+            imageUrl = new StyleableStringProperty() {
+
+                @Override
+                protected void invalidated() {
+
+                    String imageUrl = null;
+                    if (get() != null) {
+                        URL url = null;
+                        try {
+                            url = new URL(get());
+                        } catch (MalformedURLException malf) {
+                            // This may be a relative URL, so try resolving
+                            // it using the application classloader
+                            final ClassLoader cl = Thread.currentThread().getContextClassLoader();
+                            url = cl.getResource(get());
+                        }
+                        if (url != null) {
+                            setGraphic(new ImageView(new Image(url.toExternalForm())));                            
+                        }
+                    } else {
+                        setGraphic(null);
+                    }                    
+                }
+
+                @Override
+                public Object getBean() {
+                    return Labeled.this;
+                }
+
+                @Override
+                public String getName() {
+                    return "imageUrl";
+                }
+
+                @Override
+                public StyleableProperty getStyleableProperty() {
+                    return StyleableProperties.GRAPHIC;
+                }
+                
+            };
+        }
+        return imageUrl;
+    }
+    
     /**
      * Whether all text should be underlined.
      */
     public final BooleanProperty underlineProperty() {
         if (underline == null) {
-            underline = new SimpleBooleanProperty(this, "underline");
+            underline = new StyleableBooleanProperty(false) {
+
+                @Override
+                public StyleableProperty getStyleableProperty() {
+                    return StyleableProperties.UNDERLINE;
+                }
+
+                @Override
+                public Object getBean() {
+                    return Labeled.this;
+                }
+
+                @Override
+                public String getName() {
+                    return "underline";
+                }
+            };
         }
         return underline;
     }
-    @Styleable(property="-fx-underline", initial="false")
     private BooleanProperty underline;
     public final void setUnderline(boolean value) { underlineProperty().setValue(value); }
     public final boolean isUnderline() { return underline == null ? false : underline.getValue(); }
@@ -348,9 +407,11 @@ public abstract class Labeled extends Control {
      */
     public final ObjectProperty<ContentDisplay> contentDisplayProperty() {
         if (contentDisplay == null) {
-            contentDisplay = new ObjectPropertyBase<ContentDisplay>(ContentDisplay.LEFT) {
-                @Override public void invalidated() {
-                    impl_cssPropertyInvalidated(StyleableProperties.CONTENT_DISPLAY);
+            contentDisplay = new StyleableObjectProperty<ContentDisplay>(ContentDisplay.LEFT) {
+                
+                @Override 
+                public StyleableProperty getStyleableProperty() {
+                    return StyleableProperties.CONTENT_DISPLAY;
                 }
 
                 @Override
@@ -366,7 +427,6 @@ public abstract class Labeled extends Control {
         }
         return contentDisplay;
     }
-    @Styleable(property="-fx-content-display", initial="left")
     private ObjectProperty<ContentDisplay> contentDisplay;
     public final void setContentDisplay(ContentDisplay value) { contentDisplayProperty().setValue(value); }
     public final ContentDisplay getContentDisplay() { return contentDisplay == null ? ContentDisplay.LEFT : contentDisplay.getValue(); }
@@ -379,11 +439,11 @@ public abstract class Labeled extends Control {
      * This property can only be set from CSS.
      */
     public final ReadOnlyObjectProperty<Insets> labelPaddingProperty() {
-        return labelPaddingPropertyImpl().getReadOnlyProperty();
+        return labelPaddingPropertyImpl();
     }
-    private ReadOnlyObjectWrapper<Insets> labelPaddingPropertyImpl() {
+    private ObjectProperty<Insets> labelPaddingPropertyImpl() {
         if (labelPadding == null) {
-            labelPadding = new ReadOnlyObjectWrapper<Insets>(Insets.EMPTY) {
+            labelPadding = new StyleableObjectProperty<Insets>(Insets.EMPTY) {
                 private Insets lastValidValue = Insets.EMPTY;
 
                 @Override
@@ -395,7 +455,11 @@ public abstract class Labeled extends Control {
                     }
                     lastValidValue = newValue;
                     requestLayout();
-                    impl_cssPropertyInvalidated(StyleableProperties.LABEL_PADDING);
+                }
+                
+                @Override
+                public StyleableProperty getStyleableProperty() {
+                    return StyleableProperties.LABEL_PADDING;
                 }
 
                 @Override
@@ -411,8 +475,7 @@ public abstract class Labeled extends Control {
         }
         return labelPadding;
     }
-    @Styleable(property="-fx-label-padding")
-    private ReadOnlyObjectWrapper<Insets> labelPadding;
+    private ObjectProperty<Insets> labelPadding;
     private void setLabelPadding(Insets value) { labelPaddingPropertyImpl().set(value); }
     public final Insets getLabelPadding() { return labelPadding == null ? Insets.EMPTY : labelPadding.get(); }
 
@@ -421,9 +484,11 @@ public abstract class Labeled extends Control {
      */
     public final DoubleProperty graphicTextGapProperty() {
         if (graphicTextGap == null) {
-            graphicTextGap = new DoublePropertyBase(4) {
-                @Override public void invalidated() {
-                    impl_cssPropertyInvalidated(StyleableProperties.GRAPHIC_TEXT_GAP);
+            graphicTextGap = new StyleableDoubleProperty(4) {
+                
+                @Override
+                public StyleableProperty getStyleableProperty() {
+                    return StyleableProperties.GRAPHIC_TEXT_GAP;
                 }
 
                 @Override
@@ -439,7 +504,6 @@ public abstract class Labeled extends Control {
         }
         return graphicTextGap;
     }
-    @Styleable(property="-fx-graphic-text-gap", initial="4")
     private DoubleProperty graphicTextGap;
     public final void setGraphicTextGap(double value) { graphicTextGapProperty().setValue(value); }
     public final double getGraphicTextGap() { return graphicTextGap == null ? 4 : graphicTextGap.getValue(); }
@@ -448,7 +512,6 @@ public abstract class Labeled extends Control {
     /**
      * The {@link Paint} used to fill the text.
      */
-    @Styleable(property="-fx-text-fill", initial="black", inherits=true)
     private ObjectProperty<Paint> textFill; // TODO for now change this
 
     public final void setTextFill(Paint value) {
@@ -461,9 +524,11 @@ public abstract class Labeled extends Control {
 
     public final ObjectProperty<Paint> textFillProperty() {
         if (textFill == null) {
-            textFill = new ObjectPropertyBase<Paint>(Color.BLACK) {
-                @Override public void invalidated() {
-                    impl_cssPropertyInvalidated(StyleableProperties.TEXT_FILL);
+            textFill = new StyleableObjectProperty<Paint>(Color.BLACK) {
+                
+                @Override 
+                public StyleableProperty getStyleableProperty() {
+                    return StyleableProperties.TEXT_FILL;
                 }
 
                 @Override
@@ -529,20 +594,175 @@ public abstract class Labeled extends Control {
       * @treatasprivate implementation detail
       */
     private static class StyleableProperties {
-        private static final StyleableProperty FONT = new StyleableProperty(Labeled.class, "font", StyleableProperty.FONT.getSubProperties());
-        private static final StyleableProperty ALIGNMENT = new StyleableProperty(Labeled.class, "alignment");
-        private static final StyleableProperty TEXT_ALIGNMENT = new StyleableProperty(Labeled.class, "textAlignment");
-        private static final StyleableProperty TEXT_FILL = new StyleableProperty(Labeled.class, "textFill");
-        private static final StyleableProperty TEXT_OVERRUN = new StyleableProperty(Labeled.class, "textOverrun");
-        private static final StyleableProperty WRAP_TEXT = new StyleableProperty(Labeled.class, "wrapText");
-        private static final StyleableProperty GRAPHIC = new StyleableProperty(Labeled.class, "graphic");
-        private static final StyleableProperty UNDERLINE = new StyleableProperty(Labeled.class, "underline");
-        private static final StyleableProperty CONTENT_DISPLAY = new StyleableProperty(Labeled.class, "contentDisplay");
-        private static final StyleableProperty LABEL_PADDING = new StyleableProperty(Labeled.class, "labelPadding");
-        private static final StyleableProperty GRAPHIC_TEXT_GAP = new StyleableProperty(Labeled.class, "graphicTextGap");
+        private static final StyleableProperty.FONT<Labeled> FONT = 
+            new StyleableProperty.FONT<Labeled>("-fx-font", Font.getDefault()) {
+
+            @Override
+            public boolean isSettable(Labeled n) {
+                return n.font == null || !n.font.isBound();
+            }
+
+            @Override
+            public WritableValue<Font> getWritableValue(Labeled n) {
+                return n.fontProperty();
+            }
+        };
+        
+        private static final StyleableProperty<Labeled,Pos> ALIGNMENT = 
+                new StyleableProperty<Labeled,Pos>("-fx-alignment",
+                new EnumConverter<Pos>(Pos.class), Pos.CENTER_LEFT ) {
+
+            @Override
+            public boolean isSettable(Labeled n) {
+                return n.alignment == null || !n.alignment.isBound();
+            }
+
+            @Override
+            public WritableValue<Pos> getWritableValue(Labeled n) {
+                return n.alignmentProperty();
+            }
+        };
+        
+        private static final StyleableProperty<Labeled,TextAlignment> TEXT_ALIGNMENT = 
+                new StyleableProperty<Labeled,TextAlignment>("-fx-text-alignment",
+                new EnumConverter<TextAlignment>(TextAlignment.class),
+                TextAlignment.LEFT) {
+
+            @Override
+            public boolean isSettable(Labeled n) {
+                return n.textAlignment == null || !n.textAlignment.isBound();
+            }
+
+            @Override
+            public WritableValue<TextAlignment> getWritableValue(Labeled n) {
+                return n.textAlignmentProperty();
+            }
+        };
+        
+        private static final StyleableProperty<Labeled,Paint> TEXT_FILL = 
+                new StyleableProperty<Labeled,Paint>("-fx-text-fill",
+                PaintConverter.getInstance(), Color.BLACK) {
+
+            @Override
+            public boolean isSettable(Labeled n) {
+                return n.textFill == null || !n.textFill.isBound();
+            }
+
+            @Override
+            public WritableValue<Paint> getWritableValue(Labeled n) {
+                return n.textFillProperty();
+            }
+        };
+        
+        private static final StyleableProperty<Labeled,OverrunStyle> TEXT_OVERRUN = 
+                new StyleableProperty<Labeled,OverrunStyle>("-fx-text-overrun",
+                new EnumConverter<OverrunStyle>(OverrunStyle.class), 
+                OverrunStyle.ELLIPSIS) {
+
+            @Override
+            public boolean isSettable(Labeled n) {
+                return n.textOverrun == null || !n.textOverrun.isBound();
+            }
+
+            @Override
+            public WritableValue<OverrunStyle> getWritableValue(Labeled n) {
+                return n.textOverrunProperty();
+            }
+        };
+        
+        private static final StyleableProperty<Labeled,Boolean> WRAP_TEXT = 
+                new StyleableProperty<Labeled,Boolean>("-fx-wrap-text",
+                BooleanConverter.getInstance(), false) {
+
+            @Override
+            public boolean isSettable(Labeled n) {
+                return n.wrapText == null || !n.wrapText.isBound();
+            }
+
+            @Override
+            public WritableValue<Boolean> getWritableValue(Labeled n) {
+                return n.wrapTextProperty();
+            }
+        };
+        
+        private static final StyleableProperty<Labeled,String> GRAPHIC = 
+            new StyleableProperty<Labeled,String>("-fx-graphic",
+                StringConverter.getInstance()) {
+
+            @Override
+            public boolean isSettable(Labeled n) {
+                // Note that we care about the graphic, not imageUrl
+                return n.graphic == null && !n.graphic.isBound();
+            }
+
+            @Override
+            public WritableValue<String> getWritableValue(Labeled n) {
+                return n.imageUrlProperty();
+            }
+        };
+        
+        private static final StyleableProperty<Labeled,Boolean> UNDERLINE = 
+            new StyleableProperty<Labeled,Boolean>("-fx-underline",
+                BooleanConverter.getInstance(), Boolean.FALSE) {
+
+            @Override
+            public boolean isSettable(Labeled n) {
+                return n.underline == null || !n.underline.isBound();
+            }
+
+            @Override
+            public WritableValue<Boolean> getWritableValue(Labeled n) {
+                return n.underlineProperty();
+            }
+        };
+        
+        private static final StyleableProperty<Labeled,ContentDisplay> CONTENT_DISPLAY = 
+            new StyleableProperty<Labeled,ContentDisplay>("-fx-content-display",
+                new EnumConverter<ContentDisplay>(ContentDisplay.class), 
+                ContentDisplay.LEFT) {
+
+            @Override
+            public boolean isSettable(Labeled n) {
+                return n.contentDisplay == null || !n.contentDisplay.isBound();
+            }
+
+            @Override
+            public WritableValue<ContentDisplay> getWritableValue(Labeled n) {
+                return n.contentDisplayProperty();
+            }
+        };
+        
+        private static final StyleableProperty<Labeled,Insets> LABEL_PADDING = 
+            new StyleableProperty<Labeled,Insets>("-fx-label-padding",
+                InsetsConverter.getInstance(), Insets.EMPTY) {
+
+            @Override
+            public boolean isSettable(Labeled n) {
+                return n.labelPadding == null || !n.labelPadding.isBound();
+            }
+
+            @Override
+            public WritableValue<Insets> getWritableValue(Labeled n) {
+                return n.labelPaddingPropertyImpl();
+            }
+        };
+        
+        private static final StyleableProperty<Labeled,Number> GRAPHIC_TEXT_GAP = 
+            new StyleableProperty<Labeled,Number>("-fx-graphic-text-gap",
+                SizeConverter.getInstance(), 4.0) {
+
+            @Override
+            public boolean isSettable(Labeled n) {
+                return n.graphicTextGap == null || !n.graphicTextGap.isBound();
+            }
+
+            @Override
+            public WritableValue<Number> getWritableValue(Labeled n) {
+                return n.graphicTextGapProperty();
+            }
+        };
 
         private static final List<StyleableProperty> STYLEABLES;
-        private static final int[] bitIndices;
         static {
             final List<StyleableProperty> styleables =
                 new ArrayList<StyleableProperty>(Control.impl_CSS_STYLEABLES());
@@ -560,22 +780,7 @@ public abstract class Labeled extends Control {
                 GRAPHIC_TEXT_GAP
             );
             STYLEABLES = Collections.unmodifiableList(styleables);
-
-            bitIndices = new int[StyleableProperty.getMaxIndex()];
-            java.util.Arrays.fill(bitIndices, -1);
-            for(int bitIndex=0; bitIndex<STYLEABLES.size(); bitIndex++) {
-                bitIndices[STYLEABLES.get(bitIndex).getIndex()] = bitIndex;
-            }
         }
-    }
-
-    /**
-     * @treatasprivate implementation detail
-     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
-     */
-    @Deprecated
-    @Override protected int[] impl_cssStyleablePropertyBitIndices() {
-        return Labeled.StyleableProperties.bitIndices;
     }
 
     /**
@@ -587,75 +792,4 @@ public abstract class Labeled extends Control {
         return Labeled.StyleableProperties.STYLEABLES;
     }
 
-    private String cachedImageUrl = null;
-    /**
-     * @treatasprivate implementation detail
-     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
-     */
-    @Deprecated
-    @Override protected boolean impl_cssSet(String property, Object value) {
-        if ("-fx-alignment".equals(property)) {
-            setAlignment((Pos)value);
-        } else if ("-fx-text-alignment".equals(property)) {
-            setTextAlignment((TextAlignment)value);
-        } else if ("-fx-text-fill".equals(property)) {
-            setTextFill((Paint)value);
-        } else if ("-fx-text-overrun".equals(property)) {
-            setTextOverrun((OverrunStyle)value);
-        } else if ("-fx-wrap-text".equals(property)) {
-            setWrapText(((Boolean)value).booleanValue());
-        } else if ("-fx-font".equals(property)) {
-            setFont((Font)value);
-        } else if ("-fx-graphic".equals(property)) {            
-            String imageUrl = (String)value;
-            if (imageUrl != null && !imageUrl.equals(cachedImageUrl)) {
-                setGraphic(new ImageView(new Image(imageUrl)));
-            }
-            cachedImageUrl = imageUrl;
-        } else if ("-fx-underline".equals(property)) {
-            setUnderline(((Boolean)value).booleanValue());
-        } else if ("-fx-content-display".equals(property)) {
-            setContentDisplay((ContentDisplay)value);
-        } else if ("-fx-label-padding".equals(property)) {
-            setLabelPadding((Insets)value);
-        } else if ("-fx-graphic-text-gap".equals(property)) {
-            setGraphicTextGap(((Double)value).doubleValue());
-//        } else {
-//            return false;
-        }
-//        return true;
-         return super.impl_cssSet(property, value);
-    }
-
-    /**
-     * @treatasprivate implementation detail
-     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
-     */
-    @Deprecated
-    @Override protected boolean impl_cssSettable(String property) {
-        if ("-fx-alignment".equals(property))
-            return alignment == null || !alignment.isBound();
-        else if ("-fx-text-alignment".equals(property))
-            return textAlignment == null || !textAlignment.isBound();
-        else if ("-fx-text-fill".equals(property))
-            return textFill == null || !textFill.isBound();
-        else if ("-fx-text-overrun".equals(property))
-            return textOverrun == null || !textOverrun.isBound();
-        else if ("-fx-wrap-text".equals(property))
-            return wrapText == null || !wrapText.isBound();
-        else if ("-fx-font".equals(property))
-            return font == null || !font.isBound();
-        else if ("-fx-graphic".equals(property))
-            return graphic == null || !graphic.isBound();
-        else if ("-fx-content-display".equals(property))
-            return contentDisplay == null || !contentDisplay.isBound();
-        else if ("-fx-label-padding".equals(property))
-            return labelPadding == null || !labelPadding.isBound();
-        else if ("-fx-graphic-text-gap".equals(property))
-            return graphicTextGap == null || !graphicTextGap.isBound();
-        else if ("-fx-underline".equals(property))
-            return underline == null || !underline.isBound();
-        else
-            return super.impl_cssSettable(property);
-    }
-}
+ }

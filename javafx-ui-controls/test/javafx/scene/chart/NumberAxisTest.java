@@ -4,6 +4,7 @@
 
 package javafx.scene.chart;
 
+import com.sun.javafx.css.StyleableProperty;
 import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.DoubleProperty;
 import javafx.beans.property.SimpleBooleanProperty;
@@ -126,19 +127,22 @@ public class NumberAxisTest {
      ********************************************************************/
 
     @Test public void whenTickUnitIsBound_impl_cssSettable_ReturnsFalse() {
-        assertTrue(axis.impl_cssSettable("-fx-tick-unit"));
+        StyleableProperty styleable = StyleableProperty.getStyleableProperty(axis.tickUnitProperty());
+        assertTrue(styleable.isSettable(axis));
         DoubleProperty other = new SimpleDoubleProperty();
         axis.tickUnitProperty().bind(other);
-        assertFalse(axis.impl_cssSettable("-fx-tick-unit"));
+        assertFalse(styleable.isSettable(axis));
     }
 
     @Test public void whenTickUnitIsSpecifiedViaCSSAndIsNotBound_impl_cssSettable_ReturnsTrue() {
-        axis.impl_cssSet("-fx-tick-unit", 10.9);
-        assertTrue(axis.impl_cssSettable("-fx-tick-unit"));
+        StyleableProperty styleable = StyleableProperty.getStyleableProperty(axis.tickUnitProperty());
+        styleable.set(axis,10.9);
+        assertTrue(styleable.isSettable(axis));
     }
 
     @Test public void canTickUnitViaCSS() {
-        axis.impl_cssSet("-fx-tick-unit", 10.34);
+        StyleableProperty styleable = StyleableProperty.getStyleableProperty(axis.tickUnitProperty());
+        styleable.set(axis,10.34);
         assertEquals(10.34, axis.getTickUnit(), 0.0);
     }
 

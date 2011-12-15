@@ -24,29 +24,21 @@
  */
 package javafx.scene.chart;
 
+import com.sun.javafx.css.*;
+import com.sun.javafx.css.converters.BooleanConverter;
+import com.sun.javafx.css.converters.SizeConverter;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
-import javafx.beans.property.BooleanPropertyBase;
 
-import javafx.beans.property.DoubleProperty;
-import javafx.beans.property.DoublePropertyBase;
-import javafx.beans.property.IntegerProperty;
-import javafx.beans.property.IntegerPropertyBase;
-import javafx.beans.property.ObjectProperty;
-import javafx.beans.property.ObjectPropertyBase;
-import javafx.beans.property.SimpleDoubleProperty;
+import javafx.beans.property.*;
+import javafx.beans.value.WritableValue;
 import javafx.geometry.Side;
 import javafx.scene.shape.LineTo;
 import javafx.scene.shape.MoveTo;
 import javafx.scene.shape.Path;
 import javafx.util.StringConverter;
 
-import com.sun.javafx.css.Styleable;
-import com.sun.javafx.css.StyleableProperty;
-import javafx.beans.property.BooleanProperty;
-import javafx.beans.property.ReadOnlyDoubleProperty;
-import javafx.beans.property.ReadOnlyDoubleWrapper;
 
 /**
  * A axis who's data is defined as Numbers. It can also draw minor
@@ -80,8 +72,7 @@ public abstract class ValueAxis<T extends Number> extends Axis<T> {
     // -------------- PUBLIC PROPERTIES --------------------------------------------------------------------------------
 
     /** true if minor tick marks should be displayed */
-    @Styleable(property="-fx-minor-tick-visible", initial="true")
-    private BooleanProperty minorTickVisible = new BooleanPropertyBase(true) {
+    private BooleanProperty minorTickVisible = new StyleableBooleanProperty(true) {
         @Override protected void invalidated() {
             minorTickPath.setVisible(get());
             requestAxisLayout();
@@ -95,6 +86,11 @@ public abstract class ValueAxis<T extends Number> extends Axis<T> {
         @Override
         public String getName() {
             return "minorTickVisible";
+        }
+
+        @Override
+        public StyleableProperty getStyleableProperty() {
+            return StyleableProperties.MINOR_TICK_VISIBLE;
         }
     };
     public final boolean isMinorTickVisible() { return minorTickVisible.get(); }
@@ -177,10 +173,8 @@ public abstract class ValueAxis<T extends Number> extends Axis<T> {
     public final ObjectProperty<StringConverter<T>> tickLabelFormatterProperty() { return tickLabelFormatter; }
 
     /** The length of minor tick mark lines. Set to 0 to not display minor tick marks. */
-    @Styleable(property="-fx-minor-tick-length", initial="5")
-    private DoubleProperty minorTickLength = new DoublePropertyBase(5) {
+    private DoubleProperty minorTickLength = new StyleableDoubleProperty(5) {
         @Override protected void invalidated() {
-            impl_cssPropertyInvalidated(StyleableProperties.MINOR_TICK_LENGTH);
             requestAxisLayout();
         }
 
@@ -193,6 +187,11 @@ public abstract class ValueAxis<T extends Number> extends Axis<T> {
         public String getName() {
             return "minorTickLength";
         }
+
+        @Override
+        public StyleableProperty getStyleableProperty() {
+            return StyleableProperties.MINOR_TICK_LENGTH;
+        }
     };
     public final double getMinorTickLength() { return minorTickLength.get(); }
     public final void setMinorTickLength(double value) { minorTickLength.set(value); }
@@ -202,8 +201,7 @@ public abstract class ValueAxis<T extends Number> extends Axis<T> {
      * The number of minor tick divisions to be displayed between each major tick mark.
      * The number of actual minor tick marks will be one less than this.
      */
-    @Styleable(property="-fx-minor-tick-count", initial="5")
-    private IntegerProperty minorTickCount = new IntegerPropertyBase(5) {
+    private IntegerProperty minorTickCount = new StyleableIntegerProperty(5) {
         @Override protected void invalidated() {
             invalidateRange();
             requestAxisLayout();
@@ -217,6 +215,11 @@ public abstract class ValueAxis<T extends Number> extends Axis<T> {
         @Override
         public String getName() {
             return "minorTickCount";
+        }
+
+        @Override
+        public StyleableProperty getStyleableProperty() {
+            return StyleableProperties.MINOR_TICK_COUNT;
         }
     };
     public final int getMinorTickCount() { return minorTickCount.get(); }
@@ -496,15 +499,52 @@ public abstract class ValueAxis<T extends Number> extends Axis<T> {
 
      /** @treatasprivate implementation detail */
     private static class StyleableProperties {
-        private static final StyleableProperty MINOR_TICK_LENGTH =
-            new StyleableProperty(ValueAxis.class, "minorTickLength");
-        private static final StyleableProperty MINOR_TICK_COUNT =
-            new StyleableProperty(ValueAxis.class, "minorTickCount");
-         private static final StyleableProperty MINOR_TICK_VISIBLE =
-            new StyleableProperty(ValueAxis.class, "minorTickVisible");
+        private static final StyleableProperty<ValueAxis,Number> MINOR_TICK_LENGTH =
+            new StyleableProperty<ValueAxis,Number>("-fx-minor-tick-length",
+                SizeConverter.getInstance(), 5.0) {
+
+            @Override
+            public boolean isSettable(ValueAxis n) {
+                return n.minorTickLength == null || !n.minorTickLength.isBound();
+            }
+
+            @Override
+            public WritableValue<Number> getWritableValue(ValueAxis n) {
+                return n.minorTickLengthProperty();
+            }
+        };
+        
+        private static final StyleableProperty<ValueAxis,Number> MINOR_TICK_COUNT =
+            new StyleableProperty<ValueAxis,Number>("-fx-minor-tick-count",
+                SizeConverter.getInstance(), 5) {
+
+            @Override
+            public boolean isSettable(ValueAxis n) {
+                return n.minorTickCount == null || !n.minorTickCount.isBound();
+            }
+
+            @Override
+            public WritableValue<Number> getWritableValue(ValueAxis n) {
+                return n.minorTickCountProperty();
+            }
+        };
+        
+         private static final StyleableProperty<ValueAxis,Boolean> MINOR_TICK_VISIBLE =
+            new StyleableProperty<ValueAxis,Boolean>("-fx-minor-tick-visible",
+                 BooleanConverter.getInstance(), Boolean.TRUE) {
+
+            @Override
+            public boolean isSettable(ValueAxis n) {
+                return n.minorTickVisible == null || !n.minorTickVisible.isBound();
+            }
+
+            @Override
+            public WritableValue<Boolean> getWritableValue(ValueAxis n) {
+                return n.minorTickVisibleProperty();
+            }
+        };
 
         private static final List<StyleableProperty> STYLEABLES;
-         private static final int[] bitIndices;
          static {
             final List<StyleableProperty> styleables =
                 new ArrayList<StyleableProperty>(Axis.impl_CSS_STYLEABLES());
@@ -514,24 +554,9 @@ public abstract class ValueAxis<T extends Number> extends Axis<T> {
                  MINOR_TICK_VISIBLE
              );
             STYLEABLES = Collections.unmodifiableList(styleables);
-
-            bitIndices = new int[StyleableProperty.getMaxIndex()];
-             java.util.Arrays.fill(bitIndices, -1);
-            for(int bitIndex=0; bitIndex<STYLEABLES.size(); bitIndex++) {
-                bitIndices[STYLEABLES.get(bitIndex).getIndex()] = bitIndex;
-             }
          }
      }
 
-    /**
-     * @treatasprivate implementation detail
-     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
-     */
-    @Deprecated
-    @Override protected int[] impl_cssStyleablePropertyBitIndices() {
-        return ValueAxis.StyleableProperties.bitIndices;
-    }
- 
     /**
      * @treatasprivate implementation detail
      * @deprecated This is an internal API that is not intended for use and will be removed in the next version
@@ -541,38 +566,4 @@ public abstract class ValueAxis<T extends Number> extends Axis<T> {
         return ValueAxis.StyleableProperties.STYLEABLES;
     }
 
-    /**
-     * @treatasprivate implementation detail
-     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
-     */
-    @Deprecated
-    @Override protected boolean impl_cssSet(String property, Object value) {
-        if ("-fx-minor-tick-count".equals(property)) {
-            setMinorTickCount((int)((Double)value).doubleValue());
-        } else if ("-fx-minor-tick-length".equals(property)) {
-            setMinorTickLength((Double) value);
-        } else if ("-fx-minor-tick-visible".equals(property)) {
-            setMinorTickVisible((Boolean) value);
-        } else {
-            return super.impl_cssSet(property, value);
-        }
-        return true;
-    }
-
-    /**
-     * @treatasprivate implementation detail
-     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
-     */
-    @Deprecated
-    @Override protected boolean impl_cssSettable(String property) {
-        if ("-fx-minor-tick-count".equals(property)) {
-            return minorTickCountProperty() == null || !minorTickCountProperty().isBound();
-        } else if ("-fx-minor-tick-length".equals(property)) {
-            return minorTickLengthProperty() == null || !minorTickLengthProperty().isBound();
-        } else if ("-fx-minor-tick-visible".equals(property)) {
-            return minorTickVisibleProperty() == null || !minorTickVisibleProperty().isBound();
-        } else {
-            return super.impl_cssSettable(property);
-        }
-    }
 }

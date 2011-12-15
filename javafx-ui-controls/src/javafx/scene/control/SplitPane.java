@@ -32,8 +32,8 @@ import java.util.WeakHashMap;
 
 import javafx.beans.property.DoubleProperty;
 import javafx.beans.property.ObjectProperty;
-import javafx.beans.property.ObjectPropertyBase;
 import javafx.beans.property.SimpleDoubleProperty;
+import javafx.beans.value.WritableValue;
 import javafx.collections.FXCollections;
 import javafx.collections.ListChangeListener;
 import javafx.collections.ObservableList;
@@ -41,9 +41,10 @@ import javafx.geometry.Orientation;
 import javafx.scene.Node;
 
 import com.sun.javafx.collections.annotations.ReturnsUnmodifiableCollection;
-import com.sun.javafx.css.Styleable;
 import com.sun.javafx.css.StyleManager;
+import com.sun.javafx.css.StyleableObjectProperty;
 import com.sun.javafx.css.StyleableProperty;
+import com.sun.javafx.css.converters.EnumConverter;
 
 /**
  * <p>A control that has two or more sides, each separated by a divider, which can be
@@ -177,7 +178,6 @@ public class SplitPane extends Control {
      **************************************************************************/
 
     // --- Vertical
-    @Styleable(property="-fx-orientation", initial="horizontal")
     private ObjectProperty<Orientation> orientation;
 
     /**
@@ -204,13 +204,16 @@ public class SplitPane extends Control {
      */
     public final ObjectProperty<Orientation> orientationProperty() {
         if (orientation == null) {
-            orientation = new ObjectPropertyBase<Orientation>(Orientation.HORIZONTAL) {
+            orientation = new StyleableObjectProperty<Orientation>(Orientation.HORIZONTAL) {
                 @Override public void invalidated() {
-                    impl_cssPropertyInvalidated(StyleableProperties.ORIENTATION);
                     impl_pseudoClassStateChanged(PSEUDO_CLASS_VERTICAL);
                     impl_pseudoClassStateChanged(PSEUDO_CLASS_HORIZONTAL);
                 }
-
+                
+                @Override public StyleableProperty getStyleableProperty() {
+                    return StyleableProperties.ORIENTATION;
+                }
+                
                 @Override
                 public Object getBean() {
                     return SplitPane.this;
@@ -324,11 +327,23 @@ public class SplitPane extends Control {
 
     /** @treatasprivate */
     private static class StyleableProperties {
-        private static final StyleableProperty ORIENTATION =
-            new StyleableProperty(SplitPane.class, "orientation");
+        private static final StyleableProperty<SplitPane,Orientation> ORIENTATION =
+            new StyleableProperty<SplitPane,Orientation>("-fx-orientation",
+                new EnumConverter<Orientation>(Orientation.class),
+                Orientation.HORIZONTAL) {
+
+            @Override
+            public boolean isSettable(SplitPane n) {
+                return n.orientation == null || !n.orientation.isBound();
+            }
+
+            @Override
+            public WritableValue<Orientation> getWritableValue(SplitPane n) {
+                return n.orientationProperty();
+            }
+        };
 
         private static final List<StyleableProperty> STYLEABLES;
-        private static final int[] bitIndices;
         static {
             final List<StyleableProperty> styleables =
                 new ArrayList<StyleableProperty>(Control.impl_CSS_STYLEABLES());
@@ -336,22 +351,7 @@ public class SplitPane extends Control {
                 ORIENTATION
             );
             STYLEABLES = Collections.unmodifiableList(styleables);
-
-            bitIndices = new int[StyleableProperty.getMaxIndex()];
-            java.util.Arrays.fill(bitIndices, -1);
-            for(int bitIndex=0; bitIndex<STYLEABLES.size(); bitIndex++) {
-                bitIndices[STYLEABLES.get(bitIndex).getIndex()] = bitIndex;
-            }
         }
-    }
-
-    /**
-     * @treatasprivate implementation detail
-     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
-     */
-    @Deprecated
-    @Override protected int[] impl_cssStyleablePropertyBitIndices() {
-        return SplitPane.StyleableProperties.bitIndices;
     }
 
     /**
@@ -361,31 +361,6 @@ public class SplitPane extends Control {
     @Deprecated
     public static List<StyleableProperty> impl_CSS_STYLEABLES() {
         return SplitPane.StyleableProperties.STYLEABLES;
-    }
-
-    /**
-     * @treatasprivate implementation detail
-     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
-     */
-    @Deprecated
-    @Override protected boolean impl_cssSet(String property, Object value) {
-        if ("-fx-orientation".equals(property)) {
-            setOrientation((Orientation) value);
-        }
-        return super.impl_cssSet(property, value);
-    }
-
-    /**
-     * @treatasprivate implementation detail
-     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
-     */
-    @Deprecated
-    @Override protected boolean impl_cssSettable(String property) {
-        if ("-fx-orientation".equals(property)) {
-            return orientation == null || !orientation.isBound();
-        }
-
-        return super.impl_cssSettable(property);
     }
 
     private static final long VERTICAL_PSEUDOCLASS_STATE = StyleManager.getInstance().getPseudoclassMask("vertical");

@@ -4,6 +4,7 @@
 
 package javafx.scene.control;
 
+import com.sun.javafx.css.StyleableProperty;
 import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.DoubleProperty;
 import javafx.beans.property.ObjectProperty;
@@ -772,7 +773,8 @@ public class ControlTest {
     @Test public void canSpecifySkinViaCSS() {
         disableLogging();
         try {
-            c.impl_cssSet("-fx-skin", "javafx.scene.control.SkinStub");
+            StyleableProperty styleable = StyleableProperty.getStyleableProperty(c.skinClassNameProperty());
+            styleable.set(c, "javafx.scene.control.SkinStub");
             assertNotNull(c.getSkin());
             assertTrue(c.getSkin() instanceof SkinStub);
             assertSame(c, c.getSkin().getSkinnable());
@@ -786,10 +788,11 @@ public class ControlTest {
         try {
             SkinChangeListener listener = new SkinChangeListener();
             c.skinProperty().addListener(listener);
-            c.impl_cssSet("-fx-skin", "javafx.scene.control.SkinStub");
+            StyleableProperty styleable = StyleableProperty.getStyleableProperty(c.skinClassNameProperty());
+            styleable.set(c, "javafx.scene.control.SkinStub");
             assertTrue(listener.changed);
             listener.changed = false;
-            c.impl_cssSet("-fx-skin", "javafx.scene.control.SkinStub");
+            styleable.set(c, "javafx.scene.control.SkinStub");
             assertFalse(listener.changed);
         } finally {
             enableLogging();
@@ -801,7 +804,8 @@ public class ControlTest {
         try {
             SkinChangeListener listener = new SkinChangeListener();
             c.skinProperty().addListener(listener);
-            c.impl_cssSet("-fx-skin", null);
+            StyleableProperty styleable = StyleableProperty.getStyleableProperty(c.skinClassNameProperty());
+            styleable.set(c, null);
             assertFalse(listener.changed);
             assertNull(c.getSkin());
         } finally {
@@ -814,7 +818,8 @@ public class ControlTest {
         try {
             SkinChangeListener listener = new SkinChangeListener();
             c.skinProperty().addListener(listener);
-            c.impl_cssSet("-fx-skin", "");
+            StyleableProperty styleable = StyleableProperty.getStyleableProperty(c.skinClassNameProperty());
+            styleable.set(c, "");            
             assertFalse(listener.changed);
             assertNull(c.getSkin());
         } finally {
@@ -827,7 +832,8 @@ public class ControlTest {
         try {
             SkinChangeListener listener = new SkinChangeListener();
             c.skinProperty().addListener(listener);
-            c.impl_cssSet("-fx-skin", "javafx.scene.control.ControlTest$BadSkin");
+            StyleableProperty styleable = StyleableProperty.getStyleableProperty(c.skinClassNameProperty());
+            styleable.set(c, "javafx.scene.control.ControlTest$BadSkin");
             assertFalse(listener.changed);
             assertNull(c.getSkin());
         } finally {
@@ -840,7 +846,8 @@ public class ControlTest {
         try {
             SkinChangeListener listener = new SkinChangeListener();
             c.skinProperty().addListener(listener);
-            c.impl_cssSet("-fx-skin", "javafx.scene.control.ControlTest$ExceptionalSkin");
+            StyleableProperty styleable = StyleableProperty.getStyleableProperty(c.skinClassNameProperty());
+            styleable.set(c, "javafx.scene.control.ControlTest$ExceptionalSkin");
             assertFalse(listener.changed);
             assertNull(c.getSkin());
         } finally {

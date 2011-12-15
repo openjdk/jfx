@@ -4,6 +4,10 @@
 
 package javafx.scene.control;
 
+import com.sun.javafx.css.StyleableProperty;
+import javafx.beans.InvalidationListener;
+import javafx.beans.Observable;
+import javafx.beans.property.StringProperty;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertSame;
@@ -88,42 +92,57 @@ public class ControlSkinTest {
 //    }
     
     @Test public void shouldBeAbleToSpecifyTheSkinViaCSS() {
-        c.impl_cssSet("-fx-skin", "javafx.scene.control.ControlSkinTest$MySkinStub");
+        StyleableProperty styleable = StyleableProperty.getStyleableProperty(c.skinClassNameProperty());
+        styleable.set(c, "javafx.scene.control.ControlSkinTest$MySkinStub");
         assertTrue(c.getSkin() instanceof MySkinStub);
     }
     
     @Test public void impl_cssSetCalledTwiceWithTheSameValueHasNoEffectTheSecondTime() {
-        c.impl_cssSet("-fx-skin", "javafx.scene.control.ControlSkinTest$MySkinStub");
+        StringProperty skinClassName = c.skinClassNameProperty();
+        skinClassName.addListener(new InvalidationListener() {
+            boolean calledOnce = false;
+            @Override
+            public void invalidated(Observable o) {
+                if (calledOnce) org.junit.Assert.fail();
+                calledOnce = true;
+            }
+        });
+        StyleableProperty styleable = StyleableProperty.getStyleableProperty(skinClassName);
+        styleable.set(c, "javafx.scene.control.ControlSkinTest$MySkinStub");
         Skin<?> s = c.getSkin();
-        c.impl_cssSet("-fx-skin", "javafx.scene.control.ControlSkinTest$MySkinStub");
+        styleable.set(c, "javafx.scene.control.ControlSkinTest$MySkinStub");
         assertSame(s, c.getSkin());
     }
     
     @Ignore ("This spits out annoying debug statements, re-enable when we can disable all logging")
     @Test public void loadSkinClassShouldIgnoreNullNames() {
         c.setSkin(s);
-        c.impl_cssSet("-fx-skin", null); // indirectly calls loadSkinClass
+        StyleableProperty styleable = StyleableProperty.getStyleableProperty(c.skinClassNameProperty());
+        styleable.set(c, null); // indirectly calls loadSkinClass
         assertSame(s, c.getSkin()); // shouldn't have changed
     }
     
     @Ignore ("This spits out annoying debug statements, re-enable when we can disable all logging")
     @Test public void loadSkinClassShouldIgnoreEmptyStrings() {
         c.setSkin(s);
-        c.impl_cssSet("-fx-skin", ""); // indirectly calls loadSkinClass
+        StyleableProperty styleable = StyleableProperty.getStyleableProperty(c.skinClassNameProperty());
+        styleable.set(c, ""); // indirectly calls loadSkinClass
         assertSame(s, c.getSkin()); // shouldn't have changed
     }
     
     @Ignore ("This spits out annoying debug statements, re-enable when we can disable all logging")
     @Test public void loadSkinClassShouldIgnoreSkinsWithoutAProperConstructor() {
         c.setSkin(s);
-        c.impl_cssSet("-fx-skin", "javafx.scene.control.ControlSkinTest$UnloadableSkinStub"); // indirectly calls loadSkinClass
+        StyleableProperty styleable = StyleableProperty.getStyleableProperty(c.skinClassNameProperty());
+        styleable.set(c, "javafx.scene.control.ControlSkinTest$UnloadableSkinStub"); // indirectly calls loadSkinClass
         assertSame(s, c.getSkin()); // shouldn't have changed
     }
     
     @Ignore ("This spits out annoying debug statements, re-enable when we can disable all logging")
     @Test public void loadSkinClassShouldIgnoreBogusOrUnfindableSkins() {
         c.setSkin(s);
-        c.impl_cssSet("-fx-skin", "javafx.scene.control.ControlSkinTest$FooSkinWhichDoesntExist"); // indirectly calls loadSkinClass
+        StyleableProperty styleable = StyleableProperty.getStyleableProperty(c.skinClassNameProperty());
+        styleable.set(c, "javafx.scene.control.ControlSkinTest$FooSkinWhichDoesntExist"); // indirectly calls loadSkinClass
         assertSame(s, c.getSkin()); // shouldn't have changed
     }
     

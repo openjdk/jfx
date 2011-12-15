@@ -113,7 +113,7 @@ public class PopupControlTest {
     }
 
     @Test public void getSkinPropertyBean() {
-        assertEquals(popup, popup.skinProperty().getBean());
+        assertEquals(popup.bridge, popup.skinProperty().getBean());
     }
 
     @Test public void getSkinPropertyName() {

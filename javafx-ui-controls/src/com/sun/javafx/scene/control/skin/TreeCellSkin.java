@@ -32,7 +32,7 @@ import java.util.Map;
 import java.util.WeakHashMap;
 
 import javafx.beans.property.DoubleProperty;
-import javafx.beans.property.SimpleDoubleProperty;
+import javafx.beans.value.WritableValue;
 import javafx.geometry.HPos;
 import javafx.geometry.VPos;
 import javafx.scene.Node;
@@ -40,10 +40,10 @@ import javafx.scene.control.TreeCell;
 import javafx.scene.control.TreeItem;
 import javafx.scene.control.TreeView;
 
-import com.sun.javafx.css.Styleable;
+import com.sun.javafx.css.StyleableDoubleProperty;
 import com.sun.javafx.css.StyleableProperty;
+import com.sun.javafx.css.converters.SizeConverter;
 import com.sun.javafx.scene.control.behavior.TreeCellBehavior;
-import javafx.scene.control.*;
 
 public class TreeCellSkin extends CellSkinBase<TreeCell<?>, TreeCellBehavior> {
 
@@ -63,11 +63,32 @@ public class TreeCellSkin extends CellSkinBase<TreeCell<?>, TreeCellBehavior> {
      * The amount of space to multiply by the treeItem.level to get the left
      * margin for this tree cell. This is settable from CSS
      */
-    @Styleable(property="-fx-indent", initial="10")
-    private DoubleProperty indent = new SimpleDoubleProperty(this, "indent", 10);
+    private DoubleProperty indent = null;
     public final void setIndent(double value) { indentProperty().set(value); }
-    public final double getIndent() { return indent.get(); }
-    public final DoubleProperty indentProperty() { return indent; }
+    public final double getIndent() { return indent == null ? 10.0 : indent.get(); }
+    public final DoubleProperty indentProperty() { 
+        if (indent == null) {
+            indent = new StyleableDoubleProperty(10.0) {
+
+                @Override
+                public Object getBean() {
+                    return TreeCellSkin.this;
+                }
+
+                @Override
+                public String getName() {
+                    return "indent";
+                }
+
+                @Override
+                public StyleableProperty getStyleableProperty() {
+                    return StyleableProperties.INDENT;
+                }
+                
+            };
+        }
+        return indent; 
+    }
 
     public TreeCellSkin(TreeCell<?> control) {
         super(control, new TreeCellBehavior(control));
@@ -204,10 +225,22 @@ public class TreeCellSkin extends CellSkinBase<TreeCell<?>, TreeCellBehavior> {
 
     /** @treatasprivate */
     private static class StyleableProperties {
-        private static final StyleableProperty INDENT = new StyleableProperty(TreeCellSkin.class, "indent");
-            
+        private static final StyleableProperty<TreeCellSkin,Number> INDENT = 
+            new StyleableProperty<TreeCellSkin,Number>("-fx-indent",
+                SizeConverter.getInstance(), 10.0) {
+
+            @Override
+            public boolean isSettable(TreeCellSkin n) {
+                return n.indent == null || !n.indent.isBound();
+            }
+
+            @Override
+            public WritableValue<Number> getWritableValue(TreeCellSkin n) {
+                return n.indentProperty();
+            }
+        };
+        
         private static final List<StyleableProperty> STYLEABLES;
-        private static final int[] bitIndices;
         static {
             final List<StyleableProperty> styleables =
                 new ArrayList<StyleableProperty>(CellSkinBase.impl_CSS_STYLEABLES());
@@ -215,24 +248,9 @@ public class TreeCellSkin extends CellSkinBase<TreeCell<?>, TreeCellBehavior> {
                 INDENT
             );
             STYLEABLES = Collections.unmodifiableList(styleables);
-            
-            bitIndices = new int[StyleableProperty.getMaxIndex()];
-            java.util.Arrays.fill(bitIndices, -1);
-            for(int bitIndex=0; bitIndex<STYLEABLES.size(); bitIndex++) {
-                bitIndices[STYLEABLES.get(bitIndex).getIndex()] = bitIndex;
-            }
         }
     }
-
-    /**
-     * @treatasprivate implementation detail
-     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
-     */
-    @Deprecated
-    @Override protected int[] impl_cssStyleablePropertyBitIndices() {
-        return TreeCellSkin.StyleableProperties.bitIndices;
-    }
-
+    
     /**
      * @treatasprivate implementation detail
      * @deprecated This is an internal API that is not intended for use and will be removed in the next version
@@ -242,28 +260,4 @@ public class TreeCellSkin extends CellSkinBase<TreeCell<?>, TreeCellBehavior> {
         return TreeCellSkin.StyleableProperties.STYLEABLES;
     }
 
-    /**
-     * @treatasprivate implementation detail
-     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
-     */
-    @Deprecated
-    @Override protected boolean impl_cssSet(String property, Object value) {
-        if ("-fx-indent".equals(property)) {
-            setIndent((Double) value);
-        }
-        return super.impl_cssSet(property, value);
-    }
-
-    /**
-     * @treatasprivate implementation detail
-     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
-     */
-    @Deprecated
-    @Override protected boolean impl_cssSettable(String property) {
-        if ("-fx-indent".equals(property)) {
-            return indent == null || !indent.isBound();
-        }
-
-        return super.impl_cssSettable(property);
-    }
 }

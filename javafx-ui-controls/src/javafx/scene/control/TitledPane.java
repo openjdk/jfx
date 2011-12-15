@@ -32,13 +32,14 @@ import java.util.List;
 import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.BooleanPropertyBase;
 import javafx.beans.property.ObjectProperty;
-import javafx.beans.property.SimpleBooleanProperty;
 import javafx.beans.property.SimpleObjectProperty;
+import javafx.beans.value.WritableValue;
 import javafx.scene.Node;
 
-import com.sun.javafx.css.Styleable;
 import com.sun.javafx.css.StyleManager;
+import com.sun.javafx.css.StyleableBooleanProperty;
 import com.sun.javafx.css.StyleableProperty;
+import com.sun.javafx.css.converters.BooleanConverter;
 import javafx.beans.DefaultProperty;
 
 /**
@@ -167,8 +168,24 @@ public class TitledPane extends Labeled {
 
 
     // --- Animated
-    @Styleable(property="-fx-animated", initial="true")
-    private BooleanProperty animated = new SimpleBooleanProperty(this, "animated", true);
+    private BooleanProperty animated = new StyleableBooleanProperty(true) {
+
+        @Override
+        public Object getBean() {
+            return TitledPane.this;
+        }
+
+        @Override
+        public String getName() {
+            return "animated";
+        }
+
+        @Override
+        public StyleableProperty getStyleableProperty() {
+            return StyleableProperties.ANIMATED;
+        }
+        
+    };
 
     /**
      * Specifies how the TitledPane should open and close.  The panel will be
@@ -191,8 +208,24 @@ public class TitledPane extends Labeled {
 
 
     // --- Collapsible
-    @Styleable(property="-fx-collapsible", initial="true")
-    private BooleanProperty collapsible = new SimpleBooleanProperty(this, "collapsible", true);
+    private BooleanProperty collapsible = new StyleableBooleanProperty(true) {
+
+        @Override
+        public Object getBean() {
+            return TitledPane.this;
+        }
+
+        @Override
+        public String getName() {
+            return "collapsible";
+        }
+
+        @Override
+        public StyleableProperty getStyleableProperty() {
+            return StyleableProperties.COLLAPSIBLE;
+        }
+        
+    };
 
     /**
      * Specifies if the TitledPane can be collapsed.  The default is {@code true}.
@@ -227,13 +260,37 @@ public class TitledPane extends Labeled {
 
     private static class StyleableProperties {
 
-       private static final StyleableProperty COLLAPSIBLE =
-           new StyleableProperty(TitledPane.class, "collapsible");
-        private static final StyleableProperty ANIMATED =
-           new StyleableProperty(TitledPane.class, "animated");
+       private static final StyleableProperty<TitledPane,Boolean> COLLAPSIBLE =
+           new StyleableProperty<TitledPane,Boolean>("-fx-collapsible",
+               BooleanConverter.getInstance(), Boolean.TRUE) {
+
+            @Override
+            public boolean isSettable(TitledPane n) {
+                return n.collapsible == null || !n.collapsible.isBound();
+            }
+
+            @Override
+            public WritableValue<Boolean> getWritableValue(TitledPane n) {
+                return n.collapsibleProperty();
+            }
+        };
+               
+        private static final StyleableProperty<TitledPane,Boolean> ANIMATED =
+           new StyleableProperty<TitledPane,Boolean>("-fx-animated",
+               BooleanConverter.getInstance(), Boolean.TRUE) {
+
+            @Override
+            public boolean isSettable(TitledPane n) {
+                return n.animated == null || !n.animated.isBound();
+            }
+
+            @Override
+            public WritableValue<Boolean> getWritableValue(TitledPane n) {
+                return n.animatedProperty();
+            }
+        };
 
         private static final List<StyleableProperty> STYLEABLES;
-        private static final int[] bitIndices;
         static {
             final List<StyleableProperty> styleables =
                 new ArrayList<StyleableProperty>(Control.impl_CSS_STYLEABLES());
@@ -242,22 +299,7 @@ public class TitledPane extends Labeled {
                 ANIMATED
             );
             STYLEABLES = Collections.unmodifiableList(styleables);
-
-            bitIndices = new int[StyleableProperty.getMaxIndex()];
-            java.util.Arrays.fill(bitIndices, -1);
-            for(int bitIndex=0; bitIndex<STYLEABLES.size(); bitIndex++) {
-                bitIndices[STYLEABLES.get(bitIndex).getIndex()] = bitIndex;
-            }
         }
-    }
-
-    /**
-     * @treatasprivate implementation detail
-     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
-     */
-    @Deprecated
-    @Override protected int[] impl_cssStyleablePropertyBitIndices() {
-        return StyleableProperties.bitIndices;
     }
 
     /**
@@ -267,35 +309,6 @@ public class TitledPane extends Labeled {
     @Deprecated
     public static List<StyleableProperty> impl_CSS_STYLEABLES() {
         return StyleableProperties.STYLEABLES;
-    }
-
-    /**
-     * @treatasprivate implementation detail
-     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
-     */
-    @Deprecated
-    @Override protected boolean impl_cssSet(String property, Object value) {
-        if ("-fx-collapsible".equals(property)) {
-            setCollapsible((Boolean)value);
-        } else if ("-fx-animated".equals(property)) {
-            setAnimated((Boolean)value);
-        }
-        return super.impl_cssSet(property,value);
-    }
-
-    /**
-     * @treatasprivate implementation detail
-     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
-     */
-    @Deprecated
-    @Override protected boolean impl_cssSettable(String property) {
-        if ("-fx-collapsible".equals(property)) {
-            return collapsible == null || !collapsible.isBound();
-        } else if ("-fx-animated".equals(property)) {
-            return animated == null || !animated.isBound();
-        }
-
-        return super.impl_cssSettable(property);
     }
 
     private static final long EXPANDED_PSEUDOCLASS_STATE =

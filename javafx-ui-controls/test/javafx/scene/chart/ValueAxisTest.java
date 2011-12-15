@@ -4,6 +4,7 @@
 
 package javafx.scene.chart;
 
+import com.sun.javafx.css.StyleableProperty;
 import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.DoubleProperty;
 import javafx.beans.property.ObjectProperty;
@@ -215,57 +216,64 @@ public class ValueAxisTest {
      * CSS related Tests                                                 *
      ********************************************************************/
     @Test public void whenMinorTickVisibleIsBound_impl_cssSettable_ReturnsFalse() {
-        assertTrue(axis.impl_cssSettable("-fx-minor-tick-visible"));
+        StyleableProperty styleable = StyleableProperty.getStyleableProperty(axis.minorTickVisibleProperty());
+        assertTrue(styleable.isSettable(axis));
         BooleanProperty other = new SimpleBooleanProperty();
         axis.minorTickVisibleProperty().bind(other);
-        assertFalse(axis.impl_cssSettable("-fx-minor-tick-visible"));
+        assertFalse(styleable.isSettable(axis));
     }
 
     @Test public void whenMinorTickVisibleIsSpecifiedViaCSSAndIsNotBound_impl_cssSettable_ReturnsTrue() {
-        axis.impl_cssSet("-fx-minor-tick-visible", false);
-        assertTrue(axis.impl_cssSettable("-fx-minor-tick-visible"));
+        StyleableProperty styleable = StyleableProperty.getStyleableProperty(axis.minorTickVisibleProperty());
+        styleable.set(axis,false);
+        assertTrue(styleable.isSettable(axis));
     }
 
     @Test public void canSpecifyMinorTickVisibleViaCSS() {
-        axis.impl_cssSet("-fx-minor-tick-visible", true);
+        StyleableProperty styleable = StyleableProperty.getStyleableProperty(axis.minorTickVisibleProperty());
+        styleable.set(axis,true);
         assertSame(true, axis.isMinorTickVisible());
     }
 
     @Test public void whenMinorTickLengthIsBound_impl_cssSettable_ReturnsFalse() {
-        assertTrue(axis.impl_cssSettable("-fx-minor-tick-length"));
+        StyleableProperty styleable = StyleableProperty.getStyleableProperty(axis.minorTickLengthProperty());
+        assertTrue(styleable.isSettable(axis));
         DoubleProperty other = new SimpleDoubleProperty();
         axis.minorTickLengthProperty().bind(other);
-        assertFalse(axis.impl_cssSettable("-fx-minor-tick-length"));
+        assertFalse(styleable.isSettable(axis));
     }
 
     @Test public void whenMinorTickLengthIsSpecifiedViaCSSAndIsNotBound_impl_cssSettable_ReturnsTrue() {
-        axis.impl_cssSet("-fx-minor-tick-length", 10.9);
-        assertTrue(axis.impl_cssSettable("-fx-minor-tick-length"));
+        StyleableProperty styleable = StyleableProperty.getStyleableProperty(axis.minorTickLengthProperty());
+        styleable.set(axis,10.9);
+        assertTrue(styleable.isSettable(axis));
     }
 
     @Test public void canSpecifyMinorTickLengthViaCSS() {
-        axis.impl_cssSet("-fx-minor-tick-length", 10.34);
+        StyleableProperty styleable = StyleableProperty.getStyleableProperty(axis.minorTickLengthProperty());
+        styleable.set(axis,10.34);
         assertEquals(10.34, axis.getMinorTickLength(), 0.0);
     }
 
     @Test public void whenMinorTickCountIsBound_impl_cssSettable_ReturnsFalse() {
-        assertTrue(axis.impl_cssSettable("-fx-minor-tick-count"));
+        StyleableProperty styleable = StyleableProperty.getStyleableProperty(axis.minorTickCountProperty());
+        assertTrue(styleable.isSettable(axis));
         DoubleProperty other = new SimpleDoubleProperty();
         axis.minorTickCountProperty().bind(other);
-        assertFalse(axis.impl_cssSettable("-fx-minor-tick-count"));
+        assertFalse(styleable.isSettable(axis));
     }
 
     @Test public void whenMinorTickCountIsSpecifiedViaCSSAndIsNotBound_impl_cssSettable_ReturnsTrue() {
-        axis.impl_cssSet("-fx-minor-tick-count", 10.0);
-        assertTrue(axis.impl_cssSettable("-fx-minor-tick-count"));
+        StyleableProperty styleable = StyleableProperty.getStyleableProperty(axis.minorTickCountProperty());
+        styleable.set(axis,10);
+        assertTrue(styleable.isSettable(axis));
     }
 
     @Test public void canSpecifyMinorTickCountViaCSS() {
-        axis.impl_cssSet("-fx-minor-tick-count", 10.0);
-        assertEquals(10, axis.getMinorTickCount(), 0.0);
+        StyleableProperty styleable = StyleableProperty.getStyleableProperty(axis.minorTickCountProperty());
+        styleable.set(axis,10);
+        assertTrue(styleable.isSettable(axis));
     }
-
-
 
     /*********************************************************************
      * Miscellaneous Tests                                         *
