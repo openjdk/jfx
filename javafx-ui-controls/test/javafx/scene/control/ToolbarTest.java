@@ -6,9 +6,14 @@ package javafx.scene.control;
 
 import static javafx.scene.control.ControlTestUtils.*;
 import com.sun.javafx.pgstub.StubToolkit;
+import com.sun.javafx.scene.control.skin.ToolBarSkin;
 import com.sun.javafx.tk.Toolkit;
+import java.util.ArrayList;
+import java.util.List;
 import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.SimpleObjectProperty;
+import javafx.event.ActionEvent;
+import javafx.event.EventHandler;
 import javafx.geometry.Orientation;
 import javafx.scene.Node;
 import javafx.scene.shape.Rectangle;
@@ -111,6 +116,32 @@ public class ToolbarTest {
         toolBar.setOrientation(Orientation.VERTICAL);
         assertSame(toolBar.getOrientation(), Orientation.VERTICAL);
     }
-    
+
+    @Test public void rt18501_duplicate_items_are_not_allowed() {
+        ToolBarSkin toolbarSkin = new ToolBarSkin(toolBar);
+        toolBar.setSkin(toolbarSkin);
+        toolBar.getItems().clear();
+        node1 = new Rectangle();
+        node2 = new Rectangle(2.0,4.0);
+        final List<Node> list1 = new ArrayList<Node>();
+        list1.add(node1);
+
+        toolBar.getItems().add(node1);
+
+        list1.add(node2);
+
+        Button b3 = new Button("button");
+        b3.setOnAction(new EventHandler<ActionEvent>() {
+            @Override public void handle(ActionEvent e) {                
+                try {
+                    toolBar.getItems().setAll(list1);
+                } catch (Exception iae) {                    
+                    fail("Duplicate items are not allowed " + iae.toString());
+                }
+            }
+        });
+
+        b3.fire();
+    }
     
 }
