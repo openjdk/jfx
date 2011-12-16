@@ -776,7 +776,7 @@ public class TreeView<T> extends Control {
         TreeItem<T> i = item;
         TreeItem<T> p = item.getParent();
         
-        TreeItem<T> s;
+        TreeItem<T> sibling;
         List<TreeItem<T>> siblings;
         
         while (!i.equals(getRoot()) && p != null) {
@@ -785,12 +785,12 @@ public class TreeView<T> extends Control {
             // work up each sibling, from the current item
             int itemIndex = siblings.indexOf(i);
             for (int pos = itemIndex - 1; pos > -1; pos--) {
-                s = siblings.get(pos);
-                if (s == null) continue;
+                sibling = siblings.get(pos);
+                if (sibling == null) continue;
                 
-                row += getExpandedDescendantCount(s);
+                row += getExpandedDescendantCount(sibling);
                 
-                if (s.equals(getRoot())) {
+                if (sibling.equals(getRoot())) {
                     if (! isShowRoot()) {
                         // special case: we've found out that our sibling is 
                         // actually the root node AND we aren't showing root nodes.
@@ -1047,6 +1047,9 @@ public class TreeView<T> extends Control {
         
         private EventHandler<TreeModificationEvent<T>> treeItemListener = new EventHandler<TreeModificationEvent<T>>() {
             @Override public void handle(TreeModificationEvent<T> e) {
+                
+                if (getSelectedIndex() == -1 && getSelectedItem() == null) return;
+                
                 // we only shift selection from this row - everything before it
                 // is safe. We might change this below based on certain criteria
                 int startRow = treeView.getRow(e.getTreeItem());
@@ -1232,11 +1235,11 @@ public class TreeView<T> extends Control {
         
         private EventHandler<TreeModificationEvent<T>> treeItemListener = new EventHandler<TreeModificationEvent<T>>() {
             @Override public void handle(TreeModificationEvent<T> e) {
-
                 // don't shift focus if the event occurred on a tree item after
-                // the focused row
-                int row = treeView.getRow(e.getTreeItem());
+                // the focused row, or if there is no focus index at present
+                if (getFocusedIndex() == -1) return;
                 
+                int row = treeView.getRow(e.getTreeItem());
                 int shift = 0;
                 if (e.wasExpanded()) {
                     if (row > getFocusedIndex()) {
