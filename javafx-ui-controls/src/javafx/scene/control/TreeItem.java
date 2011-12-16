@@ -342,10 +342,10 @@ public class TreeItem<T> implements EventTarget {
         addEventHandler(TreeItem.<Object>treeItemCountChangeEvent(), itemListener);
     }
     
-    private static final EventHandler<TreeModificationEvent<Object>> itemListener = 
+    private final EventHandler<TreeModificationEvent<Object>> itemListener = 
         new EventHandler<TreeModificationEvent<Object>>() {
             @Override public void handle(TreeModificationEvent event) {
-                updateExpandedDescendentCount(event.getTreeItem());
+                updateExpandedDescendentCount();
             }
     };
 
@@ -825,14 +825,14 @@ public class TreeItem<T> implements EventTarget {
         return expandedDescendentCount;
     }
     
-    private static <T> void updateExpandedDescendentCount(TreeItem<T> item) {
-        item.previousExpandedDescendentCount = item.expandedDescendentCount;
-        item.expandedDescendentCount = 1;
+    private void updateExpandedDescendentCount() {
+        previousExpandedDescendentCount = expandedDescendentCount;
+        expandedDescendentCount = 1;
         
-        if (!item.isLeaf() && item.isExpanded()) {
-            for (TreeItem child : item.getChildren()) {
+        if (!isLeaf() && isExpanded()) {
+            for (TreeItem<T> child : getChildren()) {
                 if (child == null) continue;
-                item.expandedDescendentCount += child.getExpandedDescendentCount();
+                expandedDescendentCount += child.getExpandedDescendentCount();
             }
         }
     }
