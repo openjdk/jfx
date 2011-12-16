@@ -140,6 +140,19 @@ public class ComboBox<T> extends ComboBoxBase<T> {
         getStyleClass().add(DEFAULT_STYLE_CLASS);
         setItems(items);
         setSelectionModel(new ComboBoxSelectionModel<T>(this));
+        
+        // listen to the value property input by the user, and if the value is
+        // set to something that exists in the items list, we should update the
+        // selection model to indicate that this is the selected item
+        valueProperty().addListener(new ChangeListener<T>() {
+            @Override public void changed(ObservableValue<? extends T> ov, T t, T t1) {
+                if (getItems() == null) return;
+                int index = getItems().indexOf(t1);
+                if (index > -1) {
+                    getSelectionModel().select(index);
+                }
+            }
+        });
     }
     
  

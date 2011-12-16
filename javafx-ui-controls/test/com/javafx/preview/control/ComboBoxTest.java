@@ -432,6 +432,24 @@ public class ComboBoxTest {
         assertEquals("empty", comboBox.getValue());
     }
     
+    @Test public void ensureSelectionModelUpdatesWhenValueChanges() {
+        comboBox.getItems().addAll("Apple", "Orange", "Banana");
+        assertNull(comboBox.getSelectionModel().getSelectedItem());
+        comboBox.setValue("Orange");
+        assertEquals("Orange", comboBox.getSelectionModel().getSelectedItem());
+    }
+    
+    @Test public void ensureSelectionModelUpdatesWhenValueChangesToNull() {
+        comboBox.getItems().addAll("Apple", "Orange", "Banana");
+        comboBox.setValue("Kiwifruit");
+        assertNull(comboBox.getSelectionModel().getSelectedItem());
+        assertEquals("Kiwifruit", comboBox.getValue());
+        comboBox.setValue(null);
+        assertEquals(null, comboBox.getSelectionModel().getSelectedItem());
+        assertEquals(-1, comboBox.getSelectionModel().getSelectedIndex());
+        assertEquals(null, comboBox.getValue());
+    }
+    
     /*********************************************************************
      * Tests for default values                                         *
      ********************************************************************/
