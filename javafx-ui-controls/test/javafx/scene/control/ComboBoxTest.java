@@ -1,8 +1,9 @@
 /*
  * Copyright (c) 2011, Oracle and/or its affiliates. All rights reserved.
  */
-package com.javafx.preview.control;
+package javafx.scene.control;
 
+import com.javafx.preview.control.ComboBox;
 import javafx.scene.control.*;
 import static javafx.scene.control.ControlTestUtils.assertStyleClassContains;
 import static org.junit.Assert.*;

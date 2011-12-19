@@ -23,7 +23,7 @@
  * questions.
  */
 
-package com.javafx.preview.control;
+package javafx.scene.control;
 
 import com.sun.javafx.css.StyleManager;
 import com.sun.javafx.scene.control.WeakListChangeListener;

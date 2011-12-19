@@ -25,7 +25,7 @@
 
 package com.sun.javafx.scene.control.skin;
 
-import com.javafx.preview.control.ComboBoxBase;
+import javafx.scene.control.ComboBoxBase;
 import com.sun.javafx.scene.control.behavior.ComboBoxBaseBehavior;
 import javafx.event.EventHandler;
 import javafx.geometry.HPos;

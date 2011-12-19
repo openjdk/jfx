@@ -25,7 +25,7 @@
 
 package com.sun.javafx.scene.control.skin;
 
-import com.javafx.preview.control.ComboBox;
+import javafx.scene.control.ComboBox;
 import com.sun.javafx.scene.control.behavior.ComboBoxListViewBehavior;
 import javafx.beans.InvalidationListener;
 import javafx.beans.Observable;

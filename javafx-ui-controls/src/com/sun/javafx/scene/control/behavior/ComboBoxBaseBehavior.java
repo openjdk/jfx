@@ -25,7 +25,7 @@
 
 package com.sun.javafx.scene.control.behavior;
 
-import com.javafx.preview.control.ComboBoxBase;
+import javafx.scene.control.ComboBoxBase;
 import javafx.beans.Observable;
 import static javafx.scene.input.KeyCode.*;
 import static javafx.scene.input.KeyEvent.*;
