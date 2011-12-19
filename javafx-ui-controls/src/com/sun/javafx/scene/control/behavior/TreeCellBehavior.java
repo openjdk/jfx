@@ -93,6 +93,7 @@ public class TreeCellBehavior extends CellBehaviorBase<TreeCell<?>> {
         // we update the cell to point to the new tree node
         TreeCell<?> treeCell = getControl();
         TreeView treeView = treeCell.getTreeView();
+        if (treeView == null) return;
 
         // If the mouse event is not contained within this TreeCell, then
         // we don't want to react to it.
