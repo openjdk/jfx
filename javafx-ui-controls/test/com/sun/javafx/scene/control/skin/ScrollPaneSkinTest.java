@@ -347,7 +347,44 @@ public class ScrollPaneSkinTest {
         */
         assertTrue(sceneClicked == true);
     }
+
+    /*
+    ** check if ScrollPane gets focus on unconsumed mousePressed
+    */
+    @Test public void checkIfScrollPaneFocusesPressedEvents() {
+        scrollPane.setHbarPolicy(ScrollPane.ScrollBarPolicy.ALWAYS);
+        scrollPane.setVbarPolicy(ScrollPane.ScrollBarPolicy.ALWAYS);
+
+        StackPane sp = new StackPane();
+        sp.setPrefWidth(80);
+        sp.setPrefHeight(80);
     
+        scrollPane.setContent(sp);
+        scrollPane.setTranslateX(70);
+        scrollPane.setTranslateY(30);
+        scrollPane.setPrefWidth(100);
+        scrollPane.setPrefHeight(100);
+        scrollPane.setPannable(true);
+
+        MouseEventGenerator generator = new MouseEventGenerator();
+
+        Scene scene = new Scene(new Group(), 400, 400);
+        ((Group) scene.getRoot()).getChildren().clear();
+        ((Group) scene.getRoot()).getChildren().add(scrollPane);
+        Stage stage = new Stage();
+        stage.setScene(scene);
+        stage.show();
+
+        double originalValue = scrollPane.getVvalue();
+
+        Event.fireEvent(sp, generator.generateMouseEvent(MouseEvent.MOUSE_PRESSED, 50, 50));
+
+        /*
+        ** did it work?
+        */
+        assertTrue(scene.getImpl_focusOwner() == scrollPane);
+    }
+
     public static final class ScrollPaneSkinMock extends ScrollPaneSkin {
         boolean propertyChanged = false;
         int propertyChangeCount = 0;
