@@ -692,7 +692,7 @@ public abstract class Labeled extends Control {
             @Override
             public boolean isSettable(Labeled n) {
                 // Note that we care about the graphic, not imageUrl
-                return n.graphic == null && !n.graphic.isBound();
+                return n.graphic == null || !n.graphic.isBound();
             }
 
             @Override
