@@ -43,6 +43,7 @@ import javafx.scene.control.Control;
 import javafx.scene.control.ScrollPane;
 import javafx.scene.input.KeyCode;
 import javafx.scene.input.KeyEvent;
+import javafx.scene.input.MouseEvent;
 
 import com.sun.javafx.scene.control.skin.ScrollPaneSkin;
 
@@ -159,6 +160,11 @@ public class ScrollPaneBehavior extends BehaviorBase<ScrollPane> {
      **************************************************************************/
 
     public void mouseClicked() {
+        getControl().requestFocus();
+    }
+
+    @Override public void mousePressed(MouseEvent e) {
+        super.mousePressed(e);
         getControl().requestFocus();
     }
 
