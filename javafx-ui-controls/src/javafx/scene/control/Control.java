@@ -112,14 +112,7 @@ public abstract class Control extends Parent implements Skinnable {
      */
     @Override public final ObjectProperty<Skin<?>> skinProperty() { return skin; }
     @Override public final void setSkin(Skin<?> value) { 
-        skinProperty().setValue(value); 
-        // if someone calls setSkin, we need to make it look like they 
-        // called set on skinClassName in order to keep CSS from overwriting
-        // the skin. This has to be done after setting the value on the 
-        // skin property since the logic in skinClassName's invalidate method
-        // checks if the currentSkinClassName is the same as the new 
-        // skin class name.
-        skinClassNameProperty().set(currentSkinClassName);
+        skinProperty().set(value); 
     }
     @Override public final Skin<?> getSkin() { return skinProperty().getValue(); }
     private ObjectProperty<Skin<?>> skin = new StyleableObjectProperty<Skin<?>>() {
@@ -129,16 +122,34 @@ public abstract class Control extends Parent implements Skinnable {
         // a reference to the old value.
         private Skin<?> oldValue;
 
+        @Override
+        public void set(Skin<?> v) {
+
+            if (v == null 
+                ? oldValue == null
+                : oldValue != null && v.getClass().equals(oldValue.getClass()))
+                return;
+
+            super.set(v);
+            
+            // Collect the name of the currently installed skin class. We do this
+            // so that subsequent updates from CSS to the same skin class will not
+            // result in reinstalling the skin
+            currentSkinClassName = v == null ? null : v.getClass().getName();
+            
+            // if someone calls setSkin, we need to make it look like they 
+            // called set on skinClassName in order to keep CSS from overwriting
+            // the skin. 
+            skinClassNameProperty().set(currentSkinClassName);
+            
+        }
+
         @Override protected void invalidated() {
 
             // Dispose of the old skin
             if (oldValue != null) oldValue.dispose();
             // Get the new value, and save it off as the new oldValue
             final Skin<?> skin = oldValue = getValue();
-            // Collect the name of the currently installed skin class. We do this
-            // so that subsequent updates from CSS to the same skin class will not
-            // result in reinstalling the skin
-            currentSkinClassName = skin == null ? null : skin.getClass().getName();
             // Update the children list with the new skin node
             updateChildren();
             // DEBUG: Log that we've changed the skin
@@ -888,6 +899,12 @@ public abstract class Control extends Parent implements Skinnable {
         if (skinClassName == null) {
             skinClassName = new StyleableStringProperty() {
 
+                @Override
+                public void set(String v) {
+                    // do not allow the skin to be set to null through CSS
+                    if (v == null || v.isEmpty() || v.equals(get())) return;
+                    super.set(v);
+                }
                 
                 @Override
                 public void invalidated() {
@@ -896,8 +913,9 @@ public abstract class Control extends Parent implements Skinnable {
                         if (!get().equals(currentSkinClassName)) {
                             loadSkinClass();
                         }
-                    } else {
-                        setSkin(null);
+                      // CSS should not set skin to null
+//                    } else {
+//                        setSkin(null);
                     }
                 }
                 
