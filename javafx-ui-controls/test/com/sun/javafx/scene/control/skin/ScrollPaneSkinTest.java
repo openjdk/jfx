@@ -17,6 +17,7 @@ import javafx.scene.input.MouseButton;
 import javafx.scene.input.MouseEvent;
 import javafx.scene.input.ScrollEvent;
 import javafx.scene.layout.Pane;
+import javafx.scene.layout.Region;
 import javafx.scene.layout.StackPane;
 import javafx.scene.shape.Rectangle;
 import javafx.stage.Stage;
@@ -383,6 +384,37 @@ public class ScrollPaneSkinTest {
         ** did it work?
         */
         assertTrue(scene.getImpl_focusOwner() == scrollPane);
+    }
+
+    /*
+    ** check if ScrollPane gets focus on unconsumed mousePressed
+    */
+    @Test public void checkIfScrollPaneViewportIsRounded() {
+        scrollPane.setHbarPolicy(ScrollPane.ScrollBarPolicy.ALWAYS);
+        scrollPane.setVbarPolicy(ScrollPane.ScrollBarPolicy.ALWAYS);
+
+        StackPane sp = new StackPane();
+        sp.setPrefWidth(80);
+        sp.setPrefHeight(80);
+    
+        scrollPane.setContent(sp);
+        scrollPane.setTranslateX(70);
+        scrollPane.setTranslateY(30);
+        scrollPane.setPrefViewportWidth(100.5);
+        scrollPane.setPrefHeight(100);
+        scrollPane.setPannable(true);
+
+        Scene scene = new Scene(new Group(), 400, 400);
+        ((Group) scene.getRoot()).getChildren().clear();
+        ((Group) scene.getRoot()).getChildren().add(scrollPane);
+        Stage stage = new Stage();
+        stage.setScene(scene);
+        stage.show();
+        
+        /*
+        ** did it work?
+        */
+        assertTrue(scrollPane.getViewportBounds().getWidth() == Math.ceil(100.5));
     }
 
     public static final class ScrollPaneSkinMock extends ScrollPaneSkin {

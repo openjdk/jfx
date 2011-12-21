@@ -655,13 +655,19 @@ public class ScrollPaneSkin extends SkinBase<ScrollPane, ScrollPaneBehavior> imp
 
         vsb.setVisible(vsbvis);
         if (vsbvis) {
-            vsb.resizeRelocate(snapPosition(control.getWidth() - vsbWidth - getInsets().getRight()), cy, vsbWidth, contentHeight);           
+            /*
+            ** round up position of ScrollBar, round down it's size.
+            */
+            vsb.resizeRelocate(Math.ceil(control.getWidth() - vsbWidth - getInsets().getRight()), Math.ceil(cy), Math.floor(vsbWidth), Math.ceil(contentHeight));
         }
         updateVerticalSB();
 
         hsb.setVisible(hsbvis);
         if (hsbvis) {
-            hsb.resizeRelocate(cx, snapPosition(control.getHeight() - (hsbHeight + getInsets().getBottom())), contentWidth, hsbHeight);
+            /*
+            ** round up position of ScrollBar, round down it's size.
+            */
+            hsb.resizeRelocate(Math.ceil(cx), Math.ceil(control.getHeight() - (hsbHeight + getInsets().getBottom())), Math.ceil(contentWidth), Math.floor(hsbHeight));
         }
         updateHorizontalSB();
 
@@ -676,7 +682,7 @@ public class ScrollPaneSkin extends SkinBase<ScrollPane, ScrollPaneBehavior> imp
         } else {
             corner.setVisible(false);
         }
-        control.setViewportBounds(new BoundingBox(viewRect.getLayoutX(), viewRect.getLayoutY(), contentWidth, contentHeight));
+        control.setViewportBounds(new BoundingBox(snapPosition(viewRect.getLayoutX()), snapPosition(viewRect.getLayoutY()), snapSize(contentWidth), snapSize(contentHeight)));
     }
     
     private void computeScrollNodeSize(double contentWidth, double contentHeight) {
@@ -685,27 +691,27 @@ public class ScrollPaneSkin extends SkinBase<ScrollPane, ScrollPaneBehavior> imp
                 ScrollPane control = getSkinnable();
                 Orientation bias = scrollNode.getContentBias();
                 if (bias == null) {
-                    nodeWidth = snapPosition(boundedSize(control.isFitToWidth()? contentWidth : scrollNode.prefWidth(-1),
+                    nodeWidth = snapSize(boundedSize(control.isFitToWidth()? contentWidth : scrollNode.prefWidth(-1),
                                                          scrollNode.minWidth(-1),scrollNode.maxWidth(-1)));
-                    nodeHeight = snapPosition(boundedSize(control.isFitToHeight()? contentHeight : scrollNode.prefHeight(-1),
+                    nodeHeight = snapSize(boundedSize(control.isFitToHeight()? contentHeight : scrollNode.prefHeight(-1),
                                                           scrollNode.minHeight(-1), scrollNode.maxHeight(-1)));
 
                 } else if (bias == Orientation.HORIZONTAL) {
-                    nodeWidth = snapPosition(boundedSize(control.isFitToWidth()? contentWidth : scrollNode.prefWidth(-1),
+                    nodeWidth = snapSize(boundedSize(control.isFitToWidth()? contentWidth : scrollNode.prefWidth(-1),
                                                          scrollNode.minWidth(-1),scrollNode.maxWidth(-1)));
-                    nodeHeight = snapPosition(boundedSize(control.isFitToHeight()? contentHeight : scrollNode.prefHeight(nodeWidth),
+                    nodeHeight = snapSize(boundedSize(control.isFitToHeight()? contentHeight : scrollNode.prefHeight(nodeWidth),
                                                           scrollNode.minHeight(nodeWidth),scrollNode.maxHeight(nodeWidth)));
 
                 } else { // bias == VERTICAL
-                    nodeHeight = snapPosition(boundedSize(control.isFitToHeight()? contentHeight : scrollNode.prefHeight(-1),
+                    nodeHeight = snapSize(boundedSize(control.isFitToHeight()? contentHeight : scrollNode.prefHeight(-1),
                                                           scrollNode.minHeight(-1), scrollNode.maxHeight(-1)));
-                    nodeWidth = snapPosition(boundedSize(control.isFitToWidth()? contentWidth : scrollNode.prefWidth(nodeHeight),
+                    nodeWidth = snapSize(boundedSize(control.isFitToWidth()? contentWidth : scrollNode.prefWidth(nodeHeight),
                                                          scrollNode.minWidth(nodeHeight),scrollNode.maxWidth(nodeHeight)));
                 }
 
             } else {
-                nodeWidth = snapPosition(scrollNode.getLayoutBounds().getWidth());
-                nodeHeight = snapPosition(scrollNode.getLayoutBounds().getHeight());
+                nodeWidth = snapSize(scrollNode.getLayoutBounds().getWidth());
+                nodeHeight = snapSize(scrollNode.getLayoutBounds().getHeight());
             }
         }
     }
