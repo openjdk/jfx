@@ -97,6 +97,8 @@ public class TableCellBehavior extends CellBehaviorBase<TableCell> {
         if (! tableCell.contains(e.getX(), e.getY())) return;
 
         final TableView tableView = tableCell.getTableView();
+        if (tableView == null) return;
+        
         List<?> items = tableView.getItems();
         if (items == null || tableCell.getIndex() >= items.size()) return;
 

@@ -91,6 +91,7 @@ public class ControlSkinTest {
 //        c.skinProperty().bind(skin);
 //    }
     
+    
     @Test public void shouldBeAbleToSpecifyTheSkinViaCSS() {
         StyleableProperty styleable = StyleableProperty.getStyleableProperty(c.skinClassNameProperty());
         styleable.set(c, "javafx.scene.control.ControlSkinTest$MySkinStub");
@@ -113,6 +114,15 @@ public class ControlSkinTest {
         styleable.set(c, "javafx.scene.control.ControlSkinTest$MySkinStub");
         assertSame(s, c.getSkin());
     }
+
+    @Test public void shouldNotSeeErrorMessageWhenSettingTheSkinToNullViaCSS() {
+        StyleableProperty styleable = StyleableProperty.getStyleableProperty(c.skinClassNameProperty());
+        styleable.set(c, "javafx.scene.control.ControlSkinTest$MySkinStub");
+        assertTrue(c.getSkin() instanceof MySkinStub);
+        styleable.set(c, null);
+        assertTrue(c.getSkin() instanceof MySkinStub);        
+    }
+            
     
     @Ignore ("This spits out annoying debug statements, re-enable when we can disable all logging")
     @Test public void loadSkinClassShouldIgnoreNullNames() {

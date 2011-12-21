@@ -111,7 +111,16 @@ public abstract class Control extends Parent implements Skinnable {
      * A skin may be null.
      */
     @Override public final ObjectProperty<Skin<?>> skinProperty() { return skin; }
-    @Override public final void setSkin(Skin<?> value) { skinProperty().setValue(value); }
+    @Override public final void setSkin(Skin<?> value) { 
+        skinProperty().setValue(value); 
+        // if someone calls setSkin, we need to make it look like they 
+        // called set on skinClassName in order to keep CSS from overwriting
+        // the skin. This has to be done after setting the value on the 
+        // skin property since the logic in skinClassName's invalidate method
+        // checks if the currentSkinClassName is the same as the new 
+        // skin class name.
+        skinClassNameProperty().set(currentSkinClassName);
+    }
     @Override public final Skin<?> getSkin() { return skinProperty().getValue(); }
     private ObjectProperty<Skin<?>> skin = new StyleableObjectProperty<Skin<?>>() {
         // We store a reference to the oldValue so that we can handle
@@ -129,8 +138,7 @@ public abstract class Control extends Parent implements Skinnable {
             // Collect the name of the currently installed skin class. We do this
             // so that subsequent updates from CSS to the same skin class will not
             // result in reinstalling the skin
-            if (skin == null) setSkinClassName(null);
-            else setSkinClassName(skin.getClass().getName());
+            currentSkinClassName = skin == null ? null : skin.getClass().getName();
             // Update the children list with the new skin node
             updateChildren();
             // DEBUG: Log that we've changed the skin
@@ -874,16 +882,22 @@ public abstract class Control extends Parent implements Skinnable {
     /**
      * Keeps a reference to the name of the class currently acting as the skin.
      */
+    private String currentSkinClassName = null;
     private StringProperty skinClassName;
     protected StringProperty skinClassNameProperty() {
         if (skinClassName == null) {
             skinClassName = new StyleableStringProperty() {
 
-               @Override
+                
+                @Override
                 public void invalidated() {
-                    final Skin currentSkin = skinProperty().get();
-                    if (currentSkin == null || !currentSkin.getClass().getName().equals(get()) ) {
-                        loadSkinClass();
+
+                    if (get() != null) {
+                        if (!get().equals(currentSkinClassName)) {
+                            loadSkinClass();
+                        }
+                    } else {
+                        setSkin(null);
                     }
                 }
                 
@@ -951,7 +965,9 @@ public abstract class Control extends Parent implements Skinnable {
                 new NullPointerException());
             } else {
                 Skin<?> skinInstance = (Skin<?>) skinConstructor.newInstance(this);
-                setSkin(skinInstance);
+                // Do not call setSkin here since it has the side effect of
+                // also setting the skinClassName!
+                skinProperty().set(skinInstance);
             }
         } catch (InvocationTargetException e) {
             Logging.getControlsLogger().severe(
@@ -959,20 +975,20 @@ public abstract class Control extends Parent implements Skinnable {
                 e.getCause());
         } catch (Exception e) {
             Logging.getControlsLogger().severe(
-                "Failed to load skin '" + skinClassName + "' for control " + this, e);
-            Node parent = this;
-            int n = 0;
-            while (parent != null) {
-                for(int j=0; j<n*2; j++) {
-                    System.err.print(' ');
-                }
-                n+=1;
-                System.err.println(parent);
-                parent = parent.getParent();
-            }
+                "Failed to load skin '" + skinClassName + "' for control " + this, e);            
+//            Node parent = this;
+//            int n = 0;
+//            while (parent != null) {
+//                for(int j=0; j<n*2; j++) {
+//                    System.err.print(' ');
+//                }
+//                n+=1;
+//                System.err.println(parent);
+//                parent = parent.getParent();
+//            }
             
         }
-        return;
+
     }
 
     
@@ -1000,7 +1016,7 @@ public abstract class Control extends Parent implements Skinnable {
 
             @Override
             public boolean isSettable(Control n) {
-                return n.skin == null || !n.skin.isBound();
+                return (n.skin == null || !n.skin.isBound());
             }
 
             @Override
