@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project name="test-stub-toolkit" default="jar" basedir=".">
+  <description>Builds test-stub-toolkit</description>
+
+  <import file="../build-defs.xml"/>
+</project>
