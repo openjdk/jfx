@@ -214,7 +214,7 @@ public abstract class Service<V> implements Worker<V>, EventTarget {
     /**
      * The onReady event handler is called whenever the Task state transitions
      * to the READY state.
-     * 
+     *
      * @return the onReady event handler property
      */
     public final ObjectProperty<EventHandler<WorkerStateEvent>> onReadyProperty() {
@@ -234,7 +234,7 @@ public abstract class Service<V> implements Worker<V>, EventTarget {
     /**
      * The onReady event handler is called whenever the Task state transitions
      * to the READY state.
-     * 
+     *
      * @param value the event handler, can be null to clear it
      */
     public final void setOnReady(EventHandler<WorkerStateEvent> value) {
@@ -486,7 +486,7 @@ public abstract class Service<V> implements Worker<V>, EventTarget {
             }
         });
     }
-    
+
     @Override public final boolean cancel() {
         checkThread();
         if (task == null) {
@@ -578,11 +578,28 @@ public abstract class Service<V> implements Worker<V>, EventTarget {
         task.setState(State.SCHEDULED);
 
         // Start the task
+        executeTask(task);
+    }
+
+    /**
+     * <p>
+     *     Uses the <code>executor</code> defined on this Service to execute the
+     *     given task. If the <code>executor</code> is null, then a default
+     *     executor is used which will create a new daemon thread on which to
+     *     execute this task.
+     * </p>
+     * <p>
+     *     This method is intended only to be called by the Service
+     *     implementation.
+     * </p>
+     * @param task a non-null task to execute
+     */
+    protected void executeTask(Task<V> task) {
         Executor e = getExecutor();
         if (e != null) {
             e.execute(task);
         } else {
-            executeManually();
+            EXECUTOR.execute(task);
         }
     }
 
@@ -599,7 +616,7 @@ public abstract class Service<V> implements Worker<V>, EventTarget {
         }
         return eventHelper;
     }
-    
+
     /**
      * Registers an event handler to this task. Any event filters are first
      * processed, then the specified onFoo event handlers, and finally any
@@ -700,12 +717,6 @@ public abstract class Service<V> implements Worker<V>, EventTarget {
         return getEventHelper().buildEventDispatchChain(tail);
     }
 
-    // This method exists for the sake of testing, so I can actually do this differently and not
-    // run an actual thread in the background, which makes for lousy testing.
-    void executeManually() {
-        EXECUTOR.execute(task);
-    }
-
     /**
      * Invoked after the Service is started on the JavaFX Application Thread.
      * Implementations should save off any state into final variables prior to
@@ -728,14 +739,14 @@ public abstract class Service<V> implements Worker<V>, EventTarget {
      *         }
      *     }
      * </code></pre>
-     * 
+     *
      * <p>
      *     If the Task is a pre-defined class (as opposed to being an
      *     anonymous class), and if it followed the recommended best-practice,
      *     then there is no need to save off state prior to constructing
      *     the Task since its state is completely provided in its constructor.
      * </p>
-     * 
+     *
      * <pre><code>
      *     protected Task createTask() {
      *         // This is safe because getUrl is called on the FX Application
@@ -746,7 +757,7 @@ public abstract class Service<V> implements Worker<V>, EventTarget {
      * </code></pre>
      * @return
      */
-    protected abstract Task createTask();
+    protected abstract Task<V> createTask();
 
     void checkThread() {
         if (!Platform.isFxApplicationThread()) {
