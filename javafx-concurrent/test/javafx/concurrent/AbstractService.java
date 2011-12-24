@@ -39,7 +39,7 @@ public abstract class AbstractService extends Service<String> {
     public ServiceTestBase test;
     public AbstractTask currentTask;
 
-    @Override protected final Task createTask() {
+    @Override protected final Task<String> createTask() {
         currentTask = createTestTask();
         currentTask.test = test;
         return currentTask;

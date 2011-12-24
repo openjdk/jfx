@@ -979,7 +979,6 @@ public class ServiceLifecycleTest extends ServiceTestBase {
         assertFalse(filterCalled.get());
     }
 
-
     /***************************************************************************
      *
      * Tests for onRunning

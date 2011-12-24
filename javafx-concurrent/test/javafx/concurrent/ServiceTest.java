@@ -25,15 +25,13 @@
 
 package javafx.concurrent;
 
-import javafx.beans.property.ObjectProperty;
-import javafx.beans.property.SimpleObjectProperty;
 import java.util.concurrent.Executor;
 import java.util.concurrent.atomic.AtomicBoolean;
-
+import javafx.beans.property.ObjectProperty;
+import javafx.beans.property.SimpleObjectProperty;
 import javafx.concurrent.mocks.SimpleTask;
 import org.junit.Before;
 import org.junit.Test;
-
 import static org.junit.Assert.*;
 
 /**
@@ -45,7 +43,7 @@ public class ServiceTest {
         // I don't use the AbstractService here because I don't want to
         // take advantage of the built in executor / threading stuff
         service = new Service<String>() {
-            @Override protected Task createTask() {
+            @Override protected Task<String> createTask() {
                 return new SimpleTask();
             }
 
