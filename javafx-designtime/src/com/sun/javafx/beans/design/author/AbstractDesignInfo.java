@@ -24,7 +24,6 @@
  */
 package com.sun.javafx.beans.design.author;
 
-import com.sun.javafx.beans.design.author.DesignInfo;
 import com.sun.javafx.beans.metadata.BeanMetaData;
 
 /**
@@ -33,15 +32,14 @@ import com.sun.javafx.beans.metadata.BeanMetaData;
  */
 public abstract class AbstractDesignInfo<T> implements DesignInfo<T> {
     private Class<T> type;
-    private BeanMetaData metaData;
+    private BeanMetaData<T> metaData;
 
     protected AbstractDesignInfo(Class<T> type) {
         this.type = type;
-        metaData = new BeanMetaData(type);
+        metaData = new BeanMetaData<T>(type);
     }
 
-    @Override
-    public Class<T> getBeanClass() {
+    @Override public Class<T> getBeanClass() {
         return type;
     }
 
