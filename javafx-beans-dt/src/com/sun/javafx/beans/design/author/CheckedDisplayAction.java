@@ -35,7 +35,6 @@ package com.sun.javafx.beans.design.author;
  * @author Joe Nuxoll
  * @version 1.0
  * @see DisplayAction
- * @see javax.beans.impl.BasicCheckedDisplayAction
  */
 public interface CheckedDisplayAction extends DisplayAction {
 

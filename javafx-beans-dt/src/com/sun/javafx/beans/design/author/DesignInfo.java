@@ -64,7 +64,6 @@ import java.util.List;
  * @author Joe Nuxoll
  * @author Tor Norbye
  * @version 1.0
- * @see javax.beans.impl.BasicDesignInfo
  * @todo Add additional feature descriptors. How about quick tips and fixes?
  *   How about error annotations and smart tags
  */

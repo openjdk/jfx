@@ -41,7 +41,6 @@ import com.sun.javafx.beans.design.DisplayItem;
  *
  * @author Joe Nuxoll
  * @version 1.0
- * @see javax.beans.impl.BasicDisplayAction
  */
 public interface DisplayAction extends DisplayItem {
 

@@ -41,8 +41,6 @@ import com.sun.javafx.beans.design.tool.DesignBean;
  * the component (bean) author.  The BasicBeanCreateInfo class can be used for convenience.</P>
  *
  * @author Joe Nuxoll
- * @version 1.0
- * @see javax.beans.impl.BasicBeanCreateInfo
  */
 public interface BeanCreateInfo<T> extends DisplayItem {
 

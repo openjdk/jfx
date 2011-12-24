@@ -44,7 +44,6 @@ import com.sun.javafx.beans.design.tool.DesignBean;
  *
  * @author Joe Nuxoll
  * @version 1.0
- * @see javax.beans.impl.BasicBeanCreateInfoSet
  */
 public interface BeanCreateInfoSet extends DisplayItem {
 

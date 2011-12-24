@@ -39,7 +39,7 @@ import com.sun.javafx.beans.design.tool.DesignProperty;
  *
  * @author Joe Nuxoll
  * @version 1.0
- * @see Customizer2
+ * @see Customizer
  * @see Result
  */
 public class CustomizerResult extends Result {
