@@ -25,33 +25,15 @@
 
 package javafx.concurrent;
 
-import javafx.application.Platform;
-import javafx.beans.property.BooleanProperty;
-import javafx.beans.property.DoubleProperty;
-import javafx.beans.property.ObjectProperty;
-import javafx.beans.property.ReadOnlyBooleanProperty;
-import javafx.beans.property.ReadOnlyDoubleProperty;
-import javafx.beans.property.ReadOnlyObjectProperty;
-import javafx.beans.property.ReadOnlyStringProperty;
-import javafx.beans.property.SimpleBooleanProperty;
-import javafx.beans.property.SimpleDoubleProperty;
-import javafx.beans.property.SimpleObjectProperty;
-import javafx.beans.property.SimpleStringProperty;
-import javafx.beans.property.StringProperty;
-import java.util.concurrent.BlockingQueue;
-import java.util.concurrent.Executor;
-import java.util.concurrent.LinkedBlockingQueue;
-import java.util.concurrent.ThreadFactory;
-import java.util.concurrent.ThreadPoolExecutor;
-import java.util.concurrent.TimeUnit;
-
+import java.util.concurrent.*;
 import com.sun.javafx.logging.PlatformLogger;
 import com.sun.javafx.tk.Toolkit;
+import javafx.application.Platform;
+import javafx.beans.property.*;
 import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
 import javafx.event.*;
 import static javafx.concurrent.WorkerStateEvent.*;
-import static javafx.concurrent.WorkerStateEvent.WORKER_STATE_FAILED;
 
 /**
  * <p>
@@ -242,7 +224,7 @@ public abstract class Service<V> implements Worker<V>, EventTarget {
 
     /**
      * A protected convenience method for subclasses, called whenever the
-     * state of the Task has transitioned to the {@link State.READY} state.
+     * state of the Task has transitioned to the READY state.
      * This method is invoked after any listeners of the state property
      * and after the Task has been fully transitioned to the new state.
      */
@@ -280,7 +262,7 @@ public abstract class Service<V> implements Worker<V>, EventTarget {
 
     /**
      * A protected convenience method for subclasses, called whenever the
-     * state of the Task has transitioned to the {@link State.SCHEDULED} state.
+     * state of the Task has transitioned to the SCHEDULED state.
      * This method is invoked after any listeners of the state property
      * and after the Task has been fully transitioned to the new state.
      */
@@ -318,7 +300,7 @@ public abstract class Service<V> implements Worker<V>, EventTarget {
 
     /**
      * A protected convenience method for subclasses, called whenever the
-     * state of the Task has transitioned to the {@link State.RUNNING} state.
+     * state of the Task has transitioned to the RUNNING state.
      * This method is invoked after any listeners of the state property
      * and after the Task has been fully transitioned to the new state.
      */
@@ -356,7 +338,7 @@ public abstract class Service<V> implements Worker<V>, EventTarget {
 
     /**
      * A protected convenience method for subclasses, called whenever the
-     * state of the Task has transitioned to the {@link State.SUCCEEDED} state.
+     * state of the Task has transitioned to the SUCCEEDED state.
      * This method is invoked after any listeners of the state property
      * and after the Task has been fully transitioned to the new state.
      */
@@ -394,7 +376,7 @@ public abstract class Service<V> implements Worker<V>, EventTarget {
 
     /**
      * A protected convenience method for subclasses, called whenever the
-     * state of the Task has transitioned to the {@link State.CANCELLED} state.
+     * state of the Task has transitioned to the CANCELLED state.
      * This method is invoked after any listeners of the state property
      * and after the Task has been fully transitioned to the new state.
      */
@@ -432,7 +414,7 @@ public abstract class Service<V> implements Worker<V>, EventTarget {
 
     /**
      * A protected convenience method for subclasses, called whenever the
-     * state of the Task has transitioned to the {@link State.FAILED} state.
+     * state of the Task has transitioned to the FAILED state.
      * This method is invoked after any listeners of the state property
      * and after the Task has been fully transitioned to the new state.
      */
@@ -443,7 +425,7 @@ public abstract class Service<V> implements Worker<V>, EventTarget {
      * restart method I can cancel the currently running task, and so the cancel method
      * can cancel the currently running task.
      */
-    private Task task;
+    private Task<V> task;
 
     /**
      * Create a new Service.
@@ -555,8 +537,8 @@ public abstract class Service<V> implements Worker<V>, EventTarget {
         checkThread();
 
         if (getState() != State.READY) {
-            // TODO do I want to do this, or auto-cancel and restart, or what?
-            throw new IllegalStateException("Can only start a Service in the READY state. Was in state " + getState());
+            throw new IllegalStateException(
+                    "Can only start a Service in the READY state. Was in state " + getState());
         }
 
         // Create the task
@@ -754,7 +736,7 @@ public abstract class Service<V> implements Worker<V>, EventTarget {
      *         return new FirstLineReaderTask(myService.getUrl());
      *     }
      * </code></pre>
-     * @return
+     * @return the Task to execute
      */
     protected abstract Task<V> createTask();
 

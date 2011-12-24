@@ -25,15 +25,16 @@
 
 package javafx.concurrent;
 
-import javafx.beans.value.ChangeListener;
-import javafx.beans.value.ObservableValue;
 import java.util.concurrent.Executor;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
-
+import javafx.beans.value.ChangeListener;
+import javafx.beans.value.ObservableValue;
+import javafx.concurrent.mocks.SimpleTask;
+import javafx.event.Event;
 import javafx.event.EventHandler;
+import javafx.event.EventType;
 import org.junit.Test;
-
 import static org.junit.Assert.*;
 
 /**
@@ -224,8 +225,9 @@ public class ServiceLifecycleTest extends ServiceTestBase {
     @Test public void runningPropertyNotificationInScheduledState() {
         final AtomicBoolean passed = new AtomicBoolean(false);
         service.runningProperty().addListener(new ChangeListener<Boolean>() {
-            @Override public void changed(ObservableValue<? extends Boolean> o,
-                                          Boolean oldValue, Boolean newValue) {
+            @Override
+            public void changed(ObservableValue<? extends Boolean> o,
+                                Boolean oldValue, Boolean newValue) {
                 passed.set(newValue);
             }
         });
@@ -321,7 +323,8 @@ public class ServiceLifecycleTest extends ServiceTestBase {
     @Test public void runningPropertyNotificationInRunningState() {
         final AtomicBoolean passed = new AtomicBoolean(false);
         service.runningProperty().addListener(new ChangeListener<Boolean>() {
-            @Override public void changed(ObservableValue<? extends Boolean> o,
+            @Override
+            public void changed(ObservableValue<? extends Boolean> o,
                                 Boolean oldValue, Boolean newValue) {
                 passed.set(newValue);
             }
@@ -408,7 +411,8 @@ public class ServiceLifecycleTest extends ServiceTestBase {
         final AtomicBoolean passed = new AtomicBoolean(false);
         service.start();
         task.progressProperty().addListener(new ChangeListener<Number>() {
-            @Override public void changed(ObservableValue<? extends Number> o,
+            @Override
+            public void changed(ObservableValue<? extends Number> o,
                                 Number oldValue, Number newValue) {
                 passed.set(newValue.doubleValue() == .5);
             }
@@ -437,7 +441,8 @@ public class ServiceLifecycleTest extends ServiceTestBase {
         final AtomicBoolean passed = new AtomicBoolean(false);
         service.start();
         task.messageProperty().addListener(new ChangeListener<String>() {
-            @Override public void changed(ObservableValue<? extends String> o,
+            @Override
+            public void changed(ObservableValue<? extends String> o,
                                 String oldValue, String newValue) {
                 passed.set("Running".equals(service.getMessage()));
             }
@@ -466,7 +471,8 @@ public class ServiceLifecycleTest extends ServiceTestBase {
         final AtomicBoolean passed = new AtomicBoolean(false);
         service.start();
         task.titleProperty().addListener(new ChangeListener<String>() {
-            @Override public void changed(ObservableValue<? extends String> o,
+            @Override
+            public void changed(ObservableValue<? extends String> o,
                                 String oldValue, String newValue) {
                 passed.set("Title".equals(service.getTitle()));
             }
@@ -754,57 +760,94 @@ public class ServiceLifecycleTest extends ServiceTestBase {
         assertNull(service.onReadyProperty().get());
     }
 
-//    @Test public void onScheduledFilterCalledBefore_onScheduled() {
-//        final AtomicBoolean filterCalled = new AtomicBoolean(false);
-//        final AtomicBoolean filterCalledFirst = new AtomicBoolean(false);
-//        service.addEventFilter(WorkerStateEvent.WORKER_STATE_SCHEDULED, new EventHandler<WorkerStateEvent>() {
-//            @Override public void handle(WorkerStateEvent workerStateEvent) {
-//                filterCalled.set(true);
-//            }
-//        });
-//        service.setOnScheduled(new EventHandler<WorkerStateEvent>() {
-//            @Override public void handle(WorkerStateEvent workerStateEvent) {
-//                filterCalledFirst.set(filterCalled.get());
-//            }
-//        });
-//
-//        // Transition to Scheduled state
-//        service.start();
-//        executor.executeScheduled();
-//        // Events should have happened
-//        assertTrue(filterCalledFirst.get());
-//    }
-//
-//    @Test public void scheduledCalledAfterHandler() {
-//        final AtomicBoolean handlerCalled = new AtomicBoolean(false);
-//        service.setOnScheduled(new EventHandler<WorkerStateEvent>() {
-//            @Override public void handle(WorkerStateEvent workerStateEvent) {
-//                handlerCalled.set(true);
-//            }
-//        });
-//
-//        // Transition to Scheduled state
-//        service.start();
-//        executor.executeScheduled();
-//        // Events should have happened
-//        assertTrue(handlerCalled.get() && service.currentTask.scheduledSemaphore.getQueueLength() == 0);
-//    }
-//
-//    @Test public void scheduledCalledAfterHandlerEvenIfConsumed() {
-//        final AtomicBoolean handlerCalled = new AtomicBoolean(false);
-//        service.setOnScheduled(new EventHandler<WorkerStateEvent>() {
-//            @Override public void handle(WorkerStateEvent workerStateEvent) {
-//                handlerCalled.set(true);
-//                workerStateEvent.consume();
-//            }
-//        });
-//
-//        // Transition to Scheduled state
-//        service.start();
-//        executor.executeScheduled();
-//        // Events should have happened
-//        assertTrue(handlerCalled.get() && service.currentTask.scheduledSemaphore.getQueueLength() == 0);
-//    }
+    @Test public void onReadyFilterCalledBefore_onReady() {
+        final AtomicBoolean filterCalled = new AtomicBoolean(false);
+        final AtomicBoolean filterCalledFirst = new AtomicBoolean(false);
+        service.start();
+        executor.executeScheduled();
+        task.complete();
+        service.addEventFilter(WorkerStateEvent.WORKER_STATE_READY, new EventHandler<WorkerStateEvent>() {
+            @Override public void handle(WorkerStateEvent workerStateEvent) {
+                filterCalled.set(true);
+            }
+        });
+        service.setOnReady(new EventHandler<WorkerStateEvent>() {
+            @Override public void handle(WorkerStateEvent workerStateEvent) {
+                filterCalledFirst.set(filterCalled.get());
+            }
+        });
+
+        // Transition to Ready state
+        service.reset();
+        // Events should have happened
+        assertTrue(filterCalledFirst.get());
+    }
+
+    @Test public void onReadyHandlerCalled() {
+        final AtomicBoolean handlerCalled = new AtomicBoolean(false);
+        service.start();
+        executor.executeScheduled();
+        task.complete();
+        service.addEventHandler(WorkerStateEvent.WORKER_STATE_READY, new EventHandler<WorkerStateEvent>() {
+            @Override public void handle(WorkerStateEvent workerStateEvent) {
+                handlerCalled.set(true);
+            }
+        });
+
+        // Transition to Ready state
+        service.reset();
+        // Events should have happened
+        assertTrue(handlerCalled.get());
+    }
+
+    @Test public void removed_onReadyHandlerNotCalled() {
+        final AtomicBoolean handlerCalled = new AtomicBoolean(false);
+        final AtomicBoolean sanity = new AtomicBoolean(false);
+        service.start();
+        executor.executeScheduled();
+        task.complete();
+        EventHandler<WorkerStateEvent> handler = new EventHandler<WorkerStateEvent>() {
+            @Override public void handle(WorkerStateEvent workerStateEvent) {
+                handlerCalled.set(true);
+            }
+        };
+        service.addEventHandler(WorkerStateEvent.WORKER_STATE_READY, handler);
+        service.removeEventHandler(WorkerStateEvent.WORKER_STATE_READY, handler);
+        service.addEventHandler(WorkerStateEvent.WORKER_STATE_READY, new EventHandler<WorkerStateEvent>() {
+            @Override
+            public void handle(WorkerStateEvent workerStateEvent) {
+                sanity.set(true);
+            }
+        });
+
+        service.reset();
+        assertTrue(sanity.get());
+        assertFalse(handlerCalled.get());
+    }
+
+    @Test public void removed_onReadyFilterNotCalled() {
+        final AtomicBoolean filterCalled = new AtomicBoolean(false);
+        final AtomicBoolean sanity = new AtomicBoolean(false);
+        service.start();
+        executor.executeScheduled();
+        task.complete();
+        EventHandler<WorkerStateEvent> filter = new EventHandler<WorkerStateEvent>() {
+            @Override public void handle(WorkerStateEvent workerStateEvent) {
+                filterCalled.set(true);
+            }
+        };
+        service.addEventFilter(WorkerStateEvent.WORKER_STATE_READY, filter);
+        service.removeEventFilter(WorkerStateEvent.WORKER_STATE_READY, filter);
+        service.addEventFilter(WorkerStateEvent.WORKER_STATE_READY, new EventHandler<WorkerStateEvent>() {
+            @Override public void handle(WorkerStateEvent workerStateEvent) {
+                sanity.set(true);
+            }
+        });
+
+        service.reset();
+        assertTrue(sanity.get());
+        assertFalse(filterCalled.get());
+    }
 
     /***************************************************************************
      *
@@ -877,6 +920,66 @@ public class ServiceLifecycleTest extends ServiceTestBase {
         assertTrue(handlerCalled.get() && service.currentTask.scheduledSemaphore.getQueueLength() == 0);
     }
 
+    @Test public void onScheduledHandlerCalled() {
+        final AtomicBoolean handlerCalled = new AtomicBoolean(false);
+        service.addEventHandler(WorkerStateEvent.WORKER_STATE_SCHEDULED, new EventHandler<WorkerStateEvent>() {
+            @Override
+            public void handle(WorkerStateEvent workerStateEvent) {
+                handlerCalled.set(true);
+            }
+        });
+
+        service.start();
+        executor.executeScheduled();
+        // Events should have happened
+        assertTrue(handlerCalled.get());
+    }
+
+    @Test public void removed_onScheduledHandlerNotCalled() {
+        final AtomicBoolean handlerCalled = new AtomicBoolean(false);
+        final AtomicBoolean sanity = new AtomicBoolean(false);
+        EventHandler<WorkerStateEvent> handler = new EventHandler<WorkerStateEvent>() {
+            @Override public void handle(WorkerStateEvent workerStateEvent) {
+                handlerCalled.set(true);
+            }
+        };
+        service.addEventHandler(WorkerStateEvent.WORKER_STATE_SCHEDULED, handler);
+        service.removeEventHandler(WorkerStateEvent.WORKER_STATE_SCHEDULED, handler);
+        service.addEventHandler(WorkerStateEvent.WORKER_STATE_SCHEDULED, new EventHandler<WorkerStateEvent>() {
+            @Override public void handle(WorkerStateEvent workerStateEvent) {
+                sanity.set(true);
+            }
+        });
+
+        service.start();
+        executor.executeScheduled();
+        assertTrue(sanity.get());
+        assertFalse(handlerCalled.get());
+    }
+
+    @Test public void removed_onScheduledFilterNotCalled() {
+        final AtomicBoolean filterCalled = new AtomicBoolean(false);
+        final AtomicBoolean sanity = new AtomicBoolean(false);
+        EventHandler<WorkerStateEvent> filter = new EventHandler<WorkerStateEvent>() {
+            @Override public void handle(WorkerStateEvent workerStateEvent) {
+                filterCalled.set(true);
+            }
+        };
+        service.addEventFilter(WorkerStateEvent.WORKER_STATE_SCHEDULED, filter);
+        service.removeEventFilter(WorkerStateEvent.WORKER_STATE_SCHEDULED, filter);
+        service.addEventFilter(WorkerStateEvent.WORKER_STATE_SCHEDULED, new EventHandler<WorkerStateEvent>() {
+            @Override public void handle(WorkerStateEvent workerStateEvent) {
+                sanity.set(true);
+            }
+        });
+
+        service.start();
+        executor.executeScheduled();
+        assertTrue(sanity.get());
+        assertFalse(filterCalled.get());
+    }
+
+
     /***************************************************************************
      *
      * Tests for onRunning
@@ -946,6 +1049,65 @@ public class ServiceLifecycleTest extends ServiceTestBase {
         executor.executeScheduled();
         // Events should have happened
         assertTrue(handlerCalled.get() && service.currentTask.runningSemaphore.getQueueLength() == 0);
+    }
+
+    @Test public void onRunningHandlerCalled() {
+        final AtomicBoolean handlerCalled = new AtomicBoolean(false);
+        service.addEventHandler(WorkerStateEvent.WORKER_STATE_RUNNING, new EventHandler<WorkerStateEvent>() {
+            @Override
+            public void handle(WorkerStateEvent workerStateEvent) {
+                handlerCalled.set(true);
+            }
+        });
+
+        service.start();
+        executor.executeScheduled();
+        // Events should have happened
+        assertTrue(handlerCalled.get());
+    }
+
+    @Test public void removed_onRunningHandlerNotCalled() {
+        final AtomicBoolean handlerCalled = new AtomicBoolean(false);
+        final AtomicBoolean sanity = new AtomicBoolean(false);
+        EventHandler<WorkerStateEvent> handler = new EventHandler<WorkerStateEvent>() {
+            @Override public void handle(WorkerStateEvent workerStateEvent) {
+                handlerCalled.set(true);
+            }
+        };
+        service.addEventHandler(WorkerStateEvent.WORKER_STATE_RUNNING, handler);
+        service.removeEventHandler(WorkerStateEvent.WORKER_STATE_RUNNING, handler);
+        service.addEventHandler(WorkerStateEvent.WORKER_STATE_RUNNING, new EventHandler<WorkerStateEvent>() {
+            @Override public void handle(WorkerStateEvent workerStateEvent) {
+                sanity.set(true);
+            }
+        });
+
+        service.start();
+        executor.executeScheduled();
+        assertTrue(sanity.get());
+        assertFalse(handlerCalled.get());
+    }
+
+    @Test public void removed_onRunningFilterNotCalled() {
+        final AtomicBoolean filterCalled = new AtomicBoolean(false);
+        final AtomicBoolean sanity = new AtomicBoolean(false);
+        EventHandler<WorkerStateEvent> filter = new EventHandler<WorkerStateEvent>() {
+            @Override public void handle(WorkerStateEvent workerStateEvent) {
+                filterCalled.set(true);
+            }
+        };
+        service.addEventFilter(WorkerStateEvent.WORKER_STATE_RUNNING, filter);
+        service.removeEventFilter(WorkerStateEvent.WORKER_STATE_RUNNING, filter);
+        service.addEventFilter(WorkerStateEvent.WORKER_STATE_RUNNING, new EventHandler<WorkerStateEvent>() {
+            @Override public void handle(WorkerStateEvent workerStateEvent) {
+                sanity.set(true);
+            }
+        });
+
+        service.start();
+        executor.executeScheduled();
+        assertTrue(sanity.get());
+        assertFalse(filterCalled.get());
     }
 
     /***************************************************************************
@@ -1022,6 +1184,69 @@ public class ServiceLifecycleTest extends ServiceTestBase {
         assertTrue(handlerCalled.get() && service.currentTask.succeededSemaphore.getQueueLength() == 0);
     }
 
+    @Test public void onSucceededHandlerCalled() {
+        final AtomicBoolean handlerCalled = new AtomicBoolean(false);
+        service.addEventHandler(WorkerStateEvent.WORKER_STATE_SUCCEEDED, new EventHandler<WorkerStateEvent>() {
+            @Override
+            public void handle(WorkerStateEvent workerStateEvent) {
+                handlerCalled.set(true);
+            }
+        });
+
+        service.start();
+        executor.executeScheduled();
+        task.complete();
+        // Events should have happened
+        assertTrue(handlerCalled.get());
+    }
+
+    @Test public void removed_onSucceededHandlerNotCalled() {
+        final AtomicBoolean handlerCalled = new AtomicBoolean(false);
+        final AtomicBoolean sanity = new AtomicBoolean(false);
+        EventHandler<WorkerStateEvent> handler = new EventHandler<WorkerStateEvent>() {
+            @Override public void handle(WorkerStateEvent workerStateEvent) {
+                handlerCalled.set(true);
+            }
+        };
+        service.addEventHandler(WorkerStateEvent.WORKER_STATE_SUCCEEDED, handler);
+        service.removeEventHandler(WorkerStateEvent.WORKER_STATE_SUCCEEDED, handler);
+        service.addEventHandler(WorkerStateEvent.WORKER_STATE_SUCCEEDED, new EventHandler<WorkerStateEvent>() {
+            @Override
+            public void handle(WorkerStateEvent workerStateEvent) {
+                sanity.set(true);
+            }
+        });
+
+        service.start();
+        executor.executeScheduled();
+        task.complete();
+        assertTrue(sanity.get());
+        assertFalse(handlerCalled.get());
+    }
+
+    @Test public void removed_onSucceededFilterNotCalled() {
+        final AtomicBoolean filterCalled = new AtomicBoolean(false);
+        final AtomicBoolean sanity = new AtomicBoolean(false);
+        EventHandler<WorkerStateEvent> filter = new EventHandler<WorkerStateEvent>() {
+            @Override public void handle(WorkerStateEvent workerStateEvent) {
+                filterCalled.set(true);
+            }
+        };
+        service.addEventFilter(WorkerStateEvent.WORKER_STATE_SUCCEEDED, filter);
+        service.removeEventFilter(WorkerStateEvent.WORKER_STATE_SUCCEEDED, filter);
+        service.addEventFilter(WorkerStateEvent.WORKER_STATE_SUCCEEDED, new EventHandler<WorkerStateEvent>() {
+            @Override public void handle(WorkerStateEvent workerStateEvent) {
+                sanity.set(true);
+            }
+        });
+
+        service.start();
+        executor.executeScheduled();
+        task.complete();
+        assertTrue(sanity.get());
+        assertFalse(filterCalled.get());
+    }
+
     /***************************************************************************
      *
      * Tests for onCancelled
@@ -1096,6 +1321,69 @@ public class ServiceLifecycleTest extends ServiceTestBase {
         assertTrue(handlerCalled.get() && service.currentTask.cancelledSemaphore.getQueueLength() == 0);
     }
 
+    @Test public void onCancelledHandlerCalled() {
+        final AtomicBoolean handlerCalled = new AtomicBoolean(false);
+        service.addEventHandler(WorkerStateEvent.WORKER_STATE_CANCELLED, new EventHandler<WorkerStateEvent>() {
+            @Override
+            public void handle(WorkerStateEvent workerStateEvent) {
+                handlerCalled.set(true);
+            }
+        });
+
+        service.start();
+        executor.executeScheduled();
+        task.cancel();
+        // Events should have happened
+        assertTrue(handlerCalled.get());
+    }
+
+    @Test public void removed_onCancelledHandlerNotCalled() {
+        final AtomicBoolean handlerCalled = new AtomicBoolean(false);
+        final AtomicBoolean sanity = new AtomicBoolean(false);
+        EventHandler<WorkerStateEvent> handler = new EventHandler<WorkerStateEvent>() {
+            @Override public void handle(WorkerStateEvent workerStateEvent) {
+                handlerCalled.set(true);
+            }
+        };
+        service.addEventHandler(WorkerStateEvent.WORKER_STATE_CANCELLED, handler);
+        service.removeEventHandler(WorkerStateEvent.WORKER_STATE_CANCELLED, handler);
+        service.addEventHandler(WorkerStateEvent.WORKER_STATE_CANCELLED, new EventHandler<WorkerStateEvent>() {
+            @Override
+            public void handle(WorkerStateEvent workerStateEvent) {
+                sanity.set(true);
+            }
+        });
+
+        service.start();
+        executor.executeScheduled();
+        task.cancel();
+        assertTrue(sanity.get());
+        assertFalse(handlerCalled.get());
+    }
+
+    @Test public void removed_onCancelledFilterNotCalled() {
+        final AtomicBoolean filterCalled = new AtomicBoolean(false);
+        final AtomicBoolean sanity = new AtomicBoolean(false);
+        EventHandler<WorkerStateEvent> filter = new EventHandler<WorkerStateEvent>() {
+            @Override public void handle(WorkerStateEvent workerStateEvent) {
+                filterCalled.set(true);
+            }
+        };
+        service.addEventFilter(WorkerStateEvent.WORKER_STATE_CANCELLED, filter);
+        service.removeEventFilter(WorkerStateEvent.WORKER_STATE_CANCELLED, filter);
+        service.addEventFilter(WorkerStateEvent.WORKER_STATE_CANCELLED, new EventHandler<WorkerStateEvent>() {
+            @Override public void handle(WorkerStateEvent workerStateEvent) {
+                sanity.set(true);
+            }
+        });
+
+        service.start();
+        executor.executeScheduled();
+        task.cancel();
+        assertTrue(sanity.get());
+        assertFalse(filterCalled.get());
+    }
+
     /***************************************************************************
      *
      * Tests for onFailed
@@ -1167,5 +1455,106 @@ public class ServiceLifecycleTest extends ServiceTestBase {
         task.fail(new Exception("Quit Now"));
         // Events should have happened
         assertTrue(handlerCalled.get() && service.currentTask.failedSemaphore.getQueueLength() == 0);
+    }
+
+    @Test public void onFailedHandlerCalled() {
+        final AtomicBoolean handlerCalled = new AtomicBoolean(false);
+        service.addEventHandler(WorkerStateEvent.WORKER_STATE_FAILED, new EventHandler<WorkerStateEvent>() {
+            @Override
+            public void handle(WorkerStateEvent workerStateEvent) {
+                handlerCalled.set(true);
+            }
+        });
+
+        service.start();
+        executor.executeScheduled();
+        task.fail(new Exception("Forget about it"));
+        // Events should have happened
+        assertTrue(handlerCalled.get());
+    }
+
+    @Test public void removed_onFailedHandlerNotCalled() {
+        final AtomicBoolean handlerCalled = new AtomicBoolean(false);
+        final AtomicBoolean sanity = new AtomicBoolean(false);
+        EventHandler<WorkerStateEvent> handler = new EventHandler<WorkerStateEvent>() {
+            @Override public void handle(WorkerStateEvent workerStateEvent) {
+                handlerCalled.set(true);
+            }
+        };
+        service.addEventHandler(WorkerStateEvent.WORKER_STATE_FAILED, handler);
+        service.removeEventHandler(WorkerStateEvent.WORKER_STATE_FAILED, handler);
+        service.addEventHandler(WorkerStateEvent.WORKER_STATE_FAILED, new EventHandler<WorkerStateEvent>() {
+            @Override
+            public void handle(WorkerStateEvent workerStateEvent) {
+                sanity.set(true);
+            }
+        });
+
+        service.start();
+        executor.executeScheduled();
+        task.fail(new Exception("Quit"));
+        assertTrue(sanity.get());
+        assertFalse(handlerCalled.get());
+    }
+
+    @Test public void removed_onFailedFilterNotCalled() {
+        final AtomicBoolean filterCalled = new AtomicBoolean(false);
+        final AtomicBoolean sanity = new AtomicBoolean(false);
+        EventHandler<WorkerStateEvent> filter = new EventHandler<WorkerStateEvent>() {
+            @Override public void handle(WorkerStateEvent workerStateEvent) {
+                filterCalled.set(true);
+            }
+        };
+        service.addEventFilter(WorkerStateEvent.WORKER_STATE_FAILED, filter);
+        service.removeEventFilter(WorkerStateEvent.WORKER_STATE_FAILED, filter);
+        service.addEventFilter(WorkerStateEvent.WORKER_STATE_FAILED, new EventHandler<WorkerStateEvent>() {
+            @Override public void handle(WorkerStateEvent workerStateEvent) {
+                sanity.set(true);
+            }
+        });
+
+        service.start();
+        executor.executeScheduled();
+        task.fail(new Exception("Quit"));
+        assertTrue(sanity.get());
+        assertFalse(filterCalled.get());
+    }
+
+    /***************************************************************************
+     *
+     * A mythical subclass should be able to set an event handler and
+     * have events fired on the Service work.
+     *
+     **************************************************************************/
+
+    @Test public void eventFiredOnSubclassWorks() {
+        final AtomicBoolean result = new AtomicBoolean(false);
+        MythicalService svc = new MythicalService();
+        svc.setHandler(new EventHandler<MythicalEvent>() {
+            @Override public void handle(MythicalEvent mythicalEvent) {
+                result.set(true);
+            }
+        });
+        svc.fireEvent(new MythicalEvent());
+        assertTrue(result.get());
+    }
+    
+    private static final class MythicalEvent extends Event {
+        public static final EventType<MythicalEvent> ANY =
+                new EventType<MythicalEvent>(Event.ANY, "MYTHICAL");
+
+        public MythicalEvent() {
+            super(ANY);
+        }
+    }
+    
+    private static final class MythicalService extends AbstractService {
+        @Override protected AbstractTask createTestTask() {
+            return new SimpleTask();
+        }
+        
+        public void setHandler(EventHandler<MythicalEvent> h) {
+            super.setEventHandler(MythicalEvent.ANY, h);
+        }
     }
 }
