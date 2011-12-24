@@ -25,29 +25,13 @@
 
 package javafx.concurrent;
 
-import com.sun.javafx.scene.NodeEventDispatcher;
 import java.util.concurrent.Callable;
 import java.util.concurrent.FutureTask;
 import java.util.concurrent.atomic.AtomicReference;
 import javafx.application.Platform;
-import javafx.beans.property.BooleanProperty;
-import javafx.beans.property.DoubleProperty;
-import javafx.beans.property.ObjectProperty;
-import javafx.beans.property.ReadOnlyBooleanProperty;
-import javafx.beans.property.ReadOnlyDoubleProperty;
-import javafx.beans.property.ReadOnlyObjectProperty;
-import javafx.beans.property.ReadOnlyStringProperty;
-import javafx.beans.property.SimpleBooleanProperty;
-import javafx.beans.property.SimpleDoubleProperty;
-import javafx.beans.property.SimpleObjectProperty;
-import javafx.beans.property.SimpleStringProperty;
-import javafx.beans.property.StringProperty;
+import javafx.beans.property.*;
+import javafx.event.*;
 import static javafx.concurrent.WorkerStateEvent.*;
-import javafx.event.Event;
-import javafx.event.EventDispatchChain;
-import javafx.event.EventHandler;
-import javafx.event.EventTarget;
-import javafx.event.EventType;
 
 /**
  * <p>
@@ -227,7 +211,7 @@ public abstract class Task<V> extends FutureTask<V> implements Worker<V>, EventT
 
     /**
      * A protected convenience method for subclasses, called whenever the
-     * state of the Task has transitioned to the {@link State.SCHEDULED} state.
+     * state of the Task has transitioned to the SCHEDULED state.
      * This method is invoked after any listeners of the state property
      * and after the Task has been fully transitioned to the new state.
      */
@@ -265,7 +249,7 @@ public abstract class Task<V> extends FutureTask<V> implements Worker<V>, EventT
 
     /**
      * A protected convenience method for subclasses, called whenever the
-     * state of the Task has transitioned to the {@link State.RUNNING} state.
+     * state of the Task has transitioned to the RUNNING state.
      * This method is invoked after any listeners of the state property
      * and after the Task has been fully transitioned to the new state.
      */
@@ -303,7 +287,7 @@ public abstract class Task<V> extends FutureTask<V> implements Worker<V>, EventT
 
     /**
      * A protected convenience method for subclasses, called whenever the
-     * state of the Task has transitioned to the {@link State.SUCCEEDED} state.
+     * state of the Task has transitioned to the SUCCEEDED state.
      * This method is invoked after any listeners of the state property
      * and after the Task has been fully transitioned to the new state.
      */
@@ -341,7 +325,7 @@ public abstract class Task<V> extends FutureTask<V> implements Worker<V>, EventT
 
     /**
      * A protected convenience method for subclasses, called whenever the
-     * state of the Task has transitioned to the {@link State.CANCELLED} state.
+     * state of the Task has transitioned to the CANCELLED state.
      * This method is invoked after any listeners of the state property
      * and after the Task has been fully transitioned to the new state.
      */
@@ -379,7 +363,7 @@ public abstract class Task<V> extends FutureTask<V> implements Worker<V>, EventT
 
     /**
      * A protected convenience method for subclasses, called whenever the
-     * state of the Task has transitioned to the {@link State.FAILED} state.
+     * state of the Task has transitioned to the FAILED state.
      * This method is invoked after any listeners of the state property
      * and after the Task has been fully transitioned to the new state.
      */

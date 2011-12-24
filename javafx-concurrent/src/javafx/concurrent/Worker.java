@@ -163,12 +163,15 @@ public interface Worker<V> {
      * end states (SUCCEEDED, CANCELLED, or FAILED) back to READY and then
      * immediately to SCHEDULED and RUNNING. These state transitions may occur
      * immediately one after the other, but will always occur in the prescribed order.
+     *
+     * @return The current state of this Worker
      */
     public State getState();
 
     /**
      * Gets the ReadOnlyObjectProperty representing the current state.
-     * @return
+     *
+     * @return The property representing the state
      */
     public ReadOnlyObjectProperty<State> stateProperty();
 
@@ -176,12 +179,15 @@ public interface Worker<V> {
      * Specifies the value, or result, of this Worker. This is set upon entering
      * the SUCCEEDED state, and cleared (set to null) if the Worker is reinitialized
      * (that is, if the Worker is a reusable Worker and is reset or restarted).
+     *
+     * @return the current value of this Worker
      */
     public V getValue();
 
     /**
      * Gets the ReadOnlyObjectProperty representing the value.
-     * @return
+     *
+     * @return The property representing the current value
      */
     public ReadOnlyObjectProperty<V> valueProperty();
 
@@ -190,12 +196,15 @@ public interface Worker<V> {
      * If this property value is {@code null}, there is no known exception, even if
      * the status is FAILED. If this property is not {@code null}, it will most
      * likely contain an exception that describes the cause of failure.
+     *
+     * @return the exception, if one occurred
      */
     public Throwable getException();
 
     /**
      * Gets the ReadOnlyObjectProperty representing any exception which occurred.
-     * @return
+     *
+     * @return the property representing the exception
      */
     public ReadOnlyObjectProperty<Throwable> exceptionProperty();
 
@@ -209,12 +218,14 @@ public interface Worker<V> {
      *
      * @see #totalWorkProperty
      * @see #progressProperty
+     * @return the amount of work done
      */
     public double getWorkDone();
 
     /**
      * Gets the ReadOnlyLongProperty representing the current progress.
-     * @return
+     *
+     * @return The property representing the amount of work done
      */
     public ReadOnlyDoubleProperty workDoneProperty();
 
@@ -226,6 +237,7 @@ public interface Worker<V> {
      *
      * @see #workDoneProperty
      * @see #progressProperty
+     * @return the total work to be done
      */
     public double getTotalWork();
 
@@ -234,7 +246,8 @@ public interface Worker<V> {
      * that needs to be done. These "work units" have meaning to the Worker
      * implementation, such as the number of bytes that need to be downloaded
      * or the number of images to process or some other such metric.
-     * @return
+     *
+     * @return the property representing the total work to be done
      */
     public ReadOnlyDoubleProperty totalWorkProperty();
 
@@ -247,12 +260,14 @@ public interface Worker<V> {
      *
      * @see #workDoneProperty
      * @see #totalWorkProperty
+     * @return the current progress
      */
     public double getProgress();
 
     /**
      * Gets the ReadOnlyLongProperty representing the progress.
-     * @return
+     *
+     * @return the property representing the progress
      */
     public ReadOnlyDoubleProperty progressProperty();
 
@@ -261,44 +276,53 @@ public interface Worker<V> {
      * {@link javafx.scene.control.ProgressIndicator}, you will typically bind the visibility
      * of the ProgressIndicator to the Worker's running property, and the progress of the
      * ProgressIndicator to the Worker's progress property.
+     *
+     * @return true if this Worker is running
      */
     public boolean isRunning();
 
     /**
      * Gets the ReadOnlyBooleanProperty representing whether the Worker is running.
-     * @return
+     *
+     * @return the property representing whether the worker is running
      */
     public ReadOnlyBooleanProperty runningProperty();
 
     /**
      * Gets a message associated with the current state of this Worker. This may
      * be something such as "Processing image 1 of 3", for example.
-     * @return
+     *
+     * @return the current message
      */
     public String getMessage();
 
     /**
      * Gets the ReadOnlyStringProperty representing the message.
-     * @return
+     *
+     * @return a property representing the current message
      */
     public ReadOnlyStringProperty messageProperty();
 
     /**
      * An optional title that should be associated with this Worker.
      * This may be something such as "Modifying Images".
-     * @return
+     *
+     * @return the current title
      */
     public String getTitle();
 
     /**
      * Gets the ReadOnlyStringProperty representing the title.
-     * @return
+     *
+     * @return the property representing the current title
      */
     public ReadOnlyStringProperty titleProperty();
 
     /**
      * Terminates execution of this Worker. Calling this method will either
      * remove this Worker from the execution queue or stop execution.
+     *
+     * @return returns true if the cancel was successful
      */
     public boolean cancel();
 }
