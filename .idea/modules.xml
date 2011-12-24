@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="ProjectModuleManager">
+    <modules>
+      <module fileurl="file://$PROJECT_DIR$/javafx-beans-dt/javafx-beans-dt.iml" filepath="$PROJECT_DIR$/javafx-beans-dt/javafx-beans-dt.iml" />
+      <module fileurl="file://$PROJECT_DIR$/javafx-concurrent/javafx-concurrent.iml" filepath="$PROJECT_DIR$/javafx-concurrent/javafx-concurrent.iml" />
+      <module fileurl="file://$PROJECT_DIR$/javafx-designtime/javafx-designtime.iml" filepath="$PROJECT_DIR$/javafx-designtime/javafx-designtime.iml" />
+      <module fileurl="file://$PROJECT_DIR$/javafx-ui-controls/javafx-ui-controls.iml" filepath="$PROJECT_DIR$/javafx-ui-controls/javafx-ui-controls.iml" />
+      <module fileurl="file://$PROJECT_DIR$/test-stub-toolkit/test-stub-toolkit.iml" filepath="$PROJECT_DIR$/test-stub-toolkit/test-stub-toolkit.iml" />
+    </modules>
+  </component>
+</project>
+
