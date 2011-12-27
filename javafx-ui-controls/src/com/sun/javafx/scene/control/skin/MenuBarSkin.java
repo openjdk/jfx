@@ -217,7 +217,8 @@ public class MenuBarSkin extends SkinBase<MenuBar, BehaviorBase<MenuBar>> implem
                     // check if the owner window has focus
                     if (menuButton.getScene().getWindow().isFocused()) {
                         if (pendingDismiss) {
-                            menuButton.hide();
+                            if (openMenu != null) openMenu.hide();
+//                            menuButton.hide();
                         }
                     }
                     pendingDismiss = false;
