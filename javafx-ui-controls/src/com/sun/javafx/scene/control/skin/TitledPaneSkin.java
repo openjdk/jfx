@@ -69,10 +69,10 @@ public class TitledPaneSkin extends SkinBase<TitledPane, TitledPaneBehavior>  {
         super(titledPane, new TitledPaneBehavior(titledPane));
         label = new LabeledImpl(titledPane);
         label.getStyleClass().add("text");
-        
+
         clipRect = new Rectangle();
         setClip(clipRect);
-               
+
         transitionStartValue = 0;
         titleRegion = new HBox();
         titleRegion.setFillHeight(false);
@@ -91,10 +91,10 @@ public class TitledPaneSkin extends SkinBase<TitledPane, TitledPaneBehavior>  {
         StackPane arrow = new StackPane();
         arrow.getStyleClass().setAll("arrow");
         arrowRegion.getChildren().setAll(arrow);
-        
+
         // title region consists of the title and the arrow regions
-        updateTitleRegion();        
-        
+        updateTitleRegion();
+
         contentRegion = new Content(getSkinnable().getContent());
         contentRegion.getStyleClass().setAll("content");
 
@@ -121,7 +121,7 @@ public class TitledPaneSkin extends SkinBase<TitledPane, TitledPaneBehavior>  {
     }
 
     @Override protected void setHeight(double value) {
-        super.setHeight(value);        
+        super.setHeight(value);
         clipRect.setHeight(value);
     }
 
@@ -143,7 +143,7 @@ public class TitledPaneSkin extends SkinBase<TitledPane, TitledPaneBehavior>  {
         if (getSkinnable().isCollapsible()) {
             titleRegion.getChildren().add(arrowRegion);
         }
-        titleRegion.getChildren().add(label);        
+        titleRegion.getChildren().add(label);
         titleRegion.setCursor(getSkinnable().isCollapsible() ? Cursor.HAND : Cursor.DEFAULT);
     }
 
@@ -194,6 +194,7 @@ public class TitledPaneSkin extends SkinBase<TitledPane, TitledPaneBehavior>  {
 
     @Override protected void layoutChildren() {
         double w = snapSize(getWidth()) - (snapSpace(getInsets().getLeft()) + snapSpace(getInsets().getRight()));
+        double h = snapSize(getHeight()) - (snapSpace(getInsets().getTop()) + snapSpace(getInsets().getBottom()));
 
         // header
         double headerHeight = Math.max(MIN_HEADER_HEIGHT, snapSize(titleRegion.prefHeight(-1)));
@@ -202,11 +203,17 @@ public class TitledPaneSkin extends SkinBase<TitledPane, TitledPaneBehavior>  {
         positionInArea(titleRegion, snapSpace(getInsets().getLeft()), snapSpace(getInsets().getTop()),
             w, headerHeight, 0, HPos.LEFT, VPos.CENTER);
 
-        // content        
+        // content
         double contentWidth = w;
-        double contentHeight = snapSize(contentRegion.prefHeight(-1));        
+        double contentHeight = h - headerHeight;
+        if (getSkinnable().getParent() != null && getSkinnable().getParent() instanceof AccordionSkin) {
+            if (prefHeightFromAccordion != 0) {
+                contentHeight = prefHeightFromAccordion - headerHeight;
+            }
+        }
+
         double y = snapSpace(getInsets().getTop() + headerHeight) - (contentHeight * (1 - getTransition()));
-        
+
         ((Rectangle)contentRegion.getClip()).setY(contentHeight * (1 - getTransition()));
         contentRegion.resize(contentWidth, contentHeight);
         positionInArea(contentRegion, snapSpace(getInsets().getLeft()), snapSpace(y),
@@ -218,7 +225,7 @@ public class TitledPaneSkin extends SkinBase<TitledPane, TitledPaneBehavior>  {
     }
 
     @Override protected double computeMinHeight(double width) {
-        return computePrefHeight(width);
+        return Math.max(MIN_HEADER_HEIGHT, snapSize(titleRegion.prefHeight(-1)));
     }
 
     @Override protected double computePrefWidth(double height) {
@@ -230,13 +237,23 @@ public class TitledPaneSkin extends SkinBase<TitledPane, TitledPaneBehavior>  {
 
     @Override protected double computePrefHeight(double width) {
         double headerHeight = Math.max(MIN_HEADER_HEIGHT, snapSize(titleRegion.prefHeight(-1)));
-        double contentHeight = contentRegion.prefHeight(-1) * getTransition();
+        double contentHeight = 0;
+        if (getSkinnable().getParent() != null && getSkinnable().getParent() instanceof AccordionSkin) {
+            contentHeight = contentRegion.prefHeight(-1);
+        } else {
+            contentHeight = contentRegion.prefHeight(-1) * getTransition();
+        }
         return headerHeight + snapSize(contentHeight) + snapSpace(getInsets().getTop()) + snapSpace(getInsets().getBottom());
     }
 
-    @Override protected double computeMaxHeight(double width) {
+    private double prefHeightFromAccordion = 0;
+    void setPrefHeightFromAccordion(double height) {
+        this.prefHeightFromAccordion = height;
+    }
+
+    double prefHeightFromAccordion() {
         double headerHeight = Math.max(MIN_HEADER_HEIGHT, snapSize(titleRegion.prefHeight(-1)));
-        double contentHeight = contentRegion.prefHeight(-1);
+        double contentHeight = (prefHeightFromAccordion - headerHeight) * getTransition();
         return headerHeight + snapSize(contentHeight) + snapSpace(getInsets().getTop()) + snapSpace(getInsets().getBottom());
     }
 
@@ -251,7 +268,7 @@ public class TitledPaneSkin extends SkinBase<TitledPane, TitledPaneBehavior>  {
             duration = timeline.getCurrentTime();
             timeline.stop();
         } else {
-            duration = TRANSITION_DURATION;
+                duration = TRANSITION_DURATION;
         }
 
         timeline = new Timeline();
@@ -281,7 +298,7 @@ public class TitledPaneSkin extends SkinBase<TitledPane, TitledPaneBehavior>  {
                     }
                 },
                 new KeyValue(transitionProperty(), 1, Interpolator.EASE_OUT)
-                
+
             );
         } else {
             k1 = new KeyFrame(
@@ -353,10 +370,10 @@ public class TitledPaneSkin extends SkinBase<TitledPane, TitledPaneBehavior>  {
         }
 
         @Override protected void setHeight(double value) {
-            super.setHeight(value);            
+            super.setHeight(value);
             clipRect.setHeight(value);
         }
-        
+
         @Override
         public void onTraverse(Node node, Bounds bounds) {
             int index = engine.registeredNodes.indexOf(node);
