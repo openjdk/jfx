@@ -285,14 +285,7 @@ public class TextFieldSkin extends TextInputControlSkin<TextField, TextFieldBeha
         textNode.impl_caretPositionProperty().set(textField.getCaretPosition());
         textField.selectionProperty().addListener(new InvalidationListener() {
             @Override public void invalidated(Observable observable) {
-                IndexRange newValue = getSkinnable().getSelection();
-                if (newValue == null || newValue.getLength() == 0) {
-                    textNode.impl_selectionStartProperty().set(-1);
-                    textNode.impl_selectionEndProperty().set(-1);
-                } else {
-                    textNode.impl_selectionStartProperty().set(newValue.getStart());
-                    textNode.impl_selectionEndProperty().set(newValue.getEnd());
-                }
+                updateSelection();
             }
         });
 
@@ -305,12 +298,7 @@ public class TextFieldSkin extends TextInputControlSkin<TextField, TextFieldBeha
         selectionHighlightPath.fillProperty().bind(highlightFill);
         textNode.impl_selectionShapeProperty().addListener(new InvalidationListener() {
             @Override public void invalidated(Observable observable) {
-                PathElement[] elements = textNode.impl_selectionShapeProperty().get();
-                if (elements == null) {
-                    selectionHighlightPath.getElements().clear();
-                } else {
-                    selectionHighlightPath.getElements().setAll(elements);
-                }
+                updateSelection();
             }
         });
 
@@ -342,6 +330,27 @@ public class TextFieldSkin extends TextInputControlSkin<TextField, TextFieldBeha
         
         registerChangeListener(textField.prefColumnCountProperty(), "prefColumnCount");
         if (textField.isFocused()) setCaretAnimating(true);
+        updateSelection();
+    }
+
+    private void updateSelection() {
+        IndexRange newValue = getSkinnable().getSelection();
+        if (newValue == null || newValue.getLength() == 0) {
+            textNode.impl_selectionStartProperty().set(-1);
+            textNode.impl_selectionEndProperty().set(-1);
+        } else {
+            textNode.impl_selectionStartProperty().set(newValue.getStart());
+            // This intermediate value is needed to force selection shape layout.
+            textNode.impl_selectionEndProperty().set(newValue.getStart());
+            textNode.impl_selectionEndProperty().set(newValue.getEnd());
+        }
+
+        PathElement[] elements = textNode.impl_selectionShapeProperty().get();
+        if (elements == null) {
+            selectionHighlightPath.getElements().clear();
+        } else {
+            selectionHighlightPath.getElements().setAll(elements);
+        }
     }
 
     @Override protected void handleControlPropertyChanged(String propertyReference) {
