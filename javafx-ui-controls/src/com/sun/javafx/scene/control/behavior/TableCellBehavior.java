@@ -179,14 +179,17 @@ public class TableCellBehavior extends CellBehaviorBase<TableCell> {
 
         tv.getSelectionModel().clearAndSelect(row, getControl().getTableColumn());
 
-        if (e.getClickCount() == 1 && isAlreadySelected) {
-            tv.edit(row, getControl().getTableColumn());
-        } else if (e.getClickCount() == 1) {
-            // cancel editing
-            tv.edit(-1, null);
-        } else if (e.getClickCount() == 2 && getControl().isEditable()) {
-            // edit at the specified row and column
-            tv.edit(row, getControl().getTableColumn());
+        // handle editing, which only occurs with the primary mouse button
+        if (e.isPrimaryButtonDown()) {
+            if (e.getClickCount() == 1 && isAlreadySelected) {
+                tv.edit(row, getControl().getTableColumn());
+            } else if (e.getClickCount() == 1) {
+                // cancel editing
+                tv.edit(-1, null);
+            } else if (e.getClickCount() == 2 && getControl().isEditable()) {
+                // edit at the specified row and column
+                tv.edit(row, getControl().getTableColumn());
+            }
         }
     }
 
