@@ -219,7 +219,7 @@ public class ComboBoxListViewSkin<T> extends ComboBoxPopupControl<T> {
                         skin.updateCellCount();
                         itemCountDirty = false;
                     }
-                    pw = skin.getVirtualFlowPreferredWidth(height) + 10;
+                    pw = skin.getVirtualFlowPreferredWidth(-1) + 10;
                 } else {
                     pw = Math.max(100, comboBox.getWidth());
                 }
