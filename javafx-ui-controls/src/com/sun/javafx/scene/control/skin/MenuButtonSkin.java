@@ -25,6 +25,7 @@
 
 package com.sun.javafx.scene.control.skin;
 
+import javafx.event.ActionEvent;
 import javafx.event.Event;
 import javafx.event.EventHandler;
 import javafx.scene.control.MenuButton;
@@ -49,7 +50,7 @@ public class MenuButtonSkin extends MenuButtonSkinBase<MenuButton, MenuButtonBeh
      * 
      * @param menuButton the MenuButton
      */
-    public MenuButtonSkin(MenuButton menuButton) {
+    public MenuButtonSkin(final MenuButton menuButton) {
         super(menuButton, new MenuButtonBehavior(menuButton));
         // MenuButton's showing does not get updated when autoHide happens,
         // as that hide happens under the covers. So we add to the menuButton's
@@ -62,7 +63,7 @@ public class MenuButtonSkin extends MenuButtonSkinBase<MenuButton, MenuButtonBeh
                 if (!menuButton.getProperties().containsKey(AUTOHIDE)) {
                     menuButton.getProperties().put(AUTOHIDE, Boolean.TRUE);
                 }
-            }
+                }
         });
         // request focus on content when the popup is shown
         popup.setOnShown(new EventHandler<WindowEvent>() {
@@ -71,6 +72,14 @@ public class MenuButtonSkin extends MenuButtonSkinBase<MenuButton, MenuButtonBeh
                 if (cmContent != null) cmContent.requestFocus();
             }
         });
+
+        if (menuButton.getOnAction() == null) {
+            menuButton.setOnAction(new EventHandler<ActionEvent>() {
+                @Override public void handle(ActionEvent e) {
+                    menuButton.show();
+                }
+            });
+        }
 
         label.setLabelFor(menuButton);
     }

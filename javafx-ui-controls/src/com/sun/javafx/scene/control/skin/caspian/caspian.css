@@ -813,7 +813,7 @@
 
 .menu:show-mnemonics .mnemonic-underline {
     -fx-stroke: -fx-text-fill;
-} 
+}
 
 /* This hides the down arrow that would show on a menu placed in a menubar */
 .menu-bar .menu .arrow {
@@ -893,11 +893,18 @@
     -fx-padding: 0.0em;
 }
 
-.menu-bar .menu:focused:showing, .menu-bar .menu:showing, .menu-bar .menu:focused, .menu:focused:showing, .menu:showing, .menu:focused {
+.menu-bar .menu .showing {
     -fx-background: -fx-accent;
     -fx-background-color: -fx-selection-bar;
     -fx-text-fill: -fx-selection-bar-text;
 }
+
+/*.menu-bar .menu:focused:showing, .menu-bar .menu:showing, .menu-bar .menu:focused, .menu:focused:showing, .menu:showing, .menu:focused {*/
+/*.menu-bar .menu-button:showing, .menu-button:showing {
+    -fx-background: -fx-accent;
+    -fx-background-color: -fx-selection-bar;
+    -fx-text-fill: -fx-selection-bar-text;
+}*/
 
 .menu-bar .menu-button:hover {
     -fx-background: -fx-accent;
