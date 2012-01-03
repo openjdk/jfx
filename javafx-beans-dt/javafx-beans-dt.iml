@@ -9,7 +9,7 @@
       <excludeFolder url="file://$MODULE_DIR$/dist" />
       <excludeFolder url="file://$MODULE_DIR$/nbproject" />
     </content>
-    <orderEntry type="jdk" jdkName="1.6" jdkType="JavaSDK" />
+    <orderEntry type="inheritedJdk" />
     <orderEntry type="sourceFolder" forTests="false" />
     <orderEntry type="library" name="jfxrt-binary-stub" level="project" />
     <orderEntry type="library" name="junit-4.8.2" level="project" />
