@@ -196,6 +196,49 @@ import javafx.scene.control.cell.PropertyValueFactory;
  *  });
  * }}</pre>
  * 
+ * <h3>TableView Selection / Focus APIs</h3>
+ * <p>To track selection and focus, it is necessary to become familiar with the
+ * {@link SelectionModel} and {@link FocusModel} classes. A TableView has at most
+ * one instance of each of these classes, available from 
+ * {@link #selectionModelProperty() selectionModel} and 
+ * {@link #focusModelProperty() focusModel} properties respectively.
+ * Whilst it is possible to use this API to set a new selection model, in
+ * most circumstances this is not necessary - the default selection and focus
+ * models should work in most circumstances.
+ * 
+ * <p>The default {@link SelectionModel} used when instantiating a TableView is
+ * an implementation of the {@link MultipleSelectionModel} abstract class. 
+ * However, as noted in the API documentation for
+ * the {@link MultipleSelectionModel#selectionModeProperty() selectionMode}
+ * property, the default value is {@link SelectionMode#SINGLE}. To enable 
+ * multiple selection in a default TableView instance, it is therefore necessary
+ * to do the following:
+ * 
+ * <pre>
+ * {@code 
+ * tableView.getSelectionModel().setSelectionMode(SelectionMode.MULTIPLE);}</pre>
+ *
+ * <h3>Customizing TableView Visuals</h3>
+ * <p>The visuals of the TableView can be entirely customized by replacing the 
+ * default {@link #rowFactoryProperty() row factory}. A row factory is used to
+ * generate {@link TableRow} instances, which are used to represent an entire
+ * row in the TableView. 
+ * 
+ * <p>In many cases, this is not what is desired however, as it is more commonly
+ * the case that cells be customized on a per-column basis, not a per-row basis.
+ * It is therefore important to note that a {@link TableRow} is not a 
+ * {@link TableCell}. A  {@link TableRow} is simply a container for zero or more
+ * {@link TableCell}, and in most circumstances it is more likely that you'll 
+ * want to create custom TableCells, rather than TableRows. The primary use case
+ * for creating custom TableRow instances would most probably be to introduce
+ * some form of column spanning support.
+ * 
+ * <p>You can create custom {@link TableCell} instances per column by assigning 
+ * the appropriate function to the TableColumn
+ * {@link TableColumn#cellFactoryProperty() cell factory} property.
+ * 
+ * <p>See the {@link Cell} class documentation for a more complete
+ * description of how to write custom Cells.
  *
  * @see TableColumn
  * @see TablePosition
@@ -588,6 +631,9 @@ public class TableView<S> extends Control {
 
     /**
      * Creates a default TableView control with no content.
+     * 
+     * <p>Refer to the {@link TableView} class documentation for details on the
+     * default state of other properties.
      */
     public TableView() {
         this(FXCollections.<S>observableArrayList());
@@ -597,6 +643,9 @@ public class TableView<S> extends Control {
      * Creates a TableView with the content provided in the items ObservableList.
      * This also sets up an observer such that any changes to the items list
      * will be immediately reflected in the TableView itself.
+     * 
+     * <p>Refer to the {@link TableView} class documentation for details on the
+     * default state of other properties.
      * 
      * @param items The items to insert into the TableView, and the list to watch
      *          for changes (to automatically show in the TableView).

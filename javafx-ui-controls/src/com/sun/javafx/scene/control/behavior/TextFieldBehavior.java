@@ -91,24 +91,29 @@ public class TextFieldBehavior extends TextInputControlBehavior<TextField> {
         scrollSelectionTimeline.setCycleCount(Timeline.INDEFINITE);
         List<KeyFrame> scrollTimelineKeyFrames = scrollSelectionTimeline.getKeyFrames();
         scrollTimelineKeyFrames.add(new KeyFrame(Duration.millis(SCROLL_RATE), scrollSelectionHandler));
+        handleFocusChange();
 
         // Register for change events
         textField.focusedProperty().addListener(new ChangeListener<Boolean>() {
             @Override
             public void changed(ObservableValue<? extends Boolean> observable, Boolean oldValue, Boolean newValue) {
-                TextField textField = getControl();
-
-                if (textField.isFocused()) {
-                    if (!focusGainedByMouseClick) {
-                        textField.selectRange(textField.getLength(), 0);
-                        setCaretAnimating(true);
-                    }
-                } else {
-                    textField.selectRange(0, 0);
-                    focusGainedByMouseClick = false;
-                }
+                handleFocusChange();
             }
         });
+    }
+
+    private void handleFocusChange() {
+        TextField textField = getControl();
+
+        if (textField.isFocused()) {
+            if (!focusGainedByMouseClick) {
+                textField.selectRange(textField.getLength(), 0);
+                setCaretAnimating(true);
+            }
+        } else {
+            textField.selectRange(0, 0);
+            focusGainedByMouseClick = false;
+        }
     }
 
     // An unholy back-reference!
@@ -135,7 +140,9 @@ public class TextFieldBehavior extends TextInputControlBehavior<TextField> {
     }
 
     @Override protected void setCaretAnimating(boolean play) {
-        skin.setCaretAnimating(play);
+        if (skin != null) {
+            skin.setCaretAnimating(play);
+        }
     }
 
     /**

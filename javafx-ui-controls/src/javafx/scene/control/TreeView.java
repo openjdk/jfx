@@ -24,8 +24,6 @@
  */
 package javafx.scene.control;
 
-import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
 
 import javafx.beans.property.BooleanProperty;
@@ -43,7 +41,6 @@ import javafx.event.EventType;
 import javafx.scene.control.TreeItem.TreeModificationEvent;
 import javafx.util.Callback;
 
-import com.sun.javafx.css.StyleableProperty;
 import com.sun.javafx.scene.control.WeakEventHandler;
 import com.sun.javafx.scene.control.skin.VirtualContainerBase;
 import java.lang.ref.WeakReference;
@@ -83,12 +80,34 @@ import javafx.beans.value.WeakChangeListener;
  * nodes of the root node are shown. By default, the root node is shown in the
  * TreeView.
  * 
- * <p>
- * The visuals of a TreeView can be entirely customized by creating a
- * {@link #cellFactoryProperty()  cellFactory} for the TreeView. The cell 
- * factory is used for generating {@link TreeCell} instances which will be used 
- * to represent a single TreeItem in the TreeView. See the {@link Cell} class 
- * documentation for a more complete description of how to write custom cells.
+ * <h3>TreeView Selection / Focus APIs</h3>
+ * <p>To track selection and focus, it is necessary to become familiar with the
+ * {@link SelectionModel} and {@link FocusModel} classes. A TreeView has at most
+ * one instance of each of these classes, available from 
+ * {@link #selectionModelProperty() selectionModel} and 
+ * {@link #focusModelProperty() focusModel} properties respectively.
+ * Whilst it is possible to use this API to set a new selection model, in
+ * most circumstances this is not necessary - the default selection and focus
+ * models should work in most circumstances.
+ * 
+ * <p>The default {@link SelectionModel} used when instantiating a TreeView is
+ * an implementation of the {@link MultipleSelectionModel} abstract class. 
+ * However, as noted in the API documentation for
+ * the {@link MultipleSelectionModel#selectionModeProperty() selectionMode}
+ * property, the default value is {@link SelectionMode#SINGLE}. To enable 
+ * multiple selection in a default TreeView instance, it is therefore necessary
+ * to do the following:
+ * 
+ * <pre>
+ * {@code 
+ * treeView.getSelectionModel().setSelectionMode(SelectionMode.MULTIPLE);}</pre>
+ * 
+ * <h3>Customizing TreeView Visuals</h3>
+ * <p>The visuals of the TreeView can be entirely customized by replacing the 
+ * default {@link #cellFactoryProperty() cell factory}. A cell factory is used to
+ * generate {@link TreeCell} instances, which are used to represent an item in the
+ * TreeView. See the {@link Cell} class documentation for a more complete
+ * description of how to write custom Cells.
  *
  * @see TreeItem
  * @see TreeCell
@@ -193,6 +212,9 @@ public class TreeView<T> extends Control {
 
     /**
      * Creates an empty TreeView.
+     * 
+     * <p>Refer to the {@link ListView} class documentation for details on the
+     * default state of other properties.
      */
     public TreeView() {
         this(null);
@@ -200,6 +222,10 @@ public class TreeView<T> extends Control {
 
     /**
      * Creates a TreeView with the provided root node.
+     * 
+     * <p>Refer to the {@link ListView} class documentation for details on the
+     * default state of other properties.
+     * 
      * @param root The node to be the root in this TreeView.
      */
     public TreeView(TreeItem<T> root) {

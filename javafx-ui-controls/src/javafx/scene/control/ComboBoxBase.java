@@ -26,12 +26,15 @@
 package javafx.scene.control;
 
 import com.sun.javafx.css.StyleManager;
-import javafx.beans.property.*;
+import javafx.beans.property.BooleanProperty;
+import javafx.beans.property.ObjectProperty;
+import javafx.beans.property.ObjectPropertyBase;
+import javafx.beans.property.SimpleBooleanProperty;
+import javafx.beans.property.SimpleObjectProperty;
+import javafx.beans.property.SimpleStringProperty;
+import javafx.beans.property.StringProperty;
 import javafx.event.ActionEvent;
 import javafx.event.EventHandler;
-import javafx.scene.control.ButtonBase;
-import javafx.scene.control.Control;
-import javafx.scene.control.TextField;
 
 /**
  * Abstract base class for ComboBox-like controls. A ComboBox typically has
@@ -204,14 +207,18 @@ public abstract class ComboBoxBase<T> extends Control {
      * form of popup or dialog window.
      */
     public void show() {
-        if (!isDisabled()) showing.set(true);
+        if (!isDisabled() && ! showingProperty().isBound()) {
+            showing.set(true);
+        }
     }
 
     /**
      * Closes the popup / dialog that was shown when {@link #show()} was called.
      */
     public void hide() {
-        showing.set(false);
+        if (! showingProperty().isBound()) {
+            showing.set(false);
+        }
     }
     
     /**
@@ -223,7 +230,9 @@ public abstract class ComboBoxBase<T> extends Control {
      *         for developers or designers to access this function directly.
      */
     public void arm() {
-        setArmed(true);
+        if (! armedProperty().isBound()) {
+            setArmed(true);
+        }
     }
 
     /**
@@ -234,7 +243,9 @@ public abstract class ComboBoxBase<T> extends Control {
      *         for developers or designers to access this function directly.
      */
     public void disarm() {
-        setArmed(false);
+        if (! armedProperty().isBound()) {
+            setArmed(false);
+        }
     }
     
     

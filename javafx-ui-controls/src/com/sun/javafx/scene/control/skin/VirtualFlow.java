@@ -1797,15 +1797,22 @@ public class VirtualFlow extends Region {
 
     private static final double GOLDEN_RATIO_MULTIPLIER = 0.618033987;
 
-    private double getPrefBreadth() {
+    private double getPrefBreadth(double oppDimension) {
         double max = 0.0;
         int rows = Math.min(10, getCellCount());
         for (int i = 0; i < rows; i++) {
             max = Math.max(max, getCellBreadth(i));
         }
 
-        double prefLength = getPrefLength();
-        max = Math.max(max, prefLength * GOLDEN_RATIO_MULTIPLIER);
+        // This primarily exists for the case where we do not want the breadth
+        // to grow to ensure a golden ratio between width and height (for example,
+        // when a ListView is used in a ComboBox - the width should not grow
+        // just because items are being added to the ListView)
+        if (oppDimension > -1) {
+            double prefLength = getPrefLength();
+            max = Math.max(max, prefLength * GOLDEN_RATIO_MULTIPLIER);
+        }
+        
         return max;
     }
 
@@ -1819,12 +1826,12 @@ public class VirtualFlow extends Region {
     }
 
     @Override protected double computePrefWidth(double height) {
-        double w = isVertical() ? getPrefBreadth() : getPrefLength();
+        double w = isVertical() ? getPrefBreadth(height) : getPrefLength();
         return w + vbar.prefWidth(-1);
     }
 
     @Override protected double computePrefHeight(double width) {
-        double h = isVertical() ? getPrefLength() : getPrefBreadth();
+        double h = isVertical() ? getPrefLength() : getPrefBreadth(width);
         return h + hbar.prefHeight(-1);
     }
 

@@ -175,14 +175,16 @@ public class ListCellBehavior extends CellBehaviorBase<ListCell> {
 
         lv.getSelectionModel().clearAndSelect(index);
 
-        // handle editing
-        if (e.getClickCount() == 1 && isAlreadySelected) {
-            lv.edit(index);
-        } else if (e.getClickCount() == 1) {
-            // cancel editing
-            lv.edit(-1);
-        } else if (e.getClickCount() == 2 && getControl().isEditable()) {
-            lv.edit(index);
+        // handle editing, which only occurs with the primary mouse button
+        if (e.isPrimaryButtonDown()) {
+            if (e.getClickCount() == 1 && isAlreadySelected) {
+                lv.edit(index);
+            } else if (e.getClickCount() == 1) {
+                // cancel editing
+                lv.edit(-1);
+            } else if (e.getClickCount() == 2 && getControl().isEditable()) {
+                lv.edit(index);
+            }
         }
     }
 }

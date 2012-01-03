@@ -117,6 +117,18 @@ import javafx.beans.DefaultProperty;
  * Whilst it is possible to use this API to set a new selection model, in
  * most circumstances this is not necessary - the default selection and focus
  * models should work in most circumstances.
+ * 
+ * <p>The default {@link SelectionModel} used when instantiating a ListView is
+ * an implementation of the {@link MultipleSelectionModel} abstract class. 
+ * However, as noted in the API documentation for
+ * the {@link MultipleSelectionModel#selectionModeProperty() selectionMode}
+ * property, the default value is {@link SelectionMode#SINGLE}. To enable 
+ * multiple selection in a default ListView instance, it is therefore necessary
+ * to do the following:
+ * 
+ * <pre>
+ * {@code 
+ * listView.getSelectionModel().setSelectionMode(SelectionMode.MULTIPLE);}</pre>
  *
  * <h3>Customizing ListView Visuals</h3>
  * <p>The visuals of the ListView can be entirely customized by replacing the 
@@ -203,6 +215,9 @@ public class ListView<T> extends Control {
      * {@link #getItems()} if so desired. However, as noted elsewhere, this
      * is not the recommended approach 
      * (instead call {@link #setItems(javafx.collections.ObservableList)}).
+     * 
+     * <p>Refer to the {@link ListView} class documentation for details on the
+     * default state of other properties.
      */
     public ListView() {
         this(FXCollections.<T>observableArrayList());
@@ -214,6 +229,9 @@ public class ListView<T> extends Control {
      * 
      * <p>Attempts to add a listener to the {@link ObservableList}, such that all
      * subsequent changes inside the list will be shown to the user.
+     * 
+     * <p>Refer to the {@link ListView} class documentation for details on the
+     * default state of other properties.
      */
     public ListView(ObservableList<T> items) {
         getStyleClass().setAll(DEFAULT_STYLE_CLASS);

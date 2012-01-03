@@ -33,12 +33,17 @@ import javafx.collections.ListChangeListener;
 import javafx.scene.Node;
 import javafx.scene.control.Accordion;
 import javafx.scene.control.TitledPane;
+import javafx.scene.shape.Rectangle;
 
 import com.sun.javafx.scene.control.behavior.AccordionBehavior;
 
 public class AccordionSkin extends SkinBase<Accordion, AccordionBehavior> {
 
     private TitledPane firstTitledPane;
+    private Rectangle clipRect;
+    private boolean reset = false;
+    private boolean resize = false;
+    private double previousHeight = 0;
 
     public AccordionSkin(final Accordion accordion) {
         super(accordion, new AccordionBehavior(accordion));
@@ -48,7 +53,7 @@ public class AccordionSkin extends SkinBase<Accordion, AccordionBehavior> {
                     firstTitledPane.getStyleClass().remove("first-titled-pane");
                 }
                 if (!accordion.getPanes().isEmpty()) {
-                    firstTitledPane = accordion.getPanes().get(0);                    
+                    firstTitledPane = accordion.getPanes().get(0);
                     firstTitledPane.getStyleClass().add("first-titled-pane");
                 }
                 // TODO there may be a more efficient way to keep these in sync
@@ -56,7 +61,7 @@ public class AccordionSkin extends SkinBase<Accordion, AccordionBehavior> {
                 // TODO when we have access to the bean we need to remove the listeners
                 while (c.next()) {
                     initTitledPaneListeners(c.getAddedSubList());
-                }                
+                }
             }
         });
 
@@ -64,9 +69,21 @@ public class AccordionSkin extends SkinBase<Accordion, AccordionBehavior> {
             firstTitledPane = accordion.getPanes().get(0);
             firstTitledPane.getStyleClass().add("first-titled-pane");
         }
+
+        clipRect = new Rectangle();
+        setClip(clipRect);
+
         initTitledPaneListeners(accordion.getPanes());
         getChildren().setAll(accordion.getPanes());
         requestLayout();
+    }
+
+    @Override protected double computeMinHeight(double width) {
+        double h = 0;
+        for (Node child: getManagedChildren()) {
+            h += snapSize(child.minHeight(width));
+        }
+        return h;
     }
 
     @Override protected double computePrefHeight(double width) {
@@ -79,25 +96,103 @@ public class AccordionSkin extends SkinBase<Accordion, AccordionBehavior> {
 
     @Override protected void layoutChildren() {
         double w = snapSize(getWidth()) - (snapSpace(getInsets().getLeft()) + snapSpace(getInsets().getRight()));
+        double h = snapSize(getHeight()) - (snapSpace(getInsets().getTop()) + snapSpace(getInsets().getBottom()));
         double x = snapSpace(getInsets().getLeft());
         double y = snapSpace(getInsets().getTop());
 
         // TODO need to replace spacing with margins.
         double spacing = 0;
+        double notExpandedHeight = 0;
 
         for(Node n: getSkinnable().getPanes()) {
-            double ph = snapSize(n.prefHeight(-1));
-            n.resize(w, ph);
-            n.relocate(x, y);
-            y += ph + spacing;
+            TitledPane tp = ((TitledPane)n);
+            if (!tp.isExpanded()) {
+                notExpandedHeight += snapSize(tp.minHeight(-1));
+            }
+        }
+
+        double maxContentHeight = 0;
+        if (previousPane != null && previousPane.equals(expandedPane) && getSkinnable().getExpandedPane() == null) {
+            if (getSkinnable().getPanes().size() ==  1) {
+                // Open and close same pane.
+                maxContentHeight = h;
+            } else {
+                // Open and close same pane if there are more than one pane.
+                maxContentHeight = h - notExpandedHeight + previousPane.minHeight(-1);
+            }
+        } else {
+            maxContentHeight = h - notExpandedHeight;
+        }
+
+        for(Node n: getSkinnable().getPanes()) {
+            TitledPane tp = ((TitledPane)n);
+            TitledPaneSkin skin = (TitledPaneSkin) tp.getSkin();
+            skin.setPrefHeightFromAccordion(maxContentHeight);
+            double ph = snapSize(skin.prefHeightFromAccordion());
+            tp.resize(w, ph);
+
+            if (!resize && previousPane != null && expandedPane != null) {
+                // Current expanded pane is after the previous expanded pane..
+                if (getSkinnable().getPanes().indexOf(previousPane) < getSkinnable().getPanes().indexOf(expandedPane)) {
+                    // Only move the panes that are less than or equal to the current expanded.
+                    if (reset || getSkinnable().getPanes().indexOf(tp) <= getSkinnable().getPanes().indexOf(expandedPane)) {
+                        tp.relocate(x, y);
+                        y += ph + spacing;
+                    }
+                // Previous pane is after the current expanded pane.
+                } else if (getSkinnable().getPanes().indexOf(previousPane) > getSkinnable().getPanes().indexOf(expandedPane)) {
+                    // Only move the panes that are less than or equal to the previous expanded pane.
+                    if (reset || getSkinnable().getPanes().indexOf(tp) <= getSkinnable().getPanes().indexOf(previousPane)) {
+                        tp.relocate(x, y);
+                        y += ph + spacing;
+                    }
+                // Previous and current expanded pane are the same.
+                } else {
+                    // Since we expand and collapse the same pane we need to relocate
+                    // all the panes.
+                    reset = true;
+                    tp.relocate(x, y);
+                    y += ph + spacing;
+                }
+            } else {
+                tp.relocate(x, y);
+                y += ph + spacing;
+            }
+        }
+        if (expandedPane != null &&
+                ((TitledPaneSkin)expandedPane.getSkin()).prefHeightFromAccordion() == maxContentHeight) {
+            reset = false;
         }
     }
+
+    @Override protected void setWidth(double value) {
+        super.setWidth(value);
+        clipRect.setWidth(value);
+    }
+
+    @Override protected void setHeight(double value) {
+        super.setHeight(value);
+        clipRect.setHeight(value);
+        if (previousHeight != value) {
+            previousHeight = value;
+            resize = true;
+        } else {
+            resize = false;
+        }
+    }
+
+    private TitledPane expandedPane = null;
+    private TitledPane previousPane = null;
 
     private void initTitledPaneListeners(List<? extends TitledPane> list) {
         for (final TitledPane tp: list) {
             tp.setExpanded(tp == getSkinnable().getExpandedPane());
+            if (tp.isExpanded()) {
+                expandedPane = tp;
+            }
             tp.expandedProperty().addListener(new ChangeListener<Boolean>() {
                 @Override public void changed(ObservableValue<? extends Boolean> observable, Boolean wasExpanded, Boolean expanded) {
+                    previousPane = expandedPane;
                     if (expanded) {
                         if (getSkinnable().getExpandedPane() != null) {
                             getSkinnable().getExpandedPane().setExpanded(false);
@@ -105,7 +200,9 @@ public class AccordionSkin extends SkinBase<Accordion, AccordionBehavior> {
                         if (tp != null) {
                             getSkinnable().setExpandedPane(tp);
                         }
+                        expandedPane = getSkinnable().getExpandedPane();
                     } else {
+                        expandedPane = getSkinnable().getExpandedPane();
                         getSkinnable().setExpandedPane(null);
                     }
                 }

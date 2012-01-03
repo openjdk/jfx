@@ -27,13 +27,16 @@ package com.sun.javafx.scene.control.skin;
 
 import javafx.scene.control.ComboBox;
 import com.sun.javafx.scene.control.behavior.ComboBoxListViewBehavior;
+import java.util.List;
 import javafx.beans.InvalidationListener;
 import javafx.beans.Observable;
 import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
 import javafx.collections.ObservableList;
 import javafx.event.EventHandler;
+import javafx.event.EventTarget;
 import javafx.scene.Node;
+import javafx.scene.Parent;
 import javafx.scene.control.*;
 import javafx.scene.input.KeyCode;
 import javafx.scene.input.KeyEvent;
@@ -216,7 +219,7 @@ public class ComboBoxListViewSkin<T> extends ComboBoxPopupControl<T> {
                         skin.updateCellCount();
                         itemCountDirty = false;
                     }
-                    pw = skin.getVirtualFlowPreferredWidth(height) + 10;
+                    pw = skin.getVirtualFlowPreferredWidth(-1) + 10;
                 } else {
                     pw = Math.max(100, comboBox.getWidth());
                 }
@@ -266,6 +269,20 @@ public class ComboBoxListViewSkin<T> extends ComboBoxPopupControl<T> {
         
         listView.addEventFilter(MouseEvent.MOUSE_RELEASED, new EventHandler<MouseEvent>() {
             @Override public void handle(MouseEvent t) {
+                // RT-18672: Without checking if the user is clicking in the 
+                // scrollbar area of the ListView, the comboBox will hide. Therefore,
+                // we add the check below to prevent this from happening.
+                EventTarget target = t.getTarget();
+                if (target instanceof Parent) {
+                    List<String> s = ((Parent) target).getStyleClass();
+                    if (s.contains("thumb") 
+                            || s.contains("track") 
+                            || s.contains("decrement-arrow") 
+                            || s.contains("increment-arrow")) {
+                        return;
+                    }
+                }
+                
                 comboBox.hide();
             }
         });
