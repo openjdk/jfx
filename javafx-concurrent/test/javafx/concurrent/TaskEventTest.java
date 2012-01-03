@@ -66,6 +66,20 @@ public class TaskEventTest {
         assertNull(task.onScheduledProperty().get());
     }
 
+    @Test public void onScheduledCalledWhenSetViaProperty() {
+        final AtomicBoolean handlerCalled = new AtomicBoolean(false);
+        SimpleTask task = new SimpleTask();
+        task.onScheduledProperty().set(new EventHandler<WorkerStateEvent>() {
+            @Override public void handle(WorkerStateEvent workerStateEvent) {
+                handlerCalled.set(true);
+            }
+        });
+
+        task.simulateSchedule();
+        // Events should have happened
+        assertTrue(handlerCalled.get());
+    }
+
     @Test public void onScheduledFilterCalledBefore_onScheduled() {
         SimpleTask task = new SimpleTask();
         final AtomicBoolean filterCalled = new AtomicBoolean(false);
@@ -209,6 +223,20 @@ public class TaskEventTest {
         assertNull(task.onRunningProperty().get());
     }
 
+    @Test public void onRunningCalledWhenSetViaProperty() {
+        final AtomicBoolean handlerCalled = new AtomicBoolean(false);
+        SimpleTask task = new SimpleTask();
+        task.onRunningProperty().set(new EventHandler<WorkerStateEvent>() {
+            @Override public void handle(WorkerStateEvent workerStateEvent) {
+                handlerCalled.set(true);
+            }
+        });
+
+        task.run();
+        // Events should have happened
+        assertTrue(handlerCalled.get());
+    }
+
     @Test public void onRunningFilterCalledBefore_onRunning() {
         SimpleTask task = new SimpleTask();
         final AtomicBoolean filterCalled = new AtomicBoolean(false);
@@ -289,6 +317,20 @@ public class TaskEventTest {
         assertNull(task.onSucceededProperty().get());
     }
 
+    @Test public void onSucceededCalledWhenSetViaProperty() {
+        final AtomicBoolean handlerCalled = new AtomicBoolean(false);
+        SimpleTask task = new SimpleTask();
+        task.onSucceededProperty().set(new EventHandler<WorkerStateEvent>() {
+            @Override public void handle(WorkerStateEvent workerStateEvent) {
+                handlerCalled.set(true);
+            }
+        });
+
+        task.run();
+        // Events should have happened
+        assertTrue(handlerCalled.get());
+    }
+
     @Test public void onSucceededFilterCalledBefore_onSucceeded() {
         SimpleTask task = new SimpleTask();
         final AtomicBoolean filterCalled = new AtomicBoolean(false);
@@ -366,6 +408,23 @@ public class TaskEventTest {
         Task task = new SimpleTask();
         assertNull(task.getOnCancelled());
         assertNull(task.onCancelledProperty().get());
+    }
+
+    @Test public void onCancelledCalledWhenSetViaProperty() throws Exception {
+        final AtomicBoolean handlerCalled = new AtomicBoolean(false);
+        InfiniteTask task = new InfiniteTask();
+        task.onCancelledProperty().set(new EventHandler<WorkerStateEvent>() {
+            @Override public void handle(WorkerStateEvent workerStateEvent) {
+                handlerCalled.set(true);
+            }
+        });
+
+        Thread th = new Thread(task);
+        th.start();
+        task.cancel();
+        th.join();
+        // Events should have happened
+        assertTrue(handlerCalled.get());
     }
 
     @Test public void onCancelledFilterCalledBefore_onCancelled() throws Exception {
@@ -455,6 +514,20 @@ public class TaskEventTest {
         Task task = new SimpleTask();
         assertNull(task.getOnFailed());
         assertNull(task.onFailedProperty().get());
+    }
+
+    @Test public void onFailedCalledWhenSetViaProperty() {
+        final AtomicBoolean handlerCalled = new AtomicBoolean(false);
+        Task<String> task = new EpicFailTask();
+        task.onFailedProperty().set(new EventHandler<WorkerStateEvent>() {
+            @Override public void handle(WorkerStateEvent workerStateEvent) {
+                handlerCalled.set(true);
+            }
+        });
+
+        task.run();
+        // Events should have happened
+        assertTrue(handlerCalled.get());
     }
 
     @Test public void onFailedFilterCalledBefore_onFailed() {
