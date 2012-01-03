@@ -36,6 +36,7 @@ import static org.junit.Assert.*;
 
 import org.junit.Before;
 import org.junit.Test;
+import org.junit.Ignore;
 
 /**
  */
@@ -134,14 +135,17 @@ public class DateStringConverterTest {
      * Test toString / fromString methods
      ********************************************************************/    
     
+    @Ignore
     @Test public void fromString_testValidInput() {
         assertEquals(VALID_DATE, converter.fromString(VALID_DATE_STRING_MDY));
     }
     
+    @Ignore
     @Test public void fromString_testValidInputWithWhiteSpace() {
         assertEquals(VALID_DATE, converter.fromString("      " + VALID_DATE_STRING_MDY + "      "));
     }
     
+    @Ignore
     @Test public void toString_validInput() {
         assertEquals(VALID_DATE_STRING_MDY, converter.toString(VALID_DATE));
     }
