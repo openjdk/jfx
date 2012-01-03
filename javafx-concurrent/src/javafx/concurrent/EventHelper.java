@@ -25,7 +25,7 @@
 
 package javafx.concurrent;
 
-import com.sun.javafx.scene.NodeEventDispatcher;
+import com.sun.javafx.event.EventHandlerManager;
 import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.SimpleObjectProperty;
 import javafx.event.*;
@@ -89,7 +89,7 @@ class EventHelper {
         setEventHandler(WORKER_STATE_FAILED, value);
     }
 
-    private NodeEventDispatcher internalEventDispatcher;
+    private EventHandlerManager internalEventDispatcher;
 
     EventHelper(EventTarget bean) {
         this.target = bean;
@@ -115,7 +115,7 @@ class EventHelper {
     final <T extends Event> void addEventHandler(
             final EventType<T> eventType,
             final EventHandler<? super T> eventHandler) {
-        getInternalEventDispatcher().getEventHandlerManager()
+        getInternalEventDispatcher()
                 .addEventHandler(eventType, eventHandler);
     }
 
@@ -133,7 +133,6 @@ class EventHelper {
             final EventType<T> eventType,
             final EventHandler<? super T> eventHandler) {
         getInternalEventDispatcher()
-                .getEventHandlerManager()
                 .removeEventHandler(eventType, eventHandler);
     }
 
@@ -148,7 +147,7 @@ class EventHelper {
     final <T extends Event> void addEventFilter(
             final EventType<T> eventType,
             final EventHandler<? super T> eventFilter) {
-        getInternalEventDispatcher().getEventHandlerManager()
+        getInternalEventDispatcher()
                 .addEventFilter(eventType, eventFilter);
     }
 
@@ -165,7 +164,7 @@ class EventHelper {
     final <T extends Event> void removeEventFilter(
             final EventType<T> eventType,
             final EventHandler<? super T> eventFilter) {
-        getInternalEventDispatcher().getEventHandlerManager()
+        getInternalEventDispatcher()
                 .removeEventFilter(eventType, eventFilter);
     }
 
@@ -182,13 +181,13 @@ class EventHelper {
     final <T extends Event> void setEventHandler(
             final EventType<T> eventType,
             final EventHandler<? super T> eventHandler) {
-        getInternalEventDispatcher().getEventHandlerManager()
+        getInternalEventDispatcher()
                 .setEventHandler(eventType, eventHandler);
     }
 
-    private NodeEventDispatcher getInternalEventDispatcher() {
+    private EventHandlerManager getInternalEventDispatcher() {
         if (internalEventDispatcher == null) {
-            internalEventDispatcher = new NodeEventDispatcher(target);
+            internalEventDispatcher = new EventHandlerManager(target);
         }
         return internalEventDispatcher;
     }
@@ -209,6 +208,6 @@ class EventHelper {
     }
 
     EventDispatchChain buildEventDispatchChain(EventDispatchChain tail) {
-        return tail.append(getInternalEventDispatcher());
+        return internalEventDispatcher == null ? tail : tail.append(getInternalEventDispatcher());
     }
 }
