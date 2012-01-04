@@ -409,12 +409,13 @@ public class ListViewBehavior<T> extends BehaviorBase<ListView<T>> {
         
         if (isShiftDown && getAnchor() != -1) {
             int newRow = fm.getFocusedIndex() - 1;
-            clearSelectionOutsideRange(getAnchor(), newRow);
+            int anchor = getAnchor();
+            clearSelectionOutsideRange(anchor, newRow);
 
-            if (getAnchor() > newRow) {
-                sm.selectRange(getAnchor(), newRow - 1);
+            if (anchor > newRow) {
+                sm.selectRange(anchor, newRow - 1);
             } else {
-                sm.selectRange(getAnchor(), newRow + 1);
+                sm.selectRange(anchor, newRow + 1);
             }
         } else {
             sm.selectPrevious();
@@ -432,12 +433,13 @@ public class ListViewBehavior<T> extends BehaviorBase<ListView<T>> {
         
         if (isShiftDown && getAnchor() != -1) {
             int newRow = fm.getFocusedIndex() + 1;
-            clearSelectionOutsideRange(getAnchor(), newRow);
+            int anchor = getAnchor();
+            clearSelectionOutsideRange(anchor, newRow);
 
-            if (getAnchor() > newRow) {
-                sm.selectRange(getAnchor(), newRow - 1);
+            if (anchor > newRow) {
+                sm.selectRange(anchor, newRow - 1);
             } else {
-                sm.selectRange(getAnchor(), newRow + 1);
+                sm.selectRange(anchor, newRow + 1);
             }
         } else {
             sm.selectNext();
@@ -482,12 +484,12 @@ public class ListViewBehavior<T> extends BehaviorBase<ListView<T>> {
     private void selectNextRow() {
         FocusModel fm = getControl().getFocusModel();
         if (fm == null) return;
-
+        
         int focusIndex = fm.getFocusedIndex();
         if (focusIndex == getRowCount() - 1) {
             return;
         }
-
+        
         MultipleSelectionModel sm = getControl().getSelectionModel();
         if (sm == null) return;
         
