@@ -3,6 +3,16 @@
 	<classpathentry kind="src" path="javafx-ui-controls/src"/>
 	<classpathentry kind="src" path="javafx-ui-controls/test"/>
 	<classpathentry kind="src" path="javafx-ui-controls/build/builders"/>
+	<classpathentry kind="src" path="javafx-concurrent/src"/>
+	<classpathentry kind="src" path="javafx-concurrent/test"/>
+	<classpathentry kind="src" path="javafx-concurrent/build/builders"/>
+	<classpathentry kind="src" path="javafx-util-converter/src"/>
+	<classpathentry kind="src" path="javafx-util-converter/test"/>
+	<classpathentry kind="src" path="javafx-beans-dt/src"/>
+	<classpathentry kind="src" path="javafx-beans-dt/test"/>
+	<classpathentry kind="src" path="javafx-designtime/src"/>
+	<classpathentry kind="src" path="javafx-designtime/test"/>
+	<classpathentry kind="src" path="test-stub-toolkit/src"/>
 	<classpathentry kind="con" path="org.eclipse.jdt.launching.JRE_CONTAINER"/>
 	<classpathentry kind="con" path="org.eclipse.jdt.junit.JUNIT_CONTAINER/4"/>
 	<classpathentry kind="src" path="/rt-closed"/>
