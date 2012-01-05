@@ -205,7 +205,7 @@ public class TitledPaneSkin extends SkinBase<TitledPane, TitledPaneBehavior>  {
 
         // content
         double contentWidth = w;
-        double contentHeight = h - headerHeight;
+        double contentHeight = snapSize(contentRegion.prefHeight(-1));
         if (getSkinnable().getParent() != null && getSkinnable().getParent() instanceof AccordionSkin) {
             if (prefHeightFromAccordion != 0) {
                 contentHeight = prefHeightFromAccordion - headerHeight;
