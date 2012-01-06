@@ -77,6 +77,45 @@ import static javafx.concurrent.WorkerStateEvent.*;
  *     Immutable state makes it easy and safe to use from any thread and ensures
  *     correctness in the presence of multiple threads.
  * </p>
+ * <h2>Examples</h2>
+ * <p>
+ *     Suppose I have a rectangle which, when pressed, will do some work in a
+ *     background thread. When the task completes, if it executed successfully,
+ *     then the rectangle color should be changed to GREEN, otherwise, RED.
+ *
+ *     In this trivial example, the background "work" is nothing more than
+ *     sleeping for 10 seconds.
+ *
+ *     <pre><code>
+final Rectangle r = new Rectangle(100, 100);
+r.setOnMouseClicked(new EventHandler&lt;MouseEvent&gt;() {
+    public void handle(MouseEvent mouseEvent) {
+        Task&lt;Void&gt; t = new Task&lt;Void&gt;() {
+            protected Void call() throws Exception {
+                Thread.sleep(10*1000);
+                return null;
+            }
+
+            protected void succeeded() {
+                super.succeeded();
+                r.setFill(Color.GREEN);
+            }
+
+            protected void cancelled() {
+                super.cancelled();
+                r.setFill(Color.RED);
+            }
+
+            protected void failed() {
+                super.failed();
+                r.setFill(Color.RED);
+            }
+        };
+        new Thread(t).start();
+    }
+ });
+ *     </code></pre>
+ * </p>
  */
 public abstract class Task<V> extends FutureTask<V> implements Worker<V>, EventTarget {
     /**
