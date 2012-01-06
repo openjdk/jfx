@@ -27,6 +27,7 @@ package javafx.concurrent;
 
 import javafx.concurrent.mocks.EpicFailTask;
 import javafx.concurrent.mocks.InfiniteTask;
+import javafx.concurrent.mocks.RunAwayTask;
 import javafx.concurrent.mocks.SimpleTask;
 import org.junit.Before;
 import org.junit.Test;
@@ -117,5 +118,24 @@ public class TaskCancelTest {
         assertFalse(t.cancel());
         assertEquals(Task.State.FAILED, t.getState());
         assertTrue(t.isDone());
+    }
+
+    /**
+     *
+     */
+    @Test public void aFreeRunningCancelledTaskReturnValueShouldBeIgnored() throws Exception {
+        RunAwayTask runAway = new RunAwayTask();
+        Thread th = new Thread(runAway);
+        th.start();
+        runAway.runningSemaphore.acquire();
+        assertTrue(runAway.cancel());
+        runAway.stopLooping.set(true);
+        th.join();
+
+        assertEquals(Task.State.CANCELLED, runAway.getState());
+        // TODO why is this commented out?
+//        assertNull(task.getException());
+        assertNull(runAway.getValue());
+        assertTrue(runAway.isDone());
     }
 }

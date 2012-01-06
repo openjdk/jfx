@@ -49,10 +49,22 @@ import static javafx.concurrent.WorkerStateEvent.*;
  *     {@link Service} is designed to execute a Task, any Tasks defined by the application
  *     or library code can easily be used with a Service. Likewise, since Task extends
  *     from FutureTask, it is very easy and natural to use a Task with the java concurrency
- *     {@link java.util.concurrent.Executor} API. Finally, since a Task is Runnable, you
+ *     {@link java.util.concurrent.Executor} API. Since a Task is Runnable, you
  *     can also call it directly (by invoking the {@link javafx.concurrent.Task#run()} method)
  *     from another background thread. This allows for composition of work, or pass it to
- *     a new Thread constructed and executed manually.
+ *     a new Thread constructed and executed manually. Finally, since you can
+ *     manually create a new Thread, passing it a Runnable, it is possible to use
+ *     the following idiom:
+ *     <pre><code>
+ *         Thread th = new Thread(task);
+ *         th.setDaemon(true);
+ *         th.start();
+ *     </code></pre>
+ *     Note that this code sets the daemon flag of the Thread to true. If you
+ *     want a background thread to prevent the VM from existing after the last
+ *     stage is closed, then you would want daemon to be false. However, if
+ *     you want the background threads to simply terminate after all the
+ *     stages are closed, then you must set daemon to true.
  * </p>
  * <p>
  *     Although {@link java.util.concurrent.ExecutorService} defines several methods which
@@ -1220,18 +1232,27 @@ public abstract class Task<V> extends FutureTask<V> implements Worker<V>, EventT
             // Go ahead and delegate to the wrapped callable
             try {
                 final V result = task.call();
-                task.runLater(new Runnable() {
-                    @Override public void run() {
-                        // The result must be set first, so that when the
-                        // SUCCEEDED flag is set, the value will be available
-                        // The alternative is not the case, because you
-                        // can assume if the result is set, it has
-                        // succeeded.
-                        task.setValue(result);
-                        task.setState(State.SUCCEEDED);
-                    }
-                });
-                return result;
+                if (!task.isCancelled()) {
+                    // If it was not cancelled, then we take the return
+                    // value and set it as the result.
+                    task.runLater(new Runnable() {
+                        @Override public void run() {
+                            // The result must be set first, so that when the
+                            // SUCCEEDED flag is set, the value will be available
+                            // The alternative is not the case, because you
+                            // can assume if the result is set, it has
+                            // succeeded.
+                            task.setValue(result);
+                            task.setState(State.SUCCEEDED);
+                        }
+                    });
+                    return result;
+                } else {
+                    // There may have been some intermediate result in the
+                    // task set from the background thread, so I want to be
+                    // sure to return the most recent intermediate value
+                    return task.getValue();
+                }
             } catch (final Throwable th) {
                 // Be sure to set the state after setting the cause of failure
                 // so that developers handling the state change events have a
