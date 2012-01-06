@@ -77,45 +77,470 @@ import static javafx.concurrent.WorkerStateEvent.*;
  *     Immutable state makes it easy and safe to use from any thread and ensures
  *     correctness in the presence of multiple threads.
  * </p>
+ * <p>
+ *     In Java there is no reliable way to "kill" a thread in process. However,
+ *     when <code>cancel</code> is called on a Task, it is important that
+ *     the Task stop processing. A "run-away" Task might continue processing
+ *     and updating the message, text, and progress properties even after the
+ *     Task has been cancelled! In Java, cancelling a Task is a cooperative
+ *     endeavor. The user of the Task will request that it be cancelled, and
+ *     the author of the Task must check whether is has been cancelled within
+ *     the body of the <code>call</code> method. There are two ways this can
+ *     be done. First, the Task author may check the isCancelled method,
+ *     inherited from <code>FutureTask</code>, to see whether the Task has
+ *     been cancelled. Second, if the Task implementation makes use of any
+ *     blocking calls (such as NIO InterruptibleChannels or Thread.sleep) and
+ *     the task is cancelled while in such a blocking call, an
+ *     InterruptedException is thrown. Task implementations which have blocking
+ *     calls should recognize that an interrupted thread may be the signal for
+ *     a cancelled task and should double check the isCancelled method to ensure
+ *     that the InterruptedException was thrown due to the cancellation of the
+ *     Task.
+ * </p>
  * <h2>Examples</h2>
  * <p>
- *     Suppose I have a rectangle which, when pressed, will do some work in a
- *     background thread. When the task completes, if it executed successfully,
- *     then the rectangle color should be changed to GREEN, otherwise, RED.
- *
- *     In this trivial example, the background "work" is nothing more than
- *     sleeping for 10 seconds.
- *
- *     <pre><code>
-final Rectangle r = new Rectangle(100, 100);
-r.setOnMouseClicked(new EventHandler&lt;MouseEvent&gt;() {
-    public void handle(MouseEvent mouseEvent) {
-        Task&lt;Void&gt; t = new Task&lt;Void&gt;() {
-            protected Void call() throws Exception {
-                Thread.sleep(10*1000);
-                return null;
-            }
-
-            protected void succeeded() {
-                super.succeeded();
-                r.setFill(Color.GREEN);
-            }
-
-            protected void cancelled() {
-                super.cancelled();
-                r.setFill(Color.RED);
-            }
-
-            protected void failed() {
-                super.failed();
-                r.setFill(Color.RED);
-            }
-        };
-        new Thread(t).start();
-    }
- });
- *     </code></pre>
+ *     The following set of examples demonstrate some of the most common uses of
+ *     Tasks.
  * </p>
+ *
+ * <h3>A Simple Loop</h3>
+ *
+ * <p>
+ *     The first example is a simple loop that does nothing particularly useful,
+ *     but demonstrates the fundamental aspects of writing a Task correctly. This
+ *     example will simply loop and print to standard out on each loop iteration.
+ *     When it completes, it returns the number of times it iterated.
+ * </p>
+ *
+ * <pre><code>
+ *     Task&lt;Integer&gt; task = new Task&lt;Integer&gt;() {
+ *         &#64;Override protected Integer call() throws Exception {
+ *             int iterations;
+ *             for (iterations = 0; iterations &lt; 100000; iterations++) {
+ *                 if (isCancelled()) {
+ *                     break;
+ *                 }
+ *                 System.out.println("Iteration " + iterations);
+ *             }
+ *             return iterations;
+ *         }
+ *     };
+ * </code></pre>
+ *
+ * <p>
+ *     First, we define what type of value is returned from this Task. In this
+ *     case, we want to return the number of times we iterated, so we will
+ *     specify the Task to be of type Integer by using generics. Then, within
+ *     the implementation of the <code>call</code> method, we iterate from
+ *     0 to 100000. On each iteration, we check to see whether this Task has
+ *     been cancelled. If it has been, then we break out of the loop and return
+ *     the number of times we iterated. Otherwise a message is printed to
+ *     the console and the iteration count increased and we continue looping.
+ * </p>
+ *
+ * <p>
+ *     Checking for isCancelled() in the loop body is critical, otherwise the
+ *     developer may cancel the task, but the task will continue running
+ *     and updating both the progress and returning the incorrect result
+ *     from the end of the <code>call</code> method. A correct implementation
+ *     of a Task will always check for cancellation.
+ * </p>
+ *
+ * <h3>A Simple Loop With Progress Notification</h3>
+ *
+ * <p>
+ *     Similar to the previous example, except this time we will modify the
+ *     progress of the Task in each iteration. Note that we have a choice
+ *     to make in the case of cancellation. Do we want to set the progress back
+ *     to -1 (indeterminate) when the Task is cancelled, or do we want to leave
+ *     the progress where it was at? In this case, lets leave the progress alone
+ *     and only update the message on cancellation, though updating the
+ *     progress after cancellation is a perfectly valid choice.
+ * </p>
+ *
+ * <pre><code>
+ *     Task&lt;Integer&gt; task = new Task&lt;Integer&gt;() {
+ *         &#64;Override protected Integer call() throws Exception {
+ *             int iterations;
+ *             for (iterations = 0; iterations &lt; 10000000; iterations++) {
+ *                 if (isCancelled()) {
+ *                     updateMessage("Cancelled");
+ *                     break;
+ *                 }
+ *                 updateMessage("Iteration " + iterations);
+ *                 updateProgress(iterations, 10000000);
+ *             }
+ *             return iterations;
+ *         }
+ *     };
+ * </code></pre>
+ *
+ * <p>
+ *     As before, within the for loop we check whether the Task has been
+ *     cancelled. If it has been cancelled, we will update the Task's
+ *     message to indicate that it has been cancelled, and then break as
+ *     before. If the Task has not been cancelled, then we will update its
+ *     message to indicate the current iteration and then update the
+ *     progress to indicate the current progress.
+ * </p>
+ *
+ * <h3>A Simple Loop With Progress Notification And Blocking Calls</h3>
+ *
+ * <p>
+ *     This example adds to the previous examples a blocking call. Because a
+ *     blocking call may thrown an InterruptedException, and because an
+ *     InterruptedException may occur as a result of the Task being cancelled,
+ *     we need to be sure to handle the InterruptedException and check on the
+ *     cancel state.
+ * </p>
+ *
+ * <pre><code>
+ *     Task&lt;Integer&gt; task = new Task&lt;Integer&gt;() {
+ *         &#64;Override protected Integer call() throws Exception {
+ *             int iterations;
+ *             for (iterations = 0; iterations &lt; 1000; iterations++) {
+ *                 if (isCancelled()) {
+ *                     updateMessage("Cancelled");
+ *                     break;
+ *                 }
+ *                 updateMessage("Iteration " + iterations);
+ *                 updateProgress(iterations, 1000);
+ *
+ *                 // Now block the thread for a short time, but be sure
+ *                 // to check the interrupted exception for cancellation!
+ *                 try {
+ *                     Thread.sleep(100);
+ *                 } catch (InterruptedException interrupted) {
+ *                     if (isCancelled()) {
+ *                         updateMessage("Cancelled");
+ *                         break;
+ *                     }
+ *                 }
+ *             }
+ *             return iterations;
+ *         }
+ *     };
+ * </code></pre>
+ *
+ * <p>
+ *     Here we have added to the body of the loop a <code>Thread.sleep</code>
+ *     call. Since this is a blocking call, I have to handle the potential
+ *     InterruptedException. Within the catch block, I will check whether
+ *     the Task has been cancelled, and if so, update the message accordingly
+ *     and break out of the loop.
+ * </p>
+ *
+ * <h3>A Task Which Takes Parameters</h3>
+ *
+ * <p>
+ *     Most Tasks require some parameters in order to do useful work. For
+ *     example, a DeleteRecordTask needs the object or primary key to delete
+ *     from the database. A ReadFileTask needs the URI of the file to be read.
+ *     Because Tasks operate on a background thread, care must be taken to
+ *     make sure the body of the <code>call</code> method does not read or
+ *     modify any shared state. There are two techniques most useful for
+ *     doing this: using final variables, and passing variables to a Task
+ *     during construction.
+ * </p>
+ *
+ * <p>
+ *     When using a Task as an anonymous class, the most natural way to pass
+ *     parameters to the Task is by using final variables. In this example,
+ *     we pass to the Task the total number of times the Task should iterate.
+ * </p>
+ *
+ * <pre><code>
+ *     final int totalIterations = 9000000;
+ *     Task&lt;Integer&gt; task = new Task&lt;Integer&gt;() {
+ *         &#64;Override protected Integer call() throws Exception {
+ *             int iterations;
+ *             for (iterations = 0; iterations &lt; totalIterations; iterations++) {
+ *                 if (isCancelled()) {
+ *                     updateMessage("Cancelled");
+ *                     break;
+ *                 }
+ *                 updateMessage("Iteration " + iterations);
+ *                 updateProgress(iterations, totalIterations);
+ *             }
+ *             return iterations;
+ *         }
+ *     };
+ * </code></pre>
+ *
+ * <p>
+ *     Since <code>totalIterations</code> is final, the <code>call</code>
+ *     method can safely read it and refer to it from a background thread.
+ * </p>
+ *
+ * <p>
+ *     When writing Task libraries (as opposed to specific-use implementations),
+ *     we need to use a different technique. In this case, I will create an
+ *     IteratingTask which performs the same work as above. This time, since
+ *     the IteratingTask is defined in its own file, it will need to have
+ *     parameters passed to it in its constructor. These parameters are
+ *     assigned to final variables.
+ * </p>
+ *
+ * <pre><code>
+ *     public class IteratingTask extends Task&lt;Integer&gt; {
+ *         private final int totalIterations;
+ *
+ *         public IteratingTask(int totalIterations) {
+ *             this.totalIterations = totalIterations;
+ *         }
+ *
+ *         &#64;Override protected Integer call() throws Exception {
+ *             int iterations = 0;
+ *             for (iterations = 0; iterations &lt; totalIterations; iterations++) {
+ *                 if (isCancelled()) {
+ *                     updateMessage("Cancelled");
+ *                     break;
+ *                 }
+ *                 updateMessage("Iteration " + iterations);
+ *                 updateProgress(iterations, totalIterations);
+ *             }
+ *             return iterations;
+ *         }
+ *     }
+ * </code></pre>
+ *
+ * <p>And then when used:</p>
+ *
+ * <pre><code>
+ *     IteratingTask task = new IteratingTask(8000000);
+ * </code></pre>
+ *
+ * <p>In this way, parameters are passed to the IteratingTask in a safe
+ * manner, and again, are final. Thus, the <code>call</code> method can
+ * safely read this state from a background thread.</p>
+ *
+ * <p>WARNING: Do not pass mutable state to a Task and then operate on it
+ * from a background thread. Doing so may introduce race conditions. In
+ * particular, suppose you had a SaveCustomerTask which took a Customer
+ * in its constructor. Although the SaveCustomerTask may have a final
+ * reference to the Customer, if the Customer object is mutable, then it
+ * is possible that both the SaveCustomerTask and some other application code
+ * will be reading or modifying the state of the Customer from different
+ * threads. Be very careful in such cases, that while a mutable object such
+ * as this Customer is being used from a background thread, that it is
+ * not being used also from another thread. In particular, if the background
+ * thread is reading data from the database and updating the Customer object,
+ * and the Customer object is bound to scene graph nodes (such as UI
+ * controls), then there could be a violation of threading rules! For such
+ * cases, modify the Customer object from the FX Application Thread rather
+ * than from the background thread.</p>
+ *
+ * <pre><code>
+ *     public class UpdateCustomerTask extends Task&lt;Customer&gt; {
+ *         private final Customer customer;
+ *
+ *         public UpdateCustomerTask(Customer customer) {
+ *             this.customer = customer;
+ *         }
+ *
+ *         &#64;Override protected Customer call() throws Exception {
+ *             // pseudo-code:
+ *             //   query the database
+ *             //   read the values
+ *
+ *             // Now update the customer
+ *             Platform.runLater(new Runnable() {
+ *                 &#64;Override public void run() {
+ *                     customer.setF setFirstName(rs.getString("FirstName"));
+ *                     // etc
+ *                 }
+ *             });
+ *
+ *             return customer;
+ *         }
+ *     }
+ * </code></pre>
+ *
+ * <h3>A Task Which Returns No Value</h3>
+ *
+ * <p>
+ *     Many, if not most, Tasks should return a value upon completion. For
+ *     CRUD Tasks, one would expect that a "Create" Task would return the newly
+ *     created object or primary key, a "Read" Task would return the read
+ *     object, an "Update" task would return the number of records updated,
+ *     and a "Delete" task would return the number of records deleted.
+ * </p>
+ *
+ * <p>
+ *     However sometimes there just isn't anything truly useful to return.
+ *     For example, I might have a Task which writes to a file. Task has built
+ *     into it a mechanism for indicating whether it has succeeded or failed
+ *     along with the number of bytes written (the progress), and thus there is
+ *     nothing really for me to return. In such a case, you can use the Void
+ *     type. This is a special type in the Java language which can only be
+ *     assigned the value of <code>null</code>. You would use it as follows:
+ * </p>
+ *
+ * <pre><code>
+ *     final String filePath = "/foo.txt";
+ *     final String contents = "Some contents";
+ *     Task&lt;Void&gt; task = new Task&lt;Void&gt;() {
+ *         &#64;Override protected Void call() throws Exception {
+ *             File file = new File(filePath);
+ *             FileOutputStream out = new FileOutputStream(file);
+ *             // ... and other code to write the contents ...
+ *
+ *             // Return null at the end of a Task of type Void
+ *             return null;
+ *         }
+ *     };
+ * </code></pre>
+ *
+ * <h3>A Task Which Returns An ObservableList</h3>
+ *
+ * <p>Because the ListView, TableView, and other UI controls and scene graph
+ * nodes make use of ObservableList, it is common to want to create and return
+ * an ObservableList from a Task. When you do not care to display intermediate
+ * values, the easiest way to correctly write such a Task is simply to
+ * construct an ObservableList within the <code>call</code> method, and then
+ * return it at the conclusion of the Task.</p>
+ *
+ * <pre><code>
+ *     Task&lt;ObservableList&lt;Rectangle&gt;&gt; task = new Task&lt;ObservableList&lt;Rectangle&gt;&gt;() {
+ *         &#64;Override protected ObservableList&lt;Rectangle&gt; call() throws Exception {
+ *             updateMessage("Creating Rectangles");
+ *             ObservableList&lt;Rectangle&gt; results = FXCollections.observableArrayList();
+ *             for (int i=0; i<100; i++) {
+ *                 if (isCancelled()) break;
+ *                 Rectangle r = new Rectangle(10, 10);
+ *                 r.setX(10 * i);
+ *                 results.add(r);
+ *                 updateProgress(i, 100);
+ *             }
+ *             return results;
+ *         }
+ *     };
+ * </code></pre>
+ *
+ * <p>In the above example, we are going to create 100 rectangles and return
+ * them from this task. An ObservableList is created within the
+ * <code>call</code> method, populated, and then returned.</p>
+ *
+ * <h3>A Task Which Returns Partial Results</h3>
+ *
+ * <p>Sometimes you want to create a Task which will return partial results.
+ * Perhaps you are building a complex scene graph and want to show the
+ * scene graph as it is being constructed. Or perhaps you are reading a large
+ * amount of data over the network and want to display the entries in a
+ * TableView as the data is arriving. In such cases, there is some shared state
+ * available both to the FX Application Thread and the background thread.
+ * Great care must be taken to <strong>never update shared state from any
+ * thread other than the FX Application Thread</strong>.</p>
+ *
+ * <p>The easiest way to do this is to expose a new property on the Task
+ * which will represent the partial result. Then make sure to use
+ * <code>Platform.runLater</code> when adding new items to the partial
+ * result.</p>
+ *
+ * <pre><code>
+ *     public class PartialResultsTask extends Task&lt;ObservableList&lt;Rectangle&gt;&gt; {
+ *         // Uses Java 7 diamond operator
+ *         private ReadOnlyObjectWrapper<ObservableList<Rectangle>> partialResults =
+ *                 new ReadOnlyObjectWrapper<>(this, "partialResults",
+ *                         FXCollections.observableArrayList(new ArrayList<Rectangle>()));
+ *
+ *         public final ObservableList<Rectangle> getPartialResults() { return partialResults.get(); }
+ *         public final ReadOnlyObjectProperty<ObservableList<Rectangle>> partialResultsProperty() {
+ *             return partialResults.getReadOnlyProperty();
+ *         }
+ *
+ *         &#64;Override protected ObservableList<Rectangle> call() throws Exception {
+ *             updateMessage("Creating Rectangles...");
+ *             for (int i=0; i<100; i++) {
+ *                 if (isCancelled()) break;
+ *                 final Rectangle r = new Rectangle(10, 10);
+ *                 r.setX(10 * i);
+ *                 Platform.runLater(new Runnable() {
+ *                     &#64;Override public void run() {
+ *                         partialResults.get().add(r);
+ *                     }
+ *                 });
+ *                 updateProgress(i, 100);
+ *             }
+ *             return partialResults.get();
+ *         }
+ *     }
+ * </code></pre>
+ *
+ * <!-- TODO: Update to use the PartialResultsTask. This needs to be a new
+ *      task written such that there is an updateResults method which does
+ *      all the normal event queue coalescing and so forth. Creating a
+ *      PartialResultsTask is trivial, however creating a PartialResultsService
+ *      is a bit more intimidating. The problem with PartialResultsService is
+ *      that you might also want a PartialResultsScheduledService, so there is
+ *      some explosion of API possible. It might be that we simply teach
+ *      Service itself how to deal with PartialResultsTasks -- that is probably
+ *      my preferred approach. -->
+ *
+ * <h3>A Task Which Modifies The Scene Graph</h3>
+ *
+ * <p>Generally, Tasks should not interact directly with the UI. Doing so
+ * creates a tight coupling between a specific Task implementation and a
+ * specific part of your UI. However, when you do want to create such a
+ * coupling, you must ensure that you use <code>Platform.runLater</code>
+ * so that any modifications of the scene graph occur on the
+ * FX Application Thread.</p>
+ *
+ * <pre><code>
+ *     final Group group = new Group();
+ *     Task&lt;Void&gt; task = new Task&lt;Void&gt;() {
+ *         &#64;Override protected Void call() throws Exception {
+ *             for (int i=0; i<100; i++) {
+ *                 if (isCancelled()) break;
+ *                 final Rectangle r = new Rectangle(10, 10);
+ *                 r.setX(10 * i);
+ *                 Platform.runLater(new Runnable() {
+ *                     &#64;Override public void run() {
+ *                         group.getChildren().add(r);
+ *                     }
+ *                 });
+ *             }
+ *             return null;
+ *         }
+ *     };
+ * </code></pre>
+ *
+ * <h3>Reacting To State Changes Generically</h3>
+ *
+ * <p>Sometimes you may want to write a Task which updates its progress,
+ * message, text, or in some other way reacts whenever a state change
+ * happens on the Task. For example, you may want to change the status
+ * message on the Task on Failure, Success, Running, or Cancelled state changes.
+ * </p>
+ * <pre><code>
+ *     Task&lt;Integer&gt; task = new Task&lt;Integer&gt;() {
+ *         &#64;Override protected Integer call() throws Exception {
+ *             int iterations = 0;
+ *             for (iterations = 0; iterations &lt; 100000; iterations++) {
+ *                 if (isCancelled()) {
+ *                     break;
+ *                 }
+ *                 System.out.println("Iteration " + iterations);
+ *             }
+ *             return iterations;
+ *         }
+ *
+ *         &#64;Override protected void succeeded() {
+ *             super.succeeded();
+ *             updateMessage("Done!");
+ *         }
+ *
+ *         &#64;Override protected void cancelled() {
+ *             super.cancelled();
+ *             updateMessage("Cancelled!");
+ *         }
+ *
+ *         &#64;Override protected void failed() {
+ *             super.failed();
+ *             updateMessage("Failed!");
+ *         }
+ *     };
+ * </code></pre>
  */
 public abstract class Task<V> extends FutureTask<V> implements Worker<V>, EventTarget {
     /**
@@ -251,8 +676,9 @@ public abstract class Task<V> extends FutureTask<V> implements Worker<V>, EventT
     /**
      * A protected convenience method for subclasses, called whenever the
      * state of the Task has transitioned to the SCHEDULED state.
-     * This method is invoked after any listeners of the state property
-     * and after the Task has been fully transitioned to the new state.
+     * This method is invoked on the FX Application Thread after any listeners
+     * of the state property and after the Task has been fully transitioned to
+     * the new state.
      */
     protected void scheduled() { }
 
@@ -289,8 +715,9 @@ public abstract class Task<V> extends FutureTask<V> implements Worker<V>, EventT
     /**
      * A protected convenience method for subclasses, called whenever the
      * state of the Task has transitioned to the RUNNING state.
-     * This method is invoked after any listeners of the state property
-     * and after the Task has been fully transitioned to the new state.
+     * This method is invoked on the FX Application Thread after any listeners
+     * of the state property and after the Task has been fully transitioned to
+     * the new state.
      */
     protected void running() { }
 
@@ -327,8 +754,9 @@ public abstract class Task<V> extends FutureTask<V> implements Worker<V>, EventT
     /**
      * A protected convenience method for subclasses, called whenever the
      * state of the Task has transitioned to the SUCCEEDED state.
-     * This method is invoked after any listeners of the state property
-     * and after the Task has been fully transitioned to the new state.
+     * This method is invoked on the FX Application Thread after any listeners
+     * of the state property and after the Task has been fully transitioned to
+     * the new state.
      */
     protected void succeeded() { }
 
@@ -365,8 +793,9 @@ public abstract class Task<V> extends FutureTask<V> implements Worker<V>, EventT
     /**
      * A protected convenience method for subclasses, called whenever the
      * state of the Task has transitioned to the CANCELLED state.
-     * This method is invoked after any listeners of the state property
-     * and after the Task has been fully transitioned to the new state.
+     * This method is invoked on the FX Application Thread after any listeners
+     * of the state property and after the Task has been fully transitioned to
+     * the new state.
      */
     protected void cancelled() { }
 
@@ -403,8 +832,9 @@ public abstract class Task<V> extends FutureTask<V> implements Worker<V>, EventT
     /**
      * A protected convenience method for subclasses, called whenever the
      * state of the Task has transitioned to the FAILED state.
-     * This method is invoked after any listeners of the state property
-     * and after the Task has been fully transitioned to the new state.
+     * This method is invoked on the FX Application Thread after any listeners
+     * of the state property and after the Task has been fully transitioned to
+     * the new state.
      */
     protected void failed() { }
 
