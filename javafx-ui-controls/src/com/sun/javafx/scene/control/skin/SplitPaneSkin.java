@@ -326,11 +326,11 @@ public class SplitPaneSkin extends SkinBase<SplitPane, BehaviorBase<SplitPane>> 
         double minSize = 0;
         for (Content c: contentRegions) {
             if (horizontal) {
-                minSize += c.minWidth(-1);
+                minSize += c.minWidth(-1);                
             } else {
                 minSize += c.minHeight(-1);
             }
-        }
+        }        
         return minSize + dividerWidth;
     }
 
@@ -395,37 +395,13 @@ public class SplitPaneSkin extends SkinBase<SplitPane, BehaviorBase<SplitPane>> 
         }
     }
 
-    private boolean minSizeReached = false;
-    private void resizeSplitPane() {
-        double w = 0;
-        double h = 0;
+    private void resizeSplitPane(double w, double h) {
         boolean grow = previousSize < (horizontal ? getWidth() : getHeight());
+        redistribute(grow, w, h);        
+        layoutDividersAndContent();
+    }
 
-        if (this.horizontal) {
-            w = getWidth() - (getInsets().getLeft() + getInsets().getRight());
-            h = getHeight() - (getInsets().getTop() + getInsets().getBottom());
-        } else {
-            w = getHeight() - (getInsets().getTop() + getInsets().getBottom());
-            h = getWidth() - (getInsets().getLeft() + getInsets().getRight());
-        }
-
-        double minSize = totalMinSize();
-        if (!grow && minSizeReached) {
-            // Don't do anything we less than the minumum size
-            return;
-        } else if (minSizeReached) {
-            if (w >= minSize) {
-                minSizeReached = false;
-            } else {
-                // We are still less than the minumum size
-                return;
-            }
-        } else {
-            if (w < minSize) {
-                w = minSize;
-            }
-        }
-
+    private void redistribute(boolean redistribute, double w, double h) {        
         double dividerWidth = contentDividers.isEmpty() ? 0 : contentDividers.get(0).prefWidth(-1);
         double halfDividerWidth = dividerWidth / 2.0f;
         double maxSize = totalMaxSize();
@@ -504,7 +480,7 @@ public class SplitPaneSkin extends SkinBase<SplitPane, BehaviorBase<SplitPane>> 
                     right.setY(startY);
                     right.setDisplayWidth(maxRightWidth);
                     right.setDisplayHeight(h);
-                    if (grow) {
+                    if (redistribute) {
                         pos = nextDividerPos - maxRightWidth - dividerWidth;
                         dividerPos = pos;
                         leftArea = pos - (previousDividerPos == 0 ? 0 : (previousDividerPos + dividerWidth));
@@ -531,13 +507,10 @@ public class SplitPaneSkin extends SkinBase<SplitPane, BehaviorBase<SplitPane>> 
                     right.setDisplayHeight(h);
                     pos = startX - dividerWidth;
                     dividerPos = pos;
-                    leftArea = pos - (previousDividerPos == 0 ? 0 : (previousDividerPos + dividerWidth));
+                    leftArea = pos - (previousDividerPos == 0 ? 0 : (previousDividerPos + dividerWidth));                    
                     if (leftArea <= minLeftWidth) {
                         leftArea = minLeftWidth;
                         previousDividerPos = previousDividerPos <= 0 ? 0 : dividerPos - minLeftWidth - dividerWidth;
-                        if (!grow && w <= minSize) {
-                            minSizeReached = true;
-                        }
                     }
                 }
                 divider.setX(pos);
@@ -569,7 +542,7 @@ public class SplitPaneSkin extends SkinBase<SplitPane, BehaviorBase<SplitPane>> 
                     right.setY(startY + dividerWidth + (rightArea - maxRightWidth)/2);
                     right.setDisplayWidth(maxRightWidth);
                     right.setDisplayHeight(h);
-                    if (grow) {
+                    if (redistribute) {
                         pos = nextDividerPos - maxRightWidth - dividerWidth;
                         dividerPos = pos;
                         leftArea = pos - (previousDividerPos == 0 ? 0 : (previousDividerPos + dividerWidth));
@@ -600,9 +573,6 @@ public class SplitPaneSkin extends SkinBase<SplitPane, BehaviorBase<SplitPane>> 
                     if (leftArea <= minLeftWidth) {
                         leftArea = minLeftWidth;
                         previousDividerPos = previousDividerPos <= 0 ? 0 : dividerPos - minLeftWidth - dividerWidth;
-                        if (!grow && w <= minSize) {
-                            minSizeReached = true;
-                        }
                     }
                 }
                 divider.setX(startX);
@@ -630,19 +600,12 @@ public class SplitPaneSkin extends SkinBase<SplitPane, BehaviorBase<SplitPane>> 
             }
             setDividerPos(divider, pos + halfDividerWidth);
         }
-        layoutDividersAndContent();
     }
 
-    @Override protected void layoutChildren() {
+    @Override protected void layoutChildren() {        
         if (!getSkinnable().isVisible()) {
             return;
         }
-        if (contentDividers.size() > 0 && previousSize != -1 && previousSize != (horizontal ? getWidth() : getHeight())) {
-            resizeSplitPane();
-            previousSize = horizontal ? getWidth() : getHeight();
-            return;
-        }
-        previousSize = horizontal ? getWidth() : getHeight();
 
         double w = 0;
         double h = 0;
@@ -654,6 +617,13 @@ public class SplitPaneSkin extends SkinBase<SplitPane, BehaviorBase<SplitPane>> 
             w = getHeight() - (getInsets().getTop() + getInsets().getBottom());
             h = getWidth() - (getInsets().getLeft() + getInsets().getRight());
         }
+
+        if (contentDividers.size() > 0 && previousSize != -1 && previousSize != (horizontal ? getWidth() : getHeight())) {
+            resizeSplitPane(w, h);
+            previousSize = horizontal ? getWidth() : getHeight();
+            return;
+        }
+        previousSize = horizontal ? getWidth() : getHeight();
 
         double startX = 0;
         double startY = 0;
@@ -670,8 +640,9 @@ public class SplitPaneSkin extends SkinBase<SplitPane, BehaviorBase<SplitPane>> 
         ContentDivider nextDivider = null;
 
         for (int i = 0; i < contentRegions.size(); i++) {
-            if (i + 1 == contentRegions.size()) {
-                if (i == 0) {
+            if (i == contentRegions.size() - 1) {
+                // We only have one content region in the SplitPane.
+                if (i == 0) {                    
                     contentRegions.get(0).setX(startX);
                     contentRegions.get(0).setY(startY);
                     contentRegions.get(0).setDisplayWidth(w);
@@ -905,7 +876,13 @@ public class SplitPaneSkin extends SkinBase<SplitPane, BehaviorBase<SplitPane>> 
         double overflow = contentRegions.size() > 1 ?
             (((contentDividers.get(contentDividers.size() - 1).getDividerPos() - halfDividerWidth) +
                 dividerWidth + contentRegions.get(contentRegions.size() - 1).getDisplayWidth()) - w) : 0;
-
+        
+        if (overflow < 0) {
+            // RT-18805 try and redistribute the dividers if there
+            // is space left over.
+            redistribute(true, w, h);
+        }
+        
         // TODO Maybe we should adjust for priority.
         while (overflow > 0 && overflowCounter < 50) {
             int index = indexOfMaxContent();

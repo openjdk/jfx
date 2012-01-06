@@ -7,12 +7,14 @@ package javafx.scene.control;
 import com.sun.javafx.css.StyleableProperty;
 import static javafx.scene.control.ControlTestUtils.*;
 import com.sun.javafx.pgstub.StubToolkit;
+import com.sun.javafx.scene.control.skin.SplitPaneSkin;
 import com.sun.javafx.tk.Toolkit;
 import javafx.beans.property.DoubleProperty;
 import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.SimpleDoubleProperty;
 import javafx.beans.property.SimpleObjectProperty;
 import javafx.geometry.Orientation;
+import javafx.scene.layout.StackPane;
 import static org.junit.Assert.*;
 
 
@@ -32,6 +34,7 @@ public class SplitPaneTest {
     @Before public void setup() {
         tk = (StubToolkit)Toolkit.getToolkit();//This step is not needed (Just to make sure StubToolkit is loaded into VM)
         splitPane = new SplitPane();
+        splitPane.setSkin(new SplitPaneSkin(splitPane));
         divider1 = new SplitPane.Divider();
         divider2 = new SplitPane.Divider();
     }
@@ -228,6 +231,36 @@ public class SplitPaneTest {
         assertEquals(splitPane.getDividers().size(), 3, 0.0);
         assertEquals(splitPane.getDividers().get(2).getPosition(), 0.4, 0.0);
     }
-    
+
+    @Test public void checkDividerPositions_RT18805() {        
+        final Button l = new Button("Left Button");
+        final Button c = new Button("Center Button");
+        final Button r = new Button("Right Button");
+
+        StackPane spLeft = new StackPane();
+        spLeft.getChildren().add(l);
+        spLeft.setMinWidth(100);
+        spLeft.setMaxWidth(150);
+
+        StackPane spCenter = new StackPane();
+        spCenter.getChildren().add(c);
+
+        StackPane spRight = new StackPane();
+        spRight.getChildren().add(r);
+        spRight.setMinWidth(100);
+        spRight.setMaxWidth(150);
+
+
+        splitPane.getItems().addAll(spLeft, spCenter, spRight);
+        StackPane sp = new StackPane();
+        sp.setPrefSize(600, 400);
+        sp.getChildren().add(splitPane);
+
+        sp.autosize();
+        sp.layout();
+        double pos[] = splitPane.getDividerPositions();
+        assertEquals(pos[0], 0.25, 0.0);
+        assertEquals(pos[1], 0.75, 0.0);
+    }
     
 }
