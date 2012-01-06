@@ -40,7 +40,7 @@ import javafx.beans.property.ReadOnlyStringProperty;
  *     frameworks to provide workers which work well when developing user interfaces.
  * </p>
  * <p>
- *     A Worker may, or may not be reusable, depending on the implementation. A
+ *     A Worker may or may not be reusable depending on the implementation. A
  *     {@link Task}, for example, is not reusable while a {@link Service} is.
  * </p>
  * <p>

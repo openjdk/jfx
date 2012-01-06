@@ -49,7 +49,7 @@ import static javafx.concurrent.WorkerStateEvent.*;
  *     Service implements {@link Worker}. As such, you can observe the state of
  *     the background operation and optionally cancel it. Service is a reusable
  *     Worker, meaning that it can be reset and restarted. Due to this, a Service
- *     can be constructed declarativley and restarted on demand.
+ *     can be constructed declaratively and restarted on demand.
  * </p>
  * <p>
  *     If an {@link java.util.concurrent.Executor} is specified on the Service,
