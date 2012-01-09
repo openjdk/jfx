@@ -65,6 +65,10 @@ public class ListViewKeyInputTest {
         assertEquals(1, sm.getSelectedItems().size());
     }
     
+    /***************************************************************************
+     * Tests for row-based single selection
+     **************************************************************************/
+    
     @Test public void testDownArrowChangesSelection() {
         sm.clearAndSelect(0);
         keyboard.doDownArrowPress();
@@ -102,4 +106,8 @@ public class ListViewKeyInputTest {
         assertTrue(sm.isSelected(0));
         assertTrue(sm.isSelected(1));
     }
+    
+    /***************************************************************************
+     * Tests for row-based multiple selection
+     **************************************************************************/
 }
