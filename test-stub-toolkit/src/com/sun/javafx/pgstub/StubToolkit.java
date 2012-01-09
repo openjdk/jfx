@@ -100,6 +100,7 @@ import com.sun.javafx.tk.TKDropTargetListener;
 import com.sun.javafx.tk.TKScene;
 import com.sun.javafx.tk.TKScreenConfigurationListener;
 import com.sun.javafx.tk.TKStage;
+import com.sun.javafx.tk.TKSystemMenu;
 import com.sun.javafx.tk.TextHelper;
 import com.sun.javafx.tk.Toolkit;
 import com.sun.prism.BasicStroke;
@@ -175,6 +176,11 @@ public class StubToolkit extends Toolkit {
     @Override
     public TKStage createTKEmbeddedStage(HostInterface host) {
         return new StubStage();
+    }
+
+    @Override
+    public TKSystemMenu getSystemMenu() {
+        throw new UnsupportedOperationException("Not supported yet.");
     }
 
     @Override
