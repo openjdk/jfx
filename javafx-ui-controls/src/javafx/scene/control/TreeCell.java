@@ -32,8 +32,6 @@ import javafx.beans.property.SimpleObjectProperty;
 import javafx.collections.ListChangeListener;
 import javafx.scene.Node;
 import com.sun.javafx.css.StyleManager;
-import com.sun.javafx.logging.PlatformLogger;
-import com.sun.javafx.scene.control.Logging;
 import com.sun.javafx.scene.control.WeakListChangeListener;
 import java.lang.ref.WeakReference;
 import javafx.beans.property.ReadOnlyObjectProperty;
@@ -316,13 +314,6 @@ public class TreeCell<T> extends IndexedCell<T> {
         if (! isEditing()) return;
         
         TreeView tree = getTreeView();
-        if (tree != null) {
-            tree.fireEvent(new TreeView.EditEvent<T>(tree,
-                    TreeView.<T>editCancelEvent(),
-                    getTreeItem(),
-                    getItem(),
-                    null));
-        }
 
         super.cancelEdit();
 
@@ -330,6 +321,12 @@ public class TreeCell<T> extends IndexedCell<T> {
             // reset the editing index on the TreeView
             tree.edit(null);
             tree.requestFocus();
+        
+            tree.fireEvent(new TreeView.EditEvent<T>(tree,
+                    TreeView.<T>editCancelEvent(),
+                    getTreeItem(),
+                    getItem(),
+                    null));
         }
     }
 

@@ -352,21 +352,23 @@ public class TableCell<S,T> extends IndexedCell<T> {
         if (! isEditing()) return;
 
         final TableView table = getTableView();
-        if (getTableColumn() != null) {
+
+        super.cancelEdit();
+
+        // reset the editing index on the TableView
+        if (table != null) {
+            TablePosition editingCell = table.getEditingCell();
+            table.edit(-1, null);
+
             CellEditEvent editEvent = new CellEditEvent(
                 table,
-                table.getEditingCell(),
+                editingCell,
                 TableColumn.editCancelEvent(),
                 null
             );
 
             Event.fireEvent(getTableColumn(), editEvent);
         }
-
-        super.cancelEdit();
-
-        // reset the editing index on the TableView
-        if (table != null) table.edit(-1, null);
     }
     
     
