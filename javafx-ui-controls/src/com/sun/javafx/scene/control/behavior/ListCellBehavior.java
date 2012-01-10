@@ -48,7 +48,7 @@ public class ListCellBehavior extends CellBehaviorBase<ListCell> {
         FocusModel fm = list.getFocusModel();
         if (fm == null) return -1;
         
-        return map.containsKey(list) ? map.get(list) : fm.getFocusedIndex();
+        return hasAnchor(list) ? map.get(list) : fm.getFocusedIndex();
     }
     
     static void setAnchor(ListView list, int anchor) {
@@ -57,6 +57,10 @@ public class ListCellBehavior extends CellBehaviorBase<ListCell> {
         } else {
             map.put(list, anchor);
         }
+    }
+    
+    static boolean hasAnchor(ListView list) {
+        return map.containsKey(list);
     }
     
     // For RT-17456: have selection occur as fast as possible with mouse input.
@@ -129,7 +133,7 @@ public class ListCellBehavior extends CellBehaviorBase<ListCell> {
         // about).
         if (e.isShiftDown()) {
             if (! map.containsKey(listView)) {
-                map.put(listView, fm.getFocusedIndex());
+                setAnchor(listView, fm.getFocusedIndex());
             }
         } else {
             map.remove(listView);

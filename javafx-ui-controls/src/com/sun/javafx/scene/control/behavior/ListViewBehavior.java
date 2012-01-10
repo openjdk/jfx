@@ -101,7 +101,7 @@ public class ListViewBehavior<T> extends BehaviorBase<ListView<T>> {
             LIST_VIEW_BINDINGS.add(new KeyBinding(A, "SelectAll").meta());
             LIST_VIEW_BINDINGS.add(new KeyBinding(HOME, "FocusFirstRow").meta());
             LIST_VIEW_BINDINGS.add(new KeyBinding(END, "FocusLastRow").meta());
-            LIST_VIEW_BINDINGS.add(new KeyBinding(SPACE, "toggleFocusOwnerSelection").ctrl().meta());
+            LIST_VIEW_BINDINGS.add(new KeyBinding(SPACE, "toggleFocusOwnerSelection").meta());
             LIST_VIEW_BINDINGS.add(new KeyBinding(PAGE_UP, "FocusPageUp").meta());
             LIST_VIEW_BINDINGS.add(new KeyBinding(PAGE_DOWN, "FocusPageDown").meta());
         } else {
@@ -247,8 +247,22 @@ public class ListViewBehavior<T> extends BehaviorBase<ListView<T>> {
         @Override public void onChanged(ListChangeListener.Change c) {
             while (c.next()) {
                 // there are no selected items, so lets clear out the anchor
-                if (! selectionChanging && c.getList().isEmpty()) {
-                    setAnchor(-1);
+                if (! selectionChanging) {
+                    if (c.getList().isEmpty()) {
+                        setAnchor(-1);
+                    } else if (! c.getList().contains(getAnchor())) {
+                        setAnchor(-1);
+                    }
+                }
+                
+                if (! hasAnchor() && c.getAddedSize() > 0) {
+                    for (int i = 0; i < c.getAddedSize(); i++) {
+                        int index = ((List<Integer>)c.getAddedSubList()).get(i);
+                        if (index >= 0) {
+                            setAnchor(index);
+                            break;
+                        }
+                    }
                 }
             }
         }
@@ -294,6 +308,10 @@ public class ListViewBehavior<T> extends BehaviorBase<ListView<T>> {
     
     private int getAnchor() {
         return ListCellBehavior.getAnchor(getControl());
+    }
+    
+    private boolean hasAnchor() {
+        return ListCellBehavior.hasAnchor(getControl());
     }
 
     @Override public void mousePressed(MouseEvent e) {
@@ -410,6 +428,11 @@ public class ListViewBehavior<T> extends BehaviorBase<ListView<T>> {
         if (isShiftDown && getAnchor() != -1) {
             int newRow = fm.getFocusedIndex() - 1;
             int anchor = getAnchor();
+            
+            if (! hasAnchor()) {
+                setAnchor(fm.getFocusedIndex());
+            } 
+            
             clearSelectionOutsideRange(anchor, newRow);
 
             if (anchor > newRow) {
@@ -434,6 +457,11 @@ public class ListViewBehavior<T> extends BehaviorBase<ListView<T>> {
         if (isShiftDown && getAnchor() != -1) {
             int newRow = fm.getFocusedIndex() + 1;
             int anchor = getAnchor();
+            
+            if (! hasAnchor()) {
+                setAnchor(fm.getFocusedIndex());
+            } 
+
             clearSelectionOutsideRange(anchor, newRow);
 
             if (anchor > newRow) {
