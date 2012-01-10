@@ -30,6 +30,9 @@ import javafx.beans.Observable;
 import javafx.collections.ObservableList;
 import javafx.collections.ListChangeListener;
 import javafx.collections.ListChangeListener.Change;
+import javafx.event.ActionEvent;
+import javafx.event.Event;
+import javafx.event.EventHandler;
 import javafx.scene.Node;
 import javafx.scene.control.CheckMenuItem;
 import javafx.scene.control.CustomMenuItem;
@@ -80,10 +83,16 @@ public class GlobalMenuAdapter extends Menu implements MenuBase {
             }
         });
 
-        onShowingProperty().bind(menu.onShowingProperty());
-        onShownProperty().bind(menu.onShownProperty());
-        onHidingProperty().bind(menu.onHidingProperty());
-        onHiddenProperty().bind(menu.onHiddenProperty());
+        EventHandler<Event> showHideHandler = new EventHandler<Event>() {
+            public void handle(Event ev) {
+                Event.fireEvent(menu, new Event(ev.getEventType()));
+            }
+        };
+
+        setOnShowing(showHideHandler);
+        setOnShown(showHideHandler);
+        setOnHiding(showHideHandler);
+        setOnHidden(showHideHandler);
 
         menu.getItems().addListener(new ListChangeListener<MenuItem>() {
             @Override public void onChanged(Change<? extends MenuItem> c) {
@@ -123,15 +132,20 @@ public class GlobalMenuAdapter extends Menu implements MenuBase {
     }
 
 
-    private static void bindMenuItemProperties(MenuItem adapter, MenuItem menuItem) {
+    private static void bindMenuItemProperties(MenuItem adapter, final MenuItem menuItem) {
         adapter.idProperty().bind(menuItem.idProperty());
         adapter.textProperty().bind(menuItem.textProperty());
         adapter.graphicProperty().bind(menuItem.graphicProperty());
-        adapter.onActionProperty().bind(menuItem.onActionProperty());
         adapter.disableProperty().bind(menuItem.disableProperty());
         adapter.visibleProperty().bind(menuItem.visibleProperty());
         adapter.acceleratorProperty().bind(menuItem.acceleratorProperty());
         adapter.mnemonicParsingProperty().bind(menuItem.mnemonicParsingProperty());
+
+        adapter.setOnAction(new EventHandler<ActionEvent>() {
+            public void handle(ActionEvent ev) {
+                menuItem.fire();
+            }
+        });
     }
 
 
