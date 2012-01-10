@@ -173,4 +173,10 @@ public class StubStage implements TKStage {
 
     public void ungrabFocus() {
     }
+
+    public void setMinimumSize(int minWidth, int minHeight) {
+    }
+
+    public void setMaximumSize(int maxWidth, int maxHeight) {
+    }
 }
