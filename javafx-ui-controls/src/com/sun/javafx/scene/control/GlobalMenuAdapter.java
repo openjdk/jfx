@@ -188,7 +188,6 @@ public class GlobalMenuAdapter extends Menu implements MenuBase {
             bindMenuItemProperties(this, menuItem);
 
             selectedProperty().bindBidirectional(menuItem.selectedProperty());
-            toggleGroupProperty().bind(menuItem.toggleGroupProperty());
         }
 
     }
