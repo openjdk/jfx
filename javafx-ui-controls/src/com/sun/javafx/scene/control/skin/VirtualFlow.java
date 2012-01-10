@@ -1605,7 +1605,9 @@ public class VirtualFlow extends Region {
             cell = cells.get(i);
             if (cell.isEmpty()) continue;
 
-            if (cell.getLayoutY() + cell.getHeight() > 0) {
+            if (isVertical() && cell.getLayoutY() + cell.getHeight() > 0) {
+                return cell;
+            } else if (! isVertical() && cell.getLayoutX() + cell.getWidth() > 0) {
                 return cell;
             }
         }

@@ -235,7 +235,7 @@ public class TableViewBehavior<T> extends BehaviorBase<TableView<T>> {
                     
                     for (int i = 0; i < c.getAddedSize(); i++) {
                         TablePosition tp = (TablePosition) c.getAddedSubList().get(i);
-                        if (tp.getRow() != anchor.getRow() && tp.getColumn() != anchor.getColumn()) {
+                        if (anchor.getRow() != -1 && tp.getRow() != anchor.getRow() && tp.getColumn() != anchor.getColumn()) {
                             selectionPathDeviated = true;
                             break;
                         }
@@ -247,18 +247,6 @@ public class TableViewBehavior<T> extends BehaviorBase<TableView<T>> {
 
     public TableViewBehavior(TableView control) {
         super(control);
-    }
-
-    @Override public void mousePressed(MouseEvent e) {
-        super.mousePressed(e);
-        
-        // FIXME can't assume (yet) cells.get(0) is necessarily the lead cell
-        ObservableList<TablePosition> cells = getControl().getSelectionModel().getSelectedCells();
-        setAnchor(cells.isEmpty() ? null : cells.get(0));
-        
-        if (!getControl().isFocused() && getControl().isFocusTraversable()) {
-            getControl().requestFocus();
-        }
         
         // Fix for RT-16565
         getControl().selectionModelProperty().addListener(new ChangeListener<TableView.TableViewSelectionModel<T>>() {
@@ -276,6 +264,18 @@ public class TableViewBehavior<T> extends BehaviorBase<TableView<T>> {
         });
         if (getControl().getSelectionModel() != null) {
             getControl().getSelectionModel().getSelectedCells().addListener(selectedCellsListener);
+        }
+    }
+
+    @Override public void mousePressed(MouseEvent e) {
+        super.mousePressed(e);
+        
+        // FIXME can't assume (yet) cells.get(0) is necessarily the lead cell
+        ObservableList<TablePosition> cells = getControl().getSelectionModel().getSelectedCells();
+        setAnchor(cells.isEmpty() ? null : cells.get(0));
+        
+        if (!getControl().isFocused() && getControl().isFocusTraversable()) {
+            getControl().requestFocus();
         }
     }
     

@@ -387,26 +387,27 @@ public class ListCell<T> extends IndexedCell<T> {
             list.requestFocus();
         }
     }
-
+    
     /** {@inheritDoc} */
     @Override public void cancelEdit() {
         if (! isEditing()) return;
         
          // Inform the ListView of the edit being cancelled.
         ListView list = getListView();
-        if (list != null) {
-            list.fireEvent(new ListView.EditEvent<T>(list,
-                    ListView.<T>editCancelEvent(),
-                    null,
-                    list.getEditingIndex()));
-        }
-
+        
         super.cancelEdit();
 
         if (list != null) {
+            int editingIndex = list.getEditingIndex();
+            
             // reset the editing index on the ListView
             if (updateEditingIndex) list.edit(-1);
             list.requestFocus();
+        
+            list.fireEvent(new ListView.EditEvent<T>(list,
+                    ListView.<T>editCancelEvent(),
+                    null,
+                    editingIndex));
         }
     }
 
