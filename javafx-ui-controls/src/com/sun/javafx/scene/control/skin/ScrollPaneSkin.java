@@ -720,16 +720,17 @@ public class ScrollPaneSkin extends SkinBase<ScrollPane, ScrollPaneBehavior> imp
         final double contentw = getSkinnable().getWidth() - getInsets().getLeft() - getInsets().getRight();
         return (getSkinnable().getHbarPolicy().equals(ScrollBarPolicy.NEVER)) ? false :
                    ((getSkinnable().getHbarPolicy().equals(ScrollBarPolicy.ALWAYS)) ? true :
-                       ((getSkinnable().isFitToWidth() && scrollNode.isResizable()) ? false :
-                           (nodeWidth > contentw)));
+                    ((getSkinnable().isFitToWidth() && scrollNode.isResizable()) ?
+                       (nodeWidth > contentw && scrollNode.minWidth(-1) > contentw) : (nodeWidth > contentw)));
     }
 
     private boolean determineVerticalSBVisible() {
         final double contenth = getSkinnable().getHeight() - getInsets().getTop() - getInsets().getBottom();
         return (getSkinnable().getVbarPolicy().equals(ScrollBarPolicy.NEVER)) ? false :
                   ((getSkinnable().getVbarPolicy().equals(ScrollBarPolicy.ALWAYS)) ? true :
-                      ((getSkinnable().isFitToHeight() && scrollNode.isResizable()) ? false :
-                          (nodeHeight > contenth)));
+                      ((getSkinnable().isFitToHeight() && scrollNode.isResizable()) ?
+                       (nodeHeight > contenth && scrollNode.minHeight(-1) > contenth) : (nodeHeight > contenth)));
+
     }
 
     private void computeScrollBarSize() {
