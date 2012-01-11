@@ -101,7 +101,7 @@ public class ListViewBehavior<T> extends BehaviorBase<ListView<T>> {
             LIST_VIEW_BINDINGS.add(new KeyBinding(A, "SelectAll").meta());
             LIST_VIEW_BINDINGS.add(new KeyBinding(HOME, "FocusFirstRow").meta());
             LIST_VIEW_BINDINGS.add(new KeyBinding(END, "FocusLastRow").meta());
-            LIST_VIEW_BINDINGS.add(new KeyBinding(SPACE, "toggleFocusOwnerSelection").meta());
+            LIST_VIEW_BINDINGS.add(new KeyBinding(SPACE, "toggleFocusOwnerSelection").ctrl().meta());
             LIST_VIEW_BINDINGS.add(new KeyBinding(PAGE_UP, "FocusPageUp").meta());
             LIST_VIEW_BINDINGS.add(new KeyBinding(PAGE_DOWN, "FocusPageDown").meta());
         } else {
@@ -339,7 +339,11 @@ public class ListViewBehavior<T> extends BehaviorBase<ListView<T>> {
     }
 
     private void scrollPageUp() {
-        int newSelectedIndex = onScrollPageUp.call(null);
+        int newSelectedIndex = -1;
+        if (onScrollPageUp != null) {
+            newSelectedIndex = onScrollPageUp.call(null);
+        }
+        if (newSelectedIndex == -1) return;
         
         MultipleSelectionModel sm = getControl().getSelectionModel();
         if (sm == null) return;
@@ -347,7 +351,11 @@ public class ListViewBehavior<T> extends BehaviorBase<ListView<T>> {
     }
 
     private void scrollPageDown() {
-        int newSelectedIndex = onScrollPageDown.call(null);
+        int newSelectedIndex = -1;
+        if (onScrollPageDown != null) {
+            newSelectedIndex = onScrollPageDown.call(null);
+        }
+        if (newSelectedIndex == -1) return;
         
         MultipleSelectionModel sm = getControl().getSelectionModel();
         if (sm == null) return;
@@ -587,12 +595,15 @@ public class ListViewBehavior<T> extends BehaviorBase<ListView<T>> {
         int leadIndex = sm.getSelectedIndex();
         
         if (isShiftDown) {
-            leadIndex = getAnchor() == -1 ? sm.getSelectedIndex() : getAnchor();
-            setAnchor(leadIndex);
+            leadIndex = hasAnchor() ? sm.getSelectedIndex() : getAnchor();
         }
 
         sm.clearSelection();
         sm.selectRange(0, leadIndex + 1);
+        
+        if (isShiftDown) {
+            setAnchor(leadIndex);
+        }
         
         // RT-18413: Focus must go to first row
         getControl().getFocusModel().focus(0);
@@ -607,12 +618,15 @@ public class ListViewBehavior<T> extends BehaviorBase<ListView<T>> {
         int leadIndex = sm.getSelectedIndex();
         
         if (isShiftDown) {
-            leadIndex = getAnchor() == -1 ? sm.getSelectedIndex() : getAnchor();
-            setAnchor(leadIndex);
+            leadIndex = hasAnchor() ? sm.getSelectedIndex() : getAnchor();
         }
         
         sm.clearSelection();
         sm.selectRange(leadIndex, getRowCount());
+        
+        if (isShiftDown) {
+            setAnchor(leadIndex);
+        }
 
         if (onMoveToLastCell != null) onMoveToLastCell.run();
     }
@@ -637,6 +651,7 @@ public class ListViewBehavior<T> extends BehaviorBase<ListView<T>> {
         int startPos = anchor;
         int endPos = anchor > focusIndex ? focusIndex - 1 : focusIndex + 1;
         sm.selectRange(startPos, endPos);
+        setAnchor(anchor);
     }
     
     private void cancelEdit() {
@@ -662,6 +677,7 @@ public class ListViewBehavior<T> extends BehaviorBase<ListView<T>> {
         
         if (sm.isSelected(focusedIndex)) {
             sm.clearSelection(focusedIndex);
+            fm.focus(focusedIndex);
         } else {
             sm.select(focusedIndex);
         }

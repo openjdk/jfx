@@ -60,7 +60,7 @@ public class ListCellBehavior extends CellBehaviorBase<ListCell> {
     }
     
     static boolean hasAnchor(ListView list) {
-        return map.containsKey(list);
+        return map.containsKey(list) && map.get(list) != -1;
     }
     
     // For RT-17456: have selection occur as fast as possible with mouse input.

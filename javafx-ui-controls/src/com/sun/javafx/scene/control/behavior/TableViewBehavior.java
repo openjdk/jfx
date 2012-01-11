@@ -60,7 +60,6 @@ import com.sun.javafx.PlatformUtil;
 import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
 import javafx.collections.ListChangeListener;
-import javafx.scene.control.*;
 import javafx.util.Callback;
 
 public class TableViewBehavior<T> extends BehaviorBase<TableView<T>> {
@@ -218,18 +217,32 @@ public class TableViewBehavior<T> extends BehaviorBase<TableView<T>> {
     private ListChangeListener<TablePosition> selectedCellsListener = new ListChangeListener<TablePosition>() {
         @Override public void onChanged(ListChangeListener.Change c) {
             while (c.next()) {
-                if (selectionChanging) continue;
-                
                 TableView.TableViewSelectionModel sm = getControl().getSelectionModel();
                 if (sm == null) return;
                 
                 TablePosition anchor = getAnchor();
                 boolean cellSelectionEnabled = sm.isCellSelectionEnabled();
                 
-                // there are no selected items, so lets clear out the anchor
-                if (c.getList().isEmpty()) {
-                    setAnchor(null);
-                } else if (anchor != null && cellSelectionEnabled && ! selectionPathDeviated) {
+                if (! selectionChanging) {
+                    // there are no selected items, so lets clear out the anchor
+                    if (c.getList().isEmpty()) {
+                        setAnchor(null);
+                    } else if (! c.getList().contains(getAnchor())) {
+                        setAnchor(null);
+                    }
+                } 
+                
+                if (! hasAnchor() && c.getAddedSize() > 0) {
+                    for (int i = 0; i < c.getAddedSize(); i++) {
+                        TablePosition tp = ((List<TablePosition>)c.getAddedSubList()).get(i);
+                        if (tp.getRow() >= 0) {
+                            setAnchor(tp);
+                            break;
+                        }
+                    }
+                }
+                
+                if (!hasAnchor() && cellSelectionEnabled && ! selectionPathDeviated) {
                     // check if the selection is on the same row or column, 
                     // otherwise set selectionPathDeviated to true
                     
@@ -320,6 +333,10 @@ public class TableViewBehavior<T> extends BehaviorBase<TableView<T>> {
     }
     private TablePosition getAnchor() {
         return TableCellBehavior.getAnchor(getControl());
+    }
+    
+    private boolean hasAnchor() {
+        return TableCellBehavior.hasAnchor(getControl());
     }
     
 //    private void shiftAnchor(boolean rowDirection, int delta) {
@@ -545,7 +562,7 @@ public class TableViewBehavior<T> extends BehaviorBase<TableView<T>> {
                 }
             });
         } else {
-            if (isShiftDown && getAnchor() != null) {
+            if (isShiftDown && hasAnchor()) {
                 updateRowSelection(-1);
             } else {
                 sm.selectPrevious();
@@ -568,7 +585,7 @@ public class TableViewBehavior<T> extends BehaviorBase<TableView<T>> {
                 }
             });
         } else {
-            if (isShiftDown && getAnchor() != null) {
+            if (isShiftDown && hasAnchor()) {
                 updateRowSelection(1);
             } else {
                 sm.selectNext();
@@ -601,13 +618,18 @@ public class TableViewBehavior<T> extends BehaviorBase<TableView<T>> {
         if (fm == null) return;
         
         int newRow = fm.getFocusedIndex() + delta;
+        TablePosition anchor = getAnchor();
+        
+        if (! hasAnchor()) {
+            setAnchor(fm.getFocusedCell());
+        } 
 
-        clearSelectionOutsideRange(getAnchor().getRow(), newRow);
+        clearSelectionOutsideRange(anchor.getRow(), newRow);
 
-        if (getAnchor().getRow() > newRow) {
-            sm.selectRange(getAnchor().getRow(), newRow - 1);
+        if (anchor.getRow() > newRow) {
+            sm.selectRange(anchor.getRow(), newRow - 1);
         } else {
-            sm.selectRange(getAnchor().getRow(), newRow + 1);
+            sm.selectRange(anchor.getRow(), newRow + 1);
         }
     }
     
@@ -772,22 +794,26 @@ public class TableViewBehavior<T> extends BehaviorBase<TableView<T>> {
         if (fm == null) return;
 
         TablePosition focusedCell = fm.getFocusedCell();
-        int focusIndex = focusedCell.getRow();
-        int anchor = getAnchor().getRow();
+        int focusRow = focusedCell.getRow();
+        
+        TablePosition anchor = getAnchor();
+        int anchorRow = anchor.getRow();
         
         sm.clearSelection();
         if (! sm.isCellSelectionEnabled()) {
-            int startPos = anchor;
-            int endPos = anchor > focusIndex ? focusIndex - 1 : focusIndex + 1;
+            int startPos = anchorRow;
+            int endPos = anchorRow > focusRow ? focusRow - 1 : focusRow + 1;
             sm.selectRange(startPos, endPos);
         } else {
-            int min = Math.min(anchor, focusIndex);
-            int max = Math.max(anchor, focusIndex);
+            int min = Math.min(anchorRow, focusRow);
+            int max = Math.max(anchorRow, focusRow);
             
             for (int i = min; i <= max; i++) {
                 sm.select(i, focusedCell.getTableColumn());
             }
         }
+        
+        setAnchor(anchor);
     }
     
     private void selectAll() {
@@ -817,11 +843,15 @@ public class TableViewBehavior<T> extends BehaviorBase<TableView<T>> {
             // the requirement of selectRange, so we call focus on the 0th row
             sm.selectRange(0, leadIndex + 1);
             getControl().getFocusModel().focus(0);
-            setAnchor(leadIndex, null);
+//            setAnchor(leadIndex, null);
         } else {
             // TODO
             
 //            setAnchor(leadIndex, );
+        }
+        
+        if (isShiftDown) {
+            setAnchor(leadIndex, null);
         }
 
         if (onMoveToFirstCell != null) onMoveToFirstCell.run();
@@ -840,7 +870,6 @@ public class TableViewBehavior<T> extends BehaviorBase<TableView<T>> {
         
         if (isShiftDown) {
             leadIndex = getAnchor() == null ? leadIndex : getAnchor().getRow();
-            setAnchor(leadIndex, null);
         }
         
         sm.clearSelection();
@@ -848,6 +877,10 @@ public class TableViewBehavior<T> extends BehaviorBase<TableView<T>> {
             sm.selectRange(leadIndex, getItemCount());
         } else {
             // TODO
+        }
+        
+        if (isShiftDown) {
+            setAnchor(leadIndex, null);
         }
 
         if (onMoveToLastCell != null) onMoveToLastCell.run();
