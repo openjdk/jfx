@@ -43,7 +43,7 @@ public class TableCellBehavior extends CellBehaviorBase<TableCell> {
         TableViewFocusModel fm = table.getFocusModel();
         if (fm == null) return null;
         
-        return map.containsKey(table) ? map.get(table) : fm.getFocusedCell();
+        return hasAnchor(table) ? map.get(table) : fm.getFocusedCell();
     }
     
     static void setAnchor(TableView table, TablePosition anchor) {
@@ -52,6 +52,10 @@ public class TableCellBehavior extends CellBehaviorBase<TableCell> {
         } else {
             map.put(table, anchor);
         }
+    }
+    
+    static boolean hasAnchor(TableView table) {
+        return map.containsKey(table) && map.get(table) != null;
     }
     
     // For RT-17456: have selection occur as fast as possible with mouse input.
@@ -119,7 +123,7 @@ public class TableCellBehavior extends CellBehaviorBase<TableCell> {
         // about).
         if (e.isShiftDown()) {
             if (! map.containsKey(tableView)) {
-                map.put(tableView, fm.getFocusedCell());
+                setAnchor(tableView, fm.getFocusedCell());
             }
         } else {
             map.remove(tableView);
