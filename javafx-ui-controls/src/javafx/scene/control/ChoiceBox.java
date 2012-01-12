@@ -34,9 +34,12 @@ import javafx.beans.value.ObservableValue;
 import javafx.collections.FXCollections;
 import javafx.collections.ListChangeListener;
 import javafx.collections.ObservableList;
-import com.sun.javafx.css.StyleManager;
 import javafx.beans.property.ReadOnlyBooleanProperty;
 import javafx.beans.property.ReadOnlyBooleanWrapper;
+import javafx.event.ActionEvent;
+import javafx.util.StringConverter;
+
+import com.sun.javafx.css.StyleManager;
 
 /**
  * The ChoiceBox is used for presenting the user with a relatively small set of
@@ -94,6 +97,19 @@ public class ChoiceBox<T> extends Control {
         getStyleClass().setAll("choice-box");
         setItems(items);
         setSelectionModel(new ChoiceBoxSelectionModel<T>(this));
+        
+        // listen to the value property, if the value is
+        // set to something that exists in the items list, update the
+        // selection model to indicate that this is the selected item
+        valueProperty().addListener(new ChangeListener<T>() {
+            @Override public void changed(ObservableValue<? extends T> ov, T t, T t1) {
+                if (getItems() == null) return;
+                int index = getItems().indexOf(t1);
+                if (index > -1) {
+                    getSelectionModel().select(index);
+                }
+            }
+        });
     }
 
     /***************************************************************************
@@ -109,7 +125,30 @@ public class ChoiceBox<T> extends Control {
      * in the items list should be selected, or to listen to changes in the
      * selection to know which item has been chosen.
      */
-    private ObjectProperty<SingleSelectionModel<T>> selectionModel = new SimpleObjectProperty<SingleSelectionModel<T>>(this, "selectionModel");
+    private ObjectProperty<SingleSelectionModel<T>> selectionModel = 
+            new SimpleObjectProperty<SingleSelectionModel<T>>(this, "selectionModel") {
+         private SelectionModel<T> oldSM = null;
+        @Override protected void invalidated() {
+            if (oldSM != null) {
+                oldSM.selectedItemProperty().removeListener(selectedItemListener);
+            }
+            SelectionModel sm = get();
+            oldSM = sm;
+            if (sm != null) {
+                sm.selectedItemProperty().addListener(selectedItemListener);
+            }
+        }                
+    };
+    
+    private ChangeListener<T> selectedItemListener = new ChangeListener<T>() {
+        @Override public void changed(ObservableValue<? extends T> ov, T t, T t1) {
+            if (! valueProperty().isBound()) {
+                setValue(t1);
+            }
+        }
+    };
+
+    
     public final void setSelectionModel(SingleSelectionModel<T> value) { selectionModel.set(value); }
     public final SingleSelectionModel<T> getSelectionModel() { return selectionModel.get(); }
     public final ObjectProperty<SingleSelectionModel<T>> selectionModelProperty() { return selectionModel; }
@@ -185,7 +224,16 @@ public class ChoiceBox<T> extends Control {
     private final ListChangeListener<T> itemsListener = new ListChangeListener<T>() {
         @Override public void onChanged(Change<? extends T> c) {
             final SingleSelectionModel<T> sm = getSelectionModel();
+            if (sm!= null) {
+                if (getItems() == null || getItems().isEmpty()) {
+                    sm.clearSelection();
+                } else {
+                    int newIndex = getItems().indexOf(sm.getSelectedItem());
+                    sm.setSelectedIndex(newIndex);
+                }
+            }
             if (sm != null) {
+                
                 // Look for the selected item as having been removed. If it has been,
                 // then we need to clear the selection in the selection model.
                 final T selectedItem = sm.getSelectedItem();
@@ -193,11 +241,46 @@ public class ChoiceBox<T> extends Control {
                     if (selectedItem != null && c.getRemoved().contains(selectedItem)) {
                         sm.clearSelection();
                         break;
-                    }
+                        }
                 }
             }
         }
     };
+    
+    /**
+     * Allows a way to specify how to represent objects in the items list. When
+     * a StringConverter is set, the object toString method is not called and 
+     * instead its toString(object T) is called, passing the objects in the items list. 
+     * This is useful when using domain objects in a ChoiceBox as this property 
+     * allows for customization of the representation. Also, any of the pre-built
+     * Converters available in the {@link javafx.util.converter} package can be set. 
+     */
+    public ObjectProperty<StringConverter<T>> converterProperty() { return converter; }
+    private ObjectProperty<StringConverter<T>> converter = 
+            new SimpleObjectProperty<StringConverter<T>>(this, "converter", null);
+    public final void setConverter(StringConverter<T> value) { converterProperty().set(value); }
+    public final StringConverter<T> getConverter() {return converterProperty().get(); }
+    
+    /**
+     * The value of this ChoiceBox is defined as the selected item in the ChoiceBox
+     * selection model. The valueProperty is synchronized with the selectedItem. 
+     * This property allows for bi-directional binding of external properties to the 
+     * ChoiceBox and updates the selection model accordingly. 
+     */
+    public ObjectProperty<T> valueProperty() { return value; }
+    private ObjectProperty<T> value = new SimpleObjectProperty<T>(this, "value") {
+        @Override protected void invalidated() {
+            super.invalidated();
+            fireEvent(new ActionEvent());
+            // Update selection
+            final SingleSelectionModel<T> sm = getSelectionModel();
+            if (sm != null) {
+                sm.select(getValue());
+            }
+        }
+    };
+    public final void setValue(T value) { valueProperty().set(value); }
+    public final T getValue() { return valueProperty().get(); }
 
     /***************************************************************************
      *                                                                         *
@@ -318,7 +401,7 @@ public class ChoiceBox<T> extends Control {
          */
         @Override public void select(int index) {
             final int rowCount = getItemCount();
-            if (rowCount == 0 || index < 0 || index >= rowCount) return;
+            // this does not sound right, we should let the superclass handle it.
             final T value = getModelItem(index);
             if (value instanceof Separator) {
                 select(++index);
