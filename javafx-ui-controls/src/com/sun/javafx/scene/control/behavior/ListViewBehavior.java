@@ -255,9 +255,11 @@ public class ListViewBehavior<T> extends BehaviorBase<ListView<T>> {
                     }
                 }
                 
-                if (! hasAnchor() && c.getAddedSize() > 0) {
-                    for (int i = 0; i < c.getAddedSize(); i++) {
-                        int index = ((List<Integer>)c.getAddedSubList()).get(i);
+                int addedSize = c.getAddedSize();
+                if (! hasAnchor() && addedSize > 0) {
+                    List<Integer> addedSubList = (List<Integer>) c.getAddedSubList();
+                    for (int i = 0; i < addedSize; i++) {
+                        int index = addedSubList.get(i);
                         if (index >= 0) {
                             setAnchor(index);
                             break;

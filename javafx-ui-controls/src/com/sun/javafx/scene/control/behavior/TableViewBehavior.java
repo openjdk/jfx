@@ -232,9 +232,11 @@ public class TableViewBehavior<T> extends BehaviorBase<TableView<T>> {
                     }
                 } 
                 
-                if (! hasAnchor() && c.getAddedSize() > 0) {
-                    for (int i = 0; i < c.getAddedSize(); i++) {
-                        TablePosition tp = ((List<TablePosition>)c.getAddedSubList()).get(i);
+                int addedSize = c.getAddedSize();
+                if (! hasAnchor() && addedSize > 0) {
+                    List<TablePosition> addedSubList = (List<TablePosition>) c.getAddedSubList();
+                    for (int i = 0; i < addedSize; i++) {
+                        TablePosition tp = addedSubList.get(i);
                         if (tp.getRow() >= 0) {
                             setAnchor(tp);
                             break;
