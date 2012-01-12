@@ -233,8 +233,9 @@ public class TableViewBehavior<T> extends BehaviorBase<TableView<T>> {
                 } 
                 
                 int addedSize = c.getAddedSize();
+                List<TablePosition> addedSubList = (List<TablePosition>) c.getAddedSubList();
+                
                 if (! hasAnchor() && addedSize > 0) {
-                    List<TablePosition> addedSubList = (List<TablePosition>) c.getAddedSubList();
                     for (int i = 0; i < addedSize; i++) {
                         TablePosition tp = addedSubList.get(i);
                         if (tp.getRow() >= 0) {
@@ -247,9 +248,8 @@ public class TableViewBehavior<T> extends BehaviorBase<TableView<T>> {
                 if (!hasAnchor() && cellSelectionEnabled && ! selectionPathDeviated) {
                     // check if the selection is on the same row or column, 
                     // otherwise set selectionPathDeviated to true
-                    
-                    for (int i = 0; i < c.getAddedSize(); i++) {
-                        TablePosition tp = (TablePosition) c.getAddedSubList().get(i);
+                    for (int i = 0; i < addedSize; i++) {
+                        TablePosition tp = addedSubList.get(i);
                         if (anchor.getRow() != -1 && tp.getRow() != anchor.getRow() && tp.getColumn() != anchor.getColumn()) {
                             selectionPathDeviated = true;
                             break;

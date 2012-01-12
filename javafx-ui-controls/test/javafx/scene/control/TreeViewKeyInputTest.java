@@ -29,16 +29,19 @@ public class TreeViewKeyInputTest {
     private Group group;
     
     private final TreeItem<String> root = new TreeItem<String>("Root");
-    private final TreeItem<String> child1 = new TreeItem<String>("Child 1");
-    private final TreeItem<String> child2 = new TreeItem<String>("Child 2");
-    private final TreeItem<String> child3 = new TreeItem<String>("Child 3");
-    private final TreeItem<String> child4 = new TreeItem<String>("Child 4");
-    private final TreeItem<String> child5 = new TreeItem<String>("Child 5");
-    private final TreeItem<String> child6 = new TreeItem<String>("Child 6");
-    private final TreeItem<String> child7 = new TreeItem<String>("Child 7");
-    private final TreeItem<String> child8 = new TreeItem<String>("Child 8");
-    private final TreeItem<String> child9 = new TreeItem<String>("Child 9");
-    private final TreeItem<String> child10 = new TreeItem<String>("Child 10");
+        private final TreeItem<String> child1 = new TreeItem<String>("Child 1");
+        private final TreeItem<String> child2 = new TreeItem<String>("Child 2");
+        private final TreeItem<String> child3 = new TreeItem<String>("Child 3");
+            private final TreeItem<String> subchild1 = new TreeItem<String>("Subchild 1");
+            private final TreeItem<String> subchild2 = new TreeItem<String>("Subchild 2");
+            private final TreeItem<String> subchild3 = new TreeItem<String>("Subchild 3");
+        private final TreeItem<String> child4 = new TreeItem<String>("Child 4");
+        private final TreeItem<String> child5 = new TreeItem<String>("Child 5");
+        private final TreeItem<String> child6 = new TreeItem<String>("Child 6");
+        private final TreeItem<String> child7 = new TreeItem<String>("Child 7");
+        private final TreeItem<String> child8 = new TreeItem<String>("Child 8");
+        private final TreeItem<String> child9 = new TreeItem<String>("Child 9");
+        private final TreeItem<String> child10 = new TreeItem<String>("Child 10");
 
     @Before public void setup() {
         treeView = new TreeView<String>();
@@ -58,9 +61,13 @@ public class TreeViewKeyInputTest {
         group.getChildren().setAll(treeView);
         stage.show();
 
+        child3.setExpanded(true);
+        child3.getChildren().setAll(subchild1, subchild2, subchild3);
+
+        root.setExpanded(true);
         root.getChildren().setAll(child1, child2, child3, child4, child5, child6, 
                                     child7, child8, child9, child10 );
-        root.setExpanded(true);
+        
         treeView.setRoot(root);
         sm.clearAndSelect(0);
     }
@@ -113,7 +120,7 @@ public class TreeViewKeyInputTest {
     }
     
     private int getItemCount() {
-        return root.getChildren().size();
+        return root.getChildren().size() + child3.getChildren().size();
     }
     
     
@@ -761,6 +768,56 @@ public class TreeViewKeyInputTest {
 //        
 //        
 //    }
+    
+    
+    /***************************************************************************
+     * Tests for TreeView-specific functionality
+     **************************************************************************/ 
+    
+    // Test 1 (TreeView test cases)
+    @Test public void testRightArrowExpandsBranch() {
+        sm.clearAndSelect(0);
+        root.setExpanded(false);
+        assertFalse(root.isExpanded());
+        keyboard.doRightArrowPress();
+        assertTrue(root.isExpanded());
+    }
+    
+    // Test 2 (TreeView test cases)
+    @Test public void testRightArrowOnExpandedBranch() {
+        sm.clearAndSelect(0);
+        keyboard.doRightArrowPress();
+        assertTrue(isNotSelected(0));
+        assertTrue(isSelected(1));
+    }
+    
+    // Test 3 (TreeView test cases)
+    @Test public void testRightArrowOnLeafNode() {
+        sm.clearAndSelect(1);
+        keyboard.doRightArrowPress();
+        assertTrue(isNotSelected(0));
+        assertTrue(isSelected(1));
+        assertTrue(isNotSelected(2));
+    }
+    
+    // Test 4 (TreeView test cases)
+    @Test public void testLeftArrowCollapsesBranch() {
+        sm.clearAndSelect(0);
+        assertTrue(root.isExpanded());
+        keyboard.doLeftArrowPress();
+        assertFalse(root.isExpanded());
+    }
+    
+    // Test 5 (TreeView test cases)
+    @Test public void testLeftArrowOnLeafMovesSelectionToParent() {
+        sm.clearAndSelect(2);
+        assertTrue(root.isExpanded());
+        keyboard.doLeftArrowPress();
+        assertTrue(root.isExpanded());
+        assertTrue(isSelected(0));
+        assertTrue(isNotSelected(2));
+    }
+    
     
     /***************************************************************************
      * Tests for specific bug reports
