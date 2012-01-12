@@ -42,6 +42,7 @@ public class StubText extends StubShape implements PGText {
     private int textBoundsType;
     private int textOrigin;
     private int textAlignment;
+    private int fontSmoothingType;
 
     public RectBounds computeLayoutBounds(RectBounds bounds) {
         // We assume that the font point size == pixel height,
@@ -89,6 +90,11 @@ public class StubText extends StubShape implements PGText {
     public void setTextAlignment(int alignment) { textAlignment = alignment; }
     public int getTextAlignment() { return textAlignment; }
     
+    public int getFontSmoothingType() { return fontSmoothingType; }
+    public void setFontSmoothingType(int fontSmoothing) { 
+        fontSmoothingType = fontSmoothing;
+    }
+
     public void setInputMethodText(int start, Object text) { }
 
     // somewhat questionable -- do these remain in PGText??
