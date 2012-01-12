@@ -37,7 +37,6 @@ import javafx.collections.ObservableList;
 
 import com.sun.javafx.collections.ListInvalidationListenerWrapper;
 import com.sun.javafx.collections.ListenerList;
-import java.util.ArrayList;
 import java.util.Collections;
 
 /**
@@ -97,7 +96,6 @@ public abstract class ReadOnlyUnbackedObservableList<T> implements ObservableLis
         }
     }
 
-
     @Override public int indexOf(Object o) {
         if (o == null) return -1;
 
@@ -154,13 +152,18 @@ public abstract class ReadOnlyUnbackedObservableList<T> implements ObservableLis
      * NOTE: This method does not fulfill the subList contract from Collections,
      * it simply returns a list containing the values in the given range.
      */
-    @Override public List<T> subList(int fromIndex, int toIndex) {
+    @Override public List<T> subList(final int fromIndex, final int toIndex) {
         if (fromIndex >= toIndex) return Collections.emptyList();
-        List<T> sublist = new ArrayList<T>();
-        for (int i = fromIndex; i < toIndex; i++) {
-            sublist.add(get(i));
-        }
-        return sublist;
+        final List<T> outer = this;
+        return new ReadOnlyUnbackedObservableList<T>() {
+            @Override public T get(int i) {
+                return outer.get(i + fromIndex);
+            }
+
+            @Override public int size() {
+                return toIndex - fromIndex;
+            }
+        };
     }
 
     @Override
