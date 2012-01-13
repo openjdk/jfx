@@ -15,6 +15,7 @@ import javafx.stage.Stage;
 import org.junit.After;
 
 import org.junit.Before;
+import org.junit.Ignore;
 import org.junit.Test;
 
 public class TreeViewKeyInputTest {
@@ -28,48 +29,66 @@ public class TreeViewKeyInputTest {
     private Scene scene;
     private Group group;
     
-    private final TreeItem<String> root = new TreeItem<String>("Root");
-        private final TreeItem<String> child1 = new TreeItem<String>("Child 1");
-        private final TreeItem<String> child2 = new TreeItem<String>("Child 2");
-        private final TreeItem<String> child3 = new TreeItem<String>("Child 3");
-            private final TreeItem<String> subchild1 = new TreeItem<String>("Subchild 1");
-            private final TreeItem<String> subchild2 = new TreeItem<String>("Subchild 2");
-            private final TreeItem<String> subchild3 = new TreeItem<String>("Subchild 3");
-        private final TreeItem<String> child4 = new TreeItem<String>("Child 4");
-        private final TreeItem<String> child5 = new TreeItem<String>("Child 5");
-        private final TreeItem<String> child6 = new TreeItem<String>("Child 6");
-        private final TreeItem<String> child7 = new TreeItem<String>("Child 7");
-        private final TreeItem<String> child8 = new TreeItem<String>("Child 8");
-        private final TreeItem<String> child9 = new TreeItem<String>("Child 9");
-        private final TreeItem<String> child10 = new TreeItem<String>("Child 10");
+    private final TreeItem<String> root = new TreeItem<String>("Root");                     // 0
+        private final TreeItem<String> child1 = new TreeItem<String>("Child 1");            // 1
+        private final TreeItem<String> child2 = new TreeItem<String>("Child 2");            // 2
+        private final TreeItem<String> child3 = new TreeItem<String>("Child 3");            // 3
+            private final TreeItem<String> subchild1 = new TreeItem<String>("Subchild 1");  // 4
+            private final TreeItem<String> subchild2 = new TreeItem<String>("Subchild 2");  // 5
+            private final TreeItem<String> subchild3 = new TreeItem<String>("Subchild 3");  // 6
+        private final TreeItem<String> child4 = new TreeItem<String>("Child 4");            // 7
+        private final TreeItem<String> child5 = new TreeItem<String>("Child 5");            // 8
+        private final TreeItem<String> child6 = new TreeItem<String>("Child 6");            // 9
+        private final TreeItem<String> child7 = new TreeItem<String>("Child 7");            // 10
+        private final TreeItem<String> child8 = new TreeItem<String>("Child 8");            // 11
+        private final TreeItem<String> child9 = new TreeItem<String>("Child 9");            // 12
+        private final TreeItem<String> child10 = new TreeItem<String>("Child 10");          // 13
 
     @Before public void setup() {
-        treeView = new TreeView<String>();
-        sm = treeView.getSelectionModel();
-        fm = treeView.getFocusModel();
-        
-        sm.setSelectionMode(SelectionMode.MULTIPLE);
-        
-        keyboard = new KeyEventFirer(treeView);
-        
-        group = new Group();
-        scene = new Scene(group);
-        
-        stage = new Stage();
-        stage.setScene(scene);
-        
-        group.getChildren().setAll(treeView);
-        stage.show();
-
+        // reset tree structure
+        root.getChildren().clear();
+        root.setExpanded(true);
+        root.getChildren().setAll(child1, child2, child3, child4, child5, child6, child7, child8, child9, child10 );
+        child1.getChildren().clear();
+        child1.setExpanded(false);
+        child2.getChildren().clear();
+        child2.setExpanded(false);
+        child3.getChildren().clear();
         child3.setExpanded(true);
         child3.getChildren().setAll(subchild1, subchild2, subchild3);
-
-        root.setExpanded(true);
-        root.getChildren().setAll(child1, child2, child3, child4, child5, child6, 
-                                    child7, child8, child9, child10 );
+        child4.getChildren().clear();
+        child4.setExpanded(false);
+        child5.getChildren().clear();
+        child5.setExpanded(false);
+        child6.getChildren().clear();
+        child6.setExpanded(false);
+        child7.getChildren().clear();
+        child7.setExpanded(false);
+        child8.getChildren().clear();
+        child8.setExpanded(false);
+        child9.getChildren().clear();
+        child9.setExpanded(false);
+        child10.getChildren().clear();
+        child10.setExpanded(false);
         
+        // recreate treeview and gather models
+        treeView = new TreeView<String>();
         treeView.setRoot(root);
+        sm = treeView.getSelectionModel();
+        sm.setSelectionMode(SelectionMode.MULTIPLE);
         sm.clearAndSelect(0);
+        fm = treeView.getFocusModel();
+
+        // set up keyboard event firer
+        keyboard = new KeyEventFirer(treeView);
+        
+        // create a simple UI that will be shown (to send the keyboard events to)
+        group = new Group();
+        group.getChildren().setAll(treeView);
+        scene = new Scene(group);
+        stage = new Stage();
+        stage.setScene(scene);
+        stage.show();
     }
     
     @After public void tearDown() {
@@ -816,6 +835,143 @@ public class TreeViewKeyInputTest {
         assertTrue(root.isExpanded());
         assertTrue(isSelected(0));
         assertTrue(isNotSelected(2));
+    }
+    
+    // Test 6 (TreeView test cases)
+    @Test public void testLeftArrowMultipleTimes() {
+        sm.clearAndSelect(5);
+        keyboard.doLeftArrowPress();
+        assertTrue(child3.isExpanded());
+        assertTrue(isSelected(3));
+        assertTrue(isNotSelected(5));
+        
+        keyboard.doLeftArrowPress();
+        assertFalse(child3.isExpanded());
+        assertTrue(isSelected(3));
+        
+        keyboard.doLeftArrowPress();
+        assertTrue(isSelected(0));
+        assertTrue(root.isExpanded());
+        
+        keyboard.doLeftArrowPress();
+        assertTrue(isSelected(0));
+        assertFalse(root.isExpanded());
+    }
+    
+    // Test 7 (TreeView test cases)
+    @Test public void testDownArrowTwice() {
+        sm.clearAndSelect(0);
+        keyboard.doDownArrowPress();
+        keyboard.doDownArrowPress();
+        assertTrue(isSelected(2));
+        assertTrue(isNotSelected(0));
+    }
+    
+    // Test 8 (TreeView test cases)
+    @Test public void testDownArrowFourTimes() {
+        // adding children to child2, but not expanding it
+        child2.getChildren().addAll(new TreeItem("another child"), new TreeItem("And another!"));
+        child2.setExpanded(false);
+        
+        child3.setExpanded(true);
+        sm.clearAndSelect(0);
+        keyboard.doDownArrowPress();
+        keyboard.doDownArrowPress();
+        keyboard.doDownArrowPress();
+        keyboard.doDownArrowPress();
+        assertTrue(isSelected(4));
+        assertTrue(isNotSelected(0));
+    }
+    
+    // Test 9 (TreeView test cases)
+    @Test public void testUpArrow() {
+        sm.clearAndSelect(1);
+        keyboard.doUpArrowPress();
+        assertTrue(isSelected(0));
+        assertTrue(isNotSelected(1));
+    }
+    
+    // Test 9 (TreeView test cases)
+    @Test public void testUpArrowFourTimes() {
+        // adding children to child2, but not expanding it
+        child2.getChildren().addAll(new TreeItem("another child"), new TreeItem("And another!"));
+        child2.setExpanded(false);
+        
+        sm.clearAndSelect(5);
+        keyboard.doUpArrowPress();
+        keyboard.doUpArrowPress();
+        keyboard.doUpArrowPress();
+        keyboard.doUpArrowPress();
+        
+        assertTrue(isSelected(1));
+        assertTrue(isNotSelected(5));
+    }
+    
+    // Test 20 (TreeView test cases)
+    @Test public void testCtrlForwardSlashToSelectAll() {
+        sm.clearAndSelect(1);
+        keyboard.doKeyPress(KeyCode.SLASH, KeyModifier.getShortcutKey());
+        assertTrue(isSelected(0,1,2,3,4,5,6,7,8,9));
+    }
+    
+    // Test 21 (TreeView test cases)
+    @Ignore("Not yet working")
+    @Test public void testCtrlBackSlashToClearSelection() {
+        sm.selectAll();
+        fm.focus(1);
+        keyboard.doKeyPress(KeyCode.BACK_SLASH, KeyModifier.getShortcutKey());
+        assertTrue(isNotSelected(0,1,2,3,4,5,6,7,8,9));
+        assertTrue(fm.isFocused(1));
+    }
+    
+    // Test 24 (TreeView test cases)
+    @Ignore("Not yet working")
+    @Test public void testExpandCollapseImpactOnSelection() {
+        sm.clearAndSelect(5);
+        assertTrue(child3.isExpanded());
+        keyboard.doUpArrowPress(KeyModifier.SHIFT);
+        keyboard.doUpArrowPress(KeyModifier.SHIFT);
+        assertTrue(isSelected(3,4,5));
+        
+        keyboard.doLeftArrowPress();
+        assertFalse(child3.isExpanded());
+        assertTrue(isSelected(3));
+        
+        keyboard.doRightArrowPress();
+        assertTrue(child3.isExpanded());
+        assertTrue(isSelected(3,4,5));
+    }
+    
+    // Test 54 (TreeView test cases)
+    @Test public void testAsteriskExpandsAllBranchesFromRoot() {
+        // adding children to child2, but not expanding it
+        child2.getChildren().addAll(new TreeItem("another child"), new TreeItem("And another!"));
+        child2.setExpanded(false);
+        
+        sm.clearAndSelect(0);
+        assertFalse(child2.isExpanded());
+        assertTrue(child3.isExpanded());
+        keyboard.doKeyPress(KeyCode.MULTIPLY);
+        
+        assertTrue(child2.isExpanded());
+        assertTrue(child3.isExpanded());
+    }
+    
+    // Test 57 (TreeView test cases)
+    @Test public void testMinusCollapsesBranch() {
+        sm.clearAndSelect(3);
+        assertTrue(child3.isExpanded());
+        keyboard.doKeyPress(KeyCode.SUBTRACT);
+        assertFalse(child3.isExpanded());
+    }
+    
+    // Test 58 (TreeView test cases)
+    @Test public void testPlusCollapsesBranch() {
+        sm.clearAndSelect(3);
+        child3.setExpanded(false);
+        assertFalse(child3.isExpanded());
+        keyboard.doKeyPress(KeyCode.ADD);
+        assertTrue(child3.isExpanded());
     }
     
     
