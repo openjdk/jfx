@@ -761,11 +761,11 @@ public class StubToolkit extends Toolkit {
         return new Object [] { o, o1, toExternalImagePassword };
     }
 
-    @Override public void enterNestedEventLoop() {
+    @Override public Object enterNestedEventLoop(Object key) {
         throw new UnsupportedOperationException("Not supported yet.");
     }
 
-    @Override public void exitNestedEventLoop() {
+    @Override public void exitNestedEventLoop(Object key, Object rval) {
         throw new UnsupportedOperationException("Not supported yet.");
     }
 
