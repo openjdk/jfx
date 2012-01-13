@@ -25,9 +25,19 @@
 
 package javafx.scene.control;
 
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
+
 import javafx.beans.DefaultProperty;
+import javafx.beans.property.BooleanProperty;
+import javafx.beans.property.SimpleBooleanProperty;
+import javafx.beans.value.WritableValue;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
+
+import com.sun.javafx.css.*;
+import com.sun.javafx.css.converters.*;
 
 /**
  * <p>
@@ -79,6 +89,45 @@ public class MenuBar extends Control {
     private ObservableList<Menu> menus = FXCollections.<Menu>observableArrayList();
 
 
+    /***************************************************************************
+     *                                                                         *
+     * Properties                                                              *
+     *                                                                         *
+     **************************************************************************/
+
+    /**
+     * Use the system menu bar if the current platform supports it.
+     */
+    public final BooleanProperty useSystemMenuBarProperty() {
+        if (useSystemMenuBar == null) {
+            useSystemMenuBar = new StyleableBooleanProperty() {
+
+                @Override
+                public StyleableProperty getStyleableProperty() {
+                    return StyleableProperties.USE_SYSTEM_MENU_BAR;
+                }
+
+                @Override
+                public Object getBean() {
+                    return MenuBar.this;
+                }
+
+                @Override
+                public String getName() {
+                    return "useSystemMenuBar";
+                }
+            };
+        }
+        return useSystemMenuBar;
+    }
+    private BooleanProperty useSystemMenuBar;
+    public final void setUseSystemMenuBar(boolean value) {
+        useSystemMenuBarProperty().setValue(value);
+    }
+    public final boolean isUseSystemMenuBar() {
+        return useSystemMenuBar == null ? false : useSystemMenuBar.getValue();
+    }
+
 
     /***************************************************************************
      *                                                                         *
@@ -104,5 +153,39 @@ public class MenuBar extends Control {
      **************************************************************************/
 
     private static final String DEFAULT_STYLE_CLASS = "menu-bar";
+
+    private static class StyleableProperties {
+        private static final StyleableProperty<MenuBar, Boolean> USE_SYSTEM_MENU_BAR =
+                new StyleableProperty<MenuBar, Boolean>("-fx-use-system-menu-bar",
+                                                        BooleanConverter.getInstance(),
+                                                        false) {
+            @Override public boolean isSettable(MenuBar n) {
+                return n.useSystemMenuBar == null || !n.useSystemMenuBar.isBound();
+            }
+
+            @Override public WritableValue<Boolean> getWritableValue(MenuBar n) {
+                return n.useSystemMenuBarProperty();
+            }
+        };
+
+        private static final List<StyleableProperty> STYLEABLES;
+        static {
+            final List<StyleableProperty> styleables =
+                new ArrayList<StyleableProperty>(Control.impl_CSS_STYLEABLES());
+            Collections.addAll(styleables,
+                USE_SYSTEM_MENU_BAR
+            );
+            STYLEABLES = Collections.unmodifiableList(styleables);
+        }
+    }
+
+    /**
+     * @treatasprivate implementation detail
+     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
+     */
+    @Deprecated
+    public static List<StyleableProperty> impl_CSS_STYLEABLES() {
+        return MenuBar.StyleableProperties.STYLEABLES;
+    }
 }
 

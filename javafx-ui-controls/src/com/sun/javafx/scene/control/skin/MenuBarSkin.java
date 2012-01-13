@@ -25,29 +25,48 @@
 
 package com.sun.javafx.scene.control.skin;
 
+import java.lang.reflect.Field;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.WeakHashMap;
+
 import static com.sun.javafx.scene.traversal.Direction.DOWN;
+import javafx.beans.InvalidationListener;
+import javafx.beans.Observable;
+import javafx.beans.property.ReadOnlyProperty;
 import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
 import javafx.collections.ListChangeListener;
 import javafx.collections.ListChangeListener.Change;
 import javafx.collections.MapChangeListener;
+import javafx.collections.ObservableList;
 import javafx.event.EventHandler;
 import javafx.geometry.Bounds;
+import javafx.geometry.Insets;
 import javafx.scene.Node;
+import javafx.scene.Scene;
+import javafx.scene.control.CustomMenuItem;
 import javafx.scene.control.Menu;
 import javafx.scene.control.MenuBar;
 import javafx.scene.control.MenuButton;
+import javafx.scene.control.MenuItem;
+import javafx.scene.control.SeparatorMenuItem;
 import javafx.scene.input.KeyCode;
 import javafx.scene.input.KeyCodeCombination;
+import javafx.scene.input.KeyEvent;
 import javafx.scene.input.MouseEvent;
 import javafx.scene.layout.HBox;
+import javafx.stage.Stage;
+import javafx.stage.Window;
 
+import com.sun.javafx.menu.MenuBase;
+import com.sun.javafx.scene.control.GlobalMenuAdapter;
 import com.sun.javafx.scene.control.behavior.BehaviorBase;
 import com.sun.javafx.scene.traversal.Direction;
 import com.sun.javafx.scene.traversal.TraversalEngine;
 import com.sun.javafx.scene.traversal.TraverseListener;
-import javafx.scene.control.MenuItem;
-import javafx.scene.input.KeyEvent;
+import com.sun.javafx.stage.StageHelper;
+import com.sun.javafx.tk.Toolkit;
 
 
 /**
@@ -64,6 +83,52 @@ public class MenuBarSkin extends SkinBase<MenuBar, BehaviorBase<MenuBar>> implem
     private int focusedMenuIndex = 0;
     private TraversalEngine engine;
     private Direction direction;
+
+
+    private static WeakHashMap<Stage, MenuBarSkin> systemMenuMap;
+    private static List<MenuBase> emptyMenuList = new ArrayList<MenuBase>();
+    private List<MenuBase> wrappedMenus;
+
+    private static void setSystemMenu(Stage stage) {
+        if (stage.isFocused()) {
+            List<MenuBase> menuList = null;
+            MenuBarSkin skin = systemMenuMap.get(stage);
+            if (skin != null) {
+                menuList = skin.wrappedMenus;
+            }
+            Toolkit.getToolkit().getSystemMenu().setMenus((menuList != null) ? menuList : emptyMenuList);
+        }
+    }
+
+    private static void initSystemMenuBar() {
+        systemMenuMap = new WeakHashMap<Stage, MenuBarSkin>();
+
+        final InvalidationListener focusedStageListener = new InvalidationListener() {
+            @Override public void invalidated(Observable ov) {
+                setSystemMenu((Stage)((ReadOnlyProperty)ov).getBean());
+            }
+        };
+
+        final ObservableList<Stage> stages = StageHelper.getStages();
+        for (Stage stage : stages) {
+            stage.focusedProperty().addListener(focusedStageListener);
+        }
+        stages.addListener(new ListChangeListener<Stage>() {
+            @Override public void onChanged(Change<? extends Stage> c) {
+                while (c.next()) {
+                    for (Stage stage : c.getRemoved()) {
+                        stage.focusedProperty().removeListener(focusedStageListener);
+                    }
+                    for (Stage stage : c.getAddedSubList()) {
+                        stage.focusedProperty().addListener(focusedStageListener);
+                        setSystemMenu(stage);
+                    }
+                }
+            }
+        });
+    }
+
+
 
     /***************************************************************************
      *                                                                         *
@@ -142,7 +207,15 @@ public class MenuBarSkin extends SkinBase<MenuBar, BehaviorBase<MenuBar>> implem
                 rebuildUI();
             }
         });
-        
+
+        if (Toolkit.getToolkit().getSystemMenu().isSupported()) {
+            control.useSystemMenuBarProperty().addListener(new InvalidationListener() {
+                @Override public void invalidated(Observable valueModel) {
+                    rebuildUI();
+                }
+            });
+        }
+
         // When the mouse leaves the menu, the last hovered item should lose
         // it's focus so that it is no longer selected. This code returns focus
         // to the MenuBar itself, such that keyboard navigation can continue.
@@ -192,6 +265,28 @@ public class MenuBarSkin extends SkinBase<MenuBar, BehaviorBase<MenuBar>> implem
 
     private boolean pendingDismiss = false;
 
+    private boolean menusContainCustomMenuItem() {
+        for (Menu menu : getSkinnable().getMenus()) {
+            if (menuContainsCustomMenuItem(menu)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private boolean menuContainsCustomMenuItem(Menu menu) {
+        for (MenuItem mi : menu.getItems()) {
+            if (mi instanceof CustomMenuItem && !(mi instanceof SeparatorMenuItem)) {
+                return true;
+            } else if (mi instanceof Menu) {
+                if (menuContainsCustomMenuItem((Menu)mi)) {
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+
     private void rebuildUI() {
         for(Node n : container.getChildren()) {
             //Stop observing menu's showing & disable property for changes.
@@ -204,6 +299,43 @@ public class MenuBarSkin extends SkinBase<MenuBar, BehaviorBase<MenuBar>> implem
             menuButton.styleProperty().unbind();
         }
         container.getChildren().clear();
+
+
+        if (Toolkit.getToolkit().getSystemMenu().isSupported() && getSkinnable().isUseSystemMenuBar()) {
+            if (menusContainCustomMenuItem()) {
+                System.err.println("Warning: MenuBar ignored property useSystemMenuBar because menus contain CustomMenuItem");
+            } else {
+                Scene scene = getSkinnable().getScene();
+                if (scene != null) {
+                    Window window = scene.getWindow();
+                    if (window instanceof Stage) {
+                        // Set the system menu bar if not set by another
+                        // MenuBarSkin instance on this stage.
+                        Stage stage = (Stage)window;
+                        if (systemMenuMap == null ||
+                            systemMenuMap.get(stage) == null ||
+                            systemMenuMap.get(stage) == this) {
+
+                            if (systemMenuMap == null) {
+                                initSystemMenuBar();
+                            }
+                            if (wrappedMenus == null) {
+                                wrappedMenus = new ArrayList<MenuBase>();
+                                systemMenuMap.put(stage, this);
+                            }
+                            wrappedMenus.clear();
+                            for (Menu menu : getSkinnable().getMenus()) {
+                                wrappedMenus.add(GlobalMenuAdapter.adapt(menu));
+                            }
+                            setSystemMenu(stage);
+
+                            return;
+                        }
+                    }
+                }
+            }
+        }
+
 
         for (final Menu menu : getSkinnable().getMenus()) {
             final MenuBarButton menuButton = new MenuBarButton(menu.getText(), menu.getGraphic());
@@ -487,6 +619,16 @@ public class MenuBarSkin extends SkinBase<MenuBar, BehaviorBase<MenuBar>> implem
      * Layout                                                                  *
      *                                                                         *
      **************************************************************************/
+
+    // Return empty insets when "container" is empty, which happens
+    // when using the system menu bar.
+    @Override public Insets getInsets() {
+        if (container.getChildren().size() == 0) {
+            return new Insets(0, 0, 0, 0);
+        } else {
+            return super.getInsets();
+        }
+    }
 
     /**
      * Layout the menu bar. This is a simple horizontal layout like an hbox.
