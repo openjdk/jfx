@@ -47,8 +47,10 @@
         javafx-ui-common: 
 	ant -Djavafx-ui-common.javac.debuglevel=source,lines,vars
     -->	
+    <!--
     <propertycopy name="javac.debuglevel" from="${ant.project.name}.javac.debuglevel" silent="true" override="true"/>
-
+    -->
+    
     <!--
 
         Default targets for all subprojects are defined below.  These can
