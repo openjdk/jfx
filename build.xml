@@ -94,6 +94,7 @@
     
     <target name="jar" depends="dist">
         <echo>Creating merged openjfxrt.jar file</echo>
+        <mkdir dir="dist" />
         <jar destfile="dist/openjfxrt.jar">
             <zipgroupfileset dir="." includes="**/dist/*.jar" /> 
         </jar>
