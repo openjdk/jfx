@@ -527,10 +527,6 @@ public class MenuTest {
         assertFalse(hidingOccured2);
     }
 
-    @Test public void addedEventHandlerWithTwoNullArgs() {
-        menu.addEventHandler(null, null); // should throw no exceptions, if it does, the test fails
-    }
-
     @Test public void addedEventHandler1() {
         EventType<Event> et1 = new EventType<Event>(Event.ANY, "ON_EVENT");
         EventHandlerStub handler = new EventHandlerStub();
@@ -547,10 +543,6 @@ public class MenuTest {
         Event.fireEvent(menu, new Event(et1));
 
         assertTrue(handler.called);
-    }
-
-    @Test public void removedEventHandlerWithTwoNullArgs() {
-        menu.addEventHandler(null, null); // should throw no exceptions, if it does, the test fails
     }
 
     @Test public void addedRemovedEventHandler1() {

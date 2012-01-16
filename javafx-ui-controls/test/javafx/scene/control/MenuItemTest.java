@@ -465,10 +465,6 @@ public class MenuItemTest {
         assertTrue(menuItem.getStyleClass().size() == 0);
     }
 
-    @Test public void addedEventHandlerWithTwoNullArgs() {
-        menuItem.addEventHandler(null, null); // should throw no exceptions, if it does, the test fails
-    }
-
     @Test public void addedEventHandler1() {
         EventType<Event> et1 = new EventType<Event>(Event.ANY, "ON_EVENT");
         NewEventHandlerStub handler = new NewEventHandlerStub();
@@ -485,10 +481,6 @@ public class MenuItemTest {
         Event.fireEvent(menuItem, new Event(et1));
 
         assertTrue(handler.called);
-    }
-
-    @Test public void removedEventHandlerWithTwoNullArgs() {
-        menuItem.addEventHandler(null, null); // should throw no exceptions, if it does, the test fails
     }
 
     @Test public void addedRemovedEventHandler1() {

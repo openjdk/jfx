@@ -395,6 +395,7 @@ public class MenuItem implements EventTarget {
      * @param <E> the specific event class of the handler
      * @param eventType the type of the events to receive by the handler
      * @param eventHandler the handler to register
+     * @throws NullPointerException if the event type or handler is null
      */
     public <E extends Event> void addEventHandler(EventType<E> eventType, EventHandler<E> eventHandler) {
         eventHandlerManager.addEventHandler(eventType, eventHandler);
@@ -409,6 +410,7 @@ public class MenuItem implements EventTarget {
      * @param <E> the specific event class of the handler
      * @param eventType the event type from which to unregister
      * @param eventHandler the handler to unregister
+     * @throws NullPointerException if the event type or handler is null
      */
     public <E extends Event> void removeEventHandler(EventType<E> eventType, EventHandler<E> eventHandler) {
         eventHandlerManager.removeEventHandler(eventType, eventHandler);

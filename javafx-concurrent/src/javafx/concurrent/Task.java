@@ -1082,6 +1082,7 @@ public abstract class Task<V> extends FutureTask<V> implements Worker<V>, EventT
      * @param <T> the specific event class of the handler
      * @param eventType the type of the events to receive by the handler
      * @param eventHandler the handler to register
+     * @throws NullPointerException if the event type or handler is null
      */
     public final <T extends Event> void addEventHandler(
             final EventType<T> eventType,
@@ -1098,6 +1099,7 @@ public abstract class Task<V> extends FutureTask<V> implements Worker<V>, EventT
      * @param <T> the specific event class of the handler
      * @param eventType the event type from which to unregister
      * @param eventHandler the handler to unregister
+     * @throws NullPointerException if the event type or handler is null
      */
     public final <T extends Event> void removeEventHandler(
             final EventType<T> eventType,
@@ -1112,6 +1114,7 @@ public abstract class Task<V> extends FutureTask<V> implements Worker<V>, EventT
      * @param <T> the specific event class of the filter
      * @param eventType the type of the events to receive by the filter
      * @param eventFilter the filter to register
+     * @throws NullPointerException if the event type or filter is null
      */
     public final <T extends Event> void addEventFilter(
             final EventType<T> eventType,
@@ -1128,6 +1131,7 @@ public abstract class Task<V> extends FutureTask<V> implements Worker<V>, EventT
      * @param <T> the specific event class of the filter
      * @param eventType the event type from which to unregister
      * @param eventFilter the filter to unregister
+     * @throws NullPointerException if the event type or filter is null
      */
     public final <T extends Event> void removeEventFilter(
             final EventType<T> eventType,
@@ -1144,6 +1148,7 @@ public abstract class Task<V> extends FutureTask<V> implements Worker<V>, EventT
      * @param <T> the specific event class of the handler
      * @param eventType the event type to associate with the given eventHandler
      * @param eventHandler the handler to register, or null to unregister
+     * @throws NullPointerException if the event type is null
      */
     protected final <T extends Event> void setEventHandler(
             final EventType<T> eventType,
