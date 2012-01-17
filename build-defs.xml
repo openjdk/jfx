@@ -13,6 +13,13 @@
         Bring in environment properties (if not already done).
     -->
     <property environment="env"/>
+    
+    <!-- Set JFXRT_HOME -->
+    <condition property="JFXRT_HOME" value="../../artifacts/sdk/rt/lib">
+        <not>  
+            <isset property="env.JFXRT_HOME"/>
+        </not>
+    </condition>
     <property name="JFXRT_HOME" value="${env.JFXRT_HOME}" />
     
     <!--
