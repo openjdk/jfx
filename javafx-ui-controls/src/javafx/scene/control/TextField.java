@@ -25,6 +25,10 @@
 
 package javafx.scene.control;
 
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
+
 import javafx.beans.InvalidationListener;
 import javafx.beans.property.IntegerProperty;
 import javafx.beans.property.IntegerPropertyBase;
@@ -33,10 +37,15 @@ import javafx.beans.property.ObjectPropertyBase;
 import javafx.beans.property.SimpleStringProperty;
 import javafx.beans.property.StringProperty;
 import javafx.beans.value.ChangeListener;
+import javafx.beans.value.WritableValue;
 import javafx.event.ActionEvent;
 import javafx.event.EventHandler;
+import javafx.geometry.Pos;
 
 import com.sun.javafx.binding.ExpressionHelper;
+import com.sun.javafx.css.*;
+import com.sun.javafx.css.converters.*;
+
 
 /**
  * Text input component that allows a user to enter a single line of
@@ -216,4 +225,75 @@ public class TextField extends TextInputControl {
     public final ObjectProperty<EventHandler<ActionEvent>> onActionProperty() { return onAction; }
     public final EventHandler<ActionEvent> getOnAction() { return onActionProperty().get(); }
     public final void setOnAction(EventHandler<ActionEvent> value) { onActionProperty().set(value); }
+
+    /**
+     * Specifies how the text should be aligned when there is empty
+     * space within the TextField.
+     */
+    public final ObjectProperty<Pos> alignmentProperty() {
+        if (alignment == null) {
+            alignment = new StyleableObjectProperty<Pos>(Pos.CENTER_LEFT) {
+
+                @Override public StyleableProperty getStyleableProperty() {
+                    return StyleableProperties.ALIGNMENT;
+                }
+
+                @Override public Object getBean() {
+                    return TextField.this;
+                }
+
+                @Override public String getName() {
+                    return "alignment";
+                }
+            };
+        }
+        return alignment;
+    }
+    private ObjectProperty<Pos> alignment;
+    public final void setAlignment(Pos value) { alignmentProperty().set(value); }
+    public final Pos getAlignment() { return alignment == null ? Pos.CENTER_LEFT : alignment.get(); }
+
+
+    /***************************************************************************
+     *                                                                         *
+     * Stylesheet Handling                                                     *
+     *                                                                         *
+     **************************************************************************/
+
+     /**
+      * @treatasprivate implementation detail
+      */
+    private static class StyleableProperties {
+        private static final StyleableProperty<TextField, Pos> ALIGNMENT =
+            new StyleableProperty<TextField, Pos>("-fx-alignment",
+                new EnumConverter<Pos>(Pos.class), Pos.CENTER_LEFT ) {
+
+            @Override public boolean isSettable(TextField n) {
+                return (n.alignment == null || !n.alignment.isBound());
+            }
+
+            @Override public WritableValue<Pos> getWritableValue(TextField n) {
+                return n.alignmentProperty();
+            }
+        };
+
+        private static final List<StyleableProperty> STYLEABLES;
+        static {
+            final List<StyleableProperty> styleables =
+                new ArrayList<StyleableProperty>(Control.impl_CSS_STYLEABLES());
+            Collections.addAll(styleables,
+                ALIGNMENT
+            );
+            STYLEABLES = Collections.unmodifiableList(styleables);
+        }
+    }
+
+    /**
+     * @treatasprivate implementation detail
+     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
+     */
+    @Deprecated
+    public static List<StyleableProperty> impl_CSS_STYLEABLES() {
+        return TextField.StyleableProperties.STYLEABLES;
+    }
 }

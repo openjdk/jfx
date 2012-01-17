@@ -45,7 +45,7 @@ public class TreeCellBehavior extends CellBehaviorBase<TreeCell<?>> {
         FocusModel fm = tree.getFocusModel();
         if (fm == null) return -1;
         
-        return map.containsKey(tree) ? map.get(tree) : fm.getFocusedIndex();
+        return hasAnchor(tree) ? map.get(tree) : fm.getFocusedIndex();
     }
     
     static void setAnchor(TreeView tree, int anchor) {
@@ -54,6 +54,10 @@ public class TreeCellBehavior extends CellBehaviorBase<TreeCell<?>> {
         } else {
             map.put(tree, anchor);
         }
+    }
+    
+    static boolean hasAnchor(TreeView tree) {
+        return map.containsKey(tree) && map.get(tree) != -1;
     }
     
     // For RT-17456: have selection occur as fast as possible with mouse input.
@@ -133,7 +137,7 @@ public class TreeCellBehavior extends CellBehaviorBase<TreeCell<?>> {
         // about).
         if (event.isShiftDown()) {
             if (! map.containsKey(treeView)) {
-                map.put(treeView, fm.getFocusedIndex());
+                setAnchor(treeView, fm.getFocusedIndex());
             }
         } else {
             map.remove(treeView);

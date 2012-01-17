@@ -450,6 +450,13 @@ public class ComboBoxTest {
         assertEquals(null, comboBox.getValue());
     }
     
+    @Test public void ensureValueEqualsSelectedItemWhenNotInItemsList() {
+        comboBox.getItems().addAll("Apple", "Orange", "Banana");
+        comboBox.getSelectionModel().setSelectedItem("pineapple");
+        assertEquals("pineapple", comboBox.getSelectionModel().getSelectedItem());
+        assertEquals("pineapple", comboBox.getValue());
+    }
+    
     /*********************************************************************
      * Tests for default values                                         *
      ********************************************************************/

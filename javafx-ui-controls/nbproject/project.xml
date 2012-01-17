@@ -139,7 +139,7 @@
         <java-data xmlns="http://www.netbeans.org/ns/freeform-project-java/3">
             <compilation-unit>
                 <package-root>${src.dir}</package-root>
-                <classpath mode="compile">${JFXRT_HOME}/jfxrt.jar</classpath>
+                <classpath mode="compile">${javac.classpath}</classpath>
                 <built-to>dist/javafx-ui-controls.jar</built-to>
                 <source-level>1.6</source-level>
             </compilation-unit>

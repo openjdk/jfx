@@ -358,7 +358,7 @@ public class TableCell<S,T> extends IndexedCell<T> {
         // reset the editing index on the TableView
         if (table != null) {
             TablePosition editingCell = table.getEditingCell();
-            table.edit(-1, null);
+            if (updateEditingIndex) table.edit(-1, null);
 
             CellEditEvent editEvent = new CellEditEvent(
                 table,
@@ -451,14 +451,23 @@ public class TableCell<S,T> extends IndexedCell<T> {
         if (getIndex() == -1 || getTableView() == null) return;
 
         TablePosition editCell = getTableView().getEditingCell();
-        if (! isEditing()) {
-            if (match(editCell)) {
-                startEdit();
-            }
-        } else {
+        boolean match = match(editCell);
+        
+        if (match && ! isEditing()) {
+            startEdit();
+        } else if (! match && isEditing()) {
+            // If my index is not the one being edited then I need to cancel
+            // the edit. The tricky thing here is that as part of this call
+            // I cannot end up calling list.edit(-1) the way that the standard
+            // cancelEdit method would do. Yet, I need to call cancelEdit
+            // so that subclasses which override cancelEdit can execute. So,
+            // I have to use a kind of hacky flag workaround.
+            updateEditingIndex = false;
             cancelEdit();
+            updateEditingIndex = true;
         }
     }
+    private boolean updateEditingIndex = true;
 
     private boolean match(TablePosition pos) {
         return pos != null && pos.getRow() == getIndex() && pos.getTableColumn() == getTableColumn();

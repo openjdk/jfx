@@ -44,14 +44,15 @@ import javafx.scene.layout.StackPane;
 import javafx.scene.shape.Rectangle;
 
 import com.sun.javafx.scene.control.behavior.BehaviorBase;
+import java.util.ArrayList;
+import java.util.Iterator;
+import java.util.List;
 
 public class SplitPaneSkin extends SkinBase<SplitPane, BehaviorBase<SplitPane>>  {
 
     private ObservableList<Content> contentRegions;
     private ObservableList<ContentDivider> contentDividers;
     private boolean horizontal;
-    private boolean updateDividerPos = false;
-    private double previousSize = -1;
 
     public SplitPaneSkin(final SplitPane splitPane) {
         super(splitPane, new BehaviorBase<SplitPane>(splitPane));
@@ -119,17 +120,15 @@ public class SplitPaneSkin extends SkinBase<SplitPane, BehaviorBase<SplitPane>> 
     private final ChangeListener posPropertyListener = new ChangeListener() {
         @Override
         public void changed(ObservableValue observable, Object oldValue, Object newValue) {
-            updateDividerPos = true;
             requestLayout();
         }
     };
-
+   
     private void addDivider(SplitPane.Divider d) {
         ContentDivider c = new ContentDivider(d);
         c.setInitialPos(d.getPosition());
         c.setDividerPos(d.getPosition());
         d.positionProperty().addListener(posPropertyListener);
-        // TODO Maybe call updatePosition here.
         initializeDivderEventHandlers(c);
         contentDividers.add(c);
         getChildren().add(c);
@@ -170,7 +169,6 @@ public class SplitPaneSkin extends SkinBase<SplitPane, BehaviorBase<SplitPane>> 
         divider.setOnMouseDragged(new EventHandler<MouseEvent>() {
             @Override public void handle(MouseEvent e) {
                 double dividerWidth = divider.prefWidth(-1);
-                double halfDividerWidth = dividerWidth/2;
                 Content left = getLeft(divider);
                 Content right = getRight(divider);
                 double minLeft = left == null ? 0 : (horizontal) ? left.minWidth(-1) : left.minHeight(-1);
@@ -204,36 +202,24 @@ public class SplitPaneSkin extends SkinBase<SplitPane, BehaviorBase<SplitPane>> 
                     nextDividerPos = contentDividers.get(index + 1).getDividerPos();
                 }
                 if (delta > 0) {
-                    double max = previousDividerPos == 0 ? maxLeft + halfDividerWidth : previousDividerPos + maxLeft + dividerWidth;
+                    double max = previousDividerPos == 0 ? maxLeft : previousDividerPos + dividerWidth + maxLeft;
                     double min = nextDividerPos - minRight - dividerWidth;
-                    if (nextDividerPos > w) {
-                        nextDividerPos = w;
-                        min = nextDividerPos - dividerWidth;
-                    }
-
-                    if (nextDividerPos == w) {
-                        min += halfDividerWidth;
-                    }
-
                     double stopPos = Math.min(max, min);
+
                     if (newPos >= stopPos) {
-                        setDividerPos(divider, stopPos);
+                        setAbsoluteDividerPos(divider, stopPos);
                     } else {
-                        setDividerPos(divider, newPos);
+                        setAbsoluteDividerPos(divider, newPos);
                     }
                 } else {
                     double max = nextDividerPos - maxRight - dividerWidth;
-                    double min = previousDividerPos == 0 ? minLeft + halfDividerWidth : previousDividerPos + minLeft + dividerWidth;
-
-                    if (nextDividerPos == w) {
-                        max += halfDividerWidth;
-                    }
-
+                    double min = previousDividerPos == 0 ? minLeft : previousDividerPos + minLeft + dividerWidth;
                     double stopPos = Math.max(max, min);
+
                     if (newPos <= stopPos) {
-                        setDividerPos(divider, stopPos);
+                        setAbsoluteDividerPos(divider, stopPos);
                     } else {
-                        setDividerPos(divider, newPos);
+                        setAbsoluteDividerPos(divider, newPos);
                     }
                 }
                 e.consume();
@@ -257,16 +243,7 @@ public class SplitPaneSkin extends SkinBase<SplitPane, BehaviorBase<SplitPane>> 
         return null;
     }
 
-    private ContentDivider getContentDivider(SplitPane.Divider d) {
-        for (ContentDivider c: contentDividers) {
-            if (c.getDivider().equals(d)) {
-                return c;
-            }
-        }
-        return null;
-    }
-
-    @Override  protected void handleControlPropertyChanged(String property) {
+    @Override protected void handleControlPropertyChanged(String property) {
         super.handleControlPropertyChanged(property);
         if (property == "ORIENTATION") {
             this.horizontal = getSkinnable().getOrientation() == Orientation.HORIZONTAL;
@@ -274,51 +251,46 @@ public class SplitPaneSkin extends SkinBase<SplitPane, BehaviorBase<SplitPane>> 
                 c.setGrabberStyle(horizontal);
             }
             getSkinnable().requestLayout();
-        } else if (property == "WIDTH") {
-            updateDividerPos = true;
-        } else if (property == "HEIGHT") {
-            updateDividerPos = true;
+        } else if (property == "WIDTH" || property == "HEIGHT") {
+            requestLayout();
         }
     }
 
-    private void setDividerPos(ContentDivider divider, double value) {
-        if (getWidth() > 0 && getHeight() > 0) {
+    // Value is the left edge of the divider
+     private void setAbsoluteDividerPos(ContentDivider divider, double value) {
+        if (getWidth() > 0 && getHeight() > 0 && divider != null) {
             SplitPane.Divider paneDivider = divider.getDivider();
             divider.setDividerPos(value);
             double size = getSize();
             if (size != 0) {
-                paneDivider.setPosition(divider.getDividerPos() / size);
+                // Adjust the position to the center of the
+                // divider and convert its position to a percentage.
+                double pos = value + divider.prefWidth(-1)/2;
+                paneDivider.setPosition(pos / size);
             } else {
                 paneDivider.setPosition(0);
             }
         }
-        requestLayout();
     }
 
     // Updates the divider with the SplitPane.Divider's position
-    private void updateDividerPos(ContentDivider divider) {
-        if (updateDividerPos) {
-            if (getWidth() > 0 && getHeight() > 0) {
-                double newPos = getSize() * divider.getDivider().getPosition();
+    // The value updated to SplitPane.Divider will be the center of the divider.
+    // The returned position will be the left edge of the divider
+    private double getAbsoluteDividerPos(ContentDivider divider) {
+        if (getWidth() > 0 && getHeight() > 0 && divider != null) {
+            SplitPane.Divider paneDivider = divider.getDivider();
+            double pos = paneDivider.getPosition();
+            double newPos = getSize() * pos;
+            if (pos == 1) {                
+                newPos -= divider.prefWidth(-1);
+            } else {
                 newPos -= divider.prefWidth(-1)/2;
-                divider.setDividerPos(Math.round(newPos));
             }
-            updateDividerPos = false;
+            newPos = Math.round(newPos);
+            divider.setDividerPos(newPos);
+            return newPos;
         }
-    }
-
-    private int indexOfMaxContent() {
-        double maxSize = 0;
-        Content content = null;
-        // We are only using displayWidth here because in layoutChildren()
-        // the vertical orientation uses the width as its height.
-        for (Content c: contentRegions) {
-            if (c.fitsInArea() && c.getDisplayWidth() > maxSize) {
-                maxSize = c.getDisplayWidth();
-                content = c;
-            }
-        }
-        return contentRegions.indexOf(content);
+        return 0;
     }
 
     private double totalMinSize() {
@@ -326,21 +298,12 @@ public class SplitPaneSkin extends SkinBase<SplitPane, BehaviorBase<SplitPane>> 
         double minSize = 0;
         for (Content c: contentRegions) {
             if (horizontal) {
-                minSize += c.minWidth(-1);                
+                minSize += c.minWidth(-1);
             } else {
                 minSize += c.minHeight(-1);
             }
-        }        
-        return minSize + dividerWidth;
-    }
-
-    private double totalMaxSize() {
-        double dividerWidth = !contentDividers.isEmpty() ? contentDividers.size() * contentDividers.get(0).prefWidth(-1) : 0;
-        double maxSize = 0;
-        for (Content c: contentRegions) {
-            maxSize += c.getContent() != null ? (horizontal) ? c.getContent().maxWidth(-1) : c.getContent().maxHeight(-1) : 0;
         }
-        return maxSize + dividerWidth;
+        return minSize + dividerWidth;
     }
 
     private double getSize() {
@@ -357,573 +320,383 @@ public class SplitPaneSkin extends SkinBase<SplitPane, BehaviorBase<SplitPane>> 
         return size;
     }
 
-    private void layoutDividersAndContent() {
-        double w = 0;
-        double h = 0;
+    // Evenly distribute the size to the available list.
+    // size is the amount to distribute.
+    private double distributeTo(List<Content> available, double size) {
+        if (available.isEmpty()) {
+            return size;
+        }
+
+        int portion = (int)(size)/available.size();
+        int remainder;
+
+        while (size > 0 && !available.isEmpty()) {
+            Iterator<Content> i = available.iterator();
+            while (i.hasNext()) {
+                Content c = i.next();
+                double max = Math.min((horizontal ? c.maxWidth(-1) : c.maxHeight(-1)), Double.MAX_VALUE);
+                double min = horizontal ? c.minWidth(-1) : c.minHeight(-1);
+
+                // We have too much space
+                if (c.getArea() >= max) {
+                    c.setAvailable(c.getArea() - min);
+                    i.remove();
+                    continue;
+                }
+                // Not enough space
+                if (portion >= (max - c.getArea())) {
+                    size -= (max - c.getArea());
+                    c.setArea(max);
+                    c.setAvailable(max - min);
+                    i.remove();
+                } else {
+                    // Enough space
+                    c.setArea(c.getArea() + portion);
+                    c.setAvailable(c.getArea() - min);
+                    size -= portion;
+                }
+                if (size == 0) {
+                    return size;
+                }
+            }
+            if (available.isEmpty()) {
+                // We reached the max size for everything just return
+                return size;
+            }
+            portion = (int)(size)/available.size();
+            remainder = (int)(size)%available.size();
+            if (portion == 0 && remainder != 0) {
+                portion = remainder;
+                remainder = 0;
+            }
+        }
+        return size;
+    }
+
+    // Evenly distribute the size from the available list.
+    // size is the amount to distribute.
+    private double distributeFrom(double size, List<Content> available) {
+        if (available.isEmpty()) {
+            return size;
+        }
+
+        int portion = (int)(size)/available.size();
+        int remainder;
+
+        while (size > 0 && !available.isEmpty()) {
+            Iterator<Content> i = available.iterator();
+            while (i.hasNext()) {
+                Content c = i.next();
+                //not enough space taking available and setting min
+                if (portion >= c.getAvailable()) {
+                    c.setArea(c.getArea() - c.getAvailable()); // Min size
+                    size -= c.getAvailable();
+                    c.setAvailable(0);
+                    i.remove();
+                } else {
+                    //enough space
+                    c.setArea(c.getArea() - portion);
+                    c.setAvailable(c.getAvailable() - portion);
+                    size -= portion;
+                }
+                if (size == 0) {
+                    return size;
+                }
+            }
+            if (available.isEmpty()) {
+                // We reached the min size for everything just return
+                return size;
+            }
+            portion = (int)(size)/available.size();
+            remainder = (int)(size)%available.size();
+            if (portion == 0 && remainder != 0) {
+                portion = remainder;
+                remainder = 0;
+            }
+        }
+        return size;
+    }
+
+    private void setupContentAndDividerForLayout() {
+        // Set all the value to prepare for layout
+        double dividerWidth = contentDividers.isEmpty() ? 0 : contentDividers.get(0).prefWidth(-1);
+        double startX = 0;
+        double startY = 0;
+        for (Content c: contentRegions) {
+            if (resize && !c.isResizableWithParent()) {
+                c.setArea(c.getResizableWithParentArea());
+            }
+            
+            c.setX(startX);
+            c.setY(startY);
+            if (horizontal) {
+                startX += (c.getArea() + dividerWidth);
+            } else {
+                startY += (c.getArea() + dividerWidth);
+            }
+        }
+
+        startX = 0;
+        startY = 0;
+        for (int i = 0; i < contentDividers.size(); i++) {
+            ContentDivider d = contentDividers.get(i);
+            if (horizontal) {
+                startX += getLeft(d).getArea() + (i == 0 ? 0 : dividerWidth);
+            } else {
+                startY += getLeft(d).getArea() + (i == 0 ? 0 : dividerWidth);
+            }
+            d.setX(startX);
+            d.setY(startY);
+            setAbsoluteDividerPos(d, (horizontal ? d.getX() : d.getY()));
+        }
+    }
+
+    private void layoutDividersAndContent(double width, double height) {
         double paddingX = getInsets().getLeft();
         double paddingY = getInsets().getTop();
         double dividerWidth = contentDividers.isEmpty() ? 0 : contentDividers.get(0).prefWidth(-1);
-
-        if (this.horizontal) {
-            w = getWidth() - (getInsets().getLeft() + getInsets().getRight());
-            h = getHeight() - (getInsets().getTop() + getInsets().getBottom());
-        } else {
-            w = getHeight() - (getInsets().getTop() + getInsets().getBottom());
-            h = getWidth() - (getInsets().getLeft() + getInsets().getRight());
-        }
-
+       
         for (Content c: contentRegions) {
+//            System.out.println("LAYOUT " + c.getId() + " PANELS X " + c.getX() + " Y " + c.getY() + " W " + (horizontal ? c.getArea() : width) + " H " + (horizontal ? height : c.getArea()));
             if (horizontal) {
-                layoutInArea(c, c.getX() + paddingX, c.getY() + paddingY, c.getDisplayWidth(), c.getDisplayHeight(),
+                layoutInArea(c, c.getX() + paddingX, c.getY() + paddingY, c.getArea(), height,
                     0/*baseline*/,HPos.CENTER, VPos.CENTER);
             } else {
-                layoutInArea(c, c.getX() + paddingX, c.getY() + paddingY, c.getDisplayHeight(), c.getDisplayWidth(),
+                layoutInArea(c, c.getX() + paddingX, c.getY() + paddingY, width, c.getArea(),
                     0/*baseline*/,HPos.CENTER, VPos.CENTER);
             }
         }
-
         for (ContentDivider c: contentDividers) {
+//            System.out.println("LAYOUT DIVIDERS X " + c.getX() + " Y " + c.getY() + " W " + (horizontal ? dividerWidth : width) + " H " + (horizontal ? height : dividerWidth));
             if (horizontal) {
-                c.resize(dividerWidth, h);
-                positionInArea(c, c.getX() + paddingX, c.getY() + paddingY, dividerWidth, h,
+                c.resize(dividerWidth, height);
+                positionInArea(c, c.getX() + paddingX, c.getY() + paddingY, dividerWidth, height,
                     /*baseline ignored*/0, HPos.CENTER, VPos.CENTER);
             } else {
-                c.resize(h, dividerWidth);
-                positionInArea(c, c.getX() + paddingX, c.getY() + paddingY, h, dividerWidth,
+                c.resize(width, dividerWidth);                
+                positionInArea(c, c.getX() + paddingX, c.getY() + paddingY, width, dividerWidth,
                     /*baseline ignored*/0, HPos.CENTER, VPos.CENTER);
             }
         }
     }
 
-    private void resizeSplitPane(double w, double h) {
-        boolean grow = previousSize < (horizontal ? getWidth() : getHeight());
-        redistribute(grow, w, h);        
-        layoutDividersAndContent();
-    }
+    private double previousArea = -1;
+    private boolean resize = false;
 
-    private void redistribute(boolean redistribute, double w, double h) {        
-        double dividerWidth = contentDividers.isEmpty() ? 0 : contentDividers.get(0).prefWidth(-1);
-        double halfDividerWidth = dividerWidth / 2.0f;
-        double maxSize = totalMaxSize();
-        double startX = horizontal ? contentDividers.get(contentDividers.size() - 1).getDividerPos() - halfDividerWidth : 0;
-        double startY = horizontal ? 0 : contentDividers.get(contentDividers.size() - 1).getDividerPos() - halfDividerWidth;
-        double dividerPos = 0;
-        double previousDividerPos = 0;
-        double nextDividerPos = w;
-        double pos = 0;
-
-        Content left = null;
-        ContentDivider divider = null;
-        Content right = null;
-
-        for (int i = contentDividers.size() - 1; i >= 0; i--) {
-            divider = contentDividers.get(i);
-            right = getRight(divider);
-            left = getLeft(divider);
-
-            nextDividerPos = (i + 1 >= contentDividers.size()) ? w : contentDividers.get(i + 1).getDividerPos() - halfDividerWidth;
-            dividerPos = contentDividers.get(i).getDividerPos() - halfDividerWidth;
-            previousDividerPos = (i - 1 < 0) ? 0 : contentDividers.get(i - 1).getDividerPos() - halfDividerWidth;
-
-            double availableLeftWidth = dividerPos - (previousDividerPos == 0 ? 0 : (previousDividerPos + dividerWidth));
-            double availableRightWidth = nextDividerPos - (dividerPos + dividerWidth);
-
-            // do bounds checking to ensure min/max widths aren't being exceeded
-            double minLeftWidth  = left == null ? 0 : (horizontal) ? left.minWidth(-1) : left.minHeight(-1);
-            double prefLeftWidth = left == null ? 0 : (horizontal) ? left.prefWidth(-1) : left.prefHeight(-1);
-            double maxLeftWidth  = left == null ? 0 :
-                left.getContent() != null ? (horizontal) ? left.getContent().maxWidth(-1) : left.getContent().maxHeight(-1) : 0;
-
-            double minRightWidth  = right == null ? 0 : (horizontal) ? right.minWidth(-1) : right.minHeight(-1);
-            double prefRightWidth = right == null ? 0 : (horizontal) ? right.prefWidth(-1) : right.prefHeight(-1);
-            double maxRightWidth  = right == null ? 0 :
-                right.getContent() != null ? (horizontal) ? right.getContent().maxWidth(-1) : right.getContent().maxHeight(-1) : 0;
-
-            // These properties are what the actual width will be set to
-            double leftNodeWidth;
-            double rightNodeWidth;
-
-            // sort out right node
-            if (availableRightWidth <= minRightWidth) {
-                rightNodeWidth = minRightWidth;
-            } else if (availableRightWidth >= maxRightWidth) {
-                rightNodeWidth = maxRightWidth;
-            } else {
-                if (right.isManaged()) {
-                    rightNodeWidth = availableRightWidth;
-                } else {
-                    rightNodeWidth = Math.min(prefRightWidth, availableRightWidth);
-                }
-            }
-
-            // sort out left node
-            if (availableLeftWidth <= minLeftWidth) {
-                leftNodeWidth = minLeftWidth;
-            } else if (availableLeftWidth >= maxLeftWidth) {
-                leftNodeWidth = maxLeftWidth;
-            } else {
-                if (left.isManaged()) {
-                    leftNodeWidth = availableLeftWidth;
-                } else {
-                    leftNodeWidth = Math.min(prefLeftWidth, availableLeftWidth);
-                }
-            }
-
-            // Can the content fit in the area ?
-            double rightArea = availableRightWidth;
-            double leftArea = availableLeftWidth;
-
-            // Setup all the values for layout
-            if (horizontal) {
-                if (rightArea >= maxRightWidth) {
-                    right.setX(startX + dividerWidth + (rightArea - maxRightWidth)/2);
-                    right.setY(startY);
-                    right.setDisplayWidth(maxRightWidth);
-                    right.setDisplayHeight(h);
-                    if (redistribute) {
-                        pos = nextDividerPos - maxRightWidth - dividerWidth;
-                        dividerPos = pos;
-                        leftArea = pos - (previousDividerPos == 0 ? 0 : (previousDividerPos + dividerWidth));
-
-                        if (dividerPos + maxRightWidth + dividerWidth >= maxSize) {
-                            pos = maxSize - maxRightWidth - dividerWidth;
-                        }
-                        rightArea = nextDividerPos - (pos + dividerWidth);
-                        right.setX(pos + dividerWidth + (rightArea - maxRightWidth)/2);
-                    } else {
-                        pos = dividerPos;
-                    }
-                } else if (rightArea > minRightWidth) {
-                    right.setX(startX + dividerWidth);
-                    right.setY(startY);
-                    right.setDisplayWidth(rightArea);
-                    right.setDisplayHeight(h);
-                    pos = dividerPos;
-                } else {
-                    startX = nextDividerPos - minRightWidth;
-                    right.setX(startX);
-                    right.setY(startY);
-                    right.setDisplayWidth(minRightWidth);
-                    right.setDisplayHeight(h);
-                    pos = startX - dividerWidth;
-                    dividerPos = pos;
-                    leftArea = pos - (previousDividerPos == 0 ? 0 : (previousDividerPos + dividerWidth));                    
-                    if (leftArea <= minLeftWidth) {
-                        leftArea = minLeftWidth;
-                        previousDividerPos = previousDividerPos <= 0 ? 0 : dividerPos - minLeftWidth - dividerWidth;
-                    }
-                }
-                divider.setX(pos);
-                divider.setY(startY);
-
-                if (leftArea >= maxLeftWidth) {
-                    startX = previousDividerPos;
-                    left.setX(startX);
-                    left.setY(startY);
-                    left.setDisplayWidth(maxLeftWidth);
-                    left.setDisplayHeight(h);
-                } else if (leftArea > minLeftWidth) {
-                    startX = previousDividerPos;
-                    left.setX(startX);
-                    left.setY(startY);
-                    left.setDisplayWidth(leftArea);
-                    left.setDisplayHeight(h);
-                } else {
-                    startX = previousDividerPos;
-                    left.setX(startX);
-                    left.setY(startY);
-                    left.setDisplayWidth(minLeftWidth);
-                    left.setDisplayHeight(h);
-                }
-            } else {
-                // VERTICAL ORIENTATION
-                if (rightArea >= maxRightWidth) {
-                    right.setX(startX);
-                    right.setY(startY + dividerWidth + (rightArea - maxRightWidth)/2);
-                    right.setDisplayWidth(maxRightWidth);
-                    right.setDisplayHeight(h);
-                    if (redistribute) {
-                        pos = nextDividerPos - maxRightWidth - dividerWidth;
-                        dividerPos = pos;
-                        leftArea = pos - (previousDividerPos == 0 ? 0 : (previousDividerPos + dividerWidth));
-
-                        if (dividerPos + maxRightWidth + dividerWidth >= maxSize) {
-                            pos = maxSize - maxRightWidth - dividerWidth;
-                        }
-                        rightArea = nextDividerPos - (pos + dividerWidth);
-                        right.setY(pos + dividerWidth + (rightArea - maxRightWidth)/2);
-                    } else {
-                        pos = dividerPos;
-                    }
-                } else if (rightArea > minRightWidth) {
-                    right.setX(startX);
-                    right.setY(startY + dividerWidth);
-                    right.setDisplayWidth(rightArea);
-                    right.setDisplayHeight(h);
-                    pos = dividerPos;
-                } else {
-                    startY = nextDividerPos - minRightWidth;
-                    right.setX(startX);
-                    right.setY(startY);
-                    right.setDisplayWidth(minRightWidth);
-                    right.setDisplayHeight(h);
-                    pos = startY - dividerWidth;
-                    dividerPos = pos;
-                    leftArea = pos - (previousDividerPos == 0 ? 0 : (previousDividerPos + dividerWidth));
-                    if (leftArea <= minLeftWidth) {
-                        leftArea = minLeftWidth;
-                        previousDividerPos = previousDividerPos <= 0 ? 0 : dividerPos - minLeftWidth - dividerWidth;
-                    }
-                }
-                divider.setX(startX);
-                divider.setY(pos);
-
-                if (leftArea >= maxLeftWidth) {
-                    startY = previousDividerPos;
-                    left.setX(startX);
-                    left.setY(startY);
-                    left.setDisplayWidth(maxLeftWidth);
-                    left.setDisplayHeight(h);
-                } else if (leftArea > minLeftWidth) {
-                    startY = previousDividerPos;
-                    left.setX(startX);
-                    left.setY(startY);
-                    left.setDisplayWidth(leftArea);
-                    left.setDisplayHeight(h);
-                } else {
-                    startY = previousDividerPos;
-                    left.setX(startX);
-                    left.setY(startY);
-                    left.setDisplayWidth(minLeftWidth);
-                    left.setDisplayHeight(h);
-                }
-            }
-            setDividerPos(divider, pos + halfDividerWidth);
-        }
-    }
-
-    @Override protected void layoutChildren() {        
+    @Override protected void layoutChildren() {
         if (!getSkinnable().isVisible()) {
             return;
         }
 
-        double w = 0;
-        double h = 0;
+        double dividerWidth = contentDividers.isEmpty() ? 0 : contentDividers.get(0).prefWidth(-1);
+        double w = getWidth() - (getInsets().getLeft() + getInsets().getRight());
+        double h = getHeight() - (getInsets().getTop() + getInsets().getBottom());
 
-        if (this.horizontal) {
-            w = getWidth() - (getInsets().getLeft() + getInsets().getRight());
-            h = getHeight() - (getInsets().getTop() + getInsets().getBottom());
-        } else {
-            w = getHeight() - (getInsets().getTop() + getInsets().getBottom());
-            h = getWidth() - (getInsets().getLeft() + getInsets().getRight());
+        // If we are resizing the window save the current area into
+        // resizableWithParentArea.  We use this value during layout.
+        if (contentDividers.size() > 0 && previousArea != -1 && previousArea != (getWidth() * getHeight())) {
+            previousArea = getWidth() * getHeight();
+            for (Content c: contentRegions) {
+                c.setResizableWithParentArea(c.getArea());
+                c.setAvailable(0);
+            }
+            resize = true;
         }
-
-        if (contentDividers.size() > 0 && previousSize != -1 && previousSize != (horizontal ? getWidth() : getHeight())) {
-            resizeSplitPane(w, h);
-            previousSize = horizontal ? getWidth() : getHeight();
+        previousArea = getWidth() * getHeight();
+        
+        // If the window is less than the min size we want to resize
+        // proportionally
+        double minSize = totalMinSize();
+        if (minSize > (horizontal ? w : h)) {
+            double percentage = 0;
+            for (int i = 0; i < contentRegions.size(); i++) {
+                Content c = contentRegions.get(i);
+                double min = horizontal ? c.minWidth(-1) : c.minHeight(-1);
+                percentage = min/minSize;
+                c.setArea(snapSpace(percentage * (horizontal ? w : h)));
+                c.setAvailable(0);
+            }
+            setupContentAndDividerForLayout();
+            layoutDividersAndContent(w, h);
+            resize = false;
             return;
         }
-        previousSize = horizontal ? getWidth() : getHeight();
 
-        double startX = 0;
-        double startY = 0;
-        double dividerPos = 0;
-        double previousDividerPos = 0;
-        double nextDividerPos = w;
-        double dividerWidth = contentDividers.isEmpty() ? 0 : contentDividers.get(0).prefWidth(-1);
-        double halfDividerWidth = dividerWidth / 2.0f;
-        double pos = 0;
-
-        Content left = null;
-        ContentDivider divider = null;
-        Content right = null;
-        ContentDivider nextDivider = null;
-
-        for (int i = 0; i < contentRegions.size(); i++) {
-            if (i == contentRegions.size() - 1) {
-                // We only have one content region in the SplitPane.
-                if (i == 0) {                    
-                    contentRegions.get(0).setX(startX);
-                    contentRegions.get(0).setY(startY);
-                    contentRegions.get(0).setDisplayWidth(w);
-                    contentRegions.get(0).setDisplayHeight(h);
-                }
-                break;
-            }
-
-            nextDividerPos = w;
-            nextDivider = null;
-
-            left = contentRegions.get(i);
-
-            // TODO need to get rid the boolean updateDividerPos.
-            if (i < contentDividers.size()) {
-                updateDividerPos = true;
-                if (divider != null) {
-                    previousDividerPos = divider.getDividerPos();
-                }
-                divider = contentDividers.get(i);
-            }
-            if (i + 1 < contentRegions.size()) {
-                right = contentRegions.get(i + 1);
-            }
-
-            updateDividerPos(divider);
-            dividerPos = divider.getDividerPos();
-
-            if (i + 1 < contentDividers.size()) {
-                nextDivider = contentDividers.get(i + 1);
-                updateDividerPos = true;
-                updateDividerPos(nextDivider);
-            }
-
-            if (nextDivider != null && nextDivider.getDividerPos() > dividerPos) {
-                nextDividerPos = nextDivider.getDividerPos();
-            }
-
-            // this is the space available to the left and right nodes.
-            // it would be ideal if both left and right nodes would happily resize
-            // to this value, but we need to check...
-            double availableLeftWidth =
-                (dividerPos + halfDividerWidth) - (previousDividerPos == 0 ? 0 : (previousDividerPos + dividerWidth - halfDividerWidth));
-            double availableRightWidth = nextDividerPos - dividerPos - halfDividerWidth;
-
-            // do bounds checking to ensure min/max widths aren't being exceeded
-            double minLeftWidth  = left == null ? 0 : (horizontal) ? left.minWidth(-1) : left.minHeight(-1);
-            double prefLeftWidth = left == null ? 0 : (horizontal) ? left.prefWidth(-1) : left.prefHeight(-1);
-            double maxLeftWidth  = left == null ? 0 :
-                left.getContent() != null ? (horizontal) ? left.getContent().maxWidth(-1) : left.getContent().maxHeight(-1) : 0;
-
-            double minRightWidth  = right == null ? 0 : (horizontal) ? right.minWidth(-1) : right.minHeight(-1);
-            double prefRightWidth = right == null ? 0 : (horizontal) ? right.prefWidth(-1) : right.prefHeight(-1);
-            double maxRightWidth  = right == null ? 0 :
-                right.getContent() != null ? (horizontal) ? right.getContent().maxWidth(-1) : right.getContent().maxHeight(-1) : 0;
-
-            // These properties are what the actual width will be set to
-            double leftNodeWidth;
-            double rightNodeWidth;
-            boolean divRecomputed = false;
-
-            // sort out left node
-            if (availableLeftWidth <= (minLeftWidth + halfDividerWidth)) {
-                dividerPos = (horizontal ? startX : startY) + minLeftWidth;
-                leftNodeWidth = minLeftWidth;
-                availableRightWidth = nextDividerPos - dividerPos - halfDividerWidth;
-                divRecomputed = true;
-            } else if (availableLeftWidth >= maxLeftWidth) {
-                leftNodeWidth = maxLeftWidth;
-                availableRightWidth = nextDividerPos - dividerPos - halfDividerWidth;
-            } else {
-                // if the node isn't managed, we shrink, but don't grow, the node
-                availableLeftWidth -= halfDividerWidth;
-                if (left.isManaged()) {
-                    leftNodeWidth = availableLeftWidth;
-                } else {
-                    leftNodeWidth = Math.min(prefLeftWidth, availableLeftWidth);
-                }
-            }
-
-            // sort out right node
-            if (availableRightWidth <= (minRightWidth + halfDividerWidth)) {
-                rightNodeWidth = minRightWidth;
-
-                // Without it the right node will overflow the side of the SplitPane
-                if (!divRecomputed) {
-                    double rw = nextDividerPos - (dividerPos + dividerWidth);
-                    if (minRightWidth > rw) {
-                        dividerPos = nextDividerPos - rw - dividerWidth;
+        for(int trys = 0; trys < 10; trys++) {
+            // Compute the area in between each divider.            
+            ContentDivider previousDivider = null;
+            ContentDivider divider = null;
+            for (int i = 0; i < contentRegions.size(); i++) {
+                double space = 0;                
+                if (i < contentDividers.size()) {
+                    divider = contentDividers.get(i);
+                    if (i == 0) {
+                        // First panel
+                        space = getAbsoluteDividerPos(divider);
                     } else {
-                        dividerPos = nextDividerPos - minRightWidth - dividerWidth;
+                        // Middle panels
+                        if (getAbsoluteDividerPos(divider) <= getAbsoluteDividerPos(previousDivider)) {
+                            // The two dividers are stacked on top of each other or if the
+                            // current divider position is less than the previous position.
+                            // We will set the divider next to the previous divider.
+                            space = Double.NaN;
+                            double pos = getAbsoluteDividerPos(divider);
+                            setAbsoluteDividerPos(divider, pos + dividerWidth);
+                        } else {
+                            space = getAbsoluteDividerPos(divider) - (getAbsoluteDividerPos(previousDivider) + dividerWidth);
+                        }
                     }
+                } else if (i == contentDividers.size()) {
+                    // Last panel
+                    space = (horizontal ? w : h) - (previousDivider != null ? getAbsoluteDividerPos(previousDivider) + dividerWidth : 0);
+                }
+                contentRegions.get(i).setArea(space);
+                previousDivider = divider;
+            }
+
+            // Compute the amount of space we have available.
+            // Available is amount of space we can take from a panel before we reach its min.
+            // If available is negative we don't have enough space and we will
+            // proportionally take the space from the other availables.  If we have extra space
+            // we will porportionally give it to the others
+            double spaceRequested = 0;
+            double extraSpace = 0;
+            for (Content c: contentRegions) {
+                double max = 0;
+                double min = 0;
+                if (c != null) {
+                    max = horizontal ? c.maxWidth(-1) : c.maxHeight(-1);
+                    min = horizontal ? c.minWidth(-1) : c.minHeight(-1);
                 }
 
-                if (left.isManaged()) {
-                    // without this a managed node will overflow into the right
-                    // region, but we also have to be careful that if there is a max
-                    // width set on the left node that we don't grow it past that.
-                    leftNodeWidth = Math.min(dividerPos, maxLeftWidth);
-                }
-            } else if (availableRightWidth >= maxRightWidth) {
-                rightNodeWidth = maxRightWidth;
-            } else {
-                availableRightWidth -= halfDividerWidth;
-                // if the node isn't managed, we shrink, but don't grow, the node
-                if (right.isManaged()) {
-                    rightNodeWidth = availableRightWidth;
+                if (c.getArea() >= max) {
+                    // Add the space that needs to be distributed to the others
+                    extraSpace += (c.getArea() - max);
+                    c.setArea(max);
+                    c.setAvailable(c.getArea() - min);
+                } else if (c.getArea() <= min) {
+                    c.setAvailable(c.getArea() - min);
+                } else if (Double.isNaN(c.getArea())) {
+                    if (min == 0) {
+                        // We have no panels and the dividers are stacked ontop of each other.
+                        c.setArea(0);
+                        c.setAvailable(0);
+                    } else {
+                        c.setArea(0);
+                        c.setAvailable(-min);
+                    }
                 } else {
-                    rightNodeWidth = Math.min(prefRightWidth, availableRightWidth);
+                    c.setAvailable(c.getArea() - min);
+                }
+                if (c.getAvailable() < 0) {
+                    spaceRequested += c.getAvailable();
                 }
             }
 
-            // Can the content fit in the area ?
-            double leftArea = dividerPos - (previousDividerPos == 0 ? 0 : previousDividerPos + dividerWidth - halfDividerWidth);
-            double rightArea = nextDividerPos - (dividerPos + dividerWidth);
+            spaceRequested = Math.abs(spaceRequested);
 
-            // Setup all the values for layout
-            if (horizontal) {
-                if (leftArea >= maxLeftWidth) {
-                    left.setX(startX);
-                    left.setY(startY);
-                    left.setDisplayWidth(maxLeftWidth);
-                    left.setDisplayHeight(h);
-                    pos = startX + maxLeftWidth;
-                    dividerPos = pos;
-                    rightArea = nextDividerPos - (pos + dividerWidth);
-                } else if (leftArea > minLeftWidth) {
-                    left.setX(startX);
-                    left.setY(startY);
-                    left.setDisplayWidth(leftArea);
-                    left.setDisplayHeight(h);
-                    pos = dividerPos;
-                } else {
-                    left.setX(startX);
-                    left.setY(startY);
-                    left.setDisplayWidth(minLeftWidth);
-                    left.setDisplayHeight(h);
-                    pos = startX + minLeftWidth;
+            // Add the panels where we can take space from
+            List<Content> availableList = new ArrayList<Content>();
+            List<Content> storageList = new ArrayList<Content>();
+            List<Content> spaceRequestor = new ArrayList<Content>();
+            double available = 0;
+            for (Content c: contentRegions) {
+                if (c.getAvailable() >= 0) {
+                    available += c.getAvailable();
+                    availableList.add(c);
                 }
 
-                divider.setX(pos);
-                divider.setY(startY);
-
-                if (rightArea >= maxRightWidth) {
-                    startX = dividerPos + dividerWidth;
-                    right.setX(startX + (rightArea - maxRightWidth)/2);
-                    right.setY(startY);
-                    right.setDisplayWidth(maxRightWidth);
-                    right.setDisplayHeight(h);
-                } else if (rightArea > minRightWidth) {
-                    startX = dividerPos + dividerWidth;
-                    right.setX(startX);
-                    right.setY(startY);
-                    right.setDisplayWidth(rightArea);
-                    right.setDisplayHeight(h);
-                } else {
-                    // If the contents minimum size is too big to fit
-                    // in the right area we want to mark it so it is not included
-                    // using when handle the overflow.
-                    right.setFitsInArea(true);
-                    if (minRightWidth > rightArea) {                        
-                        right.setFitsInArea(false);
+                if (resize && !c.isResizableWithParent()) {
+                    // We are making the SplitPane bigger and will need to
+                    // distribute the extra space.
+                    if (c.getArea() >= c.getResizableWithParentArea()) {                        
+                        extraSpace += (c.getArea() - c.getResizableWithParentArea());
+                    } else {
+                        // We are making the SplitPane smaller and will need to
+                        // find distribute the space requested.
+                        spaceRequested += (c.getResizableWithParentArea() - c.getArea());
                     }
-                    startX = dividerPos + dividerWidth;
-                    right.setX(startX);
-                    right.setY(startY);
-                    right.setDisplayWidth(minRightWidth);
-                    right.setDisplayHeight(h);
+                    c.setAvailable(0);
                 }
-            } else {
-                // VERTICAL ORIENTATION
-                if (leftArea >= maxLeftWidth) {
-                    left.setX(startX);
-                    left.setY(startY);
-                    left.setDisplayWidth(maxLeftWidth);
-                    left.setDisplayHeight(h);
-                    pos = startY + maxLeftWidth;
-                    dividerPos = pos;
-                    rightArea = nextDividerPos - (pos + dividerWidth);
-                } else if (leftArea > minLeftWidth) {
-                    left.setX(startX);
-                    left.setY(startY);
-                    left.setDisplayWidth(leftArea);
-                    left.setDisplayHeight(h);
-                    pos = dividerPos;
-                } else {
-                    left.setX(startX);
-                    left.setY(startY);
-                    left.setDisplayWidth(minLeftWidth);
-                    left.setDisplayHeight(h);
-                    pos = startY + minLeftWidth;
-                }
-
-                divider.setX(startX);
-                divider.setY(pos);
-
-                if (rightArea >= maxRightWidth) {
-                    startY = dividerPos + dividerWidth;
-                    right.setX(startX);
-                    right.setY(startY + (rightArea - maxRightWidth)/2);
-                    right.setDisplayWidth(maxRightWidth);
-                    right.setDisplayHeight(h);
-                } else if (rightArea > minRightWidth) {
-                    startY = dividerPos + dividerWidth;
-                    right.setX(startX);
-                    right.setY(startY);
-                    right.setDisplayWidth(rightArea);
-                    right.setDisplayHeight(h);
-                } else {
-                    // If the contents minimum size is too big to fit
-                    // in the right area we want to mark it so it is not included
-                    // using when handle the overflow.
-                    right.setFitsInArea(true);
-                    if (minRightWidth > rightArea) {
-                        right.setFitsInArea(false);
+                // Add the panels where we can add space to;
+                if (resize) {
+                    if (c.isResizableWithParent()) {
+                        storageList.add(c);
                     }
-                    startY = dividerPos + dividerWidth;
-                    right.setX(startX);
-                    right.setY(startY);
-                    right.setDisplayWidth(minRightWidth);
-                    right.setDisplayHeight(h);
+                } else {
+                    storageList.add(c);
+                }
+                // List of panels that need space.
+                if (c.getAvailable() < 0) {
+                    spaceRequestor.add(c);
                 }
             }
-            setDividerPos(divider, pos + halfDividerWidth);
-        }
 
-        // TODO need to remove the overflow counter;
-        int overflowCounter = 0;
+            if (extraSpace > 0) {
+                double space = distributeTo(storageList, extraSpace);
+                if (space == 0) {
+                    spaceRequested -= extraSpace;
+                } else {
+                    spaceRequested -= space;
+                }
+                extraSpace = space;
+            }
 
-        // If we overflowed we may need several passes to fix the overflow.
-        double overflow = contentRegions.size() > 1 ?
-            (((contentDividers.get(contentDividers.size() - 1).getDividerPos() - halfDividerWidth) +
-                dividerWidth + contentRegions.get(contentRegions.size() - 1).getDisplayWidth()) - w) : 0;
-        
-        if (overflow < 0) {
-            // RT-18805 try and redistribute the dividers if there
-            // is space left over.
-            redistribute(true, w, h);
-        }
-        
-        // TODO Maybe we should adjust for priority.
-        while (overflow > 0 && overflowCounter < 50) {
-            int index = indexOfMaxContent();
-            if (index == -1) {
+            if (available >= spaceRequested) {
+                for (Content requestor: spaceRequestor) {
+                    double min = horizontal ? requestor.minWidth(-1) : requestor.minHeight(-1);
+                    requestor.setArea(min);
+                    requestor.setAvailable(0);
+                }
+                // We have some space requested but it is not from the space requestors.
+                // This is probably from resizing the SplitPane lets add this to
+                // extraSpace and try and redistribute it.
+                if (spaceRequested > 0 && !spaceRequestor.isEmpty()) {
+                    distributeFrom(spaceRequested, availableList);
+                }
+
+                // Only for resizing.  At this point we should have all the
+                // area available computed.  We can total them up and see
+                // how much space we have left or went over and redistribute.
+                if (resize) {
+                    double total = 0;
+                    for (Content c: contentRegions) {
+                        if (c.isResizableWithParent()) {
+                            total += c.getArea();
+                        } else {
+                            total += c.getResizableWithParentArea();
+                        }
+                    }
+                    total += (dividerWidth * contentDividers.size());
+                    if (total < (horizontal ? w : h)) {
+                        extraSpace += ((horizontal ? w : h) - total);
+                        distributeTo(storageList, extraSpace);
+                    } else {
+                        spaceRequested += (total - (horizontal ? w : h));
+                        distributeFrom(spaceRequested, storageList);
+                    }
+                }
+            }
+
+            setupContentAndDividerForLayout();
+
+            // Check the bounds of every panel
+            boolean passed = true;
+            for (Content c: contentRegions) {
+                double max = horizontal ? c.maxWidth(-1) : c.maxHeight(-1);
+                double min = horizontal ? c.minWidth(-1) : c.minHeight(-1);
+                if (c.getArea() < min || c.getArea() > max) {
+                    passed = false;
+                    break;
+                }
+            }
+            if (passed) {
                 break;
             }
-            ListIterator<Content> contentList = contentRegions.listIterator(index);
-            Content c = contentList.next();
-            double min = horizontal ? c.minWidth(-1): c.minHeight(-1);
-
-            if (c.getDisplayWidth() - overflow > min) {
-                c.setDisplayWidth(c.getDisplayWidth() - overflow);
-            } else {
-                overflow -= (min - (c.getDisplayWidth() - overflow));
-                c.setDisplayWidth(min);
-            }
-            while (contentList.hasNext()) {
-                c = contentList.next();
-                if (horizontal) {
-                    c.setX(c.getX() - overflow);
-                } else {
-                    c.setY(c.getY() - overflow);
-                }
-            }
-
-            ListIterator<ContentDivider> dividerList = contentDividers.listIterator(index);
-            while (dividerList.hasNext()) {
-                ContentDivider div = dividerList.next();
-                if (horizontal) {
-                    div.setX(div.getX() - overflow);
-                } else {
-                    div.setY(div.getY() - overflow);
-                }
-                setDividerPos(div, div.getDividerPos() - overflow);
-            }
-
-            overflow = ((contentDividers.get(contentDividers.size() - 1).getDividerPos() - halfDividerWidth) +
-                      dividerWidth + contentRegions.get(contentRegions.size() - 1).getDisplayWidth()) - w;
-            overflowCounter++;
         }
-        layoutDividersAndContent();
+
+        layoutDividersAndContent(w, h);        
+        resize = false;
     }
 
     @Override protected double computeMinWidth(double height) {
@@ -992,6 +765,21 @@ public class SplitPaneSkin extends SkinBase<SplitPane, BehaviorBase<SplitPane>> 
         } else {
             return prefHeight + getInsets().getTop() + getInsets().getBottom();
         }
+    }
+
+    private void printAreaAndAvailable() {
+        for (int i = 0; i < contentRegions.size(); i++) {
+            System.out.print("AREA[" + i + "] " + contentRegions.get(i).getArea() + " ");
+        }
+        System.out.println("");
+        for (int i = 0; i < contentRegions.size(); i++) {
+            System.out.print("AVAILABLE[" + i + "] " + contentRegions.get(i).getAvailable() + " ");
+        }
+        System.out.println("");
+        for (int i = 0; i < contentRegions.size(); i++) {
+            System.out.print("RESIZABLEWTIHPARENT[" + i + "] " + contentRegions.get(i).getResizableWithParentArea() + " ");
+        }
+        System.out.println("");
     }
 
     class ContentDivider extends StackPane {
@@ -1137,22 +925,20 @@ public class SplitPaneSkin extends SkinBase<SplitPane, BehaviorBase<SplitPane>> 
         private Rectangle clipRect;
         private double x;
         private double y;
-        private double displayWidth;
-        private double displayHeight;
-        private boolean fitsInArea;
+        private double area;
+        private double resizableWithParentArea;
+        private double available;
 
         public Content(Node n) {
             this.clipRect = new Rectangle();
             setClip(clipRect);
             this.content = n;
             if (n != null) {
+                this.setId(n.getId());
                 getChildren().add(n);
             }
             this.x = 0;
             this.y = 0;
-            this.displayWidth = 0;
-            this.displayHeight = 0;
-            fitsInArea = true;
         }
 
         public Node getContent() {
@@ -1175,28 +961,42 @@ public class SplitPaneSkin extends SkinBase<SplitPane, BehaviorBase<SplitPane>> 
             this.y = y;
         }
 
-        public double getDisplayHeight() {
-            return displayHeight;
+        // This is the area of the panel.  This will be used as the
+        // width/height during layout.
+        public double getArea() {
+            return area;
         }
 
-        public void setDisplayHeight(double displayHeight) {
-            this.displayHeight = displayHeight;
+        public void setArea(double area) {
+            this.area = area;
         }
 
-        public double getDisplayWidth() {
-            return displayWidth;
+        // This is the minimum available area for other panels to use
+        // if they need more space.
+        public double getAvailable() {
+            return available;
         }
 
-        public void setDisplayWidth(double displayWidth) {
-            this.displayWidth = displayWidth;
+        public void setAvailable(double available) {
+            this.available = available;
         }
 
-        public boolean fitsInArea() {
-            return fitsInArea;
+        public boolean isResizableWithParent() {
+            return true;//SplitPane.isResizableWithParent(content);
         }
 
-        public void setFitsInArea(boolean fitsInArea) {
-            this.fitsInArea = fitsInArea;
+        public double getResizableWithParentArea() {
+            return resizableWithParentArea;
+        }
+
+        // This is used to save the current area during resizing when
+        // isResizeableWithParent equals false.
+        public void setResizableWithParentArea(double resizableWithParentArea) {
+            if (!isResizableWithParent()) {
+                this.resizableWithParentArea = resizableWithParentArea;
+            } else {
+                this.resizableWithParentArea = 0;
+            }
         }
 
         @Override protected void setWidth(double value) {
@@ -1208,5 +1008,14 @@ public class SplitPaneSkin extends SkinBase<SplitPane, BehaviorBase<SplitPane>> 
             super.setHeight(value);
             clipRect.setHeight(value);
         }
+
+        @Override protected double computeMaxWidth(double height) {
+            return content.maxWidth(height);
+        }
+
+        @Override protected double computeMaxHeight(double width) {
+            return content.maxHeight(width);
+        }
     }
 }
+

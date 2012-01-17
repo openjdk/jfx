@@ -3,9 +3,21 @@
  */
 package javafx.scene.control;
 
+import com.sun.javafx.Utils;
+
 public enum KeyModifier {
     SHIFT,
     CTRL,
     ALT,
-    META;
+    META,
+    
+    // For Mac OS
+    CMD;
+    
+    /**
+     * Returns CMD on Mac OS, and CTRL on all other operating systems
+     */
+    public static KeyModifier getShortcutKey() {
+        return Utils.isMac() ? CMD : CTRL;
+    }
 }

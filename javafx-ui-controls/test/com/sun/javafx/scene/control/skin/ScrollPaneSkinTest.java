@@ -417,6 +417,134 @@ public class ScrollPaneSkinTest {
         assertTrue(scrollPane.getViewportBounds().getWidth() == Math.ceil(100.5));
     }
 
+    /*
+    ** check ScrollBars missing if fitToHeight is true but height is > minHeight
+    */
+    @Test public void checkNoScrollbarsWhenFitToAndSizeOK() {
+        scrollPane.setHbarPolicy(ScrollPane.ScrollBarPolicy.AS_NEEDED);
+        scrollPane.setVbarPolicy(ScrollPane.ScrollBarPolicy.AS_NEEDED);
+
+        StackPane sp = new StackPane();
+        sp.setPrefWidth(80);
+        sp.setPrefHeight(80);
+        sp.setMinWidth(40);
+        sp.setMinHeight(40);
+
+        scrollPane.setPrefSize(50, 50);
+        scrollPane.setContent(sp);
+        scrollPane.setPannable(true);
+        scrollPane.setFitToWidth(true);
+        scrollPane.setFitToHeight(true);
+
+        Scene scene = new Scene(new Group(), 400, 400);
+        ((Group) scene.getRoot()).getChildren().clear();
+        ((Group) scene.getRoot()).getChildren().add(scrollPane);
+        Stage stage = new Stage();
+        stage.setScene(scene);
+        stage.show();
+        
+        /*
+        ** did it work?
+        */
+        assertTrue(!skin.isHSBarVisible() & !skin.isVSBarVisible());
+    }
+
+    /*
+    ** check if ScrollBars appear if fitToHeight is true but height is < minHeight
+    */
+    @Test public void checkIfScrollbarsWhenFitToHeightAndHeightLessMin() {
+        scrollPane.setHbarPolicy(ScrollPane.ScrollBarPolicy.AS_NEEDED);
+        scrollPane.setVbarPolicy(ScrollPane.ScrollBarPolicy.AS_NEEDED);
+
+        StackPane sp = new StackPane();
+        sp.setPrefWidth(80);
+        sp.setPrefHeight(80);
+        sp.setMinWidth(40);
+        sp.setMinHeight(40);
+
+        scrollPane.setPrefSize(30, 50);
+        scrollPane.setContent(sp);
+        scrollPane.setPannable(true);
+        scrollPane.setFitToWidth(true);
+        scrollPane.setFitToHeight(true);
+
+        Scene scene = new Scene(new Group(), 400, 400);
+        ((Group) scene.getRoot()).getChildren().clear();
+        ((Group) scene.getRoot()).getChildren().add(scrollPane);
+        Stage stage = new Stage();
+        stage.setScene(scene);
+        stage.show();
+        
+        /*
+        ** did it work?
+        */
+        assertTrue(skin.isHSBarVisible() & !skin.isVSBarVisible());
+    }
+
+    /*
+    ** check if ScrollBars appear if fitToHeight is true but height is < minHeight
+    */
+    @Test public void checkIfScrollbarsWhenFitToWidthAndWidthLessMin() {
+        scrollPane.setHbarPolicy(ScrollPane.ScrollBarPolicy.AS_NEEDED);
+        scrollPane.setVbarPolicy(ScrollPane.ScrollBarPolicy.AS_NEEDED);
+
+        StackPane sp = new StackPane();
+        sp.setPrefWidth(80);
+        sp.setPrefHeight(80);
+        sp.setMinWidth(40);
+        sp.setMinHeight(40);
+
+        scrollPane.setPrefSize(50, 30);
+        scrollPane.setContent(sp);
+        scrollPane.setPannable(true);
+        scrollPane.setFitToWidth(true);
+        scrollPane.setFitToHeight(true);
+
+        Scene scene = new Scene(new Group(), 400, 400);
+        ((Group) scene.getRoot()).getChildren().clear();
+        ((Group) scene.getRoot()).getChildren().add(scrollPane);
+        Stage stage = new Stage();
+        stage.setScene(scene);
+        stage.show();
+        
+        /*
+        ** did it work?
+        */
+        assertTrue(skin.isVSBarVisible() & !skin.isHSBarVisible());
+    }
+
+    /*
+    ** check if ScrollBars appear if fitToHeight & fitToWidth are true but height is < minHeight & width is < minWidth
+    */
+    @Test public void checkIfScrollbarsWhenBothFitToAndBothLessMin() {
+        scrollPane.setHbarPolicy(ScrollPane.ScrollBarPolicy.AS_NEEDED);
+        scrollPane.setVbarPolicy(ScrollPane.ScrollBarPolicy.AS_NEEDED);
+
+        StackPane sp = new StackPane();
+        sp.setPrefWidth(80);
+        sp.setPrefHeight(80);
+        sp.setMinWidth(40);
+        sp.setMinHeight(40);
+
+        scrollPane.setPrefSize(30, 30);
+        scrollPane.setContent(sp);
+        scrollPane.setPannable(true);
+        scrollPane.setFitToWidth(true);
+        scrollPane.setFitToHeight(true);
+
+        Scene scene = new Scene(new Group(), 400, 400);
+        ((Group) scene.getRoot()).getChildren().clear();
+        ((Group) scene.getRoot()).getChildren().add(scrollPane);
+        Stage stage = new Stage();
+        stage.setScene(scene);
+        stage.show();
+        
+        /*
+        ** did it work?
+        */
+        assertTrue(skin.isVSBarVisible() & skin.isHSBarVisible());
+    }
+
     public static final class ScrollPaneSkinMock extends ScrollPaneSkin {
         boolean propertyChanged = false;
         int propertyChangeCount = 0;
@@ -429,6 +557,15 @@ public class ScrollPaneSkinTest {
             propertyChanged = true;
             propertyChangeCount++;
         }
+
+        boolean isHSBarVisible() {
+            return hsb.isVisible();
+        }
+
+        boolean isVSBarVisible() {
+            return vsb.isVisible();
+        }
+
     }
 
     private static class MouseEventGenerator {
