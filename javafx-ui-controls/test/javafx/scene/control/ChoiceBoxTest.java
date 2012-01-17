@@ -14,8 +14,11 @@ import static org.junit.Assert.assertSame;
 import static org.junit.Assert.assertTrue;
 import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.SimpleObjectProperty;
+import javafx.beans.property.SimpleStringProperty;
+import javafx.beans.property.StringProperty;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
+import javafx.util.StringConverter;
 
 import org.junit.Before;
 import org.junit.Ignore;
@@ -51,6 +54,9 @@ public class ChoiceBoxTest {
     @Test public void noArgConstructor_selectedIndexIsNegativeOne() {
         assertEquals(-1, box.getSelectionModel().getSelectedIndex());
     }
+    @Test public void noArgConstructor_converterIsNotNull() {
+        assertNull(box.getConverter());
+    }
     
     @Test public void singleArgConstructorSetsTheStyleClass() {
         final ChoiceBox<String> b2 = new ChoiceBox<String>(FXCollections.observableArrayList("Hi"));
@@ -81,6 +87,11 @@ public class ChoiceBoxTest {
     @Test public void singleArgConstructor_selectedIndexIsNegativeOne() {
         final ChoiceBox<String> b2 = new ChoiceBox<String>(FXCollections.observableArrayList("Hi"));
         assertEquals(-1, b2.getSelectionModel().getSelectedIndex());
+    }
+    
+    @Test public void singleArgConstructor_converterIsNotNull() {
+        final ChoiceBox<String> b2 = new ChoiceBox<String>(FXCollections.observableArrayList("Hi"));
+        assertNull(b2.getConverter());
     }
     
     /*********************************************************************
@@ -193,6 +204,140 @@ public class ChoiceBoxTest {
         box.setItems(FXCollections.observableArrayList("Item 2"));
         assertEquals(-1, box.getSelectionModel().getSelectedIndex());
         assertEquals(null, box.getSelectionModel().getSelectedItem());
+    }
+    
+    @Test public void ensureSelectionModelUpdatesValueProperty_withSelectIndex() {
+        box.getItems().addAll("Apple", "Orange", "Banana");
+        assertNull(box.getValue());
+        box.getSelectionModel().select(0);
+        assertEquals("Apple", box.getValue());
+    }
+    
+    @Test public void ensureSelectionModelUpdatesValueProperty_withSelectItem() {
+        box.getItems().addAll("Apple", "Orange", "Banana");
+        assertNull(box.getValue());
+        box.getSelectionModel().select("Apple");
+        assertEquals("Apple", box.getValue());
+    }
+    
+    @Test public void ensureSelectionModelUpdatesValueProperty_withSelectPrevious() {
+        box.getItems().addAll("Apple", "Orange", "Banana");
+        assertNull(box.getValue());
+        box.getSelectionModel().select(2);
+        box.getSelectionModel().selectPrevious();
+        assertEquals("Orange", box.getValue());
+    }
+    
+    @Test public void ensureSelectionModelUpdatesValueProperty_withSelectNext() {
+        box.getItems().addAll("Apple", "Orange", "Banana");
+        assertNull(box.getValue());
+        box.getSelectionModel().select("Orange");
+        box.getSelectionModel().selectNext();
+        assertEquals("Banana", box.getValue());
+    }
+    
+    @Test public void ensureSelectionModelUpdatesValueProperty_withSelectFirst() {
+        box.getItems().addAll("Apple", "Orange", "Banana");
+        assertNull(box.getValue());
+        box.getSelectionModel().selectFirst();
+        assertEquals("Apple", box.getValue());
+    }
+    
+    @Test public void ensureSelectionModelUpdatesValueProperty_withSelectLast() {
+        box.getItems().addAll("Apple", "Orange", "Banana");
+        assertNull(box.getValue());
+        box.getSelectionModel().selectLast();
+        assertEquals("Banana", box.getValue());
+    }
+    
+    @Test public void ensureSelectionModelClearsValueProperty() {
+        box.getItems().addAll("Apple", "Orange", "Banana");
+        assertNull(box.getValue());
+        box.getSelectionModel().select(0);
+        assertEquals("Apple", box.getValue());
+        
+        box.getSelectionModel().clearSelection();
+        assertNull(box.getValue());
+    }
+    
+    @Test public void ensureSelectionModelClearsValuePropertyWhenNegativeOneSelected() {
+        box.getItems().addAll("Apple", "Orange", "Banana");
+        assertNull(box.getValue());
+        box.getSelectionModel().select(0);
+        assertEquals("Apple", box.getValue());
+        
+        box.getSelectionModel().select(-1);
+        assertEquals(null, box.getValue());
+    }
+    
+    @Test public void ensureValueIsCorrectWhenItemsIsAddedToWithExistingSelection() {
+        box.getItems().addAll("Apple", "Orange", "Banana");
+        box.getSelectionModel().select(1);
+        box.getItems().add(0, "pineapple");
+        assertEquals(2, box.getSelectionModel().getSelectedIndex());
+        assertEquals("Orange", box.getSelectionModel().getSelectedItem());
+        assertEquals("Orange", box.getValue());
+    }
+    
+    @Test public void ensureValueIsCorrectWhenItemsAreRemovedWithExistingSelection() {
+        box.getItems().addAll("Apple", "Orange", "Banana");
+        box.getSelectionModel().select(1);
+        
+        box.getItems().remove("Apple");
+        
+        assertEquals(0, box.getSelectionModel().getSelectedIndex());
+        assertEquals("Orange", box.getSelectionModel().getSelectedItem());
+        assertEquals("Orange", box.getValue());
+    }
+    
+    @Test public void ensureValueIsUpdatedByCorrectSelectionModelWhenSelectionModelIsChanged() {
+        box.getItems().addAll("Apple", "Orange", "Banana");
+        SelectionModel sm1 = box.getSelectionModel();
+        sm1.select(1);
+        assertEquals("Orange", box.getValue());
+        SingleSelectionModel sm2 = new ChoiceBox.ChoiceBoxSelectionModel(box);
+        box.setSelectionModel(sm2);
+        
+        sm1.select(2);  // value should not change as we are using old SM
+        assertEquals("Orange", box.getValue());
+        
+        sm2.select(0);  // value should change, as we are using new SM
+        assertEquals("Apple", box.getValue());
+    }
+    
+    @Test public void ensureValueDoesNotChangeWhenBoundAndNoExceptions() {
+        box.getItems().addAll("Apple", "Orange", "Banana");
+        
+        StringProperty sp = new SimpleStringProperty("empty");
+        box.valueProperty().bind(sp);
+        
+        box.getSelectionModel().select(1);
+        assertEquals("empty", box.getValue());
+    }
+    
+    @Test public void ensureSelectionModelUpdatesWhenValueChanges() {
+        box.getItems().addAll("Apple", "Orange", "Banana");
+        assertNull(box.getSelectionModel().getSelectedItem());
+        box.setValue("Orange");
+        assertEquals("Orange", box.getSelectionModel().getSelectedItem());
+    }
+    
+    @Test public void ensureValueEqualsSelectedItemWhenNotInItemsList() {
+        box.getItems().addAll("Apple", "Orange", "Banana");
+        box.getSelectionModel().setSelectedItem("pineapple");
+        assertEquals("pineapple", box.getSelectionModel().getSelectedItem());
+        assertEquals("pineapple", box.getValue());
+    }
+    
+    @Test public void ensureSelectionModelUpdatesWhenValueChangesToNull() {
+        box.getItems().addAll("Apple", "Orange", "Banana");
+        box.setValue("pineapple");
+        assertEquals("pineapple", box.getSelectionModel().getSelectedItem());
+        assertEquals("pineapple", box.getValue());
+        box.setValue(null);
+        assertEquals(null, box.getSelectionModel().getSelectedItem());
+        assertEquals(-1, box.getSelectionModel().getSelectedIndex());
+        assertEquals(null, box.getValue());
     }
     
     /*********************************************************************

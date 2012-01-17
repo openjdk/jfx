@@ -25,7 +25,7 @@
 
 package com.sun.javafx.scene.control.skin;
 
-import com.sun.javafx.scene.control.WeakListChangeListener;
+import javafx.util.StringConverter;
 import javafx.beans.InvalidationListener;
 import javafx.beans.Observable;
 import javafx.beans.value.ChangeListener;
@@ -51,13 +51,13 @@ import javafx.scene.layout.StackPane;
 import javafx.scene.text.Text;
 
 import com.sun.javafx.scene.control.behavior.ChoiceBoxBehavior;
-
+import com.sun.javafx.scene.control.WeakListChangeListener;
 
 
 /**
  * ChoiceBoxSkin - default implementation
  */
-public class ChoiceBoxSkin extends SkinBase<ChoiceBox, ChoiceBoxBehavior> {
+    public class ChoiceBoxSkin<T> extends SkinBase<ChoiceBox<T>, ChoiceBoxBehavior<T>> {
 
     public ChoiceBoxSkin(ChoiceBox control) {
         super(control, new ChoiceBoxBehavior(control));
@@ -253,7 +253,9 @@ public class ChoiceBoxSkin extends SkinBase<ChoiceBox, ChoiceBoxBehavior> {
         } else if (o instanceof SeparatorMenuItem) {
             popupItem = (SeparatorMenuItem) o;
         } else {
-            final RadioMenuItem item = new RadioMenuItem(o == null ? "" : o.toString());
+            StringConverter c = getSkinnable().getConverter();
+            String displayString = (c == null) ? ((o == null) ? "" : o.toString()) :  c.toString(o);
+            final RadioMenuItem item = new RadioMenuItem(displayString);
             item.setId("choice-box-menu-item");
             item.setToggleGroup(toggleGroup);
             final int index = i;

@@ -11,15 +11,16 @@
     
     <!-- 
         Bring in environment properties (if not already done).
-        If the environment variable JFXRT_HOME is not set, we set it here to 
-        point to a sane default location. We also create a slightly nicer to
-        understand JFXRT_HOME property to use elsewhere.
     -->
-    <!--
     <property environment="env"/>
-    <property name="env.JFXRT_HOME" value="${runtime.dist.root.dir}/../artifacts/sdk/rt/lib" />
+    
+    <!-- Set JFXRT_HOME -->
+    <condition property="JFXRT_HOME" value="../../artifacts/sdk/rt/lib">
+        <not>  
+            <isset property="env.JFXRT_HOME"/>
+        </not>
+    </condition>
     <property name="JFXRT_HOME" value="${env.JFXRT_HOME}" />
-    -->
     
     <!--
         Note that .properties files are loaded relative to the basedir of
@@ -53,8 +54,10 @@
         javafx-ui-common: 
 	ant -Djavafx-ui-common.javac.debuglevel=source,lines,vars
     -->	
+    <!--
     <propertycopy name="javac.debuglevel" from="${ant.project.name}.javac.debuglevel" silent="true" override="true"/>
-
+    -->
+    
     <!--
 
         Default targets for all subprojects are defined below.  These can
@@ -186,7 +189,7 @@
             </jar>
 
             <!-- copy the jar file to the shared lib directory -->
-            <copy file="${dist.dir}/@{name}.jar" todir="${runtime.deps.dir}"/>
+            <copy file="${dist.dir}/@{name}.jar" todir="../build"/> <!--${runtime.deps.dir}-->
         </sequential>
     </macrodef>
 

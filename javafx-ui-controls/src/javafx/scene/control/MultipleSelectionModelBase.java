@@ -162,10 +162,10 @@ abstract class MultipleSelectionModelBase<T> extends MultipleSelectionModel<T> {
     @Override public ObservableList<Integer> getSelectedIndices() {
         return selectedIndicesSeq;
     }
-    private void setSelectedIndices(BitSet rows) {
-        this.selectedIndices.clear();
-        this.selectedIndices.or(rows);
-    }
+//    private void setSelectedIndices(BitSet rows) {
+//        this.selectedIndices.clear();
+//        this.selectedIndices.or(rows);
+//    }
 
     private final ReadOnlyUnbackedObservableList selectedItemsSeq;
     @Override public ObservableList<T> getSelectedItems() {
@@ -217,17 +217,35 @@ abstract class MultipleSelectionModelBase<T> extends MultipleSelectionModel<T> {
         if (position < 0) return;
         if (shift == 0) return;
         
+        int selectedIndicesCardinality = selectedIndices.cardinality(); // number of true bits
+        if (selectedIndicesCardinality == 0) return;
+        
+        int selectedIndicesSize = selectedIndices.size();   // number of bits reserved 
+        
+        int[] perm = new int[selectedIndicesSize];
+        int idx = 0;
+        
         if (shift > 0) {
             for (int iter = 0; iter < shift; iter++) {
-                for (int i = selectedIndices.size() - 1; i >= position && i >= 0; i--) {
-                    selectedIndices.set(i+1, selectedIndices.get(i));
+                for (int i = selectedIndicesSize - 1; i >= position && i >= 0; i--) {
+                    boolean selected = selectedIndices.get(i);
+                    selectedIndices.set(i+1, selected);
+                    
+                    if (selected) {
+                        perm[idx++] = i + 1;
+                    }
                 }
                 selectedIndices.clear(position);
              }
         } else if (shift < 0) {
             for (int iter = 0; iter < Math.abs(shift); iter++) {
-                for (int i = position; i < selectedIndices.size() ; i++) {
-                    selectedIndices.set(i, selectedIndices.get(i+1));
+                for (int i = position; i < selectedIndicesSize; i++) {
+                    boolean selected = selectedIndices.get(i + 1);
+                    selectedIndices.set(i, selected);
+                    
+                    if (selected) {
+                        perm[idx++] = i;
+                    }
                 }
             }
         }
@@ -237,8 +255,12 @@ abstract class MultipleSelectionModelBase<T> extends MultipleSelectionModel<T> {
             setSelectedIndex(getFocusedIndex() + shift);
         }
          
-        // TODO this isn't correct
-        selectedIndicesSeq.callObservers(new NonIterableChange.SimplePermutationChange<Integer>(0, getItemCount() - 1, new int[] { }, selectedIndicesSeq));
+        selectedIndicesSeq.callObservers(
+                new NonIterableChange.SimplePermutationChange<Integer>(
+                        0, 
+                        selectedIndicesCardinality, 
+                        perm, 
+                        selectedIndicesSeq));
     }
 
     @Override public void clearAndSelect(int row) {

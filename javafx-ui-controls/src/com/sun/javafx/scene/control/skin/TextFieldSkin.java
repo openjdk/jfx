@@ -90,6 +90,7 @@ public class TextFieldSkin extends TextInputControlSkin<TextField, TextFieldBeha
      * there is any text specified on the TextInputControl
      */
     private Text textNode = new Text();
+    private Text promptNode;
     /**
      * A path, provided by the textNode, which represents the area
      * which is selected. The path elements which make up the
@@ -104,6 +105,7 @@ public class TextFieldSkin extends TextInputControlSkin<TextField, TextFieldBeha
     private DoubleProperty textTranslateX = new SimpleDoubleProperty(this, "textTranslateX");
     private DoubleProperty textTranslateY = new SimpleDoubleProperty(this, "textTranslateY");
     private ObservableIntegerValue caretPosition;
+    private double caretWidth;
     private BooleanProperty forwardBias = new BooleanPropertyBase() {
         @Override public Object getBean() {
             return TextFieldSkin.this;
@@ -159,16 +161,6 @@ public class TextFieldSkin extends TextInputControlSkin<TextField, TextFieldBeha
         super(textField, new TextFieldBehavior(textField));
         getBehavior().setTextFieldSkin(this);
 
-        // A simple boolean binding which defines whether or not we should
-        // use the prompt text here. This is lighter weight than having
-        // a separate node for the prompt text.
-        usePromptText = new BooleanBinding() {
-            { bind(textField.textProperty(), textField.promptTextProperty()); }
-            @Override protected boolean computeValue() {
-                String txt = textField.getText();
-                return (txt == null || "".equals(txt));
-            }
-        };
 
         caretPosition = new IntegerBinding() {
             { bind(textField.caretPositionProperty()); }
@@ -198,7 +190,7 @@ public class TextFieldSkin extends TextInputControlSkin<TextField, TextFieldBeha
             @Override
             public void changed(ObservableValue<? extends Number> observable, Number oldValue, Number newValue) {
                 if (getWidth() > 0) {
-                    textTranslateX.set(0);
+                    updateTextPos();
                     updateCaretOff();
                 }
             }
@@ -252,29 +244,16 @@ public class TextFieldSkin extends TextInputControlSkin<TextField, TextFieldBeha
         // Add text
         textNode.setManaged(false);
         textNode.fontProperty().bind(font);
-        textNode.yProperty().bind(new DoubleBinding() {
-            { bind(fontMetrics, insets()); }
-            @Override protected double computeValue() {
-                return fontMetrics.get().getMaxAscent() + getInsets().getTop();
-            }
-        });
         textNode.xProperty().bind(textLeft);
         textNode.layoutXProperty().bind(textTranslateX);
         textNode.textProperty().bind(new StringBinding() {
-            { bind(textField.textProperty(), textField.promptTextProperty(), usePromptText); }
+            { bind(textField.textProperty()); }
             @Override protected String computeValue() {
-                String txt = usePromptText.get() ?
-                    textField.getPromptText() :
-                    maskText(textField.getText());
+                String txt = maskText(textField.getText());
                 return txt == null ? "" : txt;
             }
         });
-        textNode.fillProperty().bind(new ObjectBinding<Paint>() {
-            { bind(usePromptText, promptTextFill, textFill); }
-            @Override protected Paint computeValue() {
-                return usePromptText.get() ? promptTextFill.get() : textFill.get();
-            }
-        });
+        textNode.fillProperty().bind(textFill);
         textNode.impl_selectionFillProperty().bind(new ObjectBinding<Paint>() {
             { bind(highlightTextFill, textFill, textField.focusedProperty()); }
             @Override protected Paint computeValue() {
@@ -313,6 +292,7 @@ public class TextFieldSkin extends TextInputControlSkin<TextField, TextFieldBeha
         textNode.impl_caretShapeProperty().addListener(new InvalidationListener() {
             @Override public void invalidated(Observable observable) {
                 caretPath.getElements().setAll(textNode.impl_caretShapeProperty().get());
+                caretWidth = caretPath.getLayoutBounds().getWidth();
             }
         });
 
@@ -330,6 +310,50 @@ public class TextFieldSkin extends TextInputControlSkin<TextField, TextFieldBeha
         
         registerChangeListener(textField.prefColumnCountProperty(), "prefColumnCount");
         if (textField.isFocused()) setCaretAnimating(true);
+
+        textField.alignmentProperty().addListener(new InvalidationListener() {
+            @Override public void invalidated(Observable observable) {
+                if (getWidth() > 0) {
+                    updateTextPos();
+                    updateCaretOff();
+                    requestLayout();
+                }
+            }
+        });
+
+        usePromptText = new BooleanBinding() {
+            { bind(textField.textProperty(), textField.promptTextProperty()); }
+            @Override protected boolean computeValue() {
+                String txt = textField.getText();
+                String promptTxt = textField.getPromptText();
+                return ((txt == null || txt.isEmpty()) &&
+                        promptTxt != null && !promptTxt.isEmpty());
+            }
+        };
+
+        if (usePromptText.get()) {
+            createPromptNode();
+        }
+
+        usePromptText.addListener(new InvalidationListener() {
+            @Override public void invalidated(Observable observable) {
+                createPromptNode();
+            }
+        });
+    }
+
+    private void createPromptNode() {
+        if (promptNode != null || !usePromptText.get()) return;
+
+        promptNode = new Text();
+        textGroup.getChildren().add(0, promptNode);
+        promptNode.setManaged(false);
+        promptNode.visibleProperty().bind(usePromptText);
+        promptNode.fontProperty().bind(font);
+        promptNode.xProperty().bind(textLeft);
+        promptNode.layoutXProperty().set(0.0);
+        promptNode.textProperty().bind(getSkinnable().promptTextProperty());
+        promptNode.fillProperty().bind(promptTextFill);
         updateSelection();
     }
 
@@ -388,6 +412,24 @@ public class TextFieldSkin extends TextInputControlSkin<TextField, TextFieldBeha
         return getInsets().getTop() + fontMetrics.getAscent();
     }
 
+    private void updateTextPos() {
+        switch (getSkinnable().getAlignment().getHpos()) {
+          case CENTER:
+            double midPoint = (textRight.get() - textLeft.get()) / 2;
+            textTranslateX.set(midPoint - textNode.getLayoutBounds().getWidth() / 2);
+            break;
+
+          case RIGHT:
+            textTranslateX.set(textRight.get() - textNode.getLayoutBounds().getWidth() -
+                               caretWidth / 2 - 5);
+            break;
+
+          case LEFT:
+          default:
+            textTranslateX.set(caretWidth / 2);
+        }
+    }
+
     // should be called when the padding changes, or the text box width, or
     // the dot moves
     protected void updateCaretOff() {
@@ -400,14 +442,29 @@ public class TextFieldSkin extends TextInputControlSkin<TextField, TextFieldBeha
         if (caretX < textLeft.get()) {
             // I'll end up with a negative number
             delta = caretX - textLeft.get();
-        } else if (caretX > (textRight.get() - caretPath.getLayoutBounds().getWidth())) {
+        } else if (caretX > (textRight.get() - caretWidth)) {
             // I'll end up with a positive number
-            delta = caretX - (textRight.get() - caretPath.getLayoutBounds().getWidth());
+            delta = caretX - (textRight.get() - caretWidth);
         }
 
         // If delta is negative, then translate in the negative direction
         // to cause the text to scroll to the right. Vice-versa for positive.
-        textTranslateX.set(Math.min(textTranslateX.get() - delta, 0.0));
+        switch (getSkinnable().getAlignment().getHpos()) {
+          case CENTER:
+            textTranslateX.set(textTranslateX.get() - delta);
+            break;
+
+          case RIGHT:
+            textTranslateX.set(Math.max(textTranslateX.get() - delta,
+                                        textRight.get() - textNode.getLayoutBounds().getWidth() -
+                                        caretWidth / 2 - 5));
+            break;
+
+          case LEFT:
+          default:
+            textTranslateX.set(Math.min(textTranslateX.get() - delta,
+                                        caretWidth / 2));
+        }
     }
 
     /**
@@ -446,20 +503,43 @@ public class TextFieldSkin extends TextInputControlSkin<TextField, TextFieldBeha
         final Bounds textBounds = textNode.localToParent(textLayoutBounds);
         final Bounds clipBounds = clip.getBoundsInParent();
         final Bounds caretBounds = caretPath.getLayoutBounds();
-        if (textBounds.getMinX() >= clipBounds.getMinX()) {
-            return;
-        }
 
-        double delta = caretMaxXOld - caretBounds.getMaxX() - textTranslateX.get();
-        if (textBounds.getMaxX() + delta < clipBounds.getMaxX()) {
-            if (textMaxXOld <= clipBounds.getMaxX()) {
-                delta = textMaxXOld - textBounds.getMaxX();
+        switch (getSkinnable().getAlignment().getHpos()) {
+          case CENTER:
+            updateTextPos();
+            break;
+
+          case RIGHT:
+            if (textBounds.getMaxX() > clipBounds.getMaxX()) {
+                double delta = caretMaxXOld - caretBounds.getMaxX() - textTranslateX.get();
+                if (textBounds.getMaxX() + delta < clipBounds.getMaxX()) {
+                    if (textMaxXOld <= clipBounds.getMaxX()) {
+                        delta = textMaxXOld - textBounds.getMaxX();
+                    } else {
+                        delta = clipBounds.getMaxX() - textBounds.getMaxX();
+                    }
+                }
+                textTranslateX.set(textTranslateX.get() + delta);
             } else {
-                delta = clipBounds.getMaxX() - textBounds.getMaxX();
+                updateTextPos();
+            }
+            break;
+
+          case LEFT:
+          default:
+            if (textBounds.getMinX() < clipBounds.getMinX() + caretWidth / 2) {
+                double delta = caretMaxXOld - caretBounds.getMaxX() - textTranslateX.get();
+                if (textBounds.getMaxX() + delta < clipBounds.getMaxX()) {
+                    if (textMaxXOld <= clipBounds.getMaxX()) {
+                        delta = textMaxXOld - textBounds.getMaxX();
+                    } else {
+                        delta = clipBounds.getMaxX() - textBounds.getMaxX();
+                    }
+                }
+                textTranslateX.set(textTranslateX.get() + delta);
             }
         }
 
-        textTranslateX.set(textTranslateX.get() + delta);
         updateCaretOff();
     }
 
@@ -539,5 +619,32 @@ public class TextFieldSkin extends TextInputControlSkin<TextField, TextFieldBeha
 
     @Override protected void removeHighlight(List<? extends Node> nodes) {
         textGroup.getChildren().removeAll(nodes);
+    }
+
+    @Override protected void layoutChildren() {
+        super.layoutChildren();
+
+        if (textNode != null) {
+            double textY;
+            Insets insets = getInsets();
+            switch (getSkinnable().getAlignment().getVpos()) {
+              case TOP:
+                textY = insets.getTop() + fontMetrics.get().getMaxAscent();
+                break;
+
+              case CENTER:
+                textY = (getHeight() - insets.getBottom() - insets.getTop()
+                         + fontMetrics.get().getLineHeight()) / 2;
+                break;
+
+              case BOTTOM:
+              default:
+                textY = getHeight() - insets.getBottom() - fontMetrics.get().getMaxDescent();
+            }
+            textNode.setY(textY);
+            if (promptNode != null) {
+                promptNode.setY(textY);
+            }
+        }
     }
 }

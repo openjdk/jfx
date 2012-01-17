@@ -45,7 +45,7 @@ import javafx.scene.input.MouseEvent;
  *
  * @profile common
  */
-public class ChoiceBoxBehavior extends BehaviorBase<ChoiceBox> {
+public class ChoiceBoxBehavior<T> extends BehaviorBase<ChoiceBox<T>> {
     /**
      * The key bindings for the ChoiceBox. It seems this should really be the
      * same as with the ButtonBehavior super class, but it doesn't handle ENTER

@@ -30,7 +30,6 @@ import java.util.Collections;
 import java.util.List;
 
 import javafx.beans.property.ObjectProperty;
-import javafx.beans.property.ObjectPropertyBase;
 import javafx.beans.property.DoubleProperty;
 import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
@@ -61,7 +60,9 @@ import javafx.scene.layout.StackPane;
 import javafx.scene.layout.VBox;
 
 import com.sun.javafx.css.StyleableDoubleProperty;
+import com.sun.javafx.css.StyleableObjectProperty;
 import com.sun.javafx.css.StyleableProperty;
+import com.sun.javafx.css.converters.EnumConverter;
 import com.sun.javafx.css.converters.SizeConverter;
 import com.sun.javafx.scene.control.behavior.ToolBarBehavior;
 import com.sun.javafx.scene.traversal.Direction;
@@ -189,7 +190,7 @@ public class ToolBarSkin extends SkinBase<ToolBar, ToolBarBehavior> implements T
 
     public final ObjectProperty<Pos> boxAlignmentProperty() {
         if (boxAlignment == null) {
-            boxAlignment = new ObjectPropertyBase<Pos>(Pos.TOP_LEFT) {
+            boxAlignment = new StyleableObjectProperty<Pos>(Pos.TOP_LEFT) {
 
                 @Override
                 public void invalidated() {
@@ -209,6 +210,11 @@ public class ToolBarSkin extends SkinBase<ToolBar, ToolBarBehavior> implements T
                 @Override
                 public String getName() {
                     return "boxAlignment";
+                }
+
+                @Override
+                public StyleableProperty getStyleableProperty() {
+                    return StyleableProperties.ALIGNMENT;
                 }
             };
         }
@@ -625,14 +631,41 @@ public class ToolBarSkin extends SkinBase<ToolBar, ToolBarBehavior> implements T
                 return n.spacingProperty();
             }
         };
+         
+        private static final StyleableProperty<ToolBarSkin,Pos>ALIGNMENT =
+                new StyleableProperty<ToolBarSkin,Pos>("-fx-alignment",
+                new EnumConverter<Pos>(Pos.class), Pos.TOP_LEFT ) {
 
+            @Override
+            public boolean isSettable(ToolBarSkin n) {
+                return n.boxAlignment == null || !n.boxAlignment.isBound();
+            }
+
+            @Override
+            public WritableValue<Pos> getWritableValue(ToolBarSkin n) {
+                return n.boxAlignmentProperty();
+            }
+        };
+
+         
          private static final List<StyleableProperty> STYLEABLES;
          static {
 
             final List<StyleableProperty> styleables =
                 new ArrayList<StyleableProperty>(SkinBase.impl_CSS_STYLEABLES());
+            
+            // StackPane also has -fx-alignment. Replace it with 
+            // ToolBarSkin's. 
+            // TODO: Really should be able to reference StackPane.StyleableProperties.ALIGNMENT
+            final String alignmentProperty = ALIGNMENT.getProperty();
+            for (int n=0, nMax=styleables.size(); n<nMax; n++) {
+                final StyleableProperty prop = styleables.get(n);
+                if (alignmentProperty.equals(prop.getProperty())) styleables.remove(prop);
+            }
+            
             Collections.addAll(styleables,
-                SPACING
+                SPACING, 
+                ALIGNMENT
             );
             STYLEABLES = Collections.unmodifiableList(styleables);
 
