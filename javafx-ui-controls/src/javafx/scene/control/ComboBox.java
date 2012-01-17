@@ -27,6 +27,7 @@ package javafx.scene.control;
 
 import com.sun.javafx.css.StyleManager;
 import com.sun.javafx.scene.control.WeakListChangeListener;
+import com.sun.javafx.scene.control.skin.ComboBoxListViewSkin;
 import com.sun.javafx.scene.control.skin.ListViewSkin;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -173,6 +174,10 @@ public class ComboBox<T> extends ComboBoxBase<T> {
             // properly fixed when time permits
             if (getSelectionModel() instanceof ComboBoxSelectionModel) {
                 ((ComboBoxSelectionModel)getSelectionModel()).updateItemsObserver(null, getItems());
+            }
+            if (getSkin() instanceof ComboBoxListViewSkin) {
+                ComboBoxListViewSkin skin = (ComboBoxListViewSkin) getSkin();
+                skin.updateListViewItems();
             }
         }
     };

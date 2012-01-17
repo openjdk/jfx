@@ -25,6 +25,7 @@
 
 package com.sun.javafx.scene.control.skin;
 
+import com.sun.javafx.scene.control.WeakListChangeListener;
 import javafx.scene.control.ComboBox;
 import com.sun.javafx.scene.control.behavior.ComboBoxListViewBehavior;
 import java.util.List;
@@ -32,6 +33,7 @@ import javafx.beans.InvalidationListener;
 import javafx.beans.Observable;
 import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
+import javafx.collections.ListChangeListener;
 import javafx.collections.ObservableList;
 import javafx.event.EventHandler;
 import javafx.event.EventTarget;
@@ -53,6 +55,8 @@ public class ComboBoxListViewSkin<T> extends ComboBoxPopupControl<T> {
     
     private final ListView<T> listView;
     
+    private ObservableList<T> listViewItems;
+    
     public ComboBoxListViewSkin(final ComboBox<T> comboBox) {
         super(comboBox, new ComboBoxListViewBehavior<T>(comboBox));
         this.comboBox = comboBox;
@@ -67,38 +71,45 @@ public class ComboBoxListViewSkin<T> extends ComboBoxPopupControl<T> {
             }
         });
         
-        updateItemsListener(null, comboBox.getItems());
-        comboBox.itemsProperty().addListener(new ChangeListener<ObservableList<T>>() {
-            @Override 
-            public void changed(ObservableValue<? extends ObservableList<T>> ov, ObservableList<T> t, ObservableList<T> t1) {
-                updateItemsListener(t, t1);
-            }
-        });
+        updateListViewItems();
         
+        registerChangeListener(comboBox.itemsProperty(), "ITEMS");
         registerChangeListener(comboBox.promptTextProperty(), "PROMPT_TEXT");
     }
     
-    private boolean itemCountDirty = false;
-    private InvalidationListener itemsListener = new InvalidationListener() {
-        @Override public void invalidated(Observable o) {
+    public void updateListViewItems() {
+        if (listViewItems != null) {
+            listViewItems.removeListener(weakListViewItemsListener);
+        }
+
+        this.listViewItems = comboBox.getItems();
+        listView.setItems(listViewItems);
+
+        if (listViewItems != null) {
+            listViewItems.addListener(weakListViewItemsListener);
+        }
+        
+        itemCountDirty = true;
+        requestLayout();
+    }
+    
+    private boolean itemCountDirty;
+    private final ListChangeListener listViewItemsListener = new ListChangeListener() {
+        @Override public void onChanged(ListChangeListener.Change c) {
             itemCountDirty = true;
             requestLayout();
         }
     };
     
-    private void updateItemsListener(ObservableList<T> oldList, ObservableList<T> newList) {
-        if (oldList != null) {
-            oldList.removeListener(itemsListener);
-        }
-        if (newList != null) {
-            newList.addListener(itemsListener);
-        }
-    }
-
+    private final WeakListChangeListener weakListViewItemsListener =
+            new WeakListChangeListener(listViewItemsListener);
+    
     @Override protected void handleControlPropertyChanged(String p) {
         super.handleControlPropertyChanged(p);
         
-        if ("PROMPT_TEXT".equals(p)) {
+        if (p == "ITEMS") {
+            updateListViewItems();
+        } else if ("PROMPT_TEXT".equals(p)) {
             updateDisplayNode();
         }
     }
@@ -254,7 +265,6 @@ public class ComboBoxListViewSkin<T> extends ComboBoxPopupControl<T> {
             }
         };
 
-        listView.itemsProperty().bind(comboBox.itemsProperty());
         listView.cellFactoryProperty().bind(comboBox.cellFactoryProperty());
         listView.getSelectionModel().setSelectionMode(SelectionMode.SINGLE);
 
