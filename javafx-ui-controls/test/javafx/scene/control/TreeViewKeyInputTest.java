@@ -916,7 +916,7 @@ public class TreeViewKeyInputTest {
     
     // Test 21 (TreeView test cases)
     @Ignore("Not yet working")
-    @Ignore @Test public void testCtrlBackSlashToClearSelection() {
+    @Test public void testCtrlBackSlashToClearSelection() {
         sm.selectAll();
         fm.focus(1);
         keyboard.doKeyPress(KeyCode.BACK_SLASH, KeyModifier.getShortcutKey());
@@ -926,7 +926,7 @@ public class TreeViewKeyInputTest {
     
     // Test 24 (TreeView test cases)
     @Ignore("Not yet working")
-    @Ignore @Test public void testExpandCollapseImpactOnSelection() {
+    @Test public void testExpandCollapseImpactOnSelection() {
         sm.clearAndSelect(5);
         assertTrue(child3.isExpanded());
         keyboard.doUpArrowPress(KeyModifier.SHIFT);
