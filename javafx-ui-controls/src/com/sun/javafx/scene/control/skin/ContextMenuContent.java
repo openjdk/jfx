@@ -284,12 +284,13 @@ public class ContextMenuContent extends StackPane {
     }
 
     private double getScreenHeight() {
-        if (contextMenu == null || contextMenu.getOwnerWindow() == null) {
+        if (contextMenu == null || contextMenu.getOwnerWindow() == null ||
+                contextMenu.getOwnerWindow().getScene() == null) {
             return -1;
         }
         return snapSize(com.sun.javafx.Utils.getScreen(
-                contextMenu.getOwnerWindow().getScene().getRoot()).getVisualBounds().getHeight());
-
+            contextMenu.getOwnerWindow().getScene().getRoot()).getVisualBounds().getHeight());
+        
     }
 
     private double getContentHeight() {
