@@ -21,6 +21,7 @@ import static org.junit.Assert.*;
 
 
 import org.junit.Before;
+import org.junit.Ignore;
 import org.junit.Test;
 
 /**
@@ -497,9 +498,17 @@ public class SplitPaneTest {
     }
 
     @Test public void checkDividerPositions_RT18805() {
+        Button l = new Button("Left Button");
+        Button c = new Button("Center Button");
+        Button r = new Button("Left Button");
+
         StackPane spLeft = new StackPane();
         StackPane spCenter = new StackPane();
         StackPane spRight = new StackPane();
+
+        spLeft.getChildren().add(l);
+        spCenter.getChildren().add(c);
+        spRight.getChildren().add(r);
 
         spLeft.setMinWidth(100);
         spLeft.setMaxWidth(150);
@@ -915,9 +924,17 @@ public class SplitPaneTest {
     }
 
     @Test public void checkDividerPositions_RT18805_VerticalSplitPane() {
+        Button l = new Button("Left Button");
+        Button c = new Button("Center Button");
+        Button r = new Button("Left Button");
+
         StackPane spLeft = new StackPane();
         StackPane spCenter = new StackPane();
         StackPane spRight = new StackPane();
+
+        spLeft.getChildren().add(l);
+        spCenter.getChildren().add(c);
+        spRight.getChildren().add(r);
 
         spLeft.setMinHeight(100);
         spLeft.setMaxHeight(150);
