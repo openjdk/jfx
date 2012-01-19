@@ -693,7 +693,7 @@ public class SplitPaneSkin extends SkinBase<SplitPane, BehaviorBase<SplitPane>> 
                         extraSpace += (c.getArea() - c.getResizableWithParentArea());
                     } else {
                         // We are making the SplitPane smaller and will need to
-                        // find distribute the space requested.
+                        // distribute the space requested.
                         spaceRequested += (c.getResizableWithParentArea() - c.getArea());
                     }
                     c.setAvailable(0);
@@ -713,13 +713,23 @@ public class SplitPaneSkin extends SkinBase<SplitPane, BehaviorBase<SplitPane>> 
             }
 
             if (extraSpace > 0) {
-                double space = distributeTo(storageList, extraSpace);
-                if (space == 0) {
-                    spaceRequested -= extraSpace;
-                } else {
-                    spaceRequested -= space;
+                extraSpace = distributeTo(storageList, extraSpace);
+                // After distributing add any panels that may still need space to the
+                // spaceRequestor list.
+                spaceRequested = 0;
+                spaceRequestor.clear();
+                available = 0;
+                availableList.clear();
+                for (Content c: contentRegions) {
+                    if (c.getAvailable() < 0) {
+                        spaceRequested += c.getAvailable();
+                        spaceRequestor.add(c);
+                    } else {
+                        available += c.getAvailable();
+                        availableList.add(c);
+                    }
                 }
-                extraSpace = space;
+                spaceRequested = Math.abs(spaceRequested);
             }
 
             if (available >= spaceRequested) {
@@ -728,15 +738,15 @@ public class SplitPaneSkin extends SkinBase<SplitPane, BehaviorBase<SplitPane>> 
                     requestor.setArea(min);
                     requestor.setAvailable(0);
                 }
-                // We have some space requested but it is not from the space requestors.
-                // This is probably from resizing the SplitPane lets add this to
-                // extraSpace and try and redistribute it.
+                // After setting all the space requestors to their min we have to
+                // redistribute the space requested to any panel that still
+                // has available space.
                 if (spaceRequested > 0 && !spaceRequestor.isEmpty()) {
                     distributeFrom(spaceRequested, availableList);
                 }
 
-                // Only for resizing.  At this point we should have all the
-                // area available computed.  We can total them up and see
+                // Only for resizing.  We should have all the panel areas
+                // available computed.  We can total them up and see
                 // how much space we have left or went over and redistribute.
                 if (resize) {
                     double total = 0;
