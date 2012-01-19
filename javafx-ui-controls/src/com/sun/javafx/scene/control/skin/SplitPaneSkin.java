@@ -123,7 +123,7 @@ public class SplitPaneSkin extends SkinBase<SplitPane, BehaviorBase<SplitPane>> 
             requestLayout();
         }
     };
-   
+
     private void addDivider(SplitPane.Divider d) {
         ContentDivider c = new ContentDivider(d);
         c.setInitialPos(d.getPosition());
@@ -142,6 +142,7 @@ public class SplitPaneSkin extends SkinBase<SplitPane, BehaviorBase<SplitPane>> 
             c.getDivider().positionProperty().removeListener(posPropertyListener);
             dividers.remove();
         }
+        lastDividerUpdate = 0;
     }
 
     private void initializeDivderEventHandlers(final ContentDivider divider) {
@@ -481,6 +482,9 @@ public class SplitPaneSkin extends SkinBase<SplitPane, BehaviorBase<SplitPane>> 
     }
 
     private double previousArea = -1;
+    private double previousWidth = -1;
+    private double previousHeight = -1;
+    private int lastDividerUpdate = 0;
     private boolean resize = false;
 
     @Override protected void layoutChildren() {
@@ -492,17 +496,91 @@ public class SplitPaneSkin extends SkinBase<SplitPane, BehaviorBase<SplitPane>> 
         double w = getWidth() - (getInsets().getLeft() + getInsets().getRight());
         double h = getHeight() - (getInsets().getTop() + getInsets().getBottom());
 
-        // If we are resizing the window save the current area into
-        // resizableWithParentArea.  We use this value during layout.
         if (contentDividers.size() > 0 && previousArea != -1 && previousArea != (getWidth() * getHeight())) {
+            //This algorithm adds/subracts a little to each panel on every resize
+            List<Content> resizeList = new ArrayList<Content>();
+            for (Content c: contentRegions) {
+                if (c.isResizableWithParent()) {
+                    resizeList.add(c);
+                }
+            }
+                        
+            double delta = horizontal ? (getWidth() - previousWidth) : (getHeight() - previousHeight);
+            boolean growing = delta > 0;
+            
+            delta = Math.abs(delta);            
+
+            if (!resizeList.isEmpty()) {
+                int portion = (int)(delta)/resizeList.size();
+                int remainder = (int)delta%resizeList.size();
+                int size = 0;
+                if (portion == 0) {
+                    portion = remainder;
+                    size = remainder;
+                    remainder = 0;
+                } else {
+                    size = portion * resizeList.size();
+                }
+
+                while (size > 0 && !resizeList.isEmpty()) {
+                    if (growing) {
+                        lastDividerUpdate++;
+                    } else {
+                        lastDividerUpdate--;
+                        if (lastDividerUpdate < 0) {
+                            lastDividerUpdate = contentRegions.size() - 1;
+                        }
+                    }
+                    int id = lastDividerUpdate%contentRegions.size();
+                    Content content = contentRegions.get(id);
+                    if (content.isResizableWithParent() && resizeList.contains(content)) {
+                        double area = content.getArea();
+                        if (growing) {
+                            double max = horizontal ? content.maxWidth(-1) : content.maxHeight(-1);
+                            if ((area + portion) <= max) {
+                                area += portion;
+                            } else {
+                                resizeList.remove(content);
+                                continue;
+                            }
+                        } else {
+                            double min = horizontal ? content.minWidth(-1) : content.minHeight(-1);
+                            if ((area - portion) >= min) {
+                                area -= portion;
+                            } else {
+                                resizeList.remove(content);
+                                continue;
+                            }
+                        }
+                        content.setArea(area);
+                        size -= portion;
+                        if (size == 0 && remainder != 0) {
+                            portion = remainder;
+                            size = remainder;
+                            remainder = 0;
+                        } else if (size == 0) {
+                            break;
+                        }
+                    }
+                }
+            }
+
             previousArea = getWidth() * getHeight();
+            previousWidth = getWidth();
+            previousHeight = getHeight();
+
+            // If we are resizing the window save the current area into
+            // resizableWithParentArea.  We use this value during layout.
             for (Content c: contentRegions) {
                 c.setResizableWithParentArea(c.getArea());
                 c.setAvailable(0);
             }
             resize = true;
+        } else {
+            previousArea = getWidth() * getHeight();
+            previousWidth = getWidth();
+            previousHeight = getHeight();
         }
-        previousArea = getWidth() * getHeight();
         
         // If the window is less than the min size we want to resize
         // proportionally
@@ -550,7 +628,9 @@ public class SplitPaneSkin extends SkinBase<SplitPane, BehaviorBase<SplitPane>> 
                     // Last panel
                     space = (horizontal ? w : h) - (previousDivider != null ? getAbsoluteDividerPos(previousDivider) + dividerWidth : 0);
                 }
-                contentRegions.get(i).setArea(space);
+                if (!resize) {
+                    contentRegions.get(i).setArea(space);
+                }
                 previousDivider = divider;
             }
 
