@@ -1057,7 +1057,11 @@ public class TabPaneSkin extends SkinBase<TabPane, TabPaneBehavior> {
             tab.selectedProperty().removeListener(tabListener);
             tab.textProperty().removeListener(tabListener);
             tab.graphicProperty().removeListener(tabListener);
-            tab.contextMenuProperty().removeListener(tabListener);
+            ContextMenu menu = tab.getContextMenu();
+            if (menu != null) {
+                menu.getItems().clear();                
+            }
+            tab.contextMenuProperty().removeListener(tabListener);            
             tab.tooltipProperty().removeListener(tabListener);
             tab.styleProperty().removeListener(tabListener);
             getSkinnable().tabClosingPolicyProperty().removeListener(controlListener);
@@ -1066,7 +1070,9 @@ public class TabPaneSkin extends SkinBase<TabPane, TabPaneBehavior> {
             getSkinnable().tabMinWidthProperty().removeListener(controlListener);
             getSkinnable().tabMaxWidthProperty().removeListener(controlListener);
             getSkinnable().tabMinHeightProperty().removeListener(controlListener);
-            getSkinnable().tabMaxHeightProperty().removeListener(controlListener);  
+            getSkinnable().tabMaxHeightProperty().removeListener(controlListener);            
+            inner.getChildren().clear();
+            getChildren().clear();
         }
 
         private boolean animating = false;
@@ -1518,6 +1524,8 @@ public class TabPaneSkin extends SkinBase<TabPane, TabPaneBehavior> {
                         showControlButtons = true;
                     } else {
                         setVisible(false);
+                        popup.getItems().clear();
+                        popup = null;
                     }
                     setAnimationLock(false);
                     // This needs to be called when we are in the left tabPosition
