@@ -100,6 +100,9 @@ public abstract class ComboBoxBase<T> extends Control {
      * Specifies whether the ComboBox allows for user input. When editable is 
      * true, the ComboBox has a text input area that a user may type in to. This
      * input is then available via the {@link #valueProperty() value} property.
+     * 
+     * <p>Note that when the editable property changes, the value property is 
+     * reset, along with any other relevant state.
      */
     public BooleanProperty editableProperty() { return editable; }
     public final void setEditable(boolean value) { editableProperty().set(value); }

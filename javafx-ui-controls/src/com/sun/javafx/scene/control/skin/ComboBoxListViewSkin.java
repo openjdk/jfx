@@ -172,7 +172,7 @@ public class ComboBoxListViewSkin<T> extends ComboBoxPopupControl<T> {
                 textField.setText(stringValue);
             }
         } else {
-            int index = comboBox.getSelectionModel().getSelectedIndex();        
+            int index = getSelectedIndex();
             listCellLabel.updateListView(listView);
             listCellLabel.updateIndex(index);
         }
@@ -192,6 +192,12 @@ public class ComboBoxListViewSkin<T> extends ComboBoxPopupControl<T> {
         } else {
             listCellLabel.setText(item == null ? "" : item.toString());
         }
+    }
+    
+    private int getSelectedIndex() {
+        T value = comboBox.getValue();
+        int index = comboBox.getItems().indexOf(value);
+        return index;
     }
     
     private ListCell<T> getListCellLabel() {
@@ -270,7 +276,7 @@ public class ComboBoxListViewSkin<T> extends ComboBoxPopupControl<T> {
 
         listView.getSelectionModel().selectedIndexProperty().addListener(new InvalidationListener() {
             @Override public void invalidated(Observable o) {
-                int index = listView.getSelectionModel().getSelectedIndex();
+                int index = getSelectedIndex();
                 comboBox.getSelectionModel().select(index);
                 comboBox.setValue(listView.getSelectionModel().getSelectedItem());
                 updateDisplayNode();

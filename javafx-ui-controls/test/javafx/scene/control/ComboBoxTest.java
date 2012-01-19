@@ -26,9 +26,11 @@ import org.junit.Test;
 
 public class ComboBoxTest {
     private ComboBox<String> comboBox;
+    private SelectionModel<String> sm;
     
     @Before public void setup() {
         comboBox = new ComboBox<String>();
+        sm = comboBox.getSelectionModel();
     }
     
     /*********************************************************************
@@ -40,7 +42,7 @@ public class ComboBoxTest {
     }
     
     @Test public void noArgConstructorSetsNonNullSelectionModel() {
-        assertNotNull(comboBox.getSelectionModel());
+        assertNotNull(sm);
     }
     
     @Test public void noArgConstructorSetsNonNullItems() {
@@ -48,11 +50,11 @@ public class ComboBoxTest {
     }
     
     @Test public void noArgConstructor_selectedItemIsNull() {
-        assertNull(comboBox.getSelectionModel().getSelectedItem());
+        assertNull(sm.getSelectedItem());
     }
     
     @Test public void noArgConstructor_selectedIndexIsNegativeOne() {
-        assertEquals(-1, comboBox.getSelectionModel().getSelectedIndex());
+        assertEquals(-1, sm.getSelectedIndex());
     }
     
     @Test public void noArgConstructor_valueIsNull() {
@@ -171,124 +173,124 @@ public class ComboBoxTest {
         SelectionModel<String> sm = new ComboBox.ComboBoxSelectionModel<String>(comboBox);
         ObjectProperty<SelectionModel<String>> other = new SimpleObjectProperty<SelectionModel<String>>(sm);
         comboBox.selectionModelProperty().bind(other);
-        assertSame(sm, comboBox.getSelectionModel());
+        assertSame(sm, sm);
     }
 
     @Test public void selectionModelCanBeChanged() {
         SelectionModel<String> sm = new ComboBox.ComboBoxSelectionModel<String>(comboBox);
         comboBox.setSelectionModel(sm);
-        assertSame(sm, comboBox.getSelectionModel());
+        assertSame(sm, sm);
     }
     
     @Test public void canSetSelectedItemToAnItemEvenWhenThereAreNoItems() {
         final String randomString = new String("I AM A CRAZY RANDOM STRING");
-        comboBox.getSelectionModel().select(randomString);
-        assertEquals(-1, comboBox.getSelectionModel().getSelectedIndex());
-        assertSame(randomString, comboBox.getSelectionModel().getSelectedItem());
+        sm.select(randomString);
+        assertEquals(-1, sm.getSelectedIndex());
+        assertSame(randomString, sm.getSelectedItem());
     }
         
     @Test public void canSetSelectedItemToAnItemNotInTheDataModel() {
         comboBox.getItems().addAll("Apple", "Orange", "Banana");
         final String randomString = new String("I AM A CRAZY RANDOM STRING");
-        comboBox.getSelectionModel().select(randomString);
-        assertEquals(-1, comboBox.getSelectionModel().getSelectedIndex());
-        assertSame(randomString, comboBox.getSelectionModel().getSelectedItem());
+        sm.select(randomString);
+        assertEquals(-1, sm.getSelectedIndex());
+        assertSame(randomString, sm.getSelectedItem());
     }
         
     @Test public void settingTheSelectedItemToAnItemInItemsResultsInTheCorrectSelectedIndex() {
         comboBox.getItems().addAll("Apple", "Orange", "Banana");
-        comboBox.getSelectionModel().select("Orange");
-        assertEquals(1, comboBox.getSelectionModel().getSelectedIndex());
-        assertSame("Orange", comboBox.getSelectionModel().getSelectedItem());
+        sm.select("Orange");
+        assertEquals(1, sm.getSelectedIndex());
+        assertSame("Orange", sm.getSelectedItem());
     }
     
     @Test public void settingTheSelectedItemToANonexistantItemAndThenSettingItemsWhichContainsItResultsInCorrectSelectedIndex() {
-        comboBox.getSelectionModel().select("Orange");
+        sm.select("Orange");
         comboBox.getItems().addAll("Apple", "Orange", "Banana");
-        assertEquals(1, comboBox.getSelectionModel().getSelectedIndex());
-        assertSame("Orange", comboBox.getSelectionModel().getSelectedItem());
+        assertEquals(1, sm.getSelectedIndex());
+        assertSame("Orange", sm.getSelectedItem());
     }
     
     @Test public void ensureSelectionClearsWhenAllItemsAreRemoved_selectIndex0() {
         comboBox.getItems().addAll("Apple", "Orange", "Banana");
-        comboBox.getSelectionModel().select(0);
+        sm.select(0);
         comboBox.getItems().clear();
-        assertEquals(-1, comboBox.getSelectionModel().getSelectedIndex());
-        assertEquals(null, comboBox.getSelectionModel().getSelectedItem());
+        assertEquals(-1, sm.getSelectedIndex());
+        assertEquals(null, sm.getSelectedItem());
     }
     
     @Test public void ensureSelectionClearsWhenAllItemsAreRemoved_selectIndex2() {
         comboBox.getItems().addAll("Apple", "Orange", "Banana");
-        comboBox.getSelectionModel().select(2);
+        sm.select(2);
         comboBox.getItems().clear();
-        assertEquals(-1, comboBox.getSelectionModel().getSelectedIndex());
-        assertEquals(null, comboBox.getSelectionModel().getSelectedItem());
+        assertEquals(-1, sm.getSelectedIndex());
+        assertEquals(null, sm.getSelectedItem());
     }
     
     @Test public void ensureSelectedItemRemainsAccurateWhenItemsAreCleared() {
         comboBox.getItems().addAll("Apple", "Orange", "Banana");
-        comboBox.getSelectionModel().select(2);
+        sm.select(2);
         comboBox.getItems().clear();
-        assertNull(comboBox.getSelectionModel().getSelectedItem());
-        assertEquals(-1, comboBox.getSelectionModel().getSelectedIndex());
+        assertNull(sm.getSelectedItem());
+        assertEquals(-1, sm.getSelectedIndex());
         
         comboBox.getItems().addAll("Kiwifruit", "Mandarin", "Pineapple");
-        comboBox.getSelectionModel().select(2);
-        assertEquals("Pineapple", comboBox.getSelectionModel().getSelectedItem());
+        sm.select(2);
+        assertEquals("Pineapple", sm.getSelectedItem());
     }
     
     @Test public void ensureSelectionShiftsDownWhenOneNewItemIsAdded() {
         comboBox.getItems().addAll("Apple", "Orange", "Banana");
-        comboBox.getSelectionModel().select(1);
-        assertEquals(1, comboBox.getSelectionModel().getSelectedIndex());
-        assertEquals("Orange", comboBox.getSelectionModel().getSelectedItem());
+        sm.select(1);
+        assertEquals(1, sm.getSelectedIndex());
+        assertEquals("Orange", sm.getSelectedItem());
         
         comboBox.getItems().add(0, "Kiwifruit");
-        assertEquals(2, comboBox.getSelectionModel().getSelectedIndex());
-        assertEquals("Orange", comboBox.getSelectionModel().getSelectedItem());
+        assertEquals(2, sm.getSelectedIndex());
+        assertEquals("Orange", sm.getSelectedItem());
     }
     
     @Test public void ensureSelectionShiftsDownWhenMultipleNewItemAreAdded() {
         comboBox.getItems().addAll("Apple", "Orange", "Banana");
-        comboBox.getSelectionModel().select(1);
-        assertEquals(1, comboBox.getSelectionModel().getSelectedIndex());
-        assertEquals("Orange", comboBox.getSelectionModel().getSelectedItem());
+        sm.select(1);
+        assertEquals(1, sm.getSelectedIndex());
+        assertEquals("Orange", sm.getSelectedItem());
         
         comboBox.getItems().addAll(0, Arrays.asList("Kiwifruit", "Pineapple", "Mandarin"));
-        assertEquals("Orange", comboBox.getSelectionModel().getSelectedItem());
-        assertEquals(4, comboBox.getSelectionModel().getSelectedIndex());
+        assertEquals("Orange", sm.getSelectedItem());
+        assertEquals(4, sm.getSelectedIndex());
     }
     
     @Test public void ensureSelectionShiftsUpWhenOneItemIsRemoved() {
         comboBox.getItems().addAll("Apple", "Orange", "Banana");
-        comboBox.getSelectionModel().select(1);
-        assertEquals(1, comboBox.getSelectionModel().getSelectedIndex());
-        assertEquals("Orange", comboBox.getSelectionModel().getSelectedItem());
+        sm.select(1);
+        assertEquals(1, sm.getSelectedIndex());
+        assertEquals("Orange", sm.getSelectedItem());
         
         comboBox.getItems().remove("Apple");
-        assertEquals(0, comboBox.getSelectionModel().getSelectedIndex());
-        assertEquals("Orange", comboBox.getSelectionModel().getSelectedItem());
+        assertEquals(0, sm.getSelectedIndex());
+        assertEquals("Orange", sm.getSelectedItem());
     }
     
     @Test public void ensureSelectionShiftsUpWheMultipleItemsAreRemoved() {
         comboBox.getItems().addAll("Apple", "Orange", "Banana");
-        comboBox.getSelectionModel().select(2);
-        assertEquals(2, comboBox.getSelectionModel().getSelectedIndex());
-        assertEquals("Banana", comboBox.getSelectionModel().getSelectedItem());
+        sm.select(2);
+        assertEquals(2, sm.getSelectedIndex());
+        assertEquals("Banana", sm.getSelectedItem());
         
         comboBox.getItems().removeAll(Arrays.asList("Apple", "Orange"));
-        assertEquals(0, comboBox.getSelectionModel().getSelectedIndex());
-        assertEquals("Banana", comboBox.getSelectionModel().getSelectedItem());
+        assertEquals(0, sm.getSelectedIndex());
+        assertEquals("Banana", sm.getSelectedItem());
     }
     
     @Test public void ensureSelectionIsCorrectWhenItemsChange() {
         comboBox.setItems(FXCollections.observableArrayList("Item 1"));
-        comboBox.getSelectionModel().select(0);
-        assertEquals("Item 1", comboBox.getSelectionModel().getSelectedItem());
+        sm.select(0);
+        assertEquals("Item 1", sm.getSelectedItem());
         
         comboBox.setItems(FXCollections.observableArrayList("Item 2"));
-        assertEquals(-1, comboBox.getSelectionModel().getSelectedIndex());
-        assertEquals(null, comboBox.getSelectionModel().getSelectedItem());
+        assertEquals(-1, sm.getSelectedIndex());
+        assertEquals(null, sm.getSelectedItem());
     }
     
     @Test(expected=NullPointerException.class) 
@@ -323,92 +325,92 @@ public class ComboBoxTest {
     @Test public void ensureSelectionModelUpdatesValueProperty_withSelectIndex() {
         comboBox.getItems().addAll("Apple", "Orange", "Banana");
         assertNull(comboBox.getValue());
-        comboBox.getSelectionModel().select(0);
+        sm.select(0);
         assertEquals("Apple", comboBox.getValue());
     }
     
     @Test public void ensureSelectionModelUpdatesValueProperty_withSelectItem() {
         comboBox.getItems().addAll("Apple", "Orange", "Banana");
         assertNull(comboBox.getValue());
-        comboBox.getSelectionModel().select("Apple");
+        sm.select("Apple");
         assertEquals("Apple", comboBox.getValue());
     }
     
     @Test public void ensureSelectionModelUpdatesValueProperty_withSelectPrevious() {
         comboBox.getItems().addAll("Apple", "Orange", "Banana");
         assertNull(comboBox.getValue());
-        comboBox.getSelectionModel().select(2);
-        comboBox.getSelectionModel().selectPrevious();
+        sm.select(2);
+        sm.selectPrevious();
         assertEquals("Orange", comboBox.getValue());
     }
     
     @Test public void ensureSelectionModelUpdatesValueProperty_withSelectNext() {
         comboBox.getItems().addAll("Apple", "Orange", "Banana");
         assertNull(comboBox.getValue());
-        comboBox.getSelectionModel().select("Apple");
-        comboBox.getSelectionModel().selectNext();
+        sm.select("Apple");
+        sm.selectNext();
         assertEquals("Orange", comboBox.getValue());
     }
     
     @Test public void ensureSelectionModelUpdatesValueProperty_withSelectFirst() {
         comboBox.getItems().addAll("Apple", "Orange", "Banana");
         assertNull(comboBox.getValue());
-        comboBox.getSelectionModel().selectFirst();
+        sm.selectFirst();
         assertEquals("Apple", comboBox.getValue());
     }
     
     @Test public void ensureSelectionModelUpdatesValueProperty_withSelectLast() {
         comboBox.getItems().addAll("Apple", "Orange", "Banana");
         assertNull(comboBox.getValue());
-        comboBox.getSelectionModel().selectLast();
+        sm.selectLast();
         assertEquals("Banana", comboBox.getValue());
     }
     
     @Test public void ensureSelectionModelClearsValueProperty() {
         comboBox.getItems().addAll("Apple", "Orange", "Banana");
         assertNull(comboBox.getValue());
-        comboBox.getSelectionModel().select(0);
+        sm.select(0);
         assertEquals("Apple", comboBox.getValue());
         
-        comboBox.getSelectionModel().clearSelection();
+        sm.clearSelection();
         assertNull(comboBox.getValue());
     }
     
     @Test public void ensureSelectionModelClearsValuePropertyWhenNegativeOneSelected() {
         comboBox.getItems().addAll("Apple", "Orange", "Banana");
         assertNull(comboBox.getValue());
-        comboBox.getSelectionModel().select(0);
+        sm.select(0);
         assertEquals("Apple", comboBox.getValue());
         
-        comboBox.getSelectionModel().select(-1);
+        sm.select(-1);
         assertNull("Expected null, actual value: " + comboBox.getValue(), comboBox.getValue());
     }
     
     @Test public void ensureValueIsCorrectWhenItemsIsAddedToWithExistingSelection() {
         comboBox.getItems().addAll("Apple", "Orange", "Banana");
-        comboBox.getSelectionModel().select(1);
+        sm.select(1);
         
         comboBox.getItems().add(0, "Kiwifruit");
         
-        assertEquals(2, comboBox.getSelectionModel().getSelectedIndex());
-        assertEquals("Orange", comboBox.getSelectionModel().getSelectedItem());
+        assertEquals(2, sm.getSelectedIndex());
+        assertEquals("Orange", sm.getSelectedItem());
         assertEquals("Orange", comboBox.getValue());
     }
     
     @Test public void ensureValueIsCorrectWhenItemsAreRemovedWithExistingSelection() {
         comboBox.getItems().addAll("Apple", "Orange", "Banana");
-        comboBox.getSelectionModel().select(1);
+        sm.select(1);
         
         comboBox.getItems().remove("Apple");
         
-        assertEquals(0, comboBox.getSelectionModel().getSelectedIndex());
-        assertEquals("Orange", comboBox.getSelectionModel().getSelectedItem());
+        assertEquals(0, sm.getSelectedIndex());
+        assertEquals("Orange", sm.getSelectedItem());
         assertEquals("Orange", comboBox.getValue());
     }
     
     @Test public void ensureValueIsUpdatedByCorrectSelectionModelWhenSelectionModelIsChanged() {
         comboBox.getItems().addAll("Apple", "Orange", "Banana");
-        SelectionModel sm1 = comboBox.getSelectionModel();
+        SelectionModel sm1 = sm;
         sm1.select(1);
         assertEquals("Orange", comboBox.getValue());
         
@@ -428,32 +430,32 @@ public class ComboBoxTest {
         StringProperty sp = new SimpleStringProperty("empty");
         comboBox.valueProperty().bind(sp);
         
-        comboBox.getSelectionModel().select(1);
+        sm.select(1);
         assertEquals("empty", comboBox.getValue());
     }
     
     @Test public void ensureSelectionModelUpdatesWhenValueChanges() {
         comboBox.getItems().addAll("Apple", "Orange", "Banana");
-        assertNull(comboBox.getSelectionModel().getSelectedItem());
+        assertNull(sm.getSelectedItem());
         comboBox.setValue("Orange");
-        assertEquals("Orange", comboBox.getSelectionModel().getSelectedItem());
+        assertEquals("Orange", sm.getSelectedItem());
     }
     
     @Test public void ensureSelectionModelUpdatesWhenValueChangesToNull() {
         comboBox.getItems().addAll("Apple", "Orange", "Banana");
         comboBox.setValue("Kiwifruit");
-        assertNull(comboBox.getSelectionModel().getSelectedItem());
+        assertEquals("Kiwifruit", sm.getSelectedItem());
         assertEquals("Kiwifruit", comboBox.getValue());
         comboBox.setValue(null);
-        assertEquals(null, comboBox.getSelectionModel().getSelectedItem());
-        assertEquals(-1, comboBox.getSelectionModel().getSelectedIndex());
+        assertEquals(null, sm.getSelectedItem());
+        assertEquals(-1, sm.getSelectedIndex());
         assertEquals(null, comboBox.getValue());
     }
     
     @Test public void ensureValueEqualsSelectedItemWhenNotInItemsList() {
         comboBox.getItems().addAll("Apple", "Orange", "Banana");
-        comboBox.getSelectionModel().setSelectedItem("pineapple");
-        assertEquals("pineapple", comboBox.getSelectionModel().getSelectedItem());
+        sm.setSelectedItem("pineapple");
+        assertEquals("pineapple", sm.getSelectedItem());
         assertEquals("pineapple", comboBox.getValue());
     }
     
@@ -665,5 +667,31 @@ public class ComboBoxTest {
         assertTrue("PromptText cannot be bound", comboBox.getValue().equals("value"));
         strPr.setValue("newvalue");
         assertTrue("PromptText cannot be bound", comboBox.getValue().equals("newvalue"));
+    }
+    
+    
+    /*********************************************************************
+     * Tests for bug reports                                             *
+     ********************************************************************/    
+    
+    @Test public void test_rt18972() {
+        comboBox.getItems().addAll("Apple", "Orange", "Banana");
+        sm.select(1);
+        assertTrue(sm.isSelected(1));
+        
+        comboBox.setEditable(true);
+        comboBox.setValue("New Value");
+        
+        // there should be no selection in the selection model, as "New Value" 
+        // isn't an item in the list, however, it is a totally valid value for
+        // the value property
+        assertFalse(sm.isSelected(1));      
+        assertEquals("New Value", sm.getSelectedItem());
+        assertEquals("New Value", comboBox.getValue());
+        
+        comboBox.setEditable(false);
+        assertEquals(-1, sm.getSelectedIndex());
+        assertEquals("New Value", sm.getSelectedItem());
+        assertEquals("New Value", comboBox.getValue());
     }
 }
