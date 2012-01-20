@@ -11,6 +11,8 @@ import java.util.Arrays;
 
 import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.SimpleObjectProperty;
+import javafx.beans.value.ChangeListener;
+import javafx.beans.value.ObservableValue;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.scene.control.cell.PropertyValueFactory;
@@ -21,9 +23,11 @@ import org.junit.Test;
 
 public class TableViewTest {
     private TableView<String> table;
+    private TableView.TableViewSelectionModel sm;
 
     @Before public void setup() {
         table = new TableView<String>();
+        sm = table.getSelectionModel();
     }
 
     /*********************************************************************
@@ -35,7 +39,7 @@ public class TableViewTest {
     }
 
     @Test public void noArgConstructorSetsNonNullSelectionModel() {
-        assertNotNull(table.getSelectionModel());
+        assertNotNull(sm);
     }
 
     @Test public void noArgConstructorSetsNonNullItems() {
@@ -43,11 +47,11 @@ public class TableViewTest {
     }
 
     @Test public void noArgConstructor_selectedItemIsNull() {
-        assertNull(table.getSelectionModel().getSelectedItem());
+        assertNull(sm.getSelectedItem());
     }
 
     @Test public void noArgConstructor_selectedIndexIsNegativeOne() {
-        assertEquals(-1, table.getSelectionModel().getSelectedIndex());
+        assertEquals(-1, sm.getSelectedIndex());
     }
 
     @Test public void singleArgConstructorSetsTheStyleClass() {
@@ -94,126 +98,126 @@ public class TableViewTest {
         TableView.TableViewSelectionModel<String> sm = new TableView.TableViewArrayListSelectionModel<String>(table);
         ObjectProperty<TableView.TableViewSelectionModel<String>> other = new SimpleObjectProperty<TableView.TableViewSelectionModel<String>>(sm);
         table.selectionModelProperty().bind(other);
-        assertSame(sm, table.getSelectionModel());
+        assertSame(sm, sm);
     }
 
     @Test public void selectionModelCanBeChanged() {
         TableView.TableViewSelectionModel<String> sm = new TableView.TableViewArrayListSelectionModel<String>(table);
         table.setSelectionModel(sm);
-        assertSame(sm, table.getSelectionModel());
+        assertSame(sm, sm);
     }
 
     @Test public void canSetSelectedItemToAnItemEvenWhenThereAreNoItems() {
         final String randomString = new String("I AM A CRAZY RANDOM STRING");
-        table.getSelectionModel().select(randomString);
-        assertEquals(-1, table.getSelectionModel().getSelectedIndex());
-        assertSame(randomString, table.getSelectionModel().getSelectedItem());
+        sm.select(randomString);
+        assertEquals(-1, sm.getSelectedIndex());
+        assertSame(randomString, sm.getSelectedItem());
     }
 
     @Test public void canSetSelectedItemToAnItemNotInTheDataModel() {
         table.getItems().addAll("Apple", "Orange", "Banana");
         final String randomString = new String("I AM A CRAZY RANDOM STRING");
-        table.getSelectionModel().select(randomString);
-        assertEquals(-1, table.getSelectionModel().getSelectedIndex());
-        assertSame(randomString, table.getSelectionModel().getSelectedItem());
+        sm.select(randomString);
+        assertEquals(-1, sm.getSelectedIndex());
+        assertSame(randomString, sm.getSelectedItem());
     }
 
     @Test public void settingTheSelectedItemToAnItemInItemsResultsInTheCorrectSelectedIndex() {
         table.getItems().addAll("Apple", "Orange", "Banana");
-        table.getSelectionModel().select("Orange");
-        assertEquals(1, table.getSelectionModel().getSelectedIndex());
-        assertSame("Orange", table.getSelectionModel().getSelectedItem());
+        sm.select("Orange");
+        assertEquals(1, sm.getSelectedIndex());
+        assertSame("Orange", sm.getSelectedItem());
     }
 
     @Test public void settingTheSelectedItemToANonexistantItemAndThenSettingItemsWhichContainsItResultsInCorrectSelectedIndex() {
-        table.getSelectionModel().select("Orange");
+        sm.select("Orange");
         table.getItems().addAll("Apple", "Orange", "Banana");
-        assertEquals(1, table.getSelectionModel().getSelectedIndex());
-        assertSame("Orange", table.getSelectionModel().getSelectedItem());
+        assertEquals(1, sm.getSelectedIndex());
+        assertSame("Orange", sm.getSelectedItem());
     }
     
     @Test public void ensureSelectionClearsWhenAllItemsAreRemoved_selectIndex0() {
         table.getItems().addAll("Apple", "Orange", "Banana");
-        table.getSelectionModel().select(0);
+        sm.select(0);
         table.getItems().clear();
-        assertEquals(-1, table.getSelectionModel().getSelectedIndex());
+        assertEquals(-1, sm.getSelectedIndex());
     }
     
     @Test public void ensureSelectionClearsWhenAllItemsAreRemoved_selectIndex2() {
         table.getItems().addAll("Apple", "Orange", "Banana");
-        table.getSelectionModel().select(2);
+        sm.select(2);
         table.getItems().clear();
-        assertEquals(-1, table.getSelectionModel().getSelectedIndex());
+        assertEquals(-1, sm.getSelectedIndex());
     }
     
     @Test public void ensureSelectedItemRemainsAccurateWhenItemsAreCleared() {
         table.getItems().addAll("Apple", "Orange", "Banana");
-        table.getSelectionModel().select(2);
+        sm.select(2);
         table.getItems().clear();
-        assertNull("Selected Item: " + table.getSelectionModel().getSelectedItem(), table.getSelectionModel().getSelectedItem());
-        assertEquals(-1, table.getSelectionModel().getSelectedIndex());
+        assertNull("Selected Item: " + sm.getSelectedItem(), sm.getSelectedItem());
+        assertEquals(-1, sm.getSelectedIndex());
         
         table.getItems().addAll("Kiwifruit", "Mandarin", "Pineapple");
-        table.getSelectionModel().select(2);
-        assertEquals("Pineapple", table.getSelectionModel().getSelectedItem());
+        sm.select(2);
+        assertEquals("Pineapple", sm.getSelectedItem());
     }
     
     @Ignore("Not fixed yet")
     @Test public void ensureSelectionShiftsDownWhenOneNewItemIsAdded() {
         table.getItems().addAll("Apple", "Orange", "Banana");
-        table.getSelectionModel().select(1);
-        assertEquals(1, table.getSelectionModel().getSelectedIndex());
-        assertEquals("Orange", table.getSelectionModel().getSelectedItem());
+        sm.select(1);
+        assertEquals(1, sm.getSelectedIndex());
+        assertEquals("Orange", sm.getSelectedItem());
         
         table.getItems().add(0, "Kiwifruit");
-        assertEquals(2, table.getSelectionModel().getSelectedIndex());
-        assertEquals("Orange", table.getSelectionModel().getSelectedItem());
+        assertEquals(2, sm.getSelectedIndex());
+        assertEquals("Orange", sm.getSelectedItem());
     }
     
     @Ignore("Not fixed yet")
     @Test public void ensureSelectionShiftsDownWhenMultipleNewItemAreAdded() {
         table.getItems().addAll("Apple", "Orange", "Banana");
-        table.getSelectionModel().select(1);
-        assertEquals(1, table.getSelectionModel().getSelectedIndex());
-        assertEquals("Orange", table.getSelectionModel().getSelectedItem());
+        sm.select(1);
+        assertEquals(1, sm.getSelectedIndex());
+        assertEquals("Orange", sm.getSelectedItem());
         
         table.getItems().addAll(0, Arrays.asList("Kiwifruit", "Pineapple", "Mandarin"));
-        assertEquals("Orange", table.getSelectionModel().getSelectedItem());
-        assertEquals(4, table.getSelectionModel().getSelectedIndex());
+        assertEquals("Orange", sm.getSelectedItem());
+        assertEquals(4, sm.getSelectedIndex());
     }
     
     @Ignore("Not fixed yet")
     @Test public void ensureSelectionShiftsDownWhenOneItemIsRemoved() {
         table.getItems().addAll("Apple", "Orange", "Banana");
-        table.getSelectionModel().select(1);
-        assertEquals(1, table.getSelectionModel().getSelectedIndex());
-        assertEquals("Orange", table.getSelectionModel().getSelectedItem());
+        sm.select(1);
+        assertEquals(1, sm.getSelectedIndex());
+        assertEquals("Orange", sm.getSelectedItem());
         
         table.getItems().remove("Apple");
-        assertEquals(0, table.getSelectionModel().getSelectedIndex());
-        assertEquals("Orange", table.getSelectionModel().getSelectedItem());
+        assertEquals(0, sm.getSelectedIndex());
+        assertEquals("Orange", sm.getSelectedItem());
     }
     
     @Ignore("Not fixed yet")
     @Test public void ensureSelectionShiftsDownWheMultipleItemsAreRemoved() {
         table.getItems().addAll("Apple", "Orange", "Banana");
-        table.getSelectionModel().select(2);
-        assertEquals(2, table.getSelectionModel().getSelectedIndex());
-        assertEquals("Banana", table.getSelectionModel().getSelectedItem());
+        sm.select(2);
+        assertEquals(2, sm.getSelectedIndex());
+        assertEquals("Banana", sm.getSelectedItem());
         
         table.getItems().removeAll(Arrays.asList("Apple", "Orange"));
-        assertEquals(0, table.getSelectionModel().getSelectedIndex());
-        assertEquals("Banana", table.getSelectionModel().getSelectedItem());
+        assertEquals(0, sm.getSelectedIndex());
+        assertEquals("Banana", sm.getSelectedItem());
     }
     
     @Test public void ensureSelectionIsCorrectWhenItemsChange() {
         table.setItems(FXCollections.observableArrayList("Item 1"));
-        table.getSelectionModel().select(0);
-        assertEquals("Item 1", table.getSelectionModel().getSelectedItem());
+        sm.select(0);
+        assertEquals("Item 1", sm.getSelectedItem());
         
         table.setItems(FXCollections.observableArrayList("Item 2"));
-        assertEquals(-1, table.getSelectionModel().getSelectedIndex());
-        assertEquals(null, table.getSelectionModel().getSelectedItem());
+        assertEquals(-1, sm.getSelectedIndex());
+        assertEquals(null, sm.getSelectedItem());
     }
 
     /*********************************************************************
@@ -363,11 +367,11 @@ public class TableViewTest {
     
     @Test public void test_rt18385() {
         table.getItems().addAll("row1", "row2", "row3");
-        table.getSelectionModel().select(1);
+        sm.select(1);
         table.getItems().add("Another Row");
-        assertEquals(1, table.getSelectionModel().getSelectedIndices().size());
-        assertEquals(1, table.getSelectionModel().getSelectedItems().size());
-        assertEquals(1, table.getSelectionModel().getSelectedCells().size());
+        assertEquals(1, sm.getSelectedIndices().size());
+        assertEquals(1, sm.getSelectedItems().size());
+        assertEquals(1, sm.getSelectedCells().size());
     }
     
     @Test public void test_rt18339_onlyEditWhenTableViewIsEditable_tableEditableIsFalse_columnEditableIsFalse() {
@@ -408,8 +412,8 @@ public class TableViewTest {
     
     @Test public void test_rt14451() {
         table.getItems().addAll("Apple", "Orange", "Banana");
-        table.getSelectionModel().setSelectionMode(SelectionMode.MULTIPLE);
-        table.getSelectionModel().selectRange(0, 2); // select from 0 (inclusive) to 2 (exclusive)
-        assertEquals(2, table.getSelectionModel().getSelectedIndices().size());
+        sm.setSelectionMode(SelectionMode.MULTIPLE);
+        sm.selectRange(0, 2); // select from 0 (inclusive) to 2 (exclusive)
+        assertEquals(2, sm.getSelectedIndices().size());
     }
 }
