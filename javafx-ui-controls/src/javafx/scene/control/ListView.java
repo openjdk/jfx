@@ -978,10 +978,10 @@ public class ListView<T> extends Control {
             while (c.next()) {
                 if (c.wasReplaced()) {
                     // Fix for RT-18969: the list had setAll called on it
-                    if (getSelectedIndex() < getItemCount()) {
-                        int selectedIndex = getSelectedIndex();
-                        clearSelection(selectedIndex);
-                        select(selectedIndex);
+                    int index = getSelectedIndex();
+                    if (index < getItemCount() && index >= 0) {
+                        clearSelection(index);
+                        select(index);
                     }
                 } else if (c.wasAdded() || c.wasRemoved()) {
                     int shift = c.wasAdded() ? c.getAddedSize() : -c.getRemovedSize();
