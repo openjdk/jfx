@@ -292,7 +292,7 @@ public class TextFieldSkin extends TextInputControlSkin<TextField, TextFieldBeha
         textNode.impl_caretShapeProperty().addListener(new InvalidationListener() {
             @Override public void invalidated(Observable observable) {
                 caretPath.getElements().setAll(textNode.impl_caretShapeProperty().get());
-                caretWidth = caretPath.getLayoutBounds().getWidth();
+                caretWidth = Math.round(caretPath.getLayoutBounds().getWidth());
             }
         });
 
