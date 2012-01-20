@@ -1852,7 +1852,12 @@ public class TableView<S> extends Control {
         private void updateSelection(ListChangeListener.Change<? extends S> c) {
             while (c.next()) {
                 if (c.wasReplaced()) {
-                    // no-op
+                    // Fix for RT-18969: the items list had setAll called on it
+                    if (getSelectedIndex() < getRowCount()) {
+                        int selectedIndex = getSelectedIndex();
+                        clearSelection(selectedIndex);
+                        select(selectedIndex);
+                    }
                 } else if (c.wasAdded() || c.wasRemoved()) {
                     int position = c.getFrom();
                     int shift = c.wasAdded() ? c.getAddedSize() : -c.getRemovedSize();

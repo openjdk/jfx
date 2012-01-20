@@ -54,17 +54,17 @@ public class KeyEventFirer {
     }
     
     private KeyEvent createEvent(KeyCode keyCode, EventType<KeyEvent> evtType, KeyModifier... modifiers) {
-        List<KeyModifier> modifiersList = Arrays.asList(modifiers);
-        
+        List<KeyModifier> ml = Arrays.asList(modifiers);
+
         return KeyEvent.impl_keyEvent(
                 target, // EventTarget
                 null,     // Character (unused unless KeyCode == KEY_TYPED
                 null,     // text
                 keyCode.impl_getCode(), // KeyCode
-                modifiersList.contains(KeyModifier.SHIFT),    // shiftDown
-                modifiersList.contains(KeyModifier.CTRL),     // ctrlDown
-                modifiersList.contains(KeyModifier.ALT),      // altDown
-                modifiersList.contains(KeyModifier.META),     // metaData
+                ml.contains(KeyModifier.SHIFT),                                   // shiftDown
+                ml.contains(KeyModifier.CTRL),                                    // ctrlDown
+                ml.contains(KeyModifier.ALT),                                     // altDown
+                ml.contains(KeyModifier.META) || ml.contains(KeyModifier.CMD),    // metaData
                 evtType);  // eventType
     }
 }
