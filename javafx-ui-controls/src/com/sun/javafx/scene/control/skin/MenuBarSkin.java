@@ -287,6 +287,16 @@ public class MenuBarSkin extends SkinBase<MenuBar, BehaviorBase<MenuBar>> implem
         return false;
     }
 
+    private int getMenuBarButtonIndex(MenuBarButton m) {
+        for (int i= 0; i < container.getChildren().size(); i++) {
+            MenuBarButton menuButton = (MenuBarButton)container.getChildren().get(i);
+            if (m == menuButton) {
+                return i;
+            }
+        }
+        return -1;
+    }
+    
     private void rebuildUI() {
         for(Node n : container.getChildren()) {
             //Stop observing menu's showing & disable property for changes.
@@ -418,6 +428,8 @@ public class MenuBarSkin extends SkinBase<MenuBar, BehaviorBase<MenuBar>> implem
                         } else {
                             openMenu = null;
                         }
+                        // update FocusedIndex
+                        focusedMenuIndex = getMenuBarButtonIndex(menuButton);
                     }
                 }
             });

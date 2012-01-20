@@ -898,38 +898,24 @@
     -fx-skin: "com.sun.javafx.scene.control.skin.MenuBarSkin";
     -fx-padding: 0.0em 0.666667em 0.0em 0.666667em; /* 0 8 0 8 */
     -fx-spacing: 0.166667em; /* 2 */
-    -fx-text-fill: -fx-mid-text-color, white;
-    -fx-background-color:
-/*         bottom shape: */
-        linear-gradient(to bottom, derive(-fx-base,-30%), black),
-/*         top shape: */
-        linear-gradient(to bottom, derive(-fx-base,-50%), derive(-fx-base,-70%));
+    -fx-base: derive(#d0d0d0,-70%);
+    -fx-background-color: linear-gradient(to bottom, derive(-fx-color,50%), derive(-fx-color,-30%)), -fx-body-color;
     -fx-background-insets: 0, 1 0 1 0;
     -fx-background-radius: 0, 0 ;
 }
 
-.menu-bar Text {
-    -fx-font-smoothing-type: lcd;
-}
-
-.menu-bar .menu .label {
-    -fx-padding: 0.333em 0.5em 0.333em 0.5em; /* 4 6 4 6*/
-/*    -fx-effect: dropshadow(two-pass-box , rgba(0, 0, 0, 0.6), 1, 0.0 , 0, 1);*/
-}
-
-.menu-bar .menu-button:disabled .label {
-    -fx-opacity: -fx-disabled-opacity;
-}
-
-.menu-bar .menu {
-    -fx-background-color: null;
-    -fx-text-fill: white;
-    -fx-background-insets: 0;
+/* Show nothing for background of normal menu button in a menu bar */
+.menu-bar .menu-button {
     -fx-background-radius: 0;
-    -fx-padding: 0.0em;
+    -fx-background-color: transparent;
+    -fx-background-insets: 0; 
+}
+/* Change padding of menu buttons when in menu bar */
+.menu-bar .menu-button .label {
+    -fx-padding: 0.333em 0.5em 0.333em 0.5em; /* 4 6 4 6*/
 }
 
-.menu-bar .menu .showing {
+.menu-bar .menu-button:hover, .menu-bar .menu-button:focused, .menu-bar .menu-button.showing {
     -fx-background: -fx-accent;
     -fx-background-color: -fx-selection-bar;
     -fx-text-fill: -fx-selection-bar-text;
@@ -950,8 +936,7 @@
 
 .menu-bar:show-mnemonics .mnemonic-underline {
     -fx-stroke: -fx-text-fill;
-} 
-
+}
 
 /*******************************************************************************
  *                                                                             *
@@ -1990,7 +1975,11 @@
     -fx-background-insets: 0 0 -1 0, 0, 1, 2;
     -fx-background-radius: 5, 5, 4, 3;
     -fx-padding: 0.0em; /* 0 */
+    -fx-text-fill: -fx-text-base-color;
 }
+
+/* TODO workaround for RT-19062 */
+.menu-button .label { -fx-text-fill: -fx-text-base-color; }
 
 .menu-button Text {
     -fx-font-smoothing-type: lcd;
