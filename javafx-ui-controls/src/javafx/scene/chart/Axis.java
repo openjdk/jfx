@@ -1176,6 +1176,13 @@ public abstract class Axis<T> extends Region {
      */
     @Deprecated @Override public long impl_getPseudoClassState() {
         long mask = super.impl_getPseudoClassState();
+        if (getSide() == null) {
+            // RT-18270 XYChart has not initialized Side values and it could be null
+            // note: We do not have initial default property on creation, as the default
+            // depends on whether it is x, or y axis. hence if we get here - we are 
+            // probably installed directly inside a scene. 
+            setSide(Side.BOTTOM);
+        } 
         switch(getSide()) {
             case TOP:
                 mask |= TOP_PSEUDOCLASS_STATE;
