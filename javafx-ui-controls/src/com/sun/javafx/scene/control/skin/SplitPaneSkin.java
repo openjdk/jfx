@@ -328,6 +328,7 @@ public class SplitPaneSkin extends SkinBase<SplitPane, BehaviorBase<SplitPane>> 
             return size;
         }
 
+        size = snapSize(size);
         int portion = (int)(size)/available.size();
         int remainder;
 
@@ -380,7 +381,8 @@ public class SplitPaneSkin extends SkinBase<SplitPane, BehaviorBase<SplitPane>> 
         if (available.isEmpty()) {
             return size;
         }
-
+        
+        size = snapSize(size);
         int portion = (int)(size)/available.size();
         int remainder;
 
@@ -984,11 +986,11 @@ public class SplitPaneSkin extends SkinBase<SplitPane, BehaviorBase<SplitPane>> 
         }
 
         @Override protected double computePrefWidth(double height) {
-            return getInsets().getLeft() + getInsets().getRight();
+            return snapSpace(getInsets().getLeft()) + snapSpace(getInsets().getRight());
         }
 
         @Override protected double computePrefHeight(double width) {
-            return getInsets().getTop() + getInsets().getBottom();
+            return snapSpace(getInsets().getTop()) + snapSpace(getInsets().getBottom());
         }
 
         @Override protected double computeMaxWidth(double height) {
