@@ -584,55 +584,55 @@ public class SplitPaneTest {
         assertEquals(78, spRight.getLayoutBounds().getWidth(), 1e-100);
     }
 
-//    @Test public void growSplitPaneBy5pxWithFixedDividers_RT18806() {
-//        StackPane spLeft = new StackPane();
-//        StackPane spCenter = new StackPane();
-//        StackPane spRight = new StackPane();
-//
-//        spLeft.setMinWidth(77);
-//        spRight.setMinWidth(77);
-//
-//        splitPane.setDividerPosition(0, 0.20);
-//        splitPane.setDividerPosition(1, 0.80);
-//        splitPane.getItems().addAll(spLeft, spCenter, spRight);
-//
-//        SplitPane.resizableWithParent(spLeft, false);
-//        SplitPane.resizableWithParent(spRight, false);
-//
-//        root.setPrefSize(400, 400);
-//        root.getChildren().add(splitPane);
-//        show();
-//
-//        root.impl_reapplyCSS();
-//        root.autosize();
-//        root.layout();
-//
-//        double w = 398; // The width minus the insets.
-//        double pos[] = splitPane.getDividerPositions();
-//        double p0 = convertDividerPostionToAbsolutePostion(pos[0], w);
-//        double p1 = convertDividerPostionToAbsolutePostion(pos[1], w);
-//
-//        assertEquals(77, p0, 1e-100);
-//        assertEquals(315, p1, 1e-100);
-//        assertEquals(77, spLeft.getLayoutBounds().getWidth(), 1e-100);
-//        assertEquals(232, spCenter.getLayoutBounds().getWidth(), 1e-100);
-//        assertEquals(77, spRight.getLayoutBounds().getWidth(), 1e-100);
-//
-//        root.impl_reapplyCSS();
-//        root.resize(405, 400);
-//        root.layout();
-//
-//        w = 403;
-//        pos = splitPane.getDividerPositions();
-//        p0 = convertDividerPostionToAbsolutePostion(pos[0], w);
-//        p1 = convertDividerPostionToAbsolutePostion(pos[1], w);
-//
-//        assertEquals(77, p0, 1e-100);
-//        assertEquals(320, p1, 1e-100);
-//        assertEquals(77, spLeft.getLayoutBounds().getWidth(), 1e-100);
-//        assertEquals(237, spCenter.getLayoutBounds().getWidth(), 1e-100);
-//        assertEquals(77, spRight.getLayoutBounds().getWidth(), 1e-100);
-//    }
+    @Test public void growSplitPaneBy5pxWithFixedDividers_RT18806() {
+        StackPane spLeft = new StackPane();
+        StackPane spCenter = new StackPane();
+        StackPane spRight = new StackPane();
+
+        spLeft.setMinWidth(77);
+        spRight.setMinWidth(77);
+
+        splitPane.setDividerPosition(0, 0.20);
+        splitPane.setDividerPosition(1, 0.80);
+        splitPane.getItems().addAll(spLeft, spCenter, spRight);
+
+        SplitPane.resizableWithParent(spLeft, false);
+        SplitPane.resizableWithParent(spRight, false);
+
+        root.setPrefSize(400, 400);
+        root.getChildren().add(splitPane);
+        show();
+
+        root.impl_reapplyCSS();
+        root.autosize();
+        root.layout();
+
+        double w = 398; // The width minus the insets.
+        double pos[] = splitPane.getDividerPositions();
+        double p0 = convertDividerPostionToAbsolutePostion(pos[0], w);
+        double p1 = convertDividerPostionToAbsolutePostion(pos[1], w);
+
+        assertEquals(77, p0, 1e-100);
+        assertEquals(315, p1, 1e-100);
+        assertEquals(77, spLeft.getLayoutBounds().getWidth(), 1e-100);
+        assertEquals(232, spCenter.getLayoutBounds().getWidth(), 1e-100);
+        assertEquals(77, spRight.getLayoutBounds().getWidth(), 1e-100);
+
+        root.impl_reapplyCSS();
+        root.resize(405, 400);
+        root.layout();
+
+        w = 403;
+        pos = splitPane.getDividerPositions();
+        p0 = convertDividerPostionToAbsolutePostion(pos[0], w);
+        p1 = convertDividerPostionToAbsolutePostion(pos[1], w);
+
+        assertEquals(77, p0, 1e-100);
+        assertEquals(320, p1, 1e-100);
+        assertEquals(77, spLeft.getLayoutBounds().getWidth(), 1e-100);
+        assertEquals(237, spCenter.getLayoutBounds().getWidth(), 1e-100);
+        assertEquals(77, spRight.getLayoutBounds().getWidth(), 1e-100);
+    }
 
     @Test public void resizeSplitPaneAllPanesAreSetToMax() {
         StackPane spLeft = new StackPane();
@@ -1012,56 +1012,56 @@ public class SplitPaneTest {
         assertEquals(78, spRight.getLayoutBounds().getHeight(), 1e-100);
     }
 
-//    @Test public void growSplitPaneBy5pxWithFixedDividers_RT18806_VerticalSplitPane() {
-//        StackPane spLeft = new StackPane();
-//        StackPane spCenter = new StackPane();
-//        StackPane spRight = new StackPane();
-//
-//        spLeft.setMinHeight(77);
-//        spRight.setMinHeight(77);
-//
-//        splitPane.setOrientation(Orientation.VERTICAL);
-//        splitPane.setDividerPosition(0, 0.20);
-//        splitPane.setDividerPosition(1, 0.80);
-//        splitPane.getItems().addAll(spLeft, spCenter, spRight);
-//
-//        SplitPane.resizableWithParent(spLeft, false);
-//        SplitPane.resizableWithParent(spRight, false);
-//
-//        root.setPrefSize(400, 400);
-//        root.getChildren().add(splitPane);
-//        show();
-//
-//        root.impl_reapplyCSS();
-//        root.autosize();
-//        root.layout();
-//
-//        double h = 398; // The height minus the insets.
-//        double pos[] = splitPane.getDividerPositions();
-//        double p0 = convertDividerPostionToAbsolutePostion(pos[0], h);
-//        double p1 = convertDividerPostionToAbsolutePostion(pos[1], h);
-//
-//        assertEquals(77, p0, 1e-100);
-//        assertEquals(315, p1, 1e-100);
-//        assertEquals(77, spLeft.getLayoutBounds().getHeight(), 1e-100);
-//        assertEquals(232, spCenter.getLayoutBounds().getHeight(), 1e-100);
-//        assertEquals(77, spRight.getLayoutBounds().getHeight(), 1e-100);
-//
-//        root.impl_reapplyCSS();
-//        root.resize(400, 405);
-//        root.layout();
-//
-//        h = 403;
-//        pos = splitPane.getDividerPositions();
-//        p0 = convertDividerPostionToAbsolutePostion(pos[0], h);
-//        p1 = convertDividerPostionToAbsolutePostion(pos[1], h);
-//
-//        assertEquals(77, p0, 1e-100);
-//        assertEquals(320, p1, 1e-100);
-//        assertEquals(77, spLeft.getLayoutBounds().getHeight(), 1e-100);
-//        assertEquals(237, spCenter.getLayoutBounds().getHeight(), 1e-100);
-//        assertEquals(77, spRight.getLayoutBounds().getHeight(), 1e-100);
-//    }
+    @Test public void growSplitPaneBy5pxWithFixedDividers_RT18806_VerticalSplitPane() {
+        StackPane spLeft = new StackPane();
+        StackPane spCenter = new StackPane();
+        StackPane spRight = new StackPane();
+
+        spLeft.setMinHeight(77);
+        spRight.setMinHeight(77);
+
+        splitPane.setOrientation(Orientation.VERTICAL);
+        splitPane.setDividerPosition(0, 0.20);
+        splitPane.setDividerPosition(1, 0.80);
+        splitPane.getItems().addAll(spLeft, spCenter, spRight);
+
+        SplitPane.resizableWithParent(spLeft, false);
+        SplitPane.resizableWithParent(spRight, false);
+
+        root.setPrefSize(400, 400);
+        root.getChildren().add(splitPane);
+        show();
+
+        root.impl_reapplyCSS();
+        root.autosize();
+        root.layout();
+
+        double h = 398; // The height minus the insets.
+        double pos[] = splitPane.getDividerPositions();
+        double p0 = convertDividerPostionToAbsolutePostion(pos[0], h);
+        double p1 = convertDividerPostionToAbsolutePostion(pos[1], h);
+
+        assertEquals(77, p0, 1e-100);
+        assertEquals(315, p1, 1e-100);
+        assertEquals(77, spLeft.getLayoutBounds().getHeight(), 1e-100);
+        assertEquals(232, spCenter.getLayoutBounds().getHeight(), 1e-100);
+        assertEquals(77, spRight.getLayoutBounds().getHeight(), 1e-100);
+
+        root.impl_reapplyCSS();
+        root.resize(400, 405);
+        root.layout();
+
+        h = 403;
+        pos = splitPane.getDividerPositions();
+        p0 = convertDividerPostionToAbsolutePostion(pos[0], h);
+        p1 = convertDividerPostionToAbsolutePostion(pos[1], h);
+
+        assertEquals(77, p0, 1e-100);
+        assertEquals(320, p1, 1e-100);
+        assertEquals(77, spLeft.getLayoutBounds().getHeight(), 1e-100);
+        assertEquals(237, spCenter.getLayoutBounds().getHeight(), 1e-100);
+        assertEquals(77, spRight.getLayoutBounds().getHeight(), 1e-100);
+    }
 
     @Test public void resizeSplitPaneAllPanesAreSetToMax_VerticalSplitPane() {
         StackPane spLeft = new StackPane();

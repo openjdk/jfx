@@ -1074,7 +1074,7 @@ public class SplitPaneSkin extends SkinBase<SplitPane, BehaviorBase<SplitPane>> 
         }
 
         public boolean isResizableWithParent() {
-            return true;//SplitPane.isResizableWithParent(content);
+            return SplitPane.isResizableWithParent(content);
         }
 
         public double getResizableWithParentArea() {
