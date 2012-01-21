@@ -185,17 +185,18 @@ public class MenuBarSkin extends SkinBase<MenuBar, BehaviorBase<MenuBar>> implem
                     case DOWN:
                     case SPACE:
                     case ENTER:
-                        if (control.getScene().getWindow().isFocused()) {
-                            if (focusedMenuIndex != -1) {
-                                if (!isMenuEmpty(getSkinnable().getMenus().get(focusedMenuIndex))) {
-                                    openMenu = getSkinnable().getMenus().get(focusedMenuIndex);
-                                    openMenu.show();
-                                } else {
-                                    openMenu = null;
-                                }
-                                event.consume();
-                            }
-                        }
+                        // RT-18859: Doing nothing for down, space and enter 
+//                        if (control.getScene().getWindow().isFocused()) {
+//                            if (focusedMenuIndex != -1) {
+//                                if (!isMenuEmpty(getSkinnable().getMenus().get(focusedMenuIndex))) {
+//                                    openMenu = getSkinnable().getMenus().get(focusedMenuIndex);
+//                                    openMenu.show();
+//                                } else {
+//                                    openMenu = null;
+//                                }
+//                                event.consume();
+//                            }
+//                        }
                         break;
                 }
                
