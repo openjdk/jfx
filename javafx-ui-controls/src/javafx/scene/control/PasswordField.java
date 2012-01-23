@@ -33,11 +33,17 @@ public class PasswordField extends TextField {
         getStyleClass().add("password-field");
     }
 
+    /**
+     * Does nothing for PasswordField.
+     */
     @Override
     public void cut() {
         // No-op
     }
 
+    /**
+     * Does nothing for PasswordField.
+     */
     @Override
     public void copy() {
         // No-op
