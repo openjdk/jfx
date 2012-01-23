@@ -72,6 +72,9 @@ public class GridPaneDesignInfo extends PaneDesignInfo {
 
         // Compute row height
         double[] rowHeights = pane.getRowHeights();
+        if (rowHeights == null) {
+            rowHeights = new double[] {0};
+        }
         double minY = top;
         double height = rowHeights[rowIndex];
 
@@ -81,6 +84,9 @@ public class GridPaneDesignInfo extends PaneDesignInfo {
 
         // Compute column width
         double[] columnWidths = pane.getColumnWidths();
+        if (columnWidths == null) {
+            columnWidths = new double[] {0};
+        }
         double minX = left;
         double width = columnWidths[columnIndex];
 
