@@ -596,8 +596,8 @@ public class SplitPaneTest {
         splitPane.setDividerPosition(1, 0.80);
         splitPane.getItems().addAll(spLeft, spCenter, spRight);
 
-        SplitPane.resizableWithParent(spLeft, false);
-        SplitPane.resizableWithParent(spRight, false);
+        SplitPane.setResizableWithParent(spLeft, false);
+        SplitPane.setResizableWithParent(spRight, false);
 
         root.setPrefSize(400, 400);
         root.getChildren().add(splitPane);
@@ -1025,8 +1025,8 @@ public class SplitPaneTest {
         splitPane.setDividerPosition(1, 0.80);
         splitPane.getItems().addAll(spLeft, spCenter, spRight);
 
-        SplitPane.resizableWithParent(spLeft, false);
-        SplitPane.resizableWithParent(spRight, false);
+        SplitPane.setResizableWithParent(spLeft, false);
+        SplitPane.setResizableWithParent(spRight, false);
 
         root.setPrefSize(400, 400);
         root.getChildren().add(splitPane);

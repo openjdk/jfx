@@ -130,7 +130,7 @@ public class SplitPane extends Control {
      * @param node A node in the SplitPane.
      * @param value true if the node is resizable or false if not resizable.
      */
-    public static void resizableWithParent(Node node, Boolean value) {
+    public static void setResizableWithParent(Node node, Boolean value) {
         if (value == null) {
             node.getProperties().remove(RESIZABLE_WITH_PARENT);
         } else {
