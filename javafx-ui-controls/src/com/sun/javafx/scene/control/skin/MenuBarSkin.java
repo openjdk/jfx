@@ -269,6 +269,7 @@ public class MenuBarSkin extends SkinBase<MenuBar, BehaviorBase<MenuBar>> implem
     private boolean menusContainCustomMenuItem() {
         for (Menu menu : getSkinnable().getMenus()) {
             if (menuContainsCustomMenuItem(menu)) {
+                System.err.println("Warning: MenuBar ignored property useSystemMenuBar because menus contain CustomMenuItem");
                 return true;
             }
         }
@@ -312,37 +313,40 @@ public class MenuBarSkin extends SkinBase<MenuBar, BehaviorBase<MenuBar>> implem
         container.getChildren().clear();
 
 
-        if (Toolkit.getToolkit().getSystemMenu().isSupported() && getSkinnable().isUseSystemMenuBar()) {
-            if (menusContainCustomMenuItem()) {
-                System.err.println("Warning: MenuBar ignored property useSystemMenuBar because menus contain CustomMenuItem");
-            } else {
-                Scene scene = getSkinnable().getScene();
-                if (scene != null) {
-                    Window window = scene.getWindow();
-                    if (window instanceof Stage) {
-                        // Set the system menu bar if not set by another
-                        // MenuBarSkin instance on this stage.
-                        Stage stage = (Stage)window;
-                        if (systemMenuMap == null ||
-                            systemMenuMap.get(stage) == null ||
-                            systemMenuMap.get(stage) == this) {
+        if (Toolkit.getToolkit().getSystemMenu().isSupported() && getSkinnable().getScene() != null) {
+            Scene scene = getSkinnable().getScene();
+            if (scene.getWindow() instanceof Stage) {
+                Stage stage = (Stage)scene.getWindow();
+                if (getSkinnable().isUseSystemMenuBar() && !menusContainCustomMenuItem()) {
+                    // Set the system menu bar if not set by another
+                    // MenuBarSkin instance on this stage.
+                    if (systemMenuMap == null ||
+                        systemMenuMap.get(stage) == null ||
+                        systemMenuMap.get(stage) == this) {
 
-                            if (systemMenuMap == null) {
-                                initSystemMenuBar();
-                            }
-                            if (wrappedMenus == null) {
-                                wrappedMenus = new ArrayList<MenuBase>();
-                                systemMenuMap.put(stage, this);
-                            }
-                            wrappedMenus.clear();
-                            for (Menu menu : getSkinnable().getMenus()) {
-                                wrappedMenus.add(GlobalMenuAdapter.adapt(menu));
-                            }
-                            setSystemMenu(stage);
-
-                            return;
+                        if (systemMenuMap == null) {
+                            initSystemMenuBar();
                         }
+                        if (wrappedMenus == null) {
+                            wrappedMenus = new ArrayList<MenuBase>();
+                            systemMenuMap.put(stage, this);
+                        } else {
+                            wrappedMenus.clear();
+                        }
+                        for (Menu menu : getSkinnable().getMenus()) {
+                            wrappedMenus.add(GlobalMenuAdapter.adapt(menu));
+                        }
+                        setSystemMenu(stage);
+
+                        return;
                     }
+                }
+                if (systemMenuMap != null && systemMenuMap.get(stage) == this) {
+                    // This MenuBar was previously installed in the
+                    // system menu bar. Remove it.
+                    wrappedMenus = null;
+                    systemMenuMap.remove(stage);
+                    setSystemMenu(stage);
                 }
             }
         }
