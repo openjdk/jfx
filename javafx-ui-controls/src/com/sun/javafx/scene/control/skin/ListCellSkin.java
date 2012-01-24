@@ -40,14 +40,12 @@ public class ListCellSkin extends CellSkinBase<ListCell, ListCellBehavior> {
     @Override protected double computePrefWidth(double height) {
         double pref = super.computePrefWidth(height);
         ListView listView = getSkinnable().getListView();
-        return listView == null ? 0 :
-            listView.getOrientation() == Orientation.VERTICAL ? pref : Math.max(pref, getCellSize());
+        return listView == null ? 0 : pref;
     }
 
     @Override protected double computePrefHeight(double width) {
         double pref = super.computePrefHeight(width);
         ListView listView = getSkinnable().getListView();
-        return listView == null ? 0 :
-            listView.getOrientation() == Orientation.VERTICAL ? Math.max(pref, getCellSize()) : pref;
+        return listView == null ? 0 : pref;
     }
 }

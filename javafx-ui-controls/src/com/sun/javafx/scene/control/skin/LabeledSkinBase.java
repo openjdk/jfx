@@ -124,11 +124,18 @@ public abstract class LabeledSkinBase<C extends Labeled, B extends BehaviorBase<
         // Configure the Text node with all of the attributes from the
         // Labeled which apply to it.
         text = new Text();
+        //
+        // RT-16589: by binding text.fontProperty() to labeled.fontProperty(), 
+        // we achieve two things. First, the text's font stays in sync with
+        // labeled's and, second, it prevents text's font from being updated 
+        // by CSS. 
+        //
+        text.fontProperty().bind(labeled.fontProperty());
+        
         textClip = new Rectangle();
         text.setClip(textClip);
 
         updateFill();
-        updateFont();
         updateTextAlignment();
         updateUnderline();
         updateChildren();
@@ -180,7 +187,6 @@ public abstract class LabeledSkinBase<C extends Labeled, B extends BehaviorBase<
         } else if (p == "TEXT_FILL") {
             updateFill();
         } else if (p == "FONT") {
-            updateFont();
             textMetricsChanged();
             invalidateWidths();
             ellipsisWidth = Double.NEGATIVE_INFINITY;
@@ -478,17 +484,6 @@ public abstract class LabeledSkinBase<C extends Labeled, B extends BehaviorBase<
      */
     private void updateFill() {
         text.setFill(getSkinnable().getTextFill());
-    }
-
-    /**
-     * Updates the font used to render the text. Although changing the font
-     * does affect the metrics used for text layout, this method does not
-     * call requestLayout or invalidate the text, since it may be called
-     * from the constructor and such work would be duplicative and wasted.
-     */
-    private void updateFont() {
-        final Font font = getSkinnable().getFont();
-        text.setFont(font == null ? Font.getDefault() : font);
     }
 
     /**

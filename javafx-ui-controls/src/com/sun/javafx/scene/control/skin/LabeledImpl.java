@@ -48,6 +48,7 @@ public class LabeledImpl extends Label {
         // method below
         setFont(labeled.getFont()); // set font or rely on skin's css?
         setText(labeled.getText());
+        setTextFill(labeled.getTextFill());
         setGraphic(labeled.getGraphic());
         setAlignment(labeled.getAlignment());
         setContentDisplay(labeled.getContentDisplay());
@@ -61,14 +62,19 @@ public class LabeledImpl extends Label {
                 if (valueModel == labeled.textProperty()) {
                     setText(labeled.getText());
                                         
-                } else if (valueModel == labeled.alignmentProperty()) {
-                    //setAlignment(labeled.getAlignment());
+                } else if (valueModel == labeled.textFillProperty()) {
                     
                     //
                     // Fix for RT-10554. Since this Label's properties are set by the
                     // ChangeListener, from the CSS perspective it looks like they were
                     // set by the user and CSS won't override the value.
                     //
+                    StyleableProperty styleable = 
+                        StyleableProperty.getStyleableProperty(labeled.textFillProperty());
+                    styleable.set(LabeledImpl.this, labeled.getTextFill());
+                                        
+                } else if (valueModel == labeled.alignmentProperty()) {
+                    //setAlignment(labeled.getAlignment());
                     StyleableProperty styleable = 
                         StyleableProperty.getStyleableProperty(labeled.alignmentProperty());
                     styleable.set(LabeledImpl.this, labeled.getAlignment());
@@ -125,6 +131,7 @@ public class LabeledImpl extends Label {
             }
         };
         labeled.textProperty().addListener(shuttler);
+        labeled.textFillProperty().addListener(shuttler);
         labeled.alignmentProperty().addListener(shuttler);
         labeled.textAlignmentProperty().addListener(shuttler);
         labeled.textOverrunProperty().addListener(shuttler);

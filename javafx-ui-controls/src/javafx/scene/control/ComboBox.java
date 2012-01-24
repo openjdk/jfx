@@ -27,6 +27,7 @@ package javafx.scene.control;
 
 import com.sun.javafx.css.StyleManager;
 import com.sun.javafx.scene.control.WeakListChangeListener;
+import com.sun.javafx.scene.control.skin.ComboBoxListViewSkin;
 import com.sun.javafx.scene.control.skin.ListViewSkin;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -147,10 +148,14 @@ public class ComboBox<T> extends ComboBoxBase<T> {
         valueProperty().addListener(new ChangeListener<T>() {
             @Override public void changed(ObservableValue<? extends T> ov, T t, T t1) {
                 if (getItems() == null) return;
-                int index = getItems().indexOf(t1);
-                if (index > -1) {
-                    getSelectionModel().select(index);
-                }
+                getSelectionModel().setSelectedItem(t1);
+            }
+        });
+        
+        editableProperty().addListener(new InvalidationListener() {
+            @Override public void invalidated(Observable o) {
+                // when editable changes, we reset the selection / value states
+                getSelectionModel().clearSelection();
             }
         });
     }
@@ -173,6 +178,10 @@ public class ComboBox<T> extends ComboBoxBase<T> {
             // properly fixed when time permits
             if (getSelectionModel() instanceof ComboBoxSelectionModel) {
                 ((ComboBoxSelectionModel)getSelectionModel()).updateItemsObserver(null, getItems());
+            }
+            if (getSkin() instanceof ComboBoxListViewSkin) {
+                ComboBoxListViewSkin skin = (ComboBoxListViewSkin) getSkin();
+                skin.updateListViewItems();
             }
         }
     };
@@ -253,6 +262,8 @@ public class ComboBox<T> extends ComboBoxBase<T> {
      *                                                                         *
      **************************************************************************/    
     
+    // Listen to changes in the selectedItem property of the SelectionModel.
+    // When it changes, set the selectedItem in the value property.
     private ChangeListener<T> selectedItemListener = new ChangeListener<T>() {
         @Override public void changed(ObservableValue<? extends T> ov, T t, T t1) {
             if (! valueProperty().isBound()) {

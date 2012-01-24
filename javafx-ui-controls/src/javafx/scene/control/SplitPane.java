@@ -118,6 +118,42 @@ import com.sun.javafx.css.converters.EnumConverter;
 
 public class SplitPane extends Control {
 
+    /********************************************************************
+     *  static methods
+     ********************************************************************/
+    private static final String RESIZABLE_WITH_PARENT = "resizable-with-parent";
+
+    /**
+     * Sets a node in the SplitPane to be resizable or not when the SplitPane is
+     * resized.  By default all node are resizable.  Setting value to false will
+     * prevent the node from being resized.
+     * @param node A node in the SplitPane.
+     * @param value true if the node is resizable or false if not resizable.
+     */
+    public static void setResizableWithParent(Node node, Boolean value) {
+        if (value == null) {
+            node.getProperties().remove(RESIZABLE_WITH_PARENT);
+        } else {
+            node.getProperties().put(RESIZABLE_WITH_PARENT, value);
+        }
+    }
+
+    /**
+     * Return true if the node is resizable when the parent container is resized false otherwise.
+     * @param node A node in the SplitPane.
+     * @default true
+     * @return true if the node is resizable false otherwise.
+     */
+    public static Boolean isResizableWithParent(Node node) {
+        if (node.hasProperties()) {
+            Object value = node.getProperties().get(RESIZABLE_WITH_PARENT);
+            if (value != null) {
+                return (Boolean)value;
+            }
+        }
+        return true;
+    }
+    
     /***************************************************************************
      *                                                                         *
      * Constructors                                                            *

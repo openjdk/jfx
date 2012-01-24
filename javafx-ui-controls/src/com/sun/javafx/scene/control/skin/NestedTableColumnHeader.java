@@ -31,6 +31,8 @@ import java.util.List;
 import javafx.beans.InvalidationListener;
 import javafx.beans.Observable;
 import javafx.beans.WeakInvalidationListener;
+import javafx.beans.binding.Bindings;
+import javafx.beans.binding.ObjectBinding;
 import javafx.collections.ListChangeListener;
 import javafx.collections.ObservableList;
 import javafx.event.EventHandler;
@@ -249,7 +251,13 @@ class NestedTableColumnHeader extends TableColumnHeader {
             rect.setHeight(getHeight() - label.getHeight());
             rect.setFill(Color.TRANSPARENT);
             rect.setVisible(false);
-            rect.setCursor(Cursor.H_RESIZE);
+            rect.cursorProperty().bind(new ObjectBinding<Cursor>() {
+                { super.bind(c.resizableProperty()); }
+                
+                @Override protected Cursor computeValue() {
+                    return c.isResizable() ? Cursor.H_RESIZE : Cursor.DEFAULT;
+                }
+            });
             rect.setSmooth(false);
             rect.setOnMousePressed(new EventHandler<MouseEvent>() {
                 @Override public void handle(MouseEvent me) {

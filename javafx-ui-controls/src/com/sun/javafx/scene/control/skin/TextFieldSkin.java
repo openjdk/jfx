@@ -292,7 +292,7 @@ public class TextFieldSkin extends TextInputControlSkin<TextField, TextFieldBeha
         textNode.impl_caretShapeProperty().addListener(new InvalidationListener() {
             @Override public void invalidated(Observable observable) {
                 caretPath.getElements().setAll(textNode.impl_caretShapeProperty().get());
-                caretWidth = caretPath.getLayoutBounds().getWidth();
+                caretWidth = Math.round(caretPath.getLayoutBounds().getWidth());
             }
         });
 
@@ -627,19 +627,20 @@ public class TextFieldSkin extends TextInputControlSkin<TextField, TextFieldBeha
         if (textNode != null) {
             double textY;
             Insets insets = getInsets();
+            FontMetrics fm = fontMetrics.get();
             switch (getSkinnable().getAlignment().getVpos()) {
               case TOP:
-                textY = insets.getTop() + fontMetrics.get().getMaxAscent();
+                textY = insets.getTop() + fm.getMaxAscent();
                 break;
 
               case CENTER:
-                textY = (getHeight() - insets.getBottom() - insets.getTop()
-                         + fontMetrics.get().getLineHeight()) / 2;
+                textY = (insets.getTop() + fm.getMaxAscent() +
+                         getHeight() - insets.getBottom() - fm.getMaxDescent()) / 2;
                 break;
 
               case BOTTOM:
               default:
-                textY = getHeight() - insets.getBottom() - fontMetrics.get().getMaxDescent();
+                textY = getHeight() - insets.getBottom() - fm.getMaxDescent();
             }
             textNode.setY(textY);
             if (promptNode != null) {

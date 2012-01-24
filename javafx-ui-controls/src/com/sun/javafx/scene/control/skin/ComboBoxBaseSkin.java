@@ -117,14 +117,14 @@ public abstract class ComboBoxBaseSkin<T> extends SkinBase<ComboBoxBase<T>, Comb
             updateDisplayArea();
         }
         
-        final Insets padding = getPadding();
-        final Insets arrowButtonPadding = arrowButton.getPadding();
+        final Insets padding = getInsets();
+        final Insets arrowButtonPadding = arrowButton.getInsets();
 
         // x, y, w, h are the content area that will hold the label and arrow */
         final double x = padding.getLeft();
         final double y = padding.getTop();
-        final double w = getWidth() - (padding.getLeft() + padding.getRight());
-        final double h = getHeight() - (padding.getTop() + padding.getBottom());
+        final double w = getSkinnable().getWidth() - (padding.getLeft() + padding.getRight());
+        final double h = getSkinnable().getHeight() - (padding.getTop() + padding.getBottom());
 
         final double arrowWidth = arrow.prefWidth(-1);
         final double arrowButtonWidth = arrowButtonPadding.getLeft() + arrowWidth + arrowButtonPadding.getRight();
@@ -143,15 +143,16 @@ public abstract class ComboBoxBaseSkin<T> extends SkinBase<ComboBoxBase<T>, Comb
     }
     
     @Override protected double computePrefHeight(double width) {
-        final Insets padding = getPadding();
-        final Insets arrowButtonPadding = arrowButton.getPadding();
-        double arrowHeight = arrowButtonPadding.getTop() + arrow.prefHeight(-1) + arrowButtonPadding.getBottom();
+        final Insets padding = getInsets();
 
-        double ph = displayNode == null ? 24 : displayNode.prefHeight(width);
-        
-        return padding.getTop()
-                + Math.max(ph, arrowHeight)
-                + padding.getBottom();
+        if (displayNode == null) {
+            final int DEFAULT_HEIGHT = 20;
+            final Insets arrowButtonPadding = arrowButton.getInsets();
+            double arrowHeight = arrowButtonPadding.getTop() + arrow.prefHeight(-1) + arrowButtonPadding.getBottom();
+            return padding.getTop() + Math.max(DEFAULT_HEIGHT, arrowHeight) + padding.getBottom();
+        } else {
+            return displayNode.prefHeight(width);
+        }
     }
 
     @Override protected double computeMaxWidth(double height) {

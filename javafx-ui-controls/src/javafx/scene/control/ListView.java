@@ -898,17 +898,19 @@ public class ListView<T> extends Control {
         // watching for changes to the items list content
         private final ListChangeListener<T> itemsContentObserver = new ListChangeListener<T>() {
             @Override public void onChanged(Change<? extends T> c) {
-                if (listView.getItems() == null || listView.getItems().isEmpty()) {
-                    setSelectedIndex(-1);
-                    focus(-1);
-                } else if (getSelectedIndex() == -1 && getSelectedItem() != null) {
-                    int newIndex = listView.getItems().indexOf(getSelectedItem());
-                    if (newIndex != -1) {
-                        setSelectedIndex(newIndex);
+                while (c.next()) {
+                    if (listView.getItems() == null || listView.getItems().isEmpty()) {
+                        setSelectedIndex(-1);
+                        focus(-1);
+                    } else if (getSelectedIndex() == -1 && getSelectedItem() != null) {
+                        int newIndex = listView.getItems().indexOf(getSelectedItem());
+                        if (newIndex != -1) {
+                            setSelectedIndex(newIndex);
+                        }
                     }
-                }
 
-                updateSelection(c);
+                    updateSelection(c);
+                }
             }
         };
         
@@ -972,9 +974,15 @@ public class ListView<T> extends Control {
 //            if (c.wasPermutated()) {
 //                System.out.println("\tWas permutated");
 //            }
+            c.reset();
             while (c.next()) {
                 if (c.wasReplaced()) {
-                    // no-op
+                    // Fix for RT-18969: the list had setAll called on it
+                    int index = getSelectedIndex();
+                    if (index < getItemCount() && index >= 0) {
+                        clearSelection(index);
+                        select(index);
+                    }
                 } else if (c.wasAdded() || c.wasRemoved()) {
                     int shift = c.wasAdded() ? c.getAddedSize() : -c.getRemovedSize();
                     shiftSelection(c.getFrom(), shift);

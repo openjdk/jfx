@@ -9,6 +9,8 @@ import java.util.Arrays;
 
 import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.SimpleObjectProperty;
+import javafx.beans.value.ChangeListener;
+import javafx.beans.value.ObservableValue;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 
@@ -17,9 +19,11 @@ import org.junit.Test;
 
 public class ListViewTest {
     private ListView<String> listView;
+    private MultipleSelectionModel<String> sm;
     
     @Before public void setup() {
         listView = new ListView<String>();
+        sm = listView.getSelectionModel();
     }
     
     /*********************************************************************
@@ -31,7 +35,7 @@ public class ListViewTest {
     }
     
     @Test public void noArgConstructorSetsNonNullSelectionModel() {
-        assertNotNull(listView.getSelectionModel());
+        assertNotNull(sm);
     }
     
     @Test public void noArgConstructorSetsNonNullItems() {
@@ -39,11 +43,11 @@ public class ListViewTest {
     }
     
     @Test public void noArgConstructor_selectedItemIsNull() {
-        assertNull(listView.getSelectionModel().getSelectedItem());
+        assertNull(sm.getSelectedItem());
     }
     
     @Test public void noArgConstructor_selectedIndexIsNegativeOne() {
-        assertEquals(-1, listView.getSelectionModel().getSelectedIndex());
+        assertEquals(-1, sm.getSelectedIndex());
     }
     
     @Test public void singleArgConstructorSetsTheStyleClass() {
@@ -90,124 +94,124 @@ public class ListViewTest {
         MultipleSelectionModel<String> sm = new ListView.ListViewBitSetSelectionModel<String>(listView);
         ObjectProperty<MultipleSelectionModel<String>> other = new SimpleObjectProperty<MultipleSelectionModel<String>>(sm);
         listView.selectionModelProperty().bind(other);
-        assertSame(sm, listView.getSelectionModel());
+        assertSame(sm, sm);
     }
 
     @Test public void selectionModelCanBeChanged() {
         MultipleSelectionModel<String> sm = new ListView.ListViewBitSetSelectionModel<String>(listView);
         listView.setSelectionModel(sm);
-        assertSame(sm, listView.getSelectionModel());
+        assertSame(sm, sm);
     }
     
     @Test public void canSetSelectedItemToAnItemEvenWhenThereAreNoItems() {
         final String randomString = new String("I AM A CRAZY RANDOM STRING");
-        listView.getSelectionModel().select(randomString);
-        assertEquals(-1, listView.getSelectionModel().getSelectedIndex());
-        assertSame(randomString, listView.getSelectionModel().getSelectedItem());
+        sm.select(randomString);
+        assertEquals(-1, sm.getSelectedIndex());
+        assertSame(randomString, sm.getSelectedItem());
     }
         
     @Test public void canSetSelectedItemToAnItemNotInTheDataModel() {
         listView.getItems().addAll("Apple", "Orange", "Banana");
         final String randomString = new String("I AM A CRAZY RANDOM STRING");
-        listView.getSelectionModel().select(randomString);
-        assertEquals(-1, listView.getSelectionModel().getSelectedIndex());
-        assertSame(randomString, listView.getSelectionModel().getSelectedItem());
+        sm.select(randomString);
+        assertEquals(-1, sm.getSelectedIndex());
+        assertSame(randomString, sm.getSelectedItem());
     }
         
     @Test public void settingTheSelectedItemToAnItemInItemsResultsInTheCorrectSelectedIndex() {
         listView.getItems().addAll("Apple", "Orange", "Banana");
-        listView.getSelectionModel().select("Orange");
-        assertEquals(1, listView.getSelectionModel().getSelectedIndex());
-        assertSame("Orange", listView.getSelectionModel().getSelectedItem());
+        sm.select("Orange");
+        assertEquals(1, sm.getSelectedIndex());
+        assertSame("Orange", sm.getSelectedItem());
     }
     
     @Test public void settingTheSelectedItemToANonexistantItemAndThenSettingItemsWhichContainsItResultsInCorrectSelectedIndex() {
-        listView.getSelectionModel().select("Orange");
+        sm.select("Orange");
         listView.getItems().addAll("Apple", "Orange", "Banana");
-        assertEquals(1, listView.getSelectionModel().getSelectedIndex());
-        assertSame("Orange", listView.getSelectionModel().getSelectedItem());
+        assertEquals(1, sm.getSelectedIndex());
+        assertSame("Orange", sm.getSelectedItem());
     }
     
     @Test public void ensureSelectionClearsWhenAllItemsAreRemoved_selectIndex0() {
         listView.getItems().addAll("Apple", "Orange", "Banana");
-        listView.getSelectionModel().select(0);
+        sm.select(0);
         listView.getItems().clear();
-        assertEquals(-1, listView.getSelectionModel().getSelectedIndex());
-        assertEquals(null, listView.getSelectionModel().getSelectedItem());
+        assertEquals(-1, sm.getSelectedIndex());
+        assertEquals(null, sm.getSelectedItem());
     }
     
     @Test public void ensureSelectionClearsWhenAllItemsAreRemoved_selectIndex2() {
         listView.getItems().addAll("Apple", "Orange", "Banana");
-        listView.getSelectionModel().select(2);
+        sm.select(2);
         listView.getItems().clear();
-        assertEquals(-1, listView.getSelectionModel().getSelectedIndex());
-        assertEquals(null, listView.getSelectionModel().getSelectedItem());
+        assertEquals(-1, sm.getSelectedIndex());
+        assertEquals(null, sm.getSelectedItem());
     }
     
     @Test public void ensureSelectedItemRemainsAccurateWhenItemsAreCleared() {
         listView.getItems().addAll("Apple", "Orange", "Banana");
-        listView.getSelectionModel().select(2);
+        sm.select(2);
         listView.getItems().clear();
-        assertNull(listView.getSelectionModel().getSelectedItem());
-        assertEquals(-1, listView.getSelectionModel().getSelectedIndex());
+        assertNull(sm.getSelectedItem());
+        assertEquals(-1, sm.getSelectedIndex());
         
         listView.getItems().addAll("Kiwifruit", "Mandarin", "Pineapple");
-        listView.getSelectionModel().select(2);
-        assertEquals("Pineapple", listView.getSelectionModel().getSelectedItem());
+        sm.select(2);
+        assertEquals("Pineapple", sm.getSelectedItem());
     }
     
     @Test public void ensureSelectionShiftsDownWhenOneNewItemIsAdded() {
         listView.getItems().addAll("Apple", "Orange", "Banana");
-        listView.getSelectionModel().select(1);
-        assertEquals(1, listView.getSelectionModel().getSelectedIndex());
-        assertEquals("Orange", listView.getSelectionModel().getSelectedItem());
+        sm.select(1);
+        assertEquals(1, sm.getSelectedIndex());
+        assertEquals("Orange", sm.getSelectedItem());
         
         listView.getItems().add(0, "Kiwifruit");
-        assertEquals(2, listView.getSelectionModel().getSelectedIndex());
-        assertEquals("Orange", listView.getSelectionModel().getSelectedItem());
+        assertEquals(2, sm.getSelectedIndex());
+        assertEquals("Orange", sm.getSelectedItem());
     }
     
     @Test public void ensureSelectionShiftsDownWhenMultipleNewItemAreAdded() {
         listView.getItems().addAll("Apple", "Orange", "Banana");
-        listView.getSelectionModel().select(1);
-        assertEquals(1, listView.getSelectionModel().getSelectedIndex());
-        assertEquals("Orange", listView.getSelectionModel().getSelectedItem());
+        sm.select(1);
+        assertEquals(1, sm.getSelectedIndex());
+        assertEquals("Orange", sm.getSelectedItem());
         
         listView.getItems().addAll(0, Arrays.asList("Kiwifruit", "Pineapple", "Mandarin"));
-        assertEquals("Orange", listView.getSelectionModel().getSelectedItem());
-        assertEquals(4, listView.getSelectionModel().getSelectedIndex());
+        assertEquals("Orange", sm.getSelectedItem());
+        assertEquals(4, sm.getSelectedIndex());
     }
     
     @Test public void ensureSelectionShiftsUpWhenOneItemIsRemoved() {
         listView.getItems().addAll("Apple", "Orange", "Banana");
-        listView.getSelectionModel().select(1);
-        assertEquals(1, listView.getSelectionModel().getSelectedIndex());
-        assertEquals("Orange", listView.getSelectionModel().getSelectedItem());
+        sm.select(1);
+        assertEquals(1, sm.getSelectedIndex());
+        assertEquals("Orange", sm.getSelectedItem());
         
         listView.getItems().remove("Apple");
-        assertEquals(0, listView.getSelectionModel().getSelectedIndex());
-        assertEquals("Orange", listView.getSelectionModel().getSelectedItem());
+        assertEquals(0, sm.getSelectedIndex());
+        assertEquals("Orange", sm.getSelectedItem());
     }
     
     @Test public void ensureSelectionShiftsUpWheMultipleItemsAreRemoved() {
         listView.getItems().addAll("Apple", "Orange", "Banana");
-        listView.getSelectionModel().select(2);
-        assertEquals(2, listView.getSelectionModel().getSelectedIndex());
-        assertEquals("Banana", listView.getSelectionModel().getSelectedItem());
+        sm.select(2);
+        assertEquals(2, sm.getSelectedIndex());
+        assertEquals("Banana", sm.getSelectedItem());
         
         listView.getItems().removeAll(Arrays.asList("Apple", "Orange"));
-        assertEquals(0, listView.getSelectionModel().getSelectedIndex());
-        assertEquals("Banana", listView.getSelectionModel().getSelectedItem());
+        assertEquals(0, sm.getSelectedIndex());
+        assertEquals("Banana", sm.getSelectedItem());
     }
     
     @Test public void ensureSelectionIsCorrectWhenItemsChange() {
         listView.setItems(FXCollections.observableArrayList("Item 1"));
-        listView.getSelectionModel().select(0);
-        assertEquals("Item 1", listView.getSelectionModel().getSelectedItem());
+        sm.select(0);
+        assertEquals("Item 1", sm.getSelectedItem());
         
         listView.setItems(FXCollections.observableArrayList("Item 2"));
-        assertEquals(-1, listView.getSelectionModel().getSelectedIndex());
-        assertEquals(null, listView.getSelectionModel().getSelectedItem());
+        assertEquals(-1, sm.getSelectedIndex());
+        assertEquals(null, sm.getSelectedItem());
     }
     
     @Test public void test_rt15793() {
@@ -301,10 +305,10 @@ public class ListViewTest {
     
     @Test public void test_rt18385() {
         listView.getItems().addAll("row1", "row2", "row3");
-        listView.getSelectionModel().select(1);
+        sm.select(1);
         listView.getItems().add("Another Row");
-        assertEquals(1, listView.getSelectionModel().getSelectedIndices().size());
-        assertEquals(1, listView.getSelectionModel().getSelectedItems().size());
+        assertEquals(1, sm.getSelectedIndices().size());
+        assertEquals(1, sm.getSelectedItems().size());
     }
     
     @Test public void test_rt18339_onlyEditWhenListViewIsEditable_editableIsFalse() {
@@ -321,8 +325,39 @@ public class ListViewTest {
     
     @Test public void test_rt14451() {
         listView.getItems().addAll("Apple", "Orange", "Banana");
-        listView.getSelectionModel().setSelectionMode(SelectionMode.MULTIPLE);
-        listView.getSelectionModel().selectRange(0, 2); // select from 0 (inclusive) to 2 (exclusive)
-        assertEquals(2, listView.getSelectionModel().getSelectedIndices().size());
+        sm.setSelectionMode(SelectionMode.MULTIPLE);
+        sm.selectRange(0, 2); // select from 0 (inclusive) to 2 (exclusive)
+        assertEquals(2, sm.getSelectedIndices().size());
+    }
+    
+    private int hitCount = 0;
+    @Test public void test_rt18969() {
+        hitCount = 0;
+        ObservableList<String> emptyModel = FXCollections.observableArrayList();
+        listView.setItems(emptyModel);
+        assertTrue(listView.getItems().isEmpty());
+        
+        sm.selectedItemProperty().addListener(new ChangeListener<String>() {
+            @Override public void changed(ObservableValue<? extends String> observable, String oldValue, final String newValue) {
+                hitCount++;
+            }
+        });
+        
+        ObservableList<String> mod = FXCollections.observableArrayList();
+        mod.add(System.currentTimeMillis()+"");
+        listView.getItems().setAll(mod);
+        
+        sm.select(0);
+        assertTrue(sm.isSelected(0));
+        assertEquals(1, hitCount);
+        
+        // the list is totally changing (it is being cleared), so we should 
+        // be nulling out the selection model state
+        mod = FXCollections.observableArrayList();
+        mod.add(System.currentTimeMillis()+"");
+        listView.getItems().setAll(mod);
+        
+        // it should be three, as there is a null event in between
+        assertEquals(3, hitCount);
     }
 }
