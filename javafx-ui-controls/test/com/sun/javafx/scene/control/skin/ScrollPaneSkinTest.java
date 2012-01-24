@@ -545,6 +545,27 @@ public class ScrollPaneSkinTest {
         assertTrue(skin.isVSBarVisible() & skin.isHSBarVisible());
     }
 
+    /*
+    ** check if ScrollBars appear if fitToHeight & fitToWidth are true but height is < minHeight & width is < minWidth
+    */
+    @Test public void checkWeHandleNullContent() {
+        
+    
+        scrollPane.setFitToWidth(true);
+
+        Scene scene = new Scene(scrollPane);
+ 
+        Stage stage = new Stage();
+        stage.setScene(scene);
+               
+        stage.setWidth(600);
+        stage.setHeight(600);
+ 
+        stage.show();
+
+    }
+
+    
     public static final class ScrollPaneSkinMock extends ScrollPaneSkin {
         boolean propertyChanged = false;
         int propertyChangeCount = 0;
