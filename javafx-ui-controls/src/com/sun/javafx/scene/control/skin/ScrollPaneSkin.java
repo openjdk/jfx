@@ -720,7 +720,7 @@ public class ScrollPaneSkin extends SkinBase<ScrollPane, ScrollPaneBehavior> imp
         final double contentw = getSkinnable().getWidth() - getInsets().getLeft() - getInsets().getRight();
         return (getSkinnable().getHbarPolicy().equals(ScrollBarPolicy.NEVER)) ? false :
                    ((getSkinnable().getHbarPolicy().equals(ScrollBarPolicy.ALWAYS)) ? true :
-                    ((getSkinnable().isFitToWidth() && scrollNode.isResizable()) ?
+                    ((getSkinnable().isFitToWidth() && scrollNode != null ? scrollNode.isResizable() : false) ?
                        (nodeWidth > contentw && scrollNode.minWidth(-1) > contentw) : (nodeWidth > contentw)));
     }
 
@@ -728,7 +728,7 @@ public class ScrollPaneSkin extends SkinBase<ScrollPane, ScrollPaneBehavior> imp
         final double contenth = getSkinnable().getHeight() - getInsets().getTop() - getInsets().getBottom();
         return (getSkinnable().getVbarPolicy().equals(ScrollBarPolicy.NEVER)) ? false :
                   ((getSkinnable().getVbarPolicy().equals(ScrollBarPolicy.ALWAYS)) ? true :
-                      ((getSkinnable().isFitToHeight() && scrollNode.isResizable()) ?
+                      ((getSkinnable().isFitToHeight() && scrollNode != null ? scrollNode.isResizable() : false) ?
                        (nodeHeight > contenth && scrollNode.minHeight(-1) > contenth) : (nodeHeight > contenth)));
 
     }
