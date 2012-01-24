@@ -26,14 +26,9 @@
 package javafx.scene.control;
 
 import com.sun.javafx.css.StyleManager;
-import javafx.beans.property.BooleanProperty;
-import javafx.beans.property.ObjectProperty;
-import javafx.beans.property.ObjectPropertyBase;
-import javafx.beans.property.SimpleBooleanProperty;
-import javafx.beans.property.SimpleObjectProperty;
-import javafx.beans.property.SimpleStringProperty;
-import javafx.beans.property.StringProperty;
+import javafx.beans.property.*;
 import javafx.event.ActionEvent;
+import javafx.event.Event;
 import javafx.event.EventHandler;
 
 /**
@@ -119,13 +114,32 @@ public abstract class ComboBoxBase<T> extends Control {
      * Represents the current state of the ComboBox popup, and whether it is 
      * currently visible on screen (although it may be hidden behind other windows).
      */
-    public BooleanProperty showingProperty() { return showing; }
-    public final boolean isShowing() { return showingProperty().get(); }
-    private BooleanProperty showing = new SimpleBooleanProperty(this, "showing", false) {
-        @Override protected void invalidated() {
-            impl_pseudoClassStateChanged(PSEUDO_CLASS_SHOWING);
+    private ReadOnlyBooleanWrapper showing;
+    public ReadOnlyBooleanProperty showingProperty() { return showingPropertyImpl().getReadOnlyProperty(); }
+    public final boolean isShowing() { return showingPropertyImpl().get(); }
+    private void setShowing(boolean value) {
+        showingPropertyImpl().set(value);
+    }
+    private ReadOnlyBooleanWrapper showingPropertyImpl() {
+        if (showing == null) {
+            showing = new ReadOnlyBooleanWrapper(false) {
+                @Override protected void invalidated() {
+                    impl_pseudoClassStateChanged(PSEUDO_CLASS_SHOWING);
+                }
+
+                @Override
+                public Object getBean() {
+                    return ComboBoxBase.this;
+                }
+
+                @Override
+                public String getName() {
+                    return "showing";
+                }
+            };
         }
-    };
+        return showing;
+    }
     
     
     // --- prompt text
@@ -210,8 +224,8 @@ public abstract class ComboBoxBase<T> extends Control {
      * form of popup or dialog window.
      */
     public void show() {
-        if (!isDisabled() && ! showingProperty().isBound()) {
-            showing.set(true);
+        if (!isDisabled()) {
+            setShowing(true);
         }
     }
 
@@ -219,9 +233,7 @@ public abstract class ComboBoxBase<T> extends Control {
      * Closes the popup / dialog that was shown when {@link #show()} was called.
      */
     public void hide() {
-        if (! showingProperty().isBound()) {
-            showing.set(false);
-        }
+        setShowing(false);
     }
     
     /**
