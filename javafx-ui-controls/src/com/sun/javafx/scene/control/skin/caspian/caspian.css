@@ -3346,6 +3346,7 @@ Only the properties with values that are different from the TextBox are specifie
     -fx-background-color: transparent;
     -fx-text-fill: -fx-text-base-color;
     -fx-padding: 0 0 0 7;
+    -fx-cell-size: 1.66667em; /* 20 */
 }
 
 .combo-box-popup .list-view {
@@ -3355,7 +3356,6 @@ Only the properties with values that are different from the TextBox are specifie
 }
 
 .combo-box-popup .list-view .list-cell {
-    -fx-cell-size: 14;
     -fx-padding: 4 0 4 5;
     
     /* No alternate highlighting */
