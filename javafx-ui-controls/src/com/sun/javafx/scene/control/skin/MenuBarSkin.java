@@ -87,16 +87,18 @@ public class MenuBarSkin extends SkinBase<MenuBar, BehaviorBase<MenuBar>> implem
 
     private static WeakHashMap<Stage, MenuBarSkin> systemMenuMap;
     private static List<MenuBase> emptyMenuList = new ArrayList<MenuBase>();
+    private static Stage currentMenuBarStage;
     private List<MenuBase> wrappedMenus;
 
     private static void setSystemMenu(Stage stage) {
-        if (stage.isFocused()) {
+        if (stage.isFocused() && stage != currentMenuBarStage) {
             List<MenuBase> menuList = null;
             MenuBarSkin skin = systemMenuMap.get(stage);
             if (skin != null) {
                 menuList = skin.wrappedMenus;
             }
             Toolkit.getToolkit().getSystemMenu().setMenus((menuList != null) ? menuList : emptyMenuList);
+            currentMenuBarStage = stage;
         }
     }
 
@@ -304,6 +306,7 @@ public class MenuBarSkin extends SkinBase<MenuBar, BehaviorBase<MenuBar>> implem
             //Stop observing menu's showing & disable property for changes.
             //Need to unbind before clearing container's children.
             MenuBarButton menuButton = (MenuBarButton)n;
+            menuButton.hide();
             menuButton.menu.showingProperty().removeListener(menuButton.menuListener);
             menuButton.disableProperty().unbind();
             menuButton.textProperty().unbind();
@@ -336,8 +339,15 @@ public class MenuBarSkin extends SkinBase<MenuBar, BehaviorBase<MenuBar>> implem
                         for (Menu menu : getSkinnable().getMenus()) {
                             wrappedMenus.add(GlobalMenuAdapter.adapt(menu));
                         }
+                        currentMenuBarStage = null;
                         setSystemMenu(stage);
 
+                        requestLayout();
+                        javafx.application.Platform.runLater(new Runnable() {
+                            public void run() {
+                                requestLayout();
+                            }
+                        });
                         return;
                     }
                 }
@@ -346,6 +356,7 @@ public class MenuBarSkin extends SkinBase<MenuBar, BehaviorBase<MenuBar>> implem
                     // system menu bar. Remove it.
                     wrappedMenus = null;
                     systemMenuMap.remove(stage);
+                    currentMenuBarStage = null;
                     setSystemMenu(stage);
                 }
             }
