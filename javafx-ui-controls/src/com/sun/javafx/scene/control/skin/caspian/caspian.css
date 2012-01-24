@@ -498,7 +498,7 @@
     -fx-padding: 0.166667em 0.833333em 0.25em 0.833333em; /* 2 10 3 10 */
     -fx-text-fill: -fx-text-base-color;
     -fx-alignment: CENTER;
-    -fx-graphic-vpos: CENTER;
+    -fx-content-display: CENTER;
 }
 
 .button Text {
@@ -548,7 +548,7 @@
     -fx-padding: 0.166667em 0.833333em 0.25em 0.833333em; /* 2 10 3 10 */
     -fx-text-fill: -fx-text-base-color;
     -fx-alignment: CENTER;
-    -fx-graphic-vpos: CENTER;
+    -fx-content-display: CENTER;
 }
 
 .toggle-button Text {
@@ -744,7 +744,7 @@
     -fx-skin: "com.sun.javafx.scene.control.skin.HyperlinkSkin";
     -fx-padding: 0.166667em; /* 2 */
     -fx-cursor: hand;
-    -fx-graphic-vpos: CENTER;    
+    -fx-content-display: CENTER;    
 }
 
 .hyperlink Text {
@@ -1134,7 +1134,7 @@
     -fx-background-radius: 5, 5, 4, 3;
     -fx-padding: 0.0em 0.5em 0.0em 0.0em; /* 0 6 0 0 */
     -fx-alignment: CENTER;
-    -fx-graphic-vpos: CENTER;
+    -fx-content-display: CENTER;
 }
 
 .choice-box Text {
@@ -1680,7 +1680,7 @@
     -fx-background-radius: 0;
     -fx-padding: 0.0em 0.5em 0.0em 0.0em; /* 0 6 0 0 */
     -fx-alignment: CENTER_LEFT;
-    -fx-graphic-vpos: CENTER_LEFT;
+    -fx-content-display: CENTER_LEFT;
 }
 
 .cell .choice-box .label {
@@ -3319,7 +3319,7 @@ Only the properties with values that are different from the TextBox are specifie
     -fx-background-radius: 4 5 5 4, 3 4 4 3, 2 3 3 2;
     -fx-background-insets: 0 0 -1 0, 0, 1;
     -fx-vpos: CENTER;
-    -fx-graphic-vpos: CENTER;
+    -fx-content-display: CENTER;
 }
 
 .combo-box-base:editable .text-field:focused {
