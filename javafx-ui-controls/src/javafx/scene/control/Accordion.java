@@ -109,7 +109,22 @@ public class Accordion extends Control {
      **************************************************************************/
 
     // --- Expanded Pane
-    private ObjectProperty<TitledPane> expandedPane = new SimpleObjectProperty<TitledPane>(this, "expandedPane");
+    private ObjectProperty<TitledPane> expandedPane = new SimpleObjectProperty<TitledPane>(this, "expandedPane") {
+        @Override public void set(final TitledPane newSelectedToggle) {
+            if (isBound()) {
+                throw new java.lang.RuntimeException("A bound value cannot be set.");
+            }            
+            if (newSelectedToggle != null) {
+                newSelectedToggle.setExpanded(true);
+            } else {
+                TitledPane old = get();
+                if (old != null) {
+                    old.setExpanded(false);
+                }
+            }
+            super.set(newSelectedToggle);
+        }
+    };
 
     /**
      * <p>The expanded {@link TitledPane} that is currently visible. While it is technically
