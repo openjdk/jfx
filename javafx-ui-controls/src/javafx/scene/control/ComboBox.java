@@ -148,7 +148,12 @@ public class ComboBox<T> extends ComboBoxBase<T> {
         valueProperty().addListener(new ChangeListener<T>() {
             @Override public void changed(ObservableValue<? extends T> ov, T t, T t1) {
                 if (getItems() == null) return;
-                getSelectionModel().setSelectedItem(t1);
+                int index = getItems().indexOf(t1);
+                if (index == -1) {
+                    getSelectionModel().setSelectedItem(t1);
+                } else {
+                    getSelectionModel().clearAndSelect(index);
+                }
             }
         });
         
@@ -328,7 +333,7 @@ public class ComboBox<T> extends ComboBoxBase<T> {
                 }
                 
                 while (c.next()) {
-                    if (getSelectedIndex() != -1 && (c.wasAdded() || c.wasRemoved())) {
+                    if (c.getFrom() <= getSelectedIndex() && getSelectedIndex()!= -1 && (c.wasAdded() || c.wasRemoved())) {
                         int shift = c.wasAdded() ? c.getAddedSize() : -c.getRemovedSize();
                         clearAndSelect(getSelectedIndex() + shift);
                     }
