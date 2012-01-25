@@ -247,11 +247,11 @@ public class TitledPaneSkin extends SkinBase<TitledPane, TitledPaneBehavior>  {
     }
 
     private double prefHeightFromAccordion = 0;
-    void setPrefHeightFromAccordion(double height) {
+    void setMaxTitledPaneHeightForAccordion(double height) {
         this.prefHeightFromAccordion = height;
     }
 
-    double prefHeightFromAccordion() {
+    double getTitledPaneHeightForAccordion() {
         double headerHeight = Math.max(MIN_HEADER_HEIGHT, snapSize(titleRegion.prefHeight(-1)));
         double contentHeight = (prefHeightFromAccordion - headerHeight) * getTransition();
         return headerHeight + snapSize(contentHeight) + snapSpace(getInsets().getTop()) + snapSpace(getInsets().getBottom());
