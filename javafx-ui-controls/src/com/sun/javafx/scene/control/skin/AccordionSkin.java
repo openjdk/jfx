@@ -88,8 +88,21 @@ public class AccordionSkin extends SkinBase<Accordion, AccordionBehavior> {
 
     @Override protected double computePrefHeight(double width) {
         double h = 0;
+        // We want the current expanded pane or the currently collapsing one (previousPane).
+        // This is because getExpandedPane() will be null when the expanded pane
+        // is collapsing.
+        TitledPane expandedTitledPane = getSkinnable().getExpandedPane() != null ? getSkinnable().getExpandedPane() : previousPane;
+        if (expandedTitledPane != null) {
+            h = expandedTitledPane.prefHeight(-1);
+        }
         for (Node child: getManagedChildren()) {
-            h += snapSize(child.prefHeight(width));
+            TitledPane pane = (TitledPane)child;
+            if (!pane.equals(expandedTitledPane)) {
+                // The min height is the height of the TitledPane's title bar.
+                // We use the sum of all the TitledPane's title bars
+                // to compute the pref height of the accordion.
+                h += snapSize(pane.minHeight(width));
+            }
         }
         return h + snapSpace(getInsets().getTop()) + snapSpace(getInsets().getBottom());
     }

@@ -3,6 +3,9 @@
  */
 package javafx.scene.control;
 
+import javafx.scene.Scene;
+import javafx.scene.layout.StackPane;
+import javafx.stage.Stage;
 import javafx.beans.property.SimpleObjectProperty;
 import javafx.beans.value.ObservableValue;
 
@@ -16,9 +19,23 @@ import static org.junit.Assert.*;
 public class AccordionTest {
 
     private Accordion accordion;
-
+    private Scene scene;
+    private Stage stage;
+    private StackPane root;    
+    
     @Before public void setup() {
         accordion = new Accordion();
+        root = new StackPane();
+        scene = new Scene(root);
+        stage = new Stage();
+        stage.setScene(scene);
+    }
+
+    /*********************************************************************
+     * Helper methods                                                    *
+     ********************************************************************/
+    private void show() {
+        stage.show();
     }
 
     /*********************************************************************
@@ -106,5 +123,35 @@ public class AccordionTest {
         accordion.expandedPaneProperty().bind(value);
         accordion.getPanes().removeAll(b, c);
         assertSame(b, accordion.getExpandedPane());
+    }
+
+    @Test public void checkComputedHeight_RT19025() {
+        TitledPane a = new TitledPane("A", new javafx.scene.shape.Rectangle(50, 100));
+        TitledPane b = new TitledPane("B", new javafx.scene.shape.Rectangle(50, 100));
+        TitledPane c = new TitledPane("C", new javafx.scene.shape.Rectangle(50, 100));
+
+        a.setAnimated(false);
+        b.setAnimated(false);
+        c.setAnimated(false);
+        
+        accordion.getPanes().addAll(a, b, c);
+        root.setPrefSize(100, 300);
+        root.getChildren().add(accordion);
+        show();
+                
+        root.impl_reapplyCSS();
+        root.autosize();
+        root.layout();
+        
+        assertEquals(54, accordion.prefWidth(-1), 1e-100);
+        assertEquals(66, accordion.prefHeight(-1), 1e-100);
+
+        accordion.setExpandedPane(b);
+        root.impl_reapplyCSS();
+        root.autosize();
+        root.layout();
+
+        assertEquals(54, accordion.prefWidth(-1), 1e-100);
+        assertEquals(170, accordion.prefHeight(-1), 1e-100);
     }
 }
