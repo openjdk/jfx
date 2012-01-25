@@ -2254,7 +2254,7 @@
 }
 
 .progress-bar:indeterminate .bar {
-    -fx-background-color: linear-gradient(to top left, transparent, -fx-accent);
+    -fx-background-color: linear-gradient(to left, transparent, -fx-accent);
 }
 
 .progress-bar .track {

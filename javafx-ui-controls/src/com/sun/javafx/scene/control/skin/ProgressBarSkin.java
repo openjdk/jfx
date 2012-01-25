@@ -304,7 +304,13 @@ public class ProgressBarSkin extends SkinBase<ProgressBar, ProgressBarBehavior<P
         ObservableList<KeyFrame> keyframes = FXCollections.<KeyFrame>observableArrayList();
 
         // Make sure the shading of the bar points in the right direction.
-        if (!getIndeterminateBarFlip()) bar.setScaleX(-1);
+        if (!getIndeterminateBarFlip()) {
+            bar.setScaleX(-1.0);
+        }
+        else {
+            bar.setScaleX(1.0);
+        }
+
         keyframes.add(new KeyFrame(Duration.millis(0), new EventHandler<ActionEvent>() {
             @Override public void handle(ActionEvent event) {
                 if (getIndeterminateBarFlip()) bar.setScaleX(bar.getScaleX() * -1);
