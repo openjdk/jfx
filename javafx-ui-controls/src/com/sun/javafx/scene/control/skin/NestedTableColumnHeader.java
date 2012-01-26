@@ -246,18 +246,11 @@ class NestedTableColumnHeader extends TableColumnHeader {
             }
             
             final TableColumn c = getColumns().get(col);
-            Rectangle rect = new Rectangle();
+            final Rectangle rect = new Rectangle();
             rect.setWidth(DRAG_RECT_WIDTH);
             rect.setHeight(getHeight() - label.getHeight());
             rect.setFill(Color.TRANSPARENT);
             rect.setVisible(false);
-            rect.cursorProperty().bind(new ObjectBinding<Cursor>() {
-                { super.bind(c.resizableProperty()); }
-                
-                @Override protected Cursor computeValue() {
-                    return c.isResizable() ? Cursor.H_RESIZE : Cursor.DEFAULT;
-                }
-            });
             rect.setSmooth(false);
             rect.setOnMousePressed(new EventHandler<MouseEvent>() {
                 @Override public void handle(MouseEvent me) {
@@ -288,6 +281,14 @@ class NestedTableColumnHeader extends TableColumnHeader {
                     me.consume();
                 }
             });
+            
+            EventHandler<MouseEvent> cursorChangeListener = new EventHandler<MouseEvent>() {
+                @Override public void handle(MouseEvent t) {
+                    rect.setCursor(rect.isHover() && c.isResizable() ? Cursor.H_RESIZE : Cursor.DEFAULT);
+                }
+            };
+            rect.setOnMouseEntered(cursorChangeListener);
+            rect.setOnMouseExited(cursorChangeListener);
 
             dragRects.add(rect);
         }
