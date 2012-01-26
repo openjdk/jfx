@@ -148,11 +148,26 @@ public class ComboBox<T> extends ComboBoxBase<T> {
         valueProperty().addListener(new ChangeListener<T>() {
             @Override public void changed(ObservableValue<? extends T> ov, T t, T t1) {
                 if (getItems() == null) return;
+                
+                SelectionModel<T> sm = getSelectionModel();
                 int index = getItems().indexOf(t1);
+                
                 if (index == -1) {
-                    getSelectionModel().setSelectedItem(t1);
+                    sm.setSelectedItem(t1);
                 } else {
-                    getSelectionModel().clearAndSelect(index);
+                    // we must compare the value here with the currently selected
+                    // item. If they are different, we overwrite the selection
+                    // properties to reflect the new value.
+                    // We do this as there can be circumstances where there are
+                    // multiple instances of a value in the ComboBox items list,
+                    // and if we don't check here we may change the selection
+                    // mistakenly because the indexOf above will return the first
+                    // instance always, and selection may be on the second or 
+                    // later instances. This is RT-19227.
+                    T selectedItem = sm.getSelectedItem();
+                    if (selectedItem == null || ! selectedItem.equals(getValue())) {
+                        sm.clearAndSelect(index);
+                    }
                 }
             }
         });

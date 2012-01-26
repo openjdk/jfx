@@ -702,4 +702,12 @@ public class ComboBoxTest {
         assertEquals("Orange", comboBox.getSelectionModel().getSelectedItem());
         assertTrue("Selected Index: " + sm.getSelectedIndex(), sm.isSelected(1));
     }
+    
+    @Test public void test_rt19227() {
+        comboBox.getItems().addAll("0","0","0","0","0");
+        comboBox.getSelectionModel().select(2);
+        assertEquals("0", comboBox.getValue());
+        assertEquals("0", comboBox.getSelectionModel().getSelectedItem());
+        assertTrue(sm.isSelected(2));
+    }
 }
