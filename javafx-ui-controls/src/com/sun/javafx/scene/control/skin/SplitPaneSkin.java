@@ -458,7 +458,7 @@ public class SplitPaneSkin extends SkinBase<SplitPane, BehaviorBase<SplitPane>> 
         double paddingX = getInsets().getLeft();
         double paddingY = getInsets().getTop();
         double dividerWidth = contentDividers.isEmpty() ? 0 : contentDividers.get(0).prefWidth(-1);
-       
+
         for (Content c: contentRegions) {
 //            System.out.println("LAYOUT " + c.getId() + " PANELS X " + c.getX() + " Y " + c.getY() + " W " + (horizontal ? c.getArea() : width) + " H " + (horizontal ? height : c.getArea()));
             if (horizontal) {
@@ -616,11 +616,11 @@ public class SplitPaneSkin extends SkinBase<SplitPane, BehaviorBase<SplitPane>> 
                     } else {
                         // Middle panels
                         if (getAbsoluteDividerPos(divider) <= getAbsoluteDividerPos(previousDivider)) {
-                            // The two dividers are stacked on top of each other or if the
-                            // current divider position is less than the previous position.
+                            // The current divider and the previous divider share the same position
+                            // or the current divider position is less than the previous position.
                             // We will set the divider next to the previous divider.
-                            space = Double.NaN;
-                            double pos = getAbsoluteDividerPos(divider);
+                            space = Double.NaN;                            
+                            double pos = getAbsoluteDividerPos(previousDivider);                            
                             setAbsoluteDividerPos(divider, pos + dividerWidth);
                         } else {
                             space = getAbsoluteDividerPos(divider) - (getAbsoluteDividerPos(previousDivider) + dividerWidth);
