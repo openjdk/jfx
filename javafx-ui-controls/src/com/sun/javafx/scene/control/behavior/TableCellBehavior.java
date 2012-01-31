@@ -138,6 +138,7 @@ public class TableCellBehavior extends CellBehaviorBase<TableCell> {
                 if (selected) {
                     // we remove this row/cell from the current selection
                     sm.clearSelection(row, tableColumn);
+                    fm.focus(row, tableColumn);
                 } else {
                     // We add this cell/row to the current selection
                     sm.select(row, tableColumn);
