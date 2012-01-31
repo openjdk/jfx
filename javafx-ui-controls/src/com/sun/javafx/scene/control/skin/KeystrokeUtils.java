@@ -60,13 +60,13 @@ public class KeystrokeUtils {
             if (kc.getShift() == KeyCombination.ModifierValue.DOWN) {
                 stringBuilder.append("\u21e7");
             }
-            if (kc.getMeta() == KeyCombination.ModifierValue.DOWN) {
+            if (kc.getMeta() == KeyCombination.ModifierValue.DOWN || kc.getShortcut() == KeyCombination.ModifierValue.DOWN) {
                 stringBuilder.append("\u2318");
             }
             // TODO refer to RT-14486 for remaining glyphs
         }
         else {
-            if (kc.getControl() == KeyCombination.ModifierValue.DOWN) {
+            if (kc.getControl() == KeyCombination.ModifierValue.DOWN || kc.getShortcut() == KeyCombination.ModifierValue.DOWN ) {
                 stringBuilder.append("Ctrl+");
             }
             if (kc.getAlt() == KeyCombination.ModifierValue.DOWN) {

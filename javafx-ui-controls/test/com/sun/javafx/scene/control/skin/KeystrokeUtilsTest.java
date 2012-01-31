@@ -40,7 +40,30 @@ public class KeystrokeUtilsTest {
         String charAString = KeystrokeUtils.toString(kcAChar);
 
         assertTrue(codeAString.equals(charAString));
-      
     }
 
+
+    /*
+    ** check that an accelerator constructed with a Shortcut
+    ** displays appropriate platform text.
+    */
+    @Test public void checkShortcutModifierChangesDisplayString() {
+        KeyCombination acceleratorShortcutA = KeyCodeCombination.keyCombination("Shortcut+A");
+        String shortcutAString = KeystrokeUtils.toString(acceleratorShortcutA);
+
+        if (com.sun.javafx.PlatformUtil.isMac()) {
+            KeyCodeCombination acceleratorMetaA =
+                new KeyCodeCombination(KeyCode.A, KeyCombination.META_DOWN);
+            String metaAString = KeystrokeUtils.toString(acceleratorMetaA);
+
+            assertTrue(shortcutAString.equals(metaAString));
+        }
+        else {
+            KeyCodeCombination acceleratorControlA =
+                new KeyCodeCombination(KeyCode.A, KeyCombination.CONTROL_DOWN);
+            String controlAString = KeystrokeUtils.toString(acceleratorControlA);
+
+            assertTrue(shortcutAString.equals(controlAString));
+        }
+    }
 }
