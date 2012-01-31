@@ -203,6 +203,9 @@ public abstract class Axis<T> extends Region {
     /** The length of tick mark lines */
     private DoubleProperty tickLength = new StyleableDoubleProperty(8) {
         @Override protected void invalidated() {
+            if (tickLength.get() < 0 && !tickLength.isBound()) {
+                tickLength.set(0);
+            }
             // this effects preferred size so request layout
             requestAxisLayout();
         }
@@ -540,7 +543,7 @@ public abstract class Axis<T> extends Region {
                 }
             }
             // calculate tick mark length
-            final double tickMarkLength = isTickMarkVisible() ? getTickLength() : 0;
+            final double tickMarkLength = isTickMarkVisible() ? (getTickLength() > 0) ? getTickLength() : 0 : 0;
             // calculate label height
             final double labelHeight =
                     axisLabel.getText() == null || axisLabel.getText().length() == 0 ?
@@ -581,7 +584,7 @@ public abstract class Axis<T> extends Region {
                 }
             }
             // calculate tick mark length
-            final double tickMarkLength = isTickMarkVisible() ? getTickLength() : 0;
+            final double tickMarkLength = isTickMarkVisible() ? (getTickLength() > 0) ? getTickLength() : 0 : 0;
             // calculate label height
             final double labelHeight =
                     axisLabel.getText() == null || axisLabel.getText().length() == 0 ?
@@ -602,7 +605,7 @@ public abstract class Axis<T> extends Region {
     @Override protected void layoutChildren() {
         final double width = getWidth();
         final double height = getHeight();
-        final double tickMarkLength = getTickLength();
+        final double tickMarkLength = (getTickLength() > 0) ? getTickLength() : 0;
         final boolean isFirstPass = oldLength == 0;
         // auto range if it is not valid
         final Side side = getSide();

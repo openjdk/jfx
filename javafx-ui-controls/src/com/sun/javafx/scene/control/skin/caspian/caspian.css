@@ -2413,6 +2413,10 @@
     -fx-text-fill: -fx-selection-bar-text;
 }
 
+.table-view:focused .table-row-cell:filled:selected .table-cell {
+    -fx-text-fill: -fx-selection-bar-text;
+}
+
 .table-view:focused .table-row-cell:filled:selected, .table-view:row-selection .table-row-cell:filled:hover:selected {
     -fx-background: -fx-accent;
     -fx-background-color: -fx-selection-bar;

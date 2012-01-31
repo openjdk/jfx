@@ -1404,6 +1404,7 @@ public class TabPaneSkin extends SkinBase<TabPane, TabPaneBehavior> {
                 showControlButtons = true;
                 requestLayout();
             }
+            getProperties().put(ContextMenu.class, popup);
         }
 
         private boolean showTabsMenu = false;

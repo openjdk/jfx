@@ -338,6 +338,7 @@ public class TextFieldSkin extends TextInputControlSkin<TextField, TextFieldBeha
         usePromptText.addListener(new InvalidationListener() {
             @Override public void invalidated(Observable observable) {
                 createPromptNode();
+                requestLayout();
             }
         });
     }

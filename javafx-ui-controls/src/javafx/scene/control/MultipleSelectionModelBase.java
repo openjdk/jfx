@@ -359,7 +359,7 @@ abstract class MultipleSelectionModelBase<T> extends MultipleSelectionModel<T> {
                 }
             }
 
-            selectedIndicesSeq.callObservers(new NonIterableChange.SimpleAddChange<Integer>(0, 1, selectedItemsSeq));
+            selectedIndicesSeq.callObservers(new NonIterableChange.SimpleAddChange<Integer>(0, 1, selectedIndicesSeq));
         } else {
             int lastIndex = -1;
             if (row >= 0 && row < rowCount) {

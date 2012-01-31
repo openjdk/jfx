@@ -109,6 +109,9 @@ public abstract class TextInputControl extends Control {
         // listeners of the text property that it is invalid.
         content.addListener(new InvalidationListener() {
             @Override public void invalidated(Observable observable) {
+                if (content.length() > 0) {
+                    text.textIsNull = false;
+                }
                 text.invalidate();
             }
         });

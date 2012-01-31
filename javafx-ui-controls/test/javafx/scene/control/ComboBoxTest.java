@@ -694,4 +694,20 @@ public class ComboBoxTest {
         assertEquals("New Value", sm.getSelectedItem());
         assertEquals("New Value", comboBox.getValue());
     }
+    
+    @Test public void test_rt18941() {
+        comboBox.getItems().addAll("Apple", "Orange", "Banana");
+        comboBox.setValue("Orange");
+        assertEquals("Orange", comboBox.getValue());
+        assertEquals("Orange", comboBox.getSelectionModel().getSelectedItem());
+        assertTrue("Selected Index: " + sm.getSelectedIndex(), sm.isSelected(1));
+    }
+    
+    @Test public void test_rt19227() {
+        comboBox.getItems().addAll("0","0","0","0","0");
+        comboBox.getSelectionModel().select(2);
+        assertEquals("0", comboBox.getValue());
+        assertEquals("0", comboBox.getSelectionModel().getSelectedItem());
+        assertTrue(sm.isSelected(2));
+    }
 }
