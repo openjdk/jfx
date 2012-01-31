@@ -12,6 +12,7 @@ import javafx.event.EventHandler;
 
 import com.sun.javafx.stage.EmbeddedWindow;
 import org.junit.Before;
+import org.junit.Ignore;
 import org.junit.Test;
 
 import static javafx.scene.control.ControlTestUtils.*;
@@ -471,6 +472,7 @@ public class ListCellTest {
         assertFalse(other.isSelected());
     }
 
+    @Ignore("RT-19311")
     @Test public void replacingTheFocusModelRemovesTheListenerFromTheOldModel() {
         cell.updateIndex(0);
         cell.updateListView(list);
