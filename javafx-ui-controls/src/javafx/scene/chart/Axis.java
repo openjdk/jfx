@@ -378,7 +378,7 @@ public abstract class Axis<T> extends Region {
         axisLabel.setAlignment(Pos.CENTER);
         tickMarkPath.getStyleClass().add("axis-tick-mark");
         getChildren().addAll(axisLabel, tickMarkPath);
-        measure.getStyleClass().add("tick-mark");
+        measure.getStyleClass().addAll("text", "tick-mark");
     }
 
     // -------------- METHODS ------------------------------------------------------------------------------------------
@@ -1008,7 +1008,7 @@ public abstract class Axis<T> extends Region {
          * Creates and initializes an instance of TickMark. 
          */
         public TickMark() {
-            textNode.getStyleClass().add("tick-mark");
+            textNode.getStyleClass().addAll("text", "tick-mark");
         }
 
         /**

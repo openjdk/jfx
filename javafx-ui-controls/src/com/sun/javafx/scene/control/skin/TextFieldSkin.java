@@ -243,6 +243,7 @@ public class TextFieldSkin extends TextInputControlSkin<TextField, TextFieldBeha
 
         // Add text
         textNode.setManaged(false);
+        textNode.getStyleClass().add("text");
         textNode.fontProperty().bind(font);
         textNode.xProperty().bind(textLeft);
         textNode.layoutXProperty().bind(textTranslateX);
@@ -349,6 +350,7 @@ public class TextFieldSkin extends TextInputControlSkin<TextField, TextFieldBeha
         promptNode = new Text();
         textGroup.getChildren().add(0, promptNode);
         promptNode.setManaged(false);
+        promptNode.getStyleClass().add("text");
         promptNode.visibleProperty().bind(usePromptText);
         promptNode.fontProperty().bind(font);
         promptNode.xProperty().bind(textLeft);
