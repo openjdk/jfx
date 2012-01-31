@@ -2254,7 +2254,7 @@
 }
 
 .progress-bar:indeterminate .bar {
-    -fx-background-color: linear-gradient(to top left, transparent, -fx-accent);
+    -fx-background-color: linear-gradient(to left, transparent, -fx-accent);
 }
 
 .progress-bar .track {
@@ -2410,6 +2410,10 @@
     -fx-background-color: -fx-focus-color, -fx-cell-focus-inner-border, -fx-selection-bar;
     -fx-background-insets: 0, 1, 2;
     -fx-background: -fx-accent;
+    -fx-text-fill: -fx-selection-bar-text;
+}
+
+.table-view:focused .table-row-cell:filled:selected .table-cell {
     -fx-text-fill: -fx-selection-bar-text;
 }
 

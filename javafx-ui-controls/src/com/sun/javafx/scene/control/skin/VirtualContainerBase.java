@@ -113,8 +113,8 @@ public abstract class VirtualContainerBase<C extends Control, B extends Behavior
         flow.requestLayout();
     }
     
-    double getVirtualFlowPreferredWidth(double height) {
-        return getInsets().getLeft() + flow.computePrefWidth(height) + getInsets().getRight();
+    double getMaxCellWidth(int rowsToCount) {
+        return getInsets().getLeft() + flow.getMaxCellWidth(rowsToCount) + getInsets().getRight();
     }
     
     double getVirtualFlowPreferredHeight(int rows) {

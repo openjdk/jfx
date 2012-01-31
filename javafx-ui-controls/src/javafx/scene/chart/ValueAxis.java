@@ -175,6 +175,10 @@ public abstract class ValueAxis<T extends Number> extends Axis<T> {
     /** The length of minor tick mark lines. Set to 0 to not display minor tick marks. */
     private DoubleProperty minorTickLength = new StyleableDoubleProperty(5) {
         @Override protected void invalidated() {
+            // RT-16747 if tick length is negative - set it to 0
+            if (minorTickLength.get() < 0 && !minorTickLength.isBound()) {
+                minorTickLength.set(0);
+            }
             requestAxisLayout();
         }
 
@@ -203,6 +207,10 @@ public abstract class ValueAxis<T extends Number> extends Axis<T> {
      */
     private IntegerProperty minorTickCount = new StyleableIntegerProperty(5) {
         @Override protected void invalidated() {
+            // RT-16747 if the tick count is negative, set it to 0
+            if ((minorTickCount.get() - 1) < 0 && !minorTickCount.isBound()) {
+                minorTickCount.set(0);
+            }
             invalidateRange();
             requestAxisLayout();
         }

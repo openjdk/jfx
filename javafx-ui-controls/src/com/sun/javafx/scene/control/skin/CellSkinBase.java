@@ -53,7 +53,7 @@ public class CellSkinBase<C extends Cell, B extends CellBehaviorBase<C>> extends
      * is settable from CSS
      */
     private DoubleProperty cellSize;
-    private boolean cellSizeSet = false;
+    boolean cellSizeSet = false;
 
     public final double getCellSize() {
         return cellSize == null ? DEFAULT_CELL_SIZE : cellSize.get();
@@ -103,12 +103,8 @@ public class CellSkinBase<C extends Cell, B extends CellBehaviorBase<C>> extends
         consumeMouseEvents(false);
     }
 
-    @Override
-    protected double computePrefHeight(double width) {
-        return cellSizeSet ? getCellSize(): super.computePrefHeight(width);
-    }
 
-
+    
     /***************************************************************************
      *                                                                         *
      *                         Stylesheet Handling                             *

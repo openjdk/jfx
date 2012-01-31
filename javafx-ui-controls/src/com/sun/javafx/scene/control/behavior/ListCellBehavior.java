@@ -146,6 +146,7 @@ public class ListCellBehavior extends CellBehaviorBase<ListCell> {
                 if (selected) {
                     // we remove this row from the current selection
                     sm.clearSelection(index);
+                    fm.focus(index);
                 } else {
                     // We add this row to the current selection
                     sm.select(index);

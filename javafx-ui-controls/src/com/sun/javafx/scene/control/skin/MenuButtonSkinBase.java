@@ -41,6 +41,7 @@ import javafx.scene.input.MouseEvent;
 import javafx.scene.layout.StackPane;
 
 import com.sun.javafx.scene.control.behavior.MenuButtonBehaviorBase;
+import javafx.scene.control.Menu;
 
 /**
  * Base class for MenuButtonSkin and SplitMenuButtonSkin. It consists of the
@@ -125,13 +126,13 @@ public abstract class MenuButtonSkinBase<C extends MenuButton, B extends MenuBut
         });
         
         if (getSkinnable().getScene() != null) {
-            addAccelerators();
+            addAccelerators(getSkinnable().getItems());
         }
         control.sceneProperty().addListener(new ChangeListener<Scene>() {
                 @Override
                     public void changed(ObservableValue<? extends Scene> scene, Scene oldValue, Scene newValue) {
                     if (getSkinnable().getScene() != null) {
-                        addAccelerators();
+                        addAccelerators(getSkinnable().getItems());
                     }
                 }
             });
@@ -281,26 +282,50 @@ public abstract class MenuButtonSkinBase<C extends MenuButton, B extends MenuBut
 //        popup.autosize();
     }
 
-    
-    private void addAccelerators() {
-        for (final MenuItem menuitem : popup.getItems()) {
+    private void addAccelerators(javafx.collections.ObservableList<javafx.scene.control.MenuItem> mItems) {
+        for (final MenuItem menuitem : mItems) {
+            if (menuitem instanceof Menu) {
+                // add accelerators for this Menu's menuitems, by calling recursively.
+                addAccelerators(((Menu)menuitem).getItems());
+            } else {
+                /*
+                ** check is there are any accelerators in this menuitem
+                */
+                if (menuitem.getAccelerator() != null) {
+                    if (getSkinnable().getScene().getAccelerators() != null) {
 
-            /*
-            ** check is there are any accelerators in this menu
-            */
-            if (menuitem.getAccelerator() != null) {
-                if (getSkinnable().getScene().getAccelerators() != null) {
-                    
-                    Runnable acceleratorRunnable = new Runnable() {
+                        Runnable acceleratorRunnable = new Runnable() {
                             public void run() {
                                 menuitem.fire();
                             }
                         };
-                    getSkinnable().getScene().getAccelerators().put(menuitem.getAccelerator(), acceleratorRunnable);
+                        getSkinnable().getScene().getAccelerators().put(menuitem.getAccelerator(), acceleratorRunnable);
+                    }
                 }
             }
         }
     }
+    
+    // remove this after Mick approves.
+//    private void addAccelerators() {
+//        for (final MenuItem menuitem : popup.getItems()) {
+//
+//            /*
+//            ** check is there are any accelerators in this menu
+//            */
+//            if (menuitem.getAccelerator() != null) {
+//                if (getSkinnable().getScene().getAccelerators() != null) {
+//                    
+//                    Runnable acceleratorRunnable = new Runnable() {
+//                            public void run() {
+//                                menuitem.fire();
+//                            }
+//                        };
+//                    getSkinnable().getScene().getAccelerators().put(menuitem.getAccelerator(), acceleratorRunnable);
+//                }
+//            }
+//        }
+//    }
 
 
     private class MenuLabeledImpl extends LabeledImpl {

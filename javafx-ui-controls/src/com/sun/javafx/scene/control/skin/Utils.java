@@ -300,7 +300,14 @@ public class Utils {
         // This should be the first character of a line that would be clipped.
         Point2D endPoint = new Point2D(0, height - helper.getBaselineOffset());
 
-        int hit = helper.impl_hitTestChar(center ? centerPoint : endPoint).getCharIndex();
+        int hit = helper.impl_hitTestChar(endPoint).getCharIndex();
+        if (hit >= len) {
+            return text;
+        }
+        if (center) {
+            hit = helper.impl_hitTestChar(centerPoint).getCharIndex();
+        }
+
         if (hit > 0 && hit < len) {
             // Step one, make a truncation estimate.
 
@@ -360,7 +367,15 @@ public class Utils {
             while (true) {
                 helper.setText(result);
                 int hit2 = helper.impl_hitTestChar(endPoint).getCharIndex();
-                if (hit2 > 0 && hit2 < result.length()) {
+                if (center && hit2 < centerLen) {
+                    // No room for text after ellipsis. Maybe there is a newline
+                    // here, and the next line falls outside the view.
+                    if (hit2 > 0 && result.charAt(hit2-1) == '\n') {
+                        hit2--;
+                    }
+                    result = text.substring(0, hit2) + ellipsis;
+                    break;
+                } else if (hit2 > 0 && hit2 < result.length()) {
                     if (leading) {
                         int ind = eLen + 1; // Past ellipsis and first char.
                         if (wordTrim) {

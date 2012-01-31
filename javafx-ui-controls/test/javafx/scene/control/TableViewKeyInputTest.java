@@ -31,11 +31,11 @@ public class TableViewKeyInputTest {
     private Scene scene;
     private Group group;
     
-    private final TableColumn<String, String> col1 = new TableColumn<String, String>();
-    private final TableColumn<String, String> col2 = new TableColumn<String, String>();
-    private final TableColumn<String, String> col3 = new TableColumn<String, String>();
-    private final TableColumn<String, String> col4 = new TableColumn<String, String>();
-    private final TableColumn<String, String> col5 = new TableColumn<String, String>();
+    private final TableColumn<String, String> col1 = new TableColumn<String, String>("col1");
+    private final TableColumn<String, String> col2 = new TableColumn<String, String>("col2");
+    private final TableColumn<String, String> col3 = new TableColumn<String, String>("col3");
+    private final TableColumn<String, String> col4 = new TableColumn<String, String>("col4");
+    private final TableColumn<String, String> col5 = new TableColumn<String, String>("col5");
     
     @Before public void setup() {
         tableView = new TableView<String>();
@@ -854,7 +854,6 @@ public class TableViewKeyInputTest {
         assertTrue(sm.isSelected(1, col1));
     }
     
-    @Ignore("Bug persists")
     @Test public void test_rt18536_positive_horizontal() {
         // Test shift selection when focus is elsewhere (so as to select a range)
         sm.setCellSelectionEnabled(true);
@@ -876,7 +875,6 @@ public class TableViewKeyInputTest {
         assertTrue(sm.isSelected(1, col1));
     }
     
-    @Ignore("Bug persists")
     @Test public void test_rt18536_negative_horizontal() {
         // Test shift selection when focus is elsewhere (so as to select a range)
         sm.setCellSelectionEnabled(true);

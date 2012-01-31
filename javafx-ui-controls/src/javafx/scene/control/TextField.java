@@ -75,16 +75,20 @@ public class TextField extends TextInputControl {
 
         @Override public void insert(int index, String text, boolean notifyListeners) {
             text = TextInputControl.filterInput(text, true, true);
-            characters.insert(index, text);
-            if (notifyListeners) {
-                ExpressionHelper.fireValueChangedEvent(helper);
+            if (!text.isEmpty()) {
+                characters.insert(index, text);
+                if (notifyListeners) {
+                    ExpressionHelper.fireValueChangedEvent(helper);
+                }
             }
         }
 
         @Override public void delete(int start, int end, boolean notifyListeners) {
-            characters.delete(start, end);
-            if (notifyListeners) {
-                ExpressionHelper.fireValueChangedEvent(helper);
+            if (end > start) {
+                characters.delete(start, end);
+                if (notifyListeners) {
+                    ExpressionHelper.fireValueChangedEvent(helper);
+                }
             }
         }
 

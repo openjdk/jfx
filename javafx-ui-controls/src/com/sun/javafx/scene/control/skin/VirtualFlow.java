@@ -1800,11 +1800,7 @@ public class VirtualFlow extends Region {
     private static final double GOLDEN_RATIO_MULTIPLIER = 0.618033987;
 
     private double getPrefBreadth(double oppDimension) {
-        double max = 0.0;
-        int rows = Math.min(10, getCellCount());
-        for (int i = 0; i < rows; i++) {
-            max = Math.max(max, getCellBreadth(i));
-        }
+        double max = getMaxCellWidth(10);
 
         // This primarily exists for the case where we do not want the breadth
         // to grow to ensure a golden ratio between width and height (for example,
@@ -1835,6 +1831,15 @@ public class VirtualFlow extends Region {
     @Override protected double computePrefHeight(double width) {
         double h = isVertical() ? getPrefLength() : getPrefBreadth(width);
         return h + hbar.prefHeight(-1);
+    }
+    
+    double getMaxCellWidth(int rowsToCount) {
+        double max = 0.0;
+        int rows = rowsToCount == -1 ? getCellCount() : Math.min(rowsToCount, getCellCount());
+        for (int i = 0; i < rows; i++) {
+            max = Math.max(max, getCellBreadth(i));
+        }
+        return max;
     }
 
     /**

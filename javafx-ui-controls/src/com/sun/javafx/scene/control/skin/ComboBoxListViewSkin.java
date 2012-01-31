@@ -48,6 +48,12 @@ import javafx.util.StringConverter;
 
 public class ComboBoxListViewSkin<T> extends ComboBoxPopupControl<T> {
     
+    // By default we measure the width of all cells in the ListView. If this
+    // is too burdensome, the developer may set a property in the ComboBox
+    // properties map with this key to specify the number of rows to measure.
+    // This may one day become a property on the ComboBox itself.
+    private static final String COMBO_BOX_ROWS_TO_MEASURE_WIDTH_KEY = "comboBoxRowsToMeasureWidth";
+    
     private final ComboBox<T> comboBox;
     
     private ListCell<T> listCellLabel;
@@ -236,7 +242,13 @@ public class ComboBoxListViewSkin<T> extends ComboBoxPopupControl<T> {
                         skin.updateCellCount();
                         itemCountDirty = false;
                     }
-                    pw = skin.getVirtualFlowPreferredWidth(-1) + 10;
+                    
+                    int rowsToMeasure = -1;
+                    if (comboBox.getProperties().containsKey(COMBO_BOX_ROWS_TO_MEASURE_WIDTH_KEY)) {
+                        rowsToMeasure = (Integer) comboBox.getProperties().get(COMBO_BOX_ROWS_TO_MEASURE_WIDTH_KEY);
+                    }
+                    
+                    pw = skin.getMaxCellWidth(rowsToMeasure) + 20;
                 } else {
                     pw = Math.max(100, comboBox.getWidth());
                 }
@@ -276,9 +288,8 @@ public class ComboBoxListViewSkin<T> extends ComboBoxPopupControl<T> {
 
         listView.getSelectionModel().selectedIndexProperty().addListener(new InvalidationListener() {
             @Override public void invalidated(Observable o) {
-                int index = getSelectedIndex();
+                int index = listView.getSelectionModel().getSelectedIndex();
                 comboBox.getSelectionModel().select(index);
-                comboBox.setValue(listView.getSelectionModel().getSelectedItem());
                 updateDisplayNode();
             }
         });

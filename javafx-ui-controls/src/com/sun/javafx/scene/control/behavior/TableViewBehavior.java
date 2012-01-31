@@ -807,11 +807,23 @@ public class TableViewBehavior<T> extends BehaviorBase<TableView<T>> {
             int endPos = anchorRow > focusRow ? focusRow - 1 : focusRow + 1;
             sm.selectRange(startPos, endPos);
         } else {
-            int min = Math.min(anchorRow, focusRow);
-            int max = Math.max(anchorRow, focusRow);
-            
-            for (int i = min; i <= max; i++) {
-                sm.select(i, focusedCell.getTableColumn());
+            // we add all cells/rows between the current selection focus and
+            // the acnhor (inclusive) to the current selection.
+
+            // and then determine all row and columns which must be selected
+            int minRow = Math.min(focusedCell.getRow(), anchorRow);
+            int maxRow = Math.max(focusedCell.getRow(), anchorRow);
+            int minColumn = Math.min(focusedCell.getColumn(), anchor.getColumn());
+            int maxColumn = Math.max(focusedCell.getColumn(), anchor.getColumn());
+
+            // clear selection
+            sm.clearSelection();
+
+            // and then perform the selection
+            for (int _row = minRow; _row <= maxRow; _row++) {
+                for (int _col = minColumn; _col <= maxColumn; _col++) {
+                    sm.select(_row, getControl().getVisibleLeafColumn(_col));
+                }
             }
         }
         

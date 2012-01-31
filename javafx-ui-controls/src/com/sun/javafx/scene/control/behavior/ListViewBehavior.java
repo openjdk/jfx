@@ -63,6 +63,7 @@ import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
 import javafx.collections.ListChangeListener;
 import javafx.collections.ListChangeListener.Change;
+import javafx.collections.ObservableList;
 import javafx.scene.control.*;
 import javafx.util.Callback;
 
@@ -269,21 +270,36 @@ public class ListViewBehavior<T> extends BehaviorBase<ListView<T>> {
             }
         }
     };
+    
+    private final ListChangeListener itemsListListener = new ListChangeListener() {
+        @Override public void onChanged(Change c) {
+            while (c.next()) {
+                if (c.wasAdded() && c.getFrom() <= getAnchor()) {
+                    setAnchor(getAnchor() + c.getAddedSize());
+                } else if (c.wasRemoved() && c.getFrom() <= getAnchor()) {
+                    setAnchor(getAnchor() - c.getRemovedSize());
+                }
+            }
+        }
+    };
 
     public ListViewBehavior(ListView control) {
         super(control);
         
-        control.getItems().addListener(new ListChangeListener() {
-            @Override public void onChanged(Change c) {
-                while (c.next()) {
-                    if (c.wasAdded() && c.getFrom() <= getAnchor()) {
-                        setAnchor(getAnchor() + c.getAddedSize());
-                    } else if (c.wasRemoved() && c.getFrom() <= getAnchor()) {
-                        setAnchor(getAnchor() - c.getRemovedSize());
-                    }
-                }
-            }
-        });
+//        control.itemsProperty().addListener(new ChangeListener<ObservableList<T>>() {
+//            @Override public void changed(ObservableValue ov, 
+//                        ObservableList oldValue, 
+//                        ObservableList newValue) {
+//                if (oldValue != null) {
+//                    oldValue.removeListener(itemsListListener);
+//                } if (newValue != null) {
+//                    newValue.addListener(itemsListListener);
+//                }
+//            }
+//        });
+//        if (control.getItems() != null) {
+            control.getItems().addListener(itemsListListener);
+//        }
         
         // Fix for RT-16565
         getControl().selectionModelProperty().addListener(new ChangeListener<MultipleSelectionModel<T>>() {
