@@ -496,6 +496,7 @@ public class TextAreaSkin extends TextInputControlSkin<TextArea, TextAreaBehavio
         Text paragraphNode = new Text(string);
         paragraphNode.setTextOrigin(VPos.TOP);
         paragraphNode.setManaged(false);
+        paragraphNode.getStyleClass().add("text");
         paragraphNodes.getChildren().add(i, paragraphNode);
 
         paragraphNode.fontProperty().bind(font);
