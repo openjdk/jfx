@@ -137,7 +137,12 @@ public class MenuButton extends ButtonBase {
     }
 
     // --- Showing
-    private ReadOnlyBooleanWrapper showing = new ReadOnlyBooleanWrapper(this, "showing", false);
+    private ReadOnlyBooleanWrapper showing = new ReadOnlyBooleanWrapper(this, "showing", false) {
+        @Override protected void invalidated() {
+            impl_pseudoClassStateChanged("showing");
+            super.invalidated();
+        }
+    };
     private void setShowing(boolean value) { showing.set(value); }
     /**
      * Indicates whether the {@link ContextMenu} is currently visible.
@@ -236,8 +241,10 @@ public class MenuButton extends ButtonBase {
 
     private static final String DEFAULT_STYLE_CLASS = "menu-button";
     private static final String PSEUDO_CLASS_OPENVERTICALLY = "openvertically";
+    private static final String PSEUDO_CLASS_SHOWING = "showing";
 
     private static final long OPENVERTICALLY_PSEUDOCLASS_STATE = StyleManager.getInstance().getPseudoclassMask("openvertically");
+    private static final long SHOWING_PSEUDOCLASS_STATE = StyleManager.getInstance().getPseudoclassMask("showing");
 
     /**
      * @treatasprivate implementation detail
@@ -247,6 +254,9 @@ public class MenuButton extends ButtonBase {
         long mask = super.impl_getPseudoClassState();
         if (getPopupSide() == Side.TOP || getPopupSide() == Side.BOTTOM)
             mask |= OPENVERTICALLY_PSEUDOCLASS_STATE;
+        if (isShowing()) {
+            mask |= SHOWING_PSEUDOCLASS_STATE;
+        }
         return mask;
     }
 
