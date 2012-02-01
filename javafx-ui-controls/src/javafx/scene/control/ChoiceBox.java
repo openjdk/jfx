@@ -65,6 +65,12 @@ import com.sun.javafx.css.StyleManager;
  * specify the selected item and then the items. Either way will function
  * correctly.
  * <p>
+ * ChoiceBox item selection is handled by 
+ * {@link javafx.scene.control.SelectionModel SelectionModel}
+ * As with ListView and ComboBox, it is possible to modify the 
+ * {@link javafx.scene.control.SelectionModel SelectionModel} that is used, 
+ * although this is likely to be rarely changed. ChoiceBox supports only a 
+ * single selection model, hence the default used is a {@link SingleSelectionModel}.
  *
  * <pre>
  * import javafx.scene.control.ChoiceBox;
