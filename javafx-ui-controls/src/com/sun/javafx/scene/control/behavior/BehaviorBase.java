@@ -38,6 +38,7 @@ import com.sun.javafx.PlatformUtil;
 import com.sun.javafx.scene.traversal.Direction;
 
 import static javafx.scene.input.KeyCode.*;
+import static javafx.scene.input.KeyEvent.*;
 
 /**
  * A convenient base class from which all our built-in behaviors extend. The
@@ -96,7 +97,8 @@ public class BehaviorBase<C extends Control> {
 
         // Platform specific settings
         if (PlatformUtil.isMac()) {
-            TRAVERSAL_BINDINGS.add(new KeyBinding(F7, "TraverseNext").ctrl());
+            // We are not getting pressed events for ctrl on Mac, so use released instead.
+            TRAVERSAL_BINDINGS.add(new KeyBinding(F7, KEY_RELEASED, "TraverseNext").ctrl());
         }
     }
 
