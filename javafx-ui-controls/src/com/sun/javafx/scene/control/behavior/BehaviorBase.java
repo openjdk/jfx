@@ -34,6 +34,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
+import com.sun.javafx.PlatformUtil;
 import com.sun.javafx.scene.traversal.Direction;
 
 import static javafx.scene.input.KeyCode.*;
@@ -92,6 +93,12 @@ public class BehaviorBase<C extends Control> {
         TRAVERSAL_BINDINGS.add(new KeyBinding(RIGHT, "TraverseRight").shift().alt().ctrl());
         TRAVERSAL_BINDINGS.add(new KeyBinding(TAB, "TraverseNext").shift().alt().ctrl());
         TRAVERSAL_BINDINGS.add(new KeyBinding(TAB, "TraversePrevious").alt().ctrl());
+
+        // Platform specific settings
+        if (PlatformUtil.isMac()) {
+            // We are not getting pressed events for ctrl on Mac, so use released instead.
+            TEXT_AREA_BINDINGS.add(new KeyBinding(F7, KEY_RELEASED, "TraverseNext").ctrl());
+        }
     }
 
     /**

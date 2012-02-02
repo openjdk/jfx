@@ -70,9 +70,6 @@ public class TextAreaBehavior extends TextInputControlBehavior<TextArea> {
         TEXT_AREA_BINDINGS.add(new KeyBinding(PAGE_DOWN, KEY_PRESSED, "SelectNextPage").shift()); // new
         // Platform specific settings
         if (PlatformUtil.isMac()) {
-            // We are not getting pressed events for ctrl on Mac, so use released instead.
-            TEXT_AREA_BINDINGS.add(new KeyBinding(F7, KEY_RELEASED, "TraverseNext").ctrl());
-
             TEXT_AREA_BINDINGS.add(new KeyBinding(LEFT, KEY_PRESSED, "LineStart").meta()); // changed
             TEXT_AREA_BINDINGS.add(new KeyBinding(KP_LEFT, KEY_PRESSED, "LineStart").meta()); // changed
             TEXT_AREA_BINDINGS.add(new KeyBinding(RIGHT, KEY_PRESSED, "LineEnd").meta()); // changed
