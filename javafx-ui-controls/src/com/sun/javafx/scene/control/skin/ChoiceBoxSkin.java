@@ -78,7 +78,6 @@ import com.sun.javafx.scene.control.WeakListChangeListener;
 
     private final ToggleGroup toggleGroup = new ToggleGroup();
 
-    private boolean firstShow = false;
     /*
      * Watch for if the user changes the selected index, and if so, we toggle
      * the selection in the toggle group (so the check shows in the right place)
@@ -145,10 +144,7 @@ import com.sun.javafx.scene.control.WeakListChangeListener;
                 }
             }
         });
-        if (popup.getScene().getRoot() != null) {
-            popup.getScene().getRoot().getStyleClass().addAll(((ChoiceBox)getSkinnable()).getStyleClass());
-        }
-        // TODO remove this id once bug RT-7542 is fixed.
+        // This is used as a way of accessing the context menu within the ChoiceBox.
         popup.setId("choice-box-popup-menu");
 //        popup.getItems().clear();
 //        popup.getItems().addAll(popupItems);
