@@ -49,8 +49,6 @@ public class TextAreaBehavior extends TextInputControlBehavior<TextArea> {
      *************************************************************************/
     protected static final List<KeyBinding> TEXT_AREA_BINDINGS = new ArrayList<KeyBinding>();
     static {
-        TEXT_AREA_BINDINGS.add(new KeyBinding(TAB, KEY_PRESSED, "TraverseNext").ctrl());
-        TEXT_AREA_BINDINGS.add(new KeyBinding(TAB, KEY_PRESSED, "TraversePrevious").ctrl().shift());
         TEXT_AREA_BINDINGS.add(new KeyBinding(HOME, KEY_PRESSED, "LineStart")); // changed
         TEXT_AREA_BINDINGS.add(new KeyBinding(END, KEY_PRESSED, "LineEnd")); // changed
         TEXT_AREA_BINDINGS.add(new KeyBinding(UP, KEY_PRESSED, "PreviousLine")); // changed
@@ -72,6 +70,9 @@ public class TextAreaBehavior extends TextInputControlBehavior<TextArea> {
         TEXT_AREA_BINDINGS.add(new KeyBinding(PAGE_DOWN, KEY_PRESSED, "SelectNextPage").shift()); // new
         // Platform specific settings
         if (PlatformUtil.isMac()) {
+            // We are not getting pressed events for ctrl on Mac, so use released instead.
+            TEXT_AREA_BINDINGS.add(new KeyBinding(F7, KEY_RELEASED, "TraverseNext").ctrl());
+
             TEXT_AREA_BINDINGS.add(new KeyBinding(LEFT, KEY_PRESSED, "LineStart").meta()); // changed
             TEXT_AREA_BINDINGS.add(new KeyBinding(KP_LEFT, KEY_PRESSED, "LineStart").meta()); // changed
             TEXT_AREA_BINDINGS.add(new KeyBinding(RIGHT, KEY_PRESSED, "LineEnd").meta()); // changed
@@ -100,6 +101,9 @@ public class TextAreaBehavior extends TextInputControlBehavior<TextArea> {
             TEXT_AREA_BINDINGS.add(new KeyBinding(DOWN, KEY_PRESSED, "SelectParagraphEnd").alt().shift());
             TEXT_AREA_BINDINGS.add(new KeyBinding(KP_DOWN, KEY_PRESSED, "SelectParagraphEnd").alt().shift());
         } else {
+            TEXT_AREA_BINDINGS.add(new KeyBinding(TAB, KEY_PRESSED, "TraverseNext").ctrl());
+            TEXT_AREA_BINDINGS.add(new KeyBinding(TAB, KEY_PRESSED, "TraversePrevious").ctrl().shift());
+
             TEXT_AREA_BINDINGS.add(new KeyBinding(UP, KEY_PRESSED, "ParagraphStart").ctrl());
             TEXT_AREA_BINDINGS.add(new KeyBinding(KP_UP, KEY_PRESSED, "ParagraphStart").ctrl());
             TEXT_AREA_BINDINGS.add(new KeyBinding(DOWN, KEY_PRESSED, "ParagraphEnd").ctrl());
