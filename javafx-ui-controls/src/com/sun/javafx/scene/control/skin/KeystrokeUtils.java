@@ -36,16 +36,6 @@ public class KeystrokeUtils {
             return "";
         }
         
-        KeyCode keyCode = null;
-        if (kc instanceof KeyCodeCombination) {
-            keyCode = ((KeyCodeCombination)kc).getCode();
-        } else if (kc instanceof KeyCharacterCombination) {
-            keyCode = KeyCode.getKeyCode(((KeyCharacterCombination)kc).getCharacter());
-        }
-        if (keyCode == null) {
-            return "";
-        }
-        
         StringBuilder stringBuilder = new StringBuilder();
         if (com.sun.javafx.PlatformUtil.isMac()) {
             // Macs have a different convention for keyboard accelerators -
@@ -80,7 +70,11 @@ public class KeystrokeUtils {
             }
         }
         
-        stringBuilder.append(keyCode.getName());
+        if (kc instanceof KeyCodeCombination) {
+            stringBuilder.append(((KeyCodeCombination)kc).getCode());
+        } else if (kc instanceof KeyCharacterCombination) {
+            stringBuilder.append(((KeyCharacterCombination)kc).getCharacter());
+        }
 
         return stringBuilder.toString();
     }
