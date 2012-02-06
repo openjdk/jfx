@@ -315,6 +315,18 @@ public class StubToolkit extends Toolkit {
         return tmpStroke.createStrokedShape(shape).contains((float) x, (float) y);
     }
 
+
+    @Override
+    public Shape createStrokedShape(Shape shape,
+                                    StrokeType pgtype,
+                                    double strokewidth,
+                                    StrokeLineCap pgcap,
+                                    StrokeLineJoin pgjoin,
+                                    float miterLimit) {
+        initStroke(pgtype, strokewidth, pgcap, pgjoin, miterLimit);
+        return tmpStroke.createStrokedShape(shape);
+    }
+
     public CursorSizeConverter getCursorSizeConverter() {
         return cursorSizeConverter;
     }
