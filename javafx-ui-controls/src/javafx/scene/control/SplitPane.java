@@ -30,6 +30,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.WeakHashMap;
 
+import javafx.beans.DefaultProperty;
 import javafx.beans.property.DoubleProperty;
 import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.SimpleDoubleProperty;
@@ -115,7 +116,7 @@ import com.sun.javafx.css.converters.EnumConverter;
  * </code></pre>
  *
  */
-
+@DefaultProperty("items")
 public class SplitPane extends Control {
 
     /********************************************************************
