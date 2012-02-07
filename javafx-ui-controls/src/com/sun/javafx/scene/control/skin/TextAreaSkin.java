@@ -92,18 +92,21 @@ public class TextAreaSkin extends TextInputControlSkin<TextArea, TextAreaBehavio
             addEventHandler(MouseEvent.MOUSE_PRESSED, new EventHandler<MouseEvent>() {
                 @Override public void handle(MouseEvent event) {
                     getBehavior().mousePressed(event);
+                    event.consume();
                 }
             });
 
             addEventHandler(MouseEvent.MOUSE_RELEASED, new EventHandler<MouseEvent>() {
                 @Override public void handle(MouseEvent event) {
                     getBehavior().mouseReleased(event);
+                    event.consume();
                 }
             });
 
             addEventHandler(MouseEvent.MOUSE_DRAGGED, new EventHandler<MouseEvent>() {
                 @Override public void handle(MouseEvent event) {
                     getBehavior().mouseDragged(event);
+                    event.consume();
                 }
             });
         }
