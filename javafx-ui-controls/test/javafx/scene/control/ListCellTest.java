@@ -232,6 +232,7 @@ public class ListCellTest {
         assertNull(cell.getItem());
     }
 
+    @Ignore("RT-19311")
     @Test public void replaceItemsWithANull_ListenersRemovedFromFormerList() {
         cell.updateIndex(0);
         cell.updateListView(list);
@@ -375,6 +376,7 @@ public class ListCellTest {
         assertFalse(other.isSelected());
     }
 
+    @Ignore("RT-19311")
     @Test public void replacingTheSelectionModelRemovesTheListenerFromTheOldModel() {
         cell.updateIndex(0);
         cell.updateListView(list);
