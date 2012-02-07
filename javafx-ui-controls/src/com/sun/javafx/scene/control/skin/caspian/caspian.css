@@ -315,7 +315,7 @@
      *
      * TODO: should this be -fx-box-border or derived from some other color?
      */
-    -fx-tab-border-color: gray;
+    -fx-tab-border-color: -fx-box-border;
 
     /* These are needed for Popup */
     -fx-background-color: inherit;
@@ -331,6 +331,10 @@
 
 .mnemonic-underline {
     -fx-stroke: transparent;
+}
+
+.text {
+    -fx-font-smoothing-type: lcd;
 }
 
 
@@ -463,10 +467,7 @@
 
 .label {
     -fx-skin: "com.sun.javafx.scene.control.skin.LabelSkin";
-}
-
-.label Text {
-    -fx-font-smoothing-type: lcd;
+    -fx-text-fill: -fx-text-base-color;
 }
 
 .label:disabled {
@@ -498,11 +499,7 @@
     -fx-padding: 0.166667em 0.833333em 0.25em 0.833333em; /* 2 10 3 10 */
     -fx-text-fill: -fx-text-base-color;
     -fx-alignment: CENTER;
-    -fx-content-display: CENTER;
-}
-
-.button Text {
-    -fx-font-smoothing-type: lcd;
+    -fx-content-display: LEFT;
 }
 
 .button:focused {
@@ -548,11 +545,7 @@
     -fx-padding: 0.166667em 0.833333em 0.25em 0.833333em; /* 2 10 3 10 */
     -fx-text-fill: -fx-text-base-color;
     -fx-alignment: CENTER;
-    -fx-content-display: CENTER;
-}
-
-.toggle-button Text {
-    -fx-font-smoothing-type: lcd;
+    -fx-content-display: LEFT;
 }
 
 .toggle-button:focused {
@@ -608,18 +601,11 @@
 .radio-button {
     -fx-skin: "com.sun.javafx.scene.control.skin.RadioButtonSkin";
     -fx-label-padding: 0.0em 0.0em 0.0em 0.416667em; /* 0 0 0 5 */
-}
-
-.radio-button Text {
-    -fx-font-smoothing-type: lcd;
+    -fx-text-fill: -fx-text-base-color;
 }
 
 .radio-button:focused {
     -fx-color: -fx-focused-base;
-}
-
-.radio-button .text {
-   -fx-text-fill: -fx-text-background-color;
 }
 
 .radio-button .radio  {
@@ -671,18 +657,11 @@
 .check-box {
     -fx-skin: "com.sun.javafx.scene.control.skin.CheckBoxSkin";
     -fx-label-padding: 0.0em 0.0em 0.0em 0.416667em; /* 0 0 0 5 */
-}
-
-.check-box Text {
-    -fx-font-smoothing-type: lcd;
+    -fx-text-fill: -fx-text-base-color;
 }
 
 .check-box:focused {
     -fx-color: -fx-focused-base;
-}
-
-.check-box .text {
-   -fx-text-fill: -fx-text-background-color;
 }
 
 .check-box .box {
@@ -744,11 +723,7 @@
     -fx-skin: "com.sun.javafx.scene.control.skin.HyperlinkSkin";
     -fx-padding: 0.166667em; /* 2 */
     -fx-cursor: hand;
-    -fx-content-display: CENTER;    
-}
-
-.hyperlink Text {
-    -fx-font-smoothing-type: lcd;
+    -fx-content-display: LEFT;
 }
 
 .hyperlink:visited {
@@ -783,13 +758,6 @@
 
 .context-menu {
     -fx-skin: "com.sun.javafx.scene.control.skin.ContextMenuSkin";
-    /* Shadow rendered with image for performance
-    -fx-border-image-source: url("menu-shadow.png");
-    -fx-border-image-slice: 10 18 18 10;
-    -fx-border-image-width: 10 18 18 10;
-    -fx-border-image-repeat: stretch;
-    -fx-border-image-insets: -5 -10 -10 -5;
-    */
     -fx-background-color:
         derive(-fx-color,-40%),
         derive(-fx-color,100%),
@@ -798,10 +766,6 @@
     -fx-background-radius: 0 6 6 6, 0 5 5 5, 0 4 4 4;
 /*    -fx-padding: 0.666667em 0.083333em 0.666667em 0.083333em;  8 1 8 1 */
     -fx-padding: 0.333333em 0.083333em 0.666667em 0.083333em; /* 4 1 8 1 */
-}
-
-.context-menu Text {
-    -fx-font-smoothing-type: lcd;
 }
 
 .context-menu .separator {
@@ -833,10 +797,6 @@
 /*    -fx-skin: "com.sun.javafx.scene.control.skin.MenuSkin";*/
     -fx-background-color: transparent;
     -fx-padding: 0.333333em 0.666667em 0.333333em 0.666667em; /* 4 8 4 8 */
-}
-
-.menu Text {
-    -fx-font-smoothing-type: lcd;
 }
 
 .menu:disabled {
@@ -915,7 +875,7 @@
     -fx-padding: 0.333em 0.5em 0.333em 0.5em; /* 4 6 4 6*/
 }
 
-.menu-bar .menu-button:hover, .menu-bar .menu-button:focused, .menu-bar .menu-button.showing {
+.menu-bar .menu-button:hover, .menu-bar .menu-button:focused, .menu-bar .menu-button:showing {
     -fx-background: -fx-accent;
     -fx-background-color: -fx-selection-bar;
     -fx-text-fill: -fx-selection-bar-text;
@@ -960,6 +920,7 @@
 
 .menu-item .label {
     -fx-padding: 0em 0.5em 0em 0em;
+    -fx-text-fill: -fx-text-base-color;
 }
 
 .menu-item:disabled .label {
@@ -1039,90 +1000,6 @@
 
 /*******************************************************************************
  *                                                                             *
- * RadioMenuItem                                                               *
- *                                                                             *
- ******************************************************************************/
-
-/*.radio-menu-item {
-    -fx-skin: "com.sun.javafx.scene.control.skin.RadioMenuItemSkin";
-    -fx-padding: 0.333333em 0.666667em 0.333333em 0.666667em;  4 8 4 8
-    -fx-background-color: transparent;
-}
-
-.radio-menu-item Text {
-    -fx-font-smoothing-type: lcd;
-}
-
-.radio-menu-item:focused {
-    -fx-background: -fx-accent;
-    -fx-background-color: -fx-selection-bar;
-    -fx-text-fill: -fx-selection-bar-text;
-}
-
-.radio-menu-item:selected .menu-item-radio {
-    -fx-background-color: -fx-mark-color;
-}
-
-.radio-menu-item:hover:selected .menu-item-check, .radio-menu-item:focused:selected .menu-item-check,.radio-menu-item:hover:selected .menu-item-radio, .radio-menu-item:focused:selected .menu-item-radio {
-    -fx-background-color: -fx-selection-bar-text;
-}
-
-.radio-menu-item:disabled {
-    -fx-opacity: -fx-disabled-opacity;
-}
-
-.menu-item-radio {
-    -fx-background-color: transparent;
-    -fx-padding: 0.166667em;  5
-    -fx-shape: "M7,3.5C7,5.433,5.433,7,3.5,7C1.567,7,0,5.433,0,3.5C0,1.567,1.63,0,3.5,0C5.433,0,7,1.567,7,3.5z";
-}
-
-.menu-item:selected .menu-item-radio {
-    -fx-background-color: -fx-mark-color;
-}*/
-
-/*******************************************************************************
- *                                                                             *
- * CheckMenuItem                                                               *
- *                                                                             *
- ******************************************************************************/
-/*
-.check-menu-item {
-    -fx-skin: "com.sun.javafx.scene.control.skin.CheckMenuItemSkin";
-    -fx-background-color: transparent;
-    -fx-padding: 0.333333em 0.666667em 0.333333em 0.666667em;  4 8 4 8
-}
-
-.check-menu-item:focused {
-    -fx-background: -fx-accent;
-    -fx-background-color: -fx-selection-bar;
-    -fx-text-fill: -fx-selection-bar-text;
-}
-
-.check-menu-item:selected .menu-item-check {
-    -fx-background-color: -fx-mark-color;
-}
-
-.check-menu-item:hover:selected .menu-item-check, .check-menu-item:focused:selected .menu-item-check,.check-menu-item:hover:selected .menu-item-radio, .check-menu-item:focused:selected .menu-item-radio {
-    -fx-background-color: -fx-selection-bar-text;
-}
-
-.check-menu-item:disabled {
-    -fx-opacity: -fx-disabled-opacity;
-}
-
-.menu-item-check {
-    -fx-background-color: transparent;
-    -fx-padding: 0.333333em;  4
-    -fx-shape: "M0,5H2L4,8L8,0H10L5,10H3Z";
-}
-
-.menu-item:selected .menu-item-check {
-    -fx-background-color: -fx-mark-color;
-}*/
-
-/*******************************************************************************
- *                                                                             *
  * ChoiceBox                                                                   *
  *                                                                             *
  ******************************************************************************/
@@ -1134,11 +1011,7 @@
     -fx-background-radius: 5, 5, 4, 3;
     -fx-padding: 0.0em 0.5em 0.0em 0.0em; /* 0 6 0 0 */
     -fx-alignment: CENTER;
-    -fx-content-display: CENTER;
-}
-
-.choice-box Text {
-    -fx-font-smoothing-type: lcd;
+    -fx-content-display: LEFT;
 }
 
 .choice-box:focused {
@@ -1158,9 +1031,6 @@
 
 .choice-box .label {
     -fx-padding: 0.166667em 0.333333em 0.25em 0.5em; /* 2 4 3 6 */
-}
-
-.choice-box {
     -fx-text-fill: -fx-text-base-color;
 }
 
@@ -1210,10 +1080,6 @@
 
 .slider {
     -fx-skin: "com.sun.javafx.scene.control.skin.SliderSkin";
-}
-
-.slider Text {
-    -fx-font-smoothing-type: lcd;
 }
 
 .slider .thumb {
@@ -1486,100 +1352,6 @@
 
 /*******************************************************************************
  *                                                                             *
- * CSS Styles for the TextBox control                                          *
- *                                                                             *
- ******************************************************************************/
-
-.text-box {
-    -fx-skin: "com.sun.javafx.scene.control.skin.TextBoxSkin";
-    -fx-background-color: -fx-shadow-highlight-color, -fx-text-box-border, -fx-control-inner-background;
-    -fx-background-insets: 0, 1, 2;
-    -fx-background-radius: 3, 2, 2;
-    -fx-padding: 0.0em; /* 0 */
-    -fx-text-fill: -fx-text-inner-color;
-    -fx-prompt-text-fill: derive(-fx-control-inner-background,-30%);
-    -fx-highlight-fill: -fx-accent;
-    -fx-highlight-text-fill: white;
-}
-
-.text-box Text {
-    -fx-font-smoothing-type: lcd;
-}
-
-.text-box:focused {
-    -fx-background-color: -fx-focus-color, -fx-text-box-border, -fx-control-inner-background;
-    -fx-background-insets: -0.4, 1, 2;
-    -fx-background-radius: 3.4, 2, 2;
-}
-
-.text-box .viewport {
-    -fx-padding: 0.25em 0.416667em 0.25em 0.416667em; /* 3 5 3 5 */
-}
-
-.text-box:disabled {
-    -fx-opacity: -fx-disabled-opacity;
-}
-
-/* OPTION 1 Look like single line TextBox with special scrollbar */
-.text-box .scroll-bar {
-    -fx-background-insets: 0, 0 0 0 1;
-    -fx-padding: 0.0em -0.083333em 0.0em 0.0em; /* 0 -1 0 0 */
-    -fx-box-border: derive(-fx-base, -10%);
-    -fx-background-radius: 0 2 0 0, 0 2 0 0;
-}
-
-/* OPTION 2 - look like ScrollPane and ListView - 3 styles below */
-/*.text-box:multiline {*/
-    /*-fx-background-color: -fx-box-border, -fx-control-inner-background;*/
-    /*-fx-background-insets: 0, 1;*/
-    /*-fx-background-radius: 0, 0;*/
-/*}*/
-/*.text-box:multiline:focused {*/
-    /*-fx-background-color: -fx-focus-color, -fx-box-border, -fx-control-inner-background;*/
-    /*-fx-background-insets: -1.4, 0, 1;*/
-    /*-fx-background-radius: 0, 0, 0;*/
-/*}*/
-/*.text-box .scroll-bar{*/
-    /*-fx-background-insets: 0, 0 0 0 1;*/
-    /*-fx-padding: -1 -1 -1 0;*/
-/*}*/
-
-/*******************************************************************************
- *                                                                             *
- * PasswordBox                                                                 *
- *                                                                             *
- ******************************************************************************/
-
-.password-box {
-    -fx-skin: "com.sun.javafx.scene.control.skin.PasswordBoxSkin";
-    -fx-background-color: -fx-shadow-highlight-color, -fx-text-box-border, -fx-control-inner-background;
-    -fx-background-insets: 0, 1, 2;
-    -fx-background-radius: 3, 2, 2;
-    -fx-padding: 0.0em; /* 0 */
-    -fx-text-fill: -fx-text-inner-color;
-    -fx-echo-char: "\u25cf";
-}
-
-.password-box Text {
-    -fx-font-smoothing-type: lcd;
-}
-
-.password-box .viewport {
-    -fx-padding: 0.25em 0.416667em 0.25em 0.416667em; /* 3 5 3 5 */
-}
-
-.password-box:focused {
-    -fx-background-color: -fx-focus-color, -fx-text-box-border, -fx-control-inner-background;
-    -fx-background-insets: -0.4, 1, 2;
-    -fx-background-radius: 3.4, 2, 2;
-}
-
-.password-box:disabled {
-    -fx-opacity: -fx-disabled-opacity;
-}
-
-/*******************************************************************************
- *                                                                             *
  * TextInput                                                                   *
  *                                                                             *
  ******************************************************************************/
@@ -1604,10 +1376,6 @@
     -fx-padding: 3 5 3 5;
     -fx-prompt-text-fill: derive(-fx-control-inner-background,-30%);
     -fx-cursor: text;
-}
-
-.text-field Text {
-    -fx-font-smoothing-type: lcd;
 }
 
 .text-field:focused {
@@ -1645,10 +1413,6 @@
     -fx-prompt-text-fill: derive(-fx-control-inner-background,-30%);
 }
 
-.text-area Text {
-    -fx-font-smoothing-type: lcd;
-}
-
 .text-area .scroll-pane {
     -fx-background-color: transparent;
 }
@@ -1680,7 +1444,7 @@
     -fx-background-radius: 0;
     -fx-padding: 0.0em 0.5em 0.0em 0.0em; /* 0 6 0 0 */
     -fx-alignment: CENTER_LEFT;
-    -fx-content-display: CENTER_LEFT;
+    -fx-content-display: LEFT;
 }
 
 .cell .choice-box .label {
@@ -1709,10 +1473,6 @@
      /* There is some oddness if padding is in em values rather than pixels,
         in particular, the left border of the control doesn't show. */
     -fx-padding: 1; /* 0.083333em; */
-}
-
-.list-view Text {
-    -fx-font-smoothing-type: lcd;
 }
 
 .list-view:focused {
@@ -1794,10 +1554,6 @@
     -fx-text-fill: -fx-selection-bar-text;
 }
 
-.list-cell Text {
-    -fx-font-smoothing-type: lcd;
-}
-
 .list-cell:filled:selected:focused:disabled, .list-cell:filled:selected:disabled {
     -fx-opacity: -fx-disabled-opacity;
 }
@@ -1831,10 +1587,6 @@
     /* There is some oddness if padding is in em values rather than pixels,
        in particular, the left border of the control doesn't show. */
     -fx-padding: 1; /* 0.083333em; */
-}
-
-.tree-view Text {
-    -fx-font-smoothing-type: lcd;
 }
 
 .tree-view:focused {
@@ -1912,10 +1664,6 @@
     -fx-text-fill: -fx-selection-bar-text;
 }
 
-.tree-cell Text {
-    -fx-font-smoothing-type: lcd;
-}
-
 .tree-cell:filled:selected:focused:disabled, .tree-cell:filled:selected:disabled {
     -fx-opacity: -fx-disabled-opacity;
 }
@@ -1981,10 +1729,6 @@
 /* TODO workaround for RT-19062 */
 .menu-button .label { -fx-text-fill: -fx-text-base-color; }
 
-.menu-button Text {
-    -fx-font-smoothing-type: lcd;
-}
-
 .menu-button:focused {
     -fx-color: -fx-focused-base;
     -fx-background-color: -fx-focus-color, -fx-outer-border, -fx-inner-border, -fx-body-color;
@@ -2045,10 +1789,7 @@
     -fx-background-insets: 0 0 -1 0;
     -fx-background-radius: 5;
     -fx-padding: 0.0em; /* 0 */
-}
-
-.split-menu-button Text {
-    -fx-font-smoothing-type: lcd;
+    -fx-text-fill: -fx-text-base-color;
 }
 
 .split-menu-button:focused {
@@ -2127,10 +1868,6 @@
     -fx-background-radius: 0 0 13 0;
     -fx-padding: 0.333333em 0.666667em 0.333333em 0.666667em; /* 4 8 4 8 */
     -fx-effect: dropshadow( three-pass-box , rgba(0,0,0,0.6) , 8, 0.0 , 0 , 0 );
-}
-
-.tooltip Text {
-    -fx-font-smoothing-type: lcd;
 }
 
 .page-corner {
@@ -2279,10 +2016,6 @@
     -fx-progress-color: dodgerblue;
 }
 
-.progress-indicator Text {
-    -fx-font-smoothing-type: lcd;
-}
-
 .progress-indicator .indicator {
     -fx-background-color:
         -fx-box-border,
@@ -2343,10 +2076,6 @@
     -fx-table-header-border-color: #959595;
 /*    -fx-table-header-background-color: linear (0%,0%) to (0%,100%) stops (80%, #bbbbbb) (10%, #f6f6f6);*/
     -fx-table-cell-border-color: #bbbbbb;
-}
-
-.table-view Text {
-    -fx-font-smoothing-type: lcd;
 }
 
 /** Draws focus border around tableview */
@@ -2460,10 +2189,7 @@
     -fx-border-color: transparent -fx-table-cell-border-color transparent transparent;
     -fx-border-width: 0.083333em; /* 1 */
     -fx-cell-size: 2.0em; /* 24 */
-}
-
-.table-cell Text {
-    -fx-font-smoothing-type: lcd;
+    -fx-text-fill: -fx-text-inner-color;
 }
 
 /* When in constrained resize mode, the right-most visible cell should not have
@@ -2556,7 +2282,7 @@
 /* The column header row is made up of a number of column-header, one for each
    TableColumn, and a 'filler' area that extends from the right-most column
    to the edge of the tableview, or up to the 'column control' button. */
-.table-view .column-header, .table-view .filler, .table-view .column-drag-header {
+.table-view .column-header, .table-view .filler {
     -fx-text-fill: -fx-selection-bar-text;
 
     /* TODO: for some reason, this doesn't scale. */
@@ -2597,7 +2323,7 @@
 }
 
 .table-view .show-hide-column-image {
-    -fx-background-color: -fx-mark-highlight-color, derive(-fx-base, -60%);
+    -fx-background-color: -fx-mark-highlight-color, -fx-mark-color;
     -fx-background-insets: 1 0 -1 0, 0;
 
     -fx-padding: 0.25em; /* 3px */
@@ -2646,10 +2372,11 @@
 
 .titled-pane {
     -fx-skin: "com.sun.javafx.scene.control.skin.TitledPaneSkin";
+    -fx-fill: -fx-text-base-color;
 }
 
-.titled-pane Text {
-    -fx-font-smoothing-type: lcd;
+.titled-pane:focused {
+    -fx-fill: white;
 }
 
 .titled-pane > .title {
@@ -2657,6 +2384,10 @@
     -fx-background-insets: 0, 1, 2;
     -fx-background-radius: 5 5 0 0, 4 4 0 0, 3 3 0 0;
     -fx-padding: 0.166667em 0.833333em 0.25em 0.833333em; /* 2 10 3 10 */
+}
+
+.titled-pane:focused > .title {
+    -fx-color: -fx-focus-color;
 }
 
 .titled-pane > .title > .arrow-button {
@@ -2685,17 +2416,10 @@
     -fx-padding: 0.167em;
 }
 
-.titled-pane:focused > .title {
-    -fx-color: -fx-focus-color;
-}
-
-.titled-pane:focused > .title > .text {
-    -fx-text-fill: white;
-}
-
 .titled-pane:focused > .title > .arrow-button .arrow {
     -fx-background-color: white;
 }
+
 
 /*******************************************************************************
  *                                                                             *
@@ -2816,16 +2540,16 @@
     -fx-tab-max-height: 2em; /* 24 */
 }
 
-.tab *.tab-label {
+.tab .tab-label {
     -fx-skin: "com.sun.javafx.scene.control.skin.LabelSkin";
     -fx-background-color: transparent;    
     -fx-alignment: CENTER;
+    -fx-text-fill: -fx-text-base-color;
 }
-
+/*
 .tab *.tab-label Text {
     -fx-effect: dropshadow(two-pass-box , rgba(255, 255, 255, 0.4), 1, 0.0 , 0, 1);
-    -fx-font-smoothing-type: lcd;
-}
+}*/
 
 .tab-content-area {
     -fx-background-color: -fx-control-inner-background;
@@ -2842,7 +2566,7 @@
     -fx-background-insets: 0, 1, 2;
     -fx-background-radius: 5 5 0 0, 4 4 0 0, 3 3 0 0;
     -fx-padding: 0.083333em 0.5em 0.083333em 0.5em; /* 1 6 1 6 */
-    -fx-text-fill: -fx-text-base-color;
+/*    -fx-text-fill: -fx-text-base-color;*/
 }
 
 .tab:top {
@@ -2913,14 +2637,14 @@
 
 /* TODO: scaling the shape seems to make it way too large */
 .tab-close-button {
-    -fx-background-color: -fx-mid-text-color;
+    -fx-background-color: -fx-mark-color;
     -fx-shape: "M 0,0 H1 L 4,3 7,0 H8 V1 L 5,4 8,7 V8 H7 L 4,5 1,8 H0 V7 L 3,4 0,1 Z";
     -fx-scale-shape: false;
     -fx-effect: dropshadow(two-pass-box , rgba(255, 255, 255, 0.4), 1, 0.0 , 0, 1);
 }
 
 .tab-close-button:hover {
-    -fx-background-color:  -fx-dark-text-color;
+    -fx-background-color: derive(-fx-mark-color, -30%);
 }
 
 /* CONTROL BUTTONS */
@@ -3323,21 +3047,20 @@ Only the properties with values that are different from the TextBox are specifie
     -fx-background-radius: 4 5 5 4, 3 4 4 3, 2 3 3 2;
     -fx-background-insets: 0 0 -1 0, 0, 1;
     -fx-vpos: CENTER;
-    -fx-content-display: CENTER;
+    -fx-content-display: LEFT;
 }
 
 .combo-box-base:editable .text-field:focused {
-    -fx-background-color: -fx-focus-color, -fx-outer-border, white;
+    -fx-background-color: -fx-focus-color, -fx-outer-border, -fx-control-inner-background;
     -fx-background-radius: 5.4, 3, 2;
     -fx-background-insets: -1.4, 0, 1;
 }
 
 .combo-box-base:editable:focused {
-    -fx-background-color: -fx-shadow-highlight-color, -fx-outer-border, -fx-inner-border, -fx-body-color;
+    -fx-background-color: -fx-shadow-highlight-color, -fx-outer-border, -fx-inner-border, -fx-control-inner-background;
     -fx-background-radius: 5, 5, 4, 3;
     -fx-background-insets: 0 0 -1 0, 0, 1, 2;
 }
-
 
 /* -------------- STYLES FOR THE DEFAULT LISTVIEW-BASED COMBOBOX ------------- */
 .combo-box {

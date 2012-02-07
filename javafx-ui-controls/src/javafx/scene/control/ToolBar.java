@@ -29,6 +29,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
+import javafx.beans.DefaultProperty;
 import javafx.beans.property.ObjectProperty;
 import javafx.beans.value.WritableValue;
 import javafx.collections.FXCollections;
@@ -76,7 +77,7 @@ import com.sun.javafx.css.converters.EnumConverter;
  * </code></pre>
  *
  */
-
+@DefaultProperty("items")
 public class ToolBar extends Control {
 
     /***************************************************************************

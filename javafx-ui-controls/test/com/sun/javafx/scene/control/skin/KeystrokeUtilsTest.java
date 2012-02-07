@@ -66,4 +66,20 @@ public class KeystrokeUtilsTest {
             assertTrue(shortcutAString.equals(controlAString));
         }
     }
+
+
+    /*
+    ** check 
+    */
+    @Test public void validStringForNonKeyCode() {
+
+        KeyCharacterCombination acceleratorKeyCombo =
+            new KeyCharacterCombination("[");
+
+        String comboString = KeystrokeUtils.toString(acceleratorKeyCombo);
+        
+        assertTrue(comboString.equals("["));
+    }
+
+
 }

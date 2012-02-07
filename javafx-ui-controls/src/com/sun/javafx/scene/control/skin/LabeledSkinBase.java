@@ -124,6 +124,7 @@ public abstract class LabeledSkinBase<C extends Labeled, B extends BehaviorBase<
         // Configure the Text node with all of the attributes from the
         // Labeled which apply to it.
         text = new Text();
+        text.getStyleClass().add("text");
         //
         // RT-16589: by binding text.fontProperty() to labeled.fontProperty(), 
         // we achieve two things. First, the text's font stays in sync with

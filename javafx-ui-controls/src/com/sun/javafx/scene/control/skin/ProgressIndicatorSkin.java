@@ -74,6 +74,9 @@ public class ProgressIndicatorSkin extends SkinBase<ProgressIndicator, ProgressI
 
     /** doneText is just used to know the size of done as that is the biggest text we need to allow for */
     private static final Text doneText = new Text(DONE);
+    static {
+        doneText.getStyleClass().add("text");
+    }
 
 
     private static final ObservableList<String> paths;
@@ -245,7 +248,7 @@ public class ProgressIndicatorSkin extends SkinBase<ProgressIndicator, ProgressI
             text = new Text((control.getProgress() >= 1) ? (DONE) : ("" + intProgress + "%"));
             text.setFill(textFill);
             text.setTextOrigin(VPos.TOP);
-            text.getStyleClass().setAll("percentage");
+            text.getStyleClass().setAll("text", "percentage");
 
             // The circular background for the progress pie piece
             indicator = new StackPane();
