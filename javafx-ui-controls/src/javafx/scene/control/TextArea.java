@@ -42,8 +42,7 @@ import java.util.Collections;
 import java.util.List;
 
 import com.sun.javafx.binding.ExpressionHelper;
-import com.sun.javafx.collections.ListInvalidationListenerWrapper;
-import com.sun.javafx.collections.ListenerList;
+import com.sun.javafx.collections.ListListenerHelper;
 import com.sun.javafx.collections.NonIterableChange;
 
 /**
@@ -63,8 +62,7 @@ public class TextArea extends TextInputControl {
         private ArrayList<StringBuilder> paragraphs = new ArrayList<StringBuilder>();
         private int contentLength = 0;
         private ParagraphList paragraphList = new ParagraphList();
-        private ListenerList<ListChangeListener<? super CharSequence>> paragraphListChangeListeners =
-            new ListenerList<ListChangeListener<? super CharSequence>>();
+        private ListListenerHelper<CharSequence> listenerHelper;
 
         private TextAreaContent() {
             paragraphs.add(new StringBuilder(DEFAULT_PARAGRAPH_CAPACITY));
@@ -308,16 +306,7 @@ public class TextArea extends TextInputControl {
 
         private void fireParagraphListChangeEvent(int from, int to, List<CharSequence> removed) {
             ParagraphListChange change = new ParagraphListChange(paragraphList, from, to, removed);
-
-            paragraphListChangeListeners.lock();
-            try {
-                for (int i = 0, n = paragraphListChangeListeners.size(); i < n; i++) {
-                    change.reset();
-                    paragraphListChangeListeners.get(i).onChanged(change);
-                }
-            } finally {
-                paragraphListChangeListeners.unlock();
-            }
+            ListListenerHelper.fireValueChangedEvent(listenerHelper, change);
         }
     }
 
@@ -359,12 +348,12 @@ public class TextArea extends TextInputControl {
 
         @Override
         public void addListener(ListChangeListener<? super CharSequence> listener) {
-            content.paragraphListChangeListeners.safeAdd(listener);
+            content.listenerHelper = ListListenerHelper.addListener(content.listenerHelper, listener);
         }
 
         @Override
         public void removeListener(ListChangeListener<? super CharSequence> listener) {
-            content.paragraphListChangeListeners.safeRemove(listener);
+            content.listenerHelper = ListListenerHelper.removeListener(content.listenerHelper, listener);
         }
 
         @Override
@@ -384,12 +373,12 @@ public class TextArea extends TextInputControl {
 
         @Override
         public void addListener(InvalidationListener listener) {
-            addListener(new ListInvalidationListenerWrapper(this, listener));
+            content.listenerHelper = ListListenerHelper.addListener(content.listenerHelper, listener);
         }
 
         @Override
         public void removeListener(InvalidationListener listener) {
-            removeListener(new ListInvalidationListenerWrapper(this, listener));
+            content.listenerHelper = ListListenerHelper.removeListener(content.listenerHelper, listener);
         }
     }
 

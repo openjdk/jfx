@@ -75,7 +75,7 @@ import static javafx.concurrent.WorkerStateEvent.*;
  *
  *         protected Task createTask() {
  *             final String _url = getUrl();
- *             return new Task&lt;InputStream&gt;() {
+ *             return new Task&lt;String&gt;() {
  *                 protected String call() {
  *                     URL u = new URL(_url);
  *                     BufferedReader in = new BufferedReader(
@@ -713,7 +713,7 @@ public abstract class Service<V> implements Worker<V>, EventTarget {
      * <pre><code>
      *     protected Task createTask() {
      *         final String url = myService.getUrl();
-     *         return new Task&lt;InputStream&gt;() {
+     *         return new Task&lt;String&gt;() {
      *             protected String call() {
      *                 URL u = new URL("http://www.oracle.com");
      *                 BufferedReader in = new BufferedReader(
