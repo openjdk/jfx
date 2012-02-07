@@ -248,7 +248,7 @@ public class ComboBoxListViewSkin<T> extends ComboBoxPopupControl<T> {
                         rowsToMeasure = (Integer) comboBox.getProperties().get(COMBO_BOX_ROWS_TO_MEASURE_WIDTH_KEY);
                     }
                     
-                    pw = skin.getMaxCellWidth(rowsToMeasure) + 20;
+                    pw = skin.getMaxCellWidth(rowsToMeasure) + 30;
                 } else {
                     pw = Math.max(100, comboBox.getWidth());
                 }
@@ -283,6 +283,7 @@ public class ComboBoxListViewSkin<T> extends ComboBoxPopupControl<T> {
             }
         };
 
+        listView.setId("list-view");
         listView.cellFactoryProperty().bind(comboBox.cellFactoryProperty());
         listView.getSelectionModel().setSelectionMode(SelectionMode.SINGLE);
 
@@ -335,4 +336,9 @@ public class ComboBoxListViewSkin<T> extends ComboBoxPopupControl<T> {
     @Override protected double computeMinWidth(double height) {
         return 50;
     }
+    
+    
+    /**************************************************************************
+     * API for testing
+     */
 }
