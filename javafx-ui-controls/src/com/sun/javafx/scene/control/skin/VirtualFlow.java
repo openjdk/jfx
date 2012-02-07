@@ -35,6 +35,9 @@ import javafx.beans.property.DoubleProperty;
 import javafx.beans.property.DoublePropertyBase;
 import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
+import javafx.event.Event;
+import javafx.event.EventDispatcher;
+import javafx.event.EventDispatchChain;
 import javafx.event.EventHandler;
 import javafx.geometry.Orientation;
 import javafx.scene.Group;
@@ -496,20 +499,63 @@ public class VirtualFlow extends Region {
         accumCellParent.setVisible(false);
         getChildren().add(accumCellParent);
 
-        addEventFilter(ScrollEvent.SCROLL, new EventHandler<javafx.scene.input.ScrollEvent>() {
+        
+        /*
+        ** don't allow the ScrollBar to handle the ScrollEvent,
+        ** In a VirtualFlow a vertical scroll should scroll on the vertical only,
+        ** whereas in a horizontal ScrollBar it can scroll horizontally.
+        */ 
+        final EventDispatcher blockEventDispatcher = new EventDispatcher() {
+           @Override public Event dispatchEvent(Event event, EventDispatchChain tail) {
+               // block the event from being passed down to children
+               return event;
+           }
+        };
+        // block ScrollEvent from being passed down to scrollbar's skin
+        final EventDispatcher oldHsbEventDispatcher = hbar.getEventDispatcher();
+        hbar.setEventDispatcher(new EventDispatcher() {
+           @Override public Event dispatchEvent(Event event, EventDispatchChain tail) {
+               if (event.getEventType() == ScrollEvent.SCROLL) {
+                   tail = tail.prepend(blockEventDispatcher);
+                   tail = tail.prepend(oldHsbEventDispatcher);
+                   return tail.dispatchEvent(event);
+               }
+               return oldHsbEventDispatcher.dispatchEvent(event, tail);
+           }
+        });
+        // block ScrollEvent from being passed down to scrollbar's skin
+        final EventDispatcher oldVsbEventDispatcher = vbar.getEventDispatcher();
+        vbar.setEventDispatcher(new EventDispatcher() {
+           @Override public Event dispatchEvent(Event event, EventDispatchChain tail) {
+               if (event.getEventType() == ScrollEvent.SCROLL) {
+                   tail = tail.prepend(blockEventDispatcher);
+                   tail = tail.prepend(oldVsbEventDispatcher);
+                   return tail.dispatchEvent(event);
+               }
+               return oldVsbEventDispatcher.dispatchEvent(event, tail);
+           }
+        });
+        /*
+        ** listen for ScrollEvents over the whole of the VirtualFlow
+        ** area, the above dispatcher having removed the ScrollBars
+        ** scroll event handling.
+        */
+        setOnScroll(new EventHandler<javafx.scene.input.ScrollEvent>() {
             @Override public void handle(ScrollEvent event) {
-
-                double delta = 0.0;
+                /*
+                ** calculate the delta in the direction of the flow.
+                */ 
+                double virtualDelta = 0.0;
                 if (isVertical()) {
                     switch(event.getTextDeltaYUnits()) {
                         case PAGES:
-                            delta = event.getTextDeltaY() * lastHeight;
+                            virtualDelta = event.getTextDeltaY() * lastHeight;
                             break;
                         case LINES:
-                            delta = event.getTextDeltaY() * lastCellLength;
+                            virtualDelta = event.getTextDeltaY() * lastCellLength;
                             break;
                         case NONE:
-                            delta = event.getDeltaY();
+                            virtualDelta = event.getDeltaY();
                     }
                 } else { // horizontal
                     switch(event.getTextDeltaXUnits()) {
@@ -520,12 +566,17 @@ public class VirtualFlow extends Region {
                             double dx = event.getDeltaX();
                             double dy = event.getDeltaY();
 
-                            delta = (Math.abs(dx) > Math.abs(dy) ? dx : dy);
+                            virtualDelta = (Math.abs(dx) > Math.abs(dy) ? dx : dy);
                     }
                 }
 
-                adjustPixels(-delta);
-                event.consume();
+                if (virtualDelta != 0.0) { 
+                    /*
+                    ** only consume it if we use it
+                    */
+                    adjustPixels(-virtualDelta);
+                    event.consume();
+                }
             }
         });
 
