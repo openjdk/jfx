@@ -577,6 +577,27 @@ public class VirtualFlow extends Region {
                     adjustPixels(-virtualDelta);
                     event.consume();
                 }
+                else {
+                    /*
+                    ** we didn't scroll in the Virtual plane, lets see
+                    ** if we scrolled on the other plane.
+                    */
+                    ScrollBar nonVirtualBar = isVertical() ? hbar : vbar;
+                    if (nonVirtualBar.isVisible()) {
+
+                        double nonVirtualDelta = isVertical() ? event.getDeltaX() : event.getDeltaY();
+                        double newValue = nonVirtualBar.getValue() - nonVirtualDelta;
+
+                        if (newValue < nonVirtualBar.getMin()) {
+                            nonVirtualBar.setValue(nonVirtualBar.getMin());
+                        } else if (newValue > nonVirtualBar.getMax()) {
+                            nonVirtualBar.setValue(nonVirtualBar.getMax());
+                        } else {
+                            nonVirtualBar.setValue(newValue);
+                        }
+                        event.consume();
+                    }
+                }
             }
         });
 
