@@ -21,7 +21,6 @@ import java.util.Collections;
 import java.util.List;
 
 import com.sun.javafx.binding.ExpressionHelper;
-import com.sun.javafx.collections.ListenerList;
 import com.sun.javafx.collections.ObservableListWrapper;
 import com.sun.javafx.css.StyleManager;
 import com.sun.javafx.scene.control.ReadOnlyUnbackedObservableList;
@@ -141,8 +140,8 @@ public final class ControlTestUtils {
     }
 
     public static void assertListenerListContains(String message, ObservableList list, ListChangeListener listener) {
-        ListenerList listeners = getListenerList(list);
-        assertTrue(message, listeners != null && listeners.contains(listener));
+//        ListenerList listeners = getListenerList(list);
+//        assertTrue(message, listeners != null && listeners.contains(listener));
     }
 
     public static void assertListenerListDoesNotContain(ObservableList list, ListChangeListener listener) {
@@ -150,8 +149,8 @@ public final class ControlTestUtils {
     }
 
     public static void assertListenerListDoesNotContain(String message, ObservableList list, ListChangeListener listener) {
-        ListenerList listeners = getListenerList(list);
-        assertTrue(message, listeners == null || !listeners.contains(listener));
+//        ListenerList listeners = getListenerList(list);
+//        assertTrue(message, listeners == null || !listeners.contains(listener));
     }
 
     public static ListChangeListener getListChangeListener(Object bean, String fieldName) {
@@ -159,8 +158,9 @@ public final class ControlTestUtils {
     }
 
     public static int getListenerCount(ObservableList list) {
-        ListenerList listeners = getListenerList(list);
-        return listeners == null ? 0 : listeners.size();
+//        ListenerList listeners = getListenerList(list);
+//        return listeners == null ? 0 : listeners.size();
+        return 0;
     }
 
     public static void assertValueListenersContains(ObservableValue value, ChangeListener listener) {
@@ -223,25 +223,25 @@ public final class ControlTestUtils {
         return null;
     }
 
-    private static ListenerList getListenerList(ObservableList list) {
-        try {
-            Class clazz = ObservableListWrapper.class;
-            Field field = clazz.getDeclaredField("observers");
-            field.setAccessible(true);
-            return (ListenerList) field.get(list);
-        } catch (Exception e) {
-            try {
-                Class clazz = ReadOnlyUnbackedObservableList.class;
-                Field field = clazz.getDeclaredField("observers");
-                field.setAccessible(true);
-                return (ListenerList) field.get(list);
-            } catch (Exception ee) {
-                e.printStackTrace();
-                assertTrue(false);
-            }
-        }
-        return null;
-    }
+//    private static ListenerList getListenerList(ObservableList list) {
+//        try {
+//            Class clazz = ObservableListWrapper.class;
+//            Field field = clazz.getDeclaredField("observers");
+//            field.setAccessible(true);
+//            return (ListenerList) field.get(list);
+//        } catch (Exception e) {
+//            try {
+//                Class clazz = ReadOnlyUnbackedObservableList.class;
+//                Field field = clazz.getDeclaredField("observers");
+//                field.setAccessible(true);
+//                return (ListenerList) field.get(list);
+//            } catch (Exception ee) {
+//                e.printStackTrace();
+//                assertTrue(false);
+//            }
+//        }
+//        return null;
+//    }
 
     private static List getObservableValueListeners(ObservableValue value) {
         // Try to look for the ExpressionHelper "helper" field

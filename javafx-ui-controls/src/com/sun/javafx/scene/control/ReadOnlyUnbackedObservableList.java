@@ -31,12 +31,11 @@ import java.util.List;
 import java.util.ListIterator;
 
 import javafx.beans.InvalidationListener;
+import com.sun.javafx.collections.ListListenerHelper;
 import javafx.collections.ListChangeListener;
 import javafx.collections.ListChangeListener.Change;
 import javafx.collections.ObservableList;
 
-import com.sun.javafx.collections.ListInvalidationListenerWrapper;
-import com.sun.javafx.collections.ListenerList;
 import java.util.Collections;
 
 /**
@@ -47,7 +46,7 @@ import java.util.Collections;
  */
 public abstract class ReadOnlyUnbackedObservableList<T> implements ObservableList<T> {
 
-    private ListenerList<ListChangeListener<? super T>> observers;
+    private ListListenerHelper<T> listenerHelper;
 
 
     @Override public abstract T get(int i);
@@ -56,44 +55,23 @@ public abstract class ReadOnlyUnbackedObservableList<T> implements ObservableLis
 
 
     @Override public void addListener(InvalidationListener listener) {
-        addListener(new ListInvalidationListenerWrapper(this, listener));
+        listenerHelper = ListListenerHelper.addListener(listenerHelper, listener);
     }
 
     @Override public void removeListener(InvalidationListener listener) {
-        removeListener(new ListInvalidationListenerWrapper(this, listener));
+        listenerHelper = ListListenerHelper.removeListener(listenerHelper, listener);
     }
 
     @Override public void addListener(ListChangeListener<? super T> obs) {
-        if (observers == null) {
-            observers = new ListenerList<ListChangeListener<? super T>>();
-            observers.add(obs);
-        } else if (!observers.contains(obs)) {
-            observers = observers.safeAdd(obs);
-        }
+        listenerHelper = ListListenerHelper.addListener(listenerHelper, obs);
     }
 
     @Override public void removeListener(ListChangeListener<? super T> obs) {
-        if (observers != null) {
-            observers = observers.safeRemove(obs);
-            if (observers.isEmpty()) {
-                observers = null;
-            }
-        }
+        listenerHelper = ListListenerHelper.removeListener(listenerHelper, obs);
     }
 
     public void callObservers(Change<T> c) {
-        if (observers != null) {
-            ListenerList<ListChangeListener<? super T>> obs = observers;
-            obs.lock();
-            try {
-                for (int i = 0; i < obs.size(); ++i) {
-                    c.reset();
-                    obs.get(i).onChanged(c);
-                }
-            } finally {
-                obs.unlock();
-            }
-        }
+        ListListenerHelper.fireValueChangedEvent(listenerHelper, c);
     }
 
     @Override public int indexOf(Object o) {
