@@ -1,0 +1,314 @@
+/*
+ * Copyright (c) 2010, 2012, Oracle and/or its affiliates. All rights reserved.
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ * This code is free software; you can redistribute it and/or modify it
+ * under the terms of the GNU General Public License version 2 only, as
+ * published by the Free Software Foundation.  Oracle designates this
+ * particular file as subject to the "Classpath" exception as provided
+ * by Oracle in the LICENSE file that accompanied this code.
+ *
+ * This code is distributed in the hope that it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+ * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
+ * version 2 for more details (a copy is included in the LICENSE file that
+ * accompanied this code).
+ *
+ * You should have received a copy of the GNU General Public License version
+ * 2 along with this work; if not, write to the Free Software Foundation,
+ * Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301 USA.
+ *
+ * Please contact Oracle, 500 Oracle Parkway, Redwood Shores, CA 94065 USA
+ * or visit www.oracle.com if you need additional information or have any
+ * questions.
+ */
+
+package com.sun.javafx.scene.traversal;
+
+import static com.sun.javafx.scene.traversal.Direction.DOWN;
+import static com.sun.javafx.scene.traversal.Direction.LEFT;
+import static com.sun.javafx.scene.traversal.Direction.NEXT;
+import static com.sun.javafx.scene.traversal.Direction.PREVIOUS;
+import static com.sun.javafx.scene.traversal.Direction.UP;
+
+import java.util.List;
+
+import javafx.geometry.Bounds;
+import javafx.scene.Node;
+
+import com.sun.javafx.Logging;
+import com.sun.javafx.logging.PlatformLogger;
+
+
+
+/**
+ * First search for on-axis nodes. A node is on-axis if any part of its
+ * closest edge lies between the pair of rays cast in the traversal direction
+ * from the corners of the originating node.
+ *
+ * If there are multiple on-axis nodes, the closest is chosen.
+ *
+ * If there is a tie for the closest on-axis node, the tie is broken
+ * by choosing the one whose center is closest to the center of the
+ * originating node. TODO: investigate alternative tiebreaker algorithms
+ * (filed as RT-19470).
+ *
+ * If there are no on-axis nodes, compute the distance OUT (in the traversal
+ * direction) and the distance to the SIDE (perpendicular to the traversal
+ * direction) and compute a distance metric OUT + WEIGHT * SIDE. Choose the
+ * node with the smallest distance metric.
+ *
+ * TODO: presumably WEIGHT is greater than one, so that nodes farther OUT
+ * but close (and not on) axis are chosen in preference to nodes that are
+ * physically closer but are farther off to the side. Determine WEIGHT
+ * somehow, possibly empirically (filed as RT-19471).
+ */
+
+public class WeightedClosestCorner implements Algorithm {
+
+    PlatformLogger focusLogger;
+
+    WeightedClosestCorner() {
+        focusLogger = Logging.getFocusLogger();
+    }
+
+    private boolean isOnAxis(Direction dir, Bounds cur, Bounds tgt) {
+
+        final double cmin, cmax, tmin, tmax;
+
+        if (dir == UP || dir == DOWN) {
+            cmin = cur.getMinX();
+            cmax = cur.getMaxX();
+            tmin = tgt.getMinX();
+            tmax = tgt.getMaxX();
+        }
+        else { // dir == LEFT || dir == RIGHT
+            cmin = cur.getMinY();
+            cmax = cur.getMaxY();
+            tmin = tgt.getMinY();
+            tmax = tgt.getMaxY();
+        }
+
+        return tmin <= cmax && tmax >= cmin;
+    }
+
+    /**
+     * Compute the out-distance to the near edge of the target in the
+     * traversal direction. Negative means the near edge is "behind".
+     */
+    private double outDistance(Direction dir, Bounds cur, Bounds tgt) {
+
+        final double distance;
+
+        if (dir == UP) {
+            distance = cur.getMinY() - tgt.getMaxY();
+        }
+        else if (dir == DOWN) {
+            distance = tgt.getMinY() - cur.getMaxY();
+        }
+        else if (dir == LEFT) {
+            distance = cur.getMinX() - tgt.getMaxX();
+        }
+        else { // dir == RIGHT
+            distance = tgt.getMinX() - cur.getMaxX();
+        }
+
+        return distance;
+    }
+
+    /**
+     * Computes the side distance from current center to target center.
+     * Always positive. This is only used for on-axis nodes.
+     */
+    private double centerSideDistance(Direction dir, Bounds cur, Bounds tgt) {
+
+        final double cc; // current center
+        final double tc; // target center
+
+        if (dir == UP || dir == DOWN) {
+            cc = cur.getMinX() + cur.getWidth() / 2.0f;
+            tc = tgt.getMinX() + tgt.getWidth() / 2.0f;
+        }
+        else { // dir == LEFT || dir == RIGHT
+            cc = cur.getMinY() + cur.getHeight() / 2.0f;
+            tc = tgt.getMinY() + tgt.getHeight() / 2.0f;
+        }
+
+        return Math.abs(tc - cc);
+        //return (tc > cc) ? tc - cc : cc - tc;
+    }
+
+    /**
+     * Computes the side distance between the closest corners of the current
+     * and target. Always positive. This is only used for off-axis nodes.
+     */
+    private double cornerSideDistance(Direction dir, Bounds cur, Bounds tgt) {
+
+        final double distance;
+
+        if (dir == UP || dir == DOWN) {
+
+            if (tgt.getMinX() > cur.getMaxX()) {
+                // on the right
+                distance = tgt.getMinX() - cur.getMaxX();
+            }
+            else {
+                // on the left
+                distance = cur.getMinX() - tgt.getMaxX();
+            }
+        }
+        else { // dir == LEFT or dir == RIGHT
+
+            if (tgt.getMinY() > cur.getMaxY()) {
+                // below
+                distance = tgt.getMinY() - cur.getMaxY();
+            }
+            else {
+                // above
+                distance = cur.getMinY() - tgt.getMaxY();
+            }
+        }
+        return distance;
+    }
+
+    public Node traverse(Node node, Direction dir, TraversalEngine engine) {
+        Node newNode = null;
+        List<Node> nodes = engine.getTargetNodes();
+        List<Bounds> bounds = engine.getTargetBounds(nodes);
+
+        if (focusLogger.isLoggable(PlatformLogger.FINER)) {
+            focusLogger.finer("old focus owner : "+node+", bounds : "+engine.getBounds(node));
+        }
+        
+        int target = traverse(engine.getBounds(node), dir, bounds);
+        if (target != -1) {
+            newNode = nodes.get(target);
+            if (focusLogger.isLoggable(PlatformLogger.FINER)) {
+                focusLogger.finer("new focus owner : "+newNode+", bounds : "+engine.getBounds(newNode));
+            }
+        }
+        else {
+            if (focusLogger.isLoggable(PlatformLogger.FINER)) {
+                focusLogger.finer("no focus transfer");
+            }
+        }
+
+        nodes.clear();
+        bounds.clear();
+
+        return newNode;
+    }
+
+    public int traverse(Bounds origin, Direction dir, List<Bounds> targets) {
+
+        final int target;
+
+        if (dir == NEXT || dir == PREVIOUS) {
+            target = trav1D(origin, dir, targets);
+        } else {
+            target = trav2D(origin, dir, targets);
+        }
+
+        return target;
+    }
+
+    private int trav2D(Bounds origin, Direction dir, List<Bounds> targets) {
+
+        Bounds bestBounds = null;
+        double bestMetric = 0.0;
+        int bestIndex = -1;
+
+        for (int i = 0; i < targets.size(); i++) {
+            final Bounds targetBounds = targets.get(i);
+            final double outd = outDistance(dir, origin, targetBounds);
+            final double metric;
+
+            if (isOnAxis(dir, origin, targetBounds)) {
+                metric = outd + centerSideDistance(dir, origin, targetBounds) / 100;
+            }
+            else {
+                final double cosd = cornerSideDistance(dir, origin, targetBounds);
+                metric = 100000 + outd*outd + 9*cosd*cosd;
+            }
+
+            if (outd < 0.0) {
+                continue;
+            }
+
+            if (bestBounds == null || metric < bestMetric) {
+                bestBounds = targetBounds;
+                bestMetric = metric;
+                bestIndex = i;
+            }
+        }
+
+        return bestIndex;
+    }
+
+    /*
+     * Consider focus targets to have a total order using values
+     * (minY, minX, hashCode).
+     */
+    private int compare1D(Bounds a, Bounds b) {
+
+        int res = 0;
+
+        // the following use the node's center
+        final double metric1a = (a.getMinY() + a.getMaxY()) / 2;
+        final double metric1b = (b.getMinY() + b.getMaxY()) / 2;
+        final double metric2a = (a.getMinX() + a.getMaxX()) / 2;
+        final double metric2b = (b.getMinX() + b.getMaxX()) / 2;
+        final double metric3a = a.hashCode();
+        final double metric3b = b.hashCode();
+
+        if (metric1a < metric1b) {
+            res = -1;
+        }
+        else if (metric1a > metric1b) {
+            res = 1;
+        }
+        else if (metric2a < metric2b) {
+            res = -1;
+        }
+        else if (metric2a > metric2b) {
+            res = 1;
+        }
+        else if (metric3a < metric3b) {
+            res = -1;
+        }
+        else if (metric3a > metric3b) {
+            res = 1;
+        }
+
+        return res;
+    }
+
+
+    private int compare1D(Bounds a, Bounds b, Direction dir) {
+        return (dir == NEXT) ? compare1D(a, b) : -compare1D(a, b);
+    }
+
+    private int trav1D(Bounds origin, Direction dir, List<Bounds> targets) {
+        int bestSoFar = -1;
+        int leastSoFar = -1;
+
+        for (int i = 0; i < targets.size(); i++) {
+            if (leastSoFar == -1 ||
+                    compare1D(targets.get(i), targets.get(leastSoFar), dir) < 0) {
+                leastSoFar = i;
+            }
+
+            if (compare1D(targets.get(i), origin, dir) < 0) {
+                continue;
+            }
+
+            if (bestSoFar == -1 ||
+                    compare1D(targets.get(i), targets.get(bestSoFar), dir) < 0) {
+                bestSoFar = i;
+            }
+        }
+
+        return (bestSoFar == -1) ? leastSoFar : bestSoFar;
+    }
+
+}

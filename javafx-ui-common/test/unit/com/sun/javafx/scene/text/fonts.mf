@@ -1,0 +1,3 @@
+Amble\ Regular = /com/sun/fonts/Amble-Regular.ttf
+Amble\ Bold\ Italic = /com/sun/fonts/Amble-BoldItalic.ttf
+Amble\ Light\ Italic = /com/sun/fonts/Amble-LightItalic.ttf

@@ -1,0 +1,105 @@
+/*
+ * Copyright (c) 2009, 2012, Oracle and/or its affiliates. All rights reserved.
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ * This code is free software; you can redistribute it and/or modify it
+ * under the terms of the GNU General Public License version 2 only, as
+ * published by the Free Software Foundation.  Oracle designates this
+ * particular file as subject to the "Classpath" exception as provided
+ * by Oracle in the LICENSE file that accompanied this code.
+ *
+ * This code is distributed in the hope that it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+ * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
+ * version 2 for more details (a copy is included in the LICENSE file that
+ * accompanied this code).
+ *
+ * You should have received a copy of the GNU General Public License version
+ * 2 along with this work; if not, write to the Free Software Foundation,
+ * Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301 USA.
+ *
+ * Please contact Oracle, 500 Oracle Parkway, Redwood Shores, CA 94065 USA
+ * or visit www.oracle.com if you need additional information or have any
+ * questions.
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ * This code is free software; you can redistribute it and/or modify it
+ * under the terms of the GNU General Public License version 2 only, as
+ * published by the Free Software Foundation.
+ *
+ * This code is distributed in the hope that it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+ * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
+ * version 2 for more details (a copy is included in the LICENSE file that
+ * accompanied this code).
+ *
+ * You should have received a copy of the GNU General Public License version
+ * 2 along with this work; if not, write to the Free Software Foundation,
+ * Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301 USA.
+ *
+ * Please contact Sun Microsystems, Inc., 4150 Network Circle, Santa Clara,
+ * CA 95054 USA or visit www.sun.com if you need additional information or
+ * have any questions.
+ *
+ */
+
+package javafx.scene.layout;
+
+import java.util.Iterator;
+
+import javafx.scene.Node;
+import javafx.scene.Parent;
+
+import com.sun.javafx.WeakReferenceQueue;
+
+/**
+ * The base class for defining node-specific layout constraints.  Region
+ * classes may create extensions of this class if they need to define their own
+ * set of layout constraints.
+ *
+ */
+public abstract class ConstraintsBase {
+
+    /**
+     * If set as max value indicates that the pref value should be used as the max.
+     * This allows an application to constrain a resizable node's size, which normally
+     * has an unlimited max value, to its preferred size.
+     */
+    public static final double CONSTRAIN_TO_PREF = Double.NEGATIVE_INFINITY;
+
+     WeakReferenceQueue impl_nodes = new WeakReferenceQueue();
+     
+     ConstraintsBase() {
+     }
+
+    /**
+     * @treatasprivate implementation detail
+     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
+     */
+    @Deprecated
+     public void impl_add(Node node) {
+         impl_nodes.add(node);
+     }
+
+    /**
+     * @treatasprivate implementation detail
+     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
+     */
+    @Deprecated
+    public void impl_remove(Node node) {
+        impl_nodes.remove(node);
+    }
+
+     /**
+      * Calls requestLayout on layout parent associated with this constraint object.
+      */
+     protected void requestLayout() {
+        Iterator<Node> nodeIter = impl_nodes.iterator();
+        while (nodeIter.hasNext()) {
+            Parent p = nodeIter.next().getParent();
+            if (p != null) {
+                p.requestLayout();
+            }
+        }
+    }
+}

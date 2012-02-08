@@ -12,7 +12,7 @@
         <java classname="com.sun.javafx.css.parser.Css2Bin" fork="true" failonerror="true">
           <jvmarg value="-Djavafx.toolkit=com.sun.javafx.tk.DummyToolkit"/>
           <classpath> 
-            <pathelement location="${runtime.dist.root.dir}/javafx-ui-common/dist/javafx-ui-common.jar"/>
+            <pathelement location="${rt.dist.root.dir}/javafx-ui-common/dist/javafx-ui-common.jar"/>
             <pathelement location="${runtime.dist.root.dir}/javafx-beans/dist/javafx-beans.jar"/>
             <pathelement location="${runtime.dist.root.dir}/javafx-anim/dist/javafx-anim.jar"/>
             <pathelement location="${runtime.dist.root.dir}/javafx-common/dist/javafx-common.jar"/>

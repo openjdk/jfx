@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project name="javafx-ui-common" default="jar" basedir=".">
+    <description>Builds, tests, and jars the closed version of the javafx-ui-common project.</description>
+    
+    <property name="runtime.dist.root.dir" value="../../rt-closed" />    
+    <property name="runtime.deps.dir" value="${runtime.dist.root.dir}/build/deps"/>
+
+    <path id="javac.closed.classpath.path" path="
+        ${runtime.dist.root.dir}/javafx-beans/dist/javafx-beans.jar:
+        ${runtime.dist.root.dir}/javafx-geom/dist/javafx-geom.jar:
+        ${runtime.dist.root.dir}/javafx-logging/dist/javafx-logging.jar:
+        ${runtime.dist.root.dir}/javafx-anim/dist/javafx-anim.jar:
+        ${runtime.dist.root.dir}/javafx-common/dist/javafx-common.jar:
+        ${runtime.dist.root.dir}/javafx-mx-common/dist/javafx-mx-common.jar:
+        ${runtime.dist.root.dir}/javafx-sg-common/dist/javafx-sg-common.jar:
+        ${runtime.dist.root.dir}/decora-runtime/dist/decora-runtime.jar:
+        ${runtime.deps.dir}/plugin_exports.jar:
+        ${runtime.dist.root.dir}/aria/dist/aria.jar:
+        ${import.lombok.jar}:
+        ${jfx.checkstyle.jar}" />
+    <property name="javac.classpath" refid="javac.closed.classpath.path"/>
+    
+    <import file="../build-defs.xml"/>
+    <import file="build-common.xml"/>
+</project>

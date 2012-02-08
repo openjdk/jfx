@@ -1,0 +1,13 @@
+/*
+ * We specify from CSS that this rectangle should have an opacity value of
+ * .76
+ */
+#rectangle {
+    -fx-opacity: .76;
+    -fx-cursor: HAND;
+    -fx-effect: dropshadow( two-pass-box , rgba(0,0,0,0.4) , 15, 0.0 , 0 , 6 );
+}
+
+#text {
+    -fx-font: 32pt "Amble Cn";
+}

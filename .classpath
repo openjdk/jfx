@@ -3,6 +3,9 @@
 	<classpathentry kind="src" path="javafx-ui-controls/src"/>
 	<classpathentry kind="src" path="javafx-ui-controls/test"/>
 	<classpathentry kind="src" path="javafx-ui-controls/build/builders"/>
+ 	<classpathentry kind="src" path="javafx-ui-common/src"/>
+        <classpathentry kind="src" path="javafx-ui-common/test"/>
+        <classpathentry kind="src" path="javafx-ui-common/build/builders"/>
 	<classpathentry kind="src" path="javafx-concurrent/src"/>
 	<classpathentry kind="src" path="javafx-concurrent/test"/>
 	<classpathentry kind="src" path="javafx-concurrent/build/builders"/>

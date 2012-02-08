@@ -1,0 +1,533 @@
+/*
+ * Copyright (c) 2011, 2012, Oracle and/or its affiliates. All rights reserved.
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ * This code is free software; you can redistribute it and/or modify it
+ * under the terms of the GNU General Public License version 2 only, as
+ * published by the Free Software Foundation.  Oracle designates this
+ * particular file as subject to the "Classpath" exception as provided
+ * by Oracle in the LICENSE file that accompanied this code.
+ *
+ * This code is distributed in the hope that it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+ * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
+ * version 2 for more details (a copy is included in the LICENSE file that
+ * accompanied this code).
+ *
+ * You should have received a copy of the GNU General Public License version
+ * 2 along with this work; if not, write to the Free Software Foundation,
+ * Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301 USA.
+ *
+ * Please contact Oracle, 500 Oracle Parkway, Redwood Shores, CA 94065 USA
+ * or visit www.oracle.com if you need additional information or have any
+ * questions.
+ */
+
+package com.sun.javafx.tk;
+
+import java.io.File;
+import java.io.InputStream;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+
+import javafx.geometry.Dimension2D;
+import javafx.scene.image.Image;
+import javafx.scene.input.DragEvent;
+import javafx.scene.input.Dragboard;
+import javafx.scene.input.InputMethodEvent;
+import javafx.scene.input.InputMethodRequests;
+import javafx.scene.input.KeyEvent;
+import javafx.scene.input.MouseEvent;
+import javafx.scene.input.TransferMode;
+import javafx.scene.paint.Color;
+import javafx.scene.paint.LinearGradient;
+import javafx.scene.paint.RadialGradient;
+import javafx.scene.shape.PathElement;
+import javafx.scene.shape.SVGPath;
+import javafx.scene.text.Text;
+import javafx.stage.FileChooser.ExtensionFilter;
+import javafx.stage.Modality;
+import javafx.stage.StageStyle;
+
+import com.sun.javafx.embed.HostInterface;
+import com.sun.javafx.geom.ParallelCameraImpl;
+import com.sun.javafx.geom.Path2D;
+import com.sun.javafx.geom.PerspectiveCameraImpl;
+import com.sun.javafx.geom.Shape;
+import com.sun.javafx.geom.transform.BaseTransform;
+import com.sun.javafx.perf.PerformanceTracker;
+import com.sun.javafx.runtime.async.AsyncOperation;
+import com.sun.javafx.runtime.async.AsyncOperationListener;
+import com.sun.javafx.scene.paint.ImagePattern;
+import com.sun.javafx.scene.text.HitInfo;
+import com.sun.javafx.sg.PGArc;
+import com.sun.javafx.sg.PGCircle;
+import com.sun.javafx.sg.PGCubicCurve;
+import com.sun.javafx.sg.PGEllipse;
+import com.sun.javafx.sg.PGGroup;
+import com.sun.javafx.sg.PGImageView;
+import com.sun.javafx.sg.PGLine;
+import com.sun.javafx.sg.PGMediaView;
+import com.sun.javafx.sg.PGPath;
+import com.sun.javafx.sg.PGPolygon;
+import com.sun.javafx.sg.PGPolyline;
+import com.sun.javafx.sg.PGQuadCurve;
+import com.sun.javafx.sg.PGRectangle;
+import com.sun.javafx.sg.PGRegion;
+import com.sun.javafx.sg.PGSVGPath;
+import com.sun.javafx.sg.PGShape.StrokeLineCap;
+import com.sun.javafx.sg.PGShape.StrokeLineJoin;
+import com.sun.javafx.sg.PGShape.StrokeType;
+import com.sun.javafx.sg.PGText;
+import com.sun.scenario.DelayedRunnable;
+import com.sun.scenario.animation.AbstractMasterTimer;
+import com.sun.scenario.effect.FilterContext;
+import com.sun.scenario.effect.Filterable;
+import javafx.scene.input.KeyCode;
+
+/**
+ * A stubbed out Toolkit that provides no useful implementation. This is used
+ * by the build to run the CSS to binary converter. The parser uses
+ * PlatformLogger which requires a Toolkit.
+ *
+ */
+final public class DummyToolkit extends Toolkit {
+
+    @Override
+    public boolean init() {
+        return true;
+    }
+
+    @Override
+    public Object enterNestedEventLoop(Object key) {
+        throw new UnsupportedOperationException("Not supported yet.");
+    }
+
+    @Override
+    public void exitNestedEventLoop(Object key, Object rval) {
+        throw new UnsupportedOperationException("Not supported yet.");
+    }
+
+    @Override
+    public TKStage createTKStage(StageStyle stageStyle) {
+        throw new UnsupportedOperationException("Not supported yet.");
+    }
+
+    @Override
+    public TKStage createTKStage(StageStyle stageStyle, boolean primary, Modality modality, TKStage owner) {
+        throw new UnsupportedOperationException("Not supported yet.");
+    }
+
+    @Override
+    public TKStage createTKPopupStage(StageStyle stageStyle, Object owner) {
+        throw new UnsupportedOperationException("Not supported yet.");
+    }
+
+    @Override
+    public TKStage createTKEmbeddedStage(HostInterface host) {
+        throw new UnsupportedOperationException("Not supported yet.");
+    }
+
+    @Override
+    public TKSystemMenu getSystemMenu() {
+        throw new UnsupportedOperationException("Not supported yet.");
+    }
+
+    @Override
+    public ImageLoader loadImage(String url, int width, int height, boolean preserveRatio, boolean smooth) {
+        throw new UnsupportedOperationException("Not supported yet.");
+    }
+
+    @Override
+    public ImageLoader loadImage(InputStream stream, int width, int height, boolean preserveRatio, boolean smooth) {
+        throw new UnsupportedOperationException("Not supported yet.");
+    }
+
+    @Override
+    public AsyncOperation loadImageAsync(AsyncOperationListener<? extends ImageLoader> listener, String url, int width, int height, boolean preserveRatio, boolean smooth) {
+        throw new UnsupportedOperationException("Not supported yet.");
+    }
+
+    @Override
+    public ImageLoader loadPlatformImage(Object platformImage) {
+        throw new UnsupportedOperationException("Not supported yet.");
+    }
+
+    @Override
+    public void startup(Runnable runnable) {
+        throw new UnsupportedOperationException("Not supported yet.");
+    }
+
+    @Override
+    public void defer(Runnable runnable) {
+        throw new UnsupportedOperationException("Not supported yet.");
+    }
+
+    @Override
+    public Map<Object, Object> getContextMap() {
+        throw new UnsupportedOperationException("Not supported yet.");
+    }
+
+    @Override
+    public int getRefreshRate() {
+        throw new UnsupportedOperationException("Not supported yet.");
+    }
+
+    @Override
+    public void setAnimationRunnable(DelayedRunnable animationRunnable) {
+        throw new UnsupportedOperationException("Not supported yet.");
+    }
+
+    @Override
+    public PerformanceTracker getPerformanceTracker() {
+        throw new UnsupportedOperationException("Not supported yet.");
+    }
+
+    @Override public PerformanceTracker createPerformanceTracker() {
+        throw new UnsupportedOperationException("Not supported yet.");
+    }
+
+    @Override
+    public void waitFor(Task t) {
+        throw new UnsupportedOperationException("Not supported yet.");
+    }
+
+    @Override
+    public PerspectiveCameraImpl createPerspectiveCamera() {
+        throw new UnsupportedOperationException("Not supported yet.");
+    }
+
+    @Override
+    public ParallelCameraImpl createParallelCamera() {
+        throw new UnsupportedOperationException("Not supported yet.");
+    }
+
+    @Override
+    protected Object createColorPaint(Color paint) {
+        throw new UnsupportedOperationException("Not supported yet.");
+    }
+
+    @Override
+    protected Object createLinearGradientPaint(LinearGradient paint) {
+        throw new UnsupportedOperationException("Not supported yet.");
+    }
+
+    @Override
+    protected Object createRadialGradientPaint(RadialGradient paint) {
+        throw new UnsupportedOperationException("Not supported yet.");
+    }
+
+    @Override
+    protected Object createImagePatternPaint(ImagePattern paint) {
+        throw new UnsupportedOperationException("Not supported yet.");
+    }
+
+    @Override
+    public void accumulateStrokeBounds(Shape shape, float[] bbox, StrokeType type, double strokewidth, StrokeLineCap cap, StrokeLineJoin join, float miterLimit, BaseTransform tx) {
+        throw new UnsupportedOperationException("Not supported yet.");
+    }
+
+    @Override
+    public boolean strokeContains(Shape shape, double x, double y, StrokeType type, double strokewidth, StrokeLineCap cap, StrokeLineJoin join, float miterLimit) {
+        throw new UnsupportedOperationException("Not supported yet.");
+    }
+
+    @Override
+    public Shape createStrokedShape(Shape shape, StrokeType pgtype, double strokewidth, StrokeLineCap pgcap, StrokeLineJoin pgjoin, float miterLimit) {
+        throw new UnsupportedOperationException("Not supported yet.");
+    }
+
+    @Override
+    public int getKeyCodeForChar(String character) {
+        throw new UnsupportedOperationException("Not supported yet.");
+    }
+
+    @Override
+    public MouseEvent convertMouseEventToFX(Object event) {
+        throw new UnsupportedOperationException("Not supported yet.");
+    }
+
+    @Override
+    public KeyEvent convertKeyEventToFX(Object event) {
+        throw new UnsupportedOperationException("Not supported yet.");
+    }
+
+    @Override
+    public DragEvent convertDragRecognizedEventToFX(Object event, Dragboard dragboard) {
+        throw new UnsupportedOperationException("Not supported yet.");
+    }
+
+    @Override
+    public DragEvent convertDragSourceEventToFX(Object event, Dragboard dragboard) {
+        throw new UnsupportedOperationException("Not supported yet.");
+    }
+
+    @Override
+    public DragEvent convertDropTargetEventToFX(Object event, Dragboard dragboard) {
+        throw new UnsupportedOperationException("Not supported yet.");
+    }
+
+    @Override
+    public InputMethodEvent convertInputMethodEventToFX(Object event) {
+        throw new UnsupportedOperationException("Not supported yet.");
+    }
+
+    @Override
+    public Dimension2D getBestCursorSize(int preferredWidth, int preferredHeight) {
+        throw new UnsupportedOperationException("Not supported yet.");
+    }
+
+    @Override
+    public int getMaximumCursorColors() {
+        throw new UnsupportedOperationException("Not supported yet.");
+    }
+
+
+    @Override
+    public PathElement[] convertShapeToFXPath(Object shape) {
+        throw new UnsupportedOperationException("Not supported yet.");
+    }
+
+    @Override
+    public HitInfo convertHitInfoToFX(Object hit) {
+        throw new UnsupportedOperationException("Not supported yet.");
+    }
+
+    @Override
+    public Filterable toFilterable(Image img) {
+        throw new UnsupportedOperationException("Not supported yet.");
+    }
+
+    @Override
+    public FilterContext getFilterContext(Object config) {
+        throw new UnsupportedOperationException("Not supported yet.");
+    }
+
+    @Override
+    public boolean isForwardTraversalKey(KeyEvent e) {
+        throw new UnsupportedOperationException("Not supported yet.");
+    }
+
+    @Override
+    public boolean isBackwardTraversalKey(KeyEvent e) {
+        throw new UnsupportedOperationException("Not supported yet.");
+    }
+
+    @Override
+    public AbstractMasterTimer getMasterTimer() {
+        return null;
+    }
+
+    @Override
+    public FontLoader getFontLoader() {
+        throw new UnsupportedOperationException("Not supported yet.");
+    }
+
+    @Override
+    public PGArc createPGArc() {
+        throw new UnsupportedOperationException("Not supported yet.");
+    }
+
+    @Override
+    public PGCircle createPGCircle() {
+        throw new UnsupportedOperationException("Not supported yet.");
+    }
+
+    @Override
+    public PGCubicCurve createPGCubicCurve() {
+        throw new UnsupportedOperationException("Not supported yet.");
+    }
+
+    @Override
+    public PGEllipse createPGEllipse() {
+        throw new UnsupportedOperationException("Not supported yet.");
+    }
+
+    @Override
+    public PGLine createPGLine() {
+        throw new UnsupportedOperationException("Not supported yet.");
+    }
+
+    @Override
+    public PGPath createPGPath() {
+        throw new UnsupportedOperationException("Not supported yet.");
+    }
+
+    @Override
+    public PGSVGPath createPGSVGPath() {
+        throw new UnsupportedOperationException("Not supported yet.");
+    }
+
+    @Override
+    public PGPolygon createPGPolygon() {
+        throw new UnsupportedOperationException("Not supported yet.");
+    }
+
+    @Override
+    public PGPolyline createPGPolyline() {
+        throw new UnsupportedOperationException("Not supported yet.");
+    }
+
+    @Override
+    public PGQuadCurve createPGQuadCurve() {
+        throw new UnsupportedOperationException("Not supported yet.");
+    }
+
+    @Override
+    public PGRectangle createPGRectangle() {
+        throw new UnsupportedOperationException("Not supported yet.");
+    }
+
+    @Override
+    public PGImageView createPGImageView() {
+        throw new UnsupportedOperationException("Not supported yet.");
+    }
+
+    @Override
+    public PGMediaView createPGMediaView() {
+        throw new UnsupportedOperationException("Not supported yet.");
+    }
+
+    @Override
+    public PGGroup createPGGroup() {
+        throw new UnsupportedOperationException("Not supported yet.");
+    }
+
+    @Override
+    public PGText createPGText() {
+        throw new UnsupportedOperationException("Not supported yet.");
+    }
+
+    @Override
+    public PGRegion createPGRegion() {
+        throw new UnsupportedOperationException("Not supported yet.");
+    }
+
+    @Override
+    public Object createSVGPathObject(SVGPath svgpath) {
+        throw new UnsupportedOperationException("Not supported yet.");
+    }
+
+    @Override
+    public Path2D createSVGPath2D(SVGPath svgpath) {
+        throw new UnsupportedOperationException("Not supported yet.");
+    }
+
+    @Override
+    public TextHelper createTextHelper(Text text) {
+        throw new UnsupportedOperationException("Not supported yet.");
+    }
+
+    @Override
+    public boolean imageContains(Object image, float x, float y) {
+        throw new UnsupportedOperationException("Not supported yet.");
+    }
+
+    @Override
+    public com.sun.javafx.tk.TKClipboard getSystemClipboard() {
+        throw new UnsupportedOperationException("Not supported yet.");
+    }
+
+    @Override
+    public TKClipboard getNamedClipboard(String name) {
+        throw new UnsupportedOperationException("Not supported yet.");
+    }
+
+    @Override
+    public Dragboard createDragboard() {
+        throw new UnsupportedOperationException("Not supported yet.");
+    }
+
+    @Override
+    public ScreenConfigurationAccessor setScreenConfigurationListener(TKScreenConfigurationListener listener) {
+        throw new UnsupportedOperationException("Not supported yet.");
+    }
+
+    @Override
+    public Object getPrimaryScreen() {
+        throw new UnsupportedOperationException("Not supported yet.");
+    }
+
+    @Override
+    public List<?> getScreens() {
+        throw new UnsupportedOperationException("Not supported yet.");
+    }
+
+    @Override
+    public void registerDragGestureListener(TKScene s, Set<TransferMode> tms, TKDragGestureListener l) {
+        throw new UnsupportedOperationException("Not supported yet.");
+    }
+
+    @Override
+    public void startDrag(Object o, Set<TransferMode> tms, TKDragSourceListener l, Dragboard dragboard) {
+        throw new UnsupportedOperationException("Not supported yet.");
+    }
+
+    @Override
+    public void enableDrop(TKScene s, TKDropTargetListener l) {
+        throw new UnsupportedOperationException("Not supported yet.");
+    }
+
+    @Override
+    public void installInputMethodRequests(TKScene scene, InputMethodRequests requests) {
+        throw new UnsupportedOperationException("Not supported yet.");
+    }
+
+    @Override
+    public Object renderToImage(ImageRenderingContext context) {
+        throw new UnsupportedOperationException("Not supported yet.");
+    }
+
+    @Override
+    public boolean isExternalFormatSupported(Class format) {
+        throw new UnsupportedOperationException("Not supported yet.");
+    }
+
+    @Override
+    public Object toExternalImage(Object platformImg, Object imgType) {
+        throw new UnsupportedOperationException("Not supported yet.");
+    }
+
+    @Override
+    public KeyCode getPlatformShortcutKey() {
+        throw new UnsupportedOperationException("Not supported yet.");
+    }
+    
+    @Override
+    public List<File> showFileChooser(TKStage ownerWindow,
+                                      String title,
+                                      File initialDirectory,
+                                      FileChooserType fileChooserType,
+                                      List<ExtensionFilter> extensionFilters) {
+        throw new UnsupportedOperationException("Not supported yet.");
+    }
+
+
+    @Override
+    public File showDirectoryChooser(TKStage ownerWindow,
+                                     String title,
+                                     File initialDirectory) {
+        throw new UnsupportedOperationException("Not supported yet.");
+    }
+
+    @Override
+    public long getMultiClickTime() {
+	return 0L;
+    }
+
+    @Override
+    public int getMultiClickMaxX() {
+	return 0;
+    }   
+
+    @Override
+    public int getMultiClickMaxY() {
+        return 0;
+    }
+
+    @Override
+    public void requestNextPulse() {
+        throw new UnsupportedOperationException("Not supported yet.");
+    }
+}

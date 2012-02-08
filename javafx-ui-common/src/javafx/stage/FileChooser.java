@@ -1,0 +1,293 @@
+/*
+ * Copyright (c) 2011, 2012, Oracle and/or its affiliates. All rights reserved.
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ * This code is free software; you can redistribute it and/or modify it
+ * under the terms of the GNU General Public License version 2 only, as
+ * published by the Free Software Foundation.  Oracle designates this
+ * particular file as subject to the "Classpath" exception as provided
+ * by Oracle in the LICENSE file that accompanied this code.
+ *
+ * This code is distributed in the hope that it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+ * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
+ * version 2 for more details (a copy is included in the LICENSE file that
+ * accompanied this code).
+ *
+ * You should have received a copy of the GNU General Public License version
+ * 2 along with this work; if not, write to the Free Software Foundation,
+ * Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301 USA.
+ *
+ * Please contact Oracle, 500 Oracle Parkway, Redwood Shores, CA 94065 USA
+ * or visit www.oracle.com if you need additional information or have any
+ * questions.
+ */
+
+package javafx.stage;
+
+import java.io.File;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.List;
+
+import javafx.beans.property.ObjectProperty;
+import javafx.beans.property.SimpleObjectProperty;
+import javafx.beans.property.SimpleStringProperty;
+import javafx.beans.property.StringProperty;
+import javafx.collections.FXCollections;
+import javafx.collections.ObservableList;
+
+import com.sun.javafx.collections.annotations.ReturnsUnmodifiableCollection;
+import com.sun.javafx.tk.FileChooserType;
+import com.sun.javafx.tk.Toolkit;
+
+/**
+ * Provides support for standard file dialogs. On some platforms where file
+ * access may be restricted or not part of the user model (for example, on some
+ * mobile devices), opening a file dialog may always result in a no-op (that is,
+ * null file(s) being returned).
+ */
+public final class FileChooser {
+    /**
+     * Defines an extension filter, used for filtering which files can be chosen
+     * in a FileDialog based on the file name extensions.
+     */
+    public static final class ExtensionFilter {
+        private final String description;
+        private final List<String> extensions;
+
+        /**
+         * Creates an {@code ExtensionFilter} with the specified description
+         * and the file name extensions.
+         * <p>
+         * File name extension should be specified in the {@code *.<extension>}
+         * format.
+         *
+         * @param description the textual description for the filter
+         * @param extensions the accepted file name extensions
+         * @throws NullPointerException if the description or the extensions
+         *      are {@code null}
+         * @throws IllegalArgumentException if the description or the extensions
+         *      are empty
+         */
+        public ExtensionFilter(final String description,
+                               final String... extensions) {
+            validateArgs(description, extensions);
+
+            this.description = description;
+            this.extensions = Collections.unmodifiableList(
+                                      Arrays.asList(extensions.clone()));
+        }
+
+        /**
+         * Creates an {@code ExtensionFilter} with the specified description
+         * and the file name extensions.
+         * <p>
+         * File name extension should be specified in the {@code *.<extension>}
+         * format.
+         *
+         * @param description the textual description for the filter
+         * @param extensions the accepted file name extensions
+         * @throws NullPointerException if the description or the extensions
+         *      are {@code null}
+         * @throws IllegalArgumentException if the description or the extensions
+         *      are empty
+         */
+        public ExtensionFilter(final String description,
+                               final List<String> extensions) {
+            final String[] extensionsArray =
+                    (extensions != null) ? extensions.toArray(
+                                               new String[extensions.size()])
+                                         : null;
+            validateArgs(description, extensionsArray);
+
+            this.description = description;
+            this.extensions = Collections.unmodifiableList(
+                                      Arrays.asList(extensionsArray));
+        }
+
+        /**
+         * Gets the description for this {@code ExtensionFilter}.
+         *
+         * @return the description
+         */
+        public String getDescription() {
+            return description;
+        }
+
+        /**
+         * Gets the file name extensions for this {@code ExtensionFilter}.
+         * <p>
+         * The returned list is unmodifiable and will throw
+         * {@code UnsupportedOperationException} on each modification attempt.
+         *
+         * @return the file name extensions
+         */
+        @ReturnsUnmodifiableCollection
+        public List<String> getExtensions() {
+            return extensions;
+        }
+
+        private static void validateArgs(final String description,
+                                         final String[] extensions) {
+            if (description == null) {
+                throw new NullPointerException("Description must not be null");
+            }
+
+            if (description.isEmpty()) {
+                throw new IllegalArgumentException(
+                        "Description must not be empty");
+            }
+
+            if (extensions == null) {
+                throw new NullPointerException("Extensions must not be null");
+            }
+
+            if (extensions.length == 0) {
+                throw new IllegalArgumentException(
+                        "At least one extension must be defined");
+            }
+
+            for (String extension : extensions) {
+                if (extension == null) {
+                    throw new NullPointerException(
+                            "Extension must not be null");
+                }
+                
+                if (extension.isEmpty()) {
+                    throw new IllegalArgumentException(
+                            "Extension must not be empty");
+                }
+            }
+        }
+    }
+
+    /**
+     * The title of the displayed file dialog.
+     */
+    private StringProperty title;
+
+    public final void setTitle(final String value) {
+        titleProperty().set(value);
+    }
+
+    public final String getTitle() {
+        return (title != null) ? title.get() : null;
+    }
+
+    public final StringProperty titleProperty() {
+        if (title == null) {
+            title = new SimpleStringProperty(this, "title");
+        }
+
+        return title;
+    }
+
+    /**
+     * The initial directory for the displayed file dialog.
+     */
+    private ObjectProperty<File> initialDirectory;
+
+    public final void setInitialDirectory(final File value) {
+        initialDirectoryProperty().set(value);
+    }
+
+    public final File getInitialDirectory() {
+        return (initialDirectory != null) ? initialDirectory.get() : null;
+    }
+
+    public final ObjectProperty<File> initialDirectoryProperty() {
+        if (initialDirectory == null) {
+            initialDirectory = 
+                    new SimpleObjectProperty<File>(this, "initialDirectory");
+        }
+
+        return initialDirectory;
+    }
+
+    /**
+     * Specifies the extension filters used in the displayed file dialog.
+     */
+    private ObservableList<ExtensionFilter> extensionFilters =
+            FXCollections.<ExtensionFilter>observableArrayList();
+
+    /**
+     * Gets the extension filters used in the displayed file dialog.
+     * @return An observable list of the extension filters used in this dialog
+     */
+    public ObservableList<ExtensionFilter> getExtensionFilters() {
+        return extensionFilters;
+    }
+
+    /**
+     * Shows a new file open dialog. The method doesn't return until the
+     * displayed open dialog is dismissed. The return value specifies
+     * the file chosen by the user or {@code null} if no selection has been
+     * made. If the owner window for the file dialog is set, input to all
+     * windows in the dialog's owner chain is blocked while the file dialog
+     * is being shown.
+     *
+     * @param ownerWindow the owner window of the displayed file dialog
+     * @return the selected file or {@code null} if no file has been selected
+     */
+    public File showOpenDialog(final Window ownerWindow) {
+        final List<File> selectedFiles =
+                showDialog(ownerWindow, FileChooserType.OPEN);
+
+        return ((selectedFiles != null) && (selectedFiles.size() > 0))
+                ? selectedFiles.get(0) : null;
+    }
+
+    /**
+     * Shows a new file open dialog in which multiple files can be selected.
+     * The method doesn't return until the displayed open dialog is dismissed.
+     * The return value specifies the files chosen by the user or {@code null}
+     * if no selection has been made. If the owner window for the file dialog is
+     * set, input to all windows in the dialog's owner chain is blocked while
+     * the file dialog is being shown.
+     * <p>
+     * The returned list is unmodifiable and will throw
+     * {@code UnsupportedOperationException} on each modification attempt.
+     *
+     * @param ownerWindow the owner window of the displayed file dialog
+     * @return the selected files or {@code null} if no file has been selected
+     */
+    @ReturnsUnmodifiableCollection
+    public List<File> showOpenMultipleDialog(final Window ownerWindow) {
+        final List<File> selectedFiles =
+                showDialog(ownerWindow, FileChooserType.OPEN_MULTIPLE);
+
+        return ((selectedFiles != null) && (selectedFiles.size() > 0))
+                ? Collections.unmodifiableList(selectedFiles)
+                : null;
+    }
+
+    /**
+     * Shows a new file save dialog. The method doesn't return until the
+     * displayed file save dialog is dismissed. The return value specifies the
+     * file chosen by the user or {@code null} if no selection has been made.
+     * If the owner window for the file dialog is set, input to all windows in
+     * the dialog's owner chain is blocked while the file dialog is being shown.
+     *
+     * @param ownerWindow the owner window of the displayed file dialog
+     * @return the selected file or {@code null} if no file has been selected
+     */
+    public File showSaveDialog(final Window ownerWindow) {
+        final List<File> selectedFiles =
+                showDialog(ownerWindow, FileChooserType.SAVE);
+
+        return ((selectedFiles != null) && (selectedFiles.size() > 0))
+                ? selectedFiles.get(0) : null;
+    }
+
+    private List<File> showDialog(final Window ownerWindow,
+                                  final FileChooserType fileChooserType) {
+        return Toolkit.getToolkit().showFileChooser(
+                (ownerWindow != null) ? ownerWindow.impl_getPeer() : null,
+                getTitle(),
+                getInitialDirectory(),
+                fileChooserType,
+                extensionFilters);
+        
+    }
+}
