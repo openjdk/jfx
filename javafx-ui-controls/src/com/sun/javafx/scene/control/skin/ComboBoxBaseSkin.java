@@ -27,12 +27,12 @@ package com.sun.javafx.scene.control.skin;
 
 import javafx.scene.control.ComboBoxBase;
 import com.sun.javafx.scene.control.behavior.ComboBoxBaseBehavior;
-import javafx.event.EventHandler;
+import javafx.beans.value.ChangeListener;
+import javafx.beans.value.ObservableValue;
 import javafx.geometry.HPos;
 import javafx.geometry.Insets;
 import javafx.geometry.VPos;
 import javafx.scene.Node;
-import javafx.scene.input.MouseEvent;
 import javafx.scene.layout.StackPane;
 
 public abstract class ComboBoxBaseSkin<T> extends SkinBase<ComboBoxBase<T>, ComboBoxBaseBehavior<T>> {
@@ -58,6 +58,15 @@ public abstract class ComboBoxBaseSkin<T> extends SkinBase<ComboBoxBase<T>, Comb
         arrowButton.getStyleClass().setAll("arrow-button");
         arrowButton.getChildren().add(arrow);
         getChildren().add(arrowButton);
+        
+        // When ComboBoxBase focus shifts to another node, it should hide.
+        getSkinnable().focusedProperty().addListener(new ChangeListener<Boolean>() {
+            @Override public void changed(ObservableValue<? extends Boolean> observable, Boolean oldValue, Boolean newValue) {
+                if (!newValue) {
+                    ((ComboBoxBase)getSkinnable()).hide();
+                }
+            }
+        });
         
         // Register listeners
         registerChangeListener(comboBox.editableProperty(), "EDITABLE");

@@ -69,7 +69,7 @@ public class CellSkinBase<C extends Cell, B extends CellBehaviorBase<C>> extends
 
                 @Override
                 public void set(double value) {
-                    cellSizeSet = true;
+                    cellSizeSet = value != DEFAULT_CELL_SIZE;
                     super.set(value);
                 }
                 
