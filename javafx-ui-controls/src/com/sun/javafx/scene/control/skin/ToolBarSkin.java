@@ -436,6 +436,8 @@ public class ToolBarSkin extends SkinBase<ToolBar, ToolBarBehavior> implements T
         overflowMenuItems.clear();
         box.getChildren().clear();
         for (Node node : getSkinnable().getItems()) {
+            node.getStyleClass().remove("menu-item");
+            node.getStyleClass().remove("custom-menu-item");
             if (getSkinnable().getOrientation() == Orientation.VERTICAL) {
                 x += snapSize(node.prefHeight(-1)) + getSpacing();
             } else {
