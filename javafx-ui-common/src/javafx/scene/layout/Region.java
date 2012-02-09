@@ -28,12 +28,6 @@ package javafx.scene.layout;
 
 import javafx.beans.InvalidationListener;
 import javafx.beans.binding.ObjectExpression;
-import javafx.beans.property.BooleanProperty;
-import javafx.beans.property.DoubleProperty;
-import javafx.beans.property.DoublePropertyBase;
-import javafx.beans.property.ObjectProperty;
-import javafx.beans.property.ReadOnlyDoubleProperty;
-import javafx.beans.property.ReadOnlyDoubleWrapper;
 import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableObjectValue;
 import javafx.beans.value.WritableValue;
@@ -76,7 +70,6 @@ import com.sun.javafx.sg.PGShape;
 import com.sun.javafx.sg.Repeat;
 import com.sun.javafx.tk.Toolkit;
 import javafx.beans.property.*;
-import javafx.scene.text.Font;
 
 /**
  * A Region is an area of the screen that can contain other nodes and be styled
@@ -280,7 +273,9 @@ public class Region extends Parent {
                     final Insets newValue = get();
                     if (newValue == null) {
                         // rollback
-                        // TODO: what to do with binding? unbind?
+                        if (isBound()) {
+                            unbind();
+                        }
                         set(lastValidValue);
                         throw new NullPointerException("cannot set padding to null");
                     }

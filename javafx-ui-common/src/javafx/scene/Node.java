@@ -466,8 +466,6 @@ public abstract class Node implements EventTarget {
     @Deprecated
     public void impl_updatePG() {
         final PGNode peer = impl_getPGNode();
-        // TODO: if we find that TempState.getInstance() is too expensive,
-        //       we can try to pass it as an argument to this method
         TempState tempState = null;
         if (impl_isDirty(DirtyBits.NODE_TRANSFORM)) {
             tempState = TempState.getInstance();

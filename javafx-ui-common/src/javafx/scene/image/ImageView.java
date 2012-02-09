@@ -30,18 +30,11 @@ import java.util.Collections;
 import java.util.List;
 
 import javafx.beans.Observable;
-import javafx.beans.property.BooleanProperty;
-import javafx.beans.property.BooleanPropertyBase;
-import javafx.beans.property.DoubleProperty;
-import javafx.beans.property.DoublePropertyBase;
-import javafx.beans.property.ObjectProperty;
-import javafx.beans.property.ObjectPropertyBase;
 import javafx.beans.value.WritableValue;
 import javafx.geometry.Rectangle2D;
 import javafx.scene.Node;
 
 import com.sun.javafx.beans.event.AbstractNotifyListener;
-import com.sun.javafx.css.StyleableObjectProperty;
 import com.sun.javafx.css.StyleableProperty;
 import com.sun.javafx.css.StyleableStringProperty;
 import com.sun.javafx.css.converters.StringConverter;
@@ -738,15 +731,6 @@ public class ImageView extends Node {
 
         w = newW;
         h = newH;
-
-//      TODO: the following block is never executed, remove or correct
-//            newW = 1, newH = 1
-//
-//        // if the w or h are non-positive, then there is no size
-//        // for the image view
-//        if (w <= 0 || h <= 0) {
-//            return bounds.invalidate();
-//        }
 
         bounds = bounds.deriveWithNewBounds((float)getX(), (float)getY(), 0.0f,
                 (float)(getX() + w), (float)(getY() + h), 0.0f);
