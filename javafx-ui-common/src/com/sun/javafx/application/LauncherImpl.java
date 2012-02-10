@@ -347,7 +347,7 @@ public class LauncherImpl {
             boolean isMac = PlatformUtil.isMac();
             if (isMac) {
                 // Exit if using the J2D pipeline. Note that currently SCENE3D
-                // is true only if we are running the J2D pipeline.
+                // is false only if we are running the J2D pipeline.
                 boolean exitOnClose = !PlatformImpl.isSupported(ConditionalFeature.SCENE3D);
                 boolean keepAlive = AccessController.doPrivileged(new PrivilegedAction<Boolean>() {
                     @Override public Boolean run() {
