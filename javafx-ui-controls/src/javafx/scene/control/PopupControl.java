@@ -734,16 +734,6 @@ public class PopupControl extends PopupWindow implements Skinnable {
                 if (oldValue != null) oldValue.dispose();
                 // Get the new value, and save it off as the new oldValue
                 final Skin<?> skin = oldValue = getValue();
-                // Collect the name of the currently installed skin class. We do this
-                // so that subsequent updates from CSS to the same skin class will not
-                // result in reinstalling the skin
-                if (skin == null) {
-                    WritableValue writable = skinClassNameProperty();
-                    skinClassNameProperty().set(null);
-                } else {
-                    WritableValue writable = skinClassNameProperty();
-                    writable.setValue(skin.getClass().getName());
-                }
                 // Update the children list with the new skin node
                 updateChildren();
                 // DEBUG: Log that we've changed the skin
