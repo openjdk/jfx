@@ -111,7 +111,7 @@ public class CellSkinBase<C extends Cell, B extends CellBehaviorBase<C>> extends
      *                                                                         *
      **************************************************************************/
 
-    static final int DEFAULT_CELL_SIZE = 24;
+    static final double DEFAULT_CELL_SIZE = 24.0;
 
      /**
       * Super-lazy instantiation pattern from Bill Pugh.
