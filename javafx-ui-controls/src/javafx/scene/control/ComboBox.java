@@ -301,28 +301,25 @@ public class ComboBox<T> extends ComboBoxBase<T> {
     
     // --- Selection Model
     /**
-     * The selection model for the ComboBox. In general a ComboBox supports only
-     * single selection, but this is not necessarily always the case. Because of this,
-     * the selection model in ComboBox is of type {@link SelectionModel}, which
-     * means that the actual implementation may be SelectionModel, or a subclass
-     * (such as {@link SingleSelectionModel} or {@link MultipleSelectionModel}).
+     * The selection model for the ComboBox. A ComboBox only supports
+     * single selection.
      */
-    private ObjectProperty<SelectionModel<T>> selectionModel = new SimpleObjectProperty<SelectionModel<T>>(this, "selectionModel") {
-        private SelectionModel<T> oldSM = null;
+    private ObjectProperty<SingleSelectionModel<T>> selectionModel = new SimpleObjectProperty<SingleSelectionModel<T>>(this, "selectionModel") {
+        private SingleSelectionModel<T> oldSM = null;
         @Override protected void invalidated() {
             if (oldSM != null) {
                 oldSM.selectedItemProperty().removeListener(selectedItemListener);
             }
-            SelectionModel sm = get();
+            SingleSelectionModel sm = get();
             oldSM = sm;
             if (sm != null) {
                 sm.selectedItemProperty().addListener(selectedItemListener);
             }
         }                
     };
-    public final void setSelectionModel(SelectionModel<T> value) { selectionModel.set(value); }
-    public final SelectionModel<T> getSelectionModel() { return selectionModel.get(); }
-    public final ObjectProperty<SelectionModel<T>> selectionModelProperty() { return selectionModel; }
+    public final void setSelectionModel(SingleSelectionModel<T> value) { selectionModel.set(value); }
+    public final SingleSelectionModel<T> getSelectionModel() { return selectionModel.get(); }
+    public final ObjectProperty<SingleSelectionModel<T>> selectionModelProperty() { return selectionModel; }
     
     
     // --- Visible Row Count

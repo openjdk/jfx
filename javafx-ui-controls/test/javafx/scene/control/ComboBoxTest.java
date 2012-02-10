@@ -26,7 +26,7 @@ import org.junit.Test;
 
 public class ComboBoxTest {
     private ComboBox<String> comboBox;
-    private SelectionModel<String> sm;
+    private SingleSelectionModel<String> sm;
     
     @Before public void setup() {
         comboBox = new ComboBox<String>();
@@ -170,14 +170,14 @@ public class ComboBoxTest {
     }
 
     @Test public void selectionModelCanBeBound() {
-        SelectionModel<String> sm = new ComboBox.ComboBoxSelectionModel<String>(comboBox);
-        ObjectProperty<SelectionModel<String>> other = new SimpleObjectProperty<SelectionModel<String>>(sm);
+        SingleSelectionModel<String> sm = new ComboBox.ComboBoxSelectionModel<String>(comboBox);
+        ObjectProperty<SingleSelectionModel<String>> other = new SimpleObjectProperty<SingleSelectionModel<String>>(sm);
         comboBox.selectionModelProperty().bind(other);
         assertSame(sm, sm);
     }
 
     @Test public void selectionModelCanBeChanged() {
-        SelectionModel<String> sm = new ComboBox.ComboBoxSelectionModel<String>(comboBox);
+        SingleSelectionModel<String> sm = new ComboBox.ComboBoxSelectionModel<String>(comboBox);
         comboBox.setSelectionModel(sm);
         assertSame(sm, sm);
     }
@@ -410,11 +410,11 @@ public class ComboBoxTest {
     
     @Test public void ensureValueIsUpdatedByCorrectSelectionModelWhenSelectionModelIsChanged() {
         comboBox.getItems().addAll("Apple", "Orange", "Banana");
-        SelectionModel sm1 = sm;
+        SingleSelectionModel sm1 = sm;
         sm1.select(1);
         assertEquals("Orange", comboBox.getValue());
         
-        SelectionModel sm2 = new ComboBox.ComboBoxSelectionModel(comboBox);
+        SingleSelectionModel sm2 = new ComboBox.ComboBoxSelectionModel(comboBox);
         comboBox.setSelectionModel(sm2);
         
         sm1.select(2);  // value should not change as we are using old SM
