@@ -274,8 +274,7 @@ public class ComboBoxListViewSkin<T> extends ComboBoxPopupControl<T> {
                 } else {
                     pw = Math.max(100, comboBox.getWidth());
                 }
-                
-                return Math.max(50, pw);
+                return pw;
             }
 
             @Override protected double computePrefHeight(double width) {
@@ -352,11 +351,11 @@ public class ComboBoxListViewSkin<T> extends ComboBoxPopupControl<T> {
     }
 
     @Override protected double computePrefWidth(double height) {
-        return listView.prefWidth(height);
+        return getInsets().getLeft() + listView.prefWidth(height) + arrowButton.prefWidth(height) + getInsets().getRight();
     }
     
     @Override protected double computeMinWidth(double height) {
-        return 50;
+        return getInsets().getLeft() + listView.minWidth(height) + arrowButton.minWidth(height) + getInsets().getRight();
     }
     
     

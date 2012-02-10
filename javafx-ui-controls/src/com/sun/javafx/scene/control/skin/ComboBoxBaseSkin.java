@@ -147,8 +147,10 @@ public abstract class ComboBoxBaseSkin<T> extends SkinBase<ComboBoxBase<T>, Comb
                 arrowButtonWidth, getHeight(), 0, HPos.CENTER, VPos.CENTER);
     }
     
-    @Override protected double computePrefWidth(double height) {
-        return displayNode == null ? 100 : displayNode.prefWidth(height);
+    @Override protected double computePrefWidth(double height) {        
+        return getInsets().getLeft() + 
+                (displayNode == null ? arrowButton.prefWidth(height) : displayNode.prefWidth(height)) +
+                getInsets().getRight();
     }
     
     @Override protected double computePrefHeight(double width) {
@@ -160,7 +162,7 @@ public abstract class ComboBoxBaseSkin<T> extends SkinBase<ComboBoxBase<T>, Comb
             double arrowHeight = arrowButtonPadding.getTop() + arrow.prefHeight(-1) + arrowButtonPadding.getBottom();
             return padding.getTop() + Math.max(DEFAULT_HEIGHT, arrowHeight) + padding.getBottom();
         } else {
-            return displayNode.prefHeight(width);
+            return padding.getTop() + displayNode.prefHeight(width) + padding.getBottom();
         }
     }
 
