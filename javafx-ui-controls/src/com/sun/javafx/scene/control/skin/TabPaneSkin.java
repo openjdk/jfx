@@ -840,7 +840,8 @@ public class TabPaneSkin extends SkinBase<TabPane, TabPaneBehavior> {
 
         public TabHeaderSkin(final Tab tab) {
             getStyleClass().setAll(tab.getStyleClass());
-            setStyle(tab.getStyle());
+            setId(tab.getId());
+            setStyle(tab.getStyle());            
 
             this.tab = tab;
             clip = new Rectangle();
