@@ -75,11 +75,17 @@ public class TextAreaSkin extends TextInputControlSkin<TextArea, TextAreaBehavio
     // *** NOTE: Multiple node mode is not yet fully implemented *** //
     private final boolean USE_MULTIPLE_NODES = false;
 
+    private double computedMinWidth = Double.NEGATIVE_INFINITY;
+    private double computedMinHeight = Double.NEGATIVE_INFINITY;
     private double computedPrefWidth = Double.NEGATIVE_INFINITY;
     private double computedPrefHeight = Double.NEGATIVE_INFINITY;
     private double widthForComputedPrefHeight = Double.NEGATIVE_INFINITY;
+    private double characterWidth;
+    private double lineHeight;
 
     @Override protected void invalidateMetrics() {
+        computedMinWidth = Double.NEGATIVE_INFINITY;
+        computedMinHeight = Double.NEGATIVE_INFINITY;
         computedPrefWidth = Double.NEGATIVE_INFINITY;
         computedPrefHeight = Double.NEGATIVE_INFINITY;
     }
@@ -180,6 +186,22 @@ public class TextAreaSkin extends TextInputControlSkin<TextArea, TextAreaBehavio
             computedPrefHeight = Math.max(prefHeight, (viewPortBounds != null) ? viewPortBounds.getHeight() : 0);
           }
           return computedPrefHeight;
+        }
+
+        @Override protected double computeMinWidth(double height) {
+            if (computedMinWidth < 0) {
+                double hInsets = getInsets().getLeft() + getInsets().getRight();
+                computedMinWidth = Math.min(characterWidth + hInsets, computePrefWidth(height));
+            }
+            return computedMinWidth;
+        }
+
+        @Override protected double computeMinHeight(double width) {
+            if (computedMinHeight < 0) {
+                double vInsets = getInsets().getTop() + getInsets().getBottom();
+                computedMinHeight = Math.min(lineHeight + vInsets, computePrefHeight(width));
+            }
+            return computedMinHeight;
         }
 
         @Override
@@ -283,7 +305,7 @@ public class TextAreaSkin extends TextInputControlSkin<TextArea, TextAreaBehavio
     private ObservableIntegerValue caretPosition;
     private Group selectionHighlightGroup = new Group();
 
-    private ScrollPane scrollPane = new ScrollPane();
+    private ScrollPane scrollPane;
 
     private VerticalDirection scrollDirection = null;
 
@@ -329,6 +351,8 @@ public class TextAreaSkin extends TextInputControlSkin<TextArea, TextAreaBehavio
 
         // Initialize content
         scrollPane = new ScrollPane();
+        scrollPane.setMinWidth(0);
+        scrollPane.setMinHeight(0);
         scrollPane.setFitToWidth(textArea.isWrapText());
         scrollPane.setContent(contentView);
         getChildren().add(scrollPane);
@@ -411,6 +435,13 @@ public class TextAreaSkin extends TextInputControlSkin<TextArea, TextAreaBehavio
             public void changed(ObservableValue<? extends Number> observable, Number oldValue, Number newValue) {
                 invalidateMetrics();
                 updatePrefViewportHeight();
+            }
+        });
+
+        updateFontMetrics();
+        fontMetrics.addListener(new InvalidationListener() {
+            @Override public void invalidated(Observable valueModel) {
+                updateFontMetrics();
             }
         });
 
@@ -515,6 +546,20 @@ public class TextAreaSkin extends TextInputControlSkin<TextArea, TextAreaBehavio
                 return textArea.isFocused() ? highlightTextFill.get() : textFill.get();
             }
         });
+    }
+
+    @Override public void layoutChildren() {
+        scrollPane.setHbarPolicy(ScrollPane.ScrollBarPolicy.AS_NEEDED);
+        scrollPane.setVbarPolicy(ScrollPane.ScrollBarPolicy.AS_NEEDED);
+
+        super.layoutChildren();
+
+        Bounds bounds = scrollPane.getViewportBounds();
+        if (bounds != null && (bounds.getWidth() < contentView.minWidth(-1) ||
+                               bounds.getHeight() < contentView.minHeight(-1))) {
+            scrollPane.setHbarPolicy(ScrollPane.ScrollBarPolicy.NEVER);
+            scrollPane.setVbarPolicy(ScrollPane.ScrollBarPolicy.NEVER);
+        }
     }
 
     @Override
@@ -769,17 +814,20 @@ public class TextAreaSkin extends TextInputControlSkin<TextArea, TextAreaBehavio
     }
 
     private void updatePrefViewportWidth() {
-        double characterWidth = fontMetrics.get().computeStringWidth("W");
         int columnCount = getSkinnable().getPrefColumnCount();
         Insets contentPadding = contentView.getInsets();
         scrollPane.setPrefViewportWidth(columnCount * characterWidth + contentPadding.getLeft() + contentPadding.getRight());
     }
 
     private void updatePrefViewportHeight() {
-        double lineHeight = fontMetrics.get().getLineHeight();
         int rowCount = getSkinnable().getPrefRowCount();
         Insets contentPadding = contentView.getInsets();
         scrollPane.setPrefViewportHeight(rowCount * lineHeight + contentPadding.getTop() + contentPadding.getBottom());
+    }
+
+    private void updateFontMetrics() {
+        lineHeight = fontMetrics.get().getLineHeight();
+        characterWidth = fontMetrics.get().computeStringWidth("W");
     }
 
     @Override
@@ -856,7 +904,7 @@ public class TextAreaSkin extends TextInputControlSkin<TextArea, TextAreaBehavio
     protected void downLines(int nLines, boolean select, boolean extendSelection) {
         Text textNode = getTextNode();
         Bounds caretBounds = caretPath.getLayoutBounds();
-        double midY = (caretBounds.getMinY() + caretBounds.getMaxY()) / 2 + nLines * fontMetrics.get().getLineHeight();
+        double midY = (caretBounds.getMinY() + caretBounds.getMaxY()) / 2 + nLines * lineHeight;
         if (midY < 0) {
             midY = 0;
         }
@@ -883,12 +931,12 @@ public class TextAreaSkin extends TextInputControlSkin<TextArea, TextAreaBehavio
     }
 
     public void previousPage(boolean select) {
-        downLines(-(int)(scrollPane.getViewportBounds().getHeight() / fontMetrics.get().getLineHeight()),
+        downLines(-(int)(scrollPane.getViewportBounds().getHeight() / lineHeight),
                   select, false);
     }
 
     public void nextPage(boolean select) {
-        downLines((int)(scrollPane.getViewportBounds().getHeight() / fontMetrics.get().getLineHeight()),
+        downLines((int)(scrollPane.getViewportBounds().getHeight() / lineHeight),
                   select, false);
     }
 
