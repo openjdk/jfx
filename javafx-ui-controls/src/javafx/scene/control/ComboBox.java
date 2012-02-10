@@ -45,7 +45,11 @@ import javafx.collections.FXCollections;
 import javafx.collections.ListChangeListener;
 import javafx.collections.ListChangeListener.Change;
 import javafx.collections.ObservableList;
+import javafx.scene.Node;
 import javafx.scene.control.*;
+import javafx.scene.paint.Color;
+import javafx.scene.shape.Rectangle;
+import javafx.scene.text.Text;
 import javafx.util.Callback;
 import javafx.util.StringConverter;
 
@@ -90,6 +94,65 @@ import javafx.util.StringConverter;
  * which therefore assumes that the type of the editable ComboBox is String. If 
  * a different type is specified and the ComboBox is to be editable, it is 
  * necessary to specify a custom {@link StringConverter}.
+ * 
+ * <h3>A warning about inserting Nodes into the ComboBox items list</h3>
+ * ComboBox allows for the items list to contain elements of any type, including 
+ * {@link Node} instances. Putting nodes into 
+ * the items list is <strong>strongly not recommended</strong>. This is because 
+ * the default {@link #cellFactoryProperty() cell factory} simply inserts Node 
+ * items directly into the cell, including in the ComboBox 'button' area too. 
+ * Because the scenegraph only allows for Nodes to be in one place at a time, 
+ * this means that when an item is selected it becomes removed from the ComboBox
+ * list, and becomes visible in the button area. When selection changes the 
+ * previously selected item returns to the list and the new selection is removed.
+ * 
+ * <p>The recommended approach, rather than inserting Node instances into the 
+ * items list, is to put the relevant information into the ComboBox, and then
+ * provide a custom {@link #cellFactoryProperty() cell factory}. For example,
+ * rather than use the following code:
+ * 
+ * <pre>
+ * {@code
+ * ComboBox<Rectangle> cmb = new ComboBox<Rectangle>();
+ * cmb.getItems().addAll(
+ *     new Rectangle(10, 10, Color.RED), 
+ *     new Rectangle(10, 10, Color.GREEN), 
+ *     new Rectangle(10, 10, Color.BLUE));}</pre>
+ * 
+ * <p>You should do the following:</p>
+ * 
+ * <pre><code>
+ * ComboBox&lt;Color&gt; cmb = new ComboBox&lt;Color&gt;();
+ * cmb.getItems().addAll(
+ *     Color.RED,
+ *     Color.GREEN,
+ *     Color.BLUE);
+ *
+ * cmb.setCellFactory(new Callback&lt;ListView&lt;Color&gt;, ListCell&lt;Color&gt;&gt;() {
+ *     &#064;Override public ListCell&lt;Color&gt; call(ListView&lt;Color&gt; p) {
+ *         return new ListCell&lt;Color&gt;() {
+ *             private final Rectangle rectangle;
+ *             { 
+ *                 setContentDisplay(ContentDisplay.GRAPHIC_ONLY); 
+ *                 rectangle = new Rectangle(10, 10);
+ *             }
+ *             
+ *             &#064;Override protected void updateItem(Color item, boolean empty) {
+ *                 super.updateItem(item, empty);
+ *                 
+ *                 if (item == null || empty) {
+ *                     setGraphic(null);
+ *                 } else {
+ *                     rectangle.setFill(item);
+ *                     setGraphic(rectangle);
+ *                 }
+ *            }
+ *       };
+ *   }
+ *});</code></pre>
+ * 
+ * <p>Admittedly the above approach is far more verbose, but it offers the 
+ * required functionality without encountering the scenegraph constraints.
  * 
  * @see ComboBoxBase
  * @see Cell
@@ -238,28 +301,25 @@ public class ComboBox<T> extends ComboBoxBase<T> {
     
     // --- Selection Model
     /**
-     * The selection model for the ComboBox. In general a ComboBox supports only
-     * single selection, but this is not necessarily always the case. Because of this,
-     * the selection model in ComboBox is of type {@link SelectionModel}, which
-     * means that the actual implementation may be SelectionModel, or a subclass
-     * (such as {@link SingleSelectionModel} or {@link MultipleSelectionModel}).
+     * The selection model for the ComboBox. A ComboBox only supports
+     * single selection.
      */
-    private ObjectProperty<SelectionModel<T>> selectionModel = new SimpleObjectProperty<SelectionModel<T>>(this, "selectionModel") {
-        private SelectionModel<T> oldSM = null;
+    private ObjectProperty<SingleSelectionModel<T>> selectionModel = new SimpleObjectProperty<SingleSelectionModel<T>>(this, "selectionModel") {
+        private SingleSelectionModel<T> oldSM = null;
         @Override protected void invalidated() {
             if (oldSM != null) {
                 oldSM.selectedItemProperty().removeListener(selectedItemListener);
             }
-            SelectionModel sm = get();
+            SingleSelectionModel sm = get();
             oldSM = sm;
             if (sm != null) {
                 sm.selectedItemProperty().addListener(selectedItemListener);
             }
         }                
     };
-    public final void setSelectionModel(SelectionModel<T> value) { selectionModel.set(value); }
-    public final SelectionModel<T> getSelectionModel() { return selectionModel.get(); }
-    public final ObjectProperty<SelectionModel<T>> selectionModelProperty() { return selectionModel; }
+    public final void setSelectionModel(SingleSelectionModel<T> value) { selectionModel.set(value); }
+    public final SingleSelectionModel<T> getSelectionModel() { return selectionModel.get(); }
+    public final ObjectProperty<SingleSelectionModel<T>> selectionModelProperty() { return selectionModel; }
     
     
     // --- Visible Row Count

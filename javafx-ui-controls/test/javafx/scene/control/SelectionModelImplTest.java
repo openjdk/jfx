@@ -21,6 +21,7 @@ import javafx.scene.control.ListView.ListViewFocusModel;
 import javafx.scene.control.TableView.TableViewFocusModel;
 import javafx.scene.control.TableView.TableViewSelectionModel;
 import javafx.scene.control.TreeView.TreeViewFocusModel;
+import javafx.scene.control.ComboBox.ComboBoxSelectionModel;
 
 import org.junit.After;
 import org.junit.AfterClass;
@@ -69,6 +70,9 @@ public class SelectionModelImplTest {
 
     // ChoiceBox
     private static final ChoiceBox choiceBox;
+    
+    // ComboBox
+    private static final ComboBox comboBox;
 
     static {
         // ListView init
@@ -102,6 +106,11 @@ public class SelectionModelImplTest {
         choiceBox = new ChoiceBox();
         choiceBox.setItems(data);
         // --- ChoiceBox init
+        
+        // ComboBox init
+        comboBox = new ComboBox();
+        comboBox.setItems(data);
+        // --- ComboBox init
     }
     // --- ListView model data
 
@@ -110,7 +119,8 @@ public class SelectionModelImplTest {
             { ListView.ListViewBitSetSelectionModel.class },
             { TreeView.TreeViewBitSetSelectionModel.class },
             { TableView.TableViewArrayListSelectionModel.class },
-            { ChoiceBox.ChoiceBoxSelectionModel.class }
+            { ChoiceBox.ChoiceBoxSelectionModel.class },
+            { ComboBox.ComboBoxSelectionModel.class }
         });
     }
 
@@ -155,6 +165,13 @@ public class SelectionModelImplTest {
                 // recreate the selection model
                 model = modelClass.getConstructor(ChoiceBox.class).newInstance(choiceBox);
                 choiceBox.setSelectionModel((ChoiceBoxSelectionModel) model);
+
+                // create a new focus model
+                focusModel = null;
+            } else if (ComboBoxSelectionModel.class.isAssignableFrom(modelClass)) {
+                // recreate the selection model
+                model = modelClass.getConstructor(ComboBox.class).newInstance(comboBox);
+                comboBox.setSelectionModel((ComboBoxSelectionModel) model);
 
                 // create a new focus model
                 focusModel = null;
@@ -291,7 +308,7 @@ public class SelectionModelImplTest {
         }
     }
 
-    @Ignore("Not yet implemented in ChoiceBox")
+    @Ignore("Not yet implemented in TreeView")
     @Test public void testSelectionChangesWhenItemIsInsertedAtStartOfModel() {
         /* Select the fourth item, and insert a new item at the start of the
          * data model. The end result should be that the fourth item should NOT
