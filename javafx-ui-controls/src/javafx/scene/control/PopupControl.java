@@ -679,7 +679,7 @@ public class PopupControl extends PopupWindow implements Skinnable {
 
 
     protected class CSSBridge extends Group {
-        
+        private String currentSkinClassName = null;
         @Override public void impl_pseudoClassStateChanged(String s) {
             super.impl_pseudoClassStateChanged(s);
         }
@@ -706,6 +706,28 @@ public class PopupControl extends PopupWindow implements Skinnable {
             // a reference to the old value.
             private Skin<?> oldValue;
 
+            @Override
+            public void set(Skin<?> v) {
+
+                if (v == null 
+                    ? oldValue == null
+                    : oldValue != null && v.getClass().equals(oldValue.getClass()))
+                    return;
+
+                super.set(v);
+
+                // Collect the name of the currently installed skin class. We do this
+                // so that subsequent updates from CSS to the same skin class will not
+                // result in reinstalling the skin
+                currentSkinClassName = v == null ? null : v.getClass().getName();
+
+                // if someone calls setSkin, we need to make it look like they 
+                // called set on skinClassName in order to keep CSS from overwriting
+                // the skin. 
+                skinClassNameProperty().set(currentSkinClassName);
+
+            }
+            
             @Override protected void invalidated() {
                 // Let CSS know that this property has been manually changed
                 // Dispose of the old skin
@@ -745,11 +767,18 @@ public class PopupControl extends PopupWindow implements Skinnable {
         /**
         * Keeps a reference to the name of the class currently acting as the skin.
         */
-        private StringProperty skinClassName;
+        private StringProperty skinClassName = null;
         private StringProperty skinClassNameProperty() {
             if (skinClassName == null) {
                 skinClassName = new StyleableStringProperty() {
-
+                    
+                    @Override
+                    public void set(String v) {
+                        // do not allow the skin to be set to null through CSS
+                        if (v == null || v.isEmpty() || v.equals(get())) return;
+                        super.set(v);
+                    }
+                    
                     @Override
                     public void invalidated() {
 
@@ -768,12 +797,14 @@ public class PopupControl extends PopupWindow implements Skinnable {
                         // invalidated method won't get called unless the value
                         // has changed (thus, we won't reload the same skin).
                         // 
-                        if ((currentSkin != null &&
-                            currentSkin.getClass().getName().equals(get()) ) ||
-                            (currentSkin == null && get() == null))
-                            return;
-
-                        loadSkinClass();
+                        if (get() != null) {
+                            if (!get().equals(currentSkinClassName)) {
+                                loadSkinClass();
+                            }
+                        // CSS should not set skin to null
+    //                    } else {
+    //                        setSkin(null);
+                        }
                     }
 
                     @Override
@@ -783,7 +814,7 @@ public class PopupControl extends PopupWindow implements Skinnable {
 
                     @Override
                     public String getName() {
-                        return "currentSkinClass";
+                        return "skinClassName";
                     }
 
                     @Override
@@ -794,7 +825,11 @@ public class PopupControl extends PopupWindow implements Skinnable {
                 };
             }
             return skinClassName;
-        }        
+        }   
+        
+        protected void setSkinClassName(String skinClassName) {
+            skinClassNameProperty().set(skinClassName);        
+        }
 
         private void loadSkinClass() {
 
@@ -835,10 +870,13 @@ public class PopupControl extends PopupWindow implements Skinnable {
                             ".\r\nYou must provide a constructor that accepts a single "
                             + "PopupControl parameter in " + skinClassName + ".", npe);
                     throw npe;
+                } else {
+                    Skin<?> skinInstance = (Skin<?>) skinConstructor.newInstance(PopupControl.this);
+                    // Do not call setSkin here since it has the side effect of
+                    // also setting the skinClassName!
+                    skinProperty().set(skinInstance);
                 }
 
-                Skin<?> skinInstance = (Skin<?>) skinConstructor.newInstance(PopupControl.this);
-                setSkin(skinInstance);
             } catch (InvocationTargetException e) {
                 Logging.getControlsLogger().severe(
                     "Failed to load skin '" + skinClassName + "' for popup control " + this,
