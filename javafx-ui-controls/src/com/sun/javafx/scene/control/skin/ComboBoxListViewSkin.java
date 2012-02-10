@@ -77,6 +77,28 @@ public class ComboBoxListViewSkin<T> extends ComboBoxPopupControl<T> {
             }
         });
         
+        // Fix for RT-19431 (also tested via ComboBoxListViewSkinTest)
+        comboBox.valueProperty().addListener(new ChangeListener<T>() {
+            @Override public void changed(ObservableValue<? extends T> ov, T oldValue, T newValue) {
+                if (newValue == null) {
+                    listView.getSelectionModel().clearSelection();
+                } else {
+                    int index = comboBox.getSelectionModel().getSelectedIndex();
+                    if (index < comboBox.getItems().size()) {
+                        T itemsObj = comboBox.getItems().get(index);
+                        if (itemsObj != null && itemsObj.equals(newValue)) {
+                            listView.getSelectionModel().select(index);
+                        } else {
+                            listView.getSelectionModel().select(newValue);
+                        }
+                    } else {
+                        // just select the first instance of newValue in the list
+                        listView.getSelectionModel().select(newValue);
+                    }
+                }
+            }
+        });
+        
         updateListViewItems();
         
         registerChangeListener(comboBox.itemsProperty(), "ITEMS");
@@ -339,6 +361,12 @@ public class ComboBoxListViewSkin<T> extends ComboBoxPopupControl<T> {
     
     
     /**************************************************************************
+     * 
      * API for testing
-     */
+     * 
+     *************************************************************************/
+    
+    ListView<T> getListView() {
+        return listView;
+    }
 }
