@@ -71,7 +71,7 @@ public class KeystrokeUtils {
         }
         
         if (kc instanceof KeyCodeCombination) {
-            stringBuilder.append(((KeyCodeCombination)kc).getCode());
+            stringBuilder.append(KeyCodeUtils.getAccelerator(((KeyCodeCombination)kc).getCode()));
         } else if (kc instanceof KeyCharacterCombination) {
             stringBuilder.append(((KeyCharacterCombination)kc).getCharacter());
         }
