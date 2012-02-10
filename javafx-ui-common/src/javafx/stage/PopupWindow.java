@@ -367,7 +367,8 @@ public abstract class PopupWindow extends Window {
     * @param win the Window for which to get the root window
     */
    private static Window getRootWindow(Window win) {
-       // TODO: needs to be fixed when we add more non-root window types
+       // should be enough to traverse PopupWindow hierarchy here to get to the
+       // first non-popup focusable window
        while (win instanceof PopupWindow) {
            win = ((PopupWindow) win).getOwnerWindow();
        }
