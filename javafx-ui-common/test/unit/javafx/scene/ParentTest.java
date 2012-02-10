@@ -400,6 +400,64 @@ public class ParentTest {
         }
     }
 
+    @Test(expected=NullPointerException.class)
+    public void testAddingNullChild() {
+        Group g = new Group();
+        g.getChildren().add(null);
+    }
+
+    @Test(expected=IllegalArgumentException.class)
+    public void testAddingClipNodeTwice() {
+        Group g = new Group();
+        
+        Node clipParent = new Rectangle();
+        Node clipNode = new Rectangle();
+        
+        clipParent.setClip(clipNode);
+        try {
+            // try to add node which is already set as a clip
+            g.getChildren().add(clipNode);
+            fail();
+        } catch (IllegalArgumentException e) {
+        }
+
+        // try again
+        g.getChildren().add(clipNode);
+    }
+
+    @Test
+    public void testAddingFixedClipNode() {
+        Group g = new Group();
+
+        Node clipParent = new Rectangle();
+        Node clipNode = new Rectangle();
+
+        clipParent.setClip(clipNode);
+        try {
+            // try to add node which is already set as a clip
+            g.getChildren().add(clipNode);
+            fail();
+        } catch (IllegalArgumentException e) {
+        }
+
+        // fix the problem and add again
+        clipParent.setClip(null);
+        g.getChildren().add(clipNode);
+    }
+
+    @Test(expected=IllegalArgumentException.class)
+    public void testFalsePermutation() {
+        Group g = new Group();
+
+        Rectangle r1 = new Rectangle();
+        Rectangle r2 = new Rectangle();
+        Rectangle r3 = new Rectangle();
+        Rectangle r4 = new Rectangle();
+        
+        g.getChildren().addAll(r1, r2, r3, r4);
+        g.getChildren().setAll(r1, r2, r2, r4);
+    }
+
     @Test
     public void testFalseDuplicates() {
         Group g = new Group();

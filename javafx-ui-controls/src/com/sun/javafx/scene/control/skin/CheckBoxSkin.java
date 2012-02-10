@@ -55,7 +55,9 @@ public class CheckBoxSkin extends LabeledSkinBase<CheckBox, ButtonBehavior<Check
 
     @Override protected void updateChildren() {
         super.updateChildren();
-        getChildren().add(box);
+        if (box != null) {
+            getChildren().add(box);
+        }
     }
 
     @Override protected double computePrefWidth(double height) {
