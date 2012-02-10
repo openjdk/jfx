@@ -193,7 +193,7 @@ public abstract class Preloader extends Application {
 //     * @param info the UI notification
 //     */
 //    public void handleUINotification(UINotification info) {
-//        //TODO: not used for now pending completion of JRE work
+//        // TODO RT-19601: not used for now pending completion of JRE work
 ////        System.err.println("Preloader: handleUINotification = " + info);
 //    }
 
@@ -298,7 +298,8 @@ public abstract class Preloader extends Application {
             this(progress, "");
         }
 
-        // TODO: consider exposing details in the future
+        // NOTE: We could consider exposing details in the future, but currently
+        // have no plan to do so. This method is private for now.
         /**
          * Constructs a progress notification.
          *
@@ -416,7 +417,7 @@ public abstract class Preloader extends Application {
 //     * application launch. In particular proxy and security dialogs
 //     */
 //    public static class UINotification implements PreloaderNotification {
-//       //TODO: implementation pending JRE work
+//       //TODO RT-19601: implementation pending JRE work
 //    }
 
 }

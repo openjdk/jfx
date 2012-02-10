@@ -49,7 +49,6 @@ public class LauncherImpl {
     private static final boolean simulateSlowProgress = false;
 
     // Ensure that launchApplication method is only called once
-    // TODO: what about preloader?
     private static AtomicBoolean launchCalled = new AtomicBoolean(false);
 
     // Exception found during launching
@@ -108,7 +107,6 @@ public class LauncherImpl {
 //                + preloaderClass);
 
         // Create a new Launcher thread and then wait for that thread to finish
-        // TODO: consider just doing this on the calling thread
         final CountDownLatch launchLatch = new CountDownLatch(1);
         Thread launcherThread = new Thread(new Runnable() {
             @Override public void run() {
@@ -192,7 +190,6 @@ public class LauncherImpl {
 //                System.err.println("JavaFX Launcher: received exit notification");
                 exitCalled.set(true);
                 shutdownLatch.countDown();
-                // TODO: handle exit call from preloader
             }
         };
         PlatformImpl.addListener(listener);
