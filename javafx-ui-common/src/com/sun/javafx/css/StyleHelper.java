@@ -1023,7 +1023,7 @@ public class StyleHelper {
                 final ParsedValue parsedValue = style.getParsedValue();
                 if (!parsedValue.isLookup() && !parsedValue.isContainsLookups() &&
                     // RT-19192 - if -fx-font-size is relative, do not cache
-                    !(resolved.isNeedsFont() && property.endsWith("font-size"))) {
+                      !(resolved.isNeedsFont())) {
                     style.value = val;
                 }
                 
