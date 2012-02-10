@@ -192,11 +192,11 @@ public class ProgressIndicatorSkin extends SkinBase<ProgressIndicator, ProgressI
     }
 
     @Override protected void layoutChildren() {
-        if (getSkinnable().isIndeterminate()) {
+        if (spinner != null && getSkinnable().isIndeterminate()) { 
             spinner.layoutChildren();
             spinner.resizeRelocate(0, 0, getSkinnable().getWidth(), getSkinnable().getHeight());
         }
-        else {
+        else if (determinateIndicator != null) { 
             determinateIndicator.layoutChildren();
             determinateIndicator.resizeRelocate(0, 0, getSkinnable().getWidth(), getSkinnable().getHeight());
         }
