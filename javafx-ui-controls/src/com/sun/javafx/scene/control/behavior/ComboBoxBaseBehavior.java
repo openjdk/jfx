@@ -38,6 +38,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 import javafx.beans.InvalidationListener;
+import javafx.scene.Node;
 import javafx.scene.input.MouseButton;
 
 public class ComboBoxBaseBehavior<T> extends BehaviorBase<ComboBoxBase<T>> {
@@ -180,7 +181,14 @@ public class ComboBoxBaseBehavior<T> extends BehaviorBase<ComboBoxBase<T>> {
     }
 
     @Override public void mouseEntered(MouseEvent e) {
-        mouseInsideButton = true;
+        if (getControl().isEditable()) {
+            // Fix for RT-19274
+            Node arrowButton = getControl().lookup("#arrow-button");
+            mouseInsideButton = arrowButton != null && arrowButton.contains(e.getX(), e.getY());
+        } else {
+            mouseInsideButton = true;
+        }
+        
         super.mouseEntered(e);
         arm();
     }
