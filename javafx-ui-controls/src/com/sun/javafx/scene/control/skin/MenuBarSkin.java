@@ -210,6 +210,14 @@ public class MenuBarSkin extends SkinBase<MenuBar, BehaviorBase<MenuBar>> implem
                 rebuildUI();
             }
         });
+        for (final Menu menu : getSkinnable().getMenus()) {
+            menu.visibleProperty().addListener(new ChangeListener<Boolean>() {
+                @Override
+                public void changed(ObservableValue<? extends Boolean> ov, Boolean t, Boolean t1) {
+                    rebuildUI();
+                }
+            });
+        }
 
         if (Toolkit.getToolkit().getSystemMenu().isSupported()) {
             control.useSystemMenuBarProperty().addListener(new InvalidationListener() {
@@ -364,6 +372,7 @@ public class MenuBarSkin extends SkinBase<MenuBar, BehaviorBase<MenuBar>> implem
 
 
         for (final Menu menu : getSkinnable().getMenus()) {
+            if (!menu.isVisible()) continue;
             final MenuBarButton menuButton = new MenuBarButton(menu.getText(), menu.getGraphic());
             menuButton.setFocusTraversable(false);
             menuButton.getStyleClass().add("menu");
