@@ -151,6 +151,11 @@ public abstract class MenuButtonBehaviorBase<C extends MenuButton> extends Butto
         }
     }
 
+    @Override public void mouseReleased(MouseEvent e) {
+        // Overriding to not call fire() on mouseReleased.
+        getControl().disarm();
+    }
+
     /**
      * Handles mouse release events.  This will be called by the skin.
      *
