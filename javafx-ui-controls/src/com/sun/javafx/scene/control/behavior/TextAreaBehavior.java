@@ -49,6 +49,8 @@ public class TextAreaBehavior extends TextInputControlBehavior<TextArea> {
      *************************************************************************/
     protected static final List<KeyBinding> TEXT_AREA_BINDINGS = new ArrayList<KeyBinding>();
     static {
+        TEXT_AREA_BINDINGS.add(new KeyBinding(TAB, KEY_PRESSED, "TraverseNext").ctrl());
+        TEXT_AREA_BINDINGS.add(new KeyBinding(TAB, KEY_PRESSED, "TraversePrevious").ctrl().shift());
         TEXT_AREA_BINDINGS.add(new KeyBinding(HOME, KEY_PRESSED, "LineStart")); // changed
         TEXT_AREA_BINDINGS.add(new KeyBinding(END, KEY_PRESSED, "LineEnd")); // changed
         TEXT_AREA_BINDINGS.add(new KeyBinding(UP, KEY_PRESSED, "PreviousLine")); // changed
@@ -98,9 +100,6 @@ public class TextAreaBehavior extends TextInputControlBehavior<TextArea> {
             TEXT_AREA_BINDINGS.add(new KeyBinding(DOWN, KEY_PRESSED, "SelectParagraphEnd").alt().shift());
             TEXT_AREA_BINDINGS.add(new KeyBinding(KP_DOWN, KEY_PRESSED, "SelectParagraphEnd").alt().shift());
         } else {
-            TEXT_AREA_BINDINGS.add(new KeyBinding(TAB, KEY_PRESSED, "TraverseNext").ctrl());
-            TEXT_AREA_BINDINGS.add(new KeyBinding(TAB, KEY_PRESSED, "TraversePrevious").ctrl().shift());
-
             TEXT_AREA_BINDINGS.add(new KeyBinding(UP, KEY_PRESSED, "ParagraphStart").ctrl());
             TEXT_AREA_BINDINGS.add(new KeyBinding(KP_UP, KEY_PRESSED, "ParagraphStart").ctrl());
             TEXT_AREA_BINDINGS.add(new KeyBinding(DOWN, KEY_PRESSED, "ParagraphEnd").ctrl());
