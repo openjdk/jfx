@@ -24,10 +24,14 @@
  */
 package com.sun.javafx;
 
+import com.sun.javafx.pgstub.StubToolkit;
+import com.sun.javafx.pgstub.StubToolkit.ScreenConfiguration;
+import com.sun.javafx.tk.Toolkit;
 import java.util.Arrays;
 import java.util.Collection;
 import javafx.stage.Screen;
 import org.junit.Assert;
+import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
@@ -64,6 +68,14 @@ public final class Utils_getScreenForPoint_Test {
         this.x = x;
         this.y = y;
         this.expectedScreenIndex = expectedScreenIndex;
+    }
+
+    @Before
+    public void setUp() {
+        ((StubToolkit) Toolkit.getToolkit()).setScreens(
+                new ScreenConfiguration(0, 0, 1920, 1200, 0, 0, 1920, 1172, 96),
+                new ScreenConfiguration(1920, 160, 1440, 900,
+                                        1920, 160, 1440, 900, 96));
     }
 
     @Test

@@ -131,9 +131,10 @@ public class StubToolkit extends Toolkit {
 
     private int maximumCursorColors = 2;
 
+    private TKScreenConfigurationListener screenConfigurationListener;
+    
     private ScreenConfiguration[] screenConfigurations = {
-        new ScreenConfiguration(0, 0, 1920, 1200, 0, 0, 1920, 1172, 96),
-        new ScreenConfiguration(1920, 160, 1440, 900, 1920, 160, 1440, 900, 96)
+        new ScreenConfiguration(0, 0, 1920, 1200, 0, 0, 1920, 1172, 96)
     };
 
     static {
@@ -560,13 +561,22 @@ public class StubToolkit extends Toolkit {
     };
 
     @Override
-    public ScreenConfigurationAccessor setScreenConfigurationListener(TKScreenConfigurationListener listener) {
+    public ScreenConfigurationAccessor setScreenConfigurationListener(
+            TKScreenConfigurationListener listener) {
+        screenConfigurationListener = listener;
         return accessor;
     }
 
     @Override
     public ScreenConfiguration getPrimaryScreen() {
         return screenConfigurations[0];
+    }
+
+    public void setScreens(ScreenConfiguration... screenConfigurations) {
+        this.screenConfigurations = screenConfigurations.clone();
+        if (screenConfigurationListener != null) {
+            screenConfigurationListener.screenConfigurationChanged();
+        }
     }
 
     @Override
