@@ -456,7 +456,6 @@ public class TextAreaSkin extends TextInputControlSkin<TextArea, TextAreaBehavio
             @Override public void invalidated(Observable valueModel) {
                 if (scrollPane.getViewportBounds() != null) {
                     invalidateMetrics();
-                    requestLayout();
                 }
             }
         });
