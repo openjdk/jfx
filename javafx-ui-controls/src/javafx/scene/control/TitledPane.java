@@ -293,7 +293,7 @@ public class TitledPane extends Labeled {
         private static final List<StyleableProperty> STYLEABLES;
         static {
             final List<StyleableProperty> styleables =
-                new ArrayList<StyleableProperty>(Control.impl_CSS_STYLEABLES());
+                new ArrayList<StyleableProperty>(Labeled.impl_CSS_STYLEABLES());
             Collections.addAll(styleables,
                 COLLAPSIBLE,
                 ANIMATED

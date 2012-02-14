@@ -40,9 +40,9 @@ import javafx.geometry.Pos;
 import javafx.geometry.VPos;
 import javafx.scene.Cursor;
 import javafx.scene.Node;
+import javafx.scene.control.ContentDisplay;
 import javafx.scene.control.TitledPane;
 import javafx.scene.input.MouseEvent;
-import javafx.scene.layout.HBox;
 import javafx.scene.layout.StackPane;
 import javafx.scene.shape.Rectangle;
 import javafx.util.Duration;
@@ -52,51 +52,27 @@ import com.sun.javafx.scene.traversal.Direction;
 import com.sun.javafx.scene.traversal.TraversalEngine;
 import com.sun.javafx.scene.traversal.TraverseListener;
 
-public class TitledPaneSkin extends SkinBase<TitledPane, TitledPaneBehavior>  {
+public class TitledPaneSkin extends LabeledSkinBase<TitledPane, TitledPaneBehavior>  {
 
     public static final int MIN_HEADER_HEIGHT = 22;
     public static final Duration TRANSITION_DURATION = new Duration(350.0);
 
-    private final HBox titleRegion;
-    private final StackPane arrowRegion;
+    private final TitleRegion titleRegion;
     private final Content contentRegion;
     private Timeline timeline;
     private double transitionStartValue;
     private Rectangle clipRect;
-    private LabeledImpl label;
 
     public TitledPaneSkin(final TitledPane titledPane) {
         super(titledPane, new TitledPaneBehavior(titledPane));
-        label = new LabeledImpl(titledPane);
-        label.getStyleClass().add("text");
 
         clipRect = new Rectangle();
         setClip(clipRect);
 
         transitionStartValue = 0;
-        titleRegion = new HBox();
-        titleRegion.setFillHeight(false);
-        titleRegion.setAlignment(Pos.CENTER_LEFT);
-        titleRegion.getStyleClass().setAll("title");
-        titleRegion.getChildren().clear();
-        titleRegion.setOnMouseReleased(new EventHandler<MouseEvent>() {
-            @Override public void handle(MouseEvent e) {
-                getBehavior().toggle();
-             }
-        });
-
-        arrowRegion = new StackPane();
-        arrowRegion.getStyleClass().setAll("arrow-button");
-
-        StackPane arrow = new StackPane();
-        arrow.getStyleClass().setAll("arrow");
-        arrowRegion.getChildren().setAll(arrow);
-
-        // title region consists of the title and the arrow regions
-        updateTitleRegion();
-
-        contentRegion = new Content(getSkinnable().getContent());
-        contentRegion.getStyleClass().setAll("content");
+        titleRegion = new TitleRegion();
+        
+        contentRegion = new Content(getSkinnable().getContent());        
 
         if (titledPane.isExpanded()) {
             setExpanded(titledPane.isExpanded());
@@ -133,20 +109,16 @@ public class TitledPaneSkin extends SkinBase<TitledPane, TitledPaneBehavior>  {
         } else if (property == "EXPANDED") {
             setExpanded(getSkinnable().isExpanded());
         } else if (property == "COLLAPSIBLE") {
-            updateTitleRegion();
+            titleRegion.update();
         }
     }
 
-    private void updateTitleRegion() {
-        titleRegion.getChildren().clear();
-
-        if (getSkinnable().isCollapsible()) {
-            titleRegion.getChildren().add(arrowRegion);
-        }
-        titleRegion.getChildren().add(label);
-        titleRegion.setCursor(getSkinnable().isCollapsible() ? Cursor.HAND : Cursor.DEFAULT);
+    // Override LabeledSkinBase updateChildren because
+    // it removes all the children.  The update() in TitleRegion
+    // will replace this method.
+    @Override protected void updateChildren() {
     }
-
+   
     private void setExpanded(boolean expanded) {
         if (! getSkinnable().isCollapsible()) {
             setTransition(1.0f);
@@ -329,6 +301,123 @@ public class TitledPaneSkin extends SkinBase<TitledPane, TitledPaneBehavior>  {
         timeline.play();
     }
 
+    class TitleRegion extends StackPane {
+        private final StackPane arrowRegion;
+
+        public TitleRegion() {
+            getStyleClass().setAll("title");
+            arrowRegion = new StackPane();
+            arrowRegion.setId("arrowRegion");
+            arrowRegion.getStyleClass().setAll("arrow-button");
+
+            StackPane arrow = new StackPane();
+            arrow.setId("arrow");
+            arrow.getStyleClass().setAll("arrow");
+            arrowRegion.getChildren().setAll(arrow);
+
+            setAlignment(Pos.CENTER_LEFT);
+
+            setOnMouseReleased(new EventHandler<MouseEvent>() {
+                @Override public void handle(MouseEvent e) {
+                    getBehavior().toggle();
+                 }
+            });
+
+            // title region consists of the title and the arrow regions
+            update();
+        }
+
+        private void update() {
+            getChildren().clear();
+            final TitledPane titledPane = getSkinnable();
+            
+            if (titledPane.isCollapsible()) {
+                getChildren().add(arrowRegion);
+            }
+
+            // Only in some situations do we want to have the graphicPropertyChangedListener
+            // installed. Since updateChildren() is not called much, we'll just remove it always
+            // and reinstall it later if it is necessary to do so.
+            if (graphic != null) {
+                graphic.layoutBoundsProperty().removeListener(graphicPropertyChangedListener);
+            }
+            // Now update the graphic (since it may have changed)
+            graphic = titledPane.getGraphic();
+            // Now update the children (and add the graphicPropertyChangedListener as necessary)
+            if (isIgnoreGraphic()) {
+                if (titledPane.getContentDisplay() == ContentDisplay.GRAPHIC_ONLY) {
+                    getChildren().clear();
+                    getChildren().add(arrowRegion);
+                } else {
+                    getChildren().add(text);
+                }
+            } else {
+                graphic.layoutBoundsProperty().addListener(graphicPropertyChangedListener);
+                if (isIgnoreText()) {
+                    getChildren().add(graphic);
+                } else {
+                    getChildren().addAll(graphic, text);
+                }
+            }
+            setCursor(getSkinnable().isCollapsible() ? Cursor.HAND : Cursor.DEFAULT);
+        }
+
+        @Override protected double computePrefWidth(double height) {
+            double left = snapSpace(getInsets().getLeft());
+            double right = snapSpace(getInsets().getRight());
+            double arrowWidth = 0;
+            double graphicWidth = 0;
+            double textWidth = 0;
+
+            if (arrowRegion != null) {
+                arrowWidth = snapSize(arrowRegion.prefWidth(height));
+            }
+            if (text != null) {
+                textWidth = snapSize(text.prefWidth(height));
+            }
+            if (graphic != null) {
+                graphicWidth = snapSize(graphic.prefWidth(height));
+            }
+
+            return left + arrowWidth + graphicWidth + textWidth + right;
+        }
+
+        @Override protected double computePrefHeight(double width) {
+            double top = snapSpace(getInsets().getTop());
+            double bottom = snapSpace(getInsets().getBottom());
+            double arrowHeight = 0;
+            double graphicHeight = 0;
+            double textHeight = 0;
+
+            if (arrowRegion != null) {
+                arrowHeight = snapSize(arrowRegion.prefHeight(width));
+            }
+            if (text != null) {
+                textHeight = snapSize(text.prefHeight(width));
+            }
+            if (graphic != null) {
+                graphicHeight = snapSize(graphic.prefHeight(width));
+            }
+            return top + Math.max(arrowHeight, Math.max(graphicHeight, textHeight)) + bottom;
+        }
+
+        @Override protected void layoutChildren() {
+            double top = snapSpace(getInsets().getTop());
+            double bottom = snapSpace(getInsets().getBottom());
+            double left = snapSpace(getInsets().getLeft());
+            double right = snapSpace(getInsets().getRight());
+            double width = getWidth() - (left + right);
+            double height = getHeight() - (top + bottom);
+            double arrowWidth = snapSize(arrowRegion.prefWidth(-1));
+            double arrowHeight = snapSize(arrowRegion.prefHeight(-1));
+
+            arrowRegion.resize(arrowWidth, arrowHeight);
+            positionInArea(arrowRegion, left, top, arrowWidth, height,
+                    /*baseline ignored*/0, HPos.CENTER, VPos.CENTER);
+            layoutLabelInArea(left + arrowWidth, top, width - arrowWidth, height);
+        }
+    }
+
     class Content extends StackPane implements TraverseListener {
         private Node content;
         private Rectangle clipRect;
@@ -336,6 +425,7 @@ public class TitledPaneSkin extends SkinBase<TitledPane, TitledPaneBehavior>  {
         private Direction direction;
 
         public Content(Node n) {
+            getStyleClass().setAll("content");
             this.clipRect = new Rectangle();
             setClip(clipRect);
             this.content = n;

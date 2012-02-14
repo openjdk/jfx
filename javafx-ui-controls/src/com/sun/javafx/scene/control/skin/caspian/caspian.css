@@ -2369,7 +2369,7 @@
 }
 
 .titled-pane:focused {
-    -fx-fill: white;
+    -fx-text-fill: white;
 }
 
 .titled-pane > .title {
@@ -2441,7 +2441,7 @@
     -fx-color: -fx-focus-color;
 }
 
-.accordion .titled-pane:focused > .title > .text {
+.accordion .titled-pane:focused {
     -fx-text-fill: white;
 }
 

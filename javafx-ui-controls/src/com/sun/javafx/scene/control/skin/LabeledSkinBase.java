@@ -51,6 +51,7 @@ import javafx.scene.text.Text;
 
 import com.sun.javafx.scene.control.behavior.BehaviorBase;
 import com.sun.javafx.scene.control.behavior.TextBinding;
+import java.util.Collections;
 
 import static javafx.scene.control.ContentDisplay.*;
 import static javafx.scene.control.OverrunStyle.*;
@@ -73,7 +74,7 @@ public abstract class LabeledSkinBase<C extends Labeled, B extends BehaviorBase<
      * A reference to the last-known graphic on the Labeled. This reference
      * is kept so that we can remove listeners from the old graphic later
      */
-    private Node graphic;
+    Node graphic;
 
     /**
      * The cached full width of the non-truncated text. We only want to
@@ -133,10 +134,15 @@ public abstract class LabeledSkinBase<C extends Labeled, B extends BehaviorBase<
         //
         text.fontProperty().bind(labeled.fontProperty());
         
+        // RT-18858: by binding text.fillProperty() to labeled.textFillProperty(),
+        // The text can only be styled through -fx-text-fill.
+        // The reason is because -fx-text-fill is encountered first by CSS and then 
+        // gets overwritten by the latter application of -fx-fill.
+        text.fillProperty().bind(labeled.textFillProperty());
+        
         textClip = new Rectangle();
         text.setClip(textClip);
-
-        updateFill();
+        
         updateTextAlignment();
         updateUnderline();
         updateChildren();
@@ -185,8 +191,6 @@ public abstract class LabeledSkinBase<C extends Labeled, B extends BehaviorBase<
         } else if (p == "HEIGHT") {
             invalidText = true;
             // No requestLayout() because Control will force a layout
-        } else if (p == "TEXT_FILL") {
-            updateFill();
         } else if (p == "FONT") {
             textMetricsChanged();
             invalidateWidths();
@@ -478,13 +482,6 @@ public abstract class LabeledSkinBase<C extends Labeled, B extends BehaviorBase<
             updateWrappingWidth();
             invalidText = false;
         }
-    }
-
-    /**
-     * Updates the fill used to render the text
-     */
-    private void updateFill() {
-        text.setFill(getSkinnable().getTextFill());
     }
 
     /**
@@ -1046,5 +1043,5 @@ public abstract class LabeledSkinBase<C extends Labeled, B extends BehaviorBase<
 
         textClip.setX(text.getLayoutBounds().getMinX());
         textClip.setY(text.getLayoutBounds().getMinY());
-    }
+    }   
 }
