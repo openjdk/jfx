@@ -1639,7 +1639,7 @@ public enum KeyCode {
     }
 
     /**
-     * @treatasprivate implementation detail
+     * @treatAsPrivate implementation detail
      * @deprecated This is an internal API that is not intended for use and will be removed in the next version
      */
     @Deprecated
@@ -1648,7 +1648,7 @@ public enum KeyCode {
     }
 
     /**
-     * @treatasprivate implementation detail
+     * @treatAsPrivate implementation detail
      * @deprecated This is an internal API that is not intended for use and will be removed in the next version
      */
     @Deprecated
@@ -1672,7 +1672,7 @@ public enum KeyCode {
      * @param code Numeric code of the key
      * @return KeyCode object for the given numeric code, null if no such key
      *                 code exists
-     * @treatasprivate implementation detail
+     * @treatAsPrivate implementation detail
      * @deprecated This is an internal API that is not intended for use and will be removed in the next version
      */
     @Deprecated

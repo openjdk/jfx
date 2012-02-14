@@ -83,7 +83,7 @@ public  class Polygon extends Shape {
      * Defines the coordinates of the polygon vertices.
      *
      * @profile common
-     * @defaultvalue empty
+     * @defaultValue empty
      */
     private final ObservableList<Double> points = new TrackableObservableList<Double>() {
         @Override
@@ -100,7 +100,7 @@ public  class Polygon extends Shape {
     public final ObservableList<Double> getPoints() { return points; }
 
     /**
-     * @treatasprivate implementation detail
+     * @treatAsPrivate implementation detail
      * @deprecated This is an internal API that is not intended for use and will be removed in the next version
      */
     @Deprecated
@@ -113,7 +113,7 @@ public  class Polygon extends Shape {
     }
 
     /**
-     * @treatasprivate implementation detail
+     * @treatAsPrivate implementation detail
      * @deprecated This is an internal API that is not intended for use and will be removed in the next version
      */
     @Deprecated
@@ -138,7 +138,7 @@ public  class Polygon extends Shape {
     }
 
     /**
-     * @treatasprivate implementation detail
+     * @treatAsPrivate implementation detail
      * @deprecated This is an internal API that is not intended for use and will be removed in the next version
      */
     @Deprecated
@@ -158,7 +158,7 @@ public  class Polygon extends Shape {
     }
 
     /**
-     * @treatasprivate implementation detail
+     * @treatAsPrivate implementation detail
      * @deprecated This is an internal API that is not intended for use and will be removed in the next version
      */
     @Deprecated

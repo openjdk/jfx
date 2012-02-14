@@ -41,7 +41,7 @@ public class Rectangle2D {
      * The x coordinate of the upper-left corner of this {@code Rectangle2D}.
      *
      * @profile common
-     * @defaultvalue 0.0
+     * @defaultValue 0.0
      */
     public double getMinX() { return minX; }
     private double minX;
@@ -50,7 +50,7 @@ public class Rectangle2D {
      * The y coordinate of the upper-left corner of this {@code Rectangle2D}.
      *
      * @profile common
-     * @defaultvalue 0.0
+     * @defaultValue 0.0
      */
     public double getMinY() { return minY; }
     private double minY;
@@ -59,7 +59,7 @@ public class Rectangle2D {
      * The width of this {@code Rectangle2D}.
      *
      * @profile common
-     * @defaultvalue 0.0
+     * @defaultValue 0.0
      */
     public double getWidth() { return width; }
     private double width;
@@ -68,7 +68,7 @@ public class Rectangle2D {
      * The height of this {@code Rectangle2D}.
      *
      * @profile common
-     * @defaultvalue 0.0
+     * @defaultValue 0.0
      */
     public double getHeight() { return height; }
     private double height;
@@ -77,7 +77,7 @@ public class Rectangle2D {
      * The x coordinate of the lower-right corner of this {@code Rectangle2D}.
      *
      * @profile common
-     * @defaultvalue {@code minX + width}
+     * @defaultValue {@code minX + width}
      */
     public double getMaxX() { return maxX; }
     private double maxX;
@@ -86,7 +86,7 @@ public class Rectangle2D {
      * The y coordinate of the lower-right corner of this {@code Rectangle2D}.
      *
      * @profile common
-     * @defaultvalue {@code minY + height}
+     * @defaultValue {@code minY + height}
      */
     public double getMaxY() { return maxY; }
     private double maxY;

@@ -582,7 +582,7 @@ public class ScrollPane extends Control {
     private static final String PSEUDO_CLASS_PANNABLE = "pannable";
 
     /**
-     * @treatasprivate
+     * @treatAsPrivate
      */
     private static class StyleableProperties {
         private static final StyleableProperty<ScrollPane,ScrollBarPolicy> HBAR_POLICY =
@@ -678,7 +678,7 @@ public class ScrollPane extends Control {
     }
 
     /**
-     * @treatasprivate implementation detail
+     * @treatAsPrivate implementation detail
      * @deprecated This is an internal API that is not intended for use and will be removed in the next version
      */
     @Deprecated
@@ -694,7 +694,7 @@ public class ScrollPane extends Control {
             StyleManager.getInstance().getPseudoclassMask("fitToHeight");
 
     /**
-     * @treatasprivate implementation detail
+     * @treatAsPrivate implementation detail
      * @deprecated This is an internal API that is not intended for use and will be removed in the next version
      */
     @Deprecated @Override public long impl_getPseudoClassState() {

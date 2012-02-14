@@ -135,7 +135,7 @@ public final class TranslateTransition extends Transition {
      * general be larger. For example animations on desktop systems usually run
      * with a maximum of 60fps which gives a granularity of ~17 ms.
      * 
-     * @defaultvalue 400ms
+     * @defaultValue 400ms
      */
     private ObjectProperty<Duration> duration;
     private static final Duration DEFAULT_DURATION = Duration.millis(400);
@@ -182,7 +182,7 @@ public final class TranslateTransition extends Transition {
      * a running {@code TranslateTransition}, the animation has to be stopped
      * and started again to pick up the new value.
      * 
-     * @defaultvalue {@code Double.NaN}
+     * @defaultValue {@code Double.NaN}
      */
     private DoubleProperty fromX;
     private static final double DEFAULT_FROM_X = Double.NaN;
@@ -213,7 +213,7 @@ public final class TranslateTransition extends Transition {
      * a running {@code TranslateTransition}, the animation has to be stopped
      * and started again to pick up the new value.
      * 
-     * @defaultvalue {@code Double.NaN}
+     * @defaultValue {@code Double.NaN}
      */
     private DoubleProperty fromY;
     private static final double DEFAULT_FROM_Y = Double.NaN;
@@ -244,7 +244,7 @@ public final class TranslateTransition extends Transition {
      * a running {@code TranslateTransition}, the animation has to be stopped
      * and started again to pick up the new value.
      * 
-     * @defaultvalue {@code Double.NaN}
+     * @defaultValue {@code Double.NaN}
      */
     private DoubleProperty fromZ;
     private static final double DEFAULT_FROM_Z = Double.NaN;
@@ -274,7 +274,7 @@ public final class TranslateTransition extends Transition {
      * running {@code TranslateTransition}, the animation has to be stopped and
      * started again to pick up the new value.
      * 
-     * @defaultvalue {@code Double.NaN}
+     * @defaultValue {@code Double.NaN}
      */
     private DoubleProperty toX;
     private static final double DEFAULT_TO_X = Double.NaN;
@@ -304,7 +304,7 @@ public final class TranslateTransition extends Transition {
      * running {@code TranslateTransition}, the animation has to be stopped and
      * started again to pick up the new value.
      * 
-     * @defaultvalue {@code Double.NaN}
+     * @defaultValue {@code Double.NaN}
      */
     private DoubleProperty toY;
     private static final double DEFAULT_TO_Y = Double.NaN;
@@ -334,7 +334,7 @@ public final class TranslateTransition extends Transition {
      * running {@code TranslateTransition}, the animation has to be stopped and
      * started again to pick up the new value.
      * 
-     * @defaultvalue {@code Double.NaN}
+     * @defaultValue {@code Double.NaN}
      * @since JavaFX 1.3
      */
     private DoubleProperty toZ;

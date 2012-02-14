@@ -130,7 +130,7 @@ public final class PathTransition extends Transition {
      * general be larger. For example animations on desktop systems usually run
      * with a maximum of 60fps which gives a granularity of ~17 ms.
      * 
-     * @defaultvalue 400ms
+     * @defaultValue 400ms
      */
     private ObjectProperty<Duration> duration;
     private static final Duration DEFAULT_DURATION = Duration.millis(400);
@@ -176,7 +176,7 @@ public final class PathTransition extends Transition {
      * running {@code PathTransition}, the animation has to be stopped and
      * started again to pick up the new value.
      * 
-     * @defaultvalue null
+     * @defaultValue null
      */
     private ObjectProperty<Shape> path;
     private static final Shape DEFAULT_PATH = null;
@@ -227,7 +227,7 @@ public final class PathTransition extends Transition {
      * for a running {@code PathTransition}, the animation has to be stopped and
      * started again to pick up the new value.
      * 
-     * @defaultvalue NONE
+     * @defaultValue NONE
      */
     private ObjectProperty<OrientationType> orientation;
     private static final OrientationType DEFAULT_ORIENTATION = OrientationType.NONE;

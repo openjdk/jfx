@@ -182,7 +182,7 @@ public abstract class ButtonBase extends Labeled {
     private static final long ARMED_PSEUDOCLASS_STATE = StyleManager.getInstance().getPseudoclassMask("armed");
 
     /**
-     * @treatasprivate implementation detail
+     * @treatAsPrivate implementation detail
      * @deprecated This is an internal API that is not intended for use and will be removed in the next version
      */
     @Deprecated

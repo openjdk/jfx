@@ -129,7 +129,7 @@ public final class FadeTransition extends Transition {
      * general be larger. For example animations on desktop systems usually run
      * with a maximum of 60fps which gives a granularity of ~17 ms.
      * 
-     * @defaultvalue 400ms
+     * @defaultValue 400ms
      */
     private ObjectProperty<Duration> duration;
     private static final Duration DEFAULT_DURATION = Duration.millis(400);
@@ -175,7 +175,7 @@ public final class FadeTransition extends Transition {
      * a running {@code FadeTransition}, the animation has to be stopped and
      * started again to pick up the new value.
      * 
-     * @defaultvalue {@code Double.NaN}
+     * @defaultValue {@code Double.NaN}
      */
     private DoubleProperty fromValue;
     private static final double DEFAULT_FROM_VALUE = Double.NaN;
@@ -205,7 +205,7 @@ public final class FadeTransition extends Transition {
      * running {@code FadeTransition}, the animation has to be stopped and
      * started again to pick up the new value.
      * 
-     * @defaultvalue {@code Double.NaN}
+     * @defaultValue {@code Double.NaN}
      */
     private DoubleProperty toValue;
     private static final double DEFAULT_TO_VALUE = Double.NaN;

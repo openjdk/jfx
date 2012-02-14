@@ -66,7 +66,7 @@ public abstract class Light {
      *   Default: Color.WHITE
      *  Identity: n/a
      * </pre>
-     * @defaultvalue WHITE
+     * @defaultValue WHITE
      */
     private ObjectProperty<Color> color;
 
@@ -212,7 +212,7 @@ r.setHeight(t.getLayoutBounds().getHeight() + 20);
          *   Default: 45.0
          *  Identity:  n/a
          * </pre>
-         * @defaultvalue 45.0
+         * @defaultValue 45.0
          */
         private DoubleProperty azimuth;
 
@@ -255,7 +255,7 @@ r.setHeight(t.getLayoutBounds().getHeight() + 20);
          *   Default: 45.0
          *  Identity:  n/a
          * </pre>
-         * @defaultvalue 45.0
+         * @defaultValue 45.0
          */
         private DoubleProperty elevation;
 
@@ -365,7 +365,7 @@ r.setHeight(t.getLayoutBounds().getHeight() + 20);
         }
 
         /**
-         * @treatasprivate implementation detail
+         * @treatAsPrivate implementation detail
          * @deprecated This is an internal API that is not intended for use and will be removed in the next version
          */
         @Deprecated
@@ -381,7 +381,7 @@ r.setHeight(t.getLayoutBounds().getHeight() + 20);
          *   Default: 0.0
          *  Identity: n/a
          * </pre>
-         * @defaultvalue 0.0
+         * @defaultValue 0.0
          */
         private DoubleProperty x;
 
@@ -423,7 +423,7 @@ r.setHeight(t.getLayoutBounds().getHeight() + 20);
          *   Default: 0.0
          *  Identity: n/a
          * </pre>
-         * @defaultvalue 0.0
+         * @defaultValue 0.0
          */
         private DoubleProperty y;
 
@@ -465,7 +465,7 @@ r.setHeight(t.getLayoutBounds().getHeight() + 20);
          *   Default: 0.0
          *  Identity: n/a
          * </pre>
-         * @defaultvalue 0.0
+         * @defaultValue 0.0
          */
         private DoubleProperty z;
 
@@ -584,7 +584,7 @@ r.setHeight(t.getLayoutBounds().getHeight() + 20);
         }
 
         /**
-         * @treatasprivate implementation detail
+         * @treatAsPrivate implementation detail
          * @deprecated This is an internal API that is not intended for use and will be removed in the next version
          */
         @Deprecated
@@ -600,7 +600,7 @@ r.setHeight(t.getLayoutBounds().getHeight() + 20);
          *   Default: 0.0
          *  Identity: n/a
          * </pre>
-         * @defaultvalue 0.0
+         * @defaultValue 0.0
          */
         private DoubleProperty pointsAtX;
 
@@ -642,7 +642,7 @@ r.setHeight(t.getLayoutBounds().getHeight() + 20);
          *   Default: 0.0
          *  Identity: n/a
          * </pre>
-         * @defaultvalue 0.0
+         * @defaultValue 0.0
          */
         private DoubleProperty pointsAtY;
 
@@ -684,7 +684,7 @@ r.setHeight(t.getLayoutBounds().getHeight() + 20);
          *   Default: 0.0
          *  Identity: n/a
          * </pre>
-         * @defaultvalue 0.0
+         * @defaultValue 0.0
          */
         private DoubleProperty pointsAtZ;
 
@@ -727,7 +727,7 @@ r.setHeight(t.getLayoutBounds().getHeight() + 20);
          *   Default: 1.0
          *  Identity: 1.0
          * </pre>
-         * @defaultvalue 1.0
+         * @defaultValue 1.0
          */
         private DoubleProperty specularExponent;
 

@@ -73,7 +73,7 @@ public abstract class PathElement {
     abstract void addTo(PGPath pgPath);
 
     /**
-     * @treatasprivate implementation detail
+     * @treatAsPrivate implementation detail
      * @deprecated This is an internal API that is not intended for use and will be removed in the next version
      */
     @Deprecated
@@ -86,7 +86,7 @@ public abstract class PathElement {
      * actual coordinates.
      *
      * @profile common
-     * @defaultvalue true
+     * @defaultValue true
      */
     private BooleanProperty absolute;
 

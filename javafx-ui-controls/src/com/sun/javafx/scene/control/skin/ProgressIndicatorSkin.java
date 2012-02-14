@@ -541,7 +541,7 @@ public class ProgressIndicatorSkin extends SkinBase<ProgressIndicator, ProgressI
     
     /**
      * Super-lazy instantiation pattern from Bill Pugh.
-     * @treatasprivate implementation detail
+     * @treatAsPrivate implementation detail
      */
     private static class StyleableProperties {
         private static final StyleableProperty<ProgressIndicatorSkin,Paint> PROGRESS_COLOR =
@@ -571,7 +571,7 @@ public class ProgressIndicatorSkin extends SkinBase<ProgressIndicator, ProgressI
         }
     }
     /**
-     * @treatasprivate implementation detail
+     * @treatAsPrivate implementation detail
      * @deprecated This is an internal API that is not intended for use and will be removed in the next version
      */
     @Deprecated

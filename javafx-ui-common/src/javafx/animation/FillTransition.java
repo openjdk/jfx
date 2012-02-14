@@ -121,7 +121,7 @@ public final class FillTransition extends Transition {
      * general be larger. For example animations on desktop systems usually run
      * with a maximum of 60fps which gives a granularity of ~17 ms.
      * 
-     * @defaultvalue 400ms
+     * @defaultValue 400ms
      */
     private ObjectProperty<Duration> duration;
     private static final Duration DEFAULT_DURATION = Duration.millis(400);
@@ -167,7 +167,7 @@ public final class FillTransition extends Transition {
      * a running {@code FillTransition}, the animation has to be stopped and
      * started again to pick up the new value.
      * 
-     * @defaultvalue {@code null}
+     * @defaultValue {@code null}
      */
     private ObjectProperty<Color> fromValue;
     private static final Color DEFAULT_FROM_VALUE = null;
@@ -197,7 +197,7 @@ public final class FillTransition extends Transition {
      * running {@code FillTransition}, the animation has to be stopped and
      * started again to pick up the new value.
      * 
-     * @defaultvalue {@code null}
+     * @defaultValue {@code null}
      */
     private ObjectProperty<Color> toValue;
     private static final Color DEFAULT_TO_VALUE = null;

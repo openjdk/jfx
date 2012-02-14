@@ -99,7 +99,7 @@ public class Reflection extends Effect {
      * If set to {@code null}, or left unspecified, a graphical image of
      * the {@code Node} to which the {@code Effect} is attached will be
      * used as the input.
-     * @defaultvalue null
+     * @defaultValue null
      */
     private ObjectProperty<Effect> input;
 
@@ -138,7 +138,7 @@ public class Reflection extends Effect {
      *   Default: 0.0
      *  Identity: 0.0
      * </pre>
-     * @defaultvalue 0.0
+     * @defaultValue 0.0
      */
     private DoubleProperty topOffset;
 
@@ -184,7 +184,7 @@ public class Reflection extends Effect {
      *   Default: 0.5
      *  Identity: 1.0
      * </pre>
-     * @defaultvalue 0.5
+     * @defaultValue 0.5
      */
     private DoubleProperty topOpacity;
 
@@ -229,7 +229,7 @@ public class Reflection extends Effect {
      *   Default: 0.0
      *  Identity: 1.0
      * </pre>
-     * @defaultvalue 0.0
+     * @defaultValue 0.0
      */
     private DoubleProperty bottomOpacity;
 
@@ -275,7 +275,7 @@ public class Reflection extends Effect {
      *   Default: 0.75
      *  Identity: 1.0
      * </pre>
-     * @defaultvalue 0.75
+     * @defaultValue 0.75
      */
     private DoubleProperty fraction;
 
@@ -341,7 +341,7 @@ public class Reflection extends Effect {
     }
 
     /**
-     * @treatasprivate implementation detail
+     * @treatAsPrivate implementation detail
      * @deprecated This is an internal API that is not intended for use and will be removed in the next version
      */
     @Deprecated

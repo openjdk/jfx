@@ -98,7 +98,7 @@ public  class Group extends Parent {
      * This variable has no effect on content nodes which are not resizable (Shape, Text, etc).
      *
      * @since JavaFX 1.3
-     * @defaultvalue true
+     * @defaultValue true
      */
     private BooleanProperty autoSizeChildren;
 

@@ -115,7 +115,7 @@ public class CellSkinBase<C extends Cell, B extends CellBehaviorBase<C>> extends
 
      /**
       * Super-lazy instantiation pattern from Bill Pugh.
-      * @treatasprivate implementation detail
+      * @treatAsPrivate implementation detail
       */
      private static class StyleableProperties {
          private final static StyleableProperty<CellSkinBase,Number> CELL_SIZE =
@@ -154,7 +154,7 @@ public class CellSkinBase<C extends Cell, B extends CellBehaviorBase<C>> extends
     }
 
     /**
-     * @treatasprivate implementation detail
+     * @treatAsPrivate implementation detail
      * @deprecated This is an internal API that is not intended for use and will be removed in the next version
      */
     @Deprecated

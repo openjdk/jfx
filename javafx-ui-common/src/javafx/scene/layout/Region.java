@@ -316,7 +316,7 @@ public class Region extends Parent {
     }
 
     /**
-     * @treatasprivate implementation detail
+     * @treatAsPrivate implementation detail
      * @deprecated This is an internal API that is not intended for use and will be removed in the next version
      */
     @Deprecated
@@ -865,7 +865,7 @@ public class Region extends Parent {
     }
     /**
      * Some skins relying on this
-     * @treatasprivate implementation detail
+     * @treatAsPrivate implementation detail
      * @deprecated This is an internal API that is not intended for use and will be removed in the next version
      */
     @Deprecated
@@ -899,7 +899,7 @@ public class Region extends Parent {
 
     /**
      * Some skins relying on this
-     * @treatasprivate implementation detail
+     * @treatAsPrivate implementation detail
      * @deprecated This is an internal API that is not intended for use and will be removed in the next version
      */
     @Deprecated
@@ -951,7 +951,7 @@ public class Region extends Parent {
     }
     /**
      * Some skins relying on this
-     * @treatasprivate implementation detail
+     * @treatAsPrivate implementation detail
      * @deprecated This is an internal API that is not intended for use and will be removed in the next version
      */
     @Deprecated
@@ -961,7 +961,7 @@ public class Region extends Parent {
 
     /**
      * Some skins relying on this
-     * @treatasprivate implementation detail
+     * @treatAsPrivate implementation detail
      * @deprecated This is an internal API that is not intended for use and will be removed in the next version
      */
     @Deprecated
@@ -1014,7 +1014,7 @@ public class Region extends Parent {
     
     /**
      * Some skins relying on this
-     * @treatasprivate implementation detail
+     * @treatAsPrivate implementation detail
      * @deprecated This is an internal API that is not intended for use and will be removed in the next version
      */
     @Deprecated
@@ -1024,7 +1024,7 @@ public class Region extends Parent {
 
     /**
      * Some skins relying on this
-     * @treatasprivate implementation detail
+     * @treatAsPrivate implementation detail
      * @deprecated This is an internal API that is not intended for use and will be removed in the next version
      */
     @Deprecated
@@ -1087,7 +1087,7 @@ public class Region extends Parent {
     
     /**
      * Some skins relying on this
-     * @treatasprivate implementation detail
+     * @treatAsPrivate implementation detail
      * @deprecated This is an internal API that is not intended for use and will be removed in the next version
      */
     @Deprecated
@@ -1102,7 +1102,7 @@ public class Region extends Parent {
 
     /**
      * Some skins relying on this
-     * @treatasprivate implementation detail
+     * @treatAsPrivate implementation detail
      * @deprecated This is an internal API that is not intended for use and will be removed in the next version
      */
     @Deprecated
@@ -2049,7 +2049,7 @@ public class Region extends Parent {
      *                                                                         *
      **************************************************************************/
 
-    /** @treatasprivate */
+    /** @treatAsPrivate */
     @Override public void impl_updatePG() {
         super.impl_updatePG();
         PGRegion pg = (PGRegion) impl_getPGNode();
@@ -2231,14 +2231,14 @@ public class Region extends Parent {
     }
 
 
-    /** @treatasprivate */
+    /** @treatAsPrivate */
     @Override public PGNode impl_createPGNode() {
         return Toolkit.getToolkit().createPGRegion();
     }
 
     /**
      * Some skins relying on this
-     * @treatasprivate implementation detail
+     * @treatAsPrivate implementation detail
      * @deprecated This is an internal API that is not intended for use and will be removed in the next version
      */
     @Deprecated
@@ -2380,7 +2380,7 @@ public class Region extends Parent {
 
     /**
      * Some skins relying on this
-     * @treatasprivate implementation detail
+     * @treatAsPrivate implementation detail
      * @deprecated This is an internal API that is not intended for use and will be removed in the next version
      */
     @Deprecated
@@ -2402,7 +2402,7 @@ public class Region extends Parent {
 
     /**
      * Some skins relying on this
-     * @treatasprivate implementation detail
+     * @treatAsPrivate implementation detail
      * @deprecated This is an internal API that is not intended for use and will be removed in the next version
      */
     @Deprecated
@@ -2428,7 +2428,7 @@ public class Region extends Parent {
     /**
      * The layout bounds of this region: {@code 0, 0  width x height}
      *
-     * @treatasprivate implementation detail
+     * @treatAsPrivate implementation detail
      * @deprecated This is an internal API that is not intended for use and will be removed in the next version
      */
     @Deprecated
@@ -2437,7 +2437,7 @@ public class Region extends Parent {
     }
 
     /**
-     * @treatasprivate implementation detail
+     * @treatAsPrivate implementation detail
      * @deprecated This is an internal API that is not intended for use and will be removed in the next version
      */
     @Deprecated
@@ -2446,7 +2446,7 @@ public class Region extends Parent {
     }
 
     /**
-     * @treatasprivate implementation detail
+     * @treatAsPrivate implementation detail
      * @deprecated This is an internal API that is not intended for use and will be removed in the next version
      */
     @Deprecated
@@ -2588,7 +2588,7 @@ public class Region extends Parent {
 
      /**
       * Super-lazy instantiation pattern from Bill Pugh.
-      * @treatasprivate implementation detail
+      * @treatAsPrivate implementation detail
       */
      private static class StyleableProperties {
          private static final StyleableProperty<Region,Insets> PADDING =
@@ -2769,7 +2769,7 @@ public class Region extends Parent {
       * Super-lazy instantiation pattern from Bill Pugh. StyleableProperties is referenced
       * no earlier (and therefore loaded no earlier by the class loader) than
       * the moment that  impl_CSS_STYLEABLES() is called.
-      * @treatasprivate implementation detail
+      * @treatAsPrivate implementation detail
       * @deprecated This is an internal API that is not intended for use and will be removed in the next version
       */
      @Deprecated

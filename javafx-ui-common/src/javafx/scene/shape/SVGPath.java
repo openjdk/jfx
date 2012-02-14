@@ -62,7 +62,7 @@ public  class SVGPath extends Shape {
      * The default value is {@code FillRule.NON_ZERO}.
      *
      * @profile common
-     * @defaultvalue FillRule.NON_ZERO
+     * @defaultValue FillRule.NON_ZERO
      */
     private ObjectProperty<FillRule> fillRule;
 
@@ -105,7 +105,7 @@ public  class SVGPath extends Shape {
      * <a href="http://www.w3.org/TR/SVG/paths.html">http://www.w3.org/TR/SVG/paths.html</a>.
      *
      * @profile common
-     * @defaultvalue empty string
+     * @defaultValue empty string
      */
     private StringProperty content;
 
@@ -146,7 +146,7 @@ public  class SVGPath extends Shape {
     private Object svgPathObject;
 
     /**
-     * @treatasprivate implementation detail
+     * @treatAsPrivate implementation detail
      * @deprecated This is an internal API that is not intended for use and will be removed in the next version
      */
     @Deprecated
@@ -156,7 +156,7 @@ public  class SVGPath extends Shape {
     }
 
     /**
-     * @treatasprivate implementation detail
+     * @treatAsPrivate implementation detail
      * @deprecated This is an internal API that is not intended for use and will be removed in the next version
      */
     @Deprecated
@@ -165,7 +165,7 @@ public  class SVGPath extends Shape {
     }
 
     /**
-     * @treatasprivate implementation detail
+     * @treatAsPrivate implementation detail
      * @deprecated This is an internal API that is not intended for use and will be removed in the next version
      */
     @Deprecated
@@ -182,7 +182,7 @@ public  class SVGPath extends Shape {
     }
 
     /**
-     * @treatasprivate implementation detail
+     * @treatAsPrivate implementation detail
      * @deprecated This is an internal API that is not intended for use and will be removed in the next version
      */
     @Deprecated

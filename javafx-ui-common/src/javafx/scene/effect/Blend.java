@@ -131,7 +131,7 @@ public class Blend extends Effect {
 
     /**
      * Used by Group to convert the FX BlendMode enum value into a Decora value.
-     * @treatasprivate implementation detail
+     * @treatAsPrivate implementation detail
      * @deprecated This is an internal API that is not intended for use and will be removed in the next version
      */
     @Deprecated
@@ -181,7 +181,7 @@ public class Blend extends Effect {
      *   Default: BlendMode.SRC_OVER
      *  Identity: n/a
      * </pre>
-     * @defaultvalue SRC_OVER
+     * @defaultValue SRC_OVER
      */
     private ObjectProperty<BlendMode> mode;
 
@@ -226,7 +226,7 @@ public class Blend extends Effect {
      *   Default: 1.0
      *  Identity: 1.0
      * </pre>
-     * @defaultvalue 1.0
+     * @defaultValue 1.0
      */
     private DoubleProperty opacity;
 
@@ -267,7 +267,7 @@ public class Blend extends Effect {
      * If set to {@code null}, or left unspecified, a graphical image of
      * the {@code Node} to which the {@code Effect} is attached will be
      * used as the input.
-     * @defaultvalue null
+     * @defaultValue null
      */
     private ObjectProperty<Effect> bottomInput;
 
@@ -292,7 +292,7 @@ public class Blend extends Effect {
      * If set to {@code null}, or left unspecified, a graphical image of
      * the {@code Node} to which the {@code Effect} is attached will be
      * used as the input.
-     * @defaultvalue null
+     * @defaultValue null
      */
     private ObjectProperty<Effect> topInput;
 
@@ -347,7 +347,7 @@ public class Blend extends Effect {
     }
 
     /**
-     * @treatasprivate implementation detail
+     * @treatAsPrivate implementation detail
      * @deprecated This is an internal API that is not intended for use and will be removed in the next version
      */
     @Deprecated

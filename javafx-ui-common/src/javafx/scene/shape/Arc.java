@@ -109,7 +109,7 @@ public class Arc extends Shape {
      * Defines the X coordinate of the center point of the arc.
      *
      * @profile common
-     * @defaultvalue 0.0
+     * @defaultValue 0.0
      */
     private DoubleProperty centerX;
 
@@ -151,7 +151,7 @@ public class Arc extends Shape {
      * Defines the Y coordinate of the center point of the arc.
      *
      * @profile common
-     * @defaultvalue 0.0
+     * @defaultValue 0.0
      */
     private DoubleProperty centerY;
 
@@ -194,7 +194,7 @@ public class Arc extends Shape {
      * of which this arc is a partial section.
      *
      * @profile common
-     * @defaultvalue 0.0
+     * @defaultValue 0.0
      */
     private DoubleProperty radiusX;
 
@@ -237,7 +237,7 @@ public class Arc extends Shape {
      * of which this arc is a partial section.
      *
      * @profile common
-     * @defaultvalue 0.0
+     * @defaultValue 0.0
      */
     private DoubleProperty radiusY;
 
@@ -279,7 +279,7 @@ public class Arc extends Shape {
      * Defines the starting angle of the arc in degrees.
      *
      * @profile common
-     * @defaultvalue 0.0
+     * @defaultValue 0.0
      */
     private DoubleProperty startAngle;
 
@@ -321,7 +321,7 @@ public class Arc extends Shape {
      * Defines the angular extent of the arc in degrees.
      *
      * @profile common
-     * @defaultvalue 0.0
+     * @defaultValue 0.0
      */
     private DoubleProperty length;
 
@@ -364,7 +364,7 @@ public class Arc extends Shape {
      * {@link ArcType#OPEN}, {@link ArcType#CHORD},or {@link ArcType#ROUND}.
      *
      * @profile common
-     * @defaultvalue OPEN
+     * @defaultValue OPEN
      */
     private ObjectProperty<ArcType> type;
 
@@ -403,7 +403,7 @@ public class Arc extends Shape {
     }
 
     /**
-     * @treatasprivate implementation detail
+     * @treatAsPrivate implementation detail
      * @deprecated This is an internal API that is not intended for use and will be removed in the next version
      */
     @Deprecated
@@ -416,7 +416,7 @@ public class Arc extends Shape {
     }
 
     /**
-     * @treatasprivate implementation detail
+     * @treatAsPrivate implementation detail
      * @deprecated This is an internal API that is not intended for use and will be removed in the next version
      */
     @Deprecated
@@ -447,7 +447,7 @@ public class Arc extends Shape {
     }
 
     /**
-     * @treatasprivate implementation detail
+     * @treatAsPrivate implementation detail
      * @deprecated This is an internal API that is not intended for use and will be removed in the next version
      */
     @Deprecated

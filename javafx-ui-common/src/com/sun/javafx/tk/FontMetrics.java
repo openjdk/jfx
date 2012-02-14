@@ -39,7 +39,7 @@ import javafx.scene.text.Font;
  * }
  */
 public class FontMetrics {
-    /** @treatasprivate */
+    /** @treatAsPrivate */
     public static FontMetrics impl_createFontMetrics(
             float maxAscent, float ascent, float xheight, float descent,
             float maxDescent, float leading, Font font) {

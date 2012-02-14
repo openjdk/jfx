@@ -473,7 +473,7 @@ public final class CategoryAxis extends Axis<String> {
 
     // -------------- STYLESHEET HANDLING ------------------------------------------------------------------------------
 
-    /** @treatasprivate implementation detail */
+    /** @treatAsPrivate implementation detail */
     private static class StyleableProperties {
         private static final StyleableProperty<CategoryAxis,Number> START_MARGIN =
             new StyleableProperty<CategoryAxis,Number>("-fx-start-margin",
@@ -534,7 +534,7 @@ public final class CategoryAxis extends Axis<String> {
     }
 
     /**
-     * @treatasprivate implementation detail
+     * @treatAsPrivate implementation detail
      * @deprecated This is an internal API that is not intended for use and will be removed in the next version
      */
     @Deprecated

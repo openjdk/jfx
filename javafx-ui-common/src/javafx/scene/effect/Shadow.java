@@ -95,7 +95,7 @@ public class Shadow extends Effect {
      * If set to {@code null}, or left unspecified, a graphical image of
      * the {@code Node} to which the {@code Effect} is attached will be
      * used as the input.
-     * @defaultvalue null
+     * @defaultValue null
      */
     private ObjectProperty<Effect> input;
 
@@ -137,7 +137,7 @@ public class Shadow extends Effect {
      *   Default:  10.0
      *  Identity:   0.0
      * </pre>
-     * @defaultvalue 10.0
+     * @defaultValue 10.0
      */
     private DoubleProperty radius;
 
@@ -207,7 +207,7 @@ public class Shadow extends Effect {
      *   Default:  21.0
      *  Identity:  &lt;1.0
      * </pre>
-     * @defaultvalue 21.0
+     * @defaultValue 21.0
      */
     private DoubleProperty width;
 
@@ -280,7 +280,7 @@ public class Shadow extends Effect {
      *   Default:  21.0
      *  Identity:  &lt;1.0
      * </pre>
-     * @defaultvalue 21.0
+     * @defaultValue 21.0
      */
     private DoubleProperty height;
 
@@ -348,7 +348,7 @@ public class Shadow extends Effect {
      *   Default: BlurType.THREE_PASS_BOX
      *  Identity: n/a
      * </pre>
-     * @defaultvalue THREE_PASS_BOX
+     * @defaultValue THREE_PASS_BOX
      */
     private ObjectProperty<BlurType> blurType;
 
@@ -393,7 +393,7 @@ public class Shadow extends Effect {
      *   Default: Color.BLACK
      *  Identity: n/a
      * </pre>
-     * @defaultvalue BLACK
+     * @defaultValue BLACK
      */
     private ObjectProperty<Color> color;
 
@@ -454,7 +454,7 @@ public class Shadow extends Effect {
     }
 
     /**
-     * @treatasprivate implementation detail
+     * @treatAsPrivate implementation detail
      * @deprecated This is an internal API that is not intended for use and will be removed in the next version
      */
     @Deprecated

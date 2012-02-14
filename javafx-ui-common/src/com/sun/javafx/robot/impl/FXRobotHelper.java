@@ -123,7 +123,7 @@ public class FXRobotHelper {
     }
 
     /**
-     * @treatasprivate implementation detail
+     * @treatAsPrivate implementation detail
      */
     public static void setInputAccessor(FXRobotInputAccessor a) {
         if (inputAccessor != null) {
@@ -134,7 +134,7 @@ public class FXRobotHelper {
     }
 
     /**
-     * @treatasprivate implementation detail
+     * @treatAsPrivate implementation detail
      */
     public static void setSceneAccessor(FXRobotSceneAccessor a) {
         if (sceneAccessor != null) {
@@ -145,7 +145,7 @@ public class FXRobotHelper {
     }
 
     /**
-     * @treatasprivate implementation detail
+     * @treatAsPrivate implementation detail
      */
     public static void setImageConvertor(FXRobotImageConvertor ic) {
         if (imageConvertor != null) {
@@ -156,7 +156,7 @@ public class FXRobotHelper {
     }
 
     /**
-     * @treatasprivate implementation detail
+     * @treatAsPrivate implementation detail
      */
     public static void setStageAccessor(FXRobotStageAccessor a) {
         if (stageAccessor != null) {
@@ -167,14 +167,14 @@ public class FXRobotHelper {
     }
 
     /**
-     * @treatasprivate implementation detail
+     * @treatAsPrivate implementation detail
      */
     public static abstract class FXRobotStageAccessor {
           public abstract ObservableList<Stage> getStages();
     }
 
     /**
-     * @treatasprivate implementation detail
+     * @treatAsPrivate implementation detail
      */
     public static abstract class FXRobotImageConvertor {
           public abstract FXRobotImage
@@ -182,7 +182,7 @@ public class FXRobotHelper {
     }
 
     /**
-     * @treatasprivate implementation detail
+     * @treatAsPrivate implementation detail
      */
     public static abstract class FXRobotInputAccessor {
         public abstract int getCodeForKeyCode(KeyCode keyCode);
@@ -222,7 +222,7 @@ public class FXRobotHelper {
     }
 
     /**
-     * @treatasprivate implementation detail
+     * @treatAsPrivate implementation detail
      */
     public static abstract class FXRobotSceneAccessor {
         public abstract void processKeyEvent(Scene scene, KeyEvent keyEvent);

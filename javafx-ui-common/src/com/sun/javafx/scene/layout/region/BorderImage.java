@@ -63,7 +63,7 @@ public class BorderImage extends Border {
 
     /**
      * Super-lazy instantiation pattern from Bill Pugh.
-     * @treatasprivate implementation detail
+     * @treatAsPrivate implementation detail
      */
     private static class StyleableProperties {
 
@@ -163,7 +163,7 @@ public class BorderImage extends Border {
 
     /**
      * Super-lazy instantiation pattern from Bill Pugh.
-     * @treatasprivate implementation detail
+     * @treatAsPrivate implementation detail
      */
     public static List<StyleableProperty> impl_CSS_STYLEABLES() {
         return BorderImage.StyleableProperties.STYLEABLES;

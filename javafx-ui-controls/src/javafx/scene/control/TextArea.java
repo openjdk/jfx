@@ -415,7 +415,7 @@ public class TextArea extends TextInputControl {
     public static final int DEFAULT_PREF_ROW_COUNT = 10;
 
     /**
-     * @treatasprivate implementation detail
+     * @treatAsPrivate implementation detail
      * @deprecated This is an internal API that is not intended for use and will be removed in the next version
      */
     public static final int DEFAULT_PARAGRAPH_CAPACITY = 32;

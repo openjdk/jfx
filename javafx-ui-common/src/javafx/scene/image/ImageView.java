@@ -173,7 +173,7 @@ public class ImageView extends Node {
     /**
      * The {@link Image} to be painted by this {@code ImageView}.
      *
-     * @defaultvalue null
+     * @defaultValue null
      * @profile common
      */
     private ObjectProperty<Image> image;
@@ -292,7 +292,7 @@ public class ImageView extends Node {
     /**
      * The current x coordinate of the {@code ImageView} origin.
      *
-     * @defaultvalue 0
+     * @defaultValue 0
      * @profile common
      */
     private DoubleProperty x;
@@ -333,7 +333,7 @@ public class ImageView extends Node {
     /**
      * The current y coordinate of the {@code ImageView} origin.
      *
-     * @defaultvalue 0
+     * @defaultValue 0
      * @profile common
      */
     private DoubleProperty y;
@@ -380,7 +380,7 @@ public class ImageView extends Node {
      * view's {@code fitWidth}, {@code fitHeight} and {@code preserveRatio}
      * attributes.
      *
-     * @defaultvalue 0
+     * @defaultValue 0
      * @profile common
      */
     private DoubleProperty fitWidth;
@@ -428,7 +428,7 @@ public class ImageView extends Node {
      * attributes.
      * </p>
      *
-     * @defaultvalue 0
+     * @defaultValue 0
      * @profile common
      */
     private DoubleProperty fitHeight;
@@ -493,7 +493,7 @@ public class ImageView extends Node {
      * will be equal to the size of the scaled image and is guaranteed to be
      * contained within {@code fitWidth x fitHeight} bonding box.
      *
-     * @defaultvalue false
+     * @defaultValue false
      * @profile common
      */
     private BooleanProperty preserveRatio;
@@ -545,7 +545,7 @@ public class ImageView extends Node {
      * The default value depends on platform configuration.
      * </p>
      *
-     * @defaultvalue platform-dependent
+     * @defaultValue platform-dependent
      * @profile common
      */
     private BooleanProperty smooth;
@@ -598,7 +598,7 @@ public class ImageView extends Node {
      * cover the viewport then any remaining area of the viewport will be empty.
      * </p>
      *
-     * @defaultvalue null
+     * @defaultValue null
      * @profile common
      */
     private ObjectProperty<Rectangle2D> viewport;
@@ -649,7 +649,7 @@ public class ImageView extends Node {
     private double destWidth, destHeight;
 
     /**
-     * @treatasprivate implementation detail
+     * @treatAsPrivate implementation detail
      * @deprecated This is an internal API that is not intended for use and will be removed in the next version
      */
     @Deprecated
@@ -662,7 +662,7 @@ public class ImageView extends Node {
     }
 
     /**
-     * @treatasprivate implementation detail
+     * @treatAsPrivate implementation detail
      * @deprecated This is an internal API that is not intended for use and will be removed in the next version
      */
     @Deprecated
@@ -739,7 +739,7 @@ public class ImageView extends Node {
     }
 
     /**
-     * @treatasprivate implementation detail
+     * @treatAsPrivate implementation detail
      * @deprecated This is an internal API that is not intended for use and will be removed in the next version
      */
     @Deprecated
@@ -798,7 +798,7 @@ public class ImageView extends Node {
 
      /**
       * Super-lazy instantiation pattern from Bill Pugh.
-      * @treatasprivate implementation detail
+      * @treatAsPrivate implementation detail
       */
      private static class StyleableProperties {
         // TODO
@@ -832,7 +832,7 @@ public class ImageView extends Node {
      * Super-lazy instantiation pattern from Bill Pugh. StyleableProperties is referenced
      * no earlier (and therefore loaded no earlier by the class loader) than
      * the moment that  impl_CSS_STYLEABLES() is called.
-     * @treatasprivate implementation detail
+     * @treatAsPrivate implementation detail
      * @deprecated This is an internal API that is not intended for use and will be removed in the next version
      */
     @Deprecated
@@ -859,7 +859,7 @@ public class ImageView extends Node {
     }
 
     /**
-     * @treatasprivate implementation detail
+     * @treatAsPrivate implementation detail
      * @deprecated This is an internal API that is not intended for use and will be removed in the next version
      */
     @Deprecated
@@ -884,7 +884,7 @@ public class ImageView extends Node {
     }
 
     /**
-     * @treatasprivate implementation detail
+     * @treatAsPrivate implementation detail
      * @deprecated This is an internal API that is not intended for use and will be removed in the next version
      */
     @Deprecated

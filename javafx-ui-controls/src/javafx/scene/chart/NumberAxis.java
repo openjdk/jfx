@@ -410,7 +410,7 @@ public final class NumberAxis extends ValueAxis<Number> {
 
     // -------------- STYLESHEET HANDLING ------------------------------------------------------------------------------
 
-     /** @treatasprivate implementation detail */
+     /** @treatAsPrivate implementation detail */
     private static class StyleableProperties {
         private static final StyleableProperty<NumberAxis,Number> TICK_UNIT =
             new StyleableProperty<NumberAxis,Number>("-fx-tick-unit",
@@ -439,7 +439,7 @@ public final class NumberAxis extends ValueAxis<Number> {
     }
 
     /**
-     * @treatasprivate implementation detail
+     * @treatAsPrivate implementation detail
      * @deprecated This is an internal API that is not intended for use and will be removed in the next version
      */
     @Deprecated

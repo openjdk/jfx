@@ -229,7 +229,7 @@ public class ImagePattern extends Paint {
     }
 
     /**
-     * @treatasprivate implementation detail
+     * @treatAsPrivate implementation detail
      */
     @Override public Object impl_getPlatformPaint() {
         if (platformPaint == null) {

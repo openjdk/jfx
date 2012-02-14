@@ -68,7 +68,7 @@ public class ImageCursor extends Cursor {
      * The image to display when the cursor is active. If the image is null,
      * {@code Cursor.DEFAULT} will be used.
      *
-     * @defaultvalue null
+     * @defaultValue null
      */
     private ObjectPropertyImpl<Image> image;
 
@@ -95,7 +95,7 @@ public class ImageCursor extends Cursor {
      * less than 0 will be set to 0. A value greater than
      * image.width-1 will be set to image.width-1.
      *
-     * @defaultvalue 0
+     * @defaultValue 0
      */
     private DoublePropertyImpl hotspotX;
 
@@ -122,7 +122,7 @@ public class ImageCursor extends Cursor {
      * less than 0 will be set to 0. A value greater than
      * image.height-1 will be set to image.height-1.
      *
-     * @defaultvalue 0
+     * @defaultValue 0
      */
     private DoublePropertyImpl hotspotY;
 
@@ -290,7 +290,7 @@ public class ImageCursor extends Cursor {
     }
 
     /**
-     * @treatasprivate implementation detail
+     * @treatAsPrivate implementation detail
      * @deprecated This is an internal API that is not intended for use and will be removed in the next version
      */
     @Deprecated

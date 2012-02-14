@@ -113,7 +113,7 @@ public abstract class PopupWindow extends Window {
      * PopupWindow. The root node of the scene should not be modified directly.
      * Rather, subclasses should utilize this method. Package private for now.
      * @return
-     * @treatasprivate implementation detail
+     * @treatAsPrivate implementation detail
      * @deprecated This is an internal API that is not intended for use and will be removed in the next version
      */
     @Deprecated
@@ -304,7 +304,7 @@ public abstract class PopupWindow extends Window {
     }
 
     /**
-     * @treatasprivate implementation detail
+     * @treatAsPrivate implementation detail
      * @deprecated This is an internal API that is not intended for use and will be removed in the next version
      */
     @Deprecated
@@ -323,7 +323,7 @@ public abstract class PopupWindow extends Window {
     private Window focusGrabWindow;
 
     /**
-     * @treatasprivate implementation detail
+     * @treatAsPrivate implementation detail
      * @deprecated This is an internal API that is not intended for use and will be removed in the next version
      */
     @Deprecated
@@ -384,7 +384,7 @@ public abstract class PopupWindow extends Window {
    }
 
     /**
-     * @treatasprivate implementation detail
+     * @treatAsPrivate implementation detail
      * @deprecated This is an internal API that is not intended for use and will be removed in the next version
      */
     @Deprecated

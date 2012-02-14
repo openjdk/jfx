@@ -439,7 +439,7 @@ public class TreeCell<T> extends IndexedCell<T> {
     private static final long COLLAPSED_PSEUDOCLASS_STATE = StyleManager.getInstance().getPseudoclassMask("collapsed");
 
    /**
-     * @treatasprivate implementation detail
+     * @treatAsPrivate implementation detail
      * @deprecated This is an internal API that is not intended for use and will be removed in the next version
      */
     @Deprecated @Override public long impl_getPseudoClassState() {

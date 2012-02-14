@@ -307,7 +307,7 @@ public class DragEvent extends InputEvent {
 
     /**
      * Creates a copy of the given drag event with the given fields substituted.
-     * @treatasprivate implementation detail
+     * @treatAsPrivate implementation detail
      * @deprecated This is an internal API that is not intended for use and will be removed in the next version
      */
     @Deprecated
@@ -322,7 +322,7 @@ public class DragEvent extends InputEvent {
 
     /**
      * Creates a copy of the given drag event with the given fields substituted.
-     * @treatasprivate implementation detail
+     * @treatAsPrivate implementation detail
      * @deprecated This is an internal API that is not intended for use and will be removed in the next version
      */
     @Deprecated
@@ -334,7 +334,7 @@ public class DragEvent extends InputEvent {
 
     /**
      * Creates a copy of the given drag event with the given fields substituted.
-     * @treatasprivate implementation detail
+     * @treatAsPrivate implementation detail
      * @deprecated This is an internal API that is not intended for use and will be removed in the next version
      */
     @Deprecated
@@ -348,7 +348,7 @@ public class DragEvent extends InputEvent {
 
     /**
      * Creates a copy of the given drag event with the given fields substituted.
-     * @treatasprivate implementation detail
+     * @treatAsPrivate implementation detail
      * @deprecated This is an internal API that is not intended for use and will be removed in the next version
      */
     @Deprecated
@@ -588,7 +588,7 @@ public class DragEvent extends InputEvent {
      * Indicates if this event has been accepted.
      * @see #acceptTransferModes
      * @profile common
-     * @defaultvalue false
+     * @defaultValue false
      */
     public final boolean isAccepted() { return state.accepted; }
 
@@ -601,7 +601,7 @@ public class DragEvent extends InputEvent {
     }
 
     /**
-     * @treatasprivate implementation detail
+     * @treatAsPrivate implementation detail
      * @deprecated This is an internal API that is not intended for use and will be removed in the next version
      */
     @Deprecated
@@ -624,7 +624,7 @@ public class DragEvent extends InputEvent {
     private Dragboard dragboard;
 
     /**
-     * @treatasprivate implementation detail
+     * @treatAsPrivate implementation detail
      * @deprecated This is an internal API that is not intended for use and will be removed in the next version
      */
     @Deprecated
@@ -740,7 +740,7 @@ public class DragEvent extends InputEvent {
 
     /**
      * Used by toolkit
-     * @treatasprivate implementation detail
+     * @treatAsPrivate implementation detail
      * @deprecated This is an internal API that is not intended for use and will be removed in the next version
      */
     @Deprecated
@@ -750,7 +750,7 @@ public class DragEvent extends InputEvent {
 
     /**
      * Used by toolkit
-     * @treatasprivate implementation detail
+     * @treatAsPrivate implementation detail
      * @deprecated This is an internal API that is not intended for use and will be removed in the next version
      */
     @Deprecated
@@ -777,7 +777,7 @@ public class DragEvent extends InputEvent {
     }
 
     /**
-     * @treatasprivate implementation detail
+     * @treatAsPrivate implementation detail
      * @deprecated This is an internal API that is not intended for use and will be removed in the next version
      */
     @Deprecated
