@@ -25,6 +25,7 @@
 
 package com.sun.javafx.scene.control.skin;
 
+import com.sun.javafx.event.EventDispatchChainImpl;
 import com.sun.javafx.scene.control.WeakListChangeListener;
 import javafx.scene.control.ComboBox;
 import com.sun.javafx.scene.control.behavior.ComboBoxListViewBehavior;
@@ -35,11 +36,14 @@ import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
 import javafx.collections.ListChangeListener;
 import javafx.collections.ObservableList;
+import javafx.event.Event;
+import javafx.event.EventDispatchChain;
 import javafx.event.EventHandler;
 import javafx.event.EventTarget;
 import javafx.scene.Node;
 import javafx.scene.Parent;
 import javafx.scene.control.*;
+import javafx.scene.input.InputEvent;
 import javafx.scene.input.KeyCode;
 import javafx.scene.input.KeyEvent;
 import javafx.scene.input.MouseEvent;
@@ -57,7 +61,7 @@ public class ComboBoxListViewSkin<T> extends ComboBoxPopupControl<T> {
     private final ComboBox<T> comboBox;
     
     private ListCell<T> listCellLabel;
-    private TextField textField;
+    private FocusableTextField textField;
     
     private final ListView<T> listView;
     
@@ -71,9 +75,15 @@ public class ComboBoxListViewSkin<T> extends ComboBoxPopupControl<T> {
         // move focus in to the textfield if the comboBox is editable
         comboBox.focusedProperty().addListener(new ChangeListener<Boolean>() {
             @Override public void changed(ObservableValue<? extends Boolean> ov, Boolean t, Boolean t1) {
-                if (comboBox.isFocused() && textField != null) {
-                    textField.requestFocus();
-                }
+                if (textField == null) return;
+                textField.setFakeFocus(comboBox.isFocused());
+            }
+        });
+        
+        comboBox.addEventFilter(InputEvent.ANY, new EventHandler<InputEvent>() {
+            @Override public void handle(InputEvent t) {
+                if (textField == null) return;
+                textField.fireEvent(t);
             }
         });
         
@@ -161,12 +171,21 @@ public class ComboBoxListViewSkin<T> extends ComboBoxPopupControl<T> {
         return displayNode;
     }
     
-    private TextField getEditableInputNode() {
+    private FocusableTextField getEditableInputNode() {
         if (textField != null) return textField;
         
-        textField = new TextField();
+        textField = new FocusableTextField();
         textField.setFocusTraversable(true);
         textField.promptTextProperty().bind(comboBox.promptTextProperty());
+        
+        // focus always goes to the comboBox, which then forwards events down 
+        // to the TextField. This ensures that the ComboBox appears focused
+        // externally for people listening to the focus property.
+        textField.focusedProperty().addListener(new ChangeListener<Boolean>() {
+            @Override public void changed(ObservableValue<? extends Boolean> ov, Boolean t, Boolean t1) {
+                comboBox.requestFocus();
+            }
+        });
 
         // When the user hits the enter key, set the value in the 
         // ComboBox value property
@@ -358,7 +377,7 @@ public class ComboBoxListViewSkin<T> extends ComboBoxPopupControl<T> {
     @Override protected double computeMinWidth(double height) {
         return 50;
     }
-    
+
     
     /**************************************************************************
      * 
@@ -368,5 +387,20 @@ public class ComboBoxListViewSkin<T> extends ComboBoxPopupControl<T> {
     
     ListView<T> getListView() {
         return listView;
+    }
+    
+    
+    private final class FocusableTextField extends TextField {
+    
+        public void setFakeFocus(boolean focus) {
+            setFocused(focus);
+        }
+
+        @Override
+        public EventDispatchChain buildEventDispatchChain(EventDispatchChain tail) {
+            EventDispatchChain chain = new EventDispatchChainImpl();
+            chain.append(textField.getEventDispatcher());
+            return chain;
+        }
     }
 }
