@@ -524,7 +524,7 @@ public class TreeView<T> extends Control {
      * be one. If the root had three children and the root was expanded, the value
      * will be four.
      * 
-     * @treatasprivate implementation detail
+     * @treatAsPrivate implementation detail
      * @deprecated This is an internal API that is not intended for use and will be removed in the next version
      */
     @Deprecated
@@ -533,7 +533,7 @@ public class TreeView<T> extends Control {
     }
 
     /**
-     * @treatasprivate implementation detail
+     * @treatAsPrivate implementation detail
      * @deprecated This is an internal API that is not intended for use and will be removed in the next version
      */
     @Deprecated

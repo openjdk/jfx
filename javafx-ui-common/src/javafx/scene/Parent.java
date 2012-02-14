@@ -99,7 +99,7 @@ public abstract class Parent extends Node {
     private boolean removedChildrenExceedsThreshold = false;
 
     /**
-     * @treatasprivate implementation detail
+     * @treatAsPrivate implementation detail
      * @deprecated This is an internal API that is not intended for use and will be removed in the next version
      */
     @Deprecated
@@ -226,7 +226,7 @@ public abstract class Parent extends Node {
      * appears in two different bound ObservableList.
      *
      * @profile common
-     * @defaultvalue empty
+     * @defaultValue empty
      * @since JavaFX 1.3
      */
     private final ObservableList<Node> children = new VetoableObservableList<Node>() {
@@ -246,8 +246,6 @@ public abstract class Parent extends Node {
                 Toolkit.getToolkit().checkFxUserThread();
             }
             geomChanged = false;
-            boolean rollback = false;
-            String errMsg = "";
 
             long newLength = children.size() + newNodes.size();
             int removedLength = 0;
@@ -258,23 +256,24 @@ public abstract class Parent extends Node {
 
             // If the childrenTriggerPermutation flag is set, then we know it
             // is a simple permutation and no further checking is needed.
-            //
+            childrenModified = false;
+            if (childrenTriggerPermutation) {
+                return;
+            }
+
             // If the childrenTriggerPermutation flag is not set, then we will
             // check to see whether any element in the ObservableList has changed,
             // or whether the new ObservableList is a permutation on the existing
-            // ObservableList. Note that even if the childrenChanged flag is false,
+            // ObservableList. Note that even if the childrenModified flag is false,
             // we still have to check for duplicates. If it is a simple
             // permutation, we can avoid checking for cycles or other parents.
-            childrenModified = false;
-            if (!childrenTriggerPermutation) {
-                childrenModified = true;
-                if (newLength == childSet.size()) {
-                    childrenModified = false;
-                    for (Node n : newNodes) {
-                        if (!childSet.contains(n)) {
-                            childrenModified = true;
-                            break;
-                        }
+            childrenModified = true;
+            if (newLength == childSet.size()) {
+                childrenModified = false;
+                for (Node n : newNodes) {
+                    if (!childSet.contains(n)) {
+                        childrenModified = true;
+                        break;
                     }
                 }
             }
@@ -288,94 +287,91 @@ public abstract class Parent extends Node {
             //
             // 3. If a node would cause a cycle, then it is an error.
             //
+            // 4. If a node is null
+            //
             // Note that if a node is the child of another parent, we will
             // implicitly remove the node from its former Parent after first
             // checking for errors.
 
-            // Check for duplicate children if this is not a simple permutation
-            if (!childrenTriggerPermutation) {
-                // iterate over the nodes that were removed and remove them
-                // from the hash set.
-                for (int i = 0; i < toBeRemoved.length; i += 2) {
-                    for (int j = toBeRemoved[i]; j < toBeRemoved[i + 1]; j++) {
-                        childSet.remove(children.get(j));
-                    }
-                }
-
-                // add each of the new nodes to the hash set
-                for (Node node : newNodes) {
-                    childSet.add(node);
-                }
-
-                if (childSet.size() != newLength) {
-                    // dang, we've got duplicates!
-                    errMsg = "Children: duplicate children added parent=" + Parent.this;
-                    rollback = true;
-
-                    //Return children to it's original state
-                    childSet.clear();
-                    for (Node n : children) {
-                        childSet.add(n);
-                    }
+            // iterate over the nodes that were removed and remove them from
+            // the hash set.
+            for (int i = 0; i < toBeRemoved.length; i += 2) {
+                for (int j = toBeRemoved[i]; j < toBeRemoved[i + 1]; j++) {
+                    childSet.remove(children.get(j));
                 }
             }
 
-            if (!rollback) {
+            try {
+                childSet.addAll(newNodes);
+                if (childSet.size() != newLength) {
+                    throw new IllegalArgumentException(
+                            constructExceptionMessage(
+                                "duplicate children added", null));
+                }
+
                 if (childrenModified) {
-                    for (Node n : newNodes) {
-                        if (n != null && (n.impl_getClipParent() != null) || 
-                                wouldCreateCycle(Parent.this, n)) {
-
-                            String cause = null;
-                            if (n.impl_getClipParent() != null) {
-                                cause = "node already used as a clip";
-                            } else {
-                                cause = "cycle detected";
-                            }
-
-                            errMsg = "Children " + cause + ": parent=" + this +
-                                    " node= " + n;
-                            rollback = true;
-                            break;
+                    for (Node node : newNodes) {
+                        if (node == null) {
+                            throw new NullPointerException(
+                                    constructExceptionMessage(
+                                        "child node is null", null));
+                        }
+                        if (node.impl_getClipParent() != null) {
+                            throw new IllegalArgumentException(
+                                    constructExceptionMessage(
+                                        "node already used as a clip", node));
+                        }
+                        if (wouldCreateCycle(Parent.this, node)) {
+                            throw new IllegalArgumentException(
+                                    constructExceptionMessage(
+                                        "cycle detected", node));
                         }
                     }
                 }
+            } catch (RuntimeException e) {
+                //Return children to it's original state
+                childSet.clear();
+                childSet.addAll(children);
+
+                // rethrow
+                throw e;
             }
 
             // Done with error checking
-            if (rollback) {
-                throw new IllegalArgumentException(errMsg);
+
+            if (!childrenModified) {
+                return;
             }
 
             // iterate over the nodes that were removed and clear their
             // parent and scene. Add to them also to removed list for further
             // dirty regions calculation.
-            if (childrenModified) {
-                if (removed == null) removed = new ArrayList<Node>();
-                if (removed.size() + removedLength > REMOVED_CHILDREN_THRESHOLD) {
-                    //do not populate too many children in removed list
-                    removedChildrenExceedsThreshold = true;
-                }
-                for (int i = 0; i < toBeRemoved.length; i += 2) {
-                    for (int j = toBeRemoved[i]; j < toBeRemoved[i + 1]; j++) {
-                        Node old = children.get(j);
-                        if (dirtyChildren != null) {
-                            dirtyChildren.remove(old);
-                        }
-                        if (old == null) {
-                            continue;
-                        }
+            if (removed == null) {
+                removed = new ArrayList<Node>();
+            }
+            if (removed.size() + removedLength > REMOVED_CHILDREN_THRESHOLD) {
+                //do not populate too many children in removed list
+                removedChildrenExceedsThreshold = true;
+            }
+            for (int i = 0; i < toBeRemoved.length; i += 2) {
+                for (int j = toBeRemoved[i]; j < toBeRemoved[i + 1]; j++) {
+                    Node old = children.get(j);
+                    if (dirtyChildren != null) {
+                        dirtyChildren.remove(old);
+                    }
+                    if (old == null) {
+                        continue;
+                    }
 
-                        if (!geomChanged && old.isVisible()) {
-                            geomChanged = childRemoved(old);
-                        }
-                        if (old.getParent() == Parent.this) {
-                            old.setParent(null);
-                            old.setScene(null);
-                        }
-                        if (!removedChildrenExceedsThreshold) {
-                            removed.add(old);
-                        }
+                    if (!geomChanged && old.isVisible()) {
+                        geomChanged = childRemoved(old);
+                    }
+                    if (old.getParent() == Parent.this) {
+                        old.setParent(null);
+                        old.setScene(null);
+                    }
+                    if (!removedChildrenExceedsThreshold) {
+                        removed.add(old);
                     }
                 }
             }
@@ -483,6 +479,18 @@ public abstract class Parent extends Node {
             }
 
             impl_markDirty(DirtyBits.PARENT_CHILDREN);
+        }
+
+        private String constructExceptionMessage(
+                String cause, Node offendingNode) {
+            final StringBuilder sb = new StringBuilder("Children: ");
+            sb.append(cause);
+            sb.append(": parent = ").append(Parent.this);
+            if (offendingNode != null) {
+                sb.append(", node = ").append(offendingNode);
+            }
+
+            return sb.toString();
         }
     };
 
@@ -647,7 +655,7 @@ public abstract class Parent extends Node {
     }
 
     /**
-     * @treatasprivate implementation detail
+     * @treatAsPrivate implementation detail
      * @deprecated This is an internal API that is not intended for use and will be removed in the next version
      */
     @Deprecated
@@ -664,7 +672,7 @@ public abstract class Parent extends Node {
     }
 
     /**
-     * @treatasprivate implementation detail
+     * @treatAsPrivate implementation detail
      * @deprecated This is an internal API that is not intended for use and will be removed in the next version
      */
     @Deprecated
@@ -712,12 +720,12 @@ public abstract class Parent extends Node {
         return results;
     }
     
-    /** @treatasprivate implementation detail */
+    /** @treatAsPrivate implementation detail */
     private javafx.beans.property.ObjectProperty<TraversalEngine> impl_traversalEngine;
 
 
     /**
-     * @treatasprivate implementation detail
+     * @treatAsPrivate implementation detail
      * @deprecated This is an internal API that is not intended for use and will be removed in the next version
      */
     @Deprecated
@@ -726,7 +734,7 @@ public abstract class Parent extends Node {
     }
 
     /**
-     * @treatasprivate implementation detail
+     * @treatAsPrivate implementation detail
      * @deprecated This is an internal API that is not intended for use and will be removed in the next version
      */
     @Deprecated
@@ -735,7 +743,7 @@ public abstract class Parent extends Node {
     }
 
     /**
-     * @treatasprivate implementation detail
+     * @treatAsPrivate implementation detail
      * @deprecated This is an internal API that is not intended for use and will be removed in the next version
      */
     @Deprecated
@@ -965,7 +973,7 @@ public abstract class Parent extends Node {
     }
 
     /**
-     * @treatasprivate implementation detail
+     * @treatAsPrivate implementation detail
      * @deprecated This is an internal API that is not intended for use and will be removed in the next version
      */
     @Deprecated
@@ -1057,7 +1065,7 @@ public abstract class Parent extends Node {
     }
     
     /**
-     * @treatasprivate implementation detail
+     * @treatAsPrivate implementation detail
      * @deprecated This is an internal API that is not intended for use and will be removed in the next version
      */
     @Deprecated
@@ -1095,7 +1103,7 @@ public abstract class Parent extends Node {
 
 
     /**
-     * @treatasprivate implementation detail
+     * @treatAsPrivate implementation detail
      * @deprecated This is an internal API that is not intended for use and will be removed in the next version
      */
     @Deprecated
@@ -1158,7 +1166,7 @@ public abstract class Parent extends Node {
     private Node far;
 
     /**
-     * @treatasprivate implementation detail
+     * @treatAsPrivate implementation detail
      * @deprecated This is an internal API that is not intended for use and will be removed in the next version
      */
     @Deprecated
@@ -1605,7 +1613,7 @@ public abstract class Parent extends Node {
     /**
      * Overridden to make sure boundsInvalid gets set to true
      *
-     * @treatasprivate implementation detail
+     * @treatAsPrivate implementation detail
      * @deprecated This is an internal API that is not intended for use and will be removed in the next version
      */
     @Deprecated
@@ -1648,7 +1656,7 @@ public abstract class Parent extends Node {
     }
 
     /**
-     * @treatasprivate implementation detail
+     * @treatAsPrivate implementation detail
      * @deprecated This is an internal API that is not intended for use and will be removed in the next version
      */
     @Deprecated
@@ -1672,7 +1680,7 @@ public abstract class Parent extends Node {
 
     /** 
      * temporary to help debug scene graph
-     * @treatasprivate implementation detail
+     * @treatAsPrivate implementation detail
      * @deprecated This is an internal API that is not intended for use and will be removed in the next version
      */
     @Deprecated
@@ -1706,7 +1714,7 @@ public abstract class Parent extends Node {
     }
 
     /**
-     * @treatasprivate implementation detail
+     * @treatAsPrivate implementation detail
      * @deprecated This is an internal API that is not intended for use and will be removed in the next version
      */
     @Deprecated

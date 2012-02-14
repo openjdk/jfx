@@ -342,7 +342,7 @@ public final class ParallelTransition extends Transition {
     }
 
     /**
-     * @treatasprivate implementation detail
+     * @treatAsPrivate implementation detail
      * @deprecated This is an internal API that is not intended for use and will be removed in the next version
      */
     @Deprecated
@@ -413,7 +413,7 @@ public final class ParallelTransition extends Transition {
     }
 
     /**
-     * @treatasprivate implementation detail
+     * @treatAsPrivate implementation detail
      * @deprecated This is an internal API that is not intended for use and will be removed in the next version
      */
     @Deprecated

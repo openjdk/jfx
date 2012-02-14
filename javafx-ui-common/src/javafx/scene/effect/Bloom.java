@@ -96,7 +96,7 @@ public class Bloom extends Effect {
      * If set to {@code null}, or left unspecified, a graphical image of
      * the {@code Node} to which the {@code Effect} is attached will be
      * used as the input.
-     * @defaultvalue null
+     * @defaultValue null
      */
     private ObjectProperty<Effect> input;
 
@@ -134,7 +134,7 @@ public class Bloom extends Effect {
      *   Default: 0.3
      *  Identity: n/a
      * </pre>
-     * @defaultvalue 0.3
+     * @defaultValue 0.3
      */
     private DoubleProperty threshold;
 
@@ -184,7 +184,7 @@ public class Bloom extends Effect {
     }
 
     /**
-     * @treatasprivate implementation detail
+     * @treatAsPrivate implementation detail
      * @deprecated This is an internal API that is not intended for use and will be removed in the next version
      */
     @Deprecated

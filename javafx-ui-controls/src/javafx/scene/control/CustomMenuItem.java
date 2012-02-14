@@ -132,7 +132,7 @@ public class CustomMenuItem extends MenuItem {
      * If true, this menu item, and all visible menus, will be hidden when this
      * menu item is clicked on.
      *
-     * @defaultvalue true
+     * @defaultValue true
      */
     private BooleanProperty hideOnClick;
 

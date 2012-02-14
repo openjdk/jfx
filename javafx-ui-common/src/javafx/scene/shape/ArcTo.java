@@ -104,7 +104,7 @@ public class ArcTo extends PathElement {
      * The horizontal radius to use for the arc.
      *
      * @profile common
-     * @defaultvalue 0.0
+     * @defaultValue 0.0
      */
     private DoubleProperty radiusX;
 
@@ -145,7 +145,7 @@ public class ArcTo extends PathElement {
      * The vertical radius to use for the arc.
      *
      * @profile common
-     * @defaultvalue 0.0
+     * @defaultValue 0.0
      */
     private DoubleProperty radiusY;
 
@@ -186,7 +186,7 @@ public class ArcTo extends PathElement {
      * The x-axis rotation in degrees.
      *
      * @profile common
-     * @defaultvalue 0.0
+     * @defaultValue 0.0
      */
     private DoubleProperty xAxisRotation;
 
@@ -237,7 +237,7 @@ public class ArcTo extends PathElement {
      * The large arc flag.
      *
      * @profile common
-     * @defaultvalue false
+     * @defaultValue false
      */
     private BooleanProperty largeArcFlag;
 
@@ -278,7 +278,7 @@ public class ArcTo extends PathElement {
      * The sweep flag
      *
      * @profile common
-     * @defaultvalue false
+     * @defaultValue false
      */
     private BooleanProperty sweepFlag;
 
@@ -319,7 +319,7 @@ public class ArcTo extends PathElement {
      * The x coordinate to arc to.
      *
      * @profile common
-     * @defaultvalue 0.0
+     * @defaultValue 0.0
      */
     private DoubleProperty x;
 
@@ -360,7 +360,7 @@ public class ArcTo extends PathElement {
      * The y coordinate to arc to.
      *
      * @profile common
-     * @defaultvalue 0.0
+     * @defaultValue 0.0
      */
     private DoubleProperty y;
 
@@ -403,7 +403,7 @@ public class ArcTo extends PathElement {
     }
 
     /**
-     * @treatasprivate implementation detail
+     * @treatAsPrivate implementation detail
      * @deprecated This is an internal API that is not intended for use and will be removed in the next version
      */
     @Deprecated

@@ -125,6 +125,12 @@ public class GlobalMenuAdapter extends Menu implements MenuBase {
                 items.add(new MenuItemAdapter(menuItem));
             }
         }
+        
+        // Set the items in super, so setShowing() can see that it's not empty.
+        getItems().clear();
+        for (MenuItemBase mib : items) {
+            getItems().add((MenuItem)mib);
+        }
     }
 
     public final ObservableList<MenuItemBase> getItemsBase() {

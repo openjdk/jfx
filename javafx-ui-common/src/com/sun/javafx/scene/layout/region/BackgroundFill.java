@@ -45,7 +45,7 @@ public class BackgroundFill {
 
      /**
       * Super-lazy instantiation pattern from Bill Pugh.
-      * @treatasprivate implementation detail
+      * @treatAsPrivate implementation detail
       */
      private static class StyleableProperties {
          
@@ -117,7 +117,7 @@ public class BackgroundFill {
       * Super-lazy instantiation pattern from Bill Pugh. StyleablePropertyHolder is referenced
       * no earlier (and therefore loaded no earlier by the class loader) than
       * the moment that  impl_CSS_STYLEABLES() is called.
-      * @treatasprivate implementation detail
+      * @treatAsPrivate implementation detail
       */
      public static List<StyleableProperty> impl_CSS_STYLEABLES() {
          return BackgroundFill.StyleableProperties.STYLEABLES;
@@ -132,7 +132,7 @@ public class BackgroundFill {
      * Defined the radius of the top left corner of the region this border is
      * being applied to. It only has effect if the region is a rectangular region.
      *
-     * @defaultvalue 0.0
+     * @defaultValue 0.0
      */
     final private double topLeftCornerRadius;
     public double getTopLeftCornerRadius() {
@@ -143,7 +143,7 @@ public class BackgroundFill {
      * Defined the radius of the top right corner of the region this border is
      * being applied to. It only has effect if the region is a rectangular region.
      *
-     * @defaultvalue 0.0
+     * @defaultValue 0.0
      */
     final private double topRightCornerRadius;
     public double getTopRightCornerRadius() {
@@ -154,7 +154,7 @@ public class BackgroundFill {
      * Defined the radius of the bottom left corner of the region this border is
      * being applied to. It only has effect if the region is a rectangular region.
      *
-     * @defaultvalue 0.0
+     * @defaultValue 0.0
      */
     final private double bottomLeftCornerRadius;
     public double getBottomLeftCornerRadius() {
@@ -165,7 +165,7 @@ public class BackgroundFill {
      * Defined the radius of the bottom right corner of the region this border is
      * being applied to. It only has effect if the region is a rectangular region.
      *
-     * @defaultvalue 0.0
+     * @defaultValue 0.0
      */
     final private double bottomRightCornerRadius;
     public double getBottomRightCornerRadius() {

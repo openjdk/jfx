@@ -164,7 +164,7 @@ public class Stage extends Window {
     /**
      * sets this stage to be the primary stage.
      * When run as an applet, this stage will appear in the broswer
-     * @treatasprivate implementation detail
+     * @treatAsPrivate implementation detail
      * @deprecated This is an internal API that is not intended for use and will be removed in the next version
      */
     @Deprecated
@@ -184,7 +184,7 @@ public class Stage extends Window {
     }
     
     /**
-     * @treatasprivate implementation detail
+     * @treatAsPrivate implementation detail
      * @deprecated This is an internal API that is not intended for use and will be removed in the next version
      */
     @Deprecated
@@ -200,7 +200,7 @@ public class Stage extends Window {
      * the purpose of determining whether the application is idle and should
      * exit. The application is considered finished when the last important
      * window is closed.
-     * @treatasprivate implementation detail
+     * @treatAsPrivate implementation detail
      * @deprecated This is an internal API that is not intended for use and will be removed in the next version
      */
     @Deprecated
@@ -221,7 +221,7 @@ public class Stage extends Window {
      * @throws IllegalStateException if this method is called on a thread
      * other than the JavaFX Application Thread.
      *
-     * @treatasprivate implementation detail
+     * @treatAsPrivate implementation detail
      * @deprecated This is an internal API that is not intended for use and will be removed in the next version
      */
     @Deprecated
@@ -254,7 +254,7 @@ public class Stage extends Window {
      * @throws IllegalStateException if this property is set after the stage
      * has ever been made visible.
      *
-     * @defaultvalue StageStyle.DECORATED
+     * @defaultValue StageStyle.DECORATED
      */
     public final void initStyle(StageStyle style) {
         if (hasBeenVisible) {
@@ -286,7 +286,7 @@ public class Stage extends Window {
      *
      * @throws IllegalStateException if this stage is the primary stage.
      *
-     * @defaultvalue Modality.NONE
+     * @defaultValue Modality.NONE
      */
     public final void initModality(Modality modality) {
         if (hasBeenVisible) {
@@ -322,7 +322,7 @@ public class Stage extends Window {
      *
      * @throws IllegalStateException if this stage is the primary stage.
      *
-     * @defaultvalue null
+     * @defaultValue null
      */
     public final void initOwner(Window owner) {
         if (hasBeenVisible) {
@@ -419,7 +419,7 @@ public class Stage extends Window {
      *   {@code UP, DOWN, LEFT, RIGHT, SPACE, TAB, PAGE_UP, PAGE_DOWN, HOME, END, ENTER}
      *  </li>
      * </ul>
-     * @defaultvalue false
+     * @defaultValue false
      * @profile common
      */
     private ReadOnlyBooleanWrapper fullScreen;
@@ -467,7 +467,7 @@ public class Stage extends Window {
      * minimized. The images should be different sizes of the same image and
      * the best size will be chosen, eg. 16x16, 32,32.
      *
-     * @defaultvalue empty
+     * @defaultValue empty
      */
     private ObservableList<Image> icons = new TrackableObservableList<Image>() {
         @Override protected void onChanged(Change<Image> c) {
@@ -494,7 +494,7 @@ public class Stage extends Window {
     /**
      * Defines the title of the {@code Stage}.
      *
-     * @defaultvalue empty string
+     * @defaultValue empty string
      */
     private StringProperty title;
 
@@ -535,7 +535,7 @@ public class Stage extends Window {
      * Defines whether the {@code Stage} is iconified or not.
      *
      * @profile common
-     * @defaultvalue false
+     * @defaultValue false
      */
     private ReadOnlyBooleanWrapper iconified;
 
@@ -583,7 +583,7 @@ public class Stage extends Window {
      * resizable by the user.
      *
      * @profile common
-     * @defaultvalue true
+     * @defaultValue true
      */
     private BooleanProperty resizable;
 
@@ -624,7 +624,7 @@ public class Stage extends Window {
      * Defines the minimum width of this {@code Stage}.
      *
      * @profile common
-     * @defaultvalue 0
+     * @defaultValue 0
      */
     private DoubleProperty minWidth;
 
@@ -669,7 +669,7 @@ public class Stage extends Window {
      * Defines the minimum height of this {@code Stage}.
      *
      * @profile common
-     * @defaultvalue 0
+     * @defaultValue 0
      */
     private DoubleProperty minHeight;
 
@@ -715,7 +715,7 @@ public class Stage extends Window {
      * Defines the maximum width of this {@code Stage}.
      *
      * @profile common
-     * @defaultvalue Double.MAX_VALUE
+     * @defaultValue Double.MAX_VALUE
      */
     private DoubleProperty maxWidth;
 
@@ -760,7 +760,7 @@ public class Stage extends Window {
      * Defines the maximum height of this {@code Stage}.
      *
      * @profile common
-     * @defaultvalue Double.MAX_VALUE
+     * @defaultValue Double.MAX_VALUE
      */
     private DoubleProperty maxHeight;
 
@@ -804,7 +804,7 @@ public class Stage extends Window {
 
     
     /**
-     * @treatasprivate implementation detail
+     * @treatAsPrivate implementation detail
      * @deprecated This is an internal API that is not intended for use and will be removed in the next version
      */
     @Deprecated
@@ -845,7 +845,7 @@ public class Stage extends Window {
 
     
     /**
-     * @treatasprivate implementation detail
+     * @treatAsPrivate implementation detail
      * @deprecated This is an internal API that is not intended for use and will be removed in the next version
      */
     @Deprecated

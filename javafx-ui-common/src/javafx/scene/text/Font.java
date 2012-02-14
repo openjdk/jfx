@@ -232,7 +232,7 @@ public final class Font {
      * this class.
      *
      * @profile common
-     * @defaultvalue empty string
+     * @defaultValue empty string
      */
     public final String getName() { return name; }
     private String name;
@@ -261,7 +261,7 @@ public final class Font {
      * used.
      *
      * @profile common
-     * @defaultvalue 12
+     * @defaultValue 12
      */
     public final double getSize() { return size; }
     private double size;
@@ -483,14 +483,14 @@ public final class Font {
     private Object nativeFont;
 
     /**
-     * @treatasprivate implementation detail
+     * @treatAsPrivate implementation detail
      * @deprecated This is an internal API that is not intended for use and will be removed in the next version
      */
     @Deprecated
     public Object impl_getNativeFont() { return nativeFont; }
 
     /**
-     * @treatasprivate implementation detail
+     * @treatAsPrivate implementation detail
      * @deprecated This is an internal API that is not intended for use and will be removed in the next version
      */
     @Deprecated
@@ -502,7 +502,7 @@ public final class Font {
     }
 
     /**
-     * @treatasprivate implementation detail
+     * @treatAsPrivate implementation detail
      * @deprecated This is an internal API that is not intended for use and will be removed in the next version
      */
     @Deprecated

@@ -173,7 +173,7 @@ final public class Stylesheet {
     }
 
     // protected for unit testing 
-    /** @treatasprivate public to allow unit testing */
+    /** @treatAsPrivate public to allow unit testing */
     public void readBinary(DataInputStream is, String[] strings)
         throws IOException 
     {

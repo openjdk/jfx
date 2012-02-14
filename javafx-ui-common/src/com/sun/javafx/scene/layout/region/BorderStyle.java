@@ -51,7 +51,7 @@ public class BorderStyle {
      * is applied to the boundary of the shape.
      *
      * @profile desktop
-     * @defaultvalue CENTERED
+     * @defaultValue CENTERED
      */
     public StrokeType getStrokeType() { return strokeType; }
     final private StrokeType strokeType;
@@ -62,7 +62,7 @@ public class BorderStyle {
      * {@code StrokeLineJoin.BEVEL}, {@code StrokeLineJoin.MITER},
      * and {@code StrokeLineJoin.ROUND}.
      *
-     * @defaultvalue MITER
+     * @defaultValue MITER
      */
     public StrokeLineJoin getStrokeLineJoin() { return strokeLineJoin; }
     final private StrokeLineJoin strokeLineJoin;
@@ -73,7 +73,7 @@ public class BorderStyle {
      * {@code StrokeLineCap.BUTT}, {@code StrokeLineCap.ROUND},
      * and  {@code StrokeLineCap.SQUARE}.
      *
-     * @defaultvalue SQUARE
+     * @defaultValue SQUARE
      */
     public StrokeLineCap getStrokeLineCap() { return strokeLineCap; }
     final private StrokeLineCap strokeLineCap;
@@ -81,7 +81,7 @@ public class BorderStyle {
     /**
      * Defines the limit for the {@code StrokeLineJoin.MITER} line join style.
      *
-     * @defaultvalue 10
+     * @defaultValue 10
      */
     public double getStrokeMiterLimit() { return strokeMiterLimit; }
     final private double strokeMiterLimit;
@@ -92,7 +92,7 @@ public class BorderStyle {
      * defines the point in the dashing pattern that will correspond
      * to the beginning of the stroke.
      *
-     * @defaultvalue 0
+     * @defaultValue 0
      */
     public double getStrokeDashOffset() { return strokeDashOffset; }
     final private double strokeDashOffset;
@@ -107,7 +107,7 @@ public class BorderStyle {
      * The pen is opaque when its current cumulative distance maps
      * to an even element of the dash array and transparent otherwise.
      * An empty strokeDashArray indicates a solid line with no spaces.
-     * @defaultvalue empty
+     * @defaultValue empty
      */
     public double[] getStrokeDashArray() { return strokeDashArray; }
     final private double[] strokeDashArray;

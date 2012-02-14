@@ -124,7 +124,7 @@ public class CheckMenuItem extends MenuItem {
      * informed whenever the user interacts with the CheckMenuItem (and causes the
      * selected state to be toggled).
      *
-     * @defaultvalue false
+     * @defaultValue false
      */
     private BooleanProperty selected;
     public final void setSelected(boolean value) {

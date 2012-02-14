@@ -143,7 +143,7 @@ public final class Stop {
      * the focus point to the edge of the outermost/largest circle.
      *
      * @profile common
-     * @defaultvalue 0.0
+     * @defaultValue 0.0
      */
     private double offset;
 
@@ -165,7 +165,7 @@ public final class Stop {
      * The color of the gradient at this offset.
      *
      * @profile common
-     * @defaultvalue Color.BLACK
+     * @defaultValue Color.BLACK
      */
     private Color color;
 

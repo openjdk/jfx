@@ -37,7 +37,7 @@ public class Point3D {
      * The x coordinate.
      *
      * @profile common conditional scene3d
-     * @defaultvalue 0.0
+     * @defaultValue 0.0
      */
     private double x;
 
@@ -53,7 +53,7 @@ public class Point3D {
      * The y coordinate.
      *
      * @profile common conditional scene3d
-     * @defaultvalue 0.0
+     * @defaultValue 0.0
      */
     private double y;
 
@@ -69,7 +69,7 @@ public class Point3D {
      * The z coordinate.
      *
      * @profile common conditional scene3d
-     * @defaultvalue 0.0
+     * @defaultValue 0.0
      */
     private double z;
 

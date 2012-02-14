@@ -1031,7 +1031,7 @@ public abstract class Axis<T> extends Region {
     /** Pseudoclass indicating this is a vertical Left side Axis. */
     private static final String PSEUDO_CLASS_LEFT = "left";
 
-    /** @treatasprivate implementation detail */
+    /** @treatAsPrivate implementation detail */
     private static class StyleableProperties {
         private static final StyleableProperty<Axis,Side> SIDE =
             new StyleableProperty<Axis,Side>("-fx-side",
@@ -1156,7 +1156,7 @@ public abstract class Axis<T> extends Region {
     }
                                 
     /**
-     * @treatasprivate implementation detail
+     * @treatAsPrivate implementation detail
      * @deprecated This is an internal API that is not intended for use and will be removed in the next version
      */
     @Deprecated
@@ -1174,7 +1174,7 @@ public abstract class Axis<T> extends Region {
             StyleManager.getInstance().getPseudoclassMask("right");
 
     /**
-     * @treatasprivate implementation detail
+     * @treatAsPrivate implementation detail
      * @deprecated This is an internal API that is not intended for use and will be removed in the next version
      */
     @Deprecated @Override public long impl_getPseudoClassState() {

@@ -86,7 +86,7 @@ public class InputMethodEvent extends InputEvent {
     }
 
     /**
-     * @treatasprivate implementation detail
+     * @treatAsPrivate implementation detail
      * @deprecated This is an internal API that is not intended for use and will be removed in the next version
      */
     @Deprecated
@@ -96,7 +96,7 @@ public class InputMethodEvent extends InputEvent {
     }
 
     /**
-     * @treatasprivate implementation detail
+     * @treatAsPrivate implementation detail
      * @deprecated This is an internal API that is not intended for use and will be removed in the next version
      */
     @Deprecated
@@ -116,7 +116,7 @@ public class InputMethodEvent extends InputEvent {
      * attached to each run.
      *
      * @profile common conditional input_method
-     * @defaultvalue null
+     * @defaultValue null
      */
     private ObservableList<InputMethodTextRun> composed;
 
@@ -139,7 +139,7 @@ public class InputMethodEvent extends InputEvent {
      * composition.
      *
      * @profile common conditional input_method
-     * @defaultvalue empty string
+     * @defaultValue empty string
      */
     private String committed = new String();
 
@@ -158,7 +158,7 @@ public class InputMethodEvent extends InputEvent {
      * If the position is -1, the caret should be invisible.
      *
      * @profile common conditional input_method
-     * @defaultvalue 0
+     * @defaultValue 0
      */
     private int caretPosition;
 

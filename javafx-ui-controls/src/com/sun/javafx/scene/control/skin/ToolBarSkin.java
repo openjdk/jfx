@@ -616,7 +616,7 @@ public class ToolBarSkin extends SkinBase<ToolBar, ToolBarBehavior> implements T
 
      /**
       * Super-lazy instantiation pattern from Bill Pugh.
-      * @treatasprivate implementation detail
+      * @treatAsPrivate implementation detail
       */
      private static class StyleableProperties {
          private static final StyleableProperty<ToolBarSkin,Number> SPACING =
@@ -675,7 +675,7 @@ public class ToolBarSkin extends SkinBase<ToolBar, ToolBarBehavior> implements T
     }
 
     /**
-     * @treatasprivate implementation detail
+     * @treatAsPrivate implementation detail
      * @deprecated This is an internal API that is not intended for use and will be removed in the next version
      */
     @Deprecated

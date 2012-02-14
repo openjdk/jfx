@@ -130,7 +130,7 @@ public final class RotateTransition extends Transition {
      * general be larger. For example animations on desktop systems usually run
      * with a maximum of 60fps which gives a granularity of ~17 ms.
      * 
-     * @defaultvalue 400ms
+     * @defaultValue 400ms
      */
     private ObjectProperty<Duration> duration;
     private static final Duration DEFAULT_DURATION = Duration.millis(400);
@@ -178,7 +178,7 @@ public final class RotateTransition extends Transition {
      * running {@code RotateTransition}, the animation has to be stopped and
      * started again to pick up the new value.
      * 
-     * @defaultvalue null
+     * @defaultValue null
      */
     private ObjectProperty<Point3D> axis;
     private static final Point3D DEFAULT_AXIS = null;
@@ -208,7 +208,7 @@ public final class RotateTransition extends Transition {
      * for a running {@code RotateTransition}, the animation has to be stopped
      * and started again to pick up the new value.
      * 
-     * @defaultvalue {@code Double.NaN}
+     * @defaultValue {@code Double.NaN}
      */
     private DoubleProperty fromAngle;
     private static final double DEFAULT_FROM_ANGLE = Double.NaN;
@@ -238,7 +238,7 @@ public final class RotateTransition extends Transition {
      * a running {@code RotateTransition}, the animation has to be stopped and
      * started again to pick up the new value.
      * 
-     * @defaultvalue {@code Double.NaN}
+     * @defaultValue {@code Double.NaN}
      */
     private DoubleProperty toAngle;
     private static final double DEFAULT_TO_ANGLE = Double.NaN;

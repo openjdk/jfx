@@ -30,18 +30,11 @@ import java.util.Collections;
 import java.util.List;
 
 import javafx.beans.Observable;
-import javafx.beans.property.BooleanProperty;
-import javafx.beans.property.BooleanPropertyBase;
-import javafx.beans.property.DoubleProperty;
-import javafx.beans.property.DoublePropertyBase;
-import javafx.beans.property.ObjectProperty;
-import javafx.beans.property.ObjectPropertyBase;
 import javafx.beans.value.WritableValue;
 import javafx.geometry.Rectangle2D;
 import javafx.scene.Node;
 
 import com.sun.javafx.beans.event.AbstractNotifyListener;
-import com.sun.javafx.css.StyleableObjectProperty;
 import com.sun.javafx.css.StyleableProperty;
 import com.sun.javafx.css.StyleableStringProperty;
 import com.sun.javafx.css.converters.StringConverter;
@@ -180,7 +173,7 @@ public class ImageView extends Node {
     /**
      * The {@link Image} to be painted by this {@code ImageView}.
      *
-     * @defaultvalue null
+     * @defaultValue null
      * @profile common
      */
     private ObjectProperty<Image> image;
@@ -299,7 +292,7 @@ public class ImageView extends Node {
     /**
      * The current x coordinate of the {@code ImageView} origin.
      *
-     * @defaultvalue 0
+     * @defaultValue 0
      * @profile common
      */
     private DoubleProperty x;
@@ -340,7 +333,7 @@ public class ImageView extends Node {
     /**
      * The current y coordinate of the {@code ImageView} origin.
      *
-     * @defaultvalue 0
+     * @defaultValue 0
      * @profile common
      */
     private DoubleProperty y;
@@ -387,7 +380,7 @@ public class ImageView extends Node {
      * view's {@code fitWidth}, {@code fitHeight} and {@code preserveRatio}
      * attributes.
      *
-     * @defaultvalue 0
+     * @defaultValue 0
      * @profile common
      */
     private DoubleProperty fitWidth;
@@ -435,7 +428,7 @@ public class ImageView extends Node {
      * attributes.
      * </p>
      *
-     * @defaultvalue 0
+     * @defaultValue 0
      * @profile common
      */
     private DoubleProperty fitHeight;
@@ -500,7 +493,7 @@ public class ImageView extends Node {
      * will be equal to the size of the scaled image and is guaranteed to be
      * contained within {@code fitWidth x fitHeight} bonding box.
      *
-     * @defaultvalue false
+     * @defaultValue false
      * @profile common
      */
     private BooleanProperty preserveRatio;
@@ -552,7 +545,7 @@ public class ImageView extends Node {
      * The default value depends on platform configuration.
      * </p>
      *
-     * @defaultvalue platform-dependent
+     * @defaultValue platform-dependent
      * @profile common
      */
     private BooleanProperty smooth;
@@ -605,7 +598,7 @@ public class ImageView extends Node {
      * cover the viewport then any remaining area of the viewport will be empty.
      * </p>
      *
-     * @defaultvalue null
+     * @defaultValue null
      * @profile common
      */
     private ObjectProperty<Rectangle2D> viewport;
@@ -656,7 +649,7 @@ public class ImageView extends Node {
     private double destWidth, destHeight;
 
     /**
-     * @treatasprivate implementation detail
+     * @treatAsPrivate implementation detail
      * @deprecated This is an internal API that is not intended for use and will be removed in the next version
      */
     @Deprecated
@@ -669,7 +662,7 @@ public class ImageView extends Node {
     }
 
     /**
-     * @treatasprivate implementation detail
+     * @treatAsPrivate implementation detail
      * @deprecated This is an internal API that is not intended for use and will be removed in the next version
      */
     @Deprecated
@@ -739,15 +732,6 @@ public class ImageView extends Node {
         w = newW;
         h = newH;
 
-//      TODO: the following block is never executed, remove or correct
-//            newW = 1, newH = 1
-//
-//        // if the w or h are non-positive, then there is no size
-//        // for the image view
-//        if (w <= 0 || h <= 0) {
-//            return bounds.invalidate();
-//        }
-
         bounds = bounds.deriveWithNewBounds((float)getX(), (float)getY(), 0.0f,
                 (float)(getX() + w), (float)(getY() + h), 0.0f);
         bounds = tx.transform(bounds, bounds);
@@ -755,7 +739,7 @@ public class ImageView extends Node {
     }
 
     /**
-     * @treatasprivate implementation detail
+     * @treatAsPrivate implementation detail
      * @deprecated This is an internal API that is not intended for use and will be removed in the next version
      */
     @Deprecated
@@ -814,7 +798,7 @@ public class ImageView extends Node {
 
      /**
       * Super-lazy instantiation pattern from Bill Pugh.
-      * @treatasprivate implementation detail
+      * @treatAsPrivate implementation detail
       */
      private static class StyleableProperties {
         // TODO
@@ -848,7 +832,7 @@ public class ImageView extends Node {
      * Super-lazy instantiation pattern from Bill Pugh. StyleableProperties is referenced
      * no earlier (and therefore loaded no earlier by the class loader) than
      * the moment that  impl_CSS_STYLEABLES() is called.
-     * @treatasprivate implementation detail
+     * @treatAsPrivate implementation detail
      * @deprecated This is an internal API that is not intended for use and will be removed in the next version
      */
     @Deprecated
@@ -875,7 +859,7 @@ public class ImageView extends Node {
     }
 
     /**
-     * @treatasprivate implementation detail
+     * @treatAsPrivate implementation detail
      * @deprecated This is an internal API that is not intended for use and will be removed in the next version
      */
     @Deprecated
@@ -900,7 +884,7 @@ public class ImageView extends Node {
     }
 
     /**
-     * @treatasprivate implementation detail
+     * @treatAsPrivate implementation detail
      * @deprecated This is an internal API that is not intended for use and will be removed in the next version
      */
     @Deprecated

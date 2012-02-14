@@ -95,7 +95,7 @@ public  class QuadCurveTo extends PathElement {
      * Defines the X coordinate of the quadratic control point.
      *
      * @profile common
-     * @defaultvalue 0.0
+     * @defaultValue 0.0
      */
     private DoubleProperty controlX;
 
@@ -135,7 +135,7 @@ public  class QuadCurveTo extends PathElement {
      * Defines the Y coordinate of the quadratic control point.
      *
      * @profile common
-     * @defaultvalue 0.0
+     * @defaultValue 0.0
      */
     private DoubleProperty controlY;
 
@@ -175,7 +175,7 @@ public  class QuadCurveTo extends PathElement {
      * Defines the X coordinate of the final end point.
      *
      * @profile common
-     * @defaultvalue 0.0
+     * @defaultValue 0.0
      */
     private DoubleProperty x;
 
@@ -215,7 +215,7 @@ public  class QuadCurveTo extends PathElement {
      * Defines the Y coordinate of the final end point.
      *
      * @profile common
-     * @defaultvalue 0.0
+     * @defaultValue 0.0
      */
     private DoubleProperty y;
 
@@ -271,7 +271,7 @@ public  class QuadCurveTo extends PathElement {
     }
 
     /**
-     * @treatasprivate implementation detail
+     * @treatAsPrivate implementation detail
      * @deprecated This is an internal API that is not intended for use and will be removed in the next version
      */
     @Deprecated

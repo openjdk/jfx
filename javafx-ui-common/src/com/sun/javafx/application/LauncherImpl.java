@@ -36,6 +36,7 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import javafx.application.Application;
+import javafx.application.ConditionalFeature;
 import javafx.application.Preloader;
 import javafx.application.Preloader.ErrorNotification;
 import javafx.application.Preloader.PreloaderNotification;
@@ -49,7 +50,6 @@ public class LauncherImpl {
     private static final boolean simulateSlowProgress = false;
 
     // Ensure that launchApplication method is only called once
-    // TODO: what about preloader?
     private static AtomicBoolean launchCalled = new AtomicBoolean(false);
 
     // Exception found during launching
@@ -108,7 +108,6 @@ public class LauncherImpl {
 //                + preloaderClass);
 
         // Create a new Launcher thread and then wait for that thread to finish
-        // TODO: consider just doing this on the calling thread
         final CountDownLatch launchLatch = new CountDownLatch(1);
         Thread launcherThread = new Thread(new Runnable() {
             @Override public void run() {
@@ -192,7 +191,6 @@ public class LauncherImpl {
 //                System.err.println("JavaFX Launcher: received exit notification");
                 exitCalled.set(true);
                 shutdownLatch.countDown();
-                // TODO: handle exit call from preloader
             }
         };
         PlatformImpl.addListener(listener);
@@ -344,6 +342,33 @@ public class LauncherImpl {
                     }
                 });
             }
+
+            // RT-19600: workaround for Mac crash on exit with J2D pipeline
+            boolean isMac = PlatformUtil.isMac();
+            if (isMac) {
+                // Exit if using the J2D pipeline. Note that currently SCENE3D
+                // is false only if we are running the J2D pipeline.
+                boolean exitOnClose = !PlatformImpl.isSupported(ConditionalFeature.SCENE3D);
+                boolean keepAlive = AccessController.doPrivileged(new PrivilegedAction<Boolean>() {
+                    @Override public Boolean run() {
+                        return Boolean.getBoolean("javafx.keepalive");
+                    }
+                });
+                if (exitOnClose && !keepAlive) {
+                    if (constructorError != null) {
+                        constructorError.printStackTrace();
+                    } else if (initError != null) {
+                        initError.printStackTrace();
+                    } else if(startError != null) {
+                        startError.printStackTrace();
+                    } else if (stopError != null) {
+                        stopError.printStackTrace();
+                    }
+                    System.err.println("JavaFX application launcher: calling System.exit");
+                    System.exit(0);
+                }
+            }
+            // END OF WORKAROUND
 
             if (error) {
                 if (pConstructorError != null) {

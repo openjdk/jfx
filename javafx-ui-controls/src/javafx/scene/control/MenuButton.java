@@ -160,7 +160,7 @@ public class MenuButton extends ButtonBase {
      * edge of the application, you might change {@link #popupSide} to {@code Side.RIGHT} so that
      * the popup will appear to the right of the MenuButton.
      *
-     * @defaultvalue {@code Side.BOTTOM}
+     * @defaultValue {@code Side.BOTTOM}
      */
     // TODO expose via CSS
     private ObjectProperty<Side> popupSide;
@@ -247,7 +247,7 @@ public class MenuButton extends ButtonBase {
     private static final long SHOWING_PSEUDOCLASS_STATE = StyleManager.getInstance().getPseudoclassMask("showing");
 
     /**
-     * @treatasprivate implementation detail
+     * @treatAsPrivate implementation detail
      * @deprecated This is an internal API that is not intended for use and will be removed in the next version
      */
     @Deprecated @Override public long impl_getPseudoClassState() {

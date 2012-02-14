@@ -28,12 +28,6 @@ package javafx.scene.layout;
 
 import javafx.beans.InvalidationListener;
 import javafx.beans.binding.ObjectExpression;
-import javafx.beans.property.BooleanProperty;
-import javafx.beans.property.DoubleProperty;
-import javafx.beans.property.DoublePropertyBase;
-import javafx.beans.property.ObjectProperty;
-import javafx.beans.property.ReadOnlyDoubleProperty;
-import javafx.beans.property.ReadOnlyDoubleWrapper;
 import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableObjectValue;
 import javafx.beans.value.WritableValue;
@@ -76,7 +70,6 @@ import com.sun.javafx.sg.PGShape;
 import com.sun.javafx.sg.Repeat;
 import com.sun.javafx.tk.Toolkit;
 import javafx.beans.property.*;
-import javafx.scene.text.Font;
 
 /**
  * A Region is an area of the screen that can contain other nodes and be styled
@@ -280,7 +273,9 @@ public class Region extends Parent {
                     final Insets newValue = get();
                     if (newValue == null) {
                         // rollback
-                        // TODO: what to do with binding? unbind?
+                        if (isBound()) {
+                            unbind();
+                        }
                         set(lastValidValue);
                         throw new NullPointerException("cannot set padding to null");
                     }
@@ -321,7 +316,7 @@ public class Region extends Parent {
     }
 
     /**
-     * @treatasprivate implementation detail
+     * @treatAsPrivate implementation detail
      * @deprecated This is an internal API that is not intended for use and will be removed in the next version
      */
     @Deprecated
@@ -870,7 +865,7 @@ public class Region extends Parent {
     }
     /**
      * Some skins relying on this
-     * @treatasprivate implementation detail
+     * @treatAsPrivate implementation detail
      * @deprecated This is an internal API that is not intended for use and will be removed in the next version
      */
     @Deprecated
@@ -904,7 +899,7 @@ public class Region extends Parent {
 
     /**
      * Some skins relying on this
-     * @treatasprivate implementation detail
+     * @treatAsPrivate implementation detail
      * @deprecated This is an internal API that is not intended for use and will be removed in the next version
      */
     @Deprecated
@@ -956,7 +951,7 @@ public class Region extends Parent {
     }
     /**
      * Some skins relying on this
-     * @treatasprivate implementation detail
+     * @treatAsPrivate implementation detail
      * @deprecated This is an internal API that is not intended for use and will be removed in the next version
      */
     @Deprecated
@@ -966,7 +961,7 @@ public class Region extends Parent {
 
     /**
      * Some skins relying on this
-     * @treatasprivate implementation detail
+     * @treatAsPrivate implementation detail
      * @deprecated This is an internal API that is not intended for use and will be removed in the next version
      */
     @Deprecated
@@ -1019,7 +1014,7 @@ public class Region extends Parent {
     
     /**
      * Some skins relying on this
-     * @treatasprivate implementation detail
+     * @treatAsPrivate implementation detail
      * @deprecated This is an internal API that is not intended for use and will be removed in the next version
      */
     @Deprecated
@@ -1029,7 +1024,7 @@ public class Region extends Parent {
 
     /**
      * Some skins relying on this
-     * @treatasprivate implementation detail
+     * @treatAsPrivate implementation detail
      * @deprecated This is an internal API that is not intended for use and will be removed in the next version
      */
     @Deprecated
@@ -1092,7 +1087,7 @@ public class Region extends Parent {
     
     /**
      * Some skins relying on this
-     * @treatasprivate implementation detail
+     * @treatAsPrivate implementation detail
      * @deprecated This is an internal API that is not intended for use and will be removed in the next version
      */
     @Deprecated
@@ -1107,7 +1102,7 @@ public class Region extends Parent {
 
     /**
      * Some skins relying on this
-     * @treatasprivate implementation detail
+     * @treatAsPrivate implementation detail
      * @deprecated This is an internal API that is not intended for use and will be removed in the next version
      */
     @Deprecated
@@ -2054,7 +2049,7 @@ public class Region extends Parent {
      *                                                                         *
      **************************************************************************/
 
-    /** @treatasprivate */
+    /** @treatAsPrivate */
     @Override public void impl_updatePG() {
         super.impl_updatePG();
         PGRegion pg = (PGRegion) impl_getPGNode();
@@ -2236,14 +2231,14 @@ public class Region extends Parent {
     }
 
 
-    /** @treatasprivate */
+    /** @treatAsPrivate */
     @Override public PGNode impl_createPGNode() {
         return Toolkit.getToolkit().createPGRegion();
     }
 
     /**
      * Some skins relying on this
-     * @treatasprivate implementation detail
+     * @treatAsPrivate implementation detail
      * @deprecated This is an internal API that is not intended for use and will be removed in the next version
      */
     @Deprecated
@@ -2385,7 +2380,7 @@ public class Region extends Parent {
 
     /**
      * Some skins relying on this
-     * @treatasprivate implementation detail
+     * @treatAsPrivate implementation detail
      * @deprecated This is an internal API that is not intended for use and will be removed in the next version
      */
     @Deprecated
@@ -2407,7 +2402,7 @@ public class Region extends Parent {
 
     /**
      * Some skins relying on this
-     * @treatasprivate implementation detail
+     * @treatAsPrivate implementation detail
      * @deprecated This is an internal API that is not intended for use and will be removed in the next version
      */
     @Deprecated
@@ -2433,7 +2428,7 @@ public class Region extends Parent {
     /**
      * The layout bounds of this region: {@code 0, 0  width x height}
      *
-     * @treatasprivate implementation detail
+     * @treatAsPrivate implementation detail
      * @deprecated This is an internal API that is not intended for use and will be removed in the next version
      */
     @Deprecated
@@ -2442,7 +2437,7 @@ public class Region extends Parent {
     }
 
     /**
-     * @treatasprivate implementation detail
+     * @treatAsPrivate implementation detail
      * @deprecated This is an internal API that is not intended for use and will be removed in the next version
      */
     @Deprecated
@@ -2451,7 +2446,7 @@ public class Region extends Parent {
     }
 
     /**
-     * @treatasprivate implementation detail
+     * @treatAsPrivate implementation detail
      * @deprecated This is an internal API that is not intended for use and will be removed in the next version
      */
     @Deprecated
@@ -2593,7 +2588,7 @@ public class Region extends Parent {
 
      /**
       * Super-lazy instantiation pattern from Bill Pugh.
-      * @treatasprivate implementation detail
+      * @treatAsPrivate implementation detail
       */
      private static class StyleableProperties {
          private static final StyleableProperty<Region,Insets> PADDING =
@@ -2774,7 +2769,7 @@ public class Region extends Parent {
       * Super-lazy instantiation pattern from Bill Pugh. StyleableProperties is referenced
       * no earlier (and therefore loaded no earlier by the class loader) than
       * the moment that  impl_CSS_STYLEABLES() is called.
-      * @treatasprivate implementation detail
+      * @treatAsPrivate implementation detail
       * @deprecated This is an internal API that is not intended for use and will be removed in the next version
       */
      @Deprecated

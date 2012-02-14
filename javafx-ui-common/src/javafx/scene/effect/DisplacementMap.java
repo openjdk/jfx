@@ -169,7 +169,7 @@ public class DisplacementMap extends Effect {
      * If set to {@code null}, or left unspecified, a graphical image of
      * the {@code Node} to which the {@code Effect} is attached will be
      * used as the input.
-     * @defaultvalue null
+     * @defaultValue null
      */
     private ObjectProperty<Effect> input;
 
@@ -201,7 +201,7 @@ public class DisplacementMap extends Effect {
 
     /**
      * The map data for this {@code Effect}.
-     * @defaultvalue an empty map
+     * @defaultValue an empty map
      */
     private ObjectProperty<FloatMap> mapData;
 
@@ -265,7 +265,7 @@ public class DisplacementMap extends Effect {
      *   Default: 1.0
      *  Identity: 1.0
      * </pre>
-     * @defaultvalue 1.0
+     * @defaultValue 1.0
      */
     private DoubleProperty scaleX;
 
@@ -310,7 +310,7 @@ public class DisplacementMap extends Effect {
      *   Default: 1.0
      *  Identity: 1.0
      * </pre>
-     * @defaultvalue 1.0
+     * @defaultValue 1.0
      */
     private DoubleProperty scaleY;
 
@@ -355,7 +355,7 @@ public class DisplacementMap extends Effect {
      *   Default: 0.0
      *  Identity: 0.0
      * </pre>
-     * @defaultvalue 0.0
+     * @defaultValue 0.0
      */
     private DoubleProperty offsetX;
 
@@ -400,7 +400,7 @@ public class DisplacementMap extends Effect {
      *   Default: 0.0
      *  Identity: 0.0
      * </pre>
-     * @defaultvalue 0.0
+     * @defaultValue 0.0
      */
     private DoubleProperty offsetY;
 
@@ -445,7 +445,7 @@ public class DisplacementMap extends Effect {
      *   Default: false
      *  Identity:  n/a
      * </pre>
-     * @defaultvalue false
+     * @defaultValue false
      */
     private BooleanProperty wrap;
 
@@ -507,7 +507,7 @@ public class DisplacementMap extends Effect {
     }
 
     /**
-     * @treatasprivate implementation detail
+     * @treatAsPrivate implementation detail
      * @deprecated This is an internal API that is not intended for use and will be removed in the next version
      */
     @Deprecated

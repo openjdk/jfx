@@ -563,7 +563,7 @@ public class TabPane extends Control {
     }
 
     /**
-     * @treatasprivate implementation detail
+     * @treatAsPrivate implementation detail
      * @deprecated This is an internal API that is not intended for use and will be removed in the next version
      */
     @Deprecated
@@ -581,7 +581,7 @@ public class TabPane extends Control {
     private static final long RIGHT_PSEUDOCLASS_STATE = StyleManager.getInstance().getPseudoclassMask("right");
 
     /**
-     * @treatasprivate implementation detail
+     * @treatAsPrivate implementation detail
      * @deprecated This is an internal API that is not intended for use and will be removed in the next version
      */
     @Deprecated @Override public long impl_getPseudoClassState() {

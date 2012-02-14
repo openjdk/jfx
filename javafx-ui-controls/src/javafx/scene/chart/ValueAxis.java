@@ -505,7 +505,7 @@ public abstract class ValueAxis<T extends Number> extends Axis<T> {
 
     // -------------- STYLESHEET HANDLING ------------------------------------------------------------------------------
 
-     /** @treatasprivate implementation detail */
+     /** @treatAsPrivate implementation detail */
     private static class StyleableProperties {
         private static final StyleableProperty<ValueAxis,Number> MINOR_TICK_LENGTH =
             new StyleableProperty<ValueAxis,Number>("-fx-minor-tick-length",
@@ -566,7 +566,7 @@ public abstract class ValueAxis<T extends Number> extends Axis<T> {
      }
 
     /**
-     * @treatasprivate implementation detail
+     * @treatAsPrivate implementation detail
      * @deprecated This is an internal API that is not intended for use and will be removed in the next version
      */
     @Deprecated

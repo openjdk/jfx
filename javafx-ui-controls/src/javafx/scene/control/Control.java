@@ -808,7 +808,7 @@ public abstract class Control extends Parent implements Skinnable {
      **************************************************************************/
 
     /**
-     * @treatasprivate
+     * @treatAsPrivate
      * @deprecated This is an internal API that is not intended for use and will be removed in the next version
      */
     @Deprecated
@@ -819,7 +819,7 @@ public abstract class Control extends Parent implements Skinnable {
     }
 
     /**
-     * @treatasprivate implementation detail
+     * @treatAsPrivate implementation detail
      * @deprecated This is an internal API that is not intended for use and will be removed in the next version
      */
     @Deprecated
@@ -842,7 +842,7 @@ public abstract class Control extends Parent implements Skinnable {
     // overridden to base containment on the Skin rather than on the bounds
     // of the Skin, allowing the Skin to dictate containment.
     /**
-     * @treatasprivate implementation detail
+     * @treatAsPrivate implementation detail
      * @deprecated This is an internal API that is not intended for use and will be removed in the next version
      */
     @Deprecated
@@ -1055,7 +1055,7 @@ public abstract class Control extends Parent implements Skinnable {
     }
 
     /**
-     * @treatasprivate implementation detail
+     * @treatAsPrivate implementation detail
      * @deprecated This is an internal API that is not intended for use and will be removed in the next version
      */
     @Deprecated
@@ -1064,7 +1064,7 @@ public abstract class Control extends Parent implements Skinnable {
     }
 
     /**
-     * @treatasprivate implementation detail
+     * @treatAsPrivate implementation detail
      * @deprecated This is an internal API that is not intended for use and will be removed in the next version
      */
     @Deprecated

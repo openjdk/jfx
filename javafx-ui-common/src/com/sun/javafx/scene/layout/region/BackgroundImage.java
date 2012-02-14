@@ -69,7 +69,7 @@ public class BackgroundImage {
     }
     /**
      * Super-lazy instantiation pattern from Bill Pugh.
-     * @treatasprivate implementation detail
+     * @treatAsPrivate implementation detail
      */
     private static class StyleableProperties {
         
@@ -154,7 +154,7 @@ public class BackgroundImage {
 
     /**
      * Super-lazy instantiation pattern from Bill Pugh.
-     * @treatasprivate implementation detail
+     * @treatAsPrivate implementation detail
      */
     public static List<StyleableProperty> impl_CSS_STYLEABLES() {
         return StyleableProperties.STYLEABLES;

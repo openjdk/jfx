@@ -99,7 +99,7 @@ public class Ellipse extends Shape {
      * Defines the horizontal position of the center of the ellipse in pixels.
      *
      * @profile common
-     * @defaultvalue 0.0
+     * @defaultValue 0.0
      */
     private DoubleProperty centerX;
 
@@ -141,7 +141,7 @@ public class Ellipse extends Shape {
      * Defines the vertical position of the center of the ellipse in pixels.
      *
      * @profile common
-     * @defaultvalue 0.0
+     * @defaultValue 0.0
      */
     private DoubleProperty centerY;
 
@@ -182,7 +182,7 @@ public class Ellipse extends Shape {
      * Defines the width of the ellipse in pixels.
      *
      * @profile common
-     * @defaultvalue 0.0
+     * @defaultValue 0.0
      */
     private DoubleProperty radiusX;
 
@@ -224,7 +224,7 @@ public class Ellipse extends Shape {
      * Defines the height of the ellipse in pixels.
      *
      * @profile common
-     * @defaultvalue 0.0
+     * @defaultValue 0.0
      */
     private DoubleProperty radiusY;
 
@@ -263,7 +263,7 @@ public class Ellipse extends Shape {
     }
 
     /**
-     * @treatasprivate implementation detail
+     * @treatAsPrivate implementation detail
      * @deprecated This is an internal API that is not intended for use and will be removed in the next version
      */
     @Deprecated
@@ -277,7 +277,7 @@ public class Ellipse extends Shape {
     }
 
     /**
-     * @treatasprivate implementation detail
+     * @treatAsPrivate implementation detail
      * @deprecated This is an internal API that is not intended for use and will be removed in the next version
      */
     @Deprecated
@@ -297,7 +297,7 @@ public class Ellipse extends Shape {
     }
 
     /**
-     * @treatasprivate implementation detail
+     * @treatAsPrivate implementation detail
      * @deprecated This is an internal API that is not intended for use and will be removed in the next version
      */
     @Deprecated
@@ -333,7 +333,7 @@ public class Ellipse extends Shape {
     }
 
     /**
-     * @treatasprivate implementation detail
+     * @treatAsPrivate implementation detail
      * @deprecated This is an internal API that is not intended for use and will be removed in the next version
      */
     @Deprecated
@@ -348,7 +348,7 @@ public class Ellipse extends Shape {
     }
 
     /**
-     * @treatasprivate implementation detail
+     * @treatAsPrivate implementation detail
      * @deprecated This is an internal API that is not intended for use and will be removed in the next version
      */
     @Deprecated

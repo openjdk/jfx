@@ -768,7 +768,7 @@ public class TableColumnHeader extends StackPane {
 
     /**
       * Super-lazy instantiation pattern from Bill Pugh.
-      * @treatasprivate implementation detail
+      * @treatAsPrivate implementation detail
       */
      private static class StyleableProperties {
          private static final StyleableProperty<TableColumnHeader,Number> SIZE =
@@ -800,7 +800,7 @@ public class TableColumnHeader extends StackPane {
     }
 
     /**
-     * @treatasprivate implementation detail
+     * @treatAsPrivate implementation detail
      * @deprecated This is an internal API that is not intended for use and will be removed in the next version
      */
     @Deprecated

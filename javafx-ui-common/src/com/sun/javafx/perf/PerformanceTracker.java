@@ -64,14 +64,14 @@ public abstract class PerformanceTracker {
      * Use method instead of def to avoid explicit initialization which could
      * be circular (this class may be referenced before the toolkit is initialized).
      *
-     * @treatasprivate implementation detail
+     * @treatAsPrivate implementation detail
      */
     public static boolean isLoggingEnabled() {
         return Toolkit.getToolkit().getPerformanceTracker().perfLoggingEnabled;
     }
 
     /**
-     * @treatasprivate implementation detail
+     * @treatAsPrivate implementation detail
      */
     public static abstract class SceneAccessor {
         public abstract void setPerfTracker(Scene scene, PerformanceTracker tracker);
@@ -109,7 +109,7 @@ public abstract class PerformanceTracker {
     }
 
     /**
-     * @treatasprivate implementation detail
+     * @treatAsPrivate implementation detail
      */
     public static void setSceneAccessor(SceneAccessor accessor) {
         sceneAccessor = accessor;
@@ -123,7 +123,7 @@ public abstract class PerformanceTracker {
     /**
      * Log an event with given description.
      *
-     * @treatasprivate implementation detail
+     * @treatAsPrivate implementation detail
      */
     public static void logEvent(String desc) {
         Toolkit.getToolkit().getPerformanceTracker().doLogEvent(desc);
@@ -132,14 +132,14 @@ public abstract class PerformanceTracker {
     /**
      * Output full log of events so far.
      *
-     * @treatasprivate implementation detail
+     * @treatAsPrivate implementation detail
      */
     public static void outputLog() {
         Toolkit.getToolkit().getPerformanceTracker().doOutputLog();
     }
 
     /**
-     * @treatasprivate implementation detail
+     * @treatAsPrivate implementation detail
      */
     private boolean perfLoggingEnabled;
     protected boolean isPerfLoggingEnabled() { return perfLoggingEnabled; }
@@ -159,11 +159,11 @@ public abstract class PerformanceTracker {
 
     protected abstract long nanoTime();
     /**
-     * @treatasprivate implementation detail
+     * @treatAsPrivate implementation detail
      */
     public abstract void doOutputLog();
     /**
-     * @treatasprivate implementation detail
+     * @treatAsPrivate implementation detail
      */
     public abstract void doLogEvent(String s);
 
@@ -212,7 +212,7 @@ public abstract class PerformanceTracker {
     }
 
     /**
-     * @treatasprivate implementation detail
+     * @treatAsPrivate implementation detail
      */
     public void pulse() {
         calcPulses();

@@ -140,7 +140,7 @@ public class PerspectiveTransform extends Effect {
      * If set to {@code null}, or left unspecified, a graphical image of
      * the {@code Node} to which the {@code Effect} is attached will be
      * used as the input.
-     * @defaultvalue null
+     * @defaultValue null
      */
     private ObjectProperty<Effect> input;
 
@@ -173,7 +173,7 @@ public class PerspectiveTransform extends Effect {
     /**
      * The x coordinate of the output location onto which the upper left
      * corner of the source is mapped.
-     * @defaultvalue 0.0
+     * @defaultValue 0.0
      */
     private DoubleProperty ulx;
 
@@ -213,7 +213,7 @@ public class PerspectiveTransform extends Effect {
     /**
      * The y coordinate of the output location onto which the upper left
      * corner of the source is mapped.
-     * @defaultvalue 0.0
+     * @defaultValue 0.0
      */
     private DoubleProperty uly;
 
@@ -253,7 +253,7 @@ public class PerspectiveTransform extends Effect {
     /**
      * The x coordinate of the output location onto which the upper right
      * corner of the source is mapped.
-     * @defaultvalue 0.0
+     * @defaultValue 0.0
      */
     private DoubleProperty urx;
 
@@ -293,7 +293,7 @@ public class PerspectiveTransform extends Effect {
     /**
      * The y coordinate of the output location onto which the upper right
      * corner of the source is mapped.
-     * @defaultvalue 0.0
+     * @defaultValue 0.0
      */
     private DoubleProperty ury;
 
@@ -333,7 +333,7 @@ public class PerspectiveTransform extends Effect {
     /**
      * The x coordinate of the output location onto which the lower right
      * corner of the source is mapped.
-     * @defaultvalue 0.0
+     * @defaultValue 0.0
      */
     private DoubleProperty lrx;
 
@@ -373,7 +373,7 @@ public class PerspectiveTransform extends Effect {
     /**
      * The y coordinate of the output location onto which the lower right
      * corner of the source is mapped.
-     * @defaultvalue 0.0
+     * @defaultValue 0.0
      */
     private DoubleProperty lry;
 
@@ -413,7 +413,7 @@ public class PerspectiveTransform extends Effect {
     /**
      * The x coordinate of the output location onto which the lower left
      * corner of the source is mapped.
-     * @defaultvalue 0.0
+     * @defaultValue 0.0
      */
     private DoubleProperty llx;
 
@@ -453,7 +453,7 @@ public class PerspectiveTransform extends Effect {
     /**
      * The y coordinate of the output location onto which the lower left
      * corner of the source is mapped.
-     * @defaultvalue 0.0
+     * @defaultValue 0.0
      */
     private DoubleProperty lly;
 
@@ -505,7 +505,7 @@ public class PerspectiveTransform extends Effect {
     private float devcoords[] = new float[8];
 
     /**
-     * @treatasprivate implementation detail
+     * @treatAsPrivate implementation detail
      * @deprecated This is an internal API that is not intended for use and will be removed in the next version
      */
     @Deprecated

@@ -25,6 +25,7 @@
 
 package javafx.stage;
 
+import com.sun.javafx.pgstub.StubToolkit.ScreenConfiguration;
 import com.sun.javafx.test.MouseEventGenerator;
 import javafx.scene.input.MouseEvent;
 import static org.junit.Assert.assertEquals;
@@ -139,76 +140,6 @@ public class PopupTest {
         assertFalse(p2.isShowing());
     }
     
-    // Test using various objects as parents
-//    @Test
-//    public void testParent() {
-//       Popup p1 = new Popup();
-//       // using stage as parent
-//       p1.setParent(stage);
-//       assertEquals(stage, p1.getParent());
-//       assertEquals(stage, p1.getParentWindow());
-//       // using scene as parent
-//       p1.setParent(scene);
-//       assertEquals(scene, p1.getParent());
-//       assertEquals(stage, p1.getParentWindow());
-//       // using other popup as parent
-//       Popup p2 = new Popup();
-//       p1.show();
-//       p2.setParent(p1);
-//       assertEquals(p1, p2.getParent());
-//       assertEquals(p1.getPopupWindow(), p2.getParentWindow());
-//       // using Node (not in scene) as parent    
-//       Rectangle rect = new Rectangle();
-//       p1.setParent(rect);
-//       assertEquals(rect, p1.getParent());
-//       assertEquals(null, p1.getParentWindow()); 
-//       // using different Object (not Node) as parent    
-//       Integer i = new Integer(1);
-//       p1.setParent(i);
-//       assertEquals(i, p1.getParent());
-//       assertEquals(null, p1.getParentWindow());
-//       // using Node (in scene) as parent
-//       ((Group)scene.getRoot()).getChildren().add(rect);
-//       p1.setParent(rect);
-//       assertEquals(rect, p1.getParent());
-//       assertEquals(stage, p1.getParentWindow());
-//    }
-    
-//    @Test
-//    public void testChangeParent() {
-//       Popup p1 = new Popup();
-//       p1.setParent(stage);
-//       Popup p2 = new Popup();
-//       p1.show();
-//       p2.setParent(p1);
-//       assertEquals(p1, p2.getParent());
-//       assertEquals(p1.getPopupWindow(), p2.getParentWindow());
-//       assertTrue(p1.children.contains(p2));
-//       p2.setParent(stage);
-//       assertEquals(stage, p2.getParent());
-//       assertEquals(stage, p2.getParentWindow());       
-//       assertFalse(p1.children.contains(p2));
-//    }
-    
-//    @Test
-//    public void testGetPopup() {
-//        Popup p1 = new Popup();
-//        p1.setParent(stage);
-//        p1.show();
-//        assertEquals(p1, Popup.impl_getPopup(p1.getPopupWindow()));
-//        // should be null for non-popup stage
-//        assertEquals(null, Popup.impl_getPopup(stage));
-//
-//        // adding different stage extension
-//        stage.getExtensions().add(new WindowExtension() {
-//            @Override
-//            protected void impl_windowUpdated(Window window) {
-//            }
-//        });
-//        // should be null for non-popup stage
-//        assertEquals(null, Popup.impl_getPopup(stage));
-//    }
-        
     @Test
     public void testAutoHiding() {
         Popup p1 = new Popup();
@@ -288,24 +219,6 @@ public class PopupTest {
         assertTrue(p0.isShowing());
     }
     
-//    @Test
-//    public void testAutoHidingWithoutParent() {                
-//        Popup p1 = new Popup();
-//        p1.show(stage);
-//        assertTrue(p1.isVisible());
-//        Popup p2 = new Popup();
-//        p2.show(p1);
-//        assertTrue(p2.isVisible());
-//        p1.setParent(null);
-//        // test autohiding without root parent
-//        p2.doAutoHide();
-//        assertFalse(p2.isVisible());
-//        // Commenting this assersion for now : need to decide if
-//        // doAutoHide on popup should hide just itself or its parent popup as well.
-//        // PopupEventRedirector should probably take care of it.
-//        //assertFalse(p1.isVisible());
-//    }
-
     @Test
     public void testOnAutohide() {
         Popup p1 = new Popup();
@@ -379,5 +292,79 @@ public class PopupTest {
         Popup p = new Popup();
         assertTrue(p.isAutoFix());
         assertTrue(p.autoFixProperty().get());
+    }
+
+    @Test
+    public void testBasicAutofix() {
+        ((StubToolkit) Toolkit.getToolkit()).setScreens(
+                new ScreenConfiguration(0, 0, 1920, 1200,
+                                        0, 200, 1920, 1000,
+                                        96));
+
+        final Popup popup = new Popup();
+        popup.getContent().add(new Rectangle(0, 0, 50, 50));
+        popup.show(stage, 1900, 100);
+        assertEquals(1920, popup.getX() + popup.getWidth(), 1e-100);
+        assertEquals(200, popup.getY(), 1e-100);
+    }
+
+    @Test
+    public void testAutofixActivationAfterShow() {
+        ((StubToolkit) Toolkit.getToolkit()).setScreens(
+                new ScreenConfiguration(0, 0, 1920, 1200,
+                                        0, 200, 1920, 1000,
+                                        96));
+
+        final Popup popup = new Popup();
+        popup.setAutoFix(false);
+        popup.getContent().add(new Rectangle(0, 0, 50, 50));
+        popup.show(stage, 1900, 100);
+
+        assertEquals(1900, popup.getX(), 1e-100);
+        assertEquals(100, popup.getY(), 1e-100);
+
+        popup.setAutoFix(true);
+        assertEquals(1920, popup.getX() + popup.getWidth(), 1e-100);
+        assertEquals(200, popup.getY(), 1e-100);
+    }
+
+    @Test
+    public void testAutofixOnContentChange() {
+        ((StubToolkit) Toolkit.getToolkit()).setScreens(
+                new ScreenConfiguration(0, 0, 1920, 1200,
+                                        0, 0, 1920, 1172,
+                                        96));
+
+        final Popup popup = new Popup();
+        popup.getContent().add(new Rectangle(0, 0, 50, 50));
+        popup.show(stage, 100, 1120);
+        assertEquals(100, popup.getX(), 1e-100);
+        assertEquals(1120, popup.getY(), 1e-100);
+
+        popup.getContent().add(new Rectangle(0, 0, 50, 100));
+        assertEquals(100, popup.getX(), 1e-100);
+        assertEquals(1172, popup.getY() + popup.getHeight(), 1e-100);
+    }
+
+    @Test
+    public void testAutofixOnScreenChange() {
+        ((StubToolkit) Toolkit.getToolkit()).setScreens(
+                new ScreenConfiguration(0, 0, 1920, 1200,
+                                        0, 0, 1920, 1172,
+                                        96));
+
+        final Popup popup = new Popup();
+        popup.getContent().add(new Rectangle(0, 0, 50, 50));
+        popup.show(stage, 100, 1120);
+        assertEquals(100, popup.getX(), 1e-100);
+        assertEquals(1120, popup.getY(), 1e-100);
+
+        ((StubToolkit) Toolkit.getToolkit()).setScreens(
+                new ScreenConfiguration(0, 0, 1920, 1200,
+                                        120, 0, 1800, 1172,
+                                        96));
+
+        assertEquals(120, popup.getX(), 1e-100);
+        assertEquals(1120, popup.getY(), 1e-100);
     }
 }

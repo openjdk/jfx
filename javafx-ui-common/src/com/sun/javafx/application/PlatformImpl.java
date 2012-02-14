@@ -64,7 +64,7 @@ public class PlatformImpl {
      */
     public static void startup(final Runnable r) {
 
-        // TODO: if we ever support re-launching an application and/or
+        // NOTE: if we ever support re-launching an application and/or
         // launching a second application in the same VM/classloader
         // this will need to be changed.
         if (platformExit.get()) {

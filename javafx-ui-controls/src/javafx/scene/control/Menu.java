@@ -149,7 +149,7 @@ public class Menu extends MenuItem {
     /*
      * Indicates whether the {@link ContextMenu} is currently visible.
      *
-     * @defaultvalue false
+     * @defaultValue false
      */
     private ReadOnlyBooleanWrapper showing;
     

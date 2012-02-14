@@ -321,7 +321,7 @@ public  class CSSNode extends Node {
     }
     
     /**
-     * @treatasprivate Implementation detail
+     * @treatAsPrivate Implementation detail
      */
     @Override
     public Object impl_processMXNode(MXNodeAlgorithm alg, MXNodeAlgorithmContext ctx) {

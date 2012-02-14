@@ -78,7 +78,7 @@ public class Window implements EventTarget {
      * Return all Windows
      *
      * @return Iterator of all Windows
-     * @treatasprivate implementation detail
+     * @treatAsPrivate implementation detail
      * @deprecated This is an internal API that is not intended for use and will be removed in the next version
      */
     @Deprecated
@@ -104,7 +104,7 @@ public class Window implements EventTarget {
      * window size/location synchronization with the window peer, which
      * occurs on every pulse.
      *
-     * @treatasprivate implementation detail
+     * @treatAsPrivate implementation detail
      * @deprecated This is an internal API that is not intended for use and will be removed in the next version
      */
     @Deprecated
@@ -117,7 +117,7 @@ public class Window implements EventTarget {
      * that style has been initialized prior to this call, and so that
      * impl_peer is initialized prior to subsequent initialization.
      *
-     * @treatasprivate implementation detail
+     * @treatAsPrivate implementation detail
      * @deprecated This is an internal API that is not intended for use and will be removed in the next version
      */
     @Deprecated
@@ -126,7 +126,7 @@ public class Window implements EventTarget {
     /**
      * Get Stage's peer
      *
-     * @treatasprivate implementation detail
+     * @treatAsPrivate implementation detail
      * @deprecated This is an internal API that is not intended for use and will be removed in the next version
      */
     @Deprecated
@@ -135,7 +135,7 @@ public class Window implements EventTarget {
     }
 
     /**
-     * @treatasprivate implementation detail
+     * @treatAsPrivate implementation detail
      * @deprecated This is an internal API that is not intended for use and will be removed in the next version
      */
     @Deprecated
@@ -344,7 +344,7 @@ public class Window implements EventTarget {
     };
 
     /**
-     * @treatasprivate
+     * @treatAsPrivate
      * @deprecated
      */
     @Deprecated
@@ -368,7 +368,7 @@ public class Window implements EventTarget {
      * An {@link IllegalStateException} is thrown if this property is set
      * on a thread other than the JavaFX Application Thread.
      *
-     * @defaultvalue null
+     * @defaultValue null
      */
     private SceneModel scene = new SceneModel();
     protected void setScene(Scene value) { scene.set(value); }
@@ -462,7 +462,7 @@ public class Window implements EventTarget {
      * Typically, a {@code Stage} with 0% opacity will not receive any mouse
      * events.
      *
-     * @defaultvalue 1.0
+     * @defaultValue 1.0
      */
     private DoubleProperty opacity;
 
@@ -659,7 +659,7 @@ public class Window implements EventTarget {
      * be able to see it due to the Stage being rendered behind another window
      * or due to the Stage being positioned off the monitor.
      *
-     * @defaultvalue false
+     * @defaultValue false
      */
     private ReadOnlyBooleanWrapper showing = new ReadOnlyBooleanWrapper() {
         private boolean oldVisible;
@@ -791,7 +791,7 @@ public class Window implements EventTarget {
 
     /**
      * This can be replaced by listening for the onShowing/onHiding events
-     * @treatasprivate implementation detail
+     * @treatAsPrivate implementation detail
      * @deprecated This is an internal API that is not intended for use and will be removed in the next version
      */
     @Deprecated
@@ -804,7 +804,7 @@ public class Window implements EventTarget {
 
     /**
      * This can be replaced by listening for the onShown/onHidden events
-     * @treatasprivate implementation detail
+     * @treatAsPrivate implementation detail
      * @deprecated This is an internal API that is not intended for use and will be removed in the next version
      */
     @Deprecated
@@ -975,7 +975,7 @@ public class Window implements EventTarget {
     private int focusGrabCounter;
 
     /**
-     * @treatasprivate implementation detail
+     * @treatAsPrivate implementation detail
      * @deprecated This is an internal API that is not intended for use and will be removed in the next version
      */
     @Deprecated
@@ -986,7 +986,7 @@ public class Window implements EventTarget {
     }
 
     /**
-     * @treatasprivate implementation detail
+     * @treatAsPrivate implementation detail
      * @deprecated This is an internal API that is not intended for use and will be removed in the next version
      */
     @Deprecated

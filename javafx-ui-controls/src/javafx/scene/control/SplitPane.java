@@ -362,7 +362,7 @@ public class SplitPane extends Control {
     private static final String PSEUDO_CLASS_HORIZONTAL = "horizontal";
     private static final String PSEUDO_CLASS_VERTICAL = "vertical";
 
-    /** @treatasprivate */
+    /** @treatAsPrivate */
     private static class StyleableProperties {
         private static final StyleableProperty<SplitPane,Orientation> ORIENTATION =
             new StyleableProperty<SplitPane,Orientation>("-fx-orientation",
@@ -392,7 +392,7 @@ public class SplitPane extends Control {
     }
 
     /**
-     * @treatasprivate implementation detail
+     * @treatAsPrivate implementation detail
      * @deprecated This is an internal API that is not intended for use and will be removed in the next version
      */
     @Deprecated
@@ -404,7 +404,7 @@ public class SplitPane extends Control {
     private static final long HORIZONTAL_PSEUDOCLASS_STATE = StyleManager.getInstance().getPseudoclassMask("horizontal");
 
     /**
-     * @treatasprivate implementation detail
+     * @treatAsPrivate implementation detail
      * @deprecated This is an internal API that is not intended for use and will be removed in the next version
      */
     @Deprecated @Override public long impl_getPseudoClassState() {
@@ -436,7 +436,7 @@ public class SplitPane extends Control {
          * <p>As the user drags the SplitPane divider around this property will
          * be updated to always represent its current location.</p>
          *
-         * @defaultvalue 0.5
+         * @defaultValue 0.5
          */
         private DoubleProperty position;
         public final void setPosition(double value) {

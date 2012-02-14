@@ -32,6 +32,7 @@ import java.util.List;
 import javafx.beans.InvalidationListener;
 import javafx.beans.Observable;
 import javafx.beans.property.BooleanProperty;
+import javafx.beans.property.BooleanPropertyBase;
 import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.SimpleBooleanProperty;
 import javafx.beans.property.SimpleObjectProperty;
@@ -112,7 +113,7 @@ public abstract class PopupWindow extends Window {
      * PopupWindow. The root node of the scene should not be modified directly.
      * Rather, subclasses should utilize this method. Package private for now.
      * @return
-     * @treatasprivate implementation detail
+     * @treatAsPrivate implementation detail
      * @deprecated This is an internal API that is not intended for use and will be removed in the next version
      */
     @Deprecated
@@ -170,7 +171,22 @@ public abstract class PopupWindow extends Window {
      * @defaultValue true
      */
     private BooleanProperty autoFix =
-            new SimpleBooleanProperty(this, "autoFix", true);
+            new BooleanPropertyBase(true) {
+                @Override
+                protected void invalidated() {
+                    handleAutofixActivation(isShowing(), get());
+                }
+
+                @Override
+                public Object getBean() {
+                    return PopupWindow.this;
+                }
+
+                @Override
+                public String getName() {
+                    return "autoFix";
+                }
+            };
     public final void setAutoFix(boolean value) { autoFix.set(value); }
     public final boolean isAutoFix() { return autoFix.get(); }
     public final BooleanProperty autoFixProperty() { return autoFix; }
@@ -232,17 +248,7 @@ public abstract class PopupWindow extends Window {
             show();
             // adjust the x/y if autoFix and it is necessary to do so
             Bounds _bounds = group.getLayoutBounds();
-            if (isAutoFix()) {
-                final Screen currentScreen =
-                        Utils.getScreenForPoint(getX(), getY());
-                final Rectangle2D screenBounds = currentScreen.getVisualBounds();
-                double _x = Math.min(getX(), screenBounds.getMaxX() - getWidth());
-                double _y = Math.min(getY(), screenBounds.getMaxY() - getHeight());
-                _x = Math.max(_x, screenBounds.getMinX());
-                _y = Math.max(_y, screenBounds.getMinY());
-                setX(_x);
-                setY(_y);
-            } else {
+            if (!isAutoFix()) {
                 setX(this.getX() + _bounds.getMinX());
                 setY(this.getY() + _bounds.getMinY());
             }
@@ -298,7 +304,7 @@ public abstract class PopupWindow extends Window {
     }
 
     /**
-     * @treatasprivate implementation detail
+     * @treatAsPrivate implementation detail
      * @deprecated This is an internal API that is not intended for use and will be removed in the next version
      */
     @Deprecated
@@ -317,7 +323,7 @@ public abstract class PopupWindow extends Window {
     private Window focusGrabWindow;
 
     /**
-     * @treatasprivate implementation detail
+     * @treatAsPrivate implementation detail
      * @deprecated This is an internal API that is not intended for use and will be removed in the next version
      */
     @Deprecated
@@ -339,6 +345,7 @@ public abstract class PopupWindow extends Window {
             bindOwnerFocusedProperty(ownerWindowValue);
             setFocused(ownerWindowValue.isFocused());
             focusGrabWindow = increaseFocusGrabInRootWindow(ownerWindowValue);
+            handleAutofixActivation(true, isAutoFix());
         } else {
             stopMonitorOwnerEvents(ownerWindowValue);
             unbindOwnerFocusedProperty(ownerWindowValue);
@@ -347,6 +354,7 @@ public abstract class PopupWindow extends Window {
                 focusGrabWindow.impl_decreaseFocusGrabCounter();
                 focusGrabWindow = null;
             }
+            handleAutofixActivation(false, isAutoFix());
         }
 
         PerformanceTracker.logEvent("PopupWindow.storeVisible for [PopupWindow] finished");
@@ -367,7 +375,8 @@ public abstract class PopupWindow extends Window {
     * @param win the Window for which to get the root window
     */
    private static Window getRootWindow(Window win) {
-       // TODO: needs to be fixed when we add more non-root window types
+       // should be enough to traverse PopupWindow hierarchy here to get to the
+       // first non-popup focusable window
        while (win instanceof PopupWindow) {
            win = ((PopupWindow) win).getOwnerWindow();
        }
@@ -375,7 +384,7 @@ public abstract class PopupWindow extends Window {
    }
 
     /**
-     * @treatasprivate implementation detail
+     * @treatAsPrivate implementation detail
      * @deprecated This is an internal API that is not intended for use and will be removed in the next version
      */
     @Deprecated
@@ -442,5 +451,46 @@ public abstract class PopupWindow extends Window {
     private void unbindOwnerFocusedProperty(final Window ownerWindowValue) {
         ownerWindowValue.focusedProperty().removeListener(ownerFocusedListener);
         ownerFocusedListener = null;
+    }
+
+    private boolean autofixActive;
+    private AutofixHandler autofixHandler;
+    private void handleAutofixActivation(final boolean visible,
+                                         final boolean autofix) {
+        final boolean newAutofixActive = visible && autofix;
+        if (autofixActive != newAutofixActive) {
+            autofixActive = newAutofixActive;
+            if (newAutofixActive) {
+                autofixHandler = new AutofixHandler();
+                widthProperty().addListener(autofixHandler);
+                heightProperty().addListener(autofixHandler);
+                Screen.getScreens().addListener(autofixHandler);
+                autofixHandler.adjustPosition();
+            } else {
+                widthProperty().removeListener(autofixHandler);
+                heightProperty().removeListener(autofixHandler);
+                Screen.getScreens().removeListener(autofixHandler);
+                autofixHandler = null;
+            }
+        }
+    }
+
+    private final class AutofixHandler implements InvalidationListener {
+        @Override
+        public void invalidated(final Observable observable) {
+            adjustPosition();
+        }
+
+        public void adjustPosition() {
+            final Screen currentScreen =
+                    Utils.getScreenForPoint(getX(), getY());
+            final Rectangle2D screenBounds = currentScreen.getVisualBounds();
+            double _x = Math.min(getX(), screenBounds.getMaxX() - getWidth());
+            double _y = Math.min(getY(), screenBounds.getMaxY() - getHeight());
+            _x = Math.max(_x, screenBounds.getMinX());
+            _y = Math.max(_y, screenBounds.getMinY());
+            setX(_x);
+            setY(_y);
+        }
     }
 }

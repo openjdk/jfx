@@ -119,7 +119,7 @@ public class PopupControl extends PopupWindow implements Skinnable {
      * should be unique within the scene graph, this uniqueness is not enforced.
      * This is analogous to the "id" attribute on an HTML element.
      *
-     * @defaultvalue null
+     * @defaultValue null
      */
     private final StringProperty id = new SimpleStringProperty(this, "id");
     public final void setId(String value) { id.set(value); }
@@ -133,7 +133,7 @@ public class PopupControl extends PopupWindow implements Skinnable {
      * each element of the list is a style class to which this Node belongs.
      *
      * @see <a href="http://www.w3.org/TR/css3-selectors/#class-html">CSS3 class selectors</a>
-     * @defaultvalue null
+     * @defaultValue null
      */
     private final ObservableList<String> styleClass = new TrackableObservableList<String>() {
         @Override protected void onChanged(Change<String> c) {
@@ -175,7 +175,7 @@ public class PopupControl extends PopupWindow implements Skinnable {
      * Parsing this style might not be supported on some limited
      * platforms. It is recommended to use a standalone CSS file instead.
      *
-     * @defaultvalue empty string
+     * @defaultValue empty string
      */
     private final StringProperty style = new SimpleStringProperty(this, "style");
     public final void setStyle(String value) { style.set(value); }
@@ -660,7 +660,7 @@ public class PopupControl extends PopupWindow implements Skinnable {
     }
     
     /**
-     * @treatasprivate implementation detail
+     * @treatAsPrivate implementation detail
      * @deprecated This is an internal API that is not intended for use and will be removed in the next version
      */
     @Deprecated
@@ -669,7 +669,7 @@ public class PopupControl extends PopupWindow implements Skinnable {
     }
 
     /**
-     * @treatasprivate implementation detail
+     * @treatAsPrivate implementation detail
      * @deprecated This is an internal API that is not intended for use and will be removed in the next version
      */
     @Deprecated

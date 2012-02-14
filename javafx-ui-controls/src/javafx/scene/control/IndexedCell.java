@@ -132,7 +132,7 @@ public class IndexedCell<T> extends Cell<T> {
     private static final long EVEN_PSEUDOCLASS_STATE = StyleManager.getInstance().getPseudoclassMask("even");
 
     /**
-     * @treatasprivate implementation detail
+     * @treatAsPrivate implementation detail
      * @deprecated This is an internal API that is not intended for use and will be removed in the next version
      */
     @Deprecated @Override public long impl_getPseudoClassState() {

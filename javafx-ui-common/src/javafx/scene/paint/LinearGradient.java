@@ -84,7 +84,7 @@ public final class LinearGradient extends Paint {
      * the shape that the gradient fills.
      *
      * @profile common
-     * @defaultvalue 0.0
+     * @defaultValue 0.0
      */
     public final double getStartX() {
         return startX;
@@ -99,7 +99,7 @@ public final class LinearGradient extends Paint {
      * the shape that the gradient fills.
      *
      * @profile common
-     * @defaultvalue 0.0
+     * @defaultValue 0.0
      */
     public final double getStartY() {
         return startY;
@@ -114,7 +114,7 @@ public final class LinearGradient extends Paint {
      * the shape that the gradient fills.
      *
      * @profile common
-     * @defaultvalue 1.0
+     * @defaultValue 1.0
      */
     public final double getEndX() {
         return endX;
@@ -129,7 +129,7 @@ public final class LinearGradient extends Paint {
      * the shape that the gradient fills.
      *
      * @profile common
-     * @defaultvalue 1.0
+     * @defaultValue 1.0
      */
     public final double getEndY() {
         return endY;
@@ -146,7 +146,7 @@ public final class LinearGradient extends Paint {
      * coordinate system of the node.
      *
      * @profile common
-     * @defaultvalue true
+     * @defaultValue true
      */
     public final boolean isProportional() {
         return proportional;
@@ -160,7 +160,7 @@ public final class LinearGradient extends Paint {
      * {@code CycleMethod.REFLECT}, or {@code CycleMethod.REPEAT}.
      *
      * @profile common
-     * @defaultvalue NO_CYCLE
+     * @defaultValue NO_CYCLE
      */
     public final CycleMethod getCycleMethod() {
         return cycleMethod;
@@ -181,7 +181,7 @@ public final class LinearGradient extends Paint {
      * {@code UnsupportedOperationException} on each modification attempt.</p>
      *
      * @profile common
-     * @defaultvalue empty
+     * @defaultValue empty
      */
     @ReturnsUnmodifiableCollection
     public final List<Stop> getStops() {
@@ -256,7 +256,7 @@ public final class LinearGradient extends Paint {
     }
 
     /**
-     * @treatasprivate implementation detail
+     * @treatAsPrivate implementation detail
      * @deprecated This is an internal API that is not intended for use and will be removed in the next version
      */
     @Deprecated

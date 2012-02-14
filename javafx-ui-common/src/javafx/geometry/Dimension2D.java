@@ -47,7 +47,7 @@ public class Dimension2D {
     /**
      * The width of the dimension.
      *
-     * @defaultvalue 0.0
+     * @defaultValue 0.0
      */
     private double width;
 
@@ -62,7 +62,7 @@ public class Dimension2D {
     /**
      * The height of the dimension.
      *
-     * @defaultvalue 0.0
+     * @defaultValue 0.0
      */
     private double height;
 

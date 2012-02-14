@@ -735,7 +735,7 @@ public class ListView<T> extends Control {
     private static final String PSEUDO_CLASS_VERTICAL = "vertical";
     private static final String PSEUDO_CLASS_HORIZONTAL = "horizontal";
 
-    /** @treatasprivate */
+    /** @treatAsPrivate */
     private static class StyleableProperties {
         private static final StyleableProperty<ListView,Orientation> ORIENTATION = 
             new StyleableProperty<ListView,Orientation>("-fx-orientation",
@@ -765,7 +765,7 @@ public class ListView<T> extends Control {
     }
 
     /**
-     * @treatasprivate implementation detail
+     * @treatAsPrivate implementation detail
      * @deprecated This is an internal API that is not intended for use and will be removed in the next version
      */
     @Deprecated
@@ -779,7 +779,7 @@ public class ListView<T> extends Control {
             StyleManager.getInstance().getPseudoclassMask("horizontal");
 
     /**
-     * @treatasprivate implementation detail
+     * @treatAsPrivate implementation detail
      * @deprecated This is an internal API that is not intended for use and will be removed in the next version
      */
     @Deprecated @Override public long impl_getPseudoClassState() {

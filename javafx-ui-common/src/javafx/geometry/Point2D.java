@@ -35,7 +35,7 @@ public class Point2D {
      * The x coordinate.
      *
      * @profile common
-     * @defaultvalue 0.0
+     * @defaultValue 0.0
      */
     private double x;
 
@@ -51,7 +51,7 @@ public class Point2D {
      * The y coordinate.
      *
      * @profile common
-     * @defaultvalue 0.0
+     * @defaultValue 0.0
      */
     private double y;
 

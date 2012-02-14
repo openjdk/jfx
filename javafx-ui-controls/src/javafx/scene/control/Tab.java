@@ -504,7 +504,7 @@ public class Tab implements EventTarget {
             new EventHandlerManager(this);
 
     /**
-     * @treatasprivate implementation detail
+     * @treatAsPrivate implementation detail
      * @deprecated This is an internal API that is not intended for use and will be removed in the next version
      */
     @Override
@@ -513,7 +513,7 @@ public class Tab implements EventTarget {
     }
 
     /**
-     * @treatasprivate implementation detail
+     * @treatAsPrivate implementation detail
      * @deprecated This is an internal API that is not intended for use and will be removed in the next version
      */
     protected <E extends Event> void setEventHandler(EventType<E> eventType, EventHandler<E> eventHandler) {

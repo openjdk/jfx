@@ -774,7 +774,7 @@ public class ContextMenuContent extends StackPane {
      *                                                                         *
      **************************************************************************/
 
-     /** @treatasprivate */
+     /** @treatAsPrivate */
     private static class StyleableProperties {
 
         private static final List<StyleableProperty> STYLEABLES;
@@ -800,7 +800,7 @@ public class ContextMenuContent extends StackPane {
     }
 
     /**
-     * @treatasprivate implementation detail
+     * @treatAsPrivate implementation detail
      * @deprecated This is an internal API that is not intended for use and will be removed in the next version
      */
     @Deprecated

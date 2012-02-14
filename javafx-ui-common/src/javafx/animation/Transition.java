@@ -90,7 +90,7 @@ public abstract class Transition extends Animation {
      * Default interpolator is set to {@link Interpolator#EASE_BOTH}.
      * 
      * @profile common
-     * @defaultvalue EASE_BOTH
+     * @defaultValue EASE_BOTH
      */
     private ObjectProperty<Interpolator> interpolator;
     private static final Interpolator DEFAULT_INTERPOLATOR = Interpolator.EASE_BOTH;
@@ -138,7 +138,7 @@ public abstract class Transition extends Animation {
      * {@link SequentialTransition}, then parent will be null.
      * 
      * @profile common
-     * @defaultvalue null
+     * @defaultValue null
      */
     Transition parent = null;
 
@@ -210,7 +210,7 @@ public abstract class Transition extends Animation {
     }
 
     /**
-     * @treatasprivate implementation detail
+     * @treatAsPrivate implementation detail
      * @deprecated This is an internal API that is not intended for use and will
      *             be removed in the next version
      */
@@ -222,7 +222,7 @@ public abstract class Transition extends Animation {
     }
 
     /**
-     * @treatasprivate implementation detail
+     * @treatAsPrivate implementation detail
      * @deprecated This is an internal API that is not intended for use and will
      *             be removed in the next version
      */

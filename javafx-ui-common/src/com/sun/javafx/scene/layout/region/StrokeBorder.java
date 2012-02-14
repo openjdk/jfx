@@ -88,7 +88,7 @@ public class StrokeBorder extends Border {
 
      /**
       * Super-lazy instantiation pattern from Bill Pugh.
-      * @treatasprivate implementation detail
+      * @treatAsPrivate implementation detail
       */
      private static class StyleableProperties {
          
@@ -185,7 +185,7 @@ public class StrokeBorder extends Border {
 
      /**
       * Super-lazy instantiation pattern from Bill Pugh.
-      * @treatasprivate implementation detail
+      * @treatAsPrivate implementation detail
       */
      public static List<StyleableProperty> impl_CSS_STYLEABLES() {
          return StrokeBorder.StyleableProperties.STYLEABLES;
@@ -195,7 +195,7 @@ public class StrokeBorder extends Border {
      * Defines the radius of the top left corner of the region this border is
      * being applied to. It only has effect if the region is a rectangular region.
      *
-     * @defaultvalue 0.0
+     * @defaultValue 0.0
      */
     public double getTopLeftCornerRadius() { return topLeftCornerRadius; }
     final private double topLeftCornerRadius;
@@ -204,7 +204,7 @@ public class StrokeBorder extends Border {
      * Defines the radius of the top right corner of the region this border is
      * being applied to. It only has effect if the region is a rectangular region.
      *
-     * @defaultvalue 0.0
+     * @defaultValue 0.0
      */
     public double getTopRightCornerRadius() { return topRightCornerRadius; }
     final private double topRightCornerRadius;
@@ -213,7 +213,7 @@ public class StrokeBorder extends Border {
      * Define the radius of the bottom left corner of the region this border is
      * being applied to. It only has effect if the region is a rectangular region.
      *
-     * @defaultvalue 0.0
+     * @defaultValue 0.0
      */
     public double getBottomLeftCornerRadius() { return bottomLeftCornerRadius; }
     final private double bottomLeftCornerRadius;
@@ -222,7 +222,7 @@ public class StrokeBorder extends Border {
      * Defines the radius of the bottom right corner of the region this border is
      * being applied to. It only has effect if the region is a rectangular region.
      *
-     * @defaultvalue 0.0
+     * @defaultValue 0.0
      */
     public double getBottomRightCornerRadius() { return bottomRightCornerRadius; }
     final private double bottomRightCornerRadius;

@@ -55,7 +55,9 @@ public class RadioButtonSkin extends LabeledSkinBase<RadioButton, ButtonBehavior
 
     @Override protected void updateChildren() {
         super.updateChildren();
-        getChildren().add(radio);
+        if (radio != null) {
+            getChildren().add(radio);
+        }
     }
 
     private static StackPane createRadio() {

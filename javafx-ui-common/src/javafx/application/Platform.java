@@ -52,7 +52,7 @@ public final class Platform {
         PlatformImpl.runLater(runnable);
     }
 
-    // TODO: Add the following if we decide to expose it publicly
+    // NOTE: Add the following if we decide to expose it publicly
 //    public static void runAndWait(Runnable runnable) {
 //        PlatformImpl.runAndWait(runnable);
 //    }
