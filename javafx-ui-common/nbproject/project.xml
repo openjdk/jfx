@@ -6,7 +6,6 @@
             <!-- Do not use Project Properties customizer when editing this file manually. -->
             <name>javafx-ui-common</name>
             <properties>
-                <property name="import.lombok.jar">../../import/lombok-0.9.3/lombok-0.9.3.jar</property>
                 <property name="import.antlr-runtime.jar">../../import/antlr-3.1.3/antlr-3.1.3/lib/antlr-runtime-3.1.3.jar</property>
                 <property name="jfx.checkstyle.jar">../../import/checkstyle-5.1/checkstyle-5.1.jar</property>
                 <property-file>../base.properties</property-file>
@@ -118,7 +117,7 @@
         <java-data xmlns="http://www.netbeans.org/ns/freeform-project-java/3">
             <compilation-unit>
                 <package-root>${src.dir}</package-root>
-                <classpath mode="compile">../../rt-closed/javafx-beans/dist/javafx-beans.jar:../../rt-closed/javafx-geom/dist/javafx-geom.jar:../../rt-closed/javafx-logging/dist/javafx-logging.jar:../../rt-closed/javafx-anim/dist/javafx-anim.jar:../../rt-closed/javafx-common/dist/javafx-common.jar:../../rt-closed/javafx-mx-common/dist/javafx-mx-common.jar:../../rt-closed/javafx-sg-common/dist/javafx-sg-common.jar:../../rt-closed/decora-runtime/dist/decora-runtime.jar:../../rt-closed/build/deps/plugin_exports.jar:../../rt-closed/aria/dist/aria.jar:../../import/lombok-0.9.3/lombok-0.9.3.jar:../../import/checkstyle-5.1/checkstyle-5.1.jar</classpath>
+                <classpath mode="compile">../../rt-closed/javafx-beans/dist/javafx-beans.jar:../../rt-closed/javafx-geom/dist/javafx-geom.jar:../../rt-closed/javafx-logging/dist/javafx-logging.jar:../../rt-closed/javafx-anim/dist/javafx-anim.jar:../../rt-closed/javafx-common/dist/javafx-common.jar:../../rt-closed/javafx-mx-common/dist/javafx-mx-common.jar:../../rt-closed/javafx-sg-common/dist/javafx-sg-common.jar:../../rt-closed/decora-runtime/dist/decora-runtime.jar:../../rt-closed/build/deps/plugin_exports.jar:../../rt-closed/aria/dist/aria.jar:../../import/checkstyle-5.1/checkstyle-5.1.jar</classpath>
                 <built-to>dist/javafx-ui-common.jar</built-to>
                 <source-level>1.6</source-level>
             </compilation-unit>
