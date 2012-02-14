@@ -824,19 +824,18 @@ public class StyleManager {
         // stylesheets further down the tree (closer to the leaf) have
         // a higer ordinal in the cascade.
         //
-        private List<Stylesheet> gatherParentStylesheets(Parent parent, List<Stylesheet> list) {
+        private List<Stylesheet> gatherParentStylesheets(Parent parent) {
             
-            if (parent == null) return list; 
+            if (parent == null) return null; 
             
-            if (list == null && parent.getStylesheets().isEmpty() == false) {
-                list = new ArrayList<Stylesheet>();
-            }
+            final List<String> parentStylesheets = parent.impl_getAllParentStylesheets();
             
-            list = gatherParentStylesheets(parent.getParent(), list);
+            if (parentStylesheets == null || parentStylesheets.isEmpty()) return null;
             
-            final List<String> parentStylesheets = parent.getStylesheets();
+            final List<Stylesheet> list = new ArrayList<Stylesheet>();
+            
             for (int n=0, nMax=parentStylesheets.size(); n<nMax; n++) {
-                String fname = parentStylesheets.get(n);
+                final String fname = parentStylesheets.get(n);
                 Stylesheet stylesheet = null;
                 if (parentStylesheetMap.containsKey(fname)) {
                     stylesheet = parentStylesheetMap.get(fname);
@@ -861,7 +860,7 @@ public class StyleManager {
             
             // If this node has no Parent stylesheets, then shared cache can be used.
             final List<Stylesheet> parentStylesheets = 
-                gatherParentStylesheets(((node instanceof Parent) ? (Parent)node : node.getParent()), null);
+                gatherParentStylesheets(((node instanceof Parent) ? (Parent)node : node.getParent()));
             final boolean useCacheMap = parentStylesheets == null || parentStylesheets.isEmpty();
                     
             // Populate our helper key with the class name, id, and style class

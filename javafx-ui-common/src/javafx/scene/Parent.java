@@ -1018,6 +1018,44 @@ public abstract class Parent extends Node {
      */
     public final ObservableList<String> getStylesheets() { return stylesheets; }
     
+    
+    /**
+     * This method recurses up the parent chain until parent is null. As the
+     * stack unwinds, if the Parent has stylesheets, they are added to the
+     * list.
+     * 
+     * It is possible to override this method to stop the recursion. This allows
+     * a Parent to have a set of stylesheets distinct from its Parent. 
+     * 
+     * @treatasprivate implementation detail
+     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
+     */
+    @Deprecated
+    public List<String> impl_getAllParentStylesheets() {
+        
+        List<String> list = null;
+        final Parent myParent = getParent();
+        if (myParent != null) {
+
+            //
+            // recurse so that stylesheets of Parents closest to the root are 
+            // added to the list first. The ensures that declarations for 
+            // stylesheets further down the tree (closer to the leaf) have
+            // a higer ordinal in the cascade.
+            //
+            list = myParent.impl_getAllParentStylesheets();
+        }
+        
+        if (stylesheets != null && stylesheets.isEmpty() == false) {
+            if (list == null) list = new ArrayList<String>(stylesheets.size());
+            for (int n=0,nMax=stylesheets.size(); n<nMax; n++) 
+                list.add(stylesheets.get(n));
+        }
+        
+        return list;
+        
+    }
+    
     /**
      * @treatasprivate implementation detail
      * @deprecated This is an internal API that is not intended for use and will be removed in the next version
