@@ -200,8 +200,6 @@ public final class PathTransition extends Transition {
 
     /**
      * Specifies the upright orientation of {@code node} along the {@code path}.
-     * 
-     * @profile common
      */
     public static enum OrientationType {
 

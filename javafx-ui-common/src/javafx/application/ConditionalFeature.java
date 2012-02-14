@@ -36,8 +36,6 @@ package javafx.application;
  * on a platform that does not support it will not cause an exception. In
  * general, the conditional feature will just be ignored. See the documentation
  * for each feature for more detail.
- *
- * @profile common
  */
 public enum ConditionalFeature {
 

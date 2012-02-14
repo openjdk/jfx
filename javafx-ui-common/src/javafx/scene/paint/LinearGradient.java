@@ -71,8 +71,6 @@ LinearGradient lg2 = new LinearGradient(125, 0, 225, 0, false, CycleMethod.NO_CY
 Rectangle r2 = new Rectangle(125, 0, 100, 100);
 r2.setFill(lg2);
 </PRE>
- *
- * @profile common
  */
 public final class LinearGradient extends Paint {
     private double startX;
@@ -82,8 +80,7 @@ public final class LinearGradient extends Paint {
      * If proportional is true (the default), this value specifies a
      * point on a unit square that will be scaled to match the size of the
      * the shape that the gradient fills.
-     *
-     * @profile common
+     (
      * @defaultvalue 0.0
      */
     public final double getStartX() {
@@ -98,7 +95,6 @@ public final class LinearGradient extends Paint {
      * point on a unit square that will be scaled to match the size of the
      * the shape that the gradient fills.
      *
-     * @profile common
      * @defaultvalue 0.0
      */
     public final double getStartY() {
@@ -113,7 +109,6 @@ public final class LinearGradient extends Paint {
      * point on a unit square that will be scaled to match the size of the
      * the shape that the gradient fills.
      *
-     * @profile common
      * @defaultvalue 1.0
      */
     public final double getEndX() {
@@ -128,7 +123,6 @@ public final class LinearGradient extends Paint {
      * point on a unit square that will be scaled to match the size of the
      * the shape that the gradient fills.
      *
-     * @profile common
      * @defaultvalue 1.0
      */
     public final double getEndY() {
@@ -145,7 +139,6 @@ public final class LinearGradient extends Paint {
      * If this flag is false, then the coordinates are specified in the local
      * coordinate system of the node.
      *
-     * @profile common
      * @defaultvalue true
      */
     public final boolean isProportional() {
@@ -159,7 +152,6 @@ public final class LinearGradient extends Paint {
      * to the {@code LinearGradient}: {@code CycleMethod.NO_CYCLE},
      * {@code CycleMethod.REFLECT}, or {@code CycleMethod.REPEAT}.
      *
-     * @profile common
      * @defaultvalue NO_CYCLE
      */
     public final CycleMethod getCycleMethod() {
@@ -180,7 +172,6 @@ public final class LinearGradient extends Paint {
      * <p>The list is unmodifiable and will throw
      * {@code UnsupportedOperationException} on each modification attempt.</p>
      *
-     * @profile common
      * @defaultvalue empty
      */
     @ReturnsUnmodifiableCollection

@@ -37,8 +37,6 @@ import com.sun.javafx.tk.Toolkit;
 
 /**
  * The abstract base class for all light implementations.
- *
- * @profile common conditional effect
  */
 public abstract class Light {
 
@@ -177,8 +175,6 @@ g.getChildren().add(t);
 r.setWidth(t.getLayoutBounds().getWidth() + 30);
 r.setHeight(t.getLayoutBounds().getHeight() + 20);
 </PRE>
-     *
-     * @profile common conditional effect
      */
     public static class Distant extends Light {
        /**
@@ -340,8 +336,6 @@ g.getChildren().add(t);
 r.setWidth(t.getLayoutBounds().getWidth() + 30);
 r.setHeight(t.getLayoutBounds().getHeight() + 20);
 </PRE>
-     *
-     * @profile common conditional effect
      */
     public static class Point extends Light {
        /**
@@ -557,7 +551,6 @@ r.setWidth(t.getLayoutBounds().getWidth() + 30);
 r.setHeight(t.getLayoutBounds().getHeight() + 20);
 </PRE>
      *
-     * @profile common conditional effect
      */
     public static class Spot extends Light.Point {
        /**

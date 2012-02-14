@@ -40,8 +40,6 @@ import javafx.geometry.Point2D;
  * menu is platform specific.  For example, on Windows, Shift+F10
  * requests a context menu.
  * <p>
- *
- * @profile common
  */
 public class ContextMenuEvent extends InputEvent {
 
@@ -100,8 +98,6 @@ public class ContextMenuEvent extends InputEvent {
     
     /**
      * The boolean that indicates the event was triggered by a keyboard gesture.
-     *
-     * @profile common
      */
     private boolean keyboardTrigger;
     
@@ -117,8 +113,6 @@ public class ContextMenuEvent extends InputEvent {
     /**
      * Horizontal x position of the event relative to the
      * origin of the MouseEvent's node.
-     *
-     * @profile common
      */
     private double x;
 
@@ -129,8 +123,6 @@ public class ContextMenuEvent extends InputEvent {
     /**
      * Vertical y position of the event relative to the
      * origin of the MouseEvent's node.
-     *
-     * @profile common
      */
     private double y;
 
@@ -140,8 +132,6 @@ public class ContextMenuEvent extends InputEvent {
 
     /**
      * Absolute horizontal x position of the event.
-     *
-     * @profile common
      */
     private double screenX;
 
@@ -151,8 +141,6 @@ public class ContextMenuEvent extends InputEvent {
 
     /**
      * Absolute vertical y position of the event.
-     *
-     * @profile common
      */
     private double screenY;
 
@@ -165,8 +153,6 @@ public class ContextMenuEvent extends InputEvent {
      * origin of the {@code Scene} that contains the MouseEvent's node.
      * If the node is not in a {@code Scene}, then the value is relative to
      * the boundsInParent of the root-most parent of the MouseEvent's node.
-     *
-     * @profile common
      */
     private double sceneX;
 
@@ -179,8 +165,6 @@ public class ContextMenuEvent extends InputEvent {
      * origin of the {@code Scene} that contains the MouseEvent's node.
      * If the node is not in a {@code Scene}, then the value is relative to
      * the boundsInParent of the root-most parent of the MouseEvent's node.
-     *
-     * @profile common
      */
     private double sceneY;
 

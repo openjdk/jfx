@@ -62,8 +62,6 @@ line.setEndX(100.0f);
 line.setEndY(100.0f);
 }
 </PRE>
- *
- * @profile common
  */
 public class Line extends Shape {
 
@@ -100,7 +98,6 @@ public class Line extends Shape {
     /**
      * The X coordinate of the start point of the line segment.
      *
-     * @profile common
      * @defaultvalue 0.0
      */
     private DoubleProperty startX;
@@ -141,7 +138,6 @@ public class Line extends Shape {
     /**
      * The Y coordinate of the start point of the line segment.
      *
-     * @profile common
      * @defaultvalue 0.0
      */
     private DoubleProperty startY;
@@ -183,7 +179,6 @@ public class Line extends Shape {
     /**
      * The X coordinate of the end point of the line segment.
      *
-     * @profile common
      * @defaultvalue 0.0
      */
     private DoubleProperty endX;
@@ -225,7 +220,6 @@ public class Line extends Shape {
     /**
      * The Y coordinate of the end point of the line segment.
      *
-     * @profile common
      * @defaultvalue 0.0
      */
     private DoubleProperty endY;

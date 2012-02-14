@@ -147,8 +147,6 @@ r.setFill(Color.BLUE);
 root.getChildren().add(r);
  * </pre>
  * </p>
- *
- * @profile common
  */
 @DefaultProperty("root")
 public class Scene implements EventTarget {
@@ -256,7 +254,6 @@ public class Scene implements EventTarget {
      * other than the JavaFX Application Thread.
      *
      * @see javafx.scene.Node#setDepthTest(DepthTest)
-     * @profile common conditional scene3d
      */
     public Scene(Parent root, @Default("-1") double width, @Default("-1") double height, boolean depthBuffer) {
         this(root, width, height, Color.WHITE, depthBuffer);
@@ -718,8 +715,6 @@ public class Scene implements EventTarget {
 
     /**
      * The width of this {@code Scene}
-     *
-     * @profile common
      */
     private ReadOnlyDoubleWrapper width;
 
@@ -763,8 +758,6 @@ public class Scene implements EventTarget {
 
     /**
      * The height of this {@code Scene}
-     *
-     * @profile common
      */
     private ReadOnlyDoubleWrapper height;
 
@@ -814,7 +807,6 @@ public class Scene implements EventTarget {
      * {@link javafx.application.ConditionalFeature#SCENE3D ConditionalFeature.SCENE3D}
      * for more information.
      *
-     * @profile common conditional scene3d
      * @defaultvalue null
      * @since JavaFX 1.3
      */
@@ -875,7 +867,6 @@ public class Scene implements EventTarget {
      * with transparency are supported, but what is painted behind it will
      * depend on the platform.  The default value is the color white.
      *
-     * @profile common
      * @defaultvalue WHITE
      */
     private ObjectProperty<Paint> fill;
@@ -1127,8 +1118,6 @@ public class Scene implements EventTarget {
      * @param selector The css selector to look up
      * @return the {@code Node} in the scene which matches the CSS {@code selector},
      * or {@code null} if none is found.
-     *
-     * @profile common
      */
      public Node lookup(String selector) {
          return getRoot().lookup(selector);
@@ -1138,8 +1127,6 @@ public class Scene implements EventTarget {
      * contents. For additional information about using CSS with the
      * scene graph, see the <a href="doc-files/cssref.html">CSS Reference
      * Guide</a>.
-     *
-     * @profile common
      */
     private final ObservableList<String> stylesheets = new TrackableObservableList<String>() {
         @Override
@@ -3437,8 +3424,6 @@ public class Scene implements EventTarget {
     /**
      * Defines a function to be called when a mouse button has been clicked
      * (pressed and released) on this {@code Scene}.
-     *
-     * @profile common
      */
 
     private ObjectProperty<EventHandler<? super ContextMenuEvent>> onContextMenuRequested;
@@ -3483,8 +3468,6 @@ public class Scene implements EventTarget {
     /**
      * Defines a function to be called when a mouse button has been clicked
      * (pressed and released) on this {@code Scene}.
-     *
-     * @profile common
      */
     private ObjectProperty<EventHandler<? super MouseEvent>> onMouseClicked;
 
@@ -3522,8 +3505,6 @@ public class Scene implements EventTarget {
     /**
      * Defines a function to be called when a mouse button is pressed
      * on this {@code Scene} and then dragged.
-     *
-     * @profile common
      */
     private ObjectProperty<EventHandler<? super MouseEvent>> onMouseDragged;
 
@@ -3560,8 +3541,6 @@ public class Scene implements EventTarget {
 
     /**
      * Defines a function to be called when the mouse enters this {@code Scene}.
-     *
-     * @profile common
      */
     private ObjectProperty<EventHandler<? super MouseEvent>> onMouseEntered;
 
@@ -3598,8 +3577,6 @@ public class Scene implements EventTarget {
 
     /**
      * Defines a function to be called when the mouse exits this {@code Scene}.
-     *
-     * @profile common
      */
     private ObjectProperty<EventHandler<? super MouseEvent>> onMouseExited;
 
@@ -3637,8 +3614,6 @@ public class Scene implements EventTarget {
     /**
      * Defines a function to be called when mouse cursor moves within
      * this {@code Scene} but no buttons have been pushed.
-     *
-     * @profile common
      */
     private ObjectProperty<EventHandler<? super MouseEvent>> onMouseMoved;
 
@@ -3676,8 +3651,6 @@ public class Scene implements EventTarget {
     /**
      * Defines a function to be called when a mouse button
      * has been pressed on this {@code Scene}.
-     *
-     * @profile common
      */
     private ObjectProperty<EventHandler<? super MouseEvent>> onMousePressed;
 
@@ -3715,8 +3688,6 @@ public class Scene implements EventTarget {
     /**
      * Defines a function to be called when a mouse button
      * has been released on this {@code Scene}.
-     *
-     * @profile common
      */
     private ObjectProperty<EventHandler<? super MouseEvent>> onMouseReleased;
 
@@ -3754,8 +3725,6 @@ public class Scene implements EventTarget {
     /**
      * Defines a function to be called when drag gesture has been
      * detected. This is the right place to start drag and drop operation.
-     *
-     * @profile common
      */
     private ObjectProperty<EventHandler<? super MouseEvent>> onDragDetected;
 
@@ -3792,8 +3761,6 @@ public class Scene implements EventTarget {
 
     /**
      * Defines a function to be called when user performs a scrolling action. 
-     *
-     * @profile common
      */
     private ObjectProperty<EventHandler<? super ScrollEvent>> onScroll;
 
@@ -3831,8 +3798,6 @@ public class Scene implements EventTarget {
     /**
      * Defines a function to be called when a full press-drag-release gesture
      * progresses within this {@code Scene}.
-     *
-     * @profile common
      */
     private ObjectProperty<EventHandler<? super MouseDragEvent>> onMouseDragOver;
 
@@ -3870,8 +3835,6 @@ public class Scene implements EventTarget {
     /**
      * Defines a function to be called when a full press-drag-release gesture
      * ends within this {@code Scene}.
-     *
-     * @profile common
      */
     private ObjectProperty<EventHandler<? super MouseDragEvent>> onMouseDragReleased;
 
@@ -3909,8 +3872,6 @@ public class Scene implements EventTarget {
     /**
      * Defines a function to be called when a full press-drag-release gesture
      * enters this {@code Scene}.
-     *
-     * @profile common
      */
     private ObjectProperty<EventHandler<? super MouseDragEvent>> onMouseDragEntered;
 
@@ -3948,8 +3909,6 @@ public class Scene implements EventTarget {
     /**
      * Defines a function to be called when a full press-drag-release gesture
      * exits this {@code Scene}.
-     *
-     * @profile common
      */
     private ObjectProperty<EventHandler<? super MouseDragEvent>> onMouseDragExited;
 
@@ -4311,8 +4270,6 @@ public class Scene implements EventTarget {
      * {@code Scene} has input focus and a key has been pressed. The function
      * is called only if the event hasn't been already consumed during its
      * capturing or bubbling phase.
-     *
-     * @profile common
      */
     private ObjectProperty<EventHandler<? super KeyEvent>> onKeyPressed;
 
@@ -4352,8 +4309,6 @@ public class Scene implements EventTarget {
      * {@code Scene} has input focus and a key has been released. The function
      * is called only if the event hasn't been already consumed during its
      * capturing or bubbling phase.
-     *
-     * @profile common
      */
     private ObjectProperty<EventHandler<? super KeyEvent>> onKeyReleased;
 
@@ -4393,8 +4348,6 @@ public class Scene implements EventTarget {
      * {@code Scene} has input focus and a key has been typed. The function
      * is called only if the event hasn't been already consumed during its
      * capturing or bubbling phase.
-     *
-     * @profile common
      */
     private ObjectProperty<EventHandler<? super KeyEvent>> onKeyTyped;
 
@@ -4448,8 +4401,6 @@ public class Scene implements EventTarget {
      * </p>
      * When the {@code Node} loses the input focus, the JavaFX runtime
      * automatically commits the existing composed text if any.
-     *
-     * @profile common conditional input_method
      */
     private ObjectProperty<EventHandler<? super InputMethodEvent>> onInputMethodTextChanged;
 

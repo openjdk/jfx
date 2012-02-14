@@ -54,8 +54,6 @@ Group g = new Group();
 g.getChildren().add(r);
 g.getChildren().add(c);
 </PRE>
- *
- * @profile common conditional effect
  */
 public enum BlendMode {
 

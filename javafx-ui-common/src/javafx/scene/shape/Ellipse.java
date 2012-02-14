@@ -53,8 +53,6 @@ ellipse.setCenterY(50.0f);
 ellipse.setRadiusX(50.0f);
 ellipse.setRadiusY(25.0f);
 </PRE>
- *
- * @profile common
  */
 public class Ellipse extends Shape {
 
@@ -98,7 +96,6 @@ public class Ellipse extends Shape {
     /**
      * Defines the horizontal position of the center of the ellipse in pixels.
      *
-     * @profile common
      * @defaultvalue 0.0
      */
     private DoubleProperty centerX;
@@ -140,7 +137,6 @@ public class Ellipse extends Shape {
     /**
      * Defines the vertical position of the center of the ellipse in pixels.
      *
-     * @profile common
      * @defaultvalue 0.0
      */
     private DoubleProperty centerY;
@@ -181,7 +177,6 @@ public class Ellipse extends Shape {
     /**
      * Defines the width of the ellipse in pixels.
      *
-     * @profile common
      * @defaultvalue 0.0
      */
     private DoubleProperty radiusX;
@@ -223,7 +218,6 @@ public class Ellipse extends Shape {
     /**
      * Defines the height of the ellipse in pixels.
      *
-     * @profile common
      * @defaultvalue 0.0
      */
     private DoubleProperty radiusY;

@@ -63,7 +63,6 @@ package javafx.scene.text;
  * spaces are part of the logical advance width of the text.
  * <p>
  *
- * @profile common
  * @since JavaFX 1.3
  */
 public enum TextBoundsType {
@@ -72,8 +71,6 @@ public enum TextBoundsType {
      * Use logical bounds as the basis for calculating the bounds.
      * <p>
      * Note: This is usually the fastest option.
-     *
-     * @profile common
      */    
     LOGICAL,
 
@@ -81,8 +78,6 @@ public enum TextBoundsType {
      * Use visual bounds as the basis for calculating the bounds.
      * <p>
      * Note: This is likely to be slower than using logical bounds.
-     *
-     * @profile common
      */    
     VISUAL
 

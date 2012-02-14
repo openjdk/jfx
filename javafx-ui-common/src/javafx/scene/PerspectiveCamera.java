@@ -46,7 +46,6 @@ import com.sun.javafx.tk.Toolkit;
  * down and the Z axis pointing away from the viewer (into the screen). The
  * units are in pixel coordinates at the projection plane (Z=0).
  *
- * @profile common conditional scene3d
  * @since JavaFX 1.3
  */
 public  class PerspectiveCamera extends Camera {   

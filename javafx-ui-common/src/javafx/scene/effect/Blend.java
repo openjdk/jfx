@@ -82,8 +82,6 @@ Group g = new Group();
 g.getChildren().add(r);
 g.getChildren().add(t);
 </PRE>
- *
- * @profile common conditional effect
  */
 public class Blend extends Effect {
 

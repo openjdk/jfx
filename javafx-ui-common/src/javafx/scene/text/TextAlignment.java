@@ -46,36 +46,26 @@ package javafx.scene.text;
 
 /**
  * The {@code TextAlignment} enum represents the horizontal text alignment. 
- *
- * @profile common
  */
 public enum TextAlignment {
 
     /**
      * Represents text alignment to the left (left-justified, ragged right).
-     *
-     * @profile common
      */
     LEFT,
     
     /**
      * Represents centered text alignment (ragged left and right).
-     *
-     * @profile common
      */
     CENTER,
     
     /**
      * Represents text alignment to the right (right-justified, ragged left).
-     *
-     * @profile common
      */
     RIGHT,
     
     /**
      * Represents justified text alignment.
-     *
-     * @profile common
      */
     JUSTIFY
 }

@@ -89,7 +89,6 @@ public abstract class Transition extends Animation {
      * <p>
      * Default interpolator is set to {@link Interpolator#EASE_BOTH}.
      * 
-     * @profile common
      * @defaultvalue EASE_BOTH
      */
     private ObjectProperty<Interpolator> interpolator;
@@ -137,7 +136,6 @@ public abstract class Transition extends Animation {
      * added to another transition, such as {@link ParallelTransition} and
      * {@link SequentialTransition}, then parent will be null.
      * 
-     * @profile common
      * @defaultvalue null
      */
     Transition parent = null;
@@ -164,8 +162,6 @@ public abstract class Transition extends Animation {
      * Returns the target {@link Node} for animation of this {@code Transition}.
      * This method returns {@code node} if it is set, else returns its
      * {@code parent.getTargetNode()} otherwise null.
-     * 
-     * @profile common
      */
     protected Node getParentTargetNode() {
         return (parent != null) ? parent.getParentTargetNode() : null;

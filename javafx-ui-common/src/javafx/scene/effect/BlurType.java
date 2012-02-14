@@ -47,8 +47,6 @@ package javafx.scene.effect;
 /**
  * Represents the type of blur algorithm that is used to soften
  * a {@code Shadow} effect.
- *
- * @profile common conditional effect
  */
 public enum BlurType {
 

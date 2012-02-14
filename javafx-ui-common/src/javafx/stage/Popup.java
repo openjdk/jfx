@@ -38,7 +38,6 @@ import javafx.scene.Node;
  * another popup than the first popup is hidden. Once the second popup is hidden
  * the first popup is again displayed and gains focus.
  *
- * @profile common
  * @since JavaFX 1.3
  */
 public class Popup extends PopupWindow {

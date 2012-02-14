@@ -305,8 +305,6 @@ import javafx.scene.text.Font;
  * For further information about CSS and how to apply CSS styles
  * to nodes, see the <a href="doc-files/cssref.html">CSS Reference
  * Guide</a>.
- *
- * @profile common
  */
 @IDProperty("id")
 public abstract class Node implements EventTarget {
@@ -599,7 +597,6 @@ public abstract class Node implements EventTarget {
      * The parent of this {@code Node}. If this {@code Node} has not been added
      * to a scene graph, then parent will be null.
      *
-     * @profile common
      * @defaultvalue null
      */
     private ReadOnlyObjectWrapper<Parent> parent;
@@ -675,7 +672,6 @@ public abstract class Node implements EventTarget {
      * The {@link Scene} that this {@code Node} is part of. If the Node is not
      * part of a scene, then this variable will be null.
      *
-     * @profile common
      * @defaultvalue null
      */
     private ReadOnlyObjectWrapper<Scene> scene;
@@ -760,7 +756,6 @@ public abstract class Node implements EventTarget {
      *     be used to find this node as follows: <code>scene.lookup("#myId");</code>.
      * </p>
      *
-     * @profile common
      * @defaultvalue null
      */
     private StringProperty id;
@@ -780,7 +775,6 @@ public abstract class Node implements EventTarget {
      *
      * @return the id assigned to this {@code Node} using the {@code setId} 
      *         method or {@code null}, if no id has been assigned.
-     * @profile common
      * @defaultvalue null
      */
     public final String getId() {
@@ -817,7 +811,6 @@ public abstract class Node implements EventTarget {
      * each element of the list is a style class to which this Node belongs.
      *
      * @see <a href="http://www.w3.org/TR/css3-selectors/#class-html">CSS3 class selectors</a>
-     * @profile common
      * @defaultvalue null
      */
     private ObservableList<String> styleClass = new TrackableObservableList<String>() {
@@ -855,7 +848,6 @@ public abstract class Node implements EventTarget {
      * HTML element. Note that, like the HTML style attribute, this
      * variable contains style properties and values and not the
      * selector portion of a style rule.
-     * @profile common
      * @defaultvalue empty string
      */
     private StringProperty style;
@@ -868,7 +860,6 @@ public abstract class Node implements EventTarget {
      * selector portion of a style rule.
      * @param value The inline CSS style to use for this {@code Node}.
      *         {@code null} is implicitly converted to an empty String. 
-     * @profile common
      * @defaultvalue empty string
      */
     public final void setStyle(String value) {
@@ -882,7 +873,6 @@ public abstract class Node implements EventTarget {
      * HTML element. Note that, like the HTML style attribute, this
      * variable contains style properties and values and not the
      * selector portion of a style rule.
-     * @profile common
      * @defaultvalue empty string
      * @return The inline CSS style associated with this {@code Node}.
      *         If this {@code Node} does not have an inline style,
@@ -930,7 +920,6 @@ public abstract class Node implements EventTarget {
      * keyboard focus, and never maintain keyboard focus when they become
      * invisible.
      *
-     * @profile common
      * @defaultvalue true
      */
     private BooleanProperty visible;
@@ -994,7 +983,6 @@ public abstract class Node implements EventTarget {
      * used. If no Node in the scene graph defines a cursor, then the cursor
      * of the {@code Scene} will be used.
      *
-     * @profile common
      * @defaultvalue null
      */
     public final ObjectProperty<Cursor> cursorProperty() {
@@ -1028,7 +1016,6 @@ public abstract class Node implements EventTarget {
      * will cause its children to be rendered in order without Z-buffering
      * applied between those children.
      *
-     * @profile common
      * @defaultvalue 1.0
      */
     private DoubleProperty opacity;
@@ -1079,7 +1066,6 @@ public abstract class Node implements EventTarget {
      * parent such as a Group and the equivalent of SRC_OVER for a single Node.
      *
      * @defaultvalue null
-     * @profile common conditional effect
      */
     private javafx.beans.property.ObjectProperty<BlendMode> blendMode;
 
@@ -1151,7 +1137,6 @@ public abstract class Node implements EventTarget {
      * will cause its children to be rendered in order without Z-buffering
      * applied between those children.
      *
-     * @profile common conditional shape_clip
      * @defaultvalue null
      */
     public final ObjectProperty<Node> clipProperty() {
@@ -1204,7 +1189,6 @@ public abstract class Node implements EventTarget {
      * any of its ancestors, or any of its descendants.
      *
      * @see #cacheHintProperty
-     * @profile common
      * @defaultvalue false
      */
     public final BooleanProperty cacheProperty() {
@@ -1265,7 +1249,6 @@ public abstract class Node implements EventTarget {
      * any of its ancestors, or any of its descendants.
      *
      * @see #cacheProperty
-     * @profile common
      * @since JavaFX 1.3
      * @defaultvalue CacheHint.DEFAULT
      */
@@ -1296,7 +1279,6 @@ public abstract class Node implements EventTarget {
      * to be rendered in order without Z-buffering applied between those
      * children.
      *
-     * @profile common conditional effect
      * @defaultvalue null
      */
     public final ObjectProperty<Effect> effectProperty() {
@@ -1334,7 +1316,6 @@ public abstract class Node implements EventTarget {
      * arguments.
      *
      * @see javafx.scene.Scene
-     * @profile common conditional scene3d
      * @defaultvalue INHERIT
      */
     public final ObjectProperty<DepthTest> depthTestProperty() {
@@ -1399,7 +1380,6 @@ public abstract class Node implements EventTarget {
      * ancestor being disabled even if the individual {@code disable} state on
      * this {@code Node} is {@code false}.
      *
-     * @profile common
      * @defaultvalue false
      */
     public final BooleanProperty disableProperty() {
@@ -1420,7 +1400,6 @@ public abstract class Node implements EventTarget {
      * by intersecting with the geometric shape of this node.
      *
      * @defaultvalue false
-     * @profile common
      * @since JavaFX 1.3
      */
     private BooleanProperty pickOnBounds;
@@ -1457,7 +1436,6 @@ public abstract class Node implements EventTarget {
      * <p>
      * A disabled {@code Node} does not receive mouse or key events.
      *
-     * @profile common
      * @defaultvalue false
      */
     private ReadOnlyBooleanWrapper disabled;
@@ -1513,7 +1491,6 @@ public abstract class Node implements EventTarget {
      *     be used to find this node as follows: <code>scene.lookup("#myId");</code>.
      * </p>
      *
-     * @profile common
      * @param selector The css selector of the node to find
      * @return The first node, starting from this {@code Node}, which matches
      *         the CSS {@code selector}, null if none is found.
@@ -1529,7 +1506,6 @@ public abstract class Node implements EventTarget {
      * the given CSS selector. If no matches are found, an empty unmodifiable set is
      * returned. The set is explicitly unordered.
      *
-     * @profile common
      * @param selector The css selector of the nodes to find
      * @return All nodes, starting from and including this {@code Node}, which match
      *         the CSS {@code selector}. The returned set is always unordered and
@@ -1566,8 +1542,6 @@ public abstract class Node implements EventTarget {
      * z-order.  This is accomplished by moving this {@code Node} to the
      * first position in its parent's {@code content} ObservableList.
      * This function has no effect if this {@code Node} is not part of a group.
-     *
-     * @profile common
      */
     public void toBack() {
         if (getParent() != null) {
@@ -1580,8 +1554,6 @@ public abstract class Node implements EventTarget {
      * z-order.  This is accomplished by moving this {@code Node} to the
      * last position in its parent's {@code content} ObservableList.
      * This function has no effect if this {@code Node} is not part of a group.
-     *
-     * @profile common
      */
     public void toFront() {
         if (getParent() != null) {
@@ -2476,8 +2448,6 @@ public abstract class Node implements EventTarget {
      * this variable. For example, the x or y variables of a shape, or
      * translateX, translateY should never be bound to boundsInParent
      * for the purpose of positioning the node.
-     *
-     * @profile common
      */
     public final ReadOnlyObjectProperty<Bounds> boundsInParentProperty() {
         return getMiscProperties().boundsInParentProperty();
@@ -2513,8 +2483,6 @@ public abstract class Node implements EventTarget {
      * of these values in a node to an expression that depends upon this variable.
      * For example, the x or y variables of a shape should never be bound
      * to boundsInLocal for the purpose of positioning the node.
-     *
-     * @profile common
      */
     public final ReadOnlyObjectProperty<Bounds> boundsInLocalProperty() {
         return getMiscProperties().boundsInLocalProperty();
@@ -3141,8 +3109,6 @@ public abstract class Node implements EventTarget {
      * coordinate space of this {@code Node}) is contained within the shape of
      * this {@code Node}. Note that this method does not take visibility into
      * account; the test is based on the geometry of this {@code Node} only.
-     *
-     * @profile common
      */
     public boolean contains(double localX, double localY) {
         if (containsBounds(localX, localY)) {
@@ -3209,8 +3175,6 @@ public abstract class Node implements EventTarget {
      * coordinate space of this {@code Node}) is contained within the shape of
      * this {@code Node}. Note that this method does not take visibility into
      * account; the test is based on the geometry of this {@code Node} only.
-     *
-     * @profile common
      */
     public boolean contains(Point2D localPoint) {
         return contains(localPoint.getX(), localPoint.getY());
@@ -3223,8 +3187,6 @@ public abstract class Node implements EventTarget {
      * account; the test is based on the geometry of this {@code Node} only.
      * The default behavior of this function is simply to check if the
      * given coordinates intersect with the local bounds.
-     *
-     * @profile common
      */
     public boolean intersects(double localX, double localY, double localWidth, double localHeight) {
         BaseBounds tempBounds = TempState.getInstance().bounds;
@@ -3243,8 +3205,6 @@ public abstract class Node implements EventTarget {
      * account; the test is based on the geometry of this {@code Node} only.
      * The default behavior of this function is simply to check if the
      * given coordinates intersect with the local bounds.
-     *
-     * @profile common
      */
     public boolean intersects(Bounds localBounds) {
         return intersects(localBounds.getMinX(), localBounds.getMinY(), localBounds.getWidth(), localBounds.getHeight());
@@ -3253,8 +3213,6 @@ public abstract class Node implements EventTarget {
     /**
      * Transforms a point from the coordinate space of the {@link Scene}
      * into the local coordinate space of this {@code Node}.
-     *
-     * @profile common
      */
     public Point2D sceneToLocal(double sceneX, double sceneY) {
         final com.sun.javafx.geom.Point2D tempPt =
@@ -3271,8 +3229,6 @@ public abstract class Node implements EventTarget {
     /**
      * Transforms a point from the coordinate space of the {@link javafx.scene.Scene}
      * into the local coordinate space of this {@code Node}.
-     *
-     * @profile common
      */
     public Point2D sceneToLocal(Point2D scenePoint) {
         return sceneToLocal(scenePoint.getX(), scenePoint.getY());
@@ -3295,8 +3251,6 @@ public abstract class Node implements EventTarget {
      * Transforms a rectangle from the coordinate space of the
      * {@link javafx.scene.Scene} into the local coordinate space of this
      * {@code Node}.
-     *
-     * @profile common
      */
     public Bounds sceneToLocal(Bounds sceneBounds) {
         // Do a quick update of localToParentTransform so that we can determine
@@ -3324,8 +3278,6 @@ public abstract class Node implements EventTarget {
     /**
      * Transforms a point from the local coordinate space of this {@code Node}
      * into the coordinate space of its {@link javafx.scene.Scene}.
-     *
-     * @profile common
      */
     public Point2D localToScene(double localX, double localY) {
         final com.sun.javafx.geom.Point2D tempPt =
@@ -3338,8 +3290,6 @@ public abstract class Node implements EventTarget {
     /**
      * Transforms a point from the local coordinate space of this {@code Node}
      * into the coordinate space of its {@link javafx.scene.Scene}.
-     *
-     * @profile common
      */
     public Point2D localToScene(Point2D localPoint) {
         return localToScene(localPoint.getX(), localPoint.getY());
@@ -3356,8 +3306,6 @@ public abstract class Node implements EventTarget {
     /**
      * Transforms a bounds from the local coordinate space of this
      * {@code Node} into the coordinate space of its {@link javafx.scene.Scene}.
-     *
-     * @profile common
      */
     public Bounds localToScene(Bounds localBounds) {
         // Do a quick update of localToParentTransform so that we can determine
@@ -3386,8 +3334,6 @@ public abstract class Node implements EventTarget {
     /**
      * Transforms a point from the coordinate space of the parent into the
      * local coordinate space of this {@code Node}.
-     *
-     * @profile common
      */
     public Point2D parentToLocal(double parentX, double parentY) {
         final com.sun.javafx.geom.Point2D tempPt =
@@ -3404,8 +3350,6 @@ public abstract class Node implements EventTarget {
     /**
      * Transforms a point from the coordinate space of the parent into the
      * local coordinate space of this {@code Node}.
-     *
-     * @profile common
      */
     public Point2D parentToLocal(Point2D parentPoint) {
         return parentToLocal(parentPoint.getX(), parentPoint.getY());
@@ -3426,8 +3370,6 @@ public abstract class Node implements EventTarget {
     /**
      * Transforms a rectangle from the coordinate space of the parent into the
      * local coordinate space of this {@code Node}.
-     *
-     * @profile common
      */
     public Bounds parentToLocal(Bounds parentBounds) {
         // Do a quick update of localToParentTransform so that we can determine
@@ -3455,8 +3397,6 @@ public abstract class Node implements EventTarget {
     /**
      * Transforms a point from the local coordinate space of this {@code Node}
      * into the coordinate space of its parent.
-     *
-     * @profile common
      */
     public Point2D localToParent(double localX, double localY) {
         final com.sun.javafx.geom.Point2D tempPt =
@@ -3469,8 +3409,6 @@ public abstract class Node implements EventTarget {
     /**
      * Transforms a point from the local coordinate space of this {@code Node}
      * into the coordinate space of its parent.
-     *
-     * @profile common
      */
     public Point2D localToParent(Point2D localPoint) {
         return localToParent(localPoint.getX(), localPoint.getY());
@@ -3487,8 +3425,6 @@ public abstract class Node implements EventTarget {
     /**
      * Transforms a bounds from the local coordinate space of this
      * {@code Node} into the coordinate space of its parent.
-     *
-     * @profile common
      */
     public Bounds localToParent(Bounds localBounds) {
         // Do a quick update of localToParentTransform so that we can determine
@@ -3773,7 +3709,6 @@ public abstract class Node implements EventTarget {
      * {@link javafx.application.ConditionalFeature#SCENE3D ConditionalFeature.SCENE3D}
      * for more information.
      *
-     * @profile common conditional scene3d
      * @treatasprivate implementation detail
      * @deprecated This is an internal API that is not intended for use and will be removed in the next version
      */
@@ -3823,7 +3758,6 @@ public abstract class Node implements EventTarget {
      * before {@link #translateXProperty translateX}, {@link #translateYProperty translateY}, {@link #scaleXProperty scaleX}, and
      * {@link #scaleYProperty scaleY}, {@link #rotateProperty rotate} transforms.
      *
-     * @profile common
      * @defaultvalue empty
      */
     public final ObservableList<Transform> getTransforms() {
@@ -3855,7 +3789,6 @@ public abstract class Node implements EventTarget {
      * This variable can be used to alter the location of a node without disturbing
      * its {@link #layoutBoundsProperty layoutBounds}, which makes it useful for animating a node's location.
      *
-     * @profile common
      * @defaultvalue 0
      */
     public final DoubleProperty translateXProperty() {
@@ -3883,7 +3816,6 @@ public abstract class Node implements EventTarget {
      * This variable can be used to alter the location of a node without disturbing
      * its {@link #layoutBoundsProperty layoutBounds}, which makes it useful for animating a node's location.
      *
-     * @profile common
      * @defaultvalue 0
      */
     public final DoubleProperty translateYProperty() {
@@ -3914,7 +3846,6 @@ public abstract class Node implements EventTarget {
      * {@link javafx.application.ConditionalFeature#SCENE3D ConditionalFeature.SCENE3D}
      * for more information.
      *
-     * @profile common conditional scene3d
      * @defaultvalue 0
      * @since JavaFX 1.3
      */
@@ -3943,7 +3874,6 @@ public abstract class Node implements EventTarget {
      * The pivot point about which the scale occurs is the center of the
      * untransformed {@link #layoutBoundsProperty layoutBounds}.
      *
-     * @profile common
      * @defaultvalue 1.0
      */
     public final DoubleProperty scaleXProperty() {
@@ -3971,7 +3901,6 @@ public abstract class Node implements EventTarget {
      * The pivot point about which the scale occurs is the center of the
      * untransformed {@link #layoutBoundsProperty layoutBounds}.
      *
-     * @profile common
      * @defaultvalue 1.0
      */
     public final DoubleProperty scaleYProperty() {
@@ -4004,7 +3933,6 @@ public abstract class Node implements EventTarget {
      * {@link javafx.application.ConditionalFeature#SCENE3D ConditionalFeature.SCENE3D}
      * for more information.
      *
-     * @profile common conditional scene3d
      * @defaultvalue 1.0
      * @since JavaFX 1.3
      */
@@ -4044,7 +3972,6 @@ public abstract class Node implements EventTarget {
      * ObservableList, and add a {@link javafx.scene.transform.Rotate} transform,
      * which has a user-specifiable pivot point.
      *
-     * @profile common
      * @defaultvalue 0.0
      */
     public final DoubleProperty rotateProperty() {
@@ -4068,7 +3995,6 @@ public abstract class Node implements EventTarget {
      * {@link javafx.application.ConditionalFeature#SCENE3D ConditionalFeature.SCENE3D}
      * for more information.
      *
-     * @profile common conditional scene3d
      * @defaultvalue Rotate.Z_AXIS
      * @since JavaFX 1.3
      */
@@ -4937,7 +4863,6 @@ public abstract class Node implements EventTarget {
      * have a mouse. Future implementations may provide alternative means of
      * supporting hover.
      *
-     * @profile common
      * @defaultvalue false
      */
     private ReadOnlyBooleanWrapper hover;
@@ -4986,7 +4911,6 @@ public abstract class Node implements EventTarget {
      * the primary mouse button is down, though subclasses may define other
      * mouse button state or key state to cause the node to be "pressed".
      *
-     * @profile common
      * @defaultvalue false
      */
     private ReadOnlyBooleanWrapper pressed;
@@ -5043,8 +4967,6 @@ public abstract class Node implements EventTarget {
     /**
      * Defines a function to be called when a context menu
      * has been requested on this {@code Node}.
-     *
-     * @profile common
      */
     public final ObjectProperty<EventHandler<? super ContextMenuEvent>>
             onContextMenuRequestedProperty() {
@@ -5064,8 +4986,6 @@ public abstract class Node implements EventTarget {
     /**
      * Defines a function to be called when a mouse button has been clicked
      * (pressed and released) on this {@code Node}.
-     *
-     * @profile common
      */
     public final ObjectProperty<EventHandler<? super MouseEvent>>
             onMouseClickedProperty() {
@@ -5085,8 +5005,6 @@ public abstract class Node implements EventTarget {
     /**
      * Defines a function to be called when a mouse button is pressed
      * on this {@code Node} and then dragged.
-     *
-     * @profile common
      */
     public final ObjectProperty<EventHandler<? super MouseEvent>>
             onMouseDraggedProperty() {
@@ -5142,8 +5060,6 @@ public abstract class Node implements EventTarget {
     /**
      * Defines a function to be called when mouse cursor moves within
      * this {@code Node} but no buttons have been pushed.
-     *
-     * @profile common
      */
     public final ObjectProperty<EventHandler<? super MouseEvent>>
             onMouseMovedProperty() {
@@ -5163,8 +5079,6 @@ public abstract class Node implements EventTarget {
     /**
      * Defines a function to be called when a mouse button
      * has been pressed on this {@code Node}.
-     *
-     * @profile common
      */
     public final ObjectProperty<EventHandler<? super MouseEvent>>
             onMousePressedProperty() {
@@ -5184,8 +5098,6 @@ public abstract class Node implements EventTarget {
     /**
      * Defines a function to be called when a mouse button
      * has been released on this {@code Node}.
-     *
-     * @profile common
      */
     public final ObjectProperty<EventHandler<? super MouseEvent>>
             onMouseReleasedProperty() {
@@ -5205,8 +5117,6 @@ public abstract class Node implements EventTarget {
     /**
      * Defines a function to be called when drag gesture has been
      * detected. This is the right place to start drag and drop operation.
-     *
-     * @profile common
      */
     public final ObjectProperty<EventHandler<? super MouseEvent>>
             onDragDetectedProperty() {
@@ -5225,8 +5135,6 @@ public abstract class Node implements EventTarget {
 
     /**
      * Defines a function to be called when user performs a scrolling action. 
-     *
-     * @profile common
      */
     public final ObjectProperty<EventHandler<? super ScrollEvent>>
             onScrollProperty() {
@@ -5246,8 +5154,6 @@ public abstract class Node implements EventTarget {
     /**
      * Defines a function to be called when a full press-drag-release gesture
      * progresses within this {@code Node}.
-     *
-     * @profile common
      */
     public final ObjectProperty<EventHandler<? super MouseDragEvent>>
             onMouseDragOverProperty() {
@@ -5267,8 +5173,6 @@ public abstract class Node implements EventTarget {
     /**
      * Defines a function to be called when a full press-drag-release gesture
      * ends (by releasing mouse button) within this {@code Node}.
-     *
-     * @profile common
      */
     public final ObjectProperty<EventHandler<? super MouseDragEvent>>
             onMouseDragReleasedProperty() {
@@ -5288,8 +5192,6 @@ public abstract class Node implements EventTarget {
     /**
      * Defines a function to be called when a full press-drag-release gesture
      * enters this {@code Node}.
-     *
-     * @profile common
      */
     public final ObjectProperty<EventHandler<? super MouseDragEvent>>
             onMouseDragEnteredProperty() {
@@ -5309,8 +5211,6 @@ public abstract class Node implements EventTarget {
     /**
      * Defines a function to be called when a full press-drag-release gesture
      * leaves this {@code Node}.
-     *
-     * @profile common
      */
     public final ObjectProperty<EventHandler<? super MouseDragEvent>>
             onMouseDragExitedProperty() {
@@ -5339,8 +5239,6 @@ public abstract class Node implements EventTarget {
      * {@code Node} has input focus and a key has been pressed. The function
      * is called only if the event hasn't been already consumed during its
      * capturing or bubbling phase.
-     *
-     * @profile common
      */
     public final ObjectProperty<EventHandler<? super KeyEvent>>
             onKeyPressedProperty() {
@@ -5362,8 +5260,6 @@ public abstract class Node implements EventTarget {
      * {@code Node} has input focus and a key has been released. The function
      * is called only if the event hasn't been already consumed during its
      * capturing or bubbling phase.
-     *
-     * @profile common
      */
     public final ObjectProperty<EventHandler<? super KeyEvent>>
             onKeyReleasedProperty() {
@@ -5385,8 +5281,6 @@ public abstract class Node implements EventTarget {
      * {@code Node} has input focus and a key has been typed. The function
      * is called only if the event hasn't been already consumed during its
      * capturing or bubbling phase.
-     *
-     * @profile common
      */
     public final ObjectProperty<EventHandler<? super KeyEvent>>
             onKeyTypedProperty() {
@@ -5419,8 +5313,6 @@ public abstract class Node implements EventTarget {
      * </p>
      * When the {@code Node} loses the input focus, the JavaFX runtime
      * automatically commits the existing composed text if any.
-     *
-     * @profile common conditional input_method
      */
     public final ObjectProperty<EventHandler<? super InputMethodEvent>>
             onInputMethodTextChangedProperty() {
@@ -5457,7 +5349,6 @@ public abstract class Node implements EventTarget {
      * owner, and the scene must be in a {@code Stage} that is visible
      * and active. See {@code requestFocus()} for more information.
      *
-     * @profile common
      * @defaultvalue false
      */
     private ReadOnlyBooleanWrapper focused;
@@ -5514,7 +5405,6 @@ public abstract class Node implements EventTarget {
      * unless the focus had been set explicitly via a call
      * to {@code requestFocus()}.
      *
-     * @profile common
      * @defaultvalue false
      */
     private BooleanProperty focusTraversable;
@@ -5589,8 +5479,6 @@ public abstract class Node implements EventTarget {
      * node. The focus owner will not actually have the input focus, however,
      * unless the scene belongs to a {@code Stage} that is both visible
      * and active.
-     *
-     * @profile common
      */
     public void requestFocus() {
         if (getScene() != null) {

@@ -51,8 +51,6 @@ package javafx.scene.input;
  * Note: this is a conditional feature. See
  * {@link javafx.application.ConditionalFeature#INPUT_METHOD ConditionalFeature.INPUT_METHOD}
  * for more information.
- *
- * @profile common conditional input_method
  */
 public class InputMethodTextRun {
     /**
@@ -70,7 +68,6 @@ public class InputMethodTextRun {
     /**
      * The text in this run.
      *
-     * @profile common conditional input_method
      * @defaultvalue empty string
      */
     private String text = new String();
@@ -85,7 +82,6 @@ public class InputMethodTextRun {
     /**
      * The highlight used for displaying this text.
      *
-     * @profile common conditional input_method
      * @defaultvalue null
      */
     private InputMethodHighlight highlight;
