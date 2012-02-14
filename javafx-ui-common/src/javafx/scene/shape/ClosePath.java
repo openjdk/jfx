@@ -35,15 +35,11 @@ import com.sun.javafx.sg.PGPath;
  *
  * <p>For more information on path elements see the {@link Path} and 
  * {@link PathElement} classes.
- * 
- * @profile common
  */    
 public class ClosePath extends PathElement {
     
     /**
      * {@inheritDoc}
-     *
-     * @profile common
      */        
     @Override 
     void addTo(PGPath pgPath) {

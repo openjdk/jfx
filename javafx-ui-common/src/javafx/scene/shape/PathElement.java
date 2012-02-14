@@ -42,16 +42,12 @@ import com.sun.javafx.sg.PGPath;
  * The {@code PathElement} class represents an abstract element
  * of the {@link Path} that can represent any geometric objects
  * like straight lines, arcs, quadratic curves, cubic curves, etc.
- *
- * @profile common
  */
 public abstract class PathElement {
 
     /**
      * Defines the sequence of {@code Path} objects this path element
      * is attached to.
-     *
-     * @profile common
      */
     WeakReferenceQueue impl_nodes = new WeakReferenceQueue();
 
@@ -85,7 +81,6 @@ public abstract class PathElement {
      * are added to the coordinates of the previous PathElement to compute the
      * actual coordinates.
      *
-     * @profile common
      * @defaultvalue true
      */
     private BooleanProperty absolute;

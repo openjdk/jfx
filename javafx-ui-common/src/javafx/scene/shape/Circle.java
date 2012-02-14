@@ -58,8 +58,6 @@ circle.setCenterY(100.0f);
 circle.setRadius(50.0f);
 }
 </PRE>
- *
- * @profile common
  */
 public class Circle extends Shape {
 
@@ -123,7 +121,6 @@ public class Circle extends Shape {
     /**
      * Defines the horizontal position of the center of the circle in pixels.
      *
-     * @profile common
      * @defaultvalue 0.0
      */
     private DoubleProperty centerX;
@@ -165,7 +162,6 @@ public class Circle extends Shape {
     /**
      * Defines the vertical position of the center of the circle in pixels.
      *
-     * @profile common
      * @defaultvalue 0.0
      */
     private DoubleProperty centerY;
@@ -207,7 +203,6 @@ public class Circle extends Shape {
     /**
      * Defines the radius of the circle in pixels.
      *
-     * @profile common
      * @defaultvalue 0.0
      */
     private DoubleProperty radius;

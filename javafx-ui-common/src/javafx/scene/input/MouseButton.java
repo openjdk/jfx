@@ -46,34 +46,26 @@ package javafx.scene.input;
 
 /**
  * Mapping for Button Names
- * 
- * @profile common
  */          
 public enum MouseButton {
 
     /**
      * Represents no button.
-     * 
-     * @profile common
      */
     NONE,
 
     /**
      * Represents primary (button 1, usually the left) mouse button.
-     * 
-     * @profile common
      */
     PRIMARY,
 
     /**
      * Represents middle (button 2) mouse button.     
-     * @profile common
      */
     MIDDLE,
 
     /**
      * Represents seconday (button 3, usually the right) mouse button.
-     * @profile common
      */
     SECONDARY,
 }

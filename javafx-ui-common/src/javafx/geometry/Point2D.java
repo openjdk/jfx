@@ -27,14 +27,11 @@ package javafx.geometry;
 
 /**
  * A 2D geometric point that represents the x, y coordinates.
- *
- * @profile common
  */
 public class Point2D {
     /**
      * The x coordinate.
      *
-     * @profile common
      * @defaultvalue 0.0
      */
     private double x;
@@ -50,7 +47,6 @@ public class Point2D {
     /**
      * The y coordinate.
      *
-     * @profile common
      * @defaultvalue 0.0
      */
     private double y;
@@ -81,7 +77,6 @@ public class Point2D {
     /**
      * Computes the distance between this point and point {@code (x1, y1)}.
      *
-     * @profile common
      * @param x1 the x coordinate of other point
      * @param y1 the y coordinate of other point
      * @return the distance between this point and point {@code (x1, y1)}.
@@ -95,7 +90,6 @@ public class Point2D {
     /**
      * Computes the distance between this point and point {@code p}.
      *
-     * @profile common
      * @param p the other point
      * @return the distance between this point and point {@code p}.
      */
@@ -137,8 +131,6 @@ public class Point2D {
      * The content and format of the returned string might vary between
      * implementations.
      * The returned string might be empty but cannot be {@code null}.
-     *
-     * @profile common
      */
     @Override public String toString() {
         return "Point2D [x = " + getX() + ", y = " + getY() + "]";

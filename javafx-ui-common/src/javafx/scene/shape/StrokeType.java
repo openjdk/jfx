@@ -48,7 +48,6 @@ package javafx.scene.shape;
  * Defines where to draw the stroke around the boundary of a Shape node.
  *
  * @see Shape
- * @profile desktop
  * @since JavaFX 1.3
  */
 public enum StrokeType {
@@ -64,8 +63,6 @@ public enum StrokeType {
      * </p><p>
      * <img src="doc-files/stroketype-inside.png"/>
      * </p>
-     *
-     * @profile desktop
      */
     INSIDE,
 
@@ -80,8 +77,6 @@ public enum StrokeType {
      * </p><p>
      * <img src="doc-files/stroketype-outside.png"/>
      * </p>
-     *
-     * @profile desktop
      */
     OUTSIDE,
 
@@ -96,8 +91,6 @@ public enum StrokeType {
      * </p><p>
      * <img src="doc-files/stroketype-centered.png"/>
      * </p>
-     *
-     * @profile desktop
      */
     CENTERED
 }

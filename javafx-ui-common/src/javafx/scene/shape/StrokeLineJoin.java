@@ -46,8 +46,6 @@ package javafx.scene.shape;
 
 /**
  * Defines the line join style of a {@code Shape}. 
- *
- * @profile common
  */
 public enum StrokeLineJoin {
 
@@ -57,8 +55,6 @@ public enum StrokeLineJoin {
      * <p>
      * <img src="doc-files/strokelinejoin-miter.png"/>
      * </p>
-     *
-     * @profile common 
      */
     MITER,//(BasicStroke.JOIN_MITER),
 
@@ -69,8 +65,6 @@ public enum StrokeLineJoin {
      * <p>
      * <img src="doc-files/strokelinejoin-bevel.png"/>
      * </p>
-     *
-     * @profile common
      */
     BEVEL,//(BasicStroke.JOIN_BEVEL),
 
@@ -81,8 +75,6 @@ public enum StrokeLineJoin {
      * <p>
      * <img src="doc-files/strokelinejoin-round.png"/>
      * </p>
-     *
-     * @profile common 
      */
     ROUND//(BasicStroke.JOIN_ROUND);
 }

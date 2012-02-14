@@ -60,7 +60,6 @@ scene.setCursor(new ImageCursor(image,
                                 image.getHeight() /2));
  * </pre>
  *
- * @profile common
  * @since JavaFX 1.3
  */
 public class ImageCursor extends Cursor {
@@ -221,7 +220,6 @@ public class ImageCursor extends Cursor {
      * @param preferredWidth the preferred width of the cursor
      * @param preferredHeight the preferred height of the cursor
      * @return the supported cursor size
-     * @profile common
      * @since JavaFX 1.3
      */
     public static Dimension2D getBestSize(double preferredWidth,
@@ -249,7 +247,6 @@ public class ImageCursor extends Cursor {
      *
      * @return the maximum number of colors supported in a custom image cursor
      *      palette
-     * @profile common
      * @since JavaFX 1.3
      */
     public static int getMaximumColors() {
@@ -272,7 +269,6 @@ public class ImageCursor extends Cursor {
      * @param hotspotY the Y coordinate of the hotspot within the first image
      *        in the images sequence
      * @return a cursor created from the best image
-     * @profile common
      * @since JavaFX 1.3
      */
     public static ImageCursor chooseBestCursor(

@@ -69,8 +69,6 @@ for (int i = 0; i < 5; i++) {
     g.getChildren().add(r);
 }
 </PRE>
- *
- * @profile common
  */
 @DefaultProperty("children")
 public  class Group extends Parent {

@@ -420,7 +420,6 @@ public class Stage extends Window {
      *  </li>
      * </ul>
      * @defaultvalue false
-     * @profile common
      */
     private ReadOnlyBooleanWrapper fullScreen;
 
@@ -534,7 +533,6 @@ public class Stage extends Window {
     /**
      * Defines whether the {@code Stage} is iconified or not.
      *
-     * @profile common
      * @defaultvalue false
      */
     private ReadOnlyBooleanWrapper iconified;
@@ -582,7 +580,6 @@ public class Stage extends Window {
      * a hint which allows the implementation to optionally make the Stage
      * resizable by the user.
      *
-     * @profile common
      * @defaultvalue true
      */
     private BooleanProperty resizable;
@@ -623,7 +620,6 @@ public class Stage extends Window {
     /**
      * Defines the minimum width of this {@code Stage}.
      *
-     * @profile common
      * @defaultvalue 0
      */
     private DoubleProperty minWidth;
@@ -668,7 +664,6 @@ public class Stage extends Window {
     /**
      * Defines the minimum height of this {@code Stage}.
      *
-     * @profile common
      * @defaultvalue 0
      */
     private DoubleProperty minHeight;
@@ -714,7 +709,6 @@ public class Stage extends Window {
     /**
      * Defines the maximum width of this {@code Stage}.
      *
-     * @profile common
      * @defaultvalue Double.MAX_VALUE
      */
     private DoubleProperty maxWidth;
@@ -759,7 +753,6 @@ public class Stage extends Window {
     /**
      * Defines the maximum height of this {@code Stage}.
      *
-     * @profile common
      * @defaultvalue Double.MAX_VALUE
      */
     private DoubleProperty maxHeight;
@@ -867,8 +860,6 @@ public class Stage extends Window {
     /**
      * Bring the {@code Window} to the foreground.  If the {@code Window} is
      * already in the foreground there is no visible difference.
-     *
-     * @profile common
      */
     public void toFront() {
         if (impl_peer != null) {
@@ -881,8 +872,6 @@ public class Stage extends Window {
      * already in the background there is no visible difference.  This action
      * places this {@code Window} at the bottom of the stacking order on
      * platforms that support stacking.
-     *
-     * @profile common
      */
     public void toBack() {
         if (impl_peer != null) {

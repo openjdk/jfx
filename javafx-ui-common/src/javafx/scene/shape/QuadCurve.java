@@ -56,8 +56,6 @@ quad.setEndY(50.0f);
 quad.setControlX(25.0f);
 quad.setControlY(0.0f);
 </PRE>
- *
- * @profile common
  */
 public  class QuadCurve extends Shape {
 
@@ -91,7 +89,6 @@ public  class QuadCurve extends Shape {
      * Defines the X coordinate of the start point
      * of the quadratic curve segment.
      *
-     * @profile common
      * @defaultvalue 0.0
      */
     private DoubleProperty startX;
@@ -134,7 +131,6 @@ public  class QuadCurve extends Shape {
      * Defines the Y coordinate of the start point
      * of the quadratic curve segment.
      *
-     * @profile common
      * @defaultvalue 0.0
      */
     private DoubleProperty startY;
@@ -177,7 +173,6 @@ public  class QuadCurve extends Shape {
      * Defines the X coordinate of the control point
      * of the quadratic curve segment.
      *
-     * @profile common
      * @defaultvalue 0.0
      */
     private DoubleProperty controlX;
@@ -220,7 +215,6 @@ public  class QuadCurve extends Shape {
      * Defines the Y coordinate of the control point
      * of the quadratic curve segment.
      *
-     * @profile common
      * @defaultvalue 0.0
      */
     private DoubleProperty controlY;
@@ -262,7 +256,6 @@ public  class QuadCurve extends Shape {
      * Defines the X coordinate of the end point
      * of the quadratic curve segment.
      *
-     * @profile common
      * @defaultvalue 0.0
      */
     private DoubleProperty endX;
@@ -304,7 +297,6 @@ public  class QuadCurve extends Shape {
      * Defines the Y coordinate of the end point
      * of the quadratic curve segment.
      *
-     * @profile common
      * @defaultvalue 0.0
      */
     private DoubleProperty endY;

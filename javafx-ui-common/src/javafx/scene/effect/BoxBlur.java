@@ -66,8 +66,6 @@ bb.setIterations(3);
 t.setEffect(bb);
 
 </PRE>
- *
- * @profile common conditional effect
  */
 public class BoxBlur extends Effect {
 

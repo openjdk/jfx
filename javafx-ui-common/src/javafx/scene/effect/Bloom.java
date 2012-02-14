@@ -70,8 +70,6 @@ g.setEffect(new Bloom());
 g.getChildren().add(r);
 g.getChildren().add(t);
 </PRE>
- *
- * @profile common conditional effect
  */
 public class Bloom extends Effect {
     /**

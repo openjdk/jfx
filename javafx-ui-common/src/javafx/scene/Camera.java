@@ -34,7 +34,6 @@ import com.sun.javafx.geom.CameraImpl;
 /**
  * Base class for a camera used to render a scene.
  *
- * @profile common conditional scene3d
  * @since JavaFX 1.3
  */
 public abstract class Camera {

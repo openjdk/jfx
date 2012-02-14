@@ -28,8 +28,6 @@ package javafx.geometry;
 /**
  * A rectangular bounding box which is used to describe the bounds of a node
  * or other scene graph object.
- *
- * @profile common
  */
 public class BoundingBox extends Bounds {
     /**
@@ -206,8 +204,6 @@ public class BoundingBox extends Bounds {
      * The content and format of the returned string might getMary between
      * implementations.
      * The returned string might be empty but cannot be {@code null}.
-     *
-     * @profile common
      */
     @Override public String toString() {
         return "BoundingBox ["

@@ -31,7 +31,6 @@ import com.sun.javafx.tk.TKClipboard;
 
 /**
  * A drag and drop specific {@link Clipboard}.
- * @profile common
  */
 public final class Dragboard extends Clipboard {
 

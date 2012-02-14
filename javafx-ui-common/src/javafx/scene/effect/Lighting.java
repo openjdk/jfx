@@ -69,8 +69,6 @@ t.setTextOrigin(VPos.TOP);
 
 t.setEffect(l);
 </PRE>
- *
- * @profile common conditional effect
  */
 public class Lighting extends Effect {
     @Override

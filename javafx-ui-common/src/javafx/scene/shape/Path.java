@@ -91,9 +91,6 @@ path.getElements().add(lineTo);
 path.getElements().add(arcTo);
 
 </PRE>
- *
- *
- * @profile common
  */
 public class Path extends Shape {
 
@@ -145,7 +142,6 @@ public class Path extends Shape {
      * {@code FillRile.EVEN_ODD} or {@code FillRule.NON_ZERO}.
      * The default value is {@code FillRule.NON_ZERO}.
      *
-     * @profile common
      * @defaultvalue FillRule.NON_ZERO
      */
     private ObjectProperty<FillRule> fillRule;
@@ -188,7 +184,6 @@ public class Path extends Shape {
     /**
      * Defines the array of path elements of this path.
      *
-     * @profile common
      * @defaultvalue empty
      */
     private final ObservableList<PathElement> elements = new TrackableObservableList<PathElement>() {

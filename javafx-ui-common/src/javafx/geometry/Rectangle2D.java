@@ -28,8 +28,6 @@ package javafx.geometry;
 /**
  * A 2D rectangle used to describe the bounds of an object. It is defined by a
  * location (minX, minY) and dimension (width x height).
- *
- * @profile common
  */
 public class Rectangle2D {
     /**
@@ -40,7 +38,6 @@ public class Rectangle2D {
     /**
      * The x coordinate of the upper-left corner of this {@code Rectangle2D}.
      *
-     * @profile common
      * @defaultvalue 0.0
      */
     public double getMinX() { return minX; }
@@ -49,7 +46,6 @@ public class Rectangle2D {
     /**
      * The y coordinate of the upper-left corner of this {@code Rectangle2D}.
      *
-     * @profile common
      * @defaultvalue 0.0
      */
     public double getMinY() { return minY; }
@@ -58,7 +54,6 @@ public class Rectangle2D {
     /**
      * The width of this {@code Rectangle2D}.
      *
-     * @profile common
      * @defaultvalue 0.0
      */
     public double getWidth() { return width; }
@@ -67,7 +62,6 @@ public class Rectangle2D {
     /**
      * The height of this {@code Rectangle2D}.
      *
-     * @profile common
      * @defaultvalue 0.0
      */
     public double getHeight() { return height; }
@@ -76,7 +70,6 @@ public class Rectangle2D {
     /**
      * The x coordinate of the lower-right corner of this {@code Rectangle2D}.
      *
-     * @profile common
      * @defaultvalue {@code minX + width}
      */
     public double getMaxX() { return maxX; }
@@ -85,7 +78,6 @@ public class Rectangle2D {
     /**
      * The y coordinate of the lower-right corner of this {@code Rectangle2D}.
      *
-     * @profile common
      * @defaultvalue {@code minY + height}
      */
     public double getMaxY() { return maxY; }
@@ -119,7 +111,6 @@ public class Rectangle2D {
    /**
     * Tests if the specified point is inside the boundary of {@code Rectangle2D}.
     *
-    * @profile common
     * @param p the specified point to be tested
     * @return true if the specified point is inside the boundary of this
     * {@code Rectangle2D}; false otherwise.
@@ -133,7 +124,6 @@ public class Rectangle2D {
     * Tests if the specified {@code (x, y)} coordinates are inside the boundary
     * of {@code Rectangle2D}.
     *
-    * @profile common
     * @param x the specified x coordinate to be tested
     * @param y the specified y coordinate to be tested
     * @return true if the specified {@code (x, y)} coordinates are inside the
@@ -147,7 +137,6 @@ public class Rectangle2D {
     * Tests if the interior of this {@code Rectangle2D} entirely contains the
     * specified Rectangle2D, {@code r}.
     *
-    * @profile common
     * @param r The specified Rectangle2D
     * @return true if the specified Rectangle2D, {@code r}, is inside the
     * boundary of this {@code Rectangle2D}; false otherwise.
@@ -161,7 +150,6 @@ public class Rectangle2D {
     * Tests if the interior of this {@code Rectangle2D} entirely contains the
     * specified rectangular area.
     *
-    * @profile common
     * @param x the x coordinate of the upper-left corner of the specified
     * rectangular area
     * @param y the y coordinate of the upper-left corner of the specified
@@ -179,7 +167,6 @@ public class Rectangle2D {
     * Tests if the interior of this {@code Rectangle2D} intersects the interior
     * of a specified Rectangle2D, {@code r}.
     *
-    * @profile common
     * @param r The specified Rectangle2D
     * @return true if the interior of this {@code Rectangle2D} and the interior
     * of the specified Rectangle2D, {@code r}, intersect.
@@ -193,7 +180,6 @@ public class Rectangle2D {
     * Tests if the interior of this {@code Rectangle2D} intersects the interior
     * of a specified rectangular area.
     *
-    * @profile common
     * @param x the x coordinate of the upper-left corner of the specified
     * rectangular area
     * @param y the y coordinate of the upper-left corner of the specified
@@ -245,8 +231,6 @@ public class Rectangle2D {
      * The content and format of the returned string might vary between
      * implementations.
      * The returned string might be empty but cannot be {@code null}.
-     *
-     * @profile common
      */
     @Override public String toString() {
         return "Rectangle2D [minX = " + minX
