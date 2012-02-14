@@ -633,7 +633,6 @@ public final class Text extends Shape {
      * @profile common
      * @since JavaFX 1.3
      */
-    //TODO(aim): not sure this needs to be a field vs. just a getter function that lazily computes it
     private ReadOnlyDoubleWrapper baselineOffset;
 
     private void setBaselineOffset(double value) {
@@ -1097,17 +1096,6 @@ public final class Text extends Shape {
      * updates decoration Shapes: selectionShape, caretShape
      */
     private void getDecorationShapes() {
-        /*
-         * TODO: if we do not read boundsInLocal our boundsInLocalListener
-         * "on replace" does not work. It is updated once for null value and
-         * never again. Richard?
-         */
-         // TODO!! There appears to be a bug here, where if I attempt to read
-         // boundsInLocal at this time, then it will cause an invalid Bounds
-         // to be created. Seems like an initialization order bug, maybe in the
-         // compiler?
-        //var t = boundsInLocal;
-
         if (getImpl_caretPosition() >= 0) {
             //convert insertion postiion into character index
             int charIndex = getImpl_caretPosition() - ((isImpl_caretBias()) ? 0 : 1);
@@ -1221,17 +1209,6 @@ public final class Text extends Shape {
         {
             return bounds.makeEmpty();
         }
-
-        // TODO: Scenario has this odd "isDegradedTransform" function for
-        // handling an apparent bug on mac which happened when transform was
-        // not identity but really close to it, which caused the bounds to
-        // be computed as some enormous value. I'm not sure if this is a
-        // problem yet in this implementation, but if so, then we need to do
-        // the check right here.
-        //if (isDegradedTransform(tx)) {
-        //    tx = BaseTransform.IDENTITY_TRANSFORM;
-        //}
-
         return getTextHelper().computeBounds(bounds, tx);
     }
 
