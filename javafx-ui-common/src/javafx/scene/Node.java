@@ -417,9 +417,9 @@ public abstract class Node implements EventTarget {
 
     /**
      * Called only by Text to update the state and clear dirtybits in the PG graph
-     * TODO: This must be removed, and TextHelper should work with a PG node
-     * directly or some other means rather than using this method. This is a very
-     * dangerous method to have.
+     * TODO: This must be removed as soon as RT-13735 is complete, since
+     * TextHelper should work with a PG node directly or some other means rather
+     * than using this method.
      *
      * @treatAsPrivate implementation detail
      * @deprecated This is an internal API that is not intended for use and will be removed in the next version
