@@ -390,19 +390,19 @@ public class TreeCell<T> extends IndexedCell<T> {
         // Compute whether the index for this cell is for a real item
         boolean valid = getIndex() >=0 && getIndex() < tv.impl_getTreeItemCount();
 
-        // get the new treeItem that is about to go in to the TreeCell
-        TreeItem<T> treeItem = valid ? tv.getTreeItem(getIndex()) : null;
-        
         // Cause the cell to update itself
-        if (valid && treeItem != null) {
+        if (valid) {
             // update the TreeCell state.
+            // get the new treeItem that is about to go in to the TreeCell
+            TreeItem<T> treeItem = valid ? tv.getTreeItem(getIndex()) : null;
+        
             // For the sake of RT-14279, it is important that the order of these
             // method calls is as shown below. If the order is switched, it is
             // likely that events will be fired where the item is null, even
             // though calling cell.getTreeItem().getValue() returns the value
             // as expected
             updateTreeItem(treeItem);
-            updateItem(treeItem.getValue(), false);
+            updateItem(treeItem == null ? null : treeItem.getValue(), treeItem == null);
         } else {
             updateTreeItem(null);
             updateItem(null, true);

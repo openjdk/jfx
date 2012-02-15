@@ -881,23 +881,37 @@ public class TreeView<T> extends Control {
     private TreeItem getItem(TreeItem<T> parent, int itemIndex) {
         if (parent == null) return null;
 
-        // if itemIndex is 0 then our item is what we were looking for
+        // if itemIndex is 0 then our parent is what we were looking for
         if (itemIndex == 0) return parent;
 
         // if itemIndex is > the total item count, then it is out of range
         if (itemIndex >= getExpandedDescendantCount(parent)) return null;
 
         // if we got here, then one of our descendants is the item we're after
-        TreeItem<T> ret;
+        List<TreeItem<T>> children = parent.getChildren();
+        if (children == null) return null;
+        
         int idx = itemIndex - 1;
 
-        List<TreeItem<T>> children = parent.getChildren();
-        if (children != null) {
-            for (TreeItem c : children) {
-                ret = getItem(c, idx);
-                idx -= getExpandedDescendantCount(c);
-                if (ret != null) return ret;
+        TreeItem child;
+        for (int i = 0; i < children.size(); i++) {
+            child = children.get(i);
+            if (idx == 0) return child;
+            
+            if (child.isLeaf() || ! child.isExpanded()) {
+                idx--;
+                continue;
             }
+            
+            int expandedChildCount = getExpandedDescendantCount(child);
+            if (idx >= expandedChildCount) {
+                idx -= expandedChildCount;
+                continue;
+            }
+            
+            TreeItem<T> result = getItem(child, idx);
+            if (result != null) return result;
+            idx--;
         }
 
         // We might get here if getItem(0) is called on an empty tree
