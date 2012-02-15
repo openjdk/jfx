@@ -250,7 +250,7 @@ public class ComboBoxListViewSkin<T> extends ComboBoxPopupControl<T> {
     private ListCell<T> getListCellLabel() {
         if (listCellLabel != null) return listCellLabel;
         
-        Callback<ListView<T>, ListCell<T>> cellFactory = listView.getCellFactory();
+        Callback<ListView<T>, ? extends ListCell<T>> cellFactory = listView.getCellFactory();
         listCellLabel = cellFactory != null ? cellFactory.call(listView) : new ListCell<T>() {
             @Override public void updateItem(T item, boolean empty) {
                 super.updateItem(item, empty);

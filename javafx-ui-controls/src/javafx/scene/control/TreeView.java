@@ -296,7 +296,7 @@ public class TreeView<T> extends Control {
     
 
     // --- Cell Factory
-    private ObjectProperty<Callback<TreeView<T>, TreeCell<T>>> cellFactory;
+    private ObjectProperty<Callback<TreeView<T>, ? extends TreeCell<T>>> cellFactory;
     
     /**
      * Sets the cell factory that will be used for creating TreeCells,
@@ -312,7 +312,7 @@ public class TreeView<T> extends Control {
      * @param value The {@link Callback} to use for generating TreeCell instances,
      *      or null if the default cell factory should be used.
      */
-    public final void setCellFactory(Callback<TreeView<T>, TreeCell<T>> value) { 
+    public final void setCellFactory(Callback<TreeView<T>, ? extends TreeCell<T>> value) { 
         cellFactoryProperty().set(value); 
     }
     
@@ -321,7 +321,7 @@ public class TreeView<T> extends Control {
      * which are used to represent items in the TreeView, or null if no custom
      * cell factory has been set.
      */
-    public final Callback<TreeView<T>, TreeCell<T>> getCellFactory() { 
+    public final Callback<TreeView<T>, ? extends TreeCell<T>> getCellFactory() { 
         return cellFactory == null ? null : cellFactory.get(); 
     }
     
@@ -329,9 +329,9 @@ public class TreeView<T> extends Control {
      * Represents the cell factory that will be used for creating TreeCells,
      * which are used to represent items in the TreeView. 
      */
-    public final ObjectProperty<Callback<TreeView<T>, TreeCell<T>>> cellFactoryProperty() {
+    public final ObjectProperty<Callback<TreeView<T>, ? extends TreeCell<T>>> cellFactoryProperty() {
         if (cellFactory == null) {
-            cellFactory = new SimpleObjectProperty<Callback<TreeView<T>, TreeCell<T>>>(this, "cellFactory");
+            cellFactory = new SimpleObjectProperty<Callback<TreeView<T>, ? extends TreeCell<T>>>(this, "cellFactory");
         }
         return cellFactory;
     }

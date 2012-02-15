@@ -557,18 +557,21 @@ public class TableColumn<S,T> implements EventTarget {
      * elsewhere (see {@link Cell} and {@link TableView} for example).</p>
      *
      */
-    private final ObjectProperty<Callback<TableColumn<S,T>, TableCell<S,T>>> cellFactory =
-            new SimpleObjectProperty<Callback<TableColumn<S,T>, TableCell<S,T>>>(this, "cellFactory", (Callback<TableColumn<S,T>, TableCell<S,T>>) ((Callback) DEFAULT_CELL_FACTORY));
+    private final ObjectProperty<Callback<TableColumn<S,T>, ? extends TableCell<S,T>>> cellFactory =
+            new SimpleObjectProperty<Callback<TableColumn<S,T>, ? extends TableCell<S,T>>>(
+                this, 
+                "cellFactory", 
+                (Callback<TableColumn<S,T>, ? extends TableCell<S,T>>) ((Callback) DEFAULT_CELL_FACTORY));
 
-    public final void setCellFactory(Callback<TableColumn<S,T>, TableCell<S,T>> value) {
+    public final void setCellFactory(Callback<TableColumn<S,T>, ? extends TableCell<S,T>> value) {
         cellFactory.set(value);
     }
 
-    public final Callback<TableColumn<S,T>, TableCell<S,T>> getCellFactory() {
+    public final Callback<TableColumn<S,T>, ? extends TableCell<S,T>> getCellFactory() {
         return cellFactory.get();
     }
 
-    public final ObjectProperty<Callback<TableColumn<S,T>, TableCell<S,T>>> cellFactoryProperty() {
+    public final ObjectProperty<Callback<TableColumn<S,T>, ? extends TableCell<S,T>>> cellFactoryProperty() {
         return cellFactory;
     }
     
