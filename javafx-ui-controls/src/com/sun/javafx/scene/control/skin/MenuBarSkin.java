@@ -25,6 +25,7 @@
 
 package com.sun.javafx.scene.control.skin;
 
+import com.sun.javafx.css.StyleManager;
 import java.lang.reflect.Field;
 import java.util.ArrayList;
 import java.util.List;
@@ -67,6 +68,11 @@ import com.sun.javafx.scene.traversal.TraversalEngine;
 import com.sun.javafx.scene.traversal.TraverseListener;
 import com.sun.javafx.stage.StageHelper;
 import com.sun.javafx.tk.Toolkit;
+import javafx.beans.property.*;
+import javafx.event.EventType;
+import javafx.geometry.Side;
+import javafx.scene.control.*;
+import javafx.scene.input.*;
 
 
 /**
@@ -80,10 +86,10 @@ public class MenuBarSkin extends SkinBase<MenuBar, BehaviorBase<MenuBar>> implem
 
     private Menu openMenu;
     private MenuBarButton openMenuButton;
-    private int focusedMenuIndex = 0;
+    private int focusedMenuIndex = -1;
     private TraversalEngine engine;
     private Direction direction;
-
+    private boolean firstF10 = true;
 
     private static WeakHashMap<Stage, MenuBarSkin> systemMenuMap;
     private static List<MenuBase> emptyMenuList = new ArrayList<MenuBase>();
@@ -143,62 +149,53 @@ public class MenuBarSkin extends SkinBase<MenuBar, BehaviorBase<MenuBar>> implem
         
         container = new HBox();
         getChildren().add(container);
-        
+     
         control.getScene().addEventFilter(KeyEvent.KEY_PRESSED, new EventHandler<KeyEvent>() {
             @Override public void handle(KeyEvent event) {
                 // process right left and may be tab key events
                 switch (event.getCode()) {
                     case LEFT:
                         if (control.getScene().getWindow().isFocused()) {
-                            Menu prevMenu = findPreviousSibling();
-                            if (openMenu == null || ! openMenu.isShowing()) {
+                            if (openMenu == null) return;
+                            if ( !openMenu.isShowing()) {
+                                selectPrevMenu(); // just move the selection bar
                                 return;
                             }
-                             // hide the currently visible menu, and move to the previous one
-                            openMenu.hide();
-                            if (!isMenuEmpty(prevMenu)) {
-                                openMenu = prevMenu;
-                                openMenu.show();
-                            } else {
-                                openMenu = null;
-                            }
+                            showPrevMenu();
                         }
                         event.consume();
                         break;
 
                     case RIGHT:
                         if (control.getScene().getWindow().isFocused()) {
-                            Menu nextMenu = findNextSibling();
-                            if (openMenu == null || ! openMenu.isShowing()) {
+                            if (openMenu == null) return;
+                            if (! openMenu.isShowing()) {
+                                selectNextMenu(); // just move the selection bar
                                 return;
                             }
-                             // hide the currently visible menu, and move to the next one
-                            openMenu.hide();
-                            if (!isMenuEmpty(nextMenu)) {
-                                openMenu = nextMenu;
-                                openMenu.show();
-                            } else {
-                                openMenu = null;
-                            }
+                            showNextMenu();
                         }
                         event.consume();
                         break;
 
                     case DOWN:
-                    case SPACE:
-                    case ENTER:
-                        // RT-18859: Doing nothing for down, space and enter 
-//                        if (control.getScene().getWindow().isFocused()) {
-//                            if (focusedMenuIndex != -1) {
-//                                if (!isMenuEmpty(getSkinnable().getMenus().get(focusedMenuIndex))) {
-//                                    openMenu = getSkinnable().getMenus().get(focusedMenuIndex);
-//                                    openMenu.show();
-//                                } else {
-//                                    openMenu = null;
-//                                }
-//                                event.consume();
-//                            }
-//                        }
+                    //case SPACE:
+                    //case ENTER:
+                        // RT-18859: Doing nothing for space and enter 
+                        if (control.getScene().getWindow().isFocused()) {
+                             if (openMenu == null) {
+                                return;
+                            }
+                            if (focusedMenuIndex != -1) {
+                                if (!isMenuEmpty(getSkinnable().getMenus().get(focusedMenuIndex))) {
+                                    openMenu = getSkinnable().getMenus().get(focusedMenuIndex);
+                                    openMenu.show();
+                                } else {
+                                    openMenu = null;
+                                }
+                                event.consume();
+                            }
+                        }
                         break;
                 }
                
@@ -239,13 +236,16 @@ public class MenuBarSkin extends SkinBase<MenuBar, BehaviorBase<MenuBar>> implem
 //        });
 
         /*
-        ** add an accelerator for F10.
+        ** add an accelerator for F10 on windows and ctrl+F10 on mac/linux
         ** pressing f10 will select the first menu button on a menubar
         */
-        KeyCode acceleratorCode = KeyCode.F10;
-        KeyCodeCombination acceleratorKeyCombo =
-                new KeyCodeCombination(acceleratorCode);
-
+        KeyCombination acceleratorKeyCombo;
+        final String os = System.getProperty("os.name");
+        if (os != null && os.startsWith("Mac")) {
+           acceleratorKeyCombo = KeyCombination.keyCombination("ctrl+F10");
+        } else {
+           acceleratorKeyCombo = KeyCombination.keyCombination("F10");
+        }
         getSkinnable().getParent().getScene().getAccelerators().put(acceleratorKeyCombo, firstMenuRunnable);
         engine = new TraversalEngine(this, false) {
             @Override public void trav(Node node, Direction dir) {
@@ -267,7 +267,18 @@ public class MenuBarSkin extends SkinBase<MenuBar, BehaviorBase<MenuBar>> implem
                 */
                 if (container.getChildren().size() > 0) {
                     if (container.getChildren().get(0) instanceof MenuButton) {
-                        container.getChildren().get(0).requestFocus();
+//                        container.getChildren().get(0).requestFocus();
+                        if (firstF10) { 
+                            firstF10 = false;
+                            unSelectMenus();
+                            focusedMenuIndex = 0;
+                            openMenuButton = ((MenuBarButton)container.getChildren().get(0));
+                            openMenu = getSkinnable().getMenus().get(0);
+                            openMenuButton.setHover();
+                        } else {
+                            firstF10 = true;
+                            unSelectMenus();
+                        }
                     }
                 }
             }
@@ -464,7 +475,7 @@ public class MenuBarSkin extends SkinBase<MenuBar, BehaviorBase<MenuBar>> implem
                     // check if the owner window has focus
                     if (menuButton.getScene().getWindow().isFocused()) {
                         if (pendingDismiss) {
-                            if (openMenu != null) openMenu.hide();
+                            resetOpenMenu();
 //                            menuButton.hide();
                         }
                     }
@@ -537,29 +548,41 @@ public class MenuBarSkin extends SkinBase<MenuBar, BehaviorBase<MenuBar>> implem
             menuButton.setOnMouseEntered(new EventHandler<MouseEvent>() {
                 @Override public void handle(MouseEvent event) {
                     // check if the owner window has focus
-                    if (menuButton.getScene().getWindow().isFocused()) {
-                        if (openMenu == null || ! openMenu.isShowing()) {
-                            updateFocusedIndex();
-                            return;
+                    if (menuButton.getScene().getWindow().isFocused()) { 
+                        if (openMenuButton != null && openMenuButton != menuButton) {
+                                openMenuButton.clearHover();
+                                openMenuButton = null;
+                                openMenuButton = menuButton;
                         }
+                        if (openMenu == null) return;
+                        updateFocusedIndex();
+                        if (openMenu.isShowing()) {
                          // hide the currently visible menu, and move to the new one
-                        openMenu.hide();
-    //                    openMenuButton.hide();
-                        if (!isMenuEmpty(menu)) {
-                            openMenu = menu;
-                            openMenuButton = menuButton;
-                            updateFocusedIndex();
-                            openMenu.show();
-                        } else {
-                            openMenu = null;
-                        }
-    //                    openMenuButton.show();
+                            openMenu.hide();
+                            if (!isMenuEmpty(menu)) {
+                                openMenu = menu;
+                                updateFocusedIndex();
+                                openMenu.show();
+                            } else {
+                                openMenu = null;
+                            }
                         }
                     }
+                }
             });
         }
         requestLayout();
     }
+    
+    /*
+     *  if (openMenu == null) return;
+                            if ( !openMenu.isShowing()) {
+                                selectPrevMenu(); // just move the selection bar
+                                return;
+                            }
+                            showPrevMenu();
+                        }
+     */
 
     private boolean isMenuEmpty(Menu menu) {
         boolean retVal = true;
@@ -569,6 +592,73 @@ public class MenuBarSkin extends SkinBase<MenuBar, BehaviorBase<MenuBar>> implem
         return retVal;
     }
 
+    private void resetOpenMenu() {
+        if (openMenu != null) {
+            openMenu.hide();
+            openMenu = null;
+            openMenuButton = (MenuBarButton)container.getChildren().get(focusedMenuIndex);
+            openMenuButton.clearHover();
+            openMenuButton = null;
+            focusedMenuIndex = -1;
+        }
+    }
+    
+    private void unSelectMenus() {
+        if (focusedMenuIndex == -1) return;
+        clearMenuButtonHover();
+        if (openMenu != null) {
+            openMenu.hide();
+            openMenu = null;
+        }
+        if (openMenuButton != null) {
+            openMenuButton.clearHover();
+            openMenuButton = null;
+        }
+        focusedMenuIndex = -1;
+    }
+    
+    private void selectNextMenu() {
+        Menu nextMenu = findNextSibling();
+        if (nextMenu != null && focusedMenuIndex != -1) {
+            openMenuButton = (MenuBarButton)container.getChildren().get(focusedMenuIndex);
+            openMenuButton.setHover();
+            openMenu = nextMenu;
+        }
+    }
+    
+    private void selectPrevMenu() {
+        Menu prevMenu = findPreviousSibling();
+        if (prevMenu != null && focusedMenuIndex != -1) {
+            openMenuButton = (MenuBarButton)container.getChildren().get(focusedMenuIndex);
+            openMenuButton.setHover();
+            openMenu = prevMenu;
+        }
+    }
+    
+    private void showNextMenu() {
+        Menu nextMenu = findNextSibling();
+        // hide the currently visible menu, and move to the next one
+        if (openMenu != null) openMenu.hide();
+        if (!isMenuEmpty(nextMenu)) {
+            openMenu = nextMenu;
+            openMenu.show();
+        } else {
+            openMenu = null;
+        }
+    }
+
+    private void showPrevMenu() {
+        Menu prevMenu = findPreviousSibling();
+        // hide the currently visible menu, and move to the next one
+        if (openMenu != null) openMenu.hide();
+        if (!isMenuEmpty(prevMenu)) {
+            openMenu = prevMenu;
+            openMenu.show();
+        } else {
+            openMenu = null;
+        }
+    }
+    
     private boolean isAnyMenuSelected() {
         if (container != null) {
             for(Node n : container.getChildren()) {
@@ -608,6 +698,7 @@ public class MenuBarSkin extends SkinBase<MenuBar, BehaviorBase<MenuBar>> implem
             }
             index++;
         }
+        focusedMenuIndex = -1;
     }
 
     private void clearMenuButtonHover() {
@@ -649,6 +740,11 @@ public class MenuBarSkin extends SkinBase<MenuBar, BehaviorBase<MenuBar>> implem
         private void clearHover() {
             setHover(false);
         }
+        
+        private void setHover() {
+            setHover(true);
+        }
+      
     }
 
     /***************************************************************************
