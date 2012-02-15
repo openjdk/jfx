@@ -913,7 +913,7 @@ public class TableView<S> extends Control {
     
     
     // --- Row Factory
-    private ObjectProperty<Callback<TableView<S>, ? extends TableRow<S>>> rowFactory;
+    private ObjectProperty<Callback<TableView<S>, TableRow<S>>> rowFactory;
 
     /**
      * A function which produces a TableRow. The system is responsible for
@@ -930,16 +930,16 @@ public class TableView<S> extends Control {
      * You can create custom TableCell instances per column by assigning the
      * appropriate function to the cellFactory property in the TableColumn class.
      */
-    public final ObjectProperty<Callback<TableView<S>, ? extends TableRow<S>>> rowFactoryProperty() {
+    public final ObjectProperty<Callback<TableView<S>, TableRow<S>>> rowFactoryProperty() {
         if (rowFactory == null) {
-            rowFactory = new SimpleObjectProperty<Callback<TableView<S>, ? extends TableRow<S>>>(this, "rowFactory");
+            rowFactory = new SimpleObjectProperty<Callback<TableView<S>, TableRow<S>>>(this, "rowFactory");
         }
         return rowFactory;
     }
-    public final void setRowFactory(Callback<TableView<S>, ? extends TableRow<S>> value) {
+    public final void setRowFactory(Callback<TableView<S>, TableRow<S>> value) {
         rowFactoryProperty().set(value);
     }
-    public final Callback<TableView<S>, ? extends TableRow<S>> getRowFactory() {
+    public final Callback<TableView<S>, TableRow<S>> getRowFactory() {
         return rowFactory == null ? null : rowFactory.get();
     }
     

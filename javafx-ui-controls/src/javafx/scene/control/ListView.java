@@ -441,21 +441,21 @@ public class ListView<T> extends Control {
 
 
     // --- Cell Factory
-    private ObjectProperty<Callback<ListView<T>, ? extends ListCell<T>>> cellFactory;
+    private ObjectProperty<Callback<ListView<T>, ListCell<T>>> cellFactory;
 
     /**
      * Sets a new cell factory to use in the ListView. This forces all old 
      * {@link ListCell}'s to be thrown away, and new ListCell's created with 
      * the new cell factory.
      */
-    public final void setCellFactory(Callback<ListView<T>, ? extends ListCell<T>> value) {
+    public final void setCellFactory(Callback<ListView<T>, ListCell<T>> value) {
         cellFactoryProperty().set(value);
     }
 
     /**
      * Returns the current cell factory.
      */
-    public final Callback<ListView<T>, ? extends ListCell<T>> getCellFactory() {
+    public final Callback<ListView<T>, ListCell<T>> getCellFactory() {
         return cellFactory == null ? null : cellFactory.get();
     }
 
@@ -468,9 +468,9 @@ public class ListView<T> extends Control {
      *
      * <p>Refer to the {@link Cell} class documentation for more detail.
      */
-    public final ObjectProperty<Callback<ListView<T>, ? extends ListCell<T>>> cellFactoryProperty() {
+    public final ObjectProperty<Callback<ListView<T>, ListCell<T>>> cellFactoryProperty() {
         if (cellFactory == null) {
-            cellFactory = new SimpleObjectProperty<Callback<ListView<T>, ? extends ListCell<T>>>(this, "cellFactory");
+            cellFactory = new SimpleObjectProperty<Callback<ListView<T>, ListCell<T>>>(this, "cellFactory");
         }
         return cellFactory;
     }
