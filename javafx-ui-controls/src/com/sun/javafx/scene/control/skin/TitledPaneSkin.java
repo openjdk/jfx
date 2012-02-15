@@ -71,8 +71,8 @@ public class TitledPaneSkin extends LabeledSkinBase<TitledPane, TitledPaneBehavi
 
         transitionStartValue = 0;
         titleRegion = new TitleRegion();
-        
-        contentRegion = new Content(getSkinnable().getContent());        
+
+        contentRegion = new Content(getSkinnable().getContent());
 
         if (titledPane.isExpanded()) {
             setExpanded(titledPane.isExpanded());
@@ -117,8 +117,11 @@ public class TitledPaneSkin extends LabeledSkinBase<TitledPane, TitledPaneBehavi
     // it removes all the children.  The update() in TitleRegion
     // will replace this method.
     @Override protected void updateChildren() {
+        if (titleRegion != null) {
+            titleRegion.update();
+        }
     }
-   
+
     private void setExpanded(boolean expanded) {
         if (! getSkinnable().isCollapsible()) {
             setTransition(1.0f);
@@ -200,7 +203,7 @@ public class TitledPaneSkin extends LabeledSkinBase<TitledPane, TitledPaneBehavi
         return Math.max(MIN_HEADER_HEIGHT, snapSize(titleRegion.prefHeight(-1)));
     }
 
-    @Override protected double computePrefWidth(double height) {
+    @Override protected double computePrefWidth(double height) {        
         double titleWidth = snapSize(titleRegion.prefWidth(height));
         double contentWidth = snapSize(contentRegion.prefWidth(height));
 
@@ -330,7 +333,7 @@ public class TitledPaneSkin extends LabeledSkinBase<TitledPane, TitledPaneBehavi
         private void update() {
             getChildren().clear();
             final TitledPane titledPane = getSkinnable();
-            
+
             if (titledPane.isCollapsible()) {
                 getChildren().add(arrowRegion);
             }
@@ -366,39 +369,28 @@ public class TitledPaneSkin extends LabeledSkinBase<TitledPane, TitledPaneBehavi
             double left = snapSpace(getInsets().getLeft());
             double right = snapSpace(getInsets().getRight());
             double arrowWidth = 0;
-            double graphicWidth = 0;
-            double textWidth = 0;
-
+            // We want to use the label's pref width computed by LabeledSkinBase.
+            double labelPrefWidth = TitledPaneSkin.super.computePrefWidth(height);
+            
             if (arrowRegion != null) {
                 arrowWidth = snapSize(arrowRegion.prefWidth(height));
-            }
-            if (text != null) {
-                textWidth = snapSize(text.prefWidth(height));
-            }
-            if (graphic != null) {
-                graphicWidth = snapSize(graphic.prefWidth(height));
-            }
+            }            
 
-            return left + arrowWidth + graphicWidth + textWidth + right;
+            return left + arrowWidth + labelPrefWidth + right;
         }
 
         @Override protected double computePrefHeight(double width) {
             double top = snapSpace(getInsets().getTop());
             double bottom = snapSpace(getInsets().getBottom());
             double arrowHeight = 0;
-            double graphicHeight = 0;
-            double textHeight = 0;
-
+            // We want to use the label's pref height computed by LabeledSkinBase.
+            double labelPrefHeight = TitledPaneSkin.super.computePrefHeight(width);
+            
             if (arrowRegion != null) {
                 arrowHeight = snapSize(arrowRegion.prefHeight(width));
             }
-            if (text != null) {
-                textHeight = snapSize(text.prefHeight(width));
-            }
-            if (graphic != null) {
-                graphicHeight = snapSize(graphic.prefHeight(width));
-            }
-            return top + Math.max(arrowHeight, Math.max(graphicHeight, textHeight)) + bottom;
+            
+            return top + Math.max(arrowHeight, labelPrefHeight) + bottom;
         }
 
         @Override protected void layoutChildren() {

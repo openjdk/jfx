@@ -828,7 +828,7 @@ public class FlowPane extends Pane {
 
             @Override
             public WritableValue<Number> getWritableValue(FlowPane node) {
-                return node.hgapProperty();
+                return node.vgapProperty();
             }
                      
          }; 
