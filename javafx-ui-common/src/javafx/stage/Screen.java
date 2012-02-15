@@ -74,8 +74,6 @@ import com.sun.javafx.tk.Toolkit;
  * stage.show();
  * </code></pre>
  * </p>
- *
- * @profile common
  */
 public class Screen {
 
@@ -198,7 +196,6 @@ public class Screen {
       * @param height the height of the specified rectangular area
       * @return a ObservableList of {@code Screens} for which {@code Screen.bounds}
       *   intersects the provided rectangle
-      * @profile common
       */
     public static ObservableList<Screen> getScreensForRectangle(
             double x, double y, double width, double height)
@@ -216,7 +213,6 @@ public class Screen {
     /**
       * Returns a ObservableList of {@code Screens} that intersects the provided rectangle.
       *
-      * @profile common
       * @param r The specified {@code Rectangle2D}
       * @return a ObservableList of {@code Screens} for which {@code Screen.bounds}
       *   intersects the provided rectangle

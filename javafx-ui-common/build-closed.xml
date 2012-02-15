@@ -16,7 +16,6 @@
         ${runtime.dist.root.dir}/decora-runtime/dist/decora-runtime.jar:
         ${runtime.deps.dir}/plugin_exports.jar:
         ${runtime.dist.root.dir}/aria/dist/aria.jar:
-        ${import.lombok.jar}:
         ${jfx.checkstyle.jar}" />
     <property name="javac.classpath" refid="javac.closed.classpath.path"/>
     

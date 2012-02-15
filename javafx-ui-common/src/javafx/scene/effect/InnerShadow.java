@@ -63,8 +63,6 @@ t.setText("InnerShadow");
 t.setFill(Color.YELLOW);
 t.setFont(Font.font(null, FontWeight.BOLD, 80));
 </PRE>
- *
- * @profile common conditional effect
  */
 public class InnerShadow extends Effect {
     private boolean changeIsLocal;

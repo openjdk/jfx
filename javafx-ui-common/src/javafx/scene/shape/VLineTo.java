@@ -49,8 +49,6 @@ Path path = new Path();
 path.getElements().add(new MoveTo(50.0f, 0.0f));
 path.getElements().add(new VLineTo(50.0f));
 </PRE>
- *
- * @profile common
  */
 public  class VLineTo extends PathElement {
 
@@ -71,7 +69,6 @@ public  class VLineTo extends PathElement {
     /**
      * Defines the Y coordinate.
      *
-     * @profile common
      * @defaultValue 0.0
      */
     private DoubleProperty y;

@@ -225,7 +225,6 @@ public abstract class Parent extends Node {
      * {@code <p>Throws AssignToBoundException} if the same node
      * appears in two different bound ObservableList.
      *
-     * @profile common
      * @defaultValue empty
      * @since JavaFX 1.3
      */
@@ -1005,8 +1004,6 @@ public abstract class Parent extends Node {
      * contents. For additional information about using CSS with the
      * scene graph, see the <a href="doc-files/cssref.html">CSS Reference
      * Guide</a>.
-     *
-     * @profile common
      */
     private final ObservableList<String> stylesheets = new TrackableObservableList<String>() {
         @Override

@@ -44,8 +44,6 @@ import com.sun.javafx.tk.Toolkit;
 /**
  * A type of source effect that simply passes the given {@code Image}
  * through, unmodified, as an input to another {@code Effect}.
- *
- * @profile common conditional effect
  */
 public class ImageInput extends Effect {
     /**

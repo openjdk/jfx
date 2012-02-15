@@ -27,37 +27,27 @@ package javafx.stage;
 
 /**
  * This enum defines the possible styles for a {@code Stage}.
- *
- * @profile common
  */
 public enum StageStyle {
 
     /**
      * Defines a normal {@code Stage} style with a solid white background and platform decorations.
-     *
-     * @profile common
      */
     DECORATED,
 
     /**
      * Defines a {@code Stage} style with a solid white background and no decorations.
-     *
-     * @profile common
      */
     UNDECORATED,
 
     /**
      * Defines a {@code Stage} style with a transparent background and no decorations.
-     *
-     * @profile common
      */
     TRANSPARENT,
 
     /**
      * Defines a {@code Stage} style with a solid white background and minimal
      * platform decorations used for a utility window.
-     *
-     * @profile common
      */
     UTILITY
 

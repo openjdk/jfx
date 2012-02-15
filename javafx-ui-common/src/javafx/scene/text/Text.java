@@ -102,7 +102,6 @@ text.setWrappingWidth(200);
 text.setTextAlignment(TextAlignment.JUSTIFY)
 text.setText("The quick brown fox jumps over the lazy dog");
 </PRE>
- * @profile common
  */
 @DefaultProperty("text")
 public final class Text extends Shape {
@@ -156,7 +155,6 @@ public final class Text extends Shape {
      * Defines text string that is to be displayed.
      *
      * @defaultValue empty string
-     * @profile common
      */
     private StringProperty text;
 
@@ -215,7 +213,6 @@ public final class Text extends Shape {
      * Defines the X coordinate of text origin.
      *
      * @defaultValue 0
-     * @profile common
      */
     private DoubleProperty x;
 
@@ -256,7 +253,6 @@ public final class Text extends Shape {
      * Defines the Y coordinate of text origin.
      *
      * @defaultValue 0
-     * @profile common
      */
     private DoubleProperty y;
 
@@ -297,7 +293,6 @@ public final class Text extends Shape {
      * Defines the font of text.
      *
      * @defaultValue Font{}
-     * @profile common
      */
     private ObjectProperty<Font> font;
 
@@ -356,7 +351,6 @@ public final class Text extends Shape {
      * {@code VPos.BOTTOM} defines the origin of the bottom row.
      *
      * @defaultValue VPos.BASELINE
-     * @profile common
      */
     private ObjectProperty<VPos> textOrigin;
 
@@ -404,7 +398,6 @@ public final class Text extends Shape {
      * the visual bounds. See {@code TextBoundsType} for more information.
      *
      * @defaultValue TextBoundsType.LOGICAL
-     * @profile common
      * @since JavaFX 1.3
      */
     private ObjectProperty<TextBoundsType> boundsType;
@@ -447,7 +440,6 @@ public final class Text extends Shape {
      * If the value is {@code > 0} text will be line wrapped as needed
      * to satisfy this constraint.
      *
-     * @profile common
      * @defaultValue 0
      */
     private DoubleProperty wrappingWidth;
@@ -487,7 +479,6 @@ public final class Text extends Shape {
     /**
      * Defines if each line of text should have a line below it.
      *
-     * @profile common
      * @defaultValue false
      */
     private BooleanProperty underline;
@@ -532,7 +523,6 @@ public final class Text extends Shape {
     /**
      * Defines if each line of text should have a line through it.
      *
-     * @profile common
      * @defaultValue false
      */
     private BooleanProperty strikethrough;
@@ -584,7 +574,6 @@ public final class Text extends Shape {
      * node is determined by the width of the text, the alignment setting
      * has no effect.
      *
-     * @profile common
      * @defaultValue TextAlignment.LEFT
      */
     private ObjectProperty<TextAlignment> textAlignment;
@@ -630,7 +619,6 @@ public final class Text extends Shape {
      * The 'alphabetic' (or roman) baseline offset from the Text node's layoutBounds.minY location.
      * The value typically corresponds to the max ascent of the font.
      *
-     * @profile common
      * @since JavaFX 1.3
      */
     private ReadOnlyDoubleWrapper baselineOffset;
@@ -663,7 +651,6 @@ public final class Text extends Shape {
      * Note: LCD mode doesn't apply in numerous cases, such as various
      * compositing modes, where effects are applied and very large glyphs.
      *
-     * @profile common
      * @defaultValue FontSmoothingType.GRAY
      */
     private ObjectProperty<FontSmoothingType> fontSmoothingType;
@@ -722,7 +709,6 @@ public final class Text extends Shape {
      * and between characters to be picked.
      *
      * @defaultValue true
-     * @profile common
      * @since JavaFX 1.3
      */
     //@GenerateProperty private boolean pickOnBounds = true;

@@ -92,8 +92,6 @@ t.setFont(Font.font(null, FontWeight.BOLD, 36));
 g.getChildren().add(r);
 g.getChildren().add(t);
 </PRE>
- *
- * @profile common conditional effect
  */
 public class PerspectiveTransform extends Effect {
     /**

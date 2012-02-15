@@ -46,8 +46,6 @@ package javafx.scene.shape;
 
 /**
  * Defines the end cap style of a {@code Shape}.
- *
- * @profile common
  */
 public enum StrokeLineCap {
 
@@ -59,8 +57,6 @@ public enum StrokeLineCap {
      * <p>
      * <img src="doc-files/strokelinecap-square.png"/>
      * </p>
-     *
-     * @profile common
      */
     SQUARE,
 
@@ -70,8 +66,6 @@ public enum StrokeLineCap {
      * <p>
      * <img src="doc-files/strokelinecap-butt.png"/>
      * </p>
-     *
-     * @profile common
      */
     BUTT,
 
@@ -82,8 +76,6 @@ public enum StrokeLineCap {
      * <p>
      * <img src="doc-files/strokelinecap-round.png"/>
      * </p>
-     *
-     * @profile common
      */
     ROUND
 }

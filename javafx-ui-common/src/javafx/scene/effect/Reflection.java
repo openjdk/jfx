@@ -65,8 +65,6 @@ r.setFraction(0.7);
 
 t.setEffect(r);
 </PRE>
- *
- * @profile common conditional effect
  */
 public class Reflection extends Effect {
     /**

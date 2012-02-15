@@ -27,8 +27,6 @@ package javafx.scene.shape;
 
 /**
  * The fill rule for determining the interior of the path.
- *
- * @profile common
  */
 public enum FillRule {
 
@@ -41,8 +39,6 @@ public enum FillRule {
      * <p>
      * <img src="doc-files/fillrule-evenodd.png"/>
      * </p>
-     *
-     * @profile common
      */
     EVEN_ODD, //(GeneralPath.WIND_EVEN_ODD),
 
@@ -56,7 +52,6 @@ public enum FillRule {
      * <p>
      * <img src="doc-files/fillrule-nonzero.png"/>
      * </p>
-     * @profile common
      */
     NON_ZERO //(GeneralPath.WIND_NON_ZERO)
 }

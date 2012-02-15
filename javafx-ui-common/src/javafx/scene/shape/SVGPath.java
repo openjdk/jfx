@@ -51,8 +51,6 @@ import javafx.scene.shape.*;
 SVGPath svg = new SVGPath();
 svg.setContent("M40,60 C42,48 44,30 25,32");
 </PRE>
- *
- * @profile common
  */
 public  class SVGPath extends Shape {
     /**
@@ -61,7 +59,6 @@ public  class SVGPath extends Shape {
      * {@code FillRile.EVEN_ODD} or {@code FillRule.NON_ZERO}.
      * The default value is {@code FillRule.NON_ZERO}.
      *
-     * @profile common
      * @defaultValue FillRule.NON_ZERO
      */
     private ObjectProperty<FillRule> fillRule;
@@ -104,7 +101,6 @@ public  class SVGPath extends Shape {
      * Defines the SVG Path encoded string as specified at:
      * <a href="http://www.w3.org/TR/SVG/paths.html">http://www.w3.org/TR/SVG/paths.html</a>.
      *
-     * @profile common
      * @defaultValue empty string
      */
     private StringProperty content;

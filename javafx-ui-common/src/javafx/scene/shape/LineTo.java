@@ -50,8 +50,6 @@ Path path = new Path();
 path.getElements().add(new MoveTo(0.0f, 50.0f));
 path.getElements().add(new LineTo(100.0f, 100.0f));
 </PRE>
- *
- * @profile common
  */
 public class LineTo extends PathElement {
 
@@ -74,7 +72,6 @@ public class LineTo extends PathElement {
     /**
      * Defines the X coordinate.
      *
-     * @profile common
      * @defaultValue 0.0
      */
     private DoubleProperty x;
@@ -115,7 +112,6 @@ public class LineTo extends PathElement {
     /**
      * Defines the Y coordinate.
      *
-     * @profile common
      * @defaultValue 0.0
      */
     private DoubleProperty y;

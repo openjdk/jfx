@@ -135,8 +135,6 @@ import javafx.beans.property.*;
  * <p>
  * <img src="doc-files/imageview.png"/>
  * </p>
- *
- * @profile common
  */
 @DefaultProperty("image")
 public class ImageView extends Node {
@@ -174,7 +172,6 @@ public class ImageView extends Node {
      * The {@link Image} to be painted by this {@code ImageView}.
      *
      * @defaultValue null
-     * @profile common
      */
     private ObjectProperty<Image> image;
 
@@ -293,7 +290,6 @@ public class ImageView extends Node {
      * The current x coordinate of the {@code ImageView} origin.
      *
      * @defaultValue 0
-     * @profile common
      */
     private DoubleProperty x;
 
@@ -334,7 +330,6 @@ public class ImageView extends Node {
      * The current y coordinate of the {@code ImageView} origin.
      *
      * @defaultValue 0
-     * @profile common
      */
     private DoubleProperty y;
 
@@ -381,7 +376,6 @@ public class ImageView extends Node {
      * attributes.
      *
      * @defaultValue 0
-     * @profile common
      */
     private DoubleProperty fitWidth;
 
@@ -429,7 +423,6 @@ public class ImageView extends Node {
      * </p>
      *
      * @defaultValue 0
-     * @profile common
      */
     private DoubleProperty fitHeight;
 
@@ -494,7 +487,6 @@ public class ImageView extends Node {
      * contained within {@code fitWidth x fitHeight} bonding box.
      *
      * @defaultValue false
-     * @profile common
      */
     private BooleanProperty preserveRatio;
 
@@ -546,7 +538,6 @@ public class ImageView extends Node {
      * </p>
      *
      * @defaultValue platform-dependent
-     * @profile common
      */
     private BooleanProperty smooth;
 
@@ -599,7 +590,6 @@ public class ImageView extends Node {
      * </p>
      *
      * @defaultValue null
-     * @profile common
      */
     private ObjectProperty<Rectangle2D> viewport;
 

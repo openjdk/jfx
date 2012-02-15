@@ -46,8 +46,6 @@ package javafx.scene.input;
 
 /**
  * The enum that contains the input method text highlights.
- *
- * @profile common conditional input_method
  */
 public enum InputMethodHighlight {
     /**

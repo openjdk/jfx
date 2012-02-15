@@ -53,8 +53,6 @@ import com.sun.javafx.tk.Toolkit;
  * <p>
  * For more information see {@link javafx.scene.Node} for more information
  * on the default coordinate system 
- * 
- * @profile common
  */
 public final class Font {
 
@@ -94,8 +92,6 @@ public final class Font {
      * application fonts or SDK fonts. This call has performance considerations
      * as looking up all of the fonts may be an expensive operation the
      * first time.
-     *
-     * @profile common
      */
     public static List<String> getFamilies() {
         return Toolkit.getToolkit().getFontLoader().getFamilies();
@@ -106,8 +102,6 @@ public final class Font {
      * including any application fonts and SDK fonts.
      * This call has performance considerations as
      * looking up all of the fonts may be an expensive operation the first time.
-     *
-     * @profile common
      */
     public static List<String> getFontNames() {
         return Toolkit.getToolkit().getFontLoader().getFontNames();
@@ -119,8 +113,6 @@ public final class Font {
      * and SDK fonts.
      * This call has performance considerations as looking up all of the
      * fonts may be an expensive operation the first time.
-     *
-     * @profile common
      */
     public static List<String> getFontNames(String family) {
         return Toolkit.getToolkit().getFontLoader().getFontNames(family);
@@ -141,8 +133,6 @@ public final class Font {
      * @param size The point size of the font. This can be a fractional value,
      * but must not be negative. If the size is < 0 the default size will be
      * used.
-     *
-     * @profile common
      */
     public static Font font(String family, FontWeight weight,
                             FontPosture posture, double size) {
@@ -165,8 +155,6 @@ public final class Font {
      * @param size The point size of the font. This can be a fractional value,
      * but must not be negative. If the size is < 0 the default size will be
      * used.
-     *
-     * @profile common
      */
     public static Font font(String family, FontWeight weight, double size) {
         return font(family, weight, null, size);
@@ -183,8 +171,6 @@ public final class Font {
      * @param size The point size of the font. This can be a fractional value,
      * but must not be negative. If the size is < 0 the default size will be
      * used.
-     *
-     * @profile common
      */
     public static Font font(String family, FontPosture posture, double size) {
         return font(family, null, posture, size);
@@ -200,8 +186,6 @@ public final class Font {
      * @param size The point size of the font. This can be a fractional value,
      * but must not be negative. If the size is < 0 the default size will be
      * used.
-     *
-     * @profile common
      */
     public static Font font(String family, double size) {
         return font(family, null, null, size);
@@ -231,7 +215,6 @@ public final class Font {
      * then you can use one of the {@link #font} factory methods defined in
      * this class.
      *
-     * @profile common
      * @defaultValue empty string
      */
     public final String getName() { return name; }
@@ -240,8 +223,6 @@ public final class Font {
     /**
      * Returns the family of this font.
      * @return The family of this font.
-     *
-     * @profile common
      */
     public final String getFamily() { return family; }
     private String family;
@@ -249,8 +230,6 @@ public final class Font {
     /**
      * The font specified string describing the style within the font family.
      * @return The style name of this font.
-     *
-     * @profile common
      */
     public final String getStyle() { return style; }
     private String style;
@@ -260,7 +239,6 @@ public final class Font {
      * {@code 11.5}. If the specified value is < 0 the default size will be
      * used.
      *
-     * @profile common
      * @defaultValue 12
      */
     public final double getSize() { return size; }
@@ -438,8 +416,6 @@ public final class Font {
      * Converts this {@code Font} object to a {@code String} representation.
      * The String representation is for informational use only and will change.
      * Do not use this string representation for any programmatic purpose.
-     *
-     * @profile common
      */
     @Override public String toString() {
         StringBuilder builder = new StringBuilder("Font[name=");

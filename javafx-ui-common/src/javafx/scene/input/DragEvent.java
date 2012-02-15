@@ -198,7 +198,6 @@ rect.setOnDragDropped(new EventHandler<DragEvent>() {
  * pressing the ESC key to cancel the drag and drop gesture, or by
  * the gesture target reporting an unsuccessful data transfer.
  * </p>
- * @profile common
  */
 public class DragEvent extends InputEvent {
 
@@ -426,8 +425,6 @@ public class DragEvent extends InputEvent {
     /**
      * Horizontal x position of the event relative to the
      * origin of the MouseEvent's node.
-     *
-     * @profile common
      */
     private double x;
 
@@ -437,8 +434,6 @@ public class DragEvent extends InputEvent {
      * 
      * @return horizontal position of the event relative to the
      * origin of the DragEvent's source.
-     *
-     * @profile common
      */
     public final double getX() {
         return x;
@@ -447,8 +442,6 @@ public class DragEvent extends InputEvent {
     /**
      * Vertical y position of the event relative to the
      * origin of the MouseEvent's node.
-     *
-     * @profile common
      */
     private double y;
 
@@ -458,8 +451,6 @@ public class DragEvent extends InputEvent {
      * 
      * @return vertical position of the event relative to the
      * origin of the DragEvent's source.
-     *
-     * @profile common
      */
     public final double getY() {
         return y;
@@ -467,15 +458,12 @@ public class DragEvent extends InputEvent {
 
     /**
      * Absolute horizontal x position of the event.
-     *
-     * @profile common
      */
     private double screenX;
 
     /**
      * Returns absolute horizontal position of the event.
      * @return absolute horizontal position of the event
-     * @profile common
      */
     public final double getScreenX() {
         return screenX;
@@ -483,15 +471,12 @@ public class DragEvent extends InputEvent {
 
     /**
      * Absolute vertical y position of the event.
-     *
-     * @profile common
      */
     private double screenY;
 
     /**
      * Returns absolute vertical position of the event.
      * @return absolute vertical position of the event
-     * @profile common
      */
     public final double getScreenY() {
         return screenY;
@@ -502,8 +487,6 @@ public class DragEvent extends InputEvent {
      * origin of the {@code Scene} that contains the DragEvent's node.
      * If the node is not in a {@code Scene}, then the value is relative to
      * the boundsInParent of the root-most parent of the DragEvent's node.
-     *
-     * @profile common
      */
     private double sceneX;
 
@@ -515,8 +498,6 @@ public class DragEvent extends InputEvent {
      * 
      * @return horizontal position of the event relative to the
      * origin of the {@code Scene} that contains the DragEvent's source
-     *
-     * @profile common
      */
     public final double getSceneX() {
         return sceneX;
@@ -527,8 +508,6 @@ public class DragEvent extends InputEvent {
      * origin of the {@code Scene} that contains the DragEvent's node.
      * If the node is not in a {@code Scene}, then the value is relative to
      * the boundsInParent of the root-most parent of the DragEvent's node.
-     *
-     * @profile common
      */
     private double sceneY;
 
@@ -540,8 +519,6 @@ public class DragEvent extends InputEvent {
      * 
      * @return vertical position of the event relative to the
      * origin of the {@code Scene} that contains the DragEvent's source
-     *
-     * @profile common
      */
     public final double getSceneY() {
         return sceneY;
@@ -552,7 +529,6 @@ public class DragEvent extends InputEvent {
      * Gesture source is the object that started drag and drop operation.
      * The value {@code null} is valid in the case that the gesture comes
      * from another application.
-     * @profile common
      */
     public final Object getGestureSource() { return gestureSource; }
     private Object gestureSource;
@@ -563,7 +539,6 @@ public class DragEvent extends InputEvent {
      * The value {@code null} is valid in the case that the drag and drop
      * gesture has been canceled or completed without a transfer taking place
      * or there is currently no event target accepting the drag events.
-     * @profile common
      */
     public final Object getGestureTarget() { return gestureTarget; }
     private Object gestureTarget;
@@ -576,8 +551,6 @@ public class DragEvent extends InputEvent {
      * the transfer mode accepted by previous DRAG_OVER handler.
      * After the data transfer (in DRAG_DONE event)
      * it determines the actual mode of the transfer done.
-     *
-     * @profile common
      */
     public final TransferMode getTransferMode() { return transferMode; }
     private TransferMode transferMode;
@@ -587,7 +560,6 @@ public class DragEvent extends InputEvent {
     /**
      * Indicates if this event has been accepted.
      * @see #acceptTransferModes
-     * @profile common
      * @defaultValue false
      */
     public final boolean isAccepted() { return state.accepted; }

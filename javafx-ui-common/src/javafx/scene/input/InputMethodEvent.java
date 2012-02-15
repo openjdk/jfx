@@ -65,8 +65,6 @@ import javafx.scene.Node;
  * Note: this is a conditional feature. See
  * {@link javafx.application.ConditionalFeature#INPUT_METHOD ConditionalFeature.INPUT_METHOD}
  * for more information.
- *
- * @profile common conditional input_method
  */
 public class InputMethodEvent extends InputEvent {
     /**
@@ -115,7 +113,6 @@ public class InputMethodEvent extends InputEvent {
      * appropriate visual feedback that represents the {@link InputMethodHighlight}s
      * attached to each run.
      *
-     * @profile common conditional input_method
      * @defaultValue null
      */
     private ObservableList<InputMethodTextRun> composed;
@@ -138,7 +135,6 @@ public class InputMethodEvent extends InputEvent {
      * The text that is committed by the input method as the result of the
      * composition.
      *
-     * @profile common conditional input_method
      * @defaultValue empty string
      */
     private String committed = new String();
@@ -157,7 +153,6 @@ public class InputMethodEvent extends InputEvent {
      * The input method caret position within the composed text.
      * If the position is -1, the caret should be invisible.
      *
-     * @profile common conditional input_method
      * @defaultValue 0
      */
     private int caretPosition;

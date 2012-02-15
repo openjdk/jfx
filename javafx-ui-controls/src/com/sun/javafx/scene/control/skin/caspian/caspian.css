@@ -2115,6 +2115,7 @@
     -fx-background-color: -fx-table-cell-border-color, -fx-control-inner-background;
     -fx-background-insets: 0, 0 0 1 0;
     -fx-padding: 0.0em; /* 0 */
+    -fx-text-fill: -fx-text-inner-color;
     -fx-cell-size: 2.0em; /* 24 */
 }
 
@@ -2171,11 +2172,13 @@
 .table-view:row-selection .table-row-cell:filled:hover { 
     -fx-background-color: -fx-table-cell-border-color, -fx-cell-hover-color;
     -fx-background-insets: 0, 0 0 1 0;
+    -fx-text-fill: -fx-text-inner-color;
 }
 
 .table-view:row-selection .table-row-cell:filled:focused:hover { 
     -fx-background-color: -fx-table-cell-border-color, -fx-focus-color, -fx-cell-focus-inner-border, -fx-cell-hover-color;
     -fx-background-insets: 0, 0 0 1 0, 1 1 2 1, 2 2 3 2, 3 3 4 3;
+    -fx-text-fill: -fx-text-inner-color;
 }
 
 .table-cell {
@@ -2186,6 +2189,7 @@
     -fx-border-color: transparent -fx-table-cell-border-color transparent transparent;
     -fx-border-width: 0.083333em; /* 1 */
     -fx-cell-size: 2.0em; /* 24 */
+    -fx-text-fill: -fx-text-inner-color;
 }
 
 /* When in constrained resize mode, the right-most visible cell should not have
@@ -2231,6 +2235,7 @@
     -fx-background: -fx-accent;
     -fx-background-color: -fx-focus-color, -fx-cell-focus-inner-border, -fx-selection-bar;
     -fx-background-insets: 0 1 0 0, 1 2 1 1, 2 3 2 2;
+    -fx-text-fill: -fx-selection-bar-text;
 }
 
 /* When the TableView is _not_ focused, we show alternate selection colors */
@@ -2250,12 +2255,14 @@
 
 .table-view:cell-selection  .table-row-cell:filled .table-cell:hover {
     -fx-background-color: -fx-cell-hover-color;
+    -fx-text-fill: -fx-text-inner-color;
     -fx-background-insets: 0 0 1 0;
 }
 
 .table-view:cell-selection .table-row-cell:filled .table-cell:focused:hover {
     -fx-background-color: -fx-focus-color, -fx-cell-focus-inner-border, -fx-cell-hover-color;
     -fx-background-insets: 0 1 0 0, 1 2 1 1, 2 3 2 2;
+    -fx-text-fill: -fx-text-inner-color;
 }
 
 /* The column-resize-line is shown when the user is attempting to resize a column. */

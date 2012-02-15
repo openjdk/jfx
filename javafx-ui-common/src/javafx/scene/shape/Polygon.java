@@ -54,8 +54,6 @@ polygon.getPoints().addAll(new Double[]{
     20.0, 10.0,
     10.0, 20.0 });
 </PRE>
- *
- * @profile common
  */
 public  class Polygon extends Shape {
 
@@ -82,7 +80,6 @@ public  class Polygon extends Shape {
     /**
      * Defines the coordinates of the polygon vertices.
      *
-     * @profile common
      * @defaultValue empty
      */
     private final ObservableList<Double> points = new TrackableObservableList<Double>() {

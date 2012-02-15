@@ -34,110 +34,82 @@ import javafx.scene.image.Image;
 
 /**
  * A class to encapsulate the bitmap representation of the mouse cursor.
- *
- * @profile common
  */
 public abstract class Cursor {
     /**
      * The default cursor type (gets set if no cursor is defined).
-     *
-     * @profile common
      */
     public static final Cursor DEFAULT =
             new StandardCursor("DEFAULT", CursorType.DEFAULT);
 
     /**
      * The crosshair cursor type.
-     *
-     * @profile common
      */
     public static final Cursor CROSSHAIR =
             new StandardCursor("CROSSHAIR", CursorType.CROSSHAIR);
 
     /**
      * The text cursor type.
-     *
-     * @profile common
      */
     public static final Cursor TEXT =
             new StandardCursor("TEXT", CursorType.TEXT);
 
     /**
      * The wait cursor type.
-     *
-     * @profile common
      */
     public static final Cursor WAIT =
             new StandardCursor("WAIT", CursorType.WAIT);
 
     /**
      * The south-west-resize cursor type.
-     *
-     * @profile common
      */
     public static final Cursor SW_RESIZE =
             new StandardCursor("SW_RESIZE", CursorType.SW_RESIZE);
 
     /**
      * The south-east-resize cursor type.
-     *
-     * @profile common
      */
     public static final Cursor SE_RESIZE =
             new StandardCursor("SE_RESIZE", CursorType.SE_RESIZE);
 
     /**
      * The north-west-resize cursor type.
-     *
-     * @profile common
      */
     public static final Cursor NW_RESIZE =
             new StandardCursor("NW_RESIZE", CursorType.NW_RESIZE);
 
     /**
      * The north-east-resize cursor type.
-     *
-     * @profile common
      */
     public static final Cursor NE_RESIZE =
             new StandardCursor("NE_RESIZE", CursorType.NE_RESIZE);
 
     /**
      * The north-resize cursor type.
-     *
-     * @profile common
      */
     public static final Cursor N_RESIZE =
             new StandardCursor("N_RESIZE", CursorType.N_RESIZE);
 
     /**
      * The south-resize cursor type.
-     *
-     * @profile common
      */
     public static final Cursor S_RESIZE =
             new StandardCursor("S_RESIZE", CursorType.S_RESIZE);
 
     /**
      * The west-resize cursor type.
-     *
-     * @profile common
      */
     public static final Cursor W_RESIZE =
             new StandardCursor("W_RESIZE", CursorType.W_RESIZE);
 
     /**
      * The east-resize cursor type.
-     *
-     * @profile common
      */
     public static final Cursor E_RESIZE =
             new StandardCursor("E_RESIZE", CursorType.E_RESIZE);
 
     /**
      * A cursor with a hand which is open
-     *
-     * @profile common
      */
     public static final Cursor OPEN_HAND =
             new StandardCursor("OPEN_HAND", CursorType.OPEN_HAND);
@@ -145,8 +117,6 @@ public abstract class Cursor {
     /**
      * A cursor with a hand that is closed, often used when
      * "grabbing", for example, when panning.
-     *
-     * @profile common
      */
     public static final Cursor CLOSED_HAND =
             new StandardCursor("CLOSED_HAND", CursorType.CLOSED_HAND);
@@ -155,16 +125,12 @@ public abstract class Cursor {
      * The hand cursor type, resembling a pointing hand, often
      * used to indicate that something can be clicked, such as
      * a hyperlink.
-     *
-     * @profile common
      */
     public static final Cursor HAND =
             new StandardCursor("HAND", CursorType.HAND);
 
     /**
      * The move cursor type.
-     *
-     * @profile common
      */
     public static final Cursor MOVE =
             new StandardCursor("MOVE", CursorType.MOVE);
@@ -174,24 +140,18 @@ public abstract class Cursor {
      * something, such that when the user releases the mouse, the
      * item will disappear. On Mac, this is used when dragging items
      * off a toolbar or in other such situations.
-     *
-     * @profile common
      */
     public static final Cursor DISAPPEAR =
             new StandardCursor("DISAPPEAR", CursorType.DISAPPEAR);
 
     /**
      * The horizontal cursor type.
-     *
-     * @profile common
      */
     public static final Cursor H_RESIZE =
             new StandardCursor("H_RESIZE", CursorType.H_RESIZE);
 
     /**
      * The vertical cursor type.
-     *
-     * @profile common
      */
     public static final Cursor V_RESIZE =
             new StandardCursor("V_RESIZE", CursorType.V_RESIZE);
@@ -199,8 +159,6 @@ public abstract class Cursor {
     /**
      * The none cursor type. On platforms that don't support
      * custom cursors, this will be the same as {@code DEFAULT}.
-     *
-     * @profile common
      */
     public static final Cursor NONE =
             new StandardCursor("NONE", CursorType.NONE);

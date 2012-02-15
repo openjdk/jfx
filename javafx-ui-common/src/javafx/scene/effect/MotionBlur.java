@@ -61,8 +61,6 @@ mb.setAngle(-30.0);
 
 t.setEffect(mb);
 </PRE>
- *
- * @profile common conditional effect
  */
 public class MotionBlur extends Effect {
     /**

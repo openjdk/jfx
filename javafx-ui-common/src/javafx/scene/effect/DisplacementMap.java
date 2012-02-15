@@ -112,8 +112,6 @@ t.setFont(Font.font(null, FontWeight.BOLD, 36));
 
 g.getChildren().add(t);
 </PRE>
- *
- * @profile common conditional effect
  */
 public class DisplacementMap extends Effect {
     @Override

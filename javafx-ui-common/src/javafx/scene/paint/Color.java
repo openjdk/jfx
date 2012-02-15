@@ -94,8 +94,6 @@ import com.sun.javafx.tk.Toolkit;
  * rec2.setStrokeWidth(3);
  * </code></pre>
  * </p>
- *
- * @profile common
  */
 public class Color extends Paint implements Interpolatable<Color> { // final
 
@@ -119,8 +117,6 @@ public class Color extends Paint implements Interpolatable<Color> { // final
      * @param opacity the opacity component, in the range {@code 0.0-1.0}
      * @return the {@code Color}
      * @throws IllegalArgumentException if any value is out of range
-     *
-     * @profile common
      */
     public static Color color(double red, double green, double blue, @Default("1") double opacity) {
         return new Color(red, green, blue, opacity);
@@ -135,8 +131,6 @@ public class Color extends Paint implements Interpolatable<Color> { // final
      * @param blue the blue component, in the range {@code 0.0-1.0}
      * @return the {@code Color}
      * @throws IllegalArgumentException if any value is out of range
-     *
-     * @profile common
      */
     public static Color color(double red, double green, double blue) {
         return new Color(red, green, blue, 1);
@@ -152,8 +146,6 @@ public class Color extends Paint implements Interpolatable<Color> { // final
      * @param opacity the opacity component, in the range {@code 0.0-1.0}
      * @return the {@code Color}
      * @throws IllegalArgumentException if any value is out of range
-     *
-     * @profile common
      */
     public static Color rgb(int red, int green, int blue, double opacity) {
         checkRGB(red, green, blue);
@@ -172,8 +164,6 @@ public class Color extends Paint implements Interpolatable<Color> { // final
      * @param blue the blue component, in the range {@code 0-255}
      * @return the {@code Color}
      * @throws IllegalArgumentException if any value is out of range
-     *
-     * @profile common
      */
     public static Color rgb(int red, int green, int blue) {
         checkRGB(red, green, blue);
@@ -245,8 +235,6 @@ public class Color extends Paint implements Interpolatable<Color> { // final
      * @return the {@code Color}
      * @throws IllegalArgumentException if {@code saturation}, {@code brightness} or
      *         {@code opacity} are out of range
-     *
-     * @profile common
      */
     public static Color hsb(double hue, double saturation, double brightness, double opacity) {
         checkSB(saturation, brightness);
@@ -264,8 +252,6 @@ public class Color extends Paint implements Interpolatable<Color> { // final
      * @return the {@code Color}
      * @throws IllegalArgumentException if {@code saturation} or {@code brightness} are
      *         out of range
-     *
-     * @profile common
      */
     public static Color hsb(double hue, double saturation, double brightness) {
         return hsb(hue, saturation, brightness, 1.0);
@@ -313,8 +299,6 @@ public class Color extends Paint implements Interpolatable<Color> { // final
      * @throws NullPointerException if {@code colorRawName} is {@code null}
      * @throws IllegalArgumentException if {@code colorRawName} specifies
      *      an unsupported color name or illegal hexadecimal value
-     *
-     * @profile common
      */
     public static Color web(String colorRawName, double opacity) {
         if (colorRawName == null) {
@@ -404,8 +388,6 @@ public class Color extends Paint implements Interpolatable<Color> { // final
      * </code></pre>
      *
      * @param color the hexadecimal string or color name
-     *
-     * @profile common
      */
     public static Color web(String color) {
         return web(color, 1.0);
@@ -547,1030 +529,736 @@ public class Color extends Paint implements Interpolatable<Color> { // final
 
     /**
      * The color alice blue with an RGB value of #F0F8FF.
-     *
-     * @profile common
      */
     public static final Color ALICEBLUE            = rgb(0xF0, 0xF8, 0xFF);
 
     /**
      * The color antique white with an RGB value of #FAEBD7.
-     *
-     * @profile common
      */
     public static final Color ANTIQUEWHITE         = rgb(0xFA, 0xEB, 0xD7);
 
     /**
      * The color aqua with an RGB value of #00FFFF.
-     *
-     * @profile common
      */
     public static final Color AQUA                 = rgb(0x00, 0xFF, 0xFF);
 
     /**
      * The color aquamarine with an RGB value of #7FFFD4.
-     *
-     * @profile common
      */
     public static final Color AQUAMARINE           = rgb(0x7F, 0xFF, 0xD4);
 
     /**
      * The color azure with an RGB value of #F0FFFF.
-     *
-     * @profile common
      */
     public static final Color AZURE                = rgb(0xF0, 0xFF, 0xFF);
 
     /**
      * The color beige with an RGB value of #F5F5DC.
-     *
-     * @profile common
      */
     public static final Color BEIGE                = rgb(0xF5, 0xF5, 0xDC);
 
     /**
      * The color bisque with an RGB value of #FFE4C4.
-     *
-     * @profile common
      */
     public static final Color BISQUE               = rgb(0xFF, 0xE4, 0xC4);
 
     /**
      * The color black with an RGB value of #000000.
-     *
-     * @profile common
      */
     public static final Color BLACK                = rgb(0x00, 0x00, 0x00);
 
     /**
      * The color blanched almond with an RGB value of #FFEBCD.
-     *
-     * @profile common
      */
     public static final Color BLANCHEDALMOND       = rgb(0xFF, 0xEB, 0xCD);
 
     /**
      * The color blue with an RGB value of #0000FF.
-     *
-     * @profile common
      */
     public static final Color BLUE                 = rgb(0x00, 0x00, 0xFF);
 
     /**
      * The color blue violet with an RGB value of #8A2BE2.
-     *
-     * @profile common
      */
     public static final Color BLUEVIOLET           = rgb(0x8A, 0x2B, 0xE2);
 
     /**
      * The color brown with an RGB value of #A52A2A.
-     *
-     * @profile common
      */
     public static final Color BROWN                = rgb(0xA5, 0x2A, 0x2A);
 
     /**
      * The color burly wood with an RGB value of #DEB887.
-     *
-     * @profile common
      */
     public static final Color BURLYWOOD            = rgb(0xDE, 0xB8, 0x87);
 
     /**
      * The color cadet blue with an RGB value of #5F9EA0.
-     *
-     * @profile common
      */
     public static final Color CADETBLUE            = rgb(0x5F, 0x9E, 0xA0);
 
     /**
      * The color chartreuse with an RGB value of #7FFF00.
-     *
-     * @profile common
      */
     public static final Color CHARTREUSE           = rgb(0x7F, 0xFF, 0x00);
 
     /**
      * The color chocolate with an RGB value of #D2691E.
-     *
-     * @profile common
      */
     public static final Color CHOCOLATE            = rgb(0xD2, 0x69, 0x1E);
 
     /**
      * The color coral with an RGB value of #FF7F50.
-     *
-     * @profile common
      */
     public static final Color CORAL                = rgb(0xFF, 0x7F, 0x50);
 
     /**
      * The color cornflower blue with an RGB value of #6495ED.
-     *
-     * @profile common
      */
     public static final Color CORNFLOWERBLUE       = rgb(0x64, 0x95, 0xED);
 
     /**
      * The color cornsilk with an RGB value of #FFF8DC.
-     *
-     * @profile common
      */
     public static final Color CORNSILK             = rgb(0xFF, 0xF8, 0xDC);
 
     /**
      * The color crimson with an RGB value of #DC143C.
-     *
-     * @profile common
      */
     public static final Color CRIMSON              = rgb(0xDC, 0x14, 0x3C);
 
     /**
      * The color cyan with an RGB value of #00FFFF.
-     *
-     * @profile common
      */
     public static final Color CYAN                 = rgb(0x00, 0xFF, 0xFF);
 
     /**
      * The color dark blue with an RGB value of #00008B.
-     *
-     * @profile common
      */
     public static final Color DARKBLUE             = rgb(0x00, 0x00, 0x8B);
 
     /**
      * The color dark cyan with an RGB value of #008B8B.
-     *
-     * @profile common
      */
     public static final Color DARKCYAN             = rgb(0x00, 0x8B, 0x8B);
 
     /**
      * The color dark goldenrod with an RGB value of #B8860B.
-     *
-     * @profile common
      */
     public static final Color DARKGOLDENROD        = rgb(0xB8, 0x86, 0x0B);
 
     /**
      * The color dark gray with an RGB value of #A9A9A9.
-     *
-     * @profile common
      */
     public static final Color DARKGRAY             = rgb(0xA9, 0xA9, 0xA9);
 
     /**
      * The color dark green with an RGB value of #006400.
-     *
-     * @profile common
      */
     public static final Color DARKGREEN            = rgb(0x00, 0x64, 0x00);
 
     /**
      * The color dark grey with an RGB value of #A9A9A9.
-     *
-     * @profile common
      */
     public static final Color DARKGREY             = DARKGRAY;
 
     /**
      * The color dark khaki with an RGB value of #BDB76B.
-     *
-     * @profile common
      */
     public static final Color DARKKHAKI            = rgb(0xBD, 0xB7, 0x6B);
 
     /**
      * The color dark magenta with an RGB value of #8B008B.
-     *
-     * @profile common
      */
     public static final Color DARKMAGENTA          = rgb(0x8B, 0x00, 0x8B);
 
     /**
      * The color dark olive green with an RGB value of #556B2F.
-     *
-     * @profile common
      */
     public static final Color DARKOLIVEGREEN       = rgb(0x55, 0x6B, 0x2F);
 
     /**
      * The color dark orange with an RGB value of #FF8C00.
-     *
-     * @profile common
      */
     public static final Color DARKORANGE           = rgb(0xFF, 0x8C, 0x00);
 
     /**
      * The color dark orchid with an RGB value of #9932CC.
-     *
-     * @profile common
      */
     public static final Color DARKORCHID           = rgb(0x99, 0x32, 0xCC);
 
     /**
      * The color dark red with an RGB value of #8B0000.
-     *
-     * @profile common
      */
     public static final Color DARKRED              = rgb(0x8B, 0x00, 0x00);
 
     /**
      * The color dark salmon with an RGB value of #E9967A.
-     *
-     * @profile common
      */
     public static final Color DARKSALMON           = rgb(0xE9, 0x96, 0x7A);
 
     /**
      * The color dark sea green with an RGB value of #8FBC8F.
-     *
-     * @profile common
      */
     public static final Color DARKSEAGREEN         = rgb(0x8F, 0xBC, 0x8F);
 
     /**
      * The color dark slate blue with an RGB value of #483D8B.
-     *
-     * @profile common
      */
     public static final Color DARKSLATEBLUE        = rgb(0x48, 0x3D, 0x8B);
 
     /**
      * The color dark slate gray with an RGB value of #2F4F4F.
-     *
-     * @profile common
      */
     public static final Color DARKSLATEGRAY        = rgb(0x2F, 0x4F, 0x4F);
 
     /**
      * The color dark slate grey with an RGB value of #2F4F4F.
-     *
-     * @profile common
      */
     public static final Color DARKSLATEGREY        = DARKSLATEGRAY;
 
     /**
      * The color dark turquoise with an RGB value of #00CED1.
-     *
-     * @profile common
      */
     public static final Color DARKTURQUOISE        = rgb(0x00, 0xCE, 0xD1);
 
     /**
      * The color dark violet with an RGB value of #9400D3.
-     *
-     * @profile common
      */
     public static final Color DARKVIOLET           = rgb(0x94, 0x00, 0xD3);
 
     /**
      * The color deep pink with an RGB value of #FF1493.
-     *
-     * @profile common
      */
     public static final Color DEEPPINK             = rgb(0xFF, 0x14, 0x93);
 
     /**
      * The color deep sky blue with an RGB value of #00BFFF.
-     *
-     * @profile common
      */
     public static final Color DEEPSKYBLUE          = rgb(0x00, 0xBF, 0xFF);
 
     /**
      * The color dim gray with an RGB value of #696969.
-     *
-     * @profile common
      */
     public static final Color DIMGRAY              = rgb(0x69, 0x69, 0x69);
 
     /**
      * The color dim grey with an RGB value of #696969.
-     *
-     * @profile common
      */
     public static final Color DIMGREY              = DIMGRAY;
 
     /**
      * The color dodger blue with an RGB value of #1E90FF.
-     *
-     * @profile common
      */
     public static final Color DODGERBLUE           = rgb(0x1E, 0x90, 0xFF);
 
     /**
      * The color firebrick with an RGB value of #B22222.
-     *
-     * @profile common
      */
     public static final Color FIREBRICK            = rgb(0xB2, 0x22, 0x22);
 
     /**
      * The color floral white with an RGB value of #FFFAF0.
-     *
-     * @profile common
      */
     public static final Color FLORALWHITE          = rgb(0xFF, 0xFA, 0xF0);
 
     /**
      * The color forest green with an RGB value of #228B22.
-     *
-     * @profile common
      */
     public static final Color FORESTGREEN          = rgb(0x22, 0x8B, 0x22);
 
     /**
      * The color fuchsia with an RGB value of #FF00FF.
-     *
-     * @profile common
      */
     public static final Color FUCHSIA              = rgb(0xFF, 0x00, 0xFF);
 
     /**
      * The color gainsboro with an RGB value of #DCDCDC.
-     *
-     * @profile common
      */
     public static final Color GAINSBORO            = rgb(0xDC, 0xDC, 0xDC);
 
     /**
      * The color ghost white with an RGB value of #F8F8FF.
-     *
-     * @profile common
      */
     public static final Color GHOSTWHITE           = rgb(0xF8, 0xF8, 0xFF);
 
     /**
      * The color gold with an RGB value of #FFD700.
-     *
-     * @profile common
      */
     public static final Color GOLD                 = rgb(0xFF, 0xD7, 0x00);
 
     /**
      * The color goldenrod with an RGB value of #DAA520.
-     *
-     * @profile common
      */
     public static final Color GOLDENROD            = rgb(0xDA, 0xA5, 0x20);
 
     /**
      * The color gray with an RGB value of #808080.
-     *
-     * @profile common
      */
     public static final Color GRAY                 = rgb(0x80, 0x80, 0x80);
 
     /**
      * The color green with an RGB value of #008000.
-     *
-     * @profile common
      */
     public static final Color GREEN                = rgb(0x00, 0x80, 0x00);
 
     /**
      * The color green yellow with an RGB value of #ADFF2F.
-     *
-     * @profile common
      */
     public static final Color GREENYELLOW          = rgb(0xAD, 0xFF, 0x2F);
 
     /**
      * The color grey with an RGB value of #808080.
-     *
-     * @profile common
      */
     public static final Color GREY                 = GRAY;
 
     /**
      * The color honeydew with an RGB value of #F0FFF0.
-     *
-     * @profile common
      */
     public static final Color HONEYDEW             = rgb(0xF0, 0xFF, 0xF0);
 
     /**
      * The color hot pink with an RGB value of #FF69B4.
-     *
-     * @profile common
      */
     public static final Color HOTPINK              = rgb(0xFF, 0x69, 0xB4);
 
     /**
      * The color indian red with an RGB value of #CD5C5C.
-     *
-     * @profile common
      */
     public static final Color INDIANRED            = rgb(0xCD, 0x5C, 0x5C);
 
     /**
      * The color indigo with an RGB value of #4B0082.
-     *
-     * @profile common
      */
     public static final Color INDIGO               = rgb(0x4B, 0x00, 0x82);
 
     /**
      * The color ivory with an RGB value of #FFFFF0.
-     *
-     * @profile common
      */
     public static final Color IVORY                = rgb(0xFF, 0xFF, 0xF0);
 
     /**
      * The color khaki with an RGB value of #F0E68C.
-     *
-     * @profile common
      */
     public static final Color KHAKI                = rgb(0xF0, 0xE6, 0x8C);
 
     /**
      * The color lavender with an RGB value of #E6E6FA.
-     *
-     * @profile common
      */
     public static final Color LAVENDER             = rgb(0xE6, 0xE6, 0xFA);
 
     /**
      * The color lavender blush with an RGB value of #FFF0F5.
-     *
-     * @profile common
      */
     public static final Color LAVENDERBLUSH        = rgb(0xFF, 0xF0, 0xF5);
 
     /**
      * The color lawn green with an RGB value of #7CFC00.
-     *
-     * @profile common
      */
     public static final Color LAWNGREEN            = rgb(0x7C, 0xFC, 0x00);
 
     /**
      * The color lemon chiffon with an RGB value of #FFFACD.
-     *
-     * @profile common
      */
     public static final Color LEMONCHIFFON         = rgb(0xFF, 0xFA, 0xCD);
 
     /**
      * The color light blue with an RGB value of #ADD8E6.
-     *
-     * @profile common
      */
     public static final Color LIGHTBLUE            = rgb(0xAD, 0xD8, 0xE6);
 
     /**
      * The color light coral with an RGB value of #F08080.
-     *
-     * @profile common
      */
     public static final Color LIGHTCORAL           = rgb(0xF0, 0x80, 0x80);
 
     /**
      * The color light cyan with an RGB value of #E0FFFF.
-     *
-     * @profile common
      */
     public static final Color LIGHTCYAN            = rgb(0xE0, 0xFF, 0xFF);
 
     /**
      * The color light goldenrod yellow with an RGB value of #FAFAD2.
-     *
-     * @profile common
      */
     public static final Color LIGHTGOLDENRODYELLOW = rgb(0xFA, 0xFA, 0xD2);
 
     /**
      * The color light gray with an RGB value of #D3D3D3.
-     *
-     * @profile common
      */
     public static final Color LIGHTGRAY            = rgb(0xD3, 0xD3, 0xD3);
 
     /**
      * The color light green with an RGB value of #90EE90.
-     *
-     * @profile common
      */
     public static final Color LIGHTGREEN           = rgb(0x90, 0xEE, 0x90);
 
     /**
      * The color light grey with an RGB value of #D3D3D3.
-     *
-     * @profile common
      */
     public static final Color LIGHTGREY            = LIGHTGRAY;
 
     /**
      * The color light pink with an RGB value of #FFB6C1.
-     *
-     * @profile common
      */
     public static final Color LIGHTPINK            = rgb(0xFF, 0xB6, 0xC1);
 
     /**
      * The color light salmon with an RGB value of #FFA07A.
-     *
-     * @profile common
      */
     public static final Color LIGHTSALMON          = rgb(0xFF, 0xA0, 0x7A);
 
     /**
      * The color light sea green with an RGB value of #20B2AA.
-     *
-     * @profile common
      */
     public static final Color LIGHTSEAGREEN        = rgb(0x20, 0xB2, 0xAA);
 
     /**
      * The color light sky blue with an RGB value of #87CEFA.
-     *
-     * @profile common
      */
     public static final Color LIGHTSKYBLUE         = rgb(0x87, 0xCE, 0xFA);
 
     /**
      * The color light slate gray with an RGB value of #778899.
-     *
-     * @profile common
      */
     public static final Color LIGHTSLATEGRAY       = rgb(0x77, 0x88, 0x99);
 
     /**
      * The color light slate grey with an RGB value of #778899.
-     *
-     * @profile common
      */
     public static final Color LIGHTSLATEGREY       = LIGHTSLATEGRAY;
 
     /**
      * The color light steel blue with an RGB value of #B0C4DE.
-     *
-     * @profile common
      */
     public static final Color LIGHTSTEELBLUE       = rgb(0xB0, 0xC4, 0xDE);
 
     /**
      * The color light yellow with an RGB value of #FFFFE0.
-     *
-     * @profile common
      */
     public static final Color LIGHTYELLOW          = rgb(0xFF, 0xFF, 0xE0);
 
     /**
      * The color lime with an RGB value of #00FF00.
-     *
-     * @profile common
      */
     public static final Color LIME                 = rgb(0x00, 0xFF, 0x00);
 
     /**
      * The color lime green with an RGB value of #32CD32.
-     *
-     * @profile common
      */
     public static final Color LIMEGREEN            = rgb(0x32, 0xCD, 0x32);
 
     /**
      * The color linen with an RGB value of #FAF0E6.
-     *
-     * @profile common
      */
     public static final Color LINEN                = rgb(0xFA, 0xF0, 0xE6);
 
     /**
      * The color magenta with an RGB value of #FF00FF.
-     *
-     * @profile common
      */
     public static final Color MAGENTA              = rgb(0xFF, 0x00, 0xFF);
 
     /**
      * The color maroon with an RGB value of #800000.
-     *
-     * @profile common
      */
     public static final Color MAROON               = rgb(0x80, 0x00, 0x00);
 
     /**
      * The color medium aquamarine with an RGB value of #66CDAA.
-     *
-     * @profile common
      */
     public static final Color MEDIUMAQUAMARINE     = rgb(0x66, 0xCD, 0xAA);
 
     /**
      * The color medium blue with an RGB value of #0000CD.
-     *
-     * @profile common
      */
     public static final Color MEDIUMBLUE           = rgb(0x00, 0x00, 0xCD);
 
     /**
      * The color medium orchid with an RGB value of #BA55D3.
-     *
-     * @profile common
      */
     public static final Color MEDIUMORCHID         = rgb(0xBA, 0x55, 0xD3);
 
     /**
      * The color medium purple with an RGB value of #9370DB.
-     *
-     * @profile common
      */
     public static final Color MEDIUMPURPLE         = rgb(0x93, 0x70, 0xDB);
 
     /**
      * The color medium sea green with an RGB value of #3CB371.
-     *
-     * @profile common
      */
     public static final Color MEDIUMSEAGREEN       = rgb(0x3C, 0xB3, 0x71);
 
     /**
      * The color medium slate blue with an RGB value of #7B68EE.
-     *
-     * @profile common
      */
     public static final Color MEDIUMSLATEBLUE      = rgb(0x7B, 0x68, 0xEE);
 
     /**
      * The color medium spring green with an RGB value of #00FA9A.
-     *
-     * @profile common
      */
     public static final Color MEDIUMSPRINGGREEN    = rgb(0x00, 0xFA, 0x9A);
 
     /**
      * The color medium turquoise with an RGB value of #48D1CC.
-     *
-     * @profile common
      */
     public static final Color MEDIUMTURQUOISE      = rgb(0x48, 0xD1, 0xCC);
 
     /**
      * The color medium violet red with an RGB value of #C71585.
-     *
-     * @profile common
      */
     public static final Color MEDIUMVIOLETRED      = rgb(0xC7, 0x15, 0x85);
 
     /**
      * The color midnight blue with an RGB value of #191970.
-     *
-     * @profile common
      */
     public static final Color MIDNIGHTBLUE         = rgb(0x19, 0x19, 0x70);
 
     /**
      * The color mint cream with an RGB value of #F5FFFA.
-     *
-     * @profile common
      */
     public static final Color MINTCREAM            = rgb(0xF5, 0xFF, 0xFA);
 
     /**
      * The color misty rose with an RGB value of #FFE4E1.
-     *
-     * @profile common
      */
     public static final Color MISTYROSE            = rgb(0xFF, 0xE4, 0xE1);
 
     /**
      * The color moccasin with an RGB value of #FFE4B5.
-     *
-     * @profile common
      */
     public static final Color MOCCASIN             = rgb(0xFF, 0xE4, 0xB5);
 
     /**
      * The color navajo white with an RGB value of #FFDEAD.
-     *
-     * @profile common
      */
     public static final Color NAVAJOWHITE          = rgb(0xFF, 0xDE, 0xAD);
 
     /**
      * The color navy with an RGB value of #000080.
-     *
-     * @profile common
      */
     public static final Color NAVY                 = rgb(0x00, 0x00, 0x80);
 
     /**
      * The color old lace with an RGB value of #FDF5E6.
-     *
-     * @profile common
      */
     public static final Color OLDLACE              = rgb(0xFD, 0xF5, 0xE6);
 
     /**
      * The color olive with an RGB value of #808000.
-     *
-     * @profile common
      */
     public static final Color OLIVE                = rgb(0x80, 0x80, 0x00);
 
     /**
      * The color olive drab with an RGB value of #6B8E23.
-     *
-     * @profile common
      */
     public static final Color OLIVEDRAB            = rgb(0x6B, 0x8E, 0x23);
 
     /**
      * The color orange with an RGB value of #FFA500.
-     *
-     * @profile common
      */
     public static final Color ORANGE               = rgb(0xFF, 0xA5, 0x00);
 
     /**
      * The color orange red with an RGB value of #FF4500.
-     *
-     * @profile common
      */
     public static final Color ORANGERED            = rgb(0xFF, 0x45, 0x00);
 
     /**
      * The color orchid with an RGB value of #DA70D6.
-     *
-     * @profile common
      */
     public static final Color ORCHID               = rgb(0xDA, 0x70, 0xD6);
 
     /**
      * The color pale goldenrod with an RGB value of #EEE8AA.
-     *
-     * @profile common
      */
     public static final Color PALEGOLDENROD        = rgb(0xEE, 0xE8, 0xAA);
 
     /**
      * The color pale green with an RGB value of #98FB98.
-     *
-     * @profile common
      */
     public static final Color PALEGREEN            = rgb(0x98, 0xFB, 0x98);
 
     /**
      * The color pale turquoise with an RGB value of #AFEEEE.
-     *
-     * @profile common
      */
     public static final Color PALETURQUOISE        = rgb(0xAF, 0xEE, 0xEE);
 
     /**
      * The color pale violet red with an RGB value of #DB7093.
-     *
-     * @profile common
      */
     public static final Color PALEVIOLETRED        = rgb(0xDB, 0x70, 0x93);
 
     /**
      * The color papaya whip with an RGB value of #FFEFD5.
-     *
-     * @profile common
      */
     public static final Color PAPAYAWHIP           = rgb(0xFF, 0xEF, 0xD5);
 
     /**
      * The color peach puff with an RGB value of #FFDAB9.
-     *
-     * @profile common
      */
     public static final Color PEACHPUFF            = rgb(0xFF, 0xDA, 0xB9);
 
     /**
      * The color peru with an RGB value of #CD853F.
-     *
-     * @profile common
      */
     public static final Color PERU                 = rgb(0xCD, 0x85, 0x3F);
 
     /**
      * The color pink with an RGB value of #FFC0CB.
-     *
-     * @profile common
      */
     public static final Color PINK                 = rgb(0xFF, 0xC0, 0xCB);
 
     /**
      * The color plum with an RGB value of #DDA0DD.
-     *
-     * @profile common
      */
     public static final Color PLUM                 = rgb(0xDD, 0xA0, 0xDD);
 
     /**
      * The color powder blue with an RGB value of #B0E0E6.
-     *
-     * @profile common
      */
     public static final Color POWDERBLUE           = rgb(0xB0, 0xE0, 0xE6);
 
     /**
      * The color purple with an RGB value of #800080.
-     *
-     * @profile common
      */
     public static final Color PURPLE               = rgb(0x80, 0x00, 0x80);
 
     /**
      * The color red with an RGB value of #FF0000.
-     *
-     * @profile common
      */
     public static final Color RED                  = rgb(0xFF, 0x00, 0x00);
 
     /**
      * The color rosy brown with an RGB value of #BC8F8F.
-     *
-     * @profile common
      */
     public static final Color ROSYBROWN            = rgb(0xBC, 0x8F, 0x8F);
 
     /**
      * The color royal blue with an RGB value of #4169E1.
-     *
-     * @profile common
      */
     public static final Color ROYALBLUE            = rgb(0x41, 0x69, 0xE1);
 
     /**
      * The color saddle brown with an RGB value of #8B4513.
-     *
-     * @profile common
      */
     public static final Color SADDLEBROWN          = rgb(0x8B, 0x45, 0x13);
 
     /**
      * The color salmon with an RGB value of #FA8072.
-     *
-     * @profile common
      */
     public static final Color SALMON               = rgb(0xFA, 0x80, 0x72);
 
     /**
      * The color sandy brown with an RGB value of #F4A460.
-     *
-     * @profile common
      */
     public static final Color SANDYBROWN           = rgb(0xF4, 0xA4, 0x60);
 
     /**
      * The color sea green with an RGB value of #2E8B57.
-     *
-     * @profile common
      */
     public static final Color SEAGREEN             = rgb(0x2E, 0x8B, 0x57);
 
     /**
      * The color sea shell with an RGB value of #FFF5EE.
-     *
-     * @profile common
      */
     public static final Color SEASHELL             = rgb(0xFF, 0xF5, 0xEE);
 
     /**
      * The color sienna with an RGB value of #A0522D.
-     *
-     * @profile common
      */
     public static final Color SIENNA               = rgb(0xA0, 0x52, 0x2D);
 
     /**
      * The color silver with an RGB value of #C0C0C0.
-     *
-     * @profile common
      */
     public static final Color SILVER               = rgb(0xC0, 0xC0, 0xC0);
 
     /**
      * The color sky blue with an RGB value of #87CEEB.
-     *
-     * @profile common
      */
     public static final Color SKYBLUE              = rgb(0x87, 0xCE, 0xEB);
 
     /**
      * The color slate blue with an RGB value of #6A5ACD.
-     *
-     * @profile common
      */
     public static final Color SLATEBLUE            = rgb(0x6A, 0x5A, 0xCD);
 
     /**
      * The color slate gray with an RGB value of #708090.
-     *
-     * @profile common
      */
     public static final Color SLATEGRAY            = rgb(0x70, 0x80, 0x90);
 
     /**
      * The color slate grey with an RGB value of #708090.
-     *
-     * @profile common
      */
     public static final Color SLATEGREY            = SLATEGRAY;
 
     /**
      * The color snow with an RGB value of #FFFAFA.
-     *
-     * @profile common
      */
     public static final Color SNOW                 = rgb(0xFF, 0xFA, 0xFA);
 
     /**
      * The color spring green with an RGB value of #00FF7F.
-     *
-     * @profile common
      */
     public static final Color SPRINGGREEN          = rgb(0x00, 0xFF, 0x7F);
 
     /**
      * The color steel blue with an RGB value of #4682B4.
-     *
-     * @profile common
      */
     public static final Color STEELBLUE            = rgb(0x46, 0x82, 0xB4);
 
     /**
      * The color tan with an RGB value of #D2B48C.
-     *
-     * @profile common
      */
     public static final Color TAN                  = rgb(0xD2, 0xB4, 0x8C);
 
     /**
      * The color teal with an RGB value of #008080.
-     *
-     * @profile common
      */
     public static final Color TEAL                 = rgb(0x00, 0x80, 0x80);
 
     /**
      * The color thistle with an RGB value of #D8BFD8.
-     *
-     * @profile common
      */
     public static final Color THISTLE              = rgb(0xD8, 0xBF, 0xD8);
 
     /**
      * The color tomato with an RGB value of #FF6347.
-     *
-     * @profile common
      */
     public static final Color TOMATO               = rgb(0xFF, 0x63, 0x47);
 
     /**
      * The color turquoise with an RGB value of #40E0D0.
-     *
-     * @profile common
      */
     public static final Color TURQUOISE            = rgb(0x40, 0xE0, 0xD0);
 
     /**
      * The color violet with an RGB value of #EE82EE.
-     *
-     * @profile common
      */
     public static final Color VIOLET               = rgb(0xEE, 0x82, 0xEE);
 
     /**
      * The color wheat with an RGB value of #F5DEB3.
-     *
-     * @profile common
      */
     public static final Color WHEAT                = rgb(0xF5, 0xDE, 0xB3);
 
     /**
      * The color white with an RGB value of #FFFFFF.
-     *
-     * @profile common
      */
     public static final Color WHITE                = rgb(0xFF, 0xFF, 0xFF);
 
     /**
      * The color white smoke with an RGB value of #F5F5F5.
-     *
-     * @profile common
      */
     public static final Color WHITESMOKE           = rgb(0xF5, 0xF5, 0xF5);
 
     /**
      * The color yellow with an RGB value of #FFFF00.
-     *
-     * @profile common
      */
     public static final Color YELLOW               = rgb(0xFF, 0xFF, 0x00);
 
     /**
      * The color yellow green with an RGB value of #9ACD32.
-     *
-     * @profile common
      */
     public static final Color YELLOWGREEN          = rgb(0x9A, 0xCD, 0x32);
 
@@ -1749,7 +1437,6 @@ public class Color extends Paint implements Interpolatable<Color> { // final
      * The red component of the {@code Color}, in the range {@code 0.0-1.0}.
      *
      * @defaultValue 0.0
-     * @profile common
      */
     public final double getRed() { return red; }
     private float red;
@@ -1758,7 +1445,6 @@ public class Color extends Paint implements Interpolatable<Color> { // final
      * The green component of the {@code Color}, in the range {@code 0.0-1.0}.
      *
      * @defaultValue 0.0
-     * @profile common
      */
     public final double getGreen() { return green; }
     private float green;
@@ -1767,7 +1453,6 @@ public class Color extends Paint implements Interpolatable<Color> { // final
      * The blue component of the {@code Color}, in the range {@code 0.0-1.0}.
      *
      * @defaultValue 0.0
-     * @profile common
      */
     public final double getBlue() { return blue; }
     private float blue;
@@ -1776,7 +1461,6 @@ public class Color extends Paint implements Interpolatable<Color> { // final
      * The opacity of the {@code Color}, in the range {@code 0.0-1.0}.
      *
      * @defaultValue 1.0
-     * @profile common
      */
     public final double getOpacity() { return opacity; }
     private float opacity = 1;
@@ -1873,8 +1557,6 @@ public class Color extends Paint implements Interpolatable<Color> { // final
      * The returned string might be empty but cannot be {@code null}.
      *
      * @return the string representation
-     *
-     * @profile common
      */
     @Override public String toString() {
         int r = (int)Math.round(red * 255.0);

@@ -86,16 +86,12 @@ Image image3 = new Image("flower.png", 100, 0, false, false);
 Image image4 = new Image("flower.png", 0, 100, false, false);
 
 </PRE>
-
- *
- * @profile common
  */
 public class Image {
     /**
      * The string representing the URL to use in fetching the pixel data.
      *
      * @defaultValue empty string
-     * @profile common
      */
     private final String url;
 
@@ -123,7 +119,6 @@ public class Image {
      * is 100%.
      *
      * @defaultValue 0
-     * @profile common
      */
     private ReadOnlyDoubleWrapper progress;
 
@@ -157,7 +152,6 @@ public class Image {
      * attributes.
      *
      * @defaultValue 0
-     * @profile common
      */
     private final double requestedWidth;
 
@@ -186,7 +180,6 @@ public class Image {
      * attributes.
      *
      * @defaultValue 0
-     * @profile common
      */
     private final double requestedHeight;
 
@@ -208,8 +201,6 @@ public class Image {
     /**
      * The image width or {@code 0} if the image loading fails. While the image
      * is being loaded it is set to {@code 0}.
-     *
-     * @profile common
      */
     private DoublePropertyImpl width;
 
@@ -267,8 +258,6 @@ public class Image {
     /**
      * The image height or {@code 0} if the image loading fails. While the image
      * is being loaded it is set to {@code 0}.
-     *
-     * @profile common
      */
     private DoublePropertyImpl height;
 
@@ -317,7 +306,6 @@ public class Image {
      * </p>
      *
      * @defaultValue false
-     * @profile common
      */
     private final boolean preserveRatio;
 
@@ -369,7 +357,6 @@ public class Image {
      * </p>
      *
      * @defaultValue true
-     * @profile common
      */
     private final boolean smooth;
 
@@ -396,7 +383,6 @@ public class Image {
      * Indicates whether the image is being loaded in the background.
      *
      * @defaultValue false
-     * @profile common
      */
     private final boolean backgroundLoading;
 
@@ -412,7 +398,6 @@ public class Image {
      * Indicates whether an error was detected while loading an image.
      *
      * @defaultValue false
-     * @profile common
      */
     private ReadOnlyBooleanWrapper error;
 
@@ -639,8 +624,6 @@ public class Image {
      *
      * <p>Has no effect if this image isn't loaded in background or if loading
      * has already completed.</p>
-     *
-     * @profile common
      */
     public void cancel() {
         if (backgroundTask != null) {

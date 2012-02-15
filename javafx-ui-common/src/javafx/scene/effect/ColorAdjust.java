@@ -41,8 +41,6 @@ import com.sun.javafx.scene.BoundsAccessor;
 /**
  * An effect that allows for per-pixel adjustments of hue, saturation,
  * brightness, and contrast.
- *
- * @profile common conditional effect
  */
 public class ColorAdjust extends Effect {
     /**

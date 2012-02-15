@@ -114,8 +114,6 @@ import com.sun.javafx.scene.input.InputEventUtils;
  * it affects both event variants. Thanks to the subtype-relationship, a
  * {@code MOUSE_ENTERED_TARGET} event handler will receive the
  * {@code MOUSE_ENTERED} event on target.
- *
- * @profile common
  */
 public class MouseEvent extends InputEvent {
     /**
@@ -467,8 +465,6 @@ public class MouseEvent extends InputEvent {
     /**
      * Horizontal x position of the event relative to the
      * origin of the MouseEvent's node.
-     *
-     * @profile common
      */
     private double x;
 
@@ -478,8 +474,6 @@ public class MouseEvent extends InputEvent {
      * 
      * @return horizontal position of the event relative to the
      * origin of the MouseEvent's source.
-     * 
-     * @profile common
      */
     public final double getX() {
         return x;
@@ -488,8 +482,6 @@ public class MouseEvent extends InputEvent {
     /**
      * Vertical y position of the event relative to the
      * origin of the MouseEvent's node.
-     *
-     * @profile common
      */
     private double y;
 
@@ -499,8 +491,6 @@ public class MouseEvent extends InputEvent {
      * 
      * @return vertical position of the event relative to the
      * origin of the MouseEvent's source.
-     *
-     * @profile common
      */
     public final double getY() {
         return y;
@@ -508,15 +498,12 @@ public class MouseEvent extends InputEvent {
 
     /**
      * Absolute horizontal x position of the event.
-     *
-     * @profile common
      */
     private double screenX;
 
     /**
      * Returns absolute horizontal position of the event.
      * @return absolute horizontal position of the event
-     * @profile common
      */
     public final double getScreenX() {
         return screenX;
@@ -524,15 +511,12 @@ public class MouseEvent extends InputEvent {
 
     /**
      * Absolute vertical y position of the event.
-     *
-     * @profile common
      */
     private double screenY;
 
     /**
      * Returns absolute vertical position of the event.
      * @return absolute vertical position of the event
-     * @profile common
      */
     public final double getScreenY() {
         return screenY;
@@ -543,8 +527,6 @@ public class MouseEvent extends InputEvent {
      * origin of the {@code Scene} that contains the MouseEvent's node.
      * If the node is not in a {@code Scene}, then the value is relative to
      * the boundsInParent of the root-most parent of the MouseEvent's node.
-     *
-     * @profile common
      */
     private double sceneX;
 
@@ -556,8 +538,6 @@ public class MouseEvent extends InputEvent {
      * 
      * @return horizontal position of the event relative to the
      * origin of the {@code Scene} that contains the MouseEvent's source
-     *
-     * @profile common
      */
     public final double getSceneX() {
         return sceneX;
@@ -568,8 +548,6 @@ public class MouseEvent extends InputEvent {
      * origin of the {@code Scene} that contains the MouseEvent's node.
      * If the node is not in a {@code Scene}, then the value is relative to
      * the boundsInParent of the root-most parent of the MouseEvent's node.
-     *
-     * @profile common
      */
     private double sceneY;
 
@@ -581,8 +559,6 @@ public class MouseEvent extends InputEvent {
      * 
      * @return vertical position of the event relative to the
      * origin of the {@code Scene} that contains the MouseEvent's source
-     *
-     * @profile common
      */
     public final double getSceneY() {
         return sceneY;
@@ -590,8 +566,6 @@ public class MouseEvent extends InputEvent {
 
     /**
      * Which, if any, of the mouse buttons is responsible for this event.
-     *
-     * @profile common
      */
     private MouseButton button;
 
@@ -599,7 +573,6 @@ public class MouseEvent extends InputEvent {
      * Which, if any, of the mouse buttons is responsible for this event.
      * 
      * @return mouse button whose state change caused this event
-     * @profile common
      */
     public final MouseButton getButton() {
         return button;
@@ -614,8 +587,6 @@ public class MouseEvent extends InputEvent {
      * to numbers higher than one if all the events between two subsequent
      * presses happen on a small region and in a small time (according 
      * to native operating system configuration).
-     *
-     * @profile common
      */
     private int clickCount;
 
@@ -630,7 +601,6 @@ public class MouseEvent extends InputEvent {
      * to native operating system configuration).
      * 
      * @return number of mouse clicks associated with this event
-     * @profile common
      */
     public final int getClickCount() {
         return clickCount;
@@ -665,16 +635,12 @@ public class MouseEvent extends InputEvent {
     
     /**
      * Whether or not the Shift modifier is down on this event.
-     *
-     * @profile common
      */
     private boolean shiftDown;
 
     /**
      * Whether or not the Shift modifier is down on this event.
      * @return true if the Shift modifier is down on this event
-     *
-     * @profile common
      */
     public final boolean isShiftDown() {
         return shiftDown;
@@ -682,16 +648,12 @@ public class MouseEvent extends InputEvent {
 
     /**
      * Whether or not the Control modifier is down on this event.
-     *
-     * @profile common
      */
     private boolean controlDown;
 
     /**
      * Whether or not the Control modifier is down on this event.
      * @return true if the Control modifier is down on this event
-     *
-     * @profile common
      */
     public final boolean isControlDown() {
         return controlDown;
@@ -699,16 +661,12 @@ public class MouseEvent extends InputEvent {
 
     /**
      * Whether or not the Alt modifier is down on this event.
-     *
-     * @profile common
      */
     private boolean altDown;
 
     /**
      * Whether or not the Alt modifier is down on this event.
      * @return true if the Alt modifier is down on this event
-     *
-     * @profile common
      */
     public final boolean isAltDown() {
         return altDown;
@@ -716,16 +674,12 @@ public class MouseEvent extends InputEvent {
 
     /**
      * Whether or not the Meta modifier is down on this event.
-     *
-     * @profile common
      */
     private boolean metaDown;
 
     /**
      * Whether or not the Meta modifier is down on this event.
      * @return true if the Meta modifier is down on this event
-     *
-     * @profile common
      */
     public final boolean isMetaDown() {
         return metaDown;
@@ -766,8 +720,6 @@ public class MouseEvent extends InputEvent {
      * on different systems. Therefore, {@code popupTrigger}
      * should be checked in both {@code onMousePressed}
      * and {@code mouseReleased} for proper cross-platform functionality.
-     *
-     * @profile common
      */
     private boolean popupTrigger;
 
@@ -777,8 +729,6 @@ public class MouseEvent extends InputEvent {
      * that the {@code button} variable indicates which button press was
      * responsible for this event while this variable indicates whether the
      * primary button is depressed.
-     *
-     * @profile common
      */
     private boolean primaryButtonDown;
 
@@ -791,7 +741,6 @@ public class MouseEvent extends InputEvent {
      *
      * @return {@code true} if primary button (button 1, usually the left) 
      * is currently pressed
-     * @profile common
      */
     public final boolean isPrimaryButtonDown() {
         return primaryButtonDown;
@@ -803,8 +752,6 @@ public class MouseEvent extends InputEvent {
      * that the {@code button} variable indicates which button press was
      * responsible for this event while this variable indicates whether the
      * primary button is depressed.
-     *
-     * @profile common
      */
     private boolean secondaryButtonDown;
 
@@ -817,7 +764,6 @@ public class MouseEvent extends InputEvent {
      *
      * @return {@code true} if secondary button (button 3, usually the right) 
      * is currently pressed
-     * @profile common
      */
     public final boolean isSecondaryButtonDown() {
         return secondaryButtonDown;
@@ -829,8 +775,6 @@ public class MouseEvent extends InputEvent {
      * that the {@code button} variable indicates which button press was
      * responsible for this event while this variable indicates whether the
      * middle button is depressed.
-     *
-     * @profile common
      */
     private boolean middleButtonDown;
 
@@ -842,7 +786,6 @@ public class MouseEvent extends InputEvent {
      * middle button is depressed.
      *
      * @return {@code true} if middle button (button 2) is currently pressed
-     * @profile common
      */
     public final boolean isMiddleButtonDown() {
         return middleButtonDown;
