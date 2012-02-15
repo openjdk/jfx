@@ -36,6 +36,9 @@ import com.sun.javafx.scene.control.WeakListChangeListener;
 import java.lang.ref.WeakReference;
 import javafx.beans.property.ReadOnlyObjectProperty;
 import javafx.beans.property.ReadOnlyObjectWrapper;
+import javafx.beans.value.ChangeListener;
+import javafx.beans.value.ObservableValue;
+import javafx.beans.value.WeakChangeListener;
 
 /**
  * The {@link Cell} type used with the {@link TreeView} control. In addition to 
@@ -100,9 +103,45 @@ public class TreeCell<T> extends IndexedCell<T> {
             updateSelection();
         }
     };
+    
+    /**
+     * Listens to the selectionModel property on the TreeView. Whenever the entire model is changed,
+     * we have to unhook the weakSelectedListener and update the selection.
+     */
+    private final ChangeListener selectionModelPropertyListener = new ChangeListener<MultipleSelectionModel>() {
+        @Override public void changed(ObservableValue observable,
+                                      MultipleSelectionModel oldValue,
+                                      MultipleSelectionModel newValue) {
+            if (oldValue != null) {
+                oldValue.getSelectedIndices().removeListener(weakSelectedListener);
+            }
+            if (newValue != null) {
+                newValue.getSelectedIndices().addListener(weakSelectedListener);
+            }
+            updateSelection();
+        }
+    };    
 
     private final InvalidationListener focusedListener = new InvalidationListener() {
         @Override public void invalidated(Observable valueModel) {
+            updateFocus();
+        }
+    };
+    
+    /**
+     * Listens to the focusModel property on the TreeView. Whenever the entire model is changed,
+     * we have to unhook the weakFocusedListener and update the focus.
+     */
+    private final ChangeListener focusModelPropertyListener = new ChangeListener<FocusModel>() {
+        @Override public void changed(ObservableValue observable,
+                                      FocusModel oldValue,
+                                      FocusModel newValue) {
+            if (oldValue != null) {
+                oldValue.focusedIndexProperty().removeListener(weakFocusedListener);
+            }
+            if (newValue != null) {
+                newValue.focusedIndexProperty().addListener(weakFocusedListener);
+            }
             updateFocus();
         }
     };
@@ -114,7 +153,9 @@ public class TreeCell<T> extends IndexedCell<T> {
     };
     
     private final WeakListChangeListener weakSelectedListener = new WeakListChangeListener(selectedListener);
+    private final WeakChangeListener weakSelectionModelPropertyListener = new WeakChangeListener(selectionModelPropertyListener);
     private final WeakInvalidationListener weakFocusedListener = new WeakInvalidationListener(focusedListener);
+    private final WeakChangeListener weakFocusModelPropertyListener = new WeakChangeListener(focusModelPropertyListener);
     private final WeakInvalidationListener weakEditingListener = new WeakInvalidationListener(editingListener);
     
     
@@ -188,6 +229,8 @@ public class TreeCell<T> extends IndexedCell<T> {
                     }
 
                     oldTreeView.editingItemProperty().removeListener(weakEditingListener);
+                    oldTreeView.focusModelProperty().removeListener(weakFocusModelPropertyListener);
+                    oldTreeView.selectionModelProperty().removeListener(weakSelectionModelPropertyListener);
                 }
                 
                 weakTreeViewRef = null;
@@ -208,6 +251,8 @@ public class TreeCell<T> extends IndexedCell<T> {
                 }
 
                 get().editingItemProperty().addListener(weakEditingListener);
+                get().focusModelProperty().addListener(weakFocusModelPropertyListener);
+                get().selectionModelProperty().addListener(weakSelectionModelPropertyListener);
                 
                 weakTreeViewRef = new WeakReference<TreeView<T>>(get());
             }
@@ -431,9 +476,6 @@ public class TreeCell<T> extends IndexedCell<T> {
      **************************************************************************/
 
     private static final String DEFAULT_STYLE_CLASS = "tree-cell";
-
-    private static final String PSEUDO_CLASS_EXPANDED = "expanded";
-    private static final String PSEUDO_CLASS_COLLAPSED = "collapsed";
 
     private static final long EXPANDED_PSEUDOCLASS_STATE = StyleManager.getInstance().getPseudoclassMask("expanded");
     private static final long COLLAPSED_PSEUDOCLASS_STATE = StyleManager.getInstance().getPseudoclassMask("collapsed");

@@ -529,6 +529,9 @@ public class TreeView<T> extends Control {
      */
     @Deprecated
     public final int impl_getTreeItemCount() {
+        if (treeItemCountDirty) {
+            updateTreeItemCount();
+        }
         return treeItemCount.get();
     }
 
@@ -748,7 +751,6 @@ public class TreeView<T> extends Control {
     @Override protected void layoutChildren() {
         if (treeItemCountDirty) {
             updateTreeItemCount();
-            treeItemCountDirty = false;
         }
         
         super.layoutChildren();
@@ -873,6 +875,7 @@ public class TreeView<T> extends Control {
 
             setTreeItemCount(count);
         }
+        treeItemCountDirty = false;
     }
 
     private TreeItem getItem(TreeItem<T> parent, int itemIndex) {
