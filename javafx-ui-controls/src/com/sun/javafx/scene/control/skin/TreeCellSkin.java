@@ -56,6 +56,11 @@ public class TreeCellSkin extends CellSkinBase<TreeCell<?>, TreeCellBehavior> {
      * To work around this, we create a single WeakHashMap to store a max
      * disclosureNode width per TreeView. We use WeakHashMap to help prevent
      * any memory leaks.
+     * 
+     * RT-19656 identifies a related issue, which is that we may not provide
+     * indentation to any TreeItems because we have not yet encountered a cell
+     * which has a disclosureNode. Once we scroll and encounter one, indentation
+     * happens in a displeasing way.
      */
     private static final Map<TreeView, Double> maxDisclosureWidthMap = new WeakHashMap<TreeView, Double>();
 
@@ -158,7 +163,7 @@ public class TreeCellSkin extends CellSkinBase<TreeCell<?>, TreeCellBehavior> {
         boolean disclosureVisible = disclosureNode != null && treeItem != null && ! treeItem.isLeaf();
 
         final double defaultDisclosureWidth = maxDisclosureWidthMap.containsKey(tree) ?
-            maxDisclosureWidthMap.get(tree) : 0;
+            maxDisclosureWidthMap.get(tree) : 18;   // RT-19656: default width of default disclosure node
         double disclosureWidth = defaultDisclosureWidth;
 
         if (disclosureVisible) {
