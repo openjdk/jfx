@@ -420,10 +420,7 @@ public class TitledPaneSkin extends LabeledSkinBase<TitledPane, TitledPaneBehavi
             getStyleClass().setAll("content");
             this.clipRect = new Rectangle();
             setClip(clipRect);
-            this.content = n;
-            if (n != null) {
-                getChildren().add(n);
-            }
+            setContent(n);
 
             engine = new TraversalEngine(this, false) {
                 @Override public void trav(Node owner, Direction dir) {
@@ -435,14 +432,15 @@ public class TitledPaneSkin extends LabeledSkinBase<TitledPane, TitledPaneBehavi
             setImpl_traversalEngine(engine);
         }
 
-        public void setContent(Node n) {
+        public final void setContent(Node n) {
             this.content = n;
+            getChildren().clear();            
             if (n != null) {
-                getChildren().setAll(getSkinnable().getContent());
+                getChildren().setAll(n);
             }
         }
 
-        public Node getContent() {
+        public final Node getContent() {
             return content;
         }
 
