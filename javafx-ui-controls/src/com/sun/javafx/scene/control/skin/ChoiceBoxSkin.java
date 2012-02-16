@@ -359,7 +359,7 @@ import com.sun.javafx.scene.control.WeakListChangeListener;
                 popupWidth = (new Text(((MenuItem)popup.getItems().get(0)).getText())).prefWidth(-1);
             }
         }
-        return getInsets().getLeft() + Math.max(boxWidth, popupWidth)
+        return (popup.getItems().size() == 0) ? 50 : getInsets().getLeft() + Math.max(boxWidth, popupWidth)
                 + getInsets().getRight();
     }
 
