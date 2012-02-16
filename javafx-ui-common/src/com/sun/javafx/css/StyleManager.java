@@ -1142,14 +1142,14 @@ public class StyleManager {
                 if (rules.isEmpty() && pseudoclassStateMask == 0 && hasStyle == false) {
                     boolean hasInheritAsDefault = false;
                     // TODO This is questionable as what happens when a node has no style helper and inherits styles
-//                    final List<StyleableProperty> styleables =
-//                        StyleableProperty.getStyleables(node.impl_getClassToStyle());
-//                    for (int i = 0, max=styleables.size(); i < max; i++) {
-//                        if (styleables.get(i).isInherits()) {
-//                            hasInheritAsDefault = true;
-//                            break;
-//                        }
-//                    }
+                    final List<StyleableProperty> styleables =
+                        StyleableProperty.getStyleables(node.impl_getClassToStyle());
+                    for (int i = 0, max=styleables.size(); i < max; i++) {
+                        if (styleables.get(i).isInherits()) {
+                            hasInheritAsDefault = true;
+                            break;
+                        }
+                    }
                     // if we have no rules and no inherited properties we don't need a StyleHelper
                     if (! hasInheritAsDefault) return null;
                 }
