@@ -467,12 +467,12 @@ public abstract class Toolkit {
                                           boolean smooth);
     
     /*
-     * platformImage could be 
-     *   - an object returned by renderToImage method
+     * The loadPlatformImage method supports the following image types:
+     *   - an object returned by the renderToImage method
      *   - an instance of com.sun.prism.Image (in case of prism)
-     *   - an instance of BufferedImage (in case of SwingToolkit)
-     * TODO: distinguish methods for loading platform and external images  
-     *       when JavaFX Image has got a new constructor: Image(ImageLoader) 
+     *   - an instance of an external image object, which can be a BufferedImage 
+     * If JavaFX Image had one more constructor Image(ImageLoader), 
+     * we could introduce a different method for external image loading support.
      */
     
     public abstract ImageLoader loadPlatformImage(Object platformImage);
