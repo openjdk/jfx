@@ -392,6 +392,7 @@ public class TreeItem<T> implements EventTarget {
     // called whenever the contents of the children sequence changes
     private ListChangeListener<TreeItem<T>> childrenListener = new ListChangeListener<TreeItem<T>>() {
         @Override public void onChanged(Change<? extends TreeItem<T>> c) {
+            expandedDescendentCountDirty = true;
             while (c.next()) {
                 updateChildren(c.getAddedSubList(), c.getRemoved());
             }
@@ -771,22 +772,22 @@ public class TreeItem<T> implements EventTarget {
      **************************************************************************/
     
     // This value is package accessible so that it may be retrieved from TreeView.
-    int getExpandedDescendentCount() {
-//        if (expandedDescendentCountDirty) {
-            updateExpandedDescendentCount();;
-//            expandedDescendentCountDirty = false;
-//        }
+    int getExpandedDescendentCount(boolean reset) {
+        if (reset || expandedDescendentCountDirty) {
+            updateExpandedDescendentCount(reset);
+            expandedDescendentCountDirty = false;
+        }
         return expandedDescendentCount;
     }
     
-    private void updateExpandedDescendentCount() {
+    private void updateExpandedDescendentCount(boolean reset) {
         previousExpandedDescendentCount = expandedDescendentCount;
         expandedDescendentCount = 1;
         
         if (!isLeaf() && isExpanded()) {
             for (TreeItem<T> child : getChildren()) {
                 if (child == null) continue;
-                expandedDescendentCount += child.isExpanded() ? child.getExpandedDescendentCount() : 1;
+                expandedDescendentCount += child.isExpanded() ? child.getExpandedDescendentCount(reset) : 1;
             }
         }
     }
