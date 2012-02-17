@@ -257,7 +257,7 @@ public abstract class CssMethodsTestBase {
             
             // is the cssInitialValue the same as the node property's default?
             final Object cssInitialValue = 
-                    cssPropertyKey.getInitialValue();
+                    cssPropertyKey.getInitialValue(null);
             
             ValueComparator.DEFAULT.assertEquals(defaultValue, cssInitialValue);
         }
