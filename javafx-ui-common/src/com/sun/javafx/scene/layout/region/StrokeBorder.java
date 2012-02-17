@@ -190,6 +190,16 @@ public class StrokeBorder extends Border {
      public static List<StyleableProperty> impl_CSS_STYLEABLES() {
          return StrokeBorder.StyleableProperties.STYLEABLES;
      }
+     
+    /**
+     * RT-19263
+     * @treatAsPrivate implementation detail
+     * @deprecated This is an experimental API that is not intended for general use and is subject to change in future versions
+     */
+    @Deprecated
+    public List<StyleableProperty> impl_getStyleableProperties() {
+        return impl_CSS_STYLEABLES();
+    }
 
     /**
      * Defines the radius of the top left corner of the region this border is

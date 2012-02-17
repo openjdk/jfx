@@ -571,6 +571,16 @@ public class TabPane extends Control {
         return TabPane.StyleableProperties.STYLEABLES;
     }
 
+    /**
+     * RT-19263
+     * @treatAsPrivate implementation detail
+     * @deprecated This is an experimental API that is not intended for general use and is subject to change in future versions
+     */
+    @Deprecated
+    public List<StyleableProperty> impl_getStyleableProperties() {
+        return impl_CSS_STYLEABLES();
+    }
+
     // used in the impl_getPseudoClassState method below to improve performance
     private Side cachedSide;
     private String cachedSideString;

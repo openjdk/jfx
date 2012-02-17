@@ -24,6 +24,8 @@
  */
 package javafx.scene.control;
 
+import com.sun.javafx.css.Styleable;
+import com.sun.javafx.css.StyleableProperty;
 import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.ObjectPropertyBase;
@@ -41,6 +43,9 @@ import javafx.event.EventType;
 import javafx.scene.Node;
 
 import com.sun.javafx.event.EventHandlerManager;
+import java.lang.ref.Reference;
+import java.util.Collections;
+import java.util.List;
 import javafx.beans.property.ReadOnlyBooleanProperty;
 import javafx.beans.property.ReadOnlyBooleanWrapper;
 import javafx.beans.property.ReadOnlyObjectProperty;
@@ -527,4 +532,52 @@ public class Tab implements EventTarget {
      **************************************************************************/
 
     private static final String DEFAULT_STYLE_CLASS = "tab";
+    
+    protected Styleable styleable; 
+    /**
+     * RT-19263
+     * @treatAsPrivate implementation detail
+     * @deprecated This is an experimental API that is not intended for general use and is subject to change in future versions
+     */    
+    public Styleable impl_getStyleable() {
+        
+        if (styleable == null) {
+            styleable = new Styleable() {
+
+                @Override
+                public String getId() {
+                    return Tab.this.getId();
+                }
+
+                @Override
+                public List<String> getStyleClass() {
+                    return Tab.this.getStyleClass();
+                }
+
+                @Override
+                public String getStyle() {
+                    return Tab.this.getStyle();
+                }
+
+                @Override
+                public Styleable getStyleableParent() {
+                    return getTabPane() != null 
+                        ? getTabPane().impl_getStyleable()
+                        : null;
+                }
+
+                @Override
+                public List<StyleableProperty> getStyleableProperties() {
+                    return Collections.EMPTY_LIST;
+                }                
+
+                @Override
+                public Node getNode() {
+                    return null;
+                }
+
+            };
+        }
+        return styleable;
+    }    
 }

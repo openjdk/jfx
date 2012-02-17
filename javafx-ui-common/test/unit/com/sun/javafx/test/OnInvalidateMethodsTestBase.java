@@ -122,13 +122,13 @@ public abstract class OnInvalidateMethodsTestBase {
         }
     }
 
-    protected static StyleableProperty findCssKey(Class clazz, String propertyName) {
-        final List<StyleableProperty> STYLEABLES = StyleableProperty.getStyleables(clazz);
-        for(StyleableProperty styleable : STYLEABLES) {
-            if (styleable.getProperty().equals(propertyName)) return styleable;
-        }
-        return null;
-    }
+//    protected static StyleableProperty findCssKey(Class clazz, String propertyName) {
+//        final List<StyleableProperty> STYLEABLES = StyleableProperty.getStyleables(clazz);
+//        for(StyleableProperty styleable : STYLEABLES) {
+//            if (styleable.getProperty().equals(propertyName)) return styleable;
+//        }
+//        return null;
+//    }
 
 
 }

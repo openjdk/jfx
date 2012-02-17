@@ -90,6 +90,7 @@ import com.sun.javafx.scene.EventHandlerProperties;
 import com.sun.javafx.scene.NodeEventDispatcher;
 import com.sun.javafx.scene.traversal.Direction;
 import com.sun.javafx.sg.PGNode;
+import java.lang.ref.Reference;
 import java.util.*;
 import javafx.beans.property.*;
 import javafx.beans.value.WritableValue;
@@ -5980,6 +5981,57 @@ public abstract class Node implements EventTarget {
      *                                                                         *
      **************************************************************************/
 
+    private Styleable styleable; 
+    /**
+     * RT-19263
+     * @treatAsPrivate implementation detail
+     * @deprecated This is an experimental API that is not intended for general use and is subject to change in future versions
+     */    
+    public final Styleable impl_getStyleable() {
+        
+        if (styleable == null) {
+            styleable = new Styleable() {
+
+                Styleable styleableParent = null;
+
+                @Override
+                public String getId() {
+                    return Node.this.getId();
+                }
+
+                @Override
+                public List<String> getStyleClass() {
+                    return Node.this.getStyleClass();
+                }
+
+                @Override
+                public String getStyle() {
+                    return Node.this.getStyle();
+                }
+
+                @Override
+                public Styleable getStyleableParent() {
+                    Parent parent = null;
+                    if (styleableParent == null && (parent = Node.this.getParent()) != null) {
+                        styleableParent = parent.impl_getStyleable();
+                    };
+                    return styleableParent;
+                }
+
+                @Override
+                public List<StyleableProperty> getStyleableProperties() {
+                    return Node.this.impl_getStyleableProperties();
+                }                
+                
+                @Override
+                public Node getNode() {
+                    return Node.this;
+                }
+
+           };
+        }
+        return styleable;
+    }
          
      /**
       * Super-lazy instantiation pattern from Bill Pugh.
@@ -6227,21 +6279,26 @@ public abstract class Node implements EventTarget {
      public static List<StyleableProperty> impl_CSS_STYLEABLES() {
          return Node.StyleableProperties.STYLEABLES;
      }
+     
+    /**
+     * RT-19263
+     * @treatAsPrivate implementation detail
+     * @deprecated This is an experimental API that is not intended for general use and is subject to change in future versions
+     */
+    @Deprecated
+    public List<StyleableProperty> impl_getStyleableProperties() {
+        return impl_CSS_STYLEABLES();
+    }
 
-     /**
-      * RT-17293
-      * @treatAsPrivate implementation detail
-      * @deprecated This is an experimental API that is not intended for use
-      */
-     private ObservableMap<WritableValue, List<Style>> styleMap;
      
      /**
       * RT-17293
       * @treatAsPrivate implementation detail
       * @deprecated This is an experimental API that is not intended for general use and is subject to change in future versions
       */
+     @Deprecated
      public ObservableMap<WritableValue, List<Style>> impl_getStyleMap() {
-         return styleMap;
+         return impl_getStyleable().getStyleMap();
      }
 
      /**
@@ -6249,20 +6306,11 @@ public abstract class Node implements EventTarget {
       * @treatAsPrivate implementation detail
       * @deprecated This is an experimental API that is not intended for general use and is subject to change in future versions
       */
+     @Deprecated
      public void impl_setStyleMap(ObservableMap<WritableValue, List<Style>> styleMap) {
-         this.styleMap = styleMap;
+         impl_getStyleable().setStyleMap(styleMap);
      }
           
-    /**
-     * Hook for SkinnablePopup
-     * @treatAsPrivate implementation detail
-     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
-     */
-    @Deprecated
-    public Class impl_getClassToStyle() {
-        return getClass();
-    }
-
     /**
      * Flags used to indicate in which way this node is dirty (or whether it
      * is clean) and what must happen during the next CSS cycle on the
