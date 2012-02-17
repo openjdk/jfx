@@ -59,7 +59,7 @@ public abstract class StyleableProperty<N extends Node, V> {
         final WritableValue<V> writable = getWritableValue(node);
         assert (writable instanceof Property);
         final Property<V> cssProperty = (Property<V>)writable;
-        cssProperty.applyStyle(origin, value != null ? value : getInitialValue());            
+        cssProperty.applyStyle(origin, value != null ? value : getInitialValue(null));            
     }
 
     /** @deprecated Use {@link StyleableProperty#set(javafx.scene.Node, java.lang.Object, com.sun.javafx.css.Stylesheet.Origin)} */
@@ -332,9 +332,20 @@ public abstract class StyleableProperty<N extends Node, V> {
 
     private final V initialValue;
     /**
+     * The initial value of a StyleableProperty corresponds to the default 
+     * value of the WritableValue in code. 
+     * For example, the default value of Shape.fill is Color.BLACK and the
+     * initialValue of Shape.StyleableProperties.FILL is also Color.BLACK.
+     * <p>
+     * There may be exceptions to this, however. The initialValue may depend
+     * on the state of the Node. A ScrollBar has a default orientation of 
+     * horizontal. If the ScrollBar is vertical, however, this method should
+     * return Orientation.VERTICAL. Otherwise, a vertical ScrollBar would be
+     * incorrectly set to a horizontal ScrollBar when the initial value is 
+     * applied.
      * @return The initial value of the property, possibly null
      */
-    public final V getInitialValue() {
+    public V getInitialValue(N node) {
         return initialValue;
     }
     

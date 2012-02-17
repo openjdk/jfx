@@ -142,7 +142,7 @@ public class StyleablePropertyTest {
         
         TestNode testNode = new TestNode();
         Double expResult = testNode.getXyzzy();
-        Double result = (Double)TestNode.StyleableProperties.XYZZY.getInitialValue(null);
+        Double result = (Double)TestNode.StyleableProperties.XYZZY.getInitialValue(testNode);
         assertEquals(expResult, result);
 
     }

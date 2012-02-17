@@ -1116,7 +1116,7 @@ public class StyleHelper {
             // then it may have been set and it needs to be reset to its
             // default value. For example, if there is a style for the hover
             // pseudoclass state, but no style for the default state.
-            Object initialValue = styleable.getInitialValue();
+            Object initialValue = styleable.getInitialValue(node);
             
             if (styleList != null) {
                 
