@@ -6433,9 +6433,7 @@ public abstract class Node implements EventTarget {
             case REAPPLY:
             case UPDATE:
             default:
-                // I can just pass false here because the node will take
-                // care of actually doing a REAPPLY if it has to
-                impl_processCSS(false);
+                impl_processCSS(cssFlag == CSSFlags.REAPPLY);
         }
     }
 
