@@ -804,7 +804,13 @@ public class FlowPane extends Pane {
              new StyleableProperty<FlowPane,Orientation>("-fx-orientation",
                  new EnumConverter<Orientation>(Orientation.class), 
                  Orientation.HORIZONTAL) {
-
+                
+            @Override
+            public Orientation getInitialValue(FlowPane node) {
+                // A vertical flow pane should remain vertical 
+                return node.getOrientation();
+            }
+                     
             @Override
             public boolean isSettable(FlowPane node) {
                 return node.orientation == null || !node.orientation.isBound();

@@ -181,6 +181,12 @@ public class ToolBar extends Control {
                 Orientation.HORIZONTAL) {
 
             @Override
+            public Orientation getInitialValue(ToolBar node) {
+                // A vertical ToolBar should remain vertical 
+                return node.getOrientation();
+            }
+            
+            @Override
             public boolean isSettable(ToolBar n) {
                 return n.orientation == null || !n.orientation.isBound();
             }

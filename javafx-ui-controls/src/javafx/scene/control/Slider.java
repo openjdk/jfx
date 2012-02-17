@@ -725,6 +725,12 @@ public class Slider extends Control {
                 Orientation.HORIZONTAL) {
 
             @Override
+            public Orientation getInitialValue(Slider node) {
+                // A vertical Slider should remain vertical 
+                return node.getOrientation();
+            }
+
+            @Override
             public boolean isSettable(Slider n) {
                 return n.orientation == null || !n.orientation.isBound();
             }

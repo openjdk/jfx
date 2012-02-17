@@ -359,8 +359,14 @@ public class ScrollBar extends Control {
         private static final StyleableProperty<ScrollBar,Orientation> ORIENTATION = 
             new StyleableProperty<ScrollBar,Orientation>("-fx-orientation",
                 new EnumConverter<Orientation>(Orientation.class),
-                Orientation.VERTICAL) {
+                Orientation.HORIZONTAL) {
 
+            @Override
+            public Orientation getInitialValue(ScrollBar node) {
+                // A vertical ScrollBar should remain vertical 
+                return node.getOrientation();
+            }
+                    
             @Override
             public boolean isSettable(ScrollBar n) {
                 return n.orientation == null || !n.orientation.isBound();

@@ -370,6 +370,12 @@ public class SplitPane extends Control {
                 Orientation.HORIZONTAL) {
 
             @Override
+            public Orientation getInitialValue(SplitPane node) {
+                // A vertical SplitPane should remain vertical 
+                return node.getOrientation();
+            }
+            
+            @Override
             public boolean isSettable(SplitPane n) {
                 return n.orientation == null || !n.orientation.isBound();
             }

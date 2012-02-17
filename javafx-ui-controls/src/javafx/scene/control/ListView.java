@@ -417,7 +417,7 @@ public class ListView<T> extends Control {
                     impl_pseudoClassStateChanged(PSEUDO_CLASS_VERTICAL);
                     impl_pseudoClassStateChanged(PSEUDO_CLASS_HORIZONTAL);
                 }
-
+                
                 @Override 
                 public StyleableProperty getStyleableProperty() {
                     return StyleableProperties.ORIENTATION;
@@ -741,6 +741,12 @@ public class ListView<T> extends Control {
             new StyleableProperty<ListView,Orientation>("-fx-orientation",
                 new EnumConverter<Orientation>(Orientation.class), 
                 Orientation.VERTICAL) {
+
+            @Override
+            public Orientation getInitialValue(ListView node) {
+                // A vertical ListView should remain vertical 
+                return node.getOrientation();
+            }
 
             @Override
             public boolean isSettable(ListView n) {

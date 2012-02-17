@@ -223,6 +223,12 @@ public class Separator extends Control {
                 Orientation.HORIZONTAL) {
 
             @Override
+            public Orientation getInitialValue(Separator node) {
+                // A vertical Separator should remain vertical 
+                return node.getOrientation();
+            }
+
+            @Override
             public boolean isSettable(Separator n) {
                 return n.orientation == null || !n.orientation.isBound();
             }

@@ -1016,6 +1016,12 @@ public class TilePane extends Pane {
                  Orientation.HORIZONTAL) {
 
                 @Override
+                public Orientation getInitialValue(TilePane node) {
+                    // A vertical TilePane should remain vertical 
+                    return node.getOrientation();
+                }
+                                          
+                @Override
                 public boolean isSettable(TilePane node) {
                     return node.orientation == null ||
                             !node.orientation.isBound();
