@@ -1368,7 +1368,9 @@ public class StyleHelper {
             Styleable parent = node;
             while (parent != null) {
                 
-                StyleHelper parentHelper = parent.getStyleHelper();
+                StyleHelper parentHelper = parent.getNode() != null
+                        ? parent.getNode().impl_getStyleHelper()
+                        : null;
                 
                 if (parentHelper != null) {
                     
@@ -1410,7 +1412,9 @@ public class StyleHelper {
             if (styleableProperty.isInherits()) {
                 parent = node.getStyleableParent();
                 while (parent != null) {
-                    StyleHelper parentHelper = parent.getStyleHelper();
+                    StyleHelper parentHelper = parent.getNode() != null 
+                            ? parent.getNode().impl_getStyleHelper()
+                            : null;
                     if (parentHelper != null) {
                         parentHelper.getMatchingStyles(parent, styleableProperty, styleList); 
                     }
@@ -1435,7 +1439,9 @@ public class StyleHelper {
                 // gather up any and all styles that contain this value as a property
                 Styleable parent = node;
                 do {
-                    final StyleHelper helper = parent.getStyleHelper();
+                    final StyleHelper helper = parent.getNode() != null 
+                            ? parent.getNode().impl_getStyleHelper()
+                            : null;
                     if (helper != null) {
                                              
                         final int start = styleList.size();

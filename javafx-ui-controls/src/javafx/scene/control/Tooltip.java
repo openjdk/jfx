@@ -447,15 +447,25 @@ public class Tooltip extends PopupControl {
     public static List<StyleableProperty> impl_CSS_STYLEABLES() {
         return Tooltip.StyleableProperties.STYLEABLES;
     }
-   
+  
+    /**
+     * RT-19263
+     * @treatAsPrivate implementation detail
+     * @deprecated This is an experimental API that is not intended for general use and is subject to change in future versions
+     */
+    @Deprecated
+    public List<StyleableProperty> impl_getStyleableProperties() {
+        return impl_CSS_STYLEABLES();
+    }
+ 
     private final class CSSBridge extends PopupControl.CSSBridge {
         
         @Override public void impl_pseudoClassStateChanged(String s) {
             super.impl_pseudoClassStateChanged(s);
         }
-        
-        @Override public Class impl_getClassToStyle() {
-            return Tooltip.this.getClass();
+
+        @Override public List<StyleableProperty> impl_getStyleableProperties() {
+            return Tooltip.this.impl_getStyleableProperties();
         }
         
         private ObjectProperty<TextAlignment> textAlignment;

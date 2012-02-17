@@ -686,6 +686,16 @@ public class ScrollPane extends Control {
         return ScrollPane.StyleableProperties.STYLEABLES;
     }
 
+    /**
+     * RT-19263
+     * @treatAsPrivate implementation detail
+     * @deprecated This is an experimental API that is not intended for general use and is subject to change in future versions
+     */
+    @Deprecated
+    public List<StyleableProperty> impl_getStyleableProperties() {
+        return impl_CSS_STYLEABLES();
+    }
+
     private static final long PANNABLE_PSEUDOCLASS_STATE =
             StyleManager.getInstance().getPseudoclassMask("pannable");
     private static final long FIT_TO_WIDTH_PSEUDOCLASS_STATE =

@@ -227,6 +227,9 @@ class TestNodeBase extends Node {
         return StyleableProperties.STYLEABLES;
     }
             
+    public List<StyleableProperty> impl_getStyleableProperties() {
+        return impl_CSS_STYLEABLES();
+    }
 
     @Override
     public Object impl_processMXNode(MXNodeAlgorithm alg, MXNodeAlgorithmContext ctx) {

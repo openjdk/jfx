@@ -426,6 +426,16 @@ public class ScrollBar extends Control {
         return ScrollBar.StyleableProperties.STYLEABLES;
     }
 
+    /**
+     * RT-19263
+     * @treatAsPrivate implementation detail
+     * @deprecated This is an experimental API that is not intended for general use and is subject to change in future versions
+     */
+    @Deprecated
+    public List<StyleableProperty> impl_getStyleableProperties() {
+        return impl_CSS_STYLEABLES();
+    }
+
     private static final long VERTICAL_PSEUDOCLASS_STATE =
             StyleManager.getInstance().getPseudoclassMask("vertical");
     private static final long HORIZONTAL_PSEUDOCLASS_STATE =

@@ -25,6 +25,8 @@
 
 package javafx.scene.control;
 
+import com.sun.javafx.css.Styleable;
+import com.sun.javafx.css.StyleableProperty;
 import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.ObjectPropertyBase;
@@ -44,7 +46,9 @@ import javafx.scene.Node;
 import javafx.scene.input.KeyCombination;
 
 import com.sun.javafx.event.EventHandlerManager;
+import java.util.Collections;
 import java.util.HashMap;
+import java.util.List;
 import javafx.beans.property.ReadOnlyObjectProperty;
 import javafx.beans.property.ReadOnlyObjectWrapper;
 import javafx.collections.ObservableMap;
@@ -475,4 +479,59 @@ public class MenuItem implements EventTarget {
      **************************************************************************/
 
     private static final String DEFAULT_STYLE_CLASS = "menu-item";
+
+    protected Styleable styleable; 
+    /**
+     * RT-19263
+     * @treatAsPrivate implementation detail
+     * @deprecated This is an experimental API that is not intended for general use and is subject to change in future versions
+     */    
+    public Styleable impl_getStyleable() {
+        
+        if (styleable == null) {
+            styleable = new Styleable() {
+
+                @Override
+                public String getId() {
+                    return MenuItem.this.getId();
+                }
+
+                @Override
+                public List<String> getStyleClass() {
+                    return MenuItem.this.getStyleClass();
+                }
+
+                @Override
+                public String getStyle() {
+                    return MenuItem.this.getStyle();
+                }
+
+                @Override
+                public Styleable getStyleableParent() {
+                    if(MenuItem.this.getParentMenu() == null) {
+                        return MenuItem.this.getParentPopup() != null 
+                            ? MenuItem.this.getParentPopup().impl_getStyleable()
+                            : null;
+                    } else {
+                        return MenuItem.this.getParentMenu() != null 
+                            ? MenuItem.this.getParentMenu().impl_getStyleable()
+                            : null;
+                    }
+                }
+
+                
+                @Override
+                public List<StyleableProperty> getStyleableProperties() {
+                    return Collections.EMPTY_LIST;
+                }                
+
+                @Override
+                public Node getNode() {
+                    return null;
+                }
+
+            };
+        }
+        return styleable;
+    }    
 }

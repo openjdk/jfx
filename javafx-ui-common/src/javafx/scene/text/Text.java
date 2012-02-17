@@ -1394,6 +1394,16 @@ public final class Text extends Shape {
         return Text.StyleableProperties.STYLEABLES;
     }
 
+    /**
+     * RT-19263
+     * @treatAsPrivate implementation detail
+     * @deprecated This is an experimental API that is not intended for general use and is subject to change in future versions
+     */
+    @Deprecated
+    public List<StyleableProperty> impl_getStyleableProperties() {
+        return impl_CSS_STYLEABLES();
+    }
+
     private void updatePGText() {
         if (impl_isDirty(DirtyBits.NODE_GEOMETRY)) {
             getPGText().setLocation((float)getX(), (float)getY());
