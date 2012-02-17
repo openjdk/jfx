@@ -83,6 +83,26 @@ public class ComboBoxListViewSkin<T> extends ComboBoxPopupControl<T> {
         comboBox.addEventFilter(InputEvent.ANY, new EventHandler<InputEvent>() {
             @Override public void handle(InputEvent t) {
                 if (textField == null) return;
+                
+                // When the user hits the enter or F4 keys, we respond before 
+                // ever giving the event to the TextField.
+                if (t instanceof KeyEvent) {
+                    KeyEvent ke = (KeyEvent)t;
+                    if (ke.getCode() == KeyCode.ENTER) {
+                        StringConverter<T> c = comboBox.getConverter();
+                        if (c == null) return;
+                        T value = c.fromString(textField.getText());
+                        comboBox.setValue(value);
+                        t.consume();
+                        return;
+                    } else if (ke.getCode() == KeyCode.F4) {
+                        if (comboBox.isShowing()) comboBox.hide();
+                        else comboBox.show();
+                        t.consume();
+                        return;
+                    }
+                }
+                
                 textField.fireEvent(t);
             }
         });
@@ -94,7 +114,7 @@ public class ComboBoxListViewSkin<T> extends ComboBoxPopupControl<T> {
                     listView.getSelectionModel().clearSelection();
                 } else {
                     int index = comboBox.getSelectionModel().getSelectedIndex();
-                    if (index < comboBox.getItems().size()) {
+                    if (index >= 0 && index < comboBox.getItems().size()) {
                         T itemsObj = comboBox.getItems().get(index);
                         if (itemsObj != null && itemsObj.equals(newValue)) {
                             listView.getSelectionModel().select(index);
@@ -187,22 +207,6 @@ public class ComboBoxListViewSkin<T> extends ComboBoxPopupControl<T> {
             }
         });
 
-        // When the user hits the enter key, set the value in the 
-        // ComboBox value property
-        textField.setOnKeyPressed(new EventHandler<KeyEvent>() {
-            @Override public void handle(KeyEvent t) {
-                if (t.getCode() == KeyCode.ENTER) {
-                    StringConverter<T> c = comboBox.getConverter();
-                    if (c == null) return;
-                    T value = c.fromString(textField.getText());
-                    comboBox.setValue(value);
-                } else if (t.getCode() == KeyCode.F4) {
-                    if (comboBox.isShowing()) comboBox.hide();
-                    else comboBox.show();
-                }
-            }
-        });
-        
         return textField;
     }
     
