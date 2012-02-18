@@ -12,9 +12,10 @@
     </content>
     <orderEntry type="inheritedJdk" />
     <orderEntry type="sourceFolder" forTests="false" />
+    <orderEntry type="module" module-name="javafx-ui-common" />
+    <orderEntry type="module" module-name="test-stub-toolkit" scope="TEST" />
     <orderEntry type="library" name="jfxrt-binary-stub" level="project" />
     <orderEntry type="library" name="junit-4.8.2" level="project" />
-    <orderEntry type="module" module-name="test-stub-toolkit" scope="TEST" />
   </component>
 </module>
 
