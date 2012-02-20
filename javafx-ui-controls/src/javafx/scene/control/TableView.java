@@ -1869,6 +1869,7 @@ public class TableView<S> extends Control {
                     for (int i = 0; i < selectedCells.size(); i++) {
                         TablePosition old = selectedCells.get(i);
                         int newRow = old.getRow() < position ? old.getRow() : old.getRow() + shift;
+                        if (newRow < 0) continue;
                         newIndices.add(new TablePosition(getTableView(), newRow, old.getTableColumn()));
                     }
                     
