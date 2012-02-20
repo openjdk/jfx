@@ -861,7 +861,7 @@ public class TreeView<T> extends Control {
         if (node == null) return 0;
         if (node.isLeaf()) return 1;
         
-        return node.getExpandedDescendentCount();
+        return node.getExpandedDescendentCount(treeItemCountDirty);
     }
     
     private void updateTreeItemCount() {
@@ -1068,7 +1068,7 @@ public class TreeView<T> extends Control {
                 int shift = 0;
                 if (e.wasExpanded()) {
                     // need to shuffle selection by the number of visible children
-                    shift = e.getTreeItem().getExpandedDescendentCount() - 1;
+                    shift = e.getTreeItem().getExpandedDescendentCount(false) - 1;
                     startRow++;
                 } else if (e.wasCollapsed()) {
                     // remove selection from any child treeItem
@@ -1255,7 +1255,7 @@ public class TreeView<T> extends Control {
                 if (e.wasExpanded()) {
                     if (row > getFocusedIndex()) {
                         // need to shuffle selection by the number of visible children
-                        shift = e.getTreeItem().getExpandedDescendentCount() - 1;
+                        shift = e.getTreeItem().getExpandedDescendentCount(false) - 1;
                     }
                 } else if (e.wasCollapsed()) {
                     if (row > getFocusedIndex()) {
@@ -1270,7 +1270,7 @@ public class TreeView<T> extends Control {
                         
                         if (item != null && row <= getFocusedIndex()) {
 //                            shift = e.getTreeItem().isExpanded() ? e.getAddedSize() : 0;
-                            shift += item.getExpandedDescendentCount();
+                            shift += item.getExpandedDescendentCount(false);
                         }
                     }
                 } else if (e.wasRemoved()) {
