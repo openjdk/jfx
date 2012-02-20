@@ -118,7 +118,7 @@ public class TableColumnHeader extends StackPane {
                 if (! autoSizeComplete) {
                     if (tc == null || tc.getPrefWidth() != DEFAULT_WIDTH || getScene() == null) {
                         return;
-    }
+                    }
                     resizeToFit(tc, n);
                     autoSizeComplete = true;
                 }
@@ -536,7 +536,7 @@ public class TableColumnHeader extends StackPane {
      */
     protected void resizeToFit(TableColumn col, int maxRows) {
         List<?> items = getTableView().getItems();
-        if (items == null) return;
+        if (items == null || items.isEmpty()) return;
     
         Callback cellFactory = col.getCellFactory();
         if (cellFactory == null) return;
@@ -556,7 +556,7 @@ public class TableColumnHeader extends StackPane {
             padding = r.getInsets().getLeft() + r.getInsets().getRight();
         } 
         
-        int rows = maxRows == -1 ? items.size() : maxRows;
+        int rows = maxRows == -1 ? items.size() : Math.min(items.size(), maxRows);
         double maxWidth = 0;
         for (int row = 0; row < rows; row++) {
             cell.updateTableColumn(col);
