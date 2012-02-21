@@ -223,7 +223,7 @@ public interface Worker<V> {
     public double getWorkDone();
 
     /**
-     * Gets the ReadOnlyLongProperty representing the current progress.
+     * Gets the ReadOnlyDoubleProperty representing the current progress.
      *
      * @return The property representing the amount of work done
      */
@@ -233,7 +233,7 @@ public interface Worker<V> {
      * Indicates a maximum value for the {@link #workDoneProperty} property. The
      * totalWork will either be -1 (indicating that the amount of work
      * to do is indeterminate), or it will be a non-zero value less than or
-     * equal to Long.MAX_VALUE.
+     * equal to Double.MAX_VALUE.
      *
      * @see #workDoneProperty
      * @see #progressProperty
@@ -242,7 +242,7 @@ public interface Worker<V> {
     public double getTotalWork();
 
     /**
-     * Gets the ReadOnlyLongProperty representing the maximum amount of work
+     * Gets the ReadOnlyDoubleProperty representing the maximum amount of work
      * that needs to be done. These "work units" have meaning to the Worker
      * implementation, such as the number of bytes that need to be downloaded
      * or the number of images to process or some other such metric.
@@ -265,7 +265,7 @@ public interface Worker<V> {
     public double getProgress();
 
     /**
-     * Gets the ReadOnlyLongProperty representing the progress.
+     * Gets the ReadOnlyDoubleProperty representing the progress.
      *
      * @return the property representing the progress
      */

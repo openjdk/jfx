@@ -25,7 +25,7 @@
 
 package com.sun.javafx.application;
 
-import com.sun.javafx.jmx.SGMXBeanAccessor;
+import com.sun.javafx.jmx.MXExtension;
 import com.sun.javafx.runtime.SystemProperties;
 import com.sun.javafx.PlatformUtil;
 import java.lang.reflect.Constructor;
@@ -156,7 +156,7 @@ public class LauncherImpl {
             final String[] args) throws Exception {
 
         if (SystemProperties.isDebug()) {
-            SGMXBeanAccessor.registerSGMXBean();
+            MXExtension.initializeIfAvailable();
         }
 
         final CountDownLatch startupLatch = new CountDownLatch(1);

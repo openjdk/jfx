@@ -25,37 +25,26 @@
 
 package com.sun.javafx.jmx;
 
-import com.oracle.javafx.jmx.SGMXBean;
+import com.sun.javafx.Logging;
 
-import javax.management.*;
-import java.lang.Object;
-import java.lang.management.ManagementFactory;
+public abstract class MXExtension {
+    private static final String EXTENSION_CLASS_NAME =
+            System.getProperty("javafx.debug.jmx.class",
+                               "com.oracle.javafx.jmx.MXExtensionImpl");
 
-/**
- * This class provides utility methods for Scene-graph JMX bean.
- */
-public class SGMXBeanAccessor {
+    public abstract void intialize() throws Exception;
 
-    private static final String sgBeanClass = System.getProperty("javafx.debug.jmx.class", "com.oracle.javafx.jmx.SGMXBeanImpl");
-
-    /**
-     * Instantiates and registers Scene-graph JMX bean ({@link SGMXBean})
-     * into default MBean server.
-     */
-    public static void registerSGMXBean() {
-        final MBeanServer mbs = ManagementFactory.getPlatformMBeanServer();
-
+    public static void initializeIfAvailable() {
         try {
-            Object mxBean = Class.forName(sgBeanClass).newInstance();
-            if (!(mxBean instanceof SGMXBean)) {
-                throw new IllegalArgumentException("JMX: " + sgBeanClass + " does not implement " +
-                    SGMXBean.class.getName() + " interface.");
-            }
+            final Class<MXExtension> mxExtensionClass =
+                    (Class<MXExtension>) Class.forName(EXTENSION_CLASS_NAME);
 
-            ObjectName mbeanName = new ObjectName("com.oracle.javafx.jmx:type=SGBean");
-            mbs.registerMBean(mxBean, mbeanName);
-        } catch (Exception e) {
-            e.printStackTrace();
+            final MXExtension mxExtension = mxExtensionClass.newInstance();
+            mxExtension.intialize();
+        } catch (final Exception e) {
+            Logging.getJavaFXLogger().info(
+                    "Failed to initialize management extension", e);
         }
+
     }
 }
