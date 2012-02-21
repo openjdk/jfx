@@ -3043,7 +3043,7 @@ all inherit from Menu Control's popup-menu. --- */
 Only the properties with values that are different from the TextBox are specified here. ---*/
 
 .combo-box-base:editable .text-field {
-    -fx-padding: 4 5 4 5;
+    -fx-padding: 3 5 2 5;
     -fx-background-radius: 4 5 5 4, 3 4 4 3, 2 3 3 2;
     -fx-background-insets: 0 0 -1 0, 0, 1;
     -fx-vpos: CENTER;
@@ -3072,7 +3072,7 @@ Only the properties with values that are different from the TextBox are specifie
     -fx-background: transparent;
     -fx-background-color: transparent;
     -fx-text-fill: -fx-text-base-color;
-    -fx-padding: 0 0 0 7;
+    -fx-padding: 3 0 2 7;
     -fx-cell-size: 1.66667em; /* 20 */
 }
 
