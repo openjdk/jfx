@@ -402,11 +402,19 @@ public class TitledPaneSkin extends LabeledSkinBase<TitledPane, TitledPaneBehavi
             double height = getHeight() - (top + bottom);
             double arrowWidth = snapSize(arrowRegion.prefWidth(-1));
             double arrowHeight = snapSize(arrowRegion.prefHeight(-1));
+            double labelWidth = snapSize(TitledPaneSkin.super.computePrefWidth(-1));
+            double labelHeight = snapSize(TitledPaneSkin.super.computePrefHeight(-1));
 
+            HPos hpos = getAlignment().getHpos();
+            VPos vpos = getAlignment().getVpos();
+            double x = left + arrowWidth + Utils.computeXOffset(width - arrowWidth, labelWidth, hpos);
+            double y = top + Utils.computeYOffset(height, Math.max(arrowHeight, labelHeight), vpos);            
+            
             arrowRegion.resize(arrowWidth, arrowHeight);
             positionInArea(arrowRegion, left, top, arrowWidth, height,
                     /*baseline ignored*/0, HPos.CENTER, VPos.CENTER);
-            layoutLabelInArea(left + arrowWidth, top, width - arrowWidth, height);
+            
+            layoutLabelInArea(x, y, labelWidth, height, getAlignment());
         }
     }
 
