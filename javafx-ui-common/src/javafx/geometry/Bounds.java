@@ -28,14 +28,11 @@ package javafx.geometry;
 /**
  * The base class for objects that are used to describe the bounds of a node or
  * other scene graph object.
- *
- * @profile common
  */
 public abstract class Bounds {
     /**
      * The x coordinate of the upper-left corner of this {@code Bounds}.
      *
-     * @profile common
      * @defaultValue 0.0
      */
     public final double getMinX() { return minX; }
@@ -44,7 +41,6 @@ public abstract class Bounds {
     /**
      * The y coordinate of the upper-left corner of this {@code Bounds}.
      *
-     * @profile common
      * @defaultValue 0.0
      */
     public final double getMinY() { return minY; }
@@ -52,7 +48,6 @@ public abstract class Bounds {
     /**
      * The minimum z coordinate of this {@code Bounds}.
      *
-     * @profile common conditional scene3d
      * @defaultValue 0.0
      * @since JavaFX 1.3
      */
@@ -61,7 +56,6 @@ public abstract class Bounds {
     /**
      * The width of this {@code Bounds}.
      *
-     * @profile common
      * @defaultValue 0.0
      */
     public final double getWidth() { return width; }
@@ -69,7 +63,6 @@ public abstract class Bounds {
     /**
      * The height of this {@code Bounds}.
      *
-     * @profile common
      * @defaultValue 0.0
      */
     public final double getHeight() { return height; }
@@ -77,7 +70,6 @@ public abstract class Bounds {
     /**
      * The depth of this {@code Bounds}.
      *
-     * @profile common conditional scene3d
      * @defaultValue 0.0
      * @since JavaFX 1.3
      */
@@ -86,7 +78,6 @@ public abstract class Bounds {
     /**
      * The x coordinate of the lower-right corner of this {@code Bounds}.
      *
-     * @profile common
      * @defaultValue {@code minX + width}
      */
     public final double getMaxX() { return maxX; }
@@ -94,7 +85,6 @@ public abstract class Bounds {
     /**
      * The y coordinate of the lower-right corner of this {@code Bounds}.
      *
-     * @profile common
      * @defaultValue {@code minY + height}
      */
     public final double getMaxY() { return maxY; }
@@ -102,7 +92,6 @@ public abstract class Bounds {
     /**
      * The maximum z coordinate of this {@code Bounds}.
      *
-     * @profile common conditional scene3d
      * @defaultValue {@code minZ + depth}
      * @since JavaFX 1.3
      */
@@ -120,7 +109,6 @@ public abstract class Bounds {
     /**
      * Tests if the specified point is inside the boundary of {@code Bounds}.
      *
-     * @profile common
      * @param p the specified point to be tested
      * @return true if the specified point is inside the boundary of this
      * {@code Bounds}; false otherwise.
@@ -130,7 +118,6 @@ public abstract class Bounds {
     /**
      * Tests if the specified point is inside the boundary of {@code Bounds}.
      *
-     * @profile common
      * @param p the specified 3D point to be tested
      * @return true if the specified point is inside the boundary of this
      * {@code Bounds}; false otherwise.
@@ -141,7 +128,6 @@ public abstract class Bounds {
      * Tests if the specified {@code (x, y)} coordinates are inside the boundary
      * of {@code Bounds}.
      *
-     * @profile common
      * @param x the specified x coordinate to be tested
      * @param y the specified y coordinate to be tested
      * @return true if the specified {@code (x, y)} coordinates are inside the
@@ -153,7 +139,6 @@ public abstract class Bounds {
      * Tests if the specified {@code (x, y, z)} coordinates are inside the boundary
      * of {@code Bounds}.
      *
-     * @profile common
      * @param x the specified x coordinate to be tested
      * @param y the specified y coordinate to be tested
      * @return true if the specified {@code (x, y)} coordinates are inside the
@@ -165,7 +150,6 @@ public abstract class Bounds {
      * Tests if the interior of this {@code Bounds} entirely contains the
      * specified Bounds, {@code b}.
      *
-     * @profile common
      * @param b The specified Bounds
      * @return true if the specified Bounds, {@code b}, is inside the
      * boundary of this {@code Bounds}; false otherwise.
@@ -176,7 +160,6 @@ public abstract class Bounds {
      * Tests if the interior of this {@code Bounds} entirely contains the
      * specified rectangular area.
      *
-     * @profile common
      * @param x the x coordinate of the upper-left corner of the specified
      * rectangular area
      * @param y the y coordinate of the upper-left corner of the specified
@@ -192,7 +175,6 @@ public abstract class Bounds {
      * Tests if the interior of this {@code Bounds} entirely contains the
      * specified rectangular area.
      *
-     * @profile common
      * @param x the x coordinate of the upper-left corner of the specified
      * rectangular volume
      * @param y the y coordinate of the upper-left corner of the specified
@@ -212,7 +194,6 @@ public abstract class Bounds {
      * Tests if the interior of this {@code Bounds} intersects the interior
      * of a specified Bounds, {@code b}.
      *
-     * @profile common
      * @param b The specified Bounds
      * @return true if the interior of this {@code Bounds} and the interior
      * of the specified Bounds, {@code b}, intersect.
@@ -223,7 +204,6 @@ public abstract class Bounds {
      * Tests if the interior of this {@code Bounds} intersects the interior
      * of a specified rectangular area.
      *
-     * @profile common
      * @param x the x coordinate of the upper-left corner of the specified
      * rectangular area
      * @param y the y coordinate of the upper-left corner of the specified
@@ -239,7 +219,6 @@ public abstract class Bounds {
      * Tests if the interior of this {@code Bounds} intersects the interior
      * of a specified rectangular area.
      *
-     * @profile common
      * @param x the x coordinate of the upper-left corner of the specified
      * rectangular volume
      * @param y the y coordinate of the upper-left corner of the specified

@@ -46,18 +46,14 @@ package javafx.scene.text;
 
 /**
  * Specifies whether the font is italicized
- *
- * @profile common
  */
 public enum FontPosture {
     /** 
      * represents regular.
-     * @profile common
      */
     REGULAR("", "regular"),
     /** 
      * represents italic.
-     * @profile common
      */
     ITALIC("italic");
     
@@ -71,7 +67,6 @@ public enum FontPosture {
      * Returns {@code FontPosture} by its name.
      *
      * @param name name of the {@code FontPosture}
-     * @profile common
      */
     public static FontPosture findByName(String name) {
         if (name == null) return null;

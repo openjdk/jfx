@@ -112,8 +112,6 @@ import javafx.collections.ListChangeListener.Change;
  * stroke styles - which will bias the default single unit stroke onto one
  * of the full pixel rows or columns just inside or outside the border of
  * the shape.
- *
- * @profile common
  */
 public abstract class Shape extends Node {
 
@@ -188,7 +186,6 @@ public abstract class Shape extends Node {
      * </p>
      *
      * @see StrokeType
-     * @profile desktop
      * @defaultValue CENTERED
      * @since JavaFX 1.3
      */
@@ -209,7 +206,6 @@ public abstract class Shape extends Node {
      * Defines a square pen line width. A value of 0.0 specifies a hairline
      * stroke. A value of less than 0.0 will be treated as 0.0.
      *
-     * @profile common
      * @defaultValue 1.0
      */
     public final DoubleProperty strokeWidthProperty() {
@@ -237,7 +233,6 @@ public abstract class Shape extends Node {
      * </p>
      *
      * @see StrokeLineJoin
-     * @profile common
      * @defaultValue MITER
      */
     public final ObjectProperty<StrokeLineJoin> strokeLineJoinProperty() {
@@ -264,7 +259,6 @@ public abstract class Shape extends Node {
      * </p>
      *
      * @see StrokeLineCap
-     * @profile common
      * @defaultValue SQUARE
      */
     public final ObjectProperty<StrokeLineCap> strokeLineCapProperty() {
@@ -295,7 +289,6 @@ public abstract class Shape extends Node {
      * <img src="doc-files/strokemiterlimit.png"/>
      * </p>
      *
-     * @profile common
      * @defaultValue 10.0
      */
     public final DoubleProperty strokeMiterLimitProperty() {
@@ -326,7 +319,6 @@ public abstract class Shape extends Node {
      * <img src="doc-files/strokedashoffset.png"/>
      * </p>
      *
-     * @profile common
      * @defaultValue 0
      */
     public final DoubleProperty strokeDashOffsetProperty() {
@@ -350,7 +342,6 @@ public abstract class Shape extends Node {
      * <img src="doc-files/strokedasharray.png"/>
      * </p>
      *
-     * @profile common
      * @defaultValue empty
      */
     public final ObservableList<Double> getStrokeDashArray() {        
@@ -392,8 +383,6 @@ public abstract class Shape extends Node {
      * The default value is {@code Color.BLACK} for all shapes except
      * Line, Polyline, and Path. The default value is {@code null} for
      * those shapes.
-     *
-     * @profile common
      */
     private ObjectProperty<Paint> fill;
 
@@ -450,8 +439,6 @@ public abstract class Shape extends Node {
      * The default value is {@code null} for all shapes except
      * Line, Polyline, and Path. The default value is {@code Color.BLACK} for
      * those shapes.
-     *
-     * @profile common
      */
     private ObjectProperty<Paint> stroke;
 
@@ -504,7 +491,6 @@ public abstract class Shape extends Node {
      * Defines whether antialiasing hints are used or not for this {@code Shape}.
      * If the value equals true the rendering hints are applied.
      *
-     * @profile common
      * @defaultValue true
      */
     private BooleanProperty smooth;
@@ -809,6 +795,16 @@ public abstract class Shape extends Node {
     @Deprecated
     public static List<StyleableProperty> impl_CSS_STYLEABLES() {
         return Shape.StyleableProperties.STYLEABLES;
+    }
+
+    /**
+     * RT-19263
+     * @treatAsPrivate implementation detail
+     * @deprecated This is an experimental API that is not intended for general use and is subject to change in future versions
+     */
+    @Deprecated
+    public List<StyleableProperty> impl_getStyleableProperties() {
+        return impl_CSS_STYLEABLES();
     }
 
     /**

@@ -41,8 +41,6 @@ import com.sun.javafx.scene.BoundsAccessor;
 
 /**
  * A filter that produces a sepia tone effect, similar to antique photographs.
- *
- * @profile common conditional effect
  */
 public class SepiaTone extends Effect {
     /**

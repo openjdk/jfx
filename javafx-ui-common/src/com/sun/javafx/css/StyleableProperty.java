@@ -59,7 +59,7 @@ public abstract class StyleableProperty<N extends Node, V> {
         final WritableValue<V> writable = getWritableValue(node);
         assert (writable instanceof Property);
         final Property<V> cssProperty = (Property<V>)writable;
-        cssProperty.applyStyle(origin, value != null ? value : getInitialValue());            
+        cssProperty.applyStyle(origin, value != null ? value : getInitialValue(node));            
     }
 
     /** @deprecated Use {@link StyleableProperty#set(javafx.scene.Node, java.lang.Object, com.sun.javafx.css.Stylesheet.Origin)} */
@@ -92,73 +92,23 @@ public abstract class StyleableProperty<N extends Node, V> {
         
         return null;
     }
-    
-    public static Styleable createStyleable(final Node node) {
         
-        return new Styleable() {
-
-            Styleable parent = null;
-            List<StyleableProperty> styleableProperties = null;
-            
-            @Override
-            public String getId() {
-                return node.getId();
-            }
-
-            @Override
-            public List<String> getStyleClass() {
-                return node.getStyleClass();
-            }
-            
-            @Override
-            public String getStyle() {
-                return node.getStyle();
-            }
-
-            @Override
-            public Styleable getStyleableParent() {
-                if (parent == null && node.getParent() != null) {
-                    parent = createStyleable(node.getParent());
-                };
-                return parent;
-            }
-
-            @Override
-            public StyleHelper getStyleHelper() {
-                return node.impl_getStyleHelper();
-            }
-
-            @Override
-            public Reference<StyleCacheKey> getStyleCacheKey() {
-                return node.impl_getStyleCacheKey();
-            }
-
-            @Override
-            public List<StyleableProperty> getStyleableProperties() {
-                if (styleableProperties == null) {
-                    styleableProperties = StyleableProperty.getStyleables(node);
-                }
-                return styleableProperties;
-            }
-
-        };
-        
-    }
-    
     /**
      * Return the Styles that match this property for the given Node. The 
      * list is sorted by descending specificity. 
      */
     public List<Style> getMatchingStyles(final Node node) {
         if (node != null) {
-            return getMatchingStyles(createStyleable(node));
+            return getMatchingStyles(node.impl_getStyleable());
         }
         return Collections.EMPTY_LIST;        
     }
 
     public List<Style> getMatchingStyles(Styleable styleable) {
         if (styleable != null) {
-            StyleHelper helper = styleable.getStyleHelper();
+            StyleHelper helper = styleable.getNode() != null 
+                    ? styleable.getNode().impl_getStyleHelper()
+                    : null;
             return (helper != null) 
                 ? helper.getMatchingStyles(styleable, this) 
                 : Collections.EMPTY_LIST; 
@@ -207,13 +157,26 @@ public abstract class StyleableProperty<N extends Node, V> {
      * @param node
      * @return 
      */
+    public static List<StyleableProperty> getStyleables(final Styleable styleable) {
+        
+        return styleable != null 
+            ? styleable.getStyleableProperties() 
+            : Collections.EMPTY_LIST;
+    }
+
+    /**
+     * 
+     * @param node
+     * @return 
+     */
     public static List<StyleableProperty> getStyleables(final Node node) {
         
-        final Class theClass = node.impl_getClassToStyle();
-        
-        return getStyleables(theClass);
+        return node != null 
+            ? node.impl_getStyleableProperties() 
+            : Collections.EMPTY_LIST;
     }
     
+    /*
     public static List<StyleableProperty> getStyleables(final Class theClass) {
         
         if (styleablesCache != null) {            
@@ -260,6 +223,7 @@ public abstract class StyleableProperty<N extends Node, V> {
 
         return styleables;
     }
+    */
 
     public static abstract class FONT<T extends Node> extends StyleableProperty<T,Font> {
         
@@ -368,9 +332,20 @@ public abstract class StyleableProperty<N extends Node, V> {
 
     private final V initialValue;
     /**
+     * The initial value of a StyleableProperty corresponds to the default 
+     * value of the WritableValue in code. 
+     * For example, the default value of Shape.fill is Color.BLACK and the
+     * initialValue of Shape.StyleableProperties.FILL is also Color.BLACK.
+     * <p>
+     * There may be exceptions to this, however. The initialValue may depend
+     * on the state of the Node. A ScrollBar has a default orientation of 
+     * horizontal. If the ScrollBar is vertical, however, this method should
+     * return Orientation.VERTICAL. Otherwise, a vertical ScrollBar would be
+     * incorrectly set to a horizontal ScrollBar when the initial value is 
+     * applied.
      * @return The initial value of the property, possibly null
      */
-    public final V getInitialValue() {
+    public V getInitialValue(N node) {
         return initialValue;
     }
     

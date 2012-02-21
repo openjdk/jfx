@@ -1016,6 +1016,12 @@ public class TilePane extends Pane {
                  Orientation.HORIZONTAL) {
 
                 @Override
+                public Orientation getInitialValue(TilePane node) {
+                    // A vertical TilePane should remain vertical 
+                    return node.getOrientation();
+                }
+                                          
+                @Override
                 public boolean isSettable(TilePane node) {
                     return node.orientation == null ||
                             !node.orientation.isBound();
@@ -1072,6 +1078,16 @@ public class TilePane extends Pane {
     @Deprecated
     public static List<StyleableProperty> impl_CSS_STYLEABLES() {
         return TilePane.StyleableProperties.STYLEABLES;
+    }
+
+    /**
+     * RT-19263
+     * @treatAsPrivate implementation detail
+     * @deprecated This is an experimental API that is not intended for general use and is subject to change in future versions
+     */
+    @Deprecated
+    public List<StyleableProperty> impl_getStyleableProperties() {
+        return impl_CSS_STYLEABLES();
     }
 
 }

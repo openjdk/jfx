@@ -45,8 +45,6 @@ import java.util.List;
  * Rectangle r = new Rectangle();
  * r.setFill(lg);
  *</code></pre>
- *
- * @profile common
  */
 public final class Stop {
 

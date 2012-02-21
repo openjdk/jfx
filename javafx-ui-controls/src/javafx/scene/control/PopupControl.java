@@ -43,6 +43,7 @@ import java.util.Collections;
 import java.util.List;
 
 import com.sun.javafx.collections.TrackableObservableList;
+import com.sun.javafx.css.Styleable;
 import com.sun.javafx.css.StyleableProperty;
 import com.sun.javafx.css.StyleableStringProperty;
 import com.sun.javafx.css.converters.StringConverter;
@@ -668,6 +669,17 @@ public class PopupControl extends PopupWindow implements Skinnable {
         return StyleableProperties.STYLEABLES;
     }
 
+
+    /**
+     * RT-19263
+     * @treatAsPrivate implementation detail
+     * @deprecated This is an experimental API that is not intended for general use and is subject to change in future versions
+     */
+    @Deprecated
+    public List<StyleableProperty> impl_getStyleableProperties() {
+        return impl_CSS_STYLEABLES();
+    }
+
     /**
      * @treatAsPrivate implementation detail
      * @deprecated This is an internal API that is not intended for use and will be removed in the next version
@@ -677,6 +689,51 @@ public class PopupControl extends PopupWindow implements Skinnable {
         bridge.impl_pseudoClassStateChanged(s);
     }
 
+    protected Styleable styleable; 
+    /**
+     * RT-19263
+     * @treatAsPrivate implementation detail
+     * @deprecated This is an experimental API that is not intended for general use and is subject to change in future versions
+     */
+    public Styleable impl_getStyleable() {
+        
+        if (styleable == null) {
+            styleable = new Styleable() {
+
+                @Override
+                public String getId() {
+                    return PopupControl.this.getId();
+                }
+
+                @Override
+                public List<String> getStyleClass() {
+                    return PopupControl.this.getStyleClass();
+                }
+
+                @Override
+                public String getStyle() {
+                    return PopupControl.this.getStyle();
+                }
+
+                @Override
+                public Styleable getStyleableParent() {
+                    return null;
+                }
+
+                @Override
+                public List<StyleableProperty> getStyleableProperties() {
+                    return PopupControl.this.impl_getStyleableProperties();
+                }                
+                
+                @Override
+                public Node getNode() {
+                    return bridge;
+                }
+
+            };
+        }
+        return styleable;
+    }    
 
     protected class CSSBridge extends Group {
         private String currentSkinClassName = null;
@@ -684,8 +741,8 @@ public class PopupControl extends PopupWindow implements Skinnable {
             super.impl_pseudoClassStateChanged(s);
         }
         
-        @Override public Class impl_getClassToStyle() {
-            return PopupControl.this.getClass();
+        @Override public List<StyleableProperty> impl_getStyleableProperties() {
+            return PopupControl.this.impl_getStyleableProperties();
         }
 
         /**

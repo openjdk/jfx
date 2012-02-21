@@ -61,8 +61,6 @@ arc.setStartAngle(45.0f);
 arc.setLength(270.0f);
 arc.setType(ArcType.ROUND);
 </PRE>
- *
- * @profile common
  */
 public class Arc extends Shape {
 
@@ -108,7 +106,6 @@ public class Arc extends Shape {
     /**
      * Defines the X coordinate of the center point of the arc.
      *
-     * @profile common
      * @defaultValue 0.0
      */
     private DoubleProperty centerX;
@@ -150,7 +147,6 @@ public class Arc extends Shape {
     /**
      * Defines the Y coordinate of the center point of the arc.
      *
-     * @profile common
      * @defaultValue 0.0
      */
     private DoubleProperty centerY;
@@ -193,7 +189,6 @@ public class Arc extends Shape {
      * Defines the overall width (horizontal radius) of the full ellipse
      * of which this arc is a partial section.
      *
-     * @profile common
      * @defaultValue 0.0
      */
     private DoubleProperty radiusX;
@@ -236,7 +231,6 @@ public class Arc extends Shape {
      * Defines the overall height (veritcal radius) of the full ellipse
      * of which this arc is a partial section.
      *
-     * @profile common
      * @defaultValue 0.0
      */
     private DoubleProperty radiusY;
@@ -278,7 +272,6 @@ public class Arc extends Shape {
     /**
      * Defines the starting angle of the arc in degrees.
      *
-     * @profile common
      * @defaultValue 0.0
      */
     private DoubleProperty startAngle;
@@ -320,7 +313,6 @@ public class Arc extends Shape {
     /**
      * Defines the angular extent of the arc in degrees.
      *
-     * @profile common
      * @defaultValue 0.0
      */
     private DoubleProperty length;
@@ -363,7 +355,6 @@ public class Arc extends Shape {
      * Defines the closure type for the arc:
      * {@link ArcType#OPEN}, {@link ArcType#CHORD},or {@link ArcType#ROUND}.
      *
-     * @profile common
      * @defaultValue OPEN
      */
     private ObjectProperty<ArcType> type;

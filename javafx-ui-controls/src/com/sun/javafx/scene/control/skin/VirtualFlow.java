@@ -1535,7 +1535,7 @@ public class VirtualFlow extends Region {
         if (cell == null) return;
 
         cell.updateIndex(index);
-        if (cell.isNeedsLayout()) {
+        if (cell.isNeedsLayout() && cell.getScene() != null) {
             cell.impl_processCSS(false);
         }
     }

@@ -66,8 +66,6 @@ cubicTo.setY(50.0f);
 path.getElements().add(moveTo);
 path.getElements().add(cubicTo);
 </PRE>
- *
- * @profile common
  */
 public class CubicCurveTo extends PathElement {
 
@@ -100,7 +98,6 @@ public class CubicCurveTo extends PathElement {
     /**
      * Defines the X coordinate of the first B&eacute;zier control point.
      *
-     * @profile common
      * @defaultValue 0.0
      */
     private DoubleProperty controlX1;
@@ -140,7 +137,6 @@ public class CubicCurveTo extends PathElement {
     /**
      * Defines the Y coordinate of the first B&eacute;zier control point.
      *
-     * @profile common
      * @defaultValue 0.0
      */
     private DoubleProperty controlY1;
@@ -180,7 +176,6 @@ public class CubicCurveTo extends PathElement {
     /**
      * Defines the X coordinate of the second B&eacute;zier control point.
      *
-     * @profile common
      * @defaultValue 0.0
      */
     private DoubleProperty controlX2;
@@ -220,7 +215,6 @@ public class CubicCurveTo extends PathElement {
     /**
      * Defines the Y coordinate of the second B&eacute;zier control point.
      *
-     * @profile common
      * @defaultValue 0.0
      */
     private DoubleProperty controlY2;
@@ -260,7 +254,6 @@ public class CubicCurveTo extends PathElement {
     /**
      * Defines the X coordinate of the final end point.
      *
-     * @profile common
      * @defaultValue 0.0
      */
     private DoubleProperty x;
@@ -300,7 +293,6 @@ public class CubicCurveTo extends PathElement {
     /**
      * Defines the Y coordinate of the final end point.
      *
-     * @profile common
      * @defaultValue 0.0
      */
     private DoubleProperty y;
@@ -339,8 +331,6 @@ public class CubicCurveTo extends PathElement {
 
     /**
      * Adds the curved path element to the specified path.
-     *
-     * @profile common
      */
     @Override
     void addTo(PGPath pgPath) {

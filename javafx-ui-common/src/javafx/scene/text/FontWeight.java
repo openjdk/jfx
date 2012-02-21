@@ -51,62 +51,51 @@ package javafx.scene.text;
  * <A HREF=http://www.microsoft.com/typography/otspec/os2.htm#wtc>
  * OpenType font specification</A>.
  * The CSS 3 specification references the same as a sequence of values.
- *
- * @profile common
  */
 public enum FontWeight {
 
     /** 
      * represents Thin font weight (100).
-     * @profile common
      */
     THIN(100, "Thin"),
 
     /** 
      * represents 'Extra Light' font weight (200).
-     * @profile common
      */
     EXTRA_LIGHT(200, "Extra Light", "Ultra Light"),
 
     /** 
      * represents Light font weight (300).
-     * @profile common
      */
     LIGHT(300, "Light"),
 
     /** 
      * represents Normal font weight (400).
-     * @profile common
      */
     NORMAL(400, "Normal", "Regular"),
 
     /** 
      * represents Medium font weight (500).
-     * @profile common
      */
     MEDIUM(500, "Medium"),
 
     /** 
      * represents 'Demi Bold' font weight (600).
-     * @profile common
      */
     SEMI_BOLD(600, "Semi Bold", "Demi Bold"),
 
     /** 
      * represents Bold font weight (700).
-     * @profile common
      */
     BOLD(700, "Bold"),
 
     /** 
      * represents 'Extra Bold' font weight (800).
-     * @profile common
      */
     EXTRA_BOLD(800, "Extra Bold", "Ultra Bold"),
 
     /** 
      * represents Black font weight (900).
-     * @profile common
      */
     BLACK(900, "Black", "Heavy");
 
@@ -130,7 +119,6 @@ public enum FontWeight {
      * Returns {@code FontWeight} by its name.
      *
      * @param name name of the {@code FontWeight}
-     * @profile common
      */
     public static FontWeight findByName(String name) {
         if (name == null) return null;

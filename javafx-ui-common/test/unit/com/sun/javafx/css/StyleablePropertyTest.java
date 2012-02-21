@@ -94,10 +94,12 @@ public class StyleablePropertyTest {
      * Test of getStyleables method, of class StyleableProperty.
      */
     @Test
-    public void testGetStyleables_Class() {
-        Class nodeClass = TestNode.class;
+    public void testGetStyleables_Styleable() {
+        Node node = new TestNode();
+        Styleable styleable = node.impl_getStyleable();
+        assertNotNull(styleable);
         List<StyleableProperty> expResult = TestNode.impl_CSS_STYLEABLES();
-        List result = StyleableProperty.getStyleables(nodeClass);
+        List result = StyleableProperty.getStyleables(styleable);
         assertEquals(expResult, result);
     }
 
@@ -140,7 +142,7 @@ public class StyleablePropertyTest {
         
         TestNode testNode = new TestNode();
         Double expResult = testNode.getXyzzy();
-        Double result = (Double)TestNode.StyleableProperties.XYZZY.getInitialValue();
+        Double result = (Double)TestNode.StyleableProperties.XYZZY.getInitialValue(testNode);
         assertEquals(expResult, result);
 
     }
@@ -403,6 +405,10 @@ public class StyleablePropertyTest {
             styleables.addAll(Rectangle.impl_CSS_STYLEABLES());
             styleables.add(FONT);
             return styleables;
+        }
+        
+        @Override public List<StyleableProperty> impl_getStyleableProperties() {
+            return impl_CSS_STYLEABLES();
         }
             
     }    

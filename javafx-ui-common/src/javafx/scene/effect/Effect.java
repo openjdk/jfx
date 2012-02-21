@@ -56,8 +56,6 @@ import com.sun.javafx.scene.BoundsAccessor;
  * Note: this is a conditional feature. See
  * {@link javafx.application.ConditionalFeature#EFFECT ConditionalFeature.EFFECT}
  * for more information.
- *
- * @profile common conditional effect
  */
 public abstract class Effect {
     /**

@@ -36,8 +36,6 @@ import com.sun.javafx.Utils;
 /**
  * A buffer that contains floating point data, intended for use as a parameter
  * to effects such as {@link DisplacementMap}.
- *
- * @profile common conditional effect
  */
 public class FloatMap {
     private com.sun.scenario.effect.FloatMap map;

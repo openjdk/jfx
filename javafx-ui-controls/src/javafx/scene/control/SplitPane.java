@@ -370,6 +370,12 @@ public class SplitPane extends Control {
                 Orientation.HORIZONTAL) {
 
             @Override
+            public Orientation getInitialValue(SplitPane node) {
+                // A vertical SplitPane should remain vertical 
+                return node.getOrientation();
+            }
+            
+            @Override
             public boolean isSettable(SplitPane n) {
                 return n.orientation == null || !n.orientation.isBound();
             }
@@ -398,6 +404,16 @@ public class SplitPane extends Control {
     @Deprecated
     public static List<StyleableProperty> impl_CSS_STYLEABLES() {
         return SplitPane.StyleableProperties.STYLEABLES;
+    }
+
+    /**
+     * RT-19263
+     * @treatAsPrivate implementation detail
+     * @deprecated This is an experimental API that is not intended for general use and is subject to change in future versions
+     */
+    @Deprecated
+    public List<StyleableProperty> impl_getStyleableProperties() {
+        return impl_CSS_STYLEABLES();
     }
 
     private static final long VERTICAL_PSEUDOCLASS_STATE = StyleManager.getInstance().getPseudoclassMask("vertical");

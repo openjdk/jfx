@@ -80,8 +80,6 @@ c.setCache(true);
 g.getChildren().add(t);
 g.getChildren().add(c);
 </PRE>
- *
- * @profile common conditional effect
  */
 public class DropShadow extends Effect {
     private boolean changeIsLocal;

@@ -28,7 +28,6 @@ package javafx.geometry;
 /**
  * A 3D geometric point that represents the x, y, z coordinates.
  *
- * @profile common conditional scene3d
  * @since JavaFX 1.3
  */
 
@@ -36,7 +35,6 @@ public class Point3D {
     /**
      * The x coordinate.
      *
-     * @profile common conditional scene3d
      * @defaultValue 0.0
      */
     private double x;
@@ -52,7 +50,6 @@ public class Point3D {
     /**
      * The y coordinate.
      *
-     * @profile common conditional scene3d
      * @defaultValue 0.0
      */
     private double y;
@@ -68,7 +65,6 @@ public class Point3D {
     /**
      * The z coordinate.
      *
-     * @profile common conditional scene3d
      * @defaultValue 0.0
      */
     private double z;
@@ -105,7 +101,6 @@ public class Point3D {
      * @param y1 the y coordinate of other point
      * @param z1 the z coordinate of other point
      * @return the distance between this point and point {@code (x1, y1, z1)}.
-     * @profile common conditional scene3d
      */
     public double distance(double x1, double y1, double z1) {
         double a = getX() - x1;
@@ -119,7 +114,6 @@ public class Point3D {
      *
      * @param p the other point
      * @return the distance between this point and point {@code p}.
-     * @profile common conditional scene3d
      */
     public double distance(Point3D  p) {
         return distance(p.getX(), p.getY(), p.getZ());
@@ -158,8 +152,6 @@ public class Point3D {
      * The content and format of the returned string might vary between
      * implementations.
      * The returned string might be empty but cannot be {@code null}.
-     *
-     * @profile common conditional scene3d
      */
     @Override public String toString() {
         return "Point3D [x = " + getX() + ", y = " + getY() + ", z = " + getZ() + "]";

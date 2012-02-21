@@ -27,8 +27,6 @@
 
 /**
  * A set of inside offsets for the 4 side of a rectangular area
- *
- * @profile common
  */
 public class Insets {
     /**

@@ -58,8 +58,6 @@ t.setFont(Font.font(null, FontWeight.BOLD, 36));
 
 t.setEffect(new GaussianBlur());
 </PRE>
- *
- * @profile common conditional effect
  */
 public class GaussianBlur extends Effect {
     /**

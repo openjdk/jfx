@@ -29,7 +29,6 @@ package javafx.scene;
  * Cache hints for use with {@code Node.cacheHint}
  *
  * @see Node#cacheHintProperty
- * @profile common
  * @since JavaFX 1.3
  */
 public enum CacheHint {
@@ -37,7 +36,6 @@ public enum CacheHint {
     * No additional hint.  The system will determine the best use of the bitmap
     * cache.
     *
-    * @profile common
     * @since JavaFX 1.3
     */
     DEFAULT,
@@ -48,7 +46,6 @@ public enum CacheHint {
     * maintain smooth animation.  The trade-off is that this may result in
     * decreased visual quality.
     *
-    * @profile common
     * @since JavaFX 1.3
     */
     SPEED,
@@ -66,7 +63,6 @@ public enum CacheHint {
     * replaced with a more permissive value (such as {@code SPEED}) during the
     * period of the animation.
     *
-    * @profile common
     * @since JavaFX 1.3
     */
     QUALITY,
@@ -76,7 +72,6 @@ public enum CacheHint {
     * or down, it is acceptable to paint it by scaling the cached bitmap (rather
     * than re-rendering the node).
     *
-    * @profile common
     * @since JavaFX 1.3
     */
     SCALE,
@@ -86,7 +81,6 @@ public enum CacheHint {
     * it is acceptable to paint it by rotating the the cached bitmap (rather
     * than re-rendering the node).
     *
-    * @profile common
     * @since JavaFX 1.3
     */
     ROTATE,
@@ -96,7 +90,6 @@ public enum CacheHint {
     * and/or rotated, it is acceptable to paint it by scaling and/or rotating
     * the cached bitmap (rather than re-rendering the node).
     *
-    * @profile common
     * @since JavaFX 1.3
     */
     SCALE_AND_ROTATE,

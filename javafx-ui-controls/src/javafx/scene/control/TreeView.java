@@ -529,6 +529,9 @@ public class TreeView<T> extends Control {
      */
     @Deprecated
     public final int impl_getTreeItemCount() {
+        if (treeItemCountDirty) {
+            updateTreeItemCount();
+        }
         return treeItemCount.get();
     }
 
@@ -748,7 +751,6 @@ public class TreeView<T> extends Control {
     @Override protected void layoutChildren() {
         if (treeItemCountDirty) {
             updateTreeItemCount();
-            treeItemCountDirty = false;
         }
         
         super.layoutChildren();
@@ -859,7 +861,7 @@ public class TreeView<T> extends Control {
         if (node == null) return 0;
         if (node.isLeaf()) return 1;
         
-        return node.getExpandedDescendentCount();
+        return node.getExpandedDescendentCount(treeItemCountDirty);
     }
     
     private void updateTreeItemCount() {
@@ -873,28 +875,43 @@ public class TreeView<T> extends Control {
 
             setTreeItemCount(count);
         }
+        treeItemCountDirty = false;
     }
 
     private TreeItem getItem(TreeItem<T> parent, int itemIndex) {
         if (parent == null) return null;
 
-        // if itemIndex is 0 then our item is what we were looking for
+        // if itemIndex is 0 then our parent is what we were looking for
         if (itemIndex == 0) return parent;
 
         // if itemIndex is > the total item count, then it is out of range
         if (itemIndex >= getExpandedDescendantCount(parent)) return null;
 
         // if we got here, then one of our descendants is the item we're after
-        TreeItem<T> ret;
+        List<TreeItem<T>> children = parent.getChildren();
+        if (children == null) return null;
+        
         int idx = itemIndex - 1;
 
-        List<TreeItem<T>> children = parent.getChildren();
-        if (children != null) {
-            for (TreeItem c : children) {
-                ret = getItem(c, idx);
-                idx -= getExpandedDescendantCount(c);
-                if (ret != null) return ret;
+        TreeItem child;
+        for (int i = 0; i < children.size(); i++) {
+            child = children.get(i);
+            if (idx == 0) return child;
+            
+            if (child.isLeaf() || ! child.isExpanded()) {
+                idx--;
+                continue;
             }
+            
+            int expandedChildCount = getExpandedDescendantCount(child);
+            if (idx >= expandedChildCount) {
+                idx -= expandedChildCount;
+                continue;
+            }
+            
+            TreeItem<T> result = getItem(child, idx);
+            if (result != null) return result;
+            idx--;
         }
 
         // We might get here if getItem(0) is called on an empty tree
@@ -1051,7 +1068,7 @@ public class TreeView<T> extends Control {
                 int shift = 0;
                 if (e.wasExpanded()) {
                     // need to shuffle selection by the number of visible children
-                    shift = e.getTreeItem().getExpandedDescendentCount() - 1;
+                    shift = e.getTreeItem().getExpandedDescendentCount(false) - 1;
                     startRow++;
                 } else if (e.wasCollapsed()) {
                     // remove selection from any child treeItem
@@ -1238,7 +1255,7 @@ public class TreeView<T> extends Control {
                 if (e.wasExpanded()) {
                     if (row > getFocusedIndex()) {
                         // need to shuffle selection by the number of visible children
-                        shift = e.getTreeItem().getExpandedDescendentCount() - 1;
+                        shift = e.getTreeItem().getExpandedDescendentCount(false) - 1;
                     }
                 } else if (e.wasCollapsed()) {
                     if (row > getFocusedIndex()) {
@@ -1253,7 +1270,7 @@ public class TreeView<T> extends Control {
                         
                         if (item != null && row <= getFocusedIndex()) {
 //                            shift = e.getTreeItem().isExpanded() ? e.getAddedSize() : 0;
-                            shift += item.getExpandedDescendentCount();
+                            shift += item.getExpandedDescendentCount(false);
                         }
                     }
                 } else if (e.wasRemoved()) {

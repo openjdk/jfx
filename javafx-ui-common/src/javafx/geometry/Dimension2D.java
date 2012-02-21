@@ -28,7 +28,6 @@ package javafx.geometry;
 /**
  * A 2D dimension object that contains a width and a height.
  *
- * @profile common
  * @since JavaFX 1.3
  */
 public class Dimension2D {
@@ -113,8 +112,6 @@ public class Dimension2D {
      * The content and format of the returned string might vary between
      * implementations.
      * The returned string might be empty but cannot be {@code null}.
-     *
-     * @profile common
      */
     @Override public String toString() {
         return "Dimension2D [width = " + getWidth() + ", height = " + getHeight() + "]";

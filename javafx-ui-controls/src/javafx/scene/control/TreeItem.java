@@ -345,7 +345,7 @@ public class TreeItem<T> implements EventTarget {
     private final EventHandler<TreeModificationEvent<Object>> itemListener = 
         new EventHandler<TreeModificationEvent<Object>>() {
             @Override public void handle(TreeModificationEvent event) {
-                updateExpandedDescendentCount();
+                expandedDescendentCountDirty = true;
             }
     };
 
@@ -355,6 +355,8 @@ public class TreeItem<T> implements EventTarget {
      * Instance Variables                                                      *
      *                                                                         *
      **************************************************************************/
+    
+    private boolean expandedDescendentCountDirty = true;
 
     // The ObservableList containing all children belonging to this TreeItem.
     // It is important that interactions with this list go directly into the
@@ -390,6 +392,7 @@ public class TreeItem<T> implements EventTarget {
     // called whenever the contents of the children sequence changes
     private ListChangeListener<TreeItem<T>> childrenListener = new ListChangeListener<TreeItem<T>>() {
         @Override public void onChanged(Change<? extends TreeItem<T>> c) {
+            expandedDescendentCountDirty = true;
             while (c.next()) {
                 updateChildren(c.getAddedSubList(), c.getRemoved());
             }
@@ -706,60 +709,6 @@ public class TreeItem<T> implements EventTarget {
         return "TreeItem [ value: " + getValue() + " ]";
     }
 
-    /**
-     * Indicates whether some other object is "equal to" this one.
-     * @param obj the reference object with which to compare.
-     * @return {@code true} if this object is equal to the {@code obj} argument; {@code false} otherwise.
-     */
-    @Override public boolean equals(Object obj) {
-        if (obj == null) {
-            return false;
-        }
-        if (getClass() != obj.getClass()) {
-            return false;
-        }
-        final TreeItem<T> other = (TreeItem<T>) obj;
-        if (this.getExpandedDescendentCount() != other.getExpandedDescendentCount()) {
-            return false;
-        }
-        if (this.isLeaf() != other.isLeaf()) {
-            return false;
-        }
-        if (this.isExpanded() != other.isExpanded()) {
-            return false;
-        }
-        if (this.getValue() != other.getValue() && (this.getValue() == null || !this.getValue().equals(other.getValue()))) {
-            return false;
-        }
-        if (this.getGraphic() != other.getGraphic() && (this.getGraphic() == null || !this.getGraphic().equals(other.getGraphic()))) {
-            return false;
-        }
-        if (this.getParent() != other.getParent() && (this.getParent() == null || !this.getParent().equals(other.getParent()))) {
-            return false;
-        }
-        // we do NOT test the children
-//        if (this.children != other.children && (this.children == null || !this.children.equals(other.children))) {
-//            return false;
-//        }
-        return true;
-    }
-
-    /**
-     * Returns a hash code for this {@code TreeItem} object.
-     * @return a hash code for this {@code TreeItem} object.
-     */ 
-    @Override public int hashCode() {
-        int hash = 7;
-        hash = 13 * hash + this.getExpandedDescendentCount();
-//        hash = 13 * hash + this.previousExpandedDescendentCount;
-        hash = 13 * hash + (this.getValue() != null ? this.getValue().hashCode() : 0);
-        hash = 13 * hash + (this.getGraphic() != null ? this.getGraphic().hashCode() : 0);
-        hash = 13 * hash + (this.isExpanded() ? 1 : 0);
-        hash = 13 * hash + (this.isLeaf() ? 1 : 0);
-        hash = 13 * hash + (this.getParent() != null ? this.getParent().hashCode() : 0);
-        return hash;
-    }
-
     private void fireEvent(TreeModificationEvent evt) {
         Event.fireEvent(this, evt);
     }
@@ -823,18 +772,22 @@ public class TreeItem<T> implements EventTarget {
      **************************************************************************/
     
     // This value is package accessible so that it may be retrieved from TreeView.
-    int getExpandedDescendentCount() {
+    int getExpandedDescendentCount(boolean reset) {
+        if (reset || expandedDescendentCountDirty) {
+            updateExpandedDescendentCount(reset);
+            expandedDescendentCountDirty = false;
+        }
         return expandedDescendentCount;
     }
     
-    private void updateExpandedDescendentCount() {
+    private void updateExpandedDescendentCount(boolean reset) {
         previousExpandedDescendentCount = expandedDescendentCount;
         expandedDescendentCount = 1;
         
         if (!isLeaf() && isExpanded()) {
             for (TreeItem<T> child : getChildren()) {
                 if (child == null) continue;
-                expandedDescendentCount += child.getExpandedDescendentCount();
+                expandedDescendentCount += child.isExpanded() ? child.getExpandedDescendentCount(reset) : 1;
             }
         }
     }

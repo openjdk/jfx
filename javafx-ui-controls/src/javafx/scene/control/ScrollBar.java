@@ -359,8 +359,14 @@ public class ScrollBar extends Control {
         private static final StyleableProperty<ScrollBar,Orientation> ORIENTATION = 
             new StyleableProperty<ScrollBar,Orientation>("-fx-orientation",
                 new EnumConverter<Orientation>(Orientation.class),
-                Orientation.VERTICAL) {
+                Orientation.HORIZONTAL) {
 
+            @Override
+            public Orientation getInitialValue(ScrollBar node) {
+                // A vertical ScrollBar should remain vertical 
+                return node.getOrientation();
+            }
+                    
             @Override
             public boolean isSettable(ScrollBar n) {
                 return n.orientation == null || !n.orientation.isBound();
@@ -424,6 +430,16 @@ public class ScrollBar extends Control {
     @Deprecated
     public static List<StyleableProperty> impl_CSS_STYLEABLES() {
         return ScrollBar.StyleableProperties.STYLEABLES;
+    }
+
+    /**
+     * RT-19263
+     * @treatAsPrivate implementation detail
+     * @deprecated This is an experimental API that is not intended for general use and is subject to change in future versions
+     */
+    @Deprecated
+    public List<StyleableProperty> impl_getStyleableProperties() {
+        return impl_CSS_STYLEABLES();
     }
 
     private static final long VERTICAL_PSEUDOCLASS_STATE =

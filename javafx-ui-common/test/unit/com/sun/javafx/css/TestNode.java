@@ -110,5 +110,10 @@ class TestNode extends TestNodeBase {
     public static List<StyleableProperty> impl_CSS_STYLEABLES() {
         return TestNode.StyleableProperties.STYLEABLES;
     }    
+
+    public List<StyleableProperty> impl_getStyleableProperties() {
+        return impl_CSS_STYLEABLES();
+    }
+    
     
 }

@@ -62,8 +62,6 @@ polyline.getPoints().addAll(new Double[]{
     20.0, 10.0,
     10.0, 20.0 });
 </PRE>
- *
- * @profile common
  */
 public  class Polyline extends Shape {
 
@@ -98,7 +96,6 @@ public  class Polyline extends Shape {
     /**
      * Defines the coordinates of the polyline segments.
      *
-     * @profile common
      * @defaultValue empty
      */
     private final ObservableList<Double> points = new TrackableObservableList<Double>() {
@@ -251,4 +248,14 @@ public  class Polyline extends Shape {
         return StyleableProperties.STYLEABLES;
     }
         
+    /**
+     * RT-19263
+     * @treatAsPrivate implementation detail
+     * @deprecated This is an experimental API that is not intended for general use and is subject to change in future versions
+     */
+    @Deprecated
+    public List<StyleableProperty> impl_getStyleableProperties() {
+        return impl_CSS_STYLEABLES();
+    }
+
 }

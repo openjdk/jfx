@@ -46,8 +46,6 @@ import com.sun.javafx.scene.BoundsAccessor;
  * with the given {@code Paint}.  This is equivalent to rendering a
  * filled rectangle into an image and using an {@code ImageInput} effect,
  * except that it is more convenient and potentially much more efficient.
- *
- * @profile common conditional effect
  */
 public class ColorInput extends Effect {
     /**

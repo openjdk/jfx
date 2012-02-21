@@ -64,8 +64,6 @@ import com.sun.javafx.tk.Toolkit;
  * the colors along the gradient. The {@code Stop#offset} variable must be
  * the range 0.0 to 1.0 and act like keyframes along the gradient.
  * They mark where the gradient should be exactly a particular color.
- *
- * @profile common
  */
 public final class RadialGradient extends Paint {
     private double focusAngle;
@@ -73,8 +71,6 @@ public final class RadialGradient extends Paint {
     /**
      * Defines the angle in degrees from the center of the gradient
      * to the focus point to which the first color is mapped.
-     *
-     * @profile common
      */
     public final double getFocusAngle() {
         return focusAngle;
@@ -87,8 +83,6 @@ public final class RadialGradient extends Paint {
      * focus point to which the first color is mapped.
      * A distance of 0.0 will be at the center of the gradient circle.
      * A distance of 1.0 will be on the circumference of the gradient circle.
-     *
-     * @profile common
      */
     public final double getFocusDistance() {
         return focusDistance;
@@ -103,7 +97,6 @@ public final class RadialGradient extends Paint {
      * the shape that the gradient fills.
      * The last color of the gradient is mapped to the perimeter of this circle.
      *
-     * @profile common
      * @defaultValue 0.0
      */
     public final double getCenterX() {
@@ -119,7 +112,6 @@ public final class RadialGradient extends Paint {
      * the shape that the gradient fills.
      * The last color of the gradient is mapped to the perimeter of this circle.
      *
-     * @profile common
      * @defaultValue 0.0
      */
     public final double getCenterY() {
@@ -134,7 +126,6 @@ public final class RadialGradient extends Paint {
      * size relative to  unit square that will be scaled to match the size of the
      * the shape that the gradient fills.
      *
-     * @profile common
      * @defaultValue 1.0
      */
     public final double getRadius() {
@@ -152,7 +143,6 @@ public final class RadialGradient extends Paint {
      * If this flag is false, then the center coordinates and the radius are
      * specified in the local coordinate system of the node.
      *
-     * @profile common
      * @defaultValue true
      */
     public final boolean isProportional() {
@@ -166,7 +156,6 @@ public final class RadialGradient extends Paint {
      * to the {@code LinearGradient}: {@code CycleMethod.NO_CYCLE},
      * {@code CycleMethod.REFLECT}, or {@code CycleMethod.REPEAT}.
      *
-     * @profile common
      * @defaultValue NO_CYCLE
      */
     public final CycleMethod getCycleMethod() {
@@ -187,7 +176,6 @@ public final class RadialGradient extends Paint {
      * <p>The list is unmodifiable and will throw
      * {@code UnsupportedOperationException} on each modification attempt.</p>
      *
-     * @profile common
      * @defaultValue empty
      */
     @ReturnsUnmodifiableCollection

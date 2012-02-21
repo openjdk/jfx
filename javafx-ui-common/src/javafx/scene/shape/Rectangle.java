@@ -70,8 +70,6 @@ r.setHeight(100);
 r.setArcWidth(20);
 r.setArcHeight(20);
 </PRE>
- *
- * @profile common
  */
 public  class Rectangle extends Shape {
 
@@ -126,7 +124,6 @@ public  class Rectangle extends Shape {
     /**
      * Defines the X coordinate of the upper-left corner of the rectangle.
      *
-     * @profile common
      * @defaultValue 0.0
      */
     private DoubleProperty x;
@@ -167,7 +164,6 @@ public  class Rectangle extends Shape {
     /**
      * Defines the Y coordinate of the upper-left corner of the rectangle.
      *
-     * @profile common
      * @defaultValue 0.0
      */
     private DoubleProperty y;
@@ -208,7 +204,6 @@ public  class Rectangle extends Shape {
     /**
      * Defines the width of the rectangle.
      *
-     * @profile common
      * @defaultValue 0.0
      */
     private DoubleProperty width;
@@ -249,7 +244,6 @@ public  class Rectangle extends Shape {
     /**
      * Defines the height of the rectangle.
      *
-     * @profile common
      * @defaultValue 0.0
      */
     private DoubleProperty height;
@@ -291,7 +285,6 @@ public  class Rectangle extends Shape {
      * Defines the horizontal diameter of the arc
      * at the four corners of the rectangle.
      *
-     * @profile common
      * @defaultValue 0.0
      */
     private DoubleProperty arcWidth;
@@ -337,7 +330,6 @@ public  class Rectangle extends Shape {
      * Defines the vertical diameter of the arc
      * at the four corners of the rectangle.
      *
-     * @profile common
      * @defaultValue 0.0
      */
     private DoubleProperty arcHeight;
@@ -458,6 +450,16 @@ public  class Rectangle extends Shape {
     @Deprecated
     public static List<StyleableProperty> impl_CSS_STYLEABLES() {
         return Rectangle.StyleableProperties.STYLEABLES;
+    }
+
+    /**
+     * RT-19263
+     * @treatAsPrivate implementation detail
+     * @deprecated This is an experimental API that is not intended for general use and is subject to change in future versions
+     */
+    @Deprecated
+    public List<StyleableProperty> impl_getStyleableProperties() {
+        return impl_CSS_STYLEABLES();
     }
 
     /**

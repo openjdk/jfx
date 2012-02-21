@@ -91,9 +91,6 @@ path.getElements().add(lineTo);
 path.getElements().add(arcTo);
 
 </PRE>
- *
- *
- * @profile common
  */
 public class Path extends Shape {
 
@@ -145,7 +142,6 @@ public class Path extends Shape {
      * {@code FillRile.EVEN_ODD} or {@code FillRule.NON_ZERO}.
      * The default value is {@code FillRule.NON_ZERO}.
      *
-     * @profile common
      * @defaultValue FillRule.NON_ZERO
      */
     private ObjectProperty<FillRule> fillRule;
@@ -188,7 +184,6 @@ public class Path extends Shape {
     /**
      * Defines the array of path elements of this path.
      *
-     * @profile common
      * @defaultValue empty
      */
     private final ObservableList<PathElement> elements = new TrackableObservableList<PathElement>() {
@@ -397,4 +392,14 @@ public class Path extends Shape {
         return StyleableProperties.STYLEABLES;
     }
     
+    /**
+     * RT-19263
+     * @treatAsPrivate implementation detail
+     * @deprecated This is an experimental API that is not intended for general use and is subject to change in future versions
+     */
+    @Deprecated
+    public List<StyleableProperty> impl_getStyleableProperties() {
+        return impl_CSS_STYLEABLES();
+    }
+
 }

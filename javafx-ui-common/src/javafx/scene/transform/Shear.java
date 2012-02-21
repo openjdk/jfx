@@ -51,8 +51,6 @@ import com.sun.javafx.geom.transform.Affine3D;
  * text.getTransforms().add(new Shear(-0.35, 0));
  * </code></pre>
  * </p>
- *
- * @profile common
  */
 public class Shear extends Transform {
     
@@ -96,7 +94,6 @@ public class Shear extends Transform {
      * are in the range -1 to 1, exclusive.
      *
      * @defaultValue 0.0
-     * @profile common
      */
     private DoubleProperty x;
 
@@ -138,7 +135,6 @@ public class Shear extends Transform {
      * are in the range -1 to 1, exclusive.
      *
      * @defaultValue 0.0
-     * @profile common
      */
     private DoubleProperty y;
 

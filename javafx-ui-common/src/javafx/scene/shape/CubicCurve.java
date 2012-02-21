@@ -59,8 +59,6 @@ cubic.setEndX(100.0f);
 cubic.setEndY(50.0f);
 }
 </PRE>
- *
- * @profile common
  */
 public class CubicCurve extends Shape {
 
@@ -68,7 +66,6 @@ public class CubicCurve extends Shape {
     /**
      * Defines the X coordinate of the start point of the cubic curve segment.
      *
-     * @profile common
      * @defaultValue 0.0
      */
     private DoubleProperty startX;
@@ -138,7 +135,6 @@ public class CubicCurve extends Shape {
     /**
      * Defines the Y coordinate of the start point of the cubic curve segment.
      *
-     * @profile common
      * @defaultValue 0.0
      */
     private DoubleProperty startY;
@@ -181,7 +177,6 @@ public class CubicCurve extends Shape {
      * Defines the X coordinate of the first control point
      * of the cubic curve segment.
      *
-     * @profile common
      * @defaultValue 0.0
      */
     private DoubleProperty controlX1;
@@ -224,7 +219,6 @@ public class CubicCurve extends Shape {
      * Defines the Y coordinate of the first control point
      * of the cubic curve segment.
      *
-     * @profile common
      * @defaultValue 0.0
      */
     private DoubleProperty controlY1;
@@ -267,7 +261,6 @@ public class CubicCurve extends Shape {
      * Defines the X coordinate of the second control point
      * of the cubic curve segment.
      *
-     * @profile common
      * @defaultValue 0.0
      */
     private DoubleProperty controlX2;
@@ -310,7 +303,6 @@ public class CubicCurve extends Shape {
      * Defines the Y coordinate of the second control point
      * of the cubic curve segment.
      *
-     * @profile common
      * @defaultValue 0.0
      */
     private DoubleProperty controlY2;
@@ -352,7 +344,6 @@ public class CubicCurve extends Shape {
     /**
      * Defines the X coordinate of the end point of the cubic curve segment.
      *
-     * @profile common
      * @defaultValue 0.0
      */
     private DoubleProperty endX;
@@ -393,7 +384,6 @@ public class CubicCurve extends Shape {
     /**
      * Defines the Y coordinate of the end point of the cubic curve segment.
      *
-     * @profile common
      * @defaultValue 0.0
      */
     private DoubleProperty endY;

@@ -118,7 +118,7 @@ public class TableColumnHeader extends StackPane {
                 if (! autoSizeComplete) {
                     if (tc == null || tc.getPrefWidth() != DEFAULT_WIDTH || getScene() == null) {
                         return;
-    }
+                    }
                     resizeToFit(tc, n);
                     autoSizeComplete = true;
                 }
@@ -536,7 +536,7 @@ public class TableColumnHeader extends StackPane {
      */
     protected void resizeToFit(TableColumn col, int maxRows) {
         List<?> items = getTableView().getItems();
-        if (items == null) return;
+        if (items == null || items.isEmpty()) return;
     
         Callback cellFactory = col.getCellFactory();
         if (cellFactory == null) return;
@@ -556,7 +556,7 @@ public class TableColumnHeader extends StackPane {
             padding = r.getInsets().getLeft() + r.getInsets().getRight();
         } 
         
-        int rows = maxRows == -1 ? items.size() : maxRows;
+        int rows = maxRows == -1 ? items.size() : Math.min(items.size(), maxRows);
         double maxWidth = 0;
         for (int row = 0; row < rows; row++) {
             cell.updateTableColumn(col);
@@ -807,5 +807,15 @@ public class TableColumnHeader extends StackPane {
     public static List<StyleableProperty> impl_CSS_STYLEABLES() {
         return StyleableProperties.STYLEABLES;
     };
+
+    /**
+     * RT-19263
+     * @treatAsPrivate implementation detail
+     * @deprecated This is an experimental API that is not intended for general use and is subject to change in future versions
+     */
+    @Deprecated
+    public List<StyleableProperty> impl_getStyleableProperties() {
+        return impl_CSS_STYLEABLES();
+    }
 
 }

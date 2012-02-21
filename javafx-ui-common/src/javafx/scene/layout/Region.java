@@ -1931,7 +1931,7 @@ public class Region extends Parent {
      * region defined by {@code areaX}, {@code areaY}, {@code areaWidth} x {@code areaHeight},
      * with a baseline offset relative to that area.
      * <p>
-     * If the child is resizable, this method will use {@code fillWidth} and {@ocde fillHeight}
+     * If the child is resizable, this method will use {@code fillWidth} and {@code fillHeight}
      * to determine whether to resize it to fill the area or keep the child at its
      * preferred dimension.  If fillWidth/fillHeight are true, then this method
      * will only resize the child up to its max size limits.  If the node's maximum
@@ -2776,5 +2776,15 @@ public class Region extends Parent {
      public static List<StyleableProperty> impl_CSS_STYLEABLES() {
          return Region.StyleableProperties.STYLEABLES;
      }
+
+    /**
+     * RT-19263
+     * @treatAsPrivate implementation detail
+     * @deprecated This is an experimental API that is not intended for general use and is subject to change in future versions
+     */
+    @Deprecated
+    public List<StyleableProperty> impl_getStyleableProperties() {
+        return impl_CSS_STYLEABLES();
+    }
 
 }

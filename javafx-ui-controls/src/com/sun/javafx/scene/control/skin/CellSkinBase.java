@@ -111,7 +111,7 @@ public class CellSkinBase<C extends Cell, B extends CellBehaviorBase<C>> extends
      *                                                                         *
      **************************************************************************/
 
-    static final int DEFAULT_CELL_SIZE = 24;
+    static final double DEFAULT_CELL_SIZE = 24.0;
 
      /**
       * Super-lazy instantiation pattern from Bill Pugh.
@@ -161,5 +161,15 @@ public class CellSkinBase<C extends Cell, B extends CellBehaviorBase<C>> extends
     public static List<StyleableProperty> impl_CSS_STYLEABLES() {
         return StyleableProperties.STYLEABLES;
     };
+
+    /**
+     * RT-19263
+     * @treatAsPrivate implementation detail
+     * @deprecated This is an experimental API that is not intended for general use and is subject to change in future versions
+     */
+    @Deprecated
+    public List<StyleableProperty> impl_getStyleableProperties() {
+        return impl_CSS_STYLEABLES();
+    }
 
 }

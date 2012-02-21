@@ -89,7 +89,6 @@ public abstract class Transform {
      * @param tz the Z coordinate translation element of the 3x4 matrix
      * @return a new {@code Affine} object derived from specified parameters
      *
-     * @profile common conditional scene3d
      * @since JavaFX 1.3
      */
     public static Affine affine(
@@ -189,8 +188,6 @@ public abstract class Transform {
      * <pre>
      *    new Shear(x, y);
      * </pre>
-     *
-     * @profile common
      */
     public static Shear shear(double x, double y) {
         final Shear shear = new Shear();
@@ -206,8 +203,6 @@ public abstract class Transform {
      * <pre>
      *    new Shear(x, y, pivotX, pivotY);
      * </pre>
-     *
-     * @profile common
      */
     public static Shear shear(double x, double y, double pivotX, double pivotY) {
         final Shear shear = new Shear();

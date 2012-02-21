@@ -29,8 +29,6 @@ package javafx.scene.paint;
  * This enum defines one of the following methods to use when painting 
  * outside the gradient bounds: {@code  CycleMethod.NO_CYCLE}, 
  * {@code CycleMethod.REFLECT}, or {@code  CycleMethod.REPEAT}.
- *
- * @profile common
  */      
 public enum CycleMethod {
 

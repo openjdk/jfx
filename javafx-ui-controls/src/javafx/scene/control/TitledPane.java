@@ -311,6 +311,16 @@ public class TitledPane extends Labeled {
         return StyleableProperties.STYLEABLES;
     }
 
+    /**
+     * RT-19263
+     * @treatAsPrivate implementation detail
+     * @deprecated This is an experimental API that is not intended for general use and is subject to change in future versions
+     */
+    @Deprecated
+    public List<StyleableProperty> impl_getStyleableProperties() {
+        return impl_CSS_STYLEABLES();
+    }
+
     private static final long EXPANDED_PSEUDOCLASS_STATE =
             StyleManager.getInstance().getPseudoclassMask("expanded");
     private static final long COLLAPSED_PSEUDOCLASS_STATE =

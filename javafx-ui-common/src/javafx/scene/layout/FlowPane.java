@@ -804,7 +804,13 @@ public class FlowPane extends Pane {
              new StyleableProperty<FlowPane,Orientation>("-fx-orientation",
                  new EnumConverter<Orientation>(Orientation.class), 
                  Orientation.HORIZONTAL) {
-
+                
+            @Override
+            public Orientation getInitialValue(FlowPane node) {
+                // A vertical flow pane should remain vertical 
+                return node.getOrientation();
+            }
+                     
             @Override
             public boolean isSettable(FlowPane node) {
                 return node.orientation == null || !node.orientation.isBound();
@@ -828,7 +834,7 @@ public class FlowPane extends Pane {
 
             @Override
             public WritableValue<Number> getWritableValue(FlowPane node) {
-                return node.hgapProperty();
+                return node.vgapProperty();
             }
                      
          }; 
@@ -861,6 +867,16 @@ public class FlowPane extends Pane {
      public static List<StyleableProperty> impl_CSS_STYLEABLES() {
          return FlowPane.StyleableProperties.STYLEABLES;
      }
+
+    /**
+     * RT-19263
+     * @treatAsPrivate implementation detail
+     * @deprecated This is an experimental API that is not intended for general use and is subject to change in future versions
+     */
+    @Deprecated
+    public List<StyleableProperty> impl_getStyleableProperties() {
+        return impl_CSS_STYLEABLES();
+    }
 
     //REMIND(aim); replace when we get mutable rects
     private static class LayoutRect {

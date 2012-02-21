@@ -41,8 +41,6 @@ import com.sun.javafx.scene.BoundsAccessor;
 /**
  * A high-level effect that makes the input image appear to glow,
  * based on a configurable threshold.
- *
- * @profile common conditional effect
  */
 public class Glow extends Effect {
     /**

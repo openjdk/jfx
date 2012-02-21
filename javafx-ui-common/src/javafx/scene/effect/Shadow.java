@@ -52,8 +52,6 @@ import com.sun.javafx.tk.Toolkit;
  * combines this {@code Shadow} effect with an original graphic for ease
  * of adding a shadow to an existing scene graph {@code Node} with a
  * single effect.
- *
- * @profile common conditional effect
  */
 public class Shadow extends Effect {
     private boolean changeIsLocal;
