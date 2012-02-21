@@ -40,6 +40,7 @@ import javafx.event.ActionEvent;
 import javafx.util.StringConverter;
 
 import com.sun.javafx.css.StyleManager;
+import javafx.beans.DefaultProperty;
 
 /**
  * The ChoiceBox is used for presenting the user with a relatively small set of
@@ -79,6 +80,7 @@ import com.sun.javafx.css.StyleManager;
  * cb.getItems().addAll("item1", "item2", "item3");
  * </pre>
  */
+@DefaultProperty("items")
 public class ChoiceBox<T> extends Control {
     /***************************************************************************
      *                                                                         *
