@@ -451,7 +451,7 @@ public final class SequentialTransition extends Transition {
             if (curIndex < newIndex) {
                 if (current != null) {
                     final long oldDelay = add(startTimes[curIndex], delays[curIndex]);
-                    if ((oldTicks <= oldDelay) || (current.getStatus() == Status.STOPPED)) {
+                    if ((oldTicks <= oldDelay) || ((current.getStatus() == Status.STOPPED) && (oldTicks != startTimes[curIndex + 1]))) {
                         final boolean enteringCycle = oldTicks <= oldDelay;
                         if (enteringCycle) {
                             current.jumpTo(Duration.ZERO);
@@ -506,7 +506,7 @@ public final class SequentialTransition extends Transition {
             } else {
                 if (current != null) {
                     final long oldDelay = add(startTimes[curIndex], delays[curIndex]);
-                    if ((oldTicks >= startTimes[curIndex+1]) || ((oldTicks >= oldDelay) && (current.getStatus() == Status.STOPPED))){
+                    if ((oldTicks >= startTimes[curIndex+1]) || ((oldTicks > oldDelay) && (current.getStatus() == Status.STOPPED))){
                         final boolean enteringCycle = oldTicks >= startTimes[curIndex+1];
                         if (enteringCycle) {
                             current.jumpTo("end");
