@@ -4,7 +4,9 @@
 package javafx.scene.control;
 
 import javafx.beans.InvalidationListener;
+import javafx.beans.property.IntegerProperty;
 import javafx.beans.value.ChangeListener;
+import javafx.beans.value.ObservableValue;
 import javafx.collections.FXCollections;
 import javafx.collections.ListChangeListener;
 import javafx.collections.ObservableList;
@@ -232,7 +234,6 @@ public class ListCellTest {
         assertNull(cell.getItem());
     }
 
-    @Ignore("RT-19311")
     @Test public void replaceItemsWithANull_ListenersRemovedFromFormerList() {
         cell.updateIndex(0);
         cell.updateListView(list);
@@ -376,7 +377,6 @@ public class ListCellTest {
         assertFalse(other.isSelected());
     }
 
-    @Ignore("RT-19311")
     @Test public void replacingTheSelectionModelRemovesTheListenerFromTheOldModel() {
         cell.updateIndex(0);
         cell.updateListView(list);
@@ -474,7 +474,6 @@ public class ListCellTest {
         assertFalse(other.isSelected());
     }
 
-    @Ignore("RT-19311")
     @Test public void replacingTheFocusModelRemovesTheListenerFromTheOldModel() {
         cell.updateIndex(0);
         cell.updateListView(list);
@@ -652,7 +651,6 @@ public class ListCellTest {
     };
 
     private final class FocusModelMock extends FocusModel {
-
         @Override protected int getItemCount() {
             return model.size();
         }

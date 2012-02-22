@@ -272,36 +272,22 @@ public final class ControlTestUtils {
                 return listener == null ? Collections.emptyList() : Arrays.asList(listener);
             }
 
-            Class singleInvalidationSingleChangeClass = Class.forName(
-                    "com.sun.javafx.binding.ExpressionHelper$SingleInvalidationSingleChange");
-            if (singleInvalidationSingleChangeClass.isAssignableFrom(helper.getClass())) {
-                Field invalidationField = singleInvalidationSingleChangeClass.getDeclaredField("invalidationListener");
-                invalidationField.setAccessible(true);
-                Object listener = invalidationField.get(helper);
-                List results = listener == null ? Collections.emptyList() : Arrays.asList(listener);
+            Class genericClass = Class.forName("com.sun.javafx.binding.ExpressionHelper$Generic");
+            if (genericClass.isAssignableFrom(helper.getClass())) {
+                List results = new ArrayList();
+                Field field = genericClass.getDeclaredField("invalidationListeners");
+                field.setAccessible(true);
+                InvalidationListener[] invalidationListeners = (InvalidationListener[])field.get(helper);
+                if (invalidationListeners != null) {
+                    results.addAll(Arrays.asList(invalidationListeners));
+                }
 
-                Field changeField = singleInvalidationSingleChangeClass.getDeclaredField("changeListener");
-                changeField.setAccessible(true);
-                listener = changeField.get(helper);
-                if (listener != null) results.add(listener);
-                return results;
-            }
-
-            Class multipleInvalidationClass = Class.forName("com.sun.javafx.binding.ExpressionHelper$MultipleInvalidation");
-            if (multipleInvalidationClass.isAssignableFrom(helper.getClass())) {
-                return getListenersFromExpressionHelper(helper, multipleInvalidationClass, "size", "listeners");
-            }
-
-            Class multipleChangeClass = Class.forName("com.sun.javafx.binding.ExpressionHelper$MultipleChange");
-            if (multipleChangeClass.isAssignableFrom(helper.getClass())) {
-                return getListenersFromExpressionHelper(helper, multipleChangeClass, "size", "listeners");
-            }
-
-            Class multipleInvalidationMultipleChangeClass = Class.forName(
-                    "com.sun.javafx.binding.ExpressionHelper$MultipleInvalidationMultipleChange");
-            if (multipleInvalidationMultipleChangeClass.isAssignableFrom(helper.getClass())) {
-                List results = getListenersFromExpressionHelper(helper, multipleInvalidationMultipleChangeClass, "invalidationSize", "invalidationListeners");
-                results.addAll(getListenersFromExpressionHelper(helper, multipleInvalidationMultipleChangeClass, "changeSize", "changeListeners"));
+                field = genericClass.getDeclaredField("changeListeners");
+                field.setAccessible(true);
+                ChangeListener[] changeListeners = (ChangeListener[])field.get(helper);
+                if (changeListeners != null) {
+                    results.addAll(Arrays.asList(changeListeners));
+                }
                 return results;
             }
         } catch (Exception e) {
