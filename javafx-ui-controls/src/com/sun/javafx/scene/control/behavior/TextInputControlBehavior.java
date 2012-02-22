@@ -136,6 +136,7 @@ public abstract class TextInputControlBehavior<T extends TextInputControl> exten
             else if ("SelectEnd".equals(name)) selectEnd();
             else if ("SelectHomeExtend".equals(name)) selectHomeExtend();
             else if ("SelectEndExtend".equals(name)) selectEndExtend();
+            /*DEBUG*/else if ("UseVK".equals(name)) ((com.sun.javafx.scene.control.skin.TextInputControlSkin)textInputControl.getSkin()).setUseVK(true);
             else super.callAction(name);
             setCaretAnimating(true);
         } else if ("Copy".equals(name)) {

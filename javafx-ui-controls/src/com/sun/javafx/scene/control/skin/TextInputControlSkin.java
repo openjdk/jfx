@@ -27,6 +27,8 @@ package com.sun.javafx.scene.control.skin;
 
 import javafx.animation.KeyFrame;
 import javafx.animation.Timeline;
+import javafx.beans.InvalidationListener;
+import javafx.beans.Observable;
 import javafx.beans.binding.BooleanBinding;
 import javafx.beans.binding.ObjectBinding;
 import javafx.beans.property.BooleanProperty;
@@ -225,6 +227,14 @@ public abstract class TextInputControlSkin<T extends TextInputControl, B extends
      */
     protected final Path caretPath = new Path();
 
+    static boolean useVK = false;
+    public void setUseVK(boolean b) {
+        useVK = b;
+        if (useVK) {
+            FXVK.attach(getSkinnable());
+        }
+    }
+
     public TextInputControlSkin(final T textInput, final B behavior) {
         super(textInput, behavior);
 
@@ -263,6 +273,14 @@ public abstract class TextInputControlSkin<T extends TextInputControl, B extends
                         textInput.isEditable();
             }
         };
+
+        textInput.focusedProperty().addListener(new InvalidationListener() {
+            @Override public void invalidated(Observable observable) {
+                if (useVK) {
+                    FXVK.attach(textInput);
+                }
+            }
+        });
 
         if (textInput.getContextMenu() == null) {
             class ContextMenuItem extends MenuItem {
