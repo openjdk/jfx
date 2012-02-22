@@ -226,9 +226,6 @@ public class ProgressIndicatorSkin extends SkinBase<ProgressIndicator, ProgressI
         Arc arcShape;
         Arc arcProgress;
 
-        // css properties
-        private Paint textFill = Color.BLACK;
-
         public DeterminateIndicator(ProgressIndicator control, ProgressIndicatorSkin s) {
             this.control = control;
             this.skin = s;
@@ -246,7 +243,6 @@ public class ProgressIndicatorSkin extends SkinBase<ProgressIndicator, ProgressI
             getChildren().clear();
 
             text = new Text((control.getProgress() >= 1) ? (DONE) : ("" + intProgress + "%"));
-            text.setFill(textFill);
             text.setTextOrigin(VPos.TOP);
             text.getStyleClass().setAll("text", "percentage");
 

@@ -136,8 +136,10 @@ public abstract class ComboBoxBaseSkin<T> extends SkinBase<ComboBoxBase<T>, Comb
         final double w = getSkinnable().getWidth() - (padding.getLeft() + padding.getRight());
         final double h = getSkinnable().getHeight() - (padding.getTop() + padding.getBottom());
 
-        final double arrowWidth = arrow.prefWidth(-1);
-        final double arrowButtonWidth = arrowButtonPadding.getLeft() + arrowWidth + arrowButtonPadding.getRight();
+        final double arrowWidth = snapSize(arrow.prefWidth(-1));
+        final double arrowButtonWidth = snapSpace(arrowButtonPadding.getLeft()) + 
+                                        arrowWidth + 
+                                        snapSpace(arrowButtonPadding.getRight());
         
         if (displayNode != null) {
             displayNode.resizeRelocate(x, y, w, h);

@@ -84,7 +84,7 @@ public abstract class VirtualContainerBase<C extends Control, B extends Behavior
     public abstract int getItemCount();
 
     protected void scrollTo(int index) {
-        if (index < 0 /*|| index >= getItemCount()*/ || getItemCount() == 0) return;
+        if (/*index < 0 || index >= getItemCount() ||*/ getItemCount() == 0) return;
         
         boolean posSet = false;
 
@@ -92,6 +92,9 @@ public abstract class VirtualContainerBase<C extends Control, B extends Behavior
         // be perfectly at position 1
         if (index >= getItemCount() - 1) {
             flow.setPosition(1);
+            posSet = true;
+        } else if (index < 0) {
+            flow.setPosition(0);
             posSet = true;
         }
         
