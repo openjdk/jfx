@@ -69,6 +69,7 @@ import com.sun.javafx.scene.traversal.TraverseListener;
 import com.sun.javafx.stage.StageHelper;
 import com.sun.javafx.tk.Toolkit;
 import javafx.beans.property.*;
+import javafx.event.Event;
 import javafx.event.EventType;
 import javafx.geometry.Side;
 import javafx.scene.control.*;
@@ -153,54 +154,81 @@ public class MenuBarSkin extends SkinBase<MenuBar, BehaviorBase<MenuBar>> implem
         control.getScene().addEventFilter(KeyEvent.KEY_PRESSED, new EventHandler<KeyEvent>() {
             @Override public void handle(KeyEvent event) {
                 // process right left and may be tab key events
-                switch (event.getCode()) {
-                    case LEFT:
-                        if (control.getScene().getWindow().isFocused()) {
-                            if (openMenu == null) return;
-                            if ( !openMenu.isShowing()) {
-                                selectPrevMenu(); // just move the selection bar
-                                return;
-                            }
-                            showPrevMenu();
-                        }
-                        event.consume();
-                        break;
-
-                    case RIGHT:
-                        if (control.getScene().getWindow().isFocused()) {
-                            if (openMenu == null) return;
-                            if (! openMenu.isShowing()) {
-                                selectNextMenu(); // just move the selection bar
-                                return;
-                            }
-                            showNextMenu();
-                        }
-                        event.consume();
-                        break;
-
-                    case DOWN:
-                    //case SPACE:
-                    //case ENTER:
-                        // RT-18859: Doing nothing for space and enter 
-                        if (control.getScene().getWindow().isFocused()) {
-                             if (openMenu == null) {
-                                return;
-                            }
-                            if (focusedMenuIndex != -1) {
-                                if (!isMenuEmpty(getSkinnable().getMenus().get(focusedMenuIndex))) {
-                                    openMenu = getSkinnable().getMenus().get(focusedMenuIndex);
-                                    openMenu.show();
-                                } else {
-                                    openMenu = null;
+                if (openMenu != null) {
+                    switch (event.getCode()) {
+                        case LEFT:
+                            if (control.getScene().getWindow().isFocused()) {
+                                if (openMenu == null) return;
+                                if ( !openMenu.isShowing()) {
+                                    selectPrevMenu(); // just move the selection bar
+                                    return;
                                 }
-                                event.consume();
+                                showPrevMenu();
                             }
-                        }
-                        break;
+                            event.consume();
+                            break;
+
+                        case RIGHT:
+                        case TAB:
+                            if (control.getScene().getWindow().isFocused()) {
+                                if (openMenu == null) return;
+                                if (! openMenu.isShowing()) {
+                                    selectNextMenu(); // just move the selection bar
+                                    return;
+                                }
+                                showNextMenu();
+                            }
+                            event.consume();
+                            break;
+
+                        case DOWN:
+                        //case SPACE:
+                        //case ENTER:
+                            // RT-18859: Doing nothing for space and enter 
+                            if (control.getScene().getWindow().isFocused()) {
+                                if (focusedMenuIndex != -1 && openMenu != null) {
+                                    if (!isMenuEmpty(getSkinnable().getMenus().get(focusedMenuIndex))) {
+                                        openMenu = getSkinnable().getMenus().get(focusedMenuIndex);
+                                        openMenu.show();
+                                    } else {
+                                        openMenu = null;
+                                    }
+                                    event.consume();
+                                }
+                            }
+                            break;
+                        case ESCAPE:
+                            unSelectMenus();
+                            event.consume();
+                            break;
+                        default:
+                            event.consume();
+                            break;
+                    }
                 }
-               
             }
         });
+        // When we click else where in the scene - menu selection should be cleared.
+        control.getScene().addEventFilter(MouseEvent.MOUSE_CLICKED, new EventHandler<MouseEvent>() {
+            @Override
+            public void handle(MouseEvent t) {
+                if (!container.getLayoutBounds().contains(t.getX(), t.getY())) {
+                    unSelectMenus();
+                    firstF10 = true;
+                }
+            }
+        });
+        // When the parent window looses focus - menu selection should be cleared
+        control.getScene().getWindow().focusedProperty().addListener(new ChangeListener<Boolean>() {
+            @Override
+            public void changed(ObservableValue<? extends Boolean> ov, Boolean t, Boolean t1) {
+              if (!t1) {
+                  unSelectMenus();
+                  firstF10 = true;
+              }
+            }
+        });
+        
         rebuildUI();
         control.getMenus().addListener(new ListChangeListener<Menu>() {
             @Override public void onChanged(Change<? extends Menu> c) {
@@ -433,6 +461,7 @@ public class MenuBarSkin extends SkinBase<MenuBar, BehaviorBase<MenuBar>> implem
             menuButton.getProperties().addListener(new MapChangeListener<Object, Object>() {
                 @Override
                 public void onChanged(Change<? extends Object, ? extends Object> c) {
+                    System.out.println("AUTOHIDE HAPPENED");
                      if (c.wasAdded() && MenuButtonSkin.AUTOHIDE.equals(c.getKey())) {
                         menuButton.getProperties().remove(MenuButtonSkin.AUTOHIDE);
                         menu.hide();
@@ -469,7 +498,7 @@ public class MenuBarSkin extends SkinBase<MenuBar, BehaviorBase<MenuBar>> implem
                     }
                 }
             });
-
+            
             menuButton.setOnMouseReleased(new EventHandler<MouseEvent>() {
                 @Override public void handle(MouseEvent event) {
                     // check if the owner window has focus
@@ -548,7 +577,8 @@ public class MenuBarSkin extends SkinBase<MenuBar, BehaviorBase<MenuBar>> implem
             menuButton.setOnMouseEntered(new EventHandler<MouseEvent>() {
                 @Override public void handle(MouseEvent event) {
                     // check if the owner window has focus
-                    if (menuButton.getScene().getWindow().isFocused()) { 
+                    if (menuButton.getScene() != null && menuButton.getScene().getWindow() != null && 
+                            menuButton.getScene().getWindow().isFocused()) { 
                         if (openMenuButton != null && openMenuButton != menuButton) {
                                 openMenuButton.clearHover();
                                 openMenuButton = null;
