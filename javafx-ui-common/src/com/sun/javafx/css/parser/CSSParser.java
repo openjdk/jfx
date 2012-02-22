@@ -24,6 +24,7 @@
  */
 package com.sun.javafx.css.parser;
 
+import com.sun.javafx.css.*;
 import java.io.BufferedReader;
 import java.io.CharArrayReader;
 import java.io.IOException;
@@ -50,17 +51,6 @@ import javafx.scene.text.Font;
 import javafx.scene.text.FontPosture;
 import javafx.scene.text.FontWeight;
 
-import com.sun.javafx.css.Combinator;
-import com.sun.javafx.css.CompoundSelector;
-import com.sun.javafx.css.Declaration;
-import com.sun.javafx.css.FontUnits;
-import com.sun.javafx.css.Rule;
-import com.sun.javafx.css.Selector;
-import com.sun.javafx.css.SimpleSelector;
-import com.sun.javafx.css.Size;
-import com.sun.javafx.css.SizeUnits;
-import com.sun.javafx.css.Stylesheet;
-import com.sun.javafx.css.ParsedValue;
 import com.sun.javafx.css.converters.BooleanConverter;
 import com.sun.javafx.css.converters.EffectConverter;
 import com.sun.javafx.css.converters.EnumConverter;
@@ -78,6 +68,7 @@ import com.sun.javafx.scene.layout.region.BorderStyle;
 import com.sun.javafx.scene.layout.region.Margins;
 import com.sun.javafx.scene.layout.region.Repeat;
 import com.sun.javafx.scene.layout.region.StrokeBorder;
+import javafx.collections.ObservableList;
 
 final public class CSSParser {
     static boolean EXIT_ON_ERROR = false;
@@ -107,7 +98,7 @@ final public class CSSParser {
             LOGGER.setLevel(PlatformLogger.WARNING);
         }
     }
-
+    
     private static final class ParseException extends Exception {
         ParseException(String message) {
             this(message,null,null);
@@ -151,6 +142,7 @@ final public class CSSParser {
             Reader reader = new CharArrayReader(stylesheetText.toCharArray());
             parse(reader);
         }
+        notifyErrors();
         return stylesheet;
     }
 
@@ -169,6 +161,7 @@ final public class CSSParser {
             Reader reader = new BufferedReader(new InputStreamReader(url.openStream()));
             parse(reader);
         }
+        notifyErrors();
         return stylesheet;
     }
 
@@ -211,6 +204,7 @@ final public class CSSParser {
             }
         }
         stylesheet.getRules().addAll(rules);
+        notifyErrors();
         return stylesheet;
     }
 
@@ -237,6 +231,7 @@ final public class CSSParser {
                 LOGGER.warning("\"" +property + ": " + expr  + "\" " + e.toString());
             }
         }
+        notifyErrors();
         return value;
     }
     /*
@@ -327,11 +322,29 @@ final public class CSSParser {
         
     }
 
+    private List<String> errors = null;
+    private void addError(String msg) {
+        if (errors == null) {
+            errors = new ArrayList<String>();
+        }
+        errors.add(msg);
+    }
+    private void notifyErrors() {
+        if (errors != null && errors.isEmpty() == false) {
+            ObservableList<String> smErrors = StyleManager.getInstance().errorsProperty();
+            if (smErrors != null) {
+                smErrors.setAll(errors);
+            }
+            errors.clear();
+        }
+    }
+    
     private void error(final Term root, final String msg) throws ParseException {
 
         final Token token = root != null ? root.token : null;
-
-        throw new ParseException(msg,token,stylesheet);
+        final ParseException pe = new ParseException(msg,token,stylesheet);
+        addError(pe.toString());
+        throw pe;
     }
 
     private String formatDeprecatedMessage(final Term root, final String syntax) {
