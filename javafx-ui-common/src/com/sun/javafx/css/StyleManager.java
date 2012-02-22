@@ -50,6 +50,7 @@ import java.security.PrivilegedAction;
 import java.util.Map.Entry;
 import javafx.collections.ListChangeListener.Change;
 import javafx.collections.MapChangeListener;
+import javafx.collections.ObservableList;
 import javafx.collections.ObservableMap;
 import javafx.scene.Parent;
 import javafx.stage.PopupWindow;
@@ -343,6 +344,7 @@ public class StyleManager {
             }
 
             if (stylesheet == null) {
+                errorsProperty().addAll("Resource \"%s\" not found.", fname);
                 if (logger().isLoggable(PlatformLogger.WARNING)) {
                     logger().warning(
                         String.format("Resource \"%s\" not found.", fname)
@@ -352,10 +354,12 @@ public class StyleManager {
             return stylesheet;
 
         } catch (FileNotFoundException fnfe) {
+            errorsProperty().addAll("Could not find stylesheet: " + fname);
             if (logger().isLoggable(PlatformLogger.INFO)) {
                 logger().info("Could not find stylesheet: " + fname);//, fnfe);
             }
         } catch (IOException ioe) {
+            errorsProperty().addAll("Could not load stylesheet: " + fname);
             if (logger().isLoggable(PlatformLogger.INFO)) {
                 logger().info("Could not load stylesheet: " + fname);//, ioe);
             }
@@ -1092,6 +1096,17 @@ public class StyleManager {
         }
     }
 
+    private ObservableList<String> errors = null;
+    public ObservableList<String> errorsProperty() {
+        if (errors == null) {
+            errors = FXCollections.observableArrayList();
+        }
+        return errors;
+    }
+    public ObservableList<String> getErrors() {
+        return errors;
+    }
+            
     /**
      * Creates and caches StyleHelpers, reusing them as often as practical.
      */

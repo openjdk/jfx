@@ -1031,8 +1031,10 @@ public class StyleHelper {
                 return new CalculatedValue(val, origin, cacheable.get());
                 
             } catch (ClassCastException cce) {
+                String msg = formatUnresolvedLookupMessage(node, styleable, style.getStyle(),resolved);
+                StyleManager.getInstance().errorsProperty().add(msg);
                 if (LOGGER.isLoggable(PlatformLogger.WARNING)) {
-                    LOGGER.warning(formatUnresolvedLookupMessage(node, styleable, style.getStyle(),resolved));
+                    LOGGER.warning(msg);
                     LOGGER.fine("node = " + node.toString());
                     LOGGER.fine("styleable = " + styleable);
                     LOGGER.fine("styles = " + styleable.getMatchingStyles(node));
