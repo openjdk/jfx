@@ -428,6 +428,8 @@ abstract class MultipleSelectionModelBase<T> extends MultipleSelectionModel<T> {
     }
 
     @Override public void clearSelection(int index) {
+        if (index < 0) return;
+        
         // TODO shouldn't directly access like this
         // TODO might need to update focus and / or selected index/item
         boolean wasEmpty = selectedIndices.isEmpty();
