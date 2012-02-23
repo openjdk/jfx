@@ -694,6 +694,9 @@ public class Window implements EventTarget {
                     // Set peer bounds
                     if ((getScene() != null) && (!widthExplicit || !heightExplicit)) {
                         adjustSize(true);
+                    } else {
+                        peerBoundsConfigurator.setSize(
+                                getWidth(), getHeight(), -1, -1);
                     }
                     
                     if (!xExplicit && !yExplicit) {
@@ -702,6 +705,8 @@ public class Window implements EventTarget {
                         // the scene (client) width / height (won't work on X11)
                         peerBoundsConfigurator.apply();
                         centerOnScreen();
+                    } else {
+                        peerBoundsConfigurator.setLocation(getX(), getY());
                     }
 
                     // set bounds before the window is shown
