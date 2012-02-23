@@ -180,7 +180,7 @@ public class TitledPaneSkin extends LabeledSkinBase<TitledPane, TitledPaneBehavi
 
         // content
         double contentWidth = w;
-        double contentHeight = snapSize(contentRegion.prefHeight(-1));
+        double contentHeight = h - headerHeight;//snapSize(contentRegion.prefHeight(-1));
         if (getSkinnable().getParent() != null && getSkinnable().getParent() instanceof AccordionSkin) {
             if (prefHeightFromAccordion != 0) {
                 contentHeight = prefHeightFromAccordion - headerHeight;
@@ -189,7 +189,7 @@ public class TitledPaneSkin extends LabeledSkinBase<TitledPane, TitledPaneBehavi
 
         double y = snapSpace(getInsets().getTop() + headerHeight) - (contentHeight * (1 - getTransition()));
 
-        ((Rectangle)contentRegion.getClip()).setY(contentHeight * (1 - getTransition()));
+        //((Rectangle)contentRegion.getClip()).setY(contentHeight * (1 - getTransition()));
         contentRegion.resize(contentWidth, contentHeight);
         positionInArea(contentRegion, snapSpace(getInsets().getLeft()), snapSpace(y),
             w, contentHeight, /*baseline ignored*/0, HPos.CENTER, VPos.CENTER);
@@ -203,7 +203,7 @@ public class TitledPaneSkin extends LabeledSkinBase<TitledPane, TitledPaneBehavi
         return Math.max(MIN_HEADER_HEIGHT, snapSize(titleRegion.prefHeight(-1)));
     }
 
-    @Override protected double computePrefWidth(double height) {        
+    @Override protected double computePrefWidth(double height) {
         double titleWidth = snapSize(titleRegion.prefWidth(height));
         double contentWidth = snapSize(contentRegion.prefWidth(height));
 
@@ -371,10 +371,10 @@ public class TitledPaneSkin extends LabeledSkinBase<TitledPane, TitledPaneBehavi
             double arrowWidth = 0;
             // We want to use the label's pref width computed by LabeledSkinBase.
             double labelPrefWidth = TitledPaneSkin.super.computePrefWidth(height);
-            
+
             if (arrowRegion != null) {
                 arrowWidth = snapSize(arrowRegion.prefWidth(height));
-            }            
+            }
 
             return left + arrowWidth + labelPrefWidth + right;
         }
@@ -385,11 +385,11 @@ public class TitledPaneSkin extends LabeledSkinBase<TitledPane, TitledPaneBehavi
             double arrowHeight = 0;
             // We want to use the label's pref height computed by LabeledSkinBase.
             double labelPrefHeight = TitledPaneSkin.super.computePrefHeight(width);
-            
+
             if (arrowRegion != null) {
                 arrowHeight = snapSize(arrowRegion.prefHeight(width));
             }
-            
+
             return top + Math.max(arrowHeight, labelPrefHeight) + bottom;
         }
 
@@ -408,12 +408,12 @@ public class TitledPaneSkin extends LabeledSkinBase<TitledPane, TitledPaneBehavi
             HPos hpos = getAlignment().getHpos();
             VPos vpos = getAlignment().getVpos();
             double x = left + arrowWidth + Utils.computeXOffset(width - arrowWidth, labelWidth, hpos);
-            double y = top + Utils.computeYOffset(height, Math.max(arrowHeight, labelHeight), vpos);            
-            
+            double y = top + Utils.computeYOffset(height, Math.max(arrowHeight, labelHeight), vpos);
+
             arrowRegion.resize(arrowWidth, arrowHeight);
             positionInArea(arrowRegion, left, top, arrowWidth, height,
                     /*baseline ignored*/0, HPos.CENTER, VPos.CENTER);
-            
+
             layoutLabelInArea(x, y, labelWidth, height, getAlignment());
         }
     }
@@ -442,7 +442,7 @@ public class TitledPaneSkin extends LabeledSkinBase<TitledPane, TitledPaneBehavi
 
         public final void setContent(Node n) {
             this.content = n;
-            getChildren().clear();            
+            getChildren().clear();
             if (n != null) {
                 getChildren().setAll(n);
             }
