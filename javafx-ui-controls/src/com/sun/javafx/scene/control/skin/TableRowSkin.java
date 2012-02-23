@@ -166,20 +166,21 @@ public class TableRowSkin<T> extends CellSkinBase<TableRow<T>, CellBehaviorBase<
             double x = getInsets().getLeft();
             double width;
             double height;
-            List<TableColumn<T,?>> leafColumns = table.getVisibleLeafColumns();
             
             double verticalPadding = getInsets().getTop() + getInsets().getBottom();
             double horizontalPadding = getInsets().getLeft() + getInsets().getRight();
             
             for (int i = 0; i < getChildren().size(); i++) {
-                TableCell cell = (TableCell) getChildren().get(i);
+                // in most cases all children are TableCell instances, but this
+                // is not always the case. For example, see RT-17694
+                Node node = getChildren().get(i);
 
-                width = snapSize(cell.prefWidth(-1) - horizontalPadding);
-                height = Math.max(getHeight(), cell.prefHeight(-1));
+                width = snapSize(node.prefWidth(-1) - horizontalPadding);
+                height = Math.max(getHeight(), node.prefHeight(-1));
                 height = snapSize(height - verticalPadding);
                 
-                cell.resize(width, height);
-                cell.relocate(x, getInsets().getTop());
+                node.resize(width, height);
+                node.relocate(x, getInsets().getTop());
                 x += width;
             }
         } else {
