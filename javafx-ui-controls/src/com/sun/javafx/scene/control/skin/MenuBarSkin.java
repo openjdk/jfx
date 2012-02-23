@@ -201,9 +201,6 @@ public class MenuBarSkin extends SkinBase<MenuBar, BehaviorBase<MenuBar>> implem
                             unSelectMenus();
                             event.consume();
                             break;
-                        default:
-                            event.consume();
-                            break;
                     }
                 }
             }
