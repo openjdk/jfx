@@ -452,7 +452,8 @@ if (fxvk == secondaryVK) {
                 public void run() {
                     Point2D nodePoint =
                         com.sun.javafx.Utils.pointRelativeTo(key,
-                                      secondaryPopup.getWidth(), secondaryPopup.getHeight(),
+//                                       secondaryPopup.getWidth(), secondaryPopup.getHeight(),
+                                      secondaryVK.prefWidth(-1), secondaryVK.prefHeight(-1),
                                       HPos.CENTER, VPos.TOP, 0, -5, true);
 
                     Point2D point =

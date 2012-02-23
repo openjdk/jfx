@@ -39,6 +39,7 @@ import javafx.geometry.HPos;
 import javafx.geometry.Point2D;
 import javafx.geometry.VPos;
 import javafx.scene.Node;
+import javafx.scene.Scene;
 import javafx.scene.control.*;
 import javafx.stage.Popup;
 
@@ -60,7 +61,13 @@ public class FXVK extends Control {
 
 
     public void setAttachedNode(Node node) {
+        Node oldNode = attachedNode;
         attachedNode = node;
+
+        if (oldNode != null && node != null && oldNode.getScene() == node.getScene()) {
+            return;
+        }
+
         if (node != null) {
             setPrefWidth(node.getScene().getWidth());
             setMaxWidth(node.getScene().getWidth());
@@ -79,14 +86,19 @@ public class FXVK extends Control {
     private static FXVK vk;
 
     public static void attach(final TextInputControl textInput) {
-        if (textInput.isFocused()) {
-            if (vkPopup == null) {
-                vk = new FXVK();
-                vkPopup = new Popup();
-                vkPopup.getContent().add(vk);
-            }
+        if (vkPopup == null) {
+            vk = new FXVK();
+            vkPopup = new Popup();
+            vkPopup.getContent().add(vk);
+        }
 
-            vk.setAttachedNode(textInput);
+        Scene scene = null;
+        if (vk.attachedNode != null) {
+            scene = vk.attachedNode.getScene();
+        }
+        vk.setAttachedNode(textInput);
+
+        if (scene != vk.attachedNode.getScene() || !vkPopup.isShowing()) {
             Platform.runLater(new Runnable() {
                 public void run() {
                     Point2D nodePoint =
@@ -99,14 +111,17 @@ public class FXVK extends Control {
                                       vkPopup.getWidth(), vkPopup.getHeight(),
                                       HPos.CENTER, VPos.BOTTOM, 0, 0, true);
 
-                    vkPopup.show(textInput, point.getX(), point.getY() - vkPopup.getHeight());
+//                     vkPopup.show(textInput, point.getX(), point.getY() - vkPopup.getHeight());
+                    vkPopup.show(textInput, point.getX(), point.getY() - vk.prefHeight(-1));
                 }
             });
-        } else {
-            if (vk != null && vk.getAttachedNode() == textInput) {
-                vk.setAttachedNode(null);
-                vkPopup.hide();
-            }
+        }
+    }
+
+    public static void detach() {
+        if (vk != null) {
+            vk.setAttachedNode(null);
+            vkPopup.hide();
         }
     }
 
