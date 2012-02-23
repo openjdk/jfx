@@ -188,6 +188,7 @@ public class ContextMenuContent extends StackPane {
         itemsContainer.getChildren().clear();
         for (int row = 0; row < getItems().size(); row++) {
             final MenuItem item = getItems().get(row);
+            if (item instanceof CustomMenuItem && ((CustomMenuItem) item).getContent() == null) continue;
             MenuItemContainer menuItemContainer = new MenuItemContainer(item);
             menuItemContainer.visibleProperty().bind(item.visibleProperty());
             itemsContainer.getChildren().add(menuItemContainer);
@@ -215,6 +216,7 @@ public class ContextMenuContent extends StackPane {
     }
 
     @Override protected void layoutChildren() {
+        if (itemsContainer.getChildren().size() == 0) return;
         final double x = snapSpace(getInsets().getLeft());
         final double y = snapSpace(getInsets().getTop());
         final double w = snapSize(getWidth()) - (snapSpace(getInsets().getLeft()) + snapSpace(getInsets().getRight()));
@@ -258,6 +260,7 @@ public class ContextMenuContent extends StackPane {
      @Override protected double computePrefWidth(double height) {
          computeVisualMetrics();
          double prefWidth = 0;
+         if (itemsContainer.getChildren().size() == 0) return 0;
          for (Node n : itemsContainer.getChildren()) {
              if (! n.isVisible()) continue;
              prefWidth = Math.max(prefWidth, snapSize(n.prefWidth(-1)));
@@ -266,6 +269,7 @@ public class ContextMenuContent extends StackPane {
     }
 
     @Override protected double computePrefHeight(double width) {
+        if (itemsContainer.getChildren().size() == 0) return 0;
         final double screenHeight = getScreenHeight();
         final double contentHeight = getContentHeight(); // itemsContainer.prefHeight(width);
         double totalHeight = snapSpace(getInsets().getTop()) + snapSize(contentHeight) + snapSpace(getInsets().getBottom());
@@ -1157,7 +1161,7 @@ public class ContextMenuContent extends StackPane {
             node.setOnMouseClicked(new EventHandler<MouseEvent>() {
                 @Override public void handle(MouseEvent event) {
                     if (item == null || item.isDisable()) return;
-                    
+
                     item.fire();
                     if (item.isHideOnClick()) {
                         hideAllMenus(item);
