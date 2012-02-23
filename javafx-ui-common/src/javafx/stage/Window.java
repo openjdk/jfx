@@ -51,8 +51,10 @@ import javafx.scene.Scene;
 import com.sun.javafx.WeakReferenceQueue;
 import com.sun.javafx.beans.annotations.NoInit;
 import com.sun.javafx.css.StyleManager;
+import com.sun.javafx.stage.WindowBoundsAccessor;
 import com.sun.javafx.stage.WindowEventDispatcher;
 import com.sun.javafx.stage.WindowPeerListener;
+import com.sun.javafx.tk.TKPulseListener;
 import com.sun.javafx.tk.TKScene;
 import com.sun.javafx.tk.TKStage;
 import com.sun.javafx.tk.Toolkit;
@@ -73,6 +75,27 @@ public class Window implements EventTarget {
      * A list of all the currently existing windows. This is only used by SQE for testing.
      */
     private static WeakReferenceQueue<Window>windowQueue = new WeakReferenceQueue<Window>();
+
+    /**
+     * Allows window peer listeners to directly change window location and size
+     * without changing the xExplicit, yExcplicit, widthExplicit and
+     * heightExplicit values.
+     */
+    private static final WindowBoundsAccessor BOUNDS_ACCESSOR =
+            new WindowBoundsAccessor() {
+                @Override
+                public void setLocation(Window window, double x, double y) {
+                    window.x.set(x);
+                    window.y.set(y);
+                }
+
+                @Override
+                public void setSize(Window window,
+                                    double width, double height) {
+                    window.width.set(width);
+                    window.height.set(height);
+                }
+            };
 
     /**
      * Return all Windows
@@ -122,6 +145,9 @@ public class Window implements EventTarget {
      */
     @Deprecated
     protected TKStage impl_peer;
+
+    private TKBoundsConfigurator peerBoundsConfigurator =
+            new TKBoundsConfigurator();
 
     /**
      * Get Stage's peer
@@ -177,8 +203,8 @@ public class Window implements EventTarget {
             } else {
                 heightExplicit = false;
             }
-            impl_peer.setBounds(0, 0, false, false, // x/y are not set
-                    (float)w, (float)h, (float)cw, (float)ch);
+
+            peerBoundsConfigurator.setSize(w, h, cw, ch);
         }
     }
 
@@ -192,8 +218,8 @@ public class Window implements EventTarget {
             Rectangle2D bounds = Screen.getPrimary().getVisualBounds();
             double centerX = bounds.getMinX() + (bounds.getWidth() - getWidth()) / 2.0f;
             double centerY = bounds.getMinY() + (bounds.getHeight() - getHeight()) / 3.0f;
-            impl_peer.setBounds((float)centerX, (float)centerY, true, true,
-                    -1, -1, -1, -1); // width/height/clientWidth/clientHeight are not set
+
+            peerBoundsConfigurator.setLocation(centerX, centerY);
         }
     }
 
@@ -205,25 +231,14 @@ public class Window implements EventTarget {
      * {@code fullScreen} is true, but will be honored by the {@code Stage} once
      * {@code fullScreen} becomes false.
      */
-    private ReadOnlyDoubleWrapper x = new ReadOnlyDoubleWrapper(Double.NaN) {
-        @Override protected void invalidated() {
-            xExplicit = true;
-            // Need to trigger pulse incase timelines are not running
-            Toolkit.getToolkit().requestNextPulse();
-        }
+    private ReadOnlyDoubleWrapper x =
+            new ReadOnlyDoubleWrapper(this, "x", Double.NaN);
 
-        @Override
-        public Object getBean() {
-            return Window.this;
-        }
-
-        @Override
-        public String getName() {
-            return "x";
-        }
-    };
-
-    public final void setX(double value) { x.set(value); }
+    public final void setX(double value) {
+        x.set(value);
+        peerBoundsConfigurator.setX(value);
+        xExplicit = true;
+    }
     public final double getX() { return x.get(); }
     public final ReadOnlyDoubleProperty xProperty() { return x.getReadOnlyProperty(); }
 
@@ -235,25 +250,14 @@ public class Window implements EventTarget {
      * {@code fullScreen} is true, but will be honored by the {@code Stage} once
      * {@code fullScreen} becomes false.
      */
-    private ReadOnlyDoubleWrapper y = new ReadOnlyDoubleWrapper(Double.NaN) {
-        @Override protected void invalidated() {
-            yExplicit = true;
-            // Need to trigger pulse incase timelines are not running
-            Toolkit.getToolkit().requestNextPulse();
-        }
+    private ReadOnlyDoubleWrapper y =
+            new ReadOnlyDoubleWrapper(this, "y", Double.NaN);
 
-        @Override
-        public Object getBean() {
-            return Window.this;
-        }
-
-        @Override
-        public String getName() {
-            return "y";
-        }
-    };
-
-    public final void setY(double value) { y.set(value); }
+    public final void setY(double value) {
+        y.set(value);
+        peerBoundsConfigurator.setY(value);
+        yExplicit = true;
+    }
     public final double getY() { return y.get(); }
     public final ReadOnlyDoubleProperty yProperty() { return y.getReadOnlyProperty(); }
 
@@ -268,25 +272,14 @@ public class Window implements EventTarget {
      * frame handles. Typical applications will set the {@link javafx.scene.Scene} width
      * instead.
      */
-    private ReadOnlyDoubleWrapper width = new ReadOnlyDoubleWrapper(Double.NaN) {
-        @Override protected void invalidated() {
-            widthExplicit = true;
-            // Need to trigger pulse incase timelines are not running
-            Toolkit.getToolkit().requestNextPulse();
-        }
+    private ReadOnlyDoubleWrapper width =
+            new ReadOnlyDoubleWrapper(this, "width", Double.NaN);
 
-        @Override
-        public Object getBean() {
-            return Window.this;
-        }
-
-        @Override
-        public String getName() {
-            return "width";
-        }
-    };
-
-    public final void setWidth(double value) { width.set(value); }
+    public final void setWidth(double value) {
+        width.set(value);
+        peerBoundsConfigurator.setWindowWidth(value);
+        widthExplicit = true;
+    }
     public final double getWidth() { return width.get(); }
     public final ReadOnlyDoubleProperty widthProperty() { return width.getReadOnlyProperty(); }
 
@@ -300,25 +293,14 @@ public class Window implements EventTarget {
      * decorations which may be added by the Operating System such as the title
      * bar. Typical applications will set the {@link javafx.scene.Scene} height instead.
      */
-    private ReadOnlyDoubleWrapper height = new ReadOnlyDoubleWrapper(Double.NaN) {
-        @Override protected void invalidated() {
-            heightExplicit = true;
-            // Need to trigger pulse incase timelines are not running
-            Toolkit.getToolkit().requestNextPulse();
-        }
+    private ReadOnlyDoubleWrapper height =
+            new ReadOnlyDoubleWrapper(this, "height", Double.NaN);
 
-        @Override
-        public Object getBean() {
-            return Window.this;
-        }
-
-        @Override
-        public String getName() {
-            return "height";
-        }
-    };
-
-    public final void setHeight(double value) { height.set(value); }
+    public final void setHeight(double value) {
+        height.set(value);
+        peerBoundsConfigurator.setWindowHeight(value);
+        heightExplicit = true;
+    }
     public final double getHeight() { return height.get(); }
     public final ReadOnlyDoubleProperty heightProperty() { return height.getReadOnlyProperty(); }
 
@@ -691,10 +673,12 @@ public class Window implements EventTarget {
                         peerListener = new WindowPeerListener(Window.this);
                     }
 
+                    peerListener.setBoundsAccessor(BOUNDS_ACCESSOR);
+
                     // Setup listener for changes coming back from peer
                     impl_peer.setTKStageListener(peerListener);
                     // Register pulse listener
-                    tk.addStageTkPulseListener(peerListener);
+                    tk.addStageTkPulseListener(peerBoundsConfigurator);
 
                     // This method must be called from init or postinit
                     // to make sure that the runtime knows the security
@@ -710,15 +694,19 @@ public class Window implements EventTarget {
                     // Set peer bounds
                     if ((getScene() != null) && (!widthExplicit || !heightExplicit)) {
                         adjustSize(true);
-                    } else {
-                        impl_peer.setBounds(0, 0, false, false,
-                                (float)getWidth(), (float)getHeight(), -1, -1);
                     }
-                    if (xExplicit || yExplicit) {
-                        impl_peer.setBounds((float)getX(), (float)getY(), xExplicit, yExplicit, -1, -1, -1, -1);
-                    } else {
+                    
+                    if (!xExplicit && !yExplicit) {
+                        // need to call apply before centering in the case the
+                        // window with and height needs to be calculated from
+                        // the scene (client) width / height (won't work on X11)
+                        peerBoundsConfigurator.apply();
                         centerOnScreen();
                     }
+
+                    // set bounds before the window is shown
+                    peerBoundsConfigurator.apply();
+
                     impl_peer.setOpacity((float)getOpacity());
 
                     impl_peer.setVisible(true);
@@ -735,7 +723,7 @@ public class Window implements EventTarget {
                     }
 
                     // Remove toolkit pulse listener
-                    tk.removeStageTkPulseListener(peerListener);
+                    tk.removeStageTkPulseListener(peerBoundsConfigurator);
                     // Remove listener for changes coming back from peer
                     impl_peer.setTKStageListener(null);
 
@@ -999,6 +987,109 @@ public class Window implements EventTarget {
     private void focusChanged(final boolean newIsFocused) {
         if ((focusGrabCounter > 0) && (impl_peer != null) && newIsFocused) {
             impl_peer.grabFocus();
+        }
+    }
+
+    /**
+     * Caches all requested bounds settings and applies them at once during
+     * the next pulse.
+     */
+    private final class TKBoundsConfigurator implements TKPulseListener {
+        private double x;
+        private double y;
+        private double windowWidth;
+        private double windowHeight;
+        private double clientWidth;
+        private double clientHeight;
+
+        private boolean dirty;
+
+        public TKBoundsConfigurator() {
+            reset();
+        }
+
+        public void setX(final double x) {
+            this.x = x;
+            setDirty();
+        }
+
+        public void setY(final double y) {
+            this.y = y;
+            setDirty();
+        }
+
+        public void setWindowWidth(final double windowWidth) {
+            this.windowWidth = windowWidth;
+            setDirty();
+        }
+
+        public void setWindowHeight(final double windowHeight) {
+            this.windowHeight = windowHeight;
+            setDirty();
+        }
+
+        public void setClientWidth(final double clientWidth) {
+            this.clientWidth = clientWidth;
+            setDirty();
+        }
+
+        public void setClientHeight(final double clientHeight) {
+            this.clientHeight = clientHeight;
+            setDirty();
+        }
+
+        public void setLocation(final double x, final double y) {
+            this.x = x;
+            this.y = y;
+            setDirty();
+        }
+
+        public void setSize(final double windowWidth,
+                            final double windowHeight,
+                            final double clientWidth,
+                            final double clientHeight) {
+            this.windowWidth = windowWidth;
+            this.windowHeight = windowHeight;
+            this.clientWidth = clientWidth;
+            this.clientHeight = clientHeight;
+            setDirty();
+        }
+
+        public void apply() {
+            if (dirty) {
+                impl_peer.setBounds((float) (Double.isNaN(x) ? 0 : x),
+                                    (float) (Double.isNaN(y) ? 0 : y),
+                                    !Double.isNaN(x),
+                                    !Double.isNaN(y),
+                                    (float) windowWidth,
+                                    (float) windowHeight,
+                                    (float) clientWidth,
+                                    (float) clientHeight);
+
+                reset();
+            }
+        }
+
+        @Override
+        public void pulse() {
+            apply();
+        }
+
+        private void reset() {
+            x = Double.NaN;
+            y = Double.NaN;
+            windowWidth = -1;
+            windowHeight = -1;
+            clientWidth = -1;
+            clientHeight = -1;
+            dirty = false;
+        }
+
+        private void setDirty() {
+            if (!dirty) {
+                Toolkit.getToolkit().requestNextPulse();
+                dirty = true;
+            }
         }
     }
 }

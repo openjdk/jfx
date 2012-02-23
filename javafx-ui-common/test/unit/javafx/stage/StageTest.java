@@ -26,6 +26,7 @@ package javafx.stage;
 
 import static junit.framework.Assert.assertEquals;
 import static junit.framework.Assert.assertFalse;
+import static junit.framework.Assert.assertTrue;
 import static junit.framework.Assert.assertSame;
 import javafx.scene.Group;
 import javafx.scene.Scene;
@@ -143,26 +144,26 @@ public class StageTest {
      * the peer of size and location more than once.
      */
     public @Test void testSizeAndLocationChangedOverTime() {
-        // New stage with no dimension does not sync dimensions
         pulse();
-        assertEquals(1, peer.numTimesSetSizeAndLocation - initialNumTimesSetSizeAndLocation);
+        assertTrue((peer.numTimesSetSizeAndLocation - initialNumTimesSetSizeAndLocation) <= 1);
+        initialNumTimesSetSizeAndLocation = peer.numTimesSetSizeAndLocation;
         // Oncethe width/height is set it is synced once on pulse
         s.setWidth(300);
         s.setHeight(400);
         pulse();
         assertEquals(300f, peer.width);
         assertEquals(400f, peer.height);
-        assertEquals(2, peer.numTimesSetSizeAndLocation - initialNumTimesSetSizeAndLocation);
+        assertEquals(1, peer.numTimesSetSizeAndLocation - initialNumTimesSetSizeAndLocation);
         // Setting y will trigger one more sync
         s.setY(200);
         pulse();
         assertEquals(200f, peer.y);
-        assertEquals(3, peer.numTimesSetSizeAndLocation - initialNumTimesSetSizeAndLocation);
+        assertEquals(2, peer.numTimesSetSizeAndLocation - initialNumTimesSetSizeAndLocation);
         // .. same for setting y
         s.setX(100);
         pulse();
         assertEquals(100f, peer.x);
-        assertEquals(4, peer.numTimesSetSizeAndLocation - initialNumTimesSetSizeAndLocation);
+        assertEquals(3, peer.numTimesSetSizeAndLocation - initialNumTimesSetSizeAndLocation);
     }
 
     /**
