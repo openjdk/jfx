@@ -1305,9 +1305,6 @@ public class TabPaneSkin extends SkinBase<TabPane, TabPaneBehavior> {
             downArrowBtn.getChildren().add(downArrow);
             downArrowBtn.setOnMouseClicked(new EventHandler<MouseEvent>() {
                 @Override public void handle(MouseEvent me) {
-                    if (popup == null) {
-                        setupPopupMenu();
-                    }
                     for (MenuItem mi: popup.getItems()) {
                         TabMenuItem tmi = (TabMenuItem)mi;
                         if (selectedTab.equals(tmi.getTab())) {
@@ -1518,6 +1515,9 @@ public class TabPaneSkin extends SkinBase<TabPane, TabPaneBehavior> {
             timeline.getKeyFrames().clear();
             timeline.getKeyFrames().add(new KeyFrame(Duration.millis(ANIMATION_SPEED), new EventHandler<ActionEvent>() {
                 @Override public void handle(ActionEvent event) {
+                    if (popup == null) {
+                        setupPopupMenu();
+                    }
                     requestLayout();
                 }
             }, keyValue));
