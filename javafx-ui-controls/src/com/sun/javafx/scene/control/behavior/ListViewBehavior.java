@@ -286,20 +286,20 @@ public class ListViewBehavior<T> extends BehaviorBase<ListView<T>> {
     public ListViewBehavior(ListView control) {
         super(control);
         
-//        control.itemsProperty().addListener(new ChangeListener<ObservableList<T>>() {
-//            @Override public void changed(ObservableValue ov, 
-//                        ObservableList oldValue, 
-//                        ObservableList newValue) {
-//                if (oldValue != null) {
-//                    oldValue.removeListener(itemsListListener);
-//                } if (newValue != null) {
-//                    newValue.addListener(itemsListListener);
-//                }
-//            }
-//        });
-//        if (control.getItems() != null) {
+        control.itemsProperty().addListener(new ChangeListener<ObservableList<T>>() {
+            @Override public void changed(ObservableValue ov, 
+                        ObservableList oldValue, 
+                        ObservableList newValue) {
+                if (oldValue != null) {
+                    oldValue.removeListener(itemsListListener);
+                } if (newValue != null) {
+                    newValue.addListener(itemsListListener);
+                }
+            }
+        });
+        if (control.getItems() != null) {
             control.getItems().addListener(itemsListListener);
-//        }
+        }
         
         // Fix for RT-16565
         getControl().selectionModelProperty().addListener(new ChangeListener<MultipleSelectionModel<T>>() {
