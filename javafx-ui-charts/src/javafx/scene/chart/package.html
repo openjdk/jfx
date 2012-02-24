@@ -1,0 +1,242 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.0 Transitional//EN">
+<HTML>
+<HEAD>
+	<META HTTP-EQUIV="CONTENT-TYPE" CONTENT="text/html; charset=windows-1252">
+	<TITLE>javafx.scene.chart</TITLE>
+	<META NAME="GENERATOR" CONTENT="OpenOffice.org 3.3  (Win32)">
+	<META NAME="CREATED" CONTENT="0;0">
+	<META NAME="CHANGED" CONTENT="20110913;10015018">
+	<STYLE TYPE="text/css">
+	<!--
+		PRE.cjk { font-family: "NSimSun", monospace }
+	-->
+	</STYLE>
+</HEAD>
+<BODY LANG="en-US" DIR="LTR">
+<P>The JavaFX User Interface provides a set of chart components that
+are a very convenient way for data visualization. Application
+developers can make use of these off-the-rack graphical charts
+provided by the SDK, to visualize a wide variety of data.</P>
+<P>Commom types of charts such as {@link javafx.scene.chart.BarChart
+Bar}, {@link javafx.scene.chart.LineChart Line}, {@link
+javafx.scene.chart.AreaChart Area}, {@link
+javafx.scene.chart.PieChart Pie}, {@link
+javafx.scene.chart.ScatterChart Scatter} and {@link
+javafx.scene.chart.BubbleChart Bubble} charts are provided. These
+charts are easy to create and are customizable. JavaFX Charts API is
+a visual centric API rather than model centric. 
+</P>
+<P>JavaFX charts supports animation of chart components as well as
+auto ranging of chart Axis.  In addition, as with other JavaFX UI
+controls, chart visual components can be styled via CSS. Thus, there
+are several public visual properties that can be styled via CSS. An
+example is provided later in the document. 
+</P>
+<P>Below is a table listing the existing Chart types and a brief
+summary of their intended use.</P>
+<TABLE CELLPADDING=2 CELLSPACING=2>
+	<TR>
+		<TH>
+			<P>Chart</P>
+		</TH>
+		<TH>
+			<P>Summary</P>
+		</TH>
+	</TR>
+	<TR>
+		<TD>
+			<P>{@link javafx.scene.chart.LineChart}</P>
+		</TD>
+		<TD>
+			<P>Plots line between the data points in a series. Used usually to
+			view data trends over time.</P>
+		</TD>
+	</TR>
+	<TR>
+		<TD>
+			<P>{@link javafx.scene.chart.AreaChart}</P>
+		</TD>
+		<TD>
+			<P>Plots the area between the line that connects the data points
+			and the axis. Good for comparing cumulated totals over time.</P>
+		</TD>
+	</TR>
+	<TR>
+		<TD>
+			<P>{@link javafx.scene.chart.BarChart}</P>
+		</TD>
+		<TD>
+			<P>Plots rectangular bars with heights indicating data values they
+			represent, and corresponding to the categories they belongs to.
+			Used for displaying discontinuous / discrete data</P>
+		</TD>
+	</TR>
+	<TR>
+		<TD>
+			<P>{@link javafx.scene.chart.PieChart}</P>
+		</TD>
+		<TD>
+			<P>Plots circular chart divided into segments with each segment
+			representing a value as a proportion of the total. It looks like a
+			Pie and hence the name 
+			</P>
+		</TD>
+	</TR>
+	<TR>
+		<TD>
+			<P>{@link javafx.scene.chart.BubbleChart}</P>
+		</TD>
+		<TD>
+			<P>Plots bubbles for data points in a series. Each plotted entity
+			depicts three parameters in a 2D chart and hence a unique chart
+			type.</P>
+		</TD>
+	</TR>
+	<TR>
+		<TD>
+			<P>{@link javafx.scene.chart.ScatterChart}</P>
+		</TD>
+		<TD>
+			<P>Plots symbols for the data points in a series. This type of
+			chart is useful in viewing distribution of data and its
+			corelation, if there is any clustering.</P>
+		</TD>
+	</TR>
+</TABLE>
+<P>The {@link javafx.scene.chart.Chart} is the baseclass for all
+charts. It is responsible for drawing the background, frame, title
+and legend. It can be extended to create custom chart types. The
+{@link javafx.scene.chart.XYChart} is the baseclass for all two axis
+charts and it extends from Chart class. It is mostly responsible for
+drawing the two axis and the background of the chart plot. Most
+charts extend from XYChart class except for PieChart which extends
+from Chart class as it is not a two axis chart. 
+</P>
+<P>The {@link javafx.scene.chart} package includes axis classes that
+can be used when creating two axis charts. {@link
+javafx.scene.chart.Axis} is the abstract base class of all chart
+axis. {@link javafx.scene.chart.CategoryAxis} plots string categories
+where each value is a unique category along the axis. {@link
+javafx.scene.chart.NumberAxis} plots a range of numbers with major
+tick marks every tickUnit. 
+</P>
+<P>For Example BarChart plots data from a sequence of {@link
+javafx.scene.chart.XYChart.Series} objects. Each series contains
+{@link javafx.scene.chart.XYChart.Data} objects. 
+</P>
+<UL>
+	<PRE CLASS="western">// add data
+XYChart.Series&lt;String,Number&gt; series1 = new XYChart.Series&lt;String,Number&gt;();
+series1.setName(&quot;Data Series 1&quot;);
+series1.getData().add(new XYChart.Data&lt;String,Number&gt;(&ldquo;2007&rdquo;, 567));
+    </PRE>
+</UL>
+<P>We can define more series objects similarly. Following code
+snippet shows how to create a BarChart with 3 categories and its X
+and Y axis: 
+</P>
+<UL>
+	<PRE CLASS="western">static String[] years = {&quot;2007&quot;, &quot;2008&quot;, &quot;2009&quot;};
+final CategoryAxis xAxis = new CategoryAxis();
+final NumberAxis yAxis = new NumberAxis();
+final BarChart&lt;String,Number&gt; bc = new BarChart&lt;String,Number&gt;(xAxis,yAxis);
+xAxis.setCategories(FXCollections.&lt;String&gt;observableArrayList(Arrays.asList(years)));
+bc.getData().addAll(series1, series2, series3);
+   </PRE>
+</UL>
+<P>JavaFX charts lends itself very well for real time or dynamic
+Charting (like online stocks, web traffic etc) from live data sets.
+Here is an example of a dynamic chart created with simulated data. A
+{@link javafx.animation.Timeline} is used to simulate dynamic data
+for stock price variations over time(hours). 
+</P>
+<UL>
+	<PRE CLASS="western">private XYChart.Series&lt;Number,Number&gt; hourDataSeries; 
+private NumberAxis xAxis;
+private Timeline animation;
+private double hours = 0; 
+private double timeInHours = 0;
+private double prevY = 10;
+private double y = 10; 
+
+<FONT FACE="Courier New, monospace">// timeline to add new data every 60<SUP>th</SUP> of a second</FONT>
+<FONT FACE="Courier New, monospace">animation = new Timeline();</FONT>
+<FONT FACE="Courier New, monospace">animation.getKeyFrames().add(new KeyFrame(Duration.millis(1000 / 60), new    EventHandler&lt;ActionEvent&gt;() {</FONT>
+    <FONT FACE="Courier New, monospace">@Override public void handle(ActionEvent actionEvent) {</FONT>
+        <FONT FACE="Courier New, monospace">// 6 minutes data per frame</FONT></PRE>
+	<UL>
+		<PRE CLASS="western">  <FONT FACE="Courier New, monospace">for(int count=0; count &lt; 6; count++) {</FONT></PRE>
+		<UL>
+			<PRE CLASS="western"><FONT FACE="Courier New, monospace">nextTime();</FONT>
+<FONT FACE="Courier New, monospace">plotTime();</FONT></PRE>
+		</UL>
+		<PRE CLASS="western">  <FONT FACE="Courier New, monospace">}</FONT>
+<FONT FACE="Courier New, monospace">}</FONT></PRE>
+	</UL>
+	<PRE CLASS="western"><FONT FACE="Courier New, monospace"><FONT SIZE=2>}));</FONT></FONT>
+<FONT FACE="Courier New, monospace"><FONT SIZE=2>animation.set</FONT></FONT><FONT FACE="Courier New, monospace">CycleCount(Animation.INDEFINITE);</FONT>
+
+<FONT FACE="Courier New, monospace"><FONT SIZE=2>xAxis = new NumberAxis(0,24,3);</FONT></FONT></PRE>
+</UL>
+<PRE CLASS="western">      <FONT FACE="Courier New, monospace">final NumberAxis yAxis = new NumberAxis(0,100,10);</FONT>
+      <FONT FACE="Courier New, monospace">final LineChart&lt;Number,Number&gt; lc = new LineChart&lt;Number,Number&gt;(xAxis,yAxis);</FONT>
+
+      <FONT FACE="Courier New, monospace">lc.setCreateSymbols(false);</FONT>
+      <FONT FACE="Courier New, monospace">lc.setAnimated(false);</FONT>
+      <FONT FACE="Courier New, monospace">lc.setLegendVisible(false);</FONT>
+      <FONT FACE="Courier New, monospace">lc.setTitle(&quot;ACME Company Stock&quot;);</FONT>
+
+      <FONT FACE="Courier New, monospace">xAxis.setLabel(&quot;Time&quot;);</FONT>
+      <FONT FACE="Courier New, monospace">xAxis.setForceZeroInRange(false);</FONT>
+      <FONT FACE="Courier New, monospace">yAxis.setLabel(&quot;Share Price&quot;);</FONT>
+      <FONT FACE="Courier New, monospace">yAxis.setTickLabelFormatter(new NumberAxis.DefaultFormatter(yAxis,&quot;$&quot;,null));</FONT>
+
+      <FONT FACE="Courier New, monospace">hourDataSeries = new XYChart.Series&lt;Number,Number&gt;();</FONT>
+      <FONT FACE="Courier New, monospace">hourDataSeries.setName(&quot;Hourly Data&quot;);</FONT>
+      <FONT FACE="Courier New, monospace">hourDataSeries.getData().add(new XYChart.Data&lt;Number,Number&gt;(timeInHours,prevY));</FONT>
+      <FONT FACE="Courier New, monospace">lc.getData().add(hourDataSeries);</FONT>
+
+      <FONT FACE="Courier New, monospace">private void nextTime() {</FONT>
+          <FONT FACE="Courier New, monospace">if (minutes == 59) {</FONT>
+              <FONT FACE="Courier New, monospace">hours ++;</FONT>
+              <FONT FACE="Courier New, monospace">minutes = 0;</FONT>
+          <FONT FACE="Courier New, monospace">} else {</FONT>
+              <FONT FACE="Courier New, monospace">minutes ++;</FONT>
+          <FONT FACE="Courier New, monospace">}</FONT>
+          <FONT FACE="Courier New, monospace">timeInHours = hours + ((1d/60d)*minutes);</FONT>
+      <FONT FACE="Courier New, monospace">}</FONT>
+
+      <FONT FACE="Courier New, monospace">private void plotTime() {</FONT>
+          <FONT FACE="Courier New, monospace">if ((timeInHours % 1) == 0) {</FONT>
+              <FONT FACE="Courier New, monospace">// change of hour</FONT>
+              <FONT FACE="Courier New, monospace">double oldY = y;</FONT>
+              <FONT FACE="Courier New, monospace">y = prevY - 10 + (Math.random()*20);</FONT>
+              <FONT FACE="Courier New, monospace">prevY = oldY;</FONT>
+              <FONT FACE="Courier New, monospace">while (y &lt; 10 || y &gt; 90) y = y - 10 + (Math.random()*20);</FONT>
+              <FONT FACE="Courier New, monospace">hourDataSeries.getData().add(new XYChart.Data&lt;Number, Number&gt;(timeInHours, prevY));</FONT>
+              <FONT FACE="Courier New, monospace">// after 25hours delete old data</FONT>
+              <FONT FACE="Courier New, monospace">if (timeInHours &gt; 25) hourDataSeries.getData().remove(0);</FONT>
+              <FONT FACE="Courier New, monospace">// every hour after 24 move range 1 hour</FONT>
+              <FONT FACE="Courier New, monospace">if (timeInHours &gt; 24) {</FONT>
+                  <FONT FACE="Courier New, monospace">xAxis.setLowerBound(xAxis.getLowerBound()+1);</FONT>
+                  <FONT FACE="Courier New, monospace">xAxis.setUpperBound(xAxis.getUpperBound()+1);</FONT>
+              <FONT FACE="Courier New, monospace">}</FONT>
+          <FONT FACE="Courier New, monospace">}</FONT>
+      <FONT FACE="Courier New, monospace">}</FONT></PRE><P STYLE="margin-bottom: 0in">
+<BR>
+</P>
+<P>The start method needs to call animation,.play() to start the
+simulated dynamic chart.</P>
+<P>Please refer to javafx.scene.control package documentation on CSS
+styling. An example for styling a Chart via CSS is as follows:- to
+set the chart content background to a certain color:</P>
+<P>.chart-content { -fx-background-color: cyan;}</P>
+<P>Line Chart line color can be styled as follows:-</P>
+<P>.chart-series-line { -fx-stroke: green; -fx-stroke-width: 4px;}</P>
+<P STYLE="margin-bottom: 0in"><BR>
+</P>
+<UL>
+	<PRE CLASS="western" STYLE="margin-bottom: 0.2in">        </PRE>
+</UL>
+</BODY>
+</HTML>
