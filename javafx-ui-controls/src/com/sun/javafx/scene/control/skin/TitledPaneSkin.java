@@ -180,18 +180,15 @@ public class TitledPaneSkin extends LabeledSkinBase<TitledPane, TitledPaneBehavi
 
         // content
         double contentWidth = w;
-        double contentHeight = h - headerHeight;//snapSize(contentRegion.prefHeight(-1));
+        double contentHeight = h - headerHeight;
         if (getSkinnable().getParent() != null && getSkinnable().getParent() instanceof AccordionSkin) {
             if (prefHeightFromAccordion != 0) {
                 contentHeight = prefHeightFromAccordion - headerHeight;
             }
         }
 
-        double y = snapSpace(getInsets().getTop() + headerHeight) - (contentHeight * (1 - getTransition()));
-
-        //((Rectangle)contentRegion.getClip()).setY(contentHeight * (1 - getTransition()));
         contentRegion.resize(contentWidth, contentHeight);
-        positionInArea(contentRegion, snapSpace(getInsets().getLeft()), snapSpace(y),
+        positionInArea(contentRegion, snapSpace(getInsets().getLeft()), snapSpace(headerHeight),
             w, contentHeight, /*baseline ignored*/0, HPos.CENTER, VPos.CENTER);
     }
 
