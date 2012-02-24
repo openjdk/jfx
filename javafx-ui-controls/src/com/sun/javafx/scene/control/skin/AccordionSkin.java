@@ -25,8 +25,6 @@
 
 package com.sun.javafx.scene.control.skin;
 
-import java.util.List;
-
 import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
 import javafx.collections.ListChangeListener;
@@ -36,6 +34,10 @@ import javafx.scene.control.TitledPane;
 import javafx.scene.shape.Rectangle;
 
 import com.sun.javafx.scene.control.behavior.AccordionBehavior;
+
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 
 public class AccordionSkin extends SkinBase<Accordion, AccordionBehavior> {
 
@@ -57,9 +59,9 @@ public class AccordionSkin extends SkinBase<Accordion, AccordionBehavior> {
                     firstTitledPane.getStyleClass().add("first-titled-pane");
                 }
                 // TODO there may be a more efficient way to keep these in sync
-                getChildren().setAll(accordion.getPanes());
-                // TODO when we have access to the bean we need to remove the listeners
-                while (c.next()) {
+                getChildren().setAll(accordion.getPanes());                
+                while (c.next()) {          
+                    removeTitledPaneListeners(c.getRemoved());
                     initTitledPaneListeners(c.getAddedSubList());
                 }
             }
@@ -199,30 +201,46 @@ public class AccordionSkin extends SkinBase<Accordion, AccordionBehavior> {
 
     private TitledPane expandedPane = null;
     private TitledPane previousPane = null;
+    private Map<TitledPane, ChangeListener>listeners = new HashMap();
 
-    private void initTitledPaneListeners(List<? extends TitledPane> list) {
+    private void initTitledPaneListeners(List<? extends TitledPane> list) {        
         for (final TitledPane tp: list) {
             tp.setExpanded(tp == getSkinnable().getExpandedPane());
             if (tp.isExpanded()) {
                 expandedPane = tp;
             }
-            tp.expandedProperty().addListener(new ChangeListener<Boolean>() {
-                @Override public void changed(ObservableValue<? extends Boolean> observable, Boolean wasExpanded, Boolean expanded) {
-                    previousPane = expandedPane;
-                    if (expanded) {
-                        if (getSkinnable().getExpandedPane() != null) {
-                            getSkinnable().getExpandedPane().setExpanded(false);
-                        }
-                        if (tp != null) {
-                            getSkinnable().setExpandedPane(tp);
-                        }
-                        expandedPane = getSkinnable().getExpandedPane();
-                    } else {
-                        expandedPane = getSkinnable().getExpandedPane();
-                        getSkinnable().setExpandedPane(null);
-                    }
-                }
-            });
+            ChangeListener<Boolean> changeListener = expandedPropertyListener(tp);
+            tp.expandedProperty().addListener(changeListener);
+            listeners.put(tp, changeListener);
         }
+    }
+    
+    private void removeTitledPaneListeners(List<? extends TitledPane> list) {
+        for (final TitledPane tp: list) {
+            if (listeners.containsKey(tp)) {
+                tp.expandedProperty().removeListener(listeners.get(tp));
+                listeners.remove(tp);
+            }
+        }        
+    }
+    
+    private ChangeListener<Boolean> expandedPropertyListener(final TitledPane tp) {
+        return new ChangeListener<Boolean>() {
+            @Override public void changed(ObservableValue<? extends Boolean> observable, Boolean wasExpanded, Boolean expanded) {
+                previousPane = expandedPane;
+                if (expanded) {
+                    if (getSkinnable().getExpandedPane() != null) {
+                        getSkinnable().getExpandedPane().setExpanded(false);
+                    }
+                    if (tp != null) {
+                        getSkinnable().setExpandedPane(tp);
+                    }
+                    expandedPane = getSkinnable().getExpandedPane();
+                } else {
+                    expandedPane = getSkinnable().getExpandedPane();
+                    getSkinnable().setExpandedPane(null);
+                }
+            }
+        };        
     }
 }
