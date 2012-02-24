@@ -73,8 +73,11 @@ import javafx.scene.control.ToggleGroup;
 
 import com.sun.javafx.css.StyleManager;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
 
 public class TabPaneSkin extends SkinBase<TabPane, TabPaneBehavior> {
 
@@ -119,9 +122,9 @@ public class TabPaneSkin extends SkinBase<TabPane, TabPaneBehavior> {
     boolean focusTraversable = true;
     private Tab selectedTab;
     private Tab previousSelectedTab;
-    private boolean isSelectingTab;    
+    private boolean isSelectingTab;
 
-    public TabPaneSkin(TabPane tabPane) {        
+    public TabPaneSkin(TabPane tabPane) {
         super(tabPane, new TabPaneBehavior(tabPane));
 
         clipRect = new Rectangle();
@@ -172,24 +175,24 @@ public class TabPaneSkin extends SkinBase<TabPane, TabPaneBehavior> {
         }
     }
 
-    private Tab closedTab;
-    private Timeline closedTabTimeline;
-    
+    private Map<Tab, Timeline> closedTab = new HashMap();
+
     private void initializeTabListener() {
         getSkinnable().getTabs().addListener(new ListChangeListener<Tab>() {
             @Override public void onChanged(final Change<? extends Tab> c) {
+                closedTab.clear();
                 while (c.next()) {
                     for (final Tab tab : c.getRemoved()) {
-                        closedTab = tab;
                         // Animate the tab removal
                         final TabHeaderSkin tabRegion = tabHeaderArea.getTabHeaderSkin(tab);
+                        Timeline closedTabTimeline = null;
                         if (tabRegion != null) {
                             tabRegion.animating = true;
                             closedTabTimeline = createTimeline(tabRegion, Duration.millis(ANIMATION_SPEED * 1.5F), 0.0F, new EventHandler<ActionEvent>() {
 
                                 @Override
                                 public void handle(ActionEvent event) {
-                                    removeTab(tab);                                    
+                                    removeTab(tab);
                                     if (getSkinnable().getTabs().isEmpty()) {
                                         tabHeaderArea.setVisible(false);
                                     }
@@ -197,20 +200,28 @@ public class TabPaneSkin extends SkinBase<TabPane, TabPaneBehavior> {
                             });
                             closedTabTimeline.play();
                         }
+                        closedTab.put(tab, closedTabTimeline);
                     }
 
+                    int i = 0;
                     for (final Tab tab : c.getAddedSubList()) {
                         // Handle the case where we are removing and adding the same tab.
-                        if (tab.equals(closedTab)) {
+                        Timeline closedTabTimeline = closedTab.get(tab);
+                        if (closedTabTimeline != null) {
                             closedTabTimeline.stop();
-                            removeTab(closedTab);
+                            Set<Tab> keys = closedTab.keySet();
+                            for (Tab key: keys) {
+                                if (tab.equals(key)) {
+                                    removeTab(key);
+                                }
+                            }
                         }
                         // A new tab was added - animate it out
                         if (!tabHeaderArea.isVisible()) {
                             tabHeaderArea.setVisible(true);
                         }
-                        //final Tab newTab = c.getAddedSubList().get(0);
-                        tabHeaderArea.addTab(tab, c.getFrom(), false);
+                        int index = c.getFrom() + i++;
+                        tabHeaderArea.addTab(tab, index, false);
                         addTabContent(tab);
                         final TabHeaderSkin tabRegion = tabHeaderArea.getTabHeaderSkin(tab);
                         if (tabRegion != null) {
@@ -266,7 +277,7 @@ public class TabPaneSkin extends SkinBase<TabPane, TabPaneBehavior> {
         tabHeaderArea.requestLayout();
         tab = null;
     }
-    
+
     private void updateTabPosition() {
         tabHeaderArea.setScrollOffset(0.0F);
         impl_reapplyCSS();
@@ -841,7 +852,7 @@ public class TabPaneSkin extends SkinBase<TabPane, TabPaneBehavior> {
         public TabHeaderSkin(final Tab tab) {
             getStyleClass().setAll(tab.getStyleClass());
             setId(tab.getId());
-            setStyle(tab.getStyle());            
+            setStyle(tab.getStyle());
 
             this.tab = tab;
             clip = new Rectangle();
@@ -916,7 +927,7 @@ public class TabPaneSkin extends SkinBase<TabPane, TabPaneBehavior> {
 
                     double labelStartX = paddingLeft;
                     double closeBtnStartX = w - paddingRight - closeBtnWidth;
-                    
+
                     positionInArea(label, labelStartX, paddingTop, labelWidth, h,
                             /*baseline ignored*/0, HPos.CENTER, VPos.CENTER);
 
@@ -1001,7 +1012,7 @@ public class TabPaneSkin extends SkinBase<TabPane, TabPaneBehavior> {
             getSkinnable().tabMaxHeightProperty().addListener(controlListener);
             getProperties().put(Tab.class, tab);
             getProperties().put(ContextMenu.class, tab.getContextMenu());
-            
+
             setOnContextMenuRequested(new EventHandler<ContextMenuEvent>() {
                 @Override public void handle(ContextMenuEvent me) {
                    if (getTab().getContextMenu() != null) {
@@ -1061,9 +1072,9 @@ public class TabPaneSkin extends SkinBase<TabPane, TabPaneBehavior> {
             tab.graphicProperty().removeListener(tabListener);
             ContextMenu menu = tab.getContextMenu();
             if (menu != null) {
-                menu.getItems().clear();                
+                menu.getItems().clear();
             }
-            tab.contextMenuProperty().removeListener(tabListener);            
+            tab.contextMenuProperty().removeListener(tabListener);
             tab.tooltipProperty().removeListener(tabListener);
             tab.styleProperty().removeListener(tabListener);
             getSkinnable().tabClosingPolicyProperty().removeListener(controlListener);
@@ -1072,7 +1083,7 @@ public class TabPaneSkin extends SkinBase<TabPane, TabPaneBehavior> {
             getSkinnable().tabMinWidthProperty().removeListener(controlListener);
             getSkinnable().tabMaxWidthProperty().removeListener(controlListener);
             getSkinnable().tabMinHeightProperty().removeListener(controlListener);
-            getSkinnable().tabMaxHeightProperty().removeListener(controlListener);            
+            getSkinnable().tabMaxHeightProperty().removeListener(controlListener);
             inner.getChildren().clear();
             getChildren().clear();
         }
@@ -1100,7 +1111,7 @@ public class TabPaneSkin extends SkinBase<TabPane, TabPaneBehavior> {
                 tmpPrefWidth = minWidth;
             }
             tmpPrefWidth += paddingRight + paddingLeft;
-            prefWidth.setValue(tmpPrefWidth);            
+            prefWidth.setValue(tmpPrefWidth);
             return tmpPrefWidth;
         }
 
@@ -1165,7 +1176,7 @@ public class TabPaneSkin extends SkinBase<TabPane, TabPaneBehavior> {
                     mask |= LEFT_PSEUDOCLASS_STATE;
                     break;
             }
-            
+
             return mask;
         }
 
@@ -1229,7 +1240,7 @@ public class TabPaneSkin extends SkinBase<TabPane, TabPaneBehavior> {
 
             tab.selectedProperty().addListener(tabListener);
             tab.contentProperty().addListener(tabListener);
-            
+
             engine = new TraversalEngine(this, false) {
                 @Override public void trav(Node owner, Direction dir) {
                     direction = dir;
@@ -1252,7 +1263,7 @@ public class TabPaneSkin extends SkinBase<TabPane, TabPaneBehavior> {
             tab.contentProperty().removeListener(tabListener);
             engine.removeTraverseListener(this);
         }
-        
+
         @Override public void onTraverse(Node node, Bounds bounds) {
             int index = engine.registeredNodes.indexOf(node);
 
