@@ -104,7 +104,7 @@ text.setText("The quick brown fox jumps over the lazy dog");
 </PRE>
  */
 @DefaultProperty("text")
-public final class Text extends Shape {
+public class Text extends Shape {
 
     /**
      * @treatAsPrivate implementation detail
@@ -112,7 +112,7 @@ public final class Text extends Shape {
      */
     @Deprecated
     @Override
-    protected PGNode impl_createPGNode() {
+    protected final PGNode impl_createPGNode() {
         return Toolkit.getToolkit().createPGText();
     }
 
@@ -721,7 +721,7 @@ public final class Text extends Shape {
      */
     @Deprecated
     @Override
-    protected void impl_geomChanged() {
+    protected final void impl_geomChanged() {
         getDecorationShapes();
         super.impl_geomChanged();
     }
@@ -887,7 +887,7 @@ public final class Text extends Shape {
      * @deprecated This is an internal API that is not intended for use and will be removed in the next version
      */
     @Deprecated
-    @Override protected void impl_strokeOrFillChanged() {
+    @Override protected final void impl_strokeOrFillChanged() {
         impl_markDirty(DirtyBits.TEXT_SELECTION);
     }
 
@@ -1050,7 +1050,7 @@ public final class Text extends Shape {
      * @deprecated This is an internal API that is not intended for use and will be removed in the next version
      */
     @Deprecated
-    public HitInfo impl_hitTestChar(Point2D point) {
+    public final HitInfo impl_hitTestChar(Point2D point) {
         return Toolkit.getToolkit().convertHitInfoToFX(getTextHelper().getHitInfo((float)point.getX(), (float)point.getY()));
     }
 
@@ -1061,7 +1061,7 @@ public final class Text extends Shape {
      * @deprecated This is an internal API that is not intended for use and will be removed in the next version
      */
     @Deprecated
-    public PathElement[] impl_getRangeShape(int start, int end) {
+    public final PathElement[] impl_getRangeShape(int start, int end) {
         Object nativeShape =  getTextHelper().getRangeShape(start, end);
         return Toolkit.getToolkit().convertShapeToFXPath(nativeShape);
     }
@@ -1073,7 +1073,7 @@ public final class Text extends Shape {
      * @deprecated This is an internal API that is not intended for use and will be removed in the next version
      */
     @Deprecated
-    public PathElement[] impl_getUnderlineShape(int start, int end) {
+    public final PathElement[] impl_getUnderlineShape(int start, int end) {
         Object nativeShape =  getTextHelper().getUnderlineShape(start, end);
         return Toolkit.getToolkit().convertShapeToFXPath(nativeShape);
     }
@@ -1110,7 +1110,7 @@ public final class Text extends Shape {
      * @deprecated This is an internal API that is not intended for use and will be removed in the next version
      */
     @Deprecated
-    public void impl_displaySoftwareKeyboard(boolean display) {
+    public final void impl_displaySoftwareKeyboard(boolean display) {
     }
 
     private TextHelper textHelper;
@@ -1135,7 +1135,7 @@ public final class Text extends Shape {
      */
     @Deprecated
     @Override
-    public void impl_notifyLayoutBoundsChanged() {
+    public final void impl_notifyLayoutBoundsChanged() {
         // REMIND: invalidate layout bounds
         impl_layoutBoundsInvalid = true;
         super.impl_notifyLayoutBoundsChanged();
@@ -1146,7 +1146,7 @@ public final class Text extends Shape {
      * @deprecated This is an internal API that is not intended for use and will be removed in the next version
      */
     @Deprecated
-    public BaseBounds impl_computeLayoutBoundsInt(RectBounds bounds) {
+    public final BaseBounds impl_computeLayoutBoundsInt(RectBounds bounds) {
         if (getBoundsType() == TextBoundsType.VISUAL) {
             // fast path for case where there simply isn't any text
             if (getTextInternal().equals("")) {
@@ -1167,7 +1167,7 @@ public final class Text extends Shape {
      */
     @Deprecated
     @Override
-    protected Bounds impl_computeLayoutBounds()
+    protected final Bounds impl_computeLayoutBounds()
     {
         if (impl_layoutBoundsInvalid) {
             impl_computeLayoutBoundsInt(impl_layoutBounds);
@@ -1187,7 +1187,7 @@ public final class Text extends Shape {
      */
     @Deprecated
     @Override
-    public BaseBounds impl_computeGeomBounds(BaseBounds bounds, BaseTransform tx) {
+    public final BaseBounds impl_computeGeomBounds(BaseBounds bounds, BaseTransform tx) {
         // fast path for case where neither fill nor stroke is set or where
         // there simply isn't any text. Applies only to VISUAL bounds.
         if ((impl_mode == PGShape.Mode.EMPTY || getTextInternal().equals("") &&
@@ -1204,7 +1204,7 @@ public final class Text extends Shape {
      */
     @Deprecated
     @Override
-    protected boolean impl_computeContains(double localX, double localY) {
+    protected final boolean impl_computeContains(double localX, double localY) {
         // Need to call the TextHelper to do glyph (geometry) based picking.
 
         // Perform the expensive glyph (geometry) based picking
@@ -1218,7 +1218,7 @@ public final class Text extends Shape {
      */
     @Deprecated
     @Override
-	public com.sun.javafx.geom.Shape impl_configShape() {
+    public final com.sun.javafx.geom.Shape impl_configShape() {
         Object nativeShape = getTextHelper().getShape();
         final PathElement[] textPath =
                 Toolkit.getToolkit().convertShapeToFXPath(nativeShape);
@@ -1233,7 +1233,7 @@ public final class Text extends Shape {
      * @deprecated This is an internal API that is not intended for use and will be removed in the next version
      */
     @Deprecated
-    public ObjectProperty<Paint> impl_selectionFillProperty() {
+    public final ObjectProperty<Paint> impl_selectionFillProperty() {
         if (selectionFill == null) {
             selectionFill = new SimpleObjectProperty<Paint>(this, "selectionFill", Color.WHITE);
         }
@@ -1436,7 +1436,7 @@ public final class Text extends Shape {
      */
     @Deprecated
     @Override
-    public void impl_updatePG() {
+    public final void impl_updatePG() {
         super.impl_updatePG();
         updatePGText();
     }
