@@ -63,7 +63,6 @@ import com.sun.javafx.css.StyleableDoubleProperty;
 import com.sun.javafx.css.StyleableProperty;
 import com.sun.javafx.css.converters.SizeConverter;
 import com.sun.javafx.scene.control.WeakListChangeListener;
-import com.sun.javafx.tk.Toolkit;
 
 
 /**
@@ -588,7 +587,7 @@ public class TableColumnHeader extends StackPane {
         }
         
         double sortWidth = 0;
-        double w = getWidth() - getInsets().getLeft() + getInsets().getRight();
+        double w = snapSize(getWidth()) - (snapSpace(getInsets().getLeft()) + snapSpace(getInsets().getRight()));
         double h = getHeight() - getInsets().getTop() + getInsets().getBottom();
         double x = w;
         

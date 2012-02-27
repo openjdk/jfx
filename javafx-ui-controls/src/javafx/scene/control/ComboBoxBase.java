@@ -81,9 +81,14 @@ public abstract class ComboBoxBase<T> extends Control {
      */
     public ObjectProperty<T> valueProperty() { return value; }
     private ObjectProperty<T> value = new SimpleObjectProperty<T>(this, "value") {
-        @Override protected void invalidated() {
-            super.invalidated();
-            fireEvent(new ActionEvent());
+        @Override public void set(T newValue) {
+            T oldValue = get();
+            super.set(newValue);
+            
+            if ((oldValue == null && newValue != null) ||
+                    oldValue != null && ! oldValue.equals(newValue)) {
+                fireEvent(new ActionEvent());
+            }
         }
     };
     public final void setValue(T value) { valueProperty().set(value); }

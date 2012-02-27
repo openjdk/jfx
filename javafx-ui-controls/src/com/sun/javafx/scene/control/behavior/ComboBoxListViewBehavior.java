@@ -26,21 +26,13 @@
 package com.sun.javafx.scene.control.behavior;
 
 import javafx.scene.control.ComboBox;
-import javafx.scene.control.ComboBoxBase;
-import javafx.beans.Observable;
 import static javafx.scene.input.KeyCode.*;
 import static javafx.scene.input.KeyEvent.*;
-
-import com.sun.javafx.Utils;
-
-import javafx.scene.input.MouseEvent;
 
 import java.util.ArrayList;
 import java.util.List;
 
-import javafx.beans.InvalidationListener;
 import javafx.scene.control.SelectionModel;
-import javafx.scene.input.MouseButton;
 
 public class ComboBoxListViewBehavior<T> extends ComboBoxBaseBehavior<T> {
 
