@@ -28,24 +28,22 @@ public class StubPopupStage extends StubStage {
 
     @Override
     public void close() {
-        if (listener != null) {
-            listener.closing();
-        }
+        getNotificationSender().closing();
     }
 
     @Override
     public void setFullScreen(boolean fullScreen) {
-        listener.changedFullscreen(fullScreen);
+        getNotificationSender().changedFullscreen(fullScreen);
     }
 
     @Override
     public void setIconified(boolean iconified) {
-        listener.changedIconified(iconified);
+        getNotificationSender().changedIconified(iconified);
     }
 
     @Override
     public void setResizable(boolean resizable) {
-        listener.changedResizable(resizable);
+        getNotificationSender().changedResizable(resizable);
     }
 
 }

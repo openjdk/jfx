@@ -24,7 +24,9 @@
  */
 package com.sun.javafx.pgstub;
 
+import java.util.LinkedList;
 import java.util.List;
+import java.util.Queue;
 
 import com.sun.javafx.tk.FocusCause;
 import com.sun.javafx.tk.TKScene;
@@ -35,16 +37,19 @@ import com.sun.javafx.tk.TKStageListener;
  * @author Richard Bair
  */
 public class StubStage implements TKStage {
-    protected TKStageListener listener;
+    private NotificationSender notificationSender = new NotificationSender();
 
+    @Override
     public void setTKStageListener(TKStageListener listener) {
-        this.listener = listener;
+        notificationSender.setListener(listener);
     }
 
+    @Override
     public TKScene createTKScene(boolean depthBuffer) {
         return new StubScene();
     }
 
+    @Override
     public void setScene(TKScene scene) {
         if (scene != null) {
             StubScene s = (StubScene) scene;
@@ -65,41 +70,56 @@ public class StubStage implements TKStage {
     public boolean visible;
     public float opacity;
 
+    @Override
     public void setBounds(float x, float y, boolean xSet, boolean ySet,
                           float width, float height, float contentWidth, float contentHeight)
     {
         numTimesSetSizeAndLocation++;
-        if (xSet) {
+        
+        boolean locationChanged = false;
+
+        if (xSet && (this.x != x)) {
             this.x = x;
+            locationChanged = true;
         }
-        if (ySet) {
+
+        if (ySet && (this.y != y)) {
             this.y = y;
+            locationChanged = true;
         }
-        if (xSet || ySet) {
-            if (listener != null) {
-                listener.changedLocation(x, y);
-            }
+
+        if (locationChanged) {
+            notificationSender.changedLocation(x, y);
         }
-        boolean widthChanged = true;
+
+        boolean sizeChanged = false;
+
         if (width > 0) {
-            this.width = width;
-        } else if (contentWidth > 0) {
-            this.width = contentWidth;
-        } else {
-            widthChanged = false;
-        }
-        boolean heightChanged = true;
-        if (height > 0) {
-            this.height = height;
-        } else if (contentHeight > 0) {
-            this.height = contentHeight;
-        } else {
-            heightChanged = false;
-        }
-        if (widthChanged || heightChanged) {
-            if (listener != null) {
-                listener.changedSize(width, height);
+            if (this.width != width) {
+                this.width = width;
+                sizeChanged = true;
             }
+        } else if (contentWidth > 0) {
+            if (this.width != contentWidth) {
+                this.width = contentWidth;
+                sizeChanged = true;
+            }
+        }
+
+        if (height > 0) {
+            if (this.height != height) {
+                this.height = height;
+                sizeChanged = true;
+            }
+        } else if (contentHeight > 0) {
+            if (this.height != contentHeight) {
+                this.height = contentHeight;
+                sizeChanged = true;
+            }
+        }
+        
+        if (sizeChanged) {
+            notificationSender.changedSize(width, height);
         }
     }
 
@@ -113,70 +133,239 @@ public class StubStage implements TKStage {
         setBounds(x, y, true, true, 0, 0, 0, 0);
     }
 
+    @Override
     public void setIcons(List icons) {
     }
 
+    @Override
     public void setTitle(String title) {
     }
 
+    @Override
     public void setVisible(boolean visible) {
         this.visible = visible;
 
         if (!visible) {
-            listener.changedFocused(false, FocusCause.DEACTIVATED);
+            notificationSender.changedFocused(false, FocusCause.DEACTIVATED);
         }
-        if (listener != null) {
-            listener.changedLocation(x, y);
-            listener.changedSize(width, height);
-        }
+
+        notificationSender.changedLocation(x, y);
+        notificationSender.changedSize(width, height);
     }
 
+    @Override
     public void setOpacity(float opacity) {
         this.opacity = opacity;
     }
 
+    @Override
     public void setIconified(boolean iconified) {
     }
 
+    @Override
     public void setResizable(boolean resizable) {
     }
 
+    @Override
     public void setImportant(boolean important) {
     }
 
+    @Override
     public void initSecurityContext() {
     }
 
+    @Override
     public void setFullScreen(boolean fullScreen) {
     }
 
+    @Override
     public void requestFocus() {
-        listener.changedFocused(true, FocusCause.ACTIVATED);
+        notificationSender.changedFocused(true, FocusCause.ACTIVATED);
     }
     
+    @Override
     public void requestFocus(FocusCause cause) {
-        listener.changedFocused(true, cause);
+        notificationSender.changedFocused(true, cause);
     }
 
+    @Override
     public void toBack() {
     }
 
+    @Override
     public void toFront() {
     }
 
+    @Override
     public void close() {
     }
 
+    @Override
     public boolean grabFocus() {
         return false;
     }
 
+    @Override
     public void ungrabFocus() {
     }
 
+    @Override
     public void setMinimumSize(int minWidth, int minHeight) {
     }
 
+    @Override
     public void setMaximumSize(int maxWidth, int maxHeight) {
+    }
+
+    public void holdNotifications() {
+        notificationSender.holdNotifications();
+    }
+
+    public void releaseNotifications() {
+        notificationSender.releaseNotifications();
+    }
+
+    protected final TKStageListener getNotificationSender() {
+        return notificationSender;
+    }
+
+    private interface Notification {
+        void execute(TKStageListener listener);
+    }
+
+    private static final class NotificationSender implements TKStageListener {
+        private final Queue<Notification> queue =
+                new LinkedList<Notification>();
+
+        private boolean hold;
+        private TKStageListener listener;
+
+        public void setListener(final TKStageListener listener) {
+            this.listener = listener;
+        }
+
+        public void holdNotifications() {
+            hold = true;
+        }
+
+        public void releaseNotifications() {
+            hold = false;
+            flush();
+        }
+
+        @Override
+        public void changedLocation(final float x, final float y) {
+            process(new Notification() {
+                        @Override
+                        public void execute(final TKStageListener listener) {
+                            listener.changedLocation(x, y);
+                        }
+                    });
+        }
+
+        @Override
+        public void changedSize(final float width, final float height) {
+            process(new Notification() {
+                        @Override
+                        public void execute(final TKStageListener listener) {
+                            listener.changedSize(width, height);
+                        }
+                    });
+        }
+
+        @Override
+        public void changedFocused(final boolean focused,
+                                   final FocusCause cause) {
+            process(new Notification() {
+                        @Override
+                        public void execute(final TKStageListener listener) {
+                            listener.changedFocused(focused, cause);
+                        }
+                    });
+        }
+
+        @Override
+        public void changedIconified(final boolean iconified) {
+            process(new Notification() {
+                        @Override
+                        public void execute(final TKStageListener listener) {
+                            listener.changedIconified(iconified);
+                        }
+                    });
+        }
+
+        @Override
+        public void changedResizable(final boolean resizable) {
+            process(new Notification() {
+                        @Override
+                        public void execute(final TKStageListener listener) {
+                            listener.changedResizable(resizable);
+                        }
+                    });
+        }
+
+        @Override
+        public void changedFullscreen(final boolean fs) {
+            process(new Notification() {
+                        @Override
+                        public void execute(final TKStageListener listener) {
+                            listener.changedFullscreen(fs);
+                        }
+                    });
+        }
+
+        @Override
+        public void closing() {
+            process(new Notification() {
+                        @Override
+                        public void execute(final TKStageListener listener) {
+                            listener.closing();
+                        }
+                    });
+        }
+
+        @Override
+        public void closed() {
+            process(new Notification() {
+                        @Override
+                        public void execute(final TKStageListener listener) {
+                            listener.closed();
+                        }
+                    });
+        }
+
+        @Override
+        public void focusUngrab() {
+            process(new Notification() {
+                        @Override
+                        public void execute(final TKStageListener listener) {
+                            listener.focusUngrab();
+                        }
+                    });
+        }
+
+        private void process(final Notification notification) {
+            if (hold) {
+                queue.offer(notification);
+                return;
+            }
+
+            if (listener != null) {
+                notification.execute(listener);
+            }
+        }
+
+        private void flush() {
+            if (listener == null) {
+                queue.clear();
+                return;
+            }
+
+            Notification nextNotification = queue.poll();
+            while (nextNotification != null) {
+                nextNotification.execute(listener);
+                nextNotification = queue.poll();
+            }
+        }
     }
 }

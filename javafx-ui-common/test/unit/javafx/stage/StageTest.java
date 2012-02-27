@@ -25,13 +25,13 @@
 package javafx.stage;
 
 import static junit.framework.Assert.assertEquals;
+import static junit.framework.Assert.assertTrue;
 import static junit.framework.Assert.assertFalse;
 import static junit.framework.Assert.assertTrue;
 import static junit.framework.Assert.assertSame;
 import javafx.scene.Group;
 import javafx.scene.Scene;
 import javafx.scene.image.Image;
-import javafx.stage.StageBuilder;
 
 import org.junit.After;
 import org.junit.Before;
@@ -201,5 +201,89 @@ public class StageTest {
         assertEquals(300.0, stage.getX(), 0);
         assertEquals(400.0, stage.getY(), 0);
         assertSame(scene, stage.getScene());
+    }
+
+    @Test
+    public void testSecondCenterOnScreenNotIgnored() {
+        s.centerOnScreen();
+
+        s.setX(0);
+        s.setY(0);
+
+        s.centerOnScreen();
+
+        pulse();
+
+        assertTrue(Math.abs(peer.x) > 0.0001);
+        assertTrue(Math.abs(peer.y) > 0.0001);
+    }
+
+    @Test
+    public void testSecondSizeToSceneNotIgnored() {
+        final Scene scene = new Scene(new Group(), 200, 100);
+        s.setScene(scene);
+
+        s.sizeToScene();
+
+        s.setWidth(400);
+        s.setHeight(300);
+
+        s.sizeToScene();
+
+        pulse();
+
+        assertTrue(Math.abs(peer.width - 400) > 0.0001);
+        assertTrue(Math.abs(peer.height - 300) > 0.0001);
+    }
+
+    @Test
+    public void testSetBoundsNotLostForAsyncNotifications() {
+        s.setX(20);
+        s.setY(50);
+        s.setWidth(400);
+        s.setHeight(300);
+
+        peer.holdNotifications();
+        pulse();
+
+        s.setX(40);
+        s.setY(70);
+        s.setWidth(380);
+        s.setHeight(280);
+
+        peer.releaseNotifications();
+        pulse();
+
+        assertEquals(40.0, peer.x, 0.0001);
+        assertEquals(70.0, peer.y, 0.0001);
+        assertEquals(380.0, peer.width, 0.0001);
+        assertEquals(280.0, peer.height, 0.0001);
+    }
+
+    @Test
+    public void testBoundsSetAfterPeerIsRecreated() {
+        s.setX(20);
+        s.setY(50);
+        s.setWidth(400);
+        s.setHeight(300);
+
+        pulse();
+
+        assertEquals(20.0, peer.x, 0.0001);
+        assertEquals(50.0, peer.y, 0.0001);
+        assertEquals(400.0, peer.width, 0.0001);
+        assertEquals(300.0, peer.height, 0.0001);
+
+        // recreates the peer
+        s.hide();
+        s.show();
+
+        pulse();
+
+        peer = (StubStage) s.impl_getPeer();
+        assertEquals(20.0, peer.x, 0.0001);
+        assertEquals(50.0, peer.y, 0.0001);
+        assertEquals(400.0, peer.width, 0.0001);
+        assertEquals(300.0, peer.height, 0.0001);
     }
 }
