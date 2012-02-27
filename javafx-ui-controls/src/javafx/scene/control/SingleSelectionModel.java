@@ -148,6 +148,7 @@ public abstract class SingleSelectionModel<T> extends SelectionModel<T> {
      * index to be unselected.
      */
     @Override public void selectPrevious() {
+        if (getSelectedIndex() == 0) return;
         select(getSelectedIndex() - 1);
     }
 
