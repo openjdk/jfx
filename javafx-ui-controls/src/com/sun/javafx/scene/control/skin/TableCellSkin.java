@@ -78,7 +78,7 @@ public class TableCellSkin extends CellSkinBase<TableCell, TableCellBehavior> {
         // figure out the content area that is to be filled
         double x = getInsets().getLeft();
         double y = getInsets().getTop();
-        double w = getWidth() - (getInsets().getLeft() + getInsets().getRight());
+        double w = snapSize(getWidth()) - (snapSpace(getInsets().getLeft()) + snapSpace(getInsets().getRight()));
         double h = getHeight() - (getInsets().getTop() + getInsets().getBottom());
         
         // fit the cell within this space

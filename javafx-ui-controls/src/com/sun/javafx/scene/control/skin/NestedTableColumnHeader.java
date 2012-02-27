@@ -31,21 +31,16 @@ import java.util.List;
 import javafx.beans.InvalidationListener;
 import javafx.beans.Observable;
 import javafx.beans.WeakInvalidationListener;
-import javafx.beans.binding.Bindings;
-import javafx.beans.binding.ObjectBinding;
 import javafx.collections.ListChangeListener;
 import javafx.collections.ObservableList;
 import javafx.event.EventHandler;
 import javafx.scene.Cursor;
 import javafx.scene.Node;
-import javafx.scene.control.TableCell;
 import javafx.scene.control.TableColumn;
 import javafx.scene.control.TableView;
 import javafx.scene.input.MouseEvent;
-import javafx.scene.layout.Region;
 import javafx.scene.paint.Color;
 import javafx.scene.shape.Rectangle;
-import javafx.util.Callback;
 
 /**
  * <p>This class is used to construct the header of a TableView. We take the approach
@@ -329,9 +324,9 @@ class NestedTableColumnHeader extends TableColumnHeader {
     /* **************************/
 
     @Override protected void layoutChildren() {
-        double w = getWidth() - getInsets().getLeft() - getInsets().getRight();
+        double w = snapSize(getWidth()) - snapSpace(getInsets().getLeft()) - snapSpace(getInsets().getRight());
         double h = getHeight() - getInsets().getTop() - getInsets().getBottom();
-
+        
         int labelHeight = (int) label.prefHeight(-1);
 
         if (label.isVisible()) {
@@ -346,7 +341,7 @@ class NestedTableColumnHeader extends TableColumnHeader {
         for (TableColumnHeader n : getColumnHeaders()) {
             if (! n.isVisible()) continue;
             
-            double prefWidth = n.prefWidth(-1);
+            double prefWidth = snapSize(n.prefWidth(-1));
 //            double prefHeight = n.prefHeight(-1);
 
             // position the column header in the default location...
