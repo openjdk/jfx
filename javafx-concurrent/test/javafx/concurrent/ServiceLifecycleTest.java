@@ -46,13 +46,13 @@ public class ServiceLifecycleTest extends ServiceTestBase {
      * when something is scheduled and when it actually runs, such that the
      * test code has to manually tell it that it can now run.
      */
-    private ManualExecutor executor;
+    protected ManualExecutor executor;
 
     /**
      * The task to run, which has methods on it to allow me to manually
      * put it into a passing, failed, or whatnot state.
      */
-    private ManualTask task;
+    protected ManualTask task;
 
     @Override protected AbstractService setupService() {
         service = new AbstractService() {
@@ -72,7 +72,7 @@ public class ServiceLifecycleTest extends ServiceTestBase {
      * it manually by calling executeScheduled. In this way I can
      * test when a Service is scheduled but not yet started.
      */
-    private final class ManualExecutor implements Executor {
+    protected final class ManualExecutor implements Executor {
         private Runnable scheduled;
         private Executor wrapped;
         
@@ -93,7 +93,7 @@ public class ServiceLifecycleTest extends ServiceTestBase {
         }
     }
 
-    private final class ManualTask extends AbstractTask {
+    protected final class ManualTask extends AbstractTask {
         private AtomicBoolean finish = new AtomicBoolean(false);
         private AtomicReference<Exception> exception = new AtomicReference<Exception>();
 
