@@ -1860,7 +1860,9 @@ public class Scene implements EventTarget {
                 synchronizeSceneNodes();
                 Scene.this.mouseHandler.pulse();
                 // Tell the sceen peer that it needs to repaint
-                impl_peer.markDirty();
+                if (impl_peer != null) {
+                    impl_peer.markDirty();
+                }
             }
 
             // required for image cursor created from animated image
