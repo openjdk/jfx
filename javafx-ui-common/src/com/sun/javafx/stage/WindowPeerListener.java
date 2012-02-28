@@ -29,7 +29,6 @@ import javafx.event.Event;
 import javafx.stage.Window;
 
 import com.sun.javafx.tk.FocusCause;
-import com.sun.javafx.tk.TKPulseListener;
 import com.sun.javafx.tk.TKStageListener;
 import javafx.stage.WindowEvent;
 
@@ -37,49 +36,28 @@ import javafx.stage.WindowEvent;
  * Listener for the Stage Peer to pass updates and events back to the stage.
  *
  */
-public class WindowPeerListener implements TKStageListener, TKPulseListener {
+public class WindowPeerListener implements TKStageListener {
 
-    private Window window;
+    private final Window window;
 
-    protected double local_x;
-    protected double local_y;
-    protected double local_width;
-    protected double local_height;
+    private WindowBoundsAccessor boundsAccessor;
 
     public WindowPeerListener(Window window) {
         this.window = window;
     }
 
+    public void setBoundsAccessor(WindowBoundsAccessor boundsAccessor) {
+        this.boundsAccessor = boundsAccessor;
+    }
+
     @Override
     public void changedLocation(float x, float y) {
-        local_x = x;
-        local_y = y;
-        window.setX(x);
-        window.setY(y);
+        boundsAccessor.setLocation(window, x, y);
     }
 
     @Override
     public void changedSize(float width, float height) {
-        local_width = width;
-        local_height = height;
-        window.setWidth(width);
-        window.setHeight(height);
-    }
-
-    @Override
-    public void pulse() {
-        if ((local_x != window.getX()) ||
-            (local_y != window.getY()) ||
-            (local_width != window.getWidth()) ||
-            (local_height != window.getHeight()))
-        {
-            local_x = window.getX();
-            local_y = window.getY();
-            local_width = window.getWidth();
-            local_height = window.getHeight();
-            window.impl_getPeer().setBounds((float)local_x, (float)local_y, true, true,
-                    (float)local_width, (float)local_height, -1, -1);
-        }
+        boundsAccessor.setSize(window, width, height);
     }
 
     public void changedFocused(boolean focused, FocusCause cause) {

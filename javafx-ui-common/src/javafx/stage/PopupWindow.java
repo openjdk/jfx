@@ -45,6 +45,7 @@ import javafx.geometry.Bounds;
 import javafx.geometry.Rectangle2D;
 import javafx.scene.Group;
 import javafx.scene.Node;
+import javafx.scene.Parent;
 import javafx.scene.Scene;
 
 import com.sun.javafx.event.EventHandlerManager;
@@ -80,45 +81,71 @@ import javafx.beans.property.ReadOnlyObjectWrapper;
  */
 public abstract class PopupWindow extends Window {
     /**
-     * Group needed to wrap content so we can translate it so we make sure all
-     * of the content is shown, including anything above or to left or origin 0,0
-     */
-    private final Group group;
-
-    /**
      * A private list of all child popups.
      */
     private final List<PopupWindow> children = new ArrayList<PopupWindow>();
 
+    /**
+     * Keeps track of the bounds of the group, and adjust the size of the
+     * popup window accordingly. This way as the popup content changes, the
+     * window will be changed to match.
+     */
+    private final InvalidationListener rootBoundsListener =
+            new InvalidationListener() {
+                @Override
+                public void invalidated(final Observable observable) {
+                    updateDimensions();
+                }
+            };
+
     public PopupWindow() {
-        group = new Group();
-
-        // Keep track of the bounds of the group, and adjust the size of the
-        // popup window accordingly. This way as the popup content changes, the
-        // window will be changed to match.
-        group.layoutBoundsProperty().addListener(new InvalidationListener() {
-            @Override public void invalidated(Observable valueModel) {
-               updateDimensions();
-            }
-        });
-
-        Scene scene = new Scene(group);
+        final Scene scene = new Scene(null);
         scene.setFill(null);
-        updateDimensions();
         super.setScene(scene);
+
+        scene.rootProperty().addListener(
+                new InvalidationListener() {
+                    private Node oldRoot;
+
+                    @Override
+                    public void invalidated(final Observable observable) {
+                        final Node newRoot = scene.getRoot();
+                        if (oldRoot != newRoot) {
+                            if (oldRoot != null) {
+                                oldRoot.layoutBoundsProperty()
+                                       .removeListener(rootBoundsListener);
+                            }
+
+                            if (newRoot != null) {
+                                newRoot.layoutBoundsProperty()
+                                       .addListener(rootBoundsListener);
+                            }
+
+                            oldRoot = newRoot;
+                            updateDimensions();
+                        }
+                    }
+                });
+        scene.setRoot(new Group());
     }
 
     /**
      * Gets the observable, modifiable list of children which are placed in this
-     * PopupWindow. The root node of the scene should not be modified directly.
-     * Rather, subclasses should utilize this method. Package private for now.
-     * @return
+     * PopupWindow.
+     *
+     * @return the PopupWindow content
      * @treatAsPrivate implementation detail
      * @deprecated This is an internal API that is not intended for use and will be removed in the next version
      */
     @Deprecated
     protected ObservableList<Node> getContent() {
-        return group.getChildren();
+        final Parent rootNode = getScene().getRoot();
+        if (!(rootNode instanceof Group)) {
+            throw new IllegalStateException(
+                    "The content of the Popup can't be accessed");
+        }
+
+        return ((Group) rootNode).getChildren();
     }
 
     /**
@@ -151,12 +178,8 @@ public abstract class PopupWindow extends Window {
 
     /**
      * Note to subclasses: the scene used by PopupWindow is very specifically
-     * managed by PopupWindow, along with the root node. This method is
-     * overridden to throw UnsupportedOperationException. You cannot specify
-     * your own scene.
-     *
-     * Please do not replace the root node in the scene either, or you may
-     * find it doesn't work!
+     * managed by PopupWindow. This method is overridden to throw
+     * UnsupportedOperationException. You cannot specify your own scene.
      *
      * @param scene
      */
@@ -246,11 +269,13 @@ public abstract class PopupWindow extends Window {
             // popup calculated below uses the right width and height values for
             // its calculation. (fix for part of RT-10675).
             show();
-            // adjust the x/y if autoFix and it is necessary to do so
-            Bounds _bounds = group.getLayoutBounds();
             if (!isAutoFix()) {
-                setX(this.getX() + _bounds.getMinX());
-                setY(this.getY() + _bounds.getMinY());
+                final Parent rootNode = getScene().getRoot();
+                if (rootNode != null) {
+                    final Bounds _bounds = rootNode.getLayoutBounds();
+                    setX(this.getX() + _bounds.getMinX());
+                    setY(this.getY() + _bounds.getMinY());
+                }
             }
         }
     }
@@ -361,12 +386,17 @@ public abstract class PopupWindow extends Window {
     }
 
     private void updateDimensions() {
-        // update popup dimensions
-       setWidth(group.getLayoutBounds().getMaxX() - group.getLayoutBounds().getMinX());
-       setHeight(group.getLayoutBounds().getMaxY() - group.getLayoutBounds().getMinY());
-       // update transform
-       group.setTranslateX(-group.getLayoutBounds().getMinX());
-       group.setTranslateY(-group.getLayoutBounds().getMinY());
+        final Parent rootNode = getScene().getRoot();
+        if (rootNode != null) {
+            final Bounds layoutBounds = rootNode.getLayoutBounds();
+
+            // update popup dimensions
+            setWidth(layoutBounds.getMaxX() - layoutBounds.getMinX());
+            setHeight(layoutBounds.getMaxY() - layoutBounds.getMinY());
+            // update transform
+            rootNode.setTranslateX(-layoutBounds.getMinX());
+            rootNode.setTranslateY(-layoutBounds.getMinY());
+        }
    }
 
    /**
