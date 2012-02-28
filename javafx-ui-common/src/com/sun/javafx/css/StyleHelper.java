@@ -646,7 +646,7 @@ public class StyleHelper {
         // Go looking for the font for this node
         // Pass null for originating node to avoid infinite loop
         final CalculatedValue inherited = 
-            inherit(node, fontKey, userStyles, null, cacheEntry, styleList);
+            inherit(node, fontKey, false, userStyles, null, cacheEntry, styleList);
         // The inherited value might be SKIP for example, so check to make
         // sure that it really is a Font before casting it. If the inherited
         // value isn't a Font, then we will simply use the JavaFX default Font.
@@ -773,8 +773,9 @@ public class StyleHelper {
             }
 
             if (calculatedValue == null) {
-                calculatedValue = lookup(node, styleable, states, userStyles, 
-                        node, cacheEntry, styleList);
+                boolean isUserSet = isUserSetProperty(node, styleable);
+                calculatedValue = lookup(node, styleable, isUserSet, states, 
+                        userStyles, node, cacheEntry, styleList);
 
                 if (fastpath && calculatedValue.isCacheable) {
                     // if userStyles is null and calculatedValue was null,
@@ -890,7 +891,8 @@ public class StyleHelper {
      * @param font
      * @return
      */
-    private CalculatedValue lookup(Node node, StyleableProperty styleable, long states,
+    private CalculatedValue lookup(Node node, StyleableProperty styleable, 
+            boolean isUserSet, long states,
             Map<String,CascadingStyle> userStyles, Node originatingNode, 
             CacheEntry cacheEntry, List<Style> styleList) {
 
@@ -906,13 +908,70 @@ public class StyleHelper {
         final List<StyleableProperty> subProperties = styleable.getSubProperties();
         final int numSubProperties = (subProperties != null) ? subProperties.size() : 0;
         final StyleConverter keyType = styleable.getConverter();
+        if (style == null) {
+            
 
-        if (style == null && numSubProperties == 0) {
+            if (numSubProperties == 0) {
+                
+                return handleNoStyleFound(node, styleable, isUserSet, userStyles, 
+                        originatingNode, cacheEntry, styleList);
+                
+            } else {
 
-            return handleNoStyleFound(node, styleable, userStyles, 
-                    originatingNode, cacheEntry, styleList);
+                // If style is null then it means we didn't successfully find the
+                // property we were looking for. However, there might be sub styleables,
+                // in which case we should perform a lookup for them. For example,
+                // there might not be a style for "font", but there might be one
+                // for "font-size" or "font-weight". So if the style is null, then
+                // we need to check with the sub-styleables.
 
-        } else if (style != null) {
+                // Build up a list of all SubProperties which have a constituent part.
+                // I default the array to be the size of the number of total
+                // sub styleables to avoid having the array grow.
+                Map<StyleableProperty,Object> subs = null;
+                Stylesheet.Origin origin = null;
+                boolean isCacheable = true;
+                for (int i=0; i<numSubProperties; i++) {
+                    StyleableProperty subkey = subProperties.get(i);
+                    CalculatedValue constituent = 
+                        lookup(node, subkey, isUserSet, states, userStyles, 
+                            originatingNode, cacheEntry, styleList);
+                    if (constituent.value != SKIP) {
+                        if (subs == null) {
+                            subs = new HashMap<StyleableProperty,Object>();
+                        }
+                        subs.put(subkey, constituent.value);
+                        isCacheable = isCacheable && constituent.isCacheable;
+
+                        // origin of this style is the most specific
+                        if (origin == null || 
+                            (constituent.origin != null && 
+                                origin.compareTo(constituent.origin) < 0)) {
+                            origin = constituent.origin;
+                        }
+                    }
+                }
+
+                // If there are no subkeys which apply...
+                if (subs == null || subs.isEmpty()) {
+                    return handleNoStyleFound(node, styleable, isUserSet, userStyles, 
+                            originatingNode, cacheEntry, styleList);
+                }
+
+                try {
+                    final Object ret = keyType.convert(subs);
+                    return new CalculatedValue(ret, origin, isCacheable);
+                } catch (ClassCastException cce) {
+                    if (LOGGER.isLoggable(PlatformLogger.WARNING)) {
+                        LOGGER.warning("caught: ", cce);
+                        LOGGER.warning("styleable = " + styleable);
+                        LOGGER.warning("node = " + node.toString());
+                    }
+                    return new CalculatedValue(SKIP, null, true);
+                }
+            }                
+            
+        } else { // style != null
 
             // RT-10522:
             // If the user set the property and there is a style and
@@ -929,64 +988,11 @@ public class StyleHelper {
             final ParsedValue cssValue = style.getParsedValue();
             if (cssValue != null && "inherit".equals(cssValue.getValue())) {
                 if (styleList != null) styleList.add(style.getStyle());
-                return inherit(node, styleable, userStyles, 
+                return inherit(node, styleable, isUserSet, userStyles, 
                         originatingNode, cacheEntry, styleList);
             }
         }
 
-        // If style is null then it means we didn't successfully find the
-        // property we were looking for. However, there might be sub styleables,
-        // in which case we should perform a lookup for them. For example,
-        // there might not be a style for "font", but there might be one
-        // for "font-size" or "font-weight". So if the style is null, then
-        // we need to check with the sub-styleables.
-        if (style == null && numSubProperties > 0) {
-
-            // Build up a list of all SubProperties which have a constituent part.
-            // I default the array to be the size of the number of total
-            // sub styleables to avoid having the array grow.
-            Map<StyleableProperty,Object> subs = null;
-            Stylesheet.Origin origin = null;
-            boolean isCacheable = true;
-            for (int i=0; i<numSubProperties; i++) {
-                StyleableProperty subkey = subProperties.get(i);
-                CalculatedValue constituent = 
-                    lookup(node, subkey, states, userStyles, 
-                        originatingNode, cacheEntry, styleList);
-                if (constituent.value != SKIP) {
-                    if (subs == null) {
-                        subs = new HashMap<StyleableProperty,Object>();
-                    }
-                    subs.put(subkey, constituent.value);
-                    isCacheable = isCacheable && constituent.isCacheable;
-                    
-                    // origin of this style is the most specific
-                    if (origin == null || 
-                        (constituent.origin != null && 
-                            origin.compareTo(constituent.origin) < 0)) {
-                        origin = constituent.origin;
-                    }
-                }
-            }
-
-            // If there are no subkeys which apply...
-            if (subs == null || subs.isEmpty()) {
-                return handleNoStyleFound(node, styleable, userStyles, 
-                        originatingNode, cacheEntry, styleList);
-            }
-
-            try {
-                final Object ret = keyType.convert(subs);
-                return new CalculatedValue(ret, origin, isCacheable);
-            } catch (ClassCastException cce) {
-                if (LOGGER.isLoggable(PlatformLogger.WARNING)) {
-                    LOGGER.warning("caught: ", cce);
-                    LOGGER.warning("styleable = " + styleable);
-                    LOGGER.warning("node = " + node.toString());
-                }
-                return new CalculatedValue(SKIP, null, true);
-            }
-        }
 //        System.out.println("lookup " + property +
 //                ", selector = \'" + style.selector.toString() + "\'" +
 //                ", node = " + node.toString());
@@ -1031,8 +1037,10 @@ public class StyleHelper {
                 return new CalculatedValue(val, origin, cacheable.get());
                 
             } catch (ClassCastException cce) {
+                String msg = formatUnresolvedLookupMessage(node, styleable, style.getStyle(),resolved);
+                StyleManager.getInstance().errorsProperty().add(msg);
                 if (LOGGER.isLoggable(PlatformLogger.WARNING)) {
-                    LOGGER.warning(formatUnresolvedLookupMessage(node, styleable, style.getStyle(),resolved));
+                    LOGGER.warning(msg);
                     LOGGER.fine("node = " + node.toString());
                     LOGGER.fine("styleable = " + styleable);
                     LOGGER.fine("styles = " + styleable.getMatchingStyles(node));
@@ -1071,7 +1079,7 @@ public class StyleHelper {
 
     /** return true if the origin of the property is USER */
     private boolean isUserSetProperty(Node node, StyleableProperty styleable) {
-        WritableValue writable = styleable.getWritableValue(node);
+        WritableValue writable = node != null ? styleable.getWritableValue(node) : null;
         // writable could be null if this is a sub-property
         Stylesheet.Origin origin = writable != null ? ((Property)writable).getOrigin() : null;
         return (origin == Stylesheet.Origin.USER);    
@@ -1081,30 +1089,27 @@ public class StyleHelper {
      * Called when there is no style found.
      */
     private CalculatedValue handleNoStyleFound(Node node, StyleableProperty styleable,
-            Map<String,CascadingStyle> userStyles, Node originatingNode, 
-            CacheEntry cacheEntry, List<Style> styleList) {
+            boolean isUserSet, Map<String,CascadingStyle> userStyles, 
+            Node originatingNode, CacheEntry cacheEntry, List<Style> styleList) {
 
         if (styleable.isInherits()) {
 
-            CalculatedValue cv =
-                inherit(node, styleable, userStyles, 
-                    originatingNode, cacheEntry, styleList);
 
-            if (cv.value == SKIP) return cv;
+            // RT-16308: if there is no matching style and the user set 
+            // the property, do not look for inherited styles.
+            if (isUserSet) {
 
-            // RT-10522
-            // Did the user set this? The value is skipped if the user set the
-            // property and the style comes from the usear agent stylesheet.
-            else if (cv.origin == Stylesheet.Origin.USER_AGENT &&
-                    isUserSetProperty(originatingNode, styleable)) {
-                    return new CalculatedValue(SKIP, null, true);
+                    return new CalculatedValue(SKIP, Stylesheet.Origin.USER, true);
+                    
             }
 
-            // Not a SKIP, or something that can override a user set value,
-            // or the user didn't set the value
+            CalculatedValue cv =
+                inherit(node, styleable, isUserSet, userStyles, 
+                    originatingNode, cacheEntry, styleList);
+
             return cv;
 
-        } else if (isUserSetProperty(originatingNode, styleable)) {
+        } else if (isUserSet) {
 
             // Not inherited. There is no style but we don't want to
             // set the default value if the user set the property
@@ -1149,7 +1154,7 @@ public class StyleHelper {
      * Called when we must inherit a value from a parent node in the scenegraph.
      */
     private CalculatedValue inherit(Node node, StyleableProperty styleable,
-            Map<String,CascadingStyle> userStyles, 
+            boolean isUserSet, Map<String,CascadingStyle> userStyles, 
             Node originatingNode, CacheEntry cacheEntry, List<Style> styleList) {
         // Locate the first parentStyleHelper in the hierarchy
         Node parent = node.getParent();
@@ -1164,7 +1169,7 @@ public class StyleHelper {
         if (parent == null) {
             return new CalculatedValue(SKIP, null, true);
         }
-        return parentStyleHelper.lookup(parent, styleable,
+        return parentStyleHelper.lookup(parent, styleable, isUserSet,
                 parentStyleHelper.getPseudoClassState(parent),
                 getStyles(parent), originatingNode, cacheEntry, styleList);
     }

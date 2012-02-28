@@ -1163,15 +1163,15 @@ public class VirtualFlow extends Region {
         // Initialize the viewportLength and viewportBreadth to match the
         // width/height of the flow
         double lastViewportLength = viewportLength;
-        viewportLength = isVertical() ? getHeight() : getWidth();
-        viewportBreadth = isVertical() ? getWidth() : getHeight();
+        viewportLength = snapSize(isVertical() ? getHeight() : getWidth());
+        viewportBreadth = snapSize(isVertical() ? getWidth() : getHeight());
 
         // Assign the hbar and vbar to the breadthBar and lengthBar so as
         // to make some subsequent calculations easier.
         VirtualScrollBar breadthBar = isVertical() ? hbar : vbar;
         VirtualScrollBar lengthBar = isVertical() ? vbar : hbar;
-        double breadthBarLength = isVertical() ? hbar.prefHeight(-1) : vbar.prefWidth(-1);
-        double lengthBarBreadth = isVertical() ? vbar.prefWidth(-1) : hbar.prefHeight(-1);
+        double breadthBarLength = snapSize(isVertical() ? hbar.prefHeight(-1) : vbar.prefWidth(-1));
+        double lengthBarBreadth = snapSize(isVertical() ? vbar.prefWidth(-1) : hbar.prefHeight(-1));
 
         // If there has been a switch between the virtualized bar, then we
         // will want to do some stuff TODO.
@@ -1233,9 +1233,9 @@ public class VirtualFlow extends Region {
         // to make some subsequent calculations easier.
         VirtualScrollBar breadthBar = isVertical() ? hbar : vbar;
         VirtualScrollBar lengthBar = isVertical() ? vbar : hbar;
-        double breadthBarLength = isVertical() ? hbar.prefHeight(-1) : vbar.prefWidth(-1);
-        double lengthBarBreadth = isVertical() ? vbar.prefWidth(-1) : hbar.prefHeight(-1);
-
+        double breadthBarLength = snapSize(isVertical() ? hbar.prefHeight(-1) : vbar.prefWidth(-1));
+        double lengthBarBreadth = snapSize(isVertical() ? vbar.prefWidth(-1) : hbar.prefHeight(-1));
+        
         // Now that we've laid out the cells, we may need to adjust the scroll
         // bars and update the viewport dimensions based on the bars
         // We have to do the following work twice because the first pass
@@ -1347,8 +1347,8 @@ public class VirtualFlow extends Region {
             corner.relocate(hbar.getLayoutX() + hbar.getWidth(), vbar.getLayoutY() + vbar.getHeight());
         }
 
-        clipView.resize(isVertical() ? viewportBreadth : viewportLength,
-                        isVertical() ? viewportLength : viewportBreadth);
+        clipView.resize(snapSize(isVertical() ? viewportBreadth : viewportLength),
+                        snapSize(isVertical() ? viewportLength : viewportBreadth));
 
         // Update the viewport size based on our final viewportLength
         if (mapper.getViewportSize() != viewportLength) {

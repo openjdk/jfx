@@ -71,6 +71,7 @@ public class ComboBoxListViewSkin<T> extends ComboBoxPopupControl<T> {
         super(comboBox, new ComboBoxListViewBehavior<T>(comboBox));
         this.comboBox = comboBox;
         this.listView = createListView();
+        this.listCellLabel = getListCellLabel();
         
         // move focus in to the textfield if the comboBox is editable
         comboBox.focusedProperty().addListener(new ChangeListener<Boolean>() {
@@ -88,6 +89,8 @@ public class ComboBoxListViewSkin<T> extends ComboBoxPopupControl<T> {
                 // ever giving the event to the TextField.
                 if (t instanceof KeyEvent) {
                     KeyEvent ke = (KeyEvent)t;
+                    if (ke.getEventType() != KeyEvent.KEY_RELEASED) return;
+                    
                     if (ke.getCode() == KeyCode.ENTER) {
                         StringConverter<T> c = comboBox.getConverter();
                         if (c == null) return;
@@ -130,9 +133,11 @@ public class ComboBoxListViewSkin<T> extends ComboBoxPopupControl<T> {
         });
         
         updateListViewItems();
+        updateCellFactory();
         
         registerChangeListener(comboBox.itemsProperty(), "ITEMS");
         registerChangeListener(comboBox.promptTextProperty(), "PROMPT_TEXT");
+        registerChangeListener(comboBox.cellFactoryProperty(), "CELL_FACTORY");
     }
     
     public void updateListViewItems() {
@@ -169,6 +174,8 @@ public class ComboBoxListViewSkin<T> extends ComboBoxPopupControl<T> {
             updateListViewItems();
         } else if ("PROMPT_TEXT".equals(p)) {
             updateDisplayNode();
+        } else if ("CELL_FACTORY".equals(p)) {
+            updateCellFactory();
         }
     }
     
@@ -180,9 +187,6 @@ public class ComboBoxListViewSkin<T> extends ComboBoxPopupControl<T> {
             }
             displayNode = textField;
         } else {
-            if (listCellLabel == null) {
-                listCellLabel = getListCellLabel();
-            }
             displayNode = listCellLabel;
         }
         
@@ -229,19 +233,24 @@ public class ComboBoxListViewSkin<T> extends ComboBoxPopupControl<T> {
         }
     }
     
-    private void updateDisplayText(T item, boolean empty) {
+    private void updateDisplayText(ListCell<T> cell, T item, boolean empty) {
         if (empty) {
-            listCellLabel.setGraphic(null);
-            listCellLabel.setText(comboBox.getPromptText() == null ? null : comboBox.getPromptText());
+            if (listCellLabel == null) return;
+            cell.setGraphic(null);
+            cell.setText(comboBox.getPromptText() == null ? null : comboBox.getPromptText());
         } else if (item instanceof Node) {
             Node currentNode = listCellLabel.getGraphic();
             Node newNode = (Node) item;
             if (currentNode == null || ! currentNode.equals(newNode)) {
-                listCellLabel.setText(null);
-                listCellLabel.setGraphic(newNode);
+                cell.setText(null);
+                cell.setGraphic(newNode);
             }
         } else {
-            listCellLabel.setText(item == null ? "" : item.toString());
+            // run item through StringConverter if it isn't null
+            StringConverter c = comboBox.getConverter();
+            String s = item == null ? "" : (c == null ? item.toString() : c.toString(item));
+            cell.setText(s);
+            cell.setGraphic(null);
         }
     }
     
@@ -254,13 +263,9 @@ public class ComboBoxListViewSkin<T> extends ComboBoxPopupControl<T> {
     private ListCell<T> getListCellLabel() {
         if (listCellLabel != null) return listCellLabel;
         
-        Callback<ListView<T>, ListCell<T>> cellFactory = listView.getCellFactory();
-        listCellLabel = cellFactory != null ? cellFactory.call(listView) : new ListCell<T>() {
-            @Override public void updateItem(T item, boolean empty) {
-                super.updateItem(item, empty);
-                updateDisplayText(item, empty);
-            }
-        };
+        Callback<ListView<T>, ListCell<T>> cellFactory = comboBox.getCellFactory();
+        listCellLabel = cellFactory != null ? 
+                cellFactory.call(listView) : getDefaultCellFactory().call(listView);
         listCellLabel.setMouseTransparent(true);
         
         return listCellLabel;
@@ -268,6 +273,24 @@ public class ComboBoxListViewSkin<T> extends ComboBoxPopupControl<T> {
 
     @Override public Node getPopupContent() {
         return listView;
+    }
+    
+    private void updateCellFactory() {
+        Callback<ListView<T>, ListCell<T>> cf = comboBox.getCellFactory();
+        listView.setCellFactory(cf != null ? cf : getDefaultCellFactory());
+    }
+    
+    private Callback<ListView<T>, ListCell<T>> getDefaultCellFactory() {
+        return new Callback<ListView<T>, ListCell<T>>() {
+            @Override public ListCell<T> call(ListView<T> listView) {
+                return new ListCell<T>() {
+                    @Override public void updateItem(T item, boolean empty) {
+                        super.updateItem(item, empty);
+                        updateDisplayText(this, item, empty);
+                    }
+                };
+            }
+        };
     }
     
     private ListView<T> createListView() {
@@ -329,7 +352,6 @@ public class ComboBoxListViewSkin<T> extends ComboBoxPopupControl<T> {
         };
 
         listView.setId("list-view");
-        listView.cellFactoryProperty().bind(comboBox.cellFactoryProperty());
         listView.getSelectionModel().setSelectionMode(SelectionMode.SINGLE);
 
         listView.getSelectionModel().selectedIndexProperty().addListener(new InvalidationListener() {

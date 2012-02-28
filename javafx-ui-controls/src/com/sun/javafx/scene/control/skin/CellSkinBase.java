@@ -69,7 +69,13 @@ public class CellSkinBase<C extends Cell, B extends CellBehaviorBase<C>> extends
 
                 @Override
                 public void set(double value) {
-                    cellSizeSet = value != DEFAULT_CELL_SIZE;
+                    // Commented this out due to RT-19794, because otherwise
+                    // cellSizeSet would be false when the default caspian.css
+                    // cell size was set. This would lead to 
+                    // ListCellSkin.computePrefHeight computing the pref height
+                    // of the cell (which is about 22px), rather than use the 
+                    // value provided by caspian.css (which is 24px).
+                    cellSizeSet = true;//value != DEFAULT_CELL_SIZE;
                     super.set(value);
                 }
                 

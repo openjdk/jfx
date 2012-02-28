@@ -50,6 +50,7 @@
         <include name="javafx-concurrent/dist/javafx-concurrent.jar"/>
         <include name="javafx-designtime/dist/javafx-designtime.jar"/>
         <include name="javafx-ui-controls/dist/javafx-ui-controls.jar"/>
+        <include name="javafx-ui-charts/dist/javafx-ui-charts.jar"/>
         <include name="javafx-ui-common/dist/javafx-ui-common.jar"/> 
         <include name="javafx-util-converter/dist/javafx-util-converter.jar"/>
     </fileset>
@@ -58,9 +59,10 @@
     <target name="dist" depends="init">
         <ant antfile="${rt.root.dir}/javafx-beans-dt/build.xml" target="jar" inheritAll="false"/>
         <ant antfile="${rt.root.dir}/javafx-concurrent/build.xml" target="jar" inheritAll="false"/>
+        <ant antfile="${rt.root.dir}/javafx-ui-common/build.xml" target="jar" inheritAll="false"/>
         <!--<ant antfile="${rt.root.dir}/javafx-designtime/build.xml" target="jar" inheritAll="false"/>-->
         <ant antfile="${rt.root.dir}/javafx-ui-controls/build.xml" target="jar" inheritAll="false"/>
-        <ant antfile="${rt.root.dir}/javafx-ui-common/build.xml" target="jar" inheritAll="false"/>
+        <ant antfile="${rt.root.dir}/javafx-ui-charts/build.xml" target="jar" inheritAll="false"/>
         <ant antfile="${rt.root.dir}/javafx-util-converter/build.xml" target="jar" inheritAll="false"/>
     </target>
 
@@ -73,6 +75,7 @@
         <ant antfile="${rt.root.dir}/javafx-concurrent/build.xml" target="test" inheritAll="false"/>
         <!--<ant antfile="${rt.root.dir}/javafx-designtime/build.xml" target="test" inheritAll="false"/>-->
         <ant antfile="${rt.root.dir}/javafx-ui-controls/build.xml" target="test" inheritAll="false"/>
+        <ant antfile="${rt.root.dir}/javafx-ui-charts/build.xml" target="test" inheritAll="false"/>
         <ant antfile="${rt.root.dir}/javafx-ui-common/build.xml" target="test" inheritAll="false"/>
         <ant antfile="${rt.root.dir}/javafx-util-converter/build.xml" target="test" inheritAll="false"/>
     </target>
@@ -88,6 +91,7 @@
         <ant antfile="${rt.root.dir}/javafx-concurrent/build.xml" target="clean" inheritAll="false"/>
         <!--<ant antfile="${rt.root.dir}/javafx-designtime/build.xml" target="clean" inheritAll="false"/>-->
         <ant antfile="${rt.root.dir}/javafx-ui-controls/build.xml" target="clean" inheritAll="false"/>
+        <ant antfile="${rt.root.dir}/javafx-ui-charts/build.xml" target="clean" inheritAll="false"/>
         <ant antfile="${rt.root.dir}/javafx-ui-common/build.xml" target="clean" inheritAll="false"/>
         <ant antfile="${rt.root.dir}/javafx-util-converter/build.xml" target="clean" inheritAll="false"/>
     </target>

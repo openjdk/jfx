@@ -467,7 +467,7 @@
 
 .label {
     -fx-skin: "com.sun.javafx.scene.control.skin.LabelSkin";
-    -fx-text-fill: -fx-text-base-color;
+    -fx-text-fill: -fx-text-background-color;
 }
 
 .label:disabled {
@@ -601,7 +601,7 @@
 .radio-button {
     -fx-skin: "com.sun.javafx.scene.control.skin.RadioButtonSkin";
     -fx-label-padding: 0.0em 0.0em 0.0em 0.416667em; /* 0 0 0 5 */
-    -fx-text-fill: -fx-text-base-color;
+    -fx-text-fill: -fx-text-background-color;
 }
 
 .radio-button:focused {
@@ -657,7 +657,7 @@
 .check-box {
     -fx-skin: "com.sun.javafx.scene.control.skin.CheckBoxSkin";
     -fx-label-padding: 0.0em 0.0em 0.0em 0.416667em; /* 0 0 0 5 */
-    -fx-text-fill: -fx-text-base-color;
+    -fx-text-fill: -fx-text-background-color;
 }
 
 .check-box:focused {
@@ -724,6 +724,7 @@
     -fx-padding: 0.166667em; /* 2 */
     -fx-cursor: hand;
     -fx-content-display: LEFT;
+    -fx-text-fill: -fx-text-background-color;
 }
 
 .hyperlink:visited {
@@ -1137,7 +1138,8 @@
 }
 
 .slider .axis .tick-mark {
-    -fx-font-size: 0.833333em
+    -fx-font-size: 0.833333em;
+    -fx-fill: -fx-text-background-color;
 }
 .slider:disabled {
     -fx-opacity: -fx-disabled-opacity;
@@ -1374,6 +1376,7 @@
     -fx-background-insets: 0, 1, 2;
     -fx-background-radius: 3, 2, 2;
     -fx-padding: 3 5 3 5;
+    -fx-text-fill: -fx-text-inner-color;
     -fx-prompt-text-fill: derive(-fx-control-inner-background,-30%);
     -fx-cursor: text;
 }
@@ -1396,6 +1399,7 @@
 
 .password-field {
     -fx-skin: "com.sun.javafx.scene.control.skin.PasswordFieldSkin";
+    -fx-text-fill: -fx-text-inner-color;
 }
 
 /*******************************************************************************
@@ -1509,7 +1513,6 @@
     -fx-background-color: -fx-control-inner-background;
     -fx-padding: 0.25em; /* 3 */
     -fx-text-fill: -fx-text-inner-color;
-    -fx-cell-size: 2.0em; /* 24 */
     -fx-opacity: 1;
 }
 
@@ -1623,7 +1626,6 @@
     -fx-background-color: -fx-control-inner-background;
     -fx-padding: 0.25em; /* 3 */
     -fx-text-fill: -fx-text-inner-color;
-    -fx-cell-size: 2.0em; /* 24 */
     -fx-indent: 10;
 }
 
@@ -2049,6 +2051,7 @@
 
 .progress-indicator .percentage {
     -fx-font-size: 0.916667em; /* 11pt - 1 less than the default font */
+    -fx-fill: -fx-text-background-color;
 }
 
 .progress-indicator:disabled {
@@ -2116,7 +2119,6 @@
     -fx-background-insets: 0, 0 0 1 0;
     -fx-padding: 0.0em; /* 0 */
     -fx-text-fill: -fx-text-inner-color;
-    -fx-cell-size: 2.0em; /* 24 */
 }
 
 .table-row-cell:odd {
@@ -3043,7 +3045,7 @@ all inherit from Menu Control's popup-menu. --- */
 Only the properties with values that are different from the TextBox are specified here. ---*/
 
 .combo-box-base:editable .text-field {
-    -fx-padding: 4 5 4 5;
+    -fx-padding: 3 5 2 5;
     -fx-background-radius: 4 5 5 4, 3 4 4 3, 2 3 3 2;
     -fx-background-insets: 0 0 -1 0, 0, 1;
     -fx-vpos: CENTER;
@@ -3072,7 +3074,7 @@ Only the properties with values that are different from the TextBox are specifie
     -fx-background: transparent;
     -fx-background-color: transparent;
     -fx-text-fill: -fx-text-base-color;
-    -fx-padding: 0 0 0 7;
+    -fx-padding: 3 0 2 7;
     -fx-cell-size: 1.66667em; /* 20 */
 }
 

@@ -1327,7 +1327,7 @@ public class Region extends Parent {
     @Override public final double minWidth(double height) {
         double override = getMinWidth();
         if (override == USE_COMPUTED_SIZE) {
-            return computeMinWidth(height);
+            return super.minWidth(height);
         } else if (override == USE_PREF_SIZE) {
             return prefWidth(height);
         }
@@ -1345,7 +1345,7 @@ public class Region extends Parent {
     @Override public final double minHeight(double width) {
         double override = getMinHeight();
         if (override == USE_COMPUTED_SIZE) {
-            return computeMinHeight(width);
+            return super.minHeight(width);
         } else if (override == USE_PREF_SIZE) {
             return prefHeight(width);
         }

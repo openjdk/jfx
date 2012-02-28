@@ -81,7 +81,8 @@ public abstract class Axis<T> extends Region {
     private boolean rangeValid = false;
     double maxWidth = 0;
     double maxHeight = 0;
-
+    private boolean tickLabelFontPropertySet = false;
+    private boolean tickLabelFillPropertySet = false;
     // -------------- PUBLIC PROPERTIES --------------------------------------------------------------------------------
 
     private final ObservableList<TickMark<T>> tickMarks = FXCollections.observableArrayList();
@@ -257,7 +258,7 @@ public abstract class Axis<T> extends Region {
         @Override protected void invalidated() {
             Font f = get();
             measure.setFont(f);
-            for(TickMark<T> tick: tickMarks) tick.textNode.setFont(f);
+            tickLabelFontPropertySet = true;
             requestAxisLayout();
         }
 
@@ -283,8 +284,8 @@ public abstract class Axis<T> extends Region {
     /** The fill for all tick labels */
     private ObjectProperty<Paint> tickLabelFill = new StyleableObjectProperty<Paint>(Color.BLACK) {
         @Override protected void invalidated() {
-            Paint fill = get();
-            for(TickMark<T> tick: tickMarks) tick.textNode.setFill(fill);
+            tickLabelFillPropertySet = true;
+            requestAxisLayout();
         }
 
         @Override
@@ -689,8 +690,15 @@ public abstract class Axis<T> extends Region {
                 final TickMark<T> tick = new TickMark<T>();
                 tick.setValue(newValue);
                 tick.textNode.setText(getTickMarkLabel(newValue));
-                tick.textNode.setFont(getTickLabelFont());
-                tick.textNode.setFill(getTickLabelFill());
+                // RT-19870 : font & fill is set on text node if it is set programmatically.
+                // else it will take what ever is specified via CSS
+                if (tickLabelFontPropertySet) {
+                    tick.textNode.setFont(getTickLabelFont());
+                }
+                if (tickLabelFillPropertySet) {
+                    tick.textNode.setFill(getTickLabelFill());
+                }
+                
                 tick.setTextVisible(isTickLabelsVisible());
                 if (shouldAnimate()) tick.textNode.setOpacity(0);
                 getChildren().add(tick.textNode);
@@ -702,6 +710,7 @@ public abstract class Axis<T> extends Region {
                     ft.play();
                 }
             }
+           
             // call tick marks updated to inform subclasses that we have updated tick marks
             tickMarksUpdated();
             // mark all done

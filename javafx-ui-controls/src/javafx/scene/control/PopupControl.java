@@ -43,6 +43,7 @@ import java.util.Collections;
 import java.util.List;
 
 import com.sun.javafx.collections.TrackableObservableList;
+import com.sun.javafx.css.StyleManager;
 import com.sun.javafx.css.Styleable;
 import com.sun.javafx.css.StyleableProperty;
 import com.sun.javafx.css.StyleableStringProperty;
@@ -114,6 +115,12 @@ public class PopupControl extends PopupWindow implements Skinnable {
         // given to match the popup window's width & height.
     }
 
+    // TODO we should have some interface which has id, styleClass, style, etc
+    // which is in common between PopupControl and Node.
+    
+    // TODO we should have some interface for minWidth, maxWidth, etc which are
+    // both here and on Node.
+    
     /**
      * The id of this {@code Node}. This simple string identifier is useful for
      * finding a specific Node within the scene graph. While the id of a Node
@@ -137,6 +144,8 @@ public class PopupControl extends PopupWindow implements Skinnable {
      * @defaultValue null
      */
     private final ObservableList<String> styleClass = new TrackableObservableList<String>() {
+        // TODO we can save one class if we factor this into a StyleClassList, and reuse it between
+        // here and in Node.
         @Override protected void onChanged(Change<String> c) {
             // Push the change along to the bridge group
             bridge.getStyleClass().setAll(styleClass);
@@ -189,13 +198,6 @@ public class PopupControl extends PopupWindow implements Skinnable {
         skinProperty().set(value); 
     }
     @Override public final Skin<?> getSkin() {
-            if (getScene() != null && getScene().getRoot() != null) {
-                // RT-14094, RT-16754: We need the skins of the popup
-                // and it children before the stage is visible so we
-                // can calculate the popup position based on content
-                // size.
-                getScene().getRoot().impl_processCSS(true);
-            }
         return skinProperty().getValue();
     }
 
@@ -477,6 +479,20 @@ public class PopupControl extends PopupWindow implements Skinnable {
     }
 
     /**
+     * Cached prefWidth, prefHeight, minWidth, minHeight. These
+     * results are repeatedly sought during the layout pass,
+     * and caching the results leads to a significant decrease
+     * in overhead.
+     */
+    private double prefWidthCache = -1;
+    private double prefHeightCache = -1;
+    private double minWidthCache = -1;
+    private double minHeightCache = -1;
+    private double maxWidthCache = -1;
+    private double maxHeightCache = -1;
+    private boolean skinSizeComputed = false;
+    
+    /**
      * Called during layout to determine the minimum width for this node.
      * Returns the value from <code>minWidth(forHeight)</code> unless
      * the application overrode the minimum width by setting the minWidth property.
@@ -488,7 +504,8 @@ public class PopupControl extends PopupWindow implements Skinnable {
     public final double minWidth(double height) {
         double override = getMinWidth();
         if (override == USE_COMPUTED_SIZE) {
-            return recalculateMinWidth(height);
+            if (minWidthCache == -1) minWidthCache = recalculateMinWidth(height);
+            return minWidthCache;
         } else if (override == USE_PREF_SIZE) {
             return prefWidth(height);
         }
@@ -507,7 +524,8 @@ public class PopupControl extends PopupWindow implements Skinnable {
     public final double minHeight(double width) {
         double override = getMinHeight();
         if (override == USE_COMPUTED_SIZE) {
-            return recalculateMinHeight(width);
+            if (minHeightCache == -1) minHeightCache = recalculateMinHeight(width);
+            return minHeightCache;
         } else if (override == USE_PREF_SIZE) {
             return prefHeight(width);
         }
@@ -527,7 +545,8 @@ public class PopupControl extends PopupWindow implements Skinnable {
     public final double prefWidth(double height) {
         double override = getPrefWidth();
         if (override == USE_COMPUTED_SIZE) {
-            return recalculatePrefWidth(height);
+            if (prefWidthCache == -1) prefWidthCache = recalculatePrefWidth(height);
+            return prefWidthCache;
         } else if (override == USE_PREF_SIZE) {
             return prefWidth(height);
         }
@@ -546,7 +565,8 @@ public class PopupControl extends PopupWindow implements Skinnable {
     public final double prefHeight(double width) {
         double override = getPrefHeight();
         if (override == USE_COMPUTED_SIZE) {
-            return recalculatePrefHeight(width);
+            if (prefHeightCache == -1) prefHeightCache = recalculatePrefHeight(width);
+            return prefHeightCache;
         } else if (override == USE_PREF_SIZE) {
             return prefHeight(width);
         }
@@ -565,7 +585,8 @@ public class PopupControl extends PopupWindow implements Skinnable {
     public final double maxWidth(double height) {
         double override = getMaxWidth();
         if (override == USE_COMPUTED_SIZE) {
-            return recalculateMaxWidth(height);
+            if (maxWidthCache == -1) maxWidthCache = recalculateMaxWidth(height);
+            return maxWidthCache;
         } else if (override == USE_PREF_SIZE) {
             return prefWidth(height);
         }
@@ -584,7 +605,8 @@ public class PopupControl extends PopupWindow implements Skinnable {
     public final double maxHeight(double width) {
         double override = getMaxHeight();
         if (override == USE_COMPUTED_SIZE) {
-            return recalculateMaxHeight(width);
+            if (maxHeightCache == -1) maxHeightCache = recalculateMaxHeight(width);
+            return maxHeightCache;
         } else if (override == USE_PREF_SIZE) {
             return prefHeight(width);
         }
@@ -597,22 +619,39 @@ public class PopupControl extends PopupWindow implements Skinnable {
     // we simply return 0 for all the values since a Control without a Skin
     // doesn't render
     private double recalculateMinWidth(double height) {
+        recomputeSkinSize();
         return getSkinNode() == null ? 0 : getSkinNode().minWidth(height);
     }
     private double recalculateMinHeight(double width) {
+        recomputeSkinSize();
         return getSkinNode() == null ? 0 : getSkinNode().minHeight(width);
     }
     private double recalculateMaxWidth(double height) {
+        recomputeSkinSize();
         return getSkinNode() == null ? 0 : getSkinNode().maxWidth(height);
     }
     private double recalculateMaxHeight(double width) {
+        recomputeSkinSize();
         return getSkinNode() == null ? 0 : getSkinNode().maxHeight(width);
     }
     private double recalculatePrefWidth(double height) {
+        recomputeSkinSize();
         return getSkinNode() == null? 0 : getSkinNode().prefWidth(height);
     }
     private double recalculatePrefHeight(double width) {
+        recomputeSkinSize();
         return getSkinNode() == null? 0 : getSkinNode().prefHeight(width);
+    }
+    
+    private void recomputeSkinSize() {
+        if (!skinSizeComputed && getScene() != null && getScene().getRoot() != null) {
+            // RT-14094, RT-16754: We need the skins of the popup
+            // and it children before the stage is visible so we
+            // can calculate the popup position based on content
+            // size.
+            getScene().getRoot().impl_processCSS(true);
+            skinSizeComputed = true;
+        }
     }
 //    public double getBaselineOffset() { return getSkinNode() == null? 0 : getSkinNode().getBaselineOffset(); }
 
@@ -622,6 +661,13 @@ public class PopupControl extends PopupWindow implements Skinnable {
      * the skin changes, or the skin.node changes).
      */
     private void updateChildren() {
+        prefWidthCache = -1;
+        prefHeightCache = -1;
+        minWidthCache = -1;
+        minHeightCache = -1;
+        maxWidthCache = -1;
+        maxHeightCache = -1;
+        skinSizeComputed = false;
         final Node n = getSkinNode();
         if (n != null) bridge.getChildren().setAll(n);
         else bridge.getChildren().clear();
@@ -696,7 +742,6 @@ public class PopupControl extends PopupWindow implements Skinnable {
      * @deprecated This is an experimental API that is not intended for general use and is subject to change in future versions
      */
     public Styleable impl_getStyleable() {
-        
         if (styleable == null) {
             styleable = new Styleable() {
 
@@ -743,6 +788,26 @@ public class PopupControl extends PopupWindow implements Skinnable {
         
         @Override public List<StyleableProperty> impl_getStyleableProperties() {
             return PopupControl.this.impl_getStyleableProperties();
+        }
+
+        /**
+         * Requests a layout pass to be performed before the next scene is
+         * rendered. This is batched up asynchronously to happen once per
+         * "pulse", or frame of animation.
+         * <p/>
+         * If this parent is either a layout root or unmanaged, then it will be
+         * added directly to the scene's dirty layout list, otherwise requestLayout
+         * will be invoked on its parent.
+         */
+        @Override public void requestLayout() {
+            prefWidthCache = -1;
+            prefHeightCache = -1;
+            minWidthCache = -1;
+            minHeightCache = -1;
+            maxWidthCache = -1;
+            maxHeightCache = -1;
+            skinSizeComputed = false;
+            super.requestLayout();
         }
 
         /**
@@ -884,7 +949,13 @@ public class PopupControl extends PopupWindow implements Skinnable {
             if (skinClassName == null
                 || skinClassName.get() == null 
                 || skinClassName.get().isEmpty()) {
-                Logging.getControlsLogger().severe("Empty -fx-skin property specified for popup control " + this);
+                final String msg = 
+                    "Empty -fx-skin property specified for popup control " + this;   
+                final List<String> errors = StyleManager.getInstance().getErrors();
+                if (errors != null) {
+                    errors.add(msg); // RT-19884
+                } 
+                Logging.getControlsLogger().severe(msg);
                 return;
             }
 
@@ -911,12 +982,17 @@ public class PopupControl extends PopupWindow implements Skinnable {
                 }
 
                 if (skinConstructor == null) {
-                    final NullPointerException npe = new NullPointerException();
-                    Logging.getControlsLogger().severe(
-                    "No valid constructor defined in '" + skinClassName + "' for popup control " + this +
-                            ".\r\nYou must provide a constructor that accepts a single "
-                            + "PopupControl parameter in " + skinClassName + ".", npe);
-                    throw npe;
+                    final String msg = 
+                        "No valid constructor defined in '" + skinClassName 
+                        + "' for popup control " + this 
+                        + ".\r\nYou must provide a constructor that accepts a single "
+                        + "PopupControl parameter in " + skinClassName + ".";
+                    final List<String> errors = StyleManager.getInstance().getErrors();
+                    if (errors != null) {
+                        errors.add(msg); // RT-19884
+                    } 
+                    Logging.getControlsLogger().severe(msg);
+                    return;
                 } else {
                     Skin<?> skinInstance = (Skin<?>) skinConstructor.newInstance(PopupControl.this);
                     // Do not call setSkin here since it has the side effect of
@@ -925,12 +1001,23 @@ public class PopupControl extends PopupWindow implements Skinnable {
                 }
 
             } catch (InvocationTargetException e) {
-                Logging.getControlsLogger().severe(
-                    "Failed to load skin '" + skinClassName + "' for popup control " + this,
-                    e.getCause());
+                final String msg = 
+                    "Failed to load skin '" + skinClassName 
+                    + "' for popup control " + this;
+                final List<String> errors = StyleManager.getInstance().getErrors();
+                if (errors != null) {
+                    errors.add(msg + " :" + e.getLocalizedMessage()); // RT-19884
+                } 
+                Logging.getControlsLogger().severe(msg, e.getCause());
             } catch (Exception e) {
-                Logging.getControlsLogger().severe(
-                    "Failed to load skin '" + skinClassName + "' for popup control " + this, e);
+                final String msg = 
+                    "Failed to load skin '" + skinClassName 
+                    + "' for popup control " + this;
+                final List<String> errors = StyleManager.getInstance().getErrors();
+                if (errors != null) {
+                    errors.add(msg + " :" + e.getLocalizedMessage()); // RT-19884
+                } 
+                Logging.getControlsLogger().severe(msg, e.getCause());
             }
         }
         

@@ -24,6 +24,7 @@
  */
 package com.sun.javafx.css.parser;
 
+import com.sun.javafx.css.*;
 import java.io.BufferedReader;
 import java.io.CharArrayReader;
 import java.io.IOException;
@@ -50,17 +51,6 @@ import javafx.scene.text.Font;
 import javafx.scene.text.FontPosture;
 import javafx.scene.text.FontWeight;
 
-import com.sun.javafx.css.Combinator;
-import com.sun.javafx.css.CompoundSelector;
-import com.sun.javafx.css.Declaration;
-import com.sun.javafx.css.FontUnits;
-import com.sun.javafx.css.Rule;
-import com.sun.javafx.css.Selector;
-import com.sun.javafx.css.SimpleSelector;
-import com.sun.javafx.css.Size;
-import com.sun.javafx.css.SizeUnits;
-import com.sun.javafx.css.Stylesheet;
-import com.sun.javafx.css.ParsedValue;
 import com.sun.javafx.css.converters.BooleanConverter;
 import com.sun.javafx.css.converters.EffectConverter;
 import com.sun.javafx.css.converters.EnumConverter;
@@ -78,6 +68,8 @@ import com.sun.javafx.scene.layout.region.BorderStyle;
 import com.sun.javafx.scene.layout.region.Margins;
 import com.sun.javafx.scene.layout.region.Repeat;
 import com.sun.javafx.scene.layout.region.StrokeBorder;
+import java.text.MessageFormat;
+import javafx.collections.ObservableList;
 
 final public class CSSParser {
     static boolean EXIT_ON_ERROR = false;
@@ -107,7 +99,7 @@ final public class CSSParser {
             LOGGER.setLevel(PlatformLogger.WARNING);
         }
     }
-
+    
     private static final class ParseException extends Exception {
         ParseException(String message) {
             this(message,null,null);
@@ -151,6 +143,7 @@ final public class CSSParser {
             Reader reader = new CharArrayReader(stylesheetText.toCharArray());
             parse(reader);
         }
+        notifyErrors();
         return stylesheet;
     }
 
@@ -169,6 +162,7 @@ final public class CSSParser {
             Reader reader = new BufferedReader(new InputStreamReader(url.openStream()));
             parse(reader);
         }
+        notifyErrors();
         return stylesheet;
     }
 
@@ -211,6 +205,7 @@ final public class CSSParser {
             }
         }
         stylesheet.getRules().addAll(rules);
+        notifyErrors();
         return stylesheet;
     }
 
@@ -237,6 +232,7 @@ final public class CSSParser {
                 LOGGER.warning("\"" +property + ": " + expr  + "\" " + e.toString());
             }
         }
+        notifyErrors();
         return value;
     }
     /*
@@ -327,11 +323,29 @@ final public class CSSParser {
         
     }
 
+    private List<String> errors = null;
+    private void addError(String msg) {
+        if (errors == null) {
+            errors = new ArrayList<String>();
+        }
+        errors.add(msg);
+    }
+    private void notifyErrors() {
+        if (errors != null && errors.isEmpty() == false) {
+            ObservableList<String> smErrors = StyleManager.getInstance().errorsProperty();
+            if (smErrors != null) {
+                smErrors.setAll(errors);
+            }
+            errors.clear();
+        }
+    }
+    
     private void error(final Term root, final String msg) throws ParseException {
 
         final Token token = root != null ? root.token : null;
-
-        throw new ParseException(msg,token,stylesheet);
+        final ParseException pe = new ParseException(msg,token,stylesheet);
+        addError(pe.toString());
+        throw pe;
     }
 
     private String formatDeprecatedMessage(final Term root, final String syntax) {
@@ -481,6 +495,7 @@ final public class CSSParser {
                 LOGGER.finest("Expected \'<number>\'");
             }
             ParseException re = new ParseException("Expected \'<number>\'",token, stylesheet);
+            addError(re.toString());
             throw re;
         }
         // TODO: Handle NumberFormatException
@@ -3293,14 +3308,17 @@ final public class CSSParser {
 
             if ((currentToken == null) ||
                 (currentToken.getType() != CSSLexer.LBRACE)) {
-                if (LOGGER.isLoggable(PlatformLogger.WARNING)) {
                     final int line = currentToken != null ? currentToken.getLine() : -1;
                     final int pos = currentToken != null ? currentToken.getOffset() : -1;
                     final String url = 
                         (stylesheet != null && stylesheet.getUrl() != null) ? 
                             stylesheet.getUrl().toExternalForm() : "?";
-                    LOGGER.warning("Expected LBRACE at {0}[{1,number,#},{2,number,#}]",
+                    final String msg = 
+                        MessageFormat.format("Expected LBRACE at {0}[{1,number,#},{2,number,#}]",
                         url,line,pos);
+                    addError(msg);
+                if (LOGGER.isLoggable(PlatformLogger.WARNING)) {
+                    LOGGER.warning(msg);
                 }
                 currentToken = null;
                 return;
@@ -3314,14 +3332,17 @@ final public class CSSParser {
 
             if ((currentToken != null) &&
                 (currentToken.getType() != CSSLexer.RBRACE)) {
-                if (LOGGER.isLoggable(PlatformLogger.WARNING)) {
                     final int line = currentToken != null ? currentToken.getLine() : -1;
                     final int pos = currentToken != null ? currentToken.getOffset() : -1;
                     final String url = 
                         (stylesheet != null && stylesheet.getUrl() != null) ? 
                             stylesheet.getUrl().toExternalForm() : "?";
-                    LOGGER.warning("Expected RBRACE at {0}[{1,number,#},{2,number,#}]",
+                    final String msg = 
+                        MessageFormat.format("Expected RBRACE at {0}[{1,number,#},{2,number,#}]",
                         url,line,pos);
+                    addError(msg);                    
+                if (LOGGER.isLoggable(PlatformLogger.WARNING)) {
+                    LOGGER.warning(msg);
                 }
                 currentToken = null;
                 return;
@@ -3615,14 +3636,17 @@ final public class CSSParser {
 
         if ((currentToken == null) ||
             (currentToken.getType() != CSSLexer.COLON)) {
-            if (LOGGER.isLoggable(PlatformLogger.WARNING)) {
                 final int line = currentToken != null ? currentToken.getLine() : -1;
                 final int pos = currentToken != null ? currentToken.getOffset() : -1;
                 final String url = 
                     (stylesheet != null && stylesheet.getUrl() != null) ? 
                         stylesheet.getUrl().toExternalForm() : "?";
-                LOGGER.warning("Expected COLON at {0}[{1,number,#},{2,number,#}]",
+                final String msg = 
+                        MessageFormat.format("Expected COLON at {0}[{1,number,#},{2,number,#}]",
                     url,line,pos);
+                addError(msg);
+            if (LOGGER.isLoggable(PlatformLogger.WARNING)) {
+                LOGGER.warning(msg);
             }
             return null;
         }
@@ -3634,13 +3658,16 @@ final public class CSSParser {
         try {
             value = (root != null) ? valueFor(property, root) : null;
         } catch (ParseException re) {
-            if (LOGGER.isLoggable(PlatformLogger.WARNING)) {
                 Token badToken = re.tok;
                 final String url = re.url;
                 final int line = badToken != null ? badToken.getLine() : -1;
                 final int pos = badToken != null ? badToken.getOffset() : -1;
-                LOGGER.warning("{3} while parsing ''{4}'' at {0}[{1,number,#},{2,number,#}]",
+                final String msg = 
+                        MessageFormat.format("{3} while parsing ''{4}'' at {0}[{1,number,#},{2,number,#}]",
                     url,line,pos,re.getMessage(),property);
+                addError(msg);
+            if (LOGGER.isLoggable(PlatformLogger.WARNING)) {
+                LOGGER.warning(msg);
             }
             return null;
         }
@@ -3763,15 +3790,18 @@ final public class CSSParser {
                 }
 
             default:
-                if (LOGGER.isLoggable(PlatformLogger.WARNING)) {
                     final int line = currentToken != null ? currentToken.getLine() : -1;
                     final int pos = currentToken != null ? currentToken.getOffset() : -1;
                     final String text = currentToken != null ? currentToken.getText() : "";
                     final String url = 
                         (stylesheet != null && stylesheet.getUrl() != null) ? 
                             stylesheet.getUrl().toExternalForm() : "?";
-                    LOGGER.warning("Unexpected token {0}{1}{0} at {2}[{3,number,#},{4,number,#}]",
+                    final String msg = 
+                        MessageFormat.format("Unexpected token {0}{1}{0} at {2}[{3,number,#},{4,number,#}]",
                         "\'",text,url,line,pos);
+                    addError(msg);
+                if (LOGGER.isLoggable(PlatformLogger.WARNING)) {
+                    LOGGER.warning(msg);
                 }
                 return null;
 //                currentToken = nextToken(lexer);

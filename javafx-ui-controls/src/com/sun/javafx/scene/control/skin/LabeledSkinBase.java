@@ -55,6 +55,7 @@ import java.util.Collections;
 
 import static javafx.scene.control.ContentDisplay.*;
 import static javafx.scene.control.OverrunStyle.*;
+import javafx.scene.image.ImageView;
 
 public abstract class LabeledSkinBase<C extends Labeled, B extends BehaviorBase<C>> extends SkinBase<C, B> {
 
@@ -539,6 +540,13 @@ public abstract class LabeledSkinBase<C extends Labeled, B extends BehaviorBase<
         }
         // Now update the graphic (since it may have changed)
         graphic = labeled.getGraphic();
+        
+        // RT-19851 Only setMouseTransparent(true) for an ImageView.  This allows the button 
+        // to be picked regardless of the changing images on top of it. 
+        if (graphic instanceof ImageView) {
+            graphic.setMouseTransparent(true);
+        }                
+        
         // Now update the children (and add the graphicPropertyChangedListener as necessary)
         if (isIgnoreGraphic()) {
             if (labeled.getContentDisplay() == ContentDisplay.GRAPHIC_ONLY) {

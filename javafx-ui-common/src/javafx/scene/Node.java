@@ -5987,6 +5987,7 @@ public abstract class Node implements EventTarget {
      * @treatAsPrivate implementation detail
      * @deprecated This is an experimental API that is not intended for general use and is subject to change in future versions
      */    
+    @Deprecated
     public final Styleable impl_getStyleable() {
         
         if (styleable == null) {
@@ -6520,7 +6521,9 @@ public abstract class Node implements EventTarget {
      * unique to the set of StyleHelpers of this node and its parents'
      * StyleHelpers, but not necessarily unique to all Nodes.
      * @treatAsPrivate Implementation detail
+     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
      */
+    @Deprecated
     public java.lang.ref.Reference<StyleCacheKey> impl_getStyleCacheKey() {
 
         final StyleHelper styleHelper = impl_getStyleHelper();

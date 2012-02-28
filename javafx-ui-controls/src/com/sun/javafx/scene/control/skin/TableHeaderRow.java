@@ -87,9 +87,10 @@ class TableHeaderRow extends StackPane {
     private double tableWidth;
     public double getTableWidth() { return tableWidth; }
     private void updateTableWidth() {
-        double padding = getTablePadding().getLeft() + getTablePadding().getRight();
-        this.tableWidth = table.getWidth() - padding;
-        clip.setWidth(tableWidth);
+        // snapping added for RT-19428
+        double padding = snapSpace(getTablePadding().getLeft()) + snapSpace(getTablePadding().getRight());
+        this.tableWidth = snapSize(table.getWidth()) - padding;
+        clip.setWidth(tableWidth + 1);
     }
 
     private Rectangle clip;

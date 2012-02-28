@@ -25,7 +25,10 @@
 
 package javafx.scene.control;
 
-import com.sun.javafx.css.*;
+import com.sun.javafx.css.StyleManager;
+import com.sun.javafx.css.StyleableObjectProperty;
+import com.sun.javafx.css.StyleableProperty;
+import com.sun.javafx.css.StyleableStringProperty;
 import com.sun.javafx.css.converters.StringConverter;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
@@ -49,6 +52,7 @@ import javafx.scene.Parent;
 
 import com.sun.javafx.logging.PlatformLogger;
 import com.sun.javafx.scene.control.Logging;
+import javafx.collections.ObservableList;
 
 /**
  * Base class for all user interface controls. A "Control" is a node in the
@@ -625,7 +629,7 @@ public abstract class Control extends Parent implements Skinnable {
     @Override public final double minWidth(double height) {
         double override = getMinWidth();
         if (override == USE_COMPUTED_SIZE) {
-            return computeMinWidth(height);
+            return super.minWidth(height);
         } else if (override == USE_PREF_SIZE) {
             return prefWidth(height);
         }
@@ -643,7 +647,7 @@ public abstract class Control extends Parent implements Skinnable {
     @Override public final double minHeight(double width) {
         double override = getMinHeight();
         if (override == USE_COMPUTED_SIZE) {
-            return computeMinHeight(width);
+            return super.minHeight(width);
         } else if (override == USE_PREF_SIZE) {
             return prefHeight(width);
         }
@@ -747,7 +751,7 @@ public abstract class Control extends Parent implements Skinnable {
      *      the minimum width.
      * @return A double representing the minimum width of this control.
      */
-    protected double computeMinWidth(double height) {
+    @Override protected double computeMinWidth(double height) {
         return getSkinNode() == null ? 0 : getSkinNode().minWidth(height);
     }
     /**
@@ -760,7 +764,7 @@ public abstract class Control extends Parent implements Skinnable {
      *      the minimum height.
      * @return A double representing the minimum height of this control.
      */
-    protected double computeMinHeight(double width) {
+    @Override protected double computeMinHeight(double width) {
         return getSkinNode() == null ? 0 : getSkinNode().minHeight(width);
     }
     /**
@@ -948,7 +952,13 @@ public abstract class Control extends Parent implements Skinnable {
         if (skinClassName == null 
                 || skinClassName.get() == null 
                 || skinClassName.get().isEmpty()) {
-            Logging.getControlsLogger().severe("Empty -fx-skin property specified for control " + this);
+            final String msg = 
+                "Empty -fx-skin property specified for control " + this;   
+            final List<String> errors = StyleManager.getInstance().getErrors();
+            if (errors != null) {
+                errors.add(msg); // RT-19884
+            } 
+            Logging.getControlsLogger().severe(msg);
             return;
         }
         
@@ -976,11 +986,15 @@ public abstract class Control extends Parent implements Skinnable {
             }
 
             if (skinConstructor == null) {
-                Logging.getControlsLogger().severe(
-                "No valid constructor defined in '" + skinClassName + "' for control " + this +
-                         ".\r\nYou must provide a constructor that accepts a single "
-                         + "Control parameter in " + skinClassName + ".",
-                new NullPointerException());
+                final String msg = 
+                    "No valid constructor defined in '" + skinClassName + "' for control " + this +
+                        ".\r\nYou must provide a constructor that accepts a single "
+                        + "Control parameter in " + skinClassName + ".";
+                final List<String> errors = StyleManager.getInstance().getErrors();
+                if (errors != null) {
+                    errors.add(msg); // RT-19884
+                } 
+                Logging.getControlsLogger().severe(msg);
             } else {
                 Skin<?> skinInstance = (Skin<?>) skinConstructor.newInstance(this);
                 // Do not call setSkin here since it has the side effect of
@@ -988,12 +1002,21 @@ public abstract class Control extends Parent implements Skinnable {
                 skinProperty().set(skinInstance);
             }
         } catch (InvocationTargetException e) {
-            Logging.getControlsLogger().severe(
-                "Failed to load skin '" + skinClassName + "' for control " + this,
-                e.getCause());
+            final String msg = 
+                "Failed to load skin '" + skinClassName + "' for control " + this;
+            final List<String> errors = StyleManager.getInstance().getErrors();
+            if (errors != null) {
+                errors.add(msg + " :" + e.getLocalizedMessage()); // RT-19884
+            } 
+            Logging.getControlsLogger().severe(msg, e.getCause());
         } catch (Exception e) {
-            Logging.getControlsLogger().severe(
-                "Failed to load skin '" + skinClassName + "' for control " + this, e);            
+            final String msg = 
+                "Failed to load skin '" + skinClassName + "' for control " + this;
+            final List<String> errors = StyleManager.getInstance().getErrors();
+            if (errors != null) {
+                errors.add(msg + " :" + e.getLocalizedMessage()); // RT-19884
+            } 
+            Logging.getControlsLogger().severe(msg, e);            
 //            Node parent = this;
 //            int n = 0;
 //            while (parent != null) {
@@ -1086,8 +1109,13 @@ public abstract class Control extends Parent implements Skinnable {
         super.impl_processCSS(reapply);
 
         if (getSkin() == null) {
-            Logging.getControlsLogger().severe(
-            "The -fx-skin property has not been defined in CSS for " + this);
+            final String msg = 
+                "The -fx-skin property has not been defined in CSS for " + this;
+            final List<String> errors = StyleManager.getInstance().getErrors();
+            if (errors != null) {
+                errors.add(msg); // RT-19884
+            } 
+            Logging.getControlsLogger().severe(msg);
         }
     }
 }

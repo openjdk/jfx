@@ -86,7 +86,7 @@ public class ComboBoxBaseBehavior<T> extends BehaviorBase<ComboBoxBase<T>> {
 
     protected static final List<KeyBinding> COMBO_BOX_BASE_BINDINGS = new ArrayList<KeyBinding>();
     static {
-        COMBO_BOX_BASE_BINDINGS.add(new KeyBinding(F4, "togglePopup"));
+        COMBO_BOX_BASE_BINDINGS.add(new KeyBinding(F4, KEY_RELEASED, "togglePopup"));
         COMBO_BOX_BASE_BINDINGS.add(new KeyBinding(UP, "togglePopup").alt());
         COMBO_BOX_BASE_BINDINGS.add(new KeyBinding(DOWN, "togglePopup").alt());
         
