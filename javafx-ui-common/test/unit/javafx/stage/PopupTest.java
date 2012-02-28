@@ -367,4 +367,17 @@ public class PopupTest {
         assertEquals(120, popup.getX(), 1e-100);
         assertEquals(1120, popup.getY(), 1e-100);
     }
+
+    @Test
+    public void testSetPopupContentByChangingRootNode() {
+        final Popup popup = new Popup();
+
+        popup.getScene().setRoot(new Group(new Rectangle(0, 0, 300, 200)));
+        assertEquals(300, popup.getWidth(), 1e-100);
+        assertEquals(200, popup.getHeight(), 1e-100);
+
+        popup.getScene().setRoot(new Group(new Rectangle(0, 0, 200, 300)));
+        assertEquals(200, popup.getWidth(), 1e-100);
+        assertEquals(300, popup.getHeight(), 1e-100);
+    }
 }
