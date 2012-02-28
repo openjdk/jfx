@@ -1513,7 +1513,6 @@
     -fx-background-color: -fx-control-inner-background;
     -fx-padding: 0.25em; /* 3 */
     -fx-text-fill: -fx-text-inner-color;
-    -fx-cell-size: 2.0em; /* 24 */
     -fx-opacity: 1;
 }
 
@@ -1627,7 +1626,6 @@
     -fx-background-color: -fx-control-inner-background;
     -fx-padding: 0.25em; /* 3 */
     -fx-text-fill: -fx-text-inner-color;
-    -fx-cell-size: 2.0em; /* 24 */
     -fx-indent: 10;
 }
 
@@ -2121,7 +2119,6 @@
     -fx-background-insets: 0, 0 0 1 0;
     -fx-padding: 0.0em; /* 0 */
     -fx-text-fill: -fx-text-inner-color;
-    -fx-cell-size: 2.0em; /* 24 */
 }
 
 .table-row-cell:odd {
