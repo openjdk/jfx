@@ -629,7 +629,7 @@ public abstract class Control extends Parent implements Skinnable {
     @Override public final double minWidth(double height) {
         double override = getMinWidth();
         if (override == USE_COMPUTED_SIZE) {
-            return computeMinWidth(height);
+            return super.minWidth(height);
         } else if (override == USE_PREF_SIZE) {
             return prefWidth(height);
         }
@@ -647,7 +647,7 @@ public abstract class Control extends Parent implements Skinnable {
     @Override public final double minHeight(double width) {
         double override = getMinHeight();
         if (override == USE_COMPUTED_SIZE) {
-            return computeMinHeight(width);
+            return super.minHeight(width);
         } else if (override == USE_PREF_SIZE) {
             return prefHeight(width);
         }
@@ -751,7 +751,7 @@ public abstract class Control extends Parent implements Skinnable {
      *      the minimum width.
      * @return A double representing the minimum width of this control.
      */
-    protected double computeMinWidth(double height) {
+    @Override protected double computeMinWidth(double height) {
         return getSkinNode() == null ? 0 : getSkinNode().minWidth(height);
     }
     /**
@@ -764,7 +764,7 @@ public abstract class Control extends Parent implements Skinnable {
      *      the minimum height.
      * @return A double representing the minimum height of this control.
      */
-    protected double computeMinHeight(double width) {
+    @Override protected double computeMinHeight(double width) {
         return getSkinNode() == null ? 0 : getSkinNode().minHeight(width);
     }
     /**

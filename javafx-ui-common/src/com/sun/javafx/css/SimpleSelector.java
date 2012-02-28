@@ -47,11 +47,7 @@ package com.sun.javafx.css;
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Set;
+import java.util.*;
 
 import javafx.scene.Node;
 import javafx.scene.Scene;
@@ -62,7 +58,7 @@ import javafx.scene.Scene;
  */
 final public class SimpleSelector extends Selector {
     static final private Object MAX_CLASS_DEPTH = 255;
-
+    
     /**
      * If specified in the CSS file, the name of the java class to which
      * this selector is applied. For example, if the CSS file had:
@@ -79,8 +75,8 @@ final public class SimpleSelector extends Selector {
         return name;
     }
     
-
     final private List<String> styleClasses;
+    
     /**
      * @return Immutable List&lt;String&gt; of style-classes of the selector
      */
@@ -131,7 +127,7 @@ final public class SimpleSelector extends Selector {
                 ? Collections.unmodifiableList(styleClasses)  
                 : Collections.EMPTY_LIST;
         this.matchOnStyleClass = (this.styleClasses.size() > 0);
-        
+
         this.pseudoclasses = 
                 (pseudoclasses != null) 
                 ? Collections.unmodifiableList(pseudoclasses)  
@@ -180,8 +176,7 @@ final public class SimpleSelector extends Selector {
     }
 
     @Override 
-    public boolean applies(final Node node)
-    {
+    public boolean applies(final Node node) {
         // if the selector has an id,
         // then bail if it doesn't match the node's id
         // (do this first since it is potentially the cheapest check)
@@ -216,16 +211,13 @@ final public class SimpleSelector extends Selector {
 
     @Override
     boolean stateMatches(final Node node, long states) {
-
         return ((pclassMask & states) == pclassMask);
-        
     }
 
     /*
      * Optimized className.equals(name) || className.endsWith(".".concat(name)).
      */
-    private boolean nameMatchesAtEnd(final String className)
-    {
+    private boolean nameMatchesAtEnd(final String className) {
         // if name is null or empty, why bother?
         if (!matchOnName) return false;
 
@@ -241,7 +233,6 @@ final public class SimpleSelector extends Selector {
             return className.regionMatches(dotPos+1, this.name, 0, nameLen);
         }
         return false;
-
     }
 
     // Are the Selector's style classes a subset of the Node's style classes?
@@ -270,7 +261,6 @@ final public class SimpleSelector extends Selector {
       * in seq1 are contained in seq2
       */
     boolean isSubsetOf(final List<String> seq1, final List<String> seq2) {
-        
         // if one or the other is null, then they are a subset if both are null
         if (seq1 == null || seq2 == null) return seq1 == null && seq2 == null;
         

@@ -797,6 +797,8 @@ public abstract class Parent extends Node {
 
     private double prefWidthCache = -1;
     private double prefHeightCache = -1;
+    private double minWidthCache = -1;
+    private double minHeightCache = -1;
 
     /**
      * Requests a layout pass to be performed before the next scene is
@@ -808,14 +810,18 @@ public abstract class Parent extends Node {
      * will be invoked on its parent.
      */
     public void requestLayout() {
+        prefWidthCache = -1;
+        prefHeightCache = -1;
+        minWidthCache = -1;
+        minHeightCache = -1;
+
         if (!isNeedsLayout()) {
-            prefWidthCache = -1;
-            prefHeightCache = -1;
-            setNeedsLayout(true);
             PlatformLogger logger = Logging.getLayoutLogger();
             if (logger.isLoggable(PlatformLogger.FINER)) {
                 logger.finer(this.toString());
             }
+
+            setNeedsLayout(true);
             if (isLayoutRoot()) {
                 if (getScene() != null) {
                     if (logger.isLoggable(PlatformLogger.FINER)) {
@@ -825,18 +831,6 @@ public abstract class Parent extends Node {
                 }
             } else if (getParent() != null) {
                 getParent().requestLayout();
-            }
-        } else {
-            clearPrefSizeCache();
-        }
-    }
-
-    void clearPrefSizeCache() {
-        prefWidthCache = -1;
-        prefHeightCache = -1;
-        if (!isLayoutRoot()) {
-            if (getParent() != null) {
-                getParent().clearPrefSizeCache();
             }
         }
     }
@@ -860,6 +854,28 @@ public abstract class Parent extends Node {
             return prefHeightCache;
         } else {
             return computePrefHeight(width);
+        }
+    }
+
+    @Override public double minWidth(double height) {
+        if (height == -1) {
+            if (minWidthCache == -1) {
+                minWidthCache = computeMinWidth(-1);
+            }
+            return minWidthCache;
+        } else {
+            return computeMinWidth(height);
+        }
+    }
+
+    @Override public double minHeight(double width) {
+        if (width == -1) {
+            if (minHeightCache == -1) {
+                minHeightCache = computeMinHeight(-1);
+            }
+            return minHeightCache;
+        } else {
+            return computeMinHeight(width);
         }
     }
 
@@ -911,6 +927,31 @@ public abstract class Parent extends Node {
             }
         }
         return maxY - minY;
+    }
+
+    /**
+     * Calculates the minimum width of this {@code Parent}. The default
+     * implementation simply returns the pref width.
+     *
+     * @param height the height that should be used if min width depends
+     *      on it
+     * @return the calculated min width
+     */
+    protected double computeMinWidth(double height) {
+        return super.prefWidth(height);
+    }
+
+    // PENDING_DOC_REVIEW
+    /**
+     * Calculates the min height of this {@code Parent}. The default
+     * implementation simply returns the pref height;
+     *
+     * @param width the width that should be used if min height depends
+     *      on it
+     * @return the calculated min height
+     */
+    protected double computeMinHeight(double width) {
+        return super.prefHeight(width);
     }
 
     /**
