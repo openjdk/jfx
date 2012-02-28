@@ -90,7 +90,7 @@ class TableHeaderRow extends StackPane {
         // snapping added for RT-19428
         double padding = snapSpace(getTablePadding().getLeft()) + snapSpace(getTablePadding().getRight());
         this.tableWidth = snapSize(table.getWidth()) - padding;
-        clip.setWidth(tableWidth);
+        clip.setWidth(tableWidth + 1);
     }
 
     private Rectangle clip;
@@ -401,7 +401,7 @@ class TableHeaderRow extends StackPane {
         
         // position the filler region
         double border = filler.getBoundsInLocal().getWidth() - filler.getLayoutBounds().getWidth();
-        double fillerWidth = tableWidth - headerWidth + border - 1;
+        double fillerWidth = tableWidth - headerWidth + border;
         fillerWidth -= table.isTableMenuButtonVisible() ? cornerWidth : 0;
         filler.setVisible(fillerWidth > 0);
         if (fillerWidth > 0) {

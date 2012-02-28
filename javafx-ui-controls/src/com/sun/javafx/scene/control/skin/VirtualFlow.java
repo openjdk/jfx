@@ -1235,7 +1235,7 @@ public class VirtualFlow extends Region {
         VirtualScrollBar lengthBar = isVertical() ? vbar : hbar;
         double breadthBarLength = snapSize(isVertical() ? hbar.prefHeight(-1) : vbar.prefWidth(-1));
         double lengthBarBreadth = snapSize(isVertical() ? vbar.prefWidth(-1) : hbar.prefHeight(-1));
-
+        
         // Now that we've laid out the cells, we may need to adjust the scroll
         // bars and update the viewport dimensions based on the bars
         // We have to do the following work twice because the first pass
@@ -1336,7 +1336,7 @@ public class VirtualFlow extends Region {
 
             if (isVertical()) {
                 double h = viewportLength;
-                vbar.resizeRelocate(viewportBreadth - 1, 0, vbar.prefWidth(h), h);
+                vbar.resizeRelocate(viewportBreadth, 0, vbar.prefWidth(h), h);
             } else {
                 hbar.resizeRelocate(0, viewportBreadth, viewportLength, hbar.prefHeight(-1));
             }
