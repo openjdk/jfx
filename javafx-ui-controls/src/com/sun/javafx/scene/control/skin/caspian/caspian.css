@@ -2729,6 +2729,7 @@
 
 .special-key { 
     -fx-text-fill: white;
+    -fx-font: bold 1.75em "Segoe UI Symbol";
 }
 
 .fxvk .button .label { 
