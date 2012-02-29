@@ -109,7 +109,7 @@ public  class Rectangle extends Shape {
     }
 
     /**
-     * Creates a new instance of Rectangle with the given position, size and fill.
+     * Creates a new instance of Rectangle with the given position and size.
      * @param x horizontal position of the rectangle
      * @param y vertical position of the rectangle
      * @param width width of the rectangle
