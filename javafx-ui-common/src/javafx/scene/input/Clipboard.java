@@ -160,27 +160,6 @@ public class Clipboard {
         return new Clipboard(Toolkit.getToolkit().getSystemClipboard());
     }
 
-    /**
-     * Gets a specifically named clipboard. If there is a specially named clipboard
-     * on the native operating system with this name, it is returned. If there is
-     * not and the native OS supports named, shared clipboards, then a new clipboard
-     * is created and returned.
-     * TODO On Windows, if two FX apps ask for a clipboard by the same name, will
-     * they get a shared instance? I assume not, in which case we must return null
-     * on such operating systems.
-     * @param name The name of the clipboard to get. Cannot be null or the empty
-     * string.
-     * @return The clipboard for the given name, or null if the operating system
-     * doesn't support shared, named clipboards.
-     */
-//    public static Clipboard getNamedClipboard(String name) {
-//        if (name == null || name.length() == 0) {
-//            throw new IllegalArgumentException("The clipboard name must be specified " +
-//                    "and cannot be the empty string");
-//        }
-//        return new Clipboard(Toolkit.getToolkit().getNamedClipboard(name));
-//    }
-
     TKClipboard peer;
 
     // Only allow Dragboard to extend from this
