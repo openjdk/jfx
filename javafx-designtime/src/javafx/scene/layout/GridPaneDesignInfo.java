@@ -63,22 +63,35 @@ public class GridPaneDesignInfo extends PaneDesignInfo {
         }
         return numColumns;
     }
-
+    
     public Bounds getCellBounds(GridPane pane, int columnIndex, int rowIndex) {
         final double snaphgap = pane.snapSpace(pane.getHgap());
         final double snapvgap = pane.snapSpace(pane.getVgap());
         final double top = pane.snapSpace(pane.getInsets().getTop());
+        final double right = pane.snapSpace(pane.getInsets().getRight());
+        final double bottom = pane.snapSpace(pane.getInsets().getBottom());
         final double left = pane.snapSpace(pane.getInsets().getLeft());
+        final double gridPaneHeight = pane.getHeight() - (top + bottom);
+        final double gridPaneWidth = pane.getWidth() - (left + right);
 
+        System.out.println("W " + gridPaneWidth + " H " + gridPaneHeight);
         // Compute row height
-        double[] rowHeights = pane.getRowHeights();        
+        double[] rowHeights = pane.getRowHeights();
         if (rowHeights == null || rowHeights.length == 0) {
             rowHeights = new double[] {0};
             rowIndex = 0;
         }
-        double minY = top;
-        double height = rowHeights[rowIndex];
 
+        // Compute the total row height
+        double rowTotal = 0;
+        for (int i = 0; i < rowHeights.length; i++) {
+            rowTotal += rowHeights[i];
+        }
+        rowTotal += ((rowHeights.length - 1) * snapvgap);
+
+        // Adjust for alignment
+        double minY = top + Region.computeYOffset(gridPaneHeight, rowTotal, pane.getAlignment().getVpos());
+        double height = rowHeights[rowIndex];
         for (int j = 0; j < rowIndex; j++) {
             minY += rowHeights[j] + snapvgap;
         }
@@ -89,9 +102,17 @@ public class GridPaneDesignInfo extends PaneDesignInfo {
             columnWidths = new double[] {0};
             columnIndex = 0;
         }
-        double minX = left;
-        double width = columnWidths[columnIndex];
 
+        // Compute the total column width
+        double columnTotal = 0;
+        for (int i = 0; i < columnWidths.length; i++) {
+            columnTotal += columnWidths[i];
+        }
+        columnTotal += ((columnWidths.length - 1) * snaphgap);
+
+        // Adjust for alignment
+        double minX = left + Region.computeXOffset(gridPaneWidth, columnTotal, pane.getAlignment().getHpos());
+        double width = columnWidths[columnIndex];
         for (int j = 0; j < columnIndex; j++) {
             minX += columnWidths[j] + snaphgap;
         }
