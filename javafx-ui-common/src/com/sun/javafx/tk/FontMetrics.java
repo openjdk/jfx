@@ -31,12 +31,6 @@ import javafx.scene.text.Font;
  * The metrics for a Font, including helper functions for computing string
  * width/height and other metrics based on a specific String of text with
  * this font.
- * TODO Ultimately I'd like to make this public and accessible from the
- * Font class, perhaps with a simple lazy bind. So something like:
- * public class Font {
- *     public-read var metrics = bind lazy Toolkit.getToolkit().getFontMetrics(this);
- *     ...
- * }
  */
 public class FontMetrics {
     /** @treatAsPrivate */
@@ -76,7 +70,7 @@ public class FontMetrics {
     }
     
     /**
-     * The baseline is the imaginary line upon which letters without decenders
+     * The baseline is the imaginary line upon which letters without descenders
      * (for example, the lowercase letter "a") sits. In terms of the font
      * metrics, all other metrics are derived from this point. This point is
      * implicitly defined as zero.
