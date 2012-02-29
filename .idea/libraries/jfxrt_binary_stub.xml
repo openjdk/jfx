@@ -2,7 +2,7 @@
   <library name="jfxrt-binary-stub">
     <CLASSES>
       <root url="jar://$PROJECT_DIR$/../artifacts/sdk/rt/lib/jfxrt.jar!/" />
-      <root url="jar://$PROJECT_DIR$/../artifacts/sdk/tools/javafx-mx.jar!/" />
+      <root url="jar://$PROJECT_DIR$/../artifacts/sdk/lib/javafx-mx.jar!/" />
     </CLASSES>
     <JAVADOC />
     <SOURCES />
