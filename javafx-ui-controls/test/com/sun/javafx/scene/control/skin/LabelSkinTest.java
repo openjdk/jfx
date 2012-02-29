@@ -1105,7 +1105,6 @@ public class LabelSkinTest {
         final double oldPrefHeight = label.prefHeight(-1);
         label.setText("This\nis a test\nof the emergency\nbroadcast system.\nThis is only a test");
         final double newPrefHeight = label.prefHeight(-1);
-        System.out.println("newPrefHeight="+newPrefHeight+" old="+oldPrefHeight);
         assertTrue(oldPrefHeight != newPrefHeight);
     }
     

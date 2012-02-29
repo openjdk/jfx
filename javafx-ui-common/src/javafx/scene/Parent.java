@@ -810,12 +810,11 @@ public abstract class Parent extends Node {
      * will be invoked on its parent.
      */
     public void requestLayout() {
-        prefWidthCache = -1;
-        prefHeightCache = -1;
-        minWidthCache = -1;
-        minHeightCache = -1;
-
         if (!isNeedsLayout()) {
+            prefWidthCache = -1;
+            prefHeightCache = -1;
+            minWidthCache = -1;
+            minHeightCache = -1;
             PlatformLogger logger = Logging.getLayoutLogger();
             if (logger.isLoggable(PlatformLogger.FINER)) {
                 logger.finer(this.toString());
@@ -831,6 +830,20 @@ public abstract class Parent extends Node {
                 }
             } else if (getParent() != null) {
                 getParent().requestLayout();
+            }
+        } else {
+            clearSizeCache();
+        }
+    }
+
+    void clearSizeCache() {
+        prefWidthCache = -1;
+        prefHeightCache = -1;
+        minWidthCache = -1;
+        minHeightCache = -1;
+        if (!isLayoutRoot()) {
+            if (getParent() != null) {
+                getParent().clearSizeCache();
             }
         }
     }

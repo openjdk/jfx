@@ -531,7 +531,6 @@ public abstract class LabeledSkinBase<C extends Labeled, B extends BehaviorBase<
      */
     protected void updateChildren() {
         final Labeled labeled = getSkinnable();
-        final ContentDisplay contentDisplay = labeled.getContentDisplay();
         // Only in some situations do we want to have the graphicPropertyChangedListener
         // installed. Since updateChildren() is not called much, we'll just remove it always
         // and reinstall it later if it is necessary to do so.

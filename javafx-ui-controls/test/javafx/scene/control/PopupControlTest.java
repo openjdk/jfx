@@ -409,6 +409,7 @@ public class PopupControlTest {
         Tooltip tooltip = new Tooltip("Hello");
         TooltipSkin skin = new TooltipSkin(tooltip);
         popup.setSkin(skin);
+        popup.getScene().getRoot().impl_processCSS(true);
 
         popup.setMinWidth(PopupControl.USE_COMPUTED_SIZE);
         assertEquals(popup.getSkin().getNode().minWidth(anyNum), popup.minWidth(anyNum), 0.0D);
@@ -447,6 +448,7 @@ public class PopupControlTest {
         Tooltip tooltip = new Tooltip("Hello");
         TooltipSkin skin = new TooltipSkin(tooltip);
         popup.setSkin(skin);
+        popup.getScene().getRoot().impl_processCSS(true);
 
         popup.setMinHeight(PopupControl.USE_COMPUTED_SIZE);
         assertEquals(popup.getSkin().getNode().minHeight(anyNum), popup.minHeight(anyNum), 0.0D);
@@ -485,6 +487,7 @@ public class PopupControlTest {
         Tooltip tooltip = new Tooltip("Hello");
         TooltipSkin skin = new TooltipSkin(tooltip);
         popup.setSkin(skin);
+        popup.getScene().getRoot().impl_processCSS(true);
 
         popup.setPrefWidth(PopupControl.USE_COMPUTED_SIZE);
         assertEquals(popup.getSkin().getNode().prefWidth(anyNum), popup.prefWidth(anyNum), 0.0D);
@@ -523,6 +526,7 @@ public class PopupControlTest {
         Tooltip tooltip = new Tooltip("Hello");
         TooltipSkin skin = new TooltipSkin(tooltip);
         popup.setSkin(skin);
+        popup.getScene().getRoot().impl_processCSS(true);
 
         popup.setPrefHeight(PopupControl.USE_COMPUTED_SIZE);
         assertEquals(popup.getSkin().getNode().prefHeight(anyNum), popup.prefHeight(anyNum), 0.0D);
@@ -561,6 +565,7 @@ public class PopupControlTest {
         Tooltip tooltip = new Tooltip("Hello");
         TooltipSkin skin = new TooltipSkin(tooltip);
         popup.setSkin(skin);
+        popup.getScene().getRoot().impl_processCSS(true);
 
         popup.setMaxWidth(PopupControl.USE_COMPUTED_SIZE);
         assertEquals(popup.getSkin().getNode().maxWidth(anyNum), popup.maxWidth(anyNum), 0.0D);
@@ -599,6 +604,7 @@ public class PopupControlTest {
         Tooltip tooltip = new Tooltip("Hello");
         TooltipSkin skin = new TooltipSkin(tooltip);
         popup.setSkin(skin);
+        popup.getScene().getRoot().impl_processCSS(true);
 
         popup.setMaxHeight(PopupControl.USE_COMPUTED_SIZE);
         assertEquals(popup.getSkin().getNode().maxHeight(anyNum), popup.maxHeight(anyNum), 0.0D);
