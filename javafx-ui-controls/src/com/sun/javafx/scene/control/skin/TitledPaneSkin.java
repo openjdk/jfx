@@ -428,9 +428,8 @@ public class TitledPaneSkin extends LabeledSkinBase<TitledPane, TitledPaneBehavi
             final Font font = text.getFont();
             final String string = labeled.getText();
             boolean emptyText = string == null || string.isEmpty();
-            final Insets padding = getInsets();
             Insets labelPadding = labeled.getLabelPadding();
-            double widthPadding = padding.getLeft() + padding.getRight() + labelPadding.getLeft() + labelPadding.getRight();
+            double widthPadding = labelPadding.getLeft() + labelPadding.getRight();
             double textWidth = emptyText ? 0 : Utils.computeTextWidth(font, string, 0);
 
             // Now add on the graphic, gap, and padding as appropriate
@@ -453,7 +452,7 @@ public class TitledPaneSkin extends LabeledSkinBase<TitledPane, TitledPaneBehavi
             final Labeled labeled = getSkinnable();
             final Font font = text.getFont();
             final ContentDisplay contentDisplay = labeled.getContentDisplay();
-            final double gap = labeled.getGraphicTextGap();
+            final double gap = labeled.getGraphicTextGap();            
             final Insets padding = getInsets();
             final Insets labelPadding = labeled.getLabelPadding();
             final double widthPadding = padding.getLeft() + padding.getRight() + labelPadding.getLeft() + labelPadding.getRight();
@@ -486,7 +485,7 @@ public class TitledPaneSkin extends LabeledSkinBase<TitledPane, TitledPaneBehavi
                 }
             }
 
-            return padding.getTop() + h + padding.getBottom() + labelPadding.getTop() + labelPadding.getBottom();
+            return h + labelPadding.getTop() + labelPadding.getBottom();
         }        
     }
 
