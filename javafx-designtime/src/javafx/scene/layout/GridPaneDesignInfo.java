@@ -71,10 +71,9 @@ public class GridPaneDesignInfo extends PaneDesignInfo {
         final double right = pane.snapSpace(pane.getInsets().getRight());
         final double bottom = pane.snapSpace(pane.getInsets().getBottom());
         final double left = pane.snapSpace(pane.getInsets().getLeft());
-        final double gridPaneHeight = pane.getHeight() - (top + bottom);
-        final double gridPaneWidth = pane.getWidth() - (left + right);
+        final double gridPaneHeight = pane.snapSize(pane.getHeight()) - (top + bottom);
+        final double gridPaneWidth = pane.snapSize(pane.getWidth()) - (left + right);
 
-        System.out.println("W " + gridPaneWidth + " H " + gridPaneHeight);
         // Compute row height
         double[] rowHeights = pane.getRowHeights();
         if (rowHeights == null || rowHeights.length == 0) {
