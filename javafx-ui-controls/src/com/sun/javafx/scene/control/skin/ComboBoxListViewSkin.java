@@ -89,7 +89,6 @@ public class ComboBoxListViewSkin<T> extends ComboBoxPopupControl<T> {
                 // ever giving the event to the TextField.
                 if (t instanceof KeyEvent) {
                     KeyEvent ke = (KeyEvent)t;
-                    if (ke.getEventType() != KeyEvent.KEY_RELEASED) return;
                     
                     if (ke.getCode() == KeyCode.ENTER) {
                         StringConverter<T> c = comboBox.getConverter();
@@ -98,7 +97,7 @@ public class ComboBoxListViewSkin<T> extends ComboBoxPopupControl<T> {
                         comboBox.setValue(value);
                         t.consume();
                         return;
-                    } else if (ke.getCode() == KeyCode.F4) {
+                    } else if (ke.getCode() == KeyCode.F4 && ke.getEventType() == KeyEvent.KEY_RELEASED) {
                         if (comboBox.isShowing()) comboBox.hide();
                         else comboBox.show();
                         t.consume();
