@@ -228,7 +228,6 @@ public abstract class TextInputControlSkin<T extends TextInputControl, B extends
     public TextInputControlSkin(final T textInput, final B behavior) {
         super(textInput, behavior);
 
-        caretTimeline = new Timeline();
         caretTimeline.setCycleCount(Timeline.INDEFINITE);
         caretTimeline.getKeyFrames().addAll(
             new KeyFrame(Duration.ZERO, new EventHandler<ActionEvent>() {
@@ -351,7 +350,7 @@ public abstract class TextInputControlSkin<T extends TextInputControl, B extends
     }
 
  
-   /**
+    /**
      * Returns the character at a given offset.
      *
      * @param index

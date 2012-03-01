@@ -658,7 +658,10 @@ public class StubToolkit extends Toolkit {
 
     @Override
     public PathElement[] convertShapeToFXPath(Object shape) {
-        throw new UnsupportedOperationException();
+        // Had to be mocked up for TextField tests (for the caret!)
+        // Since the "shape" could be anything, I'm just returning
+        // something here, doesn't matter what.
+        return new PathElement[0];
     }
 
     @Override

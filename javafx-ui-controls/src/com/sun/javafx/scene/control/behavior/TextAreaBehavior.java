@@ -137,6 +137,7 @@ public class TextAreaBehavior extends TextInputControlBehavior<TextArea> {
                 } else {
 //                    skin.hideCaret();
                     focusGainedByMouseClick = false;
+                    setCaretAnimating(false);
                 }
             }
         });
