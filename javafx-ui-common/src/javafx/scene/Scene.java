@@ -4204,7 +4204,7 @@ public class Scene implements EventTarget {
      * event handler. More detail about dragging gestures can be found
      * in the overview of {@link MouseEvent} and {@link MouseDragEvent}.
      *
-     * @see MosueEvent
+     * @see MouseEvent
      * @see MouseDragEvent
      * @throws IllegalStateException if the full press-drag-release gesture
      * cannot be started at this moment (it's called outside of

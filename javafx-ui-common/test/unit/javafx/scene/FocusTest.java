@@ -182,6 +182,50 @@ public class FocusTest {
     }
 
     /**
+     * Test removing the focus owner without another eligible node in the scene.
+     */
+    @Test
+    public void testRemove_ClearsFocusOnRemovedNode1() {
+        Node n = n();
+        scene.setRoot(new Group());
+        scene.getRoot().getChildren().add(n);
+        n.requestFocus();
+        scene.getRoot().getChildren().remove(n);
+        fireTestPulse();
+        assertNotFocused(scene, n);
+    }
+
+    /**
+     * Test removing the focus owner with another eligible node in the scene.
+     */
+    @Test
+    public void testRemove_ClearsFocusOnRemovedNode2() {
+        Node n = n();
+        scene.setRoot(new Group());
+        scene.getRoot().getChildren().addAll(n, n());
+        n.requestFocus();
+        scene.getRoot().getChildren().remove(n);
+        fireTestPulse();
+        assertNotFocused(scene, n);
+        assertIsFocused(scene, scene.getRoot().getChildren().get(0));
+    }
+
+    /**
+     * Test removing the focus owner without another eligible node in the scene.
+     */
+    @Test
+    public void testRemoveChildOfGroup_ClearsFocusOnRemovedNode1() {
+        Node n = n();
+        Group g = new Group(n);
+        scene.setRoot(new Group());
+        scene.getRoot().getChildren().add(g);
+        n.requestFocus();
+        g.getChildren().remove(n);
+        fireTestPulse();
+        assertNotFocused(scene, n);
+    }
+
+    /**
      * Test making the focus owner invisible without another eligible
      * node in the scene.
      */

@@ -1025,7 +1025,7 @@ public abstract class Axis<T> extends Region {
          * @return a string representation of this {@code TickMark} object.
          */ 
         @Override public String toString() {
-            return value.toString();
+            return value.get().toString();
         }
     }
 
