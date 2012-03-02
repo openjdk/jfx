@@ -315,7 +315,7 @@ public class ComboBoxListViewSkin<T> extends ComboBoxPopupControl<T> {
                         rowsToMeasure = (Integer) comboBox.getProperties().get(COMBO_BOX_ROWS_TO_MEASURE_WIDTH_KEY);
                     }
                     
-                    pw = skin.getMaxCellWidth(rowsToMeasure) + 30;
+                    pw = Math.max(comboBox.getWidth(), skin.getMaxCellWidth(rowsToMeasure) + 30);
                 } else {
                     pw = Math.max(100, comboBox.getWidth());
                 }
