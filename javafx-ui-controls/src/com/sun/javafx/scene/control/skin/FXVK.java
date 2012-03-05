@@ -33,15 +33,14 @@ import javafx.application.Platform;
 import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.BooleanPropertyBase;
 import javafx.beans.property.ObjectProperty;
+import javafx.beans.property.ObjectPropertyBase;
 import javafx.beans.property.SimpleObjectProperty;
 import javafx.beans.value.WritableValue;
 import javafx.geometry.HPos;
 import javafx.geometry.Point2D;
 import javafx.geometry.VPos;
 import javafx.scene.Node;
-import javafx.scene.Scene;
 import javafx.scene.control.*;
-import javafx.stage.Popup;
 
 import com.sun.javafx.css.StyleManager;
 import com.sun.javafx.css.StyleableBooleanProperty;
@@ -51,8 +50,6 @@ import javafx.beans.DefaultProperty;
 
 public class FXVK extends Control {
 
-    private Node attachedNode;
-
     public String[] chars;
 
     public FXVK() {
@@ -60,68 +57,40 @@ public class FXVK extends Control {
     }
 
 
-    public void setAttachedNode(Node node) {
-        Node oldNode = attachedNode;
-        attachedNode = node;
+    public final ObjectProperty<Node> attachedNodeProperty() {
+        if (attachedNode == null) {
+            attachedNode = new ObjectPropertyBase<Node>() {
+                @Override public Object getBean() {
+                    return FXVK.this;
+                }
 
-        if (oldNode != null && node != null && oldNode.getScene() == node.getScene()) {
-            return;
+                @Override public String getName() {
+                    return "attachedNode";
+                }
+            };
         }
-
-        if (node != null) {
-            setPrefWidth(node.getScene().getWidth());
-            setMaxWidth(node.getScene().getWidth());
-            setPrefHeight(200);
-        }
-    }
-
-    public Node getAttachedNode() {
         return attachedNode;
     }
+    private ObjectProperty<Node> attachedNode;
+    final void setAttachedNode(Node value) { attachedNodeProperty().setValue(value); }
+    public final Node getAttachedNode() { return attachedNode == null ? null : attachedNode.getValue(); }
 
 
-
-
-    private static Popup vkPopup;
     private static FXVK vk;
 
     public static void attach(final TextInputControl textInput) {
-        if (vkPopup == null) {
+        if (vk == null) {
             vk = new FXVK();
-            vkPopup = new Popup();
-            vkPopup.getContent().add(vk);
+//             vk.impl_processCSS(true);
+            vk.setSkin(new FXVKSkin(vk));
         }
 
-        Scene scene = null;
-        if (vk.attachedNode != null) {
-            scene = vk.attachedNode.getScene();
-        }
         vk.setAttachedNode(textInput);
-
-        if (scene != vk.attachedNode.getScene() || !vkPopup.isShowing()) {
-            Platform.runLater(new Runnable() {
-                public void run() {
-                    Point2D nodePoint =
-                        com.sun.javafx.Utils.pointRelativeTo(textInput,
-                                      vkPopup.getWidth(), vkPopup.getHeight(),
-                                      HPos.CENTER, VPos.BOTTOM, 0, 2, true);
-
-                    Point2D point =
-                        com.sun.javafx.Utils.pointRelativeTo(textInput.getScene().getRoot(),
-                                      vkPopup.getWidth(), vkPopup.getHeight(),
-                                      HPos.CENTER, VPos.BOTTOM, 0, 0, true);
-
-//                     vkPopup.show(textInput, point.getX(), point.getY() - vkPopup.getHeight());
-                    vkPopup.show(textInput, point.getX(), point.getY() - vk.prefHeight(-1));
-                }
-            });
-        }
     }
 
     public static void detach() {
         if (vk != null) {
             vk.setAttachedNode(null);
-            vkPopup.hide();
         }
     }
 

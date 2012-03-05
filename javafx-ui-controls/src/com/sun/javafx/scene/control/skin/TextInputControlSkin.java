@@ -229,10 +229,12 @@ public abstract class TextInputControlSkin<T extends TextInputControl, B extends
     protected final Path caretPath = new Path();
 
     static boolean useVK = false;
-    public void setUseVK(boolean b) {
-        useVK = b;
+    public void toggleUseVK() {
+        useVK = !useVK;
         if (useVK) {
             FXVK.attach(getSkinnable());
+        } else {
+            FXVK.detach();
         }
     }
 

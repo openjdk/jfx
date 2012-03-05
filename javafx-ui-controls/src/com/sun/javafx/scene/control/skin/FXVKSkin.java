@@ -29,6 +29,8 @@ import java.lang.reflect.Field;
 import java.util.*;
 
 import javafx.application.Platform;
+import javafx.beans.InvalidationListener;
+import javafx.beans.Observable;
 import javafx.geometry.Pos;
 import javafx.event.ActionEvent;
 import javafx.event.Event;
@@ -39,6 +41,7 @@ import javafx.geometry.HPos;
 import javafx.geometry.Point2D;
 import javafx.geometry.VPos;
 import javafx.scene.Node;
+import javafx.scene.Scene;
 import javafx.scene.control.*;
 import javafx.scene.input.KeyCode;
 import javafx.scene.input.KeyEvent;
@@ -58,6 +61,9 @@ public class FXVKSkin extends SkinBase<FXVK, BehaviorBase<FXVK>> {
     private static Popup secondaryPopup;
     private static FXVK primaryVK;
     private static FXVK secondaryVK;
+    private static Popup vkPopup;
+    private Node attachedNode;
+//     private Scene scene;
 
     FXVK fxvk;
     Control[][] keyRows;
@@ -79,6 +85,63 @@ public class FXVKSkin extends SkinBase<FXVK, BehaviorBase<FXVK>> {
         this.fxvk = fxvk;
 
         createKeys();
+
+        fxvk.attachedNodeProperty().addListener(new InvalidationListener() {
+            @Override public void invalidated(Observable valueModel) {
+                Node oldNode = attachedNode;
+                attachedNode = fxvk.getAttachedNode();
+
+                if (oldNode != null) {
+                    oldNode.getScene().getRoot().setTranslateY(0);
+                }
+
+
+                if (attachedNode != null) {
+                    final Scene scene = attachedNode.getScene();
+
+                    if (vkPopup == null) {
+                        vkPopup = new Popup();
+                        vkPopup.getContent().add(fxvk);
+                    }
+
+                    if (vkPopup.isShowing()) {
+                        Point2D nodePoint = com.sun.javafx.Utils.pointRelativeTo(attachedNode, vkPopup.getWidth(), vkPopup.getHeight(), HPos.CENTER, VPos.BOTTOM, 0, 2, true);
+                        Point2D point = com.sun.javafx.Utils.pointRelativeTo(scene.getRoot(), vkPopup.getWidth(), vkPopup.getHeight(), HPos.CENTER, VPos.BOTTOM, 0, 0, true);
+                        double y = point.getY() - fxvk.prefHeight(-1);
+                        double nodeBottom = nodePoint.getY();
+                        if (y < nodeBottom) {
+                            scene.getRoot().setTranslateY(y - nodeBottom);
+                        }
+                    } else {
+                        Platform.runLater(new Runnable() {
+                            public void run() {
+                                Point2D nodePoint = com.sun.javafx.Utils.pointRelativeTo(attachedNode, vkPopup.getWidth(), vkPopup.getHeight(), HPos.CENTER, VPos.BOTTOM, 0, 2, true);
+                                Point2D point = com.sun.javafx.Utils.pointRelativeTo(scene.getRoot(), vkPopup.getWidth(), vkPopup.getHeight(), HPos.CENTER, VPos.BOTTOM, 0, 0, true);
+                                double y = point.getY() - fxvk.prefHeight(-1);
+                                vkPopup.show(attachedNode, point.getX(), y);
+
+
+                                double nodeBottom = nodePoint.getY();
+                                if (y < nodeBottom) {
+                                    scene.getRoot().setTranslateY(y - nodeBottom);
+                                }
+                            }
+                        });
+                    }
+
+                    if (oldNode == null || oldNode.getScene() != attachedNode.getScene()) {
+                        fxvk.setPrefWidth(scene.getWidth());
+                        fxvk.setMaxWidth(scene.getWidth());
+                        fxvk.setPrefHeight(200);
+                    }
+                } else {
+                    if (vkPopup != null) {
+                        vkPopup.hide();
+                    }
+                    return;
+                }
+            }
+        });
     }
 
     private void createKeys() {
