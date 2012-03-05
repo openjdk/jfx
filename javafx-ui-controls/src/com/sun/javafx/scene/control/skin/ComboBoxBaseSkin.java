@@ -158,7 +158,7 @@ public abstract class ComboBoxBaseSkin<T> extends SkinBase<ComboBoxBase<T>, Comb
         final Insets padding = getInsets();
 
         if (displayNode == null) {
-            final int DEFAULT_HEIGHT = 20;
+            final int DEFAULT_HEIGHT = 21;
             final Insets arrowButtonPadding = arrowButton.getInsets();
             double arrowHeight = arrowButtonPadding.getTop() + arrow.prefHeight(-1) + arrowButtonPadding.getBottom();
             return padding.getTop() + Math.max(DEFAULT_HEIGHT, arrowHeight) + padding.getBottom();
