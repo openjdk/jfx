@@ -7,13 +7,18 @@ package javafx.scene.control;
 import com.sun.javafx.css.StyleableProperty;
 import static javafx.scene.control.ControlTestUtils.*;
 import com.sun.javafx.pgstub.StubToolkit;
+import com.sun.javafx.scene.control.skin.TitledPaneSkin;
 import com.sun.javafx.tk.Toolkit;
 import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.SimpleBooleanProperty;
 import javafx.beans.property.SimpleObjectProperty;
+import javafx.geometry.Pos;
 import javafx.scene.Node;
+import javafx.scene.Scene;
+import javafx.scene.layout.StackPane;
 import javafx.scene.shape.Rectangle;
+import javafx.stage.Stage;
 import static org.junit.Assert.*;
 
 
@@ -29,15 +34,28 @@ public class TitledPaneTest {
     private TitledPane titledPaneWithTitleAndNode;//With title And Node
     private Node node;
     private Toolkit tk;
+    private Scene scene;
+    private Stage stage;
+    private StackPane root;  
 
     @Before public void setup() {
         node = new Rectangle();
         tk = (StubToolkit)Toolkit.getToolkit();//This step is not needed (Just to make sure StubToolkit is loaded into VM)
         titledPane = new TitledPane();
+        titledPane.setSkin(new TitledPaneSkin(titledPane));
         titledPaneWithTitleAndNode = new TitledPane("title", node);
+        root = new StackPane();
+        scene = new Scene(root);
+        stage = new Stage();
+        stage.setScene(scene);        
     }
     
-   
+    /*********************************************************************
+     * Helper methods                                                    *
+     ********************************************************************/
+    private void show() {
+        stage.show();
+    }   
    
     /*********************************************************************
      * Tests for default values                                         *
@@ -232,5 +250,14 @@ public class TitledPaneTest {
         assertFalse(titledPane.isCollapsible());
     }
     
-    
+    @Test public void setAlignment_RT20069() {        
+        titledPane.setExpanded(false);
+        titledPane.setAnimated(false);
+        titledPane.setStyle("-fx-alignment: BOTTOM_RIGHT;");
+                
+        root.getChildren().add(titledPane);
+        show();    
+        
+        assertEquals(Pos.BOTTOM_RIGHT, titledPane.getAlignment());              
+    }
 }

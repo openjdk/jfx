@@ -51,6 +51,8 @@ import com.sun.javafx.scene.control.behavior.TitledPaneBehavior;
 import com.sun.javafx.scene.traversal.Direction;
 import com.sun.javafx.scene.traversal.TraversalEngine;
 import com.sun.javafx.scene.traversal.TraverseListener;
+import javafx.beans.InvalidationListener;
+import javafx.beans.Observable;
 import javafx.geometry.Insets;
 import javafx.scene.control.Labeled;
 import javafx.scene.text.Font;
@@ -65,6 +67,9 @@ public class TitledPaneSkin extends LabeledSkinBase<TitledPane, TitledPaneBehavi
     private Timeline timeline;
     private double transitionStartValue;
     private Rectangle clipRect;
+    private Pos pos;
+    private HPos hpos;
+    private VPos vpos;    
 
     public TitledPaneSkin(final TitledPane titledPane) {
         super(titledPane, new TitledPaneBehavior(titledPane));
@@ -73,7 +78,7 @@ public class TitledPaneSkin extends LabeledSkinBase<TitledPane, TitledPaneBehavi
         setClip(clipRect);
 
         transitionStartValue = 0;
-        titleRegion = new TitleRegion();
+        titleRegion = new TitleRegion();       
 
         contentRegion = new Content(getSkinnable().getContent());
 
@@ -82,12 +87,18 @@ public class TitledPaneSkin extends LabeledSkinBase<TitledPane, TitledPaneBehavi
         } else {
             setTransition(0.0f);
         }
-
+                
         getChildren().setAll(contentRegion, titleRegion);
-
+               
         registerChangeListener(titledPane.contentProperty(), "CONTENT");
         registerChangeListener(titledPane.expandedProperty(), "EXPANDED");
         registerChangeListener(titledPane.collapsibleProperty(), "COLLAPSIBLE");
+        registerChangeListener(titledPane.alignmentProperty(), "ALIGNMENT");
+        registerChangeListener(titleRegion.alignmentProperty(), "TITLE_REGION_ALIGNMENT");        
+        
+        pos = titledPane.getAlignment();
+        hpos = titledPane.getAlignment().getHpos();
+        vpos = titledPane.getAlignment().getVpos();      
     }
 
     public StackPane getContentRegion() {
@@ -105,7 +116,7 @@ public class TitledPaneSkin extends LabeledSkinBase<TitledPane, TitledPaneBehavi
     }
 
     @Override
-    protected void handleControlPropertyChanged(String property) {
+    protected void handleControlPropertyChanged(String property) {        
         super.handleControlPropertyChanged(property);
         if (property == "CONTENT") {
             contentRegion.setContent(getSkinnable().getContent());
@@ -113,6 +124,14 @@ public class TitledPaneSkin extends LabeledSkinBase<TitledPane, TitledPaneBehavi
             setExpanded(getSkinnable().isExpanded());
         } else if (property == "COLLAPSIBLE") {
             titleRegion.update();
+        } else if (property == "ALIGNMENT") {
+            pos = getSkinnable().getAlignment();
+            hpos = pos.getHpos();
+            vpos = pos.getVpos();
+        } else if (property == "TITLE_REGION_ALIGNMENT") {
+            pos = titleRegion.getAlignment();
+            hpos = pos.getHpos();
+            vpos = pos.getVpos();
         }
     }
 
@@ -211,7 +230,7 @@ public class TitledPaneSkin extends LabeledSkinBase<TitledPane, TitledPaneBehavi
         return Math.max(titleWidth, contentWidth) + snapSpace(getInsets().getLeft()) + snapSpace(getInsets().getRight());
     }
 
-    @Override protected double computePrefHeight(double width) {                
+    @Override protected double computePrefHeight(double width) {
         double headerHeight = Math.max(MIN_HEADER_HEIGHT, snapSize(titleRegion.prefHeight(-1)));
         double contentHeight = 0;
         if (getSkinnable().getParent() != null && getSkinnable().getParent() instanceof AccordionSkin) {
@@ -391,7 +410,7 @@ public class TitledPaneSkin extends LabeledSkinBase<TitledPane, TitledPaneBehavi
 
             return top + Math.max(arrowHeight, labelPrefHeight) + bottom;
         }
-    
+
         @Override protected void layoutChildren() {
             double top = snapSpace(getInsets().getTop());
             double bottom = snapSpace(getInsets().getBottom());
@@ -404,8 +423,6 @@ public class TitledPaneSkin extends LabeledSkinBase<TitledPane, TitledPaneBehavi
             double labelWidth = snapSize(labelPrefWidth(-1));
             double labelHeight = snapSize(labelPrefHeight(-1));
 
-            HPos hpos = getAlignment().getHpos();
-            VPos vpos = getAlignment().getVpos();
             double x = left + arrowWidth + Utils.computeXOffset(width - arrowWidth, labelWidth, hpos);
             if (HPos.CENTER == hpos) {
                 // We want to center the region based on the entire width of the TitledPane.
@@ -416,10 +433,10 @@ public class TitledPaneSkin extends LabeledSkinBase<TitledPane, TitledPaneBehavi
             arrowRegion.resize(arrowWidth, arrowHeight);
             positionInArea(arrowRegion, left, top, arrowWidth, height,
                     /*baseline ignored*/0, HPos.CENTER, VPos.CENTER);
-
-            layoutLabelInArea(x, y, labelWidth, height, getAlignment());
+                       
+            layoutLabelInArea(x, y, labelWidth, height, pos);
         }
-        
+
         // Copied from LabeledSkinBase because the padding from TitledPane was being
         // applied to the Label when it should not be.
         private double labelPrefWidth(double height) {
@@ -452,7 +469,7 @@ public class TitledPaneSkin extends LabeledSkinBase<TitledPane, TitledPaneBehavi
             final Labeled labeled = getSkinnable();
             final Font font = text.getFont();
             final ContentDisplay contentDisplay = labeled.getContentDisplay();
-            final double gap = labeled.getGraphicTextGap();            
+            final double gap = labeled.getGraphicTextGap();
             final Insets padding = getInsets();
             final Insets labelPadding = labeled.getLabelPadding();
             final double widthPadding = padding.getLeft() + padding.getRight() + labelPadding.getLeft() + labelPadding.getRight();
@@ -486,7 +503,7 @@ public class TitledPaneSkin extends LabeledSkinBase<TitledPane, TitledPaneBehavi
             }
 
             return h + labelPadding.getTop() + labelPadding.getBottom();
-        }        
+        }
     }
 
     class Content extends StackPane implements TraverseListener {
