@@ -69,16 +69,16 @@ import static javafx.concurrent.WorkerStateEvent.*;
  *     such that it had a single property, <code>url</code>. It might be implemented
  *     as:
  *     <pre><code>
- *     public class FirstLineService extends Service {
- *         private StringProperty url = new StringProperty();
+ *     public static class FirstLineService extends Service&lt;String&gt; {
+ *         private StringProperty url = new SimpleStringProperty(this, "url");
  *         public final void setUrl(String value) { url.set(value); }
  *         public final String getUrl() { return url.get(); }
  *         public final StringProperty urlProperty() { return url; }
  *
  *         protected Task createTask() {
  *             final String _url = getUrl();
- *             return new Task&lt;String&gt;() {
- *                 protected String call() {
+ *             return new Task&ltString&gt;() {
+ *                 protected String call() throws Exception {
  *                     URL u = new URL(_url);
  *                     BufferedReader in = new BufferedReader(
  *                             new InputStreamReader(u.openStream()));
@@ -86,7 +86,7 @@ import static javafx.concurrent.WorkerStateEvent.*;
  *                     in.close();
  *                     return result;
  *                 }
- *             }
+ *             };
  *         }
  *     }
  *     </code></pre>
