@@ -63,7 +63,7 @@ public abstract class LabeledSkinBase<C extends Labeled, B extends BehaviorBase<
      *  The Text node used to display the text. This is package only
      *  for the sake of testing!
      */
-    Text text;
+    LabeledText text;
 
     /**
      * Indicates that the text content is invalid and needs to be updated.
@@ -125,27 +125,11 @@ public abstract class LabeledSkinBase<C extends Labeled, B extends BehaviorBase<
 
         // Configure the Text node with all of the attributes from the
         // Labeled which apply to it.
-        text = new Text();
-        text.getStyleClass().add("text");
-        //
-        // RT-16589: by binding text.fontProperty() to labeled.fontProperty(), 
-        // we achieve two things. First, the text's font stays in sync with
-        // labeled's and, second, it prevents text's font from being updated 
-        // by CSS. 
-        //
-        text.fontProperty().bind(labeled.fontProperty());
-        
-        // RT-18858: by binding text.fillProperty() to labeled.textFillProperty(),
-        // The text can only be styled through -fx-text-fill.
-        // The reason is because -fx-text-fill is encountered first by CSS and then 
-        // gets overwritten by the latter application of -fx-fill.
-        text.fillProperty().bind(labeled.textFillProperty());
+        text = new LabeledText(labeled);
         
         textClip = new Rectangle();
         text.setClip(textClip);
         
-        updateTextAlignment();
-        updateUnderline();
         updateChildren();
 
         // Labels do not block the mouse by default, unlike most other UI Controls.
@@ -223,14 +207,13 @@ public abstract class LabeledSkinBase<C extends Labeled, B extends BehaviorBase<
             textMetricsChanged();
             invalidateWidths();
         } else if (p == "TEXT_ALIGNMENT") {
-            updateTextAlignment();
+            // NO-OP
         } else if (p == "TEXT_OVERRUN") {
             textMetricsChanged();
         } else if (p == "WRAP_TEXT") {
             updateWrappingWidth();
             textMetricsChanged();
         } else if (p == "UNDERLINE") {
-            updateUnderline();
             textMetricsChanged();
         }
     }
@@ -483,26 +466,6 @@ public abstract class LabeledSkinBase<C extends Labeled, B extends BehaviorBase<
             updateWrappingWidth();
             invalidText = false;
         }
-    }
-
-    /**
-     * Updates the text alignment of the Text node. Although changing the font
-     * does affect the metrics used for text layout, this method does not
-     * call requestLayout or invalidate the text, since it may be called
-     * from the constructor and such work would be duplicative and wasted.
-     */
-    private void updateTextAlignment() {
-        text.setTextAlignment(getSkinnable().getTextAlignment());
-    }
-
-    /**
-     * Updates the underline of the text node. Although changing the font
-     * does affect the metrics used for text layout, this method does not
-     * call requestLayout or invalidate the text, since it may be called
-     * from the constructor and such work would be duplicative and wasted.
-     */
-    private void updateUnderline() {
-        text.setUnderline(getSkinnable().isUnderline());
     }
 
     /**
