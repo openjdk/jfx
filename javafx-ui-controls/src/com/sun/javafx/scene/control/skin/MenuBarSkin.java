@@ -209,7 +209,7 @@ public class MenuBarSkin extends SkinBase<MenuBar, BehaviorBase<MenuBar>> implem
         control.getScene().addEventFilter(MouseEvent.MOUSE_CLICKED, new EventHandler<MouseEvent>() {
             @Override
             public void handle(MouseEvent t) {
-                if (!container.getLayoutBounds().contains(t.getX(), t.getY())) {
+                if (!container.localToScene(container.getLayoutBounds()).contains(t.getX(), t.getY())) {
                     unSelectMenus();
                     firstF10 = true;
                 }
@@ -312,6 +312,14 @@ public class MenuBarSkin extends SkinBase<MenuBar, BehaviorBase<MenuBar>> implem
 
     private boolean pendingDismiss = false;
 
+    // For testing purpose only. 
+    MenuButton getNodeForMenu(int i) {
+        if (i < container.getChildren().size()) {
+            return (MenuBarButton)container.getChildren().get(i);
+        }
+        return null;
+    }
+    
     private boolean menusContainCustomMenuItem() {
         for (Menu menu : getSkinnable().getMenus()) {
             if (menuContainsCustomMenuItem(menu)) {

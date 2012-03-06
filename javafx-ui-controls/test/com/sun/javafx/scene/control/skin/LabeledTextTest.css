@@ -1,0 +1,14 @@
+.label {
+    -fx-text-fill: red;
+    -fx-text-alignment: center;
+    -fx-text-font: 20px Amble;
+    -fx-underline: false;
+}
+
+.label > .text { 
+    -fx-fill: green; 
+    -fx-text-alignment: right;
+    -fx-font: 10px Amble;
+    -fx-underline: true;
+}
+
