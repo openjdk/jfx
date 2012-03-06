@@ -157,6 +157,7 @@ public class KeyEvent extends InputEvent {
                                            primaryButtonDown,
                                            middleButtonDown,
                                            secondaryButtonDown,
+                                           false,
                                            eventType);
             }
 
@@ -169,10 +170,12 @@ public class KeyEvent extends InputEvent {
                     int x, int y, int screenX, int screenY, 
                     boolean shiftDown, boolean controlDown, 
                     boolean altDown, boolean metaDown) {
-                return ScrollEvent.impl_scrollEvent(scrollX, scrollY, 
-                        xTextUnits, xText, yTextUnits, yText, 
+                return ScrollEvent.impl_scrollEvent(ScrollEvent.SCROLL, 
+                        scrollX, scrollY, 0, 0,
+                        xTextUnits, xText, yTextUnits, yText,
+                        0,
                         x, y, screenX, screenY, 
-                        shiftDown, controlDown, altDown, metaDown);
+                        shiftDown, controlDown, altDown, metaDown, false, false);
             }
         };
         FXRobotHelper.setInputAccessor(a);
