@@ -3069,6 +3069,18 @@ Only the properties with values that are different from the TextBox are specifie
     -fx-skin: "com.sun.javafx.scene.control.skin.ComboBoxListViewSkin";
 }
 
+.color-picker {
+    -fx-skin: "com.sun.javafx.scene.control.skin.ColorPickerSkin";
+}
+
+.color-picker .picker-color {
+    -fx-padding: 4;
+    -fx-background-color: null;
+}
+
+.color-panel {
+    -fx-padding: 15;
+}
 /* Customie the ListCell that appears in the ComboBox button itself */
 .combo-box .list-cell {
     -fx-background: transparent;
