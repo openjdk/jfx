@@ -60,6 +60,12 @@ import javafx.beans.property.ReadOnlyBooleanWrapper;
  * JavaFX Application Thread.
  * </p>
  *
+ * <p>
+ * Many of the {@code Stage} properties are read only because they can
+ * be changed externally by the underlying platform and therefore must
+ * not be bindable.
+ * </p>
+ *
  * <p>Example:</p>
  *
  *
