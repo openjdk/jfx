@@ -32,7 +32,7 @@ import static javafx.scene.input.KeyEvent.*;
 
 import java.util.ArrayList;
 import java.util.List;
-import javafx.scene.control.ColorPicker;
+import com.sun.javafx.scene.control.ColorPicker;
 
 import javafx.scene.control.SelectionModel;
 

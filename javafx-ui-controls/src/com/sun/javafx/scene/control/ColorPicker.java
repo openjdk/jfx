@@ -2,7 +2,9 @@
  * To change this template, choose Tools | Templates
  * and open the template in the editor.
  */
-package javafx.scene.control;
+package com.sun.javafx.scene.control;
+
+import javafx.scene.control.ComboBoxBase;
 
 /**
  *

@@ -7,7 +7,7 @@ package com.sun.javafx.scene.control.skin;
 import com.sun.javafx.scene.control.behavior.ColorPickerBehavior;
 import javafx.geometry.Insets;
 import javafx.scene.Node;
-import javafx.scene.control.ColorPicker;
+import com.sun.javafx.scene.control.ColorPicker;
 import com.sun.javafx.scene.control.ColorPickerPanel;
 import java.util.List;
 import javafx.beans.binding.ObjectBinding;
