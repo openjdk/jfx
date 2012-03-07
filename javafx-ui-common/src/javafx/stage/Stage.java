@@ -387,6 +387,10 @@ public class Stage extends Window {
      * full-screen mode, upon exiting full-screen mode the {@code Stage} will
      * assume those attributes.
      * </p>
+     * <p>
+     * The property is read only because it can be changed externally
+     * by the underlying platform and therefore must not be bindable.
+     * </p>
      *
      * Notes regarding desktop profile implementation.
      * <p>
@@ -538,6 +542,10 @@ public class Stage extends Window {
 
     /**
      * Defines whether the {@code Stage} is iconified or not.
+     * <p>
+     * The property is read only because it can be changed externally
+     * by the underlying platform and therefore must not be bindable.
+     * </p>
      *
      * @defaultValue false
      */
