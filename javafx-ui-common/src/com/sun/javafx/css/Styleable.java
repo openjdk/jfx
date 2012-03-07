@@ -90,14 +90,14 @@ public abstract class Styleable {
     
      /**
       * RT-17293
-      * @treatasprivate implementation detail
+      * @treatAsPrivate implementation detail
       * @deprecated This is an experimental API that is not intended for use
       */
      private ObservableMap<WritableValue, List<Style>> styleMap;
      
      /**
       * RT-17293
-      * @treatasprivate implementation detail
+      * @treatAsPrivate implementation detail
       * @deprecated This is an experimental API that is not intended for general use and is subject to change in future versions
       */
      public ObservableMap<WritableValue, List<Style>> getStyleMap() {
@@ -106,7 +106,7 @@ public abstract class Styleable {
 
      /**
       * RT-17293
-      * @treatasprivate implementation detail
+      * @treatAsPrivate implementation detail
       * @deprecated This is an experimental API that is not intended for general use and is subject to change in future versions
       */
      public void setStyleMap(ObservableMap<WritableValue, List<Style>> styleMap) {

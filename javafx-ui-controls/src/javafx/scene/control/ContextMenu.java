@@ -195,8 +195,17 @@ public class ContextMenu extends PopupControl {
      */
     @Deprecated
     private final BooleanProperty impl_showRelativeToWindow = new SimpleBooleanProperty(false);
+     /**
+      * @treatAsPrivate implementation detail
+      */
     public final boolean isImpl_showRelativeToWindow() { return impl_showRelativeToWindow.get(); }
+     /**
+      * @treatAsPrivate implementation detail
+      */
     public final void setImpl_showRelativeToWindow(boolean value) { impl_showRelativeToWindow.set(value); }
+     /**
+      * @treatAsPrivate implementation detail
+      */
     public final BooleanProperty impl_showRelativeToWindowProperty() { return impl_showRelativeToWindow; }
     
     /***************************************************************************
