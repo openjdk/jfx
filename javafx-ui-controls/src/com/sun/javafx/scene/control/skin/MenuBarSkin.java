@@ -466,7 +466,6 @@ public class MenuBarSkin extends SkinBase<MenuBar, BehaviorBase<MenuBar>> implem
             menuButton.getProperties().addListener(new MapChangeListener<Object, Object>() {
                 @Override
                 public void onChanged(Change<? extends Object, ? extends Object> c) {
-                    System.out.println("AUTOHIDE HAPPENED");
                      if (c.wasAdded() && MenuButtonSkin.AUTOHIDE.equals(c.getKey())) {
                         menuButton.getProperties().remove(MenuButtonSkin.AUTOHIDE);
                         menu.hide();
