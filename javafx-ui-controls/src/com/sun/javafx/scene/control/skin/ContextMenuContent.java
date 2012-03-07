@@ -482,7 +482,6 @@ public class ContextMenuContent extends StackPane {
         addEventFilter(MouseEvent.MOUSE_EXITED, new EventHandler<MouseEvent>() {
             @Override
             public void handle(MouseEvent event) {
-                System.out.println("Mouse Exited !!!!!!!!!!!!!!");
                 // RT-15050 : if a submenu is open then don't do request focus
                 // on this StackPane, do nothing so that focus continues to stay
                 // on the Menu whose submenu is open.
@@ -563,7 +562,6 @@ public class ContextMenuContent extends StackPane {
     }
     
     private void selectMenuItem() {
-        System.out.println("SelectMenuItem ************* "+currentFocusedIndex);
         if (currentFocusedIndex != -1) {
             Node n = itemsContainer.getChildren().get(currentFocusedIndex);
             if (n instanceof MenuItemContainer) {
@@ -577,7 +575,6 @@ public class ContextMenuContent extends StackPane {
                     selectedBackground = ((MenuItemContainer)n);
                     showSubmenu(menu);
                 } else {
-                    System.out.println("  ---> calling doSelect()");
                     ((MenuItemContainer)n).doSelect();
                 }
             }
