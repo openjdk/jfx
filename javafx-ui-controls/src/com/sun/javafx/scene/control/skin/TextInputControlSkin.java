@@ -27,6 +27,9 @@ package com.sun.javafx.scene.control.skin;
 
 import javafx.animation.KeyFrame;
 import javafx.animation.Timeline;
+import javafx.application.Platform;
+import javafx.beans.InvalidationListener;
+import javafx.beans.Observable;
 import javafx.beans.binding.BooleanBinding;
 import javafx.beans.binding.ObjectBinding;
 import javafx.beans.property.BooleanProperty;
@@ -225,6 +228,16 @@ public abstract class TextInputControlSkin<T extends TextInputControl, B extends
      */
     protected final Path caretPath = new Path();
 
+    static boolean useVK = false;
+    public void toggleUseVK() {
+        useVK = !useVK;
+        if (useVK) {
+            FXVK.attach(getSkinnable());
+        } else {
+            FXVK.detach();
+        }
+    }
+
     public TextInputControlSkin(final T textInput, final B behavior) {
         super(textInput, behavior);
 
@@ -263,6 +276,22 @@ public abstract class TextInputControlSkin<T extends TextInputControl, B extends
                         textInput.isEditable();
             }
         };
+
+        textInput.focusedProperty().addListener(new InvalidationListener() {
+            @Override public void invalidated(Observable observable) {
+                if (useVK) {
+                    Platform.runLater(new Runnable() {
+                        public void run() {
+                            if (textInput.isFocused()) {
+                                FXVK.attach(textInput);
+                            } else if (!(getScene().impl_getFocusOwner() instanceof TextInputControl)) {
+                                FXVK.detach();
+                            }
+                        }
+                    });
+                }
+            }
+        });
 
         if (textInput.getContextMenu() == null) {
             class ContextMenuItem extends MenuItem {

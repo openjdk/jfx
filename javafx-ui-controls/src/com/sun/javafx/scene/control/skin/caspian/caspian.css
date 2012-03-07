@@ -2708,6 +2708,40 @@
     -fx-background-insets: 0, 1 1 0 1, 2 2 0 2;
 }*/
 
+
+
+.fxvk {
+    -fx-skin: "com.sun.javafx.scene.control.skin.FXVKSkin";
+    -fx-cursor: default;
+    -fx-background-color: #b1b1b1;
+    -fx-padding: 0.333333em 0.083333em 0.666667em 0.083333em; /* 4 1 8 1 */
+}
+
+.fxvk .button { 
+    -fx-body-color: linear-gradient(to bottom, #efefef, #a3a3a3);
+    -fx-font-size: 1.666667em; /* 20pt */
+    -fx-font-weight: bold;
+    -fx-padding: 3 3 5 6;
+    -fx-background-radius: 12;
+}
+
+.fxvk .button .special-key { 
+    -fx-body-color: linear-gradient(to bottom, #646464, #373737);
+}
+
+.special-key { 
+    -fx-text-fill: white;
+    -fx-font: bold 1.75em "Segoe UI Symbol";
+}
+
+.fxvk .button .label { 
+    -fx-text-fill: #b1b1b1;
+    -fx-font-size: 0.833333em; /* 10pt */
+    -fx-font-weight: bold;
+    -fx-alignment: TOP_RIGHT;
+}
+
+
 /* ====== CHART TOP LEVEL ITEMS =========================================================== */
 .chart {
     -fx-padding: 5px;
