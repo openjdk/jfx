@@ -16,6 +16,7 @@ import javafx.beans.property.StringProperty;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.event.ActionEvent;
+import javafx.event.Event;
 import javafx.event.EventHandler;
 import javafx.scene.Scene;
 import javafx.stage.Stage;
@@ -735,5 +736,31 @@ public class ComboBoxTest {
         comboBox.setVisibleRowCount(7);
         double biggerHeight = ((ComboBoxListViewSkin)comboBox.getSkin()).getListView().getHeight();
         assertTrue(biggerHeight != smallHeight && smallHeight < biggerHeight);
+    } 
+    
+    private int count = 0;
+    @Test public void test_rt20103() {
+        final TextField tf = new TextField();
+        
+        comboBox.setOnAction(new EventHandler() {
+            @Override public void handle(Event t) {
+                count++;
+            }
+        });
+        
+        assertTrue(count == 0);
+        
+        comboBox.valueProperty().bind(tf.textProperty());   // count++ here
+        assertTrue("count: " + count, count == 1);
+        
+        tf.setText("Text1");                                // count++ here
+        assertTrue("count: " + count, count == 2);
+        
+        comboBox.valueProperty().unbind();                  // no count++ here
+        assertTrue("count: " + count, count == 2);
+        
+        comboBox.valueProperty().bindBidirectional(tf.textProperty());  // count++ here
+        tf.setText("Text2");
+        assertTrue("count: " + count, count == 3);
     } 
 }
