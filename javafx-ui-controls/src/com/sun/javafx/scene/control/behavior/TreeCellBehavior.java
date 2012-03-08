@@ -143,7 +143,7 @@ public class TreeCellBehavior extends CellBehaviorBase<TreeCell<?>> {
             map.remove(treeView);
         }
 
-        if (e.isPrimaryButtonDown() || (e.isSecondaryButtonDown() && !selected)) { 
+        if (event.isPrimaryButtonDown() || (event.isSecondaryButtonDown() && !selected)) { 
             if (sm.getSelectionMode() == SelectionMode.SINGLE) {
                 simpleSelect(event);
             } else {
