@@ -139,35 +139,37 @@ public class ListCellBehavior extends CellBehaviorBase<ListCell> {
             map.remove(listView);
         }
         
-        if (sm.getSelectionMode() == SelectionMode.SINGLE) {
-            simpleSelect(e);
-        } else {
-            if (e.isControlDown() || e.isMetaDown()) {
-                if (selected) {
-                    // we remove this row from the current selection
-                    sm.clearSelection(index);
+        if (e.isPrimaryButtonDown() || (e.isSecondaryButtonDown() && !selected)) { 
+            if (sm.getSelectionMode() == SelectionMode.SINGLE) {
+                simpleSelect(e);
+            } else {
+                if (e.isControlDown() || e.isMetaDown()) {
+                    if (selected) {
+                        // we remove this row from the current selection
+                        sm.clearSelection(index);
+                        fm.focus(index);
+                    } else {
+                        // We add this row to the current selection
+                        sm.select(index);
+                    }
+                } else if (e.isShiftDown()) {
+                    // we add all rows between the current focus and
+                    // this row (inclusive) to the current selection.
+                    int focusIndex = getAnchor(listView);
+
+                    // and then determine all row and columns which must be selected
+                    int minRow = Math.min(focusIndex, index);
+                    int maxRow = Math.max(focusIndex, index);
+
+                    // and then perform the selection
+                    sm.clearSelection();
+                    sm.selectRange(minRow, maxRow+1);
+
+                    // return selection back to the focus owner
                     fm.focus(index);
                 } else {
-                    // We add this row to the current selection
-                    sm.select(index);
+                    simpleSelect(e);
                 }
-            } else if (e.isShiftDown()) {
-                // we add all rows between the current focus and
-                // this row (inclusive) to the current selection.
-                int focusIndex = getAnchor(listView);
-
-                // and then determine all row and columns which must be selected
-                int minRow = Math.min(focusIndex, index);
-                int maxRow = Math.max(focusIndex, index);
-
-                // and then perform the selection
-                sm.clearSelection();
-                sm.selectRange(minRow, maxRow+1);
-
-                // return selection back to the focus owner
-                fm.focus(index);
-            } else {
-                simpleSelect(e);
             }
         }
     }

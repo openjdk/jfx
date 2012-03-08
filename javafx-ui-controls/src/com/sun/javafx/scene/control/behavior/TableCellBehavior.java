@@ -131,47 +131,49 @@ public class TableCellBehavior extends CellBehaviorBase<TableCell> {
 
         // we must update the table appropriately, and this is determined by
         // what modifiers the user held down as they released the mouse.
-        if (sm.getSelectionMode() == SelectionMode.SINGLE) {
-            simpleSelect(e);
-        } else {
-            if (e.isControlDown() || e.isMetaDown()) {
-                if (selected) {
-                    // we remove this row/cell from the current selection
-                    sm.clearSelection(row, tableColumn);
-                    fm.focus(row, tableColumn);
-                } else {
-                    // We add this cell/row to the current selection
-                    sm.select(row, tableColumn);
-                }
-            } else if (e.isShiftDown()) {
-                // we add all cells/rows between the current selection focus and
-                // this cell/row (inclusive) to the current selection.
-                TablePosition focusedCell = map.containsKey(tableView) ? map.get(tableView) : fm.getFocusedCell();
-
-                // and then determine all row and columns which must be selected
-                int minRow = Math.min(focusedCell.getRow(), row);
-                int maxRow = Math.max(focusedCell.getRow(), row);
-                int minColumn = Math.min(focusedCell.getColumn(), column);
-                int maxColumn = Math.max(focusedCell.getColumn(), column);
-
-                // clear selection
-                sm.clearSelection();
-
-                // and then perform the selection
-                if (sm.isCellSelectionEnabled()) {
-                    for (int _row = minRow; _row <= maxRow; _row++) {
-                        for (int _col = minColumn; _col <= maxColumn; _col++) {
-                            sm.select(_row, tableView.getVisibleLeafColumn(_col));
-                        }
-                    }
-                } else {
-                    sm.selectRange(minRow, maxRow + 1);
-                }
-
-                // return selection back to the focus owner
-                fm.focus(new TablePosition(tableView, row, tableColumn));
-            } else {
+        if (e.isPrimaryButtonDown() || (e.isSecondaryButtonDown() && !selected)) { 
+            if (sm.getSelectionMode() == SelectionMode.SINGLE) {
                 simpleSelect(e);
+            } else {
+                if (e.isControlDown() || e.isMetaDown()) {
+                    if (selected) {
+                        // we remove this row/cell from the current selection
+                        sm.clearSelection(row, tableColumn);
+                        fm.focus(row, tableColumn);
+                    } else {
+                        // We add this cell/row to the current selection
+                        sm.select(row, tableColumn);
+                    }
+                } else if (e.isShiftDown()) {
+                    // we add all cells/rows between the current selection focus and
+                    // this cell/row (inclusive) to the current selection.
+                    TablePosition focusedCell = map.containsKey(tableView) ? map.get(tableView) : fm.getFocusedCell();
+
+                    // and then determine all row and columns which must be selected
+                    int minRow = Math.min(focusedCell.getRow(), row);
+                    int maxRow = Math.max(focusedCell.getRow(), row);
+                    int minColumn = Math.min(focusedCell.getColumn(), column);
+                    int maxColumn = Math.max(focusedCell.getColumn(), column);
+
+                    // clear selection
+                    sm.clearSelection();
+
+                    // and then perform the selection
+                    if (sm.isCellSelectionEnabled()) {
+                        for (int _row = minRow; _row <= maxRow; _row++) {
+                            for (int _col = minColumn; _col <= maxColumn; _col++) {
+                                sm.select(_row, tableView.getVisibleLeafColumn(_col));
+                            }
+                        }
+                    } else {
+                        sm.selectRange(minRow, maxRow + 1);
+                    }
+
+                    // return selection back to the focus owner
+                    fm.focus(new TablePosition(tableView, row, tableColumn));
+                } else {
+                    simpleSelect(e);
+                }
             }
         }
     }
