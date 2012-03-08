@@ -30,6 +30,7 @@ import java.util.List;
 
 import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.BooleanPropertyBase;
+import javafx.beans.property.SimpleBooleanProperty;
 import javafx.beans.property.StringProperty;
 import javafx.beans.property.StringPropertyBase;
 import javafx.collections.FXCollections;
@@ -43,6 +44,7 @@ import com.sun.javafx.collections.TrackableObservableList;
 import com.sun.javafx.robot.impl.FXRobotHelper;
 import com.sun.javafx.stage.StageHelper;
 import com.sun.javafx.stage.StagePeerListener;
+import com.sun.javafx.tk.TKPulseListener;
 import com.sun.javafx.tk.TKStage;
 import com.sun.javafx.tk.Toolkit;
 import javafx.beans.property.DoubleProperty;
@@ -115,6 +117,24 @@ public class Stage extends Window {
             }
         });
     }
+    
+    private static final StagePeerListener.StageAccessor STAGE_ACCESSOR = new StagePeerListener.StageAccessor() {
+
+        @Override
+        public void setIconified(Stage stage, boolean iconified) {
+            stage.iconifiedPropertyImpl().set(iconified);
+        }
+
+        @Override
+        public void setResizable(Stage stage, boolean resizable) {
+            stage.resizableProperty().set(resizable);
+        }
+
+        @Override
+        public void setFullScreen(Stage stage, boolean fs) {
+            stage.fullScreenPropertyImpl().set(fs);
+        }
+    };
 
     /**
      * Creates a new instance of decorated {@code Stage}.
@@ -426,6 +446,8 @@ public class Stage extends Window {
     public final void setFullScreen(boolean value) {
         Toolkit.getToolkit().checkFxUserThread();
         fullScreenPropertyImpl().set(value);
+        if (impl_peer != null)
+            impl_peer.setFullScreen(value);
     }
 
     public final boolean isFullScreen() {
@@ -438,25 +460,7 @@ public class Stage extends Window {
 
     private ReadOnlyBooleanWrapper fullScreenPropertyImpl () {
         if (fullScreen == null) {
-            fullScreen = new ReadOnlyBooleanWrapper() {
-
-                @Override
-                protected void invalidated() {
-                    if (impl_peer != null) {
-                        impl_peer.setFullScreen(get());
-                    }
-                }
-
-                @Override
-                public Object getBean() {
-                    return Stage.this;
-                }
-
-                @Override
-                public String getName() {
-                    return "fullScreen";
-                }
-            };
+            fullScreen = new ReadOnlyBooleanWrapper(Stage.this, "fullScreen");
         }
         return fullScreen;
     }
@@ -539,6 +543,8 @@ public class Stage extends Window {
 
     public final void setIconified(boolean value) {
         iconifiedPropertyImpl().set(value);
+        if (impl_peer != null)
+            impl_peer.setIconified(value);
     }
 
     public final boolean isIconified() {
@@ -551,25 +557,7 @@ public class Stage extends Window {
 
     private final ReadOnlyBooleanWrapper iconifiedPropertyImpl() {
         if (iconified == null) {
-            iconified = new ReadOnlyBooleanWrapper() {
-
-                @Override
-                protected void invalidated() {
-                    if (impl_peer != null) {
-                        impl_peer.setIconified(get());
-                    }
-                }
-
-                @Override
-                public Object getBean() {
-                    return Stage.this;
-                }
-
-                @Override
-                public String getName() {
-                    return "iconified";
-                }
-            };
+            iconified = new ReadOnlyBooleanWrapper(Stage.this, "iconified");
         }
         return iconified;
     }
@@ -586,6 +574,8 @@ public class Stage extends Window {
 
     public final void setResizable(boolean value) {
         resizableProperty().set(value);
+        if (impl_peer != null)
+            impl_peer.setResizable(value);
     }
 
     public final boolean isResizable() {
@@ -594,25 +584,7 @@ public class Stage extends Window {
 
     public final BooleanProperty resizableProperty() {
         if (resizable == null) {
-            resizable = new BooleanPropertyBase(true) {
-
-                @Override
-                protected void invalidated() {
-                    if (impl_peer != null) {
-                        impl_peer.setResizable(get());
-                    }
-                }
-
-                @Override
-                public Object getBean() {
-                    return Stage.this;
-                }
-
-                @Override
-                public String getName() {
-                    return "resizable";
-                }
-            };
+            resizable = new SimpleBooleanProperty(Stage.this, "resizable", true);
         }
         return resizable;
     }
@@ -811,8 +783,8 @@ public class Stage extends Window {
             impl_peer = toolkit.createTKStage(getStyle(), isPrimary(),
                     getModality(), tkStage);
             impl_peer.setImportant(isImportant());
-            peerListener = new StagePeerListener(this);
-
+            peerListener = new StagePeerListener(this, STAGE_ACCESSOR);
+            
             // Finish initialization
             impl_peer.setResizable(isResizable());
             impl_peer.setFullScreen(isFullScreen());

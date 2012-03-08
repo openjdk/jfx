@@ -99,14 +99,22 @@ import com.sun.javafx.tk.TKSceneListener;
 import com.sun.javafx.tk.TKScenePaintListener;
 import com.sun.javafx.tk.TKStage;
 import com.sun.javafx.tk.Toolkit;
+import java.util.Arrays;
+import java.util.LinkedList;
 import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.ObjectPropertyBase;
 import javafx.beans.property.ReadOnlyDoubleProperty;
 import javafx.beans.property.ReadOnlyDoubleWrapper;
 import javafx.beans.property.ReadOnlyObjectProperty;
 import javafx.beans.property.ReadOnlyObjectWrapper;
+import javafx.scene.input.GestureEvent;
 import javafx.scene.input.MouseDragEvent;
+import javafx.scene.input.RotateEvent;
 import javafx.scene.input.ScrollEvent;
+import javafx.scene.input.SwipeEvent;
+import javafx.scene.input.TouchEvent;
+import javafx.scene.input.TouchPoint;
+import javafx.scene.input.ZoomEvent;
 
 
 /**
@@ -289,7 +297,7 @@ public class Scene implements EventTarget {
                     scene.impl_processMouseEvent(mouseEvent);
                 }
                 public void processScrollEvent(Scene scene, ScrollEvent scrollEvent) {
-                    scene.processScrollEvent(scrollEvent);
+                    scene.processGestureEvent(scrollEvent, scene.scrollGesture);
                 }
                 public ObservableList<Node> getChildren(Parent parent) {
                     return parent.getChildren(); //was impl_getChildren
@@ -1267,6 +1275,30 @@ public class Scene implements EventTarget {
     private MouseHandler mouseHandler;
     private ClickGenerator clickGenerator;
 
+    // gesture events handling
+    private Point2D cursorScreenPos;
+    private Point2D cursorScenePos;
+
+    private class TouchGesture {
+        EventTarget target;
+        Point2D sceneCoords;
+        Point2D screenCoords;
+    }
+
+    private final TouchGesture scrollGesture = new TouchGesture();
+    private final TouchGesture zoomGesture = new TouchGesture();
+    private final TouchGesture rotateGesture = new TouchGesture();
+    private final TouchGesture swipeGesture = new TouchGesture();
+
+    // touch events handling
+    private TouchMap touchMap = new TouchMap();
+    private TouchEvent nextTouchEvent = null;
+    private TouchPoint[] touchPoints = null;
+    private int touchEventSetId = 0;
+    private int touchPointIndex = 0;
+    private Map<Integer, EventTarget> touchTargets =
+            new HashMap<Integer, EventTarget>();
+
     /**
      * @treatAsPrivate implementation detail
      * @deprecated This is an internal API that is not intended for use and will be removed in the next version
@@ -1308,27 +1340,124 @@ public class Scene implements EventTarget {
         if (!isKeyboardTrigger) Scene.inMousePick = false;
     }
 
-    private void processScrollEvent(ScrollEvent e) {
+    private void processGestureEvent(GestureEvent e, TouchGesture gesture) {
         EventTarget pickedTarget = null;
 
-        if (e.getEventType() != MouseEvent.MOUSE_EXITED) {
-            if (getCamera() instanceof PerspectiveCamera) {
-                final PickRay pickRay = new PickRay();
-                Scene.this.impl_peer.computePickRay((float)e.getX(), (float)e.getY(), pickRay);
-                pickedTarget = mouseHandler.pickNode(pickRay);
-            }
-            else {
-                pickedTarget = mouseHandler.pickNode(e.getX(), e.getY());
-            }
+        inMousePick = true;
+
+        if (e.getEventType() == ZoomEvent.ZOOM_STARTED ||
+                e.getEventType() == RotateEvent.ROTATION_STARTED ||
+                e.getEventType() == ScrollEvent.SCROLL_STARTED) {
+            gesture.target = null;
+        }
+
+        if (gesture.target != null) {
+            pickedTarget = gesture.target;
+        } else if (getCamera() instanceof PerspectiveCamera) {
+            final PickRay pickRay = new PickRay();
+            Scene.this.impl_peer.computePickRay((float)e.getX(), (float)e.getY(), pickRay);
+            pickedTarget = mouseHandler.pickNode(pickRay);
+        } else {
+            pickedTarget = mouseHandler.pickNode(e.getX(), e.getY());
         }
 
         if (pickedTarget == null) {
             pickedTarget = Scene.this;
         }
 
+        if (e.getEventType() == ZoomEvent.ZOOM_STARTED ||
+                e.getEventType() == RotateEvent.ROTATION_STARTED ||
+                e.getEventType() == ScrollEvent.SCROLL_STARTED) {
+            gesture.target = pickedTarget;
+        }
+        if (e.getEventType() != ZoomEvent.ZOOM_FINISHED &&
+                e.getEventType() != RotateEvent.ROTATION_FINISHED &&
+                e.getEventType() != ScrollEvent.SCROLL_FINISHED &&
+                !e.isInertia()) {
+            gesture.sceneCoords = new Point2D(e.getSceneX(), e.getSceneY());
+            gesture.screenCoords = new Point2D(e.getScreenX(), e.getScreenY());
+        }
+
         Event.fireEvent(pickedTarget, e);
+
+        inMousePick = false;
     }
-    
+
+    private void processTouchEvent(TouchEvent e, TouchPoint[] touchPoints) {
+        inMousePick = true;
+        // pick targets for all touch points
+        for (TouchPoint tp : touchPoints) {
+            EventTarget pickedTarget = touchTargets.get(tp.getId());
+            if (pickedTarget == null) {
+                if (getCamera() instanceof PerspectiveCamera) {
+                    final PickRay pickRay = new PickRay();
+                    Scene.this.impl_peer.computePickRay((float)tp.getX(), (float)tp.getY(), pickRay);
+                    pickedTarget = mouseHandler.pickNode(pickRay);
+                } else {
+                    pickedTarget = mouseHandler.pickNode(tp.getX(), tp.getY());
+                }
+
+                if (pickedTarget == null) {
+                    pickedTarget = Scene.this;
+                }
+            } else {
+                tp.grab(pickedTarget);
+            }
+
+            if (tp.getState() == TouchPoint.State.PRESSED) {
+                tp.grab(pickedTarget);
+                touchTargets.put(tp.getId(), pickedTarget);
+            } else if (tp.getState() == TouchPoint.State.RELEASED) {
+                touchTargets.remove(tp.getId());
+            }
+
+            tp.impl_setTarget(pickedTarget);
+        }
+
+        touchEventSetId++;
+
+        List<TouchPoint> touchList = Arrays.asList(touchPoints);
+
+        // fire all the events
+        for (TouchPoint tp : touchPoints) {
+            EventType<TouchEvent> type = null;
+            switch (tp.getState()) {
+                case MOVED:
+                    type = TouchEvent.TOUCH_MOVED;
+                    break;
+                case PRESSED:
+                    type = TouchEvent.TOUCH_PRESSED;
+                    break;
+                case RELEASED:
+                    type = TouchEvent.TOUCH_RELEASED;
+                    break;
+                case STATIONARY:
+                    type = TouchEvent.TOUCH_STATIONARY;
+                    break;
+            }
+
+            TouchEvent te = TouchEvent.impl_touchEvent(type, tp, touchList,
+                    touchEventSetId, e.isShiftDown(), e.isControlDown(),
+                    e.isAltDown(), e.isMetaDown());
+
+            Event.fireEvent(tp.getTarget(), te);
+        }
+
+        // process grabbing
+        for (TouchPoint tp : touchPoints) {
+            EventTarget grabbed = tp.getGrabbed();
+            if (grabbed != null) {
+                touchTargets.put(tp.getId(), grabbed);
+            };
+
+            if (grabbed == null || tp.getState() == TouchPoint.State.RELEASED) {
+                touchTargets.remove(tp.getId());
+            }
+        }
+
+        inMousePick = false;
+    }
+
     /**
      * Note: The only user of this method is in unit test: PickAndContainTest.
      */
@@ -1925,15 +2054,24 @@ public class Scene implements EventTarget {
             Scene.this.impl_processInputMethodEvent(Toolkit.getToolkit().convertInputMethodEventToFX(event));
         }
 
+        public void menuEvent(double x, double y, double xAbs, double yAbs,
+                boolean isKeyboardTrigger) {
+            Scene.this.processMenuEvent(x, y, xAbs,yAbs, isKeyboardTrigger);
+        }
+
         @Override
         public void scrollEvent(
-                double scrollX, double scrollY, 
+                EventType<ScrollEvent> eventType,
+                double scrollX, double scrollY,
+                double totalScrollX, double totalScrollY,
                 double xMultiplier, double yMultiplier,
+                int touchCount,
                 int scrollTextX, int scrollTextY,
                 int defaultTextX, int defaultTextY,
                 double x, double y, double screenX, double screenY,
                 boolean _shiftDown, boolean _controlDown, 
-                boolean _altDown, boolean _metaDown) {
+                boolean _altDown, boolean _metaDown,
+                boolean _direct, boolean _inertia) {
 
             ScrollEvent.HorizontalTextScrollUnits xUnits = scrollTextX > 0 ?
                     ScrollEvent.HorizontalTextScrollUnits.CHARACTERS :
@@ -1956,20 +2094,170 @@ public class Scene implements EventTarget {
             yMultiplier = defaultTextY > 0 && scrollTextY >= 0
                     ? Math.round(yMultiplier * scrollTextY / defaultTextY)
                     : yMultiplier;
-            
-            Scene.this.processScrollEvent(ScrollEvent.impl_scrollEvent(
+
+            if (eventType == ScrollEvent.SCROLL_FINISHED) {
+                x = scrollGesture.sceneCoords.getX();
+                y = scrollGesture.sceneCoords.getY();
+                screenX = scrollGesture.screenCoords.getX();
+                screenY = scrollGesture.screenCoords.getY();
+            } else if (Double.isNaN(x) || Double.isNaN(y) ||
+                    Double.isNaN(screenX) || Double.isNaN(screenY)) {
+                if (cursorScenePos == null || cursorScreenPos == null) {
+                    return;
+                }
+                x = cursorScenePos.getX();
+                y = cursorScenePos.getY();
+                screenX = cursorScreenPos.getX();
+                screenY = cursorScreenPos.getY();
+            } 
+
+            Scene.this.processGestureEvent(ScrollEvent.impl_scrollEvent(
+                    eventType,
                     scrollX * xMultiplier, scrollY * yMultiplier,
-                    xUnits, xText, yUnits, yText, 
+                    totalScrollX * xMultiplier, totalScrollY * yMultiplier,
+                    xUnits, xText, yUnits, yText,
+                    touchCount,
                     x, y, screenX, screenY, 
-                    _shiftDown, _controlDown, _altDown, _metaDown));
+                    _shiftDown, _controlDown, _altDown, _metaDown, 
+                    _direct, _inertia),
+                    scrollGesture);
         }
 
         @Override
-        public void menuEvent(double x, double y, double xAbs, double yAbs,
-                boolean isKeyboardTrigger) {
-            Scene.this.processMenuEvent(x, y, xAbs,yAbs, isKeyboardTrigger);
+        public void zoomEvent(
+                EventType<ZoomEvent> eventType,
+                double zoomFactor, double totalZoomFactor,
+                double x, double y, double screenX, double screenY,
+                boolean _shiftDown, boolean _controlDown,
+                boolean _altDown, boolean _metaDown,
+                boolean _direct, boolean _inertia) {
+
+            if (eventType == ZoomEvent.ZOOM_FINISHED) {
+                x = zoomGesture.sceneCoords.getX();
+                y = zoomGesture.sceneCoords.getY();
+                screenX = zoomGesture.screenCoords.getX();
+                screenY = zoomGesture.screenCoords.getY();
+            } else if (Double.isNaN(x) || Double.isNaN(y) ||
+                    Double.isNaN(screenX) || Double.isNaN(screenY)) {
+                if (cursorScenePos == null || cursorScreenPos == null) {
+                    return;
+                }
+                x = cursorScenePos.getX();
+                y = cursorScenePos.getY();
+                screenX = cursorScreenPos.getX();
+                screenY = cursorScreenPos.getY();
+            }
+
+            Scene.this.processGestureEvent(ZoomEvent.impl_zoomEvent(
+                    eventType, zoomFactor, totalZoomFactor,
+                    x, y, screenX, screenY,
+                    _shiftDown, _controlDown, _altDown, _metaDown, 
+                    _direct, _inertia),
+                    zoomGesture);
         }
-        
+
+        @Override
+        public void rotateEvent(
+                EventType<RotateEvent> eventType, double angle, double totalAngle,
+                double x, double y, double screenX, double screenY,
+                boolean _shiftDown, boolean _controlDown,
+                boolean _altDown, boolean _metaDown,
+                boolean _direct, boolean _inertia) {
+
+            if (eventType == RotateEvent.ROTATION_FINISHED) {
+                x = rotateGesture.sceneCoords.getX();
+                y = rotateGesture.sceneCoords.getY();
+                screenX = rotateGesture.screenCoords.getX();
+                screenY = rotateGesture.screenCoords.getY();
+            } else if (Double.isNaN(x) || Double.isNaN(y) ||
+                    Double.isNaN(screenX) || Double.isNaN(screenY)) {
+                if (cursorScenePos == null || cursorScreenPos == null) {
+                    return;
+                }
+                x = cursorScenePos.getX();
+                y = cursorScenePos.getY();
+                screenX = cursorScreenPos.getX();
+                screenY = cursorScreenPos.getY();
+            }
+
+            Scene.this.processGestureEvent(RotateEvent.impl_rotateEvent(
+                    eventType, angle, totalAngle, x, y, screenX, screenY,
+                    _shiftDown, _controlDown, _altDown, _metaDown, 
+                    _direct, _inertia),
+                    rotateGesture);
+
+        }
+
+        @Override
+        public void swipeEvent(
+                EventType<SwipeEvent> eventType, int touchCount,
+                double x, double y, double screenX, double screenY,
+                boolean _shiftDown, boolean _controlDown,
+                boolean _altDown, boolean _metaDown, boolean _direct) {
+
+            Scene.this.processGestureEvent(SwipeEvent.impl_swipeEvent(
+                    eventType, touchCount, x, y, screenX, screenY,
+                    _shiftDown, _controlDown, _altDown, _metaDown, _direct), 
+                    swipeGesture);
+        }
+
+        @Override
+        public void touchEventBegin(
+                long time, int touchCount, boolean isDirect,
+                boolean _shiftDown, boolean _controlDown,
+                boolean _altDown, boolean _metaDown) {
+
+            nextTouchEvent = TouchEvent.impl_touchEvent(
+                    TouchEvent.ANY, null, null, 0,
+                    _shiftDown, _controlDown, _altDown, _metaDown);
+            nextTouchEvent.impl_setDirect(isDirect);
+            if (touchPoints == null || touchPoints.length != touchCount) {
+                touchPoints = new TouchPoint[touchCount];
+            }
+            touchPointIndex = 0;
+        }
+
+        @Override
+        public void touchEventNext(
+                TouchPoint.State state, long touchId,
+                int x, int y, int xAbs, int yAbs) {
+
+            touchPointIndex++;
+            int id = (state == TouchPoint.State.PRESSED
+                    ? touchMap.add(touchId) :  touchMap.get(touchId));
+            if (state == TouchPoint.State.RELEASED) {
+                touchMap.remove(touchId);
+            }
+            int order = touchMap.getOrder(id);
+
+            //TODO: this is workaround for RT-20139, remove when fixed
+            if (!nextTouchEvent.impl_isDirect()) {
+                order = touchPointIndex - 1;
+            }
+
+            if (order >= touchPoints.length) {
+                throw new RuntimeException("Too many touch points reported");
+            }
+
+            touchPoints[order] = new TouchPoint(id, state, x, y, xAbs, yAbs);
+        }
+
+        @Override
+        public void touchEventEnd() {
+            if (touchPointIndex != touchPoints.length) {
+                throw new RuntimeException("Wrong number of touch points reported");
+            }
+
+            // for now we don't want to process indirect touch events
+            if (nextTouchEvent.impl_isDirect()) {
+                Scene.this.processTouchEvent(nextTouchEvent, touchPoints);
+            }
+
+            if (touchMap.cleanup()) {
+                // gesture finished
+                touchEventSetId = 0;
+            }
+        }
     }
 
     private class ScenePeerPaintListener implements TKScenePaintListener {
@@ -2212,7 +2500,7 @@ public class Scene implements EventTarget {
             //      this code is not used right now anyway
             MouseEvent me = MouseEvent.impl_mouseEvent(de.getX(), de.getY(),
                     de.getSceneX(), de.getScreenY(), MouseButton.PRIMARY, 1,
-                    false, false, false, false, false, true, false, false,
+                    false, false, false, false, false, true, false, false, false,
                     MouseEvent.DRAG_DETECTED);
 
             processingDragDetected();
@@ -2784,6 +3072,9 @@ public class Scene implements EventTarget {
         private void process(MouseEvent e, boolean onPulse) {
             Toolkit.getToolkit().checkFxUserThread();
             Scene.inMousePick = true;
+
+            cursorScreenPos = new Point2D(e.getScreenX(), e.getScreenY());
+            cursorScenePos = new Point2D(e.getSceneX(), e.getSceneY());
 
             boolean gestureStarted = false;
             if (!onPulse) {
@@ -3762,42 +4053,6 @@ public class Scene implements EventTarget {
     }
 
     /**
-     * Defines a function to be called when user performs a scrolling action. 
-     */
-    private ObjectProperty<EventHandler<? super ScrollEvent>> onScroll;
-
-    public final void setOnScroll(EventHandler<? super ScrollEvent> value) {
-        onScrollProperty().set(value);
-    }
-
-    public final EventHandler<? super ScrollEvent> getOnScroll() {
-        return onScroll == null ? null : onScroll.get();
-    }
-
-    public final ObjectProperty<EventHandler<? super ScrollEvent>> onScrollProperty() {
-        if (onScroll == null) {
-            onScroll = new ObjectPropertyBase<EventHandler<? super ScrollEvent>>() {
-
-                @Override
-                protected void invalidated() {
-                    setEventHandler(ScrollEvent.SCROLL, get());
-                }
-
-                @Override
-                public Object getBean() {
-                    return Scene.this;
-                }
-
-                @Override
-                public String getName() {
-                    return "onScroll";
-                }
-            };
-        }
-        return onScroll;
-    }
-
-    /**
      * Defines a function to be called when a full press-drag-release gesture
      * progresses within this {@code Scene}.
      */
@@ -3943,6 +4198,718 @@ public class Scene implements EventTarget {
             };
         }
         return onMouseDragExited;
+    }
+
+
+    /***************************************************************************
+     *                                                                         *
+     *                           Gestures Handling                             *
+     *                                                                         *
+     **************************************************************************/
+
+    /**
+     * Defines a function to be called when a scrolling gesture is detected.
+     */
+    private ObjectProperty<EventHandler<? super ScrollEvent>> onScrollStarted;
+
+    public final void setOnScrollStarted(EventHandler<? super ScrollEvent> value) {
+        onScrollStartedProperty().set(value);
+    }
+
+    public final EventHandler<? super ScrollEvent> getOnScrollStarted() {
+        return onScrollStarted == null ? null : onScrollStarted.get();
+    }
+
+    public final ObjectProperty<EventHandler<? super ScrollEvent>> onScrollStartedProperty() {
+        if (onScrollStarted == null) {
+            onScrollStarted = new ObjectPropertyBase<EventHandler<? super ScrollEvent>>() {
+
+                @Override
+                protected void invalidated() {
+                    setEventHandler(ScrollEvent.SCROLL_STARTED, get());
+                }
+
+                @Override
+                public Object getBean() {
+                    return Scene.this;
+                }
+
+                @Override
+                public String getName() {
+                    return "onScrollStarted";
+                }
+            };
+        }
+        return onScrollStarted;
+    }
+
+    /**
+     * Defines a function to be called when user performs a scrolling action.
+     */
+    private ObjectProperty<EventHandler<? super ScrollEvent>> onScroll;
+
+    public final void setOnScroll(EventHandler<? super ScrollEvent> value) {
+        onScrollProperty().set(value);
+    }
+
+    public final EventHandler<? super ScrollEvent> getOnScroll() {
+        return onScroll == null ? null : onScroll.get();
+    }
+
+    public final ObjectProperty<EventHandler<? super ScrollEvent>> onScrollProperty() {
+        if (onScroll == null) {
+            onScroll = new ObjectPropertyBase<EventHandler<? super ScrollEvent>>() {
+
+                @Override
+                protected void invalidated() {
+                    setEventHandler(ScrollEvent.SCROLL, get());
+                }
+
+                @Override
+                public Object getBean() {
+                    return Scene.this;
+                }
+
+                @Override
+                public String getName() {
+                    return "onScroll";
+                }
+            };
+        }
+        return onScroll;
+    }
+
+    /**
+     * Defines a function to be called when a scrolling gesture ends.
+     */
+    private ObjectProperty<EventHandler<? super ScrollEvent>> onScrollFinished;
+
+    public final void setOnScrollFinished(EventHandler<? super ScrollEvent> value) {
+        onScrollFinishedProperty().set(value);
+    }
+
+    public final EventHandler<? super ScrollEvent> getOnScrollFinished() {
+        return onScrollFinished == null ? null : onScrollFinished.get();
+    }
+
+    public final ObjectProperty<EventHandler<? super ScrollEvent>> onScrollFinishedProperty() {
+        if (onScrollFinished == null) {
+            onScrollFinished = new ObjectPropertyBase<EventHandler<? super ScrollEvent>>() {
+
+                @Override
+                protected void invalidated() {
+                    setEventHandler(ScrollEvent.SCROLL_FINISHED, get());
+                }
+
+                @Override
+                public Object getBean() {
+                    return Scene.this;
+                }
+
+                @Override
+                public String getName() {
+                    return "onScrollFinished";
+                }
+            };
+        }
+        return onScrollFinished;
+    }
+
+    /**
+     * Defines a function to be called when a rotating gesture is detected.
+     */
+    private ObjectProperty<EventHandler<? super RotateEvent>> onRotationStarted;
+
+    public final void setOnRotationStarted(EventHandler<? super RotateEvent> value) {
+        onRotationStartedProperty().set(value);
+    }
+
+    public final EventHandler<? super RotateEvent> getOnRotationStarted() {
+        return onRotationStarted == null ? null : onRotationStarted.get();
+    }
+
+    public final ObjectProperty<EventHandler<? super RotateEvent>> onRotationStartedProperty() {
+        if (onRotationStarted == null) {
+            onRotationStarted = new ObjectPropertyBase<EventHandler<? super RotateEvent>>() {
+
+                @Override
+                protected void invalidated() {
+                    setEventHandler(RotateEvent.ROTATION_STARTED, get());
+                }
+
+                @Override
+                public Object getBean() {
+                    return Scene.this;
+                }
+
+                @Override
+                public String getName() {
+                    return "onRotationStarted";
+                }
+            };
+        }
+        return onRotationStarted;
+    }
+
+    /**
+     * Defines a function to be called when user performs a rotating action.
+     */
+    private ObjectProperty<EventHandler<? super RotateEvent>> onRotate;
+
+    public final void setOnRotate(EventHandler<? super RotateEvent> value) {
+        onRotateProperty().set(value);
+    }
+
+    public final EventHandler<? super RotateEvent> getOnRotate() {
+        return onRotate == null ? null : onRotate.get();
+    }
+
+    public final ObjectProperty<EventHandler<? super RotateEvent>> onRotateProperty() {
+        if (onRotate == null) {
+            onRotate = new ObjectPropertyBase<EventHandler<? super RotateEvent>>() {
+
+                @Override
+                protected void invalidated() {
+                    setEventHandler(RotateEvent.ROTATE, get());
+                }
+
+                @Override
+                public Object getBean() {
+                    return Scene.this;
+                }
+
+                @Override
+                public String getName() {
+                    return "onRotate";
+                }
+            };
+        }
+        return onRotate;
+    }
+
+    /**
+     * Defines a function to be called when a rotating gesture ends.
+     */
+    private ObjectProperty<EventHandler<? super RotateEvent>> onRotationFinished;
+
+    public final void setOnRotationFinished(EventHandler<? super RotateEvent> value) {
+        onRotationFinishedProperty().set(value);
+    }
+
+    public final EventHandler<? super RotateEvent> getOnRotationFinished() {
+        return onRotationFinished == null ? null : onRotationFinished.get();
+    }
+
+    public final ObjectProperty<EventHandler<? super RotateEvent>> onRotationFinishedProperty() {
+        if (onRotationFinished == null) {
+            onRotationFinished = new ObjectPropertyBase<EventHandler<? super RotateEvent>>() {
+
+                @Override
+                protected void invalidated() {
+                    setEventHandler(RotateEvent.ROTATION_FINISHED, get());
+                }
+
+                @Override
+                public Object getBean() {
+                    return Scene.this;
+                }
+
+                @Override
+                public String getName() {
+                    return "onRotationFinished";
+                }
+            };
+        }
+        return onRotationFinished;
+    }
+
+    /**
+     * Defines a function to be called when a zooming gesture is detected.
+     */
+    private ObjectProperty<EventHandler<? super ZoomEvent>> onZoomStarted;
+
+    public final void setOnZoomStarted(EventHandler<? super ZoomEvent> value) {
+        onZoomStartedProperty().set(value);
+    }
+
+    public final EventHandler<? super ZoomEvent> getOnZoomStarted() {
+        return onZoomStarted == null ? null : onZoomStarted.get();
+    }
+
+    public final ObjectProperty<EventHandler<? super ZoomEvent>> onZoomStartedProperty() {
+        if (onZoomStarted == null) {
+            onZoomStarted = new ObjectPropertyBase<EventHandler<? super ZoomEvent>>() {
+
+                @Override
+                protected void invalidated() {
+                    setEventHandler(ZoomEvent.ZOOM_STARTED, get());
+                }
+
+                @Override
+                public Object getBean() {
+                    return Scene.this;
+                }
+
+                @Override
+                public String getName() {
+                    return "onZoomStarted";
+                }
+            };
+        }
+        return onZoomStarted;
+    }
+
+    /**
+     * Defines a function to be called when user performs a zooming action.
+     */
+    private ObjectProperty<EventHandler<? super ZoomEvent>> onZoom;
+
+    public final void setOnZoom(EventHandler<? super ZoomEvent> value) {
+        onZoomProperty().set(value);
+    }
+
+    public final EventHandler<? super ZoomEvent> getOnZoom() {
+        return onZoom == null ? null : onZoom.get();
+    }
+
+    public final ObjectProperty<EventHandler<? super ZoomEvent>> onZoomProperty() {
+        if (onZoom == null) {
+            onZoom = new ObjectPropertyBase<EventHandler<? super ZoomEvent>>() {
+
+                @Override
+                protected void invalidated() {
+                    setEventHandler(ZoomEvent.ZOOM, get());
+                }
+
+                @Override
+                public Object getBean() {
+                    return Scene.this;
+                }
+
+                @Override
+                public String getName() {
+                    return "onZoom";
+                }
+            };
+        }
+        return onZoom;
+    }
+
+    /**
+     * Defines a function to be called when a zooming gesture ends.
+     */
+    private ObjectProperty<EventHandler<? super ZoomEvent>> onZoomFinished;
+
+    public final void setOnZoomFinished(EventHandler<? super ZoomEvent> value) {
+        onZoomFinishedProperty().set(value);
+    }
+
+    public final EventHandler<? super ZoomEvent> getOnZoomFinished() {
+        return onZoomFinished == null ? null : onZoomFinished.get();
+    }
+
+    public final ObjectProperty<EventHandler<? super ZoomEvent>> onZoomFinishedProperty() {
+        if (onZoomFinished == null) {
+            onZoomFinished = new ObjectPropertyBase<EventHandler<? super ZoomEvent>>() {
+
+                @Override
+                protected void invalidated() {
+                    setEventHandler(ZoomEvent.ZOOM_FINISHED, get());
+                }
+
+                @Override
+                public Object getBean() {
+                    return Scene.this;
+                }
+
+                @Override
+                public String getName() {
+                    return "onZoomFinished";
+                }
+            };
+        }
+        return onZoomFinished;
+    }
+
+    /**
+     * Defines a function to be called when an upward swipe gesture
+     * happens in this scene.
+     */
+    private ObjectProperty<EventHandler<? super SwipeEvent>> onSwipeUp;
+
+    public final void setOnSwipeUp(EventHandler<? super SwipeEvent> value) {
+        onSwipeUpProperty().set(value);
+    }
+
+    public final EventHandler<? super SwipeEvent> getOnSwipeUp() {
+        return onSwipeUp == null ? null : onSwipeUp.get();
+    }
+
+    public final ObjectProperty<EventHandler<? super SwipeEvent>> onSwipeUpProperty() {
+        if (onSwipeUp == null) {
+            onSwipeUp = new ObjectPropertyBase<EventHandler<? super SwipeEvent>>() {
+
+                @Override
+                protected void invalidated() {
+                    setEventHandler(SwipeEvent.SWIPE_UP, get());
+                }
+
+                @Override
+                public Object getBean() {
+                    return Scene.this;
+                }
+
+                @Override
+                public String getName() {
+                    return "onSwipeUp";
+                }
+            };
+        }
+        return onSwipeUp;
+    }
+
+    /**
+     * Defines a function to be called when an downward swipe gesture
+     * happens in this scene.
+     */
+    private ObjectProperty<EventHandler<? super SwipeEvent>> onSwipeDown;
+
+    public final void setOnSwipeDown(EventHandler<? super SwipeEvent> value) {
+        onSwipeDownProperty().set(value);
+    }
+
+    public final EventHandler<? super SwipeEvent> getOnSwipeDown() {
+        return onSwipeDown == null ? null : onSwipeDown.get();
+    }
+
+    public final ObjectProperty<EventHandler<? super SwipeEvent>> onSwipeDownProperty() {
+        if (onSwipeDown == null) {
+            onSwipeDown = new ObjectPropertyBase<EventHandler<? super SwipeEvent>>() {
+
+                @Override
+                protected void invalidated() {
+                    setEventHandler(SwipeEvent.SWIPE_DOWN, get());
+                }
+
+                @Override
+                public Object getBean() {
+                    return Scene.this;
+                }
+
+                @Override
+                public String getName() {
+                    return "onSwipeDown";
+                }
+            };
+        }
+        return onSwipeDown;
+    }
+
+    /**
+     * Defines a function to be called when an leftward swipe gesture
+     * happens in this scene.
+     */
+    private ObjectProperty<EventHandler<? super SwipeEvent>> onSwipeLeft;
+
+    public final void setOnSwipeLeft(EventHandler<? super SwipeEvent> value) {
+        onSwipeLeftProperty().set(value);
+    }
+
+    public final EventHandler<? super SwipeEvent> getOnSwipeLeft() {
+        return onSwipeLeft == null ? null : onSwipeLeft.get();
+    }
+
+    public final ObjectProperty<EventHandler<? super SwipeEvent>> onSwipeLeftProperty() {
+        if (onSwipeLeft == null) {
+            onSwipeLeft = new ObjectPropertyBase<EventHandler<? super SwipeEvent>>() {
+
+                @Override
+                protected void invalidated() {
+                    setEventHandler(SwipeEvent.SWIPE_LEFT, get());
+                }
+
+                @Override
+                public Object getBean() {
+                    return Scene.this;
+                }
+
+                @Override
+                public String getName() {
+                    return "onSwipeLeft";
+                }
+            };
+        }
+        return onSwipeLeft;
+    }
+
+    /**
+     * Defines a function to be called when an rightward swipe gesture
+     * happens in this scene.
+     */
+    private ObjectProperty<EventHandler<? super SwipeEvent>> onSwipeRight;
+
+    public final void setOnSwipeRight(EventHandler<? super SwipeEvent> value) {
+        onSwipeRightProperty().set(value);
+    }
+
+    public final EventHandler<? super SwipeEvent> getOnSwipeRight() {
+        return onSwipeRight == null ? null : onSwipeRight.get();
+    }
+
+    public final ObjectProperty<EventHandler<? super SwipeEvent>> onSwipeRightProperty() {
+        if (onSwipeRight == null) {
+            onSwipeRight = new ObjectPropertyBase<EventHandler<? super SwipeEvent>>() {
+
+                @Override
+                protected void invalidated() {
+                    setEventHandler(SwipeEvent.SWIPE_RIGHT, get());
+                }
+
+                @Override
+                public Object getBean() {
+                    return Scene.this;
+                }
+
+                @Override
+                public String getName() {
+                    return "onSwipeRight";
+                }
+            };
+        }
+        return onSwipeRight;
+    }
+
+    /***************************************************************************
+     *                                                                         *
+     *                            Touch Handling                               *
+     *                                                                         *
+     **************************************************************************/
+
+    /**
+     * Defines a function to be called when a new touch point is pressed.
+     */
+    private ObjectProperty<EventHandler<? super TouchEvent>> onTouchPressed;
+
+    public final void setOnTouchPressed(EventHandler<? super TouchEvent> value) {
+        onTouchPressedProperty().set(value);
+    }
+
+    public final EventHandler<? super TouchEvent> getOnTouchPressed() {
+        return onTouchPressed == null ? null : onTouchPressed.get();
+    }
+
+    public final ObjectProperty<EventHandler<? super TouchEvent>> onTouchPressedProperty() {
+        if (onTouchPressed == null) {
+            onTouchPressed = new ObjectPropertyBase<EventHandler<? super TouchEvent>>() {
+
+                @Override
+                protected void invalidated() {
+                    setEventHandler(TouchEvent.TOUCH_PRESSED, get());
+                }
+
+                @Override
+                public Object getBean() {
+                    return Scene.this;
+                }
+
+                @Override
+                public String getName() {
+                    return "onTouchPressed";
+                }
+            };
+        }
+        return onTouchPressed;
+    }
+
+    /**
+     * Defines a function to be called when a touch point is moved.
+     */
+    private ObjectProperty<EventHandler<? super TouchEvent>> onTouchMoved;
+
+    public final void setOnTouchMoved(EventHandler<? super TouchEvent> value) {
+        onTouchMovedProperty().set(value);
+    }
+
+    public final EventHandler<? super TouchEvent> getOnTouchMoved() {
+        return onTouchMoved == null ? null : onTouchMoved.get();
+    }
+
+    public final ObjectProperty<EventHandler<? super TouchEvent>> onTouchMovedProperty() {
+        if (onTouchMoved == null) {
+            onTouchMoved = new ObjectPropertyBase<EventHandler<? super TouchEvent>>() {
+
+                @Override
+                protected void invalidated() {
+                    setEventHandler(TouchEvent.TOUCH_MOVED, get());
+                }
+
+                @Override
+                public Object getBean() {
+                    return Scene.this;
+                }
+
+                @Override
+                public String getName() {
+                    return "onTouchMoved";
+                }
+            };
+        }
+        return onTouchMoved;
+    }
+
+    /**
+     * Defines a function to be called when a new touch point is pressed.
+     */
+    private ObjectProperty<EventHandler<? super TouchEvent>> onTouchReleased;
+
+    public final void setOnTouchReleased(EventHandler<? super TouchEvent> value) {
+        onTouchReleasedProperty().set(value);
+    }
+
+    public final EventHandler<? super TouchEvent> getOnTouchReleased() {
+        return onTouchReleased == null ? null : onTouchReleased.get();
+    }
+
+    public final ObjectProperty<EventHandler<? super TouchEvent>> onTouchReleasedProperty() {
+        if (onTouchReleased == null) {
+            onTouchReleased = new ObjectPropertyBase<EventHandler<? super TouchEvent>>() {
+
+                @Override
+                protected void invalidated() {
+                    setEventHandler(TouchEvent.TOUCH_RELEASED, get());
+                }
+
+                @Override
+                public Object getBean() {
+                    return Scene.this;
+                }
+
+                @Override
+                public String getName() {
+                    return "onTouchReleased";
+                }
+            };
+        }
+        return onTouchReleased;
+    }
+
+    /**
+     * Defines a function to be called when a touch point stays pressed and
+     * still.
+     */
+    private ObjectProperty<EventHandler<? super TouchEvent>> onTouchStationary;
+
+    public final void setOnTouchStationary(EventHandler<? super TouchEvent> value) {
+        onTouchStationaryProperty().set(value);
+    }
+
+    public final EventHandler<? super TouchEvent> getOnTouchStationary() {
+        return onTouchStationary == null ? null : onTouchStationary.get();
+    }
+
+    public final ObjectProperty<EventHandler<? super TouchEvent>> onTouchStationaryProperty() {
+        if (onTouchStationary == null) {
+            onTouchStationary = new ObjectPropertyBase<EventHandler<? super TouchEvent>>() {
+
+                @Override
+                protected void invalidated() {
+                    setEventHandler(TouchEvent.TOUCH_STATIONARY, get());
+                }
+
+                @Override
+                public Object getBean() {
+                    return Scene.this;
+                }
+
+                @Override
+                public String getName() {
+                    return "onTouchStationary";
+                }
+            };
+        }
+        return onTouchStationary;
+    }
+
+    /*
+     * This class provides reordering and ID mapping of particular touch points.
+     * Platform may report arbitrary touch point IDs and they may be reused
+     * during one gesture. This class keeps track of it and provides
+     * sequentially sorted IDs, unique in scope of a gesture.
+     *
+     * Some platforms report always small numbers, these take fast paths through
+     * the algorithm, directly indexing an array. Bigger numbers take a slow
+     * path using a hash map.
+     *
+     * The algorithm performance was measured and it doesn't impose
+     * any significant slowdown on the event delivery.
+     */
+    private class TouchMap {
+        private static final int FAST_THRESHOLD = 10;
+        int[] fastMap = new int[] {0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
+        Map<Long, Integer> slowMap = new HashMap<Long, Integer>();
+        List<Integer> order = new LinkedList<Integer>();
+        List<Long> removed = new ArrayList<Long>(10);
+        int counter = 0;
+        int active = 0;
+
+        public int add(long id) {
+            counter++;
+            active++;
+            if (id < FAST_THRESHOLD) {
+                fastMap[(int) id] = counter;
+            } else {
+                slowMap.put(id, counter);
+            }
+            order.add(counter);
+            return counter;
+        }
+
+        public void remove(long id) {
+            // book the removal - it needs to be done after all touch points
+            // of an event are processed - see cleanup()
+            removed.add(id);
+        }
+
+        public int get(long id) {
+            if (id < FAST_THRESHOLD) {
+                int result = fastMap[(int) id];
+                if (result == 0) {
+                    throw new RuntimeException("Platform reported wrong "
+                            + "touch point ID");
+                }
+                return result;
+            } else {
+                try {
+                    return slowMap.get(id);
+                } catch (NullPointerException e) {
+                    throw new RuntimeException("Platform reported wrong "
+                            + "touch point ID");
+                }
+            }
+        }
+
+        public int getOrder(int id) {
+            return order.indexOf(id);
+        }
+
+        // returns true if gesture finished (no finger is touched)
+        public boolean cleanup() {
+            for (long id : removed) {
+                active--;
+                order.remove(Integer.valueOf(get(id)));
+                if (id < FAST_THRESHOLD) {
+                    fastMap[(int) id] = 0;
+                } else {
+                    slowMap.remove(id);
+                }
+                if (active == 0) {
+                    // gesture finished
+                    counter = 0;
+                }
+            }
+            removed.clear();
+            return active == 0;
+        }
     }
 
 
