@@ -63,7 +63,6 @@ import javafx.scene.text.Text;
 import javafx.util.Duration;
 import java.util.List;
 
-import com.sun.javafx.Utils;
 import com.sun.javafx.scene.control.behavior.TextAreaBehavior;
 import com.sun.javafx.scene.text.HitInfo;
 
@@ -136,10 +135,9 @@ public class TextAreaSkin extends TextInputControlSkin<TextArea, TextAreaBehavio
 
             for (Node node : paragraphNodes.getChildren()) {
                 Text paragraphNode = (Text)node;
-                paragraphNode.setWrappingWidth(-1);
-
-                Bounds bounds = paragraphNode.getBoundsInLocal();
-                prefWidth = Math.max(prefWidth, bounds.getWidth());
+                prefWidth = Math.max(prefWidth,
+                                     Utils.computeTextWidth(paragraphNode.getFont(),
+                                                            paragraphNode.getText(), 0));
             }
 
             prefWidth += padding.getLeft() + padding.getRight();
@@ -173,10 +171,9 @@ public class TextAreaSkin extends TextInputControlSkin<TextArea, TextAreaBehavio
             int i = 0;
             for (Node node : paragraphNodes.getChildren()) {
                 Text paragraphNode = (Text)node;
-                paragraphNode.setWrappingWidth(wrappingWidth);
-
-                Bounds bounds = paragraphNode.getBoundsInLocal();
-                prefHeight += bounds.getHeight();
+                prefHeight += Utils.computeTextHeight(paragraphNode.getFont(),
+                                                      paragraphNode.getText(),
+                                                      wrappingWidth);
                 i++;
             }
 
@@ -229,6 +226,7 @@ public class TextAreaSkin extends TextInputControlSkin<TextArea, TextAreaBehavio
 
             // Update the selection
             IndexRange selection = textArea.getSelection();
+            Bounds oldCaretBounds = caretPath.getBoundsInParent();
 
             caretPath.getElements().clear();
             selectionHighlightGroup.getChildren().clear();
@@ -251,7 +249,9 @@ public class TextAreaSkin extends TextInputControlSkin<TextArea, TextAreaBehavio
 
                 caretPath.setLayoutX(paragraphNode.getLayoutX());
                 caretPath.setLayoutY(paragraphNode.getLayoutY());
-                scrollCaretToVisible();
+                if (oldCaretBounds == null || !oldCaretBounds.equals(caretPath.getBoundsInParent())) {
+                    scrollCaretToVisible();
+                }
             }
 
             // Update selection fg and bg
@@ -306,6 +306,7 @@ public class TextAreaSkin extends TextInputControlSkin<TextArea, TextAreaBehavio
     private Group selectionHighlightGroup = new Group();
 
     private ScrollPane scrollPane;
+    private Bounds oldViewportBounds;
 
     private VerticalDirection scrollDirection = null;
 
@@ -455,7 +456,18 @@ public class TextAreaSkin extends TextInputControlSkin<TextArea, TextAreaBehavio
         scrollPane.viewportBoundsProperty().addListener(new InvalidationListener() {
             @Override public void invalidated(Observable valueModel) {
                 if (scrollPane.getViewportBounds() != null) {
-                    invalidateMetrics();
+                    // ScrollPane creates a new Bounds instance for each
+                    // layout pass, so we need to check if the width/height
+                    // have really changed to avoid infinite layout requests.
+                    Bounds newViewportBounds = scrollPane.getViewportBounds();
+                    if (oldViewportBounds == null ||
+                        oldViewportBounds.getWidth() != newViewportBounds.getWidth() ||
+                        oldViewportBounds.getHeight() != newViewportBounds.getHeight()) {
+
+                        invalidateMetrics();
+                        oldViewportBounds = newViewportBounds;
+                        contentView.requestLayout();
+                    }
                 }
             }
         });
@@ -738,8 +750,8 @@ public class TextAreaSkin extends TextInputControlSkin<TextArea, TextAreaBehavio
     @Override public boolean showContextMenu(ContextMenu menu, double x, double y, boolean isKeyboardTrigger) {
         if (isKeyboardTrigger) {
             Bounds caretBounds = caretPath.getLayoutBounds();
-            Point2D p = Utils.pointRelativeTo(contentView, null, caretBounds.getMinX(),
-                                              caretBounds.getMaxY(), false);
+            Point2D p = com.sun.javafx.Utils.pointRelativeTo(contentView, null, caretBounds.getMinX(),
+                                                             caretBounds.getMaxY(), false);
             x = p.getX();
             y = p.getY();
         }
