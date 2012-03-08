@@ -3,7 +3,7 @@
  */
 package javafx.scene.control;
 
-import javafx.scene.control.*;
+import com.sun.javafx.scene.control.skin.ComboBoxListViewSkin;
 import static javafx.scene.control.ControlTestUtils.assertStyleClassContains;
 import static org.junit.Assert.*;
 
@@ -17,6 +17,8 @@ import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.event.ActionEvent;
 import javafx.event.EventHandler;
+import javafx.scene.Scene;
+import javafx.stage.Stage;
 import javafx.util.Callback;
 import javafx.util.StringConverter;
 
@@ -710,4 +712,28 @@ public class ComboBoxTest {
         assertEquals("0", comboBox.getSelectionModel().getSelectedItem());
         assertTrue(sm.isSelected(2));
     }
+    
+    @Ignore("Test not working as the heights being returned are not accurate")
+    @Test public void test_rt20106() {
+        comboBox.getItems().addAll("0","1","2","3","4","5","6","7","8","9");
+        
+        Stage stage = new Stage();
+        Scene scene = new Scene(comboBox);
+        stage.setScene(scene);
+        comboBox.impl_processCSS(true);
+        comboBox.show();
+        
+        comboBox.setVisibleRowCount(5);
+        double initialHeight = ((ComboBoxListViewSkin)comboBox.getSkin()).getListView().getHeight();
+        assertFalse("initialHeight: " + initialHeight, Double.compare(0.0, initialHeight) == 0);
+        
+        comboBox.setVisibleRowCount(0);
+        double smallHeight = ((ComboBoxListViewSkin)comboBox.getSkin()).getListView().getHeight();
+        assertTrue("smallHeight: " + smallHeight + ", initialHeight: " + initialHeight,
+                smallHeight != initialHeight && smallHeight < initialHeight);
+        
+        comboBox.setVisibleRowCount(7);
+        double biggerHeight = ((ComboBoxListViewSkin)comboBox.getSkin()).getListView().getHeight();
+        assertTrue(biggerHeight != smallHeight && smallHeight < biggerHeight);
+    } 
 }

@@ -137,6 +137,7 @@ public class ComboBoxListViewSkin<T> extends ComboBoxPopupControl<T> {
         registerChangeListener(comboBox.itemsProperty(), "ITEMS");
         registerChangeListener(comboBox.promptTextProperty(), "PROMPT_TEXT");
         registerChangeListener(comboBox.cellFactoryProperty(), "CELL_FACTORY");
+        registerChangeListener(comboBox.visibleRowCountProperty(), "VISIBLE_ROW_COUNT");
     }
     
     public void updateListViewItems() {
@@ -175,6 +176,9 @@ public class ComboBoxListViewSkin<T> extends ComboBoxPopupControl<T> {
             updateDisplayNode();
         } else if ("CELL_FACTORY".equals(p)) {
             updateCellFactory();
+        } else if ("VISIBLE_ROW_COUNT".equals(p)) {
+            if (listView == null) return;
+            listView.setPrefHeight(getListViewPrefHeight());
         }
     }
     
@@ -326,17 +330,7 @@ public class ComboBoxListViewSkin<T> extends ComboBoxPopupControl<T> {
             @Override protected double computePrefHeight(double width) {
                 doCSSCheck();
                 
-                double ph;
-                if (getSkin() instanceof VirtualContainerBase) {
-                    int maxRows = comboBox.getVisibleRowCount();
-                    VirtualContainerBase skin = (VirtualContainerBase)getSkin();
-                    ph = skin.getVirtualFlowPreferredHeight(maxRows);
-                } else {
-                    double ch = comboBox.getItems().size() * 25;
-                    ph = Math.min(ch, 200);
-                }
-                
-                return ph;
+                return getListViewPrefHeight();
             }
             
             private void doCSSCheck() {
@@ -394,6 +388,20 @@ public class ComboBoxListViewSkin<T> extends ComboBoxPopupControl<T> {
         
         return listView;
     }
+    
+    private double getListViewPrefHeight() {
+        double ph;
+        if (listView.getSkin() instanceof VirtualContainerBase) {
+            int maxRows = comboBox.getVisibleRowCount();
+            VirtualContainerBase skin = (VirtualContainerBase)listView.getSkin();
+            ph = skin.getVirtualFlowPreferredHeight(maxRows);
+        } else {
+            double ch = comboBox.getItems().size() * 25;
+            ph = Math.min(ch, 200);
+        }
+        
+        return ph;
+    }
 
     @Override protected double computePrefWidth(double height) {
         return listView.prefWidth(height);
@@ -410,7 +418,7 @@ public class ComboBoxListViewSkin<T> extends ComboBoxPopupControl<T> {
      * 
      *************************************************************************/
     
-    ListView<T> getListView() {
+    public ListView<T> getListView() {
         return listView;
     }
     
