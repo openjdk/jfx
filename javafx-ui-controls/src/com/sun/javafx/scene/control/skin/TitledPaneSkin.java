@@ -51,6 +51,11 @@ import com.sun.javafx.scene.control.behavior.TitledPaneBehavior;
 import com.sun.javafx.scene.traversal.Direction;
 import com.sun.javafx.scene.traversal.TraversalEngine;
 import com.sun.javafx.scene.traversal.TraverseListener;
+import javafx.beans.InvalidationListener;
+import javafx.beans.Observable;
+import javafx.geometry.Insets;
+import javafx.scene.control.Labeled;
+import javafx.scene.text.Font;
 
 public class TitledPaneSkin extends LabeledSkinBase<TitledPane, TitledPaneBehavior>  {
 
@@ -62,6 +67,9 @@ public class TitledPaneSkin extends LabeledSkinBase<TitledPane, TitledPaneBehavi
     private Timeline timeline;
     private double transitionStartValue;
     private Rectangle clipRect;
+    private Pos pos;
+    private HPos hpos;
+    private VPos vpos;    
 
     public TitledPaneSkin(final TitledPane titledPane) {
         super(titledPane, new TitledPaneBehavior(titledPane));
@@ -70,7 +78,7 @@ public class TitledPaneSkin extends LabeledSkinBase<TitledPane, TitledPaneBehavi
         setClip(clipRect);
 
         transitionStartValue = 0;
-        titleRegion = new TitleRegion();
+        titleRegion = new TitleRegion();       
 
         contentRegion = new Content(getSkinnable().getContent());
 
@@ -79,12 +87,18 @@ public class TitledPaneSkin extends LabeledSkinBase<TitledPane, TitledPaneBehavi
         } else {
             setTransition(0.0f);
         }
-
+                
         getChildren().setAll(contentRegion, titleRegion);
-
+               
         registerChangeListener(titledPane.contentProperty(), "CONTENT");
         registerChangeListener(titledPane.expandedProperty(), "EXPANDED");
         registerChangeListener(titledPane.collapsibleProperty(), "COLLAPSIBLE");
+        registerChangeListener(titledPane.alignmentProperty(), "ALIGNMENT");
+        registerChangeListener(titleRegion.alignmentProperty(), "TITLE_REGION_ALIGNMENT");        
+        
+        pos = titledPane.getAlignment();
+        hpos = titledPane.getAlignment().getHpos();
+        vpos = titledPane.getAlignment().getVpos();      
     }
 
     public StackPane getContentRegion() {
@@ -102,7 +116,7 @@ public class TitledPaneSkin extends LabeledSkinBase<TitledPane, TitledPaneBehavi
     }
 
     @Override
-    protected void handleControlPropertyChanged(String property) {
+    protected void handleControlPropertyChanged(String property) {        
         super.handleControlPropertyChanged(property);
         if (property == "CONTENT") {
             contentRegion.setContent(getSkinnable().getContent());
@@ -110,6 +124,14 @@ public class TitledPaneSkin extends LabeledSkinBase<TitledPane, TitledPaneBehavi
             setExpanded(getSkinnable().isExpanded());
         } else if (property == "COLLAPSIBLE") {
             titleRegion.update();
+        } else if (property == "ALIGNMENT") {
+            pos = getSkinnable().getAlignment();
+            hpos = pos.getHpos();
+            vpos = pos.getVpos();
+        } else if (property == "TITLE_REGION_ALIGNMENT") {
+            pos = titleRegion.getAlignment();
+            hpos = pos.getHpos();
+            vpos = pos.getVpos();
         }
     }
 
@@ -187,8 +209,9 @@ public class TitledPaneSkin extends LabeledSkinBase<TitledPane, TitledPaneBehavi
             }
         }
 
+        double y = snapSpace(getInsets().getTop()) + snapSpace(headerHeight);
         contentRegion.resize(contentWidth, contentHeight);
-        positionInArea(contentRegion, snapSpace(getInsets().getLeft()), snapSpace(headerHeight),
+        positionInArea(contentRegion, snapSpace(getInsets().getLeft()), y,
             w, contentHeight, /*baseline ignored*/0, HPos.CENTER, VPos.CENTER);
     }
 
@@ -366,8 +389,7 @@ public class TitledPaneSkin extends LabeledSkinBase<TitledPane, TitledPaneBehavi
             double left = snapSpace(getInsets().getLeft());
             double right = snapSpace(getInsets().getRight());
             double arrowWidth = 0;
-            // We want to use the label's pref width computed by LabeledSkinBase.
-            double labelPrefWidth = TitledPaneSkin.super.computePrefWidth(height);
+            double labelPrefWidth = labelPrefWidth(height);
 
             if (arrowRegion != null) {
                 arrowWidth = snapSize(arrowRegion.prefWidth(height));
@@ -380,8 +402,7 @@ public class TitledPaneSkin extends LabeledSkinBase<TitledPane, TitledPaneBehavi
             double top = snapSpace(getInsets().getTop());
             double bottom = snapSpace(getInsets().getBottom());
             double arrowHeight = 0;
-            // We want to use the label's pref height computed by LabeledSkinBase.
-            double labelPrefHeight = TitledPaneSkin.super.computePrefHeight(width);
+            double labelPrefHeight = labelPrefHeight(width);
 
             if (arrowRegion != null) {
                 arrowHeight = snapSize(arrowRegion.prefHeight(width));
@@ -399,19 +420,89 @@ public class TitledPaneSkin extends LabeledSkinBase<TitledPane, TitledPaneBehavi
             double height = getHeight() - (top + bottom);
             double arrowWidth = snapSize(arrowRegion.prefWidth(-1));
             double arrowHeight = snapSize(arrowRegion.prefHeight(-1));
-            double labelWidth = snapSize(TitledPaneSkin.super.computePrefWidth(-1));
-            double labelHeight = snapSize(TitledPaneSkin.super.computePrefHeight(-1));
+            double labelWidth = snapSize(labelPrefWidth(-1));
+            double labelHeight = snapSize(labelPrefHeight(-1));
 
-            HPos hpos = getAlignment().getHpos();
-            VPos vpos = getAlignment().getVpos();
             double x = left + arrowWidth + Utils.computeXOffset(width - arrowWidth, labelWidth, hpos);
+            if (HPos.CENTER == hpos) {
+                // We want to center the region based on the entire width of the TitledPane.
+                x = left + Utils.computeXOffset(width, labelWidth, hpos);
+            }
             double y = top + Utils.computeYOffset(height, Math.max(arrowHeight, labelHeight), vpos);
 
             arrowRegion.resize(arrowWidth, arrowHeight);
             positionInArea(arrowRegion, left, top, arrowWidth, height,
                     /*baseline ignored*/0, HPos.CENTER, VPos.CENTER);
+                       
+            layoutLabelInArea(x, y, labelWidth, height, pos);
+        }
 
-            layoutLabelInArea(x, y, labelWidth, height, getAlignment());
+        // Copied from LabeledSkinBase because the padding from TitledPane was being
+        // applied to the Label when it should not be.
+        private double labelPrefWidth(double height) {
+            // Get the preferred width of the text
+            final Labeled labeled = getSkinnable();
+            final Font font = text.getFont();
+            final String string = labeled.getText();
+            boolean emptyText = string == null || string.isEmpty();
+            Insets labelPadding = labeled.getLabelPadding();
+            double widthPadding = labelPadding.getLeft() + labelPadding.getRight();
+            double textWidth = emptyText ? 0 : Utils.computeTextWidth(font, string, 0);
+
+            // Now add on the graphic, gap, and padding as appropriate
+            final Node graphic = labeled.getGraphic();
+            if (isIgnoreGraphic()) {
+                return textWidth + widthPadding;
+            } else if (isIgnoreText()) {
+                return graphic.prefWidth(-1) + widthPadding;
+            } else if (labeled.getContentDisplay() == ContentDisplay.LEFT
+                    || labeled.getContentDisplay() == ContentDisplay.RIGHT) {
+                return textWidth + labeled.getGraphicTextGap() + graphic.prefWidth(-1) + widthPadding;
+            } else {
+                return Math.max(textWidth, graphic.prefWidth(-1)) + widthPadding;
+            }
+        }
+
+        // Copied from LabeledSkinBase because the padding from TitledPane was being
+        // applied to the Label when it should not be.
+        private double labelPrefHeight(double width) {
+            final Labeled labeled = getSkinnable();
+            final Font font = text.getFont();
+            final ContentDisplay contentDisplay = labeled.getContentDisplay();
+            final double gap = labeled.getGraphicTextGap();
+            final Insets padding = getInsets();
+            final Insets labelPadding = labeled.getLabelPadding();
+            final double widthPadding = padding.getLeft() + padding.getRight() + labelPadding.getLeft() + labelPadding.getRight();
+
+            String str = labeled.getText();
+            if (str != null && str.endsWith("\n")) {
+                // Strip ending newline so we don't count another row.
+                str = str.substring(0, str.length() - 1);
+            }
+
+            if (!isIgnoreGraphic() &&
+                (contentDisplay == ContentDisplay.LEFT || contentDisplay == ContentDisplay.RIGHT)) {
+                width -= (graphic.prefWidth(-1) + gap);
+            }
+
+            width -= widthPadding;
+
+            // TODO figure out how to cache this effectively.
+            final double textHeight = Utils.computeTextHeight(font, str,
+                                                            labeled.isWrapText() ? width : 0);
+
+            // Now we want to add on the graphic if necessary!
+            double h = textHeight;
+            if (!isIgnoreGraphic()) {
+                final Node graphic = labeled.getGraphic();
+                if (contentDisplay == ContentDisplay.TOP || contentDisplay == ContentDisplay.BOTTOM) {
+                    h = graphic.prefHeight(-1) + gap + textHeight;
+                } else {
+                    h = Math.max(textHeight, graphic.prefHeight(-1));
+                }
+            }
+
+            return h + labelPadding.getTop() + labelPadding.getBottom();
         }
     }
 

@@ -479,16 +479,6 @@ import static javafx.concurrent.WorkerStateEvent.*;
  *     }
  * </code></pre>
  *
- * <!-- TODO: Update to use the PartialResultsTask. This needs to be a new
- *      task written such that there is an updateResults method which does
- *      all the normal event queue coalescing and so forth. Creating a
- *      PartialResultsTask is trivial, however creating a PartialResultsService
- *      is a bit more intimidating. The problem with PartialResultsService is
- *      that you might also want a PartialResultsScheduledService, so there is
- *      some explosion of API possible. It might be that we simply teach
- *      Service itself how to deal with PartialResultsTasks -- that is probably
- *      my preferred approach. -->
- *
  * <h3>A Task Which Modifies The Scene Graph</h3>
  *
  * <p>Generally, Tasks should not interact directly with the UI. Doing so

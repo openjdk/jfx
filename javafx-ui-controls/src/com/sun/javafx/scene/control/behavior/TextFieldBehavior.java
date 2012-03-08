@@ -113,6 +113,7 @@ public class TextFieldBehavior extends TextInputControlBehavior<TextField> {
         } else {
             textField.selectRange(0, 0);
             focusGainedByMouseClick = false;
+            setCaretAnimating(false);
         }
     }
 

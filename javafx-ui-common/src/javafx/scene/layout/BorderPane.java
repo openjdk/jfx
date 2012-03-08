@@ -38,12 +38,15 @@ import javafx.scene.Node;
 
 /**
  * BorderPane lays out children in top, left, right, bottom, and center positions.
+ * 
+ * <p> <img src="doc-files/borderpane.png"/> </p>
+ * 
  * The top and bottom children will be resized to their preferred heights and
  * extend the width of the borderpane.  The left and right children will be resized
  * to their preferred widths and extend the length between the top and bottom nodes.
  * And the center node will be resized to fill the available space in the middle.
  * Any of the positions may be null.
- *
+ *  
  * Example:
  * <pre><code>     <b>BorderPane borderpane = new BorderPane();</b>
  *     ToolBar toolbar = new ToolBar();

@@ -65,6 +65,7 @@ import com.sun.javafx.geom.Path2D;
 import com.sun.javafx.geom.PerspectiveCameraImpl;
 import com.sun.javafx.geom.Shape;
 import com.sun.javafx.geom.transform.BaseTransform;
+import com.sun.javafx.menu.MenuBase;
 import com.sun.javafx.perf.PerformanceTracker;
 import com.sun.javafx.runtime.async.AsyncOperation;
 import com.sun.javafx.runtime.async.AsyncOperationListener;
@@ -180,7 +181,7 @@ public class StubToolkit extends Toolkit {
 
     @Override
     public TKSystemMenu getSystemMenu() {
-        throw new UnsupportedOperationException("Not supported yet.");
+	return new StubSystemMenu();
     }
 
     @Override
@@ -658,7 +659,10 @@ public class StubToolkit extends Toolkit {
 
     @Override
     public PathElement[] convertShapeToFXPath(Object shape) {
-        throw new UnsupportedOperationException();
+        // Had to be mocked up for TextField tests (for the caret!)
+        // Since the "shape" could be anything, I'm just returning
+        // something here, doesn't matter what.
+        return new PathElement[0];
     }
 
     @Override
@@ -913,5 +917,19 @@ public class StubToolkit extends Toolkit {
         public float getDPI() {
             return dpi;
         }
+    }
+    
+    public static class StubSystemMenu implements TKSystemMenu {
+
+        @Override
+        public boolean isSupported() {
+            return false;
+        }
+
+        @Override
+        public void setMenus(List<MenuBase> menus) {
+            throw new UnsupportedOperationException("Not supported yet.");
+        }
+
     }
 }

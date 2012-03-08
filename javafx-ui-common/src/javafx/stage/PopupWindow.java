@@ -281,7 +281,11 @@ public abstract class PopupWindow extends Window {
     }
 
     /**
-     * Show the Popup at the specified x,y location relative to the screen
+     * Shows the popup at the specified x,y location relative to the screen.
+     * The popup is associated with the specified owner node. The {@code Window}
+     * which contains the owner node at the time of the call becomes an owner
+     * window of the displayed popup.
+     * 
      * @param ownerNode The owner Node of the popup. It must not be null
      *        and must be associated with a Window.
      * @param screenX the x location in screen coordinates at which to

@@ -191,7 +191,7 @@ public class TabPaneSkin extends SkinBase<TabPane, TabPaneBehavior> {
                             closedTabTimeline = createTimeline(tabRegion, Duration.millis(ANIMATION_SPEED * 1.5F), 0.0F, new EventHandler<ActionEvent>() {
 
                                 @Override
-                                public void handle(ActionEvent event) {
+                                public void handle(ActionEvent event) {       
                                     removeTab(tab);
                                     if (getSkinnable().getTabs().isEmpty()) {
                                         tabHeaderArea.setVisible(false);
@@ -501,18 +501,16 @@ public class TabPaneSkin extends SkinBase<TabPane, TabPaneBehavior> {
                         setScrollOffset(0.0);
                     } else {
                         controlButtons.showTabsMenu(true);
-                        if (!removeTab.isEmpty()) {
+                        if (!removeTab.isEmpty()) {                            
                             double offset = 0;
                             double w = tabHeaderArea.getWidth() - snapSize(controlButtons.prefWidth(-1)) - firstTabIndent() - SPACER;
                             Iterator i = getChildren().iterator();
                             while (i.hasNext()) {
                                 TabHeaderSkin tabHeader = (TabHeaderSkin)i.next();
                                 double tabHeaderPrefWidth = snapSize(tabHeader.prefWidth(-1));
-                                if (removeTab.contains(tabHeader)) {
+                                if (removeTab.contains(tabHeader)) {                                    
                                     if (offset < w) {
                                         isSelectingTab = true;
-                                    } else {
-                                        setScrollOffset(getScrollOffset() + snapSize(tabHeader.prefWidth(-1)));
                                     }
                                     i.remove();
                                     removeTab.remove(tabHeader);
@@ -520,7 +518,7 @@ public class TabPaneSkin extends SkinBase<TabPane, TabPaneBehavior> {
                                         break;
                                     }
                                 }
-                                offset += tabHeaderPrefWidth;
+                                offset += tabHeaderPrefWidth;                                
                             }
                         } else {
                             isSelectingTab = true;
