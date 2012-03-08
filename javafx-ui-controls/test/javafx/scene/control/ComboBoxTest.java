@@ -4,6 +4,8 @@
 package javafx.scene.control;
 
 import com.sun.javafx.scene.control.skin.ComboBoxListViewSkin;
+import com.sun.javafx.scene.control.skin.ListViewSkin;
+import com.sun.javafx.scene.control.skin.VirtualFlow;
 import static javafx.scene.control.ControlTestUtils.assertStyleClassContains;
 import static org.junit.Assert.*;
 
@@ -762,5 +764,46 @@ public class ComboBoxTest {
         comboBox.valueProperty().bindBidirectional(tf.textProperty());  // count++ here
         tf.setText("Text2");
         assertTrue("count: " + count, count == 3);
+    } 
+    
+    @Ignore("Test not working as the skin is not being properly instantiated")
+    @Test public void test_rt20100() {
+        comboBox.getItems().addAll("0","1","2","3","4","5","6","7","8","9");
+        
+        Stage stage = new Stage();
+        Scene scene = new Scene(comboBox);
+        stage.setScene(scene);
+        comboBox.impl_processCSS(true);
+        comboBox.show();
+        
+        comboBox.setConverter(new StringConverter() {
+            int toStringCounter = 0;
+            int fromStringCounter = 0;
+
+            @Override public String toString(Object t) {
+                return "TO_STRING";
+            }
+
+            @Override public Object fromString(String string) {
+                return "FROM_STRING";
+            }
+        });
+        
+        comboBox.getSelectionModel().select(2);
+        assertEquals("2", comboBox.getValue());
+        
+        ListView listView = ((ComboBoxListViewSkin)comboBox.getSkin()).getListView();
+//        listView.impl_processCSS(true);
+        
+        assertEquals("2", listView.getSelectionModel().getSelectedItem());
+        
+        System.out.println(listView.getSkin());
+        
+        VirtualFlow flow = (VirtualFlow)((ListViewSkin)listView.getSkin()).lookup("#virtual-flow");
+        assertNotNull(flow);
+        
+        IndexedCell cell = flow.getVisibleCell(2);
+        System.out.println("cell: " + cell);
+        assertEquals("TO_STRING", cell.getText());
     } 
 }

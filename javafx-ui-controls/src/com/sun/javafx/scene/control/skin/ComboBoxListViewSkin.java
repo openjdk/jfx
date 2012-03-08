@@ -138,6 +138,7 @@ public class ComboBoxListViewSkin<T> extends ComboBoxPopupControl<T> {
         registerChangeListener(comboBox.promptTextProperty(), "PROMPT_TEXT");
         registerChangeListener(comboBox.cellFactoryProperty(), "CELL_FACTORY");
         registerChangeListener(comboBox.visibleRowCountProperty(), "VISIBLE_ROW_COUNT");
+        registerChangeListener(comboBox.converterProperty(), "CONVERTER");
     }
     
     public void updateListViewItems() {
@@ -146,6 +147,7 @@ public class ComboBoxListViewSkin<T> extends ComboBoxPopupControl<T> {
         }
 
         this.listViewItems = comboBox.getItems();
+        listView.setItems(null);
         listView.setItems(listViewItems);
 
         if (listViewItems != null) {
@@ -179,6 +181,8 @@ public class ComboBoxListViewSkin<T> extends ComboBoxPopupControl<T> {
         } else if ("VISIBLE_ROW_COUNT".equals(p)) {
             if (listView == null) return;
             listView.setPrefHeight(getListViewPrefHeight());
+        } else if ("CONVERTER".equals(p)) {
+            updateListViewItems();
         }
     }
     
