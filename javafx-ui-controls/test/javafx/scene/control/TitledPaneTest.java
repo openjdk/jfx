@@ -16,6 +16,7 @@ import javafx.beans.property.SimpleObjectProperty;
 import javafx.geometry.Pos;
 import javafx.scene.Node;
 import javafx.scene.Scene;
+import javafx.scene.input.KeyCode;
 import javafx.scene.layout.StackPane;
 import javafx.scene.shape.Rectangle;
 import javafx.stage.Stage;
@@ -260,4 +261,30 @@ public class TitledPaneTest {
         
         assertEquals(Pos.BOTTOM_RIGHT, titledPane.getAlignment());              
     }
+    @Test public void focusOnNonCollapsibleTitledPane_RT19660() {
+        Button button = new Button("Button");
+        
+        titledPane.setCollapsible(false);
+        titledPane.setExpanded(true);
+        titledPane.setAnimated(false);
+        titledPane.setContent(button);
+        
+        root.getChildren().add(titledPane);
+        show();
+
+        tk.firePulse();        
+        assertTrue(titledPane.isFocused());
+
+        KeyEventFirer keyboard = new KeyEventFirer(titledPane);        
+        keyboard.doKeyPress(KeyCode.ENTER);
+        
+        tk.firePulse();
+        assertTrue(titledPane.isExpanded());
+        assertTrue(titledPane.isFocused());
+
+        keyboard.doKeyPress(KeyCode.TAB);
+        tk.firePulse();
+        assertFalse(titledPane.isFocused());
+        assertTrue(button.isFocused());
+    }    
 }

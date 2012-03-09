@@ -71,7 +71,7 @@ public class TitledPaneBehavior extends BehaviorBase<TitledPane> {
     @Override protected void callAction(String name) {
         if (PRESS_ACTION.equals(name)) {
             TitledPane tp = getControl();
-            if (tp.isFocused()) {
+            if (tp.isCollapsible() && tp.isFocused()) {
                 tp.setExpanded(!tp.isExpanded());
                 tp.requestFocus();
             }
@@ -85,7 +85,7 @@ public class TitledPaneBehavior extends BehaviorBase<TitledPane> {
                 // accordion and to the next focusable control.
                 if (getControl().getParent() != null && getControl().getParent() instanceof AccordionSkin) {
                     tps.getContentRegion().getImpl_traversalEngine().trav(getControl().getParent(), Direction.NEXT);
-                } else {
+                } else {                    
                     super.callAction(name);
                 }
             }
