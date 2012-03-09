@@ -179,8 +179,7 @@ public class TabPaneSkin extends SkinBase<TabPane, TabPaneBehavior> {
 
     private void initializeTabListener() {
         getSkinnable().getTabs().addListener(new ListChangeListener<Tab>() {
-            @Override public void onChanged(final Change<? extends Tab> c) {
-                closedTab.clear();
+            @Override public void onChanged(final Change<? extends Tab> c) {      
                 while (c.next()) {
                     for (final Tab tab : c.getRemoved()) {
                         // Animate the tab removal
@@ -191,8 +190,9 @@ public class TabPaneSkin extends SkinBase<TabPane, TabPaneBehavior> {
                             closedTabTimeline = createTimeline(tabRegion, Duration.millis(ANIMATION_SPEED * 1.5F), 0.0F, new EventHandler<ActionEvent>() {
 
                                 @Override
-                                public void handle(ActionEvent event) {       
+                                public void handle(ActionEvent event) {      
                                     removeTab(tab);
+                                    closedTab.remove(tab);
                                     if (getSkinnable().getTabs().isEmpty()) {
                                         tabHeaderArea.setVisible(false);
                                     }
@@ -209,10 +209,12 @@ public class TabPaneSkin extends SkinBase<TabPane, TabPaneBehavior> {
                         Timeline closedTabTimeline = closedTab.get(tab);
                         if (closedTabTimeline != null) {
                             closedTabTimeline.stop();
-                            Set<Tab> keys = closedTab.keySet();
-                            for (Tab key: keys) {
+                            Iterator<Tab> keys = closedTab.keySet().iterator();
+                            while (keys.hasNext()) {
+                                Tab key = keys.next();
                                 if (tab.equals(key)) {
                                     removeTab(key);
+                                    keys.remove();                                    
                                 }
                             }
                         }

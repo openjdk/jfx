@@ -7,6 +7,7 @@ package javafx.scene.control;
 import com.sun.javafx.css.StyleableProperty;
 import static javafx.scene.control.ControlTestUtils.*;
 import com.sun.javafx.pgstub.StubToolkit;
+import com.sun.javafx.scene.control.skin.TabPaneSkin;
 import com.sun.javafx.tk.Toolkit;
 import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.DoubleProperty;
@@ -31,17 +32,19 @@ public class TabPaneTest {
     private TabPane.TabPaneSelectionModel sm;
     private Tab tab1;
     private Tab tab2;
+    private Tab tab3;
 
     @Before public void setup() {
         tk = (StubToolkit)Toolkit.getToolkit();//This step is not needed (Just to make sure StubToolkit is loaded into VM)
         tabPane = new TabPane();
         tab1 = new Tab("one");
         tab2 = new Tab("two");
+        tab3 = new Tab("three");
         sm = new TabPane.TabPaneSelectionModel(tabPane);
     }
     
-   
-   
+    
+    
     /*********************************************************************
      * Tests for default values                                         *
      ********************************************************************/
@@ -491,4 +494,25 @@ public class TabPaneTest {
         assertTrue(tabPane.getSelectionModel().isSelected(0));
         assertFalse(tabPane.getSelectionModel().isSelected(1));
     }
+    
+    @Test public void flipTabOrder_RT20156() {
+        tabPane.setSkin(new TabPaneSkin(tabPane));
+        tabPane.getTabs().add(tab1);
+        tabPane.getTabs().add(tab2);
+        tabPane.getTabs().add(tab3);
+        
+        assertEquals("one", tabPane.getTabs().get(0).getText());
+        assertEquals("two", tabPane.getTabs().get(1).getText());
+        assertEquals("three", tabPane.getTabs().get(2).getText());
+        
+        final int lastTabIndex = tabPane.getTabs().size()-1;
+        final Tab lastTab = tabPane.getTabs().get(lastTabIndex);        
+        tabPane.getTabs().remove(lastTabIndex);
+        tabPane.getTabs().add(0, lastTab);
+        
+        assertEquals("three", tabPane.getTabs().get(0).getText());                
+        assertEquals("one", tabPane.getTabs().get(1).getText());
+        assertEquals("two", tabPane.getTabs().get(2).getText());
+        assertTrue(tabPane.getSelectionModel().isSelected(1));        
+    }    
 }

@@ -644,6 +644,13 @@ public class TabPane extends Control {
                                 }
                             }
                         }
+                        if (c.wasAdded()) {
+                            // The selected tab index can be out of sync with the list of tab if
+                            // we add tabs before the selected tab.
+                            if (getSelectedIndex() != tabPane.getTabs().indexOf(getSelectedItem())) {
+                                clearAndSelect(tabPane.getTabs().indexOf(getSelectedItem()));
+                            }
+                        }
                     }
                     if (getSelectedIndex() == -1 && tabPane.getTabs().size() > 0) {
                         selectFirst();
