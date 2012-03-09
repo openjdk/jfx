@@ -909,7 +909,10 @@ public class TreeItem<T> implements EventTarget {
             this.wasCollapsed = false;
         }
 
-        @Override public Object getSource() {
+        /**
+         * Returns the TreeItem upon which this event occurred.
+         */
+        @Override public TreeItem getSource() {
             return this.treeItem;
         }
         

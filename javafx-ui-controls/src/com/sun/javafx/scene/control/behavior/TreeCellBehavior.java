@@ -143,34 +143,36 @@ public class TreeCellBehavior extends CellBehaviorBase<TreeCell<?>> {
             map.remove(treeView);
         }
 
-        if (sm.getSelectionMode() == SelectionMode.SINGLE) {
-            simpleSelect(event);
-        } else {
-            if (event.isControlDown() || event.isMetaDown()) {
-                if (selected) {
-                    // we remove this row from the current selection
-                    sm.clearSelection(index);
+        if (event.isPrimaryButtonDown() || (event.isSecondaryButtonDown() && !selected)) { 
+            if (sm.getSelectionMode() == SelectionMode.SINGLE) {
+                simpleSelect(event);
+            } else {
+                if (event.isControlDown() || event.isMetaDown()) {
+                    if (selected) {
+                        // we remove this row from the current selection
+                        sm.clearSelection(index);
+                        fm.focus(index);
+                    } else {
+                        // We add this row to the current selection
+                        sm.select(index);
+                    }
+                } else if (event.isShiftDown()) {
+                    // we add all rows between the current selection focus and
+                    // this row (inclusive) to the current selection.
+                    final int focusedIndex = getAnchor(treeView);
+
+                    // and then determine all row and columns which must be selected
+                    int minRow = Math.min(focusedIndex, index);
+                    int maxRow = Math.max(focusedIndex, index);
+
+                    // and then perform the selection
+                    sm.clearSelection();
+                    sm.selectRange(minRow, maxRow+1);
+
                     fm.focus(index);
                 } else {
-                    // We add this row to the current selection
-                    sm.select(index);
+                    simpleSelect(event);
                 }
-            } else if (event.isShiftDown()) {
-                // we add all rows between the current selection focus and
-                // this row (inclusive) to the current selection.
-                final int focusedIndex = getAnchor(treeView);
-
-                // and then determine all row and columns which must be selected
-                int minRow = Math.min(focusedIndex, index);
-                int maxRow = Math.max(focusedIndex, index);
-
-                // and then perform the selection
-                sm.clearSelection();
-                sm.selectRange(minRow, maxRow+1);
-                
-                fm.focus(index);
-            } else {
-                simpleSelect(event);
             }
         }
     }

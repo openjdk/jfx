@@ -3,7 +3,9 @@
  */
 package javafx.scene.control;
 
-import javafx.scene.control.*;
+import com.sun.javafx.scene.control.skin.ComboBoxListViewSkin;
+import com.sun.javafx.scene.control.skin.ListViewSkin;
+import com.sun.javafx.scene.control.skin.VirtualFlow;
 import static javafx.scene.control.ControlTestUtils.assertStyleClassContains;
 import static org.junit.Assert.*;
 
@@ -16,7 +18,10 @@ import javafx.beans.property.StringProperty;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.event.ActionEvent;
+import javafx.event.Event;
 import javafx.event.EventHandler;
+import javafx.scene.Scene;
+import javafx.stage.Stage;
 import javafx.util.Callback;
 import javafx.util.StringConverter;
 
@@ -710,4 +715,95 @@ public class ComboBoxTest {
         assertEquals("0", comboBox.getSelectionModel().getSelectedItem());
         assertTrue(sm.isSelected(2));
     }
+    
+    @Ignore("Test not working as the heights being returned are not accurate")
+    @Test public void test_rt20106() {
+        comboBox.getItems().addAll("0","1","2","3","4","5","6","7","8","9");
+        
+        Stage stage = new Stage();
+        Scene scene = new Scene(comboBox);
+        stage.setScene(scene);
+        comboBox.impl_processCSS(true);
+        comboBox.show();
+        
+        comboBox.setVisibleRowCount(5);
+        double initialHeight = ((ComboBoxListViewSkin)comboBox.getSkin()).getListView().getHeight();
+        assertFalse("initialHeight: " + initialHeight, Double.compare(0.0, initialHeight) == 0);
+        
+        comboBox.setVisibleRowCount(0);
+        double smallHeight = ((ComboBoxListViewSkin)comboBox.getSkin()).getListView().getHeight();
+        assertTrue("smallHeight: " + smallHeight + ", initialHeight: " + initialHeight,
+                smallHeight != initialHeight && smallHeight < initialHeight);
+        
+        comboBox.setVisibleRowCount(7);
+        double biggerHeight = ((ComboBoxListViewSkin)comboBox.getSkin()).getListView().getHeight();
+        assertTrue(biggerHeight != smallHeight && smallHeight < biggerHeight);
+    } 
+    
+    private int count = 0;
+    @Test public void test_rt20103() {
+        final TextField tf = new TextField();
+        
+        comboBox.setOnAction(new EventHandler() {
+            @Override public void handle(Event t) {
+                count++;
+            }
+        });
+        
+        assertTrue(count == 0);
+        
+        comboBox.valueProperty().bind(tf.textProperty());   // count++ here
+        assertTrue("count: " + count, count == 1);
+        
+        tf.setText("Text1");                                // count++ here
+        assertTrue("count: " + count, count == 2);
+        
+        comboBox.valueProperty().unbind();                  // no count++ here
+        assertTrue("count: " + count, count == 2);
+        
+        comboBox.valueProperty().bindBidirectional(tf.textProperty());  // count++ here
+        tf.setText("Text2");
+        assertTrue("count: " + count, count == 3);
+    } 
+    
+    @Ignore("Test not working as the skin is not being properly instantiated")
+    @Test public void test_rt20100() {
+        comboBox.getItems().addAll("0","1","2","3","4","5","6","7","8","9");
+        
+        Stage stage = new Stage();
+        Scene scene = new Scene(comboBox);
+        stage.setScene(scene);
+        comboBox.impl_processCSS(true);
+        comboBox.show();
+        
+        comboBox.setConverter(new StringConverter() {
+            int toStringCounter = 0;
+            int fromStringCounter = 0;
+
+            @Override public String toString(Object t) {
+                return "TO_STRING";
+            }
+
+            @Override public Object fromString(String string) {
+                return "FROM_STRING";
+            }
+        });
+        
+        comboBox.getSelectionModel().select(2);
+        assertEquals("2", comboBox.getValue());
+        
+        ListView listView = ((ComboBoxListViewSkin)comboBox.getSkin()).getListView();
+//        listView.impl_processCSS(true);
+        
+        assertEquals("2", listView.getSelectionModel().getSelectedItem());
+        
+        System.out.println(listView.getSkin());
+        
+        VirtualFlow flow = (VirtualFlow)((ListViewSkin)listView.getSkin()).lookup("#virtual-flow");
+        assertNotNull(flow);
+        
+        IndexedCell cell = flow.getVisibleCell(2);
+        System.out.println("cell: " + cell);
+        assertEquals("TO_STRING", cell.getText());
+    } 
 }

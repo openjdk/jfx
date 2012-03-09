@@ -55,6 +55,7 @@ public class ListViewSkin<T> extends VirtualContainerBase<ListView<T>, ListViewB
 
         // init the VirtualFlow
         flow = new VirtualFlow();
+        flow.setId("virtual-flow");
         flow.setPannable(false);
         flow.setVertical(getSkinnable().getOrientation() == Orientation.VERTICAL);
         flow.setFocusTraversable(getSkinnable().isFocusTraversable());

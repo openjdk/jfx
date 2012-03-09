@@ -25,7 +25,7 @@
  * questions.
  */
 --> 
-<project name="JavaFX Runtime" default="dist" basedir=".">
+<project name="JavaFX Runtime" default="jar" basedir=".">
     <description>Builds, tests, and runs the project JavaFX Runtime</description>
 
     <import file="../build-defs.xml"/>
