@@ -2373,8 +2373,8 @@
  ******************************************************************************/
 
 .titled-pane {
-    -fx-skin: "com.sun.javafx.scene.control.skin.TitledPaneSkin";
-    -fx-fill: -fx-text-base-color;
+    -fx-skin: "com.sun.javafx.scene.control.skin.TitledPaneSkin";    
+    -fx-text-fill: -fx-text-base-color;
 }
 
 .titled-pane:focused {
