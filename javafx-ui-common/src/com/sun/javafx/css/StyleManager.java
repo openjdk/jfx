@@ -27,8 +27,13 @@ package com.sun.javafx.css;
 
 import java.io.IOException;
 import java.net.MalformedURLException;
+import java.net.URI;
 import java.net.URL;
+import java.io.FilePermission;
+import java.security.AccessControlContext;
 import java.security.AccessController;
+import java.security.PermissionCollection;
+import java.security.ProtectionDomain;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
@@ -36,6 +41,8 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.jar.JarEntry;
+import java.util.jar.JarFile;
 
 import javafx.collections.FXCollections;
 import javafx.scene.Node;
@@ -47,6 +54,8 @@ import java.io.FileNotFoundException;
 import java.lang.ref.Reference;
 import java.lang.ref.WeakReference;
 import java.security.PrivilegedAction;
+import java.security.PrivilegedExceptionAction;
+import java.security.PrivilegedActionException;
 import java.util.Map.Entry;
 import javafx.collections.ListChangeListener.Change;
 import javafx.collections.MapChangeListener;
@@ -291,6 +300,138 @@ public class StyleManager {
     }
 
     private Stylesheet loadStylesheet(final String fname) {
+        try {
+            return loadStylesheetUnPrivileged(fname);
+        } catch (java.security.AccessControlException ace) {
+            if (logger().isLoggable(PlatformLogger.INFO)) {
+                logger().info("Could not load the stylesheet, trying with FilePermissions : " + fname);
+            }
+
+            /*
+            ** we got an access control exception, so
+            ** we could be running from an applet/jnlp/or with a security manager.
+            ** we'll allow the app to read a css file from our runtime jar,
+            ** and give it one more chance.
+            */
+
+            /*
+            ** check that there are enough chars after the !/ to have a valid .css or .bss file name
+            */
+            if ((fname.length() < 7) && (fname.indexOf("!/") < fname.length()-7)) {
+                return null;
+            }
+
+            /*
+            **
+            ** first check that it's actually looking for the same runtime jar
+            ** that we're running from, and not some other file.
+            */
+            try {
+                URI requestedFileUrI = new URI(fname);
+
+                /*
+                ** is the requested file in a jar
+                */
+                if ("jar".equals(requestedFileUrI.getScheme())) {
+                    /*
+                    ** let's check that the css file is being requested from our
+                    ** runtime jar
+                    */
+                    URI styleManagerJarURI = AccessController.doPrivileged(new PrivilegedExceptionAction<URI>() {
+                            public URI run() throws java.net.URISyntaxException, java.security.PrivilegedActionException {
+                            return StyleManager.class.getProtectionDomain().getCodeSource().getLocation().toURI();
+                        }
+                    });
+
+                    final String styleManagerJarPath = styleManagerJarURI.getSchemeSpecificPart();
+                    String requestedFilePath = requestedFileUrI.getSchemeSpecificPart();
+                    String requestedFileJarPart = requestedFilePath.substring(requestedFilePath.indexOf('/'), requestedFilePath.indexOf("!/"));
+                    /*
+                    ** it's the correct jar, check it's a file access
+                    ** strip off the leading jar
+                    */
+                    if (styleManagerJarPath.equals(requestedFileJarPart.toString())) {
+                        /*
+                        ** strip off the leading "jar",
+                        ** the css file name is past the last '!'
+                        */
+                        String requestedFileJarPathNoLeadingSlash = fname.substring(fname.indexOf("!/")+2);
+                        /*
+                        ** check that it's looking for a css file in the runtime jar
+                        */
+                        if (fname.endsWith(".css") || fname.endsWith(".bss")) {
+                            /*
+                            ** set up a read permission for the jar
+                            */
+                            FilePermission perm = new FilePermission(styleManagerJarPath, "read");
+
+                            PermissionCollection perms = perm.newPermissionCollection();
+                            perms.add(perm);
+                            AccessControlContext permsAcc = new AccessControlContext(
+                                new ProtectionDomain[] {
+                                    new ProtectionDomain(null, perms)
+                                });
+                            /*
+                            ** check that the jar file exists, and that we're allowed to
+                            ** read it.
+                            */
+                            JarFile jar = null;
+                            try {
+                                jar = AccessController.doPrivileged(new PrivilegedExceptionAction<JarFile>() {
+                                        public JarFile run() throws FileNotFoundException, IOException {
+                                            return new JarFile(styleManagerJarPath);
+                                        }
+                                    }, permsAcc);
+                            } catch (PrivilegedActionException pae) {
+                                /*
+                                ** we got either a FileNotFoundException or an IOException
+                                ** in the privileged read. Return the same error as we
+                                ** would have returned if the css file hadn't of existed.
+                                */
+                                return null;
+                            }
+                            if (jar != null) {
+                                /*
+                                ** check that the file is in the jar
+                                */
+                                JarEntry entry = jar.getJarEntry(requestedFileJarPathNoLeadingSlash);
+                                if (entry != null) {
+                                    /*
+                                    ** allow read access to the jar
+                                    */
+                                    return AccessController.doPrivileged(
+                                        new PrivilegedAction<Stylesheet>() {
+                                            @Override public Stylesheet run() {
+                                                return loadStylesheetUnPrivileged(fname);
+                                            }}, permsAcc);
+                                }
+                            }
+                        }
+                    }
+                }
+                /*
+                ** no matter what happen, we return the same error that would
+                ** be returned if the css file hadn't of existed.
+                ** That way there in no information leaked.
+                */
+                return null;
+            }
+            /*
+            ** no matter what happen, we return the same error that would
+            ** be returned if the css file hadn't of existed.
+            ** That way there in no information leaked.
+            */
+            catch (java.net.URISyntaxException e) {
+                return null;
+            }
+            catch (java.security.PrivilegedActionException e) {
+                return null;
+            }
+       }
+    }
+
+
+    private Stylesheet loadStylesheetUnPrivileged(final String fname) {
 
         Boolean parse = AccessController.doPrivileged(new PrivilegedAction<Boolean>() {
             @Override public Boolean run() {
