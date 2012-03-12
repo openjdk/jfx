@@ -300,6 +300,8 @@ public class ComboBoxListViewSkin<T> extends ComboBoxPopupControl<T> {
         };
     }
     
+    private boolean listSelectionLock = false;
+    
     private ListView<T> createListView() {
         final ListView<T> listView = new ListView<T>() {
             
@@ -352,10 +354,17 @@ public class ComboBoxListViewSkin<T> extends ComboBoxPopupControl<T> {
         listView.getSelectionModel().setSelectionMode(SelectionMode.SINGLE);
 
         listView.getSelectionModel().selectedIndexProperty().addListener(new InvalidationListener() {
+             @Override public void invalidated(Observable o) {
+                 if (listSelectionLock) return;
+                 int index = listView.getSelectionModel().getSelectedIndex();
+                 comboBox.getSelectionModel().select(index);
+                 updateDisplayNode();
+             }
+         });
+         
+        comboBox.getSelectionModel().selectedItemProperty().addListener(new InvalidationListener() {
             @Override public void invalidated(Observable o) {
-                int index = listView.getSelectionModel().getSelectedIndex();
-                comboBox.getSelectionModel().select(index);
-                updateDisplayNode();
+                listViewSelectionDirty = true;
             }
         });
         
@@ -413,6 +422,23 @@ public class ComboBoxListViewSkin<T> extends ComboBoxPopupControl<T> {
     
     @Override protected double computeMinWidth(double height) {
         return 50;
+    }
+    
+    private boolean listViewSelectionDirty = false;
+    @Override protected void layoutChildren() {
+        if (listViewSelectionDirty) {
+            try {
+                listSelectionLock = true;
+                T item = comboBox.getSelectionModel().getSelectedItem();
+                listView.getSelectionModel().clearSelection();
+                listView.getSelectionModel().select(item);
+            } finally {
+                listSelectionLock = false;
+                listViewSelectionDirty = false;
+            }
+        }
+        
+        super.layoutChildren();
     }
 
     

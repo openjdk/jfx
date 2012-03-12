@@ -806,4 +806,32 @@ public class ComboBoxTest {
         System.out.println("cell: " + cell);
         assertEquals("TO_STRING", cell.getText());
     } 
+    
+    @Test public void test_rt20189() {
+        comboBox.getItems().addAll("0","1","2","3","4","5","6","7","8","9");
+        
+        Stage stage = new Stage();
+        Scene scene = new Scene(comboBox);
+        stage.setScene(scene);
+        comboBox.impl_processCSS(true);
+        comboBox.show();
+        
+        ListView listView = ((ComboBoxListViewSkin)comboBox.getSkin()).getListView();
+        SelectionModel sm = listView.getSelectionModel();
+        
+        comboBox.getSelectionModel().select(2);
+        Object item = sm.getSelectedItem();
+        assertEquals("2", item);
+        assertEquals(2, sm.getSelectedIndex());
+        
+        comboBox.setValue("test");
+        item = sm.getSelectedItem();
+        assertEquals("test",item);
+        assertEquals(-1, sm.getSelectedIndex());
+        
+        comboBox.getSelectionModel().select(2);
+        item = sm.getSelectedItem();
+        assertEquals("2", item);
+        assertEquals(2, sm.getSelectedIndex());
+    }
 }
