@@ -321,13 +321,7 @@ public class StyleManager {
 
             Stylesheet stylesheet = null;
             if ((url != null) && !parse) {
-                final URL bssUrl = url;
-                // RT-17012
-                stylesheet = AccessController.doPrivileged(new PrivilegedAction<Stylesheet>() {
-                    @Override public Stylesheet run() {
-                        return Stylesheet.loadBinary(bssUrl);
-                    }
-                });
+                stylesheet = Stylesheet.loadBinary(url);
 
                 if (stylesheet == null && (parse = !parse)) {
                     // If we failed to load the .bss file,
