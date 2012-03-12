@@ -39,6 +39,7 @@ import javafx.scene.layout.StackPane;
 import com.sun.javafx.scene.control.WeakEventHandler;
 import com.sun.javafx.scene.control.behavior.TreeViewBehavior;
 import java.lang.ref.WeakReference;
+import javafx.event.EventType;
 import javafx.scene.control.*;
 import javafx.util.Callback;
 
@@ -169,6 +170,18 @@ public class TreeViewSkin<T> extends VirtualContainerBase<TreeView<T>, TreeViewB
                 // Fix for RT-14971 and RT-15338. 
                 needCellsRecreated = true;
                 requestLayout();
+            } else {
+                // Fix for RT-20090. We are checking to see if the event coming
+                // from the TreeItem root is an event where the count has changed.
+                EventType eventType = e.getEventType();
+                while (eventType != null) {
+                    if (eventType.equals(TreeItem.<T>treeItemCountChangeEvent())) {
+                        needItemCountUpdate = true;
+                        requestLayout();
+                        break;
+                    }
+                    eventType = eventType.getSuperType();
+                }
             }
         }
     };
@@ -211,12 +224,7 @@ public class TreeViewSkin<T> extends VirtualContainerBase<TreeView<T>, TreeViewB
         // memory leak in VirtualFlow.sheet.children. This can probably be 
         // optimised in the future when time permits.
         flow.setCellCount(newCount);
-        
-        if (newCount != oldCount) {
-            flow.recreateCells();
-        } else {
-            flow.reconfigureCells();
-        }
+        flow.recreateCells();
     }
 
     @Override public TreeCell<T> createCell() {
