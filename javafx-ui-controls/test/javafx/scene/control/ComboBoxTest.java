@@ -807,6 +807,7 @@ public class ComboBoxTest {
         assertEquals("TO_STRING", cell.getText());
     } 
     
+    @Ignore
     @Test public void test_rt20189() {
         comboBox.getItems().addAll("0","1","2","3","4","5","6","7","8","9");
         
