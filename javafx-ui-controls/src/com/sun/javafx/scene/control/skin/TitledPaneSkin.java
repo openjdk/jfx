@@ -209,7 +209,10 @@ public class TitledPaneSkin extends LabeledSkinBase<TitledPane, TitledPaneBehavi
             }
         }
 
-        double y = snapSpace(getInsets().getTop()) + snapSpace(headerHeight);
+        double y = snapSpace(getInsets().getTop()) + snapSpace(headerHeight) - (contentHeight * (1 - getTransition()));
+        double clipY = contentHeight * (1 - getTransition());
+        ((Rectangle)contentRegion.getClip()).setY(clipY);
+
         contentRegion.resize(contentWidth, contentHeight);
         positionInArea(contentRegion, snapSpace(getInsets().getLeft()), y,
             w, contentHeight, /*baseline ignored*/0, HPos.CENTER, VPos.CENTER);
