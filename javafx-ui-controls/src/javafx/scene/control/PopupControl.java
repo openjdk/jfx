@@ -735,12 +735,19 @@ public class PopupControl extends PopupWindow implements Skinnable {
         bridge.impl_pseudoClassStateChanged(s);
     }
 
+    /**
+     * @treatAsPrivate implementation detail
+     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
+     */
+    @Deprecated
     protected Styleable styleable; 
+    
     /**
      * RT-19263
      * @treatAsPrivate implementation detail
      * @deprecated This is an experimental API that is not intended for general use and is subject to change in future versions
      */
+    @Deprecated
     public Styleable impl_getStyleable() {
         if (styleable == null) {
             styleable = new Styleable() {
