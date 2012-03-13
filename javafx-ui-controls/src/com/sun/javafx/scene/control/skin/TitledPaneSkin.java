@@ -350,8 +350,10 @@ public class TitledPaneSkin extends LabeledSkinBase<TitledPane, TitledPaneBehavi
 
             setOnMouseReleased(new EventHandler<MouseEvent>() {
                 @Override public void handle(MouseEvent e) {
-                    getBehavior().toggle();
-                 }
+                    if (getSkinnable().isCollapsible() && getSkinnable().isFocused()) {                        
+                        getBehavior().toggle();
+                    }
+                }
             });
 
             // title region consists of the title and the arrow regions
