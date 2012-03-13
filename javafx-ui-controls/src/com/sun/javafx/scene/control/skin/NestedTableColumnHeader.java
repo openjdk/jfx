@@ -139,44 +139,19 @@ class NestedTableColumnHeader extends TableColumnHeader {
     public void setColumns(ObservableList<? extends TableColumn> newColumns) {
         this.columns = newColumns;  
         
-        // update the column headers. 
-        // We make a copy of all current headers
-        ArrayList<TableColumnHeader> copy = new ArrayList(getColumnHeaders());
+        // update the column headers....
         
         // then clear out the column headers
         getColumnHeaders().clear();
         
-        // then iterate through all columns. We try to reuse the column if it
-        // previously existed, rather than recreate it.
+        // then iterate through all columns.
         for (int i = 0; i < getColumns().size(); i++) {
-            TableColumnHeader header = null;
             TableColumn<?,?> column = getColumns().get(i);
             
             if (column == null) continue;
             
-            for (int j = 0; j < copy.size(); j++) {
-                if (column.equals(copy.get(j).getTableColumn())) {
-                    header = copy.get(j);
-                    break;
-                }
-            }
-            
-            if (header == null) {
-                header = createColumnHeader(column);
-            }
-            
-            getColumnHeaders().add(header);
+            getColumnHeaders().add(createColumnHeader(column));
         }
-        
-//        // we put all column headers into the list, even if they are not visible.
-//        // This ensures that we can accurately calculate the height of the 
-//        // table header row, even when no columns are visible. See RT-14434 for
-//        // the bug report (in addition to this change, I also changed the 
-//        // prefHeight calculations to ignore whether or not the column is 
-//        // visible).
-//        for (TableColumn c : getColumns()) {
-//            getColumnHeaders().add(createColumnHeader(c));
-//        }
 
         // update the content
         updateContent();
