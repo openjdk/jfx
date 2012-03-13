@@ -630,6 +630,36 @@ public class ColorTest {
         assertFalse(s.isEmpty());
     }
 
+    @Test
+    public void testToStringEquals() {
+        Color color = Color.web("#aabbcc");
+        assertEquals(color, Color.valueOf(color.toString()));
+        color = Color.web("#abc");
+        assertEquals(color, Color.valueOf(color.toString()));
+        color = Color.web("#aabbcc80", 0.5);
+        assertEquals(color, Color.valueOf(color.toString()));
+        color = Color.web("0xaabbcc");
+        assertEquals(color, Color.valueOf(color.toString()));
+        color = Color.web("0xaabbcc80");
+        assertEquals(color, Color.valueOf(color.toString()));
+        color = Color.web("orangered");
+        assertEquals(color, Color.valueOf(color.toString()));
+        color = Color.web("orangered", 0.4);
+        assertEquals(color, Color.valueOf(color.toString()));
+        color = Color.web("oRAngEReD");
+        assertEquals(color, Color.valueOf(color.toString()));
+        color = Color.web("0xaabbcc");
+        assertEquals(color, Color.valueOf(color.toString()));
+        color = Color.web("0xabc");
+        assertEquals(color, Color.valueOf(color.toString()));
+        color = Color.web("aAbBcC");
+        assertEquals(color, Color.valueOf(color.toString()));
+        color = Color.web("aBc");
+        assertEquals(color, Color.valueOf(color.toString()));
+        color = Color.web("aBc9");
+        assertEquals(color, Color.valueOf(color.toString()));
+    }
+
     //function testOfTheWayHandlesNegatives() {
         // TODO should this be tested? What does it mean?
     //}

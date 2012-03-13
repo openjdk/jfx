@@ -322,20 +322,29 @@ public final class RadialGradient extends Paint {
      * @return a string representation of this {@code RadialGradient} object.
      */ 
     @Override public String toString() {
-        final StringBuilder s = new StringBuilder("RadialGradient[focusAngle=").append(focusAngle)
-                .append(",focusDistance=").append(focusDistance).append(",centerX=")
-                .append(centerX).append(",centerY=").append(centerY).append(",radius=")
-                .append(radius).append(",proportional=").append(proportional)
-                .append(",cycleMethod=").append(cycleMethod).append(",stops=<");
-        if (stops.isEmpty()) {
-            s.append("empty");
-        } else {
-            for (Stop stop: stops) {
-                s.append(stop).append(",");
-            }
-            s.deleteCharAt(s.length() - 1);
+        final StringBuilder s = new StringBuilder("radial-gradient(focus-angle ").append(focusAngle)
+                .append("deg, focus-distance ").append(focusDistance * 100)
+                .append("% , center ").append(GradientUtils.lengthToString(centerX, proportional))
+                .append(" ").append(GradientUtils.lengthToString(centerY, proportional))
+                .append(", radius ").append(GradientUtils.lengthToString(radius, proportional))
+                .append(", ");                
+
+        switch (cycleMethod) {
+            case REFLECT:
+                s.append("reflect").append(", ");
+                break;
+            case REPEAT:
+                s.append("repeat").append(", ");
+                break;
         }
-        s.append(">]");
+
+        for (Stop stop : stops) {
+            s.append(stop).append(", ");
+        }
+
+        s.delete(s.length() - 2, s.length());
+        s.append(")");
+
         return s.toString();
     }
 

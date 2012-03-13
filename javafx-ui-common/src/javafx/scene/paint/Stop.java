@@ -225,6 +225,6 @@ public final class Stop {
      * @return a string representation of this {@code Stop} object.
      */ 
     @Override public String toString() {
-        return "Stop[offset=" + offset + ",color=" + color + "]";
+        return color + " " + offset*100 + "%";
     }
 }
