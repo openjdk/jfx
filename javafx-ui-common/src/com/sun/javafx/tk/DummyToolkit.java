@@ -234,7 +234,7 @@ final public class DummyToolkit extends Toolkit {
     }
 
     @Override
-    public Shape createStrokedShape(Shape shape, StrokeType pgtype, double strokewidth, StrokeLineCap pgcap, StrokeLineJoin pgjoin, float miterLimit) {
+    public Shape createStrokedShape(Shape shape, StrokeType pgtype, double strokewidth, StrokeLineCap pgcap, StrokeLineJoin pgjoin, float miterLimit, float[] dashArray, float dashOffset) {
         throw new UnsupportedOperationException("Not supported yet.");
     }
 

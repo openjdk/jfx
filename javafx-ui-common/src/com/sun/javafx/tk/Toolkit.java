@@ -590,7 +590,9 @@ public abstract class Toolkit {
                            double strokewidth,
                            PGShape.StrokeLineCap cap,
                            PGShape.StrokeLineJoin join,
-                           float miterLimit);
+                           float miterLimit,
+                           float[] dashArray,
+                           float dashOffset);
 
     public abstract int getKeyCodeForChar(String character);
     public abstract MouseEvent convertMouseEventToFX(Object event);
