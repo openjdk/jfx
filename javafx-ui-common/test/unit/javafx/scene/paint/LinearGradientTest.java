@@ -156,6 +156,22 @@ public class LinearGradientTest {
         assertNotNull(s);
         assertFalse(s.isEmpty());
     }
+    
+    @Test
+    public void testToStringEquals() {
+        LinearGradient lg =
+                LinearGradient.valueOf("linear-gradient(from 0% 0% to 100% 100%, red  0% , blue 30%,  black 100%)");
+        assertEquals(lg, LinearGradient.valueOf(lg.toString()));
+        
+        lg = LinearGradient.valueOf("linear-gradient(from 100px 0 to 200px 0px, red 0px, blue 50px,  black 100px)");        
+        assertEquals(lg, LinearGradient.valueOf(lg.toString()));
+
+        lg = LinearGradient.valueOf("linear-gradient(to top, red  0%, blue  30%,black 100%)");
+        assertEquals(lg, LinearGradient.valueOf(lg.toString()));
+        
+        lg = LinearGradient.valueOf("linear-gradient(from 10% 20% to 30% 40%, ff00ff 0%, 0xffffff 30%,black 100%)");
+        assertEquals(lg, LinearGradient.valueOf(lg.toString()));
+    }
 
     @Test
     public void testImpl_getPlatformPaint() {

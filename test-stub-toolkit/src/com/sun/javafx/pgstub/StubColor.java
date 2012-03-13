@@ -44,6 +44,7 @@ public class StubColor extends StubPaint {
         int r = (int)Math.round(red * 255f);
         int g = (int)Math.round(green * 255f);
         int b = (int)Math.round(blue * 255f);
-        return "Color[red=" + r + ",green=" + g + ",blue=" + b + ",opacity=" + opacity + "]";
+        int o = (int)Math.round(opacity * 255f);
+        return String.format("0x%02x%02x%02x%02x" , r, g, b, o);
     }
 }

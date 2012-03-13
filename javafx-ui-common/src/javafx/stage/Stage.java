@@ -60,6 +60,55 @@ import javafx.beans.property.ReadOnlyBooleanWrapper;
  * JavaFX Application Thread.
  * </p>
  *
+ * <p><b>Style</b></p>
+ * <p>
+ * A stage has one of the following styles:
+ * <ul>
+ * <li>{@link StageStyle#DECORATED} - a stage with a solid white background and
+ * platform decorations.</li>
+ * <li>{@link StageStyle#UNDECORATED} - a stage with a solid white background
+ * and no decorations.</li>
+ * <li>{@link StageStyle#TRANSPARENT} - a stage with a transparent background
+ * and no decorations.</li>
+ * <li>{@link StageStyle#UTILITY} - a stage with a solid white background and
+ * minimal platform decorations.</li>
+ * </ul>
+ * The style must be initialized before the stage is made visible.
+ * 
+ * <p><b>Owner</b></p>
+ * <p>
+ * A stage can optionally have an owner Window.
+ * When a window is a stage's owner, it is said to be the parent of that stage.
+ * When a parent window is closed, all its descendant windows are closed. 
+ * The same chained behavior applied for a parent window that is iconified. 
+ * A stage will always be on top of its parent window.
+ * The owner must be initialized before the stage is made visible.
+ *
+ * <p><b>Modality</b></p>
+ * <p>
+ * A stage has one of the following modalities:
+ * <ul>
+ * <li>{@link Modality#NONE} - a stage that does not block any other window.</li>
+ * <li>{@link Modality#WINDOW_MODAL} - a stage that blocks input events from 
+ * being delivered to all windows from its owner (parent) to its root.
+ * Its root is the closest ancestor window without an owner.</li>
+ * <li>{@link Modality#APPLICATION_MODAL} - a stage that blocks input events from 
+ * being delivered to all windows from the same application, except for those
+ * from its child hierarchy.</li>
+ * </ul> 
+ * 
+ * When a window is blocked by a modal stage, it receives no input events, but 
+ * continues to animate and render normally. Note that showing a modal stage does
+ * not block the calling thread. The {@link #show} method returns immediately 
+ * regardless of the modality.
+ * The modality must be initialized before the stage is made visible. 
+ * 
+ * <p>
+ * Many of the {@code Stage} properties are read only because they can
+ * be changed externally by the underlying platform and therefore must
+ * not be bindable.
+ * </p>
+ *
  * <p>Example:</p>
  *
  *
@@ -96,6 +145,7 @@ public class HelloWorld extends Application {
  * <p>produces the following on Windows Vista:</p>
  * <p><img src="doc-files/Stage0-vista.png"/></p>
  *
+ * 
  */
 public class Stage extends Window {
 
@@ -381,6 +431,10 @@ public class Stage extends Window {
      * full-screen mode, upon exiting full-screen mode the {@code Stage} will
      * assume those attributes.
      * </p>
+     * <p>
+     * The property is read only because it can be changed externally
+     * by the underlying platform and therefore must not be bindable.
+     * </p>
      *
      * Notes regarding desktop profile implementation.
      * <p>
@@ -532,6 +586,10 @@ public class Stage extends Window {
 
     /**
      * Defines whether the {@code Stage} is iconified or not.
+     * <p>
+     * The property is read only because it can be changed externally
+     * by the underlying platform and therefore must not be bindable.
+     * </p>
      *
      * @defaultValue false
      */
