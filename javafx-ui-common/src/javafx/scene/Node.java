@@ -3534,7 +3534,7 @@ public abstract class Node implements EventTarget {
                 localToParentTx.translate(getTranslateX() + getLayoutX(), getTranslateY() + getLayoutY(), getTranslateZ());
             }
 
-            if (hasTransforms()) {
+            if (impl_hasTransforms()) {
                 for (Transform t : getTransforms()) {
                     t.impl_apply(localToParentTx);
                 }
@@ -4015,7 +4015,12 @@ public abstract class Node implements EventTarget {
         return nodeTransformation;
     }
 
-    private boolean hasTransforms() {
+    /**
+     * @treatAsPrivate implementation detail
+     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
+     */
+    @Deprecated
+    protected boolean impl_hasTransforms() {
         return (nodeTransformation != null)
                 && nodeTransformation.hasTransforms();
     }
