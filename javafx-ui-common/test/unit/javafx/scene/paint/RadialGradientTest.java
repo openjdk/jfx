@@ -160,6 +160,22 @@ public class RadialGradientTest {
         assertNotNull(s);
         assertFalse(s.isEmpty());
     }
+    
+    @Test
+    public void testToStringEquals() {
+        RadialGradient rg =
+            RadialGradient.valueOf("radial-gradient(radius 100%, red  0% , blue 30%,  black 100%)");
+        assertEquals(rg, RadialGradient.valueOf(rg.toString()));
+
+        rg = RadialGradient.valueOf("radial-gradient(center 10px 10, radius 100, red 0px, blue 50px,  black 100px)");
+        assertEquals(rg, RadialGradient.valueOf(rg.toString()));
+        
+        rg = RadialGradient.valueOf("radial-gradient(radius 10%, red  0%, blue 30%, black 100%)");
+        assertEquals(rg, RadialGradient.valueOf(rg.toString()));
+        
+        rg = RadialGradient.valueOf("radial-gradient(focus-angle 3.1415926535rad, radius 10%, red  0%, blue 30%, black 100%)");
+        assertEquals(rg, RadialGradient.valueOf(rg.toString()));
+    }
 
     @Test
     public void testImpl_getPlatformPaint() {

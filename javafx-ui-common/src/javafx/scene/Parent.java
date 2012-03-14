@@ -1086,7 +1086,7 @@ public abstract class Parent extends Node {
      * It is possible to override this method to stop the recursion. This allows
      * a Parent to have a set of stylesheets distinct from its Parent. 
      * 
-     * @treatasprivate implementation detail
+     * @treatAsPrivate implementation detail
      * @deprecated This is an internal API that is not intended for use and will be removed in the next version
      */
     @Deprecated

@@ -31,7 +31,8 @@ package javafx.stage;
 public enum Modality {
 
     /**
-     * Defines a top-level window that is not modal.
+     * Defines a top-level window that is not modal and does not block any other
+     * window.
      */
     NONE,
 

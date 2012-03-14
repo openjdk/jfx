@@ -29,6 +29,14 @@ import javafx.scene.paint.Stop;
 
 public class GradientUtils {
 
+    public static String lengthToString(double value, boolean proportional) {
+        if (proportional) {
+            return (value * 100) + "%";
+        } else {
+            return value + "px";
+        }
+    }
+
     public static class Point {
 
         public static Point MIN = new Point(0, true);

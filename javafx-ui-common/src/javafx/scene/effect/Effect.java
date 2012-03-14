@@ -41,8 +41,7 @@ import com.sun.javafx.scene.BoundsAccessor;
  * An effect is a graphical algorithm that produces an image, typically
  * as a modification of a source image.
  * An effect can be associated with a scene graph {@code Node} by setting
- * the <a href="../javafx.scene/javafx.scene.Node.html#effect">Node.effect</a>
- * attribute.
+ * the {@link javafx.scene.Node#effectProperty Node.effect} attribute.
  * Some effects change the color properties of the source pixels
  * (such as {@link ColorAdjust}),
  * others combine multiple images together (such as {@link Blend}),

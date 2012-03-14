@@ -305,19 +305,29 @@ public final class LinearGradient extends Paint {
      * @return a string representation of this {@code LinearGradient} object.
      */
     @Override public String toString() {
-        final StringBuilder s = new StringBuilder("LinearGradient[startX=").append(startX)
-                .append(",startY=").append(startY).append(",endX=").append(endX)
-                .append(",endY=").append(endY).append(",proportional=").append(proportional)
-                .append(",cycleMethod=").append(cycleMethod).append(",stops=<");
-        if (stops.isEmpty()) {
-            s.append("empty");
-        } else {
-            for (Stop stop: stops) {
-                s.append(stop).append(",");
-            }
-            s.deleteCharAt(s.length() - 1);
+        final StringBuilder s = new StringBuilder("linear-gradient(from ")
+                .append(GradientUtils.lengthToString(startX, proportional))
+                .append(" ").append(GradientUtils.lengthToString(startY, proportional))
+                .append(" to ").append(GradientUtils.lengthToString(endX, proportional))
+                .append(" ").append(GradientUtils.lengthToString(endY, proportional))
+                .append(", ");
+
+        switch (cycleMethod) {
+            case REFLECT:
+                s.append("reflect").append(", ");
+                break;
+            case REPEAT:
+                s.append("repeat").append(", ");
+                break;
         }
-        s.append(">]");
+
+        for (Stop stop : stops) {
+            s.append(stop).append(", ");
+        }
+
+        s.delete(s.length() - 2, s.length());
+        s.append(")");
+
         return s.toString();
     }
 

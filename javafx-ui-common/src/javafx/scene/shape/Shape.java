@@ -1622,10 +1622,16 @@ public abstract class Shape extends Node {
         final float strokeMiterLimit =
                 (float) Utils.clampMin(getStrokeMiterLimit(),
                                        MIN_STROKE_MITER_LIMIT);
+        final float[] dashArray =
+                (hasStrokeDashArray())
+                        ? toPGDashArray(getStrokeDashArray())
+                        : DEFAULT_PG_STROKE_DASH_ARRAY;
+
         final com.sun.javafx.geom.Shape strokeShape =
                 Toolkit.getToolkit().createStrokedShape(
                         fillShape, strokeType, strokeWidth, strokeLineCap,
-                        strokeLineJoin, strokeMiterLimit);
+                        strokeLineJoin, strokeMiterLimit,
+                        dashArray, (float) getStrokeDashOffset());
 
         if (impl_mode == Mode.STROKE) {
             return createTransformedArea(strokeShape, transform);

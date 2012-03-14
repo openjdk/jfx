@@ -271,6 +271,10 @@ public class Window implements EventTarget {
      * decorations which may be added by the Operating System such as resizable
      * frame handles. Typical applications will set the {@link javafx.scene.Scene} width
      * instead.
+     * <p>
+     * The property is read only because it can be changed externally
+     * by the underlying platform and therefore must not be bindable.
+     * </p>
      */
     private ReadOnlyDoubleWrapper width =
             new ReadOnlyDoubleWrapper(this, "width", Double.NaN);
@@ -292,6 +296,10 @@ public class Window implements EventTarget {
      * {@code fullScreen} becomes false. This value includes any and all
      * decorations which may be added by the Operating System such as the title
      * bar. Typical applications will set the {@link javafx.scene.Scene} height instead.
+     * <p>
+     * The property is read only because it can be changed externally
+     * by the underlying platform and therefore must not be bindable.
+     * </p>
      */
     private ReadOnlyDoubleWrapper height =
             new ReadOnlyDoubleWrapper(this, "height", Double.NaN);
@@ -306,6 +314,10 @@ public class Window implements EventTarget {
 
     /**
      * Whether or not this {@code Window} has the keyboard or input focus.
+     * <p>
+     * The property is read only because it can be changed externally
+     * by the underlying platform and therefore must not be bindable.
+     * </p>
      *
      * @profile common
      */

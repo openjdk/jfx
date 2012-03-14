@@ -322,7 +322,9 @@ public class StubToolkit extends Toolkit {
                                     double strokewidth,
                                     StrokeLineCap pgcap,
                                     StrokeLineJoin pgjoin,
-                                    float miterLimit) {
+                                    float miterLimit,
+                                    float[] dashArray,
+                                    float dashOffset) {
         initStroke(pgtype, strokewidth, pgcap, pgjoin, miterLimit);
         return tmpStroke.createStrokedShape(shape);
     }
