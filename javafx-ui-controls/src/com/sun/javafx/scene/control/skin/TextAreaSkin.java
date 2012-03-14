@@ -401,7 +401,7 @@ public class TextAreaSkin extends TextInputControlSkin<TextArea, TextAreaBehavio
 
         // Add initial text content
         for (int i = 0, n = USE_MULTIPLE_NODES ? textArea.getParagraphs().size() : 1; i < n; i++) {
-            CharSequence paragraph = (n == 1) ? textArea.getText() : textArea.getParagraphs().get(i);
+            CharSequence paragraph = (n == 1) ? textArea.textProperty().getValueSafe() : textArea.getParagraphs().get(i);
             addParagraphNode(i, paragraph.toString());
         }
 
@@ -512,7 +512,7 @@ public class TextAreaSkin extends TextInputControlSkin<TextArea, TextAreaBehavio
         textArea.textProperty().addListener(new InvalidationListener() {
             @Override public void invalidated(Observable observable) {
                 invalidateMetrics();
-                ((Text)paragraphNodes.getChildren().get(0)).setText(textArea.getText());
+                ((Text)paragraphNodes.getChildren().get(0)).setText(textArea.textProperty().getValueSafe());
                 contentView.requestLayout();
             }
         });
@@ -956,7 +956,7 @@ public class TextAreaSkin extends TextInputControlSkin<TextArea, TextAreaBehavio
 
     public void paragraphStart(boolean previousIfAtStart, boolean select) {
         TextArea textArea = getSkinnable();
-        String text = textArea.getText();
+        String text = textArea.textProperty().getValueSafe();
         int pos = textArea.getCaretPosition();
 
         if (pos > 0) {
@@ -979,7 +979,7 @@ public class TextAreaSkin extends TextInputControlSkin<TextArea, TextAreaBehavio
 
     public void paragraphEnd(boolean nextIfAtEnd, boolean select) {
         TextArea textArea = getSkinnable();
-        String text = textArea.getText();
+        String text = textArea.textProperty().getValueSafe();
         int pos = textArea.getCaretPosition();
         int len = text.length();
 
@@ -1005,7 +1005,7 @@ public class TextAreaSkin extends TextInputControlSkin<TextArea, TextAreaBehavio
         int pStart = 0;
         for (Node node : paragraphNodes.getChildren()) {
             Text p = (Text)node;
-            int pEnd = pStart + p.getText().length();
+            int pEnd = pStart + p.textProperty().getValueSafe().length();
             if (pEnd >= start) {
                 return p.impl_getUnderlineShape(start - pStart, end - pStart);
             }
@@ -1018,7 +1018,7 @@ public class TextAreaSkin extends TextInputControlSkin<TextArea, TextAreaBehavio
         int pStart = 0;
         for (Node node : paragraphNodes.getChildren()) {
             Text p = (Text)node;
-            int pEnd = pStart + p.getText().length();
+            int pEnd = pStart + p.textProperty().getValueSafe().length();
             if (pEnd >= start) {
                 return p.impl_getRangeShape(start - pStart, end - pStart);
             }
@@ -1032,7 +1032,7 @@ public class TextAreaSkin extends TextInputControlSkin<TextArea, TextAreaBehavio
         Text paragraphNode = null;
         for (Node node : paragraphNodes.getChildren()) {
             Text p = (Text)node;
-            int pEnd = pStart + p.getText().length();
+            int pEnd = pStart + p.textProperty().getValueSafe().length();
             if (pEnd >= start) {
                 paragraphNode = p;
                 break;
