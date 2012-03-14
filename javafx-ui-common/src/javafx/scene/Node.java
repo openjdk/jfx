@@ -58,6 +58,9 @@ import javafx.scene.input.KeyEvent;
 import javafx.scene.input.MouseEvent;
 import javafx.scene.input.MouseDragEvent;
 import javafx.scene.input.TransferMode;
+import javafx.scene.input.RotateEvent;
+import javafx.scene.input.ZoomEvent;
+import javafx.scene.input.ScrollEvent;
 import javafx.scene.transform.Rotate;
 import javafx.scene.transform.Transform;
 
@@ -94,7 +97,8 @@ import java.lang.ref.Reference;
 import java.util.*;
 import javafx.beans.property.*;
 import javafx.beans.value.WritableValue;
-import javafx.scene.input.ScrollEvent;
+import javafx.scene.input.SwipeEvent;
+import javafx.scene.input.TouchEvent;
 import javafx.scene.text.Font;
 
 /**
@@ -3530,7 +3534,7 @@ public abstract class Node implements EventTarget {
                 localToParentTx.translate(getTranslateX() + getLayoutX(), getTranslateY() + getLayoutY(), getTranslateZ());
             }
 
-            if (hasTransforms()) {
+            if (impl_hasTransforms()) {
                 for (Transform t : getTransforms()) {
                     t.impl_apply(localToParentTx);
                 }
@@ -4011,7 +4015,12 @@ public abstract class Node implements EventTarget {
         return nodeTransformation;
     }
 
-    private boolean hasTransforms() {
+    /**
+     * @treatAsPrivate implementation detail
+     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
+     */
+    @Deprecated
+    protected boolean impl_hasTransforms() {
         return (nodeTransformation != null)
                 && nodeTransformation.hasTransforms();
     }
@@ -5122,24 +5131,6 @@ public abstract class Node implements EventTarget {
         return getEventHandlerProperties().onDragDetectedProperty();
     }
 
-   public final void setOnScroll(
-            EventHandler<? super ScrollEvent> value) {
-        onScrollProperty().set(value);
-    }
-
-    public final EventHandler<? super ScrollEvent> getOnScroll() {
-        return (eventHandlerProperties == null)
-                ? null : eventHandlerProperties.getOnScroll();
-    }
-
-    /**
-     * Defines a function to be called when user performs a scrolling action. 
-     */
-    public final ObjectProperty<EventHandler<? super ScrollEvent>>
-            onScrollProperty() {
-        return getEventHandlerProperties().onScrollProperty();
-    }
-
     public final void setOnMouseDragOver(
             EventHandler<? super MouseDragEvent> value) {
         onMouseDragOverProperty().set(value);
@@ -5216,6 +5207,330 @@ public abstract class Node implements EventTarget {
         return getEventHandlerProperties().onMouseDragExitedProperty();
     }
 
+
+    /* *************************************************************************
+     *                                                                         *
+     *                           Gestures Handling                             *
+     *                                                                         *
+     **************************************************************************/
+
+    public final void setOnScrollStarted(
+            EventHandler<? super ScrollEvent> value) {
+        onScrollStartedProperty().set(value);
+    }
+
+    public final EventHandler<? super ScrollEvent> getOnScrollStarted() {
+        return (eventHandlerProperties == null)
+                ? null : eventHandlerProperties.getOnScrollStarted();
+    }
+
+    /**
+     * Defines a function to be called when a scrolling gesture is detected.
+     */
+    public final ObjectProperty<EventHandler<? super ScrollEvent>>
+            onScrollStartedProperty() {
+        return getEventHandlerProperties().onScrollStartedProperty();
+    }
+
+    public final void setOnScroll(
+            EventHandler<? super ScrollEvent> value) {
+        onScrollProperty().set(value);
+    }
+
+    public final EventHandler<? super ScrollEvent> getOnScroll() {
+        return (eventHandlerProperties == null)
+                ? null : eventHandlerProperties.getOnScroll();
+    }
+
+    /**
+     * Defines a function to be called when user performs a scrolling action.
+     */
+    public final ObjectProperty<EventHandler<? super ScrollEvent>>
+            onScrollProperty() {
+        return getEventHandlerProperties().onScrollProperty();
+    }
+
+    public final void setOnScrollFinished(
+            EventHandler<? super ScrollEvent> value) {
+        onScrollFinishedProperty().set(value);
+    }
+
+    public final EventHandler<? super ScrollEvent> getOnScrollFinished() {
+        return (eventHandlerProperties == null)
+                ? null : eventHandlerProperties.getOnScrollFinished();
+    }
+
+    /**
+     * Defines a function to be called when a scrolling gesture ends.
+     */
+    public final ObjectProperty<EventHandler<? super ScrollEvent>>
+            onScrollFinishedProperty() {
+        return getEventHandlerProperties().onScrollFinishedProperty();
+    }
+
+    public final void setOnRotationStarted(
+            EventHandler<? super RotateEvent> value) {
+        onRotationStartedProperty().set(value);
+    }
+
+    public final EventHandler<? super RotateEvent> getOnRotationStarted() {
+        return (eventHandlerProperties == null)
+                ? null : eventHandlerProperties.getOnRotationStarted();
+    }
+
+    /**
+     * Defines a function to be called when a rotation gesture is detected.
+     */
+    public final ObjectProperty<EventHandler<? super RotateEvent>>
+            onRotationStartedProperty() {
+        return getEventHandlerProperties().onRotationStartedProperty();
+    }
+
+    public final void setOnRotate(
+            EventHandler<? super RotateEvent> value) {
+        onRotateProperty().set(value);
+    }
+
+    public final EventHandler<? super RotateEvent> getOnRotate() {
+        return (eventHandlerProperties == null)
+                ? null : eventHandlerProperties.getOnRotate();
+    }
+
+    /**
+     * Defines a function to be called when user performs a rotation action.
+     */
+    public final ObjectProperty<EventHandler<? super RotateEvent>>
+            onRotateProperty() {
+        return getEventHandlerProperties().onRotateProperty();
+    }
+
+    public final void setOnRotationFinished(
+            EventHandler<? super RotateEvent> value) {
+        onRotationFinishedProperty().set(value);
+    }
+
+    public final EventHandler<? super RotateEvent> getOnRotationFinished() {
+        return (eventHandlerProperties == null)
+                ? null : eventHandlerProperties.getOnRotationFinished();
+    }
+
+    /**
+     * Defines a function to be called when a rotation gesture ends.
+     */
+    public final ObjectProperty<EventHandler<? super RotateEvent>>
+            onRotationFinishedProperty() {
+        return getEventHandlerProperties().onRotationFinishedProperty();
+    }
+
+    public final void setOnZoomStarted(
+            EventHandler<? super ZoomEvent> value) {
+        onZoomStartedProperty().set(value);
+    }
+
+    public final EventHandler<? super ZoomEvent> getOnZoomStarted() {
+        return (eventHandlerProperties == null)
+                ? null : eventHandlerProperties.getOnZoomStarted();
+    }
+
+    /**
+     * Defines a function to be called when a zooming gesture is detected.
+     */
+    public final ObjectProperty<EventHandler<? super ZoomEvent>>
+            onZoomStartedProperty() {
+        return getEventHandlerProperties().onZoomStartedProperty();
+    }
+
+    public final void setOnZoom(
+            EventHandler<? super ZoomEvent> value) {
+        onZoomProperty().set(value);
+    }
+
+    public final EventHandler<? super ZoomEvent> getOnZoom() {
+        return (eventHandlerProperties == null)
+                ? null : eventHandlerProperties.getOnZoom();
+    }
+
+    /**
+     * Defines a function to be called when user performs a zooming action.
+     */
+    public final ObjectProperty<EventHandler<? super ZoomEvent>>
+            onZoomProperty() {
+        return getEventHandlerProperties().onZoomProperty();
+    }
+
+    public final void setOnZoomFinished(
+            EventHandler<? super ZoomEvent> value) {
+        onZoomFinishedProperty().set(value);
+    }
+
+    public final EventHandler<? super ZoomEvent> getOnZoomFinished() {
+        return (eventHandlerProperties == null)
+                ? null : eventHandlerProperties.getOnZoomFinished();
+    }
+
+    /**
+     * Defines a function to be called when a zooming gesture ends.
+     */
+    public final ObjectProperty<EventHandler<? super ZoomEvent>>
+            onZoomFinishedProperty() {
+        return getEventHandlerProperties().onZoomFinishedProperty();
+    }
+
+    public final void setOnSwipeUp(
+            EventHandler<? super SwipeEvent> value) {
+        onSwipeUpProperty().set(value);
+    }
+
+    public final EventHandler<? super SwipeEvent> getOnSwipeUp() {
+        return (eventHandlerProperties == null)
+                ? null : eventHandlerProperties.getOnSwipeUp();
+    }
+
+    /**
+     * Defines a function to be called when an upward swipe gesture
+     * centered over this node happens.
+     */
+    public final ObjectProperty<EventHandler<? super SwipeEvent>>
+            onSwipeUpProperty() {
+        return getEventHandlerProperties().onSwipeUpProperty();
+    }
+
+    public final void setOnSwipeDown(
+            EventHandler<? super SwipeEvent> value) {
+        onSwipeDownProperty().set(value);
+    }
+
+    public final EventHandler<? super SwipeEvent> getOnSwipeDown() {
+        return (eventHandlerProperties == null)
+                ? null : eventHandlerProperties.getOnSwipeDown();
+    }
+
+    /**
+     * Defines a function to be called when a downward swipe gesture
+     * centered over this node happens.
+     */
+    public final ObjectProperty<EventHandler<? super SwipeEvent>>
+            onSwipeDownProperty() {
+        return getEventHandlerProperties().onSwipeDownProperty();
+    }
+
+    public final void setOnSwipeLeft(
+            EventHandler<? super SwipeEvent> value) {
+        onSwipeLeftProperty().set(value);
+    }
+
+    public final EventHandler<? super SwipeEvent> getOnSwipeLeft() {
+        return (eventHandlerProperties == null)
+                ? null : eventHandlerProperties.getOnSwipeLeft();
+    }
+
+    /**
+     * Defines a function to be called when a leftward swipe gesture
+     * centered over this node happens.
+     */
+    public final ObjectProperty<EventHandler<? super SwipeEvent>>
+            onSwipeLeftProperty() {
+        return getEventHandlerProperties().onSwipeLeftProperty();
+    }
+
+    public final void setOnSwipeRight(
+            EventHandler<? super SwipeEvent> value) {
+        onSwipeRightProperty().set(value);
+    }
+
+    public final EventHandler<? super SwipeEvent> getOnSwipeRight() {
+        return (eventHandlerProperties == null)
+                ? null : eventHandlerProperties.getOnSwipeRight();
+    }
+
+    /**
+     * Defines a function to be called when an rightward swipe gesture
+     * centered over this node happens.
+     */
+    public final ObjectProperty<EventHandler<? super SwipeEvent>>
+            onSwipeRightProperty() {
+        return getEventHandlerProperties().onSwipeRightProperty();
+    }
+
+
+    /* *************************************************************************
+     *                                                                         *
+     *                             Touch Handling                              *
+     *                                                                         *
+     **************************************************************************/
+
+    public final void setOnTouchPressed(
+            EventHandler<? super TouchEvent> value) {
+        onTouchPressedProperty().set(value);
+    }
+
+    public final EventHandler<? super TouchEvent> getOnTouchPressed() {
+        return (eventHandlerProperties == null)
+                ? null : eventHandlerProperties.getOnTouchPressed();
+    }
+
+    /**
+     * Defines a function to be called when a new touch point is pressed.
+     */
+    public final ObjectProperty<EventHandler<? super TouchEvent>>
+            onTouchPressedProperty() {
+        return getEventHandlerProperties().onTouchPressedProperty();
+    }
+
+    public final void setOnTouchMoved(
+            EventHandler<? super TouchEvent> value) {
+        onTouchMovedProperty().set(value);
+    }
+
+    public final EventHandler<? super TouchEvent> getOnTouchMoved() {
+        return (eventHandlerProperties == null)
+                ? null : eventHandlerProperties.getOnTouchMoved();
+    }
+
+    /**
+     * Defines a function to be called when a touch point is moved.
+     */
+    public final ObjectProperty<EventHandler<? super TouchEvent>>
+            onTouchMovedProperty() {
+        return getEventHandlerProperties().onTouchMovedProperty();
+    }
+
+    public final void setOnTouchReleased(
+            EventHandler<? super TouchEvent> value) {
+        onTouchReleasedProperty().set(value);
+    }
+
+    public final EventHandler<? super TouchEvent> getOnTouchReleased() {
+        return (eventHandlerProperties == null)
+                ? null : eventHandlerProperties.getOnTouchReleased();
+    }
+
+    /**
+     * Defines a function to be called when a touch point is released.
+     */
+    public final ObjectProperty<EventHandler<? super TouchEvent>>
+            onTouchReleasedProperty() {
+        return getEventHandlerProperties().onTouchReleasedProperty();
+    }
+
+    public final void setOnTouchStationary(
+            EventHandler<? super TouchEvent> value) {
+        onTouchStationaryProperty().set(value);
+    }
+
+    public final EventHandler<? super TouchEvent> getOnTouchStationary() {
+        return (eventHandlerProperties == null)
+                ? null : eventHandlerProperties.getOnTouchStationary();
+    }
+
+    /**
+     * Defines a function to be called when a touch point stays pressed and
+     * still.
+     */
+    public final ObjectProperty<EventHandler<? super TouchEvent>>
+            onTouchStationaryProperty() {
+        return getEventHandlerProperties().onTouchStationaryProperty();
+    }
 
     /* *************************************************************************
      *                                                                         *

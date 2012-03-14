@@ -292,13 +292,14 @@ public class ScrollPaneSkinTest {
         stage.show();
  
         Event.fireEvent(rect, 
-              ScrollEvent.impl_scrollEvent(
-                          0.0, -50.0,
+              ScrollEvent.impl_scrollEvent(ScrollEvent.SCROLL,
+                          0.0, -50.0, 0.0, -50.0,
                           ScrollEvent.HorizontalTextScrollUnits.NONE, 10.0,
                           ScrollEvent.VerticalTextScrollUnits.NONE, 10.0,
+                          0,
                           50, 50,
                           50, 50,
-                          false, false, false, false));
+                          false, false, false, false, true, false));
 
         /*
         ** did it work?
@@ -340,7 +341,7 @@ public class ScrollPaneSkinTest {
               MouseEvent.impl_mouseEvent(50.0, 50.0, 50.0, 50.0,
                          MouseButton.PRIMARY, 1,
                          false, false, false, false, false,
-                         true, false, false,
+                         true, false, false, false,
                          MouseEvent.MOUSE_CLICKED));
 
         /*
@@ -613,7 +614,7 @@ public class ScrollPaneSkinTest {
 
             MouseEvent event = MouseEvent.impl_mouseEvent(x, y, x, y, button,
                     1, false, false, false, false, false, primaryButtonDown,
-                    false, false, type);
+                    false, false, false, type);
 
             return event;
         }

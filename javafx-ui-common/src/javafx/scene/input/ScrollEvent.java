@@ -24,28 +24,45 @@
  */
 package javafx.scene.input;
 
-import com.sun.javafx.scene.input.InputEventUtils;
-import com.sun.javafx.tk.Toolkit;
-import javafx.event.Event;
 import javafx.event.EventTarget;
 import javafx.event.EventType;
-import javafx.geometry.Point2D;
 
 /**
- * Scroll event indicates that user performed scrolling by mouse wheel, touchpad
- * or other similar device. It is always delivered to the node under cursor
- * regardless of current focus owner (similarly to mouse events).
+ * Scroll event indicates that user performed scrolling by mouse wheel,
+ * track pad, touch screen or other similar device.
+ * <p>
+ * When the scrolling is produced by a touch gesture (such as dragging a finger
+ * over a touch screen), it is surrounded by the {@code SCROLL_STARTED} and 
+ * {@code SCROLL_FINISHED} events. When the scrolling is caused by a mouse
+ * wheel rotation, only a one-time {@code SCROLL} event is delivered, without
+ * the started/finished surroundings. If scrolling inertia is active on the
+ * given platform, some {@code SCROLL} events with {@code isInertia()} returning
+ * {@code true} can come after {@code SCROLL_FINISHED}.
+ * <p>
+ * The event is delivered to the top-most
+ * node picked on the gesture coordinates in time of the gesture start - the
+ * whole gesture is delivered to the same node even if the coordinates change
+ * during the gesture. For mouse wheel rotation the event is delivered to the
+ * top-most node picked on mouse cursor location. The delivery is independent
+ * of current focus owner.
  * <p>
  * The event provides two different types of scrolling values: pixel-based and 
  * character/line-based. The basic {@code deltaX} and {@code deltaY} values 
  * give reasonable results when used as number of pixels
- * to scroll. For scrolling text (or other line-based content as tables) the 
+ * to scroll (The {@code totalDeltaX} and {@code totalDeltaY} contain the 
+ * cumulative values for the whole gesture, zeros for mouse wheel).
+ * For scrolling text (or other line-based content as tables) the
  * {@code textDelta} values should be used if they are available. The 
  * {@code textDeltaXUnits} and {@code textDeltaYUnits} determine how to 
  * interpret the {@code textDeltaX} and {@code textDeltaY} values. If the 
  * units are set to {@code NONE}, the text-based values are not available
  * (not provided by the underlying platform) and the pixel-based values
  * need to be used.
+ * <p>
+ * As all gestures, scrolling can be direct (performed directly at
+ * the concrete coordinates as on touch screen) or indirect (performed
+ * indirectly as on track pad or with mouse - the mouse cursor location
+ * is usually used as the gesture coordinates).
  * <p>
  * For example, scrolling a graphical node can be achieved by following code:
  * <code><pre>
@@ -73,19 +90,35 @@ import javafx.geometry.Point2D;
     }
  </pre></code>
  */
-public class ScrollEvent extends InputEvent {
-
-    /**
-     * This event occurs when user performs a scrolling action such as
-     * rotating mouse wheel.
-     */
-    public static final EventType<ScrollEvent> SCROLL =
-            new EventType<ScrollEvent>(InputEvent.ANY, "SCROLL");
+public class ScrollEvent extends GestureEvent {
 
     /**
      * Common supertype for all scroll event types.
      */
-    public static final EventType<ScrollEvent> ANY = SCROLL;
+    public static final EventType<ScrollEvent> ANY =
+            new EventType<ScrollEvent>(GestureEvent.ANY, "ANY_SCROLL");
+
+    /**
+     * This event occurs when user performs a scrolling action such as
+     * rotating mouse wheel or dragging a finger over touch screen.
+     */
+    public static final EventType<ScrollEvent> SCROLL =
+            new EventType<ScrollEvent>(ScrollEvent.ANY, "SCROLL");
+
+    /**
+     * This event occurs when a scrolling gesture is detected. It doesn't
+     * occur for mouse wheel scrolling.
+     */
+    public static final EventType<ScrollEvent> SCROLL_STARTED =
+            new EventType<ScrollEvent>(ScrollEvent.ANY, "SCROLL_STARTED");
+
+    /**
+     * This event occurs when a scrolling gesture ends. It doesn't
+     * occur for mouse wheel scrolling.
+     */
+    public static final EventType<ScrollEvent> SCROLL_FINISHED =
+            new EventType<ScrollEvent>(ScrollEvent.ANY, "SCROLL_FINISHED");
+
     
     private ScrollEvent(final EventType<? extends ScrollEvent> eventType) {
         super(eventType);
@@ -95,34 +128,35 @@ public class ScrollEvent extends InputEvent {
             final EventType<? extends ScrollEvent> eventType) {
         super(source, target, eventType);
     }
-    
-    /**
-     * Fills the given event by this event's coordinates recomputed to the given
-     * source object.
-     * @param newEvent Event whose coordinates are to be filled
-     * @param newSource Source object to compute coordinates for
-     */
-    private void recomputeCoordinatesToSource(ScrollEvent newEvent, Object newSource) {
 
-        final Point2D newCoordinates = InputEventUtils.recomputeCoordinates(
-                new Point2D(x, y), source, newSource);
+    private ScrollEvent(final EventType<? extends ScrollEvent> eventType,
+            double deltaX, double deltaY,
+            double gestureDeltaX, double gestureDeltaY,
+            HorizontalTextScrollUnits textDeltaXUnits, double textDeltaX,
+            VerticalTextScrollUnits textDeltaYUnits, double textDeltaY,
+            int touchCount,
+            double x, double y,
+            double screenX, double screenY,
+            boolean shiftDown,
+            boolean controlDown,
+            boolean altDown,
+            boolean metaDown,
+            boolean direct,
+            boolean inertia) {
 
-        newEvent.x = newCoordinates.getX();
-        newEvent.y = newCoordinates.getY();
-        newEvent.sceneX = getSceneX();
-        newEvent.sceneY = getSceneY();
+        super(eventType, x, y, screenX, screenY,
+                shiftDown, controlDown, altDown, metaDown, direct, inertia);
+        this.deltaX = deltaX;
+        this.deltaY = deltaY;
+        this.totalDeltaX = gestureDeltaX;
+        this.totalDeltaY = gestureDeltaY;
+        this.textDeltaXUnits = textDeltaXUnits;
+        this.textDeltaX = textDeltaX;
+        this.textDeltaYUnits = textDeltaYUnits;
+        this.textDeltaY = textDeltaY;
+        this.touchCount = touchCount;
     }
     
-    /**
-     * @InheritDoc
-     */
-    @Override
-    public Event copyFor(Object newSource, EventTarget newTarget) {
-        ScrollEvent e = (ScrollEvent) super.copyFor(newSource, newTarget);
-        recomputeCoordinatesToSource(e, newSource);
-        return e;
-    }
-
     private double deltaX;
 
     /**
@@ -161,6 +195,44 @@ public class ScrollEvent extends InputEvent {
         return deltaY;
     }
     
+    private double totalDeltaX;
+
+    /**
+     * Gets the cumulative horizontal scroll amount for the whole gesture.
+     * This value should be interpreted as a number of pixels to scroll
+     * relatively to the state at the beginning of the gesture.
+     * Contains zeros for mouse wheel scrolling.
+     * <p>
+     * The sign of the value is reversed compared to the coordinate system
+     * (when you scroll right, the content actually needs to go left). So the
+     * returned value can be simply added to the content's {@code X}
+     * coordinate.
+     *
+     * @return Number of pixels scrolled horizontally during the gesture
+     */
+    public double getTotalDeltaX() {
+        return totalDeltaX;
+    }
+
+    private double totalDeltaY;
+
+    /**
+     * Gets the cumulative vertical scroll amount for the whole gesture.
+     * This value should be interpreted as a number of pixels to scroll
+     * relatively to the state at the beginning of the gesture.
+     * Contains zeros for mouse wheel scrolling.
+     * <p>
+     * The sign of the value is reversed compared to the coordinate system
+     * (when you scroll down, the content actually needs to go up). So the
+     * returned value can be simply added to the content's {@code Y}
+     * coordinate.
+     *
+     * @return Number of pixels to scrolled vertically during the gesture
+     */
+    public double getTotalDeltaY() {
+        return totalDeltaY;
+    }
+
     private HorizontalTextScrollUnits textDeltaXUnits;
 
     /**
@@ -218,149 +290,17 @@ public class ScrollEvent extends InputEvent {
     public double getTextDeltaY() {
         return textDeltaY;
     }
-    
-    private double x;
+
+    private int touchCount;
 
     /**
-     * Gets the horizontal position of the event relative to the
-     * origin of the ScrollEvent's source.
-     *
-     * @return the horizontal position of the event relative to the
-     * origin of the ScrollEvent's source.
+     * Gets number of touch points that caused this event. For non-touch source
+     * devices as mouse wheel and for inertia events after gesture finish
+     * it returns zero.
+     * @return Number of touch points that caused this event
      */
-    public final double getX() {
-        return x;
-    }
-
-    private double y;
-
-    /**
-     * Gets the vertical position of the event relative to the
-     * origin of the ScrollEvent's source.
-     * 
-     * @return the vertical position of the event relative to the
-     * origin of the ScrollEvent's source.
-     */
-    public final double getY() {
-        return y;
-    }
-
-    private double screenX;
-
-    /**
-     * Gets the absolute horizontal position of the event.
-     * @return the absolute horizontal position of the event
-     */
-    public final double getScreenX() {
-        return screenX;
-    }
-
-    private double screenY;
-
-    /**
-     * Gets the absolute vertical position of the event.
-     * @return the absolute vertical position of the event
-     */
-    public final double getScreenY() {
-        return screenY;
-    }
-
-    private double sceneX;
-
-    /**
-     * Gets the horizontal position of the event relative to the
-     * origin of the {@code Scene} that contains the ScrollEvent's source.
-     * If the node is not in a {@code Scene}, then the value is relative to
-     * the boundsInParent of the root-most parent of the ScrollEvent's node.
-     * 
-     * @return the horizontal position of the event relative to the
-     * origin of the {@code Scene} that contains the ScrollEvent's source
-     */
-    public final double getSceneX() {
-        return sceneX;
-    }
-
-    private double sceneY;
-
-    /**
-     * Gets the vertical position of the event relative to the
-     * origin of the {@code Scene} that contains the ScrollEvent's source.
-     * If the node is not in a {@code Scene}, then the value is relative to
-     * the boundsInParent of the root-most parent of the ScrollEvent's node.
-     * 
-     * @return the vertical position of the event relative to the
-     * origin of the {@code Scene} that contains the ScrollEvent's source
-     */
-    public final double getSceneY() {
-        return sceneY;
-    }
-    
-    private boolean shiftDown;
-
-    /**
-     * Indicates whether or not the Shift modifier is down on this event.
-     * @return true if the Shift modifier is down on this event
-     */
-    public final boolean isShiftDown() {
-        return shiftDown;
-    }
-
-    private boolean controlDown;
-
-    /**
-     * Indicates whether or not the Control modifier is down on this event.
-     * @return true if the Control modifier is down on this event
-     */
-    public final boolean isControlDown() {
-        return controlDown;
-    }
-
-    private boolean altDown;
-
-    /**
-     * Indicates whether or not the Alt modifier is down on this event.
-     * @return true if the Alt modifier is down on this event
-     */
-    public final boolean isAltDown() {
-        return altDown;
-    }
-
-    private boolean metaDown;
-
-    /**
-     * Indicates whether or not the Meta modifier is down on this event.
-     * @return true if the Meta modifier is down on this event
-     */
-    public final boolean isMetaDown() {
-        return metaDown;
-    }
-
-    /**
-     * Indicates whether or not the host platform common shortcut modifier is
-     * down on this event. This common shortcut modifier is a modifier key which
-     * is used commonly in shortcuts on the host platform. It is for example
-     * {@code control} on Windows and {@code meta} (command key) on Mac.
-     *
-     * @return {@code true} if the shortcut modifier is down, {@code false}
-     *      otherwise
-     */
-    public final boolean isShortcutDown() {
-        switch (Toolkit.getToolkit().getPlatformShortcutKey()) {
-            case SHIFT:
-                return shiftDown;
-
-            case CONTROL:
-                return controlDown;
-
-            case ALT:
-                return altDown;
-
-            case META:
-                return metaDown;
-
-            default:
-                return false;
-        }
+    public int getTouchCount() {
+        return touchCount;
     }
 
     /**
@@ -368,36 +308,30 @@ public class ScrollEvent extends InputEvent {
      * @deprecated This is an internal API that is not intended for use and will be removed in the next version
      */
     @Deprecated
-    public static ScrollEvent impl_scrollEvent(
+    public static ScrollEvent impl_scrollEvent(EventType<ScrollEvent> eventType,
             double _scrollX, double _scrollY,
+            double _totalScrollX, double _totalScrollY,
             HorizontalTextScrollUnits _scrollTextXUnits, double _scrollTextX,
             VerticalTextScrollUnits _scrollTextYUnits, double _scrollTextY,
+            int _touchPoints,
             double _x, double _y,
             double _screenX, double _screenY,
             boolean _shiftDown,
             boolean _controlDown,
             boolean _altDown,
-            boolean _metaDown
+            boolean _metaDown,
+            boolean _direct,
+            boolean _inertia
           )
     {
-        ScrollEvent e = new ScrollEvent(SCROLL);
-        e.deltaX = _scrollX;
-        e.deltaY = _scrollY;
-        e.textDeltaXUnits = _scrollTextXUnits;
-        e.textDeltaX = _scrollTextX;
-        e.textDeltaYUnits = _scrollTextYUnits;
-        e.textDeltaY = _scrollTextY;
-        e.x = _x;
-        e.y = _y;
-        e.screenX = _screenX;
-        e.screenY = _screenY;
-        e.sceneX = _x;
-        e.sceneY = _y;
-        e.shiftDown = _shiftDown;
-        e.controlDown = _controlDown;
-        e.altDown = _altDown;
-        e.metaDown = _metaDown;
-        return e;
+        return new ScrollEvent(eventType, _scrollX, _scrollY,
+                _totalScrollX, _totalScrollY,
+                _scrollTextXUnits, _scrollTextX,
+                _scrollTextYUnits, _scrollTextY,
+                _touchPoints,
+                _x, _y, _screenX, _screenY,
+                _shiftDown, _controlDown, _altDown, _metaDown, 
+                _direct, _inertia);
     }
     
     /**
@@ -414,11 +348,15 @@ public class ScrollEvent extends InputEvent {
 
         sb.append(", deltaX = ").append(getDeltaX())
                 .append(", deltaY = ").append(getDeltaY());
+        sb.append(", totalDeltaX = ").append(getTotalDeltaX())
+                .append(", totalDeltaY = ").append(getTotalDeltaY());
         sb.append(", textDeltaXUnits = ").append(getTextDeltaXUnits())
                 .append(", textDeltaX = ").append(getTextDeltaX());
         sb.append(", textDeltaYUnits = ").append(getTextDeltaYUnits())
                 .append(", textDeltaY = ").append(getTextDeltaY());
+        sb.append(", touchCount = ").append(getTouchCount());
         sb.append(", x = ").append(getX()).append(", y = ").append(getY());
+        sb.append(isDirect() ? ", direct" : ", indirect");
 
         if (isShiftDown()) {
             sb.append(", shiftDown");

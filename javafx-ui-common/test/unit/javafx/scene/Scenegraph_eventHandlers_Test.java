@@ -333,7 +333,7 @@ public final class Scenegraph_eventHandlers_Test {
                                           button, clickCount,
                                           false, false, false, false,
                                           false, primaryButtonDown,
-                                          false, false, mouseEventType);
+                                          false, false, false, mouseEventType);
     }
 
     private static void setEventHandler(

@@ -43,7 +43,7 @@ public class MouseEventTest {
     private final Node node2 = new TestNode(10);
     private final MouseEvent doubleclick = MouseEvent.impl_mouseEvent(
             11, 12, 13, 14, MouseButton.PRIMARY, 2,
-            true, false, true, false, true, false, true, false,
+            true, false, true, false, true, false, true, false, false,
             MouseEvent.MOUSE_CLICKED);
 
     @Test

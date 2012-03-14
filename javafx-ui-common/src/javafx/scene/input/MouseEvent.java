@@ -34,6 +34,7 @@ import javafx.geometry.Point2D;
 import javafx.scene.Node;
 
 import com.sun.javafx.scene.input.InputEventUtils;
+import javax.sound.midi.Synthesizer;
 
 // PENDING_DOC_REVIEW
 /**
@@ -86,6 +87,12 @@ import com.sun.javafx.scene.input.InputEventUtils;
  * the system switches into the drag and drop mode and {@code DragEvent}s start
  * to be delivered instead of {@code MouseEvent}s. If you don't call any of
  * those methods, the simple press-drag-release gesture continues.
+ * <p>
+ * Note that dragging a finger over touch screen produces mouse dragging events,
+ * but also scroll gesture events. If it means a conflict in an application
+ * (the physical dragging action is handled by two different handlers), the
+ * {@code isSynthesized()} method may be used to detect the problem and make the
+ * dragging handlers behave accordingly.
  *
  * <h4>Mouse enter/exit handling</h4>
  * <p>
@@ -317,6 +324,7 @@ public class MouseEvent extends InputEvent {
         to.primaryButtonDown = from.primaryButtonDown;
         to.secondaryButtonDown = from.secondaryButtonDown;
         to.middleButtonDown = from.middleButtonDown;
+        to.synthesized = from.synthesized;
         to.source = source;
         to.target = target;
 
@@ -334,7 +342,7 @@ public class MouseEvent extends InputEvent {
                 evt.screenY, evt.button, evt.clickCount, evt.stillSincePress,
                 evt.shiftDown, evt.controlDown, evt.altDown, evt.metaDown,
                 evt.popupTrigger, evt.primaryButtonDown, evt.middleButtonDown,
-                evt.secondaryButtonDown,
+                evt.secondaryButtonDown, evt.synthesized,
                 (impl_EventType != null
                         ? impl_EventType
                         : (EventType<? extends MouseEvent>)
@@ -361,6 +369,7 @@ public class MouseEvent extends InputEvent {
           boolean _primaryButtonDown,
           boolean _middleButtonDown,
           boolean _secondaryButtonDown,
+          boolean _synthesized,
           EventType<? extends MouseEvent> _eventType
           )
     {
@@ -382,6 +391,7 @@ public class MouseEvent extends InputEvent {
         e.primaryButtonDown = _primaryButtonDown;
         e.middleButtonDown = _middleButtonDown;
         e.secondaryButtonDown = _secondaryButtonDown;
+        e.synthesized = _synthesized;
         return e;
     }
 
@@ -404,6 +414,7 @@ public class MouseEvent extends InputEvent {
           boolean _primaryButtonDown,
           boolean _middleButtonDown,
           boolean _secondaryButtonDown,
+          boolean _synthesized,
           EventType<? extends MouseEvent> _eventType
           )
     {
@@ -425,6 +436,7 @@ public class MouseEvent extends InputEvent {
         e.primaryButtonDown = _primaryButtonDown;
         e.middleButtonDown = _middleButtonDown;
         e.secondaryButtonDown = _secondaryButtonDown;
+        e.synthesized = _synthesized;
         return e;
     }
 
@@ -685,6 +697,21 @@ public class MouseEvent extends InputEvent {
         return metaDown;
     }
 
+    private boolean synthesized;
+
+    /**
+     * Indicates whether this event is synthesized from using a touch screen
+     * instead of usual mouse event source devices like mouse or track pad.
+     * When a finger is dragged over a touch screen, both scrolling gesture
+     * and mouse dragging are produced. If it causes a conflict in an
+     * application, this flag can be used to tell apart the usual mouse dragging
+     * from the touch screen dragging already handled as scroll events.
+     * @return true if this event is synthesized from using a touch screen
+     */
+    public boolean isSynthesized() {
+        return synthesized;
+    }
+
     /**
      * Returns whether or not the host platform common shortcut modifier is
      * down on this event. This common shortcut modifier is a modifier key which
@@ -834,6 +861,9 @@ public class MouseEvent extends InputEvent {
         }
         if (isShortcutDown()) {
             sb.append(", shortcutDown");
+        }
+        if (isSynthesized()) {
+            sb.append(", synthesized");
         }
 
         return sb.append("]").toString();
