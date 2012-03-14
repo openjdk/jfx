@@ -122,17 +122,42 @@ public class PopupControl extends PopupWindow implements Skinnable {
     // both here and on Node.
     
     /**
-     * The id of this {@code Node}. This simple string identifier is useful for
+     * The id of this {@code PopupControl}. This simple string identifier is useful for
      * finding a specific Node within the scene graph. While the id of a Node
      * should be unique within the scene graph, this uniqueness is not enforced.
-     * This is analogous to the "id" attribute on an HTML element.
+     * This is analogous to the "id" attribute on an HTML element 
+     * (<a href="http://www.w3.org/TR/CSS21/syndata.html#value-def-identifier">CSS ID Specification</a>).
      *
      * @defaultValue null
      */
     private final StringProperty id = new SimpleStringProperty(this, "id");
-    public final void setId(String value) { id.set(value); }
-    public final String getId() { return id.get(); }
     public final StringProperty idProperty() { return id; }
+    
+    /**
+     * Sets the id of this {@code PopupControl}. This simple string identifier is useful for
+     * finding a specific Node within the scene graph. While the id of a Node
+     * should be unique within the scene graph, this uniqueness is not enforced.
+     * This is analogous to the "id" attribute on an HTML element 
+     * (<a href="http://www.w3.org/TR/CSS21/syndata.html#value-def-identifier">CSS ID Specification</a>).
+     *
+     * @param value  the id assigned to this {@code PopupControl} using the {@code setId} 
+     *         method or {@code null}, if no id has been assigned.
+     * @defaultValue null
+     */
+    public final void setId(String value) { id.set(value); }
+    
+    /**
+     * The id of this {@code PopupControl}. This simple string identifier is useful for
+     * finding a specific Node within the scene graph. While the id of a Node
+     * should be unique within the scene graph, this uniqueness is not enforced.
+     * This is analogous to the "id" attribute on an HTML element 
+     * (<a href="http://www.w3.org/TR/CSS21/syndata.html#value-def-identifier">CSS ID Specification</a>).
+     *
+     * @return the id assigned to this {@code PopupControl} using the {@code setId} 
+     *         method or {@code null}, if no id has been assigned.
+     * @defaultValue null
+     */
+    public final String getId() { return id.get(); }
 
     /**
      * A list of String identifiers which can be used to logically group
@@ -177,7 +202,7 @@ public class PopupControl extends PopupWindow implements Skinnable {
 
     /**
      * A string representation of the CSS style associated with this
-     * specific Node. This is analogous to the "style" attribute of an
+     * specific PopupControl. This is analogous to the "style" attribute of an
      * HTML element. Note that, like the HTML style attribute, this
      * variable contains style properties and values and not the
      * selector portion of a style rule.
@@ -188,7 +213,31 @@ public class PopupControl extends PopupWindow implements Skinnable {
      * @defaultValue empty string
      */
     private final StringProperty style = new SimpleStringProperty(this, "style");
+    
+    /**
+     * A string representation of the CSS style associated with this
+     * specific {@code PopupControl}. This is analogous to the "style" attribute of an
+     * HTML element. Note that, like the HTML style attribute, this
+     * variable contains style properties and values and not the
+     * selector portion of a style rule.
+     * @param value The inline CSS style to use for this {@code PopupControl}.
+     *         {@code null} is implicitly converted to an empty String. 
+     * @defaultValue empty string
+     */
     public final void setStyle(String value) { style.set(value); }
+    
+    // TODO: javadoc copied from property for the sole purpose of providing a return tag
+    /**
+     * A string representation of the CSS style associated with this
+     * specific {@code PopupControl}. This is analogous to the "style" attribute of an
+     * HTML element. Note that, like the HTML style attribute, this
+     * variable contains style properties and values and not the
+     * selector portion of a style rule.
+     * @defaultValue empty string
+     * @return The inline CSS style associated with this {@code PopupControl}.
+     *         If this {@code PopupControl} does not have an inline style,
+     *         an empty String is returned.
+     */
     public final String getStyle() { return style.get(); }
     public final StringProperty styleProperty() { return style; }
 
@@ -227,7 +276,35 @@ public class PopupControl extends PopupWindow implements Skinnable {
      * enabling applications to easily restrict the resizability of the control.
      */
     private DoubleProperty minWidth;
+    
+    /**
+     * Property for overriding the control's computed minimum width.
+     * This should only be set if the control's internally computed minimum width
+     * doesn't meet the application's layout needs.
+     * <p>
+     * Defaults to the <code>USE_COMPUTED_SIZE</code> flag, which means that
+     * <code>getMinWidth(forHeight)</code> will return the control's internally
+     * computed minimum width.
+     * <p>
+     * Setting this value to the <code>USE_PREF_SIZE</code> flag will cause
+     * <code>getMinWidth(forHeight)</code> to return the control's preferred width,
+     * enabling applications to easily restrict the resizability of the control.
+     */
     public final void setMinWidth(double value) { minWidthProperty().set(value); }
+    
+    /**
+     * Property for overriding the control's computed minimum width.
+     * This should only be set if the control's internally computed minimum width
+     * doesn't meet the application's layout needs.
+     * <p>
+     * Defaults to the <code>USE_COMPUTED_SIZE</code> flag, which means that
+     * <code>getMinWidth(forHeight)</code> will return the control's internally
+     * computed minimum width.
+     * <p>
+     * Setting this value to the <code>USE_PREF_SIZE</code> flag will cause
+     * <code>getMinWidth(forHeight)</code> to return the control's preferred width,
+     * enabling applications to easily restrict the resizability of the control.
+     */
     public final double getMinWidth() { return minWidth == null ? USE_COMPUTED_SIZE : minWidth.get(); }
     public final DoubleProperty minWidthProperty() {
         if (minWidth == null) {
@@ -266,7 +343,37 @@ public class PopupControl extends PopupWindow implements Skinnable {
      *
      */
     private DoubleProperty minHeight;
+    
+    /**
+     * Property for overriding the control's computed minimum height.
+     * This should only be set if the control's internally computed minimum height
+     * doesn't meet the application's layout needs.
+     * <p>
+     * Defaults to the <code>USE_COMPUTED_SIZE</code> flag, which means that
+     * <code>getMinHeight(forWidth)</code> will return the control's internally
+     * computed minimum height.
+     * <p>
+     * Setting this value to the <code>USE_PREF_SIZE</code> flag will cause
+     * <code>getMinHeight(forWidth)</code> to return the control's preferred height,
+     * enabling applications to easily restrict the resizability of the control.
+     *
+     */
     public final void setMinHeight(double value) { minHeightProperty().set(value); }
+    
+    /**
+     * Property for overriding the control's computed minimum height.
+     * This should only be set if the control's internally computed minimum height
+     * doesn't meet the application's layout needs.
+     * <p>
+     * Defaults to the <code>USE_COMPUTED_SIZE</code> flag, which means that
+     * <code>getMinHeight(forWidth)</code> will return the control's internally
+     * computed minimum height.
+     * <p>
+     * Setting this value to the <code>USE_PREF_SIZE</code> flag will cause
+     * <code>getMinHeight(forWidth)</code> to return the control's preferred height,
+     * enabling applications to easily restrict the resizability of the control.
+     *
+     */
     public final double getMinHeight() { return minHeight == null ? USE_COMPUTED_SIZE : minHeight.get(); }
     public final DoubleProperty minHeightProperty() {
         if (minHeight == null) {
@@ -312,10 +419,29 @@ public class PopupControl extends PopupWindow implements Skinnable {
      * Defaults to the <code>USE_COMPUTED_SIZE</code> flag, which means that
      * <code>getPrefWidth(forHeight)</code> will return the control's internally
      * computed preferred width.
-     *
      */
     private DoubleProperty prefWidth;
+    
+    /**
+     * Property for overriding the control's computed preferred width.
+     * This should only be set if the control's internally computed preferred width
+     * doesn't meet the application's layout needs.
+     * <p>
+     * Defaults to the <code>USE_COMPUTED_SIZE</code> flag, which means that
+     * <code>getPrefWidth(forHeight)</code> will return the control's internally
+     * computed preferred width.
+     */
     public final void setPrefWidth(double value) { prefWidthProperty().set(value); }
+    
+    /**
+     * Property for overriding the control's computed preferred width.
+     * This should only be set if the control's internally computed preferred width
+     * doesn't meet the application's layout needs.
+     * <p>
+     * Defaults to the <code>USE_COMPUTED_SIZE</code> flag, which means that
+     * <code>getPrefWidth(forHeight)</code> will return the control's internally
+     * computed preferred width.
+     */
     public final double getPrefWidth() { return prefWidth == null ? USE_COMPUTED_SIZE : prefWidth.get(); }
     public final DoubleProperty prefWidthProperty() {
         if (prefWidth == null) {
@@ -349,7 +475,29 @@ public class PopupControl extends PopupWindow implements Skinnable {
      *
      */
     private DoubleProperty prefHeight;
+    
+    /**
+     * Property for overriding the control's computed preferred height.
+     * This should only be set if the control's internally computed preferred height
+     * doesn't meet the application's layout needs.
+     * <p>
+     * Defaults to the <code>USE_COMPUTED_SIZE</code> flag, which means that
+     * <code>getPrefHeight(forWidth)</code> will return the control's internally
+     * computed preferred width.
+     *
+     */
     public final void setPrefHeight(double value) { prefHeightProperty().set(value); }
+    
+    /**
+     * Property for overriding the control's computed preferred height.
+     * This should only be set if the control's internally computed preferred height
+     * doesn't meet the application's layout needs.
+     * <p>
+     * Defaults to the <code>USE_COMPUTED_SIZE</code> flag, which means that
+     * <code>getPrefHeight(forWidth)</code> will return the control's internally
+     * computed preferred width.
+     *
+     */
     public final double getPrefHeight() { return prefHeight == null ? USE_COMPUTED_SIZE : prefHeight.get(); }
     public final DoubleProperty prefHeightProperty() {
         if (prefHeight == null) {
@@ -399,10 +547,37 @@ public class PopupControl extends PopupWindow implements Skinnable {
      * Setting this value to the <code>USE_PREF_SIZE</code> flag will cause
      * <code>getMaxWidth(forHeight)</code> to return the control's preferred width,
      * enabling applications to easily restrict the resizability of the control.
-     *
      */
     private DoubleProperty maxWidth;
+    
+    /**
+     * Property for overriding the control's computed maximum width.
+     * This should only be set if the control's internally computed maximum width
+     * doesn't meet the application's layout needs.
+     * <p>
+     * Defaults to the <code>USE_COMPUTED_SIZE</code> flag, which means that
+     * <code>getMaxWidth(forHeight)</code> will return the control's internally
+     * computed maximum width.
+     * <p>
+     * Setting this value to the <code>USE_PREF_SIZE</code> flag will cause
+     * <code>getMaxWidth(forHeight)</code> to return the control's preferred width,
+     * enabling applications to easily restrict the resizability of the control.
+     */
     public final void setMaxWidth(double value) { maxWidthProperty().set(value); }
+    
+    /**
+     * Property for overriding the control's computed maximum width.
+     * This should only be set if the control's internally computed maximum width
+     * doesn't meet the application's layout needs.
+     * <p>
+     * Defaults to the <code>USE_COMPUTED_SIZE</code> flag, which means that
+     * <code>getMaxWidth(forHeight)</code> will return the control's internally
+     * computed maximum width.
+     * <p>
+     * Setting this value to the <code>USE_PREF_SIZE</code> flag will cause
+     * <code>getMaxWidth(forHeight)</code> to return the control's preferred width,
+     * enabling applications to easily restrict the resizability of the control.
+     */
     public final double getMaxWidth() { return maxWidth == null ? USE_COMPUTED_SIZE : maxWidth.get(); }
     public final DoubleProperty maxWidthProperty() {
         if (maxWidth == null) {
@@ -440,7 +615,37 @@ public class PopupControl extends PopupWindow implements Skinnable {
      *
      */
     private DoubleProperty maxHeight;
+    
+    /**
+     * Property for overriding the control's computed maximum height.
+     * This should only be set if the control's internally computed maximum height
+     * doesn't meet the application's layout needs.
+     * <p>
+     * Defaults to the <code>USE_COMPUTED_SIZE</code> flag, which means that
+     * <code>getMaxHeight(forWidth)</code> will return the control's internally
+     * computed maximum height.
+     * <p>
+     * Setting this value to the <code>USE_PREF_SIZE</code> flag will cause
+     * <code>getMaxHeight(forWidth)</code> to return the control's preferred height,
+     * enabling applications to easily restrict the resizability of the control.
+     *
+     */
     public final void setMaxHeight(double value) { maxHeightProperty().set(value); }
+    
+    /**
+     * Property for overriding the control's computed maximum height.
+     * This should only be set if the control's internally computed maximum height
+     * doesn't meet the application's layout needs.
+     * <p>
+     * Defaults to the <code>USE_COMPUTED_SIZE</code> flag, which means that
+     * <code>getMaxHeight(forWidth)</code> will return the control's internally
+     * computed maximum height.
+     * <p>
+     * Setting this value to the <code>USE_PREF_SIZE</code> flag will cause
+     * <code>getMaxHeight(forWidth)</code> to return the control's preferred height,
+     * enabling applications to easily restrict the resizability of the control.
+     *
+     */
     public final double getMaxHeight() { return maxHeight == null ? USE_COMPUTED_SIZE : maxHeight.get(); }
     public final DoubleProperty maxHeightProperty() {
         if (maxHeight == null) {
