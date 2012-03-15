@@ -993,7 +993,7 @@ public class TableViewKeyInputTest {
         keyboard.doKeyPress(KeyCode.SPACE, KeyModifier.getShortcutKey());
         assertTrue(sm.isSelected(0,col1));
         assertTrue(sm.isSelected(0,col3));
-        assertTrue(isAnchor(2,));
+        assertTrue(isAnchor(2));
         
         keyboard.doDownArrowPress(KeyModifier.SHIFT, KeyModifier.getShortcutKey());
         keyboard.doDownArrowPress(KeyModifier.SHIFT, KeyModifier.getShortcutKey());
