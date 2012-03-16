@@ -44,14 +44,23 @@
 
 package com.sun.javafx.scene.control;
 
+import com.sun.javafx.css.StyleableIntegerProperty;
+import com.sun.javafx.css.StyleableProperty;
+import com.sun.javafx.css.Stylesheet.Origin;
+import com.sun.javafx.css.converters.SizeConverter;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
 import javafx.beans.DefaultProperty;
 import javafx.beans.InvalidationListener;
 import javafx.beans.Observable;
+import javafx.beans.property.IntegerProperty;
 import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.SimpleObjectProperty;
 import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
 import javafx.beans.value.WeakChangeListener;
+import javafx.beans.value.WritableValue;
 import javafx.collections.FXCollections;
 import javafx.collections.ListChangeListener;
 import javafx.collections.ListChangeListener.Change;
@@ -65,6 +74,8 @@ import javafx.util.Callback;
 @DefaultProperty("pages")
 public class Pagination<T> extends Control {
 
+    private static final int DEFAULT_NUMBER_OF_VISIBLE_PAGES = 10;
+    
     public static final String STYLE_CLASS_BULLET = "bullet";
 
     /**
@@ -75,7 +86,7 @@ public class Pagination<T> extends Control {
     }
 
     public Pagination(ObservableList<T> items) {
-        getStyleClass().setAll("pagination");
+        getStyleClass().setAll(DEFAULT_STYLE_CLASS);
         setSelectionModel(new PaginationSelectionModel(this));
         setItems(items);
     }
@@ -85,6 +96,38 @@ public class Pagination<T> extends Control {
      * Properties                                                              *
      *                                                                         *
      **************************************************************************/
+
+    // The number of visible page indicators
+    public final IntegerProperty numberOfVisiblePagesProperty() {
+        if (numberOfVisiblePages == null) {
+            numberOfVisiblePages = new StyleableIntegerProperty(DEFAULT_NUMBER_OF_VISIBLE_PAGES) {
+                @Override
+                public StyleableProperty getStyleableProperty() {
+                    return StyleableProperties.NUMBER_OF_VISIBLE_PAGES;
+                }
+
+                @Override
+                public Object getBean() {
+                    return Pagination.this;
+                }
+
+                @Override
+                public String getName() {
+                    return "numberOfVisiblePages";
+                }
+            };
+        }
+        return numberOfVisiblePages;
+    }
+
+    private IntegerProperty numberOfVisiblePages;
+    public final void setNumberOfVisiblePages(int value) {
+        numberOfVisiblePagesProperty().set(value);
+    }
+
+    public final int getNumberOfVisiblePages() {        
+        return numberOfVisiblePages == null ? DEFAULT_NUMBER_OF_VISIBLE_PAGES : numberOfVisiblePages.get();
+    }
 
     // --- Pages
     private ObjectProperty<ObservableList<T>> items;
@@ -224,5 +267,62 @@ public class Pagination<T> extends Control {
             final ObservableList<T> items = pagination.getItems();
             return items == null ? 0 : items.size();
         }
+    }
+
+    /***************************************************************************
+     *                                                                         *
+     *                         Stylesheet Handling                             *
+     *                                                                         *
+     **************************************************************************/
+
+    private static final String DEFAULT_STYLE_CLASS = "pagination";
+
+    private static class StyleableProperties {
+        private static final StyleableProperty<Pagination,Number> NUMBER_OF_VISIBLE_PAGES =
+            new StyleableProperty<Pagination,Number>("-fx-number-of-visible-pages",
+                SizeConverter.getInstance(), DEFAULT_NUMBER_OF_VISIBLE_PAGES) {
+
+            @Override
+            public void set(Pagination node, Number value, Origin origin) {
+                super.set(node, value.intValue(), origin);
+            }
+
+            @Override
+            public boolean isSettable(Pagination n) {
+                return n.numberOfVisiblePages == null || !n.numberOfVisiblePages.isBound();
+            }
+
+            @Override
+            public WritableValue<Number> getWritableValue(Pagination n) {
+                return n.numberOfVisiblePagesProperty();
+            }
+        };
+        private static final List<StyleableProperty> STYLEABLES;
+        static {
+            final List<StyleableProperty> styleables =
+                new ArrayList<StyleableProperty>(Control.impl_CSS_STYLEABLES());
+            Collections.addAll(styleables,
+                NUMBER_OF_VISIBLE_PAGES
+            );
+            STYLEABLES = Collections.unmodifiableList(styleables);
+        }
+    }
+
+    /**
+     * @treatAsPrivate implementation detail
+     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
+     */
+    @Deprecated
+    public static List<StyleableProperty> impl_CSS_STYLEABLES() {
+        return Pagination.StyleableProperties.STYLEABLES;
+    }
+
+    /**
+     * @treatAsPrivate implementation detail
+     * @deprecated This is an experimental API that is not intended for general use and is subject to change in future versions
+     */
+    @Deprecated
+    public List<StyleableProperty> impl_getStyleableProperties() {
+        return impl_CSS_STYLEABLES();
     }
 }

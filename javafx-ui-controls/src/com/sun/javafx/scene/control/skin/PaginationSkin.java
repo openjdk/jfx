@@ -74,8 +74,6 @@ import javafx.util.Callback;
 
 public class PaginationSkin<T> extends SkinBase<Pagination<T>, PaginationBehavior<T>>  {
 
-    private final static int MAX_PAGES = 10;
-
     private Pagination<T> pagination;
     private PaginationListView<T> paginationListView;
     private ObservableList<T> pages;
@@ -96,6 +94,7 @@ public class PaginationSkin<T> extends SkinBase<Pagination<T>, PaginationBehavio
     private int toIndex;
     private int totalNumberOfPages;
     private int numberOfPages;
+    private int numberOfVisiblePages;
 
     public PaginationSkin(final Pagination<T> pagination) {
         super(pagination, new PaginationBehavior(pagination));
@@ -112,19 +111,34 @@ public class PaginationSkin<T> extends SkinBase<Pagination<T>, PaginationBehavio
         updateCellFactory();
         paginationListView.setOrientation(Orientation.HORIZONTAL);
 
+        resetIndexes();
+        navigation = new NavigationControl();
+
+        getChildren().addAll(paginationListView, navigation);
+
+        pagination.numberOfVisiblePagesProperty().addListener(new InvalidationListener() {
+            @Override
+            public void invalidated(Observable o) {
+                resetIndexes();
+                getChildren().remove(navigation);
+                navigation = new NavigationControl();
+                getChildren().add(navigation);
+            }
+        });
+    }
+
+    private void resetIndexes() {
+        numberOfVisiblePages = getSkinnable().getNumberOfVisiblePages();
         totalNumberOfPages = pages.size();
         numberOfPages = totalNumberOfPages;
-        if (totalNumberOfPages > MAX_PAGES) {
-            numberOfPages = MAX_PAGES;
+        if (totalNumberOfPages > numberOfVisiblePages) {
+            numberOfPages = numberOfVisiblePages;
         }
 
         fromIndex = 0;
         previousIndex = 0;
         currentIndex = 0;
         toIndex = numberOfPages - 1;
-        navigation = new NavigationControl();
-
-        getChildren().addAll(paginationListView, navigation);
     }
 
     private PaginationListView<T> createListView() {
@@ -232,7 +246,6 @@ public class PaginationSkin<T> extends SkinBase<Pagination<T>, PaginationBehavio
         private StackPane rightArrowButton;
         private List<IndicatorButton> indicatorButton;
 
-
         public NavigationControl() {
             getStyleClass().setAll("pagination-control");
             StackPane leftArrow = new StackPane();
@@ -293,7 +306,7 @@ public class PaginationSkin<T> extends SkinBase<Pagination<T>, PaginationBehavio
                     } else {
                         leftArrowButton.setVisible(true);
                         rightArrowButton.setVisible(true);
-                        if (numberOfPages == MAX_PAGES) {
+                        if (numberOfPages == numberOfVisiblePages) {
                             scroll();
                         }
                     }
@@ -324,14 +337,14 @@ public class PaginationSkin<T> extends SkinBase<Pagination<T>, PaginationBehavio
         }
 
         private void scroll() {
-            if (previousIndex < currentIndex && currentIndex % MAX_PAGES == 0) {
+            if (previousIndex < currentIndex && currentIndex % numberOfVisiblePages == 0) {
                 // Scroll to the right
                 fromIndex = currentIndex;
-                toIndex = fromIndex + (MAX_PAGES - 1);
-            } else if (currentIndex < previousIndex && currentIndex % MAX_PAGES == MAX_PAGES - 1) {
+                toIndex = fromIndex + (numberOfVisiblePages - 1);
+            } else if (currentIndex < previousIndex && currentIndex % numberOfVisiblePages == numberOfVisiblePages - 1) {
                 // Scroll to the left
                 toIndex = currentIndex;
-                fromIndex = toIndex - (MAX_PAGES - 1);
+                fromIndex = toIndex - (numberOfVisiblePages - 1);
             } else {
                 return;
             }
@@ -344,7 +357,7 @@ public class PaginationSkin<T> extends SkinBase<Pagination<T>, PaginationBehavio
             // We have gone past the starting page
             if (fromIndex < 0) {
                 fromIndex = 0;
-                toIndex = fromIndex + (MAX_PAGES - 1);
+                toIndex = fromIndex + (numberOfVisiblePages - 1);
             }
             //System.out.println("SCROLL from " + fromIndex + " to " + toIndex + " previous " + previousIndex + " current " + currentIndex);
             setupPageIndicators();
@@ -450,11 +463,13 @@ public class PaginationSkin<T> extends SkinBase<Pagination<T>, PaginationBehavio
             setOnMousePressed(new EventHandler<MouseEvent>() {
                 @Override
                 public void handle(MouseEvent arg0) {
-                    //System.out.println("INDICATOR BUTTON PRESSED " + pageIndicator.getText() + " NUMBER " + IndicatorButton.this.pageNumber);
-                    pagination.getSelectionModel().select(IndicatorButton.this.pageNumber);
-                    //System.out.println("INDICATOR BUTTON SELECTED INDEX " + pagination.getSelectionModel().getSelectedIndex());
-                    paginationListView.show(pagination.getSelectionModel().getSelectedIndex());
-                    requestLayout();
+                    int selected = pagination.getSelectionModel().getSelectedIndex();
+                    // We do not need to update the selection if it has not changed.
+                    if (selected != IndicatorButton.this.pageNumber) {
+                        pagination.getSelectionModel().select(IndicatorButton.this.pageNumber);
+                        paginationListView.show(pagination.getSelectionModel().getSelectedIndex());
+                        requestLayout();
+                    }
                 }
             });
         }
