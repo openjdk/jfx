@@ -67,6 +67,7 @@ import com.sun.javafx.scene.control.WeakListChangeListener;
         registerChangeListener(control.showingProperty(), "SHOWING");
         registerChangeListener(control.itemsProperty(), "ITEMS");
         registerChangeListener(control.getSelectionModel().selectedItemProperty(), "SELECTION_CHANGED");
+        registerChangeListener(control.converterProperty(), "CONVERTER");
     }
 
     private ObservableList<?> choiceBoxItems;
@@ -238,6 +239,9 @@ import com.sun.javafx.scene.control.WeakListChangeListener;
             } else {
                 popup.hide();
             }
+        } else if ("CONVERTER".equals(p)) {
+            updateChoiceBoxItems();
+            updatePopupItems();
         }
     }
 
