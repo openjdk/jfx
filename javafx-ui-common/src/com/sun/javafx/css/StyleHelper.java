@@ -623,6 +623,14 @@ public class StyleHelper {
             }
         }
 
+        final WritableValue writable = fontKey.getWritableValue(node);
+        if (writable != null) {
+            Stylesheet.Origin origin = fontKey.getOrigin(writable);
+            if (origin == Stylesheet.Origin.USER) {
+                return (Font)fontKey.getWritableValue(node).getValue();                
+            }
+        }
+        
         //
         // need to distinguish the "inherited" font since it could resolve
         // to Font.getDefault() and we don't want that to look like it was
@@ -979,8 +987,7 @@ public class StyleHelper {
             // the style came from the user agent stylesheet, then
             // skip the value. A style from a user agent stylesheet should
             // not override the user set style.
-            if (style.getOrigin() == Stylesheet.Origin.USER_AGENT
-                    && isUserSetProperty(originatingNode, styleable)) {
+            if (isUserSet && style.getOrigin() == Stylesheet.Origin.USER_AGENT) {
                 return new CalculatedValue(SKIP, style.getOrigin(), true);
             }
 
