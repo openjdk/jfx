@@ -24,15 +24,19 @@
  */
 package com.sun.javafx.css;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotSame;
-import static org.junit.Assert.assertSame;
+import com.sun.javafx.css.parser.CSSParser;
+import com.sun.javafx.tk.Toolkit;
+import java.io.IOException;
+import java.net.URL;
+import static org.junit.Assert.*;
 import javafx.scene.Cursor;
 import javafx.scene.Group;
 import javafx.scene.Scene;
+import javafx.scene.paint.Color;
 import javafx.scene.shape.Rectangle;
 import javafx.scene.text.Font;
 import javafx.scene.text.Text;
+import javafx.stage.Stage;
 import javafx.stage.Window;
 
 import org.junit.Before;
@@ -69,18 +73,22 @@ public class HonorDeveloperSettingsTest {
         Group group = new Group();
         group.getChildren().addAll(rect, text);
 
-        scene = new Scene(group) {
+        scene = new Scene(group);/* {
             TestWindow window;
             {
                 window = new TestWindow();
                 window.setScene(HonorDeveloperSettingsTest.this.scene);
                 impl_setWindow(window);
             }
-        };
-        //scene.getStylesheets().add("/com/sun/javafx/css/HonorDeveloperSettingsTest.css");
+        };*/
+        
         System.setProperty("binary.css", "false");
-        String url = getClass().getResource("HonorDeveloperSettingsTest.css").toExternalForm();
+        String url = getClass().getResource("HonorDeveloperSettingsTest_UA.css").toExternalForm();
         StyleManager.getInstance().setDefaultUserAgentStylesheet(url);
+        
+        Stage stage = new Stage();
+        stage.setScene(scene);
+        stage.show();
     }
 
     @Test
@@ -225,4 +233,31 @@ public class HonorDeveloperSettingsTest {
         assertSame(f, text.getFont());
     }
     
+    @Test
+    public void testUseInheritedFontSizeFromStylesheetForEmSize() {
+        
+        String url = getClass().getResource("HonorDeveloperSettingsTest_AUTHOR.css").toExternalForm();
+        scene.getStylesheets().add(url);
+        Toolkit.getToolkit().firePulse();
+        assertEquals(20, rect.getStrokeWidth(), 0.00001);
+        
+    }
+    
+    @Test
+    public void testInhertWithNoStyleDoesNotOverrideUserSetValue() {
+        Font font = Font.font("Amble", 14);
+        text.setFont(font);
+        
+        String url = getClass().getResource("HonorDeveloperSettingsTest_AUTHOR.css").toExternalForm();
+        scene.getStylesheets().add(url);
+           
+        Toolkit.getToolkit().firePulse();
+        //
+        // Stroke width is set to 1em in the author stylesheet. If 
+        // RT-20145 is not working, then the code will pick up the 20px
+        // font size.
+        //
+        assertEquals(14, text.getStrokeWidth(), 0.00001);
+        
+    }
 }

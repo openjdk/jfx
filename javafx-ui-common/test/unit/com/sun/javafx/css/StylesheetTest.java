@@ -37,7 +37,7 @@ public class StylesheetTest {
     URL testURL = null;
     
     public StylesheetTest() {
-        testURL = getClass().getResource("HonorDeveloperSettingsTest.css");
+        testURL = getClass().getResource("HonorDeveloperSettingsTest_UA.css");
     }
 
     /**

@@ -1,0 +1,11 @@
+
+.root { -fx-font: 20 Amble; }
+
+/* 
+ * setting stroke width to 1em will cause CSS to lookup the
+ * inherited font. 
+ */
+#text { -fx-stroke: red; -fx-stroke-width: 1em; }
+#rectangle { -fx-stroke: red; -fx-stroke-width: 1em; }
+
+

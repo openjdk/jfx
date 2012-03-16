@@ -46,6 +46,7 @@ import java.util.Map.Entry;
 import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.SimpleBooleanProperty;
 import javafx.beans.value.WritableValue;
+import javafx.scene.text.Text;
 
 /**
  * The StyleHelper is a helper class used for applying CSS information to Nodes.
@@ -587,13 +588,11 @@ public class StyleHelper {
 
         @Override
         public boolean isSettable(Node node) {
-            assert(false);
             return false;
         }
 
         @Override
         public WritableValue<Font> getWritableValue(Node node) {
-            assert(false);
             return null;
         }
     };
@@ -643,10 +642,12 @@ public class StyleHelper {
             if (cv != null && cv.value instanceof Font) return (Font)cv.value;
         }
 
-        // Go looking for the font for this node
         // Pass null for originating node to avoid infinite loop
         final CalculatedValue inherited = 
-            inherit(node, fontKey, false, userStyles, null, cacheEntry, styleList);
+            lookup(node, fontKey, false, 
+                   getPseudoClassState(node), userStyles, null,
+                   cacheEntry, styleList);
+        
         // The inherited value might be SKIP for example, so check to make
         // sure that it really is a Font before casting it. If the inherited
         // value isn't a Font, then we will simply use the JavaFX default Font.
@@ -988,7 +989,7 @@ public class StyleHelper {
             final ParsedValue cssValue = style.getParsedValue();
             if (cssValue != null && "inherit".equals(cssValue.getValue())) {
                 if (styleList != null) styleList.add(style.getStyle());
-                return inherit(node, styleable, isUserSet, userStyles, 
+                return inherit(node, styleable, userStyles, 
                         originatingNode, cacheEntry, styleList);
             }
         }
@@ -1104,7 +1105,7 @@ public class StyleHelper {
             }
 
             CalculatedValue cv =
-                inherit(node, styleable, isUserSet, userStyles, 
+                inherit(node, styleable, userStyles, 
                     originatingNode, cacheEntry, styleList);
 
             return cv;
@@ -1154,10 +1155,25 @@ public class StyleHelper {
      * Called when we must inherit a value from a parent node in the scenegraph.
      */
     private CalculatedValue inherit(Node node, StyleableProperty styleable,
-            boolean isUserSet, Map<String,CascadingStyle> userStyles, 
+            Map<String,CascadingStyle> userStyles, 
             Node originatingNode, CacheEntry cacheEntry, List<Style> styleList) {
+        
+        //
+        // RT-20145 - if node has the property, use the property value instead
+        // of looking for matching styles. If the property was styled, then 
+        // we are getting the right value since the parent is styled before the
+        // child. If the property was not styled, then we're still getting the
+        // right value - either the default value or some user set value.
+        //
+
+        WritableValue prop = styleable.getWritableValue(node);
+        if (prop != null) {
+            final Stylesheet.Origin origin = StyleableProperty.getOrigin(prop);
+            return new CalculatedValue(prop.getValue(), origin, true);
+        }
+        
         // Locate the first parentStyleHelper in the hierarchy
-        Node parent = node.getParent();
+        Node parent = node.getParent();        
         StyleHelper parentStyleHelper = parent == null ? null : parent.impl_getStyleHelper();
         while (parent != null && parentStyleHelper == null) {
             parent = parent.getParent();
@@ -1169,7 +1185,7 @@ public class StyleHelper {
         if (parent == null) {
             return new CalculatedValue(SKIP, null, true);
         }
-        return parentStyleHelper.lookup(parent, styleable, isUserSet,
+        return parentStyleHelper.lookup(parent, styleable, false,
                 parentStyleHelper.getPseudoClassState(parent),
                 getStyles(parent), originatingNode, cacheEntry, styleList);
     }
