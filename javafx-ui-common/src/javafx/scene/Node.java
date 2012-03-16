@@ -358,7 +358,7 @@ public abstract class Node implements EventTarget {
      * @deprecated This is an internal API that is not intended for use and will be removed in the next version
      */
     @Deprecated
-    protected boolean impl_isDirty(DirtyBits dirtyBit) {
+    protected final boolean impl_isDirty(DirtyBits dirtyBit) {
         return (dirtyBits & dirtyBit.getMask()) != 0;
     }
 
@@ -380,7 +380,7 @@ public abstract class Node implements EventTarget {
      * @deprecated This is an internal API that is not intended for use and will be removed in the next version
      */
     @Deprecated
-    protected void impl_clearDirty(DirtyBits dirtyBit) {
+    protected final void impl_clearDirty(DirtyBits dirtyBit) {
         dirtyBits &= ~dirtyBit.getMask();
     }
 
@@ -405,7 +405,7 @@ public abstract class Node implements EventTarget {
      * @deprecated This is an internal API that is not intended for use and will be removed in the next version
      */
     @Deprecated
-    protected boolean impl_isDirtyEmpty() {
+    protected final boolean impl_isDirtyEmpty() {
         return dirtyBits == 0;
     }
 
@@ -1758,7 +1758,7 @@ public abstract class Node implements EventTarget {
     private Node clipParent;
     // Use a getter function instead of giving clipParent package access,
     // so that clipParent doesn't get turned into a Location.
-    Node impl_getClipParent() {
+    final Node impl_getClipParent() {
         return clipParent;
     }
 
@@ -2696,7 +2696,7 @@ public abstract class Node implements EventTarget {
      * @deprecated This is an internal API that is not intended for use and will be removed in the next version
      */
     @Deprecated
-    protected void impl_layoutBoundsChanged() {
+    protected final void impl_layoutBoundsChanged() {
         layoutBounds.invalidate();
         if (getScaleX() != 1 || getScaleY() != 1 || getScaleZ() != 1 || getRotate() != 0) {
             // if either the scale or rotate convenience variables are used,
@@ -3467,7 +3467,7 @@ public abstract class Node implements EventTarget {
      * @deprecated This is an internal API that is not intended for use and will be removed in the next version
      */
     @Deprecated
-    public BaseTransform impl_getLeafTransform() {
+    public final BaseTransform impl_getLeafTransform() {
         return getLocalToParentTransform(TempState.getInstance().leafTx);
     }
 
@@ -3478,7 +3478,7 @@ public abstract class Node implements EventTarget {
      * @deprecated This is an internal API that is not intended for use and will be removed in the next version
      */
     @Deprecated
-    public void impl_transformsChanged() {
+    public final void impl_transformsChanged() {
         impl_markDirty(DirtyBits.NODE_TRANSFORM);
         transformDirty = true;
         transformedBoundsChanged();
@@ -3489,7 +3489,7 @@ public abstract class Node implements EventTarget {
      * @deprecated This is an internal API that is not intended for use and will be removed in the next version
      */
     @Deprecated
-    public double impl_getPivotX() {
+    public final double impl_getPivotX() {
         final Bounds bounds = getLayoutBounds();
         return bounds.getMinX() + bounds.getWidth()/2;
     }
@@ -3499,7 +3499,7 @@ public abstract class Node implements EventTarget {
      * @deprecated This is an internal API that is not intended for use and will be removed in the next version
      */
     @Deprecated
-    public double impl_getPivotY() {
+    public final double impl_getPivotY() {
         final Bounds bounds = getLayoutBounds();
         return bounds.getMinY() + bounds.getHeight()/2;
     }
@@ -3509,7 +3509,7 @@ public abstract class Node implements EventTarget {
      * @deprecated This is an internal API that is not intended for use and will be removed in the next version
      */
     @Deprecated
-    public double impl_getPivotZ() {
+    public final double impl_getPivotZ() {
         final Bounds bounds = getLayoutBounds();
         return bounds.getMinZ() + bounds.getDepth()/2;
     }
@@ -3614,7 +3614,7 @@ public abstract class Node implements EventTarget {
      * @deprecated This is an internal API that is not intended for use and will be removed in the next version
      */
     @Deprecated
-    public Node impl_pickNode(double parentX, double parentY) {
+    public final Node impl_pickNode(double parentX, double parentY) {
 
         // TODO this check for whether there is no scene is dubious and complicates testing
         // In some conditions we can omit picking this node or subgraph
@@ -3677,7 +3677,7 @@ public abstract class Node implements EventTarget {
      * @deprecated This is an internal API that is not intended for use and will be removed in the next version
      */
     @Deprecated
-    public Node impl_pickNode(PickRay pickRay) {
+    public final Node impl_pickNode(PickRay pickRay) {
 
         // TODO this check for whether there is no scene is dubious and complicates testing
         // In some conditions we can omit picking this node or subgraph
@@ -3716,7 +3716,7 @@ public abstract class Node implements EventTarget {
      * @deprecated This is an internal API that is not intended for use and will be removed in the next version
      */
     @Deprecated
-    protected boolean impl_intersects(PickRay pickRay) {
+    protected final boolean impl_intersects(PickRay pickRay) {
         // TODO: Need to handle clip and effect
         return contentIntersects(pickRay);
     }
@@ -5806,7 +5806,7 @@ public abstract class Node implements EventTarget {
      * @deprecated This is an internal API that is not intended for use and will be removed in the next version
      */
     @Deprecated
-    public void impl_requestFocusImpl(Runnable r) {
+    public final void impl_requestFocusImpl(Runnable r) {
         r.run();
     }
 
@@ -5820,7 +5820,7 @@ public abstract class Node implements EventTarget {
      * @deprecated This is an internal API that is not intended for use and will be removed in the next version
      */
     @Deprecated
-    public void impl_traverse(Direction dir) {
+    public final void impl_traverse(Direction dir) {
         if (getScene() == null) {
             return;
         }
@@ -5916,7 +5916,7 @@ public abstract class Node implements EventTarget {
      * @deprecated This is an internal API that is not intended for use and will be removed in the next version
      */
     @Deprecated
-    public boolean impl_isTreeVisible() {
+    public final boolean impl_isTreeVisible() {
         return treeVisibleProperty().get();
     }
 
@@ -6029,7 +6029,7 @@ public abstract class Node implements EventTarget {
      * @deprecated This is an internal API that is not intended for use and will be removed in the next version
      */
     @Deprecated
-    public BooleanProperty impl_showMnemonicsProperty() {
+    public final BooleanProperty impl_showMnemonicsProperty() {
         if (impl_showMnemonics == null) {
             impl_showMnemonics = new BooleanPropertyBase(false) {
 
@@ -6613,7 +6613,7 @@ public abstract class Node implements EventTarget {
       * @deprecated This is an experimental API that is not intended for general use and is subject to change in future versions
       */
      @Deprecated
-     public ObservableMap<WritableValue, List<Style>> impl_getStyleMap() {
+     public final ObservableMap<WritableValue, List<Style>> impl_getStyleMap() {
          return impl_getStyleable().getStyleMap();
      }
 
@@ -6623,7 +6623,7 @@ public abstract class Node implements EventTarget {
       * @deprecated This is an experimental API that is not intended for general use and is subject to change in future versions
       */
      @Deprecated
-     public void impl_setStyleMap(ObservableMap<WritableValue, List<Style>> styleMap) {
+     public final void impl_setStyleMap(ObservableMap<WritableValue, List<Style>> styleMap) {
          impl_getStyleable().setStyleMap(styleMap);
      }
           
@@ -6647,7 +6647,7 @@ public abstract class Node implements EventTarget {
      * @deprecated This is an internal API that is not intended for use and will be removed in the next version
      */
     @Deprecated
-    CSSFlags impl_getCSSFlags() { return cssFlag; }
+    final CSSFlags impl_getCSSFlags() { return cssFlag; }
 
     /**
      * Used to specify that the list of which pseudoclasses apply to this
@@ -6709,7 +6709,7 @@ public abstract class Node implements EventTarget {
      * @deprecated This is an internal API that is not intended for use and will be removed in the next version
      */
     @Deprecated
-    public void impl_reapplyCSS() {
+    public final void impl_reapplyCSS() {
         // If there is no scene, then we cannot make it dirty, so we'll leave
         // the flag alone
         if (getScene() == null) return;
