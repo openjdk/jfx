@@ -26,13 +26,19 @@
 
 package javafx.scene.layout;
 
+import com.sun.javafx.css.ParsedValue;
+import com.sun.javafx.css.StyleableProperty;
+import com.sun.javafx.css.parser.CSSParser;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNull;
 import javafx.geometry.Insets;
 import javafx.geometry.Orientation;
 import javafx.geometry.Pos;
 import javafx.scene.Node;
+import javafx.scene.Scene;
 import javafx.scene.shape.Rectangle;
+import javafx.stage.Stage;
+import org.junit.Assert;
 
 import org.junit.Before;
 import org.junit.Test;
@@ -911,6 +917,21 @@ public class TilePaneTest {
         assertEquals(100, last.getLayoutBounds().getHeight(), 1e-100);
     }
 
-
+    @Test public void testCSSsetPrefTileWidthAndHeight_RT20388() {        
+        Scene scene = new Scene(tilepane);
+        Stage stage = new Stage();
+        stage.setScene(scene);                
+        stage.show();
+        
+        ParsedValue pv = CSSParser.getInstance().parseExpr("-fx-perf-tile-width","67.0");
+        Object val = pv.convert(null);        
+        StyleableProperty prop = StyleableProperty.getStyleableProperty(tilepane.prefTileWidthProperty());
+        try {
+            prop.set(tilepane, val, null);
+            assertEquals(67.0, tilepane.getPrefTileWidth(), 0.00001);
+        } catch (Exception e) {
+            Assert.fail(e.toString());
+        }
+    }
       
 }
