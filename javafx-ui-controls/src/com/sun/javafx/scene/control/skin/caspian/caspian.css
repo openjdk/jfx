@@ -2717,28 +2717,34 @@
     -fx-padding: 0.333333em 0.083333em 0.666667em 0.083333em; /* 4 1 8 1 */
 }
 
-.fxvk .button { 
+.fxvk-secondary {
+    -fx-background-radius: 8;
+    -fx-padding: 1 3 1 3;
+}
+
+.fxvk .key { 
     -fx-body-color: linear-gradient(to bottom, #efefef, #a3a3a3);
-    -fx-font-size: 1.666667em; /* 20pt */
+    -fx-font-family: "Segoe UI";
+    -fx-font-size: 1.5em; /* 18pt */
     -fx-font-weight: bold;
     -fx-padding: 3 3 5 6;
     -fx-background-radius: 12;
 }
 
-.fxvk .button .special-key { 
-    -fx-body-color: linear-gradient(to bottom, #646464, #373737);
+.fxvk .secondary-key { 
+    -fx-padding: 3 3 5 1;
 }
 
-.special-key { 
-    -fx-text-fill: white;
-    -fx-font: bold 1.75em "Segoe UI Symbol";
-}
-
-.fxvk .button .label { 
-    -fx-text-fill: #b1b1b1;
-    -fx-font-size: 0.833333em; /* 10pt */
+.fxvk .key .label { 
+    -fx-text-fill: #a1a1a1;
     -fx-font-weight: bold;
     -fx-alignment: TOP_RIGHT;
+}
+
+.fxvk .special-key { 
+    -fx-body-color: linear-gradient(to bottom, #646464, #373737);
+    -fx-text-fill: white;
+    -fx-font-family: "Segoe UI Symbol";
 }
 
 
