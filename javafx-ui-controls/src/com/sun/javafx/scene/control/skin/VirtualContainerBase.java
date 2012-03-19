@@ -42,6 +42,7 @@ import com.sun.javafx.scene.control.behavior.BehaviorBase;
 public abstract class VirtualContainerBase<C extends Control, B extends BehaviorBase<C>, I extends IndexedCell> extends SkinBase<C, B> {
 
     public static final String SCROLL_TO_INDEX = "VirtualContainerBase.scrollToIndex";
+    public static final String SHOW_INDEX = "VirtualContainerBase.showIndex";
 
     public VirtualContainerBase(C control, B behavior) {
         super(control, behavior);
@@ -56,6 +57,13 @@ public abstract class VirtualContainerBase<C extends Control, B extends Behavior
                     }
 
                     c.getMap().remove(SCROLL_TO_INDEX);
+                } else if (c.wasAdded() && SHOW_INDEX.equals(c.getKey())) {
+                    Object index = c.getValueAdded();
+                    if (index instanceof Integer) {
+                        flow.scrollTo((Integer)index);
+                    }
+
+                    c.getMap().remove(SHOW_INDEX);
                 }
             }
         });

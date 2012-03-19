@@ -163,7 +163,7 @@ public class PositionMapper {
     public void adjustPositionToIndex(int index) {
         if (getItemCount() <= 0) {
             setPosition(0.0f);
-        } else {
+        } else {            
             adjustPosition(((double)index) / getItemCount());
         }
     }
@@ -265,5 +265,14 @@ public class PositionMapper {
         double count = getItemCount();
         double p = Utils.clamp(0, itemIndex, count) / count;
         return -(getViewportSize() * p);
+    }
+    
+    /**
+     * Adjust the position based on a chunk of pixels. The position is based
+     * on the start of the scrollbar position.
+     */
+    public void adjustByPixelChunk(double numPixels) {
+        setPosition(0);
+        adjustByPixelAmount(numPixels);
     }
 }

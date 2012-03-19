@@ -28,9 +28,14 @@ package com.sun.javafx.scene.control.skin;
 import java.lang.reflect.Field;
 import java.util.*;
 
+import javafx.animation.Interpolator;
+import javafx.animation.KeyFrame;
+import javafx.animation.KeyValue;
+import javafx.animation.Timeline;
 import javafx.application.Platform;
 import javafx.beans.InvalidationListener;
 import javafx.beans.Observable;
+import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.event.ActionEvent;
 import javafx.event.Event;
@@ -41,6 +46,7 @@ import javafx.geometry.HPos;
 import javafx.geometry.Point2D;
 import javafx.geometry.VPos;
 import javafx.scene.Node;
+import javafx.scene.Parent;
 import javafx.scene.Scene;
 import javafx.scene.control.*;
 import javafx.scene.input.KeyCode;
@@ -48,34 +54,50 @@ import javafx.scene.input.KeyEvent;
 import javafx.scene.input.MouseEvent;
 import javafx.scene.layout.*;
 import javafx.stage.Popup;
-
+import javafx.util.Duration;
 
 import com.sun.javafx.robot.impl.FXRobotHelper;
 import com.sun.javafx.robot.impl.FXRobotHelper.FXRobotInputAccessor;
 import com.sun.javafx.scene.control.behavior.BehaviorBase;
 
+import javafx.animation.Animation.Status;
 import static javafx.scene.input.KeyCode.*;
+import static javafx.scene.input.MouseEvent.*;
 
 public class FXVKSkin extends SkinBase<FXVK, BehaviorBase<FXVK>> {
 
+    private static Region oldRoot;
+    private static Pane newRoot;
     private static Popup secondaryPopup;
     private static FXVK primaryVK;
     private static FXVK secondaryVK;
     private static Popup vkPopup;
+    private static Timeline slideInTimeline;
+    private static Timeline slideOutTimeline;
+    private static Timeline slideRootTimeline;
+    private static Timeline secondaryVKDelay;
+    private static CharKey secondaryVKKey;
+
     private Node attachedNode;
-//     private Scene scene;
 
     FXVK fxvk;
     Control[][] keyRows;
 
     enum State { NORMAL, SHIFTED, SHIFT_LOCK, NUMERIC; };
 
-    State state = State.NORMAL;
+    static State state = State.NORMAL;
 
-    static double KEY_WIDTH = 40;
-    static double KEY_HEIGHT = 30;
-    final static double hGap = 2;
-    final static double vGap = 3;
+    static final boolean USE_POPUP = false;
+    static final double VK_WIDTH = 800;
+    static final double VK_HEIGHT = 230;
+    static final double VK_SLIDE_MILLIS = 250;
+    static final double PREF_KEY_WIDTH = 40;
+    static final double PREF_KEY_HEIGHT = 30;
+    static final double hGap = 2;
+    static final double vGap = 3;
+
+    double keyWidth = PREF_KEY_WIDTH;
+    double keyHeight = PREF_KEY_HEIGHT;
 
     private ShiftKey shiftKey;
     private SymbolKey symbolKey;
@@ -84,6 +106,8 @@ public class FXVKSkin extends SkinBase<FXVK, BehaviorBase<FXVK>> {
         super(fxvk, new BehaviorBase<FXVK>(fxvk));
         this.fxvk = fxvk;
 
+        fxvk.setFocusTraversable(false);
+
         createKeys();
 
         fxvk.attachedNodeProperty().addListener(new InvalidationListener() {
@@ -91,39 +115,69 @@ public class FXVKSkin extends SkinBase<FXVK, BehaviorBase<FXVK>> {
                 Node oldNode = attachedNode;
                 attachedNode = fxvk.getAttachedNode();
 
-                if (oldNode != null) {
-                    oldNode.getScene().getRoot().setTranslateY(0);
+if (USE_POPUP) {
+                if (fxvk != secondaryVK && oldNode != null) {
+                    translatePane(oldNode.getScene().getRoot(), 0);
                 }
-
+} else {
+                if (fxvk != secondaryVK && oldRoot != null) {
+                    translatePane(oldRoot, 0);
+                }
+}
 
                 if (attachedNode != null) {
                     final Scene scene = attachedNode.getScene();
 
+                    if (secondaryVKDelay == null) {
+                        secondaryVKDelay = new Timeline();
+                        KeyFrame kf = new KeyFrame(Duration.millis(500), new EventHandler<ActionEvent>() {
+                            @Override public void handle(ActionEvent event) {
+                                if (secondaryVKKey != null) {
+                                    showSecondaryVK(secondaryVKKey, fxvk, state);
+                                }
+                            }
+                        });
+                        secondaryVKDelay.getKeyFrames().add(kf);
+                    }
+
+if (USE_POPUP) {
                     if (vkPopup == null) {
                         vkPopup = new Popup();
                         vkPopup.getContent().add(fxvk);
                     }
 
                     if (vkPopup.isShowing()) {
-                        Point2D nodePoint = com.sun.javafx.Utils.pointRelativeTo(attachedNode, vkPopup.getWidth(), vkPopup.getHeight(), HPos.CENTER, VPos.BOTTOM, 0, 2, true);
-                        Point2D point = com.sun.javafx.Utils.pointRelativeTo(scene.getRoot(), vkPopup.getWidth(), vkPopup.getHeight(), HPos.CENTER, VPos.BOTTOM, 0, 0, true);
+                        Point2D nodePoint =
+                            com.sun.javafx.Utils.pointRelativeTo(attachedNode,
+                                                                 vkPopup.getWidth(), vkPopup.getHeight(),
+                                                                 HPos.CENTER, VPos.BOTTOM, 0, 2, true);
+                        Point2D point =
+                            com.sun.javafx.Utils.pointRelativeTo(scene.getRoot(),
+                                                                 vkPopup.getWidth(), vkPopup.getHeight(),
+                                                                 HPos.CENTER, VPos.BOTTOM, 0, 0, true);
                         double y = point.getY() - fxvk.prefHeight(-1);
                         double nodeBottom = nodePoint.getY();
                         if (y < nodeBottom) {
-                            scene.getRoot().setTranslateY(y - nodeBottom);
+                            translatePane(scene.getRoot(), y - nodeBottom);
                         }
                     } else {
                         Platform.runLater(new Runnable() {
                             public void run() {
-                                Point2D nodePoint = com.sun.javafx.Utils.pointRelativeTo(attachedNode, vkPopup.getWidth(), vkPopup.getHeight(), HPos.CENTER, VPos.BOTTOM, 0, 2, true);
-                                Point2D point = com.sun.javafx.Utils.pointRelativeTo(scene.getRoot(), vkPopup.getWidth(), vkPopup.getHeight(), HPos.CENTER, VPos.BOTTOM, 0, 0, true);
+                                Point2D nodePoint =
+                                    com.sun.javafx.Utils.pointRelativeTo(attachedNode,
+                                                                         vkPopup.getWidth(), vkPopup.getHeight(),
+                                                                         HPos.CENTER, VPos.BOTTOM, 0, 2, true);
+                                Point2D point =
+                                    com.sun.javafx.Utils.pointRelativeTo(scene.getRoot(),
+                                                                         vkPopup.getWidth(), vkPopup.getHeight(),
+                                                                         HPos.CENTER, VPos.BOTTOM, 0, 0, true);
                                 double y = point.getY() - fxvk.prefHeight(-1);
                                 vkPopup.show(attachedNode, point.getX(), y);
 
 
                                 double nodeBottom = nodePoint.getY();
                                 if (y < nodeBottom) {
-                                    scene.getRoot().setTranslateY(y - nodeBottom);
+                                    translatePane(scene.getRoot(), y - nodeBottom);
                                 }
                             }
                         });
@@ -131,12 +185,59 @@ public class FXVKSkin extends SkinBase<FXVK, BehaviorBase<FXVK>> {
 
                     if (oldNode == null || oldNode.getScene() != attachedNode.getScene()) {
                         fxvk.setPrefWidth(scene.getWidth());
-                        fxvk.setMaxWidth(scene.getWidth());
+                        fxvk.setMaxWidth(USE_PREF_SIZE);
                         fxvk.setPrefHeight(200);
                     }
+} else {
+                    if (newRoot == null) {
+                        oldRoot = (Region)scene.getRoot();
+                        newRoot = new NewRootPane(oldRoot);
+                        scene.setRoot(newRoot);
+                        newRoot.getChildren().add(fxvk);
+                        slideInTimeline = new Timeline();
+                    }
+
+                    fxvk.setVisible(true);
+                    if (fxvk != secondaryVK && fxvk.getHeight() > 0 &&
+                        (fxvk.getLayoutY() == 0 || fxvk.getLayoutY() > scene.getHeight() - fxvk.getHeight())) {
+
+                        slideOutTimeline.stop();
+                        slideInTimeline.playFromStart();
+                    }
+
+                    if (fxvk != secondaryVK) {
+                        Platform.runLater(new Runnable() {
+                            public void run() {
+                                double nodeBottom =
+                                    attachedNode.localToScene(attachedNode.getBoundsInLocal()).getMaxY() + 2;
+                                if (nodeBottom > fxvk.getLayoutY()) {
+                                    translatePane(oldRoot, fxvk.getLayoutY() - nodeBottom);
+                                }
+                            }
+                        });
+
+                        if (oldNode == null || oldNode.getScene() != attachedNode.getScene()) {
+                            fxvk.setPrefWidth(VK_WIDTH);
+                            fxvk.setMaxWidth(USE_PREF_SIZE);
+                            fxvk.setPrefHeight(VK_HEIGHT);
+                            fxvk.setMinHeight(USE_PREF_SIZE);
+                        }
+                    }
+}
                 } else {
+if (USE_POPUP) {
                     if (vkPopup != null) {
                         vkPopup.hide();
+                    }
+} else {
+                    if (fxvk != secondaryVK) {
+                        slideInTimeline.stop();
+                        slideOutTimeline.playFromStart();
+                    }
+}
+                    if (secondaryVK != null) {
+                        secondaryVK.setAttachedNode(null);
+                        secondaryPopup.hide();
                     }
                     return;
                 }
@@ -144,48 +245,69 @@ public class FXVKSkin extends SkinBase<FXVK, BehaviorBase<FXVK>> {
         });
     }
 
+    private void translatePane(Parent pane, double y) {
+        if (slideRootTimeline == null) {
+            slideRootTimeline = new Timeline();
+        } else {
+            slideRootTimeline.stop();
+        }
+
+        slideRootTimeline.getKeyFrames().setAll(
+            new KeyFrame(Duration.millis(VK_SLIDE_MILLIS),
+                         new KeyValue(pane.translateYProperty(), y, Interpolator.EASE_BOTH)));
+        slideRootTimeline.playFromStart();
+    }
+
     private void createKeys() {
         getChildren().clear();
 
         if (fxvk.chars != null) {
-            keyRows = new Control[][] {
-                makeKeyRow((Object[])fxvk.chars)
-            };
+            // Secondary popup
+            int nKeys = fxvk.chars.length;
+            int nRows = (int)Math.floor(Math.sqrt(Math.max(1, nKeys - 2)));
+            int nKeysPerRow = (int)Math.ceil(nKeys / (double)nRows);
+            keyRows = new Control[nRows][];
+            for (int i = 0; i < nRows; i++) {
+                keyRows[i] =
+                    makeKeyRow((Object[])Arrays.copyOfRange(fxvk.chars, i * nKeysPerRow,
+                                                            Math.min((i + 1) * nKeysPerRow, fxvk.chars.length)));
+            }
         } else {
+            // TODO: Move this to a resource bundle.
             keyRows = new Control[][] {
                 makeKeyRow("q 1 [",
                            "w 2 ]",
-                           "e 3 {",
-                           "r 4 }",
-                           "t 5 \\",
-                           "y 6 |",
-                           "u 7 \"",
-                           "i 8 <",
-                           "o 9 >",
-                           "p 0 _"),
-                makeKeyRow("a @ ~",
-                           "s # `",
-                           "d $ \u20ac",
-                           "f % \u00a3",
-                           "g ^ \u00a5",
-                           "h & \u00a7",
-                           "j * \u00b7",
-                           "k ( \u00b0",
-                           "l ) \u2260"),
-                makeKeyRow(shiftKey = new ShiftKey(KEY_WIDTH * 1.5),
-                           "z - \u00a1",
-                           "x = \u00bf",
-                           "c + \u2030",
-                           "v ; \u00ae",
-                           "b : \u2122",
-                           "n / \u00ab",
-                           "m ' \u00bb",
-                           new CommandKey("\u232b", BACK_SPACE, KEY_WIDTH * 1.5)),
-                makeKeyRow(symbolKey = new SymbolKey("!#123 ABC", KEY_WIDTH * 2.5 + (9-4) * hGap / 2),
-                           ", !",
-                           " ",
-                           ". ?",
-                           new CommandKey("\u21b5", ENTER, KEY_WIDTH * 2.5 + (9-4) * hGap / 2))
+                           "e 3 { \u00e8 \u00e9 \u00ea \u00eb", // e 3 { egrave eacute ecircumflex ediaeresis
+                           "r 4 } \u00ae", // r 4 } registered
+                           "t 5 \\ \u2122", // t 5 \ TM
+                           "y 6 | \u1ef3 \u00fd \u0177 \u0233 \u00ff \u1ef7", // y 6 | ygrave yacute ycircumflex ymacron ydiaeresis yhook
+                           "u 7 \" \u00f9 \u00fa \u00fb \u00fc", // u 7 \" ugrave uacute ucircumflex udiaeresis
+                           "i 8 < \u00ec \u00ed \u00ee \u00ef", // i 8 < igrave iacute icircumflex idiaeresis
+                           "o 9 > \u00f2 \u00f3 \u00f4 \u00f5 \u00f6 \u00f8 \u00b0", // o 9 > ograve oacute ocircumflex otilde odiaeresis oslash degree
+                           "p 0 _ \u00a7 \u00b6 \u03c0"),       // p 0 _ paragraph pilcrow pi
+                makeKeyRow("a @ ~ \u00e0 \u00e1 \u00e2 \u00e3 \u00e4 \u00e5", // a @ ~ agrave aacute acircumflex atilde adiaeresis aring
+                           "s # ` \u015f \u0161 \u00df \u03c3", // s # ` scedilla scaron sharps sigma
+                           "d $ \u20ac \u00f0",                 // d $ euro eth
+                           "f % \u00a3",                        // f % sterling
+                           "g ^ \u00a5",                        // g ^ yen
+                           "h & \u00a7",                        // h & paragraph (TODO: use only once)
+                           "j * \u00b7",                        // j * middledot
+                           "k ( \u00b0",                        // k ( degree (TODO: use only once)
+                           "l ) \u2260"),                       // l ) notequalto
+                makeKeyRow(shiftKey = new ShiftKey(keyWidth * 1.5),
+                           "z - \u00a1",                        // z - invertedexclamationmark
+                           "x = \u00bf",                        // x = invertedquestionmark
+                           "c + \u2030 \u00e7 \u00a9 \u00a2",   // c + permille ccedilla copyright cent
+                           "v ; \u00ae",                        // v ; registered (TODO: use only once)
+                           "b : \u2122",                        // b : TM  (TODO: use only once)
+                           "n / \u00ab \u00f1",                 // n / doubleleftangle ntilde
+                           "m ' \u00bb",                        // m ' doublerightangle (add micro)
+                           new CommandKey("\u232b", BACK_SPACE, keyWidth * 1.5)),
+                makeKeyRow(symbolKey = new SymbolKey("!#123 ABC", keyWidth * 2.5 + (9-4) * hGap / 2),
+                           ", !",                               // , !
+                           " ",                                 // space
+                           ". ?",                               // . ?
+                           new CommandKey("\u21b5", ENTER, keyWidth * 2.5 + (9-4) * hGap / 2))
             };
         }
 
@@ -193,13 +315,27 @@ public class FXVKSkin extends SkinBase<FXVK, BehaviorBase<FXVK>> {
         vbox.setFillWidth(true);
         getChildren().add(vbox);
 
+        double primaryFontSize = 16 * keyWidth / PREF_KEY_WIDTH;
+        double secondaryFontSize = 8 * keyWidth / PREF_KEY_WIDTH;
+
         for (Control[] row : keyRows) {
             HBox hbox = new HBox(hGap);
-            hbox.setAlignment(Pos.CENTER);
+            // Primary keyboard has centered keys, secondary has left aligned keys.
+            hbox.setAlignment((fxvk.chars != null) ? Pos.CENTER_LEFT : Pos.CENTER);
             vbox.getChildren().add(hbox);
-            for (Control key : row) {
-                hbox.getChildren().add(key);
-                HBox.setHgrow(key, Priority.ALWAYS);
+            for (Control c : row) {
+                hbox.getChildren().add(c);
+                HBox.setHgrow(c, Priority.ALWAYS);
+                if (c instanceof Key) {
+                    Key key = (Key)c;
+                    if (fxvk.chars != null) {
+                        key.getStyleClass().add("secondary-key");
+                    }
+                    key.setStyle("-fx-font-size: "+primaryFontSize+"px;");
+                    if (key.getGraphic() instanceof Label) {
+                        ((Label)key.getGraphic()).setStyle("-fx-font-size: "+secondaryFontSize+"px;");
+                    }
+                }
             }
         }
     }
@@ -214,7 +350,7 @@ public class FXVKSkin extends SkinBase<FXVK, BehaviorBase<FXVK>> {
         Control[] keyRow = new Control[keyList.size()];
         for (int i = 0; i < keyRow.length; i++) {
             if (keyList.get(i) instanceof String) {
-                keyRow[i] = new Key((String)keyList.get(i));
+                keyRow[i] = new CharKey((String)keyList.get(i));
             } else {
                 keyRow[i] = (Control)keyList.get(i);
             }
@@ -239,20 +375,26 @@ public class FXVKSkin extends SkinBase<FXVK, BehaviorBase<FXVK>> {
         }
         state = newState;
 
-        updateLabels();
+        if (fxvk == secondaryVK) {
+            ((FXVKSkin)primaryVK.getSkin()).updateLabels();
+        } else {
+            updateLabels();
+        }
     }
 
     private void updateLabels() {
         for (Control[] row : keyRows) {
             for (Control button : row) {
-                if (button instanceof Key) {
-                    Key key = (Key)button;
+                if (button instanceof CharKey) {
+                    CharKey key = (CharKey)button;
                     String txt = key.chars[0];
                     String alt = (key.chars.length > 1) ? key.chars[1] : "";
                     if (key.chars.length > 1 && state == State.NUMERIC) {
                         txt = key.chars[1];
                         if (key.chars.length > 2) {
                             alt = key.chars[2];
+                        } else {
+                            alt = "";
                         }
                     } else if (state == State.SHIFTED || state == State.SHIFT_LOCK) {
                         txt = txt.toUpperCase();
@@ -284,15 +426,36 @@ public class FXVKSkin extends SkinBase<FXVK, BehaviorBase<FXVK>> {
         }
     }
 
+
+
     private class Key extends Button {
+        private Key() {
+            this(null);
+        }
+
+        private Key(String text) {
+            super(text);
+
+            getStyleClass().add("key");
+            setFocusTraversable(false);
+
+            setMinHeight(USE_PREF_SIZE);
+            setPrefHeight(keyHeight);
+        }
+
+    }
+
+    private class CharKey extends Key {
         String str;
         String[] chars;
         Label graphic;
-        boolean pendingSecondaryVK = false;
 
         EventHandler<ActionEvent> actionHandler = new EventHandler<ActionEvent>() {
             @Override public void handle(ActionEvent e) {
-if (fxvk != secondaryVK && secondaryPopup != null && secondaryPopup.isShowing()) return;
+                if (fxvk != secondaryVK && secondaryPopup != null && secondaryPopup.isShowing()) {
+                    return;
+                }
+
                 Node target = fxvk.getAttachedNode();
                 if (target instanceof EventTarget) {
                     String txt = getText();
@@ -311,48 +474,36 @@ if (fxvk != secondaryVK && secondaryPopup != null && secondaryPopup.isShowing())
                         toggleShift();
                     }
                 }
-if (fxvk == secondaryVK) {
-    showSecondaryVK(null, fxvk, state);
-}
+
+                if (fxvk == secondaryVK) {
+                    showSecondaryVK(null, fxvk, state);
+                }
             }
         };
 
-        Key(String str) {
+        CharKey(String str) {
             this.str = str;
-            setFocusTraversable(false);
             setOnAction(actionHandler);
 
-            if (fxvk != secondaryVK)
-            setOnMousePressed(new EventHandler<MouseEvent>() {
-                @Override public void handle(MouseEvent event) {
-                    showSecondaryVK(null, fxvk, state);
-                    pendingSecondaryVK = true;
-                    new Thread(new Runnable() {
-                        public void run() {
-                            try {
-                                Thread.sleep(500);
-                            } catch (InterruptedException ex) {
-                                pendingSecondaryVK = false;
-                            }
-                            if (pendingSecondaryVK) {
-                                Platform.runLater(new Runnable() {
-                                    public void run() {
-                                        showSecondaryVK(Key.this, fxvk, state);
-                                    }
-                                });
-                            }
+            if (fxvk != secondaryVK) {
+                setOnMousePressed(new EventHandler<MouseEvent>() {
+                    @Override public void handle(MouseEvent event) {
+                        showSecondaryVK(null, fxvk, state);
+                        if (state != State.NUMERIC || chars.length > 2) {
+                            secondaryVKKey = CharKey.this;
+                            secondaryVKDelay.playFromStart();
+                        } else {
+                            secondaryVKKey = null;
                         }
-                    }).start();
-                }
-            });
+                    }
+                });
 
-            if (fxvk != secondaryVK)
-            setOnMouseReleased(new EventHandler<MouseEvent>() {
-                @Override public void handle(MouseEvent event) {
-                    pendingSecondaryVK = false;
-                }
-            });
-
+                setOnMouseReleased(new EventHandler<MouseEvent>() {
+                    @Override public void handle(MouseEvent event) {
+                        secondaryVKDelay.stop();
+                    }
+                });
+            }
 
             if (str.length() == 1) {
                 chars = new String[] { str };
@@ -361,19 +512,19 @@ if (fxvk == secondaryVK) {
             }
             setContentDisplay(ContentDisplay.RIGHT);
             setText(chars[0]);
-            graphic = new Label((chars.length > 1) ? chars[1] : " ");
-            //graphic.getStyleClass().add("
-            //setGraphicTextGap(KEY_WIDTH - 20);
-            graphic.setPrefWidth(KEY_WIDTH / 2 - 10);
-            graphic.setPrefHeight(KEY_HEIGHT - 6);
-            setGraphic(graphic);
+            if (chars.length > 1) {
+                graphic = new Label((chars.length > 1) ? chars[1] : " ");
+                graphic.setPrefWidth(keyWidth / 2 - 10);
+                graphic.setMinWidth(USE_PREF_SIZE);
+                graphic.setPrefHeight(keyHeight - 6);
+                setGraphic(graphic);
+            }
 
-            setPrefWidth((str == " ") ? KEY_WIDTH * 3 : KEY_WIDTH);
-            setPrefHeight(KEY_HEIGHT);
+            setPrefWidth((str == " ") ? keyWidth * 3 : keyWidth);
         }
     }
 
-    private class CommandKey extends Button {
+    private class CommandKey extends Key {
         KeyCode code;
 
         EventHandler<ActionEvent> actionHandler = new EventHandler<ActionEvent>() {
@@ -396,14 +547,12 @@ if (fxvk == secondaryVK) {
             super(label);
             this.code = code;
             getStyleClass().add("special-key");
-            setFocusTraversable(false);
             setOnAction(actionHandler);
             setPrefWidth(width);
-            setPrefHeight(KEY_HEIGHT);
         }
     }
 
-    private class ShiftKey extends Button {
+    private class ShiftKey extends Key {
         EventHandler<ActionEvent> actionHandler = new EventHandler<ActionEvent>() {
             @Override public void handle(ActionEvent e) {
                 showSecondaryVK(null, null, null);
@@ -417,11 +566,10 @@ if (fxvk == secondaryVK) {
             setFocusTraversable(false);
             setOnAction(actionHandler);
             setPrefWidth(width);
-            setPrefHeight(KEY_HEIGHT);
         }
     }
 
-    private class SymbolKey extends Button {
+    private class SymbolKey extends Key {
         String str;
         String[] chars;
 
@@ -437,7 +585,6 @@ if (fxvk == secondaryVK) {
         SymbolKey(String str, double width) {
             this.str = str;
             getStyleClass().add("special-key");
-            setFocusTraversable(false);
 
             if (str.length() == 1) {
                 chars = new String[] { str };
@@ -448,90 +595,179 @@ if (fxvk == secondaryVK) {
 
             setOnAction(actionHandler);
             setPrefWidth(width);
-            setPrefHeight(KEY_HEIGHT);
         }
     }
 
     @Override public void layoutChildren() {
         double kw, kh;
+        Insets insets = getInsets();
 
         if (fxvk == secondaryVK) {
-            kw = ((FXVKSkin)primaryVK.getSkin()).KEY_WIDTH;
-            kh = ((FXVKSkin)primaryVK.getSkin()).KEY_HEIGHT;
+            kw = ((FXVKSkin)primaryVK.getSkin()).keyWidth;
+            kh = ((FXVKSkin)primaryVK.getSkin()).keyHeight;
         } else {
             kw = (getWidth() / 10) - 2 * hGap;
-            kh = getHeight() / keyRows.length;
+            kh = (getHeight() - insets.getTop() - insets.getBottom() - (keyRows.length - 1) * vGap) / keyRows.length;
         }
 
-        if (KEY_WIDTH != kw || KEY_HEIGHT != kh) {
-            KEY_WIDTH = kw;
-            KEY_HEIGHT = kh;
+        if (keyWidth != kw || keyHeight != kh) {
+            keyWidth = kw;
+            keyHeight = kh;
             createKeys();
         }
 
         super.layoutChildren();
     }
 
-    private static void showSecondaryVK(final Key key, FXVK primVK, State state) {
+    private static void showSecondaryVK(final CharKey key, FXVK primVK, State state) {
         if (key != null) {
             primaryVK = primVK;
             final Node textInput = primaryVK.getAttachedNode();
 
             if (secondaryPopup == null) {
                 secondaryVK = new FXVK();
-                secondaryVK.getStyleClass().add("secondary");
-                if (state == State.NUMERIC) {
-                    secondaryVK.chars = new String[key.chars.length - 1];
-                    System.arraycopy(key.chars, 1, secondaryVK.chars, 0, secondaryVK.chars.length);
-                } else if (state == State.SHIFTED || state == State.SHIFT_LOCK) {
-                    secondaryVK.chars = new String[key.chars.length];
-                    System.arraycopy(key.chars, 0, secondaryVK.chars, 0, secondaryVK.chars.length);
-                    secondaryVK.chars[0] = key.chars[0].toUpperCase();
-                } else {
-                    secondaryVK.chars = key.chars;
-                }
+                secondaryVK.getStyleClass().add("fxvk-secondary");
                 secondaryPopup = new Popup();
                 secondaryPopup.getContent().add(secondaryVK);
-            } else {
-                if (state == State.NUMERIC) {
-                    secondaryVK.chars = new String[key.chars.length - 1];
-                    System.arraycopy(key.chars, 1, secondaryVK.chars, 0, secondaryVK.chars.length);
-                } else if (state == State.SHIFTED || state == State.SHIFT_LOCK) {
-                    secondaryVK.chars = new String[key.chars.length];
-                    System.arraycopy(key.chars, 0, secondaryVK.chars, 0, secondaryVK.chars.length);
-                    secondaryVK.chars[0] = key.chars[0].toUpperCase();
-                } else {
-                    secondaryVK.chars = key.chars;
+            }
+
+            if (state == State.NUMERIC) {
+                ArrayList<String> symbols = new ArrayList<String>();
+                for (String ch : key.chars) {
+                    if (!Character.isLetter(ch.charAt(0))) {
+                        symbols.add(ch);
+                    }
                 }
+                secondaryVK.chars = symbols.toArray(new String[symbols.size()]);
+            } else if (state == State.SHIFTED || state == State.SHIFT_LOCK) {
+                secondaryVK.chars = new String[key.chars.length];
+                System.arraycopy(key.chars, 0, secondaryVK.chars, 0, secondaryVK.chars.length);
+                for (int i = 0; i < secondaryVK.chars.length; i++) {
+                    secondaryVK.chars[i] = key.chars[i].toUpperCase();
+                }
+            } else {
+                secondaryVK.chars = key.chars;
+            }
+
+            if (secondaryVK.getSkin() != null) {
                 ((FXVKSkin)secondaryVK.getSkin()).createKeys();
             }
 
             secondaryVK.setAttachedNode(textInput);
-            double w = key.chars.length * KEY_WIDTH + (key.chars.length - 1) * hGap;
+            FXVKSkin primarySkin = (FXVKSkin)primaryVK.getSkin();
+            Insets insets = primarySkin.getInsets();
+            int nKeys = secondaryVK.chars.length;
+            int nRows = (int)Math.floor(Math.sqrt(Math.max(1, nKeys - 2)));
+            int nKeysPerRow = (int)Math.ceil(nKeys / (double)nRows);
+            final double w = insets.getLeft() + insets.getRight() +
+                             nKeysPerRow * primarySkin.keyWidth + (nKeys - 1) * hGap;
+            final double h = nRows * primarySkin.keyHeight + (nRows-1) * vGap + 5;
             secondaryVK.setPrefWidth(w);
-            secondaryVK.setMaxWidth(w);
-            secondaryVK.setPrefHeight(KEY_HEIGHT);
+            secondaryVK.setMinWidth(USE_PREF_SIZE);
+            secondaryVK.setPrefHeight(h);
+            secondaryVK.setMinHeight(USE_PREF_SIZE);
             Platform.runLater(new Runnable() {
                 public void run() {
+                    // Position popup on screen
                     Point2D nodePoint =
-                        com.sun.javafx.Utils.pointRelativeTo(key,
-//                                       secondaryPopup.getWidth(), secondaryPopup.getHeight(),
-                                      secondaryVK.prefWidth(-1), secondaryVK.prefHeight(-1),
-                                      HPos.CENTER, VPos.TOP, 0, -5, true);
-
-                    Point2D point =
-                        com.sun.javafx.Utils.pointRelativeTo(key.getScene().getRoot(),
-                                      secondaryPopup.getWidth(), secondaryPopup.getHeight(),
-                                      HPos.CENTER, VPos.TOP, 0, 0, true);
-
-                    secondaryPopup.show(key.getScene().getWindow(), nodePoint.getX(), nodePoint.getY());
+                        com.sun.javafx.Utils.pointRelativeTo(key, w, h, HPos.CENTER, VPos.TOP,
+                                                             5, -3, true);
+                    double x = nodePoint.getX();
+                    double y = nodePoint.getY();
+                    Scene scene = key.getScene();
+                    x = Math.min(x, scene.getWindow().getX() + scene.getWidth() - w);
+                    secondaryPopup.show(key.getScene().getWindow(), x, y);
                 }
             });
         } else {
-//             if (secondaryVK != null && secondaryVK.getAttachedNode() == textInput) {
             if (secondaryVK != null) {
                 secondaryVK.setAttachedNode(null);
                 secondaryPopup.hide();
+            }
+        }
+    }
+
+    class NewRootPane extends Pane {
+        double dragStartY;
+
+        NewRootPane(final Region oldRoot) {
+            getChildren().add(oldRoot);
+            prefWidthProperty().bind(oldRoot.prefWidthProperty());
+            prefHeightProperty().bind(oldRoot.prefHeightProperty());
+
+
+            addEventHandler(MOUSE_PRESSED, new EventHandler<MouseEvent>() {
+                @Override public void handle(MouseEvent e) {
+                    dragStartY = e.getY() - oldRoot.getTranslateY();
+                    e.consume();
+                }
+            });
+
+            addEventHandler(MOUSE_DRAGGED, new EventHandler<MouseEvent>() {
+                @Override public void handle(MouseEvent e) {
+                    if (fxvk.isVisible()) {
+                        double y =
+                            Math.min(0, Math.max(e.getY() - dragStartY,
+                                                 fxvk.getLayoutY() - oldRoot.getHeight()));
+                        oldRoot.setTranslateY(y);
+                    }
+                    e.consume();
+                }
+            });
+        }
+
+        @Override protected double computePrefWidth(double height) {
+            return oldRoot.prefWidth(height);
+        }
+
+        @Override protected double computePrefHeight(double width) {
+            return oldRoot.prefHeight(width);
+        }
+
+        @Override public void layoutChildren() {
+            double scale = getWidth() / fxvk.prefWidth(-1);
+            double rootHeight = getHeight();
+            double vkHeight = fxvk.prefHeight(-1) * scale;
+
+            boolean resized = false;
+            if (fxvk.getWidth() != getWidth() || fxvk.getHeight() != vkHeight) {
+                fxvk.resize(getWidth(), vkHeight);
+                resized = true;
+            }
+
+            if (fxvk.getLayoutY() == 0) {
+                fxvk.setLayoutY(rootHeight);
+            }
+
+            slideInTimeline.getKeyFrames().setAll(
+                new KeyFrame(Duration.ZERO,
+                             new KeyValue(fxvk.visibleProperty(), true),
+                             new KeyValue(fxvk.layoutYProperty(), rootHeight)),
+                new KeyFrame(Duration.millis(VK_SLIDE_MILLIS),
+                             new KeyValue(fxvk.visibleProperty(), true),
+                             new KeyValue(fxvk.layoutYProperty(),
+                                          Math.floor(rootHeight - vkHeight),
+                                          Interpolator.EASE_BOTH)));
+
+            slideOutTimeline = new Timeline();
+            slideOutTimeline.getKeyFrames().setAll(
+                new KeyFrame(Duration.ZERO,
+                             new KeyValue(fxvk.layoutYProperty(),
+                                          Math.floor(rootHeight - vkHeight))),
+                new KeyFrame(Duration.millis(VK_SLIDE_MILLIS),
+                             new KeyValue(fxvk.layoutYProperty(),
+                                          rootHeight,
+                                          Interpolator.EASE_BOTH),
+                             new KeyValue(fxvk.visibleProperty(), false)));
+
+            if (fxvk.isVisible()) {
+                if (fxvk.getLayoutY() >= rootHeight) {
+                    slideOutTimeline.stop();
+                    slideInTimeline.playFromStart();
+                } else if (resized && slideInTimeline.getStatus() == Status.STOPPED
+                                   && slideOutTimeline.getStatus() == Status.STOPPED) {
+                    fxvk.setLayoutY(rootHeight - vkHeight);
+                }
             }
         }
     }

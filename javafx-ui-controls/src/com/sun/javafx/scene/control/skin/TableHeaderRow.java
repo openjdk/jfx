@@ -340,7 +340,8 @@ class TableHeaderRow extends StackPane {
         
         if (col.getColumns().isEmpty()) {
             CheckMenuItem item = columnMenuItems.remove(col);
-
+            if (item == null) return;
+            
             item.textProperty().unbind();
             item.selectedProperty().unbindBidirectional(col.visibleProperty());
 
