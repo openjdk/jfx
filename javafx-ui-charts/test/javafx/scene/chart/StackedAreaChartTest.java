@@ -18,6 +18,7 @@ import javafx.scene.Group;
 import javafx.stage.Stage;
 import javafx.scene.shape.*;
 
+import org.junit.Ignore;
 
 
 public class StackedAreaChartTest extends ChartTestBase {
@@ -85,7 +86,7 @@ public class StackedAreaChartTest extends ChartTestBase {
         }
     }
     
-    @Test
+    @Test @Ignore
     public void testDataItemRemove() {
         startApp();
         ac.getData().addAll(series1);
@@ -98,7 +99,7 @@ public class StackedAreaChartTest extends ChartTestBase {
         }
     }
     
-    @Test
+    @Test @Ignore
     public void testDataItemAdd() {
         startApp();
         ac.getData().addAll(series1);
@@ -111,7 +112,7 @@ public class StackedAreaChartTest extends ChartTestBase {
         }
     }
     
-    @Test
+    @Test @Ignore
     public void testDataItemInsert() {
         startApp();
         ac.getData().addAll(series1);
@@ -124,7 +125,7 @@ public class StackedAreaChartTest extends ChartTestBase {
         }
     }
     
-    @Test
+    @Test @Ignore
     public void testDataItemChange() {
         startApp();
         ac.getData().addAll(series1);
