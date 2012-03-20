@@ -275,6 +275,7 @@
               <li><a href="#checkbox">CheckBox</a></li>
               <li><a href="#checkmenuitem">CheckMenuItem</a></li>
               <li><a href="#choicebox">ChoiceBox</a></li>
+              <li><a href="#combobox">ComboBox</a></li>
               <li><a href="#control">Control</a></li>
               <li><a href="#hyperlink">Hyperlink</a></li>
               <li><a href="#indexedcell">IndexedCell</a></li>
@@ -3015,6 +3016,8 @@
         </tr>
       </tbody>
     </table>
+    <h4>Substructure</h4>
+    <ul><li>text - a Labeled</li></ul>
     <h4><a name="checkbox" id="checkbox">CheckBox</a></h4>
     <p class="styleclass">Style class: check-box</p>
     <p>The CheckBox control has all the properties of <a href="#buttonbase">ButtonBase</a></p>
@@ -3080,6 +3083,56 @@
         </ul>
       </li>
     </ul>
+    <h4><a name="combobox" id="combobox">ComboBox</a></h4>
+    <p class="styleclass">Style class: combo-box</p>
+    <p>The ComboBox control has all the properties and pseudo-classes of <a href="#comboboxbase">ComboBoxBase</a></p>
+    <h4>Substructure</h4>
+    <ul>
+      <li>list-cell - a ListCell instance used to show the selection in the button area of a non-editable ComboBox</li> 
+      <li>text-input — a TextField instance used to show the selection and allow input in the button area of an editable ComboBox</li>
+      <li>combo-box-popup - a PopupControl that is displayed when the button is pressed
+        <ul>
+          <li>list-view - a ListView</li>
+          <ul>
+          <li>list-cell - a ListCell</li>
+          </ul>
+          </li>
+        </ul>
+      </li>  
+    </ul>
+    <h4><a name="comboboxbase" id="comboboxbase">ComboBoxBase</a></h4>
+        <p class="styleclass">Style class: combo-box-base</p>
+    <p>The ComboBoxBase control has all the properties of <a href="#control">Control</a></p>
+    <h4>Substructure</h4>
+    <ul>
+      <li>arrow-button — a StackPane
+        <ul>
+          <li>arrow — a StackPane </li>
+        </ul>
+      </li>
+    </ul>    
+    <table summary="property table" class="csspropertytable" cellpadding="2" cellspacing="1">
+      <thead>
+        <tr>
+          <th class="propertyname">CSS Pseudo-class</th>
+          <th>Comments</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td class="propertyname">editable</td>
+          <td>applies when the <strong>editable </strong>variable is true</td>
+        </tr>
+        <tr>
+          <td class="propertyname">showing</td>
+          <td>applies when the <strong>showing </strong>variable is true</td>
+        </tr>
+        <tr>
+          <td class="propertyname">armed</td>
+          <td>applies when the <strong>armed </strong>variable is true</td>
+        </tr>
+      </tbody>
+    </table>
     <h4><a name="control" id="control">Control</a></h4>
     <p>The Control class has all the properties of <a href="#parent">Parent</a></p>
     <table summary="property table" class="csspropertytable" cellpadding="2" cellspacing="1">
@@ -3368,6 +3421,27 @@
     <h4><a name="passwordfield" id="passwordfield">PasswordField</a></h4>
     <p class="styleclass">Style class: password-field</p>
     <p>The PasswordField control has all the properties of <a href="#textfield">TextField</a></p>
+    <h4><a name="popupcontrol" id="popupcontrol">PopupControl</a></h4>
+    <table summary="property table" class="csspropertytable" cellpadding="2" cellspacing="1">
+      <thead>
+        <tr>
+          <th class="propertyname">CSS Property</th>
+          <th class="value">Values</th>
+          <th>Default</th>
+          <th>Comments</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td class="propertyname">-fx-skin</td>
+          <td class="value"><a href="#string" class="typelink">&lt;the fully qualified class name of the Skin&gt;</a></td>
+          <td>null</td>
+          <td>&nbsp;</td>
+        </tr>
+        <tr>
+          <td>The PopupControl is a PopupWindow and does not have any other CSS properties</td>
+        </tr>
+      </tbody>
     <h4><a name="progressbar" id="progressbar">ProgressBar</a></h4>
     <p class="styleclass">Style class: progress-bar</p>
     <p>The ProgressBar control has all the properties of and pseudo-class state
