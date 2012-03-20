@@ -3364,19 +3364,26 @@ public class Scene implements EventTarget {
         private void setFocusOwner(Node value) {
             Node oldFocusOwner = focusOwner;
             if (oldFocusOwner != null) {
-                oldFocusOwner.setFocused(false);
+                ((Node.FocusedProperty) oldFocusOwner.focusedProperty()).store(false);
             }
             focusOwner = value;
 
             Scene.this.setImpl_focusOwner(focusOwner);// = Scene{ impl_focusOwner = bind keyHandler.focusOwner };
 
             if (focusOwner != null) {
-                focusOwner.setFocused(windowFocused);
+                ((Node.FocusedProperty) focusOwner.focusedProperty()).store(windowFocused);
                 if (focusOwner != oldFocusOwner) {
                     focusOwner.getScene().impl_enableInputMethodEvents(
                         focusOwner.getInputMethodRequests() != null &&
                         focusOwner.getOnInputMethodTextChanged() != null);
                 }
+            }
+
+            if (oldFocusOwner != null) {
+                ((Node.FocusedProperty) oldFocusOwner.focusedProperty()).notifyListeners();
+            }
+            if (focusOwner != null) {
+                ((Node.FocusedProperty) focusOwner.focusedProperty()).notifyListeners();
             }
 
             PlatformLogger logger = Logging.getFocusLogger();
