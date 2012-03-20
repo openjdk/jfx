@@ -1090,7 +1090,7 @@ public abstract class Parent extends Node {
      * @deprecated This is an internal API that is not intended for use and will be removed in the next version
      */
     @Deprecated
-    public final List<String> impl_getAllParentStylesheets() {
+    public /* Do not make this final! */ List<String> impl_getAllParentStylesheets() {
         
         List<String> list = null;
         final Parent myParent = getParent();
