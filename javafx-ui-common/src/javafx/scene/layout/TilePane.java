@@ -143,7 +143,7 @@ import javafx.scene.Node;
  * <p>
  * TilePane does not clip its content by default, so it is possible that childrens'
  * bounds may extend outside the tiles (and possibly the tilepane bounds) if a
- * child's min size prevents it from being fit within its tile. Also, if the tilepane
+ * child's pref size prevents it from being fit within its tile. Also, if the tilepane
  * is resized smaller than its preferred size, it may not be able to fit all the
  * tiles within its bounds and the content will extend outside.
  *
