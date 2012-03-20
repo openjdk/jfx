@@ -205,7 +205,7 @@ public class Window implements EventTarget {
             }
 
             peerBoundsConfigurator.setSize(w, h, cw, ch);
-            peerBoundsConfigurator.apply();
+            applyBounds();
         }
     }
 
@@ -720,8 +720,8 @@ public class Window implements EventTarget {
                         peerBoundsConfigurator.setLocation(getX(), getY());
                     }
 
-                    // set bounds before the window is shown
-                    peerBoundsConfigurator.apply();
+                    // set peer bounds before the window is shown
+                    applyBounds();
 
                     impl_peer.setOpacity((float)getOpacity());
 
@@ -1006,6 +1006,10 @@ public class Window implements EventTarget {
         }
     }
 
+    final void applyBounds() {
+        peerBoundsConfigurator.apply();
+    }
+    
     /**
      * Caches all requested bounds settings and applies them at once during
      * the next pulse.
