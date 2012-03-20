@@ -80,7 +80,7 @@ import javafx.beans.property.*;
  * depending on borders. It can be made into any shape by specifying the {@code shape}.
  * It is designed to support as much of the CSS3 specification for backgrounds
  * and borders as is relevant to JavaFX. The full specification is available at
- * http://www.w3.org/TR/css3-background/.
+ * <a href="http://www.w3.org/TR/css3-background/">css3-background</a>.
  * <p>
  * By default a Region inherits the layout behavior of its superclass, {@link Parent},
  * which means that it will resize any resizable child nodes to their preferred
@@ -90,32 +90,33 @@ import javafx.beans.property.*;
  * {@link BorderPane}, {@link GridPane}, or {@link AnchorPane}.
  * <p>
  * To implement more custom layout, a Region subclass must override
- * {@code computePrefWidth()}, {@code computePrefHeight()}, and {@code layoutChildren()}.
- * Note that {@code layoutChildren} is called automatically by the scene graph while
+ * {@link #computePrefWidth(double) computePrefWidth}, {@link #computePrefHeight(double) computePrefHeight}, and {@link #layoutChildren() layoutChildren}.
+ * Note that {@link #layoutChildren() layoutChildren} is called automatically by the scene graph while
  * executing a top-down layout pass and it should not be invoked directly by the
  * region subclass.
  * <p>
  * Region subclasses which layout their children will position nodes by setting
- * {@code layoutX}/{@code layoutY} and do not alter
- * {@code translateX}/{@code translateY}, which are reserved for
+ * {@link setLayoutX(double) layoutX}/{@link setLayoutY(double) layoutY} and do not alter
+ * {@link setTranslateX(double) translateX}/{@link setTranslateY(double) translateY}, which are reserved for
  * adjustments and animation.
  *
  */
 public class Region extends Parent {
 
     /**
-     * Sentinel value which can be passed to a region's setMinWidth(), setMinHeight(),
-     * setMaxWidth() or setMaxHeight() methods to indicate that the preferred dimension
+     * Sentinel value which can be passed to a region's {@link #setMinWidth(double) setMinWidth}, {@link #setMinHeight(double) setMinHeight},
+     * {@link #setMaxWidth(double) setMaxWidth} or {@link #setMaxHeight(double) setMaxHeight} methods to indicate that the preferred dimension
      * should be used for that max and/or min constraint.
      */
      public static final double USE_PREF_SIZE = Double.NEGATIVE_INFINITY;
 
      /**
-      * Sentinel value which can be passed to a region's setMinWidth(), setMinHeight(),
-      * setPrefWidth(), setPrefHeight(), setMaxWidth(), setMaxHeight() methods
+      * Sentinel value which can be passed to a region's {@link #setMinWidth(double) setMinWidth}, {@link #setMinHeight(double) setMinHeight},
+      * {@link #setPrefWidth(double) setPrefWidth}, {@link #setPrefHeight(double) setPrefHeight}, {@link #setMaxWidth(double) setMaxWidth}, {@link #setMaxHeight(double) setMaxHeight} methods
       * to reset the region's size constraint back to it's intrinsic size returned
-      * by computeMinWidth(), computeMinHeight(), computePrefWidth(), computePrefHeight(),
-      * computeMaxWidth(), or computeMaxHeight().
+      * by {@link #computeMinWidth(double) computeMinWidth}, {@link #computeMinHeight(double) computeMinHeight}, 
+      * {@link #computePrefWidth(double) computePrefWidth}, {@link #computePrefHeight(double) computePrefHeight},
+      * {@link #computeMaxWidth(double) computeMaxWidth}, or {@link #computeMaxHeight(double) computeMaxHeight}.
       */
      public static final double USE_COMPUTED_SIZE = -1;
 
