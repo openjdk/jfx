@@ -25,6 +25,7 @@
 package javafx.scene.input;
 
 import com.sun.javafx.pgstub.StubScene;
+import com.sun.javafx.test.MouseEventGenerator;
 import javafx.event.EventHandler;
 import javafx.scene.Group;
 import javafx.scene.Scene;
@@ -36,6 +37,7 @@ import static org.junit.Assert.*;
 public class ScrollEventTest {
 
     private boolean scrolled;
+    private boolean scrolled2;
     
     @Test
     public void shouldDeliverScrollEventToPickedNode() {
@@ -51,12 +53,14 @@ public class ScrollEventTest {
         });
         
         ((StubScene) scene.impl_getPeer()).getListener().scrollEvent(
-                1, 1, 1, 1, 1, 1, 1, 1, 50, 50, 50, 50, false, false, false, false);
+                ScrollEvent.SCROLL, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+                50, 50, 50, 50, false, false, false, false, false, false);
         
         assertFalse(scrolled);
 
         ((StubScene) scene.impl_getPeer()).getListener().scrollEvent(
-                1, 1, 1, 1, 1, 1, 1, 1, 150, 150, 150, 150, false, false, false, false);
+                ScrollEvent.SCROLL, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+                150, 150, 150, 150, false, false, false, false, false, false);
         
         assertTrue(scrolled);
     }
@@ -72,12 +76,15 @@ public class ScrollEventTest {
             @Override public void handle(ScrollEvent event) {
                 assertEquals(66.0, event.getDeltaX(), 0.0001);
                 assertEquals(99.0, event.getDeltaY(), 0.0001);
+                assertEquals(132.0, event.getTotalDeltaX(), 0.0001);
+                assertEquals(198.0, event.getTotalDeltaY(), 0.0001);
                 scrolled = true;
             }
         });
         
         ((StubScene) scene.impl_getPeer()).getListener().scrollEvent(
-                2, 3, 33, 33, 1, 1, 1, 1, 150, 150, 150, 150, false, false, false, false);
+                ScrollEvent.SCROLL, 2, 3, 4, 6, 33, 33, 1, 1, 1, 1, 1,
+                150, 150, 150, 150, false, false, false, false, false, false);
         
         assertTrue(scrolled);
     }
@@ -99,7 +106,8 @@ public class ScrollEventTest {
             }
         });
         ((StubScene) scene.impl_getPeer()).getListener().scrollEvent(
-                2, 3, 33, 33, 0, 0, 0, 0, 150, 150, 150, 150, false, false, false, false);
+                ScrollEvent.SCROLL, 2, 3, 4, 6, 33, 33, 0, 0, 0, 0, 0,
+                150, 150, 150, 150, false, false, false, false, false, false);
         assertTrue(scrolled);
 
         scrolled = false;
@@ -113,7 +121,8 @@ public class ScrollEventTest {
             }
         });
         ((StubScene) scene.impl_getPeer()).getListener().scrollEvent(
-                2, 3, 33, 33, 4, 5, 3, 3, 150, 150, 150, 150, false, false, false, false);
+                ScrollEvent.SCROLL, 2, 3, 4, 6, 33, 33, 1, 4, 5, 3, 3,
+                150, 150, 150, 150, false, false, false, false, false, false);
         assertTrue(scrolled);
         
         scrolled = false;
@@ -127,7 +136,8 @@ public class ScrollEventTest {
             }
         });
         ((StubScene) scene.impl_getPeer()).getListener().scrollEvent(
-                2, 3, 33, 33, -1, -1, 3, 3, 150, 150, 150, 150, false, false, false, false);
+                ScrollEvent.SCROLL, 2, 3, 4, 6, 33, 33, 5, -1, -1, 3, 3,
+                150, 150, 150, 150, false, false, false, false, false, false);
         assertTrue(scrolled);
         
     }
@@ -149,7 +159,8 @@ public class ScrollEventTest {
             }
         });
         ((StubScene) scene.impl_getPeer()).getListener().scrollEvent(
-                2, 3, 33, 33, 1, 1, 3, 3, 150, 150, 150, 150, true, false, true, false);
+                ScrollEvent.SCROLL, 2, 3, 4, 6, 33, 33, 1, 1, 1, 3, 3,
+                150, 150, 150, 150, true, false, true, false, false, false);
         assertTrue(scrolled);
 
         scrolled = false;
@@ -163,18 +174,318 @@ public class ScrollEventTest {
             }
         });
         ((StubScene) scene.impl_getPeer()).getListener().scrollEvent(
-                2, 3, 33, 33, 1, 1, 3, 3, 150, 150, 150, 150, false, true, false, true);
+                ScrollEvent.SCROLL, 2, 3, 4, 6, 33, 33, 1, 1, 1, 3, 3,
+                150, 150, 150, 150, false, true, false, true, false, false);
+        assertTrue(scrolled);
+    }
+
+    @Test
+    public void shouldPassDirect() {
+        Scene scene = createScene();
+        Rectangle rect =
+                (Rectangle) scene.getRoot().getChildrenUnmodifiable().get(0);
+
+        scrolled = false;
+        rect.setOnScroll(new EventHandler<ScrollEvent>() {
+            @Override public void handle(ScrollEvent event) {
+                assertTrue(event.isDirect());
+                scrolled = true;
+            }
+        });
+        ((StubScene) scene.impl_getPeer()).getListener().scrollEvent(
+                ScrollEvent.SCROLL, 2, 3, 4, 6, 33, 33, 1, 1, 1, 3, 3,
+                150, 150, 150, 150, true, false, true, false, true, false);
+        assertTrue(scrolled);
+
+        scrolled = false;
+        rect.setOnScroll(new EventHandler<ScrollEvent>() {
+            @Override public void handle(ScrollEvent event) {
+                assertFalse(event.isDirect());
+                scrolled = true;
+            }
+        });
+        ((StubScene) scene.impl_getPeer()).getListener().scrollEvent(
+                ScrollEvent.SCROLL, 2, 3, 4, 6, 33, 33, 1, 1, 1, 3, 3,
+                150, 150, 150, 150, false, true, false, true, false, false);
+        assertTrue(scrolled);
+    }
+
+    @Test
+    public void shouldPassInertia() {
+        Scene scene = createScene();
+        Rectangle rect =
+                (Rectangle) scene.getRoot().getChildrenUnmodifiable().get(0);
+
+        scrolled = false;
+        rect.setOnScroll(new EventHandler<ScrollEvent>() {
+            @Override public void handle(ScrollEvent event) {
+                assertTrue(event.isInertia());
+                scrolled = true;
+            }
+        });
+        ((StubScene) scene.impl_getPeer()).getListener().scrollEvent(
+                ScrollEvent.SCROLL, 2, 3, 4, 6, 33, 33, 1, 1, 1, 3, 3,
+                150, 150, 150, 150, true, false, true, false, false, true);
+        assertTrue(scrolled);
+
+        scrolled = false;
+        rect.setOnScroll(new EventHandler<ScrollEvent>() {
+            @Override public void handle(ScrollEvent event) {
+                assertFalse(event.isInertia());
+                scrolled = true;
+            }
+        });
+        ((StubScene) scene.impl_getPeer()).getListener().scrollEvent(
+                ScrollEvent.SCROLL, 2, 3, 4, 6, 33, 33, 1, 1, 1, 3, 3,
+                150, 150, 150, 150, false, true, false, true, false, false);
+        assertTrue(scrolled);
+    }
+
+    @Test
+    public void shouldPassTouchCount() {
+        Scene scene = createScene();
+        Rectangle rect =
+                (Rectangle) scene.getRoot().getChildrenUnmodifiable().get(0);
+
+        scrolled = false;
+        rect.setOnScroll(new EventHandler<ScrollEvent>() {
+            @Override public void handle(ScrollEvent event) {
+                assertEquals(0, event.getTouchCount());
+                scrolled = true;
+            }
+        });
+        ((StubScene) scene.impl_getPeer()).getListener().scrollEvent(
+                ScrollEvent.SCROLL, 2, 3, 4, 6, 33, 33, 0, 1, 1, 3, 3,
+                150, 150, 150, 150, true, false, true, false, true, false);
+        assertTrue(scrolled);
+
+        scrolled = false;
+        rect.setOnScroll(new EventHandler<ScrollEvent>() {
+            @Override public void handle(ScrollEvent event) {
+                assertEquals(5, event.getTouchCount());
+                scrolled = true;
+            }
+        });
+        ((StubScene) scene.impl_getPeer()).getListener().scrollEvent(
+                ScrollEvent.SCROLL, 2, 3, 4, 6, 33, 33, 5, 1, 1, 3, 3,
+                150, 150, 150, 150, true, false, true, false, true, false);
         assertTrue(scrolled);
     }
     
+    @Test
+    public void shouldPassEventType() {
+        Scene scene = createScene();
+        Rectangle rect =
+                (Rectangle) scene.getRoot().getChildrenUnmodifiable().get(0);
+
+        scrolled = false;
+        rect.setOnScrollStarted(new EventHandler<ScrollEvent>() {
+            @Override public void handle(ScrollEvent event) {
+                scrolled = true;
+            }
+        });
+        ((StubScene) scene.impl_getPeer()).getListener().scrollEvent(
+                ScrollEvent.SCROLL_STARTED, 2, 3, 4, 6, 33, 33, 0, 1, 1, 3, 3,
+                150, 150, 150, 150, true, false, true, false, true, false);
+        assertTrue(scrolled);
+
+        scrolled = false;
+        rect.setOnScrollFinished(new EventHandler<ScrollEvent>() {
+            @Override public void handle(ScrollEvent event) {
+                scrolled = true;
+            }
+        });
+        ((StubScene) scene.impl_getPeer()).getListener().scrollEvent(
+                ScrollEvent.SCROLL_FINISHED, 2, 3, 4, 6, 33, 33, 5, 1, 1, 3, 3,
+                150, 150, 150, 150, true, false, true, false, true, false);
+        assertTrue(scrolled);
+    }
+
+    @Test
+    public void handlingAnyShouldGetAllTypes() {
+        Scene scene = createScene();
+        Rectangle rect =
+                (Rectangle) scene.getRoot().getChildrenUnmodifiable().get(0);
+
+        rect.addEventHandler(ScrollEvent.ANY, new EventHandler<ScrollEvent>() {
+            @Override public void handle(ScrollEvent event) {
+                scrolled = true;
+            }
+        });
+
+        scrolled = false;
+        ((StubScene) scene.impl_getPeer()).getListener().scrollEvent(
+                ScrollEvent.SCROLL_STARTED, 2, 3, 4, 6, 33, 33, 0, 1, 1, 3, 3,
+                150, 150, 150, 150, true, false, true, false, true, false);
+        assertTrue(scrolled);
+
+        scrolled = false;
+        ((StubScene) scene.impl_getPeer()).getListener().scrollEvent(
+                ScrollEvent.SCROLL, 2, 3, 4, 6, 33, 33, 5, 1, 1, 3, 3,
+                150, 150, 150, 150, true, false, true, false, true, false);
+        assertTrue(scrolled);
+
+        scrolled = false;
+        ((StubScene) scene.impl_getPeer()).getListener().scrollEvent(
+                ScrollEvent.SCROLL_FINISHED, 2, 3, 4, 6, 33, 33, 5, 1, 1, 3, 3,
+                150, 150, 150, 150, true, false, true, false, true, false);
+        assertTrue(scrolled);
+    }
+
+    @Test
+    public void shouldDeliverWholeGestureToOneNode() {
+        Scene scene = createScene();
+        Rectangle rect1 =
+                (Rectangle) scene.getRoot().getChildrenUnmodifiable().get(0);
+        Rectangle rect2 =
+                (Rectangle) scene.getRoot().getChildrenUnmodifiable().get(1);
+
+        rect1.addEventHandler(ScrollEvent.ANY, new EventHandler<ScrollEvent>() {
+            @Override public void handle(ScrollEvent event) {
+                scrolled = true;
+            }
+        });
+        rect2.addEventHandler(ScrollEvent.ANY, new EventHandler<ScrollEvent>() {
+            @Override public void handle(ScrollEvent event) {
+                scrolled2 = true;
+            }
+        });
+
+        scrolled = false;
+        scrolled2 = false;
+        ((StubScene) scene.impl_getPeer()).getListener().scrollEvent(
+                ScrollEvent.SCROLL_STARTED, 2, 3, 4, 6, 33, 33, 0, 1, 1, 3, 3,
+                150, 150, 150, 150, true, false, true, false, true, false);
+        assertTrue(scrolled);
+        assertFalse(scrolled2);
+
+        scrolled = false;
+        scrolled2 = false;
+        ((StubScene) scene.impl_getPeer()).getListener().scrollEvent(
+                ScrollEvent.SCROLL, 2, 3, 4, 6, 33, 33, 0, 1, 1, 3, 3,
+                250, 250, 250, 250, true, false, true, false, true, false);
+        assertTrue(scrolled);
+        assertFalse(scrolled2);
+
+        scrolled = false;
+        scrolled2 = false;
+        ((StubScene) scene.impl_getPeer()).getListener().scrollEvent(
+                ScrollEvent.SCROLL_FINISHED, 2, 3, 4, 6, 33, 33, 0, 1, 1, 3, 3,
+                250, 250, 250, 250, true, false, true, false, true, false);
+        assertTrue(scrolled);
+        assertFalse(scrolled2);
+    }
+
+    @Test
+    public void unknownLocationShouldBeReplacedByMouseLocation() {
+        Scene scene = createScene();
+        Rectangle rect1 =
+                (Rectangle) scene.getRoot().getChildrenUnmodifiable().get(0);
+        Rectangle rect2 =
+                (Rectangle) scene.getRoot().getChildrenUnmodifiable().get(1);
+        rect1.addEventHandler(ScrollEvent.ANY, new EventHandler<ScrollEvent>() {
+            @Override public void handle(ScrollEvent event) {
+                scrolled = true;
+            }
+        });
+
+        MouseEventGenerator generator = new MouseEventGenerator();
+
+        scrolled = false;
+        scrolled2 = false;
+        rect2.setOnScrollStarted(new EventHandler<ScrollEvent>() {
+            @Override public void handle(ScrollEvent event) {
+                assertEquals(250.0, event.getSceneX(), 0.0001);
+                assertEquals(250.0, event.getSceneY(), 0.0001);
+                scrolled2 = true;
+            }
+        });
+        scene.impl_processMouseEvent(generator.generateMouseEvent(
+                MouseEvent.MOUSE_MOVED, 250, 250));
+        ((StubScene) scene.impl_getPeer()).getListener().scrollEvent(
+                ScrollEvent.SCROLL_STARTED, 2, 3, 4, 6, 33, 33, 0, 1, 1, 3, 3,
+                Double.NaN, Double.NaN, Double.NaN, Double.NaN,
+                true, false, true, false, true, false);
+        assertFalse(scrolled);
+        assertTrue(scrolled2);
+
+        scrolled = false;
+        scrolled2 = false;
+        rect2.setOnScroll(new EventHandler<ScrollEvent>() {
+            @Override public void handle(ScrollEvent event) {
+                assertEquals(150.0, event.getSceneX(), 0.0001);
+                assertEquals(150.0, event.getSceneY(), 0.0001);
+                scrolled2 = true;
+            }
+        });
+        scene.impl_processMouseEvent(generator.generateMouseEvent(
+                MouseEvent.MOUSE_MOVED, 150, 150));
+        ((StubScene) scene.impl_getPeer()).getListener().scrollEvent(
+                ScrollEvent.SCROLL, 2, 3, 4, 6, 33, 33, 0, 1, 1, 3, 3,
+                Double.NaN, Double.NaN, Double.NaN, Double.NaN,
+                true, false, true, false, true, false);
+        assertFalse(scrolled);
+        assertTrue(scrolled2);
+
+        scrolled = false;
+        scrolled2 = false;
+        rect2.setOnScrollFinished(new EventHandler<ScrollEvent>() {
+            @Override public void handle(ScrollEvent event) {
+                assertEquals(150.0, event.getSceneX(), 0.0001);
+                assertEquals(150.0, event.getSceneY(), 0.0001);
+                scrolled2 = true;
+            }
+        });
+        ((StubScene) scene.impl_getPeer()).getListener().scrollEvent(
+                ScrollEvent.SCROLL_FINISHED, 2, 3, 4, 6, 33, 33, 0, 1, 1, 3, 3,
+                Double.NaN, Double.NaN, Double.NaN, Double.NaN,
+                true, false, true, false, true, false);
+        assertFalse(scrolled);
+        assertTrue(scrolled2);
+    }
+
+    @Test
+    public void finishedLocationShouldBeFixed() {
+        Scene scene = createScene();
+        Rectangle rect =
+                (Rectangle) scene.getRoot().getChildrenUnmodifiable().get(0);
+        rect.setOnScrollFinished(new EventHandler<ScrollEvent>() {
+            @Override public void handle(ScrollEvent event) {
+                assertEquals(250.0, event.getSceneX(), 0.0001);
+                assertEquals(250.0, event.getSceneY(), 0.0001);
+                scrolled = true;
+            }
+        });
+
+        scrolled = false;
+
+        ((StubScene) scene.impl_getPeer()).getListener().scrollEvent(
+                ScrollEvent.SCROLL_STARTED, 2, 3, 4, 6, 33, 33, 0, 1, 1, 3, 3,
+                150, 150, 150, 150, true, false, true, false, true, false);
+
+        ((StubScene) scene.impl_getPeer()).getListener().scrollEvent(
+                ScrollEvent.SCROLL, 2, 3, 4, 6, 33, 33, 0, 1, 1, 3, 3,
+                250, 250, 250, 250, true, false, true, false, true, false);
+
+        assertFalse(scrolled);
+
+        ((StubScene) scene.impl_getPeer()).getListener().scrollEvent(
+                ScrollEvent.SCROLL_FINISHED, 2, 3, 4, 6, 33, 33, 0, 1, 1, 3, 3,
+                Double.NaN, Double.NaN, Double.NaN, Double.NaN,
+                true, false, true, false, true, false);
+
+        assertTrue(scrolled);
+    }
+
     private Scene createScene() {
         final Group root = new Group();
         
         final Scene scene = new Scene(root, 400, 400);
 
         Rectangle rect = new Rectangle(100, 100, 100, 100);
+        Rectangle rect2 = new Rectangle(200, 200, 100, 100);
 
-        root.getChildren().add(rect);
+        root.getChildren().addAll(rect, rect2);
 
         Stage stage = new Stage();
         stage.setScene(scene);

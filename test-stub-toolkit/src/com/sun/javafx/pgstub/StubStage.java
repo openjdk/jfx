@@ -160,10 +160,12 @@ public class StubStage implements TKStage {
 
     @Override
     public void setIconified(boolean iconified) {
+        notificationSender.changedIconified(iconified);
     }
 
     @Override
     public void setResizable(boolean resizable) {
+        notificationSender.changedResizable(resizable);
     }
 
     @Override
@@ -176,6 +178,7 @@ public class StubStage implements TKStage {
 
     @Override
     public void setFullScreen(boolean fullScreen) {
+        notificationSender.changedFullscreen(fullScreen);
     }
 
     @Override
@@ -225,6 +228,10 @@ public class StubStage implements TKStage {
         notificationSender.releaseNotifications();
     }
 
+    public void releaseSingleNotification() {
+        notificationSender.releaseSingleNotification();
+    }
+
     protected final TKStageListener getNotificationSender() {
         return notificationSender;
     }
@@ -251,6 +258,10 @@ public class StubStage implements TKStage {
         public void releaseNotifications() {
             hold = false;
             flush();
+        }
+
+        private void releaseSingleNotification() {
+            queue.poll().execute(listener);
         }
 
         @Override
