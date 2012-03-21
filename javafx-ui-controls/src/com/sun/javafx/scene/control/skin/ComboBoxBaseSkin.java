@@ -180,16 +180,19 @@ public abstract class ComboBoxBaseSkin<T> extends SkinBase<ComboBoxBase<T>, Comb
             updateDisplayArea();
         }
 
+        double ph;
         if (displayNode == null) {
             final int DEFAULT_HEIGHT = 21;
-            final Insets padding = getInsets();
             final Insets arrowButtonPadding = arrowButton.getInsets();
             double arrowHeight = (isButton()) ? 0 : 
                     (arrowButtonPadding.getTop() + arrow.prefHeight(-1) + arrowButtonPadding.getBottom());
-            return padding.getTop() + Math.max(DEFAULT_HEIGHT, arrowHeight) + padding.getBottom();
+            ph = Math.max(DEFAULT_HEIGHT, arrowHeight);
         } else {
-            return padding.getTop()+ displayNode.prefHeight(width) + padding.getBottom();
+            ph = displayNode.prefHeight(width);
         }
+
+        final Insets padding = getInsets();
+        return padding.getTop()+ ph + padding.getBottom();
     }
 
     @Override protected double computeMaxWidth(double height) {
