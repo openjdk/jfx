@@ -75,15 +75,8 @@ import javafx.util.Callback;
 public class PaginationSkin<T> extends SkinBase<Pagination<T>, PaginationBehavior<T>>  {
 
     private Pagination<T> pagination;
-    private PaginationListView<T> paginationListView;
-    private ObservableList<T> pages;
-    private final ListChangeListener pageListener = new ListChangeListener() {
-        @Override public void onChanged(ListChangeListener.Change c) {
-            requestLayout();
-        }
-    };
-    private final WeakListChangeListener weakPageListener =
-            new WeakListChangeListener(pageListener);
+    private PaginationListView<T> paginationListView;    
+    private ObservableList dummyListViewItems;
 
     private Rectangle clipRect;
 
@@ -102,18 +95,15 @@ public class PaginationSkin<T> extends SkinBase<Pagination<T>, PaginationBehavio
         setManaged(false);
         clipRect = new Rectangle();
         setClip(clipRect);
-
+        
         this.pagination = pagination;
-        pagination.getSelectionModel().selectFirst();
-
-        this.paginationListView = createListView();
+        this.paginationListView = new PaginationListView<T>();                
         updateListViewItems();
         updateCellFactory();
-        paginationListView.setOrientation(Orientation.HORIZONTAL);
-
         resetIndexes();
-        navigation = new NavigationControl();
-
+                
+        this.navigation = new NavigationControl();        
+        
         getChildren().addAll(paginationListView, navigation);
 
         pagination.numberOfVisiblePagesProperty().addListener(new InvalidationListener() {
@@ -125,76 +115,94 @@ public class PaginationSkin<T> extends SkinBase<Pagination<T>, PaginationBehavio
                 getChildren().add(navigation);
             }
         });
+        
+        registerChangeListener(pagination.itemsPerPageProperty(), "ITEMS_PER_PAGE");
+        registerChangeListener(pagination.numberOfItemsProperty(), "NUMBER_OF_ITEMS");
+        registerChangeListener(pagination.pageIndexProperty(), "PAGE_INDEX");
+        registerChangeListener(pagination.pageFactoryProperty(), "PAGE_FACTORY");
     }
 
     private void resetIndexes() {
         numberOfVisiblePages = getSkinnable().getNumberOfVisiblePages();
-        totalNumberOfPages = pages.size();
+        totalNumberOfPages = totalNumberOfPages();
         numberOfPages = totalNumberOfPages;
         if (totalNumberOfPages > numberOfVisiblePages) {
             numberOfPages = numberOfVisiblePages;
         }
 
-        fromIndex = 0;
+        fromIndex = 0;        
         previousIndex = 0;
-        currentIndex = 0;
+        currentIndex = getSkinnable().getPageIndex();
         toIndex = numberOfPages - 1;
+        paginationListView.getSelectionModel().select(currentIndex);
     }
 
-    private PaginationListView<T> createListView() {
-        return new PaginationListView<T>();
+    private void updateListViewItems() {        
+        if (dummyListViewItems == null) {
+            dummyListViewItems = FXCollections.observableArrayList();
+        } else {
+            dummyListViewItems.removeListener(weakListViewItemsListener);
+        }
+
+        for (int i = 0; i < totalNumberOfPages(); i++) {
+            dummyListViewItems.add(i);
+        }
+        paginationListView.setItems(null);
+        paginationListView.setItems(dummyListViewItems);
+
+        if (dummyListViewItems != null) {
+            dummyListViewItems.addListener(weakListViewItemsListener);
+        }
+        requestLayout();
     }
 
-    private void updateCellFactory() {
-        Callback<ListView<T>, ListCell<T>> cf = pagination.getCellFactory();
-        paginationListView.setCellFactory(cf != null ? cf : getDefaultCellFactory());
+    private final ListChangeListener listViewItemsListener = new ListChangeListener() {
+        @Override public void onChanged(ListChangeListener.Change c) {
+            requestLayout();
+        }
+    };
+
+    private final WeakListChangeListener weakListViewItemsListener =
+            new WeakListChangeListener(listViewItemsListener);
+
+    private void updateCellFactory() {        
+        Callback<ListView<T>, ListCell<T>> cell = createCellFactory();        
+        paginationListView.setCellFactory(cell);
     }
 
-    private Callback<ListView<T>, ListCell<T>> getDefaultCellFactory() {
-        return new Callback<ListView<T>, ListCell<T>>() {
+    private Callback<ListView<T>, ListCell<T>> createCellFactory() {
+        Callback<ListView<T>, ListCell<T>> cell = new Callback<ListView<T>, ListCell<T>>() {
             @Override public ListCell<T> call(ListView<T> listView) {
                 return new PaginationCell<T>() {
                     @Override public void updateItem(T item, boolean empty) {
                         super.updateItem(item, empty);
 
-                        if (empty) {
+                        if (empty || item == null) {
                             setText(null);
                             setGraphic(null);
-                        } else if (item instanceof Node) {
-                            setText(null);
-                            Node currentNode = getGraphic();
-                            Node newNode = (Node) item;
-                            if (currentNode == null || ! currentNode.equals(newNode)) {
-                                setGraphic(newNode);
-                            }
                         } else {
-                            /**
-                            * This label is used if the item associated with this cell is to be
-                            * represented as a String. While we will lazily instantiate it
-                            * we never clear it, being more afraid of object churn than a minor
-                            * "leak" (which will not become a "major" leak).
-                            */
-                            setText(item == null ? "null" : item.toString());
-                            setGraphic(null);
+                            setText(null);
+                            setGraphic(pagination.getPageFactory().call(getIndex()));
                         }
                     }
                 };
             }
         };
+        return cell;
     }
 
-    private void updateListViewItems() {
-        if (pages != null) {
-            pages.removeListener(weakPageListener);
+    private int totalNumberOfPages() {
+        return getSkinnable().getNumberOfItems()/getSkinnable().getItemsPerPage();
+    }
+                    
+    @Override protected void handleControlPropertyChanged(String p) {
+        super.handleControlPropertyChanged(p);
+        // TODO need to implement
+        if (p == "ITEMS_PER_PAGE") {            
+        } else if (p == "NUMBER_OF_ITEMS") {            
+        } else if (p == "PAGE_INDEX") {
+        } else if (p == "PAGE_FACTORY") {
         }
-
-        this.pages = getSkinnable().getItems();
-        paginationListView.setItems(pages);
-
-        if (pages != null) {
-            pages.addListener(weakPageListener);
-        }
-        requestLayout();
     }
 
     @Override protected void setWidth(double value) {
@@ -273,30 +281,30 @@ public class PaginationSkin<T> extends SkinBase<Pagination<T>, PaginationBehavio
             leftArrowButton.setOnMousePressed(new EventHandler<MouseEvent>() {
                 @Override
                 public void handle(MouseEvent arg0) {
-                    pagination.getSelectionModel().selectPrevious();
-                    //System.out.println("LEFT BUTTON " + pagination.getSelectionModel().getSelectedIndex());
-                    paginationListView.show(pagination.getSelectionModel().getSelectedIndex());
+                    paginationListView.getSelectionModel().selectPrevious();
+                    //System.out.println("LEFT BUTTON " + paginationListView.getSelectionModel().getSelectedIndex());
+                    paginationListView.show(paginationListView.getSelectionModel().getSelectedIndex());
                     requestLayout();
                 }
             });
 
             rightArrowButton.setOnMousePressed(new EventHandler<MouseEvent>() {
                 @Override
-                public void handle(MouseEvent arg0) {
-                    pagination.getSelectionModel().selectNext();
-                    //System.out.println("RIGHT BUTTON " + pagination.getSelectionModel().getSelectedIndex() + " TNP " + (totalNumberOfPages - 1));
-                    paginationListView.show(pagination.getSelectionModel().getSelectedIndex());
+                public void handle(MouseEvent arg0) {                   
+                    paginationListView.getSelectionModel().selectNext();
+                    //System.out.println("RIGHT BUTTON " + paginationListView.getSelectionModel().getSelectedIndex() + " TNP " + (totalNumberOfPages - 1));
+                    paginationListView.show(paginationListView.getSelectionModel().getSelectedIndex());
                     requestLayout();
                 }
             });
 
-            getSkinnable().getSelectionModel().selectedIndexProperty().addListener(new ChangeListener<Number>() {
+            paginationListView.getSelectionModel().selectedIndexProperty().addListener(new ChangeListener<Number>() {
                 @Override
                 public void changed(ObservableValue<? extends Number> arg0, Number arg1, Number arg2) {
                     previousIndex = arg1.intValue();
                     currentIndex = arg2.intValue();
 
-                    //System.out.println("\nSELECT PROPERTY FROM " + fromIndex + " TO " + toIndex + " PREVIOUS " + previousIndex + " CURRENT "+ currentIndex + " SIZE " + pages.size());
+                    //System.out.println("\nSELECT PROPERTY FROM " + fromIndex + " TO " + toIndex + " PREVIOUS " + previousIndex + " CURRENT "+ currentIndex);
                     if (currentIndex == 0) {
                         // Grey out the left arrow we are at the beginning.
                         leftArrowButton.setVisible(false);
@@ -310,6 +318,9 @@ public class PaginationSkin<T> extends SkinBase<Pagination<T>, PaginationBehavio
                             scroll();
                         }
                     }
+                    // Update the current page index
+                    pagination.setPageIndex(currentIndex);
+                    
                     // Update the indictor buttons
                     for (int i = 0; i < indicatorButton.size(); i++) {
                         if (indicatorButton.get(i).getPageNumber() == previousIndex) {
@@ -463,11 +474,11 @@ public class PaginationSkin<T> extends SkinBase<Pagination<T>, PaginationBehavio
             setOnMousePressed(new EventHandler<MouseEvent>() {
                 @Override
                 public void handle(MouseEvent arg0) {
-                    int selected = pagination.getSelectionModel().getSelectedIndex();
+                    int selected = paginationListView.getSelectionModel().getSelectedIndex();
                     // We do not need to update the selection if it has not changed.
                     if (selected != IndicatorButton.this.pageNumber) {
-                        pagination.getSelectionModel().select(IndicatorButton.this.pageNumber);
-                        paginationListView.show(pagination.getSelectionModel().getSelectedIndex());
+                        paginationListView.getSelectionModel().select(IndicatorButton.this.pageNumber);
+                        paginationListView.show(paginationListView.getSelectionModel().getSelectedIndex());
                         requestLayout();
                     }
                 }
@@ -522,16 +533,14 @@ public class PaginationSkin<T> extends SkinBase<Pagination<T>, PaginationBehavio
 
     class PaginationListView<T> extends ListView<T> {
         public PaginationListView() {
-            this(FXCollections.<T>observableArrayList());
-        }
-
-        public PaginationListView(ObservableList<T> items) {
-            super(items);
+            super();
             setId("list-view");
+            setOrientation(Orientation.HORIZONTAL);
+            getSelectionModel().setSelectionMode(SelectionMode.SINGLE);            
         }
 
         public void show(int index) {
-            getProperties().put(VirtualContainerBase.SHOW_INDEX, index);
+            getProperties().put(VirtualContainerBase.SCROLL_TO_INDEX_TOP, index);
         }
     }
 }

@@ -35,6 +35,7 @@ import java.util.List;
 import com.sun.javafx.scene.control.ColorPicker;
 
 import javafx.scene.control.SelectionModel;
+import javafx.scene.input.MouseEvent;
 
 public class ColorPickerBehavior<T> extends ComboBoxBaseBehavior<T> {
 
@@ -59,8 +60,6 @@ public class ColorPickerBehavior<T> extends ComboBoxBaseBehavior<T> {
 
     protected static final List<KeyBinding> COMBO_BOX_BINDINGS = new ArrayList<KeyBinding>();
     static {
-        COMBO_BOX_BINDINGS.add(new KeyBinding(UP, KEY_PRESSED, "selectPrevious"));
-        COMBO_BOX_BINDINGS.add(new KeyBinding(DOWN, "selectNext"));
         COMBO_BOX_BINDINGS.addAll(COMBO_BOX_BASE_BINDINGS);
     }
 
@@ -69,28 +68,46 @@ public class ColorPickerBehavior<T> extends ComboBoxBaseBehavior<T> {
     }
 
     @Override protected void callAction(String name) {
-        if ("selectPrevious".equals(name)) {
-            selectPrevious();
-        } else if ("selectNext".equals(name)) {
-            selectNext();
+        super.callAction(name);
+    }
+    
+    private ColorPicker<T> getColorPicker() {
+        return (ColorPicker<T>) getControl();
+    }
+    
+     /**************************************************************************
+     *                                                                        *
+     * Mouse Events                                                           *
+     *                                                                        *
+     *************************************************************************/
+     /**
+     * When a mouse button is pressed, we either want to behave like a button or
+     * show the popup.  This will be called by the skin.
+     *
+     * @param e the mouse press event
+     * @param behaveLikeButton if true, this should act just like a button
+     */
+//    public void mousePressed(MouseEvent e) {
+//        super.mousePressed(e);
+//    }
+    
+    @Override public void mouseReleased(MouseEvent e) {
+        // Overriding to not do the usual on mouseReleased.
+        // The event is handled by the skin instead, which calls
+        // the method below.
+    }
+//    
+    /**
+     * Handles mouse release events.  This will be called by the skin.
+     *
+     * @param e the mouse press event
+     * @param behaveLikeButton if true, this should act just like a button
+     */
+    public void mouseReleased(MouseEvent e, boolean behaveLikeSplitButton) {
+        if (behaveLikeSplitButton) {
+            super.mouseReleased(e);
         } else {
-            super.callAction(name);
+            disarm();
         }
-    }
-    
-    private ComboBox<T> getComboBox() {
-        return (ComboBox<T>) getControl();
-    }
-
-    private void selectPrevious() {
-        SelectionModel sm = getComboBox().getSelectionModel();
-        if (sm == null) return;
-        sm.selectPrevious();
-    }
-    
-    private void selectNext() {
-        SelectionModel sm = getComboBox().getSelectionModel();
-        if (sm == null) return;
-        sm.selectNext();
     }
 }

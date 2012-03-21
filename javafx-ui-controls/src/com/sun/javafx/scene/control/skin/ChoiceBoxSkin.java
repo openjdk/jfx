@@ -304,7 +304,7 @@ import com.sun.javafx.scene.control.WeakListChangeListener;
             label.setText("");
         } else {
             int selectedIndex = selectionModel.getSelectedIndex();
-            if (selectedIndex == -1) {
+            if (selectedIndex == -1 || selectedIndex > popup.getItems().size()) {
                 label.setText(""); // clear label text
                 return;
             }
@@ -314,12 +314,9 @@ import com.sun.javafx.scene.control.WeakListChangeListener;
                     ((RadioMenuItem) selectedItem).setSelected(true);
                     toggleGroup.selectToggle(null);
                 }
+                // update the label
+                label.setText(popup.getItems().get(selectedIndex).getText());
             }
-
-            // update the label
-            Object selected = choiceBoxItems.get(selectedIndex);
-            String text = selected == null ? "" : selected.toString();
-            label.setText(text);
         }
     }
 
