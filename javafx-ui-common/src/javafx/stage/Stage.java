@@ -632,8 +632,10 @@ public class Stage extends Window {
 
     public final void setResizable(boolean value) {
         resizableProperty().set(value);
-        if (impl_peer != null)
+        if (impl_peer != null) {
+            applyBounds();
             impl_peer.setResizable(value);
+        }
     }
 
     public final boolean isResizable() {

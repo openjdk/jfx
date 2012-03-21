@@ -27,10 +27,13 @@ package javafx.scene;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.assertFalse;
 import javafx.scene.layout.StackPane;
 import javafx.scene.shape.Rectangle;
 import javafx.scene.transform.Scale;
 import javafx.stage.Stage;
+import javafx.beans.value.ChangeListener;
+import javafx.beans.value.ObservableValue;
 
 import org.junit.After;
 import org.junit.Before;
@@ -43,6 +46,9 @@ import org.junit.Test;
 public class SceneTest {
 
     private Stage stage;
+    private boolean handler1Called = false;
+    private boolean handler2Called = false;
+
 
     @Before
     public void setUp() {
@@ -508,6 +514,52 @@ public class SceneTest {
 
         assertEquals(600, (int) scene.getWidth());
         assertEquals(600, (int) scene.getHeight());
+    }
+
+    @Test
+    public void focusChangeShouldBeAtomic() {
+        final Group root = new Group();
+
+        final Rectangle r1 = new Rectangle();
+        final Rectangle r2 = new Rectangle();
+
+        root.getChildren().addAll(r1, r2);
+        final Scene scene = new Scene(root, 600, 600);
+        stage.setScene(scene);
+
+        r1.requestFocus();
+
+        assertTrue(r1.isFocused());
+        assertFalse(r2.isFocused());
+
+        handler1Called = false;
+        handler2Called = true;
+
+        r1.focusedProperty().addListener(new ChangeListener<Boolean>() {
+            @Override
+            public void changed(ObservableValue<? extends Boolean> arg0, Boolean arg1, Boolean focused) {
+                assertFalse(focused); // r1 is being defocused
+                assertTrue(r2.isFocused()); // r2 is already focused
+                handler1Called = true;
+
+                root.getChildren().remove(r2); // be evil: remove r2
+            }
+        });
+
+        r2.focusedProperty().addListener(new ChangeListener<Boolean>() {
+            @Override
+            public void changed(ObservableValue<? extends Boolean> arg0, Boolean arg1, Boolean focused) {
+                assertTrue(focused); // r2 is being focused
+                assertFalse(r1.isFocused()); // r1 is already defocused
+                assertTrue(handler1Called); // r1 listener was called first
+                handler2Called = true;
+                // remove the listener otherwise thi final defocus calls it again
+                r2.focusedProperty().removeListener(this);
+            }
+        });
+
+        r2.requestFocus();
+        assertTrue(handler2Called); // both listeners were called
     }
 
 }
