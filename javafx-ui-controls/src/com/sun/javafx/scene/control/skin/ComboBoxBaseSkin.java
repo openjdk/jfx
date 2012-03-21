@@ -42,6 +42,11 @@ public abstract class ComboBoxBaseSkin<T> extends SkinBase<ComboBoxBase<T>, Comb
     protected StackPane arrowButton;
     protected StackPane arrow;
     
+    /** The mode in which this control will be represented. */
+    private ComboBoxMode mode = ComboBoxMode.COMBOBOX;
+    protected final ComboBoxMode getMode() { return mode; }
+    protected final void setMode(ComboBoxMode value) { mode = value; }
+    
     public ComboBoxBaseSkin(final ComboBoxBase<T> comboBox, final ComboBoxBaseBehavior behavior) {
         // Call the super method with the button we were just given in the 
         // constructor, as well as an instance of the behavior class.
@@ -110,7 +115,7 @@ public abstract class ComboBoxBaseSkin<T> extends SkinBase<ComboBoxBase<T>, Comb
             updateDisplayArea();
         } else if (p == "VALUE") {
             updateDisplayArea();
-        }
+        } 
     }
     
     private void updateDisplayArea() {
@@ -120,6 +125,10 @@ public abstract class ComboBoxBaseSkin<T> extends SkinBase<ComboBoxBase<T>, Comb
         }
         displayNode = getDisplayNode();
         getChildren().add(0, displayNode);
+    }
+    
+    private boolean isButton() {
+        return getMode() == ComboBoxMode.BUTTON;
     }
     
     @Override protected void layoutChildren() {
@@ -137,13 +146,15 @@ public abstract class ComboBoxBaseSkin<T> extends SkinBase<ComboBoxBase<T>, Comb
         final double h = getSkinnable().getHeight() - (padding.getTop() + padding.getBottom());
 
         final double arrowWidth = snapSize(arrow.prefWidth(-1));
-        final double arrowButtonWidth = snapSpace(arrowButtonPadding.getLeft()) + 
-                                        arrowWidth + 
-                                        snapSpace(arrowButtonPadding.getRight());
+        final double arrowButtonWidth = (isButton()) ? 0 :
+                (snapSpace(arrowButtonPadding.getLeft()) + arrowWidth + 
+                snapSpace(arrowButtonPadding.getRight()));
         
         if (displayNode != null) {
-            displayNode.resizeRelocate(x, y, w, h);
+            displayNode.resizeRelocate(x, y, w-arrowButtonWidth, h);
         }
+        
+        if (isButton()) return;
         
         arrowButton.resize(arrowButtonWidth, getHeight());
         positionInArea(arrowButton, getWidth() - padding.getRight() - arrowButtonWidth, 0, 
@@ -151,7 +162,17 @@ public abstract class ComboBoxBaseSkin<T> extends SkinBase<ComboBoxBase<T>, Comb
     }
     
     @Override protected double computePrefWidth(double height) {
-        return displayNode == null ? 100 : displayNode.prefWidth(height);
+        final Insets arrowButtonPadding = arrowButton.getInsets();
+        final double arrowWidth = snapSize(arrow.prefWidth(-1));
+        final double arrowButtonWidth = (isButton()) ? 0 : 
+                                        (snapSpace(arrowButtonPadding.getLeft()) + 
+                                        arrowWidth + 
+                                        snapSpace(arrowButtonPadding.getRight()));
+        
+        final double totalWidth = (displayNode == null) ? 0 : (displayNode.prefWidth(height) 
+                + arrowButtonWidth);
+        return getInsets().getLeft() + totalWidth +
+                + getInsets().getRight();
     }
     
     @Override protected double computePrefHeight(double width) {
@@ -160,10 +181,11 @@ public abstract class ComboBoxBaseSkin<T> extends SkinBase<ComboBoxBase<T>, Comb
         if (displayNode == null) {
             final int DEFAULT_HEIGHT = 21;
             final Insets arrowButtonPadding = arrowButton.getInsets();
-            double arrowHeight = arrowButtonPadding.getTop() + arrow.prefHeight(-1) + arrowButtonPadding.getBottom();
+            double arrowHeight = (isButton()) ? 0 : 
+                    (arrowButtonPadding.getTop() + arrow.prefHeight(-1) + arrowButtonPadding.getBottom());
             return padding.getTop() + Math.max(DEFAULT_HEIGHT, arrowHeight) + padding.getBottom();
         } else {
-            return displayNode.prefHeight(width);
+            return padding.getTop()+ displayNode.prefHeight(width) + padding.getBottom();
         }
     }
 

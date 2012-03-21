@@ -3059,11 +3059,17 @@
 
 /* ------- OPEN BUTTON ------- */
 .combo-box-base .arrow-button {
-    -fx-background-color: -fx-outer-border, -fx-inner-border, -fx-body-color;
+    -fx-background-color: null;
     -fx-background-insets: 0, 1, 2;
     -fx-background-radius: 0 5 5 0, 0 4 4 0, 0 3 3 0;
     -fx-padding: 0.5em 0.416667em 0.5em 0.416667em; /* 6 5 6 5 */
 }
+/*.combo-box-base.split-button .arrow-button {
+    -fx-background-color: -fx-outer-border, -fx-inner-border, -fx-body-color;
+    -fx-background-insets: 0, 1, 2;
+    -fx-background-radius: 0 5 5 0, 0 4 4 0, 0 3 3 0;
+    -fx-padding: 0.5em 0.416667em 0.5em 0.416667em;  6 5 6 5 
+}*/
 
 /* ------- ARROW* ------- */
 .combo-box-base .arrow {
@@ -3111,6 +3117,29 @@ Only the properties with values that are different from the TextBox are specifie
 
 .color-picker {
     -fx-skin: "com.sun.javafx.scene.control.skin.ColorPickerSkin";
+}
+
+.color-picker .color-picker-label .text {
+    -fx-padding: 0.0em 0.833333em 0.0em 0.0em;  /* 0 10 0 0 */
+}
+
+.color-picker.split-button .arrow-button {
+    -fx-background-color: -fx-outer-border, -fx-inner-border, -fx-body-color;
+    -fx-background-insets: 0, 1, 2;
+    -fx-background-radius: 0 5 5 0, 0 4 4 0, 0 3 3 0;
+    -fx-padding: 0.5em 0.416667em 0.5em 0.416667em; /* 6 5 6 5 */
+}
+
+.color-picker:hover {
+    -fx-color: -fx-base;
+}
+
+.color-picker.split-button .arrow-button:hover {
+    -fx-color: -fx-hover-base;
+}
+
+.color-picker.split-button .color-picker-label:hover {
+     -fx-color: -fx-hover-base;
 }
 
 .color-picker .picker-color {
