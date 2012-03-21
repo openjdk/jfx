@@ -540,7 +540,7 @@ public class PaginationSkin<T> extends SkinBase<Pagination<T>, PaginationBehavio
         }
 
         public void show(int index) {
-            getProperties().put(VirtualContainerBase.SHOW_INDEX, index);
+            getProperties().put(VirtualContainerBase.SCROLL_TO_INDEX_TOP, index);
         }
     }
 }
