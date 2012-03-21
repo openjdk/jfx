@@ -984,13 +984,13 @@ public class TilePane extends Pane {
 
             @Override
             public boolean isSettable(TilePane node) {
-                return node.prefRows == null ||
-                        !node.prefRows.isBound();
+                return node.prefTileWidth == null ||
+                        !node.prefTileWidth.isBound();
             }
 
             @Override
             public WritableValue<Number> getWritableValue(TilePane node) {
-                return node.prefRowsProperty();
+                return node.prefTileWidthProperty();
             }
         };
 

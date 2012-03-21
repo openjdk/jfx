@@ -179,6 +179,7 @@ public class TableViewSkin<T> extends VirtualContainerBase<TableView<T>, TableVi
         registerChangeListener(tableView.rowFactoryProperty(), "ROW_FACTORY");
         registerChangeListener(tableView.placeholderProperty(), "PLACEHOLDER");
         registerChangeListener(tableView.focusTraversableProperty(), "FOCUS_TRAVERSABLE");
+        registerChangeListener(tableView.widthProperty(), "WIDTH");
     }
 
     @Override protected void handleControlPropertyChanged(String p) {
@@ -196,6 +197,8 @@ public class TableViewSkin<T> extends VirtualContainerBase<TableView<T>, TableVi
             updatePlaceholderRegionVisibility();
         } else if (p == "FOCUS_TRAVERSABLE") {
             flow.setFocusTraversable(getSkinnable().isFocusTraversable());
+        } else if (p == "WIDTH") {
+            tableHeaderRow.setTablePadding(getInsets());
         }
     }
     

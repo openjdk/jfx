@@ -172,11 +172,16 @@ final public class CSSParser {
         CSSLexer lex = CSSLexer.getInstance();
         lex.setReader(reader);
 
-        this.parse(lex);
-
         try {
+            this.parse(lex);
             reader.close();
         } catch (IOException ioe) {
+        } catch (Exception ex) {
+            // Sometimes bad syntax causes an exception. The code should be 
+            // fixed to handle the bad syntax, but the fallback is 
+            // to handle the exception here. Uncaught, the exception can cause 
+            // problems like RT-20311
+            reportException(ex);
         }
 
     }
@@ -189,19 +194,25 @@ final public class CSSParser {
             final Reader reader = new CharArrayReader(stylesheetText.toCharArray());
             final CSSLexer lexer = CSSLexer.getInstance();
             lexer.setReader(reader);
-            currentToken = nextToken(lexer);
-            final List<Declaration> declarations = declarations(lexer);
-            if (declarations != null && !declarations.isEmpty()) {
-                final Selector selector = Selector.getUniversalSelector();
-                final Rule rule = new Rule(
-                    Collections.singletonList(selector),
-                    declarations
-                );
-                rules.add(rule);
-            }
             try {
+                currentToken = nextToken(lexer);
+                final List<Declaration> declarations = declarations(lexer);
+                if (declarations != null && !declarations.isEmpty()) {
+                    final Selector selector = Selector.getUniversalSelector();
+                    final Rule rule = new Rule(
+                        Collections.singletonList(selector),
+                        declarations
+                    );
+                    rules.add(rule);
+                }
                 reader.close();
             } catch (IOException ioe) {
+            } catch (Exception ex) {
+                // Sometimes bad syntax causes an exception. The code should be 
+                // fixed to handle the bad syntax, but the fallback is 
+                // to handle the exception here. Uncaught, the exception can cause 
+                // problems like RT-20311
+                reportException(ex);
             }
         }
         stylesheet.getRules().addAll(rules);
@@ -231,6 +242,12 @@ final public class CSSParser {
             if (LOGGER.isLoggable(PlatformLogger.WARNING)) {
                 LOGGER.warning("\"" +property + ": " + expr  + "\" " + e.toString());
             }
+        } catch (Exception ex) {
+            // Sometimes bad syntax causes an exception. The code should be 
+            // fixed to handle the bad syntax, but the fallback is 
+            // to handle the exception here. Uncaught, the exception can cause 
+            // problems like RT-20311
+            reportException(ex);
         }
         notifyErrors();
         return value;
@@ -348,6 +365,29 @@ final public class CSSParser {
         throw pe;
     }
 
+    private void reportException(Exception exception) {
+        
+        if (LOGGER.isLoggable(PlatformLogger.WARNING)) {
+            final StackTraceElement[] stea = exception.getStackTrace();
+            if (stea.length > 0) {
+                final StringBuilder buf = 
+                    new StringBuilder("Please report ");
+                buf.append(exception.getClass().getName())
+                   .append(" at:");
+                int end = 0;
+                while(end < stea.length) {
+                    // only report parser part of the stack trace.
+                    if (!getClass().getName().equals(stea[end].getClassName())) {
+                        break;
+                    }
+                    buf.append("\n\t")
+                    .append(stea[end++].toString());
+                }
+                LOGGER.warning(buf.toString());
+            }
+        }
+    }
+    
     private String formatDeprecatedMessage(final Term root, final String syntax) {
         final StringBuilder buf = 
             new StringBuilder("Using deprecated syntax for ");

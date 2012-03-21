@@ -218,4 +218,18 @@ public class CSSParserTest {
         assertEquals(Color.YELLOW, paint);
     }
     
+    @Test
+    public void testRT_20311() {
+
+        CSSParser instance = CSSParser.getInstance();
+        
+        try {
+            instance.parse(".rt-20311 {  -fx-background-color:red\n-fx-border-color:black; }");
+        } catch (Exception e) {
+            fail(e.toString());
+        }
+        
+    }
+    
+    
 }

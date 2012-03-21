@@ -19,6 +19,7 @@ import javafx.stage.Stage;
 import javafx.scene.shape.*;
 import javafx.scene.layout.Region;
 
+import org.junit.Ignore;
 
 public class StackedBarChartTest extends ChartTestBase {
     
@@ -125,7 +126,7 @@ public class StackedBarChartTest extends ChartTestBase {
         }
     }
     
-    @Test
+    @Test @Ignore
     public void testDataItemChange() {
         startApp();
         sbc.getData().addAll(series1);
