@@ -41,29 +41,33 @@ import com.sun.javafx.scene.control.behavior.BehaviorBase;
  */
 public abstract class VirtualContainerBase<C extends Control, B extends BehaviorBase<C>, I extends IndexedCell> extends SkinBase<C, B> {
 
-    public static final String SCROLL_TO_INDEX = "VirtualContainerBase.scrollToIndex";
-    public static final String SHOW_INDEX = "VirtualContainerBase.showIndex";
+    public static final String SCROLL_TO_INDEX_CENTERED = "VirtualContainerBase.scrollToIndexCentered";
+    public static final String SCROLL_TO_INDEX_TOP = "VirtualContainerBase.scrollToIndexTop";
 
     public VirtualContainerBase(C control, B behavior) {
         super(control, behavior);
+        
+        flow = new VirtualFlow();
 
         control.getProperties().addListener(new MapChangeListener<Object, Object>() {
             @Override
             public void onChanged(Change<? extends Object, ? extends Object> c) {
-                if (c.wasAdded() && SCROLL_TO_INDEX.equals(c.getKey())) {
+                if (c.wasAdded() && SCROLL_TO_INDEX_CENTERED.equals(c.getKey())) {
                     Object row = c.getValueAdded();
                     if (row instanceof Integer) {
-                        scrollTo((Integer)row);
+                        // we want the index to be centered
+                        flow.scrollTo((Integer)row, true);
                     }
 
-                    c.getMap().remove(SCROLL_TO_INDEX);
-                } else if (c.wasAdded() && SHOW_INDEX.equals(c.getKey())) {
+                    c.getMap().remove(SCROLL_TO_INDEX_CENTERED);
+                } else if (c.wasAdded() && SCROLL_TO_INDEX_TOP.equals(c.getKey())) {
                     Object index = c.getValueAdded();
                     if (index instanceof Integer) {
-                        flow.scrollTo((Integer)index);
+                        // we don't want the index to be centered
+                        flow.scrollTo((Integer)index, false);
                     }
 
-                    c.getMap().remove(SHOW_INDEX);
+                    c.getMap().remove(SCROLL_TO_INDEX_TOP);
                 }
             }
         });
@@ -73,7 +77,7 @@ public abstract class VirtualContainerBase<C extends Control, B extends Behavior
      * The virtualized container which handles the layout and scrolling of
      * all the cells.
      */
-    protected VirtualFlow flow;
+    protected final VirtualFlow flow;
 
     /**
      * Returns a Cell available to be used in the virtual flow. This means you
@@ -91,39 +95,6 @@ public abstract class VirtualContainerBase<C extends Control, B extends Behavior
      */
     public abstract int getItemCount();
 
-    protected void scrollTo(int index) {
-        if (/*index < 0 || index >= getItemCount() ||*/ getItemCount() == 0) return;
-        
-        boolean posSet = false;
-
-        // special-case the 'greater than row count' condition to have it
-        // be perfectly at position 1
-        if (index >= getItemCount() - 1) {
-            flow.setPosition(1);
-            posSet = true;
-        } else if (index < 0) {
-            flow.setPosition(0);
-            posSet = true;
-        }
-        
-//        IndexedCell lastVisibleCell = flow.getLastVisibleCell();
-//        if (lastVisibleCell != null) {
-//            int lastVisibleIndex = lastVisibleCell.getIndex();
-//            System.out.println(index + " >= " + lastVisibleIndex);
-//            if (index == lastVisibleIndex) {
-//                flow.setPosition(1);
-//                posSet = true;
-//            }
-//        }
-        
-        if (! posSet) {
-            // otherwise just use the default maths
-            flow.setPosition(index / (double) getItemCount());
-        }
-        
-        flow.requestLayout();
-    }
-    
     double getMaxCellWidth(int rowsToCount) {
         return getInsets().getLeft() + flow.getMaxCellWidth(rowsToCount) + getInsets().getRight();
     }

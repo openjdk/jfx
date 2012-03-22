@@ -217,7 +217,7 @@ public class ComboBoxListViewSkin<T> extends ComboBoxPopupControl<T> {
                 comboBox.requestFocus();
             }
         });
-        
+
         return textField;
     }
     
@@ -228,7 +228,6 @@ public class ComboBoxListViewSkin<T> extends ComboBoxPopupControl<T> {
         if (comboBox.isEditable()) {
             T value = comboBox.getValue();
             String stringValue = c.toString(value);
-            
             if (value == null || stringValue == null) {
                 textField.setText("");
             } else if (! stringValue.equals(textField.getText())) {
@@ -353,7 +352,6 @@ public class ComboBoxListViewSkin<T> extends ComboBoxPopupControl<T> {
 
         listView.setId("list-view");
         listView.getSelectionModel().setSelectionMode(SelectionMode.SINGLE);
-        listView.prefWidthProperty().bind(comboBox.widthProperty());
 
         listView.getSelectionModel().selectedIndexProperty().addListener(new InvalidationListener() {
              @Override public void invalidated(Observable o) {
