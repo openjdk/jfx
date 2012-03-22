@@ -5662,6 +5662,69 @@ public abstract class Node implements EventTarget {
      *                             Focus Traversal                             *
      *                                                                         *
      **************************************************************************/
+
+    /**
+     * Special boolean property which allows for atomic focus change.
+     * Focus change means defocusing the old focus owner and focusing a new
+     * one. With a usual property, defocusing the old node fires the value
+     * changed event and user code can react with something that breaks
+     * focusability of the new node, or even remove the new node from the scene.
+     * This leads to various error states. This property allows for setting
+     * the state without firing the event. The focus change first sets both
+     * properties and then fires both events. This makes the focus change look
+     * like an atomic operation - when the old node is notified to loose focus,
+     * the new node is already focused.
+     */
+    final class FocusedProperty extends ReadOnlyBooleanPropertyBase {
+        private boolean value;
+        private boolean valid;
+        private boolean needsChangeEvent = false;
+
+        public void store(final boolean value) {
+            if (value != this.value) {
+                this.value = value;
+                markInvalid();
+            }
+        }
+
+        public void notifyListeners() {
+            if (needsChangeEvent) {
+                fireValueChangedEvent();
+                needsChangeEvent = false;
+            }
+        }
+
+        private void markInvalid() {
+            if (valid) {
+                valid = false;
+
+                impl_pseudoClassStateChanged("focused");
+                PlatformLogger logger = Logging.getFocusLogger();
+                if (logger.isLoggable(PlatformLogger.FINE)) {
+                    logger.fine(this + " focused=" + get());
+                }
+
+                needsChangeEvent = true;
+            }
+        }
+
+        @Override
+        public boolean get() {
+            valid = true;
+            return value;
+        }
+
+        @Override
+        public Object getBean() {
+            return Node.this;
+        }
+
+        @Override
+        public String getName() {
+            return "focused";
+        }
+    }
+
     /**
      * Indicates whether this {@code Node} currently has the input focus.
      * To have the input focus, a node must be the {@code Scene}'s focus
@@ -5671,10 +5734,14 @@ public abstract class Node implements EventTarget {
      * @see #requestFocus()
      * @defaultValue false
      */
-    private ReadOnlyBooleanWrapper focused;
+    private FocusedProperty focused;
 
     protected final void setFocused(boolean value) {
-        focusedPropertyImpl().set(value);
+        FocusedProperty fp = focusedPropertyImpl();
+        if (fp.value != value) {
+            fp.store(value);
+            fp.notifyListeners();
+        }
     }
 
     public final boolean isFocused() {
@@ -5682,32 +5749,12 @@ public abstract class Node implements EventTarget {
     }
 
     public final ReadOnlyBooleanProperty focusedProperty() {
-        return focusedPropertyImpl().getReadOnlyProperty();
+        return focusedPropertyImpl();
     }
 
-    private ReadOnlyBooleanWrapper focusedPropertyImpl() {
+    private FocusedProperty focusedPropertyImpl() {
         if (focused == null) {
-            focused = new ReadOnlyBooleanWrapper() {
-
-                @Override
-                protected void invalidated() {
-                    impl_pseudoClassStateChanged("focused");
-                    PlatformLogger logger = Logging.getFocusLogger();
-                    if (logger.isLoggable(PlatformLogger.FINE)) {
-                        logger.fine(this + " focused=" + get());
-                    }
-                }
-
-                @Override
-                public Object getBean() {
-                    return Node.this;
-                }
-
-                @Override
-                public String getName() {
-                    return "focused";
-                }
-            };
+            focused = new FocusedProperty();
         }
         return focused;
     }
