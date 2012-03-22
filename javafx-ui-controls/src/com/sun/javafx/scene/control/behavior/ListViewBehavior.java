@@ -134,9 +134,23 @@ public class ListViewBehavior<T> extends BehaviorBase<ListView<T>> {
         if (PlatformUtil.isMac()) {
             LIST_VIEW_BINDINGS.add(new ListViewKeyBinding(UP, "FocusPreviousRow").vertical().meta());
             LIST_VIEW_BINDINGS.add(new ListViewKeyBinding(DOWN, "FocusNextRow").vertical().meta());
+            
+            LIST_VIEW_BINDINGS.add(new ListViewKeyBinding(UP, "DiscontinuousSelectPreviousRow").vertical().meta().shift());
+            LIST_VIEW_BINDINGS.add(new ListViewKeyBinding(DOWN, "DiscontinuousSelectNextRow").vertical().meta().shift());
+            LIST_VIEW_BINDINGS.add(new ListViewKeyBinding(PAGE_UP, "DiscontinuousSelectPageUp").vertical().meta().shift());
+            LIST_VIEW_BINDINGS.add(new ListViewKeyBinding(PAGE_DOWN, "DiscontinuousSelectPageDown").vertical().meta().shift());
+            LIST_VIEW_BINDINGS.add(new ListViewKeyBinding(HOME, "DiscontinuousSelectAllToFirstRow").vertical().meta().shift());
+            LIST_VIEW_BINDINGS.add(new ListViewKeyBinding(END, "DiscontinuousSelectAllToLastRow").vertical().meta().shift());
         } else {
             LIST_VIEW_BINDINGS.add(new ListViewKeyBinding(UP, "FocusPreviousRow").vertical().ctrl());
             LIST_VIEW_BINDINGS.add(new ListViewKeyBinding(DOWN, "FocusNextRow").vertical().ctrl());
+            
+            LIST_VIEW_BINDINGS.add(new ListViewKeyBinding(UP, "DiscontinuousSelectPreviousRow").vertical().ctrl().shift());
+            LIST_VIEW_BINDINGS.add(new ListViewKeyBinding(DOWN, "DiscontinuousSelectNextRow").vertical().ctrl().shift());
+            LIST_VIEW_BINDINGS.add(new ListViewKeyBinding(PAGE_UP, "DiscontinuousSelectPageUp").vertical().ctrl().shift());
+            LIST_VIEW_BINDINGS.add(new ListViewKeyBinding(PAGE_DOWN, "DiscontinuousSelectPageDown").vertical().ctrl().shift());
+            LIST_VIEW_BINDINGS.add(new ListViewKeyBinding(HOME, "DiscontinuousSelectAllToFirstRow").vertical().ctrl().shift());
+            LIST_VIEW_BINDINGS.add(new ListViewKeyBinding(END, "DiscontinuousSelectAllToLastRow").vertical().ctrl().shift());
         }
         // --- end of vertical
 
@@ -200,6 +214,12 @@ public class ListViewBehavior<T> extends BehaviorBase<ListView<T>> {
         else if ("FocusLastRow".equals(name)) focusLastRow();
         else if ("toggleFocusOwnerSelection".equals(name)) toggleFocusOwnerSelection();
         else if ("SelectAllToFocus".equals(name)) selectAllToFocus();
+        else if ("DiscontinuousSelectNextRow".equals(name)) discontinuousSelectNextRow();
+        else if ("DiscontinuousSelectPreviousRow".equals(name)) discontinuousSelectPreviousRow();
+        else if ("DiscontinuousSelectPageUp".equals(name)) discontinuousSelectPageUp();
+        else if ("DiscontinuousSelectPageDown".equals(name)) discontinuousSelectPageDown();
+        else if ("DiscontinuousSelectAllToLastRow".equals(name)) discontinuousSelectAllToLastRow();
+        else if ("DiscontinuousSelectAllToFirstRow".equals(name)) discontinuousSelectAllToFirstRow();
         else super.callAction(name);
     }
 
@@ -224,8 +244,8 @@ public class ListViewBehavior<T> extends BehaviorBase<ListView<T>> {
     private boolean isShiftDown = false;
     private boolean isCtrlDown = false;
     
-    private Callback<Void, Integer> onScrollPageUp;
-    private Callback<Void, Integer> onScrollPageDown;
+    private Callback<Integer, Integer> onScrollPageUp;
+    private Callback<Integer, Integer> onScrollPageDown;
     private Runnable onFocusPreviousRow;
     private Runnable onFocusNextRow;
     private Runnable onSelectPreviousRow;
@@ -233,8 +253,8 @@ public class ListViewBehavior<T> extends BehaviorBase<ListView<T>> {
     private Runnable onMoveToFirstCell;
     private Runnable onMoveToLastCell;
 
-    public void setOnScrollPageUp(Callback<Void, Integer> c) { onScrollPageUp = c; }
-    public void setOnScrollPageDown(Callback<Void, Integer> c) { onScrollPageDown = c; }
+    public void setOnScrollPageUp(Callback<Integer, Integer> c) { onScrollPageUp = c; }
+    public void setOnScrollPageDown(Callback<Integer, Integer> c) { onScrollPageDown = c; }
     public void setOnFocusPreviousRow(Runnable r) { onFocusPreviousRow = r; }
     public void setOnFocusNextRow(Runnable r) { onFocusNextRow = r; }
     public void setOnSelectPreviousRow(Runnable r) { onSelectPreviousRow = r; }
@@ -359,7 +379,7 @@ public class ListViewBehavior<T> extends BehaviorBase<ListView<T>> {
     private void scrollPageUp() {
         int newSelectedIndex = -1;
         if (onScrollPageUp != null) {
-            newSelectedIndex = onScrollPageUp.call(null);
+            newSelectedIndex = onScrollPageUp.call(getAnchor());
         }
         if (newSelectedIndex == -1) return;
         
@@ -371,7 +391,7 @@ public class ListViewBehavior<T> extends BehaviorBase<ListView<T>> {
     private void scrollPageDown() {
         int newSelectedIndex = -1;
         if (onScrollPageDown != null) {
-            newSelectedIndex = onScrollPageDown.call(null);
+            newSelectedIndex = onScrollPageDown.call(getAnchor());
         }
         if (newSelectedIndex == -1) return;
         
@@ -429,7 +449,7 @@ public class ListViewBehavior<T> extends BehaviorBase<ListView<T>> {
     }
     
     private void focusPageUp() {
-        int newFocusIndex = onScrollPageUp.call(null);
+        int newFocusIndex = onScrollPageUp.call(getAnchor());
         
         FocusModel fm = getControl().getFocusModel();
         if (fm == null) return;
@@ -437,7 +457,7 @@ public class ListViewBehavior<T> extends BehaviorBase<ListView<T>> {
     }
     
     private void focusPageDown() {
-        int newFocusIndex = onScrollPageDown.call(null);
+        int newFocusIndex = onScrollPageDown.call(getAnchor());
         
         FocusModel fm = getControl().getFocusModel();
         if (fm == null) return;
@@ -574,7 +594,7 @@ public class ListViewBehavior<T> extends BehaviorBase<ListView<T>> {
             setAnchor(leadIndex);
         }
         
-        int leadSelectedIndex = onScrollPageUp.call(null);
+        int leadSelectedIndex = onScrollPageUp.call(getAnchor());
         
         MultipleSelectionModel sm = getControl().getSelectionModel();
         if (sm == null) return;
@@ -595,7 +615,7 @@ public class ListViewBehavior<T> extends BehaviorBase<ListView<T>> {
             setAnchor(leadIndex);
         }
         
-        int leadSelectedIndex = onScrollPageDown.call(null);
+        int leadSelectedIndex = onScrollPageDown.call(getAnchor());
         
         MultipleSelectionModel sm = getControl().getSelectionModel();
         if (sm == null) return;
@@ -701,6 +721,83 @@ public class ListViewBehavior<T> extends BehaviorBase<ListView<T>> {
         }
         
         setAnchor(focusedIndex);
+    }
+    
+    /**************************************************************************
+     * Discontinuous Selection                                                *
+     *************************************************************************/
+    
+    private void discontinuousSelectPreviousRow() {
+        MultipleSelectionModel sm = getControl().getSelectionModel();
+        if (sm == null) return;
+        
+        FocusModel fm = getControl().getFocusModel();
+        if (fm == null) return;
+        
+        int index = fm.getFocusedIndex() - 1;
+        if (index < 0) return;
+        sm.select(index);
+    }
+    
+    private void discontinuousSelectNextRow() {
+        MultipleSelectionModel sm = getControl().getSelectionModel();
+        if (sm == null) return;
+        
+        FocusModel fm = getControl().getFocusModel();
+        if (fm == null) return;
+
+        int index = fm.getFocusedIndex() + 1;
+        sm.select(index);
+    }
+    
+    private void discontinuousSelectPageUp() {
+        MultipleSelectionModel sm = getControl().getSelectionModel();
+        if (sm == null) return;
+        
+        FocusModel fm = getControl().getFocusModel();
+        if (fm == null) return;
+
+        int leadIndex = fm.getFocusedIndex();
+        int leadSelectedIndex = onScrollPageUp.call(getAnchor());
+        sm.selectRange(leadSelectedIndex, leadIndex + 1);
+    }
+    
+    private void discontinuousSelectPageDown() {
+        MultipleSelectionModel sm = getControl().getSelectionModel();
+        if (sm == null) return;
+        
+        FocusModel fm = getControl().getFocusModel();
+        if (fm == null) return;
+        
+        int leadIndex = fm.getFocusedIndex();
+        int leadSelectedIndex = onScrollPageDown.call(getAnchor());
+        sm.selectRange(leadIndex, leadSelectedIndex + 1);
+    }
+    
+    private void discontinuousSelectAllToFirstRow() {
+        MultipleSelectionModel sm = getControl().getSelectionModel();
+        if (sm == null) return;
+        
+        FocusModel fm = getControl().getFocusModel();
+        if (fm == null) return;
+
+        int index = fm.getFocusedIndex();
+        sm.selectRange(0, index);
+
+        if (onMoveToFirstCell != null) onMoveToFirstCell.run();
+    }
+    
+    private void discontinuousSelectAllToLastRow() {
+        MultipleSelectionModel sm = getControl().getSelectionModel();
+        if (sm == null) return;
+        
+        FocusModel fm = getControl().getFocusModel();
+        if (fm == null) return;
+
+        int index = fm.getFocusedIndex() + 1;
+        sm.selectRange(index, getRowCount());
+
+        if (onMoveToLastCell != null) onMoveToLastCell.run();
     }
 
     private static class ListViewKeyBinding extends OrientedKeyBinding {
