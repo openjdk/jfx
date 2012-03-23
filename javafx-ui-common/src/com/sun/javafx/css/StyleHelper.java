@@ -1165,20 +1165,6 @@ public class StyleHelper {
             Map<String,CascadingStyle> userStyles, 
             Node originatingNode, CacheEntry cacheEntry, List<Style> styleList) {
         
-        //
-        // RT-20145 - if node has the property, use the property value instead
-        // of looking for matching styles. If the property was styled, then 
-        // we are getting the right value since the parent is styled before the
-        // child. If the property was not styled, then we're still getting the
-        // right value - either the default value or some user set value.
-        //
-
-        WritableValue prop = styleable.getWritableValue(node);
-        if (prop != null) {
-            final Stylesheet.Origin origin = StyleableProperty.getOrigin(prop);
-            return new CalculatedValue(prop.getValue(), origin, true);
-        }
-        
         // Locate the first parentStyleHelper in the hierarchy
         Node parent = node.getParent();        
         StyleHelper parentStyleHelper = parent == null ? null : parent.impl_getStyleHelper();
