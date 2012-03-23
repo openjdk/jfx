@@ -260,4 +260,42 @@ public class HonorDeveloperSettingsTest {
         assertEquals(14, text.getStrokeWidth(), 0.00001);
         
     }
+    
+    @Test
+    public void testInlineStyleInheritedFromParentApplies() {
+        
+        // must remove the id so we don't pick up the ua style
+        text.setId(null);
+        text.setStyle("-fx-stroke-width: 1em;");
+        
+        scene.getRoot().setStyle("-fx-font: 18 Amble;");
+        
+        Toolkit.getToolkit().firePulse();
+        
+        //
+        // If RT-20513 is not working, then the code will _not_ 
+        // pick up the inline style
+        //        
+        assertEquals(18, text.getStrokeWidth(), 0.00001);
+        
+    }
+    
+    @Test
+    public void testInlineStyleNotInheritedFromParentWhenUserSetsFont() {
+        
+        // must remove the id so we don't pick up the ua style
+        text.setId(null);
+        text.setStyle("-fx-stroke-width: 1em;");
+        
+        Font font = Font.font("Amble", 14);
+        text.setFont(font);
+        
+        scene.getRoot().setStyle("-fx-font: 18 Amble;");
+        
+        Toolkit.getToolkit().firePulse();
+                
+        assertEquals(14, text.getStrokeWidth(), 0.00001);
+        
+    }
+    
 }
