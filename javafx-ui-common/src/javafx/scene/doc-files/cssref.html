@@ -209,7 +209,9 @@
         <ul>
           <li>javafx.scene
             <ul>
+              <li><a href="#group">Group</a></li>
               <li><a href="#node">Node</a></li>
+              <li><a href="#parent">Parent</a></li>
               <li><a href="#scene">Scene</a></li>
             </ul>
           </li>
@@ -428,7 +430,7 @@
       modified using "!important" in a style declaration.&nbsp;</p>
     <p>Beginning with JavaFX 2.1, the Parent class has a stylesheets property,
       allowing style sheets to be set on a container. This allows for one branch
-      of of the scene graph to have a distinct set of styles. Any insatnce of
+      of of the scene graph to have a distinct set of styles. Any instance of
       Parent can have a style sheets. A child will take its styles from its own
       inline styles, the style sheets of all its ancestors, and any style sheets
       from the Scene. <br>
@@ -2418,7 +2420,7 @@
               Backgrounds and Borders Module Level 3: Border Images</a>)</td>
         </tr>
         <tr>
-          <td class="propertyname">-fx-border-image</td>
+          <td class="propertyname">-fx-border-image-source</td>
           <td class="value"><a href="#typeuri" class="typelink">&lt;uri&gt;</a>
             [ , <a href="#typeuri" class="typelink">&lt;uri&gt;</a> ]*</td>
           <td class="default">null</td>
@@ -2604,10 +2606,10 @@
           <td class="propertyname">-fx-image-borders</td>
           <td class="value">&nbsp;</td>
           <td class="default">null</td>
-          <td>This property set by specifying -fx-border-image with the optional
+          <td>This property set by specifying -fx-border-image-source with the optional
             -fx-border-image-insets, -fx-border-image-repeat,
             -fx-border-image-slice and -fx-border-image-width. There is no
-            shorthand notation for -fx-stroke-borders at this time.</td>
+            shorthand notation for -fx-image-borders at this time.</td>
         </tr>
         <tr>
           <td colspan="4" class="parents">Also has all properties of <a href="#parent">Parent</a><br>
