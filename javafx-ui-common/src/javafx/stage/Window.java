@@ -528,8 +528,7 @@ public class Window implements EventTarget {
     }
 
     /**
-     * Called just prior to the Window being shown, even if the menu has
-     * no items to show.
+     * Called just prior to the Window being shown.
      */
     private ObjectProperty<EventHandler<WindowEvent>> onShowing;
     public final void setOnShowing(EventHandler<WindowEvent> value) { onShowingProperty().set(value); }
