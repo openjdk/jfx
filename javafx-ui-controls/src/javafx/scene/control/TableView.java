@@ -1204,7 +1204,7 @@ public class TableView<S> extends Control {
      * @param index The index of an item that should be visible to the user.
      */
     public void scrollTo(int index) {
-       getProperties().put(VirtualContainerBase.SCROLL_TO_INDEX, index);
+       getProperties().put(VirtualContainerBase.SCROLL_TO_INDEX_CENTERED, index);
     }
 
     /**

@@ -60,7 +60,6 @@ public class TableViewSkin<T> extends VirtualContainerBase<TableView<T>, TableVi
         super(tableView, new TableViewBehavior(tableView));
 
         // init the VirtualFlow
-        flow = new VirtualFlow();
         flow.setPannable(false);
         flow.setFocusTraversable(getSkinnable().isFocusTraversable());
         flow.setCreateCell(new Callback<VirtualFlow, TableRow>() {

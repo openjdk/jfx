@@ -227,7 +227,7 @@ public class ComboBoxBaseBehavior<T> extends BehaviorBase<ComboBoxBase<T>> {
         }
     }
     
-    private boolean wasComboBoxButtonClickedForAutoHide = false;
+    boolean wasComboBoxButtonClickedForAutoHide = false;
     private boolean mouseInsideButton = false;
     public void onAutoHide() {
         // if the ComboBox button was clicked, and it was this that forced the

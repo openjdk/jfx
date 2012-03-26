@@ -1765,10 +1765,31 @@ public class VirtualFlow extends Region {
         }
     }
 
-    public void scrollTo(int index) {
-        double offset = index * getCellLength(index);
-        mapper.adjustByPixelChunk(offset);
-        addAllToPile();
+    public void scrollTo(int index, boolean centered) {
+        boolean posSet = false;
+        
+        if (index >= getCellCount() - 1) {
+            setPosition(1);
+            posSet = true;
+        } else if (index < 0) {
+            setPosition(0);
+            posSet = true;
+        }
+        
+        if (! posSet) {
+            double offset = 0;
+            for (int i = 0; i < index; i++) {
+                offset += getCellLength(i);
+            }
+            
+            if (centered) {
+                offset += (getCellLength(index) / 2.0);
+                offset -= (getHeight() / 2.0);// + (getHbar() == null ? 0 : getHbar().getHeight()));
+            }
+
+            mapper.adjustByPixelChunk(offset);
+        }
+        
         requestLayout();        
     }
     

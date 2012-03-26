@@ -33,6 +33,7 @@ import java.util.List;
 import javafx.animation.Interpolator;
 import javafx.animation.KeyFrame;
 import javafx.animation.KeyValue;
+import javafx.beans.DefaultProperty;
 import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.ObjectPropertyBase;
@@ -1406,6 +1407,7 @@ public abstract class XYChart<X,Y> extends Chart {
     /**
      * A named series of data items
      */
+    @DefaultProperty("data")
     public static final class Series<X,Y> {
 
         // -------------- PRIVATE PROPERTIES ----------------------------------------
