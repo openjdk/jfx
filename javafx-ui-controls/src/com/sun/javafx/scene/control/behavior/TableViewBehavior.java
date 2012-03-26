@@ -135,6 +135,8 @@ public class TableViewBehavior<T> extends BehaviorBase<TableView<T>> {
             
             TABLE_VIEW_BINDINGS.add(new KeyBinding(UP, "DiscontinuousSelectPreviousRow").meta().shift());
             TABLE_VIEW_BINDINGS.add(new KeyBinding(DOWN, "DiscontinuousSelectNextRow").meta().shift());
+            TABLE_VIEW_BINDINGS.add(new KeyBinding(LEFT, "DiscontinuousSelectPreviousColumn").meta().shift());
+            TABLE_VIEW_BINDINGS.add(new KeyBinding(RIGHT, "DiscontinuousSelectNextColumn").meta().shift());
             TABLE_VIEW_BINDINGS.add(new KeyBinding(PAGE_UP, "DiscontinuousSelectPageUp").meta().shift());
             TABLE_VIEW_BINDINGS.add(new KeyBinding(PAGE_DOWN, "DiscontinuousSelectPageDown").meta().shift());
             TABLE_VIEW_BINDINGS.add(new KeyBinding(HOME, "DiscontinuousSelectAllToFirstRow").meta().shift());
@@ -155,6 +157,8 @@ public class TableViewBehavior<T> extends BehaviorBase<TableView<T>> {
             
             TABLE_VIEW_BINDINGS.add(new KeyBinding(UP, "DiscontinuousSelectPreviousRow").ctrl().shift());
             TABLE_VIEW_BINDINGS.add(new KeyBinding(DOWN, "DiscontinuousSelectNextRow").ctrl().shift());
+            TABLE_VIEW_BINDINGS.add(new KeyBinding(LEFT, "DiscontinuousSelectPreviousColumn").ctrl().shift());
+            TABLE_VIEW_BINDINGS.add(new KeyBinding(RIGHT, "DiscontinuousSelectNextColumn").ctrl().shift());
             TABLE_VIEW_BINDINGS.add(new KeyBinding(PAGE_UP, "DiscontinuousSelectPageUp").ctrl().shift());
             TABLE_VIEW_BINDINGS.add(new KeyBinding(PAGE_DOWN, "DiscontinuousSelectPageDown").ctrl().shift());
             TABLE_VIEW_BINDINGS.add(new KeyBinding(HOME, "DiscontinuousSelectAllToFirstRow").ctrl().shift());
@@ -208,6 +212,8 @@ public class TableViewBehavior<T> extends BehaviorBase<TableView<T>> {
         else if ("FocusPageDown".equals(name)) focusPageDown();
         else if ("DiscontinuousSelectNextRow".equals(name)) discontinuousSelectNextRow();
         else if ("DiscontinuousSelectPreviousRow".equals(name)) discontinuousSelectPreviousRow();
+        else if ("DiscontinuousSelectNextColumn".equals(name)) discontinuousSelectNextColumn();
+        else if ("DiscontinuousSelectPreviousColumn".equals(name)) discontinuousSelectPreviousColumn();
         else if ("DiscontinuousSelectPageUp".equals(name)) discontinuousSelectPageUp();
         else if ("DiscontinuousSelectPageDown".equals(name)) discontinuousSelectPageDown();
         else if ("DiscontinuousSelectAllToLastRow".equals(name)) discontinuousSelectAllToLastRow();
@@ -1026,30 +1032,62 @@ public class TableViewBehavior<T> extends BehaviorBase<TableView<T>> {
      *************************************************************************/
     
     private void discontinuousSelectPreviousRow() {
-        MultipleSelectionModel sm = getControl().getSelectionModel();
+        TableView.TableViewSelectionModel sm = getControl().getSelectionModel();
         if (sm == null) return;
         
-        FocusModel fm = getControl().getFocusModel();
+        TableViewFocusModel fm = getControl().getFocusModel();
         if (fm == null) return;
         
         int index = fm.getFocusedIndex() - 1;
         if (index < 0) return;
-        sm.select(index);
+        
+        if (! sm.isCellSelectionEnabled()) {
+            sm.select(index);
+        } else {
+            sm.select(index, fm.getFocusedCell().getTableColumn());
+        }
     }
     
     private void discontinuousSelectNextRow() {
-        MultipleSelectionModel sm = getControl().getSelectionModel();
+        TableView.TableViewSelectionModel sm = getControl().getSelectionModel();
         if (sm == null) return;
         
-        FocusModel fm = getControl().getFocusModel();
+        TableViewFocusModel fm = getControl().getFocusModel();
         if (fm == null) return;
 
         int index = fm.getFocusedIndex() + 1;
-        sm.select(index);
+        
+        if (! sm.isCellSelectionEnabled()) {
+            sm.select(index);
+        } else {
+            sm.select(index, fm.getFocusedCell().getTableColumn());
+        }
+    }
+    
+    private void discontinuousSelectPreviousColumn() {
+        TableView.TableViewSelectionModel sm = getControl().getSelectionModel();
+        if (sm == null || ! sm.isCellSelectionEnabled()) return;
+        
+        TableViewFocusModel fm = getControl().getFocusModel();
+        if (fm == null) return;
+
+        TableColumn tc = getColumn(fm.getFocusedCell().getTableColumn(), -1);
+        sm.select(fm.getFocusedIndex(), tc);
+    }
+    
+    private void discontinuousSelectNextColumn() {
+        TableView.TableViewSelectionModel sm = getControl().getSelectionModel();
+        if (sm == null || ! sm.isCellSelectionEnabled()) return;
+        
+        TableViewFocusModel fm = getControl().getFocusModel();
+        if (fm == null) return;
+
+        TableColumn tc = getColumn(fm.getFocusedCell().getTableColumn(), 1);
+        sm.select(fm.getFocusedIndex(), tc);
     }
     
     private void discontinuousSelectPageUp() {
-        MultipleSelectionModel sm = getControl().getSelectionModel();
+        TableView.TableViewSelectionModel sm = getControl().getSelectionModel();
         if (sm == null) return;
         
         FocusModel fm = getControl().getFocusModel();
@@ -1057,11 +1095,14 @@ public class TableViewBehavior<T> extends BehaviorBase<TableView<T>> {
 
         int leadIndex = fm.getFocusedIndex();
         int leadSelectedIndex = onScrollPageUp.call(null);
-        sm.selectRange(leadSelectedIndex, leadIndex + 1);
+        
+        if (! sm.isCellSelectionEnabled()) {
+            sm.selectRange(leadSelectedIndex, leadIndex + 1);
+        }
     }
     
     private void discontinuousSelectPageDown() {
-        MultipleSelectionModel sm = getControl().getSelectionModel();
+        TableView.TableViewSelectionModel sm = getControl().getSelectionModel();
         if (sm == null) return;
         
         FocusModel fm = getControl().getFocusModel();
@@ -1069,31 +1110,48 @@ public class TableViewBehavior<T> extends BehaviorBase<TableView<T>> {
         
         int leadIndex = fm.getFocusedIndex();
         int leadSelectedIndex = onScrollPageDown.call(null);
-        sm.selectRange(leadIndex, leadSelectedIndex + 1);
+        
+        if (! sm.isCellSelectionEnabled()) {
+            sm.selectRange(leadIndex, leadSelectedIndex + 1);
+        }
     }
     
     private void discontinuousSelectAllToFirstRow() {
-        MultipleSelectionModel sm = getControl().getSelectionModel();
+        TableView.TableViewSelectionModel sm = getControl().getSelectionModel();
         if (sm == null) return;
         
-        FocusModel fm = getControl().getFocusModel();
+        TableViewFocusModel fm = getControl().getFocusModel();
         if (fm == null) return;
 
         int index = fm.getFocusedIndex();
-        sm.selectRange(0, index);
+        
+        if (! sm.isCellSelectionEnabled()) {
+            sm.selectRange(0, index);
+        } else {
+            for (int i = 0; i < index; i++) {
+                sm.select(i, fm.getFocusedCell().getTableColumn());
+            }
+        }
 
         if (onMoveToFirstCell != null) onMoveToFirstCell.run();
     }
     
     private void discontinuousSelectAllToLastRow() {
-        MultipleSelectionModel sm = getControl().getSelectionModel();
+        TableView.TableViewSelectionModel sm = getControl().getSelectionModel();
         if (sm == null) return;
         
-        FocusModel fm = getControl().getFocusModel();
+        TableViewFocusModel fm = getControl().getFocusModel();
         if (fm == null) return;
 
         int index = fm.getFocusedIndex() + 1;
-        sm.selectRange(index, getItemCount());
+        
+        if (! sm.isCellSelectionEnabled()) {
+            sm.selectRange(index, getItemCount());
+        } else {
+            for (int i = index; i < getItemCount(); i++) {
+                sm.select(i, fm.getFocusedCell().getTableColumn());
+            }
+        }
 
         if (onMoveToLastCell != null) onMoveToLastCell.run();
     }   

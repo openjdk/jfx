@@ -31,11 +31,11 @@ public class TableViewKeyInputTest {
     private Scene scene;
     private Group group;
     
+    private final TableColumn<String, String> col0 = new TableColumn<String, String>("col0");
     private final TableColumn<String, String> col1 = new TableColumn<String, String>("col1");
     private final TableColumn<String, String> col2 = new TableColumn<String, String>("col2");
     private final TableColumn<String, String> col3 = new TableColumn<String, String>("col3");
     private final TableColumn<String, String> col4 = new TableColumn<String, String>("col4");
-    private final TableColumn<String, String> col5 = new TableColumn<String, String>("col5");
     
     @Before public void setup() {
         tableView = new TableView<String>();
@@ -46,7 +46,7 @@ public class TableViewKeyInputTest {
         sm.setCellSelectionEnabled(false);
         
         tableView.getItems().setAll("1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12");
-        tableView.getColumns().setAll(col1, col2, col3, col4, col5);
+        tableView.getColumns().setAll(col0, col1, col2, col3, col4);
         
         sm.clearAndSelect(0);
         
@@ -750,33 +750,33 @@ public class TableViewKeyInputTest {
         // select horizontally, then select two items vertically, then go back
         // in opposite direction
         sm.setCellSelectionEnabled(true);
-        sm.clearAndSelect(1, col1);
+        sm.clearAndSelect(1, col0);
         
         keyboard.doRightArrowPress(KeyModifier.SHIFT);   // select (1, col2)
         keyboard.doRightArrowPress(KeyModifier.SHIFT);   // select (1, col3)
         keyboard.doDownArrowPress(KeyModifier.SHIFT);    // select (2, col3)
         keyboard.doDownArrowPress(KeyModifier.SHIFT);    // select (3, col3)
-        assertTrue(sm.isSelected(1, col3));
-        assertTrue(sm.isSelected(2, col3));
-        assertTrue(sm.isSelected(3, col3));
+        assertTrue(sm.isSelected(1, col2));
+        assertTrue(sm.isSelected(2, col2));
+        assertTrue(sm.isSelected(3, col2));
         
         keyboard.doUpArrowPress(KeyModifier.SHIFT);    // deselect (3, col3)
-        assertTrue(sm.isSelected(1, col3));
-        assertTrue(sm.isSelected(2, col3));
-        assertFalse(sm.isSelected(3, col3));
+        assertTrue(sm.isSelected(1, col2));
+        assertTrue(sm.isSelected(2, col2));
+        assertFalse(sm.isSelected(3, col2));
         
         keyboard.doUpArrowPress(KeyModifier.SHIFT);    // deselect (2, col3)
-        assertTrue(sm.isSelected(1, col3));
-        assertFalse(sm.isSelected(2, col3));
-        assertFalse(sm.isSelected(3, col3));
+        assertTrue(sm.isSelected(1, col2));
+        assertFalse(sm.isSelected(2, col2));
+        assertFalse(sm.isSelected(3, col2));
         
         keyboard.doUpArrowPress(KeyModifier.SHIFT);    // deselect (1, col3)
-        assertFalse(debug(), sm.isSelected(1, col3));
-        assertFalse(sm.isSelected(2, col3));
-        assertFalse(sm.isSelected(3, col3));
+        assertFalse(debug(), sm.isSelected(1, col2));
+        assertFalse(sm.isSelected(2, col2));
+        assertFalse(sm.isSelected(3, col2));
         
         keyboard.doLeftArrowPress(KeyModifier.SHIFT);    // deselect (1, col2)
-        assertFalse(sm.isSelected(1, col2));
+        assertFalse(sm.isSelected(1, col1));
     }
     
     
@@ -987,19 +987,341 @@ public class TableViewKeyInputTest {
     // Test 1
     @Test public void test_rt18591_cell_1() {
         sm.setSelectionMode(SelectionMode.MULTIPLE);
-        sm.select(0, col1);
+        sm.setCellSelectionEnabled(true);
+        sm.select(0, col0);
         keyboard.doRightArrowPress(KeyModifier.getShortcutKey());
         keyboard.doRightArrowPress(KeyModifier.getShortcutKey());
         keyboard.doKeyPress(KeyCode.SPACE, KeyModifier.getShortcutKey());
-        assertTrue(sm.isSelected(0,col1));
+        assertTrue(sm.isSelected(0,col0));
+        assertTrue(sm.isSelected(0,col2));
+        assertTrue(isAnchor(0,2));
+        
+        keyboard.doRightArrowPress(KeyModifier.SHIFT, KeyModifier.getShortcutKey());
+        keyboard.doRightArrowPress(KeyModifier.SHIFT, KeyModifier.getShortcutKey());
+        assertTrue(sm.isSelected(0,col0));
+        assertTrue(sm.isSelected(0,col2));
         assertTrue(sm.isSelected(0,col3));
-        assertTrue(isAnchor(2));
+        assertTrue(sm.isSelected(0,col4));
+        assertTrue(isAnchor(0,2));
+    }
+    
+    // Test 2
+    @Test public void test_rt18591_cell_2() {
+        sm.setSelectionMode(SelectionMode.MULTIPLE);
+        sm.setCellSelectionEnabled(true);
+        sm.select(0, col4);
+        keyboard.doLeftArrowPress(KeyModifier.getShortcutKey());
+        keyboard.doLeftArrowPress(KeyModifier.getShortcutKey());
+        keyboard.doKeyPress(KeyCode.SPACE, KeyModifier.getShortcutKey());
+        assertTrue(sm.isSelected(0,col4));
+        assertTrue(sm.isSelected(0,col2));
+        assertTrue(isAnchor(0,2));
+        
+        keyboard.doLeftArrowPress(KeyModifier.SHIFT, KeyModifier.getShortcutKey());
+        keyboard.doLeftArrowPress(KeyModifier.SHIFT, KeyModifier.getShortcutKey());
+        assertTrue(sm.isSelected(0,col0));
+        assertTrue(sm.isSelected(0,col1));
+        assertTrue(sm.isSelected(0,col2));
+        assertTrue(sm.isSelected(0,col4));
+        assertTrue(isAnchor(0,2));
+    }
+    
+    // Test 3
+    @Test public void test_rt18591_cell_3() {
+        sm.setSelectionMode(SelectionMode.MULTIPLE);
+        sm.setCellSelectionEnabled(true);
+        sm.select(0, col0);
+        keyboard.doRightArrowPress(KeyModifier.getShortcutKey());
+        keyboard.doRightArrowPress(KeyModifier.getShortcutKey());
+        keyboard.doKeyPress(KeyCode.SPACE, KeyModifier.getShortcutKey());
+        assertTrue(sm.isSelected(0,col0));
+        assertTrue(sm.isSelected(0,col2));
+        assertTrue(isAnchor(0,2));
+        
+        keyboard.doRightArrowPress(KeyModifier.SHIFT, KeyModifier.getShortcutKey());
+        keyboard.doRightArrowPress(KeyModifier.SHIFT, KeyModifier.getShortcutKey());
+        assertTrue(sm.isSelected(0,col0));
+        assertTrue(sm.isSelected(0,col2));
+        assertTrue(sm.isSelected(0,col3));
+        assertTrue(sm.isSelected(0,col4));
+        assertTrue(isAnchor(0,2));
+        
+        keyboard.doLeftArrowPress(KeyModifier.SHIFT, KeyModifier.getShortcutKey());
+        keyboard.doLeftArrowPress(KeyModifier.SHIFT, KeyModifier.getShortcutKey());
+        keyboard.doLeftArrowPress(KeyModifier.SHIFT, KeyModifier.getShortcutKey());
+        assertTrue(sm.isSelected(0,col0));
+        assertTrue(sm.isSelected(0,col1));
+        assertTrue(sm.isSelected(0,col2));
+        assertTrue(sm.isSelected(0,col3));
+        assertTrue(sm.isSelected(0,col4));
+        assertTrue(isAnchor(0,2));
+    }
+    
+    // Test 4
+    @Test public void test_rt18591_cell_4() {
+        sm.setSelectionMode(SelectionMode.MULTIPLE);
+        sm.setCellSelectionEnabled(true);
+        sm.select(0, col4);
+        keyboard.doLeftArrowPress(KeyModifier.getShortcutKey());
+        keyboard.doLeftArrowPress(KeyModifier.getShortcutKey());
+        keyboard.doKeyPress(KeyCode.SPACE, KeyModifier.getShortcutKey());
+        assertTrue(sm.isSelected(0,col4));
+        assertTrue(sm.isSelected(0,col2));
+        assertTrue(isAnchor(0,2));
+        
+        keyboard.doLeftArrowPress(KeyModifier.SHIFT, KeyModifier.getShortcutKey());
+        keyboard.doLeftArrowPress(KeyModifier.SHIFT, KeyModifier.getShortcutKey());
+        assertTrue(sm.isSelected(0,col0));
+        assertTrue(sm.isSelected(0,col1));
+        assertTrue(sm.isSelected(0,col2));
+        assertTrue(sm.isSelected(0,col4));
+        assertTrue(isAnchor(0,2));
+        
+        keyboard.doRightArrowPress(KeyModifier.SHIFT, KeyModifier.getShortcutKey());
+        keyboard.doRightArrowPress(KeyModifier.SHIFT, KeyModifier.getShortcutKey());
+        keyboard.doRightArrowPress(KeyModifier.SHIFT, KeyModifier.getShortcutKey());
+        assertTrue(sm.isSelected(0,col0));
+        assertTrue(sm.isSelected(0,col1));
+        assertTrue(sm.isSelected(0,col2));
+        assertTrue(sm.isSelected(0,col3));
+        assertTrue(sm.isSelected(0,col4));
+        assertTrue(isAnchor(0,2));
+    }
+    
+    // Test 5
+    @Test public void test_rt18591_cell_5() {
+        sm.setSelectionMode(SelectionMode.MULTIPLE);
+        sm.setCellSelectionEnabled(true);
+        sm.select(0, col1);
+        keyboard.doDownArrowPress(KeyModifier.getShortcutKey());
+        keyboard.doDownArrowPress(KeyModifier.getShortcutKey());
+        keyboard.doKeyPress(KeyCode.SPACE, KeyModifier.getShortcutKey());
+        assertTrue(sm.isSelected(0,col1));
+        assertTrue(sm.isSelected(2,col1));
+        assertTrue(isAnchor(2,1));
         
         keyboard.doDownArrowPress(KeyModifier.SHIFT, KeyModifier.getShortcutKey());
         keyboard.doDownArrowPress(KeyModifier.SHIFT, KeyModifier.getShortcutKey());
-        assertTrue(isSelected(0,2,3,4));
-        assertTrue(isAnchor(2));
+        assertTrue(sm.isSelected(0,col1));
+        assertTrue(sm.isSelected(2,col1));
+        assertTrue(sm.isSelected(3,col1));
+        assertTrue(sm.isSelected(4,col1));
+        assertTrue(isAnchor(2,1));
     }
+    
+    // Test 6
+    @Test public void test_rt18591_cell_6() {
+        sm.setSelectionMode(SelectionMode.MULTIPLE);
+        sm.setCellSelectionEnabled(true);
+        sm.select(5, col1);
+        keyboard.doUpArrowPress(KeyModifier.getShortcutKey());
+        keyboard.doUpArrowPress(KeyModifier.getShortcutKey());
+        keyboard.doKeyPress(KeyCode.SPACE, KeyModifier.getShortcutKey());
+        assertTrue(sm.isSelected(5,col1));
+        assertTrue(sm.isSelected(3,col1));
+        assertTrue(isAnchor(3,1));
+        
+        keyboard.doUpArrowPress(KeyModifier.SHIFT, KeyModifier.getShortcutKey());
+        keyboard.doUpArrowPress(KeyModifier.SHIFT, KeyModifier.getShortcutKey());
+        assertTrue(sm.isSelected(1,col1));
+        assertTrue(sm.isSelected(2,col1));
+        assertTrue(sm.isSelected(3,col1));
+        assertTrue(sm.isSelected(5,col1));
+        assertTrue(isAnchor(3,1));
+    }
+    
+    // Test 7
+    @Test public void test_rt18591_cell_7() {
+        sm.setSelectionMode(SelectionMode.MULTIPLE);
+        sm.setCellSelectionEnabled(true);
+        sm.select(0, col1);
+        keyboard.doDownArrowPress(KeyModifier.getShortcutKey());
+        keyboard.doDownArrowPress(KeyModifier.getShortcutKey());
+        keyboard.doKeyPress(KeyCode.SPACE, KeyModifier.getShortcutKey());
+        assertTrue(sm.isSelected(0,col1));
+        assertTrue(sm.isSelected(2,col1));
+        assertTrue(isAnchor(2,1));
+        
+        keyboard.doDownArrowPress(KeyModifier.SHIFT, KeyModifier.getShortcutKey());
+        keyboard.doDownArrowPress(KeyModifier.SHIFT, KeyModifier.getShortcutKey());
+        assertTrue(sm.isSelected(0,col1));
+        assertTrue(sm.isSelected(2,col1));
+        assertTrue(sm.isSelected(3,col1));
+        assertTrue(sm.isSelected(4,col1));
+        assertTrue(isAnchor(2,1));
+        
+        keyboard.doUpArrowPress(KeyModifier.SHIFT, KeyModifier.getShortcutKey());
+        keyboard.doUpArrowPress(KeyModifier.SHIFT, KeyModifier.getShortcutKey());
+        keyboard.doUpArrowPress(KeyModifier.SHIFT, KeyModifier.getShortcutKey());
+        assertTrue(sm.isSelected(0,col1));
+        assertTrue(sm.isSelected(1,col1));
+        assertTrue(sm.isSelected(2,col1));
+        assertTrue(sm.isSelected(3,col1));
+        assertTrue(sm.isSelected(4,col1));
+        assertTrue(isAnchor(2,1));
+    }
+    
+    // Test 8
+    @Test public void test_rt18591_cell_8() {
+        sm.setSelectionMode(SelectionMode.MULTIPLE);
+        sm.setCellSelectionEnabled(true);
+        sm.select(5, col1);
+        keyboard.doUpArrowPress(KeyModifier.getShortcutKey());
+        keyboard.doUpArrowPress(KeyModifier.getShortcutKey());
+        keyboard.doKeyPress(KeyCode.SPACE, KeyModifier.getShortcutKey());
+        assertTrue(sm.isSelected(5,col1));
+        assertTrue(sm.isSelected(3,col1));
+        assertTrue(isAnchor(3,1));
+        
+        keyboard.doUpArrowPress(KeyModifier.SHIFT, KeyModifier.getShortcutKey());
+        keyboard.doUpArrowPress(KeyModifier.SHIFT, KeyModifier.getShortcutKey());
+        assertTrue(sm.isSelected(1,col1));
+        assertTrue(sm.isSelected(2,col1));
+        assertTrue(sm.isSelected(3,col1));
+        assertTrue(sm.isSelected(5,col1));
+        assertTrue(isAnchor(3,1));
+        
+        keyboard.doDownArrowPress(KeyModifier.SHIFT, KeyModifier.getShortcutKey());
+        keyboard.doDownArrowPress(KeyModifier.SHIFT, KeyModifier.getShortcutKey());
+        keyboard.doDownArrowPress(KeyModifier.SHIFT, KeyModifier.getShortcutKey());
+        assertTrue(sm.isSelected(1,col1));
+        assertTrue(sm.isSelected(2,col1));
+        assertTrue(sm.isSelected(3,col1));
+        assertTrue(sm.isSelected(4,col1));
+        assertTrue(sm.isSelected(5,col1));
+        assertTrue(isAnchor(3,1));
+    }
+    
+    // Skipped tests 9 - 12 as they require Page Up/Down support
+    
+    // Test 13
+    @Test public void test_rt18591_cell_13() {
+        sm.setSelectionMode(SelectionMode.MULTIPLE);
+        sm.setCellSelectionEnabled(true);
+        sm.select(0, col1);
+        keyboard.doDownArrowPress(KeyModifier.getShortcutKey());
+        keyboard.doDownArrowPress(KeyModifier.getShortcutKey());
+        keyboard.doKeyPress(KeyCode.SPACE, KeyModifier.getShortcutKey());
+        assertTrue(sm.isSelected(0,col1));
+        assertTrue(sm.isSelected(2,col1));
+        assertTrue(isAnchor(2,1));
+        
+        keyboard.doKeyPress(KeyCode.END, KeyModifier.SHIFT, KeyModifier.getShortcutKey());
+        assertTrue(sm.isSelected(0,col1));
+        for (int i = 2; i < tableView.getItems().size(); i++) {
+            assertTrue(debug(),sm.isSelected(i,col1));
+        }
+        assertTrue(isAnchor(2,1));
+    }
+    
+    // Test 14
+    @Test public void test_rt18591_cell_14() {
+        int n = tableView.getItems().size() - 1;
+        sm.setSelectionMode(SelectionMode.MULTIPLE);
+        sm.setCellSelectionEnabled(true);
+        sm.select(n, col1);
+        keyboard.doUpArrowPress(KeyModifier.getShortcutKey());
+        keyboard.doUpArrowPress(KeyModifier.getShortcutKey());
+        keyboard.doKeyPress(KeyCode.SPACE, KeyModifier.getShortcutKey());
+        assertTrue(sm.isSelected(n,col1));
+        assertTrue(sm.isSelected(n - 2,col1));
+        assertTrue(isAnchor(n - 2,1));
+        
+        keyboard.doKeyPress(KeyCode.HOME, KeyModifier.SHIFT, KeyModifier.getShortcutKey());
+        assertTrue(sm.isSelected(n,col1));
+        for (int i = 0; i < n - 2; i++) {
+            assertTrue(sm.isSelected(i,col1));
+        }
+        assertTrue(isAnchor(n - 2,1));
+    }
+    
+    // Test 15
+    @Test public void test_rt18591_cell_15() {
+        sm.setSelectionMode(SelectionMode.MULTIPLE);
+        sm.setCellSelectionEnabled(true);
+        sm.select(5, col1);
+
+        keyboard.doKeyPress(KeyCode.HOME, KeyModifier.SHIFT, KeyModifier.getShortcutKey());
+        for (int i = 0; i <= 5; i++) {
+            assertTrue(sm.isSelected(i,col1));
+        }
+        assertTrue(isAnchor(5,1));
+        
+        keyboard.doKeyPress(KeyCode.END, KeyModifier.SHIFT, KeyModifier.getShortcutKey());
+        for (int i = 0; i < tableView.getItems().size() - 1; i++) {
+            assertTrue(sm.isSelected(i,col1));
+        }
+        assertTrue(isAnchor(5,1));
+    }
+    
+    // Test 16
+    @Test public void test_rt18591_cell_16() {
+        sm.setSelectionMode(SelectionMode.MULTIPLE);
+        sm.setCellSelectionEnabled(true);
+        sm.select(0, col1);
+        keyboard.doDownArrowPress(KeyModifier.getShortcutKey());
+        keyboard.doDownArrowPress(KeyModifier.getShortcutKey());
+        keyboard.doKeyPress(KeyCode.SPACE, KeyModifier.getShortcutKey());
+        assertTrue(sm.isSelected(0,col1));
+        assertTrue(sm.isSelected(2,col1));
+        assertTrue(isAnchor(2,1));
+        
+        keyboard.doDownArrowPress(KeyModifier.SHIFT, KeyModifier.getShortcutKey());
+        keyboard.doDownArrowPress(KeyModifier.SHIFT, KeyModifier.getShortcutKey());
+        assertTrue(sm.isSelected(0,col1));
+        assertTrue(sm.isSelected(2,col1));
+        assertTrue(sm.isSelected(3,col1));
+        assertTrue(sm.isSelected(4,col1));
+        assertTrue(isAnchor(2,1));
+        
+        keyboard.doUpArrowPress(KeyModifier.SHIFT, KeyModifier.getShortcutKey());
+        keyboard.doUpArrowPress(KeyModifier.SHIFT, KeyModifier.getShortcutKey());
+        keyboard.doUpArrowPress(KeyModifier.SHIFT, KeyModifier.getShortcutKey());
+        assertTrue(sm.isSelected(0,col1));
+        assertTrue(sm.isSelected(1,col1));
+        assertTrue(sm.isSelected(2,col1));
+        assertTrue(sm.isSelected(3,col1));
+        assertTrue(sm.isSelected(4,col1));
+        assertTrue(isAnchor(2,1));
+        
+        keyboard.doUpArrowPress(KeyModifier.getShortcutKey());
+        keyboard.doKeyPress(KeyCode.SPACE, KeyModifier.getShortcutKey());
+        assertFalse(sm.isSelected(0,col1));
+        assertTrue(sm.isSelected(1,col1));
+        assertTrue(sm.isSelected(2,col1));
+        assertTrue(sm.isSelected(3,col1));
+        assertTrue(sm.isSelected(4,col1));
+        assertTrue(isAnchor(0,1));
+        assertTrue(fm.isFocused(0,col1));
+    }
+    
+//    // Test 17
+//    @Test public void test_rt18591_cell_17() {
+//        sm.setSelectionMode(SelectionMode.MULTIPLE);
+//        sm.setCellSelectionEnabled(true);
+//        sm.select(3, col1);
+//        keyboard.doRightArrowPress(KeyModifier.getShortcutKey());
+//        keyboard.doRightArrowPress(KeyModifier.getShortcutKey());
+//        keyboard.doKeyPress(KeyCode.SPACE, KeyModifier.getShortcutKey());
+//        assertTrue(sm.isSelected(3,col1));
+//        assertTrue(sm.isSelected(3,col3));
+//        assertTrue(isAnchor(3,3));
+//        
+//        keyboard.doRightArrowPress(KeyModifier.SHIFT, KeyModifier.getShortcutKey());
+//        assertTrue(sm.isSelected(3,col1));
+//        assertTrue(sm.isSelected(3,col3));
+//        assertTrue(sm.isSelected(3,col4));
+//        assertTrue(isAnchor(3,3));
+//        
+//        keyboard.doDownArrowPress(KeyModifier.SHIFT, KeyModifier.getShortcutKey());
+//        keyboard.doDownArrowPress(KeyModifier.SHIFT, KeyModifier.getShortcutKey());
+//        assertTrue(sm.isSelected(3,col1));
+//        assertTrue(sm.isSelected(3,col3));
+//        assertTrue(sm.isSelected(3,col4));
+//        assertTrue(sm.isSelected(4,col3));
+//        assertTrue(sm.isSelected(5,col3));
+//        assertTrue(isAnchor(3,3));
+//    }
     
     
     /***************************************************************************
@@ -1008,51 +1330,51 @@ public class TableViewKeyInputTest {
     
     @Test public void test_rt18488_selectToLeft() {
         sm.setCellSelectionEnabled(true);
-        sm.clearAndSelect(1, col5);
+        sm.clearAndSelect(1, col4);
         
         keyboard.doLeftArrowPress(KeyModifier.SHIFT);   // select (1, col4)
         keyboard.doLeftArrowPress(KeyModifier.SHIFT);   // select (1, col3)
         keyboard.doLeftArrowPress(KeyModifier.SHIFT);   // select (1, col2)
         keyboard.doLeftArrowPress(KeyModifier.SHIFT);   // select (1, col1)
-        assertTrue(sm.isSelected(1, col5));
         assertTrue(sm.isSelected(1, col4));
         assertTrue(sm.isSelected(1, col3));
         assertTrue(sm.isSelected(1, col2));
         assertTrue(sm.isSelected(1, col1));
+        assertTrue(sm.isSelected(1, col0));
         
         keyboard.doRightArrowPress(KeyModifier.SHIFT);   // deselect (1, col1)
-        assertTrue(sm.isSelected(1, col5));
         assertTrue(sm.isSelected(1, col4));
         assertTrue(sm.isSelected(1, col3));
-        assertTrue(debug(), sm.isSelected(1, col2));
-        assertFalse(sm.isSelected(1, col1));
+        assertTrue(sm.isSelected(1, col2));
+        assertTrue(debug(), sm.isSelected(1, col1));
+        assertFalse(sm.isSelected(1, col0));
     }
     
     @Test public void test_rt18488_selectToRight() {
         sm.setCellSelectionEnabled(true);
-        sm.clearAndSelect(1, col1);
+        sm.clearAndSelect(1, col0);
         
         keyboard.doRightArrowPress(KeyModifier.SHIFT);   // select (1, col2)
         keyboard.doRightArrowPress(KeyModifier.SHIFT);   // select (1, col3)
         keyboard.doRightArrowPress(KeyModifier.SHIFT);   // select (1, col4)
         keyboard.doRightArrowPress(KeyModifier.SHIFT);   // select (1, col5)
-        assertTrue(sm.isSelected(1, col5));
         assertTrue(sm.isSelected(1, col4));
         assertTrue(sm.isSelected(1, col3));
         assertTrue(sm.isSelected(1, col2));
         assertTrue(sm.isSelected(1, col1));
+        assertTrue(sm.isSelected(1, col0));
         
         keyboard.doLeftArrowPress(KeyModifier.SHIFT);   // deselect (1, col5)
-        assertFalse(sm.isSelected(1, col5));
-        assertTrue(sm.isSelected(1, col4));
+        assertFalse(sm.isSelected(1, col4));
         assertTrue(sm.isSelected(1, col3));
         assertTrue(sm.isSelected(1, col2));
         assertTrue(sm.isSelected(1, col1));
+        assertTrue(sm.isSelected(1, col0));
     }
     
     @Test public void test_rt18488_comment1() {
         sm.setCellSelectionEnabled(true);
-        sm.clearAndSelect(1, col1);
+        sm.clearAndSelect(1, col0);
         
         keyboard.doRightArrowPress(KeyModifier.SHIFT);   // select (1, col2)
         keyboard.doRightArrowPress(KeyModifier.SHIFT);   // select (1, col3)
@@ -1060,106 +1382,106 @@ public class TableViewKeyInputTest {
         keyboard.doRightArrowPress(KeyModifier.SHIFT);   // select (1, col5)
         keyboard.doDownArrowPress(KeyModifier.SHIFT);    // select (2, col5)
         
-        assertTrue(sm.isSelected(2, col5));
-        assertTrue(sm.isSelected(1, col5));
+        assertTrue(sm.isSelected(2, col4));
         assertTrue(sm.isSelected(1, col4));
         assertTrue(sm.isSelected(1, col3));
         assertTrue(sm.isSelected(1, col2));
         assertTrue(sm.isSelected(1, col1));
+        assertTrue(sm.isSelected(1, col0));
         
         keyboard.doUpArrowPress(KeyModifier.SHIFT);     // deselect (2, col5)
-        assertFalse(sm.isSelected(2, col5));
-        assertTrue(sm.isSelected(1, col5));
+        assertFalse(sm.isSelected(2, col4));
         assertTrue(sm.isSelected(1, col4));
         assertTrue(sm.isSelected(1, col3));
         assertTrue(sm.isSelected(1, col2));
         assertTrue(sm.isSelected(1, col1));
+        assertTrue(sm.isSelected(1, col0));
     }
     
     @Test public void test_rt18536_positive_horizontal() {
         // Test shift selection when focus is elsewhere (so as to select a range)
         sm.setCellSelectionEnabled(true);
-        sm.clearAndSelect(1, col1);
+        sm.clearAndSelect(1, col0);
         
         // move focus by holding down ctrl button
         keyboard.doRightArrowPress(KeyModifier.getShortcutKey());   // move focus to (1, col2)
         keyboard.doRightArrowPress(KeyModifier.getShortcutKey());   // move focus to (1, col3)
         keyboard.doRightArrowPress(KeyModifier.getShortcutKey());   // move focus to (1, col4)
         keyboard.doRightArrowPress(KeyModifier.getShortcutKey());   // move focus to (1, col5)
-        assertTrue(fm.isFocused(1, col5));
+        assertTrue(fm.isFocused(1, col4));
         
         // press shift + space to select all cells between (1, col1) and (1, col5)
         keyboard.doKeyPress(KeyCode.SPACE, KeyModifier.SHIFT);
-        assertTrue(sm.isSelected(1, col5));
-        assertTrue(debug(), sm.isSelected(1, col4));
-        assertTrue(sm.isSelected(1, col3));
+        assertTrue(sm.isSelected(1, col4));
+        assertTrue(debug(), sm.isSelected(1, col3));
         assertTrue(sm.isSelected(1, col2));
         assertTrue(sm.isSelected(1, col1));
+        assertTrue(sm.isSelected(1, col0));
     }
     
     @Test public void test_rt18536_negative_horizontal() {
         // Test shift selection when focus is elsewhere (so as to select a range)
         sm.setCellSelectionEnabled(true);
-        sm.clearAndSelect(1, col5);
+        sm.clearAndSelect(1, col4);
         
         // move focus by holding down ctrl button
         keyboard.doLeftArrowPress(KeyModifier.getShortcutKey());   // move focus to (1, col4)
         keyboard.doLeftArrowPress(KeyModifier.getShortcutKey());   // move focus to (1, col3)
         keyboard.doLeftArrowPress(KeyModifier.getShortcutKey());   // move focus to (1, col2)
         keyboard.doLeftArrowPress(KeyModifier.getShortcutKey());   // move focus to (1, col1)
-        assertTrue(fm.isFocused(1, col1));
+        assertTrue(fm.isFocused(1, col0));
         
         // press shift + space to select all cells between (1, col1) and (1, col5)
         keyboard.doKeyPress(KeyCode.SPACE, KeyModifier.SHIFT);
-        assertTrue(debug(), sm.isSelected(1, col5));
-        assertTrue(sm.isSelected(1, col4));
+        assertTrue(debug(), sm.isSelected(1, col4));
         assertTrue(sm.isSelected(1, col3));
         assertTrue(sm.isSelected(1, col2));
         assertTrue(sm.isSelected(1, col1));
+        assertTrue(sm.isSelected(1, col0));
     }
 
     //
     @Test public void test_rt18536_positive_vertical() {
         // Test shift selection when focus is elsewhere (so as to select a range)
         sm.setCellSelectionEnabled(true);
-        sm.clearAndSelect(1, col5);
+        sm.clearAndSelect(1, col4);
         
         // move focus by holding down ctrl button
         keyboard.doDownArrowPress(KeyModifier.getShortcutKey());   // move focus to (2, col5)
         keyboard.doDownArrowPress(KeyModifier.getShortcutKey());   // move focus to (3, col5)
         keyboard.doDownArrowPress(KeyModifier.getShortcutKey());   // move focus to (4, col5)
         keyboard.doDownArrowPress(KeyModifier.getShortcutKey());   // move focus to (5, col5)
-        assertTrue(fm.isFocused(5, col5));
+        assertTrue(fm.isFocused(5, col4));
         
         // press shift + space to select all cells between (1, col5) and (5, col5)
         keyboard.doKeyPress(KeyCode.SPACE, KeyModifier.SHIFT);
-        assertTrue(sm.isSelected(1, col5));
-        assertTrue(sm.isSelected(2, col5));
-        assertTrue(sm.isSelected(3, col5));
-        assertTrue(sm.isSelected(4, col5));
-        assertTrue(sm.isSelected(5, col5));
+        assertTrue(sm.isSelected(1, col4));
+        assertTrue(sm.isSelected(2, col4));
+        assertTrue(sm.isSelected(3, col4));
+        assertTrue(sm.isSelected(4, col4));
+        assertTrue(sm.isSelected(5, col4));
     }
     
     //
     @Test public void test_rt18536_negative_vertical() {
         // Test shift selection when focus is elsewhere (so as to select a range)
         sm.setCellSelectionEnabled(true);
-        sm.clearAndSelect(5, col5);
+        sm.clearAndSelect(5, col4);
         
         // move focus by holding down ctrl button
         keyboard.doUpArrowPress(KeyModifier.getShortcutKey());   // move focus to (4, col5)
         keyboard.doUpArrowPress(KeyModifier.getShortcutKey());   // move focus to (3, col5)
         keyboard.doUpArrowPress(KeyModifier.getShortcutKey());   // move focus to (2, col5)
         keyboard.doUpArrowPress(KeyModifier.getShortcutKey());   // move focus to (1, col5)
-        assertTrue(fm.isFocused(1, col5));
+        assertTrue(fm.isFocused(1, col4));
         
         // press shift + space to select all cells between (1, col5) and (5, col5)
         keyboard.doKeyPress(KeyCode.SPACE, KeyModifier.SHIFT);
-        assertTrue(sm.isSelected(1, col5));
-        assertTrue(sm.isSelected(2, col5));
-        assertTrue(sm.isSelected(3, col5));
-        assertTrue(sm.isSelected(4, col5));
-        assertTrue(sm.isSelected(5, col5));
+        assertTrue(sm.isSelected(1, col4));
+        assertTrue(sm.isSelected(2, col4));
+        assertTrue(sm.isSelected(3, col4));
+        assertTrue(sm.isSelected(4, col4));
+        assertTrue(sm.isSelected(5, col4));
     }
     
     //
