@@ -92,11 +92,11 @@ public class TreeViewSkin<T> extends VirtualContainerBase<TreeView<T>, TreeViewB
         getBehavior().setOnMoveToLastCell(new Runnable() {
             @Override public void run() { onMoveToLastCell(); }
         });
-        getBehavior().setOnScrollPageDown(new Callback<Void, Integer>() {
-            @Override public Integer call(Void param) { return onScrollPageDown(); }
+        getBehavior().setOnScrollPageDown(new Callback<Integer, Integer>() {
+            @Override public Integer call(Integer anchor) { return onScrollPageDown(anchor); }
         });
-        getBehavior().setOnScrollPageUp(new Callback<Void, Integer>() {
-            @Override public Integer call(Void param) { return onScrollPageUp(); }
+        getBehavior().setOnScrollPageUp(new Callback<Integer, Integer>() {
+            @Override public Integer call(Integer anchor) { return onScrollPageUp(anchor); }
         });
         getBehavior().setOnSelectPreviousRow(new Runnable() {
             @Override public void run() { onSelectPreviousCell(); }
@@ -353,12 +353,13 @@ public class TreeViewSkin<T> extends VirtualContainerBase<TreeView<T>, TreeViewB
      * Function used to scroll the container down by one 'page', although
      * if this is a horizontal container, then the scrolling will be to the right.
      */
-    public int onScrollPageDown() {
+    public int onScrollPageDown(int anchor) {
         IndexedCell lastVisibleCell = flow.getLastVisibleCellWithinViewPort();
         if (lastVisibleCell == null) return -1;
 
         int newSelectionIndex = -1;
-        if (! (lastVisibleCell.isSelected() || lastVisibleCell.isFocused())) {
+        int lastVisibleCellIndex = lastVisibleCell.getIndex();
+        if (! (lastVisibleCell.isSelected() || lastVisibleCell.isFocused()) || (lastVisibleCellIndex != anchor)) {
             // if the selection is not on the 'bottom' most cell, we firstly move
             // the selection down to that, without scrolling the contents
             newSelectionIndex = lastVisibleCell.getIndex();
@@ -380,12 +381,13 @@ public class TreeViewSkin<T> extends VirtualContainerBase<TreeView<T>, TreeViewB
      * Function used to scroll the container up by one 'page', although
      * if this is a horizontal container, then the scrolling will be to the left.
      */
-    public int onScrollPageUp() {
+    public int onScrollPageUp(int anchor) {
         IndexedCell firstVisibleCell = flow.getFirstVisibleCellWithinViewPort();
         if (firstVisibleCell == null) return -1;
 
         int newSelectionIndex = -1;
-        if (! (firstVisibleCell.isSelected() || firstVisibleCell.isFocused())) {
+        int firstVisibleCellIndex = firstVisibleCell.getIndex();
+        if (! (firstVisibleCell.isSelected() || firstVisibleCell.isFocused()) || (firstVisibleCellIndex != anchor)) {
             // if the selection is not on the 'top' most cell, we firstly move
             // the selection up to that, without scrolling the contents
             newSelectionIndex = firstVisibleCell.getIndex();
