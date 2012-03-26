@@ -4,22 +4,20 @@
  */
 package com.sun.javafx.scene.control;
 
+import java.security.acl.Owner;
 import java.util.List;
 import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.SimpleObjectProperty;
 import javafx.collections.FXCollections;
+import javafx.event.ActionEvent;
 import javafx.event.EventHandler;
-import javafx.scene.Group;
 import javafx.scene.control.Button;
+import javafx.scene.control.Separator;
 import javafx.scene.effect.DropShadow;
 import javafx.scene.input.MouseEvent;
 import javafx.scene.layout.GridPane;
 import javafx.scene.layout.Region;
-import javafx.scene.layout.VBox;
 import javafx.scene.paint.Color;
-import javafx.scene.paint.CycleMethod;
-import javafx.scene.paint.LinearGradient;
-import javafx.scene.paint.Stop;
 import javafx.scene.shape.ArcTo;
 import javafx.scene.shape.ClosePath;
 import javafx.scene.shape.LineTo;
@@ -27,6 +25,7 @@ import javafx.scene.shape.MoveTo;
 import javafx.scene.shape.Path;
 import javafx.scene.shape.Rectangle;
 import javafx.scene.shape.StrokeType;
+import javafx.stage.Window;
 
 
 public class ColorPickerPanel extends Region {
@@ -36,6 +35,7 @@ public class ColorPickerPanel extends Region {
     
     ColorPickerGrid cpg;
     Path path;
+    ColorPicker colorPicker;
     
     private ObjectProperty<Color> color = new SimpleObjectProperty<Color>(Color.WHITE);
     public ObjectProperty<Color> colorProperty() { return color; }
@@ -48,11 +48,16 @@ public class ColorPickerPanel extends Region {
         colorProperty().bindBidirectional(cpg.colorProperty());
         // create popup path for main shape
         path = new Path();
-        path.setFill(new LinearGradient(0, 0, 0, 1, true, CycleMethod.NO_CYCLE, new Stop(0, Color.web("#313131")), new Stop(0.5, Color.web("#5f5f5f")), new Stop(1, Color.web("#313131"))));
+//        path.setFill(new LinearGradient(0, 0, 0, 1, true, CycleMethod.NO_CYCLE, new Stop(0, Color.web("#313131")), new Stop(0.5, Color.web("#5f5f5f")), new Stop(1, Color.web("#313131"))));
+        path.setFill(Color.LIGHTGRAY);
         path.setStroke(null);
         path.setEffect(new DropShadow(15, 0, 1, Color.gray(0, 0.6)));
         path.setCache(true);
         getChildren().addAll(path, cpg);
+    }
+    public void setOwner(ColorPicker colorPicker) {
+        this.colorPicker = colorPicker;
+        cpg.owner = colorPicker.getScene().getWindow();
     }
     
     @Override protected void layoutChildren() {
@@ -60,8 +65,6 @@ public class ColorPickerPanel extends Region {
         double paddingY = getInsets().getTop();
         double popupWidth = cpg.prefWidth(-1) + paddingX+getInsets().getRight();
         double popupHeight = cpg.prefHeight(-1) + getInsets().getTop() + getInsets().getBottom();
-        System.out.println("cpg width = "+cpg.prefWidth(-1)+" paddingX = "+paddingX+" paddingY = "+
-                paddingY);
         double arrowX = paddingX+RADIUS;
         path.getElements().addAll(
                 new MoveTo(paddingX, getInsets().getTop() + ARROW_SIZE + RADIUS), 
@@ -86,8 +89,10 @@ class ColorPickerGrid extends GridPane {
     
     private Color currentColor = null;
     private final List<ColorSquare> squares;
+    Window owner;
     
     public ColorPickerGrid(Color initPaint) {
+        getStyleClass().add("color-picker-grid");
         setId("ColorCustomizerColorGrid");
         setGridLinesVisible(true);
         int columnIndex = 0, rowIndex = 0;
@@ -111,8 +116,25 @@ class ColorPickerGrid extends GridPane {
                 rowIndex++;
             }
         }
+        System.out.println("getWidth = "+getWidth());
+        add(new Rectangle(getWidth(), SQUARE_SIZE), 0, ++rowIndex, 12, 1);
+        add(new Separator(), 0, ++rowIndex, 12, 1);
+        add(new Rectangle(getWidth(), SQUARE_SIZE), 0, ++rowIndex, 12, 1);
+        Button addColorButton = new Button("Add Color...");
+        addColorButton.setPrefWidth(SQUARE_SIZE*NUM_OF_COLUMNS);
+        add(addColorButton, 0, ++rowIndex, 12, 1);
+        add(new Rectangle(getWidth(), SQUARE_SIZE), 0, ++rowIndex, 12, 1);
         
-        setColor(initPaint);
+    setColor(initPaint);
+        
+        addColorButton.setOnAction(new EventHandler<ActionEvent>() {
+            @Override
+            public void handle(ActionEvent t) {
+                ColorPickerAddColorPane addColorDialog = new ColorPickerAddColorPane(owner);
+                addColorDialog.show();
+            }
+        });
+        
     }
     
     private ObjectProperty<Color> color = new SimpleObjectProperty<Color>(Color.RED) {
