@@ -60,6 +60,7 @@ import com.sun.javafx.PlatformUtil;
 import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
 import javafx.collections.ListChangeListener;
+import javafx.scene.control.*;
 import javafx.util.Callback;
 
 public class TableViewBehavior<T> extends BehaviorBase<TableView<T>> {
@@ -131,6 +132,13 @@ public class TableViewBehavior<T> extends BehaviorBase<TableView<T>> {
             TABLE_VIEW_BINDINGS.add(new KeyBinding(SPACE, "toggleFocusOwnerSelection").ctrl().meta());
             TABLE_VIEW_BINDINGS.add(new KeyBinding(PAGE_UP, "FocusPageUp").meta());
             TABLE_VIEW_BINDINGS.add(new KeyBinding(PAGE_DOWN, "FocusPageDown").meta());
+            
+            TABLE_VIEW_BINDINGS.add(new KeyBinding(UP, "DiscontinuousSelectPreviousRow").meta().shift());
+            TABLE_VIEW_BINDINGS.add(new KeyBinding(DOWN, "DiscontinuousSelectNextRow").meta().shift());
+            TABLE_VIEW_BINDINGS.add(new KeyBinding(PAGE_UP, "DiscontinuousSelectPageUp").meta().shift());
+            TABLE_VIEW_BINDINGS.add(new KeyBinding(PAGE_DOWN, "DiscontinuousSelectPageDown").meta().shift());
+            TABLE_VIEW_BINDINGS.add(new KeyBinding(HOME, "DiscontinuousSelectAllToFirstRow").meta().shift());
+            TABLE_VIEW_BINDINGS.add(new KeyBinding(END, "DiscontinuousSelectAllToLastRow").meta().shift());
         } else {
             TABLE_VIEW_BINDINGS.add(new KeyBinding(UP, "FocusPreviousRow").ctrl());
             TABLE_VIEW_BINDINGS.add(new KeyBinding(DOWN, "FocusNextRow").ctrl());
@@ -144,6 +152,13 @@ public class TableViewBehavior<T> extends BehaviorBase<TableView<T>> {
             TABLE_VIEW_BINDINGS.add(new KeyBinding(SPACE, "toggleFocusOwnerSelection").ctrl());
             TABLE_VIEW_BINDINGS.add(new KeyBinding(PAGE_UP, "FocusPageUp").ctrl());
             TABLE_VIEW_BINDINGS.add(new KeyBinding(PAGE_DOWN, "FocusPageDown").ctrl());
+            
+            TABLE_VIEW_BINDINGS.add(new KeyBinding(UP, "DiscontinuousSelectPreviousRow").ctrl().shift());
+            TABLE_VIEW_BINDINGS.add(new KeyBinding(DOWN, "DiscontinuousSelectNextRow").ctrl().shift());
+            TABLE_VIEW_BINDINGS.add(new KeyBinding(PAGE_UP, "DiscontinuousSelectPageUp").ctrl().shift());
+            TABLE_VIEW_BINDINGS.add(new KeyBinding(PAGE_DOWN, "DiscontinuousSelectPageDown").ctrl().shift());
+            TABLE_VIEW_BINDINGS.add(new KeyBinding(HOME, "DiscontinuousSelectAllToFirstRow").ctrl().shift());
+            TABLE_VIEW_BINDINGS.add(new KeyBinding(END, "DiscontinuousSelectAllToLastRow").ctrl().shift());
         }
 
         TABLE_VIEW_BINDINGS.add(new KeyBinding(ENTER, "Activate"));
@@ -191,6 +206,12 @@ public class TableViewBehavior<T> extends BehaviorBase<TableView<T>> {
         else if ("SelectAllToFocus".equals(name)) selectAllToFocus();
         else if ("FocusPageUp".equals(name)) focusPageUp();
         else if ("FocusPageDown".equals(name)) focusPageDown();
+        else if ("DiscontinuousSelectNextRow".equals(name)) discontinuousSelectNextRow();
+        else if ("DiscontinuousSelectPreviousRow".equals(name)) discontinuousSelectPreviousRow();
+        else if ("DiscontinuousSelectPageUp".equals(name)) discontinuousSelectPageUp();
+        else if ("DiscontinuousSelectPageDown".equals(name)) discontinuousSelectPageDown();
+        else if ("DiscontinuousSelectAllToLastRow".equals(name)) discontinuousSelectAllToLastRow();
+        else if ("DiscontinuousSelectAllToFirstRow".equals(name)) discontinuousSelectAllToFirstRow();
         else super.callAction(name);
     }
 
@@ -998,4 +1019,82 @@ public class TableViewBehavior<T> extends BehaviorBase<TableView<T>> {
         sm.clearAndSelect(focusedCell.getRow(), endColumn);
     }
      */
+    
+    
+    /**************************************************************************
+     * Discontinuous Selection                                                *
+     *************************************************************************/
+    
+    private void discontinuousSelectPreviousRow() {
+        MultipleSelectionModel sm = getControl().getSelectionModel();
+        if (sm == null) return;
+        
+        FocusModel fm = getControl().getFocusModel();
+        if (fm == null) return;
+        
+        int index = fm.getFocusedIndex() - 1;
+        if (index < 0) return;
+        sm.select(index);
+    }
+    
+    private void discontinuousSelectNextRow() {
+        MultipleSelectionModel sm = getControl().getSelectionModel();
+        if (sm == null) return;
+        
+        FocusModel fm = getControl().getFocusModel();
+        if (fm == null) return;
+
+        int index = fm.getFocusedIndex() + 1;
+        sm.select(index);
+    }
+    
+    private void discontinuousSelectPageUp() {
+        MultipleSelectionModel sm = getControl().getSelectionModel();
+        if (sm == null) return;
+        
+        FocusModel fm = getControl().getFocusModel();
+        if (fm == null) return;
+
+        int leadIndex = fm.getFocusedIndex();
+        int leadSelectedIndex = onScrollPageUp.call(null);
+        sm.selectRange(leadSelectedIndex, leadIndex + 1);
+    }
+    
+    private void discontinuousSelectPageDown() {
+        MultipleSelectionModel sm = getControl().getSelectionModel();
+        if (sm == null) return;
+        
+        FocusModel fm = getControl().getFocusModel();
+        if (fm == null) return;
+        
+        int leadIndex = fm.getFocusedIndex();
+        int leadSelectedIndex = onScrollPageDown.call(null);
+        sm.selectRange(leadIndex, leadSelectedIndex + 1);
+    }
+    
+    private void discontinuousSelectAllToFirstRow() {
+        MultipleSelectionModel sm = getControl().getSelectionModel();
+        if (sm == null) return;
+        
+        FocusModel fm = getControl().getFocusModel();
+        if (fm == null) return;
+
+        int index = fm.getFocusedIndex();
+        sm.selectRange(0, index);
+
+        if (onMoveToFirstCell != null) onMoveToFirstCell.run();
+    }
+    
+    private void discontinuousSelectAllToLastRow() {
+        MultipleSelectionModel sm = getControl().getSelectionModel();
+        if (sm == null) return;
+        
+        FocusModel fm = getControl().getFocusModel();
+        if (fm == null) return;
+
+        int index = fm.getFocusedIndex() + 1;
+        sm.selectRange(index, getItemCount());
+
+        if (onMoveToLastCell != null) onMoveToLastCell.run();
+    }   
 }
