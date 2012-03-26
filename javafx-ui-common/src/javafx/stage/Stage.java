@@ -59,7 +59,12 @@ import javafx.beans.property.ReadOnlyBooleanWrapper;
  * Stage objects must be constructed and modified on the
  * JavaFX Application Thread.
  * </p>
- *
+ * <p>
+ * Many of the {@code Stage} properties are read only because they can
+ * be changed externally by the underlying platform and therefore must
+ * not be bindable.
+ * </p>
+ * 
  * <p><b>Style</b></p>
  * <p>
  * A stage has one of the following styles:
@@ -73,7 +78,7 @@ import javafx.beans.property.ReadOnlyBooleanWrapper;
  * <li>{@link StageStyle#UTILITY} - a stage with a solid white background and
  * minimal platform decorations.</li>
  * </ul>
- * The style must be initialized before the stage is made visible.
+ * <p>The style must be initialized before the stage is made visible.</p>
  * 
  * <p><b>Owner</b></p>
  * <p>
@@ -97,19 +102,14 @@ import javafx.beans.property.ReadOnlyBooleanWrapper;
  * from its child hierarchy.</li>
  * </ul> 
  * 
- * When a window is blocked by a modal stage, it receives no input events, but 
- * continues to animate and render normally. Note that showing a modal stage does
- * not block the calling thread. The {@link #show} method returns immediately 
- * regardless of the modality.
- * The modality must be initialized before the stage is made visible. 
- * 
- * <p>
- * Many of the {@code Stage} properties are read only because they can
- * be changed externally by the underlying platform and therefore must
- * not be bindable.
- * </p>
+ * <p>When a window is blocked by a modal stage its Z-order relative to its ancestors
+ * is preserved, and it receives no input events and no window activation events,
+ * but continues to animate and render normally.
+ * Note that showing a modal stage does not block the calling thread. The
+ * {@link #show} method returns immediately regardless of the modality.
+ * The modality must be initialized before the stage is made visible.</p> 
  *
- * <p>Example:</p>
+ * <p><b>Example:</b></p>
  *
  *
 <pre><code>
