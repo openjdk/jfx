@@ -189,10 +189,6 @@ public class Path extends Shape {
     private final ObservableList<PathElement> elements = new TrackableObservableList<PathElement>() {
         @Override
         protected void onChanged(Change<PathElement> c) {
-            //
-            // TODO: Need to keep a list of Path objects in PathElement if we want
-            // to support sharability. See how transforms is handled in Node.
-            //
             List<PathElement> list = c.getList();
             boolean firstElementChanged = false;
             while (c.next()) {

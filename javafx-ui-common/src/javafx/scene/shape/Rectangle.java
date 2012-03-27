@@ -504,7 +504,6 @@ public  class Rectangle extends Shape {
         }
         if ((getArcWidth() > 0) && (getArcHeight() > 0)
                 && ((tx.getType() & NON_RECTILINEAR_TYPE_MASK) != 0)) {
-            // TODO: Optimize rotated bounds...
             return computeShapeBounds(bounds, tx, impl_configShape());
         }
         double upad;

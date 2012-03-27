@@ -63,18 +63,5 @@ public final class Dragboard extends Clipboard {
     public static Dragboard impl_create(TKClipboard peer) {
         return new Dragboard(peer);
     }
-
-    // TODO: DragView support
-//    /**
-//     * Visual representation of data being transfered in a drag and drop gesture.
-//     * This will be shown to the side of the mouse cursor as it is moved around
-//     * the screen.
-//     */
-//    public Node dragView;
-//
-//    /**
-//     * Specifies the opacity of the dragView node as the drag occurs. If this
-//     * is not specified, a default opacity of 0.65 will be applied.
-//     */
-//    public float dragViewOpacity = 0.65f;
+    
 }
