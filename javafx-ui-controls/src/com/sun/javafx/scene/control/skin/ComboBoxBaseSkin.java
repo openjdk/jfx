@@ -178,6 +178,13 @@ public abstract class ComboBoxBaseSkin<T> extends SkinBase<ComboBoxBase<T>, Comb
     @Override protected double computePrefHeight(double width) {
         if (displayNode == null) {
             updateDisplayArea();
+            
+            // RT-20575: The display node is being brought into the scenegraph
+            // early so we get the correct prefHeight, but at this point it
+            // may not have had a layout pass run over it itself, so the 
+            // displayNode will return a prefHeight of 0. Here we are forcing
+            // a one-off run of the layout over the displayNode.
+            displayNode.impl_processCSS(true);
         }
 
         double ph;
