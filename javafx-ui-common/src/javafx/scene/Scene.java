@@ -2496,8 +2496,6 @@ public class Scene implements EventTarget {
          * the Node.onDragSourceRecognized function.
          */
         private boolean processRecognized(Node n, DragEvent de) {
-            //TODO: Should get Mouse Event, for now we have to make up one
-            //      this code is not used right now anyway
             MouseEvent me = MouseEvent.impl_mouseEvent(de.getX(), de.getY(),
                     de.getSceneX(), de.getScreenY(), MouseButton.PRIMARY, 1,
                     false, false, false, false, false, true, false, false, false,
