@@ -332,6 +332,15 @@ public class TextFieldSkin extends TextInputControlSkin<TextField, TextFieldBeha
             }
         };
 
+        textField.textProperty().addListener(new InvalidationListener() {
+            @Override public void invalidated(Observable observable) {
+                if (!getBehavior().isEditing()) {
+                    // Text changed, but not by user action
+                    updateTextPos();
+                }
+            }
+        });
+
         if (usePromptText.get()) {
             createPromptNode();
         }
@@ -530,7 +539,8 @@ public class TextFieldSkin extends TextInputControlSkin<TextField, TextFieldBeha
 
           case LEFT:
           default:
-            if (textBounds.getMinX() < clipBounds.getMinX() + caretWidth / 2) {
+            if (textBounds.getMinX() < clipBounds.getMinX() + caretWidth / 2 &&
+                textBounds.getMaxX() <= clipBounds.getMaxX()) {
                 double delta = caretMaxXOld - caretBounds.getMaxX() - textTranslateX.get();
                 if (textBounds.getMaxX() + delta < clipBounds.getMaxX()) {
                     if (textMaxXOld <= clipBounds.getMaxX()) {
