@@ -3262,6 +3262,25 @@ Only the properties with values that are different from the TextBox are specifie
     -fx-effect: dropshadow( one-pass-box , white , 0, 0.0 , 0 , 1 );
 }
 
+
+.controls-pane .addcolor-controls-background {
+    -fx-background-color: -fx-text-box-border, -fx-text-box-border, -fx-control-inner-background;
+    -fx-background-insets: 0, 1, 2;
+    -fx-background-radius: 3, 2, 2;
+    -fx-padding: 3 5 3 5;
+}
+
+.controls-pane .alpha-settings .text-field {
+/*    -fx-background-color: -fx-shadow-highlight-color, -fx-text-box-border, -fx-control-inner-background;*/
+    -fx-background-color: -fx-text-box-border, -fx-control-inner-background;
+    -fx-background-insets: 0, 1;
+    -fx-background-radius: 3, 2;
+    -fx-padding: 3 5 3 5;
+    -fx-text-fill: -fx-text-inner-color;
+    -fx-prompt-text-fill: derive(-fx-control-inner-background,-30%);
+    -fx-cursor: text;
+}
+
 /* -------------------------- STYLES FOR PAGINATION CONTROL ----- */
 .pagination-cell {
     -fx-skin: "com.sun.javafx.scene.control.skin.PaginationCellSkin";
