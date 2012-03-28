@@ -112,6 +112,9 @@ public class Pagination<T> extends Control {
 
     private IntegerProperty numberOfVisiblePages;
     public final void setNumberOfVisiblePages(int value) {
+        if (value < 1) {
+            value = 1;
+        }
         numberOfVisiblePagesProperty().set(value);
     }
 
@@ -123,7 +126,12 @@ public class Pagination<T> extends Control {
      * The max number of items per page
      */
     public final IntegerProperty itemsPerPage = new SimpleIntegerProperty(this, "itemsPerPage", 10);
-    public final void setItemsPerPage(int value) { itemsPerPage.set(value); }
+    public final void setItemsPerPage(int value) { 
+        if (value < 1) {
+            value = 1;
+        }        
+        itemsPerPage.set(value); 
+    }
     public final int getItemsPerPage() { return itemsPerPage.get(); }
     public final IntegerProperty itemsPerPageProperty() { return itemsPerPage; }
 
@@ -131,7 +139,7 @@ public class Pagination<T> extends Control {
      * The total number of items
      */
     public final IntegerProperty numberOfItems = new SimpleIntegerProperty(this, "numberOfItems", 1);
-    private final void setNumberOfItems(int value) { numberOfItems.set(value); }
+    public final void setNumberOfItems(int value) { numberOfItems.set(value); }
     public final int getNumberOfItems() { return numberOfItems.get(); }
     public final IntegerProperty numberOfItemsProperty() { return numberOfItems; }
 
@@ -139,7 +147,12 @@ public class Pagination<T> extends Control {
      * The current page index
      */
     public final IntegerProperty pageIndex = new SimpleIntegerProperty(this, "pageIndex", 0);
-    public final void setPageIndex(int value) { pageIndex.set(value); }
+    public final void setPageIndex(int value) { 
+        if (value < 0) {
+            value = 0;
+        }                
+        pageIndex.set(value); 
+    }
     public final int getPageIndex() { return pageIndex.get(); }
     public final IntegerProperty pageIndexProperty() { return pageIndex; }
 
