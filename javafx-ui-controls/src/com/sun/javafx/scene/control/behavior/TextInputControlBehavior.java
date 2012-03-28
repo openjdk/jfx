@@ -112,6 +112,7 @@ public abstract class TextInputControlBehavior<T extends TextInputControl> exten
         TextInputControl textInputControl = getControl();
         if (textInputControl.isEditable()) {
             setCaretAnimating(false);
+            setEditing(true);
             if ("InputCharacter".equals(name)) defaultKeyTyped(lastEvent);
             else if ("Cut".equals(name)) textInputControl.cut();
             else if ("Copy".equals(name)) textInputControl.copy();
@@ -137,7 +138,11 @@ public abstract class TextInputControlBehavior<T extends TextInputControl> exten
             else if ("SelectHomeExtend".equals(name)) selectHomeExtend();
             else if ("SelectEndExtend".equals(name)) selectEndExtend();
             /*DEBUG*/else if ("UseVK".equals(name)) ((com.sun.javafx.scene.control.skin.TextInputControlSkin)textInputControl.getSkin()).toggleUseVK();
-            else super.callAction(name);
+            else {
+                setEditing(false);
+                super.callAction(name);
+            }
+            setEditing(false);
             setCaretAnimating(true);
         } else if ("Copy".equals(name)) {
             // If the key event is for the "copy" action then we go ahead
@@ -243,5 +248,13 @@ public abstract class TextInputControlBehavior<T extends TextInputControl> exten
     private void selectEndExtend() {
         TextInputControl textInputControl = getControl();
         textInputControl.extendSelection(textInputControl.getLength());
+    }
+
+    private boolean editing = false;
+    protected void setEditing(boolean b) {
+        editing = b;
+    }
+    public boolean isEditing() {
+        return editing;
     }
 }

@@ -79,6 +79,13 @@ public class TreeViewBehavior<T> extends BehaviorBase<TreeView<T>> {
             TREE_VIEW_BINDINGS.add(new KeyBinding(PAGE_DOWN, "FocusPageDown").meta());
             TREE_VIEW_BINDINGS.add(new KeyBinding(UP, "FocusPreviousRow").meta());
             TREE_VIEW_BINDINGS.add(new KeyBinding(DOWN, "FocusNextRow").meta());
+            
+            TREE_VIEW_BINDINGS.add(new KeyBinding(UP, "DiscontinuousSelectPreviousRow").meta().shift());
+            TREE_VIEW_BINDINGS.add(new KeyBinding(DOWN, "DiscontinuousSelectNextRow").meta().shift());
+            TREE_VIEW_BINDINGS.add(new KeyBinding(PAGE_UP, "DiscontinuousSelectPageUp").meta().shift());
+            TREE_VIEW_BINDINGS.add(new KeyBinding(PAGE_DOWN, "DiscontinuousSelectPageDown").meta().shift());
+            TREE_VIEW_BINDINGS.add(new KeyBinding(HOME, "DiscontinuousSelectAllToFirstRow").meta().shift());
+            TREE_VIEW_BINDINGS.add(new KeyBinding(END, "DiscontinuousSelectAllToLastRow").meta().shift());
         } else {
             TREE_VIEW_BINDINGS.add(new KeyBinding(A, "SelectAll").ctrl());
             TREE_VIEW_BINDINGS.add(new KeyBinding(BACK_SLASH, "ClearSelection").ctrl());
@@ -88,6 +95,13 @@ public class TreeViewBehavior<T> extends BehaviorBase<TreeView<T>> {
             TREE_VIEW_BINDINGS.add(new KeyBinding(PAGE_DOWN, "FocusPageDown").ctrl());
             TREE_VIEW_BINDINGS.add(new KeyBinding(UP, "FocusPreviousRow").ctrl());
             TREE_VIEW_BINDINGS.add(new KeyBinding(DOWN, "FocusNextRow").ctrl());
+            
+            TREE_VIEW_BINDINGS.add(new KeyBinding(UP, "DiscontinuousSelectPreviousRow").ctrl().shift());
+            TREE_VIEW_BINDINGS.add(new KeyBinding(DOWN, "DiscontinuousSelectNextRow").ctrl().shift());
+            TREE_VIEW_BINDINGS.add(new KeyBinding(PAGE_UP, "DiscontinuousSelectPageUp").ctrl().shift());
+            TREE_VIEW_BINDINGS.add(new KeyBinding(PAGE_DOWN, "DiscontinuousSelectPageDown").ctrl().shift());
+            TREE_VIEW_BINDINGS.add(new KeyBinding(HOME, "DiscontinuousSelectAllToFirstRow").ctrl().shift());
+            TREE_VIEW_BINDINGS.add(new KeyBinding(END, "DiscontinuousSelectAllToLastRow").ctrl().shift());
         }
 
         TREE_VIEW_BINDINGS.add(new KeyBinding(LEFT, "CollapseRow"));
@@ -143,6 +157,12 @@ public class TreeViewBehavior<T> extends BehaviorBase<TreeView<T>> {
         else if ("FocusPageDown".equals(name)) focusPageDown();
         else if ("FocusPreviousRow".equals(name)) focusPreviousRow();
         else if ("FocusNextRow".equals(name)) focusNextRow();
+        else if ("DiscontinuousSelectNextRow".equals(name)) discontinuousSelectNextRow();
+        else if ("DiscontinuousSelectPreviousRow".equals(name)) discontinuousSelectPreviousRow();
+        else if ("DiscontinuousSelectPageUp".equals(name)) discontinuousSelectPageUp();
+        else if ("DiscontinuousSelectPageDown".equals(name)) discontinuousSelectPageDown();
+        else if ("DiscontinuousSelectAllToLastRow".equals(name)) discontinuousSelectAllToLastRow();
+        else if ("DiscontinuousSelectAllToFirstRow".equals(name)) discontinuousSelectAllToFirstRow();
         else super.callAction(name);
     }
 
@@ -171,11 +191,11 @@ public class TreeViewBehavior<T> extends BehaviorBase<TreeView<T>> {
     // set when focus is moved by keyboard to allow for proper selection positions
 //    private int selectPos = -1;
     
-    private Callback<Void, Integer> onScrollPageUp;
-    public void setOnScrollPageUp(Callback<Void, Integer> c) { onScrollPageUp = c; }
+    private Callback<Integer, Integer> onScrollPageUp;
+    public void setOnScrollPageUp(Callback<Integer, Integer> c) { onScrollPageUp = c; }
 
-    private Callback<Void, Integer> onScrollPageDown;
-    public void setOnScrollPageDown(Callback<Void, Integer> c) { onScrollPageDown = c; }
+    private Callback<Integer, Integer> onScrollPageDown;
+    public void setOnScrollPageDown(Callback<Integer, Integer> c) { onScrollPageDown = c; }
 
     private Runnable onSelectPreviousRow;
     public void setOnSelectPreviousRow(Runnable r) { onSelectPreviousRow = r; }
@@ -279,7 +299,7 @@ public class TreeViewBehavior<T> extends BehaviorBase<TreeView<T>> {
     private void scrollUp() {
         int newSelectedIndex = -1;
         if (onScrollPageUp != null) {
-            newSelectedIndex = onScrollPageUp.call(null);
+            newSelectedIndex = onScrollPageUp.call(getAnchor());
         }
         if (newSelectedIndex == -1) return;
         
@@ -291,7 +311,7 @@ public class TreeViewBehavior<T> extends BehaviorBase<TreeView<T>> {
     private void scrollDown() {
         int newSelectedIndex = -1;
         if (onScrollPageDown != null) {
-            newSelectedIndex = onScrollPageDown.call(null);
+            newSelectedIndex = onScrollPageDown.call(getAnchor());
         }
         if (newSelectedIndex == -1) return;
         
@@ -349,7 +369,7 @@ public class TreeViewBehavior<T> extends BehaviorBase<TreeView<T>> {
     }
     
     private void focusPageUp() {
-        int newFocusIndex = onScrollPageUp.call(null);
+        int newFocusIndex = onScrollPageUp.call(getAnchor());
         
         FocusModel fm = getControl().getFocusModel();
         if (fm == null) return;
@@ -357,7 +377,7 @@ public class TreeViewBehavior<T> extends BehaviorBase<TreeView<T>> {
     }
     
     private void focusPageDown() {
-        int newFocusIndex = onScrollPageDown.call(null);
+        int newFocusIndex = onScrollPageDown.call(getAnchor());
         
         FocusModel fm = getControl().getFocusModel();
         if (fm == null) return;
@@ -537,7 +557,7 @@ public class TreeViewBehavior<T> extends BehaviorBase<TreeView<T>> {
             setAnchor(leadIndex);
         }
         
-        int leadSelectedIndex = onScrollPageUp.call(null);
+        int leadSelectedIndex = onScrollPageUp.call(getAnchor());
         
         MultipleSelectionModel sm = getControl().getSelectionModel();
         if (sm == null) return;
@@ -558,7 +578,7 @@ public class TreeViewBehavior<T> extends BehaviorBase<TreeView<T>> {
             setAnchor(leadIndex);
         }
         
-        int leadSelectedIndex = onScrollPageDown.call(null);
+        int leadSelectedIndex = onScrollPageDown.call(getAnchor());
         
         MultipleSelectionModel sm = getControl().getSelectionModel();
         if (sm == null) return;
@@ -683,5 +703,82 @@ public class TreeViewBehavior<T> extends BehaviorBase<TreeView<T>> {
         }
         
         setAnchor(focusedIndex);
+    }
+    
+    /**************************************************************************
+     * Discontinuous Selection                                                *
+     *************************************************************************/
+    
+    private void discontinuousSelectPreviousRow() {
+        MultipleSelectionModel sm = getControl().getSelectionModel();
+        if (sm == null) return;
+        
+        FocusModel fm = getControl().getFocusModel();
+        if (fm == null) return;
+        
+        int index = fm.getFocusedIndex() - 1;
+        if (index < 0) return;
+        sm.select(index);
+    }
+    
+    private void discontinuousSelectNextRow() {
+        MultipleSelectionModel sm = getControl().getSelectionModel();
+        if (sm == null) return;
+        
+        FocusModel fm = getControl().getFocusModel();
+        if (fm == null) return;
+
+        int index = fm.getFocusedIndex() + 1;
+        sm.select(index);
+    }
+    
+    private void discontinuousSelectPageUp() {
+        MultipleSelectionModel sm = getControl().getSelectionModel();
+        if (sm == null) return;
+        
+        FocusModel fm = getControl().getFocusModel();
+        if (fm == null) return;
+
+        int leadIndex = fm.getFocusedIndex();
+        int leadSelectedIndex = onScrollPageUp.call(getAnchor());
+        sm.selectRange(leadSelectedIndex, leadIndex + 1);
+    }
+    
+    private void discontinuousSelectPageDown() {
+        MultipleSelectionModel sm = getControl().getSelectionModel();
+        if (sm == null) return;
+        
+        FocusModel fm = getControl().getFocusModel();
+        if (fm == null) return;
+        
+        int leadIndex = fm.getFocusedIndex();
+        int leadSelectedIndex = onScrollPageDown.call(getAnchor());
+        sm.selectRange(leadIndex, leadSelectedIndex + 1);
+    }
+    
+    private void discontinuousSelectAllToFirstRow() {
+        MultipleSelectionModel sm = getControl().getSelectionModel();
+        if (sm == null) return;
+        
+        FocusModel fm = getControl().getFocusModel();
+        if (fm == null) return;
+
+        int index = fm.getFocusedIndex();
+        sm.selectRange(0, index);
+
+        if (onMoveToFirstCell != null) onMoveToFirstCell.run();
+    }
+    
+    private void discontinuousSelectAllToLastRow() {
+        MultipleSelectionModel sm = getControl().getSelectionModel();
+        if (sm == null) return;
+        
+        FocusModel fm = getControl().getFocusModel();
+        if (fm == null) return;
+
+        int index = fm.getFocusedIndex() + 1;
+        sm.selectRange(index, getControl().impl_getTreeItemCount());
+
+        if (onMoveToLastCell != null) onMoveToLastCell.run();
     }
 }
