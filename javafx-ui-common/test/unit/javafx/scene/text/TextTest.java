@@ -82,137 +82,137 @@ public class TextTest {
     }
 */
 
-    @Test public void testPropertyPropagation_textOrigin() throws Exception {
-        final Text node = new Text();
-        NodeTest.testObjectPropertyPropagation(node, "textOrigin", "textOrigin",
-                VPos.BASELINE, VPos.TOP, new NodeTest.ObjectValueConvertor() {
-                    @Override
-                    public Object toSg(Object pgValue) {
-                        return VPos.values()[((Number)pgValue).intValue()];
-                    }
-                });
-    }
+//     @Test public void testPropertyPropagation_textOrigin() throws Exception {
+//         final Text node = new Text();
+//         NodeTest.testObjectPropertyPropagation(node, "textOrigin", "textOrigin",
+//                 VPos.BASELINE, VPos.TOP, new NodeTest.ObjectValueConvertor() {
+//                     @Override
+//                     public Object toSg(Object pgValue) {
+//                         return VPos.values()[((Number)pgValue).intValue()];
+//                     }
+//                 });
+//     }
     
-    @Test public void testPropertyPropagation_boundsType() throws Exception {
-        final Text node = new Text();
-        NodeTest.testObjectPropertyPropagation(node, "boundsType", "textBoundsType",
-                TextBoundsType.LOGICAL, TextBoundsType.VISUAL, new NodeTest.ObjectValueConvertor() {
-                    @Override
-                    public Object toSg(Object pgValue) {
-                        return TextBoundsType.values()[((Number)pgValue).intValue()];
-                    }
-                });
-    }
+//     @Test public void testPropertyPropagation_boundsType() throws Exception {
+//         final Text node = new Text();
+//         NodeTest.testObjectPropertyPropagation(node, "boundsType", "textBoundsType",
+//                 TextBoundsType.LOGICAL, TextBoundsType.VISUAL, new NodeTest.ObjectValueConvertor() {
+//                     @Override
+//                     public Object toSg(Object pgValue) {
+//                         return TextBoundsType.values()[((Number)pgValue).intValue()];
+//                     }
+//                 });
+//     }
     
-    @Test public void testPropertyPropagation_textAlignment() throws Exception {
-        final Text node = new Text();
-        NodeTest.testObjectPropertyPropagation(node, "textAlignment", "textAlignment", 
-                TextAlignment.LEFT, TextAlignment.CENTER, new NodeTest.ObjectValueConvertor() {
-                    @Override
-                    public Object toSg(Object pgValue) {
-                        return TextAlignment.values()[(((Number)pgValue).intValue())];
-                    }
-                });
-    }
+//     @Test public void testPropertyPropagation_textAlignment() throws Exception {
+//         final Text node = new Text();
+//         NodeTest.testObjectPropertyPropagation(node, "textAlignment", "textAlignment", 
+//                 TextAlignment.LEFT, TextAlignment.CENTER, new NodeTest.ObjectValueConvertor() {
+//                     @Override
+//                     public Object toSg(Object pgValue) {
+//                         return TextAlignment.values()[(((Number)pgValue).intValue())];
+//                     }
+//                 });
+//     }
     
-    @Test public void testPropertyPropagation_visible() throws Exception {
-        final Text node = new Text();
-        NodeTest.testBooleanPropertyPropagation(node, "visible", false, true);
-    }
+//     @Test public void testPropertyPropagation_visible() throws Exception {
+//         final Text node = new Text();
+//         NodeTest.testBooleanPropertyPropagation(node, "visible", false, true);
+//     }
 
-    @Test public void testPropertyPropagation_text() throws Exception {
-        final Text node = new Text();
-        NodeTest.testObjectPropertyPropagation(node, "text", "text", "Hello", "World");
-    }
+//     @Test public void testPropertyPropagation_text() throws Exception {
+//         final Text node = new Text();
+//         NodeTest.testObjectPropertyPropagation(node, "text", "text", "Hello", "World");
+//     }
 
-    @Test public void testPropertyPropagation_strikethrough() throws Exception {
-        final Text node = new Text();
-        NodeTest.testBooleanPropertyPropagation(node, "strikethrough", false, true);
-    }
+//     @Test public void testPropertyPropagation_strikethrough() throws Exception {
+//         final Text node = new Text();
+//         NodeTest.testBooleanPropertyPropagation(node, "strikethrough", false, true);
+//     }
 
-    @Test public void testPropertyPropagation_underline() throws Exception {
-        final Text node = new Text();
-        NodeTest.testBooleanPropertyPropagation(node, "underline", false, true);
-    }
+//     @Test public void testPropertyPropagation_underline() throws Exception {
+//         final Text node = new Text();
+//         NodeTest.testBooleanPropertyPropagation(node, "underline", false, true);
+//     }
 
-    @Test public void testPropertyPropagation_x() throws Exception {
-        final Text node = new Text();
-        NodeTest.testDoublePropertyPropagation(node, "x", 100, 200);
-    }
+//     @Test public void testPropertyPropagation_x() throws Exception {
+//         final Text node = new Text();
+//         NodeTest.testDoublePropertyPropagation(node, "x", 100, 200);
+//     }
 
-    @Test public void testPropertyPropagation_y() throws Exception {
-        final Text node = new Text();
-        NodeTest.testDoublePropertyPropagation(node, "y", 100, 200);
-    }
+//     @Test public void testPropertyPropagation_y() throws Exception {
+//         final Text node = new Text();
+//         NodeTest.testDoublePropertyPropagation(node, "y", 100, 200);
+//     }
 
-    @Test public void testPropertyPropagation_wrappingWidth() throws Exception {
-        final Text node = new Text();
-        NodeTest.testDoublePropertyPropagation(node, "wrappingWidth", 100, 200);
-    }
+//     @Test public void testPropertyPropagation_wrappingWidth() throws Exception {
+//         final Text node = new Text();
+//         NodeTest.testDoublePropertyPropagation(node, "wrappingWidth", 100, 200);
+//     }
 
-    @Test public void testBoundPropertySync_X() throws Exception {
-        NodeTest.assertDoublePropertySynced(
-                new Text(1.0, 2.0, "The Text"),
-                "x", "x", 10.0);
-    }
+//     @Test public void testBoundPropertySync_X() throws Exception {
+//         NodeTest.assertDoublePropertySynced(
+//                 new Text(1.0, 2.0, "The Text"),
+//                 "x", "x", 10.0);
+//     }
 
-    @Test public void testBoundPropertySync_Y() throws Exception {
-        NodeTest.assertDoublePropertySynced(
-                new Text(1.0, 2.0, "The Text"),
-                "y", "y", 20.0);
-    }
+//     @Test public void testBoundPropertySync_Y() throws Exception {
+//         NodeTest.assertDoublePropertySynced(
+//                 new Text(1.0, 2.0, "The Text"),
+//                 "y", "y", 20.0);
+//     }
 
-    @Test public void testBoundPropertySync_Text() throws Exception {
-        NodeTest.assertStringPropertySynced(
-                new Text(1.0, 2.0, "The Text"),
-                "text", "text", "The Changed Text");
-    }
+//     @Test public void testBoundPropertySync_Text() throws Exception {
+//         NodeTest.assertStringPropertySynced(
+//                 new Text(1.0, 2.0, "The Text"),
+//                 "text", "text", "The Changed Text");
+//     }
 
-    // The StubFontLoader is not adequate. SansSerif is the default font
-    // family. But StubFontLoader is hard coded with some knowledge of
-    // Amble so we end up with a null reference for its the PGFont
-    // and it sets null on the PGText node. StubFontLoader needs to be
-    // replaced with the real font loader.
-/*
-    @Test public void testBoundPropertySync_Font() throws Exception {
-        List<String> fontNames = Font.getFontNames();
-        String fontName = fontNames.get(fontNames.size() - 1);
-        NodeTest.assertObjectPropertySynced(
-                new Text(1.0, 2.0, "The Text"),
-                "font", "font", new Font(fontName, 22));
-    }
-*/
+//     // The StubFontLoader is not adequate. SansSerif is the default font
+//     // family. But StubFontLoader is hard coded with some knowledge of
+//     // Amble so we end up with a null reference for its the PGFont
+//     // and it sets null on the PGText node. StubFontLoader needs to be
+//     // replaced with the real font loader.
+// /*
+//     @Test public void testBoundPropertySync_Font() throws Exception {
+//         List<String> fontNames = Font.getFontNames();
+//         String fontName = fontNames.get(fontNames.size() - 1);
+//         NodeTest.assertObjectPropertySynced(
+//                 new Text(1.0, 2.0, "The Text"),
+//                 "font", "font", new Font(fontName, 22));
+//     }
+// */
 
-    @Test public void testBoundPropertySync_BoundsType() throws Exception {
-        NodeTest.assertObjectPropertySynced(
-                new Text(1.0, 2.0, "The Text"),
-                "boundsType", "textBoundsType", TextBoundsType.VISUAL);
-    }
+//     @Test public void testBoundPropertySync_BoundsType() throws Exception {
+//         NodeTest.assertObjectPropertySynced(
+//                 new Text(1.0, 2.0, "The Text"),
+//                 "boundsType", "textBoundsType", TextBoundsType.VISUAL);
+//     }
 
     
-    @Test public void testBoundPropertySync_WrappingWidth() throws Exception {
-        NodeTest.assertDoublePropertySynced(
-                new Text(1.0, 2.0, "The Text"),
-                "wrappingWidth", "wrappingWidth", 50);
-    }
+//     @Test public void testBoundPropertySync_WrappingWidth() throws Exception {
+//         NodeTest.assertDoublePropertySynced(
+//                 new Text(1.0, 2.0, "The Text"),
+//                 "wrappingWidth", "wrappingWidth", 50);
+//     }
     
 
-    @Test public void testBoundPropertySync_Underline() throws Exception {
-        NodeTest.assertBooleanPropertySynced(
-                new Text(1.0, 2.0, "The Text"),
-                "underline", "underline", true);
-    }
+//     @Test public void testBoundPropertySync_Underline() throws Exception {
+//         NodeTest.assertBooleanPropertySynced(
+//                 new Text(1.0, 2.0, "The Text"),
+//                 "underline", "underline", true);
+//     }
 
-    @Test public void testBoundPropertySync_Strikethrough() throws Exception {
-        NodeTest.assertBooleanPropertySynced(
-                new Text(1.0, 2.0, "The Text"),
-                "strikethrough", "strikethrough", true);
-    }
+//     @Test public void testBoundPropertySync_Strikethrough() throws Exception {
+//         NodeTest.assertBooleanPropertySynced(
+//                 new Text(1.0, 2.0, "The Text"),
+//                 "strikethrough", "strikethrough", true);
+//     }
 
-    @Test public void testBoundPropertySync_TextAlignment() throws Exception {
-        NodeTest.assertObjectPropertySynced(
-                new Text(1.0, 2.0, "The Text"),
-                "textAlignment", "textAlignment", TextAlignment.RIGHT);
-    }
+//     @Test public void testBoundPropertySync_TextAlignment() throws Exception {
+//         NodeTest.assertObjectPropertySynced(
+//                 new Text(1.0, 2.0, "The Text"),
+//                 "textAlignment", "textAlignment", TextAlignment.RIGHT);
+//     }
 
 }

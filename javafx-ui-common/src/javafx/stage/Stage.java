@@ -227,8 +227,6 @@ public class Stage extends Window {
         super.show();
     }
     
-    // TODO do I also want to expose the model as being a writable model?
-    
     private boolean primary = false;
 
     /**
@@ -242,7 +240,6 @@ public class Stage extends Window {
         this.primary = primary;
     }
 
-    // TODO: consider making this public
     /**
      * Returns whether this stage is the primary stage.
      * When run as an applet, the primary stage will appear in the broswer
@@ -911,7 +908,6 @@ public class Stage extends Window {
         }
     }
 
-    // TODO: remove
     /**
      * Closes this {@code Stage}.
      * This call is equivalent to {@code hide()}.

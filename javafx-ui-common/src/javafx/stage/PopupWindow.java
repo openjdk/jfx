@@ -217,9 +217,6 @@ public abstract class PopupWindow extends Window {
     /**
      * Specifies whether Popups should auto hide. If a popup loses focus and
      * autoHide is true, then the popup will be hidden automatically.
-     * TODO How does this function if you want to animate the popup becoming invisible??
-     * For example, if you wanted to scroll up the popup (such as if the popup
-     * is used for a drop down list).
      * @defaultValue false
      */
     private BooleanProperty autoHide =
