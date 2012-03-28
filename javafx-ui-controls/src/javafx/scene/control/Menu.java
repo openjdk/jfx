@@ -123,6 +123,13 @@ public class Menu extends MenuItem {
      **************************************************************************/
 
     /**
+     * Constructs a Menu with an empty string for its display text.
+     */
+    public Menu() {
+        this("");
+    }
+    
+    /**
      * Constructs a Menu and sets the display text with the specified text.
      */
     public Menu(String text) {

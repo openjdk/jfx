@@ -159,7 +159,7 @@ public class StageTest {
         pulse();
         assertEquals(200f, peer.y);
         assertEquals(2, peer.numTimesSetSizeAndLocation - initialNumTimesSetSizeAndLocation);
-        // .. same for setting y
+        // .. same for setting x
         s.setX(100);
         pulse();
         assertEquals(100f, peer.x);
@@ -258,6 +258,84 @@ public class StageTest {
         assertEquals(70.0, peer.y, 0.0001);
         assertEquals(380.0, peer.width, 0.0001);
         assertEquals(280.0, peer.height, 0.0001);
+    }
+
+    @Test
+    public void testFullscreenNotLostForAsyncNotifications() {
+        peer.holdNotifications();
+
+        s.setFullScreen(true);
+        assertTrue(s.isFullScreen());
+
+        s.setFullScreen(false);
+        assertFalse(s.isFullScreen());
+        
+        peer.releaseSingleNotification();
+        assertTrue(s.isFullScreen());
+
+        peer.releaseNotifications();
+        
+        assertFalse(s.isFullScreen());
+    }
+
+    @Test
+    public void testFullScreenNotification() {
+        peer.setFullScreen(true);
+        assertTrue(s.isFullScreen());
+        peer.setFullScreen(false);
+        assertFalse(s.isFullScreen());
+    }
+
+    @Test
+    public void testResizableNotLostForAsyncNotifications() {
+        peer.holdNotifications();
+
+        s.setResizable(true);
+        assertTrue(s.isResizable());
+
+        s.setResizable(false);
+        assertFalse(s.isResizable());
+
+        peer.releaseSingleNotification();
+        assertTrue(s.isResizable());
+
+        peer.releaseNotifications();
+
+        assertFalse(s.isResizable());
+    }
+
+    @Test
+    public void testResizableNotification() {
+        peer.setResizable(false);
+        assertFalse(s.isResizable());
+        peer.setResizable(true);
+        assertTrue(s.isResizable());
+    }
+    
+    @Test
+    public void testIconifiedNotLostForAsyncNotifications() {
+        peer.holdNotifications();
+
+        s.setIconified(true);
+        assertTrue(s.isIconified());
+
+        s.setIconified(false);
+        assertFalse(s.isIconified());
+
+        peer.releaseSingleNotification();
+        assertTrue(s.isIconified());
+
+        peer.releaseNotifications();
+
+        assertFalse(s.isIconified());
+    }
+
+    @Test
+    public void testIconifiedNotification() {
+        peer.setIconified(true);
+        assertTrue(s.isIconified());
+        peer.setIconified(false);
+        assertFalse(s.isIconified());
     }
 
     @Test

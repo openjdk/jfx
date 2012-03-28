@@ -68,5 +68,16 @@ public enum ConditionalFeature {
      * If an application specifies an input method on a platform that does
      * not support it, the input method will be ignored.
      */
-    INPUT_METHOD
+    INPUT_METHOD,
+
+    /**
+     * Indicates that the system supports full window transparency.
+     * Transparent windows will have only limited or no functionality on a platform that
+     * doesn't support it.
+     * <p>
+     * NOTE: Currently, this support is available on all platforms
+     * except Linux systems without the XComposite extension. The
+     * XShape extension is used in that case, so the window edges are aliased.
+     */
+    TRANSPARENT_WINDOW
 }

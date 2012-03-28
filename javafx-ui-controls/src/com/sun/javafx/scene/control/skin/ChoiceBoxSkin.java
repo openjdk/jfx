@@ -67,6 +67,7 @@ import com.sun.javafx.scene.control.WeakListChangeListener;
         registerChangeListener(control.showingProperty(), "SHOWING");
         registerChangeListener(control.itemsProperty(), "ITEMS");
         registerChangeListener(control.getSelectionModel().selectedItemProperty(), "SELECTION_CHANGED");
+        registerChangeListener(control.converterProperty(), "CONVERTER");
     }
 
     private ObservableList<?> choiceBoxItems;
@@ -238,6 +239,9 @@ import com.sun.javafx.scene.control.WeakListChangeListener;
             } else {
                 popup.hide();
             }
+        } else if ("CONVERTER".equals(p)) {
+            updateChoiceBoxItems();
+            updatePopupItems();
         }
     }
 
@@ -300,7 +304,7 @@ import com.sun.javafx.scene.control.WeakListChangeListener;
             label.setText("");
         } else {
             int selectedIndex = selectionModel.getSelectedIndex();
-            if (selectedIndex == -1) {
+            if (selectedIndex == -1 || selectedIndex > popup.getItems().size()) {
                 label.setText(""); // clear label text
                 return;
             }
@@ -310,12 +314,9 @@ import com.sun.javafx.scene.control.WeakListChangeListener;
                     ((RadioMenuItem) selectedItem).setSelected(true);
                     toggleGroup.selectToggle(null);
                 }
+                // update the label
+                label.setText(popup.getItems().get(selectedIndex).getText());
             }
-
-            // update the label
-            Object selected = choiceBoxItems.get(selectedIndex);
-            String text = selected == null ? "" : selected.toString();
-            label.setText(text);
         }
     }
 

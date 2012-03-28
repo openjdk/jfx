@@ -205,6 +205,7 @@ public class Window implements EventTarget {
             }
 
             peerBoundsConfigurator.setSize(w, h, cw, ch);
+            applyBounds();
         }
     }
 
@@ -219,6 +220,8 @@ public class Window implements EventTarget {
             double centerX = bounds.getMinX() + (bounds.getWidth() - getWidth()) / 2.0f;
             double centerY = bounds.getMinY() + (bounds.getHeight() - getHeight()) / 3.0f;
 
+            x.set(centerX);
+            y.set(centerY);
             peerBoundsConfigurator.setLocation(centerX, centerY);
         }
     }
@@ -711,17 +714,13 @@ public class Window implements EventTarget {
                     }
                     
                     if (!xExplicit && !yExplicit) {
-                        // need to call apply before centering in the case the
-                        // window with and height needs to be calculated from
-                        // the scene (client) width / height (won't work on X11)
-                        peerBoundsConfigurator.apply();
                         centerOnScreen();
                     } else {
                         peerBoundsConfigurator.setLocation(getX(), getY());
                     }
 
-                    // set bounds before the window is shown
-                    peerBoundsConfigurator.apply();
+                    // set peer bounds before the window is shown
+                    applyBounds();
 
                     impl_peer.setOpacity((float)getOpacity());
 
@@ -1006,6 +1005,10 @@ public class Window implements EventTarget {
         }
     }
 
+    final void applyBounds() {
+        peerBoundsConfigurator.apply();
+    }
+    
     /**
      * Caches all requested bounds settings and applies them at once during
      * the next pulse.
