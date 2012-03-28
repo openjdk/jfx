@@ -364,7 +364,7 @@ public class StackedAreaChart<X,Y> extends XYChart<X,Y> {
                     totalY += maxY;
 
                 }
-                yData.add(totalY);
+                if(totalY > 0) yData.add(totalY);
                 ya.invalidateRange(yData);
             }
         }
