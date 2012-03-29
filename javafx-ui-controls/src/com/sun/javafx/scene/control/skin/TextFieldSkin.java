@@ -418,6 +418,10 @@ public class TextFieldSkin extends TextInputControlSkin<TextField, TextFieldBeha
         return lineHeight + (padding.getTop() + padding.getBottom());
     }
 
+    @Override protected double computeMaxHeight(double width) {
+        return getSkinnable().prefHeight(width);
+    }
+
     @Override
     public double getBaselineOffset() {
         FontMetrics fontMetrics = super.fontMetrics.get();       
