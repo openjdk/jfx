@@ -72,7 +72,9 @@ public class StubStage implements TKStage {
 
     @Override
     public void setBounds(float x, float y, boolean xSet, boolean ySet,
-                          float width, float height, float contentWidth, float contentHeight)
+                          float width, float height,
+                          float contentWidth, float contentHeight,
+                          float xGravity, float yGravity)
     {
         numTimesSetSizeAndLocation++;
         
@@ -125,12 +127,12 @@ public class StubStage implements TKStage {
 
     // Just a helper method
     public void setSize(float w, float h) {
-        setBounds(0, 0, false, false, w, h, 0, 0);
+        setBounds(0, 0, false, false, w, h, 0, 0, 0, 0);
     }
 
     // Just a helper method
     public void setLocation(float x, float y) {
-        setBounds(x, y, true, true, 0, 0, 0, 0);
+        setBounds(x, y, true, true, 0, 0, 0, 0, 0, 0);
     }
 
     @Override

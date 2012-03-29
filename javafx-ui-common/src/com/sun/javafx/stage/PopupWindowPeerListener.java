@@ -39,15 +39,6 @@ public class PopupWindowPeerListener extends WindowPeerListener {
         this.popupWindow = popupWindow;
     }
 
-    public void changedSize(float w, float h) {
-        if (w != popupWindow.getWidth()) {
-            popupWindow.setWidth(w);
-        }
-        if (h != popupWindow.getHeight()) {
-            popupWindow.setHeight(h);
-        }
-    }
-
     public void changedFocused(boolean cf, FocusCause cause) {
         // TODO: at the native level popup windows are unfocusable, so we
         // don't get any focus notifications from the platform. Temporary

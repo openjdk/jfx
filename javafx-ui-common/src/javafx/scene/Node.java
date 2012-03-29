@@ -4025,7 +4025,7 @@ public abstract class Node implements EventTarget {
      * @deprecated This is an internal API that is not intended for use and will be removed in the next version
      */
     @Deprecated
-    protected boolean impl_hasTransforms() {
+    public boolean impl_hasTransforms() {
         return (nodeTransformation != null)
                 && nodeTransformation.hasTransforms();
     }
@@ -6253,10 +6253,6 @@ public abstract class Node implements EventTarget {
 
     /**
      * Event dispatcher for invoking preprocessing of mouse events
-     *
-     * TODO: The dispatcher is inserted into the event dispatch chain, this
-     * needs to be solved differently, this way it's impossible for user
-     * to override this behavior.
      */
     private EventDispatcher preprocessMouseEventDispatcher;
 
