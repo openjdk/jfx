@@ -95,7 +95,7 @@ public class ContextMenuContent extends StackPane {
     private double maxLeftWidth = 0;
 
     private Rectangle clipRect;
-    private MenuBox itemsContainer;
+    MenuBox itemsContainer;
     private ArrowMenuItem upArrow;
     private ArrowMenuItem downArrow;
 
@@ -128,6 +128,21 @@ public class ContextMenuContent extends StackPane {
         updateVisualItems();
         initialize();
         setUpBinds();
+    }
+    
+       //For testing purpose only
+    VBox getItemsContainer() {
+        return itemsContainer;
+    }
+    //For testing purpose only
+    int getCurrentFocusIndex() {
+        return currentFocusedIndex;
+    }
+    //For testing purpose only
+    void setCurrentFocusedIndex(int index) {
+        if (index < itemsContainer.getChildren().size()) {
+            currentFocusedIndex = index;
+        }
     }
 
     private void computeVisualMetrics() {
@@ -545,7 +560,7 @@ public class ContextMenuContent extends StackPane {
                     // if submenu for this menu is already showing then do nothing
                     // Menubar will process the right key and move to the next menu
                     if (openSubmenu == menu && submenu.isShowing()) return;
-                    showSubmenu(menu);
+                    menu.show();
                     // request focus on the first item of the submenu after it is shown
                     ContextMenuContent cmContent = (ContextMenuContent)submenu.getSkin().getNode();
                     if (cmContent != null) {
@@ -573,7 +588,7 @@ public class ContextMenuContent extends StackPane {
                     }
                     if (menu.isDisable()) return;
                     selectedBackground = ((MenuItemContainer)n);
-                    showSubmenu(menu);
+                    menu.show();
                 } else {
                     ((MenuItemContainer)n).doSelect();
                 }
@@ -730,6 +745,11 @@ public class ContextMenuContent extends StackPane {
                 }
             });
         }
+    }
+
+    // For test purpose only
+    ContextMenu getSubMenu() {
+        return submenu;
     }
 
     private void showSubmenu(Menu menu) {
@@ -973,6 +993,10 @@ public class ContextMenuContent extends StackPane {
         protected Label getLabel(){
             return (Label) label;
         }
+        
+        protected MenuItem getItem() {
+            return item;
+        }
 
         public MenuItemContainer(MenuItem item){
             if (item == null) {
@@ -1113,6 +1137,18 @@ public class ContextMenuContent extends StackPane {
                     setOnMouseReleased(new EventHandler<MouseEvent>() {
                         @Override public void handle(MouseEvent event) {
                             doSelect();
+                        }
+                    });
+                    // RT-19546 update currentFocusedIndex when MenuItemContainer gets focused.
+                    // e.g this happens when you press the Right key to open a submenu; the first
+                    // menuitem is focused.
+                    focusedProperty().addListener(new ChangeListener<Boolean>() {
+                        @Override public void changed(ObservableValue<? extends Boolean> ov,
+                                                                    Boolean t, Boolean t1) {
+                            if (t1 && !t) {
+                                currentFocusedIndex =
+                                    itemsContainer.getChildren().indexOf(MenuItemContainer.this);
+                            }
                         }
                     });
                 }

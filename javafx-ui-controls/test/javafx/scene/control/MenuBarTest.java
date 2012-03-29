@@ -5,10 +5,10 @@
 package javafx.scene.control;
 
 import com.sun.javafx.pgstub.StubToolkit;
+import com.sun.javafx.scene.control.skin.ContextMenuContent;
 import com.sun.javafx.scene.control.skin.MenuBarMenuButtonRetriever;
 import com.sun.javafx.scene.control.skin.MenuBarSkin;
 import com.sun.javafx.tk.Toolkit;
-import javafx.event.EventHandler;
 import javafx.scene.Parent;
 import javafx.scene.Scene;
 import javafx.scene.input.MouseButton;
@@ -20,6 +20,7 @@ import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.assertFalse;
 import javafx.event.EventType;
 import javafx.scene.Node;
+import javafx.scene.input.KeyCode;
 
 import org.junit.Before;
 import org.junit.Test;
@@ -100,7 +101,80 @@ public class MenuBarTest {
         assertTrue(menu.isShowing());
         
     }
+    
+    @Test public void testSubMenuDismissalWithKeyNavigation() {
+        final MouseEventGenerator generator = new MouseEventGenerator();
+        AnchorPane root = new AnchorPane();
+        Menu menu = new Menu("Menu");
+        Menu menu1 = new Menu("Menu With SubMenu");
+        menu.getItems().add(menu1);
 
+        MenuItem menuItem1 = new MenuItem("MenuItem1");
+        MenuItem menuItem2 = new MenuItem("MenuItem2");
+        menu1.getItems().addAll(menuItem1, menuItem2);
+        
+        menuBar.getMenus().add(menu);
+        menuBar.setLayoutX(100);
+        menuBar.setLayoutY(100);
+
+        root.getChildren().add(menuBar);
+        startApp(root);
+        tk.firePulse();
+        
+        MenuBarSkin skin = (MenuBarSkin)menuBar.getSkin();
+        assertTrue(skin != null);
+        
+        double xval = (menuBar.localToScene(menuBar.getLayoutBounds())).getMinX();
+        double yval = (menuBar.localToScene(menuBar.getLayoutBounds())).getMinY();
+   
+        MenuButton mb = MenuBarMenuButtonRetriever.getNodeForMenu(skin, 0);
+        mb.getScene().getWindow().requestFocus();
+        scene.impl_processMouseEvent(
+            generator.generateMouseEvent(MouseEvent.MOUSE_PRESSED, xval+20, yval+20));
+        scene.impl_processMouseEvent(
+            generator.generateMouseEvent(MouseEvent.MOUSE_RELEASED, xval+20, yval+20));
+        assertTrue(menu.isShowing());
+         /* ------------------------------------------------------------------ */
+        
+        // Show subMenu
+        ContextMenuContent menuContent = MenuBarMenuButtonRetriever.getMenuContent(mb); // ContextMenuContent
+        Node displayNode = MenuBarMenuButtonRetriever.getDisplayNodeForMenuItem(menuContent, 0); // MenuItemContainer
+        
+        displayNode.getScene().getWindow().requestFocus();
+        assertTrue(displayNode.getScene().getWindow().isFocused());
+        
+        displayNode.requestFocus(); // requestFocus on 1st Menu
+        assertTrue(displayNode.isFocused());
+        // update currentFocusedIndex
+        MenuBarMenuButtonRetriever.setCurrentFocusedIndex(menuContent, 0);
+        
+        // fire KeyEvent (Enter) on menu1 to show submenu
+        KeyEventFirer keyboard = new KeyEventFirer(menuContent);
+        keyboard.doKeyPress(KeyCode.ENTER);
+        tk.firePulse();     
+        assertTrue(menu1.isShowing()); // subMenu is showing
+        /* ------------------------------------------------------------------ */
+        
+        // Get 1st MenuItem from the submenu
+        ContextMenuContent subMenuContent = MenuBarMenuButtonRetriever.getSubMenuContent(menuContent);
+        subMenuContent.getScene().getWindow().requestFocus(); // requestFocus on submenu
+        assertTrue(subMenuContent.getScene().getWindow().isFocused());
+        
+        displayNode = MenuBarMenuButtonRetriever.getDisplayNodeForMenuItem(subMenuContent, 0);
+        displayNode.requestFocus();
+        assertTrue(displayNode.isFocused());
+        
+        MenuBarMenuButtonRetriever.setCurrentFocusedIndex(subMenuContent, 0);
+        // fire KeyEvent (Enter) on menuItem1 to hide all menus
+        keyboard = new KeyEventFirer(subMenuContent);
+        keyboard.doKeyPress(KeyCode.ENTER);
+        tk.firePulse();
+        
+        // confirm all menus are closed. 
+        assertTrue(!menu1.isShowing());
+        assertTrue(!menu.isShowing());
+    }
+    
     static final class MouseEventGenerator {
         private boolean primaryButtonDown = false;
 
@@ -125,7 +199,7 @@ public class MenuBarTest {
 
             MouseEvent event = MouseEvent.impl_mouseEvent(x, y, x, y, button,
                     1, false, false, false, false, false, primaryButtonDown,
-                    false, false, type);
+                    false, false, false, type);
 
             return event;
         }

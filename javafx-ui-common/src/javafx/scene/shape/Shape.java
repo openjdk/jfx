@@ -842,7 +842,8 @@ public abstract class Shape extends Node {
     private static final double MIN_STROKE_MITER_LIMIT = 1.0f;
 
     private void updatePGShape() {
-        if (impl_isDirty(DirtyBits.SHAPE_STROKEATTRS)) {
+        if (strokeAttributesDirty && (getStroke() != null)) {
+            // set attributes of stroke only when stroke paint is not null
             final float[] pgDashArray =
                     (hasStrokeDashArray())
                             ? toPGDashArray(getStrokeDashArray())
@@ -857,6 +858,8 @@ public abstract class Shape extends Node {
                         (float)Utils.clampMin(getStrokeMiterLimit(),
                                               MIN_STROKE_MITER_LIMIT),
                         pgDashArray, (float)getStrokeDashOffset());
+
+           strokeAttributesDirty = false;
         }
 
         if (impl_isDirty(DirtyBits.SHAPE_MODE)) {
@@ -1102,6 +1105,8 @@ public abstract class Shape extends Node {
 
         return false;
     }
+
+    private boolean strokeAttributesDirty = true;
 
     private StrokeAttributes strokeAttributes;
 
@@ -1442,6 +1447,7 @@ public abstract class Shape extends Node {
 
         private void invalidated(final StyleableProperty propertyCssKey) {
             impl_markDirty(DirtyBits.SHAPE_STROKEATTRS);
+            strokeAttributesDirty = true;
             if (propertyCssKey != StyleableProperties.STROKE_DASH_OFFSET) {
                 // all stroke attributes change geometry except for the
                 // stroke dash offset

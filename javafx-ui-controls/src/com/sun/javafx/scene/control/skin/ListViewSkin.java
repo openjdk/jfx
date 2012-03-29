@@ -54,7 +54,6 @@ public class ListViewSkin<T> extends VirtualContainerBase<ListView<T>, ListViewB
         updateListViewItems();
 
         // init the VirtualFlow
-        flow = new VirtualFlow();
         flow.setId("virtual-flow");
         flow.setPannable(false);
         flow.setVertical(getSkinnable().getOrientation() == Orientation.VERTICAL);

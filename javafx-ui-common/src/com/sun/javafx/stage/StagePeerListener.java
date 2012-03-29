@@ -29,26 +29,34 @@ import javafx.stage.Stage;
 
 
 public class StagePeerListener extends WindowPeerListener {
+    private final Stage stage;
+    private final StageAccessor stageAccessor;
 
-    private Stage stage;
+    public static interface StageAccessor {
+        public void setIconified(Stage stage, boolean iconified);
+        public void setResizable(Stage stage, boolean resizable);
+        public void setFullScreen(Stage stage, boolean fs);
+    }
 
-    public StagePeerListener(Stage stage) {
+    public StagePeerListener(Stage stage, StageAccessor stageAccessor) {
         super(stage);
         this.stage = stage;
+        this.stageAccessor = stageAccessor;
     }
+
 
     @Override
     public void changedIconified(boolean iconified) {
-        stage.setIconified(iconified);
+        stageAccessor.setIconified(stage, iconified);
     }
 
     @Override
     public void changedResizable(boolean resizable) {
-        stage.setResizable(resizable);
+        stageAccessor.setResizable(stage, resizable);
     }
 
     @Override
     public void changedFullscreen(boolean fs) {
-        stage.setFullScreen(fs);
+        stageAccessor.setFullScreen(stage, fs);
     }
 }

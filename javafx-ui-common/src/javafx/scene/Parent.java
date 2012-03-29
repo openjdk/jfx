@@ -543,7 +543,7 @@ public abstract class Parent extends Node {
     }
 
     // implementation of Node.toFront function
-    void impl_toFront(Node node) {
+    final void impl_toFront(Node node) {
         if (Utils.assertionEnabled()) {
             if (!childSet.contains(node)) {
                 throw new java.lang.AssertionError(
@@ -563,7 +563,7 @@ public abstract class Parent extends Node {
     }
 
     // implementation of Node.toBack function
-    void impl_toBack(Node node) {
+    final void impl_toBack(Node node) {
         if (Utils.assertionEnabled()) {
             if (!childSet.contains(node)) {
                 throw new java.lang.AssertionError(
@@ -1030,7 +1030,7 @@ public abstract class Parent extends Node {
      * @deprecated This is an internal API that is not intended for use and will be removed in the next version
      */
     @Deprecated
-    protected void impl_resizeChildren(boolean snapToPixel) {
+    protected final void impl_resizeChildren(boolean snapToPixel) {
         for (Node node : getChildren()) {
             if (node.isResizable() && node.isManaged()) {
                 node.autosize();
@@ -1090,7 +1090,7 @@ public abstract class Parent extends Node {
      * @deprecated This is an internal API that is not intended for use and will be removed in the next version
      */
     @Deprecated
-    public List<String> impl_getAllParentStylesheets() {
+    public /* Do not make this final! */ List<String> impl_getAllParentStylesheets() {
         
         List<String> list = null;
         final Parent myParent = getParent();
@@ -1735,7 +1735,7 @@ public abstract class Parent extends Node {
      * @deprecated This is an internal API that is not intended for use and will be removed in the next version
      */
     @Deprecated
-    public void impl_printBranch() {
+    public final void impl_printBranch() {
         final int nodecount = printBranch("");
         System.out.println("total node count="+nodecount);
     }

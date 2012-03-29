@@ -49,7 +49,6 @@ public class TreeViewSkin<T> extends VirtualContainerBase<TreeView<T>, TreeViewB
         super(treeView, new TreeViewBehavior(treeView));
 
         // init the VirtualFlow
-        flow = new VirtualFlow();
         flow.setPannable(false);
         flow.setFocusTraversable(getSkinnable().isFocusTraversable());
         flow.setCreateCell(new Callback<VirtualFlow, TreeCell>() {
