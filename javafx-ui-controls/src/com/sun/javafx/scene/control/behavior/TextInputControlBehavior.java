@@ -225,11 +225,13 @@ public abstract class TextInputControlBehavior<T extends TextInputControl> exten
         int start = selection.getStart();
         int end = selection.getEnd();
 
-        if (selection.getLength() == 0) {
-            end = start;
-            start--;
+        if (start > 0 || end > start) {
+            if (selection.getLength() == 0) {
+                end = start;
+                start--;
+            }
+            undoManager.addChange(start, textInputControl.getText().substring(start, end), null);
         }
-        undoManager.addChange(start, textInputControl.getText().substring(start, end), null);
         deleteChar(true);
     }
 
