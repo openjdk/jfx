@@ -123,8 +123,12 @@ public class PaginationSkin<T> extends SkinBase<Pagination<T>, PaginationBehavio
         numberOfPages = totalNumberOfPages();
         if (totalNumberOfPages() > numberOfVisiblePages) {
             numberOfPages = numberOfVisiblePages;
+        } else {
+            // If the number of pages is less than the visible number of pages
+            // we want to set it to the new value.
+            getSkinnable().setNumberOfVisiblePages(numberOfPages);
         }
-        
+
         fromIndex = 0;
         previousIndex = 0;
         currentIndex = usePageIndex ? getSkinnable().getPageIndex() : 0;
@@ -203,7 +207,7 @@ public class PaginationSkin<T> extends SkinBase<Pagination<T>, PaginationBehavio
             updateCellFactory();
             resetIndexes(false);
             navigation.initializePageIndicators();
-            navigation.updatePageIndicators();            
+            navigation.updatePageIndicators();
         } else if (p == "PAGE_INDEX") {
             paginationListView.getSelectionModel().select(getSkinnable().getPageIndex());
         } else if (p == "PAGE_FACTORY") {
@@ -322,7 +326,7 @@ public class PaginationSkin<T> extends SkinBase<Pagination<T>, PaginationBehavio
             for (int i = fromIndex; i <= toIndex; i++) {
                 indicatorButton.add(new IndicatorButton(i));
             }
-            getChildren().addAll(indicatorButton);            
+            getChildren().addAll(indicatorButton);
         }
 
         private void updatePageIndicators() {
@@ -439,15 +443,16 @@ public class PaginationSkin<T> extends SkinBase<Pagination<T>, PaginationBehavio
             double arrowButtonY = top + Utils.computeYOffset(height, leftArrowHeight, VPos.CENTER);
             double indicatorButtonY = top + Utils.computeYOffset(height, indicatorHeight, VPos.CENTER);
 
+            leftArrowButton.setVisible(true);
+            rightArrowButton.setVisible(true);
+
             if (currentIndex == 0) {
                 // Grey out the left arrow if we are at the beginning.
                 leftArrowButton.setVisible(false);
-            } else if (currentIndex == (totalNumberOfPages() - 1)) {
+            }
+            if (currentIndex == (totalNumberOfPages() - 1)) {
                 // Grey out the right arrow if we have reached the end.
                 rightArrowButton.setVisible(false);
-            } else {
-                leftArrowButton.setVisible(true);
-                rightArrowButton.setVisible(true);
             }
 
             paginationListView.show(paginationListView.getSelectionModel().getSelectedIndex());
