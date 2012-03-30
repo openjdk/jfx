@@ -898,7 +898,18 @@ public abstract class Node implements EventTarget {
 
                 @Override
                 protected void invalidated() {
-                     impl_reapplyCSS();
+                    //
+                    // Here, we used to call reapplyCSS(). But there is 
+                    // no need to create a new StyleHelper if just the 
+                    // inline style has changed since the inline style is
+                    // not cached. 
+                    //
+                    if (getScene() != null &&
+                        cssFlag != CSSFlags.REAPPLY && 
+                        cssFlag != CSSFlags.UPDATE) {
+                        cssFlag = CSSFlags.UPDATE; 
+                        notifyParentsOfInvalidatedCSS();
+                    } 
                 }
 
                 @Override
