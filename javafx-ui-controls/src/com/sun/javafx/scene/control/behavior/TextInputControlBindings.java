@@ -101,6 +101,8 @@ public class TextInputControlBindings {
             BINDINGS.add(new KeyBinding(KP_LEFT, KEY_PRESSED,    "SelectPreviousWord").shift().alt());
             BINDINGS.add(new KeyBinding(RIGHT, KEY_PRESSED,      "SelectNextWord").shift().alt());
             BINDINGS.add(new KeyBinding(KP_RIGHT, KEY_PRESSED,   "SelectNextWord").shift().alt());
+            BINDINGS.add(new KeyBinding(Z, KEY_PRESSED,          "Undo").meta());
+            BINDINGS.add(new KeyBinding(Z, KEY_PRESSED,          "Redo").shift().meta());
         } else {
             BINDINGS.add(new KeyBinding(HOME, KEY_PRESSED,       "SelectHome").shift());
             BINDINGS.add(new KeyBinding(END, KEY_PRESSED,        "SelectEnd").shift());
@@ -126,6 +128,13 @@ public class TextInputControlBindings {
             BINDINGS.add(new KeyBinding(KP_RIGHT, KEY_PRESSED,   "SelectNextWord").ctrl().shift());
             BINDINGS.add(new KeyBinding(A, KEY_PRESSED,          "SelectAll").ctrl());
             BINDINGS.add(new KeyBinding(BACK_SLASH, KEY_PRESSED, "Unselect").ctrl());
+            if (PlatformUtil.isLinux()) {
+                BINDINGS.add(new KeyBinding(Z, KEY_PRESSED,          "Undo").ctrl());
+                BINDINGS.add(new KeyBinding(Z, KEY_PRESSED,          "Redo").ctrl().shift());
+            } else {  // Windows
+                BINDINGS.add(new KeyBinding(Z, KEY_PRESSED,          "Undo").ctrl());
+                BINDINGS.add(new KeyBinding(Y, KEY_PRESSED,          "Redo").ctrl());
+            }
         }
         // Any other key press first goes to normal text input
         // Note this is KEY_TYPED because otherwise the character is not available in the event.

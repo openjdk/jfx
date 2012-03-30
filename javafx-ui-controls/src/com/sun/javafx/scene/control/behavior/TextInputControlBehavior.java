@@ -25,6 +25,8 @@
 
 package com.sun.javafx.scene.control.behavior;
 
+import javafx.beans.InvalidationListener;
+import javafx.beans.Observable;
 import javafx.scene.control.IndexRange;
 import javafx.scene.control.TextInputControl;
 import javafx.scene.input.KeyEvent;
@@ -66,6 +68,8 @@ public abstract class TextInputControlBehavior<T extends TextInputControl> exten
      */
     protected boolean macOS = PlatformUtil.isMac();
 
+    private UndoManager undoManager = new UndoManager();
+
     /**************************************************************************
      * Constructors                                                           *
      *************************************************************************/
@@ -76,6 +80,15 @@ public abstract class TextInputControlBehavior<T extends TextInputControl> exten
      */
     public TextInputControlBehavior(T textInputControl) {
         super(textInputControl);
+
+        textInputControl.textProperty().addListener(new InvalidationListener() {
+            @Override public void invalidated(Observable observable) {
+                if (!isEditing()) {
+                    // Text changed, but not by user action
+                    undoManager.reset();
+                }
+            }
+        });
     }
 
     /**************************************************************************
@@ -113,10 +126,14 @@ public abstract class TextInputControlBehavior<T extends TextInputControl> exten
         if (textInputControl.isEditable()) {
             setCaretAnimating(false);
             setEditing(true);
+            final IndexRange selection = textInputControl.getSelection();
+            final int start = selection.getStart();
+            final int end = selection.getEnd();
+
             if ("InputCharacter".equals(name)) defaultKeyTyped(lastEvent);
-            else if ("Cut".equals(name)) textInputControl.cut();
+            else if ("Cut".equals(name)) cut();
             else if ("Copy".equals(name)) textInputControl.copy();
-            else if ("Paste".equals(name)) textInputControl.paste();
+            else if ("Paste".equals(name)) paste();
             else if ("SelectBackward".equals(name)) textInputControl.selectBackward();
             else if ("SelectForward".equals(name)) textInputControl.selectForward();
             else if ("PreviousWord".equals(name)) textInputControl.previousWord();
@@ -137,6 +154,8 @@ public abstract class TextInputControlBehavior<T extends TextInputControl> exten
             else if ("SelectEnd".equals(name)) selectEnd();
             else if ("SelectHomeExtend".equals(name)) selectHomeExtend();
             else if ("SelectEndExtend".equals(name)) selectEndExtend();
+            else if ("Undo".equals(name)) undoManager.undo();
+            else if ("Redo".equals(name)) undoManager.redo();
             /*DEBUG*/else if ("UseVK".equals(name)) ((com.sun.javafx.scene.control.skin.TextInputControlSkin)textInputControl.getSkin()).toggleUseVK();
             else {
                 setEditing(false);
@@ -192,6 +211,7 @@ public abstract class TextInputControlBehavior<T extends TextInputControl> exten
 //                + character.length() > textInput.getMaximumLength()) {
 //                // TODO Beep?
 //            } else {
+                undoManager.addChange(start, textInput.getText().substring(start, end), character, true);
                 replaceText(start, end, character);
 //            }
 
@@ -200,17 +220,67 @@ public abstract class TextInputControlBehavior<T extends TextInputControl> exten
     }
 
     private void deletePreviousChar() {
+        TextInputControl textInputControl = getControl();
+        IndexRange selection = textInputControl.getSelection();
+        int start = selection.getStart();
+        int end = selection.getEnd();
+
+        if (selection.getLength() == 0) {
+            end = start;
+            start--;
+        }
+        undoManager.addChange(start, textInputControl.getText().substring(start, end), null);
         deleteChar(true);
     }
 
     private void deleteNextChar() {
+        TextInputControl textInputControl = getControl();
+        IndexRange selection = textInputControl.getSelection();
+        int start = selection.getStart();
+        int end = selection.getEnd();
+
+        if (selection.getLength() == 0) {
+            end = start + 1;
+        }
+        undoManager.addChange(start, textInputControl.getText().substring(start, end), null);
         deleteChar(false);
     }
 
     private void deleteSelection() {
-        if (getControl().getSelection().getLength() > 0) {
+        TextInputControl textInputControl = getControl();
+        IndexRange selection = textInputControl.getSelection();
+
+        if (selection.getLength() > 0) {
+            int start = selection.getStart();
+            int end = selection.getEnd();
+            undoManager.addChange(start, textInputControl.getText().substring(start, end), null);
             deleteChar(false);
         }
+    }
+
+    private void cut() {
+        TextInputControl textInputControl = getControl();
+        IndexRange selection = textInputControl.getSelection();
+        int start = selection.getStart();
+        int end = selection.getEnd();
+
+        undoManager.addChange(start, textInputControl.getText().substring(start, end), null);
+        textInputControl.cut();
+    }
+
+    private void paste() {
+        TextInputControl textInputControl = getControl();
+        IndexRange selection = textInputControl.getSelection();
+        int start = selection.getStart();
+        int end = selection.getEnd();
+        String text = textInputControl.getText();
+        String deleted = text.substring(start, end);
+        String tail = text.substring(end);
+
+        textInputControl.paste();
+
+        text = textInputControl.getText();
+        undoManager.addChange(start, deleted, text.substring(start, text.lastIndexOf(tail)));
     }
 
     private void selectNextWord() {
@@ -256,5 +326,105 @@ public abstract class TextInputControlBehavior<T extends TextInputControl> exten
     }
     public boolean isEditing() {
         return editing;
+    }
+
+    public boolean canUndo() {
+        return undoManager.canUndo();
+    }
+
+    public boolean canRedo() {
+        return undoManager.canRedo();
+    }
+
+    static class Change {
+        int start;
+        String oldText;
+        String newText;
+        boolean appendable;
+
+        Change(int start, String oldText, String newText) {
+            this(start, oldText, newText, false);
+        }
+
+        Change(int start, String oldText, String newText, boolean appendable) {
+            this.start = start;
+            this.oldText = oldText;
+            this.newText = newText;
+            this.appendable = appendable;
+        }
+    }
+
+    class UndoManager {
+        private ArrayList<Change> chain = new ArrayList<Change>();
+        private int currentIndex = 0;
+
+        public void addChange(int start, String oldText, String newText) {
+            addChange(start, oldText, newText, false);
+        }
+
+        public void addChange(int start, String oldText, String newText, boolean appendable) {
+            truncate();
+            if (appendable && currentIndex > 0 && (oldText == null || oldText.length() == 0)) {
+                Change change = chain.get(currentIndex - 1);
+                if (change.appendable && start == change.start + change.newText.length()) {
+                    // Append text to previous Change
+                    change.newText += newText;
+                    return;
+                }
+            }
+            chain.add(new Change(start, oldText, newText, appendable));
+            currentIndex++;
+        }
+
+        public void undo() {
+            if (currentIndex > 0) {
+                // Apply reverse change here
+                Change change = chain.get(currentIndex - 1);
+                replaceText(change.start,
+                            change.start + ((change.newText != null) ? change.newText.length() : 0),
+                            (change.oldText != null) ? change.oldText : "");
+                currentIndex--;
+                if (currentIndex > 0) {
+                    chain.get(currentIndex - 1).appendable = false;
+                }
+            }
+            // else beep ?
+        }
+
+        public void redo() {
+            if (currentIndex < chain.size()) {
+                // Apply change here
+                Change change = chain.get(currentIndex);
+                replaceText(change.start,
+                            change.start + ((change.oldText != null) ? change.oldText.length() : 0),
+                            (change.newText != null) ? change.newText : "");
+                change.appendable = false;
+                currentIndex++;
+            }
+            // else beep ?
+        }
+
+        public boolean canUndo() {
+            return (currentIndex > 0);
+        }
+
+        public boolean canRedo() {
+            return (currentIndex < chain.size());
+        }
+
+        public void reset() {
+            chain.clear();
+            currentIndex = 0;
+        }
+
+        private void truncate() {
+            if (currentIndex > 0 && chain.size() > currentIndex) {
+                chain.get(currentIndex - 1).appendable = false;
+            }
+
+            while (chain.size() > currentIndex) {
+                chain.remove(chain.size() - 1);
+            }
+        }
     }
 }
