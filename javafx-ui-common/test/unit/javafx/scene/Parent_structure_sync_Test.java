@@ -24,6 +24,7 @@
  */
 package javafx.scene;
 
+import com.sun.javafx.pgstub.StubToolkit;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertSame;
 import static org.junit.Assert.assertTrue;
@@ -33,6 +34,8 @@ import org.junit.Before;
 import org.junit.Test;
 
 import com.sun.javafx.sg.PGGroup;
+import com.sun.javafx.tk.Toolkit;
+import javafx.stage.Stage;
 
 /**
  * Tests to make sure the synchronization of children between a Parent and PGGroup
@@ -51,11 +54,17 @@ public class Parent_structure_sync_Test {
         r4 = new Rectangle(0, 0, 10, 10);
         r5 = new Rectangle(0, 0, 10, 10);
         pg = (PGGroup) parent.impl_getPGNode();
+
+        Scene scene = new Scene(parent);
+        Stage stage = new Stage();
+        stage.setScene(scene);
+        stage.show();
+
         sync();
     }
     
     private void sync() {
-        parent.impl_syncPGNodeDirect();
+        ((StubToolkit) Toolkit.getToolkit()).firePulse();
     }
     
     @Test public void emptyParentShouldHaveEmptyPGGroup() {
