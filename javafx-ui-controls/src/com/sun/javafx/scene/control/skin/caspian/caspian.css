@@ -3292,49 +3292,47 @@ Only the properties with values that are different from the TextBox are specifie
 
 .pagination .pagination-control {
     -fx-alignment: BOTTOM_CENTER;
-    -fx-background-color: transparent;
+    -fx-background-color: transparent;    
 }
 
-.pagination .pagination-control > .arrow-button {    
+.pagination .pagination-control > .page-navigation {    
     -fx-padding: 0.833333em 0.416667em 0.833333em 0.416667em; /* 10 5 10 5 */    
 }
 
-.pagination .pagination-control > .arrow-button .left-arrow {
+.pagination .pagination-control > .page-navigation .left-arrow {
     -fx-background-color: -fx-mark-highlight-color, -fx-mark-color;
     -fx-background-insets: 1 0 -1 0, 0;
     -fx-padding: 0.25em 0.3125em 0.25em 0.3125em; /* 3 3.75 3 3.75 */
     -fx-shape: "M 0 0 L -4 3.5 L 0 7 z";
 }
 
-.pagination .pagination-control > .arrow-button .right-arrow {
+.pagination .pagination-control > .page-navigation .right-arrow {
     -fx-background-color: -fx-mark-highlight-color, -fx-mark-color;
     -fx-background-insets: 1 0 -1 0, 0;
     -fx-padding: 0.25em 0.3125em 0.25em 0.3125em; /* 3 3.75 3 3.75 */
     -fx-shape: "M 0 0 L 4 3.5 L 0 7 z";
 }
 
-.pagination .pagination-control > .arrow-button .bullet-indicator {
+.pagination .pagination-control > .page-navigation .bullet {
    -fx-background-color: -fx-shadow-highlight-color, -fx-outer-border, -fx-inner-border, -fx-body-color;
    -fx-background-insets: 0 0 -1 0,  0,  1,  2;
    -fx-background-radius: 1.0em; /* large value to make sure this remains circular */
    -fx-padding: 0.333333em; /* 4 -- padding from outside edge to the inner black dot */
 }
 
-.pagination .pagination-control > .arrow-button:selected .bullet-indicator {
+.pagination .pagination-control > .page-navigation:selected .bullet {
    -fx-background-color: -fx-mark-highlight-color, -fx-mark-color;
    -fx-background-insets: 0 0 -1 0, 0;    
 }
 
-.pagination .pagination-control > .arrow-button .number-indicator {
+.pagination .pagination-control > .page-navigation .number {
     -fx-font-size: 10px;
-    -fx-background-color: -fx-mark-highlight-color, white;
-    -fx-background-insets: 1 0 -1 0, 0;    
-    -fx-padding: 2 10 2 10; /*0.25em 0.25em 0.25em 0.25em; /* 3 3 3 3*/
-    -fx-shape: "M0 0 L0 0 L5 0 L5 5 L0 5 Z";
+    -fx-background-color: -fx-mark-highlight-color, white;    
+    -fx-padding: 0 2 0 2;
 }
 
-.pagination .pagination-control > .arrow-button:selected .number-indicator {
-    -fx-background-color: transparent, red;    
+.pagination .pagination-control > .page-navigation:selected .number {
+    -fx-background-color: transparent, red;        
 }
 
 .pagination .list-view .scroll-bar:horizontal, 

@@ -271,13 +271,13 @@ public class PaginationSkin<T> extends SkinBase<Pagination<T>, PaginationBehavio
             StackPane leftArrow = new StackPane();
             leftArrow.getStyleClass().add("left-arrow");
             leftArrowButton = new StackPane();
-            leftArrowButton.getStyleClass().add("arrow-button");
+            leftArrowButton.getStyleClass().add("page-navigation");
             leftArrowButton.getChildren().setAll(leftArrow);
 
             StackPane rightArrow = new StackPane();
             rightArrow.getStyleClass().add("right-arrow");
             rightArrowButton = new StackPane();
-            rightArrowButton.getStyleClass().add("arrow-button");
+            rightArrowButton.getStyleClass().add("page-navigation");
             rightArrowButton.getChildren().setAll(rightArrow);
 
             indicatorButton = new ArrayList<IndicatorButton>();
@@ -480,7 +480,7 @@ public class PaginationSkin<T> extends SkinBase<Pagination<T>, PaginationBehavio
         private boolean selected;
 
         public IndicatorButton(int pageNumber) {
-            getStyleClass().add("arrow-button");
+            getStyleClass().add("page-navigation");
             this.selected = false;
             this.pageNumber = pageNumber;
             pageIndicator = new Label(Integer.toString(this.pageNumber + 1));
@@ -515,10 +515,10 @@ public class PaginationSkin<T> extends SkinBase<Pagination<T>, PaginationBehavio
 
         private void setIndicatorType() {
             if (getSkinnable().getStyleClass().contains(Pagination.STYLE_CLASS_BULLET)) {
-                indicator.getStyleClass().setAll("bullet-indicator");
+                indicator.getStyleClass().setAll("bullet");
                 indicator.getChildren().remove(pageIndicator);
             } else {
-                indicator.getStyleClass().setAll("number-indicator");
+                indicator.getStyleClass().setAll("number");
                 indicator.getChildren().setAll(pageIndicator);
             }
         }
