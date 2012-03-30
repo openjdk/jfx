@@ -6774,6 +6774,38 @@ public abstract class Node implements EventTarget {
      * @deprecated This is an internal API that is not intended for use and will be removed in the next version
      */
     @Deprecated
+    public void impl_cssResetInitialValues() {
+        
+        //
+        // RT-9784: reset all properties that have been set by CSS back
+        // to their default value. Called when a stylesheet is removed from
+        // a parent or from the scene. This has to be done before calling 
+        // impl_reapplyCSS.
+        //
+        final List<StyleableProperty> styleables = impl_getStyleableProperties();
+        final int nStyleables = styleables != null ? styleables.size() : 0;
+        for (int n=0; n<nStyleables; n++) {
+            final StyleableProperty styleable = styleables.get(n);
+            if (styleable.isSettable(this) == false) continue;
+            final WritableValue writable = styleable.getWritableValue(this);
+            if (writable != null) {
+                final Stylesheet.Origin origin = StyleableProperty.getOrigin(writable);
+                if (origin != null && origin != Stylesheet.Origin.USER) {
+                    // If a property is never set by the user or by CSS, then 
+                    // the Origin of the property is null. So, passing null 
+                    // here makes the property look (to CSS) like it was
+                    // initialized but never used.
+                    styleable.set(this, styleable.getInitialValue(this), null);
+                }
+            }
+        }        
+    }
+    
+    /**
+     * @treatAsPrivate implementation detail
+     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
+     */
+    @Deprecated
     public final void impl_reapplyCSS() {
         // If there is no scene, then we cannot make it dirty, so we'll leave
         // the flag alone
@@ -6872,6 +6904,8 @@ public abstract class Node implements EventTarget {
             styleHelper = styleHelperRef.get();
         }
 
+        // set the key to null here so the next call to impl_getStyleCacheKey
+        // will cause a new key to be created
         styleCacheKeyRef = null;
         return styleHelper;
     }

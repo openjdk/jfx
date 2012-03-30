@@ -1063,6 +1063,13 @@ public abstract class Parent extends Node {
         @Override
         protected void onChanged(Change<String> c) {
             StyleManager.getInstance().parentStylesheetsChanged(c);
+            // RT-9784 - if stylesheet is removed, reset styled properties to 
+            // their initial value.
+            while(c.next()) {
+                if (c.wasRemoved() == false) continue;
+                impl_cssResetInitialValues();
+                break; // no point in resetting more than once...
+            }
             impl_reapplyCSS();
         }
     };
@@ -1135,6 +1142,28 @@ public abstract class Parent extends Node {
             }
         }
     }
+    
+    /**
+     * @treatAsPrivate implementation detail
+     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
+     */
+    @Deprecated
+    @Override public void impl_cssResetInitialValues() {
+        
+        // RT-9784
+        
+        super.impl_cssResetInitialValues();
+
+        final List kids = this.getChildren();
+        final int max = kids.size();
+        for (int c=0; c<max; c++) {
+            Node kid = (Node)kids.get(c);
+            if (kid != null) {
+                kid.impl_cssResetInitialValues();
+            }
+        }
+    }
+    
 
     /***********************************************************************
      *                               Misc                                  *
