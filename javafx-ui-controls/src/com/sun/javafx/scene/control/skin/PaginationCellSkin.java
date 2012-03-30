@@ -46,11 +46,20 @@ package com.sun.javafx.scene.control.skin;
 
 import javafx.scene.control.ListView;
 import com.sun.javafx.scene.control.PaginationCell;
+import javafx.beans.InvalidationListener;
+import javafx.beans.Observable;
 
 public class PaginationCellSkin extends ListCellSkin {
 
     public PaginationCellSkin(PaginationCell control) {
         super(control);
+
+        getSkinnable().getListView().layoutBoundsProperty().addListener(new InvalidationListener() {
+            @Override
+            public void invalidated(Observable o) {
+                requestLayout();
+            }
+        });
     }
 
     @Override protected double computePrefWidth(double height) {
