@@ -33,10 +33,11 @@ import javafx.scene.input.KeyEvent;
 import java.util.ArrayList;
 import java.util.List;
 
-import com.sun.javafx.PlatformUtil;
 import com.sun.javafx.scene.control.skin.SkinBase;
 
 import static javafx.scene.input.KeyEvent.KEY_PRESSED;
+
+import static com.sun.javafx.PlatformUtil.*;
 
 /**
  * Abstract base class for text input behaviors.
@@ -62,11 +63,6 @@ public abstract class TextInputControlBehavior<T extends TextInputControl> exten
      * handling InputCharacter actions.
      */
     private KeyEvent lastEvent;
-
-    /**
-     * Simple flag to know if we are on mac OS
-     */
-    protected boolean macOS = PlatformUtil.isMac();
 
     private UndoManager undoManager = new UndoManager();
 
@@ -145,6 +141,8 @@ public abstract class TextInputControlBehavior<T extends TextInputControl> exten
             else if ("End".equals(name)) textInputControl.end();
             else if ("DeletePreviousChar".equals(name)) deletePreviousChar();
             else if ("DeleteNextChar".equals(name)) deleteNextChar();
+            else if ("DeletePreviousWord".equals(name)) deletePreviousWord();
+            else if ("DeleteNextWord".equals(name)) deleteNextWord();
             else if ("DeleteSelection".equals(name)) deleteSelection();
             else if ("Forward".equals(name)) textInputControl.forward();
             else if ("Backward".equals(name)) textInputControl.backward();
@@ -194,8 +192,8 @@ public abstract class TextInputControlBehavior<T extends TextInputControl> exten
         if (character.length() == 0) return;
 
         // Filter out control keys except control+Alt on PC or Alt on Mac
-        if (event.isControlDown() || event.isAltDown() || (PlatformUtil.isMac() && event.isMetaDown())) {
-            if (!((event.isControlDown() || PlatformUtil.isMac()) && event.isAltDown())) return;
+        if (event.isControlDown() || event.isAltDown() || (isMac() && event.isMetaDown())) {
+            if (!((event.isControlDown() || isMac()) && event.isAltDown())) return;
         }
 
         // Ignore characters in the control range and the ASCII delete
@@ -241,11 +239,37 @@ public abstract class TextInputControlBehavior<T extends TextInputControl> exten
         int start = selection.getStart();
         int end = selection.getEnd();
 
-        if (selection.getLength() == 0) {
-            end = start + 1;
+        if (start < textInputControl.getLength() || end > start) {
+            if (selection.getLength() == 0) {
+                end = start + 1;
+            }
+            undoManager.addChange(start, textInputControl.getText().substring(start, end), null);
         }
-        undoManager.addChange(start, textInputControl.getText().substring(start, end), null);
         deleteChar(false);
+    }
+
+    private void deletePreviousWord() {
+        TextInputControl textInputControl = getControl();
+        int end = textInputControl.getCaretPosition();
+
+        if (end > 0) {
+            textInputControl.previousWord();
+            int start = textInputControl.getCaretPosition();
+            undoManager.addChange(start, textInputControl.getText().substring(start, end), null);
+            replaceText(start, end, "");
+        }
+    }
+
+    private void deleteNextWord() {
+        TextInputControl textInputControl = getControl();
+        int start = textInputControl.getCaretPosition();
+
+        if (start < textInputControl.getLength()) {
+            nextWord();
+            int end = textInputControl.getCaretPosition();
+            undoManager.addChange(start, textInputControl.getText().substring(start, end), null);
+            replaceText(start, end, "");
+        }
     }
 
     private void deleteSelection() {
@@ -277,17 +301,17 @@ public abstract class TextInputControlBehavior<T extends TextInputControl> exten
         int end = selection.getEnd();
         String text = textInputControl.getText();
         String deleted = text.substring(start, end);
-        String tail = text.substring(end);
+        int tail = text.length() - end;
 
         textInputControl.paste();
 
         text = textInputControl.getText();
-        undoManager.addChange(start, deleted, text.substring(start, text.lastIndexOf(tail)));
+        undoManager.addChange(start, deleted, text.substring(start, text.length() - tail));
     }
 
     private void selectNextWord() {
         TextInputControl textInputControl = getControl();
-        if (macOS) {
+        if (isMac() || isLinux()) {
             textInputControl.selectEndOfNextWord();
         } else {
             textInputControl.selectNextWord();
@@ -296,7 +320,7 @@ public abstract class TextInputControlBehavior<T extends TextInputControl> exten
 
     private void nextWord() {
         TextInputControl textInputControl = getControl();
-        if (macOS) {
+        if (isMac() || isLinux()) {
             textInputControl.endOfNextWord();
         } else {
             textInputControl.nextWord();

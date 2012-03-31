@@ -114,8 +114,8 @@ public class TextInputControlBindings {
             BINDINGS.add(new KeyBinding(RIGHT, KEY_PRESSED,      "NextWord").ctrl());
             BINDINGS.add(new KeyBinding(KP_RIGHT, KEY_PRESSED,   "NextWord").ctrl());
             BINDINGS.add(new KeyBinding(H, KEY_PRESSED,          "DeletePreviousChar").ctrl());
-            BINDINGS.add(new KeyBinding(DELETE, KEY_PRESSED,     "DeleteNextChar").ctrl());
-            BINDINGS.add(new KeyBinding(BACK_SPACE, KEY_PRESSED, "DeleteNextChar").ctrl());
+            BINDINGS.add(new KeyBinding(DELETE, KEY_PRESSED,     "DeleteNextWord").ctrl());
+            BINDINGS.add(new KeyBinding(BACK_SPACE, KEY_PRESSED, "DeletePreviousWord").ctrl());
             BINDINGS.add(new KeyBinding(X, KEY_PRESSED,          "Cut").ctrl());
             BINDINGS.add(new KeyBinding(C, KEY_PRESSED,          "Copy").ctrl());
             BINDINGS.add(new KeyBinding(INSERT, KEY_PRESSED,     "Copy").ctrl());
