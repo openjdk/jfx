@@ -132,9 +132,9 @@ public abstract class TextInputControlBehavior<T extends TextInputControl> exten
             else if ("Paste".equals(name)) paste();
             else if ("SelectBackward".equals(name)) textInputControl.selectBackward();
             else if ("SelectForward".equals(name)) textInputControl.selectForward();
-            else if ("PreviousWord".equals(name)) textInputControl.previousWord();
+            else if ("PreviousWord".equals(name)) previousWord();
             else if ("NextWord".equals(name)) nextWord();
-            else if ("SelectPreviousWord".equals(name)) textInputControl.selectPreviousWord();
+            else if ("SelectPreviousWord".equals(name)) selectPreviousWord();
             else if ("SelectNextWord".equals(name)) selectNextWord();
             else if ("SelectAll".equals(name)) textInputControl.selectAll();
             else if ("Home".equals(name)) textInputControl.home();
@@ -248,7 +248,7 @@ public abstract class TextInputControlBehavior<T extends TextInputControl> exten
         deleteChar(false);
     }
 
-    private void deletePreviousWord() {
+    protected void deletePreviousWord() {
         TextInputControl textInputControl = getControl();
         int end = textInputControl.getCaretPosition();
 
@@ -260,7 +260,7 @@ public abstract class TextInputControlBehavior<T extends TextInputControl> exten
         }
     }
 
-    private void deleteNextWord() {
+    protected void deleteNextWord() {
         TextInputControl textInputControl = getControl();
         int start = textInputControl.getCaretPosition();
 
@@ -309,7 +309,11 @@ public abstract class TextInputControlBehavior<T extends TextInputControl> exten
         undoManager.addChange(start, deleted, text.substring(start, text.length() - tail));
     }
 
-    private void selectNextWord() {
+    protected void selectPreviousWord() {
+        getControl().selectPreviousWord();
+    }
+
+    protected void selectNextWord() {
         TextInputControl textInputControl = getControl();
         if (isMac() || isLinux()) {
             textInputControl.selectEndOfNextWord();
@@ -318,7 +322,11 @@ public abstract class TextInputControlBehavior<T extends TextInputControl> exten
         }
     }
 
-    private void nextWord() {
+    protected void previousWord() {
+        getControl().previousWord();
+    }
+
+    protected void nextWord() {
         TextInputControl textInputControl = getControl();
         if (isMac() || isLinux()) {
             textInputControl.endOfNextWord();

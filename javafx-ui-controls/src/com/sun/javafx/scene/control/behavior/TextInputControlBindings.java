@@ -86,6 +86,8 @@ public class TextInputControlBindings {
             BINDINGS.add(new KeyBinding(KP_LEFT, KEY_PRESSED,    "PreviousWord").alt());
             BINDINGS.add(new KeyBinding(RIGHT, KEY_PRESSED,      "NextWord").alt());
             BINDINGS.add(new KeyBinding(KP_RIGHT, KEY_PRESSED,   "NextWord").alt());
+            BINDINGS.add(new KeyBinding(DELETE, KEY_PRESSED,     "DeleteNextWord").meta());
+            BINDINGS.add(new KeyBinding(BACK_SPACE, KEY_PRESSED, "DeletePreviousWord").meta());
             BINDINGS.add(new KeyBinding(X, KEY_PRESSED,          "Cut").meta());
             BINDINGS.add(new KeyBinding(C, KEY_PRESSED,          "Copy").meta());
             BINDINGS.add(new KeyBinding(INSERT, KEY_PRESSED,     "Copy").meta());
