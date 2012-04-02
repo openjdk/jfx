@@ -134,6 +134,7 @@ public class PaginationSkin<T> extends SkinBase<Pagination<T>, PaginationBehavio
         currentIndex = usePageIndex ? getSkinnable().getPageIndex() : 0;
         toIndex = fromIndex + (numberOfPages - 1);
 
+        paginationListView.reset();
         paginationListView.getSelectionModel().select(currentIndex);
     }
 
@@ -176,11 +177,11 @@ public class PaginationSkin<T> extends SkinBase<Pagination<T>, PaginationBehavio
                 return new PaginationCell<T>() {
                     @Override public void updateItem(T item, boolean empty) {
                         super.updateItem(item, empty);
-
+                        setContentDisplay(ContentDisplay.GRAPHIC_ONLY);
                         if (empty || item == null) {
                             setText(null);
                             setGraphic(null);
-                        } else {
+                        } else {                            
                             setText(null);
                             setGraphic(pagination.getPageFactory().call(getIndex()));
                         }
@@ -192,7 +193,12 @@ public class PaginationSkin<T> extends SkinBase<Pagination<T>, PaginationBehavio
     }
 
     private int totalNumberOfPages() {
-        return getSkinnable().getNumberOfItems()/getSkinnable().getItemsPerPage();
+        int totalNumberOfPages = getSkinnable().getNumberOfItems()/getSkinnable().getItemsPerPage();
+        if (getSkinnable().getNumberOfItems()%getSkinnable().getItemsPerPage() != 0) {
+            // Add the remaining to the next page.
+            totalNumberOfPages += 1;
+        }
+        return totalNumberOfPages;
     }
 
     @Override protected void handleControlPropertyChanged(String p) {
@@ -455,7 +461,11 @@ public class PaginationSkin<T> extends SkinBase<Pagination<T>, PaginationBehavio
                 rightArrowButton.setVisible(false);
             }
 
-            paginationListView.show(paginationListView.getSelectionModel().getSelectedIndex());
+            if (previousIndex < 0) {
+                paginationListView.showOffset(0, paginationListView.getSelectionModel().getSelectedIndex());                
+            } else {
+                paginationListView.showOffset(currentIndex - previousIndex, paginationListView.getSelectionModel().getSelectedIndex());
+            }
 
             leftArrowButton.resize(leftArrowWidth, leftArrowHeight);
 
@@ -574,6 +584,18 @@ public class PaginationSkin<T> extends SkinBase<Pagination<T>, PaginationBehavio
                 getProperties().put(VirtualContainerBase.SCROLL_TO_INDEX_TOP, index);
                 previousIndex = index;
             }
+        }
+
+        public void showOffset(int offset, int index) {
+            if (previousIndex != index) {
+                getProperties().put(VirtualContainerBase.SCROLL_TO_OFFSET, offset);
+                previousIndex = index;
+            }
+        }
+        
+        public void reset() {
+            getProperties().put(VirtualContainerBase.SCROLL_TO_INDEX_TOP, 0);
+            previousIndex = -1;
         }
     }
 }
