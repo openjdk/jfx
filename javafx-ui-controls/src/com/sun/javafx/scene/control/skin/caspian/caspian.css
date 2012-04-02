@@ -3283,11 +3283,13 @@ Only the properties with values that are different from the TextBox are specifie
 
 /* -------------------------- STYLES FOR PAGINATION CONTROL ----- */
 .pagination-cell {
-    -fx-skin: "com.sun.javafx.scene.control.skin.PaginationCellSkin";      
+    -fx-skin: "com.sun.javafx.scene.control.skin.PaginationCellSkin";    
+    -fx-padding: 0;
 }
 
 .pagination {
     -fx-skin: "com.sun.javafx.scene.control.skin.PaginationSkin";
+    -fx-padding: 0;
 }
 
 .pagination .pagination-control {
@@ -3333,6 +3335,10 @@ Only the properties with values that are different from the TextBox are specifie
 
 .pagination .pagination-control > .page-navigation:selected .number {
     -fx-background-color: transparent, red;        
+}
+
+.pagination .list-view {
+    -fx-padding: 0;
 }
 
 .pagination .list-view .scroll-bar:horizontal, 
