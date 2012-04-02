@@ -31,7 +31,6 @@ import javafx.animation.FadeTransition;
 import javafx.animation.Interpolator;
 import javafx.animation.KeyFrame;
 import javafx.animation.KeyValue;
-import javafx.beans.DefaultProperty;
 import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.DoubleProperty;
 import javafx.beans.property.DoublePropertyBase;
@@ -81,7 +80,6 @@ import java.util.ArrayList;
  * pie slice labels or not.
  *
  */
-@DefaultProperty("data")
 public class PieChart extends Chart {
 
     // -------------- PRIVATE FIELDS -----------------------------------------------------------------------------------

@@ -11,6 +11,7 @@ import java.util.List;
 import javafx.beans.property.Property;
 import javafx.beans.value.WritableValue;
 import javafx.scene.control.Labeled;
+import javafx.scene.paint.Color;
 import javafx.scene.paint.Paint;
 import javafx.scene.text.Font;
 import javafx.scene.text.Text;
@@ -121,7 +122,7 @@ public class LabeledText extends Text {
 
        private static final StyleableProperty<LabeledText,Paint> FILL =
            new StyleableProperty<LabeledText,Paint>("-fx-fill", 
-               PaintConverter.getInstance(), null) {
+               PaintConverter.getInstance(), Color.BLACK) {
 
             @Override
             public void set(LabeledText node, Paint value, Stylesheet.Origin origin) {

@@ -763,6 +763,153 @@ public class TreeViewKeyInputTest {
     
     
     /***************************************************************************
+     * Tests for discontinuous multiple selection (RT-18952)
+     **************************************************************************/  
+    
+    // Test 1
+    @Test public void test_rt18952_1() {
+        sm.clearAndSelect(0);
+        keyboard.doDownArrowPress(KeyModifier.getShortcutKey());
+        keyboard.doDownArrowPress(KeyModifier.getShortcutKey());
+        keyboard.doKeyPress(KeyCode.SPACE, KeyModifier.getShortcutKey());
+        assertTrue(isSelected(0,2));
+        assertTrue(isAnchor(2));
+        
+        keyboard.doDownArrowPress(KeyModifier.getShortcutKey(), KeyModifier.SHIFT);
+        keyboard.doDownArrowPress(KeyModifier.getShortcutKey(), KeyModifier.SHIFT);
+        assertTrue(debug(),isSelected(0,2,3,4));
+        assertTrue(isAnchor(2));
+    }
+    
+    // Test 2
+    @Test public void test_rt18952_2() {
+        sm.clearAndSelect(5);
+        keyboard.doUpArrowPress(KeyModifier.getShortcutKey());
+        keyboard.doUpArrowPress(KeyModifier.getShortcutKey());
+        keyboard.doKeyPress(KeyCode.SPACE, KeyModifier.getShortcutKey());
+        assertTrue(isSelected(3,5));
+        assertTrue(isAnchor(3));
+        
+        keyboard.doUpArrowPress(KeyModifier.getShortcutKey(), KeyModifier.SHIFT);
+        keyboard.doUpArrowPress(KeyModifier.getShortcutKey(), KeyModifier.SHIFT);
+        assertTrue(isSelected(1,2,3,5));
+        assertTrue(isAnchor(3));
+    }
+    
+    // Test 3
+    @Test public void test_rt18952_3() {
+        sm.clearAndSelect(0);
+        keyboard.doDownArrowPress(KeyModifier.getShortcutKey());
+        keyboard.doDownArrowPress(KeyModifier.getShortcutKey());
+        keyboard.doKeyPress(KeyCode.SPACE, KeyModifier.getShortcutKey());
+        assertTrue(isSelected(0,2));
+        assertTrue(isAnchor(2));
+        
+        keyboard.doDownArrowPress(KeyModifier.getShortcutKey(), KeyModifier.SHIFT);
+        keyboard.doDownArrowPress(KeyModifier.getShortcutKey(), KeyModifier.SHIFT);
+        assertTrue(isSelected(0,2,3,4));
+        assertTrue(isAnchor(2));
+        
+        keyboard.doUpArrowPress(KeyModifier.getShortcutKey(), KeyModifier.SHIFT);
+        keyboard.doUpArrowPress(KeyModifier.getShortcutKey(), KeyModifier.SHIFT);
+        keyboard.doUpArrowPress(KeyModifier.getShortcutKey(), KeyModifier.SHIFT);
+        assertTrue(isSelected(0,1,2,3,4));
+        assertTrue(isAnchor(2));
+    }
+    
+    // Test 4
+    @Test public void test_rt18952_4() {
+        sm.clearAndSelect(5);
+        keyboard.doUpArrowPress(KeyModifier.getShortcutKey());
+        keyboard.doUpArrowPress(KeyModifier.getShortcutKey());
+        keyboard.doKeyPress(KeyCode.SPACE, KeyModifier.getShortcutKey());
+        assertTrue(isSelected(3,5));
+        assertTrue(isAnchor(3));
+        
+        keyboard.doUpArrowPress(KeyModifier.getShortcutKey(), KeyModifier.SHIFT);
+        keyboard.doUpArrowPress(KeyModifier.getShortcutKey(), KeyModifier.SHIFT);
+        assertTrue(isSelected(1,2,3,5));
+        assertTrue(isAnchor(3));
+        
+        keyboard.doDownArrowPress(KeyModifier.getShortcutKey(), KeyModifier.SHIFT);
+        keyboard.doDownArrowPress(KeyModifier.getShortcutKey(), KeyModifier.SHIFT);
+        keyboard.doDownArrowPress(KeyModifier.getShortcutKey(), KeyModifier.SHIFT);
+        assertTrue(isSelected(1,2,3,4,5));
+        assertTrue(isAnchor(3));
+    }
+    
+    // TODO skipped some tests here (5-8)
+    
+    // Test 9
+    @Test public void test_rt18952_9() {
+        sm.clearAndSelect(0);
+        keyboard.doDownArrowPress(KeyModifier.getShortcutKey());
+        keyboard.doDownArrowPress(KeyModifier.getShortcutKey());
+        keyboard.doKeyPress(KeyCode.SPACE, KeyModifier.getShortcutKey());
+        assertTrue(isSelected(0,2));
+        assertTrue(isAnchor(2));
+        
+        keyboard.doKeyPress(KeyCode.END, KeyModifier.getShortcutKey(), KeyModifier.SHIFT);
+        assertTrue(isSelected(0,2,3,4,5,6,7,8,9));
+        assertTrue(isAnchor(2));
+    }
+    
+    // Test 10
+    @Test public void test_rt18952_10() {
+        sm.clearAndSelect(9);
+        keyboard.doUpArrowPress(KeyModifier.getShortcutKey());
+        keyboard.doUpArrowPress(KeyModifier.getShortcutKey());
+        keyboard.doKeyPress(KeyCode.SPACE, KeyModifier.getShortcutKey());
+        assertTrue(isSelected(7,9));
+        assertTrue(isAnchor(7));
+        
+        keyboard.doKeyPress(KeyCode.HOME, KeyModifier.getShortcutKey(), KeyModifier.SHIFT);
+        assertTrue(isSelected(0,1,2,3,4,5,6,7,9));
+        assertTrue(isAnchor(7));
+    }
+    
+    // Test 11
+    @Test public void test_rt18952_11() {
+        sm.clearAndSelect(5);
+        keyboard.doKeyPress(KeyCode.HOME, KeyModifier.getShortcutKey(), KeyModifier.SHIFT);
+        assertTrue(isSelected(0,1,2,3,4,5));
+        assertTrue(isAnchor(5));
+        
+        keyboard.doKeyPress(KeyCode.END, KeyModifier.getShortcutKey(), KeyModifier.SHIFT);
+        assertTrue(isSelected(0,1,2,3,4,5,6,7,8,9));
+        assertTrue(isAnchor(5));
+    }
+    
+    // Test 12
+    @Test public void test_rt18952_12() {
+        sm.clearAndSelect(0);
+        keyboard.doDownArrowPress(KeyModifier.getShortcutKey());
+        keyboard.doDownArrowPress(KeyModifier.getShortcutKey());
+        keyboard.doKeyPress(KeyCode.SPACE, KeyModifier.getShortcutKey());
+        assertTrue(isSelected(0,2));
+        assertTrue(isAnchor(2));
+        
+        keyboard.doDownArrowPress(KeyModifier.getShortcutKey(), KeyModifier.SHIFT);
+        keyboard.doDownArrowPress(KeyModifier.getShortcutKey(), KeyModifier.SHIFT);
+        assertTrue(isSelected(0,2,3,4));
+        assertTrue(isAnchor(2));
+        
+        keyboard.doUpArrowPress(KeyModifier.getShortcutKey(), KeyModifier.SHIFT);
+        keyboard.doUpArrowPress(KeyModifier.getShortcutKey(), KeyModifier.SHIFT);
+        keyboard.doUpArrowPress(KeyModifier.getShortcutKey(), KeyModifier.SHIFT);
+        assertTrue(isSelected(0,1,2,3,4));
+        assertTrue(isAnchor(2));
+
+        keyboard.doUpArrowPress(KeyModifier.getShortcutKey());
+        keyboard.doKeyPress(KeyCode.SPACE,KeyModifier.getShortcutKey());
+        assertTrue(isSelected(1,2,3,4));
+        assertTrue(fm.isFocused(0));
+        assertTrue(isAnchor(0));
+    }
+    
+    
+    
+    /***************************************************************************
      * Tests for editing
      **************************************************************************/
     

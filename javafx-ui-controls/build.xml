@@ -4,4 +4,7 @@
 
     <import file="../build-defs.xml"/>
     <import file="build-common.xml"/>
+
+    <target name="-pre-init" depends="javafx-ui-controls-common.-pre-init"/>
+
 </project>
