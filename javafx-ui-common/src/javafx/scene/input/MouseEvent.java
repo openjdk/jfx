@@ -34,7 +34,6 @@ import javafx.geometry.Point2D;
 import javafx.scene.Node;
 
 import com.sun.javafx.scene.input.InputEventUtils;
-import javax.sound.midi.Synthesizer;
 
 // PENDING_DOC_REVIEW
 /**
