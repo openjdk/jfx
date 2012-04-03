@@ -1241,7 +1241,17 @@ public class StyleManager {
     public ObservableList<String> getErrors() {
         return errors;
     }
-            
+
+    private static class StyleHelperCacheContainer {
+        private final StyleHelper styleHelper;
+        private final Reference<StyleHelper> styleHelperRef;
+        private StyleHelperCacheContainer(StyleHelper styleHelper, 
+                Reference<StyleHelper> styleHelperRef) {
+            this.styleHelper = styleHelper;
+            this.styleHelperRef = styleHelperRef;
+        }        
+    }
+    
     /**
      * Creates and caches StyleHelpers, reusing them as often as practical.
      */
@@ -1251,23 +1261,30 @@ public class StyleManager {
         private final List<Rule> rules;
         private final long pseudoclassStateMask;
         private final boolean impactsChildren;
-        private final Map<Long, StyleHelper> cache;
+        private final Map<Long, StyleHelperCacheContainer> cache;
 
         Cache(List<Rule> rules, long pseudoclassStateMask, boolean impactsChildren) {
             this.rules = rules;
             this.pseudoclassStateMask = pseudoclassStateMask;
             this.impactsChildren = impactsChildren;
-            cache = new HashMap<Long, StyleHelper>();
+            cache = new HashMap<Long, StyleHelperCacheContainer>();
         }
 
         private void clear() {
 
-            for(StyleHelper helper : cache.values()) {
+            for(StyleHelperCacheContainer helperContainer : cache.values()) {
+                
+                final StyleHelper helper = (helperContainer != null)
+                        ? helperContainer.styleHelper
+                        : null;
+                
                 if (helper == null) {
                     continue;
                 }
                 helper.valueCache = null;
                 helper.clearStyleMap();
+                helperContainer.styleHelperRef.clear();
+                
             }
 
             cache.clear();
@@ -1317,8 +1334,11 @@ public class StyleManager {
             }
 
             if (cache.containsKey(key)) {
-                StyleHelper helper = cache.get(key);
-                return new WeakReference<StyleHelper>(helper);
+                final StyleHelperCacheContainer helperContainer = cache.get(key);
+                if (helperContainer != null) {
+                    return helperContainer.styleHelperRef;
+                }
+                cache.remove(key);
             } 
             
             // We need to create a new StyleHelper, add it to the cache,
@@ -1329,9 +1349,14 @@ public class StyleManager {
                     ++(container.helperCount));
 
             helper.valueCache = container.valueCache;
-            cache.put(key, helper);
+            
+            final Reference<StyleHelper> helperRef =
+                new WeakReference<StyleHelper>(helper);            
+            final StyleHelperCacheContainer helperContainer = 
+                new StyleHelperCacheContainer(helper, helperRef);
+            cache.put(key, helperContainer);
 
-            return new WeakReference(helper);
+            return helperRef;
         }
 
         /**

@@ -300,10 +300,7 @@ public class StyleHelper {
         //
         final Reference<StyleCacheKey> keyRef = node.impl_getStyleCacheKey();
 
-        final List<CacheEntry> cachedValues = 
-            valueCache != null 
-                ? valueCache.get(keyRef) 
-                : null;
+        final List<CacheEntry> cachedValues = valueCache.get(keyRef);
         if (cachedValues == null) return null;
 
         //
