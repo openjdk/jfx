@@ -35,6 +35,7 @@ import javafx.scene.Scene;
 import javafx.scene.paint.Color;
 import javafx.scene.shape.Rectangle;
 import javafx.scene.text.Font;
+import javafx.scene.text.FontSmoothingType;
 import javafx.scene.text.Text;
 import javafx.stage.Stage;
 import javafx.stage.Window;
@@ -297,5 +298,33 @@ public class HonorDeveloperSettingsTest {
         assertEquals(14, text.getStrokeWidth(), 0.00001);
         
     }
+
+    
+    @Test public void test_RT_20686_UAStyleDoesNotOverrideSetFontSmoothingType() {
+        
+        text.setId("rt-20686-ua");
+        text.setFontSmoothingType(FontSmoothingType.LCD);
+        
+        Toolkit.getToolkit().firePulse();
+         
+        assertEquals(FontSmoothingType.LCD, text.getFontSmoothingType());
+        
+    }
+    
+    @Test public void test_RT_20686_AuthorStyleOverridesSetFontSmoothingType() {
+        
+        String url = getClass().getResource("HonorDeveloperSettingsTest_AUTHOR.css").toExternalForm();
+        scene.getStylesheets().add(url);
+
+        text.setId("rt-20686-author");
+        text.setFontSmoothingType(FontSmoothingType.GRAY);
+        
+        Toolkit.getToolkit().firePulse();
+                
+        assertEquals(FontSmoothingType.LCD, text.getFontSmoothingType());
+        
+    }
+
+    
     
 }
