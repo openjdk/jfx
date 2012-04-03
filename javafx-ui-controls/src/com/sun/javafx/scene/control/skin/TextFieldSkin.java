@@ -158,8 +158,12 @@ public class TextFieldSkin extends TextInputControlSkin<TextField, TextFieldBeha
      * @param textField not null
      */
     public TextFieldSkin(final TextField textField) {
-        super(textField, new TextFieldBehavior(textField));
-        getBehavior().setTextFieldSkin(this);
+        this(textField, new TextFieldBehavior(textField));
+    }
+
+    public TextFieldSkin(final TextField textField, final TextFieldBehavior behavior) {
+        super(textField, behavior);
+        behavior.setTextFieldSkin(this);
 
 
         caretPosition = new IntegerBinding() {

@@ -945,10 +945,8 @@ public abstract class Shape extends Node {
                 x1 += dx;
                 y1 += dy;
             }
-            // TODO - only pad by upad or dpad, depending on transform
             _dpad += upad;
         } else {
-            // TODO - only pad by upad or dpad, depending on transform
             x0 -= upad;
             y0 -= upad;
             x1 += upad*2;

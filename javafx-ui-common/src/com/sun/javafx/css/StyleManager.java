@@ -1251,25 +1251,23 @@ public class StyleManager {
         private final List<Rule> rules;
         private final long pseudoclassStateMask;
         private final boolean impactsChildren;
-        private final Map<Long, Reference<StyleHelper>> cache;
+        private final Map<Long, StyleHelper> cache;
 
         Cache(List<Rule> rules, long pseudoclassStateMask, boolean impactsChildren) {
             this.rules = rules;
             this.pseudoclassStateMask = pseudoclassStateMask;
             this.impactsChildren = impactsChildren;
-            cache = new HashMap<Long, Reference<StyleHelper>>();
+            cache = new HashMap<Long, StyleHelper>();
         }
 
         private void clear() {
 
-            for(Reference<StyleHelper> helperRef : cache.values()) {
-               StyleHelper helper = helperRef.get();
+            for(StyleHelper helper : cache.values()) {
                 if (helper == null) {
                     continue;
                 }
                 helper.valueCache = null;
                 helper.clearStyleMap();
-                helperRef.clear();
             }
 
             cache.clear();
@@ -1319,11 +1317,8 @@ public class StyleManager {
             }
 
             if (cache.containsKey(key)) {
-                Reference helperRef = cache.get(key);
-                if (helperRef.get() != null) {
-                    return helperRef;
-                }
-                cache.remove(key);
+                StyleHelper helper = cache.get(key);
+                return new WeakReference<StyleHelper>(helper);
             } 
             
             // We need to create a new StyleHelper, add it to the cache,
@@ -1332,11 +1327,11 @@ public class StyleManager {
             final StyleHelper helper =
                 StyleHelper.create(styles, pseudoclassStateMask,
                     ++(container.helperCount));
-            final Reference helperRef = new WeakReference(helper);
 
             helper.valueCache = container.valueCache;
-            cache.put(key, helperRef);
-            return helperRef;
+            cache.put(key, helper);
+
+            return new WeakReference(helper);
         }
 
         /**

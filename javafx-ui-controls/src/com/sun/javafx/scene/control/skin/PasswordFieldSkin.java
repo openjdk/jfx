@@ -28,6 +28,8 @@ package com.sun.javafx.scene.control.skin;
 import javafx.scene.control.PasswordField;
 import javafx.scene.control.TextField;
 
+import com.sun.javafx.scene.control.behavior.PasswordFieldBehavior;
+
 /**
  * Password field skin.
  */
@@ -35,7 +37,7 @@ public class PasswordFieldSkin extends TextFieldSkin {
     public static final char BULLET = '\u2022';
 
     public PasswordFieldSkin(PasswordField passwordField) {
-        super(passwordField);
+        super(passwordField, new PasswordFieldBehavior(passwordField));
     }
 
     @Override protected String maskText(String txt) {

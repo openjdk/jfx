@@ -419,31 +419,6 @@ public abstract class Node implements EventTarget {
      *************************************************************************/
 
     /**
-     * Called only by Text to update the state and clear dirtybits in the PG graph
-     * TODO: This must be removed as soon as RT-13735 is complete, since
-     * TextHelper should work with a PG node directly or some other means rather
-     * than using this method.
-     *
-     * @treatAsPrivate implementation detail
-     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
-     */
-    @Deprecated
-    public void impl_syncPGNodeDirect() {
-        if (!impl_isDirtyEmpty()) {
-            // Workaround for Don't RT-7446 update the state controlled by
-            // NODE_TRANSFORM.
-            boolean nodeTxDirty = impl_isDirty(DirtyBits.NODE_TRANSFORM);
-            impl_clearDirty(DirtyBits.NODE_TRANSFORM);
-            boolean boundsDirty = impl_isDirty(DirtyBits.NODE_BOUNDS);
-            impl_clearDirty(DirtyBits.NODE_BOUNDS);
-            impl_updatePG();
-            clearDirty();
-            if (nodeTxDirty) impl_setDirty(DirtyBits.NODE_TRANSFORM);
-            if (boundsDirty) impl_setDirty(DirtyBits.NODE_BOUNDS);
-        }
-    }
-
-    /**
      * Called by the synchronizer to update the state and
      * clear dirtybits of this node in the PG graph
      *
@@ -898,7 +873,18 @@ public abstract class Node implements EventTarget {
 
                 @Override
                 protected void invalidated() {
-                     impl_reapplyCSS();
+                    //
+                    // Here, we used to call reapplyCSS(). But there is 
+                    // no need to create a new StyleHelper if just the 
+                    // inline style has changed since the inline style is
+                    // not cached. 
+                    //
+                    if (getScene() != null &&
+                        cssFlag != CSSFlags.REAPPLY && 
+                        cssFlag != CSSFlags.UPDATE) {
+                        cssFlag = CSSFlags.UPDATE; 
+                        notifyParentsOfInvalidatedCSS();
+                    } 
                 }
 
                 @Override
@@ -4025,7 +4011,7 @@ public abstract class Node implements EventTarget {
      * @deprecated This is an internal API that is not intended for use and will be removed in the next version
      */
     @Deprecated
-    protected boolean impl_hasTransforms() {
+    public boolean impl_hasTransforms() {
         return (nodeTransformation != null)
                 && nodeTransformation.hasTransforms();
     }
@@ -6253,10 +6239,6 @@ public abstract class Node implements EventTarget {
 
     /**
      * Event dispatcher for invoking preprocessing of mouse events
-     *
-     * TODO: The dispatcher is inserted into the event dispatch chain, this
-     * needs to be solved differently, this way it's impossible for user
-     * to override this behavior.
      */
     private EventDispatcher preprocessMouseEventDispatcher;
 
@@ -6763,6 +6745,38 @@ public abstract class Node implements EventTarget {
      * @deprecated This is an internal API that is not intended for use and will be removed in the next version
      */
     @Deprecated
+    public void impl_cssResetInitialValues() {
+        
+        //
+        // RT-9784: reset all properties that have been set by CSS back
+        // to their default value. Called when a stylesheet is removed from
+        // a parent or from the scene. This has to be done before calling 
+        // impl_reapplyCSS.
+        //
+        final List<StyleableProperty> styleables = impl_getStyleableProperties();
+        final int nStyleables = styleables != null ? styleables.size() : 0;
+        for (int n=0; n<nStyleables; n++) {
+            final StyleableProperty styleable = styleables.get(n);
+            if (styleable.isSettable(this) == false) continue;
+            final WritableValue writable = styleable.getWritableValue(this);
+            if (writable != null) {
+                final Stylesheet.Origin origin = StyleableProperty.getOrigin(writable);
+                if (origin != null && origin != Stylesheet.Origin.USER) {
+                    // If a property is never set by the user or by CSS, then 
+                    // the Origin of the property is null. So, passing null 
+                    // here makes the property look (to CSS) like it was
+                    // initialized but never used.
+                    styleable.set(this, styleable.getInitialValue(this), null);
+                }
+            }
+        }        
+    }
+    
+    /**
+     * @treatAsPrivate implementation detail
+     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
+     */
+    @Deprecated
     public final void impl_reapplyCSS() {
         // If there is no scene, then we cannot make it dirty, so we'll leave
         // the flag alone
@@ -6861,6 +6875,8 @@ public abstract class Node implements EventTarget {
             styleHelper = styleHelperRef.get();
         }
 
+        // set the key to null here so the next call to impl_getStyleCacheKey
+        // will cause a new key to be created
         styleCacheKeyRef = null;
         return styleHelper;
     }

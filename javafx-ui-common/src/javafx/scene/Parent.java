@@ -676,9 +676,6 @@ public abstract class Parent extends Node {
      */
     @Deprecated
     @Override protected Node impl_pickNodeLocal(PickRay pickRay) {
-//      TODO: FIX RT-5258: Optimize 3D picking
-       // if (intersects(pickRay)) {
-
             for (int i = children.size()-1; i >= 0; i--) {
                 Node picked = children.get(i).impl_pickNode(pickRay);
 
@@ -686,9 +683,6 @@ public abstract class Parent extends Node {
                     return picked;
                 }
             }
-
-      //}
-
         return null;
     }
 
@@ -1063,6 +1057,13 @@ public abstract class Parent extends Node {
         @Override
         protected void onChanged(Change<String> c) {
             StyleManager.getInstance().parentStylesheetsChanged(c);
+            // RT-9784 - if stylesheet is removed, reset styled properties to 
+            // their initial value.
+            while(c.next()) {
+                if (c.wasRemoved() == false) continue;
+                impl_cssResetInitialValues();
+                break; // no point in resetting more than once...
+            }
             impl_reapplyCSS();
         }
     };
@@ -1135,6 +1136,28 @@ public abstract class Parent extends Node {
             }
         }
     }
+    
+    /**
+     * @treatAsPrivate implementation detail
+     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
+     */
+    @Deprecated
+    @Override public void impl_cssResetInitialValues() {
+        
+        // RT-9784
+        
+        super.impl_cssResetInitialValues();
+
+        final List kids = this.getChildren();
+        final int max = kids.size();
+        for (int c=0; c<max; c++) {
+            Node kid = (Node)kids.get(c);
+            if (kid != null) {
+                kid.impl_cssResetInitialValues();
+            }
+        }
+    }
+    
 
     /***********************************************************************
      *                               Misc                                  *
@@ -1361,8 +1384,6 @@ public abstract class Parent extends Node {
         return extended;
     }
 
-
-    // TODO!!!
     // This is called when either the child is actually removed, OR IF IT IS
     // TOGGLED TO BE INVISIBLE. This is because in both cases it needs to be
     // cleared from the state which manages bounds.
@@ -1414,9 +1435,6 @@ public abstract class Parent extends Node {
             if (dirtyChildren != null) dirtyChildren.clear();
             cachedBoundsInvalid = false;
             cachedBounds.makeEmpty();
-            //TODO: isn't the above already done by childRemoved? If not in some
-            //      cases, shouldn't we do the following?
-            // top = left = bottom = right = near = far = null;
             return;
         }
 
@@ -1429,12 +1447,8 @@ public abstract class Parent extends Node {
 
             if (node.isVisible()) {
                 cachedBounds = node.getTransformedBounds(cachedBounds, BaseTransform.IDENTITY_TRANSFORM);
-                //TODO: shouldn't we do this?
-                //top = left = bottom = right = near = far = node;
             } else {
                 cachedBounds.makeEmpty();
-                //TODO: shouldn't we do this?
-                //top = left = bottom = right = near = far = null;
             }
             node.boundsChanged = false;
             return;

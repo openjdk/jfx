@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2012, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -22,25 +22,33 @@
  * or visit www.oracle.com if you need additional information or have any
  * questions.
  */
-package com.sun.javafx.tk;
 
-import com.sun.javafx.geom.BaseBounds;
-import com.sun.javafx.geom.transform.BaseTransform;
+package com.sun.javafx.scene.control.behavior;
+
+import javafx.scene.control.PasswordField;
+
+import com.sun.javafx.scene.text.HitInfo;
+
 
 /**
- * Utility class used by Text nodes for measuring their bounds. instances of
- * this class are produced by Toolkit implementations. Generally a different
- * TextBoundsHelper class is created for each Text node, so as to allow the
- * toolkit implementation to cache information on the TextBoundsHelper.
+ * Password field behavior.
  */
-public abstract class TextHelper {
-    public abstract BaseBounds computeBounds(BaseBounds bounds, BaseTransform tx);
-    public abstract BaseBounds computeLayoutBounds(BaseBounds bounds);
-    public abstract Object getCaretShape(int charIndex, boolean isLeading);
-    public abstract Object getSelectionShape();
-    public abstract Object getRangeShape(int start, int end);
-    public abstract Object getUnderlineShape(int start, int end);
-    public abstract Object getShape();
-    public abstract Object getHitInfo(float localX, float localY);
-    public abstract boolean contains(float localX, float localY);
+public class PasswordFieldBehavior extends TextFieldBehavior {
+
+    public PasswordFieldBehavior(PasswordField passwordField) {
+        super(passwordField);
+    }
+
+    // RT-18711 & RT-18854: Stub out word based navigation and editing
+    // for security reasons.
+    protected void deletePreviousWord() { }
+    protected void deleteNextWord() { }
+    protected void selectPreviousWord() { }
+    protected void selectNextWord() { }
+    protected void previousWord() { }
+    protected void nextWord() { }
+    protected void mouseDoubleClick(HitInfo hit) {
+        getControl().selectAll();
+    }
+
 }

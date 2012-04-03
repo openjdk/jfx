@@ -730,10 +730,6 @@ public class DragEvent extends InputEvent {
             double _screenX, double _screenY, TransferMode _transferMode,
             Dragboard _dragboard, TKDropEvent _tkDropEvent) {
         
-        //TODO: this is not nice. Toolkit always creates DragEvent of type ANY
-        //      and scenegraph then copies it and fixes the type.
-        //      Serious scenegraph/toolkit contract rework is needed
-        //      to get rid of this.
         DragEvent de = new DragEvent(DragEvent.ANY);
 
         de.x = _x;

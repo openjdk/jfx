@@ -633,8 +633,6 @@ public class Scene implements EventTarget {
             // content may have been added after scene was constructed, so
             // try again to set size based on content if the scene or window
             // weren't explicitly sized;
-            // (TODO): ideally we'd do this just once, at the latest point
-            // we could, before the window was assigned a size and made visible
             preferredSize();
         }
         impl_peer.setFillPaint(getFill() == null ? null : tk.getPaint(getFill()));
@@ -1140,11 +1138,14 @@ public class Scene implements EventTarget {
         @Override
         protected void onChanged(Change<String> c) {
             StyleManager.getInstance().updateStylesheets(Scene.this);
+            // RT-9784 - if stylesheet is removed, reset styled properties to 
+            // their initial value.
+            while(c.next()) {
+                if (c.wasRemoved() == false) continue;
+                getRoot().impl_cssResetInitialValues();
+                break; // no point in resetting more than once...
+            }
             getRoot().impl_reapplyCSS();
-            // we'll immediately reapply the style for this scene. It might be
-            // better to defer eventually
-            // TODO needs to be wired up
-            // StyleManager.getInstance().getStyleHelper(this);
         }
     };
 
@@ -1194,13 +1195,8 @@ public class Scene implements EventTarget {
         if (PerformanceTracker.isLoggingEnabled()) {
             PerformanceTracker.logEvent("Scene.init for [" + this + "]");
         }
-        // TODO JASPER sure there is more init needed here
-
         mouseHandler = new MouseHandler();
         clickGenerator = new ClickGenerator();
-
-        // TODO need to reimplement
-        //StyleManager.getInstance().getStyleHelper(this);
 
         initialized = true;
 
@@ -1491,7 +1487,6 @@ public class Scene implements EventTarget {
      * Set to true if something has happened to the focused node that makes
      * it no longer eligible to have the focus.
      *
-     * TODO: need to schedule a pulse if this turns true?
      */
     private boolean focusDirty = true;
 
@@ -1665,7 +1660,6 @@ public class Scene implements EventTarget {
     /**
      * Gets the scene's current focus owner node.
      *
-     * TODO: probably should be removed in favor of impl_focusOwner below.
      *
      * @treatAsPrivate implementation detail
      * @deprecated This is an internal API that is not intended for use and will be removed in the next version
@@ -1678,10 +1672,6 @@ public class Scene implements EventTarget {
      * The scene's current focus owner node. This node's "focused"
      * variable might be false if this scene has no window, or if the
      * window is inactive (window.focused == false).
-     *
-     * TODO this was added because of RT-3930. This needs to be reconciled
-     * with impl_getFocusOwner(). We don't need both. Exposing a variable
-     * is more powerful because it allows code to bind to it.
      *
      * @treatAsPrivate implementation detail
      * @deprecated This is an internal API that is not intended for use and will be removed in the next version
@@ -1751,15 +1741,6 @@ public class Scene implements EventTarget {
      * Returns true if this scene is quiescent, i.e. it has no activity
      * pending on it such as CSS processing or layout requests.
      *
-     * TODO this is for testing purposes only. It's not clear that
-     * the set of things this checks is exactly right. It doesn't check
-     * for events pending in the event queue for instance. However, it
-     * seems to work reasonably well at present for UI testing.
-     *
-     * TODO this should be replaced with a better interface, say a
-     * package-private interface that can be called from test support
-     * code that has been loaded into javafx.scene.
-     *
      * @return boolean indicating whether the scene is quiescent
      * @treatAsPrivate implementation detail
      * @deprecated This is an internal API that is not intended for use and will be removed in the next version
@@ -1774,9 +1755,6 @@ public class Scene implements EventTarget {
     /**
      * A listener for pulses, used for testing. If non-null, this is called at
      * the very end of ScenePulseListener.pulse().
-     *
-     * TODO this is public so it can be written to from test code. Ugly,
-     * but effective. This should be replaced with a cleaner interface.
      *
      * @treatAsPrivate implementation detail
      * @deprecated This is an internal API that is not intended for use and will be removed in the next version
@@ -2230,7 +2208,6 @@ public class Scene implements EventTarget {
             }
             int order = touchMap.getOrder(id);
 
-            //TODO: this is workaround for RT-20139, remove when fixed
             if (!nextTouchEvent.impl_isDirect()) {
                 order = touchPointIndex - 1;
             }
@@ -2496,8 +2473,6 @@ public class Scene implements EventTarget {
          * the Node.onDragSourceRecognized function.
          */
         private boolean processRecognized(Node n, DragEvent de) {
-            //TODO: Should get Mouse Event, for now we have to make up one
-            //      this code is not used right now anyway
             MouseEvent me = MouseEvent.impl_mouseEvent(de.getX(), de.getY(),
                     de.getSceneX(), de.getScreenY(), MouseButton.PRIMARY, 1,
                     false, false, false, false, false, true, false, false, false,
@@ -3108,8 +3083,6 @@ public class Scene implements EventTarget {
                 if (getCamera() instanceof PerspectiveCamera) {
                     final PickRay pickRay = new PickRay();
                     Scene.this.impl_peer.computePickRay((float)e.getX(), (float)e.getY(), pickRay);
-    //                System.out.println("** 3D: origin = " + pickRay.getOriginNoClone()
-    //                        + ", direction = " + pickRay.getDirectionNoClone());
                     pickedTarget = pickNode(pickRay);
                 }
                 else {
@@ -3123,14 +3096,6 @@ public class Scene implements EventTarget {
 
             EventTarget target;
             if (pdrInProgress) {
-                // TODO I believe this is bogus. We should still deliver mouse
-                // enter / exit / move events to nodes that are not part of the
-                // press-drag-release event, but only pdr nodes get the mouse
-                // dragged events, and other nodes DO NOT (?) get pressed events...
-                // The use case here is that I press a button and a popup is visible
-                // and while the button is still depressed I "drag" over the item
-                // in the popup I want and release. So in this case I need to get
-                // some events on the items in the popup, just not the drag events.
                 target = pdrEventTarget;
             } else {
                 target = pickedTarget;
@@ -3357,7 +3322,7 @@ public class Scene implements EventTarget {
      *                                                                             *
      ******************************************************************************/
 
-    class KeyHandler implements InvalidationListener {
+    class KeyHandler {
         private Node focusOwner = null;
         private Node getFocusOwner() { return focusOwner; }
 
@@ -3453,12 +3418,6 @@ public class Scene implements EventTarget {
                     }
                 });
             }
-        }
-
-        // TODO: What is the point of extending a listener, if handle() is not overridden?
-        @Override
-        public void invalidated(Observable valueModel) {
-            //nothing to do, implemented because of extending ChangeListener
         }
     }
     /***************************************************************************
