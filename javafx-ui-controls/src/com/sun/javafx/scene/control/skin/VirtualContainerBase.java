@@ -44,6 +44,7 @@ public abstract class VirtualContainerBase<C extends Control, B extends Behavior
 
     public static final String SCROLL_TO_INDEX_CENTERED = "VirtualContainerBase.scrollToIndexCentered";
     public static final String SCROLL_TO_INDEX_TOP = "VirtualContainerBase.scrollToIndexTop";
+    public static final String SCROLL_TO_OFFSET = "VirtualContainerBase.scrollToOffset";    
 
     public VirtualContainerBase(final C control, B behavior) {
         super(control, behavior);
@@ -115,6 +116,13 @@ public abstract class VirtualContainerBase<C extends Control, B extends Behavior
             }
 
             properties.remove(SCROLL_TO_INDEX_TOP);
+        } else if (properties.containsKey(SCROLL_TO_OFFSET)) {
+            Object offset = properties.get(SCROLL_TO_OFFSET);
+            if (offset instanceof Integer) {
+                flow.scrollToOffset((Integer)offset);
+            }
+
+            properties.remove(SCROLL_TO_OFFSET);
         }        
     }
 }

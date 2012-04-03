@@ -1793,6 +1793,12 @@ public class VirtualFlow extends Region {
         requestLayout();        
     }
     
+    //TODO We assume all the cell have the same length.  We will need to support
+    // cells of different lengths.
+    public void scrollToOffset(int offset) {
+        adjustPixels(offset * getCellLength(0));
+    }    
+    
     /**
      * Given a delta value representing a number of pixels, this method attempts
      * to move the VirtualFlow in the given direction (positive is down/right,
