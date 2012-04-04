@@ -1308,12 +1308,12 @@
 
 .scroll-pane > * > .scroll-bar:horizontal {
     -fx-background-insets: 0, 1 0 0 0;
-    -fx-padding: 0.0 0.0 -1.0 -1.0;
+    -fx-padding: 0.0 0.0 0.0 0.0;
 }
 
 .scroll-pane > * > .scroll-bar:vertical {
     -fx-background-insets: 0, 0 0 0 1;
-    -fx-padding: -1.0 -1.0 -1.0 0.0;
+    -fx-padding: 0.0 0.0 0.0 0.0;
 }
 
 .scroll-pane .corner {
@@ -1491,12 +1491,12 @@
 
 .list-view .scroll-bar:vertical{
     -fx-background-insets: 0, 0 0 0 1;
-    -fx-padding: -0.083333em -0.083333em -0.083333em 0.0em; /* -1 -1 -1 0 */
+    -fx-padding: 0.0 0.0 0.0 0.0;
 }
 
 .list-view .scroll-bar:horizontal{
     -fx-background-insets: 0, 1 0 0 0;
-    -fx-padding: 0.0em 0.0em -0.083333em -0.083333em; /* 0 0 -1 -1 */
+    -fx-padding: 0.0 0.0 0.0 0.0;
 }
 
 .list-view:disabled {
@@ -1604,12 +1604,12 @@
 
 .tree-view .scroll-bar:vertical{
     -fx-background-insets: 0, 0 0 0 1;
-    -fx-padding: -0.083333em -0.083333em -0.083333em 0.0em; /* -1 -1 -1 0 */
+    -fx-padding: 0.0 0.0 0.0 0.0;
 }
 
 .tree-view .scroll-bar:horizontal{
     -fx-background-insets: 0, 1 0 0 0;
-    -fx-padding: 0.0em 0.0em -0.083333em -0.083333em; /* 0 0 -1 -1 */
+    -fx-padding: 0.0 0.0 0.0 0.0;
 }
 
 .tree-view:disabled {
@@ -2098,12 +2098,12 @@
 
 .table-view .scroll-bar:vertical{
     -fx-background-insets: 0, 0 0 0 1;
-    -fx-padding: -0.083333em -0.083333em -0.083333em 0.0em; /* -1 -1 -1 0 */
+    -fx-padding: 0.0 0.0 0.0 0.0;
 }
 
 .table-view .scroll-bar:horizontal{
     -fx-background-insets: 0, 1 0 0 0;
-    -fx-padding: 0.0em 0.0em -0.083333em -0.083333em; /* 0 0 -1 -1 */
+    -fx-padding: 0.0 0.0 0.0 0.0;
 }
 
 .table-view .corner {
