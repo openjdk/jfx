@@ -577,7 +577,6 @@ public class PaginationSkin<T> extends SkinBase<Pagination<T>, PaginationBehavio
         private int previousIndex;
         public PaginationListView() {
             super();
-            setId("list-view");
             setOrientation(Orientation.HORIZONTAL);
             getSelectionModel().setSelectionMode(SelectionMode.SINGLE);
             previousIndex = -1;
