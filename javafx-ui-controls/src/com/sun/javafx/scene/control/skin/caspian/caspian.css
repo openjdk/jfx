@@ -3337,10 +3337,6 @@ Only the properties with values that are different from the TextBox are specifie
     -fx-background-color: transparent, red;        
 }
 
-.pagination .list-view {
-    -fx-padding: 0;
-}
-
 .pagination .list-view .scroll-bar:horizontal, 
 .pagination .list-view .scroll-bar:horizontal .thumb, 
 .pagination .list-view .scroll-bar:horizontal .track, 

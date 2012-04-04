@@ -118,6 +118,10 @@ public class PaginationSkin<T> extends SkinBase<Pagination<T>, PaginationBehavio
         registerChangeListener(pagination.pageFactoryProperty(), "PAGE_FACTORY");
     }
 
+    public MultipleSelectionModel getSelectionModel() {
+        return paginationListView.getSelectionModel();
+    }
+
     private void resetIndexes(boolean usePageIndex) {
         numberOfVisiblePages = getSkinnable().getNumberOfVisiblePages();
         numberOfPages = totalNumberOfPages();
@@ -181,7 +185,7 @@ public class PaginationSkin<T> extends SkinBase<Pagination<T>, PaginationBehavio
                         if (empty || item == null) {
                             setText(null);
                             setGraphic(null);
-                        } else {                            
+                        } else {
                             setText(null);
                             setGraphic(pagination.getPageFactory().call(getIndex()));
                         }
@@ -462,7 +466,7 @@ public class PaginationSkin<T> extends SkinBase<Pagination<T>, PaginationBehavio
             }
 
             if (previousIndex < 0) {
-                paginationListView.showOffset(0, paginationListView.getSelectionModel().getSelectedIndex());                
+                paginationListView.showOffset(0, paginationListView.getSelectionModel().getSelectedIndex());
             } else {
                 paginationListView.showOffset(currentIndex - previousIndex, paginationListView.getSelectionModel().getSelectedIndex());
             }
@@ -592,7 +596,7 @@ public class PaginationSkin<T> extends SkinBase<Pagination<T>, PaginationBehavio
                 previousIndex = index;
             }
         }
-        
+
         public void reset() {
             getProperties().put(VirtualContainerBase.SCROLL_TO_INDEX_TOP, 0);
             previousIndex = -1;
