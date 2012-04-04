@@ -153,6 +153,8 @@ public class ImageView extends Node {
      * </p>
      *
      * @param url the string representing the URL from which to load the image
+     * @throws NullPointerException if URL is null
+     * @throws IllegalArgumentException if URL is invalid or unsupported
      * @since JavaFX 2.1
      */
     public ImageView(String url) {
