@@ -221,7 +221,7 @@ public class ScrollPaneSkin extends SkinBase<ScrollPane, ScrollPaneBehavior> imp
                     computeScrollNodeSize(getWidth(),getHeight());
                 }
                 if (scrollNode != null && scrollNode.isResizable()) {
-                    scrollNode.resize(nodeWidth,nodeHeight);
+                    scrollNode.resize(snapSize(nodeWidth), snapSize(nodeHeight));
                     if (vsbvis != determineVerticalSBVisible() || hsbvis != determineHorizontalSBVisible()) {
                         ScrollPaneSkin.this.requestLayout();
                     }
@@ -445,8 +445,8 @@ public class ScrollPaneSkin extends SkinBase<ScrollPane, ScrollPaneBehavior> imp
                 }
                 scrollNode = getSkinnable().getContent();
                 if (scrollNode != null) {
-                    nodeWidth = Math.floor(scrollNode.getLayoutBounds().getWidth());
-                    nodeHeight = Math.floor(scrollNode.getLayoutBounds().getHeight());
+                    nodeWidth = snapSize(scrollNode.getLayoutBounds().getWidth());
+                    nodeHeight = snapSize(scrollNode.getLayoutBounds().getHeight());
                     viewRect.getChildren().setAll(scrollNode);
                     scrollNode.layoutBoundsProperty().addListener(nodeListener);
                     scrollNode.layoutBoundsProperty().addListener(boundsChangeListener);
@@ -610,8 +610,14 @@ public class ScrollPaneSkin extends SkinBase<ScrollPane, ScrollPaneBehavior> imp
         hsb.setMin(control.getHmin());
         hsb.setMax(control.getHmax());
 
-        contentWidth = control.getWidth() - getInsets().getLeft() - getInsets().getRight();
-        contentHeight = control.getHeight() - getInsets().getTop() - getInsets().getBottom();
+        contentWidth = control.getWidth() - (getInsets().getLeft() + getInsets().getRight());
+        contentHeight = control.getHeight() - (getInsets().getTop() + getInsets().getBottom());
+
+        /*
+        ** we want the scrollbars to go right to the border
+        */
+        double hsbWidth = contentWidth + getPadding().getLeft() + getPadding().getRight();
+        double vsbHeight = contentHeight + getPadding().getTop() + getPadding().getBottom();
 
         computeScrollNodeSize(contentWidth, contentHeight);
         computeScrollBarSize();
@@ -620,9 +626,11 @@ public class ScrollPaneSkin extends SkinBase<ScrollPane, ScrollPaneBehavior> imp
 
         if (vsbvis) {
             contentWidth -= vsbWidth;
+            hsbWidth -= vsbWidth;
         }
         if (hsbvis) {
             contentHeight -= hsbHeight;
+            vsbHeight -= hsbHeight;
         }
         if (scrollNode != null && scrollNode.isResizable()) {
             // maybe adjust size now that scrollbars may take up space
@@ -650,15 +658,15 @@ public class ScrollPaneSkin extends SkinBase<ScrollPane, ScrollPaneBehavior> imp
         }
 
         // figure out the content area that is to be filled
-        double cx = getInsets().getLeft();
-        double cy = getInsets().getTop();
+        double cx = getInsets().getLeft()-getPadding().getLeft();
+        double cy = getInsets().getTop()-getPadding().getTop();
 
         vsb.setVisible(vsbvis);
         if (vsbvis) {
             /*
             ** round up position of ScrollBar, round down it's size.
             */
-            vsb.resizeRelocate(Math.ceil(control.getWidth() - vsbWidth - getInsets().getRight()), Math.ceil(cy), Math.floor(vsbWidth), Math.ceil(contentHeight));
+            vsb.resizeRelocate(snapPosition(control.getWidth() - (vsbWidth + (getInsets().getRight()-getPadding().getRight()))), snapPosition(cy), snapSize(vsbWidth), snapSize(vsbHeight));
         }
         updateVerticalSB();
 
@@ -667,18 +675,18 @@ public class ScrollPaneSkin extends SkinBase<ScrollPane, ScrollPaneBehavior> imp
             /*
             ** round up position of ScrollBar, round down it's size.
             */
-            hsb.resizeRelocate(Math.ceil(cx), Math.ceil(control.getHeight() - (hsbHeight + getInsets().getBottom())), Math.ceil(contentWidth), Math.floor(hsbHeight));
+            hsb.resizeRelocate(snapPosition(cx), snapPosition(control.getHeight() - (hsbHeight + (getInsets().getBottom()-getPadding().getBottom()))), snapSize(hsbWidth), snapSize(hsbHeight));
         }
         updateHorizontalSB();
 
-        viewRect.resize(contentWidth, contentHeight);
-        clipRect.setWidth(contentWidth);
-        clipRect.setHeight(contentHeight);
-        clipRect.relocate(getInsets().getLeft() - viewRect.getLayoutX(), getInsets().getTop() - viewRect.getLayoutY());
+        viewRect.resize(snapSize(contentWidth), snapSize(contentHeight));
+        clipRect.setWidth(snapSize(contentWidth));
+        clipRect.setHeight(snapSize(contentHeight));
+        clipRect.relocate(snapPosition(getInsets().getLeft() - viewRect.getLayoutX()), snapPosition(getInsets().getTop() - viewRect.getLayoutY()));
 
         if (vsbvis && hsbvis) {
             corner.setVisible(true);
-            corner.resizeRelocate(vsb.getLayoutX(), hsb.getLayoutY(), vsbWidth, hsbHeight);
+            corner.resizeRelocate(snapPosition(vsb.getLayoutX()), snapPosition(hsb.getLayoutY()), snapSize(vsbWidth), snapSize(hsbHeight));
         } else {
             corner.setVisible(false);
         }
@@ -734,12 +742,12 @@ public class ScrollPaneSkin extends SkinBase<ScrollPane, ScrollPaneBehavior> imp
     }
 
     private void computeScrollBarSize() {
-        vsbWidth = vsb.prefWidth(-1);
+        vsbWidth = snapSize(vsb.prefWidth(-1));
         if (vsbWidth == 0) {
             //            println("*** WARNING ScrollPaneSkin: can't get scroll bar width, using {DEFAULT_SB_BREADTH}");
             vsbWidth = DEFAULT_SB_BREADTH;
         }
-        hsbHeight = hsb.prefHeight(-1);
+        hsbHeight = snapSize(hsb.prefHeight(-1));
         if (hsbHeight == 0) {
             //            println("*** WARNING ScrollPaneSkin: can't get scroll bar height, using {DEFAULT_SB_BREADTH}");
             hsbHeight = DEFAULT_SB_BREADTH;

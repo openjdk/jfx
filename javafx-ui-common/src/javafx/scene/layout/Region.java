@@ -79,8 +79,8 @@ import javafx.beans.property.*;
  * around its content. By default it's a rectangle with possible rounded corners,
  * depending on borders. It can be made into any shape by specifying the {@code shape}.
  * It is designed to support as much of the CSS3 specification for backgrounds
- * and borders as is relevant to JavaFX. The full specification is available at
- * <a href="http://www.w3.org/TR/css3-background/">css3-background</a>.
+ * and borders as is relevant to JavaFX. 
+ * <a href="http://www.w3.org/TR/css3-background/"> The full specification is available at css3-background</a>.
  * <p>
  * By default a Region inherits the layout behavior of its superclass, {@link Parent},
  * which means that it will resize any resizable child nodes to their preferred

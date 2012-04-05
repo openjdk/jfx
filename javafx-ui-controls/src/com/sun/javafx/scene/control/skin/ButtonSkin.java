@@ -106,14 +106,6 @@ public class ButtonSkin extends LabeledSkinBase<Button, ButtonBehavior<Button>> 
         }
     }
 
-    @Override protected double computePrefHeight(double width) {
-        double w = -1;
-        if (width != -1) {
-            w = Math.max(0, width - getInsets().getLeft() - getInsets().getRight());
-        }
-        return super.computePrefHeight(w);
-    }
-
     Runnable defaultButtonRunnable = new Runnable() {
             public void run() {
                 getSkinnable().fire();

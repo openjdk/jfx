@@ -46,22 +46,40 @@ package com.sun.javafx.scene.control.skin;
 
 import javafx.scene.control.ListView;
 import com.sun.javafx.scene.control.PaginationCell;
+import javafx.beans.InvalidationListener;
+import javafx.beans.Observable;
+import javafx.geometry.HPos;
+import javafx.geometry.VPos;
+import javafx.scene.Node;
 
 public class PaginationCellSkin extends ListCellSkin {
 
     public PaginationCellSkin(PaginationCell control) {
         super(control);
+
+        getSkinnable().getListView().layoutBoundsProperty().addListener(new InvalidationListener() {
+            @Override
+            public void invalidated(Observable o) {
+                requestLayout();
+            }
+        });
     }
 
     @Override protected double computePrefWidth(double height) {
         ListView listView = getSkinnable().getListView();
-        double d = listView == null ? 0 : listView.getLayoutBounds().getWidth();
-        return d;
+        double nodeWidth = listView == null ? 0 : listView.getLayoutBounds().getWidth();
+        for (Node n: getChildren()) {
+            nodeWidth = Math.max(nodeWidth, n.prefWidth(height));
+        }
+        return nodeWidth;
     }
 
     @Override protected double computePrefHeight(double width) {
         ListView listView = getSkinnable().getListView();
-        double d = listView == null ? 0 : listView.getLayoutBounds().getHeight();
-        return d;
-    }
+        double nodeHeight = listView == null ? 0 : listView.getLayoutBounds().getHeight();
+        for (Node n: getChildren()) {
+            nodeHeight = Math.max(nodeHeight, n.prefHeight(width));
+        }
+        return nodeHeight;
+    }    
 }

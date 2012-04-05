@@ -27,6 +27,7 @@ package com.sun.javafx.scene.control.skin;
 
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
 
 import javafx.application.Platform;
@@ -77,12 +78,24 @@ public class FXVK extends Control {
 
 
     private static FXVK vk;
+    static int vkType;
+    private static HashMap<Integer, FXVK> vkMap = new HashMap<Integer, FXVK>();
 
     public static void attach(final TextInputControl textInput) {
+        int type = textInput.getImpl_virtualKeyboardType();
+
+        if (vk != null && vkType != type) {
+            detach();
+        }
+
+        vkType = type;
+        vk = vkMap.get(vkType);
+
         if (vk == null) {
             vk = new FXVK();
 //             vk.impl_processCSS(true);
             vk.setSkin(new FXVKSkin(vk));
+            vkMap.put(vkType, vk);
         }
 
         vk.setAttachedNode(textInput);

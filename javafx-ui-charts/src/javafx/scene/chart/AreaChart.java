@@ -98,6 +98,30 @@ public class AreaChart<X,Y> extends XYChart<X,Y> {
         return (number == null) ? nullDefault : number.doubleValue();
     }
 
+       /** @inheritDoc */
+    @Override protected void updateAxisRange() {
+        final Axis<X> xa = getXAxis();
+        final Axis<Y> ya = getYAxis();
+        List<X> xData = null;
+        List<Y> yData = null;
+        if(xa.isAutoRanging()) xData = new ArrayList<X>();
+        if(ya.isAutoRanging()) yData = new ArrayList<Y>();
+        if(xData != null || yData != null) {
+            for(Series<X,Y> series : getData()) {
+                for(Data<X,Y> data: series.getData()) {
+                    if(xData != null) xData.add(data.getXValue());
+                    if(yData != null) yData.add(data.getYValue());
+                }
+            }
+            if(xData != null && !(xData.size() == 1 && getXAxis().toNumericValue(xData.get(0)) == 0)) {
+                xa.invalidateRange(xData);
+            }
+            if(yData != null && !(xData.size() == 1 && getYAxis().toNumericValue(yData.get(0)) == 0)) {
+                ya.invalidateRange(yData);
+            }
+        }
+    }
+    
     @Override protected void dataItemAdded(Series<X,Y> series, int itemIndex, Data<X,Y> item) {
         final Node symbol = createSymbol(series, getData().indexOf(series), item, itemIndex);
         if (shouldAnimate()) {
@@ -161,7 +185,7 @@ public class AreaChart<X,Y> extends XYChart<X,Y> {
         int itemIndex = series.getItemIndex(item);
         if (shouldAnimate()) {
             boolean animate = false;
-            if (itemIndex > 0 && itemIndex < series.getDataSize()) {
+            if (itemIndex > 0 && itemIndex < series.getDataSize()-1) {
                 animate = true;
                 int index=0; Data<X,Y> d;
                 for (d = series.begin; d != null && index != itemIndex - 1; d=d.next) index++;
@@ -365,7 +389,11 @@ public class AreaChart<X,Y> extends XYChart<X,Y> {
                     symbol.resizeRelocate(x-(w/2), y-(h/2),w,h);
                 }
             }
-            fillPath.getElements().add(new LineTo(lastX, getYAxis().getZeroPosition()));
+            if (fillPath.getElements().size() >= 1) {
+                fillPath.getElements().add(new LineTo(lastX, getYAxis().getZeroPosition()));
+            } else {
+                fillPath.getElements().add(new MoveTo(lastX, getYAxis().getZeroPosition()));
+            }
             fillPath.getElements().add(new ClosePath());
         }
     }

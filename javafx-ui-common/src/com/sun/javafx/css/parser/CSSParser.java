@@ -707,6 +707,21 @@ final public class CSSParser {
             ParsedValue value = parseStrokeType(root);
             if (value == null) error(root, "Expected \'centered', \'inside\' or \'outside\'");
             return value;
+        } else if ("-fx-font-smoothing-type".equals(prop)) {
+            // TODO: Figure out a way that these properties don't need to be
+            // special cased.
+            String str = null;
+            int ttype = -1;
+            final Token token = root.token;
+            
+            if (root.token == null
+                    || ((ttype = root.token.getType()) != CSSLexer.STRING
+                         && ttype != CSSLexer.IDENT)
+                    || (str = root.token.getText()) == null
+                    || str.isEmpty()) {
+                error(root,  "Expected STRING or IDENT");
+            }
+            return new ParsedValue<String, String>(stripQuotes(str), null, false);            
         }
         return parse(root);
     }

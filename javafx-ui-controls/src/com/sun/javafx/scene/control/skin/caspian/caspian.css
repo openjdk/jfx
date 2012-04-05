@@ -1308,12 +1308,12 @@
 
 .scroll-pane > * > .scroll-bar:horizontal {
     -fx-background-insets: 0, 1 0 0 0;
-    -fx-padding: 0.0 0.0 -1.0 -1.0;
+    -fx-padding: 0.0 0.0 0.0 0.0;
 }
 
 .scroll-pane > * > .scroll-bar:vertical {
     -fx-background-insets: 0, 0 0 0 1;
-    -fx-padding: -1.0 -1.0 -1.0 0.0;
+    -fx-padding: 0.0 0.0 0.0 0.0;
 }
 
 .scroll-pane .corner {
@@ -1491,12 +1491,12 @@
 
 .list-view .scroll-bar:vertical{
     -fx-background-insets: 0, 0 0 0 1;
-    -fx-padding: -0.083333em -0.083333em -0.083333em 0.0em; /* -1 -1 -1 0 */
+    -fx-padding: 0.0 0.0 0.0 0.0;
 }
 
 .list-view .scroll-bar:horizontal{
     -fx-background-insets: 0, 1 0 0 0;
-    -fx-padding: 0.0em 0.0em -0.083333em -0.083333em; /* 0 0 -1 -1 */
+    -fx-padding: 0.0 0.0 0.0 0.0;
 }
 
 .list-view:disabled {
@@ -1604,12 +1604,12 @@
 
 .tree-view .scroll-bar:vertical{
     -fx-background-insets: 0, 0 0 0 1;
-    -fx-padding: -0.083333em -0.083333em -0.083333em 0.0em; /* -1 -1 -1 0 */
+    -fx-padding: 0.0 0.0 0.0 0.0;
 }
 
 .tree-view .scroll-bar:horizontal{
     -fx-background-insets: 0, 1 0 0 0;
-    -fx-padding: 0.0em 0.0em -0.083333em -0.083333em; /* 0 0 -1 -1 */
+    -fx-padding: 0.0 0.0 0.0 0.0;
 }
 
 .tree-view:disabled {
@@ -2098,12 +2098,12 @@
 
 .table-view .scroll-bar:vertical{
     -fx-background-insets: 0, 0 0 0 1;
-    -fx-padding: -0.083333em -0.083333em -0.083333em 0.0em; /* -1 -1 -1 0 */
+    -fx-padding: 0.0 0.0 0.0 0.0;
 }
 
 .table-view .scroll-bar:horizontal{
     -fx-background-insets: 0, 1 0 0 0;
-    -fx-padding: 0.0em 0.0em -0.083333em -0.083333em; /* 0 0 -1 -1 */
+    -fx-padding: 0.0 0.0 0.0 0.0;
 }
 
 .table-view .corner {
@@ -3115,6 +3115,40 @@ Only the properties with values that are different from the TextBox are specifie
     -fx-skin: "com.sun.javafx.scene.control.skin.ComboBoxListViewSkin";
 }
 
+/* Customie the ListCell that appears in the ComboBox button itself */
+.combo-box .list-cell {
+    -fx-background: transparent;
+    -fx-background-color: transparent;
+    -fx-text-fill: -fx-text-base-color;
+    -fx-padding: 3 0 2 7;
+    -fx-cell-size: 1.66667em; /* 20 */
+}
+
+.combo-box-popup .list-view {
+    -fx-background-color: -fx-box-border, -fx-control-inner-background;
+    -fx-background-insets: 0, 1;
+    -fx-effect: dropshadow( three-pass-box , rgba(0,0,0,0.6) , 8, 0.0 , 0 , 0 );
+}
+
+.combo-box-popup .list-view .list-cell {
+    -fx-padding: 4 0 4 5;
+    
+    /* No alternate highlighting */
+    -fx-background-color: -fx-control-inner-background;
+}
+
+.combo-box-popup .list-view .list-cell:filled:selected, .combo-box-popup .list-view .list-cell:filled:selected:hover {
+    -fx-background: -fx-accent;
+    -fx-background-color: -fx-selection-bar;
+    -fx-text-fill: -fx-selection-bar-text;
+}
+
+.combo-box-popup .list-view .list-cell:filled:hover {
+    -fx-background-color: -fx-cell-hover-color;
+    -fx-text-fill: -fx-text-inner-color;
+}
+
+/* -------------------------- STYLES FOR THE COLOR-PICKER CONTROL ----- */
 .color-picker {
     -fx-skin: "com.sun.javafx.scene.control.skin.ColorPickerSkin";
 }
@@ -3150,95 +3184,167 @@ Only the properties with values that are different from the TextBox are specifie
 .color-panel {
     -fx-padding: 15;
 }
-/* Customie the ListCell that appears in the ComboBox button itself */
-.combo-box .list-cell {
-    -fx-background: transparent;
-    -fx-background-color: transparent;
-    -fx-text-fill: -fx-text-base-color;
-    -fx-padding: 3 0 2 7;
-    -fx-cell-size: 1.66667em; /* 20 */
+
+.color-picker-grid .separator .line {
+    -fx-background-color: -fx-pressed-base;
+    -fx-padding: 6 0 0 0;
+    -fx-background-insets: 4 -10 0 -10,5 -10 0 -10;
+    -fx-border-style: none;
+    -fx-border-color: null;
+}
+.add-color-pane .color-rect-pane {
+    -fx-padding: 15;
+    -fx-background-color: -fx-hover-base; 
 }
 
-.combo-box-popup .list-view {
-    -fx-background-color: -fx-box-border, -fx-control-inner-background;
+.add-color-pane .controls-pane {
+    -fx-padding: 15 15 5 15;
+    -fx-background-color: -fx-hover-base;   
+}
+.add-color-pane  {
+    -fx-padding: 0 0 0 10;
+    -fx-background-color: -fx-hover-base;
+}
+
+.controls-pane #pill-left {
+    -fx-padding: 0 8 0 8;
+    -fx-border-image-source: url("left-btn.png");
+    -fx-border-image-slice: 4 4 4 4 fill;
+    -fx-border-image-width: 4 4 4 4;
+    -fx-border-image-insets: 0;
+    -fx-border-image-repeat: stretch;
+    -fx-background-color: null !important; 
+}
+.controls-pane #pill-left:selected { -fx-border-image-source: url("left-btn-selected.png"); }
+.controls-pane #pill-left .label {
+    -fx-text-fill: #d3d3d3; 
+    -fx-effect: dropshadow( one-pass-box , rgba(0,0,0,0.75) , 0, 0.0 , 0 , -1 );
+}
+
+.controls-pane #pill-left:selected .label {
+   -fx-text-fill: white;
+    -fx-effect: dropshadow( one-pass-box , white , 0, 0.0 , 0 , 1 );
+}
+.controls-pane #pill-center {
+    -fx-padding: 0 8 0 8;
+    -fx-border-image-source: url("center-btn.png");
+    -fx-border-image-slice: 4 4 4 4 fill;
+    -fx-border-image-width: 4 4 4 4;
+    -fx-border-image-insets: 0;
+    -fx-border-image-repeat: stretch;
+    -fx-background-color: null !important;
+}
+.controls-pane #pill-center:selected { -fx-border-image-source: url("center-btn-selected.png"); }
+.controls-pane #pill-center .label {
+    -fx-text-fill: #d3d3d3;
+    -fx-effect: dropshadow( one-pass-box , rgba(0,0,0,0.75) , 0, 0.0 , 0 , -1 );
+}
+.controls-pane #pill-center:selected .label {
+    -fx-text-fill: black;
+    -fx-effect: dropshadow( one-pass-box , white , 0, 0.0 , 0 , 1 );
+}
+.controls-pane #pill-right {
+    -fx-padding: 0 8 0 8;
+    -fx-border-image-source: url("right-btn.png");
+    -fx-border-image-slice: 4 4 4 4 fill;
+    -fx-border-image-width: 4 4 4 4;
+    -fx-border-image-insets: 0;
+    -fx-border-image-repeat: stretch;
+    -fx-background-color: null !important;
+}
+.controls-pane #pill-right:selected { -fx-border-image-source: url("right-btn-selected.png"); }
+.controls-pane #pill-right .label {
+    -fx-text-fill: #d3d3d3;
+    -fx-effect: dropshadow( one-pass-box , rgba(0,0,0,0.75) , 0, 0.0 , 0 , -1 );
+}
+.controls-pane #pill-right:selected .label {
+    -fx-text-fill: black;
+    -fx-effect: dropshadow( one-pass-box , white , 0, 0.0 , 0 , 1 );
+}
+
+
+.controls-pane .addcolor-controls-background {
+    -fx-background-color: -fx-text-box-border, -fx-text-box-border, -fx-control-inner-background;
+    -fx-background-insets: 0, 1, 2;
+    -fx-background-radius: 3, 2, 2;
+    -fx-padding: 3 5 3 5;
+}
+
+.controls-pane .alpha-settings .text-field {
+/*    -fx-background-color: -fx-shadow-highlight-color, -fx-text-box-border, -fx-control-inner-background;*/
+    -fx-background-color: -fx-text-box-border, -fx-control-inner-background;
     -fx-background-insets: 0, 1;
-    -fx-effect: dropshadow( three-pass-box , rgba(0,0,0,0.6) , 8, 0.0 , 0 , 0 );
-}
-
-.combo-box-popup .list-view .list-cell {
-    -fx-padding: 4 0 4 5;
-    
-    /* No alternate highlighting */
-    -fx-background-color: -fx-control-inner-background;
-}
-
-.combo-box-popup .list-view .list-cell:filled:selected, .combo-box-popup .list-view .list-cell:filled:selected:hover {
-    -fx-background: -fx-accent;
-    -fx-background-color: -fx-selection-bar;
-    -fx-text-fill: -fx-selection-bar-text;
-}
-
-.combo-box-popup .list-view .list-cell:filled:hover {
-    -fx-background-color: -fx-cell-hover-color;
+    -fx-background-radius: 3, 2;
+    -fx-padding: 3 5 3 5;
     -fx-text-fill: -fx-text-inner-color;
+    -fx-prompt-text-fill: derive(-fx-control-inner-background,-30%);
+    -fx-cursor: text;
 }
 
+/* -------------------------- STYLES FOR PAGINATION CONTROL ----- */
 .pagination-cell {
-    -fx-skin: "com.sun.javafx.scene.control.skin.PaginationCellSkin";
-    -fx-backgound-color: yellow;
-}
-
-.pagination-cell:odd {
-    -fx-backgound-color: green;
+    -fx-skin: "com.sun.javafx.scene.control.skin.PaginationCellSkin";    
+    -fx-padding: 0;
 }
 
 .pagination {
     -fx-skin: "com.sun.javafx.scene.control.skin.PaginationSkin";
+    -fx-padding: 0;
 }
 
 .pagination .pagination-control {
     -fx-alignment: BOTTOM_CENTER;
-    -fx-background-color: transparent;
+    -fx-background-color: transparent;    
 }
 
-.pagination .pagination-control > .arrow-button {    
+.pagination .pagination-control > .page-navigation {    
     -fx-padding: 0.833333em 0.416667em 0.833333em 0.416667em; /* 10 5 10 5 */    
 }
 
-.pagination .pagination-control > .arrow-button .left-arrow {
+.pagination .pagination-control > .page-navigation .left-arrow {
     -fx-background-color: -fx-mark-highlight-color, -fx-mark-color;
     -fx-background-insets: 1 0 -1 0, 0;
     -fx-padding: 0.25em 0.3125em 0.25em 0.3125em; /* 3 3.75 3 3.75 */
     -fx-shape: "M 0 0 L -4 3.5 L 0 7 z";
 }
 
-.pagination .pagination-control > .arrow-button .right-arrow {
+.pagination .pagination-control > .page-navigation .right-arrow {
     -fx-background-color: -fx-mark-highlight-color, -fx-mark-color;
     -fx-background-insets: 1 0 -1 0, 0;
     -fx-padding: 0.25em 0.3125em 0.25em 0.3125em; /* 3 3.75 3 3.75 */
     -fx-shape: "M 0 0 L 4 3.5 L 0 7 z";
 }
 
-.pagination .pagination-control > .arrow-button .bullet-indicator {
+.pagination .pagination-control > .page-navigation .bullet {
    -fx-background-color: -fx-shadow-highlight-color, -fx-outer-border, -fx-inner-border, -fx-body-color;
    -fx-background-insets: 0 0 -1 0,  0,  1,  2;
    -fx-background-radius: 1.0em; /* large value to make sure this remains circular */
    -fx-padding: 0.333333em; /* 4 -- padding from outside edge to the inner black dot */
 }
 
-.pagination .pagination-control > .arrow-button:selected .bullet-indicator {
+.pagination .pagination-control > .page-navigation:selected .bullet {
    -fx-background-color: -fx-mark-highlight-color, -fx-mark-color;
    -fx-background-insets: 0 0 -1 0, 0;    
 }
 
-.pagination .pagination-control > .arrow-button .number-indicator {
+.pagination .pagination-control > .page-navigation .number {
     -fx-font-size: 10px;
-    -fx-background-color: -fx-mark-highlight-color, white;
-    -fx-background-insets: 1 0 -1 0, 0;    
-    -fx-padding: 2 10 2 10; /*0.25em 0.25em 0.25em 0.25em; /* 3 3 3 3*/
-    -fx-shape: "M0 0 L0 0 L5 0 L5 5 L0 5 Z";
+    -fx-background-color: -fx-mark-highlight-color, white;    
+    -fx-padding: 0 2 0 2;
 }
 
-.pagination .pagination-control > .arrow-button:selected .number-indicator {
-    -fx-background-color: transparent, red;    
+.pagination .pagination-control > .page-navigation:selected .number {
+    -fx-background-color: transparent, red;        
+}
+
+.pagination .list-view .scroll-bar:horizontal, 
+.pagination .list-view .scroll-bar:horizontal .thumb, 
+.pagination .list-view .scroll-bar:horizontal .track, 
+.pagination .list-view .scroll-bar:horizontal .increment-button, 
+.pagination .list-view .scroll-bar:horizontal .decrement-button, 
+.pagination .list-view .scroll-bar:horizontal .increment-arrow,
+.pagination .list-view .scroll-bar:horizontal .decrement-arrow {
+    -fx-background-color: null;
+    -fx-background-insets: 0;
+    -fx-padding: 0;
 }

@@ -1286,13 +1286,28 @@ public class VirtualFlow extends Region {
 
         // Now position and update the scroll bars
         if (breadthBar.isVisible()) {
-            if (isVertical()) {
-                hbar.resizeRelocate(0, viewportLength,
-                        viewportBreadth, hbar.prefHeight(viewportBreadth));
-            } else {
-                vbar.resizeRelocate(viewportLength, 0,
-                        vbar.prefWidth(viewportBreadth), viewportBreadth);
+            double topPadding;
+            double bottomPadding;
+            double leftPadding;
+            double rightPadding;
 
+            Parent parent = getParent();
+            if (parent instanceof Region) {
+                topPadding = ((Region)parent).getInsets().getTop();
+                bottomPadding = ((Region)parent).getInsets().getBottom();
+                leftPadding = ((Region)parent).getInsets().getLeft();
+                rightPadding = ((Region)parent).getInsets().getRight();
+            }
+            else {
+                topPadding = bottomPadding = leftPadding = rightPadding = 0.0;
+            }
+
+            if (isVertical()) {
+                hbar.resizeRelocate(0-leftPadding, viewportLength+topPadding,
+                                    viewportBreadth+(leftPadding+rightPadding), hbar.prefHeight(viewportBreadth));
+            } else {
+                vbar.resizeRelocate(viewportLength+leftPadding, 0-topPadding,
+                                    vbar.prefWidth(viewportBreadth), viewportBreadth+(topPadding+bottomPadding));
             }
 
             // There was a weird bug where the newMax would sometimes go < 0
@@ -1334,11 +1349,26 @@ public class VirtualFlow extends Region {
 //                lengthBar.setValue(0.99);
 //            }
 
+            double topPadding;
+            double bottomPadding;
+            double leftPadding;
+            double rightPadding;
+
+            Parent parent = getParent();
+            if (parent instanceof Region) {
+                topPadding = ((Region)parent).getInsets().getTop();
+                bottomPadding = ((Region)parent).getInsets().getBottom();
+                leftPadding = ((Region)parent).getInsets().getLeft();
+                rightPadding = ((Region)parent).getInsets().getRight();
+            }
+            else {
+                topPadding = bottomPadding = leftPadding = rightPadding = 0.0;
+            }
+
             if (isVertical()) {
-                double h = viewportLength;
-                vbar.resizeRelocate(viewportBreadth, 0, vbar.prefWidth(h), h);
+                vbar.resizeRelocate(viewportBreadth+leftPadding, 0-topPadding, vbar.prefWidth(viewportLength), viewportLength+(topPadding+bottomPadding));
             } else {
-                hbar.resizeRelocate(0, viewportBreadth, viewportLength, hbar.prefHeight(-1));
+                hbar.resizeRelocate(0-leftPadding, viewportBreadth+topPadding, viewportLength+(leftPadding+rightPadding), hbar.prefHeight(-1));
             }
         }
 
@@ -1792,6 +1822,12 @@ public class VirtualFlow extends Region {
         
         requestLayout();        
     }
+    
+    //TODO We assume all the cell have the same length.  We will need to support
+    // cells of different lengths.
+    public void scrollToOffset(int offset) {
+        adjustPixels(offset * getCellLength(0));
+    }    
     
     /**
      * Given a delta value representing a number of pixels, this method attempts

@@ -1138,6 +1138,13 @@ public class Scene implements EventTarget {
         @Override
         protected void onChanged(Change<String> c) {
             StyleManager.getInstance().updateStylesheets(Scene.this);
+            // RT-9784 - if stylesheet is removed, reset styled properties to 
+            // their initial value.
+            while(c.next()) {
+                if (c.wasRemoved() == false) continue;
+                getRoot().impl_cssResetInitialValues();
+                break; // no point in resetting more than once...
+            }
             getRoot().impl_reapplyCSS();
         }
     };

@@ -30,6 +30,7 @@ import javafx.scene.control.Control;
 import javafx.scene.control.IndexedCell;
 
 import com.sun.javafx.scene.control.behavior.BehaviorBase;
+import java.util.Map;
 
 /**
  * Parent class to control skins whose contents are virtualized and scrollable.
@@ -43,31 +44,19 @@ public abstract class VirtualContainerBase<C extends Control, B extends Behavior
 
     public static final String SCROLL_TO_INDEX_CENTERED = "VirtualContainerBase.scrollToIndexCentered";
     public static final String SCROLL_TO_INDEX_TOP = "VirtualContainerBase.scrollToIndexTop";
+    public static final String SCROLL_TO_OFFSET = "VirtualContainerBase.scrollToOffset";    
 
-    public VirtualContainerBase(C control, B behavior) {
+    public VirtualContainerBase(final C control, B behavior) {
         super(control, behavior);
         
         flow = new VirtualFlow();
+        handleControlProperties(control);
 
         control.getProperties().addListener(new MapChangeListener<Object, Object>() {
             @Override
             public void onChanged(Change<? extends Object, ? extends Object> c) {
-                if (c.wasAdded() && SCROLL_TO_INDEX_CENTERED.equals(c.getKey())) {
-                    Object row = c.getValueAdded();
-                    if (row instanceof Integer) {
-                        // we want the index to be centered
-                        flow.scrollTo((Integer)row, true);
-                    }
-
-                    c.getMap().remove(SCROLL_TO_INDEX_CENTERED);
-                } else if (c.wasAdded() && SCROLL_TO_INDEX_TOP.equals(c.getKey())) {
-                    Object index = c.getValueAdded();
-                    if (index instanceof Integer) {
-                        // we don't want the index to be centered
-                        flow.scrollTo((Integer)index, false);
-                    }
-
-                    c.getMap().remove(SCROLL_TO_INDEX_TOP);
+                if (c.wasAdded()) {
+                    handleControlProperties(control);
                 }
             }
         });
@@ -107,5 +96,33 @@ public abstract class VirtualContainerBase<C extends Control, B extends Behavior
         }
         
         return height + getInsets().getTop() + getInsets().getBottom();
+    }
+    
+    private void handleControlProperties(C control) {
+        Map<Object, Object>properties = control.getProperties();
+        if (properties.containsKey(SCROLL_TO_INDEX_CENTERED)) {
+            Object row = properties.get(SCROLL_TO_INDEX_CENTERED);
+            if (row instanceof Integer) {
+                // we want the index to be centered
+                flow.scrollTo((Integer)row, true);
+            }
+
+            properties.remove(SCROLL_TO_INDEX_CENTERED);
+        } else if (properties.containsKey(SCROLL_TO_INDEX_TOP)) {
+            Object index = properties.get(SCROLL_TO_INDEX_TOP);
+            if (index instanceof Integer) {
+                // we don't want the index to be centered
+                flow.scrollTo((Integer)index, false);
+            }
+
+            properties.remove(SCROLL_TO_INDEX_TOP);
+        } else if (properties.containsKey(SCROLL_TO_OFFSET)) {
+            Object offset = properties.get(SCROLL_TO_OFFSET);
+            if (offset instanceof Integer) {
+                flow.scrollToOffset((Integer)offset);
+            }
+
+            properties.remove(SCROLL_TO_OFFSET);
+        }        
     }
 }

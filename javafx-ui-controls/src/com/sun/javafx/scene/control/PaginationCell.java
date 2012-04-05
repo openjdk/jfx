@@ -49,6 +49,7 @@ import javafx.scene.control.ListCell;
 public class PaginationCell<T> extends ListCell<T> {
 
     public PaginationCell() {
-        getStyleClass().addAll("pagination-cell");
+        // We use setAll because we dont want any of ListCell's styles.
+        getStyleClass().setAll("pagination-cell");
     }
 }
