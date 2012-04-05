@@ -214,7 +214,8 @@ public class ComboBoxListViewSkin<T> extends ComboBoxPopupControl<T> {
         // externally for people listening to the focus property.
         textField.focusedProperty().addListener(new ChangeListener<Boolean>() {
             @Override public void changed(ObservableValue<? extends Boolean> ov, Boolean t, Boolean t1) {
-                comboBox.requestFocus();
+	        // RT-20657 focus ring gets stuck in a editable combobox
+                // comboBox.requestFocus();
             }
         });
 
