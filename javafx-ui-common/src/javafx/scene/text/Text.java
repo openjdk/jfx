@@ -45,11 +45,13 @@ import javafx.geometry.BoundingBox;
 import javafx.geometry.Bounds;
 import javafx.geometry.Point2D;
 import javafx.geometry.VPos;
+import javafx.scene.Node;
 import javafx.scene.Scene;
 import javafx.scene.paint.Color;
 import javafx.scene.paint.Paint;
 import javafx.scene.shape.PathElement;
 import javafx.scene.shape.Shape;
+import javafx.scene.transform.Transform;
 
 import com.sun.javafx.css.StyleableBooleanProperty;
 import com.sun.javafx.css.StyleableObjectProperty;
@@ -59,6 +61,7 @@ import com.sun.javafx.css.converters.EnumConverter;
 import com.sun.javafx.css.converters.FontConverter;
 import com.sun.javafx.geom.BaseBounds;
 import com.sun.javafx.geom.RectBounds;
+import com.sun.javafx.geom.transform.Affine3D;
 import com.sun.javafx.geom.transform.BaseTransform;
 import com.sun.javafx.scene.DirtyBits;
 import com.sun.javafx.scene.shape.PathUtils;
@@ -66,7 +69,8 @@ import com.sun.javafx.scene.text.HitInfo;
 import com.sun.javafx.sg.PGNode;
 import com.sun.javafx.sg.PGShape;
 import com.sun.javafx.sg.PGText;
-import com.sun.javafx.tk.TextHelper;
+import com.sun.javafx.sg.PGTextHelper;
+import com.sun.javafx.tk.FontLoader;
 import com.sun.javafx.tk.Toolkit;
 import javafx.beans.DefaultProperty;
 import javafx.beans.property.*;
@@ -108,7 +112,8 @@ public class Text extends Shape {
 
     /**
      * @treatAsPrivate implementation detail
-     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
+     * @deprecated This is an internal API that is not intended
+     * for use and will be removed in the next version
      */
     @Deprecated
     @Override
@@ -116,17 +121,38 @@ public class Text extends Shape {
         return Toolkit.getToolkit().createPGText();
     }
 
-    PGText getPGText() {
+    private PGText getPGText() {
         return (PGText) impl_getPGNode();
     }
 
+    private PGTextHelper textHelper;
+    /* 
+     * The Text node state is synced down to *its* helper on return.
+     * This doesn't mean its synced to the peer! That happens only
+     * during the pulse.
+     */
+    private PGTextHelper getTextHelper() {
+        if (textHelper == null) {
+            Scene.impl_setAllowPGAccess(true);
+            textHelper = getPGText().getTextHelper();
+            Scene.impl_setAllowPGAccess(false);
+        }
+        updatePGTextHelper(textHelper);
+        return textHelper;
+    }
+
+    private static FontLoader fontLoader = null;
     /**
      * Creates an empty instance of Text.
      */
     public Text() {
+        if (fontLoader == null) {
+            fontLoader = Toolkit.getToolkit().getFontLoader();
+        }
         setPickOnBounds(true);
         getDecorationShapes();
-        setBaselineOffset(Toolkit.getToolkit().getFontLoader().getFontMetrics(getFontInternal()).getAscent());
+        setBaselineOffset(
+             fontLoader.getFontMetrics(getFontInternal()).getAscent());
     }
 
     /**
@@ -187,8 +213,10 @@ public class Text extends Shape {
                     setImpl_selectionStart(-1);
                     setImpl_selectionEnd(-1);
                     impl_geomChanged();
-                    // MH: Functionality copied from store() method, which was removed
-                    // Wonder what should happen if text is bound and becomes null?
+                    // MH: Functionality copied from store() method,
+                    // which was removed.
+                    // Wonder what should happen if text is bound
+                    //  and becomes null?
                     final String value = get();
                     if ((value == null) && !isBound()) {
                         set("");
@@ -322,7 +350,8 @@ public class Text extends Shape {
                 public void invalidated() {
                     impl_markDirty(DirtyBits.TEXT_FONT);
                     impl_geomChanged();
-                    setBaselineOffset(Toolkit.getToolkit().getFontLoader().getFontMetrics(getFontInternal()).getAscent());
+                    setBaselineOffset(fontLoader.getFontMetrics(
+                                          getFontInternal()).getAscent());
                 }
 
                 @Override 
@@ -412,7 +441,8 @@ public class Text extends Shape {
 
     public final ObjectProperty<TextBoundsType> boundsTypeProperty() {
         if (boundsType == null) {
-            boundsType = new ObjectPropertyBase<TextBoundsType>(TextBoundsType.LOGICAL) {
+            boundsType =
+               new ObjectPropertyBase<TextBoundsType>(TextBoundsType.LOGICAL) {
 
                 @Override
                 public void invalidated() {
@@ -588,7 +618,8 @@ public class Text extends Shape {
 
     public final ObjectProperty<TextAlignment> textAlignmentProperty() {
         if (textAlignment == null) {
-            textAlignment = new StyleableObjectProperty<TextAlignment>(TextAlignment.LEFT) {
+            textAlignment =
+                new StyleableObjectProperty<TextAlignment>(TextAlignment.LEFT) {
 
                 @Override
                 public void invalidated() {
@@ -616,7 +647,8 @@ public class Text extends Shape {
     }
 
     /**
-     * The 'alphabetic' (or roman) baseline offset from the Text node's layoutBounds.minY location.
+     * The 'alphabetic' (or roman) baseline offset from the Text node's
+     * layoutBounds.minY location.
      * The value typically corresponds to the max ascent of the font.
      *
      * @since JavaFX 1.3
@@ -717,7 +749,8 @@ public class Text extends Shape {
 
     /**
      * @treatAsPrivate implementation detail
-     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
+     * @deprecated This is an internal API that is not intended
+     * for use and will be removed in the next version
      */
     @Deprecated
     @Override
@@ -729,7 +762,8 @@ public class Text extends Shape {
     /**
      * Shape of selection in local coordinates.
      * @treatAsPrivate implementation detail
-     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
+     * @deprecated This is an internal API that is not intended
+     * for use and will be removed in the next version
      */
     @Deprecated
     private ObjectProperty<PathElement[]> impl_selectionShape;
@@ -737,7 +771,8 @@ public class Text extends Shape {
 
     /**
      * @treatAsPrivate implementation detail
-     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
+     * @deprecated This is an internal API that is not intended
+     * for use and will be removed in the next version
      */
     @Deprecated
     public final void setImpl_selectionShape(PathElement[] value) {
@@ -746,7 +781,8 @@ public class Text extends Shape {
 
     /**
      * @treatAsPrivate implementation detail
-     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
+     * @deprecated This is an internal API that is not intended
+     * for use and will be removed in the next version
      */
     @Deprecated
     public final PathElement[] getImpl_selectionShape() {
@@ -755,7 +791,8 @@ public class Text extends Shape {
 
     /**
      * @treatAsPrivate implementation detail
-     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
+     * @deprecated This is an internal API that is not intended
+     * for use and will be removed in the next version
      */
     @Deprecated
     public final ObjectProperty<PathElement[]> impl_selectionShapeProperty() {
@@ -772,14 +809,16 @@ public class Text extends Shape {
      * set to {@code -1} to unset selection.
      *
      * @treatAsPrivate implementation detail
-     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
+     * @deprecated This is an internal API that is not intended
+     * for use and will be removed in the next version
      */
     @Deprecated
     private IntegerProperty impl_selectionStart;
 
     /**
      * @treatAsPrivate implementation detail
-     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
+     * @deprecated This is an internal API that is not intended
+     * for use and will be removed in the next version
      */
     @Deprecated
     public final void setImpl_selectionStart(int value) {
@@ -788,7 +827,8 @@ public class Text extends Shape {
 
     /**
      * @treatAsPrivate implementation detail
-     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
+     * @deprecated This is an internal API that is not intended
+     * for use and will be removed in the next version
      */
     @Deprecated
     public final int getImpl_selectionStart() {
@@ -797,7 +837,8 @@ public class Text extends Shape {
 
     /**
      * @treatAsPrivate implementation detail
-     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
+     * @deprecated This is an internal API that is not intended
+     * for use and will be removed in the next version
      */
     @Deprecated
     public final IntegerProperty impl_selectionStartProperty() {
@@ -829,14 +870,16 @@ public class Text extends Shape {
      * set to {@code -1} to unset selection.
      *
      * @treatAsPrivate implementation detail
-     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
+     * @deprecated This is an internal API that is not intended
+     * for use and will be removed in the next version
      */
     @Deprecated
     private IntegerProperty impl_selectionEnd;
 
     /**
      * @treatAsPrivate implementation detail
-     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
+     * @deprecated This is an internal API that is not intended
+     * for use and will be removed in the next version
      */
     @Deprecated
     public final void setImpl_selectionEnd(int value) {
@@ -845,7 +888,8 @@ public class Text extends Shape {
 
     /**
      * @treatAsPrivate implementation detail
-     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
+     * @deprecated This is an internal API that is not intended
+     * for use and will be removed in the next version
      */
     @Deprecated
     public final int getImpl_selectionEnd() {
@@ -854,7 +898,8 @@ public class Text extends Shape {
 
     /**
      * @treatAsPrivate implementation detail
-     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
+     * @deprecated This is an internal API that is not intended
+     * for use and will be removed in the next version
      */
     @Deprecated
     public final IntegerProperty impl_selectionEndProperty() {
@@ -884,7 +929,8 @@ public class Text extends Shape {
     /**
      * stroke paint to be used for selected content.
      * @treatAsPrivate implementation detail
-     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
+     * @deprecated This is an internal API that is not intended
+     * for use and will be removed in the next version
      */
     @Deprecated
     @Override protected final void impl_strokeOrFillChanged() {
@@ -894,7 +940,8 @@ public class Text extends Shape {
     /**
      * Shape of caret in local coordinates.
      * @treatAsPrivate implementation detail
-     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
+     * @deprecated This is an internal API that is not intended
+     * for use and will be removed in the next version
      */
     @Deprecated
     /*public-read*/
@@ -902,7 +949,8 @@ public class Text extends Shape {
 
     /**
      * @treatAsPrivate implementation detail
-     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
+     * @deprecated This is an internal API that is not intended
+     * for use and will be removed in the next version
      */
     @Deprecated
     public final void setImpl_caretShape(PathElement[] value) {
@@ -911,7 +959,8 @@ public class Text extends Shape {
 
     /**
      * @treatAsPrivate implementation detail
-     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
+     * @deprecated This is an internal API that is not intended
+     * for use and will be removed in the next version
      */
     @Deprecated
     public final PathElement[] getImpl_caretShape() {
@@ -920,7 +969,8 @@ public class Text extends Shape {
 
     /**
      * @treatAsPrivate implementation detail
-     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
+     * @deprecated This is an internal API that is not intended
+     * for use and will be removed in the next version
      */
     @Deprecated
     public final ObjectProperty<PathElement[]> impl_caretShapeProperty() {
@@ -937,14 +987,16 @@ public class Text extends Shape {
      * set to {@code -1} to unset caret.
      *
      * @treatAsPrivate implementation detail
-     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
+     * @deprecated This is an internal API that is not intended
+     * for use and will be removed in the next version
      */
     @Deprecated
     private IntegerProperty impl_caretPosition;
 
     /**
      * @treatAsPrivate implementation detail
-     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
+     * @deprecated This is an internal API that is not intended
+     * for use and will be removed in the next version
      */
     @Deprecated
     public final void setImpl_caretPosition(int value) {
@@ -953,7 +1005,8 @@ public class Text extends Shape {
 
     /**
      * @treatAsPrivate implementation detail
-     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
+     * @deprecated This is an internal API that is not intended
+     * for use and will be removed in the next version
      */
     @Deprecated
     public final int getImpl_caretPosition() {
@@ -962,7 +1015,8 @@ public class Text extends Shape {
 
     /**
      * @treatAsPrivate implementation detail
-     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
+     * @deprecated This is an internal API that is not intended
+     * for use and will be removed in the next version
      */
     @Deprecated
     public final IntegerProperty impl_caretPositionProperty() {
@@ -992,14 +1046,16 @@ public class Text extends Shape {
      * caret bias in the content. true means a bias towards forward charcter
      *
      * @treatAsPrivate implementation detail
-     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
+     * @deprecated This is an internal API that is not intended
+     * for use and will be removed in the next version
      */
     @Deprecated
     private BooleanProperty impl_caretBias;
 
     /**
      * @treatAsPrivate implementation detail
-     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
+     * @deprecated This is an internal API that is not intended
+     * for use and will be removed in the next version
      */
     @Deprecated
     public final void setImpl_caretBias(boolean value) {
@@ -1008,7 +1064,8 @@ public class Text extends Shape {
 
     /**
      * @treatAsPrivate implementation detail
-     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
+     * @deprecated This is an internal API that is not intended
+     * for use and will be removed in the next version
      */
     @Deprecated
     public final boolean isImpl_caretBias() {
@@ -1017,7 +1074,8 @@ public class Text extends Shape {
 
     /**
      * @treatAsPrivate implementation detail
-     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
+     * @deprecated This is an internal API that is not intended
+     * for use and will be removed in the next version
      */
     @Deprecated
     public final BooleanProperty impl_caretBiasProperty() {
@@ -1047,18 +1105,22 @@ public class Text extends Shape {
      * Maps local point to index in the content.
      *
      * @treatAsPrivate implementation detail
-     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
+     * @deprecated This is an internal API that is not intended
+     * for use and will be removed in the next version
      */
     @Deprecated
     public final HitInfo impl_hitTestChar(Point2D point) {
-        return Toolkit.getToolkit().convertHitInfoToFX(getTextHelper().getHitInfo((float)point.getX(), (float)point.getY()));
+        return Toolkit.getToolkit().convertHitInfoToFX(
+            getTextHelper().getHitInfo((float)point.getX(),
+                                      (float)point.getY()));
     }
 
     /**
      * Returns shape for the range of the text in local coordinates.
      *
      * @treatAsPrivate implementation detail
-     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
+     * @deprecated This is an internal API that is not intended
+     * for use and will be removed in the next version
      */
     @Deprecated
     public final PathElement[] impl_getRangeShape(int start, int end) {
@@ -1070,7 +1132,8 @@ public class Text extends Shape {
      * Returns shape for the underline in local coordinates.
      *
      * @treatAsPrivate implementation detail
-     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
+     * @deprecated This is an internal API that is not intended
+     * for use and will be removed in the next version
      */
     @Deprecated
     public final PathElement[] impl_getUnderlineShape(int start, int end) {
@@ -1085,19 +1148,18 @@ public class Text extends Shape {
         if (getImpl_caretPosition() >= 0) {
             //convert insertion postiion into character index
             int charIndex = getImpl_caretPosition() - ((isImpl_caretBias()) ? 0 : 1);
-            Scene.impl_setAllowPGAccess(true);
-            Object nativeShape = getTextHelper().getCaretShape(charIndex, isImpl_caretBias());
-            Scene.impl_setAllowPGAccess(false);
-            setImpl_caretShape(Toolkit.getToolkit().convertShapeToFXPath(nativeShape));
+            Object nativeShape =
+                getTextHelper().getCaretShape(charIndex, isImpl_caretBias());
+            setImpl_caretShape(
+                Toolkit.getToolkit().convertShapeToFXPath(nativeShape));
         } else {
             setImpl_caretShape(null);
         }
 
         if (getImpl_selectionStart() >= 0 && getImpl_selectionEnd() >= 0) {
-            Scene.impl_setAllowPGAccess(true);
             Object nativeShape = getTextHelper().getSelectionShape();
-            Scene.impl_setAllowPGAccess(false);
-            setImpl_selectionShape(Toolkit.getToolkit().convertShapeToFXPath(nativeShape));
+            setImpl_selectionShape(
+                Toolkit.getToolkit().convertShapeToFXPath(nativeShape));
         } else {
             setImpl_selectionShape(null);
         }
@@ -1107,18 +1169,11 @@ public class Text extends Shape {
      * Shows/Hides on-screen keyboard if available (mobile platform)
      *
      * @treatAsPrivate implementation detail
-     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
+     * @deprecated This is an internal API that is not intended
+     * for use and will be removed in the next version
      */
     @Deprecated
     public final void impl_displaySoftwareKeyboard(boolean display) {
-    }
-
-    private TextHelper textHelper;
-    private TextHelper getTextHelper() {
-        if (textHelper == null) {
-            textHelper = Toolkit.getToolkit().createTextHelper(this);
-        }
-        return textHelper;
     }
 
     /**
@@ -1131,7 +1186,8 @@ public class Text extends Shape {
 
     /**
      * @treatAsPrivate implementation detail
-     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
+     * @deprecated This is an internal API that is not intended
+     * for use and will be removed in the next version
      */
     @Deprecated
     @Override
@@ -1143,7 +1199,8 @@ public class Text extends Shape {
 
     /**
      * @treatAsPrivate implementation detail
-     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
+     * @deprecated This is an internal API that is not intended
+     * for use and will be removed in the next version
      */
     @Deprecated
     public final BaseBounds impl_computeLayoutBoundsInt(RectBounds bounds) {
@@ -1163,7 +1220,8 @@ public class Text extends Shape {
      * reporting mode for this node, this may be logical or visual bounds.
      *
      * @treatAsPrivate implementation detail
-     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
+     * @deprecated This is an internal API that is not intended
+     * for use and will be removed in the next version
      */
     @Deprecated
     @Override
@@ -1183,11 +1241,13 @@ public class Text extends Shape {
 
     /**
      * @treatAsPrivate implementation detail
-     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
+     * @deprecated This is an internal API that is not intended
+     * for use and will be removed in the next version
      */
     @Deprecated
     @Override
-    public final BaseBounds impl_computeGeomBounds(BaseBounds bounds, BaseTransform tx) {
+    public final BaseBounds impl_computeGeomBounds(BaseBounds bounds,
+                                                   BaseTransform tx) {
         // fast path for case where neither fill nor stroke is set or where
         // there simply isn't any text. Applies only to VISUAL bounds.
         if ((impl_mode == PGShape.Mode.EMPTY || getTextInternal().equals("") &&
@@ -1195,26 +1255,27 @@ public class Text extends Shape {
         {
             return bounds.makeEmpty();
         }
-        return getTextHelper().computeBounds(bounds, tx);
+        return getTextHelper().computeContentBounds(bounds, tx);
     }
 
     /**
      * @treatAsPrivate implementation detail
-     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
+     * @deprecated This is an internal API that is not intended
+     * for use and will be removed in the next version
      */
     @Deprecated
     @Override
     protected final boolean impl_computeContains(double localX, double localY) {
         // Need to call the TextHelper to do glyph (geometry) based picking.
-
-        // Perform the expensive glyph (geometry) based picking
-        // See the computeContains function in SGText.java for detail.
-        return getTextHelper().contains((float)localX, (float)localY);
+        // Performs expensive glyph (geometry) based picking
+        // This is currently unimplemented in the peer (just returns true).
+        return getTextHelper().computeContains((float)localX, (float)localY);
     }
 
     /**
      * @treatAsPrivate implementation detail
-     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
+     * @deprecated This is an internal API that is not intended
+     * for use and will be removed in the next version
      */
     @Deprecated
     @Override
@@ -1230,21 +1291,24 @@ public class Text extends Shape {
 
     /**
      * @treatAsPrivate implementation detail
-     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
+     * @deprecated This is an internal API that is not intended
+     * for use and will be removed in the next version
      */
     @Deprecated
     public final ObjectProperty<Paint> impl_selectionFillProperty() {
         if (selectionFill == null) {
-            selectionFill = new SimpleObjectProperty<Paint>(this, "selectionFill", Color.WHITE);
+            selectionFill = new SimpleObjectProperty<Paint>(this,
+                                                            "selectionFill",
+                                                            Color.WHITE);
         }
         return selectionFill;
     }
 
-    /***************************************************************************
-     *                                                                         *
-     *                         Stylesheet Handling                             *
-     *                                                                         *
-     **************************************************************************/
+   /***************************************************************************
+    *                                                                         *
+    *                            Stylesheet Handling                          *
+    *                                                                         *
+    **************************************************************************/
 
      /**
       * Super-lazy instantiation pattern from Bill Pugh.
@@ -1288,7 +1352,8 @@ public class Text extends Shape {
 
             @Override
             public boolean isSettable(Text node) {
-                return node.strikethrough == null || !node.strikethrough.isBound();
+                return node.strikethrough == null ||
+                      !node.strikethrough.isBound();
             }
                      
             @Override
@@ -1298,14 +1363,16 @@ public class Text extends Shape {
 
          };
          
-         private static final StyleableProperty<Text,TextAlignment> TEXT_ALIGNMENT = 
+         private static final
+             StyleableProperty<Text,TextAlignment> TEXT_ALIGNMENT =
                  new StyleableProperty<Text,TextAlignment>("-fx-text-alignment",
                  new EnumConverter<TextAlignment>(TextAlignment.class),
                  TextAlignment.LEFT) {
 
             @Override
             public boolean isSettable(Text node) {
-                return node.textAlignment == null || !node.textAlignment.isBound();
+                return node.textAlignment == null ||
+                      !node.textAlignment.isBound();
             }
 
             @Override
@@ -1354,7 +1421,7 @@ public class Text extends Shape {
          private static final List<StyleableProperty> STYLEABLES;
          static {
             final List<StyleableProperty> styleables =
-                    new ArrayList<StyleableProperty>(Shape.impl_CSS_STYLEABLES());
+                new ArrayList<StyleableProperty>(Shape.impl_CSS_STYLEABLES());
             Collections.addAll(styleables,
                 FONT,
                 UNDERLINE,
@@ -1369,11 +1436,13 @@ public class Text extends Shape {
     }
 
     /**
-     * Super-lazy instantiation pattern from Bill Pugh. StyleableProperties is referenced
-     * no earlier (and therefore loaded no earlier by the class loader) than
+     * Super-lazy instantiation pattern from Bill Pugh.
+     * StyleableProperties is referenced  no earlier
+     * (and therefore loaded no earlier by the class loader) than
      * the moment that  impl_CSS_STYLEABLES() is called.
      * @treatAsPrivate implementation detail
-     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
+     * @deprecated This is an internal API that is not intended
+     * for use and will be removed in the next version
      */
     @Deprecated
     public static List<StyleableProperty> impl_CSS_STYLEABLES() {
@@ -1383,7 +1452,8 @@ public class Text extends Shape {
     /**
      * RT-19263
      * @treatAsPrivate implementation detail
-     * @deprecated This is an experimental API that is not intended for general use and is subject to change in future versions
+     * @deprecated This is an experimental API that is not intended
+     * for general use and is subject to change in future versions
      */
     @Deprecated
     public List<StyleableProperty> impl_getStyleableProperties() {
@@ -1391,48 +1461,179 @@ public class Text extends Shape {
     }
 
     private void updatePGText() {
+        getTextHelper(); // implicitly syncs Text to Helper.
+        getPGText().updateText();
+    }
+
+    /*
+     * This skips the pivot x/y as that requires knowing the bounds
+     * but we need to sync the transform down to the helper when
+     * getting bounds. And we only need the portion of the transform
+     * that affects text size anyway.
+     */
+    private Affine3D getConcatenatedNodeTransform(Node node, Affine3D dst) {
+        if (node.getScaleX() != 1 || node.getScaleY() != 1 ||
+            node.getRotate() != 0 || node.impl_hasTransforms())
+        {
+            if (node.getRotate() != 0) {
+                dst.rotate(Math.toRadians(node.getRotate()),
+                           node.getRotationAxis().getX(),
+                           node.getRotationAxis().getY(),
+                           node.getRotationAxis().getZ());
+            }
+            if (node.getScaleX() != 1 || node.getScaleY() != 1) {
+                dst.scale(node.getScaleX(), node.getScaleY());
+            }
+            if (node.impl_hasTransforms()) {
+                for (Transform t : node.getTransforms()) {
+                    t.impl_apply(dst);
+                }
+            }
+        }
+        return dst;
+    }
+
+    private BaseTransform getCumulativeTransform() {
+        Affine3D dst = new Affine3D();
+        Node node = this;
+        do {
+            dst = getConcatenatedNodeTransform(node, dst);
+            node = node.getParent();
+        } while (node != null);
+        return dst;
+    }
+
+    private PGShape.Mode getMode() {
+        if (getFill() != null && getStroke() != null) {
+            return PGShape.Mode.STROKE_FILL;
+        } else if (getFill() != null) {
+            return PGShape.Mode.FILL;
+        } else if (getStroke() != null) {
+            return PGShape.Mode.STROKE;
+        } else {
+            return PGShape.Mode.EMPTY;
+        }
+    }
+
+    /* This method can be called outside of the pulse */
+    private void updatePGTextHelper(PGTextHelper helper) {
+
         if (impl_isDirty(DirtyBits.NODE_GEOMETRY)) {
-            getPGText().setLocation((float)getX(), (float)getY());
+            helper.setLocation((float)getX(), (float)getY());
+            impl_clearDirty(DirtyBits.NODE_GEOMETRY);
         }
         if (impl_isDirty(DirtyBits.TEXT_ATTRS)) {
-            PGText peer = getPGText();
-            peer.setTextBoundsType(getBoundsType().ordinal());
-            peer.setTextOrigin(getTextOrigin().ordinal());
-            peer.setWrappingWidth((float)getWrappingWidth());
-            peer.setUnderline(isUnderline());
-            peer.setStrikethrough(isStrikethrough());
-            peer.setTextAlignment(getTextAlignment().ordinal());
-            peer.setFontSmoothingType(getFontSmoothingType().ordinal());
+            helper.setTextBoundsType(getBoundsType().ordinal());
+            helper.setTextOrigin(getTextOrigin().ordinal());
+            helper.setWrappingWidth((float)getWrappingWidth());
+            helper.setUnderline(isUnderline());
+            helper.setStrikethrough(isStrikethrough());
+            helper.setTextAlignment(getTextAlignment().ordinal());
+            helper.setFontSmoothingType(getFontSmoothingType().ordinal());
+            impl_clearDirty(DirtyBits.TEXT_ATTRS);
         }
         if (impl_isDirty(DirtyBits.TEXT_FONT)) {
-            getPGText().setFont(getFontInternal().impl_getNativeFont());
+            helper.setFont(getFontInternal().impl_getNativeFont());
+            impl_clearDirty(DirtyBits.TEXT_FONT);
         }
         if (impl_isDirty(DirtyBits.NODE_CONTENTS)) {
-            getPGText().setText(getTextInternal());
+            helper.setText(getTextInternal());
+            impl_clearDirty(DirtyBits.NODE_CONTENTS);
         }
         if (impl_isDirty(DirtyBits.TEXT_SELECTION)) {
             if (getImpl_selectionStart() >= 0 && getImpl_selectionEnd() >= 0) {
-                getPGText().setLogicalSelection(getImpl_selectionStart(),
-                                                getImpl_selectionEnd());
+                helper.setLogicalSelection(getImpl_selectionStart(),
+                                           getImpl_selectionEnd());
                 // getStroke and getFill can be null
-                Paint strokePaint   = getStroke();
-                Paint fillPaint     = selectionFill == null ? null : selectionFill.get();
+                Paint strokePaint = getStroke();
+                Paint fillPaint =
+                    selectionFill == null ? null : selectionFill.get();
                 Object strokeObj = (strokePaint == null) ? null :
-                                    strokePaint.impl_getPlatformPaint();
+                    strokePaint.impl_getPlatformPaint();
                 Object fillObj = (fillPaint == null) ? null :
-                                    fillPaint.impl_getPlatformPaint();
+                    fillPaint.impl_getPlatformPaint();
 
-                getPGText().setSelectionPaint(strokeObj, fillObj);
+                helper.setSelectionPaint(strokeObj, fillObj);
             } else {
                 // Deselect any PGText, in order to update selected text color
-                getPGText().setLogicalSelection(0, 0);
+                helper.setLogicalSelection(0, 0);
+            }
+            impl_clearDirty(DirtyBits.TEXT_SELECTION);
+        }
+        /* Rendering state like transform, Mode, and stroke also matter
+         * for bounds calculations. Need to pass down this information too.
+         */
+        helper.setCumulativeTransform(getCumulativeTransform());
+        helper.setMode(getMode());
+        if (impl_isDirty(DirtyBits.SHAPE_STROKE) ||
+            impl_isDirty(DirtyBits.SHAPE_STROKEATTRS))
+        {
+            boolean hasStroke = getStroke() != null;
+            helper.setStroke(hasStroke);
+            /* We don't want to do this work unless there's currently
+             * a stroke set. And we also don't want to repeat it unless
+             * something changed. We know something has changed if we
+             * are here because of the dirty bits, so we then have to
+             * check if there's a stroke been set. The case this does
+             * extra work is if the stroke's Paint changes, but nothing else.
+             */
+            if (hasStroke) {
+                List<Double> daList = getStrokeDashArray();
+                int len = daList.size();
+                float[] strokeDashArray = new float[len];
+                for (int i=0; i<len; i++) {
+                    strokeDashArray[i] = daList.get(i).floatValue();
+                }
+                helper.setStrokeParameters(
+                       getPGStrokeType(),
+                       getPGStrokeDashArray(),
+                       (float)getStrokeDashOffset(),
+                       getPGStrokeLineCap(),
+                       getPGStrokeLineJoin(),
+                       Math.max((float)getStrokeMiterLimit(), 1f),
+                       Math.max((float)getStrokeWidth(), 0f));
             }
         }
     }
 
+    private com.sun.javafx.sg.PGShape.StrokeType getPGStrokeType() {
+        switch (getStrokeType()) {
+            case INSIDE: return PGShape.StrokeType.INSIDE;
+            case OUTSIDE: return PGShape.StrokeType.OUTSIDE;
+            default: return PGShape.StrokeType.CENTERED;
+        }
+    }
+
+    private com.sun.javafx.sg.PGShape.StrokeLineCap getPGStrokeLineCap() {
+        switch (getStrokeLineCap()) {
+            case SQUARE: return PGShape.StrokeLineCap.SQUARE;
+            case BUTT:   return PGShape.StrokeLineCap.BUTT;
+            default: return PGShape.StrokeLineCap.ROUND;
+        }
+    }
+
+    private com.sun.javafx.sg.PGShape.StrokeLineJoin getPGStrokeLineJoin() {
+         switch (getStrokeLineJoin()) {
+             case MITER: return PGShape.StrokeLineJoin.MITER;
+             case BEVEL: return PGShape.StrokeLineJoin.BEVEL;
+             default: return PGShape.StrokeLineJoin.ROUND;
+         }
+    }
+
+    private float[] getPGStrokeDashArray() {
+        List<Double> daList = getStrokeDashArray();
+        int len = daList.size();
+        float[] strokeDashArray = new float[len];
+        for (int i=0; i<len; i++) {
+            strokeDashArray[i] = daList.get(i).floatValue();
+        }
+        return strokeDashArray;
+    }
+
     /**
      * @treatAsPrivate implementation detail
-     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
+     * @deprecated This is an internal API that is not intended
+     * for use and will be removed in the next version
      */
     @Deprecated
     @Override

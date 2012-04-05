@@ -415,11 +415,6 @@ final public class DummyToolkit extends Toolkit {
     }
 
     @Override
-    public TextHelper createTextHelper(Text text) {
-        throw new UnsupportedOperationException("Not supported yet.");
-    }
-
-    @Override
     public boolean imageContains(Object image, float x, float y) {
         throw new UnsupportedOperationException("Not supported yet.");
     }

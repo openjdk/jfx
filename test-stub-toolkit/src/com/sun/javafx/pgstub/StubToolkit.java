@@ -102,7 +102,6 @@ import com.sun.javafx.tk.TKScene;
 import com.sun.javafx.tk.TKScreenConfigurationListener;
 import com.sun.javafx.tk.TKStage;
 import com.sun.javafx.tk.TKSystemMenu;
-import com.sun.javafx.tk.TextHelper;
 import com.sun.javafx.tk.Toolkit;
 import com.sun.prism.BasicStroke;
 import com.sun.scenario.DelayedRunnable;
@@ -419,11 +418,6 @@ public class StubToolkit extends Toolkit {
 
     @Override public PGText createPGText() {
         return new StubText();
-    }
-
-    @Override
-    public TextHelper createTextHelper(Text text) {
-        return new StubTextHelper(text);
     }
 
     /*

@@ -22,84 +22,151 @@
  * or visit www.oracle.com if you need additional information or have any
  * questions.
  */
-/*
- * StubTextHelper.fx
- */
-
 package com.sun.javafx.pgstub;
 
-import javafx.scene.Scene;
-import javafx.scene.text.Text;
+import javafx.scene.text.Font;
 
 import com.sun.javafx.geom.BaseBounds;
-import com.sun.javafx.geom.RectBounds;
 import com.sun.javafx.geom.transform.BaseTransform;
-import com.sun.javafx.tk.TextHelper;
+import com.sun.javafx.scene.text.HitInfo;
+import com.sun.javafx.sg.PGTextHelper;
+import com.sun.javafx.sg.PGShape.Mode;
+import com.sun.javafx.sg.PGShape.StrokeLineCap;
+import com.sun.javafx.sg.PGShape.StrokeLineJoin;
+import com.sun.javafx.sg.PGShape.StrokeType;
 
-/**
- * @author Jan
- */
-public class StubTextHelper extends TextHelper {
+public class StubTextHelper implements PGTextHelper {
+    // for tests
+    private float x;
+    private float y;
+    private float wrappingWidth;
+    private String text;
+    private boolean strikethrough;
+    private boolean underline;
+    private Object font;
+    private int textBoundsType;
+    private int textOrigin;
+    private int textAlignment;
+    private int fontSmoothingType;
 
-    private Text text;
-    public StubTextHelper(Text text) {
-        this.text = text;
+    public void setText(String text) { this.text = text;}
+    public String getText() {return text;}
+
+    public void setLocation(float x, float y) { this.x = x; this.y = y;}
+    public float getX() {return x;}
+    public float getY() {return y;}
+
+    public void setFont(Object f) { font = f; }
+    public Object getFont() { return font; }
+    
+    public void setTextBoundsType(int textBoundsType) {
+        this.textBoundsType = textBoundsType;
+    }
+    public int getTextBoundsType() { return textBoundsType; }
+    
+    public void setTextOrigin(int textOrigin) { this.textOrigin = textOrigin; }
+    public int getTextOrigin() { return textOrigin; }
+    
+    public void setWrappingWidth(float width) { this.wrappingWidth = width;}
+    public float getWrappingWidth() {return wrappingWidth;}
+
+    public void setUnderline(boolean underline) { this.underline = underline;}
+    public boolean isUnderline() { return underline;}
+    
+    public void setStrikethrough(boolean strikethrough) {
+        this.strikethrough = strikethrough;}
+    public boolean isStrikethrough() {return strikethrough;}
+
+    public void setTextAlignment(int alignment) { textAlignment = alignment; }
+    public int getTextAlignment() { return textAlignment; }
+    
+    public int getFontSmoothingType() { return fontSmoothingType; }
+    public void setFontSmoothingType(int fontSmoothing) { 
+        fontSmoothingType = fontSmoothing;
     }
 
-    @Override
-    public BaseBounds computeBounds(BaseBounds bounds, BaseTransform tx) {
-        Scene.impl_setAllowPGAccess(true);
-        StubText ng = (StubText) text.impl_getPGNode();
-        text.impl_syncPGNodeDirect();
-        Scene.impl_setAllowPGAccess(false);
-        return tx.transform(computeLayoutBounds(bounds), new RectBounds());
+    public void setLogicalSelection(int start, int end) { }
+    public void setSelectionPaint(Object strokePaint, Object fillPaint) { }
+    // given the x, y point, give the insertion index into the string
+    public Object getHitInfo(float x, float y) {
+        // TODO this probably needs to be entirely rewritten...
+        if (text == null) {
+            final HitInfo hit = new HitInfo();
+            hit.setCharIndex(0);
+            hit.setLeading(true);
+            return hit;
+        }
+
+        final double fontSize = (font == null ? 0 : ((Font)font).getSize());
+        final String[] lines = text.split("\n");
+        int lineIndex = Math.min(lines.length - 1, (int) (y / fontSize));
+        if (lineIndex >= lines.length) {
+            throw new IllegalStateException("Asked for hit info out of y range: x=" + x + "y=" +
+                    + y + "text='" + text + "', lineIndex=" + lineIndex + ", numLines=" + lines.length +
+                    ", fontSize=" + fontSize);
+        }
+        int offset = 0;
+        for (int i=0; i<lineIndex; i++) {
+            offset += lines[i].length() + 1; // add in the \n
+        }
+
+        int charPos = (int) (x / lines[lineIndex].length());
+        if (charPos + offset > text.length()) {
+            throw new IllegalStateException("Asked for hit info out of x range");
+        }
+
+        final HitInfo hit = new HitInfo();
+        hit.setCharIndex(offset + charPos);
+        return hit;
     }
 
-    @Override
     public BaseBounds computeLayoutBounds(BaseBounds bounds) {
-        Scene.impl_setAllowPGAccess(true);
-        StubText ng = (StubText) text.impl_getPGNode();
-        text.impl_syncPGNodeDirect();
-        Scene.impl_setAllowPGAccess(false);
-        return ng.computeLayoutBounds((RectBounds)bounds);
+        // We assume that the font point size == pixel height,
+        // and completely square glyphs, mono-spaced.
+        if (text == null) return bounds.makeEmpty();
+
+        final double fontSize = (font == null ? 0 : ((Font)font).getSize());
+        final String[] lines = text.split("\n");
+        double width = 0.0;
+        double height = fontSize * lines.length;
+        for (String line : lines) {
+            width = Math.max(width, fontSize * line.length());
+        }
+
+        return bounds.deriveWithNewBounds(0, 0, 0,
+                                          (float)width, (float)height, 0);
     }
 
-    @Override
+    public BaseBounds computeContentBounds(BaseBounds bds, BaseTransform tx) {
+        return computeLayoutBounds(bds);     
+    }
+
     public Object getCaretShape(int charIndex, boolean isLeading) {
-        return null;
+        return null; }
+    public Object getSelectionShape() { return null; }
+    public Object getRangeShape(int start, int end) { return null; }
+    public Object getUnderlineShape(int start, int end) { return null; }
+
+    public boolean computeContains(float localX, float localY) {
+        return true;
     }
 
-    @Override
-    public Object getSelectionShape() {
-        return null;
-    }
-
-    @Override
-    public Object getRangeShape(int start, int end) {
-        return null;
-    }
-
-    @Override
-    public Object getUnderlineShape(int start, int end) {
-        return null;
-    }
-
-    @Override
     public Object getShape() {
-        return null;
+        return new Object();
     }
 
-    @Override
-    public Object getHitInfo(float localX, float localY) {
-        Scene.impl_setAllowPGAccess(true);
-        StubText ng = (StubText) text.impl_getPGNode();
-        text.impl_syncPGNodeDirect();
-        Scene.impl_setAllowPGAccess(false);
-        return ng.getHitInfo(localX, localY);
-    }
-
-    @Override
-    public boolean contains(float localX, float localY) {
-        return false;
+    // Rendering state stuff ..
+    
+    public void setCumulativeTransform(BaseTransform tx) { return; }
+    public void setMode(Mode mode) { return; }
+    public void setStroke(boolean doStroke) { return; }
+    public void setStrokeParameters(StrokeType strokeType,
+                                    float[] strokeDashArray,
+                                    float strokeDashOffset,
+                                    StrokeLineCap lineCap,
+                                    StrokeLineJoin lineJoin,
+                                    float strokeMiterLimit,
+                                    float strokeWidth) {
+        return;
     }
 }

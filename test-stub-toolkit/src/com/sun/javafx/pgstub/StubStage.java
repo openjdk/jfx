@@ -72,7 +72,9 @@ public class StubStage implements TKStage {
 
     @Override
     public void setBounds(float x, float y, boolean xSet, boolean ySet,
-                          float width, float height, float contentWidth, float contentHeight)
+                          float width, float height,
+                          float contentWidth, float contentHeight,
+                          float xGravity, float yGravity)
     {
         numTimesSetSizeAndLocation++;
         
@@ -125,12 +127,12 @@ public class StubStage implements TKStage {
 
     // Just a helper method
     public void setSize(float w, float h) {
-        setBounds(0, 0, false, false, w, h, 0, 0);
+        setBounds(0, 0, false, false, w, h, 0, 0, 0, 0);
     }
 
     // Just a helper method
     public void setLocation(float x, float y) {
-        setBounds(x, y, true, true, 0, 0, 0, 0);
+        setBounds(x, y, true, true, 0, 0, 0, 0, 0, 0);
     }
 
     @Override
@@ -160,10 +162,12 @@ public class StubStage implements TKStage {
 
     @Override
     public void setIconified(boolean iconified) {
+        notificationSender.changedIconified(iconified);
     }
 
     @Override
     public void setResizable(boolean resizable) {
+        notificationSender.changedResizable(resizable);
     }
 
     @Override
@@ -176,6 +180,7 @@ public class StubStage implements TKStage {
 
     @Override
     public void setFullScreen(boolean fullScreen) {
+        notificationSender.changedFullscreen(fullScreen);
     }
 
     @Override
@@ -225,6 +230,10 @@ public class StubStage implements TKStage {
         notificationSender.releaseNotifications();
     }
 
+    public void releaseSingleNotification() {
+        notificationSender.releaseSingleNotification();
+    }
+
     protected final TKStageListener getNotificationSender() {
         return notificationSender;
     }
@@ -251,6 +260,10 @@ public class StubStage implements TKStage {
         public void releaseNotifications() {
             hold = false;
             flush();
+        }
+
+        private void releaseSingleNotification() {
+            queue.poll().execute(listener);
         }
 
         @Override

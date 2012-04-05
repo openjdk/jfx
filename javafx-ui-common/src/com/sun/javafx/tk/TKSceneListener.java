@@ -43,6 +43,13 @@
  */
 package com.sun.javafx.tk;
 
+import javafx.scene.input.TouchPoint;
+import javafx.event.EventType;
+import javafx.scene.input.RotateEvent;
+import javafx.scene.input.ScrollEvent;
+import javafx.scene.input.SwipeEvent;
+import javafx.scene.input.ZoomEvent;
+
 /**
  * TKSceneListener - Listener for the Scene Peer TKScene to pass updates and events back to the scene
  *
@@ -88,15 +95,49 @@ public interface TKSceneListener {
     public void inputMethodEvent(Object event);
 
     public void scrollEvent(
-            double scrollX, double scrollY,
-            double xMultiplier, double yMultiplier,
+            EventType<ScrollEvent> eventType, double scrollX, double scrollY,
+            double totalScrollX, double totalScrollY,
+            double xMultiplier, double yMultiplier, int touchCount,
             int scrollTextX, int scrollTextY,
             int defaultTextX, int defaultTextY,
             double x, double y, double screenX, double screenY,
             boolean _shiftDown, boolean _controlDown,
-            boolean _altDown, boolean _metaDown);
+            boolean _altDown, boolean _metaDown, 
+            boolean _direct, boolean _inertia);
 
     public void menuEvent(double x, double y, double xAbs, double yAbs,
             boolean isKeyboardTrigger);
+    
+    public void zoomEvent(
+            EventType<ZoomEvent> eventType,
+            double zoomFactor, double totalZoomFactor,
+            double x, double y, double screenX, double screenY,
+            boolean _shiftDown, boolean _controlDown,
+            boolean _altDown, boolean _metaDown, 
+            boolean _direct, boolean _inertia);
+
+    public void rotateEvent(
+            EventType<RotateEvent> eventType, double angle, double totalAngle,
+            double x, double y, double screenX, double screenY,
+            boolean _shiftDown, boolean _controlDown,
+            boolean _altDown, boolean _metaDown, 
+            boolean _direct, boolean _inertia);
+
+    public void swipeEvent(
+            EventType<SwipeEvent> eventType, int touchCount,
+            double x, double y, double screenX, double screenY,
+            boolean _shiftDown, boolean _controlDown,
+            boolean _altDown, boolean _metaDown, boolean _direct);
+
+    public void touchEventBegin(
+            long time, int touchCount, boolean isDirect,
+            boolean _shiftDown, boolean _controlDown,
+            boolean _altDown, boolean _metaDown);
+
+    public void touchEventNext(
+            TouchPoint.State state, long touchId,
+            int x, int y, int xAbs, int yAbs);
+
+    public void touchEventEnd();
 
 }

@@ -205,9 +205,13 @@ public class Window implements EventTarget {
             }
 
             peerBoundsConfigurator.setSize(w, h, cw, ch);
+            applyBounds();
         }
     }
 
+    private static final float CENTER_ON_SCREEN_X_FRACTION = 1.0f / 2;
+    private static final float CENTER_ON_SCREEN_Y_FRACTION = 1.0f / 3;
+    
     /**
      * Sets x and y properties on this Window so that it is centered on the screen.
      */
@@ -216,10 +220,19 @@ public class Window implements EventTarget {
         yExplicit = false;
         if (impl_peer != null) {
             Rectangle2D bounds = Screen.getPrimary().getVisualBounds();
-            double centerX = bounds.getMinX() + (bounds.getWidth() - getWidth()) / 2.0f;
-            double centerY = bounds.getMinY() + (bounds.getHeight() - getHeight()) / 3.0f;
+            double centerX = 
+                    bounds.getMinX() + (bounds.getWidth() - getWidth())
+                                           * CENTER_ON_SCREEN_X_FRACTION;
+            double centerY =
+                    bounds.getMinY() + (bounds.getHeight() - getHeight())
+                                           * CENTER_ON_SCREEN_Y_FRACTION;
 
-            peerBoundsConfigurator.setLocation(centerX, centerY);
+            x.set(centerX);
+            y.set(centerY);
+            peerBoundsConfigurator.setLocation(centerX, centerY,
+                                               CENTER_ON_SCREEN_X_FRACTION,
+                                               CENTER_ON_SCREEN_Y_FRACTION);
+            applyBounds();
         }
     }
 
@@ -236,7 +249,7 @@ public class Window implements EventTarget {
 
     public final void setX(double value) {
         x.set(value);
-        peerBoundsConfigurator.setX(value);
+        peerBoundsConfigurator.setX(value, 0);
         xExplicit = true;
     }
     public final double getX() { return x.get(); }
@@ -255,7 +268,7 @@ public class Window implements EventTarget {
 
     public final void setY(double value) {
         y.set(value);
-        peerBoundsConfigurator.setY(value);
+        peerBoundsConfigurator.setY(value, 0);
         yExplicit = true;
     }
     public final double getY() { return y.get(); }
@@ -711,17 +724,14 @@ public class Window implements EventTarget {
                     }
                     
                     if (!xExplicit && !yExplicit) {
-                        // need to call apply before centering in the case the
-                        // window with and height needs to be calculated from
-                        // the scene (client) width / height (won't work on X11)
-                        peerBoundsConfigurator.apply();
                         centerOnScreen();
                     } else {
-                        peerBoundsConfigurator.setLocation(getX(), getY());
+                        peerBoundsConfigurator.setLocation(getX(), getY(),
+                                                           0, 0);
                     }
 
-                    // set bounds before the window is shown
-                    peerBoundsConfigurator.apply();
+                    // set peer bounds before the window is shown
+                    applyBounds();
 
                     impl_peer.setOpacity((float)getOpacity());
 
@@ -1006,6 +1016,10 @@ public class Window implements EventTarget {
         }
     }
 
+    final void applyBounds() {
+        peerBoundsConfigurator.apply();
+    }
+    
     /**
      * Caches all requested bounds settings and applies them at once during
      * the next pulse.
@@ -1013,6 +1027,8 @@ public class Window implements EventTarget {
     private final class TKBoundsConfigurator implements TKPulseListener {
         private double x;
         private double y;
+        private float xGravity;
+        private float yGravity;
         private double windowWidth;
         private double windowHeight;
         private double clientWidth;
@@ -1024,13 +1040,15 @@ public class Window implements EventTarget {
             reset();
         }
 
-        public void setX(final double x) {
+        public void setX(final double x, final float xGravity) {
             this.x = x;
+            this.xGravity = xGravity;
             setDirty();
         }
 
-        public void setY(final double y) {
+        public void setY(final double y, final float yGravity) {
             this.y = y;
+            this.yGravity = yGravity;
             setDirty();
         }
 
@@ -1054,9 +1072,14 @@ public class Window implements EventTarget {
             setDirty();
         }
 
-        public void setLocation(final double x, final double y) {
+        public void setLocation(final double x,
+                                final double y,
+                                final float xGravity,
+                                final float yGravity) {
             this.x = x;
             this.y = y;
+            this.xGravity = xGravity;
+            this.yGravity = yGravity;
             setDirty();
         }
 
@@ -1080,7 +1103,8 @@ public class Window implements EventTarget {
                                     (float) windowWidth,
                                     (float) windowHeight,
                                     (float) clientWidth,
-                                    (float) clientHeight);
+                                    (float) clientHeight,
+                                    xGravity, yGravity);
 
                 reset();
             }
@@ -1094,6 +1118,8 @@ public class Window implements EventTarget {
         private void reset() {
             x = Double.NaN;
             y = Double.NaN;
+            xGravity = 0;
+            yGravity = 0;
             windowWidth = -1;
             windowHeight = -1;
             clientWidth = -1;

@@ -12,4 +12,5 @@ dist/
 ^webrev/
 ^webrev\.zip$
 nbproject/private/
+target/
 ^.*~$

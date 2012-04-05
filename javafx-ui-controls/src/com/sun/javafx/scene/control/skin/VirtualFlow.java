@@ -1762,16 +1762,37 @@ public class VirtualFlow extends Region {
 //                layingOut = false;
                 return;
             }
-
-            // In this case, we're asked to show a random cell
-//            layingOut = true;
-            mapper.adjustPositionToIndex(index);
-            addAllToPile();
-            requestLayout();
-//            layingOut = false;
         }
     }
 
+    public void scrollTo(int index, boolean centered) {
+        boolean posSet = false;
+        
+        if (index >= getCellCount() - 1) {
+            setPosition(1);
+            posSet = true;
+        } else if (index < 0) {
+            setPosition(0);
+            posSet = true;
+        }
+        
+        if (! posSet) {
+            double offset = 0;
+            for (int i = 0; i < index; i++) {
+                offset += getCellLength(i);
+            }
+            
+            if (centered) {
+                offset += (getCellLength(index) / 2.0);
+                offset -= (getHeight() / 2.0);// + (getHbar() == null ? 0 : getHbar().getHeight()));
+            }
+
+            mapper.adjustByPixelChunk(offset);
+        }
+        
+        requestLayout();        
+    }
+    
     /**
      * Given a delta value representing a number of pixels, this method attempts
      * to move the VirtualFlow in the given direction (positive is down/right,

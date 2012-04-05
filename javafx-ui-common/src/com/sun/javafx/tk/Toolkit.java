@@ -636,8 +636,6 @@ public abstract class Toolkit {
     public abstract Object createSVGPathObject(SVGPath svgpath);
     public abstract Path2D createSVGPath2D(SVGPath svgpath);
 
-    public abstract TextHelper createTextHelper(Text text);
-
     /**
      * Tests whether the pixel on the given coordinates in the given image
      * is non-empty (not fully transparent). Return value is not defined
