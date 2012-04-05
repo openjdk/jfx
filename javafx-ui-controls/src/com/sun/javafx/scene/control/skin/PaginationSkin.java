@@ -65,6 +65,7 @@ import javafx.geometry.Orientation;
 import javafx.geometry.VPos;
 import javafx.scene.control.*;
 import javafx.scene.input.MouseEvent;
+import javafx.scene.input.SwipeEvent;
 import javafx.scene.layout.Region;
 import javafx.scene.layout.StackPane;
 import javafx.scene.shape.Rectangle;
@@ -116,6 +117,20 @@ public class PaginationSkin<T> extends SkinBase<Pagination<T>, PaginationBehavio
         registerChangeListener(pagination.numberOfItemsProperty(), "NUMBER_OF_ITEMS");
         registerChangeListener(pagination.pageIndexProperty(), "PAGE_INDEX");
         registerChangeListener(pagination.pageFactoryProperty(), "PAGE_FACTORY");
+
+        setOnSwipeLeft(new EventHandler<SwipeEvent>() {
+            @Override
+            public void handle(SwipeEvent t) {
+                paginationListView.getSelectionModel().selectPrevious();
+            }
+        });
+
+        setOnSwipeRight(new EventHandler<SwipeEvent>() {
+            @Override
+            public void handle(SwipeEvent t) {
+                paginationListView.getSelectionModel().selectNext();
+            }
+        });
     }
 
     public MultipleSelectionModel getSelectionModel() {
