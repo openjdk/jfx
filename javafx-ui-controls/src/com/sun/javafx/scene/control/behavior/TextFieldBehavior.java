@@ -291,7 +291,11 @@ public class TextFieldBehavior extends TextInputControlBehavior<TextField> {
     protected void mouseDoubleClick(HitInfo hit) {
         final TextField textField = getControl();
         textField.previousWord();
-        textField.selectNextWord();
+        if (isWindows()) {
+            textField.selectNextWord();
+        } else {
+            textField.selectEndOfNextWord();
+        }
     }
 
     protected void mouseTripleClick(HitInfo hit) {

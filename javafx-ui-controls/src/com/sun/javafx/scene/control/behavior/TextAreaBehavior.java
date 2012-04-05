@@ -334,7 +334,11 @@ public class TextAreaBehavior extends TextInputControlBehavior<TextArea> {
     protected void mouseDoubleClick(HitInfo hit) {
         final TextArea textArea = getControl();
         textArea.previousWord();
-        textArea.selectNextWord();
+        if (isWindows()) {
+            textArea.selectNextWord();
+        } else {
+            textArea.selectEndOfNextWord();
+        }
     }
 
     protected void mouseTripleClick(HitInfo hit) {
