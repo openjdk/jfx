@@ -311,21 +311,19 @@ public class FXVKSkin extends SkinBase<FXVK, BehaviorBase<FXVK>> {
         Control[] keyRow = new Control[keyList.size()];
         for (int i = 0; i < keyRow.length; i++) {
             String str = keyList.get(i);
-            Double w = (widths != null) ? widths.get(i) : -1.0;
+            Double w = 1.0;
+            if (widths != null && widths.get(i) > 0) {
+                w = widths.get(i);
+            }
             if ("BACKSPACE".equals(str)) {
-                if (w < 0) w = 1.5;
                 keyRow[i] = new CommandKey("\u232b", BACK_SPACE, keyWidth * w);
             } else if ("ENTER".equals(str)) {
-                if (w < 0) w = 2.5;
                 keyRow[i] = new CommandKey("\u21b5", ENTER, keyWidth * w + (9-4) * hGap / 2);
             } else if ("SHIFT".equals(str)) {
-                if (w < 0) w = 1.5;
                 keyRow[i] = shiftKey = new ShiftKey(keyWidth * w);
             } else if ("SYM".equals(str)) {
-                if (w < 0) w = 2.5;
                 keyRow[i] = symbolKey = new SymbolKey("!#123 ABC", keyWidth * w + (9-4) * hGap / 2);
             } else {
-                if (w < 0) w = 1.0;
                 keyRow[i] = new CharKey((String)keyList.get(i), keyWidth * w);
             }
         }
