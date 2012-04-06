@@ -372,10 +372,11 @@ public abstract class LabeledSkinBase<C extends Labeled, B extends BehaviorBase<
                     mnemonic_underscore.setEndY(0.0f);
                     mnemonic_underscore.getStyleClass().clear();
                     mnemonic_underscore.getStyleClass().setAll("mnemonic-underline");
+                }
+                if (!getChildren().contains(mnemonic_underscore)) {
                     getChildren().add(mnemonic_underscore);
                 }
-            }
-            else {
+            } else {
                 /*
                 ** we don't need a mnemonic....
                 */
