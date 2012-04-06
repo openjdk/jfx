@@ -172,6 +172,9 @@ public class MouseTest {
         assertFalse(scene.smallSquareTracker.wasExitedMe());
         assertFalse(scene.bigSquareTracker.wasExitedMe());
         assertFalse(scene.groupTracker.wasExitedMe());
+        assertTrue(scene.sceneTracker.wasEnteredMe());
+        assertFalse(scene.sceneTracker.wasExitedMe());
+        scene.clear();
 
         scene.processEvent(generator.generateMouseEvent(
                 MouseEvent.MOUSE_MOVED, 250, 250));
@@ -182,6 +185,8 @@ public class MouseTest {
         assertFalse(scene.smallSquareTracker.wasExitedMe());
         assertFalse(scene.bigSquareTracker.wasExitedMe());
         assertFalse(scene.groupTracker.wasExitedMe());
+        assertFalse(scene.sceneTracker.wasEnteredMe());
+        assertFalse(scene.sceneTracker.wasExitedMe());
         scene.clear();
 
         scene.processEvent(generator.generateMouseEvent(
@@ -193,6 +198,8 @@ public class MouseTest {
         assertTrue(scene.smallSquareTracker.wasExitedMe());
         assertFalse(scene.bigSquareTracker.wasExitedMe());
         assertFalse(scene.groupTracker.wasExitedMe());
+        assertFalse(scene.sceneTracker.wasEnteredMe());
+        assertFalse(scene.sceneTracker.wasExitedMe());
         scene.clear();
 
         scene.processEvent(generator.generateMouseEvent(
@@ -204,6 +211,21 @@ public class MouseTest {
         assertFalse(scene.smallSquareTracker.wasExitedMe());
         assertTrue(scene.bigSquareTracker.wasExitedMe());
         assertTrue(scene.groupTracker.wasExitedMe());
+        assertFalse(scene.sceneTracker.wasEnteredMe());
+        assertFalse(scene.sceneTracker.wasExitedMe());
+        scene.clear();
+
+        scene.processEvent(generator.generateMouseEvent(
+                MouseEvent.MOUSE_MOVED, -1, 50));
+        assertFalse(scene.smallSquareTracker.wasEnteredMe());
+        assertFalse(scene.bigSquareTracker.wasEnteredMe());
+        assertFalse(scene.groupTracker.wasEnteredMe());
+        assertFalse(scene.smallSquareTracker.wasExitedMe());
+        assertFalse(scene.bigSquareTracker.wasExitedMe());
+        assertFalse(scene.groupTracker.wasExitedMe());
+        assertFalse(scene.sceneTracker.wasEnteredMe());
+        assertTrue(scene.sceneTracker.wasExitedMe());
+        scene.clear();
     }
 
     @Test
@@ -223,6 +245,8 @@ public class MouseTest {
         assertFalse(scene.smallSquareTracker.wasExitedMe());
         assertFalse(scene.bigSquareTracker.wasExitedMe());
         assertFalse(scene.groupTracker.wasExitedMe());
+        assertTrue(scene.sceneTracker.wasEnteredMe());
+        assertFalse(scene.sceneTracker.wasExitedMe());
         scene.clear();
 
         scene.processEvent(generator.generateMouseEvent(
@@ -234,6 +258,8 @@ public class MouseTest {
         assertTrue(scene.smallSquareTracker.wasExitedMe());
         assertFalse(scene.bigSquareTracker.wasExitedMe());
         assertFalse(scene.groupTracker.wasExitedMe());
+        assertFalse(scene.sceneTracker.wasEnteredMe());
+        assertFalse(scene.sceneTracker.wasExitedMe());
         scene.clear();
 
         scene.processEvent(generator.generateMouseEvent(
@@ -245,6 +271,21 @@ public class MouseTest {
         assertFalse(scene.smallSquareTracker.wasExitedMe());
         assertFalse(scene.bigSquareTracker.wasExitedMe());
         assertTrue(scene.groupTracker.wasExitedMe());
+        assertFalse(scene.sceneTracker.wasEnteredMe());
+        assertFalse(scene.sceneTracker.wasExitedMe());
+        scene.clear();
+
+        scene.processEvent(generator.generateMouseEvent(
+                MouseEvent.MOUSE_DRAGGED, -1, 50));
+
+        assertFalse(scene.smallSquareTracker.wasEnteredMe());
+        assertFalse(scene.bigSquareTracker.wasEnteredMe());
+        assertFalse(scene.groupTracker.wasEnteredMe());
+        assertFalse(scene.smallSquareTracker.wasExitedMe());
+        assertFalse(scene.bigSquareTracker.wasExitedMe());
+        assertFalse(scene.groupTracker.wasExitedMe());
+        assertFalse(scene.sceneTracker.wasEnteredMe());
+        assertTrue(scene.sceneTracker.wasExitedMe());
         scene.clear();
 
         scene.processEvent(generator.generateMouseEvent(
@@ -256,6 +297,8 @@ public class MouseTest {
         assertFalse(scene.smallSquareTracker.wasExitedMe());
         assertFalse(scene.bigSquareTracker.wasExitedMe());
         assertFalse(scene.groupTracker.wasExitedMe());
+        assertTrue(scene.sceneTracker.wasEnteredMe());
+        assertFalse(scene.sceneTracker.wasExitedMe());
         scene.clear();
 
         scene.processEvent(generator.generateMouseEvent(
@@ -267,6 +310,8 @@ public class MouseTest {
         assertFalse(scene.smallSquareTracker.wasExitedMe());
         assertFalse(scene.bigSquareTracker.wasExitedMe());
         assertTrue(scene.groupTracker.wasExitedMe());
+        assertFalse(scene.sceneTracker.wasEnteredMe());
+        assertFalse(scene.sceneTracker.wasExitedMe());
     }
 
     @Test
@@ -560,6 +605,25 @@ public class MouseTest {
     }
 
     @Test
+    public void doubleClickShouldBeGeneratedEvenIfNodeChangesInBetween() {
+        SimpleTestScene scene = new SimpleTestScene();
+        MouseEventGenerator generator = new MouseEventGenerator();
+
+        scene.processEvent(generator.generateMouseEvent(
+                MouseEvent.MOUSE_PRESSED, 199, 250));
+        scene.processEvent(generator.generateMouseEvent(
+                MouseEvent.MOUSE_RELEASED, 199, 250));
+        scene.processEvent(generator.generateMouseEvent(
+                MouseEvent.MOUSE_PRESSED, 201, 250));
+        scene.processEvent(generator.generateMouseEvent(
+                MouseEvent.MOUSE_RELEASED, 201, 250));
+
+        assertTrue(scene.smallSquareTracker.wasDoubleClicked());
+        assertFalse(scene.bigSquareTracker.wasDoubleClicked());
+        assertTrue(scene.bigSquareTracker.wasClicked());
+    }
+
+    @Test
     public void doubleClickShouldBeGeneratedFromPressedReleasedTwoTimesWithHysteresis() {
         SimpleTestScene scene = new SimpleTestScene();
         MouseEventGenerator generator = new MouseEventGenerator();
@@ -848,6 +912,7 @@ public class MouseTest {
     
     private static class SimpleTestScene {
 
+        MouseEventTracker sceneTracker;
         MouseEventTracker groupTracker;
         MouseEventTracker bigSquareTracker;
         MouseEventTracker smallSquareTracker;
@@ -870,6 +935,7 @@ public class MouseTest {
 
             root.getChildren().add(group);
 
+            sceneTracker = new MouseEventTracker(scene);
             groupTracker = new MouseEventTracker(group);
             bigSquareTracker = new MouseEventTracker(bigSquare);
             smallSquareTracker = new MouseEventTracker(smallSquare);
@@ -900,6 +966,7 @@ public class MouseTest {
 
         public void clear() {
             moused = false;
+            sceneTracker.clear();
             groupTracker.clear();
             bigSquareTracker.clear();
             smallSquareTracker.clear();
@@ -992,6 +1059,22 @@ public class MouseTest {
                         lastClickCount = event.getClickCount();
                         lastIsStill = event.isStillSincePress();
                     }
+                }
+            });
+        }
+
+        public MouseEventTracker(Scene scene) {
+            scene.setOnMouseEntered(new EventHandler<MouseEvent>() {
+                @Override
+                public void handle(MouseEvent event) {
+                    enteredMe = true;
+                }
+            });
+
+            scene.setOnMouseExited(new EventHandler<MouseEvent>() {
+                @Override
+                public void handle(MouseEvent event) {
+                    exitedMe = true;
                 }
             });
         }
