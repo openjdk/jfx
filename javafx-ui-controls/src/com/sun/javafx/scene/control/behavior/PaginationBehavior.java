@@ -45,8 +45,10 @@
 package com.sun.javafx.scene.control.behavior;
 
 import com.sun.javafx.scene.control.Pagination;
+import com.sun.javafx.scene.control.skin.PaginationSkin;
 import java.util.ArrayList;
 import java.util.List;
+import javafx.scene.input.KeyCode;
 import javafx.scene.input.MouseEvent;
 
 public class PaginationBehavior<T> extends BehaviorBase<Pagination<T>> {
@@ -54,14 +56,30 @@ public class PaginationBehavior<T> extends BehaviorBase<Pagination<T>> {
     /**************************************************************************
      *                          Setup KeyBindings                             *
      *************************************************************************/
+    private static final String LEFT = "Left";
+    private static final String RIGHT = "Right";
 
     protected static final List<KeyBinding> PAGINATION_BINDINGS = new ArrayList<KeyBinding>();
     static {
+        PAGINATION_BINDINGS.add(new KeyBinding(KeyCode.LEFT, LEFT));
+        PAGINATION_BINDINGS.add(new KeyBinding(KeyCode.RIGHT, RIGHT));
         PAGINATION_BINDINGS.addAll(TRAVERSAL_BINDINGS);
     }
 
     @Override protected List<KeyBinding> createKeyBindings() {
         return PAGINATION_BINDINGS;
+    }
+
+    @Override protected void callAction(String name) {
+        if (LEFT.equals(name)) {
+            PaginationSkin ps = (PaginationSkin)getControl().getSkin();
+            ps.getSelectionModel().selectPrevious();
+        } else if (RIGHT.equals(name)) {
+            PaginationSkin ps = (PaginationSkin)getControl().getSkin();
+            ps.getSelectionModel().selectNext();
+        } else {
+            super.callAction(name);
+        }
     }
 
     /***************************************************************************

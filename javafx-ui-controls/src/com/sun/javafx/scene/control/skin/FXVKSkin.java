@@ -35,15 +35,15 @@ import javafx.animation.Timeline;
 import javafx.application.Platform;
 import javafx.beans.InvalidationListener;
 import javafx.beans.Observable;
-import javafx.geometry.Insets;
-import javafx.geometry.Pos;
 import javafx.event.ActionEvent;
 import javafx.event.Event;
 import javafx.event.EventHandler;
 import javafx.event.EventTarget;
 import javafx.event.EventType;
 import javafx.geometry.HPos;
+import javafx.geometry.Insets;
 import javafx.geometry.Point2D;
+import javafx.geometry.Pos;
 import javafx.geometry.VPos;
 import javafx.scene.Node;
 import javafx.scene.Parent;
@@ -64,17 +64,20 @@ import javafx.animation.Animation.Status;
 import static javafx.scene.input.KeyCode.*;
 import static javafx.scene.input.MouseEvent.*;
 
+import static com.sun.javafx.scene.control.skin.resources.ControlResources.*;
+
 public class FXVKSkin extends SkinBase<FXVK, BehaviorBase<FXVK>> {
 
     private static Region oldRoot;
-    private static Pane newRoot;
+    private static NewRootPane newRoot;
     private static Popup secondaryPopup;
     private static FXVK primaryVK;
-    private static FXVK secondaryVK;
-    private static Popup vkPopup;
-    private static Timeline slideInTimeline;
-    private static Timeline slideOutTimeline;
+
+    private Timeline slideInTimeline;
+    private Timeline slideOutTimeline;
     private static Timeline slideRootTimeline;
+
+    private static FXVK secondaryVK;
     private static Timeline secondaryVKDelay;
     private static CharKey secondaryVKKey;
 
@@ -85,9 +88,8 @@ public class FXVKSkin extends SkinBase<FXVK, BehaviorBase<FXVK>> {
 
     enum State { NORMAL, SHIFTED, SHIFT_LOCK, NUMERIC; };
 
-    static State state = State.NORMAL;
+    private State state = State.NORMAL;
 
-    static final boolean USE_POPUP = false;
     static final double VK_WIDTH = 800;
     static final double VK_HEIGHT = 230;
     static final double VK_SLIDE_MILLIS = 250;
@@ -108,109 +110,67 @@ public class FXVKSkin extends SkinBase<FXVK, BehaviorBase<FXVK>> {
 
         fxvk.setFocusTraversable(false);
 
-        createKeys();
+        slideInTimeline = new Timeline();
+        slideOutTimeline = new Timeline();
 
         fxvk.attachedNodeProperty().addListener(new InvalidationListener() {
             @Override public void invalidated(Observable valueModel) {
                 Node oldNode = attachedNode;
                 attachedNode = fxvk.getAttachedNode();
 
-if (USE_POPUP) {
-                if (fxvk != secondaryVK && oldNode != null) {
-                    translatePane(oldNode.getScene().getRoot(), 0);
-                }
-} else {
                 if (fxvk != secondaryVK && oldRoot != null) {
                     translatePane(oldRoot, 0);
                 }
-}
 
                 if (attachedNode != null) {
-                    final Scene scene = attachedNode.getScene();
+                    if (keyRows == null) {
+                        createKeys();
+                    }
 
-                    if (secondaryVKDelay == null) {
-                        secondaryVKDelay = new Timeline();
+                    final Scene scene = attachedNode.getScene();
+                    fxvk.setVisible(true);
+
+                    if (fxvk != secondaryVK) {
+                        if (secondaryVKDelay == null) {
+                            secondaryVKDelay = new Timeline();
+                        }
                         KeyFrame kf = new KeyFrame(Duration.millis(500), new EventHandler<ActionEvent>() {
                             @Override public void handle(ActionEvent event) {
                                 if (secondaryVKKey != null) {
-                                    showSecondaryVK(secondaryVKKey, fxvk, state);
+                                    showSecondaryVK(secondaryVKKey);
                                 }
                             }
                         });
-                        secondaryVKDelay.getKeyFrames().add(kf);
-                    }
+                        secondaryVKDelay.getKeyFrames().setAll(kf);
 
-if (USE_POPUP) {
-                    if (vkPopup == null) {
-                        vkPopup = new Popup();
-                        vkPopup.getContent().add(fxvk);
-                    }
 
-                    if (vkPopup.isShowing()) {
-                        Point2D nodePoint =
-                            com.sun.javafx.Utils.pointRelativeTo(attachedNode,
-                                                                 vkPopup.getWidth(), vkPopup.getHeight(),
-                                                                 HPos.CENTER, VPos.BOTTOM, 0, 2, true);
-                        Point2D point =
-                            com.sun.javafx.Utils.pointRelativeTo(scene.getRoot(),
-                                                                 vkPopup.getWidth(), vkPopup.getHeight(),
-                                                                 HPos.CENTER, VPos.BOTTOM, 0, 0, true);
-                        double y = point.getY() - fxvk.prefHeight(-1);
-                        double nodeBottom = nodePoint.getY();
-                        if (y < nodeBottom) {
-                            translatePane(scene.getRoot(), y - nodeBottom);
+                        if (newRoot == null) {
+                            oldRoot = (Region)scene.getRoot();
+                            newRoot = new NewRootPane(oldRoot);
+                            scene.setRoot(newRoot);
                         }
-                    } else {
-                        Platform.runLater(new Runnable() {
-                            public void run() {
-                                Point2D nodePoint =
-                                    com.sun.javafx.Utils.pointRelativeTo(attachedNode,
-                                                                         vkPopup.getWidth(), vkPopup.getHeight(),
-                                                                         HPos.CENTER, VPos.BOTTOM, 0, 2, true);
-                                Point2D point =
-                                    com.sun.javafx.Utils.pointRelativeTo(scene.getRoot(),
-                                                                         vkPopup.getWidth(), vkPopup.getHeight(),
-                                                                         HPos.CENTER, VPos.BOTTOM, 0, 0, true);
-                                double y = point.getY() - fxvk.prefHeight(-1);
-                                vkPopup.show(attachedNode, point.getX(), y);
+
+                        if (!newRoot.getChildren().contains(fxvk)){
+                            newRoot.getChildren().add(fxvk);
+                        }
+
+                        newRoot.slideInTimeline = slideInTimeline;
+                        newRoot.slideOutTimeline = slideOutTimeline;
+                        newRoot.updateTimelines(fxvk);
+
+                        if (fxvk.getHeight() > 0 &&
+                            (fxvk.getLayoutY() == 0 || fxvk.getLayoutY() > scene.getHeight() - fxvk.getHeight())) {
+
+                            slideOutTimeline.stop();
+                            slideInTimeline.playFromStart();
+                        }
 
 
-                                double nodeBottom = nodePoint.getY();
-                                if (y < nodeBottom) {
-                                    translatePane(scene.getRoot(), y - nodeBottom);
-                                }
-                            }
-                        });
-                    }
-
-                    if (oldNode == null || oldNode.getScene() != attachedNode.getScene()) {
-                        fxvk.setPrefWidth(scene.getWidth());
-                        fxvk.setMaxWidth(USE_PREF_SIZE);
-                        fxvk.setPrefHeight(200);
-                    }
-} else {
-                    if (newRoot == null) {
-                        oldRoot = (Region)scene.getRoot();
-                        newRoot = new NewRootPane(oldRoot);
-                        scene.setRoot(newRoot);
-                        newRoot.getChildren().add(fxvk);
-                        slideInTimeline = new Timeline();
-                    }
-
-                    fxvk.setVisible(true);
-                    if (fxvk != secondaryVK && fxvk.getHeight() > 0 &&
-                        (fxvk.getLayoutY() == 0 || fxvk.getLayoutY() > scene.getHeight() - fxvk.getHeight())) {
-
-                        slideOutTimeline.stop();
-                        slideInTimeline.playFromStart();
-                    }
-
-                    if (fxvk != secondaryVK) {
                         Platform.runLater(new Runnable() {
                             public void run() {
                                 double nodeBottom =
                                     attachedNode.localToScene(attachedNode.getBoundsInLocal()).getMaxY() + 2;
-                                if (nodeBottom > fxvk.getLayoutY()) {
+                                if (fxvk.getLayoutY() > 0 && nodeBottom > fxvk.getLayoutY()) {
                                     translatePane(oldRoot, fxvk.getLayoutY() - nodeBottom);
                                 }
                             }
@@ -223,18 +183,12 @@ if (USE_POPUP) {
                             fxvk.setMinHeight(USE_PREF_SIZE);
                         }
                     }
-}
                 } else {
-if (USE_POPUP) {
-                    if (vkPopup != null) {
-                        vkPopup.hide();
-                    }
-} else {
                     if (fxvk != secondaryVK) {
                         slideInTimeline.stop();
                         slideOutTimeline.playFromStart();
                     }
-}
+
                     if (secondaryVK != null) {
                         secondaryVK.setAttachedNode(null);
                         secondaryPopup.hide();
@@ -245,7 +199,7 @@ if (USE_POPUP) {
         });
     }
 
-    private void translatePane(Parent pane, double y) {
+    private static void translatePane(Parent pane, double y) {
         if (slideRootTimeline == null) {
             slideRootTimeline = new Timeline();
         } else {
@@ -264,51 +218,52 @@ if (USE_POPUP) {
         if (fxvk.chars != null) {
             // Secondary popup
             int nKeys = fxvk.chars.length;
-            int nRows = (int)Math.floor(Math.sqrt(Math.max(1, nKeys - 2)));
-            int nKeysPerRow = (int)Math.ceil(nKeys / (double)nRows);
-            keyRows = new Control[nRows][];
-            for (int i = 0; i < nRows; i++) {
-                keyRows[i] =
-                    makeKeyRow((Object[])Arrays.copyOfRange(fxvk.chars, i * nKeysPerRow,
-                                                            Math.min((i + 1) * nKeysPerRow, fxvk.chars.length)));
+            if (nKeys > 1) {
+                int nRows = (int)Math.floor(Math.sqrt(Math.max(1, nKeys - 2)));
+                int nKeysPerRow = (int)Math.ceil(nKeys / (double)nRows);
+                keyRows = new Control[nRows][];
+                for (int i = 0; i < nRows; i++) {
+                    keyRows[i] =
+                        makeKeyRow((String[])Arrays.copyOfRange(fxvk.chars, i * nKeysPerRow,
+                                                                Math.min((i + 1) * nKeysPerRow, fxvk.chars.length)));
+                }
+            } else {
+                keyRows = new Control[0][];
             }
         } else {
-            // TODO: Move this to a resource bundle.
-            keyRows = new Control[][] {
-                makeKeyRow("q 1 [",
-                           "w 2 ]",
-                           "e 3 { \u00e8 \u00e9 \u00ea \u00eb", // e 3 { egrave eacute ecircumflex ediaeresis
-                           "r 4 } \u00ae", // r 4 } registered
-                           "t 5 \\ \u2122", // t 5 \ TM
-                           "y 6 | \u1ef3 \u00fd \u0177 \u0233 \u00ff \u1ef7", // y 6 | ygrave yacute ycircumflex ymacron ydiaeresis yhook
-                           "u 7 \" \u00f9 \u00fa \u00fb \u00fc", // u 7 \" ugrave uacute ucircumflex udiaeresis
-                           "i 8 < \u00ec \u00ed \u00ee \u00ef", // i 8 < igrave iacute icircumflex idiaeresis
-                           "o 9 > \u00f2 \u00f3 \u00f4 \u00f5 \u00f6 \u00f8 \u00b0", // o 9 > ograve oacute ocircumflex otilde odiaeresis oslash degree
-                           "p 0 _ \u00a7 \u00b6 \u03c0"),       // p 0 _ paragraph pilcrow pi
-                makeKeyRow("a @ ~ \u00e0 \u00e1 \u00e2 \u00e3 \u00e4 \u00e5", // a @ ~ agrave aacute acircumflex atilde adiaeresis aring
-                           "s # ` \u015f \u0161 \u00df \u03c3", // s # ` scedilla scaron sharps sigma
-                           "d $ \u20ac \u00f0",                 // d $ euro eth
-                           "f % \u00a3",                        // f % sterling
-                           "g ^ \u00a5",                        // g ^ yen
-                           "h & \u00a7",                        // h & paragraph (TODO: use only once)
-                           "j * \u00b7",                        // j * middledot
-                           "k ( \u00b0",                        // k ( degree (TODO: use only once)
-                           "l ) \u2260"),                       // l ) notequalto
-                makeKeyRow(shiftKey = new ShiftKey(keyWidth * 1.5),
-                           "z - \u00a1",                        // z - invertedexclamationmark
-                           "x = \u00bf",                        // x = invertedquestionmark
-                           "c + \u2030 \u00e7 \u00a9 \u00a2",   // c + permille ccedilla copyright cent
-                           "v ; \u00ae",                        // v ; registered (TODO: use only once)
-                           "b : \u2122",                        // b : TM  (TODO: use only once)
-                           "n / \u00ab \u00f1",                 // n / doubleleftangle ntilde
-                           "m ' \u00bb",                        // m ' doublerightangle (add micro)
-                           new CommandKey("\u232b", BACK_SPACE, keyWidth * 1.5)),
-                makeKeyRow(symbolKey = new SymbolKey("!#123 ABC", keyWidth * 2.5 + (9-4) * hGap / 2),
-                           ", !",                               // , !
-                           " ",                                 // space
-                           ". ?",                               // . ?
-                           new CommandKey("\u21b5", ENTER, keyWidth * 2.5 + (9-4) * hGap / 2))
-            };
+            // Read keyboard layout from resource bundle
+            ArrayList<Control[]> rows = new ArrayList<Control[]>();
+            ArrayList<String> row = new ArrayList<String>();
+            ArrayList<Double> keyWidths = new ArrayList<Double>();
+            String typeString = new String[] { "Text", "Numeric", "URL", "Email" }[fxvk.vkType];
+            int r = 0;
+            try {
+                String format = "FXVK."+typeString+".row%d.key%02d";
+                while (getBundle().containsKey(String.format(format, ++r, 1))) {
+                    int c = 0;
+                    String keyChars;
+                    while (getBundle().containsKey(String.format(format, r, ++c))) {
+                        row.add(getString(String.format(format, r, c)));
+                        Double w = -1.0;
+                        String widthLookup = String.format(format+".width", r, c);
+                        if (getBundle().containsKey(widthLookup)) {
+                            try {
+                                w = new Double(getString(widthLookup));
+                            } catch (NumberFormatException ex) {
+                                System.err.println(widthLookup+"="+getString(widthLookup));
+                                System.err.println(ex);
+                            }
+                        }
+                        keyWidths.add(w);
+                    }
+                    rows.add(makeKeyRow(row, keyWidths));
+                    row.clear();
+                    keyWidths.clear();
+                }
+            } catch (Exception ex) {
+                ex.printStackTrace();
+            }
+            keyRows = rows.toArray(new Control[rows.size()][]);
         }
 
         VBox vbox = new VBox(vGap);
@@ -331,7 +286,14 @@ if (USE_POPUP) {
                     if (fxvk.chars != null) {
                         key.getStyleClass().add("secondary-key");
                     }
-                    key.setStyle("-fx-font-size: "+primaryFontSize+"px;");
+
+                    int textLen = key.getText().length();
+                    if (textLen == 1 || !key.getClass().getSimpleName().equals("CharKey")) {
+                        key.setStyle("-fx-font-size: "+primaryFontSize+"px;");
+                    } else {
+                        key.setStyle("-fx-font-size: "+(primaryFontSize* Math.min(1.0, 3.0/textLen))+"px;");
+                        key.setGraphicTextGap(key.getGraphicTextGap() + 2*textLen);
+                    }
                     if (key.getGraphic() instanceof Label) {
                         ((Label)key.getGraphic()).setStyle("-fx-font-size: "+secondaryFontSize+"px;");
                     }
@@ -341,18 +303,28 @@ if (USE_POPUP) {
     }
 
 
-    private Control[] makeKeyRow(Object... obj) {
-        List<Object> keyList = Arrays.asList((Object[])obj);
-        return makeKeyRow(keyList);
+    private Control[] makeKeyRow(String... obj) {
+        return makeKeyRow(Arrays.asList(obj), null);
     }
 
-    private Control[] makeKeyRow(List<Object> keyList) {
+    private Control[] makeKeyRow(List<String> keyList, List<Double> widths) {
         Control[] keyRow = new Control[keyList.size()];
         for (int i = 0; i < keyRow.length; i++) {
-            if (keyList.get(i) instanceof String) {
-                keyRow[i] = new CharKey((String)keyList.get(i));
+            String str = keyList.get(i);
+            Double w = 1.0;
+            if (widths != null && widths.get(i) > 0) {
+                w = widths.get(i);
+            }
+            if ("BACKSPACE".equals(str)) {
+                keyRow[i] = new CommandKey("\u232b", BACK_SPACE, keyWidth * w);
+            } else if ("ENTER".equals(str)) {
+                keyRow[i] = new CommandKey("\u21b5", ENTER, keyWidth * w + (9-4) * hGap / 2);
+            } else if ("SHIFT".equals(str)) {
+                keyRow[i] = shiftKey = new ShiftKey(keyWidth * w);
+            } else if ("SYM".equals(str)) {
+                keyRow[i] = symbolKey = new SymbolKey("!#123 ABC", keyWidth * w + (9-4) * hGap / 2);
             } else {
-                keyRow[i] = (Control)keyList.get(i);
+                keyRow[i] = new CharKey((String)keyList.get(i), keyWidth * w);
             }
         }
         return keyRow;
@@ -406,7 +378,9 @@ if (USE_POPUP) {
                 }
             }
         }
-        symbolKey.setText(symbolKey.chars[(state == State.NUMERIC) ? 1 : 0]);
+        if (symbolKey != null) {
+            symbolKey.setText(symbolKey.chars[(state == State.NUMERIC) ? 1 : 0]);
+        }
     }
 
     private void fireKeyEvent(Node target, EventType<? extends KeyEvent> eventType,
@@ -476,25 +450,21 @@ if (USE_POPUP) {
                 }
 
                 if (fxvk == secondaryVK) {
-                    showSecondaryVK(null, fxvk, state);
+                    showSecondaryVK(null);
                 }
             }
         };
 
-        CharKey(String str) {
+        CharKey(String str, double width) {
             this.str = str;
             setOnAction(actionHandler);
 
             if (fxvk != secondaryVK) {
                 setOnMousePressed(new EventHandler<MouseEvent>() {
                     @Override public void handle(MouseEvent event) {
-                        showSecondaryVK(null, fxvk, state);
-                        if (state != State.NUMERIC || chars.length > 2) {
-                            secondaryVKKey = CharKey.this;
-                            secondaryVKDelay.playFromStart();
-                        } else {
-                            secondaryVKKey = null;
-                        }
+                        showSecondaryVK(null);
+                        secondaryVKKey = CharKey.this;
+                        secondaryVKDelay.playFromStart();
                     }
                 });
 
@@ -509,18 +479,21 @@ if (USE_POPUP) {
                 chars = new String[] { str };
             } else {
                 chars = str.split(" ");
+                for (int i = 0; i < chars.length; i++) {
+                    chars[i] = FXVKCharEntities.get(chars[i]);
+                }
             }
-            setContentDisplay(ContentDisplay.RIGHT);
+            setContentDisplay(ContentDisplay.TOP);
+            setGraphicTextGap(-8);
             setText(chars[0]);
-            if (chars.length > 1) {
-                graphic = new Label((chars.length > 1) ? chars[1] : " ");
-                graphic.setPrefWidth(keyWidth / 2 - 10);
-                graphic.setMinWidth(USE_PREF_SIZE);
-                graphic.setPrefHeight(keyHeight - 6);
-                setGraphic(graphic);
-            }
 
-            setPrefWidth((str == " ") ? keyWidth * 3 : keyWidth);
+            graphic = new Label((chars.length > 1) ? chars[1] : " ");
+            graphic.setPrefWidth(keyWidth - 12);
+            graphic.setMinWidth(USE_PREF_SIZE);
+            graphic.setPrefHeight(keyHeight / 2 - 8);
+            setGraphic(graphic);
+
+            setPrefWidth(width);
         }
     }
 
@@ -529,7 +502,7 @@ if (USE_POPUP) {
 
         EventHandler<ActionEvent> actionHandler = new EventHandler<ActionEvent>() {
             @Override public void handle(ActionEvent e) {
-                showSecondaryVK(null, null, null);
+                showSecondaryVK(null);
                 Node target = fxvk.getAttachedNode();
                 if (target instanceof EventTarget) {
                     String txt = getText();
@@ -555,7 +528,7 @@ if (USE_POPUP) {
     private class ShiftKey extends Key {
         EventHandler<ActionEvent> actionHandler = new EventHandler<ActionEvent>() {
             @Override public void handle(ActionEvent e) {
-                showSecondaryVK(null, null, null);
+                showSecondaryVK(null);
                 toggleShift();
             }
         };
@@ -576,8 +549,10 @@ if (USE_POPUP) {
         EventHandler<ActionEvent> actionHandler = new EventHandler<ActionEvent>() {
             @Override public void handle(ActionEvent e) {
                 state = (state == State.NUMERIC) ? State.NORMAL : State.NUMERIC;
-                shiftKey.setDisable(state == State.NUMERIC);
-                showSecondaryVK(null, null, null);
+                if (shiftKey != null) {
+                    shiftKey.setDisable(state == State.NUMERIC);
+                }
+                showSecondaryVK(null);
                 updateLabels();
             }
         };
@@ -619,9 +594,9 @@ if (USE_POPUP) {
         super.layoutChildren();
     }
 
-    private static void showSecondaryVK(final CharKey key, FXVK primVK, State state) {
+    private void showSecondaryVK(final CharKey key) {
         if (key != null) {
-            primaryVK = primVK;
+            primaryVK = fxvk;
             final Node textInput = primaryVK.getAttachedNode();
 
             if (secondaryPopup == null) {
@@ -649,36 +624,38 @@ if (USE_POPUP) {
                 secondaryVK.chars = key.chars;
             }
 
-            if (secondaryVK.getSkin() != null) {
-                ((FXVKSkin)secondaryVK.getSkin()).createKeys();
-            }
-
-            secondaryVK.setAttachedNode(textInput);
-            FXVKSkin primarySkin = (FXVKSkin)primaryVK.getSkin();
-            Insets insets = primarySkin.getInsets();
-            int nKeys = secondaryVK.chars.length;
-            int nRows = (int)Math.floor(Math.sqrt(Math.max(1, nKeys - 2)));
-            int nKeysPerRow = (int)Math.ceil(nKeys / (double)nRows);
-            final double w = insets.getLeft() + insets.getRight() +
-                             nKeysPerRow * primarySkin.keyWidth + (nKeys - 1) * hGap;
-            final double h = nRows * primarySkin.keyHeight + (nRows-1) * vGap + 5;
-            secondaryVK.setPrefWidth(w);
-            secondaryVK.setMinWidth(USE_PREF_SIZE);
-            secondaryVK.setPrefHeight(h);
-            secondaryVK.setMinHeight(USE_PREF_SIZE);
-            Platform.runLater(new Runnable() {
-                public void run() {
-                    // Position popup on screen
-                    Point2D nodePoint =
-                        com.sun.javafx.Utils.pointRelativeTo(key, w, h, HPos.CENTER, VPos.TOP,
-                                                             5, -3, true);
-                    double x = nodePoint.getX();
-                    double y = nodePoint.getY();
-                    Scene scene = key.getScene();
-                    x = Math.min(x, scene.getWindow().getX() + scene.getWidth() - w);
-                    secondaryPopup.show(key.getScene().getWindow(), x, y);
+            if (secondaryVK.chars.length > 1) {
+                if (secondaryVK.getSkin() != null) {
+                    ((FXVKSkin)secondaryVK.getSkin()).createKeys();
                 }
-            });
+
+                secondaryVK.setAttachedNode(textInput);
+                FXVKSkin primarySkin = (FXVKSkin)primaryVK.getSkin();
+                Insets insets = primarySkin.getInsets();
+                int nKeys = secondaryVK.chars.length;
+                int nRows = (int)Math.floor(Math.sqrt(Math.max(1, nKeys - 2)));
+                int nKeysPerRow = (int)Math.ceil(nKeys / (double)nRows);
+                final double w = insets.getLeft() + insets.getRight() +
+                                 nKeysPerRow * primarySkin.keyWidth + (nKeys - 1) * hGap;
+                final double h = nRows * primarySkin.keyHeight + (nRows-1) * vGap + 5;
+                secondaryVK.setPrefWidth(w);
+                secondaryVK.setMinWidth(USE_PREF_SIZE);
+                secondaryVK.setPrefHeight(h);
+                secondaryVK.setMinHeight(USE_PREF_SIZE);
+                Platform.runLater(new Runnable() {
+                    public void run() {
+                        // Position popup on screen
+                        Point2D nodePoint =
+                            com.sun.javafx.Utils.pointRelativeTo(key, w, h, HPos.CENTER, VPos.TOP,
+                                                                 5, -3, true);
+                        double x = nodePoint.getX();
+                        double y = nodePoint.getY();
+                        Scene scene = key.getScene();
+                        x = Math.min(x, scene.getWindow().getX() + scene.getWidth() - w);
+                        secondaryPopup.show(key.getScene().getWindow(), x, y);
+                    }
+                });
+            }
         } else {
             if (secondaryVK != null) {
                 secondaryVK.setAttachedNode(null);
@@ -687,7 +664,9 @@ if (USE_POPUP) {
         }
     }
 
-    class NewRootPane extends Pane {
+    static class NewRootPane extends Pane {
+        Timeline slideInTimeline;
+        Timeline slideOutTimeline;
         double dragStartY;
 
         NewRootPane(final Region oldRoot) {
@@ -705,11 +684,17 @@ if (USE_POPUP) {
 
             addEventHandler(MOUSE_DRAGGED, new EventHandler<MouseEvent>() {
                 @Override public void handle(MouseEvent e) {
-                    if (fxvk.isVisible()) {
-                        double y =
-                            Math.min(0, Math.max(e.getY() - dragStartY,
-                                                 fxvk.getLayoutY() - oldRoot.getHeight()));
-                        oldRoot.setTranslateY(y);
+                    for (Node child : getChildren()) {
+                        if (child instanceof FXVK) {
+                            FXVK fxvk = (FXVK)child;
+                            if (fxvk.isVisible()) {
+                                double y =
+                                    Math.min(0, Math.max(e.getY() - dragStartY,
+                                                         fxvk.getLayoutY() - oldRoot.getHeight()));
+                                oldRoot.setTranslateY(y);
+                                break;
+                            }
+                        }
                     }
                     e.consume();
                 }
@@ -724,22 +709,12 @@ if (USE_POPUP) {
             return oldRoot.prefHeight(width);
         }
 
-        @Override public void layoutChildren() {
+        private void updateTimelines(FXVK fxvk) {
             double scale = getWidth() / fxvk.prefWidth(-1);
             double rootHeight = getHeight();
             double vkHeight = fxvk.prefHeight(-1) * scale;
 
-            boolean resized = false;
-            if (fxvk.getWidth() != getWidth() || fxvk.getHeight() != vkHeight) {
-                fxvk.resize(getWidth(), vkHeight);
-                resized = true;
-            }
-
-            if (fxvk.getLayoutY() == 0) {
-                fxvk.setLayoutY(rootHeight);
-            }
-
-            slideInTimeline.getKeyFrames().setAll(
+            ((FXVKSkin)fxvk.getSkin()).slideInTimeline.getKeyFrames().setAll(
                 new KeyFrame(Duration.ZERO,
                              new KeyValue(fxvk.visibleProperty(), true),
                              new KeyValue(fxvk.layoutYProperty(), rootHeight)),
@@ -749,8 +724,7 @@ if (USE_POPUP) {
                                           Math.floor(rootHeight - vkHeight),
                                           Interpolator.EASE_BOTH)));
 
-            slideOutTimeline = new Timeline();
-            slideOutTimeline.getKeyFrames().setAll(
+            ((FXVKSkin)fxvk.getSkin()).slideOutTimeline.getKeyFrames().setAll(
                 new KeyFrame(Duration.ZERO,
                              new KeyValue(fxvk.layoutYProperty(),
                                           Math.floor(rootHeight - vkHeight))),
@@ -759,14 +733,51 @@ if (USE_POPUP) {
                                           rootHeight,
                                           Interpolator.EASE_BOTH),
                              new KeyValue(fxvk.visibleProperty(), false)));
+        }
 
-            if (fxvk.isVisible()) {
-                if (fxvk.getLayoutY() >= rootHeight) {
-                    slideOutTimeline.stop();
-                    slideInTimeline.playFromStart();
-                } else if (resized && slideInTimeline.getStatus() == Status.STOPPED
-                                   && slideOutTimeline.getStatus() == Status.STOPPED) {
-                    fxvk.setLayoutY(rootHeight - vkHeight);
+        @Override public void layoutChildren() {
+            for (Node child : getChildren()) {
+                if (child instanceof FXVK) {
+                    final FXVK fxvk = (FXVK)child;
+                    double scale = getWidth() / fxvk.prefWidth(-1);
+                    final double rootHeight = getHeight();
+                    final double vkHeight = fxvk.prefHeight(-1) * scale;
+
+                    boolean resized = false;
+                    if (fxvk.getWidth() != getWidth() || fxvk.getHeight() != vkHeight) {
+                        fxvk.resize(getWidth(), vkHeight);
+                        resized = true;
+                    }
+
+                    if (fxvk.getLayoutY() == 0) {
+                        fxvk.setLayoutY(rootHeight);
+                    }
+
+                    updateTimelines(fxvk);
+
+
+                    if (fxvk.isVisible()) {
+                        if (fxvk.getLayoutY() >= rootHeight) {
+                            slideOutTimeline.stop();
+                            slideInTimeline.playFromStart();
+                        } else if (resized && slideInTimeline.getStatus() == Status.STOPPED
+                                           && slideOutTimeline.getStatus() == Status.STOPPED) {
+                            fxvk.setLayoutY(rootHeight - vkHeight);
+                        }
+                        Platform.runLater(new Runnable() {
+                            public void run() {
+                                Node attachedNode = fxvk.getAttachedNode();
+                                if (attachedNode != null) {
+                                    double oldRootY = oldRoot.getTranslateY();
+                                    double nodeBottom =
+                                        attachedNode.localToScene(attachedNode.getBoundsInLocal()).getMaxY() + 2;
+                                    if (nodeBottom > rootHeight - vkHeight) {
+                                        translatePane(oldRoot, rootHeight - vkHeight - nodeBottom + oldRootY);
+                                    }
+                                }
+                            }
+                        });
+                    }
                 }
             }
         }

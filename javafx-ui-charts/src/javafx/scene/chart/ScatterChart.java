@@ -168,9 +168,9 @@ public class ScatterChart<X,Y> extends XYChart<X,Y> {
                 double y = getYAxis().getDisplayPosition(item.getCurrentY());
                 Node symbol = item.getNode();
                 if (symbol != null) {
-                    symbol.setLayoutX(x);
-                    symbol.setLayoutY(y);
-                    symbol.resize(symbol.prefWidth(-1), symbol.prefHeight(-1));
+                    final double w = symbol.prefWidth(-1);
+                    final double h = symbol.prefHeight(-1);
+                    symbol.resizeRelocate(x-(w/2), y-(h/2),w,h); 
                 }
             }
         }

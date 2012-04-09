@@ -218,6 +218,39 @@ public abstract class LabeledSkinBase<C extends Labeled, B extends BehaviorBase<
         }
     }
 
+    protected double topPadding() {
+        return snapSpace(getInsets().getTop());
+    }
+
+    protected double topLabelPadding() {
+        return snapSpace(getSkinnable().getLabelPadding().getTop());
+    }
+
+    protected double bottomPadding() {
+        return snapSpace(getInsets().getBottom());
+    }
+
+    protected double bottomLabelPadding() {
+        return snapSpace(getSkinnable().getLabelPadding().getBottom());
+    }
+
+    protected double leftPadding() {
+        return snapSpace(getInsets().getLeft());
+    }
+
+    protected double leftLabelPadding() {
+        return snapSpace(getSkinnable().getLabelPadding().getLeft());
+    }
+
+    protected double rightPadding() {
+        return snapSpace(getInsets().getRight());
+    }
+
+    protected double rightLabelPadding() {
+        return snapSpace(getSkinnable().getLabelPadding().getRight());
+    }
+
+
     /**
      * Called whenever some state has changed that affects the text metrics.
      * Changes here will involve invalidating the display text so the next
@@ -339,10 +372,11 @@ public abstract class LabeledSkinBase<C extends Labeled, B extends BehaviorBase<
                     mnemonic_underscore.setEndY(0.0f);
                     mnemonic_underscore.getStyleClass().clear();
                     mnemonic_underscore.getStyleClass().setAll("mnemonic-underline");
+                }
+                if (!getChildren().contains(mnemonic_underscore)) {
                     getChildren().add(mnemonic_underscore);
                 }
-            }
-            else {
+            } else {
                 /*
                 ** we don't need a mnemonic....
                 */
@@ -377,11 +411,8 @@ public abstract class LabeledSkinBase<C extends Labeled, B extends BehaviorBase<
                     (labeled.getContentDisplay() == ContentDisplay.LEFT ||
                     labeled.getContentDisplay() == ContentDisplay.RIGHT);
 
-            Insets padding = getInsets();
-            Insets labelPadding = labeled.getLabelPadding();
-
-            double availableWidth = labeled.getWidth() - padding.getLeft() - padding.getRight() -
-                                    labelPadding.getLeft() - labelPadding.getRight();
+            double availableWidth = labeled.getWidth() - leftPadding() - leftLabelPadding() -
+                                    rightPadding() - rightLabelPadding();
             availableWidth = Math.max(availableWidth, 0);
 
             if (w == -1) {
@@ -399,8 +430,8 @@ public abstract class LabeledSkinBase<C extends Labeled, B extends BehaviorBase<
                     (labeled.getContentDisplay() == ContentDisplay.TOP ||
                     labeled.getContentDisplay() == ContentDisplay.BOTTOM);
 
-            double availableHeight = labeled.getHeight() - padding.getTop() - padding.getBottom() -
-                                     labelPadding.getTop() - labelPadding.getBottom();
+            double availableHeight = labeled.getHeight() - topPadding() - topLabelPadding() -
+                                     bottomPadding() - bottomLabelPadding();
             availableHeight = Math.max(availableHeight, 0);
 
             if (h == -1) {
@@ -481,7 +512,7 @@ public abstract class LabeledSkinBase<C extends Labeled, B extends BehaviorBase<
             // Note that the wrapping width needs to be set to zero before
             // getting the text's real preferred width.
             double w = Math.min(text.prefWidth(-1), textClip.getWidth());
-            text.setWrappingWidth((int)snapSize(w));
+            text.setWrappingWidth(w);
         }
     }
 
@@ -577,10 +608,8 @@ public abstract class LabeledSkinBase<C extends Labeled, B extends BehaviorBase<
         final boolean emptyText = string == null || string.isEmpty();
         final ContentDisplay contentDisplay = labeled.getContentDisplay();
         final double gap = labeled.getGraphicTextGap();
-        final Insets padding = getInsets();
-        final Insets labelPadding = labeled.getLabelPadding();
-        final double widthPadding = padding.getLeft() + padding.getRight() +
-                                    labelPadding.getLeft() + labelPadding.getRight();
+        final double widthPadding = leftPadding() + leftLabelPadding() +
+                                    rightPadding() + rightLabelPadding();
 
         double minTextWidth = 0;
         if (!emptyText) {
@@ -647,10 +676,8 @@ public abstract class LabeledSkinBase<C extends Labeled, B extends BehaviorBase<
                 h = Math.max(textHeight, graphic.minHeight(-1));
             }
         }
-        Insets padding = getInsets();
-        Insets labelPadding = labeled.getLabelPadding();
 
-        return padding.getTop() + h + padding.getBottom() + labelPadding.getTop() - labelPadding.getBottom();
+        return topPadding() + h + bottomPadding() + topLabelPadding() - bottomLabelPadding();
     }
 
     @Override protected double computePrefWidth(double height) {
@@ -659,9 +686,11 @@ public abstract class LabeledSkinBase<C extends Labeled, B extends BehaviorBase<
         final Font font = text.getFont();
         final String string = labeled.getText();
         boolean emptyText = string == null || string.isEmpty();
-        final Insets padding = getInsets();
-        Insets labelPadding = labeled.getLabelPadding();
-        double widthPadding = padding.getLeft() + padding.getRight() + labelPadding.getLeft() + labelPadding.getRight();
+        double widthPadding = leftPadding() + leftLabelPadding() +
+                              rightPadding() + rightLabelPadding();
+        double heightPadding = topPadding() + topLabelPadding() +
+                               bottomPadding() + bottomLabelPadding();
+
         double textWidth = emptyText ? 0 : Utils.computeTextWidth(font, string, 0);
 
         // Now add on the graphic, gap, and padding as appropriate
@@ -683,9 +712,8 @@ public abstract class LabeledSkinBase<C extends Labeled, B extends BehaviorBase<
         final Font font = text.getFont();
         final ContentDisplay contentDisplay = labeled.getContentDisplay();
         final double gap = labeled.getGraphicTextGap();
-        final Insets padding = getInsets();
-        final Insets labelPadding = labeled.getLabelPadding();
-        final double widthPadding = padding.getLeft() + padding.getRight() + labelPadding.getLeft() + labelPadding.getRight();
+        double widthPadding = leftPadding() + leftLabelPadding() +
+                              rightPadding() + rightLabelPadding();
 
         String str = labeled.getText();
         if (str != null && str.endsWith("\n")) {
@@ -715,7 +743,7 @@ public abstract class LabeledSkinBase<C extends Labeled, B extends BehaviorBase<
             }
         }
 
-        return padding.getTop() + h + padding.getBottom() + labelPadding.getTop() + labelPadding.getBottom();
+        return topPadding() + h + bottomPadding() + topLabelPadding() + bottomLabelPadding();
     }
 
     @Override protected double computeMaxWidth(double height) {
@@ -742,9 +770,7 @@ public abstract class LabeledSkinBase<C extends Labeled, B extends BehaviorBase<
             }
         }
                 
-        Insets padding = getInsets();
-        Insets labelPadding = labeled.getLabelPadding();
-        return padding.getTop() + labelPadding.getTop() + h;
+        return topPadding() + topLabelPadding() + h;
     }
 
     public TextBinding bindings;
@@ -768,12 +794,10 @@ public abstract class LabeledSkinBase<C extends Labeled, B extends BehaviorBase<
      *  - position the graphic and text
      */
     @Override protected void layoutChildren() {
-        final Insets padding = getInsets();
-
-        final double x = padding.getLeft();
-        final double y = padding.getTop();
-        final double w = getWidth() - (padding.getLeft() + padding.getRight());
-        final double h = getHeight() - (padding.getTop() + padding.getBottom());
+        final double x = leftPadding();
+        final double y = topPadding();
+        final double w = getWidth() - (leftPadding() + rightPadding());
+        final double h = getHeight() - (topPadding() + bottomPadding());
 
         layoutLabelInArea(x, y, w, h);
     }
@@ -825,11 +849,10 @@ public abstract class LabeledSkinBase<C extends Labeled, B extends BehaviorBase<
         final boolean ignoreGraphic = isIgnoreGraphic();
         final boolean ignoreText = isIgnoreText();
 
-        final Insets labelPadding = labeled.getLabelPadding();
-        x += labelPadding.getLeft();
-        y += labelPadding.getTop();
-        w -= labelPadding.getLeft() + labelPadding.getRight();
-        h -= labelPadding.getTop() + labelPadding.getBottom();
+        x += leftLabelPadding();
+        y += topLabelPadding();
+        w -= leftLabelPadding() + rightLabelPadding();
+        h -= topLabelPadding() + bottomLabelPadding();
 
         // Compute some standard useful numbers for the graphic, text, and gap
         double graphicWidth;

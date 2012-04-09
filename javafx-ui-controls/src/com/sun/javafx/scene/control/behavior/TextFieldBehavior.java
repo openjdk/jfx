@@ -42,6 +42,8 @@ import java.util.List;
 import com.sun.javafx.scene.control.skin.TextFieldSkin;
 import com.sun.javafx.scene.text.HitInfo;
 
+import static com.sun.javafx.PlatformUtil.*;
+
 /**
  * Text field behavior.
  */
@@ -216,7 +218,7 @@ public class TextFieldBehavior extends TextInputControlBehavior<TextField> {
                     // selection, and set the mark to be the other side and
                     // the dot to be the new position.
                     // everywhere else we just move the dot.
-                    if(macOS) {
+                    if (isMac()) {
                         textField.extendSelection(i);
                     } else {
                         skin.positionCaret(hit, true);
@@ -289,7 +291,11 @@ public class TextFieldBehavior extends TextInputControlBehavior<TextField> {
     protected void mouseDoubleClick(HitInfo hit) {
         final TextField textField = getControl();
         textField.previousWord();
-        textField.selectNextWord();
+        if (isWindows()) {
+            textField.selectNextWord();
+        } else {
+            textField.selectEndOfNextWord();
+        }
     }
 
     protected void mouseTripleClick(HitInfo hit) {

@@ -46,6 +46,7 @@ import com.sun.javafx.event.EventHandlerManager;
 import java.lang.ref.Reference;
 import java.util.Collections;
 import java.util.List;
+import javafx.beans.DefaultProperty;
 import javafx.beans.property.ReadOnlyBooleanProperty;
 import javafx.beans.property.ReadOnlyBooleanWrapper;
 import javafx.beans.property.ReadOnlyObjectProperty;
@@ -59,6 +60,7 @@ import javafx.beans.property.ReadOnlyObjectWrapper;
  * <p>When the user clicks
  * on a Tab in the TabPane the Tab content becomes visible to the user.</p>
  */
+@DefaultProperty("content")
 public class Tab implements EventTarget {
 
     /***************************************************************************

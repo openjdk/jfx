@@ -12,13 +12,19 @@ import javafx.event.EventHandler;
 import javafx.event.EventType;
 import javafx.scene.Group;
 import javafx.scene.Scene;
+import javafx.scene.control.Button;
+import javafx.scene.control.CheckBox;
+import javafx.scene.control.Label;
+import javafx.scene.control.RadioButton;
 import javafx.scene.control.ScrollPane;
 import javafx.scene.input.MouseButton;
 import javafx.scene.input.MouseEvent;
 import javafx.scene.input.ScrollEvent;
+import javafx.scene.layout.HBox;
 import javafx.scene.layout.Pane;
 import javafx.scene.layout.Region;
 import javafx.scene.layout.StackPane;
+import javafx.scene.layout.VBox;
 import javafx.scene.shape.Rectangle;
 import javafx.stage.Stage;
 
@@ -567,6 +573,50 @@ public class ScrollPaneSkinTest {
     }
 
     
+    /*
+    ** check if 'reduced-size' scrollbars leave a gap
+    ** at the right edge 
+    */
+    @Test public void checkForScrollBarGaps() {
+   
+        HBox hbox1 = new HBox(20);
+        VBox vbox1a = new VBox(10);
+        vbox1a.getChildren().addAll(new Label("one"), new Button("two"), new CheckBox("three"), new RadioButton("four"), new Label("five"));
+        VBox vbox1b = new VBox(10);
+        vbox1b.getChildren().addAll(new Label("one"), new Button("two"), new CheckBox("three"), new RadioButton("four"), new Label("five"));
+        hbox1.getChildren().addAll(vbox1a, vbox1b);
+        scrollPane.setContent(hbox1);
+        scrollPane.setStyle("-fx-background-color: red;-fx-border-color:green;");
+        scrollPane.setFocusTraversable(false);
+        scrollPane.setPrefSize(50, 50);
+
+
+        Scene scene = new Scene(new Group(), 400, 400);
+        ((Group) scene.getRoot()).getChildren().clear();
+        ((Group) scene.getRoot()).getChildren().add(scrollPane);
+        Stage stage = new Stage();
+        stage.setScene(scene);
+        stage.show();
+        
+
+        /*
+        ** did it work?
+        ** check that the scrollbar is right at the border of the scrollpane, and
+        ** not at the padding.
+        */
+        ScrollPaneSkinMock skin = (ScrollPaneSkinMock) scrollPane.getSkin();
+
+        double skinWidth = skin.getWidth();
+        double vsbPosAndWidth = skin.getVsbX()+skin.getVsbWidth()+(skin.getInsets().getRight() - skin.getPadding().getRight());
+        assertEquals(skinWidth,  vsbPosAndWidth, 0.1);
+
+        double skinHeight = skin.getHeight();
+        double hsbPosAndHeight = skin.getHsbY()+skin.getHsbHeight()+(skin.getInsets().getBottom() - skin.getPadding().getBottom());
+        assertEquals(skinHeight,  hsbPosAndHeight, 0.1);
+
+    }
+
+    
     public static final class ScrollPaneSkinMock extends ScrollPaneSkin {
         boolean propertyChanged = false;
         int propertyChangeCount = 0;
@@ -587,7 +637,18 @@ public class ScrollPaneSkinTest {
         boolean isVSBarVisible() {
             return vsb.isVisible();
         }
-
+        double getVsbX() {
+            return vsb.getLayoutX();
+        }
+        double getVsbWidth() {
+            return vsb.getWidth();
+        }
+        double getHsbY() {
+            return hsb.getLayoutY();
+        }
+        double getHsbHeight() {
+            return hsb.getHeight();
+        }
     }
 
     private static class MouseEventGenerator {

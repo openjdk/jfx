@@ -229,12 +229,17 @@ public abstract class TextInputControlSkin<T extends TextInputControl, B extends
     protected final Path caretPath = new Path();
 
     static boolean useVK = false;
+    static int vkType = -1;
     public void toggleUseVK() {
-        useVK = !useVK;
-        if (useVK) {
+        vkType = (vkType + 1) % 5;
+        if (vkType < 4) {
+            useVK = true;
+            getSkinnable().setImpl_virtualKeyboardType(vkType);
             FXVK.attach(getSkinnable());
         } else {
             FXVK.detach();
+            vkType = -1;
+            useVK = false;
         }
     }
 
@@ -304,13 +309,15 @@ public abstract class TextInputControlSkin<T extends TextInputControl, B extends
                 }
             }
 
+            final MenuItem undoMI   = new ContextMenuItem("Undo");
+            final MenuItem redoMI   = new ContextMenuItem("Redo");
             final MenuItem cutMI    = new ContextMenuItem("Cut");
             final MenuItem copyMI   = new ContextMenuItem("Copy");
             final MenuItem pasteMI  = new ContextMenuItem("Paste");
             final MenuItem deleteMI = new ContextMenuItem("DeleteSelection");
             final MenuItem selectMI = new ContextMenuItem("SelectAll");
 
-            final ContextMenu cm = new ContextMenu(cutMI, copyMI, pasteMI, deleteMI,
+            final ContextMenu cm = new ContextMenu(undoMI, redoMI, cutMI, copyMI, pasteMI, deleteMI,
                                                    new SeparatorMenuItem(), selectMI);
 
             cm.setOnShowing(new EventHandler<WindowEvent>() {
@@ -318,6 +325,8 @@ public abstract class TextInputControlSkin<T extends TextInputControl, B extends
                     boolean hasSelection = (textInput.getSelection().getLength() > 0);
                     boolean maskText = (maskText("A") != "A");
 
+                    undoMI.setDisable(!getBehavior().canUndo());
+                    redoMI.setDisable(!getBehavior().canRedo());
                     cutMI.setDisable(maskText || !hasSelection);
                     copyMI.setDisable(maskText || !hasSelection);
                     pasteMI.setDisable(!Clipboard.getSystemClipboard().hasString());

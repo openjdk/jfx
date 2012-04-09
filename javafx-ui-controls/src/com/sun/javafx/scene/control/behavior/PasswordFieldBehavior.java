@@ -23,32 +23,32 @@
  * questions.
  */
 
-package com.sun.javafx.scene.control.skin;
+package com.sun.javafx.scene.control.behavior;
 
 import javafx.scene.control.PasswordField;
-import javafx.scene.control.TextField;
 
-import com.sun.javafx.scene.control.behavior.PasswordFieldBehavior;
+import com.sun.javafx.scene.text.HitInfo;
+
 
 /**
- * Password field skin.
+ * Password field behavior.
  */
-public class PasswordFieldSkin extends TextFieldSkin {
-    public static final char BULLET = '\u2022';
+public class PasswordFieldBehavior extends TextFieldBehavior {
 
-    public PasswordFieldSkin(PasswordField passwordField) {
-        super(passwordField, new PasswordFieldBehavior(passwordField));
+    public PasswordFieldBehavior(PasswordField passwordField) {
+        super(passwordField);
     }
 
-    @Override protected String maskText(String txt) {
-        TextField textField = getSkinnable();
-
-        int n = textField.getLength();
-        StringBuilder passwordBuilder = new StringBuilder(n);
-        for (int i=0; i<n; i++) {
-            passwordBuilder.append(BULLET);
-        }
-
-        return passwordBuilder.toString();
+    // RT-18711 & RT-18854: Stub out word based navigation and editing
+    // for security reasons.
+    protected void deletePreviousWord() { }
+    protected void deleteNextWord() { }
+    protected void selectPreviousWord() { }
+    protected void selectNextWord() { }
+    protected void previousWord() { }
+    protected void nextWord() { }
+    protected void mouseDoubleClick(HitInfo hit) {
+        getControl().selectAll();
     }
+
 }

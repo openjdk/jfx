@@ -52,7 +52,9 @@ public class Text_cssMethods_Test extends CssMethodsTestBase {
                    "-fx-text-alignment", TextAlignment.CENTER),
             config(TEST_TEXT, "textOrigin", VPos.BASELINE,
                    "-fx-text-origin", VPos.BOTTOM),
-            config(TEST_TEXT, "translateX", 0.0, "-fx-translate-x", 10.0)
+            config(TEST_TEXT, "translateX", 0.0, "-fx-translate-x", 10.0),
+            config(TEST_TEXT, "fontSmoothingType", FontSmoothingType.LCD,
+                "-fx-font-smoothing-type", FontSmoothingType.GRAY)
         });
     }
 

@@ -158,8 +158,12 @@ public class TextFieldSkin extends TextInputControlSkin<TextField, TextFieldBeha
      * @param textField not null
      */
     public TextFieldSkin(final TextField textField) {
-        super(textField, new TextFieldBehavior(textField));
-        getBehavior().setTextFieldSkin(this);
+        this(textField, new TextFieldBehavior(textField));
+    }
+
+    public TextFieldSkin(final TextField textField, final TextFieldBehavior behavior) {
+        super(textField, behavior);
+        behavior.setTextFieldSkin(this);
 
 
         caretPosition = new IntegerBinding() {
@@ -332,6 +336,15 @@ public class TextFieldSkin extends TextInputControlSkin<TextField, TextFieldBeha
             }
         };
 
+        textField.textProperty().addListener(new InvalidationListener() {
+            @Override public void invalidated(Observable observable) {
+                if (!getBehavior().isEditing()) {
+                    // Text changed, but not by user action
+                    updateTextPos();
+                }
+            }
+        });
+
         if (usePromptText.get()) {
             createPromptNode();
         }
@@ -407,6 +420,10 @@ public class TextFieldSkin extends TextInputControlSkin<TextField, TextFieldBeha
         Insets padding = getInsets();
 
         return lineHeight + (padding.getTop() + padding.getBottom());
+    }
+
+    @Override protected double computeMaxHeight(double width) {
+        return getSkinnable().prefHeight(width);
     }
 
     @Override
@@ -530,7 +547,8 @@ public class TextFieldSkin extends TextInputControlSkin<TextField, TextFieldBeha
 
           case LEFT:
           default:
-            if (textBounds.getMinX() < clipBounds.getMinX() + caretWidth / 2) {
+            if (textBounds.getMinX() < clipBounds.getMinX() + caretWidth / 2 &&
+                textBounds.getMaxX() <= clipBounds.getMaxX()) {
                 double delta = caretMaxXOld - caretBounds.getMaxX() - textTranslateX.get();
                 if (textBounds.getMaxX() + delta < clipBounds.getMaxX()) {
                     if (textMaxXOld <= clipBounds.getMaxX()) {

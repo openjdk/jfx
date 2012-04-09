@@ -39,6 +39,8 @@ import com.sun.javafx.scene.control.skin.TextAreaSkin;
 import com.sun.javafx.scene.text.HitInfo;
 import static javafx.scene.input.KeyCode.*;
 import static javafx.scene.input.KeyEvent.*;
+import static com.sun.javafx.PlatformUtil.*;
+
 
 /**
  * Text area behavior.
@@ -71,7 +73,7 @@ public class TextAreaBehavior extends TextInputControlBehavior<TextArea> {
         TEXT_AREA_BINDINGS.add(new KeyBinding(PAGE_UP, KEY_PRESSED, "SelectPreviousPage").shift()); // new
         TEXT_AREA_BINDINGS.add(new KeyBinding(PAGE_DOWN, KEY_PRESSED, "SelectNextPage").shift()); // new
         // Platform specific settings
-        if (PlatformUtil.isMac()) {
+        if (isMac()) {
             TEXT_AREA_BINDINGS.add(new KeyBinding(LEFT, KEY_PRESSED, "LineStart").meta()); // changed
             TEXT_AREA_BINDINGS.add(new KeyBinding(KP_LEFT, KEY_PRESSED, "LineStart").meta()); // changed
             TEXT_AREA_BINDINGS.add(new KeyBinding(RIGHT, KEY_PRESSED, "LineEnd").meta()); // changed
@@ -283,7 +285,7 @@ public class TextAreaBehavior extends TextInputControlBehavior<TextArea> {
                     // selection, and set the mark to be the other side and
                     // the dot to be the new position.
                     // everywhere else we just move the dot.
-                    if(macOS) {
+                    if (isMac()) {
                         textArea.extendSelection(i);
                     } else {
                         skin.positionCaret(hit, true, false);
@@ -332,7 +334,11 @@ public class TextAreaBehavior extends TextInputControlBehavior<TextArea> {
     protected void mouseDoubleClick(HitInfo hit) {
         final TextArea textArea = getControl();
         textArea.previousWord();
-        textArea.selectNextWord();
+        if (isWindows()) {
+            textArea.selectNextWord();
+        } else {
+            textArea.selectEndOfNextWord();
+        }
     }
 
     protected void mouseTripleClick(HitInfo hit) {

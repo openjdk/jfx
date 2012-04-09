@@ -31,6 +31,7 @@ import javafx.beans.Observable;
 import javafx.beans.binding.IntegerBinding;
 import javafx.beans.binding.StringBinding;
 import javafx.beans.property.BooleanProperty;
+import javafx.beans.property.IntegerProperty;
 import javafx.beans.property.ReadOnlyIntegerProperty;
 import javafx.beans.property.ReadOnlyIntegerWrapper;
 import javafx.beans.property.ReadOnlyObjectProperty;
@@ -38,6 +39,7 @@ import javafx.beans.property.ReadOnlyObjectWrapper;
 import javafx.beans.property.ReadOnlyStringProperty;
 import javafx.beans.property.ReadOnlyStringWrapper;
 import javafx.beans.property.SimpleBooleanProperty;
+import javafx.beans.property.SimpleIntegerProperty;
 import javafx.beans.property.StringProperty;
 import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableStringValue;
@@ -1037,6 +1039,42 @@ public abstract class TextInputControl extends Control {
                 doSet(observable.getValue());
             }
         }
+    }
+
+    /*
+     * Virtual keyboard API. This is not yet final.
+     *
+     * 0: Text, 1: Numeric, 2: URL, 3: Email address
+     *
+     * TODO: Use mnemonics until VK API is avaiulable in Quantum.
+     */
+
+    /** @treatAsPrivate implementation detail */
+    private IntegerProperty impl_virtualKeyboardType = new SimpleIntegerProperty(this, "impl_virtualKeyboardType", 0);
+
+    /**
+     * @treatAsPrivate implementation detail
+     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
+     */
+    @Deprecated
+    public final void setImpl_virtualKeyboardType(int value) { impl_virtualKeyboardType.set(value); }
+    /**
+     * @treatAsPrivate implementation detail
+     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
+     */
+    @Deprecated
+    public final int getImpl_virtualKeyboardType() { return impl_virtualKeyboardType.get(); }
+    /**
+     * @treatAsPrivate implementation detail
+     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
+     */
+    @Deprecated
+    public final IntegerProperty impl_virtualKeyboardTypePoperty() { return impl_virtualKeyboardType; }
+
+
+
+    @Deprecated
+    public void impl_enableVirtualKeyboard(int type) {
     }
 
     /***************************************************************************

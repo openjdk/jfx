@@ -62,11 +62,10 @@ import javafx.collections.ObservableList;
 import javafx.event.EventHandler;
 import javafx.geometry.HPos;
 import javafx.geometry.Orientation;
-import javafx.geometry.Pos;
 import javafx.geometry.VPos;
-import javafx.scene.Node;
 import javafx.scene.control.*;
 import javafx.scene.input.MouseEvent;
+import javafx.scene.input.SwipeEvent;
 import javafx.scene.layout.Region;
 import javafx.scene.layout.StackPane;
 import javafx.scene.shape.Rectangle;
@@ -75,7 +74,7 @@ import javafx.util.Callback;
 public class PaginationSkin<T> extends SkinBase<Pagination<T>, PaginationBehavior<T>>  {
 
     private Pagination<T> pagination;
-    private PaginationListView<T> paginationListView;    
+    private PaginationListView<T> paginationListView;
     private ObservableList dummyListViewItems;
 
     private Rectangle clipRect;
@@ -85,7 +84,6 @@ public class PaginationSkin<T> extends SkinBase<Pagination<T>, PaginationBehavio
     private int previousIndex;
     private int currentIndex;
     private int toIndex;
-    private int totalNumberOfPages;
     private int numberOfPages;
     private int numberOfVisiblePages;
 
@@ -94,60 +92,82 @@ public class PaginationSkin<T> extends SkinBase<Pagination<T>, PaginationBehavio
 
         setManaged(false);
         clipRect = new Rectangle();
-        setClip(clipRect);
-        
+        //setClip(clipRect);
+
         this.pagination = pagination;
-        this.paginationListView = new PaginationListView<T>();                
+        this.paginationListView = new PaginationListView<T>();
         updateListViewItems();
         updateCellFactory();
-        resetIndexes();
-                
-        this.navigation = new NavigationControl();        
-        
+        resetIndexes(true);
+
+        this.navigation = new NavigationControl();
+
         getChildren().addAll(paginationListView, navigation);
 
         pagination.numberOfVisiblePagesProperty().addListener(new InvalidationListener() {
             @Override
             public void invalidated(Observable o) {
-                resetIndexes();
-                getChildren().remove(navigation);
-                navigation = new NavigationControl();
-                getChildren().add(navigation);
+                resetIndexes(false);
+                navigation.initializePageIndicators();
+                navigation.updatePageIndicators();
             }
         });
-        
+
         registerChangeListener(pagination.itemsPerPageProperty(), "ITEMS_PER_PAGE");
         registerChangeListener(pagination.numberOfItemsProperty(), "NUMBER_OF_ITEMS");
         registerChangeListener(pagination.pageIndexProperty(), "PAGE_INDEX");
         registerChangeListener(pagination.pageFactoryProperty(), "PAGE_FACTORY");
+
+        setOnSwipeLeft(new EventHandler<SwipeEvent>() {
+            @Override
+            public void handle(SwipeEvent t) {
+                paginationListView.getSelectionModel().selectNext();
+            }
+        });
+
+        setOnSwipeRight(new EventHandler<SwipeEvent>() {
+            @Override
+            public void handle(SwipeEvent t) {
+                paginationListView.getSelectionModel().selectPrevious();
+            }
+        });
     }
 
-    private void resetIndexes() {
+    public MultipleSelectionModel getSelectionModel() {
+        return paginationListView.getSelectionModel();
+    }
+
+    private void resetIndexes(boolean usePageIndex) {
         numberOfVisiblePages = getSkinnable().getNumberOfVisiblePages();
-        totalNumberOfPages = totalNumberOfPages();
-        numberOfPages = totalNumberOfPages;
-        if (totalNumberOfPages > numberOfVisiblePages) {
+        numberOfPages = totalNumberOfPages();
+        if (totalNumberOfPages() > numberOfVisiblePages) {
             numberOfPages = numberOfVisiblePages;
+        } else {
+            // If the number of pages is less than the visible number of pages
+            // we want to set it to the new value.
+            getSkinnable().setNumberOfVisiblePages(numberOfPages);
         }
 
-        fromIndex = 0;        
+        fromIndex = 0;
         previousIndex = 0;
-        currentIndex = getSkinnable().getPageIndex();
-        toIndex = numberOfPages - 1;
+        currentIndex = usePageIndex ? getSkinnable().getPageIndex() : 0;
+        toIndex = fromIndex + (numberOfPages - 1);
+
+        paginationListView.reset();
         paginationListView.getSelectionModel().select(currentIndex);
     }
 
-    private void updateListViewItems() {        
+    private void updateListViewItems() {
         if (dummyListViewItems == null) {
             dummyListViewItems = FXCollections.observableArrayList();
         } else {
+            dummyListViewItems.clear();
             dummyListViewItems.removeListener(weakListViewItemsListener);
         }
 
         for (int i = 0; i < totalNumberOfPages(); i++) {
             dummyListViewItems.add(i);
         }
-        paginationListView.setItems(null);
         paginationListView.setItems(dummyListViewItems);
 
         if (dummyListViewItems != null) {
@@ -165,8 +185,8 @@ public class PaginationSkin<T> extends SkinBase<Pagination<T>, PaginationBehavio
     private final WeakListChangeListener weakListViewItemsListener =
             new WeakListChangeListener(listViewItemsListener);
 
-    private void updateCellFactory() {        
-        Callback<ListView<T>, ListCell<T>> cell = createCellFactory();        
+    private void updateCellFactory() {
+        Callback<ListView<T>, ListCell<T>> cell = createCellFactory();
         paginationListView.setCellFactory(cell);
     }
 
@@ -176,7 +196,7 @@ public class PaginationSkin<T> extends SkinBase<Pagination<T>, PaginationBehavio
                 return new PaginationCell<T>() {
                     @Override public void updateItem(T item, boolean empty) {
                         super.updateItem(item, empty);
-
+                        setContentDisplay(ContentDisplay.GRAPHIC_ONLY);
                         if (empty || item == null) {
                             setText(null);
                             setGraphic(null);
@@ -192,17 +212,34 @@ public class PaginationSkin<T> extends SkinBase<Pagination<T>, PaginationBehavio
     }
 
     private int totalNumberOfPages() {
-        return getSkinnable().getNumberOfItems()/getSkinnable().getItemsPerPage();
+        int totalNumberOfPages = getSkinnable().getNumberOfItems()/getSkinnable().getItemsPerPage();
+        if (getSkinnable().getNumberOfItems()%getSkinnable().getItemsPerPage() != 0) {
+            // Add the remaining to the next page.
+            totalNumberOfPages += 1;
+        }
+        return totalNumberOfPages;
     }
-                    
+
     @Override protected void handleControlPropertyChanged(String p) {
         super.handleControlPropertyChanged(p);
-        // TODO need to implement
-        if (p == "ITEMS_PER_PAGE") {            
-        } else if (p == "NUMBER_OF_ITEMS") {            
+        if (p == "ITEMS_PER_PAGE") {
+            updateListViewItems();
+            resetIndexes(false);
+            navigation.initializePageIndicators();
+            navigation.updatePageIndicators();
+        } else if (p == "NUMBER_OF_ITEMS") {
+            updateListViewItems();
+            updateCellFactory();
+            resetIndexes(false);
+            navigation.initializePageIndicators();
+            navigation.updatePageIndicators();
         } else if (p == "PAGE_INDEX") {
+            paginationListView.getSelectionModel().select(getSkinnable().getPageIndex());
         } else if (p == "PAGE_FACTORY") {
+            updateCellFactory();
+            resetIndexes(false);
         }
+        requestLayout();
     }
 
     @Override protected void setWidth(double value) {
@@ -259,41 +296,38 @@ public class PaginationSkin<T> extends SkinBase<Pagination<T>, PaginationBehavio
             StackPane leftArrow = new StackPane();
             leftArrow.getStyleClass().add("left-arrow");
             leftArrowButton = new StackPane();
-            leftArrowButton.getStyleClass().add("arrow-button");
+            leftArrowButton.getStyleClass().add("page-navigation");
             leftArrowButton.getChildren().setAll(leftArrow);
 
             StackPane rightArrow = new StackPane();
             rightArrow.getStyleClass().add("right-arrow");
             rightArrowButton = new StackPane();
-            rightArrowButton.getStyleClass().add("arrow-button");
+            rightArrowButton.getStyleClass().add("page-navigation");
             rightArrowButton.getChildren().setAll(rightArrow);
 
             indicatorButton = new ArrayList<IndicatorButton>();
 
             getChildren().addAll(leftArrowButton, rightArrowButton);
-            setupPageIndicators();
-            setupEventHandlers();
-            indicatorButton.get(0).setSelected(true);
-            leftArrowButton.setVisible(false);
+            initializeNavigationHandlers();
+            initializePageIndicators();
+            updatePageIndex();
         }
 
-        private void setupEventHandlers() {
+        private void initializeNavigationHandlers() {
             leftArrowButton.setOnMousePressed(new EventHandler<MouseEvent>() {
                 @Override
                 public void handle(MouseEvent arg0) {
                     paginationListView.getSelectionModel().selectPrevious();
                     //System.out.println("LEFT BUTTON " + paginationListView.getSelectionModel().getSelectedIndex());
-                    paginationListView.show(paginationListView.getSelectionModel().getSelectedIndex());
                     requestLayout();
                 }
             });
 
             rightArrowButton.setOnMousePressed(new EventHandler<MouseEvent>() {
                 @Override
-                public void handle(MouseEvent arg0) {                   
+                public void handle(MouseEvent arg0) {
                     paginationListView.getSelectionModel().selectNext();
                     //System.out.println("RIGHT BUTTON " + paginationListView.getSelectionModel().getSelectedIndex() + " TNP " + (totalNumberOfPages - 1));
-                    paginationListView.show(paginationListView.getSelectionModel().getSelectedIndex());
                     requestLayout();
                 }
             });
@@ -303,39 +337,12 @@ public class PaginationSkin<T> extends SkinBase<Pagination<T>, PaginationBehavio
                 public void changed(ObservableValue<? extends Number> arg0, Number arg1, Number arg2) {
                     previousIndex = arg1.intValue();
                     currentIndex = arg2.intValue();
-
-                    //System.out.println("\nSELECT PROPERTY FROM " + fromIndex + " TO " + toIndex + " PREVIOUS " + previousIndex + " CURRENT "+ currentIndex);
-                    if (currentIndex == 0) {
-                        // Grey out the left arrow we are at the beginning.
-                        leftArrowButton.setVisible(false);
-                    } else if (currentIndex == (totalNumberOfPages - 1)) {
-                        // Grey out the right arrow we reached the end.
-                        rightArrowButton.setVisible(false);
-                    } else {
-                        leftArrowButton.setVisible(true);
-                        rightArrowButton.setVisible(true);
-                        if (numberOfPages == numberOfVisiblePages) {
-                            scroll();
-                        }
-                    }
-                    // Update the current page index
-                    pagination.setPageIndex(currentIndex);
-                    
-                    // Update the indictor buttons
-                    for (int i = 0; i < indicatorButton.size(); i++) {
-                        if (indicatorButton.get(i).getPageNumber() == previousIndex) {
-                            indicatorButton.get(i).setSelected(false);
-                        }
-                        if (indicatorButton.get(i).getPageNumber() == currentIndex) {
-                            indicatorButton.get(i).setSelected(true);
-                        }
-                    }
-                    requestLayout();
+                    updatePageIndex();
                 }
             });
         }
 
-        private void setupPageIndicators() {
+        private void initializePageIndicators() {
             if (!indicatorButton.isEmpty()) {
                 getChildren().removeAll(indicatorButton);
                 indicatorButton.clear();
@@ -347,7 +354,35 @@ public class PaginationSkin<T> extends SkinBase<Pagination<T>, PaginationBehavio
             getChildren().addAll(indicatorButton);
         }
 
-        private void scroll() {
+        private void updatePageIndicators() {
+            for (int i = 0; i < indicatorButton.size(); i++) {
+                if (indicatorButton.get(i).getPageNumber() == previousIndex) {
+                    indicatorButton.get(i).setSelected(false);
+                }
+                if (indicatorButton.get(i).getPageNumber() == currentIndex) {
+                    indicatorButton.get(i).setSelected(true);
+                }
+            }
+        }
+
+        private void updatePageIndex() {
+            //System.out.println("SELECT PROPERTY FROM " + fromIndex + " TO " + toIndex + " PREVIOUS " + previousIndex + " CURRENT "+ currentIndex + " NOP " + numberOfPages + " NOVP " + numberOfVisiblePages);
+            if (currentIndex >= 0 && currentIndex <= (totalNumberOfPages() - 1)) {
+                if (numberOfPages == numberOfVisiblePages) {
+                    if (scroll()) {
+                        initializePageIndicators();
+                    }
+                }
+                // Update the current page index
+                pagination.setPageIndex(currentIndex);
+                updatePageIndicators();
+                requestLayout();
+            }
+        }
+
+        // Only scroll to the next set when the current index is at the start or the end of the set.
+        // Return true only if we have scrolled to the next/previous set.
+        private boolean scroll() {
             if (previousIndex < currentIndex && currentIndex % numberOfVisiblePages == 0) {
                 // Scroll to the right
                 fromIndex = currentIndex;
@@ -357,12 +392,18 @@ public class PaginationSkin<T> extends SkinBase<Pagination<T>, PaginationBehavio
                 toIndex = currentIndex;
                 fromIndex = toIndex - (numberOfVisiblePages - 1);
             } else {
-                return;
+                // We need to scroll if the currentIndex is out of range.
+                if (currentIndex < fromIndex || currentIndex > toIndex) {
+                    fromIndex = currentIndex - (currentIndex % numberOfVisiblePages);
+                    toIndex = fromIndex + (numberOfVisiblePages - 1);
+                } else {
+                    return false;
+                }
             }
 
             // We have gone past the total number of pages
-            if (toIndex > totalNumberOfPages - 1) {
-                toIndex = totalNumberOfPages - 1;
+            if (toIndex > totalNumberOfPages() - 1) {
+                toIndex = totalNumberOfPages() - 1;
             }
 
             // We have gone past the starting page
@@ -370,8 +411,7 @@ public class PaginationSkin<T> extends SkinBase<Pagination<T>, PaginationBehavio
                 fromIndex = 0;
                 toIndex = fromIndex + (numberOfVisiblePages - 1);
             }
-            //System.out.println("SCROLL from " + fromIndex + " to " + toIndex + " previous " + previousIndex + " current " + currentIndex);
-            setupPageIndicators();
+            return true;
         }
 
         @Override protected double computeMinWidth(double height) {
@@ -428,6 +468,24 @@ public class PaginationSkin<T> extends SkinBase<Pagination<T>, PaginationBehavio
             double arrowButtonY = top + Utils.computeYOffset(height, leftArrowHeight, VPos.CENTER);
             double indicatorButtonY = top + Utils.computeYOffset(height, indicatorHeight, VPos.CENTER);
 
+            leftArrowButton.setVisible(true);
+            rightArrowButton.setVisible(true);
+
+            if (currentIndex == 0) {
+                // Grey out the left arrow if we are at the beginning.
+                leftArrowButton.setVisible(false);
+            }
+            if (currentIndex == (totalNumberOfPages() - 1)) {
+                // Grey out the right arrow if we have reached the end.
+                rightArrowButton.setVisible(false);
+            }
+
+            if (previousIndex < 0) {
+                paginationListView.showOffset(0, paginationListView.getSelectionModel().getSelectedIndex());
+            } else {
+                paginationListView.showOffset(currentIndex - previousIndex, paginationListView.getSelectionModel().getSelectedIndex());
+            }
+
             leftArrowButton.resize(leftArrowWidth, leftArrowHeight);
 
             positionInArea(leftArrowButton, left, arrowButtonY, leftArrowWidth, leftArrowHeight, 0, HPos.CENTER, VPos.CENTER);
@@ -451,7 +509,7 @@ public class PaginationSkin<T> extends SkinBase<Pagination<T>, PaginationBehavio
         private boolean selected;
 
         public IndicatorButton(int pageNumber) {
-            getStyleClass().add("arrow-button");
+            getStyleClass().add("page-navigation");
             this.selected = false;
             this.pageNumber = pageNumber;
             pageIndicator = new Label(Integer.toString(this.pageNumber + 1));
@@ -478,19 +536,18 @@ public class PaginationSkin<T> extends SkinBase<Pagination<T>, PaginationBehavio
                     // We do not need to update the selection if it has not changed.
                     if (selected != IndicatorButton.this.pageNumber) {
                         paginationListView.getSelectionModel().select(IndicatorButton.this.pageNumber);
-                        paginationListView.show(paginationListView.getSelectionModel().getSelectedIndex());
                         requestLayout();
                     }
                 }
             });
         }
 
-        private final void setIndicatorType() {
+        private void setIndicatorType() {
             if (getSkinnable().getStyleClass().contains(Pagination.STYLE_CLASS_BULLET)) {
-                indicator.getStyleClass().setAll("bullet-indicator");
+                indicator.getStyleClass().setAll("bullet");
                 indicator.getChildren().remove(pageIndicator);
             } else {
-                indicator.getStyleClass().setAll("number-indicator");
+                indicator.getStyleClass().setAll("number");
                 indicator.getChildren().setAll(pageIndicator);
             }
         }
@@ -532,15 +589,31 @@ public class PaginationSkin<T> extends SkinBase<Pagination<T>, PaginationBehavio
             StyleManager.getInstance().getPseudoclassMask("selected");
 
     class PaginationListView<T> extends ListView<T> {
+        private int previousIndex;
         public PaginationListView() {
             super();
-            setId("list-view");
             setOrientation(Orientation.HORIZONTAL);
-            getSelectionModel().setSelectionMode(SelectionMode.SINGLE);            
+            getSelectionModel().setSelectionMode(SelectionMode.SINGLE);
+            previousIndex = -1;
         }
 
         public void show(int index) {
-            getProperties().put(VirtualContainerBase.SCROLL_TO_INDEX_TOP, index);
+            if (previousIndex != index) {
+                getProperties().put(VirtualContainerBase.SCROLL_TO_INDEX_TOP, index);
+                previousIndex = index;
+            }
+        }
+
+        public void showOffset(int offset, int index) {
+            if (previousIndex != index) {
+                getProperties().put(VirtualContainerBase.SCROLL_TO_OFFSET, offset);
+                previousIndex = index;
+            }
+        }
+
+        public void reset() {
+            getProperties().put(VirtualContainerBase.SCROLL_TO_INDEX_TOP, 0);
+            previousIndex = -1;
         }
     }
 }

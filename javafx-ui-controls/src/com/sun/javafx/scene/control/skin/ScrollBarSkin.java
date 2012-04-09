@@ -350,8 +350,10 @@ public class ScrollBarSkin extends SkinBase<ScrollBar, ScrollBarBehavior> {
         // compute x,y,w,h of content area
         double x = getInsets().getLeft();
         double y = getInsets().getTop();
-        double w = getWidth() - (getInsets().getLeft() + getInsets().getRight());
-        double h = getHeight() - (getInsets().getTop() + getInsets().getBottom());
+        double wTotal = snapSize(getWidth());
+        double hTotal = snapSize(getHeight());
+        double wNoInsets = snapSize(wTotal - (getInsets().getLeft() + getInsets().getRight()));
+        double hNoInsets = snapSize(hTotal - (getInsets().getTop() + getInsets().getBottom()));
 
         /**
          * Compute the percentage length of thumb as (visibleAmount/range)
@@ -367,34 +369,45 @@ public class ScrollBarSkin extends SkinBase<ScrollBar, ScrollBarBehavior> {
         
 
         if (getSkinnable().getOrientation() == Orientation.VERTICAL) {
-            double decHeight = decButton.prefHeight(-1);
-            double incHeight = incButton.prefHeight(-1);
 
-            trackLength = h - (decHeight + incHeight);
-            thumbLength = Utils.clamp(minThumbLength(), (trackLength * visiblePortion), trackLength);
+            double decHeight = snapSize(decButton.prefHeight(-1));
+            double incHeight = snapSize(incButton.prefHeight(-1));
 
-            decButton.resizeRelocate(x, y, w, decHeight+3);
-            incButton.resizeRelocate(x, y + h - (incHeight+4), w, incHeight+4);
-            track.resizeRelocate(x, y + decHeight, w, trackLength);
-            thumb.resize(x >= 0 ? w : w + x, thumbLength); // Account for negative padding (see also RT-10719)
+            decButton.resize(wTotal, decHeight);
+            incButton.resize(wTotal, incHeight);
+
+
+            trackLength = snapSize(hNoInsets - (decHeight + incHeight));
+            thumbLength = snapSize(Utils.clamp(minThumbLength(), (trackLength * visiblePortion), trackLength));
+
+            decButton.relocate(snapPosition(x), snapPosition(y));
+            incButton.relocate(snapPosition(x), snapPosition(y + hNoInsets - incHeight));
+            track.resizeRelocate(snapPosition(x), snapPosition(y + decHeight), wTotal, trackLength);
+            thumb.resize(snapSize(x >= 0 ? wTotal : wTotal + x), thumbLength); // Account for negative padding (see also RT-10719)
             positionThumb();
         } else {
-            double decWidth = decButton.prefWidth(-1);
-            double incWidth = incButton.prefWidth(-1);
 
-            trackLength = w - (decWidth + incWidth);
-            thumbLength = Utils.clamp(minThumbLength(), (trackLength * visiblePortion), trackLength);
+            double decWidth = snapSize(decButton.prefWidth(-1));
+            double incWidth = snapSize(incButton.prefWidth(-1));
 
-            decButton.resizeRelocate(x, y, decWidth+3, h);
-            incButton.resizeRelocate(x + w - incWidth-4, y, incWidth+4, h);
-            track.resizeRelocate(x + decWidth, y, trackLength, h);
-            thumb.resize(thumbLength, y >= 0 ? h : h + y); // Account for negative padding (see also RT-10719)
+            decButton.resize(decWidth, hTotal);
+            incButton.resize(incWidth, hTotal);
+
+            trackLength = snapSize(wNoInsets - (decWidth + incWidth));
+            thumbLength = snapSize(Utils.clamp(minThumbLength(), (trackLength * visiblePortion), trackLength));
+
+            decButton.relocate(snapPosition(x), snapPosition(y));
+            incButton.relocate(snapPosition(x + wNoInsets - incWidth), snapPosition(y));
+            track.resizeRelocate(snapPosition(x + decWidth), snapPosition(y), trackLength, hTotal);
+            thumb.resize(thumbLength, snapSize(y >= 0 ? hTotal : hTotal + y)); // Account for negative padding (see also RT-10719)
             positionThumb();
         }
 
+        resize(snapSize(getWidth()), snapSize(getHeight()));
+
         // things should be invisible only when well below minimum length
-        if (getSkinnable().getOrientation() == Orientation.VERTICAL && h >= (computeMinHeight(-1) - (getInsets().getTop()+getInsets().getBottom())) ||
-            getSkinnable().getOrientation() == Orientation.HORIZONTAL && w >= (computeMinWidth(-1) - (getInsets().getLeft()+getInsets().getRight()))) {
+        if (getSkinnable().getOrientation() == Orientation.VERTICAL && hNoInsets >= (computeMinHeight(-1) - (getInsets().getTop()+getInsets().getBottom())) ||
+            getSkinnable().getOrientation() == Orientation.HORIZONTAL && wNoInsets >= (computeMinWidth(-1) - (getInsets().getLeft()+getInsets().getRight()))) {
             track.setVisible(true);
             thumb.setVisible(true);
             incButton.setVisible(true);
@@ -408,13 +421,13 @@ public class ScrollBarSkin extends SkinBase<ScrollBar, ScrollBarBehavior> {
             ** once the space is big enough for one button we 
             ** can look at drawing
             */
-            if (h >= decButton.computeMinWidth(-1)) {
+            if (hNoInsets >= decButton.computeMinWidth(-1)) {
                 decButton.setVisible(true);
             }
             else {
                 decButton.setVisible(false);
             }
-            if (h >= incButton.computeMinWidth(-1)) {
+            if (hNoInsets >= incButton.computeMinWidth(-1)) {
                 incButton.setVisible(true);
             }
             else {
