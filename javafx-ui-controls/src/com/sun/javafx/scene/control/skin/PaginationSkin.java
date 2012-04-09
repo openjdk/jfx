@@ -121,14 +121,14 @@ public class PaginationSkin<T> extends SkinBase<Pagination<T>, PaginationBehavio
         setOnSwipeLeft(new EventHandler<SwipeEvent>() {
             @Override
             public void handle(SwipeEvent t) {
-                paginationListView.getSelectionModel().selectPrevious();
+                paginationListView.getSelectionModel().selectNext();
             }
         });
 
         setOnSwipeRight(new EventHandler<SwipeEvent>() {
             @Override
             public void handle(SwipeEvent t) {
-                paginationListView.getSelectionModel().selectNext();
+                paginationListView.getSelectionModel().selectPrevious();
             }
         });
     }
