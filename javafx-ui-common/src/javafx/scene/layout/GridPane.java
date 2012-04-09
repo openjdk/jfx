@@ -582,18 +582,18 @@ public class GridPane extends Pane {
     private static final Color GRID_LINE_COLOR = Color.rgb(30, 30, 30);
     private static final double GRID_LINE_DASH = 3;
 
-    static void createRow(int rowIndex, Node... nodes) {
+    static void createRow(int rowIndex, int columnIndex, Node... nodes) {
         for (int i = 0; i < nodes.length; i++) {
-            setConstraints(nodes[i], i, rowIndex);
+            setConstraints(nodes[i], columnIndex + i, rowIndex);
         }
     }
 
-    static void createColumn(int columnIndex, Node... nodes) {
+    static void createColumn(int columnIndex, int rowIndex, Node... nodes) {
         for (int i = 0; i < nodes.length; i++) {
-            setConstraints(nodes[i], columnIndex, i);
+            setConstraints(nodes[i], columnIndex, rowIndex + i);
         }
     }
-
+    
     static int getNodeRowIndex(Node node) {
         Integer rowIndex = getRowIndex(node);
         return rowIndex != null? rowIndex : 0;
@@ -908,8 +908,9 @@ public class GridPane extends Pane {
 
     /**
      * Convenience method for placing the specified nodes sequentially in a given
-     * row of the gridpane.   For example, the first node will be positioned at [0,row],
-     * the second at [1,row], etc.   This method will set the appropriate gridpane
+     * row of the gridpane.    If the row already contains nodes the specified nodes
+     * will be appended to the row.  For example, the first node will be positioned at [column,row],
+     * the second at [column+1,row], etc.   This method will set the appropriate gridpane
      * row/column constraints on the nodes as well as add the nodes to the gridpane's
      * children sequence.
      *
@@ -917,14 +918,24 @@ public class GridPane extends Pane {
      * @param children the nodes to be added as a row in the gridpane
      */
     public void addRow(int rowIndex, Node... children) {
-        createRow(rowIndex, children);
+        int columnIndex = getColumnConstraints().size();
+        for (int i = 0; i < getChildren().size(); i++) {
+            Node child = getChildren().get(i);
+            if (child.isManaged() && rowIndex == getNodeRowIndex(child)) {
+                int index = getNodeColumnIndex(child);
+                int end = getNodeColumnEnd(child);
+                columnIndex = Math.max(columnIndex, (end != REMAINING? end : index) + 1);
+            }
+        }        
+        createRow(rowIndex, columnIndex, children);
         getChildren().addAll(children);
     }
 
     /**
      * Convenience method for placing the specified nodes sequentially in a given
-     * column of the gridpane.   For example, the first node will be positioned at [column,0],
-     * the second at [column,1], etc.   This method will set the appropriate gridpane
+     * column of the gridpane.    If the column already contains nodes the specified nodes
+     * will be appended to the column.  For example, the first node will be positioned at [column, row],
+     * the second at [column, row+1], etc.   This method will set the appropriate gridpane
      * row/column constraints on the nodes as well as add the nodes to the gridpane's
      * children sequence.
      *
@@ -932,7 +943,16 @@ public class GridPane extends Pane {
      * @param children the nodes to be added as a column in the gridpane
      */
     public void addColumn(int columnIndex, Node... children)  {
-        createColumn(columnIndex, children);
+        int rowIndex = getRowConstraints().size();
+        for (int i = 0; i < getChildren().size(); i++) {
+            Node child = getChildren().get(i);
+            if (child.isManaged() && columnIndex == getNodeColumnIndex(child)) {
+                int index = getNodeRowIndex(child);
+                int end = getNodeRowEnd(child);
+                rowIndex = Math.max(rowIndex, (end != REMAINING? end : index) + 1);
+            }
+        }        
+        createColumn(columnIndex, rowIndex, children);
         getChildren().addAll(children);
     }
 
@@ -963,7 +983,7 @@ public class GridPane extends Pane {
     // This is set to true while in layoutChildren and set false on the conclusion.
     // It is used to decide whether to update metricsDirty in requestLayout().
     private boolean performingLayout = false;
-
+    
     @Override protected double computeMinWidth(double height) {
         computeGridMetrics();
         if (getContentBias() == Orientation.VERTICAL) {

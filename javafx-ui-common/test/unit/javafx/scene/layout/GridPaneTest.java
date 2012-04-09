@@ -608,7 +608,7 @@ public class GridPaneTest {
         MockResizable child2 = new MockResizable(100,100);
         MockResizable child3 = new MockResizable(100,100);
 
-        GridPane.createRow(2, child1,child2,child3);
+        GridPane.createRow(2, 0, child1,child2,child3);
 
         assertEquals((Integer)2, GridPane.getRowIndex(child1));
         assertEquals((Integer)2, GridPane.getRowIndex(child2));
@@ -624,7 +624,7 @@ public class GridPaneTest {
         MockResizable child2 = new MockResizable(100,100);
         MockResizable child3 = new MockResizable(100,100);
 
-        GridPane.createColumn(2, child1,child2,child3);
+        GridPane.createColumn(2, 0, child1,child2,child3);
 
         assertEquals((Integer)2, GridPane.getColumnIndex(child1));
         assertEquals((Integer)2, GridPane.getColumnIndex(child2));
@@ -672,6 +672,34 @@ public class GridPaneTest {
         assertEquals(child2, gridpane.getChildren().get(1));
         assertEquals(child3, gridpane.getChildren().get(2));
     }
+    
+    @Test public void testGridPaneAddRowAppend() {
+        MockResizable child1 = new MockResizable(100,100);
+        MockResizable child2 = new MockResizable(100,100);
+        MockResizable child3 = new MockResizable(100,100);
+        gridpane.addRow(2, child1,child2,child3);
+
+        assertEquals((Integer)2, GridPane.getRowIndex(child1));
+        assertEquals((Integer)2, GridPane.getRowIndex(child2));
+        assertEquals((Integer)2, GridPane.getRowIndex(child3));
+
+        assertEquals((Integer)0, GridPane.getColumnIndex(child1));
+        assertEquals((Integer)1, GridPane.getColumnIndex(child2));
+        assertEquals((Integer)2, GridPane.getColumnIndex(child3));
+
+        MockResizable child4 = new MockResizable(100,100);
+        MockResizable child5 = new MockResizable(100,100);
+        MockResizable child6 = new MockResizable(100,100);
+        gridpane.addRow(2, child4,child5,child6);
+        
+        assertEquals((Integer)2, GridPane.getRowIndex(child4));
+        assertEquals((Integer)2, GridPane.getRowIndex(child5));
+        assertEquals((Integer)2, GridPane.getRowIndex(child6));
+
+        assertEquals((Integer)3, GridPane.getColumnIndex(child4));
+        assertEquals((Integer)4, GridPane.getColumnIndex(child5));
+        assertEquals((Integer)5, GridPane.getColumnIndex(child6));        
+    }    
 
     @Test public void testGridPaneAddColumn() {
         MockResizable child1 = new MockResizable(100,100);
@@ -692,6 +720,39 @@ public class GridPaneTest {
         assertEquals(child2, gridpane.getChildren().get(1));
         assertEquals(child3, gridpane.getChildren().get(2));
     }
+    
+    @Test public void testGridPaneAddColumnAppend() {
+        MockResizable child1 = new MockResizable(100,100);
+        MockResizable child2 = new MockResizable(100,100);
+        MockResizable child3 = new MockResizable(100,100);
+        gridpane.addColumn(2, child1,child2,child3);
+
+        assertEquals((Integer)2, GridPane.getColumnIndex(child1));
+        assertEquals((Integer)2, GridPane.getColumnIndex(child2));
+        assertEquals((Integer)2, GridPane.getColumnIndex(child3));
+
+        assertEquals((Integer)0, GridPane.getRowIndex(child1));
+        assertEquals((Integer)1, GridPane.getRowIndex(child2));
+        assertEquals((Integer)2, GridPane.getRowIndex(child3));
+
+        assertEquals(3, gridpane.getChildren().size());
+        assertEquals(child1, gridpane.getChildren().get(0));
+        assertEquals(child2, gridpane.getChildren().get(1));
+        assertEquals(child3, gridpane.getChildren().get(2));
+        
+        MockResizable child4 = new MockResizable(100,100);
+        MockResizable child5 = new MockResizable(100,100);
+        MockResizable child6 = new MockResizable(100,100);
+        gridpane.addColumn(2, child4,child5,child6);
+
+        assertEquals((Integer)2, GridPane.getColumnIndex(child4));
+        assertEquals((Integer)2, GridPane.getColumnIndex(child5));
+        assertEquals((Integer)2, GridPane.getColumnIndex(child6));
+
+        assertEquals((Integer)3, GridPane.getRowIndex(child4));
+        assertEquals((Integer)4, GridPane.getRowIndex(child5));
+        assertEquals((Integer)5, GridPane.getRowIndex(child6));        
+    }    
 
     @Test public void testColumnConstraintsDefaults() {
         ColumnConstraints cc = new ColumnConstraints();
