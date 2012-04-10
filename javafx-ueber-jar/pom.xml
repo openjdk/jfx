@@ -49,6 +49,7 @@
                 <artifactId>maven-shade-plugin</artifactId>
                 <version>1.5</version>
                 <configuration>
+                    <createSourcesJar>true</createSourcesJar>
                     <artifactSet>
                         <includes>
                             <include>*</include>

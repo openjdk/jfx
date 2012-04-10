@@ -1596,7 +1596,7 @@ public class VirtualFlow extends Region {
 
         if (cell == null) {
             if (pile.size() > 0) {
-                cell = pile.removeFirst();
+                cell = (prefIndex < pile.getFirst().getIndex())? pile.removeLast() : pile.removeFirst();
             } else {
                 cell = createCell.call(this);
             }

@@ -58,7 +58,6 @@ import com.sun.javafx.css.StyleableObjectProperty;
 import com.sun.javafx.css.StyleableProperty;
 import com.sun.javafx.css.converters.BooleanConverter;
 import com.sun.javafx.css.converters.EnumConverter;
-import com.sun.javafx.css.converters.FontConverter;
 import com.sun.javafx.geom.BaseBounds;
 import com.sun.javafx.geom.RectBounds;
 import com.sun.javafx.geom.transform.Affine3D;
@@ -1578,12 +1577,6 @@ public class Text extends Shape {
              * extra work is if the stroke's Paint changes, but nothing else.
              */
             if (hasStroke) {
-                List<Double> daList = getStrokeDashArray();
-                int len = daList.size();
-                float[] strokeDashArray = new float[len];
-                for (int i=0; i<len; i++) {
-                    strokeDashArray[i] = daList.get(i).floatValue();
-                }
                 helper.setStrokeParameters(
                        getPGStrokeType(),
                        getPGStrokeDashArray(),

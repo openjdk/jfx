@@ -506,4 +506,49 @@ public final class ImageTest {
         final Image image = Image.impl_fromExternalImage(fakeExternalImage);
         verifyLoadedImage(image, 0, 0, false, false, 123, 456);
     }
+
+    @Test(expected=NullPointerException.class)
+    public void createImageFromNullUrlTest() {
+        new Image((String) null);
+    }
+
+    @Test(expected=NullPointerException.class)
+    public void createImageAsyncFromNullUrlTest() {
+        new Image((String) null, true);
+    }
+
+    @Test(expected=NullPointerException.class)
+    public void createImageFromNullInputStreamTest() {
+        new Image((InputStream) null);
+    }
+
+    @Test(expected=IllegalArgumentException.class)
+    public void createImageFromEmptyUrlTest() {
+        new Image((String) "");
+    }
+
+    @Test(expected=IllegalArgumentException.class)
+    public void createImageAsyncFromEmptyUrlTest() {
+        new Image((String) "", true);
+    }
+
+    @Test(expected=IllegalArgumentException.class)
+    public void createImageFromInvalidUrlTest() {
+        new Image((String) ":");
+    }
+
+    @Test(expected=IllegalArgumentException.class)
+    public void createImageAsyncFromInvalidUrlTest() {
+        new Image((String) ":", true);
+    }
+
+    @Test(expected=IllegalArgumentException.class)
+    public void createImageFromUnsupportedUrlTest() {
+        new Image((String) "unsupported:image.png");
+    }
+
+    @Test(expected=IllegalArgumentException.class)
+    public void createImageAsyncFromUnsupportedUrlTest() {
+        new Image((String) "unsupported:image.png", true);
+    }
 }

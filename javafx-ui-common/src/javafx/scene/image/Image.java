@@ -25,7 +25,10 @@
 
 package javafx.scene.image;
 
+import java.io.File;
 import java.io.InputStream;
+import java.net.MalformedURLException;
+import java.net.URI;
 import java.util.LinkedList;
 import java.util.Queue;
 
@@ -502,9 +505,11 @@ public class Image {
      *
      * @param url the string representing the URL to use in fetching the pixel
      *      data
+     * @throws NullPointerException if URL is null
+     * @throws IllegalArgumentException if URL is invalid or unsupported
      */
     public Image(String url) {
-        this(url, null, 0, 0, false, false, false);
+        this(validateUrl(url), null, 0, 0, false, false, false);
         initialize(null);
     }
 
@@ -515,9 +520,11 @@ public class Image {
      *      data
      * @param backgroundLoading indicates whether the image
      *      is being loaded in the background
+     * @throws NullPointerException if URL is null
+     * @throws IllegalArgumentException if URL is invalid or unsupported
      */
     public Image(String url, boolean backgroundLoading) {
-        this(url, null, 0, 0, false, false, backgroundLoading);
+        this(validateUrl(url), null, 0, 0, false, false, backgroundLoading);
         initialize(null);
     }
 
@@ -534,11 +541,13 @@ public class Image {
      * @param smooth indicates whether to use a better quality filtering
      *      algorithm or a faster one when scaling this image to fit within
      *      the specified bounding box
+     * @throws NullPointerException if URL is null
+     * @throws IllegalArgumentException if URL is invalid or unsupported
      */
     public Image(String url, double requestedWidth, double requestedHeight,
                  boolean preserveRatio, boolean smooth) {
-        this(url, null, requestedWidth, requestedHeight, preserveRatio, smooth,
-             false);
+        this(validateUrl(url), null, requestedWidth, requestedHeight,
+             preserveRatio, smooth, false);
         initialize(null);
     }
 
@@ -557,6 +566,8 @@ public class Image {
      *      the specified bounding box
      * @param backgroundLoading indicates whether the image
      *      is being loaded in the background
+     * @throws NullPointerException if URL is null
+     * @throws IllegalArgumentException if URL is invalid or unsupported
      */
     public Image(
             @Default("\"\"") String url,
@@ -565,8 +576,8 @@ public class Image {
             boolean preserveRatio,
             @Default("true") boolean smooth,
             boolean backgroundLoading) {
-        this(url, null, requestedWidth, requestedHeight, preserveRatio, smooth,
-             backgroundLoading);
+        this(validateUrl(url), null, requestedWidth, requestedHeight,
+             preserveRatio, smooth, backgroundLoading);
         initialize(null);
     }
 
@@ -575,9 +586,10 @@ public class Image {
      * input stream.
      *
      * @param is the stream from which to load the image
+     * @throws NullPointerException if input stream is null
      */
     public Image(InputStream is) {
-        this(null, is, 0, 0, false, false, false);
+        this(null, validateInputStream(is), 0, 0, false, false, false);
         initialize(null);
     }
 
@@ -593,11 +605,12 @@ public class Image {
      * @param smooth indicates whether to use a better quality filtering
      *      algorithm or a faster one when scaling this image to fit within
      *      the specified bounding box
+     * @throws NullPointerException if input stream is null
      */
     public Image(InputStream is, double requestedWidth, double requestedHeight,
                  boolean preserveRatio, boolean smooth) {
-        this(null, is, requestedWidth, requestedHeight, preserveRatio, smooth,
-             false);
+        this(null, validateInputStream(is), requestedWidth, requestedHeight,
+             preserveRatio, smooth, false);
         initialize(null);
     }
 
@@ -889,6 +902,64 @@ public class Image {
         return Toolkit.getToolkit().loadPlatformImage(platformImage);
     }
 
+    private static String validateUrl(final String url) {
+        if (url == null) {
+            throw new NullPointerException("URL must not be null");
+        }
+
+        if (url.trim().isEmpty()) {
+            throw new IllegalArgumentException("URL must not be empty");
+        }
+
+        final URI baseUri = getBaseUri();
+        final URI resolvedUri;
+        try {
+            resolvedUri = (baseUri != null) ? baseUri.resolve(url)
+                                            : URI.create(url);
+
+            return resolvedUri.toURL().toString();
+        } catch (final IllegalArgumentException e) {
+            throw new IllegalArgumentException(
+                    constructDetailedExceptionMessage("Invalid URL", e), e);
+        } catch (final MalformedURLException e) {
+            throw new IllegalArgumentException(
+                    constructDetailedExceptionMessage("Invalid URL", e), e);
+        }
+    }
+
+    private static InputStream validateInputStream(
+            final InputStream inputStream) {
+        if (inputStream == null) {
+            throw new NullPointerException("Input stream must not be null");
+        }
+
+        return inputStream;
+    }
+
+    private static String constructDetailedExceptionMessage(
+            final String mainMessage,
+            final Throwable cause) {
+        if (cause == null) {
+            return mainMessage;
+        }
+
+        final String causeMessage = cause.getMessage();
+        return constructDetailedExceptionMessage(
+                       (causeMessage != null)
+                               ? mainMessage + ": " + causeMessage
+                               : mainMessage,
+                       cause.getCause());
+    }
+
+    private static URI getBaseUri() {
+        try {
+            // we might want to use getDocumentBase() from HostServices here,
+            // but that would be an incompatible change
+            return new File("").toURI();
+        } catch (final Exception e) {
+            return null;
+        }
+    }
 
     /**
      * This method converts a JavaFX Image to the specified image class or
