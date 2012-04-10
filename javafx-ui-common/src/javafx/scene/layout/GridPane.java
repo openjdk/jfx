@@ -918,7 +918,7 @@ public class GridPane extends Pane {
      * @param children the nodes to be added as a row in the gridpane
      */
     public void addRow(int rowIndex, Node... children) {
-        int columnIndex = getColumnConstraints().size();
+        int columnIndex = 0;
         for (int i = 0; i < getChildren().size(); i++) {
             Node child = getChildren().get(i);
             if (child.isManaged() && rowIndex == getNodeRowIndex(child)) {
@@ -943,7 +943,7 @@ public class GridPane extends Pane {
      * @param children the nodes to be added as a column in the gridpane
      */
     public void addColumn(int columnIndex, Node... children)  {
-        int rowIndex = getRowConstraints().size();
+        int rowIndex = 0;
         for (int i = 0; i < getChildren().size(); i++) {
             Node child = getChildren().get(i);
             if (child.isManaged() && columnIndex == getNodeColumnIndex(child)) {
