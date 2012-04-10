@@ -683,9 +683,8 @@ public abstract class Node implements EventTarget {
                 protected void invalidated() {
                     Scene _scene = get();
                     if (oldScene != _scene) {
-                        if (oldScene != null) {
-                            oldScene.removeFromDirtyList(Node.this);
-                        }
+                        //Note: no need to remove from scene's dirty list
+                        //Scene's is checking if the node's scene is correct
                         impl_reapplyCSS();
                         if (_scene != null && !impl_isDirtyEmpty()) {
                             _scene.addToDirtyList(Node.this);

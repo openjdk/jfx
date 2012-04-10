@@ -32,8 +32,6 @@ import java.util.ArrayList;
 import java.util.EnumMap;
 import java.util.EnumSet;
 import java.util.HashMap;
-import java.util.Iterator;
-import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -310,10 +308,8 @@ public class Scene implements EventTarget {
             });
         }
 
-        // Reserve space for 30 nodes in the dirtyNodes and dirtyCSSNodes sets.
-        // We need to account for the default HashSet load factor.
-        private static final double HASH_LOAD = 0.75f; // default load factor for HashSet
-        private static final int MIN_DIRTY_CAPACITY = (int) (30.0f / HASH_LOAD);
+        // Reserve space for 30 nodes in the dirtyNodes set.
+        private static final int MIN_DIRTY_CAPACITY = 30;
 
         // For debugging
         private static boolean inSynchronizer = false;
@@ -369,10 +365,6 @@ public class Scene implements EventTarget {
      * is added to this list. Note that if state on the Node changes, but it
      * was already dirty, then the Node doesn't add itself again.
      * <p>
-     * We need this to be a set so that adding and removing nodes from the list
-     * will be inexpensive (constant time); we use a LinkedHashSet so that
-     * iteration performance won't suffer.
-     * <p>
      * Because at initialization time every node in the scene graph is dirty,
      * we have a special state and special code path during initialization
      * that does not involve adding each node to the dirtyNodes list. When
@@ -383,27 +375,28 @@ public class Scene implements EventTarget {
      * set while processing the existing set. This avoids our having to
      * take a snapshot of the set (e.g., with toArray()) and reduces garbage.
      */
-    private LinkedHashSet dirtyNodesA;
-    private LinkedHashSet dirtyNodesB;
-    private LinkedHashSet dirtyNodes; // refers to dirtyNodesA or dirtyNodesB
-
+    private Node[] dirtyNodes;
+    private int dirtyNodesSize;
+    
     /**
      * Add the specified node to this scene's dirty list. Called by the
      * markDirty method in Node or when the Node's scene changes.
      */
     void addToDirtyList(Node n) {
-        if (dirtyNodes == null || dirtyNodes.isEmpty()) {
+        if (dirtyNodes == null || dirtyNodesSize == 0) {
             if (impl_peer != null) {
                 Toolkit.getToolkit().requestNextPulse();
             }
         }
 
-        if (dirtyNodes != null) dirtyNodes.add(n);
-    }
-
-    void removeFromDirtyList(Node n) {
-        if (dirtyNodes != null)
-            dirtyNodes.remove(n);
+        if (dirtyNodes != null) {
+            if (dirtyNodesSize == dirtyNodes.length) {
+                Node[] tmp = new Node[dirtyNodesSize + (dirtyNodesSize >> 1)];
+                System.arraycopy(dirtyNodes, 0, tmp, 0, dirtyNodesSize);
+                dirtyNodes = tmp;
+            }
+            dirtyNodes[dirtyNodesSize++] = n;
+        }
     }
 
     private void doCSSPass() {
@@ -1861,36 +1854,22 @@ public class Scene implements EventTarget {
             // scene and then create the dirty nodes array list
             if (Scene.this.dirtyNodes == null) {
                 // must do this recursively
-                final int size = syncAll(getRoot());
-                // Default capacity is hard-coded to minimum capacity
-                // This heuristic can be changed over time if we like
-                Scene.this.dirtyNodesA = new LinkedHashSet(MIN_DIRTY_CAPACITY);
-                Scene.this.dirtyNodesB = new LinkedHashSet(MIN_DIRTY_CAPACITY);
-                Scene.this.dirtyNodes = Scene.this.dirtyNodesA;
+                syncAll(getRoot());
+                dirtyNodes = new Node[MIN_DIRTY_CAPACITY];
+                
             } else {
                 // This is not the first time this scene has been synchronized,
                 // so we will only synchronize those nodes that need it
-                LinkedHashSet currDirtyNodes = Scene.this.dirtyNodes;
-                // Swap the double buffer
-                if (Scene.this.dirtyNodes == Scene.this.dirtyNodesA) {
-                    Scene.this.dirtyNodes = Scene.this.dirtyNodesB;
-                } else {
-                    Scene.this.dirtyNodes = Scene.this.dirtyNodesA;
-                }
-
-
-                final Iterator<Node> it = currDirtyNodes.iterator();
-
-                while(it.hasNext()) {
-                    Node node = it.next();
+                for (int i = 0 ; i < dirtyNodesSize; ++i) {
+                    Node node = dirtyNodes[i];
+                    dirtyNodes[i] = null;
                     if (node.getScene() == Scene.this) {
                         node.impl_syncPGNode();
                     }
                 }
-
-                currDirtyNodes.clear();
+                dirtyNodesSize = 0;
             }
-
+            
             Scene.inSynchronizer = false;
         }
 
@@ -1981,7 +1960,7 @@ public class Scene implements EventTarget {
             Scene.this.doCSSPass();
             Scene.this.doLayoutPass();
 
-            boolean dirty = dirtyNodes == null || !dirtyNodes.isEmpty() || !isDirtyEmpty();
+            boolean dirty = dirtyNodes == null || dirtyNodesSize != 0 || !isDirtyEmpty();
             if (dirty) {
                 // synchronize scene properties
                 synchronizeSceneProperties();
