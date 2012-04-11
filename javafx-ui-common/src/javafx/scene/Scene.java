@@ -2310,6 +2310,10 @@ public class Scene implements EventTarget {
                 Scene.this.dndGesture.processTargetExit(
                         Toolkit.getToolkit().convertDropTargetEventToFX(
                             e, Scene.this.dndGesture.dragboard));
+
+                if (Scene.this.dndGesture.source == null) {
+                    Scene.this.dndGesture = null;
+                }
             }
         }
 
@@ -2343,9 +2347,7 @@ public class Scene implements EventTarget {
            final EventTarget pickedNode = pick(de.getX(), de.getY());
            Scene.this.dndGesture.dragboard = de.impl_getPlatformDragboard();
 
-            if (Scene.this.dndGesture.processRecognized(pickedNode, de)) {
-                return;
-            }
+            Scene.this.dndGesture.processRecognized(pickedNode, de);
 
             Scene.this.dndGesture = null;
         }
@@ -2490,14 +2492,7 @@ public class Scene implements EventTarget {
 
             final boolean hasContent = dragboard != null
                     && !dragboard.getContentTypes().isEmpty();
-            if (hasContent) {
-                Toolkit.getToolkit().startDrag(Scene.this.impl_peer,
-                                               sourceTransferModes,
-                                               new DragSourceListener(),
-                                               dragboard);
-                return true;
-            }
-            return false;
+            return hasContent;
         }
 
         private void processDropEnd(DragEvent de) {
@@ -2524,7 +2519,7 @@ public class Scene implements EventTarget {
             final EventTarget pickedTarget = tmpTargetWrapper.getEventTarget();
 
             if (dragboard == null) {
-                dragboard = createDragboard();
+                dragboard = createDragboard(de);
             }
 
             de = DragEvent.impl_copy(de.getSource(), pickedTarget, source,
@@ -2552,7 +2547,7 @@ public class Scene implements EventTarget {
 //                        pickedNode, de, DragEvent.DRAG_TRANSFER_MODE_CHANGED);
 //
 //                if (dragboard == null) {
-//                    dragboard = createDragboard();
+//                    dragboard = createDragboard(de);
 //                }
 //                dragboard = de.impl_getPlatformDragboard();
 //
@@ -2577,7 +2572,7 @@ public class Scene implements EventTarget {
                     DragEvent.DRAG_DROPPED);
 
             if (dragboard == null) {
-                dragboard = createDragboard();
+                dragboard = createDragboard(de);
             }
 
             handleExitEnter(de, tmpTargetWrapper);
@@ -2684,7 +2679,7 @@ public class Scene implements EventTarget {
             if (t.isEmpty()) {
                 dragboard = null;
             } else if (dragboard == null) {
-                dragboard = createDragboard();
+                dragboard = createDragboard(null);
             }
             this.source = source;
             potentialTarget = source;
@@ -2699,8 +2694,15 @@ public class Scene implements EventTarget {
             fullPDRSource = source;
         }
 
-        private Dragboard createDragboard() {
-            return Toolkit.getToolkit().createDragboard();
+        private Dragboard createDragboard(final DragEvent de) {
+            Dragboard dragboard = null;
+            if (de != null) {
+                dragboard = de.getDragboard();
+                if (dragboard != null) {
+                    return dragboard;
+                }
+            }
+            return Scene.this.impl_peer.createDragboard();
         }
     }
 

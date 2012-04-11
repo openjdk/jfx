@@ -31,6 +31,8 @@ import com.sun.javafx.tk.TKScene;
 import com.sun.javafx.tk.TKSceneListener;
 import com.sun.javafx.tk.TKScenePaintListener;
 
+import javafx.scene.input.Dragboard;
+
 public class StubScene implements TKScene {
     StubStage stage;
     private TKSceneListener listener;
@@ -83,6 +85,11 @@ public class StubScene implements TKScene {
     }
 
     public void entireSceneNeedsRepaint() {
+    }
+
+    @Override
+    public Dragboard createDragboard() {
+        throw new UnsupportedOperationException();
     }
 
     @Override

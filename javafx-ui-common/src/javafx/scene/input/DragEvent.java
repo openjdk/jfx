@@ -672,7 +672,7 @@ public class DragEvent extends InputEvent {
         state.accepted = tm != null;
         if (tkDropEvent != null) {
             if (state.accepted) {
-                tkDropEvent.accept();
+                tkDropEvent.accept(tm);
             } else {
                 tkDropEvent.reject();
             }

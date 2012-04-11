@@ -46,6 +46,7 @@ package com.sun.javafx.tk;
 import com.sun.javafx.geom.CameraImpl;
 import com.sun.javafx.geom.PickRay;
 import com.sun.javafx.sg.PGNode;
+import javafx.scene.input.Dragboard;
 
 /**
  * TKScene
@@ -80,4 +81,6 @@ public interface TKScene {
     public void enableInputMethodEvents(boolean enable);
     
     public void entireSceneNeedsRepaint();
+    
+    public Dragboard createDragboard();
 }
