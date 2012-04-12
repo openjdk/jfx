@@ -27,6 +27,7 @@ package com.sun.javafx.pgstub;
 import com.sun.javafx.geom.CameraImpl;
 import com.sun.javafx.geom.PickRay;
 import com.sun.javafx.sg.PGNode;
+import com.sun.javafx.tk.Toolkit;
 import com.sun.javafx.tk.TKScene;
 import com.sun.javafx.tk.TKSceneListener;
 import com.sun.javafx.tk.TKScenePaintListener;
@@ -89,7 +90,7 @@ public class StubScene implements TKScene {
 
     @Override
     public Dragboard createDragboard() {
-        throw new UnsupportedOperationException();
+        return Toolkit.getToolkit().createDragboard();
     }
 
     @Override
