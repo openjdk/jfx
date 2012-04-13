@@ -583,7 +583,7 @@ public class VirtualFlow extends Region {
                     ** if we scrolled on the other plane.
                     */
                     ScrollBar nonVirtualBar = isVertical() ? hbar : vbar;
-                    if (nonVirtualBar.isVisible()) {
+                    if (nonVirtualBar.isVisible()) {                        
 
                         double nonVirtualDelta = isVertical() ? event.getDeltaX() : event.getDeltaY();
                         double newValue = nonVirtualBar.getValue() - nonVirtualDelta;
@@ -1792,6 +1792,13 @@ public class VirtualFlow extends Region {
 //                layingOut = false;
                 return;
             }
+
+            // In this case, we're asked to show a random cell
+//            layingOut = true;
+            mapper.adjustPositionToIndex(index);
+            addAllToPile();
+            requestLayout();
+//            layingOut = false;            
         }
     }
 
