@@ -27,6 +27,7 @@
 package javafx.scene.layout;
 
 import com.sun.javafx.css.*;
+import com.sun.javafx.css.Stylesheet.Origin;
 import com.sun.javafx.css.converters.EnumConverter;
 import com.sun.javafx.css.converters.SizeConverter;
 import static javafx.geometry.Orientation.HORIZONTAL;
@@ -949,6 +950,10 @@ public class TilePane extends Pane {
              new StyleableProperty<TilePane,Number>("-fx-pref-rows",
                  SizeConverter.getInstance(), 5.0) {
 
+            @Override public void set(TilePane node, Number value, Origin origin) {
+                super.set(node, value.intValue(), origin);
+            }
+            
             @Override
             public boolean isSettable(TilePane node) {
                 return node.prefRows == null ||
