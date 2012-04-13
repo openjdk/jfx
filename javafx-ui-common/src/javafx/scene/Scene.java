@@ -1511,6 +1511,9 @@ public class Scene implements EventTarget {
     private boolean focusDirty = true;
 
     final void setFocusDirty(boolean value) {
+        if (!focusDirty) {
+            Toolkit.getToolkit().requestNextPulse();
+        }
         focusDirty = value;
     }
 
