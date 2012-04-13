@@ -81,5 +81,5 @@ public class PaginationCellSkin extends ListCellSkin {
             nodeHeight = Math.max(nodeHeight, n.prefHeight(width));
         }
         return nodeHeight;
-    }    
+    }
 }
