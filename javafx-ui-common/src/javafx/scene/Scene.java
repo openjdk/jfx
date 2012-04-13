@@ -1761,12 +1761,11 @@ public class Scene implements EventTarget {
      * Returns true if this scene is quiescent, i.e. it has no activity
      * pending on it such as CSS processing or layout requests.
      *
+     * Intended to be used for tests only
+     *
      * @return boolean indicating whether the scene is quiescent
-     * @treatAsPrivate implementation detail
-     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
      */
-    @Deprecated
-    public boolean impl_isQuiescent() {
+    boolean isQuiescent() {
         return !isFocusDirty()
                && (getRoot().cssFlag == CSSFlags.CLEAN)
                && dirtyLayoutRoots.isEmpty();
@@ -1776,11 +1775,9 @@ public class Scene implements EventTarget {
      * A listener for pulses, used for testing. If non-null, this is called at
      * the very end of ScenePulseListener.pulse().
      *
-     * @treatAsPrivate implementation detail
-     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
+     * Intended to be used for tests only
      */
-    @Deprecated
-    public Runnable impl_testPulseListener = null;
+    Runnable testPulseListener = null;
 
     /**
      * Set the specified dirty bit and mark the peer as dirty
@@ -2000,8 +1997,8 @@ public class Scene implements EventTarget {
                 firstPulse = false;
             }
 
-            if (impl_testPulseListener != null) {
-                impl_testPulseListener.run();
+            if (testPulseListener != null) {
+                testPulseListener.run();
             }
         }
     }
