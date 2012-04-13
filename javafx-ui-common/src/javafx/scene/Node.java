@@ -100,6 +100,7 @@ import javafx.beans.value.WritableValue;
 import javafx.scene.input.SwipeEvent;
 import javafx.scene.input.TouchEvent;
 import javafx.scene.text.Font;
+import javafx.scene.text.Text;
 
 /**
  * Base class for scene graph nodes. A scene graph is a set of tree data structures
@@ -344,8 +345,10 @@ public abstract class Node implements EventTarget {
      */
     @Deprecated
     protected void impl_markDirty(DirtyBits dirtyBit) {
-        if ((getScene() != null) && impl_isDirtyEmpty()) {
-            getScene().addToDirtyList(this);
+        if (impl_isDirtyEmpty()) {
+            Scene s = getScene();
+            if (s != null)
+                s.addToDirtyList(this);
         }
 
         impl_setDirty(dirtyBit);
@@ -2687,8 +2690,11 @@ public abstract class Node implements EventTarget {
      */
     @Deprecated
     protected final void impl_layoutBoundsChanged() {
+        if (!layoutBounds.valid) {
+            return;
+        }
         layoutBounds.invalidate();
-        if (getScaleX() != 1 || getScaleY() != 1 || getScaleZ() != 1 || getRotate() != 0) {
+        if (nodeTransformation != null && nodeTransformation.hasScaleOrRotate()) {
             // if either the scale or rotate convenience variables are used,
             // then we need a valid pivot point. Since the layoutBounds
             // affects the pivot we need to invalidate the transform
@@ -2697,8 +2703,9 @@ public abstract class Node implements EventTarget {
         // notify the parent
         // Group instanceof check a little hoaky, but it allows us to disable
         // unnecessary layout for the case of a non-resizable within a group
-        if (isManaged() && (getParent() != null) && !(getParent() instanceof Group && !isResizable())) {
-            getParent().requestLayout();
+        Parent p = getParent();
+        if (isManaged() && (p != null) && !(p instanceof Group && !isResizable())) {
+            p.requestLayout();
         }
     }
 
@@ -3015,6 +3022,12 @@ public abstract class Node implements EventTarget {
      */
     @Deprecated
     protected void impl_geomChanged() {
+        if (geomBoundsInvalid) {
+            //We need to call this even if geomBounds are already invalid.
+            //Text is relying on this behaviour.
+            impl_notifyLayoutBoundsChanged(); 
+            return;
+        }
         geomBounds.makeEmpty();
         geomBoundsInvalid = true;
         impl_markDirty(DirtyBits.NODE_BOUNDS);
@@ -3042,15 +3055,14 @@ public abstract class Node implements EventTarget {
      * clipParent) that this child Node's bounds have changed.
      */
     void transformedBoundsChanged() {
-        boolean wasValid = !txBoundsInvalid;
+        if (txBoundsInvalid) {
+            return;
+        }
         txBounds.makeEmpty();
         txBoundsInvalid = true;
         invalidateBoundsInParent();
         if (isVisible()) {
-            // TODO if we do dirty regions, insert that code here
-            if (wasValid) {
-                notifyParentOfBoundsChange();
-            }
+            notifyParentOfBoundsChange();
         }
         impl_markDirty(DirtyBits.NODE_BOUNDS);
     }
@@ -3079,8 +3091,9 @@ public abstract class Node implements EventTarget {
     void notifyParentOfBoundsChange() {
         // let the parent know which node has changed and the parent will
         // deal with marking itself invalid correctly
-        if (getParent() != null) {
-            getParent().childBoundsChanged(this);
+        Parent p = getParent();
+        if (p != null) {
+            p.childBoundsChanged(this);
         }
         // since the clip is used to compute the local bounds (and not the
         // geom bounds), we just need to notify that local bounds on the
@@ -3469,6 +3482,9 @@ public abstract class Node implements EventTarget {
      */
     @Deprecated
     public final void impl_transformsChanged() {
+        if (transformDirty) {
+            return;
+        }
         impl_markDirty(DirtyBits.NODE_TRANSFORM);
         transformDirty = true;
         transformedBoundsChanged();
@@ -4333,6 +4349,22 @@ public abstract class Node implements EventTarget {
 
         public boolean hasTransforms() {
             return (transforms != null);
+        }
+
+        public boolean hasScaleOrRotate() {
+            if (scaleX != null && scaleX.get() != DEFAULT_SCALE_X) {
+                return true;
+            }
+            if (scaleY != null && scaleY.get() != DEFAULT_SCALE_Y) {
+                return true;
+            }
+            if (scaleZ != null && scaleZ.get() != DEFAULT_SCALE_Z) {
+                return true;
+            }
+            if (rotate != null && rotate.get() != DEFAULT_ROTATE) {
+                return true;
+            }
+            return false;
         }
 
     }

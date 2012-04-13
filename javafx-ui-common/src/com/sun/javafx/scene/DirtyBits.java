@@ -63,6 +63,7 @@ public enum DirtyBits {
     TEXT_ATTRS,
     TEXT_FONT,
     TEXT_SELECTION,
+    TEXT_HELPER,
 
     // Dirty bits for the MediaView class
     MEDIAVIEW_MEDIA,

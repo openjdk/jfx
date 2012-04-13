@@ -1520,6 +1520,7 @@ public class Text extends Shape {
         if (impl_isDirty(DirtyBits.NODE_GEOMETRY)) {
             helper.setLocation((float)getX(), (float)getY());
             impl_clearDirty(DirtyBits.NODE_GEOMETRY);
+            impl_markDirty(DirtyBits.TEXT_HELPER);
         }
         if (impl_isDirty(DirtyBits.TEXT_ATTRS)) {
             helper.setTextBoundsType(getBoundsType().ordinal());
@@ -1530,14 +1531,17 @@ public class Text extends Shape {
             helper.setTextAlignment(getTextAlignment().ordinal());
             helper.setFontSmoothingType(getFontSmoothingType().ordinal());
             impl_clearDirty(DirtyBits.TEXT_ATTRS);
+            impl_markDirty(DirtyBits.TEXT_HELPER);
         }
         if (impl_isDirty(DirtyBits.TEXT_FONT)) {
             helper.setFont(getFontInternal().impl_getNativeFont());
             impl_clearDirty(DirtyBits.TEXT_FONT);
+            impl_markDirty(DirtyBits.TEXT_HELPER);
         }
         if (impl_isDirty(DirtyBits.NODE_CONTENTS)) {
             helper.setText(getTextInternal());
             impl_clearDirty(DirtyBits.NODE_CONTENTS);
+            impl_markDirty(DirtyBits.TEXT_HELPER);
         }
         if (impl_isDirty(DirtyBits.TEXT_SELECTION)) {
             if (getImpl_selectionStart() >= 0 && getImpl_selectionEnd() >= 0) {
@@ -1558,6 +1562,7 @@ public class Text extends Shape {
                 helper.setLogicalSelection(0, 0);
             }
             impl_clearDirty(DirtyBits.TEXT_SELECTION);
+            impl_markDirty(DirtyBits.TEXT_HELPER);
         }
         /* Rendering state like transform, Mode, and stroke also matter
          * for bounds calculations. Need to pass down this information too.

@@ -25,6 +25,8 @@
 package javafx.scene;
 
 
+import com.sun.javafx.pgstub.StubToolkit;
+import com.sun.javafx.tk.Toolkit;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNull;
@@ -46,6 +48,7 @@ public class FocusTest {
     private Scene scene;
     private List<Node> nodes;
     private int nodeIndex;
+    private StubToolkit toolkit;
 
     @Before
     public void setUp() {
@@ -55,6 +58,8 @@ public class FocusTest {
         stage.show();
         nodes = new ArrayList();
         nodeIndex = 0;
+
+        toolkit = (StubToolkit) Toolkit.getToolkit();
     }
 
     @After
@@ -309,7 +314,10 @@ public class FocusTest {
         scene.getRoot().getChildren().addAll(n(F, T, T), n(F, T, T));
         fireTestPulse();
         assertNullFocus(scene);
+        toolkit.clearPulseRequested();
+        assertFalse(toolkit.isPulseRequested());
         nodes.get(0).setFocusTraversable(true);
+        assertTrue(toolkit.isPulseRequested());
         fireTestPulse();
         assertIsFocused(scene, nodes.get(0));
     }
@@ -649,7 +657,7 @@ public class FocusTest {
         assertEquals(nodes.get(0), scene.impl_getFocusOwner());
         assertIsFocused(scene2, nodes.get(1));
     }
-    
+
     // TODO: tests for moving nodes between scenes
     // and active and inactive stages
 }

@@ -62,4 +62,8 @@ public interface EmbeddedSceneInterface {
     public void keyEvent(int type, int key, char[] chars, int modifiers);
 
     public boolean traverseOut(Direction dir);
+    
+    public void setDragStartListener(EmbeddedSceneDragStartListenerInterface l);
+    
+    public EmbeddedSceneDropTargetInterface createDropTarget();
 }
