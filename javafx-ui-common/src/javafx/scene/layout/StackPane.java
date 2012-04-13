@@ -75,7 +75,7 @@ import com.sun.javafx.css.converters.EnumConverter;
  * <p>
  * StackPane example:
  * <pre><code>     StackPane stack = new StackPane();
- *     stack.getChildren().addAll(new Rectangle(100,100,Color.BLUE, new Label("Go!));
+ *     stack.getChildren().addAll(new Rectangle(100,100,Color.BLUE), new Label("Go!));
  * </code></pre>
  * <p>
  * StackPane lays out each managed child regardless of the child's
