@@ -57,6 +57,7 @@ import javafx.scene.input.KeyCodeCombination;
 import javafx.scene.input.KeyEvent;
 import javafx.scene.input.MouseEvent;
 import javafx.scene.layout.HBox;
+import javafx.stage.Modality;
 import javafx.stage.Stage;
 import javafx.stage.Window;
 
@@ -98,14 +99,28 @@ public class MenuBarSkin extends SkinBase<MenuBar, BehaviorBase<MenuBar>> implem
     private List<MenuBase> wrappedMenus;
 
     private static void setSystemMenu(Stage stage) {
-        if (stage.isFocused() && stage != currentMenuBarStage) {
-            List<MenuBase> menuList = null;
-            MenuBarSkin skin = systemMenuMap.get(stage);
-            if (skin != null) {
-                menuList = skin.wrappedMenus;
+        if (stage.isFocused()) {
+            while (stage.getOwner() instanceof Stage) {
+                MenuBarSkin skin = systemMenuMap.get(stage);
+                if (skin != null && skin.wrappedMenus != null) {
+                    break;
+                } else {
+                    // This is a secondary stage (dialog) that doesn't
+                    // have own menu bar.
+                    //
+                    // Continue looking for a menu bar in the parent stage.
+                    stage = (Stage)stage.getOwner();
+                }
             }
-            Toolkit.getToolkit().getSystemMenu().setMenus((menuList != null) ? menuList : emptyMenuList);
-            currentMenuBarStage = stage;
+            if (stage != currentMenuBarStage) {
+                List<MenuBase> menuList = null;
+                MenuBarSkin skin = systemMenuMap.get(stage);
+                if (skin != null) {
+                    menuList = skin.wrappedMenus;
+                }
+                Toolkit.getToolkit().getSystemMenu().setMenus((menuList != null) ? menuList : emptyMenuList);
+                currentMenuBarStage = stage;
+            }
         }
     }
 
