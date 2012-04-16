@@ -64,7 +64,7 @@ public class ColorPickerSkin<T> extends ComboBoxPopupControl<T> {
     public Color getColor() { return color.get(); }
     public void setColor(Color newColor) { color.set(newColor); }
     
-    public ColorPickerSkin(final ColorPicker<T> colorPicker) {
+    public ColorPickerSkin(final ColorPicker colorPicker) {
         super(colorPicker, new ColorPickerBehavior<T>(colorPicker));
         popup.setOwner(colorPicker);
         initialize();
