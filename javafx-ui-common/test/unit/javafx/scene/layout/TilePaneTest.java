@@ -934,4 +934,20 @@ public class TilePaneTest {
         }
     }
       
+    @Test public void testCSSsetPrefRow_RT20437() {        
+        Scene scene = new Scene(tilepane);
+        Stage stage = new Stage();
+        stage.setScene(scene);                
+        stage.show();
+        
+        ParsedValue pv = CSSParser.getInstance().parseExpr("-fx-perf-rows","2");
+        Object val = pv.convert(null);        
+        StyleableProperty prop = StyleableProperty.getStyleableProperty(tilepane.prefRowsProperty());
+        try {
+            prop.set(tilepane, val, null);
+            assertEquals(2, tilepane.getPrefRows(), 0.00001);
+        } catch (Exception e) {
+            Assert.fail(e.toString());
+        }
+    }    
 }
