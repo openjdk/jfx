@@ -65,6 +65,7 @@ import javafx.geometry.Orientation;
 import javafx.geometry.VPos;
 import javafx.scene.control.*;
 import javafx.scene.input.MouseEvent;
+import javafx.scene.input.ScrollEvent;
 import javafx.scene.input.SwipeEvent;
 import javafx.scene.layout.Region;
 import javafx.scene.layout.StackPane;
@@ -129,6 +130,13 @@ public class PaginationSkin<T> extends SkinBase<Pagination<T>, PaginationBehavio
             @Override
             public void handle(SwipeEvent t) {
                 paginationListView.getSelectionModel().selectPrevious();
+            }
+        });
+        
+        // Disable scrolling.  We do not want mouse scrolling to scroll between the pages.
+        addEventFilter(ScrollEvent.ANY, new EventHandler<ScrollEvent>() {
+            @Override public void handle(ScrollEvent event) {
+                event.consume();
             }
         });
     }
