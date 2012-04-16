@@ -3185,8 +3185,14 @@ Only the properties with values that are different from the TextBox are specifie
     -fx-padding: 15;
 }
 
-.color-picker-grid .separator .line {
-    -fx-background-color: -fx-pressed-base;
+.color-square {
+    -fx-stroke: black;
+    -fx-stroke-width: 0.2;
+}
+
+.color-panel .separator .line {
+/*    -fx-background-color: -fx-pressed-base;*/
+    -fx-background-color: white;
     -fx-padding: 6 0 0 0;
     -fx-background-insets: 4 -10 0 -10,5 -10 0 -10;
     -fx-border-style: none;
@@ -3246,6 +3252,7 @@ Only the properties with values that are different from the TextBox are specifie
 .controls-pane #pill-right {
     -fx-padding: 0 8 0 8;
     -fx-border-image-source: url("right-btn.png");
+/*    -fx-border-image-source: url("file:///Users/paru/javafx/platform/repos/2.2/jfx/rt/javafx-ui-controls/src/com/sun/javafx/scene/control/skin/caspian/right-btn.png");*/
     -fx-border-image-slice: 4 4 4 4 fill;
     -fx-border-image-width: 4 4 4 4;
     -fx-border-image-insets: 0;
@@ -3280,6 +3287,92 @@ Only the properties with values that are different from the TextBox are specifie
     -fx-prompt-text-fill: derive(-fx-control-inner-background,-30%);
     -fx-cursor: text;
 }
+
+#input-text-field {
+    -fx-skin: "com.sun.javafx.scene.control.skin.TextFieldSkin";
+}
+
+.input-field {
+    -fx-skin: "com.sun.javafx.scene.control.skin.InputFieldSkin";
+    -fx-background-color: -fx-shadow-highlight-color, -fx-text-box-border, -fx-control-inner-background;
+    -fx-background-insets: 0, 1, 2;
+    -fx-background-radius: 3, 2, 2;
+    -fx-padding: 3 5 3 5;
+    -fx-prompt-text-fill: derive(-fx-control-inner-background,-30%);
+    -fx-cursor: text;
+}
+
+.input-field:focused {
+    -fx-background-color: -fx-focus-color, -fx-text-box-border, -fx-control-inner-background;
+    -fx-background-insets: -0.4, 1, 2;
+    -fx-background-radius: 3.4, 2, 2;
+}
+
+.input-field:disabled {
+    -fx-opacity: -fx-disabled-opacity;
+}
+
+.integer-field {
+    -fx-skin: "com.sun.javafx.scene.control.skin.IntegerFieldSkin";
+    -fx-background-color: -fx-shadow-highlight-color, -fx-text-box-border, -fx-control-inner-background;
+    -fx-background-insets: 0, 1, 2;
+    -fx-background-radius: 3, 2, 2;
+    -fx-padding: 3 5 3 5;
+    -fx-prompt-text-fill: derive(-fx-control-inner-background,-30%);
+    -fx-cursor: text;
+}
+
+.integer-field:focused {
+    -fx-background-color: -fx-focus-color, -fx-text-box-border, -fx-control-inner-background;
+    -fx-background-insets: -0.4, 1, 2;
+    -fx-background-radius: 3.4, 2, 2;
+}
+
+/*.integer-field:disabled {
+    -fx-opacity: -fx-disabled-opacity;
+}*/
+
+.double-field {
+    -fx-skin: "com.sun.javafx.scene.control.skin.DoubleFieldSkin";
+    -fx-background-color: -fx-shadow-highlight-color, -fx-text-box-border, -fx-control-inner-background;
+    -fx-background-insets: 0, 1, 2;
+    -fx-background-radius: 3, 2, 2;
+    -fx-padding: 3 5 3 5;
+    -fx-prompt-text-fill: derive(-fx-control-inner-background,-30%);
+    -fx-cursor: text;
+}
+
+.double-field:focused {
+    -fx-background-color: -fx-focus-color, -fx-text-box-border, -fx-control-inner-background;
+    -fx-background-insets: -0.4, 1, 2;
+    -fx-background-radius: 3.4, 2, 2;
+}
+
+.double-field:disabled {
+    -fx-opacity: -fx-disabled-opacity;
+}
+
+
+.webcolor-field {
+    -fx-skin: "com.sun.javafx.scene.control.skin.WebColorFieldSkin";
+    -fx-background-color: -fx-shadow-highlight-color, -fx-text-box-border, -fx-control-inner-background;
+    -fx-background-insets: 0, 1, 2;
+    -fx-background-radius: 3, 2, 2;
+    -fx-padding: 3 5 3 5;
+    -fx-prompt-text-fill: derive(-fx-control-inner-background,-30%);
+    -fx-cursor: text;
+}
+
+.webcolor-field:focused {
+    -fx-background-color: -fx-focus-color, -fx-text-box-border, -fx-control-inner-background;
+    -fx-background-insets: -0.4, 1, 2;
+    -fx-background-radius: 3.4, 2, 2;
+}
+
+.webcolor-field:disabled {
+    -fx-opacity: -fx-disabled-opacity;
+}
+
 
 /* -------------------------- STYLES FOR PAGINATION CONTROL ----- */
 .pagination-cell {

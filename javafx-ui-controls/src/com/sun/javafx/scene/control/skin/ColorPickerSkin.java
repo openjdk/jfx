@@ -44,7 +44,6 @@ import javafx.scene.layout.StackPane;
 import javafx.scene.shape.Rectangle;
 import javafx.scene.paint.Color;
 import javafx.scene.paint.Paint;
-import javafx.scene.shape.RectangleBuilder;
 import com.sun.javafx.scene.control.behavior.ColorPickerBehavior;
 import com.sun.javafx.scene.control.ColorPicker;
 import com.sun.javafx.scene.control.ColorPickerPanel;
@@ -60,8 +59,6 @@ public class ColorPickerSkin<T> extends ComboBoxPopupControl<T> {
     private Rectangle colorRect; 
     private ColorPickerPanel popup = new ColorPickerPanel(Color.WHITE);
     
-    private boolean behaveLikeSplitButton = false;
-    
     private ObjectProperty<Color> color = new SimpleObjectProperty<Color>(Color.WHITE);
     public ObjectProperty<Color> colorProperty() { return color; }
     public Color getColor() { return color.get(); }
@@ -71,15 +68,31 @@ public class ColorPickerSkin<T> extends ComboBoxPopupControl<T> {
         super(colorPicker, new ColorPickerBehavior<T>(colorPicker));
         popup.setOwner(colorPicker);
         initialize();
-        if (arrowButton.getOnMouseReleased() == null) {
-            colorPicker.setOnMouseReleased(new EventHandler<MouseEvent>() {
-                @Override public void handle(MouseEvent e) {
-                    ((ColorPickerBehavior)getBehavior()).mouseReleased(e, behaveLikeSplitButton);
-                    e.consume();
-                }
-            });
+        if (getMode() == ComboBoxMode.BUTTON || getMode() == ComboBoxMode.COMBOBOX) {
+             if (arrowButton.getOnMouseReleased() == null) {
+                arrowButton.setOnMouseReleased(new EventHandler<MouseEvent>() {
+                    @Override public void handle(MouseEvent e) {
+                        ((ColorPickerBehavior)getBehavior()).mouseReleased(e, true);
+                        e.consume();
+                    }
+                });
+            }
+        } else if (getMode() == ComboBoxMode.SPLITBUTTON) {
+            if (arrowButton.getOnMouseReleased() == null) {
+                arrowButton.setOnMouseReleased(new EventHandler<MouseEvent>() {
+                    @Override public void handle(MouseEvent e) {
+                        ((ColorPickerBehavior)getBehavior()).mouseReleased(e, true);
+                        e.consume();
+                    }
+                });
+            }
         }
         getPopup().setAutoHide(false);
+         color.addListener(new ChangeListener<Color>() {
+            @Override public void changed(ObservableValue<? extends Color> ov, Color t, Color t1) {
+                colorPicker.setColor(getColor());
+            }
+        });
     }
     
     private void initialize() {
@@ -99,11 +112,9 @@ public class ColorPickerSkin<T> extends ComboBoxPopupControl<T> {
     private void updateComboBoxMode() {
         if (getSkinnable().getStyleClass().contains(ColorPicker.STYLE_CLASS_BUTTON)) {
             setMode(ComboBoxMode.BUTTON);
-            behaveLikeSplitButton = false;
         }
         else if (getSkinnable().getStyleClass().contains(ColorPicker.STYLE_CLASS_SPLIT_BUTTON)) {
             setMode(ComboBoxMode.SPLITBUTTON);
-            behaveLikeSplitButton = true;
         }
     }
     
@@ -157,12 +168,28 @@ public class ColorPickerSkin<T> extends ComboBoxPopupControl<T> {
                     return colorValueToWeb(getColor());
                 }
             });
+            if (getMode() == ComboBoxMode.BUTTON || getMode() == ComboBoxMode.COMBOBOX) {
+                if (displayNode.getOnMouseReleased() == null) {
+                    displayNode.setOnMouseReleased(new EventHandler<MouseEvent>() {
+                        @Override public void handle(MouseEvent e) {
+                            ((ColorPickerBehavior)getBehavior()).mouseReleased(e, true);
+                        }
+                    });
+                }
+            } else {
+                if (displayNode.getOnMouseReleased() == null) {
+                displayNode.setOnMouseReleased(new EventHandler<MouseEvent>() {
+                    @Override public void handle(MouseEvent e) {
+                        ((ColorPickerBehavior)getBehavior()).mouseReleased(e, false);
+                        e.consume();
+                    }
+                });
+            }
+            }
             // label graphic
             icon = new StackPane();
             icon.getStyleClass().add("picker-color");
-            colorRect = RectangleBuilder.create()
-                    .width(16).height(16)
-                    .build();
+            colorRect = new Rectangle(16, 16);
             colorRect.fillProperty().bind(new ObjectBinding<Paint>() {
                 { bind(color); }
                 @Override protected Paint computeValue() {

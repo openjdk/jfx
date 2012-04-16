@@ -85,7 +85,7 @@ public class ColorPickerBehavior<T> extends ComboBoxBaseBehavior<T> {
      * show the popup.  This will be called by the skin.
      *
      * @param e the mouse press event
-     * @param behaveLikeButton if true, this should act just like a button
+     * @param showHidePopup if true, this should show or hide Popup.
      */
 //    public void mousePressed(MouseEvent e) {
 //        super.mousePressed(e);
@@ -103,8 +103,8 @@ public class ColorPickerBehavior<T> extends ComboBoxBaseBehavior<T> {
      * @param e the mouse press event
      * @param behaveLikeButton if true, this should act just like a button
      */
-    public void mouseReleased(MouseEvent e, boolean behaveLikeSplitButton) {
-        if (behaveLikeSplitButton) {
+    public void mouseReleased(MouseEvent e, boolean showHidePopup) {
+        if (showHidePopup) {
             super.mouseReleased(e);
         } else {
             disarm();

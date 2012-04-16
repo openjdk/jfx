@@ -24,18 +24,30 @@
  */
 package com.sun.javafx.scene.control;
 
+import javafx.beans.property.ObjectProperty;
+import javafx.beans.property.SimpleObjectProperty;
 import javafx.scene.control.ComboBoxBase;
 
 /**
  *
  * @author paru
  */
-public class ColorPicker<Color> extends ComboBoxBase<Color> {
+public class ColorPicker<Paint> extends ComboBoxBase<Paint> {
 
     public static final String STYLE_CLASS_BUTTON = "button";
     public static final String STYLE_CLASS_SPLIT_BUTTON = "split-button";
     
+    /**
+     * The ColorPicker's currently selected color.  
+     */
+    private ObjectProperty<Paint> color = new SimpleObjectProperty<Paint>();
+    public ObjectProperty<Paint> colorProperty() { return color; }
+    public Paint getColor() { return color.get(); }
+    public void setColor(Paint newColor) { color.set(newColor); }
+    
     // Need API to turn off Color Label text.
+    // API to list custom colors 
+    // API to save custom colors
     
     public ColorPicker() {
         getStyleClass().add(DEFAULT_STYLE_CLASS);
