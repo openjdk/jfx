@@ -387,13 +387,18 @@ public class MenuBarSkin extends SkinBase<MenuBar, BehaviorBase<MenuBar>> implem
             Scene scene = getSkinnable().getScene();
             if (scene.getWindow() instanceof Stage) {
                 Stage stage = (Stage)scene.getWindow();
+                MenuBarSkin curMBSkin = (systemMenuMap != null) ? systemMenuMap.get(stage) : null;
                 if (getSkinnable().isUseSystemMenuBar() && !menusContainCustomMenuItem()) {
+                    if (curMBSkin != null &&
+                        (curMBSkin.getScene() == null || curMBSkin.getScene().getWindow() == null)) {
+                        // Fix for RT-20951. The MenuBar may have been removed from the Stage.
+                        systemMenuMap.remove(stage);
+                        curMBSkin = null;
+                    }
+
                     // Set the system menu bar if not set by another
                     // MenuBarSkin instance on this stage.
-                    if (systemMenuMap == null ||
-                        systemMenuMap.get(stage) == null ||
-                        systemMenuMap.get(stage) == this) {
-
+                    if (systemMenuMap == null || curMBSkin == null || curMBSkin == this) {
                         if (systemMenuMap == null) {
                             initSystemMenuBar();
                         }
@@ -418,7 +423,8 @@ public class MenuBarSkin extends SkinBase<MenuBar, BehaviorBase<MenuBar>> implem
                         return;
                     }
                 }
-                if (systemMenuMap != null && systemMenuMap.get(stage) == this) {
+
+                if (curMBSkin == this) {
                     // This MenuBar was previously installed in the
                     // system menu bar. Remove it.
                     wrappedMenus = null;
