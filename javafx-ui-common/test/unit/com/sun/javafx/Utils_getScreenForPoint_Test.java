@@ -30,6 +30,7 @@ import com.sun.javafx.tk.Toolkit;
 import java.util.Arrays;
 import java.util.Collection;
 import javafx.stage.Screen;
+import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
@@ -76,6 +77,11 @@ public final class Utils_getScreenForPoint_Test {
                 new ScreenConfiguration(0, 0, 1920, 1200, 0, 0, 1920, 1172, 96),
                 new ScreenConfiguration(1920, 160, 1440, 900,
                                         1920, 160, 1440, 900, 96));
+    }
+
+    @After
+    public void tearDown() {
+        ((StubToolkit) Toolkit.getToolkit()).resetScreens();
     }
 
     @Test

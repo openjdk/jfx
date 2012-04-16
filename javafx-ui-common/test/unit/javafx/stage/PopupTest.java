@@ -65,6 +65,7 @@ public class PopupTest {
 
     @After
     public void tearDown() {
+        toolkit.resetScreens();
     }
 
     private void pulse() {
@@ -296,7 +297,7 @@ public class PopupTest {
 
     @Test
     public void testBasicAutofix() {
-        ((StubToolkit) Toolkit.getToolkit()).setScreens(
+        toolkit.setScreens(
                 new ScreenConfiguration(0, 0, 1920, 1200,
                                         0, 200, 1920, 1000,
                                         96));
@@ -310,7 +311,7 @@ public class PopupTest {
 
     @Test
     public void testAutofixActivationAfterShow() {
-        ((StubToolkit) Toolkit.getToolkit()).setScreens(
+        toolkit.setScreens(
                 new ScreenConfiguration(0, 0, 1920, 1200,
                                         0, 200, 1920, 1000,
                                         96));
@@ -330,7 +331,7 @@ public class PopupTest {
 
     @Test
     public void testAutofixOnContentChange() {
-        ((StubToolkit) Toolkit.getToolkit()).setScreens(
+        toolkit.setScreens(
                 new ScreenConfiguration(0, 0, 1920, 1200,
                                         0, 0, 1920, 1172,
                                         96));
@@ -348,7 +349,7 @@ public class PopupTest {
 
     @Test
     public void testAutofixOnScreenChange() {
-        ((StubToolkit) Toolkit.getToolkit()).setScreens(
+        toolkit.setScreens(
                 new ScreenConfiguration(0, 0, 1920, 1200,
                                         0, 0, 1920, 1172,
                                         96));
@@ -359,7 +360,7 @@ public class PopupTest {
         assertEquals(100, popup.getX(), 1e-100);
         assertEquals(1120, popup.getY(), 1e-100);
 
-        ((StubToolkit) Toolkit.getToolkit()).setScreens(
+        toolkit.setScreens(
                 new ScreenConfiguration(0, 0, 1920, 1200,
                                         120, 0, 1800, 1172,
                                         96));

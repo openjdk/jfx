@@ -134,9 +134,11 @@ public class StubToolkit extends Toolkit {
 
     private TKScreenConfigurationListener screenConfigurationListener;
     
-    private ScreenConfiguration[] screenConfigurations = {
-        new ScreenConfiguration(0, 0, 1920, 1200, 0, 0, 1920, 1172, 96)
-    };
+    private static final ScreenConfiguration[] DEFAULT_SCREEN_CONFIG = {
+                new ScreenConfiguration(0, 0, 1920, 1200, 0, 0, 1920, 1172, 96)
+            };
+            
+    private ScreenConfiguration[] screenConfigurations = DEFAULT_SCREEN_CONFIG;
 
     static {
         try {
@@ -587,6 +589,10 @@ public class StubToolkit extends Toolkit {
         if (screenConfigurationListener != null) {
             screenConfigurationListener.screenConfigurationChanged();
         }
+    }
+
+    public void resetScreens() {
+        setScreens(DEFAULT_SCREEN_CONFIG);
     }
 
     @Override
