@@ -107,8 +107,10 @@ import javafx.beans.property.ReadOnlyBooleanWrapper;
  * <p>When a window is blocked by a modal stage its Z-order relative to its ancestors
  * is preserved, and it receives no input events and no window activation events,
  * but continues to animate and render normally.
- * Note that showing a modal stage does not block the calling thread. The
- * {@link #show} method returns immediately regardless of the modality.
+ * Note that showing a modal stage does not necessarily block the caller. The
+ * {@link #show} method returns immediately regardless of the modality of the stage.
+ * Use the {@link #showAndWait} method if you need to block the caller until
+ * the modal stage is hidden (closed).
  * The modality must be initialized before the stage is made visible.</p> 
  *
  * <p><b>Example:</b></p>
@@ -280,19 +282,99 @@ public class Stage extends Window {
     }
 
     /**
-     * Show the stage and wait for it to be closed before returning to the
-     * caller. This must be called on the FX Application thread. The stage
-     * must not already be visible prior to calling this method. This must not
-     * be called on the primary stage.
+     * Shows this stage and waits for it to be hidden (closed) before returning
+     * to the caller. This method temporarily blocks processing of the current
+     * event, and starts a nested event loop to handle other events.
+     * This method must be called on the FX Application thread.
+     * <p>
+     * A Stage is hidden (closed) by one of the following means:
+     * <ul>
+     * <li>the application calls the {@link #hide} or {@link #close} method on
+     * this stage</li>
+     * <li>this stage has a non-null owner window, and its owner is closed</li>
+     * <li>the user closes the window via the window system (for example,
+     * by pressing the close button in the window decoration)</li>
+     * </ul>
+     * </p>
+     *
+     * <p>
+     * After the Stage is hidden, and the application has returned from the
+     * event handler to the event loop, the nested event loop terminates
+     * and this method returns to the caller.
+     * </p>
+     * <p>
+     * For example, consider the following sequence of operations for different
+     * event handlers, assumed to execute in the order shown below:
+     * <pre>void evtHander1(...) {
+     *     stage1.showAndWait();
+     *     doSomethingAfterStage1Closed(...)
+     * }
+     *
+     * void evtHander2(...) {
+     *     stage1.hide();
+     *     doSomethingElseHere(...)
+     * }</pre>
+     * evtHandler1 will block at the call to showAndWait. It will resume execution
+     * after stage1 is hidden and the current event handler, in this case evtHandler2,
+     * returns to the event loop. This means that doSomethingElseHere will
+     * execute before doSomethingAfterStage1Closed.
+     * </p>
+     *
+     * <p>
+     * More than one stage may be shown with showAndWait. Each call
+     * will start a new nested event loop. The stages may be hidden in any order,
+     * but a particular nested event loop (and thus the showAndWait method
+     * for the associated stage) will only terminate after all inner event loops
+     * have also terminated.
+     * </p>
+     * <p>
+     * For example, consider the following sequence of operations for different
+     * event handlers, assumed to execute in the order shown below:
+     * <ul>
+     * <pre>void evtHander1() {
+     *     stage1.showAndWait();
+     *     doSomethingAfterStage1Closed(...)
+     * }
+     *
+     * void evtHander2() {
+     *     stage2.showAndWait();
+     *     doSomethingAfterStage2Closed(...)
+     * }
+     *
+     * void evtHander3() {
+     *     stage1.hide();
+     *     doSomethingElseHere(...)
+     * }
+     *
+     * void evtHander4() {
+     *     stage2.hide();
+     *     doSomethingElseHereToo(...)
+     * }</pre>
+     * </ul>
+     * evtHandler1 will block at the call to stage1.showAndWait, starting up
+     * a nested event loop just like in the previous example. evtHandler2 will
+     * then block at the call to stage2.showAndWait, starting up another (inner)
+     * nested event loop. The first call to stage1.showAndWait will resume execution
+     * after stage1 is hidden, but only after the inner nested event loop started
+     * by stage2.showAndWait has terminated. This means that the call to
+     * stage1.showAndWait won't return until after evtHandler2 has returned.
+     * The order of execution is: stage1.showAndWait, stage2.showAndWait,
+     * stage1.hide, doSomethingElseHere, stage2.hide, doSomethingElseHereToo,
+     * doSomethingAfterStage2Closed, doSomethingAfterStage1Closed.
+     * </p>
+     *
+     * <p>
+     * This method must not be called on the primary stage or on a stage that
+     * is already visible.
+     * </p>
      *
      * @throws IllegalStateException if this method is called on a thread
-     * other than the JavaFX Application Thread.
-     *
-     * @treatAsPrivate implementation detail
-     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
+     *     other than the JavaFX Application Thread.
+     * @throws IllegalStateException if this method is called on the
+     *     primary stage.
+     * @throws IllegalStateException if this stage is already showing.
      */
-    @Deprecated
-    public void impl_showAndWait() {
+    public void showAndWait() {
 
         Toolkit.getToolkit().checkFxUserThread();
 
@@ -303,6 +385,11 @@ public class Stage extends Window {
         if (isShowing()) {
             throw new IllegalStateException("Stage already visible");
         }
+
+        // TODO: file a new bug; the following assertion can fail if this
+        // method is called from an event handler that is listening to a
+        // WindowEvent.WINDOW_HIDING event.
+        assert !inNestedEventLoop;
 
         show();
         inNestedEventLoop = true;
