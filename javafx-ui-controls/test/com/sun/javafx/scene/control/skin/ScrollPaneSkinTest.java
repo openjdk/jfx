@@ -390,7 +390,7 @@ public class ScrollPaneSkinTest {
         /*
         ** did it work?
         */
-        assertTrue(scene.getImpl_focusOwner() == scrollPane);
+        assertTrue(scene.impl_getFocusOwner() == scrollPane);
     }
 
     /*
