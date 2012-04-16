@@ -202,7 +202,9 @@ public class PaginationSkin<T> extends SkinBase<Pagination<T>, PaginationBehavio
                             setGraphic(null);
                         } else {
                             setText(null);
-                            setGraphic(pagination.getPageFactory().call(getIndex()));
+                            if (pagination.getPageFactory() != null) {
+                                setGraphic(pagination.getPageFactory().call(getIndex()));
+                            }
                         }
                     }
                 };
