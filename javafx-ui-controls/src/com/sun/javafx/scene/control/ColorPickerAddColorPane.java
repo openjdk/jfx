@@ -257,9 +257,9 @@ public class ColorPickerAddColorPane extends StackPane {
                 }
             });
             
-            colorRectIndicator = 
-                    CircleBuilder.create().centerX(60).centerY(60).radius(5).stroke(Color.WHITE).
-                    fill(null).effect(new DropShadow(2, 0, 1, Color.BLACK)).build();
+            colorRectIndicator = new Circle(60, 60, 5, null);
+            colorRectIndicator.setStroke(Color.WHITE);
+            colorRectIndicator.setEffect(new DropShadow(2, 0, 1, Color.BLACK));
         
             colorRect = new Rectangle(RECT_SIZE, RECT_SIZE);
             colorRect.fillProperty().bind(new ObjectBinding<Paint>() {
@@ -277,8 +277,8 @@ public class ColorPickerAddColorPane extends StackPane {
         
             EventHandler<MouseEvent> rectMouseHandler = new EventHandler<MouseEvent>() {
                 @Override public void handle(MouseEvent event) {
-                    final double x = event.getX() - colorRect.getLayoutX();
-                    final double y = event.getY() - colorRect.getLayoutY();
+                    final double x = event.getX();
+                    final double y = event.getY();
                     sat.set(clamp(x / RECT_SIZE) * 100);
                     bright.set(100 - (clamp(y / RECT_SIZE) * 100));
                 }
@@ -294,6 +294,8 @@ public class ColorPickerAddColorPane extends StackPane {
             colorBar.setFill(createHueGradient());
 
             colorBarIndicator = new Rectangle(24, 10, null);
+            colorBarIndicator.setLayoutX(CONTENT_PADDING+colorRect.getWidth()+13);
+            colorBarIndicator.setLayoutY((CONTENT_PADDING+(colorBar.getHeight()*(hue.get() / 360))));
             colorBarIndicator.setArcWidth(4);
             colorBarIndicator.setArcHeight(4);
             colorBarIndicator.setStroke(Color.WHITE);
@@ -339,7 +341,7 @@ public class ColorPickerAddColorPane extends StackPane {
             });
             EventHandler<MouseEvent> barMouseHandler = new EventHandler<MouseEvent>() {
                 @Override public void handle(MouseEvent event) {
-                    final double y = event.getY() - colorBar.getLayoutY();
+                    final double y = event.getY();
                     hue.set(clamp(y / RECT_SIZE) * 360);
                 }
             };
@@ -363,7 +365,6 @@ public class ColorPickerAddColorPane extends StackPane {
             colorRectOverlayTwo.relocate(x, y);
             
             colorBar.relocate(x+colorRect.getWidth()+10, y);
-            colorBarIndicator.relocate(x+colorRect.getWidth()+8, y-5+colorBar.getHeight());
         }
     }
     
