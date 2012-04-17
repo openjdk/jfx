@@ -31,6 +31,7 @@ import javafx.scene.paint.Color;
 import javafx.scene.paint.LinearGradient;
 import javafx.scene.paint.Paint;
 import javafx.scene.paint.Stop;
+import javafx.scene.text.Font;
 import org.junit.Test;
 import static org.junit.Assert.*;
 
@@ -141,7 +142,7 @@ public class CSSParserTest {
         ParsedValue value = decl.getParsedValue();
         assertTrue(value != null);
         
-        Double size = (Double)value.convert(null);
+        Double size = (Double)value.convert(Font.font("Amble", 12));
         assertTrue(Double.compare(size, 12) == 0);
     }
     

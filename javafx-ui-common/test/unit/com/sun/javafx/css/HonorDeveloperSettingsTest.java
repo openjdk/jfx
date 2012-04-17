@@ -39,6 +39,7 @@ import javafx.scene.text.FontSmoothingType;
 import javafx.scene.text.Text;
 import javafx.stage.Stage;
 import javafx.stage.Window;
+import javafx.beans.value.*;
 
 import org.junit.Before;
 import org.junit.Ignore;
@@ -262,15 +263,15 @@ public class HonorDeveloperSettingsTest {
         
     }
     
-    @Test @Ignore("RT-20210 breaks this, but RT-20513 is working")
+    @Test 
     public void testInlineStyleInheritedFromParentApplies() {
-        
-        // must remove the id so we don't pick up the ua style
+
+        // Must remove the id so we don't match on the ua style.
         text.setId(null);
-        text.setStyle("-fx-stroke-width: 1em;");
+        text.setStyle("-fx-stroke-width: 1em; -fx-stroke: red;");
         
         scene.getRoot().setStyle("-fx-font: 18 Amble;");
-        
+       
         Toolkit.getToolkit().firePulse();
         
         //
@@ -284,8 +285,6 @@ public class HonorDeveloperSettingsTest {
     @Test
     public void testInlineStyleNotInheritedFromParentWhenUserSetsFont() {
         
-        // must remove the id so we don't pick up the ua style
-        text.setId(null);
         text.setStyle("-fx-stroke-width: 1em;");
         
         Font font = Font.font("Amble", 14);

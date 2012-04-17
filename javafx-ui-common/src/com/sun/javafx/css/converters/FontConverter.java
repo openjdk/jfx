@@ -192,5 +192,32 @@ public final class FontConverter extends StyleConverter<ParsedValue[], Font> {
             return "Font.WeightConverter";
         }
     }
+    
+    public static final class SizeConverter extends com.sun.javafx.css.StyleConverter<ParsedValue<?, Size>, Double> {
+
+        // lazy, thread-safe instatiation
+        private static class Holder {
+            static SizeConverter INSTANCE = new SizeConverter();
+        }
+
+        public static SizeConverter getInstance() {
+            return Holder.INSTANCE;
+        }
+
+        private SizeConverter() {
+            super();
+        }
+
+        @Override
+        public Double convert(ParsedValue<ParsedValue<?, Size>, Double> value, Font font) {
+            final ParsedValue<?, Size> size = value.getValue();
+            return size.convert(font).pixels(font.getSize(), font);
+        }
+
+        @Override
+        public String toString() {
+            return "Font.SizeConverter";
+        }
+    }    
 
 }
