@@ -789,6 +789,7 @@ public abstract class Parent extends Node {
      */
     boolean performingLayout = false;
 
+    private boolean sizeCacheClear = true;
     private double prefWidthCache = -1;
     private double prefHeightCache = -1;
     private double minWidthCache = -1;
@@ -831,6 +832,10 @@ public abstract class Parent extends Node {
     }
 
     void clearSizeCache() {
+        if (sizeCacheClear) {
+            return;
+        }
+        sizeCacheClear = true;
         prefWidthCache = -1;
         prefHeightCache = -1;
         minWidthCache = -1;
@@ -846,6 +851,7 @@ public abstract class Parent extends Node {
         if (height == -1) {
             if (prefWidthCache == -1) {
                 prefWidthCache = computePrefWidth(-1);
+                sizeCacheClear = false;
             } 
             return prefWidthCache;
         } else {
@@ -857,6 +863,7 @@ public abstract class Parent extends Node {
         if (width == -1) {
             if (prefHeightCache == -1) {
                 prefHeightCache = computePrefHeight(-1);
+                sizeCacheClear = false;
             } 
             return prefHeightCache;
         } else {
@@ -868,6 +875,7 @@ public abstract class Parent extends Node {
         if (height == -1) {
             if (minWidthCache == -1) {
                 minWidthCache = computeMinWidth(-1);
+                sizeCacheClear = false;
             }
             return minWidthCache;
         } else {
@@ -879,6 +887,7 @@ public abstract class Parent extends Node {
         if (width == -1) {
             if (minHeightCache == -1) {
                 minHeightCache = computeMinHeight(-1);
+                sizeCacheClear = false;
             }
             return minHeightCache;
         } else {

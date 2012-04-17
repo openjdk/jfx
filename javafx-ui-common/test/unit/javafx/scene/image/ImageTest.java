@@ -453,6 +453,7 @@ public final class ImageTest {
     // }
     @Test
     public void isExternalFormatSupportedTest() {
+        toolkit.externalFormatClass = StubToolkit.class;
         assertFalse(Image.impl_isExternalFormatSupported(null));
         assertTrue(Image.impl_isExternalFormatSupported(StubToolkit.class));
         toolkit.externalFormatClass = ImageTest.class;

@@ -27,9 +27,12 @@ package com.sun.javafx.pgstub;
 import com.sun.javafx.geom.CameraImpl;
 import com.sun.javafx.geom.PickRay;
 import com.sun.javafx.sg.PGNode;
+import com.sun.javafx.tk.Toolkit;
 import com.sun.javafx.tk.TKScene;
 import com.sun.javafx.tk.TKSceneListener;
 import com.sun.javafx.tk.TKScenePaintListener;
+
+import javafx.scene.input.Dragboard;
 
 public class StubScene implements TKScene {
     StubStage stage;
@@ -83,6 +86,11 @@ public class StubScene implements TKScene {
     }
 
     public void entireSceneNeedsRepaint() {
+    }
+
+    @Override
+    public Dragboard createDragboard() {
+        return Toolkit.getToolkit().createDragboard();
     }
 
     @Override

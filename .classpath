@@ -4,12 +4,13 @@
 	<classpathentry kind="src" path="javafx-ui-controls/test"/>
 	<classpathentry kind="src" path="javafx-ui-controls/build/builders"/>
 	<classpathentry kind="src" path="javafx-ui-common/src"/>
+	<classpathentry kind="src" path="javafx-ui-common/build/builders"/>
 	<classpathentry kind="src" path="javafx-ui-charts/src"/>
+	<classpathentry kind="src" path="javafx-ui-charts/build/builders"/>
 	<!--
 	<classpathentry kind="src" path="javafx-ui-common/test/unit"/>
 	<classpathentry kind="src" path="javafx-designtime/test"/>
 	-->
-	<classpathentry kind="src" path="javafx-ui-common/build/builders"/>
 	<classpathentry kind="src" path="javafx-concurrent/src"/>
 	<classpathentry kind="src" path="javafx-concurrent/test"/>
 	<classpathentry kind="src" path="javafx-concurrent/build/builders"/>

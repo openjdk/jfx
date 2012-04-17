@@ -1511,6 +1511,9 @@ public class Scene implements EventTarget {
     private boolean focusDirty = true;
 
     final void setFocusDirty(boolean value) {
+        if (!focusDirty) {
+            Toolkit.getToolkit().requestNextPulse();
+        }
         focusDirty = value;
     }
 
@@ -1688,46 +1691,6 @@ public class Scene implements EventTarget {
     public Node impl_getFocusOwner() {
         return getKeyHandler().getFocusOwner();
     }
-    /**
-     * The scene's current focus owner node. This node's "focused"
-     * variable might be false if this scene has no window, or if the
-     * window is inactive (window.focused == false).
-     *
-     * @treatAsPrivate implementation detail
-     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
-     */
-    @Deprecated
-    private ObjectProperty<Node> impl_focusOwner;
-
-    /**
-     * @treatAsPrivate implementation detail
-     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
-     */
-    @Deprecated
-    public final void setImpl_focusOwner(Node value) {
-        impl_focusOwnerProperty().set(value);
-    }
-
-    /**
-     * @treatAsPrivate implementation detail
-     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
-     */
-    @Deprecated
-    public final Node getImpl_focusOwner() {
-        return impl_focusOwner == null ? null : impl_focusOwner.get();
-    }
-
-    /**
-     * @treatAsPrivate implementation detail
-     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
-     */
-    @Deprecated
-    public final ObjectProperty<Node> impl_focusOwnerProperty() {
-        if (impl_focusOwner == null) {
-            impl_focusOwner = new SimpleObjectProperty<Node>(this, "impl_focusOwner");
-        }
-        return impl_focusOwner;
-    }
 
     // For testing.
     void focusCleanup() {
@@ -1761,12 +1724,11 @@ public class Scene implements EventTarget {
      * Returns true if this scene is quiescent, i.e. it has no activity
      * pending on it such as CSS processing or layout requests.
      *
+     * Intended to be used for tests only
+     *
      * @return boolean indicating whether the scene is quiescent
-     * @treatAsPrivate implementation detail
-     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
      */
-    @Deprecated
-    public boolean impl_isQuiescent() {
+    boolean isQuiescent() {
         return !isFocusDirty()
                && (getRoot().cssFlag == CSSFlags.CLEAN)
                && dirtyLayoutRoots.isEmpty();
@@ -1776,11 +1738,9 @@ public class Scene implements EventTarget {
      * A listener for pulses, used for testing. If non-null, this is called at
      * the very end of ScenePulseListener.pulse().
      *
-     * @treatAsPrivate implementation detail
-     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
+     * Intended to be used for tests only
      */
-    @Deprecated
-    public Runnable impl_testPulseListener = null;
+    Runnable testPulseListener = null;
 
     /**
      * Set the specified dirty bit and mark the peer as dirty
@@ -2000,8 +1960,8 @@ public class Scene implements EventTarget {
                 firstPulse = false;
             }
 
-            if (impl_testPulseListener != null) {
-                impl_testPulseListener.run();
+            if (testPulseListener != null) {
+                testPulseListener.run();
             }
         }
     }
@@ -2310,6 +2270,10 @@ public class Scene implements EventTarget {
                 Scene.this.dndGesture.processTargetExit(
                         Toolkit.getToolkit().convertDropTargetEventToFX(
                             e, Scene.this.dndGesture.dragboard));
+
+                if (Scene.this.dndGesture.source == null) {
+                    Scene.this.dndGesture = null;
+                }
             }
         }
 
@@ -2343,9 +2307,7 @@ public class Scene implements EventTarget {
            final EventTarget pickedNode = pick(de.getX(), de.getY());
            Scene.this.dndGesture.dragboard = de.impl_getPlatformDragboard();
 
-            if (Scene.this.dndGesture.processRecognized(pickedNode, de)) {
-                return;
-            }
+            Scene.this.dndGesture.processRecognized(pickedNode, de);
 
             Scene.this.dndGesture = null;
         }
@@ -2490,14 +2452,7 @@ public class Scene implements EventTarget {
 
             final boolean hasContent = dragboard != null
                     && !dragboard.getContentTypes().isEmpty();
-            if (hasContent) {
-                Toolkit.getToolkit().startDrag(Scene.this.impl_peer,
-                                               sourceTransferModes,
-                                               new DragSourceListener(),
-                                               dragboard);
-                return true;
-            }
-            return false;
+            return hasContent;
         }
 
         private void processDropEnd(DragEvent de) {
@@ -2524,7 +2479,7 @@ public class Scene implements EventTarget {
             final EventTarget pickedTarget = tmpTargetWrapper.getEventTarget();
 
             if (dragboard == null) {
-                dragboard = createDragboard();
+                dragboard = createDragboard(de);
             }
 
             de = DragEvent.impl_copy(de.getSource(), pickedTarget, source,
@@ -2552,7 +2507,7 @@ public class Scene implements EventTarget {
 //                        pickedNode, de, DragEvent.DRAG_TRANSFER_MODE_CHANGED);
 //
 //                if (dragboard == null) {
-//                    dragboard = createDragboard();
+//                    dragboard = createDragboard(de);
 //                }
 //                dragboard = de.impl_getPlatformDragboard();
 //
@@ -2577,7 +2532,7 @@ public class Scene implements EventTarget {
                     DragEvent.DRAG_DROPPED);
 
             if (dragboard == null) {
-                dragboard = createDragboard();
+                dragboard = createDragboard(de);
             }
 
             handleExitEnter(de, tmpTargetWrapper);
@@ -2684,7 +2639,7 @@ public class Scene implements EventTarget {
             if (t.isEmpty()) {
                 dragboard = null;
             } else if (dragboard == null) {
-                dragboard = createDragboard();
+                dragboard = createDragboard(null);
             }
             this.source = source;
             potentialTarget = source;
@@ -2699,8 +2654,15 @@ public class Scene implements EventTarget {
             fullPDRSource = source;
         }
 
-        private Dragboard createDragboard() {
-            return Toolkit.getToolkit().createDragboard();
+        private Dragboard createDragboard(final DragEvent de) {
+            Dragboard dragboard = null;
+            if (de != null) {
+                dragboard = de.getDragboard();
+                if (dragboard != null) {
+                    return dragboard;
+                }
+            }
+            return Scene.this.impl_peer.createDragboard();
         }
     }
 
@@ -3219,8 +3181,6 @@ public class Scene implements EventTarget {
                 ((Node.FocusedProperty) oldFocusOwner.focusedProperty()).store(false);
             }
             focusOwner = value;
-
-            Scene.this.setImpl_focusOwner(focusOwner);// = Scene{ impl_focusOwner = bind keyHandler.focusOwner };
 
             if (focusOwner != null) {
                 ((Node.FocusedProperty) focusOwner.focusedProperty()).store(windowFocused);

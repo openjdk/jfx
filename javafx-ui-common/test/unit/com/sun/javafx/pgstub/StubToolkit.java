@@ -133,9 +133,11 @@ public class StubToolkit extends Toolkit {
 
     private TKScreenConfigurationListener screenConfigurationListener;
     
-    private ScreenConfiguration[] screenConfigurations = {
-        new ScreenConfiguration(0, 0, 1920, 1200, 0, 0, 1920, 1172, 96)
-    };
+    private static final ScreenConfiguration[] DEFAULT_SCREEN_CONFIG = {
+                new ScreenConfiguration(0, 0, 1920, 1200, 0, 0, 1920, 1172, 96)
+            };
+            
+    private ScreenConfiguration[] screenConfigurations = DEFAULT_SCREEN_CONFIG;
 
     static {
         try {
@@ -147,6 +149,7 @@ public class StubToolkit extends Toolkit {
         // so that they can run with assertion enabled
         javafx.scene.Scene.impl_setAllowPGAccess(true);
     }
+    private boolean pulseRequested;
 
     /*
      * overrides of Toolkit's abstract functions
@@ -425,11 +428,21 @@ public class StubToolkit extends Toolkit {
         firePulse();
     }
 
+   public boolean isPulseRequested() {
+        return pulseRequested;
+    }
+
+    public void clearPulseRequested() {
+        pulseRequested = false;
+    }
+
     // do nothing -- bringing in FrameJob and MasterTimer also bring in
     // Settings and crap which isn't setup for the testing stuff because
     // we don't run through a RuntimeProvider or do normal startup
     // public @Override public void triggerNextPulse():Void { }
-    @Override public void requestNextPulse() {}
+    @Override public void requestNextPulse() {
+        pulseRequested = true;
+    }
 
     private TKClipboard clipboard = new TKClipboard() {
         private Map<DataFormat, Object> map = new HashMap<DataFormat, Object>();
@@ -574,6 +587,10 @@ public class StubToolkit extends Toolkit {
         if (screenConfigurationListener != null) {
             screenConfigurationListener.screenConfigurationChanged();
         }
+    }
+
+    public void resetScreens() {
+        setScreens(DEFAULT_SCREEN_CONFIG);
     }
 
     @Override
