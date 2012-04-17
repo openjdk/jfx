@@ -73,10 +73,10 @@ public class PaginationBehavior<T> extends BehaviorBase<Pagination<T>> {
     @Override protected void callAction(String name) {
         if (LEFT.equals(name)) {
             PaginationSkin ps = (PaginationSkin)getControl().getSkin();
-            ps.getSelectionModel().selectPrevious();
+            ps.selectPrevious();
         } else if (RIGHT.equals(name)) {
             PaginationSkin ps = (PaginationSkin)getControl().getSkin();
-            ps.getSelectionModel().selectNext();
+            ps.selectNext();
         } else {
             super.callAction(name);
         }

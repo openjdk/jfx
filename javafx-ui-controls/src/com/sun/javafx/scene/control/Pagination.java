@@ -148,10 +148,12 @@ public class Pagination<T> extends Control {
      */
     public final IntegerProperty pageIndex = new SimpleIntegerProperty(this, "pageIndex", 0);
     public final void setPageIndex(int value) { 
-        if (value < 0) {
-            value = 0;
-        }                
-        pageIndex.set(value); 
+        int totalNumberOfPages = getNumberOfItems()/getItemsPerPage();
+        totalNumberOfPages += getNumberOfItems()%getItemsPerPage() != 0 ? 1 : 0;
+        
+        if (value >= 0 && value < totalNumberOfPages) {
+            pageIndex.set(value); 
+        }
     }
     public final int getPageIndex() { return pageIndex.get(); }
     public final IntegerProperty pageIndexProperty() { return pageIndex; }
