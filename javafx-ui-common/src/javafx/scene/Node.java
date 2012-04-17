@@ -908,7 +908,7 @@ public abstract class Node implements EventTarget {
      * as part of the scene graph. A node may be visible and yet not be shown
      * in the rendered scene if, for instance, it is off the screen or obscured
      * by another Node. Invisible nodes never receive mouse events or
-     * keyboard focus, and never maintain keyboard focus when they become
+     * keyboard focus and never maintain keyboard focus when they become
      * invisible.
      *
      * @defaultValue true
