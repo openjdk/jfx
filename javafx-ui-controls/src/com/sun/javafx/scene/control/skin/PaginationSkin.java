@@ -170,7 +170,16 @@ public class PaginationSkin<T> extends SkinBase<Pagination<T>, PaginationBehavio
         currentIndex = usePageIndex ? getSkinnable().getPageIndex() : 0;
         toIndex = fromIndex + (numberOfPages - 1);
 
+        boolean isAnimate = animate;
+        if (isAnimate) {
+            animate = false;
+        }
+
         pagination.setPageIndex(currentIndex);
+
+        if (isAnimate) {
+            animate = true;
+        }
     }
 
     private void createPage(ScrollPane pane, int index) {
@@ -192,18 +201,19 @@ public class PaginationSkin<T> extends SkinBase<Pagination<T>, PaginationBehavio
     private int currentAnimatedIndex;
     private int previousAnimatedIndex;
 
-    private void animateSwitchPage() {         
+    private void animateSwitchPage() {
         if (timeline != null) {
             // The current animation has not finished
             return;
         }
-        
-        previousAnimatedIndex = currentAnimatedIndex;
-        if (currentIndex > previousIndex) {            
-            currentAnimatedIndex++;
-        } else {
-            currentAnimatedIndex--;
-        }
+          // Uncomment this code is we want to see the page index
+          // selections as we cycle from previous to the current index.
+//        previousAnimatedIndex = currentAnimatedIndex;
+//        if (currentIndex > previousIndex) {
+//            currentAnimatedIndex++;
+//        } else {
+//            currentAnimatedIndex--;
+//        }
 
         createPage(nextScrollPane, currentAnimatedIndex);
         nextScrollPane.setCache(true);
@@ -257,7 +267,7 @@ public class PaginationSkin<T> extends SkinBase<Pagination<T>, PaginationBehavio
             ScrollPane temp = currentScrollPane;
             currentScrollPane = nextScrollPane;
             nextScrollPane = temp;
-                        
+
             timeline = null;
             currentScrollPane.setTranslateX(0);
             nextScrollPane.setCache(false);
@@ -265,20 +275,22 @@ public class PaginationSkin<T> extends SkinBase<Pagination<T>, PaginationBehavio
             nextScrollPane.setVisible(false);
             nextScrollPane.setContent(null);
 
-            int savedCurrentIndex = currentIndex;
-            int savedPreviousIndex = previousIndex;
-            
-            // We swap out the current and previous index so we can select
-            // and unselect them.
-            previousIndex = previousAnimatedIndex;
-            currentIndex = currentAnimatedIndex;            
-            navigation.updatePageIndex();            
-            currentIndex = savedCurrentIndex;
-            previousIndex = savedPreviousIndex;
-            
-            if (currentAnimatedIndex != currentIndex) {
-                animateSwitchPage();
-            }
+            // Uncomment this code is we want to see the page index
+            // selections as we cycle from previous to the current index.
+//            int savedCurrentIndex = currentIndex;
+//            int savedPreviousIndex = previousIndex;
+//
+//            // We swap out the current and previous index so we can select
+//            // and unselect them.
+//            previousIndex = previousAnimatedIndex;
+//            currentIndex = currentAnimatedIndex;
+            navigation.updatePageIndex();
+//            currentIndex = savedCurrentIndex;
+//            previousIndex = savedPreviousIndex;
+//
+//            if (currentAnimatedIndex != currentIndex) {
+//                animateSwitchPage();
+//            }
         }
     };
 
@@ -394,8 +406,11 @@ public class PaginationSkin<T> extends SkinBase<Pagination<T>, PaginationBehavio
                 public void changed(ObservableValue<? extends Number> arg0, Number arg1, Number arg2) {
                     previousIndex = arg1.intValue();
                     currentIndex = arg2.intValue();
-                    if (animate) {                        
+                    if (animate) {
+                        // Uncomment this code is we want to see the page index
+                        // selections as we cycle from previous to the current index.
                         currentAnimatedIndex = previousIndex;
+                        currentAnimatedIndex = currentIndex;
                         animateSwitchPage();
                     } else {
                         updatePageIndex();
