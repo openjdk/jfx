@@ -2724,11 +2724,13 @@
 
 .fxvk .key { 
     -fx-body-color: linear-gradient(to bottom, #efefef, #a3a3a3);
+    -fx-background-color: -fx-outer-border, -fx-shadow-highlight-color, -fx-inner-border, -fx-body-color;
+    -fx-background-insets: 0, 1, 2 1 1 1, 2;
     -fx-font-family: "Segoe UI";
     -fx-font-size: 1.5em; /* 18pt */
     -fx-font-weight: bold;
     -fx-padding: 3 3 5 6;
-    -fx-background-radius: 12;
+    -fx-background-radius: 6;
 }
 
 .fxvk .secondary-key { 
@@ -2743,6 +2745,7 @@
 
 .fxvk .special-key { 
     -fx-body-color: linear-gradient(to bottom, #646464, #373737);
+    -fx-background-insets: 0, 1, 1, 2;
     -fx-text-fill: white;
     -fx-font-family: "Segoe UI Symbol";
 }
