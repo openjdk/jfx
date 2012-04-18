@@ -309,7 +309,7 @@ public class TitledPaneTest {
         double xval = (titledPane.localToScene(titledPane.getLayoutBounds())).getMinX();
         double yval = (titledPane.localToScene(titledPane.getLayoutBounds())).getMinY();
    
-        final TitledPaneTest.MouseEventGenerator generator = new TitledPaneTest.MouseEventGenerator();
+        final MouseEventGenerator generator = new MouseEventGenerator();
         scene.impl_processMouseEvent(
             generator.generateMouseEvent(MouseEvent.MOUSE_PRESSED, xval+20, yval+20));
         scene.impl_processMouseEvent(
@@ -324,35 +324,5 @@ public class TitledPaneTest {
         tk.firePulse();
         assertFalse(titledPane.isFocused());
         assertTrue(button.isFocused());
-    }      
-    
-    static final class MouseEventGenerator {
-        private boolean primaryButtonDown = false;
-
-        public MouseEvent generateMouseEvent(EventType<MouseEvent> type,
-                double x, double y) {
-
-            MouseButton button = MouseButton.NONE;
-            if (type == MouseEvent.MOUSE_PRESSED ||
-                    type == MouseEvent.MOUSE_RELEASED ||
-                    type == MouseEvent.MOUSE_DRAGGED) {
-                button = MouseButton.PRIMARY;
-            }
-
-            if (type == MouseEvent.MOUSE_PRESSED ||
-                    type == MouseEvent.MOUSE_DRAGGED) {
-                primaryButtonDown = true;
-            }
-
-            if (type == MouseEvent.MOUSE_RELEASED) {
-                primaryButtonDown = false;
-            }
-
-            MouseEvent event = MouseEvent.impl_mouseEvent(x, y, x, y, button,
-                    1, false, false, false, false, false, primaryButtonDown,
-                    false, false, false, type);
-
-            return event;
-        }    
-    }
+    }          
 }
