@@ -107,8 +107,7 @@ public class PaginationSkin<T> extends SkinBase<Pagination<T>, PaginationBehavio
         nextScrollPane.setPannable(false);
         nextScrollPane.setVisible(false);
 
-        resetIndexes(true);
-        createPage(currentScrollPane, currentIndex);
+        resetIndexes(true);        
 
         this.navigation = new NavigationControl();
 
@@ -164,7 +163,7 @@ public class PaginationSkin<T> extends SkinBase<Pagination<T>, PaginationBehavio
             // We will use the number of pages.
             getSkinnable().setNumberOfVisiblePages(numberOfPages);
         }
-
+        
         fromIndex = 0;
         previousIndex = 0;
         currentIndex = usePageIndex ? getSkinnable().getPageIndex() : 0;
@@ -176,6 +175,7 @@ public class PaginationSkin<T> extends SkinBase<Pagination<T>, PaginationBehavio
         }
 
         pagination.setPageIndex(currentIndex);
+        createPage(currentScrollPane, currentIndex);
 
         if (isAnimate) {
             animate = true;
