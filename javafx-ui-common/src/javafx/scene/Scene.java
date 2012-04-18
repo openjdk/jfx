@@ -1691,6 +1691,46 @@ public class Scene implements EventTarget {
     public Node impl_getFocusOwner() {
         return getKeyHandler().getFocusOwner();
     }
+    /**
+     * The scene's current focus owner node. This node's "focused"
+     * variable might be false if this scene has no window, or if the
+     * window is inactive (window.focused == false).
+     *
+     * @treatAsPrivate implementation detail
+     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
+     */
+    @Deprecated
+    private ObjectProperty<Node> impl_focusOwner;
+
+    /**
+     * @treatAsPrivate implementation detail
+     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
+     */
+    @Deprecated
+    public final void setImpl_focusOwner(Node value) {
+        impl_focusOwnerProperty().set(value);
+    }
+
+    /**
+     * @treatAsPrivate implementation detail
+     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
+     */
+    @Deprecated
+    public final Node getImpl_focusOwner() {
+        return impl_focusOwner == null ? null : impl_focusOwner.get();
+    }
+
+    /**
+     * @treatAsPrivate implementation detail
+     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
+     */
+    @Deprecated
+    public final ObjectProperty<Node> impl_focusOwnerProperty() {
+        if (impl_focusOwner == null) {
+            impl_focusOwner = new SimpleObjectProperty<Node>(this, "impl_focusOwner");
+        }
+        return impl_focusOwner;
+    }
 
     // For testing.
     void focusCleanup() {
@@ -3181,6 +3221,8 @@ public class Scene implements EventTarget {
                 ((Node.FocusedProperty) oldFocusOwner.focusedProperty()).store(false);
             }
             focusOwner = value;
+
+            Scene.this.setImpl_focusOwner(focusOwner);// = Scene{ impl_focusOwner = bind keyHandler.focusOwner };
 
             if (focusOwner != null) {
                 ((Node.FocusedProperty) focusOwner.focusedProperty()).store(windowFocused);
