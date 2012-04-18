@@ -174,7 +174,10 @@ public class Window implements EventTarget {
      * of this Window's Scene.
      */
     public void sizeToScene() {
-        adjustSize(false);
+        if (getScene() != null && impl_peer != null) {
+            getScene().impl_preferredSize();
+            adjustSize(false);
+        }
     }
 
     private void adjustSize(boolean selfSizePriority) {
@@ -182,7 +185,6 @@ public class Window implements EventTarget {
             return;
         }
         if (impl_peer != null) {
-            getScene().impl_preferredSize();
             double sceneWidth = getScene().getWidth();
             double cw = (sceneWidth > 0) ? sceneWidth : -1;
             double w = -1;
@@ -416,10 +418,11 @@ public class Window implements EventTarget {
                     if (isShowing()) {
                         StyleManager.getInstance().updateStylesheets(newScene);
                         newScene.getRoot().impl_reapplyCSS();
-                    }
+                        getScene().impl_preferredSize();
 
-                    if (!widthExplicit || !heightExplicit) {
-                        adjustSize(true);
+                        if (!widthExplicit || !heightExplicit) {
+                            adjustSize(true);
+                        }
                     }
                 } else {
                     updatePeerStage(null);
@@ -713,6 +716,7 @@ public class Window implements EventTarget {
                     if (getScene() != null) {
                         getScene().impl_initPeer();
                         impl_peer.setScene(getScene().impl_getPeer());
+                        getScene().impl_preferredSize();
                     }
 
                     // Set peer bounds

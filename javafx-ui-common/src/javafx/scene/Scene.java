@@ -624,12 +624,6 @@ public class Scene implements EventTarget {
         impl_peer.setScene(this);
         PerformanceTracker.logEvent("Scene.initPeer TKScene set");
         impl_peer.setRoot(getRoot().impl_getPGNode());
-        if (!sizeInitialized) {
-            // content may have been added after scene was constructed, so
-            // try again to set size based on content if the scene or window
-            // weren't explicitly sized;
-            preferredSize();
-        }
         impl_peer.setFillPaint(getFill() == null ? null : tk.getPaint(getFill()));
         impl_peer.setCamera(getCamera() == null ? null : getCamera().getPlatformCamera());
         pickingCamera = getCamera();
@@ -976,10 +970,6 @@ public class Scene implements EventTarget {
                         _value.getStyleClass().add(0, "root");
                         _value.setScene(Scene.this);
                         markDirty(DirtyBits.ROOT_DIRTY);
-                        if (impl_peer != null && !sizeInitialized) {
-                            // Root was set after scene was initialized and peer created
-                            preferredSize();
-                        }
                         _value.resize(getWidth(), getHeight()); // maybe no-op if root is not resizable
                         _value.requestLayout();
                     }
