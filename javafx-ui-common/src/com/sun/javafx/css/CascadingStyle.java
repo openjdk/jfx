@@ -120,8 +120,11 @@ class CascadingStyle implements Comparable {
         }
         
         // if either pseudoclass is null, both have to be null
-        if ((pseudoclasses == null || other.pseudoclasses == null) &&
-            (pseudoclasses != null || other.pseudoclasses != null)) return false;
+        if (pseudoclasses == null && other.pseudoclasses == null) {
+            return true;
+        } else if (pseudoclasses == null || other.pseudoclasses == null) {
+            return false;
+        }
 
         if (pseudoclasses.size() != other.pseudoclasses.size()) return false;
 
