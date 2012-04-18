@@ -30,6 +30,7 @@ import javafx.beans.property.*;
 import javafx.event.ActionEvent;
 import javafx.event.Event;
 import javafx.event.EventHandler;
+import javafx.event.EventType;
 
 /**
  * Abstract base class for ComboBox-like controls. A ComboBox typically has
@@ -65,6 +66,46 @@ import javafx.event.EventHandler;
  */
 public abstract class ComboBoxBase<T> extends Control {
     
+ 
+    /***************************************************************************
+     *                                                                         *
+     * Static properties and methods                                           *
+     *                                                                         *
+     **************************************************************************/
+    
+    /**
+     * <p>Called prior to the ComboBox showing its popup/display after the user
+     * has clicked or otherwise interacted with the ComboBox.
+     */
+    public static final EventType<Event> ON_SHOWING =
+            new EventType<Event>(Event.ANY, "ON_SHOWING");
+
+    /**
+     * <p>Called after the ComboBox has shown its popup/display.
+     */
+    public static final EventType<Event> ON_SHOWN =
+            new EventType<Event>(Event.ANY, "ON_SHOWN");
+
+    /**
+     * <p>Called when the ComboBox popup/display <b>will</b> be hidden. 
+     */
+    public static final EventType<Event> ON_HIDING =
+            new EventType<Event>(Event.ANY, "ON_HIDING");
+
+    /**
+     * <p>Called when the ComboBox popup/display has been hidden.
+     */
+    public static final EventType<Event> ON_HIDDEN =
+            new EventType<Event>(Event.ANY, "ON_HIDDEN");
+    
+    
+    
+    /***************************************************************************
+     *                                                                         *
+     * Constructors                                                            *
+     *                                                                         *
+     **************************************************************************/
+    
     /**
      * Creates a default ComboBoxBase instance.
      */
@@ -72,7 +113,14 @@ public abstract class ComboBoxBase<T> extends Control {
         getStyleClass().add(DEFAULT_STYLE_CLASS);
     }
     
-
+    
+    
+    /***************************************************************************
+     *                                                                         *
+     * Properties                                                              *
+     *                                                                         *
+     **************************************************************************/  
+    
     // --- value
     /**
      * The value of this ComboBox is defined as the selected item if the input
@@ -127,7 +175,12 @@ public abstract class ComboBoxBase<T> extends Control {
     public ReadOnlyBooleanProperty showingProperty() { return showingPropertyImpl().getReadOnlyProperty(); }
     public final boolean isShowing() { return showingPropertyImpl().get(); }
     private void setShowing(boolean value) {
+        // these events will not fire if the showing property is bound
+        Event.fireEvent(this, value ? new Event(ComboBoxBase.ON_SHOWING) :
+            new Event(ComboBoxBase.ON_HIDING));
         showingPropertyImpl().set(value);
+        Event.fireEvent(this, value ? new Event(ComboBoxBase.ON_SHOWN) : 
+            new Event(ComboBoxBase.ON_HIDDEN));
     }
     private ReadOnlyBooleanWrapper showingPropertyImpl() {
         if (showing == null) {
@@ -220,6 +273,94 @@ public abstract class ComboBoxBase<T> extends Control {
     };
     
     
+    // --- On Showing
+    public final ObjectProperty<EventHandler<Event>> onShowingProperty() { return onShowing; }
+    /**
+     * Called just prior to the {@code ComboBoxBase} popup/display being shown, 
+     */
+    public final void setOnShowing(EventHandler<Event> value) { onShowingProperty().set(value); }
+    public final EventHandler<Event> getOnShowing() { return onShowingProperty().get(); }
+    private ObjectProperty<EventHandler<Event>> onShowing = new ObjectPropertyBase<EventHandler<Event>>() {
+        @Override protected void invalidated() {
+            setEventHandler(ON_SHOWING, get());
+        }
+
+        @Override public Object getBean() {
+            return ComboBoxBase.this;
+        }
+
+        @Override public String getName() {
+            return "onShowing";
+        }
+    };
+
+
+    // -- On Shown
+    public final ObjectProperty<EventHandler<Event>> onShownProperty() { return onShown; }
+    /**
+     * Called just after the {@link ComboBoxBase} popup/display is shown.
+     */
+    public final void setOnShown(EventHandler<Event> value) { onShownProperty().set(value); }
+    public final EventHandler<Event> getOnShown() { return onShownProperty().get(); }
+    private ObjectProperty<EventHandler<Event>> onShown = new ObjectPropertyBase<EventHandler<Event>>() {
+        @Override protected void invalidated() {
+            setEventHandler(ON_SHOWN, get());
+        }
+
+        @Override public Object getBean() {
+            return ComboBoxBase.this;
+        }
+
+        @Override public String getName() {
+            return "onShown";
+        }
+    };
+
+
+    // --- On Hiding
+    public final ObjectProperty<EventHandler<Event>> onHidingProperty() { return onHiding; }
+    /**
+     * Called just prior to the {@link ComboBox} popup/display being hidden.
+     */
+    public final void setOnHiding(EventHandler<Event> value) { onHidingProperty().set(value); }
+    public final EventHandler<Event> getOnHiding() { return onHidingProperty().get(); }
+    private ObjectProperty<EventHandler<Event>> onHiding = new ObjectPropertyBase<EventHandler<Event>>() {
+        @Override protected void invalidated() {
+            setEventHandler(ON_HIDING, get());
+        }
+
+        @Override public Object getBean() {
+            return ComboBoxBase.this;
+        }
+
+        @Override public String getName() {
+            return "onHiding";
+        }
+    };
+
+
+    // --- On Hidden
+    public final ObjectProperty<EventHandler<Event>> onHiddenProperty() { return onHidden; }
+    /**
+     * Called just after the {@link ComboBoxBase} popup/display has been hidden.
+     */
+    public final void setOnHidden(EventHandler<Event> value) { onHiddenProperty().set(value); }
+    public final EventHandler<Event> getOnHidden() { return onHiddenProperty().get(); }
+    private ObjectProperty<EventHandler<Event>> onHidden = new ObjectPropertyBase<EventHandler<Event>>() {
+        @Override protected void invalidated() {
+            setEventHandler(ON_HIDDEN, get());
+        }
+
+        @Override public Object getBean() {
+            return ComboBoxBase.this;
+        }
+
+        @Override public String getName() {
+            return "onHidden";
+        }
+    };
+    
+    
     /***************************************************************************
      *                                                                         *
      * Methods                                                                 *
@@ -242,7 +383,9 @@ public abstract class ComboBoxBase<T> extends Control {
      * Closes the popup / dialog that was shown when {@link #show()} was called.
      */
     public void hide() {
-        setShowing(false);
+        if (isShowing()) {
+            setShowing(false);
+        }
     }
     
     /**

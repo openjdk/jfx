@@ -162,6 +162,8 @@ public class Menu extends MenuItem {
     
     private void setShowing(boolean value) {
         if (getItems().size() == 0) return;
+        
+        // these events will not fire if the showing property is bound
         Event.fireEvent(this, (value) ? new Event(Menu.ON_SHOWING) :
             new Event(Menu.ON_HIDING));
         showingPropertyImpl().set(value);
