@@ -95,8 +95,8 @@ public class FXVKSkin extends SkinBase<FXVK, BehaviorBase<FXVK>> {
     static final double VK_SLIDE_MILLIS = 250;
     static final double PREF_KEY_WIDTH = 40;
     static final double PREF_KEY_HEIGHT = 30;
-    static final double hGap = 2;
-    static final double vGap = 3;
+    static final double hGap = 5;
+    static final double vGap = 6;
 
     double keyWidth = PREF_KEY_WIDTH;
     double keyHeight = PREF_KEY_HEIGHT;
@@ -219,13 +219,27 @@ public class FXVKSkin extends SkinBase<FXVK, BehaviorBase<FXVK>> {
             // Secondary popup
             int nKeys = fxvk.chars.length;
             if (nKeys > 1) {
+                // Reorder to make letter keys appear before symbols
+                String[] array = new String[nKeys];
+                int ind = 0;
+                for (String str : fxvk.chars) {
+                    if (Character.isLetter(str.charAt(0))) {
+                        array[ind++] = str;
+                    }
+                }
+                for (String str : fxvk.chars) {
+                    if (!Character.isLetter(str.charAt(0))) {
+                        array[ind++] = str;
+                    }
+                }
+
                 int nRows = (int)Math.floor(Math.sqrt(Math.max(1, nKeys - 2)));
                 int nKeysPerRow = (int)Math.ceil(nKeys / (double)nRows);
                 keyRows = new Control[nRows][];
                 for (int i = 0; i < nRows; i++) {
                     keyRows[i] =
-                        makeKeyRow((String[])Arrays.copyOfRange(fxvk.chars, i * nKeysPerRow,
-                                                                Math.min((i + 1) * nKeysPerRow, fxvk.chars.length)));
+                        makeKeyRow((String[])Arrays.copyOfRange(array, i * nKeysPerRow,
+                                                                Math.min((i + 1) * nKeysPerRow, nKeys)));
                 }
             } else {
                 keyRows = new Control[0][];
@@ -363,7 +377,7 @@ public class FXVKSkin extends SkinBase<FXVK, BehaviorBase<FXVK>> {
                     String alt = (key.chars.length > 1) ? key.chars[1] : "";
                     if (key.chars.length > 1 && state == State.NUMERIC) {
                         txt = key.chars[1];
-                        if (key.chars.length > 2) {
+                        if (key.chars.length > 2 && !Character.isLetter(key.chars[2].charAt(0))) {
                             alt = key.chars[2];
                         } else {
                             alt = "";
