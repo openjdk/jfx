@@ -1385,6 +1385,7 @@
     -fx-background-color: -fx-focus-color, -fx-text-box-border, -fx-control-inner-background;
     -fx-background-insets: -0.4, 1, 2;
     -fx-background-radius: 3.4, 2, 2;
+    -fx-prompt-text-fill: transparent;
 }
 
 .text-field:disabled {
@@ -1430,6 +1431,7 @@
     -fx-background-color: -fx-focus-color, -fx-text-box-border, -fx-control-inner-background;
     -fx-background-insets: -0.4, 1, 2;
     -fx-background-radius: 3.4, 2, 2;
+    -fx-prompt-text-fill: transparent;
 }
 
 .text-area:disabled {
