@@ -1921,7 +1921,7 @@ public abstract class Node implements EventTarget {
      *
      * <p>For example, if {@code textnode} should be positioned at {@code finalX}
      * <code><pre>
-     *     textnode.setLayoutX(finalX - textnode.getLayoutBounds().getMinX();
+     *     textnode.setLayoutX(finalX - textnode.getLayoutBounds().getMinX());
      * </pre></code>
      * <p>
      * Failure to subtract {@code layoutBounds minX} may result in misplacement
