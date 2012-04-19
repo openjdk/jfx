@@ -93,10 +93,10 @@ public  class QuadCurve extends Shape {
      */
     private DoubleProperty startX;
 
-
-
     public final void setStartX(double value) {
-        startXProperty().set(value);
+        if (startX != null || value != 0.0) {
+            startXProperty().set(value);
+        }
     }
 
     public final double getStartX() {
@@ -135,10 +135,10 @@ public  class QuadCurve extends Shape {
      */
     private DoubleProperty startY;
 
-
-
     public final void setStartY(double value) {
-        startYProperty().set(value);
+        if (startY != null || value != 0.0) {
+            startYProperty().set(value);
+        }
     }
 
     public final double getStartY() {
@@ -175,39 +175,34 @@ public  class QuadCurve extends Shape {
      *
      * @defaultValue 0.0
      */
-    private DoubleProperty controlX;
+    private DoubleProperty controlX = new DoublePropertyBase() {
 
+        @Override
+        public void invalidated() {
+            impl_markDirty(DirtyBits.NODE_GEOMETRY);
+            impl_geomChanged();
+        }
 
+        @Override
+        public Object getBean() {
+            return QuadCurve.this;
+        }
+
+        @Override
+        public String getName() {
+            return "controlX";
+        }
+    };
 
     public final void setControlX(double value) {
-        controlXProperty().set(value);
+        controlX.set(value);
     }
 
     public final double getControlX() {
-        return controlX == null ? 0.0 : controlX.get();
+        return controlX.get();
     }
 
     public final DoubleProperty controlXProperty() {
-        if (controlX == null) {
-            controlX = new DoublePropertyBase() {
-
-                @Override
-                public void invalidated() {
-                    impl_markDirty(DirtyBits.NODE_GEOMETRY);
-                    impl_geomChanged();
-                }
-
-                @Override
-                public Object getBean() {
-                    return QuadCurve.this;
-                }
-
-                @Override
-                public String getName() {
-                    return "controlX";
-                }
-            };
-        }
         return controlX;
     }
 
@@ -217,38 +212,35 @@ public  class QuadCurve extends Shape {
      *
      * @defaultValue 0.0
      */
-    private DoubleProperty controlY;
+    private DoubleProperty controlY = new DoublePropertyBase() {
+
+        @Override
+        public void invalidated() {
+            impl_markDirty(DirtyBits.NODE_GEOMETRY);
+            impl_geomChanged();
+        }
+
+        @Override
+        public Object getBean() {
+            return QuadCurve.this;
+        }
+
+        @Override
+        public String getName() {
+            return "controlY";
+        }
+    };
 
 
     public final void setControlY(double value) {
-        controlYProperty().set(value);
+        controlY.set(value);
     }
 
     public final double getControlY() {
-        return controlY == null ? 0.0 : controlY.get();
+        return controlY.get();
     }
 
     public final DoubleProperty controlYProperty() {
-        if (controlY == null) {
-            controlY = new DoublePropertyBase() {
-
-                @Override
-                public void invalidated() {
-                    impl_markDirty(DirtyBits.NODE_GEOMETRY);
-                    impl_geomChanged();
-                }
-
-                @Override
-                public Object getBean() {
-                    return QuadCurve.this;
-                }
-
-                @Override
-                public String getName() {
-                    return "controlY";
-                }
-            };
-        }
         return controlY;
     }
 
@@ -262,7 +254,9 @@ public  class QuadCurve extends Shape {
 
 
     public final void setEndX(double value) {
-        endXProperty().set(value);
+        if (endX != null || value != 0.0) {
+            endXProperty().set(value);
+        }
     }
 
     public final double getEndX() {
@@ -273,23 +267,23 @@ public  class QuadCurve extends Shape {
         if (endX == null) {
             endX = new DoublePropertyBase() {
 
-                @Override
-                public void invalidated() {
-                    impl_markDirty(DirtyBits.NODE_GEOMETRY);
-                    impl_geomChanged();
-                }
-
-                @Override
-                public Object getBean() {
-                    return QuadCurve.this;
-                }
-
-                @Override
-                public String getName() {
-                    return "endX";
-                }
-            };
+        @Override
+        public void invalidated() {
+            impl_markDirty(DirtyBits.NODE_GEOMETRY);
+            impl_geomChanged();
         }
+
+        @Override
+        public Object getBean() {
+            return QuadCurve.this;
+        }
+
+        @Override
+        public String getName() {
+            return "endX";
+        }
+    };
+    }
         return endX;
     }
 
@@ -301,9 +295,10 @@ public  class QuadCurve extends Shape {
      */
     private DoubleProperty endY;
 
-
     public final void setEndY(double value) {
-        endYProperty().set(value);
+        if (endY != null || value != 0.0) {
+            endYProperty().set(value);
+        }
     }
 
     public final double getEndY() {
@@ -314,23 +309,23 @@ public  class QuadCurve extends Shape {
         if (endY == null) {
             endY = new DoublePropertyBase() {
 
-                @Override
-                public void invalidated() {
-                    impl_markDirty(DirtyBits.NODE_GEOMETRY);
-                    impl_geomChanged();
-                }
-
-                @Override
-                public Object getBean() {
-                    return QuadCurve.this;
-                }
-
-                @Override
-                public String getName() {
-                    return "endY";
-                }
-            };
+        @Override
+        public void invalidated() {
+            impl_markDirty(DirtyBits.NODE_GEOMETRY);
+            impl_geomChanged();
         }
+
+        @Override
+        public Object getBean() {
+            return QuadCurve.this;
+        }
+
+        @Override
+        public String getName() {
+            return "endY";
+        }
+    };
+    }
         return endY;
     }
 

@@ -104,7 +104,9 @@ public class CubicCurveTo extends PathElement {
 
 
     public final void setControlX1(double value) {
-        controlX1Property().set(value);
+        if (controlX1 != null || value != 0.0) {
+            controlX1Property().set(value);
+        }
     }
 
     public final double getControlX1() {
@@ -143,7 +145,9 @@ public class CubicCurveTo extends PathElement {
 
 
     public final void setControlY1(double value) {
-        controlY1Property().set(value);
+        if (controlY1 != null || value != 0.0) {
+            controlY1Property().set(value);
+        }
     }
 
     public final double getControlY1() {
@@ -182,7 +186,9 @@ public class CubicCurveTo extends PathElement {
 
 
     public final void setControlX2(double value) {
-        controlX2Property().set(value);
+        if (controlX2 != null || value != 0.0) {
+            controlX2Property().set(value);
+        }
     }
 
     public final double getControlX2() {
@@ -221,7 +227,9 @@ public class CubicCurveTo extends PathElement {
 
 
     public final void setControlY2(double value) {
-        controlY2Property().set(value);
+        if (controlY2 != null || value != 0.0) {
+            controlY2Property().set(value);
+        }
     }
 
     public final double getControlY2() {
@@ -258,9 +266,10 @@ public class CubicCurveTo extends PathElement {
      */
     private DoubleProperty x;
 
-
     public final void setX(double value) {
-        xProperty().set(value);
+        if (x != null || value != 0.0) {
+            xProperty().set(value);
+        }
     }
 
     public final double getX() {
@@ -299,7 +308,9 @@ public class CubicCurveTo extends PathElement {
 
 
     public final void setY(double value) {
-        yProperty().set(value);
+        if (y != null || value != 0.0) {
+            yProperty().set(value);
+        }
     }
 
     public final double getY() {

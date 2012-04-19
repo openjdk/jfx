@@ -100,10 +100,10 @@ public class Ellipse extends Shape {
      */
     private DoubleProperty centerX;
 
-
-
     public final void setCenterX(double value) {
-        centerXProperty().set(value);
+        if (centerX != null || value != 0.0) {
+            centerXProperty().set(value);
+        }
     }
 
     public final double getCenterX() {
@@ -141,9 +141,10 @@ public class Ellipse extends Shape {
      */
     private DoubleProperty centerY;
 
-
     public final void setCenterY(double value) {
-        centerYProperty().set(value);
+        if (centerY != null || value != 0.0) {
+            centerYProperty().set(value);
+        }
     }
 
     public final double getCenterY() {
@@ -179,39 +180,34 @@ public class Ellipse extends Shape {
      *
      * @defaultValue 0.0
      */
-    private DoubleProperty radiusX;
+    private DoubleProperty radiusX = new DoublePropertyBase() {
 
+        @Override
+        public void invalidated() {
+            impl_markDirty(DirtyBits.NODE_GEOMETRY);
+            impl_geomChanged();
+        }
 
+        @Override
+        public Object getBean() {
+            return Ellipse.this;
+        }
+
+        @Override
+        public String getName() {
+            return "radiusX";
+        }
+    };
 
     public final void setRadiusX(double value) {
-        radiusXProperty().set(value);
+        radiusX.set(value);
     }
 
     public final double getRadiusX() {
-        return radiusX == null ? 0.0 : radiusX.get();
+        return radiusX.get();
     }
 
     public final DoubleProperty radiusXProperty() {
-        if (radiusX == null) {
-            radiusX = new DoublePropertyBase() {
-
-                @Override
-                public void invalidated() {
-                    impl_markDirty(DirtyBits.NODE_GEOMETRY);
-                    impl_geomChanged();
-                }
-
-                @Override
-                public Object getBean() {
-                    return Ellipse.this;
-                }
-
-                @Override
-                public String getName() {
-                    return "radiusX";
-                }
-            };
-        }
         return radiusX;
     }
 
@@ -220,39 +216,34 @@ public class Ellipse extends Shape {
      *
      * @defaultValue 0.0
      */
-    private DoubleProperty radiusY;
+    private DoubleProperty radiusY = new DoublePropertyBase() {
 
+        @Override
+        public void invalidated() {
+            impl_markDirty(DirtyBits.NODE_GEOMETRY);
+            impl_geomChanged();
+        }
 
+        @Override
+        public Object getBean() {
+            return Ellipse.this;
+        }
+
+        @Override
+        public String getName() {
+            return "radiusY";
+        }
+    };
 
     public final void setRadiusY(double value) {
-        radiusYProperty().set(value);
+        radiusY.set(value);
     }
 
     public final double getRadiusY() {
-        return radiusY == null ? 0.0 : radiusY.get();
+        return radiusY.get();
     }
 
     public final DoubleProperty radiusYProperty() {
-        if (radiusY == null) {
-            radiusY = new DoublePropertyBase() {
-
-                @Override
-                public void invalidated() {
-                    impl_markDirty(DirtyBits.NODE_GEOMETRY);
-                    impl_geomChanged();
-                }
-
-                @Override
-                public Object getBean() {
-                    return Ellipse.this;
-                }
-
-                @Override
-                public String getName() {
-                    return "radiusY";
-                }
-            };
-        }
         return radiusY;
     }
 

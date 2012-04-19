@@ -130,7 +130,9 @@ public  class Rectangle extends Shape {
 
 
     public final void setX(double value) {
-        xProperty().set(value);
+        if (x != null || value != 0.0) {
+            xProperty().set(value);
+        }
     }
 
     public final double getX() {
@@ -168,9 +170,10 @@ public  class Rectangle extends Shape {
      */
     private DoubleProperty y;
 
-
     public final void setY(double value) {
-        yProperty().set(value);
+        if (y != null || value != 0.0) {
+            yProperty().set(value);
+        }
     }
 
     public final double getY() {
@@ -206,38 +209,34 @@ public  class Rectangle extends Shape {
      *
      * @defaultValue 0.0
      */
-    private DoubleProperty width;
+    private DoubleProperty width = new DoublePropertyBase() {
 
+        @Override
+        public void invalidated() {
+            impl_markDirty(DirtyBits.NODE_GEOMETRY);
+            impl_geomChanged();
+        }
+
+        @Override
+        public Object getBean() {
+            return Rectangle.this;
+        }
+
+        @Override
+        public String getName() {
+            return "width";
+        }
+    };
 
     public final void setWidth(double value) {
-        widthProperty().set(value);
+        width.set(value);
     }
 
     public final double getWidth() {
-        return width == null ? 0.0 : width.get();
+        return width.get();
     }
 
     public final DoubleProperty widthProperty() {
-        if (width == null) {
-            width = new DoublePropertyBase() {
-
-                @Override
-                public void invalidated() {
-                    impl_markDirty(DirtyBits.NODE_GEOMETRY);
-                    impl_geomChanged();
-                }
-
-                @Override
-                public Object getBean() {
-                    return Rectangle.this;
-                }
-
-                @Override
-                public String getName() {
-                    return "width";
-                }
-            };
-        }
         return width;
     }
 
@@ -246,38 +245,35 @@ public  class Rectangle extends Shape {
      *
      * @defaultValue 0.0
      */
-    private DoubleProperty height;
+    private DoubleProperty height = new DoublePropertyBase() {
+
+        @Override
+        public void invalidated() {
+            impl_markDirty(DirtyBits.NODE_GEOMETRY);
+            impl_geomChanged();
+        }
+
+        @Override
+        public Object getBean() {
+            return Rectangle.this;
+        }
+
+        @Override
+        public String getName() {
+            return "height";
+        }
+    };
 
 
     public final void setHeight(double value) {
-        heightProperty().set(value);
+        height.set(value);
     }
 
     public final double getHeight() {
-        return height == null ? 0.0 : height.get();
+        return height.get();
     }
 
     public final DoubleProperty heightProperty() {
-        if (height == null) {
-            height = new DoublePropertyBase() {
-
-                @Override
-                public void invalidated() {
-                    impl_markDirty(DirtyBits.NODE_GEOMETRY);
-                    impl_geomChanged();
-                }
-
-                @Override
-                public Object getBean() {
-                    return Rectangle.this;
-                }
-
-                @Override
-                public String getName() {
-                    return "height";
-                }
-            };
-        }
         return height;
     }
 
@@ -291,7 +287,9 @@ public  class Rectangle extends Shape {
 
 
     public final void setArcWidth(double value) {
-	arcWidthProperty().set(value);
+        if (arcWidth != null || value != 0.0) {
+            arcWidthProperty().set(value);
+        }
     }
 
     public final double getArcWidth() {
@@ -336,7 +334,9 @@ public  class Rectangle extends Shape {
 
 
     public final void setArcHeight(double value) {
- 	arcHeightProperty().set(value);
+        if (arcHeight != null || value != 0.0) {
+            arcHeightProperty().set(value);
+        }
     }
 
     public final double getArcHeight() {

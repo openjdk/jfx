@@ -66,7 +66,9 @@ public  class SVGPath extends Shape {
     private Path2D path2d;
 
     public final void setFillRule(FillRule value) {
-        fillRuleProperty().set(value);
+        if (fillRule != null || value != FillRule.NON_ZERO) {
+            fillRuleProperty().set(value);
+        }
     }
 
     public final FillRule getFillRule() {
