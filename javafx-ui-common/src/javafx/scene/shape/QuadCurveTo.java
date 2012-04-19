@@ -94,37 +94,34 @@ public  class QuadCurveTo extends PathElement {
      *
      * @defaultValue 0.0
      */
-    private DoubleProperty controlX;
+    private DoubleProperty controlX = new DoublePropertyBase() {
+
+        @Override
+        public void invalidated() {
+            u();
+        }
+
+        @Override
+        public Object getBean() {
+            return QuadCurveTo.this;
+        }
+
+        @Override
+        public String getName() {
+            return "controlX";
+        }
+    };
 
 
     public final void setControlX(double value) {
-        controlXProperty().set(value);
+        controlX.set(value);
     }
 
     public final double getControlX() {
-        return controlX == null ? 0.0 : controlX.get();
+        return controlX.get();
     }
 
     public final DoubleProperty controlXProperty() {
-        if (controlX == null) {
-            controlX = new DoublePropertyBase() {
-
-                @Override
-                public void invalidated() {
-                    u();
-                }
-
-                @Override
-                public Object getBean() {
-                    return QuadCurveTo.this;
-                }
-
-                @Override
-                public String getName() {
-                    return "controlX";
-                }
-            };
-        }
         return controlX;
     }
 
@@ -133,37 +130,34 @@ public  class QuadCurveTo extends PathElement {
      *
      * @defaultValue 0.0
      */
-    private DoubleProperty controlY;
+    private DoubleProperty controlY = new DoublePropertyBase() {
+
+        @Override
+        public void invalidated() {
+            u();
+        }
+
+        @Override
+        public Object getBean() {
+            return QuadCurveTo.this;
+        }
+
+        @Override
+        public String getName() {
+            return "controlY";
+        }
+    };
 
 
     public final void setControlY(double value) {
-        controlYProperty().set(value);
+        controlY.set(value);
     }
 
     public final double getControlY() {
-        return controlY == null ? 0.0 : controlY.get();
+        return controlY.get();
     }
 
     public final DoubleProperty controlYProperty() {
-        if (controlY == null) {
-            controlY = new DoublePropertyBase() {
-
-                @Override
-                public void invalidated() {
-                    u();
-                }
-
-                @Override
-                public Object getBean() {
-                    return QuadCurveTo.this;
-                }
-
-                @Override
-                public String getName() {
-                    return "controlY";
-                }
-            };
-        }
         return controlY;
     }
 
@@ -174,9 +168,10 @@ public  class QuadCurveTo extends PathElement {
      */
     private DoubleProperty x;
 
-
     public final void setX(double value) {
-        xProperty().set(value);
+        if (x != null || value != 0.0) {
+            xProperty().set(value);
+        }
     }
 
     public final double getX() {
@@ -205,7 +200,7 @@ public  class QuadCurveTo extends PathElement {
         }
         return x;
     }
-
+    
     /**
      * Defines the Y coordinate of the final end point.
      *
@@ -213,9 +208,10 @@ public  class QuadCurveTo extends PathElement {
      */
     private DoubleProperty y;
 
-
     public final void setY(double value) {
-        yProperty().set(value);
+        if (y != null || value != 0.0) {
+            yProperty().set(value);
+        }
     }
 
     public final double getY() {

@@ -104,7 +104,9 @@ public class Line extends Shape {
 
 
     public final void setStartX(double value) {
-        startXProperty().set(value);
+        if (startX != null || value != 0.0) {
+            startXProperty().set(value);
+        }
     }
 
     public final double getStartX() {
@@ -145,7 +147,9 @@ public class Line extends Shape {
 
 
     public final void setStartY(double value) {
-        startYProperty().set(value);
+        if (startY != null || value != 0.0) {
+            startYProperty().set(value);
+        }
     }
 
     public final double getStartY() {
@@ -186,7 +190,9 @@ public class Line extends Shape {
 
 
     public final void setEndX(double value) {
-        endXProperty().set(value);
+        if (endX != null || value != 0.0) {
+            endXProperty().set(value);
+        }
     }
 
     public final double getEndX() {
@@ -197,23 +203,23 @@ public class Line extends Shape {
         if (endX == null) {
             endX = new DoublePropertyBase() {
 
-                @Override
-                public void invalidated() {
-                    impl_markDirty(DirtyBits.NODE_GEOMETRY);
-                    impl_geomChanged();
-                }
-
-                @Override
-                public Object getBean() {
-                    return Line.this;
-                }
-
-                @Override
-                public String getName() {
-                    return "endX";
-                }
-            };
+        @Override
+        public void invalidated() {
+            impl_markDirty(DirtyBits.NODE_GEOMETRY);
+            impl_geomChanged();
         }
+
+        @Override
+        public Object getBean() {
+            return Line.this;
+        }
+
+        @Override
+        public String getName() {
+            return "endX";
+        }
+    };
+    }
         return endX;
     }
 
@@ -224,10 +230,10 @@ public class Line extends Shape {
      */
     private DoubleProperty endY;
 
-
-
     public final void setEndY(double value) {
-        endYProperty().set(value);
+        if (endY != null || value != 0.0) {
+            endYProperty().set(value);
+        }
     }
 
     public final double getEndY() {
@@ -238,23 +244,23 @@ public class Line extends Shape {
         if (endY == null) {
             endY = new DoublePropertyBase() {
 
-                @Override
-                public void invalidated() {
-                    impl_markDirty(DirtyBits.NODE_GEOMETRY);
-                    impl_geomChanged();
-                }
-
-                @Override
-                public Object getBean() {
-                    return Line.this;
-                }
-
-                @Override
-                public String getName() {
-                    return "endY";
-                }
-            };
+        @Override
+        public void invalidated() {
+            impl_markDirty(DirtyBits.NODE_GEOMETRY);
+            impl_geomChanged();
         }
+
+        @Override
+        public Object getBean() {
+            return Line.this;
+        }
+
+        @Override
+        public String getName() {
+            return "endY";
+        }
+    };
+    }
         return endY;
     }
 

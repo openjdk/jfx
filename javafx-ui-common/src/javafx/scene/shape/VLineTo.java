@@ -71,37 +71,34 @@ public  class VLineTo extends PathElement {
      *
      * @defaultValue 0.0
      */
-    private DoubleProperty y;
+    private DoubleProperty y = new DoublePropertyBase() {
+
+        @Override
+        public void invalidated() {
+            u();
+        }
+
+        @Override
+        public Object getBean() {
+            return VLineTo.this;
+        }
+
+        @Override
+        public String getName() {
+            return "y";
+        }
+    };
 
 
     public final void setY(double value) {
-        yProperty().set(value);
+        y.set(value);
     }
 
     public final double getY() {
-        return y == null ? 0.0 : y.get();
+        return y.get();
     }
 
     public final DoubleProperty yProperty() {
-        if (y == null) {
-            y = new DoublePropertyBase() {
-
-                @Override
-                public void invalidated() {
-                    u();
-                }
-
-                @Override
-                public Object getBean() {
-                    return VLineTo.this;
-                }
-
-                @Override
-                public String getName() {
-                    return "y";
-                }
-            };
-        }
         return y;
     }
 

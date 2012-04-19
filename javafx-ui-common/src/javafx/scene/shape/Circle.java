@@ -128,7 +128,9 @@ public class Circle extends Shape {
 
 
     public final void setCenterX(double value) {
-        centerXProperty().set(value);
+        if (centerX != null || value != 0.0) {
+            centerXProperty().set(value);
+        }
     }
 
     public final double getCenterX() {
@@ -169,7 +171,9 @@ public class Circle extends Shape {
 
 
     public final void setCenterY(double value) {
-        centerYProperty().set(value);
+        if (centerY != null || value != 0.0) {
+            centerYProperty().set(value);
+        }
     }
 
     public final double getCenterY() {
@@ -205,48 +209,34 @@ public class Circle extends Shape {
      *
      * @defaultValue 0.0
      */
-    private DoubleProperty radius;
+    private DoubleProperty radius = new DoublePropertyBase() {
 
+        @Override
+        public void invalidated() {
+            impl_markDirty(DirtyBits.NODE_GEOMETRY);
+            impl_geomChanged();
+        }
 
+        @Override
+        public Object getBean() {
+            return Circle.this;
+        }
+
+        @Override
+        public String getName() {
+            return "radius";
+        }
+    };
 
     public final void setRadius(double value) {
-        radiusProperty().set(value);
+        radius.set(value);
     }
 
     public final double getRadius() {
-        return radius == null ? 0.0 : radius.get();
+        return radius.get();
     }
 
-    //used in Magnetism app
-    /**
-     * @treatAsPrivate implementation detail
-     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
-     */
-    @Deprecated
-    protected void impl_radiusChanged() {}
-
     public final DoubleProperty radiusProperty() {
-        if (radius == null) {
-            radius = new DoublePropertyBase(0.0) {
-
-                @Override
-                public void invalidated() {
-                    impl_radiusChanged();
-                    impl_markDirty(DirtyBits.NODE_GEOMETRY);
-                    impl_geomChanged();
-                }
-
-                @Override
-                public Object getBean() {
-                    return Circle.this;
-                }
-
-                @Override
-                public String getName() {
-                    return "radius";
-                }
-            };
-        }
         return radius;
     }
 

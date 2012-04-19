@@ -71,37 +71,34 @@ public class HLineTo extends PathElement {
      *
      * @defaultValue 0.0
      */
-    private DoubleProperty x;
+    private DoubleProperty x = new DoublePropertyBase() {
+
+        @Override
+        public void invalidated() {
+            u();
+        }
+
+        @Override
+        public Object getBean() {
+            return HLineTo.this;
+        }
+
+        @Override
+        public String getName() {
+            return "x";
+        }
+    };
 
 
     public final void setX(double value) {
-        xProperty().set(value);
+        x.set(value);
     }
 
     public final double getX() {
-        return x == null ? 0.0 : x.get();
+        return x.get();
     }
 
     public final DoubleProperty xProperty() {
-        if (x == null) {
-            x = new DoublePropertyBase() {
-
-                @Override
-                public void invalidated() {
-                    u();
-                }
-
-                @Override
-                public Object getBean() {
-                    return HLineTo.this;
-                }
-
-                @Override
-                public String getName() {
-                    return "x";
-                }
-            };
-        }
         return x;
     }
 

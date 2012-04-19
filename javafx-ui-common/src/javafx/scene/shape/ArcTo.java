@@ -103,38 +103,33 @@ public class ArcTo extends PathElement {
      *
      * @defaultValue 0.0
      */
-    private DoubleProperty radiusX;
+    private DoubleProperty radiusX = new DoublePropertyBase() {
 
+        @Override
+        public void invalidated() {
+            u();
+        }
 
+        @Override
+        public Object getBean() {
+            return ArcTo.this;
+        }
+
+        @Override
+        public String getName() {
+            return "radiusX";
+        }
+    };
 
     public final void setRadiusX(double value) {
-        radiusXProperty().set(value);
+        radiusX.set(value);
     }
 
     public final double getRadiusX() {
-        return radiusX == null ? 0.0 : radiusX.get();
+        return radiusX.get();
     }
 
     public final DoubleProperty radiusXProperty() {
-        if (radiusX == null) {
-            radiusX = new DoublePropertyBase() {
-
-                @Override
-                public void invalidated() {
-                    u();
-                }
-
-                @Override
-                public Object getBean() {
-                    return ArcTo.this;
-                }
-
-                @Override
-                public String getName() {
-                    return "radiusX";
-                }
-            };
-        }
         return radiusX;
     }
 
@@ -143,38 +138,33 @@ public class ArcTo extends PathElement {
      *
      * @defaultValue 0.0
      */
-    private DoubleProperty radiusY;
+    private DoubleProperty radiusY = new DoublePropertyBase() {
 
+        @Override
+        public void invalidated() {
+            u();
+        }
 
+        @Override
+        public Object getBean() {
+            return ArcTo.this;
+        }
+
+        @Override
+        public String getName() {
+            return "radiusY";
+        }
+    };
 
     public final void setRadiusY(double value) {
-        radiusYProperty().set(value);
+        radiusY.set(value);
     }
 
     public final double getRadiusY() {
-        return radiusY == null ? 0.0 : radiusY.get();
+        return radiusY.get();
     }
 
     public final DoubleProperty radiusYProperty() {
-        if (radiusY == null) {
-            radiusY = new DoublePropertyBase() {
-
-                @Override
-                public void invalidated() {
-                    u();
-                }
-
-                @Override
-                public Object getBean() {
-                    return ArcTo.this;
-                }
-
-                @Override
-                public String getName() {
-                    return "radiusY";
-                }
-            };
-        }
         return radiusY;
     }
 
@@ -190,7 +180,9 @@ public class ArcTo extends PathElement {
      * @param value the x-axis rotation in degrees.
      */
     public final void setXAxisRotation(double value) {
-        XAxisRotationProperty().set(value);
+        if (xAxisRotation != null || value != 0.0) {
+            XAxisRotationProperty().set(value);
+        }
     }
 
     /**
@@ -235,10 +227,10 @@ public class ArcTo extends PathElement {
      */
     private BooleanProperty largeArcFlag;
 
-
-
     public final void setLargeArcFlag(boolean value) {
-        largeArcFlagProperty().set(value);
+        if (largeArcFlag != null || value != false) {
+            largeArcFlagProperty().set(value);
+        }
     }
 
     public final boolean isLargeArcFlag() {
@@ -275,10 +267,10 @@ public class ArcTo extends PathElement {
      */
     private BooleanProperty sweepFlag;
 
-
-
     public final void setSweepFlag(boolean value) {
-        sweepFlagProperty().set(value);
+        if (sweepFlag != null || value != false) {
+            sweepFlagProperty().set(value);
+        }
     }
 
     public final boolean isSweepFlag() {
@@ -318,7 +310,9 @@ public class ArcTo extends PathElement {
 
 
     public final void setX(double value) {
-        xProperty().set(value);
+        if (x != null || value != 0.0) {
+            xProperty().set(value);
+        }
     }
 
     public final double getX() {
@@ -358,7 +352,9 @@ public class ArcTo extends PathElement {
 
 
     public final void setY(double value) {
-        yProperty().set(value);
+        if (y != null || value != 0.0) {
+            yProperty().set(value);
+        }
     }
 
     public final double getY() {

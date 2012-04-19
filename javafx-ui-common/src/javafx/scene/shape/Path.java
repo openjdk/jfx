@@ -146,10 +146,10 @@ public class Path extends Shape {
      */
     private ObjectProperty<FillRule> fillRule;
 
-
-
     public final void setFillRule(FillRule value) {
-        fillRuleProperty().set(value);
+        if (fillRule != null || value != FillRule.NON_ZERO) {
+            fillRuleProperty().set(value);
+        }
     }
 
     public final FillRule getFillRule() {
