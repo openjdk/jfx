@@ -3378,11 +3378,6 @@ Only the properties with values that are different from the TextBox are specifie
 
 
 /* -------------------------- STYLES FOR PAGINATION CONTROL ----- */
-.pagination-cell {
-    -fx-skin: "com.sun.javafx.scene.control.skin.PaginationCellSkin";    
-    -fx-padding: 0;
-}
-
 .pagination {
     -fx-skin: "com.sun.javafx.scene.control.skin.PaginationSkin";
     -fx-padding: 0;
@@ -3433,14 +3428,3 @@ Only the properties with values that are different from the TextBox are specifie
     -fx-background-color: transparent, red;        
 }
 
-.pagination .list-view .scroll-bar:horizontal, 
-.pagination .list-view .scroll-bar:horizontal .thumb, 
-.pagination .list-view .scroll-bar:horizontal .track, 
-.pagination .list-view .scroll-bar:horizontal .increment-button, 
-.pagination .list-view .scroll-bar:horizontal .decrement-button, 
-.pagination .list-view .scroll-bar:horizontal .increment-arrow,
-.pagination .list-view .scroll-bar:horizontal .decrement-arrow {
-    -fx-background-color: null;
-    -fx-background-insets: 0;
-    -fx-padding: 0;
-}
