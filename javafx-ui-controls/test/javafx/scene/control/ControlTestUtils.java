@@ -23,6 +23,7 @@ import java.util.List;
 import com.sun.javafx.binding.ExpressionHelper;
 import com.sun.javafx.collections.ObservableListWrapper;
 import com.sun.javafx.css.StyleManager;
+import com.sun.javafx.scene.control.Pagination;
 import com.sun.javafx.scene.control.ReadOnlyUnbackedObservableList;
 import javafx.scene.Node;
 import javafx.scene.chart.Axis;
@@ -134,6 +135,19 @@ public final class ControlTestUtils {
         long state = StyleManager.getInstance().getPseudoclassMask(pseudoClass);
         assertFalse(message, (allStates & state) != 0);
     }    
+    
+    /*********************************************************************
+     * Following 2 methods are for the Pagination controls               *
+     ********************************************************************/
+    public static void assertStyleClassContains(Pagination control, String styleClass) {
+        assertStyleClassContains(
+                "The style class " + styleClass + " was not set on the Pagination " + control,
+                control, styleClass);
+    }
+    
+    public static void assertStyleClassContains(String message, Pagination control, String styleClass) {
+        assertTrue(message, control.getStyleClass().contains(styleClass));
+    }
     
     public static void assertListenerListContains(ObservableList list, ListChangeListener listener) {
         assertListenerListContains("The listener " + listener + " was not contained in " + list, list, listener);
