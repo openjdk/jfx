@@ -52,10 +52,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import javafx.beans.DefaultProperty;
-import javafx.beans.property.IntegerProperty;
-import javafx.beans.property.ObjectProperty;
-import javafx.beans.property.SimpleIntegerProperty;
-import javafx.beans.property.SimpleObjectProperty;
+import javafx.beans.property.*;
 import javafx.beans.value.WritableValue;
 import javafx.scene.Node;
 import javafx.scene.control.Control;
@@ -126,11 +123,11 @@ public class Pagination<T> extends Control {
      * The max number of items per page
      */
     public final IntegerProperty itemsPerPage = new SimpleIntegerProperty(this, "itemsPerPage", 10);
-    public final void setItemsPerPage(int value) { 
+    public final void setItemsPerPage(int value) {
         if (value < 1) {
             value = 1;
-        }        
-        itemsPerPage.set(value); 
+        }
+        itemsPerPage.set(value);
     }
     public final int getItemsPerPage() { return itemsPerPage.get(); }
     public final IntegerProperty itemsPerPageProperty() { return itemsPerPage; }
@@ -144,15 +141,23 @@ public class Pagination<T> extends Control {
     public final IntegerProperty numberOfItemsProperty() { return numberOfItems; }
 
     /**
+     * The total number of pages
+     */
+    private ReadOnlyIntegerWrapper pageCount = new ReadOnlyIntegerWrapper(this, "pageCount", 1);
+    private final void setPageCount(int value) { pageCount.set(value); }
+    public final int getPageCount() { return pageCount.get(); }
+    public final ReadOnlyIntegerProperty pageCountProperty() { return pageCount.getReadOnlyProperty(); }
+
+    /**
      * The current page index
      */
     public final IntegerProperty pageIndex = new SimpleIntegerProperty(this, "pageIndex", 0);
-    public final void setPageIndex(int value) { 
+    public final void setPageIndex(int value) {
         int totalNumberOfPages = getNumberOfItems()/getItemsPerPage();
         totalNumberOfPages += getNumberOfItems()%getItemsPerPage() != 0 ? 1 : 0;
-        
+
         if (value >= 0 && value < totalNumberOfPages) {
-            pageIndex.set(value); 
+            pageIndex.set(value);
         }
     }
     public final int getPageIndex() { return pageIndex.get(); }
