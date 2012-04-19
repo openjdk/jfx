@@ -50,7 +50,11 @@ public class TextAreaTest {
     @Test public void checkContentNotNull() {
         assertNotNull(txtArea.getContent());
     }
-    
+
+    @Test public void checkDefPromptTextEmptyString() {
+        assertEquals("", txtArea.getPromptText());
+    }
+
     /*********************************************************************
      * Tests for default values                                         *
      ********************************************************************/
@@ -82,6 +86,10 @@ public class TextAreaTest {
         assertEquals(dummyTxtArea.getText(), dummyTxtArea.getContent().get(0, dummyTxtArea.getLength()));
     }
 
+    @Test public void checkPromptTextPropertyName() {
+        assertTrue(txtArea.promptTextProperty().getName().equals("promptText"));
+    }
+
     @Test public void prefColCountCannotBeNegative() {
         try {
             txtArea.setPrefColumnCount(-1);
@@ -111,6 +119,14 @@ public class TextAreaTest {
     /*********************************************************************
      * Tests for property binding                                        *
      ********************************************************************/
+    @Test public void checkPromptTextPropertyBind() {
+        StringProperty strPr = new SimpleStringProperty("value");
+        txtArea.promptTextProperty().bind(strPr);
+        assertTrue("PromptText cannot be bound", txtArea.getPromptText().equals("value"));
+        strPr.setValue("newvalue");
+        assertTrue("PromptText cannot be bound", txtArea.getPromptText().equals("newvalue"));
+    }
+
     @Ignore("TODO: Please remove ignore annotation after RT-15799 is fixed.")
     @Test public void checkTextPropertyBind() {
         StringProperty strPr = new SimpleStringProperty("value");
@@ -244,8 +260,17 @@ public class TextAreaTest {
             assertNotNull(iobe);
         }
     }
-    
-    
+
+    @Test public void setPromptTextAndSeeValueIsReflectedInModel() {
+        txtArea.setPromptText("tmp");
+        assertEquals(txtArea.promptTextProperty().getValue(), "tmp");
+    }
+
+    @Test public void setPromptTextAndSeeValue() {
+        txtArea.setPromptText("tmp");
+        assertEquals(txtArea.getPromptText(), "tmp");
+    }
+
     @Test public void setTextAndSeeValueIsReflectedInModel() {
         txtArea.setText("tmp");
         assertEquals(txtArea.textProperty().getValue(), "tmp");
