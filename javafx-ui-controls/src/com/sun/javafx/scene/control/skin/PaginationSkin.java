@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2009, 2012, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -61,6 +61,7 @@ import javafx.event.ActionEvent;
 import javafx.event.EventHandler;
 import javafx.geometry.HPos;
 import javafx.geometry.VPos;
+import javafx.scene.Node;
 import javafx.scene.control.*;
 import javafx.scene.input.MouseEvent;
 import javafx.scene.input.SwipeEvent;
@@ -69,9 +70,9 @@ import javafx.scene.layout.StackPane;
 import javafx.scene.shape.Rectangle;
 import javafx.util.Duration;
 
-public class PaginationSkin<T> extends SkinBase<Pagination<T>, PaginationBehavior<T>>  {
+public class PaginationSkin extends SkinBase<Pagination, PaginationBehavior>  {
 
-    private Pagination<T> pagination;
+    private Pagination pagination;
     private ScrollPane currentScrollPane;
     private ScrollPane nextScrollPane;
     private Timeline timeline;
@@ -82,13 +83,13 @@ public class PaginationSkin<T> extends SkinBase<Pagination<T>, PaginationBehavio
     private int previousIndex;
     private int currentIndex;
     private int toIndex;
-    private int numberOfPages;
-    private int numberOfVisiblePages;
+    private int pageCount;
+    private int pageIndicatorCount;
 
     private boolean animate = false;
     public static final Duration duration = new Duration(125.0);
 
-    public PaginationSkin(final Pagination<T> pagination) {
+    public PaginationSkin(final Pagination pagination) {
         super(pagination, new PaginationBehavior(pagination));
 
         setManaged(false);
@@ -107,13 +108,13 @@ public class PaginationSkin<T> extends SkinBase<Pagination<T>, PaginationBehavio
         nextScrollPane.setPannable(false);
         nextScrollPane.setVisible(false);
 
-        resetIndexes(true);        
+        resetIndexes(true);
 
         this.navigation = new NavigationControl();
 
         getChildren().addAll(currentScrollPane, nextScrollPane, navigation);
 
-        pagination.numberOfVisiblePagesProperty().addListener(new InvalidationListener() {
+        pagination.pageIndicatorCountProperty().addListener(new InvalidationListener() {
             @Override
             public void invalidated(Observable o) {
                 resetIndexes(false);
@@ -122,8 +123,7 @@ public class PaginationSkin<T> extends SkinBase<Pagination<T>, PaginationBehavio
             }
         });
 
-        registerChangeListener(pagination.itemsPerPageProperty(), "ITEMS_PER_PAGE");
-        registerChangeListener(pagination.numberOfItemsProperty(), "NUMBER_OF_ITEMS");
+        registerChangeListener(pagination.pageCountProperty(), "PAGE_COUNT");
         registerChangeListener(pagination.pageFactoryProperty(), "PAGE_FACTORY");
 
         setOnSwipeLeft(new EventHandler<SwipeEvent>() {
@@ -142,39 +142,35 @@ public class PaginationSkin<T> extends SkinBase<Pagination<T>, PaginationBehavio
     }
 
     public void selectNext() {
-        if (pagination.getPageIndex() < totalNumberOfPages()) {
-            pagination.setPageIndex(pagination.getPageIndex() + 1);
+        if (pagination.getCurrentPageIndex() < getPageCount()) {
+            pagination.setCurrentPageIndex(pagination.getCurrentPageIndex() + 1);
         }
     }
 
     public void selectPrevious() {
-        if (pagination.getPageIndex() != 0) {
-            pagination.setPageIndex(pagination.getPageIndex() - 1);
+        if (pagination.getCurrentPageIndex() != 0) {
+            pagination.setCurrentPageIndex(pagination.getCurrentPageIndex() - 1);
         }
     }
 
     private void resetIndexes(boolean usePageIndex) {
-        numberOfVisiblePages = getSkinnable().getNumberOfVisiblePages();
-        numberOfPages = totalNumberOfPages();
-        if (totalNumberOfPages() > numberOfVisiblePages) {
-            numberOfPages = numberOfVisiblePages;
-        } else {
-            // If the number of pages is less than the visible number of pages.
-            // We will use the number of pages.
-            getSkinnable().setNumberOfVisiblePages(numberOfPages);
+        pageIndicatorCount = getSkinnable().getPageIndicatorCount();
+        pageCount = getPageCount();
+        if (pageCount > pageIndicatorCount) {
+            pageCount = pageIndicatorCount;
         }
-        
+
         fromIndex = 0;
         previousIndex = 0;
-        currentIndex = usePageIndex ? getSkinnable().getPageIndex() : 0;
-        toIndex = fromIndex + (numberOfPages - 1);
+        currentIndex = usePageIndex ? getSkinnable().getCurrentPageIndex() : 0;
+        toIndex = fromIndex + (pageCount - 1);
 
         boolean isAnimate = animate;
         if (isAnimate) {
             animate = false;
         }
 
-        pagination.setPageIndex(currentIndex);
+        pagination.setCurrentPageIndex(currentIndex);
         createPage(currentScrollPane, currentIndex);
 
         if (isAnimate) {
@@ -184,17 +180,18 @@ public class PaginationSkin<T> extends SkinBase<Pagination<T>, PaginationBehavio
 
     private void createPage(ScrollPane pane, int index) {
         if (pagination.getPageFactory() != null) {
-            pane.setContent(pagination.getPageFactory().call(index));
+            Node content = pagination.getPageFactory().call(index);
+            // If the content is null we don't want to switch pages.
+            if (content != null) {
+                pane.setContent(content);
+            } else {
+                pagination.setCurrentPageIndex(previousIndex);
+            }
         }
     }
 
-    private int totalNumberOfPages() {
-        int totalNumberOfPages = getSkinnable().getNumberOfItems()/getSkinnable().getItemsPerPage();
-        if (getSkinnable().getNumberOfItems()%getSkinnable().getItemsPerPage() != 0) {
-            // Add the remaining to the last page.
-            totalNumberOfPages += 1;
-        }
-        return totalNumberOfPages;
+    private int getPageCount() {
+        return getSkinnable().getPageCount() == Pagination.INDETERMINATE ? Integer.MAX_VALUE : getSkinnable().getPageCount();
     }
 
     private static final Interpolator interpolator = Interpolator.SPLINE(0.4829, 0.5709, 0.6803, 0.9928);
@@ -296,16 +293,14 @@ public class PaginationSkin<T> extends SkinBase<Pagination<T>, PaginationBehavio
 
     @Override protected void handleControlPropertyChanged(String p) {
         super.handleControlPropertyChanged(p);
-        if (p == "ITEMS_PER_PAGE") {
+        if (p == "PAGE_FACTORY") {
             resetIndexes(false);
             navigation.initializePageIndicators();
             navigation.updatePageIndicators();
-        } else if (p == "NUMBER_OF_ITEMS") {
+        } else if (p == "PAGE_COUNT") {
             resetIndexes(false);
             navigation.initializePageIndicators();
             navigation.updatePageIndicators();
-        } else if (p == "PAGE_FACTORY") {
-            resetIndexes(false);
         }
         requestLayout();
     }
@@ -401,20 +396,20 @@ public class PaginationSkin<T> extends SkinBase<Pagination<T>, PaginationBehavio
                 }
             });
 
-            pagination.pageIndexProperty().addListener(new ChangeListener<Number>() {
+            pagination.currentPageIndexProperty().addListener(new ChangeListener<Number>() {
                 @Override
                 public void changed(ObservableValue<? extends Number> arg0, Number arg1, Number arg2) {
                     previousIndex = arg1.intValue();
                     currentIndex = arg2.intValue();
                     if (animate) {
-                        // Uncomment this code is we want to see the page index
+                        // Uncomment this code if we want to see the page index
                         // selections as we cycle from previous to the current index.
-                        currentAnimatedIndex = previousIndex;
+                        //currentAnimatedIndex = previousIndex;
                         currentAnimatedIndex = currentIndex;
                         animateSwitchPage();
                     } else {
                         updatePageIndex();
-                        createPage(currentScrollPane, pagination.getPageIndex());
+                        createPage(currentScrollPane, currentIndex);
                     }
                 }
             });
@@ -445,7 +440,7 @@ public class PaginationSkin<T> extends SkinBase<Pagination<T>, PaginationBehavio
 
         private void updatePageIndex() {
             //System.out.println("SELECT PROPERTY FROM " + fromIndex + " TO " + toIndex + " PREVIOUS " + previousIndex + " CURRENT "+ currentIndex + " NOP " + numberOfPages + " NOVP " + numberOfVisiblePages);
-            if (numberOfPages == numberOfVisiblePages) {
+            if (pageCount == pageIndicatorCount) {
                 if (changePageSet()) {
                     initializePageIndicators();
                 }
@@ -457,34 +452,34 @@ public class PaginationSkin<T> extends SkinBase<Pagination<T>, PaginationBehavio
         // Only change to the next set when the current index is at the start or the end of the set.
         // Return true only if we have scrolled to the next/previous set.
         private boolean changePageSet() {
-            if (previousIndex < currentIndex && currentIndex % numberOfVisiblePages == 0) {
+            if (previousIndex < currentIndex && currentIndex % pageIndicatorCount == 0) {
                 // Get the right page set
                 fromIndex = currentIndex;
-                toIndex = fromIndex + (numberOfVisiblePages - 1);
-            } else if (currentIndex < previousIndex && currentIndex % numberOfVisiblePages == numberOfVisiblePages - 1) {
+                toIndex = fromIndex + (pageIndicatorCount - 1);
+            } else if (currentIndex < previousIndex && currentIndex % pageIndicatorCount == pageIndicatorCount - 1) {
                 // Get the left page set
                 toIndex = currentIndex;
-                fromIndex = toIndex - (numberOfVisiblePages - 1);
+                fromIndex = toIndex - (pageIndicatorCount - 1);
             } else {
                 // We need to get the new page set if the currentIndex is out of range.
                 // This can happen if setPageIndex() is called programatically.
                 if (currentIndex < fromIndex || currentIndex > toIndex) {
-                    fromIndex = currentIndex - (currentIndex % numberOfVisiblePages);
-                    toIndex = fromIndex + (numberOfVisiblePages - 1);
+                    fromIndex = currentIndex - (currentIndex % pageIndicatorCount);
+                    toIndex = fromIndex + (pageIndicatorCount - 1);
                 } else {
                     return false;
                 }
             }
 
             // We have gone past the total number of pages
-            if (toIndex > totalNumberOfPages() - 1) {
-                toIndex = totalNumberOfPages() - 1;
+            if (toIndex > getPageCount() - 1) {
+                toIndex = getPageCount() - 1;
             }
 
             // We have gone past the starting page
             if (fromIndex < 0) {
                 fromIndex = 0;
-                toIndex = fromIndex + (numberOfVisiblePages - 1);
+                toIndex = fromIndex + (pageIndicatorCount - 1);
             }
             return true;
         }
@@ -550,7 +545,7 @@ public class PaginationSkin<T> extends SkinBase<Pagination<T>, PaginationBehavio
                 // Grey out the left arrow if we are at the beginning.
                 leftArrowButton.setVisible(false);
             }
-            if (currentIndex == (totalNumberOfPages() - 1)) {
+            if (currentIndex == (getPageCount() - 1)) {
                 // Grey out the right arrow if we have reached the end.
                 rightArrowButton.setVisible(false);
             }
@@ -600,10 +595,10 @@ public class PaginationSkin<T> extends SkinBase<Pagination<T>, PaginationBehavio
             setOnMousePressed(new EventHandler<MouseEvent>() {
                 @Override
                 public void handle(MouseEvent arg0) {
-                    int selected = pagination.getPageIndex();
+                    int selected = pagination.getCurrentPageIndex();
                     // We do not need to update the selection if it has not changed.
                     if (selected != IndicatorButton.this.pageNumber) {
-                        pagination.setPageIndex(IndicatorButton.this.pageNumber);
+                        pagination.setCurrentPageIndex(IndicatorButton.this.pageNumber);
                         requestLayout();
                     }
                 }
