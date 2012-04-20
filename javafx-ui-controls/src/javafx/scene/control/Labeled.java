@@ -268,6 +268,15 @@ public abstract class Labeled extends Control {
         if (font == null) {
             font = new StyleableObjectProperty<Font>(Font.getDefault()) {
                 
+                @Override
+                protected void invalidated() {
+                    // RT-20727 - if font is changed by calling setFont, then
+                    // css might need to be reapplied since font size affects
+                    // calculated values for styles with relative values
+                    Stylesheet.Origin origin = StyleableProperty.getOrigin(font);
+                    if (origin == Stylesheet.Origin.USER) Labeled.this.impl_reapplyCSS();
+                }
+                
                 @Override 
                 public StyleableProperty getStyleableProperty() {
                     return StyleableProperties.FONT;
