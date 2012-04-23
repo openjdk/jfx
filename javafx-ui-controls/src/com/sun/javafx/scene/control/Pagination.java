@@ -58,11 +58,68 @@ import javafx.scene.Node;
 import javafx.scene.control.Control;
 import javafx.util.Callback;
 
+/**
+ * <p>
+ * A Pagination control is used for navigation between pages of a single content,
+ * which has been divided into smaller parts.  
+ * </p>
+ *
+ * <h3>Styling the page indicators</h3>
+ * <p>
+ * The control can be customized to display numeric page indicators or bullet style indicators by
+ * setting the style class {@link STYLE_CLASS_BULLET}.  The 
+ * {@link #pageIndicatorCountProperty() pageIndicatorCountProperty} can be used to change 
+ * the number of page indicators.  The property value can also be changed 
+ * via CSS using -fx-page-indicator-count
+ *</p> 
+ * 
+ * <h3>Page count</h3>
+ * <p>
+ * The {@link #pageCountProperty() pageCountProperty} controls the number of 
+ * pages this pagination control has.  If the page count is 
+ * not known {@link #INDETERMINATE} should be used as the page count.  
+ * </p>
+ * 
+ * <h3>Page factory</h3>
+ * <p>
+ * The {@link #pageFactoryProperty() pageFactoryProperty} is a callback function 
+ * that is called when a page has been selected by the application or 
+ * the user.  The function is required for the functionality of the pagination
+ * control.  The callback function should load and return the contents of the selected page.
+ * Null should be returned if the selected page index does not exist.
+ * </p>
+ *
+ * <h3>Creating a Pagination control:</h3>
+ * <p> 
+ * A simple example of how to create a pagination control with ten pages and 
+ * each page containing ten hyperlinks.
+ * </p>
+ * 
+ * <pre>
+ * {@code
+ *   Pagination pagination = new Pagination(10, 0);
+ *   pagination.setPageFactory(new Callback<Integer, Node>() {
+ *       public Node call(Integer pageIndex) {
+ *           VBox box = new VBox(5);
+ *           for (int i = 0; i < pageIndex + 10; i++) {
+ *               Hyperlink link = new Hyperlink(myurls[i]);
+ *               box.getChildren().add(l);
+ *           }
+ *           return box;
+ *       }
+ *   });
+ * }</pre>
+ */
+
 @DefaultProperty("pages")
 public class Pagination extends Control {
 
     private static final int DEFAULT_PAGE_INDICATOR_COUNT = 10;
 
+    /**
+     * The style class to change the numeric page indicators to
+     * bullet indicators.
+     */
     public static final String STYLE_CLASS_BULLET = "bullet";
 
     /**
@@ -73,7 +130,12 @@ public class Pagination extends Control {
     public static final int INDETERMINATE = -1;
 
     /**
-     * Constructs a new Pagination.
+     * Constructs a new Pagination control with the specified page count
+     * and page index.
+     * 
+     * @param pageCount the number of pages for the pagination control
+     * @param pageIndex the index of the first page.
+     * 
      */
     public Pagination(int pageCount, int pageIndex) {
         getStyleClass().setAll(DEFAULT_STYLE_CLASS);
@@ -81,10 +143,20 @@ public class Pagination extends Control {
         setCurrentPageIndex(pageIndex);
     }
 
+    /**
+     * Constructs a new Pagination control with the specified page count.
+     * 
+     * @param pageCount the number of pages for the pagination control
+     * 
+     */
     public Pagination(int pageCount) {
         this(pageCount, 0);
     }
 
+    /**
+     * Constructs a Pagination control with an {@link INDETERMINATE} page count
+     * and a page index equal to zero.
+     */
     public Pagination() {
         this(INDETERMINATE, 0);
     }
@@ -95,17 +167,42 @@ public class Pagination extends Control {
      *                                                                         *
      **************************************************************************/
 
-    /**
-     * The number of page indicators
-     */
+    private int oldPageIndicatorCount = DEFAULT_PAGE_INDICATOR_COUNT;
     private IntegerProperty pageIndicatorCount;
+    
+    /**
+     * Sets the number of page indicators.
+     * 
+     * @param value the number of page indicators.  The default is 10.
+     */
     public final void setPageIndicatorCount(int value) { pageIndicatorCountProperty().set(value); }
+    
+    /**
+     * Returns the number of page indicators.
+     */
     public final int getPageIndicatorCount() {
         return pageIndicatorCount == null ? DEFAULT_PAGE_INDICATOR_COUNT : pageIndicatorCount.get();
     }
+    
+    /**
+     * The number of page indicators to use for this pagination control.  This
+     * value must be greater than or equal to 1.  The page indicators will 
+     * be unselected when the {@link #currentPageIndexProperty currentPageIndex} 
+     * is greater than the pageIndicatorCount.
+     * 
+     * The default is 10 page indicators.
+     */    
     public final IntegerProperty pageIndicatorCountProperty() {
         if (pageIndicatorCount == null) {
             pageIndicatorCount = new StyleableIntegerProperty(DEFAULT_PAGE_INDICATOR_COUNT) {
+
+                @Override protected void invalidated() {
+                    if (getPageIndicatorCount() < 1) {
+                        setPageIndicatorCount(oldPageIndicatorCount);
+                    }
+                    oldPageIndicatorCount = getPageIndicatorCount();
+                }
+
                 @Override
                 public StyleableProperty getStyleableProperty() {
                     return StyleableProperties.PAGE_INDICATOR_COUNT;
@@ -125,9 +222,6 @@ public class Pagination extends Control {
         return pageIndicatorCount;
     }
 
-    /**
-     * The total number of pages
-     */
     private int oldPageCount = 1;
     private IntegerProperty pageCount = new SimpleIntegerProperty(this, "pageCount", 1) {
         @Override protected void invalidated() {
@@ -137,13 +231,28 @@ public class Pagination extends Control {
             oldPageCount = getPageCount();
         }
     };
+    
+    /**
+     * Sets the number of pages.
+     * 
+     * @param value the number of pages
+     */
     public final void setPageCount(int value) { pageCount.set(value); }
+    
+    /**
+     * Returns the number of pages.
+     */
     public final int getPageCount() { return pageCount.get(); }
+    
+    /**
+     * The number of pages for this pagination control.  This
+     * value must be greater than or equal to 1.  {@link INDETERMINATE} 
+     * should be used as the page count if the total number of pages is unknown.
+     * 
+     * The default is 1 page.
+     */    
     public final IntegerProperty pageCountProperty() { return pageCount; }
 
-    /**
-     * The current page index
-     */
     private int oldPageIndex;
     private final IntegerProperty currentPageIndex = new SimpleIntegerProperty(this, "currentPageIndex", 0) {
         @Override protected void invalidated() {
@@ -153,17 +262,49 @@ public class Pagination extends Control {
             oldPageIndex = getCurrentPageIndex();
         }
     };
+    
+    /**
+     * Sets the current page index.
+     * @param value the current page index.
+     */
     public final void setCurrentPageIndex(int value) { currentPageIndex.set(value); }
+    
+    /**
+     * Returns the current page index.
+     */
     public final int getCurrentPageIndex() { return currentPageIndex.get(); }
+    
+    /**
+     * The current page index to display for this pagination control.  This value
+     * must be greater than or equal to 0.  The page indicators will be unselected when
+     * the currentPageIndex is greater than the {@link #pageIndicatorCountProperty pageIndicatorCount}.
+     * 
+     * The default is 0 for the first page.
+     */    
     public final IntegerProperty currentPageIndexProperty() { return currentPageIndex; }
 
-    /**
-     * The page callback
-     */
     private ObjectProperty<Callback<Integer, Node>> pageFactory =
             new SimpleObjectProperty<Callback<Integer, Node>>(this, "pageFactory");
+    
+    /**
+     * Sets the page factory callback function.
+     */
     public final void setPageFactory(Callback<Integer, Node> value) { pageFactory.set(value); }
+    
+    /**
+     * Returns the page factory callback function.
+     */    
     public final Callback<Integer, Node> getPageFactory() {return pageFactory.get(); }
+    
+    /**
+     * The pageFactory callback function that is called when a page has been 
+     * selected by the application or the user.
+     * 
+     * This function is required for the functionality of the pagination
+     * control.  The callback function should load and return the contents the page index.
+     * Null should be returned if the page index does not exist.  The currentPageIndex 
+     * will not change when null is returned.
+     */    
     public final ObjectProperty<Callback<Integer, Node>> pageFactoryProperty() { return pageFactory; }
 
     /***************************************************************************
