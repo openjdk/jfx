@@ -128,10 +128,10 @@ public class ColorPalette extends Region {
                         processRightKey(ke);
                         break;
                     case UP:
-//                        processUpKey(ke);
+                        processUpKey(ke);
                         break;
                     case DOWN:
-//                        processDownKey(ke);
+                        processDownKey(ke);
                 }
             }
         });
@@ -157,6 +157,26 @@ public class ColorPalette extends Region {
         }
     }
     
+     private void processUpKey(KeyEvent ke) {
+        int index;
+        for (index = (NUM_OF_ROWS*NUM_OF_COLUMNS)-1; index >= 0; index--)  {
+            ColorSquare cs = cpg.getSquares().get(index);
+            if (cs == focusedSquare) {
+                cs.setHoverValue(false);
+                ColorSquare prevSquare = cpg.getSquares().get((index-12 >= 0)? 
+                        (index-12) : ((NUM_OF_ROWS-1)*NUM_OF_COLUMNS)+index);
+                prevSquare.setHoverValue(true);
+                focusedSquare = prevSquare;
+                break;
+            } 
+        }
+        if (index == -1) {
+            ColorSquare cs = cpg.getSquares().get((NUM_OF_ROWS*NUM_OF_COLUMNS)-1);
+            cs.setHoverValue(true);
+            focusedSquare = cs;
+        }
+    }
+     
     private void processRightKey(KeyEvent ke) {
         int index;
         for (index = 0; index < (NUM_OF_ROWS*NUM_OF_COLUMNS); index++)  {
@@ -165,6 +185,26 @@ public class ColorPalette extends Region {
                 cs.setHoverValue(false);
                 ColorSquare prevSquare = cpg.getSquares().get(
                         (index != (NUM_OF_ROWS*NUM_OF_COLUMNS)-1) ? (index+1) : 0);
+                prevSquare.setHoverValue(true);
+                focusedSquare = prevSquare;
+                break;
+            } 
+        }
+        if (index == (NUM_OF_ROWS*NUM_OF_COLUMNS)) {
+            ColorSquare cs = cpg.getSquares().get(0);
+            cs.setHoverValue(true);
+            focusedSquare = cs;
+        }
+    }
+    
+     private void processDownKey(KeyEvent ke) {
+        int index;
+        for (index = 0; index < (NUM_OF_ROWS*NUM_OF_COLUMNS); index++)  {
+            ColorSquare cs = cpg.getSquares().get(index);
+            if (cs == focusedSquare) {
+                cs.setHoverValue(false);
+                ColorSquare prevSquare = cpg.getSquares().get((index+12 < NUM_OF_ROWS*NUM_OF_COLUMNS)? 
+                        (index+12) : index-((NUM_OF_ROWS-1)*NUM_OF_COLUMNS));
                 prevSquare.setHoverValue(true);
                 focusedSquare = prevSquare;
                 break;
