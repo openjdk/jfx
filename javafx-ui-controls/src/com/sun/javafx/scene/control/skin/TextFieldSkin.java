@@ -84,12 +84,12 @@ public class TextFieldSkin extends TextInputControlSkin<TextField, TextFieldBeha
      * ability to render both the normal fill as well as the highlight
      * fill, to perform hit testing, fetching of the selection
      * highlight, and other such duties.
-     *
-     * This node is also used for showing the prompt text. We just
-     * switch the fill & content of the textNode depending on whether
-     * there is any text specified on the TextInputControl
      */
     private Text textNode = new Text();
+    /**
+     *
+     * The node used for showing the prompt text.
+     */
     private Text promptNode;
     /**
      * A path, provided by the textNode, which represents the area

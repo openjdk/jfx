@@ -20,6 +20,7 @@ import javafx.scene.control.ScrollPane;
 import javafx.scene.input.MouseButton;
 import javafx.scene.input.MouseEvent;
 import javafx.scene.input.ScrollEvent;
+import javafx.scene.input.SwipeEvent;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.Pane;
 import javafx.scene.layout.Region;
@@ -41,7 +42,6 @@ import javafx.stage.Stage;
 import org.junit.Test;
 import static org.junit.Assert.*;
 
-import javafx.scene.input.ScrollEvent;
 
 /**
  * @author mickf
@@ -615,6 +615,135 @@ public class ScrollPaneSkinTest {
         assertEquals(skinHeight,  hsbPosAndHeight, 0.1);
 
     }
+
+    /*
+    ** check if scrollPane content Horizontal position compensates for content size change
+    */
+    @Test public void checkIfSwipeDownEventsChangeAnything() {
+
+        scrolled = false;
+
+        Rectangle rect = new Rectangle(200, 200, 200, 200);
+
+        final ScrollPane scrollPaneInner = new ScrollPane();
+        scrollPaneInner.setSkin(new com.sun.javafx.scene.control.skin.ScrollPaneSkin(scrollPaneInner));
+        scrollPaneInner.setPrefWidth(100);
+        scrollPaneInner.setPrefHeight(100);
+        scrollPaneInner.setPannable(true);
+        scrollPaneInner.setContent(rect);
+        scrollPaneInner.setOnSwipeUp(new EventHandler<SwipeEvent>() {
+            @Override public void handle(SwipeEvent event) {
+                scrolled = true;
+            }
+        });       
+        scrollPaneInner.setOnSwipeDown(new EventHandler<SwipeEvent>() {
+            @Override public void handle(SwipeEvent event) {
+                scrolled = true;
+            }
+        });       
+        scrollPaneInner.setOnSwipeLeft(new EventHandler<SwipeEvent>() {
+            @Override public void handle(SwipeEvent event) {
+                scrolled = true;
+            }
+        });     
+        scrollPaneInner.setOnSwipeRight(new EventHandler<SwipeEvent>() {
+            @Override public void handle(SwipeEvent event) {
+                scrolled = true;
+            }
+        });     
+        Pane pOuter = new Pane();
+        pOuter.setPrefWidth(600);
+        pOuter.setPrefHeight(600);
+
+        Scene scene = new Scene(new Group(), 700, 700);
+        ((Group) scene.getRoot()).getChildren().clear();
+        ((Group) scene.getRoot()).getChildren().add(scrollPaneInner);
+
+        Stage stage = new Stage();
+        stage.setScene(scene);
+        stage.show();
+         
+        Event.fireEvent(rect,      
+         SwipeEvent.impl_swipeEvent(SwipeEvent.SWIPE_DOWN,
+            1,
+            0.0, -50.0,
+            0.0, -50.0,
+            false,
+            false,
+            false,
+            false,
+            false));
+
+        /*
+        ** did it work?
+        */
+        assertTrue(scrollPaneInner.getVvalue() > 0.0);
+    }
+
+    /*
+    ** check if scrollPane content Horizontal position compensates for content size change
+    */
+    @Test public void checkIfSwipeRightEventsChangeAnything() {
+
+        scrolled = false;
+
+        Rectangle rect = new Rectangle(200, 200, 200, 200);
+
+        final ScrollPane scrollPaneInner = new ScrollPane();
+        scrollPaneInner.setSkin(new com.sun.javafx.scene.control.skin.ScrollPaneSkin(scrollPaneInner));
+        scrollPaneInner.setPrefWidth(100);
+        scrollPaneInner.setPrefHeight(100);
+        scrollPaneInner.setPannable(true);
+        scrollPaneInner.setContent(rect);
+        scrollPaneInner.setOnSwipeUp(new EventHandler<SwipeEvent>() {
+            @Override public void handle(SwipeEvent event) {
+                scrolled = true;
+            }
+        });       
+        scrollPaneInner.setOnSwipeDown(new EventHandler<SwipeEvent>() {
+            @Override public void handle(SwipeEvent event) {
+                scrolled = true;
+            }
+        });       
+        scrollPaneInner.setOnSwipeLeft(new EventHandler<SwipeEvent>() {
+            @Override public void handle(SwipeEvent event) {
+                scrolled = true;
+            }
+        });     
+        scrollPaneInner.setOnSwipeRight(new EventHandler<SwipeEvent>() {
+            @Override public void handle(SwipeEvent event) {
+                scrolled = true;
+            }
+        });     
+        Pane pOuter = new Pane();
+        pOuter.setPrefWidth(600);
+        pOuter.setPrefHeight(600);
+
+        Scene scene = new Scene(new Group(), 700, 700);
+        ((Group) scene.getRoot()).getChildren().clear();
+        ((Group) scene.getRoot()).getChildren().add(scrollPaneInner);
+
+        Stage stage = new Stage();
+        stage.setScene(scene);
+        stage.show();
+         
+        Event.fireEvent(rect,      
+            SwipeEvent.impl_swipeEvent(SwipeEvent.SWIPE_RIGHT,
+            1,
+            0.0, -50.0,
+            0.0, -50.0,
+            false,
+            false,
+            false,
+            false,
+            false));
+
+         /*
+         ** did it work?
+         */
+        assertTrue(scrollPaneInner.getHvalue() > 0.0);
+    }
+
 
     
     public static final class ScrollPaneSkinMock extends ScrollPaneSkin {

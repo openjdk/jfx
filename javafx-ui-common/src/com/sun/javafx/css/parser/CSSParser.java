@@ -3156,7 +3156,7 @@ final public class CSSParser {
         }
 
         ParsedValue<?,Size> svalue = new ParsedValue<Size,Size>(size, null);
-        return new ParsedValue<ParsedValue<?,Size>,Double>(svalue, SizeConverter.getInstance());
+        return new ParsedValue<ParsedValue<?,Size>,Double>(svalue, FontConverter.SizeConverter.getInstance());
     }
 
     /* http://www.w3.org/TR/css3-fonts/#font-style-the-font-style-property */

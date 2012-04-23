@@ -34,8 +34,6 @@ import javafx.beans.property.IntegerProperty;
 import javafx.beans.property.IntegerPropertyBase;
 import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.ObjectPropertyBase;
-import javafx.beans.property.SimpleStringProperty;
-import javafx.beans.property.StringProperty;
 import javafx.beans.value.ChangeListener;
 import javafx.beans.value.WritableValue;
 import javafx.event.ActionEvent;
@@ -157,25 +155,6 @@ public class TextField extends TextInputControl {
      * Properties                                                              *
      *                                                                         *
      **************************************************************************/
-
-    /**
-     * The {@code TextField}'s prompt text to display, or
-     * <tt>null</tt> if no prompt text is displayed.
-     */
-    private StringProperty promptText = new SimpleStringProperty(this, "promptText", "") {
-        @Override protected void invalidated() {
-            // Strip out newlines
-            String txt = get();
-            if (txt != null && txt.contains("\n")) {
-                txt = txt.replace("\n", "");
-                set(txt);
-            }
-        }
-    };
-    public final StringProperty promptTextProperty() { return promptText; }
-    public final String getPromptText() { return promptText.get(); }
-    public final void setPromptText(String value) { promptText.set(value); }
-
 
     /**
      * The preferred number of text columns. This is used for

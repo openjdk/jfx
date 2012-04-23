@@ -46,6 +46,7 @@ import javafx.scene.control.ScrollPane;
 import javafx.scene.control.ScrollPane.ScrollBarPolicy;
 import javafx.scene.input.MouseEvent;
 import javafx.scene.input.ScrollEvent;
+import javafx.scene.input.SwipeEvent;
 import javafx.scene.layout.StackPane;
 import javafx.scene.shape.Rectangle;
 
@@ -421,6 +422,42 @@ public class ScrollPaneSkin extends SkinBase<ScrollPane, ScrollPaneBehavior> imp
                             hsb.setValue(hsb.getValue()+(-event.getDeltaX())*hPixelValue);
                             event.consume();
                     }
+                }
+            }
+        });
+
+        setOnSwipeLeft(new EventHandler<SwipeEvent>() {
+            @Override
+            public void handle(SwipeEvent t) {
+                if (hsb != null) {
+                    hsb.setValue(Utils.clamp(hsb.getMin(), hsb.getValue() - hsb.getBlockIncrement(), hsb.getMax()));
+                }
+            }
+        });
+
+        setOnSwipeRight(new EventHandler<SwipeEvent>() {
+            @Override
+            public void handle(SwipeEvent t) {
+                if (hsb != null) {
+                    hsb.setValue(Utils.clamp(hsb.getMin(), hsb.getValue() + hsb.getBlockIncrement(), hsb.getMax()));
+                }
+            }
+        });
+
+        setOnSwipeUp(new EventHandler<SwipeEvent>() {
+            @Override
+            public void handle(SwipeEvent t) {
+                if (vsb != null) {
+                    vsb.setValue(Utils.clamp(vsb.getMin(), vsb.getValue() - vsb.getBlockIncrement(), vsb.getMax()));
+                }
+            }
+        });
+
+        setOnSwipeDown(new EventHandler<SwipeEvent>() {
+            @Override
+            public void handle(SwipeEvent t) {
+                if (vsb != null) {
+                    vsb.setValue(Utils.clamp(vsb.getMin(), vsb.getValue() + vsb.getBlockIncrement(), vsb.getMax()));
                 }
             }
         });

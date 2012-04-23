@@ -52,7 +52,13 @@ import com.sun.javafx.collections.NonIterableChange;
  * the sole-purpose of the {@link TextField} control. Additionally, if you want
  * a form of rich-text editing, there is also the
  * {@link javafx.scene.web.HTMLEditor HTMLEditor} control.
- * 
+ *
+ * <p>TextArea supports the notion of showing {@link #promptTextProperty() prompt text}
+ * to the user when there is no {@link #textProperty() text} already in the
+ * TextArea (either via the user, or set programmatically). This is a useful
+ * way of informing the user as to what is expected in the text area, without
+ * having to resort to {@link Tooltip tooltips} or on-screen {@link Label labels}.
+ *
  * @see TextField
  */
 public class TextArea extends TextInputControl {

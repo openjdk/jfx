@@ -33,10 +33,6 @@ import java.lang.reflect.Modifier;
 import javafx.scene.Node;
 import javafx.beans.binding.ObjectBinding;
 import javafx.beans.binding.StringBinding;
-import javafx.beans.property.ObjectProperty;
-import javafx.beans.property.SimpleObjectProperty;
-import javafx.beans.value.ChangeListener;
-import javafx.beans.value.ObservableValue;
 import javafx.event.EventHandler;
 import javafx.scene.control.*;
 import javafx.scene.input.MouseEvent;
@@ -46,7 +42,7 @@ import javafx.scene.paint.Color;
 import javafx.scene.paint.Paint;
 import com.sun.javafx.scene.control.behavior.ColorPickerBehavior;
 import com.sun.javafx.scene.control.ColorPicker;
-import com.sun.javafx.scene.control.ColorPickerPanel;
+import com.sun.javafx.scene.control.ColorPalette;
 
 /**
  *
@@ -57,17 +53,16 @@ public class ColorPickerSkin<T> extends ComboBoxPopupControl<T> {
     private Label displayNode; 
     private StackPane icon; 
     private Rectangle colorRect; 
-    private ColorPickerPanel popup = new ColorPickerPanel(Color.WHITE);
-    
-    private ObjectProperty<Color> color = new SimpleObjectProperty<Color>(Color.WHITE);
-    public ObjectProperty<Color> colorProperty() { return color; }
-    public Color getColor() { return color.get(); }
-    public void setColor(Color newColor) { color.set(newColor); }
+    private ColorPalette popupContent;
+//    private ColorPickerPanel popup = new ColorPickerPanel(Color.WHITE);
     
     public ColorPickerSkin(final ColorPicker colorPicker) {
         super(colorPicker, new ColorPickerBehavior<T>(colorPicker));
-        popup.setOwner(colorPicker);
-        initialize();
+        if (colorPicker.getColor() == null) colorPicker.setColor(Color.WHITE);
+        popupContent = new ColorPalette(Color.WHITE, colorPicker);
+        popupContent.setPopupControl(getPopup());
+        popupContent.setOwner(colorPicker);
+        updateComboBoxMode();
         if (getMode() == ComboBoxMode.BUTTON || getMode() == ComboBoxMode.COMBOBOX) {
              if (arrowButton.getOnMouseReleased() == null) {
                 arrowButton.setOnMouseReleased(new EventHandler<MouseEvent>() {
@@ -87,28 +82,10 @@ public class ColorPickerSkin<T> extends ComboBoxPopupControl<T> {
                 });
             }
         }
-        getPopup().setAutoHide(false);
-         color.addListener(new ChangeListener<Color>() {
-            @Override public void changed(ObservableValue<? extends Color> ov, Color t, Color t1) {
-                colorPicker.setColor(getColor());
-            }
-        });
+        registerChangeListener(getPopup().showingProperty(), "POPUP_VISIBLE");
+//        getPopup().setAutoHide(false);
     }
     
-    private void initialize() {
-        updateComboBoxMode();
-//        popup.addEventFilter(MouseEvent.MOUSE_RELEASED, new EventHandler<MouseEvent>() {
-//            @Override public void handle(MouseEvent t) {
-//                ((ColorPicker)getSkinnable()).hide();
-//            }
-//        });
-        popup.colorProperty().addListener(new ChangeListener<Color>() {
-            @Override public void changed(ObservableValue<? extends Color> ov, Color t, Color t1) {
-                setColor(t1);
-            }
-        });
-    }
-     
     private void updateComboBoxMode() {
         if (getSkinnable().getStyleClass().contains(ColorPicker.STYLE_CLASS_BUTTON)) {
             setMode(ComboBoxMode.BUTTON);
@@ -154,18 +131,48 @@ public class ColorPickerSkin<T> extends ComboBoxPopupControl<T> {
     }
     
     @Override protected Node getPopupContent() {
-       return popup;
+       return popupContent;
     }
     
+    @Override protected void focusLost() {
+        // do nothing
+    }
+    
+    @Override public void show() {
+        super.show();
+        final ColorPicker colorPicker = (ColorPicker)getSkinnable();
+        popupContent.updateSelection((Color)colorPicker.getColor());
+        popupContent.setDialogLocation(getPopup().getX()+getPopup().getWidth(), getPopup().getY());
+    }
+    
+    @Override protected void handleControlPropertyChanged(String p) {
+        super.handleControlPropertyChanged(p);
+    
+        if (p == "SHOWING") {
+            if (getSkinnable().isShowing()) {
+                show();
+            } else {
+                if (!popupContent.isAddColorDialogShowing()) hide();
+            }
+        }     
+        else if (p == "POPUP_VISIBLE") {
+            if (!getPopup().isShowing() && getSkinnable().isShowing()) {
+                // Popup was dismissed. Maybe user clicked outside or typed ESCAPE.
+                // Make sure button is in sync.
+                getSkinnable().hide();
+            }
+        }
+    }
     @Override public Node getDisplayNode() {
+        final ColorPicker colorPicker = (ColorPicker)getSkinnable();
         if (displayNode == null) {
             displayNode = new Label();
             displayNode.getStyleClass().add("color-picker-label");
             // label text
             displayNode.textProperty().bind(new StringBinding() {
-                { bind(color); }
+                { bind(colorPicker.colorProperty()); }
                 @Override protected String computeValue() {
-                    return colorValueToWeb(getColor());
+                    return colorValueToWeb((Color)colorPicker.getColor());
                 }
             });
             if (getMode() == ComboBoxMode.BUTTON || getMode() == ComboBoxMode.COMBOBOX) {
@@ -190,10 +197,11 @@ public class ColorPickerSkin<T> extends ComboBoxPopupControl<T> {
             icon = new StackPane();
             icon.getStyleClass().add("picker-color");
             colorRect = new Rectangle(16, 16);
+            colorRect.getStyleClass().add("picker-color-rect");
             colorRect.fillProperty().bind(new ObjectBinding<Paint>() {
-                { bind(color); }
+                { bind(colorPicker.colorProperty()); }
                 @Override protected Paint computeValue() {
-                    return getColor();
+                    return (Color)colorPicker.getColor();
                 }
             });         
             

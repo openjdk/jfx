@@ -156,6 +156,8 @@ public class StyleConverter<F, T> {
             styleConverter = com.sun.javafx.css.converters.FontConverter.StyleConverter.getInstance();
         } else if (com.sun.javafx.css.converters.FontConverter.WeightConverter.class.equals(converterClass)) {
             styleConverter = com.sun.javafx.css.converters.FontConverter.WeightConverter.getInstance();
+        } else if (com.sun.javafx.css.converters.FontConverter.SizeConverter.class.equals(converterClass)) {
+            styleConverter = com.sun.javafx.css.converters.FontConverter.SizeConverter.getInstance();
 
         }  else if (com.sun.javafx.css.converters.InsetsConverter.class.equals(converterClass)) {
             styleConverter = com.sun.javafx.css.converters.InsetsConverter.getInstance();

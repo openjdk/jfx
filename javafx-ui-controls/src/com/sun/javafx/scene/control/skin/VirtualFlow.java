@@ -717,6 +717,14 @@ public class VirtualFlow extends Region {
 //        addChangedListener(VERTICAL, listenerY);
 //        vbar.addChangedListener(ScrollBar.VALUE, listenerY);
 
+        ChangeListener listenerY = new ChangeListener() {
+            @Override
+            public void changed(ObservableValue ov, Object t, Object t1) {
+                clipView.setClipY(isVertical() ? 0 : vbar.getValue());
+            }
+        };
+        vbar.valueProperty().addListener(listenerY);
+        
         /*
          * Watch the PositionMapper.position property, and when it changes
          * update the location position value within this VirtualFlow instance.

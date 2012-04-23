@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2009, 2012, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -51,7 +51,7 @@ import java.util.List;
 import javafx.scene.input.KeyCode;
 import javafx.scene.input.MouseEvent;
 
-public class PaginationBehavior<T> extends BehaviorBase<Pagination<T>> {
+public class PaginationBehavior extends BehaviorBase<Pagination> {
 
     /**************************************************************************
      *                          Setup KeyBindings                             *
@@ -73,10 +73,10 @@ public class PaginationBehavior<T> extends BehaviorBase<Pagination<T>> {
     @Override protected void callAction(String name) {
         if (LEFT.equals(name)) {
             PaginationSkin ps = (PaginationSkin)getControl().getSkin();
-            ps.getSelectionModel().selectPrevious();
+            ps.selectPrevious();
         } else if (RIGHT.equals(name)) {
             PaginationSkin ps = (PaginationSkin)getControl().getSkin();
-            ps.getSelectionModel().selectNext();
+            ps.selectNext();
         } else {
             super.callAction(name);
         }

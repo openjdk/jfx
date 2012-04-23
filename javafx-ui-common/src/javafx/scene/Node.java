@@ -879,13 +879,19 @@ public abstract class Node implements EventTarget {
                     // Here, we used to call reapplyCSS(). But there is 
                     // no need to create a new StyleHelper if just the 
                     // inline style has changed since the inline style is
-                    // not cached. 
+                    // not cached...unless there is no StyleHelper. If there
+                    // is an inline style, there needs to be a StyleHelper. 
                     //
-                    if (getScene() != null &&
-                        cssFlag != CSSFlags.REAPPLY && 
-                        cssFlag != CSSFlags.UPDATE) {
-                        cssFlag = CSSFlags.UPDATE; 
-                        notifyParentsOfInvalidatedCSS();
+                    if (getScene() != null) {
+                        
+                        if (cssFlag != CSSFlags.REAPPLY) {
+                            if (impl_getStyleHelper() == null) {
+                                impl_reapplyCSS();
+                            } else if (cssFlag != CSSFlags.UPDATE) {
+                                cssFlag = CSSFlags.UPDATE; 
+                                notifyParentsOfInvalidatedCSS();
+                            }
+                        }
                     } 
                 }
 

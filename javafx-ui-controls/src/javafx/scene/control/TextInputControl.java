@@ -40,6 +40,7 @@ import javafx.beans.property.ReadOnlyStringProperty;
 import javafx.beans.property.ReadOnlyStringWrapper;
 import javafx.beans.property.SimpleBooleanProperty;
 import javafx.beans.property.SimpleIntegerProperty;
+import javafx.beans.property.SimpleStringProperty;
 import javafx.beans.property.StringProperty;
 import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableStringValue;
@@ -153,6 +154,25 @@ public abstract class TextInputControl extends Control {
      * Properties                                                              *
      *                                                                         *
      **************************************************************************/
+
+    /**
+     * The prompt text to display in the {@code TextInputControl}, or
+     * <tt>null</tt> if no prompt text is displayed.
+     */
+    private StringProperty promptText = new SimpleStringProperty(this, "promptText", "") {
+        @Override protected void invalidated() {
+            // Strip out newlines
+            String txt = get();
+            if (txt != null && txt.contains("\n")) {
+                txt = txt.replace("\n", "");
+                set(txt);
+            }
+        }
+    };
+    public final StringProperty promptTextProperty() { return promptText; }
+    public final String getPromptText() { return promptText.get(); }
+    public final void setPromptText(String value) { promptText.set(value); }
+
 
     private final Content content;
     /**

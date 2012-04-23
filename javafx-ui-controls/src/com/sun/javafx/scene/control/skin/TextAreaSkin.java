@@ -30,9 +30,11 @@ import javafx.animation.Timeline;
 import javafx.application.Platform;
 import javafx.beans.InvalidationListener;
 import javafx.beans.Observable;
+import javafx.beans.binding.BooleanBinding;
 import javafx.beans.binding.IntegerBinding;
 import javafx.beans.binding.ObjectBinding;
 import javafx.beans.value.ChangeListener;
+import javafx.beans.value.ObservableBooleanValue;
 import javafx.beans.value.ObservableIntegerValue;
 import javafx.beans.value.ObservableValue;
 import javafx.collections.ListChangeListener;
@@ -224,6 +226,12 @@ public class TextAreaSkin extends TextInputControlSkin<TextArea, TextAreaBehavio
                 y += bounds.getHeight();
             }
 
+            if (promptNode != null) {
+                promptNode.setLayoutX(padding.getLeft());
+                promptNode.setLayoutY(padding.getTop() + fontMetrics.get().getAscent());
+                promptNode.setWrappingWidth(wrappingWidth);
+            }
+
             // Update the selection
             IndexRange selection = textArea.getSelection();
             Bounds oldCaretBounds = caretPath.getBoundsInParent();
@@ -301,6 +309,9 @@ public class TextAreaSkin extends TextInputControlSkin<TextArea, TextAreaBehavio
 
     private ContentView contentView = new ContentView();
     private Group paragraphNodes = new Group();
+
+    private Text promptNode;
+    private ObservableBooleanValue usePromptText;
 
     private ObservableIntegerValue caretPosition;
     private Group selectionHighlightGroup = new Group();
@@ -530,11 +541,44 @@ public class TextAreaSkin extends TextInputControlSkin<TextArea, TextAreaBehavio
         });
       }
 
+        usePromptText = new BooleanBinding() {
+            { bind(textArea.textProperty(), textArea.promptTextProperty()); }
+            @Override protected boolean computeValue() {
+                String txt = textArea.getText();
+                String promptTxt = textArea.getPromptText();
+                return ((txt == null || txt.isEmpty()) &&
+                        promptTxt != null && !promptTxt.isEmpty());
+            }
+        };
+
+        if (usePromptText.get()) {
+            createPromptNode();
+        }
+
+        usePromptText.addListener(new InvalidationListener() {
+            @Override public void invalidated(Observable observable) {
+                createPromptNode();
+                requestLayout();
+            }
+        });
 
         updateHighlightFill();
         updatePrefViewportWidth();
         updatePrefViewportHeight();
         if (textArea.isFocused()) setCaretAnimating(true);
+    }
+
+    private void createPromptNode() {
+        if (promptNode == null && usePromptText.get()) {
+            promptNode = new Text();
+            contentView.getChildren().add(0, promptNode);
+            promptNode.setManaged(false);
+            promptNode.getStyleClass().add("text");
+            promptNode.visibleProperty().bind(usePromptText);
+            promptNode.fontProperty().bind(font);
+            promptNode.textProperty().bind(getSkinnable().promptTextProperty());
+            promptNode.fillProperty().bind(promptTextFill);
+        }
     }
 
     private void addParagraphNode(int i, String string) {
