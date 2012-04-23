@@ -135,11 +135,6 @@ public class StyleHelper {
      *
      * The key is comprised of this helper's index, plus the
      * indices of all this node's parents' helper's indices.
-     * We know that the indices are contiguous so we can
-     * construct a unique key from the indices. If the indices
-     * are [1, 2, 3], then the unique key will be 123. If
-     * the indices are [50, 2, 18], then the unique key will be
-     *  50218.
      *
      * The values in the cache styles that apply are determined
      * by the node's state and the state of its parents. This unique combination
@@ -155,8 +150,19 @@ public class StyleHelper {
      *
      * Since all StyleHelpers are relevant to a Scene, valueCache is
      * created by StyleManager.StylesheetContainer and is passed in.
+     * Note that all StyleHelper instances within a given Scene all 
+     * share the same valueCache! 
      */
-    Map<Reference<StyleCacheKey>, List<CacheEntry>> valueCache;
+    Map<StyleCacheKey, List<CacheEntry>> valueCache;
+    
+    /**
+     * Outside of StyleHelper, StyleCacheKeys are Reference&lt;StyleCacheKey&gt;.
+     * This Map holds the StyleHelper as the key so the Reference won't get
+     * collected. At least, thats the theory. This is set from StyleManager.
+     * As with valueCache, there is only one shared instance of this Map
+     * for a given Scene.
+     */
+    Map<StyleCacheKey,Reference<StyleCacheKey>> keysInUse;
 
     /**
      * Called from Node.impl_createStyleHelper before a getting a new
@@ -197,15 +203,16 @@ public class StyleHelper {
 
         // If we encounter a key with a null referent, then the key is added
         // to a list and then removed later in order to avoid concurrent mod.
-        List<Reference<StyleCacheKey>> keysToRemove = null;
+        List<StyleCacheKey> keysToRemove = null;
 
         Reference<StyleCacheKey> existingKeyRef = null;
 
-        for(Reference<StyleCacheKey> keyRef : valueCache.keySet()) {
-            final StyleCacheKey key = keyRef.get();
-            if (key == null) {
-                if (keysToRemove == null) keysToRemove = new ArrayList<Reference<StyleCacheKey>>();
-                keysToRemove.add(keyRef);
+        for(Entry<StyleCacheKey,Reference<StyleCacheKey>> entry : keysInUse.entrySet()) {
+            final StyleCacheKey key = entry.getKey();
+            final Reference<StyleCacheKey> keyRef = entry.getValue();
+            if (keyRef.get() == null) {
+                if (keysToRemove == null) keysToRemove = new ArrayList<StyleCacheKey>();
+                keysToRemove.add(key);
                 continue;
             }
             if (Arrays.equals(key.indices, indices)) {
@@ -215,8 +222,9 @@ public class StyleHelper {
         }
 
         if (keysToRemove != null) {
-            for (Reference<StyleCacheKey> keyRef : keysToRemove) {
-                for(CacheEntry entry : valueCache.remove(keyRef)) {
+            for (StyleCacheKey key : keysToRemove) {
+                keysInUse.remove(key);
+                for(CacheEntry entry : valueCache.remove(key)) {
                     entry.values.clear();
                 }
             }
@@ -245,9 +253,10 @@ public class StyleHelper {
         }
 
         // No existing cache was found for this set of helpers.
-        Reference<StyleCacheKey> keyRef =
-            new WeakReference<StyleCacheKey>(new StyleCacheKey(indices, pclassMasks));
-        valueCache.put(keyRef, new ArrayList<CacheEntry>());
+        final StyleCacheKey key = new StyleCacheKey(indices, pclassMasks);
+        final Reference<StyleCacheKey> keyRef = new WeakReference(key);
+        valueCache.put(key, new ArrayList<CacheEntry>());
+        keysInUse.put(key, keyRef);
         return keyRef;
     }
 
@@ -303,18 +312,15 @@ public class StyleHelper {
         //
         final Reference<StyleCacheKey> keyRef = node.impl_getStyleCacheKey();
 
-        final List<CacheEntry> cachedValues = valueCache.get(keyRef);
+        final StyleCacheKey key = keyRef != null ? keyRef.get() : null;
+        if(key == null) return null;
+        
+        final List<CacheEntry> cachedValues = valueCache.get(key);
         if (cachedValues == null) return null;
 
         //
         // Find the entry in the list that matches the states
         //
-        StyleCacheKey key = keyRef.get();
-        if(key == null) {
-            for (CacheEntry ce : cachedValues) ce.values.clear();
-            valueCache.remove(keyRef);
-            return null;
-        }
         
         // pclassMask is the set of pseudoclasses that appear in the
         // style maps of this set of StyleHelpers. Calculated values are
