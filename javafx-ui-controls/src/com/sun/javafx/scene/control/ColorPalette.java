@@ -4,8 +4,11 @@
  */
 package com.sun.javafx.scene.control;
 
+import com.sun.javafx.css.StyleManager;
 import java.util.List;
 import javafx.beans.property.ObjectProperty;
+import javafx.beans.property.ReadOnlyBooleanProperty;
+import javafx.beans.property.ReadOnlyBooleanWrapper;
 import javafx.beans.property.SimpleObjectProperty;
 import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
@@ -13,11 +16,14 @@ import javafx.collections.FXCollections;
 import javafx.event.ActionEvent;
 import javafx.event.EventHandler;
 import javafx.scene.control.Button;
+import javafx.scene.control.PopupControl;
 import javafx.scene.control.Separator;
 import javafx.scene.effect.DropShadow;
+import javafx.scene.input.KeyEvent;
 import javafx.scene.input.MouseEvent;
 import javafx.scene.layout.GridPane;
 import javafx.scene.layout.Region;
+import javafx.scene.layout.StackPane;
 import javafx.scene.paint.Color;
 import javafx.scene.shape.ArcTo;
 import javafx.scene.shape.ClosePath;
@@ -29,13 +35,14 @@ import javafx.scene.shape.StrokeType;
 import javafx.stage.Window;
 
 
-public class ColorPickerPanel extends Region {
+public class ColorPalette extends Region {
     
     private static final int ARROW_SIZE = 10;
     private static final int RADIUS = 8;
     private static final int GAP = 15;
     private static final int SQUARE_SIZE = 15;
     private static final int NUM_OF_COLUMNS = 12;
+    private static final int NUM_OF_ROWS = 10;
     
     private boolean customColorAdded = false;
     ColorPickerGrid cpg;
@@ -48,27 +55,29 @@ public class ColorPickerPanel extends Region {
     ColorPickerAddColorPane addColorDialog = null;
     int customColumnIndex = 0, customRowIndex = 0;
     private final List<ColorSquare> customSquares = FXCollections.observableArrayList();
-    
-    private ObjectProperty<Color> color = new SimpleObjectProperty<Color>(Color.WHITE);
-    public ObjectProperty<Color> colorProperty() { return color; }
-    public Color getColor() { return color.get(); }
-    public void setColor(Color newColor) { color.set(newColor);}
+ 
+    private double x;
+    private double y;
+    private PopupControl popupControl;
+    private ColorSquare focusedSquare;
     
     private ObjectProperty<Color> customColor = new SimpleObjectProperty<Color>(Color.WHITE);
     public ObjectProperty<Color> customColorProperty() { return customColor; }
     public Color getcustomColor() { return customColor.get(); }
     public void setCustomColor(Color newColor) { customColor.set(newColor);}
     
-    public ColorPickerPanel(Color initPaint) {
+    public ColorPalette(Color initPaint, ColorPicker colorPicker) {
         getStyleClass().add("color-panel");
+        this.colorPicker = colorPicker;
         cpg = new ColorPickerGrid(initPaint);
-        colorProperty().bindBidirectional(cpg.colorProperty());
-        addColorDialog = new ColorPickerAddColorPane(owner, colorProperty());
+        addColorDialog = new ColorPickerAddColorPane(owner, colorPicker.colorProperty());
         addColorButton.setPrefWidth(cpg.prefWidth(-1));
         addColorButton.setOnAction(new EventHandler<ActionEvent>() {
             @Override
             public void handle(ActionEvent t) {
-                addColorDialog.show();
+                if (popupControl != null) popupControl.setAutoHide(false);
+                addColorDialog.show(x, y);
+                if (popupControl != null) popupControl.setAutoHide(true);
             }
         });
         addColorDialog.customColorProperty.addListener(new ChangeListener<Color>() {
@@ -96,6 +105,7 @@ public class ColorPickerPanel extends Region {
             }
         });
         
+        
         // create popup path for main shape
         path = new Path();
 //        path.setFill(new LinearGradient(0, 0, 0, 1, true, CycleMethod.NO_CYCLE, new Stop(0, Color.web("#313131")), new Stop(0.5, Color.web("#5f5f5f")), new Stop(1, Color.web("#313131"))));
@@ -103,7 +113,81 @@ public class ColorPickerPanel extends Region {
         path.setStroke(null);
         path.setEffect(new DropShadow(15, 0, 1, Color.gray(0, 0.6)));
         path.setCache(true);
+        initNavigation();
         getChildren().addAll(path, cpg, customColorGrid, separator, addColorButton);
+    }
+    
+    private void initNavigation() {
+        setOnKeyPressed(new EventHandler<KeyEvent>() {
+            @Override public void handle(KeyEvent ke) {
+                switch (ke.getCode()) {
+                    case LEFT:
+                        processLeftKey(ke);
+                        break;
+                    case RIGHT:
+                        processRightKey(ke);
+                        break;
+                    case UP:
+//                        processUpKey(ke);
+                        break;
+                    case DOWN:
+//                        processDownKey(ke);
+                }
+            }
+        });
+    }
+    
+    private void processLeftKey(KeyEvent ke) {
+        int index;
+        for (index = (NUM_OF_ROWS*NUM_OF_COLUMNS)-1; index >= 0; index--)  {
+            ColorSquare cs = cpg.getSquares().get(index);
+            if (cs == focusedSquare) {
+                cs.setHoverValue(false);
+                ColorSquare prevSquare = cpg.getSquares().get((index != 0) ? 
+                                    (index-1) : (NUM_OF_ROWS*NUM_OF_COLUMNS)-1);
+                prevSquare.setHoverValue(true);
+                focusedSquare = prevSquare;
+                break;
+            } 
+        }
+        if (index == -1) {
+            ColorSquare cs = cpg.getSquares().get((NUM_OF_ROWS*NUM_OF_COLUMNS)-1);
+            cs.setHoverValue(true);
+            focusedSquare = cs;
+        }
+    }
+    
+    private void processRightKey(KeyEvent ke) {
+        int index;
+        for (index = 0; index < (NUM_OF_ROWS*NUM_OF_COLUMNS); index++)  {
+            ColorSquare cs = cpg.getSquares().get(index);
+            if (cs == focusedSquare) {
+                cs.setHoverValue(false);
+                ColorSquare prevSquare = cpg.getSquares().get(
+                        (index != (NUM_OF_ROWS*NUM_OF_COLUMNS)-1) ? (index+1) : 0);
+                prevSquare.setHoverValue(true);
+                focusedSquare = prevSquare;
+                break;
+            } 
+        }
+        if (index == (NUM_OF_ROWS*NUM_OF_COLUMNS)) {
+            ColorSquare cs = cpg.getSquares().get(0);
+            cs.setHoverValue(true);
+            focusedSquare = cs;
+        }
+    }
+    
+    public void setPopupControl(PopupControl pc) {
+        this.popupControl = pc;
+    }
+    
+    public void setDialogLocation(double xValue, double yValue) {
+        x = xValue;
+        y = yValue;
+    }
+    
+    public ColorPickerGrid getColorGrid() {
+        return cpg;
     }
     public void setOwner(ColorPicker colorPicker) {
         this.colorPicker = colorPicker;
@@ -159,34 +243,99 @@ public class ColorPickerPanel extends Region {
         this.customColorAdded = value;
     }
     
+    public boolean isAddColorDialogShowing() {
+        return addColorDialog.isVisible();
+    }
 
-    class ColorSquare extends Rectangle {
+    class ColorSquare extends StackPane {
+        Rectangle rectangle;
+        
         public ColorSquare(Color color) {
-            setFill(color == null  ? Color.WHITE : color);
-//            setFill(color);
-            setSmooth(false);
-//            Utils.setBlocksMouse(this, true);
-            setWidth(SQUARE_SIZE);
-            setHeight(SQUARE_SIZE);
-            setStrokeType(StrokeType.INSIDE);
             // Add style class to handle selected color square
             getStyleClass().add("color-square");
+            rectangle = new Rectangle(SQUARE_SIZE, SQUARE_SIZE);
+            setFocusTraversable(true);
+            rectangle.setFill(color == null  ? Color.WHITE : color);
+//            setFill(color);
+            rectangle.setSmooth(false);
+//            Utils.setBlocksMouse(this, true);
+            
+            rectangle.setStrokeType(StrokeType.INSIDE);
+            
+            rectangle.getStyleClass().add("color-rect");
             addEventHandler(MouseEvent.MOUSE_CLICKED, new EventHandler<MouseEvent>() {
-                @Override
-                public void handle(MouseEvent event) {
+                @Override public void handle(MouseEvent event) {
                     if (event.getClickCount() == 1) {
-                        if (getFill() != null) {
-                            if (getFill() instanceof Color) {
-                                setColor((Color) getFill());
+                        if (rectangle.getFill() != null) {
+                            if (rectangle.getFill() instanceof Color) {
+                                colorPicker.setColor((Color) rectangle.getFill());
+                                cpg.setColor((Color)rectangle.getFill());
                             }
                             event.consume();
                         }
+                        colorPicker.hide();
                     }
                 }
             });
+            addEventHandler(MouseEvent.MOUSE_ENTERED, new EventHandler<MouseEvent>() {
+                @Override public void handle(MouseEvent event) {
+                    if (focusedSquare != null && focusedSquare != ColorSquare.this) {
+                        focusedSquare.setHoverValue(false);
+                    }
+                    focusedSquare = ColorSquare.this;
+                }
+             });
+            getChildren().add(rectangle);
         }
+        
+        public void setHoverValue(Boolean value) {
+            setHover(value);
+        }
+        
+        private ReadOnlyBooleanWrapper selected;
+        protected final void setSelected(boolean value) {
+            selectedPropertyImpl().set(value);
+        }
+        public final boolean isSelected() { return selected == null ? false : selected.get(); }
+
+        public ReadOnlyBooleanProperty selectedProperty() {
+            return selectedPropertyImpl().getReadOnlyProperty();
+        }
+        private ReadOnlyBooleanWrapper selectedPropertyImpl() {
+            if (selected == null) {
+                selected = new ReadOnlyBooleanWrapper() {
+                    @Override protected void invalidated() {
+                        impl_pseudoClassStateChanged("selected");
+                    }
+
+                    @Override
+                    public Object getBean() {
+                        return ColorSquare.this;
+                    }
+
+                    @Override
+                    public String getName() {
+                        return "selected";
+                    }
+                };
+            }
+            return selected;
+        }
+        private final long SELECTED_PSEUDOCLASS_STATE =
+            StyleManager.getInstance().getPseudoclassMask("selected");
+
+        public long impl_getPseudoClassState() {
+            return super.impl_getPseudoClassState() | (isSelected() ? SELECTED_PSEUDOCLASS_STATE : 0);
+        }
+        
     }
 
+    public void updateSelection(Color color) {
+        for (ColorSquare cs : cpg.getSquares()) {
+             cs.setSelected(cs.rectangle.getFill().equals(color));
+        }
+    }
+    
     class ColorPickerGrid extends GridPane {
 
         private Color currentColor = null;
@@ -196,7 +345,7 @@ public class ColorPickerPanel extends Region {
         public ColorPickerGrid(Color initPaint) {
             getStyleClass().add("color-picker-grid");
             setId("ColorCustomizerColorGrid");
-            setGridLinesVisible(true);
+//            setGridLinesVisible(true);
             int columnIndex = 0, rowIndex = 0;
 
             squares = FXCollections.observableArrayList();
@@ -220,20 +369,14 @@ public class ColorPickerPanel extends Region {
             }
             setColor(initPaint);
         }
-
+        
+        public List<ColorSquare> getSquares() {
+            return squares;
+        }
+        
         private ObjectProperty<Color> color = new SimpleObjectProperty<Color>(Color.RED) {
             @Override protected void invalidated() {
-                for (ColorSquare cs : squares) {
-                if (cs.getFill().equals(get())) {
-                    // Check css rule has not been already added
-                    if (!cs.getStyleClass().contains("selected")) {
-                        cs.getStyleClass().add("selected");
-                    }
-                } else {
-                    cs.getStyleClass().remove("selected");
-                }
-            }
-            currentColor = get(); 
+                currentColor = get(); 
             }
         };
         public ObjectProperty<Color> colorProperty() { return color; }
@@ -362,5 +505,15 @@ public class ColorPickerPanel extends Region {
             230, 230, 204,
             204, 255, 204
         };
+        
+        @Override protected double computePrefWidth(double height) {
+            return (SQUARE_SIZE + 1)*12;
+        }
+
+        @Override protected double computePrefHeight(double width) {
+            return (SQUARE_SIZE + 1)*10;
+        }
+        
     }
+    
 }

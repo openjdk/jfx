@@ -69,7 +69,7 @@ public abstract class ComboBoxBaseSkin<T> extends SkinBase<ComboBoxBase<T>, Comb
         getSkinnable().focusedProperty().addListener(new ChangeListener<Boolean>() {
             @Override public void changed(ObservableValue<? extends Boolean> observable, Boolean oldValue, Boolean newValue) {
                 if (!newValue) {
-                    ((ComboBoxBase)getSkinnable()).hide();
+                    focusLost();
                 }
             }
         });
@@ -81,6 +81,9 @@ public abstract class ComboBoxBaseSkin<T> extends SkinBase<ComboBoxBase<T>, Comb
         registerChangeListener(comboBox.valueProperty(), "VALUE");
     }
     
+    protected void focusLost() {
+        ((ComboBoxBase)getSkinnable()).hide();
+    }
     /**
      * This method should return a Node that will be positioned within the
      * ComboBox 'button' area.

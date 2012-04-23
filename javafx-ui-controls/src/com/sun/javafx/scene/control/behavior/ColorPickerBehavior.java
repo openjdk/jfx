@@ -57,18 +57,39 @@ public class ColorPickerBehavior<T> extends ComboBoxBaseBehavior<T> {
      * Key event handling                                                      *
      *                                                                         *
      **************************************************************************/
+    
+    /**
+     * Opens the Color Picker Palette.
+     */
+    protected static final String OPEN_ACTION = "Open";
 
-    protected static final List<KeyBinding> COMBO_BOX_BINDINGS = new ArrayList<KeyBinding>();
+    /**
+     * Closes the Color Picker Palette.
+     */
+    protected static final String CLOSE_ACTION = "Close";
+    
+
+    protected static final List<KeyBinding> COLOR_PICKER_BINDINGS = new ArrayList<KeyBinding>();
     static {
-        COMBO_BOX_BINDINGS.addAll(COMBO_BOX_BASE_BINDINGS);
+//        COLOR_PICKER_BINDINGS.addAll(COMBO_BOX_BASE_BINDINGS);
+        COLOR_PICKER_BINDINGS.add(new KeyBinding(ESCAPE, KEY_PRESSED, CLOSE_ACTION));
+        COLOR_PICKER_BINDINGS.add(new KeyBinding(SPACE, KEY_PRESSED, OPEN_ACTION));
+        COLOR_PICKER_BINDINGS.add(new KeyBinding(ENTER, KEY_PRESSED, OPEN_ACTION));
+        
     }
 
     @Override protected List<KeyBinding> createKeyBindings() {
-        return COMBO_BOX_BINDINGS;
+        return COLOR_PICKER_BINDINGS;
     }
 
     @Override protected void callAction(String name) {
-        super.callAction(name);
+        ColorPicker colorPicker = (ColorPicker)getControl();
+        if (OPEN_ACTION.equals(name)) {
+            show();
+        } else if(CLOSE_ACTION.equals(name)) {
+            hide();
+        }
+        else super.callAction(name);
     }
     
     private ColorPicker<T> getColorPicker() {
@@ -90,6 +111,10 @@ public class ColorPickerBehavior<T> extends ComboBoxBaseBehavior<T> {
 //    public void mousePressed(MouseEvent e) {
 //        super.mousePressed(e);
 //    }
+    
+    @Override public void onAutoHide() {
+        // do nothing
+    }
     
     @Override public void mouseReleased(MouseEvent e) {
         // Overriding to not do the usual on mouseReleased.

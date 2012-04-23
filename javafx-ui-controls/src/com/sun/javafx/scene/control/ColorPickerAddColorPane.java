@@ -87,7 +87,11 @@ public class ColorPickerAddColorPane extends StackPane {
         dialog.setScene(scene);
     }
     
-    public void show() {
+    public void show(double x, double y) {
+        if (x != 0 && y != 0) {
+            dialog.setX(x);
+            dialog.setY(y);
+        }
         dialog.show();
     }
     
