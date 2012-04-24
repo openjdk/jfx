@@ -45,26 +45,26 @@ import com.sun.javafx.scene.BoundsAccessor;
  * Note that the reflection of a {@code Node} with a {@code Reflection}
  * effect installed will not respond to mouse events or the containment
  * methods on the {@code Node}.
- *
-<PRE>
-import javafx.scene.*;
-import javafx.scene.text.*;
-import javafx.scene.paint.*;
-import javafx.scene.effect.*;
-
-Text t = new Text();
-t.setX(10.0);
-t.setY(50.0);
-t.setCache(true);
-t.setText("Reflections on JavaFX...");
-t.setFill(Color.RED);
-t.setFont(Font.font(null, FontWeight.BOLD, 30));
-
-Reflection r = new Reflection();
-r.setFraction(0.7);
-
-t.setEffect(r);
-</PRE>
+ * 
+ * <p>
+ * Example:
+ * <pre><code>
+ * Reflection reflection = new Reflection();
+ * reflection.setFraction(0.7);
+ * 
+ * Text text = new Text();
+ * text.setX(10.0);
+ * text.setY(50.0);
+ * text.setCache(true);
+ * text.setText("Reflections on JavaFX...");
+ * text.setFill(Color.web("0x3b596d"));
+ * text.setFont(Font.font(null, FontWeight.BOLD, 40));
+ * text.setEffect(reflection);
+ * </pre></code> 
+ * <p> The code above produces the following: </p>
+ * <p>
+ * <img src="doc-files/reflection.png"/>
+ * </p>
  */
 public class Reflection extends Effect {
     /**

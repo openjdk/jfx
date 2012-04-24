@@ -42,34 +42,32 @@ import com.sun.javafx.scene.BoundsAccessor;
  * A high-level effect that makes brighter portions of the input image
  * appear to glow, based on a configurable threshold.
  *
-<PRE>
-import javafx.scene.*;
-import javafx.scene.shape.*;
-import javafx.scene.text.*;
-import javafx.scene.paint.*;
-import javafx.scene.effect.*;
-
-Group g = new Group();
-
-Rectangle r = new Rectangle();
-r.setX(10);
-r.setY(10);
-r.setWidth(160);
-r.setHeight(80);
-r.setFill(Color.DARKBLUE);
-
-Text t = new Text();
-t.setText("Bloom!");
-t.setFill(Color.YELLOW);
-t.setFont(Font.font(null, FontWeight.BOLD, 36));
-t.setX(25);
-t.setY(65);
-
-g.setCache(true);
-g.setEffect(new Bloom());
-g.getChildren().add(r);
-g.getChildren().add(t);
-</PRE>
+ * <p>
+ * Example:
+ * <pre><code>
+ * Bloom bloom = new Bloom();
+ * bloom.setThreshold(0.1);
+ * 
+ * Rectangle rect = new Rectangle();
+ * rect.setX(10);
+ * rect.setY(10);
+ * rect.setWidth(160);
+ * rect.setHeight(80);
+ * rect.setFill(Color.DARKSLATEBLUE);
+ *
+ * Text text = new Text();
+ * text.setText("Bloom!");
+ * text.setFill(Color.ALICEBLUE);
+ * text.setFont(Font.font(null, FontWeight.BOLD, 40));
+ * text.setX(25);
+ * text.setY(65);
+ * text.setEffect(bloom);
+ * </pre></code>
+ *
+ * <p> The code above produces the following: </p>
+ * <p>
+ * <img src="doc-files/bloom.png"/>
+ * </p>
  */
 public class Bloom extends Effect {
     /**

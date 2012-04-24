@@ -96,8 +96,8 @@ import javafx.beans.property.*;
  * region subclass.
  * <p>
  * Region subclasses which layout their children will position nodes by setting
- * {@link setLayoutX(double) layoutX}/{@link setLayoutY(double) layoutY} and do not alter
- * {@link setTranslateX(double) translateX}/{@link setTranslateY(double) translateY}, which are reserved for
+ * {@link #setLayoutX(double) layoutX}/{@link #setLayoutY(double) layoutY} and do not alter
+ * {@link #setTranslateX(double) translateX}/{@link #setTranslateY(double) translateY}, which are reserved for
  * adjustments and animation.
  *
  */

@@ -41,6 +41,26 @@ import com.sun.javafx.scene.BoundsAccessor;
 /**
  * A high-level effect that makes the input image appear to glow,
  * based on a configurable threshold.
+ * 
+ * <p>
+ * Example:
+ * <pre><code>
+ * Image image = new Image("boat.jpg");
+ * ImageView imageView = new ImageView(image);
+ * imageView.setFitWidth(200);
+ * imageView.setPreserveRatio(true);
+ *
+ * imageView.setEffect(new Glow(0.8));
+ * </pre></code>
+ * <p>
+ * <p> The code above applied on this image: </p>
+ * <p>
+ * <img src="doc-files/photo.png"/>
+ * </p>
+ * <p> produces the following: </p>
+ * <p>
+ * <img src="doc-files/glow.png"/>
+ * </p>
  */
 public class Glow extends Effect {
     /**

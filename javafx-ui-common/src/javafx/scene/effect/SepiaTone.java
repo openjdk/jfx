@@ -41,6 +41,27 @@ import com.sun.javafx.scene.BoundsAccessor;
 
 /**
  * A filter that produces a sepia tone effect, similar to antique photographs.
+ * 
+ * <p>
+ * Example:
+ * <pre><code>
+ * SepiaTone sepiaTone = new SepiaTone();
+ * sepiaTone.setLevel(0.7);
+ *
+ * Image image = new Image("boat.jpg");
+ * ImageView imageView = new ImageView(image);
+ * imageView.setFitWidth(200);
+ * imageView.setPreserveRatio(true);
+ * imageView.setEffect(sepiaTone);
+ * </pre></code> 
+ * <p> The code above applied on this image: </p>
+ * <p>
+ * <img src="doc-files/photo.png"/>
+ * </p>
+ * <p> produces the following: </p>
+ * <p>
+ * <img src="doc-files/sepiatone.png"/>
+ * </p>
  */
 public class SepiaTone extends Effect {
     /**

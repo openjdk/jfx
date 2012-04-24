@@ -340,7 +340,7 @@ public class Image {
      * </ul>
      * </p>
      *
-     * @returns true if the aspect ratio of the original image is to be
+     * @return true if the aspect ratio of the original image is to be
      *               preserved when scaling to fit the image within the bounding
      *               box provided by {@code width} and {@code height}.
      */

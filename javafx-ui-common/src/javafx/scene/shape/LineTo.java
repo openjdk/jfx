@@ -79,7 +79,9 @@ public class LineTo extends PathElement {
 
 
     public final void setX(double value) {
-        xProperty().set(value);
+        if (x != null || value != 0.0) {
+            xProperty().set(value);
+        }
     }
 
     public final double getX() {
@@ -116,10 +118,10 @@ public class LineTo extends PathElement {
      */
     private DoubleProperty y;
 
-
-
     public final void setY(double value) {
-        yProperty().set(value);
+        if (y != null || value != 0.0) {
+            yProperty().set(value);
+        }
     }
 
     public final double getY() {

@@ -67,51 +67,38 @@ import com.sun.javafx.scene.BoundsAccessor;
  * The results of mouse picking and the containment methods are undefined
  * when a {@code Node} has a {@code DisplacementMap} effect in place.
  *
-<PRE>
-import javafx.scene.*;
-import javafx.scene.text.*;
-import javafx.scene.shape.*;
-import javafx.scene.paint.*;
-import javafx.scene.effect.*;
-
-int w = 220;
-int h = 100;
-FloatMap map = new FloatMap();
-map.setWidth(w);
-map.setHeight(h);
-
-for (int i = 0; i < w; i++) {
-    double v = (Math.sin(i/50.0*Math.PI)-0.5)/40.0;
-    for (int j = 0; j < h; j++) {
-        map.setSamples(i, j, 0.0f,(float) v);
-    }
-}
-
-Group g = new Group();
-DisplacementMap dm = new DisplacementMap();
-dm.setMapData(map);
-
-g.setEffect(dm);
-g.setCache(true);
-
-Rectangle r = new Rectangle();
-r.setX(20.0);
-r.setY(20.0);
-r.setWidth(w);
-r.setHeight(h);
-r.setFill(Color.BLUE);
-
-g.getChildren().add(r);
-
-Text t = new Text();
-t.setX(40.0);
-t.setY(80.0);
-t.setText("Wavy Text");
-t.setFill(Color.YELLOW);
-t.setFont(Font.font(null, FontWeight.BOLD, 36));
-
-g.getChildren().add(t);
-</PRE>
+ * <p>
+ * Example:
+ * <pre><code>
+ * int width = 220;
+ * int height = 100;
+ * 
+ * FloatMap floatMap = new FloatMap();
+ * floatMap.setWidth(width);
+ * floatMap.setHeight(height);
+ *
+ * for (int i = 0; i < width; i++) {
+ *     double v = (Math.sin(i / 20.0 * Math.PI) - 0.5) / 40.0;
+ *     for (int j = 0; j < height; j++) {
+ *         floatMap.setSamples(i, j, 0.0f, (float) v);
+ *     }
+ * }
+ *
+ * DisplacementMap displacementMap = new DisplacementMap();
+ * displacementMap.setMapData(floatMap);
+ *
+ * Text text = new Text();
+ * text.setX(40.0);
+ * text.setY(80.0);
+ * text.setText("Wavy Text");
+ * text.setFill(Color.web("0x3b596d"));
+ * text.setFont(Font.font(null, FontWeight.BOLD, 50));
+ * text.setEffect(displacementMap);
+ *
+ * </pre></code>
+ *
+ * <p> The code above produces the following: </p>
+ * <p> <img src="doc-files/displacementmap.png"/> </p>
  */
 public class DisplacementMap extends Effect {
     @Override

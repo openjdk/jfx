@@ -45,41 +45,44 @@ import com.sun.javafx.tk.Toolkit;
  * A high-level effect that renders a shadow of the given content behind
  * the content with the specified color, radius, and offset.
  *
-<PRE>
-import javafx.scene.*;
-import javafx.scene.effect.*;
-import javafx.scene.paint.*;
-import javafx.scene.shape.*;
-import javafx.scene.text.*;
+ * <p>
+ * Example:
+ * <pre><code>
 
-Group g = new Group();
-DropShadow ds = new DropShadow();
-ds.setOffsetY(3.0);
-ds.setColor(Color.color(0.4, 0.4, 0.4));
-
-Text t = new Text();
-t.setEffect(ds);
-t.setCache(true);
-t.setX(10.0);
-t.setY(70.0);
-t.setFill(Color.RED);
-t.setText("JavaFX drop shadow...");
-t.setFont(Font.font(null, FontWeight.BOLD, 32));
-
-DropShadow ds1 = new DropShadow();
-ds1.setOffsetY(4.0);
-
-Circle c = new Circle();
-c.setEffect(ds1);
-c.setCenterX(50.0);
-c.setCenterY(125.0);
-c.setRadius(30.0);
-c.setFill(Color.ORANGE);
-c.setCache(true);
-
-g.getChildren().add(t);
-g.getChildren().add(c);
-</PRE>
+ * DropShadow dropShadow = new DropShadow();
+ * dropShadow.setRadius(5.0);
+ * dropShadow.setOffsetX(3.0);
+ * dropShadow.setOffsetY(3.0);
+ * dropShadow.setColor(Color.color(0.4, 0.5, 0.5));  *
+ * 
+ * Text text = new Text();
+ * text.setEffect(dropShadow);
+ * text.setCache(true);
+ * text.setX(10.0);
+ * text.setY(70.0);
+ * text.setFill(Color.web("0x3b596d"));
+ * text.setText("JavaFX drop shadow...");
+ * text.setFont(Font.font(null, FontWeight.BOLD, 40));
+ *
+ * DropShadow dropShadow2 = new DropShadow();
+ * dropShadow2.setOffsetX(6.0);
+ * dropShadow2.setOffsetY(4.0);
+ *
+ * Circle circle = new Circle();
+ * circle.setEffect(dropShadow2);
+ * circle.setCenterX(50.0);
+ * circle.setCenterY(125.0);
+ * circle.setRadius(30.0);
+ * circle.setFill(Color.STEELBLUE);
+ * circle.setCache(true);
+ * </pre></code>
+ *
+ * <p>
+ * The code above produces the following:
+ * </p>
+ * <p>
+ * <img src="doc-files/dropshadow.png"/>
+ * </p>
  */
 public class DropShadow extends Effect {
     private boolean changeIsLocal;

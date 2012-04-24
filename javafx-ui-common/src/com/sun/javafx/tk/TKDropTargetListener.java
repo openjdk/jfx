@@ -49,7 +49,7 @@ import javafx.scene.input.TransferMode;
 /**
  * Listens for drop target events on a TKScene.
  * Event objects are passed transparently as java.lang.Object and are expected
- * to be converted to {@link javafx.scene.transfer.DragEvent}s by the implemtation
+ * to be converted to {@link javafx.scene.transfer.DragEvent}s by the implementation
  * of this interface through the use of
  * {@link Toolkit#convertDropTargetEventToFX(Object):javafx.scene.transfer.DragEvent}
  * as necessary.
@@ -80,8 +80,8 @@ public interface TKDropTargetListener {
 
     /**
      * Called if the user has modified the intended 
-     * {@link javafx.scene.transfer.TransferMode} of the drag gesture.
-     * This ususally happens as a result of different keys being pressed/released
+     * {@link javafx.scene.input.TransferMode} of the drag gesture.
+     * This usually happens as a result of different keys being pressed/released
      * during the gesture (alt, shift, ctrl, etc.)
      *
      * @param dropTargetDragEvent a drop target drag event

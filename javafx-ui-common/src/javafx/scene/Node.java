@@ -1178,7 +1178,7 @@ public abstract class Node implements EventTarget {
      * little benefit to caching Nodes as bitmaps when blurs and other effects
      * are used since they are very fast to render on the GPU.
      *
-     * The {@link cacheHint} variable provides additional options for enabling
+     * The {@link #cacheHintProperty} variable provides additional options for enabling
      * more aggressive bitmap caching.
      *
      * <p>
@@ -1724,7 +1724,7 @@ public abstract class Node implements EventTarget {
      * event handler. More detail about dragging gestures can be found
      * in the overview of {@link MouseEvent} and {@link MouseDragEvent}.
      *
-     * @see MosueEvent
+     * @see MouseEvent
      * @see MouseDragEvent
      * @throws IllegalStateException if the full press-drag-release gesture
      * cannot be started at this moment (it's called outside of
@@ -1870,7 +1870,7 @@ public abstract class Node implements EventTarget {
      * If the node is unmanaged, its parent will ignore the child in both preferred
      * size computations and layout.   Changes in layoutBounds will not trigger
      * relayout above it.   If an unmanaged node is of type {@link javafx.scene.Parent Parent},
-     * it will act as a "layout root", meaning that calls to {@link requestLayout()}
+     * it will act as a "layout root", meaning that calls to {@link Parent#requestLayout()}
      * beneath it will cause only the branch rooted by the node to be relayed out,
      * thereby isolating layout changes to that root and below.  It's the application's
      * responsibility to set the size and position of an unmanaged node.
@@ -1927,7 +1927,7 @@ public abstract class Node implements EventTarget {
      *
      * <p>For example, if {@code textnode} should be positioned at {@code finalX}
      * <code><pre>
-     *     textnode.setLayoutX(finalX - textnode.getLayoutBounds().getMinX();
+     *     textnode.setLayoutX(finalX - textnode.getLayoutBounds().getMinX());
      * </pre></code>
      * <p>
      * Failure to subtract {@code layoutBounds minX} may result in misplacement
@@ -5752,7 +5752,7 @@ public abstract class Node implements EventTarget {
      * Indicates whether this {@code Node} currently has the input focus.
      * To have the input focus, a node must be the {@code Scene}'s focus
      * owner, and the scene must be in a {@code Stage} that is visible
-     * and active. See {@link requestFocus()} for more information.
+     * and active. See {@link #requestFocus()} for more information.
      *
      * @see #requestFocus()
      * @defaultValue false
@@ -5793,7 +5793,7 @@ public abstract class Node implements EventTarget {
      * {@code Node} whose {@code focusTraversable} variable is true
      * and that is eligible to receive the focus,
      * unless the focus had been set explicitly via a call
-     * to {@link requestFocus()}.
+     * to {@link #requestFocus()}.
      *
      * @see #requestFocus()
      * @defaultValue false

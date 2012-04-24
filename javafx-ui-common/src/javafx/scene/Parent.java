@@ -1083,7 +1083,7 @@ public abstract class Parent extends Node {
      * with the scene graph, see the <a href="doc-files/cssref.html">CSS Reference
      * Guide</a>.
      *
-     * @returns the list of stylesheets to use with this Parent
+     * @return the list of stylesheets to use with this Parent
      */
     public final ObservableList<String> getStylesheets() { return stylesheets; }
     

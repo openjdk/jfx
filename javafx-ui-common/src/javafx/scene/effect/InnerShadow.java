@@ -22,7 +22,6 @@
  * or visit www.oracle.com if you need additional information or have any
  * questions.
  */
-
 package javafx.scene.effect;
 
 import javafx.beans.property.DoubleProperty;
@@ -45,24 +44,26 @@ import com.sun.javafx.tk.Toolkit;
  * A high-level effect that renders a shadow inside the edges of the
  * given content with the specified color, radius, and offset.
  *
-<PRE>
-import javafx.scene.*;
-import javafx.scene.text.*;
-import javafx.scene.paint.*;
-import javafx.scene.effect.*;
-
-InnerShadow is = new InnerShadow();
-is.setOffsetX(4.0);
-is.setOffsetY(4.0);
-
-Text t = new Text();
-t.setEffect(is);
-t.setX(20);
-t.setY(100);
-t.setText("InnerShadow");
-t.setFill(Color.YELLOW);
-t.setFont(Font.font(null, FontWeight.BOLD, 80));
-</PRE>
+ * <p>
+ * Example:
+ * <pre><code>
+ * InnerShadow innerShadow = new InnerShadow();
+ * innerShadow.setOffsetX(4);
+ * innerShadow.setOffsetY(4);
+ * innerShadow.setColor(Color.web("0x3b596d"));
+ *
+ * Text text = new Text();
+ * text.setEffect(innerShadow);
+ * text.setX(20);
+ * text.setY(100);
+ * text.setText("InnerShadow");
+ * text.setFill(Color.ALICEBLUE);
+ * text.setFont(Font.font(null, FontWeight.BOLD, 50));
+ * </pre></code>
+ * <p> The code above produces the following: </p>
+ * <p>
+ * <img * src="doc-files/innershadow.png"/>
+ * </p>
  */
 public class InnerShadow extends Effect {
     private boolean changeIsLocal;
@@ -96,7 +97,7 @@ public class InnerShadow extends Effect {
         setOffsetY(offsetY);
         setColor(color);
     }
-    
+
     /**
      * Creates a new instance of InnerShadow with the specified blurType, color,
      * radius, spread, offsetX and offsetY.
@@ -108,7 +109,7 @@ public class InnerShadow extends Effect {
      * @param offsetX the shadow offset in the x direction
      * @param offsetY the shadow offset in the y direction
      */
-    public InnerShadow(BlurType blurType, Color color, double radius, double choke, 
+    public InnerShadow(BlurType blurType, Color color, double radius, double choke,
             double offsetX, double offsetY) {
         setBlurType(blurType);
         setColor(color);

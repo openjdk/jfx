@@ -321,7 +321,7 @@ public abstract class KeyCombination {
      * section string and creates a {@code KeyCodeCombination} for it. If this
      * can't be done, it falls back to the {@code KeyCharacterCombination}.
      *
-     * @param name the string which represents the requested key combination
+     * @param value the string which represents the requested key combination
      * @return the constructed {@code KeyCombination}
      */
     public static KeyCombination valueOf(String value) {
