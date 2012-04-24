@@ -6,6 +6,8 @@ package javafx.scene.control;
 
 import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.SimpleBooleanProperty;
+import javafx.event.ActionEvent;
+import javafx.event.EventHandler;
 import javafx.geometry.Pos;
 
 import org.junit.Before;
@@ -331,4 +333,26 @@ public class CheckBoxTest {
         assertFalse(btn.isSelected());
         assertFalse(btn.isIndeterminate());
     }
+    
+    @Test public void fireSelectedCheckboxResultsIn_OnAction() {
+        btn.setOnAction(new EventHandler<ActionEvent>() {
+            @Override
+            public void handle(ActionEvent arg0) {
+                assertTrue(btn.isSelected());
+            }
+        });
+        btn.setSelected(true); 
+        assertTrue(btn.isSelected());
+    }    
+    
+    @Test public void fireIndeterminateCheckboxResultsIn_OnAction() {
+        btn.setOnAction(new EventHandler<ActionEvent>() {
+            @Override
+            public void handle(ActionEvent arg0) {
+                assertTrue(btn.isIndeterminate());
+            }
+        });
+        btn.setIndeterminate(true);
+        assertTrue(btn.isIndeterminate());
+    }    
 }
