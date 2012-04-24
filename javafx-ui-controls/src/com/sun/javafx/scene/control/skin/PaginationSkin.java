@@ -142,7 +142,7 @@ public class PaginationSkin extends SkinBase<Pagination, PaginationBehavior>  {
     }
 
     public void selectNext() {
-        if (pagination.getCurrentPageIndex() < getPageCount()) {
+        if (pagination.getCurrentPageIndex() < getPageCount() - 1) {
             pagination.setCurrentPageIndex(pagination.getCurrentPageIndex() + 1);
         }
     }
@@ -472,8 +472,12 @@ public class PaginationSkin extends SkinBase<Pagination, PaginationBehavior>  {
             }
 
             // We have gone past the total number of pages
-            if (toIndex > getPageCount() - 1) {
-                toIndex = getPageCount() - 1;
+            if (toIndex > getPageCount() - 1) {       
+                if (fromIndex > getPageCount() - 1) {
+                    return false;
+                } else {
+                  toIndex = getPageCount() - 1;
+                }
             }
 
             // We have gone past the starting page
