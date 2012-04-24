@@ -41,6 +41,30 @@ import com.sun.javafx.scene.BoundsAccessor;
 /**
  * An effect that allows for per-pixel adjustments of hue, saturation,
  * brightness, and contrast.
+ *  
+ * <p>
+ * Example:
+ * <pre><code>
+ * ColorAdjust colorAdjust = new ColorAdjust();
+ * colorAdjust.setContrast(0.1);
+ * colorAdjust.setHue(-0.05);
+ * colorAdjust.setBrightness(0.1);
+ * colorAdjust.setSaturation(0.2);
+ * 
+ * Image image = new Image("boat.jpg");
+ * ImageView imageView = new ImageView(image);
+ * imageView.setFitWidth(200);
+ * imageView.setPreserveRatio(true);
+ * imageView.setEffect(colorAdjust);
+ * </pre></code> 
+ * <p> The code above applied on this image: </p>
+ * <p>
+ * <img src="doc-files/photo.png"/>
+ * </p>
+ * <p> produces the following: </p>
+ * <p>
+ * <img src="doc-files/coloradjust.png"/>
+ * </p>
  */
 public class ColorAdjust extends Effect {
     /**

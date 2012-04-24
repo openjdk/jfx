@@ -42,22 +42,24 @@ import com.sun.javafx.scene.BoundsAccessor;
  * A blur effect using a Gaussian convolution kernel, with a configurable
  * radius.
  *
-<PRE>
-import javafx.scene.*;
-import javafx.scene.text.*;
-import javafx.scene.paint.*;
-import javafx.scene.effect.*;
-
-Text t = new Text();
-t.setX(10.0);
-t.setY(40.0);
-t.setCache(true);
-t.setText("Blurry Text");
-t.setFill(Color.RED);
-t.setFont(Font.font(null, FontWeight.BOLD, 36));
-
-t.setEffect(new GaussianBlur());
-</PRE>
+ * <p>
+ * Example:
+ * <pre><code>
+ * Text text = new Text();
+ * text.setText("Blurry Text!");
+ * text.setFill(Color.web("0x3b596d"));
+ * text.setFont(Font.font(null, FontWeight.BOLD, 50));
+ * text.setX(10);
+ * text.setY(50);
+ *
+ * text.setEffect(new GaussianBlur());
+ * </pre></code>
+ * <p>
+ * The code above produces the following:
+ * </p>
+ * <p>
+ * <img src="doc-files/gaussianblur.png"/>
+ * </p>
  */
 public class GaussianBlur extends Effect {
     /**

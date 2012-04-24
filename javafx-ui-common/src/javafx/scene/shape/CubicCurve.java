@@ -82,8 +82,8 @@ public class CubicCurve extends Shape {
      * @param startY the Y coordinate of the start point
      * @param controlX1 the X coordinate of the first control point
      * @param controlY1 the Y coordinate of the first control point
-     * @param controlX1 the X coordinate of the second control point
-     * @param controlY1 the Y coordinate of the second control point
+     * @param controlX2 the X coordinate of the second control point
+     * @param controlY2 the Y coordinate of the second control point
      * @param endX the X coordinate of the end point
      * @param endY the Y coordinate of the end point
      */

@@ -71,7 +71,7 @@ import javafx.scene.Node;
  * The alignment property controls how the rows and columns are aligned
  * within the bounds of the tilepane and defaults to Pos.TOP_LEFT.  It is also possible
  * to control the alignment of nodes within the individual tiles by setting
- * {@link tileAlignment}, which defaults to Pos.CENTER.
+ * {@link #tileAlignmentProperty() tileAlignment}, which defaults to Pos.CENTER.
  * <p>
  * A horizontal tilepane example:
  * <pre><code>

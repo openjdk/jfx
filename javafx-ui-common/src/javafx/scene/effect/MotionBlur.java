@@ -42,25 +42,27 @@ import com.sun.javafx.scene.BoundsAccessor;
  * A motion blur effect using a Gaussian convolution kernel, with a
  * configurable radius and angle.
  *
-<PRE>
-import javafx.scene.*;
-import javafx.scene.text.*;
-import javafx.scene.paint.*;
-import javafx.scene.effect.*;
-
-Text t = new Text();
-t.setX(20.0);
-t.setY(100.0);
-t.setText("Motion");
-t.setFill(Color.RED);
-t.setFont(Font.font(null, FontWeight.BOLD, 60));
-
-MotionBlur mb = new MotionBlur();
-mb.setRadius(15.0);
-mb.setAngle(-30.0);
-
-t.setEffect(mb);
-</PRE>
+ * <p>
+ * Example:
+ * <pre><code>
+ * MotionBlur motionBlur = new MotionBlur();
+ * motionBlur.setRadius(30);
+ * motionBlur.setAngle(-15.0);
+ *
+ * Text text = new Text();
+ * text.setX(20.0);
+ * text.setY(100.0);
+ * text.setText("Motion!");
+ * text.setFill(Color.web("0x3b596d"));
+ * text.setFont(Font.font(null, FontWeight.BOLD, 60));
+ * text.setEffect(motionBlur);
+ * </pre></code>
+ * <p>
+ * The code above produces the following:
+ * </p>
+ * <p>
+ * <img src="doc-files/motionblur.png"/>
+ * </p>
  */
 public class MotionBlur extends Effect {
     /**

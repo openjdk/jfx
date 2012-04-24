@@ -45,30 +45,30 @@ import com.sun.scenario.effect.PhongLighting;
  * which can be used to give flat objects a more realistic, three-dimensional
  * appearance.
  *
-<PRE>
-import javafx.scene.*;
-import javafx.scene.text.*;
-import javafx.scene.paint.*;
-import javafx.scene.effect.*;
-import javafx.geometry.*;
-
-Light.Distant light = new Light.Distant();
-light.setAzimuth(-135.0);
-
-Lighting l = new Lighting();
-l.setLight(light);
-l.setSurfaceScale(5.0);
-
-Text t = new Text();
-t.setText("JavaFX!");
-t.setFill(Color.RED);
-t.setFont(Font.font(null, FontWeight.BOLD, 90));
-t.setX(10.0);
-t.setY(10.0);
-t.setTextOrigin(VPos.TOP);
-
-t.setEffect(l);
-</PRE>
+ * <p>
+ * Example:
+ * <pre><code>
+ * Light.Distant light = new Light.Distant();
+ * light.setAzimuth(-135.0);
+ *
+ * Lighting lighting = new Lighting();
+ * lighting.setLight(light);
+ * lighting.setSurfaceScale(5.0);
+ *
+ * Text text = new Text();
+ * text.setText("JavaFX!");
+ * text.setFill(Color.STEELBLUE);
+ * text.setFont(Font.font(null, FontWeight.BOLD, 60));
+ * text.setX(10.0);
+ * text.setY(10.0);
+ * text.setTextOrigin(VPos.TOP);
+ *
+ * text.setEffect(lighting);
+ * </pre></code>
+ * <p> The code above produces the following: </p>
+ * <p>
+ * <img * src="doc-files/lighting.png"/>
+ * </p>
  */
 public class Lighting extends Effect {
     @Override

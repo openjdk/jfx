@@ -43,29 +43,30 @@ import com.sun.javafx.scene.BoundsAccessor;
 /**
  * A blur effect using a simple box filter kernel, with separately
  * configurable sizes in both dimensions, and an iteration parameter
- * that contols the quality of the resulting blur.
+ * that controls the quality of the resulting blur.
  *
-<PRE>
-import javafx.scene.*;
-import javafx.scene.text.*;
-import javafx.scene.paint.*;
-import javafx.scene.effect.*;
-
-Text t = new Text();
-t.setText("Blurry Text!");
-t.setFill(Color.RED);
-t.setFont(Font.font(null, FontWeight.BOLD, 36));
-t.setX(10);
-t.setY(40);
-
-BoxBlur bb = new BoxBlur();
-bb.setWidth(15);
-bb.setHeight(15);
-bb.setIterations(3);
-
-t.setEffect(bb);
-
-</PRE>
+ * <p>
+ * Example:
+ * <pre><code>
+ * BoxBlur boxBlur = new BoxBlur();
+ * boxBlur.setWidth(10);
+ * boxBlur.setHeight(3);
+ * boxBlur.setIterations(3);
+ *
+ * Text text = new Text();
+ * text.setText("Blurry Text!");
+ * text.setFill(Color.web("0x3b596d"));
+ * text.setFont(Font.font(null, FontWeight.BOLD, 50));
+ * text.setX(10);
+ * text.setY(50);
+ * text.setEffect(boxBlur);
+ * </pre></code>
+ * <p>
+ * The code above produces the following:
+ * </p>
+ * <p>
+ * <img src="doc-files/boxblur.png"/>
+ * </p>
  */
 public class BoxBlur extends Effect {
 

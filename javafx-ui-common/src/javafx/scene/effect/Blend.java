@@ -44,44 +44,42 @@ import com.sun.scenario.effect.Blend.Mode;
  * An effect that blends the two inputs together using one of the
  * pre-defined {@link BlendMode}s.
  *
-<PRE>
-import javafx.scene.*;
-import javafx.scene.effect.*;
-import javafx.scene.paint.*;
-import javafx.scene.shape.*;
-import javafx.scene.text.*;
-
-Blend blend = new Blend();
-blend.setMode(BlendMode.MULTIPLY);
-
-ColorInput colorInput = new ColorInput();
-colorInput.setPaint(Color.BLUE);
-colorInput.setX(10);
-colorInput.setY(10);
-colorInput.setWidth(160);
-colorInput.setHeight(80);
-
-blend.setTopInput(colorInput);
-
-Rectangle r = new Rectangle();
-r.setWidth(180);
-r.setHeight(100);
-Stop[] stops = new Stop[] {new Stop(0, Color.RED), new Stop(1, Color.YELLOW)};
-LinearGradient lg = new LinearGradient(0, 0, 0.25, 0.25, true, CycleMethod.REFLECT, stops);
-r.setFill(lg);
-
-Text t = new Text();
-t.setEffect(blend);
-t.setX(25);
-t.setY(65);
-t.setFill(Color.RED);
-t.setText("SrcOut");
-t.setFont(Font.font(null, FontWeight.BOLD, 36));
-
-Group g = new Group();
-g.getChildren().add(r);
-g.getChildren().add(t);
-</PRE>
+ * <p>
+ * Example:
+ * <pre><code>
+ * Blend blend = new Blend();
+ * blend.setMode(BlendMode.COLOR_BURN);
+ *
+ * ColorInput colorInput = new ColorInput();
+ * colorInput.setPaint(Color.STEELBLUE);
+ * colorInput.setX(10);
+ * colorInput.setY(10);
+ * colorInput.setWidth(100);
+ * colorInput.setHeight(180);
+ *
+ * blend.setTopInput(colorInput);
+ *
+ * Rectangle rect = new Rectangle();
+ * rect.setWidth(220);
+ * rect.setHeight(100);
+ * Stop[] stops = new Stop[]{new Stop(0, Color.LIGHTSTEELBLUE), new Stop(1, Color.PALEGREEN)};
+ * LinearGradient lg = new LinearGradient(0, 0, 0.25, 0.25, true, CycleMethod.REFLECT, stops);
+ * rect.setFill(lg);
+ *
+ * Text text = new Text();
+ * text.setX(15);
+ * text.setY(65);
+ * text.setFill(Color.PALEVIOLETRED);
+ * text.setText("COLOR_BURN");
+ * text.setFont(Font.font(null, FontWeight.BOLD, 30));
+ *
+ * Group g = new Group();
+ * g.setEffect(blend);
+ * g.getChildren().addAll(rect, text);
+ * </pre></code>
+ *
+ * <p> The code above produces the following: </p> 
+ * <p> <img src="doc-files/blend.png"/> </p>
  */
 public class Blend extends Effect {
 

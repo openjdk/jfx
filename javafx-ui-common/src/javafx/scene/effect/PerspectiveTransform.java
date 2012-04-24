@@ -54,44 +54,43 @@ import com.sun.javafx.scene.BoundsAccessor;
  * The results of mouse picking and the containment methods are undefined
  * when a {@code Node} has a {@code PerspectiveTransform} effect in place.
  *
-<PRE>
-import javafx.scene.*;
-import javafx.scene.shape.*;
-import javafx.scene.text.*;
-import javafx.scene.paint.*;
-import javafx.scene.effect.*;
-
-Group g = new Group();
-PerspectiveTransform pt = new PerspectiveTransform();
-pt.setUlx(10.0);
-pt.setUly(10.0);
-pt.setUrx(310.0);
-pt.setUry(40.0);
-pt.setLrx(310.0);
-pt.setLry(60.0);
-pt.setLlx(10.0);
-pt.setLly(90.0);
-
-g.setEffect(pt);
-g.setCache(true);
-
-Rectangle r = new Rectangle();
-r.setX(10.0);
-r.setY(10.0);
-r.setWidth(280.0);
-r.setHeight(80.0);
-r.setFill(Color.BLUE);
-
-Text t = new Text();
-t.setX(20.0);
-t.setY(65.0);
-t.setText("Perspective");
-t.setFill(Color.YELLOW);
-t.setFont(Font.font(null, FontWeight.BOLD, 36));
-
-g.getChildren().add(r);
-g.getChildren().add(t);
-</PRE>
+ * <p>
+ * Example:
+ * <pre><code>
+ * PerspectiveTransform perspectiveTrasform = new PerspectiveTransform();
+ * perspectiveTrasform.setUlx(10.0);
+ * perspectiveTrasform.setUly(10.0);
+ * perspectiveTrasform.setUrx(310.0);
+ * perspectiveTrasform.setUry(40.0);
+ * perspectiveTrasform.setLrx(310.0);
+ * perspectiveTrasform.setLry(60.0);
+ * perspectiveTrasform.setLlx(10.0);
+ * perspectiveTrasform.setLly(90.0);
+ *
+ * Group g = new Group();
+ * g.setEffect(perspectiveTrasform);
+ * g.setCache(true);
+ *
+ * Rectangle rect = new Rectangle();
+ * rect.setX(10.0);
+ * rect.setY(10.0);
+ * rect.setWidth(280.0);
+ * rect.setHeight(80.0);
+ * rect.setFill(Color.web("0x3b596d"));
+ *
+ * Text text = new Text();
+ * text.setX(20.0);
+ * text.setY(65.0);
+ * text.setText("Perspective");
+ * text.setFill(Color.ALICEBLUE);
+ * text.setFont(Font.font(null, FontWeight.BOLD, 36));
+ *
+ * g.getChildren().addAll(rect, text);
+ * </pre></code>
+ * <p> The code above produces the following: </p>
+ * <p>
+ * <img src="doc-files/perspectivetransform.png"/>
+ * </p>
  */
 public class PerspectiveTransform extends Effect {
     /**
