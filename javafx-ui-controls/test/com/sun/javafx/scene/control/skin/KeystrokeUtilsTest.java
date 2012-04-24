@@ -82,4 +82,23 @@ public class KeystrokeUtilsTest {
     }
 
 
+    /*
+    ** check that the KeyCodeCombination for KeyCode.DELETE produces something printable.
+    ** We only display the unicode DELETE char on mac, otherwise we use "Delete".
+    */
+    @Test public void validStringForDELETE() {
+
+        KeyCodeCombination keyComboDELETE = new KeyCodeCombination(KeyCode.DELETE);
+
+        String shortcutString = KeyCodeUtils.getAccelerator(keyComboDELETE.getCode());
+
+        if (com.sun.javafx.PlatformUtil.isMac()) {
+            assertTrue(shortcutString.equals("\u2326"));
+        }
+        else {
+            assertTrue(shortcutString.equals("Delete"));
+        }
+    }
+
+
 }
