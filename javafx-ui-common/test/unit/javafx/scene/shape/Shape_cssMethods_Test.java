@@ -44,6 +44,7 @@ public class Shape_cssMethods_Test extends CssMethodsTestBase {
     public static Collection data() {
         return Arrays.asList(new Object[] {
             config(TEST_SHAPE, "fill", null, "-fx-fill", Color.RED),
+            config(TEST_SHAPE, "fill", null, "-fx-fill", null),
             config(TEST_SHAPE, "smooth", false, "-fx-smooth", true),
             config(TEST_SHAPE, "stroke", null, "-fx-stroke", Color.BLUE),
             config(TEST_SHAPE, "strokeDashOffset", 0.0,
