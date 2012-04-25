@@ -101,7 +101,9 @@ public class CubicCurve extends Shape {
     }
 
     public final void setStartX(double value) {
-        startXProperty().set(value);
+        if (startX != null || value != 0.0) {
+            startXProperty().set(value);
+        }
     }
 
     public final double getStartX() {
@@ -139,10 +141,10 @@ public class CubicCurve extends Shape {
      */
     private DoubleProperty startY;
 
-
-
     public final void setStartY(double value) {
-        startYProperty().set(value);
+        if (startY != null || value != 0.0) {
+            startYProperty().set(value);
+        }
     }
 
     public final double getStartY() {
@@ -181,10 +183,10 @@ public class CubicCurve extends Shape {
      */
     private DoubleProperty controlX1;
 
-
-
     public final void setControlX1(double value) {
-        controlX1Property().set(value);
+        if (controlX1 != null || value != 0.0) {
+            controlX1Property().set(value);
+        }
     }
 
     public final double getControlX1() {
@@ -223,10 +225,10 @@ public class CubicCurve extends Shape {
      */
     private DoubleProperty controlY1;
 
-
-
     public final void setControlY1(double value) {
-        controlY1Property().set(value);
+        if (controlY1 != null || value != 0.0) {
+            controlY1Property().set(value);
+        }
     }
 
     public final double getControlY1() {
@@ -265,10 +267,10 @@ public class CubicCurve extends Shape {
      */
     private DoubleProperty controlX2;
 
-
-
     public final void setControlX2(double value) {
-        controlX2Property().set(value);
+        if (controlX2 != null || value != 0.0) {
+            controlX2Property().set(value);
+        }
     }
 
     public final double getControlX2() {
@@ -307,10 +309,10 @@ public class CubicCurve extends Shape {
      */
     private DoubleProperty controlY2;
 
-
-
     public final void setControlY2(double value) {
-        controlY2Property().set(value);
+        if (controlY2 != null || value != 0.0) {
+            controlY2Property().set(value);
+        }
     }
 
     public final double getControlY2() {
@@ -348,9 +350,10 @@ public class CubicCurve extends Shape {
      */
     private DoubleProperty endX;
 
-
     public final void setEndX(double value) {
-        endXProperty().set(value);
+        if (endX != null || value != 0.0) {
+            endXProperty().set(value);
+        }
     }
 
     public final double getEndX() {
@@ -388,10 +391,10 @@ public class CubicCurve extends Shape {
      */
     private DoubleProperty endY;
 
-
-
     public final void setEndY(double value) {
-        endYProperty().set(value);
+        if (endY != null || value != 0.0) {
+            endYProperty().set(value);
+        }
     }
 
     public final double getEndY() {

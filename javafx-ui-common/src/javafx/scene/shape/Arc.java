@@ -110,10 +110,10 @@ public class Arc extends Shape {
      */
     private DoubleProperty centerX;
 
-
-
     public final void setCenterX(double value) {
-        centerXProperty().set(value);
+        if (centerX != null || value != 0.0) {
+            centerXProperty().set(value);
+        }
     }
 
     public final double getCenterX() {
@@ -151,10 +151,10 @@ public class Arc extends Shape {
      */
     private DoubleProperty centerY;
 
-
-
     public final void setCenterY(double value) {
-        centerYProperty().set(value);
+        if (centerY != null || value != 0.0) {
+            centerYProperty().set(value);
+        }
     }
 
     public final double getCenterY() {
@@ -191,81 +191,71 @@ public class Arc extends Shape {
      *
      * @defaultValue 0.0
      */
-    private DoubleProperty radiusX;
+    private DoubleProperty radiusX = new DoublePropertyBase() {
 
+        @Override
+        public void invalidated() {
+            impl_markDirty(DirtyBits.NODE_GEOMETRY);
+            impl_geomChanged();
+        }
 
+        @Override
+        public Object getBean() {
+            return Arc.this;
+        }
+
+        @Override
+        public String getName() {
+            return "radiusX";
+        }
+    };
 
     public final void setRadiusX(double value) {
-        radiusXProperty().set(value);
+        radiusX.set(value);
     }
 
     public final double getRadiusX() {
-        return radiusX == null ? 0.0 : radiusX.get();
+        return radiusX.get();
     }
 
     public final DoubleProperty radiusXProperty() {
-        if (radiusX == null) {
-            radiusX = new DoublePropertyBase() {
-
-                @Override
-                public void invalidated() {
-                    impl_markDirty(DirtyBits.NODE_GEOMETRY);
-                    impl_geomChanged();
-                }
-
-                @Override
-                public Object getBean() {
-                    return Arc.this;
-                }
-
-                @Override
-                public String getName() {
-                    return "radiusX";
-                }
-            };
-        }
         return radiusX;
     }
 
     /**
-     * Defines the overall height (veritcal radius) of the full ellipse
+     * Defines the overall height (vertical radius) of the full ellipse
      * of which this arc is a partial section.
      *
      * @defaultValue 0.0
      */
-    private DoubleProperty radiusY;
+    private DoubleProperty radiusY = new DoublePropertyBase() {
 
+        @Override
+        public void invalidated() {
+            impl_markDirty(DirtyBits.NODE_GEOMETRY);
+            impl_geomChanged();
+        }
 
+        @Override
+        public Object getBean() {
+            return Arc.this;
+        }
+
+        @Override
+        public String getName() {
+            return "radiusY";
+        }
+    };
 
     public final void setRadiusY(double value) {
-        radiusYProperty().set(value);
+        radiusY.set(value);
     }
 
     public final double getRadiusY() {
-        return radiusY == null ? 0.0 : radiusY.get();
+        return radiusY.get();
     }
 
     public final DoubleProperty radiusYProperty() {
-        if (radiusY == null) {
-            radiusY = new DoublePropertyBase() {
-
-                @Override
-                public void invalidated() {
-                    impl_markDirty(DirtyBits.NODE_GEOMETRY);
-                    impl_geomChanged();
-                }
-
-                @Override
-                public Object getBean() {
-                    return Arc.this;
-                }
-
-                @Override
-                public String getName() {
-                    return "radiusY";
-                }
-            };
-        }
         return radiusY;
     }
 
@@ -276,10 +266,10 @@ public class Arc extends Shape {
      */
     private DoubleProperty startAngle;
 
-
-
     public final void setStartAngle(double value) {
-        startAngleProperty().set(value);
+        if (startAngle != null || value != 0.0) {
+            startAngleProperty().set(value);
+        }
     }
 
     public final double getStartAngle() {
@@ -315,39 +305,34 @@ public class Arc extends Shape {
      *
      * @defaultValue 0.0
      */
-    private DoubleProperty length;
+    private DoubleProperty length = new DoublePropertyBase() {
 
+        @Override
+        public void invalidated() {
+            impl_markDirty(DirtyBits.NODE_GEOMETRY);
+            impl_geomChanged();
+        }
 
+        @Override
+        public Object getBean() {
+            return Arc.this;
+        }
+
+        @Override
+        public String getName() {
+            return "length";
+        }
+    };
 
     public final void setLength(double value) {
-        lengthProperty().set(value);
+        length.set(value);
     }
 
     public final double getLength() {
-        return length == null ? 0.0 : length.get();
+        return length.get();
     }
 
     public final DoubleProperty lengthProperty() {
-        if (length == null) {
-            length = new DoublePropertyBase() {
-
-                @Override
-                public void invalidated() {
-                    impl_markDirty(DirtyBits.NODE_GEOMETRY);
-                    impl_geomChanged();
-                }
-
-                @Override
-                public Object getBean() {
-                    return Arc.this;
-                }
-
-                @Override
-                public String getName() {
-                    return "length";
-                }
-            };
-        }
         return length;
     }
 
@@ -362,7 +347,9 @@ public class Arc extends Shape {
 
 
     public final void setType(ArcType value) {
-        typeProperty().set(value);
+        if (type != null || value != ArcType.OPEN) {
+            typeProperty().set(value);
+        }
     }
 
     public final ArcType getType() {
