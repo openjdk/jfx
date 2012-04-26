@@ -41,6 +41,8 @@ import javafx.scene.control.MenuItem;
 import javafx.scene.control.RadioMenuItem;
 import javafx.scene.control.SeparatorMenuItem;
 
+import java.util.List;
+
 import com.sun.javafx.menu.CheckMenuItemBase;
 import com.sun.javafx.menu.CustomMenuItemBase;
 import com.sun.javafx.menu.MenuBase;
@@ -57,6 +59,11 @@ public class GlobalMenuAdapter extends Menu implements MenuBase {
         return new GlobalMenuAdapter(menu);
     }
 
+    private final ObservableList<MenuItemBase> items = new TrackableObservableList<MenuItemBase>() {
+        @Override protected void onChanged(Change<MenuItemBase> c) {
+        }
+    };
+
     private GlobalMenuAdapter(final Menu menu) {
         super(menu.getText());
 
@@ -66,18 +73,18 @@ public class GlobalMenuAdapter extends Menu implements MenuBase {
 
         menu.showingProperty().addListener(new InvalidationListener() {
             @Override public void invalidated(Observable property) {
-                if (menu.isShowing()) {
+                if (menu.isShowing() && !isShowing()) {
                     show();
-                } else {
+                } else if (!menu.isShowing() && isShowing()) {
                     hide();
                 }
             }
         });
         showingProperty().addListener(new InvalidationListener() {
             @Override public void invalidated(Observable property) {
-                if (isShowing()) {
+                if (isShowing() && !menu.isShowing()) {
                     menu.show();
-                } else {
+                } else if (!isShowing() && menu.isShowing()) {
                     menu.hide();
                 }
             }
@@ -89,48 +96,48 @@ public class GlobalMenuAdapter extends Menu implements MenuBase {
             }
         };
 
-        setOnShowing(showHideHandler);
-        setOnShown(showHideHandler);
-        setOnHiding(showHideHandler);
-        setOnHidden(showHideHandler);
-
         menu.getItems().addListener(new ListChangeListener<MenuItem>() {
-            @Override public void onChanged(Change<? extends MenuItem> c) {
-                updateItems();
+            @Override public void onChanged(Change<? extends MenuItem> change) {
+                while (change.next()) {
+                    int from = change.getFrom();
+                    int to = change.getTo();
+                    List<? extends MenuItem> removed = change.getRemoved();
+                    for (int i = from + removed.size() - 1; i >= from ; i--) {
+                        items.remove(i);
+                        getItems().remove(i);
+                    }
+                    for (int i = from; i < to; i++) {
+                        MenuItem item = change.getList().get(i);
+                        insertItem(item, i);
+                    }
+                }
             }
         });
 
-        updateItems();
+        for (MenuItem menuItem : menu.getItems()) {
+            insertItem(menuItem, items.size());
+        }
     }
 
-    private final ObservableList<MenuItemBase> items = new TrackableObservableList<MenuItemBase>() {
-        @Override protected void onChanged(Change<MenuItemBase> c) {
-        }
-    };
+    private void insertItem(MenuItem menuItem, int pos) {
+        MenuItemBase mib;
 
-    private void updateItems() {
-        items.clear();
-        for (MenuItem menuItem : menu.getItems()) {
-            if (menuItem instanceof Menu) {
-                items.add(new GlobalMenuAdapter((Menu)menuItem));
-            } else if (menuItem instanceof CheckMenuItem) {
-                items.add(new CheckMenuItemAdapter((CheckMenuItem)menuItem));
-            } else if (menuItem instanceof RadioMenuItem) {
-                items.add(new RadioMenuItemAdapter((RadioMenuItem)menuItem));
-            } else if (menuItem instanceof SeparatorMenuItem) {
-                items.add(new SeparatorMenuItemAdapter((SeparatorMenuItem)menuItem));
-            } else if (menuItem instanceof CustomMenuItem) {
-                items.add(new CustomMenuItemAdapter((CustomMenuItem)menuItem));
-            } else {
-                items.add(new MenuItemAdapter(menuItem));
-            }
+        if (menuItem instanceof Menu) {
+            mib = new GlobalMenuAdapter((Menu)menuItem);
+        } else if (menuItem instanceof CheckMenuItem) {
+            mib = new CheckMenuItemAdapter((CheckMenuItem)menuItem);
+        } else if (menuItem instanceof RadioMenuItem) {
+            mib = new RadioMenuItemAdapter((RadioMenuItem)menuItem);
+        } else if (menuItem instanceof SeparatorMenuItem) {
+            mib = new SeparatorMenuItemAdapter((SeparatorMenuItem)menuItem);
+        } else if (menuItem instanceof CustomMenuItem) {
+            mib = new CustomMenuItemAdapter((CustomMenuItem)menuItem);
+        } else {
+            mib = new MenuItemAdapter(menuItem);
         }
-        
-        // Set the items in super, so setShowing() can see that it's not empty.
-        getItems().clear();
-        for (MenuItemBase mib : items) {
-            getItems().add((MenuItem)mib);
-        }
+
+        items.add(pos, mib);
+        getItems().add(pos, (MenuItem)mib);
     }
 
     public final ObservableList<MenuItemBase> getItemsBase() {
