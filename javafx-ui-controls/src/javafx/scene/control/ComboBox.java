@@ -39,7 +39,6 @@ import javafx.collections.FXCollections;
 import javafx.collections.ListChangeListener;
 import javafx.collections.ListChangeListener.Change;
 import javafx.collections.ObservableList;
-import javafx.event.EventDispatchChain;
 import javafx.scene.Node;
 import javafx.util.Callback;
 import javafx.util.StringConverter;
@@ -292,6 +291,20 @@ public class ComboBox<T> extends ComboBoxBase<T> {
     public final void setCellFactory(Callback<ListView<T>, ListCell<T>> value) { cellFactoryProperty().set(value); }
     public final Callback<ListView<T>, ListCell<T>> getCellFactory() {return cellFactoryProperty().get(); }
     public ObjectProperty<Callback<ListView<T>, ListCell<T>>> cellFactoryProperty() { return cellFactory; }
+    
+    
+    // --- button cell
+    /**
+     * The button cell is used to render what is shown in the ComboBox 'button'
+     * area. If a cell is set here, it does not change the rendering of the
+     * ComboBox popup list - that rendering is controlled via the 
+     * {@link #cellFactoryProperty() cell factory} API.
+     */
+    public ObjectProperty<ListCell<T>> buttonCellProperty() { return buttonCell; }
+    private ObjectProperty<ListCell<T>> buttonCell = 
+            new SimpleObjectProperty<ListCell<T>>(this, "buttonCell");
+    public final void setButtonCell(ListCell<T> value) { buttonCellProperty().set(value); }
+    public final ListCell<T> getButtonCell() {return buttonCellProperty().get(); }
     
     
     // --- Selection Model
