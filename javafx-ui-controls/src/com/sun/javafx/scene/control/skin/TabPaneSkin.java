@@ -149,8 +149,18 @@ public class TabPaneSkin extends SkinBase<TabPane, TabPaneBehavior> {
         registerChangeListener(tabPane.getSelectionModel().selectedItemProperty(), "SELECTED_TAB");
         registerChangeListener(tabPane.sideProperty(), "SIDE");
 
-        previousSelectedTab = null;
+        previousSelectedTab = null;        
         selectedTab = getSkinnable().getSelectionModel().getSelectedItem();
+        // Could not find the selected tab try and get the selected tab using the selected index
+        if (selectedTab == null && getSkinnable().getSelectionModel().getSelectedIndex() != -1) {
+            getSkinnable().getSelectionModel().select(getSkinnable().getSelectionModel().getSelectedIndex());
+            selectedTab = getSkinnable().getSelectionModel().getSelectedItem();        
+        } 
+        if (selectedTab == null) {
+            // getSelectedItem and getSelectedIndex failed select the first.
+            getSkinnable().getSelectionModel().selectFirst();
+        } 
+        selectedTab = getSkinnable().getSelectionModel().getSelectedItem();        
         isSelectingTab = false;
     }
 
@@ -165,7 +175,7 @@ public class TabPaneSkin extends SkinBase<TabPane, TabPaneBehavior> {
 
     @Override protected void handleControlPropertyChanged(String property) {
         super.handleControlPropertyChanged(property);
-        if (property == "SELECTED_TAB") {
+        if (property == "SELECTED_TAB") {            
             isSelectingTab = true;
             previousSelectedTab = selectedTab;
             selectedTab = getSkinnable().getSelectionModel().getSelectedItem();
@@ -967,6 +977,9 @@ public class TabPaneSkin extends SkinBase<TabPane, TabPaneBehavior> {
                         }
                     } else if (valueModel == tab.styleProperty()) {
                         setStyle(tab.getStyle());
+                    } else if (valueModel == tab.disableProperty()) {
+                        impl_pseudoClassStateChanged("disabled");
+                        requestLayout();
                     }
                 }
             };
@@ -975,6 +988,7 @@ public class TabPaneSkin extends SkinBase<TabPane, TabPaneBehavior> {
             tab.graphicProperty().addListener(tabListener);
             tab.contextMenuProperty().addListener(tabListener);
             tab.tooltipProperty().addListener(tabListener);
+            tab.disableProperty().addListener(tabListener);
             tab.styleProperty().addListener(tabListener);
             tab.getStyleClass().addListener(new ListChangeListener<String>() {
                 @Override
@@ -1023,6 +1037,9 @@ public class TabPaneSkin extends SkinBase<TabPane, TabPaneBehavior> {
             });
             setOnMousePressed(new EventHandler<MouseEvent>() {
                 @Override public void handle(MouseEvent me) {
+                    if (getTab().isDisable()) {
+                        return;
+                    }
                     if (me.getButton().equals(MouseButton.MIDDLE)) {
                         if (showCloseButton()) {
                             removeListeners(getTab());
@@ -1160,7 +1177,11 @@ public class TabPaneSkin extends SkinBase<TabPane, TabPaneBehavior> {
         public long impl_getPseudoClassState() {
             long mask = super.impl_getPseudoClassState();
 
-            if (getTab().isSelected()) mask |= SELECTED_PSEUDOCLASS_STATE;
+            if (getTab().isDisable()) {
+                mask |= DISABLED_PSEUDOCLASS_STATE;
+            } else if (getTab().isSelected()) {
+                mask |= SELECTED_PSEUDOCLASS_STATE;
+            }
 
             switch(getSkinnable().getSide()) {
                 case TOP:
@@ -1192,6 +1213,8 @@ public class TabPaneSkin extends SkinBase<TabPane, TabPaneBehavior> {
             StyleManager.getInstance().getPseudoclassMask("left");
     private static final long RIGHT_PSEUDOCLASS_STATE =
             StyleManager.getInstance().getPseudoclassMask("right");
+    private static final long DISABLED_PSEUDOCLASS_STATE =
+            StyleManager.getInstance().getPseudoclassMask("disabled");    
 
 
    /**************************************************************************

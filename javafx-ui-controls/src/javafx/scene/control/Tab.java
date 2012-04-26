@@ -1,4 +1,4 @@
-/*
+ /*
  * Copyright (c) 2011, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
@@ -26,6 +26,7 @@ package javafx.scene.control;
 
 import com.sun.javafx.css.Styleable;
 import com.sun.javafx.css.StyleableProperty;
+import com.sun.javafx.event.BasicEventDispatcher;
 import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.ObjectPropertyBase;
@@ -47,10 +48,7 @@ import java.lang.ref.Reference;
 import java.util.Collections;
 import java.util.List;
 import javafx.beans.DefaultProperty;
-import javafx.beans.property.ReadOnlyBooleanProperty;
-import javafx.beans.property.ReadOnlyBooleanWrapper;
-import javafx.beans.property.ReadOnlyObjectProperty;
-import javafx.beans.property.ReadOnlyObjectWrapper;
+import javafx.beans.property.*;
 
 /**
  * <p>Tabs are placed within a {@link TabPane}, where each tab represents a single
@@ -495,6 +493,100 @@ public class Tab implements EventTarget {
     
     private final ObservableList<String> styleClass = FXCollections.observableArrayList();
 
+    private BooleanProperty disable;
+    
+    /**
+     * Sets the disabled state of this tab.
+     * 
+     * @param value the state to set this tab
+     * 
+     * @defaultValue false
+     */
+    public final void setDisable(boolean value) { 
+        disableProperty().set(value);
+    }
+
+    /**
+     * Returns {@code true} if this tab is disable.
+     */    
+    public final boolean isDisable() { return disable == null ? false : disable.get(); }
+
+    /**
+     * Sets the disabled state of this tab. A disable tab is no longer interactive
+     * or traversable, but the contents remain interactive.  A disable tab 
+     * can be selected using {@link TabPane.getSelectionModel()}.
+     * 
+     * @defaultValue false
+     */    
+    public final BooleanProperty disableProperty() {
+        if (disable == null) {
+            disable = new BooleanPropertyBase(false) {
+                @Override
+                protected void invalidated() {
+                    updateDisabled();
+                }
+
+                @Override
+                public Object getBean() {
+                    return Tab.this;
+                }
+
+                @Override
+                public String getName() {
+                    return "disable";
+                }
+            };
+        }
+        return disable;
+    }
+    
+    private ReadOnlyBooleanWrapper disabled;
+
+    private final void setDisabled(boolean value) {
+        disabledPropertyImpl().set(value);
+    }
+
+    /**
+     * Returns true when the {@code Tab} {@link #disableProperty disable} is set to
+     * {@code true} or if the {@code TabPane} is disabled.
+     * 
+     */
+    public final boolean isDisabled() {
+        return disabled == null ? false : disabled.get();
+    }
+
+    /**
+     * Indicates whether or not this {@code Tab} is disabled.  A {@code Tab}
+     * will become disabled if {@link #disableProperty disable} is set to {@code true} on either
+     * itself or if the {@code TabPane} is disabled.
+     * 
+     * @defaultValue false
+     */    
+    public final ReadOnlyBooleanProperty disabledProperty() {
+        return disabledPropertyImpl().getReadOnlyProperty();
+    }
+
+    private ReadOnlyBooleanWrapper disabledPropertyImpl() {
+        if (disabled == null) {
+            disabled = new ReadOnlyBooleanWrapper() {
+                @Override
+                public Object getBean() {
+                    return Tab.this;
+                }
+
+                @Override
+                public String getName() {
+                    return "disabled";
+                }
+            };
+        }
+        return disabled;
+    }
+
+    private void updateDisabled() {
+        setDisabled(isDisable() || (getTabPane() != null && getTabPane().isDisabled()));
+    }
+    
     /**
      * A list of String identifiers which can be used to logically group
      * Nodes, specifically for an external style engine. This variable is
@@ -515,7 +607,7 @@ public class Tab implements EventTarget {
      * @deprecated This is an internal API that is not intended for use and will be removed in the next version
      */
     @Override
-    public EventDispatchChain buildEventDispatchChain(EventDispatchChain tail) {
+    public EventDispatchChain buildEventDispatchChain(EventDispatchChain tail) {        
         return tail.prepend(eventHandlerManager);
     }
 
