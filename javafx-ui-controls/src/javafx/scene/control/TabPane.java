@@ -158,7 +158,7 @@ public class TabPane extends Control {
      * <p>The position to place the tabs in this TabPane. Whenever this changes
      * the TabPane will immediately update the location of the tabs to reflect
      * this.</p>
-     *     
+     *
      */
     public final void setSide(Side value) {
         sideProperty().set(value);
@@ -488,8 +488,8 @@ public class TabPane extends Control {
      **************************************************************************/
 
     private static class StyleableProperties {
-        private static final StyleableProperty<TabPane,Number> TAB_MIN_WIDTH = 
-                new StyleableProperty<TabPane,Number>("-fx-tab-min-width", 
+        private static final StyleableProperty<TabPane,Number> TAB_MIN_WIDTH =
+                new StyleableProperty<TabPane,Number>("-fx-tab-min-width",
                 SizeConverter.getInstance(), DEFAULT_TAB_MIN_WIDTH) {
 
             @Override
@@ -502,9 +502,9 @@ public class TabPane extends Control {
                 return n.tabMinWidthProperty();
             }
         };
-        
-        private static final StyleableProperty<TabPane,Number> TAB_MAX_WIDTH = 
-                new StyleableProperty<TabPane,Number>("-fx-tab-max-width", 
+
+        private static final StyleableProperty<TabPane,Number> TAB_MAX_WIDTH =
+                new StyleableProperty<TabPane,Number>("-fx-tab-max-width",
                 SizeConverter.getInstance(), DEFAULT_TAB_MAX_WIDTH) {
 
             @Override
@@ -517,9 +517,9 @@ public class TabPane extends Control {
                 return n.tabMaxWidthProperty();
             }
         };
-        
-        private static final StyleableProperty<TabPane,Number> TAB_MIN_HEIGHT = 
-                new StyleableProperty<TabPane,Number>("-fx-tab-min-height", 
+
+        private static final StyleableProperty<TabPane,Number> TAB_MIN_HEIGHT =
+                new StyleableProperty<TabPane,Number>("-fx-tab-min-height",
                 SizeConverter.getInstance(), DEFAULT_TAB_MIN_HEIGHT) {
 
             @Override
@@ -532,9 +532,9 @@ public class TabPane extends Control {
                 return n.tabMinHeightProperty();
             }
         };
-        
-        private static final StyleableProperty<TabPane,Number> TAB_MAX_HEIGHT = 
-                new StyleableProperty<TabPane,Number>("-fx-tab-max-height", 
+
+        private static final StyleableProperty<TabPane,Number> TAB_MAX_HEIGHT =
+                new StyleableProperty<TabPane,Number>("-fx-tab-max-height",
                 SizeConverter.getInstance(), DEFAULT_TAB_MAX_HEIGHT) {
 
             @Override
@@ -652,7 +652,7 @@ public class TabPane extends Control {
                             }
                         }
                     }
-                    if (getSelectedIndex() == -1 && tabPane.getTabs().size() > 0) {
+                    if (getSelectedIndex() == -1 && getSelectedItem() == null && tabPane.getTabs().size() > 0) {
                         selectFirst();
                     } else if (tabPane.getTabs().isEmpty()) {
                         clearSelection();
@@ -665,18 +665,42 @@ public class TabPane extends Control {
         }
 
         // API Implementation
-        @Override public void select(int index) {            
-            final int rowCount = getItemCount();
-            if (rowCount == 0 || index < 0 || index >= rowCount) {
+        @Override public void select(int index) {
+            if (index < 0 || (getItemCount() > 0 && index >= getItemCount())) {
                 return;
             }
 
-            if (getSelectedIndex() != -1 && getSelectedIndex() < tabPane.getTabs().size()) {                
+            // Unselect the old tab
+            if (getSelectedIndex() >= 0 && getSelectedIndex() < tabPane.getTabs().size()) {
                 tabPane.getTabs().get(getSelectedIndex()).setSelected(false);
             }
+
             setSelectedIndex(index);
-            setSelectedItem(getModelItem(index));
-            tabPane.getTabs().get(getSelectedIndex()).setSelected(true);
+
+            Tab tab = getModelItem(index);            
+            if (tab != null) {
+                setSelectedItem(tab);
+            }
+            
+            // Select the new tab
+            if (getSelectedIndex() >= 0 && getSelectedIndex() < tabPane.getTabs().size()) {
+                tabPane.getTabs().get(getSelectedIndex()).setSelected(true);
+            }
+        }
+
+        @Override public void select(Tab tab) {
+            final int itemCount = getItemCount();
+
+            for (int i = 0; i < itemCount; i++) {
+                final Tab value = getModelItem(i);
+                if (value != null && value.equals(tab)) {
+                    select(i);
+                    return;
+                }
+            }
+            if (tab != null) {
+                setSelectedItem(tab);
+            }
         }
 
         @Override protected Tab getModelItem(int index) {

@@ -123,6 +123,7 @@ public class CheckBox extends ButtonBase {
                 @Override protected void invalidated() {
                     impl_pseudoClassStateChanged(PSEUDO_CLASS_DETERMINATE);
                     impl_pseudoClassStateChanged(PSEUDO_CLASS_INDETERMINATE);
+                    fireEvent(new ActionEvent());
                 }
 
                 @Override
@@ -155,6 +156,7 @@ public class CheckBox extends ButtonBase {
             selected = new BooleanPropertyBase() {
                 @Override protected void invalidated() {
                     impl_pseudoClassStateChanged(PSEUDO_CLASS_SELECTED);
+                    fireEvent(new ActionEvent());
                 }
 
                 @Override

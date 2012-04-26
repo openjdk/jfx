@@ -59,7 +59,7 @@ public abstract class StyleableProperty<N extends Node, V> {
         final WritableValue<V> writable = getWritableValue(node);
         assert (writable instanceof Property);
         final Property<V> cssProperty = (Property<V>)writable;
-        cssProperty.applyStyle(origin, value != null ? value : getInitialValue(node));            
+        cssProperty.applyStyle(origin, value);            
     }
 
     /** @deprecated Use {@link StyleableProperty#set(javafx.scene.Node, java.lang.Object, com.sun.javafx.css.Stylesheet.Origin)} */

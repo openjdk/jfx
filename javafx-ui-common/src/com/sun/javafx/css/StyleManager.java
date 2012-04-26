@@ -561,7 +561,7 @@ public class StyleManager {
             Scene scene = it.next().getScene();
             if (scene != null) {
                 updateStylesheets(scene);
-                scene.getRoot().impl_processCSS(true);
+                scene.getRoot().impl_reapplyCSS();
             }            
         }        
     }

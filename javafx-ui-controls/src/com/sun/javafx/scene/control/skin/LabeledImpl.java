@@ -35,11 +35,27 @@ import javafx.scene.control.Label;
 import javafx.scene.control.Labeled;
 
 import com.sun.javafx.css.StyleableProperty;
+import java.util.List;
+import javafx.beans.value.WritableValue;
 
 
 public class LabeledImpl extends Label {
 
     private Labeled labeled;
+    
+    private final static StyleableProperty graphicProperty;
+    static {
+        StyleableProperty prop = null;
+        final List<StyleableProperty> properties = Labeled.impl_CSS_STYLEABLES();
+        for(int n=0, nMax=properties.size(); n<nMax; n++) {
+            final StyleableProperty styleable = properties.get(n);
+            if ("-fx-graphic".equals(styleable.getProperty())) {
+                prop = styleable;
+                break;
+            }
+        }
+        graphicProperty = prop;
+    }
 
     public LabeledImpl(final Labeled labeled) {
         this.labeled = labeled;
@@ -105,10 +121,9 @@ public class LabeledImpl extends Label {
                                         
                 } else if (valueModel == labeled.graphicProperty()) {
                     //setGraphic(labeled.getGraphic());
-                    StyleableProperty styleable = 
-                        StyleableProperty.getStyleableProperty(labeled.graphicProperty());
-                    styleable.set(LabeledImpl.this, labeled.getGraphic());
-                                        
+                    WritableValue fromVal = graphicProperty.getWritableValue(labeled);
+                    WritableValue toVal = graphicProperty.getWritableValue(LabeledImpl.this);
+                    toVal.setValue(fromVal.getValue());
                 } else if (valueModel == labeled.underlineProperty()) {
                     //setUnderline(labeled.isUnderline());
                     StyleableProperty styleable = 

@@ -16,10 +16,15 @@ import javafx.beans.property.SimpleBooleanProperty;
 import javafx.beans.property.SimpleDoubleProperty;
 import javafx.beans.property.SimpleObjectProperty;
 import javafx.geometry.Side;
+import javafx.scene.Scene;
+import javafx.scene.input.MouseEvent;
+import javafx.scene.layout.StackPane;
+import javafx.stage.Stage;
 import static org.junit.Assert.*;
 
 
 import org.junit.Before;
+import org.junit.Ignore;
 import org.junit.Test;
 
 /**
@@ -33,6 +38,9 @@ public class TabPaneTest {
     private Tab tab1;
     private Tab tab2;
     private Tab tab3;
+    private Scene scene;
+    private Stage stage;
+    private StackPane root;
 
     @Before public void setup() {
         tk = (StubToolkit)Toolkit.getToolkit();//This step is not needed (Just to make sure StubToolkit is loaded into VM)
@@ -41,27 +49,36 @@ public class TabPaneTest {
         tab2 = new Tab("two");
         tab3 = new Tab("three");
         sm = new TabPane.TabPaneSelectionModel(tabPane);
+        root = new StackPane();
+        scene = new Scene(root);
+        stage = new Stage();
+        stage.setScene(scene);
     }
-    
-    
-    
+
+    /*********************************************************************
+     * Helper methods                                                    *
+     ********************************************************************/
+    private void show() {
+        stage.show();
+    }
+
     /*********************************************************************
      * Tests for default values                                         *
      ********************************************************************/
-    
+
     @Test public void defaultConstructorShouldSetStyleClassTo_tabpane() {
         assertStyleClassContains(tabPane, "tab-pane");
     }
-    
+
     @Test public void defaultConstructorSelectionModelNotNull() {
         assertNotNull(tabPane.getSelectionModel());
     }
-    
+
     @Test public void defaultConstructorInitialTabsEmpty() {
         assertNotNull(tabPane.getTabs());
         assertEquals(tabPane.getTabs().size(), 0.0, 0.0);
     }
-    
+
     @Test public void defaultSideIsTop() {
         assertSame(tabPane.getSide(), Side.TOP);
     }
@@ -74,7 +91,7 @@ public class TabPaneTest {
     @Test public void defaultConstructorRotateGraphic() {
         assertFalse(tabPane.isRotateGraphic());
     }
-    
+
     @Test public void defaultTabMinWidth() {
         assertEquals(tabPane.getTabMinWidth(), 0.0, 0.0);
     }
@@ -94,12 +111,12 @@ public class TabPaneTest {
     @Test public void defaultSelectionModelEmpty() {
         assertTrue(tabPane.getSelectionModel().isEmpty());
     }
-    
-    
+
+
     /*********************************************************************
      * Tests for property binding                                        *
      ********************************************************************/
-    
+
     @Test public void checkSelectionModelPropertyBind() {
         ObjectProperty objPr = new SimpleObjectProperty<SingleSelectionModel<Tab>>(null);
         tabPane.selectionModelProperty().bind(objPr);
@@ -107,7 +124,7 @@ public class TabPaneTest {
         objPr.setValue(sm);
         assertSame("selectionModel cannot be bound", tabPane.selectionModelProperty().getValue(), sm);
     }
-    
+
     @Test public void checkSidePropertyBind() {
         ObjectProperty objPr = new SimpleObjectProperty<Side>(Side.BOTTOM);
         tabPane.sideProperty().bind(objPr);
@@ -115,7 +132,7 @@ public class TabPaneTest {
         objPr.setValue(Side.RIGHT);
         assertSame("side cannot be bound", tabPane.sideProperty().getValue(), Side.RIGHT);
     }
-    
+
     @Test public void checkTabClosingPropertyBind() {
         ObjectProperty objPr = new SimpleObjectProperty<TabPane.TabClosingPolicy>(TabPane.TabClosingPolicy.UNAVAILABLE);
         tabPane.tabClosingPolicyProperty().bind(objPr);
@@ -123,7 +140,7 @@ public class TabPaneTest {
         objPr.setValue(TabPane.TabClosingPolicy.ALL_TABS);
         assertSame("side cannot be bound", tabPane.tabClosingPolicyProperty().getValue(), TabPane.TabClosingPolicy.ALL_TABS);
     }
-    
+
     @Test public void checkRotateGraphicsPropertyBind() {
         BooleanProperty objPr = new SimpleBooleanProperty(false);
         tabPane.rotateGraphicProperty().bind(objPr);
@@ -131,7 +148,7 @@ public class TabPaneTest {
         objPr.setValue(true);
         assertTrue("rotateGraphic cannot be bound", tabPane.rotateGraphicProperty().getValue());
     }
-    
+
     @Test public void checkTabMinWidthPropertyBind() {
         DoubleProperty objPr = new SimpleDoubleProperty(2.0);
         tabPane.tabMinWidthProperty().bind(objPr);
@@ -139,7 +156,7 @@ public class TabPaneTest {
         objPr.setValue(5.0);
         assertEquals("tabMinWidthProperty cannot be bound", tabPane.tabMinWidthProperty().getValue(), 5.0, 0.0);
     }
-    
+
     @Test public void checkTabMaxWidthPropertyBind() {
         DoubleProperty objPr = new SimpleDoubleProperty(2.0);
         tabPane.tabMaxWidthProperty().bind(objPr);
@@ -147,8 +164,8 @@ public class TabPaneTest {
         objPr.setValue(5.0);
         assertEquals("tabMaxWidthProperty cannot be bound", tabPane.tabMaxWidthProperty().getValue(), 5.0, 0.0);
     }
-    
-    
+
+
     @Test public void checkTabMinHeightPropertyBind() {
         DoubleProperty objPr = new SimpleDoubleProperty(2.0);
         tabPane.tabMinHeightProperty().bind(objPr);
@@ -156,7 +173,7 @@ public class TabPaneTest {
         objPr.setValue(5.0);
         assertEquals("tabMinHeightProperty cannot be bound", tabPane.tabMinHeightProperty().getValue(), 5.0, 0.0);
     }
-    
+
     @Test public void checkTabMaxHeightPropertyBind() {
         DoubleProperty objPr = new SimpleDoubleProperty(2.0);
         tabPane.tabMaxHeightProperty().bind(objPr);
@@ -164,7 +181,7 @@ public class TabPaneTest {
         objPr.setValue(5.0);
         assertEquals("tabMaxHeightProperty cannot be bound", tabPane.tabMaxHeightProperty().getValue(), 5.0, 0.0);
     }
-    
+
     @Test public void selectionModelPropertyHasBeanReference() {
         assertSame(tabPane, tabPane.selectionModelProperty().getBean());
     }
@@ -230,8 +247,8 @@ public class TabPaneTest {
     }
 
 
-    
-    
+
+
     /*********************************************************************
      * Check for Pseudo classes                                          *
      ********************************************************************/
@@ -253,22 +270,22 @@ public class TabPaneTest {
     }
 
 
-    
+
     /*********************************************************************
      * CSS related Tests                                                 *
      ********************************************************************/
     @Test public void whenTabMinWidthIsBound_impl_cssSettable_ReturnsFalse() {
         StyleableProperty styleable = StyleableProperty.getStyleableProperty(tabPane.tabMinWidthProperty());
-        assertTrue(styleable.isSettable(tabPane));        
+        assertTrue(styleable.isSettable(tabPane));
         DoubleProperty other = new SimpleDoubleProperty(30.0);
         tabPane.tabMinWidthProperty().bind(other);
-        assertFalse(styleable.isSettable(tabPane));        
+        assertFalse(styleable.isSettable(tabPane));
     }
 
     @Test public void whenTabMinWidthIsSpecifiedViaCSSAndIsNotBound_impl_cssSettable_ReturnsTrue() {
         StyleableProperty styleable = StyleableProperty.getStyleableProperty(tabPane.tabMinWidthProperty());
         styleable.set(tabPane, 43.0);
-        assertTrue(styleable.isSettable(tabPane));        
+        assertTrue(styleable.isSettable(tabPane));
     }
 
     @Test public void canSpecifyTabMinWidthViaCSS() {
@@ -279,16 +296,16 @@ public class TabPaneTest {
 
     @Test public void whenTabMaxWidthIsBound_impl_cssSettable_ReturnsFalse() {
         StyleableProperty styleable = StyleableProperty.getStyleableProperty(tabPane.tabMaxWidthProperty());
-        assertTrue(styleable.isSettable(tabPane));        
+        assertTrue(styleable.isSettable(tabPane));
         DoubleProperty other = new SimpleDoubleProperty(30.0);
         tabPane.tabMaxWidthProperty().bind(other);
-        assertFalse(styleable.isSettable(tabPane));        
+        assertFalse(styleable.isSettable(tabPane));
     }
 
     @Test public void whenTabMaxWidthIsSpecifiedViaCSSAndIsNotBound_impl_cssSettable_ReturnsTrue() {
         StyleableProperty styleable = StyleableProperty.getStyleableProperty(tabPane.tabMaxWidthProperty());
         styleable.set(tabPane, 43.0);
-        assertTrue(styleable.isSettable(tabPane));        
+        assertTrue(styleable.isSettable(tabPane));
     }
 
     @Test public void canSpecifyTabMaxWidthViaCSS() {
@@ -308,7 +325,7 @@ public class TabPaneTest {
     @Test public void whenTabMinHeightIsSpecifiedViaCSSAndIsNotBound_impl_cssSettable_ReturnsTrue() {
         StyleableProperty styleable = StyleableProperty.getStyleableProperty(tabPane.tabMinHeightProperty());
         styleable.set(tabPane, 43.0);
-        assertTrue(styleable.isSettable(tabPane));        
+        assertTrue(styleable.isSettable(tabPane));
     }
 
     @Test public void canSpecifyTabMinHeightViaCSS() {
@@ -328,7 +345,7 @@ public class TabPaneTest {
     @Test public void whenTabMaxHeightIsSpecifiedViaCSSAndIsNotBound_impl_cssSettable_ReturnsTrue() {
         StyleableProperty styleable = StyleableProperty.getStyleableProperty(tabPane.tabMaxHeightProperty());
         styleable.set(tabPane, 43.0);
-        assertTrue(styleable.isSettable(tabPane));        
+        assertTrue(styleable.isSettable(tabPane));
     }
 
     @Test public void canSpecifyTabMaxHeightViaCSS() {
@@ -346,116 +363,116 @@ public class TabPaneTest {
         tabPane.setSelectionModel(sm);
         assertSame(tabPane.selectionModelProperty().getValue(), sm);
     }
-    
+
     @Test public void setselectionModelAndSeeValue() {
         tabPane.setSelectionModel(sm);
         assertSame(tabPane.getSelectionModel(), sm);
     }
-    
+
     @Test public void setSideAndSeeValueIsReflectedInModel() {
         tabPane.setSide(Side.BOTTOM);
         assertSame(tabPane.sideProperty().getValue(), Side.BOTTOM);
     }
-    
+
     @Test public void setSideAndSeeValue() {
         tabPane.setSide(Side.LEFT);
         assertSame(tabPane.getSide(), Side.LEFT);
     }
-    
+
     @Test public void setTabClosingPolicyAndSeeValueIsReflectedInModel() {
         tabPane.setTabClosingPolicy(TabPane.TabClosingPolicy.ALL_TABS);
         assertSame(tabPane.tabClosingPolicyProperty().getValue(), TabPane.TabClosingPolicy.ALL_TABS);
     }
-    
+
     @Test public void setTabClosingPolicyAndSeeValue() {
         tabPane.setTabClosingPolicy(TabPane.TabClosingPolicy.UNAVAILABLE);
         assertSame(tabPane.getTabClosingPolicy(), TabPane.TabClosingPolicy.UNAVAILABLE);
     }
-    
+
     @Test public void setRotateGraphicAndSeeValueIsReflectedInModel() {
         tabPane.setRotateGraphic(true);
         assertTrue(tabPane.rotateGraphicProperty().getValue());
     }
-    
+
     @Test public void setRotateGraphicAndSeeValue() {
         tabPane.setRotateGraphic(true);
         assertTrue(tabPane.isRotateGraphic());
     }
-    
+
     @Test public void setTabMinWidthAndSeeValueIsReflectedInModel() {
         tabPane.setTabMinWidth(30.0);
         assertEquals(tabPane.tabMinWidthProperty().getValue(), 30.0, 0.0);
     }
-    
+
     @Test public void setTabMinWidthAndSeeValue() {
         tabPane.setTabMinWidth(30.0);
         assertEquals(tabPane.getTabMinWidth(), 30.0, 0.0);
     }
-    
+
     @Test public void setTabMaxWidthAndSeeValueIsReflectedInModel() {
         tabPane.setTabMaxWidth(30.0);
         assertEquals(tabPane.tabMaxWidthProperty().getValue(), 30.0, 0.0);
     }
-    
+
     @Test public void setTabMaxWidthAndSeeValue() {
         tabPane.setTabMaxWidth(30.0);
         assertEquals(tabPane.getTabMaxWidth(), 30.0, 0.0);
     }
-    
+
     @Test public void setTabMinHeightAndSeeValueIsReflectedInModel() {
         tabPane.setTabMinHeight(30.0);
         assertEquals(tabPane.tabMinHeightProperty().getValue(), 30.0, 0.0);
     }
-    
+
     @Test public void setTabMinHeightAndSeeValue() {
         tabPane.setTabMinHeight(30.0);
         assertEquals(tabPane.getTabMinHeight(), 30.0, 0.0);
     }
-    
+
     @Test public void setTabMaxHeightAndSeeValueIsReflectedInModel() {
         tabPane.setTabMaxHeight(30.0);
         assertEquals(tabPane.tabMaxHeightProperty().getValue(), 30.0, 0.0);
     }
-    
+
     @Test public void setTabMaxHeightAndSeeValue() {
         tabPane.setTabMaxHeight(30.0);
         assertEquals(tabPane.getTabMaxHeight(), 30.0, 0.0);
     }
-    
+
     @Test public void addTabsCheckItemCountInSelectionModel() {
         tabPane.getTabs().add(tab1);
         tabPane.getTabs().add(tab2);
         assertEquals(tabPane.getSelectionModel().getItemCount(), 2.0, 0.0);
     }
-    
+
     @Test public void addTabsCheckItemInSelectionModel() {
         tabPane.getTabs().add(tab1);
         tabPane.getTabs().add(tab2);
         assertSame(tabPane.getSelectionModel().getModelItem(0), tab1);
         assertSame(tabPane.getSelectionModel().getModelItem(1), tab2);
     }
-    
+
     @Test public void addTabsCheckSelectUsingObjInSelectionModel() {
         tabPane.getTabs().add(tab1);
         tabPane.getTabs().add(tab2);
         tabPane.getSelectionModel().select(tab1);
         assertTrue(tabPane.getSelectionModel().isSelected(0));
     }
-    
+
     @Test public void addTabsCheckSelectUsingIndexInSelectionModel() {
         tabPane.getTabs().add(tab1);
         tabPane.getTabs().add(tab2);
         tabPane.getSelectionModel().select(1);
         assertTrue(tabPane.getSelectionModel().isSelected(1));
     }
-    
+
     @Test public void addTabsCheckClearAndSelectUsingIndexInSelectionModel() {
         tabPane.getTabs().add(tab1);
         tabPane.getTabs().add(tab2);
         tabPane.getSelectionModel().clearAndSelect(1);
         assertTrue(tabPane.getSelectionModel().isSelected(1));
     }
-    
+
     @Test public void addTabsCheckSelectMultipleItemsAndClearOneItemInSelectionModel() {
         tabPane.getTabs().add(tab1);
         tabPane.getTabs().add(tab2);
@@ -465,7 +482,7 @@ public class TabPaneTest {
         assertFalse(tabPane.getSelectionModel().isSelected(0));
         assertTrue(tabPane.getSelectionModel().isSelected(1));
     }
-    
+
     @Test public void addTabsCheckSelectMultipleItemsAndClearAllSelectionInSelectionModel() {
         tabPane.getTabs().add(tab1);
         tabPane.getTabs().add(tab2);
@@ -494,25 +511,160 @@ public class TabPaneTest {
         assertTrue(tabPane.getSelectionModel().isSelected(0));
         assertFalse(tabPane.getSelectionModel().isSelected(1));
     }
-    
+
     @Test public void flipTabOrder_RT20156() {
         tabPane.setSkin(new TabPaneSkin(tabPane));
         tabPane.getTabs().add(tab1);
         tabPane.getTabs().add(tab2);
         tabPane.getTabs().add(tab3);
-        
+
         assertEquals("one", tabPane.getTabs().get(0).getText());
         assertEquals("two", tabPane.getTabs().get(1).getText());
         assertEquals("three", tabPane.getTabs().get(2).getText());
-        
+
         final int lastTabIndex = tabPane.getTabs().size()-1;
-        final Tab lastTab = tabPane.getTabs().get(lastTabIndex);        
+        final Tab lastTab = tabPane.getTabs().get(lastTabIndex);
         tabPane.getTabs().remove(lastTabIndex);
         tabPane.getTabs().add(0, lastTab);
-        
-        assertEquals("three", tabPane.getTabs().get(0).getText());                
+
+        assertEquals("three", tabPane.getTabs().get(0).getText());
         assertEquals("one", tabPane.getTabs().get(1).getText());
         assertEquals("two", tabPane.getTabs().get(2).getText());
-        assertTrue(tabPane.getSelectionModel().isSelected(1));        
-    }    
+        assertTrue(tabPane.getSelectionModel().isSelected(1));
+    }
+
+    @Test public void disableAllTabs() {
+        tabPane.setSkin(new TabPaneSkin(tabPane));
+        tabPane.getTabs().add(tab1);
+        tabPane.getTabs().add(tab2);
+        tabPane.getTabs().add(tab3);
+
+        tab1.setDisable(true);
+        tab2.setDisable(true);
+        tab3.setDisable(true);
+
+        assertEquals(0, tabPane.getSelectionModel().getSelectedIndex());
+        assertEquals(tab1, tabPane.getSelectionModel().getSelectedItem());
+    }
+
+    @Test public void disableFirstTabs() {
+        tabPane.setSkin(new TabPaneSkin(tabPane));
+        tabPane.getTabs().add(tab1);
+        tabPane.getTabs().add(tab2);
+        tabPane.getTabs().add(tab3);
+
+        tab1.setDisable(true);
+        assertEquals(0, tabPane.getSelectionModel().getSelectedIndex());
+        assertEquals(tab1, tabPane.getSelectionModel().getSelectedItem());
+    }
+
+    @Test public void disableATabAndSelectItByIndex() {
+        tabPane.setSkin(new TabPaneSkin(tabPane));
+        tabPane.getTabs().add(tab1);
+        tabPane.getTabs().add(tab2);
+        tabPane.getTabs().add(tab3);
+
+        tab2.setDisable(true);
+        tabPane.getSelectionModel().select(1);
+        assertEquals(1, tabPane.getSelectionModel().getSelectedIndex());
+        assertEquals(tab2, tabPane.getSelectionModel().getSelectedItem());
+    }
+
+    @Test public void selectByIndexADisableTab() {
+        tabPane.setSkin(new TabPaneSkin(tabPane));
+        tabPane.getTabs().add(tab1);
+        tabPane.getTabs().add(tab2);
+        tabPane.getTabs().add(tab3);
+
+        tabPane.getSelectionModel().select(1);
+        tab2.setDisable(true);
+        assertEquals(1, tabPane.getSelectionModel().getSelectedIndex());
+        assertEquals(tab2, tabPane.getSelectionModel().getSelectedItem());
+        assertTrue(tab2.isDisable());
+    }
+
+    @Test public void disableATabAndSelectItByTab() {
+        tabPane.setSkin(new TabPaneSkin(tabPane));
+        tabPane.getTabs().add(tab1);
+        tabPane.getTabs().add(tab2);
+        tabPane.getTabs().add(tab3);
+
+        tab2.setDisable(true);
+        tabPane.getSelectionModel().select(tab2);
+        assertEquals(1, tabPane.getSelectionModel().getSelectedIndex());
+        assertEquals(tab2, tabPane.getSelectionModel().getSelectedItem());
+    }
+
+    @Test public void selectByTabADisableTab() {
+        tabPane.setSkin(new TabPaneSkin(tabPane));
+        tabPane.getTabs().add(tab1);
+        tabPane.getTabs().add(tab2);
+        tabPane.getTabs().add(tab3);
+
+        tabPane.getSelectionModel().select(tab2);
+        tab2.setDisable(true);
+        assertEquals(1, tabPane.getSelectionModel().getSelectedIndex());
+        assertEquals(tab2, tabPane.getSelectionModel().getSelectedItem());
+        assertTrue(tab2.isDisable());
+    }
+
+    @Test public void navigateOverDisableTab() {
+        tabPane.getTabs().add(tab1);
+        tabPane.getTabs().add(tab2);
+        tabPane.getTabs().add(tab3);
+
+        root.getChildren().add(tabPane);
+        show();
+
+        tk.firePulse();
+        assertTrue(tabPane.isFocused());
+        
+        tab2.setDisable(true);
+        assertEquals(0, tabPane.getSelectionModel().getSelectedIndex());
+        assertEquals(tab1, tabPane.getSelectionModel().getSelectedItem());
+        assertTrue(tab2.isDisable());
+
+        KeyEventFirer keyboard = new KeyEventFirer(tabPane);
+        keyboard.doRightArrowPress();
+        tk.firePulse();
+
+        assertEquals(2, tabPane.getSelectionModel().getSelectedIndex());
+        assertEquals(tab3, tabPane.getSelectionModel().getSelectedItem());
+
+        keyboard.doLeftArrowPress();
+        tk.firePulse();
+
+        assertEquals(0, tabPane.getSelectionModel().getSelectedIndex());
+        assertEquals(tab1, tabPane.getSelectionModel().getSelectedItem());
+    }
+    
+    @Test public void mousePressSelectsATab_RT20476() {        
+        tabPane.getTabs().add(tab1);
+        tabPane.getTabs().add(tab2);
+        tabPane.getTabs().add(tab3);        
+        
+        tab1.setContent(new Button("TAB1"));
+        tab2.setContent(new Button("TAB2"));
+        tab3.setContent(new Button("TAB3"));
+        
+        root.getChildren().add(tabPane);
+        show();
+
+        root.impl_reapplyCSS();
+        root.resize(300, 300);
+        root.layout();
+        
+        tk.firePulse();        
+        assertTrue(tabPane.isFocused());
+        
+        double xval = (tabPane.localToScene(tabPane.getLayoutBounds())).getMinX();
+        double yval = (tabPane.localToScene(tabPane.getLayoutBounds())).getMinY();
+   
+        scene.impl_processMouseEvent(
+            MouseEventGenerator.generateMouseEvent(MouseEvent.MOUSE_PRESSED, xval+75, yval+20));
+        tk.firePulse();        
+        
+        assertEquals(1, tabPane.getSelectionModel().getSelectedIndex());
+        assertEquals(tab2, tabPane.getSelectionModel().getSelectedItem());        
+    }
 }

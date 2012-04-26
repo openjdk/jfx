@@ -15,6 +15,8 @@ import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.SimpleObjectProperty;
 import javafx.beans.property.SimpleStringProperty;
 import javafx.beans.property.StringProperty;
+import javafx.beans.value.ChangeListener;
+import javafx.beans.value.ObservableValue;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.event.ActionEvent;
@@ -577,6 +579,37 @@ public class ComboBoxTest {
         };
         comboBox.setCellFactory(cf);
         assertEquals(cf, comboBox.getCellFactory());
+    }
+    
+    @Test public void ensureEditorIsNullWhenComboBoxIsNotEditable() {
+        assertNull(comboBox.getEditor());
+    }
+    
+    @Test public void ensureEditorIsNonNullWhenComboBoxIsEditable() {
+        comboBox.setEditable(true);
+        assertNotNull(comboBox.getEditor());
+    }
+    
+    @Test public void ensureEditorChangesBetweenNullAndNonNull() {
+        comboBox.setEditable(true);
+        assertNotNull(comboBox.getEditor());
+        comboBox.setEditable(false);
+        assertNull(comboBox.getEditor());
+        comboBox.setEditable(true);
+        assertNotNull(comboBox.getEditor());
+    }
+    
+    boolean hit = false;
+    @Test public void ensureEditorPropertyFiresWhenEditableBecomesTrue() {
+        comboBox.editorProperty().addListener(new ChangeListener<TextField>() {
+            @Override
+            public void changed(ObservableValue<? extends TextField> arg0, TextField arg1, TextField arg2) {
+                hit = true;
+            }
+        });
+        assertFalse(hit);
+        comboBox.setEditable(true);
+        assertTrue(hit);
     }
     
     @Test public void ensureCanSetValueToNonNullStringAndBackAgain() {

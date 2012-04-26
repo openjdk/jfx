@@ -72,8 +72,6 @@ public class KeyCodeUtils {
     private static char getSingleChar(KeyCode code) {
         switch (code) {
             case ENTER: return '\u21B5';
-            case BACK_SPACE: return '\u232B';
-            case ESCAPE: return '\u238B';
             case LEFT: return '\u2190';
             case UP: return '\u2191';
             case RIGHT: return '\u2192';
@@ -92,7 +90,6 @@ public class KeyCodeUtils {
             case SUBTRACT: return '-';
             case DECIMAL: return '.';
             case DIVIDE: return '/';
-            case DELETE: return '\u2326';
             case BACK_QUOTE: return '`';
             case QUOTE: return '"';
             case AMPERSAND: return '&';
@@ -124,6 +121,17 @@ public class KeyCodeUtils {
             case DIGIT9: return '9';
         }
 
+        /*
+        ** On Mac we display these unicode symbols,
+        ** otherwise we default to the Text version of the char.
+        */
+        if (com.sun.javafx.PlatformUtil.isMac()) {
+            switch (code) {
+                case BACK_SPACE: return '\u232B';
+                case ESCAPE: return '\u238B';
+                case DELETE: return '\u2326';
+            }
+        }
         return 0;
     }
 }

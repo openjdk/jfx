@@ -55,20 +55,10 @@ public abstract class StyleableIntegerProperty
     
     @Override
     public void applyStyle(Stylesheet.Origin origin, Integer v) {
-        // call set here in case it has been overridden in the javafx.beans.property        
-        set(v);
+        setValue(v);
         this.origin = origin;
     }
 
-    // CSS uses double everywhere
-    public void applyStyle(Stylesheet.Origin origin, Double v) {
-        // call set here in case it has been overridden in the javafx.beans.property
-        set(v.intValue());
-        this.origin = origin;
-    }
-            
-    
-            
     @Override
     public void bind(ObservableValue<? extends Number> observable) {
         super.bind(observable);

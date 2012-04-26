@@ -201,8 +201,17 @@ public abstract class SingleSelectionModel<T> extends SelectionModel<T> {
     protected abstract int getItemCount();
 
     // Private Implementation
-    private void updateSelectedIndex(int index) {
-       setSelectedIndex(index);
-       setSelectedItem(getModelItem(index));
+    private void updateSelectedIndex(int newIndex) {
+        int currentIndex = getSelectedIndex();
+        T currentItem = getSelectedItem();
+        
+        setSelectedIndex(newIndex);
+        
+        if (currentIndex == -1 && currentItem != null && newIndex == -1) {
+            // no-op: the current selection isn't in the underlying data model - 
+            // we should keep the selected item as the new index is -1
+        } else {
+            setSelectedItem(getModelItem(newIndex));
+        }
     }    
 }

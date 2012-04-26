@@ -2604,6 +2604,15 @@
     -fx-background-radius: 5 5 0 0, 4 4 0 0;
 }
 
+.tab:disabled {
+    -fx-opacity: -fx-disabled-opacity;
+}
+
+.tab:disabled:hover {
+    -fx-color: -fx-base;
+    -fx-opacity: -fx-disabled-opacity;
+}
+
 .tab-pane *.tab-header-background {
     -fx-background-color: -fx-outer-border, -fx-inner-border, derive(-fx-color, -20%);
     -fx-effect: innershadow(two-pass-box , rgba(0,0,0,0.6) , 4, 0.0 , 0 , 0);

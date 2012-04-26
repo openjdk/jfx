@@ -55,8 +55,7 @@ public abstract class StyleableDoubleProperty
     
     @Override
     public void applyStyle(Stylesheet.Origin origin, Double v) {
-        // call set here in case it has been overridden in the javafx.beans.property        
-        set(v.doubleValue());
+        setValue(v);
         this.origin = origin;
     }
             

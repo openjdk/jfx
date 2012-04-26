@@ -58,12 +58,12 @@
 
     <target name="dist" depends="init">
         <ant antfile="${rt.root.dir}/javafx-beans-dt/build.xml" target="jar" inheritAll="false"/>
+        <ant antfile="${rt.root.dir}/javafx-util-converter/build.xml" target="jar" inheritAll="false"/>
         <ant antfile="${rt.root.dir}/javafx-concurrent/build.xml" target="jar" inheritAll="false"/>
         <ant antfile="${rt.root.dir}/javafx-ui-common/build.xml" target="jar" inheritAll="false"/>
         <!--<ant antfile="${rt.root.dir}/javafx-designtime/build.xml" target="jar" inheritAll="false"/>-->
         <ant antfile="${rt.root.dir}/javafx-ui-controls/build.xml" target="jar" inheritAll="false"/>
         <ant antfile="${rt.root.dir}/javafx-ui-charts/build.xml" target="jar" inheritAll="false"/>
-        <ant antfile="${rt.root.dir}/javafx-util-converter/build.xml" target="jar" inheritAll="false"/>
     </target>
 
     <!--

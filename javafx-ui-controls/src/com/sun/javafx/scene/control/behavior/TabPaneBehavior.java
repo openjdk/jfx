@@ -34,6 +34,7 @@ import javafx.scene.input.KeyCode;
 import javafx.scene.input.MouseEvent;
 
 import com.sun.javafx.scene.control.skin.TabPaneSkin;
+import javafx.scene.control.SingleSelectionModel;
 
 public class TabPaneBehavior extends BehaviorBase<TabPane> {
 
@@ -152,29 +153,39 @@ public class TabPaneBehavior extends BehaviorBase<TabPane> {
         }
         if (index != -1) {
             tabPane.getTabs().remove(index);
-        }
+        }                
         if (tab.getOnClosed() != null) {
             Event.fireEvent(tab, new Event(Tab.CLOSED_EVENT));
         }
     }
 
+    // Find a tab after the currently selected that is not disabled.
     public void selectNextTab() {
-        selectNextTab(getControl().getSelectionModel().getSelectedItem());
+        SingleSelectionModel<Tab> selectionModel = getControl().getSelectionModel();
+        int current = selectionModel.getSelectedIndex();
+        int index = current;
+        while (index < getControl().getTabs().size()) {
+            selectionModel.selectNext();
+            index++;
+            if (!selectionModel.getSelectedItem().isDisable()) {
+                return;
+            }
+        }
+        selectionModel.select(current);
     }
 
-    public void selectNextTab(Tab tab) {
-        TabPane tabPane = getControl();
-        tabPane.getSelectionModel().select(tab);
-        tabPane.getSelectionModel().selectNext();
-    }
-
-    public void selectPreviousTab() {
-        selectPreviousTab(getControl().getSelectionModel().getSelectedItem());
-    }
-
-    public void selectPreviousTab(Tab tab) {
-        TabPane tabPane = getControl();
-        tabPane.getSelectionModel().select(tab);
-        tabPane.getSelectionModel().selectPrevious();
+    // Find a tab before the currently selected that is not disabled.
+    public void selectPreviousTab() {       
+        SingleSelectionModel<Tab> selectionModel = getControl().getSelectionModel();
+        int current = selectionModel.getSelectedIndex();
+        int index = current;
+        while (index > 0) {
+            selectionModel.selectPrevious();
+            index--;
+            if (!selectionModel.getSelectedItem().isDisable()) {
+                return;
+            }
+        }
+        selectionModel.select(current);
     }
 }

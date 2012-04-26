@@ -424,6 +424,10 @@ public class TabTest {
         tab.buildEventDispatchChain(chain);
     }
     
+    @Test public void setDisableAndSeeValue() {
+        tab.setDisable(true);
+        assertTrue(tab.isDisable());
+    }
     
 
 }

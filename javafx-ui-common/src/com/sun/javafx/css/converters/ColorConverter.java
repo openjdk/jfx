@@ -49,7 +49,7 @@ public final class ColorConverter extends StyleConverter<String, Color> {
     public Color convert(ParsedValue<String, Color> value, Font font) {
         String str = value.getValue();
         if (str == null || str.isEmpty() || "null".equals(str)) {
-            return Color.TRANSPARENT;
+            return null;
         }
         try {
             return Color.web(str);

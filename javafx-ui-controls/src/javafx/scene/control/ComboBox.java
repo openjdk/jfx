@@ -25,19 +25,13 @@
 
 package javafx.scene.control;
 
-import com.sun.javafx.css.StyleManager;
+import com.sun.javafx.event.EventDispatchChainImpl;
+import com.sun.javafx.scene.control.FocusableTextField;
 import com.sun.javafx.scene.control.WeakListChangeListener;
 import com.sun.javafx.scene.control.skin.ComboBoxListViewSkin;
-import com.sun.javafx.scene.control.skin.ListViewSkin;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
 import javafx.beans.InvalidationListener;
 import javafx.beans.Observable;
-import javafx.beans.property.IntegerProperty;
-import javafx.beans.property.ObjectProperty;
-import javafx.beans.property.SimpleIntegerProperty;
-import javafx.beans.property.SimpleObjectProperty;
+import javafx.beans.property.*;
 import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
 import javafx.beans.value.WeakChangeListener;
@@ -46,10 +40,6 @@ import javafx.collections.ListChangeListener;
 import javafx.collections.ListChangeListener.Change;
 import javafx.collections.ObservableList;
 import javafx.scene.Node;
-import javafx.scene.control.*;
-import javafx.scene.paint.Color;
-import javafx.scene.shape.Rectangle;
-import javafx.scene.text.Text;
 import javafx.util.Callback;
 import javafx.util.StringConverter;
 
@@ -239,6 +229,10 @@ public class ComboBox<T> extends ComboBoxBase<T> {
             @Override public void invalidated(Observable o) {
                 // when editable changes, we reset the selection / value states
                 getSelectionModel().clearSelection();
+                
+                // we also change the editor property so that it is null when
+                // editable is false, and non-null when it is true.
+                updateEditor();
             }
         });
     }
@@ -299,6 +293,20 @@ public class ComboBox<T> extends ComboBoxBase<T> {
     public ObjectProperty<Callback<ListView<T>, ListCell<T>>> cellFactoryProperty() { return cellFactory; }
     
     
+    // --- button cell
+    /**
+     * The button cell is used to render what is shown in the ComboBox 'button'
+     * area. If a cell is set here, it does not change the rendering of the
+     * ComboBox popup list - that rendering is controlled via the 
+     * {@link #cellFactoryProperty() cell factory} API.
+     */
+    public ObjectProperty<ListCell<T>> buttonCellProperty() { return buttonCell; }
+    private ObjectProperty<ListCell<T>> buttonCell = 
+            new SimpleObjectProperty<ListCell<T>>(this, "buttonCell");
+    public final void setButtonCell(ListCell<T> value) { buttonCellProperty().set(value); }
+    public final ListCell<T> getButtonCell() {return buttonCellProperty().get(); }
+    
+    
     // --- Selection Model
     /**
      * The selection model for the ComboBox. A ComboBox only supports
@@ -335,7 +343,24 @@ public class ComboBox<T> extends ComboBoxBase<T> {
     public final IntegerProperty visibleRowCountProperty() { return visibleRowCount; }
     
     
-
+    // --- Editor
+    /**
+     * The editor for the ComboBox. The editor is null if the ComboBox is not
+     * {@link #editableProperty() editable}.
+     */
+    private ReadOnlyObjectWrapper<TextField> editor;
+    public final TextField getEditor() { 
+        return editorProperty().get(); 
+    }
+    public final ReadOnlyObjectProperty<TextField> editorProperty() { 
+        if (editor == null || (editor.get() == null && isEditable())) {
+            updateEditor();
+        }
+        return editor.getReadOnlyProperty(); 
+    }
+    
+    
+    
     /***************************************************************************
      *                                                                         *
      * Callbacks and Events                                                    *
@@ -351,8 +376,26 @@ public class ComboBox<T> extends ComboBoxBase<T> {
             }
         }
     };
-
     
+    
+    
+    /***************************************************************************
+     *                                                                         *
+     * Private methods                                                         *
+     *                                                                         *
+     **************************************************************************/        
+
+    private void updateEditor() {
+        if (editor == null) {
+            editor = new ReadOnlyObjectWrapper<TextField>(this, "editor");
+        }
+        
+        if (isEditable()) {
+            editor.set(new FocusableTextField());
+        } else {
+            editor.set(null);
+        }
+    }
     
     /***************************************************************************
      *                                                                         *
@@ -458,4 +501,8 @@ public class ComboBox<T> extends ComboBoxBase<T> {
             return items == null ? 0 : items.size();
         }
     }
+    
+    
+    
+    
 }
