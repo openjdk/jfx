@@ -230,6 +230,10 @@ public class ComboBox<T> extends ComboBoxBase<T> {
             @Override public void invalidated(Observable o) {
                 // when editable changes, we reset the selection / value states
                 getSelectionModel().clearSelection();
+                
+                // we also change the editor property so that it is null when
+                // editable is false, and non-null when it is true.
+                updateEditor();
             }
         });
     }
@@ -336,9 +340,8 @@ public class ComboBox<T> extends ComboBoxBase<T> {
         return editorProperty().get(); 
     }
     public final ReadOnlyObjectProperty<TextField> editorProperty() { 
-        if (editor == null) {
-            TextField textField = isEditable() ? new FocusableTextField() : null;
-            editor = new ReadOnlyObjectWrapper<TextField>(this, "editor", textField);
+        if (editor == null || (editor.get() == null && isEditable())) {
+            updateEditor();
         }
         return editor.getReadOnlyProperty(); 
     }
@@ -360,8 +363,26 @@ public class ComboBox<T> extends ComboBoxBase<T> {
             }
         }
     };
-
     
+    
+    
+    /***************************************************************************
+     *                                                                         *
+     * Private methods                                                         *
+     *                                                                         *
+     **************************************************************************/        
+
+    private void updateEditor() {
+        if (editor == null) {
+            editor = new ReadOnlyObjectWrapper<TextField>(this, "editor");
+        }
+        
+        if (isEditable()) {
+            editor.set(new FocusableTextField());
+        } else {
+            editor.set(null);
+        }
+    }
     
     /***************************************************************************
      *                                                                         *

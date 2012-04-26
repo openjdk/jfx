@@ -168,6 +168,7 @@ public class ChoiceBoxTest {
         assertEquals(null, box.getSelectionModel().getSelectedItem());
     }
 
+    @Ignore
     @Test public void ensureSelectionClearsWhenSettingSelectionBeforePopulatingItemsAndSelectedItemIsRemoved() {
         box.getSelectionModel().select("Banana");
         box.getItems().addAll("Apple", "Orange", "Banana");
