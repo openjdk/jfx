@@ -1279,6 +1279,7 @@ public class Scene implements EventTarget {
         EventTarget target;
         Point2D sceneCoords;
         Point2D screenCoords;
+        boolean finished;
     }
 
     private final TouchGesture scrollGesture = new TouchGesture();
@@ -1335,9 +1336,10 @@ public class Scene implements EventTarget {
                 e.getEventType() == RotateEvent.ROTATION_STARTED ||
                 e.getEventType() == ScrollEvent.SCROLL_STARTED) {
             gesture.target = null;
+            gesture.finished = false;
         }
 
-        if (gesture.target != null) {
+        if (gesture.target != null && (!gesture.finished || e.isInertia())) {
             pickedTarget = gesture.target;
         } else {
             pickedTarget = pick(e.getX(), e.getY());
@@ -1358,6 +1360,12 @@ public class Scene implements EventTarget {
 
         if (pickedTarget != null) {
             Event.fireEvent(pickedTarget, e);
+        }
+
+        if (e.getEventType() == ZoomEvent.ZOOM_FINISHED ||
+                e.getEventType() == RotateEvent.ROTATION_FINISHED ||
+                e.getEventType() == ScrollEvent.SCROLL_FINISHED) {
+            gesture.finished = true;
         }
 
         inMousePick = false;
