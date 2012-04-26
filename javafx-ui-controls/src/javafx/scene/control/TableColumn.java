@@ -902,7 +902,7 @@ public class TableColumn<S,T> implements EventTarget {
     }
     
     /**
-     * Tests if Node has properties.
+     * Tests if this TableColumn has properties.
      * @return true if node has properties.
      */
      public boolean hasProperties() {
@@ -915,10 +915,10 @@ public class TableColumn<S,T> implements EventTarget {
      * Convenience method for setting a single Object property that can be
      * retrieved at a later date. This is functionally equivalent to calling
      * the getProperties().put(Object key, Object value) method. This can later
-     * be retrieved by calling {@link Node#getUserData()}.
+     * be retrieved by calling {@link TableColumn#getUserData()}.
      *
      * @param value The value to be stored - this can later be retrieved by calling
-     *          {@link Node#getUserData()}.
+     *          {@link TableColumn#getUserData()}.
      */
     public void setUserData(Object value) {
         getProperties().put(USER_DATA_KEY, value);
@@ -926,7 +926,7 @@ public class TableColumn<S,T> implements EventTarget {
 
     /**
      * Returns a previously set Object property, or null if no such property
-     * has been set using the {@link Node#setUserData(java.lang.Object)} method.
+     * has been set using the {@link TableColumn#setUserData(java.lang.Object)} method.
      *
      * @return The Object that was previously set, or null if no property
      *          has been set or if null was set.

@@ -26,7 +26,6 @@ package javafx.scene.control;
 
 import com.sun.javafx.css.Styleable;
 import com.sun.javafx.css.StyleableProperty;
-import com.sun.javafx.event.BasicEventDispatcher;
 import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.ObjectPropertyBase;
@@ -44,11 +43,12 @@ import javafx.event.EventType;
 import javafx.scene.Node;
 
 import com.sun.javafx.event.EventHandlerManager;
-import java.lang.ref.Reference;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
 import javafx.beans.DefaultProperty;
 import javafx.beans.property.*;
+import javafx.collections.ObservableMap;
 
 /**
  * <p>Tabs are placed within a {@link TabPane}, where each tab represents a single
@@ -585,6 +585,60 @@ public class Tab implements EventTarget {
 
     private void updateDisabled() {
         setDisabled(isDisable() || (getTabPane() != null && getTabPane().isDisabled()));
+    }
+    
+    // --- Properties
+    private static final Object USER_DATA_KEY = new Object();
+    
+    // A map containing a set of properties for this Tab
+    private ObservableMap<Object, Object> properties;
+
+    /**
+      * Returns an observable map of properties on this Tab for use primarily
+      * by application developers.
+      *
+      * @return an observable map of properties on this Tab for use primarily
+      * by application developers
+      */
+     public final ObservableMap<Object, Object> getProperties() {
+        if (properties == null) {
+            properties = FXCollections.observableMap(new HashMap<Object, Object>());
+        }
+        return properties;
+    }
+    
+    /**
+     * Tests if this Tab has properties.
+     * @return true if this tab has properties.
+     */
+     public boolean hasProperties() {
+        return properties != null;
+    }
+
+     
+    // --- UserData
+    /**
+     * Convenience method for setting a single Object property that can be
+     * retrieved at a later date. This is functionally equivalent to calling
+     * the getProperties().put(Object key, Object value) method. This can later
+     * be retrieved by calling {@link Tab#getUserData()}.
+     *
+     * @param value The value to be stored - this can later be retrieved by calling
+     *          {@link Tab#getUserData()}.
+     */
+    public void setUserData(Object value) {
+        getProperties().put(USER_DATA_KEY, value);
+    }
+
+    /**
+     * Returns a previously set Object property, or null if no such property
+     * has been set using the {@link Tab#setUserData(java.lang.Object)} method.
+     *
+     * @return The Object that was previously set, or null if no property
+     *          has been set or if null was set.
+     */
+    public Object getUserData() {
+        return getProperties().get(USER_DATA_KEY);
     }
     
     /**
