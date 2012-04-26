@@ -36,6 +36,7 @@ import javafx.util.Callback;
 import com.sun.javafx.logging.PlatformLogger;
 import com.sun.javafx.property.PropertyReference;
 import com.sun.javafx.scene.control.Logging;
+import com.sun.javafx.scene.control.cell.MapValueFactory;
 
 
 /**
@@ -86,6 +87,7 @@ import com.sun.javafx.scene.control.Logging;
  * @see TableColumn
  * @see TableView
  * @see TableCell
+ * @see MapValueFactory
  * @param <S> The type of the class contained within the TableView.items list.
  * @param <T> The type of the class contained within the TableColumn cells.
  */

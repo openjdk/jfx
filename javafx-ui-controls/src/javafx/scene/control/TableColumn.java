@@ -52,6 +52,7 @@ import javafx.util.Callback;
 import com.sun.javafx.scene.control.skin.Utils;
 import com.sun.javafx.event.EventHandlerManager;
 import com.sun.javafx.scene.control.WeakListChangeListener;
+import java.util.HashMap;
 
 import java.util.List;
 import javafx.beans.InvalidationListener;
@@ -62,6 +63,7 @@ import javafx.beans.property.ReadOnlyObjectProperty;
 import javafx.beans.property.ReadOnlyObjectWrapper;
 import javafx.beans.value.ObservableValue;
 import javafx.beans.value.WritableValue;
+import javafx.collections.ObservableMap;
 import javafx.scene.control.cell.PropertyValueFactory;
 
 /**
@@ -876,6 +878,61 @@ public class TableColumn<S,T> implements EventTarget {
             };
         }
         return onEditCancel;
+    }
+    
+    
+    // --- Properties
+    private static final Object USER_DATA_KEY = new Object();
+    
+    // A map containing a set of properties for this TableColumn
+    private ObservableMap<Object, Object> properties;
+
+    /**
+      * Returns an observable map of properties on this TableColumn for use primarily
+      * by application developers.
+      *
+      * @return an observable map of properties on this TableColumn for use primarily
+      * by application developers
+      */
+     public final ObservableMap<Object, Object> getProperties() {
+        if (properties == null) {
+            properties = FXCollections.observableMap(new HashMap<Object, Object>());
+        }
+        return properties;
+    }
+    
+    /**
+     * Tests if Node has properties.
+     * @return true if node has properties.
+     */
+     public boolean hasProperties() {
+        return properties != null;
+    }
+
+     
+    // --- UserData
+    /**
+     * Convenience method for setting a single Object property that can be
+     * retrieved at a later date. This is functionally equivalent to calling
+     * the getProperties().put(Object key, Object value) method. This can later
+     * be retrieved by calling {@link Node#getUserData()}.
+     *
+     * @param value The value to be stored - this can later be retrieved by calling
+     *          {@link Node#getUserData()}.
+     */
+    public void setUserData(Object value) {
+        getProperties().put(USER_DATA_KEY, value);
+    }
+
+    /**
+     * Returns a previously set Object property, or null if no such property
+     * has been set using the {@link Node#setUserData(java.lang.Object)} method.
+     *
+     * @return The Object that was previously set, or null if no property
+     *          has been set or if null was set.
+     */
+    public Object getUserData() {
+        return getProperties().get(USER_DATA_KEY);
     }
     
     
