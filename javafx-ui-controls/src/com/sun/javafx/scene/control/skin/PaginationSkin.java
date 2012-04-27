@@ -65,12 +65,16 @@ import javafx.scene.Node;
 import javafx.scene.control.*;
 import javafx.scene.input.MouseEvent;
 import javafx.scene.input.SwipeEvent;
+import javafx.scene.input.TouchEvent;
 import javafx.scene.layout.Region;
 import javafx.scene.layout.StackPane;
 import javafx.scene.shape.Rectangle;
 import javafx.util.Duration;
 
 public class PaginationSkin extends SkinBase<Pagination, PaginationBehavior>  {
+
+    private static final Duration DURATION = new Duration(125.0);
+    private static final double THRESHOLD = 0.30;
 
     private Pagination pagination;
     private ScrollPane currentScrollPane;
@@ -86,8 +90,7 @@ public class PaginationSkin extends SkinBase<Pagination, PaginationBehavior>  {
     private int pageCount;
     private int pageIndicatorCount;
 
-    private boolean animate = false;
-    public static final Duration duration = new Duration(125.0);
+    private boolean animate = true;
 
     public PaginationSkin(final Pagination pagination) {
         super(pagination, new PaginationBehavior(pagination));
@@ -126,19 +129,7 @@ public class PaginationSkin extends SkinBase<Pagination, PaginationBehavior>  {
         registerChangeListener(pagination.pageCountProperty(), "PAGE_COUNT");
         registerChangeListener(pagination.pageFactoryProperty(), "PAGE_FACTORY");
 
-        setOnSwipeLeft(new EventHandler<SwipeEvent>() {
-            @Override
-            public void handle(SwipeEvent t) {
-                selectNext();
-            }
-        });
-
-        setOnSwipeRight(new EventHandler<SwipeEvent>() {
-            @Override
-            public void handle(SwipeEvent t) {
-                selectPrevious();
-            }
-        });
+        initializeSwipeAndTouchHandlers();
     }
 
     public void selectNext() {
@@ -151,6 +142,98 @@ public class PaginationSkin extends SkinBase<Pagination, PaginationBehavior>  {
         if (pagination.getCurrentPageIndex() != 0) {
             pagination.setCurrentPageIndex(pagination.getCurrentPageIndex() - 1);
         }
+    }
+
+    private double pressPos;
+    private boolean touchMoved = false;
+    private void initializeSwipeAndTouchHandlers() {
+//        setOnSwipeLeft(new EventHandler<SwipeEvent>() {
+//            @Override public void handle(SwipeEvent t) {
+//                selectNext();
+//            }
+//        });
+//
+//        setOnSwipeRight(new EventHandler<SwipeEvent>() {
+//            @Override public void handle(SwipeEvent t) {
+//                selectPrevious();
+//            }
+//        });
+
+        setOnTouchPressed(new EventHandler<TouchEvent>() {
+            @Override public void handle(TouchEvent e) {  
+                pressPos = e.getTouchPoint().getSceneX();
+                e.consume();
+            }
+        });
+
+        setOnTouchMoved(new EventHandler<TouchEvent>() {
+            @Override public void handle(TouchEvent e) { 
+                touchMoved = true;
+                double delta = e.getTouchPoint().getSceneX() - pressPos;
+                double width = getWidth() - (getInsets().getLeft() + getInsets().getRight());
+                double currentScrollPaneX;
+                double nextScrollPaneX;
+
+                if (delta < 0) {
+                    // right to left
+                    if (Math.abs(delta) <= width) {
+                        currentScrollPaneX = delta;
+                        nextScrollPaneX = width + delta;
+                    } else {
+                        currentScrollPaneX = -width;
+                        nextScrollPaneX = 0;
+                    }
+                    currentScrollPane.setTranslateX(currentScrollPaneX);
+                    if (pagination.getCurrentPageIndex() < getPageCount() - 1) {
+                        createPage(nextScrollPane, currentIndex + 1);
+                        nextScrollPane.setVisible(true);
+                        nextScrollPane.setTranslateX(nextScrollPaneX);
+                    } else {
+                        currentScrollPane.setTranslateX(0);
+                    }
+                } else {
+                    // left to right
+                    if (Math.abs(delta) <= width) {
+                        currentScrollPaneX = delta;
+                        nextScrollPaneX = -width + delta;
+                    } else {
+                        currentScrollPaneX = width;
+                        nextScrollPaneX = 0;
+                    }
+                    currentScrollPane.setTranslateX(currentScrollPaneX);
+                    if (pagination.getCurrentPageIndex() != 0) {
+                        createPage(nextScrollPane, currentIndex - 1);
+                        nextScrollPane.setVisible(true);
+                        nextScrollPane.setTranslateX(nextScrollPaneX);
+                    } else {
+                        currentScrollPane.setTranslateX(0);
+                    }
+                }
+                e.consume();
+            }
+        });
+
+        setOnTouchReleased(new EventHandler<TouchEvent>() {
+            @Override
+            public void handle(TouchEvent e) {  
+                double delta = Math.abs(e.getTouchPoint().getSceneX() - pressPos);
+                double width = getWidth() - (getInsets().getLeft() + getInsets().getRight());
+                double threshold = delta/width;                
+                if (touchMoved) {
+                    if (threshold > THRESHOLD) {
+                        if (pressPos > e.getTouchPoint().getSceneX()) {
+                            selectNext();
+                        } else {
+                            selectPrevious();
+                        }
+                    } else {                        
+                        animateClamping(pressPos > e.getTouchPoint().getSceneX());                        
+                    }
+                }
+                touchMoved = false;
+                e.consume();
+            }
+        });
     }
 
     private void resetIndexes(boolean usePageIndex) {
@@ -178,16 +261,30 @@ public class PaginationSkin extends SkinBase<Pagination, PaginationBehavior>  {
         }
     }
 
-    private void createPage(ScrollPane pane, int index) {
+    private boolean createPage(ScrollPane pane, int index) {
         if (pagination.getPageFactory() != null) {
             Node content = pagination.getPageFactory().call(index);
             // If the content is null we don't want to switch pages.
             if (content != null) {
                 pane.setContent(content);
+                return true;
             } else {
+                // Disable animation if the new page does not exist.  It is strange to
+                // see the same page animated out then in.
+                boolean isAnimate = animate;
+                if (isAnimate) {
+                    animate = false;
+                }                
+                
                 pagination.setCurrentPageIndex(previousIndex);
+                
+                if (isAnimate) {
+                    animate = true;
+                }
+                return false;
             }
         }
+        return false;
     }
 
     private int getPageCount() {
@@ -197,13 +294,16 @@ public class PaginationSkin extends SkinBase<Pagination, PaginationBehavior>  {
     private static final Interpolator interpolator = Interpolator.SPLINE(0.4829, 0.5709, 0.6803, 0.9928);
     private int currentAnimatedIndex;
     private int previousAnimatedIndex;
+    private boolean hasPendingAnimation = false;
 
     private void animateSwitchPage() {
         if (timeline != null) {
-            // The current animation has not finished
+            timeline.setRate(8);
+            hasPendingAnimation = true;
             return;
         }
-          // Uncomment this code is we want to see the page index
+        
+          // Uncomment this code if we want to see the page index
           // selections as we cycle from previous to the current index.
 //        previousAnimatedIndex = currentAnimatedIndex;
 //        if (currentIndex > previousIndex) {
@@ -212,68 +312,92 @@ public class PaginationSkin extends SkinBase<Pagination, PaginationBehavior>  {
 //            currentAnimatedIndex--;
 //        }
 
-        createPage(nextScrollPane, currentAnimatedIndex);
+        // We are handling a touch event if nextScrollPane's page has already been
+        // created and visible == true.
+        if (!nextScrollPane.isVisible()) {
+            if (!createPage(nextScrollPane, currentAnimatedIndex)) {
+                // The page does not exist just return without starting 
+                // any animation.
+                return;
+            }
+        }
         nextScrollPane.setCache(true);
         currentScrollPane.setCache(true);
 
         // wait one pulse then animate
         Platform.runLater(new Runnable() {
             @Override public void run() {
-                // animate right to left
-                if (currentAnimatedIndex > previousIndex) {
-                    nextScrollPane.setTranslateX(currentScrollPane.getWidth());
+                // We are handling a touch event if nextScrollPane's translateX is not 0
+                boolean useTranslateX = nextScrollPane.getTranslateX() != 0;
+                if (currentAnimatedIndex > previousIndex) {  // animate right to left
+                    if (!useTranslateX) {
+                        nextScrollPane.setTranslateX(currentScrollPane.getWidth());
+                    }
                     nextScrollPane.setVisible(true);
                     timeline = TimelineBuilder.create()
-                            .keyFrames(
-                                new KeyFrame(Duration.millis(0),
-                                    new KeyValue(currentScrollPane.translateXProperty(), 0, interpolator),
-                                    new KeyValue(nextScrollPane.translateXProperty(), currentScrollPane.getWidth(), interpolator)
-                                ),
-                                new KeyFrame(duration,
-                                    animationEndEventHandler,
-                                    new KeyValue(currentScrollPane.translateXProperty(), -currentScrollPane.getWidth(), interpolator),
-                                    new KeyValue(nextScrollPane.translateXProperty(), 0, interpolator)
-                                )
+                        .keyFrames(
+                            new KeyFrame(Duration.millis(0),
+                                new KeyValue(currentScrollPane.translateXProperty(),
+                                    useTranslateX ? currentScrollPane.getTranslateX() : 0,
+                                    interpolator),
+                                new KeyValue(nextScrollPane.translateXProperty(),
+                                    useTranslateX ?
+                                        nextScrollPane.getTranslateX() : currentScrollPane.getWidth(), interpolator)
+                            ),
+                            new KeyFrame(DURATION,
+                                swipeAnimationEndEventHandler,
+                                new KeyValue(currentScrollPane.translateXProperty(), -currentScrollPane.getWidth(), interpolator),
+                                new KeyValue(nextScrollPane.translateXProperty(), 0, interpolator)
                             )
-                            .build();
+                        )
+                        .build();
                     timeline.play();
                 } else { // animate left to right
-                    nextScrollPane.setTranslateX(-currentScrollPane.getWidth());
+                    if (!useTranslateX) {
+                        nextScrollPane.setTranslateX(-currentScrollPane.getWidth());
+                    }
                     nextScrollPane.setVisible(true);
                     timeline = TimelineBuilder.create()
-                            .keyFrames(
-                                new KeyFrame(Duration.millis(0),
-                                    new KeyValue(currentScrollPane.translateXProperty(), 0, interpolator),
-                                    new KeyValue(nextScrollPane.translateXProperty(), -currentScrollPane.getWidth(), interpolator)
-                                ),
-                                new KeyFrame(duration,
-                                    animationEndEventHandler,
-                                    new KeyValue(currentScrollPane.translateXProperty(), currentScrollPane.getWidth(), interpolator),
-                                    new KeyValue(nextScrollPane.translateXProperty(), 0, interpolator)
-                                )
+                        .keyFrames(
+                            new KeyFrame(Duration.millis(0),
+                                new KeyValue(currentScrollPane.translateXProperty(),
+                                    useTranslateX ? currentScrollPane.getTranslateX() : 0,
+                                    interpolator),
+                                new KeyValue(nextScrollPane.translateXProperty(),
+                                    useTranslateX ? nextScrollPane.getTranslateX() : -currentScrollPane.getWidth(),
+                                    interpolator)
+                            ),
+                            new KeyFrame(DURATION,
+                                swipeAnimationEndEventHandler,
+                                new KeyValue(currentScrollPane.translateXProperty(), currentScrollPane.getWidth(), interpolator),
+                                new KeyValue(nextScrollPane.translateXProperty(), 0, interpolator)
                             )
-                            .build();
+                        )
+                        .build();
                     timeline.play();
                 }
             }
         });
     }
 
-    private EventHandler<ActionEvent> animationEndEventHandler = new EventHandler<ActionEvent>() {
+    private EventHandler<ActionEvent> swipeAnimationEndEventHandler = new EventHandler<ActionEvent>() {
         @Override public void handle(ActionEvent t) {
             ScrollPane temp = currentScrollPane;
             currentScrollPane = nextScrollPane;
             nextScrollPane = temp;
 
             timeline = null;
-            currentScrollPane.setTranslateX(0);
-            nextScrollPane.setCache(false);
+            
+            currentScrollPane.setTranslateX(0);            
             currentScrollPane.setCache(false);
+
+            nextScrollPane.setTranslateX(0);
+            nextScrollPane.setCache(false);
             nextScrollPane.setVisible(false);
             nextScrollPane.setContent(null);
 
-            // Uncomment this code is we want to see the page index
-            // selections as we cycle from previous to the current index.
+//            // Uncomment this code if we want to see the page index
+//            // selections as we cycle from previous to the current index.
 //            int savedCurrentIndex = currentIndex;
 //            int savedPreviousIndex = previousIndex;
 //
@@ -281,16 +405,65 @@ public class PaginationSkin extends SkinBase<Pagination, PaginationBehavior>  {
 //            // and unselect them.
 //            previousIndex = previousAnimatedIndex;
 //            currentIndex = currentAnimatedIndex;
-            navigation.updatePageIndex();
+//            navigation.updatePageIndex();
 //            currentIndex = savedCurrentIndex;
 //            previousIndex = savedPreviousIndex;
 //
 //            if (currentAnimatedIndex != currentIndex) {
 //                animateSwitchPage();
 //            }
+
+            if (hasPendingAnimation) {
+                animateSwitchPage();
+                hasPendingAnimation = false;
+            }
         }
     };
 
+    // If the swipe hasn't reached the THRESHOLD we want to animate the clamping.
+    private void animateClamping(boolean rightToLeft) {
+        if (rightToLeft) {  // animate right to left
+            timeline = TimelineBuilder.create()
+                .keyFrames(
+                    new KeyFrame(Duration.millis(0),
+                        new KeyValue(currentScrollPane.translateXProperty(), currentScrollPane.getTranslateX(), interpolator),
+                        new KeyValue(nextScrollPane.translateXProperty(), nextScrollPane.getTranslateX(), interpolator)
+                    ),
+                    new KeyFrame(DURATION,
+                        clampAnimationEndEventHandler,
+                        new KeyValue(currentScrollPane.translateXProperty(), 0, interpolator),
+                        new KeyValue(nextScrollPane.translateXProperty(), currentScrollPane.getWidth(), interpolator)
+                    )
+                )
+                .build();
+            timeline.play();
+        } else { // animate left to right
+            timeline = TimelineBuilder.create()
+                .keyFrames(
+                    new KeyFrame(Duration.millis(0),
+                        new KeyValue(currentScrollPane.translateXProperty(), currentScrollPane.getTranslateX(), interpolator),
+                        new KeyValue(nextScrollPane.translateXProperty(), nextScrollPane.getTranslateX(), interpolator)
+                    ),
+                    new KeyFrame(DURATION,
+                        clampAnimationEndEventHandler,
+                        new KeyValue(currentScrollPane.translateXProperty(), 0, interpolator),
+                        new KeyValue(nextScrollPane.translateXProperty(), -currentScrollPane.getWidth(), interpolator)
+                    )
+                )
+                .build();
+            timeline.play();
+        }        
+    }
+    
+    private EventHandler<ActionEvent> clampAnimationEndEventHandler = new EventHandler<ActionEvent>() {
+        @Override public void handle(ActionEvent t) {
+            currentScrollPane.setTranslateX(0);
+            nextScrollPane.setTranslateX(0);
+            nextScrollPane.setVisible(false); 
+            timeline = null;
+        }   
+    };
+    
     @Override protected void handleControlPropertyChanged(String p) {
         super.handleControlPropertyChanged(p);
         if (p == "PAGE_FACTORY") {
@@ -401,6 +574,7 @@ public class PaginationSkin extends SkinBase<Pagination, PaginationBehavior>  {
                 public void changed(ObservableValue<? extends Number> arg0, Number arg1, Number arg2) {
                     previousIndex = arg1.intValue();
                     currentIndex = arg2.intValue();
+                    updatePageIndex();
                     if (animate) {
                         // Uncomment this code if we want to see the page index
                         // selections as we cycle from previous to the current index.
@@ -408,7 +582,6 @@ public class PaginationSkin extends SkinBase<Pagination, PaginationBehavior>  {
                         currentAnimatedIndex = currentIndex;
                         animateSwitchPage();
                     } else {
-                        updatePageIndex();
                         createPage(currentScrollPane, currentIndex);
                     }
                 }
@@ -472,7 +645,7 @@ public class PaginationSkin extends SkinBase<Pagination, PaginationBehavior>  {
             }
 
             // We have gone past the total number of pages
-            if (toIndex > getPageCount() - 1) {       
+            if (toIndex > getPageCount() - 1) {
                 if (fromIndex > getPageCount() - 1) {
                     return false;
                 } else {
