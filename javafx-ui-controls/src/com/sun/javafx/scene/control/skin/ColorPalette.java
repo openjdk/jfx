@@ -66,6 +66,7 @@ public class ColorPalette extends Region {
     public ColorPalette(Color initPaint, final ColorPicker colorPicker) {
         getStyleClass().add("color-panel");
         this.colorPicker = colorPicker;
+        owner = colorPicker.getScene().getWindow();
         cpg = new ColorPickerGrid(initPaint);
         customColorDialog = new CustomColorDialog(owner, colorPicker.valueProperty());
         customColorLink.setPrefWidth(cpg.prefWidth(-1));
@@ -231,11 +232,6 @@ public class ColorPalette extends Region {
     
     public ColorPickerGrid getColorGrid() {
         return cpg;
-    }
-    public void setOwner(ColorPicker colorPicker) {
-        this.colorPicker = colorPicker;
-        owner = colorPicker.getScene().getWindow();
-        cpg.owner = colorPicker.getScene().getWindow();
     }
     
     @Override protected void layoutChildren() {

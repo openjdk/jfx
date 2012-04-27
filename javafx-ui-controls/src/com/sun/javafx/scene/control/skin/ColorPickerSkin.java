@@ -70,7 +70,6 @@ public class ColorPickerSkin extends ComboBoxPopupControl<Color> {
         if (colorPicker.getValue() == null) colorPicker.setValue(Color.WHITE);
         popupContent = new ColorPalette(Color.WHITE, colorPicker);
         popupContent.setPopupControl(getPopup());
-        popupContent.setOwner(colorPicker);
         updateComboBoxMode();
         if (getMode() == ComboBoxMode.BUTTON || getMode() == ComboBoxMode.COMBOBOX) {
              if (arrowButton.getOnMouseReleased() == null) {
