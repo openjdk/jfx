@@ -228,7 +228,7 @@ public class ComboBoxBaseBehavior<T> extends BehaviorBase<ComboBoxBase<T>> {
     }
     
     boolean wasComboBoxButtonClickedForAutoHide = false;
-    private boolean mouseInsideButton = false;
+    boolean mouseInsideButton = false;
     public void onAutoHide() {
         // if the ComboBox button was clicked, and it was this that forced the
         // popup to disappear, we don't want the popup to immediately reappear,
