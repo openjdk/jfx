@@ -25,7 +25,6 @@
 
 package com.sun.javafx.scene.control.behavior;
 
-import javafx.scene.control.ComboBox;
 import static javafx.scene.input.KeyCode.*;
 import static javafx.scene.input.KeyEvent.*;
 
@@ -34,10 +33,10 @@ import java.util.ArrayList;
 import java.util.List;
 import com.sun.javafx.scene.control.ColorPicker;
 
-import javafx.scene.control.SelectionModel;
 import javafx.scene.input.MouseEvent;
+import javafx.scene.paint.Color;
 
-public class ColorPickerBehavior<T> extends ComboBoxBaseBehavior<T> {
+public class ColorPickerBehavior extends ComboBoxBaseBehavior<Color> {
 
     /***************************************************************************
      *                                                                         *
@@ -48,7 +47,7 @@ public class ColorPickerBehavior<T> extends ComboBoxBaseBehavior<T> {
     /**
      * 
      */
-    public ColorPickerBehavior(final ColorPicker<T> colorPicker) {
+    public ColorPickerBehavior(final ColorPicker colorPicker) {
         super(colorPicker);
     }
 
@@ -92,8 +91,8 @@ public class ColorPickerBehavior<T> extends ComboBoxBaseBehavior<T> {
         else super.callAction(name);
     }
     
-    private ColorPicker<T> getColorPicker() {
-        return (ColorPicker<T>) getControl();
+    private ColorPicker getColorPicker() {
+        return (ColorPicker) getControl();
     }
     
      /**************************************************************************

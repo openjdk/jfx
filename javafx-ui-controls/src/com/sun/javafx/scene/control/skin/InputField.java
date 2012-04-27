@@ -1,4 +1,4 @@
-package com.sun.javafx.scene.control;
+package com.sun.javafx.scene.control.skin;
 
 import javafx.beans.property.*;
 import javafx.event.ActionEvent;
@@ -8,7 +8,7 @@ import javafx.scene.control.Control;
 /**
  *
  */
-public class InputField extends Control {
+class InputField extends Control {
     /**
      * The default value for {@link #prefColumnCount}.
      */

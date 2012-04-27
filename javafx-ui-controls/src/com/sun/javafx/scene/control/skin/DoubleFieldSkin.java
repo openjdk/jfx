@@ -1,7 +1,5 @@
 package com.sun.javafx.scene.control.skin;
 
-import com.sun.javafx.scene.control.DoubleField;
-import com.sun.javafx.scene.control.IntegerField;
 import javafx.application.Platform;
 import javafx.beans.InvalidationListener;
 import javafx.beans.Observable;

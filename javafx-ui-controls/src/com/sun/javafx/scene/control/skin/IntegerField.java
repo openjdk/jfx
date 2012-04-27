@@ -1,4 +1,4 @@
-package com.sun.javafx.scene.control;
+package com.sun.javafx.scene.control.skin;
 
 import javafx.beans.property.IntegerProperty;
 import javafx.beans.property.SimpleIntegerProperty;
@@ -6,7 +6,7 @@ import javafx.beans.property.SimpleIntegerProperty;
 /**
  *
  */
-public class IntegerField extends InputField {
+class IntegerField extends InputField {
     /**
      * The value of the IntegerField. If null, the value will be treated as "0", but
      * will still actually be null.

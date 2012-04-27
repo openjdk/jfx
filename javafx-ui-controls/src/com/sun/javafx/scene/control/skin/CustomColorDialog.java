@@ -22,7 +22,7 @@
  * or visit www.oracle.com if you need additional information or have any
  * questions.
  */
-package com.sun.javafx.scene.control;
+package com.sun.javafx.scene.control.skin;
 
 import javafx.beans.binding.ObjectBinding;
 import javafx.beans.property.*;
@@ -40,7 +40,6 @@ import javafx.scene.input.MouseEvent;
 import javafx.scene.layout.*;
 import javafx.scene.paint.*;
 import javafx.scene.shape.Circle;
-import javafx.scene.shape.CircleBuilder;
 import javafx.scene.shape.Rectangle;
 import javafx.stage.Modality;
 import javafx.stage.Stage;
@@ -51,7 +50,7 @@ import javafx.stage.Window;
  *
  * @author paru
  */
-public class ColorPickerAddColorPane extends StackPane {
+public class CustomColorDialog extends StackPane {
     
     private static final int CONTENT_PADDING = 10;
     private static final int RECT_SIZE = 200;
@@ -69,11 +68,13 @@ public class ColorPickerAddColorPane extends StackPane {
     Rectangle colorBarIndicator;
     ObjectProperty<Color> currentColorProperty = new SimpleObjectProperty<Color>();
     ObjectProperty<Color> customColorProperty = new SimpleObjectProperty<Color>();
+    boolean saveCustomColor = false;
     
-    public ColorPickerAddColorPane(Window owner, ObjectProperty<Color> currentColorProperty) {
+    public CustomColorDialog(Window owner, ObjectProperty<Color> currentColorProperty) {
         getStyleClass().add("add-color-pane");
         this.currentColorProperty.bind(currentColorProperty);
         if (owner != null) dialog.initOwner(owner);
+        dialog.setTitle("Custom Colors..");
         dialog.initModality(Modality.WINDOW_MODAL);
         dialog.initStyle(StageStyle.UTILITY);
         colorRectPane = new ColorRectPane();
@@ -140,7 +141,7 @@ public class ColorPickerAddColorPane extends StackPane {
     class ColorRectPane extends StackPane {
         
         private boolean changeIsLocal = false;
-        private DoubleProperty hue = new SimpleDoubleProperty() {
+        DoubleProperty hue = new SimpleDoubleProperty() {
             @Override protected void invalidated() {
                 if (!changeIsLocal) {
                     changeIsLocal = true;
@@ -149,7 +150,7 @@ public class ColorPickerAddColorPane extends StackPane {
                 }
             }
         };
-        private DoubleProperty sat = new SimpleDoubleProperty() {
+        DoubleProperty sat = new SimpleDoubleProperty() {
             @Override protected void invalidated() {
                 if (!changeIsLocal) {
                     changeIsLocal = true;
@@ -158,7 +159,7 @@ public class ColorPickerAddColorPane extends StackPane {
                 }
             }
         };
-        private DoubleProperty bright = new SimpleDoubleProperty() {
+        DoubleProperty bright = new SimpleDoubleProperty() {
             @Override protected void invalidated() {
                 if (!changeIsLocal) {
                     changeIsLocal = true;
@@ -172,7 +173,7 @@ public class ColorPickerAddColorPane extends StackPane {
         public Color getColor() { return color.get(); }
         public void setColor(Color newColor) { color.set(newColor); }
 
-        private IntegerProperty red = new SimpleIntegerProperty() {
+        IntegerProperty red = new SimpleIntegerProperty() {
             @Override protected void invalidated() {
                 if (!changeIsLocal) {
                     changeIsLocal = true;
@@ -182,7 +183,7 @@ public class ColorPickerAddColorPane extends StackPane {
             }
         };
         
-        private IntegerProperty green = new SimpleIntegerProperty() {
+        IntegerProperty green = new SimpleIntegerProperty() {
             @Override protected void invalidated() {
                 if (!changeIsLocal) {
                     changeIsLocal = true;
@@ -192,7 +193,7 @@ public class ColorPickerAddColorPane extends StackPane {
             }
         };
         
-        private IntegerProperty blue = new SimpleIntegerProperty() {
+        IntegerProperty blue = new SimpleIntegerProperty() {
             @Override protected void invalidated() {
                 if (!changeIsLocal) {
                     changeIsLocal = true;
@@ -202,7 +203,7 @@ public class ColorPickerAddColorPane extends StackPane {
             }
         };
         
-        private DoubleProperty alpha = new SimpleDoubleProperty(100) {
+        DoubleProperty alpha = new SimpleDoubleProperty(100) {
             @Override protected void invalidated() {
                 if (!changeIsLocal) {
                     changeIsLocal = true;
@@ -506,6 +507,7 @@ public class ColorPickerAddColorPane extends StackPane {
             alphaSettings.add(alphaSlider, 1, 1);
             
             IntegerField alphaField = new IntegerField();
+            alphaField.setSkin(new IntegerFieldSkin(alphaField));
             alphaField.setPrefColumnCount(6);
             alphaSettings.add(alphaField, 2, 1);
             
@@ -517,8 +519,21 @@ public class ColorPickerAddColorPane extends StackPane {
             alphaSettings.add(spacer5, 0, 2, 3, 1);
             
             buttonBox = new HBox(4);
-            Button addButton = new Button("Add");
-            addButton.setOnAction(new EventHandler<ActionEvent>() {
+            
+            Button saveButton = new Button("Save");
+            saveButton.setOnAction(new EventHandler<ActionEvent>() {
+                @Override public void handle(ActionEvent t) {
+                    saveCustomColor = true;
+                    customColorProperty.set(Color.rgb(colorRectPane.red.get(), 
+                            colorRectPane.green.get(), colorRectPane.blue.get(), 
+                            clamp(colorRectPane.alpha.get() / 100)));
+                    dialog.hide();
+                    saveCustomColor = false;
+                }
+            });
+            
+            Button useButton = new Button("Use");
+            useButton.setOnAction(new EventHandler<ActionEvent>() {
                 @Override public void handle(ActionEvent t) {
                     customColorProperty.set(Color.rgb(colorRectPane.red.get(), 
                             colorRectPane.green.get(), colorRectPane.blue.get(), 
@@ -533,7 +548,7 @@ public class ColorPickerAddColorPane extends StackPane {
                     dialog.hide();
                 }
             });
-            buttonBox.getChildren().addAll(addButton, cancelButton);
+            buttonBox.getChildren().addAll(saveButton, useButton, cancelButton);
             
             getChildren().addAll(currentAndNewColor, currentNewColorBorder, whiteBox, 
                                             hBox, settingsPane, alphaSettings, buttonBox);
@@ -565,6 +580,7 @@ public class ColorPickerAddColorPane extends StackPane {
                 hsbSettings.add(hueSlider, 1, 1);
 
                 IntegerField hueField = new IntegerField();
+                hueField.setSkin(new IntegerFieldSkin(hueField));
                 hueField.setPrefColumnCount(6);
                 hsbSettings.add(hueField, 2, 1);
                 hueField.valueProperty().bindBidirectional(colorRectPane.hue);
@@ -579,6 +595,7 @@ public class ColorPickerAddColorPane extends StackPane {
                 hsbSettings.add(saturationSlider, 1, 2);
                 
                 IntegerField saturationField = new IntegerField();
+                saturationField.setSkin(new IntegerFieldSkin(saturationField));
                 saturationField.setPrefColumnCount(6);
                 hsbSettings.add(saturationField, 2, 2);
                 saturationField.valueProperty().bindBidirectional(colorRectPane.sat);
@@ -593,6 +610,7 @@ public class ColorPickerAddColorPane extends StackPane {
                 hsbSettings.add(brightnessSlider, 1, 3);
 
                 IntegerField brightnessField = new IntegerField();
+                brightnessField.setSkin(new IntegerFieldSkin(brightnessField));
                 brightnessField.setPrefColumnCount(6);
                 hsbSettings.add(brightnessField, 2, 3);
 //                colorRectPane.bright.bindBidirectional(brightnessSlider.valueProperty());
@@ -625,10 +643,11 @@ public class ColorPickerAddColorPane extends StackPane {
                 rgbSettings.add(redLabel, 0, 1);
 
                 // Red ----------------------------------------
-                Slider redSlider = new Slider(0, 100, 50);
+                Slider redSlider = new Slider(0, 255, 100);
                 rgbSettings.add(redSlider, 1, 1);
 
                 IntegerField redField = new IntegerField();
+                redField.setSkin(new IntegerFieldSkin(redField));
                 redField.setPrefColumnCount(6);
                 rgbSettings.add(redField, 2, 1);
                 
@@ -640,10 +659,11 @@ public class ColorPickerAddColorPane extends StackPane {
                 greenLabel.setMinWidth(Control.USE_PREF_SIZE);
                 rgbSettings.add(greenLabel, 0, 2);
 
-                Slider greenSlider = new Slider(0, 100, 50);
+                Slider greenSlider = new Slider(0, 255, 100);
                 rgbSettings.add(greenSlider, 1, 2);
 
                 IntegerField greenField = new IntegerField();
+                greenField.setSkin(new IntegerFieldSkin(greenField));
                 greenField.setPrefColumnCount(6);
                 rgbSettings.add(greenField, 2, 2);
                 
@@ -655,10 +675,11 @@ public class ColorPickerAddColorPane extends StackPane {
                 blueLabel.setMinWidth(Control.USE_PREF_SIZE);
                 rgbSettings.add(blueLabel, 0, 3);
 
-                Slider blueSlider = new Slider(0, 100, 50);
+                Slider blueSlider = new Slider(0, 255, 100);
                 rgbSettings.add(blueSlider, 1, 3);
 
                 IntegerField blueField = new IntegerField();
+                blueField.setSkin(new IntegerFieldSkin(blueField));
                 blueField.setPrefColumnCount(6);
                 rgbSettings.add(blueField, 2, 3);
 
@@ -688,6 +709,7 @@ public class ColorPickerAddColorPane extends StackPane {
                 webSettings.add(webLabel, 0, 1);
 
                 WebColorField webField = new WebColorField();
+                webField.setSkin(new WebColorFieldSkin(webField));
                 webField.valueProperty().bindBidirectional(colorRectPane.colorProperty());
                 webField.setPrefColumnCount(6);
                 webSettings.add(webField, 1, 1);
@@ -754,7 +776,7 @@ public class ColorPickerAddColorPane extends StackPane {
         }
     }
     
-    private static double clamp(double value) {
+    static double clamp(double value) {
         return value < 0 ? 0 : value > 1 ? 1 : value;
     }
     

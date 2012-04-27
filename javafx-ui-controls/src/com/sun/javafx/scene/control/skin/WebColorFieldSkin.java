@@ -1,6 +1,5 @@
 package com.sun.javafx.scene.control.skin;
 
-import com.sun.javafx.scene.control.WebColorField;
 import javafx.beans.InvalidationListener;
 import javafx.beans.Observable;
 import javafx.scene.Node;
@@ -8,7 +7,7 @@ import javafx.scene.paint.Color;
 
 /**
  */
-public class WebColorFieldSkin extends InputFieldSkin {
+class WebColorFieldSkin extends InputFieldSkin {
     private InvalidationListener integerFieldValueListener;
 
     /**

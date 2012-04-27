@@ -1,5 +1,6 @@
-package com.sun.javafx.scene.control;
+package com.sun.javafx.scene.control.skin;
 
+import com.sun.javafx.scene.control.skin.InputField;
 import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.SimpleObjectProperty;
 import javafx.scene.paint.Color;
@@ -7,7 +8,7 @@ import javafx.scene.paint.Color;
 /**
  *
  */
-public class WebColorField extends InputField {
+class WebColorField extends InputField {
     /**
      * The value of the WebColorField. If null, the value will be treated as "#000000" black, but
      * will still actually be null.

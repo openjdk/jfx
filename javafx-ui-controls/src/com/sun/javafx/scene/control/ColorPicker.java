@@ -24,35 +24,82 @@
  */
 package com.sun.javafx.scene.control;
 
-import javafx.beans.property.ObjectProperty;
-import javafx.beans.property.SimpleObjectProperty;
+import javafx.collections.FXCollections;
+import javafx.collections.ObservableList;
 import javafx.scene.control.ComboBoxBase;
+import javafx.scene.paint.Color;
 
 /**
- *
- * @author paru
+ * <p>ColorPicker control allows the user to select a color from either a standard 
+ * palette of colors with a simple one click selection OR define their own custom color.
+ * 
+ * <p>The {@link #valueProperty() value} is the currently selected {@link javafx.scene.paint.Color}. 
+ * An initial color can be set by calling setColor or via the constructor. If nothing 
+ * is specified, a default initial color is used. 
+ * 
+ * <p>The ColorPicker control provides a color palette with a predefined set of colors. If 
+ * the user does not want to choose from the predefined set, they can create a custom
+ * color by interacting with a custom color dialog. This dialog provides RGB,
+ * HSB and Web modes of interaction, to create new colors. It also lets the opacity
+ * of the color to be modified.
+ * 
+ * <p>Once a new color is defined, users can choose whether they want to save it 
+ * or just use it. If the new color is saved, this color will then appear in the
+ * custom colors area on the color palette. Also {@link #getCustomColors() getCustomColors} 
+ * returns the list of saved custom colors.
+ * 
+ * <p>The {@link #promptTextProperty() promptText} is not supported and hence is a no-op.
+ * But it may be supported in the future. 
+ * 
+ * <pre><code>
+ * final ColorPicker colorPicker = new ColorPicker();
+ * colorPicker.setOnAction(new EventHandler() {
+ *     public void handle(Event t) {
+ *         Color c = colorPicker.getValue();
+ *         System.out.println("New Color's RGB = "+c.getRed()+" "+c.getGreen()+" "+c.getBlue());
+ *     }
+ * });
+ * </code></pre>
+ * 
+ * <p>The ColorPicker control's appearance can be styled in three ways: a simple Button mode, 
+ * MenuButton mode or SplitMenuButton mode. The default is MenuButton mode. 
+ * For a Button like appearance the style class to use is {@link #STYLE_CLASS_BUTTON STYLE_CLASS_BUTTON}
+ * and for SplitMenuButton appearance and behavior, the style class to use is 
+ * {@link #STYLE_CLASS_SPLIT_BUTTON STYLE_CLASS_SPLIT_BUTTON}. 
+ * 
+ * <pre><code>
+ * colorPicker.getStyleClass().add("button");
+ * </code></pre>
+ * or
+ * <pre><code>
+ * colorPicker.getStyleClass().add("split-button");
+ * </pre><code>
+ * 
  */
-public class ColorPicker<Paint> extends ComboBoxBase<Paint> {
+public class ColorPicker extends ComboBoxBase<Color> {
 
     public static final String STYLE_CLASS_BUTTON = "button";
     public static final String STYLE_CLASS_SPLIT_BUTTON = "split-button";
     
     /**
-     * The ColorPicker's currently selected color.  
+     * The custom colors added to the Color Palette by the user.
      */
-    private ObjectProperty<Paint> color = new SimpleObjectProperty<Paint>();
-    public ObjectProperty<Paint> colorProperty() { return color; }
-    public Paint getColor() { return color.get(); }
-    public void setColor(Paint newColor) { color.set(newColor); }
-    
-    // Need API to turn off Color Label text.
-    // API to list custom colors 
-    // API to save custom colors
-    
+    private ObservableList<Color> customColors = FXCollections.<Color>observableArrayList();
+    public final ObservableList<Color>  getCustomColors() {
+        return customColors;
+    } 
+ 
     public ColorPicker() {
         getStyleClass().add(DEFAULT_STYLE_CLASS);
     }
     
+    /**
+     * 
+     * @param color to be set as the currently selected color of the ColorPicker.
+     */
+    public ColorPicker(Color color) {
+        setValue(color);
+    }
     /***************************************************************************
      *                                                                         *
      * Stylesheet Handling                                                     *

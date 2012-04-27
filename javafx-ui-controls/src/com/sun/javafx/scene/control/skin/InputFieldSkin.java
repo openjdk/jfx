@@ -1,7 +1,6 @@
 package com.sun.javafx.scene.control.skin;
 
 import com.sun.javafx.event.EventDispatchChainImpl;
-import com.sun.javafx.scene.control.InputField;
 import javafx.beans.InvalidationListener;
 import javafx.beans.Observable;
 import javafx.event.ActionEvent;
@@ -16,7 +15,7 @@ import javafx.scene.input.KeyEvent;
 
 /**
  */
-public abstract class InputFieldSkin implements Skin<InputField> {
+abstract class InputFieldSkin implements Skin<InputField> {
     /**
      * The {@code Control} that is referencing this Skin. There is a
      * one-to-one relationship between a {@code Skin} and a {@code Control}.

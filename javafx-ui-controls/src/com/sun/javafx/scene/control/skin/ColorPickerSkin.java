@@ -24,6 +24,8 @@
  */
 package com.sun.javafx.scene.control.skin;
 
+import com.sun.javafx.css.StyleableProperty;
+import com.sun.javafx.css.converters.BooleanConverter;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -38,27 +40,34 @@ import javafx.scene.control.*;
 import javafx.scene.input.MouseEvent;
 import javafx.scene.layout.StackPane;
 import javafx.scene.shape.Rectangle;
-import javafx.scene.paint.Color;
-import javafx.scene.paint.Paint;
 import com.sun.javafx.scene.control.behavior.ColorPickerBehavior;
 import com.sun.javafx.scene.control.ColorPicker;
-import com.sun.javafx.scene.control.ColorPalette;
+import com.sun.javafx.scene.control.skin.ColorPalette;
+import javafx.beans.property.BooleanProperty;
+import javafx.beans.property.SimpleBooleanProperty;
+import javafx.beans.value.WritableValue;
+import javafx.scene.paint.Color;
 
 /**
  *
  * @author paru
  */
-public class ColorPickerSkin<T> extends ComboBoxPopupControl<T> {
+public class ColorPickerSkin extends ComboBoxPopupControl<Color> {
 
     private Label displayNode; 
     private StackPane icon; 
     private Rectangle colorRect; 
     private ColorPalette popupContent;
 //    private ColorPickerPanel popup = new ColorPickerPanel(Color.WHITE);
+    BooleanProperty colorLabelVisible = new SimpleBooleanProperty(true) {
+        @Override protected void invalidated() {
+            super.invalidated();
+        }
+    };
     
     public ColorPickerSkin(final ColorPicker colorPicker) {
-        super(colorPicker, new ColorPickerBehavior<T>(colorPicker));
-        if (colorPicker.getColor() == null) colorPicker.setColor(Color.WHITE);
+        super(colorPicker, new ColorPickerBehavior(colorPicker));
+        if (colorPicker.getValue() == null) colorPicker.setValue(Color.WHITE);
         popupContent = new ColorPalette(Color.WHITE, colorPicker);
         popupContent.setPopupControl(getPopup());
         popupContent.setOwner(colorPicker);
@@ -141,7 +150,7 @@ public class ColorPickerSkin<T> extends ComboBoxPopupControl<T> {
     @Override public void show() {
         super.show();
         final ColorPicker colorPicker = (ColorPicker)getSkinnable();
-        popupContent.updateSelection((Color)colorPicker.getColor());
+        popupContent.updateSelection(colorPicker.getValue());
         popupContent.setDialogLocation(getPopup().getX()+getPopup().getWidth(), getPopup().getY());
     }
     
@@ -169,12 +178,16 @@ public class ColorPickerSkin<T> extends ComboBoxPopupControl<T> {
             displayNode = new Label();
             displayNode.getStyleClass().add("color-picker-label");
             // label text
-            displayNode.textProperty().bind(new StringBinding() {
-                { bind(colorPicker.colorProperty()); }
-                @Override protected String computeValue() {
-                    return colorValueToWeb((Color)colorPicker.getColor());
-                }
-            });
+            if (colorLabelVisible.get()) {
+                displayNode.textProperty().bind(new StringBinding() {
+                    { bind(colorPicker.valueProperty()); }
+                    @Override protected String computeValue() {
+                        return colorValueToWeb(colorPicker.getValue());
+                    }
+                });
+            } else {
+                displayNode.setText("");
+            }
             if (getMode() == ComboBoxMode.BUTTON || getMode() == ComboBoxMode.COMBOBOX) {
                 if (displayNode.getOnMouseReleased() == null) {
                     displayNode.setOnMouseReleased(new EventHandler<MouseEvent>() {
@@ -198,10 +211,10 @@ public class ColorPickerSkin<T> extends ComboBoxPopupControl<T> {
             icon.getStyleClass().add("picker-color");
             colorRect = new Rectangle(16, 16);
             colorRect.getStyleClass().add("picker-color-rect");
-            colorRect.fillProperty().bind(new ObjectBinding<Paint>() {
-                { bind(colorPicker.colorProperty()); }
-                @Override protected Paint computeValue() {
-                    return (Color)colorPicker.getColor();
+            colorRect.fillProperty().bind(new ObjectBinding<Color>() {
+                { bind(colorPicker.valueProperty()); }
+                @Override protected Color computeValue() {
+                    return colorPicker.getValue();
                 }
             });         
             
@@ -223,6 +236,31 @@ public class ColorPickerSkin<T> extends ComboBoxPopupControl<T> {
     @Override protected void layoutChildren() {
         updateComboBoxMode();
         super.layoutChildren();
+    }
+    
+     private static class StyleableProperties {
+        private static final StyleableProperty<ColorPickerSkin,Boolean> COLOR_LABEL_VISIBLE = 
+                new StyleableProperty<ColorPickerSkin,Boolean>("-fx-color-label-visible",
+                BooleanConverter.getInstance(), false) {
+
+            @Override
+            public boolean isSettable(ColorPickerSkin n) {
+                return n.colorLabelVisible == null || !n.colorLabelVisible.isBound();
+            }
+
+            @Override public WritableValue<Boolean> getWritableValue(ColorPickerSkin n) {
+                return n.colorLabelVisible;
+            }
+        };
+        private static final List<StyleableProperty> STYLEABLES;
+        static {
+            final List<StyleableProperty> styleables =
+                new ArrayList<StyleableProperty>(ComboBoxBase.impl_CSS_STYLEABLES());
+            Collections.addAll(styleables,
+                COLOR_LABEL_VISIBLE
+            );
+            STYLEABLES = Collections.unmodifiableList(styleables);
+        }
     }
     
 }
