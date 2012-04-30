@@ -93,6 +93,7 @@ public class CustomColorDialog extends StackPane {
             dialog.setX(x);
             dialog.setY(y);
         }
+        colorRectPane.updateValues();
         dialog.show();
     }
     
@@ -306,21 +307,6 @@ public class CustomColorDialog extends StackPane {
             colorBarIndicator.setStroke(Color.WHITE);
             colorBarIndicator.setEffect(new DropShadow(2, 0, 1, Color.BLACK));
             
-            changeIsLocal = true;
-            //Initialize Hue: (TopInsets-indicatorHeight/2 = 10 in calculation belows
-            hue.set((10+colorBar.getHeight()-CONTENT_PADDING - RECT_SIZE)*360);
-            //Initialize values sat, bright, color
-            sat.set(((colorRectIndicator.getCenterX() - CONTENT_PADDING - 
-                                colorRectIndicator.getRadius())*100)/RECT_SIZE);
-            bright.set(((1 - (colorRectIndicator.getCenterY() - CONTENT_PADDING - 
-                    colorRectIndicator.getRadius())/RECT_SIZE))*100);
-            setColor(Color.hsb(hue.get(), clamp(sat.get() / 100), clamp(bright.get() / 100), 
-                    clamp(alpha.get()/100)));
-            red.set(doubleToInt(getColor().getRed()));
-            green.set(doubleToInt(getColor().getGreen()));
-            blue.set(doubleToInt(getColor().getBlue()));
-            changeIsLocal = false;
-            
             // *********************** Listeners ******************************
             hue.addListener(new ChangeListener<Number>() {
                 @Override public void changed(ObservableValue<? extends Number> ov, Number t, Number t1) {
@@ -358,6 +344,20 @@ public class CustomColorDialog extends StackPane {
             getChildren().addAll(colorRect, colorRectOverlayOne, colorRectOverlayTwo, 
                     colorBar, colorRectIndicator, colorBarIndicator);
            
+        }
+        
+        private void updateValues() {
+            changeIsLocal = true;
+            //Initialize hue, sat, bright, color, red, green and blue
+            hue.set(currentColorProperty.get().getHue());
+            sat.set(currentColorProperty.get().getSaturation()*100);
+            bright.set(currentColorProperty.get().getBrightness()*100);
+            setColor(Color.hsb(hue.get(), clamp(sat.get() / 100), clamp(bright.get() / 100), 
+                    clamp(alpha.get()/100)));
+            red.set(doubleToInt(getColor().getRed()));
+            green.set(doubleToInt(getColor().getGreen()));
+            blue.set(doubleToInt(getColor().getBlue()));
+            changeIsLocal = false;
         }
         
         @Override public void layoutChildren() {

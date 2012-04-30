@@ -15,8 +15,8 @@ import javafx.collections.FXCollections;
 import javafx.event.ActionEvent;
 import javafx.event.EventHandler;
 import javafx.geometry.Pos;
-import javafx.scene.control.Button;
 import javafx.scene.control.Hyperlink;
+import javafx.scene.control.Label;
 import javafx.scene.control.PopupControl;
 import javafx.scene.control.Separator;
 import javafx.scene.effect.DropShadow;
@@ -46,14 +46,14 @@ public class ColorPalette extends Region {
     private static final int NUM_OF_ROWS = 10;
     
     private boolean customColorAdded = false;
-    ColorPickerGrid cpg;
+    ColorPickerGrid colorPickerGrid;
     Path path;
     ColorPicker colorPicker;
     GridPane customColorGrid = new GridPane();
-//    Button addColorButton = new Button("Add Color...");
     Hyperlink customColorLink = new Hyperlink("Custom Color..");
     Separator separator = new Separator();
     Window owner;
+    Label customColorLabel = new Label("Custom Colors");
     CustomColorDialog customColorDialog = null;
     int customColumnIndex = 0, customRowIndex = 0;
     private final List<ColorSquare> customSquares = FXCollections.observableArrayList();
@@ -67,31 +67,54 @@ public class ColorPalette extends Region {
         getStyleClass().add("color-panel");
         this.colorPicker = colorPicker;
         owner = colorPicker.getScene().getWindow();
-        cpg = new ColorPickerGrid(initPaint);
-        customColorDialog = new CustomColorDialog(owner, colorPicker.valueProperty());
-        customColorLink.setPrefWidth(cpg.prefWidth(-1));
+        colorPickerGrid = new ColorPickerGrid(initPaint);
+        customColorLabel.setAlignment(Pos.CENTER_LEFT);
+        customColorLabel.setVisible(false);
+        customColorLink.setPrefWidth(colorPickerGrid.prefWidth(-1));
         customColorLink.setAlignment(Pos.CENTER);
         customColorLink.setOnAction(new EventHandler<ActionEvent>() {
             @Override
             public void handle(ActionEvent t) {
+                if (customColorDialog == null) {
+                    customColorDialog = new CustomColorDialog(owner, colorPicker.valueProperty());
+                    setupDialog();
+                }
                 if (popupControl != null) popupControl.setAutoHide(false);
                 customColorDialog.show(x, y);
                 if (popupControl != null) popupControl.setAutoHide(true);
             }
         });
+        
+        // create popup path for main shape
+        path = new Path();
+//        path.setFill(new LinearGradient(0, 0, 0, 1, true, CycleMethod.NO_CYCLE, new Stop(0, Color.web("#313131")), new Stop(0.5, Color.web("#5f5f5f")), new Stop(1, Color.web("#313131"))));
+        path.setFill(Color.LIGHTGRAY);
+        path.setStroke(null);
+        path.setEffect(new DropShadow(15, 0, 1, Color.gray(0, 0.6)));
+        path.setCache(true);
+        initNavigation();
+        getChildren().addAll(path, colorPickerGrid, customColorLabel, customColorGrid, separator, customColorLink);
+    }
+    
+    private void setupDialog() {
         customColorDialog.customColorProperty.addListener(new ChangeListener<Color>() {
             @Override public void changed(ObservableValue<? extends Color> ov, Color t, Color t1) {
                 if (customColorDialog.saveCustomColor) {
                     if (!customColorAdded) {
                         customColorAdded = true;
                         customColorGrid.setGridLinesVisible(true);
+                        customColorLabel.setVisible(true);
                     }
-                    ColorSquare cs = new ColorSquare(customColorDialog.customColorProperty.get());
+                    Color customColor = customColorDialog.customColorProperty.get();
+                    ColorSquare cs = new ColorSquare(customColor);
+                    cs.setHoverValue(false);
                     customSquares.add(cs);
+                    colorPicker.getCustomColors().add(customColor);
                     customColorGrid.add(cs, customColumnIndex, customRowIndex);
                     if (customColumnIndex == 0) { // new row - add empty squares
                         for (int i = 0; i < NUM_OF_COLUMNS - 1; i++) {
                             ColorSquare emptySquare = new ColorSquare(null);
+                            emptySquare.setHoverValue(false);
                             customSquares.add(emptySquare);
                             customColorGrid.add(emptySquare, i+1, customRowIndex);
                         }
@@ -106,17 +129,6 @@ public class ColorPalette extends Region {
                 colorPicker.setValue(customColorDialog.customColorProperty.get());
             }
         });
-        
-        
-        // create popup path for main shape
-        path = new Path();
-//        path.setFill(new LinearGradient(0, 0, 0, 1, true, CycleMethod.NO_CYCLE, new Stop(0, Color.web("#313131")), new Stop(0.5, Color.web("#5f5f5f")), new Stop(1, Color.web("#313131"))));
-        path.setFill(Color.LIGHTGRAY);
-        path.setStroke(null);
-        path.setEffect(new DropShadow(15, 0, 1, Color.gray(0, 0.6)));
-        path.setCache(true);
-        initNavigation();
-        getChildren().addAll(path, cpg, customColorGrid, separator, customColorLink);
     }
 
     private void initNavigation() {
@@ -142,19 +154,18 @@ public class ColorPalette extends Region {
     private void processLeftKey(KeyEvent ke) {
         int index;
         for (index = (NUM_OF_ROWS*NUM_OF_COLUMNS)-1; index >= 0; index--)  {
-            ColorSquare cs = cpg.getSquares().get(index);
+            ColorSquare cs = colorPickerGrid.getSquares().get(index);
             if (cs == focusedSquare) {
                 cs.setHoverValue(false);
-                ColorSquare prevSquare = cpg.getSquares().get((index != 0) ? 
+                ColorSquare prevSquare = colorPickerGrid.getSquares().get((index != 0) ? 
                                     (index-1) : (NUM_OF_ROWS*NUM_OF_COLUMNS)-1);
                 prevSquare.setHoverValue(true);
                 focusedSquare = prevSquare;
-                System.out.println("cs isFocused = "+prevSquare.isFocused());
                 break;
             } 
         }
         if (index == -1) {
-            ColorSquare cs = cpg.getSquares().get((NUM_OF_ROWS*NUM_OF_COLUMNS)-1);
+            ColorSquare cs = colorPickerGrid.getSquares().get((NUM_OF_ROWS*NUM_OF_COLUMNS)-1);
             cs.setHoverValue(true);
             focusedSquare = cs;
         }
@@ -163,10 +174,10 @@ public class ColorPalette extends Region {
      private void processUpKey(KeyEvent ke) {
         int index;
         for (index = (NUM_OF_ROWS*NUM_OF_COLUMNS)-1; index >= 0; index--)  {
-            ColorSquare cs = cpg.getSquares().get(index);
+            ColorSquare cs = colorPickerGrid.getSquares().get(index);
             if (cs == focusedSquare) {
                 cs.setHoverValue(false);
-                ColorSquare prevSquare = cpg.getSquares().get((index-12 >= 0)? 
+                ColorSquare prevSquare = colorPickerGrid.getSquares().get((index-12 >= 0)? 
                         (index-12) : ((NUM_OF_ROWS-1)*NUM_OF_COLUMNS)+index);
                 prevSquare.setHoverValue(true);
                 focusedSquare = prevSquare;
@@ -174,7 +185,7 @@ public class ColorPalette extends Region {
             } 
         }
         if (index == -1) {
-            ColorSquare cs = cpg.getSquares().get((NUM_OF_ROWS*NUM_OF_COLUMNS)-1);
+            ColorSquare cs = colorPickerGrid.getSquares().get((NUM_OF_ROWS*NUM_OF_COLUMNS)-1);
             cs.setHoverValue(true);
             focusedSquare = cs;
         }
@@ -183,19 +194,18 @@ public class ColorPalette extends Region {
     private void processRightKey(KeyEvent ke) {
         int index;
         for (index = 0; index < (NUM_OF_ROWS*NUM_OF_COLUMNS); index++)  {
-            ColorSquare cs = cpg.getSquares().get(index);
+            ColorSquare cs = colorPickerGrid.getSquares().get(index);
             if (cs == focusedSquare) {
                 cs.setHoverValue(false);
-                ColorSquare prevSquare = cpg.getSquares().get(
+                ColorSquare prevSquare = colorPickerGrid.getSquares().get(
                         (index != (NUM_OF_ROWS*NUM_OF_COLUMNS)-1) ? (index+1) : 0);
                 prevSquare.setHoverValue(true);
-                System.out.println("cs isFocused = "+prevSquare.isFocused());
                 focusedSquare = prevSquare;
                 break;
             } 
         }
         if (index == (NUM_OF_ROWS*NUM_OF_COLUMNS)) {
-            ColorSquare cs = cpg.getSquares().get(0);
+            ColorSquare cs = colorPickerGrid.getSquares().get(0);
             cs.setHoverValue(true);
             focusedSquare = cs;
         }
@@ -204,10 +214,10 @@ public class ColorPalette extends Region {
      private void processDownKey(KeyEvent ke) {
         int index;
         for (index = 0; index < (NUM_OF_ROWS*NUM_OF_COLUMNS); index++)  {
-            ColorSquare cs = cpg.getSquares().get(index);
+            ColorSquare cs = colorPickerGrid.getSquares().get(index);
             if (cs == focusedSquare) {
                 cs.setHoverValue(false);
-                ColorSquare prevSquare = cpg.getSquares().get((index+12 < NUM_OF_ROWS*NUM_OF_COLUMNS)? 
+                ColorSquare prevSquare = colorPickerGrid.getSquares().get((index+12 < NUM_OF_ROWS*NUM_OF_COLUMNS)? 
                         (index+12) : index-((NUM_OF_ROWS-1)*NUM_OF_COLUMNS));
                 prevSquare.setHoverValue(true);
                 focusedSquare = prevSquare;
@@ -215,7 +225,7 @@ public class ColorPalette extends Region {
             } 
         }
         if (index == (NUM_OF_ROWS*NUM_OF_COLUMNS)) {
-            ColorSquare cs = cpg.getSquares().get(0);
+            ColorSquare cs = colorPickerGrid.getSquares().get(0);
             cs.setHoverValue(true);
             focusedSquare = cs;
         }
@@ -231,7 +241,7 @@ public class ColorPalette extends Region {
     }
     
     public ColorPickerGrid getColorGrid() {
-        return cpg;
+        return colorPickerGrid;
     }
     
     @Override protected void layoutChildren() {
@@ -257,23 +267,28 @@ public class ColorPalette extends Region {
                 new ClosePath());
         double x = paddingX*2;
         double y = 2*getInsets().getTop()+ARROW_SIZE;
-        cpg.relocate(x, y);
-        y = y+cpg.prefHeight(-1)+GAP;
+        colorPickerGrid.relocate(x, y);
+        y = y+colorPickerGrid.prefHeight(-1)+GAP;
         if (customColorAdded) {
+            if (customColorLabel.isVisible()) {
+                customColorLabel.resizeRelocate(x, y, colorPickerGrid.prefWidth(-1), customColorLabel.prefHeight(y));
+                y = y+customColorLabel.prefHeight(-1);
+            }
             customColorGrid.relocate(x, y);
             y = y+customColorGrid.prefHeight(-1)+GAP;
         }
-        separator.resizeRelocate(x, y, cpg.prefWidth(-1), separator.prefHeight(-1));
+        separator.resizeRelocate(x, y, colorPickerGrid.prefWidth(-1), separator.prefHeight(-1));
         y = y+separator.prefHeight(-1)+GAP;
-        customColorLink.resizeRelocate(x, y, cpg.prefWidth(-1), customColorLink.prefHeight(-1));
+        customColorLink.resizeRelocate(x, y, colorPickerGrid.prefWidth(-1), customColorLink.prefHeight(-1));
     }
     
     @Override protected double computePrefWidth(double height) {
-        return getInsets().getLeft() + cpg.prefWidth(-1) + getInsets().getRight();
+        return getInsets().getLeft() + colorPickerGrid.prefWidth(-1) + getInsets().getRight();
     }
     
     @Override protected double computePrefHeight(double width) {
-        double totalHeight = cpg.prefHeight(-1) + GAP + customColorGrid.prefHeight(-1) +
+        double totalHeight = colorPickerGrid.prefHeight(-1) + GAP + 
+                ((customColorLabel.isVisible()) ? customColorLabel.prefHeight(-1) : 0) + customColorGrid.prefHeight(-1) +
                 GAP + separator.prefHeight(-1) + GAP + customColorLink.prefHeight(-1);
         return getInsets().getTop() + totalHeight + getInsets().getBottom();
     }
@@ -365,8 +380,9 @@ public class ColorPalette extends Region {
         
     }
 
+    // The skin can update selection if colorpicker value changes..
     public void updateSelection(Color color) {
-        for (ColorSquare cs : cpg.getSquares()) {
+        for (ColorSquare cs : colorPickerGrid.getSquares()) {
              cs.setSelected(cs.rectangle.getFill().equals(color));
         }
     }

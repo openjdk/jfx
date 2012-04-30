@@ -45,6 +45,8 @@ import com.sun.javafx.scene.control.ColorPicker;
 import com.sun.javafx.scene.control.skin.ColorPalette;
 import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.SimpleBooleanProperty;
+import javafx.beans.value.ChangeListener;
+import javafx.beans.value.ObservableValue;
 import javafx.beans.value.WritableValue;
 import javafx.scene.paint.Color;
 
@@ -68,8 +70,6 @@ public class ColorPickerSkin extends ComboBoxPopupControl<Color> {
     public ColorPickerSkin(final ColorPicker colorPicker) {
         super(colorPicker, new ColorPickerBehavior(colorPicker));
         if (colorPicker.getValue() == null) colorPicker.setValue(Color.WHITE);
-        popupContent = new ColorPalette(Color.WHITE, colorPicker);
-        popupContent.setPopupControl(getPopup());
         updateComboBoxMode();
         if (getMode() == ComboBoxMode.BUTTON || getMode() == ComboBoxMode.COMBOBOX) {
              if (arrowButton.getOnMouseReleased() == null) {
@@ -91,6 +91,7 @@ public class ColorPickerSkin extends ComboBoxPopupControl<Color> {
             }
         }
 //        getPopup().setAutoHide(false);
+        registerChangeListener(colorPicker.valueProperty(), "VALUE");
     }
     
     private void updateComboBoxMode() {
@@ -136,8 +137,13 @@ public class ColorPickerSkin extends ComboBoxPopupControl<Color> {
         }
         return web;
     }
-    
+ 
     @Override protected Node getPopupContent() {
+        if (popupContent == null) {
+//            popupContent = new ColorPalette(colorPicker.getValue(), colorPicker);
+            popupContent = new ColorPalette(getSkinnable().getValue(), (ColorPicker)getSkinnable());
+            popupContent.setPopupControl(getPopup());
+        }
        return popupContent;
     }
     
@@ -161,7 +167,12 @@ public class ColorPickerSkin extends ComboBoxPopupControl<Color> {
             } else {
                 if (!popupContent.isAddColorDialogShowing()) hide();
             }
-        }     
+        } else if (p == "VALUE") {
+           // Change the current selected color in the grid if ColorPicker value changes
+            if (popupContent != null) {
+                popupContent.updateSelection(getSkinnable().getValue());
+            }
+        }
     }
     @Override public Node getDisplayNode() {
         final ColorPicker colorPicker = (ColorPicker)getSkinnable();
