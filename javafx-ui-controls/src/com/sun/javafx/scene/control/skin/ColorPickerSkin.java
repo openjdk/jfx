@@ -70,7 +70,6 @@ public class ColorPickerSkin extends ComboBoxPopupControl<Color> {
         if (colorPicker.getValue() == null) colorPicker.setValue(Color.WHITE);
         popupContent = new ColorPalette(Color.WHITE, colorPicker);
         popupContent.setPopupControl(getPopup());
-        popupContent.setOwner(colorPicker);
         updateComboBoxMode();
         if (getMode() == ComboBoxMode.BUTTON || getMode() == ComboBoxMode.COMBOBOX) {
              if (arrowButton.getOnMouseReleased() == null) {
@@ -91,7 +90,6 @@ public class ColorPickerSkin extends ComboBoxPopupControl<Color> {
                 });
             }
         }
-        registerChangeListener(getPopup().showingProperty(), "POPUP_VISIBLE");
 //        getPopup().setAutoHide(false);
     }
     
@@ -164,13 +162,6 @@ public class ColorPickerSkin extends ComboBoxPopupControl<Color> {
                 if (!popupContent.isAddColorDialogShowing()) hide();
             }
         }     
-        else if (p == "POPUP_VISIBLE") {
-            if (!getPopup().isShowing() && getSkinnable().isShowing()) {
-                // Popup was dismissed. Maybe user clicked outside or typed ESCAPE.
-                // Make sure button is in sync.
-                getSkinnable().hide();
-            }
-        }
     }
     @Override public Node getDisplayNode() {
         final ColorPicker colorPicker = (ColorPicker)getSkinnable();
@@ -231,6 +222,14 @@ public class ColorPickerSkin extends ComboBoxPopupControl<Color> {
             }
         }
         return displayNode;
+    }
+    
+    public void syncWithAutoUpdate() {
+        if (!getPopup().isShowing() && getSkinnable().isShowing()) {
+            // Popup was dismissed. Maybe user clicked outside or typed ESCAPE.
+            // Make sure ColorPicker button is in sync.
+            getSkinnable().hide();
+        }
     }
     
     @Override protected void layoutChildren() {

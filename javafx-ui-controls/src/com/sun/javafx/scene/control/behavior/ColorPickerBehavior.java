@@ -32,6 +32,7 @@ import static javafx.scene.input.KeyEvent.*;
 import java.util.ArrayList;
 import java.util.List;
 import com.sun.javafx.scene.control.ColorPicker;
+import com.sun.javafx.scene.control.skin.ColorPickerSkin;
 
 import javafx.scene.input.MouseEvent;
 import javafx.scene.paint.Color;
@@ -112,7 +113,12 @@ public class ColorPickerBehavior extends ComboBoxBaseBehavior<Color> {
 //    }
     
     @Override public void onAutoHide() {
-        // do nothing
+        // when we click on some non  interactive part of the 
+        // Color Palette - we do not want to hide.
+        wasComboBoxButtonClickedForAutoHide = mouseInsideButton;
+        ColorPicker colorPicker = (ColorPicker)getControl();
+        ColorPickerSkin cpSkin = (ColorPickerSkin)colorPicker.getSkin();
+        cpSkin.syncWithAutoUpdate();
     }
     
     @Override public void mouseReleased(MouseEvent e) {
