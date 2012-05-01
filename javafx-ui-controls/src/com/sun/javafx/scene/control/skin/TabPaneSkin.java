@@ -980,9 +980,13 @@ public class TabPaneSkin extends SkinBase<TabPane, TabPaneBehavior> {
                     } else if (valueModel == tab.disableProperty()) {
                         impl_pseudoClassStateChanged("disabled");
                         requestLayout();
+                    } else if (valueModel == tab.closableProperty()) {
+                        requestLayout();
                     }
                 }
             };
+            
+            tab.closableProperty().addListener(tabListener);
             tab.selectedProperty().addListener(tabListener);
             tab.textProperty().addListener(tabListener);
             tab.graphicProperty().addListener(tabListener);
