@@ -85,8 +85,8 @@ public abstract class LabeledSkinBase<C extends Labeled, B extends BehaviorBase<
     double textWidth = Double.NEGATIVE_INFINITY;
 
     /**
-     * The cached width of the ellipsis string. This is only recomputed
-     * if the font has changed.
+     * The cached width of the ellipsis string. This will be recomputed
+     * if the font or the ellipsisString property have changed.
      * This is package private ONLY FOR THE SAKE OF TESTING
      */
     double ellipsisWidth = Double.NEGATIVE_INFINITY;
@@ -210,6 +210,10 @@ public abstract class LabeledSkinBase<C extends Labeled, B extends BehaviorBase<
             // NO-OP
         } else if (p == "TEXT_OVERRUN") {
             textMetricsChanged();
+        } else if (p == "ELLIPSIS_STRING") {
+            textMetricsChanged();
+            invalidateWidths();
+            ellipsisWidth = Double.NEGATIVE_INFINITY;
         } else if (p == "WRAP_TEXT") {
             updateWrappingWidth();
             textMetricsChanged();
@@ -451,15 +455,16 @@ public abstract class LabeledSkinBase<C extends Labeled, B extends BehaviorBase<
 
             Font font = text.getFont();
             OverrunStyle truncationStyle = labeled.getTextOverrun();
+            String ellipsisString = labeled.getEllipsisString();
 
             if (labeled.isWrapText()) {
-                result = Utils.computeClippedWrappedText(font, s, w, h, truncationStyle);
+                result = Utils.computeClippedWrappedText(font, s, w, h, truncationStyle, ellipsisString);
             } else if (multiline) {
                 StringBuilder sb = new StringBuilder();
 
                 String[] splits = s.split("\n");
                 for (int i = 0; i < splits.length; i++) {
-                    sb.append(Utils.computeClippedText(font, splits[i], w, truncationStyle));
+                    sb.append(Utils.computeClippedText(font, splits[i], w, truncationStyle, ellipsisString));
                     if (i < splits.length - 1) {
                         sb.append('\n');
                     }
@@ -485,7 +490,7 @@ public abstract class LabeledSkinBase<C extends Labeled, B extends BehaviorBase<
 
                 result = sb.toString();
             } else {
-                result = Utils.computeClippedText(font, s, w, truncationStyle);
+                result = Utils.computeClippedText(font, s, w, truncationStyle, ellipsisString);
             }
 
             if (result != null && result.endsWith("\n")) {
@@ -604,6 +609,7 @@ public abstract class LabeledSkinBase<C extends Labeled, B extends BehaviorBase<
         final Labeled labeled = getSkinnable();
         final Font font = text.getFont();
         OverrunStyle truncationStyle = labeled.getTextOverrun();
+        String ellipsisString = labeled.getEllipsisString();
         final String string = labeled.getText();
         final boolean emptyText = string == null || string.isEmpty();
         final ContentDisplay contentDisplay = labeled.getContentDisplay();
@@ -626,7 +632,7 @@ public abstract class LabeledSkinBase<C extends Labeled, B extends BehaviorBase<
                 }
                 // We only want to recompute the ellipsis width if the font has changed
                 if (ellipsisWidth == Double.NEGATIVE_INFINITY) {
-                    ellipsisWidth = Utils.computeTextWidth(font, "...", 0);
+                    ellipsisWidth = Utils.computeTextWidth(font, ellipsisString, 0);
                 }
                 minTextWidth = Math.min(textWidth, ellipsisWidth);
             }

@@ -55,6 +55,9 @@ import javafx.scene.text.TextAlignment;
 
 import javafx.beans.DefaultProperty;
 
+import com.sun.javafx.css.StyleableStringProperty;
+
+import static com.sun.javafx.scene.control.skin.resources.ControlResources.*;
 
 /**
  * A Labeled {@link Control} is one which has as part of its user interface
@@ -81,6 +84,11 @@ import javafx.beans.DefaultProperty;
  */
 @DefaultProperty("text")
 public abstract class Labeled extends Control {
+
+    // This is locale specific and may need to be non-static
+    // if and when instances can have different locales.
+    private final static String DEFAULT_ELLIPSIS_STRING = getString("Labeled.defaultEllipsisString");
+
 
     /***************************************************************************
      *                                                                         *
@@ -219,6 +227,44 @@ public abstract class Labeled extends Control {
     private ObjectProperty<OverrunStyle> textOverrun;
     public final void setTextOverrun(OverrunStyle value) { textOverrunProperty().setValue(value); }
     public final OverrunStyle getTextOverrun() { return textOverrun == null ? OverrunStyle.ELLIPSIS : textOverrun.getValue(); }
+
+    /**
+     * Specifies the string to display for the ellipsis when text is truncated.
+     *
+     * <table border="0" cellpadding="0" cellspacing="0"><tr><th>Examples</th></tr>
+     *   <tr class="altColor"><td align="right">"..."</td>        <td>- Default value for most locales</td>
+     *   <tr class="rowColor"><td align="right">" . . . "</td>    <td></td>
+     *   <tr class="altColor"><td align="right">" [...] "</td>    <td></td>
+     *   <tr class="rowColor"><td align="right">"&#92;u2026"</td> <td>- The Unicode ellipsis character '&hellip;'</td>
+     *   <tr class="altColor"><td align="right">""</td>           <td>- No ellipsis, just display the truncated string</td>
+     * </table>
+     *
+     * <p>Note that not all fonts support all Unicode characters.
+     *
+     * @see <a href="http://en.wikipedia.org/wiki/Ellipsis#Computer_representations">Wikipedia:ellipsis</a>
+     */
+    public final StringProperty ellipsisStringProperty() {
+        if (ellipsisString == null) {
+            ellipsisString = new StyleableStringProperty(DEFAULT_ELLIPSIS_STRING) {
+                @Override public Object getBean() {
+                    return Labeled.this;
+                }
+
+                @Override public String getName() {
+                    return "ellipsisString";
+                }
+
+                @Override public StyleableProperty getStyleableProperty() {
+                    return StyleableProperties.ELLIPSIS_STRING;
+                }                
+            };
+        }
+        return ellipsisString;
+    }
+    private StringProperty ellipsisString;
+    public final void setEllipsisString(String value) { ellipsisStringProperty().set((value == null) ? "" : value); }
+    public final String getEllipsisString() { return ellipsisString == null ? DEFAULT_ELLIPSIS_STRING : ellipsisString.get(); }
+
 
     /**
      * If a run of text exceeds the width of the Labeled, then this variable
@@ -678,7 +724,20 @@ public abstract class Labeled extends Control {
                 return n.textOverrunProperty();
             }
         };
-        
+
+        private static final StyleableProperty<Labeled,String> ELLIPSIS_STRING =
+                new StyleableProperty<Labeled,String>("-fx-ellipsis-string",
+                StringConverter.getInstance(), DEFAULT_ELLIPSIS_STRING) {
+
+            @Override public boolean isSettable(Labeled n) {
+                return n.ellipsisString == null || !n.ellipsisString.isBound();
+            }
+
+            @Override public WritableValue<String> getWritableValue(Labeled n) {
+                return n.ellipsisStringProperty();
+            }
+        };
+
         private static final StyleableProperty<Labeled,Boolean> WRAP_TEXT = 
                 new StyleableProperty<Labeled,Boolean>("-fx-wrap-text",
                 BooleanConverter.getInstance(), false) {
@@ -781,6 +840,7 @@ public abstract class Labeled extends Control {
                 TEXT_ALIGNMENT,
                 TEXT_FILL,
                 TEXT_OVERRUN,
+                ELLIPSIS_STRING,
                 WRAP_TEXT,
                 GRAPHIC,
                 UNDERLINE,
