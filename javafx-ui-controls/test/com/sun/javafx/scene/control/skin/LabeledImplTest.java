@@ -107,6 +107,8 @@ public class LabeledImplTest {
                 value = new Insets(1,2,3,4);
             } else if ("-fx-graphic-text-gap".equals(prop)) {
                 value = .5;
+            } else if ("-fx-ellipsis-string".equals(prop)) {
+                value = "...";
             } else {
                 fail(prop + " not accounted for");
                 return null;
