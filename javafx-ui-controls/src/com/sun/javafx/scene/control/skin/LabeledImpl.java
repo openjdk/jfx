@@ -35,126 +35,72 @@ import javafx.scene.control.Label;
 import javafx.scene.control.Labeled;
 
 import com.sun.javafx.css.StyleableProperty;
+import com.sun.javafx.css.Stylesheet;
 import java.util.List;
+import javafx.beans.property.Property;
 import javafx.beans.value.WritableValue;
 
 
 public class LabeledImpl extends Label {
 
-    private Labeled labeled;
+    final private Shuttler shuttler;
     
-    private final static StyleableProperty graphicProperty;
-    static {
-        StyleableProperty prop = null;
-        final List<StyleableProperty> properties = Labeled.impl_CSS_STYLEABLES();
-        for(int n=0, nMax=properties.size(); n<nMax; n++) {
-            final StyleableProperty styleable = properties.get(n);
-            if ("-fx-graphic".equals(styleable.getProperty())) {
-                prop = styleable;
-                break;
+    private static void initialize(Shuttler shuttler, LabeledImpl labeledImpl, Labeled labeled) {
+        
+        labeledImpl.setText(labeled.getText());
+        labeled.textProperty().addListener(shuttler);
+        
+        final List<StyleableProperty> styleables = Labeled.impl_CSS_STYLEABLES();
+        
+        for(int n=0, nMax=styleables.size(); n<nMax; n++) {
+            final StyleableProperty styleable = styleables.get(n);
+            
+            // the Labeled isn't necessarily a Label, so skip the skin or
+            // we'll get an argument type mismatch on the invocation of the
+            // skin constructor. 
+            if ("-fx-skin".equals(styleable.getProperty())) continue;
+            
+            final WritableValue fromVal = styleable.getWritableValue(labeled);
+            if (fromVal instanceof Observable) {
+                // listen for changes to this property
+                ((Observable)fromVal).addListener(shuttler);
+                // set this LabeledImpl's property to the same value as the Labeled. 
+                final Stylesheet.Origin origin = StyleableProperty.getOrigin(fromVal);
+                styleable.set(labeledImpl, fromVal.getValue(), origin);
             }
         }
-        graphicProperty = prop;
+    }
+    
+    private static class Shuttler implements InvalidationListener {
+        
+        private final LabeledImpl labeledImpl;
+        private final Labeled labeled; 
+        
+        Shuttler(LabeledImpl labeledImpl, Labeled labeled) {
+            this.labeledImpl = labeledImpl;
+            this.labeled = labeled;
+            initialize(this, labeledImpl, labeled);
+
+        }
+        
+        @Override public void invalidated(Observable valueModel) {
+          
+            if (valueModel == labeled.textProperty()) {
+                labeledImpl.setText(labeled.getText());
+            } else 
+            if (valueModel instanceof WritableValue) { 
+                WritableValue writable = (WritableValue)valueModel;
+                StyleableProperty styleable = 
+                        StyleableProperty.getStyleableProperty(writable);
+                if (styleable != null) {
+                    Stylesheet.Origin origin = StyleableProperty.getOrigin(writable);
+                    styleable.set(labeledImpl, writable.getValue(), origin);
+                }
+            }
+        }
     }
 
     public LabeledImpl(final Labeled labeled) {
-        this.labeled = labeled;
-        setLabelFor(labeled);
-        // For calls to setXXX added or removed, update the onPropertyChanged
-        // method below
-        setFont(labeled.getFont()); // set font or rely on skin's css?
-        setText(labeled.getText());
-        setTextFill(labeled.getTextFill());
-        setGraphic(labeled.getGraphic());
-        setAlignment(labeled.getAlignment());
-        setContentDisplay(labeled.getContentDisplay());
-        setGraphicTextGap(labeled.getGraphicTextGap());
-        setTextAlignment(labeled.getTextAlignment());
-        setTextOverrun(labeled.getTextOverrun());
-        setUnderline(labeled.isUnderline());
-        setWrapText(labeled.isWrapText());
-        InvalidationListener shuttler = new InvalidationListener() {
-            @Override public void invalidated(Observable valueModel) {
-                if (valueModel == labeled.textProperty()) {
-                    setText(labeled.getText());
-                                        
-                } else if (valueModel == labeled.textFillProperty()) {
-                    
-                    //
-                    // Fix for RT-10554. Since this Label's properties are set by the
-                    // ChangeListener, from the CSS perspective it looks like they were
-                    // set by the user and CSS won't override the value.
-                    //
-                    StyleableProperty styleable = 
-                        StyleableProperty.getStyleableProperty(labeled.textFillProperty());
-                    styleable.set(LabeledImpl.this, labeled.getTextFill());
-                                        
-                } else if (valueModel == labeled.alignmentProperty()) {
-                    //setAlignment(labeled.getAlignment());
-                    StyleableProperty styleable = 
-                        StyleableProperty.getStyleableProperty(labeled.alignmentProperty());
-                    styleable.set(LabeledImpl.this, labeled.getAlignment());
-                    
-                } else if (valueModel == labeled.textAlignmentProperty()) {
-                    //setTextAlignment(labeled.getTextAlignment());
-                    StyleableProperty styleable = 
-                        StyleableProperty.getStyleableProperty(labeled.textAlignmentProperty());
-                    styleable.set(LabeledImpl.this, labeled.getTextAlignment());
-                    
-                } else if (valueModel == labeled.textOverrunProperty()) {
-                    //setTextOverrun(labeled.getTextOverrun());
-                    StyleableProperty styleable = 
-                        StyleableProperty.getStyleableProperty(labeled.textOverrunProperty());
-                    styleable.set(LabeledImpl.this, labeled.getTextOverrun());
-                    
-                } else if (valueModel == labeled.wrapTextProperty()) {
-                    //setWrapText(labeled.isWrapText());
-                    StyleableProperty styleable = 
-                        StyleableProperty.getStyleableProperty(labeled.wrapTextProperty());
-                    styleable.set(LabeledImpl.this, labeled.isWrapText());
-                                        
-                } else if (valueModel == labeled.fontProperty()) {
-                    //setFont(labeled.getFont());
-                    StyleableProperty styleable = 
-                        StyleableProperty.getStyleableProperty(labeled.fontProperty());
-                    styleable.set(LabeledImpl.this, labeled.getFont());
-                                        
-                } else if (valueModel == labeled.graphicProperty()) {
-                    //setGraphic(labeled.getGraphic());
-                    WritableValue fromVal = graphicProperty.getWritableValue(labeled);
-                    WritableValue toVal = graphicProperty.getWritableValue(LabeledImpl.this);
-                    toVal.setValue(fromVal.getValue());
-                } else if (valueModel == labeled.underlineProperty()) {
-                    //setUnderline(labeled.isUnderline());
-                    StyleableProperty styleable = 
-                        StyleableProperty.getStyleableProperty(labeled.underlineProperty());
-                    styleable.set(LabeledImpl.this, labeled.isUnderline());
-                    
-                } else if (valueModel == labeled.contentDisplayProperty()) {
-                    //setContentDisplay(labeled.getContentDisplay());
-                    StyleableProperty styleable = 
-                        StyleableProperty.getStyleableProperty(labeled.contentDisplayProperty());
-                    styleable.set(LabeledImpl.this, labeled.getContentDisplay());
-                    
-                } else if (valueModel == labeled.graphicTextGapProperty()) {
-                    //setGraphicTextGap(labeled.getGraphicTextGap());
-                    StyleableProperty styleable = 
-                        StyleableProperty.getStyleableProperty(labeled.graphicTextGapProperty());
-                    styleable.set(LabeledImpl.this, labeled.getGraphicTextGap());
-                    
-                }
-            }
-        };
-        labeled.textProperty().addListener(shuttler);
-        labeled.textFillProperty().addListener(shuttler);
-        labeled.alignmentProperty().addListener(shuttler);
-        labeled.textAlignmentProperty().addListener(shuttler);
-        labeled.textOverrunProperty().addListener(shuttler);
-        labeled.wrapTextProperty().addListener(shuttler);
-        labeled.fontProperty().addListener(shuttler);
-        labeled.graphicProperty().addListener(shuttler);
-        labeled.underlineProperty().addListener(shuttler);
-        labeled.contentDisplayProperty().addListener(shuttler);
-        labeled.graphicTextGapProperty().addListener(shuttler);
+        this.shuttler = new Shuttler(this, labeled);
     }
 }
