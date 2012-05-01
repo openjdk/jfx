@@ -160,14 +160,14 @@ public class PaginationSkin extends SkinBase<Pagination, PaginationBehavior>  {
 //        });
 
         setOnTouchPressed(new EventHandler<TouchEvent>() {
-            @Override public void handle(TouchEvent e) {  
+            @Override public void handle(TouchEvent e) {
                 pressPos = e.getTouchPoint().getSceneX();
                 e.consume();
             }
         });
 
         setOnTouchMoved(new EventHandler<TouchEvent>() {
-            @Override public void handle(TouchEvent e) { 
+            @Override public void handle(TouchEvent e) {
                 touchMoved = true;
                 double delta = e.getTouchPoint().getSceneX() - pressPos;
                 double width = getWidth() - (getInsets().getLeft() + getInsets().getRight());
@@ -215,10 +215,10 @@ public class PaginationSkin extends SkinBase<Pagination, PaginationBehavior>  {
 
         setOnTouchReleased(new EventHandler<TouchEvent>() {
             @Override
-            public void handle(TouchEvent e) {  
+            public void handle(TouchEvent e) {
                 double delta = Math.abs(e.getTouchPoint().getSceneX() - pressPos);
                 double width = getWidth() - (getInsets().getLeft() + getInsets().getRight());
-                double threshold = delta/width;                
+                double threshold = delta/width;
                 if (touchMoved) {
                     if (threshold > THRESHOLD) {
                         if (pressPos > e.getTouchPoint().getSceneX()) {
@@ -226,8 +226,8 @@ public class PaginationSkin extends SkinBase<Pagination, PaginationBehavior>  {
                         } else {
                             selectPrevious();
                         }
-                    } else {                        
-                        animateClamping(pressPos > e.getTouchPoint().getSceneX());                        
+                    } else {
+                        animateClamping(pressPos > e.getTouchPoint().getSceneX());
                     }
                 }
                 touchMoved = false;
@@ -274,10 +274,10 @@ public class PaginationSkin extends SkinBase<Pagination, PaginationBehavior>  {
                 boolean isAnimate = animate;
                 if (isAnimate) {
                     animate = false;
-                }                
-                
+                }
+
                 pagination.setCurrentPageIndex(previousIndex);
-                
+
                 if (isAnimate) {
                     animate = true;
                 }
@@ -302,7 +302,7 @@ public class PaginationSkin extends SkinBase<Pagination, PaginationBehavior>  {
             hasPendingAnimation = true;
             return;
         }
-        
+
           // Uncomment this code if we want to see the page index
           // selections as we cycle from previous to the current index.
 //        previousAnimatedIndex = currentAnimatedIndex;
@@ -316,7 +316,7 @@ public class PaginationSkin extends SkinBase<Pagination, PaginationBehavior>  {
         // created and visible == true.
         if (!nextScrollPane.isVisible()) {
             if (!createPage(nextScrollPane, currentAnimatedIndex)) {
-                // The page does not exist just return without starting 
+                // The page does not exist just return without starting
                 // any animation.
                 return;
             }
@@ -387,8 +387,8 @@ public class PaginationSkin extends SkinBase<Pagination, PaginationBehavior>  {
             nextScrollPane = temp;
 
             timeline = null;
-            
-            currentScrollPane.setTranslateX(0);            
+
+            currentScrollPane.setTranslateX(0);
             currentScrollPane.setCache(false);
 
             nextScrollPane.setTranslateX(0);
@@ -452,18 +452,18 @@ public class PaginationSkin extends SkinBase<Pagination, PaginationBehavior>  {
                 )
                 .build();
             timeline.play();
-        }        
+        }
     }
-    
+
     private EventHandler<ActionEvent> clampAnimationEndEventHandler = new EventHandler<ActionEvent>() {
         @Override public void handle(ActionEvent t) {
             currentScrollPane.setTranslateX(0);
             nextScrollPane.setTranslateX(0);
-            nextScrollPane.setVisible(false); 
+            nextScrollPane.setVisible(false);
             timeline = null;
-        }   
+        }
     };
-    
+
     @Override protected void handleControlPropertyChanged(String p) {
         super.handleControlPropertyChanged(p);
         if (p == "PAGE_FACTORY") {
@@ -511,21 +511,18 @@ public class PaginationSkin extends SkinBase<Pagination, PaginationBehavior>  {
         double height = getHeight() - (top + bottom);
         double navigationWidth = navigation.prefWidth(-1);
         double navigationHeight = navigation.prefHeight(-1);
-
-        HPos hpos = navigation.getAlignment().getHpos();
-        VPos vpos = navigation.getAlignment().getVpos();
-        double x = left + Utils.computeXOffset(width, navigationWidth, hpos);
-        double y = top + Utils.computeYOffset(height, navigationHeight, vpos);
-
-        layoutInArea(currentScrollPane, left, top, width, height - navigationHeight, 0, HPos.CENTER, VPos.CENTER);
-        layoutInArea(nextScrollPane, left, top, width, height - navigationHeight, 0, HPos.CENTER, VPos.CENTER);
-        layoutInArea(navigation, x, y, navigationWidth, navigationHeight, 0, hpos, vpos);
+        double scrollPaneHeight = height - navigationHeight;
+        
+        layoutInArea(currentScrollPane, left, top, width, scrollPaneHeight, 0, HPos.CENTER, VPos.CENTER);
+        layoutInArea(nextScrollPane, left, top, width, scrollPaneHeight, 0, HPos.CENTER, VPos.CENTER);
+        layoutInArea(navigation, left, scrollPaneHeight, width, navigationHeight, 0, HPos.CENTER, VPos.CENTER);
     }
 
     class NavigationControl extends StackPane {
 
         private StackPane leftArrowButton;
         private StackPane rightArrowButton;
+        private StackPane overflowIndicator;
         private List<IndicatorButton> indicatorButton;
 
         public NavigationControl() {
@@ -542,9 +539,13 @@ public class PaginationSkin extends SkinBase<Pagination, PaginationBehavior>  {
             rightArrowButton.getStyleClass().add("page-navigation");
             rightArrowButton.getChildren().setAll(rightArrow);
 
+            overflowIndicator = new StackPane();
+            overflowIndicator.getChildren().setAll(new Label("..."));
+            overflowIndicator.setVisible(false);
+            
             indicatorButton = new ArrayList<IndicatorButton>();
 
-            getChildren().addAll(leftArrowButton, rightArrowButton);
+            getChildren().addAll(leftArrowButton, rightArrowButton, overflowIndicator);
             initializeNavigationHandlers();
             initializePageIndicators();
             updatePageIndex();
@@ -612,7 +613,7 @@ public class PaginationSkin extends SkinBase<Pagination, PaginationBehavior>  {
         }
 
         private void updatePageIndex() {
-            //System.out.println("SELECT PROPERTY FROM " + fromIndex + " TO " + toIndex + " PREVIOUS " + previousIndex + " CURRENT "+ currentIndex + " NOP " + numberOfPages + " NOVP " + numberOfVisiblePages);
+            //System.out.println("SELECT PROPERTY FROM " + fromIndex + " TO " + toIndex + " PREVIOUS " + previousIndex + " CURRENT "+ currentIndex + " PAGE COUNT " + pageCount + " PAGE INDICATOR COUNT " + pageIndicatorCount);
             if (pageCount == pageIndicatorCount) {
                 if (changePageSet()) {
                     initializePageIndicators();
@@ -662,7 +663,13 @@ public class PaginationSkin extends SkinBase<Pagination, PaginationBehavior>  {
         }
 
         @Override protected double computeMinWidth(double height) {
-            return computePrefWidth(height);
+            double left = snapSpace(getInsets().getLeft());
+            double right = snapSpace(getInsets().getRight());
+            double leftArrowWidth = snapSize(leftArrowButton.prefWidth(-1));
+            double rightArrowWidth = snapSize(rightArrowButton.prefWidth(-1));
+            double indicatorWidth = snapSize(indicatorButton.get(0).prefWidth(-1));
+
+            return left + leftArrowWidth + indicatorWidth + rightArrowWidth + right;
         }
 
         @Override protected double computeMinHeight(double width) {
@@ -684,8 +691,8 @@ public class PaginationSkin extends SkinBase<Pagination, PaginationBehavior>  {
         @Override protected double computePrefHeight(double width) {
             double top = snapSpace(getInsets().getTop());
             double bottom = snapSpace(getInsets().getBottom());
-            double leftArrowHeight = snapSize(leftArrowButton.prefWidth(-1));
-            double rightArrowHeight = snapSize(rightArrowButton.prefWidth(-1));
+            double leftArrowHeight = snapSize(leftArrowButton.prefHeight(-1));
+            double rightArrowHeight = snapSize(rightArrowButton.prefHeight(-1));
             double indicatorHeight = snapSize(indicatorButton.get(0).prefHeight(-1));
 
             return top + Math.max(leftArrowHeight, Math.max(rightArrowHeight, indicatorHeight)) + bottom;
@@ -694,12 +701,10 @@ public class PaginationSkin extends SkinBase<Pagination, PaginationBehavior>  {
         @Override protected double computeMaxWidth(double height) {
             return computePrefWidth(height);
         }
-
-        @Override protected double computeMaxHeight(double width) {
-            return computePrefHeight(width);
-        }
-
+        
         @Override protected void layoutChildren() {
+            HPos hpos = getAlignment().getHpos();
+            VPos vpos = getAlignment().getVpos();            
             double top = snapSpace(getInsets().getTop());
             double bottom = snapSpace(getInsets().getBottom());
             double left = snapSpace(getInsets().getLeft());
@@ -711,34 +716,62 @@ public class PaginationSkin extends SkinBase<Pagination, PaginationBehavior>  {
             double rightArrowWidth = snapSize(rightArrowButton.prefWidth(-1));
             double rightArrowHeight = snapSize(rightArrowButton.prefHeight(-1));
             double indicatorWidth = snapSize(indicatorButton.get(0).prefWidth(-1));
-            double indicatorHeight = snapSize(indicatorButton.get(0).prefHeight(-1));
-            double arrowButtonY = top + Utils.computeYOffset(height, leftArrowHeight, VPos.CENTER);
-            double indicatorButtonY = top + Utils.computeYOffset(height, indicatorHeight, VPos.CENTER);
-
-            leftArrowButton.setVisible(true);
-            rightArrowButton.setVisible(true);
+            double indicatorHeight = snapSize(indicatorButton.get(0).prefHeight(-1));                                   
+            double arrowButtonY = top + Utils.computeYOffset(height, leftArrowHeight, vpos);
+            double indicatorButtonY = top + Utils.computeYOffset(height, indicatorHeight, vpos);
+            
+            leftArrowButton.setDisable(false);           
+            rightArrowButton.setDisable(false);
 
             if (currentIndex == 0) {
                 // Grey out the left arrow if we are at the beginning.
-                leftArrowButton.setVisible(false);
+                leftArrowButton.setDisable(true);
             }
             if (currentIndex == (getPageCount() - 1)) {
                 // Grey out the right arrow if we have reached the end.
-                rightArrowButton.setVisible(false);
+                rightArrowButton.setDisable(true);
             }
+
+            // Determine the number of indicators we can fit within the pagination width.
+            double availableWidth = width - (leftArrowWidth + rightArrowWidth);
+            int visibleIndicatorCount = (int)(availableWidth/indicatorWidth);
+            if (visibleIndicatorCount > indicatorButton.size()) {
+                visibleIndicatorCount = indicatorButton.size();
+            }
+
+            double contentWidth = (leftArrowWidth + rightArrowWidth) + (visibleIndicatorCount * indicatorWidth);
+            double arrowButtonX = left + Utils.computeXOffset(width, contentWidth, hpos);
 
             leftArrowButton.resize(leftArrowWidth, leftArrowHeight);
-            positionInArea(leftArrowButton, left, arrowButtonY, leftArrowWidth, leftArrowHeight, 0, HPos.CENTER, VPos.CENTER);
+            positionInArea(leftArrowButton, arrowButtonX, arrowButtonY, leftArrowWidth, leftArrowHeight, 0, HPos.CENTER, VPos.CENTER);
 
-            double indicatorX = left + leftArrowWidth;
+            boolean overflow = false;
+            double indicatorButtonX = arrowButtonX + leftArrowWidth;
             for (int i = 0; i < indicatorButton.size(); i++) {
-                indicatorButton.get(i).resize(indicatorWidth, indicatorHeight);
-                positionInArea(indicatorButton.get(i), indicatorX, indicatorButtonY, indicatorWidth, indicatorHeight, 0, HPos.CENTER, VPos.CENTER);
-                indicatorX += indicatorWidth;
+                // Display the indicators that can fit within the width.
+                if (i < visibleIndicatorCount) {
+                    indicatorButton.get(i).setVisible(true);
+                    indicatorButton.get(i).resize(indicatorWidth, indicatorHeight);
+                    positionInArea(indicatorButton.get(i), indicatorButtonX, indicatorButtonY, indicatorWidth, indicatorHeight, 0, HPos.CENTER, VPos.CENTER);
+                    indicatorButtonX += indicatorWidth;
+                } else {
+                    //Hide the indicators that do not fit.
+                    indicatorButton.get(i).setVisible(false);
+                    overflow = true;
+                }
             }
 
-            rightArrowButton.resize(rightArrowWidth, rightArrowHeight);
-            positionInArea(rightArrowButton, indicatorX, arrowButtonY, rightArrowWidth, rightArrowHeight, 0, HPos.CENTER, VPos.CENTER);
+            if (overflow) {       
+                rightArrowButton.setVisible(false);
+                overflowIndicator.setVisible(true);
+                overflowIndicator.resize(rightArrowWidth, rightArrowHeight);
+                positionInArea(overflowIndicator, indicatorButtonX, arrowButtonY, rightArrowWidth, rightArrowHeight, 0, HPos.CENTER, VPos.CENTER);                
+            } else {
+                rightArrowButton.setVisible(true);
+                overflowIndicator.setVisible(false);
+                rightArrowButton.resize(rightArrowWidth, rightArrowHeight);
+                positionInArea(rightArrowButton, indicatorButtonX, arrowButtonY, rightArrowWidth, rightArrowHeight, 0, HPos.CENTER, VPos.CENTER);
+            }
         }
     }
 
