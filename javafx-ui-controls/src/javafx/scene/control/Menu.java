@@ -25,13 +25,11 @@
 
 package javafx.scene.control;
 
-import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.ObjectPropertyBase;
 import javafx.collections.ListChangeListener.Change;
 import javafx.collections.ObservableList;
 import javafx.event.Event;
-import javafx.event.EventDispatchChain;
 import javafx.event.EventHandler;
 import javafx.event.EventType;
 import javafx.scene.Node;
@@ -164,8 +162,19 @@ public class Menu extends MenuItem {
         if (getItems().size() == 0) return;
         
         // these events will not fire if the showing property is bound
-        Event.fireEvent(this, (value) ? new Event(Menu.ON_SHOWING) :
-            new Event(Menu.ON_HIDING));
+        if (value) {
+           if (getOnMenuValidation() != null) {
+                Event.fireEvent(this, new Event(new EventType<Event>()));
+                for(MenuItem m : getItems()) {
+                    if (!(m instanceof Menu) && m.getOnMenuValidation() != null) {
+                        Event.fireEvent(m, new Event(MenuItem.MENU_VALIDATION_EVENT));
+                    }
+                }
+           }
+           Event.fireEvent(this, new Event(Menu.ON_SHOWING));
+        } else {
+           Event.fireEvent(this, new Event(Menu.ON_HIDING));
+        }
         showingPropertyImpl().set(value);
         Event.fireEvent(this, (value) ? new Event(Menu.ON_SHOWN) : 
             new Event(Menu.ON_HIDDEN));
@@ -391,11 +400,6 @@ public class Menu extends MenuItem {
     
     @Override public <E extends Event> void removeEventHandler(EventType<E> eventType, EventHandler<E> eventHandler) {
         eventHandlerManager.removeEventHandler(eventType, eventHandler);
-    }
-
-    /** {@inheritDoc} */
-    @Override public EventDispatchChain buildEventDispatchChain(EventDispatchChain tail) {
-        return tail.prepend(eventHandlerManager);
     }
 
     /***************************************************************************
