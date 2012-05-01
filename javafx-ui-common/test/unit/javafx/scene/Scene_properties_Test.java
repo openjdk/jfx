@@ -39,6 +39,7 @@ import org.junit.runners.Parameterized.Parameters;
 import com.sun.javafx.test.PropertiesTestBase;
 import com.sun.javafx.test.objects.TestScene;
 import com.sun.javafx.test.objects.TestStage;
+import javafx.scene.layout.Pane;
 
 @RunWith(Parameterized.class)
 public final class Scene_properties_Test extends PropertiesTestBase {
@@ -66,7 +67,7 @@ public final class Scene_properties_Test extends PropertiesTestBase {
 //            config(testScene, "height", , ),
             config(testScene, "camera", null, new ParallelCamera()),
             config(testScene, "fill", Color.WHITE, Color.BLACK),
-            config(testScene, "root", new Group(), null),
+            config(testScene, "root", new Group(), new Pane()),
             config(testScene, "cursor", Cursor.DEFAULT, Cursor.CROSSHAIR),
             config(testScene, "eventDispatcher",
                    null,

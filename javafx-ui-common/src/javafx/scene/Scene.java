@@ -942,17 +942,22 @@ public class Scene implements EventTarget {
                 protected void invalidated() {
                     Parent _value = get();
 
-                    if (_value != null && _value.getParent() != null) {
+                    if (_value == null) {
+                        if (isBound()) forceUnbind();
+                        throw new NullPointerException("Scene's root cannot be null");
+                    }
+
+                    if (_value.getParent() != null) {
                         if (isBound()) forceUnbind();
                         throw new IllegalArgumentException(_value +
                                 "is already inside a scene-graph and cannot be set as root");
                     }
-                    if (_value != null && _value.impl_getClipParent() != null) {
+                    if (_value.impl_getClipParent() != null) {
                         if (isBound()) forceUnbind();
                         throw new IllegalArgumentException(_value +
                                 "is set as a clip on another node, so cannot be set as root");
                     }
-                    if (_value != null && _value.isSceneRoot() && _value.getScene() != Scene.this) {
+                    if (_value.isSceneRoot() && _value.getScene() != Scene.this) {
                         if (isBound()) forceUnbind();
                         throw new IllegalArgumentException(_value +
                                 "is already set as root of another scene");
@@ -963,16 +968,14 @@ public class Scene implements EventTarget {
                         oldRoot.setImpl_traversalEngine(null);
                     }
                     oldRoot = _value;
-                    if (_value != null) {
-                        if (_value.getImpl_traversalEngine() == null) {
-                            _value.setImpl_traversalEngine(new TraversalEngine(_value, true));
-                        }
-                        _value.getStyleClass().add(0, "root");
-                        _value.setScene(Scene.this);
-                        markDirty(DirtyBits.ROOT_DIRTY);
-                        _value.resize(getWidth(), getHeight()); // maybe no-op if root is not resizable
-                        _value.requestLayout();
+                    if (_value.getImpl_traversalEngine() == null) {
+                        _value.setImpl_traversalEngine(new TraversalEngine(_value, true));
                     }
+                    _value.getStyleClass().add(0, "root");
+                    _value.setScene(Scene.this);
+                    markDirty(DirtyBits.ROOT_DIRTY);
+                    _value.resize(getWidth(), getHeight()); // maybe no-op if root is not resizable
+                    _value.requestLayout();
                 }
 
                 @Override
@@ -1276,6 +1279,7 @@ public class Scene implements EventTarget {
         EventTarget target;
         Point2D sceneCoords;
         Point2D screenCoords;
+        boolean finished;
     }
 
     private final TouchGesture scrollGesture = new TouchGesture();
@@ -1332,9 +1336,10 @@ public class Scene implements EventTarget {
                 e.getEventType() == RotateEvent.ROTATION_STARTED ||
                 e.getEventType() == ScrollEvent.SCROLL_STARTED) {
             gesture.target = null;
+            gesture.finished = false;
         }
 
-        if (gesture.target != null) {
+        if (gesture.target != null && (!gesture.finished || e.isInertia())) {
             pickedTarget = gesture.target;
         } else {
             pickedTarget = pick(e.getX(), e.getY());
@@ -1355,6 +1360,12 @@ public class Scene implements EventTarget {
 
         if (pickedTarget != null) {
             Event.fireEvent(pickedTarget, e);
+        }
+
+        if (e.getEventType() == ZoomEvent.ZOOM_FINISHED ||
+                e.getEventType() == RotateEvent.ROTATION_FINISHED ||
+                e.getEventType() == ScrollEvent.SCROLL_FINISHED) {
+            gesture.finished = true;
         }
 
         inMousePick = false;

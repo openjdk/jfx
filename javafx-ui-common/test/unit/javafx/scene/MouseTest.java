@@ -909,7 +909,31 @@ public class MouseTest {
                 MouseEvent.MOUSE_RELEASED, 266, 266));
         assertTrue(scene.smallSquareTracker.wasLastStill());        
     }
-    
+
+    @Test
+    public void NodeMovementsWithStillMouseShouldFireEnteredExited() {
+        SimpleTestScene scene = new SimpleTestScene();
+        MouseEventGenerator generator = new MouseEventGenerator();
+
+        scene.processEvent(generator.generateMouseEvent(
+                MouseEvent.MOUSE_ENTERED, 250, 250));
+        scene.processEvent(generator.generateMouseEvent(
+                MouseEvent.MOUSE_MOVED, 250, 250));
+        scene.smallSquareTracker.clear();
+
+        assertFalse(scene.smallSquareTracker.exitedMe);
+        ((Rectangle) scene.smallSquareTracker.node).setX(400);
+        ((StubToolkit) Toolkit.getToolkit()).firePulse();
+        assertTrue(scene.smallSquareTracker.exitedMe);
+
+        scene.smallSquareTracker.clear();
+
+        assertFalse(scene.smallSquareTracker.enteredMe);
+        ((Rectangle) scene.smallSquareTracker.node).setX(200);
+        ((StubToolkit) Toolkit.getToolkit()).firePulse();
+        assertTrue(scene.smallSquareTracker.enteredMe);
+    }
+
     private static class SimpleTestScene {
 
         MouseEventTracker sceneTracker;

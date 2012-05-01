@@ -374,6 +374,72 @@ public class ScrollEventTest {
                 250, 250, 250, 250, true, false, true, false, true, false);
         assertTrue(scrolled);
         assertFalse(scrolled2);
+
+        // inertia
+        scrolled = false;
+        scrolled2 = false;
+        ((StubScene) scene.impl_getPeer()).getListener().scrollEvent(
+                ScrollEvent.SCROLL, 2, 3, 4, 6, 33, 33, 0, 1, 1, 3, 3,
+                250, 250, 250, 250, true, false, true, false, true, true);
+        assertTrue(scrolled);
+        assertFalse(scrolled2);
+    }
+
+    @Test
+    public void shouldPickForMouseWheelDuringInertia() {
+        Scene scene = createScene();
+        Rectangle rect1 =
+                (Rectangle) scene.getRoot().getChildrenUnmodifiable().get(0);
+        Rectangle rect2 =
+                (Rectangle) scene.getRoot().getChildrenUnmodifiable().get(1);
+
+        rect1.addEventHandler(ScrollEvent.ANY, new EventHandler<ScrollEvent>() {
+            @Override public void handle(ScrollEvent event) {
+                scrolled = true;
+            }
+        });
+        rect2.addEventHandler(ScrollEvent.ANY, new EventHandler<ScrollEvent>() {
+            @Override public void handle(ScrollEvent event) {
+                scrolled2 = true;
+            }
+        });
+
+        ((StubScene) scene.impl_getPeer()).getListener().scrollEvent(
+                ScrollEvent.SCROLL_STARTED, 2, 3, 4, 6, 33, 33, 0, 1, 1, 3, 3,
+                150, 150, 150, 150, true, false, true, false, true, false);
+        ((StubScene) scene.impl_getPeer()).getListener().scrollEvent(
+                ScrollEvent.SCROLL, 2, 3, 4, 6, 33, 33, 0, 1, 1, 3, 3,
+                250, 250, 250, 250, true, false, true, false, true, false);
+        ((StubScene) scene.impl_getPeer()).getListener().scrollEvent(
+                ScrollEvent.SCROLL_FINISHED, 2, 3, 4, 6, 33, 33, 0, 1, 1, 3, 3,
+                250, 250, 250, 250, true, false, true, false, true, false);
+
+        // inertia
+        scrolled = false;
+        scrolled2 = false;
+        ((StubScene) scene.impl_getPeer()).getListener().scrollEvent(
+                ScrollEvent.SCROLL, 2, 3, 4, 6, 33, 33, 0, 1, 1, 3, 3,
+                250, 250, 250, 250, true, false, true, false, true, true);
+        assertTrue(scrolled);
+        assertFalse(scrolled2);
+
+        // wheel
+        scrolled = false;
+        scrolled2 = false;
+        ((StubScene) scene.impl_getPeer()).getListener().scrollEvent(
+                ScrollEvent.SCROLL, 2, 3, 4, 6, 33, 33, 0, 1, 1, 3, 3,
+                250, 250, 250, 250, true, false, true, false, true, false);
+        assertFalse(scrolled);
+        assertTrue(scrolled2);
+
+        // inertia
+        scrolled = false;
+        scrolled2 = false;
+        ((StubScene) scene.impl_getPeer()).getListener().scrollEvent(
+                ScrollEvent.SCROLL, 2, 3, 4, 6, 33, 33, 0, 1, 1, 3, 3,
+                250, 250, 250, 250, true, false, true, false, true, true);
+        assertTrue(scrolled);
+        assertFalse(scrolled2);
     }
 
     @Test
