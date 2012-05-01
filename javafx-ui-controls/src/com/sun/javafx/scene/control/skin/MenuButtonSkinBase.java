@@ -41,6 +41,9 @@ import javafx.scene.input.MouseEvent;
 import javafx.scene.layout.StackPane;
 
 import com.sun.javafx.scene.control.behavior.MenuButtonBehaviorBase;
+import javafx.event.Event;
+import javafx.event.Event;
+import javafx.event.EventType;
 import javafx.scene.control.Menu;
 
 /**
@@ -296,7 +299,14 @@ public abstract class MenuButtonSkinBase<C extends MenuButton, B extends MenuBut
 
                         Runnable acceleratorRunnable = new Runnable() {
                             public void run() {
-                                menuitem.fire();
+                                if (menuitem.getOnMenuValidation() != null) {
+                                    Event.fireEvent(menuitem, new Event(MenuItem.MENU_VALIDATION_EVENT));
+                                }
+                                Menu target = (Menu)menuitem.getParentMenu();
+                                if(target.getOnMenuValidation() != null) {
+                                    Event.fireEvent(target, new Event(new EventType<Event>()));
+                                }
+                                if (!menuitem.isDisable()) menuitem.fire();
                             }
                         };
                         getSkinnable().getScene().getAccelerators().put(menuitem.getAccelerator(), acceleratorRunnable);
