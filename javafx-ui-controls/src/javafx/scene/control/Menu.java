@@ -323,9 +323,6 @@ public class Menu extends MenuItem {
      * Instance variables                                                      *
      *                                                                         *
      **************************************************************************/
-    
-    private final EventHandlerManager eventHandlerManager =
-            new EventHandlerManager(this);
 
     private final ObservableList<MenuItem> items = new TrackableObservableList<MenuItem>() {
         @Override protected void onChanged(Change<MenuItem> c) {

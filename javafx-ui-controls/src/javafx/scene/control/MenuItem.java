@@ -133,7 +133,7 @@ public class MenuItem implements EventTarget {
     
     private final ObservableList<String> styleClass = FXCollections.observableArrayList();
     
-    private final EventHandlerManager eventHandlerManager =
+    final EventHandlerManager eventHandlerManager =
             new EventHandlerManager(this);
 
     private Object userData;
