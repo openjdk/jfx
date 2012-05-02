@@ -305,8 +305,7 @@ public class StyleablePropertyTest {
             @Override
             public StyleHelper impl_createStyleHelper() {
                 shelper = StyleHelper.create(cascadingStyles, 0, 0);
-                shelper.valueCache = new HashMap<StyleHelper.StyleCacheKey, List<StyleHelper.CacheEntry>>();
-                shelper.keysInUse = new HashMap<StyleHelper.StyleCacheKey, Reference<StyleHelper.StyleCacheKey>>();
+                shelper.styleCache = new HashMap<StyleHelper.StyleCacheKey, StyleHelper.StyleCacheEntry>();
                 return shelper;
             }
             
@@ -338,8 +337,7 @@ public class StyleablePropertyTest {
             @Override
             public StyleHelper impl_createStyleHelper() {
                 shelper = StyleHelper.create(cascadingStyles, 0, 1);
-                shelper.valueCache = new HashMap<StyleHelper.StyleCacheKey, List<StyleHelper.CacheEntry>>();
-                shelper.keysInUse = new HashMap<StyleHelper.StyleCacheKey, Reference<StyleHelper.StyleCacheKey>>();
+                shelper.styleCache = new HashMap<StyleHelper.StyleCacheKey, StyleHelper.StyleCacheEntry>();
                 return shelper;
             }
             
@@ -375,8 +373,7 @@ public class StyleablePropertyTest {
         @Override
         public StyleHelper impl_createStyleHelper() {
             shelper = StyleHelper.create(cascadingStyles, 0, 1);
-            shelper.valueCache = new HashMap<StyleHelper.StyleCacheKey, List<StyleHelper.CacheEntry>>();
-            shelper.keysInUse = new HashMap<StyleHelper.StyleCacheKey, Reference<StyleHelper.StyleCacheKey>>();
+            shelper.styleCache = new HashMap<StyleHelper.StyleCacheKey, StyleHelper.StyleCacheEntry>();
             return shelper;
         }
             
