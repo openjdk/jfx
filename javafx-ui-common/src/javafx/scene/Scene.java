@@ -180,6 +180,7 @@ public class Scene implements EventTarget {
      *
      * @throws IllegalStateException if this constructor is called on a thread
      * other than the JavaFX Application Thread.
+     * @throws NullPointerException if root is null
      */
     public Scene(Parent root) {
         this(root, -1, -1, Color.WHITE, false);
@@ -210,6 +211,7 @@ public class Scene implements EventTarget {
      *
      * @throws IllegalStateException if this constructor is called on a thread
      * other than the JavaFX Application Thread.
+     * @throws NullPointerException if root is null
      */
     public Scene(Parent root, double width, double height) {
         this(root, width, height, Color.WHITE, false);
@@ -223,6 +225,7 @@ public class Scene implements EventTarget {
      *
      * @throws IllegalStateException if this constructor is called on a thread
      * other than the JavaFX Application Thread.
+     * @throws NullPointerException if root is null
      */
     public Scene(Parent root, @Default("javafx.scene.paint.Color.WHITE") Paint fill) {
         this(root, -1, -1, fill, false);
@@ -238,6 +241,7 @@ public class Scene implements EventTarget {
      *
      * @throws IllegalStateException if this constructor is called on a thread
      * other than the JavaFX Application Thread.
+     * @throws NullPointerException if root is null
      */
     public Scene(Parent root, double width, double height,
             @Default("javafx.scene.paint.Color.WHITE") Paint fill) {
@@ -260,6 +264,7 @@ public class Scene implements EventTarget {
      *
      * @throws IllegalStateException if this constructor is called on a thread
      * other than the JavaFX Application Thread.
+     * @throws NullPointerException if root is null
      *
      * @see javafx.scene.Node#setDepthTest(DepthTest)
      */
@@ -917,6 +922,9 @@ public class Scene implements EventTarget {
      * layout of the scene graph.    If a resizable node (layout {@code Region} or
      * {@code Control}) is set as the root, then the root's size will track the
      * scene's size, causing the contents to be relayed out as necessary.
+     * 
+     * Scene doesn't accept null root.
+     * 
      */
     private ObjectProperty<Parent> root;
 
