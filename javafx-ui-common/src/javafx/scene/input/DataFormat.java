@@ -103,8 +103,18 @@ public class DataFormat {
      * With the above code, if I were to look on the clipboard, I'd find the String "Hello"
      * listed both for "text/foo" and "text/bar" on the clipboard.
      * @param ids The set of ids used to represent this DataFormat on the clipboard.
+     * @throws IllegalArgumentException if one of the given mime types is already
+     *         assigned to another DataFormat.
      */
     public DataFormat(String... ids) {
+        DATA_FORMAT_LIST.cleanup();
+        for (String id : ids) {
+            if (lookupMimeType(id) != null) {
+                throw new IllegalArgumentException("DataFormat '" + id +
+                        "' already exists.");
+            }
+        }
+
         // If ids is null, then we will use an empty set.
         Set<String> set = ids == null ?
                 Collections.<String>emptySet() :

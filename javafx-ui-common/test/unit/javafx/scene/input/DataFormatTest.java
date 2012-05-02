@@ -54,7 +54,7 @@ public class DataFormatTest {
     private DataFormat format;
     private String mime1;
     private String mime2;
-    
+
     public DataFormatTest(DataFormat format, String mime1, String mime2) {
         this.format = format;
         this.mime1 = mime1;
@@ -82,15 +82,20 @@ public class DataFormatTest {
     public void testToString() {
         assertNotNull(customFormat.toString());
         assertFalse("".equals(customFormat.toString()));
-    }    
-    
-    @Test
-    public void testEqualsAndHashCode() {
+    }
+
+    @Test(expected=IllegalArgumentException.class)
+    public void shouldNotBePossibleToReuseMimeTypes() {
         DataFormat customEqual = new DataFormat(format.getIdentifiers().toArray(
                 new String[format.getIdentifiers().size()]));
-        
-        assertEquals(customEqual, format);
-        assertEquals(customEqual.hashCode(), format.hashCode());
+    }
+
+
+    @Test
+    public void testEqualsAndHashCode() {
+        //cannot have two different equal data formats
+        assertEquals(format, format);
+        assertEquals(format.hashCode(), format.hashCode());
         assertFalse(uniqueFormat.equals(format));
         assertFalse(uniqueFormat.hashCode() == format.hashCode());
     }
