@@ -40,6 +40,7 @@ import com.sun.javafx.scene.control.Logging;
 import javafx.beans.DefaultProperty;
 import javafx.beans.property.ReadOnlyBooleanProperty;
 import javafx.beans.property.ReadOnlyBooleanWrapper;
+import javafx.event.EventDispatchChain;
 
 /**
  * <p>
@@ -400,6 +401,11 @@ public class Menu extends MenuItem {
     
     @Override public <E extends Event> void removeEventHandler(EventType<E> eventType, EventHandler<E> eventHandler) {
         eventHandlerManager.removeEventHandler(eventType, eventHandler);
+    }
+
+     /** {@inheritDoc} */
+    @Override public EventDispatchChain buildEventDispatchChain(EventDispatchChain tail) {
+        return tail.prepend(eventHandlerManager);
     }
 
     /***************************************************************************
