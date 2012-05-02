@@ -646,6 +646,16 @@ public abstract class Labeled extends Control {
      **************************************************************************/
 
      /**
+      * Not everything uses the default value of false for alignment. 
+      * This method provides a way to have them return the correct initial value.
+      * @treatAsPrivate implementation detail
+      */
+    @Deprecated
+    protected Pos impl_cssGetAlignmentInitialValue() {
+        return Pos.CENTER_LEFT;
+    }
+    
+     /**
       * @treatAsPrivate implementation detail
       */
     private static class StyleableProperties {
@@ -675,6 +685,11 @@ public abstract class Labeled extends Control {
             @Override
             public WritableValue<Pos> getWritableValue(Labeled n) {
                 return n.alignmentProperty();
+            }
+            
+            @Override
+            public Pos getInitialValue(Labeled n) {
+                return n.impl_cssGetAlignmentInitialValue();
             }
         };
         

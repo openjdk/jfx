@@ -65,6 +65,15 @@ public class CheckBoxListCell<T> extends ListCell<T> {
     private ObservableValue<Boolean> booleanProperty;
     
     /**
+     * for junit testing
+     */
+    CheckBoxListCell() { 
+        getSelectedProperty = null; 
+        converter = null; 
+        checkBox = null; 
+    } 
+    
+    /**
      * Creates a default CheckBoxListCell.
      * 
      * @param getSelectedProperty A {@link Callback} that will return an 

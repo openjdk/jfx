@@ -126,8 +126,10 @@ public class Path extends Shape {
         // overriding default values for fill and stroke
         // Set through CSS property so that it appears to be a UA style rather
         // that a USER style so that fill and stroke can still be set from CSS.
-        StyleableProperties.FILL.set(this, null, null);
-        Shape.StyleableProperties.STROKE.set(this, Color.BLACK, null);
+        final StyleableProperty fillProp = StyleableProperty.getStyleableProperty(fillProperty());
+        fillProp.set(this, null);
+        final StyleableProperty strokeProp = StyleableProperty.getStyleableProperty(strokeProperty());
+        strokeProp.set(this, Color.BLACK);
     }
 
     void markPathDirty() {
@@ -334,63 +336,38 @@ public class Path extends Shape {
      *                                                                         *
      **************************************************************************/
 
-    /**
-     * @treatAsPrivate implementation detail
+    /** 
+     * Some sub-class of Shape, such as {@link Line}, override the
+     * default value for the {@link Shape#fill} property. This allows
+     * CSS to get the correct initial value.
+     * @treatAsPrivate Implementation detail
      * @deprecated This is an internal API that is not intended for use and will be removed in the next version
      */
     @Deprecated
-    @Override
-    protected StyleableProperty impl_cssGetStyleablePropertyForFillProperty() {
-        return StyleableProperties.FILL;
-    }
-
-    /**
-     * Super-lazy instantiation pattern from Bill Pugh.
-     * @treatAsPrivate implementation detail
+    protected Paint impl_cssGetFillInitialValue() {
+        return null;
+    }    
+    
+    /** 
+     * Some sub-class of Shape, such as {@link Line}, override the
+     * default value for the {@link Shape#stroke} property. This allows
+     * CSS to get the correct initial value.
+     * @treatAsPrivate Implementation detail
+     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
      */
-    private static class StyleableProperties {
-
-        /**
-        * @css -fx-fill: <a href="../doc-files/cssref.html#typepaint">&lt;paint&gt;</a>
-        * @see Shape#fill
-        */
-        protected static final StyleableProperty<Path,Paint> FILL =
-            new StyleableProperty<Path,Paint>("-fx-fill", 
-                PaintConverter.getInstance(), null) {
-
-            @Override
-            public boolean isSettable(Path node) {
-                return Shape.StyleableProperties.FILL.isSettable(node);
-            }
-
-            @Override
-            public WritableValue<Paint> getWritableValue(Path node) {
-                return Shape.StyleableProperties.FILL.getWritableValue(node);
-            }
-
-        };     
-        private static final List<StyleableProperty> STYLEABLES;
-        static {
-
-            final List<StyleableProperty> styleables =
-                new ArrayList<StyleableProperty>(Shape.impl_CSS_STYLEABLES());
-            // remove FILL since Line FILL has a different initial value.
-            styleables.remove(Shape.StyleableProperties.FILL);
-            Collections.addAll(styleables, StyleableProperties.FILL);
-            STYLEABLES = Collections.unmodifiableList(styleables);
-        }
-    }
+    @Deprecated
+    protected Paint impl_cssGetStrokeInitialValue() {
+        return Color.BLACK;
+    }    
+    
 
     /**
-     * Super-lazy instantiation pattern from Bill Pugh. StyleableProperty is referenced
-     * no earlier (and therefore loaded no earlier by the class loader) than
-     * the moment that  impl_CSS_STYLEABLES() is called.
      * @treatAsPrivate implementation detail
      * @deprecated This is an internal API that is not intended for use and will be removed in the next version
      */
     @Deprecated
     public static List<StyleableProperty> impl_CSS_STYLEABLES() {
-        return StyleableProperties.STYLEABLES;
+        return Shape.impl_CSS_STYLEABLES();
     }
     
     /**

@@ -406,7 +406,7 @@ public abstract class Shape extends Node {
                 
                 @Override
                 public StyleableProperty getStyleableProperty() {
-                    return impl_cssGetStyleablePropertyForFillProperty();
+                    return StyleableProperties.FILL;
                 }
 
                 @Override
@@ -421,19 +421,6 @@ public abstract class Shape extends Node {
             };
         }
         return fill;
-    }
-    
-    /** 
-     * Some sub-class of Shape, such as {@link Line}, override the
-     * default value for the {@link Shape#fill} property. This allows
-     * the {@link Shape#fill} property method getStyleableProperty to 
-     * return a StyleableProperty with the correct default.
-     * @treatAsPrivate Implementation detail
-     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
-     */
-    @Deprecated
-    protected StyleableProperty impl_cssGetStyleablePropertyForFillProperty() {
-        return StyleableProperties.FILL;
     }
 
     /**
@@ -481,6 +468,7 @@ public abstract class Shape extends Node {
         }
         return stroke;
     }
+
 
     // Used by Text
     /**
@@ -541,17 +529,42 @@ public abstract class Shape extends Node {
      *                                                                         *
      **************************************************************************/
 
-     /**
+    /** 
+     * Some sub-class of Shape, such as {@link Line}, override the
+     * default value for the {@link Shape#fill} property. This allows
+     * CSS to get the correct initial value.
+     * @treatAsPrivate Implementation detail
+     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
+     */
+    @Deprecated
+    protected Paint impl_cssGetFillInitialValue() {
+        return Color.BLACK;
+    }    
+    
+    /** 
+     * Some sub-class of Shape, such as {@link Line}, override the
+     * default value for the {@link Shape#stroke} property. This allows
+     * CSS to get the correct initial value.
+     * @treatAsPrivate Implementation detail
+     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
+     */
+    @Deprecated
+    protected Paint impl_cssGetStrokeInitialValue() {
+        return null;
+    }    
+    
+
+    /**
       * Super-lazy instantiation pattern from Bill Pugh.
       * @treatAsPrivate implementation detail
       */
-     protected static class StyleableProperties {
+     private static class StyleableProperties {
 
         /**
         * @css -fx-fill: <a href="../doc-files/cssref.html#typepaint">&lt;paint&gt;</a>
         * @see Shape#fill
         */
-        protected static final StyleableProperty<Shape,Paint> FILL =
+        private static final StyleableProperty<Shape,Paint> FILL =
             new StyleableProperty<Shape,Paint>("-fx-fill", 
                 PaintConverter.getInstance(), Color.BLACK) {
 
@@ -565,6 +578,13 @@ public abstract class Shape extends Node {
                 return node.fillProperty();
             }
 
+            @Override
+            public Paint getInitialValue(Shape node) {
+                // Some shapes have a different initial value for fill. 
+                // Give a way to have them return the correct initial value.
+                return node.impl_cssGetFillInitialValue();
+            }
+            
         };
 
         /**
@@ -591,7 +611,7 @@ public abstract class Shape extends Node {
         * @css -fx-stroke: <a href="../doc-files/cssref.html#typepaint">&lt;paint&gt;</a>
         * @see Shape#stroke
         */    
-        protected static final StyleableProperty<Shape,Paint> STROKE =
+        private static final StyleableProperty<Shape,Paint> STROKE =
             new StyleableProperty<Shape,Paint>("-fx-stroke", 
                 PaintConverter.getInstance()) {
 
@@ -604,6 +624,14 @@ public abstract class Shape extends Node {
             public WritableValue<Paint> getWritableValue(Shape node) {
                 return node.strokeProperty();
             }
+            
+            @Override
+            public Paint getInitialValue(Shape node) {
+                // Some shapes have a different initial value for stroke. 
+                // Give a way to have them return the correct initial value.
+                return node.impl_cssGetStrokeInitialValue();
+            }
+            
 
         };
 

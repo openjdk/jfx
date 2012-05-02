@@ -1745,7 +1745,7 @@ public class GridPane extends Pane {
 
          private static final StyleableProperty<GridPane,Boolean> GRID_LINES_VISIBLE =
              new StyleableProperty<GridPane,Boolean>("-fx-grid-lines-visible",
-                 BooleanConverter.getInstance(), Boolean.TRUE) {
+                 BooleanConverter.getInstance(), Boolean.FALSE) {
 
             @Override
             public boolean isSettable(GridPane node) {
