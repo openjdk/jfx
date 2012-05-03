@@ -70,7 +70,7 @@ public class InputMethodTextRun {
      *
      * @defaultValue empty string
      */
-    private String text = "";
+    private String text = new String();
 
     /**
      * Gets the text in this run.

@@ -776,7 +776,7 @@ public class DragEvent extends InputEvent {
      * copied events to make sure that the values are propagated to the
      * original event.
      */
-    private static class State {
+    private class State {
         /**
          * Whether this event has been accepted.
          */

@@ -36,7 +36,7 @@ import com.sun.javafx.tk.Toolkit;
  */
 public final class KeyCharacterCombination extends KeyCombination {
     /** The key character associated with this key combination. */
-    private String character = "";
+    private String character = new String();
 
     /** 
      * Gets the key character associated with this key combination. 

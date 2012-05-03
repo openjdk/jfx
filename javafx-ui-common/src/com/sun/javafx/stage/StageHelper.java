@@ -50,12 +50,8 @@ public class StageHelper {
      */
     public static ObservableList<Stage> getStages() {
         if (stageAccessor == null) {
-            try {
-                // Force stage static initialization, see http://java.sun.com/j2se/1.5.0/compatibility.html
-                Class.forName(Stage.class.getName(), true, Stage.class.getClassLoader());
-            } catch (ClassNotFoundException ex) {
-                // Cannot happen
-            }
+            // Force stage static initialization
+            Class cl = Stage.class;
         }
         return stageAccessor.getStages();
     }

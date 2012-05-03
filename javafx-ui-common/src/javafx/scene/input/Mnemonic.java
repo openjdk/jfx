@@ -79,7 +79,7 @@ public class Mnemonic {
     /**
      * Sets the {@link javafx.scene.Node Node}
      */
-    public void setNode(Node node) {
+    public void setNode() {
         this.node = node;
     }
 

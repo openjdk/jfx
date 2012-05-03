@@ -5915,7 +5915,7 @@ public abstract class Node implements EventTarget {
     @Override
     public String toString() {
         String klassName = getClass().getName();
-        String simpleName = klassName.substring(klassName.lastIndexOf('.')+1);
+        String simpleName = klassName.substring(klassName.lastIndexOf(".")+1);
         StringBuilder sbuf = new StringBuilder(simpleName);
         boolean hasId = id != null && !"".equals(getId());
         boolean hasStyleClass = !getStyleClass().isEmpty();

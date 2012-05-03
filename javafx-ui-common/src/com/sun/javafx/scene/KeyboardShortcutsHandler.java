@@ -269,11 +269,15 @@ public final class KeyboardShortcutsHandler extends BasicEventDispatcher {
 
     private void processMnemonicsKeyDisplay() {
         ObservableList<Mnemonic> mnemonicsList = null;
+        List<Scene> scenePaintedList = null;
+
         if (mnemonics != null) {
             for (Map.Entry<KeyCombination, ObservableList<Mnemonic>> mnemonic: mnemonics.entrySet()) {
                 mnemonicsList = (ObservableList) mnemonic.getValue();
          
                 if (mnemonicsList != null) {
+                    scenePaintedList = new ArrayList<Scene>();
+
                     for (int i = 0 ; i < mnemonicsList.size() ; i++) {
                         Node currentNode = (Node)mnemonicsList.get(i).getNode();
                         currentNode.impl_setShowMnemonics(mnemonicsDisplayEnabled);

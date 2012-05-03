@@ -48,12 +48,12 @@ public final class EnumConverter<T extends Enum<T>> extends StyleConverter<Strin
             return null;
         }
         String string = value.getValue();
-        final int dotPos = string.lastIndexOf('.');
+        final int dotPos = string.lastIndexOf(".");
         if (dotPos > -1) {
             string = string.substring(dotPos + 1);
         }
         try {
-            string = string.replace('-', '_');
+            string = string.replace("-".charAt(0), "_".charAt(0));
             return (T)Enum.valueOf(enumClass, string.toUpperCase());
         } catch (IllegalArgumentException e) {
             // may throw another IllegalArgumentException
