@@ -25,6 +25,7 @@
 
 package javafx.scene.control;
 
+import com.sun.javafx.css.StyleableProperty;
 import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.ObjectPropertyBase;
 import javafx.beans.value.ChangeListener;
@@ -81,8 +82,12 @@ public class Label extends Labeled {
     private void initialize() {
         getStyleClass().setAll("label");
         // Labels are not focus traversable, unlike most other UI Controls.
-        setFocusTraversable(false);
-    }
+        // focusTraversable is styleable through css. Calling setFocusTraversable
+        // makes it look to css like the user set the value and css will not 
+        // override. Initializing focusTraversable by calling set on the 
+        // StyleableProperty ensures that css will be able to override the value.        
+        final StyleableProperty prop = StyleableProperty.getStyleableProperty(focusTraversableProperty());
+        prop.set(this, Boolean.FALSE);    }
     
     /***************************************************************************
      *                                                                         *
@@ -137,4 +142,22 @@ public class Label extends Labeled {
 
     public final void setLabelFor(Node value) { labelForProperty().setValue(value); }
     public final Node getLabelFor() { return labelFor == null ? null : labelFor.getValue(); }
+    
+    /***************************************************************************
+     *                                                                         *
+     * CSS Support                                                              *
+     *                                                                         *
+     **************************************************************************/
+
+    /**
+      * Most Controls return true for focusTraversable, so Control overrides
+      * this method to return true, but Label returns false for
+      * focusTraversable's initial value; hence the override of the override. 
+      * This method is called from CSS code to get the correct initial value.
+      * @treatAsPrivate implementation detail
+      */
+    @Deprecated @Override
+    protected /*do not make final*/ Boolean impl_cssGetFocusTraversableInitialValue() {
+        return Boolean.FALSE;
+    }    
 }

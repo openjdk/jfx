@@ -63,7 +63,8 @@ public class CheckBoxTableCell<S,T> extends TableCell<S,T> {
     private final Callback<Integer, ObservableValue<Boolean>> getSelectedProperty;
     private ObservableValue<Boolean> booleanProperty;
     
-    private CheckBoxTableCell() {
+    /** for unit testing */
+    CheckBoxTableCell() {
         this(null, null);
     }
     

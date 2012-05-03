@@ -25,13 +25,11 @@
 
 package javafx.scene.control;
 
-import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.ObjectPropertyBase;
 import javafx.collections.ListChangeListener.Change;
 import javafx.collections.ObservableList;
 import javafx.event.Event;
-import javafx.event.EventDispatchChain;
 import javafx.event.EventHandler;
 import javafx.event.EventType;
 import javafx.scene.Node;
@@ -42,6 +40,7 @@ import com.sun.javafx.scene.control.Logging;
 import javafx.beans.DefaultProperty;
 import javafx.beans.property.ReadOnlyBooleanProperty;
 import javafx.beans.property.ReadOnlyBooleanWrapper;
+import javafx.event.EventDispatchChain;
 
 /**
  * <p>
@@ -164,8 +163,19 @@ public class Menu extends MenuItem {
         if (getItems().size() == 0) return;
         
         // these events will not fire if the showing property is bound
-        Event.fireEvent(this, (value) ? new Event(Menu.ON_SHOWING) :
-            new Event(Menu.ON_HIDING));
+        if (value) {
+           if (getOnMenuValidation() != null) {
+                Event.fireEvent(this, new Event(new EventType<Event>()));
+                for(MenuItem m : getItems()) {
+                    if (!(m instanceof Menu) && m.getOnMenuValidation() != null) {
+                        Event.fireEvent(m, new Event(MenuItem.MENU_VALIDATION_EVENT));
+                    }
+                }
+           }
+           Event.fireEvent(this, new Event(Menu.ON_SHOWING));
+        } else {
+           Event.fireEvent(this, new Event(Menu.ON_HIDING));
+        }
         showingPropertyImpl().set(value);
         Event.fireEvent(this, (value) ? new Event(Menu.ON_SHOWN) : 
             new Event(Menu.ON_HIDDEN));
@@ -313,9 +323,6 @@ public class Menu extends MenuItem {
      * Instance variables                                                      *
      *                                                                         *
      **************************************************************************/
-    
-    private final EventHandlerManager eventHandlerManager =
-            new EventHandlerManager(this);
 
     private final ObservableList<MenuItem> items = new TrackableObservableList<MenuItem>() {
         @Override protected void onChanged(Change<MenuItem> c) {
@@ -393,7 +400,7 @@ public class Menu extends MenuItem {
         eventHandlerManager.removeEventHandler(eventType, eventHandler);
     }
 
-    /** {@inheritDoc} */
+     /** {@inheritDoc} */
     @Override public EventDispatchChain buildEventDispatchChain(EventDispatchChain tail) {
         return tail.prepend(eventHandlerManager);
     }

@@ -110,12 +110,10 @@ public class Node_cssStyleMap_Test {
                 // Otherwise, create a StyleHelper matching the "rect" style class.
                 if (this.getStyleClass().isEmpty()) {
                     shelper = StyleHelper.create(Collections.EMPTY_LIST, 0, 0);
-                    shelper.valueCache = new HashMap<StyleHelper.StyleCacheKey, List<StyleHelper.CacheEntry>>();
-                    shelper.keysInUse = new HashMap<StyleHelper.StyleCacheKey, Reference<StyleHelper.StyleCacheKey>>();
+                    shelper.styleCache = new HashMap<StyleHelper.StyleCacheKey, StyleHelper.StyleCacheEntry>();
                 } else  {
                     shelper = StyleHelper.create(styles, 0, 0);
-                    shelper.valueCache = new HashMap<StyleHelper.StyleCacheKey, List<StyleHelper.CacheEntry>>();
-                    shelper.keysInUse = new HashMap<StyleHelper.StyleCacheKey, Reference<StyleHelper.StyleCacheKey>>();
+                    shelper.styleCache = new HashMap<StyleHelper.StyleCacheKey, StyleHelper.StyleCacheEntry>();
                 }
                 return shelper;
             }

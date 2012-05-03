@@ -31,6 +31,7 @@ import javafx.event.ActionEvent;
 import javafx.scene.Cursor;
 import javafx.scene.Node;
 import com.sun.javafx.css.StyleManager;
+import com.sun.javafx.css.StyleableProperty;
 
 
 /**
@@ -82,7 +83,12 @@ public class Hyperlink extends ButtonBase {
     private void initialize() {
         // Initialize the style class to be 'hyperlink'.
         getStyleClass().setAll(DEFAULT_STYLE_CLASS);
-        setCursor(Cursor.HAND);
+        // cursor is styleable through css. Calling setCursor
+        // makes it look to css like the user set the value and css will not 
+        // override. Initializing cursor by calling set on the 
+        // StyleableProperty ensures that css will be able to override the value.        
+        final StyleableProperty prop = StyleableProperty.getStyleableProperty(cursorProperty());
+        prop.set(this, Cursor.HAND);
     }
     
     /***************************************************************************
@@ -161,4 +167,15 @@ public class Hyperlink extends ButtonBase {
         if (isVisited()) mask |= VISITED_PSEUDOCLASS_STATE;
         return mask;
     }
+
+     /**
+      * Hyperlink uses HAND as the default value for cursor. 
+      * This method provides a way for css to get the correct initial value.
+      * @treatAsPrivate implementation detail
+      */
+    @Deprecated @Override
+    protected /*do not make final*/ Cursor impl_cssGetCursorInitialValue() {
+        return Cursor.HAND;
+    }
+    
 }

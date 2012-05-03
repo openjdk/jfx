@@ -69,12 +69,13 @@ public class Utils {
         return helper.getLayoutBounds().getHeight();
     }
 
-    static String computeClippedText(Font font, String text, double width, OverrunStyle type) {
+    static String computeClippedText(Font font, String text, double width,
+                                     OverrunStyle type, String ellipsisString) {
         if (font == null) {
             throw new IllegalArgumentException("Must specify a font");
         }
         OverrunStyle style = (type == null || OverrunStyle.CLIP.equals(type)) ? (OverrunStyle.ELLIPSIS) : (type);
-        final String ellipsis = (OverrunStyle.CLIP.equals(type)) ? ("") : ("...");
+        String ellipsis = (style == CLIP) ? "" : ellipsisString;
         // if the text is empty or null or no ellipsis, then it always fits
         if (text == null || "".equals(text)) {
             return text;
@@ -257,12 +258,13 @@ public class Utils {
     }
 
     static String computeClippedWrappedText(Font font, String text, double width,
-                                            double height, OverrunStyle truncationStyle) {
+                                            double height, OverrunStyle truncationStyle,
+                                            String ellipsisString) {
         if (font == null) {
             throw new IllegalArgumentException("Must specify a font");
         }
 
-        String ellipsis = (truncationStyle == CLIP) ? "" : "...";
+        String ellipsis = (truncationStyle == CLIP) ? "" : ellipsisString;
         int eLen = ellipsis.length();
         // Do this before using helper, as it's not reentrant.
         double eWidth = computeTextWidth(font, ellipsis, 0);

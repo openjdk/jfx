@@ -1104,7 +1104,7 @@ public abstract class Axis<T> extends Region {
         
         private static final StyleableProperty<Axis,Number> TICK_LABEL_TICK_GAP =
             new StyleableProperty<Axis,Number>("-fx-tick-label-gap",
-                SizeConverter.getInstance(), 5.0) {
+                SizeConverter.getInstance(), 3.0) {
 
             @Override
             public boolean isSettable(Axis n) {

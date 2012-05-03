@@ -5809,7 +5809,7 @@ public abstract class Node implements EventTarget {
 
     public final BooleanProperty focusTraversableProperty() {
         if (focusTraversable == null) {
-            focusTraversable = new StyleableBooleanProperty() {
+            focusTraversable = new StyleableBooleanProperty(false) {
 
                 @Override
                 public void invalidated() {
@@ -6423,6 +6423,26 @@ public abstract class Node implements EventTarget {
     }
          
      /**
+      * Not everything uses the default value of false for focusTraversable. 
+      * This method provides a way to have them return the correct initial value.
+      * @treatAsPrivate implementation detail
+      */
+    @Deprecated
+    protected /*do not make final*/ Boolean impl_cssGetFocusTraversableInitialValue() {
+        return Boolean.FALSE;
+    }
+
+     /**
+      * Not everything uses the default value of null for cursor. 
+      * This method provides a way to have them return the correct initial value.
+      * @treatAsPrivate implementation detail
+      */
+    @Deprecated
+    protected /*do not make final*/ Cursor impl_cssGetCursorInitialValue() {
+        return null;
+    }
+    
+     /**
       * Super-lazy instantiation pattern from Bill Pugh.
       * @treatAsPrivate implementation detail
       */
@@ -6440,6 +6460,14 @@ public abstract class Node implements EventTarget {
                 public WritableValue<Cursor> getWritableValue(Node node) {
                     return node.cursorProperty();
                 }
+                
+                @Override
+                public Cursor getInitialValue(Node node) {
+                    // Most controls default focusTraversable to true. 
+                    // Give a way to have them return the correct default value.
+                    return node.impl_cssGetCursorInitialValue();
+                }
+                
             };
         private static final StyleableProperty<Node,Effect> EFFECT =
             new StyleableProperty<Node,Effect>("-fx-effect", EffectConverter.getInstance()) {
@@ -6467,6 +6495,14 @@ public abstract class Node implements EventTarget {
                 public BooleanProperty getWritableValue(Node node) {
                     return node.focusTraversableProperty();
                 }
+
+                @Override
+                public Boolean getInitialValue(Node node) {
+                    // Most controls default focusTraversable to true. 
+                    // Give a way to have them return the correct default value.
+                    return node.impl_cssGetFocusTraversableInitialValue();
+                }
+                
             };
         private static final StyleableProperty<Node,Number> OPACITY =
             new StyleableProperty<Node,Number>("-fx-opacity", 

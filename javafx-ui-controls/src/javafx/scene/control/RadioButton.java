@@ -25,6 +25,8 @@
 
 package javafx.scene.control;
 
+import com.sun.javafx.css.StyleableProperty;
+import javafx.geometry.Pos;
 import static javafx.geometry.Pos.CENTER_LEFT;
 
 /**
@@ -81,7 +83,12 @@ import static javafx.geometry.Pos.CENTER_LEFT;
 
     private void initialize() {
         getStyleClass().setAll(DEFAULT_STYLE_CLASS);
-        setAlignment(CENTER_LEFT);
+        // alignment is styleable through css. Calling setAlignment
+        // makes it look to css like the user set the value and css will not 
+        // override. Initializing alignment by calling set on the 
+        // StyleableProperty ensures that css will be able to override the value.
+        final StyleableProperty prop = StyleableProperty.getStyleableProperty(alignmentProperty());
+        prop.set(this, Pos.CENTER_LEFT);
     }
 
     /***************************************************************************
@@ -108,4 +115,16 @@ import static javafx.geometry.Pos.CENTER_LEFT;
      **************************************************************************/
 
     private static final String DEFAULT_STYLE_CLASS = "radio-button";
+
+    
+    /**
+      * Labeled return CENTER_LEFT for alignment, but ToggleButton returns
+      * CENTER. RadioButton also returns CENTER_LEFT so we have to override
+      * the override in ToggleButton. 
+      * @treatAsPrivate implementation detail
+      */
+    @Deprecated @Override
+    protected Pos impl_cssGetAlignmentInitialValue() {
+        return Pos.CENTER_LEFT;
+    }
 }

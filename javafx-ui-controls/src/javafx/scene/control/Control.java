@@ -579,7 +579,12 @@ public abstract class Control extends Parent implements Skinnable {
      *  Create a new Control.
      */
     protected Control() {
-        setFocusTraversable(true);
+        // focusTraversable is styleable through css. Calling setFocusTraversable
+        // makes it look to css like the user set the value and css will not 
+        // override. Initializing focusTraversable by calling set on the 
+        // StyleableProperty ensures that css will be able to override the value.        
+        final StyleableProperty prop = StyleableProperty.getStyleableProperty(focusTraversableProperty());
+        prop.set(this, Boolean.TRUE);            
     }
     
     
@@ -1117,5 +1122,15 @@ public abstract class Control extends Parent implements Skinnable {
             } 
             Logging.getControlsLogger().severe(msg);
         }
+    }
+    
+    /**
+      * Most Controls return true for focusTraversable initial value. 
+      * This method is called from CSS code to get the correct initial value.
+      * @treatAsPrivate implementation detail
+      */
+    @Deprecated @Override
+    protected /*do not make final*/ Boolean impl_cssGetFocusTraversableInitialValue() {
+        return Boolean.TRUE;
     }
 }

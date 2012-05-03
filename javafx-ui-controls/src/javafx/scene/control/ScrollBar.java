@@ -78,7 +78,12 @@ public class ScrollBar extends Control {
         setWidth(ScrollBarSkin.DEFAULT_WIDTH);
         setHeight(ScrollBarSkin.DEFAULT_LENGTH);
         getStyleClass().setAll(DEFAULT_STYLE_CLASS);
-        setFocusTraversable(false);
+        // focusTraversable is styleable through css. Calling setFocusTraversable
+        // makes it look to css like the user set the value and css will not 
+        // override. Initializing focusTraversable by calling set on the 
+        // StyleableProperty ensures that css will be able to override the value.
+        final StyleableProperty prop = StyleableProperty.getStyleableProperty(focusTraversableProperty());
+        prop.set(this, Boolean.FALSE);            
     }
     /***************************************************************************
      *                                                                         *
@@ -457,4 +462,17 @@ public class ScrollBar extends Control {
             VERTICAL_PSEUDOCLASS_STATE : HORIZONTAL_PSEUDOCLASS_STATE;
         return mask;
     }
+    
+    /**
+      * Most Controls return true for focusTraversable, so Control overrides
+      * this method to return true, but ScrollBar returns false for
+      * focusTraversable's initial value; hence the override of the override. 
+      * This method is called from CSS code to get the correct initial value.
+      * @treatAsPrivate implementation detail
+      */
+    @Deprecated @Override
+    protected /*do not make final*/ Boolean impl_cssGetFocusTraversableInitialValue() {
+        return Boolean.FALSE;
+    }
+    
 }

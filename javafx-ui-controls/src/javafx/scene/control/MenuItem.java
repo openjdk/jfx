@@ -133,7 +133,7 @@ public class MenuItem implements EventTarget {
     
     private final ObservableList<String> styleClass = FXCollections.observableArrayList();
     
-    private final EventHandlerManager eventHandlerManager =
+    final EventHandlerManager eventHandlerManager =
             new EventHandlerManager(this);
 
     private Object userData;
@@ -309,6 +309,40 @@ public class MenuItem implements EventTarget {
         return onAction;
     }
     
+    /**
+     * <p>Called when a accelerator for the Menuitem is invoked</p>
+     */
+    public static final EventType<Event> MENU_VALIDATION_EVENT = new EventType<Event>();
+    private ObjectProperty<EventHandler<Event>> onMenuValidation;
+    /**
+     * The event handler that is associated with invocation of an accelerator for a MenuItem. This 
+     * can happen when a key sequence for an accelerator is pressed. The event handler is also  
+     * invoked when onShowing event handler is called. 
+     */
+    public final void setOnMenuValidation(EventHandler<Event> value) {
+        onMenuValidationProperty().set( value);
+    }
+
+    public final EventHandler<Event> getOnMenuValidation() {
+        return onMenuValidation == null ? null : onMenuValidation.get();
+    }
+
+    public final ObjectProperty<EventHandler<Event>> onMenuValidationProperty() {
+        if (onMenuValidation == null) {
+            onMenuValidation = new ObjectPropertyBase<EventHandler<Event>>() {
+                @Override protected void invalidated() {
+                    eventHandlerManager.setEventHandler(MENU_VALIDATION_EVENT, get());
+                }
+                @Override public Object getBean() {
+                    return MenuItem.this;
+                }
+                @Override public String getName() {
+                    return "onMenuValidation";
+                }
+            };
+        }
+        return onMenuValidation;
+    }
     
     // --- Disable
     private BooleanProperty disable;

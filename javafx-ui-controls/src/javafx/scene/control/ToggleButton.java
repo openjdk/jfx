@@ -122,7 +122,12 @@ import com.sun.javafx.css.StyleableProperty;
 
     private void initialize() {
         getStyleClass().setAll(DEFAULT_STYLE_CLASS);
-        setAlignment(Pos.CENTER);
+        // alignment is styleable through css. Calling setAlignment
+        // makes it look to css like the user set the value and css will not 
+        // override. Initializing alignment by calling set on the 
+        // StyleableProperty ensures that css will be able to override the value.
+        final StyleableProperty prop = StyleableProperty.getStyleableProperty(alignmentProperty());
+        prop.set(this, Pos.CENTER);
         setMnemonicParsing(true);     // enable mnemonic auto-parsing by default
     }
     /***************************************************************************
@@ -249,4 +254,15 @@ import com.sun.javafx.css.StyleableProperty;
         if (isSelected()) mask |= SELECTED_PSEUDOCLASS_STATE;
         return mask;
     }
+    
+     /**
+      * Not everything uses the default value of false for alignment. 
+      * This method provides a way to have them return the correct initial value.
+      * @treatAsPrivate implementation detail
+      */
+    @Deprecated @Override
+    protected Pos impl_cssGetAlignmentInitialValue() {
+        return Pos.CENTER;
+    }
+        
 }

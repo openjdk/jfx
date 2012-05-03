@@ -64,7 +64,7 @@ public abstract class StyleableProperty<N extends Node, V> {
 
     /** @deprecated Use {@link StyleableProperty#set(javafx.scene.Node, java.lang.Object, com.sun.javafx.css.Stylesheet.Origin)} */
     public void set(N node, V value) {
-        set(node, value, Stylesheet.Origin.USER_AGENT);
+        set(node, value, null);
     }    
 
     /**

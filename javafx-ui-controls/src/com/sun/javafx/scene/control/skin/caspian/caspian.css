@@ -3415,7 +3415,7 @@ Only the properties with values that are different from the TextBox are specifie
 }
 
 .pagination .pagination-control {
-    -fx-alignment: BOTTOM_CENTER;
+    -fx-alignment: CENTER;
     -fx-background-color: transparent;    
 }
 
@@ -3430,11 +3430,19 @@ Only the properties with values that are different from the TextBox are specifie
     -fx-shape: "M 0 0 L -4 3.5 L 0 7 z";
 }
 
+.pagination .pagination-control > .page-navigation .left-arrow:disabled {
+    -fx-opacity: -fx-disabled-opacity;
+}
+
 .pagination .pagination-control > .page-navigation .right-arrow {
     -fx-background-color: -fx-mark-highlight-color, -fx-mark-color;
     -fx-background-insets: 1 0 -1 0, 0;
     -fx-padding: 0.25em 0.3125em 0.25em 0.3125em; /* 3 3.75 3 3.75 */
     -fx-shape: "M 0 0 L 4 3.5 L 0 7 z";
+}
+
+.pagination .pagination-control > .page-navigation .right-arrow:disabled {
+    -fx-opacity: -fx-disabled-opacity;
 }
 
 .pagination .pagination-control > .page-navigation .bullet {

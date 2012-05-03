@@ -20,6 +20,17 @@ import java.io.PrintStream;
 
 import com.sun.javafx.logging.PlatformLogger;
 import com.sun.javafx.scene.control.Logging;
+import java.io.File;
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
+import java.lang.reflect.Modifier;
+import java.net.URL;
+import java.util.Arrays;
+import java.util.List;
+import javafx.beans.value.WritableValue;
+import javafx.geometry.Pos;
+import javafx.scene.Cursor;
+import javafx.scene.Node;
 import org.junit.Before;
 import org.junit.Ignore;
 import org.junit.Test;
@@ -971,6 +982,106 @@ public class ControlTest {
         c.setSkin(s);
         assertEquals(BASELINE_OFFSET, c.getBaselineOffset(), 0);
     }
+    
+    @Test
+    public void testRT18097() {
+        try {
+            ClassLoader cl = Thread.currentThread().getContextClassLoader();
+            URL base = cl.getResource("javafx/..");
+            File f = new File(base.toURI());
+            System.out.println(f.getPath());
+            recursiveCheck(f, f.getPath().length());
+        } catch (Exception ex) {
+            ex.printStackTrace(System.err);
+            fail(ex.getMessage());
+        }
+    }
+
+    private static void checkClass(Class someClass) {
+        
+        // Ignore inner classes
+        if (someClass.getEnclosingClass() != null) return;
+        
+        if (javafx.scene.control.Control.class.isAssignableFrom(someClass) &&
+                Modifier.isAbstract(someClass.getModifiers()) == false) {
+            String what = someClass.getName();
+            try {
+                // should get NoSuchMethodException if ctor is not public
+//                Constructor ctor = someClass.getConstructor((Class[])null);
+                Method m = someClass.getMethod("impl_CSS_STYLEABLES", (Class[]) null);
+//                Node node = (Node)ctor.newInstance((Object[])null);
+                Node node = (Node)someClass.newInstance();
+                for (StyleableProperty styleable : (List<StyleableProperty>) m.invoke(null)) {
+                    
+                    what = someClass.getName() + " " + styleable.getProperty();
+                    WritableValue writable = styleable.getWritableValue(node);
+                    assertNotNull(what, writable);
+                    
+                    Object defaultValue = writable.getValue();
+                    Object initialValue = styleable.getInitialValue((Node) someClass.newInstance());
+                    
+                    if (defaultValue instanceof Number) {
+                        // 5 and 5.0 are not the same according to equals,
+                        // but they should be...
+                        assert(initialValue instanceof Number);
+                        double d1 = ((Number)defaultValue).doubleValue();
+                        double d2 = ((Number)initialValue).doubleValue();
+                        assertEquals(what, d1, d2, .001);
+                        
+                    } else if (defaultValue != null && defaultValue.getClass().isArray()) {
+                        assertTrue(what, Arrays.equals((Object[])defaultValue, (Object[])initialValue));
+                    } else {                        
+                        assertEquals(what, defaultValue, initialValue);
+                    }
+                    
+                }
+
+            } catch (NoSuchMethodException ex) {
+                fail("NoSuchMethodException: RT-18097 cannot be tested on " + what);
+            } catch (IllegalAccessException ex) {
+                fail("IllegalAccessException:  RT-18097 cannot be tested on " + what);
+            } catch (IllegalArgumentException ex) {
+                fail("IllegalArgumentException:  RT-18097 cannot be tested on " + what);
+            } catch (InvocationTargetException ex) {
+                fail("InvocationTargetException:  RT-18097 cannot be tested on " + what);
+            } catch (InstantiationException ex) {
+                fail("InstantiationException:  RT-18097 cannot be tested on " + what);
+            }
+        }
+    }
+
+    private static void checkDirectory(File directory, final int pathLength) {
+        if (directory.isDirectory()) {
+            
+            for (File file : directory.listFiles()) {
+                if (file.isFile() && file.getName().endsWith(".class")) {
+                    final String filePath = file.getPath();
+                    final int len = file.getPath().length() - ".class".length();
+                    final String clName = 
+                        file.getPath().substring(pathLength+1, len).replace(File.separatorChar,'.');
+                    if (clName.startsWith("javafx.scene") == false) continue;
+                    try {
+                        final Class cl = Class.forName(clName);
+                        if (cl != null) checkClass(cl);
+                    } catch(ClassNotFoundException ex) {
+                        System.err.println(ex.toString() + " " + clName);
+                    }
+                }
+            }
+        }
+    }
+
+    private static void recursiveCheck(File directory, int pathLength) {
+        if (directory.isDirectory()) {
+//            System.out.println(directory.getPath());
+            checkDirectory(directory, pathLength);
+
+            for (File subFile : directory.listFiles()) {
+                recursiveCheck(subFile, pathLength);
+            }
+        }
+    }    
+    
 
     // TODO need to test key event dispatch
 
