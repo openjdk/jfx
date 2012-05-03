@@ -40,6 +40,7 @@ import javafx.scene.image.Image;
 import com.sun.javafx.cursor.CursorFrame;
 import com.sun.javafx.cursor.ImageCursorFrame;
 import com.sun.javafx.tk.Toolkit;
+import java.util.Arrays;
 
 
 /**
@@ -641,7 +642,7 @@ public class ImageCursor extends Cursor {
                                    final double hotspotY) {
             final DelayedInitialization delayedInitialization =
                     new DelayedInitialization(imageCursor,
-                                              images,
+                                              Arrays.copyOf(images, images.length),
                                               hotspotX,
                                               hotspotY,
                                               false);

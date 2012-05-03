@@ -98,6 +98,7 @@ import com.sun.javafx.tk.TKScenePaintListener;
 import com.sun.javafx.tk.TKStage;
 import com.sun.javafx.tk.Toolkit;
 import java.util.Arrays;
+import java.util.HashSet;
 import java.util.LinkedList;
 import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.ObjectPropertyBase;
@@ -434,11 +435,11 @@ public class Scene implements EventTarget {
     /**
      * List of dirty layout roots.
      * When a parent is either marked as a layout root or is unmanaged and it
-     * has its needsLayout flag set to true, then that node is added to this list
+     * has its needsLayout flag set to true, then that node is added to this set
      * so that it can be laid out on the next pulse without requiring its
      * ancestors to be laid out.
      */
-    private List dirtyLayoutRoots = new ArrayList(10);
+    private Set<Node> dirtyLayoutRoots = new HashSet<Node>(10);
 
     /**
      * Add the specified parent to this scene's dirty layout list.
@@ -1283,7 +1284,7 @@ public class Scene implements EventTarget {
     private Point2D cursorScreenPos;
     private Point2D cursorScenePos;
 
-    private class TouchGesture {
+    private static class TouchGesture {
         EventTarget target;
         Point2D sceneCoords;
         Point2D screenCoords;
@@ -2748,7 +2749,7 @@ public class Scene implements EventTarget {
      *                                                                             *
      ******************************************************************************/
 
-    class ClickCounter {
+    static class ClickCounter {
         Toolkit toolkit = Toolkit.getToolkit();
         private int count;
         private boolean out;
@@ -2814,7 +2815,7 @@ public class Scene implements EventTarget {
         }
     }
 
-    class ClickGenerator {
+    static class ClickGenerator {
         private ClickCounter lastPress = null;
 
         private Map<MouseButton, ClickCounter> counters =
@@ -4707,7 +4708,7 @@ public class Scene implements EventTarget {
      * The algorithm performance was measured and it doesn't impose
      * any significant slowdown on the event delivery.
      */
-    private class TouchMap {
+    private static class TouchMap {
         private static final int FAST_THRESHOLD = 10;
         int[] fastMap = new int[] {0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
         Map<Long, Integer> slowMap = new HashMap<Long, Integer>();
@@ -5274,7 +5275,7 @@ public class Scene implements EventTarget {
      * It provides functionality needed for the targets and covers the fact
      * that they are different kinds of animals.
      */
-    private class TargetWrapper {
+    private static class TargetWrapper {
         private Scene scene;
         private Node node;
 

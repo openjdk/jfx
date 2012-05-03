@@ -3637,7 +3637,7 @@ final public class CSSParser {
                 }
 
                 // current token is either SEMI, RBRACE or EOF.
-                if (currentToken == null &&
+                if (currentToken != null &&
                     currentToken.getType() != CSSLexer.SEMI)
                     return declarations;
             }
