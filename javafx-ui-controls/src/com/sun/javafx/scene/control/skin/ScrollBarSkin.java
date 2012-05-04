@@ -85,69 +85,78 @@ public class ScrollBarSkin extends SkinBase<ScrollBar, ScrollBarBehavior> {
      * bindings for the group.
      */
     private void initialize() {
-        decButton = new EndButton("decrement-button", "decrement-arrow");
+        if (com.sun.javafx.scene.control.skin.Utils.isEmbedded()) {
+            getStyleClass().setAll("track-touch");
+            setOpacity(0.5);
+        }
 
         track = new StackPane();
-        track.getStyleClass().setAll("track");
+        if (!com.sun.javafx.scene.control.skin.Utils.isEmbedded()) {
+            track.getStyleClass().setAll("track");
+        }
+        else {
+            track.getStyleClass().setAll("track-touch");
+        }
 
         thumb = new StackPane();
-        thumb.getStyleClass().setAll("thumb");
+        if (!com.sun.javafx.scene.control.skin.Utils.isEmbedded()) {
+            thumb.getStyleClass().setAll("thumb");
+        }
+        else {
+            thumb.getStyleClass().setAll("thumb-touch");
+        }
 
-        incButton = new EndButton("increment-button", "increment-arrow");
 
-        ObservableList<Node> contentObservableList = FXCollections.<Node>observableArrayList();
-        contentObservableList.add(incButton);
-        contentObservableList.add(decButton);
-        contentObservableList.add(track);
-        contentObservableList.add(thumb);
-        getChildren().clear();
-        getChildren().addAll(contentObservableList);
+        if (!com.sun.javafx.scene.control.skin.Utils.isEmbedded()) {
+            incButton = new EndButton("increment-button", "increment-arrow");
+            incButton.setOnMousePressed(new EventHandler<javafx.scene.input.MouseEvent>() {
+               @Override public void handle(javafx.scene.input.MouseEvent me) {
+                   /*
+                   ** if the tracklenght isn't greater than do nothing....
+                   */
+                   if (!thumb.isVisible() || trackLength > thumbLength) {
+                       getBehavior().incButtonPressed(me);
+                   }
+                   me.consume();
+               }
+            });
+            incButton.setOnMouseReleased(new EventHandler<javafx.scene.input.MouseEvent>() {
+               @Override public void handle(javafx.scene.input.MouseEvent me) {
+                   /*
+                   ** if the tracklenght isn't greater than do nothing....
+                   */
+                   if (!thumb.isVisible() || trackLength > thumbLength) {
+                       getBehavior().incButtonReleased(me);
+                   }
+                   me.consume();
+               }
+            });
 
-        incButton.setOnMousePressed(new EventHandler<javafx.scene.input.MouseEvent>() {
-            @Override public void handle(javafx.scene.input.MouseEvent me) {
-                /*
-                ** if the tracklenght isn't greater than do nothing....
-                */
-                if (!thumb.isVisible() || trackLength > thumbLength) {
-                    getBehavior().incButtonPressed(me);
-                }
-                me.consume();
-            }
-        });
-        incButton.setOnMouseReleased(new EventHandler<javafx.scene.input.MouseEvent>() {
-            @Override public void handle(javafx.scene.input.MouseEvent me) {
-                /*
-                ** if the tracklenght isn't greater than do nothing....
-                */
-                if (!thumb.isVisible() || trackLength > thumbLength) {
-                    getBehavior().incButtonReleased(me);
-                }
-                me.consume();
-            }
-        });
+            decButton = new EndButton("decrement-button", "decrement-arrow");
+            decButton.setOnMousePressed(new EventHandler<javafx.scene.input.MouseEvent>() {
+               @Override public void handle(javafx.scene.input.MouseEvent me) {
+                   /*
+                   ** if the tracklenght isn't greater than do nothing....
+                   */
+                   if (!thumb.isVisible() || trackLength > thumbLength) {
+                       getBehavior().decButtonPressed(me);
+                   }
+                   me.consume();
+               }
+            });
+            decButton.setOnMouseReleased(new EventHandler<javafx.scene.input.MouseEvent>() {
+               @Override public void handle(javafx.scene.input.MouseEvent me) {
+                   /*
+                   ** if the tracklenght isn't greater than do nothing....
+                   */
+                   if (!thumb.isVisible() || trackLength > thumbLength) {
+                       getBehavior().decButtonReleased(me);
+                   }
+                   me.consume();
+               }
+            });
+        }
 
-        decButton.setOnMousePressed(new EventHandler<javafx.scene.input.MouseEvent>() {
-            @Override public void handle(javafx.scene.input.MouseEvent me) {
-                /*
-                ** if the tracklenght isn't greater than do nothing....
-                */
-                if (!thumb.isVisible() || trackLength > thumbLength) {
-                    getBehavior().decButtonPressed(me);
-                }
-                me.consume();
-            }
-        });
-        decButton.setOnMouseReleased(new EventHandler<javafx.scene.input.MouseEvent>() {
-            @Override public void handle(javafx.scene.input.MouseEvent me) {
-                /*
-                ** if the tracklenght isn't greater than do nothing....
-                */
-                if (!thumb.isVisible() || trackLength > thumbLength) {
-                    getBehavior().decButtonReleased(me);
-                }
-                me.consume();
-            }
-        });
 
         track.setOnMousePressed( new EventHandler<javafx.scene.input.MouseEvent>() {
            @Override public void handle(javafx.scene.input.MouseEvent me) {
@@ -242,6 +251,14 @@ public class ScrollBarSkin extends SkinBase<ScrollBar, ScrollBarBehavior> {
                 }
             }
         });
+
+        getChildren().clear();
+        if (!com.sun.javafx.scene.control.skin.Utils.isEmbedded()) {
+            getChildren().addAll(incButton, decButton, track, thumb);
+        }
+        else {
+            getChildren().addAll(track, thumb);
+        }
     }
 
 
@@ -268,10 +285,19 @@ public class ScrollBarSkin extends SkinBase<ScrollBar, ScrollBarBehavior> {
      * This is determined by the greater of the breadths of the end-buttons.
      */
     double getBreadth() {
-        if (getSkinnable().getOrientation() == Orientation.VERTICAL) {
-            return Math.max(decButton.prefWidth(-1)+getInsets().getLeft()+getInsets().getRight(), incButton.prefWidth(-1)+getInsets().getLeft()+getInsets().getRight());
-        } else {
-            return Math.max(decButton.prefHeight(-1)+getInsets().getTop()+getInsets().getBottom(), incButton.prefHeight(-1)+getInsets().getTop()+getInsets().getBottom());
+        if (!com.sun.javafx.scene.control.skin.Utils.isEmbedded()) {
+            if (getSkinnable().getOrientation() == Orientation.VERTICAL) {
+                return Math.max(decButton.prefWidth(-1)+getInsets().getLeft()+getInsets().getRight(), incButton.prefWidth(-1)+getInsets().getLeft()+getInsets().getRight());
+            } else {
+                return Math.max(decButton.prefHeight(-1)+getInsets().getTop()+getInsets().getBottom(), incButton.prefHeight(-1)+getInsets().getTop()+getInsets().getBottom());
+            }
+        }
+        else {
+            if (getSkinnable().getOrientation() == Orientation.VERTICAL) {
+                return Math.max(getInsets().getLeft()+getInsets().getRight(), getInsets().getLeft()+getInsets().getRight());
+            } else {
+                return Math.max(getInsets().getTop()+getInsets().getBottom(), getInsets().getTop()+getInsets().getBottom());
+            }
         }
     }
 
@@ -293,13 +319,23 @@ public class ScrollBarSkin extends SkinBase<ScrollBar, ScrollBarBehavior> {
         if (getSkinnable().getOrientation() == Orientation.VERTICAL) {
             return getBreadth();
         } else {
-            return decButton.minWidth(-1) + incButton.minWidth(-1) + minTrackLength()+getInsets().getLeft()+getInsets().getRight();
+            if (!com.sun.javafx.scene.control.skin.Utils.isEmbedded()) {
+                return decButton.minWidth(-1) + incButton.minWidth(-1) + minTrackLength()+getInsets().getLeft()+getInsets().getRight();
+            }
+            else {
+                return minTrackLength()+getInsets().getLeft()+getInsets().getRight();
+            }
         }
     }
 
     @Override protected double computeMinHeight(double width) {
         if (getSkinnable().getOrientation() == Orientation.VERTICAL) {
-            return decButton.minHeight(-1) + incButton.minHeight(-1) + minTrackLength()+getInsets().getTop()+getInsets().getBottom();
+            if (!com.sun.javafx.scene.control.skin.Utils.isEmbedded()) {
+                return decButton.minHeight(-1) + incButton.minHeight(-1) + minTrackLength()+getInsets().getTop()+getInsets().getBottom();
+            }
+            else {
+                return minTrackLength()+getInsets().getTop()+getInsets().getBottom();
+            }
         } else {
             return getBreadth();
         }
@@ -336,10 +372,12 @@ public class ScrollBarSkin extends SkinBase<ScrollBar, ScrollBarBehavior> {
         double clampedValue = Utils.clamp(s.getMin(), s.getValue(), s.getMax());
         trackPos = (s.getMax() - s.getMin() > 0) ? ((trackLength - thumbLength) * (clampedValue - s.getMin()) / (s.getMax() - s.getMin())) : (0.0F);
 
-        if (s.getOrientation() == Orientation.VERTICAL) {
-            trackPos += decButton.prefHeight(-1);
-        } else {
-            trackPos += decButton.prefWidth(-1);
+        if (!com.sun.javafx.scene.control.skin.Utils.isEmbedded()) {
+            if (s.getOrientation() == Orientation.VERTICAL) {
+                trackPos += decButton.prefHeight(-1);
+            } else {
+                trackPos += decButton.prefWidth(-1);
+            }
         }
 
         thumb.setTranslateX( s.getOrientation() == Orientation.VERTICAL ? getInsets().getLeft() : trackPos + getInsets().getLeft());
@@ -366,74 +404,94 @@ public class ScrollBarSkin extends SkinBase<ScrollBar, ScrollBarBehavior> {
         else {
             visiblePortion = 1.0;
         }
-        
 
         if (getSkinnable().getOrientation() == Orientation.VERTICAL) {
+            if (!com.sun.javafx.scene.control.skin.Utils.isEmbedded()) {
+                double decHeight = snapSize(decButton.prefHeight(-1));
+                double incHeight = snapSize(incButton.prefHeight(-1));
 
-            double decHeight = snapSize(decButton.prefHeight(-1));
-            double incHeight = snapSize(incButton.prefHeight(-1));
+                decButton.resize(wTotal, decHeight);
+                incButton.resize(wTotal, incHeight);
 
-            decButton.resize(wTotal, decHeight);
-            incButton.resize(wTotal, incHeight);
+                trackLength = snapSize(hNoInsets - (decHeight + incHeight));
+                thumbLength = snapSize(Utils.clamp(minThumbLength(), (trackLength * visiblePortion), trackLength));
 
+                decButton.relocate(snapPosition(x), snapPosition(y));
+                incButton.relocate(snapPosition(x), snapPosition(y + hNoInsets - incHeight));
+                track.resizeRelocate(snapPosition(x), snapPosition(y + decHeight), wTotal, trackLength);
+                thumb.resize(snapSize(x >= 0 ? wTotal : wTotal + x), thumbLength); // Account for negative padding (see also RT-10719)
+                positionThumb();
+            }
+            else {
+                trackLength = snapSize(hNoInsets);
+                thumbLength = snapSize(Utils.clamp(minThumbLength(), (trackLength * visiblePortion), trackLength));
 
-            trackLength = snapSize(hNoInsets - (decHeight + incHeight));
-            thumbLength = snapSize(Utils.clamp(minThumbLength(), (trackLength * visiblePortion), trackLength));
-
-            decButton.relocate(snapPosition(x), snapPosition(y));
-            incButton.relocate(snapPosition(x), snapPosition(y + hNoInsets - incHeight));
-            track.resizeRelocate(snapPosition(x), snapPosition(y + decHeight), wTotal, trackLength);
-            thumb.resize(snapSize(x >= 0 ? wTotal : wTotal + x), thumbLength); // Account for negative padding (see also RT-10719)
-            positionThumb();
+                track.resizeRelocate(snapPosition(x), snapPosition(y), wTotal, trackLength);
+                thumb.resize(snapSize(x >= 0 ? wTotal : wTotal + x), thumbLength); // Account for negative padding (see also RT-10719)
+                positionThumb();
+            }
         } else {
+            if (!com.sun.javafx.scene.control.skin.Utils.isEmbedded()) {
+                double decWidth = snapSize(decButton.prefWidth(-1));
+                double incWidth = snapSize(incButton.prefWidth(-1));
 
-            double decWidth = snapSize(decButton.prefWidth(-1));
-            double incWidth = snapSize(incButton.prefWidth(-1));
+                decButton.resize(decWidth, hTotal);
+                incButton.resize(incWidth, hTotal);
 
-            decButton.resize(decWidth, hTotal);
-            incButton.resize(incWidth, hTotal);
+                trackLength = snapSize(wNoInsets - (decWidth + incWidth));
+                thumbLength = snapSize(Utils.clamp(minThumbLength(), (trackLength * visiblePortion), trackLength));
 
-            trackLength = snapSize(wNoInsets - (decWidth + incWidth));
-            thumbLength = snapSize(Utils.clamp(minThumbLength(), (trackLength * visiblePortion), trackLength));
-
-            decButton.relocate(snapPosition(x), snapPosition(y));
-            incButton.relocate(snapPosition(x + wNoInsets - incWidth), snapPosition(y));
-            track.resizeRelocate(snapPosition(x + decWidth), snapPosition(y), trackLength, hTotal);
-            thumb.resize(thumbLength, snapSize(y >= 0 ? hTotal : hTotal + y)); // Account for negative padding (see also RT-10719)
-            positionThumb();
-        }
-
-        resize(snapSize(getWidth()), snapSize(getHeight()));
-
-        // things should be invisible only when well below minimum length
-        if (getSkinnable().getOrientation() == Orientation.VERTICAL && hNoInsets >= (computeMinHeight(-1) - (getInsets().getTop()+getInsets().getBottom())) ||
-            getSkinnable().getOrientation() == Orientation.HORIZONTAL && wNoInsets >= (computeMinWidth(-1) - (getInsets().getLeft()+getInsets().getRight()))) {
-            track.setVisible(true);
-            thumb.setVisible(true);
-            incButton.setVisible(true);
-            decButton.setVisible(true);
-        }
-        else {
-            track.setVisible(false);
-            thumb.setVisible(false);
-
-            /*
-            ** once the space is big enough for one button we 
-            ** can look at drawing
-            */
-            if (hNoInsets >= decButton.computeMinWidth(-1)) {
-                decButton.setVisible(true);
+                decButton.relocate(snapPosition(x), snapPosition(y));
+                incButton.relocate(snapPosition(x + wNoInsets - incWidth), snapPosition(y));
+                track.resizeRelocate(snapPosition(x + decWidth), snapPosition(y), trackLength, hTotal);
+                thumb.resize(thumbLength, snapSize(y >= 0 ? hTotal : hTotal + y)); // Account for negative padding (see also RT-10719)
+                positionThumb();
             }
             else {
-                decButton.setVisible(false);
-            }
-            if (hNoInsets >= incButton.computeMinWidth(-1)) {
-                incButton.setVisible(true);
-            }
-            else {
-                incButton.setVisible(false);
+                trackLength = snapSize(wNoInsets);
+                thumbLength = snapSize(Utils.clamp(minThumbLength(), (trackLength * visiblePortion), trackLength));
+
+                track.resizeRelocate(snapPosition(x), snapPosition(y), trackLength, hTotal);
+                thumb.resize(thumbLength, snapSize(y >= 0 ? hTotal : hTotal + y)); // Account for negative padding (see also RT-10719)
+                positionThumb();
             }
 
+            resize(snapSize(getWidth()), snapSize(getHeight()));
+
+            // things should be invisible only when well below minimum length
+            if (getSkinnable().getOrientation() == Orientation.VERTICAL && hNoInsets >= (computeMinHeight(-1) - (getInsets().getTop()+getInsets().getBottom())) ||
+                getSkinnable().getOrientation() == Orientation.HORIZONTAL && wNoInsets >= (computeMinWidth(-1) - (getInsets().getLeft()+getInsets().getRight()))) {
+                track.setVisible(true);
+                thumb.setVisible(true);
+                if (!com.sun.javafx.scene.control.skin.Utils.isEmbedded()) {
+                    incButton.setVisible(true);
+                    decButton.setVisible(true);
+                }
+            }
+            else {
+                track.setVisible(false);
+                thumb.setVisible(false);
+
+                if (!com.sun.javafx.scene.control.skin.Utils.isEmbedded()) {
+                    /*
+                    ** once the space is big enough for one button we 
+                    ** can look at drawing
+                    */
+                    if (hNoInsets >= decButton.computeMinWidth(-1)) {
+                        decButton.setVisible(true);
+                    }
+                    else {
+                        decButton.setVisible(false);
+                    }
+                    if (hNoInsets >= incButton.computeMinWidth(-1)) {
+                        incButton.setVisible(true);
+                    }
+                    else {
+                        incButton.setVisible(false);
+                    }
+                }
+            
+            }
         }
     }
 }
