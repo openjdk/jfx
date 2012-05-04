@@ -1338,6 +1338,10 @@
     -fx-background-insets: 0, 1 0 0 1;
 }
 
+.scroll-pane .corner-touch {
+    -fx-background-color: skyblue;
+}
+
 .scroll-pane:disabled {
     -fx-opacity: -fx-disabled-opacity;
 }

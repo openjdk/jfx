@@ -27,10 +27,18 @@ package com.sun.javafx.scene.control.skin;
 
 import static com.sun.javafx.Utils.clamp;
 import static com.sun.javafx.scene.control.skin.Utils.boundedSize;
+import javafx.animation.Interpolator;
+import javafx.animation.KeyFrame;
+import javafx.animation.KeyValue;
+import javafx.animation.Timeline;
 import javafx.beans.InvalidationListener;
 import javafx.beans.Observable;
+import javafx.beans.property.DoubleProperty;
+import javafx.beans.property.DoublePropertyBase;
+import javafx.beans.property.SimpleDoubleProperty;
 import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
+import javafx.event.ActionEvent;
 import javafx.event.Event;
 import javafx.event.EventDispatcher;
 import javafx.event.EventDispatchChain;
@@ -46,9 +54,9 @@ import javafx.scene.control.ScrollPane;
 import javafx.scene.control.ScrollPane.ScrollBarPolicy;
 import javafx.scene.input.MouseEvent;
 import javafx.scene.input.ScrollEvent;
-import javafx.scene.input.SwipeEvent;
 import javafx.scene.layout.StackPane;
 import javafx.scene.shape.Rectangle;
+import javafx.util.Duration;
 
 import com.sun.javafx.scene.control.behavior.ScrollPaneBehavior;
 import com.sun.javafx.scene.traversal.TraversalEngine;
@@ -102,6 +110,7 @@ public class ScrollPaneSkin extends SkinBase<ScrollPane, ScrollPaneBehavior> imp
     double ovvalue;
     private Cursor saveCursor =  null;
     private boolean dragDetected = false;
+    private boolean mouseDown = false;
 
     Rectangle clipRect;
 
@@ -244,7 +253,12 @@ public class ScrollPaneSkin extends SkinBase<ScrollPane, ScrollPaneBehavior> imp
         vsb.setOrientation(Orientation.VERTICAL);
 
         corner = new StackPane();
-        corner.getStyleClass().setAll("corner");
+        if (!com.sun.javafx.scene.control.skin.Utils.isEmbedded()) {
+            corner.getStyleClass().setAll("corner");
+        }
+        else {
+            corner.getStyleClass().setAll("corner-touch");
+        }
 
         viewRect.getChildren().clear();
         if (scrollNode != null) {
@@ -259,7 +273,12 @@ public class ScrollPaneSkin extends SkinBase<ScrollPane, ScrollPaneBehavior> imp
         */
         InvalidationListener vsbListener = new InvalidationListener() {
             @Override public void invalidated(Observable valueModel) {
-                posY = Utils.clamp(getSkinnable().getVmin(), vsb.getValue(), getSkinnable().getVmax());
+                if (!com.sun.javafx.scene.control.skin.Utils.isEmbedded()) {
+                    posY = Utils.clamp(getSkinnable().getVmin(), vsb.getValue(), getSkinnable().getVmax());
+                }
+                else {
+                    posY = vsb.getValue();
+                }
                 updatePosY();
             }
         };
@@ -267,7 +286,12 @@ public class ScrollPaneSkin extends SkinBase<ScrollPane, ScrollPaneBehavior> imp
 
         InvalidationListener hsbListener = new InvalidationListener() {
             @Override public void invalidated(Observable valueModel) {
-                posX = Utils.clamp(getSkinnable().getHmin(), hsb.getValue(), getSkinnable().getHmax());
+                if (!com.sun.javafx.scene.control.skin.Utils.isEmbedded()) {
+                    posX = Utils.clamp(getSkinnable().getHmin(), hsb.getValue(), getSkinnable().getHmax());
+                }
+                else {
+                    posX = hsb.getValue();
+                }
                 updatePosX();
             }
         };
@@ -275,6 +299,10 @@ public class ScrollPaneSkin extends SkinBase<ScrollPane, ScrollPaneBehavior> imp
 
         viewRect.setOnMousePressed(new EventHandler<javafx.scene.input.MouseEvent>() {
            @Override public void handle(javafx.scene.input.MouseEvent e) {
+               if (com.sun.javafx.scene.control.skin.Utils.isEmbedded()) {
+                   startSBReleasedAnimation();
+               }
+               mouseDown = true;
                pressX = e.getX() + viewRect.getLayoutX();
                pressY = e.getY() + viewRect.getLayoutY();
                ohvalue = hsb.getValue();
@@ -285,6 +313,9 @@ public class ScrollPaneSkin extends SkinBase<ScrollPane, ScrollPaneBehavior> imp
 
         viewRect.setOnDragDetected(new EventHandler<javafx.scene.input.MouseEvent>() {
            @Override public void handle(javafx.scene.input.MouseEvent e) {
+                if (com.sun.javafx.scene.control.skin.Utils.isEmbedded()) {
+                    startSBReleasedAnimation();
+                }
                if (getSkinnable().isPannable()) {
                  dragDetected = true;
                  if (saveCursor == null) {
@@ -301,6 +332,11 @@ public class ScrollPaneSkin extends SkinBase<ScrollPane, ScrollPaneBehavior> imp
 
         viewRect.addEventFilter(MouseEvent.MOUSE_RELEASED, new EventHandler<MouseEvent>() {
             @Override public void handle(MouseEvent e) {
+                  if (com.sun.javafx.scene.control.skin.Utils.isEmbedded()) {
+                    startSBReleasedAnimation();
+                 }
+                 mouseDown = false;
+
                  if (dragDetected == true) {
                      if (saveCursor != null) {
                          setCursor(saveCursor);
@@ -309,11 +345,22 @@ public class ScrollPaneSkin extends SkinBase<ScrollPane, ScrollPaneBehavior> imp
                      }
                      dragDetected = false;
                  }
+
+                 if (posY > getSkinnable().getVmax() || posY < getSkinnable().getVmin() ||
+                     posX > getSkinnable().getHmax() || posX < getSkinnable().getHmin()) {
+                     startContentsToViewport();
+                 }
             }
         });
         viewRect.setOnMouseDragged(new EventHandler<javafx.scene.input.MouseEvent>() {
            @Override public void handle(javafx.scene.input.MouseEvent e) {
-               if (getSkinnable().isPannable()) {
+                if (com.sun.javafx.scene.control.skin.Utils.isEmbedded()) {
+                    startSBReleasedAnimation();
+                }
+               /*
+               ** for mobile-touch we allow drag, even if not pannagle
+               */
+               if (getSkinnable().isPannable() || com.sun.javafx.scene.control.skin.Utils.isEmbedded()) {
                    double deltaX = pressX - (e.getX() + viewRect.getLayoutX());
                    double deltaY = pressY - (e.getY() + viewRect.getLayoutY());
                    /*
@@ -322,13 +369,18 @@ public class ScrollPaneSkin extends SkinBase<ScrollPane, ScrollPaneBehavior> imp
                    if (hsb.getVisibleAmount() > 0.0 && hsb.getVisibleAmount() < hsb.getMax()) {
                        if (Math.abs(deltaX) > PAN_THRESHOLD) {
                            double newHVal = (ohvalue + deltaX / (nodeWidth - viewRect.getWidth()) * (hsb.getMax() - hsb.getMin()));
-                           if (newHVal > hsb.getMax()) {
-                               newHVal = hsb.getMax();
+                           if (!com.sun.javafx.scene.control.skin.Utils.isEmbedded()) {
+                               if (newHVal > hsb.getMax()) {
+                                   newHVal = hsb.getMax();
+                               }
+                               else if (newHVal < hsb.getMin()) {
+                                   newHVal = hsb.getMin();
+                               }
+                               hsb.setValue(newHVal);
                            }
-                           else if (newHVal < hsb.getMin()) {
-                               newHVal = hsb.getMin();
+                           else {
+                               hsb.setValue(newHVal);
                            }
-                           hsb.setValue(newHVal);
                        }
                    }
                    /*
@@ -337,13 +389,18 @@ public class ScrollPaneSkin extends SkinBase<ScrollPane, ScrollPaneBehavior> imp
                    if (vsb.getVisibleAmount() > 0.0 && vsb.getVisibleAmount() < vsb.getMax()) {
                        if (Math.abs(deltaY) > PAN_THRESHOLD) {
                            double newVVal = (ovvalue + deltaY / (nodeHeight - viewRect.getHeight()) * (vsb.getMax() - vsb.getMin()));
-                           if (newVVal > vsb.getMax()) {
-                               newVVal = vsb.getMax();
+                           if (!com.sun.javafx.scene.control.skin.Utils.isEmbedded()) {
+                               if (newVVal > vsb.getMax()) {
+                                   newVVal = vsb.getMax();
+                               }
+                               else if (newVVal < vsb.getMin()) {
+                                   newVVal = vsb.getMin();
+                               }
+                               vsb.setValue(newVVal);
                            }
-                           else if (newVVal < vsb.getMin()) {
-                               newVVal = vsb.getMin();
+                           else {
+                               vsb.setValue(newVVal);
                            }
-                           vsb.setValue(newVVal);
                        }
                    }
                }
@@ -399,65 +456,58 @@ public class ScrollPaneSkin extends SkinBase<ScrollPane, ScrollPaneBehavior> imp
         */
         setOnScroll(new EventHandler<javafx.scene.input.ScrollEvent>() {
             @Override public void handle(ScrollEvent event) {
+                if (com.sun.javafx.scene.control.skin.Utils.isEmbedded()) {
+                    startSBReleasedAnimation();
+                }
                 /*
                 ** if we're completely visible then do nothing....
                 ** we only consume an event that we've used.
                 */
                 if (vsb.getVisibleAmount() < vsb.getMax()) {
+                    if (!com.sun.javafx.scene.control.skin.Utils.isEmbedded()) {
+                        if ((event.getDeltaY() > 0.0 && vsb.getValue() > vsb.getMin()) ||
+                            (event.getDeltaY() < 0.0 && vsb.getValue() < vsb.getMax())) {
+                            double vRange = getSkinnable().getVmax()-getSkinnable().getVmin();
+                            double vPixelValue = vRange / getSkinnable().getHeight();
+                            vsb.setValue(vsb.getValue()+(-event.getDeltaY())*vPixelValue);
+                            event.consume();
+                        }
+                    }
+                    else {
+                        double vRange = getSkinnable().getVmax()-getSkinnable().getVmin();
+                        double vPixelValue = vRange / getSkinnable().getHeight();
+                        double newValue = vsb.getValue()+(event.getDeltaY())*vPixelValue;
+                        vsb.setValue(newValue);
+                        if (newValue > vsb.getMax() || newValue < vsb.getMin() && !mouseDown) {
+                            startContentsToViewport();
+                        }
 
-                    if ((event.getDeltaY() > 0.0 && vsb.getValue() > vsb.getMin()) ||
-                        (event.getDeltaY() < 0.0 && vsb.getValue() < vsb.getMax())) {
-                          double vRange = getSkinnable().getVmax()-getSkinnable().getVmin();
-                          double vPixelValue = vRange / getSkinnable().getHeight();
-                          vsb.setValue(vsb.getValue()+(-event.getDeltaY())*vPixelValue);
-                          event.consume();
+                        event.consume();
                     }
                 }
 
                 if (hsb.getVisibleAmount() < hsb.getMax()) {
-                    if ((event.getDeltaX() > 0.0 && hsb.getValue() > hsb.getMin()) ||
-                        (event.getDeltaX() < 0.0 && hsb.getValue() < hsb.getMax())) {
+                    if (!com.sun.javafx.scene.control.skin.Utils.isEmbedded()) {
+                        if ((event.getDeltaX() > 0.0 && hsb.getValue() > hsb.getMin()) ||
+                            (event.getDeltaX() < 0.0 && hsb.getValue() < hsb.getMax())) {
                             double hRange = getSkinnable().getHmax()-getSkinnable().getHmin();
                             double hPixelValue = hRange / getSkinnable().getWidth();
                             hsb.setValue(hsb.getValue()+(-event.getDeltaX())*hPixelValue);
                             event.consume();
+                        }
                     }
-                }
-            }
-        });
+                    else {
+                        double hRange = getSkinnable().getHmax()-getSkinnable().getHmin();
+                        double hPixelValue = hRange / getSkinnable().getWidth();
+                        double newValue = hsb.getValue()+(event.getDeltaX())*hPixelValue;
 
-        setOnSwipeLeft(new EventHandler<SwipeEvent>() {
-            @Override
-            public void handle(SwipeEvent t) {
-                if (hsb != null) {
-                    hsb.setValue(Utils.clamp(hsb.getMin(), hsb.getValue() - hsb.getBlockIncrement(), hsb.getMax()));
-                }
-            }
-        });
+                        hsb.setValue(newValue);
 
-        setOnSwipeRight(new EventHandler<SwipeEvent>() {
-            @Override
-            public void handle(SwipeEvent t) {
-                if (hsb != null) {
-                    hsb.setValue(Utils.clamp(hsb.getMin(), hsb.getValue() + hsb.getBlockIncrement(), hsb.getMax()));
-                }
-            }
-        });
-
-        setOnSwipeUp(new EventHandler<SwipeEvent>() {
-            @Override
-            public void handle(SwipeEvent t) {
-                if (vsb != null) {
-                    vsb.setValue(Utils.clamp(vsb.getMin(), vsb.getValue() - vsb.getBlockIncrement(), vsb.getMax()));
-                }
-            }
-        });
-
-        setOnSwipeDown(new EventHandler<SwipeEvent>() {
-            @Override
-            public void handle(SwipeEvent t) {
-                if (vsb != null) {
-                    vsb.setValue(Utils.clamp(vsb.getMin(), vsb.getValue() + vsb.getBlockIncrement(), vsb.getMax()));
+                        if (newValue > hsb.getMax() || newValue < hsb.getMin() && !mouseDown) {
+                            startContentsToViewport();
+                        }
+                        event.consume();
+                    }
                 }
             }
         });
@@ -661,11 +711,11 @@ public class ScrollPaneSkin extends SkinBase<ScrollPane, ScrollPaneBehavior> imp
         vsbvis = determineVerticalSBVisible();
         hsbvis = determineHorizontalSBVisible();
 
-        if (vsbvis) {
+        if (vsbvis && !com.sun.javafx.scene.control.skin.Utils.isEmbedded()) {
             contentWidth -= vsbWidth;
             hsbWidth -= vsbWidth;
         }
-        if (hsbvis) {
+        if (hsbvis && !com.sun.javafx.scene.control.skin.Utils.isEmbedded()) {
             contentHeight -= hsbHeight;
             vsbHeight -= hsbHeight;
         }
@@ -763,19 +813,28 @@ public class ScrollPaneSkin extends SkinBase<ScrollPane, ScrollPaneBehavior> imp
 
     private boolean determineHorizontalSBVisible() {
         final double contentw = getSkinnable().getWidth() - getInsets().getLeft() - getInsets().getRight();
-        return (getSkinnable().getHbarPolicy().equals(ScrollBarPolicy.NEVER)) ? false :
-                   ((getSkinnable().getHbarPolicy().equals(ScrollBarPolicy.ALWAYS)) ? true :
-                    ((getSkinnable().isFitToWidth() && scrollNode != null ? scrollNode.isResizable() : false) ?
-                       (nodeWidth > contentw && scrollNode.minWidth(-1) > contentw) : (nodeWidth > contentw)));
+        if (com.sun.javafx.scene.control.skin.Utils.isEmbedded()) {
+            return (tempVisibility && (nodeWidth > contentw));
+        }
+        else {
+            return (getSkinnable().getHbarPolicy().equals(ScrollBarPolicy.NEVER)) ? false :
+                ((getSkinnable().getHbarPolicy().equals(ScrollBarPolicy.ALWAYS)) ? true :
+                 ((getSkinnable().isFitToWidth() && scrollNode != null ? scrollNode.isResizable() : false) ?
+                  (nodeWidth > contentw && scrollNode.minWidth(-1) > contentw) : (nodeWidth > contentw)));
+        }
     }
 
     private boolean determineVerticalSBVisible() {
         final double contenth = getSkinnable().getHeight() - getInsets().getTop() - getInsets().getBottom();
-        return (getSkinnable().getVbarPolicy().equals(ScrollBarPolicy.NEVER)) ? false :
-                  ((getSkinnable().getVbarPolicy().equals(ScrollBarPolicy.ALWAYS)) ? true :
-                      ((getSkinnable().isFitToHeight() && scrollNode != null ? scrollNode.isResizable() : false) ?
-                       (nodeHeight > contenth && scrollNode.minHeight(-1) > contenth) : (nodeHeight > contenth)));
-
+        if (com.sun.javafx.scene.control.skin.Utils.isEmbedded()) {
+            return (tempVisibility && (nodeHeight > contenth));
+        }
+        else {
+            return (getSkinnable().getVbarPolicy().equals(ScrollBarPolicy.NEVER)) ? false :
+                ((getSkinnable().getVbarPolicy().equals(ScrollBarPolicy.ALWAYS)) ? true :
+                 ((getSkinnable().isFitToHeight() && scrollNode != null ? scrollNode.isResizable() : false) ?
+                  (nodeHeight > contenth && scrollNode.minHeight(-1) > contenth) : (nodeHeight > contenth)));
+        }
     }
 
     private void computeScrollBarSize() {
@@ -849,5 +908,140 @@ public class ScrollPaneSkin extends SkinBase<ScrollPane, ScrollPaneBehavior> imp
         viewRect.setLayoutY(snapPosition(getInsets().getTop() - posY / (vsb.getMax() - vsb.getMin()) * (nodeHeight - contentHeight)));
         getSkinnable().setVvalue(Utils.clamp(getSkinnable().getVmin(), posY, getSkinnable().getVmax()));
         return posY;
+    }
+
+
+    Timeline sbTouchTimeline;
+    KeyFrame sbTouchKF1;
+    KeyFrame sbTouchKF2;
+    Timeline contentsToViewTimeline;
+    KeyFrame contentsToViewKF1;
+    KeyFrame contentsToViewKF2;
+
+    private boolean tempVisibility;
+
+
+    void startSBReleasedAnimation() {
+        if (sbTouchTimeline == null) {
+            /*
+            ** timeline to leave the scrollbars visible for a short
+            ** while after a scroll/drag
+            */
+            sbTouchTimeline = new Timeline();
+            sbTouchKF1 = new KeyFrame(Duration.millis(0), new EventHandler<ActionEvent>() {
+                @Override public void handle(ActionEvent event) {
+                    tempVisibility = true;
+                }
+            });
+
+            sbTouchKF2 = new KeyFrame(Duration.millis(500), new EventHandler<ActionEvent>() {
+                @Override public void handle(ActionEvent event) {
+                    tempVisibility = false;
+                    requestLayout();
+                }
+            });
+            sbTouchTimeline.getKeyFrames().addAll(sbTouchKF1, sbTouchKF2);
+        }
+        sbTouchTimeline.playFromStart();
+    }
+
+
+
+    void startContentsToViewport() {
+        double newPosX = posX;
+        double newPosY = posY;
+        double hRange = getSkinnable().getHmax() - getSkinnable().getHmin();
+        double vRange = getSkinnable().getVmax() - getSkinnable().getVmin();
+
+        setContentPosX(posX);
+        setContentPosY(posY);
+
+        if (posY > getSkinnable().getVmax()) {
+            newPosY = getSkinnable().getVmax();
+        }
+        else if (posY < getSkinnable().getVmin()) {
+            newPosY = getSkinnable().getVmin();
+        }             
+        
+
+        if (posX > getSkinnable().getHmax()) {
+            newPosX = getSkinnable().getHmax();
+        }
+        else if (posX < getSkinnable().getHmin()) {
+            newPosX = getSkinnable().getHmin();
+        }
+
+        if (!com.sun.javafx.scene.control.skin.Utils.isEmbedded()) {
+            startSBReleasedAnimation();
+        }
+
+        /*
+        ** timeline to return the contents of the scrollpane to the viewport
+        */
+        if (contentsToViewTimeline != null) {
+            contentsToViewTimeline.stop();
+        }
+        contentsToViewTimeline = new Timeline();
+        contentsToViewKF2 = new KeyFrame(Duration.millis(500), new EventHandler<ActionEvent>() {
+                @Override public void handle(ActionEvent event) {
+                    requestLayout();
+                }
+            },
+            new KeyValue(contentPosX, newPosX),
+            new KeyValue(contentPosY, newPosY)
+            );
+        contentsToViewTimeline.getKeyFrames().addAll(contentsToViewKF2);
+        contentsToViewTimeline.playFromStart();
+    }
+
+
+    private DoubleProperty contentPosX;
+    private void setContentPosX(double value) { contentPosXProperty().set(value); }
+    private double getContentPosX() { return contentPosX == null ? 0.0 : contentPosX.get(); }
+    private DoubleProperty contentPosXProperty() {
+        if (contentPosX == null) {
+            contentPosX = new DoublePropertyBase() {
+                @Override protected void invalidated() {
+                    hsb.setValue(getContentPosX());
+                    requestLayout();
+                }
+
+                @Override
+                public Object getBean() {
+                    return ScrollPaneSkin.this;
+                }
+
+                @Override
+                public String getName() {
+                    return "contentPosX";
+                }
+            };
+        }
+        return contentPosX;
+    }
+
+    private DoubleProperty contentPosY;
+    private void setContentPosY(double value) { contentPosYProperty().set(value); }
+    private double getContentPosY() { return contentPosY == null ? 0.0 : contentPosY.get(); }
+    private DoubleProperty contentPosYProperty() {
+        if (contentPosY == null) {
+            contentPosY = new DoublePropertyBase() {
+                @Override protected void invalidated() {
+                    vsb.setValue(getContentPosY());
+                    requestLayout();
+                }
+
+                @Override
+                public Object getBean() {
+                    return ScrollPaneSkin.this;
+                }
+
+                @Override
+                public String getName() {
+                    return "contentPosY";
+                }
+            };
+        }
+        return contentPosY;
     }
 }

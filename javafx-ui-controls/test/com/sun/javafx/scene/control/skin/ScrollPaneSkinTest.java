@@ -618,7 +618,9 @@ public class ScrollPaneSkinTest {
 
     /*
     ** check if scrollPane content Horizontal position compensates for content size change
+    ** ignored, as we do swipe through ScrollEvents.
     */
+    @Ignore
     @Test public void checkIfSwipeDownEventsChangeAnything() {
 
         scrolled = false;
@@ -682,7 +684,9 @@ public class ScrollPaneSkinTest {
 
     /*
     ** check if scrollPane content Horizontal position compensates for content size change
+    ** ignored, as we do swipe through ScrollEvents.
     */
+    @Ignore
     @Test public void checkIfSwipeRightEventsChangeAnything() {
 
         scrolled = false;
