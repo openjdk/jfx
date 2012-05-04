@@ -59,7 +59,16 @@ public abstract class StyleableProperty<N extends Node, V> {
         final WritableValue<V> writable = getWritableValue(node);
         assert (writable instanceof Property);
         final Property<V> cssProperty = (Property<V>)writable;
-        cssProperty.applyStyle(origin, value);            
+        final Stylesheet.Origin currentOrigin = cssProperty.getOrigin();    
+        final V currentValue = writable.getValue();
+        // RT-21185: Only apply the style if something has changed. 
+        if ((currentOrigin != origin)
+            || (currentValue != null 
+                ? currentValue.equals(value) == false 
+                : value != null)
+            ) {
+            cssProperty.applyStyle(origin, value);            
+        }
     }
 
     /** @deprecated Use {@link StyleableProperty#set(javafx.scene.Node, java.lang.Object, com.sun.javafx.css.Stylesheet.Origin)} */

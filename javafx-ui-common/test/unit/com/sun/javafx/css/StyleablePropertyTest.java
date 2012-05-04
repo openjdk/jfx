@@ -1370,4 +1370,42 @@ public class StyleablePropertyTest {
         }
     }    
     
+    @Test
+    public void testRT_21185() {
+        
+        Color c1 = new Color(.1,.2,.3,1.0);
+        Color c2 = new Color(.1,.2,.3,1.0);
+                
+        Rectangle rect = new Rectangle();
+        rect.setFill(c1);
+        
+        StyleableProperty fill = StyleableProperty.getStyleableProperty(rect.fillProperty());
+        Stylesheet.Origin origin = StyleableProperty.getOrigin(rect.fillProperty());
+
+        // set should not change the value if the values are equal and origin is same
+        assertEquals(c1, c2);
+        fill.set(rect, c2, origin);
+        assert(c1 == rect.getFill()); // instance should not change.
+
+        // set should change the value if the values are not equal.
+        c2 = new Color(.3,.2,.1,1.0);
+        fill.set(rect, c2, origin);
+        assert(c2 == rect.getFill());
+        
+        // set should change the value if the origin is not the same
+        fill.set(rect, c2, Stylesheet.Origin.INLINE);
+        origin = StyleableProperty.getOrigin(rect.fillProperty());
+        assert(origin == Stylesheet.Origin.INLINE);
+        
+        // set should change the value if one is null and the other is not.
+        rect.setFill(null);
+        fill.set(rect, c2, origin);
+        assert(c2 == rect.getFill());
+        
+        // set should change the value if one is null and the other is not
+        fill.set(rect, null, origin);
+        assertNull(rect.getFill());
+        
+    }
+    
 }
