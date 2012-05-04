@@ -520,6 +520,7 @@ public class MenuItem implements EventTarget {
      * @treatAsPrivate implementation detail
      * @deprecated This is an experimental API that is not intended for general use and is subject to change in future versions
      */    
+    @Deprecated // SB-dependency: RT-21094 has been filed to track this
     public Styleable impl_getStyleable() {
         
         if (styleable == null) {

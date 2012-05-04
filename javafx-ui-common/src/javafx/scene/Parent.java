@@ -1099,7 +1099,7 @@ public abstract class Parent extends Node {
      * @treatAsPrivate implementation detail
      * @deprecated This is an internal API that is not intended for use and will be removed in the next version
      */
-    @Deprecated
+    @Deprecated // SB-dependency: RT-21247 has been filed to track this
     public /* Do not make this final! */ List<String> impl_getAllParentStylesheets() {
         
         List<String> list = null;

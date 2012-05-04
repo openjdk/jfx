@@ -6375,7 +6375,7 @@ public abstract class Node implements EventTarget {
      * @treatAsPrivate implementation detail
      * @deprecated This is an experimental API that is not intended for general use and is subject to change in future versions
      */    
-    @Deprecated
+    @Deprecated // SB-dependency: RT-21094 has been filed to track this
     public final Styleable impl_getStyleable() {
         
         if (styleable == null) {
@@ -6721,7 +6721,7 @@ public abstract class Node implements EventTarget {
       * @treatAsPrivate implementation detail
       * @deprecated This is an experimental API that is not intended for general use and is subject to change in future versions
       */
-     @Deprecated
+     @Deprecated // SB-dependency: RT-21096 has been filed to track this
      public final ObservableMap<WritableValue, List<Style>> impl_getStyleMap() {
          return impl_getStyleable().getStyleMap();
      }
@@ -6731,7 +6731,7 @@ public abstract class Node implements EventTarget {
       * @treatAsPrivate implementation detail
       * @deprecated This is an experimental API that is not intended for general use and is subject to change in future versions
       */
-     @Deprecated
+     @Deprecated // SB-dependency: RT-21096 has been filed to track this
      public final void impl_setStyleMap(ObservableMap<WritableValue, List<Style>> styleMap) {
          impl_getStyleable().setStyleMap(styleMap);
      }
@@ -6902,7 +6902,7 @@ public abstract class Node implements EventTarget {
      * @treatAsPrivate implementation detail
      * @deprecated This is an internal API that is not intended for use and will be removed in the next version
      */
-    @Deprecated
+    @Deprecated // SB-dependency: RT-21206 has been filed to track this
     public void impl_processCSS(boolean reapply) {
 
         StyleHelper styleHelper = null;
