@@ -70,7 +70,7 @@ public class StyleHelper {
      * used to represent SKIP because if a String constant were used it might
      * accidentally match some actual string value specified in the CSS.
      */
-    private static final Object SKIP = new int[0];
+    private static final CalculatedValue SKIP = new CalculatedValue(new int[0], null, true);
 
     /**
      * Constructs and returns a StyleHelper for the given sequence of styles.
@@ -723,9 +723,12 @@ public class StyleHelper {
                 // the style came from the user agent stylesheet, then
                 // skip the value. A style from a user agent stylesheet should
                 // not override the user set style.
-                if (calculatedValue != null &&
-                    (calculatedValue.origin == Stylesheet.Origin.USER_AGENT) &&
-                        isUserSetProperty(node, styleable)) {
+                if (calculatedValue == SKIP
+                    || (   calculatedValue != null
+                        && calculatedValue.origin == Stylesheet.Origin.USER_AGENT
+                        && isUserSetProperty(node, styleable)
+                       )
+                    ) {
                     continue;
                 }
 
@@ -744,10 +747,10 @@ public class StyleHelper {
 
             }
 
-            final Object value = calculatedValue.value;
             // If the CalculatedValue value is not SKIP then we will set it.
-            if (value == SKIP) continue;
+            if (calculatedValue == SKIP) continue;
             
+                final Object value = calculatedValue.value;
                 if (LOGGER.isLoggable(PlatformLogger.FINER)) {
                     LOGGER.finer("call " + node + ".impl_cssSet(" +
                                     property + ", " + value + ")");
@@ -902,7 +905,7 @@ public class StyleHelper {
                     CalculatedValue constituent = 
                         lookup(node, subkey, isUserSet, states, userStyles, 
                             originatingNode, cacheEntry, styleList);
-                    if (constituent.value != SKIP) {
+                    if (constituent != SKIP) {
                         if (subs == null) {
                             subs = new HashMap<StyleableProperty,Object>();
                         }
@@ -933,7 +936,7 @@ public class StyleHelper {
                         LOGGER.warning("styleable = " + styleable);
                         LOGGER.warning("node = " + node.toString());
                     }
-                    return new CalculatedValue(SKIP, null, true);
+                    return SKIP;
                 }
             }                
             
@@ -945,7 +948,7 @@ public class StyleHelper {
             // skip the value. A style from a user agent stylesheet should
             // not override the user set style.
             if (isUserSet && style.getOrigin() == Stylesheet.Origin.USER_AGENT) {
-                return new CalculatedValue(SKIP, style.getOrigin(), true);
+                return SKIP;
             }
 
             // If there was a style found, then we want to check whether the
@@ -984,7 +987,7 @@ public class StyleHelper {
             // the property, do not look for inherited styles.
             if (isUserSet) {
 
-                    return new CalculatedValue(SKIP, Stylesheet.Origin.USER, true);
+                    return SKIP;
                     
             }
 
@@ -998,7 +1001,7 @@ public class StyleHelper {
 
             // Not inherited. There is no style but we don't want to
             // set the default value if the user set the property
-            return new CalculatedValue(SKIP, null, true);
+            return SKIP;
 
         } else if (smap.containsKey(styleable.getProperty())) {
 
@@ -1027,11 +1030,11 @@ public class StyleHelper {
                 styleList.add(initialStyle);
             }
 
-            return new CalculatedValue(initialValue, null, false);
+            return new CalculatedValue(initialValue, null, true);
 
         } else {
 
-            return new CalculatedValue(SKIP, null, true);
+            return SKIP;
 
         }
     }
@@ -1053,7 +1056,7 @@ public class StyleHelper {
         }
 
         if (parent == null) {
-            return new CalculatedValue(SKIP, null, true);
+            return SKIP;
         }
         return parentStyleHelper.lookup(parent, styleable, false,
                 parentStyleHelper.getPseudoClassState(parent),
@@ -1284,21 +1287,21 @@ public class StyleHelper {
                     LOGGER.fine("styleable = " + styleable);
                     LOGGER.fine("styles = " + styleable.getMatchingStyles(node));
                 }
-                return new CalculatedValue(SKIP, null, true);
+                return SKIP;
             } catch (IllegalArgumentException iae) {
                 if (LOGGER.isLoggable(PlatformLogger.WARNING)) {
                     LOGGER.warning("caught: ", iae);
                     LOGGER.fine("styleable = " + styleable);
                     LOGGER.fine("node = " + node.toString());
                 }
-                return new CalculatedValue(SKIP, null, true);
+                return SKIP;
             } catch (NullPointerException npe) {
                 if (LOGGER.isLoggable(PlatformLogger.WARNING)) {
                     LOGGER.warning("caught: ", npe);
                     LOGGER.fine("styleable = " + styleable);
                     LOGGER.fine("node = " + node.toString());
                 }
-                return new CalculatedValue(SKIP, null, true);
+                return SKIP;
             } finally {
                 resolved.nullResolved();
             }
@@ -1744,7 +1747,7 @@ public class StyleHelper {
             size   == -1   &&
             weight == null &&
             style  == null) {
-            return new CalculatedValue(SKIP, null, true);
+            return SKIP;
         }
         
         // Now we have all the pieces from the stylesheet
