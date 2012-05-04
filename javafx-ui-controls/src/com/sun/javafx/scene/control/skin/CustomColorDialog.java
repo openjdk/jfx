@@ -66,13 +66,16 @@ public class CustomColorDialog extends StackPane {
     Rectangle colorRectOverlayTwo;
     Rectangle colorBar;
     Rectangle colorBarIndicator;
-    ObjectProperty<Color> currentColorProperty = new SimpleObjectProperty<Color>();
+    private Color currentColor = Color.WHITE;
+//    ObjectProperty<Color> currentColorProperty = new SimpleObjectProperty<Color>();
     ObjectProperty<Color> customColorProperty = new SimpleObjectProperty<Color>();
     boolean saveCustomColor = false;
+    boolean useCustomColor = false;
     
-    public CustomColorDialog(Window owner, ObjectProperty<Color> currentColorProperty) {
+//    public CustomColorDialog(Window owner, ObjectProperty<Color> currentColorProperty) {
+    public CustomColorDialog(Window owner) {
         getStyleClass().add("add-color-pane");
-        this.currentColorProperty.bind(currentColorProperty);
+//        this.currentColorProperty.bind(currentColorProperty);
         if (owner != null) dialog.initOwner(owner);
         dialog.setTitle("Custom Colors..");
         dialog.initModality(Modality.APPLICATION_MODAL);
@@ -86,6 +89,11 @@ public class CustomColorDialog extends StackPane {
         dialogRoot.getChildren().addAll(this);
         
         dialog.setScene(scene);
+    }
+    
+    public void setCurrentColor(Color currentColor) {
+        this.currentColor = currentColor;
+        controlsPane.currentColorRect.setFill(currentColor);
     }
     
     public void show(double x, double y) {
@@ -349,9 +357,9 @@ public class CustomColorDialog extends StackPane {
         private void updateValues() {
             changeIsLocal = true;
             //Initialize hue, sat, bright, color, red, green and blue
-            hue.set(currentColorProperty.get().getHue());
-            sat.set(currentColorProperty.get().getSaturation()*100);
-            bright.set(currentColorProperty.get().getBrightness()*100);
+            hue.set(currentColor.getHue());
+            sat.set(currentColor.getSaturation()*100);
+            bright.set(currentColor.getBrightness()*100);
             setColor(Color.hsb(hue.get(), clamp(sat.get() / 100), clamp(bright.get() / 100), 
                     clamp(alpha.get()/100)));
             red.set(doubleToInt(getColor().getRed()));
@@ -412,12 +420,8 @@ public class CustomColorDialog extends StackPane {
             currentNewColorBorder.setStroke(Color.BLACK);
             
             currentColorRect = new Rectangle(CONTROLS_WIDTH/2, 18);
-            currentColorRect.setFill(currentColorProperty.get());
-            currentColorProperty.addListener(new ChangeListener<Color>() {
-                @Override public void changed(ObservableValue<? extends Color> ov, Color t, Color t1) {
-                    currentColorRect.setFill(currentColorProperty.get());
-                }
-            });
+            currentColorRect.setFill(currentColor);
+
             newColorRect = new Rectangle(CONTROLS_WIDTH/2, 18);
            
             updateNewColorFill();
@@ -425,6 +429,10 @@ public class CustomColorDialog extends StackPane {
                 @Override
                 public void changed(ObservableValue<? extends Color> ov, Color t, Color t1) {
                     updateNewColorFill();
+                    customColorProperty.set(Color.hsb(colorRectPane.hue.getValue(), 
+                        clamp(colorRectPane.sat.getValue()/100), 
+                        clamp(colorRectPane.bright.getValue()/100),
+                        clamp(colorRectPane.alpha.getValue()/100)));
                 }
             });
 
@@ -545,7 +553,10 @@ public class CustomColorDialog extends StackPane {
             Button cancelButton = new Button("Cancel");
             cancelButton.setOnAction(new EventHandler<ActionEvent>() {
                 @Override public void handle(ActionEvent e) {
+                    useCustomColor = true;
+                    customColorProperty.set(currentColor);
                     dialog.hide();
+                    useCustomColor = false;
                 }
             });
             buttonBox.getChildren().addAll(saveButton, useButton, cancelButton);

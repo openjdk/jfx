@@ -69,7 +69,6 @@ public class ColorPickerSkin extends ComboBoxPopupControl<Color> {
     
     public ColorPickerSkin(final ColorPicker colorPicker) {
         super(colorPicker, new ColorPickerBehavior(colorPicker));
-        if (colorPicker.getValue() == null) colorPicker.setValue(Color.WHITE);
         updateComboBoxMode();
         if (getMode() == ComboBoxMode.BUTTON || getMode() == ComboBoxMode.COMBOBOX) {
              if (arrowButton.getOnMouseReleased() == null) {
@@ -103,7 +102,7 @@ public class ColorPickerSkin extends ComboBoxPopupControl<Color> {
         }
     }
     
-      private static final List<String> colorNames = new ArrayList<String>();
+    private static final List<String> colorNames = new ArrayList<String>();
     static {
         // Initializes the namedColors map
         Color.web("white", 1.0);
@@ -116,8 +115,9 @@ public class ColorPickerSkin extends ComboBoxPopupControl<Color> {
         Collections.sort(colorNames);
     }
     
-    private static String colorValueToWeb(Color c) {
+    static String colorValueToWeb(Color c) {
         String web = null;
+        if (c == null) return null;
         if (colorNames != null) {
             // Find a name for the color. Note that there can
             // be more than one name for a color, e.g. #ff0ff
@@ -170,7 +170,7 @@ public class ColorPickerSkin extends ComboBoxPopupControl<Color> {
         } else if (p == "VALUE") {
            // Change the current selected color in the grid if ColorPicker value changes
             if (popupContent != null) {
-                popupContent.updateSelection(getSkinnable().getValue());
+//                popupContent.updateSelection(getSkinnable().getValue());
             }
         }
     }

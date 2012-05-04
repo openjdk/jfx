@@ -90,7 +90,7 @@ public class ColorPicker extends ComboBoxBase<Color> {
     } 
  
     public ColorPicker() {
-        getStyleClass().add(DEFAULT_STYLE_CLASS);
+        this(Color.WHITE);
     }
     
     /**
@@ -99,6 +99,7 @@ public class ColorPicker extends ComboBoxBase<Color> {
      */
     public ColorPicker(Color color) {
         setValue(color);
+        getStyleClass().add(DEFAULT_STYLE_CLASS);
     }
     /***************************************************************************
      *                                                                         *
