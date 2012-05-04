@@ -165,10 +165,10 @@ public class Menu extends MenuItem {
         // these events will not fire if the showing property is bound
         if (value) {
            if (getOnMenuValidation() != null) {
-                Event.fireEvent(this, new Event(new EventType<Event>()));
+                Event.fireEvent(this, new Event(MENU_VALIDATION_EVENT));
                 for(MenuItem m : getItems()) {
                     if (!(m instanceof Menu) && m.getOnMenuValidation() != null) {
-                        Event.fireEvent(m, new Event(MenuItem.MENU_VALIDATION_EVENT));
+                        Event.fireEvent(m, new Event(m.MENU_VALIDATION_EVENT));
                     }
                 }
            }

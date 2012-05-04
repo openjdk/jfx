@@ -312,7 +312,7 @@ public class MenuItem implements EventTarget {
     /**
      * <p>Called when a accelerator for the Menuitem is invoked</p>
      */
-    public static final EventType<Event> MENU_VALIDATION_EVENT = new EventType<Event>();
+    public final EventType<Event> MENU_VALIDATION_EVENT = new EventType<Event>();
     private ObjectProperty<EventHandler<Event>> onMenuValidation;
     /**
      * The event handler that is associated with invocation of an accelerator for a MenuItem. This 
