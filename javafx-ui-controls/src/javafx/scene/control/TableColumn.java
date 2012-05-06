@@ -575,6 +575,141 @@ public class TableColumn<S,T> implements EventTarget {
     }
     
     
+    // --- Id
+    private StringProperty id;
+
+    /**
+     * Sets the id of this TableColumn. This simple string identifier is useful 
+     * for finding a specific TableColumn within the {@code TableView}. The 
+     * default value is {@code null}.
+     */
+    public final void setId(String value) { idProperty().set(value); }
+
+    /**
+     * The id of this TableColumn.
+     *
+     * @return The id of the TableColumn.
+     */
+    public final String getId() { return id == null ? null : id.get(); }
+
+    /**
+     * The id of this TableColumn.
+     */
+    public final StringProperty idProperty() {
+        if (id == null) {
+            id = new SimpleStringProperty(this, "id");
+        }
+        return id;
+    }
+
+    private StringProperty style;
+
+    /**
+     * A string representation of the CSS style associated with this
+     * TableColumn. This is analogous to the "style" attribute of an
+     * HTML element. Note that, like the HTML style attribute, this
+     * variable contains style properties and values and not the
+     * selector portion of a style rule.
+     * <p>
+     * Parsing this style might not be supported on some limited
+     * platforms. It is recommended to use a standalone CSS file instead.
+     *     
+     */
+    public final void setStyle(String value) { styleProperty().set(value); }
+
+    /**
+     * The CSS style string associated to this TableColumn.
+     *
+     * @return The CSS style string associated to this TableColumn.
+     */
+    public final String getStyle() { return style == null ? null : style.get(); }
+
+    /**
+     * The CSS style string associated to this TableColumn.
+     */
+    public final StringProperty styleProperty() {
+        if (style == null) {
+            style = new SimpleStringProperty(this, "style");
+        }
+        return style;
+    }
+    
+    
+    // --- Style class
+    private final ObservableList<String> styleClass = FXCollections.observableArrayList();
+    /**
+     * A list of String identifiers which can be used to logically group
+     * Nodes, specifically for an external style engine. This variable is
+     * analogous to the "class" attribute on an HTML element and, as such,
+     * each element of the list is a style class to which this Node belongs.
+     *
+     * @see <a href="http://www.w3.org/TR/css3-selectors/#class-html">CSS3 class selectors</a>
+     */
+    public ObservableList<String> getStyleClass() {
+        return styleClass;
+    }
+    
+    
+    // --- Graphic
+    private ObjectProperty<Node> graphic;
+
+    /**
+     * <p>Sets the graphic to show in the TableColumn to allow the user to
+     * indicate graphically what is in the column. </p>
+     */
+    public final void setGraphic(Node value) {
+        graphicProperty().set(value);
+    }
+
+    /**
+     * The graphic shown in the TableColumn.
+     *
+     * @return The graphic shown in the TableColumn.
+     */
+    public final Node getGraphic() {
+        return graphic == null ? null : graphic.get();
+    }
+
+    /**
+     * The graphic in the TableColumn.
+     * 
+     * @return The graphic in the TableColumn.
+     */
+    public final ObjectProperty<Node> graphicProperty() {
+        if (graphic == null) {
+            graphic = new SimpleObjectProperty<Node>(this, "graphic");
+        }
+        return graphic;
+    }
+    
+    
+    // --- Sort node
+    private ObjectProperty<Node> sortNode = new SimpleObjectProperty<Node>(this, "sortNode");
+
+    /**
+     * The node to use as the "sort arrow", shown to the user in situations where
+     * the TableColumn is part of the sort order. It may be the only item in
+     * the sort order, or it may be a secondary, tertiary, or latter sort item, 
+     * and the node should reflect this visually. This is only used in the case of
+     * the TableColumn being in the sort order. If not specified, the
+     * TableColumn skin implementation is responsible for providing a default
+     * sort node.
+     */
+    public final void setSortNode(Node value) { sortNodeProperty().set(value); }
+    
+    /**
+     * Returns the current sort node set in this TableColumn.
+     */
+    public final Node getSortNode() { return sortNode.get(); }
+    
+    /**
+     * The sort node is commonly seen represented as a triangle that rotates
+     * on screen to indicate whether the TableColumn is part of the sort order, 
+     * and if so, what position in the sort order it is in.
+     */
+    public final ObjectProperty<Node> sortNodeProperty() { return sortNode; }
+    
+    
     // --- Width
     /**
      * The width of this column. Modifying this will result in the column width
