@@ -230,8 +230,18 @@ public abstract class TextInputControlSkin<T extends TextInputControl, B extends
 
     static boolean useVK = false;
     static int vkType = -1;
+    static double winWidth = 640;
     public void toggleUseVK() {
-        vkType = (vkType + 1) % 5;
+        Window window = getScene().getWindow();
+        if (winWidth == 640) {
+            window.setWidth(640);
+            window.setHeight(480);
+        } else {
+            window.setWidth(480);
+            window.setHeight(640);
+        }
+
+        vkType++;
         if (vkType < 4) {
             useVK = true;
             getSkinnable().setImpl_virtualKeyboardType(vkType);
@@ -240,6 +250,7 @@ public abstract class TextInputControlSkin<T extends TextInputControl, B extends
             FXVK.detach();
             vkType = -1;
             useVK = false;
+            winWidth = (winWidth == 640) ? 480 : 640;
         }
     }
 

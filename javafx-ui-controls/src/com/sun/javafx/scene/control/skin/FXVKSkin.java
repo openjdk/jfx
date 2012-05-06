@@ -40,6 +40,7 @@ import javafx.event.Event;
 import javafx.event.EventHandler;
 import javafx.event.EventTarget;
 import javafx.event.EventType;
+import javafx.geometry.Bounds;
 import javafx.geometry.HPos;
 import javafx.geometry.Insets;
 import javafx.geometry.Point2D;
@@ -68,6 +69,8 @@ import static com.sun.javafx.scene.control.skin.resources.ControlResources.*;
 
 public class FXVKSkin extends SkinBase<FXVK, BehaviorBase<FXVK>> {
 
+    private final static boolean USE_SECONDARY_POPUP = false;
+
     private static Region oldRoot;
     private static NewRootPane newRoot;
     private static Popup secondaryPopup;
@@ -90,19 +93,21 @@ public class FXVKSkin extends SkinBase<FXVK, BehaviorBase<FXVK>> {
 
     private State state = State.NORMAL;
 
-    static final double VK_WIDTH = 800;
-    static final double VK_HEIGHT = 230;
+    static final double VK_WIDTH = 640 /*800*/;
+    static final double VK_HEIGHT = 243;
+    static final double VK_PORTRAIT_HEIGHT = 326;
     static final double VK_SLIDE_MILLIS = 250;
-    static final double PREF_KEY_WIDTH = 40;
-    static final double PREF_KEY_HEIGHT = 30;
-    static final double hGap = 5;
-    static final double vGap = 6;
+    static final double PREF_KEY_WIDTH = 56;
+    static final double PREF_PORTRAIT_KEY_WIDTH = 40;
+    static final double PREF_KEY_HEIGHT = 56;
 
     double keyWidth = PREF_KEY_WIDTH;
     double keyHeight = PREF_KEY_HEIGHT;
 
     private ShiftKey shiftKey;
     private SymbolKey symbolKey;
+
+    private VBox vbox;
 
     public FXVKSkin(final FXVK fxvk) {
         super(fxvk, new BehaviorBase<FXVK>(fxvk));
@@ -168,16 +173,19 @@ public class FXVKSkin extends SkinBase<FXVK, BehaviorBase<FXVK>> {
 
                         Platform.runLater(new Runnable() {
                             public void run() {
-                                double nodeBottom =
-                                    attachedNode.localToScene(attachedNode.getBoundsInLocal()).getMaxY() + 2;
-                                if (fxvk.getLayoutY() > 0 && nodeBottom > fxvk.getLayoutY()) {
-                                    translatePane(oldRoot, fxvk.getLayoutY() - nodeBottom);
+                                if (attachedNode != null) {
+                                    double nodeBottom =
+                                        attachedNode.localToScene(attachedNode.getBoundsInLocal()).getMaxY() + 2;
+                                    if (fxvk.getLayoutY() > 0 && nodeBottom > fxvk.getLayoutY()) {
+                                        translatePane(oldRoot, fxvk.getLayoutY() - nodeBottom);
+                                    }
                                 }
                             }
                         });
 
                         if (oldNode == null || oldNode.getScene() != attachedNode.getScene()) {
                             fxvk.setPrefWidth(VK_WIDTH);
+                            fxvk.setMinWidth(USE_PREF_SIZE);
                             fxvk.setMaxWidth(USE_PREF_SIZE);
                             fxvk.setPrefHeight(VK_HEIGHT);
                             fxvk.setMinHeight(USE_PREF_SIZE);
@@ -191,7 +199,11 @@ public class FXVKSkin extends SkinBase<FXVK, BehaviorBase<FXVK>> {
 
                     if (secondaryVK != null) {
                         secondaryVK.setAttachedNode(null);
+if (USE_SECONDARY_POPUP) {
                         secondaryPopup.hide();
+} else {
+                        secondaryVK.setVisible(false);
+}
                     }
                     return;
                 }
@@ -280,15 +292,16 @@ public class FXVKSkin extends SkinBase<FXVK, BehaviorBase<FXVK>> {
             keyRows = rows.toArray(new Control[rows.size()][]);
         }
 
-        VBox vbox = new VBox(vGap);
-        vbox.setFillWidth(true);
+        vbox = new VBox();
+        vbox.setId("vbox");
         getChildren().add(vbox);
 
-        double primaryFontSize = 16 * keyWidth / PREF_KEY_WIDTH;
-        double secondaryFontSize = 8 * keyWidth / PREF_KEY_WIDTH;
+        //double primaryFontSize = 16 * keyWidth / PREF_KEY_WIDTH;
+        //double secondaryFontSize = 8 * keyWidth / PREF_KEY_WIDTH;
 
         for (Control[] row : keyRows) {
-            HBox hbox = new HBox(hGap);
+            HBox hbox = new HBox();
+            hbox.setId("hbox");
             // Primary keyboard has centered keys, secondary has left aligned keys.
             hbox.setAlignment((fxvk.chars != null) ? Pos.CENTER_LEFT : Pos.CENTER);
             vbox.getChildren().add(hbox);
@@ -297,19 +310,15 @@ public class FXVKSkin extends SkinBase<FXVK, BehaviorBase<FXVK>> {
                 HBox.setHgrow(c, Priority.ALWAYS);
                 if (c instanceof Key) {
                     Key key = (Key)c;
-                    if (fxvk.chars != null) {
-                        key.getStyleClass().add("secondary-key");
-                    }
-
                     int textLen = key.getText().length();
                     if (textLen == 1 || !key.getClass().getSimpleName().equals("CharKey")) {
-                        key.setStyle("-fx-font-size: "+primaryFontSize+"px;");
+                        //key.setStyle("-fx-font-size: "+primaryFontSize+"px;");
                     } else {
-                        key.setStyle("-fx-font-size: "+(primaryFontSize* Math.min(1.0, 3.0/textLen))+"px;");
+                        //key.setStyle("-fx-font-size: "+(primaryFontSize* Math.min(1.0, 3.0/textLen))+"px;");
                         key.setGraphicTextGap(key.getGraphicTextGap() + 2*textLen);
                     }
                     if (key.getGraphic() instanceof Label) {
-                        ((Label)key.getGraphic()).setStyle("-fx-font-size: "+secondaryFontSize+"px;");
+                        //((Label)key.getGraphic()).setStyle("-fx-font-size: "+secondaryFontSize+"px;");
                     }
                 }
             }
@@ -330,36 +339,34 @@ public class FXVKSkin extends SkinBase<FXVK, BehaviorBase<FXVK>> {
                 w = widths.get(i);
             }
             if ("BACKSPACE".equals(str)) {
-                keyRow[i] = new CommandKey("\u232b", BACK_SPACE, keyWidth * w);
+                CommandKey backspaceKey = new CommandKey("\u232b", BACK_SPACE, w);
+                backspaceKey.setId("backspace-key");
+                keyRow[i] = backspaceKey;
             } else if ("ENTER".equals(str)) {
-                keyRow[i] = new CommandKey("\u21b5", ENTER, keyWidth * w + (9-4) * hGap / 2);
+                CommandKey enterKey = new CommandKey("\u21b5", ENTER, w);
+                enterKey.setId("enter-key");
+                keyRow[i] = enterKey;
             } else if ("SHIFT".equals(str)) {
-                keyRow[i] = shiftKey = new ShiftKey(keyWidth * w);
+                shiftKey = new ShiftKey(w);
+                shiftKey.setId("shift-key");
+                keyRow[i] = shiftKey;
             } else if ("SYM".equals(str)) {
-                keyRow[i] = symbolKey = new SymbolKey("!#123 ABC", keyWidth * w + (9-4) * hGap / 2);
+                symbolKey = new SymbolKey("!#123 ABC", w);
+                symbolKey.setId("symbol-key");
+                keyRow[i] = symbolKey;
             } else {
-                keyRow[i] = new CharKey((String)keyList.get(i), keyWidth * w);
+                keyRow[i] = new CharKey((String)keyList.get(i), w);
             }
         }
         return keyRow;
     }
 
-    private void toggleShift() {
-        State newState;
-        switch (state) {
-          case NORMAL:
-            newState = State.SHIFTED;
-            break;
+    private void setState(State state) {
+        this.state = state;
 
-          case SHIFTED:
-            newState = State.SHIFT_LOCK;
-            break;
-
-          case SHIFT_LOCK:
-          default:
-            newState = State.NORMAL;
-        }
-        state = newState;
+        shiftKey.setPressState(state == State.SHIFTED || state == State.SHIFT_LOCK);
+        shiftKey.setDisable(state == State.NUMERIC);
+        shiftKey.setId((state == State.SHIFT_LOCK) ? "capslock-key" : "shift-key");
 
         if (fxvk == secondaryVK) {
             ((FXVKSkin)primaryVK.getSkin()).updateLabels();
@@ -417,12 +424,12 @@ public class FXVKSkin extends SkinBase<FXVK, BehaviorBase<FXVK>> {
 
 
     private class Key extends Button {
-        private Key() {
-            this(null);
-        }
+        private double keyWidth;
 
-        private Key(String text) {
+        private Key(String text, double keyWidth) {
             super(text);
+
+            this.keyWidth = keyWidth;
 
             getStyleClass().add("key");
             setFocusTraversable(false);
@@ -440,9 +447,15 @@ public class FXVKSkin extends SkinBase<FXVK, BehaviorBase<FXVK>> {
 
         EventHandler<ActionEvent> actionHandler = new EventHandler<ActionEvent>() {
             @Override public void handle(ActionEvent e) {
+if (USE_SECONDARY_POPUP) {
                 if (fxvk != secondaryVK && secondaryPopup != null && secondaryPopup.isShowing()) {
                     return;
                 }
+} else {
+                if (fxvk != secondaryVK && secondaryVK != null && secondaryVK.isVisible()) {
+                    return;
+                }
+}
 
                 Node target = fxvk.getAttachedNode();
                 if (target instanceof EventTarget) {
@@ -458,8 +471,7 @@ public class FXVKSkin extends SkinBase<FXVK, BehaviorBase<FXVK>> {
                     }
 
                     if (state == State.SHIFTED) {
-                        toggleShift();
-                        toggleShift();
+                        setState(State.NORMAL);
                     }
                 }
 
@@ -470,6 +482,8 @@ public class FXVKSkin extends SkinBase<FXVK, BehaviorBase<FXVK>> {
         };
 
         CharKey(String str, double width) {
+            super(null, width);
+
             this.str = str;
             setOnAction(actionHandler);
 
@@ -498,16 +512,17 @@ public class FXVKSkin extends SkinBase<FXVK, BehaviorBase<FXVK>> {
                 }
             }
             setContentDisplay(ContentDisplay.TOP);
-            setGraphicTextGap(-8);
+            setGraphicTextGap(-16);
             setText(chars[0]);
+            if (getText().length() > 1) {
+                getStyleClass().add("multi-char-key");
+            }
 
             graphic = new Label((chars.length > 1) ? chars[1] : " ");
             graphic.setPrefWidth(keyWidth - 12);
             graphic.setMinWidth(USE_PREF_SIZE);
             graphic.setPrefHeight(keyHeight / 2 - 8);
             setGraphic(graphic);
-
-            setPrefWidth(width);
         }
     }
 
@@ -523,36 +538,49 @@ public class FXVKSkin extends SkinBase<FXVK, BehaviorBase<FXVK>> {
                     fireKeyEvent(target, KeyEvent.KEY_PRESSED, code, null, null,
                               false, false, false, false);
                     if (state == State.SHIFTED) {
-                        toggleShift();
-                        toggleShift();
+                        setState(State.NORMAL);
                     }
                 }
             }
         };
 
         CommandKey(String label, KeyCode code, double width) {
-            super(label);
+            super(label, width);
             this.code = code;
+            setContentDisplay(ContentDisplay.GRAPHIC_ONLY);
             getStyleClass().add("special-key");
             setOnAction(actionHandler);
-            setPrefWidth(width);
         }
     }
 
     private class ShiftKey extends Key {
         EventHandler<ActionEvent> actionHandler = new EventHandler<ActionEvent>() {
+            long lastTime = -1L;
+
             @Override public void handle(ActionEvent e) {
                 showSecondaryVK(null);
-                toggleShift();
+                long time = System.currentTimeMillis();
+                if (state == State.SHIFTED && lastTime > 0L && time - lastTime < 600L) {
+                    setState(State.SHIFT_LOCK);
+                } else if (state == State.SHIFTED || state == State.SHIFT_LOCK) {
+                    setState(State.NORMAL);
+                } else {
+                    setState(State.SHIFTED);
+                }
+                lastTime = time;
             }
         };
 
         ShiftKey(double width) {
-            super("\u21d1");
+            super("\u21d1", width);
+            setContentDisplay(ContentDisplay.GRAPHIC_ONLY);
             getStyleClass().add("special-key");
             setFocusTraversable(false);
             setOnAction(actionHandler);
-            setPrefWidth(width);
+        }
+
+        private void setPressState(boolean pressed) {
+            setPressed(pressed);
         }
     }
 
@@ -562,16 +590,13 @@ public class FXVKSkin extends SkinBase<FXVK, BehaviorBase<FXVK>> {
 
         EventHandler<ActionEvent> actionHandler = new EventHandler<ActionEvent>() {
             @Override public void handle(ActionEvent e) {
-                state = (state == State.NUMERIC) ? State.NORMAL : State.NUMERIC;
-                if (shiftKey != null) {
-                    shiftKey.setDisable(state == State.NUMERIC);
-                }
+                setState((state == State.NUMERIC) ? State.NORMAL : State.NUMERIC);
                 showSecondaryVK(null);
-                updateLabels();
             }
         };
 
         SymbolKey(String str, double width) {
+            super(null, width);
             this.str = str;
             getStyleClass().add("special-key");
 
@@ -583,20 +608,41 @@ public class FXVKSkin extends SkinBase<FXVK, BehaviorBase<FXVK>> {
             setText(chars[0]);
 
             setOnAction(actionHandler);
-            setPrefWidth(width);
         }
     }
 
     @Override public void layoutChildren() {
         double kw, kh;
         Insets insets = getInsets();
+        if (vbox == null) {
+            createKeys();
+        }
+        HBox hbox = (HBox)vbox.getChildren().get(0);
+        double hGap = hbox.getSpacing();
+
+        double maxWidth = 0;
+        int maxNKeys = 0;
+        for (Node vnode : vbox.getChildren()) {
+            hbox = (HBox)vnode;
+            int nKeys = 0;
+            double totalWidth = 0;
+            for (Node hnode : hbox.getChildren()) {
+                Key key = (Key)hnode;
+                nKeys++;
+                totalWidth += key.keyWidth;
+            }
+
+            maxNKeys = Math.max(maxNKeys, nKeys);
+            maxWidth = Math.max(maxWidth, totalWidth);
+        }
+
 
         if (fxvk == secondaryVK) {
-            kw = ((FXVKSkin)primaryVK.getSkin()).keyWidth;
+            kw = PREF_PORTRAIT_KEY_WIDTH;
             kh = ((FXVKSkin)primaryVK.getSkin()).keyHeight;
         } else {
-            kw = (getWidth() / 10) - 2 * hGap;
-            kh = (getHeight() - insets.getTop() - insets.getBottom() - (keyRows.length - 1) * vGap) / keyRows.length;
+            kw = (hbox.getWidth() - (maxNKeys - 1) * hGap) / Math.max(maxWidth, 10.0);
+            kh = (getHeight() - insets.getTop() - insets.getBottom() - (keyRows.length - 1) * vbox.getSpacing()) / keyRows.length;
         }
 
         if (keyWidth != kw || keyHeight != kh) {
@@ -606,6 +652,34 @@ public class FXVKSkin extends SkinBase<FXVK, BehaviorBase<FXVK>> {
         }
 
         super.layoutChildren();
+
+        for (Node vnode : vbox.getChildren()) {
+            hbox = (HBox)vnode;
+            int nKeys = 0;
+            int nSpecialKeys = 0;
+            double totalWidth = 0;
+            for (Node hnode : hbox.getChildren()) {
+                Key key = (Key)hnode;
+                nKeys++;
+                if (key.keyWidth > 1.0) {
+                    nSpecialKeys++;
+                }
+                totalWidth += key.keyWidth;
+            }
+
+            double slop = hbox.getWidth() - (nKeys - 1) * hGap - totalWidth * kw;
+            for (Node hnode : hbox.getChildren()) {
+                Key key = (Key)hnode;
+                // Add slop if not landscape numerical keyboard. (Better if specified in props).
+                if ((fxvk.vkType != 1 || fxvk.getStyleClass().contains("fxvk-portrait")) &&
+                    slop > 0 && key.keyWidth > 1.0) {
+
+                    key.setPrefWidth(key.keyWidth * keyWidth + slop / nSpecialKeys);
+                } else {
+                    key.setPrefWidth(key.keyWidth * keyWidth);
+                }
+            }
+        }
     }
 
     private void showSecondaryVK(final CharKey key) {
@@ -613,11 +687,19 @@ public class FXVKSkin extends SkinBase<FXVK, BehaviorBase<FXVK>> {
             primaryVK = fxvk;
             final Node textInput = primaryVK.getAttachedNode();
 
-            if (secondaryPopup == null) {
+            if (secondaryVK == null) {
                 secondaryVK = new FXVK();
-                secondaryVK.getStyleClass().add("fxvk-secondary");
+                secondaryVK.getStyleClass().addAll("fxvk-secondary", "fxvk-portrait");
+if (USE_SECONDARY_POPUP) {
                 secondaryPopup = new Popup();
+                secondaryPopup.setAutoHide(true);
                 secondaryPopup.getContent().add(secondaryVK);
+} else {
+                newRoot.getChildren().add(secondaryVK);
+                secondaryVK.setManaged(false);
+                secondaryVK.setVisible(false);
+                secondaryVK.impl_processCSS(true);
+}
             }
 
             if (state == State.NUMERIC) {
@@ -645,17 +727,21 @@ public class FXVKSkin extends SkinBase<FXVK, BehaviorBase<FXVK>> {
 
                 secondaryVK.setAttachedNode(textInput);
                 FXVKSkin primarySkin = (FXVKSkin)primaryVK.getSkin();
-                Insets insets = primarySkin.getInsets();
+                FXVKSkin secondarySkin = (FXVKSkin)secondaryVK.getSkin();
+                Insets insets = secondarySkin.getInsets();
                 int nKeys = secondaryVK.chars.length;
                 int nRows = (int)Math.floor(Math.sqrt(Math.max(1, nKeys - 2)));
                 int nKeysPerRow = (int)Math.ceil(nKeys / (double)nRows);
+                HBox hbox = (HBox)vbox.getChildren().get(0);
                 final double w = insets.getLeft() + insets.getRight() +
-                                 nKeysPerRow * primarySkin.keyWidth + (nKeys - 1) * hGap;
-                final double h = nRows * primarySkin.keyHeight + (nRows-1) * vGap + 5;
+                                 nKeysPerRow * PREF_PORTRAIT_KEY_WIDTH + (nKeysPerRow - 1) * hbox.getSpacing();
+                final double h = insets.getTop() + insets.getBottom() +
+                                 nRows * primarySkin.keyHeight + (nRows-1) * vbox.getSpacing();
                 secondaryVK.setPrefWidth(w);
                 secondaryVK.setMinWidth(USE_PREF_SIZE);
                 secondaryVK.setPrefHeight(h);
                 secondaryVK.setMinHeight(USE_PREF_SIZE);
+if (USE_SECONDARY_POPUP) {
                 Platform.runLater(new Runnable() {
                     public void run() {
                         // Position popup on screen
@@ -669,11 +755,28 @@ public class FXVKSkin extends SkinBase<FXVK, BehaviorBase<FXVK>> {
                         secondaryPopup.show(key.getScene().getWindow(), x, y);
                     }
                 });
+} else {
+                // Position popup in Scene
+                Bounds keyBounds = key.localToScene(key.getBoundsInLocal());
+                double x = keyBounds.getMinX() + 5;
+                double y = keyBounds.getMinY() - secondaryVK.prefHeight(-1) - 3;
+                Scene scene = key.getScene();
+                x = Math.min(x, scene.getWidth() - w - 4);
+                //secondaryVK.setLayoutX(x);
+                //secondaryVK.setLayoutY(y);
+                secondaryVK.relocate(x, y);
+                secondaryVK.resize(secondaryVK.prefWidth(-1), secondaryVK.prefHeight(-1));
+                secondaryVK.setVisible(true);
+}
             }
         } else {
             if (secondaryVK != null) {
                 secondaryVK.setAttachedNode(null);
+if (USE_SECONDARY_POPUP) {
                 secondaryPopup.hide();
+} else {
+                secondaryVK.setVisible(false);
+}
             }
         }
     }
@@ -724,9 +827,8 @@ public class FXVKSkin extends SkinBase<FXVK, BehaviorBase<FXVK>> {
         }
 
         private void updateTimelines(FXVK fxvk) {
-            double scale = getWidth() / fxvk.prefWidth(-1);
             double rootHeight = getHeight();
-            double vkHeight = fxvk.prefHeight(-1) * scale;
+            double vkHeight = fxvk.getHeight();
 
             ((FXVKSkin)fxvk.getSkin()).slideInTimeline.getKeyFrames().setAll(
                 new KeyFrame(Duration.ZERO,
@@ -750,24 +852,38 @@ public class FXVKSkin extends SkinBase<FXVK, BehaviorBase<FXVK>> {
         }
 
         @Override public void layoutChildren() {
+            if (getScene() != null && getScene().getWindow() != null &&
+                getWidth() > getScene().getWindow().getWidth()) {
+                // Too soon to layout keyboard
+                return;
+            }
+
+            final double rootWidth = getWidth();
+            final double rootHeight = getHeight();
+            final double vkHeight = (rootWidth > rootHeight) ? VK_HEIGHT : VK_PORTRAIT_HEIGHT;
+
             for (Node child : getChildren()) {
-                if (child instanceof FXVK) {
+                if (child instanceof FXVK && !child.getStyleClass().contains("fxvk-secondary")) {
                     final FXVK fxvk = (FXVK)child;
-                    double scale = getWidth() / fxvk.prefWidth(-1);
-                    final double rootHeight = getHeight();
-                    final double vkHeight = fxvk.prefHeight(-1) * scale;
+                    if (rootWidth > rootHeight) {
+                        fxvk.getStyleClass().remove("fxvk-portrait");
+                    } else {
+                        if (!fxvk.getStyleClass().contains("fxvk-portrait")) {
+                            fxvk.getStyleClass().add("fxvk-portrait");
+                        }
+                    }
 
                     boolean resized = false;
-                    if (fxvk.getWidth() != getWidth() || fxvk.getHeight() != vkHeight) {
-                        fxvk.resize(getWidth(), vkHeight);
+                    if (fxvk.getWidth() != rootWidth || fxvk.getHeight() != vkHeight) {
+                        fxvk.setLayoutY(rootHeight);
+                        fxvk.resize(rootWidth, vkHeight);
+                        updateTimelines(fxvk);
                         resized = true;
                     }
 
                     if (fxvk.getLayoutY() == 0) {
                         fxvk.setLayoutY(rootHeight);
                     }
-
-                    updateTimelines(fxvk);
 
 
                     if (fxvk.isVisible()) {
