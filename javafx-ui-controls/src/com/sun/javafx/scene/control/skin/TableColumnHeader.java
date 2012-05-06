@@ -87,6 +87,10 @@ public class TableColumnHeader extends StackPane {
         this.table = table;
 
         getStyleClass().setAll("column-header");
+        if (getTableColumn() != null) {
+            idProperty().bind(column.idProperty());
+            styleProperty().bind(column.styleProperty());
+        }
 
         setFocusTraversable(false);
 
@@ -248,7 +252,7 @@ public class TableColumnHeader extends StackPane {
     private StackPane arrow;
     private Label sortOrderLabel;
     private HBox sortOrderDots;
-    private GridPane sortArrowGrid;
+    private Node sortArrow;
     private boolean isSortColumn;
     
     private boolean isSizeDirty = false;
@@ -273,9 +277,6 @@ public class TableColumnHeader extends StackPane {
      **************************************************************************/       
 
     private void initUI() {
-        sortArrowGrid = new GridPane();
-        sortArrowGrid.setPadding(new Insets(0, 3, 0, 0));
-        
         // TableColumn will be null if we are dealing with the root NestedTableColumnHeader
         if (column == null) return;
         
@@ -327,6 +328,7 @@ public class TableColumnHeader extends StackPane {
         label = new Label();
         label.setAlignment(Pos.CENTER);
         label.textProperty().bind(column.textProperty());
+        label.graphicProperty().bind(column.graphicProperty());
 
         // ---- container for the sort arrow
         arrow = new StackPane();
@@ -353,53 +355,65 @@ public class TableColumnHeader extends StackPane {
         getChildren().clear();
         getChildren().add(label);
         
-        sortArrowGrid.getChildren().clear();
-        
         if (! isSortColumn) return;
         
         final int sortColumnCount = getTableView().getSortOrder().size();
         boolean showSortOrderDots = sortPos <= 3 && sortColumnCount > 1;
         
-        arrow.setVisible(isSortColumn);
-        sortArrowGrid.setVisible(isSortColumn);
-        getChildren().add(sortArrowGrid);
-        
-        if (sortPos > 2) {
-            if (sortOrderLabel == null) {
-                // ---- sort order label (for sort positions greater than 3)
-                sortOrderLabel = new Label();
-                sortOrderLabel.getStyleClass().add("sort-order");
-            }
-            
-            // only show the label if the sortPos is greater than 3 (for sortPos 
-            // values less than three, we show the sortOrderDots instead)
-            sortOrderLabel.setText("" + (sortPos + 1));
-            sortOrderLabel.setVisible(sortColumnCount > 1);
-            
-            // update the grid layout
-            sortArrowGrid.add(arrow, 1, 1);
-            GridPane.setHgrow(arrow, Priority.NEVER);
-            GridPane.setVgrow(arrow, Priority.NEVER);
-            sortArrowGrid.add(sortOrderLabel, 2, 1);
-        } else if (showSortOrderDots) {
-            if (sortOrderDots == null) {
-                sortOrderDots = new HBox(1);
-            }
-            
-            // show the sort order dots
-            int arrowRow = column.getSortType() == ASCENDING ? 1 : 2;
-            int dotsRow = column.getSortType() == ASCENDING ? 2 : 1;
-            
-            sortArrowGrid.add(arrow, 1, arrowRow);
-            GridPane.setHalignment(arrow, HPos.CENTER);
-            sortArrowGrid.add(sortOrderDots, 1, dotsRow);
-            
-            updateSortOrderDots(sortPos);
+        Node _sortArrow = null;
+        if (getTableColumn().getSortNode() != null) {
+            _sortArrow = getTableColumn().getSortNode();
+            getChildren().add(_sortArrow);
         } else {
-            // only show the arrow
-            sortArrowGrid.add(arrow, 1, 1);
-            GridPane.setHgrow(arrow, Priority.NEVER);
-            GridPane.setVgrow(arrow, Priority.ALWAYS);
+            GridPane sortArrowGrid = new GridPane();
+            _sortArrow = sortArrowGrid;
+            sortArrowGrid.setPadding(new Insets(0, 3, 0, 0));
+            getChildren().add(sortArrowGrid);
+            
+            arrow.setVisible(isSortColumn);
+            
+            if (sortPos > 2) {
+                if (sortOrderLabel == null) {
+                    // ---- sort order label (for sort positions greater than 3)
+                    sortOrderLabel = new Label();
+                    sortOrderLabel.getStyleClass().add("sort-order");
+                }
+
+                // only show the label if the sortPos is greater than 3 (for sortPos 
+                // values less than three, we show the sortOrderDots instead)
+                sortOrderLabel.setText("" + (sortPos + 1));
+                sortOrderLabel.setVisible(sortColumnCount > 1);
+
+                // update the grid layout
+                sortArrowGrid.add(arrow, 1, 1);
+                GridPane.setHgrow(arrow, Priority.NEVER);
+                GridPane.setVgrow(arrow, Priority.NEVER);
+                sortArrowGrid.add(sortOrderLabel, 2, 1);
+            } else if (showSortOrderDots) {
+                if (sortOrderDots == null) {
+                    sortOrderDots = new HBox(1);
+                }
+
+                // show the sort order dots
+                int arrowRow = column.getSortType() == ASCENDING ? 1 : 2;
+                int dotsRow = column.getSortType() == ASCENDING ? 2 : 1;
+
+                sortArrowGrid.add(arrow, 1, arrowRow);
+                GridPane.setHalignment(arrow, HPos.CENTER);
+                sortArrowGrid.add(sortOrderDots, 1, dotsRow);
+
+                updateSortOrderDots(sortPos);
+            } else {
+                // only show the arrow
+                sortArrowGrid.add(arrow, 1, 1);
+                GridPane.setHgrow(arrow, Priority.NEVER);
+                GridPane.setVgrow(arrow, Priority.ALWAYS);
+            }
+        }
+        
+        sortArrow = _sortArrow;
+        if (sortArrow != null) {
+            sortArrow.setVisible(isSortColumn);
         }
         
         requestLayout();
@@ -597,11 +611,11 @@ public class TableColumnHeader extends StackPane {
             arrow.setMaxSize(arrow.prefWidth(-1), arrow.prefHeight(-1));
         }
 
-        if (sortArrowGrid.isVisible()) {
-            sortWidth = sortArrowGrid.prefWidth(-1);
+        if (sortArrow != null && sortArrow.isVisible()) {
+            sortWidth = sortArrow.prefWidth(-1);
             x -= sortWidth;
-            sortArrowGrid.resize(sortWidth, sortArrowGrid.prefHeight(-1));
-            positionInArea(sortArrowGrid, x, getInsets().getTop(), 
+            sortArrow.resize(sortWidth, sortArrow.prefHeight(-1));
+            positionInArea(sortArrow, x, getInsets().getTop(), 
                     sortWidth, h, 0, HPos.CENTER, VPos.CENTER);
         }
 
