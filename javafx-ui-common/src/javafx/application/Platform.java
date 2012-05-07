@@ -85,6 +85,33 @@ public final class Platform {
     }
 
     /**
+     * Sets the implicitExit attribute to the specified value. If this
+     * attribute is true, the JavaFX runtime will implicitly shutdown
+     * when the last window is closed; the JavaFX launcher will call the
+     * {@link Application#stop} method and terminate the JavaFX
+     * application thread.
+     * If this attribute is false, the application will continue to
+     * run normally even after the last window is closed, until the
+     * application calls {@link #exit}.
+     * The default value is true.
+     *
+     * @param implicitExit a flag indicating whether or not to implicitly exit
+     * when the last window is closed.
+     */
+    public static void setImplicitExit(boolean implicitExit) {
+        PlatformImpl.setImplicitExit(implicitExit);
+    }
+
+    /**
+     * Gets the value of the implicitExit attribute.
+     *
+     * @return the implicitExit attribute
+     */
+    public static boolean isImplicitExit() {
+        return PlatformImpl.isImplicitExit();
+    }
+
+    /**
      * Queries whether a specific conditional feature is supported
      * by the platform.
      * <p>
