@@ -765,6 +765,8 @@ public class StyleHelper {
                     }
                     
                 } catch (Exception e) {
+                    final String msg = String.format("Failed to set css [%s] due to %s\n", styleable, e.getMessage());
+                    StyleManager.getInstance().errorsProperty().add(msg);                    
                     // TODO: use logger here
                     PlatformLogger logger = Logging.getCSSLogger();
                     if (logger.isLoggable(PlatformLogger.WARNING)) {
@@ -931,6 +933,8 @@ public class StyleHelper {
                     final Object ret = keyType.convert(subs);
                     return new CalculatedValue(ret, origin, isCacheable);
                 } catch (ClassCastException cce) {
+                    final String msg = formatExceptionMessage(node, styleable, style.getStyle(), cce);
+                    StyleManager.getInstance().errorsProperty().add(msg);
                     if (LOGGER.isLoggable(PlatformLogger.WARNING)) {
                         LOGGER.warning("caught: ", cce);
                         LOGGER.warning("styleable = " + styleable);
@@ -1227,6 +1231,31 @@ public class StyleHelper {
         return sbuf.toString();
     }
 
+    private String formatExceptionMessage(Node node, StyleableProperty styleable, Style style, Exception e) {
+        
+        StringBuilder sbuf = new StringBuilder();
+        sbuf.append("Caught ")
+            .append(e.toString())
+            .append("'")
+            .append(" while calculating value for '")
+            .append(styleable.getProperty())
+            .append("'");
+        
+        final Rule rule = style != null ? style.getDeclaration().getRule(): null;
+        final Stylesheet stylesheet = rule != null ? rule.getStylesheet() : null;
+        final java.net.URL url = stylesheet != null ? stylesheet.getUrl() : null;
+        if (url != null) {
+            sbuf.append(" from rule '")
+                .append(style.getSelector())
+                .append("' in stylesheet ").append(url.toExternalForm());
+        } else if (stylesheet != null && Stylesheet.Origin.INLINE == stylesheet.getOrigin()) {
+            sbuf.append(" from inline style on " )
+                .append(node.toString());            
+        }
+        
+        return sbuf.toString();
+    }
+    
     private CalculatedValue calculateValue(
             final CascadingStyle style, 
             final Node node, 
@@ -1279,7 +1308,7 @@ public class StyleHelper {
                 return new CalculatedValue(val, origin, cacheable.get());
                 
             } catch (ClassCastException cce) {
-                String msg = formatUnresolvedLookupMessage(node, styleable, style.getStyle(),resolved);
+                final String msg = formatUnresolvedLookupMessage(node, styleable, style.getStyle(),resolved);
                 StyleManager.getInstance().errorsProperty().add(msg);
                 if (LOGGER.isLoggable(PlatformLogger.WARNING)) {
                     LOGGER.warning(msg);
@@ -1289,6 +1318,8 @@ public class StyleHelper {
                 }
                 return SKIP;
             } catch (IllegalArgumentException iae) {
+                final String msg = formatExceptionMessage(node, styleable, style.getStyle(), iae);
+                StyleManager.getInstance().errorsProperty().add(msg);
                 if (LOGGER.isLoggable(PlatformLogger.WARNING)) {
                     LOGGER.warning("caught: ", iae);
                     LOGGER.fine("styleable = " + styleable);
@@ -1296,6 +1327,8 @@ public class StyleHelper {
                 }
                 return SKIP;
             } catch (NullPointerException npe) {
+                final String msg = formatExceptionMessage(node, styleable, style.getStyle(), npe);
+                StyleManager.getInstance().errorsProperty().add(msg);
                 if (LOGGER.isLoggable(PlatformLogger.WARNING)) {
                     LOGGER.warning("caught: ", npe);
                     LOGGER.fine("styleable = " + styleable);
