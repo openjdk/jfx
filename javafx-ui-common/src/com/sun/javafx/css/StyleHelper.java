@@ -154,6 +154,7 @@ public class StyleHelper {
      * share the same valueCache! 
      */
     Map<StyleCacheKey, StyleCacheEntry> styleCache;
+    Map<StyleCacheKey, Reference<StyleCacheKey>> styleCacheKeyRefs;
     
     public static final class StyleCacheKey {
         final int[] indices;
@@ -207,6 +208,7 @@ public class StyleHelper {
             final StyleCacheKey key = keyRef.get();
             final StyleCacheEntry styleCacheEntry = styleCache.remove(key);
             styleCacheEntry.clearEntries();
+            styleCacheKeyRefs.remove(key);
             keyRef.clear();
         }
     }
@@ -229,16 +231,22 @@ public class StyleHelper {
         //
         // Look to see if there is already a cache for this set of helpers
         //
-        final StyleCacheEntry styleCacheEntry = styleCache.get(styleCacheKey);
-        if (styleCacheEntry != null) {
+        final Reference<StyleCacheKey> existingKeyRef = styleCacheKeyRefs.get(styleCacheKey);
+        if (existingKeyRef != null) {
             
-            final Reference<StyleCacheKey> keyRef = styleCacheEntry.keyRef;
-            if (keyRef != null && keyRef.get() != null) return keyRef;
-            // if the existing ref is null, then remove the existingCache
-            // from the styleCache since it is no longer in use.
-            styleCache.remove(styleCacheKey);
-            styleCacheEntry.clearEntries();
-
+            if (existingKeyRef.get() != null) {
+                return existingKeyRef;
+                
+            } else {
+                // key not in use, clean up
+                styleCacheKeyRefs.remove(styleCacheKey);
+                
+                final StyleCacheEntry styleCacheEntry = styleCache.remove(styleCacheKey);
+                if (styleCacheEntry != null) {
+                    styleCacheEntry.clearEntries();
+                }
+            }
+            
         }
 
         // The List<CacheEntry> should only contain entries for those
@@ -261,11 +269,13 @@ public class StyleHelper {
             parent = parent.getParent();
         }
 
-        // No existing cache was found for this set of helpers.
+        final StyleCacheEntry value = new StyleCacheEntry(pclassMasks);
+        styleCache.put(styleCacheKey, value);
+        
         final Reference<StyleCacheKey> keyRef = 
             new WeakReference<StyleCacheKey>(styleCacheKey);
-        final StyleCacheEntry value = new StyleCacheEntry(keyRef, pclassMasks);
-        styleCache.put(styleCacheKey, value);
+        styleCacheKeyRefs.put(styleCacheKey, keyRef);
+        
         return keyRef;
     }
 
@@ -275,14 +285,12 @@ public class StyleHelper {
      */
     final static class StyleCacheEntry {
         
-        private final Reference<StyleCacheKey> keyRef;
         // see comments in createStyleCacheKey
         private final long[] pclassMask;
         
         private final List<CacheEntry> entries;
 
-        private StyleCacheEntry(Reference<StyleCacheKey> keyRef, long[] pclassMask) {
-            this.keyRef = keyRef;
+        private StyleCacheEntry(long[] pclassMask) {
             this.pclassMask = pclassMask;
             this.entries = new ArrayList<CacheEntry>();
         }
@@ -295,9 +303,6 @@ public class StyleHelper {
             entries.clear();
         }
         
-        void clearRef() {
-            keyRef.clear();
-        }
     }
 
     /**
@@ -332,18 +337,13 @@ public class StyleHelper {
         if(key == null) return null;
         
         final StyleCacheEntry styleCacheEntry = styleCache.get(key);
-        if (styleCacheEntry == null) return null;
-        
-        if (styleCacheEntry.keyRef.get() == null) {
-            
+        if (styleCacheEntry == null) {
             styleCache.remove(key);
-            styleCacheEntry.clearEntries();
+            styleCacheKeyRefs.remove(key);
             return null;
-            
         }
-        
+               
         final List<CacheEntry> cachedValues = styleCacheEntry.entries;
-        assert(cachedValues != null);
 
         //
         // Find the entry in the list that matches the states

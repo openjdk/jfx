@@ -111,9 +111,11 @@ public class Node_cssStyleMap_Test {
                 if (this.getStyleClass().isEmpty()) {
                     shelper = StyleHelper.create(Collections.EMPTY_LIST, 0, 0);
                     shelper.styleCache = new HashMap<StyleHelper.StyleCacheKey, StyleHelper.StyleCacheEntry>();
+                    shelper.styleCacheKeyRefs = new HashMap<StyleHelper.StyleCacheKey, Reference<StyleHelper.StyleCacheKey>>();
                 } else  {
                     shelper = StyleHelper.create(styles, 0, 0);
                     shelper.styleCache = new HashMap<StyleHelper.StyleCacheKey, StyleHelper.StyleCacheEntry>();
+                    shelper.styleCacheKeyRefs = new HashMap<StyleHelper.StyleCacheKey, Reference<StyleHelper.StyleCacheKey>>();
                 }
                 return shelper;
             }

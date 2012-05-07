@@ -887,6 +887,7 @@ public class StyleManager {
         // it makes sense that the container should own the valueCache. This
         // way, each scene gets its own valueCache.
         private final Map<StyleHelper.StyleCacheKey, StyleHelper.StyleCacheEntry> styleCache;
+        private final Map<StyleHelper.StyleCacheKey, Reference<StyleHelper.StyleCacheKey>> styleCacheKeyRefs;
         
         // ditto
         private int helperCount;
@@ -921,6 +922,7 @@ public class StyleManager {
             StyleManager.getInstance().userAgentStylesheetMap.addListener(mapChangeListener);
 
             styleCache = new HashMap<StyleHelper.StyleCacheKey, StyleHelper.StyleCacheEntry>();
+            styleCacheKeyRefs = new HashMap<StyleHelper.StyleCacheKey, Reference<StyleHelper.StyleCacheKey>>();
             helperCount = 0;
         }
 
@@ -934,12 +936,15 @@ public class StyleManager {
         private void clearCaches() {
 
             for (Entry<StyleHelper.StyleCacheKey, StyleHelper.StyleCacheEntry> entry : styleCache.entrySet()) {
-                StyleHelper.StyleCacheEntry value = entry.getValue();
+                final StyleHelper.StyleCacheKey key = entry.getKey();
+                final StyleHelper.StyleCacheEntry value = entry.getValue();
                 value.clearEntries();
-                value.clearRef();
+                final Reference<StyleHelper.StyleCacheKey> keyRef = styleCacheKeyRefs.remove(key);
+                if (keyRef != null) keyRef.clear();
             }
             styleCache.clear();
-
+            styleCacheKeyRefs.clear();
+            
             for(Cache cache : cacheMap.values()) {
                 cache.clear();
             }
@@ -1184,6 +1189,7 @@ public class StyleManager {
         StyleHelper getStyleHelper(Scene scene) {
             StyleHelper helper = StyleHelper.create(getStyles(scene), 0, ++helperCount);
             helper.styleCache = styleCache;
+            helper.styleCacheKeyRefs = styleCacheKeyRefs;
             return helper;
         }
 
@@ -1246,16 +1252,6 @@ public class StyleManager {
     public ObservableList<String> getErrors() {
         return errors;
     }
-
-    private static class StyleHelperCacheContainer {
-        private final StyleHelper styleHelper;
-        private final Reference<StyleHelper> styleHelperRef;
-        private StyleHelperCacheContainer(StyleHelper styleHelper, 
-                Reference<StyleHelper> styleHelperRef) {
-            this.styleHelper = styleHelper;
-            this.styleHelperRef = styleHelperRef;
-        }        
-    }
     
     /**
      * Creates and caches StyleHelpers, reusing them as often as practical.
@@ -1266,33 +1262,33 @@ public class StyleManager {
         private final List<Rule> rules;
         private final long pseudoclassStateMask;
         private final boolean impactsChildren;
-        private final Map<Long, StyleHelperCacheContainer> cache;
+        private final Map<Long, StyleHelper> cache;
+        private final Map<Long, Reference<StyleHelper>> refs;
 
         Cache(List<Rule> rules, long pseudoclassStateMask, boolean impactsChildren) {
             this.rules = rules;
             this.pseudoclassStateMask = pseudoclassStateMask;
             this.impactsChildren = impactsChildren;
-            cache = new HashMap<Long, StyleHelperCacheContainer>();
+            cache = new HashMap<Long, StyleHelper>();
+            refs = new HashMap<Long, Reference<StyleHelper>>();
         }
 
         private void clear() {
 
-            for(StyleHelperCacheContainer helperContainer : cache.values()) {
-                
-                final StyleHelper helper = (helperContainer != null)
-                        ? helperContainer.styleHelper
-                        : null;
-                
+            for(StyleHelper helper : cache.values()) {
+                                
                 if (helper == null) {
                     continue;
                 }
                 helper.styleCache = null;
                 helper.clearStyleMap();
-                helperContainer.styleHelperRef.clear();
+                Reference<StyleHelper> ref = refs.remove(helper);
+                if (ref != null) ref.clear();
                 
             }
-
+            
             cache.clear();
+            refs.clear();
             rules.clear();
         }
 
@@ -1337,13 +1333,21 @@ public class StyleManager {
                 }
                 mask = mask << 1;
             }
-
-            if (cache.containsKey(key)) {
-                final StyleHelperCacheContainer helperContainer = cache.get(key);
-                if (helperContainer != null) {
-                    return helperContainer.styleHelperRef;
+            
+            final Long keyObj = Long.valueOf(key);            
+            if (refs.containsKey(keyObj)) {
+                final Reference<StyleHelper> ref = refs.get(keyObj);
+                if (ref != null && ref.get() != null) {
+                    return ref;
+                } else {
+                    refs.remove(keyObj);
+                    final StyleHelper helper = cache.remove(keyObj);
+                    if (helper != null) {
+                        helper.clearStyleMap();
+                        helper.styleCache = null;
+                        helper.styleCacheKeyRefs = null;
+                    }
                 }
-                cache.remove(key);
             } 
             
             // We need to create a new StyleHelper, add it to the cache,
@@ -1354,12 +1358,12 @@ public class StyleManager {
                     ++(container.helperCount));
 
             helper.styleCache = container.styleCache;
+            helper.styleCacheKeyRefs = container.styleCacheKeyRefs;
+            cache.put(keyObj, helper);
             
             final Reference<StyleHelper> helperRef =
                 new WeakReference<StyleHelper>(helper);            
-            final StyleHelperCacheContainer helperContainer = 
-                new StyleHelperCacheContainer(helper, helperRef);
-            cache.put(key, helperContainer);
+            refs.put(keyObj, helperRef);
 
             return helperRef;
         }
