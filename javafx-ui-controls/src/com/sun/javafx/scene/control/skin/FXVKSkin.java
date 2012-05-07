@@ -341,14 +341,20 @@ if (USE_SECONDARY_POPUP) {
             if ("BACKSPACE".equals(str)) {
                 CommandKey backspaceKey = new CommandKey("\u232b", BACK_SPACE, w);
                 backspaceKey.setId("backspace-key");
+// Workaround until we can load -fx-graphic from caspian.css
+setIcon(backspaceKey, "fxvk-backspace-button.png");
                 keyRow[i] = backspaceKey;
             } else if ("ENTER".equals(str)) {
                 CommandKey enterKey = new CommandKey("\u21b5", ENTER, w);
                 enterKey.setId("enter-key");
+// Workaround until we can load -fx-graphic from caspian.css
+setIcon(enterKey, "fxvk-enter-button.png");
                 keyRow[i] = enterKey;
             } else if ("SHIFT".equals(str)) {
                 shiftKey = new ShiftKey(w);
                 shiftKey.setId("shift-key");
+// Workaround until we can load -fx-graphic from caspian.css
+setIcon(shiftKey, "fxvk-shift-button.png");
                 keyRow[i] = shiftKey;
             } else if ("SYM".equals(str)) {
                 symbolKey = new SymbolKey("!#123 ABC", w);
@@ -368,12 +374,28 @@ if (USE_SECONDARY_POPUP) {
         shiftKey.setDisable(state == State.NUMERIC);
         shiftKey.setId((state == State.SHIFT_LOCK) ? "capslock-key" : "shift-key");
 
+// Workaround until we can load -fx-graphic from caspian.css
+switch (state) {
+    case NUMERIC: setIcon(shiftKey, null); break;
+    case SHIFT_LOCK: setIcon(shiftKey, "fxvk-capslock-button.png"); break;
+    default: setIcon(shiftKey, "fxvk-shift-button.png");
+}
         if (fxvk == secondaryVK) {
             ((FXVKSkin)primaryVK.getSkin()).updateLabels();
         } else {
             updateLabels();
         }
     }
+
+// Workaround until we can load -fx-graphic from caspian.css
+private void setIcon(Key key, String fileName) {
+    if (fileName != null) {
+        String url = getClass().getResource("caspian/"+fileName).toExternalForm();
+        key.setGraphic(new javafx.scene.image.ImageView(url));
+    } else {
+        key.setGraphic(null);
+    }
+}
 
     private void updateLabels() {
         for (Control[] row : keyRows) {

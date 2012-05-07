@@ -2817,6 +2817,7 @@
     -fx-background-color: #707070;
 }
 
+/* The url based images don't load properly. Using workaround in FXVKSkin instead.
 .fxvk #shift-key {
     -fx-graphic: url("fxvk-shift-button.png");
 }
@@ -2836,6 +2837,7 @@
 .fxvk #enter-key {
     -fx-graphic: url("fxvk-enter-button.png");
 }
+*/
 
 
 
