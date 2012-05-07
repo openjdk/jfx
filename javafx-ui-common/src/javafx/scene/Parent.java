@@ -721,6 +721,7 @@ public abstract class Parent extends Node {
      * @treatAsPrivate implementation detail
      * @deprecated This is an internal API that is not intended for use and will be removed in the next version
      */
+    // SB-dependency: RT-21209 has been filed to track this
     @Deprecated
     public final void setImpl_traversalEngine(TraversalEngine value) {
         impl_traversalEngineProperty().set(value);
