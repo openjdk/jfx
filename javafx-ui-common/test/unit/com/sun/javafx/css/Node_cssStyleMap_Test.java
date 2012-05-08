@@ -102,35 +102,32 @@ public class Node_cssStyleMap_Test {
 
             // I'm bypassing StyleManager by creating StyleHelper directly. 
             StyleHelper shelper = null;
-            Reference<StyleCacheKey> ref = null;
+                                   
+            @Override
+            public Reference<StyleHelper.StyleCacheKey> impl_getStyleCacheKey() {
+                return shelper.createStyleCacheKey(this);
+            }
             
-            public void impl_processCSS(boolean reapply) {
+            @Override public StyleHelper impl_getStyleHelper() {
+                if (shelper == null) shelper = impl_createStyleHelper();
+                return shelper;
+            }            
+            
+            @Override
+            public StyleHelper impl_createStyleHelper() {
                 // If no styleclass, then create an StyleHelper with no mappings.
                 // Otherwise, create a StyleHelper matching the "rect" style class.
                 if (getStyleClass().isEmpty()) {
                     shelper = StyleHelper.create(Collections.EMPTY_LIST, 0, 0);
                     shelper.styleCache = new HashMap<StyleHelper.StyleCacheKey, StyleHelper.StyleCacheEntry>();
                     shelper.styleCacheKeyRefs = new HashMap<StyleHelper.StyleCacheKey, Reference<StyleHelper.StyleCacheKey>>();
-                    ref = shelper.createStyleCacheKey(this);
                 } else  {
                     shelper = StyleHelper.create(styles, 0, 0);
                     shelper.styleCache = new HashMap<StyleHelper.StyleCacheKey, StyleHelper.StyleCacheEntry>();
                     shelper.styleCacheKeyRefs = new HashMap<StyleHelper.StyleCacheKey, Reference<StyleHelper.StyleCacheKey>>();
-                    ref = shelper.createStyleCacheKey(this);
                 }
-                shelper.transitionToState(this);
-            }
-            
-            @Override
-            public Reference<StyleCacheKey> impl_getStyleCacheKey() {
-                return ref;
-            }
-            
-            @Override
-            public StyleHelper impl_getStyleHelper() {
                 return shelper;
             }
-            
         };
                 
         rect.getStyleClass().add("rect");
