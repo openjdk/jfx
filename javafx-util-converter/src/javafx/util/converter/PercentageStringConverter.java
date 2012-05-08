@@ -25,7 +25,6 @@
 package javafx.util.converter;
 
 import com.sun.javafx.beans.annotations.NoBuilder;
-import java.text.Format;
 import java.text.NumberFormat;
 import java.util.Locale;
 import javafx.util.StringConverter;
@@ -58,11 +57,11 @@ public class PercentageStringConverter extends NumberStringConverter {
     // ----------------------------------------------------------------- Methods
 
     /** {@inheritDoc} */
-    @Override public Format getFormat() {
+    @Override public NumberFormat getNumberFormat() {
         Locale _locale = locale == null ? Locale.getDefault() : locale;
         
-        if (format != null) {
-            return format;
+        if (numberFormat != null) {
+            return numberFormat;
         } else {
             return NumberFormat.getPercentInstance(_locale);
         }

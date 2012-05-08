@@ -27,7 +27,6 @@ package javafx.util.converter;
 import com.sun.javafx.beans.annotations.NoBuilder;
 import java.text.DecimalFormat;
 import java.text.DecimalFormatSymbols;
-import java.text.Format;
 import java.text.NumberFormat;
 import java.util.Locale;
 import javafx.util.StringConverter;
@@ -68,11 +67,11 @@ public class CurrencyStringConverter extends NumberStringConverter {
     // ---------------------------------------------------------------0- Methods
 
     /** {@inheritDoc} */
-    @Override protected Format getFormat() {
+    @Override protected NumberFormat getNumberFormat() {
         Locale _locale = locale == null ? Locale.getDefault() : locale;
         
-        if (format != null) {
-            return format;
+        if (numberFormat != null) {
+            return numberFormat;
         } else if (pattern != null) {
             DecimalFormatSymbols symbols = new DecimalFormatSymbols(_locale);
             return new DecimalFormat(pattern, symbols);
