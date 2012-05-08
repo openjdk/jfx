@@ -186,7 +186,7 @@ public class PaginationTest {
             MouseEventGenerator.generateMouseEvent(MouseEvent.MOUSE_PRESSED, xval+170, yval+380));
         tk.firePulse();
 
-        assertEquals(2, pagination.getCurrentPageIndex());
+        assertEquals(3, pagination.getCurrentPageIndex());
     }
 
     @Test public void setCurrentPageIndexAndVerifyCallback() {
