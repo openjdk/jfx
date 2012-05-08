@@ -1015,6 +1015,9 @@ public class Scene implements EventTarget {
      * @treatAsPrivate implementation detail
      * @deprecated This is an internal API that is not intended for use and will be removed in the next version
      */
+    // SB-dependency: RT-21222 has been filed to track this
+    // TODO: need to ensure that both SceneBuilder and JDevloper have migrated
+    // to new 2.2 public API before we remove this.
     @Deprecated
     public Object renderToImage(Object platformImage) {
         return renderToImage(platformImage, 1.0f);
