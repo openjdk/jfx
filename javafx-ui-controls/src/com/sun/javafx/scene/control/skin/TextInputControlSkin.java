@@ -74,6 +74,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
+import com.sun.javafx.PlatformUtil;
 import com.sun.javafx.css.StyleableBooleanProperty;
 import com.sun.javafx.css.StyleableObjectProperty;
 import com.sun.javafx.css.StyleableProperty;
@@ -90,7 +91,7 @@ import static com.sun.javafx.scene.control.skin.resources.ControlResources.*;
  */
 public abstract class TextInputControlSkin<T extends TextInputControl, B extends TextInputControlBehavior<T>> extends SkinBase<T, B> {
 
-    private static final boolean macOS = com.sun.javafx.PlatformUtil.isMac();
+    private static final boolean macOS = PlatformUtil.isMac();
     /**
      * The font to use with this control. In 1.3 and prior we had a font property
      * on the TextInputControl itself, however now we just do it via CSS
@@ -228,7 +229,7 @@ public abstract class TextInputControlSkin<T extends TextInputControl, B extends
      */
     protected final Path caretPath = new Path();
 
-    static boolean useVK = false;
+    static boolean useFXVK = PlatformUtil.isEmbedded();
     static int vkType = -1;
     static double winWidth = 640;
     public void toggleUseVK() {
@@ -243,13 +244,13 @@ public abstract class TextInputControlSkin<T extends TextInputControl, B extends
 
         vkType++;
         if (vkType < 4) {
-            useVK = true;
+            useFXVK = true;
             getSkinnable().setImpl_virtualKeyboardType(vkType);
             FXVK.attach(getSkinnable());
         } else {
             FXVK.detach();
             vkType = -1;
-            useVK = false;
+            useFXVK = false;
             winWidth = (winWidth == 640) ? 480 : 640;
         }
     }
@@ -294,7 +295,7 @@ public abstract class TextInputControlSkin<T extends TextInputControl, B extends
 
         textInput.focusedProperty().addListener(new InvalidationListener() {
             @Override public void invalidated(Observable observable) {
-                if (useVK) {
+                if (useFXVK) {
                     Platform.runLater(new Runnable() {
                         public void run() {
                             if (textInput.isFocused()) {
