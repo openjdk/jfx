@@ -25,6 +25,8 @@
 package com.sun.javafx.scene.control.cell;
 
 import javafx.beans.property.BooleanProperty;
+import javafx.beans.property.ObjectProperty;
+import javafx.beans.property.SimpleObjectProperty;
 import javafx.beans.value.ObservableValue;
 import javafx.geometry.Pos;
 import javafx.scene.control.CheckBox;
@@ -57,20 +59,30 @@ import javafx.util.StringConverter;
  * @param <T> The type of the elements contained within the ListView.
  */
 public class CheckBoxListCell<T> extends ListCell<T> {
+    
+    /***************************************************************************
+     *                                                                         *
+     * Fields                                                                  *
+     *                                                                         *
+     **************************************************************************/
+    
     private final CheckBox checkBox;
     
-    private final StringConverter<T> converter;
-
-    private final Callback<T, ObservableValue<Boolean>> getSelectedProperty;
     private ObservableValue<Boolean> booleanProperty;
     
+
+    
+    /***************************************************************************
+     *                                                                         *
+     * Constructors                                                            *
+     *                                                                         *
+     **************************************************************************/
+    
     /**
-     * for junit testing
+     * Creates a default CheckBoxListCell.
      */
-    CheckBoxListCell() { 
-        getSelectedProperty = null; 
-        converter = null; 
-        checkBox = null; 
+    public CheckBoxListCell() { 
+        this(null);
     } 
     
     /**
@@ -98,8 +110,8 @@ public class CheckBoxListCell<T> extends ListCell<T> {
         if (getSelectedProperty == null) {
             throw new NullPointerException("getSelectedProperty can not be null");
         }
-        this.getSelectedProperty = getSelectedProperty;
-        this.converter = converter;
+        setSelectedStateCallback(getSelectedProperty);
+        setConverter(converter);
         
         this.checkBox = new CheckBox();
         
@@ -108,19 +120,90 @@ public class CheckBoxListCell<T> extends ListCell<T> {
         setGraphic(checkBox);
     }
     
+    
+    /***************************************************************************
+     *                                                                         *
+     * Properties                                                              *
+     *                                                                         *
+     **************************************************************************/
+    
+    // --- converter
+    private ObjectProperty<StringConverter<T>> converter = 
+            new SimpleObjectProperty<StringConverter<T>>(this, "converter");
+
+    /**
+     * The {@link StringConverter} property.
+     */
+    public final ObjectProperty<StringConverter<T>> converterProperty() { 
+        return converter; 
+    }
+    
+    /** 
+     * Sets the {@link StringConverter} to be used in this cell.
+     */
+    public final void setConverter(StringConverter<T> value) { 
+        converterProperty().set(value); 
+    }
+    
+    /**
+     * Returns the {@link StringConverter} used in this cell.
+     */
+    public final StringConverter<T> getConverter() { 
+        return converterProperty().get(); 
+    }
+    
+    
+    // --- selected state callback property
+    private ObjectProperty<Callback<T, ObservableValue<Boolean>>> 
+            selectedStateCallback = 
+            new SimpleObjectProperty<Callback<T, ObservableValue<Boolean>>>(
+            this, "selectedStateCallback");
+
+    /**
+     * Property representing the {@link Callback} that is bound to by the 
+     * CheckBox shown on screen.
+     */
+    public final ObjectProperty<Callback<T, ObservableValue<Boolean>>> selectedStateCallbackProperty() { 
+        return selectedStateCallback; 
+    }
+    
+    /** 
+     * Sets the {@link Callback} that is bound to by the CheckBox shown on screen.
+     */
+    public final void setSelectedStateCallback(Callback<T, ObservableValue<Boolean>> value) { 
+        selectedStateCallbackProperty().set(value); 
+    }
+    
+    /**
+     * Returns the {@link Callback} that is bound to by the CheckBox shown on screen.
+     */
+    public final Callback<T, ObservableValue<Boolean>> getSelectedStateCallback() { 
+        return selectedStateCallbackProperty().get(); 
+    }
+
+    
+
+    /***************************************************************************
+     *                                                                         *
+     * Public API                                                              *
+     *                                                                         *
+     **************************************************************************/
+    
     /** {@inheritDoc} */
     @Override public void updateItem(T item, boolean empty) {
         super.updateItem(item, empty);
         
         if (! empty) {
+            StringConverter c = getConverter();
+            Callback<T, ObservableValue<Boolean>> callback = getSelectedStateCallback();
+            
             setGraphic(checkBox);
-            setText(converter != null ? 
-                    converter.toString(item) : (item == null ? "" : item.toString()));
+            setText(c != null ? c.toString(item) : (item == null ? "" : item.toString()));
             
             if (booleanProperty != null) {
                 checkBox.selectedProperty().unbindBidirectional((BooleanProperty)booleanProperty);
             }
-            booleanProperty = getSelectedProperty.call(item);
+            booleanProperty = callback.call(item);
             if (booleanProperty != null) {
                 checkBox.selectedProperty().bindBidirectional((BooleanProperty)booleanProperty);
             }

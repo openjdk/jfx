@@ -26,6 +26,8 @@ package com.sun.javafx.scene.control.cell;
 
 import com.sun.javafx.scene.control.CheckBoxTreeItem;
 import javafx.beans.property.BooleanProperty;
+import javafx.beans.property.ObjectProperty;
+import javafx.beans.property.SimpleObjectProperty;
 import javafx.beans.value.ObservableValue;
 import javafx.scene.control.CheckBox;
 import javafx.scene.control.TreeCell;
@@ -73,14 +75,23 @@ import javafx.util.StringConverter;
  *      instances.
  */
 public class CheckBoxTreeCell<T> extends TreeCell<T> {
+    
+    /***************************************************************************
+     *                                                                         *
+     * Fields                                                                  *
+     *                                                                         *
+     **************************************************************************/
     private final CheckBox checkBox;
     
-    private final StringConverter<TreeItem<T>> converter;
-    
-    private final Callback<TreeItem<T>, ObservableValue<Boolean>> getSelectedProperty;
     private ObservableValue<Boolean> booleanProperty;
     
-    private BooleanProperty indeterminateProperty;
+    
+    
+    /***************************************************************************
+     *                                                                         *
+     * Constructors                                                            *
+     *                                                                         *
+     **************************************************************************/
     
     /**
      * Creates a default {@link CheckBoxTreeCell} that assumes the TreeView is 
@@ -176,13 +187,84 @@ public class CheckBoxTreeCell<T> extends TreeCell<T> {
         if (getSelectedProperty == null) {
             throw new NullPointerException("getSelectedProperty can not be null");
         }
-        this.getSelectedProperty = getSelectedProperty;
-        this.converter = converter;
+        setSelectedStateCallback(getSelectedProperty);
+        setConverter(converter);
         
         this.checkBox = new CheckBox();
         this.checkBox.setAllowIndeterminate(false);
         setGraphic(checkBox);
     }
+    
+    
+    
+    /***************************************************************************
+     *                                                                         *
+     * Properties                                                              *
+     *                                                                         *
+     **************************************************************************/
+    
+    // --- converter
+    private ObjectProperty<StringConverter<TreeItem<T>>> converter = 
+            new SimpleObjectProperty<StringConverter<TreeItem<T>>>(this, "converter");
+
+    /**
+     * The {@link StringConverter} property.
+     */
+    public final ObjectProperty<StringConverter<TreeItem<T>>> converterProperty() { 
+        return converter; 
+    }
+    
+    /** 
+     * Sets the {@link StringConverter} to be used in this cell.
+     */
+    public final void setConverter(StringConverter<TreeItem<T>> value) { 
+        converterProperty().set(value); 
+    }
+    
+    /**
+     * Returns the {@link StringConverter} used in this cell.
+     */
+    public final StringConverter<TreeItem<T>> getConverter() { 
+        return converterProperty().get(); 
+    }
+    
+    
+    
+    // --- selected state callback property
+    private ObjectProperty<Callback<TreeItem<T>, ObservableValue<Boolean>>> 
+            selectedStateCallback = 
+            new SimpleObjectProperty<Callback<TreeItem<T>, ObservableValue<Boolean>>>(
+            this, "selectedStateCallback");
+
+    /**
+     * Property representing the {@link Callback} that is bound to by the 
+     * CheckBox shown on screen.
+     */
+    public final ObjectProperty<Callback<TreeItem<T>, ObservableValue<Boolean>>> selectedStateCallbackProperty() { 
+        return selectedStateCallback; 
+    }
+    
+    /** 
+     * Sets the {@link Callback} that is bound to by the CheckBox shown on screen.
+     */
+    public final void setSelectedStateCallback(Callback<TreeItem<T>, ObservableValue<Boolean>> value) { 
+        selectedStateCallbackProperty().set(value); 
+    }
+    
+    /**
+     * Returns the {@link Callback} that is bound to by the CheckBox shown on screen.
+     */
+    public final Callback<TreeItem<T>, ObservableValue<Boolean>> getSelectedStateCallback() { 
+        return selectedStateCallbackProperty().get(); 
+    }
+    
+    
+    
+    /***************************************************************************
+     *                                                                         *
+     * Public API                                                              *
+     *                                                                         *
+     **************************************************************************/
     
     /** {@inheritDoc} */
     @Override public void updateItem(T item, boolean empty) {
@@ -192,17 +274,20 @@ public class CheckBoxTreeCell<T> extends TreeCell<T> {
             setText(null);
             setGraphic(null);
         } else {
+            StringConverter c = getConverter();
+            Callback<TreeItem<T>, ObservableValue<Boolean>> callback = getSelectedStateCallback();
+            
             // update the node content
-            setText(converter.toString(getTreeItem()));
+            setText(c.toString(getTreeItem()));
             setGraphic(checkBox);
             
             // uninstall bindings
             if (booleanProperty != null) {
                 checkBox.selectedProperty().unbindBidirectional((BooleanProperty)booleanProperty);
             }
-            if (indeterminateProperty != null) {
-                checkBox.indeterminateProperty().unbindBidirectional(indeterminateProperty);
-            }
+//            if (indeterminateProperty != null) {
+//                checkBox.indeterminateProperty().unbindBidirectional(indeterminateProperty);
+//            }
 
             // install new bindings.
             // We special case things when the TreeItem is a CheckBoxTreeItem
@@ -211,10 +296,10 @@ public class CheckBoxTreeCell<T> extends TreeCell<T> {
                 booleanProperty = cbti.selectedProperty();
                 checkBox.selectedProperty().bindBidirectional((BooleanProperty)booleanProperty);
                 
-                indeterminateProperty = cbti.indeterminateProperty();
-                checkBox.indeterminateProperty().bindBidirectional(indeterminateProperty);
+//                indeterminateProperty = cbti.indeterminateProperty();
+//                checkBox.indeterminateProperty().bindBidirectional(indeterminateProperty);
             } else {
-                booleanProperty = getSelectedProperty.call(getTreeItem());
+                booleanProperty = callback.call(getTreeItem());
                 if (booleanProperty != null) {
                     checkBox.selectedProperty().bindBidirectional((BooleanProperty)booleanProperty);
                 }

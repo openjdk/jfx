@@ -48,7 +48,7 @@ class ChoiceBoxCell {
                 cell.setText(null);
                 cell.setGraphic(choiceBox);
             } else {
-                cell.setText(converter.toString(cell.getItem()));
+                cell.setText(getItemText(cell, converter));
                 cell.setGraphic(null);
             }
         }
@@ -68,5 +68,11 @@ class ChoiceBoxCell {
             }
         });
         return choiceBox;
+    }
+    
+    private static <T> String getItemText(Cell<T> cell, StringConverter<T> converter) {
+        return converter == null ?
+            cell.getItem() == null ? "" : cell.getItem().toString() :
+            converter.toString(cell.getItem());
     }
 }

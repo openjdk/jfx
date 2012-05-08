@@ -29,25 +29,24 @@ import javafx.scene.control.Cell;
 import javafx.scene.control.TextField;
 import javafx.scene.input.KeyCode;
 import javafx.scene.input.KeyEvent;
-import javafx.util.Callback;
 import javafx.util.StringConverter;
 
 // Package protected - not intended for external use
 class TextFieldCell {
 
-    static <T> void updateItem(Cell<T> cell, TextField textField) {
+    static <T> void updateItem(Cell<T> cell, TextField textField, StringConverter<T> converter) {
         if (cell.isEmpty()) {
             cell.setText(null);
             cell.setGraphic(null);
         } else {
             if (cell.isEditing()) {
                 if (textField != null) {
-                    textField.setText(getItemText(cell));
+                    textField.setText(getItemText(cell, converter));
                 }
                 cell.setText(null);
                 cell.setGraphic(textField);
             } else {
-                cell.setText(getItemText(cell));
+                cell.setText(getItemText(cell, converter));
                 cell.setGraphic(null);
             }
         }
@@ -60,7 +59,7 @@ class TextFieldCell {
         if (textField == null) {
             textField = createTextField(cell, converter);
         }
-        textField.setText(getItemText(cell));
+        textField.setText(getItemText(cell, converter));
         
         cell.setText(null);
         cell.setGraphic(textField);
@@ -68,13 +67,13 @@ class TextFieldCell {
         textField.selectAll();
     }
     
-    static <T> void cancelEdit(Cell<T> cell) {
-        cell.setText(getItemText(cell));
+    static <T> void cancelEdit(Cell<T> cell, final StringConverter<T> converter) {
+        cell.setText(getItemText(cell, converter));
         cell.setGraphic(null);
     }
     
     private static <T> TextField createTextField(final Cell<T> cell, final StringConverter<T> converter) {
-        final TextField textField = new TextField(getItemText(cell));
+        final TextField textField = new TextField(getItemText(cell, converter));
         textField.setOnKeyReleased(new EventHandler<KeyEvent>() {
             @Override public void handle(KeyEvent t) {
                 if (t.getCode() == KeyCode.ENTER) {
@@ -87,7 +86,9 @@ class TextFieldCell {
         return textField;
     }
     
-    private static <T> String getItemText(Cell<T> cell) {
-        return cell.getItem() == null ? "" : cell.getItem().toString();
+    private static <T> String getItemText(Cell<T> cell, StringConverter<T> converter) {
+        return converter == null ?
+            cell.getItem() == null ? "" : cell.getItem().toString() :
+            converter.toString(cell.getItem());
     }
 }

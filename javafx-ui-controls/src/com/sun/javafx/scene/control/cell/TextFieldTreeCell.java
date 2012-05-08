@@ -24,6 +24,8 @@
  */
 package com.sun.javafx.scene.control.cell;
 
+import javafx.beans.property.ObjectProperty;
+import javafx.beans.property.SimpleObjectProperty;
 import javafx.scene.control.Label;
 import javafx.scene.control.TextField;
 import javafx.scene.control.TreeCell;
@@ -41,10 +43,30 @@ import javafx.util.StringConverter;
  * @param <T> The type of the elements contained within the ListView.
  */
 public class TextFieldTreeCell<T> extends TreeCell<T> {
+    
+    /***************************************************************************
+     *                                                                         *
+     * Fields                                                                  *
+     *                                                                         *
+     **************************************************************************/
+    
     private TextField textField;
     
-    private final StringConverter<T> converter;
-
+    
+    
+    /***************************************************************************
+     *                                                                         *
+     * Constructors                                                            *
+     *                                                                         *
+     **************************************************************************/
+    
+    /**
+     * Creates a default TextFieldTreeCell with a null converter.
+     */
+    public TextFieldTreeCell() { 
+        this(null);
+    } 
+    
     /**
      * Creates a TextFieldTreeCell that provides a {@link TextField} when put 
      * into editing mode that allows editing of the cell content. This method 
@@ -59,8 +81,49 @@ public class TextFieldTreeCell<T> extends TreeCell<T> {
      *      type T.
      */
     public TextFieldTreeCell(StringConverter<T> converter) {
-        this.converter = converter;
+        setConverter(converter);
     }
+    
+    
+    
+    /***************************************************************************
+     *                                                                         *
+     * Properties                                                              *
+     *                                                                         *
+     **************************************************************************/
+    
+    // --- converter
+    private ObjectProperty<StringConverter<T>> converter = 
+            new SimpleObjectProperty<StringConverter<T>>(this, "converter");
+
+    /**
+     * The {@link StringConverter} property.
+     */
+    public final ObjectProperty<StringConverter<T>> converterProperty() { 
+        return converter; 
+    }
+    
+    /** 
+     * Sets the {@link StringConverter} to be used in this cell.
+     */
+    public final void setConverter(StringConverter<T> value) { 
+        converterProperty().set(value); 
+    }
+    
+    /**
+     * Returns the {@link StringConverter} used in this cell.
+     */
+    public final StringConverter<T> getConverter() { 
+        return converterProperty().get(); 
+    }  
+    
+    
+    
+    /***************************************************************************
+     *                                                                         *
+     * Public API                                                              *
+     *                                                                         *
+     **************************************************************************/    
     
     /** {@inheritDoc} */
     @Override public void startEdit() {
@@ -68,18 +131,18 @@ public class TextFieldTreeCell<T> extends TreeCell<T> {
             return;
         }
         super.startEdit();
-        TextFieldCell.startEdit(this, textField, converter);
+        TextFieldCell.startEdit(this, textField, getConverter());
     }
 
     /** {@inheritDoc} */
     @Override public void cancelEdit() {
         super.cancelEdit();
-        TextFieldCell.cancelEdit(this);
+        TextFieldCell.cancelEdit(this, getConverter());
     }
     
     /** {@inheritDoc} */
     @Override public void updateItem(T item, boolean empty) {
         super.updateItem(item, empty);
-        TextFieldCell.updateItem(this, textField);
+        TextFieldCell.updateItem(this, textField, getConverter());
     }
 }
