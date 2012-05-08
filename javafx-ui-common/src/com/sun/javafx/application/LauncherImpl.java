@@ -178,7 +178,11 @@ public class LauncherImpl {
         final CountDownLatch pShutdownLatch = new CountDownLatch(1);
 
         final PlatformImpl.FinishListener listener = new PlatformImpl.FinishListener() {
-            @Override public void idle() {
+            @Override public void idle(boolean implicitExit) {
+                if (!implicitExit) {
+                    return;
+                }
+
 //                System.err.println("JavaFX Launcher: system is idle");
                 if (startCalled.get()) {
                     shutdownLatch.countDown();

@@ -44,15 +44,19 @@ import com.sun.javafx.application.ParametersImpl;
  * JavaFX runtime does the following, in order, whenever an application is
  * launched:
  * </p>
- * <ul>
+ * <ol>
  * <li>Constructs an instance of the specified Application class</li>
  * <li>Calls the {@link #init} method</li>
  * <li>Calls the {@link #start} method</li>
- * <li>Waits for the application to finish, which happens either when the
- * last window has been closed, or the application calls
- * {@link Platform#exit}</li>
+ * <li>Waits for the application to finish, which happens when either of
+ * the following occur:
+ * <ul>
+ * <li>the application calls {@link Platform#exit}</li>
+ * <li>the last window has been closed and the {@code implicitExit}
+ * attribute on {@code Platform} is true</li>
+ * </ul></li>
  * <li>Calls the {@link #stop} method</li>
- * </ul>
+ * </ol>
  * <p>Note that the {@code start} method is abstract and must be overridden.
  * The {@code init} and {@code stop} methods have concrete implementations
  * that do nothing.</p>

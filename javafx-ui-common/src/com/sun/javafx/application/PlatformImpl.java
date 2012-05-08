@@ -47,6 +47,7 @@ public class PlatformImpl {
     private static CountDownLatch startupLatch = new CountDownLatch(1);
     private static AtomicBoolean listenersRegistered = new AtomicBoolean(false);
     private static TKListener toolkitListener = null;
+    private static volatile boolean implicitExit = true;
     private static AtomicInteger pendingRunnables = new AtomicInteger(0);
     private static AtomicInteger numWindows = new AtomicInteger(0);
     private static volatile boolean firstWindowShown = false;
@@ -193,6 +194,15 @@ public class PlatformImpl {
         }
     }
 
+    public static void setImplicitExit(boolean implicitExit) {
+        PlatformImpl.implicitExit = implicitExit;
+        checkIdle();
+    }
+
+    public static boolean isImplicitExit() {
+        return implicitExit;
+    }
+
     public static void addListener(FinishListener l) {
         listenersRegistered.set(true);
         finishListeners.add(l);
@@ -208,7 +218,7 @@ public class PlatformImpl {
             if (exitCalled) {
                 l.exitCalled();
             } else {
-                l.idle();
+                l.idle(implicitExit);
             }
         }
     }
@@ -253,6 +263,12 @@ public class PlatformImpl {
         }
     }
 
+    // package scope method for testing
+    private static final CountDownLatch platformExitLatch = new CountDownLatch(1);
+    static CountDownLatch test_getPlatformExitLatch() {
+        return platformExitLatch;
+    }
+
     public static void tkExit() {
         if (toolkitExit.getAndSet(true)) {
             return;
@@ -270,6 +286,7 @@ public class PlatformImpl {
 
             Toolkit.getToolkit().removeTkListener(toolkitListener);
             toolkitListener = null;
+            platformExitLatch.countDown();
         }
     }
 
@@ -291,7 +308,7 @@ public class PlatformImpl {
     }
 
     public static interface FinishListener {
-        public void idle();
+        public void idle(boolean implicitExit);
         public void exitCalled();
     }
 
