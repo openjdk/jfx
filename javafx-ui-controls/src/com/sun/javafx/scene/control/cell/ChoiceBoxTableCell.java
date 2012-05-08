@@ -206,6 +206,6 @@ public class ChoiceBoxTableCell<S,T> extends TableCell<S,T> {
     /** {@inheritDoc} */
     @Override public void updateItem(T item, boolean empty) {
         super.updateItem(item, empty);
-        ChoiceBoxCell.updateItem(this, choiceBox, getConverter());
+        CellUtils.updateItem(this, choiceBox, getConverter());
     }
 }
