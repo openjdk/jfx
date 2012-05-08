@@ -6965,7 +6965,7 @@ public abstract class Node implements EventTarget {
         // If we had a helper before, but don't now, then this
         // node's StyleHelper was nuked by the StyleManager
         // and we need to create a new one.
-        if (styleHelperRef != null && (helper = styleHelperRef.get()) == null) {
+        if (styleHelperRef == null || (helper = styleHelperRef.get()) == null) {
 
             helper = impl_createStyleHelper();
 

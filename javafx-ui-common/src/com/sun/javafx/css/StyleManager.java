@@ -935,14 +935,16 @@ public class StyleManager {
 
         private void clearCaches() {
 
-            for (Entry<StyleHelper.StyleCacheKey, StyleHelper.StyleCacheEntry> entry : styleCache.entrySet()) {
-                final StyleHelper.StyleCacheKey key = entry.getKey();
-                final StyleHelper.StyleCacheEntry value = entry.getValue();
+            for (StyleHelper.StyleCacheEntry value : styleCache.values()) {
                 value.clearEntries();
-                final Reference<StyleHelper.StyleCacheKey> keyRef = styleCacheKeyRefs.remove(key);
-                if (keyRef != null) keyRef.clear();
             }
             styleCache.clear();
+            
+            for (Reference<StyleHelper.StyleCacheKey> ref : styleCacheKeyRefs.values()) {
+                // don't wait for GC to figure it out - logic in Node
+                // depends on this                
+                ref.clear();
+            }
             styleCacheKeyRefs.clear();
             
             for(Cache cache : cacheMap.values()) {
@@ -1276,18 +1278,16 @@ public class StyleManager {
         private void clear() {
 
             for(StyleHelper helper : cache.values()) {
-                                
-                if (helper == null) {
-                    continue;
-                }
-                helper.styleCache = null;
                 helper.clearStyleMap();
-                Reference<StyleHelper> ref = refs.remove(helper);
-                if (ref != null) ref.clear();
-                
+                helper.styleCache = null;                
             }
-            
             cache.clear();
+            
+            for (Reference<StyleHelper> ref : refs.values()) {
+                // don't wait for GC to figure it out - logic in Node
+                // depends on this
+                ref.clear();
+            }
             refs.clear();
             rules.clear();
         }
