@@ -25,6 +25,8 @@
 package com.sun.javafx.scene.control.cell;
 
 import static com.sun.javafx.scene.control.cell.ChoiceBoxCell.createChoiceBox;
+import javafx.beans.property.ObjectProperty;
+import javafx.beans.property.SimpleObjectProperty;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.scene.control.ChoiceBox;
@@ -51,11 +53,30 @@ import javafx.util.StringConverter;
  */
 public class ChoiceBoxListCell<T> extends ListCell<T> {
     
+    /***************************************************************************
+     *                                                                         *
+     * Fields                                                                  *
+     *                                                                         *
+     **************************************************************************/    
+    
     private final ObservableList<T> items;
 
     private ChoiceBox<T> choiceBox;
     
-    private final StringConverter<T> converter;
+    
+    
+    /***************************************************************************
+     *                                                                         *
+     * Constructors                                                            *
+     *                                                                         *
+     **************************************************************************/  
+    
+    /**
+     * Creates a default ChoiceBoxListCell with an empty items list.
+     */
+    public ChoiceBoxListCell() {
+        this(FXCollections.<T>observableArrayList());
+    }
     
     /**
      * Creates a default {@link ChoiceBoxListCell} instance with the given items
@@ -109,7 +130,55 @@ public class ChoiceBoxListCell<T> extends ListCell<T> {
      */
     public ChoiceBoxListCell(StringConverter<T> converter, ObservableList<T> items) {
         this.items = items;
-        this.converter = converter != null ? converter : CellUtils.<T>defaultStringConverter();
+        setConverter(converter != null ? converter : CellUtils.<T>defaultStringConverter());
+    }
+    
+    
+
+    /***************************************************************************
+     *                                                                         *
+     * Properties                                                              *
+     *                                                                         *
+     **************************************************************************/
+    
+    // --- converter
+    private ObjectProperty<StringConverter<T>> converter = 
+            new SimpleObjectProperty<StringConverter<T>>(this, "converter");
+
+    /**
+     * The {@link StringConverter} property.
+     */
+    public final ObjectProperty<StringConverter<T>> converterProperty() { 
+        return converter; 
+    }
+    
+    /** 
+     * Sets the {@link StringConverter} to be used in this cell.
+     */
+    public final void setConverter(StringConverter<T> value) { 
+        converterProperty().set(value); 
+    }
+    
+    /**
+     * Returns the {@link StringConverter} used in this cell.
+     */
+    public final StringConverter<T> getConverter() { 
+        return converterProperty().get(); 
+    }
+    
+    
+    
+    /***************************************************************************
+     *                                                                         *
+     * Public API                                                              *
+     *                                                                         *
+     **************************************************************************/
+    
+    /**
+     * Returns the items to be displayed in the ChoiceBox when it is showing.
+     */
+    public ObservableList<T> getItems() {
+        return items;
     }
     
     /** {@inheritDoc} */
@@ -133,13 +202,13 @@ public class ChoiceBoxListCell<T> extends ListCell<T> {
     @Override public void cancelEdit() {
         super.cancelEdit();
         
-        setText(converter.toString(getItem()));
+        setText(getConverter().toString(getItem()));
         setGraphic(null);
     }
     
     /** {@inheritDoc} */
     @Override public void updateItem(T item, boolean empty) {
         super.updateItem(item, empty);
-        ChoiceBoxCell.updateItem(this, choiceBox, converter);
+        ChoiceBoxCell.updateItem(this, choiceBox, getConverter());
     }
 }

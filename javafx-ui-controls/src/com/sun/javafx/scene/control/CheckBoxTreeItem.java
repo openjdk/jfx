@@ -99,6 +99,13 @@ public class CheckBoxTreeItem<T> extends TreeItem<T> {
      **************************************************************************/
     
     /**
+     * Creates an empty CheckBoxTreeItem.
+     */
+    public CheckBoxTreeItem() {
+        this(null);
+    }
+    
+    /**
      * Creates a CheckBoxTreeItem with the value property set to the provided 
      * object.
      * 
