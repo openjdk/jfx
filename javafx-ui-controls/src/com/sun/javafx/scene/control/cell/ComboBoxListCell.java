@@ -25,10 +25,13 @@
 package com.sun.javafx.scene.control.cell;
 
 import static com.sun.javafx.scene.control.cell.ComboBoxCell.createComboBox;
+import javafx.beans.property.BooleanProperty;
+import javafx.beans.property.ObjectProperty;
+import javafx.beans.property.SimpleBooleanProperty;
+import javafx.beans.property.SimpleObjectProperty;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.scene.control.*;
-import javafx.util.Callback;
 import javafx.util.StringConverter;
 
 /**
@@ -49,11 +52,30 @@ import javafx.util.StringConverter;
  */
 public class ComboBoxListCell<T> extends ListCell<T> {
     
+    /***************************************************************************
+     *                                                                         *
+     * Fields                                                                  *
+     *                                                                         *
+     **************************************************************************/    
+    
     private final ObservableList<T> items;
 
     private ComboBox<T> comboBox;
     
-    private final StringConverter<T> converter;
+    
+    
+    /***************************************************************************
+     *                                                                         *
+     * Constructors                                                            *
+     *                                                                         *
+     **************************************************************************/
+    
+    /**
+     * Creates a default ComboBoxListCell with an empty items list.
+     */
+    public ComboBoxListCell() {
+        this(FXCollections.<T>observableArrayList());
+    }
     
     /**
      * Creates a default {@link ComboBoxListCell} instance with the given items
@@ -107,8 +129,84 @@ public class ComboBoxListCell<T> extends ListCell<T> {
      */
     public ComboBoxListCell(StringConverter<T> converter, ObservableList<T> items) {
         this.items = items;
-        this.converter = converter != null ? converter : CellUtils.<T>defaultStringConverter();
+        setConverter(converter != null ? converter : CellUtils.<T>defaultStringConverter());
     }
+    
+    
+    
+    /***************************************************************************
+     *                                                                         *
+     * Properties                                                              *
+     *                                                                         *
+     **************************************************************************/
+    
+    // --- converter
+    private ObjectProperty<StringConverter<T>> converter = 
+            new SimpleObjectProperty<StringConverter<T>>(this, "converter");
+
+    /**
+     * The {@link StringConverter} property.
+     */
+    public final ObjectProperty<StringConverter<T>> converterProperty() { 
+        return converter; 
+    }
+    
+    /** 
+     * Sets the {@link StringConverter} to be used in this cell.
+     */
+    public final void setConverter(StringConverter<T> value) { 
+        converterProperty().set(value); 
+    }
+    
+    /**
+     * Returns the {@link StringConverter} used in this cell.
+     */
+    public final StringConverter<T> getConverter() { 
+        return converterProperty().get(); 
+    }
+    
+    
+    // --- comboBox editable
+    private BooleanProperty comboBoxEditable = 
+            new SimpleBooleanProperty(this, "comboBoxEditable");
+
+    /**
+     * A property representing whether the ComboBox, when shown to the user,
+     * is editable or not.
+     */
+    public final BooleanProperty comboBoxEditableProperty() { 
+        return comboBoxEditable; 
+    }
+    
+    /** 
+     * Configures the ComboBox to be editable (to allow user input outside of the
+     * options provide in the dropdown list).
+     */
+    public final void setComboBoxEditable(boolean value) { 
+        comboBoxEditableProperty().set(value); 
+    }
+    
+    /**
+     * Returns true if the ComboBox is editable.
+     */
+    public final boolean isComboBoxEditable() { 
+        return comboBoxEditableProperty().get(); 
+    }
+    
+    
+    
+    /***************************************************************************
+     *                                                                         *
+     * Public API                                                              *
+     *                                                                         *
+     **************************************************************************/
+    
+    /**
+     * Returns the items to be displayed in the ChoiceBox when it is showing.
+     */
+    public ObservableList<T> getItems() {
+        return items;
+    }       
     
     /** {@inheritDoc} */
     @Override public void startEdit() {
@@ -118,6 +216,7 @@ public class ComboBoxListCell<T> extends ListCell<T> {
         
         if (comboBox == null) {
             comboBox = createComboBox(this, items);
+            comboBox.editableProperty().bind(comboBoxEditableProperty());
         }
         
         comboBox.getSelectionModel().select(getItem());
@@ -131,13 +230,13 @@ public class ComboBoxListCell<T> extends ListCell<T> {
     @Override public void cancelEdit() {
         super.cancelEdit();
         
-        setText(converter.toString(getItem()));
+        setText(getConverter().toString(getItem()));
         setGraphic(null);
     }
     
     /** {@inheritDoc} */
     @Override public void updateItem(T item, boolean empty) {
         super.updateItem(item, empty);
-        ComboBoxCell.updateItem(this, comboBox, converter);
+        ComboBoxCell.updateItem(this, comboBox, getConverter());
     }
 }

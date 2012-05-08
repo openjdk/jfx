@@ -26,6 +26,8 @@ package com.sun.javafx.scene.control.cell;
 
 import javafx.beans.binding.Bindings;
 import javafx.beans.property.BooleanProperty;
+import javafx.beans.property.ObjectProperty;
+import javafx.beans.property.SimpleObjectProperty;
 import javafx.beans.value.ObservableValue;
 import javafx.geometry.Pos;
 import javafx.scene.control.CheckBox;
@@ -54,17 +56,30 @@ import javafx.util.StringConverter;
  * @param <T> The type of the elements contained within the TableColumn.
  */
 public class CheckBoxTableCell<S,T> extends TableCell<S,T> {
+
+    /***************************************************************************
+     *                                                                         *
+     * Fields                                                                  *
+     *                                                                         *
+     **************************************************************************/
     private final CheckBox checkBox;
     
     private final boolean showLabel;
     
-    private final StringConverter<T> converter;
-    
-    private final Callback<Integer, ObservableValue<Boolean>> getSelectedProperty;
     private ObservableValue<Boolean> booleanProperty;
     
-    /** for unit testing */
-    CheckBoxTableCell() {
+    
+    
+    /***************************************************************************
+     *                                                                         *
+     * Constructors                                                            *
+     *                                                                         *
+     **************************************************************************/
+    
+    /** 
+     * Creates a default CheckBoxTableCell.
+     */
+    public CheckBoxTableCell() {
         this(null, null);
     }
     
@@ -93,8 +108,8 @@ public class CheckBoxTableCell<S,T> extends TableCell<S,T> {
             final StringConverter<T> converter) {
         // we let getSelectedProperty be null here, as we can always defer to the
         // TableColumn
-        this.getSelectedProperty = getSelectedProperty;
-        this.converter = converter;
+        setSelectedStateCallback(getSelectedProperty);
+        setConverter(converter);
         this.showLabel = converter != null;
         
         this.checkBox = new CheckBox();
@@ -108,6 +123,76 @@ public class CheckBoxTableCell<S,T> extends TableCell<S,T> {
         }
     }
     
+    
+    /***************************************************************************
+     *                                                                         *
+     * Properties                                                              *
+     *                                                                         *
+     **************************************************************************/
+    
+    // --- converter
+    private ObjectProperty<StringConverter<T>> converter = 
+            new SimpleObjectProperty<StringConverter<T>>(this, "converter");
+
+    /**
+     * The {@link StringConverter} property.
+     */
+    public final ObjectProperty<StringConverter<T>> converterProperty() { 
+        return converter; 
+    }
+    
+    /** 
+     * Sets the {@link StringConverter} to be used in this cell.
+     */
+    public final void setConverter(StringConverter<T> value) { 
+        converterProperty().set(value); 
+    }
+    
+    /**
+     * Returns the {@link StringConverter} used in this cell.
+     */
+    public final StringConverter<T> getConverter() { 
+        return converterProperty().get(); 
+    }
+    
+    
+    
+    // --- selected state callback property
+    private ObjectProperty<Callback<Integer, ObservableValue<Boolean>>> 
+            selectedStateCallback = 
+            new SimpleObjectProperty<Callback<Integer, ObservableValue<Boolean>>>(
+            this, "selectedStateCallback");
+
+    /**
+     * Property representing the {@link Callback} that is bound to by the 
+     * CheckBox shown on screen.
+     */
+    public final ObjectProperty<Callback<Integer, ObservableValue<Boolean>>> selectedStateCallbackProperty() { 
+        return selectedStateCallback; 
+    }
+    
+    /** 
+     * Sets the {@link Callback} that is bound to by the CheckBox shown on screen.
+     */
+    public final void setSelectedStateCallback(Callback<Integer, ObservableValue<Boolean>> value) { 
+        selectedStateCallbackProperty().set(value); 
+    }
+    
+    /**
+     * Returns the {@link Callback} that is bound to by the CheckBox shown on screen.
+     */
+    public final Callback<Integer, ObservableValue<Boolean>> getSelectedStateCallback() { 
+        return selectedStateCallbackProperty().get(); 
+    }
+    
+    
+    
+    /***************************************************************************
+     *                                                                         *
+     * Public API                                                              *
+     *                                                                         *
+     **************************************************************************/
+    
     /** {@inheritDoc} */
     @Override public void updateItem(T item, boolean empty) {
         super.updateItem(item, empty);
@@ -116,8 +201,10 @@ public class CheckBoxTableCell<S,T> extends TableCell<S,T> {
             setText(null);
             setGraphic(null);
         } else {
+            StringConverter c = getConverter();
+            
             if (showLabel) {
-                setText(converter.toString(item));
+                setText(c.toString(item));
             }
             setGraphic(checkBox);
             
@@ -138,9 +225,17 @@ public class CheckBoxTableCell<S,T> extends TableCell<S,T> {
         }
     }
     
+    
+    
+    /***************************************************************************
+     *                                                                         *
+     * Private implementation                                                  *
+     *                                                                         *
+     **************************************************************************/
+    
     private ObservableValue getSelectedProperty() {
-        return getSelectedProperty != null ?
-                getSelectedProperty.call(getIndex()) :
+        return getSelectedStateCallback() != null ?
+                getSelectedStateCallback().call(getIndex()) :
                 getTableColumn().getCellObservableValue(getIndex());
     }
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2011, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -30,60 +30,68 @@ import java.util.Locale;
 import javafx.util.StringConverter;
 
 /**
- * <p>{@link StringConverter} implementation for {@link Number} values.</p>
+ * <p>{@link StringConverter} implementation that can use a {@link Format} 
+ * instance.</p>
  */
 @NoBuilder
-public class NumberStringConverter extends FormatStringConverter<Number> {
+public class FormatStringConverter<T> extends StringConverter<T> {
     
     // ------------------------------------------------------ Private properties
 
-    final Locale locale;
-    final String pattern;
-//    final NumberFormat numberFormat;
+    final Format format;
     
     // ------------------------------------------------------------ Constructors
-    public NumberStringConverter() {
-        this(Locale.getDefault());
-    }
     
-    public NumberStringConverter(Locale locale) {
-        this(locale, null);
-    }
-    
-    public NumberStringConverter(String pattern) {
-        this(Locale.getDefault(), pattern);
-    }
-    
-    public NumberStringConverter(Locale locale, String pattern) {
-        this(locale, pattern, null);
-    }
-    
-    public NumberStringConverter(NumberFormat numberFormat) {
-        this(null, null, numberFormat);
-    }
-    
-    NumberStringConverter(Locale locale, String pattern, NumberFormat numberFormat) {
-        super(numberFormat);
-        this.locale = locale;
-        this.pattern = pattern;
+    public FormatStringConverter(Format format) {
+        this.format = format;
     }
 
     // ------------------------------------------------------- Converter Methods
 
+    /** {@inheritDoc} */
+    @Override public T fromString(String value) {
+        try {
+            // If the specified value is null or zero-length, return null
+            if (value == null) {
+                return null;
+            }
+
+            value = value.trim();
+
+            if (value.length() < 1) {
+                return null;
+            }
+
+            // Create and configure the parser to be used
+            Format _format = getFormat();
+
+            // Perform the requested parsing, and attempt to conver the output
+            // back to T
+            return (T) _format.parseObject(value);
+        } catch (ParseException ex) {
+            throw new RuntimeException(ex);
+        }
+    }
+
+    /** {@inheritDoc} */
+    @Override public String toString(T value) {
+        // If the specified value is null, return a zero-length String
+        if (value == null) {
+            return "";
+        }
+
+        // Create and configure the formatter to be used
+        Format _format = getFormat();
+
+        // Perform the requested formatting
+        return _format.format(value);
+    }
+
     /**
-     * <p>Return a <code>NumberFormat</code> instance to use for formatting
+     * <p>Return a <code>Format</code> instance to use for formatting
      * and parsing in this {@link StringConverter}.</p>
      */
-    @Override protected Format getFormat() {
-        Locale _locale = locale == null ? Locale.getDefault() : locale;
-        
-        if (format != null) {
-            return format;
-        } else if (pattern != null) {
-            DecimalFormatSymbols symbols = new DecimalFormatSymbols(_locale);
-            return new DecimalFormat(pattern, symbols);
-        } else {
-            return NumberFormat.getNumberInstance(_locale);
-        }
+    protected Format getFormat() {
+        return format;
     }
 }

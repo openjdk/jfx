@@ -36,8 +36,23 @@ import javafx.scene.control.TableCell;
  */
 public class ProgressBarTableCell<S,Double> extends TableCell<S, java.lang.Double> {
     
+    /***************************************************************************
+     *                                                                         *
+     * Fields                                                                  *
+     *                                                                         *
+     **************************************************************************/
+    
     private final ProgressBar progressBar;
+    
     private ObservableValue observable;
+    
+    
+    
+    /***************************************************************************
+     *                                                                         *
+     * Constructors                                                            *
+     *                                                                         *
+     **************************************************************************/    
     
     /**
      * Creates a default {@link ProgressBarTableCell} instance
@@ -48,6 +63,14 @@ public class ProgressBarTableCell<S,Double> extends TableCell<S, java.lang.Doubl
         this.progressBar = new ProgressBar();
         setGraphic(progressBar);
     }
+    
+    
+    
+    /***************************************************************************
+     *                                                                         *
+     * Public API                                                              *
+     *                                                                         *
+     **************************************************************************/    
     
     /** {@inheritDoc} */
     @Override public void updateItem(java.lang.Double item, boolean empty) {
