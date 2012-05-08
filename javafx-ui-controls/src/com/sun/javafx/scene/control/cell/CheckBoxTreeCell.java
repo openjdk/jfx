@@ -187,6 +187,7 @@ public class CheckBoxTreeCell<T> extends TreeCell<T> {
         if (getSelectedProperty == null) {
             throw new NullPointerException("getSelectedProperty can not be null");
         }
+        this.getStyleClass().add("choice-box-tree-cell");
         setSelectedStateCallback(getSelectedProperty);
         setConverter(converter);
         

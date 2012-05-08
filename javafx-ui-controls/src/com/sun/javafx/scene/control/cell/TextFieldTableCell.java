@@ -81,6 +81,7 @@ public class TextFieldTableCell<S,T> extends TableCell<S,T> {
      *      type T.
      */
     public TextFieldTableCell(StringConverter<T> converter) {
+        this.getStyleClass().add("text-field-table-cell");
         setConverter(converter);
     }
         
@@ -133,18 +134,18 @@ public class TextFieldTableCell<S,T> extends TableCell<S,T> {
             return;
         }
         super.startEdit();
-        TextFieldCell.startEdit(this, textField, getConverter());
+        CellUtils.startEdit(this, textField, getConverter());
     }
 
     /** {@inheritDoc} */
     @Override public void cancelEdit() {
         super.cancelEdit();
-        TextFieldCell.cancelEdit(this, getConverter());
+        CellUtils.cancelEdit(this, getConverter());
     }
     
     /** {@inheritDoc} */
     @Override public void updateItem(T item, boolean empty) {
         super.updateItem(item, empty);
-        TextFieldCell.updateItem(this, textField, getConverter());
+        CellUtils.updateItem(this, textField, getConverter());
     }
 }

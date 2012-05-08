@@ -24,9 +24,8 @@
  */
 package com.sun.javafx.scene.control.cell;
 
-import static com.sun.javafx.scene.control.cell.ChoiceBoxCell.createChoiceBox;
+import static com.sun.javafx.scene.control.cell.CellUtils.createChoiceBox;
 import javafx.beans.property.ObjectProperty;
-import javafx.beans.property.SimpleBooleanProperty;
 import javafx.beans.property.SimpleObjectProperty;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
@@ -131,6 +130,7 @@ public class ChoiceBoxTreeCell<T> extends TreeCell<T> {
      *      by the user.
      */
     public ChoiceBoxTreeCell(StringConverter<T> converter, ObservableList<T> items) {
+        this.getStyleClass().add("choice-box-tree-cell");
         this.items = items;
         setConverter(converter != null ? converter : CellUtils.<T>defaultStringConverter());
     }

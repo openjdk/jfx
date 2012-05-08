@@ -24,7 +24,7 @@
  */
 package com.sun.javafx.scene.control.cell;
 
-import static com.sun.javafx.scene.control.cell.ComboBoxCell.createComboBox;
+import static com.sun.javafx.scene.control.cell.CellUtils.createComboBox;
 import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.SimpleBooleanProperty;
@@ -130,6 +130,7 @@ public class ComboBoxTreeCell<T> extends TreeCell<T> {
      *      by the user.
      */
     public ComboBoxTreeCell(StringConverter<T> converter, ObservableList<T> items) {
+        this.getStyleClass().add("combo-box-tree-cell");
         this.items = items;
         setConverter(converter != null ? converter : CellUtils.<T>defaultStringConverter());
     }
@@ -238,6 +239,6 @@ public class ComboBoxTreeCell<T> extends TreeCell<T> {
     /** {@inheritDoc} */
     @Override public void updateItem(T item, boolean empty) {
         super.updateItem(item, empty);
-        ComboBoxCell.updateItem(this, comboBox, getConverter());
+        CellUtils.updateItem(this, comboBox, getConverter());
     };
 }

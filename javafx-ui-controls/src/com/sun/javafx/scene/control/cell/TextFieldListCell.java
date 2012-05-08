@@ -80,6 +80,7 @@ public class TextFieldListCell<T> extends ListCell<T> {
      *      type T.
      */
     public TextFieldListCell(StringConverter<T> converter) {
+        this.getStyleClass().add("text-field-list-cell");
         setConverter(converter);
     }
         
@@ -129,18 +130,18 @@ public class TextFieldListCell<T> extends ListCell<T> {
             return;
         }
         super.startEdit();
-        TextFieldCell.startEdit(this, textField, getConverter());
+        CellUtils.startEdit(this, textField, getConverter());
     }
 
     /** {@inheritDoc} */
     @Override public void cancelEdit() {
         super.cancelEdit();
-        TextFieldCell.cancelEdit(this, getConverter());
+        CellUtils.cancelEdit(this, getConverter());
     }
     
     /** {@inheritDoc} */
     @Override public void updateItem(T item, boolean empty) {
         super.updateItem(item, empty);
-        TextFieldCell.updateItem(this, textField, getConverter());
+        CellUtils.updateItem(this, textField, getConverter());
     }
 }

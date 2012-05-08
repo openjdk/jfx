@@ -24,26 +24,62 @@
  */
 package com.sun.javafx.scene.control.cell;
 
+import javafx.beans.value.ChangeListener;
+import javafx.beans.value.ObservableValue;
+import javafx.collections.ObservableList;
+import javafx.event.EventHandler;
+import javafx.scene.control.Cell;
+import javafx.scene.control.ChoiceBox;
+import javafx.scene.control.ComboBox;
+import javafx.scene.control.TextField;
 import javafx.scene.control.TreeItem;
+import javafx.scene.input.KeyCode;
+import javafx.scene.input.KeyEvent;
 import javafx.util.StringConverter;
 
 // Package protected - not intended for external use
 class CellUtils {
+    
+    /***************************************************************************
+     *                                                                         *
+     * Private fields                                                          *
+     *                                                                         *
+     **************************************************************************/    
+    
+    private final static StringConverter defaultStringConverter = new StringConverter<Object>() {
+        @Override public String toString(Object t) {
+            return t == null ? null : t.toString();
+        }
+
+        @Override public Object fromString(String string) {
+            return (Object) string;
+        }
+    };
+    
+    private final static StringConverter defaultTreeItemStringConverter =
+        new StringConverter<TreeItem>() {
+            @Override public String toString(TreeItem treeItem) {
+                return (treeItem == null || treeItem.getValue() == null) ? 
+                        "" : treeItem.getValue().toString();
+            }
+
+            @Override public TreeItem fromString(String string) {
+                return new TreeItem(string);
+            }
+        };
+    
+    /***************************************************************************
+     *                                                                         *
+     * General convenience                                                     *
+     *                                                                         *
+     **************************************************************************/    
     
     /*
      * Simple method to provide a StringConverter implementation in various cell
      * implementations.
      */
     static <T> StringConverter<T> defaultStringConverter() {
-        return new StringConverter<T>() {
-            @Override public String toString(T t) {
-                return t == null ? null : t.toString();
-            }
-
-            @Override public T fromString(String string) {
-                return (T) string;
-            }
-        };
+        return (StringConverter<T>) defaultStringConverter;
     }
     
     /*
@@ -51,15 +87,155 @@ class CellUtils {
      * implementation in various cell implementations.
      */
     static <T> StringConverter<TreeItem<T>> defaultTreeItemStringConverter() {
-        return new StringConverter<TreeItem<T>>() {
-            @Override public String toString(TreeItem<T> treeItem) {
-                return (treeItem == null || treeItem.getValue() == null) ? 
-                        "" : treeItem.getValue().toString();
+        return (StringConverter<TreeItem<T>>) defaultTreeItemStringConverter;
+    }
+    
+    private static <T> String getItemText(Cell<T> cell, StringConverter<T> converter) {
+        return converter == null ?
+            cell.getItem() == null ? "" : cell.getItem().toString() :
+            converter.toString(cell.getItem());
+    }
+    
+    
+    
+    /***************************************************************************
+     *                                                                         *
+     * ChoiceBox convenience                                                   *
+     *                                                                         *
+     **************************************************************************/   
+    
+    static <T> void updateItem(
+            final Cell<T> cell, ChoiceBox<T> choiceBox, 
+            final StringConverter<T> converter) {
+        if (cell.isEmpty()) {
+            cell.setText(null);
+            cell.setGraphic(null);
+        } else {
+            if (cell.isEditing()) {
+                if (choiceBox != null) {
+                    choiceBox.getSelectionModel().select(cell.getItem());
+                }
+                cell.setText(null);
+                cell.setGraphic(choiceBox);
+            } else {
+                cell.setText(getItemText(cell, converter));
+                cell.setGraphic(null);
             }
-
-            @Override public TreeItem<T> fromString(String string) {
-                return new TreeItem(string);
+        }
+    };
+    
+    static <T> ChoiceBox<T> createChoiceBox(
+            final Cell<T> cell, 
+            final ObservableList<T> items) {
+        ChoiceBox<T> choiceBox = new ChoiceBox<T>(items);
+        choiceBox.setMaxWidth(Double.MAX_VALUE);
+        choiceBox.getSelectionModel().selectedItemProperty().addListener(new ChangeListener<T>() {
+            @Override
+            public void changed(ObservableValue<? extends T> ov, T oldValue, T newValue) {
+                if (cell.isEditing()) {
+                    cell.commitEdit(newValue);
+                }
             }
-        };
+        });
+        return choiceBox;
+    }
+    
+    
+    
+    /***************************************************************************
+     *                                                                         *
+     * TextField convenience                                                   *
+     *                                                                         *
+     **************************************************************************/  
+    
+    static <T> void updateItem(Cell<T> cell, TextField textField, StringConverter<T> converter) {
+        if (cell.isEmpty()) {
+            cell.setText(null);
+            cell.setGraphic(null);
+        } else {
+            if (cell.isEditing()) {
+                if (textField != null) {
+                    textField.setText(getItemText(cell, converter));
+                }
+                cell.setText(null);
+                cell.setGraphic(textField);
+            } else {
+                cell.setText(getItemText(cell, converter));
+                cell.setGraphic(null);
+            }
+        }
+    }
+    
+    static <T> void startEdit(
+            final Cell<T> cell, 
+            TextField textField, 
+            final StringConverter<T> converter) {
+        if (textField == null) {
+            textField = createTextField(cell, converter);
+        }
+        textField.setText(getItemText(cell, converter));
+        
+        cell.setText(null);
+        cell.setGraphic(textField);
+        
+        textField.selectAll();
+    }
+    
+    static <T> void cancelEdit(Cell<T> cell, final StringConverter<T> converter) {
+        cell.setText(getItemText(cell, converter));
+        cell.setGraphic(null);
+    }
+    
+    private static <T> TextField createTextField(final Cell<T> cell, final StringConverter<T> converter) {
+        final TextField textField = new TextField(getItemText(cell, converter));
+        textField.setOnKeyReleased(new EventHandler<KeyEvent>() {
+            @Override public void handle(KeyEvent t) {
+                if (t.getCode() == KeyCode.ENTER) {
+                    cell.commitEdit(converter.fromString(textField.getText()));
+                } else if (t.getCode() == KeyCode.ESCAPE) {
+                    cell.cancelEdit();
+                }
+            }
+        });
+        return textField;
+    }
+    
+    
+    
+    /***************************************************************************
+     *                                                                         *
+     * TextField convenience                                                   *
+     *                                                                         *
+     **************************************************************************/ 
+    
+    static <T> void updateItem(Cell<T> cell, ComboBox<T> comboBox, StringConverter<T> converter) {
+        if (cell.isEmpty()) {
+            cell.setText(null);
+            cell.setGraphic(null);
+        } else {
+            if (cell.isEditing()) {
+                if (comboBox != null) {
+                    comboBox.getSelectionModel().select(cell.getItem());
+                }
+                cell.setText(null);
+                cell.setGraphic(comboBox);
+            } else {
+                cell.setText(getItemText(cell, converter));
+                cell.setGraphic(null);
+            }
+        }
+    };
+    
+    static <T> ComboBox<T> createComboBox(final Cell<T> cell, ObservableList<T> items) {
+        ComboBox<T> comboBox = new ComboBox<T>(items);
+        comboBox.setMaxWidth(Double.MAX_VALUE);
+        comboBox.getSelectionModel().selectedItemProperty().addListener(new ChangeListener<T>() {
+            @Override public void changed(ObservableValue<? extends T> ov, T oldValue, T newValue) {
+                if (cell.isEditing()) {
+                    cell.commitEdit(newValue);
+                }
+            }
+        });
+        return comboBox;
     }
 }

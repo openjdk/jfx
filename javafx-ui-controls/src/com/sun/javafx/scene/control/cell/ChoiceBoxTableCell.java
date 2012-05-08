@@ -24,7 +24,7 @@
  */
 package com.sun.javafx.scene.control.cell;
 
-import static com.sun.javafx.scene.control.cell.ChoiceBoxCell.createChoiceBox;
+import static com.sun.javafx.scene.control.cell.CellUtils.createChoiceBox;
 import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.SimpleObjectProperty;
 import javafx.collections.FXCollections;
@@ -126,6 +126,7 @@ public class ChoiceBoxTableCell<S,T> extends TableCell<S,T> {
      *      by the user.
      */
     public ChoiceBoxTableCell(StringConverter<T> converter, ObservableList<T> items) {
+        this.getStyleClass().add("choice-box-table-cell");
         this.items = items;
         setConverter(converter != null ? converter : CellUtils.<T>defaultStringConverter());
     }

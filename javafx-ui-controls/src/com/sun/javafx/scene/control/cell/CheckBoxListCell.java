@@ -110,6 +110,7 @@ public class CheckBoxListCell<T> extends ListCell<T> {
         if (getSelectedProperty == null) {
             throw new NullPointerException("getSelectedProperty can not be null");
         }
+        this.getStyleClass().add("choice-box-list-cell");
         setSelectedStateCallback(getSelectedProperty);
         setConverter(converter);
         
