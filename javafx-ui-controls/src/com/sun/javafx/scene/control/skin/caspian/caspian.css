@@ -3295,11 +3295,11 @@ Only the properties with values that are different from the TextBox are specifie
 
 .color-panel .color-square {
     -fx-background-color: transparent;
-    -fx-background-insets: -1, 1, 2;    
+    -fx-background-insets: -1, 0;   
     -fx-padding: 0.5;
 }
 /* the color over which the user is hovering */
-.color-panel .color-square:hover, .color-panel .color-square:hover:selected {
+.color-panel .color-square:focused, .color-panel .color-square:selected:focused {
     -fx-background-color: -fx-focus-color;
 }
 
@@ -3317,17 +3317,16 @@ Only the properties with values that are different from the TextBox are specifie
     -fx-border-style: none;
     -fx-border-color: null;
 }
-.add-color-pane .color-rect-pane {
-    -fx-padding: 15;
+.custom-color-dialog .color-rect-pane {
+    -fx-padding: 15 8 15 15;
     -fx-background-color: -fx-hover-base; 
 }
 
-.add-color-pane .controls-pane {
-    -fx-padding: 15 15 5 15;
+.custom-color-dialog .controls-pane {
+    -fx-padding: 15 15 15 0;
     -fx-background-color: -fx-hover-base;   
 }
-.add-color-pane  {
-    -fx-padding: 0 0 0 10;
+.custom-color-dialog  {
     -fx-background-color: -fx-hover-base;
 }
 
@@ -3371,7 +3370,6 @@ Only the properties with values that are different from the TextBox are specifie
 .controls-pane #pill-right {
     -fx-padding: 0 8 0 8;
     -fx-border-image-source: url("right-btn.png");
-/*    -fx-border-image-source: url("file:///Users/paru/javafx/platform/repos/2.2/jfx/rt/javafx-ui-controls/src/com/sun/javafx/scene/control/skin/caspian/right-btn.png");*/
     -fx-border-image-slice: 4 4 4 4 fill;
     -fx-border-image-width: 4 4 4 4;
     -fx-border-image-insets: 0;
@@ -3388,6 +3386,12 @@ Only the properties with values that are different from the TextBox are specifie
     -fx-effect: dropshadow( one-pass-box , white , 0, 0.0 , 0 , 1 );
 }
 
+.controls-pane .current-new-color-grid #transparent-current, .controls-pane .current-new-color-grid #transparent-new {
+    -fx-background-image: url("pattern-transparent.png"); 
+    -fx-background-repeat: repeat;
+    -fx-background-size: auto;
+    -fx-padding: 9 64 9 64;
+}
 
 .controls-pane .addcolor-controls-background {
     -fx-background-color: -fx-text-box-border, -fx-text-box-border, -fx-control-inner-background;
@@ -3405,6 +3409,10 @@ Only the properties with values that are different from the TextBox are specifie
     -fx-text-fill: -fx-text-inner-color;
     -fx-prompt-text-fill: derive(-fx-control-inner-background,-30%);
     -fx-cursor: text;
+}
+
+.controls-pane .current-new-color-grid .label {
+    -fx-padding: 0 0 0 5;
 }
 
 #input-text-field {
