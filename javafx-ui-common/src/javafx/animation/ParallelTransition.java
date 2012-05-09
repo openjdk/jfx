@@ -40,11 +40,11 @@ import javafx.util.Duration;
 import com.sun.javafx.collections.TrackableObservableList;
 
 /**
- * This {@link Transition} starts all {@link javafx.animation.Animation
- * Animations} in {@link #children} in parallel.
+ * This {@link Transition} plays a list of {@link javafx.animation.Animation
+ * Animations} in parallel.
  * <p>
- * Children of this {@code Transition} inherit {@link #node} if their
- * {@code node} variable is not specified.
+ * Children of this {@code Transition} inherit {@link #nodeProperty() node}, if their
+ * {@code node} property is not specified.
  * 
  * <p>
  * Code Segment Example:
@@ -180,6 +180,8 @@ public final class ParallelTransition extends Transition {
      * {@code ParallelTransition}. If the children are changed for a running
      * {@code ParallelTransition}, the animation has to be stopped and started
      * again to pick up the new value.
+     *
+     * @return the list of {@link javafx.animation.Animation Animations}
      */
     public final ObservableList<Animation> getChildren() {
         return children;
