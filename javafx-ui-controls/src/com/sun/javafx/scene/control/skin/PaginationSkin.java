@@ -90,7 +90,7 @@ public class PaginationSkin extends SkinBase<Pagination, PaginationBehavior>  {
     private int currentIndex;
     private int toIndex;
     private int pageCount;
-    private int pageIndicatorCount;
+    private int maxPageIndicatorCount;
 
     private boolean animate = true;
 
@@ -121,7 +121,7 @@ public class PaginationSkin extends SkinBase<Pagination, PaginationBehavior>  {
 
         getChildren().addAll(currentScrollPane, nextScrollPane, navigation);
 
-        pagination.pageIndicatorCountProperty().addListener(new InvalidationListener() {
+        pagination.maxPageIndicatorCountProperty().addListener(new InvalidationListener() {
             @Override
             public void invalidated(Observable o) {
                 resetIndexes(false);
@@ -241,10 +241,10 @@ public class PaginationSkin extends SkinBase<Pagination, PaginationBehavior>  {
     }
 
     private void resetIndexes(boolean usePageIndex) {
-        pageIndicatorCount = getSkinnable().getPageIndicatorCount();
+        maxPageIndicatorCount = getSkinnable().getMaxPageIndicatorCount();
         pageCount = getPageCount();
-        if (pageCount > pageIndicatorCount) {
-            pageCount = pageIndicatorCount;
+        if (pageCount > maxPageIndicatorCount) {
+            pageCount = maxPageIndicatorCount;
         }
 
         fromIndex = 0;
@@ -555,7 +555,7 @@ public class PaginationSkin extends SkinBase<Pagination, PaginationBehavior>  {
                 @Override
                 public void changed(ObservableValue<? extends Number> arg0, Number arg1, Number arg2) {
                     previousIndex = arg1.intValue();
-                    currentIndex = arg2.intValue();                    
+                    currentIndex = arg2.intValue();
                     updatePageIndex();
                     if (animate) {
                         // Uncomment this code if we want to see the page index
@@ -586,7 +586,7 @@ public class PaginationSkin extends SkinBase<Pagination, PaginationBehavior>  {
             controlBox.getChildren().add(rightArrowButton);
         }
 
-        private void updatePageIndicators() {            
+        private void updatePageIndicators() {
             for (int i = 0; i < indicatorButtons.getToggles().size(); i++) {
                 IndicatorButton ib = (IndicatorButton)indicatorButtons.getToggles().get(i);
                 if (ib.getPageNumber() == currentIndex) {
@@ -598,32 +598,32 @@ public class PaginationSkin extends SkinBase<Pagination, PaginationBehavior>  {
 
         private void updatePageIndex() {
             //System.out.println("SELECT PROPERTY FROM " + fromIndex + " TO " + toIndex + " PREVIOUS " + previousIndex + " CURRENT "+ currentIndex + " PAGE COUNT " + pageCount + " PAGE INDICATOR COUNT " + pageIndicatorCount);
-            if (pageCount == pageIndicatorCount) {
+            if (pageCount == maxPageIndicatorCount) {
                 if (changePageSet()) {
                     initializePageIndicators();
                 }
             }
             updatePageIndicators();
             requestLayout();
-        }        
+        }
 
         // Only change to the next set when the current index is at the start or the end of the set.
         // Return true only if we have scrolled to the next/previous set.
         private boolean changePageSet() {
-            if (previousIndex < currentIndex && currentIndex % pageIndicatorCount == 0) {
+            if (previousIndex < currentIndex && currentIndex % maxPageIndicatorCount == 0) {
                 // Get the right page set
                 fromIndex = currentIndex;
-                toIndex = fromIndex + (pageIndicatorCount - 1);
-            } else if (currentIndex < previousIndex && currentIndex % pageIndicatorCount == pageIndicatorCount - 1) {
+                toIndex = fromIndex + (maxPageIndicatorCount - 1);
+            } else if (currentIndex < previousIndex && currentIndex % maxPageIndicatorCount == maxPageIndicatorCount - 1) {
                 // Get the left page set
                 toIndex = currentIndex;
-                fromIndex = toIndex - (pageIndicatorCount - 1);
+                fromIndex = toIndex - (maxPageIndicatorCount - 1);
             } else {
                 // We need to get the new page set if the currentIndex is out of range.
                 // This can happen if setPageIndex() is called programatically.
                 if (currentIndex < fromIndex || currentIndex > toIndex) {
-                    fromIndex = currentIndex - (currentIndex % pageIndicatorCount);
-                    toIndex = fromIndex + (pageIndicatorCount - 1);
+                    fromIndex = currentIndex - (currentIndex % maxPageIndicatorCount);
+                    toIndex = fromIndex + (maxPageIndicatorCount - 1);
                 } else {
                     return false;
                 }
@@ -641,7 +641,7 @@ public class PaginationSkin extends SkinBase<Pagination, PaginationBehavior>  {
             // We have gone past the starting page
             if (fromIndex < 0) {
                 fromIndex = 0;
-                toIndex = fromIndex + (pageIndicatorCount - 1);
+                toIndex = fromIndex + (maxPageIndicatorCount - 1);
             }
             return true;
         }
@@ -700,7 +700,7 @@ public class PaginationSkin extends SkinBase<Pagination, PaginationBehavior>  {
 
             // Determine the number of indicators we can fit within the pagination width.
             double availableWidth = width - controlBoxWidth;
-            
+
             double controlBoxX = left + Utils.computeXOffset(width, controlBoxWidth, HPos.CENTER);
             double controlBoxY = top + Utils.computeYOffset(height, controlBoxHeight, VPos.CENTER);
 

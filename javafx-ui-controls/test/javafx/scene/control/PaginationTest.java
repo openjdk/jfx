@@ -24,6 +24,7 @@ import static org.junit.Assert.*;
 
 
 import org.junit.Before;
+import org.junit.Ignore;
 import org.junit.Test;
 
 public class PaginationTest {
@@ -69,20 +70,20 @@ public class PaginationTest {
         assertNull(pagination.getPageFactory());
     }
 
-    @Test public void defaultPageIndicatorCount() {
-        assertEquals(pagination.getPageIndicatorCount(), 10);
+    @Test public void defaultMaxPageIndicatorCount() {
+        assertEquals(pagination.getMaxPageIndicatorCount(), 10);
     }
 
     /*********************************************************************
      * Tests for property binding                                        *
      ********************************************************************/
 
-    @Test public void checkNumberOfVisiblePagesPropertyBind() {
+    @Test public void checkMaxPageIndicatorCountPropertyBind() {
         IntegerProperty intPr = new SimpleIntegerProperty(200);
-        pagination.pageIndicatorCountProperty().bind(intPr);
-        assertEquals("number of visible pages cannot be bound", pagination.pageIndicatorCountProperty().getValue(), 200, 0);
+        pagination.maxPageIndicatorCountProperty().bind(intPr);
+        assertEquals("number of visible pages cannot be bound", pagination.maxPageIndicatorCountProperty().getValue(), 200, 0);
         intPr.setValue(105);
-        assertEquals("number of visible pages cannot be bound", pagination.pageIndicatorCountProperty().getValue(), 105, 0);
+        assertEquals("number of visible pages cannot be bound", pagination.maxPageIndicatorCountProperty().getValue(), 105, 0);
     }
 
     @Test public void checkPageIndexPropertyBind() {
@@ -108,24 +109,24 @@ public class PaginationTest {
     /*********************************************************************
      * CSS related Tests                                                 *
      ********************************************************************/
-    @Test public void whenPageIndicatorCountIsBound_impl_cssSettable_ReturnsFalse() {
-        StyleableProperty styleable = StyleableProperty.getStyleableProperty(pagination.pageIndicatorCountProperty());
+    @Test public void whenMaxPageIndicatorCountIsBound_impl_cssSettable_ReturnsFalse() {
+        StyleableProperty styleable = StyleableProperty.getStyleableProperty(pagination.maxPageIndicatorCountProperty());
         assertTrue(styleable.isSettable(pagination));
         IntegerProperty intPr = new SimpleIntegerProperty(10);
-        pagination.pageIndicatorCountProperty().bind(intPr);
+        pagination.maxPageIndicatorCountProperty().bind(intPr);
         assertFalse(styleable.isSettable(pagination));
     }
 
-    @Test public void whenPageIndicatorCountIsSpecifiedViaCSSAndIsNotBound_impl_cssSettable_ReturnsTrue() {
-        StyleableProperty styleable = StyleableProperty.getStyleableProperty(pagination.pageIndicatorCountProperty());
+    @Test public void whenMaxPageIndicatorCountIsSpecifiedViaCSSAndIsNotBound_impl_cssSettable_ReturnsTrue() {
+        StyleableProperty styleable = StyleableProperty.getStyleableProperty(pagination.maxPageIndicatorCountProperty());
         styleable.set(pagination, 100);
         assertTrue(styleable.isSettable(pagination));
     }
 
-    @Test public void canSpecifyPageIndicatorCountViaCSS() {
-        StyleableProperty styleable = StyleableProperty.getStyleableProperty(pagination.pageIndicatorCountProperty());
+    @Test public void canSpecifyMaxPageIndicatorCountViaCSS() {
+        StyleableProperty styleable = StyleableProperty.getStyleableProperty(pagination.maxPageIndicatorCountProperty());
         styleable.set(pagination, 100);
-        assertSame(100, pagination.getPageIndicatorCount());
+        assertSame(100, pagination.getMaxPageIndicatorCount());
     }
 
     /********************************************************************
@@ -160,7 +161,7 @@ public class PaginationTest {
         assertEquals(2, pagination.getCurrentPageIndex());
     }
 
-    @Test public void setCurrentPageIndexAndNavigateWithMouse() {
+    @Ignore @Test public void setCurrentPageIndexAndNavigateWithMouse() {
         pagination.setPageCount(25);
         pagination.setPageFactory(new Callback<Integer, Node>() {
             @Override
@@ -207,14 +208,14 @@ public class PaginationTest {
         pagination.setCurrentPageIndex(4);
     }
 
-    @Test public void setNumberOfVisiblePagesToZero() {
+    @Test public void setMaxPageIndicatorCountToZero() {
         pagination.setPageCount(0);
 
         root.setPrefSize(400, 400);
         root.getChildren().add(pagination);
         show();
 
-        assertEquals(-1, pagination.getPageCount());
+        assertEquals(Integer.MAX_VALUE, pagination.getPageCount());
     }
 
     @Test public void setCurrentPageIndexLessThanZero() {
