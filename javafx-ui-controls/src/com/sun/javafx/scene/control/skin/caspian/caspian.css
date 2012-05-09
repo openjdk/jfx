@@ -3511,122 +3511,28 @@ Only the properties with values that are different from the TextBox are specifie
 }
 
 .pagination .pagination-control {
-    -fx-alignment: CENTER;
     -fx-background-color: transparent;    
     -fx-padding: 0.833333em 0em 0.833333em 0em; /* 10 5 10 5 */    
 }
 
-.pagination .pagination-control .left-arrow-button {
-    -fx-padding: 0em 0.583em 0em 0em;
+.pagination .pagination-control .control-box {
+    -fx-spacing: 10;
 }
 
-.pagination .pagination-control .left-arrow-button .left-arrow {
-    -fx-background-color: -fx-page-bullet-border, linear-gradient(to bottom, #d8d8d8, #868686);
-    -fx-background-insets: 0, 1;
+.pagination .pagination-control .left-arrow-button {    
     -fx-padding: 0.583em 0.5em 0.583em 0.583em; /* 7 6 7 7 */
-    -fx-shape: "M 0 0 L -13 7 L 0 13 z";
+    -fx-shape: "M 0 0 L -13 7 L 0 13 z";    
 }
 
-.pagination .pagination-control .left-arrow-button:hover:armed .left-arrow {
-    -fx-background-color: #464646, linear-gradient(to bottom, #bebebe, #929292);
-    -fx-background-insets: 0, 1;
-}
-
-.pagination .pagination-control .left-arrow-button:disabled .left-arrow {
-    -fx-opacity: -fx-disabled-opacity;
-}
-
-.pagination .pagination-control .left-arrow-button:hover .left-arrow {
-    -fx-background-color: 
-        linear-gradient(to bottom, #c2cad0, #90989e),
-        linear-gradient(to bottom, #e9e9e9, #c4c4c4);
-    -fx-background-insets: 0, 1;
-}
-
-.pagination .pagination-control .right-arrow-button {
-    -fx-padding: 0em 0em 0em 0.583em;
-}
-
-.pagination .pagination-control .right-arrow-button .right-arrow {
-    -fx-background-color: linear-gradient(to bottom, #d8d8d8, #868686);
-    -fx-background-insets: 0;
+.pagination .pagination-control .right-arrow-button {    
     -fx-padding: 0.583em 0.583em 0.583em 0.5em; /* 7 7 6 7 */
     -fx-shape: "M 0 0 L 13 7 L 0 13 z";
 }
 
-.pagination .pagination-control .right-arrow-button:hover:armed .right-arrow{
-    -fx-background-color: linear-gradient(to bottom, #bebebe, #929292);
-    -fx-background-insets: 0;
-}
-
-.pagination .pagination-control .right-arrow-button:disabled .right-arrow {
-    -fx-opacity: -fx-disabled-opacity;
-}
-
-.pagination .pagination-control .right-arrow-button:hover .right-arrow {
-    -fx-background-color: 
-        linear-gradient(to bottom, #e9e9e9, #c4c4c4);
-    -fx-background-insets: 0;
-}
-
-.pagination .pagination-control .indicator {
-    -fx-padding: 0em 0.583em 0em 0.583em; /* 0 7 0 7 */
-}
-
-.pagination .pagination-control .indicator .bullet-button .bullet {   
-   -fx-effect: innershadow(two-pass-box , rgba(99,99,99,0.6) ,3 , 0.0 , 0 , 1);
-   -fx-background-color: 
-       -fx-page-bullet-border, 
-       linear-gradient(to bottom, derive(-fx-background,-8%) 0%, derive(white,100%) 100%);
-   -fx-background-insets: 0, 1;
+.pagination .pagination-control .bullet-button {   
    -fx-background-radius: 1.0em; /* large value to make sure this remains circular */
    -fx-padding: 0.583em; /* 7 -- padding from outside edge to the inner black dot */
 }
 
-.pagination .pagination-control .indicator:hover .bullet-button .bullet {
-    -fx-background-color: -fx-page-indicator-hover-border, -fx-cell-hover-color;
-    -fx-background-insets: 0, 1;
-}
-
-.pagination .pagination-control .indicator:selected .bullet-button .bullet {   
-   -fx-background: -fx-accent;
-   -fx-background-color: -fx-focus-color, -fx-selection-bar;
-   -fx-background-insets: 0, 1;
-}
-
-.pagination .pagination-control .indicator:hover:selected .bullet-button .bullet {
-   -fx-background-color: -fx-focus-color, -fx-selection-bar;
-   -fx-background-insets: 0, 1;
-}
-
-.pagination .pagination-control .indicator .number-button .number {
-    -fx-background: -fx-accent;
-    -fx-background-color: -fx-control-inner-background;  
-    -fx-border-style: solid;
-    -fx-border-width: 1px;
-    -fx-border-color: derive(-fx-base,15%);
-    -fx-padding: 0em 0.417em 0em 0.417em;  /* 0 5 0 5 */
-}
-
-.pagination .pagination-control > .indicator:hover .number-button .number {
-    -fx-background-color: -fx-cell-hover-color;
-    -fx-border-color: -fx-page-indicator-hover-border;
-}
-
-.pagination .pagination-control .indicator:selected .number-button .number {
-    -fx-background-color: -fx-selection-bar;
-    -fx-border-color: -fx-focus-color;    
-}
-
-.pagination .pagination-control .indicator:hover:selected .number-button .number {
-    -fx-background-color: -fx-selection-bar;
-    -fx-border-color: -fx-focus-color;
-}
-
-.pagination .pagination-control .indicator .number-button .number .label {    
-    -fx-text-fill: -fx-text-inner-color;
-}
-
-.pagination .pagination-control .indicator:selected .number-button .number .label {
-    -fx-text-fill: -fx-selection-bar-text;
+.pagination .pagination-control .number-button {
 }

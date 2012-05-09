@@ -127,7 +127,7 @@ public class Pagination extends Control {
      *
      * @see #setPageCount
      */
-    public static final int INDETERMINATE = -1;
+    public static final int INDETERMINATE = Integer.MAX_VALUE;
 
     /**
      * Constructs a new Pagination control with the specified page count
@@ -225,7 +225,7 @@ public class Pagination extends Control {
     private int oldPageCount = 1;
     private IntegerProperty pageCount = new SimpleIntegerProperty(this, "pageCount", 1) {
         @Override protected void invalidated() {
-            if (getPageCount() < INDETERMINATE || getPageCount() == 0) {
+            if (getPageCount() <= 0) {
                 setPageCount(oldPageCount);
             }
             oldPageCount = getPageCount();
