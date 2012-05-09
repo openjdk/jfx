@@ -22,36 +22,37 @@
  * or visit www.oracle.com if you need additional information or have any
  * questions.
  */
-package com.sun.javafx.scene.control.cell;
+package javafx.scene.control.cell;
 
-import static com.sun.javafx.scene.control.cell.CellUtils.createComboBox;
+import static javafx.scene.control.cell.CellUtils.createComboBox;
 import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.SimpleBooleanProperty;
 import javafx.beans.property.SimpleObjectProperty;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
-import javafx.scene.control.*;
+import javafx.scene.control.ComboBox;
+import javafx.scene.control.Label;
+import javafx.scene.control.TableCell;
+import javafx.scene.control.TableColumn;
 import javafx.util.Callback;
 import javafx.util.StringConverter;
 
 /**
- * A class containing a {@link ListCell} implementation that draws a 
+ * A class containing a {@link TableCell} implementation that draws a 
  * {@link ComboBox} node inside the cell.
  * 
- * <p>By default, the ComboBoxListCell is rendered as a {@link Label} when not 
+ * <p>By default, the ComboBoxTableCell is rendered as a {@link Label} when not 
  * being edited, and as a ComboBox when in editing mode. The ComboBox will, by 
- * default, stretch to fill the entire list cell.
+ * default, stretch to fill the entire table cell.
  * 
- * <p>To create a ComboBoxListCell, it is necessary to provide zero or more 
+ * <p>To create a ComboBoxTableCell, it is necessary to provide zero or more 
  * items that will be shown to the user when the {@link ComboBox} menu is 
- * showing. These items must be of the same type as the ListView items sequence, 
- * such that upon selection, they replace the existing value in the 
- * {@link ListView#itemsProperty() items} list.
+ * showing. These items must be of the same type as the TableColumn.
  * 
- * @param <T> The type of the elements contained within the ListView.
+ * @param <T> The type of the elements contained within the TableColumn.
  */
-public class ComboBoxListCell<T> extends ListCell<T> {
+public class ComboBoxTableCell<S,T> extends TableCell<S,T> {
     
     /***************************************************************************
      *                                                                         *
@@ -60,90 +61,103 @@ public class ComboBoxListCell<T> extends ListCell<T> {
      **************************************************************************/
     
     /**
-     * Creates a ComboBox cell factory for use in {@link ListView} controls. By 
-     * default, the ComboBoxCell is rendered as a {@link Label} when not being 
-     * edited, and as a ComboBox when in editing mode. The ComboBox will, by 
-     * default, stretch to fill the entire list cell.
+     * Creates a ComboBox cell factory for use in {@link TableColumn} controls. 
+     * By default, the ComboBoxCell is rendered as a {@link Label} when not 
+     * being edited, and as a ComboBox when in editing mode. The ComboBox will, 
+     * by default, stretch to fill the entire list cell.
      * 
-     * @param <T> The type of the elements contained within the ListView.
+     * @param <T> The type of the elements contained within the TableColumn.
      * @param items Zero or more items that will be shown to the user when the
      *      {@link ComboBox} menu is showing. These items must be of the same 
-     *      type as the ListView items list, such that upon selection, they 
-     *      replace the existing value in the 
-     *      {@link ListView#itemsProperty() items} list.
-     * @return A {@link Callback} that will return a ListCell that is able to 
-     *      work on the type of element contained within the ListView.
+     *      type as the TableColumn. Note that it is up to the developer to set 
+     *      {@link EventHandler event handlers} to listen to edit events in the 
+     *      TableColumn, and react accordingly. Methods of interest include 
+     *      {@link TableColumn#setOnEditStart(EventHandler) setOnEditStart},
+     *      {@link TableColumn#setOnEditCommit(javafx.event.EventHandler) setOnEditCommit}, 
+     *      and {@link TableColumn#setOnEditCancel(EventHandler) setOnEditCancel}.
+     * @return A {@link Callback} that will return a TableCell that is able to 
+     *      work on the type of element contained within the TableColumn.
      */
-    public static <T> Callback<ListView<T>, ListCell<T>> forListView(final T... items) {
-        return forListView(FXCollections.observableArrayList(items));
+    public static <S,T> Callback<TableColumn<S,T>, TableCell<S,T>> forTableColumn(
+            final T... items) {
+        return forTableColumn(null, items);
     }
     
     /**
-     * Creates a ComboBox cell factory for use in {@link ListView} controls. By 
-     * default, the ComboBoxCell is rendered as a {@link Label} when not being 
-     * edited, and as a ComboBox when in editing mode. The ComboBox will, by 
-     * default, stretch to fill the entire list cell.
+     * Creates a ComboBox cell factory for use in {@link TableColumn} controls. 
+     * By default, the ComboBoxCell is rendered as a {@link Label} when not 
+     * being edited, and as a ComboBox when in editing mode. The ComboBox will, 
+     * by default, stretch to fill the entire list cell.
      * 
-     * @param <T> The type of the elements contained within the ListView.
+     * @param <T> The type of the elements contained within the TableColumn.
      * @param converter A {@link StringConverter} to convert the given item (of 
      *      type T) to a String for displaying to the user.
      * @param items Zero or more items that will be shown to the user when the
      *      {@link ComboBox} menu is showing. These items must be of the same 
-     *      type as the ListView items list, such that
-     *      upon selection, they replace the existing value in the 
-     *      {@link ListView#itemsProperty() items} list.
-     * @return A {@link Callback} that will return a ListCell that is able to 
-     *      work on the type of element contained within the ListView.
+     *      type as the TableColumn. Note that it is up to the developer to set 
+     *      {@link EventHandler event handlers} to listen to edit events in the 
+     *      TableColumn, and react accordingly. Methods of interest include 
+     *      {@link TableColumn#setOnEditStart(EventHandler) setOnEditStart},
+     *      {@link TableColumn#setOnEditCommit(javafx.event.EventHandler) setOnEditCommit}, 
+     *      and {@link TableColumn#setOnEditCancel(EventHandler) setOnEditCancel}.
+     * @return A {@link Callback} that will return a TableCell that is able to 
+     *      work on the type of element contained within the TableColumn.
      */
-    public static <T> Callback<ListView<T>, ListCell<T>> forListView(
-                final StringConverter<T> converter, 
-                final T... items) {
-        return forListView(converter, FXCollections.observableArrayList(items));
+    public static <S,T> Callback<TableColumn<S,T>, TableCell<S,T>> forTableColumn(
+            final StringConverter<T> converter, 
+            final T... items) {
+        return forTableColumn(converter, FXCollections.observableArrayList(items));
     }
     
     /**
-     * Creates a ComboBox cell factory for use in {@link ListView} controls. By 
-     * default, the ComboBoxCell is rendered as a {@link Label} when not being 
-     * edited, and as a ComboBox when in editing mode. The ComboBox will, by 
-     * default, stretch to fill the entire list cell.
+     * Creates a ComboBox cell factory for use in {@link TableColumn} controls. 
+     * By default, the ComboBoxCell is rendered as a {@link Label} when not 
+     * being edited, and as a ComboBox when in editing mode. The ComboBox will, 
+     * by default, stretch to fill the entire list cell.
      * 
-     * @param <T> The type of the elements contained within the ListView.
-     * @param items An {@link ObservableList} containing zero or more items that 
-     *      will be shown to the user when the {@link ComboBox} menu is showing. 
-     *      These items must be of the same type as the ListView items sequence, 
-     *      such that upon selection, they replace the existing value in the 
-     *      {@link ListView#itemsProperty() items} list.
-     * @return A {@link Callback} that will return a ListCell that is able to 
-     *      work on the type of element contained within the ListView.
+     * @param <T> The type of the elements contained within the TableColumn.
+     * @param items Zero or more items that will be shown to the user when the
+     *      {@link ComboBox} menu is showing. These items must be of the same 
+     *      type as the TableColumn. Note that it is up to the developer to set 
+     *      {@link EventHandler event handlers} to listen to edit events in the 
+     *      TableColumn, and react accordingly. Methods of interest include 
+     *      {@link TableColumn#setOnEditStart(EventHandler) setOnEditStart},
+     *      {@link TableColumn#setOnEditCommit(javafx.event.EventHandler) setOnEditCommit}, 
+     *      and {@link TableColumn#setOnEditCancel(EventHandler) setOnEditCancel}.
+     * @return A {@link Callback} that will return a TableCell that is able to 
+     *      work on the type of element contained within the TableColumn.
      */
-    public static <T> Callback<ListView<T>, ListCell<T>> forListView(
+    public static <S,T> Callback<TableColumn<S,T>, TableCell<S,T>> forTableColumn(
             final ObservableList<T> items) {
-        return forListView(null, items);
+        return forTableColumn(null, items);
     }
     
     /**
-     * Creates a ComboBox cell factory for use in {@link ListView} controls. By 
-     * default, the ComboBoxCell is rendered as a {@link Label} when not being 
-     * edited, and as a ComboBox when in editing mode. The ComboBox will, by 
-     * default, stretch to fill the entire list cell.
+     * Creates a ComboBox cell factory for use in {@link TableColumn} controls. 
+     * By default, the ComboBoxCell is rendered as a {@link Label} when not 
+     * being edited, and as a ComboBox when in editing mode. The ComboBox will, 
+     * by default, stretch to fill the entire list cell.
      * 
-     * @param <T> The type of the elements contained within the ListView.
+     * @param <T> The type of the elements contained within the TableColumn.
      * @param converter A {@link StringConverter} to convert the given item (of 
      *      type T) to a String for displaying to the user.
-     * @param items An {@link ObservableList} containing zero or more items that 
-     *      will be shown to the user when the {@link ComboBox} menu is showing. 
-     *      These items must be of the same type as the ListView items sequence, 
-     *      such that upon selection, they replace the existing value in the 
-     *      {@link ListView#itemsProperty() items} list.
-     * @return A {@link Callback} that will return a ListCell that is able to 
-     *      work on the type of element contained within the ListView.
+     * @param items Zero or more items that will be shown to the user when the
+     *      {@link ComboBox} menu is showing. These items must be of the same 
+     *      type as the TableColumn. Note that it is up to the developer to set 
+     *      {@link EventHandler event handlers} to listen to edit events in the 
+     *      TableColumn, and react accordingly. Methods of interest include 
+     *      {@link TableColumn#setOnEditStart(EventHandler) setOnEditStart},
+     *      {@link TableColumn#setOnEditCommit(javafx.event.EventHandler) setOnEditCommit}, 
+     *      and {@link TableColumn#setOnEditCancel(EventHandler) setOnEditCancel}.
+     * @return A {@link Callback} that will return a TableCell that is able to 
+     *      work on the type of element contained within the TableColumn.
      */
-    public static <T> Callback<ListView<T>, ListCell<T>> forListView(
+    public static <S,T> Callback<TableColumn<S,T>, TableCell<S,T>> forTableColumn(
             final StringConverter<T> converter, 
             final ObservableList<T> items) {
-        return new Callback<ListView<T>, ListCell<T>>() {
-            @Override public ListCell<T> call(ListView<T> list) {
-                return new ComboBoxListCell<T>(converter, items);
+        return new Callback<TableColumn<S,T>, TableCell<S,T>>() {
+            @Override public TableCell<S,T> call(TableColumn<S,T> list) {
+                return new ComboBoxTableCell<S,T>(converter, items);
             }
         };
     }
@@ -154,79 +168,79 @@ public class ComboBoxListCell<T> extends ListCell<T> {
      *                                                                         *
      * Fields                                                                  *
      *                                                                         *
-     **************************************************************************/    
-    
+     **************************************************************************/      
+        
     private final ObservableList<T> items;
 
     private ComboBox<T> comboBox;
-    
+
     
     
     /***************************************************************************
      *                                                                         *
      * Constructors                                                            *
      *                                                                         *
-     **************************************************************************/
+     **************************************************************************/     
     
     /**
-     * Creates a default ComboBoxListCell with an empty items list.
+     * Creates a default ComboBoxTableCell with an empty items list.
      */
-    public ComboBoxListCell() {
+    public ComboBoxTableCell() {
         this(FXCollections.<T>observableArrayList());
     }
     
     /**
-     * Creates a default {@link ComboBoxListCell} instance with the given items
+     * Creates a default {@link ComboBoxTableCell} instance with the given items
      * being used to populate the {@link ComboBox} when it is shown.
      * 
      * @param items The items to show in the ComboBox popup menu when selected 
      *      by the user.
      */
-    public ComboBoxListCell(T... items) {
+    public ComboBoxTableCell(T... items) {
         this(FXCollections.observableArrayList(items));
     }
     
     /**
-     * Creates a {@link ComboBoxListCell} instance with the given items
+     * Creates a {@link ComboBoxTableCell} instance with the given items
      * being used to populate the {@link ComboBox} when it is shown, and the 
      * {@link StringConverter} being used to convert the item in to a 
      * user-readable form.
      * 
-     * @param converter A {@link StringConverter} that can convert an item of 
-     *      type T into a user-readable string so that it may then be shown in 
-     *      the ComboBox popup menu.
+     * @param converter A {@link StringConverter} that can convert an item of type T 
+     *      into a user-readable string so that it may then be shown in the 
+     *      ComboBox popup menu.
      * @param items The items to show in the ComboBox popup menu when selected 
      *      by the user.
      */
-    public ComboBoxListCell(StringConverter<T> converter, T... items) {
+    public ComboBoxTableCell(StringConverter<T> converter, T... items) {
         this(converter, FXCollections.observableArrayList(items));
     }
     
     /**
-     * Creates a default {@link ComboBoxListCell} instance with the given items
+     * Creates a default {@link ComboBoxTableCell} instance with the given items
      * being used to populate the {@link ComboBox} when it is shown.
      * 
      * @param items The items to show in the ComboBox popup menu when selected 
      *      by the user.
      */
-    public ComboBoxListCell(ObservableList<T> items) {
+    public ComboBoxTableCell(ObservableList<T> items) {
         this(null, items);
     }
 
     /**
-     * Creates a {@link ComboBoxListCell} instance with the given items
+     * Creates a {@link ComboBoxTableCell} instance with the given items
      * being used to populate the {@link ComboBox} when it is shown, and the 
      * {@link StringConverter} being used to convert the item in to a 
      * user-readable form.
      * 
-     * @param converter A {@link StringConverter} that can convert an item of 
-     *      type T into a user-readable string so that it may then be shown in 
-     *      the ComboBox popup menu.
+     * @param converter A {@link StringConverter} that can convert an item of type T 
+     *      into a user-readable string so that it may then be shown in the 
+     *      ComboBox popup menu.
      * @param items The items to show in the ComboBox popup menu when selected 
      *      by the user.
      */
-    public ComboBoxListCell(StringConverter<T> converter, ObservableList<T> items) {
-        this.getStyleClass().add("combo-box-list-cell");
+    public ComboBoxTableCell(StringConverter<T> converter, ObservableList<T> items) {
+        this.getStyleClass().add("combo-box-table-cell");
         this.items = items;
         setConverter(converter != null ? converter : CellUtils.<T>defaultStringConverter());
     }
@@ -305,11 +319,11 @@ public class ComboBoxListCell<T> extends ListCell<T> {
      */
     public ObservableList<T> getItems() {
         return items;
-    }       
+    }    
     
     /** {@inheritDoc} */
     @Override public void startEdit() {
-        if (! isEditable() || ! getListView().isEditable()) {
+        if (! isEditable() || ! getTableView().isEditable() || ! getTableColumn().isEditable()) {
             return;
         }
         

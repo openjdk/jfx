@@ -22,9 +22,9 @@
  * or visit www.oracle.com if you need additional information or have any
  * questions.
  */
-package com.sun.javafx.scene.control.cell;
+package javafx.scene.control.cell;
 
-import com.sun.javafx.scene.control.CheckBoxTreeItem;
+import javafx.scene.control.CheckBoxTreeItem;
 import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.SimpleObjectProperty;

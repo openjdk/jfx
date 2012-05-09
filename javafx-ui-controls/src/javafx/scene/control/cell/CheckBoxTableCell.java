@@ -22,7 +22,7 @@
  * or visit www.oracle.com if you need additional information or have any
  * questions.
  */
-package com.sun.javafx.scene.control.cell;
+package javafx.scene.control.cell;
 
 import javafx.beans.binding.Bindings;
 import javafx.beans.property.BooleanProperty;

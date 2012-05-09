@@ -22,35 +22,37 @@
  * or visit www.oracle.com if you need additional information or have any
  * questions.
  */
-package com.sun.javafx.scene.control.cell;
+package javafx.scene.control.cell;
 
-import static com.sun.javafx.scene.control.cell.CellUtils.createChoiceBox;
+import static javafx.scene.control.cell.CellUtils.createChoiceBox;
 import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.SimpleObjectProperty;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.scene.control.ChoiceBox;
 import javafx.scene.control.Label;
-import javafx.scene.control.TableCell;
-import javafx.scene.control.TableColumn;
+import javafx.scene.control.ListCell;
+import javafx.scene.control.ListView;
 import javafx.util.Callback;
 import javafx.util.StringConverter;
 
 /**
- * A class containing a {@link TableCell} implementation that draws a 
+ * A class containing a {@link ListCell} implementation that draws a 
  * {@link ChoiceBox} node inside the cell.
  * 
- * <p>By default, the ChoiceBoxTableCell is rendered as a {@link Label} when not 
+ * <p>By default, the ChoiceBoxListCell is rendered as a {@link Label} when not 
  * being edited, and as a ChoiceBox when in editing mode. The ChoiceBox will, by 
- * default, stretch to fill the entire table cell.
+ * default, stretch to fill the entire list cell.
  * 
- * <p>To create a ChoiceBoxTableCell, it is necessary to provide zero or more 
+ * <p>To create a ChoiceBoxListCell, it is necessary to provide zero or more 
  * items that will be shown to the user when the {@link ChoiceBox} menu is 
- * showing. These items must be of the same type as the TableColumn.
+ * showing. These items must be of the same type as the ListView items sequence, 
+ * such that upon selection, they replace the existing value in the 
+ * {@link ListView#itemsProperty() items} list.
  * 
- * @param <T> The type of the elements contained within the TableColumn.
+ * @param <T> The type of the elements contained within the ListView.
  */
-public class ChoiceBoxTableCell<S,T> extends TableCell<S,T> {
+public class ChoiceBoxListCell<T> extends ListCell<T> {
     
     /***************************************************************************
      *                                                                         *
@@ -59,102 +61,90 @@ public class ChoiceBoxTableCell<S,T> extends TableCell<S,T> {
      **************************************************************************/
     
     /**
-     * Creates a ChoiceBox cell factory for use in {@link TableColumn} controls. 
+     * Creates a ChoiceBox cell factory for use in {@link ListView} controls. 
      * By default, the ChoiceBoxCell is rendered as a {@link Label} when not 
      * being edited, and as a ChoiceBox when in editing mode. The ChoiceBox will, 
      * by default, stretch to fill the entire list cell.
      * 
-     * @param <T> The type of the elements contained within the TableColumn.
+     * @param <T> The type of the elements contained within the ListView.
      * @param items Zero or more items that will be shown to the user when the
      *      {@link ChoiceBox} menu is showing. These items must be of the same 
-     *      type as the TableColumn. Note that it is up to the developer to set 
-     *      {@link EventHandler event handlers} to listen to edit events in the 
-     *      TableColumn, and react accordingly. Methods of interest include 
-     *      {@link TableColumn#setOnEditStart(EventHandler) setOnEditStart},
-     *      {@link TableColumn#setOnEditCommit(javafx.event.EventHandler) setOnEditCommit}, 
-     *      and {@link TableColumn#setOnEditCancel(EventHandler) setOnEditCancel}.
-     * @return A {@link Callback} that will return a TableCell that is able to 
-     *      work on the type of element contained within the TableColumn.
+     *      type as the ListView items list, such that upon selection, they 
+     *      replace the existing value in the 
+     *      {@link ListView#itemsProperty() items} list.
+     * @return A {@link Callback} that will return a ListCell that is able to 
+     *      work on the type of element contained within the ListView.
      */
-    public static <S,T> Callback<TableColumn<S,T>, TableCell<S,T>> forTableColumn(final T... items) {
-        return forTableColumn(null, items);
+    public static <T> Callback<ListView<T>, ListCell<T>> forListView(final T... items) {
+        return forListView(FXCollections.observableArrayList(items));
     }
     
     /**
-     * Creates a ChoiceBox cell factory for use in {@link TableColumn} controls. 
+     * Creates a ChoiceBox cell factory for use in {@link ListView} controls. By
+     * default, the ChoiceBoxCell is rendered as a {@link Label} when not being 
+     * edited, and as a ChoiceBox when in editing mode. The ChoiceBox will, by 
+     * default, stretch to fill the entire list cell.
+     * 
+     * @param <T> The type of the elements contained within the ListView.
+     * @param converter A {@link StringConverter} to convert the given item (of type T) 
+     *      to a String for displaying to the user.
+     * @param items Zero or more items that will be shown to the user when the
+     *      {@link ChoiceBox} menu is showing. These items must be of the same 
+     *      type as the ListView items list, such that upon selection, they 
+     *      replace the existing value in the 
+     *      {@link ListView#itemsProperty() items} list.
+     * @return A {@link Callback} that will return a ListCell that is able to 
+     *      work on the type of element contained within the ListView.
+     */
+    public static <T> Callback<ListView<T>, ListCell<T>> forListView(
+            final StringConverter<T> converter, 
+            final T... items) {
+        return forListView(converter, FXCollections.observableArrayList(items));
+    }
+    
+    /**
+     * Creates a ChoiceBox cell factory for use in {@link ListView} controls. 
      * By default, the ChoiceBoxCell is rendered as a {@link Label} when not 
      * being edited, and as a ChoiceBox when in editing mode. The ChoiceBox 
      * will, by default, stretch to fill the entire list cell.
      * 
-     * @param <T> The type of the elements contained within the TableColumn.
+     * @param <T> The type of the elements contained within the ListView.
+     * @param items An {@link ObservableList} containing zero or more items that 
+     *      will be shown to the user when the {@link ChoiceBox} menu is showing. 
+     *      These items must be of the same type as the ListView items sequence, 
+     *      such that upon selection, they replace the existing value in the 
+     *      {@link ListView#itemsProperty() items} list.
+     * @return A {@link Callback} that will return a ListCell that is able to 
+     *      work on the type of element contained within the ListView.
+     */
+    public static <T> Callback<ListView<T>, ListCell<T>> forListView(
+            final ObservableList<T> items) {
+        return forListView(null, items);
+    }
+    
+    /**
+     * Creates a ChoiceBox cell factory for use in {@link ListView} controls. By 
+     * default, the ChoiceBoxCell is rendered as a {@link Label} when not being 
+     * edited, and as a ChoiceBox when in editing mode. The ChoiceBox will, by 
+     * default, stretch to fill the entire list cell.
+     * 
+     * @param <T> The type of the elements contained within the ListView.
      * @param converter A {@link StringConverter} to convert the given item (of type T) 
      *      to a String for displaying to the user.
-     * @param items Zero or more items that will be shown to the user when the
-     *      {@link ChoiceBox} menu is showing. These items must be of the same
-     *      type as the TableColumn. Note that it is up to the developer to set 
-     *      {@link EventHandler event handlers} to listen to edit events in the 
-     *      TableColumn, and react accordingly. Methods of interest include 
-     *      {@link TableColumn#setOnEditStart(EventHandler) setOnEditStart},
-     *      {@link TableColumn#setOnEditCommit(javafx.event.EventHandler) setOnEditCommit}, 
-     *      and {@link TableColumn#setOnEditCancel(EventHandler) setOnEditCancel}.
-     * @return A {@link Callback} that will return a TableCell that is able to 
-     *      work on the type of element contained within the TableColumn.
+     * @param items An {@link ObservableList} containing zero or more items that 
+     *      will be shown to the user when the {@link ChoiceBox} menu is showing. 
+     *      These items must be of the same type as the ListView items sequence, 
+     *      such that upon selection, they replace the existing value in the 
+     *      {@link ListView#itemsProperty() items} list.
+     * @return A {@link Callback} that will return a ListCell that is able to 
+     *      work on the type of element contained within the ListView.
      */
-    public static <S,T> Callback<TableColumn<S,T>, TableCell<S,T>> forTableColumn(
-            final StringConverter<T> converter, 
-            final T... items) {
-        return forTableColumn(converter, FXCollections.observableArrayList(items));
-    }
-    
-    /**
-     * Creates a ChoiceBox cell factory for use in {@link TableColumn} controls. 
-     * By default, the ChoiceBoxCell is rendered as a {@link Label} when not 
-     * being edited, and as a ChoiceBox when in editing mode. The ChoiceBox will, 
-     * by default, stretch to fill the entire list cell.
-     * 
-     * @param <T> The type of the elements contained within the TableColumn.
-     * @param items Zero or more items that will be shown to the user when the
-     *      {@link ChoiceBox} menu is showing. These items must be of the same 
-     *      type as the TableColumn. Note that it is up to the developer to set 
-     *      {@link EventHandler event handlers} to listen to edit events in the 
-     *      TableColumn, and react accordingly. Methods of interest include 
-     *      {@link TableColumn#setOnEditStart(EventHandler) setOnEditStart},
-     *      {@link TableColumn#setOnEditCommit(javafx.event.EventHandler) setOnEditCommit}, 
-     *      and {@link TableColumn#setOnEditCancel(EventHandler) setOnEditCancel}.
-     * @return A {@link Callback} that will return a TableCell that is able to 
-     *      work on the type of element contained within the TableColumn.
-     */
-    public static <S,T> Callback<TableColumn<S,T>, TableCell<S,T>> forTableColumn(
-            final ObservableList<T> items) {
-        return forTableColumn(null, items);
-    }
-    
-    /**
-     * Creates a ChoiceBox cell factory for use in {@link TableColumn} controls. 
-     * By default, the ChoiceBoxCell is rendered as a {@link Label} when not 
-     * being edited, and as a ChoiceBox when in editing mode. The ChoiceBox will, 
-     * by default, stretch to fill the entire list cell.
-     * 
-     * @param <T> The type of the elements contained within the TableColumn.
-     * @param converter A {@link StringConverter} to convert the given item (of type T) 
-     * to a String for displaying to the user.
-     * @param items Zero or more items that will be shown to the user when the
-     *      {@link ChoiceBox} menu is showing. These items must be of the same 
-     *      type as the TableColumn. Note that it is up to the developer to set 
-     *      {@link EventHandler event handlers} to listen to edit events in the 
-     *      TableColumn, and react accordingly. Methods of interest include 
-     *      {@link TableColumn#setOnEditStart(EventHandler) setOnEditStart},
-     *      {@link TableColumn#setOnEditCommit(javafx.event.EventHandler) setOnEditCommit}, 
-     *      and {@link TableColumn#setOnEditCancel(EventHandler) setOnEditCancel}.
-     * @return A {@link Callback} that will return a TableCell that is able to 
-     *      work on the type of element contained within the TableColumn.
-     */
-    public static <S,T> Callback<TableColumn<S,T>, TableCell<S,T>> forTableColumn(
+    public static <T> Callback<ListView<T>, ListCell<T>> forListView(
             final StringConverter<T> converter, 
             final ObservableList<T> items) {
-        return new Callback<TableColumn<S,T>, TableCell<S,T>>() {
-            @Override public TableCell<S,T> call(TableColumn<S,T> list) {
-                return new ChoiceBoxTableCell<S,T>(converter, items);
+        return new Callback<ListView<T>, ListCell<T>>() {
+            @Override public ListCell<T> call(ListView<T> list) {
+                return new ChoiceBoxListCell<T>(converter, items);
             }
         };
     }
@@ -165,8 +155,8 @@ public class ChoiceBoxTableCell<S,T> extends TableCell<S,T> {
      *                                                                         *
      * Fields                                                                  *
      *                                                                         *
-     **************************************************************************/     
-        
+     **************************************************************************/    
+    
     private final ObservableList<T> items;
 
     private ChoiceBox<T> choiceBox;
@@ -177,28 +167,28 @@ public class ChoiceBoxTableCell<S,T> extends TableCell<S,T> {
      *                                                                         *
      * Constructors                                                            *
      *                                                                         *
-     **************************************************************************/     
+     **************************************************************************/  
     
     /**
-     * Creates a default ChoiceBoxTableCell with an empty items list.
+     * Creates a default ChoiceBoxListCell with an empty items list.
      */
-    public ChoiceBoxTableCell() {
+    public ChoiceBoxListCell() {
         this(FXCollections.<T>observableArrayList());
     }
     
     /**
-     * Creates a default {@link ChoiceBoxTableCell} instance with the given items
+     * Creates a default {@link ChoiceBoxListCell} instance with the given items
      * being used to populate the {@link ChoiceBox} when it is shown.
      * 
      * @param items The items to show in the ChoiceBox popup menu when selected 
      *      by the user.
      */
-    public ChoiceBoxTableCell(T... items) {
+    public ChoiceBoxListCell(T... items) {
         this(FXCollections.observableArrayList(items));
     }
     
     /**
-     * Creates a {@link ChoiceBoxTableCell} instance with the given items
+     * Creates a {@link ChoiceBoxListCell} instance with the given items
      * being used to populate the {@link ChoiceBox} when it is shown, and the 
      * {@link StringConverter} being used to convert the item in to a 
      * user-readable form.
@@ -209,23 +199,23 @@ public class ChoiceBoxTableCell<S,T> extends TableCell<S,T> {
      * @param items The items to show in the ChoiceBox popup menu when selected 
      *      by the user.
      */
-    public ChoiceBoxTableCell(StringConverter<T> converter, T... items) {
+    public ChoiceBoxListCell(StringConverter<T> converter, T... items) {
         this(converter, FXCollections.observableArrayList(items));
     }
     
     /**
-     * Creates a default {@link ChoiceBoxTableCell} instance with the given items
+     * Creates a default {@link ChoiceBoxListCell} instance with the given items
      * being used to populate the {@link ChoiceBox} when it is shown.
      * 
      * @param items The items to show in the ChoiceBox popup menu when selected 
      *      by the user.
      */
-    public ChoiceBoxTableCell(ObservableList<T> items) {
+    public ChoiceBoxListCell(ObservableList<T> items) {
         this(null, items);
     }
 
     /**
-     * Creates a {@link ChoiceBoxTableCell} instance with the given items
+     * Creates a {@link ChoiceBoxListCell} instance with the given items
      * being used to populate the {@link ChoiceBox} when it is shown, and the 
      * {@link StringConverter} being used to convert the item in to a 
      * user-readable form.
@@ -236,13 +226,14 @@ public class ChoiceBoxTableCell<S,T> extends TableCell<S,T> {
      * @param items The items to show in the ChoiceBox popup menu when selected 
      *      by the user.
      */
-    public ChoiceBoxTableCell(StringConverter<T> converter, ObservableList<T> items) {
-        this.getStyleClass().add("choice-box-table-cell");
+    public ChoiceBoxListCell(StringConverter<T> converter, ObservableList<T> items) {
+        this.getStyleClass().add("choice-box-list-cell");
         this.items = items;
         setConverter(converter != null ? converter : CellUtils.<T>defaultStringConverter());
     }
     
     
+
     /***************************************************************************
      *                                                                         *
      * Properties                                                              *
@@ -287,11 +278,11 @@ public class ChoiceBoxTableCell<S,T> extends TableCell<S,T> {
      */
     public ObservableList<T> getItems() {
         return items;
-    }    
+    }
     
     /** {@inheritDoc} */
     @Override public void startEdit() {
-        if (! isEditable() || ! getTableView().isEditable() || ! getTableColumn().isEditable()) {
+        if (! isEditable() || ! getListView().isEditable()) {
             return;
         }
         

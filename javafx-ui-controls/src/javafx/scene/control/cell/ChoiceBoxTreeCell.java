@@ -22,9 +22,9 @@
  * or visit www.oracle.com if you need additional information or have any
  * questions.
  */
-package com.sun.javafx.scene.control.cell;
+package javafx.scene.control.cell;
 
-import static com.sun.javafx.scene.control.cell.CellUtils.createChoiceBox;
+import static javafx.scene.control.cell.CellUtils.createChoiceBox;
 import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.SimpleObjectProperty;
 import javafx.collections.FXCollections;

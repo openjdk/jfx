@@ -22,8 +22,9 @@
  * or visit www.oracle.com if you need additional information or have any
  * questions.
  */
-package com.sun.javafx.scene.control.cell;
+package javafx.scene.control.cell;
 
+import com.sun.javafx.beans.annotations.NoBuilder;
 import javafx.beans.value.ObservableValue;
 import javafx.scene.control.ProgressBar;
 import javafx.scene.control.TableCell;
@@ -36,7 +37,7 @@ import javafx.util.Callback;
  * 
  * @param <S> The type of the elements contained within the TableView.
  */
-public class ProgressBarTableCell<S,Double> extends TableCell<S, java.lang.Double> {
+public class ProgressBarTableCell<S> extends TableCell<S, Double> {
     
     /***************************************************************************
      *                                                                         *
@@ -54,10 +55,10 @@ public class ProgressBarTableCell<S,Double> extends TableCell<S, java.lang.Doubl
      *      TableColumn, that enables visualisation of a Number as it progresses 
      *      from 0.0 to 1.0.
      */
-    public static <S> Callback<TableColumn<S,java.lang.Double>, TableCell<S,java.lang.Double>> forTableColumn() {
-        return new Callback<TableColumn<S, java.lang.Double>, TableCell<S, java.lang.Double>>() {
-            @Override public TableCell<S, java.lang.Double> call(TableColumn<S, java.lang.Double> param) {
-                return new ProgressBarTableCell<S, java.lang.Double>();
+    public static <S> Callback<TableColumn<S,Double>, TableCell<S,Double>> forTableColumn() {
+        return new Callback<TableColumn<S, Double>, TableCell<S, Double>>() {
+            @Override public TableCell<S, Double> call(TableColumn<S, Double> param) {
+                return new ProgressBarTableCell<S>();
             }
         };
     }
@@ -101,7 +102,7 @@ public class ProgressBarTableCell<S,Double> extends TableCell<S, java.lang.Doubl
      **************************************************************************/    
     
     /** {@inheritDoc} */
-    @Override public void updateItem(java.lang.Double item, boolean empty) {
+    @Override public void updateItem(Double item, boolean empty) {
         super.updateItem(item, empty);
         
         if (empty) {

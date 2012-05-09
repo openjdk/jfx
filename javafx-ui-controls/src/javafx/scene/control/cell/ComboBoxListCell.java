@@ -22,37 +22,36 @@
  * or visit www.oracle.com if you need additional information or have any
  * questions.
  */
-package com.sun.javafx.scene.control.cell;
+package javafx.scene.control.cell;
 
-import static com.sun.javafx.scene.control.cell.CellUtils.createChoiceBox;
+import static javafx.scene.control.cell.CellUtils.createComboBox;
+import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.ObjectProperty;
+import javafx.beans.property.SimpleBooleanProperty;
 import javafx.beans.property.SimpleObjectProperty;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
-import javafx.scene.control.ChoiceBox;
-import javafx.scene.control.Label;
-import javafx.scene.control.ListCell;
-import javafx.scene.control.ListView;
+import javafx.scene.control.*;
 import javafx.util.Callback;
 import javafx.util.StringConverter;
 
 /**
  * A class containing a {@link ListCell} implementation that draws a 
- * {@link ChoiceBox} node inside the cell.
+ * {@link ComboBox} node inside the cell.
  * 
- * <p>By default, the ChoiceBoxListCell is rendered as a {@link Label} when not 
- * being edited, and as a ChoiceBox when in editing mode. The ChoiceBox will, by 
+ * <p>By default, the ComboBoxListCell is rendered as a {@link Label} when not 
+ * being edited, and as a ComboBox when in editing mode. The ComboBox will, by 
  * default, stretch to fill the entire list cell.
  * 
- * <p>To create a ChoiceBoxListCell, it is necessary to provide zero or more 
- * items that will be shown to the user when the {@link ChoiceBox} menu is 
+ * <p>To create a ComboBoxListCell, it is necessary to provide zero or more 
+ * items that will be shown to the user when the {@link ComboBox} menu is 
  * showing. These items must be of the same type as the ListView items sequence, 
  * such that upon selection, they replace the existing value in the 
  * {@link ListView#itemsProperty() items} list.
  * 
  * @param <T> The type of the elements contained within the ListView.
  */
-public class ChoiceBoxListCell<T> extends ListCell<T> {
+public class ComboBoxListCell<T> extends ListCell<T> {
     
     /***************************************************************************
      *                                                                         *
@@ -61,14 +60,14 @@ public class ChoiceBoxListCell<T> extends ListCell<T> {
      **************************************************************************/
     
     /**
-     * Creates a ChoiceBox cell factory for use in {@link ListView} controls. 
-     * By default, the ChoiceBoxCell is rendered as a {@link Label} when not 
-     * being edited, and as a ChoiceBox when in editing mode. The ChoiceBox will, 
-     * by default, stretch to fill the entire list cell.
+     * Creates a ComboBox cell factory for use in {@link ListView} controls. By 
+     * default, the ComboBoxCell is rendered as a {@link Label} when not being 
+     * edited, and as a ComboBox when in editing mode. The ComboBox will, by 
+     * default, stretch to fill the entire list cell.
      * 
      * @param <T> The type of the elements contained within the ListView.
      * @param items Zero or more items that will be shown to the user when the
-     *      {@link ChoiceBox} menu is showing. These items must be of the same 
+     *      {@link ComboBox} menu is showing. These items must be of the same 
      *      type as the ListView items list, such that upon selection, they 
      *      replace the existing value in the 
      *      {@link ListView#itemsProperty() items} list.
@@ -80,37 +79,37 @@ public class ChoiceBoxListCell<T> extends ListCell<T> {
     }
     
     /**
-     * Creates a ChoiceBox cell factory for use in {@link ListView} controls. By
-     * default, the ChoiceBoxCell is rendered as a {@link Label} when not being 
-     * edited, and as a ChoiceBox when in editing mode. The ChoiceBox will, by 
+     * Creates a ComboBox cell factory for use in {@link ListView} controls. By 
+     * default, the ComboBoxCell is rendered as a {@link Label} when not being 
+     * edited, and as a ComboBox when in editing mode. The ComboBox will, by 
      * default, stretch to fill the entire list cell.
      * 
      * @param <T> The type of the elements contained within the ListView.
-     * @param converter A {@link StringConverter} to convert the given item (of type T) 
-     *      to a String for displaying to the user.
+     * @param converter A {@link StringConverter} to convert the given item (of 
+     *      type T) to a String for displaying to the user.
      * @param items Zero or more items that will be shown to the user when the
-     *      {@link ChoiceBox} menu is showing. These items must be of the same 
-     *      type as the ListView items list, such that upon selection, they 
-     *      replace the existing value in the 
+     *      {@link ComboBox} menu is showing. These items must be of the same 
+     *      type as the ListView items list, such that
+     *      upon selection, they replace the existing value in the 
      *      {@link ListView#itemsProperty() items} list.
      * @return A {@link Callback} that will return a ListCell that is able to 
      *      work on the type of element contained within the ListView.
      */
     public static <T> Callback<ListView<T>, ListCell<T>> forListView(
-            final StringConverter<T> converter, 
-            final T... items) {
+                final StringConverter<T> converter, 
+                final T... items) {
         return forListView(converter, FXCollections.observableArrayList(items));
     }
     
     /**
-     * Creates a ChoiceBox cell factory for use in {@link ListView} controls. 
-     * By default, the ChoiceBoxCell is rendered as a {@link Label} when not 
-     * being edited, and as a ChoiceBox when in editing mode. The ChoiceBox 
-     * will, by default, stretch to fill the entire list cell.
+     * Creates a ComboBox cell factory for use in {@link ListView} controls. By 
+     * default, the ComboBoxCell is rendered as a {@link Label} when not being 
+     * edited, and as a ComboBox when in editing mode. The ComboBox will, by 
+     * default, stretch to fill the entire list cell.
      * 
      * @param <T> The type of the elements contained within the ListView.
      * @param items An {@link ObservableList} containing zero or more items that 
-     *      will be shown to the user when the {@link ChoiceBox} menu is showing. 
+     *      will be shown to the user when the {@link ComboBox} menu is showing. 
      *      These items must be of the same type as the ListView items sequence, 
      *      such that upon selection, they replace the existing value in the 
      *      {@link ListView#itemsProperty() items} list.
@@ -123,16 +122,16 @@ public class ChoiceBoxListCell<T> extends ListCell<T> {
     }
     
     /**
-     * Creates a ChoiceBox cell factory for use in {@link ListView} controls. By 
-     * default, the ChoiceBoxCell is rendered as a {@link Label} when not being 
-     * edited, and as a ChoiceBox when in editing mode. The ChoiceBox will, by 
+     * Creates a ComboBox cell factory for use in {@link ListView} controls. By 
+     * default, the ComboBoxCell is rendered as a {@link Label} when not being 
+     * edited, and as a ComboBox when in editing mode. The ComboBox will, by 
      * default, stretch to fill the entire list cell.
      * 
      * @param <T> The type of the elements contained within the ListView.
-     * @param converter A {@link StringConverter} to convert the given item (of type T) 
-     *      to a String for displaying to the user.
+     * @param converter A {@link StringConverter} to convert the given item (of 
+     *      type T) to a String for displaying to the user.
      * @param items An {@link ObservableList} containing zero or more items that 
-     *      will be shown to the user when the {@link ChoiceBox} menu is showing. 
+     *      will be shown to the user when the {@link ComboBox} menu is showing. 
      *      These items must be of the same type as the ListView items sequence, 
      *      such that upon selection, they replace the existing value in the 
      *      {@link ListView#itemsProperty() items} list.
@@ -144,7 +143,7 @@ public class ChoiceBoxListCell<T> extends ListCell<T> {
             final ObservableList<T> items) {
         return new Callback<ListView<T>, ListCell<T>>() {
             @Override public ListCell<T> call(ListView<T> list) {
-                return new ChoiceBoxListCell<T>(converter, items);
+                return new ComboBoxListCell<T>(converter, items);
             }
         };
     }
@@ -159,7 +158,7 @@ public class ChoiceBoxListCell<T> extends ListCell<T> {
     
     private final ObservableList<T> items;
 
-    private ChoiceBox<T> choiceBox;
+    private ComboBox<T> comboBox;
     
     
     
@@ -167,73 +166,73 @@ public class ChoiceBoxListCell<T> extends ListCell<T> {
      *                                                                         *
      * Constructors                                                            *
      *                                                                         *
-     **************************************************************************/  
+     **************************************************************************/
     
     /**
-     * Creates a default ChoiceBoxListCell with an empty items list.
+     * Creates a default ComboBoxListCell with an empty items list.
      */
-    public ChoiceBoxListCell() {
+    public ComboBoxListCell() {
         this(FXCollections.<T>observableArrayList());
     }
     
     /**
-     * Creates a default {@link ChoiceBoxListCell} instance with the given items
-     * being used to populate the {@link ChoiceBox} when it is shown.
+     * Creates a default {@link ComboBoxListCell} instance with the given items
+     * being used to populate the {@link ComboBox} when it is shown.
      * 
-     * @param items The items to show in the ChoiceBox popup menu when selected 
+     * @param items The items to show in the ComboBox popup menu when selected 
      *      by the user.
      */
-    public ChoiceBoxListCell(T... items) {
+    public ComboBoxListCell(T... items) {
         this(FXCollections.observableArrayList(items));
     }
     
     /**
-     * Creates a {@link ChoiceBoxListCell} instance with the given items
-     * being used to populate the {@link ChoiceBox} when it is shown, and the 
+     * Creates a {@link ComboBoxListCell} instance with the given items
+     * being used to populate the {@link ComboBox} when it is shown, and the 
      * {@link StringConverter} being used to convert the item in to a 
      * user-readable form.
      * 
-     * @param converter A {@link StringConverter} that can convert an item of type T 
-     *      into a user-readable string so that it may then be shown in the 
-     *      ChoiceBox popup menu.
-     * @param items The items to show in the ChoiceBox popup menu when selected 
+     * @param converter A {@link StringConverter} that can convert an item of 
+     *      type T into a user-readable string so that it may then be shown in 
+     *      the ComboBox popup menu.
+     * @param items The items to show in the ComboBox popup menu when selected 
      *      by the user.
      */
-    public ChoiceBoxListCell(StringConverter<T> converter, T... items) {
+    public ComboBoxListCell(StringConverter<T> converter, T... items) {
         this(converter, FXCollections.observableArrayList(items));
     }
     
     /**
-     * Creates a default {@link ChoiceBoxListCell} instance with the given items
-     * being used to populate the {@link ChoiceBox} when it is shown.
+     * Creates a default {@link ComboBoxListCell} instance with the given items
+     * being used to populate the {@link ComboBox} when it is shown.
      * 
-     * @param items The items to show in the ChoiceBox popup menu when selected 
+     * @param items The items to show in the ComboBox popup menu when selected 
      *      by the user.
      */
-    public ChoiceBoxListCell(ObservableList<T> items) {
+    public ComboBoxListCell(ObservableList<T> items) {
         this(null, items);
     }
 
     /**
-     * Creates a {@link ChoiceBoxListCell} instance with the given items
-     * being used to populate the {@link ChoiceBox} when it is shown, and the 
+     * Creates a {@link ComboBoxListCell} instance with the given items
+     * being used to populate the {@link ComboBox} when it is shown, and the 
      * {@link StringConverter} being used to convert the item in to a 
      * user-readable form.
      * 
-     * @param converter A {@link StringConverter} that can convert an item of type T 
-     *      into a user-readable string so that it may then be shown in the 
-     *      ChoiceBox popup menu.
-     * @param items The items to show in the ChoiceBox popup menu when selected 
+     * @param converter A {@link StringConverter} that can convert an item of 
+     *      type T into a user-readable string so that it may then be shown in 
+     *      the ComboBox popup menu.
+     * @param items The items to show in the ComboBox popup menu when selected 
      *      by the user.
      */
-    public ChoiceBoxListCell(StringConverter<T> converter, ObservableList<T> items) {
-        this.getStyleClass().add("choice-box-list-cell");
+    public ComboBoxListCell(StringConverter<T> converter, ObservableList<T> items) {
+        this.getStyleClass().add("combo-box-list-cell");
         this.items = items;
         setConverter(converter != null ? converter : CellUtils.<T>defaultStringConverter());
     }
     
     
-
+    
     /***************************************************************************
      *                                                                         *
      * Properties                                                              *
@@ -266,6 +265,34 @@ public class ChoiceBoxListCell<T> extends ListCell<T> {
     }
     
     
+    // --- comboBox editable
+    private BooleanProperty comboBoxEditable = 
+            new SimpleBooleanProperty(this, "comboBoxEditable");
+
+    /**
+     * A property representing whether the ComboBox, when shown to the user,
+     * is editable or not.
+     */
+    public final BooleanProperty comboBoxEditableProperty() { 
+        return comboBoxEditable; 
+    }
+    
+    /** 
+     * Configures the ComboBox to be editable (to allow user input outside of the
+     * options provide in the dropdown list).
+     */
+    public final void setComboBoxEditable(boolean value) { 
+        comboBoxEditableProperty().set(value); 
+    }
+    
+    /**
+     * Returns true if the ComboBox is editable.
+     */
+    public final boolean isComboBoxEditable() { 
+        return comboBoxEditableProperty().get(); 
+    }
+    
+    
     
     /***************************************************************************
      *                                                                         *
@@ -278,7 +305,7 @@ public class ChoiceBoxListCell<T> extends ListCell<T> {
      */
     public ObservableList<T> getItems() {
         return items;
-    }
+    }       
     
     /** {@inheritDoc} */
     @Override public void startEdit() {
@@ -286,15 +313,16 @@ public class ChoiceBoxListCell<T> extends ListCell<T> {
             return;
         }
         
-        if (choiceBox == null) {
-            choiceBox = createChoiceBox(this, items);
+        if (comboBox == null) {
+            comboBox = createComboBox(this, items);
+            comboBox.editableProperty().bind(comboBoxEditableProperty());
         }
         
-        choiceBox.getSelectionModel().select(getItem());
+        comboBox.getSelectionModel().select(getItem());
         
         super.startEdit();
         setText(null);
-        setGraphic(choiceBox);
+        setGraphic(comboBox);
     }
 
     /** {@inheritDoc} */
@@ -308,6 +336,6 @@ public class ChoiceBoxListCell<T> extends ListCell<T> {
     /** {@inheritDoc} */
     @Override public void updateItem(T item, boolean empty) {
         super.updateItem(item, empty);
-        CellUtils.updateItem(this, choiceBox, getConverter());
+        CellUtils.updateItem(this, comboBox, getConverter());
     }
 }
