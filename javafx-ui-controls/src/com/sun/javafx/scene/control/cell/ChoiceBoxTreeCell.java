@@ -29,11 +29,8 @@ import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.SimpleObjectProperty;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
-import javafx.scene.control.ChoiceBox;
-import javafx.scene.control.Label;
-import javafx.scene.control.ListCell;
-import javafx.scene.control.TreeCell;
-import javafx.scene.control.TreeItem;
+import javafx.scene.control.*;
+import javafx.util.Callback;
 import javafx.util.StringConverter;
 
 /**
@@ -53,6 +50,108 @@ import javafx.util.StringConverter;
  * @param <T> The type of the TreeItems contained within the TreeView.
  */
 public class ChoiceBoxTreeCell<T> extends TreeCell<T> {
+    
+    /***************************************************************************
+     *                                                                         *
+     * Static cell factories                                                   *
+     *                                                                         *
+     **************************************************************************/
+    
+    /**
+     * Creates a ChoiceBox cell factory for use in {@link TreeView} controls. By
+     * default, the ChoiceBoxCell is rendered as a {@link Label} when not being 
+     * edited, and as a ChoiceBox when in editing mode. The ChoiceBox will, by 
+     * default, stretch to fill the entire tree cell.
+     * 
+     * @param <T> The type of the elements contained within the TreeView.
+     * @param items Zero or more items that will be shown to the user when the
+     *      {@link ChoiceBox} menu is showing. These items must be of the same 
+     *      type as the TreeView<T>, such that upon selection, they replace the 
+     *      existing value in the TreeItem {@link TreeItem#valueProperty() value} 
+     *      property.
+     * @return A {@link Callback} that will return a TreeCell that is able to 
+     *      work on the type of element contained within the TreeView.
+     */    
+    public static <T> Callback<TreeView<T>, TreeCell<T>> forTreeView(T... items) {
+        return forTreeView(FXCollections.observableArrayList(items));
+    }
+    
+    /**
+     * Creates a ChoiceBox cell factory for use in {@link TreeView} controls. By 
+     * default, the ChoiceBoxCell is rendered as a {@link Label} when not being 
+     * edited, and as a ChoiceBox when in editing mode. The ChoiceBox will, by 
+     * default, stretch to fill the entire tree cell, excluding the space 
+     * allocated to the tree cell indentation and disclosure node (i.e. the 
+     * arrow).
+     * 
+     * @param <T> The type of the {@link TreeItem} elements contained within the 
+     *      TreeView.
+     * @param items An {@link ObservableList} containing zero or more items that 
+     *      will be shown to the user when the {@link ChoiceBox} menu is showing. 
+     *      These items must be of the same type as the TreeView generic type, 
+     *      such that upon selection, they replace the existing value in the 
+     *      {@link TreeItem} that is being edited (as noted in the 
+     *      {@link TreeView#editingItemProperty()}.
+     * @return A {@link Callback} that will return a TreeCell that is able to 
+     *      work on the type of element contained within the TreeView.
+     */
+    public static <T> Callback<TreeView<T>, TreeCell<T>> forTreeView(
+            final ObservableList<T> items) {
+        return forTreeView(null, items);
+    }
+    
+    /**
+     * Creates a ChoiceBox cell factory for use in {@link TreeView} controls. By 
+     * default, the ChoiceBoxCell is rendered as a {@link Label} when not being 
+     * edited, and as a ChoiceBox when in editing mode. The ChoiceBox will, by 
+     * default, stretch to fill the entire tree cell.
+     * 
+     * @param <T> The type of the elements contained within the TreeView.
+     * @param converter A {@link StringConverter} to convert the given item (of type T) 
+     *      to a String for displaying to the user.
+     * @param items Zero or more items that will be shown to the user when the
+     *      {@link ChoiceBox} menu is showing. These items must be of the same 
+     *      type as the TreeView<T>, such that upon selection, they replace the 
+     *      existing value in the TreeItem {@link TreeItem#valueProperty() value} 
+     *      property.
+     * @return A {@link Callback} that will return a TreeCell that is able to 
+     *      work on the type of element contained within the TreeView.
+     */  
+    public static <T> Callback<TreeView<T>, TreeCell<T>> forTreeView(
+            final StringConverter<T> converter, 
+            final T... items) {
+        return forTreeView(converter, FXCollections.observableArrayList(items));
+    }
+    
+    /**
+     * Creates a ChoiceBox cell factory for use in {@link TreeView} controls. By
+     * default, the ChoiceBoxCell is rendered as a {@link Label} when not being 
+     * edited, and as a ChoiceBox when in editing mode. The ChoiceBox will, by 
+     * default, stretch to fill the entire tree cell.
+     * 
+     * @param <T> The type of the elements contained within the TreeView.
+     * @param converter A {@link StringConverter} to convert the given item (of type T) 
+     *      to a String for displaying to the user.
+     * @param items An {@link ObservableList} containing zero or more items that 
+     *      will be shown to the user when the {@link ChoiceBox} menu is showing. 
+     *      These items must be of the same type as the TreeView generic type, 
+     *      such that upon selection, they replace the existing value in the 
+     *      {@link TreeItem} that is being edited (as noted in the 
+     *      {@link TreeView#editingItemProperty()}.
+     * @return A {@link Callback} that will return a TreeCell that is able to 
+     *      work on the type of element contained within the TreeView.
+     */  
+    public static <T> Callback<TreeView<T>, TreeCell<T>> forTreeView(
+            final StringConverter<T> converter, 
+            final ObservableList<T> items) {
+        return new Callback<TreeView<T>, TreeCell<T>>() {
+          @Override public TreeCell<T> call(TreeView<T> list) {
+              return new ChoiceBoxTreeCell<T>(converter, items);
+          }
+      };
+    }
+    
+    
     
     /***************************************************************************
      *                                                                         *

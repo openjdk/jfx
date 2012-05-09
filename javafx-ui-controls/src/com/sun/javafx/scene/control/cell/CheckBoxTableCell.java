@@ -32,6 +32,7 @@ import javafx.beans.value.ObservableValue;
 import javafx.geometry.Pos;
 import javafx.scene.control.CheckBox;
 import javafx.scene.control.TableCell;
+import javafx.scene.control.TableColumn;
 import javafx.util.Callback;
 import javafx.util.StringConverter;
 
@@ -56,6 +57,134 @@ import javafx.util.StringConverter;
  * @param <T> The type of the elements contained within the TableColumn.
  */
 public class CheckBoxTableCell<S,T> extends TableCell<S,T> {
+    
+    /***************************************************************************
+     *                                                                         *
+     * Static cell factories                                                   *
+     *                                                                         *
+     **************************************************************************/
+    
+    /**
+     * Creates a cell factory for use in a {@link TableColumn} cell factory. 
+     * This method requires that the TableColumn be of type {@link Boolean}.
+     * 
+     * <p>When used in a TableColumn, the CheckBoxCell is rendered with a 
+     * CheckBox centered in the column.
+     * 
+     * <p>The {@code ObservableValue<Boolean>} contained within each cell in the 
+     * column will be bound bidirectionally. This means that the  CheckBox in 
+     * the cell will set/unset this property based on user interactions, and the 
+     * CheckBox will reflect the state of the {@code ObservableValue<Boolean>}, 
+     * if it changes externally).</li>
+     * 
+     * @return A {@link Callback} that will return a {@link TableCell} that is 
+     *      able to work on the type of element contained within the TableColumn.
+     */
+    public static <S> Callback<TableColumn<S,Boolean>, TableCell<S,Boolean>> forTableColumn(
+            final TableColumn<S, Boolean> column) {
+        return forTableColumn(null, null);
+    }
+    
+    /**
+     * Creates a cell factory for use in a {@link TableColumn} cell factory. 
+     * This method requires that the TableColumn be of type
+     * {@code ObservableValue<Boolean>}.
+     * 
+     * <p>When used in a TableColumn, the CheckBoxCell is rendered with a 
+     * CheckBox centered in the column.
+     * 
+     * @param <T> The type of the elements contained within the {@link TableColumn} 
+     *      instance.
+     * @param getSelectedProperty A Callback that, given an object of 
+     *      type {@code TableColumn<S,T>}, will return an 
+     *      {@code ObservableValue<Boolean>} 
+     *      that represents whether the given item is selected or not. This 
+     *      {@code ObservableValue<Boolean>} will be bound bidirectionally 
+     *      (meaning that the CheckBox in the cell will set/unset this property 
+     *      based on user interactions, and the CheckBox will reflect the state of 
+     *      the {@code ObservableValue<Boolean>}, if it changes externally).
+     * @return A {@link Callback} that will return a {@link TableCell} that is 
+     *      able to work on the type of element contained within the TableColumn.
+     */
+    public static <S,T> Callback<TableColumn<S,T>, TableCell<S,T>> forTableColumn(
+            final Callback<Integer, ObservableValue<Boolean>> getSelectedProperty) {
+        return forTableColumn(getSelectedProperty, null);
+    }
+    
+    /**
+     * Creates a cell factory for use in a {@link TableColumn} cell factory. 
+     * This method requires that the TableColumn be of type
+     * {@code ObservableValue<Boolean>}.
+     * 
+     * <p>When used in a TableColumn, the CheckBoxCell is rendered with a 
+     * CheckBox centered in the column.
+     * 
+     * @param <T> The type of the elements contained within the {@link TableColumn} 
+     *      instance.
+     * @param getSelectedProperty A Callback that, given an object of 
+     *      type {@code TableColumn<S,T>}, will return an 
+     *      {@code ObservableValue<Boolean>} 
+     *      that represents whether the given item is selected or not. This 
+     *      {@code ObservableValue<Boolean>} will be bound bidirectionally 
+     *      (meaning that the CheckBox in the cell will set/unset this property 
+     *      based on user interactions, and the CheckBox will reflect the state of 
+     *      the {@code ObservableValue<Boolean>}, if it changes externally).
+     * @param showLabel In some cases, it may be desirable to show a label in 
+     *      the TableCell beside the {@link CheckBox}. By default a label is not 
+     *      shown, but by setting this to true the item in the cell will also 
+     *      have toString() called on it. If this is not the desired behavior, 
+     *      consider using {@link #forTableColumn(Callback, Callback)}, which 
+     *      allows for you to provide a callback that specifies the label for a 
+     *      given row item.
+     * @return A {@link Callback} that will return a {@link TableCell} that is 
+     *      able to work on the type of element contained within the TableColumn.
+     */
+    public static <S,T> Callback<TableColumn<S,T>, TableCell<S,T>> forTableColumn(
+            final Callback<Integer, ObservableValue<Boolean>> getSelectedProperty, 
+            final boolean showLabel) {
+        StringConverter<T> converter = ! showLabel ? 
+                null : CellUtils.<T>defaultStringConverter();
+        return forTableColumn(getSelectedProperty, converter);
+    }
+    
+    /**
+     * Creates a cell factory for use in a {@link TableColumn} cell factory. 
+     * This method requires that the TableColumn be of type
+     * {@code ObservableValue<Boolean>}.
+     * 
+     * <p>When used in a TableColumn, the CheckBoxCell is rendered with a 
+     * CheckBox centered in the column.
+     * 
+     * @param <T> The type of the elements contained within the {@link TableColumn} 
+     *      instance.
+     * @param getSelectedProperty A Callback that, given an object of type 
+     *      {@code TableColumn<S,T>}, will return an 
+     *      {@code ObservableValue<Boolean>} that represents whether the given 
+     *      item is selected or not. This {@code ObservableValue<Boolean>} will 
+     *      be bound bidirectionally (meaning that the CheckBox in the cell will 
+     *      set/unset this property based on user interactions, and the CheckBox 
+     *      will reflect the state of the {@code ObservableValue<Boolean>}, if 
+     *      it changes externally).
+     * @param converter A StringConverter that, give an object of type T, will return a 
+     *      String that can be used to represent the object visually. The default 
+     *      implementation in {@link #forTableColumn(Callback, boolean)} (when 
+     *      showLabel is true) is to simply call .toString() on all non-null 
+     *      items (and to just return an empty string in cases where the given 
+     *      item is null).
+     * @return A {@link Callback} that will return a {@link TableCell} that is 
+     *      able to work on the type of element contained within the TableColumn.
+     */
+    public static <S,T> Callback<TableColumn<S,T>, TableCell<S,T>> forTableColumn(
+            final Callback<Integer, ObservableValue<Boolean>> getSelectedProperty, 
+            final StringConverter<T> converter) {
+        return new Callback<TableColumn<S,T>, TableCell<S,T>>() {
+            @Override public TableCell<S,T> call(TableColumn<S,T> list) {
+                return new CheckBoxTableCell<S,T>(getSelectedProperty, converter);
+            }
+        };
+    }
+    
+    
 
     /***************************************************************************
      *                                                                         *

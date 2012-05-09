@@ -27,6 +27,8 @@ package com.sun.javafx.scene.control.cell;
 import javafx.beans.value.ObservableValue;
 import javafx.scene.control.ProgressBar;
 import javafx.scene.control.TableCell;
+import javafx.scene.control.TableColumn;
+import javafx.util.Callback;
 
 /**
  * A class containing a {@link TableCell} implementation that draws a 
@@ -35,6 +37,32 @@ import javafx.scene.control.TableCell;
  * @param <S> The type of the elements contained within the TableView.
  */
 public class ProgressBarTableCell<S,Double> extends TableCell<S, java.lang.Double> {
+    
+    /***************************************************************************
+     *                                                                         *
+     * Static cell factories                                                   *
+     *                                                                         *
+     **************************************************************************/
+    
+    /**
+     * Provides a {@link ProgressBar} that allows easy visualisation of a Number 
+     * value as it proceeds from 0.0 to 1.0. If the value is -1, the progress 
+     * bar will appear indeterminate.
+     * 
+     * @return A {@link Callback} that can be inserted into the 
+     *      {@link TableColumn#cellFactoryProperty() cell factory property} of a
+     *      TableColumn, that enables visualisation of a Number as it progresses 
+     *      from 0.0 to 1.0.
+     */
+    public static <S> Callback<TableColumn<S,java.lang.Double>, TableCell<S,java.lang.Double>> forTableColumn() {
+        return new Callback<TableColumn<S, java.lang.Double>, TableCell<S, java.lang.Double>>() {
+            @Override public TableCell<S, java.lang.Double> call(TableColumn<S, java.lang.Double> param) {
+                return new ProgressBarTableCell<S, java.lang.Double>();
+            }
+        };
+    }
+    
+    
     
     /***************************************************************************
      *                                                                         *

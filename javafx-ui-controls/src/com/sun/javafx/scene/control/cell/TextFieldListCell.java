@@ -30,7 +30,9 @@ import javafx.scene.control.Label;
 import javafx.scene.control.ListCell;
 import javafx.scene.control.ListView;
 import javafx.scene.control.TextField;
+import javafx.util.Callback;
 import javafx.util.StringConverter;
+import javafx.util.converter.DefaultStringConverter;
 
 /**
  * A class containing a {@link ListCell} implementation that draws a 
@@ -43,6 +45,51 @@ import javafx.util.StringConverter;
  * @param <T> The type of the elements contained within the ListView.
  */
 public class TextFieldListCell<T> extends ListCell<T> {
+    
+    /***************************************************************************
+     *                                                                         *
+     * Static cell factories                                                   *
+     *                                                                         *
+     **************************************************************************/
+    
+    /**
+     * Provides a {@link TextField} that allows editing of the cell content when
+     * the cell is double-clicked, or when {@link ListView#edit(int)} is called. 
+     * This method will only work on {@link ListView} instances which are of 
+     * type String.
+     * 
+     * @return A {@link Callback} that can be inserted into the 
+     *      {@link ListView#cellFactoryProperty() cell factory property} of a 
+     *      ListView, that enables textual editing of the content.
+     */
+    public static Callback<ListView<String>, ListCell<String>> forListView() {
+        return forListView(new DefaultStringConverter());
+    }
+    
+    /**
+     * Provides a {@link TextField} that allows editing of the cell content when 
+     * the cell is double-clicked, or when {@link ListView#edit(int)} is called. 
+     * This method will work on any ListView instance, regardless of its generic 
+     * type. However, to enable this, a {@link StringConverter} must be provided 
+     * that will convert the given String (from what the user typed in) into an 
+     * instance of type T. This item will then be passed along to the 
+     * {@link ListView#onEditCommitProperty()} callback.
+     * 
+     * @param converter A {@link StringConverter} that can convert the given String 
+     *      (from what the user typed in) into an instance of type T.
+     * @return A {@link Callback} that can be inserted into the 
+     *      {@link ListView#cellFactoryProperty() cell factory property} of a 
+     *      ListView, that enables textual editing of the content.
+     */
+    public static <T> Callback<ListView<T>, ListCell<T>> forListView(final StringConverter<T> converter) {
+        return new Callback<ListView<T>, ListCell<T>>() {
+            @Override public ListCell<T> call(ListView<T> list) {
+                return new TextFieldListCell<T>(converter);
+            }
+        };
+    }
+    
+    
     
     /***************************************************************************
      *                                                                         *

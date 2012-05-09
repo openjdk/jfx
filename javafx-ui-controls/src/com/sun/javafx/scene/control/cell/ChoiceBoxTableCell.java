@@ -32,6 +32,8 @@ import javafx.collections.ObservableList;
 import javafx.scene.control.ChoiceBox;
 import javafx.scene.control.Label;
 import javafx.scene.control.TableCell;
+import javafx.scene.control.TableColumn;
+import javafx.util.Callback;
 import javafx.util.StringConverter;
 
 /**
@@ -49,6 +51,115 @@ import javafx.util.StringConverter;
  * @param <T> The type of the elements contained within the TableColumn.
  */
 public class ChoiceBoxTableCell<S,T> extends TableCell<S,T> {
+    
+    /***************************************************************************
+     *                                                                         *
+     * Static cell factories                                                   *
+     *                                                                         *
+     **************************************************************************/
+    
+    /**
+     * Creates a ChoiceBox cell factory for use in {@link TableColumn} controls. 
+     * By default, the ChoiceBoxCell is rendered as a {@link Label} when not 
+     * being edited, and as a ChoiceBox when in editing mode. The ChoiceBox will, 
+     * by default, stretch to fill the entire list cell.
+     * 
+     * @param <T> The type of the elements contained within the TableColumn.
+     * @param items Zero or more items that will be shown to the user when the
+     *      {@link ChoiceBox} menu is showing. These items must be of the same 
+     *      type as the TableColumn. Note that it is up to the developer to set 
+     *      {@link EventHandler event handlers} to listen to edit events in the 
+     *      TableColumn, and react accordingly. Methods of interest include 
+     *      {@link TableColumn#setOnEditStart(EventHandler) setOnEditStart},
+     *      {@link TableColumn#setOnEditCommit(javafx.event.EventHandler) setOnEditCommit}, 
+     *      and {@link TableColumn#setOnEditCancel(EventHandler) setOnEditCancel}.
+     * @return A {@link Callback} that will return a TableCell that is able to 
+     *      work on the type of element contained within the TableColumn.
+     */
+    public static <S,T> Callback<TableColumn<S,T>, TableCell<S,T>> forTableColumn(final T... items) {
+        return forTableColumn(null, items);
+    }
+    
+    /**
+     * Creates a ChoiceBox cell factory for use in {@link TableColumn} controls. 
+     * By default, the ChoiceBoxCell is rendered as a {@link Label} when not 
+     * being edited, and as a ChoiceBox when in editing mode. The ChoiceBox 
+     * will, by default, stretch to fill the entire list cell.
+     * 
+     * @param <T> The type of the elements contained within the TableColumn.
+     * @param converter A {@link StringConverter} to convert the given item (of type T) 
+     *      to a String for displaying to the user.
+     * @param items Zero or more items that will be shown to the user when the
+     *      {@link ChoiceBox} menu is showing. These items must be of the same
+     *      type as the TableColumn. Note that it is up to the developer to set 
+     *      {@link EventHandler event handlers} to listen to edit events in the 
+     *      TableColumn, and react accordingly. Methods of interest include 
+     *      {@link TableColumn#setOnEditStart(EventHandler) setOnEditStart},
+     *      {@link TableColumn#setOnEditCommit(javafx.event.EventHandler) setOnEditCommit}, 
+     *      and {@link TableColumn#setOnEditCancel(EventHandler) setOnEditCancel}.
+     * @return A {@link Callback} that will return a TableCell that is able to 
+     *      work on the type of element contained within the TableColumn.
+     */
+    public static <S,T> Callback<TableColumn<S,T>, TableCell<S,T>> forTableColumn(
+            final StringConverter<T> converter, 
+            final T... items) {
+        return forTableColumn(converter, FXCollections.observableArrayList(items));
+    }
+    
+    /**
+     * Creates a ChoiceBox cell factory for use in {@link TableColumn} controls. 
+     * By default, the ChoiceBoxCell is rendered as a {@link Label} when not 
+     * being edited, and as a ChoiceBox when in editing mode. The ChoiceBox will, 
+     * by default, stretch to fill the entire list cell.
+     * 
+     * @param <T> The type of the elements contained within the TableColumn.
+     * @param items Zero or more items that will be shown to the user when the
+     *      {@link ChoiceBox} menu is showing. These items must be of the same 
+     *      type as the TableColumn. Note that it is up to the developer to set 
+     *      {@link EventHandler event handlers} to listen to edit events in the 
+     *      TableColumn, and react accordingly. Methods of interest include 
+     *      {@link TableColumn#setOnEditStart(EventHandler) setOnEditStart},
+     *      {@link TableColumn#setOnEditCommit(javafx.event.EventHandler) setOnEditCommit}, 
+     *      and {@link TableColumn#setOnEditCancel(EventHandler) setOnEditCancel}.
+     * @return A {@link Callback} that will return a TableCell that is able to 
+     *      work on the type of element contained within the TableColumn.
+     */
+    public static <S,T> Callback<TableColumn<S,T>, TableCell<S,T>> forTableColumn(
+            final ObservableList<T> items) {
+        return forTableColumn(null, items);
+    }
+    
+    /**
+     * Creates a ChoiceBox cell factory for use in {@link TableColumn} controls. 
+     * By default, the ChoiceBoxCell is rendered as a {@link Label} when not 
+     * being edited, and as a ChoiceBox when in editing mode. The ChoiceBox will, 
+     * by default, stretch to fill the entire list cell.
+     * 
+     * @param <T> The type of the elements contained within the TableColumn.
+     * @param converter A {@link StringConverter} to convert the given item (of type T) 
+     * to a String for displaying to the user.
+     * @param items Zero or more items that will be shown to the user when the
+     *      {@link ChoiceBox} menu is showing. These items must be of the same 
+     *      type as the TableColumn. Note that it is up to the developer to set 
+     *      {@link EventHandler event handlers} to listen to edit events in the 
+     *      TableColumn, and react accordingly. Methods of interest include 
+     *      {@link TableColumn#setOnEditStart(EventHandler) setOnEditStart},
+     *      {@link TableColumn#setOnEditCommit(javafx.event.EventHandler) setOnEditCommit}, 
+     *      and {@link TableColumn#setOnEditCancel(EventHandler) setOnEditCancel}.
+     * @return A {@link Callback} that will return a TableCell that is able to 
+     *      work on the type of element contained within the TableColumn.
+     */
+    public static <S,T> Callback<TableColumn<S,T>, TableCell<S,T>> forTableColumn(
+            final StringConverter<T> converter, 
+            final ObservableList<T> items) {
+        return new Callback<TableColumn<S,T>, TableCell<S,T>>() {
+            @Override public TableCell<S,T> call(TableColumn<S,T> list) {
+                return new ChoiceBoxTableCell<S,T>(converter, items);
+            }
+        };
+    }
+    
+    
     
     /***************************************************************************
      *                                                                         *

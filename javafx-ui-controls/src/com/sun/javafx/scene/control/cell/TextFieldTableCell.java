@@ -30,7 +30,9 @@ import javafx.scene.control.Label;
 import javafx.scene.control.TableCell;
 import javafx.scene.control.TableColumn;
 import javafx.scene.control.TextField;
+import javafx.util.Callback;
 import javafx.util.StringConverter;
+import javafx.util.converter.DefaultStringConverter;
 
 /**
  * A class containing a {@link TableCell} implementation that draws a 
@@ -43,6 +45,52 @@ import javafx.util.StringConverter;
  * @param <T> The type of the elements contained within the TableColumn.
  */
 public class TextFieldTableCell<S,T> extends TableCell<S,T> {
+    
+    /***************************************************************************
+     *                                                                         *
+     * Static cell factories                                                   *
+     *                                                                         *
+     **************************************************************************/
+    
+    /**
+     * Provides a {@link TextField} that allows editing of the cell content when
+     * the cell is double-clicked, or when 
+     * {@link TableView#edit(int, TableColumn)} is called. This method will only 
+     * work on {@link TableColumn} instances which are of type String.
+     * 
+     * @return A {@link Callback} that can be inserted into the 
+     *      {@link TableColumn#cellFactoryProperty() cell factory property} of a 
+     *      TableColumn, that enables textual editing of the content.
+     */
+    public static <S> Callback<TableColumn<S,String>, TableCell<S,String>> forTableColumn() {
+        return forTableColumn(new DefaultStringConverter());
+    }
+    
+    /**
+     * Provides a {@link TextField} that allows editing of the cell content when
+     * the cell is double-clicked, or when 
+     * {@link TableView#edit(int, TableColumn)} is called. This method will work 
+     * on any {@link TableColumn} instance, regardless of its generic type. 
+     * However, to enable this, a {@link StringConverter} must be provided that will 
+     * convert the given String (from what the user typed in) into an instance 
+     * of type T. This item will then be passed along to the 
+     * {@link TableColumn#onEditCommitProperty()} callback.
+     * 
+     * @param converter A {@link StringConverter} that can convert the given String 
+     *      (from what the user typed in) into an instance of type T.
+     * @return A {@link Callback} that can be inserted into the 
+     *      {@link TableColumn#cellFactoryProperty() cell factory property} of a 
+     *      TableColumn, that enables textual editing of the content.
+     */
+    public static <S,T> Callback<TableColumn<S,T>, TableCell<S,T>> forTableColumn(
+            final StringConverter<T> converter) {
+        return new Callback<TableColumn<S,T>, TableCell<S,T>>() {
+            @Override public TableCell<S,T> call(TableColumn<S,T> list) {
+                return new TextFieldTableCell<S,T>(converter);
+            }
+        };
+    }
+    
     
     /***************************************************************************
      *                                                                         *

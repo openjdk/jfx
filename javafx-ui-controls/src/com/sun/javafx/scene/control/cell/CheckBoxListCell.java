@@ -62,6 +62,67 @@ public class CheckBoxListCell<T> extends ListCell<T> {
     
     /***************************************************************************
      *                                                                         *
+     * Static cell factories                                                   *
+     *                                                                         *
+     **************************************************************************/    
+    
+    /**
+     * Creates a cell factory for use in ListView controls. When used in a 
+     * ListView, the {@link CheckBoxListCell} is rendered with a CheckBox on the 
+     * left-hand side of the ListView, with the text related to the list item 
+     * taking up all remaining horizontal space. 
+     * 
+     * @param <T> The type of the elements contained within the ListView.
+     * @param getSelectedProperty A {@link Callback} that, given an object of 
+     *      type T (which is a value taken out of the 
+     *      {@code ListView<T>.items} list), 
+     *      will return an {@code ObservableValue<Boolean>} that represents 
+     *      whether the given item is selected or not. This ObservableValue will 
+     *      be bound bidirectionally (meaning that the CheckBox in the cell will 
+     *      set/unset this property based on user interactions, and the CheckBox 
+     *      will reflect the state of the ObservableValue, if it changes 
+     *      externally).
+     * @return A {@link Callback} that will return a ListCell that is able to 
+     *      work on the type of element contained within the ListView items list.
+     */
+    public static <T> Callback<ListView<T>, ListCell<T>> forListView(
+            final Callback<T, ObservableValue<Boolean>> getSelectedProperty) {
+        return forListView(getSelectedProperty, null);
+    }
+    
+    /**
+     * Creates a cell factory for use in ListView controls. When used in a 
+     * ListView, the {@link CheckBoxListCell} is rendered with a CheckBox on the
+     * left-hand side of the ListView, with the text related to the list item 
+     * taking up all remaining horizontal space. 
+     * 
+     * @param <T> The type of the elements contained within the ListView.
+     * @param getSelectedProperty A {@link Callback} that, given an object 
+     *      of type T (which is a value taken out of the 
+     *      {@code ListView<T>.items} list), 
+     *      will return an {@code ObservableValue<Boolean>} that represents 
+     *      whether the given item is selected or not. This ObservableValue will 
+     *      be bound bidirectionally (meaning that the CheckBox in the cell will 
+     *      set/unset this property based on user interactions, and the CheckBox 
+     *      will reflect the state of the ObservableValue, if it changes 
+     *      externally).
+     * @param converter A StringConverter that, give an object of type T, will 
+     *      return a String that can be used to represent the object visually. 
+     * @return A {@link Callback} that will return a ListCell that is able to 
+     *      work on the type of element contained within the ListView.
+     */
+    public static <T> Callback<ListView<T>, ListCell<T>> forListView(
+            final Callback<T, ObservableValue<Boolean>> getSelectedProperty, 
+            final StringConverter<T> converter) {
+        return new Callback<ListView<T>, ListCell<T>>() {
+            @Override public ListCell<T> call(ListView<T> list) {
+                return new CheckBoxListCell<T>(getSelectedProperty, converter);
+            }
+        };
+    }
+    
+    /***************************************************************************
+     *                                                                         *
      * Fields                                                                  *
      *                                                                         *
      **************************************************************************/

@@ -33,6 +33,7 @@ import javafx.scene.control.ChoiceBox;
 import javafx.scene.control.Label;
 import javafx.scene.control.ListCell;
 import javafx.scene.control.ListView;
+import javafx.util.Callback;
 import javafx.util.StringConverter;
 
 /**
@@ -52,6 +53,103 @@ import javafx.util.StringConverter;
  * @param <T> The type of the elements contained within the ListView.
  */
 public class ChoiceBoxListCell<T> extends ListCell<T> {
+    
+    /***************************************************************************
+     *                                                                         *
+     * Static cell factories                                                   *
+     *                                                                         *
+     **************************************************************************/
+    
+    /**
+     * Creates a ChoiceBox cell factory for use in {@link ListView} controls. 
+     * By default, the ChoiceBoxCell is rendered as a {@link Label} when not 
+     * being edited, and as a ChoiceBox when in editing mode. The ChoiceBox will, 
+     * by default, stretch to fill the entire list cell.
+     * 
+     * @param <T> The type of the elements contained within the ListView.
+     * @param items Zero or more items that will be shown to the user when the
+     *      {@link ChoiceBox} menu is showing. These items must be of the same 
+     *      type as the ListView items list, such that upon selection, they 
+     *      replace the existing value in the 
+     *      {@link ListView#itemsProperty() items} list.
+     * @return A {@link Callback} that will return a ListCell that is able to 
+     *      work on the type of element contained within the ListView.
+     */
+    public static <T> Callback<ListView<T>, ListCell<T>> forListView(final T... items) {
+        return forListView(FXCollections.observableArrayList(items));
+    }
+    
+    /**
+     * Creates a ChoiceBox cell factory for use in {@link ListView} controls. By
+     * default, the ChoiceBoxCell is rendered as a {@link Label} when not being 
+     * edited, and as a ChoiceBox when in editing mode. The ChoiceBox will, by 
+     * default, stretch to fill the entire list cell.
+     * 
+     * @param <T> The type of the elements contained within the ListView.
+     * @param converter A {@link StringConverter} to convert the given item (of type T) 
+     *      to a String for displaying to the user.
+     * @param items Zero or more items that will be shown to the user when the
+     *      {@link ChoiceBox} menu is showing. These items must be of the same 
+     *      type as the ListView items list, such that upon selection, they 
+     *      replace the existing value in the 
+     *      {@link ListView#itemsProperty() items} list.
+     * @return A {@link Callback} that will return a ListCell that is able to 
+     *      work on the type of element contained within the ListView.
+     */
+    public static <T> Callback<ListView<T>, ListCell<T>> forListView(
+            final StringConverter<T> converter, 
+            final T... items) {
+        return forListView(converter, FXCollections.observableArrayList(items));
+    }
+    
+    /**
+     * Creates a ChoiceBox cell factory for use in {@link ListView} controls. 
+     * By default, the ChoiceBoxCell is rendered as a {@link Label} when not 
+     * being edited, and as a ChoiceBox when in editing mode. The ChoiceBox 
+     * will, by default, stretch to fill the entire list cell.
+     * 
+     * @param <T> The type of the elements contained within the ListView.
+     * @param items An {@link ObservableList} containing zero or more items that 
+     *      will be shown to the user when the {@link ChoiceBox} menu is showing. 
+     *      These items must be of the same type as the ListView items sequence, 
+     *      such that upon selection, they replace the existing value in the 
+     *      {@link ListView#itemsProperty() items} list.
+     * @return A {@link Callback} that will return a ListCell that is able to 
+     *      work on the type of element contained within the ListView.
+     */
+    public static <T> Callback<ListView<T>, ListCell<T>> forListView(
+            final ObservableList<T> items) {
+        return forListView(null, items);
+    }
+    
+    /**
+     * Creates a ChoiceBox cell factory for use in {@link ListView} controls. By 
+     * default, the ChoiceBoxCell is rendered as a {@link Label} when not being 
+     * edited, and as a ChoiceBox when in editing mode. The ChoiceBox will, by 
+     * default, stretch to fill the entire list cell.
+     * 
+     * @param <T> The type of the elements contained within the ListView.
+     * @param converter A {@link StringConverter} to convert the given item (of type T) 
+     *      to a String for displaying to the user.
+     * @param items An {@link ObservableList} containing zero or more items that 
+     *      will be shown to the user when the {@link ChoiceBox} menu is showing. 
+     *      These items must be of the same type as the ListView items sequence, 
+     *      such that upon selection, they replace the existing value in the 
+     *      {@link ListView#itemsProperty() items} list.
+     * @return A {@link Callback} that will return a ListCell that is able to 
+     *      work on the type of element contained within the ListView.
+     */
+    public static <T> Callback<ListView<T>, ListCell<T>> forListView(
+            final StringConverter<T> converter, 
+            final ObservableList<T> items) {
+        return new Callback<ListView<T>, ListCell<T>>() {
+            @Override public ListCell<T> call(ListView<T> list) {
+                return new ChoiceBoxListCell<T>(converter, items);
+            }
+        };
+    }
+    
+    
     
     /***************************************************************************
      *                                                                         *
