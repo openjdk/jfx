@@ -137,7 +137,7 @@ public class InputMethodEvent extends InputEvent {
      *
      * @defaultValue empty string
      */
-    private String committed = new String();
+    private String committed = "";
 
     /**
      * Gets the text that is committed by the input method as the result of the

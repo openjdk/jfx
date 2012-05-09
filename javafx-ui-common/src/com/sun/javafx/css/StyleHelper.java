@@ -320,11 +320,6 @@ public class StyleHelper {
 
     }
 
-
-    private CacheEntry getCacheEntry(Node node) {
-        return getCacheEntry(node, getAllPseudoClassStates(node,0));
-    }
-    
     private CacheEntry getCacheEntry(Node node, long[] states) {
         //
         // The key is created from this StyleHelper's index

@@ -108,19 +108,18 @@ public class DataFormat {
      */
     public DataFormat(String... ids) {
         DATA_FORMAT_LIST.cleanup();
-        for (String id : ids) {
-            if (lookupMimeType(id) != null) {
-                throw new IllegalArgumentException("DataFormat '" + id +
-                        "' already exists.");
+        if (ids != null) {
+            for (String id : ids) {
+                if (lookupMimeType(id) != null) {
+                    throw new IllegalArgumentException("DataFormat '" + id +
+                            "' already exists.");
+                }
             }
+            this.identifier = Collections.unmodifiableSet(new HashSet<String>(Arrays.asList(ids)));
+        } else {
+            this.identifier = Collections.<String>emptySet();
         }
 
-        // If ids is null, then we will use an empty set.
-        Set<String> set = ids == null ?
-                Collections.<String>emptySet() :
-                new HashSet<String>(Arrays.asList(ids));
-        // Make sure identifier is immutable
-        this.identifier = Collections.unmodifiableSet(set);
         // Add to the statis data format list.
         DATA_FORMAT_LIST.add(this);
     }

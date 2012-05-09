@@ -46,7 +46,7 @@ public class Css2Bin {
         try {
             String ifname = args[0];
             String ofname = (args.length > 1) ?
-                args[1] : ifname.substring(0, ifname.lastIndexOf(".")+1).concat("bss");
+                args[1] : ifname.substring(0, ifname.lastIndexOf('.')+1).concat("bss");
 
             convertToBinary(ifname, ofname);
 

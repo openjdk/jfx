@@ -1282,7 +1282,7 @@ public abstract class Parent extends Node {
             // at all (no scales, rotates, or shears)
             // so in this case we can easily use the cached bounds
             if (cachedBoundsInvalid) recomputeBounds();
-            if (tx != null && !tx.isIdentity()) {
+            if (!tx.isIdentity()) {
                 bounds = bounds.deriveWithNewBounds((float)(cachedBounds.getMinX() + tx.getMxt()),
                                  (float)(cachedBounds.getMinY() + tx.getMyt()),
                                  (float)(cachedBounds.getMinZ() + tx.getMzt()),

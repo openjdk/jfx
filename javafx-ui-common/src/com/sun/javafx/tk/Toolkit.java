@@ -186,7 +186,7 @@ public abstract class Toolkit {
             forcedToolkit = getDefaultToolkit();
         }
 
-        if (forcedToolkit.indexOf(".") == -1) {
+        if (forcedToolkit.indexOf('.') == -1) {
             // Turn a short name into a fully qualified classname
             forcedToolkit = lookupToolkitClass(forcedToolkit);
         }
