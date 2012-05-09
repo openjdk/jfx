@@ -873,7 +873,7 @@ public class MouseEvent extends InputEvent {
      * copied events to make sure that the values are propagated to the
      * original event.
      */
-    private class Flags implements Cloneable {
+    private static class Flags implements Cloneable {
         /**
          * Whether dragDetected event is going to be sent after this event.
          * Applies only to MOUSE_PRESSED and MOUSE_MOVED event types.
