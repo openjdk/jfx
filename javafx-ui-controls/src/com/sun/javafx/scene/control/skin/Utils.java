@@ -817,13 +817,4 @@ public class Utils {
         }
        return 0;
     }
-
-    /*
-    ** this is just a place holder, until the proper
-    ** api reaches the Controls repo
-    */
-    static public boolean useEmbeddedSkin = false;
-    static boolean isEmbedded() {
-        return useEmbeddedSkin;
-    }
 }

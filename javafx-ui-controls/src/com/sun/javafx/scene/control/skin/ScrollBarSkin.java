@@ -25,6 +25,7 @@
 
 package com.sun.javafx.scene.control.skin;
 
+import com.sun.javafx.PlatformUtil;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.event.EventHandler;
@@ -85,13 +86,13 @@ public class ScrollBarSkin extends SkinBase<ScrollBar, ScrollBarBehavior> {
      * bindings for the group.
      */
     private void initialize() {
-        if (com.sun.javafx.scene.control.skin.Utils.isEmbedded()) {
+        if (PlatformUtil.isEmbedded()) {
             getStyleClass().setAll("track-touch");
             setOpacity(0.5);
         }
 
         track = new StackPane();
-        if (!com.sun.javafx.scene.control.skin.Utils.isEmbedded()) {
+        if (!PlatformUtil.isEmbedded()) {
             track.getStyleClass().setAll("track");
         }
         else {
@@ -99,7 +100,7 @@ public class ScrollBarSkin extends SkinBase<ScrollBar, ScrollBarBehavior> {
         }
 
         thumb = new StackPane();
-        if (!com.sun.javafx.scene.control.skin.Utils.isEmbedded()) {
+        if (!PlatformUtil.isEmbedded()) {
             thumb.getStyleClass().setAll("thumb");
         }
         else {
@@ -107,7 +108,7 @@ public class ScrollBarSkin extends SkinBase<ScrollBar, ScrollBarBehavior> {
         }
 
 
-        if (!com.sun.javafx.scene.control.skin.Utils.isEmbedded()) {
+        if (!PlatformUtil.isEmbedded()) {
             incButton = new EndButton("increment-button", "increment-arrow");
             incButton.setOnMousePressed(new EventHandler<javafx.scene.input.MouseEvent>() {
                @Override public void handle(javafx.scene.input.MouseEvent me) {
@@ -253,7 +254,7 @@ public class ScrollBarSkin extends SkinBase<ScrollBar, ScrollBarBehavior> {
         });
 
         getChildren().clear();
-        if (!com.sun.javafx.scene.control.skin.Utils.isEmbedded()) {
+        if (!PlatformUtil.isEmbedded()) {
             getChildren().addAll(incButton, decButton, track, thumb);
         }
         else {
@@ -285,7 +286,7 @@ public class ScrollBarSkin extends SkinBase<ScrollBar, ScrollBarBehavior> {
      * This is determined by the greater of the breadths of the end-buttons.
      */
     double getBreadth() {
-        if (!com.sun.javafx.scene.control.skin.Utils.isEmbedded()) {
+        if (!PlatformUtil.isEmbedded()) {
             if (getSkinnable().getOrientation() == Orientation.VERTICAL) {
                 return Math.max(decButton.prefWidth(-1)+getInsets().getLeft()+getInsets().getRight(), incButton.prefWidth(-1)+getInsets().getLeft()+getInsets().getRight());
             } else {
@@ -319,7 +320,7 @@ public class ScrollBarSkin extends SkinBase<ScrollBar, ScrollBarBehavior> {
         if (getSkinnable().getOrientation() == Orientation.VERTICAL) {
             return getBreadth();
         } else {
-            if (!com.sun.javafx.scene.control.skin.Utils.isEmbedded()) {
+            if (!PlatformUtil.isEmbedded()) {
                 return decButton.minWidth(-1) + incButton.minWidth(-1) + minTrackLength()+getInsets().getLeft()+getInsets().getRight();
             }
             else {
@@ -330,7 +331,7 @@ public class ScrollBarSkin extends SkinBase<ScrollBar, ScrollBarBehavior> {
 
     @Override protected double computeMinHeight(double width) {
         if (getSkinnable().getOrientation() == Orientation.VERTICAL) {
-            if (!com.sun.javafx.scene.control.skin.Utils.isEmbedded()) {
+            if (!PlatformUtil.isEmbedded()) {
                 return decButton.minHeight(-1) + incButton.minHeight(-1) + minTrackLength()+getInsets().getTop()+getInsets().getBottom();
             }
             else {
@@ -372,7 +373,7 @@ public class ScrollBarSkin extends SkinBase<ScrollBar, ScrollBarBehavior> {
         double clampedValue = Utils.clamp(s.getMin(), s.getValue(), s.getMax());
         trackPos = (s.getMax() - s.getMin() > 0) ? ((trackLength - thumbLength) * (clampedValue - s.getMin()) / (s.getMax() - s.getMin())) : (0.0F);
 
-        if (!com.sun.javafx.scene.control.skin.Utils.isEmbedded()) {
+        if (!PlatformUtil.isEmbedded()) {
             if (s.getOrientation() == Orientation.VERTICAL) {
                 trackPos += decButton.prefHeight(-1);
             } else {
@@ -406,7 +407,7 @@ public class ScrollBarSkin extends SkinBase<ScrollBar, ScrollBarBehavior> {
         }
 
         if (getSkinnable().getOrientation() == Orientation.VERTICAL) {
-            if (!com.sun.javafx.scene.control.skin.Utils.isEmbedded()) {
+            if (!PlatformUtil.isEmbedded()) {
                 double decHeight = snapSize(decButton.prefHeight(-1));
                 double incHeight = snapSize(incButton.prefHeight(-1));
 
@@ -431,7 +432,7 @@ public class ScrollBarSkin extends SkinBase<ScrollBar, ScrollBarBehavior> {
                 positionThumb();
             }
         } else {
-            if (!com.sun.javafx.scene.control.skin.Utils.isEmbedded()) {
+            if (!PlatformUtil.isEmbedded()) {
                 double decWidth = snapSize(decButton.prefWidth(-1));
                 double incWidth = snapSize(incButton.prefWidth(-1));
 
@@ -463,7 +464,7 @@ public class ScrollBarSkin extends SkinBase<ScrollBar, ScrollBarBehavior> {
                 getSkinnable().getOrientation() == Orientation.HORIZONTAL && wNoInsets >= (computeMinWidth(-1) - (getInsets().getLeft()+getInsets().getRight()))) {
                 track.setVisible(true);
                 thumb.setVisible(true);
-                if (!com.sun.javafx.scene.control.skin.Utils.isEmbedded()) {
+                if (!PlatformUtil.isEmbedded()) {
                     incButton.setVisible(true);
                     decButton.setVisible(true);
                 }
@@ -472,7 +473,7 @@ public class ScrollBarSkin extends SkinBase<ScrollBar, ScrollBarBehavior> {
                 track.setVisible(false);
                 thumb.setVisible(false);
 
-                if (!com.sun.javafx.scene.control.skin.Utils.isEmbedded()) {
+                if (!PlatformUtil.isEmbedded()) {
                     /*
                     ** once the space is big enough for one button we 
                     ** can look at drawing

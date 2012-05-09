@@ -25,6 +25,7 @@
 
 package com.sun.javafx.scene.control.skin;
 
+import com.sun.javafx.PlatformUtil;
 import static com.sun.javafx.Utils.clamp;
 import static com.sun.javafx.scene.control.skin.Utils.boundedSize;
 import javafx.animation.Interpolator;
@@ -253,7 +254,7 @@ public class ScrollPaneSkin extends SkinBase<ScrollPane, ScrollPaneBehavior> imp
         vsb.setOrientation(Orientation.VERTICAL);
 
         corner = new StackPane();
-        if (!com.sun.javafx.scene.control.skin.Utils.isEmbedded()) {
+        if (!PlatformUtil.isEmbedded()) {
             corner.getStyleClass().setAll("corner");
         }
         else {
@@ -273,7 +274,7 @@ public class ScrollPaneSkin extends SkinBase<ScrollPane, ScrollPaneBehavior> imp
         */
         InvalidationListener vsbListener = new InvalidationListener() {
             @Override public void invalidated(Observable valueModel) {
-                if (!com.sun.javafx.scene.control.skin.Utils.isEmbedded()) {
+                if (!PlatformUtil.isEmbedded()) {
                     posY = Utils.clamp(getSkinnable().getVmin(), vsb.getValue(), getSkinnable().getVmax());
                 }
                 else {
@@ -286,7 +287,7 @@ public class ScrollPaneSkin extends SkinBase<ScrollPane, ScrollPaneBehavior> imp
 
         InvalidationListener hsbListener = new InvalidationListener() {
             @Override public void invalidated(Observable valueModel) {
-                if (!com.sun.javafx.scene.control.skin.Utils.isEmbedded()) {
+                if (!PlatformUtil.isEmbedded()) {
                     posX = Utils.clamp(getSkinnable().getHmin(), hsb.getValue(), getSkinnable().getHmax());
                 }
                 else {
@@ -299,7 +300,7 @@ public class ScrollPaneSkin extends SkinBase<ScrollPane, ScrollPaneBehavior> imp
 
         viewRect.setOnMousePressed(new EventHandler<javafx.scene.input.MouseEvent>() {
            @Override public void handle(javafx.scene.input.MouseEvent e) {
-               if (com.sun.javafx.scene.control.skin.Utils.isEmbedded()) {
+               if (PlatformUtil.isEmbedded()) {
                    startSBReleasedAnimation();
                }
                mouseDown = true;
@@ -313,7 +314,7 @@ public class ScrollPaneSkin extends SkinBase<ScrollPane, ScrollPaneBehavior> imp
 
         viewRect.setOnDragDetected(new EventHandler<javafx.scene.input.MouseEvent>() {
            @Override public void handle(javafx.scene.input.MouseEvent e) {
-                if (com.sun.javafx.scene.control.skin.Utils.isEmbedded()) {
+                if (PlatformUtil.isEmbedded()) {
                     startSBReleasedAnimation();
                 }
                if (getSkinnable().isPannable()) {
@@ -332,7 +333,7 @@ public class ScrollPaneSkin extends SkinBase<ScrollPane, ScrollPaneBehavior> imp
 
         viewRect.addEventFilter(MouseEvent.MOUSE_RELEASED, new EventHandler<MouseEvent>() {
             @Override public void handle(MouseEvent e) {
-                  if (com.sun.javafx.scene.control.skin.Utils.isEmbedded()) {
+                  if (PlatformUtil.isEmbedded()) {
                     startSBReleasedAnimation();
                  }
                  mouseDown = false;
@@ -354,13 +355,13 @@ public class ScrollPaneSkin extends SkinBase<ScrollPane, ScrollPaneBehavior> imp
         });
         viewRect.setOnMouseDragged(new EventHandler<javafx.scene.input.MouseEvent>() {
            @Override public void handle(javafx.scene.input.MouseEvent e) {
-                if (com.sun.javafx.scene.control.skin.Utils.isEmbedded()) {
+                if (PlatformUtil.isEmbedded()) {
                     startSBReleasedAnimation();
                 }
                /*
                ** for mobile-touch we allow drag, even if not pannagle
                */
-               if (getSkinnable().isPannable() || com.sun.javafx.scene.control.skin.Utils.isEmbedded()) {
+               if (getSkinnable().isPannable() || PlatformUtil.isEmbedded()) {
                    double deltaX = pressX - (e.getX() + viewRect.getLayoutX());
                    double deltaY = pressY - (e.getY() + viewRect.getLayoutY());
                    /*
@@ -369,7 +370,7 @@ public class ScrollPaneSkin extends SkinBase<ScrollPane, ScrollPaneBehavior> imp
                    if (hsb.getVisibleAmount() > 0.0 && hsb.getVisibleAmount() < hsb.getMax()) {
                        if (Math.abs(deltaX) > PAN_THRESHOLD) {
                            double newHVal = (ohvalue + deltaX / (nodeWidth - viewRect.getWidth()) * (hsb.getMax() - hsb.getMin()));
-                           if (!com.sun.javafx.scene.control.skin.Utils.isEmbedded()) {
+                           if (!PlatformUtil.isEmbedded()) {
                                if (newHVal > hsb.getMax()) {
                                    newHVal = hsb.getMax();
                                }
@@ -389,7 +390,7 @@ public class ScrollPaneSkin extends SkinBase<ScrollPane, ScrollPaneBehavior> imp
                    if (vsb.getVisibleAmount() > 0.0 && vsb.getVisibleAmount() < vsb.getMax()) {
                        if (Math.abs(deltaY) > PAN_THRESHOLD) {
                            double newVVal = (ovvalue + deltaY / (nodeHeight - viewRect.getHeight()) * (vsb.getMax() - vsb.getMin()));
-                           if (!com.sun.javafx.scene.control.skin.Utils.isEmbedded()) {
+                           if (!PlatformUtil.isEmbedded()) {
                                if (newVVal > vsb.getMax()) {
                                    newVVal = vsb.getMax();
                                }
@@ -456,7 +457,7 @@ public class ScrollPaneSkin extends SkinBase<ScrollPane, ScrollPaneBehavior> imp
         */
         setOnScroll(new EventHandler<javafx.scene.input.ScrollEvent>() {
             @Override public void handle(ScrollEvent event) {
-                if (com.sun.javafx.scene.control.skin.Utils.isEmbedded()) {
+                if (PlatformUtil.isEmbedded()) {
                     startSBReleasedAnimation();
                 }
                 /*
@@ -464,7 +465,7 @@ public class ScrollPaneSkin extends SkinBase<ScrollPane, ScrollPaneBehavior> imp
                 ** we only consume an event that we've used.
                 */
                 if (vsb.getVisibleAmount() < vsb.getMax()) {
-                    if (!com.sun.javafx.scene.control.skin.Utils.isEmbedded()) {
+                    if (!PlatformUtil.isEmbedded()) {
                         if ((event.getDeltaY() > 0.0 && vsb.getValue() > vsb.getMin()) ||
                             (event.getDeltaY() < 0.0 && vsb.getValue() < vsb.getMax())) {
                             double vRange = getSkinnable().getVmax()-getSkinnable().getVmin();
@@ -487,7 +488,7 @@ public class ScrollPaneSkin extends SkinBase<ScrollPane, ScrollPaneBehavior> imp
                 }
 
                 if (hsb.getVisibleAmount() < hsb.getMax()) {
-                    if (!com.sun.javafx.scene.control.skin.Utils.isEmbedded()) {
+                    if (!PlatformUtil.isEmbedded()) {
                         if ((event.getDeltaX() > 0.0 && hsb.getValue() > hsb.getMin()) ||
                             (event.getDeltaX() < 0.0 && hsb.getValue() < hsb.getMax())) {
                             double hRange = getSkinnable().getHmax()-getSkinnable().getHmin();
@@ -711,11 +712,11 @@ public class ScrollPaneSkin extends SkinBase<ScrollPane, ScrollPaneBehavior> imp
         vsbvis = determineVerticalSBVisible();
         hsbvis = determineHorizontalSBVisible();
 
-        if (vsbvis && !com.sun.javafx.scene.control.skin.Utils.isEmbedded()) {
+        if (vsbvis && !PlatformUtil.isEmbedded()) {
             contentWidth -= vsbWidth;
             hsbWidth -= vsbWidth;
         }
-        if (hsbvis && !com.sun.javafx.scene.control.skin.Utils.isEmbedded()) {
+        if (hsbvis && !PlatformUtil.isEmbedded()) {
             contentHeight -= hsbHeight;
             vsbHeight -= hsbHeight;
         }
@@ -813,7 +814,7 @@ public class ScrollPaneSkin extends SkinBase<ScrollPane, ScrollPaneBehavior> imp
 
     private boolean determineHorizontalSBVisible() {
         final double contentw = getSkinnable().getWidth() - getInsets().getLeft() - getInsets().getRight();
-        if (com.sun.javafx.scene.control.skin.Utils.isEmbedded()) {
+        if (PlatformUtil.isEmbedded()) {
             return (tempVisibility && (nodeWidth > contentw));
         }
         else {
@@ -826,7 +827,7 @@ public class ScrollPaneSkin extends SkinBase<ScrollPane, ScrollPaneBehavior> imp
 
     private boolean determineVerticalSBVisible() {
         final double contenth = getSkinnable().getHeight() - getInsets().getTop() - getInsets().getBottom();
-        if (com.sun.javafx.scene.control.skin.Utils.isEmbedded()) {
+        if (PlatformUtil.isEmbedded()) {
             return (tempVisibility && (nodeHeight > contenth));
         }
         else {
@@ -971,7 +972,7 @@ public class ScrollPaneSkin extends SkinBase<ScrollPane, ScrollPaneBehavior> imp
             newPosX = getSkinnable().getHmin();
         }
 
-        if (!com.sun.javafx.scene.control.skin.Utils.isEmbedded()) {
+        if (!PlatformUtil.isEmbedded()) {
             startSBReleasedAnimation();
         }
 
