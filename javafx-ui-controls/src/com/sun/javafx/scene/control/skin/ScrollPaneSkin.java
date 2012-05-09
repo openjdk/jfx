@@ -54,6 +54,7 @@ import javafx.scene.control.ScrollPane;
 import javafx.scene.control.ScrollPane.ScrollBarPolicy;
 import javafx.scene.input.MouseEvent;
 import javafx.scene.input.ScrollEvent;
+import javafx.scene.input.TouchEvent;
 import javafx.scene.layout.StackPane;
 import javafx.scene.shape.Rectangle;
 import javafx.util.Duration;
@@ -110,6 +111,7 @@ public class ScrollPaneSkin extends SkinBase<ScrollPane, ScrollPaneBehavior> imp
     double ovvalue;
     private Cursor saveCursor =  null;
     private boolean dragDetected = false;
+    private boolean touchDetected = false;
     private boolean mouseDown = false;
 
     Rectangle clipRect;
@@ -478,7 +480,7 @@ public class ScrollPaneSkin extends SkinBase<ScrollPane, ScrollPaneBehavior> imp
                         double vPixelValue = vRange / getSkinnable().getHeight();
                         double newValue = vsb.getValue()+(event.getDeltaY())*vPixelValue;
                         vsb.setValue(newValue);
-                        if (newValue > vsb.getMax() || newValue < vsb.getMin() && !mouseDown) {
+                        if ((newValue > vsb.getMax() || newValue < vsb.getMin()) && !(mouseDown || touchDetected)) {
                             startContentsToViewport();
                         }
 
@@ -503,12 +505,32 @@ public class ScrollPaneSkin extends SkinBase<ScrollPane, ScrollPaneBehavior> imp
 
                         hsb.setValue(newValue);
 
-                        if (newValue > hsb.getMax() || newValue < hsb.getMin() && !mouseDown) {
+                        if (newValue > hsb.getMax() || newValue < hsb.getMin() && !(mouseDown || touchDetected)) {
                             startContentsToViewport();
                         }
                         event.consume();
                     }
                 }
+            }
+        });
+
+        /*
+        ** there are certain animations that need to know if the touch is
+        ** happening.....
+        */
+        setOnTouchPressed(new EventHandler<TouchEvent>() {
+            @Override public void handle(TouchEvent e) {
+                touchDetected = true;
+                startSBReleasedAnimation();
+                e.consume();
+            }
+        });
+
+        setOnTouchReleased(new EventHandler<TouchEvent>() {
+            @Override public void handle(TouchEvent e) {
+                touchDetected = false;
+                startSBReleasedAnimation();
+                e.consume();
             }
         });
 
@@ -982,7 +1004,7 @@ public class ScrollPaneSkin extends SkinBase<ScrollPane, ScrollPaneBehavior> imp
             contentsToViewTimeline.stop();
         }
         contentsToViewTimeline = new Timeline();
-        contentsToViewKF2 = new KeyFrame(Duration.millis(500), new EventHandler<ActionEvent>() {
+        contentsToViewKF2 = new KeyFrame(Duration.millis(100), new EventHandler<ActionEvent>() {
                 @Override public void handle(ActionEvent event) {
                     requestLayout();
                 }
