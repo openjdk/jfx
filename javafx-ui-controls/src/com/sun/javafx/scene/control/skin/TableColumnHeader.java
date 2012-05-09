@@ -24,6 +24,7 @@
  */
 package com.sun.javafx.scene.control.skin;
 
+import com.sun.javafx.PlatformUtil;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -274,8 +275,18 @@ public class TableColumnHeader extends StackPane {
      *                                                                         *
      * Private methods                                                         *
      *                                                                         *
-     **************************************************************************/       
-
+     **************************************************************************/   
+    
+    private boolean isSortingEnabled() {
+        return ! PlatformUtil.isEmbedded();
+    }
+    
+    private boolean isColumnReorderingEnabled() {
+        // we only allow for column reordering if there are more than one column,
+        // and if we are not on an embedded platform
+        return PlatformUtil.isEmbedded() && getTableView().getVisibleLeafColumns().size() > 1;
+    }
+    
     private void initUI() {
         // TableColumn will be null if we are dealing with the root NestedTableColumnHeader
         if (column == null) return;
@@ -330,23 +341,31 @@ public class TableColumnHeader extends StackPane {
         label.textProperty().bind(column.textProperty());
         label.graphicProperty().bind(column.graphicProperty());
 
-        // ---- container for the sort arrow
-        arrow = new StackPane();
-        arrow.getStyleClass().setAll("arrow");
-        arrow.setVisible(true);
-        arrow.setRotate(column.getSortType() == ASCENDING ? 180.0F : 0.0F);
-        column.sortTypeProperty().addListener(weakSortTypeListener);
-
-        // put together the grid
-        updateSortGrid();
+        // ---- container for the sort arrow (which is not supported on embedded
+        // platforms)
+        if (isSortingEnabled()) {
+            arrow = new StackPane();
+            arrow.getStyleClass().setAll("arrow");
+            arrow.setVisible(true);
+            arrow.setRotate(column.getSortType() == ASCENDING ? 180.0F : 0.0F);
+            column.sortTypeProperty().addListener(weakSortTypeListener);
+            
+            // put together the grid
+            updateSortGrid();
+        }
     }
     
     private void setSortPos(int sortPos) {
+        if (! isSortingEnabled()) return;
+        
         this.sortPos = sortPos;
         updateSortGrid();
     }
     
     private void updateSortGrid() {
+        // we do not support sorting in embedded devices
+        if (! isSortingEnabled()) return;
+        
         // Fixe for RT-14488
         if (this instanceof NestedTableColumnHeader) return;
         
@@ -483,6 +502,8 @@ public class TableColumnHeader extends StackPane {
     }
 
     private void sortColumn(TableColumn column, boolean addColumn) {
+        if (! isSortingEnabled()) return;
+        
         // we only allow sorting on the leaf columns and columns
         // that actually have comparators defined, and are sortable
         if (column == null || column.getColumns().size() != 0 || column.getComparator() == null || !column.isSortable()) return;
@@ -662,11 +683,6 @@ public class TableColumnHeader extends StackPane {
      **************************************************************************/   
     private int newColumnPos;
     
-    private boolean isColumnReorderingEnabled() {
-        // we only allow for column reordering if there are more than one column
-        return getTableView().getVisibleLeafColumns().size() > 1;
-    }
-
     private void columnReorderingStarted(MouseEvent me) {
         // Used to ensure the column ghost is positioned relative to where the
         // user clicked on the column header
