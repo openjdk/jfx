@@ -37,16 +37,16 @@
  *                                                                             *
  ******************************************************************************/
 
+.scroll-bar {
+    -fx-opacity: 50%;
+}
+
 .scroll-bar:horizontal .thumb {
     -fx-background-color: blue;
 }
 
 .scroll-bar:vertical .thumb {
     -fx-background-color: blue;
-}
-
-.scroll-bar .track {
-    -fx-opacity: 50%;
 }
 
 .scroll-bar:horizontal .track {
