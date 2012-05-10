@@ -60,6 +60,11 @@ class UAStylesheetLoader {
                 public Object run() {
                         URL url = SkinBase.class.getResource("caspian/caspian.css");
                         StyleManager.getInstance().setDefaultUserAgentStylesheet(url.toExternalForm());
+                        
+                        if (com.sun.javafx.PlatformUtil.isEmbedded()) {
+                            url = SkinBase.class.getResource("caspian/embedded.css");
+                            StyleManager.getInstance().addUserAgentStylesheet(url.toExternalForm());
+                        }
                         stylesheetLoaded = true;
                     return null;
                 }

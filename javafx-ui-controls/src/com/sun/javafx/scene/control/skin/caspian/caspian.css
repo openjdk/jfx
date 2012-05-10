@@ -1217,14 +1217,6 @@
     -fx-color: -fx-hover-base;
 }
 
-.scroll-bar:horizontal .thumb-touch {
-    -fx-background-color: blue;
-}
-
-.scroll-bar:vertical .thumb-touch {
-    -fx-background-color: blue;
-}
-
 /* Uncomment when RT-10521 is fixed.
 .scroll-bar .thumb:pressed {
     -fx-color: -fx-pressed-base;
@@ -1245,15 +1237,6 @@
         linear-gradient(to right, derive(-fx-color,-15%), derive(-fx-color,2.2%) 20%, derive(-fx-color,60%));
     -fx-background-insets:  0, 1;
     -fx-background-radius: 0.5em; /* makes sure this remains circular */
-}
-
-.scroll-bar:horizontal .track-touch {
-    -fx-background-color: skyblue;
-}
-
-.scroll-bar:vertical .track-touch {
-    -fx-opacity: 0.5;
-    -fx-background-color: skyblue;
 }
 
 .scroll-bar .increment-button {
@@ -1342,10 +1325,6 @@
 .scroll-pane .corner {
     -fx-background-color: -fx-box-border, -fx-base;
     -fx-background-insets: 0, 1 0 0 1;
-}
-
-.scroll-pane .corner-touch {
-    -fx-background-color: skyblue;
 }
 
 .scroll-pane:disabled {

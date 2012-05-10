@@ -255,12 +255,7 @@ public class ScrollPaneSkin extends SkinBase<ScrollPane, ScrollPaneBehavior> imp
         vsb.setOrientation(Orientation.VERTICAL);
 
         corner = new StackPane();
-        if (!com.sun.javafx.scene.control.skin.Utils.isEmbedded()) {
-            corner.getStyleClass().setAll("corner");
-        }
-        else {
-            corner.getStyleClass().setAll("corner-touch");
-        }
+        corner.getStyleClass().setAll("corner");
 
         viewRect.getChildren().clear();
         if (scrollNode != null) {
