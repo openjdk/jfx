@@ -85,29 +85,16 @@ public class ScrollBarSkin extends SkinBase<ScrollBar, ScrollBarBehavior> {
      * bindings for the group.
      */
     private void initialize() {
-        if (com.sun.javafx.scene.control.skin.Utils.isEmbedded()) {
-            getStyleClass().setAll("track-touch");
-            setOpacity(0.5);
-        }
 
         track = new StackPane();
-        if (!com.sun.javafx.scene.control.skin.Utils.isEmbedded()) {
-            track.getStyleClass().setAll("track");
-        }
-        else {
-            track.getStyleClass().setAll("track-touch");
-        }
+        track.getStyleClass().setAll("track");
 
         thumb = new StackPane();
-        if (!com.sun.javafx.scene.control.skin.Utils.isEmbedded()) {
-            thumb.getStyleClass().setAll("thumb");
-        }
-        else {
-            thumb.getStyleClass().setAll("thumb-touch");
-        }
+        thumb.getStyleClass().setAll("thumb");
 
 
         if (!com.sun.javafx.scene.control.skin.Utils.isEmbedded()) {
+            
             incButton = new EndButton("increment-button", "increment-arrow");
             incButton.setOnMousePressed(new EventHandler<javafx.scene.input.MouseEvent>() {
                @Override public void handle(javafx.scene.input.MouseEvent me) {
