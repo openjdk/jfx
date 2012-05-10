@@ -6950,7 +6950,7 @@ public abstract class Node implements EventTarget {
     public StyleHelper impl_getStyleHelper() {
 
         // if styleHelper is invalid, then StyleManager has discarded it
-        if (styleHelper == null || styleHelper.isInvalid()) {
+        if (styleHelper != null && styleHelper.isInvalid()) {
 
             styleHelper = impl_createStyleHelper();
 
