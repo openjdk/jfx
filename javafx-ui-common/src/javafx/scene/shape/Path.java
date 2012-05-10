@@ -47,6 +47,7 @@ import com.sun.javafx.sg.PGNode;
 import com.sun.javafx.sg.PGPath;
 import com.sun.javafx.tk.Toolkit;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Collections;
 import javafx.beans.value.WritableValue;
 import javafx.scene.paint.Paint;
@@ -108,9 +109,18 @@ public class Path extends Shape {
      */
     public Path(PathElement... elements) {
         if (elements != null) {
-            for (PathElement element : elements) {
-                this.getElements().add(element);
-            }
+            this.elements.addAll(elements);
+        }
+    }
+    
+    /**
+     * Creates new instance of Path
+     * @since 2.2
+     * @param elements The collection of the elements of the Path
+     */
+    public Path(Collection<? extends PathElement> elements) {
+        if (elements != null) {
+            this.elements.addAll(elements);
         }
     }
 
