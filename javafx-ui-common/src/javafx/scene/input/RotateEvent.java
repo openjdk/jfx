@@ -44,7 +44,8 @@ import javafx.event.EventType;
  * property value (positive values for clockwise rotation).
  * <p>
  * As all gestures, rotation can be direct (performed directly at
- * the concrete coordinates as on touch screen) or indirect (performed
+ * the concrete coordinates as on touch screen - the center point among all
+ * the touches is usually used as the gesture coordinates) or indirect (performed
  * indirectly as on track pad - the mouse cursor location is usually used
  * as the gesture coordinates).
  * <p>

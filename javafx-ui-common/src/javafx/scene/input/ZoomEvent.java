@@ -44,7 +44,8 @@ import javafx.event.EventType;
  * properties (values greater than {@code 1} for zooming in).
  * <p>
  * As all gestures, zooming can be direct (performed directly at
- * the concrete coordinates as on touch screen) or indirect (performed
+ * the concrete coordinates as on touch screen - the center point among all
+ * the touches is usually used as the gesture coordinates) or indirect (performed
  * indirectly as on track pad - the mouse cursor location is usually used
  * as the gesture coordinates).
  * <p>
