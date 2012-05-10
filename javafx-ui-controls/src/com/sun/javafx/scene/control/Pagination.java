@@ -114,7 +114,7 @@ import javafx.util.Callback;
 @DefaultProperty("pages")
 public class Pagination extends Control {
 
-    private static final int DEFAULT_PAGE_INDICATOR_COUNT = 10;
+    private static final int DEFAULT_MAX_PAGE_INDICATOR_COUNT = 10;
 
     /**
      * The style class to change the numeric page indicators to
@@ -127,7 +127,7 @@ public class Pagination extends Control {
      *
      * @see #setPageCount
      */
-    public static final int INDETERMINATE = -1;
+    public static final int INDETERMINATE = Integer.MAX_VALUE;
 
     /**
      * Constructs a new Pagination control with the specified page count
@@ -167,45 +167,46 @@ public class Pagination extends Control {
      *                                                                         *
      **************************************************************************/
 
-    private int oldPageIndicatorCount = DEFAULT_PAGE_INDICATOR_COUNT;
-    private IntegerProperty pageIndicatorCount;
+    private int oldMaxPageIndicatorCount = DEFAULT_MAX_PAGE_INDICATOR_COUNT;
+    private IntegerProperty maxPageIndicatorCount;
     
     /**
-     * Sets the number of page indicators.
+     * Sets the maximum number of page indicators.
      * 
      * @param value the number of page indicators.  The default is 10.
      */
-    public final void setPageIndicatorCount(int value) { pageIndicatorCountProperty().set(value); }
+    public final void setMaxPageIndicatorCount(int value) { maxPageIndicatorCountProperty().set(value); }
     
     /**
-     * Returns the number of page indicators.
+     * Returns the maximum number of page indicators.
      */
-    public final int getPageIndicatorCount() {
-        return pageIndicatorCount == null ? DEFAULT_PAGE_INDICATOR_COUNT : pageIndicatorCount.get();
+    public final int getMaxPageIndicatorCount() {
+        return maxPageIndicatorCount == null ? DEFAULT_MAX_PAGE_INDICATOR_COUNT : maxPageIndicatorCount.get();
     }
     
     /**
-     * The number of page indicators to use for this pagination control.  This
+     * The maximum number of page indicators to use for this pagination control.  This
      * value must be greater than or equal to 1.  The page indicators will 
      * be unselected when the {@link #currentPageIndexProperty currentPageIndex} 
-     * is greater than the pageIndicatorCount.
+     * is greater than the pageIndicatorCount.  The number of page indicators will be
+     * reduced if MaxPageIndicatorCount cannot fit within this control. 
      * 
      * The default is 10 page indicators.
      */    
-    public final IntegerProperty pageIndicatorCountProperty() {
-        if (pageIndicatorCount == null) {
-            pageIndicatorCount = new StyleableIntegerProperty(DEFAULT_PAGE_INDICATOR_COUNT) {
+    public final IntegerProperty maxPageIndicatorCountProperty() {
+        if (maxPageIndicatorCount == null) {
+            maxPageIndicatorCount = new StyleableIntegerProperty(DEFAULT_MAX_PAGE_INDICATOR_COUNT) {
 
                 @Override protected void invalidated() {
-                    if (getPageIndicatorCount() < 1) {
-                        setPageIndicatorCount(oldPageIndicatorCount);
+                    if (getMaxPageIndicatorCount() < 1) {
+                        setMaxPageIndicatorCount(oldMaxPageIndicatorCount);
                     }
-                    oldPageIndicatorCount = getPageIndicatorCount();
+                    oldMaxPageIndicatorCount = getMaxPageIndicatorCount();
                 }
 
                 @Override
                 public StyleableProperty getStyleableProperty() {
-                    return StyleableProperties.PAGE_INDICATOR_COUNT;
+                    return StyleableProperties.MAX_PAGE_INDICATOR_COUNT;
                 }
 
                 @Override
@@ -219,13 +220,13 @@ public class Pagination extends Control {
                 }
             };
         }
-        return pageIndicatorCount;
+        return maxPageIndicatorCount;
     }
 
     private int oldPageCount = 1;
     private IntegerProperty pageCount = new SimpleIntegerProperty(this, "pageCount", 1) {
         @Override protected void invalidated() {
-            if (getPageCount() < INDETERMINATE || getPageCount() == 0) {
+            if (getPageCount() <= 0) {
                 setPageCount(oldPageCount);
             }
             oldPageCount = getPageCount();
@@ -316,9 +317,9 @@ public class Pagination extends Control {
     private static final String DEFAULT_STYLE_CLASS = "pagination";
 
     private static class StyleableProperties {
-        private static final StyleableProperty<Pagination,Number> PAGE_INDICATOR_COUNT =
-            new StyleableProperty<Pagination,Number>("-fx-page-indicator-count",
-                SizeConverter.getInstance(), DEFAULT_PAGE_INDICATOR_COUNT) {
+        private static final StyleableProperty<Pagination,Number> MAX_PAGE_INDICATOR_COUNT =
+            new StyleableProperty<Pagination,Number>("-fx-max-page-indicator-count",
+                SizeConverter.getInstance(), DEFAULT_MAX_PAGE_INDICATOR_COUNT) {
 
             @Override
             public void set(Pagination node, Number value, Origin origin) {
@@ -327,12 +328,12 @@ public class Pagination extends Control {
 
             @Override
             public boolean isSettable(Pagination n) {
-                return n.pageIndicatorCount == null || !n.pageIndicatorCount.isBound();
+                return n.maxPageIndicatorCount == null || !n.maxPageIndicatorCount.isBound();
             }
 
             @Override
             public WritableValue<Number> getWritableValue(Pagination n) {
-                return n.pageIndicatorCountProperty();
+                return n.maxPageIndicatorCountProperty();
             }
         };
         private static final List<StyleableProperty> STYLEABLES;
@@ -340,7 +341,7 @@ public class Pagination extends Control {
             final List<StyleableProperty> styleables =
                 new ArrayList<StyleableProperty>(Control.impl_CSS_STYLEABLES());
             Collections.addAll(styleables,
-                PAGE_INDICATOR_COUNT
+                MAX_PAGE_INDICATOR_COUNT
             );
             STYLEABLES = Collections.unmodifiableList(styleables);
         }

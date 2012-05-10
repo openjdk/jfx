@@ -27,6 +27,8 @@ package com.sun.javafx.scene.control.skin;
 
 import javafx.scene.control.ComboBoxBase;
 import com.sun.javafx.scene.control.behavior.ComboBoxBaseBehavior;
+import javafx.beans.InvalidationListener;
+import javafx.beans.Observable;
 import javafx.event.Event;
 import javafx.event.EventHandler;
 import javafx.geometry.HPos;
@@ -63,24 +65,34 @@ public abstract class ComboBoxPopupControl<T> extends ComboBoxBaseSkin<T> {
         if (getSkinnable() == null) {
             throw new IllegalStateException("ComboBox is null");
         }
-        if (getPopupContent() == null) {
+        
+        Node content = getPopupContent();
+        if (content == null) {
             throw new IllegalStateException("Popup node is null");
         }
         
-        if (! getPopup().isShowing()) {
-            if (getPopup().getSkin() == null) {
-                getScene().getRoot().impl_processCSS(true);
-            }
-
-            Point2D p = com.sun.javafx.Utils.pointRelativeTo(getSkinnable(), getPopupContent(), HPos.CENTER, VPos.BOTTOM, -7, -10, false);
-            getPopup().show(getSkinnable().getScene().getWindow(), p.getX(), p.getY());
-        }
+        if (getPopup().isShowing()) return;
+        
+        positionAndShowPopup();
     }
 
     @Override public void hide() {
         if (popup != null && popup.isShowing()) {
             popup.hide();
         }
+    }
+    
+    private Point2D getPrefPopupPosition() {
+        return com.sun.javafx.Utils.pointRelativeTo(getSkinnable(), getPopupContent(), HPos.CENTER, VPos.BOTTOM, -7, -10, false);
+    }
+    
+    private void positionAndShowPopup() {
+        if (getPopup().getSkin() == null) {
+            getScene().getRoot().impl_processCSS(true);
+        }
+        
+        Point2D p = getPrefPopupPosition();
+        getPopup().show(getSkinnable().getScene().getWindow(), p.getX(), p.getY());
     }
     
     private void createPopup() {
@@ -111,5 +123,19 @@ public abstract class ComboBoxPopupControl<T> extends ComboBoxBaseSkin<T> {
                 getBehavior().onAutoHide();
             }
         });
+        
+        // Fix for RT-21207
+        InvalidationListener layoutPosListener = new InvalidationListener() {
+            @Override public void invalidated(Observable o) {
+                if (! getPopup().isShowing()) return;
+                
+                Point2D p = getPrefPopupPosition();
+                getPopup().setX(p.getX());
+                getPopup().setY(p.getY());
+                getPopup().setMinWidth(getPopupContent().prefWidth(1));
+            }
+        };
+        getSkinnable().layoutXProperty().addListener(layoutPosListener);
+        getSkinnable().layoutYProperty().addListener(layoutPosListener);
     }
 }

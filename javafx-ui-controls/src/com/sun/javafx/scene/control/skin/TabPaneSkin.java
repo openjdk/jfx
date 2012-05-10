@@ -932,12 +932,12 @@ public class TabPaneSkin extends SkinBase<TabPane, TabPaneBehavior> {
                     } else {
                         closeBtn.setVisible(showCloseButton());
                     }
-
+                    
                     label.resize(labelWidth, labelHeight);
 
                     double labelStartX = paddingLeft;
-                    double closeBtnStartX = w - paddingRight - closeBtnWidth;
-
+                    double closeBtnStartX = (maxWidth != Double.MAX_VALUE ? maxWidth : w) - paddingRight - closeBtnWidth;
+                    
                     positionInArea(label, labelStartX, paddingTop, labelWidth, h,
                             /*baseline ignored*/0, HPos.CENTER, VPos.CENTER);
 
@@ -962,6 +962,10 @@ public class TabPaneSkin extends SkinBase<TabPane, TabPaneBehavior> {
                 @Override public void invalidated(Observable valueModel) {
                     if (valueModel == tab.selectedProperty()) {
                         impl_pseudoClassStateChanged("selected");
+                        // Need to request a layout pass for inner because if the width
+                        // and height didn't not change the label or close button may have
+                        // changed.
+                        inner.requestLayout();
                         requestLayout();
                     } else if (valueModel == tab.textProperty()) {
                         label.setText(getTab().getText());
@@ -979,8 +983,10 @@ public class TabPaneSkin extends SkinBase<TabPane, TabPaneBehavior> {
                         setStyle(tab.getStyle());
                     } else if (valueModel == tab.disableProperty()) {
                         impl_pseudoClassStateChanged("disabled");
+                        inner.requestLayout();
                         requestLayout();
                     } else if (valueModel == tab.closableProperty()) {
+                        inner.requestLayout();
                         requestLayout();
                     }
                 }
@@ -1154,8 +1160,8 @@ public class TabPaneSkin extends SkinBase<TabPane, TabPaneBehavior> {
 
         private Runnable animateNewTab = null;
 
-        @Override protected void layoutChildren() {
-            Insets padding = getInsets();
+        @Override protected void layoutChildren() {            
+            Insets padding = getInsets();            
             inner.resize(snapSize(getWidth()) - snapSize(padding.getRight()) - snapSize(padding.getLeft()),
                     snapSize(getHeight()) - snapSize(padding.getTop()) - snapSize(padding.getBottom()));
             inner.relocate(snapSize(padding.getLeft()), snapSize(padding.getTop()));

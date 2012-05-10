@@ -22,10 +22,9 @@
  * or visit www.oracle.com if you need additional information or have any
  * questions.
  */
-package com.sun.javafx.scene.control;
+package javafx.scene.control;
 
-import com.sun.javafx.scene.control.cell.CheckBoxCellFactory;
-import com.sun.javafx.scene.control.cell.CheckBoxTreeCell;
+import javafx.scene.control.cell.CheckBoxTreeCell;
 import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.SimpleBooleanProperty;
 import javafx.beans.value.ChangeListener;
@@ -70,7 +69,6 @@ import javafx.scene.control.TreeItem;
  * treeView.setCellFactory(CheckBoxCellFactory.&lt;String&gt;forTreeView());</code></pre>
  *
  * @see CheckBoxTreeCell
- * @see CheckBoxCellFactory
  * @see TreeItem
  * @see CheckBox
  */
@@ -97,6 +95,13 @@ public class CheckBoxTreeItem<T> extends TreeItem<T> {
      * Constructors                                                            *
      *                                                                         *
      **************************************************************************/
+    
+    /**
+     * Creates an empty CheckBoxTreeItem.
+     */
+    public CheckBoxTreeItem() {
+        this(null);
+    }
     
     /**
      * Creates a CheckBoxTreeItem with the value property set to the provided 

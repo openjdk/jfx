@@ -36,7 +36,6 @@ import javafx.util.Callback;
 import com.sun.javafx.logging.PlatformLogger;
 import com.sun.javafx.property.PropertyReference;
 import com.sun.javafx.scene.control.Logging;
-import com.sun.javafx.scene.control.cell.MapValueFactory;
 
 
 /**

@@ -77,7 +77,6 @@ public class ColorPalette extends Region {
             @Override
             public void handle(ActionEvent t) {
                 if (customColorDialog == null) {
-                    System.out.println("Creating dialog with "+colorPicker.valueProperty().get());
                     customColorDialog = new CustomColorDialog(owner);
                     updateCustomColors();
                     customColorDialog.dialog.showingProperty().addListener(new ChangeListener<Boolean>() {
@@ -125,7 +124,6 @@ public class ColorPalette extends Region {
         }
         for (int i = 0; i < numEmpty; i++) {            
             ColorSquare emptySquare = new ColorSquare(null);
-            emptySquare.setHoverValue(false);
             customColorGrid.add(emptySquare, customColumnIndex, customRowIndex);
             customColumnIndex++;
         }
@@ -154,7 +152,6 @@ public class ColorPalette extends Region {
                     
                     Color customColor = customColorDialog.customColorProperty.get();
                     ColorSquare cs = new ColorSquare(customColor, true);
-                    cs.setHoverValue(false);
                     customSquares.add(cs);
                     buildCustomColors();
                     
@@ -184,9 +181,17 @@ public class ColorPalette extends Region {
                         break;
                     case DOWN:
                         processDownKey(ke);
+                        break;
+                    case ENTER:
+                        processSelectKey(ke);
+                        break;
                 }
             }
         });
+    }
+    
+    private void processSelectKey(KeyEvent ke) {
+        if (focusedSquare != null) focusedSquare.selectColor(ke);
     }
     
     private void processLeftKey(KeyEvent ke) {
@@ -194,18 +199,17 @@ public class ColorPalette extends Region {
         for (index = (NUM_OF_ROWS*NUM_OF_COLUMNS)-1; index >= 0; index--)  {
             ColorSquare cs = colorPickerGrid.getSquares().get(index);
             if (cs == focusedSquare) {
-                cs.setHoverValue(false);
                 ColorSquare prevSquare = colorPickerGrid.getSquares().get((index != 0) ? 
                                     (index-1) : (NUM_OF_ROWS*NUM_OF_COLUMNS)-1);
-                prevSquare.setHoverValue(true);
+                prevSquare.requestFocus();
                 focusedSquare = prevSquare;
                 break;
             } 
         }
         if (index == -1) {
             ColorSquare cs = colorPickerGrid.getSquares().get((NUM_OF_ROWS*NUM_OF_COLUMNS)-1);
-            cs.setHoverValue(true);
             focusedSquare = cs;
+            cs.requestFocus();;
         }
     }
     
@@ -214,18 +218,17 @@ public class ColorPalette extends Region {
         for (index = (NUM_OF_ROWS*NUM_OF_COLUMNS)-1; index >= 0; index--)  {
             ColorSquare cs = colorPickerGrid.getSquares().get(index);
             if (cs == focusedSquare) {
-                cs.setHoverValue(false);
                 ColorSquare prevSquare = colorPickerGrid.getSquares().get((index-12 >= 0)? 
                         (index-12) : ((NUM_OF_ROWS-1)*NUM_OF_COLUMNS)+index);
-                prevSquare.setHoverValue(true);
+                prevSquare.requestFocus();
                 focusedSquare = prevSquare;
                 break;
             } 
         }
         if (index == -1) {
             ColorSquare cs = colorPickerGrid.getSquares().get((NUM_OF_ROWS*NUM_OF_COLUMNS)-1);
-            cs.setHoverValue(true);
             focusedSquare = cs;
+            focusedSquare.requestFocus();
         }
     }
      
@@ -234,18 +237,17 @@ public class ColorPalette extends Region {
         for (index = 0; index < (NUM_OF_ROWS*NUM_OF_COLUMNS); index++)  {
             ColorSquare cs = colorPickerGrid.getSquares().get(index);
             if (cs == focusedSquare) {
-                cs.setHoverValue(false);
                 ColorSquare prevSquare = colorPickerGrid.getSquares().get(
                         (index != (NUM_OF_ROWS*NUM_OF_COLUMNS)-1) ? (index+1) : 0);
-                prevSquare.setHoverValue(true);
+                prevSquare.requestFocus();
                 focusedSquare = prevSquare;
                 break;
             } 
         }
         if (index == (NUM_OF_ROWS*NUM_OF_COLUMNS)) {
             ColorSquare cs = colorPickerGrid.getSquares().get(0);
-            cs.setHoverValue(true);
             focusedSquare = cs;
+            focusedSquare.requestFocus();
         }
     }
     
@@ -254,17 +256,16 @@ public class ColorPalette extends Region {
         for (index = 0; index < (NUM_OF_ROWS*NUM_OF_COLUMNS); index++)  {
             ColorSquare cs = colorPickerGrid.getSquares().get(index);
             if (cs == focusedSquare) {
-                cs.setHoverValue(false);
                 ColorSquare prevSquare = colorPickerGrid.getSquares().get((index+12 < NUM_OF_ROWS*NUM_OF_COLUMNS)? 
                         (index+12) : index-((NUM_OF_ROWS-1)*NUM_OF_COLUMNS));
-                prevSquare.setHoverValue(true);
+                prevSquare.requestFocus();
                 focusedSquare = prevSquare;
                 break;
             } 
         }
         if (index == (NUM_OF_ROWS*NUM_OF_COLUMNS)) {
             ColorSquare cs = colorPickerGrid.getSquares().get(0);
-            cs.setHoverValue(true);
+            focusedSquare.requestFocus();
             focusedSquare = cs;
         }
     }
@@ -347,6 +348,7 @@ public class ColorPalette extends Region {
         public ColorSquare(Color color, boolean value) {
             // Add style class to handle selected color square
             getStyleClass().add("color-square");
+            setFocusTraversable(true);
             this.isCustom = value;
             rectangle = new Rectangle(SQUARE_SIZE, SQUARE_SIZE);
             setFocusTraversable(true);
@@ -387,20 +389,31 @@ public class ColorPalette extends Region {
                     }
                 }
             });
-            
+            focusedProperty().addListener(new ChangeListener<Boolean>() {
+                @Override
+                public void changed(ObservableValue<? extends Boolean> ov, Boolean t, Boolean t1) {
+                }
+            });
             addEventHandler(MouseEvent.MOUSE_ENTERED, new EventHandler<MouseEvent>() {
                 @Override public void handle(MouseEvent event) {
-                    if (focusedSquare != null && focusedSquare != ColorSquare.this) {
-                        focusedSquare.setHoverValue(false);
+                    if (focusedSquare != null && focusedSquare != ColorSquare.this && !ColorSquare.this.isCustom) {
+                        focusedSquare.requestFocus();
+                        focusedSquare = ColorSquare.this;
                     }
-                    focusedSquare = ColorSquare.this;
                 }
              });
             getChildren().add(rectangle);
         }
         
-        public void setHoverValue(Boolean value) {
-            setHover(value);
+        public void selectColor(KeyEvent event) {
+            if (rectangle.getFill() != null) {
+                if (rectangle.getFill() instanceof Color) {
+                    colorPicker.setValue((Color) rectangle.getFill());
+                    colorPicker.fireEvent(new ActionEvent());
+                }
+                event.consume();
+            }
+            colorPicker.hide();
         }
         
         private ReadOnlyBooleanWrapper selected;
@@ -456,9 +469,8 @@ public class ColorPalette extends Region {
         public ColorPickerGrid(Color initPaint) {
             getStyleClass().add("color-picker-grid");
             setId("ColorCustomizerColorGrid");
-//            setGridLinesVisible(true);
             int columnIndex = 0, rowIndex = 0;
-
+            setFocusTraversable(true);
             squares = FXCollections.observableArrayList();
             int numColors = rawValues.length / 3;
             Color[] colors = new Color[numColors];
