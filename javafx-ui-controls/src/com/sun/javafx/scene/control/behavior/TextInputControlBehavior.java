@@ -154,8 +154,9 @@ public abstract class TextInputControlBehavior<T extends TextInputControl> exten
             else if ("SelectEndExtend".equals(name)) selectEndExtend();
             else if ("Undo".equals(name)) undoManager.undo();
             else if ("Redo".equals(name)) undoManager.redo();
-            /*DEBUG*/else if ("UseVK".equals(name)) ((com.sun.javafx.scene.control.skin.TextInputControlSkin)textInputControl.getSkin()).toggleUseVK();
-            else {
+            /*DEBUG*/else if ("UseVK".equals(name) && isEmbedded()) {
+                ((com.sun.javafx.scene.control.skin.TextInputControlSkin)textInputControl.getSkin()).toggleUseVK();
+            } else {
                 setEditing(false);
                 super.callAction(name);
             }

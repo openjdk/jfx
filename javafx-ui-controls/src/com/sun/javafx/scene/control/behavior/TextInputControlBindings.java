@@ -150,6 +150,8 @@ public class TextInputControlBindings {
         BINDINGS.add(new KeyBinding(TAB, "TraversePrevious").shift());
         // TODO XXX DEBUGGING ONLY
 //        BINDINGS.add(new KeyBinding(F4, "TraverseDebug").alt().ctrl().shift());
-        BINDINGS.add(new KeyBinding(DIGIT9, "UseVK").ctrl().shift());
+        /*DEBUG*/if (PlatformUtil.isEmbedded()) {
+            BINDINGS.add(new KeyBinding(DIGIT9, "UseVK").ctrl().shift());
+        }
     }
 }
