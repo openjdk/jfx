@@ -3504,7 +3504,10 @@ Only the properties with values that are different from the TextBox are specifie
 /* -------------------------- STYLES FOR PAGINATION CONTROL ----- */
 .pagination {
     -fx-skin: "com.sun.javafx.scene.control.skin.PaginationSkin";
-    -fx-padding: 0;
+    -fx-padding: 0;        
+    -fx-arrows-visible: true;
+    -fx-page-information-visible: true;
+    -fx-page-information-alignment: bottom;
 }
 .pagination .page {
     -fx-background-color: transparent;
@@ -3512,11 +3515,12 @@ Only the properties with values that are different from the TextBox are specifie
 
 .pagination .pagination-control {
     -fx-background-color: transparent;    
-    -fx-padding: 0.833333em 0em 0.833333em 0em; /* 10 5 10 5 */    
+    -fx-padding: 0.833333em 0em 0.833333em 0em; /* 10 5 10 5 */            
 }
 
 .pagination .pagination-control .control-box {
     -fx-spacing: 10;
+    -fx-alignment: center;
 }
 
 .pagination .pagination-control .left-arrow-button {    
