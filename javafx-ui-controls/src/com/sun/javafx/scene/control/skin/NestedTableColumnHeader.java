@@ -24,6 +24,7 @@
  */
 package com.sun.javafx.scene.control.skin;
 
+import com.sun.javafx.PlatformUtil;
 import com.sun.javafx.scene.control.WeakListChangeListener;
 import java.util.ArrayList;
 import java.util.List;
@@ -193,13 +194,17 @@ class NestedTableColumnHeader extends TableColumnHeader {
 
         // Small transparent overlays that sit at the start and end of each
         // column to intercept user drag gestures to enable column resizing.
-        rebuildDragRects();
-        content.addAll(dragRects);
+        if (isColumnResizingEnabled()) {
+            rebuildDragRects();
+            content.addAll(dragRects);
+        }
 
         getChildren().setAll(content);
     }
 
     private void rebuildDragRects() {
+        if (! isColumnResizingEnabled()) return;
+        
         // drag rectangle overlays
         dragRects = new ArrayList<Rectangle>();
 
@@ -224,6 +229,8 @@ class NestedTableColumnHeader extends TableColumnHeader {
             rect.setSmooth(false);
             rect.setOnMousePressed(new EventHandler<MouseEvent>() {
                 @Override public void handle(MouseEvent me) {
+                    if (! isColumnResizingEnabled()) return;
+                    
                     if (me.getClickCount() == 2 && me.isPrimaryButtonDown()) {
                         // the user wants to resize the column such that its 
                         // width is equal to the widest element in the column
@@ -241,12 +248,16 @@ class NestedTableColumnHeader extends TableColumnHeader {
             });
             rect.setOnMouseDragged(new EventHandler<MouseEvent>() {
                 @Override public void handle(MouseEvent me) {
+                    if (! isColumnResizingEnabled()) return;
+                    
                     columnResizing(c, me);
                     me.consume();
                 }
             });
             rect.setOnMouseReleased(new EventHandler<MouseEvent>() {
                 @Override public void handle(MouseEvent me) {
+                    if (! isColumnResizingEnabled()) return;
+                    
                     columnResizingComplete(c, me);
                     me.consume();
                 }
@@ -254,7 +265,8 @@ class NestedTableColumnHeader extends TableColumnHeader {
             
             EventHandler<MouseEvent> cursorChangeListener = new EventHandler<MouseEvent>() {
                 @Override public void handle(MouseEvent t) {
-                    rect.setCursor(rect.isHover() && c.isResizable() ? Cursor.H_RESIZE : Cursor.DEFAULT);
+                    rect.setCursor(isColumnResizingEnabled() && rect.isHover() && 
+                            c.isResizable() ? Cursor.H_RESIZE : Cursor.DEFAULT);
                 }
             };
             rect.setOnMouseEntered(cursorChangeListener);
@@ -272,6 +284,10 @@ class NestedTableColumnHeader extends TableColumnHeader {
     private double dragAnchorX = 0.0;
 
     private List<Rectangle> dragRects;
+    
+    private boolean isColumnResizingEnabled() {
+        return ! PlatformUtil.isEmbedded();
+    }
 
     private void columnResizingStarted(double startX) {
         getTableHeaderRow().getColumnReorderLine().setLayoutX(startX);
@@ -336,7 +352,7 @@ class NestedTableColumnHeader extends TableColumnHeader {
             x += prefWidth;
 
             // position drag overlay to intercept column resize requests
-            if (i < dragRects.size()) {
+            if (dragRects != null && i < dragRects.size()) {
                 Rectangle dragRect = dragRects.get(i++);
                 dragRect.setVisible(true);
                 dragRect.setHeight(getHeight() - label.getHeight());
