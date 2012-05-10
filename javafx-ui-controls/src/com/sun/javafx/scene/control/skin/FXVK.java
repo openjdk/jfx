@@ -51,6 +51,9 @@ import javafx.beans.DefaultProperty;
 
 public class FXVK extends Control {
 
+    public final static String[] VK_TYPE_NAMES = new String[] { "text", "numeric", "url", "email" };
+    public final static String VK_TYPE_PROP_KEY = "vkType";
+
     public String[] chars;
 
     public FXVK() {
@@ -81,8 +84,18 @@ public class FXVK extends Control {
     int vkType;
     private static HashMap<Integer, FXVK> vkMap = new HashMap<Integer, FXVK>();
 
-    public static void attach(final TextInputControl textInput) {
-        int type = textInput.getImpl_virtualKeyboardType();
+    public static void attach(final Control textInput) {
+        int type = 0;
+        Object typeValue = textInput.getProperties().get(VK_TYPE_PROP_KEY);
+        if (typeValue instanceof String) {
+            String typeStr = ((String)typeValue).toLowerCase();
+            for (int i = 0; i < VK_TYPE_NAMES.length; i++) {
+                if (typeStr.equals(VK_TYPE_NAMES[i])) {
+                    type = i;
+                    break;
+                }
+            }
+        }
 
         if (vk != null && vk.vkType != type) {
             detach();

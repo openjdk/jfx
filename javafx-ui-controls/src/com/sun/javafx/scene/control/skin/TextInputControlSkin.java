@@ -229,31 +229,23 @@ public abstract class TextInputControlSkin<T extends TextInputControl, B extends
      */
     protected final Path caretPath = new Path();
 
-    static boolean useFXVK = PlatformUtil.isEmbedded();
-    static int vkType = -1;
-    static double winWidth = 640;
-    public void toggleUseVK() {
-        Window window = getScene().getWindow();
-        if (winWidth == 640) {
-            window.setWidth(640);
-            window.setHeight(480);
-        } else {
-            window.setWidth(480);
-            window.setHeight(640);
-        }
+    private static boolean useFXVK = PlatformUtil.isEmbedded();
 
+    /* For testing only */
+    static int vkType = -1;
+    public void toggleUseVK() {
         vkType++;
         if (vkType < 4) {
             useFXVK = true;
-            getSkinnable().setImpl_virtualKeyboardType(vkType);
+            getSkinnable().getProperties().put(FXVK.VK_TYPE_PROP_KEY, FXVK.VK_TYPE_NAMES[vkType]);
             FXVK.attach(getSkinnable());
         } else {
             FXVK.detach();
             vkType = -1;
             useFXVK = false;
-            winWidth = (winWidth == 640) ? 480 : 640;
         }
     }
+
 
     public TextInputControlSkin(final T textInput, final B behavior) {
         super(textInput, behavior);

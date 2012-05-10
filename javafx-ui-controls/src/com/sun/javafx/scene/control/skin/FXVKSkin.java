@@ -261,7 +261,7 @@ if (USE_SECONDARY_POPUP) {
             ArrayList<Control[]> rows = new ArrayList<Control[]>();
             ArrayList<String> row = new ArrayList<String>();
             ArrayList<Double> keyWidths = new ArrayList<Double>();
-            String typeString = new String[] { "Text", "Numeric", "URL", "Email" }[fxvk.vkType];
+            String typeString = FXVK.VK_TYPE_NAMES[fxvk.vkType];
             int r = 0;
             try {
                 String format = "FXVK."+typeString+".row%d.key%02d";
