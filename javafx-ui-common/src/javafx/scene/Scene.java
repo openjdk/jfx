@@ -1327,7 +1327,7 @@ public class Scene implements EventTarget {
         final EventTarget eventTarget;
         if (!isKeyboardTrigger) Scene.inMousePick = true;
         if (isKeyboardTrigger) {
-            Node sceneFocusOwner = keyHandler.getFocusOwner();
+            Node sceneFocusOwner = getFocusOwner();
             eventTarget = sceneFocusOwner != null ? sceneFocusOwner : Scene.this;
         } else {
             eventTarget = pick(x2, y2);
@@ -1694,59 +1694,51 @@ public class Scene implements EventTarget {
         getKeyHandler().requestFocus(node);
     }
 
+    private Node oldFocusOwner;
+    
     /**
-     * Gets the scene's current focus owner node.
-     *
-     *
-     * @treatAsPrivate implementation detail
-     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
-     */
-    // SB-dependency: RT-11080 has been filed to track this
-    @Deprecated
-    public Node impl_getFocusOwner() {
-        return getKeyHandler().getFocusOwner();
-    }
-    /**
-     * The scene's current focus owner node. This node's "focused"
-     * variable might be false if this scene has no window, or if the
-     * window is inactive (window.focused == false).
-     *
-     * @treatAsPrivate implementation detail
-     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
-     */
-    // SB-dependency: RT-11080 has been filed to track this
-    @Deprecated
-    private ObjectProperty<Node> impl_focusOwner;
+      * The scene's current focus owner node. This node's "focused"
+      * variable might be false if this scene has no window, or if the
+      * window is inactive (window.focused == false).
+      * @since 2.2
+      */
+    private ReadOnlyObjectWrapper<Node> focusOwner = new ReadOnlyObjectWrapper<Node>(this, "focusOwner") {
 
-    /**
-     * @treatAsPrivate implementation detail
-     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
-     */
-    @Deprecated
-    public final void setImpl_focusOwner(Node value) {
-        impl_focusOwnerProperty().set(value);
-    }
-
-    /**
-     * @treatAsPrivate implementation detail
-     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
-     */
-    @Deprecated
-    public final Node getImpl_focusOwner() {
-        return impl_focusOwner == null ? null : impl_focusOwner.get();
-    }
-
-    /**
-     * @treatAsPrivate implementation detail
-     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
-     */
-    // SB-dependency: RT-11080 has been filed to track this
-    @Deprecated
-    public final ObjectProperty<Node> impl_focusOwnerProperty() {
-        if (impl_focusOwner == null) {
-            impl_focusOwner = new SimpleObjectProperty<Node>(this, "impl_focusOwner");
+        @Override
+        protected void invalidated() {
+            if (oldFocusOwner != null) {
+                ((Node.FocusedProperty) oldFocusOwner.focusedProperty()).store(false);
+            }
+            Node value = get();
+            if (value != null) {
+                ((Node.FocusedProperty) value.focusedProperty()).store(keyHandler.windowFocused);
+                if (value != oldFocusOwner) {
+                    value.getScene().impl_enableInputMethodEvents(
+                            value.getInputMethodRequests() != null
+                            && value.getOnInputMethodTextChanged() != null);
+                }
+            }
+            if (oldFocusOwner != null) {
+                ((Node.FocusedProperty) oldFocusOwner.focusedProperty()).notifyListeners();
+            }
+            if (value != null) {
+                ((Node.FocusedProperty) value.focusedProperty()).notifyListeners();
+            }
+            PlatformLogger logger = Logging.getFocusLogger();
+            if (logger.isLoggable(PlatformLogger.FINE)) {
+                logger.fine("Changed focus from "
+                        + oldFocusOwner + " to " + value);
+            }
+            oldFocusOwner = value;
         }
-        return impl_focusOwner;
+    };
+    
+    public final Node getFocusOwner() {
+        return focusOwner.get();
+    }
+
+    public final ReadOnlyObjectProperty<Node> focusOwnerProperty() {
+        return focusOwner.getReadOnlyProperty();
     }
 
     // For testing.
@@ -1760,7 +1752,7 @@ public class Scene implements EventTarget {
      */
     @Deprecated
     public void impl_processInputMethodEvent(InputMethodEvent e) {
-        Node node = impl_getFocusOwner();
+        Node node = getFocusOwner();
         if (node != null) {
             node.fireEvent(e);
         }
@@ -1958,7 +1950,7 @@ public class Scene implements EventTarget {
          */
         private void focusCleanup() {
             if (Scene.this.isFocusDirty()) {
-                final Node oldOwner = Scene.this.impl_getFocusOwner();
+                final Node oldOwner = Scene.this.getFocusOwner();
                 if (oldOwner == null) {
                     Scene.this.focusInitial();
                 } else if (oldOwner.getScene() != Scene.this) {
@@ -3229,40 +3221,8 @@ public class Scene implements EventTarget {
      ******************************************************************************/
 
     class KeyHandler {
-        private Node focusOwner = null;
-        private Node getFocusOwner() { return focusOwner; }
-
-        private void setFocusOwner(Node value) {
-            Node oldFocusOwner = focusOwner;
-            if (oldFocusOwner != null) {
-                ((Node.FocusedProperty) oldFocusOwner.focusedProperty()).store(false);
-            }
-            focusOwner = value;
-
-            Scene.this.setImpl_focusOwner(focusOwner);// = Scene{ impl_focusOwner = bind keyHandler.focusOwner };
-
-            if (focusOwner != null) {
-                ((Node.FocusedProperty) focusOwner.focusedProperty()).store(windowFocused);
-                if (focusOwner != oldFocusOwner) {
-                    focusOwner.getScene().impl_enableInputMethodEvents(
-                        focusOwner.getInputMethodRequests() != null &&
-                        focusOwner.getOnInputMethodTextChanged() != null);
-                }
-            }
-
-            if (oldFocusOwner != null) {
-                ((Node.FocusedProperty) oldFocusOwner.focusedProperty()).notifyListeners();
-            }
-            if (focusOwner != null) {
-                ((Node.FocusedProperty) focusOwner.focusedProperty()).notifyListeners();
-            }
-
-            PlatformLogger logger = Logging.getFocusLogger();
-            if (logger.isLoggable(PlatformLogger.FINE)) {
-                logger.fine("Changed focus from "
-                            + oldFocusOwner + " to "
-                            + focusOwner);
-            }
+        private void setFocusOwner(final Node value) {
+            focusOwner.set(value);
         }
 
         private boolean windowFocused = true;
@@ -3397,7 +3357,7 @@ public class Scene implements EventTarget {
         }
 
         private InputMethodRequests getClientRequests() {
-            Node focusOwner = impl_getFocusOwner();
+            Node focusOwner = getFocusOwner();
             if (focusOwner != null) {
                 return focusOwner.getInputMethodRequests();
             }

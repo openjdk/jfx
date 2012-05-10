@@ -95,17 +95,17 @@ public class FocusTest {
     }
 
     private void assertIsFocused(Scene s, Node n) {
-        assertEquals(n, s.impl_getFocusOwner());
+        assertEquals(n, s.getFocusOwner());
         assertTrue(n.isFocused());
     }
 
     private void assertNotFocused(Scene s, Node n) {
-        assertTrue(n != s.impl_getFocusOwner());
+        assertTrue(n != s.getFocusOwner());
         assertFalse(n.isFocused());
     }
 
     private void assertNullFocus(Scene s) {
-        assertNull(s.impl_getFocusOwner());
+        assertNull(s.getFocusOwner());
     }
 
     /**
@@ -609,7 +609,7 @@ public class FocusTest {
         nodes.get(0).requestFocus();
         fireTestPulse();
         assertNullFocus(scene);
-        assertEquals(nodes.get(0), scene2.impl_getFocusOwner());
+        assertEquals(nodes.get(0), scene2.getFocusOwner());
         assertFalse(nodes.get(0).isFocused());
         stage.setScene(scene2);
         fireTestPulse();
@@ -631,7 +631,7 @@ public class FocusTest {
         stage.hide();
         nodes.get(0).requestFocus();
         fireTestPulse();
-        assertEquals(nodes.get(0), scene.impl_getFocusOwner());
+        assertEquals(nodes.get(0), scene.getFocusOwner());
         assertFalse(nodes.get(0).isFocused());     
     }
     
@@ -650,11 +650,11 @@ public class FocusTest {
         fireTestPulse();
         assertIsFocused(scene, nodes.get(0));
         assertFalse(nodes.get(1).isFocused());
-        assertEquals(nodes.get(1), scene2.impl_getFocusOwner());
+        assertEquals(nodes.get(1), scene2.getFocusOwner());
         stage.setScene(scene2);
         fireTestPulse();
         assertFalse(nodes.get(0).isFocused());
-        assertEquals(nodes.get(0), scene.impl_getFocusOwner());
+        assertEquals(nodes.get(0), scene.getFocusOwner());
         assertIsFocused(scene2, nodes.get(1));
     }
 

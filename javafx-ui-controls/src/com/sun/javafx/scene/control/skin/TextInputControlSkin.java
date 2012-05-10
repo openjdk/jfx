@@ -299,7 +299,7 @@ public abstract class TextInputControlSkin<T extends TextInputControl, B extends
                         public void run() {
                             if (textInput.isFocused()) {
                                 FXVK.attach(textInput);
-                            } else if (!(getScene().impl_getFocusOwner() instanceof TextInputControl)) {
+                            } else if (!(getScene().getFocusOwner() instanceof TextInputControl)) {
                                 FXVK.detach();
                             }
                         }

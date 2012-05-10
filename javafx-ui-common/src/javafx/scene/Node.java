@@ -5855,7 +5855,7 @@ public abstract class Node implements EventTarget {
      */
     private void focusSetDirty(Scene s) {
         if (s != null &&
-            (this == s.impl_getFocusOwner() || isFocusTraversable())) {
+            (this == s.getFocusOwner() || isFocusTraversable())) {
                 s.setFocusDirty(true);
         }
     }
