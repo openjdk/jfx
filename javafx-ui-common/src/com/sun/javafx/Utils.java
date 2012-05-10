@@ -797,6 +797,24 @@ public class Utils {
         }
     }
 
+    /*
+     * Returns true if the primary Screen has VGA dimensions, in landscape or portrait mode.
+     */
+    public static boolean isVGAScreen() {
+        Rectangle2D bounds = Screen.getPrimary().getBounds();
+        return ((bounds.getWidth() == 640 && bounds.getHeight() == 480) ||
+                (bounds.getWidth() == 480 && bounds.getHeight() == 640));
+    }
+
+    /*
+     * Returns true if the primary Screen has QVGA dimensions, in landscape or portrait mode.
+     */
+    public static boolean isQVGAScreen() {
+        Rectangle2D bounds = Screen.getPrimary().getBounds();
+        return ((bounds.getWidth() == 320 && bounds.getHeight() == 240) ||
+                (bounds.getWidth() == 240 && bounds.getHeight() == 320));
+    }
+
     /**
      * This function attempts to determine the best screen given the parent object
      * from which we are wanting to position another item relative to. This is particularly
