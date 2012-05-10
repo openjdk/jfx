@@ -6744,13 +6744,6 @@ public abstract class Node implements EventTarget {
     CSSFlags cssFlag = CSSFlags.CLEAN;
 
     /**
-     * A Reference to a StyleHelper for this node.
-     * A StyleHelper contains all the css styles for this node
-     * and knows how to apply them when our state changes.
-     */
-    private java.lang.ref.Reference<StyleHelper> styleHelperRef;
-    
-    /**
      * Needed for testing.
      * @treatAsPrivate implementation detail
      * @deprecated This is an internal API that is not intended for use and will be removed in the next version
@@ -6925,7 +6918,14 @@ public abstract class Node implements EventTarget {
             styleHelper.transitionToState(this);
         }
     }
-
+    
+    /**
+     * A StyleHelper for this node.
+     * A StyleHelper contains all the css styles for this node
+     * and knows how to apply them when our state changes.
+     */
+    private StyleHelper styleHelper;
+    
     /**
      * @treatAsPrivate implementation detail
      * @deprecated This is an internal API that is not intended for use and will be removed in the next version
@@ -6933,24 +6933,11 @@ public abstract class Node implements EventTarget {
     @Deprecated
     protected StyleHelper impl_createStyleHelper() {
 
-        StyleHelper styleHelper = null;
-        if (styleHelperRef != null && (styleHelper = styleHelperRef.get()) != null) {
-            // if we're creating a StyleHelper when we've already got one,
-            // then we're reapplying CSS. This means that the CSS structure
-            // has changed for this node and the cached values are no longer
-            // valid.
-            styleHelper.clearCachedValues(styleCacheKeyRef);
-        }
-
-        styleHelperRef = StyleManager.getInstance().getStyleHelper(this);
-
-        if (styleHelperRef != null) {
-            styleHelper = styleHelperRef.get();
-        }
-
         // set the key to null here so the next call to impl_getStyleCacheKey
         // will cause a new key to be created
-        styleCacheKeyRef = null;
+        styleCacheKey = null;
+        
+        styleHelper = StyleManager.getInstance().getStyleHelper(this);
         return styleHelper;
     }
 
@@ -6961,19 +6948,17 @@ public abstract class Node implements EventTarget {
      */
     @Deprecated
     public StyleHelper impl_getStyleHelper() {
-        StyleHelper helper = null;
-        // If we had a helper before, but don't now, then this
-        // node's StyleHelper was nuked by the StyleManager
-        // and we need to create a new one.
-        if (styleHelperRef == null || (helper = styleHelperRef.get()) == null) {
 
-            helper = impl_createStyleHelper();
+        // if styleHelper is invalid, then StyleManager has discarded it
+        if (styleHelper == null || styleHelper.isInvalid()) {
+
+            styleHelper = impl_createStyleHelper();
 
         }
-        return helper;
+        return styleHelper;
     }
 
-    private java.lang.ref.Reference<StyleCacheKey> styleCacheKeyRef;
+    private StyleCacheKey styleCacheKey;
     /**
      * Return a key for this Node's cached values in StyleHelper. The key is
      * unique to the set of StyleHelpers of this node and its parents'
@@ -6982,22 +6967,22 @@ public abstract class Node implements EventTarget {
      * @deprecated This is an internal API that is not intended for use and will be removed in the next version
      */
     @Deprecated
-    public java.lang.ref.Reference<StyleCacheKey> impl_getStyleCacheKey() {
+    public StyleCacheKey impl_getStyleCacheKey() {
 
         final StyleHelper styleHelper = impl_getStyleHelper();
 
         // cannot have a cache key without a helper...
-        if (styleHelper == null) {
-            styleCacheKeyRef = null;
+        if (styleHelper == null || styleHelper.isInvalid()) {
+            styleCacheKey = null;
             return null;
         }
 
         //  we have a helper, do we have a key?
-        if (styleCacheKeyRef == null || styleCacheKeyRef.get() == null) {
-            styleCacheKeyRef = styleHelper.createStyleCacheKey(this);
+        if (styleCacheKey == null) {
+            styleCacheKey = styleHelper.createStyleCacheKey(this);
         } 
         
-        return styleCacheKeyRef;
+        return styleCacheKey;
     }
 
     private static final long HOVER_PSEUDOCLASS_STATE = StyleManager.getInstance().getPseudoclassMask("hover");

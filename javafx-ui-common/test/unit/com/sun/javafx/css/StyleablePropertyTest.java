@@ -293,7 +293,7 @@ public class StyleablePropertyTest {
             StyleHelper shelper = null;
             
             @Override
-            public Reference<StyleHelper.StyleCacheKey> impl_getStyleCacheKey() {
+            public StyleHelper.StyleCacheKey impl_getStyleCacheKey() {
                 return shelper.createStyleCacheKey(this);
             }
 
@@ -306,7 +306,6 @@ public class StyleablePropertyTest {
             public StyleHelper impl_createStyleHelper() {
                 shelper = StyleHelper.create(cascadingStyles, 0, 0);
                 shelper.styleCache = new HashMap<StyleHelper.StyleCacheKey, StyleHelper.StyleCacheEntry>();
-                shelper.styleCacheKeyRefs = new HashMap<StyleHelper.StyleCacheKey, Reference<StyleHelper.StyleCacheKey>>();
                 return shelper;
             }
             
@@ -326,7 +325,7 @@ public class StyleablePropertyTest {
             StyleHelper shelper = null;
             
             @Override
-            public Reference<StyleHelper.StyleCacheKey> impl_getStyleCacheKey() {
+            public StyleHelper.StyleCacheKey impl_getStyleCacheKey() {
                 return shelper.createStyleCacheKey(this);
             }
             
@@ -339,7 +338,6 @@ public class StyleablePropertyTest {
             public StyleHelper impl_createStyleHelper() {
                 shelper = StyleHelper.create(cascadingStyles, 0, 1);
                 shelper.styleCache = new HashMap<StyleHelper.StyleCacheKey, StyleHelper.StyleCacheEntry>();
-                shelper.styleCacheKeyRefs = new HashMap<StyleHelper.StyleCacheKey, Reference<StyleHelper.StyleCacheKey>>();
                 return shelper;
             }
             
@@ -363,7 +361,7 @@ public class StyleablePropertyTest {
         }    
         
         @Override
-        public Reference<StyleHelper.StyleCacheKey> impl_getStyleCacheKey() {
+        public StyleHelper.StyleCacheKey impl_getStyleCacheKey() {
             return shelper.createStyleCacheKey(this);
         }
 
@@ -376,7 +374,6 @@ public class StyleablePropertyTest {
         public StyleHelper impl_createStyleHelper() {
             shelper = StyleHelper.create(cascadingStyles, 0, 1);
             shelper.styleCache = new HashMap<StyleHelper.StyleCacheKey, StyleHelper.StyleCacheEntry>();
-            shelper.styleCacheKeyRefs = new HashMap<StyleHelper.StyleCacheKey, Reference<StyleHelper.StyleCacheKey>>();
             return shelper;
         }
             

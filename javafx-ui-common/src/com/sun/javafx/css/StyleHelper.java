@@ -41,9 +41,8 @@ import com.sun.javafx.css.parser.CSSParser;
 import com.sun.javafx.logging.PlatformLogger;
 import java.lang.ref.Reference;
 import java.lang.ref.WeakReference;
-import java.util.Collections;
+import java.util.*;
 import java.util.Map.Entry;
-import java.util.Stack;
 import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.SimpleBooleanProperty;
 import javafx.beans.value.WritableValue;
@@ -152,23 +151,16 @@ public class StyleHelper {
      * created by StyleManager.StylesheetContainer and is passed in.
      * Note that all StyleHelper instances within a given Scene all 
      * share the same valueCache! 
+     * 
+     * Note that the Map is created as a WeakHashMap in StyleManager. 
      */
     Map<StyleCacheKey, StyleCacheEntry> styleCache;
-    Map<StyleCacheKey, Reference<StyleCacheKey>> styleCacheKeyRefs;
     
-    public static final class StyleCacheKey {
-        final int[] indices;
+    public final class StyleCacheKey {
+        private final int[] indices;
         
-        StyleCacheKey(int[] indices) {
+        private StyleCacheKey(int[] indices) {
             this.indices = indices;
-        }
-
-        private static int[] getIndices(Node node, int count) {
-            if (node == null) return new int[count];
-            int[] indices = getIndices(node.getParent(), ++count);
-            StyleHelper sh = node.impl_getStyleHelper();
-            indices[count-1] = (sh != null) ? sh.helperIndex : 0;
-            return indices;
         }
         
         @Override
@@ -195,29 +187,19 @@ public class StyleHelper {
         
     }
     
-    /**
-     * Called from Node.impl_createStyleHelper before a getting a new
-     * StyleHelper for a Node. The impl_createStyleHelper method is called
-     * when CSS needs to be reapplied. CSS is reapplied when the CSS structure
-     * changes - a stylesheet is added, a style is changed, a node is added
-     * to a parent, etc. Since the CSS structure has changed, the cached
-     * values are invalid.
-     */
-    public void clearCachedValues(Reference<StyleCacheKey> keyRef) {
-        if (keyRef != null && keyRef.get() != null) {
-            final StyleCacheKey key = keyRef.get();
-            final StyleCacheEntry styleCacheEntry = styleCache.remove(key);
-            styleCacheEntry.clearEntries();
-            styleCacheKeyRefs.remove(key);
-            keyRef.clear();
-        }
+    private static int[] getIndices(Node node, int count) {
+        if (node == null) return new int[count];
+        int[] indices = getIndices(node.getParent(), ++count);
+        StyleHelper sh = node.impl_getStyleHelper();
+        indices[count-1] = (sh != null) ? sh.helperIndex : 0;
+        return indices;
     }
-
+        
     /** 
      * This method will either create a new StyleCacheKey for the node
      * or will return an existing one. It may return null.
      */
-    public Reference<StyleCacheKey> createStyleCacheKey(Node node) {
+    public StyleCacheKey createStyleCacheKey(Node node) {
 
 
         // Note: valueCache will not be null. The valueCache is owned
@@ -225,28 +207,14 @@ public class StyleHelper {
         // stylehelper is created.
         assert(styleCache != null);
 
-        final int[] indices = StyleCacheKey.getIndices(node, 0);
+        final int[] indices = getIndices(node, 0);
         final StyleCacheKey styleCacheKey = new StyleCacheKey(indices);
         
         //
         // Look to see if there is already a cache for this set of helpers
         //
-        final Reference<StyleCacheKey> existingKeyRef = styleCacheKeyRefs.get(styleCacheKey);
-        if (existingKeyRef != null) {
-            
-            if (existingKeyRef.get() != null) {
-                return existingKeyRef;
-                
-            } else {
-                // key not in use, clean up
-                styleCacheKeyRefs.remove(styleCacheKey);
-                
-                final StyleCacheEntry styleCacheEntry = styleCache.remove(styleCacheKey);
-                if (styleCacheEntry != null) {
-                    styleCacheEntry.clearEntries();
-                }
-            }
-            
+        if (styleCache.containsKey(styleCacheKey)) {            
+            return styleCacheKey;
         }
 
         // The List<CacheEntry> should only contain entries for those
@@ -271,12 +239,8 @@ public class StyleHelper {
 
         final StyleCacheEntry value = new StyleCacheEntry(pclassMasks);
         styleCache.put(styleCacheKey, value);
-        
-        final Reference<StyleCacheKey> keyRef = 
-            new WeakReference<StyleCacheKey>(styleCacheKey);
-        styleCacheKeyRefs.put(styleCacheKey, keyRef);
-        
-        return keyRef;
+                
+        return styleCacheKey;
     }
 
     /**
@@ -293,14 +257,6 @@ public class StyleHelper {
         private StyleCacheEntry(long[] pclassMask) {
             this.pclassMask = pclassMask;
             this.entries = new ArrayList<CacheEntry>();
-        }
-        
-        void clearEntries() {
-            for (int n=0, nMax=entries.size(); n<nMax; n++) {
-                CacheEntry ce = entries.get(n);
-                ce.values.clear();
-            }
-            entries.clear();
         }
         
     }
@@ -331,15 +287,12 @@ public class StyleHelper {
         // and the index of all the StyleHelpers of the Node's parents.
         // The key is unique to this set of StyleHelpers.
         //
-        final Reference<StyleCacheKey> keyRef = node.impl_getStyleCacheKey();
-
-        final StyleCacheKey key = keyRef != null ? keyRef.get() : null;
+        final StyleCacheKey key = node.impl_getStyleCacheKey();
         if(key == null) return null;
         
         final StyleCacheEntry styleCacheEntry = styleCache.get(key);
         if (styleCacheEntry == null) {
             styleCache.remove(key);
-            styleCacheKeyRefs.remove(key);
             return null;
         }
                
@@ -438,6 +391,7 @@ public class StyleHelper {
      */
     private final long pseudoclassStateMask;
 
+    private boolean invalid;
     /**
      * Creates a new StyleHelper.
      *
@@ -450,7 +404,8 @@ public class StyleHelper {
         this.pseudoclassStateMask = pseudoclassStateMask;
         this.smap = new HashMap<String, List<CascadingStyle>>();
         this.helperIndex = index;
-
+        this.invalid = false;
+        
         final int max = styles != null ? styles.size() : 0;
         for (int i=0; i<max; i++) {
             CascadingStyle style = styles.get(i);
@@ -466,6 +421,19 @@ public class StyleHelper {
 
     }
 
+    /** 
+    * If the StyleHelper is invalid, then the Node needs to get a
+    * new StyleHelper.
+    * @return 
+    */
+    public boolean isInvalid() {
+        return invalid;
+    }
+
+    /* package so StyleManager can get at it */ void setInvalid(boolean b) {
+        this.invalid = b;
+    }
+    
     /**
      * Invoked by Node to determine whether a change to a specific pseudoclass
      * state should result in the Node being marked dirty with an UPDATE flag.
