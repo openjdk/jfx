@@ -248,6 +248,7 @@ public class PaginationSkin extends SkinBase<Pagination, PaginationBehavior>  {
 
     private void resetIndexes(boolean usePageIndex) {
         maxPageIndicatorCount = getSkinnable().getMaxPageIndicatorCount();
+        // Used to indicate that we can change a set of pages.
         pageCount = getPageCount();
         if (pageCount > maxPageIndicatorCount) {
             pageCount = maxPageIndicatorCount;
@@ -548,6 +549,36 @@ public class PaginationSkin extends SkinBase<Pagination, PaginationBehavior>  {
         return pageInformationAlignment;
     }
 
+    private BooleanProperty tooltipVisible;
+    public final void setTooltipVisible(boolean value) { tooltipVisibleProperty().set(value); }
+    public final boolean isTooltipVisible() { return tooltipVisible == null ? DEFAULT_TOOLTIP_VISIBLE : tooltipVisible.get(); }
+    public final BooleanProperty tooltipVisibleProperty() {
+        if (tooltipVisible == null) {
+            tooltipVisible = new StyleableBooleanProperty(DEFAULT_TOOLTIP_VISIBLE) {
+                @Override
+                protected void invalidated() {
+                    requestLayout();
+                }
+
+                @Override
+                public StyleableProperty getStyleableProperty() {
+                    return StyleableProperties.TOOLTIP_VISIBLE;
+                }
+
+                @Override
+                public Object getBean() {
+                    return PaginationSkin.this;
+                }
+
+                @Override
+                public String getName() {
+                    return "tooltipVisible";
+                }
+            };
+        }
+        return tooltipVisible;
+    }
+    
     @Override protected void handleControlPropertyChanged(String p) {
         super.handleControlPropertyChanged(p);
         if (p == "PAGE_FACTORY") {
@@ -608,6 +639,7 @@ public class PaginationSkin extends SkinBase<Pagination, PaginationBehavior>  {
         private Button rightArrowButton;
         private ToggleGroup indicatorButtons;
         private Label pageInformation;
+        private double previousWidth = -1;
 
         public NavigationControl() {
             getStyleClass().setAll("pagination-control");
@@ -670,6 +702,7 @@ public class PaginationSkin extends SkinBase<Pagination, PaginationBehavior>  {
             });
         }
 
+        // Create the indicators using fromIndex and toIndex.
         private void initializePageIndicators() {
             if (!indicatorButtons.getToggles().isEmpty()) {
                 controlBox.getChildren().clear();
@@ -686,6 +719,7 @@ public class PaginationSkin extends SkinBase<Pagination, PaginationBehavior>  {
             controlBox.getChildren().add(rightArrowButton);
         }
 
+        // Finds and selects the IndicatorButton using the currentIndex.
         private void updatePageIndicators() {
             for (int i = 0; i < indicatorButtons.getToggles().size(); i++) {
                 IndicatorButton ib = (IndicatorButton)indicatorButtons.getToggles().get(i);
@@ -697,8 +731,10 @@ public class PaginationSkin extends SkinBase<Pagination, PaginationBehavior>  {
             }
         }
 
+        // Update the page index using the currentIndex and updates the page set
+        // if necessary.
         private void updatePageIndex() {
-            //System.out.println("SELECT PROPERTY FROM " + fromIndex + " TO " + toIndex + " PREVIOUS " + previousIndex + " CURRENT "+ currentIndex + " PAGE COUNT " + pageCount + " PAGE INDICATOR COUNT " + pageIndicatorCount);
+            //System.out.println("SELECT PROPERTY FROM " + fromIndex + " TO " + toIndex + " PREVIOUS " + previousIndex + " CURRENT "+ currentIndex + " PAGE COUNT " + pageCount + " MAX PAGE INDICATOR COUNT " + maxPageIndicatorCount);
             if (pageCount == maxPageIndicatorCount) {
                 if (changePageSet()) {
                     initializePageIndicators();
@@ -837,8 +873,11 @@ public class PaginationSkin extends SkinBase<Pagination, PaginationBehavior>  {
             rightArrowButton.setVisible(isArrowsVisible());
             pageInformation.setVisible(isPageInformationVisible());
 
-            // TODO Determine the number of indicators we can fit within the pagination width.
-            double availableWidth = width - controlBoxWidth;
+            // Determine the number of indicators we can fit within the pagination width.
+//            if (snapSize(getWidth()) != previousWidth) {
+//                layoutPageIndicators();
+//            }
+            previousWidth = getWidth();
 
             HPos controlBoxHPos = controlBox.getAlignment().getHpos();
             VPos controlBoxVPos = controlBox.getAlignment().getVpos();
@@ -850,12 +889,12 @@ public class PaginationSkin extends SkinBase<Pagination, PaginationBehavior>  {
                 HPos pageInformationHPos = p.getHpos();
                 VPos pageInformationVPos = p.getVpos();
                 double pageInformationX = left + Utils.computeXOffset(width, pageInformationWidth, pageInformationHPos);
-                double pageInformationY = top + Utils.computeYOffset(height, pageInformationHeight, pageInformationVPos);                
-                
+                double pageInformationY = top + Utils.computeYOffset(height, pageInformationHeight, pageInformationVPos);
+
                 if (Side.TOP.equals(getPageInformationAlignment())) {
                     pageInformationY = top;
                     controlBoxY = top + pageInformationHeight;
-                } else if (Side.RIGHT.equals(getPageInformationAlignment())) {                    
+                } else if (Side.RIGHT.equals(getPageInformationAlignment())) {
                     pageInformationX = width - right - pageInformationWidth;
                 } else if (Side.BOTTOM.equals(getPageInformationAlignment())) {
                     controlBoxY = top;
@@ -863,20 +902,22 @@ public class PaginationSkin extends SkinBase<Pagination, PaginationBehavior>  {
                 } else if (Side.LEFT.equals(getPageInformationAlignment())) {
                     pageInformationX = left;
                 }
-                layoutInArea(pageInformation, pageInformationX, pageInformationY, pageInformationWidth, pageInformationHeight, 0, pageInformationHPos, pageInformationVPos);                
+                layoutInArea(pageInformation, pageInformationX, pageInformationY, pageInformationWidth, pageInformationHeight, 0, pageInformationHPos, pageInformationVPos);
             }
-            
+
             layoutInArea(controlBox, controlBoxX, controlBoxY, controlBoxWidth, controlBoxHeight, 0, controlBoxHPos, controlBoxVPos);
         }
     }
 
     class IndicatorButton extends ToggleButton {
         private int pageNumber;
+        private Tooltip tooltip;
 
         public IndicatorButton(int pageNumber) {
             this.pageNumber = pageNumber;
             setFocusTraversable(false);
             setIndicatorType();
+            setTooltipVisible(isTooltipVisible());
 
             getSkinnable().getStyleClass().addListener(new ListChangeListener<String>() {
                 @Override
@@ -895,6 +936,13 @@ public class PaginationSkin extends SkinBase<Pagination, PaginationBehavior>  {
                     }
                 }
             });
+            
+            tooltipVisibleProperty().addListener(new ChangeListener<Boolean>() {
+                @Override
+                public void changed(ObservableValue<? extends Boolean> ov, Boolean oldValue, Boolean newValue) {
+                    setTooltipVisible(newValue);
+                }                
+            });
         }
 
         private void setIndicatorType() {
@@ -906,6 +954,14 @@ public class PaginationSkin extends SkinBase<Pagination, PaginationBehavior>  {
             }
         }
 
+        private void setTooltipVisible(boolean b) {
+            if (b) {
+                setTooltip(new Tooltip(Integer.toString(IndicatorButton.this.pageNumber + 1)));
+            } else {
+                setTooltip(null);
+            }            
+        }
+        
         public int getPageNumber() {
             return this.pageNumber;
         }
@@ -927,6 +983,7 @@ public class PaginationSkin extends SkinBase<Pagination, PaginationBehavior>  {
     private static final Boolean DEFAULT_ARROW_VISIBLE = Boolean.FALSE;
     private static final Boolean DEFAULT_PAGE_INFORMATION_VISIBLE = Boolean.FALSE;
     private static final Side DEFAULT_PAGE_INFORMATION_ALIGNMENT = Side.BOTTOM;
+    private static final Boolean DEFAULT_TOOLTIP_VISIBLE = Boolean.FALSE;
 
     private static class StyleableProperties {
         private static final StyleableProperty<PaginationSkin,Boolean> ARROWS_VISIBLE =
@@ -974,6 +1031,21 @@ public class PaginationSkin extends SkinBase<Pagination, PaginationBehavior>  {
             }
         };
 
+        private static final StyleableProperty<PaginationSkin,Boolean> TOOLTIP_VISIBLE =
+            new StyleableProperty<PaginationSkin,Boolean>("-fx-tooltip-visible",
+                BooleanConverter.getInstance(), DEFAULT_TOOLTIP_VISIBLE) {
+
+            @Override
+            public boolean isSettable(PaginationSkin n) {
+                return n.tooltipVisible == null || !n.tooltipVisible.isBound();
+            }
+
+            @Override
+            public WritableValue<Boolean> getWritableValue(PaginationSkin n) {
+                return n.tooltipVisibleProperty();
+            }
+        };
+        
         private static final List<StyleableProperty> STYLEABLES;
         static {
             final List<StyleableProperty> styleables =
@@ -981,7 +1053,8 @@ public class PaginationSkin extends SkinBase<Pagination, PaginationBehavior>  {
             Collections.addAll(styleables,
                 ARROWS_VISIBLE,
                 PAGE_INFORMATION_VISIBLE,
-                PAGE_INFORMATION_ALIGNMENT
+                PAGE_INFORMATION_ALIGNMENT,
+                TOOLTIP_VISIBLE
             );
             STYLEABLES = Collections.unmodifiableList(styleables);
         }

@@ -3387,8 +3387,9 @@ Only the properties with values that are different from the TextBox are specifie
     -fx-skin: "com.sun.javafx.scene.control.skin.PaginationSkin";
     -fx-padding: 0;        
     -fx-arrows-visible: true;
+    -fx-tooltip-visible: true;
     -fx-page-information-visible: true;
-    -fx-page-information-alignment: bottom;
+    -fx-page-information-alignment: bottom;    
 }
 .pagination .page {
     -fx-background-color: transparent;
