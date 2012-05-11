@@ -245,7 +245,7 @@ public class CheckBoxTableCell<S,T> extends TableCell<S,T> {
         this.checkBox = new CheckBox();
 //        this.checkBox.setAlignment(Pos.TOP_CENTER);
         
-        setAlignment(Pos.CENTER);
+//        setAlignment(Pos.CENTER);
         setGraphic(checkBox);
         
         if (showLabel) {
