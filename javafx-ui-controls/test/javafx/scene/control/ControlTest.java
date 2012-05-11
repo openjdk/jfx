@@ -983,7 +983,7 @@ public class ControlTest {
         assertEquals(BASELINE_OFFSET, c.getBaselineOffset(), 0);
     }
     
-    @Test @Ignore
+    @Test
     public void testRT18097() {
         try {
             ClassLoader cl = Thread.currentThread().getContextClassLoader();
