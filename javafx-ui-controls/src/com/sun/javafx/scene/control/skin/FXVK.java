@@ -54,14 +54,14 @@ public class FXVK extends Control {
     public final static String[] VK_TYPE_NAMES = new String[] { "text", "numeric", "url", "email" };
     public final static String VK_TYPE_PROP_KEY = "vkType";
 
-    public String[] chars;
+    String[] chars;
 
-    public FXVK() {
+    FXVK() {
         getStyleClass().setAll(DEFAULT_STYLE_CLASS);
     }
 
 
-    public final ObjectProperty<Node> attachedNodeProperty() {
+    final ObjectProperty<Node> attachedNodeProperty() {
         if (attachedNode == null) {
             attachedNode = new ObjectPropertyBase<Node>() {
                 @Override public Object getBean() {
@@ -77,14 +77,14 @@ public class FXVK extends Control {
     }
     private ObjectProperty<Node> attachedNode;
     final void setAttachedNode(Node value) { attachedNodeProperty().setValue(value); }
-    public final Node getAttachedNode() { return attachedNode == null ? null : attachedNode.getValue(); }
+    final Node getAttachedNode() { return attachedNode == null ? null : attachedNode.getValue(); }
 
 
-    private static FXVK vk;
     int vkType;
+    static FXVK vk;
     private static HashMap<Integer, FXVK> vkMap = new HashMap<Integer, FXVK>();
 
-    public static void attach(final Control textInput) {
+    public static void attach(final Node textInput) {
         int type = 0;
         Object typeValue = textInput.getProperties().get(VK_TYPE_PROP_KEY);
         if (typeValue instanceof String) {
@@ -97,23 +97,24 @@ public class FXVK extends Control {
             }
         }
 
-        if (vk != null && vk.vkType != type) {
-            detach();
-        }
-
         vk = vkMap.get(type);
         if (vk == null) {
             vk = new FXVK();
-            vk.setSkin(new FXVKSkin(vk));
             vk.vkType = type;
+            vk.setSkin(new FXVKSkin(vk));
             vkMap.put(type, vk);
         }
 
+        for (FXVK v : vkMap.values()) {
+            if (v != vk) {
+                v.setAttachedNode(null);
+            }
+        }
         vk.setAttachedNode(textInput);
     }
 
     public static void detach() {
-        if (vk != null) {
+        for (FXVK vk : vkMap.values()) {
             vk.setAttachedNode(null);
         }
     }

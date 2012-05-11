@@ -285,21 +285,23 @@ public abstract class TextInputControlSkin<T extends TextInputControl, B extends
             }
         };
 
-        textInput.focusedProperty().addListener(new InvalidationListener() {
-            @Override public void invalidated(Observable observable) {
-                if (useFXVK) {
-                    Platform.runLater(new Runnable() {
-                        public void run() {
-                            if (textInput.isFocused()) {
-                                FXVK.attach(textInput);
-                            } else if (!(getScene().impl_getFocusOwner() instanceof TextInputControl)) {
-                                FXVK.detach();
+        if (PlatformUtil.isEmbedded()) {
+            textInput.focusedProperty().addListener(new InvalidationListener() {
+                @Override public void invalidated(Observable observable) {
+                    if (useFXVK) {
+                        Platform.runLater(new Runnable() {
+                            public void run() {
+                                if (textInput.isFocused()) {
+                                    FXVK.attach(textInput);
+                                } else if (!(getScene().impl_getFocusOwner() instanceof TextInputControl)) {
+                                    FXVK.detach();
+                                }
                             }
-                        }
-                    });
+                        });
+                    }
                 }
-            }
-        });
+            });
+        }
 
         if (textInput.getContextMenu() == null) {
             class ContextMenuItem extends MenuItem {

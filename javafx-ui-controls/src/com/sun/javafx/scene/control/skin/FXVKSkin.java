@@ -35,6 +35,8 @@ import javafx.animation.Timeline;
 import javafx.application.Platform;
 import javafx.beans.InvalidationListener;
 import javafx.beans.Observable;
+import javafx.beans.property.DoubleProperty;
+import javafx.beans.property.SimpleDoubleProperty;
 import javafx.event.ActionEvent;
 import javafx.event.Event;
 import javafx.event.EventHandler;
@@ -45,6 +47,7 @@ import javafx.geometry.HPos;
 import javafx.geometry.Insets;
 import javafx.geometry.Point2D;
 import javafx.geometry.Pos;
+import javafx.geometry.Rectangle2D;
 import javafx.geometry.VPos;
 import javafx.scene.Node;
 import javafx.scene.Parent;
@@ -54,7 +57,7 @@ import javafx.scene.input.KeyCode;
 import javafx.scene.input.KeyEvent;
 import javafx.scene.input.MouseEvent;
 import javafx.scene.layout.*;
-import javafx.stage.Popup;
+import javafx.stage.*;
 import javafx.util.Duration;
 
 import com.sun.javafx.robot.impl.FXRobotHelper;
@@ -69,16 +72,12 @@ import static com.sun.javafx.scene.control.skin.resources.ControlResources.*;
 
 public class FXVKSkin extends SkinBase<FXVK, BehaviorBase<FXVK>> {
 
-    private final static boolean USE_SECONDARY_POPUP = false;
-
-    private static Region oldRoot;
-    private static NewRootPane newRoot;
+    private static Popup vkPopup;
     private static Popup secondaryPopup;
     private static FXVK primaryVK;
 
-    private Timeline slideInTimeline;
-    private Timeline slideOutTimeline;
-    private static Timeline slideRootTimeline;
+    private static Timeline slideInTimeline;
+    private static Timeline slideOutTimeline;
 
     private static FXVK secondaryVK;
     private static Timeline secondaryVKDelay;
@@ -109,22 +108,34 @@ public class FXVKSkin extends SkinBase<FXVK, BehaviorBase<FXVK>> {
 
     private VBox vbox;
 
+    // Proxy for read-only Window.yProperty() so we can animate.
+    private static DoubleProperty winY = new SimpleDoubleProperty();
+    static {
+        winY.addListener(new InvalidationListener() {
+            @Override public void invalidated(Observable valueModel) {
+                if (vkPopup != null) {
+                    vkPopup.setY(winY.get());
+                }
+            }
+        });
+    }
+
+
+
     public FXVKSkin(final FXVK fxvk) {
         super(fxvk, new BehaviorBase<FXVK>(fxvk));
         this.fxvk = fxvk;
 
         fxvk.setFocusTraversable(false);
 
-        slideInTimeline = new Timeline();
-        slideOutTimeline = new Timeline();
-
         fxvk.attachedNodeProperty().addListener(new InvalidationListener() {
             @Override public void invalidated(Observable valueModel) {
                 Node oldNode = attachedNode;
                 attachedNode = fxvk.getAttachedNode();
 
-                if (fxvk != secondaryVK && oldRoot != null) {
-                    translatePane(oldRoot, 0);
+                if (fxvk != FXVK.vk) {
+                    // This is not the current vk, so nothing more to do
+                    return;
                 }
 
                 if (attachedNode != null) {
@@ -148,40 +159,59 @@ public class FXVKSkin extends SkinBase<FXVK, BehaviorBase<FXVK>> {
                         });
                         secondaryVKDelay.getKeyFrames().setAll(kf);
 
+                        if (vkPopup == null) {
+                            vkPopup = new Popup();
+                            vkPopup.focusedProperty().addListener(new InvalidationListener() {
+                                @Override public void invalidated(Observable ov) {
+                                    scene.getWindow().requestFocus();
+                                }
+                            });
 
-                        if (newRoot == null) {
-                            oldRoot = (Region)scene.getRoot();
-                            newRoot = new NewRootPane(oldRoot);
-                            scene.setRoot(newRoot);
+                            double screenHeight =
+                                com.sun.javafx.Utils.getScreen(attachedNode).getBounds().getHeight();
+                            double screenVisualHeight =
+                                com.sun.javafx.Utils.getScreen(attachedNode).getVisualBounds().getHeight();
+
+                            slideInTimeline = new Timeline();
+                            slideInTimeline.getKeyFrames().setAll(
+                                new KeyFrame(Duration.millis(VK_SLIDE_MILLIS),
+                                             new KeyValue(winY, screenVisualHeight - fxvk.prefHeight(-1) + 4 /*????*/,
+                                                          Interpolator.EASE_BOTH)));
+
+                            slideOutTimeline = new Timeline();
+                            slideOutTimeline.getKeyFrames().setAll(
+                                new KeyFrame(Duration.millis(VK_SLIDE_MILLIS),
+                                             new KeyValue(winY, screenHeight, Interpolator.EASE_BOTH)));
                         }
 
-                        if (!newRoot.getChildren().contains(fxvk)){
-                            newRoot.getChildren().add(fxvk);
+                        vkPopup.getContent().setAll(fxvk);
+
+                        if (!vkPopup.isShowing()) {
+                            Platform.runLater(new Runnable() {
+                                public void run() {
+                                    Rectangle2D screenBounds =
+                                        com.sun.javafx.Utils.getScreen(attachedNode).getBounds();
+                                    vkPopup.show(attachedNode,
+                                                 (screenBounds.getWidth() - fxvk.prefWidth(-1)) / 2,
+                                                 screenBounds.getHeight() - fxvk.prefHeight(-1));
+                                }
+                            });
                         }
 
-                        newRoot.slideInTimeline = slideInTimeline;
-                        newRoot.slideOutTimeline = slideOutTimeline;
-                        newRoot.updateTimelines(fxvk);
+                        if (oldNode == null || oldNode.getScene() != attachedNode.getScene()) {
+                            fxvk.setPrefWidth(scene.getWidth());
+                            fxvk.setMaxWidth(USE_PREF_SIZE);
+                            fxvk.setPrefHeight(200);
+                        }
 
                         if (fxvk.getHeight() > 0 &&
                             (fxvk.getLayoutY() == 0 || fxvk.getLayoutY() > scene.getHeight() - fxvk.getHeight())) {
 
                             slideOutTimeline.stop();
+                            winY.set(vkPopup.getY());
                             slideInTimeline.playFromStart();
                         }
 
-
-                        Platform.runLater(new Runnable() {
-                            public void run() {
-                                if (attachedNode != null) {
-                                    double nodeBottom =
-                                        attachedNode.localToScene(attachedNode.getBoundsInLocal()).getMaxY() + 2;
-                                    if (fxvk.getLayoutY() > 0 && nodeBottom > fxvk.getLayoutY()) {
-                                        translatePane(oldRoot, fxvk.getLayoutY() - nodeBottom);
-                                    }
-                                }
-                            }
-                        });
 
                         if (oldNode == null || oldNode.getScene() != attachedNode.getScene()) {
                             fxvk.setPrefWidth(VK_WIDTH);
@@ -194,34 +224,18 @@ public class FXVKSkin extends SkinBase<FXVK, BehaviorBase<FXVK>> {
                 } else {
                     if (fxvk != secondaryVK) {
                         slideInTimeline.stop();
+                        winY.set(vkPopup.getY());
                         slideOutTimeline.playFromStart();
                     }
 
                     if (secondaryVK != null) {
                         secondaryVK.setAttachedNode(null);
-if (USE_SECONDARY_POPUP) {
                         secondaryPopup.hide();
-} else {
-                        secondaryVK.setVisible(false);
-}
                     }
                     return;
                 }
             }
         });
-    }
-
-    private static void translatePane(Parent pane, double y) {
-        if (slideRootTimeline == null) {
-            slideRootTimeline = new Timeline();
-        } else {
-            slideRootTimeline.stop();
-        }
-
-        slideRootTimeline.getKeyFrames().setAll(
-            new KeyFrame(Duration.millis(VK_SLIDE_MILLIS),
-                         new KeyValue(pane.translateYProperty(), y, Interpolator.EASE_BOTH)));
-        slideRootTimeline.playFromStart();
     }
 
     private void createKeys() {
@@ -469,15 +483,9 @@ private void setIcon(Key key, String fileName) {
 
         EventHandler<ActionEvent> actionHandler = new EventHandler<ActionEvent>() {
             @Override public void handle(ActionEvent e) {
-if (USE_SECONDARY_POPUP) {
                 if (fxvk != secondaryVK && secondaryPopup != null && secondaryPopup.isShowing()) {
                     return;
                 }
-} else {
-                if (fxvk != secondaryVK && secondaryVK != null && secondaryVK.isVisible()) {
-                    return;
-                }
-}
 
                 Node target = fxvk.getAttachedNode();
                 if (target instanceof EventTarget) {
@@ -712,16 +720,10 @@ if (USE_SECONDARY_POPUP) {
             if (secondaryVK == null) {
                 secondaryVK = new FXVK();
                 secondaryVK.getStyleClass().addAll("fxvk-secondary", "fxvk-portrait");
-if (USE_SECONDARY_POPUP) {
+                secondaryVK.setSkin(new FXVKSkin(secondaryVK));
                 secondaryPopup = new Popup();
                 secondaryPopup.setAutoHide(true);
                 secondaryPopup.getContent().add(secondaryVK);
-} else {
-                newRoot.getChildren().add(secondaryVK);
-                secondaryVK.setManaged(false);
-                secondaryVK.setVisible(false);
-                secondaryVK.impl_processCSS(true);
-}
             }
 
             if (state == State.NUMERIC) {
@@ -763,7 +765,6 @@ if (USE_SECONDARY_POPUP) {
                 secondaryVK.setMinWidth(USE_PREF_SIZE);
                 secondaryVK.setPrefHeight(h);
                 secondaryVK.setMinHeight(USE_PREF_SIZE);
-if (USE_SECONDARY_POPUP) {
                 Platform.runLater(new Runnable() {
                     public void run() {
                         // Position popup on screen
@@ -777,160 +778,11 @@ if (USE_SECONDARY_POPUP) {
                         secondaryPopup.show(key.getScene().getWindow(), x, y);
                     }
                 });
-} else {
-                // Position popup in Scene
-                Bounds keyBounds = key.localToScene(key.getBoundsInLocal());
-                double x = keyBounds.getMinX() + 5;
-                double y = keyBounds.getMinY() - secondaryVK.prefHeight(-1) - 3;
-                Scene scene = key.getScene();
-                x = Math.min(x, scene.getWidth() - w - 4);
-                //secondaryVK.setLayoutX(x);
-                //secondaryVK.setLayoutY(y);
-                secondaryVK.relocate(x, y);
-                secondaryVK.resize(secondaryVK.prefWidth(-1), secondaryVK.prefHeight(-1));
-                secondaryVK.setVisible(true);
-}
             }
         } else {
             if (secondaryVK != null) {
                 secondaryVK.setAttachedNode(null);
-if (USE_SECONDARY_POPUP) {
                 secondaryPopup.hide();
-} else {
-                secondaryVK.setVisible(false);
-}
-            }
-        }
-    }
-
-    static class NewRootPane extends Pane {
-        Timeline slideInTimeline;
-        Timeline slideOutTimeline;
-        double dragStartY;
-
-        NewRootPane(final Region oldRoot) {
-            getChildren().add(oldRoot);
-            prefWidthProperty().bind(oldRoot.prefWidthProperty());
-            prefHeightProperty().bind(oldRoot.prefHeightProperty());
-
-
-            addEventHandler(MOUSE_PRESSED, new EventHandler<MouseEvent>() {
-                @Override public void handle(MouseEvent e) {
-                    dragStartY = e.getY() - oldRoot.getTranslateY();
-                    e.consume();
-                }
-            });
-
-            addEventHandler(MOUSE_DRAGGED, new EventHandler<MouseEvent>() {
-                @Override public void handle(MouseEvent e) {
-                    for (Node child : getChildren()) {
-                        if (child instanceof FXVK) {
-                            FXVK fxvk = (FXVK)child;
-                            if (fxvk.isVisible()) {
-                                double y =
-                                    Math.min(0, Math.max(e.getY() - dragStartY,
-                                                         fxvk.getLayoutY() - oldRoot.getHeight()));
-                                oldRoot.setTranslateY(y);
-                                break;
-                            }
-                        }
-                    }
-                    e.consume();
-                }
-            });
-        }
-
-        @Override protected double computePrefWidth(double height) {
-            return oldRoot.prefWidth(height);
-        }
-
-        @Override protected double computePrefHeight(double width) {
-            return oldRoot.prefHeight(width);
-        }
-
-        private void updateTimelines(FXVK fxvk) {
-            double rootHeight = getHeight();
-            double vkHeight = fxvk.getHeight();
-
-            ((FXVKSkin)fxvk.getSkin()).slideInTimeline.getKeyFrames().setAll(
-                new KeyFrame(Duration.ZERO,
-                             new KeyValue(fxvk.visibleProperty(), true),
-                             new KeyValue(fxvk.layoutYProperty(), rootHeight)),
-                new KeyFrame(Duration.millis(VK_SLIDE_MILLIS),
-                             new KeyValue(fxvk.visibleProperty(), true),
-                             new KeyValue(fxvk.layoutYProperty(),
-                                          Math.floor(rootHeight - vkHeight),
-                                          Interpolator.EASE_BOTH)));
-
-            ((FXVKSkin)fxvk.getSkin()).slideOutTimeline.getKeyFrames().setAll(
-                new KeyFrame(Duration.ZERO,
-                             new KeyValue(fxvk.layoutYProperty(),
-                                          Math.floor(rootHeight - vkHeight))),
-                new KeyFrame(Duration.millis(VK_SLIDE_MILLIS),
-                             new KeyValue(fxvk.layoutYProperty(),
-                                          rootHeight,
-                                          Interpolator.EASE_BOTH),
-                             new KeyValue(fxvk.visibleProperty(), false)));
-        }
-
-        @Override public void layoutChildren() {
-            if (getScene() != null && getScene().getWindow() != null &&
-                getWidth() > getScene().getWindow().getWidth()) {
-                // Too soon to layout keyboard
-                return;
-            }
-
-            final double rootWidth = getWidth();
-            final double rootHeight = getHeight();
-            final double vkHeight = (rootWidth > rootHeight) ? VK_HEIGHT : VK_PORTRAIT_HEIGHT;
-
-            for (Node child : getChildren()) {
-                if (child instanceof FXVK && !child.getStyleClass().contains("fxvk-secondary")) {
-                    final FXVK fxvk = (FXVK)child;
-                    if (rootWidth > rootHeight) {
-                        fxvk.getStyleClass().remove("fxvk-portrait");
-                    } else {
-                        if (!fxvk.getStyleClass().contains("fxvk-portrait")) {
-                            fxvk.getStyleClass().add("fxvk-portrait");
-                        }
-                    }
-
-                    boolean resized = false;
-                    if (fxvk.getWidth() != rootWidth || fxvk.getHeight() != vkHeight) {
-                        fxvk.setLayoutY(rootHeight);
-                        fxvk.resize(rootWidth, vkHeight);
-                        updateTimelines(fxvk);
-                        resized = true;
-                    }
-
-                    if (fxvk.getLayoutY() == 0) {
-                        fxvk.setLayoutY(rootHeight);
-                    }
-
-
-                    if (fxvk.isVisible()) {
-                        if (fxvk.getLayoutY() >= rootHeight) {
-                            slideOutTimeline.stop();
-                            slideInTimeline.playFromStart();
-                        } else if (resized && slideInTimeline.getStatus() == Status.STOPPED
-                                           && slideOutTimeline.getStatus() == Status.STOPPED) {
-                            fxvk.setLayoutY(rootHeight - vkHeight);
-                        }
-                        Platform.runLater(new Runnable() {
-                            public void run() {
-                                Node attachedNode = fxvk.getAttachedNode();
-                                if (attachedNode != null) {
-                                    double oldRootY = oldRoot.getTranslateY();
-                                    double nodeBottom =
-                                        attachedNode.localToScene(attachedNode.getBoundsInLocal()).getMaxY() + 2;
-                                    if (nodeBottom > rootHeight - vkHeight) {
-                                        translatePane(oldRoot, rootHeight - vkHeight - nodeBottom + oldRootY);
-                                    }
-                                }
-                            }
-                        });
-                    }
-                }
             }
         }
     }
