@@ -476,6 +476,259 @@ public class ColorTest {
     }
 
     @Test
+    public void testWebRgb() {
+        Color color = Color.web("rgb(128, 64, 192)");
+        assertEquals(128.0/255.0, color.getRed(), 0.0001);
+        assertEquals( 64.0/255.0, color.getGreen(), 0.0001);
+        assertEquals(192.0/255.0, color.getBlue(), 0.0001);
+        assertEquals(1.0, color.getOpacity(), 0.0001);
+    }
+
+    @Test
+    public void testWebRgbRange() {
+        Color c1 = Color.web("rgb(255, 0, 255)");
+        Color c2 = Color.web("rgb(256, -1, 256)");
+        assertEquals(c1, c2);
+        Color c3 = Color.web("rgb(0, 255, 0)");
+        Color c4 = Color.web("rgb(-1, 256, -1)");
+        assertEquals(c3, c4);
+    }
+
+    @Test
+    public void testWebRgba() {
+        Color color = Color.web("rgba(128, 64, 192, 0.6)");
+        assertEquals(128.0/255.0, color.getRed(), 0.0001);
+        assertEquals( 64.0/255.0, color.getGreen(), 0.0001);
+        assertEquals(192.0/255.0, color.getBlue(), 0.0001);
+        assertEquals(0.6, color.getOpacity(), 0.0001);
+    }
+
+    @Test
+    public void testWebRgbaRange() {
+        Color c1 = Color.web("rgba(255, 0, 255, 1.0)");
+        Color c2 = Color.web("rgba(256, -1, 256, 1.1)");
+        assertEquals(c1, c2);
+        Color c3 = Color.web("rgba(0, 255, 0, 1.0)");
+        Color c4 = Color.web("rgba(-1, 256, -1, 1.1)");
+        assertEquals(c3, c4);
+        Color c5 = Color.web("rgba(0, 0, 0, 0.0)");
+        Color c6 = Color.web("rgba(0, 0, 0, -1)");
+        assertEquals(c5, c6);
+    }
+
+    @Test
+    public void testWebRgbPercent() {
+        Color color = Color.web("rgb(60%, 40%, 100%)");
+        assertEquals(0.6, color.getRed(), 0.0001);
+        assertEquals(0.4, color.getGreen(), 0.0001);
+        assertEquals(1.0, color.getBlue(), 0.0001);
+        assertEquals(1.0, color.getOpacity(), 0.0001);
+    }
+
+    @Test
+    public void testWebRgbPercentRange() {
+        Color c1 = Color.web("rgb(100%,  0%, 100%)");
+        Color c2 = Color.web("rgb(101%, -1%, 101%)");
+        assertEquals(c1, c2);
+        Color c3 = Color.web("rgb( 0%, 100%,  0%)");
+        Color c4 = Color.web("rgb(-1%, 101%, -1%)");
+        assertEquals(c3, c4);
+    }
+
+    @Test
+    public void testWebRgbaPercent() {
+        Color color = Color.web("rgba(60%, 40%, 100%, 0.6)");
+        assertEquals(0.6, color.getRed(), 0.0001);
+        assertEquals(0.4, color.getGreen(), 0.0001);
+        assertEquals(1.0, color.getBlue(), 0.0001);
+        assertEquals(0.6, color.getOpacity(), 0.0001);
+    }
+
+    @Test
+    public void testWebRgbaPercentRange() {
+        Color c1 = Color.web("rgba(100%,  0%, 100%, 1.0)");
+        Color c2 = Color.web("rgba(101%, -1%, 101%, 1.1)");
+        assertEquals(c1, c2);
+        Color c3 = Color.web("rgba( 0%, 100%,  0%, 1.0)");
+        Color c4 = Color.web("rgba(-1%, 101%, -1%, 1.1)");
+        assertEquals(c3, c4);
+        Color c5 = Color.web("rgba(0%, 0%, 0%, 0.0)");
+        Color c6 = Color.web("rgba(0%, 0%, 0%, -1)");
+        assertEquals(c5, c6);
+    }
+
+    @Test
+    public void testWebRgbPercentMix() {
+        Color color = Color.web("rgb(60%, 40%, 192)");
+        assertEquals(0.6, color.getRed(), 0.0001);
+        assertEquals(0.4, color.getGreen(), 0.0001);
+        assertEquals(192.0/255.0, color.getBlue(), 0.0001);
+        assertEquals(1.0, color.getOpacity(), 0.0001);
+    }
+
+    @Test
+    public void testWebRgbaPercentMix() {
+        Color color = Color.web("rgba(60%, 40%, 192, 0.6)");
+        assertEquals(0.6, color.getRed(), 0.0001);
+        assertEquals(0.4, color.getGreen(), 0.0001);
+        assertEquals(192.0/255.0, color.getBlue(), 0.0001);
+        assertEquals(0.6, color.getOpacity(), 0.0001);
+    }
+
+    @Test
+    public void testWebHsl() {
+        Color color = Color.web("hsl(180, 50%, 100%)");
+        Color ref = Color.hsb(180, 0.5, 1.0);
+        assertEquals(ref.getRed(),     color.getRed(),     0.0001);
+        assertEquals(ref.getGreen(),   color.getGreen(),   0.0001);
+        assertEquals(ref.getBlue(),    color.getBlue(),    0.0001);
+        assertEquals(ref.getOpacity(), color.getOpacity(), 0.0001);
+    }
+
+    @Test
+    public void testWebHslRange() {
+        Color c1 = Color.web("hsl( 240,  0%, 100%)");
+        Color c2 = Color.web("hsl(-120, -1%, 101%)");
+        assertEquals(c1, c2);
+        Color c3 = Color.web("hsl(240, 100%,  0%)");
+        Color c4 = Color.web("hsl(600, 101%, -1%)");
+        assertEquals(c3, c4);
+    }
+
+    @Test
+    public void testWebHsla() {
+        Color color = Color.web("hsla(180, 50%, 100%, 0.6)");
+        Color ref = Color.hsb(180, 0.5, 1.0, 0.6);
+        assertEquals(ref.getRed(),     color.getRed(),     0.0001);
+        assertEquals(ref.getGreen(),   color.getGreen(),   0.0001);
+        assertEquals(ref.getBlue(),    color.getBlue(),    0.0001);
+        assertEquals(ref.getOpacity(), color.getOpacity(), 0.0001);
+    }
+
+    @Test
+    public void testWebHslaRange() {
+        Color c1 = Color.web("hsla( 240,  0%, 100%, 1.0)");
+        Color c2 = Color.web("hsla(-120, -1%, 101%, 1.1)");
+        assertEquals(c1, c2);
+        Color c3 = Color.web("hsla(240, 100%,  0%, 1.0)");
+        Color c4 = Color.web("hsla(600, 101%, -1%, 1.1)");
+        assertEquals(c3, c4);
+        Color c5 = Color.web("hsla(240, 0%, 0%, 0.0)");
+        Color c6 = Color.web("hsla(240, 0%, 0%, -1)");
+        assertEquals(c5, c6);
+    }
+
+    @Test(expected=IllegalArgumentException.class)
+    public void testWebRgb2Param() {
+        Color.web("rgb(100, 100)");
+    }
+
+    @Test(expected=IllegalArgumentException.class)
+    public void testWebRgb1Param() {
+        Color.web("rgb(100)");
+    }
+
+    @Test(expected=IllegalArgumentException.class)
+    public void testWebRgb0Param() {
+        Color.web("rgb()");
+    }
+
+    @Test(expected=IllegalArgumentException.class)
+    public void testWebRgbNoParen() {
+        Color.web("rgb 100, 100, 100");
+    }
+
+    @Test(expected=IllegalArgumentException.class)
+    public void testWebRgbNoCloseParen() {
+        Color.web("rgb(100, 100, 100");
+    }
+
+    @Test(expected=IllegalArgumentException.class)
+    public void testWebRgba3Param() {
+        Color.web("rgba(100, 100, 100)");
+    }
+
+    @Test(expected=IllegalArgumentException.class)
+    public void testWebRgba2Param() {
+        Color.web("rgba(100, 100)");
+    }
+
+    @Test(expected=IllegalArgumentException.class)
+    public void testWebRgba1Param() {
+        Color.web("rgba(100)");
+    }
+
+    @Test(expected=IllegalArgumentException.class)
+    public void testWebRgba0Param() {
+        Color.web("rgba()");
+    }
+
+    @Test(expected=IllegalArgumentException.class)
+    public void testWebRgbaNoParen() {
+        Color.web("rgba 100, 100, 100");
+    }
+
+    @Test(expected=IllegalArgumentException.class)
+    public void testWebRgbaNoCloseParen() {
+        Color.web("rgba(100, 100, 100, 0.5");
+    }
+
+    @Test(expected=IllegalArgumentException.class)
+    public void testWebHsl2Param() {
+        Color.web("hsl(240, 50%)");
+    }
+
+    @Test(expected=IllegalArgumentException.class)
+    public void testWebHsl1Param() {
+        Color.web("hsl(240)");
+    }
+
+    @Test(expected=IllegalArgumentException.class)
+    public void testWebHsl0Param() {
+        Color.web("hsl()");
+    }
+
+    @Test(expected=IllegalArgumentException.class)
+    public void testWebHslNoParen() {
+        Color.web("hsl 240, 50%, 50%");
+    }
+
+    @Test(expected=IllegalArgumentException.class)
+    public void testWebHslNoCloseParen() {
+        Color.web("hsl(240, 50%, 50%");
+    }
+
+    @Test(expected=IllegalArgumentException.class)
+    public void testWebHsla3Param() {
+        Color.web("hsla(240, 50%, 50%)");
+    }
+
+    @Test(expected=IllegalArgumentException.class)
+    public void testWebHsla2Param() {
+        Color.web("hsla(240, 50%)");
+    }
+
+    @Test(expected=IllegalArgumentException.class)
+    public void testWebHsla1Param() {
+        Color.web("hsla(240)");
+    }
+
+    @Test(expected=IllegalArgumentException.class)
+    public void testWebHsla0Param() {
+        Color.web("hsla()");
+    }
+
+    @Test(expected=IllegalArgumentException.class)
+    public void testWebHslaNoParen() {
+        Color.web("hsla 240, 50%, 50%, 0.5");
+    }
+
+    @Test(expected=IllegalArgumentException.class)
+    public void testWebHslaNoCloseParen() {
+        Color.web("hsla(240, 50%, 50%, 0.5");
+    }
+
+    @Test
     public void testDeriveColor() {
         Color original = Color.hsb(180, 0.4, 0.8, 0.5);
         Color color = original.deriveColor(-90, 2, 0.5, 2);
