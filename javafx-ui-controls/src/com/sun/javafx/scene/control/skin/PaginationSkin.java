@@ -643,10 +643,13 @@ public class PaginationSkin extends SkinBase<Pagination, PaginationBehavior>  {
 
         private HBox controlBox;
         private Button leftArrowButton;
+        private StackPane leftArrow;
         private Button rightArrowButton;
+        private StackPane rightArrow;
         private ToggleGroup indicatorButtons;
         private Label pageInformation;
         private double previousWidth = -1;
+        private double minButtonSize = -1;
 
         public NavigationControl() {
             getStyleClass().setAll("pagination-control");
@@ -655,17 +658,40 @@ public class PaginationSkin extends SkinBase<Pagination, PaginationBehavior>  {
             controlBox.getStyleClass().add("control-box");
 
             leftArrowButton = new Button();
+            minButtonSize = leftArrowButton.getFont().getSize() * 2;
+            leftArrowButton.fontProperty().addListener(new ChangeListener<Font>() {
+                @Override public void changed(ObservableValue<? extends Font> arg0, Font arg1, Font newFont) {
+                    minButtonSize = newFont.getSize() * 2;
+                    for(Node child: controlBox.getChildren()) {
+                        ((Control)child).setMinSize(minButtonSize, minButtonSize);
+                    }
+                    // We want to relayout the indicator buttons because the size has changed.
+                    requestLayout();
+                }
+            });
+            leftArrowButton.setMinSize(minButtonSize, minButtonSize);
             leftArrowButton.getStyleClass().add("left-arrow-button");
             leftArrowButton.setFocusTraversable(false);
+            HBox.setMargin(leftArrowButton, new Insets(0, 4, 0, 0));
+            leftArrow = new StackPane();
+            leftArrow.setMaxSize(USE_PREF_SIZE, USE_PREF_SIZE);
+            leftArrowButton.setGraphic(leftArrow);
+            leftArrow.getStyleClass().add("left-arrow");
 
             rightArrowButton = new Button();
+            rightArrowButton.setMinSize(minButtonSize, minButtonSize);
             rightArrowButton.getStyleClass().add("right-arrow-button");
             rightArrowButton.setFocusTraversable(false);
+            HBox.setMargin(rightArrowButton, new Insets(0, 0, 0, 4));
+            rightArrow = new StackPane();
+            rightArrow.setMaxSize(USE_PREF_SIZE, USE_PREF_SIZE);
+            rightArrowButton.setGraphic(rightArrow);
+            rightArrow.getStyleClass().add("right-arrow");
 
             indicatorButtons = new ToggleGroup();
 
             pageInformation = new Label();
-            //pageInformation.getStyleClass().add("page-information");
+            pageInformation.getStyleClass().add("page-information");
 
             getChildren().addAll(controlBox, pageInformation);
             initializeNavigationHandlers();
@@ -719,6 +745,7 @@ public class PaginationSkin extends SkinBase<Pagination, PaginationBehavior>  {
             controlBox.getChildren().add(leftArrowButton);
             for (int i = fromIndex; i <= toIndex; i++) {
                 IndicatorButton ib = new IndicatorButton(i);
+                ib.setMinSize(minButtonSize, minButtonSize);
                 ib.setToggleGroup(indicatorButtons);
                 controlBox.getChildren().add(ib);
             }

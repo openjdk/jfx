@@ -3397,28 +3397,64 @@ Only the properties with values that are different from the TextBox are specifie
 
 .pagination .pagination-control {
     -fx-background-color: transparent;    
-    -fx-padding: 0.833333em 0em 0.833333em 0em; /* 10 5 10 5 */            
+    -fx-padding: 0.833333em 0em 0.833333em 0em;
 }
 
 .pagination .pagination-control .control-box {
-    -fx-spacing: 10;
+    -fx-spacing: 4;
     -fx-alignment: center;
 }
 
-.pagination .pagination-control .left-arrow-button {    
-    -fx-padding: 0.583em 0.5em 0.583em 0.583em; /* 7 6 7 7 */
-    -fx-shape: "M 0 0 L -13 7 L 0 13 z";    
+.pagination .pagination-control .left-arrow-button{
+    -fx-background-radius: 0;
+    -fx-padding: 0.166667em 0.416em 0.25em 0.333em;
+}
+.pagination .pagination-control .right-arrow-button {
+    -fx-background-radius: 0;
+    -fx-padding: 0.166667em 0.333em 0.25em 0.416em;
 }
 
-.pagination .pagination-control .right-arrow-button {    
-    -fx-padding: 0.583em 0.583em 0.583em 0.5em; /* 7 7 6 7 */
+.pagination .pagination-control .left-arrow {
+    -fx-background-color: -fx-mark-highlight-color, -fx-mark-color;
+    -fx-background-insets: 1 0 -1 0, 0;
+    -fx-padding: 0.375em 0.291em 0.375em 0.291em;
+    -fx-shape: "M 0 0 L -13 7 L 0 13 z";
+    -fx-scale-shape: true;
+}
+
+.pagination .pagination-control .right-arrow {
+    -fx-background-color: -fx-mark-highlight-color, -fx-mark-color;
+    -fx-background-insets: 1 0 -1 0, 0;
+    -fx-padding: 0.375em 0.291em 0.375em 0.291em;
     -fx-shape: "M 0 0 L 13 7 L 0 13 z";
+    -fx-scale-shape: true;
 }
 
 .pagination .pagination-control .bullet-button {   
-   -fx-background-radius: 1.0em; /* large value to make sure this remains circular */
-   -fx-padding: 0.583em; /* 7 -- padding from outside edge to the inner black dot */
+   -fx-background-radius: 0, 4em, 4em, 4em, 4em;
+   -fx-padding: 0.333em;
+   
+   -fx-background-color: transparent, -fx-shadow-highlight-color, -fx-outer-border, -fx-inner-border, -fx-body-color;
+   -fx-background-insets: 0, 4 4 3 4,  5,  6,  7;
+}
+
+.pagination .pagination-control .bullet-button:selected {   
+    -fx-base: -fx-accent;
+}
+
+.pagination.bullet .pagination-control .left-arrow-button, .pagination.bullet .pagination-control .right-arrow-button {
+    -fx-background-radius: 4em;
 }
 
 .pagination .pagination-control .number-button {
+    -fx-background-radius: 0;
+    -fx-padding: 0.166667em 0.25em 0.25em 0.333em;
+    -fx-background-color: -fx-shadow-highlight-color, -fx-outer-border, -fx-inner-border, -fx-body-color;
+}
+
+.pagination .pagination-control .number-button:selected {   
+    -fx-base: -fx-accent;
+}
+.pagination .pagination-control .page-information {   
+    -fx-padding: 0.416em 0 0 0;
 }
