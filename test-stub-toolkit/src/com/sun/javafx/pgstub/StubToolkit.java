@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2012, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -318,7 +318,6 @@ public class StubToolkit extends Toolkit {
         // TODO: The contains testing could be done directly without creating a Shape
         return tmpStroke.createStrokedShape(shape).contains((float) x, (float) y);
     }
-
 
     @Override
     public Shape createStrokedShape(Shape shape,
@@ -674,7 +673,10 @@ public class StubToolkit extends Toolkit {
 
     @Override
     public PathElement[] convertShapeToFXPath(Object shape) {
-        throw new UnsupportedOperationException();
+        // Had to be mocked up for TextField tests (for the caret!)
+        // Since the "shape" could be anything, I'm just returning
+        // something here, doesn't matter what.
+        return new PathElement[0];
     }
 
     @Override
@@ -852,12 +854,12 @@ public class StubToolkit extends Toolkit {
 
     @Override
     public long getMultiClickTime() {
-	return 500L;
+        return 500L;
     }
 
     @Override
     public int getMultiClickMaxX() {
-	return 5;
+        return 5;
     }
 
     @Override
@@ -942,6 +944,6 @@ public class StubToolkit extends Toolkit {
         public void setMenus(List<MenuBase> menus) {
             throw new UnsupportedOperationException("Not supported yet.");
         }
-        
+
     }
 }
