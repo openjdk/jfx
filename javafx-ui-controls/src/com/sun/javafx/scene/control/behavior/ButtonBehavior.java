@@ -71,21 +71,7 @@ public class ButtonBehavior<C extends ButtonBase> extends BehaviorBase<C> {
                 }
             }
         };
-        button.focusedProperty().addListener(focusListener);       
-
-        if (PlatformUtil.isEmbedded()) {
-            button.setOnTouchPressed(new EventHandler<TouchEvent>() {
-                @Override public void handle(TouchEvent e) {                    
-                    keyPressed();
-                }            
-            });
-
-            button.setOnTouchReleased(new EventHandler<TouchEvent>() {
-                @Override public void handle(TouchEvent e) {                    
-                    keyReleased();
-                }            
-            });        
-        }
+        button.focusedProperty().addListener(focusListener);
     }
 
     /***************************************************************************

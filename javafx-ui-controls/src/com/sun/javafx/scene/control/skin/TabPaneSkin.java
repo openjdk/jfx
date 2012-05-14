@@ -908,15 +908,6 @@ public class TabPaneSkin extends SkinBase<TabPane, TabPaneBehavior> {
                     setOnMousePressed(null);
                 }
             });
-
-            if (PlatformUtil.isEmbedded()) {
-                closeBtn.setOnTouchPressed(new EventHandler<TouchEvent>() {
-                    @Override public void handle(TouchEvent arg0) {
-                        removeListeners(getTab());
-                        getBehavior().closeTab(getTab());
-                    }                    
-                });
-            }
             
             updateGraphicRotation();
 
@@ -1089,15 +1080,7 @@ public class TabPaneSkin extends SkinBase<TabPane, TabPaneBehavior> {
                         getBehavior().selectTab(getTab());
                     }
                 }
-            });
-            
-            if (PlatformUtil.isEmbedded()) {
-                setOnTouchPressed(new EventHandler<TouchEvent>() {
-                    @Override public void handle(TouchEvent arg0) {
-                        getBehavior().selectTab(getTab());
-                    }                    
-                });
-            }
+            });            
         }
 
         private void updateGraphicRotation() {
@@ -1380,14 +1363,6 @@ public class TabPaneSkin extends SkinBase<TabPane, TabPaneBehavior> {
                 }
             });
             
-            if (PlatformUtil.isEmbedded()) {
-                downArrowBtn.setOnTouchPressed(new EventHandler<TouchEvent>() {
-                    @Override public void handle(TouchEvent arg0) {
-                        showPopupMenu();
-                    }                    
-                });
-            }
-
             setupPopupMenu();
 
             inner = new StackPane() {
