@@ -48,6 +48,9 @@ import javafx.beans.property.SimpleBooleanProperty;
 import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
 import javafx.beans.value.WritableValue;
+import javafx.geometry.HPos;
+import javafx.geometry.Point2D;
+import javafx.geometry.VPos;
 import javafx.scene.paint.Color;
 
 /**
@@ -89,7 +92,7 @@ public class ColorPickerSkin extends ComboBoxPopupControl<Color> {
                 });
             }
         }
-//        getPopup().setAutoHide(false);
+        getPopup().setAutoHide(false);
         registerChangeListener(colorPicker.valueProperty(), "VALUE");
     }
     
@@ -155,6 +158,7 @@ public class ColorPickerSkin extends ComboBoxPopupControl<Color> {
         super.show();
         final ColorPicker colorPicker = (ColorPicker)getSkinnable();
         popupContent.updateSelection(colorPicker.getValue());
+        popupContent.clearFocus();
         popupContent.setDialogLocation(getPopup().getX()+getPopup().getWidth(), getPopup().getY());
     }
     

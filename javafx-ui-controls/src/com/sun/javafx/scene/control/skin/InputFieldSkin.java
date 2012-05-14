@@ -44,28 +44,28 @@ abstract class InputFieldSkin implements Skin<InputField> {
         // Money can be input.
         textField = new InnerTextField() {
             @Override public void replaceText(int start, int end, String text) {
-//                String t = textField.getText() == null ? "" : textField.getText();
-//                t = t.substring(0, start) + text + t.substring(end);
-//                if (accept(t)) {
-//                    super.replaceText(start, end, text);
-//                }
-                if (!text.matches("[a-z]")) {
+                String t = textField.getText() == null ? "" : textField.getText();
+                t = t.substring(0, start) + text + t.substring(end);
+                if (accept(t)) {
                     super.replaceText(start, end, text);
                 }
+//                if (!text.matches("[a-z]")) {
+//                    super.replaceText(start, end, text);
+//                }
             }
 
             @Override public void replaceSelection(String text) {
-//                String t = textField.getText() == null ? "" : textField.getText();
-//                int start = Math.min(textField.getAnchor(), textField.getCaretPosition());
-//                int end = Math.max(textField.getAnchor(), textField.getCaretPosition());
-//                t = t.substring(0, start) + text + t.substring(end);
-//                if (accept(t)) {
-//                    super.replaceSelection(text);
-//                }
-                
-                if (!text.matches("[a-z]")) {
+                String t = textField.getText() == null ? "" : textField.getText();
+                int start = Math.min(textField.getAnchor(), textField.getCaretPosition());
+                int end = Math.max(textField.getAnchor(), textField.getCaretPosition());
+                t = t.substring(0, start) + text + t.substring(end);
+                if (accept(t)) {
                     super.replaceSelection(text);
                 }
+//                
+//                if (!text.matches("[a-z]")) {
+//                    super.replaceSelection(text);
+//                }
             }
         };
 

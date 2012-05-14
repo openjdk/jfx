@@ -48,6 +48,7 @@ class WebColorFieldSkin extends InputFieldSkin {
         super.dispose();
     }
 
+    //  "^#([A-Fa-f0-9]{6}|[A-Fa-f0-9]{3})$";
     protected boolean accept(String text) {
         if (text.length() == 0) return true;
         if (text.matches("#[a-fA-F0-9]{0,6}")) {
