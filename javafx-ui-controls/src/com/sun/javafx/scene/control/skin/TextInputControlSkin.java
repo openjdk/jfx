@@ -55,6 +55,7 @@ import javafx.scene.input.InputMethodEvent;
 import javafx.scene.input.InputMethodHighlight;
 import javafx.scene.input.InputMethodRequests;
 import javafx.scene.input.InputMethodTextRun;
+import javafx.scene.input.TouchEvent;
 import javafx.scene.paint.Color;
 import javafx.scene.paint.Paint;
 import javafx.scene.shape.ClosePath;
@@ -301,6 +302,19 @@ public abstract class TextInputControlSkin<T extends TextInputControl, B extends
                     }
                 }
             });
+
+            if (textInput.getOnTouchStationary() == null) {
+                textInput.setOnTouchStationary(new EventHandler<TouchEvent>() {
+                    @Override public void handle(TouchEvent event) {
+                        ContextMenu menu = textInput.getContextMenu();
+                        if (menu != null &&
+                            showContextMenu(menu, event.getTouchPoint().getScreenX(),
+                                            event.getTouchPoint().getScreenY(), false)) {
+                            event.consume();
+                        }
+                    }
+                });
+            }
         }
 
         if (textInput.getContextMenu() == null) {
