@@ -36,6 +36,7 @@ public enum DirtyBits {
     NODE_TRANSFORM,
     NODE_BOUNDS,
     NODE_VISIBLE,
+    NODE_TREE_VISIBLE,
     NODE_DEPTH_TEST,
     NODE_BLENDMODE,
     NODE_CSS,

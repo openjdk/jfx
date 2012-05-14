@@ -510,6 +510,10 @@ public abstract class Node implements EventTarget {
                                   ? null
                                   : Blend.impl_getToolkitMode(mode));
         }
+
+        if (impl_isDirty(DirtyBits.NODE_TREE_VISIBLE) && !treeVisible) {
+            peer.dispose();
+        }
     }
 
     /*************************************************************************
@@ -696,6 +700,7 @@ public abstract class Node implements EventTarget {
                     if (getClip() != null) {
                         getClip().setScene(_scene);
                     }
+                    updateTreeVisible();
                     updateCanReceiveFocus();
                     if (isFocusTraversable()) {
                         if (oldScene != null) {
@@ -5973,7 +5978,8 @@ public abstract class Node implements EventTarget {
     }
 
     private void updateTreeVisible() {
-        setTreeVisible(isVisible() && ((getParent() == null) || getParent().impl_isTreeVisible()));
+        setTreeVisible(isVisible() && ((getParent() != null && getParent().impl_isTreeVisible()) ||
+                (getScene() != null && getScene().getRoot() == this)));
     }
 
     private boolean treeVisible;
@@ -5985,6 +5991,7 @@ public abstract class Node implements EventTarget {
             updateCanReceiveFocus();
             focusSetDirty(getScene());
             ((TreeVisiblePropertyReadOnly)treeVisibleProperty()).invalidate();
+            impl_setDirty(DirtyBits.NODE_TREE_VISIBLE);
         }
     }
 
