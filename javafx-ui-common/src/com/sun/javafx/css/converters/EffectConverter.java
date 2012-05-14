@@ -24,6 +24,7 @@
  */
 package com.sun.javafx.css.converters;
 
+import com.sun.javafx.Logging;
 import javafx.scene.effect.BlurType;
 import javafx.scene.effect.DropShadow;
 import javafx.scene.effect.Effect;
@@ -34,6 +35,8 @@ import javafx.scene.text.Font;
 import com.sun.javafx.css.Size;
 import com.sun.javafx.css.StyleConverter;
 import com.sun.javafx.css.ParsedValue;
+import com.sun.javafx.css.StyleManager;
+import com.sun.javafx.logging.PlatformLogger;
 
 public class EffectConverter extends StyleConverter<ParsedValue[], Effect> {
 
@@ -50,6 +53,11 @@ public class EffectConverter extends StyleConverter<ParsedValue[], Effect> {
     public static EffectConverter getInstance() {
         return Holder.EFFECT_CONVERTER;
     }
+    
+    @Override
+    public Effect convert(ParsedValue<ParsedValue[], Effect> value, Font font) {
+        throw new IllegalArgumentException("Parsed value is not an Effect");
+    }    
 
     protected EffectConverter() {
         super();

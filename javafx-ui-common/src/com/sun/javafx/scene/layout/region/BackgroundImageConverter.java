@@ -75,6 +75,7 @@ public final class BackgroundImageConverter extends StyleConverter<ParsedValue[]
         List<BackgroundImage> images = new ArrayList<BackgroundImage>();
         int nImages = (imageUrls != null) ? imageUrls.length : 0;
         for (int index = 0; index < nImages; index++) {
+            if (imageUrls[index] == null) continue;
             BackgroundImage.BackgroundRepeat repeat = (repeats != null) ? repeats[Math.min(index, repeats.length - 1)] : null;
             BackgroundImage.BackgroundPosition position = (positions != null) ? positions[Math.min(index, positions.length - 1)] : null;
             BackgroundImage.BackgroundSize size = (sizes != null) ? sizes[Math.min(index, sizes.length - 1)] : null;
