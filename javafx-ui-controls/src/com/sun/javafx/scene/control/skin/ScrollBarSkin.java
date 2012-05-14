@@ -38,6 +38,7 @@ import javafx.scene.input.ScrollEvent;
 
 import com.sun.javafx.Utils;
 import com.sun.javafx.scene.control.behavior.ScrollBarBehavior;
+import javafx.event.EventType;
 
 public class ScrollBarSkin extends SkinBase<ScrollBar, ScrollBarBehavior> {
 
@@ -173,6 +174,11 @@ public class ScrollBarSkin extends SkinBase<ScrollBar, ScrollBarBehavior> {
 
         thumb.setOnMousePressed(new EventHandler<javafx.scene.input.MouseEvent>() {
             @Override public void handle(javafx.scene.input.MouseEvent me) {
+                if (me.isSynthesized()) {
+                    // touch-screen events handled by Scroll handler
+                    me.consume();
+                    return;
+                }
                 /*
                 ** if max isn't greater than min then there is nothing to do here
                 */
@@ -188,6 +194,11 @@ public class ScrollBarSkin extends SkinBase<ScrollBar, ScrollBarBehavior> {
 
         thumb.setOnMouseDragged(new EventHandler<javafx.scene.input.MouseEvent>() {
             @Override public void handle(javafx.scene.input.MouseEvent me) {
+                if (me.isSynthesized()) {
+                    // touch-screen events handled by Scroll handler
+                    me.consume();
+                    return;
+                }
                 /*
                 ** if max isn't greater than min then there is nothing to do here
                 */
@@ -205,6 +216,46 @@ public class ScrollBarSkin extends SkinBase<ScrollBar, ScrollBarBehavior> {
                 }
             }
         });
+
+        thumb.setOnScrollStarted(new EventHandler<javafx.scene.input.ScrollEvent>() {
+            @Override public void handle(javafx.scene.input.ScrollEvent se) {
+                if (se.isDirect()) {
+                    /*
+                    ** if max isn't greater than min then there is nothing to do here
+                    */
+                    if (getSkinnable().getMax() > getSkinnable().getMin()) {
+                        dragStart = thumb.localToParent(se.getX(), se.getY());
+                        double clampedValue = Utils.clamp(getSkinnable().getMin(), getSkinnable().getValue(), getSkinnable().getMax());
+                        preDragThumbPos = (clampedValue - getSkinnable().getMin()) / (getSkinnable().getMax() - getSkinnable().getMin());
+                        se.consume();
+                    }
+                }
+            }
+        });
+
+        thumb.setOnScroll(new EventHandler<ScrollEvent>() {
+            @Override public void handle(ScrollEvent event) {
+                if (event.isDirect()) {
+                    /*
+                    ** if max isn't greater than min then there is nothing to do here
+                    */
+                    if (getSkinnable().getMax() > getSkinnable().getMin()) {
+                        /*
+                        ** if the tracklength isn't greater then do nothing....
+                        */
+                        if (trackLength > thumbLength) {
+                            Point2D cur = thumb.localToParent(event.getX(), event.getY());
+                            double dragPos = getSkinnable().getOrientation() == Orientation.VERTICAL ? cur.getY() - dragStart.getY(): cur.getX() - dragStart.getX();
+                            getBehavior().thumbDragged(null/*todo*/, preDragThumbPos + dragPos / (trackLength - thumbLength));
+                        }
+
+                        event.consume();
+                        return;
+                    }
+                }
+            }
+        });
+
 
         setOnScroll(new EventHandler<javafx.scene.input.ScrollEvent>() {
             @Override public void handle(ScrollEvent event) {
