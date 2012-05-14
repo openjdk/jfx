@@ -193,4 +193,16 @@ public class Bloom extends Effect {
                                           node, boundsAccessor,
                                           getInput());
     }
+
+    /**
+     * 
+     * @treatAsPrivate implementation detail
+     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
+     */
+    @Override
+    public Effect impl_copy() {
+        Bloom b = new Bloom(this.getThreshold());
+        b.setInput(this.getInput());
+        return b;
+    }
 }

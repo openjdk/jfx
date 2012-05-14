@@ -537,4 +537,16 @@ public class PerspectiveTransform extends Effect {
         devcoords[7] = (float)getLly();
         transform.transform(devcoords, 0, devcoords, 0, 4);
     }
+
+    /**
+     * 
+     * @treatAsPrivate implementation detail
+     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
+     */
+    @Override
+    public Effect impl_copy() {
+        return new PerspectiveTransform(this.getUlx(), this.getUly(), 
+                this.getUrx(), this.getUry(), this.getLrx(), this.getLry(), 
+                this.getLlx(), this.getLly());
+    }
 }

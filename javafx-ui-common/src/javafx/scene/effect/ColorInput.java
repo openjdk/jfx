@@ -338,4 +338,14 @@ public class ColorInput extends Effect {
                 (float)(getY() + getHeight()));
         return EffectUtils.transformBounds(tx, ret);
     }
+
+    /**
+     * 
+     * @treatAsPrivate implementation detail
+     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
+     */
+    @Override
+    public Effect impl_copy() {
+        return new ColorInput(this.getX(), this.getY(), this.getWidth(), this.getHeight(), this.getPaint());
+    }
 }

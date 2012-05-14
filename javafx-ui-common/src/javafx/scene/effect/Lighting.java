@@ -131,6 +131,18 @@ public class Lighting extends Effect {
     }
 
     private final LightChangeListener lightChangeListener = new LightChangeListener();
+
+    @Override
+    public Effect impl_copy() {
+        Lighting lighting = new Lighting(this.getLight());
+        lighting.setBumpInput(this.getBumpInput());
+        lighting.setContentInput(this.getContentInput());
+        lighting.setDiffuseConstant(this.getDiffuseConstant());
+        lighting.setSpecularConstant(this.getSpecularConstant());
+        lighting.setSpecularExponent(this.getSpecularExponent());
+        lighting.setSurfaceScale(this.getSurfaceScale());
+        return lighting;
+    }
     private class LightChangeListener extends EffectChangeListener {
         Light light;
 

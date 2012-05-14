@@ -187,4 +187,17 @@ public class SepiaTone extends Effect {
                                           node, boundsAccessor,
                                           getInput());
     }
+
+    /**
+     * 
+     * @treatAsPrivate implementation detail
+     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
+     */
+    @Override
+    public Effect impl_copy() {
+        SepiaTone st = new SepiaTone(this.getLevel());
+        st.setInput(this.getInput());        
+        return st;
+        
+    }
 }

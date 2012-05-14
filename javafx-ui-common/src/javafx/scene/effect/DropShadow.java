@@ -703,4 +703,20 @@ public class DropShadow extends Effect {
 
         return ret;
     }
+
+    /**
+     * 
+     * @treatAsPrivate implementation detail
+     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
+     */
+    @Override
+    public Effect impl_copy() {
+        DropShadow d = new DropShadow(this.getBlurType(), this.getColor(), 
+                this.getRadius(), this.getSpread(), this.getOffsetX(), 
+                this.getOffsetY());
+        d.setInput(this.getInput());
+        d.setWidth(this.getWidth());
+        d.setHeight(this.getHeight());
+        return d;
+    }
 }

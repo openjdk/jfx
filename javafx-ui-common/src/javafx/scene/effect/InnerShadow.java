@@ -638,4 +638,20 @@ public class InnerShadow extends Effect {
                                           node, boundsAccessor,
                                           getInput());
     }
+
+    /**
+     * 
+     * @treatAsPrivate implementation detail
+     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
+     */
+    @Override
+    public Effect impl_copy() {
+        InnerShadow is = new InnerShadow(this.getBlurType(), this.getColor(), 
+                this.getRadius(), this.getChoke(), this.getOffsetX(), 
+                this.getOffsetY());
+        is.setInput(this.getInput());
+        is.setWidth(this.getWidth());
+        is.setHeight(this.getHeight());
+        return is;
+    }
 }

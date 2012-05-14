@@ -72,6 +72,7 @@ import com.sun.javafx.runtime.async.AsyncOperation;
 import com.sun.javafx.runtime.async.AsyncOperationListener;
 import com.sun.javafx.scene.text.HitInfo;
 import com.sun.javafx.sg.PGArc;
+import com.sun.javafx.sg.PGCanvas;
 import com.sun.javafx.sg.PGCircle;
 import com.sun.javafx.sg.PGCubicCurve;
 import com.sun.javafx.sg.PGEllipse;
@@ -820,6 +821,11 @@ public class StubToolkit extends Toolkit {
     private DndDelegate dndDelegate;
     public void setDndDelegate(DndDelegate dndDelegate) {
         this.dndDelegate = dndDelegate;
+    }
+
+    @Override
+    public PGCanvas createPGCanvas() {
+        return new StubCanvas();
     }
 
     public interface DndDelegate {
