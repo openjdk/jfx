@@ -7,7 +7,7 @@ package javafx.scene.control;
 import com.sun.javafx.css.StyleableProperty;
 import com.sun.javafx.pgstub.StubToolkit;
 import static javafx.scene.control.ControlTestUtils.*;
-import com.sun.javafx.scene.control.Pagination;
+import javafx.scene.control.Pagination;
 import com.sun.javafx.tk.Toolkit;
 import javafx.beans.property.IntegerProperty;
 import javafx.beans.property.ObjectProperty;

@@ -49,7 +49,6 @@ import com.sun.javafx.css.StyleableObjectProperty;
 import com.sun.javafx.css.StyleableProperty;
 import com.sun.javafx.css.converters.BooleanConverter;
 import com.sun.javafx.css.converters.EnumConverter;
-import com.sun.javafx.scene.control.Pagination;
 import com.sun.javafx.scene.control.behavior.PaginationBehavior;
 import java.util.ArrayList;
 import java.util.Collections;

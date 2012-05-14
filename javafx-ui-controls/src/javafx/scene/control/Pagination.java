@@ -42,7 +42,7 @@
  * have any questions.
  */
 
-package com.sun.javafx.scene.control;
+package javafx.scene.control;
 
 import com.sun.javafx.css.StyleableIntegerProperty;
 import com.sun.javafx.css.StyleableProperty;

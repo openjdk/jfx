@@ -44,7 +44,7 @@
 
 package com.sun.javafx.scene.control.behavior;
 
-import com.sun.javafx.scene.control.Pagination;
+import javafx.scene.control.Pagination;
 import com.sun.javafx.scene.control.skin.PaginationSkin;
 import java.util.ArrayList;
 import java.util.List;

@@ -23,7 +23,7 @@ import java.util.List;
 import com.sun.javafx.binding.ExpressionHelper;
 import com.sun.javafx.collections.ObservableListWrapper;
 import com.sun.javafx.css.StyleManager;
-import com.sun.javafx.scene.control.Pagination;
+import javafx.scene.control.Pagination;
 import com.sun.javafx.scene.control.ReadOnlyUnbackedObservableList;
 import javafx.scene.Node;
 import javafx.scene.chart.Axis;
