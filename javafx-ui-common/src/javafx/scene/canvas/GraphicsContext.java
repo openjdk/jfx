@@ -88,7 +88,7 @@ root.getChildren().add(canvas);
  */
 public final class GraphicsContext {
     /**
-     * 
+     * @deprecated 
      */
     public enum CompositeOperation {       
         SRC_OVER,

@@ -123,13 +123,13 @@ public class CanvasTest {
     @Test public void testGCdrawOval_basic() throws Exception {
         Canvas node = new Canvas();
         GraphicsContext gc = node.getGraphicsContext2D();
-        gc.drawOval(0, 0, 1, 1);
+        gc.strokeOval(0, 0, 1, 1);
     }
         
     @Test public void testGCdrawRoundRect_basic() throws Exception {
         Canvas node = new Canvas();
         GraphicsContext gc = node.getGraphicsContext2D();
-        gc.drawRoundRect(0, 0, 1, 1, 2, 2);
+        gc.strokeRoundRect(0, 0, 1, 1, 2, 2);
     }
     
     @Test public void testGCstrokeText_basic() throws Exception {
@@ -145,7 +145,7 @@ public class CanvasTest {
         GraphicsContext gc = node.getGraphicsContext2D();
         double[] xPoints = {0.0,10.0};
         double[] yPoints = {0.0,10.0};        
-        gc.drawPolygon( xPoints, yPoints, 2);
+        gc.strokePolygon( xPoints, yPoints, 2);
     }
     
     @Test public void testGCdrawArc_basic() throws Exception {
@@ -153,9 +153,9 @@ public class CanvasTest {
         GraphicsContext gc = node.getGraphicsContext2D();
         double[] xPoints = {0.0,10.0};
         double[] yPoints = {0.0,10.0};        
-        gc.drawArc(10, 10, 100, 100, 0, 40, ArcType.OPEN); 
-        gc.drawArc(10, 10, 100, 100, 0, 360, ArcType.CHORD); 
-        gc.drawArc(10, 10, 100, 100, 0, 361, ArcType.ROUND); 
+        gc.strokeArc(10, 10, 100, 100, 0, 40, ArcType.OPEN); 
+        gc.strokeArc(10, 10, 100, 100, 0, 360, ArcType.CHORD); 
+        gc.strokeArc(10, 10, 100, 100, 0, 361, ArcType.ROUND); 
     }
     
     @Test public void testGCfillPath_basic() throws Exception {

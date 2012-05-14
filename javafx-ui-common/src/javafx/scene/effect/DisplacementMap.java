@@ -225,15 +225,6 @@ public class DisplacementMap extends Effect {
 
     private final MapDataChangeListener mapDataChangeListener = new MapDataChangeListener();
 
-    @Override
-    public Effect impl_copy() {
-       
-        DisplacementMap dm = new DisplacementMap(this.getMapData().impl_copy(), 
-                this.getOffsetX(), this.getOffsetY(), this.getScaleX(), 
-                this.getScaleY());
-        dm.setInput(this.getInput());
-        return dm;
-    }
     private class MapDataChangeListener extends EffectChangeListener {
         FloatMap mapData;
 
@@ -516,5 +507,14 @@ public class DisplacementMap extends Effect {
                                             node, boundsAccessor,
                                             getInput());
         return EffectUtils.transformBounds(tx, bounds);
+    }
+    
+    @Override
+    public Effect impl_copy() {    
+        DisplacementMap dm = new DisplacementMap(this.getMapData().impl_copy(), 
+                this.getOffsetX(), this.getOffsetY(), this.getScaleX(), 
+                this.getScaleY());
+        dm.setInput(this.getInput());
+        return dm;
     }
 }
