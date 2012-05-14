@@ -79,6 +79,7 @@ public final class BorderImageConverter extends StyleConverter<ParsedValue[], Li
         int nImages = imageUrls != null ? imageUrls.length : 0;
         List<BorderImage> borders = new ArrayList<BorderImage>();
         for (int index = 0; index < nImages; index++) {
+            if (imageUrls[index]==null) continue;
             BorderImage.BorderImageRepeat repeat = (repeats != null) ?
                 repeats[Math.min(index, repeats.length - 1)] : null;
             BorderImage.BorderImageSlice slice = (slices != null) ?
