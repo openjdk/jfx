@@ -464,19 +464,17 @@ public class ScrollPaneSkin extends SkinBase<ScrollPane, ScrollPaneBehavior> imp
                 ** we only consume an event that we've used.
                 */
                 if (vsb.getVisibleAmount() < vsb.getMax()) {
+                    double vRange = getSkinnable().getVmax()-getSkinnable().getVmin();
+                    double vPixelValue = vRange / getSkinnable().getHeight();
+                    double newValue = vsb.getValue()+(-event.getDeltaY())*vPixelValue;
                     if (!PlatformUtil.isEmbedded()) {
                         if ((event.getDeltaY() > 0.0 && vsb.getValue() > vsb.getMin()) ||
                             (event.getDeltaY() < 0.0 && vsb.getValue() < vsb.getMax())) {
-                            double vRange = getSkinnable().getVmax()-getSkinnable().getVmin();
-                            double vPixelValue = vRange / getSkinnable().getHeight();
-                            vsb.setValue(vsb.getValue()+(-event.getDeltaY())*vPixelValue);
+                            vsb.setValue(newValue);
                             event.consume();
                         }
                     }
                     else {
-                        double vRange = getSkinnable().getVmax()-getSkinnable().getVmin();
-                        double vPixelValue = vRange / getSkinnable().getHeight();
-                        double newValue = vsb.getValue()+(event.getDeltaY())*vPixelValue;
                         vsb.setValue(newValue);
                         if ((newValue > vsb.getMax() || newValue < vsb.getMin()) && !(mouseDown || touchDetected)) {
                             startContentsToViewport();
@@ -487,19 +485,17 @@ public class ScrollPaneSkin extends SkinBase<ScrollPane, ScrollPaneBehavior> imp
                 }
 
                 if (hsb.getVisibleAmount() < hsb.getMax()) {
+                    double hRange = getSkinnable().getHmax()-getSkinnable().getHmin();
+                    double hPixelValue = hRange / getSkinnable().getWidth();
+                    double newValue = hsb.getValue()+(-event.getDeltaX())*hPixelValue;
                     if (!PlatformUtil.isEmbedded()) {
                         if ((event.getDeltaX() > 0.0 && hsb.getValue() > hsb.getMin()) ||
                             (event.getDeltaX() < 0.0 && hsb.getValue() < hsb.getMax())) {
-                            double hRange = getSkinnable().getHmax()-getSkinnable().getHmin();
-                            double hPixelValue = hRange / getSkinnable().getWidth();
-                            hsb.setValue(hsb.getValue()+(-event.getDeltaX())*hPixelValue);
+                            hsb.setValue(newValue);
                             event.consume();
                         }
                     }
                     else {
-                        double hRange = getSkinnable().getHmax()-getSkinnable().getHmin();
-                        double hPixelValue = hRange / getSkinnable().getWidth();
-                        double newValue = hsb.getValue()+(event.getDeltaX())*hPixelValue;
 
                         hsb.setValue(newValue);
 
