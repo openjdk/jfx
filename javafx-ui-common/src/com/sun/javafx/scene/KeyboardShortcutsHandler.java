@@ -36,6 +36,7 @@ import javafx.event.Event;
 import javafx.scene.Node;
 import javafx.scene.Scene;
 import javafx.scene.input.KeyCombination;
+import javafx.scene.input.KeyCode;
 import javafx.scene.input.KeyEvent;
 import javafx.scene.input.Mnemonic;
 
@@ -47,6 +48,8 @@ import com.sun.javafx.event.BasicEventDispatcher;
 public final class KeyboardShortcutsHandler extends BasicEventDispatcher {
     private ObservableMap<KeyCombination, Runnable> accelerators;
     private ObservableMap<KeyCombination, ObservableList<Mnemonic>> mnemonics;
+
+    private boolean mnemonicsLatch = false;
 
     public void addMnemonic(Mnemonic m) {
         ObservableList<Mnemonic> mnemonicsList = (ObservableList)getMnemonics().get(m.getKeyCombination());
@@ -107,7 +110,7 @@ public final class KeyboardShortcutsHandler extends BasicEventDispatcher {
                     processMnemonics((KeyEvent)event);
                 }
             } else {
-                if (((KeyEvent)event).isAltDown()) {
+                if (((KeyEvent)event).isAltDown() || isMnemonicsDisplayEnabled()) {
                     processMnemonics((KeyEvent)event);
                 }
             }
@@ -127,12 +130,19 @@ public final class KeyboardShortcutsHandler extends BasicEventDispatcher {
                     /*
                     ** show mnemonics while alt is held
                     */
-                    setMnemonicsDisplayEnabled(true);
+                    if (!isMnemonicsDisplayEnabled()) {
+                        setMnemonicsDisplayEnabled(true);
+                    }
+                    if (PlatformUtil.isWindows()) {
+                        mnemonicsLatch = !mnemonicsLatch;
+                    }
                 }
             }
             if (event.getEventType() == KeyEvent.KEY_RELEASED) {
                 if (!((KeyEvent)event).isAltDown()) {
-                    setMnemonicsDisplayEnabled(false);
+                    if (mnemonicsLatch != true) {
+                        setMnemonicsDisplayEnabled(false);
+                    }
                 }
             }
         }
@@ -147,9 +157,33 @@ public final class KeyboardShortcutsHandler extends BasicEventDispatcher {
             for (Map.Entry<KeyCombination, ObservableList<Mnemonic>>
                     mnemonic: mnemonics.entrySet()) {
 
-                if (mnemonic.getKey().match(event)) {
-                    mnemonicsList = (ObservableList) mnemonic.getValue();
-                    break;
+                if (!isMnemonicsDisplayEnabled()) {
+                    if (mnemonic.getKey().match(event)) {
+                        mnemonicsList = (ObservableList) mnemonic.getValue();
+                        break;
+                    }
+                }
+                else {
+                    /*
+                    ** Mnemonics display has been enabled, which means
+                    ** we act as is the alt key is being held down.
+                    */
+
+                    KeyEvent fakeEvent = KeyEvent.impl_keyEvent(event.getTarget(), 
+                                                                event.getCharacter(),
+                                                                event.getText(),
+                                                                ((KeyCode)event.getCode()).impl_getCode(),
+                                                                event.isShiftDown(),
+                                                                event.isControlDown(),
+                                                                true,
+                                                                event.isMetaDown(),
+                                                                KeyEvent.KEY_PRESSED);
+
+
+                    if (mnemonic.getKey().match(fakeEvent)) {
+                        mnemonicsList = (ObservableList) mnemonic.getValue();
+                        break;
+                    }
                 }
             }
 
