@@ -515,7 +515,8 @@ public class VirtualFlow extends Region {
         final EventDispatcher oldHsbEventDispatcher = hbar.getEventDispatcher();
         hbar.setEventDispatcher(new EventDispatcher() {
            @Override public Event dispatchEvent(Event event, EventDispatchChain tail) {
-               if (event.getEventType() == ScrollEvent.SCROLL) {
+               if (event.getEventType() == ScrollEvent.SCROLL && 
+                       !((ScrollEvent)event).isDirect()) {
                    tail = tail.prepend(blockEventDispatcher);
                    tail = tail.prepend(oldHsbEventDispatcher);
                    return tail.dispatchEvent(event);
@@ -527,7 +528,8 @@ public class VirtualFlow extends Region {
         final EventDispatcher oldVsbEventDispatcher = vbar.getEventDispatcher();
         vbar.setEventDispatcher(new EventDispatcher() {
            @Override public Event dispatchEvent(Event event, EventDispatchChain tail) {
-               if (event.getEventType() == ScrollEvent.SCROLL) {
+               if (event.getEventType() == ScrollEvent.SCROLL &&
+                       !((ScrollEvent)event).isDirect()) {
                    tail = tail.prepend(blockEventDispatcher);
                    tail = tail.prepend(oldVsbEventDispatcher);
                    return tail.dispatchEvent(event);

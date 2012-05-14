@@ -426,7 +426,8 @@ public class ScrollPaneSkin extends SkinBase<ScrollPane, ScrollPaneBehavior> imp
         final EventDispatcher oldHsbEventDispatcher = hsb.getEventDispatcher();
         hsb.setEventDispatcher(new EventDispatcher() {
            @Override public Event dispatchEvent(Event event, EventDispatchChain tail) {
-               if (event.getEventType() == ScrollEvent.SCROLL) {
+               if (event.getEventType() == ScrollEvent.SCROLL &&
+                       !((ScrollEvent)event).isDirect()) {
                    tail = tail.prepend(blockEventDispatcher);
                    tail = tail.prepend(oldHsbEventDispatcher);
                    return tail.dispatchEvent(event);
@@ -438,7 +439,8 @@ public class ScrollPaneSkin extends SkinBase<ScrollPane, ScrollPaneBehavior> imp
         final EventDispatcher oldVsbEventDispatcher = vsb.getEventDispatcher();
         vsb.setEventDispatcher(new EventDispatcher() {
            @Override public Event dispatchEvent(Event event, EventDispatchChain tail) {
-               if (event.getEventType() == ScrollEvent.SCROLL) {
+               if (event.getEventType() == ScrollEvent.SCROLL &&
+                       !((ScrollEvent)event).isDirect()) {
                    tail = tail.prepend(blockEventDispatcher);
                    tail = tail.prepend(oldVsbEventDispatcher);
                    return tail.dispatchEvent(event);
