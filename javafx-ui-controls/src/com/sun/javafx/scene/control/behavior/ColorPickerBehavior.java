@@ -31,7 +31,7 @@ import static javafx.scene.input.KeyEvent.*;
 
 import java.util.ArrayList;
 import java.util.List;
-import com.sun.javafx.scene.control.ColorPicker;
+import javafx.scene.control.ColorPicker;
 import com.sun.javafx.scene.control.skin.ColorPickerSkin;
 
 import javafx.scene.input.MouseEvent;

@@ -22,11 +22,10 @@
  * or visit www.oracle.com if you need additional information or have any
  * questions.
  */
-package com.sun.javafx.scene.control;
+package javafx.scene.control;
 
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
-import javafx.scene.control.ComboBoxBase;
 import javafx.scene.paint.Color;
 
 /**

@@ -5,7 +5,7 @@
 package com.sun.javafx.scene.control.skin;
 
 import com.sun.javafx.css.StyleManager;
-import com.sun.javafx.scene.control.ColorPicker;
+import javafx.scene.control.ColorPicker;
 import java.util.List;
 import javafx.beans.property.ReadOnlyBooleanProperty;
 import javafx.beans.property.ReadOnlyBooleanWrapper;
@@ -356,7 +356,7 @@ public class ColorPalette extends StackPane {
           
             rectangle.getStyleClass().add("color-rect");
             
-            setOnMouseClicked(new EventHandler<MouseEvent>() {
+            addEventHandler(MouseEvent.MOUSE_RELEASED, new EventHandler<MouseEvent>() {
                 @Override public void handle(MouseEvent event) {
                     if (event.getButton() == MouseButton.PRIMARY && event.getClickCount() == 1) {
                         if (!isEmpty) {
@@ -513,6 +513,7 @@ public class ColorPalette extends StackPane {
                 public void handle(MouseEvent t) {
                     if(colorPickerGrid.getBoundsInLocal().contains(t.getX(), t.getY())) {
                         updateSelection(colorPicker.getValue());
+                        colorPicker.hide();
                     } else {
                         // restore color as mouse release happened outside the grid.
                         if (beforeDrag != null) {

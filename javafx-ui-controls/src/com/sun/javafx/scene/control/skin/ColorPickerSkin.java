@@ -41,7 +41,7 @@ import javafx.scene.input.MouseEvent;
 import javafx.scene.layout.StackPane;
 import javafx.scene.shape.Rectangle;
 import com.sun.javafx.scene.control.behavior.ColorPickerBehavior;
-import com.sun.javafx.scene.control.ColorPicker;
+import javafx.scene.control.ColorPicker;
 import com.sun.javafx.scene.control.skin.ColorPalette;
 import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.SimpleBooleanProperty;
