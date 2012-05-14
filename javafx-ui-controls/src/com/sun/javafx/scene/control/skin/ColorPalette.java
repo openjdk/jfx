@@ -17,12 +17,12 @@ import javafx.collections.ListChangeListener.Change;
 import javafx.event.ActionEvent;
 import javafx.event.Event;
 import javafx.event.EventHandler;
-import javafx.event.EventType;
 import javafx.geometry.Pos;
 import javafx.geometry.Side;
 import javafx.scene.control.*;
 import javafx.scene.input.KeyEvent;
 import javafx.scene.input.MouseButton;
+import javafx.scene.input.MouseDragEvent;
 import javafx.scene.input.MouseEvent;
 import javafx.scene.layout.GridPane;
 import javafx.scene.layout.StackPane;
@@ -58,7 +58,8 @@ public class ColorPalette extends StackPane {
     private ColorSquare focusedSquare;
     private ContextMenu contextMenu = null;
     
-    private Color beforeDrag = null;
+    private Color mouseDragColor = null;
+    private boolean dragDetected = false;
     
     public ColorPalette(Color initPaint, final ColorPicker colorPicker) {
         getStyleClass().add("color-palette");
@@ -358,7 +359,7 @@ public class ColorPalette extends StackPane {
             
             addEventHandler(MouseEvent.MOUSE_RELEASED, new EventHandler<MouseEvent>() {
                 @Override public void handle(MouseEvent event) {
-                    if (event.getButton() == MouseButton.PRIMARY && event.getClickCount() == 1) {
+                    if (!dragDetected && event.getButton() == MouseButton.PRIMARY && event.getClickCount() == 1) {
                         if (!isEmpty) {
                             Color fill = (Color)rectangle.getFill();
                             colorPicker.setValue(fill);
@@ -501,11 +502,11 @@ public class ColorPalette extends StackPane {
                     }
                 }
             });
-            addEventHandler(MouseEvent.MOUSE_PRESSED, new EventHandler<MouseEvent>() {
+            addEventHandler(MouseDragEvent.DRAG_DETECTED, new EventHandler<Event>() {
                 @Override
-                public void handle(MouseEvent t) {
-                    // save the current color
-                    beforeDrag = colorPicker.getValue();
+                public void handle(Event t) {
+                    dragDetected = true;
+                    mouseDragColor = colorPicker.getValue();
                 }
             });
             addEventHandler(MouseEvent.MOUSE_RELEASED, new EventHandler<MouseEvent>() {
@@ -516,11 +517,12 @@ public class ColorPalette extends StackPane {
                         colorPicker.hide();
                     } else {
                         // restore color as mouse release happened outside the grid.
-                        if (beforeDrag != null) {
-                            colorPicker.setValue(beforeDrag);
-                            updateSelection(beforeDrag);
+                        if (mouseDragColor != null) {
+                            colorPicker.setValue(mouseDragColor);
+                            updateSelection(mouseDragColor);
                         }
                     }
+                    dragDetected = false;
                 }
             });
         }
