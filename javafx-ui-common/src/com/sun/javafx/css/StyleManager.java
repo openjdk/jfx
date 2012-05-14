@@ -548,10 +548,6 @@ public class StyleManager {
         if (defaultUserAgentStylesheet != null) {
             defaultUserAgentStylesheet.setOrigin(Stylesheet.Origin.USER_AGENT);
         }
-        if (defaultContainer != null) {
-            defaultContainer.destroy();
-            defaultContainer = null;
-        }
         if (containerMap != null) {
             Iterator<StylesheetContainer> iter = containerMap.values().iterator();
             while(iter.hasNext()) {
@@ -658,10 +654,6 @@ public class StyleManager {
         // This should happen infrequently since adding and removing stylesheets
         // on the fly should be the exception rather than the rule.
         //
-        if (defaultContainer != null) {
-            defaultContainer.destroy();
-            defaultContainer = null;
-        }
         if (containerMap != null) {
 
             final StylesheetContainer container = remove(containerMap, scene);
