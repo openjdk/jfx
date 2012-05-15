@@ -89,4 +89,8 @@ public abstract class Camera {
     protected final void impl_clearDirty() {
         setDirty(false);
     }
+
+    Camera copy() {
+        return this;
+    }
 }

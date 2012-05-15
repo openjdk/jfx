@@ -108,4 +108,11 @@ public  class PerspectiveCamera extends Camera {
             impl_clearDirty();
         }
     }
+
+    @Override Camera copy() {
+        PerspectiveCamera c = new PerspectiveCamera();
+        c.setFieldOfView(getFieldOfView());
+        return c;
+    }
+
 }

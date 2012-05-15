@@ -81,6 +81,8 @@ import com.sun.javafx.collections.TrackableObservableList;
 import com.sun.javafx.css.StyleManager;
 import com.sun.javafx.cursor.CursorFrame;
 import com.sun.javafx.geom.PickRay;
+import com.sun.javafx.geom.transform.Affine2D;
+import com.sun.javafx.geom.transform.BaseTransform;
 import com.sun.javafx.logging.PlatformLogger;
 import com.sun.javafx.perf.PerformanceTracker;
 import com.sun.javafx.robot.impl.FXRobotHelper;
@@ -106,6 +108,7 @@ import javafx.beans.property.ReadOnlyDoubleProperty;
 import javafx.beans.property.ReadOnlyDoubleWrapper;
 import javafx.beans.property.ReadOnlyObjectProperty;
 import javafx.beans.property.ReadOnlyObjectWrapper;
+import javafx.scene.image.Image;
 import javafx.scene.input.GestureEvent;
 import javafx.scene.input.MouseDragEvent;
 import javafx.scene.input.RotateEvent;
@@ -116,6 +119,7 @@ import javafx.scene.input.TouchPoint;
 import javafx.scene.input.ZoomEvent;
 import javafx.stage.Stage;
 import javafx.stage.StageStyle;
+import javafx.util.Callback;
 
 
 /**
@@ -312,6 +316,11 @@ public class Scene implements EventTarget {
                     return scene.renderToImage(platformImage);
                 }
             });
+            Toolkit.setSceneAccessor(new Toolkit.SceneAccessor() {
+                @Override public void setPaused(boolean paused) {
+                    Scene.paused = paused;
+                }
+            });
         }
 
         // Reserve space for 30 nodes in the dirtyNodes set.
@@ -322,6 +331,9 @@ public class Scene implements EventTarget {
         private static boolean inMousePick = false;
         private static boolean allowPGAccess = false;
         private static int pgAccessCount = 0;
+
+        // Flag set by the Toolkit when we are paused for JMX debugging
+        private static boolean paused = false;
 
         /**
          * Used for debugging purposes. Returns true if we are in either the
@@ -1003,13 +1015,7 @@ public class Scene implements EventTarget {
     }
 
     /**
-     * Renders this {@code Scene} to the given platform-specific image
-     * (e.g. a {@code BufferedImage} in the case of the Swing profile)
-     * at a 1:1 scale.
-     * If {@code platformImage} is null, a new platform-specific image
-     * is returned.
-     * If the contents of the scene have not changed since the last time
-     * this method was called, this method returns null.
+     * This method is superseded by {@link #snapshot(javafx.scene.image.Image)}
      *
      * WARNING: This method is not part of the public API and is
      * subject to change!  It is intended for use by the designer tool only.
@@ -1022,7 +1028,8 @@ public class Scene implements EventTarget {
     // to new 2.2 public API before we remove this.
     @Deprecated
     public Object renderToImage(Object platformImage) {
-        return renderToImage(platformImage, 1.0f);
+        Toolkit.getToolkit().checkFxUserThread();
+        return doSnapshot(platformImage, 1.0f);
     }
 
     /**
@@ -1042,7 +1049,8 @@ public class Scene implements EventTarget {
      */
     @Deprecated
     public Object renderToImage(Object platformImage, float scale) {
-        return renderToImage(platformImage, scale, true);
+        Toolkit.getToolkit().checkFxUserThread();
+        return doSnapshot(platformImage, scale);
     }
 
     private void doLayoutPassWithoutPulse(int maxAttempts) {
@@ -1050,58 +1058,233 @@ public class Scene implements EventTarget {
             layoutDirtyRoots();
         }
     }
-    
-    /**
-     * WARNING: This method is not part of the public API and is subject to change!
-     * It is intended for use by the internal tools only.
-     *
-     * @treatAsPrivate implementation detail
-     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
-     */
-    @Deprecated
-    public Object renderToImage(Object platformImage, float scale, boolean syncNeeded) {
-        
+
+    void setNeedsRepaint() {
+        if (this.impl_peer != null) {
+            impl_peer.entireSceneNeedsRepaint();
+        }
+    }
+
+    // Process CSS and layout and sync the scene prior to the snapshot
+    // operation of the given node for this scene (currently the node
+    // is unused but could possibly be used in the future to optimize this)
+    void doCSSLayoutSyncForSnapshot(Node node) {
         if (!sizeInitialized) {
             preferredSize();
         } else {
             doCSSPass();
         }
 
-        // we do not need pulse in the renderToImage code
+        // we do not need pulse in the snapshot code
         // because this scene can be stage-less
         doLayoutPassWithoutPulse(3);
 
-        if (syncNeeded) {
+        if (!paused) {
             scenePulseListener.synchronizeSceneNodes();
         }
-        
-        impl_setAllowPGAccess(true);
-        
+
+    }
+
+    // Shared method for Scene.snapshot and Node.snapshot. It is static because
+    // we might be doing a Node snapshot with a null scene
+    // TODO: modify to take an Image rather than platformImage
+    static Object doSnapshot(Scene scene,
+            double x, double y, double w, double h,
+            Node root, BaseTransform transform, boolean depthBuffer,
+            Paint fill, Camera camera, Object platformImage) {
+
         Toolkit tk = Toolkit.getToolkit();
         Toolkit.ImageRenderingContext context = new Toolkit.ImageRenderingContext();
-        context.width = getWidth();
-        context.height = getHeight();
-        context.scale = scale;
-        context.depthBuffer = isDepthBuffer();
-        context.root = getRoot().impl_getPGNode();
-        context.platformPaint = (getFill() == null ? null : tk.getPaint(getFill()));
-        if (getCamera() != null) {
-            getCamera().impl_update();
-            context.camera = getCamera().getPlatformCamera();
+
+        impl_setAllowPGAccess(true);
+        context.x = (int)Math.floor(x);
+        context.y = (int)Math.floor(y);
+        context.width = (int)Math.ceil(w);
+        context.height = (int)Math.ceil(h);
+        context.transform = transform;
+        context.depthBuffer = depthBuffer;
+        context.root = root.impl_getPGNode();
+        context.platformPaint = fill == null ? null : tk.getPaint(fill);
+        if (camera != null) {
+            camera.impl_update();
+            context.camera = camera.getPlatformCamera();
+        } else {
+            context.camera = null;
         }
         context.platformImage = platformImage;
         impl_setAllowPGAccess(false);
         Object result = tk.renderToImage(context);
-        
-        // if this scene belongs to some stage 
-        // we need to mark the entire scene as dirty 
+
+        // if this scene belongs to some stage
+        // we need to mark the entire scene as dirty
         // because dirty logic is buggy
-        
-        if (this.impl_peer != null) {
-            impl_peer.entireSceneNeedsRepaint();
+        if (scene != null && scene.impl_peer != null) {
+            scene.setNeedsRepaint();
         }
-                
+
         return result;
+    }
+
+    /**
+     * Implementation method for snapshot
+     */
+    // TODO: modify to take an Image rather than platformImage
+    private Object doSnapshot(Object platformImage, float scale) {
+        // TODO: no need to do CSS, layout or sync in the deferred case,
+        // if this scene is attached to a visible stage
+        doCSSLayoutSyncForSnapshot(getRoot());
+
+        double w = getWidth();
+        double h = getHeight();
+        BaseTransform transform = BaseTransform.IDENTITY_TRANSFORM;
+        if (scale != 1.0f) {
+            Affine2D tx = new Affine2D();
+            tx.scale(scale, scale);
+            transform = tx;
+            w *= scale;
+            h *= scale;
+        }
+
+        return doSnapshot(this, 0, 0, w, h,
+                getRoot(), transform, isDepthBuffer(),
+                getFill(), getCamera(), platformImage);
+    }
+
+    // Pulse listener used to run all deferred (async) snapshot requests
+    private static TKPulseListener snapshotPulseListener = null;
+
+    private static List<Runnable> snapshotRunnableListA;
+    private static List<Runnable> snapshotRunnableListB;
+    private static List<Runnable> snapshotRunnableList;
+
+    static void addSnapshotRunnable(Runnable r) {
+        Toolkit.getToolkit().checkFxUserThread();
+
+        if (snapshotPulseListener == null) {
+            snapshotRunnableListA = new ArrayList<Runnable>();
+            snapshotRunnableListB = new ArrayList<Runnable>();
+            snapshotRunnableList = snapshotRunnableListA;
+
+            snapshotPulseListener = new TKPulseListener() {
+                @Override public void pulse() {
+                    if (snapshotRunnableList.size() > 0) {
+                        List<Runnable> runnables = snapshotRunnableList;
+                        if (snapshotRunnableList == snapshotRunnableListA) {
+                            snapshotRunnableList = snapshotRunnableListB;
+                        } else {
+                            snapshotRunnableList = snapshotRunnableListA;
+                        }
+                        for (Runnable r : runnables) {
+                            try {
+                                r.run();
+                            } catch (Throwable th) {
+                                System.err.println("Exception in snapshot runnable");
+                                th.printStackTrace(System.err);
+                            }
+                        }
+                        runnables.clear();
+                    }
+                }
+            };
+
+            // Add listener that will be called after all of the scenes have
+            // had layout and CSS processing, and have been synced
+            Toolkit.getToolkit().addPostSceneTkPulseListener(snapshotPulseListener);
+        }
+        snapshotRunnableList.add(r);
+        Toolkit.getToolkit().requestNextPulse();
+    }
+
+    /**
+     * Takes a snapshot of this scene and returns the rendered image when
+     * it is ready.
+     * CSS and layout processing will be done for the scene prior to
+     * rendering it.
+     *
+     * @param image the image that will be used to hold the rendered scene.
+     * It may be null in which case a new Image will be constructed.
+     * If the image is non-null, the scene will be rendered into the
+     * existing image.
+     * If the image is larger than the scene, the area outside the bounds
+     * of the scene will be filled with the Scene fill color. If the image is
+     * smaller than the scene, the rendered image will be clipped.
+     *
+     * @throws IllegalStateException if this method is called on a thread
+     *     other than the JavaFX Application Thread.
+     *
+     * @return the rendered image
+     */
+    public Image snapshot(Image image) {
+        Toolkit.getToolkit().checkFxUserThread();
+
+        // TODO: Ignore image for now. In order to support it, we either need
+        // ImageOps support or we need a private method to mutate the existing
+        // platform image in an image object.
+        if (image != null) {
+            System.err.println("WARNING: Scene.snapshot: image currently ignored");
+        }
+
+        Object platformImage = doSnapshot(null, 1.0f);
+        Image theImage = Image.impl_fromPlatformImage(platformImage);
+        return theImage;
+    }
+
+    /**
+     * Takes a snapshot of this scene at the next frame and calls the
+     * specified callback method when the image is ready.
+     * CSS and layout processing will be done for the scene prior to
+     * rendering it. This is an asynchronous call, which means that other
+     * events or animation might be processed before the scene is rendered.
+     * If any such events modify a node in the scene that modification will
+     * be reflected in the rendered image (as it will also be reflected in
+     * the frame rendered to the Stage).
+     *
+     * @param callback a class whose call method will be called when the image
+     * is ready. The SnapshotResult that is passed into the call method of
+     * the callback will contain the rendered image and the source scene
+     * that was rendered.
+     *
+     * @param image the image that will be used to hold the rendered scene.
+     * It may be null in which case a new Image will be constructed.
+     * If the image is non-null, the scene will be rendered into the
+     * existing image.
+     * If the image is larger than the scene, the area outside the bounds
+     * of the scene will be filled with the Scene fill color. If the image is
+     * smaller than the scene, the rendered image will be clipped.
+     *
+     * @throws IllegalStateException if this method is called on a thread
+     *     other than the JavaFX Application Thread.
+     */
+    public void snapshot(Callback<SnapshotResult, Void> callback, Image image) {
+        Toolkit.getToolkit().checkFxUserThread();
+
+        // TODO: Ignore image for now. In order to support it, we either need
+        // ImageOps support or we need a private method to mutate the existing
+        // platform image in an image object.
+        if (image != null) {
+            System.err.println("WARNING: Scene.snapshot: image currently ignored");
+        }
+
+        // Create a deferred runnable that will be run from a pulse listener
+        // that is called after all of the scenes have been synced but before
+        // any of them have been rendered.
+        final Callback<SnapshotResult, Void> theCallback = callback;
+        final Runnable snapshotRunnable = new Runnable() {
+            @Override public void run() {
+                Object platformImage = doSnapshot(null, 1.0f);
+                Image theImage = Image.impl_fromPlatformImage(platformImage);
+//                System.err.println("Calling snapshot callback");
+                SnapshotResult result = new SnapshotResult(theImage, Scene.this, null);
+                try {
+                    Void v = theCallback.call(result);
+                } catch (Throwable th) {
+                    System.err.println("Exception in snapshot callback");
+                    th.printStackTrace(System.err);
+                }
+            }
+        };
+//        System.err.println("Schedule a snapshot in the future");
+        addSnapshotRunnable(snapshotRunnable);
     }
 
     // lets us know when initialized so our triggers can be a bit more effective

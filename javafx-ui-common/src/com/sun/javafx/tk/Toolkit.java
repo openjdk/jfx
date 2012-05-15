@@ -67,6 +67,7 @@ import javafx.stage.StageStyle;
 import javafx.stage.Window;
 
 import com.sun.javafx.embed.HostInterface;
+import com.sun.javafx.geom.CameraImpl;
 import com.sun.javafx.geom.ParallelCameraImpl;
 import com.sun.javafx.geom.Path2D;
 import com.sun.javafx.geom.PerspectiveCameraImpl;
@@ -86,6 +87,7 @@ import com.sun.javafx.sg.PGGroup;
 import com.sun.javafx.sg.PGImageView;
 import com.sun.javafx.sg.PGLine;
 import com.sun.javafx.sg.PGMediaView;
+import com.sun.javafx.sg.PGNode;
 import com.sun.javafx.sg.PGPath;
 import com.sun.javafx.sg.PGPolygon;
 import com.sun.javafx.sg.PGPolyline;
@@ -333,6 +335,8 @@ public abstract class Toolkit {
             new WeakHashMap<TKPulseListener,Object>();
     private final Map<TKPulseListener,Object> scenePulseListeners =
             new WeakHashMap<TKPulseListener,Object>();
+    private final Map<TKPulseListener,Object> postScenePulseListeners =
+            new WeakHashMap<TKPulseListener,Object>();
     private final Map<TKListener,Object> toolkitListeners =
             new WeakHashMap<TKListener,Object>();
 
@@ -341,6 +345,7 @@ public abstract class Toolkit {
     
     private final ArrayList<TKPulseListener> stagePulseList = new ArrayList<TKPulseListener>();
     private final ArrayList<TKPulseListener> scenePulseList = new ArrayList<TKPulseListener>();
+    private final ArrayList<TKPulseListener> postScenePulseList = new ArrayList<TKPulseListener>();
 
     public void firePulse() {
         // Stages need to be notified of pulses before scenes so the Stage can resized 
@@ -350,11 +355,15 @@ public abstract class Toolkit {
             synchronized (this) {
                 stagePulseList.addAll(stagePulseListeners.keySet());
                 scenePulseList.addAll(scenePulseListeners.keySet());
+                postScenePulseList.addAll(postScenePulseListeners.keySet());
             }
             for (TKPulseListener listener: stagePulseList) {
                 listener.pulse();
             }
             for (TKPulseListener listener: scenePulseList) {
+                listener.pulse();
+            }
+            for (TKPulseListener listener: postScenePulseList) {
                 listener.pulse();
             }
             if (lastTkPulseListener != null) {
@@ -363,6 +372,7 @@ public abstract class Toolkit {
         } finally {
             stagePulseList.clear();
             scenePulseList.clear();
+            postScenePulseList.clear();
         }
     }
     public void addStageTkPulseListener(TKPulseListener listener) {
@@ -383,6 +393,16 @@ public abstract class Toolkit {
     public void removeSceneTkPulseListener(TKPulseListener listener) {
         synchronized (this) {
             scenePulseListeners.remove(listener);
+        }
+    }
+    public void addPostSceneTkPulseListener(TKPulseListener listener) {
+        synchronized (this) {
+            postScenePulseListeners.put(listener, null);
+        }
+    }
+    public void removePostSceneTkPulseListener(TKPulseListener listener) {
+        synchronized (this) {
+            postScenePulseListeners.remove(listener);
         }
     }
 
@@ -716,13 +736,24 @@ public abstract class Toolkit {
      * @see #renderToImage
      */
     public static class ImageRenderingContext {
-        public double width;
-        public double height;
-        public double scale;
+        // Node to be rendered
+        public PGNode root;
+
+        // Viewport for rendering
+        public int x;
+        public int y;
+        public int width;
+        public int height;
+
+        // Initial transform for root node
+        public BaseTransform transform;
+
+        // Rendering parameters either from Scene or SnapShotParams
         public boolean depthBuffer;
-        public com.sun.javafx.sg.PGNode root;
         public Object platformPaint;
-        public com.sun.javafx.geom.CameraImpl camera;
+        public CameraImpl camera;
+
+        // PlatformImage into which to render or null
         public Object platformImage;
     }
 
@@ -821,6 +852,9 @@ public abstract class Toolkit {
             }
         }
         this.getMasterTimer().pause();
+        if (sceneAccessor != null) {
+            sceneAccessor.setPaused(true);
+        }
     }
 
     /*
@@ -828,6 +862,9 @@ public abstract class Toolkit {
      * It is used by Scenegraph-JMX bean.
      */
     public void resumeScenes() {
+        if (sceneAccessor != null) {
+            sceneAccessor.setPaused(false);
+        }
         this.getMasterTimer().resume();
         Iterator<Window> i = Window.impl_getWindows();
         while (i.hasNext()) {
@@ -870,4 +907,17 @@ public abstract class Toolkit {
         }
         return highlightRegions;
     }
+
+    // Accessor for scene class
+    public interface SceneAccessor {
+        // Pause all scenes
+        public void setPaused(boolean paused);
+    }
+
+    private static SceneAccessor sceneAccessor = null;
+
+    public static void setSceneAccessor(SceneAccessor accessor) {
+        sceneAccessor = accessor;
+    }
+
 }

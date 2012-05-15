@@ -228,6 +228,13 @@ public abstract class Transform {
      * @deprecated This is an internal API that is not intended for use and will be removed in the next version
      */
     @Deprecated
+    public abstract Transform impl_copy();
+
+    /**
+     * @treatAsPrivate implementation detail
+     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
+     */
+    @Deprecated
     public void impl_add(final Node node) {
         impl_nodes.add(node);
     }

@@ -262,6 +262,16 @@ public class Shear extends Transform {
     }
 
     /**
+     * @treatAsPrivate implementation detail
+     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
+     */
+    @Deprecated
+    @Override
+    public Transform impl_copy() {
+        return new Shear(getX(), getY(), getPivotX(), getPivotY());
+    }
+
+    /**
      * Returns a string representation of this {@code Shear} object.
      * @return a string representation of this {@code Shear} object.
      */ 
