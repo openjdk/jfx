@@ -65,6 +65,11 @@ class UAStylesheetLoader {
                             url = SkinBase.class.getResource("caspian/embedded.css");
                             StyleManager.getInstance().addUserAgentStylesheet(url.toExternalForm());
                         }
+                        
+                        if (com.sun.javafx.Utils.isQVGAScreen()) {
+                            url = SkinBase.class.getResource("caspian/embedded-qvga.css");
+                            StyleManager.getInstance().addUserAgentStylesheet(url.toExternalForm());
+                        }
                         stylesheetLoaded = true;
                     return null;
                 }
