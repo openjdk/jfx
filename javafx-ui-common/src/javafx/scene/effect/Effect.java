@@ -162,14 +162,12 @@ public abstract class Effect {
     }
 
     class EffectInputChangeListener extends EffectChangeListener {
-        private Effect effect;
         private int oldBits;
 
         public void register(Effect value) {
-            effect = value;
-            super.register(effect == null? null: effect.impl_effectDirtyProperty());
-            if (effect != null) {
-                oldBits = effect.impl_effectDirtyProperty().get();
+            super.register(value == null? null: value.impl_effectDirtyProperty());
+            if (value != null) {
+                oldBits = value.impl_effectDirtyProperty().get();
             }
         }
 
@@ -253,4 +251,12 @@ public abstract class Effect {
                                               BaseTransform tx,
                                               Node node,
                                               BoundsAccessor boundsAccessor);
+    /**
+     * 
+     * @treatAsPrivate implementation detail
+     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
+     */
+    @Deprecated
+    public abstract Effect impl_copy();
+    
 }

@@ -258,4 +258,17 @@ public class MotionBlur extends Effect {
 
         return EffectUtils.transformBounds(tx, bounds);
     }
+
+    /**
+     * 
+     * @treatAsPrivate implementation detail
+     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
+     */
+    @Override
+    public Effect impl_copy() {
+        MotionBlur mb = new MotionBlur(this.getAngle(), this.getRadius());
+        mb.setInput(mb.getInput());
+        return mb;
+        
+    }
 }

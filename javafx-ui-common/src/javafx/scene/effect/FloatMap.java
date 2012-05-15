@@ -294,4 +294,14 @@ public class FloatMap {
         buf[index + 3] = s3;
         impl_markDirty();
     }
+    
+    /**
+     * @treatAsPrivate implementation detail
+     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
+     */
+    public FloatMap impl_copy() {
+        FloatMap dest = new FloatMap(this.getWidth(), this.getHeight());
+        System.arraycopy(buf, 0, dest.buf, 0, buf.length);
+        return dest;
+    }
 }

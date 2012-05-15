@@ -61,18 +61,27 @@ import com.sun.javafx.tk.Toolkit;
  * Color c = Color.color(0,0,1.0); //use 0->1.0 values. implicit alpha of 1.0
  * Color c = Color.color(0,0,1.0,1.0); //use 0->1.0 values, explicit alpha of 1.0
  *
- * Color c = Color.rgb(0,0,255); //use 0->255 integers, implict alpha of 1.0
- * Color c = Color.rgb(0,0,255,1.0); //use 0->255 integers, explict alpha of 1.0
+ * Color c = Color.rgb(0,0,255); //use 0->255 integers, implicit alpha of 1.0
+ * Color c = Color.rgb(0,0,255,1.0); //use 0->255 integers, explicit alpha of 1.0
  *
- * Color c = Color.hsb(270,1.0,1.0); //hue = 270, saturation & value = 1.0. inplict alpha of 1.0
- * Color c = Color.hsb(270,1.0,1.0,1.0); //hue = 270, saturation & value = 1.0, explict alpha of 1.0
+ * Color c = Color.hsb(270,1.0,1.0); //hue = 270, saturation & value = 1.0. inplicit alpha of 1.0
+ * Color c = Color.hsb(270,1.0,1.0,1.0); //hue = 270, saturation & value = 1.0, explicit alpha of 1.0
  *
- * Color c = Color.web("0x0000FF",1.0);// blue as a hex web value, explict alpha
- * Color c = Color.web("0x0000FF");// blue as a hex web value, implict alpha
- * Color c = Color.web("#0000FF",1.0);// blue as a hex web value, explict alpha
- * Color c = Color.web("#0000FF");// blue as a hex web value, implict alpha
- * Color c = Color.web("0000FF",1.0);// blue as a hex web value, explict alpha
- * Color c = Color.web("0000FF");// blue as a hex web value, implict alpha
+ * Color c = Color.web("0x0000FF",1.0);// blue as a hex web value, explicit alpha
+ * Color c = Color.web("0x0000FF");// blue as a hex web value, implicit alpha
+ * Color c = Color.web("0x00F");// blue as a short hex web value, implicit alpha
+ * Color c = Color.web("#0000FF",1.0);// blue as a hex web value, explicit alpha
+ * Color c = Color.web("#0000FF");// blue as a hex web value, implicit alpha
+ * Color c = Color.web("#00F");// blue as a short hex web value, implicit alpha
+ * Color c = Color.web("0000FF",1.0);// blue as a hex web value, explicit alpha
+ * Color c = Color.web("0000FF");// blue as a hex web value, implicit alpha
+ * Color c = Color.web("00F");// blue as a short hex web value, implicit alpha
+ * Color c = Color.web("rgba(0,0,255,1.0)");// blue as an rgb web value, explicit alpha
+ * Color c = Color.web("rgb(0,0,255)");// blue as an rgb web value, implicit alpha
+ * Color c = Color.web("rgba(0,0,100%,1.0)");// blue as an rgb percent web value, explicit alpha
+ * Color c = Color.web("rgb(0,0,100%)");// blue as an rgb percent web value, implicit alpha
+ * Color c = Color.web("hsla(270,100%,100%,1.0)");// blue as an hsl web value, explicit alpha
+ * Color c = Color.web("hsl(270,100%,100%)");// blue as an hsl web value, implicit alpha
  * </code></pre>
  *
  * <p>
@@ -267,54 +276,134 @@ public class Color extends Paint implements Interpolatable<Color> { // final
     }
 
     /**
-     * Creates an RGB color specified with hexadecimal notation or
-     * color name.
+     * Creates an RGB color specified with an HTML or CSS attribute string.
      *
-     * <p>Hexadecimal string contains values of red, green and blue channel.
-     * Optionally, value of alfa channel can be added. The whole string can
-     * be optionally prefixed by "0x" or "#".</p>
+     * <p>
+     * This method supports the following formats:
+     * <ul>
+     * <li>Any standard HTML color name
+     * <li>An HTML long or short format hex string with an optional hex alpha
+     * channel.
+     * Hexadecimal values may be preceded by either {@code "0x"} or {@code "#"}
+     * and can either be 2 digits in the range {@code 00} to {@code 0xFF} or a
+     * single digit in the range {@code 0} to {@code F}.
+     * <li>An {@code rgb(r,g,b)} or {@code rgba(r,g,b,a)} format string.
+     * Each of the {@code r}, {@code g}, or {@code b} values can be an integer
+     * from 0 to 255 or a percent value integer from 0 to 100 followed by the
+     * percent ({@code %}) character.  The alpha component, if present, is a
+     * floating point value from 0.0 to 1.0.  Spaces are allowed before or
+     * after the numbers and between the percentage number and its percent
+     * sign ({@code %}).
+     * <li>An {@code hsl(h,s,l)} or {@code hsla(h,s,l,a)} format string.
+     * The {@code h} value is an integer from 0 to 360 representing the hue
+     * angle on a color wheel in degrees with {@code 0} or {@code 360}
+     * representing red, {@code 120} representing green, and {@code 240}
+     * representing blue.  The {@code s} value is the saturation of the
+     * desired color represented as a percentage from gray ({@code 0}) to
+     * the fully saturated color ({@code 100}) and the {@code l} value
+     * is the desired lightness or brightness of the desired color represented
+     * as a percentage from black ({@code 0}) to the full brightness of the
+     * color ({@code 100}).  The alpha component, if present, is a floating
+     * point value from 0.0 to 1.0.  Spaces are allowed before or
+     * after the numbers and between the percentage number and its percent
+     * sign ({@code %}).
+     * </ul>
      *
-     * <p>For colors without alpha channel and for named colors, opacity
-     * is set according to the {@code opacity} argument. For colors with
-     * alpha channel, the resulting opacity is a combination of alpha channel
-     * and the {@code opacity} argument, so transparent color becomes more
-     * transparent by specifying opacity.</p>
+     * <p>For formats without an alpha component and for named colors, opacity
+     * is set according to the {@code opacity} argument. For colors specified
+     * with an alpha component, the resulting opacity is a combination of the
+     * parsed alpha component and the {@code opacity} argument, so a
+     * transparent color becomes more transparent by specifying opacity.</p>
      *
-     * <p>This method supports also short notation, in which each channel
-     * is represented by only one hexadecimal character.</p>
+     * <p>Examples:</p>
+     * <div class="classUseContainer">
+     * <table class="overviewSummary" border="0" cellpadding="3" cellspacing="0">
+     * <tr>
+     * <th class="colFirst">Web Format String</th>
+     * <th class="colLast">Equivalent constructor or factory call</th>
+     * </tr>
+     * <tr class="rowColor">
+     * <td class="colFirst"><code>Color.web("orange", 0.5);</code></td>
+     * <td class="colLast"><code>new Color(1.0, 0xA5/255.0, 0.0, 0.5)</code></td>
+     * </tr>
+     * <tr class="altColor">
+     * <td class="colFirst"><code>Color.web("0xff66cc33", 0.5);</code></td>
+     * <td class="colLast"><code>new Color(1.0, 0.4, 0.8, 0.1)</code></td>
+     * </tr>
+     * <tr class="rowColor">
+     * <td class="colFirst"><code>Color.web("0xff66cc", 0.5);</code></td>
+     * <td class="colLast"><code>new Color(1.0, 0.4, 0.8, 0.5)</code></td>
+     * </tr>
+     * <tr class="altColor">
+     * <td class="colFirst"><code>Color.web("#ff66cc", 0.5);</code></td>
+     * <td class="colLast"><code>new Color(1.0, 0.4, 0.8, 0.5)</code></td>
+     * </tr>
+     * <tr class="rowColor">
+     * <td class="colFirst"><code>Color.web("#f68", 0.5);</code></td>
+     * <td class="colLast"><code>new Color(1.0, 0.4, 0.8, 0.5)</code></td>
+     * </tr>
+     * <tr class="altColor">
+     * <td class="colFirst"><code>Color.web("rgb(255,102,204)", 0.5);</code></td>
+     * <td class="colLast"><code>new Color(1.0, 0.4, 0.8, 0.5)</code></td>
+     * </tr>
+     * <tr class="rowColor">
+     * <td class="colFirst"><code>Color.web("rgb(100%,50%,50%)", 0.5);</code></td>
+     * <td class="colLast"><code>new Color(1.0, 0.5, 0.5, 0.5)</code></td>
+     * </tr>
+     * <tr class="altColor">
+     * <td class="colFirst"><code>Color.web("rgb(255,50%,50%,0.25)", 0.5);</code></td>
+     * <td class="colLast"><code>new Color(1.0, 0.5, 0.5, 0.125)</code></td>
+     * </tr>
+     * <tr class="rowColor">
+     * <td class="colFirst"><code>Color.web("hsl(240,100%,100%)", 0.5);</code></td>
+     * <td class="colLast"><code>Color.hsb(240.0, 1.0, 1.0, 0.5)</code></td>
+     * </tr>
+     * <tr class="altColor">
+     * <td style="border-bottom:1px solid" class="colFirst">
+     *     <code>Color.web("hsla(120,0%,0%,0.25)", 0.5);</code>
+     * </td>
+     * <td style="border-bottom:1px solid" class="colLast">
+     *     <code>Color.hsb(120.0, 0.0, 0.0, 0.125)</code>
+     * </td>
+     * </tr>
+     * </table>
+     * </div>
      *
-     * Examples:
-     * <pre><code>
-     * Color c = Color.web("0xff668840", 0.5);
-     * Color c = Color.web("0xff6688", 0.5);
-     * Color c = Color.web("#ff6688", 0.5);
-     * Color c = Color.web("ff6688", 0.5);
-     * Color c = Color.web("f68", 0.5);
-     * Color c = Color.web("orange", 0.5);
-     * </code></pre>
-     *
-     * @param colorRawName the hexadecimal string or color name
+     * @param colorString the name or numeric representation of the color
+     *                    in one of the supported formats
      * @param opacity the opacity component in range from 0.0 (transparent)
      *                to 1.0 (opaque)
-     * @throws NullPointerException if {@code colorRawName} is {@code null}
-     * @throws IllegalArgumentException if {@code colorRawName} specifies
-     *      an unsupported color name or illegal hexadecimal value
+     * @throws NullPointerException if {@code colorString} is {@code null}
+     * @throws IllegalArgumentException if {@code colorString} specifies
+     *      an unsupported color name or contains an illegal numeric value
      */
-    public static Color web(String colorRawName, double opacity) {
-        if (colorRawName == null) {
+    public static Color web(String colorString, double opacity) {
+        if (colorString == null) {
             throw new NullPointerException(
                     "The color components or name must be specified");
         }
-        if (colorRawName.isEmpty()) {
+        if (colorString.isEmpty()) {
             throw new IllegalArgumentException("Invalid color specification");
         }
         
-        String color = colorRawName.toLowerCase();
+        String color = colorString.toLowerCase();
 
         if (color.startsWith("#")) {
             color = color.substring(1);
         } else if (color.startsWith("0x")) {
             color = color.substring(2);
+        } else if (color.startsWith("rgb")) {
+            if (color.startsWith("(", 3)) {
+                return parseRGBColor(color, 4, false, opacity);
+            } else if (color.startsWith("a(", 3)) {
+                return parseRGBColor(color, 5, true, opacity);
+            }
+        } else if (color.startsWith("hsl")) {
+            if (color.startsWith("(", 3)) {
+                return parseHSLColor(color, 4, false, opacity);
+            } else if (color.startsWith("a(", 3)) {
+                return parseHSLColor(color, 5, true, opacity);
+            }
         } else {
             Color col = NamedColors.get(color);
             if (col != null) {
@@ -363,34 +452,182 @@ public class Color extends Paint implements Interpolatable<Color> { // final
         throw new IllegalArgumentException("Invalid color specification");
     }
 
+    private static Color parseRGBColor(String color, int roff,
+                                       boolean hasAlpha, double a)
+    {
+        try {
+            int rend = color.indexOf(',', roff);
+            int gend = rend < 0 ? -1 : color.indexOf(',', rend+1);
+            int bend = gend < 0 ? -1 : color.indexOf(hasAlpha ? ',' : ')', gend+1);
+            int aend = hasAlpha ? (bend < 0 ? -1 : color.indexOf(')', bend+1)) : bend;
+            if (aend >= 0) {
+                double r = parseComponent(color, roff, rend, PARSE_COMPONENT);
+                double g = parseComponent(color, rend+1, gend, PARSE_COMPONENT);
+                double b = parseComponent(color, gend+1, bend, PARSE_COMPONENT);
+                if (hasAlpha) {
+                    a *= parseComponent(color, bend+1, aend, PARSE_ALPHA);
+                }
+                return new Color(r, g, b, a);
+            }
+        } catch (NumberFormatException nfe) {}
+
+        throw new IllegalArgumentException("Invalid color specification");
+    }
+
+    private static Color parseHSLColor(String color, int hoff,
+                                       boolean hasAlpha, double a)
+    {
+        try {
+            int hend = color.indexOf(',', hoff);
+            int send = hend < 0 ? -1 : color.indexOf(',', hend+1);
+            int lend = send < 0 ? -1 : color.indexOf(hasAlpha ? ',' : ')', send+1);
+            int aend = hasAlpha ? (lend < 0 ? -1 : color.indexOf(')', lend+1)) : lend;
+            if (aend >= 0) {
+                double h = parseComponent(color, hoff, hend, PARSE_ANGLE);
+                double s = parseComponent(color, hend+1, send, PARSE_PERCENT);
+                double l = parseComponent(color, send+1, lend, PARSE_PERCENT);
+                if (hasAlpha) {
+                    a *= parseComponent(color, lend+1, aend, PARSE_ALPHA);
+                }
+                return Color.hsb(h, s, l, a);
+            }
+        } catch (NumberFormatException nfe) {}
+
+        throw new IllegalArgumentException("Invalid color specification");
+    }
+
+    private static final int PARSE_COMPONENT = 0; // percent, or clamped to [0,255] => [0,1]
+    private static final int PARSE_PERCENT = 1; // clamped to [0,100]% => [0,1]
+    private static final int PARSE_ANGLE = 2; // clamped to [0,360]
+    private static final int PARSE_ALPHA = 3; // clamped to [0.0,1.0]
+    private static double parseComponent(String color, int off, int end, int type) {
+        color = color.substring(off, end).trim();
+        if (color.endsWith("%")) {
+            if (type > PARSE_PERCENT) {
+                throw new IllegalArgumentException("Invalid color specification");
+            }
+            type = PARSE_PERCENT;
+            color = color.substring(0, color.length()-1).trim();
+        } else if (type == PARSE_PERCENT) {
+            throw new IllegalArgumentException("Invalid color specification");
+        }
+        if (type == PARSE_ALPHA) {
+            double d = Double.parseDouble(color);
+            return (d < 0.0) ? 0.0 : ((d > 1.0) ? 1.0 : d);
+        }
+        int c = Integer.parseInt(color);
+        switch (type) {
+            case PARSE_PERCENT:
+                return (c <= 0) ? 0.0 : ((c >= 100) ? 1.0 : (c / 100.0));
+            case PARSE_COMPONENT:
+                return (c <= 0) ? 0.0 : ((c >= 255) ? 1.0 : (c / 255.0));
+            case PARSE_ANGLE:
+                return ((c < 0.0)
+                        ? ((c % 360.0) + 360.0)
+                        : ((c > 360.0)
+                           ? (c % 360.0)
+                           : c));
+        }
+
+        throw new IllegalArgumentException("Invalid color specification");
+    }
+
     /**
-     * Creates an RGB color specified with hexadecimal notation or
-     * color name.
+     * Creates an RGB color specified with an HTML or CSS attribute string.
      *
-     * <p>Hexadecimal string contains values of red, green and blue channel.
-     * Optionally, value of alfa channel can be added. The whole string can
-     * be optionally prefixed by "0x" or "#".</p>
+     * <p>
+     * This method supports the following formats:
+     * <ul>
+     * <li>Any standard HTML color name
+     * <li>An HTML long or short format hex string with an optional hex alpha
+     * channel.
+     * Hexadecimal values may be preceded by either {@code "0x"} or {@code "#"}
+     * and can either be 2 digits in the range {@code 00} to {@code 0xFF} or a
+     * single digit in the range {@code 0} to {@code F}.
+     * <li>An {@code rgb(r,g,b)} or {@code rgba(r,g,b,a)} format string.
+     * Each of the {@code r}, {@code g}, or {@code b} values can be an integer
+     * from 0 to 255 or a percent value integer from 0 to 100 followed by the
+     * percent ({@code %}) character.  The alpha component, if present, is a
+     * floating point value from 0.0 to 1.0.  Spaces are allowed before or
+     * after the numbers and between the percentage number and its percent
+     * sign ({@code %}).
+     * <li>An {@code hsl(h,s,l)} or {@code hsla(h,s,l,a)} format string.
+     * The {@code h} value is an integer from 0 to 360 representing the hue
+     * angle on a color wheel in degrees with {@code 0} or {@code 360}
+     * representing red, {@code 120} representing green, and {@code 240}
+     * representing blue.  The {@code s} value is the saturation of the
+     * desired color represented as a percentage from gray ({@code 0}) to
+     * the fully saturated color ({@code 100}) and the {@code l} value
+     * is the desired lightness or brightness of the desired color represented
+     * as a percentage from black ({@code 0}) to the full brightness of the
+     * color ({@code 100}).  The alpha component, if present, is a floating
+     * point value from 0.0 to 1.0.  Spaces are allowed before or
+     * after the numbers and between the percentage number and its percent
+     * sign ({@code %}).
+     * </ul>
      *
-     * <p>For colors without alpha channel and for named colors, opacity
-     * is set to {@code 1.0} (opaque).</p>
+     * <p>Examples:</p>
+     * <div class="classUseContainer">
+     * <table class="overviewSummary" border="0" cellpadding="3" cellspacing="0">
+     * <tr>
+     * <th class="colFirst">Web Format String</th>
+     * <th class="colLast">Equivalent constant or factory call</th>
+     * </tr>
+     * <tr class="rowColor">
+     * <td class="colFirst"><code>Color.web("orange");</code></td>
+     * <td class="colLast"><code>Color.ORANGE</code></td>
+     * </tr>
+     * <tr class="altColor">
+     * <td class="colFirst"><code>Color.web("0xff668840");</code></td>
+     * <td class="colLast"><code>Color.rgb(255, 102, 136, 0.25)</code></td>
+     * </tr>
+     * <tr class="rowColor">
+     * <td class="colFirst"><code>Color.web("0xff6688");</code></td>
+     * <td class="colLast"><code>Color.rgb(255, 102, 136, 1.0)</code></td>
+     * </tr>
+     * <tr class="altColor">
+     * <td class="colFirst"><code>Color.web("#ff6688");</code></td>
+     * <td class="colLast"><code>Color.rgb(255, 102, 136, 1.0)</code></td>
+     * </tr>
+     * <tr class="rowColor">
+     * <td class="colFirst"><code>Color.web("#f68");</code></td>
+     * <td class="colLast"><code>Color.rgb(255, 102, 136, 1.0)</code></td>
+     * </tr>
+     * <tr class="altColor">
+     * <td class="colFirst"><code>Color.web("rgb(255,102,136)");</code></td>
+     * <td class="colLast"><code>Color.rgb(255, 102, 136, 1.0)</code></td>
+     * </tr>
+     * <tr class="rowColor">
+     * <td class="colFirst"><code>Color.web("rgb(100%,50%,50%)");</code></td>
+     * <td class="colLast"><code>Color.rgb(255, 128, 128, 1.0)</code></td>
+     * </tr>
+     * <tr class="altColor">
+     * <td class="colFirst"><code>Color.web("rgb(255,50%,50%,0.25)");</code></td>
+     * <td class="colLast"><code>Color.rgb(255, 128, 128, 0.25)</code></td>
+     * </tr>
+     * <tr class="rowColor">
+     * <td class="colFirst"><code>Color.web("hsl(240,100%,100%)");</code></td>
+     * <td class="colLast"><code>Color.hsb(240.0, 1.0, 1.0, 1.0)</code></td>
+     * </tr>
+     * <tr class="altColor">
+     * <td style="border-bottom:1px solid" class="colFirst">
+     *     <code>Color.web("hsla(120,0%,0%,0.25)");</code>
+     * </td>
+     * <td style="border-bottom:1px solid" class="colLast">
+     *     <code>Color.hsb(120.0, 0.0, 0.0, 0.25)</code>
+     * </td>
+     * </tr>
+     * </table>
+     * </div>
      *
-     * <p>This method supports also short notation, in which each channel
-     * is represented by only one hexadecimal character.</p>
-     *
-     * Examples:
-     * <pre><code>
-     * Color c = Color.web("0xff668840");
-     * Color c = Color.web("0xff6688");
-     * Color c = Color.web("#ff6688");
-     * Color c = Color.web("ff6688");
-     * Color c = Color.web("f68");
-     * Color c = Color.web("orange");
-     * </code></pre>
-     *
-     * @param color the hexadecimal string or color name
+     * @param colorString the name or numeric representation of the color
+     *                    in one of the supported formats
+     * @throws NullPointerException if {@code colorString} is {@code null}
+     * @throws IllegalArgumentException if {@code colorString} specifies
+     *      an unsupported color name or contains an illegal numeric value
      */
-    public static Color web(String color) {
-        return web(color, 1.0);
+    public static Color web(String colorString) {
+        return web(colorString, 1.0);
     }
 
     /**

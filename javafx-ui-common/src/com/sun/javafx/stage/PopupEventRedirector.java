@@ -82,7 +82,7 @@ public final class PopupEventRedirector extends EventRedirector {
 
         final Scene scene = popupWindow.getScene();
         if (scene != null) {
-            final Node sceneFocusOwner = scene.impl_getFocusOwner();
+            final Node sceneFocusOwner = scene.getFocusOwner();
             final EventTarget eventTarget =
                     (sceneFocusOwner != null) ? sceneFocusOwner : scene;
             if (EventUtil.fireEvent(eventTarget, new DirectEvent(event))

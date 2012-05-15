@@ -33,7 +33,10 @@ import javafx.event.EventType;
  * <p>
  * When the scrolling is produced by a touch gesture (such as dragging a finger
  * over a touch screen), it is surrounded by the {@code SCROLL_STARTED} and 
- * {@code SCROLL_FINISHED} events. When the scrolling is caused by a mouse
+ * {@code SCROLL_FINISHED} events. Changing number of involved touch points during
+ * the scrolling is considered a new gesture, so the pair of
+ * {@code SCROLL_FINISHED} and {@code SCROLL_STARTED} notifications is delivered
+ * each time the {@code touchCount} changes. When the scrolling is caused by a mouse
  * wheel rotation, only a one-time {@code SCROLL} event is delivered, without
  * the started/finished surroundings. If scrolling inertia is active on the
  * given platform, some {@code SCROLL} events with {@code isInertia()} returning
@@ -60,7 +63,8 @@ import javafx.event.EventType;
  * need to be used.
  * <p>
  * As all gestures, scrolling can be direct (performed directly at
- * the concrete coordinates as on touch screen) or indirect (performed
+ * the concrete coordinates as on touch screen - the center point among all
+ * the touches is usually used as the gesture coordinates) or indirect (performed
  * indirectly as on track pad or with mouse - the mouse cursor location
  * is usually used as the gesture coordinates).
  * <p>

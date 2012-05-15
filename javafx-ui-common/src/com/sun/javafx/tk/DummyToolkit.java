@@ -59,9 +59,10 @@ import com.sun.javafx.geom.transform.BaseTransform;
 import com.sun.javafx.perf.PerformanceTracker;
 import com.sun.javafx.runtime.async.AsyncOperation;
 import com.sun.javafx.runtime.async.AsyncOperationListener;
-import com.sun.javafx.scene.paint.ImagePattern;
+import javafx.scene.paint.ImagePattern;
 import com.sun.javafx.scene.text.HitInfo;
 import com.sun.javafx.sg.PGArc;
+import com.sun.javafx.sg.PGCanvas;
 import com.sun.javafx.sg.PGCircle;
 import com.sun.javafx.sg.PGCubicCurve;
 import com.sun.javafx.sg.PGEllipse;
@@ -401,6 +402,11 @@ final public class DummyToolkit extends Toolkit {
 
     @Override
     public PGRegion createPGRegion() {
+        throw new UnsupportedOperationException("Not supported yet.");
+    }
+
+    @Override
+    public PGCanvas createPGCanvas() {
         throw new UnsupportedOperationException("Not supported yet.");
     }
 

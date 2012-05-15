@@ -120,7 +120,8 @@ public class ParametersImpl extends Parameters {
      * object.
      */
     private void init(Map params, String[] arguments) {
-        for (Object key : params.keySet()) {
+        for (Object e : params.entrySet()) {
+            Object key = ((Map.Entry)e).getKey();
             if (validKey(key)) {
                 Object value = params.get(key);
                 if (value instanceof String) {
@@ -161,7 +162,7 @@ public class ParametersImpl extends Parameters {
     private boolean validKey(Object key) {
         if (key instanceof String) {
             String keyStr = (String)key;
-            if (keyStr.length() > 0 && keyStr.indexOf("=") < 0) {
+            if (keyStr.length() > 0 && keyStr.indexOf('=') < 0) {
                 return validFirstChar(keyStr.charAt(0));
             }
         }
@@ -179,7 +180,7 @@ public class ParametersImpl extends Parameters {
      */
     private boolean isNamedParam(String arg) {
         if (arg.startsWith("--")) {
-            return (arg.indexOf("=") > 2 && validFirstChar(arg.charAt(2)));
+            return (arg.indexOf('=') > 2 && validFirstChar(arg.charAt(2)));
         } else {
             return false;
         }
@@ -205,7 +206,7 @@ public class ParametersImpl extends Parameters {
     private void computeNamedParams() {
         for (String arg : rawArgs) {
             if (isNamedParam(arg)) {
-                final int eqIdx = arg.indexOf("=");
+                final int eqIdx = arg.indexOf('=');
                 String key = arg.substring(2, eqIdx);
                 String value = arg.substring(eqIdx + 1);
                 namedParams.put(key, value);

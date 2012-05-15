@@ -470,4 +470,18 @@ public class Shadow extends Effect {
                                            getClampedHeight(),
                                            getBlurType());
     }
+
+    /**
+     * 
+     * @treatAsPrivate implementation detail
+     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
+     */
+    @Override
+    public Effect impl_copy() {
+        Shadow shadow = new Shadow(this.getBlurType(), this.getColor(), this.getRadius());
+        shadow.setInput(this.getInput());
+        shadow.setHeight(this.getHeight());
+        shadow.setWidth(this.getWidth());
+        return shadow;
+    }
 }

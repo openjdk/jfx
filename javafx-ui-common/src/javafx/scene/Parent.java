@@ -106,8 +106,8 @@ public abstract class Parent extends Node {
     @Override public void impl_updatePG() {
         super.impl_updatePG();
 
-        List<PGNode> pgnodes = getPGGroup().getChildren();
         if (Utils.assertionEnabled()) {
+            List<PGNode> pgnodes = getPGGroup().getChildren();
             if (pgnodes.size() != pgChildrenSize) {
                 java.lang.System.err.println("*** pgnodes.size() [" + pgnodes.size() + "] != pgChildrenSize [" + pgChildrenSize + "]");
             }
@@ -255,8 +255,8 @@ public abstract class Parent extends Node {
 
             // If the childrenTriggerPermutation flag is set, then we know it
             // is a simple permutation and no further checking is needed.
-            childrenModified = false;
             if (childrenTriggerPermutation) {
+                childrenModified = false;
                 return;
             }
 
@@ -269,7 +269,8 @@ public abstract class Parent extends Node {
             childrenModified = true;
             if (newLength == childSet.size()) {
                 childrenModified = false;
-                for (Node n : newNodes) {
+                for (int i = newNodes.size() - 1; i >= 0; --i ) {
+                    Node n = newNodes.get(i);
                     if (!childSet.contains(n)) {
                         childrenModified = true;
                         break;
@@ -309,7 +310,8 @@ public abstract class Parent extends Node {
                 }
 
                 if (childrenModified) {
-                    for (Node node : newNodes) {
+                    for (int i = newNodes.size() - 1; i >= 0; --i ) {
+                        Node node = newNodes.get(i);
                         if (node == null) {
                             throw new NullPointerException(
                                     constructExceptionMessage(
@@ -383,7 +385,10 @@ public abstract class Parent extends Node {
                 boolean relayout = false;
                 
                 while (c.next()) {
-                    for (Node n : c.getAddedSubList()) {
+                    int from = c.getFrom();
+                    int to = c.getTo();
+                    for (int i = from; i < to; ++i) {
+                        Node n = children.get(i);
                         if (n != null && n.getParent() != null && n.getParent() != Parent.this) {
                             if (warnOnAutoMove) {
                                 java.lang.System.err.println("WARNING added to a new parent without first removing it from its current");
@@ -400,14 +405,18 @@ public abstract class Parent extends Node {
                         }
                     }
 
-                    for (Node node : c.getRemoved()) {
+                    List<Node> removed = c.getRemoved();
+                    int removedSize = removed.size();
+                    for (int i = 0; i < removedSize; ++i) {
+                        Node node = removed.get(i);
                         if (node != null && node.isManaged()) {
                             relayout = true;
                         }
                     }
                     
                     // update the parent and scene for each new node
-                    for (Node node : c.getAddedSubList()) {
+                    for (int i = from; i < to; ++i) {
+                        Node node = children.get(i);
                         if (node != null) {
                             if (node.isManaged()) {
                                 relayout = true;
@@ -433,7 +442,9 @@ public abstract class Parent extends Node {
                     // only bother populating children if geom has
                     // changed, otherwise there is no need
                     if (geomChanged) {
-                        for (Node ch : children) {
+                        int size = children.size();
+                        for (int i = 0; i < size; ++i) {
+                            Node ch = children.get(i);
                             if (ch.isVisible() && ch.boundsChanged) {
                                 dirtyChildren.add(ch);
                             }
@@ -693,8 +704,9 @@ public abstract class Parent extends Node {
     @Override public Node lookup(String selector) {
         Node n = super.lookup(selector);
         if (n == null) {
-            for (Node c : getChildren()) {
-                n = c.lookup(selector);
+            int size = children.size();
+            for (int i = 0; i < size; ++i) {
+                n = children.get(i).lookup(selector);
                 if (n != null) return n;
             }
         }
@@ -707,8 +719,9 @@ public abstract class Parent extends Node {
      */
     @Override List<Node> lookupAll(Selector selector, List<Node> results) {
         results = super.lookupAll(selector, results);
-        for (Node c : getChildren()) {
-            results = c.lookupAll(selector, results);
+        int size = children.size();
+            for (int i = 0; i < size; ++i) {
+            results = children.get(i).lookupAll(selector, results);
         }
         return results;
     }
@@ -978,7 +991,9 @@ public abstract class Parent extends Node {
      * @return baseline offset
      */
     @Override public double getBaselineOffset() {
-        for (Node child: getChildren()) {
+        int size = children.size();
+        for (int i = 0; i < size; ++i) {
+            Node child = children.get(i);
             if (child.isManaged()) {
                 return child.getLayoutBounds().getMinY() + child.getLayoutY() + child.getBaselineOffset();
             }
@@ -1035,7 +1050,9 @@ public abstract class Parent extends Node {
      */
     @Deprecated
     protected final void impl_resizeChildren(boolean snapToPixel) {
-        for (Node node : getChildren()) {
+        int size = children.size();
+        for (int i = 0; i < size; ++i) {
+            Node node = children.get(i);
             if (node.isResizable() && node.isManaged()) {
                 node.autosize();
             }
@@ -1265,7 +1282,7 @@ public abstract class Parent extends Node {
             // at all (no scales, rotates, or shears)
             // so in this case we can easily use the cached bounds
             if (cachedBoundsInvalid) recomputeBounds();
-            if (tx != null && !tx.isIdentity()) {
+            if (!tx.isIdentity()) {
                 bounds = bounds.deriveWithNewBounds((float)(cachedBounds.getMinX() + tx.getMxt()),
                                  (float)(cachedBounds.getMinY() + tx.getMyt()),
                                  (float)(cachedBounds.getMinZ() + tx.getMzt()),

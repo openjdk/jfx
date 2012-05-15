@@ -352,6 +352,17 @@ public class Rotate extends Transform {
     }
 
     /**
+     * @treatAsPrivate implementation detail
+     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
+     */
+    @Deprecated
+    @Override
+    public Transform impl_copy() {
+        return new Rotate(getAngle(), getPivotX(), getPivotY(), getPivotZ(),
+                          getAxis());
+    }
+
+    /**
      * Returns a string representation of this {@code Rotate} object.
      * @return a string representation of this {@code Rotate} object.
      */ 

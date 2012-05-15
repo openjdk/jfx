@@ -42,11 +42,11 @@ import javafx.util.Duration;
 import com.sun.javafx.collections.TrackableObservableList;
 
 /**
- * This {@link Transition} starts all {@link javafx.animation.Animation
- * Animations} in {@link #children} in sequential order.
+ * This {@link Transition} plays a list of {@link javafx.animation.Animation
+ * Animations} in sequential order.
  * <p>
- * Children of this {@code Transition} inherit {@link #node} if their
- * {@code node} variable is not specified.
+ * Children of this {@code Transition} inherit {@link #nodeProperty() node}, if their
+ * {@code node} property is not specified.
  * 
  * <p>
  * Code Segment Example:

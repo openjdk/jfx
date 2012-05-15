@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2012, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -49,6 +49,7 @@ import javafx.scene.input.KeyEvent;
 import javafx.scene.input.MouseEvent;
 import javafx.scene.input.TransferMode;
 import javafx.scene.paint.Color;
+import javafx.scene.paint.ImagePattern;
 import javafx.scene.paint.LinearGradient;
 import javafx.scene.paint.RadialGradient;
 import javafx.scene.shape.PathElement;
@@ -69,9 +70,9 @@ import com.sun.javafx.menu.MenuBase;
 import com.sun.javafx.perf.PerformanceTracker;
 import com.sun.javafx.runtime.async.AsyncOperation;
 import com.sun.javafx.runtime.async.AsyncOperationListener;
-import com.sun.javafx.scene.paint.ImagePattern;
 import com.sun.javafx.scene.text.HitInfo;
 import com.sun.javafx.sg.PGArc;
+import com.sun.javafx.sg.PGCanvas;
 import com.sun.javafx.sg.PGCircle;
 import com.sun.javafx.sg.PGCubicCurve;
 import com.sun.javafx.sg.PGEllipse;
@@ -318,7 +319,6 @@ public class StubToolkit extends Toolkit {
         // TODO: The contains testing could be done directly without creating a Shape
         return tmpStroke.createStrokedShape(shape).contains((float) x, (float) y);
     }
-
 
     @Override
     public Shape createStrokedShape(Shape shape,
@@ -674,7 +674,10 @@ public class StubToolkit extends Toolkit {
 
     @Override
     public PathElement[] convertShapeToFXPath(Object shape) {
-        throw new UnsupportedOperationException();
+        // Had to be mocked up for TextField tests (for the caret!)
+        // Since the "shape" could be anything, I'm just returning
+        // something here, doesn't matter what.
+        return new PathElement[0];
     }
 
     @Override
@@ -820,6 +823,11 @@ public class StubToolkit extends Toolkit {
         this.dndDelegate = dndDelegate;
     }
 
+    @Override
+    public PGCanvas createPGCanvas() {
+        return new StubCanvas();
+    }
+
     public interface DndDelegate {
         void startDrag(Object o, Set<TransferMode> tm,
                 TKDragSourceListener l, Dragboard dragboard);
@@ -852,12 +860,12 @@ public class StubToolkit extends Toolkit {
 
     @Override
     public long getMultiClickTime() {
-	return 500L;
+        return 500L;
     }
 
     @Override
     public int getMultiClickMaxX() {
-	return 5;
+        return 5;
     }
 
     @Override
@@ -942,6 +950,6 @@ public class StubToolkit extends Toolkit {
         public void setMenus(List<MenuBase> menus) {
             throw new UnsupportedOperationException("Not supported yet.");
         }
-        
+
     }
 }

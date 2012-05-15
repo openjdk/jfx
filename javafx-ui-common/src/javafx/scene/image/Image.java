@@ -436,6 +436,9 @@ public class Image {
     /**
      * @treatAsPrivate implementation detail
      */
+    // SB-dependency: RT-21219 has been filed to track this
+    // TODO: need to ensure that both SceneBuilder and JDevloper have migrated
+    // to new 2.2 public API before we remove this.
     @Deprecated
     public final Object impl_getPlatformImage() {
         return platformImage == null ? null : platformImage.get();
@@ -775,6 +778,9 @@ public class Image {
      * @treatAsPrivate implementation detail
      * @deprecated This is an internal API that is not intended for use and will be removed in the next version
      */
+    // SB-dependency: RT-21217 has been filed to track this
+    // TODO: need to ensure that both SceneBuilder and JDevloper have migrated
+    // to new 2.2 public API before we remove this.
     @Deprecated
     public static Image impl_fromPlatformImage(Object image) {
         return new Image(image);
@@ -971,6 +977,9 @@ public class Image {
      * @treatAsPrivate implementation detail
      * @deprecated This is an internal API that is not intended for use and will be removed in the next version
      */
+    // SB-dependency: ?????
+    // TODO: need to ensure that both SceneBuilder and JDevloper have migrated
+    // to new 2.2 public API before we remove this.
     @Deprecated
     public Object impl_toExternalImage(Object imgType) {
         return Toolkit.getToolkit().toExternalImage(impl_getPlatformImage(), imgType);
@@ -984,6 +993,9 @@ public class Image {
      * @treatAsPrivate implementation detail
      * @deprecated This is an internal API that is not intended for use and will be removed in the next version
      */
+    // SB-dependency: ?????
+    // TODO: need to ensure that both SceneBuilder and JDevloper have migrated
+    // to new 2.2 public API before we remove this.
     @Deprecated
     public static Image impl_fromExternalImage(Object extImage) {
         return impl_isExternalFormatSupported(extImage.getClass())
@@ -998,6 +1010,9 @@ public class Image {
      * @treatAsPrivate implementation detail
      * @deprecated This is an internal API that is not intended for use and will be removed in the next version
      */
+    // SB-dependency: ?????
+    // TODO: need to ensure that both SceneBuilder and JDevloper have migrated
+    // to new 2.2 public API before we remove this.
     @Deprecated
     public static boolean impl_isExternalFormatSupported(Class format) {
         return Toolkit.getToolkit().isExternalFormatSupported(format);

@@ -366,4 +366,17 @@ public class Reflection extends Effect {
 
         return EffectUtils.transformBounds(tx, ret);
     }
+
+    /**
+     * 
+     * @treatAsPrivate implementation detail
+     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
+     */
+    @Override
+    public Effect impl_copy() {
+        Reflection ref = new Reflection(this.getTopOffset(), this.getFraction(), 
+                this.getTopOpacity(), this.getBottomOpacity());
+        ref.setInput(ref.getInput());        
+        return ref;
+    }
 }

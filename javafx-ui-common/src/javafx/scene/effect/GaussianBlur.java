@@ -194,4 +194,14 @@ public class GaussianBlur extends Effect {
         bounds = bounds.deriveWithPadding(r, r, 0);
         return EffectUtils.transformBounds(tx, bounds);
     }
+
+    /**
+     * 
+     * @treatAsPrivate implementation detail
+     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
+     */
+    @Override
+    public Effect impl_copy() {
+        return new GaussianBlur(this.getRadius());
+    }
 }

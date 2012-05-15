@@ -59,6 +59,12 @@ public final class TempState {
     public final Affine3D leafTx = new Affine3D();
 
     /**
+     * A temporary affine transform used by the snapshot code in scene or
+     * node.
+     */
+    public final Affine3D snapshotTx = new Affine3D();
+
+    /**
      * A temporary point used for picking and other purposes.
      */
     public final com.sun.javafx.geom.Point2D point =

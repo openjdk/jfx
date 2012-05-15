@@ -40,6 +40,8 @@ import org.junit.Test;
 import com.sun.javafx.geom.Path2D;
 import com.sun.javafx.geom.PathIterator;
 import com.sun.javafx.pgstub.StubPath;
+import java.util.ArrayList;
+import java.util.List;
 
 
 public class PathTest {
@@ -54,7 +56,23 @@ public class PathTest {
         assertSame(two, path.getElements().get(1));
         assertSame(three, path.getElements().get(2));
     }
-
+    
+    @Test public void testListConstructor() {        
+        PathElement one = new MoveTo(10, 10);
+        PathElement two = new LineTo(20, 20);
+        PathElement three = new MoveTo(30, 30);
+        
+        List<PathElement> listOfElements = new ArrayList<PathElement>();
+        listOfElements.add(one);
+        listOfElements.add(two);
+        listOfElements.add(three);
+        Path path = new Path(listOfElements);
+        assertEquals(3, path.getElements().size());
+        assertSame(one, path.getElements().get(0));
+        assertSame(two, path.getElements().get(1));
+        assertSame(three, path.getElements().get(2));
+    }
+    
     @Test public void testBoundPropertySync_FillRule() throws Exception {
         ObjectProperty<FillRule> v = new SimpleObjectProperty<FillRule>(FillRule.EVEN_ODD);
         Path path = new Path();

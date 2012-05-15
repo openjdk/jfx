@@ -327,4 +327,16 @@ public class BoxBlur extends Effect {
 
         return EffectUtils.transformBounds(tx, bounds);
     }
+
+    /**
+     * 
+     * @treatAsPrivate implementation detail
+     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
+     */
+    @Override
+    public Effect impl_copy() {
+        BoxBlur bb = new BoxBlur(this.getWidth(), this.getHeight(), this.getIterations());
+        bb.setInput(this.getInput());
+        return bb;
+    }
 }

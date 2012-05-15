@@ -25,7 +25,7 @@
  *
  */
 
-package com.sun.javafx.scene.paint;
+package javafx.scene.paint;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
@@ -33,6 +33,7 @@ import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertSame;
 import static org.junit.Assert.assertTrue;
 import javafx.scene.image.Image;
+import javafx.scene.paint.ImagePattern;
 
 import org.junit.Test;
 

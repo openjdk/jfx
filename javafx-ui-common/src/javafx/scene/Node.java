@@ -93,14 +93,17 @@ import com.sun.javafx.scene.EventHandlerProperties;
 import com.sun.javafx.scene.NodeEventDispatcher;
 import com.sun.javafx.scene.traversal.Direction;
 import com.sun.javafx.sg.PGNode;
-import java.lang.ref.Reference;
+import com.sun.javafx.tk.Toolkit;
 import java.util.*;
 import javafx.beans.property.*;
 import javafx.beans.value.WritableValue;
+import javafx.geometry.Rectangle2D;
+import javafx.scene.image.Image;
 import javafx.scene.input.SwipeEvent;
 import javafx.scene.input.TouchEvent;
 import javafx.scene.text.Font;
 import javafx.scene.text.Text;
+import javafx.util.Callback;
 
 /**
  * Base class for scene graph nodes. A scene graph is a set of tree data structures
@@ -510,6 +513,10 @@ public abstract class Node implements EventTarget {
                                   ? null
                                   : Blend.impl_getToolkitMode(mode));
         }
+
+        if (impl_isDirty(DirtyBits.NODE_TREE_VISIBLE) && !treeVisible) {
+            peer.dispose();
+        }
     }
 
     /*************************************************************************
@@ -696,6 +703,7 @@ public abstract class Node implements EventTarget {
                     if (getClip() != null) {
                         getClip().setScene(_scene);
                     }
+                    updateTreeVisible();
                     updateCanReceiveFocus();
                     if (isFocusTraversable()) {
                         if (oldScene != null) {
@@ -1556,6 +1564,238 @@ public abstract class Node implements EventTarget {
         if (getParent() != null) {
             getParent().impl_toFront(this);
         }
+    }
+
+    // TODO: need to verify whether this is OK to do starting from a node in
+    // the scene graph other than the root.
+    private void doCSSPass() {
+        if (this.cssFlag != CSSFlags.CLEAN) {
+            // The dirty bit isn't checked but we must ensure it is cleared.
+            // The cssFlag is set to clean in either Node.processCSS or
+            // Node.impl_processCSS(boolean)
+
+            // Don't clear the dirty bit in case it will cause problems
+            // with a full CSS pass on the scene.
+            // TODO: is this the right thing to do?
+            // this.impl_clearDirty(com.sun.javafx.scene.DirtyBits.NODE_CSS);
+
+            this.processCSS();
+        }
+    }
+
+    /**
+     * Recursive function for synchronizing a node and all descendents
+     */
+    private static void syncAll(Node node) {
+        node.impl_syncPGNode();
+        if (node instanceof Parent) {
+            Parent p = (Parent) node;
+            final int childrenCount = p.getChildren().size();
+
+            for (int i = 0; i < childrenCount; i++) {
+                Node n = p.getChildren().get(i);
+                if (n != null) {
+                    syncAll(n);
+                }
+            }
+        }
+        if (node.getClip() != null) {
+            syncAll(node.getClip());
+        }
+    }
+
+    private void doLayoutPass() {
+        if (this instanceof Parent) {
+            // TODO: As an optimization we only need to layout those dirty
+            // roots that are descendents of this node
+            Parent p = (Parent)this;
+            for (int i = 0; i < 3; i++) {
+                p.layout();
+            }
+        }
+    }
+
+    private void doCSSLayoutSyncForSnapshot() {
+        doCSSPass();
+        doLayoutPass();
+        Scene.impl_setAllowPGAccess(true);
+        syncAll(this);
+        Scene.impl_setAllowPGAccess(false);
+    }
+
+    private Object doSnapshot(SnapshotParameters params, Object platformImage) {
+        if (getScene() != null) {
+            getScene().doCSSLayoutSyncForSnapshot(this);
+        } else {
+            doCSSLayoutSyncForSnapshot();
+        }
+
+        BaseTransform transform = BaseTransform.IDENTITY_TRANSFORM;
+        if (params.getTransform() != null) {
+            Affine3D tempTx = new Affine3D();
+            params.getTransform().impl_apply(tempTx);
+            transform = tempTx;
+        }
+        double x;
+        double y;
+        double w;
+        double h;
+        Rectangle2D viewport = params.getViewport();
+        if (viewport != null) {
+            // Use the specified viewport
+            x = viewport.getMinX();
+            y = viewport.getMinY();
+            w = viewport.getWidth();
+            h = viewport.getHeight();
+        } else {
+            // Get the bounds in parent of this node, transformed by the
+            // specified transform.
+            BaseBounds tempBounds = TempState.getInstance().bounds;
+            tempBounds = getTransformedBounds(tempBounds, transform);
+            x = tempBounds.getMinX();
+            y = tempBounds.getMinY();
+            w = tempBounds.getWidth();
+            h = tempBounds.getHeight();
+        }
+        Object result = Scene.doSnapshot(getScene(), x, y, w, h,
+                this, transform, params.isDepthBuffer(),
+                params.getFill(), params.getCamera(), platformImage);
+
+        return result;
+    }
+
+    /**
+     * Takes a snapshot of this node and returns the rendered image when
+     * it is ready.
+     * CSS and layout processing will be done for the node, and any of its
+     * children, prior to rendering it.
+     *
+     * @param params the snapshot parameters containing attributes that
+     * will control the rendering. If the SnapshotParameters object is null,
+     * then the Scene's attributes will be used if this node is part of a scene,
+     * or default attributes will be used if this node is not part of a scene.
+     *
+     * @param image the image that will be used to hold the rendered node.
+     * It may be null in which case a new Image will be constructed.
+     * If the image is non-null, the node will be rendered into the
+     * existing image.
+     * If the image is larger than the bounds of the node, the area outside
+     * the bounds will be filled with the fill color specified in the
+     * snapshot parameters. If the image is smaller than the bounds,
+     * the rendered image will be clipped.
+     *
+     * @throws IllegalStateException if this method is called on a thread
+     *     other than the JavaFX Application Thread.
+     *
+     * @return the rendered image
+     */
+    public Image snapshot(SnapshotParameters params, Image image) {
+        Toolkit.getToolkit().checkFxUserThread();
+
+        if (params == null) {
+            params = new SnapshotParameters();
+            Scene s = getScene();
+            if (s != null) {
+                params.setCamera(s.getCamera());
+                params.setDepthBuffer(s.isDepthBuffer());
+                params.setFill(s.getFill());
+            }
+        }
+
+        // TODO: Ignore image for now. In order to support it, we either need
+        // ImageOps support or we need a private method to mutate the existing
+        // platform image in an image object.
+        if (image != null) {
+            System.err.println("WARNING: Scene.snapshot: image currently ignored");
+        }
+
+        Object platformImage = doSnapshot(params, null);
+        Image theImage = Image.impl_fromPlatformImage(platformImage);
+        return theImage;
+    }
+
+    /**
+     * Takes a snapshot of this node at the next frame and calls the
+     * specified callback method when the image is ready.
+     * CSS and layout processing will be done for the node, and any of its
+     * children, prior to rendering it.
+     * This is an asynchronous call, which means that other
+     * events or animation might be processed before the node is rendered.
+     * If any such events modify the node, or any of its children, that
+     * modification will be reflected in the rendered image (just like it
+     * will also be reflected in the frame rendered to the Stage, if this node
+     * is part of a live scene graph).
+     *
+     * @param callback a class whose call method will be called when the image
+     * is ready. The SnapshotResult that is passed into the call method of
+     * the callback will contain the rendered image, the source node
+     * that was rendered, and a copy of the SnapshotParameters.
+     *
+     * @param params the snapshot parameters containing attributes that
+     * will control the rendering. If the SnapshotParameters object is null,
+     * then the Scene's attributes will be used if this node is part of a scene,
+     * or default attributes will be used if this node is not part of a scene.
+     *
+     * @param image the image that will be used to hold the rendered node.
+     * It may be null in which case a new Image will be constructed.
+     * If the image is non-null, the node will be rendered into the
+     * existing image.
+     * If the image is larger than the bounds of the node, the area outside
+     * the bounds will be filled with the fill color specified in the
+     * snapshot parameters. If the image is smaller than the bounds,
+     * the rendered image will be clipped.
+     *
+     * @throws IllegalStateException if this method is called on a thread
+     *     other than the JavaFX Application Thread.
+     *
+     */
+    public void snapshot(Callback<SnapshotResult, Void> callback,
+            SnapshotParameters params, Image image) {
+
+        Toolkit.getToolkit().checkFxUserThread();
+
+        if (params == null) {
+            params = new SnapshotParameters();
+            Scene s = getScene();
+            if (s != null) {
+                params.setCamera(s.getCamera());
+                params.setDepthBuffer(s.isDepthBuffer());
+                params.setFill(s.getFill());
+            }
+        } else {
+            params = params.copy();
+        }
+
+        // TODO: Ignore image for now. In order to support it, we either need
+        // ImageOps support or we need a private method to mutate the existing
+        // platform image in an image object.
+        if (image != null) {
+            System.err.println("WARNING: Scene.snapshot: image currently ignored");
+        }
+
+        final SnapshotParameters theParams = params;
+        final Callback<SnapshotResult, Void> theCallback = callback;
+
+        // Create a deferred runnable that will be run from a pulse listener
+        // that is called after all of the scenes have been synced but before
+        // any of them have been rendered.
+        final Runnable snapshotRunnable = new Runnable() {
+            @Override public void run() {
+                Object platformImage = doSnapshot(theParams, null);
+                Image theImage = Image.impl_fromPlatformImage(platformImage);
+                SnapshotResult result = new SnapshotResult(theImage, Node.this, theParams);
+//                System.err.println("Calling snapshot callback");
+                try {
+                    Void v = theCallback.call(result);
+                } catch (Throwable th) {
+                    System.err.println("Exception in snapshot callback");
+                    th.printStackTrace(System.err);
+                }
+            }
+        };
+
+//        System.err.println("Schedule a snapshot in the future");
+        Scene.addSnapshotRunnable(snapshotRunnable);
     }
 
     /* ************************************************************************
@@ -5855,7 +6095,7 @@ public abstract class Node implements EventTarget {
      */
     private void focusSetDirty(Scene s) {
         if (s != null &&
-            (this == s.impl_getFocusOwner() || isFocusTraversable())) {
+            (this == s.getFocusOwner() || isFocusTraversable())) {
                 s.setFocusDirty(true);
         }
     }
@@ -5915,7 +6155,7 @@ public abstract class Node implements EventTarget {
     @Override
     public String toString() {
         String klassName = getClass().getName();
-        String simpleName = klassName.substring(klassName.lastIndexOf(".")+1);
+        String simpleName = klassName.substring(klassName.lastIndexOf('.')+1);
         StringBuilder sbuf = new StringBuilder(simpleName);
         boolean hasId = id != null && !"".equals(getId());
         boolean hasStyleClass = !getStyleClass().isEmpty();
@@ -5973,7 +6213,8 @@ public abstract class Node implements EventTarget {
     }
 
     private void updateTreeVisible() {
-        setTreeVisible(isVisible() && ((getParent() == null) || getParent().impl_isTreeVisible()));
+        setTreeVisible(isVisible() && ((getParent() != null && getParent().impl_isTreeVisible()) ||
+                (getScene() != null && getScene().getRoot() == this)));
     }
 
     private boolean treeVisible;
@@ -5985,6 +6226,7 @@ public abstract class Node implements EventTarget {
             updateCanReceiveFocus();
             focusSetDirty(getScene());
             ((TreeVisiblePropertyReadOnly)treeVisibleProperty()).invalidate();
+            impl_setDirty(DirtyBits.NODE_TREE_VISIBLE);
         }
     }
 

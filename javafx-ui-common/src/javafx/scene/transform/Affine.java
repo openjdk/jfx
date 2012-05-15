@@ -517,6 +517,18 @@ public class Affine extends Transform {
     }
 
     /**
+     * @treatAsPrivate implementation detail
+     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
+     */
+    @Deprecated
+    @Override
+    public Transform impl_copy() {
+        return affine(getMxx(), getMxy(), getMxz(), getTx(),
+                      getMyx(), getMyy(), getMyz(), getTy(),
+                      getMzx(), getMzy(), getMzz(), getTz());
+    }
+
+    /**
      * Returns a string representation of this {@code Affine} object.
      * @return a string representation of this {@code Affine} object.
      */ 
