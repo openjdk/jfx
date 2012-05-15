@@ -30,10 +30,14 @@ import javafx.scene.Node;
 
 import com.sun.javafx.WeakReferenceQueue;
 import com.sun.javafx.geom.transform.Affine3D;
+import com.sun.javafx.scene.transform.TransformUtils;
+import javafx.geometry.Point3D;
 
 /**
- * This class provides functions to perform rotating, scaling, shearing,
- * and translation transformations for {@code Affine} objects.
+ * This class is a base class for different affine transformations.
+ * It provides factory methods for the simple transformations - rotating,
+ * scaling, shearing, and translation. It allows to get the transformation
+ * matrix elements for any transform.
  *
  * <p>Example:</p>
  *
@@ -215,6 +219,153 @@ public abstract class Transform {
 
     private WeakReferenceQueue impl_nodes = new WeakReferenceQueue();
 
+    /**
+     * Gets the X coordinate scaling element of the 3x4 matrix.
+     */
+    public  double getMxx() {
+        return 1.0;
+    }
+
+    /**
+     * Gets the XY coordinate element of the 3x4 matrix.
+     */
+    public  double getMxy() {
+        return 0.0;
+    }
+
+    /**
+     * Gets the XZ coordinate element of the 3x4 matrix.
+     */
+    public  double getMxz() {
+        return 0.0;
+    }
+
+    /**
+     * Gets the X coordinate translation element of the 3x4 matrix.
+     */
+    public  double getTx() {
+        return 0.0;
+    }
+
+    /**
+     * Gets the YX coordinate element of the 3x4 matrix.
+     */
+    public  double getMyx() {
+        return 0.0;
+    }
+
+    /**
+     * Gets the Y coordinate scaling element of the 3x4 matrix.
+     */
+    public  double getMyy() {
+        return 1.0;
+    }
+
+    /**
+     * Gets the YZ coordinate element of the 3x4 matrix.
+     */
+    public  double getMyz() {
+        return 0.0;
+    }
+
+    /**
+     * Gets the Y coordinate translation element of the 3x4 matrix.
+     */
+    public  double getTy() {
+        return 0.0;
+    }
+
+    /**
+     * Gets the ZX coordinate element of the 3x4 matrix.
+     */
+    public  double getMzx() {
+        return 0.0;
+    }
+
+    /**
+     * Gets the ZY coordinate element of the 3x4 matrix.
+     */
+    public  double getMzy() {
+        return 0.0;
+    }
+
+    /**
+     * Gets the Z coordinate scaling element of the 3x4 matrix.
+     */
+    public  double getMzz() {
+        return 1.0;
+    }
+
+    /**
+     * Gets the Z coordinate translation element of the 3x4 matrix.
+     */
+    public  double getTz() {
+        return 0.0;
+    }
+
+    // to be published
+    /**
+     * Returns the concatenation of this transformation and the given
+     * transformation.
+     * @param transform Transform to be concatenated with this transform
+     * @return The concatenated transformation
+     */
+    /**
+     * @treatAsPrivate implementation detail
+     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
+     */
+    public Transform impl_getConcatenation(Transform transform) {
+        final double txx = transform.getMxx();
+        final double txy = transform.getMxy();
+        final double txz = transform.getMxz();
+        final double ttx = transform.getTx();
+        final double tyx = transform.getMyx();
+        final double tyy = transform.getMyy();
+        final double tyz = transform.getMyz();
+        final double tty = transform.getTy();
+        final double tzx = transform.getMzx();
+        final double tzy = transform.getMzy();
+        final double tzz = transform.getMzz();
+        final double ttz = transform.getTz();
+        final double rxx = (getMxx() * txx + getMxy() * tyx + getMxz() * tzx /* + getMxt * 0.0 */);
+        final double rxy = (getMxx() * txy + getMxy() * tyy + getMxz() * tzy /* + getMxt * 0.0 */);
+        final double rxz = (getMxx() * txz + getMxy() * tyz + getMxz() * tzz /* + getMxt * 0.0 */);
+        final double rxt = (getMxx() * ttx + getMxy() * tty + getMxz() * ttz + getTx() /* * 1.0 */);
+        final double ryx = (getMyx() * txx + getMyy() * tyx + getMyz() * tzx /* + getMyt * 0.0 */);
+        final double ryy = (getMyx() * txy + getMyy() * tyy + getMyz() * tzy /* + getMyt * 0.0 */);
+        final double ryz = (getMyx() * txz + getMyy() * tyz + getMyz() * tzz /* + getMyt * 0.0 */);
+        final double ryt = (getMyx() * ttx + getMyy() * tty + getMyz() * ttz + getTy() /* * 1.0 */);
+        final double rzx = (getMzx() * txx + getMzy() * tyx + getMzz() * tzx /* + getMzt * 0.0 */);
+        final double rzy = (getMzx() * txy + getMzy() * tyy + getMzz() * tzy /* + getMzt * 0.0 */);
+        final double rzz = (getMzx() * txz + getMzy() * tyz + getMzz() * tzz /* + getMzt * 0.0 */);
+        final double rzt = (getMzx() * ttx + getMzy() * tty + getMzz() * ttz + getTz() /* * 1.0 */);
+        return TransformUtils.immutableTransform(
+                rxx, rxy, rxz, rxt,
+                ryx, ryy, ryz, ryt,
+                rzx, rzy, rzz, rzt
+                );
+
+    }
+
+    // to be published
+    /**
+     * Transforms the given point by this transformation.
+     * @param point The point to transform
+     * @return The transformed point
+     */
+    /**
+     * @treatAsPrivate implementation detail
+     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
+     */
+    public Point3D impl_transform(Point3D point) {
+        double x = point.getX();
+        double y = point.getY();
+        double z = point.getZ();
+        return new Point3D(
+            getMxx() * x + getMxy() * y + getMxz() * z + getTx(),
+            getMyx() * x + getMyy() * y + getMyz() * z + getTy(),
+            getMzx() * x + getMzy() * y + getMzz() * z + getTz());
+    }
 
     /**
      * @treatAsPrivate implementation detail

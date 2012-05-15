@@ -28,6 +28,8 @@ import javafx.beans.property.DoubleProperty;
 import javafx.beans.property.DoublePropertyBase;
 
 import com.sun.javafx.geom.transform.Affine3D;
+import com.sun.javafx.geom.transform.NoninvertibleTransformException;
+import javafx.geometry.Point3D;
 
 
 /**
@@ -59,6 +61,44 @@ import com.sun.javafx.geom.transform.Affine3D;
  * </pre>
  */
 public class Affine extends Transform {
+
+    public Affine() {
+    }
+
+    // to be published
+    Affine(Double mxx, Double mxy, Double mxz, Double tx,
+            Double myx, Double myy, Double myz, Double ty,
+            Double mzx, Double mzy, Double mzz, Double tz) {
+        if (mxx != 1.0) this.mxxProperty().set(mxx);
+        if (mxy != 0.0) this.mxyProperty().set(mxy);
+        if (mxz != 0.0) this.mxzProperty().set(mxz);
+        if (tx != 0.0) this.txProperty().set(tx);
+        if (myx != 0.0) this.myxProperty().set(myx);
+        if (myy != 1.0) this.myyProperty().set(myy);
+        if (myz != 0.0) this.myzProperty().set(myz);
+        if (ty != 0.0) this.tyProperty().set(ty);
+        if (mzx != 0.0) this.mzxProperty().set(mzx);
+        if (mzy != 0.0) this.mzyProperty().set(mzy);
+        if (mzz != 1.0) this.mzzProperty().set(mzz);
+        if (tz != 0.0) this.tzProperty().set(tz);
+    }
+
+    // to be published
+    void setTransform(Transform t) {
+        setMxx(t.getMxx());
+        setMxy(t.getMxy());
+        setMxz(t.getMxz());
+        setTx(t.getTx());
+        setMyx(t.getMyx());
+        setMyy(t.getMyy());
+        setMyz(t.getMyz());
+        setTy(t.getTy());
+        setMzx(t.getMzx());
+        setMzy(t.getMzy());
+        setMzz(t.getMzz());
+        setTz(t.getTz());
+    }
+
     /**
      * Defines the X coordinate scaling element of the 3x4 matrix.
      */

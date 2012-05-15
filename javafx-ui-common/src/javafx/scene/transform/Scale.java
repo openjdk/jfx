@@ -321,7 +321,21 @@ public class Scale extends Transform {
         return pivotZ;
     }
 
-    
+    @Override
+    public double getMxx() {
+        return getX();
+    }
+
+    @Override
+    public double getMyy() {
+        return getY();
+    }
+
+    @Override
+    public double getMzz() {
+        return getZ();
+    }
+
     /**
      * @treatAsPrivate implementation detail
      * @deprecated This is an internal API that is not intended for use and will be removed in the next version

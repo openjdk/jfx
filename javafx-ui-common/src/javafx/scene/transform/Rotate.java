@@ -328,6 +328,107 @@ public class Rotate extends Transform {
         return axis;
     }
 
+    private double cos() {
+        return Math.cos(Math.toRadians(getAngle()));
+    }
+
+    private double sin() {
+        return Math.sin(Math.toRadians(getAngle()));
+    }
+
+    private Point3D normalizedAxis() {
+        final Point3D axis = getAxis();
+        final double mag = Math.sqrt(axis.getX() * axis.getX() +
+                axis.getY() * axis.getY() + axis.getZ() * axis.getZ());
+
+        if (mag == 0.0) {
+            return Z_AXIS;
+        }
+
+        return new Point3D(axis.getX() / mag, axis.getY() / mag, axis.getZ() / mag);
+    }
+
+    @Override
+    public double getMxx() {
+        final double axisX = normalizedAxis().getX();
+        final double cos = cos();
+        return cos + axisX * axisX * (1 - cos);
+    }
+
+    @Override
+    public double getMxy() {
+        final Point3D axis = normalizedAxis();
+        return axis.getX() * axis.getY() * (1 - cos()) - axis.getZ() * sin();
+    }
+
+    @Override
+    public double getMxz() {
+        final Point3D axis = normalizedAxis();
+        return axis.getX() * axis.getZ() * (1 - cos()) + axis.getY() * sin();
+    }
+
+    @Override
+    public double getTx() {
+        return getPivotX()
+                - getPivotX() * getMxx()
+                - getPivotY() * getMxy()
+                - getPivotZ() * getMxz();
+    }
+
+    @Override
+    public double getMyx() {
+        final Point3D axis = normalizedAxis();
+        return axis.getY() * axis.getX() * (1 - cos()) + axis.getZ() * sin();
+    }
+
+    @Override
+    public double getMyy() {
+        final double axisY = normalizedAxis().getY();
+        final double cos = cos();
+        return cos + axisY * axisY * (1 - cos);
+    }
+
+    @Override
+    public double getMyz() {
+        final Point3D axis = normalizedAxis();
+        return axis.getY() * axis.getZ() * (1 - cos()) - axis.getX() * sin();
+    }
+
+    @Override
+    public double getTy() {
+        return getPivotY()
+                - getPivotX() * getMyx()
+                - getPivotY() * getMyy()
+                - getPivotZ() * getMyz();
+    }
+
+    @Override
+    public double getMzx() {
+        final Point3D axis = normalizedAxis();
+        return axis.getZ() * axis.getX() * (1 - cos()) - axis.getY() * sin();
+    }
+
+    @Override
+    public double getMzy() {
+        final Point3D axis = normalizedAxis();
+        return axis.getZ() * axis.getY() * (1 - cos()) + axis.getX() * sin();
+    }
+
+    @Override
+    public double getMzz() {
+        final double axisZ = normalizedAxis().getZ();
+        final double cos = cos();
+        return cos + axisZ * axisZ * (1 - cos);
+    }
+
+    @Override
+    public double getTz() {
+        return getPivotZ()
+                - getPivotX() * getMzx()
+                - getPivotY() * getMzy()
+                - getPivotZ() * getMzz();
+    }
+
     /**
      * @treatAsPrivate implementation detail
      * @deprecated This is an internal API that is not intended for use and will be removed in the next version

@@ -91,6 +91,7 @@ import com.sun.javafx.scene.CSSFlags;
 import com.sun.javafx.scene.DirtyBits;
 import com.sun.javafx.scene.EventHandlerProperties;
 import com.sun.javafx.scene.NodeEventDispatcher;
+import com.sun.javafx.scene.transform.TransformUtils;
 import com.sun.javafx.scene.traversal.Direction;
 import com.sun.javafx.sg.PGNode;
 import com.sun.javafx.tk.Toolkit;
@@ -611,6 +612,10 @@ public abstract class Node implements EventTarget {
                     if (oldParent != null) {
                         oldParent.disabledProperty().removeListener(parentDisabledChangedListener);
                         oldParent.treeVisibleProperty().removeListener(parentTreeVisibleChangedListener);
+                        if (nodeTransformation != null && nodeTransformation.listenerReasons > 0) {
+                            ((Node) oldParent).localToSceneTransformProperty().removeListener(
+                                    nodeTransformation.getLocalToSceneInvalidationListener());
+                        }
                     }
                     updateDisabled();
                     computeDerivedDepthTest();
@@ -618,6 +623,10 @@ public abstract class Node implements EventTarget {
                     if (newParent != null) {
                     	newParent.disabledProperty().addListener(parentDisabledChangedListener);
                     	newParent.treeVisibleProperty().addListener(parentTreeVisibleChangedListener);
+                        if (nodeTransformation != null && nodeTransformation.listenerReasons > 0) {
+                            ((Node) newParent).localToSceneTransformProperty().addListener(
+                                    nodeTransformation.getLocalToSceneInvalidationListener());
+                        }
                         //
                         // if parent changed, then CSS needs to be reapplied so
                         // that this node will get the right styles. This used
@@ -642,7 +651,7 @@ public abstract class Node implements EventTarget {
             };
         }
         return parent;
-    }
+                    }
 
     private final InvalidationListener parentDisabledChangedListener = new InvalidationListener() {
         @Override public void invalidated(Observable valueModel) {
@@ -3728,6 +3737,8 @@ public abstract class Node implements EventTarget {
      */
     @Deprecated
     public final void impl_transformsChanged() {
+        invalidateLocalToParentTransform();
+        invalidateLocalToSceneTransform();
         if (transformDirty) {
             return;
         }
@@ -4257,6 +4268,52 @@ public abstract class Node implements EventTarget {
         return getNodeTransformation().rotationAxisProperty();
     }
 
+    /**
+     * An affine transform that holds the computed local-to-parent transform.
+     * This is the concatenation of all transforms in this node, including all
+     * of the convenience transforms.
+     */
+    public final ReadOnlyObjectProperty<Transform> localToParentTransformProperty() {
+        return getNodeTransformation().localToParentTransformProperty();
+    }
+
+    private void invalidateLocalToParentTransform() {
+        if (nodeTransformation != null) {
+            nodeTransformation.invalidateLocalToParentTransform();
+        }
+    }
+
+    public final Transform getLocalToParentTransform() {
+        return localToParentTransformProperty().get();
+    }
+
+    /**
+     * An affine transform that holds the computed local-to-scene transform.
+     * This is the concatenation of all transforms in this node's parents and
+     * in this node, including all of the convenience transforms.
+     *
+     * <p>
+     * Note that when you register a listener or a binding to this property,
+     * it needs to be invalidated every time transformation changes in any
+     * of this node's parents. This means that registering a listener on this
+     * property on many nodes may seriously affect performance of
+     * transformation changes in their common parents.
+     * </p>
+     */
+    public final ReadOnlyObjectProperty<Transform> localToSceneTransformProperty() {
+        return getNodeTransformation().localToSceneTransformProperty();
+    }
+
+    private void invalidateLocalToSceneTransform() {
+        if (nodeTransformation != null) {
+            nodeTransformation.invalidateLocalToSceneTransform();
+        }
+    }
+
+    public final Transform getLocalToSceneTransform() {
+        return localToSceneTransformProperty().get();
+    }
+
     private NodeTransformation nodeTransformation;
 
     private NodeTransformation getNodeTransformation() {
@@ -4296,6 +4353,165 @@ public abstract class Node implements EventTarget {
         private DoubleProperty rotate;
         private ObjectProperty<Point3D> rotationAxis;
         private ObservableList<Transform> transforms;
+        private LazyTransformProperty localToParentTransform;
+        private LazyTransformProperty localToSceneTransform;
+        private int listenerReasons = 0;
+        private InvalidationListener localToSceneInvLstnr;
+
+        private InvalidationListener getLocalToSceneInvalidationListener() {
+            if (localToSceneInvLstnr == null) {
+                localToSceneInvLstnr = new InvalidationListener() {
+                    @Override
+                    public void invalidated(Observable observable) {
+                        invalidateLocalToSceneTransform();
+                    }
+                };
+            }
+            return localToSceneInvLstnr;
+        }
+
+        public void incListenerReasons() {
+            if (listenerReasons == 0) {
+                Node n = Node.this.getParent();
+                if (n != null) {
+                    n.localToSceneTransformProperty().addListener(
+                            getLocalToSceneInvalidationListener());
+                }
+            }
+            listenerReasons++;
+        }
+
+        public void decListenerReasons() {
+            listenerReasons--;
+            if (listenerReasons == 0) {
+                Node n = Node.this.getParent();
+                if (n != null) {
+                    n.localToSceneTransformProperty().removeListener(
+                            getLocalToSceneInvalidationListener());
+                }
+            }
+        }
+
+        public final Transform getLocalToParentTransform() {
+            return localToParentTransformProperty().get();
+        }
+
+        public final ReadOnlyObjectProperty<Transform> localToParentTransformProperty() {
+            if (localToParentTransform == null) {
+                localToParentTransform = new LazyTransformProperty() {
+                    @Override
+                    protected Transform computeTransform() {
+                        updateLocalToParentTransform();
+                        return TransformUtils.immutableTransform(
+                                localToParentTx.getMxx(), localToParentTx.getMxy(), localToParentTx.getMxz(), localToParentTx.getMxt(),
+                                localToParentTx.getMyx(), localToParentTx.getMyy(), localToParentTx.getMyz(), localToParentTx.getMyt(),
+                                localToParentTx.getMzx(), localToParentTx.getMzy(), localToParentTx.getMzz(), localToParentTx.getMzt());
+                    }
+
+                    @Override
+                    public Object getBean() {
+                        return Node.this;
+                    }
+
+                    @Override
+                    public String getName() {
+                        return "localToParentTransform";
+                    }
+                };
+            }
+
+            return localToParentTransform;
+        }
+
+        public void invalidateLocalToParentTransform() {
+            if (localToParentTransform != null) {
+                localToParentTransform.invalidate();
+            }
+        }
+
+        public final Transform getLocalToSceneTransform() {
+            return localToSceneTransformProperty().get();
+        }
+
+        public final ReadOnlyObjectProperty<Transform> localToSceneTransformProperty() {
+            if (localToSceneTransform == null) {
+                localToSceneTransform = new LazyTransformProperty() {
+                    // need this to track number of listeners
+                    private List localToSceneListeners;
+
+                    @Override
+                    protected Transform computeTransform() {
+                        updateLocalToParentTransform();
+
+                        Transform result = null;
+                        Node parentNode = Node.this.getParent();
+                        if (parentNode != null) {
+                            result = parentNode.getLocalToSceneTransform();
+                            result = result.impl_getConcatenation(getLocalToParentTransform());
+                        } else {
+                            result = getLocalToParentTransform();
+                        }
+                        return result;
+                    }
+
+                    @Override
+                    public Object getBean() {
+                        return Node.this;
+                    }
+
+                    @Override
+                    public String getName() {
+                        return "localToSceneTransform";
+                    }
+
+                    @Override
+                    public void addListener(InvalidationListener listener) {
+                        incListenerReasons();
+                        if (localToSceneListeners == null) {
+                            localToSceneListeners = new LinkedList<Object>();
+                        }
+                        localToSceneListeners.add(listener);
+                        super.addListener(listener);
+                    }
+
+                    @Override
+                    public void addListener(ChangeListener<? super Transform> listener) {
+                        incListenerReasons();
+                        if (localToSceneListeners == null) {
+                            localToSceneListeners = new LinkedList<Object>();
+                        }
+                        localToSceneListeners.add(listener);
+                        super.addListener(listener);
+                    }
+
+                    @Override
+                    public void removeListener(InvalidationListener listener) {
+                        if (localToSceneListeners != null &&
+                                localToSceneListeners.remove(listener)) {
+                            decListenerReasons();
+                        }
+                        super.removeListener(listener);
+                    }
+
+                    @Override
+                    public void removeListener(ChangeListener<? super Transform> listener) {
+                        if (localToSceneListeners != null &&
+                                localToSceneListeners.remove(listener)) {
+                            decListenerReasons();
+                        }
+                        super.removeListener(listener);
+                    }
+                };
+            }
+
+            return localToSceneTransform;
+        }
+
+        public void invalidateLocalToSceneTransform() {
+            if (localToSceneTransform != null) {
+                localToSceneTransform.invalidate();
+            }
+        }
 
         public double getTranslateX() {
             return (translateX == null) ? DEFAULT_TRANSLATE_X
@@ -7246,6 +7462,53 @@ public abstract class Node implements EventTarget {
         if(isFocused()) mask |= FOCUSED_PSEUDOCLASS_STATE;
         if(impl_isShowMnemonics()) mask |= SHOW_MNEMONICS_PSEUDOCLASS_STATE;
         return mask;
+    }
+
+    private static abstract class LazyTransformProperty
+            extends ReadOnlyObjectProperty<Transform> {
+        private ExpressionHelper<Transform> helper;
+        private boolean valid;
+
+        private Transform transform;
+
+        @Override
+        public void addListener(InvalidationListener listener) {
+            helper = ExpressionHelper.addListener(helper, this, listener);
+        }
+
+        @Override
+        public void removeListener(InvalidationListener listener) {
+            helper = ExpressionHelper.removeListener(helper, listener);
+        }
+
+        @Override
+        public void addListener(ChangeListener<? super Transform> listener) {
+            helper = ExpressionHelper.addListener(helper, this, listener);
+        }
+
+        @Override
+        public void removeListener(ChangeListener<? super Transform> listener) {
+            helper = ExpressionHelper.removeListener(helper, listener);
+        }
+
+        @Override
+        public Transform get() {
+            if (!valid) {
+                transform = computeTransform();
+                valid = true;
+            }
+
+            return transform;
+        }
+
+        public void invalidate() {
+            if (valid) {
+                valid = false;
+                ExpressionHelper.fireValueChangedEvent(helper);
+            }
+        }
+
+        protected abstract Transform computeTransform();
     }
 
     private static abstract class LazyBoundsProperty

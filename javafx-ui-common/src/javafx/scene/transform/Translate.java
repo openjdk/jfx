@@ -189,7 +189,21 @@ public class Translate extends Transform {
         return z;
     }
 
-    
+    @Override
+    public double getTx() {
+        return getX();
+    }
+
+    @Override
+    public double getTy() {
+        return getY();
+    }
+
+    @Override
+    public double getTz() {
+        return getZ();
+    }
+
     /**
      * @treatAsPrivate implementation detail
      * @deprecated This is an internal API that is not intended for use and will be removed in the next version

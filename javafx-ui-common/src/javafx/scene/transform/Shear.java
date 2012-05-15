@@ -35,8 +35,8 @@ import com.sun.javafx.geom.transform.Affine3D;
  * by the specified multipliers. The matrix representing the shearing
  * transformation is as follows:
  * <pre>
- *      [   1   x   0   0   ]
- *      [   y   1   0   0   ]
+ *      [   1   x   0   -x*pivotY ]
+ *      [   y   1   0   -y*pivotX ]
  *      [   0   0   1   0   ]
  * </pre>
  *
@@ -244,6 +244,25 @@ public class Shear extends Transform {
         return pivotY;
     }
 
+    @Override
+    public double getMxy() {
+        return getX();
+    }
+
+    @Override
+    public double getMyx() {
+        return getY();
+    }
+
+    @Override
+    public double getTx() {
+        return -getX() * getPivotY();
+    }
+
+    @Override
+    public double getTy() {
+        return -getY() * getPivotX();
+    }
     
     /**
      * @treatAsPrivate implementation detail
