@@ -72,6 +72,11 @@ public class ComboBoxListViewSkin<T> extends ComboBoxPopupControl<T> {
         this.comboBox = comboBox;
         this.listView = createListView();
         
+        // Fix for RT-21207. Additional code related to this bug is further below.
+        this.listView.setManaged(false);
+        getChildren().add(listView);
+        // -- end of fix
+                
         updateListViewItems();
         updateCellFactory();
         
@@ -174,6 +179,17 @@ public class ComboBoxListViewSkin<T> extends ComboBoxPopupControl<T> {
             new WeakListChangeListener(listViewItemsListener);
     
     @Override protected void handleControlPropertyChanged(String p) {
+        // Fix for RT-21207
+        if (p == "SHOWING") {
+            if (getSkinnable().isShowing()) {
+                this.listView.setManaged(true);
+                this.listView.impl_processCSS(true);
+            } else {
+                this.listView.setManaged(false);
+            }
+        }
+        // -- end of fix
+        
         super.handleControlPropertyChanged(p);
         
         if (p == "ITEMS") {

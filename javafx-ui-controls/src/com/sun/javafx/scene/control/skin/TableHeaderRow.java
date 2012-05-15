@@ -226,7 +226,6 @@ class TableHeaderRow extends StackPane {
 
         // the header lives inside a NestedTableColumnHeader
         header = new NestedTableColumnHeader(table, null);
-        getChildren().add(0, header);
         header.setFocusTraversable(false);
         header.setTableHeaderRow(this);
 
@@ -278,7 +277,7 @@ class TableHeaderRow extends StackPane {
         // the region that is anchored above the vertical scrollbar
         // a 'ghost' of the header being dragged by the user to force column
         // reordering
-        getChildren().addAll(filler, cornerRegion, dragHeader);
+        getChildren().addAll(filler, header, cornerRegion, dragHeader);
     }
     
     
