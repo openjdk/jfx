@@ -507,6 +507,30 @@ public final class ImageTest {
         final Image image = Image.impl_fromExternalImage(fakeExternalImage);
         verifyLoadedImage(image, 0, 0, false, false, 123, 456);
     }
+    
+    @Test
+    public void createImageFromClasspathTest() {
+        final String url = "javafx/scene/image/test.png";
+        final String resolvedUrl = Thread.currentThread().getContextClassLoader().getResource(url).toString();
+        registerImage(resolvedUrl, 100, 200);
+        
+        final Image image = new Image(url);
+
+        assertEquals(resolvedUrl, image.impl_getUrl());
+        verifyLoadedImage(image, 0, 0, false, false, 100, 200);
+    }
+    
+    @Test
+    public void createImageFromClasspathTest_withLeadingSlash() {
+        final String url = "/javafx/scene/image/test.png";
+        final String resolvedUrl = Thread.currentThread().getContextClassLoader().getResource(url.substring(1)).toString();
+        registerImage(resolvedUrl, 100, 200);
+        
+        final Image image = new Image(url);
+
+        assertEquals(resolvedUrl, image.impl_getUrl());
+        verifyLoadedImage(image, 0, 0, false, false, 100, 200);
+    }
 
     @Test(expected=NullPointerException.class)
     public void createImageFromNullUrlTest() {
