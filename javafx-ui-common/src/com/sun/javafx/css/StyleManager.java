@@ -548,6 +548,16 @@ public class StyleManager {
         if (defaultUserAgentStylesheet != null) {
             defaultUserAgentStylesheet.setOrigin(Stylesheet.Origin.USER_AGENT);
         }
+        if (defaultContainer != null) {
+            //
+            // RT-21563 if default ua stylesheet is set, then the default 
+            // container must be destroyed so it will be rebuilt. If this is 
+            // the first time the ua stylesheet is set, then the defaultContainer
+            // won't have any rules so it must be destroyed so it will be rebuilt. 
+            // 
+            defaultContainer.destroy();
+            defaultContainer = null;
+        }
         if (containerMap != null) {
             Iterator<StylesheetContainer> iter = containerMap.values().iterator();
             while(iter.hasNext()) {
