@@ -116,5 +116,10 @@ public interface MenuItemBase {
      * Fires a new ActionEvent.
      */
     public void fire();
+    
+    /**
+     * Fires when the accelerator for this MenuItem is invoked.
+     */
+    public void fireValidation();
 
 }
