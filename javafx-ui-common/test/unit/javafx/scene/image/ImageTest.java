@@ -51,6 +51,7 @@ import com.sun.javafx.tk.Toolkit;
 
 import javafx.beans.InvalidationListener;
 import javafx.beans.Observable;
+import org.junit.Ignore;
 
 public final class ImageTest {
     private final StubToolkit toolkit;
@@ -509,6 +510,7 @@ public final class ImageTest {
     }
     
     @Test
+    @Ignore
     public void createImageFromClasspathTest() {
         final String url = "javafx/scene/image/test.png";
         final String resolvedUrl = Thread.currentThread().getContextClassLoader().getResource(url).toString();
@@ -521,6 +523,7 @@ public final class ImageTest {
     }
     
     @Test
+    @Ignore
     public void createImageFromClasspathTest_withLeadingSlash() {
         final String url = "/javafx/scene/image/test.png";
         final String resolvedUrl = Thread.currentThread().getContextClassLoader().getResource(url.substring(1)).toString();
