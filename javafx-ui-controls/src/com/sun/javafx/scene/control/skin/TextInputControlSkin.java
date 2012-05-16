@@ -56,6 +56,7 @@ import javafx.scene.input.InputMethodHighlight;
 import javafx.scene.input.InputMethodRequests;
 import javafx.scene.input.InputMethodTextRun;
 import javafx.scene.input.TouchEvent;
+import javafx.scene.layout.StackPane;
 import javafx.scene.paint.Color;
 import javafx.scene.paint.Paint;
 import javafx.scene.shape.ClosePath;
@@ -230,6 +231,10 @@ public abstract class TextInputControlSkin<T extends TextInputControl, B extends
      */
     protected final Path caretPath = new Path();
 
+    protected StackPane caretHandle = null;
+    protected StackPane selectionHandle1 = null;
+    protected StackPane selectionHandle2 = null;
+
     private static boolean useFXVK = PlatformUtil.isEmbedded();
 
     /* For testing only */
@@ -287,6 +292,26 @@ public abstract class TextInputControlSkin<T extends TextInputControl, B extends
         };
 
         if (PlatformUtil.isEmbedded()) {
+            caretHandle      = new StackPane();
+            selectionHandle1 = new StackPane();
+            selectionHandle1.setRotate(180);
+            selectionHandle2 = new StackPane();
+
+            caretHandle.visibleProperty().bind(new BooleanBinding() {
+                { bind(textInput.focusedProperty(), textInput.anchorProperty(), textInput.caretPositionProperty(),
+                       textInput.disabledProperty(), textInput.editableProperty(), displayCaret);}
+                @Override protected boolean computeValue() {
+                return displayCaret.get() && textInput.isFocused() &&
+                        textInput.getCaretPosition() == textInput.getAnchor() &&
+                        !textInput.isDisabled() && textInput.isEditable();
+                }
+            });
+
+
+            caretHandle.getStyleClass().setAll("caret-handle");
+            selectionHandle1.getStyleClass().setAll("selection-handle");
+            selectionHandle2.getStyleClass().add("selection-handle");
+
             textInput.focusedProperty().addListener(new InvalidationListener() {
                 @Override public void invalidated(Observable observable) {
                     if (useFXVK) {
