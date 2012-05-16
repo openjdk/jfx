@@ -25,10 +25,7 @@
 
 package javafx.scene.image;
 
-import java.io.File;
 import java.io.InputStream;
-import java.net.MalformedURLException;
-import java.net.URI;
 import java.util.LinkedList;
 import java.util.Queue;
 
@@ -46,6 +43,8 @@ import com.sun.javafx.runtime.async.AsyncOperation;
 import com.sun.javafx.runtime.async.AsyncOperationListener;
 import com.sun.javafx.tk.ImageLoader;
 import com.sun.javafx.tk.Toolkit;
+import java.net.MalformedURLException;
+import java.net.URL;
 import javafx.beans.property.ReadOnlyBooleanProperty;
 import javafx.beans.property.ReadOnlyBooleanWrapper;
 import javafx.beans.property.ReadOnlyDoubleProperty;
@@ -63,6 +62,12 @@ import javafx.beans.property.ReadOnlyObjectProperty;
  * image's aspect ratio.
  * </p>
  *
+ * <p>
+ * All URLs supported by {@link URL} can be passed to the constructor.
+ * If the passed string is not a valid URL, but a path instead, the Image is
+ * searched on the classpath in that case.
+ * </p>
+ *
  * <p>Use {@link ImageView} for displaying images loaded with this
  * class. The same {@code Image} instance can be displayed by multiple
  * {@code ImageView}s.</p>
@@ -74,23 +79,30 @@ import javafx.scene.image.Image;
 
 // load an image in background, displaying a placeholder while it's loading
 // (assuming there's an ImageView node somewhere displaying this image)
-Image image1 = new Image("flower.png", true);
+// The image is located in default package of the classpath
+Image image1 = new Image("/flower.png", true);
 
 // load an image and resize it to 100x150 without preserving its original
 // aspect ratio
-Image image2 = new Image("flower.png", 100, 150, false, false);
+// The image is located in my.res package of the classpath
+Image image2 = new Image("my/res/flower.png", 100, 150, false, false);
 
 // load an image and resize it to width of 100 while preserving its
 // original aspect ratio, using faster filtering method
-Image image3 = new Image("flower.png", 100, 0, false, false);
+// The image is downloaded from the supplied URL through http protocol
+Image image3 = new Image("http://sample.com/res/flower.png", 100, 0, false, false);
 
 // load an image and resize it only in one dimension, to the height of 100 and
 // the original width, without preserving original aspect ratio
-Image image4 = new Image("flower.png", 0, 100, false, false);
+// The image is located in the current working directory
+Image image4 = new Image("file:flower.png", 0, 100, false, false);
 
 </PRE>
  */
 public class Image {
+
+    // Matches strings that start with a valid URI scheme
+    private static final String URL_QUICKMATCH = "^\\p{Alpha}[\\p{Alnum}+.-]*:.*$";
     /**
      * The string representing the URL to use in fetching the pixel data.
      *
@@ -503,11 +515,12 @@ public class Image {
     }
 
     /**
-     * Construct an {@code Image} which pixels are loaded from the specified
+     * Constructs an {@code Image} with content loaded from the specified
      * url.
      *
      * @param url the string representing the URL to use in fetching the pixel
      *      data
+     * @see #Image(java.lang.String, java.io.InputStream, double, double, boolean, boolean, boolean)
      * @throws NullPointerException if URL is null
      * @throws IllegalArgumentException if URL is invalid or unsupported
      */
@@ -521,6 +534,7 @@ public class Image {
      *
      * @param url the string representing the URL to use in fetching the pixel
      *      data
+     * @see #Image(java.lang.String, java.io.InputStream, double, double, boolean, boolean, boolean)
      * @param backgroundLoading indicates whether the image
      *      is being loaded in the background
      * @throws NullPointerException if URL is null
@@ -536,6 +550,7 @@ public class Image {
      *
      * @param url the string representing the URL to use in fetching the pixel
      *      data
+     * @see #Image(java.lang.String, java.io.InputStream, double, double, boolean, boolean, boolean)
      * @param requestedWidth the image's bounding box width
      * @param requestedHeight the image's bounding box height
      * @param preserveRatio indicates whether to preserve the aspect ratio of
@@ -556,6 +571,10 @@ public class Image {
 
     /**
      * Construct a new {@code Image} with the specified parameters.
+     *
+     * The <i>url</i> without scheme is threated as relative to classpath,
+     * url with scheme is treated accordingly to the scheme using
+     * {@link URL#openStream()}
      *
      * @param url the string representing the URL to use in fetching the pixel
      *      data
@@ -585,7 +604,7 @@ public class Image {
     }
 
     /**
-     * Construct an {@code Image} which pixels are loaded from the specified
+     * Construct an {@code Image} with content loaded from the specified
      * input stream.
      *
      * @param is the stream from which to load the image
@@ -917,13 +936,22 @@ public class Image {
             throw new IllegalArgumentException("URL must not be empty");
         }
 
-        final URI baseUri = getBaseUri();
-        final URI resolvedUri;
         try {
-            resolvedUri = (baseUri != null) ? baseUri.resolve(url)
-                                            : URI.create(url);
-
-            return resolvedUri.toURL().toString();
+            if (!url.matches(URL_QUICKMATCH)) {
+                final ClassLoader contextClassLoader = Thread.currentThread().getContextClassLoader();
+                URL resource;
+                if (url.charAt(0) == '/') {
+                    resource = contextClassLoader.getResource(url.substring(1));
+                } else {
+                    resource = contextClassLoader.getResource(url);
+                }
+                if (resource == null) {
+                    throw new IllegalArgumentException("Invalid URL or resource not found");
+                }
+                return resource.toString();
+            }
+            // Use URL constructor for validation
+            return new URL(url).toString();
         } catch (final IllegalArgumentException e) {
             throw new IllegalArgumentException(
                     constructDetailedExceptionMessage("Invalid URL", e), e);
@@ -955,16 +983,6 @@ public class Image {
                                ? mainMessage + ": " + causeMessage
                                : mainMessage,
                        cause.getCause());
-    }
-
-    private static URI getBaseUri() {
-        try {
-            // we might want to use getDocumentBase() from HostServices here,
-            // but that would be an incompatible change
-            return new File("").toURI();
-        } catch (final Exception e) {
-            return null;
-        }
     }
 
     /**
