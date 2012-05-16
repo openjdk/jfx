@@ -27,6 +27,8 @@ package javafx.stage;
 
 import com.sun.javafx.pgstub.StubToolkit.ScreenConfiguration;
 import com.sun.javafx.test.MouseEventGenerator;
+import javafx.scene.input.KeyCode;
+import javafx.scene.input.KeyEvent;
 import javafx.scene.input.MouseEvent;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
@@ -380,5 +382,74 @@ public class PopupTest {
         popup.getScene().setRoot(new Group(new Rectangle(0, 0, 200, 300)));
         assertEquals(200, popup.getWidth(), 1e-100);
         assertEquals(300, popup.getHeight(), 1e-100);
+    }
+
+    @Test
+    public void testConsumeAutoHidingEventsProperty() {
+        final EventCounter mouseEventCounter = new EventCounter();
+        final EventCounter keyEventCounter = new EventCounter();
+
+        stage.addEventHandler(MouseEvent.MOUSE_PRESSED, mouseEventCounter);
+        stage.addEventHandler(KeyEvent.KEY_PRESSED, keyEventCounter);
+        try {
+            final MouseEventGenerator mouseEventGenerator =
+                    new MouseEventGenerator();
+
+            final Popup popup = new Popup();
+            popup.setAutoHide(true);
+
+            assertTrue(popup.getConsumeAutoHidingEvents());
+
+            popup.show(stage);
+            Event.fireEvent(stage,
+                            mouseEventGenerator.generateMouseEvent(
+                                MouseEvent.MOUSE_PRESSED, 0, 0));
+            assertEquals(0, mouseEventCounter.getValue());
+
+            popup.show(stage);
+            Event.fireEvent(stage,
+                            KeyEvent.impl_keyEvent(
+                                stage, KeyEvent.CHAR_UNDEFINED,
+                                KeyCode.ESCAPE.getName(),
+                                KeyCode.ESCAPE.impl_getCode(),
+                                false, false, false, false,
+                                KeyEvent.KEY_PRESSED));
+            assertEquals(0, keyEventCounter.getValue());
+
+            popup.setConsumeAutoHidingEvents(false);
+
+            popup.show(stage);
+            Event.fireEvent(stage,
+                            mouseEventGenerator.generateMouseEvent(
+                                MouseEvent.MOUSE_PRESSED, 0, 0));
+            assertEquals(1, mouseEventCounter.getValue());
+
+            popup.show(stage);
+            Event.fireEvent(stage,
+                            KeyEvent.impl_keyEvent(
+                                stage, KeyEvent.CHAR_UNDEFINED,
+                                KeyCode.ESCAPE.getName(),
+                                KeyCode.ESCAPE.impl_getCode(),
+                                false, false, false, false,
+                                KeyEvent.KEY_PRESSED));
+            assertEquals(1, keyEventCounter.getValue());
+            
+        } finally {
+            stage.removeEventHandler(MouseEvent.MOUSE_PRESSED,
+                                     mouseEventCounter);
+            stage.removeEventHandler(KeyEvent.KEY_PRESSED, keyEventCounter);
+        }
+    }
+
+    private static final class EventCounter implements EventHandler<Event> {
+        private int counter;
+
+        public int getValue() {
+            return counter;
+        }
+
+        public void handle(final Event event) {
+            ++counter;
+        }
     }
 }
