@@ -72,6 +72,11 @@ public class ComboBoxListViewSkin<T> extends ComboBoxPopupControl<T> {
         this.comboBox = comboBox;
         this.listView = createListView();
         
+        // Fix for RT-21207. Additional code related to this bug is further below.
+        this.listView.setManaged(false);
+        getChildren().add(listView);
+        // -- end of fix
+                
         updateListViewItems();
         updateCellFactory();
         
@@ -174,6 +179,17 @@ public class ComboBoxListViewSkin<T> extends ComboBoxPopupControl<T> {
             new WeakListChangeListener(listViewItemsListener);
     
     @Override protected void handleControlPropertyChanged(String p) {
+        // Fix for RT-21207
+        if (p == "SHOWING") {
+            if (getSkinnable().isShowing()) {
+                this.listView.setManaged(true);
+                this.listView.impl_processCSS(true);
+            } else {
+                this.listView.setManaged(false);
+            }
+        }
+        // -- end of fix
+        
         super.handleControlPropertyChanged(p);
         
         if (p == "ITEMS") {
@@ -221,9 +237,10 @@ public class ComboBoxListViewSkin<T> extends ComboBoxPopupControl<T> {
         // to the TextField. This ensures that the ComboBox appears focused
         // externally for people listening to the focus property.
         textField.focusedProperty().addListener(new ChangeListener<Boolean>() {
-            @Override public void changed(ObservableValue<? extends Boolean> ov, Boolean t, Boolean t1) {
-	        // RT-20657 focus ring gets stuck in a editable combobox
-                // comboBox.requestFocus();
+            @Override public void changed(ObservableValue<? extends Boolean> ov, Boolean t, Boolean hasFocus) {
+                if (hasFocus) {
+                    comboBox.requestFocus();
+                }
             }
         });
 

@@ -182,9 +182,8 @@ public class ComboBoxBaseBehavior<T> extends BehaviorBase<ComboBoxBase<T>> {
 
     @Override public void mouseEntered(MouseEvent e) {
         if (getControl().isEditable()) {
-            // Fix for RT-19274
             Node arrowButton = getControl().lookup("#arrow-button");
-            mouseInsideButton = arrowButton != null && arrowButton.contains(e.getX(), e.getY());
+            mouseInsideButton = arrowButton != null && arrowButton.localToScene(arrowButton.getBoundsInLocal()).contains(e.getSceneX(), e.getSceneY());
         } else {
             mouseInsideButton = true;
         }

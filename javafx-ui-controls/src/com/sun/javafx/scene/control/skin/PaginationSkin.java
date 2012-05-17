@@ -73,7 +73,8 @@ import javafx.geometry.Side;
 import javafx.geometry.VPos;
 import javafx.scene.Node;
 import javafx.scene.control.*;
-import javafx.scene.input.TouchEvent;
+import javafx.scene.input.ScrollEvent;
+import javafx.scene.input.SwipeEvent;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.StackPane;
 import javafx.scene.shape.Rectangle;
@@ -158,29 +159,39 @@ public class PaginationSkin extends SkinBase<Pagination, PaginationBehavior>  {
     private double pressPos;
     private boolean touchMoved = false;
     private void initializeSwipeAndTouchHandlers() {
-//        setOnSwipeLeft(new EventHandler<SwipeEvent>() {
-//            @Override public void handle(SwipeEvent t) {
-//                selectNext();
-//            }
-//        });
-//
-//        setOnSwipeRight(new EventHandler<SwipeEvent>() {
-//            @Override public void handle(SwipeEvent t) {
-//                selectPrevious();
-//            }
-//        });
+        setOnSwipeLeft(new EventHandler<SwipeEvent>() {
+            @Override public void handle(SwipeEvent t) {
+                touchMoved = false;
+                selectNext();
+                t.consume();
+            }
+        });
 
-        setOnTouchPressed(new EventHandler<TouchEvent>() {
-            @Override public void handle(TouchEvent e) {
-                pressPos = e.getTouchPoint().getSceneX();
+        setOnSwipeRight(new EventHandler<SwipeEvent>() {
+            @Override public void handle(SwipeEvent t) {
+                touchMoved = false;
+                selectPrevious();
+                t.consume();
+            }
+        });
+
+        setOnScrollStarted(new EventHandler<ScrollEvent>() {
+            @Override public void handle(ScrollEvent e) {
+                pressPos = e.getSceneX();
+                touchMoved = true;
                 e.consume();
             }
         });
 
-        setOnTouchMoved(new EventHandler<TouchEvent>() {
-            @Override public void handle(TouchEvent e) {
+        setOnScroll(new EventHandler<ScrollEvent>() {
+            @Override public void handle(ScrollEvent e) {
+                if (!touchMoved) {
+                    // Ignore any scroll events after the scrolling has finished.
+                    return;
+                }
+                
                 touchMoved = true;
-                double delta = e.getTouchPoint().getSceneX() - pressPos;
+                double delta = e.getSceneX() - pressPos;
                 double width = getWidth() - (getInsets().getLeft() + getInsets().getRight());
                 double currentScrollPaneX;
                 double nextScrollPaneX;
@@ -224,21 +235,21 @@ public class PaginationSkin extends SkinBase<Pagination, PaginationBehavior>  {
             }
         });
 
-        setOnTouchReleased(new EventHandler<TouchEvent>() {
+        setOnScrollFinished(new EventHandler<ScrollEvent>() {
             @Override
-            public void handle(TouchEvent e) {
-                double delta = Math.abs(e.getTouchPoint().getSceneX() - pressPos);
+            public void handle(ScrollEvent e) {
+                double delta = Math.abs(e.getSceneX() - pressPos);
                 double width = getWidth() - (getInsets().getLeft() + getInsets().getRight());
                 double threshold = delta/width;
                 if (touchMoved) {
                     if (threshold > THRESHOLD) {
-                        if (pressPos > e.getTouchPoint().getSceneX()) {
+                        if (pressPos > e.getSceneX()) {
                             selectNext();
                         } else {
                             selectPrevious();
                         }
                     } else {
-                        animateClamping(pressPos > e.getTouchPoint().getSceneX());
+                        animateClamping(pressPos > e.getSceneX());
                     }
                 }
                 touchMoved = false;

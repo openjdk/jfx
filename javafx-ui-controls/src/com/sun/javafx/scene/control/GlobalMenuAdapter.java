@@ -161,6 +161,19 @@ public class GlobalMenuAdapter extends Menu implements MenuBase {
         });
     }
 
+    @Override
+    public void fireValidation() {
+        if (menu.getOnMenuValidation() != null) {
+            Event.fireEvent(menu, new Event(GlobalMenuAdapter.this.MENU_VALIDATION_EVENT));
+        }
+        Menu target = (Menu)menu.getParentMenu();
+        if(target != null && target.getOnMenuValidation() != null) {
+            Event.fireEvent(target, new Event(target.MENU_VALIDATION_EVENT));
+        }
+        if (!menu.isDisable()) menu.fire();
+        
+    }
+
 
     private class MenuItemAdapter extends MenuItem implements MenuItemBase {
         private MenuItem menuItem;
@@ -173,6 +186,18 @@ public class GlobalMenuAdapter extends Menu implements MenuBase {
             bindMenuItemProperties(this, menuItem);
         }
 
+        @Override
+        public void fireValidation() {
+            if (menuItem.getOnMenuValidation() != null) {
+                Event.fireEvent(menuItem, new Event(menuItem.MENU_VALIDATION_EVENT));
+            }
+            Menu target = (Menu)menuItem.getParentMenu();
+            if(target.getOnMenuValidation() != null) {
+                Event.fireEvent(target, new Event(target.MENU_VALIDATION_EVENT));
+            }
+            if (!menuItem.isDisable()) menuItem.fire();
+        }
+
     }
 
     private class CheckMenuItemAdapter extends CheckMenuItem implements CheckMenuItemBase {
@@ -180,12 +205,23 @@ public class GlobalMenuAdapter extends Menu implements MenuBase {
 
         private CheckMenuItemAdapter(final CheckMenuItem menuItem) {
             super(menuItem.getText());
-
             this.menuItem = menuItem;
 
             bindMenuItemProperties(this, menuItem);
 
             selectedProperty().bindBidirectional(menuItem.selectedProperty());
+        }
+
+        @Override
+        public void fireValidation() {
+            if (getOnMenuValidation() != null) {
+                Event.fireEvent(menuItem, new Event(CheckMenuItemAdapter.this.MENU_VALIDATION_EVENT));
+            }
+            Menu target = (Menu)menuItem.getParentMenu();
+            if(target.getOnMenuValidation() != null) {
+                Event.fireEvent(target, new Event(target.MENU_VALIDATION_EVENT));
+            }
+            if (!menuItem.isDisable()) menuItem.fire();
         }
 
     }
@@ -203,6 +239,18 @@ public class GlobalMenuAdapter extends Menu implements MenuBase {
             selectedProperty().bindBidirectional(menuItem.selectedProperty());
         }
 
+        @Override
+        public void fireValidation() {
+            if (getOnMenuValidation() != null) {
+                Event.fireEvent(menuItem, new Event(RadioMenuItemAdapter.this.MENU_VALIDATION_EVENT));
+            }
+            Menu target = (Menu)menuItem.getParentMenu();
+            if(target.getOnMenuValidation() != null) {
+                Event.fireEvent(target, new Event(target.MENU_VALIDATION_EVENT));
+            }
+            if (!menuItem.isDisable()) menuItem.fire();
+        }
+
     }
 
     private class SeparatorMenuItemAdapter extends SeparatorMenuItem implements SeparatorMenuItemBase {
@@ -214,6 +262,18 @@ public class GlobalMenuAdapter extends Menu implements MenuBase {
             bindMenuItemProperties(this, menuItem);
         }
 
+        @Override
+        public void fireValidation() {
+            if (getOnMenuValidation() != null) {
+                Event.fireEvent(menuItem, new Event(SeparatorMenuItemAdapter.this.MENU_VALIDATION_EVENT));
+            }
+            Menu target = (Menu)menuItem.getParentMenu();
+            if(target.getOnMenuValidation() != null) {
+                Event.fireEvent(target, new Event(target.MENU_VALIDATION_EVENT));
+            }
+            if (!menuItem.isDisable()) menuItem.fire();
+        }
+
     }
 
     private class CustomMenuItemAdapter extends CustomMenuItem implements CustomMenuItemBase {
@@ -223,6 +283,18 @@ public class GlobalMenuAdapter extends Menu implements MenuBase {
             this.menuItem = menuItem;
 
             bindMenuItemProperties(this, menuItem);
+        }
+
+        @Override
+        public void fireValidation() {
+            if (getOnMenuValidation() != null) {
+                Event.fireEvent(menuItem, new Event(CustomMenuItemAdapter.this.MENU_VALIDATION_EVENT));
+            }
+            Menu target = (Menu)menuItem.getParentMenu();
+            if(target.getOnMenuValidation() != null) {
+                Event.fireEvent(target, new Event(target.MENU_VALIDATION_EVENT));
+            }
+            if (!menuItem.isDisable()) menuItem.fire();
         }
 
     }

@@ -71,6 +71,14 @@ public class MapValueFactory<T> implements Callback<CellDataFeatures<Map,T>, Obs
 
     private final Object key;
     
+    /**
+     * Creates a default MapValueFactory, which will use the provided key to 
+     * lookup the value for cells in the {@link TableColumn} in which this
+     * MapValueFactory is installed (via the 
+     * {@link TableColumn#cellValueFactoryProperty() cell value factory} property.
+     * 
+     * @param key The key to use to lookup the value in the {@code Map}.
+     */
     public MapValueFactory(final Object key) {
         this.key = key;
     }

@@ -258,8 +258,9 @@ public class TextAreaBehavior extends TextInputControlBehavior<TextArea> {
                 final int anchor = textArea.getAnchor();
                 final int caretPosition = textArea.getCaretPosition();
                 if (e.getClickCount() < 2 &&
-                        anchor != caretPosition &&
-                        ((i > anchor && i < caretPosition) || (i < anchor && i > caretPosition))) {
+                    (PlatformUtil.isEmbedded() ||
+                     (anchor != caretPosition &&
+                      ((i > anchor && i < caretPosition) || (i < anchor && i > caretPosition))))) {
                     // if there is a selection, then we will NOT handle the
                     // press now, but will defer until the release. If you
                     // select some text and then press down, we change the
