@@ -29,6 +29,7 @@ import javafx.scene.shape.Rectangle;
 
 import org.junit.Test;
 
+import com.sun.javafx.test.TransformHelper;
 import com.sun.javafx.geom.transform.Affine2D;
 
 public class ShearTest {
@@ -49,6 +50,11 @@ public class ShearTest {
         final Rectangle n = new Rectangle();
         n.getTransforms().add(trans);
 
+        TransformHelper.assertMatrix(trans,
+                 1, 25, 0, 0,
+                52,  1, 0, 0,
+                 0,  0, 1, 0);
+
         Affine2D expTx1 = new Affine2D();
         expTx1.setToShear(25, 52);
         assertTx(n, expTx1);
@@ -57,11 +63,19 @@ public class ShearTest {
         Affine2D expTx2 = new Affine2D();
         expTx2.setToShear(34, 52);
         assertTx(n, expTx2);
+        TransformHelper.assertMatrix(trans,
+                 1, 34, 0, 0,
+                52,  1, 0, 0,
+                 0,  0, 1, 0);
 
         trans.setY(67);
         Affine2D expTx3 = new Affine2D();
         expTx3.setToShear(34, 67);
         assertTx(n, expTx3);
+        TransformHelper.assertMatrix(trans,
+                 1, 34, 0, 0,
+                67,  1, 0, 0,
+                 0,  0, 1, 0);
 
         trans.setPivotX(66);
 
@@ -70,6 +84,10 @@ public class ShearTest {
         expTx.shear(trans.getX(), trans.getY());
         expTx.translate(-trans.getPivotX(), -trans.getPivotY());
         assertTx(n, expTx);
+        TransformHelper.assertMatrix(trans,
+                 1, 34, 0,      0,
+                67,  1, 0, -67*66,
+                 0,  0, 1,      0);
 
 
         trans.setPivotY(77);
@@ -78,6 +96,10 @@ public class ShearTest {
         expTx.shear(trans.getX(), trans.getY());
         expTx.translate(-trans.getPivotX(), -trans.getPivotY());
         assertTx(n, expTx);
+        TransformHelper.assertMatrix(trans,
+                 1, 34, 0, -34*77,
+                67,  1, 0, -67*66,
+                 0,  0, 1,      0);
     }
 
     @Test public void testBoundPropertySynced_X() throws Exception {

@@ -626,6 +626,7 @@ public abstract class Node implements EventTarget {
                     }
                     updateTreeVisible();
                     oldParent = newParent;
+                    invalidateLocalToSceneTransform();
                 }
 
                 @Override
@@ -3726,14 +3727,13 @@ public abstract class Node implements EventTarget {
      */
     @Deprecated
     public final void impl_transformsChanged() {
+        if (!transformDirty) {
+            impl_markDirty(DirtyBits.NODE_TRANSFORM);
+            transformDirty = true;
+            transformedBoundsChanged();
+        }
         invalidateLocalToParentTransform();
         invalidateLocalToSceneTransform();
-        if (transformDirty) {
-            return;
-        }
-        impl_markDirty(DirtyBits.NODE_TRANSFORM);
-        transformDirty = true;
-        transformedBoundsChanged();
     }
 
     /**
@@ -4283,9 +4283,9 @@ public abstract class Node implements EventTarget {
      *
      * <p>
      * Note that when you register a listener or a binding to this property,
-     * it needs to be invalidated every time transformation changes in any
-     * of this node's parents. This means that registering a listener on this
-     * property on many nodes may seriously affect performance of
+     * it needs to listen for invalidation on all its parents to the root node.
+     * This means that registering a listener on this
+     * property on many nodes may negatively affect performance of
      * transformation changes in their common parents.
      * </p>
      */
@@ -4321,6 +4321,16 @@ public abstract class Node implements EventTarget {
     public boolean impl_hasTransforms() {
         return (nodeTransformation != null)
                 && nodeTransformation.hasTransforms();
+    }
+
+    // for tests only
+    Transform getCurrentLocalToSceneTransformState() {
+        if (nodeTransformation == null ||
+                nodeTransformation.localToSceneTransform == null) {
+            return null;
+        }
+
+        return nodeTransformation.localToSceneTransform.transform;
     }
 
     private static final double DEFAULT_TRANSLATE_X = 0;
@@ -4451,6 +4461,17 @@ public abstract class Node implements EventTarget {
                     @Override
                     public String getName() {
                         return "localToSceneTransform";
+                    }
+
+                    @Override
+                    public Transform get() {
+                        Transform t = super.get();
+                        if (listenerReasons == 0) {
+                            // we don't get invalidation notifications
+                            // so we must expect it to be always invalid
+                            invalidate();
+                        }
+                        return t;
                     }
 
                     @Override

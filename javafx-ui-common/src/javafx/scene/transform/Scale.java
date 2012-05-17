@@ -35,9 +35,9 @@ import com.sun.javafx.geom.transform.Affine3D;
  * by the specified factors. The matrix representing the scaling transformation
  * is as follows:
  * <pre>
- *              [ x    0   0   0 ]
- *              [ 0    y   0   0 ]
- *              [ 0    0   z   0 ]
+ *              [ x   0   0   (1-x)*pivotX ]
+ *              [ 0   y   0   (1-y)*pivotY ]
+ *              [ 0   0   z   (1-z)*pivotZ ]
  * </pre>
  */
 public class Scale extends Transform {
@@ -335,6 +335,23 @@ public class Scale extends Transform {
     public double getMzz() {
         return getZ();
     }
+
+    @Override
+    public double getTx() {
+        return (1-getX()) * getPivotX();
+    }
+
+    @Override
+    public double getTy() {
+        return (1-getY()) * getPivotY();
+    }
+
+    @Override
+    public double getTz() {
+        return (1-getZ()) * getPivotZ();
+    }
+
+
 
     /**
      * @treatAsPrivate implementation detail

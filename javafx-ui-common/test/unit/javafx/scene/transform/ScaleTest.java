@@ -30,6 +30,7 @@ import javafx.scene.shape.Rectangle;
 import org.junit.Assert;
 import org.junit.Test;
 
+import com.sun.javafx.test.TransformHelper;
 import com.sun.javafx.geom.transform.Affine2D;
 import com.sun.javafx.geom.transform.Affine3D;
 import com.sun.javafx.geom.transform.BaseTransform;
@@ -46,15 +47,27 @@ public class ScaleTest {
         n.getTransforms().add(trans);
 
         assertTx(n, BaseTransform.getScaleInstance(25, 52));
+        TransformHelper.assertMatrix(trans,
+                25,  0, 0, 0,
+                 0, 52, 0, 0,
+                 0,  0, 1, 0);
 
 
         trans.setX(34);
         Assert.assertEquals(34, trans.getX(), 1e-100);
         assertTx(n, BaseTransform.getScaleInstance(34, 52));
+        TransformHelper.assertMatrix(trans,
+                34,  0, 0, 0,
+                 0, 52, 0, 0,
+                 0,  0, 1, 0);
 
 
         trans.setY(67);
         assertTx(n, BaseTransform.getScaleInstance(34, 67));
+        TransformHelper.assertMatrix(trans,
+                34,  0, 0, 0,
+                 0, 67, 0, 0,
+                 0,  0, 1, 0);
 
 
         trans.setPivotX(66);
@@ -64,6 +77,10 @@ public class ScaleTest {
         expTx.scale(trans.getX(), trans.getY());
         expTx.translate(-trans.getPivotX(), -trans.getPivotY());
         assertTx(n, expTx);
+        TransformHelper.assertMatrix(trans,
+                34,  0, 0, -2178,
+                 0, 67, 0,     0,
+                 0,  0, 1,     0);
 
 
         trans.setPivotY(77);
@@ -72,6 +89,17 @@ public class ScaleTest {
         expTx.scale(trans.getX(), trans.getY());
         expTx.translate(-trans.getPivotX(), -trans.getPivotY());
         assertTx(n, expTx);
+        TransformHelper.assertMatrix(trans,
+                34,  0, 0, -2178,
+                 0, 67, 0, -5082,
+                 0,  0, 1,     0);
+
+        trans.setZ(10);
+        trans.setPivotZ(5);
+        TransformHelper.assertMatrix(trans,
+                34,  0,  0, -2178,
+                 0, 67,  0, -5082,
+                 0,  0, 10,   -45);
     }
     
     @Test public void testScalePivotCtor() {

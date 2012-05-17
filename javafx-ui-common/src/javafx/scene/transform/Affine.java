@@ -66,9 +66,9 @@ public class Affine extends Transform {
     }
 
     // to be published
-    Affine(Double mxx, Double mxy, Double mxz, Double tx,
-            Double myx, Double myy, Double myz, Double ty,
-            Double mzx, Double mzy, Double mzz, Double tz) {
+    Affine(double mxx, double mxy, double mxz, double tx,
+            double myx, double myy, double myz, double ty,
+            double mzx, double mzy, double mzz, double tz) {
         if (mxx != 1.0) this.mxxProperty().set(mxx);
         if (mxy != 0.0) this.mxyProperty().set(mxy);
         if (mxz != 0.0) this.mxzProperty().set(mxz);
