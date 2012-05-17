@@ -246,22 +246,13 @@ public class TextAreaSkin extends TextInputControlSkin<TextArea, TextAreaBehavio
             if (PlatformUtil.isEmbedded()) {
                 // Install and resize the handles for caret and anchor.
                 if (selection.getLength() > 0) {
-                    contentView.getChildren().remove(caretHandle);
-                    if (!contentView.getChildren().contains(selectionHandle2)) {
-                        contentView.getChildren().addAll(selectionHandle1, selectionHandle2);
-                        selectionHandle1.resize(selectionHandle1.prefWidth(-1),
-                                                selectionHandle1.prefHeight(-1));
-                        selectionHandle2.resize(selectionHandle2.prefWidth(-1),
-                                                selectionHandle2.prefHeight(-1));
-                    }
+                    selectionHandle1.resize(selectionHandle1.prefWidth(-1),
+                                            selectionHandle1.prefHeight(-1));
+                    selectionHandle2.resize(selectionHandle2.prefWidth(-1),
+                                            selectionHandle2.prefHeight(-1));
                 } else {
-                    contentView.getChildren().remove(selectionHandle1);
-                    contentView.getChildren().remove(selectionHandle2);
-                    if (!contentView.getChildren().contains(caretHandle)) {
-                        contentView.getChildren().add(caretHandle);
-                        caretHandle.resize(caretHandle.prefWidth(-1),
-                                                caretHandle.prefHeight(-1));
-                    }
+                    caretHandle.resize(caretHandle.prefWidth(-1),
+                                       caretHandle.prefHeight(-1));
                 }
 
                 // Position the handle for the anchor. This could be handle1 or handle2.
@@ -413,6 +404,8 @@ public class TextAreaSkin extends TextInputControlSkin<TextArea, TextAreaBehavio
 
     public static final int SCROLL_RATE = 30;
 
+    private double pressX, pressY; // For dragging handles on embedded
+
     public TextAreaSkin(final TextArea textArea) {
         super(textArea, new TextAreaBehavior(textArea));
         getBehavior().setTextAreaSkin(this);
@@ -460,6 +453,10 @@ public class TextAreaSkin extends TextInputControlSkin<TextArea, TextAreaBehavio
         caretPath.strokeProperty().bind(textFill);
         caretPath.visibleProperty().bind(caretVisible);
         contentView.getChildren().add(caretPath);
+
+        if (PlatformUtil.isEmbedded()) {
+            contentView.getChildren().addAll(caretHandle, selectionHandle1, selectionHandle2);
+        }
 
         scrollPane.hvalueProperty().addListener(new ChangeListener<Number>() {
             @Override
@@ -638,6 +635,8 @@ public class TextAreaSkin extends TextInputControlSkin<TextArea, TextAreaBehavio
         if (textArea.isFocused()) setCaretAnimating(true);
 
         if (PlatformUtil.isEmbedded()) {
+            selectionHandle1.setRotate(180);
+
             EventHandler<MouseEvent> handlePressHandler = new EventHandler<MouseEvent>() {
                 @Override public void handle(MouseEvent e) {
                     pressX = e.getX();
@@ -684,7 +683,7 @@ public class TextAreaSkin extends TextInputControlSkin<TextArea, TextAreaBehavio
                         // Swap caret and anchor
                         textArea.selectRange(textArea.getCaretPosition(), textArea.getAnchor());
                     }
-                    if (pos > 0) {
+                    if (pos >= 0) {
                         if (pos >= textArea.getAnchor()) {
                             pos = textArea.getAnchor();
                         }
@@ -732,8 +731,6 @@ public class TextAreaSkin extends TextInputControlSkin<TextArea, TextAreaBehavio
             });
         }
     }
-
-double pressX, pressY, pressSX, pressSY;
 
     private void createPromptNode() {
         if (promptNode == null && usePromptText.get()) {

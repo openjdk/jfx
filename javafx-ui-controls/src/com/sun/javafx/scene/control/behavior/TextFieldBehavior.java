@@ -32,13 +32,16 @@ import javafx.beans.value.ObservableValue;
 import javafx.event.ActionEvent;
 import javafx.event.EventHandler;
 import javafx.geometry.HorizontalDirection;
+import javafx.scene.control.ContextMenu;
 import javafx.scene.control.IndexRange;
 import javafx.scene.control.TextField;
 import javafx.scene.input.KeyEvent;
 import javafx.scene.input.MouseEvent;
+import javafx.scene.input.TouchEvent;
 import javafx.util.Duration;
 import java.util.List;
 
+import com.sun.javafx.PlatformUtil;
 import com.sun.javafx.scene.control.skin.TextFieldSkin;
 import com.sun.javafx.scene.text.HitInfo;
 
@@ -87,7 +90,7 @@ public class TextFieldBehavior extends TextInputControlBehavior<TextField> {
         }
     };
 
-    public TextFieldBehavior(TextField textField) {
+    public TextFieldBehavior(final TextField textField) {
         super(textField);
         // Initialize scroll timeline
         scrollSelectionTimeline.setCycleCount(Timeline.INDEFINITE);
@@ -102,6 +105,20 @@ public class TextFieldBehavior extends TextInputControlBehavior<TextField> {
                 handleFocusChange();
             }
         });
+
+        if (textField.getOnTouchStationary() == null) {
+            textField.setOnTouchStationary(new EventHandler<TouchEvent>() {
+                @Override public void handle(TouchEvent event) {
+                    ContextMenu menu = textField.getContextMenu();
+                    if (menu != null &&
+                        skin.showContextMenu(menu, event.getTouchPoint().getScreenX(),
+                                        event.getTouchPoint().getScreenY(), false)) {
+                        deferClick = false;
+                        event.consume();
+                    }
+                }
+            });
+        }
     }
 
     private void handleFocusChange() {
@@ -191,8 +208,9 @@ public class TextFieldBehavior extends TextInputControlBehavior<TextField> {
                 final int anchor = textField.getAnchor();
                 final int caretPosition = textField.getCaretPosition();
                 if (e.getClickCount() < 2 &&
-                        anchor != caretPosition &&
-                        ((i > anchor && i < caretPosition) || (i < anchor && i > caretPosition))) {
+                    (PlatformUtil.isEmbedded() ||
+                     (anchor != caretPosition &&
+                      ((i > anchor && i < caretPosition) || (i < anchor && i > caretPosition))))) {
                     // if there is a selection, then we will NOT handle the
                     // press now, but will defer until the release. If you
                     // select some text and then press down, we change the

@@ -55,7 +55,6 @@ import javafx.scene.input.InputMethodEvent;
 import javafx.scene.input.InputMethodHighlight;
 import javafx.scene.input.InputMethodRequests;
 import javafx.scene.input.InputMethodTextRun;
-import javafx.scene.input.TouchEvent;
 import javafx.scene.layout.StackPane;
 import javafx.scene.paint.Color;
 import javafx.scene.paint.Paint;
@@ -294,16 +293,43 @@ public abstract class TextInputControlSkin<T extends TextInputControl, B extends
         if (PlatformUtil.isEmbedded()) {
             caretHandle      = new StackPane();
             selectionHandle1 = new StackPane();
-            selectionHandle1.setRotate(180);
             selectionHandle2 = new StackPane();
 
+            caretHandle.setManaged(false);
+            selectionHandle1.setManaged(false);
+            selectionHandle2.setManaged(false);
+
             caretHandle.visibleProperty().bind(new BooleanBinding() {
-                { bind(textInput.focusedProperty(), textInput.anchorProperty(), textInput.caretPositionProperty(),
-                       textInput.disabledProperty(), textInput.editableProperty(), displayCaret);}
+                { bind(textInput.focusedProperty(), textInput.anchorProperty(),
+                       textInput.caretPositionProperty(), textInput.disabledProperty(),
+                       textInput.editableProperty(), textInput.lengthProperty(), displayCaret);}
                 @Override protected boolean computeValue() {
-                return displayCaret.get() && textInput.isFocused() &&
-                        textInput.getCaretPosition() == textInput.getAnchor() &&
-                        !textInput.isDisabled() && textInput.isEditable();
+                    return (displayCaret.get() && textInput.isFocused() &&
+                            textInput.getCaretPosition() == textInput.getAnchor() &&
+                            !textInput.isDisabled() && textInput.isEditable() &&
+                            textInput.getLength() > 0);
+                }
+            });
+
+
+            selectionHandle1.visibleProperty().bind(new BooleanBinding() {
+                { bind(textInput.focusedProperty(), textInput.anchorProperty(), textInput.caretPositionProperty(),
+                       textInput.disabledProperty(), displayCaret);}
+                @Override protected boolean computeValue() {
+                    return (displayCaret.get() && textInput.isFocused() &&
+                            textInput.getCaretPosition() != textInput.getAnchor() &&
+                            !textInput.isDisabled());
+                }
+            });
+
+
+            selectionHandle2.visibleProperty().bind(new BooleanBinding() {
+                { bind(textInput.focusedProperty(), textInput.anchorProperty(), textInput.caretPositionProperty(),
+                       textInput.disabledProperty(), displayCaret);}
+                @Override protected boolean computeValue() {
+                    return (displayCaret.get() && textInput.isFocused() &&
+                            textInput.getCaretPosition() != textInput.getAnchor() &&
+                            !textInput.isDisabled());
                 }
             });
 
@@ -327,19 +353,6 @@ public abstract class TextInputControlSkin<T extends TextInputControl, B extends
                     }
                 }
             });
-
-            if (textInput.getOnTouchStationary() == null) {
-                textInput.setOnTouchStationary(new EventHandler<TouchEvent>() {
-                    @Override public void handle(TouchEvent event) {
-                        ContextMenu menu = textInput.getContextMenu();
-                        if (menu != null &&
-                            showContextMenu(menu, event.getTouchPoint().getScreenX(),
-                                            event.getTouchPoint().getScreenY(), false)) {
-                            event.consume();
-                        }
-                    }
-                });
-            }
         }
 
         if (textInput.getContextMenu() == null) {

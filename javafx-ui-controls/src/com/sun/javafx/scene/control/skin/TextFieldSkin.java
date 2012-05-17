@@ -41,6 +41,7 @@ import javafx.beans.value.ObservableBooleanValue;
 import javafx.beans.value.ObservableDoubleValue;
 import javafx.beans.value.ObservableIntegerValue;
 import javafx.beans.value.ObservableValue;
+import javafx.event.EventHandler;
 import javafx.geometry.Bounds;
 import javafx.geometry.Insets;
 import javafx.geometry.Point2D;
@@ -58,6 +59,7 @@ import javafx.scene.shape.Rectangle;
 import javafx.scene.text.Text;
 import java.util.List;
 
+import com.sun.javafx.PlatformUtil;
 import com.sun.javafx.Utils;
 import com.sun.javafx.scene.control.behavior.TextFieldBehavior;
 import com.sun.javafx.scene.text.HitInfo;
@@ -141,6 +143,8 @@ public class TextFieldSkin extends TextInputControlSkin<TextField, TextFieldBeha
      * Right edge of the text region sans padding
      */
     protected ObservableDoubleValue textRight;
+
+    private double pressX, pressY; // For dragging handles on embedded
 
     @Override public boolean showContextMenu(ContextMenu menu, double x, double y, boolean isKeyboardTrigger) {
         if (isKeyboardTrigger) {
@@ -244,6 +248,9 @@ public class TextFieldSkin extends TextInputControlSkin<TextField, TextFieldBeha
         textGroup.setClip(clip);
         textGroup.getChildren().addAll(selectionHighlightPath, textNode, caretPath);
         getChildren().add(textGroup);
+        if (PlatformUtil.isEmbedded()) {
+            /*textGroup.*/getChildren().addAll(caretHandle, selectionHandle1, selectionHandle2);
+        }
 
         // Add text
         textNode.setManaged(false);
@@ -355,6 +362,77 @@ public class TextFieldSkin extends TextInputControlSkin<TextField, TextFieldBeha
                 requestLayout();
             }
         });
+
+
+
+        if (PlatformUtil.isEmbedded()) {
+            EventHandler<MouseEvent> handlePressHandler = new EventHandler<MouseEvent>() {
+                @Override public void handle(MouseEvent e) {
+                    pressX = e.getX();
+                    pressY = e.getY();
+                    e.consume();
+                }
+            };
+
+            caretHandle.setOnMousePressed(handlePressHandler);
+            selectionHandle1.setOnMousePressed(handlePressHandler);
+            selectionHandle2.setOnMousePressed(handlePressHandler);
+
+            caretHandle.setOnMouseDragged(new EventHandler<MouseEvent>() {
+                @Override public void handle(MouseEvent e) {
+                    Point2D p = new Point2D(caretHandle.getLayoutX() + e.getX() + pressX - textNode.getLayoutX(),
+                                            caretHandle.getLayoutY() + e.getY() - pressY - 6);
+                    HitInfo hit = textNode.impl_hitTestChar(translateCaretPosition(p));
+                    int pos = hit.getCharIndex();
+                    positionCaret(hit, false);
+                    e.consume();
+                }
+            });
+
+            selectionHandle1.setOnMouseDragged(new EventHandler<MouseEvent>() {
+                @Override public void handle(MouseEvent e) {
+                    TextField textField = getSkinnable();
+                    Point2D tp = textNode.localToScene(0, 0);
+                    Point2D p = new Point2D(e.getSceneX() - tp.getX() + 10/*??*/ - pressX + selectionHandle1.getWidth() / 2,
+                                            e.getSceneY() - tp.getY() - pressY - 6);
+                    HitInfo hit = textNode.impl_hitTestChar(translateCaretPosition(p));
+                    int pos = hit.getCharIndex();
+                    if (textField.getAnchor() < textField.getCaretPosition()) {
+                        // Swap caret and anchor
+                        textField.selectRange(textField.getCaretPosition(), textField.getAnchor());
+                    }
+                    if (pos >= 0) {
+                        if (pos >= textField.getAnchor() - 1) {
+                            hit.setCharIndex(Math.max(0, textField.getAnchor() - 1));
+                        }
+                        positionCaret(hit, true);
+                    }
+                    e.consume();
+                }
+            });
+
+            selectionHandle2.setOnMouseDragged(new EventHandler<MouseEvent>() {
+                @Override public void handle(MouseEvent e) {
+                    TextField textField = getSkinnable();
+                    Point2D tp = textNode.localToScene(0, 0);
+                    Point2D p = new Point2D(e.getSceneX() - tp.getX() + 10/*??*/ - pressX + selectionHandle1.getWidth() / 2,
+                                            e.getSceneY() - tp.getY() - pressY - 6);
+                    HitInfo hit = textNode.impl_hitTestChar(translateCaretPosition(p));
+                    int pos = hit.getCharIndex();
+                    if (textField.getAnchor() > textField.getCaretPosition()) {
+                        // Swap caret and anchor
+                        textField.selectRange(textField.getCaretPosition(), textField.getAnchor());
+                    }
+                    if (pos > 0) {
+                        if (pos <= textField.getAnchor()) {
+                            hit.setCharIndex(Math.min(textField.getAnchor() + 1, textField.getLength()));
+                        }
+                        positionCaret(hit, true);
+                    }
+                    e.consume();
+                }
+            });
+        }
     }
 
     private void createPromptNode() {
@@ -390,6 +468,12 @@ public class TextFieldSkin extends TextInputControlSkin<TextField, TextFieldBeha
             selectionHighlightPath.getElements().clear();
         } else {
             selectionHighlightPath.getElements().setAll(elements);
+        }
+
+        if (PlatformUtil.isEmbedded() && newValue != null && newValue.getLength() > 0) {
+            Bounds b = selectionHighlightPath.getBoundsInParent();
+            selectionHandle1.setLayoutX(b.getMinX() - selectionHandle1.getWidth() / 2);
+            selectionHandle2.setLayoutX(b.getMaxX() - selectionHandle2.getWidth() / 2);
         }
     }
 
@@ -484,6 +568,9 @@ public class TextFieldSkin extends TextInputControlSkin<TextField, TextFieldBeha
           default:
             textTranslateX.set(Math.min(textTranslateX.get() - delta,
                                         caretWidth / 2));
+        }
+        if (PlatformUtil.isEmbedded()) {
+            caretHandle.setLayoutX(caretX - caretHandle.getWidth() / 2 + 1);
         }
     }
 
@@ -667,6 +754,24 @@ public class TextFieldSkin extends TextInputControlSkin<TextField, TextFieldBeha
             if (promptNode != null) {
                 promptNode.setY(textY);
             }
+        }
+
+        if (PlatformUtil.isEmbedded()) {
+            TextField textField = getSkinnable();
+
+            // Resize handles for caret and anchor.
+            IndexRange selection = textField.getSelection();
+            selectionHandle1.resize(selectionHandle1.prefWidth(-1),
+                                    selectionHandle1.prefHeight(-1));
+            selectionHandle2.resize(selectionHandle2.prefWidth(-1),
+                                    selectionHandle2.prefHeight(-1));
+            caretHandle.resize(caretHandle.prefWidth(-1),
+                               caretHandle.prefHeight(-1));
+
+            Bounds b = caretPath.getBoundsInParent();
+            selectionHandle1.setLayoutY(b.getMaxY() - 3);
+            selectionHandle2.setLayoutY(b.getMaxY() - 3);
+            caretHandle.setLayoutY(b.getMaxY() - 3);
         }
     }
 }
