@@ -131,7 +131,7 @@
     -fx-font-weight: bold;
     -fx-font: bold 36px "Amble";
     -fx-text-fill: #333333;
-    -fx-padding: 3 6 5 0;
+    -fx-padding: 3 3 5 0;
     -fx-background-radius: 4;
     -fx-effect: dropshadow(three-pass-box, rgba(0, 0, 0, 0.75), 2, 0.0, 0, 1);
 }
@@ -168,6 +168,7 @@
     -fx-background-insets: 0, 1, 2;
     -fx-font: bold 22px "Amble";
     -fx-text-fill: white;
+    -fx-padding: 3 0 5 0;
 }
 
 .fxvk .special-key:disabled { 
