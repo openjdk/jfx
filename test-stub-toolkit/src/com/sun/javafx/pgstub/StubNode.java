@@ -107,4 +107,9 @@ public class StubNode implements PGNode {
     public void effectChanged() {
         // ignore
     }
+
+    @Override
+    public void dispose() {
+        // ignore
+    }
 }
