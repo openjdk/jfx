@@ -31,6 +31,7 @@ import java.util.Map;
 import com.sun.javafx.runtime.async.AsyncOperation;
 import com.sun.javafx.runtime.async.AsyncOperationListener;
 import com.sun.javafx.tk.ImageLoader;
+import com.sun.javafx.tk.PlatformImage;
 
 public final class StubImageLoaderFactory {
     private final Map<Object, StubPlatformImageInfo> imageInfos;
@@ -50,12 +51,12 @@ public final class StubImageLoaderFactory {
                 }
 
                 @Override
-                public Object[] getFrames() {
+                public PlatformImage[] getFrames() {
                     throw new IllegalStateException();
                 }
 
                 @Override
-                public Object getFrame(int i) {
+                public PlatformImage getFrame(int i) {
                     throw new IllegalStateException();
                 }
 

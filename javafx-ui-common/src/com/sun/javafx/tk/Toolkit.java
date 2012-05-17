@@ -498,6 +498,8 @@ public abstract class Toolkit {
     
     public abstract ImageLoader loadPlatformImage(Object platformImage);
 
+    public abstract PlatformImage createPlatformImage(int w, int h);
+
     // Indicates the default state of smooth for ImageView and MediaView
     // Subclasses may override this to provide a platform-specific default
     public boolean getDefaultImageSmooth() { return true; }

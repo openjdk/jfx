@@ -42,14 +42,19 @@ import com.sun.javafx.beans.annotations.Default;
 import com.sun.javafx.runtime.async.AsyncOperation;
 import com.sun.javafx.runtime.async.AsyncOperationListener;
 import com.sun.javafx.tk.ImageLoader;
+import com.sun.javafx.tk.PlatformImage;
 import com.sun.javafx.tk.Toolkit;
 import java.net.MalformedURLException;
 import java.net.URL;
+import java.nio.Buffer;
+import java.nio.ByteBuffer;
+import java.nio.IntBuffer;
 import javafx.beans.property.ReadOnlyBooleanProperty;
 import javafx.beans.property.ReadOnlyBooleanWrapper;
 import javafx.beans.property.ReadOnlyDoubleProperty;
 import javafx.beans.property.ReadOnlyDoubleWrapper;
 import javafx.beans.property.ReadOnlyObjectProperty;
+import javafx.scene.paint.Color;
 
 /**
  * The {@code Image} class represents graphical images and is used for loading
@@ -444,7 +449,7 @@ public class Image {
      * @treatAsPrivate implementation detail
      * @deprecated This is an internal API that is not intended for use and will be removed in the next version
      */
-    private ObjectPropertyImpl<Object> platformImage;
+    private ObjectPropertyImpl<PlatformImage> platformImage;
 
     /**
      * @treatAsPrivate implementation detail
@@ -461,16 +466,20 @@ public class Image {
      * @treatAsPrivate implementation detail
      */
     @Deprecated
-    public final ReadOnlyObjectProperty<Object> impl_platformImageProperty() {
+    public final ReadOnlyObjectProperty<PlatformImage> impl_platformImageProperty() {
         return platformImagePropertyImpl();
     }
 
-    private ObjectPropertyImpl<Object> platformImagePropertyImpl() {
+    private ObjectPropertyImpl<PlatformImage> platformImagePropertyImpl() {
         if (platformImage == null) {
-            platformImage = new ObjectPropertyImpl<Object>("platformImage");
+            platformImage = new ObjectPropertyImpl<PlatformImage>("platformImage");
         }
 
         return platformImage;
+    }
+
+    void pixelsDirty() {
+        platformImagePropertyImpl().fireValueChangedEvent();
     }
 
     private final class ObjectPropertyImpl<T>
@@ -637,9 +646,25 @@ public class Image {
         initialize(null);
     }
 
-    private Image(Object platformImage) {
+    /**
+     * Construct a new empty {@code Image} with the specified dimensions
+     * filled with transparent pixels to be used with the
+     * {@link #setArgb(int, int, int) setArgb()}
+     * and
+     * {@link #setColor(int, int, javafx.scene.paint.Color) setColor()}
+     * methods to create a completely custom image.
+     * 
+     * @param width the width of the empty image
+     * @param height the height of the empty image
+     */
+    Image(int width, int height) {
+        this(null, null, width, height, false, false, false);
+        initialize(Toolkit.getToolkit().createPlatformImage(width, height));
+    }
+
+    private Image(Object externalImage) {
         this(null, null, 0, 0, false, false, false);
-        initialize(platformImage);
+        initialize(externalImage);
     }
 
     private Image(String url, InputStream is,
@@ -679,13 +704,13 @@ public class Image {
 
     private ImageTask backgroundTask;
 
-    private void initialize(Object platformImage) {
+    private void initialize(Object externalImage) {
         // we need to check the original values here, because setting placeholder
         // changes platformImage, so wrong branch of if would be used
-        if (platformImage != null) {
+        if (externalImage != null) {
             // Make an image from the provided platform-specific image
             // object (e.g. a BufferedImage in the case of the Swing profile)
-            ImageLoader loader = loadPlatformImage(platformImage);
+            ImageLoader loader = loadPlatformImage(externalImage);
             finishImage(loader);
         } else if (isBackgroundLoading() && (impl_source == null)) {
             // Load image in the background.
@@ -727,7 +752,7 @@ public class Image {
     // Generates the animation Timeline for multiframe images.
     private void makeAnimationTimeline(ImageLoader loader) {
         // create and start the animation thread.
-        final Object[] frames = loader.getFrames();
+        final PlatformImage[] frames = loader.getFrames();
 
         timeline = new Timeline();
         timeline.setCycleCount(Timeline.INDEFINITE);
@@ -750,7 +775,7 @@ public class Image {
 
     private KeyFrame createPlatformImageSetKeyFrame(
             final long duration,
-            final Object platformImage) {
+            final PlatformImage platformImage) {
         return new KeyFrame(Duration.millis(duration),
                             new EventHandler<ActionEvent>() {
                                     @Override
@@ -806,7 +831,7 @@ public class Image {
         return new Image(image);
     }
 
-    private void setPlatformImageWH(final Object newPlatformImage,
+    private void setPlatformImageWH(final PlatformImage newPlatformImage,
                                     final double newWidth,
                                     final double newHeight) {
         if ((impl_getPlatformImage() == newPlatformImage)
@@ -834,7 +859,7 @@ public class Image {
         }
     }
 
-    private void storePlatformImageWH(final Object platformImage,
+    private void storePlatformImageWH(final PlatformImage platformImage,
                                       final double width,
                                       final double height) {
         platformImagePropertyImpl().store(platformImage);
@@ -1042,5 +1067,108 @@ public class Image {
      */
     boolean isAnimation() {
         return timeline != null;
+    }
+
+    boolean pixelsReadable() {
+        return (getProgress() >= 1.0 && !isAnimation() && !isError());
+    }
+
+    private PixelReader reader;
+    /**
+     * This method returns a {@code PixelReader} that provides access to
+     * read the pixels of the image, if the image is readable.
+     * If this method returns null then this image does not support reading
+     * at this time.
+     * This method will return null if the image is being loaded from a
+     * source and is still incomplete {the progress is still < 1.0) or if
+     * there was an error.
+     * This method may also return null for some images in a format that
+     * is not supported for reading and writing pixels to.
+     * 
+     * @return the {@code PixelReader} for reading the pixel data of the image
+     */
+    public PixelReader getPixelReader() {
+        if (!pixelsReadable()) {
+            return null;
+        }
+        if (reader == null) {
+            reader = new PixelReader() {
+                @Override
+                public PixelFormat getPixelFormat() {
+                    PlatformImage pimg = platformImage.get();
+//                    if (pimg == null) {
+//                        return null;
+//                    }
+                    return pimg.getPlatformPixelFormat();
+                }
+
+                @Override
+                public int getArgb(int x, int y) {
+                    PlatformImage pimg = platformImage.get();
+                    return pimg.getArgb(x, y);
+                }
+
+                @Override
+                public Color getColor(int x, int y) {
+                    int argb = getArgb(x, y);
+                    int a = argb >>> 24;
+                    int r = (argb >> 16) & 0xff;
+                    int g = (argb >>  8) & 0xff;
+                    int b = (argb      ) & 0xff;
+                    return Color.rgb(r, g, b, a / 255.0);
+                }
+
+                @Override
+                public <T extends Buffer>
+                    void getPixels(int x, int y, int w, int h,
+                                   WritablePixelFormat<T> pixelformat,
+                                   T buffer, int scanlineStride)
+                {
+                    PlatformImage pimg = platformImage.get();
+                    for (int j = 0; j < h; j++) {
+                        for (int i = 0; i < w; i++) {
+                            pixelformat.setArgb(buffer, i, j, scanlineStride,
+                                                pimg.getArgb(x+i, y+j));
+                        }
+                    }
+//                    checkPixelAccess(true, false).getPixels(x, y, w, h,
+//                                                            buffer, pixelformat, scanlineStride);
+                }
+
+                @Override
+                public void getPixels(int x, int y, int w, int h,
+                                    WritablePixelFormat<ByteBuffer> pixelformat,
+                                    byte buffer[], int offset, int scanlineStride)
+                {
+                    ByteBuffer bytebuf = ByteBuffer.wrap(buffer);
+                    bytebuf.position(offset);
+                    getPixels(x, y, w, h, pixelformat, bytebuf, scanlineStride);
+//                    checkPixelAccess(true, false).getPixels(x, y, w, h,
+//                                                            buffer, pixelformat, scanlineStride);
+                }
+
+                @Override
+                public void getPixels(int x, int y, int w, int h,
+                                    WritablePixelFormat<IntBuffer> pixelformat,
+                                    int buffer[], int offset, int scanlineStride)
+                {
+                    IntBuffer intbuf = IntBuffer.wrap(buffer);
+                    intbuf.position(offset);
+                    getPixels(x, y, w, h, pixelformat, intbuf, scanlineStride);
+//                    checkPixelAccess(true, false).getPixels(x, y, w, h,
+//                                                            buffer, pixelformat, scanlineStride);
+                }
+            };
+        }
+        return reader;
+    }
+
+    PlatformImage getWritablePlatformImage() {
+        PlatformImage pimg = platformImage.get();
+        if (!pimg.isWritable()) {
+            pimg = pimg.promoteToWritableImage();
+            platformImage.set(pimg);
+        }
+        return pimg;
     }
 }
