@@ -246,6 +246,28 @@ public abstract class PopupWindow extends Window {
     public final BooleanProperty hideOnEscapeProperty() { return hideOnEscape; }
 
     /**
+     * Specifies whether the event, which caused the Popup to hide, should be
+     * consumed. Having the event consumed prevents it from triggering some
+     * additional UI response in the Popup's owner window.
+     * @defaultValue true
+     */
+    private BooleanProperty consumeAutoHidingEvents =
+            new SimpleBooleanProperty(this, "consumeAutoHidingEvents",
+                                      true);
+
+    public final void setConsumeAutoHidingEvents(boolean value) {
+        consumeAutoHidingEvents.set(value);
+    }
+
+    public final boolean getConsumeAutoHidingEvents() {
+        return consumeAutoHidingEvents.get();
+    }
+
+    public final BooleanProperty consumeAutoHidingEventsProperty() {
+        return consumeAutoHidingEvents;
+    }
+
+    /**
      * Show the popup.
      * @param owner The owner of the popup. This must not be null.
      */
