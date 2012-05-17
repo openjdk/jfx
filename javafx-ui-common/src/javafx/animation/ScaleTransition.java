@@ -70,7 +70,7 @@ import javafx.util.Duration;
  *     ScaleTransition st = new ScaleTransition(Duration.millis(2000), rect);
  *     st.setByX(1.5f);
  *     st.setByY(1.5f);
- *     st.setRepeatCount(4f);
+ *     st.setCycleCount(4f);
  *     st.setAutoReverse(true);
  * 
  *     st.play();

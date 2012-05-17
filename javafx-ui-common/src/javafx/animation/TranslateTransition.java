@@ -68,7 +68,7 @@ import javafx.util.Duration;
  * 
  *     TranslateTransition tt = new TranslateTransition(Duration.millis(2000), rect);
  *     tt.setByX(200f);
- *     tt.setRepeatCount(4f);
+ *     tt.setCycleCount(4f);
  *     tt.setAutoReverse(true);
  * 
  *     tt.play();
