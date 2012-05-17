@@ -114,6 +114,7 @@ public class Image {
      * @treatAsPrivate implementation detail
      * @deprecated This is an internal API that is not intended for use and will be removed in the next version
      */
+    // SB-dependency: RT-21216 has been filed to track this
     @Deprecated
     public final String impl_getUrl() {
         return url;

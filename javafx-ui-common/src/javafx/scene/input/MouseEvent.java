@@ -398,6 +398,7 @@ public class MouseEvent extends InputEvent {
      * @treatAsPrivate implementation detail
      * @deprecated This is an internal API that is not intended for use and will be removed in the next version
      */
+    // SB-dependency: RT-21224 has been filed to track this
     @Deprecated
     private static MouseEvent impl_mouseEvent(Object _source, EventTarget _target,
           double _x, double _y,
