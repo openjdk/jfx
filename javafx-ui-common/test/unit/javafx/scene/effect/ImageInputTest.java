@@ -85,7 +85,7 @@ public class ImageInputTest extends EffectsTestBase {
     @Test
     public void testSetSource() {
         // try setting non-existing image
-        Image i = new Image("test");
+        Image i = new Image("javafx/scene/image/test.png");
         effect.setSource(i);
         assertEquals(i, effect.getSource());
         pulse();

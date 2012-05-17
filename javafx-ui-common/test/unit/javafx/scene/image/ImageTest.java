@@ -51,6 +51,7 @@ import com.sun.javafx.tk.Toolkit;
 
 import javafx.beans.InvalidationListener;
 import javafx.beans.Observable;
+import org.junit.Ignore;
 
 public final class ImageTest {
     private final StubToolkit toolkit;
