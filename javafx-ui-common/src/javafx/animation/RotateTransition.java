@@ -66,7 +66,7 @@ import javafx.util.Duration;
  * 
  *     RotateTransition rt = new RotateTransition(Duration.millis(3000), rect);
  *     rt.setByAngle(180);
- *     rt.setRepeatCount(4);
+ *     rt.setCycleCount(4);
  *     rt.setAutoReverse(true);
  * 
  *     rt.play();

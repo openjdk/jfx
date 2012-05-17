@@ -59,7 +59,7 @@ import javafx.util.Duration;
  *     rect.setArcWidth(50);
  * 
  *     FillTransition ft = new FillTransition(Duration.millis(3000), rect, Color.RED, Color.BLUE);
- *     ft.setRepeatCount(4);
+ *     ft.setCycleCount(4);
  *     ft.setAutoReverse(true);
  * 
  *     ft.play();

@@ -71,7 +71,7 @@ import com.sun.javafx.geom.transform.BaseTransform;
  *     pathTransition.setNode(rect);
  *     pathTransition.setPath(path);
  *     pathTransition.setOrientation(OrientationType.ORTHOGONAL_TO_TANGENT);
- *     pathTransition.setRepeatCount(4f);
+ *     pathTransition.setCycleCount(4f);
  *     pathTransition.setAutoReverse(true);
  * 
  *     pathTransition.play();
