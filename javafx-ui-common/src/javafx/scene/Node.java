@@ -4820,7 +4820,7 @@ public abstract class Node implements EventTarget {
         }
 
         public boolean hasTransforms() {
-            return (transforms != null);
+            return (transforms != null && !transforms.isEmpty());
         }
 
         public boolean hasScaleOrRotate() {
