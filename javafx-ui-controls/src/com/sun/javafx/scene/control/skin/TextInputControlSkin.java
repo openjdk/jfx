@@ -338,20 +338,20 @@ public abstract class TextInputControlSkin<T extends TextInputControl, B extends
             selectionHandle1.getStyleClass().setAll("selection-handle");
             selectionHandle2.getStyleClass().add("selection-handle");
 
-            textInput.focusedProperty().addListener(new InvalidationListener() {
-                @Override public void invalidated(Observable observable) {
-                    if (useFXVK) {
-                        if (textInput.isFocused()) {
-                            FXVK.attach(textInput);
-                        } else if (getScene() == null ||
-                                   getScene().getWindow() == null ||
-                                   !getScene().getWindow().isFocused() ||
-                                   !(getScene().getFocusOwner() instanceof TextInputControl)) {
-                            FXVK.detach();
-                        }
-                    }
-                }
-            });
+//             textInput.focusedProperty().addListener(new InvalidationListener() {
+//                 @Override public void invalidated(Observable observable) {
+//                     if (useFXVK) {
+//                         if (textInput.isFocused()) {
+//                             FXVK.attach(textInput);
+//                         } else if (getScene() == null ||
+//                                    getScene().getWindow() == null ||
+//                                    !getScene().getWindow().isFocused() ||
+//                                    !(getScene().getFocusOwner() instanceof TextInputControl)) {
+//                             FXVK.detach();
+//                         }
+//                     }
+//                 }
+//             });
         }
 
         if (textInput.getContextMenu() == null) {
@@ -375,20 +375,35 @@ public abstract class TextInputControlSkin<T extends TextInputControl, B extends
             final MenuItem selectMI = new ContextMenuItem("SelectAll");
 
             final ContextMenu cm = new ContextMenu(undoMI, redoMI, cutMI, copyMI, pasteMI, deleteMI,
-                                             new SeparatorMenuItem(), selectMI);
-                     
-            cm.getStyleClass().add("text-input-context-menu");
+                                                   new SeparatorMenuItem(), selectMI);
+
+            if (PlatformUtil.isEmbedded()) {
+                cm.getStyleClass().add("text-input-context-menu");
+            }
             cm.setOnShowing(new EventHandler<WindowEvent>() {
                 public void handle(WindowEvent e) {
                     boolean hasSelection = (textInput.getSelection().getLength() > 0);
                     boolean maskText = (maskText("A") != "A");
 
-                    undoMI.setDisable(!getBehavior().canUndo());
-                    redoMI.setDisable(!getBehavior().canRedo());
-                    cutMI.setDisable(maskText || !hasSelection);
-                    copyMI.setDisable(maskText || !hasSelection);
-                    pasteMI.setDisable(!Clipboard.getSystemClipboard().hasString());
-                    deleteMI.setDisable(!hasSelection);
+                    if (PlatformUtil.isEmbedded()) {
+                        ObservableList<MenuItem> items = cm.getItems();
+                        items.clear();
+                        if (!maskText && hasSelection) {
+                            items.add(cutMI);
+                            items.add(copyMI);
+                        }
+                        if (Clipboard.getSystemClipboard().hasString()) {
+                            items.add(pasteMI);
+                        }
+                        items.add(selectMI);
+                    } else {
+                        undoMI.setDisable(!getBehavior().canUndo());
+                        redoMI.setDisable(!getBehavior().canRedo());
+                        cutMI.setDisable(maskText || !hasSelection);
+                        copyMI.setDisable(maskText || !hasSelection);
+                        pasteMI.setDisable(!Clipboard.getSystemClipboard().hasString());
+                        deleteMI.setDisable(!hasSelection);
+                    }
                 }
             });
 

@@ -27,19 +27,22 @@ package com.sun.javafx.scene.control.skin;
 
 import javafx.beans.InvalidationListener;
 import javafx.beans.Observable;
+import javafx.collections.ListChangeListener;
+import javafx.event.ActionEvent;
+import javafx.event.Event;
 import javafx.geometry.HPos;
 import javafx.geometry.VPos;
 import javafx.scene.control.*;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.StackPane;
 
-public class TextInputContextMenuContent extends StackPane {
+public class EmbeddedTextContextMenuContent extends StackPane {
 
     private ContextMenu contextMenu;
     private StackPane pointer;
     private HBox menuBox;
 
-    public TextInputContextMenuContent(final ContextMenu popupMenu) {
+    public EmbeddedTextContextMenuContent(final ContextMenu popupMenu) {
         this.contextMenu = popupMenu;
         this.menuBox = new HBox();
         this.pointer = new StackPane();
@@ -65,6 +68,13 @@ public class TextInputContextMenuContent extends StackPane {
                         }
                     });
                 }
+            }
+        });
+
+        contextMenu.getItems().addListener(new ListChangeListener<MenuItem>() {
+            @Override public void onChanged(Change<? extends MenuItem> c) {
+                // Listener to items in PopupMenu to update items in PopupMenuContent
+                updateMenuItemContainer();
             }
         });
     }
@@ -103,7 +113,7 @@ public class TextInputContextMenuContent extends StackPane {
     @Override protected void layoutChildren() {
         double left = snapSpace(getInsets().getLeft());
         double right = snapSpace(getInsets().getRight());
-        double top = snapSpace(getInsets().getTop());        
+        double top = snapSpace(getInsets().getTop());
         double width = snapSize(getWidth() - (left + right));
         double pointerWidth = snapSize(Utils.boundedSize(pointer.prefWidth(-1), pointer.minWidth(-1), pointer.maxWidth(-1)));
         double pointerHeight = snapSize(Utils.boundedSize(pointer.prefWidth(-1), pointer.minWidth(-1), pointer.maxWidth(-1)));
@@ -157,8 +167,8 @@ public class TextInputContextMenuContent extends StackPane {
         }
 
         @Override public void fire() {
+            Event.fireEvent(item, new ActionEvent());
             hideAllMenus(item);
-            super.fire();
         }
     }
 }

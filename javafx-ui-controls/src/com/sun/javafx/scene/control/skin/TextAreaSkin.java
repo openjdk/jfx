@@ -432,11 +432,6 @@ public class TextAreaSkin extends TextInputControlSkin<TextArea, TextAreaBehavio
         scrollPane.setFitToWidth(textArea.isWrapText());
         scrollPane.setContent(contentView);
         getChildren().add(scrollPane);
-        
-        if (textArea.getContextMenu() != null) {
-            // Set to false so we can get the Anchor node in TextInputContextMenuContent.
-            textArea.getContextMenu().setImpl_showRelativeToWindow(false);   
-        }
 
         // Add selection
         selectionHighlightGroup.setManaged(false);
@@ -456,6 +451,12 @@ public class TextAreaSkin extends TextInputControlSkin<TextArea, TextAreaBehavio
         contentView.getChildren().add(caretPath);
 
         if (PlatformUtil.isEmbedded()) {
+// This is preventing autoHide
+//             if (textArea.getContextMenu() != null) {
+//                 // Set to false so we can get the Anchor node in EmbeddedTextContextMenuContent.
+//                 textArea.getContextMenu().setImpl_showRelativeToWindow(false);
+//             }
+
             contentView.getChildren().addAll(caretHandle, selectionHandle1, selectionHandle2);
         }
 
@@ -964,28 +965,32 @@ public class TextAreaSkin extends TextInputControlSkin<TextArea, TextAreaBehavio
             x = p.getX();
             y = p.getY();
         }
-        
-        double menuWidth = menu.prefWidth(-1);
-        double menuX = x - menuWidth/2;
-        Screen currentScreen = com.sun.javafx.Utils.getScreenForPoint(0, 0);
-        double maxWidth = currentScreen.getVisualBounds().getWidth();
-                        
-        double windowX = getScene().getWindow().getX() + getScene().getX();
-        double sceneX = x - windowX;
 
-        if (menuX < 0) {
-            getProperties().put("CONTEXT_MENU_SCREEN_X", x);
-            getProperties().put("CONTEXT_MENU_SCENE_X", sceneX);
-            return super.showContextMenu(menu, 0, y, isKeyboardTrigger);            
-        } else if (x + menu.prefWidth(-1) > maxWidth) {            
-            double leftOver = menuWidth - (maxWidth - x);
-            getProperties().put("CONTEXT_MENU_SCREEN_X", x);
-            getProperties().put("CONTEXT_MENU_SCENE_X", sceneX);
-            return super.showContextMenu(menu, x - leftOver, y, isKeyboardTrigger);
+        if (PlatformUtil.isEmbedded()) {
+            double menuWidth = menu.prefWidth(-1);
+            double menuX = x - menuWidth/2;
+            Screen currentScreen = com.sun.javafx.Utils.getScreenForPoint(0, 0);
+            double maxWidth = currentScreen.getVisualBounds().getWidth();
+
+            double windowX = getScene().getWindow().getX() + getScene().getX();
+            double sceneX = x - windowX;
+
+            if (menuX < 0) {
+                getProperties().put("CONTEXT_MENU_SCREEN_X", x);
+                getProperties().put("CONTEXT_MENU_SCENE_X", sceneX);
+                return super.showContextMenu(menu, 0, y, isKeyboardTrigger);
+            } else if (x + menu.prefWidth(-1) > maxWidth) {
+                double leftOver = menuWidth - (maxWidth - x);
+                getProperties().put("CONTEXT_MENU_SCREEN_X", x);
+                getProperties().put("CONTEXT_MENU_SCENE_X", sceneX);
+                return super.showContextMenu(menu, x - leftOver, y, isKeyboardTrigger);
+            }
+            getProperties().put("CONTEXT_MENU_SCREEN_X", 0);
+            getProperties().put("CONTEXT_MENU_SCENE_X", 0);
+            return super.showContextMenu(menu, menuX, y, isKeyboardTrigger);
+        } else {
+            return super.showContextMenu(menu, x, y, isKeyboardTrigger);
         }
-        getProperties().put("CONTEXT_MENU_SCREEN_X", 0);
-        getProperties().put("CONTEXT_MENU_SCENE_X", 0);    
-        return super.showContextMenu(menu, menuX, y, isKeyboardTrigger);
     }
 
     @Override public void scrollCharacterToVisible(final int index) {

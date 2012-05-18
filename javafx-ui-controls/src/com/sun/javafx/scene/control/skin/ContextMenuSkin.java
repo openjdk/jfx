@@ -33,6 +33,8 @@ import javafx.scene.control.Menu;
 import javafx.scene.control.Skin;
 import javafx.scene.layout.StackPane;
 
+import com.sun.javafx.PlatformUtil;
+
 /**
  * Default Skin implementation for PopupMenu. Several controls use PopupMenu in
  * order to display items in a drop down. It deals mostly with show hide logic for
@@ -56,23 +58,16 @@ public class ContextMenuSkin implements Skin<ContextMenu> {
         // When a contextMenu is shown, requestFocus on its content to enable
         // keyboard navigation.
         popupMenu.addEventHandler(Menu.ON_SHOWN, new EventHandler() {
-             @Override public void handle(Event event) {
-                if (popupMenu.getStyleClass().contains("text-input-context-menu")) {
-                    TextInputContextMenuContent cmContent = (TextInputContextMenuContent)popupMenu.getSkin().getNode();
-                    if (cmContent != null) {
-                        cmContent.requestFocus();
-                    }                    
-                } else {
-                    ContextMenuContent cmContent = (ContextMenuContent)popupMenu.getSkin().getNode();
-                    if (cmContent != null) {
-                        cmContent.requestFocus();
-                    }
-                }
-             }
-         });
+            @Override public void handle(Event event) {
+                Node cmContent = popupMenu.getSkin().getNode();
+                if (cmContent != null) cmContent.requestFocus();
+            }
+        });
 
-        if (popupMenu.getStyleClass().contains("text-input-context-menu")) {
-            root = new TextInputContextMenuContent(popupMenu);
+        if (PlatformUtil.isEmbedded() &&
+            popupMenu.getStyleClass().contains("text-input-context-menu")) {
+
+            root = new EmbeddedTextContextMenuContent(popupMenu);
         } else {
             root = new ContextMenuContent(popupMenu);
         }
