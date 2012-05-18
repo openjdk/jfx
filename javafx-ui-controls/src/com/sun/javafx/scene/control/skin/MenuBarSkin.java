@@ -25,8 +25,6 @@
 
 package com.sun.javafx.scene.control.skin;
 
-import com.sun.javafx.css.StyleManager;
-import java.lang.reflect.Field;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.WeakHashMap;
@@ -52,14 +50,10 @@ import javafx.scene.control.MenuBar;
 import javafx.scene.control.MenuButton;
 import javafx.scene.control.MenuItem;
 import javafx.scene.control.SeparatorMenuItem;
-import javafx.scene.input.KeyCode;
-import javafx.scene.input.KeyCodeCombination;
 import javafx.scene.input.KeyEvent;
 import javafx.scene.input.MouseEvent;
 import javafx.scene.layout.HBox;
-import javafx.stage.Modality;
 import javafx.stage.Stage;
-import javafx.stage.Window;
 
 import com.sun.javafx.menu.MenuBase;
 import com.sun.javafx.scene.control.GlobalMenuAdapter;
@@ -69,11 +63,8 @@ import com.sun.javafx.scene.traversal.TraversalEngine;
 import com.sun.javafx.scene.traversal.TraverseListener;
 import com.sun.javafx.stage.StageHelper;
 import com.sun.javafx.tk.Toolkit;
-import javafx.beans.property.*;
-import javafx.event.Event;
+import javafx.event.ActionEvent;
 import javafx.event.EventType;
-import javafx.geometry.Side;
-import javafx.scene.control.*;
 import javafx.scene.input.*;
 
 
@@ -335,6 +326,10 @@ public class MenuBarSkin extends SkinBase<MenuBar, BehaviorBase<MenuBar>> implem
         return null;
     }
     
+    int getFocusedMenuIndex() {
+        return focusedMenuIndex;
+    }
+    
     private boolean menusContainCustomMenuItem() {
         for (Menu menu : getSkinnable().getMenus()) {
             if (menuContainsCustomMenuItem(menu)) {
@@ -368,7 +363,30 @@ public class MenuBarSkin extends SkinBase<MenuBar, BehaviorBase<MenuBar>> implem
         return -1;
     }
     
+    // RT-20411 : reset menu selected/focused state 
+    private EventHandler<ActionEvent> menuActionEventHandler = new EventHandler<ActionEvent>() {
+        @Override
+        public void handle(ActionEvent t) {
+            unSelectMenus();
+        }
+    };
+    
+    private void updateActionListeners(Menu m, boolean add) {
+        for (MenuItem mi : m.getItems()) {
+            if (mi instanceof Menu) {
+                updateActionListeners((Menu)mi, add);
+            } else {
+                if (add) {
+                    mi.addEventHandler(ActionEvent.ACTION, menuActionEventHandler);
+                } else {
+                    mi.removeEventHandler(ActionEvent.ACTION, menuActionEventHandler);
+                }
+            }
+        }
+    }
+    
     private void rebuildUI() {
+        int index = 0;
         for(Node n : container.getChildren()) {
             //Stop observing menu's showing & disable property for changes.
             //Need to unbind before clearing container's children.
@@ -379,6 +397,8 @@ public class MenuBarSkin extends SkinBase<MenuBar, BehaviorBase<MenuBar>> implem
             menuButton.textProperty().unbind();
             menuButton.graphicProperty().unbind();
             menuButton.styleProperty().unbind();
+            updateActionListeners(getSkinnable().getMenus().get(index), false);
+            index++;
         }
         container.getChildren().clear();
 
@@ -625,6 +645,7 @@ public class MenuBarSkin extends SkinBase<MenuBar, BehaviorBase<MenuBar>> implem
                     }
                 }
             });
+            updateActionListeners(menu, true);
         }
         requestLayout();
     }

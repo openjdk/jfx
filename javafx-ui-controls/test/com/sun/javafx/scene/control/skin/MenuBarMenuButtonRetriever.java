@@ -49,4 +49,8 @@ public class MenuBarMenuButtonRetriever {
     public static void setCurrentFocusedIndex(ContextMenuContent cmc, int i) {
         cmc.setCurrentFocusedIndex(i);
     }
+    
+    public static int getFocusedIndex(MenuBarSkin skin) {
+        return skin.getFocusedMenuIndex();
+    }
 }

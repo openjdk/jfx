@@ -175,6 +175,62 @@ public class MenuBarTest {
         assertTrue(!menu.isShowing());
     }
         
+    @Test public void checkMenuBarMenusSelectionResetAfterMenuItemIsSelected() {
+        final MouseEventGenerator generator = new MouseEventGenerator();
+        AnchorPane root = new AnchorPane();
+        Menu menu = new Menu("Menu");
+        MenuItem menuItem = new MenuItem("MenuItem");
+        menu.getItems().add(menuItem);
+
+        menuBar.getMenus().add(menu);
+        menuBar.setLayoutX(100);
+        menuBar.setLayoutY(100);
+
+        root.getChildren().addAll(menuBar);
+        
+        startApp(root);
+        tk.firePulse();
+        
+        MenuBarSkin skin = (MenuBarSkin)menuBar.getSkin();
+        assertTrue(skin != null);
+        MenuButton mb = MenuBarMenuButtonRetriever.getNodeForMenu(skin, 0);
+        mb.getScene().getWindow().requestFocus();
+        
+        double xval = (menuBar.localToScene(menuBar.getLayoutBounds())).getMinX();
+        double yval = (menuBar.localToScene(menuBar.getLayoutBounds())).getMinY();
+   
+        scene.impl_processMouseEvent(
+            generator.generateMouseEvent(MouseEvent.MOUSE_PRESSED, xval+20, yval+20));
+        scene.impl_processMouseEvent(
+            generator.generateMouseEvent(MouseEvent.MOUSE_RELEASED, xval+20, yval+20));
+        assertTrue(menu.isShowing());
+         /* ------------------------------------------------------------------ */
+        
+        // Show Menu
+        ContextMenuContent menuContent = MenuBarMenuButtonRetriever.getMenuContent(mb); // ContextMenuContent
+        Node displayNode = MenuBarMenuButtonRetriever.getDisplayNodeForMenuItem(menuContent, 0); // MenuItemContainer
+        
+        displayNode.getScene().getWindow().requestFocus();
+        assertTrue(displayNode.getScene().getWindow().isFocused());
+        
+        displayNode.requestFocus(); // requestFocus on 1st Menu
+        assertTrue(displayNode.isFocused());
+        
+        // fire KeyEvent (Enter) on menuitem 
+        KeyEventFirer keyboard = new KeyEventFirer(menuContent);
+        keyboard.doKeyPress(KeyCode.ENTER);
+        tk.firePulse();     
+        
+        // confirm menu is closed. 
+        assertTrue(!menu.isShowing());
+        keyboard.doKeyPress(KeyCode.LEFT);
+        tk.firePulse();
+        
+        // check if focusedMenuIndex is reset to -1 so navigation happens.
+        int focusedIndex = MenuBarMenuButtonRetriever.getFocusedIndex(skin);
+        assertEquals(focusedIndex, -1);
+        
+    }
 //    static final class MouseEventTracker {
 //        private Node node;
 //        
