@@ -147,5 +147,31 @@ public class TransformUtils {
                     getMyx(), getMyy(), getMyz(), getTy(),
                     getMzx(), getMzy(), getMzz(), getTz());
         }
+
+        /**
+         * Returns a string representation of this {@code Affine} object.
+         * @return a string representation of this {@code Affine} object.
+         */
+        @Override
+        public String toString() {
+            final StringBuilder sb = new StringBuilder("Transform [");
+
+            sb.append("mxx=").append(getMxx());
+            sb.append(", mxy=").append(getMxy());
+            sb.append(", mxz=").append(getMxz());
+            sb.append(", tx=").append(getTx());
+
+            sb.append(", myx=").append(getMyx());
+            sb.append(", myy=").append(getMyy());
+            sb.append(", myz=").append(getMyz());
+            sb.append(", ty=").append(getTy());
+
+            sb.append(", mzx=").append(getMzx());
+            sb.append(", mzy=").append(getMzy());
+            sb.append(", mzz=").append(getMzz());
+            sb.append(", tz=").append(getTz());
+
+            return sb.append("]").toString();
+        }
     }
 }
