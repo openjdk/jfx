@@ -543,6 +543,60 @@ public class ScrollEventTest {
         assertTrue(scrolled);
     }
 
+    @Test
+    public void unknownLocalShouldBeFixedByMousePosition() {
+        MouseEventGenerator gen = new MouseEventGenerator();
+        Scene scene = createScene();
+        Rectangle rect =
+                (Rectangle) scene.getRoot().getChildrenUnmodifiable().get(0);
+
+        rect.setOnScroll(new EventHandler<ScrollEvent>() {
+            @Override public void handle(ScrollEvent event) {
+                assertEquals(150.0, event.getSceneX(), 0.0001);
+                assertEquals(150.0, event.getSceneY(), 0.0001);
+                scrolled = true;
+            }
+        });
+
+        scrolled = false;
+
+        scene.impl_processMouseEvent(
+                gen.generateMouseEvent(MouseEvent.MOUSE_MOVED, 250, 250));
+
+        ((StubScene) scene.impl_getPeer()).getListener().scrollEvent(
+                ScrollEvent.SCROLL, 2, 3, 4, 6, 33, 33, 0, 1, 1, 3, 3,
+                Double.NaN, Double.NaN, Double.NaN, Double.NaN,
+                true, false, true, false, true, false);
+
+        assertFalse(scrolled);
+
+        scene.impl_processMouseEvent(
+                gen.generateMouseEvent(MouseEvent.MOUSE_MOVED, 150, 150));
+
+        ((StubScene) scene.impl_getPeer()).getListener().scrollEvent(
+                ScrollEvent.SCROLL, 2, 3, 4, 6, 33, 33, 0, 1, 1, 3, 3,
+                Double.NaN, Double.NaN, Double.NaN, Double.NaN,
+                true, false, true, false, true, false);
+
+        assertTrue(scrolled);
+    }
+
+    @Test public void testToString() {
+        ScrollEvent e = ScrollEvent.impl_scrollEvent(ScrollEvent.SCROLL,
+            10, 10, 20, 20,
+            ScrollEvent.HorizontalTextScrollUnits.NONE, 0,
+            ScrollEvent.VerticalTextScrollUnits.NONE, 0,
+            3,
+            100, 100, 200, 200,
+            false, false, false, false,
+            true, false);
+
+        String s = e.toString();
+
+        assertNotNull(s);
+        assertFalse(s.isEmpty());
+    }
+
     private Scene createScene() {
         final Group root = new Group();
         

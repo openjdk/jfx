@@ -448,6 +448,103 @@ public class TouchEventTest {
     }
 
     @Test
+    public void shouldMaintainIDMappingInDynamicConditions() {
+        Scene scene = createScene();
+        Rectangle rect =
+                (Rectangle) scene.getRoot().getChildrenUnmodifiable().get(0);
+
+        touched = 0;
+        rect.setOnTouchPressed(new EventHandler<TouchEvent>() {
+            @Override public void handle(TouchEvent event) {
+                touched++;
+                switch(event.getTouchPoint().getId()) {
+                    case 1:
+                        assertEquals(110.0, event.getTouchPoint().getX(), 0.0001);
+                        assertEquals(110.0, event.getTouchPoint().getY(), 0.0001);
+                        assertEquals(1, event.getTouchPoints().get(0).getId());
+                        assertEquals(2, event.getTouchPoints().get(1).getId());
+                        assertEquals(1, touched);
+                        break;
+                    case 2:
+                        assertEquals(120.0, event.getTouchPoint().getX(), 0.0001);
+                        assertEquals(120.0, event.getTouchPoint().getY(), 0.0001);
+                        assertEquals(1, event.getTouchPoints().get(0).getId());
+                        assertEquals(2, event.getTouchPoints().get(1).getId());
+                        assertEquals(2, touched);
+                        break;
+                    case 3:
+                        assertEquals(160.0, event.getTouchPoint().getX(), 0.0001);
+                        assertEquals(160.0, event.getTouchPoint().getY(), 0.0001);
+                        assertEquals(2, event.getTouchPoints().get(0).getId());
+                        assertEquals(3, event.getTouchPoints().get(1).getId());
+                        assertEquals(3, touched);
+                        break;
+                    default:
+                        fail("Wrong touch point id " + event.getTouchPoint().getId());
+                }
+            }
+        });
+
+        rect.setOnTouchMoved(new EventHandler<TouchEvent>() {
+            @Override public void handle(TouchEvent event) {
+                touched++;
+                switch(event.getTouchPoint().getId()) {
+                    case 2:
+                        assertEquals(120.0, event.getTouchPoint().getX(), 0.0001);
+                        assertEquals(120.0, event.getTouchPoint().getY(), 0.0001);
+                        assertEquals(2, event.getTouchPoints().get(0).getId());
+                        assertEquals(3, event.getTouchPoints().get(1).getId());
+                        assertEquals(4, touched);
+                        break;
+                    case 3:
+                        assertEquals(160.0, event.getTouchPoint().getX(), 0.0001);
+                        assertEquals(160.0, event.getTouchPoint().getY(), 0.0001);
+                        assertEquals(2, event.getTouchPoints().get(0).getId());
+                        assertEquals(3, event.getTouchPoints().get(1).getId());
+                        assertEquals(5, touched);
+                        break;
+                    default:
+                        fail("Wrong touch point id " + event.getTouchPoint().getId());
+                }
+            }
+        });
+
+        ((StubScene) scene.impl_getPeer()).getListener().touchEventBegin(
+                System.currentTimeMillis(), 2, true, false, false, false, false);
+        ((StubScene) scene.impl_getPeer()).getListener().touchEventNext(
+                TouchPoint.State.PRESSED, 1368, 110, 110, 110, 110);
+        ((StubScene) scene.impl_getPeer()).getListener().touchEventNext(
+                TouchPoint.State.PRESSED, 127, 120, 120, 120, 120);
+        ((StubScene) scene.impl_getPeer()).getListener().touchEventEnd();
+
+        ((StubScene) scene.impl_getPeer()).getListener().touchEventBegin(
+                System.currentTimeMillis(), 2, true, false, false, false, false);
+        ((StubScene) scene.impl_getPeer()).getListener().touchEventNext(
+                TouchPoint.State.STATIONARY, 127, 120, 120, 120, 120);
+        ((StubScene) scene.impl_getPeer()).getListener().touchEventNext(
+                TouchPoint.State.RELEASED, 1368, 120, 120, 120, 120);
+        ((StubScene) scene.impl_getPeer()).getListener().touchEventEnd();
+
+        ((StubScene) scene.impl_getPeer()).getListener().touchEventBegin(
+                System.currentTimeMillis(), 2, true, false, false, false, false);
+        ((StubScene) scene.impl_getPeer()).getListener().touchEventNext(
+                TouchPoint.State.PRESSED, 11, 160, 160, 160, 160);
+        ((StubScene) scene.impl_getPeer()).getListener().touchEventNext(
+                TouchPoint.State.STATIONARY, 127, 120, 120, 120, 120);
+        ((StubScene) scene.impl_getPeer()).getListener().touchEventEnd();
+
+        ((StubScene) scene.impl_getPeer()).getListener().touchEventBegin(
+                System.currentTimeMillis(), 2, true, false, false, false, false);
+        ((StubScene) scene.impl_getPeer()).getListener().touchEventNext(
+                TouchPoint.State.MOVED, 11, 160, 160, 160, 160);
+        ((StubScene) scene.impl_getPeer()).getListener().touchEventNext(
+                TouchPoint.State.MOVED, 127, 120, 120, 120, 120);
+        ((StubScene) scene.impl_getPeer()).getListener().touchEventEnd();
+
+        assertEquals(5, touched);
+    }
+
+    @Test
     public void shouldResetIDsAfterGesture() {
         Scene scene = createScene();
         Rectangle rect =

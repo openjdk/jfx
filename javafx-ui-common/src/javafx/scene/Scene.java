@@ -2373,6 +2373,17 @@ public class Scene implements EventTarget {
                 boolean _shiftDown, boolean _controlDown,
                 boolean _altDown, boolean _metaDown, boolean _direct) {
 
+            if (Double.isNaN(x) || Double.isNaN(y) ||
+                    Double.isNaN(screenX) || Double.isNaN(screenY)) {
+                if (cursorScenePos == null || cursorScreenPos == null) {
+                    return;
+                }
+                x = cursorScenePos.getX();
+                y = cursorScenePos.getY();
+                screenX = cursorScreenPos.getX();
+                screenY = cursorScreenPos.getY();
+            }
+
             Scene.this.processGestureEvent(SwipeEvent.impl_swipeEvent(
                     eventType, touchCount, x, y, screenX, screenY,
                     _shiftDown, _controlDown, _altDown, _metaDown, _direct), 

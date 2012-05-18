@@ -46,6 +46,8 @@ import org.junit.runners.Parameterized.Parameters;
 
 import com.sun.javafx.test.PropertyReference;
 import com.sun.javafx.test.MouseEventGenerator;
+import javafx.scene.input.ContextMenuEvent;
+import javafx.scene.input.SwipeEvent;
 
 @RunWith(Parameterized.class)
 public final class Scenegraph_eventHandlers_Test {
@@ -106,6 +108,26 @@ public final class Scenegraph_eventHandlers_Test {
                 "onMouseDragged",
                 mouseEventGenerator.generateMouseEvent(
                         MouseEvent.MOUSE_DRAGGED, 0, 0)
+            }, {
+                SwipeEvent.SWIPE_LEFT,
+                "onSwipeLeft",
+                createSwipeEvent(SwipeEvent.SWIPE_LEFT)
+            }, {
+                SwipeEvent.SWIPE_RIGHT,
+                "onSwipeRight",
+                createSwipeEvent(SwipeEvent.SWIPE_RIGHT)
+            }, {
+                SwipeEvent.SWIPE_UP,
+                "onSwipeUp",
+                createSwipeEvent(SwipeEvent.SWIPE_UP)
+            }, {
+                SwipeEvent.SWIPE_DOWN,
+                "onSwipeDown",
+                createSwipeEvent(SwipeEvent.SWIPE_DOWN)
+            }, {
+                ContextMenuEvent.CONTEXT_MENU_REQUESTED,
+                "onContextMenuRequested",
+                createContextMenuEvent()
             }
         });
     }
@@ -321,6 +343,19 @@ public final class Scenegraph_eventHandlers_Test {
                                       keyCode.impl_getCode(),
                                       false, false, false, false,
                                       keyEventType);
+    }
+
+    private static Event createContextMenuEvent() {
+        return ContextMenuEvent.impl_contextEvent(10, 10,
+          10, 10, false, ContextMenuEvent.CONTEXT_MENU_REQUESTED);
+    }
+
+    private static Event createSwipeEvent(final EventType<SwipeEvent> type) {
+        return SwipeEvent.impl_swipeEvent(
+                type,
+                1,
+                100, 100, 100, 100,
+                false, false, false, false, true);
     }
 
     private static void setEventHandler(

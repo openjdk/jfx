@@ -370,6 +370,56 @@ public class RotateEventTest {
         assertTrue(rotated);
     }
 
+    @Test
+    public void unknownLocalShouldBeFixedByMousePosition() {
+        MouseEventGenerator gen = new MouseEventGenerator();
+        Scene scene = createScene();
+        Rectangle rect =
+                (Rectangle) scene.getRoot().getChildrenUnmodifiable().get(0);
+        rect.setOnRotate(new EventHandler<RotateEvent>() {
+            @Override public void handle(RotateEvent event) {
+                assertEquals(150.0, event.getSceneX(), 0.0001);
+                assertEquals(150.0, event.getSceneY(), 0.0001);
+                rotated = true;
+            }
+        });
+
+        rotated = false;
+
+        scene.impl_processMouseEvent(
+                gen.generateMouseEvent(MouseEvent.MOUSE_MOVED, 250, 250));
+
+        ((StubScene) scene.impl_getPeer()).getListener().rotateEvent(
+                RotateEvent.ROTATE, 2, 3,
+                Double.NaN, Double.NaN, Double.NaN, Double.NaN,
+                true, false, true, false, true, false);
+
+        assertFalse(rotated);
+
+        scene.impl_processMouseEvent(
+                gen.generateMouseEvent(MouseEvent.MOUSE_MOVED, 150, 150));
+
+        ((StubScene) scene.impl_getPeer()).getListener().rotateEvent(
+                RotateEvent.ROTATE, 2, 3,
+                Double.NaN, Double.NaN, Double.NaN, Double.NaN,
+                true, false, true, false, true, false);
+
+        assertTrue(rotated);
+    }
+
+    @Test public void testToString() {
+        RotateEvent e = RotateEvent.impl_rotateEvent(RotateEvent.ROTATE,
+            10, 20,
+            100, 100, 200, 200,
+            false, false, false, false,
+            true, false);
+
+        String s = e.toString();
+
+        assertNotNull(s);
+        assertFalse(s.isEmpty());
+    }
+
     private Scene createScene() {
         final Group root = new Group();
         
