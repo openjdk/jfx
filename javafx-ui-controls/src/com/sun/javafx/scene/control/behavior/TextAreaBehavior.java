@@ -146,21 +146,6 @@ public class TextAreaBehavior extends TextInputControlBehavior<TextArea> {
                 }
             }
         });
-
-
-        if (textArea.getOnTouchStationary() == null) {
-            textArea.setOnTouchStationary(new EventHandler<TouchEvent>() {
-                @Override public void handle(TouchEvent event) {
-                    ContextMenu menu = textArea.getContextMenu();
-                    if (menu != null &&
-                        skin.showContextMenu(menu, event.getTouchPoint().getScreenX(),
-                                        event.getTouchPoint().getScreenY(), false)) {
-                        deferClick = false;
-                        event.consume();
-                    }
-                }
-            });
-        }
     }
 
     // An unholy back-reference!

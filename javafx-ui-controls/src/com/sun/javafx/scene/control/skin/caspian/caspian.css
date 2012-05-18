@@ -794,6 +794,24 @@
     -fx-stroke: -fx-text-fill;
 } 
 
+.context-menu .text-input-context-menu {
+    -fx-background-color: transparent;
+    -fx-background-radius: 0;
+    -fx-padding: 0;
+}
+
+.context-menu .text-input-context-menu .button {
+    -fx-background-radius: 0;   
+    -fx-background-color: derive(-fx-color,-40%);
+}
+
+.context-menu .text-input-context-menu .pointer {    
+    -fx-background-color: derive(-fx-color,-40%);    
+    -fx-padding: 6px;
+    -fx-shape: "M 6 0 L 12 12 L 0 12 z";
+    -fx-scale-shape: true;
+}
+
 /*******************************************************************************
  *                                                                             *
  * Menu                                                                        *

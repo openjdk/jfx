@@ -56,12 +56,26 @@ public class ContextMenuSkin implements Skin<ContextMenu> {
         // When a contextMenu is shown, requestFocus on its content to enable
         // keyboard navigation.
         popupMenu.addEventHandler(Menu.ON_SHOWN, new EventHandler() {
-            @Override public void handle(Event event) {
-                 ContextMenuContent cmContent = (ContextMenuContent)popupMenu.getSkin().getNode();
-                if (cmContent != null) cmContent.requestFocus();
-            }
-        });
-        root = new ContextMenuContent(popupMenu);
+             @Override public void handle(Event event) {
+                if (popupMenu.getStyleClass().contains("text-input-context-menu")) {
+                    TextInputContextMenuContent cmContent = (TextInputContextMenuContent)popupMenu.getSkin().getNode();
+                    if (cmContent != null) {
+                        cmContent.requestFocus();
+                    }                    
+                } else {
+                    ContextMenuContent cmContent = (ContextMenuContent)popupMenu.getSkin().getNode();
+                    if (cmContent != null) {
+                        cmContent.requestFocus();
+                    }
+                }
+             }
+         });
+
+        if (popupMenu.getStyleClass().contains("text-input-context-menu")) {
+            root = new TextInputContextMenuContent(popupMenu);
+        } else {
+            root = new ContextMenuContent(popupMenu);
+        }
         root.idProperty().bind(popupMenu.idProperty());
         root.styleProperty().bind(popupMenu.styleProperty());
         root.getStyleClass().addAll(popupMenu.getStyleClass()); // TODO needs to handle updates

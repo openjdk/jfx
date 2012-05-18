@@ -64,6 +64,7 @@ import com.sun.javafx.Utils;
 import com.sun.javafx.scene.control.behavior.TextFieldBehavior;
 import com.sun.javafx.scene.text.HitInfo;
 import com.sun.javafx.tk.FontMetrics;
+import javafx.stage.Screen;
 
 /**
  * Text field skin.
@@ -154,7 +155,27 @@ public class TextFieldSkin extends TextInputControlSkin<TextField, TextFieldBeha
             x = p.getX();
             y = p.getY();
         }
-        return super.showContextMenu(menu, x, y, isKeyboardTrigger);
+        double menuWidth = menu.prefWidth(-1);
+        double menuX = x - menuWidth/2;
+        Screen currentScreen = com.sun.javafx.Utils.getScreenForPoint(0, 0);
+        double maxWidth = currentScreen.getVisualBounds().getWidth();
+                        
+        double windowX = getScene().getWindow().getX() + getScene().getX();
+        double sceneX = x - windowX;
+
+        if (menuX < 0) {
+            getProperties().put("CONTEXT_MENU_SCREEN_X", x);
+            getProperties().put("CONTEXT_MENU_SCENE_X", sceneX);
+            return super.showContextMenu(menu, 0, y, isKeyboardTrigger);            
+        } else if (x + menu.prefWidth(-1) > maxWidth) {            
+            double leftOver = menuWidth - (maxWidth - x);
+            getProperties().put("CONTEXT_MENU_SCREEN_X", x);
+            getProperties().put("CONTEXT_MENU_SCENE_X", sceneX);
+            return super.showContextMenu(menu, x - leftOver, y, isKeyboardTrigger);
+        }
+        getProperties().put("CONTEXT_MENU_SCREEN_X", 0);
+        getProperties().put("CONTEXT_MENU_SCENE_X", 0);    
+        return super.showContextMenu(menu, menuX, y, isKeyboardTrigger);        
     }
 
     /**
@@ -363,8 +384,11 @@ public class TextFieldSkin extends TextInputControlSkin<TextField, TextFieldBeha
             }
         });
 
-
-
+        if (textField.getContextMenu() != null) {
+            // Set to false so we can get the Anchor node in TextInputContextMenuContent.
+            textField.getContextMenu().setImpl_showRelativeToWindow(false);   
+        }
+        
         if (PlatformUtil.isEmbedded()) {
             EventHandler<MouseEvent> handlePressHandler = new EventHandler<MouseEvent>() {
                 @Override public void handle(MouseEvent e) {

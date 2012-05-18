@@ -105,20 +105,6 @@ public class TextFieldBehavior extends TextInputControlBehavior<TextField> {
                 handleFocusChange();
             }
         });
-
-        if (textField.getOnTouchStationary() == null) {
-            textField.setOnTouchStationary(new EventHandler<TouchEvent>() {
-                @Override public void handle(TouchEvent event) {
-                    ContextMenu menu = textField.getContextMenu();
-                    if (menu != null &&
-                        skin.showContextMenu(menu, event.getTouchPoint().getScreenX(),
-                                        event.getTouchPoint().getScreenY(), false)) {
-                        deferClick = false;
-                        event.consume();
-                    }
-                }
-            });
-        }
     }
 
     private void handleFocusChange() {

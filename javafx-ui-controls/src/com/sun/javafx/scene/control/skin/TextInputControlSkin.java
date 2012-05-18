@@ -376,8 +376,9 @@ public abstract class TextInputControlSkin<T extends TextInputControl, B extends
             final MenuItem selectMI = new ContextMenuItem("SelectAll");
 
             final ContextMenu cm = new ContextMenu(undoMI, redoMI, cutMI, copyMI, pasteMI, deleteMI,
-                                                   new SeparatorMenuItem(), selectMI);
-
+                                             new SeparatorMenuItem(), selectMI);
+                     
+            cm.getStyleClass().add("text-input-context-menu");
             cm.setOnShowing(new EventHandler<WindowEvent>() {
                 public void handle(WindowEvent e) {
                     boolean hasSelection = (textInput.getSelection().getLength() > 0);
