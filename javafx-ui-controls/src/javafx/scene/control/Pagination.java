@@ -68,9 +68,9 @@ import javafx.util.Callback;
  * <p>
  * The control can be customized to display numeric page indicators or bullet style indicators by
  * setting the style class {@link STYLE_CLASS_BULLET}.  The 
- * {@link #pageIndicatorCountProperty() pageIndicatorCountProperty} can be used to change 
+ * {@link #maxPageIndicatorCountProperty() maxPageIndicatorCountProperty} can be used to change 
  * the number of page indicators.  The property value can also be changed 
- * via CSS using -fx-page-indicator-count
+ * via CSS using -fx-max-page-indicator-count.
  *</p> 
  * 
  * <h3>Page count</h3>
@@ -188,8 +188,8 @@ public class Pagination extends Control {
      * The maximum number of page indicators to use for this pagination control.  This
      * value must be greater than or equal to 1.  The page indicators will 
      * be unselected when the {@link #currentPageIndexProperty currentPageIndex} 
-     * is greater than the pageIndicatorCount.  The number of page indicators will be
-     * reduced if MaxPageIndicatorCount cannot fit within this control. 
+     * is greater than the maxPageIndicatorCount.  The number of page indicators will be
+     * reduced if maxPageIndicatorCount cannot fit within this control. 
      * 
      * The default is 10 page indicators.
      */    
@@ -216,7 +216,7 @@ public class Pagination extends Control {
 
                 @Override
                 public String getName() {
-                    return "pageIndicatorCount";
+                    return "maxPageIndicatorCount";
                 }
             };
         }
@@ -278,7 +278,7 @@ public class Pagination extends Control {
     /**
      * The current page index to display for this pagination control.  This value
      * must be greater than or equal to 0.  The page indicators will be unselected when
-     * the currentPageIndex is greater than the {@link #pageIndicatorCountProperty pageIndicatorCount}.
+     * the currentPageIndex is greater than the {@link #maxPageIndicatorCountProperty maxPageIndicatorCount}.
      * 
      * The default is 0 for the first page.
      */    
