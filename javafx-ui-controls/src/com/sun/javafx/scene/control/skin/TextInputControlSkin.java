@@ -372,10 +372,11 @@ public abstract class TextInputControlSkin<T extends TextInputControl, B extends
             final MenuItem copyMI   = new ContextMenuItem("Copy");
             final MenuItem pasteMI  = new ContextMenuItem("Paste");
             final MenuItem deleteMI = new ContextMenuItem("DeleteSelection");
-            final MenuItem selectMI = new ContextMenuItem("SelectAll");
+            final MenuItem selectWordMI = new ContextMenuItem("SelectWord");
+            final MenuItem selectAllMI = new ContextMenuItem("SelectAll");
 
             final ContextMenu cm = new ContextMenu(undoMI, redoMI, cutMI, copyMI, pasteMI, deleteMI,
-                                                   new SeparatorMenuItem(), selectMI);
+                                                   new SeparatorMenuItem(), selectAllMI);
 
             if (PlatformUtil.isEmbedded()) {
                 cm.getStyleClass().add("text-input-context-menu");
@@ -395,7 +396,10 @@ public abstract class TextInputControlSkin<T extends TextInputControl, B extends
                         if (Clipboard.getSystemClipboard().hasString()) {
                             items.add(pasteMI);
                         }
-                        items.add(selectMI);
+                        if (!hasSelection) {
+                            items.add(selectWordMI);
+                        }
+                        items.add(selectAllMI);
                     } else {
                         undoMI.setDisable(!getBehavior().canUndo());
                         redoMI.setDisable(!getBehavior().canRedo());

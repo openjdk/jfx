@@ -136,6 +136,7 @@ public abstract class TextInputControlBehavior<T extends TextInputControl> exten
             else if ("NextWord".equals(name)) nextWord();
             else if ("SelectPreviousWord".equals(name)) selectPreviousWord();
             else if ("SelectNextWord".equals(name)) selectNextWord();
+            else if ("SelectWord".equals(name)) selectWord();
             else if ("SelectAll".equals(name)) textInputControl.selectAll();
             else if ("Home".equals(name)) textInputControl.home();
             else if ("End".equals(name)) textInputControl.end();
@@ -320,6 +321,16 @@ public abstract class TextInputControlBehavior<T extends TextInputControl> exten
             textInputControl.selectEndOfNextWord();
         } else {
             textInputControl.selectNextWord();
+        }
+    }
+
+    protected void selectWord() {
+        final TextInputControl textInputControl = getControl();
+        textInputControl.previousWord();
+        if (isWindows()) {
+            textInputControl.selectNextWord();
+        } else {
+            textInputControl.selectEndOfNextWord();
         }
     }
 
