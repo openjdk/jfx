@@ -25,6 +25,7 @@
 package javafx.scene.transform;
 
 import static javafx.scene.transform.TransformTest.assertTx;
+import static org.junit.Assert.*;
 
 import java.lang.reflect.Method;
 
@@ -164,6 +165,59 @@ public class RotateTest {
 
     @Test public void testBoundPropertySynced_Axis() throws Exception {
         checkObjectPropertySynced("axis", new Point3D(1, 0, 0));
+    }
+
+    @Test
+    public void testCopying() {
+        final Rotate trans = new Rotate();
+
+        trans.setAngle(45);
+        trans.setPivotX(66);
+        trans.setPivotY(77);
+        trans.setPivotZ(88);
+        trans.setAxis(new Point3D(20, 30, 40));
+
+        Transform copy = trans.impl_copy();
+
+        final Point3D a = new Point3D(20.0 / Math.sqrt(2900.0),
+                                30.0 / Math.sqrt(2900.0),
+                                40.0 / Math.sqrt(2900.0));
+        double sin = Math.sin(Math.PI / 4);
+        double cos = Math.cos(Math.PI / 4);
+
+        TransformHelper.assertMatrix(copy,
+                cos + a.getX() * a.getX() * (1 - cos), //mxx
+                a.getX() * a.getY() * (1 - cos) - a.getZ() * sin, //mxy
+                a.getX() * a.getZ() * (1 - cos) + a.getY() * sin, //mxz
+                66
+                    - 66 * (cos + a.getX() * a.getX() * (1 - cos))
+                    - 77 * (a.getX() * a.getY() * (1 - cos) - a.getZ() * sin)
+                    - 88 * (a.getX() * a.getZ() * (1 - cos) + a.getY() * sin), //tx
+                a.getY() * a.getX() * (1 - cos) + a.getZ() * sin, //myx
+                cos + a.getY() * a.getY() * (1 - cos), //myy
+                a.getY() * a.getZ() * (1 - cos) - a.getX() * sin, //myz
+                77
+                    - 66 * (a.getY() * a.getX() * (1 - cos) + a.getZ() * sin)
+                    - 77 * (cos + a.getY() * a.getY() * (1 - cos))
+                    - 88 * (a.getY() * a.getZ() * (1 - cos) - a.getX() * sin), //ty
+                a.getZ() * a.getX() * (1 - cos) - a.getY() * sin, //mzx
+                a.getZ() * a.getY() * (1 - cos) + a.getX() * sin, //mzy
+                cos + a.getZ() * a.getZ() * (1 - cos), //mzz
+                88
+                    - 66 * (a.getZ() * a.getX() * (1 - cos) - a.getY() * sin)
+                    - 77 * (a.getZ() * a.getY() * (1 - cos) + a.getX() * sin)
+                    - 88 * (cos + a.getZ() * a.getZ() * (1 - cos)) //tz
+
+                );
+    }
+
+    @Test public void testToString() {
+        final Rotate trans = new Rotate(40);
+
+        String s = trans.toString();
+
+        assertNotNull(s);
+        assertFalse(s.isEmpty());
     }
 
     private void checkObjectPropertySynced(String propertyName, Object val)

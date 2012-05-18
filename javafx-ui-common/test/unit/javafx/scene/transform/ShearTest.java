@@ -28,6 +28,7 @@ import static javafx.scene.transform.TransformTest.assertTx;
 import javafx.scene.shape.Rectangle;
 
 import org.junit.Test;
+import static org.junit.Assert.*;
 
 import com.sun.javafx.test.TransformHelper;
 import com.sun.javafx.geom.transform.Affine2D;
@@ -100,6 +101,27 @@ public class ShearTest {
                  1, 34, 0, -34*77,
                 67,  1, 0, -67*66,
                  0,  0, 1,      0);
+    }
+
+    @Test
+    public void testCopying() {
+        final Shear trans = new Shear(34, 67, 66, 77);
+
+        Transform copy = trans.impl_copy();
+
+        TransformHelper.assertMatrix(copy,
+                 1, 34, 0, -34*77,
+                67,  1, 0, -67*66,
+                 0,  0, 1,      0);
+    }
+
+    @Test public void testToString() {
+        final Shear trans = new Shear(8, 15);
+
+        String s = trans.toString();
+
+        assertNotNull(s);
+        assertFalse(s.isEmpty());
     }
 
     @Test public void testBoundPropertySynced_X() throws Exception {

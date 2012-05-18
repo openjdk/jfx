@@ -30,6 +30,7 @@ import javafx.scene.shape.Rectangle;
 import org.junit.Assert;
 import org.junit.Test;
 
+import static org.junit.Assert.*;
 import com.sun.javafx.test.TransformHelper;
 import com.sun.javafx.geom.transform.Affine2D;
 import com.sun.javafx.geom.transform.Affine3D;
@@ -126,6 +127,26 @@ public class ScaleTest {
         assertTx(n, expT);
     }
 
+    @Test
+    public void testCopying() {
+        final Scale trans = new Scale(34, 67, 10, 66, 77, 5);
+
+        Transform copy = trans.impl_copy();
+
+        TransformHelper.assertMatrix(copy,
+                34,  0,  0, -2178,
+                 0, 67,  0, -5082,
+                 0,  0, 10,   -45);
+    }
+
+    @Test public void testToString() {
+        final Scale trans = new Scale(5, 8);
+
+        String s = trans.toString();
+
+        assertNotNull(s);
+        assertFalse(s.isEmpty());
+    }
 
     @Test public void testBoundPropertySynced_PivotX() throws Exception {
         TransformTest.checkDoublePropertySynced(new Scale(3, 3, 0), "pivotX", 200.0);

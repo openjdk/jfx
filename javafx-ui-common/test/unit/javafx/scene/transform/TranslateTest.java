@@ -29,6 +29,7 @@ import javafx.scene.shape.Rectangle;
 
 import org.junit.Assert;
 import org.junit.Test;
+import static org.junit.Assert.*;
 
 import com.sun.javafx.test.TransformHelper;
 import com.sun.javafx.geom.transform.BaseTransform;
@@ -72,6 +73,27 @@ public class TranslateTest {
                 1, 0, 0, 34,
                 0, 1, 0, 67,
                 0, 0, 1, 33);
+    }
+
+    @Test
+    public void testCopying() {
+        final Translate trans = new Translate(34, 67, 33);
+
+        Transform copy = trans.impl_copy();
+
+        TransformHelper.assertMatrix(copy,
+                1, 0, 0, 34,
+                0, 1, 0, 67,
+                0, 0, 1, 33);
+    }
+
+    @Test public void testToString() {
+        final Translate trans = new Translate(8, 15);
+
+        String s = trans.toString();
+
+        assertNotNull(s);
+        assertFalse(s.isEmpty());
     }
 
     @Test public void testBoundPropertySynced_X() throws Exception {

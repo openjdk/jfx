@@ -29,10 +29,12 @@ import javafx.scene.shape.Rectangle;
 
 import org.junit.Assert;
 import org.junit.Test;
+import static org.junit.Assert.*;
 
 import com.sun.javafx.test.TransformHelper;
 import com.sun.javafx.geom.transform.Affine2D;
 import com.sun.javafx.geom.transform.Affine3D;
+import com.sun.javafx.scene.transform.TransformUtils;
 
 public class AffineTest {
 
@@ -78,11 +80,11 @@ public class AffineTest {
 
     @Test public void testGetters() {
         final Affine trans = new Affine(
-                1,  2,  3,  4,
+                0.5,  2,  3,  4,
                 5,  6,  7,  8,
                 9, 10, 11, 12);
         TransformHelper.assertMatrix(trans,
-                1,  2,  3,  4,
+                0.5,  2,  3,  4,
                 5,  6,  7,  8,
                 9, 10, 11, 12);
 
@@ -103,6 +105,87 @@ public class AffineTest {
                 12, 11, 10, 9,
                  8,  7,  6, 5,
                  4,  3,  2, 1);
+    }
+
+    @Test public void testConstructingIdentityTransform() {
+        final Affine trans = new Affine(
+                1, 0, 0, 0,
+                0, 1, 0, 0,
+                0, 0, 1, 0);
+
+        TransformHelper.assertMatrix(trans,
+                1, 0, 0, 0,
+                0, 1, 0, 0,
+                0, 0, 1, 0);
+
+        trans.setMxx(12);
+        trans.setMxy(11);
+        trans.setMxz(10);
+        trans.setTx(9);
+        trans.setMyx(8);
+        trans.setMyy(7);
+        trans.setMyz(6);
+        trans.setTy(5);
+        trans.setMzx(4);
+        trans.setMzy(3);
+        trans.setMzz(2);
+        trans.setTz(1);
+
+        TransformHelper.assertMatrix(trans,
+                12, 11, 10, 9,
+                 8,  7,  6, 5,
+                 4,  3,  2, 1);
+    }
+
+    @Test public void testSettingTransform() {
+        final Affine trans = new Affine(
+                1,  2,  3,  4,
+                5,  6,  7,  8,
+                9, 10, 11, 12);
+
+        TransformHelper.assertMatrix(trans,
+                1,  2,  3,  4,
+                5,  6,  7,  8,
+                9, 10, 11, 12);
+
+        Transform it = TransformUtils.immutableTransform(
+                12, 11, 10, 9,
+                 8,  7,  6, 5,
+                 4,  3,  2, 1);
+
+        trans.setTransform(it);
+
+        TransformHelper.assertMatrix(trans,
+                12, 11, 10, 9,
+                 8,  7,  6, 5,
+                 4,  3,  2, 1);
+    }
+
+    @Test
+    public void testCopying() {
+        final Affine trans = new Affine(
+                1,  2,  3,  4,
+                5,  6,  7,  8,
+                9, 10, 11, 12);
+
+        Transform copy = trans.impl_copy();
+
+        TransformHelper.assertMatrix(copy,
+                1,  2,  3,  4,
+                5,  6,  7,  8,
+                9, 10, 11, 12);
+    }
+
+    @Test public void testToString() {
+        final Affine trans = new Affine(
+                1,  2,  3,  4,
+                5,  6,  7,  8,
+                9, 10, 11, 12);
+
+        String s = trans.toString();
+
+        assertNotNull(s);
+        assertFalse(s.isEmpty());
     }
 
     @Test public void testBoundPropertySynced() throws Exception {

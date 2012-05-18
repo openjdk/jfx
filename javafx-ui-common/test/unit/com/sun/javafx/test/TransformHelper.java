@@ -26,6 +26,10 @@ package com.sun.javafx.test;
 
 import javafx.scene.transform.Transform;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertSame;
+import com.sun.javafx.geom.transform.Affine3D;
+import javafx.scene.Node;
+import javafx.scene.transform.Affine;
 
 public class TransformHelper {
     public static void assertMatrix(Transform matrix,
@@ -46,4 +50,21 @@ public class TransformHelper {
         assertEquals(tz, matrix.getTz(), 0.00001);
     }
 
+    public static void assertMatrix(Affine3D matrix,
+            double mxx, double mxy, double mxz, double tx,
+            double myx, double myy, double myz, double ty,
+            double mzx, double mzy, double mzz, double tz) {
+        assertEquals(mxx, matrix.getMxx(), 0.00001);
+        assertEquals(mxy, matrix.getMxy(), 0.00001);
+        assertEquals(mxz, matrix.getMxz(), 0.00001);
+        assertEquals(tx, matrix.getMxt(), 0.00001);
+        assertEquals(myx, matrix.getMyx(), 0.00001);
+        assertEquals(myy, matrix.getMyy(), 0.00001);
+        assertEquals(myz, matrix.getMyz(), 0.00001);
+        assertEquals(ty, matrix.getMyt(), 0.00001);
+        assertEquals(mzx, matrix.getMzx(), 0.00001);
+        assertEquals(mzy, matrix.getMzy(), 0.00001);
+        assertEquals(mzz, matrix.getMzz(), 0.00001);
+        assertEquals(tz, matrix.getMzt(), 0.00001);
+    }
 }
