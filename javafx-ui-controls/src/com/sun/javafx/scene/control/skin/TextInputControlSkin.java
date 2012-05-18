@@ -341,15 +341,14 @@ public abstract class TextInputControlSkin<T extends TextInputControl, B extends
             textInput.focusedProperty().addListener(new InvalidationListener() {
                 @Override public void invalidated(Observable observable) {
                     if (useFXVK) {
-                        Platform.runLater(new Runnable() {
-                            public void run() {
-                                if (textInput.isFocused()) {
-                                    FXVK.attach(textInput);
-                                } else if (!(getScene().getFocusOwner() instanceof TextInputControl)) {
-                                    FXVK.detach();
-                                }
-                            }
-                        });
+                        if (textInput.isFocused()) {
+                            FXVK.attach(textInput);
+                        } else if (getScene() == null ||
+                                   getScene().getWindow() == null ||
+                                   !getScene().getWindow().isFocused() ||
+                                   !(getScene().getFocusOwner() instanceof TextInputControl)) {
+                            FXVK.detach();
+                        }
                     }
                 }
             });
