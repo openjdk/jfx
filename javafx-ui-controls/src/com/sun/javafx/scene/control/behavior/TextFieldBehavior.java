@@ -46,6 +46,8 @@ import com.sun.javafx.scene.control.skin.TextFieldSkin;
 import com.sun.javafx.scene.text.HitInfo;
 
 import static com.sun.javafx.PlatformUtil.*;
+import javafx.scene.input.MouseButton;
+import javafx.stage.Screen;
 
 /**
  * Text field behavior.
@@ -89,9 +91,17 @@ public class TextFieldBehavior extends TextInputControlBehavior<TextField> {
             }
         }
     };
+    
+    private ContextMenu contextMenu;
 
     public TextFieldBehavior(final TextField textField) {
         super(textField);
+        
+        contextMenu = new ContextMenu();
+        if (PlatformUtil.isEmbedded()) {
+            contextMenu.getStyleClass().add("text-input-context-menu");
+        }
+        
         // Initialize scroll timeline
         scrollSelectionTimeline.setCycleCount(Timeline.INDEFINITE);
         List<KeyFrame> scrollTimelineKeyFrames = scrollSelectionTimeline.getKeyFrames();
@@ -233,6 +243,9 @@ public class TextFieldBehavior extends TextInputControlBehavior<TextField> {
 //                    displaySoftwareKeyboard(true);
             }
         }
+        if (contextMenu.isShowing()) {
+            contextMenu.hide();                
+        }         
     }
 
     @Override public void mouseDragged(MouseEvent e) {
@@ -262,6 +275,34 @@ public class TextFieldBehavior extends TextInputControlBehavior<TextField> {
             }
             setCaretAnimating(true);
         }
+        if (e.getButton() == MouseButton.SECONDARY) {    
+            if (contextMenu.isShowing()) {
+                contextMenu.hide();                
+            } else {
+                skin.populateContextMenu(contextMenu);
+                double screenX = e.getScreenX();
+                double sceneX = e.getSceneX();
+                double menuWidth = contextMenu.prefWidth(-1);                
+                double menuX = screenX - menuWidth/2;
+                Screen currentScreen = com.sun.javafx.Utils.getScreenForPoint(0, 0);
+                double maxWidth = currentScreen.getVisualBounds().getWidth();
+
+                if (menuX < 0) {
+                    skin.getProperties().put("CONTEXT_MENU_SCREEN_X", screenX);
+                    skin.getProperties().put("CONTEXT_MENU_SCENE_X", sceneX);
+                    contextMenu.show(getControl(), 0, e.getScreenY());
+                } else if (screenX + menuWidth > maxWidth) {
+                    double leftOver = menuWidth - (maxWidth - screenX);
+                    skin.getProperties().put("CONTEXT_MENU_SCREEN_X", screenX);
+                    skin.getProperties().put("CONTEXT_MENU_SCENE_X", sceneX);
+                    contextMenu.show(getControl(), screenX - leftOver, e.getScreenY());
+                } else {
+                    skin.getProperties().put("CONTEXT_MENU_SCREEN_X", 0);
+                    skin.getProperties().put("CONTEXT_MENU_SCENE_X", 0);
+                    contextMenu.show(getControl(), menuX, e.getScreenY());
+                }
+            }
+        }        
     }
 
 //    var hadFocus = false;

@@ -48,7 +48,6 @@ import javafx.geometry.Point2D;
 import javafx.geometry.Rectangle2D;
 import javafx.scene.Group;
 import javafx.scene.Node;
-import javafx.scene.control.ContextMenu;
 import javafx.scene.control.IndexRange;
 import javafx.scene.control.TextField;
 import javafx.scene.input.MouseEvent;
@@ -60,11 +59,9 @@ import javafx.scene.text.Text;
 import java.util.List;
 
 import com.sun.javafx.PlatformUtil;
-import com.sun.javafx.Utils;
 import com.sun.javafx.scene.control.behavior.TextFieldBehavior;
 import com.sun.javafx.scene.text.HitInfo;
 import com.sun.javafx.tk.FontMetrics;
-import javafx.stage.Screen;
 
 /**
  * Text field skin.
@@ -146,42 +143,6 @@ public class TextFieldSkin extends TextInputControlSkin<TextField, TextFieldBeha
     protected ObservableDoubleValue textRight;
 
     private double pressX, pressY; // For dragging handles on embedded
-
-    @Override public boolean showContextMenu(ContextMenu menu, double x, double y, boolean isKeyboardTrigger) {
-        if (isKeyboardTrigger) {
-            Bounds caretBounds = caretPath.getLayoutBounds();
-            Point2D p = Utils.pointRelativeTo(textNode, null, caretBounds.getMinX(),
-                                              caretBounds.getMaxY(), false);
-            x = p.getX();
-            y = p.getY();
-        }
-
-        if (PlatformUtil.isEmbedded()) {
-            double menuWidth = menu.prefWidth(-1);
-            double menuX = x - menuWidth/2;
-            Screen currentScreen = com.sun.javafx.Utils.getScreenForPoint(0, 0);
-            double maxWidth = currentScreen.getVisualBounds().getWidth();
-
-            double windowX = getScene().getWindow().getX() + getScene().getX();
-            double sceneX = x - windowX;
-
-            if (menuX < 0) {
-                getProperties().put("CONTEXT_MENU_SCREEN_X", x);
-                getProperties().put("CONTEXT_MENU_SCENE_X", sceneX);
-                return super.showContextMenu(menu, 0, y, isKeyboardTrigger);
-            } else if (x + menu.prefWidth(-1) > maxWidth) {
-                double leftOver = menuWidth - (maxWidth - x);
-                getProperties().put("CONTEXT_MENU_SCREEN_X", x);
-                getProperties().put("CONTEXT_MENU_SCENE_X", sceneX);
-                return super.showContextMenu(menu, x - leftOver, y, isKeyboardTrigger);
-            }
-            getProperties().put("CONTEXT_MENU_SCREEN_X", 0);
-            getProperties().put("CONTEXT_MENU_SCENE_X", 0);
-            return super.showContextMenu(menu, menuX, y, isKeyboardTrigger);
-        } else {
-            return super.showContextMenu(menu, x, y, isKeyboardTrigger);
-        }
-    }
 
     /**
      * Create a new TextFieldSkin.
@@ -390,12 +351,6 @@ public class TextFieldSkin extends TextInputControlSkin<TextField, TextFieldBeha
         });
 
         if (PlatformUtil.isEmbedded()) {
-// This is preventing autoHide
-//             if (textField.getContextMenu() != null) {
-//                 // Set to false so we can get the Anchor node in EmbeddedTextContextMenuContent.
-//                 textField.getContextMenu().setImpl_showRelativeToWindow(false);
-//             }
-
             EventHandler<MouseEvent> handlePressHandler = new EventHandler<MouseEvent>() {
                 @Override public void handle(MouseEvent e) {
                     pressX = e.getX();

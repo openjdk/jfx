@@ -43,6 +43,8 @@ import com.sun.javafx.scene.text.HitInfo;
 import static javafx.scene.input.KeyCode.*;
 import static javafx.scene.input.KeyEvent.*;
 import static com.sun.javafx.PlatformUtil.*;
+import javafx.geometry.Side;
+import javafx.stage.Screen;
 
 
 /**
@@ -122,6 +124,7 @@ public class TextAreaBehavior extends TextInputControlBehavior<TextArea> {
     }
 
     private TextAreaSkin skin;
+    private ContextMenu contextMenu;
 
     /**************************************************************************
      * Constructors                                                           *
@@ -130,6 +133,11 @@ public class TextAreaBehavior extends TextInputControlBehavior<TextArea> {
     public TextAreaBehavior(final TextArea textArea) {
         super(textArea);
 
+        contextMenu = new ContextMenu();
+        if (PlatformUtil.isEmbedded()) {
+            contextMenu.getStyleClass().add("text-input-context-menu");
+        }
+        
         // Register for change events
         textArea.focusedProperty().addListener(new ChangeListener<Boolean>() {
             @Override
@@ -145,7 +153,7 @@ public class TextAreaBehavior extends TextInputControlBehavior<TextArea> {
                     setCaretAnimating(false);
                 }
             }
-        });
+        });        
     }
 
     // An unholy back-reference!
@@ -298,6 +306,9 @@ public class TextAreaBehavior extends TextInputControlBehavior<TextArea> {
 //                if (textInputControl.editable)
 //                    displaySoftwareKeyboard(true);
             }
+            if (contextMenu.isShowing()) {
+                contextMenu.hide();                
+            }            
         }
     }
 
@@ -314,7 +325,7 @@ public class TextAreaBehavior extends TextInputControlBehavior<TextArea> {
         }
     }
 
-    @Override public void mouseReleased(MouseEvent e) {
+    @Override public void mouseReleased(MouseEvent e) {        
         final TextArea textArea = getControl();
         super.mouseReleased(e);
         // we never respond to events if disabled, but we do notify any onXXX
@@ -327,6 +338,34 @@ public class TextAreaBehavior extends TextInputControlBehavior<TextArea> {
                 shiftDown = false;
             }
             setCaretAnimating(true);
+        }
+        if (e.getButton() == MouseButton.SECONDARY) {    
+            if (contextMenu.isShowing()) {
+                contextMenu.hide();                
+            } else {
+                skin.populateContextMenu(contextMenu);
+                double screenX = e.getScreenX();
+                double sceneX = e.getSceneX();
+                double menuWidth = contextMenu.prefWidth(-1);             
+                double menuX = screenX - menuWidth/2;
+                Screen currentScreen = com.sun.javafx.Utils.getScreenForPoint(0, 0);
+                double maxWidth = currentScreen.getVisualBounds().getWidth();
+
+                if (menuX < 0) {
+                    skin.getProperties().put("CONTEXT_MENU_SCREEN_X", screenX);
+                    skin.getProperties().put("CONTEXT_MENU_SCENE_X", sceneX);
+                    contextMenu.show(getControl(), 0, e.getScreenY());
+                } else if (screenX + menuWidth > maxWidth) {
+                    double leftOver = menuWidth - (maxWidth - screenX);
+                    skin.getProperties().put("CONTEXT_MENU_SCREEN_X", screenX);
+                    skin.getProperties().put("CONTEXT_MENU_SCENE_X", sceneX);
+                    contextMenu.show(getControl(), screenX - leftOver, e.getScreenY());
+                } else {
+                    skin.getProperties().put("CONTEXT_MENU_SCREEN_X", 0);
+                    skin.getProperties().put("CONTEXT_MENU_SCENE_X", 0);
+                    contextMenu.show(getControl(), menuX, e.getScreenY());
+                }
+            }
         }
     }
 

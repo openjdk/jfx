@@ -110,6 +110,14 @@ public class EmbeddedTextContextMenuContent extends StackPane {
         return top + pointerHeight + menuBoxHeight + bottom;
     }
 
+    @Override protected double computePrefWidth(double height) {
+        double left = snapSpace(getInsets().getLeft());
+        double right = snapSpace(getInsets().getRight());
+        double menuBoxWidth = snapSize(menuBox.prefWidth(height));
+
+        return left + menuBoxWidth + right;
+    }
+    
     @Override protected void layoutChildren() {
         double left = snapSpace(getInsets().getLeft());
         double right = snapSpace(getInsets().getRight());

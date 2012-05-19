@@ -353,67 +353,7 @@ public abstract class TextInputControlSkin<T extends TextInputControl, B extends
 //                 }
 //             });
         }
-
-        if (textInput.getContextMenu() == null) {
-            class ContextMenuItem extends MenuItem {
-                ContextMenuItem(final String action) {
-                    super(getString("TextInputControl.menu." + action));
-                    setOnAction(new EventHandler<ActionEvent>() {
-                        @Override public void handle(ActionEvent e) {
-                            behavior.callAction(action);
-                        }
-                    });
-                }
-            }
-
-            final MenuItem undoMI   = new ContextMenuItem("Undo");
-            final MenuItem redoMI   = new ContextMenuItem("Redo");
-            final MenuItem cutMI    = new ContextMenuItem("Cut");
-            final MenuItem copyMI   = new ContextMenuItem("Copy");
-            final MenuItem pasteMI  = new ContextMenuItem("Paste");
-            final MenuItem deleteMI = new ContextMenuItem("DeleteSelection");
-            final MenuItem selectWordMI = new ContextMenuItem("SelectWord");
-            final MenuItem selectAllMI = new ContextMenuItem("SelectAll");
-
-            final ContextMenu cm = new ContextMenu(undoMI, redoMI, cutMI, copyMI, pasteMI, deleteMI,
-                                                   new SeparatorMenuItem(), selectAllMI);
-
-            if (PlatformUtil.isEmbedded()) {
-                cm.getStyleClass().add("text-input-context-menu");
-            }
-            cm.setOnShowing(new EventHandler<WindowEvent>() {
-                public void handle(WindowEvent e) {
-                    boolean hasSelection = (textInput.getSelection().getLength() > 0);
-                    boolean maskText = (maskText("A") != "A");
-
-                    if (PlatformUtil.isEmbedded()) {
-                        ObservableList<MenuItem> items = cm.getItems();
-                        items.clear();
-                        if (!maskText && hasSelection) {
-                            items.add(cutMI);
-                            items.add(copyMI);
-                        }
-                        if (Clipboard.getSystemClipboard().hasString()) {
-                            items.add(pasteMI);
-                        }
-                        if (!hasSelection) {
-                            items.add(selectWordMI);
-                        }
-                        items.add(selectAllMI);
-                    } else {
-                        undoMI.setDisable(!getBehavior().canUndo());
-                        redoMI.setDisable(!getBehavior().canRedo());
-                        cutMI.setDisable(maskText || !hasSelection);
-                        copyMI.setDisable(maskText || !hasSelection);
-                        pasteMI.setDisable(!Clipboard.getSystemClipboard().hasString());
-                        deleteMI.setDisable(!hasSelection);
-                    }
-                }
-            });
-
-            textInput.setContextMenu(cm);
-        }
-
+                    
         if (textInput.getOnInputMethodTextChanged() == null) {
             textInput.setOnInputMethodTextChanged(new EventHandler<InputMethodEvent>() {
                 @Override public void handle(InputMethodEvent event) {
@@ -453,7 +393,7 @@ public abstract class TextInputControlSkin<T extends TextInputControl, B extends
             }
         });
     }
-
+    
     @Override public void dispose() {
         caretTimeline.stop();
         caretTimeline = null;
@@ -619,7 +559,55 @@ public abstract class TextInputControlSkin<T extends TextInputControl, B extends
             blink.set(true);
         }
     }
+    
+    class ContextMenuItem extends MenuItem {
+        ContextMenuItem(final String action) {
+            super(getString("TextInputControl.menu." + action));
+            setOnAction(new EventHandler<ActionEvent>() {
+                @Override public void handle(ActionEvent e) {
+                    getBehavior().callAction(action);
+                }
+            });
+        }
+    }
 
+    final MenuItem undoMI   = new ContextMenuItem("Undo");
+    final MenuItem redoMI   = new ContextMenuItem("Redo");
+    final MenuItem cutMI    = new ContextMenuItem("Cut");
+    final MenuItem copyMI   = new ContextMenuItem("Copy");
+    final MenuItem pasteMI  = new ContextMenuItem("Paste");
+    final MenuItem deleteMI = new ContextMenuItem("DeleteSelection");
+    final MenuItem selectWordMI = new ContextMenuItem("SelectWord");
+    final MenuItem selectAllMI = new ContextMenuItem("SelectAll");    
+       
+    public void populateContextMenu(ContextMenu contextMenu) {
+        boolean hasSelection = (getSkinnable().getSelection().getLength() > 0);
+        boolean maskText = (maskText("A") != "A");
+
+        if (PlatformUtil.isEmbedded()) {
+            ObservableList<MenuItem> items = contextMenu.getItems();
+            items.clear();
+            if (!maskText && hasSelection) {
+                items.add(cutMI);
+                items.add(copyMI);
+            }
+            if (Clipboard.getSystemClipboard().hasString()) {
+                items.add(pasteMI);
+            }
+            if (!hasSelection) {
+                items.add(selectWordMI);
+            }
+            items.add(selectAllMI);
+        } else {
+            undoMI.setDisable(!getBehavior().canUndo());
+            redoMI.setDisable(!getBehavior().canRedo());
+            cutMI.setDisable(maskText || !hasSelection);
+            copyMI.setDisable(maskText || !hasSelection);
+            pasteMI.setDisable(!Clipboard.getSystemClipboard().hasString());
+            deleteMI.setDisable(!hasSelection);
+        }
+    }    
+    
     private static class StyleableProperties {
         private static final StyleableProperty<TextInputControlSkin,Font> FONT =
            new StyleableProperty.FONT<TextInputControlSkin>("-fx-font", Font.getDefault()) {
