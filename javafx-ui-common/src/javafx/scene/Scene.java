@@ -80,6 +80,7 @@ import com.sun.javafx.beans.event.AbstractNotifyListener;
 import com.sun.javafx.collections.TrackableObservableList;
 import com.sun.javafx.css.StyleManager;
 import com.sun.javafx.cursor.CursorFrame;
+import com.sun.javafx.event.EventQueue;
 import com.sun.javafx.geom.PickRay;
 import com.sun.javafx.geom.transform.Affine2D;
 import com.sun.javafx.geom.transform.BaseTransform;
@@ -102,6 +103,7 @@ import com.sun.javafx.tk.Toolkit;
 import java.util.Arrays;
 import java.util.LinkedHashSet;
 import java.util.LinkedList;
+import javafx.application.Platform;
 import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.ObjectPropertyBase;
 import javafx.beans.property.ReadOnlyDoubleProperty;
@@ -3092,10 +3094,20 @@ public class Scene implements EventTarget {
 
         private Cursor currCursor;
         private CursorFrame currCursorFrame;
+        private EventQueue queue = new EventQueue();
+
+        private Runnable pickProcess = new Runnable() {
+
+            @Override
+            public void run() {
+                process(lastEvent, true);
+            }
+        };
 
         private void pulse() {
             if (hover && lastEvent != null) {
-                process(lastEvent, true);
+                //Shouldn't run user code directly. User can call stage.showAndWait() and block the pulse.
+                Platform.runLater(pickProcess);
             }
         }
 
@@ -3161,7 +3173,7 @@ public class Scene implements EventTarget {
                             (k < 0 || exitedEventTarget != pdrEventTargets.get(k))) {
                          break;
                     }
-                    Event.fireEvent(exitedEventTarget, MouseEvent.impl_copy(
+                    queue.postEvent(MouseEvent.impl_copy(
                             exitedEventTarget, exitedEventTarget, e,
                             MouseEvent.MOUSE_EXITED_TARGET));
                 }
@@ -3173,7 +3185,7 @@ public class Scene implements EventTarget {
                             (k < 0 || enteredEventTarget != pdrEventTargets.get(k))) {
                         break;
                     }
-                    Event.fireEvent(enteredEventTarget, MouseEvent.impl_copy(
+                    queue.postEvent(MouseEvent.impl_copy(
                             enteredEventTarget, enteredEventTarget, e,
                             MouseEvent.MOUSE_ENTERED_TARGET));
                 }
@@ -3184,6 +3196,7 @@ public class Scene implements EventTarget {
                     currentEventTargets.add(newEventTargets.get(j));
                 }
             }
+            queue.fire();
         }
 
         private void process(MouseEvent e, boolean onPulse) {
