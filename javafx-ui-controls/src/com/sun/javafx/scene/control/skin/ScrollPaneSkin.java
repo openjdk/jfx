@@ -28,6 +28,7 @@ package com.sun.javafx.scene.control.skin;
 import com.sun.javafx.PlatformUtil;
 import static com.sun.javafx.Utils.clamp;
 import static com.sun.javafx.scene.control.skin.Utils.boundedSize;
+import javafx.animation.Animation.Status;
 import javafx.animation.Interpolator;
 import javafx.animation.KeyFrame;
 import javafx.animation.KeyValue;
@@ -344,8 +345,12 @@ public class ScrollPaneSkin extends SkinBase<ScrollPane, ScrollPaneBehavior> imp
                      dragDetected = false;
                  }
 
-                 if (posY > getSkinnable().getVmax() || posY < getSkinnable().getVmin() ||
-                     posX > getSkinnable().getHmax() || posX < getSkinnable().getHmin()) {
+                 /*
+                 ** if the contents need repositioning, and there's is no
+                 ** touch event in progress, then start the repositioning.
+                 */
+                 if ((posY > getSkinnable().getVmax() || posY < getSkinnable().getVmin() ||
+                     posX > getSkinnable().getHmax() || posX < getSkinnable().getHmin()) && !touchDetected) {
                      startContentsToViewport();
                  }
             }
@@ -475,12 +480,17 @@ public class ScrollPaneSkin extends SkinBase<ScrollPane, ScrollPaneBehavior> imp
                         }
                     }
                     else {
-                        vsb.setValue(newValue);
-                        if ((newValue > vsb.getMax() || newValue < vsb.getMin()) && !(mouseDown || touchDetected)) {
-                            startContentsToViewport();
+                        /*
+                        ** if there is a repositioning in progress then we only
+                        ** set the value for 'real' events
+                        */
+                        if (!(((ScrollEvent)event).isInertia()) || (((ScrollEvent)event).isInertia()) && (contentsToViewTimeline == null || contentsToViewTimeline.getStatus() == Status.STOPPED)) {
+                            vsb.setValue(newValue);
+                            if ((newValue > vsb.getMax() || newValue < vsb.getMin()) && (!mouseDown && !touchDetected)) {
+                                startContentsToViewport();
+                            }
+                            event.consume();
                         }
-
-                        event.consume();
                     }
                 }
 
@@ -496,13 +506,18 @@ public class ScrollPaneSkin extends SkinBase<ScrollPane, ScrollPaneBehavior> imp
                         }
                     }
                     else {
+                        /*
+                        ** if there is a repositioning in progress then we only
+                        ** set the value for 'real' events
+                        */
+                        if (!(((ScrollEvent)event).isInertia()) || (((ScrollEvent)event).isInertia()) && (contentsToViewTimeline == null || contentsToViewTimeline.getStatus() == Status.STOPPED)) {
+                            hsb.setValue(newValue);
 
-                        hsb.setValue(newValue);
-
-                        if (newValue > hsb.getMax() || newValue < hsb.getMin() && !(mouseDown || touchDetected)) {
-                            startContentsToViewport();
+                            if ((newValue > hsb.getMax() || newValue < hsb.getMin()) && (!mouseDown && !touchDetected)) {
+                                startContentsToViewport();
+                            }
+                            event.consume();
                         }
-                        event.consume();
                     }
                 }
             }
@@ -933,6 +948,7 @@ public class ScrollPaneSkin extends SkinBase<ScrollPane, ScrollPaneBehavior> imp
     Timeline contentsToViewTimeline;
     KeyFrame contentsToViewKF1;
     KeyFrame contentsToViewKF2;
+    KeyFrame contentsToViewKF3;
 
     private boolean tempVisibility;
 
@@ -998,7 +1014,14 @@ public class ScrollPaneSkin extends SkinBase<ScrollPane, ScrollPaneBehavior> imp
             contentsToViewTimeline.stop();
         }
         contentsToViewTimeline = new Timeline();
-        contentsToViewKF2 = new KeyFrame(Duration.millis(100), new EventHandler<ActionEvent>() {
+	/*
+	** short pause before animation starts
+	*/
+        contentsToViewKF1 = new KeyFrame(Duration.millis(50));
+	/*
+	** reposition
+	*/
+        contentsToViewKF2 = new KeyFrame(Duration.millis(150), new EventHandler<ActionEvent>() {
                 @Override public void handle(ActionEvent event) {
                     requestLayout();
                 }
@@ -1006,7 +1029,12 @@ public class ScrollPaneSkin extends SkinBase<ScrollPane, ScrollPaneBehavior> imp
             new KeyValue(contentPosX, newPosX),
             new KeyValue(contentPosY, newPosY)
             );
-        contentsToViewTimeline.getKeyFrames().addAll(contentsToViewKF2);
+	/*
+	** block out 'aftershocks', but real events will
+	** still reactivate
+	*/
+        contentsToViewKF3 = new KeyFrame(Duration.millis(1500));
+        contentsToViewTimeline.getKeyFrames().addAll(contentsToViewKF1, contentsToViewKF2, contentsToViewKF3);
         contentsToViewTimeline.playFromStart();
     }
 

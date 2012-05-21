@@ -50,7 +50,6 @@ import javafx.geometry.VPos;
 import javafx.geometry.VerticalDirection;
 import javafx.scene.Group;
 import javafx.scene.Node;
-import javafx.scene.control.ContextMenu;
 import javafx.scene.control.IndexRange;
 import javafx.scene.control.ScrollPane;
 import javafx.scene.control.TextArea;
@@ -60,11 +59,11 @@ import javafx.scene.paint.Paint;
 import javafx.scene.shape.MoveTo;
 import javafx.scene.shape.Path;
 import javafx.scene.shape.PathElement;
-import javafx.scene.text.Font;
 import javafx.scene.text.Text;
 import javafx.util.Duration;
 import java.util.List;
 
+import com.sun.javafx.PlatformUtil;
 import com.sun.javafx.scene.control.behavior.TextAreaBehavior;
 import com.sun.javafx.scene.text.HitInfo;
 
@@ -236,12 +235,54 @@ public class TextAreaSkin extends TextInputControlSkin<TextArea, TextAreaBehavio
             IndexRange selection = textArea.getSelection();
             Bounds oldCaretBounds = caretPath.getBoundsInParent();
 
-            caretPath.getElements().clear();
             selectionHighlightGroup.getChildren().clear();
 
-            {
-                int caretPos = textArea.getCaretPosition();
+            int caretPos = textArea.getCaretPosition();
+            int anchorPos = textArea.getAnchor();
 
+            if (PlatformUtil.isEmbedded()) {
+                // Install and resize the handles for caret and anchor.
+                if (selection.getLength() > 0) {
+                    selectionHandle1.resize(selectionHandle1.prefWidth(-1),
+                                            selectionHandle1.prefHeight(-1));
+                    selectionHandle2.resize(selectionHandle2.prefWidth(-1),
+                                            selectionHandle2.prefHeight(-1));
+                } else {
+                    caretHandle.resize(caretHandle.prefWidth(-1),
+                                       caretHandle.prefHeight(-1));
+                }
+
+                // Position the handle for the anchor. This could be handle1 or handle2.
+                // Do this before positioning the actual caret.
+                if (selection.getLength() > 0) {
+                    int paragraphIndex = paragraphNodes.getChildren().size();
+                    int paragraphOffset = textArea.getLength() + 1;
+                    Text paragraphNode = null;
+                    do {
+                        paragraphNode = (Text)paragraphNodes.getChildren().get(--paragraphIndex);
+                        paragraphOffset -= paragraphNode.getText().length() + 1;
+                    } while (anchorPos < paragraphOffset);
+
+                    paragraphNode.setImpl_caretPosition(anchorPos - paragraphOffset);
+                    caretPath.getElements().clear();
+                    caretPath.getElements().addAll(paragraphNode.getImpl_caretShape());
+                    caretPath.setLayoutX(paragraphNode.getLayoutX());
+                    caretPath.setLayoutY(paragraphNode.getLayoutY());
+
+                    Bounds b = caretPath.getBoundsInParent();
+                    if (caretPos < anchorPos) {
+                        selectionHandle2.setLayoutX(b.getMinX() - selectionHandle2.getWidth() / 2);
+                        selectionHandle2.setLayoutY(b.getMaxY());
+                    } else {
+                        selectionHandle1.setLayoutX(b.getMinX() - selectionHandle1.getWidth() / 2);
+                        //selectionHandle1.setLayoutY(b.getMinY() - selectionHandle1.getHeight());
+                        selectionHandle1.setLayoutY(b.getMaxY());
+                    }
+                }
+            }
+
+            {
+                // Position caret
                 int paragraphIndex = paragraphNodes.getChildren().size();
                 int paragraphOffset = textArea.getLength() + 1;
 
@@ -253,6 +294,7 @@ public class TextAreaSkin extends TextInputControlSkin<TextArea, TextAreaBehavio
 
                 paragraphNode.setImpl_caretPosition(caretPos - paragraphOffset);
 
+                caretPath.getElements().clear();
                 caretPath.getElements().addAll(paragraphNode.getImpl_caretShape());
 
                 caretPath.setLayoutX(paragraphNode.getLayoutX());
@@ -293,6 +335,24 @@ public class TextAreaSkin extends TextInputControlSkin<TextArea, TextAreaBehavio
                 end   = Math.max(0, end   - paragraphLength);
             }
 
+            if (PlatformUtil.isEmbedded()) {
+                // Position handle for the caret. This could be handle1 or handle2 when
+                // a selection is active.
+                Bounds b = caretPath.getBoundsInParent();
+                if (selection.getLength() > 0) {
+                    if (caretPos < anchorPos) {
+                        selectionHandle1.setLayoutX(b.getMinX() - selectionHandle1.getWidth() / 2);
+                        //selectionHandle1.setLayoutY(b.getMinY() - selectionHandle1.getHeight());
+                        selectionHandle1.setLayoutY(b.getMaxY());
+                    } else {
+                        selectionHandle2.setLayoutX(b.getMinX() - selectionHandle2.getWidth() / 2);
+                        selectionHandle2.setLayoutY(b.getMaxY());
+                    }
+                } else {
+                    caretHandle.setLayoutX(b.getMinX() - caretHandle.getWidth() / 2 + 1);
+                    caretHandle.setLayoutY(b.getMaxY());
+                }
+            }
 
             if (scrollPane.getPrefViewportWidth() == 0
                 || scrollPane.getPrefViewportHeight() == 0) {
@@ -343,6 +403,8 @@ public class TextAreaSkin extends TextInputControlSkin<TextArea, TextAreaBehavio
 
     public static final int SCROLL_RATE = 30;
 
+    private double pressX, pressY; // For dragging handles on embedded
+
     public TextAreaSkin(final TextArea textArea) {
         super(textArea, new TextAreaBehavior(textArea));
         getBehavior().setTextAreaSkin(this);
@@ -369,11 +431,6 @@ public class TextAreaSkin extends TextInputControlSkin<TextArea, TextAreaBehavio
         scrollPane.setContent(contentView);
         getChildren().add(scrollPane);
 
-        // Workaround
-        if (textArea.getContextMenu() != null) {
-            scrollPane.setContextMenu(textArea.getContextMenu());
-        }
-
         // Add selection
         selectionHighlightGroup.setManaged(false);
         selectionHighlightGroup.setVisible(false);
@@ -390,6 +447,10 @@ public class TextAreaSkin extends TextInputControlSkin<TextArea, TextAreaBehavio
         caretPath.strokeProperty().bind(textFill);
         caretPath.visibleProperty().bind(caretVisible);
         contentView.getChildren().add(caretPath);
+
+        if (PlatformUtil.isEmbedded()) {
+            contentView.getChildren().addAll(caretHandle, selectionHandle1, selectionHandle2);
+        }
 
         scrollPane.hvalueProperty().addListener(new ChangeListener<Number>() {
             @Override
@@ -566,6 +627,104 @@ public class TextAreaSkin extends TextInputControlSkin<TextArea, TextAreaBehavio
         updatePrefViewportWidth();
         updatePrefViewportHeight();
         if (textArea.isFocused()) setCaretAnimating(true);
+
+        if (PlatformUtil.isEmbedded()) {
+            //selectionHandle1.setRotate(180);
+
+            EventHandler<MouseEvent> handlePressHandler = new EventHandler<MouseEvent>() {
+                @Override public void handle(MouseEvent e) {
+                    pressX = e.getX();
+                    pressY = e.getY();
+                    e.consume();
+                }
+            };
+
+            caretHandle.setOnMousePressed(handlePressHandler);
+            selectionHandle1.setOnMousePressed(handlePressHandler);
+            selectionHandle2.setOnMousePressed(handlePressHandler);
+
+            caretHandle.setOnMouseDragged(new EventHandler<MouseEvent>() {
+                @Override public void handle(MouseEvent e) {
+                    Text textNode = getTextNode();
+                    Point2D p = new Point2D(caretHandle.getLayoutX() + e.getX() + pressX - textNode.getLayoutX(),
+                                            caretHandle.getLayoutY() + e.getY() - pressY - 6 - getTextTranslateY());
+                    HitInfo hit = textNode.impl_hitTestChar(translateCaretPosition(p));
+                    int pos = hit.getCharIndex();
+                    if (pos > 0) {
+                        int oldPos = textNode.getImpl_caretPosition();
+                        textNode.setImpl_caretPosition(pos);
+                        PathElement element = textNode.getImpl_caretShape()[0];
+                        if (element instanceof MoveTo && ((MoveTo)element).getY() > e.getY() - getTextTranslateY()) {
+                            hit.setCharIndex(pos - 1);
+                        }
+                        textNode.setImpl_caretPosition(oldPos);
+                    }
+                    positionCaret(hit, false, false);
+                    e.consume();
+                }
+            });
+
+            selectionHandle1.setOnMouseDragged(new EventHandler<MouseEvent>() {
+                @Override public void handle(MouseEvent e) {
+                    TextArea textArea = getSkinnable();
+                    Text textNode = getTextNode();
+                    Point2D tp = textNode.localToScene(0, 0);
+                    Point2D p = new Point2D(e.getSceneX() - tp.getX() + 10/*??*/ - pressX + selectionHandle1.getWidth() / 2,
+                                            //e.getSceneY() - tp.getY() - pressY + selectionHandle1.getHeight() + 5);
+                                            e.getSceneY() - tp.getY() - pressY - 6);
+                    HitInfo hit = textNode.impl_hitTestChar(translateCaretPosition(p));
+                    int pos = hit.getCharIndex();
+                    if (textArea.getAnchor() < textArea.getCaretPosition()) {
+                        // Swap caret and anchor
+                        textArea.selectRange(textArea.getCaretPosition(), textArea.getAnchor());
+                    }
+                    if (pos >= 0) {
+                        if (pos >= textArea.getAnchor()) {
+                            pos = textArea.getAnchor();
+                        }
+                        int oldPos = textNode.getImpl_caretPosition();
+                        textNode.setImpl_caretPosition(pos);
+                        PathElement element = textNode.getImpl_caretShape()[0];
+                        if (element instanceof MoveTo && ((MoveTo)element).getY() > e.getY() - getTextTranslateY()) {
+                            hit.setCharIndex(pos - 1);
+                        }
+                        textNode.setImpl_caretPosition(oldPos);
+                        positionCaret(hit, true, false);
+                    }
+                    e.consume();
+                }
+            });
+
+            selectionHandle2.setOnMouseDragged(new EventHandler<MouseEvent>() {
+                @Override public void handle(MouseEvent e) {
+                    TextArea textArea = getSkinnable();
+                    Text textNode = getTextNode();
+                    Point2D tp = textNode.localToScene(0, 0);
+                    Point2D p = new Point2D(e.getSceneX() - tp.getX() + 10/*??*/ - pressX + selectionHandle2.getWidth() / 2,
+                                            e.getSceneY() - tp.getY() - pressY - 6);
+                    HitInfo hit = textNode.impl_hitTestChar(translateCaretPosition(p));
+                    int pos = hit.getCharIndex();
+                    if (textArea.getAnchor() > textArea.getCaretPosition()) {
+                        // Swap caret and anchor
+                        textArea.selectRange(textArea.getCaretPosition(), textArea.getAnchor());
+                    }
+                    if (pos > 0) {
+                        if (pos <= textArea.getAnchor() + 1) {
+                            pos = Math.min(textArea.getAnchor() + 2, textArea.getLength());
+                        }
+                        int oldPos = textNode.getImpl_caretPosition();
+                        textNode.setImpl_caretPosition(pos);
+                        PathElement element = textNode.getImpl_caretShape()[0];
+                        if (element instanceof MoveTo && ((MoveTo)element).getY() > e.getY() - getTextTranslateY()) {
+                            hit.setCharIndex(pos - 1);
+                        }
+                        textNode.setImpl_caretPosition(oldPos);
+                        positionCaret(hit, true, false);
+                    }
+                    e.consume();
+                }
+            });
+        }
     }
 
     private void createPromptNode() {
@@ -789,17 +948,6 @@ public class TextAreaSkin extends TextInputControlSkin<TextArea, TextAreaBehavio
         }
 
         return new Rectangle2D(x, y, width, height);
-    }
-
-    @Override public boolean showContextMenu(ContextMenu menu, double x, double y, boolean isKeyboardTrigger) {
-        if (isKeyboardTrigger) {
-            Bounds caretBounds = caretPath.getLayoutBounds();
-            Point2D p = com.sun.javafx.Utils.pointRelativeTo(contentView, null, caretBounds.getMinX(),
-                                                             caretBounds.getMaxY(), false);
-            x = p.getX();
-            y = p.getY();
-        }
-        return super.showContextMenu(menu, x, y, isKeyboardTrigger);
     }
 
     @Override public void scrollCharacterToVisible(final int index) {
@@ -1126,5 +1274,16 @@ public class TextAreaSkin extends TextInputControlSkin<TextArea, TextAreaBehavio
         } else {
 //            scrollAfterDelete(textMaxXOld, caretMaxXOld);
         }
+    }
+
+    @Override public Point2D getMenuPosition() {
+        contentView.layoutChildren();
+        Point2D p = super.getMenuPosition();
+        if (p != null) {
+            Insets padding = contentView.getInsets();
+            p = new Point2D(Math.max(0, p.getX() - padding.getLeft() - getSkinnable().getScrollLeft()),
+                            Math.max(0, p.getY() - padding.getTop() - getSkinnable().getScrollTop()));
+        }
+        return p;
     }
 }

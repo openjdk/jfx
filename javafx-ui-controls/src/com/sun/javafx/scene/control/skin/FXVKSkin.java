@@ -92,8 +92,10 @@ public class FXVKSkin extends SkinBase<FXVK, BehaviorBase<FXVK>> {
 
     private State state = State.NORMAL;
 
-    static final double VK_WIDTH = 640 /*800*/;
+    static final double VK_WIDTH = 640;
     static final double VK_HEIGHT = 243;
+//     static final double VK_WIDTH = 480;
+//     static final double VK_HEIGHT = 326;
     static final double VK_PORTRAIT_HEIGHT = 326;
     static final double VK_SLIDE_MILLIS = 250;
     static final double PREF_KEY_WIDTH = 56;
@@ -171,11 +173,12 @@ public class FXVKSkin extends SkinBase<FXVK, BehaviorBase<FXVK>> {
                                 com.sun.javafx.Utils.getScreen(attachedNode).getBounds().getHeight();
                             double screenVisualHeight =
                                 com.sun.javafx.Utils.getScreen(attachedNode).getVisualBounds().getHeight();
+                            screenVisualHeight = Math.min(screenHeight, screenVisualHeight + 4 /*??*/);
 
                             slideInTimeline = new Timeline();
                             slideInTimeline.getKeyFrames().setAll(
                                 new KeyFrame(Duration.millis(VK_SLIDE_MILLIS),
-                                             new KeyValue(winY, screenVisualHeight - fxvk.prefHeight(-1) + 4 /*????*/,
+                                             new KeyValue(winY, screenVisualHeight - fxvk.prefHeight(-1),
                                                           Interpolator.EASE_BOTH)));
 
                             slideOutTimeline = new Timeline();
@@ -549,7 +552,7 @@ private void setIcon(Key key, String fileName) {
             }
 
             graphic = new Label((chars.length > 1) ? chars[1] : " ");
-            graphic.setPrefWidth(keyWidth - 12);
+            graphic.setPrefWidth(keyWidth - 6);
             graphic.setMinWidth(USE_PREF_SIZE);
             graphic.setPrefHeight(keyHeight / 2 - 8);
             setGraphic(graphic);
@@ -590,7 +593,7 @@ private void setIcon(Key key, String fileName) {
             @Override public void handle(ActionEvent e) {
                 showSecondaryVK(null);
                 long time = System.currentTimeMillis();
-                if (state == State.SHIFTED && lastTime > 0L && time - lastTime < 600L) {
+                if (lastTime > 0L && time - lastTime < 600L) {
                     setState(State.SHIFT_LOCK);
                 } else if (state == State.SHIFTED || state == State.SHIFT_LOCK) {
                     setState(State.NORMAL);
@@ -724,6 +727,7 @@ private void setIcon(Key key, String fileName) {
                 secondaryPopup = new Popup();
                 secondaryPopup.setAutoHide(true);
                 secondaryPopup.getContent().add(secondaryVK);
+                secondaryVK.impl_processCSS(false);
             }
 
             if (state == State.NUMERIC) {
@@ -734,14 +738,24 @@ private void setIcon(Key key, String fileName) {
                     }
                 }
                 secondaryVK.chars = symbols.toArray(new String[symbols.size()]);
-            } else if (state == State.SHIFTED || state == State.SHIFT_LOCK) {
-                secondaryVK.chars = new String[key.chars.length];
-                System.arraycopy(key.chars, 0, secondaryVK.chars, 0, secondaryVK.chars.length);
-                for (int i = 0; i < secondaryVK.chars.length; i++) {
-                    secondaryVK.chars[i] = key.chars[i].toUpperCase();
-                }
             } else {
-                secondaryVK.chars = key.chars;
+                ArrayList<String> secondaryChars = new ArrayList<String>();
+                // Add all letters
+                for (String ch : key.chars) {
+                    if (Character.isLetter(ch.charAt(0))) {
+                        if (state == State.SHIFTED || state == State.SHIFT_LOCK) {
+                            secondaryChars.add(ch.toUpperCase());
+                        } else {
+                            secondaryChars.add(ch);
+                        }
+                    }
+                }
+                // Add secondary character if not a letter
+                if (key.chars.length > 1 &&
+                    !Character.isLetter(key.chars[1].charAt(0))) {
+                    secondaryChars.add(key.chars[1]);
+                }
+                secondaryVK.chars = secondaryChars.toArray(new String[secondaryChars.size()]);
             }
 
             if (secondaryVK.chars.length > 1) {

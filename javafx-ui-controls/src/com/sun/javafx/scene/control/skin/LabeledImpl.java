@@ -50,6 +50,9 @@ public class LabeledImpl extends Label {
         labeledImpl.setText(labeled.getText());
         labeled.textProperty().addListener(shuttler);
         
+        labeledImpl.setGraphic(labeled.getGraphic());
+        labeled.graphicProperty().addListener(shuttler);
+        
         final List<StyleableProperty> styleables = Labeled.impl_CSS_STYLEABLES();
         
         for(int n=0, nMax=styleables.size(); n<nMax; n++) {
@@ -87,8 +90,16 @@ public class LabeledImpl extends Label {
           
             if (valueModel == labeled.textProperty()) {
                 labeledImpl.setText(labeled.getText());
-            } else 
-            if (valueModel instanceof WritableValue) { 
+            } else if (valueModel == labeled.graphicProperty()) {
+                // If the user set the graphic, then mirror that.
+                // Otherwise, the graphic was set via the imageUrlProperty which
+                // will be mirrored onto the labeledImpl by the next block.
+                Stylesheet.Origin origin = StyleableProperty.getOrigin(labeled.graphicProperty());
+                if (origin == null || origin == Stylesheet.Origin.USER) {
+                    labeledImpl.setGraphic(labeled.getGraphic());
+                }
+                
+            } else if (valueModel instanceof WritableValue) { 
                 WritableValue writable = (WritableValue)valueModel;
                 StyleableProperty styleable = 
                         StyleableProperty.getStyleableProperty(writable);

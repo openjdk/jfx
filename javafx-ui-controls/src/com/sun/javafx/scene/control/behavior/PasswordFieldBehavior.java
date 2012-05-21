@@ -47,6 +47,9 @@ public class PasswordFieldBehavior extends TextFieldBehavior {
     protected void selectNextWord() { }
     protected void previousWord() { }
     protected void nextWord() { }
+    protected void selectWord() {
+        getControl().selectAll();
+    }
     protected void mouseDoubleClick(HitInfo hit) {
         getControl().selectAll();
     }

@@ -33,6 +33,31 @@
 
 /*******************************************************************************
  *                                                                             *
+ * PopupMenu                                                                   *
+ *                                                                             *
+ ******************************************************************************/
+
+.context-menu .text-input-context-menu {
+    -fx-background-color: transparent;
+    -fx-background-radius: 0;
+    -fx-padding: 0;
+}
+
+.context-menu .text-input-context-menu .button {
+    -fx-background-radius: 0;   
+    -fx-background-color: derive(-fx-color,-40%);
+    -fx-text-fill: white;
+}
+
+.context-menu .text-input-context-menu .pointer {    
+    -fx-background-color: derive(-fx-color,-40%);    
+    -fx-padding: 6px;
+    -fx-shape: "M 6 0 L 12 12 L 0 12 z";
+    -fx-scale-shape: true;
+}
+
+/*******************************************************************************
+ *                                                                             *
  * ScrollBar                                                                   *
  *                                                                             *
  ******************************************************************************/
@@ -67,6 +92,39 @@
 }
 
 
+.caret-handle {
+    -fx-background-color: black /*#ACACAC*/,
+                          linear-gradient(to bottom, #AFAFAF 0%, #DFDFDF 100%);
+    -fx-background-insets: 0, 1;
+    -fx-shape: "M11.974,2.579L20,12.358V28H4V12.356L11.974,2.579z";
+/*
+    -fx-shape: "M11.972,1L3,12v17h18V12L11.972,1L11.972,1z";
+    -fx-padding: 0.375em 0.291em 0.375em 0.291em;
+*/
+    -fx-padding: 0.45em 0.3em 0.45em 0.3em;
+    -fx-cursor: hand;
+}
+
+.selection-handle {
+    -fx-background-color: transparent, #0071bc /*-fx-accent*/,
+                          linear-gradient(to bottom, #0063AA 0%, #008AED 100%);
+    -fx-background-insets: 0, 0, 1;
+    -fx-shape: "M10.974,2.579L19,12.358V28H3V12.356L10.974,2.579z";
+/*
+    -fx-shape: "M10.972,1L2,12v17h18V12L10.972,1L10.972,1z";
+    -fx-padding: 0.375em 0.291em 0.375em 0.291em;
+*/
+    -fx-padding: 0.45em 0.3em 0.45em 0.3em;
+    -fx-cursor: hand;
+}
+
+#selection-handle-1 {
+    -fx-background-insets: -4 0 -4 -4, 0, 1;
+}
+
+#selection-handle-2 {
+    -fx-background-insets: -4 -4 -4 0, 0, 1;
+}
 
 /*******************************************************************************
  *                                                                             *
@@ -105,7 +163,7 @@
     -fx-font-weight: bold;
     -fx-font: bold 36px "Amble";
     -fx-text-fill: #333333;
-    -fx-padding: 3 6 5 0;
+    -fx-padding: 3 3 5 0;
     -fx-background-radius: 4;
     -fx-effect: dropshadow(three-pass-box, rgba(0, 0, 0, 0.75), 2, 0.0, 0, 1);
 }
@@ -142,6 +200,7 @@
     -fx-background-insets: 0, 1, 2;
     -fx-font: bold 22px "Amble";
     -fx-text-fill: white;
+    -fx-padding: 3 0 5 0;
 }
 
 .fxvk .special-key:disabled { 

@@ -32,13 +32,21 @@ import javafx.beans.value.ObservableValue;
 import javafx.event.ActionEvent;
 import javafx.event.EventHandler;
 import javafx.geometry.HorizontalDirection;
+import javafx.geometry.Point2D;
+import javafx.scene.Scene;
+import javafx.scene.control.ContextMenu;
 import javafx.scene.control.IndexRange;
 import javafx.scene.control.TextField;
 import javafx.scene.input.KeyEvent;
+import javafx.scene.input.MouseButton;
 import javafx.scene.input.MouseEvent;
+import javafx.scene.input.TouchEvent;
+import javafx.stage.Screen;
+import javafx.stage.Window;
 import javafx.util.Duration;
 import java.util.List;
 
+import com.sun.javafx.PlatformUtil;
 import com.sun.javafx.scene.control.skin.TextFieldSkin;
 import com.sun.javafx.scene.text.HitInfo;
 
@@ -86,9 +94,17 @@ public class TextFieldBehavior extends TextInputControlBehavior<TextField> {
             }
         }
     };
+    
+    private ContextMenu contextMenu;
 
-    public TextFieldBehavior(TextField textField) {
+    public TextFieldBehavior(final TextField textField) {
         super(textField);
+        
+        contextMenu = new ContextMenu();
+        if (PlatformUtil.isEmbedded()) {
+            contextMenu.getStyleClass().add("text-input-context-menu");
+        }
+        
         // Initialize scroll timeline
         scrollSelectionTimeline.setCycleCount(Timeline.INDEFINITE);
         List<KeyFrame> scrollTimelineKeyFrames = scrollSelectionTimeline.getKeyFrames();
@@ -191,8 +207,9 @@ public class TextFieldBehavior extends TextInputControlBehavior<TextField> {
                 final int anchor = textField.getAnchor();
                 final int caretPosition = textField.getCaretPosition();
                 if (e.getClickCount() < 2 &&
-                        anchor != caretPosition &&
-                        ((i > anchor && i < caretPosition) || (i < anchor && i > caretPosition))) {
+                    (PlatformUtil.isEmbedded() ||
+                     (anchor != caretPosition &&
+                      ((i > anchor && i < caretPosition) || (i < anchor && i > caretPosition))))) {
                     // if there is a selection, then we will NOT handle the
                     // press now, but will defer until the release. If you
                     // select some text and then press down, we change the
@@ -229,6 +246,9 @@ public class TextFieldBehavior extends TextInputControlBehavior<TextField> {
 //                    displaySoftwareKeyboard(true);
             }
         }
+        if (contextMenu.isShowing()) {
+            contextMenu.hide();                
+        }         
     }
 
     @Override public void mouseDragged(MouseEvent e) {
@@ -257,6 +277,61 @@ public class TextFieldBehavior extends TextInputControlBehavior<TextField> {
                 shiftDown = false;
             }
             setCaretAnimating(true);
+        }
+        if (e.getButton() == MouseButton.SECONDARY) {
+            if (contextMenu.isShowing()) {
+                contextMenu.hide();
+            } else {
+                double screenX = e.getScreenX();
+                double screenY = e.getScreenY();
+                double sceneX = e.getSceneX();
+
+                if (PlatformUtil.isEmbedded()) {
+                    Point2D menuPos;
+                    if (textField.getSelection().getLength() == 0) {
+                        skin.positionCaret(skin.getIndex(e), false);
+                        menuPos = skin.getMenuPosition();
+                    } else {
+                        menuPos = skin.getMenuPosition();
+                        if (menuPos != null && (menuPos.getX() <= 0 || menuPos.getY() <= 0)) {
+                            skin.positionCaret(skin.getIndex(e), false);
+                            menuPos = skin.getMenuPosition();
+                        }
+                    }
+
+                    if (menuPos != null) {
+                        Point2D p = skin.localToScene(menuPos);
+                        Scene scene = skin.getScene();
+                        Window window = scene.getWindow();
+                        Point2D location = new Point2D(window.getX() + scene.getX() + p.getX(),
+                                                       window.getY() + scene.getY() + p.getY());
+                        screenX = location.getX();
+                        sceneX = p.getX();
+                        screenY = location.getY();
+                    }
+                }
+
+                skin.populateContextMenu(contextMenu);
+                double menuWidth = contextMenu.prefWidth(-1);
+                double menuX = screenX - (PlatformUtil.isEmbedded() ? (menuWidth / 2) : 0);
+                Screen currentScreen = com.sun.javafx.Utils.getScreenForPoint(0, 0);
+                double maxWidth = currentScreen.getVisualBounds().getWidth();
+
+                if (menuX < 0) {
+                    skin.getProperties().put("CONTEXT_MENU_SCREEN_X", screenX);
+                    skin.getProperties().put("CONTEXT_MENU_SCENE_X", sceneX);
+                    contextMenu.show(getControl(), 0, screenY);
+                } else if (screenX + menuWidth > maxWidth) {
+                    double leftOver = menuWidth - (maxWidth - screenX);
+                    skin.getProperties().put("CONTEXT_MENU_SCREEN_X", screenX);
+                    skin.getProperties().put("CONTEXT_MENU_SCENE_X", sceneX);
+                    contextMenu.show(getControl(), screenX - leftOver, screenY);
+                } else {
+                    skin.getProperties().put("CONTEXT_MENU_SCREEN_X", 0);
+                    skin.getProperties().put("CONTEXT_MENU_SCENE_X", 0);
+                    contextMenu.show(getControl(), menuX, screenY);
+                }
+            }
         }
     }
 
