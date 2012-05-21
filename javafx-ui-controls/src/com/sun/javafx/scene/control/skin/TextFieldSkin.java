@@ -400,7 +400,7 @@ public class TextFieldSkin extends TextInputControlSkin<TextField, TextFieldBeha
                 @Override public void handle(MouseEvent e) {
                     TextField textField = getSkinnable();
                     Point2D tp = textNode.localToScene(0, 0);
-                    Point2D p = new Point2D(e.getSceneX() - tp.getX() + 10/*??*/ - pressX + selectionHandle1.getWidth() / 2,
+                    Point2D p = new Point2D(e.getSceneX() - tp.getX() + 10/*??*/ - pressX + selectionHandle2.getWidth() / 2,
                                             e.getSceneY() - tp.getY() - pressY - 6);
                     HitInfo hit = textNode.impl_hitTestChar(translateCaretPosition(p));
                     int pos = hit.getCharIndex();
@@ -758,5 +758,15 @@ public class TextFieldSkin extends TextInputControlSkin<TextField, TextFieldBeha
             selectionHandle2.setLayoutY(b.getMaxY() - 3);
             caretHandle.setLayoutY(b.getMaxY() - 3);
         }
+    }
+
+    @Override public Point2D getMenuPosition() {
+        Point2D p = super.getMenuPosition();
+        if (p != null) {
+            Insets padding = getInsets();
+            p = new Point2D(Math.max(0, p.getX() - textNode.getLayoutX() - padding.getLeft() + textTranslateX.get()),
+                            Math.max(0, p.getY() - textNode.getLayoutY() - padding.getTop()));
+        }
+        return p;
     }
 }

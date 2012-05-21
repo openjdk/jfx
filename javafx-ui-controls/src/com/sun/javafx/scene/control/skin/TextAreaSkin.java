@@ -275,7 +275,8 @@ public class TextAreaSkin extends TextInputControlSkin<TextArea, TextAreaBehavio
                         selectionHandle2.setLayoutY(b.getMaxY());
                     } else {
                         selectionHandle1.setLayoutX(b.getMinX() - selectionHandle1.getWidth() / 2);
-                        selectionHandle1.setLayoutY(b.getMinY() - selectionHandle1.getHeight());
+                        //selectionHandle1.setLayoutY(b.getMinY() - selectionHandle1.getHeight());
+                        selectionHandle1.setLayoutY(b.getMaxY());
                     }
                 }
             }
@@ -341,7 +342,8 @@ public class TextAreaSkin extends TextInputControlSkin<TextArea, TextAreaBehavio
                 if (selection.getLength() > 0) {
                     if (caretPos < anchorPos) {
                         selectionHandle1.setLayoutX(b.getMinX() - selectionHandle1.getWidth() / 2);
-                        selectionHandle1.setLayoutY(b.getMinY() - selectionHandle1.getHeight());
+                        //selectionHandle1.setLayoutY(b.getMinY() - selectionHandle1.getHeight());
+                        selectionHandle1.setLayoutY(b.getMaxY());
                     } else {
                         selectionHandle2.setLayoutX(b.getMinX() - selectionHandle2.getWidth() / 2);
                         selectionHandle2.setLayoutY(b.getMaxY());
@@ -627,7 +629,7 @@ public class TextAreaSkin extends TextInputControlSkin<TextArea, TextAreaBehavio
         if (textArea.isFocused()) setCaretAnimating(true);
 
         if (PlatformUtil.isEmbedded()) {
-            selectionHandle1.setRotate(180);
+            //selectionHandle1.setRotate(180);
 
             EventHandler<MouseEvent> handlePressHandler = new EventHandler<MouseEvent>() {
                 @Override public void handle(MouseEvent e) {
@@ -668,7 +670,8 @@ public class TextAreaSkin extends TextInputControlSkin<TextArea, TextAreaBehavio
                     Text textNode = getTextNode();
                     Point2D tp = textNode.localToScene(0, 0);
                     Point2D p = new Point2D(e.getSceneX() - tp.getX() + 10/*??*/ - pressX + selectionHandle1.getWidth() / 2,
-                                            e.getSceneY() - tp.getY() - pressY + selectionHandle1.getHeight() + 5);
+                                            //e.getSceneY() - tp.getY() - pressY + selectionHandle1.getHeight() + 5);
+                                            e.getSceneY() - tp.getY() - pressY - 6);
                     HitInfo hit = textNode.impl_hitTestChar(translateCaretPosition(p));
                     int pos = hit.getCharIndex();
                     if (textArea.getAnchor() < textArea.getCaretPosition()) {
@@ -697,7 +700,7 @@ public class TextAreaSkin extends TextInputControlSkin<TextArea, TextAreaBehavio
                     TextArea textArea = getSkinnable();
                     Text textNode = getTextNode();
                     Point2D tp = textNode.localToScene(0, 0);
-                    Point2D p = new Point2D(e.getSceneX() - tp.getX() + 10/*??*/ - pressX + selectionHandle1.getWidth() / 2,
+                    Point2D p = new Point2D(e.getSceneX() - tp.getX() + 10/*??*/ - pressX + selectionHandle2.getWidth() / 2,
                                             e.getSceneY() - tp.getY() - pressY - 6);
                     HitInfo hit = textNode.impl_hitTestChar(translateCaretPosition(p));
                     int pos = hit.getCharIndex();
@@ -1271,5 +1274,16 @@ public class TextAreaSkin extends TextInputControlSkin<TextArea, TextAreaBehavio
         } else {
 //            scrollAfterDelete(textMaxXOld, caretMaxXOld);
         }
+    }
+
+    @Override public Point2D getMenuPosition() {
+        contentView.layoutChildren();
+        Point2D p = super.getMenuPosition();
+        if (p != null) {
+            Insets padding = contentView.getInsets();
+            p = new Point2D(Math.max(0, p.getX() - padding.getLeft() - getSkinnable().getScrollLeft()),
+                            Math.max(0, p.getY() - padding.getTop() - getSkinnable().getScrollTop()));
+        }
+        return p;
     }
 }

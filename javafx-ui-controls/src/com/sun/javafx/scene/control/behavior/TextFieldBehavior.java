@@ -32,12 +32,17 @@ import javafx.beans.value.ObservableValue;
 import javafx.event.ActionEvent;
 import javafx.event.EventHandler;
 import javafx.geometry.HorizontalDirection;
+import javafx.geometry.Point2D;
+import javafx.scene.Scene;
 import javafx.scene.control.ContextMenu;
 import javafx.scene.control.IndexRange;
 import javafx.scene.control.TextField;
 import javafx.scene.input.KeyEvent;
+import javafx.scene.input.MouseButton;
 import javafx.scene.input.MouseEvent;
 import javafx.scene.input.TouchEvent;
+import javafx.stage.Screen;
+import javafx.stage.Window;
 import javafx.util.Duration;
 import java.util.List;
 
@@ -46,8 +51,6 @@ import com.sun.javafx.scene.control.skin.TextFieldSkin;
 import com.sun.javafx.scene.text.HitInfo;
 
 import static com.sun.javafx.PlatformUtil.*;
-import javafx.scene.input.MouseButton;
-import javafx.stage.Screen;
 
 /**
  * Text field behavior.
@@ -275,34 +278,61 @@ public class TextFieldBehavior extends TextInputControlBehavior<TextField> {
             }
             setCaretAnimating(true);
         }
-        if (e.getButton() == MouseButton.SECONDARY) {    
+        if (e.getButton() == MouseButton.SECONDARY) {
             if (contextMenu.isShowing()) {
-                contextMenu.hide();                
+                contextMenu.hide();
             } else {
-                skin.populateContextMenu(contextMenu);
                 double screenX = e.getScreenX();
+                double screenY = e.getScreenY();
                 double sceneX = e.getSceneX();
-                double menuWidth = contextMenu.prefWidth(-1);                
-                double menuX = screenX - menuWidth/2;
+
+                if (PlatformUtil.isEmbedded()) {
+                    Point2D menuPos;
+                    if (textField.getSelection().getLength() == 0) {
+                        skin.positionCaret(skin.getIndex(e), false);
+                        menuPos = skin.getMenuPosition();
+                    } else {
+                        menuPos = skin.getMenuPosition();
+                        if (menuPos != null && (menuPos.getX() <= 0 || menuPos.getY() <= 0)) {
+                            skin.positionCaret(skin.getIndex(e), false);
+                            menuPos = skin.getMenuPosition();
+                        }
+                    }
+
+                    if (menuPos != null) {
+                        Point2D p = skin.localToScene(menuPos);
+                        Scene scene = skin.getScene();
+                        Window window = scene.getWindow();
+                        Point2D location = new Point2D(window.getX() + scene.getX() + p.getX(),
+                                                       window.getY() + scene.getY() + p.getY());
+                        screenX = location.getX();
+                        sceneX = p.getX();
+                        screenY = location.getY();
+                    }
+                }
+
+                skin.populateContextMenu(contextMenu);
+                double menuWidth = contextMenu.prefWidth(-1);
+                double menuX = screenX - (PlatformUtil.isEmbedded() ? (menuWidth / 2) : 0);
                 Screen currentScreen = com.sun.javafx.Utils.getScreenForPoint(0, 0);
                 double maxWidth = currentScreen.getVisualBounds().getWidth();
 
                 if (menuX < 0) {
                     skin.getProperties().put("CONTEXT_MENU_SCREEN_X", screenX);
                     skin.getProperties().put("CONTEXT_MENU_SCENE_X", sceneX);
-                    contextMenu.show(getControl(), 0, e.getScreenY());
+                    contextMenu.show(getControl(), 0, screenY);
                 } else if (screenX + menuWidth > maxWidth) {
                     double leftOver = menuWidth - (maxWidth - screenX);
                     skin.getProperties().put("CONTEXT_MENU_SCREEN_X", screenX);
                     skin.getProperties().put("CONTEXT_MENU_SCENE_X", sceneX);
-                    contextMenu.show(getControl(), screenX - leftOver, e.getScreenY());
+                    contextMenu.show(getControl(), screenX - leftOver, screenY);
                 } else {
                     skin.getProperties().put("CONTEXT_MENU_SCREEN_X", 0);
                     skin.getProperties().put("CONTEXT_MENU_SCENE_X", 0);
-                    contextMenu.show(getControl(), menuX, e.getScreenY());
+                    contextMenu.show(getControl(), menuX, screenY);
                 }
             }
-        }        
+        }
     }
 
 //    var hadFocus = false;

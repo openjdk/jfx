@@ -106,9 +106,9 @@
 }
 
 .selection-handle {
-    -fx-background-color: #0071bc /*-fx-accent*/,
+    -fx-background-color: transparent, #0071bc /*-fx-accent*/,
                           linear-gradient(to bottom, #0063AA 0%, #008AED 100%);
-    -fx-background-insets: 0, 1;
+    -fx-background-insets: 0, 0, 1;
     -fx-shape: "M10.974,2.579L19,12.358V28H3V12.356L10.974,2.579z";
 /*
     -fx-shape: "M10.972,1L2,12v17h18V12L10.972,1L10.972,1z";
@@ -118,6 +118,13 @@
     -fx-cursor: hand;
 }
 
+#selection-handle-1 {
+    -fx-background-insets: -4 0 -4 -4, 0, 1;
+}
+
+#selection-handle-2 {
+    -fx-background-insets: -4 -4 -4 0, 0, 1;
+}
 
 /*******************************************************************************
  *                                                                             *

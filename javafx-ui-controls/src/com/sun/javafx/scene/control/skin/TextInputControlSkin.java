@@ -234,6 +234,24 @@ public abstract class TextInputControlSkin<T extends TextInputControl, B extends
     protected StackPane selectionHandle1 = null;
     protected StackPane selectionHandle2 = null;
 
+    public Point2D getMenuPosition() {
+        if (PlatformUtil.isEmbedded()) {
+            if (caretHandle.isVisible()) {
+                return new Point2D(caretHandle.getLayoutX() + caretHandle.getWidth() / 2,
+                                   caretHandle.getLayoutY());
+            } else if (selectionHandle1.isVisible() && selectionHandle2.isVisible()) {
+                return new Point2D((selectionHandle1.getLayoutX() + selectionHandle1.getWidth() / 2 +
+                                    selectionHandle2.getLayoutX() + selectionHandle2.getWidth() / 2) / 2,
+                                   selectionHandle2.getLayoutY() + selectionHandle2.getHeight() / 2);
+            } else {
+                return null;
+            }
+        } else {
+            throw new UnsupportedOperationException();
+        }
+    }
+
+
     private static boolean useFXVK = PlatformUtil.isEmbedded();
 
     /* For testing only */
@@ -336,7 +354,10 @@ public abstract class TextInputControlSkin<T extends TextInputControl, B extends
 
             caretHandle.getStyleClass().setAll("caret-handle");
             selectionHandle1.getStyleClass().setAll("selection-handle");
-            selectionHandle2.getStyleClass().add("selection-handle");
+            selectionHandle2.getStyleClass().setAll("selection-handle");
+
+            selectionHandle1.setId("selection-handle-1");
+            selectionHandle2.setId("selection-handle-2");
 
 //             textInput.focusedProperty().addListener(new InvalidationListener() {
 //                 @Override public void invalidated(Observable observable) {
@@ -426,6 +447,10 @@ public abstract class TextInputControlSkin<T extends TextInputControl, B extends
      * @param index
      */
     public Rectangle2D getCharacterBounds(int index) { return null; }
+
+    public double getLineHeight() {
+        return fontMetrics.get().getLineHeight();
+    }
 
     /**
      * Ensures that the character at a given index is visible.
@@ -559,7 +584,7 @@ public abstract class TextInputControlSkin<T extends TextInputControl, B extends
             blink.set(true);
         }
     }
-    
+
     class ContextMenuItem extends MenuItem {
         ContextMenuItem(final String action) {
             super(getString("TextInputControl.menu." + action));
@@ -578,14 +603,15 @@ public abstract class TextInputControlSkin<T extends TextInputControl, B extends
     final MenuItem pasteMI  = new ContextMenuItem("Paste");
     final MenuItem deleteMI = new ContextMenuItem("DeleteSelection");
     final MenuItem selectWordMI = new ContextMenuItem("SelectWord");
-    final MenuItem selectAllMI = new ContextMenuItem("SelectAll");    
-       
+    final MenuItem selectAllMI = new ContextMenuItem("SelectAll");
+
     public void populateContextMenu(ContextMenu contextMenu) {
+        boolean hasText = (getSkinnable().getLength() > 0);
         boolean hasSelection = (getSkinnable().getSelection().getLength() > 0);
         boolean maskText = (maskText("A") != "A");
+        ObservableList<MenuItem> items = contextMenu.getItems();
 
         if (PlatformUtil.isEmbedded()) {
-            ObservableList<MenuItem> items = contextMenu.getItems();
             items.clear();
             if (!maskText && hasSelection) {
                 items.add(cutMI);
@@ -594,11 +620,19 @@ public abstract class TextInputControlSkin<T extends TextInputControl, B extends
             if (Clipboard.getSystemClipboard().hasString()) {
                 items.add(pasteMI);
             }
-            if (!hasSelection) {
-                items.add(selectWordMI);
+            if (hasText) {
+                if (!hasSelection) {
+                    items.add(selectWordMI);
+                }
+                items.add(selectAllMI);
             }
-            items.add(selectAllMI);
+            selectWordMI.getProperties().put("refreshMenu", Boolean.TRUE);
+            selectAllMI.getProperties().put("refreshMenu", Boolean.TRUE);
         } else {
+            if (items.size() == 0) {
+                items.addAll(undoMI, redoMI, cutMI, copyMI, pasteMI, deleteMI,
+                             new SeparatorMenuItem(), selectAllMI);
+            }
             undoMI.setDisable(!getBehavior().canUndo());
             redoMI.setDisable(!getBehavior().canRedo());
             cutMI.setDisable(maskText || !hasSelection);
@@ -606,8 +640,8 @@ public abstract class TextInputControlSkin<T extends TextInputControl, B extends
             pasteMI.setDisable(!Clipboard.getSystemClipboard().hasString());
             deleteMI.setDisable(!hasSelection);
         }
-    }    
-    
+    }
+
     private static class StyleableProperties {
         private static final StyleableProperty<TextInputControlSkin,Font> FONT =
            new StyleableProperty.FONT<TextInputControlSkin>("-fx-font", Font.getDefault()) {

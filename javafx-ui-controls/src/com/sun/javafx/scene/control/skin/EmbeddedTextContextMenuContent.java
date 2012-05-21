@@ -176,7 +176,11 @@ public class EmbeddedTextContextMenuContent extends StackPane {
 
         @Override public void fire() {
             Event.fireEvent(item, new ActionEvent());
-            hideAllMenus(item);
+            if (Boolean.TRUE.equals((Boolean)item.getProperties().get("refreshMenu"))) {
+                //refreshMenu();
+            } else {
+                hideAllMenus(item);
+            }
         }
     }
 }
