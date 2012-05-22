@@ -26,6 +26,7 @@ package javafx.util.converter;
 
 import java.text.DecimalFormat;
 import java.text.NumberFormat;
+import java.util.Currency;
 import java.util.Locale;
 import static org.junit.Assert.*;
 
@@ -107,14 +108,17 @@ public class CurrencyStringConverterTest {
      ********************************************************************/    
     
     @Test public void fromString_testValidStringInput() {
+        Locale.setDefault(Locale.US);
         assertEquals(10.32, converter.fromString("$10.32"));
     }
     
     @Test public void fromString_testValidStringInputWithWhiteSpace() {
+        Locale.setDefault(Locale.US);
         assertEquals(10.32, converter.fromString("      $10.32      "));
     }
     
     @Test public void toString_validInput() {
+        Locale.setDefault(Locale.US);
         assertEquals("$10.32", converter.toString(10.32));
     }
 }
