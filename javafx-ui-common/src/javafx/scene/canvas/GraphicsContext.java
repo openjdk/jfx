@@ -36,6 +36,8 @@ import java.nio.ByteBuffer;
 import java.nio.IntBuffer;
 import java.util.LinkedList;
 import javafx.geometry.VPos;
+import javafx.scene.effect.Blend;
+import javafx.scene.effect.BlendMode;
 import javafx.scene.effect.Effect;
 import javafx.scene.image.Image;
 import javafx.scene.image.PixelFormat;
@@ -90,23 +92,6 @@ root.getChildren().add(canvas);
  * @since JavaFX 2.2
  */
 public final class GraphicsContext {
-    /**
-     * @deprecated 
-     */
-    public enum CompositeOperation {       
-        SRC_OVER,
-        SRC_IN,
-        SRC_OUT,
-        SRC_ATOP,
-        DST_OVER,
-        DST_IN,
-        DST_OUT,
-        DST_ATOP,
-        LIGHTER,
-        COPY,
-        XOR,
-    };
-
     Canvas theCanvas;
     Path2D path;
     boolean pathDirty;
@@ -127,7 +112,7 @@ public final class GraphicsContext {
 
     static class State {
         double globalAlpha;
-        CompositeOperation compop;
+        BlendMode blendop;
         Affine2D transform;
         Paint fill;
         Paint stroke;
@@ -143,7 +128,7 @@ public final class GraphicsContext {
         FillRule fillRule;
 
         State() {
-            this(1.0, CompositeOperation.SRC_OVER,
+            this(1.0, BlendMode.SRC_OVER,
                  new Affine2D(),
                  Color.BLACK, Color.BLACK,
                  1.0, StrokeLineCap.BUTT, StrokeLineJoin.MITER, 10.0,
@@ -152,7 +137,7 @@ public final class GraphicsContext {
         }
 
         State(State copy) {
-            this(copy.globalAlpha, copy.compop,
+            this(copy.globalAlpha, copy.blendop,
                  new Affine2D(copy.transform),
                  copy.fill, copy.stroke,
                  copy.linewidth, copy.linecap, copy.linejoin, copy.miterlimit,
@@ -161,7 +146,7 @@ public final class GraphicsContext {
                  copy.effect, copy.fillRule);
         }
 
-        State(double globalAlpha, CompositeOperation compop,
+        State(double globalAlpha, BlendMode blendop,
                      Affine2D transform, Paint fill, Paint stroke,
                      double linewidth, StrokeLineCap linecap,
                      StrokeLineJoin linejoin, double miterlimit,
@@ -170,7 +155,7 @@ public final class GraphicsContext {
                      Effect effect, FillRule fillRule)
         {
             this.globalAlpha = globalAlpha;
-            this.compop = compop;
+            this.blendop = blendop;
             this.transform = transform;
             this.fill = fill;
             this.stroke = stroke;
@@ -192,7 +177,7 @@ public final class GraphicsContext {
 
         void restore(GraphicsContext ctx) {
             ctx.setGlobalAlpha(globalAlpha);
-            ctx.setGlobalCompositeOperation(compop);
+            ctx.setGlobalBlendMode(blendop);
             ctx.setTransform(transform.getMxx(), transform.getMyx(),
                              transform.getMxy(), transform.getMyy(),
                              transform.getMxt(), transform.getMyt());
@@ -597,42 +582,30 @@ public final class GraphicsContext {
         return curState.globalAlpha;
     }
     
-    
-    
+    private static Blend TMP_BLEND = new Blend(BlendMode.SRC_OVER); 
     /**
-     * Sets the Global Composite Operation of the current state.
+     * Sets the Global Blend Mode of the current state.
      * 
      * @param op
      */
-    public void setGlobalCompositeOperation(CompositeOperation op) {
-        if (op != curState.compop) {
-            byte mode;
-            switch (op) {
-                case SRC_OVER: mode = PGCanvas.COMP_SRC_OVER; break;
-                case SRC_IN:   mode = PGCanvas.COMP_SRC_IN;   break;
-                case SRC_OUT:  mode = PGCanvas.COMP_SRC_OUT;  break;
-                case SRC_ATOP: mode = PGCanvas.COMP_SRC_ATOP; break;
-                case DST_OVER: mode = PGCanvas.COMP_DST_OVER; break;
-                case DST_IN:   mode = PGCanvas.COMP_DST_IN;   break;
-                case DST_OUT:  mode = PGCanvas.COMP_DST_OUT;  break;
-                case DST_ATOP: mode = PGCanvas.COMP_DST_ATOP; break;
-                case LIGHTER:  mode = PGCanvas.COMP_LIGHTER;  break;
-                case COPY:     mode = PGCanvas.COMP_COPY;     break;
-                case XOR:      mode = PGCanvas.COMP_XOR;      break;
-                default: return;  // Unknown values are ignored per W3C spec
-            }
-            curState.compop = op;
-            writeParam(mode, PGCanvas.COMP_MODE);
+    public void setGlobalBlendMode(BlendMode op) {
+        if (op != null && op != curState.blendop) {
+            GrowableDataBuffer buf = getBuffer();           
+            curState.blendop = op; 
+            TMP_BLEND.setMode(op);
+            TMP_BLEND.impl_sync();
+            buf.putByte(PGCanvas.COMP_MODE);
+            buf.putObject(((com.sun.scenario.effect.Blend)TMP_BLEND.impl_getImpl()).getMode());
         }
     }
     
     /**
-     * Gets the Global Composite Operation of the current state.
+     * Gets the Global Blend Mode of the current state.
      * 
-     * @return CompositeOperation 
+     * @return BlendMode 
      */
-    public CompositeOperation getGlobalCompositeOperation() {
-        return curState.compop;
+    public BlendMode getGlobalBlendMode() {
+        return curState.blendop;
     }
 
     /**
