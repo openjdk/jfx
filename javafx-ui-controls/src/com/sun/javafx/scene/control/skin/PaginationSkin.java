@@ -88,6 +88,7 @@ public class PaginationSkin extends SkinBase<Pagination, PaginationBehavior>  {
     private static final double THRESHOLD = 0.30;
 
     private Pagination pagination;
+    private StackPane stackPane;
     private ScrollPane currentScrollPane;
     private ScrollPane nextScrollPane;
     private Timeline timeline;
@@ -111,6 +112,9 @@ public class PaginationSkin extends SkinBase<Pagination, PaginationBehavior>  {
         setClip(clipRect);
 
         this.pagination = pagination;
+
+        this.stackPane = new StackPane();
+
         this.currentScrollPane = new ScrollPane();
         currentScrollPane.getStyleClass().add("page");
         currentScrollPane.setFitToWidth(true);
@@ -128,7 +132,8 @@ public class PaginationSkin extends SkinBase<Pagination, PaginationBehavior>  {
 
         this.navigation = new NavigationControl();
 
-        getChildren().addAll(currentScrollPane, nextScrollPane, navigation);
+        stackPane.getChildren().addAll(currentScrollPane, nextScrollPane);
+        getChildren().addAll(stackPane, navigation);
 
         pagination.maxPageIndicatorCountProperty().addListener(new InvalidationListener() {
             @Override
@@ -160,103 +165,105 @@ public class PaginationSkin extends SkinBase<Pagination, PaginationBehavior>  {
     private double pressPos;
     private boolean touchMoved = false;
     private void initializeSwipeAndTouchHandlers() {
-        setOnSwipeLeft(new EventHandler<SwipeEvent>() {
-            @Override public void handle(SwipeEvent t) {
-                touchMoved = false;
-                selectNext();
-                t.consume();
-            }
-        });
-
-        setOnSwipeRight(new EventHandler<SwipeEvent>() {
-            @Override public void handle(SwipeEvent t) {
-                touchMoved = false;
-                selectPrevious();
-                t.consume();
-            }
-        });
-
-        setOnScrollStarted(new EventHandler<ScrollEvent>() {
-            @Override public void handle(ScrollEvent e) {
-                pressPos = e.getSceneX();
-                touchMoved = true;
-                e.consume();
-            }
-        });
-
-        setOnScroll(new EventHandler<ScrollEvent>() {
-            @Override public void handle(ScrollEvent e) {
-                if (!touchMoved) {
-                    // Ignore any scroll events after the scrolling has finished.
-                    return;
+        if (PlatformUtil.isEmbedded()) {
+            stackPane.setOnSwipeLeft(new EventHandler<SwipeEvent>() {
+                @Override public void handle(SwipeEvent t) {
+                    touchMoved = false;
+                    selectNext();
+                    t.consume();
                 }
+            });
 
-                touchMoved = true;
-                double delta = e.getSceneX() - pressPos;
-                double width = getWidth() - (getInsets().getLeft() + getInsets().getRight());
-                double currentScrollPaneX;
-                double nextScrollPaneX;
-
-                if (delta < 0) {
-                    // right to left
-                    if (Math.abs(delta) <= width) {
-                        currentScrollPaneX = delta;
-                        nextScrollPaneX = width + delta;
-                    } else {
-                        currentScrollPaneX = -width;
-                        nextScrollPaneX = 0;
-                    }
-                    currentScrollPane.setTranslateX(currentScrollPaneX);
-                    if (pagination.getCurrentPageIndex() < getPageCount() - 1) {
-                        createPage(nextScrollPane, currentIndex + 1);
-                        nextScrollPane.setVisible(true);
-                        nextScrollPane.setTranslateX(nextScrollPaneX);
-                    } else {
-                        currentScrollPane.setTranslateX(0);
-                    }
-                } else {
-                    // left to right
-                    if (Math.abs(delta) <= width) {
-                        currentScrollPaneX = delta;
-                        nextScrollPaneX = -width + delta;
-                    } else {
-                        currentScrollPaneX = width;
-                        nextScrollPaneX = 0;
-                    }
-                    currentScrollPane.setTranslateX(currentScrollPaneX);
-                    if (pagination.getCurrentPageIndex() != 0) {
-                        createPage(nextScrollPane, currentIndex - 1);
-                        nextScrollPane.setVisible(true);
-                        nextScrollPane.setTranslateX(nextScrollPaneX);
-                    } else {
-                        currentScrollPane.setTranslateX(0);
-                    }
+            stackPane.setOnSwipeRight(new EventHandler<SwipeEvent>() {
+                @Override public void handle(SwipeEvent t) {
+                    touchMoved = false;
+                    selectPrevious();
+                    t.consume();
                 }
-                e.consume();
-            }
-        });
+            });
 
-        setOnScrollFinished(new EventHandler<ScrollEvent>() {
-            @Override
-            public void handle(ScrollEvent e) {
-                double delta = Math.abs(e.getSceneX() - pressPos);
-                double width = getWidth() - (getInsets().getLeft() + getInsets().getRight());
-                double threshold = delta/width;
-                if (touchMoved) {
-                    if (threshold > THRESHOLD) {
-                        if (pressPos > e.getSceneX()) {
-                            selectNext();
+            stackPane.setOnScrollStarted(new EventHandler<ScrollEvent>() {
+                @Override public void handle(ScrollEvent e) {
+                    pressPos = e.getSceneX();
+                    touchMoved = true;
+                    e.consume();
+                }
+            });
+
+            stackPane.setOnScroll(new EventHandler<ScrollEvent>() {
+                @Override public void handle(ScrollEvent e) {
+                    if (!touchMoved) {
+                        // Ignore any scroll events after the scrolling has finished.
+                        return;
+                    }
+
+                    touchMoved = true;
+                    double delta = e.getSceneX() - pressPos;
+                    double width = getWidth() - (getInsets().getLeft() + getInsets().getRight());
+                    double currentScrollPaneX;
+                    double nextScrollPaneX;
+
+                    if (delta < 0) {
+                        // right to left
+                        if (Math.abs(delta) <= width) {
+                            currentScrollPaneX = delta;
+                            nextScrollPaneX = width + delta;
                         } else {
-                            selectPrevious();
+                            currentScrollPaneX = -width;
+                            nextScrollPaneX = 0;
+                        }
+                        currentScrollPane.setTranslateX(currentScrollPaneX);
+                        if (pagination.getCurrentPageIndex() < getPageCount() - 1) {
+                            createPage(nextScrollPane, currentIndex + 1);
+                            nextScrollPane.setVisible(true);
+                            nextScrollPane.setTranslateX(nextScrollPaneX);
+                        } else {
+                            currentScrollPane.setTranslateX(0);
                         }
                     } else {
-                        animateClamping(pressPos > e.getSceneX());
+                        // left to right
+                        if (Math.abs(delta) <= width) {
+                            currentScrollPaneX = delta;
+                            nextScrollPaneX = -width + delta;
+                        } else {
+                            currentScrollPaneX = width;
+                            nextScrollPaneX = 0;
+                        }
+                        currentScrollPane.setTranslateX(currentScrollPaneX);
+                        if (pagination.getCurrentPageIndex() != 0) {
+                            createPage(nextScrollPane, currentIndex - 1);
+                            nextScrollPane.setVisible(true);
+                            nextScrollPane.setTranslateX(nextScrollPaneX);
+                        } else {
+                            currentScrollPane.setTranslateX(0);
+                        }
                     }
+                    e.consume();
                 }
-                touchMoved = false;
-                e.consume();
-            }
-        });
+            });
+
+            stackPane.setOnScrollFinished(new EventHandler<ScrollEvent>() {
+                @Override
+                public void handle(ScrollEvent e) {
+                    double delta = Math.abs(e.getSceneX() - pressPos);
+                    double width = getWidth() - (getInsets().getLeft() + getInsets().getRight());
+                    double threshold = delta/width;
+                    if (touchMoved) {
+                        if (threshold > THRESHOLD) {
+                            if (pressPos > e.getSceneX()) {
+                                selectNext();
+                            } else {
+                                selectPrevious();
+                            }
+                        } else {
+                            animateClamping(pressPos > e.getSceneX());
+                        }
+                    }
+                    touchMoved = false;
+                    e.consume();
+                }
+            });
+        }
     }
 
     private void resetIndexes(boolean usePageIndex) {
@@ -645,8 +652,7 @@ public class PaginationSkin extends SkinBase<Pagination, PaginationBehavior>  {
         double navigationHeight = snapSize(navigation.prefHeight(-1));
         double scrollPaneHeight = snapSize(height - navigationHeight);
 
-        layoutInArea(currentScrollPane, left, top, width, scrollPaneHeight, 0, HPos.CENTER, VPos.CENTER);
-        layoutInArea(nextScrollPane, left, top, width, scrollPaneHeight, 0, HPos.CENTER, VPos.CENTER);
+        layoutInArea(stackPane, left, top, width, scrollPaneHeight, 0, HPos.CENTER, VPos.CENTER);
         layoutInArea(navigation, left, scrollPaneHeight, width, navigationHeight, 0, HPos.CENTER, VPos.CENTER);
     }
 
