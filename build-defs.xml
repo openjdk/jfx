@@ -89,8 +89,20 @@
         <clean-project/>
     </target>
 
-    <target name="test" depends="jar">
-        <test-project/>
+    <target name="-check-smoke-test-excludes" unless="is-full-test">
+        <property name="test.excludes" value="${smoke.test.excludes}"/>
+    </target>
+
+    <target name="-init-test" depends="-check-smoke-test-excludes">
+    </target>
+
+    <target name="full-test">
+        <property name="is-full-test" value="true"/>
+        <antcall target="test"/>
+    </target>
+
+    <target name="test" depends="-init-test,jar">
+        <test-project excludes="${test.excludes}"/>
     </target>
 
     <target name="test-single" depends="jar">
@@ -195,6 +207,7 @@
 
     <macrodef name="test-project">
         <attribute name="testsrc" default="${test.dir}"/>
+        <attribute name="excludes" default=""/>
         <sequential>
             <!-- compile all test sources -->
             <build-tests testsrc="@{testsrc}"/>

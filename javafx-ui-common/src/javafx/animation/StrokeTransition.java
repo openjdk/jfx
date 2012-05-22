@@ -60,7 +60,7 @@ import javafx.util.Duration;
  *     rect.setFill(null);
  * 
  *     StrokeTransition st = new StrokeTransition(Duration.millis(3000), rect, Color.RED, Color.BLUE);
- *     st.setRepeatCount(4);
+ *     st.setCycleCount(4);
  *     st.setAutoReverse(true);
  * 
  *     st.play();

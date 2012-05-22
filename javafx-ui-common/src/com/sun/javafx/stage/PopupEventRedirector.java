@@ -94,13 +94,17 @@ public final class PopupEventRedirector extends EventRedirector {
 
         if ((event.getEventType() == KeyEvent.KEY_PRESSED)
                 && ESCAPE_KEY_COMBINATION.match(event)) {
-            handleEscapeKeyPressedEvent();
+            handleEscapeKeyPressedEvent(event);
         }
     }
 
-    private void handleEscapeKeyPressedEvent() {
+    private void handleEscapeKeyPressedEvent(final Event event) {
         if (popupWindow.isHideOnEscape()) {
             popupWindow.doAutoHide();
+
+            if (popupWindow.getConsumeAutoHidingEvents()) {
+                event.consume();
+            }
         }
     }
 
@@ -121,10 +125,9 @@ public final class PopupEventRedirector extends EventRedirector {
 
             popupWindow.doAutoHide();
 
-            // we can consume the press which caused the autohide here,
-            // if we do that it won't have any effect in the target window
-            // from discussions, not consuming it seems preferable
-            // event.consume();
+            if (popupWindow.getConsumeAutoHidingEvents()) {
+                event.consume();
+            }
         }
     }
 

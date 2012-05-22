@@ -45,6 +45,9 @@ import org.junit.runners.Parameterized;
 import org.junit.runners.Parameterized.Parameters;
 
 import com.sun.javafx.test.PropertyReference;
+import com.sun.javafx.test.MouseEventGenerator;
+import javafx.scene.input.ContextMenuEvent;
+import javafx.scene.input.SwipeEvent;
 
 @RunWith(Parameterized.class)
 public final class Scenegraph_eventHandlers_Test {
@@ -55,6 +58,8 @@ public final class Scenegraph_eventHandlers_Test {
 
     @Parameters
     public static Collection data() {
+        final MouseEventGenerator mouseEventGenerator =
+                new MouseEventGenerator();
         return Arrays.asList(new Object[][] {
             {
                 KeyEvent.KEY_PRESSED,
@@ -71,31 +76,58 @@ public final class Scenegraph_eventHandlers_Test {
             }, {
                 MouseEvent.MOUSE_PRESSED,
                 "onMousePressed",
-                createTestMouseEvent(MouseEvent.MOUSE_PRESSED)
+                mouseEventGenerator.generateMouseEvent(
+                        MouseEvent.MOUSE_PRESSED, 0, 0)
             }, {
                 MouseEvent.MOUSE_RELEASED,
                 "onMouseReleased",
-                createTestMouseEvent(MouseEvent.MOUSE_RELEASED)
+                mouseEventGenerator.generateMouseEvent(
+                        MouseEvent.MOUSE_RELEASED, 0, 0)
             }, {
                 MouseEvent.MOUSE_CLICKED,
                 "onMouseClicked",
-                createTestMouseEvent(MouseEvent.MOUSE_CLICKED)
+                mouseEventGenerator.generateMouseEvent(
+                        MouseEvent.MOUSE_CLICKED, 0, 0)
             }, {
                 MouseEvent.MOUSE_ENTERED,
                 "onMouseEntered",
-                createTestMouseEvent(MouseEvent.MOUSE_ENTERED)
+                mouseEventGenerator.generateMouseEvent(
+                        MouseEvent.MOUSE_ENTERED, 0, 0)
             }, {
                 MouseEvent.MOUSE_EXITED,
                 "onMouseExited",
-                createTestMouseEvent(MouseEvent.MOUSE_EXITED)
+                mouseEventGenerator.generateMouseEvent(
+                        MouseEvent.MOUSE_EXITED, 0, 0)
             }, {
                 MouseEvent.MOUSE_MOVED,
                 "onMouseMoved",
-                createTestMouseEvent(MouseEvent.MOUSE_MOVED)
+                mouseEventGenerator.generateMouseEvent(
+                        MouseEvent.MOUSE_MOVED, 0, 0)
             }, {
                 MouseEvent.MOUSE_DRAGGED,
                 "onMouseDragged",
-                createTestMouseEvent(MouseEvent.MOUSE_DRAGGED)
+                mouseEventGenerator.generateMouseEvent(
+                        MouseEvent.MOUSE_DRAGGED, 0, 0)
+            }, {
+                SwipeEvent.SWIPE_LEFT,
+                "onSwipeLeft",
+                createSwipeEvent(SwipeEvent.SWIPE_LEFT)
+            }, {
+                SwipeEvent.SWIPE_RIGHT,
+                "onSwipeRight",
+                createSwipeEvent(SwipeEvent.SWIPE_RIGHT)
+            }, {
+                SwipeEvent.SWIPE_UP,
+                "onSwipeUp",
+                createSwipeEvent(SwipeEvent.SWIPE_UP)
+            }, {
+                SwipeEvent.SWIPE_DOWN,
+                "onSwipeDown",
+                createSwipeEvent(SwipeEvent.SWIPE_DOWN)
+            }, {
+                ContextMenuEvent.CONTEXT_MENU_REQUESTED,
+                "onContextMenuRequested",
+                createContextMenuEvent()
             }
         });
     }
@@ -313,27 +345,17 @@ public final class Scenegraph_eventHandlers_Test {
                                       keyEventType);
     }
 
-    private static Event createTestMouseEvent(
-            final EventType<MouseEvent> mouseEventType) {
-        MouseButton button = MouseButton.NONE;
-        boolean primaryButtonDown = false;
-        int clickCount = 0;
+    private static Event createContextMenuEvent() {
+        return ContextMenuEvent.impl_contextEvent(10, 10,
+          10, 10, false, ContextMenuEvent.CONTEXT_MENU_REQUESTED);
+    }
 
-        if ((mouseEventType == MouseEvent.MOUSE_RELEASED)
-                || (mouseEventType == MouseEvent.MOUSE_CLICKED)) {
-            button = MouseButton.PRIMARY;
-            clickCount = 1;
-        } else if (mouseEventType == MouseEvent.MOUSE_PRESSED) {
-            button = MouseButton.PRIMARY;
-            primaryButtonDown = true;
-            clickCount = 1;
-        }
-
-        return MouseEvent.impl_mouseEvent(0, 0, 0, 0,
-                                          button, clickCount,
-                                          false, false, false, false,
-                                          false, primaryButtonDown,
-                                          false, false, false, mouseEventType);
+    private static Event createSwipeEvent(final EventType<SwipeEvent> type) {
+        return SwipeEvent.impl_swipeEvent(
+                type,
+                1,
+                100, 100, 100, 100,
+                false, false, false, false, true);
     }
 
     private static void setEventHandler(

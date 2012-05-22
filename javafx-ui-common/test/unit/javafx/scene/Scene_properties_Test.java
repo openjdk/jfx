@@ -25,6 +25,7 @@
 
 package javafx.scene;
 
+import com.sun.javafx.cursor.CursorFrame;
 import com.sun.javafx.event.EventHandlerManager;
 import java.util.Arrays;
 import java.util.Collection;
@@ -67,11 +68,18 @@ public final class Scene_properties_Test extends PropertiesTestBase {
 //            config(testScene, "height", , ),
             config(testScene, "camera", null, new ParallelCamera()),
             config(testScene, "fill", Color.WHITE, Color.BLACK),
+            config(testScene, "fill", null, Color.TRANSPARENT),
             config(testScene, "root", new Group(), new Pane()),
+            config(testScene, "cursor", null, new Cursor("TestCursor") {
+                @Override public CursorFrame impl_getCurrentFrame() {
+                    throw new UnsupportedOperationException("Not supported yet.");
+                }
+            }),
             config(testScene, "cursor", Cursor.DEFAULT, Cursor.CROSSHAIR),
             config(testScene, "eventDispatcher",
                    null,
                    new EventHandlerManager(null)),
+            config(testScene, "camera", null, new PerspectiveCamera()),
             config(testScene, "onMouseClicked", null, testEventHandler),
             config(testScene, "onMouseDragged", null, testEventHandler),
             config(testScene, "onMouseEntered", null, testEventHandler),
@@ -88,6 +96,34 @@ public final class Scene_properties_Test extends PropertiesTestBase {
             config(testScene, "onKeyPressed", null, testEventHandler),
             config(testScene, "onKeyReleased", null, testEventHandler),
             config(testScene, "onKeyTyped", null, testEventHandler),
+            config(testScene, "onContextMenuRequested", null, testEventHandler),
+            config(testScene, "onDragDetected", null, testEventHandler),
+            config(testScene, "onDragDone", null, testEventHandler),
+            config(testScene, "onDragDropped", null, testEventHandler),
+            config(testScene, "onDragEntered", null, testEventHandler),
+            config(testScene, "onDragExited", null, testEventHandler),
+            config(testScene, "onDragOver", null, testEventHandler),
+            config(testScene, "onMouseDragEntered", null, testEventHandler),
+            config(testScene, "onMouseDragExited", null, testEventHandler),
+            config(testScene, "onMouseDragOver", null, testEventHandler),
+            config(testScene, "onMouseDragReleased", null, testEventHandler),
+            config(testScene, "onRotate", null, testEventHandler),
+            config(testScene, "onRotationStarted", null, testEventHandler),
+            config(testScene, "onRotationFinished", null, testEventHandler),
+            config(testScene, "onZoom", null, testEventHandler),
+            config(testScene, "onZoomStarted", null, testEventHandler),
+            config(testScene, "onZoomFinished", null, testEventHandler),
+            config(testScene, "onScroll", null, testEventHandler),
+            config(testScene, "onScrollStarted", null, testEventHandler),
+            config(testScene, "onScrollFinished", null, testEventHandler),
+            config(testScene, "onSwipeLeft", null, testEventHandler),
+            config(testScene, "onSwipeRight", null, testEventHandler),
+            config(testScene, "onSwipeUp", null, testEventHandler),
+            config(testScene, "onSwipeDown", null, testEventHandler),
+            config(testScene, "onTouchPressed", null, testEventHandler),
+            config(testScene, "onTouchReleased", null, testEventHandler),
+            config(testScene, "onTouchMoved", null, testEventHandler),
+            config(testScene, "onTouchStationary", null, testEventHandler),
             config(testScene, "onInputMethodTextChanged",
                    null, testEventHandler)
         });

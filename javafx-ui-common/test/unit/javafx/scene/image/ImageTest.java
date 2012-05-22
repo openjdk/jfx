@@ -51,6 +51,7 @@ import com.sun.javafx.tk.Toolkit;
 
 import javafx.beans.InvalidationListener;
 import javafx.beans.Observable;
+import org.junit.Ignore;
 
 public final class ImageTest {
     private final StubToolkit toolkit;
@@ -506,6 +507,30 @@ public final class ImageTest {
         toolkit.externalFormatClass = fakeExternalImage.getClass();
         final Image image = Image.impl_fromExternalImage(fakeExternalImage);
         verifyLoadedImage(image, 0, 0, false, false, 123, 456);
+    }
+    
+    @Test
+    public void createImageFromClasspathTest() {
+        final String url = "javafx/scene/image/test.png";
+        final String resolvedUrl = Thread.currentThread().getContextClassLoader().getResource(url).toString();
+        registerImage(resolvedUrl, 100, 200);
+        
+        final Image image = new Image(url);
+
+        assertEquals(resolvedUrl, image.impl_getUrl());
+        verifyLoadedImage(image, 0, 0, false, false, 100, 200);
+    }
+    
+    @Test
+    public void createImageFromClasspathTest_withLeadingSlash() {
+        final String url = "/javafx/scene/image/test.png";
+        final String resolvedUrl = Thread.currentThread().getContextClassLoader().getResource(url.substring(1)).toString();
+        registerImage(resolvedUrl, 100, 200);
+        
+        final Image image = new Image(url);
+
+        assertEquals(resolvedUrl, image.impl_getUrl());
+        verifyLoadedImage(image, 0, 0, false, false, 100, 200);
     }
 
     @Test(expected=NullPointerException.class)

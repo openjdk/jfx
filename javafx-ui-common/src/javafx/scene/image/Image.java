@@ -25,10 +25,7 @@
 
 package javafx.scene.image;
 
-import java.io.File;
 import java.io.InputStream;
-import java.net.MalformedURLException;
-import java.net.URI;
 import java.util.LinkedList;
 import java.util.Queue;
 
@@ -45,12 +42,19 @@ import com.sun.javafx.beans.annotations.Default;
 import com.sun.javafx.runtime.async.AsyncOperation;
 import com.sun.javafx.runtime.async.AsyncOperationListener;
 import com.sun.javafx.tk.ImageLoader;
+import com.sun.javafx.tk.PlatformImage;
 import com.sun.javafx.tk.Toolkit;
+import java.net.MalformedURLException;
+import java.net.URL;
+import java.nio.Buffer;
+import java.nio.ByteBuffer;
+import java.nio.IntBuffer;
 import javafx.beans.property.ReadOnlyBooleanProperty;
 import javafx.beans.property.ReadOnlyBooleanWrapper;
 import javafx.beans.property.ReadOnlyDoubleProperty;
 import javafx.beans.property.ReadOnlyDoubleWrapper;
 import javafx.beans.property.ReadOnlyObjectProperty;
+import javafx.scene.paint.Color;
 
 /**
  * The {@code Image} class represents graphical images and is used for loading
@@ -61,6 +65,12 @@ import javafx.beans.property.ReadOnlyObjectProperty;
  * memory consumed by the image). The application can specify the quality of
  * filtering used when scaling, and whether or not to preserve the original
  * image's aspect ratio.
+ * </p>
+ *
+ * <p>
+ * All URLs supported by {@link URL} can be passed to the constructor.
+ * If the passed string is not a valid URL, but a path instead, the Image is
+ * searched on the classpath in that case.
  * </p>
  *
  * <p>Use {@link ImageView} for displaying images loaded with this
@@ -74,23 +84,30 @@ import javafx.scene.image.Image;
 
 // load an image in background, displaying a placeholder while it's loading
 // (assuming there's an ImageView node somewhere displaying this image)
-Image image1 = new Image("flower.png", true);
+// The image is located in default package of the classpath
+Image image1 = new Image("/flower.png", true);
 
 // load an image and resize it to 100x150 without preserving its original
 // aspect ratio
-Image image2 = new Image("flower.png", 100, 150, false, false);
+// The image is located in my.res package of the classpath
+Image image2 = new Image("my/res/flower.png", 100, 150, false, false);
 
 // load an image and resize it to width of 100 while preserving its
 // original aspect ratio, using faster filtering method
-Image image3 = new Image("flower.png", 100, 0, false, false);
+// The image is downloaded from the supplied URL through http protocol
+Image image3 = new Image("http://sample.com/res/flower.png", 100, 0, false, false);
 
 // load an image and resize it only in one dimension, to the height of 100 and
 // the original width, without preserving original aspect ratio
-Image image4 = new Image("flower.png", 0, 100, false, false);
+// The image is located in the current working directory
+Image image4 = new Image("file:flower.png", 0, 100, false, false);
 
 </PRE>
  */
 public class Image {
+
+    // Matches strings that start with a valid URI scheme
+    private static final String URL_QUICKMATCH = "^\\p{Alpha}[\\p{Alnum}+.-]*:.*$";
     /**
      * The string representing the URL to use in fetching the pixel data.
      *
@@ -102,6 +119,7 @@ public class Image {
      * @treatAsPrivate implementation detail
      * @deprecated This is an internal API that is not intended for use and will be removed in the next version
      */
+    // SB-dependency: RT-21216 has been filed to track this
     @Deprecated
     public final String impl_getUrl() {
         return url;
@@ -431,7 +449,7 @@ public class Image {
      * @treatAsPrivate implementation detail
      * @deprecated This is an internal API that is not intended for use and will be removed in the next version
      */
-    private ObjectPropertyImpl<Object> platformImage;
+    private ObjectPropertyImpl<PlatformImage> platformImage;
 
     /**
      * @treatAsPrivate implementation detail
@@ -448,16 +466,20 @@ public class Image {
      * @treatAsPrivate implementation detail
      */
     @Deprecated
-    public final ReadOnlyObjectProperty<Object> impl_platformImageProperty() {
+    public final ReadOnlyObjectProperty<PlatformImage> impl_platformImageProperty() {
         return platformImagePropertyImpl();
     }
 
-    private ObjectPropertyImpl<Object> platformImagePropertyImpl() {
+    private ObjectPropertyImpl<PlatformImage> platformImagePropertyImpl() {
         if (platformImage == null) {
-            platformImage = new ObjectPropertyImpl<Object>("platformImage");
+            platformImage = new ObjectPropertyImpl<PlatformImage>("platformImage");
         }
 
         return platformImage;
+    }
+
+    void pixelsDirty() {
+        platformImagePropertyImpl().fireValueChangedEvent();
     }
 
     private final class ObjectPropertyImpl<T>
@@ -503,11 +525,12 @@ public class Image {
     }
 
     /**
-     * Construct an {@code Image} which pixels are loaded from the specified
+     * Constructs an {@code Image} with content loaded from the specified
      * url.
      *
      * @param url the string representing the URL to use in fetching the pixel
      *      data
+     * @see #Image(java.lang.String, java.io.InputStream, double, double, boolean, boolean, boolean)
      * @throws NullPointerException if URL is null
      * @throws IllegalArgumentException if URL is invalid or unsupported
      */
@@ -521,6 +544,7 @@ public class Image {
      *
      * @param url the string representing the URL to use in fetching the pixel
      *      data
+     * @see #Image(java.lang.String, java.io.InputStream, double, double, boolean, boolean, boolean)
      * @param backgroundLoading indicates whether the image
      *      is being loaded in the background
      * @throws NullPointerException if URL is null
@@ -536,6 +560,7 @@ public class Image {
      *
      * @param url the string representing the URL to use in fetching the pixel
      *      data
+     * @see #Image(java.lang.String, java.io.InputStream, double, double, boolean, boolean, boolean)
      * @param requestedWidth the image's bounding box width
      * @param requestedHeight the image's bounding box height
      * @param preserveRatio indicates whether to preserve the aspect ratio of
@@ -556,6 +581,10 @@ public class Image {
 
     /**
      * Construct a new {@code Image} with the specified parameters.
+     *
+     * The <i>url</i> without scheme is threated as relative to classpath,
+     * url with scheme is treated accordingly to the scheme using
+     * {@link URL#openStream()}
      *
      * @param url the string representing the URL to use in fetching the pixel
      *      data
@@ -585,7 +614,7 @@ public class Image {
     }
 
     /**
-     * Construct an {@code Image} which pixels are loaded from the specified
+     * Construct an {@code Image} with content loaded from the specified
      * input stream.
      *
      * @param is the stream from which to load the image
@@ -617,9 +646,25 @@ public class Image {
         initialize(null);
     }
 
-    private Image(Object platformImage) {
+    /**
+     * Construct a new empty {@code Image} with the specified dimensions
+     * filled with transparent pixels to be used with the
+     * {@link #setArgb(int, int, int) setArgb()}
+     * and
+     * {@link #setColor(int, int, javafx.scene.paint.Color) setColor()}
+     * methods to create a completely custom image.
+     * 
+     * @param width the width of the empty image
+     * @param height the height of the empty image
+     */
+    Image(int width, int height) {
+        this(null, null, width, height, false, false, false);
+        initialize(Toolkit.getToolkit().createPlatformImage(width, height));
+    }
+
+    private Image(Object externalImage) {
         this(null, null, 0, 0, false, false, false);
-        initialize(platformImage);
+        initialize(externalImage);
     }
 
     private Image(String url, InputStream is,
@@ -659,13 +704,13 @@ public class Image {
 
     private ImageTask backgroundTask;
 
-    private void initialize(Object platformImage) {
+    private void initialize(Object externalImage) {
         // we need to check the original values here, because setting placeholder
         // changes platformImage, so wrong branch of if would be used
-        if (platformImage != null) {
+        if (externalImage != null) {
             // Make an image from the provided platform-specific image
             // object (e.g. a BufferedImage in the case of the Swing profile)
-            ImageLoader loader = loadPlatformImage(platformImage);
+            ImageLoader loader = loadPlatformImage(externalImage);
             finishImage(loader);
         } else if (isBackgroundLoading() && (impl_source == null)) {
             // Load image in the background.
@@ -707,7 +752,7 @@ public class Image {
     // Generates the animation Timeline for multiframe images.
     private void makeAnimationTimeline(ImageLoader loader) {
         // create and start the animation thread.
-        final Object[] frames = loader.getFrames();
+        final PlatformImage[] frames = loader.getFrames();
 
         timeline = new Timeline();
         timeline.setCycleCount(Timeline.INDEFINITE);
@@ -730,7 +775,7 @@ public class Image {
 
     private KeyFrame createPlatformImageSetKeyFrame(
             final long duration,
-            final Object platformImage) {
+            final PlatformImage platformImage) {
         return new KeyFrame(Duration.millis(duration),
                             new EventHandler<ActionEvent>() {
                                     @Override
@@ -786,7 +831,7 @@ public class Image {
         return new Image(image);
     }
 
-    private void setPlatformImageWH(final Object newPlatformImage,
+    private void setPlatformImageWH(final PlatformImage newPlatformImage,
                                     final double newWidth,
                                     final double newHeight) {
         if ((impl_getPlatformImage() == newPlatformImage)
@@ -814,7 +859,7 @@ public class Image {
         }
     }
 
-    private void storePlatformImageWH(final Object platformImage,
+    private void storePlatformImageWH(final PlatformImage platformImage,
                                       final double width,
                                       final double height) {
         platformImagePropertyImpl().store(platformImage);
@@ -917,13 +962,22 @@ public class Image {
             throw new IllegalArgumentException("URL must not be empty");
         }
 
-        final URI baseUri = getBaseUri();
-        final URI resolvedUri;
         try {
-            resolvedUri = (baseUri != null) ? baseUri.resolve(url)
-                                            : URI.create(url);
-
-            return resolvedUri.toURL().toString();
+            if (!url.matches(URL_QUICKMATCH)) {
+                final ClassLoader contextClassLoader = Thread.currentThread().getContextClassLoader();
+                URL resource;
+                if (url.charAt(0) == '/') {
+                    resource = contextClassLoader.getResource(url.substring(1));
+                } else {
+                    resource = contextClassLoader.getResource(url);
+                }
+                if (resource == null) {
+                    throw new IllegalArgumentException("Invalid URL or resource not found");
+                }
+                return resource.toString();
+            }
+            // Use URL constructor for validation
+            return new URL(url).toString();
         } catch (final IllegalArgumentException e) {
             throw new IllegalArgumentException(
                     constructDetailedExceptionMessage("Invalid URL", e), e);
@@ -955,16 +1009,6 @@ public class Image {
                                ? mainMessage + ": " + causeMessage
                                : mainMessage,
                        cause.getCause());
-    }
-
-    private static URI getBaseUri() {
-        try {
-            // we might want to use getDocumentBase() from HostServices here,
-            // but that would be an incompatible change
-            return new File("").toURI();
-        } catch (final Exception e) {
-            return null;
-        }
     }
 
     /**
@@ -1023,5 +1067,108 @@ public class Image {
      */
     boolean isAnimation() {
         return timeline != null;
+    }
+
+    boolean pixelsReadable() {
+        return (getProgress() >= 1.0 && !isAnimation() && !isError());
+    }
+
+    private PixelReader reader;
+    /**
+     * This method returns a {@code PixelReader} that provides access to
+     * read the pixels of the image, if the image is readable.
+     * If this method returns null then this image does not support reading
+     * at this time.
+     * This method will return null if the image is being loaded from a
+     * source and is still incomplete {the progress is still < 1.0) or if
+     * there was an error.
+     * This method may also return null for some images in a format that
+     * is not supported for reading and writing pixels to.
+     * 
+     * @return the {@code PixelReader} for reading the pixel data of the image
+     */
+    public PixelReader getPixelReader() {
+        if (!pixelsReadable()) {
+            return null;
+        }
+        if (reader == null) {
+            reader = new PixelReader() {
+                @Override
+                public PixelFormat getPixelFormat() {
+                    PlatformImage pimg = platformImage.get();
+//                    if (pimg == null) {
+//                        return null;
+//                    }
+                    return pimg.getPlatformPixelFormat();
+                }
+
+                @Override
+                public int getArgb(int x, int y) {
+                    PlatformImage pimg = platformImage.get();
+                    return pimg.getArgb(x, y);
+                }
+
+                @Override
+                public Color getColor(int x, int y) {
+                    int argb = getArgb(x, y);
+                    int a = argb >>> 24;
+                    int r = (argb >> 16) & 0xff;
+                    int g = (argb >>  8) & 0xff;
+                    int b = (argb      ) & 0xff;
+                    return Color.rgb(r, g, b, a / 255.0);
+                }
+
+                @Override
+                public <T extends Buffer>
+                    void getPixels(int x, int y, int w, int h,
+                                   WritablePixelFormat<T> pixelformat,
+                                   T buffer, int scanlineStride)
+                {
+                    PlatformImage pimg = platformImage.get();
+                    for (int j = 0; j < h; j++) {
+                        for (int i = 0; i < w; i++) {
+                            pixelformat.setArgb(buffer, i, j, scanlineStride,
+                                                pimg.getArgb(x+i, y+j));
+                        }
+                    }
+//                    checkPixelAccess(true, false).getPixels(x, y, w, h,
+//                                                            buffer, pixelformat, scanlineStride);
+                }
+
+                @Override
+                public void getPixels(int x, int y, int w, int h,
+                                    WritablePixelFormat<ByteBuffer> pixelformat,
+                                    byte buffer[], int offset, int scanlineStride)
+                {
+                    ByteBuffer bytebuf = ByteBuffer.wrap(buffer);
+                    bytebuf.position(offset);
+                    getPixels(x, y, w, h, pixelformat, bytebuf, scanlineStride);
+//                    checkPixelAccess(true, false).getPixels(x, y, w, h,
+//                                                            buffer, pixelformat, scanlineStride);
+                }
+
+                @Override
+                public void getPixels(int x, int y, int w, int h,
+                                    WritablePixelFormat<IntBuffer> pixelformat,
+                                    int buffer[], int offset, int scanlineStride)
+                {
+                    IntBuffer intbuf = IntBuffer.wrap(buffer);
+                    intbuf.position(offset);
+                    getPixels(x, y, w, h, pixelformat, intbuf, scanlineStride);
+//                    checkPixelAccess(true, false).getPixels(x, y, w, h,
+//                                                            buffer, pixelformat, scanlineStride);
+                }
+            };
+        }
+        return reader;
+    }
+
+    PlatformImage getWritablePlatformImage() {
+        PlatformImage pimg = platformImage.get();
+        if (!pimg.isWritable()) {
+            pimg = pimg.promoteToWritableImage();
+            platformImage.set(pimg);
+        }
+        return pimg;
     }
 }

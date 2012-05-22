@@ -29,7 +29,9 @@ import javafx.scene.shape.Rectangle;
 
 import org.junit.Assert;
 import org.junit.Test;
+import static org.junit.Assert.*;
 
+import com.sun.javafx.test.TransformHelper;
 import com.sun.javafx.geom.transform.BaseTransform;
 
 
@@ -45,15 +47,53 @@ public class TranslateTest {
         n.getTransforms().add(trans);
 
         assertTx(n, BaseTransform.getTranslateInstance(25, 52));
-
+        TransformHelper.assertMatrix(trans,
+                1, 0, 0, 25,
+                0, 1, 0, 52,
+                0, 0, 1,  0);
 
         trans.setX(34);
         Assert.assertEquals(34, trans.getX(), 1e-100);
         assertTx(n, BaseTransform.getTranslateInstance(34, 52));
+        TransformHelper.assertMatrix(trans,
+                1, 0, 0, 34,
+                0, 1, 0, 52,
+                0, 0, 1,  0);
 
 
         trans.setY(67);
         assertTx(n, BaseTransform.getTranslateInstance(34, 67));
+        TransformHelper.assertMatrix(trans,
+                1, 0, 0, 34,
+                0, 1, 0, 67,
+                0, 0, 1,  0);
+
+        trans.setZ(33);
+        TransformHelper.assertMatrix(trans,
+                1, 0, 0, 34,
+                0, 1, 0, 67,
+                0, 0, 1, 33);
+    }
+
+    @Test
+    public void testCopying() {
+        final Translate trans = new Translate(34, 67, 33);
+
+        Transform copy = trans.impl_copy();
+
+        TransformHelper.assertMatrix(copy,
+                1, 0, 0, 34,
+                0, 1, 0, 67,
+                0, 0, 1, 33);
+    }
+
+    @Test public void testToString() {
+        final Translate trans = new Translate(8, 15);
+
+        String s = trans.toString();
+
+        assertNotNull(s);
+        assertFalse(s.isEmpty());
     }
 
     @Test public void testBoundPropertySynced_X() throws Exception {

@@ -36,11 +36,15 @@ import javafx.scene.shape.Rectangle;
 
 import org.junit.Assert;
 import org.junit.Test;
+import static org.junit.Assert.*;
 
 import com.sun.javafx.geom.transform.Affine2D;
 import com.sun.javafx.geom.transform.Affine3D;
 import com.sun.javafx.geom.transform.BaseTransform;
 import com.sun.javafx.pgstub.StubRectangle;
+import com.sun.javafx.scene.transform.TransformUtils;
+import com.sun.javafx.test.TransformHelper;
+import javafx.geometry.Point3D;
 
 
 public class TransformTest {
@@ -143,7 +147,38 @@ public class TransformTest {
         final Affine3D affine3D = new Affine3D(11, 22, 33, 44, 55, 66, 77, 88, 99, 111, 222, 333);
         assertTx(n, affine3D);
     }
+
+    @Test
+    public void defaultTransformShouldBeIdentity() {
+        final Transform t = new Transform() {
+            @Override
+            public void impl_apply(com.sun.javafx.geom.transform.Affine3D ad) {}
+            @Override
+            public Transform impl_copy() { return null; }
+        };
+
+        TransformHelper.assertMatrix(t,
+                1, 0, 0, 0,
+                0, 1, 0, 0,
+                0, 0, 1, 0);
+    }
     
+    @Test
+    public void testTransform() {
+        Transform t = TransformUtils.immutableTransform(
+                1,  2,  3,  4,
+                5,  6,  7,  8,
+                9, 10, 11, 12);
+
+        Point3D point = new Point3D(2, 5, 7);
+
+        Point3D transformed = t.impl_transform(point);
+
+        assertEquals(37, transformed.getX(), 0.0001);
+        assertEquals(97, transformed.getY(), 0.0001);
+        assertEquals(157, transformed.getZ(), 0.0001);
+    }
+
     static void checkDoublePropertySynced(Transform tr, String propertyName, double val)
         throws Exception {
 

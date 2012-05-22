@@ -32,6 +32,8 @@ import javafx.scene.Scene;
 import javafx.scene.shape.Rectangle;
 import javafx.stage.Stage;
 
+import com.sun.javafx.test.MouseEventGenerator;
+
 import static org.junit.Assert.*;
 import org.junit.Test;
 
@@ -528,37 +530,6 @@ public class MouseDragEventTest {
         w.getScene().getDragExited().assertGestureSource(w.getSource().getNode());
 
         w.clear();
-    }
-
-
-    private static class MouseEventGenerator {
-        private boolean primaryButtonDown = false;
-
-        public MouseEvent generateMouseEvent(EventType<MouseEvent> type,
-                double x, double y) {
-
-            MouseButton button = MouseButton.NONE;
-            if (type == MouseEvent.MOUSE_PRESSED ||
-                    type == MouseEvent.MOUSE_RELEASED ||
-                    type == MouseEvent.MOUSE_DRAGGED) {
-                button = MouseButton.PRIMARY;
-            }
-
-            if (type == MouseEvent.MOUSE_PRESSED ||
-                    type == MouseEvent.MOUSE_DRAGGED) {
-                primaryButtonDown = true;
-            }
-
-            if (type == MouseEvent.MOUSE_RELEASED) {
-                primaryButtonDown = false;
-            }
-
-            MouseEvent event = MouseEvent.impl_mouseEvent(x, y, x, y, button,
-                    1, false, false, false, false, false, primaryButtonDown,
-                    false, false, false, type);
-
-            return event;
-        }
     }
 
     private class World {

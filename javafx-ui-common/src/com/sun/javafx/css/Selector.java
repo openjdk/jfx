@@ -53,10 +53,8 @@ import java.util.List;
 import javafx.scene.Node;
 import javafx.scene.Scene;
 
-import org.w3c.dom.css.CSSRule;
-
 /**
- * Used by {@link CSSRule} to determine whether or not the rule applies to a 
+ * Used by CSSRule to determine whether or not the rule applies to a 
  * given object.
  *
  */

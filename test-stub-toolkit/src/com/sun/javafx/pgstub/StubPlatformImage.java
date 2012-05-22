@@ -25,7 +25,12 @@
 
 package com.sun.javafx.pgstub;
 
-public final class StubPlatformImage {
+import com.sun.javafx.tk.PlatformImage;
+import java.nio.Buffer;
+import javafx.scene.image.PixelFormat;
+import javafx.scene.image.WritablePixelFormat;
+
+public final class StubPlatformImage implements PlatformImage {
     private final StubImageLoader imageLoader;
     private final int frame;
 
@@ -49,6 +54,57 @@ public final class StubPlatformImage {
 
     public Object getSource() {
         return imageLoader.getSource();
+    }
+
+    @Override
+    public PixelFormat getPlatformPixelFormat() {
+        throw new UnsupportedOperationException("Not supported yet.");
+    }
+
+    @Override
+    public boolean isWritable() {
+        throw new UnsupportedOperationException("Not supported yet.");
+    }
+
+    @Override
+    public PlatformImage promoteToWritableImage() {
+        throw new UnsupportedOperationException("Not supported yet.");
+    }
+
+    @Override
+    public int getArgb(int x, int y) {
+        throw new UnsupportedOperationException("Not supported yet.");
+    }
+
+    @Override
+    public int getArgbPre(int x, int y) {
+        throw new UnsupportedOperationException("Not supported yet.");
+    }
+
+    @Override
+    public void setArgb(int x, int y, int argb) {
+        throw new UnsupportedOperationException("Not supported yet.");
+    }
+
+    @Override
+    public void setArgbPre(int x, int y, int argbpre) {
+        throw new UnsupportedOperationException("Not supported yet.");
+    }
+
+    @Override
+    public <T extends Buffer> void getPixels(int x, int y, int w, int h,
+                                             T pixels,
+                                             WritablePixelFormat<T> pixelformat,
+                                             int scanlineBytes) {
+        throw new UnsupportedOperationException("Not supported yet.");
+    }
+
+    @Override
+    public <T extends Buffer> void setPixels(int x, int y, int w, int h,
+                                             T pixels,
+                                             PixelFormat<T> pixelformat,
+                                             int scanlineBytes) {
+        throw new UnsupportedOperationException("Not supported yet.");
     }
 
     @Override

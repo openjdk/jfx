@@ -26,6 +26,7 @@
 package com.sun.javafx.pgstub;
 
 import com.sun.javafx.tk.ImageLoader;
+import com.sun.javafx.tk.PlatformImage;
 
 public final class StubImageLoader implements ImageLoader {
     private final Object source;
@@ -36,7 +37,7 @@ public final class StubImageLoader implements ImageLoader {
     private final boolean preserveRatio;
     private final boolean smooth;
 
-    private final Object[] frames;
+    private final PlatformImage[] frames;
 
     public StubImageLoader(final Object source,
                            final StubPlatformImageInfo imageInfo,
@@ -52,7 +53,7 @@ public final class StubImageLoader implements ImageLoader {
         this.preserveRatio = preserveRatio;
         this.smooth = smooth;
 
-        frames = new Object[imageInfo.getFrameCount()];
+        frames = new PlatformImage[imageInfo.getFrameCount()];
         for (int i = 0; i < frames.length; ++i) {
             frames[i] = new StubPlatformImage(this, i);
         }
@@ -73,12 +74,12 @@ public final class StubImageLoader implements ImageLoader {
     }
 
     @Override
-    public Object[] getFrames() {
+    public PlatformImage[] getFrames() {
         return frames;
     }
 
     @Override
-    public Object getFrame(final int i) {
+    public PlatformImage getFrame(final int i) {
         return frames[i];
     }
 

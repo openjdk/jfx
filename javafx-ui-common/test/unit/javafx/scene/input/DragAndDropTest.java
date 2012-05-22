@@ -56,6 +56,7 @@ import com.sun.javafx.tk.TKDragGestureListener;
 import com.sun.javafx.tk.TKDragSourceListener;
 import com.sun.javafx.tk.TKDropTargetListener;
 import com.sun.javafx.tk.Toolkit;
+import com.sun.javafx.test.MouseEventGenerator;
 
 public class DragAndDropTest {
     
@@ -1249,37 +1250,6 @@ public class DragAndDropTest {
             dragging = false;
         }
         
-    }
-    
-    // Event generators
-    
-    private static class MouseEventGenerator {
-        private boolean primaryButtonDown = false;
-
-        public MouseEvent generateMouseEvent(EventType<MouseEvent> type,
-                double x, double y) {
-
-            MouseButton button = MouseButton.NONE;
-            if (type == MouseEvent.MOUSE_PRESSED ||
-                    type == MouseEvent.MOUSE_RELEASED ||
-                    type == MouseEvent.MOUSE_CLICKED) {
-                button = MouseButton.PRIMARY;
-            }
-
-            if (type == MouseEvent.MOUSE_PRESSED) {
-                primaryButtonDown = true;
-            }
-
-            MouseEvent event = MouseEvent.impl_mouseEvent(x, y, x, y, button,
-                    1, false, false, false, false, false, primaryButtonDown,
-                    false, false, false, type);
-
-            if (type == MouseEvent.MOUSE_RELEASED) {
-                primaryButtonDown = false;
-            }
-
-            return event;
-        }
     }
     
     private static class DragEventGenerator {

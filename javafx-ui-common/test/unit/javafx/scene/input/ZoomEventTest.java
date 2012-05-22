@@ -370,6 +370,57 @@ public class ZoomEventTest {
         assertTrue(zoomed);
     }
 
+    @Test
+    public void unknownLocalShouldBeFixedByMousePosition() {
+        MouseEventGenerator gen = new MouseEventGenerator();
+        Scene scene = createScene();
+        Rectangle rect =
+                (Rectangle) scene.getRoot().getChildrenUnmodifiable().get(0);
+
+        rect.setOnZoom(new EventHandler<ZoomEvent>() {
+            @Override public void handle(ZoomEvent event) {
+                assertEquals(150.0, event.getSceneX(), 0.0001);
+                assertEquals(150.0, event.getSceneY(), 0.0001);
+                zoomed = true;
+            }
+        });
+
+        zoomed = false;
+
+        scene.impl_processMouseEvent(
+                gen.generateMouseEvent(MouseEvent.MOUSE_MOVED, 250, 250));
+
+        ((StubScene) scene.impl_getPeer()).getListener().zoomEvent(
+                ZoomEvent.ZOOM, 2, 3,
+                Double.NaN, Double.NaN, Double.NaN, Double.NaN,
+                true, false, true, false, true, false);
+
+        assertFalse(zoomed);
+
+        scene.impl_processMouseEvent(
+                gen.generateMouseEvent(MouseEvent.MOUSE_MOVED, 150, 150));
+
+        ((StubScene) scene.impl_getPeer()).getListener().zoomEvent(
+                ZoomEvent.ZOOM, 2, 3,
+                Double.NaN, Double.NaN, Double.NaN, Double.NaN,
+                true, false, true, false, true, false);
+
+        assertTrue(zoomed);
+    }
+
+    @Test public void testToString() {
+        ZoomEvent e = ZoomEvent.impl_zoomEvent(ZoomEvent.ZOOM,
+            10, 20,
+            100, 100, 200, 200,
+            false, false, false, false,
+            true, false);
+
+        String s = e.toString();
+
+        assertNotNull(s);
+        assertFalse(s.isEmpty());
+    }
+
     private Scene createScene() {
         final Group root = new Group();
         

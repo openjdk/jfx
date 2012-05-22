@@ -94,6 +94,7 @@ import com.sun.javafx.sg.PGText;
 import com.sun.javafx.tk.FileChooserType;
 import com.sun.javafx.tk.FontLoader;
 import com.sun.javafx.tk.ImageLoader;
+import com.sun.javafx.tk.PlatformImage;
 import com.sun.javafx.tk.ScreenConfigurationAccessor;
 import com.sun.javafx.tk.TKClipboard;
 import com.sun.javafx.tk.TKDragGestureListener;
@@ -638,6 +639,11 @@ public class StubToolkit extends Toolkit {
     public ImageLoader loadPlatformImage(Object platformImage) {
         return imageLoaderFactory.createImageLoader(platformImage,
                                                     0, 0, false, false);
+    }
+
+    @Override
+    public PlatformImage createPlatformImage(int w, int h) {
+        throw new UnsupportedOperationException("Not supported yet.");
     }
 
     @Override

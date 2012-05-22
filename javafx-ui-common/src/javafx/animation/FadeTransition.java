@@ -66,7 +66,7 @@ import javafx.util.Duration;
  *     FadeTransition ft = new FadeTransition(Duration.millis(3000), rect);
  *     ft.setFromValue(1.0);
  *     ft.setToValue(0.3);
- *     ft.setRepeatCount(4);
+ *     ft.setCycleCount(4);
  *     ft.setAutoReverse(true);
  * 
  *     ft.play();
