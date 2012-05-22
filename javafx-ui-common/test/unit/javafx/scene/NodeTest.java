@@ -986,33 +986,4 @@ public class NodeTest {
         assertEquals("", node.styleProperty().get());
         assertEquals("", node.getStyle());
     }
-
-    @Test
-    public void testNode_treeVisible() {
-        final Node n = new Rectangle();
-        Group g = new Group();
-        Scene s = new Scene(g);
-        assertTrue(g.impl_isTreeVisible());
-        assertFalse(n.impl_isTreeVisible());
-
-        g.getChildren().add(n);
-        assertTrue(n.impl_isTreeVisible());
-
-        g.getChildren().clear();
-        assertTrue(g.impl_isTreeVisible());
-        assertFalse(n.impl_isTreeVisible());
-
-        s.setRoot(new Group());
-        assertFalse(g.impl_isTreeVisible());
-
-        g.getChildren().add(n);
-        s.setRoot(g);
-        assertTrue(g.impl_isTreeVisible());
-        assertTrue(n.impl_isTreeVisible());
-
-        g.setVisible(false);
-        assertFalse(g.impl_isTreeVisible());
-        assertFalse(n.impl_isTreeVisible());
-    }
-
 }

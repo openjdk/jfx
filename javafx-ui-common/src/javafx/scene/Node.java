@@ -355,7 +355,7 @@ public abstract class Node implements EventTarget {
                 s.addToDirtyList(this);
         }
 
-        dirtyBits |= dirtyBit.getMask();
+        impl_setDirty(dirtyBit);
     }
 
     /**
@@ -367,6 +367,17 @@ public abstract class Node implements EventTarget {
     @Deprecated
     protected final boolean impl_isDirty(DirtyBits dirtyBit) {
         return (dirtyBits & dirtyBit.getMask()) != 0;
+    }
+
+    /**
+     * Set the specified dirty bit.
+     *
+     * @treatAsPrivate implementation detail
+     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
+     */
+    @Deprecated
+    private void impl_setDirty(DirtyBits dirtyBit) {
+        dirtyBits |= dirtyBit.getMask();
     }
 
     /**
@@ -502,10 +513,6 @@ public abstract class Node implements EventTarget {
             peer.setNodeBlendMode((mode == null)
                                   ? null
                                   : Blend.impl_getToolkitMode(mode));
-        }
-
-        if (impl_isDirty(DirtyBits.NODE_TREE_VISIBLE) && !treeVisible) {
-            peer.dispose();
         }
     }
 
@@ -702,7 +709,6 @@ public abstract class Node implements EventTarget {
                     if (getClip() != null) {
                         getClip().setScene(_scene);
                     }
-                    updateTreeVisible();
                     updateCanReceiveFocus();
                     if (isFocusTraversable()) {
                         if (oldScene != null) {
@@ -6439,8 +6445,7 @@ public abstract class Node implements EventTarget {
     }
 
     private void updateTreeVisible() {
-        setTreeVisible(isVisible() && ((getParent() != null && getParent().impl_isTreeVisible()) ||
-                (getScene() != null && getScene().getRoot() == this)));
+        setTreeVisible(isVisible() && ((getParent() == null) || getParent().impl_isTreeVisible()));
     }
 
     private boolean treeVisible;
@@ -6452,7 +6457,6 @@ public abstract class Node implements EventTarget {
             updateCanReceiveFocus();
             focusSetDirty(getScene());
             ((TreeVisiblePropertyReadOnly)treeVisibleProperty()).invalidate();
-            impl_markDirty(DirtyBits.NODE_TREE_VISIBLE);
         }
     }
 
