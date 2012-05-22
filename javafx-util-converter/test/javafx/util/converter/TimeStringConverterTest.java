@@ -126,14 +126,17 @@ public class TimeStringConverterTest {
      ********************************************************************/    
     
     @Test public void fromString_testValidInput() {
+        Locale.setDefault(Locale.US);
         assertEquals(VALID_TIME, converter.fromString(VALID_TIME_STRING));
     }
     
     @Test public void fromString_testValidInputWithWhiteSpace() {
+        Locale.setDefault(Locale.US);
         assertEquals(VALID_TIME, converter.fromString("      " + VALID_TIME_STRING + "      "));
     }
     
     @Test public void toString_validInput() {
+        Locale.setDefault(Locale.US);
         assertEquals(VALID_TIME_STRING, converter.toString(VALID_TIME));
     }
 }
