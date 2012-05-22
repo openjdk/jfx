@@ -236,6 +236,12 @@ public class ComboBox<T> extends ComboBoxBase<T> {
                 updateEditor();
             }
         });
+        
+        converterProperty().addListener(new InvalidationListener() {
+            @Override public void invalidated(Observable o) {
+                updateBindings();
+            }
+        });
     }
     
  
@@ -386,16 +392,31 @@ public class ComboBox<T> extends ComboBoxBase<T> {
      *                                                                         *
      **************************************************************************/        
 
+    private FocusableTextField textField;
+    
     private void updateEditor() {
         if (editor == null) {
             editor = new ReadOnlyObjectWrapper<TextField>(this, "editor");
         }
         
         if (isEditable()) {
-            editor.set(new FocusableTextField());
+            textField = new FocusableTextField();
+            updateBindings();
+            editor.set(textField);
         } else {
+            textField = null;
             editor.set(null);
         }
+    }
+    
+    private void updateBindings() {
+        // remove bindings if any exist
+        textField.promptTextProperty().unbindBidirectional(promptTextProperty());
+        textField.textProperty().unbindBidirectional(valueProperty());
+        
+        // update bindings with new converter
+        textField.promptTextProperty().bindBidirectional(promptTextProperty());
+        textField.textProperty().bindBidirectional(valueProperty(), getConverter());
     }
     
     /***************************************************************************
