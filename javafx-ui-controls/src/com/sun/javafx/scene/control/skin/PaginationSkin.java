@@ -44,6 +44,7 @@
 
 package com.sun.javafx.scene.control.skin;
 
+import com.sun.javafx.PlatformUtil;
 import com.sun.javafx.css.StyleableBooleanProperty;
 import com.sun.javafx.css.StyleableObjectProperty;
 import com.sun.javafx.css.StyleableProperty;
@@ -189,7 +190,7 @@ public class PaginationSkin extends SkinBase<Pagination, PaginationBehavior>  {
                     // Ignore any scroll events after the scrolling has finished.
                     return;
                 }
-                
+
                 touchMoved = true;
                 double delta = e.getSceneX() - pressPos;
                 double width = getWidth() - (getInsets().getLeft() + getInsets().getRight());
@@ -835,8 +836,20 @@ public class PaginationSkin extends SkinBase<Pagination, PaginationBehavior>  {
                     maxPageIndicatorCount = toIndex - fromIndex;
                 }
 
-                pageCount = maxPageIndicatorCount;
-                int lastIndicatorButtonIndex = maxPageIndicatorCount - 1;
+                int lastIndicatorButtonIndex;
+                if (pageCount > maxPageIndicatorCount) {
+                    pageCount = maxPageIndicatorCount;
+                    lastIndicatorButtonIndex = maxPageIndicatorCount - 1;
+                 } else {
+                    if (indicatorCount > getPageCount()) {
+                        pageCount = getPageCount();
+                        lastIndicatorButtonIndex = getPageCount() - 1;
+                    } else {
+                        pageCount = indicatorCount;
+                        lastIndicatorButtonIndex = indicatorCount - 1;
+                    }
+                }
+
                 if (currentIndex >= toIndex) {
                     // The current index has fallen off the right
                     toIndex = currentIndex;
@@ -851,7 +864,7 @@ public class PaginationSkin extends SkinBase<Pagination, PaginationBehavior>  {
 
                 if (toIndex > getPageCount() - 1) {
                     toIndex = getPageCount() - 1;
-                    fromIndex = toIndex - lastIndicatorButtonIndex;
+                    //fromIndex = toIndex - lastIndicatorButtonIndex;
                 }
 
                 if (fromIndex < 0) {
@@ -895,7 +908,7 @@ public class PaginationSkin extends SkinBase<Pagination, PaginationBehavior>  {
                     return false;
                 } else {
                   toIndex = getPageCount() - 1;
-                  fromIndex = toIndex - lastIndicatorButtonIndex;
+                  //fromIndex = toIndex - lastIndicatorButtonIndex;
                 }
             }
 
@@ -946,8 +959,8 @@ public class PaginationSkin extends SkinBase<Pagination, PaginationBehavior>  {
                     i += maxPageIndicatorCount;
                 }
             }
-            // We should never be here
-            return -1;
+            // We are on the last page set going back to the previous page set
+            return maxPageIndicatorCount - 1;
         }
 
         private Pos sideToPos(Side s) {
@@ -1029,6 +1042,9 @@ public class PaginationSkin extends SkinBase<Pagination, PaginationBehavior>  {
                 // Grey out the right arrow if we have reached the end.
                 rightArrowButton.setDisable(true);
             }
+            // Reapply CSS so the left and right arrow button's disable state is updated
+            // immediately.
+            impl_reapplyCSS();
 
             leftArrowButton.setVisible(isArrowsVisible());
             rightArrowButton.setVisible(isArrowsVisible());
