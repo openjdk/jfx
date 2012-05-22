@@ -441,6 +441,52 @@ public class PopupTest {
         }
     }
 
+    @Test(expected=NullPointerException.class)
+    public void testShowWithNullOwner() {
+        final Popup popup = new Popup();
+        popup.show(null);
+    }
+
+    @Test(expected=NullPointerException.class)
+    public void testShowXYWithNullOwner() {
+        final Popup popup = new Popup();
+        popup.show((Window) null, 10, 10);
+    }
+
+    @Test(expected=IllegalArgumentException.class)
+    public void testShowWithOwnerThatWouldCreateCycle1() {
+        final Popup popup = new Popup();
+        popup.show(popup);                
+    }
+
+    @Test(expected=IllegalArgumentException.class)
+    public void testShowWithOwnerThatWouldCreateCycle2() {
+        final Popup popup1 = new Popup();
+        final Popup popup2 = new Popup();
+
+        popup1.show(stage);
+        popup2.show(popup1);
+        popup1.hide();
+        popup1.show(popup2);
+    }
+
+    @Test(expected=IllegalArgumentException.class)
+    public void testShowXYWithOwnerThatWouldCreateCycle1() {
+        final Popup popup = new Popup();
+        popup.show(popup, 10, 20);
+    }
+
+    @Test(expected=IllegalArgumentException.class)
+    public void testShowXYWithOwnerThatWouldCreateCycle2() {
+        final Popup popup1 = new Popup();
+        final Popup popup2 = new Popup();
+
+        popup1.show(stage);
+        popup2.show(popup1);
+        popup1.hide();
+        popup1.show(popup2, 10, 20);
+    }
+
     private static final class EventCounter implements EventHandler<Event> {
         private int counter;
 

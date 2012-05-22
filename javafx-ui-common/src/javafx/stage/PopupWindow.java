@@ -270,9 +270,77 @@ public abstract class PopupWindow extends Window {
     /**
      * Show the popup.
      * @param owner The owner of the popup. This must not be null.
+     * @throws NullPointerException if owner is null
+     * @throws IllegalArgumentException if the specified owner window would
+     *      create cycle in the window hierarchy
      */
     public void show(Window owner) {
-        if (owner == null) throw new NullPointerException();
+        validateOwnerWindow(owner);
+        showImpl(owner);
+    }
+
+    /**
+     * Shows the popup at the specified x,y location relative to the screen.
+     * The popup is associated with the specified owner node. The {@code Window}
+     * which contains the owner node at the time of the call becomes an owner
+     * window of the displayed popup.
+     * 
+     * @param ownerNode The owner Node of the popup. It must not be null
+     *        and must be associated with a Window.
+     * @param screenX the x location in screen coordinates at which to
+     *        show this PopupWindow.
+     * @param screenY the y location in screen coordiates at which to
+     *        show this PopupWindow.
+     * @throws NullPointerException if ownerNode is null
+     * @throws IllegalArgumentException if the specified owner node is not
+     *      associated with a Window or when the window would create cycle
+     *      in the window hierarchy
+     */
+    public void show(Node ownerNode, double screenX, double screenY) {
+        if (ownerNode == null) {
+            throw new NullPointerException("The owner node must not be null");
+        }
+
+        final Scene ownerNodeScene = ownerNode.getScene();
+        if ((ownerNodeScene == null)
+                || (ownerNodeScene.getWindow() == null)) {
+            throw new IllegalArgumentException(
+                    "The owner node needs to be associated with a window");
+        }
+
+        final Window newOwnerWindow = ownerNodeScene.getWindow();
+        validateOwnerWindow(newOwnerWindow);
+
+        this.ownerNode.set(ownerNode);
+
+        setX(screenX);
+        setY(screenY);
+        showImpl(newOwnerWindow);
+    }
+
+    /**
+     * Show the Popup at the specified x,y location relative to the screen
+     * @param ownerWindow The owner of the popup. This must not be null.
+     * @param screenX the x location in screen coordinates at which to
+     *        show this PopupWindow.
+     * @param screenY the y location in screen coordiates at which to
+     *        show this PopupWindow.
+     * @throws NullPointerException if ownerWindow is null
+     * @throws IllegalArgumentException if the specified owner window would
+     *      create cycle in the window hierarchy
+     */
+    public void show(Window ownerWindow, double screenX, double screenY) {
+        validateOwnerWindow(ownerWindow);
+
+        setX(screenX);
+        setY(screenY);
+        showImpl(ownerWindow);
+    }
+
+    private void showImpl(final Window owner) {
+        if (isShowing()) {
+            return;
+        }
 
         // Update the owner field
         this.ownerWindow.set(owner);
@@ -297,45 +365,6 @@ public abstract class PopupWindow extends Window {
                 }
             }
         }
-    }
-
-    /**
-     * Shows the popup at the specified x,y location relative to the screen.
-     * The popup is associated with the specified owner node. The {@code Window}
-     * which contains the owner node at the time of the call becomes an owner
-     * window of the displayed popup.
-     * 
-     * @param ownerNode The owner Node of the popup. It must not be null
-     *        and must be associated with a Window.
-     * @param screenX the x location in screen coordinates at which to
-     *        show this PopupWindow.
-     * @param screenY the y location in screen coordiates at which to
-     *        show this PopupWindow.
-     */
-    public void show(Node ownerNode, double screenX, double screenY) {
-        final Scene ownerNodeScene = ownerNode.getScene();
-        if ((ownerNodeScene == null)
-                || (ownerNodeScene.getWindow() == null)) {
-            throw new IllegalStateException(
-                    "The owner node needs to be associated with a window");
-        }
-
-        this.ownerNode.set(ownerNode);
-        show(ownerNodeScene.getWindow(), screenX, screenY);
-    }
-
-    /**
-     * Show the Popup at the specified x,y location relative to the screen
-     * @param ownerWindow The owner of the popup. This must not be null.
-     * @param screenX the x location in screen coordinates at which to
-     *        show this PopupWindow.
-     * @param screenY the y location in screen coordiates at which to
-     *        show this PopupWindow.
-     */
-    public void show(Window ownerWindow, double screenX, double screenY) {
-        setX(screenX);
-        setY(screenY);
-        show(ownerWindow);
     }
 
     /**
@@ -526,6 +555,47 @@ public abstract class PopupWindow extends Window {
                 autofixHandler = null;
             }
         }
+    }
+
+    private void validateOwnerWindow(final Window owner) {
+        if (owner == null) {
+            throw new NullPointerException("Owner window must not be null");
+        }
+
+        if (wouldCreateCycle(owner, this)) {
+            throw new IllegalArgumentException(
+                    "Specified owner window would create cycle"
+                        + " in the window hierarchy");
+        }
+
+        if (isShowing() && (getOwnerWindow() != owner)) {
+            throw new IllegalStateException(
+                    "Popup is already shown with different owner window");
+        }
+    }
+
+    private static Window getOwnerWindow(final Window window) {
+       if (window instanceof PopupWindow) {
+           return ((PopupWindow) window).getOwnerWindow();
+       }
+
+       if (window instanceof Stage) {
+           return ((Stage) window).getOwner();
+       }
+
+       return null;
+    }
+
+    private static boolean wouldCreateCycle(Window parent, final Window child) {
+       while (parent != null) {
+           if (parent == child) {
+               return true;
+           }
+
+           parent = getOwnerWindow(parent);
+       }
+
+       return false;
     }
 
     private final class AutofixHandler implements InvalidationListener {
