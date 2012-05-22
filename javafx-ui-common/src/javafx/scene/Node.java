@@ -99,7 +99,7 @@ import java.util.*;
 import javafx.beans.property.*;
 import javafx.beans.value.WritableValue;
 import javafx.geometry.Rectangle2D;
-import javafx.scene.image.Image;
+import javafx.scene.image.WritableImage;
 import javafx.scene.input.SwipeEvent;
 import javafx.scene.input.TouchEvent;
 import javafx.scene.text.Font;
@@ -1628,7 +1628,7 @@ public abstract class Node implements EventTarget {
         Scene.impl_setAllowPGAccess(false);
     }
 
-    private Object doSnapshot(SnapshotParameters params, Object platformImage) {
+    private WritableImage doSnapshot(SnapshotParameters params, WritableImage img) {
         if (getScene() != null) {
             getScene().doCSSLayoutSyncForSnapshot(this);
         } else {
@@ -1662,9 +1662,9 @@ public abstract class Node implements EventTarget {
             w = tempBounds.getWidth();
             h = tempBounds.getHeight();
         }
-        Object result = Scene.doSnapshot(getScene(), x, y, w, h,
+        WritableImage result = Scene.doSnapshot(getScene(), x, y, w, h,
                 this, transform, params.isDepthBuffer(),
-                params.getFill(), params.getCamera(), platformImage);
+                params.getFill(), params.getCamera(), img);
 
         return result;
     }
@@ -1680,21 +1680,19 @@ public abstract class Node implements EventTarget {
      * then the Scene's attributes will be used if this node is part of a scene,
      * or default attributes will be used if this node is not part of a scene.
      *
-     * @param image the image that will be used to hold the rendered node.
-     * It may be null in which case a new Image will be constructed.
+     * @param image the writable image that will be used to hold the rendered node.
+     * It may be null in which case a new WritableImage will be constructed.
      * If the image is non-null, the node will be rendered into the
      * existing image.
-     * If the image is larger than the bounds of the node, the area outside
-     * the bounds will be filled with the fill color specified in the
-     * snapshot parameters. If the image is smaller than the bounds,
-     * the rendered image will be clipped.
+     * In this case, the width and height of the image determine the area
+     * that is rendered instead of the width and height of the Node's bounds.
      *
      * @throws IllegalStateException if this method is called on a thread
      *     other than the JavaFX Application Thread.
      *
      * @return the rendered image
      */
-    public Image snapshot(SnapshotParameters params, Image image) {
+    public WritableImage snapshot(SnapshotParameters params, WritableImage image) {
         Toolkit.getToolkit().checkFxUserThread();
 
         if (params == null) {
@@ -1707,16 +1705,7 @@ public abstract class Node implements EventTarget {
             }
         }
 
-        // TODO: Ignore image for now. In order to support it, we either need
-        // ImageOps support or we need a private method to mutate the existing
-        // platform image in an image object.
-        if (image != null) {
-            System.err.println("WARNING: Scene.snapshot: image currently ignored");
-        }
-
-        Object platformImage = doSnapshot(params, null);
-        Image theImage = Image.impl_fromPlatformImage(platformImage);
-        return theImage;
+        return doSnapshot(params, image);
     }
 
     /**
@@ -1741,21 +1730,19 @@ public abstract class Node implements EventTarget {
      * then the Scene's attributes will be used if this node is part of a scene,
      * or default attributes will be used if this node is not part of a scene.
      *
-     * @param image the image that will be used to hold the rendered node.
-     * It may be null in which case a new Image will be constructed.
+     * @param image the writable image that will be used to hold the rendered node.
+     * It may be null in which case a new WritableImage will be constructed.
      * If the image is non-null, the node will be rendered into the
      * existing image.
-     * If the image is larger than the bounds of the node, the area outside
-     * the bounds will be filled with the fill color specified in the
-     * snapshot parameters. If the image is smaller than the bounds,
-     * the rendered image will be clipped.
+     * In this case, the width and height of the image determine the area
+     * that is rendered instead of the width and height of the Node's bounds.
      *
      * @throws IllegalStateException if this method is called on a thread
      *     other than the JavaFX Application Thread.
      *
      */
     public void snapshot(Callback<SnapshotResult, Void> callback,
-            SnapshotParameters params, Image image) {
+            SnapshotParameters params, WritableImage image) {
 
         Toolkit.getToolkit().checkFxUserThread();
 
@@ -1771,24 +1758,17 @@ public abstract class Node implements EventTarget {
             params = params.copy();
         }
 
-        // TODO: Ignore image for now. In order to support it, we either need
-        // ImageOps support or we need a private method to mutate the existing
-        // platform image in an image object.
-        if (image != null) {
-            System.err.println("WARNING: Scene.snapshot: image currently ignored");
-        }
-
         final SnapshotParameters theParams = params;
         final Callback<SnapshotResult, Void> theCallback = callback;
+        final WritableImage theImage = image;
 
         // Create a deferred runnable that will be run from a pulse listener
         // that is called after all of the scenes have been synced but before
         // any of them have been rendered.
         final Runnable snapshotRunnable = new Runnable() {
             @Override public void run() {
-                Object platformImage = doSnapshot(theParams, null);
-                Image theImage = Image.impl_fromPlatformImage(platformImage);
-                SnapshotResult result = new SnapshotResult(theImage, Node.this, theParams);
+                WritableImage img = doSnapshot(theParams, theImage);
+                SnapshotResult result = new SnapshotResult(img, Node.this, theParams);
 //                System.err.println("Calling snapshot callback");
                 try {
                     Void v = theCallback.call(result);

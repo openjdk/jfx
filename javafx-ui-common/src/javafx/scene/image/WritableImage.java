@@ -25,7 +25,9 @@
 
 package javafx.scene.image;
 
+import com.sun.javafx.tk.ImageLoader;
 import com.sun.javafx.tk.PlatformImage;
+import com.sun.javafx.tk.Toolkit;
 import java.nio.Buffer;
 import java.nio.ByteBuffer;
 import java.nio.IntBuffer;
@@ -39,6 +41,21 @@ import javafx.scene.paint.Color;
  * images read from a file or URL.
  */
 public class WritableImage extends Image {
+
+    static {
+        Toolkit.setWritableImageAccessor(new Toolkit.WritableImageAccessor() {
+            @Override public void loadTkImage(WritableImage wimg, Object loader) {
+                wimg.loadTkImage(loader);
+            }
+
+            @Override public Object getTkImageLoader(WritableImage wimg) {
+                return wimg.getTkImageLoader();
+            }
+        });
+    }
+
+    private ImageLoader tkImageLoader;
+
     /**
      * Construct an empty image of the specified dimensions.
      * The image will initially be filled with transparent pixels.
@@ -211,5 +228,25 @@ public class WritableImage extends Image {
             };
         }
         return writer;
+    }
+
+    private void loadTkImage(Object loader) {
+        if (!(loader instanceof ImageLoader)) {
+            throw new IllegalArgumentException("Unrecognized image loader: "
+                    + loader);
+        }
+        ImageLoader tkLoader = (ImageLoader)loader;
+        if (tkLoader.getWidth() != (int)this.getWidth()
+                || tkLoader.getHeight() != (int)this.getHeight())
+        {
+            throw new IllegalArgumentException("Size of loader does not match size of image");
+        }
+
+        super.setPlatformImage(tkLoader.getFrame(0));
+        this.tkImageLoader = tkLoader;
+    }
+
+    private Object getTkImageLoader() {
+        return tkImageLoader;
     }
 }

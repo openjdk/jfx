@@ -24,18 +24,18 @@
  */
 package javafx.scene;
 
-import javafx.scene.image.Image;
+import javafx.scene.image.WritableImage;
 
 /**
  * This class holds the result of a snapshot operation.
  */
 public class SnapshotResult {
-    private Image image;
+    private WritableImage image;
     private Object source;
     private SnapshotParameters params;
 
     // Package scope constructor
-    SnapshotResult(Image image, Object source, SnapshotParameters params) {
+    SnapshotResult(WritableImage image, Object source, SnapshotParameters params) {
         this.image = image;
         this.source = source;
         this.params = params;
@@ -46,7 +46,7 @@ public class SnapshotResult {
      *
      * @return the generated image
      */
-    public Image getImage() {
+    public WritableImage getImage() {
         return image;
     }
 

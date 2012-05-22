@@ -867,6 +867,10 @@ public class Image {
         heightPropertyImpl().store(height);
     }
 
+    void setPlatformImage(PlatformImage newPlatformImage) {
+        platformImage.set(newPlatformImage);
+    }
+
     private static final int MAX_RUNNING_TASKS = 4;
     private static int runningTasks = 0;
     private static final Queue<ImageTask> pendingTasks =

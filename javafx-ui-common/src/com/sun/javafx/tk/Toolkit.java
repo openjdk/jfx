@@ -44,6 +44,7 @@ import javafx.geometry.Dimension2D;
 import javafx.scene.Scene;
 import javafx.scene.effect.BlurType;
 import javafx.scene.image.Image;
+import javafx.scene.image.WritableImage;
 import javafx.scene.input.DragEvent;
 import javafx.scene.input.Dragboard;
 import javafx.scene.input.InputMethodEvent;
@@ -920,6 +921,21 @@ public abstract class Toolkit {
 
     public static void setSceneAccessor(SceneAccessor accessor) {
         sceneAccessor = accessor;
+    }
+
+    public interface WritableImageAccessor {
+        public void loadTkImage(WritableImage wimg, Object loader);
+        public Object getTkImageLoader(WritableImage wimg);
+    }
+
+    private static WritableImageAccessor writableImageAccessor = null;
+
+    public static void setWritableImageAccessor(WritableImageAccessor accessor) {
+        writableImageAccessor = accessor;
+    }
+
+    public static WritableImageAccessor getWritableImageAccessor() {
+        return writableImageAccessor;
     }
 
 }

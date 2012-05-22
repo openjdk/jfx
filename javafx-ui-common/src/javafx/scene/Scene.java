@@ -110,7 +110,7 @@ import javafx.beans.property.ReadOnlyDoubleProperty;
 import javafx.beans.property.ReadOnlyDoubleWrapper;
 import javafx.beans.property.ReadOnlyObjectProperty;
 import javafx.beans.property.ReadOnlyObjectWrapper;
-import javafx.scene.image.Image;
+import javafx.scene.image.WritableImage;
 import javafx.scene.input.GestureEvent;
 import javafx.scene.input.MouseDragEvent;
 import javafx.scene.input.RotateEvent;
@@ -1017,7 +1017,7 @@ public class Scene implements EventTarget {
     }
 
     /**
-     * This method is superseded by {@link #snapshot(javafx.scene.image.Image)}
+     * This method is superseded by {@link #snapshot(javafx.scene.image.WritableImage)}
      *
      * WARNING: This method is not part of the public API and is
      * subject to change!  It is intended for use by the designer tool only.
@@ -1030,8 +1030,7 @@ public class Scene implements EventTarget {
     // to new 2.2 public API before we remove this.
     @Deprecated
     public Object renderToImage(Object platformImage) {
-        Toolkit.getToolkit().checkFxUserThread();
-        return doSnapshot(platformImage, 1.0f);
+        return renderToImage(platformImage, 1.0f);
     }
 
     /**
@@ -1052,7 +1051,11 @@ public class Scene implements EventTarget {
     @Deprecated
     public Object renderToImage(Object platformImage, float scale) {
         Toolkit.getToolkit().checkFxUserThread();
-        return doSnapshot(platformImage, scale);
+        // NOTE: that we no longer use the passed in platform image. Since this
+        // API is deprecated and will be removed in 3.0 this is not a concern.
+        // Also, we used to return a TK image loader and now we return
+        // the actual TK PlatformImage.
+        return doSnapshot(null, scale).impl_getPlatformImage();
     }
 
     private void doLayoutPassWithoutPulse(int maxAttempts) {
@@ -1089,20 +1092,32 @@ public class Scene implements EventTarget {
 
     // Shared method for Scene.snapshot and Node.snapshot. It is static because
     // we might be doing a Node snapshot with a null scene
-    // TODO: modify to take an Image rather than platformImage
-    static Object doSnapshot(Scene scene,
+    static WritableImage doSnapshot(Scene scene,
             double x, double y, double w, double h,
             Node root, BaseTransform transform, boolean depthBuffer,
-            Paint fill, Camera camera, Object platformImage) {
+            Paint fill, Camera camera, WritableImage wimg) {
 
         Toolkit tk = Toolkit.getToolkit();
         Toolkit.ImageRenderingContext context = new Toolkit.ImageRenderingContext();
 
+        int xMin = (int)Math.floor(x);
+        int yMin = (int)Math.floor(y);
+        int xMax = (int)Math.ceil(x + w);
+        int yMax = (int)Math.ceil(y + h);
+        int width = xMax - xMin;
+        int height = yMax - yMin;
+        if (wimg == null) {
+            wimg = new WritableImage(width, height);
+        } else {
+            width = (int)wimg.getWidth();
+            height = (int)wimg.getHeight();
+        }
+
         impl_setAllowPGAccess(true);
-        context.x = (int)Math.floor(x);
-        context.y = (int)Math.floor(y);
-        context.width = (int)Math.ceil(w);
-        context.height = (int)Math.ceil(h);
+        context.x = xMin;
+        context.y = xMin;
+        context.width = width;
+        context.height = height;
         context.transform = transform;
         context.depthBuffer = depthBuffer;
         context.root = root.impl_getPGNode();
@@ -1113,9 +1128,12 @@ public class Scene implements EventTarget {
         } else {
             context.camera = null;
         }
-        context.platformImage = platformImage;
+
+        Toolkit.WritableImageAccessor accessor = Toolkit.getWritableImageAccessor();
+        context.platformImage = accessor.getTkImageLoader(wimg);
         impl_setAllowPGAccess(false);
-        Object result = tk.renderToImage(context);
+        Object tkImage = tk.renderToImage(context);
+        accessor.loadTkImage(wimg, tkImage);
 
         // if this scene belongs to some stage
         // we need to mark the entire scene as dirty
@@ -1124,14 +1142,13 @@ public class Scene implements EventTarget {
             scene.setNeedsRepaint();
         }
 
-        return result;
+        return wimg;
     }
 
     /**
      * Implementation method for snapshot
      */
-    // TODO: modify to take an Image rather than platformImage
-    private Object doSnapshot(Object platformImage, float scale) {
+    private WritableImage doSnapshot(WritableImage img, float scale) {
         // TODO: no need to do CSS, layout or sync in the deferred case,
         // if this scene is attached to a visible stage
         doCSSLayoutSyncForSnapshot(getRoot());
@@ -1149,7 +1166,7 @@ public class Scene implements EventTarget {
 
         return doSnapshot(this, 0, 0, w, h,
                 getRoot(), transform, isDepthBuffer(),
-                getFill(), getCamera(), platformImage);
+                getFill(), getCamera(), img);
     }
 
     // Pulse listener used to run all deferred (async) snapshot requests
@@ -1203,32 +1220,21 @@ public class Scene implements EventTarget {
      * CSS and layout processing will be done for the scene prior to
      * rendering it.
      *
-     * @param image the image that will be used to hold the rendered scene.
-     * It may be null in which case a new Image will be constructed.
+     * @param image the writable image that will be used to hold the rendered scene.
+     * It may be null in which case a new WritableImage will be constructed.
      * If the image is non-null, the scene will be rendered into the
      * existing image.
-     * If the image is larger than the scene, the area outside the bounds
-     * of the scene will be filled with the Scene fill color. If the image is
-     * smaller than the scene, the rendered image will be clipped.
+     * In this case, the width and height of the image determine the area
+     * that is rendered instead of the width and height of the scene.
      *
      * @throws IllegalStateException if this method is called on a thread
      *     other than the JavaFX Application Thread.
      *
      * @return the rendered image
      */
-    public Image snapshot(Image image) {
+    public WritableImage snapshot(WritableImage image) {
         Toolkit.getToolkit().checkFxUserThread();
-
-        // TODO: Ignore image for now. In order to support it, we either need
-        // ImageOps support or we need a private method to mutate the existing
-        // platform image in an image object.
-        if (image != null) {
-            System.err.println("WARNING: Scene.snapshot: image currently ignored");
-        }
-
-        Object platformImage = doSnapshot(null, 1.0f);
-        Image theImage = Image.impl_fromPlatformImage(platformImage);
-        return theImage;
+        return  doSnapshot(image, 1.0f);
     }
 
     /**
@@ -1246,37 +1252,30 @@ public class Scene implements EventTarget {
      * the callback will contain the rendered image and the source scene
      * that was rendered.
      *
-     * @param image the image that will be used to hold the rendered scene.
-     * It may be null in which case a new Image will be constructed.
+     * @param image the writable image that will be used to hold the rendered scene.
+     * It may be null in which case a new WritableImage will be constructed.
      * If the image is non-null, the scene will be rendered into the
      * existing image.
-     * If the image is larger than the scene, the area outside the bounds
-     * of the scene will be filled with the Scene fill color. If the image is
-     * smaller than the scene, the rendered image will be clipped.
+     * In this case, the width and height of the image determine the area
+     * that is rendered instead of the width and height of the scene.
      *
      * @throws IllegalStateException if this method is called on a thread
      *     other than the JavaFX Application Thread.
      */
-    public void snapshot(Callback<SnapshotResult, Void> callback, Image image) {
+    public void snapshot(Callback<SnapshotResult, Void> callback, WritableImage image) {
         Toolkit.getToolkit().checkFxUserThread();
 
-        // TODO: Ignore image for now. In order to support it, we either need
-        // ImageOps support or we need a private method to mutate the existing
-        // platform image in an image object.
-        if (image != null) {
-            System.err.println("WARNING: Scene.snapshot: image currently ignored");
-        }
+        final Callback<SnapshotResult, Void> theCallback = callback;
+        final WritableImage theImage = image;
 
         // Create a deferred runnable that will be run from a pulse listener
         // that is called after all of the scenes have been synced but before
         // any of them have been rendered.
-        final Callback<SnapshotResult, Void> theCallback = callback;
         final Runnable snapshotRunnable = new Runnable() {
             @Override public void run() {
-                Object platformImage = doSnapshot(null, 1.0f);
-                Image theImage = Image.impl_fromPlatformImage(platformImage);
+                WritableImage img = doSnapshot(theImage, 1.0f);
 //                System.err.println("Calling snapshot callback");
-                SnapshotResult result = new SnapshotResult(theImage, Scene.this, null);
+                SnapshotResult result = new SnapshotResult(img, Scene.this, null);
                 try {
                     Void v = theCallback.call(result);
                 } catch (Throwable th) {
