@@ -22,16 +22,7 @@
     <import file="../build-defs.xml"/>
     <import file="build-common.xml"/>
 
-    <target name="test" depends="init,jar">
-      <!-- create a META-INF directory and copy over the fonts.mf file from
-         the unit test workspace. This is necessary so that the
-         FontManagerTest unit test can check that the embedded font logic
-         works -->
-      <mkdir dir="${build.test.classes.dir}/META-INF" />
-      <copy todir="${build.test.classes.dir}/META-INF"
-            file="test/unit/com/sun/javafx/scene/text/fonts.mf" />
-      <unzip src="${jfx.amble-fonts.jar}" dest="${build.test.classes.dir}" />
-      <test-project />
-  </target>
+    <target name="test" depends="javafx-ui-common-common.test"/>
+    <target name="-pre-coverage" depends="javafx-ui-common-common.-pre-coverage"/>
 
 </project>
