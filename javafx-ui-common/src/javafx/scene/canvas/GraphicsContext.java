@@ -31,12 +31,16 @@ import com.sun.javafx.geom.transform.Affine2D;
 import com.sun.javafx.geom.transform.NoninvertibleTransformException;
 import com.sun.javafx.sg.GrowableDataBuffer;
 import com.sun.javafx.sg.PGCanvas;
-import java.util.Arrays;
+import java.nio.Buffer;
+import java.nio.ByteBuffer;
+import java.nio.IntBuffer;
 import java.util.LinkedList;
-import javafx.geometry.Bounds;
 import javafx.geometry.VPos;
 import javafx.scene.effect.Effect;
 import javafx.scene.image.Image;
+import javafx.scene.image.PixelFormat;
+import javafx.scene.image.PixelReader;
+import javafx.scene.image.PixelWriter;
 import javafx.scene.paint.Color;
 import javafx.scene.paint.Paint;
 import javafx.scene.shape.ArcType;
@@ -44,7 +48,6 @@ import javafx.scene.shape.FillRule;
 import javafx.scene.shape.StrokeLineCap;
 import javafx.scene.shape.StrokeLineJoin;
 import javafx.scene.text.Font;
-import javafx.scene.text.Text;
 import javafx.scene.text.TextAlignment;
 import javafx.scene.transform.Affine;
 
@@ -103,59 +106,6 @@ public final class GraphicsContext {
         COPY,
         XOR,
     };
-
-    /**
-     * @deprecated 
-     */
-    public static enum ImgFormat {
-        BYTE_BGRA,
-        BYTE_BGRA_PRE,
-        BYTE_RGBA,
-        BYTE_RGBA_PRE,
-    }
-
-    /**
-     * @deprecated 
-     */
-    public static class ImageData {
-        public final ImgFormat format;
-        public final int width;
-        public final int height;
-        public final byte[] data;
-
-        ImageData(ImgFormat format, int width, int height) {
-            this.format = format;
-            this.width = width;
-            this.height = height;
-            this.data = new byte[width * height * 4];
-        }
-    }
-
-    private static PGCanvas.ImgFormat toPGImgFormat(ImgFormat fxformat) {
-        switch (fxformat) {
-            case BYTE_BGRA:     return PGCanvas.ImgFormat.BYTE_BGRA;
-            case BYTE_BGRA_PRE: return PGCanvas.ImgFormat.BYTE_BGRA_PRE;
-            case BYTE_RGBA:     return PGCanvas.ImgFormat.BYTE_RGBA;
-            case BYTE_RGBA_PRE: return PGCanvas.ImgFormat.BYTE_RGBA_PRE;
-            default:
-                throw new InternalError("Unrecognized platform image format");
-        }
-    }
-
-    private static ImgFormat toFXImgFormat(PGCanvas.ImgFormat pgformat) {
-        switch (pgformat) {
-            case BYTE_BGRA:     return ImgFormat.BYTE_BGRA;
-            case BYTE_BGRA_PRE: return ImgFormat.BYTE_BGRA_PRE;
-            case BYTE_RGBA:     return ImgFormat.BYTE_RGBA;
-            case BYTE_RGBA_PRE: return ImgFormat.BYTE_RGBA_PRE;
-            default:
-                throw new InternalError("Unrecognized platform image format");
-        }
-    }
-
-    private ImgFormat bestImgFormat() {
-        return toFXImgFormat(theCanvas.getPGCanvas().bestImgFormat());
-    }
 
     Canvas theCanvas;
     Path2D path;
@@ -1713,133 +1663,122 @@ public final class GraphicsContext {
         writeImage(img, dx, dy, dw, dh, sx, sy, sw, sh);
     }
 
+    private PixelWriter writer;
     /**
-     * @deprecated
-     * Creates a new ImageData using the "best" format. The best format is will
-     * be determined by the renderer (currently BGRA PRE).
+     * Returns a {@link PixelWriter} object that can be used to modify
+     * the pixels of the {@link Canvas} associated with this
+     * {@code GraphicsContext}.
+     * All coordinates in the {@code PixelWriter} methods on the returned
+     * object will be in device space since they refer directly to pixels.
      * 
-     * @param sw
-     * @param sh
-     * @return
+     * @return the {@code PixelWriter} for modifying the pixels of this
+     *         {@code Canvas}
      */
-    @Deprecated
-    public ImageData createImageData(double sw, double sh) {
-        return createImageData(bestImgFormat(), sw, sh);
+    public PixelWriter getPixelWriter() {
+        if (writer == null) {
+            writer = new PixelWriter() {
+                @Override
+                public PixelFormat getPixelFormat() {
+                    return PixelFormat.getByteBgraPreInstance();
+                }
+
+                @Override
+                public void setArgb(int x, int y, int argb) {
+                    GrowableDataBuffer buf = getBuffer();
+                    buf.putByte(PGCanvas.PUT_ARGB);
+                    buf.putInt(x);
+                    buf.putInt(y);
+                    buf.putInt(argb);
+                }
+
+                @Override
+                public void setColor(int x, int y, Color c) {
+                    int a = (int) Math.round(c.getOpacity() * 255.0);
+                    int r = (int) Math.round(c.getRed() * 255.0);
+                    int g = (int) Math.round(c.getGreen() * 255.0);
+                    int b = (int) Math.round(c.getBlue() * 255.0);
+                    setArgb(x, y, (a << 24) | (r << 16) | (g << 8) | b);
+                }
+
+                @Override
+                public <T extends Buffer> void
+                    setPixels(int x, int y, int w, int h,
+                              PixelFormat<T> pixelformat,
+                              T buffer, int scan)
+                {
+                    for (int j = 0; j < h; j++) {
+                        for (int i = 0; i < w; i++) {
+                            int argb = pixelformat.getArgb(buffer, i, j, scan);
+                            setArgb(x + i, y + j, argb);
+                        }
+                    }
+                }
+
+                @Override
+                public void setPixels(int x, int y, int w, int h,
+                                      PixelFormat<ByteBuffer> pixelformat,
+                                      byte[] buffer, int offset, int scanlineStride)
+                {
+                    ByteBuffer bytebuf = ByteBuffer.wrap(buffer);
+                    bytebuf.position(offset);
+                    setPixels(x, y, w, h, pixelformat, bytebuf, scanlineStride);
+                }
+
+                @Override
+                public void setPixels(int x, int y, int w, int h,
+                                      PixelFormat<IntBuffer> pixelformat,
+                                      int[] buffer, int offset, int scanlineStride)
+                {
+                    IntBuffer bytebuf = IntBuffer.wrap(buffer);
+                    bytebuf.position(offset);
+                    setPixels(x, y, w, h, pixelformat, bytebuf, scanlineStride);
+                }
+
+                @Override
+                public void setPixels(int dstx, int dsty, int w, int h,
+                                      PixelReader reader, int srcx, int srcy)
+                {
+                    for (int j = 0; j < h; j++) {
+                        for (int i = 0; i < w; i++) {
+                            int argb = reader.getArgb(srcx + i, srcy + j);
+                            setArgb(dstx + i, dsty + j, argb);
+                        }
+                    }
+                }
+            };
+        }
+        return writer;
     }
 
     /**
-     * @deprecated
-     * Returns a newly created image data using the given format.
-     * 
-     * @param format
-     * @param sw
-     * @param sh
-     * @return
-     */
-    @Deprecated
-    public ImageData createImageData(ImgFormat format, double sw, double sh) {
-        return new ImageData(format, (int) sw, (int) sh);
-    }
-
-    /**
-     * @deprecated
-     * Puts the image data into the Canvas
-     * 
-     * @param imagedata
-     * @return
-     */
-    @Deprecated
-    public ImageData createImageData(ImageData imagedata) {
-        return new ImageData(imagedata.format, imagedata.width, imagedata.height);
-    }
-
-    /**
-     * Puts the image data into the Canvas
-     * 
-     * @param imagedata
-     * @param dx
-     * @param dy
-     */
-    public void putImageData(ImageData imagedata, double dx, double dy) {
-        putImageData(imagedata, dx, dy, 0, 0, imagedata.width, imagedata.height);
-    }
-
-    /**
-     * Puts the image data into the Canvas
-     * 
-     * @param imagedata
-     * @param dx
-     * @param dy
-     * @param dirtyX
-     * @param dirtyY
-     * @param dirtyWidth
-     * @param dirtyHeight
-     */
-    public void putImageData(ImageData imagedata, double dx, double dy,
-                             double dirtyX, double dirtyY,
-                             double dirtyWidth, double dirtyHeight)
-    {
-        if (dirtyWidth < 0) {
-            dirtyX += dirtyWidth;
-            dirtyWidth = -dirtyWidth;
-        }
-        if (dirtyHeight < 0) {
-            dirtyY += dirtyHeight;
-            dirtyHeight = -dirtyHeight;
-        }
-        if (dirtyX < 0) {
-            dirtyWidth += dirtyX;
-            dirtyX = 0;
-        }
-        if (dirtyY < 0) {
-            dirtyHeight += dirtyY;
-            dirtyY = 0;
-        }
-        if (dirtyWidth > imagedata.width) {
-            dirtyWidth = imagedata.width - dirtyX;
-        }
-        if (dirtyHeight > imagedata.height) {
-            dirtyHeight = imagedata.height - dirtyY;
-        }
-        int sx0 = (int) Math.ceil(dirtyX - 0.5);
-        int sy0 = (int) Math.ceil(dirtyY - 0.5);
-        int sx1 = (int) Math.ceil(dirtyX + dirtyWidth - 0.5);
-        int sy1 = (int) Math.ceil(dirtyY + dirtyHeight - 0.5);
-        int w = sx1 - sx0;
-        int h = sy1 - sy0;
-        if (w <= 0 || h <= 0) return;
-        PGCanvas.ImgFormat pgformatin = toPGImgFormat(imagedata.format);
-        PGCanvas.ImgFormat pgformatout =
-            theCanvas.getPGCanvas().bestImgFormatFor(pgformatin);
-        ImgConverter converter = ImgConverter.getConverter(pgformatin, pgformatout);
-        GrowableDataBuffer buf = getBuffer();
-        buf.putByte(PGCanvas.PUT_PIXELS);
-        buf.putFloat((float) dx);
-        buf.putFloat((float) dy);
-        buf.putInt(w);
-        buf.putInt(h);
-        buf.putByte((byte) pgformatout.ordinal());
-        buf.putObject(converter.convert(imagedata, sx0, sy0, w, h));
-    }
-
-    /**
-     * Sets the effect to be applied after the next draw call.
-     * @param e
+     * Sets the effect to be applied after the next draw call, or null to
+     * disable effects.
+     * @param e the effect to use, or null to disable effects
      */
     public void setEffect(Effect e) {
         GrowableDataBuffer buf = getBuffer();
         buf.putByte(PGCanvas.EFFECT);
-        curState.effect = e.impl_copy();
-        curState.effect.impl_sync();
-        buf.putObject(curState.effect.impl_getImpl());
+        if (e == null) {
+            curState.effect = null;
+            buf.putObject(null);
+        } else {
+            curState.effect = e.impl_copy();
+            curState.effect.impl_sync();
+            buf.putObject(curState.effect.impl_getImpl());
+        }
     }
     
     /**
      * Gets a copy of the effect to be applied after the next draw call.
-     * @param e the effect to be used.
+     * A null return value means that no effect will be applied after future
+     * rendering calls.
+     * @param e an {@code Effect} object that may be used to store the
+     *        copy of the current effect, if it is of a compatible type
+     * @return the current effect used for all rendering calls,
+     *         or null if there is no current effect
      */
     public Effect getEffect(Effect e) {
-        return e.impl_copy();
+        return curState.effect == null ? null : curState.effect.impl_copy();
     }
 
     /**
@@ -1852,159 +1791,5 @@ public final class GraphicsContext {
         Effect effect = e.impl_copy();
         effect.impl_sync();
         buf.putObject(effect.impl_getImpl());
-    }
-
-    static abstract class ImgConverter {
-        public static ImgConverter getConverter(PGCanvas.ImgFormat pgsrcformat,
-                                                PGCanvas.ImgFormat pgdstformat)
-        {
-            switch (pgsrcformat) {
-                case BYTE_BGRA:
-                    switch (pgdstformat) {
-                        case BYTE_BGRA:     return NopImgConverter.instance;
-                        case BYTE_BGRA_PRE: return MulConverter.mul_instance;
-                        case BYTE_RGBA:     return SwapConverter.rbswap_instance;
-                        case BYTE_RGBA_PRE: return MulConverter.mul_rbswap_instance;
-                    }
-                    break;
-                case BYTE_BGRA_PRE:
-                    switch (pgdstformat) {
-                        case BYTE_BGRA:     return MulConverter.unmul_instance;
-                        case BYTE_BGRA_PRE: return NopImgConverter.instance;
-                        case BYTE_RGBA:     return MulConverter.unmul_rbswap_instance;
-                        case BYTE_RGBA_PRE: return SwapConverter.rbswap_instance;
-                    }
-                    break;
-                case BYTE_RGBA:
-                    switch (pgdstformat) {
-                        case BYTE_BGRA:     return SwapConverter.rbswap_instance;
-                        case BYTE_BGRA_PRE: return MulConverter.mul_rbswap_instance;
-                        case BYTE_RGBA:     return NopImgConverter.instance;
-                        case BYTE_RGBA_PRE: return MulConverter.mul_instance;
-                    }
-                    break;
-                case BYTE_RGBA_PRE:
-                    switch (pgdstformat) {
-                        case BYTE_BGRA:     return MulConverter.unmul_rbswap_instance;
-                        case BYTE_BGRA_PRE: return SwapConverter.rbswap_instance;
-                        case BYTE_RGBA:     return MulConverter.unmul_instance;
-                        case BYTE_RGBA_PRE: return NopImgConverter.instance;
-                    }
-                    break;
-            }
-            throw new InternalError("Unable to convert image format "+
-                                    pgsrcformat+" to "+pgdstformat);
-        }
-        public abstract byte[] convert(ImageData id, int x, int y, int w, int h);
-    }
-
-    static class NopImgConverter extends ImgConverter {
-        public static final ImgConverter instance = new NopImgConverter();
-        private NopImgConverter() {}
-
-        @Override
-        public byte[] convert(ImageData id, int x, int y, int w, int h) {
-            byte[] data;
-            if (x == 0 && y == 0 && w == id.width) {
-                data = Arrays.copyOf(id.data, w*h*4);
-            } else {
-                data = new byte[w*h*4];
-                int isrc = y * id.width + x;
-                if (w == id.width) {
-                    System.arraycopy(id.data, isrc, data, 0, w*h*4);
-                } else {
-                    int idst = 0;
-                    while (--h >= 0) {
-                        System.arraycopy(id.data, isrc, data, idst, w*4);
-                        idst += w*4;
-                        isrc += id.width*4;
-                    }
-                }
-            }
-            return data;
-        }
-    }
-
-    /* arbitrary multiplying/dividing, possibly color swapping converter */
-    static class MulConverter extends ImgConverter {
-        public static final ImgConverter mul_instance          = new MulConverter(true, 0, 1, 2);
-        public static final ImgConverter mul_rbswap_instance   = new MulConverter(true, 2, 1, 0);
-        public static final ImgConverter unmul_instance        = new MulConverter(false, 0, 1, 2);
-        public static final ImgConverter unmul_rbswap_instance = new MulConverter(false, 2, 1, 0);
-
-        private final boolean mul;
-        private final int roff, goff, boff;
-
-        private MulConverter(boolean mul, int roff, int goff, int boff) {
-            this.mul = mul;
-            this.roff = roff;
-            this.goff = goff;
-            this.boff = boff;
-        }
-
-        @Override
-        public byte[] convert(ImageData id, int x, int y, int w, int h) {
-            byte src[] = id.data;
-            byte dst[] = new byte[w*h*4];
-            int isrc = y * id.width + x;
-            int idst = 0;
-            while (--h >= 0) {
-                for (int tw = w; --tw >= 0; ) {
-                    int a = src[isrc + 3] & 0xff;
-                    if (a > 0) {
-                        if (a < 0xff) {
-                            double scale = mul ? a / 255.0 : 255.0 / a;
-                            dst[idst + roff] = (byte) ((src[isrc    ] & 0xff) * scale);
-                            dst[idst + goff] = (byte) ((src[isrc + 1] & 0xff) * scale);
-                            dst[idst + boff] = (byte) ((src[isrc + 2] & 0xff) * scale);
-                        } else {
-                            dst[idst + roff] = src[isrc    ];
-                            dst[idst + goff] = src[isrc + 1];
-                            dst[idst + boff] = src[isrc + 2];
-                        }
-                    } else {
-                        dst[idst] = dst[idst + 1] = dst[idst + 2] = 0;
-                    }
-                    dst[idst + 3] = (byte) a;
-                    idst += 4;
-                    isrc += 4;
-                }
-                isrc += (id.width - w) * 4;
-            }
-            return dst;
-        }
-    }
-
-    /* direct (same premul) component swapping converter */
-    static class SwapConverter extends ImgConverter {
-        public static final ImgConverter rbswap_instance = new SwapConverter(2, 1, 0);
-
-        private final int roff, goff, boff;
-
-        private SwapConverter(int roff, int goff, int boff) {
-            this.roff = roff;
-            this.goff = goff;
-            this.boff = boff;
-        }
-
-        @Override
-        public byte[] convert(ImageData id, int x, int y, int w, int h) {
-            byte src[] = id.data;
-            byte dst[] = new byte[w*h*4];
-            int isrc = y * id.width + x;
-            int idst = 0;
-            while (--h >= 0) {
-                for (int tw = w; --tw >= 0; ) {
-                    dst[idst + roff] = src[isrc    ];
-                    dst[idst + goff] = src[isrc + 1];
-                    dst[idst + boff] = src[isrc + 2];
-                    dst[idst + 3]    = src[isrc + 3];
-                    idst += 4;
-                    isrc += 4;
-                }
-                isrc += (id.width - w) * 4;
-            }
-            return dst;
-        }
     }
 }

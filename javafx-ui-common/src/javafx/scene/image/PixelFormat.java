@@ -193,7 +193,7 @@ public abstract class PixelFormat<T extends Buffer> {
 
         @Override
         public int getArgb(ByteBuffer buf, int x, int y, int scanlineStride) {
-            int index = y * scanlineStride + x * 4;
+            int index = y * scanlineStride + x * 3;
             int r = buf.get(index    ) & 0xff;
             int g = buf.get(index + 1) & 0xff;
             int b = buf.get(index + 2) & 0xff;

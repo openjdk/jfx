@@ -33,16 +33,6 @@ public class StubCanvas extends StubNode implements PGCanvas {
     private GrowableDataBuffer buf;
 
     @Override
-    public ImgFormat bestImgFormat() {
-        return ImgFormat.BYTE_BGRA;
-    }
-
-    @Override
-    public ImgFormat bestImgFormatFor(ImgFormat format) {
-        return ImgFormat.BYTE_BGRA;
-    }
-
-    @Override
     public void updateBounds(float w, float h) {
         this.w = w;
         this.h = h;
