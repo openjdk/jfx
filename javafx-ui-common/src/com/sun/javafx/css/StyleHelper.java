@@ -1249,7 +1249,8 @@ public class StyleHelper {
                         cacheEntry,
                         cacheable,
                         originatingNode,
-                        Font.getDefault()
+                        Font.getDefault(),
+                        styleList
                       )
                     : null;
                 if (font == null) font = Font.getDefault();
@@ -1331,7 +1332,8 @@ public class StyleHelper {
             final CacheEntry cacheEntry,
             final BooleanProperty cacheable,
             final Node originatingNode,
-            final Font font) 
+            final Font font,
+            final List<Style> styleList) 
     {
         
         if (node == null) return Font.getDefault();
@@ -1401,6 +1403,10 @@ public class StyleHelper {
             if (fontStyle != null && 
                 style.getStyle().equals(fontStyle.getStyle()) == false) {
                 
+                if (styleList != null) {
+                    styleList.add(fontStyle.getStyle());
+                }
+                
                 final Stylesheet.Origin fsOrigin = fontStyle.getOrigin();
                 if (origin == null || origin.compareTo(fsOrigin) < 0) {
                     origin = fsOrigin;
@@ -1420,7 +1426,7 @@ public class StyleHelper {
                     inheritedFont =
                         getFontForUseInConvertingRelativeSize(node.getParent(),
                             styleable, style, cacheEntry, cacheable, 
-                            originatingNode, font);
+                            originatingNode, font, styleList);
                 }
                 
                 Object value = resolved.convert(inheritedFont);
@@ -1439,7 +1445,7 @@ public class StyleHelper {
         }
 
         return getFontForUseInConvertingRelativeSize(node.getParent(), 
-                styleable, style, cacheEntry, cacheable, originatingNode, font);
+                styleable, style, cacheEntry, cacheable, originatingNode, font, styleList);
     }
     
     private CascadingStyle lookupFontSubPropertyStyle(final Node node, 
@@ -1644,6 +1650,10 @@ public class StyleHelper {
         
         if (csShorthand != null) {
             
+            if (styleList != null) {
+                styleList.add(csShorthand.getStyle());
+            }
+            
             // pull out the pieces. 
             final CalculatedValue cv = 
                 calculateValue(csShorthand, node, styleable, states, inlineStyles, 
@@ -1672,7 +1682,11 @@ public class StyleHelper {
         CascadingStyle csFamily = null; 
         if ((csFamily = lookupFontSubPropertyStyle(node, "-fx-font-family",
                 isUserSet, cacheable, csShorthand, distance)) != null) {
-       
+
+            if (styleList != null) {
+                styleList.add(csFamily.getStyle());
+            }
+            
             final CalculatedValue cv = 
                 calculateValue(csFamily, node, styleable, states, inlineStyles, 
                     originatingNode, cacheEntry, styleList);
@@ -1691,6 +1705,10 @@ public class StyleHelper {
         if ((csSize = lookupFontSubPropertyStyle(node, "-fx-font-size",
                 isUserSet, cacheable, csShorthand, distance))!= null) {
        
+            if (styleList != null) {
+                styleList.add(csSize.getStyle());
+            }
+
             final CalculatedValue cv = 
                 calculateValue(csSize, node, styleable, states, inlineStyles, 
                     originatingNode, cacheEntry, styleList);
@@ -1707,7 +1725,11 @@ public class StyleHelper {
         CascadingStyle csWeight = null;
         if ((csWeight = lookupFontSubPropertyStyle(node, "-fx-font-weight",
                 isUserSet, cacheable, csShorthand, distance))!= null) {
-       
+
+            if (styleList != null) {
+                styleList.add(csWeight.getStyle());
+            }
+            
             final CalculatedValue cv = 
                 calculateValue(csWeight, node, styleable, states, inlineStyles, 
                     originatingNode, cacheEntry, styleList);
@@ -1725,10 +1747,14 @@ public class StyleHelper {
         if ((csStyle = lookupFontSubPropertyStyle(node, "-fx-font-style",
                 isUserSet, cacheable, csShorthand, distance))!= null) {
        
-                final CalculatedValue cv = 
-                    calculateValue(csStyle, node, styleable, states, inlineStyles, 
-                        originatingNode, cacheEntry, styleList);
-                if (cv.isCacheable == false) cacheable.set(false);
+            if (styleList != null) {
+                styleList.add(csStyle.getStyle());
+            }
+            
+            final CalculatedValue cv = 
+                calculateValue(csStyle, node, styleable, states, inlineStyles, 
+                    originatingNode, cacheEntry, styleList);
+            if (cv.isCacheable == false) cacheable.set(false);
             if (cv.value instanceof FontPosture) {
                 style = (FontPosture)cv.value;
                 if (origin == null || origin.compareTo(cv.origin) < 0) {                        
