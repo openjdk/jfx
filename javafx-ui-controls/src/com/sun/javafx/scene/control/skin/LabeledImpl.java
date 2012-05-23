@@ -117,9 +117,10 @@ public class LabeledImpl extends Label {
         }
     }
 
-    private static class StyleableProperties {
+    /** Protected for unit test purposes */
+    static final class StyleableProperties {
 
-        private static final List<StyleableProperty> STYLEABLES_TO_MIRROR;
+        static final List<StyleableProperty> STYLEABLES_TO_MIRROR;
         static {
             //
             // We do this as we only want to mirror the Labeled's keys,
