@@ -356,25 +356,23 @@ public class TableColumnHeader extends StackPane {
     }
     
     private void setSortPos(int sortPos) {
-        if (! isSortingEnabled()) return;
-        
         this.sortPos = sortPos;
         updateSortGrid();
     }
     
     private void updateSortGrid() {
-        // we do not support sorting in embedded devices
-        if (! isSortingEnabled()) return;
-        
         // Fixe for RT-14488
         if (this instanceof NestedTableColumnHeader) return;
-        
-        isSortColumn = sortPos != -1;
         
         getChildren().clear();
         getChildren().add(label);
         
+        // we do not support sorting in embedded devices
+        if (! isSortingEnabled()) return;
+        
         if (! isSortColumn) return;
+        
+        isSortColumn = sortPos != -1;
         
         final int sortColumnCount = getTableView().getSortOrder().size();
         boolean showSortOrderDots = sortPos <= 3 && sortColumnCount > 1;
