@@ -410,13 +410,15 @@ public class ComboBox<T> extends ComboBoxBase<T> {
     }
     
     private void updateBindings() {
+        if (textField == null) return;
+        
         // remove bindings if any exist
         textField.promptTextProperty().unbindBidirectional(promptTextProperty());
-        textField.textProperty().unbindBidirectional(valueProperty());
+//        textField.textProperty().unbindBidirectional(valueProperty());
         
         // update bindings with new converter
         textField.promptTextProperty().bindBidirectional(promptTextProperty());
-        textField.textProperty().bindBidirectional(valueProperty(), getConverter());
+//        textField.textProperty().bindBidirectional(valueProperty(), getConverter());
     }
     
     /***************************************************************************
