@@ -128,7 +128,7 @@ public class LabeledImplTest {
 
         Collection<Configuration[]> data = new ArrayList<Configuration[]>();
         
-        List<StyleableProperty> styleables = LabeledImpl.impl_CSS_STYLEABLES();
+        List<StyleableProperty> styleables = LabeledImpl.StyleableProperties.STYLEABLES_TO_MIRROR;
         for(StyleableProperty styleable : styleables) {
             
             // LabeledImpl doesn't track -fx-skin since the Labeled

@@ -36,11 +36,15 @@ final class Token {
     final static Token INVALID_TOKEN = new Token(INVALID, "INVALID");
     final static Token SKIP_TOKEN = new Token(SKIP, "SKIP");
 
-    Token(int type, String text) {
+    Token(int type, String text, int line, int offset) {
         this.type = type;
         this.text = text;
-        this.line = -1;
-        this.offset = -1;
+        this.line = line;
+        this.offset = offset;        
+    }
+    
+    Token(int type, String text) {
+        this(type, text, -1, -1);
     }
 
     Token(int type) {

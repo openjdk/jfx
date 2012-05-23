@@ -64,11 +64,12 @@ import javafx.util.StringConverter;
  * exceedingly long.
  * 
  * <p>As with ListView, it is possible to modify the 
- * {@link javafx.scene.control.SelectionModel SelectionModel} that is used, 
- * although this is likely to be rarely changed. The default
- * SelectionModel used in ComboBox is a {@link SingleSelectionModel}, but this
- * can be switched out by developers to instead allow for multiple selection to 
- * occur, or to alter the behavior of the various methods provided in these APIs.
+ * {@link javafx.scene.control.SelectionModel selection model} that is used, 
+ * although this is likely to be rarely changed. This is because the ComboBox
+ * enforces the need for a {@link javafx.scene.control.SingleSelectionModel} 
+ * instance, and it is not likely that there is much need for alternate 
+ * implementations. Nonetheless, the option is there should use cases be found 
+ * for switching the selection model.
  * 
  * <p>As the ComboBox internally renders content with a ListView, API exists in
  * the ComboBox class to allow for a custom cell factory to be set. For more
@@ -235,6 +236,12 @@ public class ComboBox<T> extends ComboBoxBase<T> {
                 updateEditor();
             }
         });
+        
+        converterProperty().addListener(new InvalidationListener() {
+            @Override public void invalidated(Observable o) {
+                updateBindings();
+            }
+        });
     }
     
  
@@ -385,16 +392,33 @@ public class ComboBox<T> extends ComboBoxBase<T> {
      *                                                                         *
      **************************************************************************/        
 
+    private FocusableTextField textField;
+    
     private void updateEditor() {
         if (editor == null) {
             editor = new ReadOnlyObjectWrapper<TextField>(this, "editor");
         }
         
         if (isEditable()) {
-            editor.set(new FocusableTextField());
+            textField = new FocusableTextField();
+            updateBindings();
+            editor.set(textField);
         } else {
+            textField = null;
             editor.set(null);
         }
+    }
+    
+    private void updateBindings() {
+        if (textField == null) return;
+        
+        // remove bindings if any exist
+        textField.promptTextProperty().unbindBidirectional(promptTextProperty());
+//        textField.textProperty().unbindBidirectional(valueProperty());
+        
+        // update bindings with new converter
+        textField.promptTextProperty().bindBidirectional(promptTextProperty());
+//        textField.textProperty().bindBidirectional(valueProperty(), getConverter());
     }
     
     /***************************************************************************

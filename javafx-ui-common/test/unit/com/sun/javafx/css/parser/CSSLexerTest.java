@@ -284,4 +284,372 @@ public class CSSLexerTest {
         );
     }
 
+    @Test 
+    public void testTokenOffset() {
+        
+        String str =  "a: b;";
+        // [?][0] = line
+        // [?][1] = offset
+        Token[] expected = {
+            new Token(CSSLexer.IDENT, "a", 1, 0),
+            new Token(CSSLexer.COLON, ":", 1, 1),
+            new Token(CSSLexer.WS,    " ", 1, 2),
+            new Token(CSSLexer.IDENT, "b", 1, 3),
+            new Token(CSSLexer.SEMI,  ";", 1, 4),
+            Token.EOF_TOKEN
+        };
+        
+        List<Token> tlist = getTokens(str);
+        checkTokens(tlist, expected);
+        
+        for(int n=0; n<tlist.size(); n++) {
+            Token tok = tlist.get(n);
+            assertEquals("bad line. tok="+tok, expected[n].getLine(), tok.getLine());
+            assertEquals("bad offset. tok="+tok, expected[n].getOffset(), tok.getOffset());
+        }
+                
+    }
+    
+    @Test 
+    public void testTokenLineAndOffsetWithCR() {
+        
+        String str =  "a: b;\rc: d;";
+        // [?][0] = line
+        // [?][1] = offset
+        Token[] expected = {
+            new Token(CSSLexer.IDENT, "a", 1, 0),
+            new Token(CSSLexer.COLON, ":", 1, 1),
+            new Token(CSSLexer.WS,    " ", 1, 2),
+            new Token(CSSLexer.IDENT, "b", 1, 3),
+            new Token(CSSLexer.SEMI,  ";", 1, 4),
+            new Token(CSSLexer.NL,  "\\r", 1, 5),
+            new Token(CSSLexer.IDENT, "c", 2, 0),
+            new Token(CSSLexer.COLON, ":", 2, 1),
+            new Token(CSSLexer.WS,    " ", 2, 2),
+            new Token(CSSLexer.IDENT, "d", 2, 3),
+            new Token(CSSLexer.SEMI,  ";", 2, 4),
+            Token.EOF_TOKEN
+        };
+        
+        List<Token> tlist = getTokens(str);
+        checkTokens(tlist, expected);
+        
+        for(int n=0; n<tlist.size(); n++) {
+            Token tok = tlist.get(n);
+            assertEquals("bad line. tok="+tok, expected[n].getLine(), tok.getLine());
+            assertEquals("bad offset. tok="+tok, expected[n].getOffset(), tok.getOffset());
+        }
+                
+    }
+
+    @Test 
+    public void testTokenLineAndOffsetWithLF() {
+        
+        String str =  "a: b;\nc: d;";
+        // [?][0] = line
+        // [?][1] = offset
+        Token[] expected = {
+            new Token(CSSLexer.IDENT, "a", 1, 0),
+            new Token(CSSLexer.COLON, ":", 1, 1),
+            new Token(CSSLexer.WS,    " ", 1, 2),
+            new Token(CSSLexer.IDENT, "b", 1, 3),
+            new Token(CSSLexer.SEMI,  ";", 1, 4),
+            new Token(CSSLexer.NL,  "\\n", 1, 5),
+            new Token(CSSLexer.IDENT, "c", 2, 0),
+            new Token(CSSLexer.COLON, ":", 2, 1),
+            new Token(CSSLexer.WS,    " ", 2, 2),
+            new Token(CSSLexer.IDENT, "d", 2, 3),
+            new Token(CSSLexer.SEMI,  ";", 2, 4),
+            Token.EOF_TOKEN
+        };
+        
+        List<Token> tlist = getTokens(str);
+        checkTokens(tlist, expected);
+        
+        for(int n=0; n<tlist.size(); n++) {
+            Token tok = tlist.get(n);
+            assertEquals("bad line. tok="+tok, expected[n].getLine(), tok.getLine());
+            assertEquals("bad offset. tok="+tok, expected[n].getOffset(), tok.getOffset());
+        }
+                
+    }
+
+    @Test 
+    public void testTokenLineAndOffsetWithCRLF() {
+        //             012345   01234
+        String str =  "a: b;\r\nc: d;";
+        // [?][0] = line
+        // [?][1] = offset
+        Token[] expected = {
+            new Token(CSSLexer.IDENT, "a", 1, 0),
+            new Token(CSSLexer.COLON, ":", 1, 1),
+            new Token(CSSLexer.WS,    " ", 1, 2),
+            new Token(CSSLexer.IDENT, "b", 1, 3),
+            new Token(CSSLexer.SEMI,  ";", 1, 4),
+            new Token(CSSLexer.NL,  "\\r\\n", 1, 5),
+            new Token(CSSLexer.IDENT, "c", 2, 0),
+            new Token(CSSLexer.COLON, ":", 2, 1),
+            new Token(CSSLexer.WS,    " ", 2, 2),
+            new Token(CSSLexer.IDENT, "d", 2, 3),
+            new Token(CSSLexer.SEMI,  ";", 2, 4),
+            Token.EOF_TOKEN
+        };
+        
+        List<Token> tlist = getTokens(str);
+        checkTokens(tlist, expected);
+        
+        for(int n=0; n<tlist.size(); n++) {
+            Token tok = tlist.get(n);
+            assertEquals("bad line. tok="+tok, expected[n].getLine(), tok.getLine());
+            assertEquals("bad offset. tok="+tok, expected[n].getOffset(), tok.getOffset());
+        }
+                
+    }
+    
+    @Test 
+    public void testTokenOffsetWithEmbeddedComment() {
+        //             0123456789012345
+        String str =  "a: /*comment*/b;";
+        // [?][0] = line
+        // [?][1] = offset
+        Token[] expected = {
+            new Token(CSSLexer.IDENT, "a", 1, 0),
+            new Token(CSSLexer.COLON, ":", 1, 1),
+            new Token(CSSLexer.WS,    " ", 1, 2),
+            new Token(CSSLexer.IDENT, "b", 1, 14), 
+            new Token(CSSLexer.SEMI,  ";", 1, 15),
+            Token.EOF_TOKEN
+        };
+        
+        List<Token> tlist = getTokens(str);
+        checkTokens(tlist, expected);
+        
+        for(int n=0; n<tlist.size(); n++) {
+            Token tok = tlist.get(n);
+            assertEquals("bad line. tok="+tok, expected[n].getLine(), tok.getLine());
+            assertEquals("bad offset. tok="+tok, expected[n].getOffset(), tok.getOffset());
+        }
+    }
+
+    @Test 
+    public void testTokenLineAndOffsetWithLeadingComment() {
+        //             012345678901 01234
+        String str =  "/*comment*/\na: b;";
+        // [?][0] = line
+        // [?][1] = offset
+        Token[] expected = {
+            new Token(CSSLexer.NL, "\\n", 1, 11),
+            new Token(CSSLexer.IDENT, "a", 2, 0),
+            new Token(CSSLexer.COLON, ":", 2, 1),
+            new Token(CSSLexer.WS,    " ", 2, 2),
+            new Token(CSSLexer.IDENT, "b", 2, 3), 
+            new Token(CSSLexer.SEMI,  ";", 2, 4),
+            Token.EOF_TOKEN
+        };
+        
+        List<Token> tlist = getTokens(str);
+        checkTokens(tlist, expected);
+        
+        for(int n=0; n<tlist.size(); n++) {
+            Token tok = tlist.get(n);
+            assertEquals("bad line. tok="+tok, expected[n].getLine(), tok.getLine());
+            assertEquals("bad offset. tok="+tok, expected[n].getOffset(), tok.getOffset());
+        }
+    }
+    
+    @Test 
+    public void testTokenOffsetWithFunction() {
+        //             01234567890
+        String str =  "a: b(arg);";
+        // [?][0] = line
+        // [?][1] = offset
+        Token[] expected = {
+            new Token(CSSLexer.IDENT, "a", 1, 0),
+            new Token(CSSLexer.COLON, ":", 1, 1),
+            new Token(CSSLexer.WS,    " ", 1, 2),
+            new Token(CSSLexer.IDENT, "b", 1, 3), 
+            new Token(CSSLexer.LPAREN, "(", 1, 4), 
+            new Token(CSSLexer.IDENT, "arg", 1, 5), 
+            new Token(CSSLexer.RPAREN, ")", 1, 8), 
+            new Token(CSSLexer.SEMI,  ";", 1, 9),
+            Token.EOF_TOKEN
+        };
+        
+        List<Token> tlist = getTokens(str);
+        checkTokens(tlist, expected);
+        
+        for(int n=0; n<tlist.size(); n++) {
+            Token tok = tlist.get(n);
+            assertEquals("bad line. tok="+tok, expected[n].getLine(), tok.getLine());
+            assertEquals("bad offset. tok="+tok, expected[n].getOffset(), tok.getOffset());
+        }
+    }
+    
+    @Test 
+    public void testTokenOffsetWithHash() {
+        //             01234567890
+        String str =  "a: #012345;";
+        // [?][0] = line
+        // [?][1] = offset
+        Token[] expected = {
+            new Token(CSSLexer.IDENT, "a", 1, 0),
+            new Token(CSSLexer.COLON, ":", 1, 1),
+            new Token(CSSLexer.WS,    " ", 1, 2),
+            new Token(CSSLexer.HASH, "#012345", 1, 3), 
+            new Token(CSSLexer.SEMI,  ";", 1, 10),
+            Token.EOF_TOKEN
+        };
+        
+        List<Token> tlist = getTokens(str);
+        checkTokens(tlist, expected);
+        
+        for(int n=0; n<tlist.size(); n++) {
+            Token tok = tlist.get(n);
+            assertEquals("bad line. tok="+tok, expected[n].getLine(), tok.getLine());
+            assertEquals("bad offset. tok="+tok, expected[n].getOffset(), tok.getOffset());
+        }
+    }
+ 
+    @Test 
+    public void testTokenOffsetWithDigits() {
+        //             01234567890
+        String str =  "a: 123.45;";
+        // [?][0] = line
+        // [?][1] = offset
+        Token[] expected = {
+            new Token(CSSLexer.IDENT, "a", 1, 0),
+            new Token(CSSLexer.COLON, ":", 1, 1),
+            new Token(CSSLexer.WS,    " ", 1, 2),
+            new Token(CSSLexer.NUMBER, "123.45", 1, 3), 
+            new Token(CSSLexer.SEMI,  ";", 1, 9),
+            Token.EOF_TOKEN
+        };
+        
+        List<Token> tlist = getTokens(str);
+        checkTokens(tlist, expected);
+        
+        for(int n=0; n<tlist.size(); n++) {
+            Token tok = tlist.get(n);
+            assertEquals("bad line. tok="+tok, expected[n].getLine(), tok.getLine());
+            assertEquals("bad offset. tok="+tok, expected[n].getOffset(), tok.getOffset());
+        }
+    }
+
+    @Test 
+    public void testTokenOffsetWithBangImportant() {
+        //             0123456789012345
+        String str =  "a: b !important;";
+        // [?][0] = line
+        // [?][1] = offset
+        Token[] expected = {
+            new Token(CSSLexer.IDENT, "a", 1, 0),
+            new Token(CSSLexer.COLON, ":", 1, 1),
+            new Token(CSSLexer.WS,    " ", 1, 2),
+            new Token(CSSLexer.IDENT, "b", 1, 3),
+            new Token(CSSLexer.WS,    " ", 1, 4),
+            new Token(CSSLexer.IMPORTANT_SYM, "!important", 1, 5), 
+            new Token(CSSLexer.SEMI,  ";", 1, 15),
+            Token.EOF_TOKEN
+        };
+        
+        List<Token> tlist = getTokens(str);
+        checkTokens(tlist, expected);
+        
+        for(int n=0; n<tlist.size(); n++) {
+            Token tok = tlist.get(n);
+            assertEquals("bad line. tok="+tok, expected[n].getLine(), tok.getLine());
+            assertEquals("bad offset. tok="+tok, expected[n].getOffset(), tok.getOffset());
+        }
+    }
+
+    @Test 
+    public void testTokenOffsetWithSkip() {
+        //             0123456789012345
+        String str =  "a: b !imporzant;";
+        // [?][0] = line
+        // [?][1] = offset
+        Token[] expected = {
+            new Token(CSSLexer.IDENT, "a", 1, 0),
+            new Token(CSSLexer.COLON, ":", 1, 1),
+            new Token(CSSLexer.WS,    " ", 1, 2),
+            new Token(CSSLexer.IDENT, "b", 1, 3),
+            new Token(CSSLexer.WS,    " ", 1, 4),
+            new Token(Token.SKIP, "!imporz", 1, 5), 
+            new Token(CSSLexer.SEMI,  ";", 1, 15),
+            Token.EOF_TOKEN
+        };
+        
+        List<Token> tlist = getTokens(str);
+        checkTokens(tlist, expected);
+        
+        for(int n=0; n<tlist.size(); n++) {
+            Token tok = tlist.get(n);
+            assertEquals("bad line. tok="+tok, expected[n].getLine(), tok.getLine());
+            assertEquals("bad offset. tok="+tok, expected[n].getOffset(), tok.getOffset());
+        }
+    }
+    
+    @Test 
+    public void testTokenOffsetWithInvalid() {
+        //             0123456789012345
+        String str =  "a: 1pz;";
+        // [?][0] = line
+        // [?][1] = offset
+        Token[] expected = {
+            new Token(CSSLexer.IDENT, "a", 1, 0),
+            new Token(CSSLexer.COLON, ":", 1, 1),
+            new Token(CSSLexer.WS,    " ", 1, 2),
+            new Token(Token.INVALID, "1pz", 1, 3),
+            new Token(CSSLexer.SEMI,  ";", 1, 6),
+            Token.EOF_TOKEN
+        };
+        
+        List<Token> tlist = getTokens(str);
+        checkTokens(tlist, expected);
+        
+        for(int n=0; n<tlist.size(); n++) {
+            Token tok = tlist.get(n);
+            assertEquals("bad line. tok="+tok, expected[n].getLine(), tok.getLine());
+            assertEquals("bad offset. tok="+tok, expected[n].getOffset(), tok.getOffset());
+        }
+    }
+
+    @Test
+    public void testTokenLineAndOffsetMoreFully() {
+        //             1            2                 3         4
+        //             012345678901 0123456789012345  012345678 0
+        String str =  "/*comment*/\n*.foo#bar:baz {\n\ta: 1em;\n}";
+        // [?][0] = line
+        // [?][1] = offset
+        Token[] expected = {
+            new Token(CSSLexer.NL,     "\\n",  1, 11),
+            new Token(CSSLexer.STAR,   "*",    2, 0),
+            new Token(CSSLexer.DOT,    ".",    2, 1),
+            new Token(CSSLexer.IDENT,  "foo",  2, 2),
+            new Token(CSSLexer.HASH,   "#bar", 2, 5),
+            new Token(CSSLexer.COLON,  ":",    2, 9),
+            new Token(CSSLexer.IDENT,  "baz",  2, 10),
+            new Token(CSSLexer.WS,     " ",    2, 13),
+            new Token(CSSLexer.LBRACE, "{",    2, 14),
+            new Token(CSSLexer.NL,     "\\n",  2, 15),
+            new Token(CSSLexer.WS,     "\t",   3, 0),
+            new Token(CSSLexer.IDENT,  "a",    3, 1),
+            new Token(CSSLexer.COLON,  ":",    3, 2),
+            new Token(CSSLexer.WS,     " ",    3, 3),
+            new Token(CSSLexer.EMS,    "1em",  3, 4), 
+            new Token(CSSLexer.SEMI,   ";",    3, 7),
+            new Token(CSSLexer.NL,     "\\n",  3, 8),
+            new Token(CSSLexer.RBRACE, "}",    4, 0),
+            Token.EOF_TOKEN
+        };
+        
+        List<Token> tlist = getTokens(str);
+        checkTokens(tlist, expected);
+        
+        for(int n=0; n<tlist.size(); n++) {
+            Token tok = tlist.get(n);
+            assertEquals("bad line. tok="+tok, expected[n].getLine(), tok.getLine());
+            assertEquals("bad offset. tok="+tok, expected[n].getOffset(), tok.getOffset());
+        }
+    }    
 }

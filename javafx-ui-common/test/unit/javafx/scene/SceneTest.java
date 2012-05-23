@@ -34,6 +34,9 @@ import javafx.scene.transform.Scale;
 import javafx.stage.Stage;
 import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
+import javafx.scene.layout.HBox;
+import javafx.scene.layout.TilePane;
+import javafx.scene.layout.VBox;
 
 import org.junit.After;
 import org.junit.Before;
@@ -516,6 +519,24 @@ public class SceneTest {
         assertEquals(600, (int) scene.getHeight());
     }
 
+    @Test
+    public void testSceneSizeWithContentBiasOnRoot() {
+        Rectangle r1 = new Rectangle(20, 20);
+        Rectangle r2 = new Rectangle(20, 20);
+        Rectangle r3 = new Rectangle(100, 20);
+        
+        TilePane tilePane = new TilePane();
+        tilePane.getChildren().addAll(r1, r2);
+
+        final VBox root = new VBox();
+        root.getChildren().addAll(tilePane, r3);
+        Scene scene = new Scene(root);
+        stage.setScene(scene);
+                
+        assertEquals(100, (int) scene.getWidth());
+        assertEquals(40, (int) scene.getHeight());
+    }
+    
     @Test
     public void focusChangeShouldBeAtomic() {
         final Group root = new Group();

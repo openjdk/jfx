@@ -138,7 +138,8 @@ public class Legend extends Region {
             if(columns <= 1) return tileSize.getWidth() + getInsets().getLeft() + getInsets().getRight();
         } else {
             rows = (int) Math.floor( contentHeight / (tileSize.getHeight() + GAP) );
-            columns = (int)Math.ceil(getItems().size() / (double)rows);
+            columns = (rows == 0) ? (int)Math.ceil(getItems().size()) : 
+                            (int)Math.ceil(getItems().size() / (double)rows);
         }
         if(columns == 1) rows = Math.min(rows, getItems().size());
         return (columns*(tileSize.getWidth()+GAP)) - GAP + getInsets().getLeft() + getInsets().getRight();
@@ -151,7 +152,8 @@ public class Legend extends Region {
             if(rows <= 1) return tileSize.getHeight() + getInsets().getTop() + getInsets().getBottom();
         } else {
             columns = (int) Math.floor( contentWidth / (tileSize.getWidth() + GAP) );
-            rows = (int)Math.ceil(getItems().size() / (double)columns);
+            rows = (columns == 0) ? (int)Math.ceil(getItems().size()) : 
+                            (int)Math.ceil(getItems().size() / (double)columns);
         }
         if(rows == 1) columns = Math.min(columns, getItems().size());
         return (rows*(tileSize.getHeight()+GAP)) - GAP + getInsets().getTop() + getInsets().getBottom();

@@ -24,16 +24,25 @@
  */
 package com.sun.javafx.scene.control.behavior;
 
+import com.sun.javafx.PlatformUtil;
 import java.util.List;
 import java.util.WeakHashMap;
 
 import javafx.scene.control.*;
 import javafx.scene.control.TableView.TableViewFocusModel;
+import javafx.scene.input.MouseButton;
 import javafx.scene.input.MouseEvent;
 
 /**
  */
 public class TableCellBehavior extends CellBehaviorBase<TableCell> {
+    
+    /***************************************************************************
+     *                                                                         *
+     * Private static implementation                                           *
+     *                                                                         *
+     **************************************************************************/
+    
     // global map used to store the focus cell for a table view when it is first
     // shift-clicked. This allows for proper keyboard interactions, in particular
     // resolving RT-11446
@@ -58,26 +67,59 @@ public class TableCellBehavior extends CellBehaviorBase<TableCell> {
         return map.containsKey(table) && map.get(table) != null;
     }
     
+    
+    
+    /***************************************************************************
+     *                                                                         *
+     * Private fields                                                          *
+     *                                                                         *
+     **************************************************************************/      
+    
     // For RT-17456: have selection occur as fast as possible with mouse input.
     // The idea is (consistently with some native applications we've tested) to 
     // do the action as soon as you can. It takes a bit more coding but provides
     // the best feel:
     //  - when you click on a not-selected item, you can select immediately on press
     //  - when you click on a selected item, you need to wait whether DragDetected or Release comes first 
-    private boolean selected = false;
+    // To support touch devices, we have to slightly modify this behavior, such
+    // that selection only happens on mouse release, if only minimal dragging
+    // has occurred.
     private boolean latePress = false;
+    private final boolean isEmbedded = PlatformUtil.isEmbedded();
+    private boolean wasSelected = false;
+    
+    
+
+    /***************************************************************************
+     *                                                                         *
+     * Constructors                                                            *
+     *                                                                         *
+     **************************************************************************/    
 
     public TableCellBehavior(TableCell control) {
         super(control);
     }
     
+    
+    /***************************************************************************
+     *                                                                         *
+     * Public API                                                              *
+     *                                                                         *
+     **************************************************************************/    
+    
     @Override public void mousePressed(MouseEvent event) {
-        if (selected) {
+        boolean selectedBefore = getControl().isSelected();
+        
+        if (getControl().isSelected()) {
             latePress = true;
             return;
         }
-        
+
         doSelect(event);
+        
+        if (isEmbedded && selectedBefore) {
+            wasSelected = getControl().isSelected();
+        }
     }
     
     @Override public void mouseReleased(MouseEvent event) {
@@ -85,11 +127,28 @@ public class TableCellBehavior extends CellBehaviorBase<TableCell> {
             latePress = false;
             doSelect(event);
         }
+        
+        wasSelected = false;
     }
     
     @Override public void mouseDragged(MouseEvent event) {
         latePress = false;
+        
+        // the mouse has now been dragged on a touch device, we should
+        // remove the selection if we just added it in the last mouse press
+        // event
+        if (isEmbedded && ! wasSelected && getControl().isSelected()) {
+            getControl().getTableView().getSelectionModel().clearSelection(getControl().getIndex());
+        }
     }
+    
+    
+    
+    /***************************************************************************
+     *                                                                         *
+     * Private implementation                                                  *
+     *                                                                         *
+     **************************************************************************/      
 
     private void doSelect(MouseEvent e) {
         // Note that table.select will reset selection
@@ -131,7 +190,8 @@ public class TableCellBehavior extends CellBehaviorBase<TableCell> {
 
         // we must update the table appropriately, and this is determined by
         // what modifiers the user held down as they released the mouse.
-        if (e.isPrimaryButtonDown() || (e.isSecondaryButtonDown() && !selected)) { 
+        MouseButton button = e.getButton();
+        if (button == MouseButton.PRIMARY || (button == MouseButton.SECONDARY && !selected)) { 
             if (sm.getSelectionMode() == SelectionMode.SINGLE) {
                 simpleSelect(e);
             } else {
@@ -187,7 +247,7 @@ public class TableCellBehavior extends CellBehaviorBase<TableCell> {
         tv.getSelectionModel().clearAndSelect(row, getControl().getTableColumn());
 
         // handle editing, which only occurs with the primary mouse button
-        if (e.isPrimaryButtonDown()) {
+        if (e.getButton() == MouseButton.PRIMARY) {
             if (e.getClickCount() == 1 && isAlreadySelected) {
                 tv.edit(row, getControl().getTableColumn());
             } else if (e.getClickCount() == 1) {
