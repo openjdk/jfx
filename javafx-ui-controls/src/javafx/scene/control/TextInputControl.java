@@ -50,6 +50,7 @@ import javafx.scene.input.ClipboardContent;
 import java.text.BreakIterator;
 
 import com.sun.javafx.Utils;
+import com.sun.javafx.beans.annotations.MovedFromSubclass;
 import com.sun.javafx.binding.ExpressionHelper;
 import com.sun.javafx.css.StyleManager;
 
@@ -170,6 +171,7 @@ public abstract class TextInputControl extends Control {
         }
     };
     public final StringProperty promptTextProperty() { return promptText; }
+    @MovedFromSubclass
     public final String getPromptText() { return promptText.get(); }
     public final void setPromptText(String value) { promptText.set(value); }
 
