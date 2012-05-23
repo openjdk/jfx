@@ -35,6 +35,7 @@ import javafx.scene.control.ListCell;
 import javafx.scene.control.ListView;
 import javafx.scene.control.MultipleSelectionModel;
 import javafx.scene.control.SelectionMode;
+import javafx.scene.input.MouseButton;
 import javafx.scene.input.MouseEvent;
 
 /**
@@ -160,7 +161,8 @@ public class ListCellBehavior extends CellBehaviorBase<ListCell> {
             map.remove(listView);
         }
         
-        if (e.isPrimaryButtonDown() || (e.isSecondaryButtonDown() && !selected)) { 
+        MouseButton button = e.getButton();
+        if (button == MouseButton.PRIMARY || (button == MouseButton.SECONDARY && !selected)) { 
             if (sm.getSelectionMode() == SelectionMode.SINGLE) {
                 simpleSelect(e);
             } else {
@@ -204,7 +206,7 @@ public class ListCellBehavior extends CellBehaviorBase<ListCell> {
         lv.getSelectionModel().clearAndSelect(index);
 
         // handle editing, which only occurs with the primary mouse button
-        if (e.isPrimaryButtonDown()) {
+        if (e.getButton() == MouseButton.PRIMARY) {
             if (e.getClickCount() == 1 && isAlreadySelected) {
                 lv.edit(index);
             } else if (e.getClickCount() == 1) {
