@@ -359,22 +359,22 @@ public abstract class TextInputControlSkin<T extends TextInputControl, B extends
             selectionHandle1.setId("selection-handle-1");
             selectionHandle2.setId("selection-handle-2");
 
-//             textInput.focusedProperty().addListener(new InvalidationListener() {
-//                 @Override public void invalidated(Observable observable) {
-//                     if (useFXVK) {
-//                         if (textInput.isFocused()) {
-//                             FXVK.attach(textInput);
-//                         } else if (getScene() == null ||
-//                                    getScene().getWindow() == null ||
-//                                    !getScene().getWindow().isFocused() ||
-//                                    !(getScene().getFocusOwner() instanceof TextInputControl)) {
-//                             FXVK.detach();
-//                         }
-//                     }
-//                 }
-//             });
+            textInput.focusedProperty().addListener(new InvalidationListener() {
+                @Override public void invalidated(Observable observable) {
+                    if (useFXVK) {
+                        if (textInput.isFocused()) {
+                            FXVK.attach(textInput);
+                        } else if (getScene() == null ||
+                                   getScene().getWindow() == null ||
+                                   !getScene().getWindow().isFocused() ||
+                                   !(getScene().getFocusOwner() instanceof TextInputControl)) {
+                            FXVK.detach();
+                        }
+                    }
+                }
+            });
         }
-                    
+
         if (textInput.getOnInputMethodTextChanged() == null) {
             textInput.setOnInputMethodTextChanged(new EventHandler<InputMethodEvent>() {
                 @Override public void handle(InputMethodEvent event) {
