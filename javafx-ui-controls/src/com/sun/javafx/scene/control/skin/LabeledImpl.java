@@ -36,13 +36,19 @@ import javafx.scene.control.Labeled;
 
 import com.sun.javafx.css.StyleableProperty;
 import com.sun.javafx.css.Stylesheet;
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
-import javafx.beans.property.Property;
 import javafx.beans.value.WritableValue;
+import javafx.scene.Parent;
 
 
 public class LabeledImpl extends Label {
 
+    public LabeledImpl(final Labeled labeled) {
+        this.shuttler = new Shuttler(this, labeled);
+    }
+        
     final private Shuttler shuttler;
     
     private static void initialize(Shuttler shuttler, LabeledImpl labeledImpl, Labeled labeled) {
@@ -53,7 +59,7 @@ public class LabeledImpl extends Label {
         labeledImpl.setGraphic(labeled.getGraphic());
         labeled.graphicProperty().addListener(shuttler);
         
-        final List<StyleableProperty> styleables = Labeled.impl_CSS_STYLEABLES();
+        final List<StyleableProperty> styleables = StyleableProperties.STYLEABLES_TO_MIRROR;
         
         for(int n=0, nMax=styleables.size(); n<nMax; n++) {
             final StyleableProperty styleable = styleables.get(n);
@@ -111,7 +117,31 @@ public class LabeledImpl extends Label {
         }
     }
 
-    public LabeledImpl(final Labeled labeled) {
-        this.shuttler = new Shuttler(this, labeled);
+    private static class StyleableProperties {
+
+        private static final List<StyleableProperty> STYLEABLES_TO_MIRROR;
+        static {
+            //
+            // We do this as we only want to mirror the Labeled's keys,
+            // none of Parent's, otherwise all of the properties on Parent,
+            // like opacity, would be applied twice (once to the Labeled and 
+            // again to the LabeledImpl). 
+            //
+            // Note, however, that this subset is not the list of properties
+            // for this LabeledImpl that can be styled. For that, we want all
+            // the properites that are inherited by virtue of LabeledImpl 
+            // being a Label. This allows for the LabledImpl to be styled
+            // with styles like .menu-button .label { -fx-opacity: 80%; }
+            // If just this subset were returned (by impl_CSS_STYLEABLE) then
+            // -fx-opacity (for example) would be meaningless to the Labeled. 
+            // 
+            final List<StyleableProperty> labeledStyleables = Labeled.impl_CSS_STYLEABLES();
+            final List<StyleableProperty> parentStyleables = Parent.impl_CSS_STYLEABLES();
+            final List<StyleableProperty> styleables = 
+                new ArrayList<StyleableProperty>(labeledStyleables);
+            styleables.removeAll(parentStyleables);
+            STYLEABLES_TO_MIRROR = Collections.unmodifiableList(styleables);
+        }
     }
+
 }
