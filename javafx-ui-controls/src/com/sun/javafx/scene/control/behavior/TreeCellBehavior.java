@@ -32,6 +32,7 @@ import java.util.WeakHashMap;
 
 import javafx.scene.Node;
 import javafx.scene.control.*;
+import javafx.scene.input.MouseButton;
 import javafx.scene.input.MouseEvent;
 
 /**
@@ -202,8 +203,9 @@ public class TreeCellBehavior extends CellBehaviorBase<TreeCell<?>> {
         } else {
             map.remove(treeView);
         }
-
-        if (event.isPrimaryButtonDown() || (event.isSecondaryButtonDown() && !selected)) { 
+        
+        MouseButton button = event.getButton();
+        if (button == MouseButton.PRIMARY || (button == MouseButton.SECONDARY && !selected)) { 
             if (sm.getSelectionMode() == SelectionMode.SINGLE) {
                 simpleSelect(event);
             } else {
@@ -246,13 +248,13 @@ public class TreeCellBehavior extends CellBehaviorBase<TreeCell<?>> {
         tv.getSelectionModel().clearAndSelect(index);
 
         // handle editing, which only occurs with the primary mouse button
-        if (e.isPrimaryButtonDown()) {
+        if (e.getButton() == MouseButton.PRIMARY) {
             if (e.getClickCount() == 1 && isAlreadySelected) {
                 tv.edit(getControl().getTreeItem());
             } else if (e.getClickCount() == 1) {
                 // cancel editing
                 tv.edit(null);
-            } else if (e.getClickCount() == 2 && getControl().isEditable()) {
+            } else if (e.getClickCount() == 2 && ! getControl().isEditable()) {
                 // try to expand/collapse tree item
                 getControl().getTreeItem().setExpanded(! getControl().getTreeItem().isExpanded());
             }

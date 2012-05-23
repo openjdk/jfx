@@ -30,6 +30,7 @@ import java.util.WeakHashMap;
 
 import javafx.scene.control.*;
 import javafx.scene.control.TableView.TableViewFocusModel;
+import javafx.scene.input.MouseButton;
 import javafx.scene.input.MouseEvent;
 
 /**
@@ -189,7 +190,8 @@ public class TableCellBehavior extends CellBehaviorBase<TableCell> {
 
         // we must update the table appropriately, and this is determined by
         // what modifiers the user held down as they released the mouse.
-        if (e.isPrimaryButtonDown() || (e.isSecondaryButtonDown() && !selected)) { 
+        MouseButton button = e.getButton();
+        if (button == MouseButton.PRIMARY || (button == MouseButton.SECONDARY && !selected)) { 
             if (sm.getSelectionMode() == SelectionMode.SINGLE) {
                 simpleSelect(e);
             } else {
@@ -245,7 +247,7 @@ public class TableCellBehavior extends CellBehaviorBase<TableCell> {
         tv.getSelectionModel().clearAndSelect(row, getControl().getTableColumn());
 
         // handle editing, which only occurs with the primary mouse button
-        if (e.isPrimaryButtonDown()) {
+        if (e.getButton() == MouseButton.PRIMARY) {
             if (e.getClickCount() == 1 && isAlreadySelected) {
                 tv.edit(row, getControl().getTableColumn());
             } else if (e.getClickCount() == 1) {
