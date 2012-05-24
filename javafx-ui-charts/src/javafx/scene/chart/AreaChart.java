@@ -116,7 +116,7 @@ public class AreaChart<X,Y> extends XYChart<X,Y> {
             if(xData != null && !(xData.size() == 1 && getXAxis().toNumericValue(xData.get(0)) == 0)) {
                 xa.invalidateRange(xData);
             }
-            if(yData != null && !(xData.size() == 1 && getYAxis().toNumericValue(yData.get(0)) == 0)) {
+            if(yData != null && !(yData.size() == 1 && getYAxis().toNumericValue(yData.get(0)) == 0)) {
                 ya.invalidateRange(yData);
             }
         }
