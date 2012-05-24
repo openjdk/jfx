@@ -621,14 +621,14 @@ public class PaginationSkin extends SkinBase<Pagination, PaginationBehavior>  {
     @Override protected double computePrefWidth(double height) {
         double left = snapSpace(getInsets().getLeft());
         double right = snapSpace(getInsets().getRight());
-        double navigationWidth = snapSize(navigation.prefWidth(height));
+        double navigationWidth = navigation.isVisible() ? snapSize(navigation.prefWidth(height)) : 0;
         return left + Math.max(currentStackPane.prefWidth(height), navigationWidth) + right;
     }
 
     @Override protected double computePrefHeight(double width) {
         double top = snapSpace(getInsets().getTop());
         double bottom = snapSpace(getInsets().getBottom());
-        double navigationHeight = snapSize(navigation.prefHeight(width));
+        double navigationHeight = navigation.isVisible() ? snapSize(navigation.prefHeight(width)) : 0;
         return top + currentStackPane.prefHeight(width) + navigationHeight + bottom;
     }
 
@@ -639,7 +639,7 @@ public class PaginationSkin extends SkinBase<Pagination, PaginationBehavior>  {
         double bottom = snapSpace(getInsets().getBottom());
         double width = snapSize(getWidth() - (left + right));
         double height = snapSize(getHeight() - (top + bottom));
-        double navigationHeight = snapSize(navigation.prefHeight(-1));
+        double navigationHeight = navigation.isVisible() ? snapSize(navigation.prefHeight(-1)) : 0;
         double stackPaneHeight = snapSize(height - navigationHeight);
 
         layoutInArea(currentStackPane, left, top, width, stackPaneHeight, 0, HPos.CENTER, VPos.CENTER);
