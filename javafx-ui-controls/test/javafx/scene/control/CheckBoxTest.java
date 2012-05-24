@@ -354,5 +354,19 @@ public class CheckBoxTest {
         });
         btn.setIndeterminate(true);
         assertTrue(btn.isIndeterminate());
-    }    
+    }  
+    
+    private int count = 0;
+    @Test public void fireSelectedCheckboxResultsIn_OnActionCalledOnce_RT21482() {        
+        btn.setOnAction(new EventHandler<ActionEvent>() {
+            @Override
+            public void handle(ActionEvent arg0) {
+                if (count++ > 0) {
+                    assertFalse(true);
+                }
+            }
+        });
+        btn.fire();
+        assertTrue(btn.isSelected());
+    }
 }
