@@ -74,6 +74,13 @@ public class MenuBarTest {
         assertEquals(0, menuBar.getMenus().size());
     }
     
+     @Test public void getMenusIsRemovable() {
+           menuBar.getMenus().add(new Menu("blah"));
+           menuBar.getMenus().add(new Menu("foo"));
+           menuBar.getMenus().remove(0);
+           assertEquals(1, menuBar.getMenus().size());
+     }
+     
     @Test public void testMenuShowHideWithMenuBarWithXYTranslation() {
         final MouseEventGenerator generator = new MouseEventGenerator();
         AnchorPane root = new AnchorPane();
