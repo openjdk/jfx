@@ -727,6 +727,7 @@ private void setIcon(Key key, String fileName) {
                 secondaryPopup = new Popup();
                 secondaryPopup.setAutoHide(true);
                 secondaryPopup.getContent().add(secondaryVK);
+                // TODO: call to impl_processCSS is probably not needed here
                 secondaryVK.impl_processCSS(false);
             }
 

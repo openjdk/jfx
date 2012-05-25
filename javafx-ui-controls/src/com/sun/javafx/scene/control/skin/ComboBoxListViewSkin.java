@@ -180,7 +180,6 @@ public class ComboBoxListViewSkin<T> extends ComboBoxPopupControl<T> {
         if (p == "SHOWING") {
             if (getSkinnable().isShowing()) {
                 this.listView.setManaged(true);
-                this.listView.impl_processCSS(true);
             } else {
                 this.listView.setManaged(false);
             }
