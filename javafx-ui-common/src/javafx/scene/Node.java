@@ -2951,12 +2951,22 @@ public abstract class Node implements EventTarget {
      * to promote from a RectBounds to a BoxBounds (3D).
      */
     BaseBounds getTransformedBounds(BaseBounds bounds, BaseTransform tx) {
-        // TODO couldn't we also take a fastpath for cases where tx is
-        // simply a translation?
         updateLocalToParentTransform();
-        if (tx.isIdentity()) {
+        if (tx.isTranslateOrIdentity()) {
             updateTxBounds();
             bounds = bounds.deriveWithNewBounds(txBounds);
+            if (!tx.isIdentity()) {
+                final double translateX = tx.getMxt();
+                final double translateY = tx.getMyt();
+                final double translateZ = tx.getMzt();
+                bounds = bounds.deriveWithNewBounds(
+                                    (float) (bounds.getMinX() + translateX),
+                                    (float) (bounds.getMinY() + translateY),
+                                    (float) (bounds.getMinZ() + translateZ),
+                                    (float) (bounds.getMaxX() + translateX),
+                                    (float) (bounds.getMaxY() + translateY),
+                                    (float) (bounds.getMaxZ() + translateZ));
+            }
             return bounds;
         } else if (localToParentTx.isIdentity()) {
             return getLocalBounds(bounds, tx);
