@@ -254,7 +254,7 @@ public class TreeCellBehavior extends CellBehaviorBase<TreeCell<?>> {
             } else if (e.getClickCount() == 1) {
                 // cancel editing
                 tv.edit(null);
-            } else if (e.getClickCount() == 2 && ! getControl().isEditable()) {
+            } else if (e.getClickCount() == 2/* && ! getControl().isEditable()*/) {
                 // try to expand/collapse tree item
                 getControl().getTreeItem().setExpanded(! getControl().getTreeItem().isExpanded());
             }
