@@ -5,13 +5,59 @@
 package javafx.scene.control;
 
 
-import org.junit.Ignore;
+import com.sun.javafx.css.ParsedValue;
+import com.sun.javafx.css.StyleableProperty;
+import com.sun.javafx.css.parser.CSSParser;
+import com.sun.javafx.pgstub.StubToolkit;
+import com.sun.javafx.tk.Toolkit;
+import javafx.scene.Parent;
+import javafx.scene.Scene;
+import javafx.scene.layout.StackPane;
+import javafx.stage.Stage;
+import static org.junit.Assert.assertEquals;
+import org.junit.Assert;
+import org.junit.Before;
+import org.junit.Test;
 
 /**
  * @author smarks
  */
-@Ignore
 public class SliderTest {
+    
+    
+    private Slider slider;
+    private Toolkit tk;
+    private Scene scene;
+    private Stage stage;
+    
+    @Before public void setup() {
+        tk = (StubToolkit)Toolkit.getToolkit();//This step is not needed (Just to make sure StubToolkit is loaded into VM)
+        slider = new Slider();
+    }
+    
+    protected void startApp(Parent root) {
+        scene = new Scene(root,800,600);
+        stage = new Stage();
+        stage.setScene(scene);
+        stage.show();
+        tk.firePulse();
+    }
+    @Test public void testSettingMinorTickCountViaCSS() {
+        StackPane pane = new StackPane();
+        pane.getChildren().add(slider);
+        startApp(pane);
+        
+        ParsedValue pv = CSSParser.getInstance().parseExpr("-fx-minor-tick-count","2");
+        Object val = pv.convert(null);        
+        StyleableProperty prop = StyleableProperty.getStyleableProperty(slider.minorTickCountProperty());
+        try {
+            prop.set(slider, val, null);
+            assertEquals(2, slider.getMinorTickCount(), 0.);
+        } catch (Exception e) {
+            Assert.fail(e.toString());
+        }
+    }
+    
 //    Slider slider;
 //
 //    /**

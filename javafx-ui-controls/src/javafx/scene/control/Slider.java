@@ -43,6 +43,7 @@ import javafx.util.StringConverter;
 
 import com.sun.javafx.Utils;
 import com.sun.javafx.css.*;
+import com.sun.javafx.css.Stylesheet.Origin;
 import com.sun.javafx.css.converters.BooleanConverter;
 import com.sun.javafx.css.converters.EnumConverter;
 import com.sun.javafx.css.converters.SizeConverter;
@@ -708,6 +709,10 @@ public class Slider extends Control {
             new StyleableProperty<Slider,Number>("-fx-minor-tick-count",
                 SizeConverter.getInstance(), 3.0) {
 
+            @Override public void set(Slider node, Number value, Origin origin) {
+                super.set(node, value.intValue(), origin);
+            } 
+            
             @Override
             public boolean isSettable(Slider n) {
                 return n.minorTickCount == null || !n.minorTickCount.isBound();
