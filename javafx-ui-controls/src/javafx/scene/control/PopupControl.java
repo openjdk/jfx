@@ -43,10 +43,7 @@ import java.util.Collections;
 import java.util.List;
 
 import com.sun.javafx.collections.TrackableObservableList;
-import com.sun.javafx.css.StyleManager;
-import com.sun.javafx.css.Styleable;
-import com.sun.javafx.css.StyleableProperty;
-import com.sun.javafx.css.StyleableStringProperty;
+import com.sun.javafx.css.*;
 import com.sun.javafx.css.converters.StringConverter;
 import com.sun.javafx.logging.PlatformLogger;
 import com.sun.javafx.scene.control.Logging;
@@ -1163,9 +1160,10 @@ public class PopupControl extends PopupWindow implements Skinnable {
                 || skinClassName.get().isEmpty()) {
                 final String msg = 
                     "Empty -fx-skin property specified for popup control " + this;   
-                final List<String> errors = StyleManager.getInstance().getErrors();
+                final List<CssError> errors = StyleManager.getInstance().getErrors();
                 if (errors != null) {
-                    errors.add(msg); // RT-19884
+                    CssError error = new CssError(msg);
+                    errors.add(error); // RT-19884
                 } 
                 Logging.getControlsLogger().severe(msg);
                 return;
@@ -1199,9 +1197,10 @@ public class PopupControl extends PopupWindow implements Skinnable {
                         + "' for popup control " + this 
                         + ".\r\nYou must provide a constructor that accepts a single "
                         + "PopupControl parameter in " + skinClassName + ".";
-                    final List<String> errors = StyleManager.getInstance().getErrors();
+                    final List<CssError> errors = StyleManager.getInstance().getErrors();
                     if (errors != null) {
-                        errors.add(msg); // RT-19884
+                        CssError error = new CssError(msg);
+                        errors.add(error); // RT-19884
                     } 
                     Logging.getControlsLogger().severe(msg);
                     return;
@@ -1216,18 +1215,20 @@ public class PopupControl extends PopupWindow implements Skinnable {
                 final String msg = 
                     "Failed to load skin '" + skinClassName 
                     + "' for popup control " + this;
-                final List<String> errors = StyleManager.getInstance().getErrors();
+                final List<CssError> errors = StyleManager.getInstance().getErrors();
                 if (errors != null) {
-                    errors.add(msg + " :" + e.getLocalizedMessage()); // RT-19884
+                    CssError error = new CssError(msg + " :" + e.getLocalizedMessage());
+                    errors.add(error); // RT-19884
                 } 
                 Logging.getControlsLogger().severe(msg, e.getCause());
             } catch (Exception e) {
                 final String msg = 
                     "Failed to load skin '" + skinClassName 
                     + "' for popup control " + this;
-                final List<String> errors = StyleManager.getInstance().getErrors();
+                final List<CssError> errors = StyleManager.getInstance().getErrors();
                 if (errors != null) {
-                    errors.add(msg + " :" + e.getLocalizedMessage()); // RT-19884
+                    CssError error = new CssError(msg + " :" + e.getLocalizedMessage());
+                    errors.add(error); // RT-19884
                 } 
                 Logging.getControlsLogger().severe(msg, e.getCause());
             }

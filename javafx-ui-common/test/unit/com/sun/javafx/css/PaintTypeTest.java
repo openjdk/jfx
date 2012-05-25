@@ -198,7 +198,7 @@ public class PaintTypeTest {
     @Test
     public void testPaintTypeWithCSS() {
         setup();
-        try {
+
         for (int i=0; i<css.length; i++) {
 
             Stylesheet stylesheet =
@@ -215,9 +215,7 @@ public class PaintTypeTest {
                 assertEquals(msg, expResults[i][j], paints[j][0]);
             }
         }
-        } catch (IOException ioe) {
-            fail(ioe.toString());
-        }
+
     }
 
     @Test

@@ -122,17 +122,12 @@ public class RegionTest {
         };
 
 
-        Stylesheet stylesheet = null;
-        try {
-            stylesheet = CSSParser.getInstance().parse(
+        Stylesheet stylesheet = CSSParser.getInstance().parse(
                     "* { " +
                         "-fx-background-color: #ff0000, #00ff00, #0000ff;" +
                         "-fx-background-radius: -1, 0, 1; " +
                         "-fx-background-insets: -1, 0, 1; " +
                     "}");
-         } catch (IOException ioe) {
-             fail(ioe.toString());
-         }
 
         Map<StyleableProperty,Object> keyValues = new HashMap<StyleableProperty,Object>();
 
@@ -230,9 +225,7 @@ public class RegionTest {
             {dashed, dotted, BorderStyle.SOLID, BorderStyle.NONE},
         };
 
-        Stylesheet stylesheet = null;
-        try {
-            stylesheet = CSSParser.getInstance().parse(
+        Stylesheet stylesheet = CSSParser.getInstance().parse(
                     "* { " +
                         "-fx-border-color: red, " +
                             "yellow blue green red," +
@@ -242,9 +235,6 @@ public class RegionTest {
                         "-fx-border-insets: -1, 0, 1;" +
                         "-fx-border-style: dashed dotted solid none;" +
                     "}");
-         } catch (IOException ioe) {
-             fail(ioe.toString());
-         }
 
         Map<StyleableProperty,Object> keyValues = new HashMap<StyleableProperty,Object>();
         ParsedValue cssColorValue = getValueFor(stylesheet, "-fx-border-color");
@@ -339,18 +329,13 @@ public class RegionTest {
             BackgroundSize.COVER,
         };
 
-        Stylesheet stylesheet = null;
-        try {
-            stylesheet = CSSParser.getInstance().parse(
+        Stylesheet stylesheet = CSSParser.getInstance().parse(
                     "* { " +
                         "-fx-background-image: url(\"http://sipi.usc.edu/database/misc/4.2.04.tiff\"), url(\"javafx/scene/image/doc-files/imageview.png\");" +
                         "-fx-background-repeat: repeat no-repeat, no-repeat;" +
                         "-fx-background-position: right 30% center, left 20% bottom 10%; " +
                         "-fx-background-size: AUTO, cover; " +
                     "}");
-         } catch (IOException ioe) {
-             fail(ioe.toString());
-         }
 
         Map<StyleableProperty,Object> keyValues = new HashMap<StyleableProperty,Object>();
 
@@ -451,9 +436,7 @@ public class RegionTest {
             new Insets(1f, 1f, 1f, 1f)
         };
 
-        Stylesheet stylesheet = null;
-        try {
-            stylesheet = CSSParser.getInstance().parse(
+        Stylesheet stylesheet = CSSParser.getInstance().parse(
                     "* { " +
 //                        "-fx-border-image-source: url(\"http://sipi.usc.edu/database/misc/4.2.04.tiff\"), url(\"scenic-view.png\");" +
                         "-fx-border-image-source: url(\"http://sipi.usc.edu/database/misc/4.2.04.tiff\"), url(\"http://sipi.usc.edu/database/misc/4.2.03.tiff\");" +
@@ -462,9 +445,6 @@ public class RegionTest {
                         "-fx-border-image-width: 5%, 10; " +
                         "-fx-border-image-insets: -1, 1; " +
                     "}");
-         } catch (IOException ioe) {
-             fail(ioe.toString());
-         }
 
         Map<StyleableProperty,Object> keyValues = new HashMap<StyleableProperty,Object>();
 

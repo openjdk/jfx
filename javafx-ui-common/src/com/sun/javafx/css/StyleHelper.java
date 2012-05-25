@@ -515,17 +515,15 @@ public class StyleHelper {
      */
     private Map<String,CascadingStyle> getInlineStyleMap(Node node) {
 
-        return mapInlineStyles(node.getStyle());
+        return getInlineStyleMap(node.impl_getStyleable());
     }
 
     /**
      * Get the mapping of property to style from Node.style for this node.
      */
-    private Map<String,CascadingStyle> getInlineStyleMap(Styleable node) {
-        return mapInlineStyles(node.getStyle());
-    }
-    
-    private Map<String,CascadingStyle> mapInlineStyles(final String inlineStyles) {
+    private Map<String,CascadingStyle> getInlineStyleMap(Styleable styleable) {
+        
+        final String inlineStyles = styleable.getStyle();
 
         // If there are no styles for this property then we can just bail
         if ((inlineStyles == null) || inlineStyles.isEmpty()) return null;
@@ -535,7 +533,7 @@ public class StyleHelper {
         if (styles == null) {
 
             Stylesheet authorStylesheet =
-                CSSParser.getInstance().parseStyle(inlineStyles);
+                CSSParser.getInstance().parseInlineStyle(styleable);
             if (authorStylesheet != null) {
                 authorStylesheet.setOrigin(Stylesheet.Origin.INLINE);
             }
@@ -728,8 +726,12 @@ public class StyleHelper {
                     }
                     
                 } catch (Exception e) {
-                    final String msg = String.format("Failed to set css [%s] due to %s\n", styleable, e.getMessage());
-                    StyleManager.getInstance().errorsProperty().add(msg);                    
+                    List<CssError> errors = null;
+                    if ((errors = StyleManager.getInstance().getErrors()) != null) {
+                        final String msg = String.format("Failed to set css [%s] due to %s\n", styleable, e.getMessage());
+                        final CssError error = new CssError.PropertySetError(styleable, node.impl_getStyleable(), msg);
+                        errors.add(error);
+                    }
                     // TODO: use logger here
                     PlatformLogger logger = Logging.getCSSLogger();
                     if (logger.isLoggable(PlatformLogger.WARNING)) {
@@ -897,7 +899,11 @@ public class StyleHelper {
                     return new CalculatedValue(ret, origin, isCacheable);
                 } catch (ClassCastException cce) {
                     final String msg = formatExceptionMessage(node, styleable, style.getStyle(), cce);
-                    StyleManager.getInstance().errorsProperty().add(msg);
+                    List<CssError> errors = null;
+                    if ((errors = StyleManager.getInstance().getErrors()) != null) {
+                        final CssError error = new CssError.PropertySetError(styleable, node.impl_getStyleable(), msg);
+                        errors.add(error);
+                    }
                     if (LOGGER.isLoggable(PlatformLogger.WARNING)) {
                         LOGGER.warning("caught: ", cce);
                         LOGGER.warning("styleable = " + styleable);
@@ -1273,7 +1279,11 @@ public class StyleHelper {
                 
             } catch (ClassCastException cce) {
                 final String msg = formatUnresolvedLookupMessage(node, styleable, style.getStyle(),resolved);
-                StyleManager.getInstance().errorsProperty().add(msg);
+                List<CssError> errors = null;
+                if ((errors = StyleManager.getInstance().getErrors()) != null) {
+                    final CssError error = new CssError.PropertySetError(styleable, node.impl_getStyleable(), msg);
+                    errors.add(error);
+                }
                 if (LOGGER.isLoggable(PlatformLogger.WARNING)) {
                     LOGGER.warning(msg);
                     LOGGER.fine("node = " + node.toString());
@@ -1283,7 +1293,11 @@ public class StyleHelper {
                 return SKIP;
             } catch (IllegalArgumentException iae) {
                 final String msg = formatExceptionMessage(node, styleable, style.getStyle(), iae);
-                StyleManager.getInstance().errorsProperty().add(msg);
+                List<CssError> errors = null;
+                if ((errors = StyleManager.getInstance().getErrors()) != null) {
+                    final CssError error = new CssError.PropertySetError(styleable, node.impl_getStyleable(), msg);
+                    errors.add(error);
+                }
                 if (LOGGER.isLoggable(PlatformLogger.WARNING)) {
                     LOGGER.warning("caught: ", iae);
                     LOGGER.fine("styleable = " + styleable);
@@ -1292,7 +1306,11 @@ public class StyleHelper {
                 return SKIP;
             } catch (NullPointerException npe) {
                 final String msg = formatExceptionMessage(node, styleable, style.getStyle(), npe);
-                StyleManager.getInstance().errorsProperty().add(msg);
+                List<CssError> errors = null;
+                if ((errors = StyleManager.getInstance().getErrors()) != null) {
+                    final CssError error = new CssError.PropertySetError(styleable, node.impl_getStyleable(), msg);
+                    errors.add(error);
+                }
                 if (LOGGER.isLoggable(PlatformLogger.WARNING)) {
                     LOGGER.warning("caught: ", npe);
                     LOGGER.fine("styleable = " + styleable);
