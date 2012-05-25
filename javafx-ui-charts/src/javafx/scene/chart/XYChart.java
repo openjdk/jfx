@@ -613,7 +613,7 @@ public abstract class XYChart<X,Y> extends Chart {
 
     /** @inheritDoc */
     @Override protected final void layoutChartChildren(double top, double left, double width, double height) {
-        if(getData() == null || height <= 0 || width <= 0 ) return;
+        if(getData() == null) return;
         if (!rangeValid) {
             rangeValid = true;
             if(getData() != null) updateAxisRange();
