@@ -319,9 +319,8 @@ import javafx.util.Callback;
 @IDProperty("id")
 public abstract class Node implements EventTarget {
 
-     // PERF: TODO remove before shipping
      static {
-          PerformanceTracker.logEvent("Node.fx class loaded");
+          PerformanceTracker.logEvent("Node class loaded");
      }
 
     /**************************************************************************
@@ -3854,9 +3853,8 @@ public abstract class Node implements EventTarget {
     @Deprecated
     public final Node impl_pickNode(double parentX, double parentY) {
 
-        // TODO this check for whether there is no scene is dubious and complicates testing
         // In some conditions we can omit picking this node or subgraph
-        if (getScene() == null || !isVisible() || isDisable() || isMouseTransparent()) {
+        if (!isVisible() || isDisable() || isMouseTransparent()) {
             return null;
         }
 
@@ -3917,9 +3915,8 @@ public abstract class Node implements EventTarget {
     @Deprecated
     public final Node impl_pickNode(PickRay pickRay) {
 
-        // TODO this check for whether there is no scene is dubious and complicates testing
         // In some conditions we can omit picking this node or subgraph
-        if (getScene() == null || !isVisible() || isDisable() || isMouseTransparent()) {
+        if (!isVisible() || isDisable() || isMouseTransparent()) {
             return null;
         }
 
@@ -3955,19 +3952,6 @@ public abstract class Node implements EventTarget {
      */
     @Deprecated
     protected final boolean impl_intersects(PickRay pickRay) {
-        // TODO: Need to handle clip and effect
-        return contentIntersects(pickRay);
-    }
-
-    /**
-     * Returns true if the content of this node contains given coordinates.
-     * "Content" doesn't include filters like effect or clip.
-     *
-     * @param pickRay
-     * @return true if node's content contains passed point, false otherwise
-     */
-    private boolean contentIntersects(PickRay pickRay) {
-
         double origZ = pickRay.getOriginNoClone().z;
         double dirZ = pickRay.getDirectionNoClone().z;
         // Handle the case where pickRay is almost parallel to the Z-plane
