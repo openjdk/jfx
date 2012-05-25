@@ -72,8 +72,6 @@ public class TreeViewBehavior<T> extends BehaviorBase<TreeView<T>> {
 
         if (PlatformUtil.isMac()) {
             TREE_VIEW_BINDINGS.add(new KeyBinding(A, "SelectAll").meta());
-            TREE_VIEW_BINDINGS.add(new KeyBinding(BACK_SLASH, "ClearSelection").meta());
-            TREE_VIEW_BINDINGS.add(new KeyBinding(SLASH, "SelectAll").meta());
             TREE_VIEW_BINDINGS.add(new KeyBinding(SPACE, "toggleFocusOwnerSelection").ctrl().meta());
             TREE_VIEW_BINDINGS.add(new KeyBinding(PAGE_UP, "FocusPageUp").meta());
             TREE_VIEW_BINDINGS.add(new KeyBinding(PAGE_DOWN, "FocusPageDown").meta());
@@ -88,8 +86,6 @@ public class TreeViewBehavior<T> extends BehaviorBase<TreeView<T>> {
             TREE_VIEW_BINDINGS.add(new KeyBinding(END, "DiscontinuousSelectAllToLastRow").meta().shift());
         } else {
             TREE_VIEW_BINDINGS.add(new KeyBinding(A, "SelectAll").ctrl());
-            TREE_VIEW_BINDINGS.add(new KeyBinding(BACK_SLASH, "ClearSelection").ctrl());
-            TREE_VIEW_BINDINGS.add(new KeyBinding(SLASH, "SelectAll").ctrl());
             TREE_VIEW_BINDINGS.add(new KeyBinding(SPACE, "toggleFocusOwnerSelection").ctrl());
             TREE_VIEW_BINDINGS.add(new KeyBinding(PAGE_UP, "FocusPageUp").ctrl());
             TREE_VIEW_BINDINGS.add(new KeyBinding(PAGE_DOWN, "FocusPageDown").ctrl());
