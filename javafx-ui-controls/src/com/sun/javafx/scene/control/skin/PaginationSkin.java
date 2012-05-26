@@ -649,6 +649,20 @@ public class PaginationSkin extends SkinBase<Pagination, PaginationBehavior>  {
         clipRect.setHeight(value);
     }
 
+    @Override protected double computeMinWidth(double height) {
+        double left = snapSpace(getInsets().getLeft());
+        double right = snapSpace(getInsets().getRight());
+        double navigationWidth = navigation.isVisible() ? snapSize(navigation.minWidth(height)) : 0;
+        return left + Math.max(currentStackPane.minWidth(height), navigationWidth) + right;
+    }   
+    
+    @Override protected double computeMinHeight(double width) {
+        double top = snapSpace(getInsets().getTop());
+        double bottom = snapSpace(getInsets().getBottom());
+        double navigationHeight = navigation.isVisible() ? snapSize(navigation.minHeight(width)) : 0;
+        return top + currentStackPane.minHeight(width) + navigationHeight + bottom;
+    }    
+    
     @Override protected double computePrefWidth(double height) {
         double left = snapSpace(getInsets().getLeft());
         double right = snapSpace(getInsets().getRight());
