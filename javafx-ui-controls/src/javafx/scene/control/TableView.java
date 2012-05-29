@@ -679,9 +679,6 @@ public class TableView<S> extends Control {
                     // set up listeners
                     removeTableColumnListener(c.getRemoved());
                     addTableColumnListener(c.getAddedSubList());
-
-                    removeColumnsListener(c.getRemoved(), weakColumnsObserver);
-                    addColumnsListener(c.getAddedSubList(), weakColumnsObserver);
                 }
                     
                 // We don't maintain a bind for leafColumns, we simply call this update
@@ -762,6 +759,9 @@ public class TableView<S> extends Control {
             // Fix for RT-15194: Need to remove removed columns from the 
             // sortOrder list.
             while (c.next()) {
+                removeColumnsListener(c.getRemoved(), weakColumnsObserver);
+                addColumnsListener(c.getAddedSubList(), weakColumnsObserver);
+                
                 if (c.wasRemoved()) {
                     for (int i = 0; i < c.getRemovedSize(); i++) {
                         getSortOrder().remove(c.getRemoved().get(i));

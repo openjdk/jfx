@@ -59,21 +59,21 @@ class NestedTableColumnHeader extends TableColumnHeader {
      *                                                                         *
      **************************************************************************/
     
-    public NestedTableColumnHeader(TableView table, TableColumn tc) {
+    NestedTableColumnHeader(TableView table, TableColumn tc) {
         super(table, tc);
 
         getStyleClass().setAll("nested-column-header");
         setFocusTraversable(false);
 
         initUI();
-
+        
         // watching for changes to the view columns in either table or tableColumn.
         if (getTableColumn() == null && getTableView() != null) {
             setColumns(getTableView().getColumns());
         } else if (getTableColumn() != null) {
             setColumns(getTableColumn().getColumns());
         }
-        getColumns().addListener(weakColumnsListener);
+//        getColumns().addListener(weakColumnsListener);
     }
     
     
@@ -136,9 +136,17 @@ class NestedTableColumnHeader extends TableColumnHeader {
      * It does NOT include ANY of the children of these columns, if any exist.
      */
     private ObservableList<? extends TableColumn> columns;
-    public ObservableList<? extends TableColumn> getColumns() { return columns; }
-    public void setColumns(ObservableList<? extends TableColumn> newColumns) {
+    ObservableList<? extends TableColumn> getColumns() { return columns; }
+    void setColumns(ObservableList<? extends TableColumn> newColumns) {
+        if (this.columns != null) {
+            this.columns.removeListener(weakColumnsListener);
+        }
+        
         this.columns = newColumns;  
+        
+        if (this.columns != null) {
+            this.columns.addListener(weakColumnsListener);
+        }
         
         // update the column headers....
         
