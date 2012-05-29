@@ -1104,8 +1104,8 @@ public class Scene implements EventTarget {
         int yMin = (int)Math.floor(y);
         int xMax = (int)Math.ceil(x + w);
         int yMax = (int)Math.ceil(y + h);
-        int width = xMax - xMin;
-        int height = yMax - yMin;
+        int width = Math.max(xMax - xMin, 1);
+        int height = Math.max(yMax - yMin, 1);
         if (wimg == null) {
             wimg = new WritableImage(width, height);
         } else {
