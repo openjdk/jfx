@@ -38,6 +38,8 @@ import javafx.application.ConditionalFeature;
 import com.sun.javafx.tk.TKListener;
 import com.sun.javafx.tk.TKStage;
 import com.sun.javafx.tk.Toolkit;
+import java.security.AccessController;
+import java.security.PrivilegedAction;
 
 public class PlatformImpl {
 
@@ -48,6 +50,7 @@ public class PlatformImpl {
     private static AtomicBoolean listenersRegistered = new AtomicBoolean(false);
     private static TKListener toolkitListener = null;
     private static volatile boolean implicitExit = true;
+    private static boolean taskbarApplication = true;
     private static AtomicInteger pendingRunnables = new AtomicInteger(0);
     private static AtomicInteger numWindows = new AtomicInteger(0);
     private static volatile boolean firstWindowShown = false;
@@ -56,6 +59,25 @@ public class PlatformImpl {
     private static Set<FinishListener> finishListeners =
             new CopyOnWriteArraySet<FinishListener>();
     private final static Object runLaterLock = new Object();
+
+    /**
+     * Set a flag indicating whether this application should show up in the
+     * task bar. The default value is true.
+     *
+     * @param taskbarApplication the new value of this attribute
+     */
+    public static void setTaskbarApplication(boolean taskbarApplication) {
+        PlatformImpl.taskbarApplication = taskbarApplication;
+    }
+
+    /**
+     * Returns the current value of the taskBarApplication flag.
+     *
+     * @return the current state of the flag.
+     */
+    public static boolean isTaskbarApplication() {
+        return taskbarApplication;
+    }
 
     /**
      * This method is invoked typically on the main thread. At this point,
@@ -76,6 +98,15 @@ public class PlatformImpl {
             // If we've already initialized, just put the runnable on the queue.
             runLater(r);
             return;
+        }
+
+        if (!taskbarApplication) {
+            AccessController.doPrivileged(new PrivilegedAction<Void>() {
+                @Override public Void run() {
+                    System.setProperty("com.sun.glass.taskbarApplication", "false");
+                    return null;
+                }
+            });
         }
 
         // Create Toolkit listener and register it with the Toolkit.
