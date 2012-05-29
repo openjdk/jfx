@@ -370,7 +370,7 @@ class NestedTableColumnHeader extends TableColumnHeader {
     /* **************************/
 
     @Override protected void layoutChildren() {
-        double w = snapSize(getWidth()) - snapSpace(getInsets().getLeft()) - snapSpace(getInsets().getRight());
+        double w = getWidth() - getInsets().getLeft() - getInsets().getRight();
         double h = getHeight() - getInsets().getTop() - getInsets().getBottom();
         
         int labelHeight = (int) label.prefHeight(-1);
@@ -387,7 +387,7 @@ class NestedTableColumnHeader extends TableColumnHeader {
         for (TableColumnHeader n : getColumnHeaders()) {
             if (! n.isVisible()) continue;
             
-            double prefWidth = snapSize(n.prefWidth(-1));
+            double prefWidth = n.prefWidth(-1);
 //            double prefHeight = n.prefHeight(-1);
 
             // position the column header in the default location...
