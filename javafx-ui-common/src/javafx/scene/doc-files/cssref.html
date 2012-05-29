@@ -609,9 +609,8 @@
     <p>If the error is found while parsing a file, the file URL will be given.
       If the error is from an inline style (as in the example above), the URL is
       given as a question mark. The line and position give an offset into the
-      file or string where the token begins. <em>Note well!</em> The lexer does
-      a poor job of counting lines and characters. The line and position may not
-      be accurate. This should be resolved in a future release. <br>
+      file or string where the token begins. <em>Please note that the line and
+      position may not be accurate in releases prior to JavaFX 2.2.</em><br>
     </p>
     <p>Applications needing to detect errors from the parser can add a listener
       to the errors property of com.sun.javafx.css.StyleManager. This is not

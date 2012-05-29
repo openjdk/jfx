@@ -122,12 +122,8 @@ public abstract class ComboBoxBaseSkin<T> extends SkinBase<ComboBoxBase<T>, Comb
     }
     
     private void updateDisplayArea() {
-        if (displayNode != null) {
-            getChildren().remove(displayNode);
-            displayNode = null;
-        }
         displayNode = getDisplayNode();
-        getChildren().add(0, displayNode);
+        getChildren().setAll(displayNode, arrowButton);
     }
     
     private boolean isButton() {
@@ -159,7 +155,7 @@ public abstract class ComboBoxBaseSkin<T> extends SkinBase<ComboBoxBase<T>, Comb
         
         if (isButton()) return;
         
-        arrowButton.resize(arrowButtonWidth, getHeight());
+        arrowButton.resize(arrowButtonWidth, getHeight() - padding.getTop() - padding.getBottom());
         positionInArea(arrowButton, getWidth() - padding.getRight() - arrowButtonWidth, 0, 
                 arrowButtonWidth, getHeight(), 0, HPos.CENTER, VPos.CENTER);
     }

@@ -186,9 +186,8 @@ public class ScrollBarBehavior extends BehaviorBase<ScrollBar> {
         timeline = new Timeline();
         timeline.setCycleCount(Timeline.INDEFINITE);
 
-        final KeyFrame kf1 = new KeyFrame(
-            Duration.millis(0),
-            new EventHandler<ActionEvent>() {
+        final EventHandler<ActionEvent> step =
+                new EventHandler<ActionEvent>() {
                 @Override
                 public void handle(ActionEvent event) {
                     boolean i = (pos > ((bar.getValue() - bar.getMin())/(bar.getMax() - bar.getMin())));
@@ -203,12 +202,13 @@ public class ScrollBarBehavior extends BehaviorBase<ScrollBar> {
                         timeline = null;
                     }
                 }
-            }
-        );
-        final KeyFrame kf2 = new KeyFrame(Duration.millis(200));
-        timeline.getKeyFrames().addAll(kf1, kf2);
-        timeline.play();
+            };
 
+        final KeyFrame kf = new KeyFrame(Duration.millis(200), step);
+        timeline.getKeyFrames().add(kf);
+        // do the first step immediately
+        timeline.play();
+        step.handle(null);
     }
 
     /**
@@ -235,8 +235,7 @@ public class ScrollBarBehavior extends BehaviorBase<ScrollBar> {
         timeline = new Timeline();
         timeline.setCycleCount(Timeline.INDEFINITE);
 
-        final KeyFrame kf1 = new KeyFrame(
-            Duration.millis(0),
+        final EventHandler<ActionEvent> dec =
             new EventHandler<ActionEvent>() {
                 @Override
                 public void handle(ActionEvent event) {
@@ -248,11 +247,13 @@ public class ScrollBarBehavior extends BehaviorBase<ScrollBar> {
                         timeline = null;
                     }
                 }
-            }
-        );
-        final KeyFrame kf2 = new KeyFrame(Duration.millis(200));
-        timeline.getKeyFrames().addAll(kf1, kf2);
+            };
+
+        final KeyFrame kf = new KeyFrame(Duration.millis(200), dec);
+        timeline.getKeyFrames().add(kf);
+        // do the first step immediately
         timeline.play();
+        dec.handle(null);
     }
 
     /**
@@ -278,8 +279,7 @@ public class ScrollBarBehavior extends BehaviorBase<ScrollBar> {
         timeline = new Timeline();
         timeline.setCycleCount(Timeline.INDEFINITE);
 
-        final KeyFrame kf1 = new KeyFrame(
-            Duration.millis(0),
+        final EventHandler<ActionEvent> inc =
             new EventHandler<ActionEvent>() {
                 @Override
                 public void handle(ActionEvent event) {
@@ -291,11 +291,13 @@ public class ScrollBarBehavior extends BehaviorBase<ScrollBar> {
                         timeline = null;
                     }
                 }
-            }
-        );
-        final KeyFrame kf2 = new KeyFrame(Duration.millis(200));
-        timeline.getKeyFrames().addAll(kf1, kf2);
+            };
+
+        final KeyFrame kf = new KeyFrame(Duration.millis(200), inc);
+        timeline.getKeyFrames().add(kf);
+        // do the first step immediately
         timeline.play();
+        inc.handle(null);
     }
 
     /**

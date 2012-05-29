@@ -387,6 +387,10 @@ public class MenuBarSkin extends SkinBase<MenuBar, BehaviorBase<MenuBar>> implem
     
     private void rebuildUI() {
         int index = 0;
+        for (Menu m : getSkinnable().getMenus()) {
+            // remove action listeners 
+            updateActionListeners(getSkinnable().getMenus().get(index), false);
+        }
         for(Node n : container.getChildren()) {
             //Stop observing menu's showing & disable property for changes.
             //Need to unbind before clearing container's children.
@@ -397,7 +401,6 @@ public class MenuBarSkin extends SkinBase<MenuBar, BehaviorBase<MenuBar>> implem
             menuButton.textProperty().unbind();
             menuButton.graphicProperty().unbind();
             menuButton.styleProperty().unbind();
-            updateActionListeners(getSkinnable().getMenus().get(index), false);
             index++;
         }
         container.getChildren().clear();

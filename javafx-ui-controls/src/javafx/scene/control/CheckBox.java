@@ -225,7 +225,6 @@ public class CheckBox extends ButtonBase {
             setSelected(!isSelected());
             setIndeterminate(false);
         }
-        fireEvent(new ActionEvent());
     }
 
     /***************************************************************************

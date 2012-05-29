@@ -25,10 +25,7 @@
 
 package javafx.scene.control;
 
-import com.sun.javafx.css.StyleManager;
-import com.sun.javafx.css.StyleableObjectProperty;
-import com.sun.javafx.css.StyleableProperty;
-import com.sun.javafx.css.StyleableStringProperty;
+import com.sun.javafx.css.*;
 import com.sun.javafx.css.converters.StringConverter;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
@@ -959,9 +956,10 @@ public abstract class Control extends Parent implements Skinnable {
                 || skinClassName.get().isEmpty()) {
             final String msg = 
                 "Empty -fx-skin property specified for control " + this;   
-            final List<String> errors = StyleManager.getInstance().getErrors();
+            final List<CssError> errors = StyleManager.getInstance().getErrors();
             if (errors != null) {
-                errors.add(msg); // RT-19884
+                CssError error = new CssError(msg);
+                errors.add(error); // RT-19884
             } 
             Logging.getControlsLogger().severe(msg);
             return;
@@ -995,9 +993,10 @@ public abstract class Control extends Parent implements Skinnable {
                     "No valid constructor defined in '" + skinClassName + "' for control " + this +
                         ".\r\nYou must provide a constructor that accepts a single "
                         + "Control parameter in " + skinClassName + ".";
-                final List<String> errors = StyleManager.getInstance().getErrors();
+                final List<CssError> errors = StyleManager.getInstance().getErrors();
                 if (errors != null) {
-                    errors.add(msg); // RT-19884
+                    CssError error = new CssError(msg);
+                    errors.add(error); // RT-19884
                 } 
                 Logging.getControlsLogger().severe(msg);
             } else {
@@ -1009,17 +1008,19 @@ public abstract class Control extends Parent implements Skinnable {
         } catch (InvocationTargetException e) {
             final String msg = 
                 "Failed to load skin '" + skinClassName + "' for control " + this;
-            final List<String> errors = StyleManager.getInstance().getErrors();
+            final List<CssError> errors = StyleManager.getInstance().getErrors();
             if (errors != null) {
-                errors.add(msg + " :" + e.getLocalizedMessage()); // RT-19884
+                CssError error = new CssError(msg + " :" + e.getLocalizedMessage());
+                errors.add(error); // RT-19884
             } 
             Logging.getControlsLogger().severe(msg, e.getCause());
         } catch (Exception e) {
             final String msg = 
                 "Failed to load skin '" + skinClassName + "' for control " + this;
-            final List<String> errors = StyleManager.getInstance().getErrors();
+            final List<CssError> errors = StyleManager.getInstance().getErrors();
             if (errors != null) {
-                errors.add(msg + " :" + e.getLocalizedMessage()); // RT-19884
+                CssError error = new CssError(msg + " :" + e.getLocalizedMessage());
+                errors.add(error); // RT-19884
             } 
             Logging.getControlsLogger().severe(msg, e);            
 //            Node parent = this;
@@ -1116,9 +1117,10 @@ public abstract class Control extends Parent implements Skinnable {
         if (getSkin() == null) {
             final String msg = 
                 "The -fx-skin property has not been defined in CSS for " + this;
-            final List<String> errors = StyleManager.getInstance().getErrors();
+            final List<CssError> errors = StyleManager.getInstance().getErrors();
             if (errors != null) {
-                errors.add(msg); // RT-19884
+                CssError error = new CssError(msg);
+                errors.add(error); // RT-19884
             } 
             Logging.getControlsLogger().severe(msg);
         }

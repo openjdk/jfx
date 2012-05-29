@@ -101,10 +101,7 @@ public class ComboBoxListViewSkin<T> extends ComboBoxPopupControl<T> {
                     KeyEvent ke = (KeyEvent)t;
                     
                     if (ke.getCode() == KeyCode.ENTER) {
-                        StringConverter<T> c = comboBox.getConverter();
-                        if (c == null) return;
-                        T value = c.fromString(textField.getText());
-                        comboBox.setValue(value);
+                        setTextFromTextFieldIntoComboBoxValue();
                         t.consume();
                         return;
                     } else if (ke.getCode() == KeyCode.F4 && ke.getEventType() == KeyEvent.KEY_RELEASED) {
@@ -183,7 +180,6 @@ public class ComboBoxListViewSkin<T> extends ComboBoxPopupControl<T> {
         if (p == "SHOWING") {
             if (getSkinnable().isShowing()) {
                 this.listView.setManaged(true);
-                this.listView.impl_processCSS(true);
             } else {
                 this.listView.setManaged(false);
             }
@@ -236,10 +232,17 @@ public class ComboBoxListViewSkin<T> extends ComboBoxPopupControl<T> {
         // focus always goes to the comboBox, which then forwards events down 
         // to the TextField. This ensures that the ComboBox appears focused
         // externally for people listening to the focus property.
+        // Also, (for RT-21454) set the currently typed text as the value when focus 
+        // is lost from the ComboBox
         textField.focusedProperty().addListener(new ChangeListener<Boolean>() {
             @Override public void changed(ObservableValue<? extends Boolean> ov, Boolean t, Boolean hasFocus) {
                 if (hasFocus) {
                     comboBox.requestFocus();
+                }
+                
+                // RT-21454 starts here
+                if (! hasFocus) {
+                    setTextFromTextFieldIntoComboBoxValue();
                 }
             }
         });
@@ -285,6 +288,21 @@ public class ComboBoxListViewSkin<T> extends ComboBoxPopupControl<T> {
             cell.setText(s);
             cell.setGraphic(null);
         }
+    }
+    
+    private void setTextFromTextFieldIntoComboBoxValue() {
+        StringConverter<T> c = comboBox.getConverter();
+        if (c == null) return;
+        
+        T oldValue = comboBox.getValue();
+        T value = c.fromString(textField.getText());
+        
+        if ((value == null && oldValue == null) || (value != null && value.equals(oldValue))) {
+            // no point updating values needlessly (as they are the same)
+            return;
+        }
+        
+        comboBox.setValue(value);
     }
     
     private int getSelectedIndex() {

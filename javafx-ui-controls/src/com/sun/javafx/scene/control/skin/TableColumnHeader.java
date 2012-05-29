@@ -116,18 +116,7 @@ public class TableColumnHeader extends StackPane {
         // number of rows retrieved from a very slow (e.g. remote) data source.
         // Obviously, the bigger the value of n, the more likely the default 
         // width will be suitable for most values in the column
-        final int n = 30;
-        sceneProperty().addListener(new InvalidationListener() {
-            @Override public void invalidated(Observable o) {
-                if (! autoSizeComplete) {
-                    if (tc == null || tc.getPrefWidth() != DEFAULT_WIDTH || getScene() == null) {
-                        return;
-                    }
-                    resizeToFit(tc, n);
-                    autoSizeComplete = true;
-                }
-            }
-        });
+        sceneProperty().addListener(sceneListener);
     }
     
     
@@ -137,6 +126,20 @@ public class TableColumnHeader extends StackPane {
      * Listeners                                                               *
      *                                                                         *
      **************************************************************************/
+    
+    private final InvalidationListener sceneListener = new InvalidationListener() {
+        final int n = 30;
+        
+        @Override public void invalidated(Observable o) {
+            if (! autoSizeComplete) {
+                if (getTableColumn() == null || getTableColumn().getPrefWidth() != DEFAULT_WIDTH || getScene() == null) {
+                    return;
+                }
+                resizeToFit(getTableColumn(), n);
+                autoSizeComplete = true;
+            }
+        }
+    };
     
     private final InvalidationListener visibleListener = new InvalidationListener() {
         @Override public void invalidated(Observable observable) {
@@ -203,28 +206,22 @@ public class TableColumnHeader extends StackPane {
     private DoubleProperty sizeProperty() {
         if (size == null) {
             size = new StyleableDoubleProperty(20) {
-
-                @Override
-                public void set(double v) {
+                @Override public void set(double v) {
                     // guard against a 0 or negative size
                     super.set(((v <= 0) ? 20.0 : v));
                 }
 
-                @Override
-                public Object getBean() {
+                @Override public Object getBean() {
                     return TableColumnHeader.this;
                 }
 
-                @Override
-                public String getName() {
+                @Override public String getName() {
                     return "size";
                 }
 
-                @Override
-                public StyleableProperty getStyleableProperty() {
+                @Override public StyleableProperty getStyleableProperty() {
                     return StyleableProperties.SIZE;
                 }
-                
             };
         }
         return size;
@@ -276,6 +273,26 @@ public class TableColumnHeader extends StackPane {
      * Private methods                                                         *
      *                                                                         *
      **************************************************************************/   
+    
+    void dispose() {
+        if (table != null) {
+            table.getVisibleLeafColumns().removeListener(weakVisibleLeafColumnsListener);
+            table.getSortOrder().removeListener(weakSortOrderListener);
+        }
+
+        if (getTableColumn() != null) {
+            getTableColumn().visibleProperty().removeListener(weakVisibleListener);
+            getTableColumn().widthProperty().removeListener(weakWidthListener);
+        }
+        
+        sceneProperty().removeListener(sceneListener);
+        
+        label.textProperty().unbind();
+        label.graphicProperty().unbind();
+        
+        idProperty().unbind();
+        styleProperty().unbind();
+    }
     
     private boolean isSortingEnabled() {
         return ! PlatformUtil.isEmbedded();
@@ -356,25 +373,23 @@ public class TableColumnHeader extends StackPane {
     }
     
     private void setSortPos(int sortPos) {
-        if (! isSortingEnabled()) return;
-        
         this.sortPos = sortPos;
         updateSortGrid();
     }
     
     private void updateSortGrid() {
-        // we do not support sorting in embedded devices
-        if (! isSortingEnabled()) return;
-        
         // Fixe for RT-14488
         if (this instanceof NestedTableColumnHeader) return;
-        
-        isSortColumn = sortPos != -1;
         
         getChildren().clear();
         getChildren().add(label);
         
+        // we do not support sorting in embedded devices
+        if (! isSortingEnabled()) return;
+        
         if (! isSortColumn) return;
+        
+        isSortColumn = sortPos != -1;
         
         final int sortColumnCount = getTableView().getSortOrder().size();
         boolean showSortOrderDots = sortPos <= 3 && sortColumnCount > 1;

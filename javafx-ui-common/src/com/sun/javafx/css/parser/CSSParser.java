@@ -68,8 +68,10 @@ import com.sun.javafx.scene.layout.region.BorderStyle;
 import com.sun.javafx.scene.layout.region.Margins;
 import com.sun.javafx.scene.layout.region.Repeat;
 import com.sun.javafx.scene.layout.region.StrokeBorder;
+import java.net.MalformedURLException;
 import java.text.MessageFormat;
 import javafx.collections.ObservableList;
+import javafx.scene.Node;
 
 final public class CSSParser {
     static boolean EXIT_ON_ERROR = false;
@@ -84,12 +86,49 @@ final public class CSSParser {
     }
 
     private CSSParser() {
-        stylesheet = null;
         properties = new HashMap<String,String>();
     }
 
-    private Stylesheet stylesheet;
-
+    // stylesheet as a string from parse method. This will be null if the
+    // stylesheet is being parsed from a file; otherwise, the parser is parsing
+    // a string and this is that string.    
+    private String     stylesheetAsText;
+    
+    // the url of the stylesheet file, or the docbase of an applet. This will
+    // be null if the source is not a file or from an applet.
+    private URL        sourceOfStylesheet; 
+    
+    // the Styleable from the node with an in-line style. This will be null
+    // unless the source of the styles is a Node's styleProperty. In this case,
+    // the stylesheetString will also be set.
+    private Styleable  sourceOfInlineStyle;
+    
+    // source is a file
+    private void setInputSource(URL url) {
+        setInputSource(url, null);
+    }
+    
+    // source is a file
+    private void setInputSource(URL url, String str) {
+        stylesheetAsText = str;
+        sourceOfStylesheet = url;        
+        sourceOfInlineStyle = null;
+    }
+    
+    // source as string only
+    private void setInputSource(String str) {
+        stylesheetAsText = str;
+        sourceOfStylesheet = null;        
+        sourceOfInlineStyle = null;        
+    }
+    
+    // source is in-line style
+    private void setInputSource(Styleable styleable) {
+        stylesheetAsText = styleable != null ? styleable.getStyle() : null;
+        sourceOfStylesheet = null;
+        sourceOfInlineStyle = styleable;
+    }
+    
     private static final PlatformLogger LOGGER;
     static {
         LOGGER = com.sun.javafx.Logging.getCSSLogger();
@@ -104,46 +143,60 @@ final public class CSSParser {
         ParseException(String message) {
             this(message,null,null);
         }
-        ParseException(String message, Token tok, Stylesheet stylesheet) {
+        ParseException(String message, Token tok, CSSParser parser) {
             super(message);
             this.tok = tok;
-            this.url =
-                (stylesheet != null && stylesheet.getUrl() != null) 
-                    ? stylesheet.getUrl().toExternalForm()
-                    : "?";
-
-
+            if (parser.sourceOfStylesheet != null) {
+                source = parser.sourceOfStylesheet.toExternalForm();
+            } else if (parser.sourceOfInlineStyle != null) {
+                source = parser.sourceOfInlineStyle.toString();
+            } else if (parser.stylesheetAsText != null) {
+                source = parser.stylesheetAsText;
+            } else {
+                source = "?";
+            }
         }
         @Override public String toString() {
             StringBuilder builder = new StringBuilder(super.getMessage());
-            builder.append(url);
+            builder.append(source);
             if (tok != null) builder.append(": ").append(tok.toString());
             return builder.toString();
         }
         private final Token tok;
-        private final String url;
+        private final String source;
     }
 
     /**
      * Creates a stylesheet from a CSS document string.
      *
      *@param stylesheetText the CSS document to parse
-     *@return the stylesheet, null if stylesheetText is null or empty.
-     *@throws IOException
+     *@return the Stylesheet
      */
-    public Stylesheet parse(final String stylesheetText) throws IOException {
-        return parse((URL)null, stylesheetText);
-    }
-    public Stylesheet parse(final String docbase, final String stylesheetText) throws IOException {
-        return parse(new URL(docbase), stylesheetText);        
-    }
-    private Stylesheet parse(final URL docbase, final String stylesheetText) throws IOException {
-        stylesheet = new Stylesheet(docbase);
+    public Stylesheet parse(final String stylesheetText) {
+        final Stylesheet stylesheet = new Stylesheet();
         if (stylesheetText != null && !stylesheetText.trim().isEmpty()) {
+            setInputSource(stylesheetText);
             Reader reader = new CharArrayReader(stylesheetText.toCharArray());
-            parse(reader);
+            parse(stylesheet, reader);
         }
-        notifyErrors();
+        return stylesheet;
+    }
+    
+    /**
+     * Creates a stylesheet from a CSS document string using docbase as
+     * the base URL for resolving references within stylesheet.
+     *
+     *@param stylesheetText the CSS document to parse
+     *@return the Stylesheet
+     */
+    public Stylesheet parse(final String docbase, final String stylesheetText) throws IOException {
+        final URL url =  new URL(docbase);
+        final Stylesheet stylesheet = new Stylesheet(url);
+        if (stylesheetText != null && !stylesheetText.trim().isEmpty()) {
+            setInputSource(url, stylesheetText);
+            Reader reader = new CharArrayReader(stylesheetText.toCharArray());
+            parse(stylesheet, reader);
+        }
         return stylesheet;
     }
 
@@ -157,23 +210,23 @@ final public class CSSParser {
      */
     public Stylesheet parse(final URL url) throws IOException {
         
-        stylesheet = new Stylesheet(url);
+        final Stylesheet stylesheet = new Stylesheet(url);
         if (url != null) {
+            setInputSource(url);
             Reader reader = new BufferedReader(new InputStreamReader(url.openStream()));
-            parse(reader);
+            parse(stylesheet, reader);
         }
-        notifyErrors();
         return stylesheet;
     }
 
     /* All of the other function calls should wind up here */
-    private void parse(final Reader reader) {
+    private void parse(final Stylesheet stylesheet, final Reader reader) {
 
         CSSLexer lex = CSSLexer.getInstance();
         lex.setReader(reader);
 
         try {
-            this.parse(lex);
+            this.parse(stylesheet, lex);
             reader.close();
         } catch (IOException ioe) {
         } catch (Exception ex) {
@@ -186,11 +239,15 @@ final public class CSSParser {
 
     }
 
-    /** Parse a style from a Node */
-    public Stylesheet parseStyle(final String stylesheetText) {
-        stylesheet = new Stylesheet();
-        final List<Rule> rules = new ArrayList<Rule>();
+    /** Parse an in-line style from a Node */
+    public Stylesheet parseInlineStyle(final Styleable node) {
+        
+        Stylesheet stylesheet = new Stylesheet();
+        
+        final String stylesheetText = (node != null) ? node.getStyle() : null;
         if (stylesheetText != null && !stylesheetText.trim().isEmpty()) {
+            setInputSource(node);
+            final List<Rule> rules = new ArrayList<Rule>();
             final Reader reader = new CharArrayReader(stylesheetText.toCharArray());
             final CSSLexer lexer = CSSLexer.getInstance();
             lexer.setReader(reader);
@@ -214,16 +271,16 @@ final public class CSSParser {
                 // problems like RT-20311
                 reportException(ex);
             }
+            stylesheet.getRules().addAll(rules);
         }
-        stylesheet.getRules().addAll(rules);
-        notifyErrors();
         return stylesheet;
     }
 
+    /** convenience method for unit tests */
     public ParsedValue parseExpr(String property, String expr) {
         ParsedValue value = null;
         try {
-
+            setInputSource(null, property + ": " + expr);
             char buf[] = new char[expr.length() + 1];
             System.arraycopy(expr.toCharArray(), 0, buf, 0, expr.length());
             buf[buf.length-1] = ';';
@@ -249,7 +306,6 @@ final public class CSSParser {
             // problems like RT-20311
             reportException(ex);
         }
-        notifyErrors();
         return value;
     }
     /*
@@ -340,28 +396,31 @@ final public class CSSParser {
         
     }
 
-    private List<String> errors = null;
-    private void addError(String msg) {
-        if (errors == null) {
-            errors = new ArrayList<String>();
+    private CssError createError(String msg) {
+        
+        CssError error = null; 
+        if (sourceOfStylesheet != null) {
+            error = new CssError.StylesheetParsingError(sourceOfStylesheet, msg);
+        } else if (sourceOfInlineStyle != null) {
+            error = new CssError.InlineStyleParsingError(sourceOfInlineStyle, msg);
+        } else {
+            error = new CssError.StringParsingError(stylesheetAsText, msg);
         }
-        errors.add(msg);
+        return error;
     }
-    private void notifyErrors() {
-        if (errors != null && errors.isEmpty() == false) {
-            ObservableList<String> smErrors = StyleManager.getInstance().errorsProperty();
-            if (smErrors != null) {
-                smErrors.setAll(errors);
-            }
-            errors.clear();
+    
+    private void reportError(CssError error) {
+        List<CssError> errors = null;
+        if ((errors = StyleManager.getInstance().getErrors()) != null) {        
+            errors.add(error);
         }
     }
     
     private void error(final Term root, final String msg) throws ParseException {
 
         final Token token = root != null ? root.token : null;
-        final ParseException pe = new ParseException(msg,token,stylesheet);
-        addError(pe.toString());
+        final ParseException pe = new ParseException(msg,token,this);
+        reportError(createError(pe.toString()));
         throw pe;
     }
 
@@ -392,12 +451,10 @@ final public class CSSParser {
         final StringBuilder buf = 
             new StringBuilder("Using deprecated syntax for ");
         buf.append(syntax);
-        if (stylesheet != null){
-            buf.append(" at ");
-            if (stylesheet.getUrl() != null) {
-               buf.append(stylesheet.getUrl());
-            }
-            buf.append("[")
+        if (sourceOfStylesheet != null){
+            buf.append(" at ")
+               .append(sourceOfStylesheet)
+               .append("[")
                .append(root.token.getLine())
                .append(',')
                .append(root.token.getOffset())
@@ -534,8 +591,8 @@ final public class CSSParser {
             if (LOGGER.isLoggable(PlatformLogger.FINEST)) {
                 LOGGER.finest("Expected \'<number>\'");
             }
-            ParseException re = new ParseException("Expected \'<number>\'",token, stylesheet);
-            addError(re.toString());
+            ParseException re = new ParseException("Expected \'<number>\'",token, this);
+            reportError(createError(re.toString()));
             throw re;
         }
         // TODO: Handle NumberFormatException
@@ -3082,7 +3139,7 @@ final public class CSSParser {
         final String uri = arg.token.getText();
         ParsedValue[] uriValues = new ParsedValue[] {
             new ParsedValue<String,String>(uri, StringConverter.getInstance()),
-            new ParsedValue<URL,URL>(stylesheet.getUrl(), null)
+            new ParsedValue<URL,URL>(sourceOfStylesheet, null)
         };
         return new ParsedValue<ParsedValue[],String>(uriValues, URLConverter.getInstance());
     }
@@ -3350,7 +3407,7 @@ final public class CSSParser {
 
     }
 
-    private void parse(CSSLexer lexer) {
+    private void parse(Stylesheet stylesheet, CSSLexer lexer) {
 
         // need to read the first token
         currentToken = nextToken(lexer);
@@ -3365,16 +3422,14 @@ final public class CSSParser {
                 (currentToken.getType() != CSSLexer.LBRACE)) {
                     final int line = currentToken != null ? currentToken.getLine() : -1;
                     final int pos = currentToken != null ? currentToken.getOffset() : -1;
-                    final String url = 
-                        (stylesheet != null && stylesheet.getUrl() != null) ? 
-                            stylesheet.getUrl().toExternalForm() : "?";
                     final String msg = 
-                        MessageFormat.format("Expected LBRACE at {0}[{1,number,#},{2,number,#}]",
-                        url,line,pos);
-                    addError(msg);
-                if (LOGGER.isLoggable(PlatformLogger.WARNING)) {
-                    LOGGER.warning(msg);
-                }
+                        MessageFormat.format("Expected LBRACE at [{0,number,#},{1,number,#}]",
+                        line,pos); 
+                    CssError error = createError(msg);
+                    if (LOGGER.isLoggable(PlatformLogger.WARNING)) {
+                        LOGGER.warning(error.toString());
+                    }
+                    reportError(error);
                 currentToken = null;
                 return;
             }
@@ -3389,16 +3444,14 @@ final public class CSSParser {
                 (currentToken.getType() != CSSLexer.RBRACE)) {
                     final int line = currentToken != null ? currentToken.getLine() : -1;
                     final int pos = currentToken != null ? currentToken.getOffset() : -1;
-                    final String url = 
-                        (stylesheet != null && stylesheet.getUrl() != null) ? 
-                            stylesheet.getUrl().toExternalForm() : "?";
                     final String msg = 
-                        MessageFormat.format("Expected RBRACE at {0}[{1,number,#},{2,number,#}]",
-                        url,line,pos);
-                    addError(msg);                    
-                if (LOGGER.isLoggable(PlatformLogger.WARNING)) {
-                    LOGGER.warning(msg);
-                }
+                        MessageFormat.format("Expected RBRACE at [{0,number,#},{1,number,#}]",
+                        line,pos);
+                    CssError error = createError(msg);                    
+                    if (LOGGER.isLoggable(PlatformLogger.WARNING)) {
+                        LOGGER.warning(error.toString());
+                    }
+                    reportError(error);
                 currentToken = null;
                 return;
             }
@@ -3693,16 +3746,14 @@ final public class CSSParser {
             (currentToken.getType() != CSSLexer.COLON)) {
                 final int line = currentToken != null ? currentToken.getLine() : -1;
                 final int pos = currentToken != null ? currentToken.getOffset() : -1;
-                final String url = 
-                    (stylesheet != null && stylesheet.getUrl() != null) ? 
-                        stylesheet.getUrl().toExternalForm() : "?";
                 final String msg = 
-                        MessageFormat.format("Expected COLON at {0}[{1,number,#},{2,number,#}]",
-                    url,line,pos);
-                addError(msg);
-            if (LOGGER.isLoggable(PlatformLogger.WARNING)) {
-                LOGGER.warning(msg);
-            }
+                        MessageFormat.format("Expected COLON at [{0,number,#},{1,number,#}]",
+                    line,pos);
+                CssError error = createError(msg);
+                if (LOGGER.isLoggable(PlatformLogger.WARNING)) {
+                    LOGGER.warning(error.toString());
+                }
+                reportError(error);
             return null;
         }
 
@@ -3714,16 +3765,16 @@ final public class CSSParser {
             value = (root != null) ? valueFor(property, root) : null;
         } catch (ParseException re) {
                 Token badToken = re.tok;
-                final String url = re.url;
                 final int line = badToken != null ? badToken.getLine() : -1;
                 final int pos = badToken != null ? badToken.getOffset() : -1;
                 final String msg = 
-                        MessageFormat.format("{3} while parsing ''{4}'' at {0}[{1,number,#},{2,number,#}]",
-                    url,line,pos,re.getMessage(),property);
-                addError(msg);
-            if (LOGGER.isLoggable(PlatformLogger.WARNING)) {
-                LOGGER.warning(msg);
-            }
+                        MessageFormat.format("{2} while parsing ''{3}'' at [{0,number,#},{1,number,#}]",
+                    line,pos,re.getMessage(),property);
+                CssError error = createError(msg);
+                if (LOGGER.isLoggable(PlatformLogger.WARNING)) {
+                    LOGGER.warning(error.toString());
+                }
+                reportError(error);
             return null;
         }
 
@@ -3845,19 +3896,17 @@ final public class CSSParser {
                 }
 
             default:
-                    final int line = currentToken != null ? currentToken.getLine() : -1;
-                    final int pos = currentToken != null ? currentToken.getOffset() : -1;
-                    final String text = currentToken != null ? currentToken.getText() : "";
-                    final String url = 
-                        (stylesheet != null && stylesheet.getUrl() != null) ? 
-                            stylesheet.getUrl().toExternalForm() : "?";
-                    final String msg = 
-                        MessageFormat.format("Unexpected token {0}{1}{0} at {2}[{3,number,#},{4,number,#}]",
-                        "\'",text,url,line,pos);
-                    addError(msg);
+                final int line = currentToken != null ? currentToken.getLine() : -1;
+                final int pos = currentToken != null ? currentToken.getOffset() : -1;
+                final String text = currentToken != null ? currentToken.getText() : "";
+                final String msg = 
+                    MessageFormat.format("Unexpected token {0}{1}{0} at [{2,number,#},{3,number,#}]",
+                    "\'",text,line,pos);
+                CssError error = createError(msg);
                 if (LOGGER.isLoggable(PlatformLogger.WARNING)) {
-                    LOGGER.warning(msg);
+                    LOGGER.warning(error.toString());
                 }
+                reportError(error);
                 return null;
 //                currentToken = nextToken(lexer);
 //

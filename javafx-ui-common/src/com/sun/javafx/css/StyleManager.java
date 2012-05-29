@@ -481,7 +481,13 @@ public class StyleManager {
             }
 
             if (stylesheet == null) {
-                errorsProperty().addAll("Resource \"%s\" not found.", fname);
+                if (errors != null) {
+                    CssError error = 
+                        new CssError(
+                            "Resource \""+fname+"\" not found."
+                        );
+                    errors.add(error);
+                }
                 if (logger().isLoggable(PlatformLogger.WARNING)) {
                     logger().warning(
                         String.format("Resource \"%s\" not found.", fname)
@@ -491,12 +497,24 @@ public class StyleManager {
             return stylesheet;
 
         } catch (FileNotFoundException fnfe) {
-            errorsProperty().addAll("Could not find stylesheet: " + fname);
+            if (errors != null) {
+                CssError error = 
+                    new CssError(
+                        "Stylesheet \""+fname+"\" not found."
+                    );
+                errors.add(error);
+            }
             if (logger().isLoggable(PlatformLogger.INFO)) {
                 logger().info("Could not find stylesheet: " + fname);//, fnfe);
             }
         } catch (IOException ioe) {
-            errorsProperty().addAll("Could not load stylesheet: " + fname);
+                if (errors != null) {
+                    CssError error = 
+                        new CssError(
+                            "Could not load stylesheet: " + fname
+                        );
+                    errors.add(error);
+                }
             if (logger().isLoggable(PlatformLogger.INFO)) {
                 logger().info("Could not load stylesheet: " + fname);//, ioe);
             }
@@ -1235,14 +1253,14 @@ public class StyleManager {
         }
     }
 
-    private ObservableList<String> errors = null;
-    public ObservableList<String> errorsProperty() {
+    private ObservableList<CssError> errors = null;
+    public ObservableList<CssError> errorsProperty() {
         if (errors == null) {
             errors = FXCollections.observableArrayList();
         }
         return errors;
     }
-    public ObservableList<String> getErrors() {
+    public ObservableList<CssError> getErrors() {
         return errors;
     }
     

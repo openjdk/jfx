@@ -134,7 +134,6 @@ public class InsetsTypeTest {
     @Test
     public void testConvert() {
 
-        try {
         for (int i=0; i<css.length; i++) {
 
             Stylesheet stylesheet =
@@ -151,9 +150,6 @@ public class InsetsTypeTest {
                 String msg = Integer.toString(i) + "." + Integer.toString(j);
                 checkInsets(msg, expResults[i][j], insets[j]);
             }
-        }
-        } catch(IOException ioe) {
-            fail(ioe.toString());
         }
     }
 }

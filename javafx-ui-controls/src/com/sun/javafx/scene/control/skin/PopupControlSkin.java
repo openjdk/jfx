@@ -149,7 +149,6 @@ public class PopupControlSkin<C extends PopupControl> implements Skin<C>{
 
         // Adding content here triggers Popup.invokeDimensions()
         popup.getContent().setAll(popupContent);
-        popupContent.impl_processCSS(true);
 
         if (popupContent instanceof Parent) {
             ((Parent) popupContent).requestLayout();

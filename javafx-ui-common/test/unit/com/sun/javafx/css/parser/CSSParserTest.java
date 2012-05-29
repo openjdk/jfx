@@ -49,14 +49,16 @@ public class CSSParserTest {
 
         // The bad syntax should be skipped. The stylesheet should have one
         // linear gradient with colors red, white, blue.
-        Stylesheet ss = instance.parseStyle(
-              "-fx-background-color: linear-gradient(from 0% 0% to 0% 100%, ); "
-            + "-fx-background-color: linear-gradient(from 0% 0% to 0% 100%, red, white, blue);" 
+        Stylesheet ss = instance.parse( 
+            "* { "
+            +   "-fx-background-color: linear-gradient(from 0% 0% to 0% 100%, ); "
+            +   "-fx-background-color: linear-gradient(from 0% 0% to 0% 100%, red, white, blue); "
+            + "}" 
         );
         
         assertNotNull(ss);
         List<Rule> rules = ss.getRules();
-        assertTrue(rules.size()==1);
+        assertEquals(1,rules.size(),0);
         List<Declaration> decls = ss.getRules().get(0).getDeclarations();
         assertTrue(decls.size()==1);
         Declaration decl = decls.get(0);
@@ -82,22 +84,24 @@ public class CSSParserTest {
         // RT-17770 is an infinite loop on a dangling comma.
         // Missing term should be ignored
         String stylesheetText = 
-              "-fx-background-color: linear-gradient( "
-            + "to right, "
-            + "rgba(141, 138, 125, 0.0), "
-            + "rgba(248, 248, 246, 0.3) 45%, "
-            + "rgba(248, 248, 246, 0.8) 50%, "
-            + "rgba(248, 248, 246, 0.3) 55%, "
-            + "rgba(141, 138, 125, 0.0), "
-            + "); ";
+            "* {"
+            +   "-fx-background-color: linear-gradient( "
+            +   "to right, "
+            +   "rgba(141, 138, 125, 0.0), "
+            +   "rgba(248, 248, 246, 0.3) 45%, "
+            +   "rgba(248, 248, 246, 0.8) 50%, "
+            +   "rgba(248, 248, 246, 0.3) 55%, "
+            +   "rgba(141, 138, 125, 0.0), "
+            +   "); "
+            + "}";
                 
         CSSParser instance = CSSParser.getInstance();
         
-        Stylesheet ss = instance.parseStyle(stylesheetText);
+        Stylesheet ss = instance.parse(stylesheetText);
         
         assertNotNull(ss);
         List<Rule> rules = ss.getRules();
-        assertTrue(rules.size()==1);
+        assertEquals(1,rules.size(),0);
         List<Declaration> decls = ss.getRules().get(0).getDeclarations();
         assertTrue(decls.size()==1);
         Declaration decl = decls.get(0);
@@ -128,14 +132,16 @@ public class CSSParserTest {
         assertNull("parseExpr", result);
 
         // The bad syntax should be skipped.
-        Stylesheet ss = instance.parseStyle(
-              "-fx-font-size: 10ptx; "
-            + "-fx-font-size: 12px; "
+        Stylesheet ss = instance.parse(
+            "* {"
+            +  "-fx-font-size: 10ptx; "
+            +  "-fx-font-size: 12px; "
+            + "}"
         );
         
         assertNotNull(ss);
         List<Rule> rules = ss.getRules();
-        assertTrue(rules.size()==1);
+        assertEquals(1,rules.size(),0);
         List<Declaration> decls = ss.getRules().get(0).getDeclarations();
         assertTrue(decls.size()==1);
         Declaration decl = decls.get(0);
@@ -193,18 +199,13 @@ public class CSSParserTest {
         
         // The empty declaration should be skipped. The stylesheet should have
         // two declarations.
-        Stylesheet ss = null;
-        try { 
-            ss = instance.parse(".rt17830 {-fx-fill: red;; -fx-stroke: yellow; }");
-        } catch (IOException ioe) {
-            fail(ioe.toString());
-        }
+        Stylesheet ss = instance.parse(".rt17830 {-fx-fill: red;; -fx-stroke: yellow; }");
         
         assertNotNull(ss);
         List<Rule> rules = ss.getRules();
-        assertTrue(rules.size()==1);
+        assertEquals(1,rules.size(),0);
         List<Declaration> decls = ss.getRules().get(0).getDeclarations();
-        assertTrue(decls.size()==2);
+        assertEquals(2,decls.size(),0);
         
         Declaration decl = decls.get(0);
         ParsedValue value = decl.getParsedValue();

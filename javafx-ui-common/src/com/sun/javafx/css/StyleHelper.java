@@ -515,17 +515,15 @@ public class StyleHelper {
      */
     private Map<String,CascadingStyle> getInlineStyleMap(Node node) {
 
-        return mapInlineStyles(node.getStyle());
+        return getInlineStyleMap(node.impl_getStyleable());
     }
 
     /**
      * Get the mapping of property to style from Node.style for this node.
      */
-    private Map<String,CascadingStyle> getInlineStyleMap(Styleable node) {
-        return mapInlineStyles(node.getStyle());
-    }
-    
-    private Map<String,CascadingStyle> mapInlineStyles(final String inlineStyles) {
+    private Map<String,CascadingStyle> getInlineStyleMap(Styleable styleable) {
+        
+        final String inlineStyles = styleable.getStyle();
 
         // If there are no styles for this property then we can just bail
         if ((inlineStyles == null) || inlineStyles.isEmpty()) return null;
@@ -535,7 +533,7 @@ public class StyleHelper {
         if (styles == null) {
 
             Stylesheet authorStylesheet =
-                CSSParser.getInstance().parseStyle(inlineStyles);
+                CSSParser.getInstance().parseInlineStyle(styleable);
             if (authorStylesheet != null) {
                 authorStylesheet.setOrigin(Stylesheet.Origin.INLINE);
             }
@@ -728,8 +726,12 @@ public class StyleHelper {
                     }
                     
                 } catch (Exception e) {
-                    final String msg = String.format("Failed to set css [%s] due to %s\n", styleable, e.getMessage());
-                    StyleManager.getInstance().errorsProperty().add(msg);                    
+                    List<CssError> errors = null;
+                    if ((errors = StyleManager.getInstance().getErrors()) != null) {
+                        final String msg = String.format("Failed to set css [%s] due to %s\n", styleable, e.getMessage());
+                        final CssError error = new CssError.PropertySetError(styleable, node.impl_getStyleable(), msg);
+                        errors.add(error);
+                    }
                     // TODO: use logger here
                     PlatformLogger logger = Logging.getCSSLogger();
                     if (logger.isLoggable(PlatformLogger.WARNING)) {
@@ -897,7 +899,11 @@ public class StyleHelper {
                     return new CalculatedValue(ret, origin, isCacheable);
                 } catch (ClassCastException cce) {
                     final String msg = formatExceptionMessage(node, styleable, style.getStyle(), cce);
-                    StyleManager.getInstance().errorsProperty().add(msg);
+                    List<CssError> errors = null;
+                    if ((errors = StyleManager.getInstance().getErrors()) != null) {
+                        final CssError error = new CssError.PropertySetError(styleable, node.impl_getStyleable(), msg);
+                        errors.add(error);
+                    }
                     if (LOGGER.isLoggable(PlatformLogger.WARNING)) {
                         LOGGER.warning("caught: ", cce);
                         LOGGER.warning("styleable = " + styleable);
@@ -1249,7 +1255,8 @@ public class StyleHelper {
                         cacheEntry,
                         cacheable,
                         originatingNode,
-                        Font.getDefault()
+                        Font.getDefault(),
+                        styleList
                       )
                     : null;
                 if (font == null) font = Font.getDefault();
@@ -1272,7 +1279,11 @@ public class StyleHelper {
                 
             } catch (ClassCastException cce) {
                 final String msg = formatUnresolvedLookupMessage(node, styleable, style.getStyle(),resolved);
-                StyleManager.getInstance().errorsProperty().add(msg);
+                List<CssError> errors = null;
+                if ((errors = StyleManager.getInstance().getErrors()) != null) {
+                    final CssError error = new CssError.PropertySetError(styleable, node.impl_getStyleable(), msg);
+                    errors.add(error);
+                }
                 if (LOGGER.isLoggable(PlatformLogger.WARNING)) {
                     LOGGER.warning(msg);
                     LOGGER.fine("node = " + node.toString());
@@ -1282,7 +1293,11 @@ public class StyleHelper {
                 return SKIP;
             } catch (IllegalArgumentException iae) {
                 final String msg = formatExceptionMessage(node, styleable, style.getStyle(), iae);
-                StyleManager.getInstance().errorsProperty().add(msg);
+                List<CssError> errors = null;
+                if ((errors = StyleManager.getInstance().getErrors()) != null) {
+                    final CssError error = new CssError.PropertySetError(styleable, node.impl_getStyleable(), msg);
+                    errors.add(error);
+                }
                 if (LOGGER.isLoggable(PlatformLogger.WARNING)) {
                     LOGGER.warning("caught: ", iae);
                     LOGGER.fine("styleable = " + styleable);
@@ -1291,7 +1306,11 @@ public class StyleHelper {
                 return SKIP;
             } catch (NullPointerException npe) {
                 final String msg = formatExceptionMessage(node, styleable, style.getStyle(), npe);
-                StyleManager.getInstance().errorsProperty().add(msg);
+                List<CssError> errors = null;
+                if ((errors = StyleManager.getInstance().getErrors()) != null) {
+                    final CssError error = new CssError.PropertySetError(styleable, node.impl_getStyleable(), msg);
+                    errors.add(error);
+                }
                 if (LOGGER.isLoggable(PlatformLogger.WARNING)) {
                     LOGGER.warning("caught: ", npe);
                     LOGGER.fine("styleable = " + styleable);
@@ -1331,7 +1350,8 @@ public class StyleHelper {
             final CacheEntry cacheEntry,
             final BooleanProperty cacheable,
             final Node originatingNode,
-            final Font font) 
+            final Font font,
+            final List<Style> styleList) 
     {
         
         if (node == null) return Font.getDefault();
@@ -1401,6 +1421,10 @@ public class StyleHelper {
             if (fontStyle != null && 
                 style.getStyle().equals(fontStyle.getStyle()) == false) {
                 
+                if (styleList != null) {
+                    styleList.add(fontStyle.getStyle());
+                }
+                
                 final Stylesheet.Origin fsOrigin = fontStyle.getOrigin();
                 if (origin == null || origin.compareTo(fsOrigin) < 0) {
                     origin = fsOrigin;
@@ -1420,7 +1444,7 @@ public class StyleHelper {
                     inheritedFont =
                         getFontForUseInConvertingRelativeSize(node.getParent(),
                             styleable, style, cacheEntry, cacheable, 
-                            originatingNode, font);
+                            originatingNode, font, styleList);
                 }
                 
                 Object value = resolved.convert(inheritedFont);
@@ -1439,7 +1463,7 @@ public class StyleHelper {
         }
 
         return getFontForUseInConvertingRelativeSize(node.getParent(), 
-                styleable, style, cacheEntry, cacheable, originatingNode, font);
+                styleable, style, cacheEntry, cacheable, originatingNode, font, styleList);
     }
     
     private CascadingStyle lookupFontSubPropertyStyle(final Node node, 
@@ -1644,6 +1668,10 @@ public class StyleHelper {
         
         if (csShorthand != null) {
             
+            if (styleList != null) {
+                styleList.add(csShorthand.getStyle());
+            }
+            
             // pull out the pieces. 
             final CalculatedValue cv = 
                 calculateValue(csShorthand, node, styleable, states, inlineStyles, 
@@ -1672,7 +1700,11 @@ public class StyleHelper {
         CascadingStyle csFamily = null; 
         if ((csFamily = lookupFontSubPropertyStyle(node, "-fx-font-family",
                 isUserSet, cacheable, csShorthand, distance)) != null) {
-       
+
+            if (styleList != null) {
+                styleList.add(csFamily.getStyle());
+            }
+            
             final CalculatedValue cv = 
                 calculateValue(csFamily, node, styleable, states, inlineStyles, 
                     originatingNode, cacheEntry, styleList);
@@ -1691,6 +1723,10 @@ public class StyleHelper {
         if ((csSize = lookupFontSubPropertyStyle(node, "-fx-font-size",
                 isUserSet, cacheable, csShorthand, distance))!= null) {
        
+            if (styleList != null) {
+                styleList.add(csSize.getStyle());
+            }
+
             final CalculatedValue cv = 
                 calculateValue(csSize, node, styleable, states, inlineStyles, 
                     originatingNode, cacheEntry, styleList);
@@ -1707,7 +1743,11 @@ public class StyleHelper {
         CascadingStyle csWeight = null;
         if ((csWeight = lookupFontSubPropertyStyle(node, "-fx-font-weight",
                 isUserSet, cacheable, csShorthand, distance))!= null) {
-       
+
+            if (styleList != null) {
+                styleList.add(csWeight.getStyle());
+            }
+            
             final CalculatedValue cv = 
                 calculateValue(csWeight, node, styleable, states, inlineStyles, 
                     originatingNode, cacheEntry, styleList);
@@ -1725,10 +1765,14 @@ public class StyleHelper {
         if ((csStyle = lookupFontSubPropertyStyle(node, "-fx-font-style",
                 isUserSet, cacheable, csShorthand, distance))!= null) {
        
-                final CalculatedValue cv = 
-                    calculateValue(csStyle, node, styleable, states, inlineStyles, 
-                        originatingNode, cacheEntry, styleList);
-                if (cv.isCacheable == false) cacheable.set(false);
+            if (styleList != null) {
+                styleList.add(csStyle.getStyle());
+            }
+            
+            final CalculatedValue cv = 
+                calculateValue(csStyle, node, styleable, states, inlineStyles, 
+                    originatingNode, cacheEntry, styleList);
+            if (cv.isCacheable == false) cacheable.set(false);
             if (cv.value instanceof FontPosture) {
                 style = (FontPosture)cv.value;
                 if (origin == null || origin.compareTo(cv.origin) < 0) {                        

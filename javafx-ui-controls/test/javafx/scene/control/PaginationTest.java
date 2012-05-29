@@ -229,6 +229,23 @@ public class PaginationTest {
         assertEquals(5, pagination.getCurrentPageIndex());
     }
 
+    @Test public void pageCountIsLessThanMaxPageIndicatorCount_RT21660() {
+        pagination.setPageCount(5);
+        root.setPrefSize(400, 400);
+        root.getChildren().add(pagination);
+        show();
+        
+        pagination.setCurrentPageIndex(4);
+        tk.firePulse();
+        assertTrue(pagination.isFocused());
+
+        KeyEventFirer keyboard = new KeyEventFirer(pagination);
+        keyboard.doRightArrowPress();
+        tk.firePulse();
+
+        assertEquals(4, pagination.getCurrentPageIndex());
+    }
+    
     public VBox createPage(int pageIndex) {
         VBox box = new VBox(5);
         int page = pageIndex * 10;

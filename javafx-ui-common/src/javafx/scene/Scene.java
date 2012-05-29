@@ -110,6 +110,7 @@ import javafx.beans.property.ReadOnlyDoubleProperty;
 import javafx.beans.property.ReadOnlyDoubleWrapper;
 import javafx.beans.property.ReadOnlyObjectProperty;
 import javafx.beans.property.ReadOnlyObjectWrapper;
+import javafx.geometry.Orientation;
 import javafx.scene.image.WritableImage;
 import javafx.scene.input.GestureEvent;
 import javafx.scene.input.MouseDragEvent;
@@ -1430,6 +1431,23 @@ public class Scene implements EventTarget {
                     root.maxHeight(widthSetByUser >= 0 ? widthSetByUser : -1));
             computeHeight = true;
         }
+        if (root.getContentBias() == Orientation.HORIZONTAL) {
+            if (heightSetByUser < 0) {            
+                rootHeight = root.boundedSize(
+                        root.prefHeight(rootWidth),
+                        root.minHeight(rootWidth),
+                        root.maxHeight(rootWidth));
+                computeHeight = true;
+            }            
+        } else if (root.getContentBias() == Orientation.VERTICAL) {
+            if (widthSetByUser < 0) {
+                rootWidth = root.boundedSize(
+                        root.prefWidth(rootHeight),
+                        root.minWidth(rootHeight),
+                        root.maxWidth(rootHeight));
+                computeWidth = true;
+            }            
+        }        
         root.resize(rootWidth, rootHeight);
         doLayoutPass();
 

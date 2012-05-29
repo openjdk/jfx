@@ -209,7 +209,19 @@ public class ColorPalette extends StackPane {
                                     (index-1) : (NUM_OF_ROWS*NUM_OF_COLUMNS)-1);
                 prevSquare.requestFocus();
                 focusedSquare = prevSquare;
-                break;
+                return;
+            } 
+        }
+        // check custom colors
+        int len = customColorGrid.getChildren().size();
+        for (index = len-1; index >= 0; index--) {
+            ColorSquare cs = (ColorSquare)customColorGrid.getChildren().get(index);
+            if (cs == focusedSquare) {
+                ColorSquare prevSquare = (ColorSquare)customColorGrid.getChildren().get((index != 0) ? 
+                                    (index-1) : len-1);
+                prevSquare.requestFocus();
+                focusedSquare = prevSquare;
+                return;
             } 
         }
         if (index == -1) {
@@ -228,8 +240,25 @@ public class ColorPalette extends StackPane {
                         (index-12) : ((NUM_OF_ROWS-1)*NUM_OF_COLUMNS)+index);
                 prevSquare.requestFocus();
                 focusedSquare = prevSquare;
-                break;
+                return;
             } 
+        }
+        int len = customColorGrid.getChildren().size();
+        for (index = len-1; index >= 0; index--) {
+            // check custom colors
+            ColorSquare cs = (ColorSquare)customColorGrid.getChildren().get(index);
+            ColorSquare prevSquare = null;
+            if (cs == focusedSquare) {
+                if (index -12 >= 0) {
+                    prevSquare = (ColorSquare)customColorGrid.getChildren().get(index-12);
+                } else {
+                    int rowIndex = customColorGrid.getRowIndex(customColorGrid.getChildren().get(len-1));
+                    prevSquare = (ColorSquare)customColorGrid.getChildren().get((rowIndex*NUM_OF_COLUMNS)+index);
+                }
+                prevSquare.requestFocus();
+                focusedSquare = prevSquare;
+                return;
+            }
         }
         if (index == -1) {
             ColorSquare cs = colorPickerGrid.getSquares().get((NUM_OF_ROWS*NUM_OF_COLUMNS)-1);
@@ -247,10 +276,22 @@ public class ColorPalette extends StackPane {
                         (index != (NUM_OF_ROWS*NUM_OF_COLUMNS)-1) ? (index+1) : 0);
                 prevSquare.requestFocus();
                 focusedSquare = prevSquare;
-                break;
+                return;
             } 
         }
-        if (index == (NUM_OF_ROWS*NUM_OF_COLUMNS)) {
+        // check custom colors
+        int len = customColorGrid.getChildren().size();
+        for (index = 0; index < len; index++) {
+            ColorSquare cs = (ColorSquare)customColorGrid.getChildren().get(index);
+            if (cs == focusedSquare) {
+                ColorSquare prevSquare = (ColorSquare)customColorGrid.getChildren().get(
+                        (index != len-1) ? (index+1) : 0);
+                prevSquare.requestFocus();
+                focusedSquare = prevSquare;
+                return;
+            } 
+        }
+        if (index == len) {
             ColorSquare cs = colorPickerGrid.getSquares().get(0);
             focusedSquare = cs;
             focusedSquare.requestFocus();
@@ -266,10 +307,27 @@ public class ColorPalette extends StackPane {
                         (index+12) : index-((NUM_OF_ROWS-1)*NUM_OF_COLUMNS));
                 prevSquare.requestFocus();
                 focusedSquare = prevSquare;
-                break;
+                return;
             } 
         }
-        if (index == (NUM_OF_ROWS*NUM_OF_COLUMNS)) {
+        // check custom colors
+        int len = customColorGrid.getChildren().size();
+        for (index = 0; index < len; index++) {
+            ColorSquare cs = (ColorSquare)customColorGrid.getChildren().get(index);
+            ColorSquare prevSquare = null;
+            if (cs == focusedSquare) {
+                if (index+12 < len) {
+                    prevSquare = (ColorSquare)customColorGrid.getChildren().get(index+12);
+                } else {
+                    int rowIndex = customColorGrid.getRowIndex(customColorGrid.getChildren().get(len-1));
+                    prevSquare = (ColorSquare)customColorGrid.getChildren().get(index-(rowIndex)*NUM_OF_COLUMNS);
+                }
+                prevSquare.requestFocus();
+                focusedSquare = prevSquare;
+                return;
+            } 
+        }
+        if (index == len) {
             ColorSquare cs = colorPickerGrid.getSquares().get(0);
             focusedSquare.requestFocus();
             focusedSquare = cs;

@@ -142,7 +142,13 @@ class NestedTableColumnHeader extends TableColumnHeader {
         
         // update the column headers....
         
-        // then clear out the column headers
+        // iterate through all current headers, telling them to clean up
+        for (int i = 0; i < getColumnHeaders().size(); i++) {
+            TableColumnHeader header = getColumnHeaders().get(i);
+            header.dispose();
+        }
+        
+        // clear the column headers list before we recreate them
         getColumnHeaders().clear();
         
         // then iterate through all columns.
@@ -156,6 +162,26 @@ class NestedTableColumnHeader extends TableColumnHeader {
 
         // update the content
         updateContent();
+    }
+    
+    @Override void dispose() {
+        super.dispose();
+        
+        if (label != null) label.dispose();
+        
+        getColumns().removeListener(weakColumnsListener);
+        
+        getTableColumn().textProperty().removeListener(weakColumnTextListener);
+        
+        getTableView().columnResizePolicyProperty().removeListener(weakResizePolicyListener);
+        
+        for (int i = 0; i < getColumnHeaders().size(); i++) {
+            TableColumnHeader header = getColumnHeaders().get(i);
+            header.dispose();
+        }
+        
+        dragRects.clear();
+        getChildren().clear();
     }
 
     private TableColumnHeader label;
@@ -201,13 +227,78 @@ class NestedTableColumnHeader extends TableColumnHeader {
 
         getChildren().setAll(content);
     }
+    
+    private static final String TABLE_COLUMN_KEY = "TableColumn";
+    private static final String TABLE_COLUMN_HEADER_KEY = "TableColumnHeader";
+    
+    private static final EventHandler<MouseEvent> rectMousePressed = new EventHandler<MouseEvent>() {
+        @Override public void handle(MouseEvent me) {
+            Rectangle rect = (Rectangle) me.getSource();
+            TableColumn column = (TableColumn) rect.getProperties().get(TABLE_COLUMN_KEY);
+            NestedTableColumnHeader header = (NestedTableColumnHeader) rect.getProperties().get(TABLE_COLUMN_HEADER_KEY);
+            
+            if (! header.isColumnResizingEnabled()) return;
+
+            if (me.getClickCount() == 2 && me.isPrimaryButtonDown()) {
+                // the user wants to resize the column such that its 
+                // width is equal to the widest element in the column
+                header.resizeToFit(column, -1);
+            } else {
+                // rather than refer to the rect variable, we just grab
+                // it from the source to prevent a small memory leak.
+                Rectangle innerRect = (Rectangle) me.getSource();
+                double startX = header.getTableHeaderRow().sceneToLocal(innerRect.localToScene(innerRect.getBoundsInLocal())).getMinX() + 2;
+                header.dragAnchorX = me.getSceneX();
+                header.columnResizingStarted(startX);
+            }
+            me.consume();
+        }
+    };
+    
+    private static final EventHandler<MouseEvent> rectMouseDragged = new EventHandler<MouseEvent>() {
+        @Override public void handle(MouseEvent me) {
+            Rectangle rect = (Rectangle) me.getSource();
+            TableColumn column = (TableColumn) rect.getProperties().get(TABLE_COLUMN_KEY);
+            NestedTableColumnHeader header = (NestedTableColumnHeader) rect.getProperties().get(TABLE_COLUMN_HEADER_KEY);
+            
+            if (! header.isColumnResizingEnabled()) return;
+                    
+            header.columnResizing(column, me);
+            me.consume();
+        }
+    };
+    
+    private static final EventHandler<MouseEvent> rectMouseReleased = new EventHandler<MouseEvent>() {
+        @Override public void handle(MouseEvent me) {
+            Rectangle rect = (Rectangle) me.getSource();
+            TableColumn column = (TableColumn) rect.getProperties().get(TABLE_COLUMN_KEY);
+            NestedTableColumnHeader header = (NestedTableColumnHeader) rect.getProperties().get(TABLE_COLUMN_HEADER_KEY);
+            
+            if (! header.isColumnResizingEnabled()) return;
+                    
+            header.columnResizingComplete(column, me);
+            me.consume();
+        }
+    };
+    
+    private static final EventHandler<MouseEvent> rectCursorChangeListener = new EventHandler<MouseEvent>() {
+        @Override public void handle(MouseEvent me) {
+            Rectangle rect = (Rectangle) me.getSource();
+            TableColumn column = (TableColumn) rect.getProperties().get(TABLE_COLUMN_KEY);
+            NestedTableColumnHeader header = (NestedTableColumnHeader) rect.getProperties().get(TABLE_COLUMN_HEADER_KEY);
+            
+            rect.setCursor(header.isColumnResizingEnabled() && rect.isHover() && 
+                    column.isResizable() ? Cursor.H_RESIZE : Cursor.DEFAULT);
+        }
+    };
+    
 
     private void rebuildDragRects() {
         if (! isColumnResizingEnabled()) return;
         
-        // drag rectangle overlays
-        dragRects = new ArrayList<Rectangle>();
-
+        getChildren().removeAll(dragRects);
+        dragRects.clear();
+        
         if (getColumns() == null) {
             return;
         }
@@ -222,55 +313,18 @@ class NestedTableColumnHeader extends TableColumnHeader {
             
             final TableColumn c = getColumns().get(col);
             final Rectangle rect = new Rectangle();
+            rect.getProperties().put(TABLE_COLUMN_KEY, c);
+            rect.getProperties().put(TABLE_COLUMN_HEADER_KEY, this);
             rect.setWidth(DRAG_RECT_WIDTH);
             rect.setHeight(getHeight() - label.getHeight());
             rect.setFill(Color.TRANSPARENT);
             rect.setVisible(false);
             rect.setSmooth(false);
-            rect.setOnMousePressed(new EventHandler<MouseEvent>() {
-                @Override public void handle(MouseEvent me) {
-                    if (! isColumnResizingEnabled()) return;
-                    
-                    if (me.getClickCount() == 2 && me.isPrimaryButtonDown()) {
-                        // the user wants to resize the column such that its 
-                        // width is equal to the widest element in the column
-                        resizeToFit(c, -1);
-                    } else {
-                        // rather than refer to the rect variable, we just grab
-                        // it from the source to prevent a small memory leak.
-                        Rectangle innerRect = (Rectangle) me.getSource();
-                        double startX = getTableHeaderRow().sceneToLocal(innerRect.localToScene(innerRect.getBoundsInLocal())).getMinX() + 2;
-                        dragAnchorX = me.getSceneX();
-                        columnResizingStarted(startX);
-                    }
-                    me.consume();
-                }
-            });
-            rect.setOnMouseDragged(new EventHandler<MouseEvent>() {
-                @Override public void handle(MouseEvent me) {
-                    if (! isColumnResizingEnabled()) return;
-                    
-                    columnResizing(c, me);
-                    me.consume();
-                }
-            });
-            rect.setOnMouseReleased(new EventHandler<MouseEvent>() {
-                @Override public void handle(MouseEvent me) {
-                    if (! isColumnResizingEnabled()) return;
-                    
-                    columnResizingComplete(c, me);
-                    me.consume();
-                }
-            });
-            
-            EventHandler<MouseEvent> cursorChangeListener = new EventHandler<MouseEvent>() {
-                @Override public void handle(MouseEvent t) {
-                    rect.setCursor(isColumnResizingEnabled() && rect.isHover() && 
-                            c.isResizable() ? Cursor.H_RESIZE : Cursor.DEFAULT);
-                }
-            };
-            rect.setOnMouseEntered(cursorChangeListener);
-            rect.setOnMouseExited(cursorChangeListener);
+            rect.setOnMousePressed(rectMousePressed);
+            rect.setOnMouseDragged(rectMouseDragged);
+            rect.setOnMouseReleased(rectMouseReleased);
+            rect.setOnMouseEntered(rectCursorChangeListener);
+            rect.setOnMouseExited(rectCursorChangeListener);
 
             dragRects.add(rect);
         }
@@ -283,7 +337,8 @@ class NestedTableColumnHeader extends TableColumnHeader {
 
     private double dragAnchorX = 0.0;
 
-    private List<Rectangle> dragRects;
+    // drag rectangle overlays
+    private List<Rectangle> dragRects = new ArrayList<Rectangle>();
     
     private boolean isColumnResizingEnabled() {
         return ! PlatformUtil.isEmbedded();

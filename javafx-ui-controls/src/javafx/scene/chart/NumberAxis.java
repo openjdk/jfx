@@ -243,9 +243,9 @@ public final class NumberAxis extends ValueAxis<Number> {
         final double upperBound = rangeProps[1];
         final double tickUnit = rangeProps[2];
         List<Number> tickValues =  new ArrayList<Number>();
-        if (lowerBound == upperBound) {
+        if (tickUnit <= 0 || lowerBound == upperBound) {
             tickValues.add(lowerBound);
-        } else if (getTickUnit() != 0) {
+        } else if (getTickUnit() > 0) {
             for (double major = lowerBound; major <= upperBound; major += tickUnit)  {
                 tickValues.add(major);
                 if(tickValues.size()>2000) {
@@ -255,7 +255,7 @@ public final class NumberAxis extends ValueAxis<Number> {
                     break;
                 }
             }
-        }
+        } 
         return tickValues;
     }
 
@@ -270,14 +270,16 @@ public final class NumberAxis extends ValueAxis<Number> {
         final double upperBound = getUpperBound();
         final double tickUnit = getTickUnit();
         final double minorUnit = tickUnit/getMinorTickCount();
-        for (double major = lowerBound; major < upperBound; major += tickUnit)  {
-            for (double minor=major+minorUnit; minor < (major+tickUnit); minor += minorUnit) {
-                minorTickMarks.add(minor);
-                if(minorTickMarks.size()>10000) {
-                    // This is a ridiculous amount of major tick marks, something has probably gone wrong
-                    System.err.println("Warning we tried to create more than 10000 minor tick marks on a NumberAxis. " +
-                            "Lower Bound=" + getLowerBound() + ", Upper Bound=" + getUpperBound() + ", Tick Unit=" + tickUnit);
-                    break;
+        if (getTickUnit() > 0) {
+            for (double major = lowerBound; major < upperBound; major += tickUnit)  {
+                for (double minor=major+minorUnit; minor < (major+tickUnit); minor += minorUnit) {
+                    minorTickMarks.add(minor);
+                    if(minorTickMarks.size()>10000) {
+                        // This is a ridiculous amount of major tick marks, something has probably gone wrong
+                        System.err.println("Warning we tried to create more than 10000 minor tick marks on a NumberAxis. " +
+                                "Lower Bound=" + getLowerBound() + ", Upper Bound=" + getUpperBound() + ", Tick Unit=" + tickUnit);
+                        break;
+                    }
                 }
             }
         }

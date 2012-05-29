@@ -364,6 +364,9 @@ final class CSSLexer {
 
     public void setReader(Reader reader) {
         this.reader = reader;
+        lastc = -1;
+        pos = offset = 0;
+        line = 1;
         this.currentState = initState;
         this.token = null;
         try {
@@ -374,25 +377,34 @@ final class CSSLexer {
     }
 
     private Token scanImportant()  throws IOException{
+        // CSS 2.1 grammar for important_sym
+        // "!"({w}|{comment})*{I}{M}{P}{O}{R}{T}{A}{N}{T}
         final Recognizer[] important_sym =
                 new Recognizer[] { I, M, P, O, R, T, A, N, T };
         int current = 0;
-
+        
+        text.append((char)ch);
+        
         // get past the '!'
         ch = readChar();
-
+       
         while(true) {
+            
             switch (ch) {
 
                 case Token.EOF:
                     token = Token.EOF_TOKEN;
                     return token;
 
-                case '/':
+                case '/':                    
                     ch = readChar();
                     if (ch == '*') skipComment();
-                    else return new Token(Token.INVALID);
-                    if (ch != -1) ch = readChar();
+                    else {
+                        text.append('/').append((char)ch);
+                        int temp = offset;
+                        offset = pos;
+                        return new Token(Token.INVALID, text.toString(), line, temp);
+                    }
                     break;
 
                 case ' ':
@@ -407,10 +419,13 @@ final class CSSLexer {
                     boolean accepted = true;
                     while(accepted && current < important_sym.length) {
                         accepted = important_sym[current++].recognize(ch);
+                        text.append((char)ch);
                         ch = readChar();
                     }
                     if (accepted) {
-                        return new Token(IMPORTANT_SYM, "!important");
+                        final int temp = offset;
+                        offset = pos-1; // will have read one char too many
+                        return new Token(IMPORTANT_SYM, "!important", line, temp);
                     } else {
                         while (ch != ';' &&
                                ch != '}' &&
@@ -418,7 +433,9 @@ final class CSSLexer {
                             ch = readChar();
                         }
                         if (ch != Token.EOF) {
-                            return Token.SKIP_TOKEN;
+                            final int temp = offset;
+                            offset = pos-1; // will have read one char too many
+                            return new Token(Token.SKIP, text.toString(), line, temp);
                         } else {
                             return Token.EOF_TOKEN;
                         }
@@ -532,6 +549,8 @@ final class CSSLexer {
             if (ch == '*') {
                 ch = readChar();
                 if (ch == '/') {
+                    offset = pos;
+                    ch=readChar();
                     break;
                 }
             } else {
@@ -540,7 +559,8 @@ final class CSSLexer {
         }
     }
 
-    private int pos = 1;
+    private int pos = 0;
+    private int offset = 0;
     private int line = 1;
     private int lastc = -1;
 
@@ -548,12 +568,17 @@ final class CSSLexer {
 
         int c = reader.read();
 
-        if (c == '\r' || (c == '\n' && lastc != '\r')) {
-            pos = 1;
+        // only reset line and pos counters after having read a NL since
+        // a NL token is created after the readChar
+        if (lastc == '\n' || (lastc == '\r' && c != '\n')) {
+            // set pos to 1 since we've already read the first char of the new line
+            pos = 1; 
+            offset = 0;
             line++;
         } else {
             pos++;
         }
+        
         lastc = c;
         return c;
     }
@@ -614,7 +639,7 @@ final class CSSLexer {
                     final int type = currentState.getType();
 
                     //
-                    // If the token is an INVALID and
+                    // If the token is INVALID and
                     // the currentState is something other than initState, then
                     // there is an error, so return INVALID.
                      //
@@ -622,9 +647,10 @@ final class CSSLexer {
                         !currentState.equals(initState)) {
 
                         final String str = text.toString();
-                        Token tok = new Token(type, str);
-                        tok.setOffset(pos);
-                        tok.setLine(line);
+                        Token tok = new Token(type, str, line, offset);
+                        // because the next char has already been read, 
+                        // the next token starts at pos-1
+                        offset = pos-1;
 
                         // return here, but the next char has already been read.
                         return tok;
@@ -650,9 +676,11 @@ final class CSSLexer {
                         }
 
                         if (ch != -1) {
-                            token = new Token(STRING, text.toString());
+                            token = new Token(STRING, text.toString(), line, offset);
+                            offset = pos;
                         } else {
-                            token = new Token(Token.INVALID);
+                            token = new Token(Token.INVALID, text.toString(), line, offset);
+                            offset = pos;
                         }
                         break;
 
@@ -661,8 +689,6 @@ final class CSSLexer {
                         if (ch == '*') {
                             skipComment();
                              if (ch != -1) {
-                                text.append((char)ch);
-                                ch = readChar();
                                 continue;
                             } else {
                                 token = Token.EOF_TOKEN;
@@ -670,79 +696,95 @@ final class CSSLexer {
                             }
                         } else {
                             // not a comment - a SOLIDUS
-                            token = new Token(SOLIDUS,"/");
+                            token = new Token(SOLIDUS,"/", line, offset);
+                            offset = pos;
                         }
                         break;
 
                     case '>':
 
-                        token = new Token(GREATER,">");
+                        token = new Token(GREATER,">", line, offset);
+                        offset = pos;
                         break;
 
                     case '{':
-                        token = new Token(LBRACE,"{");
+                        token = new Token(LBRACE,"{", line, offset);
+                        offset = pos;
                         break;
 
                     case '}':
-                        token = new Token(RBRACE,"}");
+                        token = new Token(RBRACE,"}", line, offset);
+                        offset = pos;
                         break;
 
                     case ';':
-                        token = new Token(SEMI,";");
+                        token = new Token(SEMI,";", line, offset);
+                        offset = pos;
                         break;
 
                     case ':':
-                        token = new Token(COLON,":");
+                        token = new Token(COLON,":", line, offset);
+                        offset = pos;
                         break;
 
                     case '*':
-                        token = new Token(STAR,"*");
+                        token = new Token(STAR,"*", line, offset);
+                        offset = pos;
                         break;
 
                     case '(':
-                        token = new Token(LPAREN,"(");
+                        token = new Token(LPAREN,"(", line, offset);
+                        offset = pos;
                         break;
 
                     case ')':
-                        token = new Token(RPAREN,")");
+                        token = new Token(RPAREN,")", line, offset);
+                        offset = pos;
                         break;
 
                     case ',':
-                        token = new Token(COMMA,",");
+                        token = new Token(COMMA,",", line, offset);
+                        offset = pos;
                         break;
 
                     case '.':
-                        token = new Token(DOT,".");
+                        token = new Token(DOT,".", line, offset);
+                        offset = pos;
                         break;
 
                     case ' ':
                     case '\t':
                     case '\f':
-                        token = new Token(WS, Character.toString((char)ch));
+                        token = new Token(WS, Character.toString((char)ch), line, offset);
+                        offset = pos;
                         break;
 
 
                     case '\r':
-                        token = new Token(NL);
-
+                        token = new Token(NL, "\\r", line, offset);
+                        // offset and pos are reset on next readChar
+                        
                         ch = readChar();
-                        if (ch != '\n') {
-                            token.setOffset(pos);
-                            token.setLine(line);
+                        if (ch == '\n') {
+                            token = new Token(NL, "\\r\\n", line, offset);
+                            // offset and pos are reset on next readChar
+                        } else {
+                            // already read the next character, so return
+                            // return the NL token here (avoid the readChar
+                            // at the end of the loop below)
                             final Token tok = token;
                             token = (ch == -1) ? Token.EOF_TOKEN : null;
                             return tok;
-                        }
+                        }                        
                         break;
 
                     case '\n':
-                        token = new Token(NL);
+                        token = new Token(NL, "\\n", line, offset);
+                        // offset and pos are reset on next readChar
                         break;
 
                     case '!':
                         Token tok = scanImportant();
-                        tok.setLine(line);
-                        tok.setOffset(pos);
                         return tok;
 
                     case '@':
@@ -754,25 +796,24 @@ final class CSSLexer {
                         if (ch == ';') {
                             ch = readChar();
                             token = Token.SKIP_TOKEN;
-
+                            offset = pos;
                         }
                         break;
 
                     default:
 //                      System.err.println("hit default case: ch = " + Character.toString((char)ch));
-                        token = new Token(Token.INVALID, Character.toString((char)ch));
+                        token = new Token(Token.INVALID, Character.toString((char)ch), line, offset);
+                        offset = pos;
                         break;
                 }
 
                 if (token == null) {
 //                    System.err.println("token is null! ch = " + Character.toString((char)ch));
-                    token = new Token(Token.INVALID, null);
+                    token = new Token(Token.INVALID, null, line, offset);
+                    offset = pos;
                 } else if (token.getType() == Token.EOF) {
                     return token;
-                } else {
-                    token.setLine(line);
-                    token.setOffset(pos);
-                }
+                } 
 
                 if (ch != -1) ch = readChar();
 
