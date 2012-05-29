@@ -25,6 +25,7 @@
 
 package javafx.scene.control;
 
+import com.sun.javafx.beans.IDProperty;
 import com.sun.javafx.css.Styleable;
 import com.sun.javafx.css.StyleableProperty;
 import javafx.beans.property.BooleanProperty;
@@ -91,6 +92,7 @@ menu.getItems().add(menuItem);
  *
  * @see Menu
  */
+@IDProperty("id")
 public class MenuItem implements EventTarget {
 
     /***************************************************************************
