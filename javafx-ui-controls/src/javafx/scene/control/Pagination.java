@@ -250,7 +250,7 @@ public class Pagination extends Control {
      * value must be greater than or equal to 1.  {@link INDETERMINATE} 
      * should be used as the page count if the total number of pages is unknown.
      * 
-     * The default is {@link INDETERMINATE} page.
+     * The default is an {@link INDETERMINATE} number of pages.
      */    
     public final IntegerProperty pageCountProperty() { return pageCount; }
 
