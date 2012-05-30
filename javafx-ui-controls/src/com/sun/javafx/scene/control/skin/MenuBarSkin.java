@@ -167,6 +167,7 @@ public class MenuBarSkin extends SkinBase<MenuBar, BehaviorBase<MenuBar>> implem
                                 if (openMenu == null) return;
                                 if ( !openMenu.isShowing()) {
                                     selectPrevMenu(); // just move the selection bar
+                                    event.consume();
                                     return;
                                 }
                                 showPrevMenu();
@@ -180,6 +181,7 @@ public class MenuBarSkin extends SkinBase<MenuBar, BehaviorBase<MenuBar>> implem
                                 if (openMenu == null) return;
                                 if (! openMenu.isShowing()) {
                                     selectNextMenu(); // just move the selection bar
+                                    event.consume();
                                     return;
                                 }
                                 showNextMenu();
