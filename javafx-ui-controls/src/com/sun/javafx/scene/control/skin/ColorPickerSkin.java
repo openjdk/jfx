@@ -92,7 +92,6 @@ public class ColorPickerSkin extends ComboBoxPopupControl<Color> {
                 });
             }
         }
-        getPopup().setAutoHide(false);
         registerChangeListener(colorPicker.valueProperty(), "VALUE");
     }
     
