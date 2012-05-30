@@ -1162,9 +1162,12 @@ public class PaginationSkin extends SkinBase<Pagination, PaginationBehavior>  {
 
         private void setIndicatorType() {
             if (getSkinnable().getStyleClass().contains(Pagination.STYLE_CLASS_BULLET)) {
-                getStyleClass().addAll("bullet-button");
+                getStyleClass().remove("number-button");
+                getStyleClass().add("bullet-button");
+                setText(null);
             } else {
-                getStyleClass().addAll("number-button");
+                getStyleClass().remove("bullet-button");
+                getStyleClass().add("number-button");
                 setText(Integer.toString(this.pageNumber + 1));
             }
         }
