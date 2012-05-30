@@ -765,11 +765,6 @@ public class Color extends Paint implements Interpolatable<Color> { // final
     public static final Color TRANSPARENT          = new Color(0f, 0f, 0f, 0f);
 
     /**
-     * A fully transparent color with an ARGB value of #00000000.
-     */
-    public static final Color TRANSPARENT          = new Color(0f, 0f, 0f, 0f);
-
-    /**
      * The color alice blue with an RGB value of #F0F8FF.
      */
     public static final Color ALICEBLUE = new Color(0.9411765f, 0.972549f, 1.0f);
