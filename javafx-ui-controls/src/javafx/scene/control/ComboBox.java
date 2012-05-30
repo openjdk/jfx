@@ -230,10 +230,6 @@ public class ComboBox<T> extends ComboBoxBase<T> {
             @Override public void invalidated(Observable o) {
                 // when editable changes, we reset the selection / value states
                 getSelectionModel().clearSelection();
-                
-                // we also change the editor property so that it is null when
-                // editable is false, and non-null when it is true.
-                updateEditor();
             }
         });
     }
@@ -345,6 +341,7 @@ public class ComboBox<T> extends ComboBoxBase<T> {
     
     
     // --- Editor
+    private FocusableTextField textField;
     /**
      * The editor for the ComboBox. The editor is null if the ComboBox is not
      * {@link #editableProperty() editable}.
@@ -354,8 +351,12 @@ public class ComboBox<T> extends ComboBoxBase<T> {
         return editorProperty().get(); 
     }
     public final ReadOnlyObjectProperty<TextField> editorProperty() { 
-        if (editor == null || (editor.get() == null && isEditable())) {
-            updateEditor();
+        if (editor == null) {
+            editor = new ReadOnlyObjectWrapper<TextField>(this, "editor");
+            textField = new FocusableTextField();
+            textField.promptTextProperty().bindBidirectional(promptTextProperty());
+            textField.tooltipProperty().bind(tooltipProperty());
+            editor.set(textField);
         }
         return editor.getReadOnlyProperty(); 
     }
@@ -386,23 +387,8 @@ public class ComboBox<T> extends ComboBoxBase<T> {
      *                                                                         *
      **************************************************************************/        
 
-    private FocusableTextField textField;
     
-    private void updateEditor() {
-        if (editor == null) {
-            editor = new ReadOnlyObjectWrapper<TextField>(this, "editor");
-        }
-        
-        if (isEditable()) {
-            textField = new FocusableTextField();
-            textField.promptTextProperty().bindBidirectional(promptTextProperty());
-            textField.tooltipProperty().bind(tooltipProperty());
-            editor.set(textField);
-        } else {
-            textField = null;
-            editor.set(null);
-        }
-    }
+    
 
     
     
