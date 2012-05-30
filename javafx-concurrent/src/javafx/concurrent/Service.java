@@ -495,13 +495,28 @@ public abstract class Service<V> implements Worker<V>, EventTarget {
 
     /**
      * Cancels any currently running Task, if any, and restarts this Service. The state
-     * will be reset to READY prior to execution.
+     * will be reset to READY prior to execution. This method should only be called on
+     * the FX application thread.
      */
     public void restart() {
+        checkThread();
+
         // Cancel the current task, if there is one
         if (task != null) {
             task.cancel();
             task = null;
+
+            // RT-20880: IllegalStateException thrown from Service#restart()
+            // The problem is that the reset method explodes if the state
+            // is SCHEDULED or RUNNING. Although we have cancelled the
+            // task above, it is possible that cancelling does not change
+            // state to the CANCELLED state. However we still need to
+            // succeed in resetting. I believe that although the old task is
+            // still running away, everything is about to be unbound so
+            // we really can just let the old task run and create a new
+            // task and the Service will be none the wiser.
+            state.unbind();
+            state.setValue(State.CANCELLED);
         }
 
         // Reset
@@ -513,9 +528,11 @@ public abstract class Service<V> implements Worker<V>, EventTarget {
 
     /**
      * Resets the Service. May only be called while in one of the finish states,
-     * that is, SUCCEEDED, FAILED, or CANCELLED, or when READY.
+     * that is, SUCCEEDED, FAILED, or CANCELLED, or when READY. This method should
+     * only be called on the FX application thread.
      */
     public void reset() {
+        checkThread();
         final State s = getState();
         if (s == State.SCHEDULED || s == State.RUNNING) {
             throw new IllegalStateException();
@@ -544,6 +561,7 @@ public abstract class Service<V> implements Worker<V>, EventTarget {
 
     /**
      * Starts this Service. The Service must be in the READY state to succeed in this call.
+     * This method should only be called on the FX application thread.
      */
     public void start() {
         checkThread();
