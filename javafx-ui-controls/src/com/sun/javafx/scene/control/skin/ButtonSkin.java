@@ -108,13 +108,17 @@ public class ButtonSkin extends LabeledSkinBase<Button, ButtonBehavior<Button>> 
 
     Runnable defaultButtonRunnable = new Runnable() {
             public void run() {
-                getSkinnable().fire();
+                if (!getSkinnable().isDisabled()) {
+                    getSkinnable().fire();
+                }
             }
         };
 
     Runnable cancelButtonRunnable = new Runnable() {
-            public void run() {
-                getSkinnable().fire();
+            public void run() {                
+                if (!getSkinnable().isDisabled()) {
+                    getSkinnable().fire();
+                }
             }
         };
 

@@ -11,16 +11,15 @@ import com.sun.javafx.scene.control.skin.MenuBarSkin;
 import com.sun.javafx.tk.Toolkit;
 import javafx.scene.Parent;
 import javafx.scene.Scene;
-import javafx.scene.input.MouseButton;
 import javafx.scene.input.MouseEvent;
 import javafx.scene.layout.AnchorPane;
 import javafx.stage.Stage;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.assertFalse;
-import javafx.event.EventType;
 import javafx.scene.Node;
 import javafx.scene.input.KeyCode;
+import javafx.scene.layout.VBox;
 
 import org.junit.Before;
 import org.junit.Test;
@@ -236,8 +235,47 @@ public class MenuBarTest {
         // check if focusedMenuIndex is reset to -1 so navigation happens.
         int focusedIndex = MenuBarMenuButtonRetriever.getFocusedIndex(skin);
         assertEquals(focusedIndex, -1);
-        
     }
+    
+    @Test public void testMenuOnShownEventFiringWithKeyNavigation() {
+        final MouseEventGenerator generator = new MouseEventGenerator();
+        VBox root = new VBox();
+        Menu menu = new Menu("Menu");
+
+        MenuItem menuItem1 = new MenuItem("MenuItem1");
+        MenuItem menuItem2 = new MenuItem("MenuItem2");
+        menu.getItems().addAll(menuItem1, menuItem2);
+        
+        menuBar.getMenus().add(menu);
+        menuBar.setLayoutX(100);
+        menuBar.setLayoutY(100);
+        
+        final CheckBox cb = new CheckBox("showing");
+        
+        root.getChildren().addAll(cb,menuBar);
+        startApp(root);
+        tk.firePulse();
+        
+        MenuBarSkin skin = (MenuBarSkin)menuBar.getSkin();
+        assertTrue(skin != null);
+        
+        MenuButton mb = MenuBarMenuButtonRetriever.getNodeForMenu(skin, 0);
+        mb.getScene().getWindow().requestFocus();
+        assertTrue(mb.getScene().getWindow().isFocused());
+        
+
+        KeyEventFirer keyboard = new KeyEventFirer(mb.getScene());
+        keyboard.doKeyPress(KeyCode.TAB);
+        tk.firePulse(); 
+        mb.requestFocus();
+        assertTrue(mb.isFocused());
+        
+        keyboard = new KeyEventFirer(mb);
+        keyboard.doDownArrowPress();
+        tk.firePulse();
+        assertEquals(menu.showingProperty().get(), true);
+    }
+    
 //    static final class MouseEventTracker {
 //        private Node node;
 //        

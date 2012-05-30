@@ -525,6 +525,7 @@ public class MenuBarSkin extends SkinBase<MenuBar, BehaviorBase<MenuBar>> implem
                         }
                         openMenuButton = menuButton;
                         openMenu = menu;
+                        if (!menu.isShowing())menu.show();
                     }
                 }
             });

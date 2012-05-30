@@ -60,7 +60,7 @@ import com.sun.javafx.css.StyleManager;
  * state.
  *
  * <p>Example:
- * <pre><code>Checkbox cb = new Checkbox("a checkbox");
+ * <pre><code>CheckBox cb = new CheckBox("a checkbox");
  * cb.setIndeterminate(false);</code></pre>
  *
  * <p>
