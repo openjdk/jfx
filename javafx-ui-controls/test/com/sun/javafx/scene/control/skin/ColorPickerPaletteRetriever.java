@@ -4,7 +4,9 @@
 package com.sun.javafx.scene.control.skin;
 
 import javafx.scene.control.ColorPicker;
+import javafx.scene.control.Hyperlink;
 import javafx.scene.control.PopupControl;
+import javafx.stage.Stage;
 
 
 /**
@@ -25,5 +27,14 @@ public class ColorPickerPaletteRetriever {
     public static PopupControl getPopup(ColorPicker cp) {
         ColorPickerSkin cpSkin = (ColorPickerSkin)cp.getSkin();
         return cpSkin.getPopup();
+    }
+    
+    public static Hyperlink getCustomColorLink(ColorPalette cp) {
+        return cp.customColorLink;
+    }
+    
+    public static Stage getCustomColorDialog(ColorPalette cp) {
+        if (cp.customColorDialog != null) return cp.customColorDialog.dialog;
+        return null;
     }
 }

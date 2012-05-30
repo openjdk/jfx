@@ -45,12 +45,7 @@ import javafx.scene.control.ColorPicker;
 import com.sun.javafx.scene.control.skin.ColorPalette;
 import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.SimpleBooleanProperty;
-import javafx.beans.value.ChangeListener;
-import javafx.beans.value.ObservableValue;
 import javafx.beans.value.WritableValue;
-import javafx.geometry.HPos;
-import javafx.geometry.Point2D;
-import javafx.geometry.VPos;
 import javafx.scene.paint.Color;
 
 /**
@@ -168,7 +163,7 @@ public class ColorPickerSkin extends ComboBoxPopupControl<Color> {
             if (getSkinnable().isShowing()) {
                 show();
             } else {
-                if (!popupContent.isAddColorDialogShowing()) hide();
+                if (!popupContent.isCustomColorDialogShowing()) hide();
             }
         } else if (p == "VALUE") {
            // Change the current selected color in the grid if ColorPicker value changes

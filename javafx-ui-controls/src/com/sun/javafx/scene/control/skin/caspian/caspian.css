@@ -3323,7 +3323,7 @@ Only the properties with values that are different from the TextBox are specifie
     -fx-padding: 9 64 9 64;
 }
 
-.custom-color-dialog .controls-pane .addcolor-controls-background {
+.custom-color-dialog .controls-pane .customcolor-controls-background {
     -fx-background-color: -fx-text-box-border, -fx-text-box-border, -fx-control-inner-background;
     -fx-background-insets: 0, 1, 2;
     -fx-background-radius: 3, 2, 2;
