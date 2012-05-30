@@ -185,6 +185,11 @@ public class StyleHelper {
             return hash;
         }
         
+        public void clearCache() {
+            StyleCacheEntry entry = styleCache.get(this);
+            entry.entries.clear();
+        }
+        
     }
     
     private static int[] getIndices(Node node, int count) {
