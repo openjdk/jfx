@@ -1694,10 +1694,14 @@ public class StyleHelper {
                 // what did font shorthand specify? 
                 ParsedValue[] vals = 
                         (ParsedValue[])csShorthand.getParsedValue().getValue();
+                // Use family and size from converted font since the actual 
+                // values may have been resolved. The weight and posture, 
+                // however, are hard to get reliably from the font so use 
+                // the parsed value instead. 
                 if (vals[0] != null) family = f.getFamily();
                 if (vals[1] != null) size   = f.getSize();
-//                if (vals[3] != null) weight = f.??();
-//                if (vals[4] != null) style  = f.??();
+                if (vals[2] != null) weight = (FontWeight)vals[2].convert(null);
+                if (vals[3] != null) style  = (FontPosture)vals[3].convert(null);
                 
             }
             
