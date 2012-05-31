@@ -581,8 +581,8 @@ public class ComboBoxTest {
         assertEquals(cf, comboBox.getCellFactory());
     }
     
-    @Test public void ensureEditorIsNullWhenComboBoxIsNotEditable() {
-        assertNull(comboBox.getEditor());
+    @Test public void ensureEditorIsNonNullWhenComboBoxIsNotEditable() {
+        assertNotNull(comboBox.getEditor());
     }
     
     @Test public void ensureEditorIsNonNullWhenComboBoxIsEditable() {
@@ -590,26 +590,13 @@ public class ComboBoxTest {
         assertNotNull(comboBox.getEditor());
     }
     
-    @Test public void ensureEditorChangesBetweenNullAndNonNull() {
+    @Test public void ensureEditorDoesNotChangeWhenEditableToggles() {
         comboBox.setEditable(true);
         assertNotNull(comboBox.getEditor());
         comboBox.setEditable(false);
-        assertNull(comboBox.getEditor());
+        assertNotNull(comboBox.getEditor());
         comboBox.setEditable(true);
         assertNotNull(comboBox.getEditor());
-    }
-    
-    boolean hit = false;
-    @Test public void ensureEditorPropertyFiresWhenEditableBecomesTrue() {
-        comboBox.editorProperty().addListener(new ChangeListener<TextField>() {
-            @Override
-            public void changed(ObservableValue<? extends TextField> arg0, TextField arg1, TextField arg2) {
-                hit = true;
-            }
-        });
-        assertFalse(hit);
-        comboBox.setEditable(true);
-        assertTrue(hit);
     }
     
     @Test public void ensureCanSetValueToNonNullStringAndBackAgain() {
