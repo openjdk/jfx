@@ -24,6 +24,7 @@
  */
 package com.sun.javafx.scene.control.skin;
 
+import com.sun.javafx.css.StyleableBooleanProperty;
 import com.sun.javafx.css.StyleableProperty;
 import com.sun.javafx.css.converters.BooleanConverter;
 import java.util.ArrayList;
@@ -59,9 +60,20 @@ public class ColorPickerSkin extends ComboBoxPopupControl<Color> {
     private Rectangle colorRect; 
     private ColorPalette popupContent;
 //    private ColorPickerPanel popup = new ColorPickerPanel(Color.WHITE);
-    BooleanProperty colorLabelVisible = new SimpleBooleanProperty(true) {
-        @Override protected void invalidated() {
-            super.invalidated();
+    BooleanProperty colorLabelVisible = new StyleableBooleanProperty(true) {
+        
+        @Override
+        public Object getBean() {
+            return ColorPickerSkin.this;
+        }
+
+        @Override
+        public String getName() {
+            return "colorLabelVisible";
+        }
+        
+        @Override public StyleableProperty getStyleableProperty() {
+            return StyleableProperties.COLOR_LABEL_VISIBLE;
         }
     };
     
@@ -246,29 +258,55 @@ public class ColorPickerSkin extends ComboBoxPopupControl<Color> {
         super.layoutChildren();
     }
     
+    /***************************************************************************
+    *                                                                         *
+    *                         Stylesheet Handling                             *
+    *                                                                         *
+    **************************************************************************/
+    
      private static class StyleableProperties {
         private static final StyleableProperty<ColorPickerSkin,Boolean> COLOR_LABEL_VISIBLE = 
                 new StyleableProperty<ColorPickerSkin,Boolean>("-fx-color-label-visible",
-                BooleanConverter.getInstance(), false) {
+                BooleanConverter.getInstance(), Boolean.TRUE) {
+
+            @Override public WritableValue<Boolean> getWritableValue(ColorPickerSkin n) {
+                return n.colorLabelVisible;
+            }
 
             @Override
             public boolean isSettable(ColorPickerSkin n) {
                 return n.colorLabelVisible == null || !n.colorLabelVisible.isBound();
             }
-
-            @Override public WritableValue<Boolean> getWritableValue(ColorPickerSkin n) {
-                return n.colorLabelVisible;
-            }
         };
         private static final List<StyleableProperty> STYLEABLES;
         static {
             final List<StyleableProperty> styleables =
-                new ArrayList<StyleableProperty>(ComboBoxBase.impl_CSS_STYLEABLES());
+                new ArrayList<StyleableProperty>(ComboBoxBaseSkin.impl_CSS_STYLEABLES());
             Collections.addAll(styleables,
                 COLOR_LABEL_VISIBLE
             );
             STYLEABLES = Collections.unmodifiableList(styleables);
         }
     }
+     
+     /**
+     * @treatAsPrivate implementation detail
+     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
+     */
+    @Deprecated
+     public static List<StyleableProperty> impl_CSS_STYLEABLES() {
+         return StyleableProperties.STYLEABLES;
+     }
+
+    /**
+     * RT-19263
+     * @treatAsPrivate implementation detail
+     * @deprecated This is an experimental API that is not intended for general use and is subject to change in future versions
+     */
+    @Deprecated
+    public List<StyleableProperty> impl_getStyleableProperties() {
+        return impl_CSS_STYLEABLES();
+    }
+
     
 }
