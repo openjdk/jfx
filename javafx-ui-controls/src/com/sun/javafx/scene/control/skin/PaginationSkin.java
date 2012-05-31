@@ -654,15 +654,15 @@ public class PaginationSkin extends SkinBase<Pagination, PaginationBehavior>  {
         double right = snapSpace(getInsets().getRight());
         double navigationWidth = navigation.isVisible() ? snapSize(navigation.minWidth(height)) : 0;
         return left + Math.max(currentStackPane.minWidth(height), navigationWidth) + right;
-    }   
-    
+    }
+
     @Override protected double computeMinHeight(double width) {
         double top = snapSpace(getInsets().getTop());
         double bottom = snapSpace(getInsets().getBottom());
         double navigationHeight = navigation.isVisible() ? snapSize(navigation.minHeight(width)) : 0;
         return top + currentStackPane.minHeight(width) + navigationHeight + bottom;
-    }    
-    
+    }
+
     @Override protected double computePrefWidth(double height) {
         double left = snapSpace(getInsets().getLeft());
         double right = snapSpace(getInsets().getRight());
@@ -788,6 +788,7 @@ public class PaginationSkin extends SkinBase<Pagination, PaginationBehavior>  {
         // Create the indicators using fromIndex and toIndex.
         private void initializePageIndicators() {
             if (!indicatorButtons.getToggles().isEmpty()) {
+                previousIndicatorCount = 0;
                 controlBox.getChildren().clear();
                 indicatorButtons.getToggles().clear();
             }
