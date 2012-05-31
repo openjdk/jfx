@@ -25,6 +25,7 @@
 package com.sun.javafx.css;
 
 import com.sun.javafx.Logging;
+import com.sun.javafx.Utils;
 import com.sun.javafx.css.StyleHelper.StyleCacheKey;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -1716,7 +1717,7 @@ public class StyleHelper {
 
             if (cv.isCacheable == false) cacheable.set(false);
             if (cv.value instanceof String) {
-                family = (String)cv.value;
+                family = Utils.stripQuotes((String)cv.value);
                 if (origin == null || origin.compareTo(cv.origin) < 0) {                        
                     origin = cv.origin;
                 }
@@ -1814,7 +1815,16 @@ public class StyleHelper {
             size = f.getSize();                
         }
 
-        Font val = Font.font(family, weight, style, size);
+        Font val = null;
+        if (weight != null && style != null) {
+            val = Font.font(family, weight, style, size);            
+        } else if (weight != null) {
+            val = Font.font(family, weight, size);
+        } else if (style != null) {
+            val = Font.font(family, style, size);
+        } else {
+            val = Font.font(family, size);            
+        }
 
         return new CalculatedValue(val, origin, cacheable.get());
     }    
