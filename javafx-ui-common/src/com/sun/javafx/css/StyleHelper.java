@@ -187,7 +187,7 @@ public class StyleHelper {
         
         public void clearCache() {
             StyleCacheEntry entry = styleCache.get(this);
-            entry.entries.clear();
+            if (entry != null && entry.entries != null) entry.entries.clear();
         }
         
     }
