@@ -1615,7 +1615,7 @@ public class TabPaneSkin extends SkinBase<TabPane, TabPaneBehavior> {
             ToggleGroup group = new ToggleGroup();
             ObservableList<RadioMenuItem> menuitems = FXCollections.<RadioMenuItem>observableArrayList();
             for (final Tab tab : getSkinnable().getTabs()) {
-                TabMenuItem item = new TabMenuItem(tab);
+                TabMenuItem item = new TabMenuItem(tab);                
                 item.setToggleGroup(group);
                 item.setOnAction(new EventHandler<ActionEvent>() {
                     @Override public void handle(ActionEvent t) {
@@ -1641,9 +1641,16 @@ public class TabPaneSkin extends SkinBase<TabPane, TabPaneBehavior> {
 
     class TabMenuItem extends RadioMenuItem {
         Tab tab;
-        public TabMenuItem(Tab tab) {
-            super(tab.getText(), TabPaneSkin.clone(tab.getGraphic()));
+        public TabMenuItem(final Tab tab) {
+            super(tab.getText(), TabPaneSkin.clone(tab.getGraphic()));                        
             this.tab = tab;
+            setDisable(tab.isDisable());
+            tab.disableProperty().addListener(new InvalidationListener() {
+                @Override
+                public void invalidated(Observable arg0) {
+                    setDisable(tab.isDisable());
+                }
+            });                   
         }
 
         public Tab getTab() {
