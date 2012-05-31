@@ -111,13 +111,13 @@ public class ResizabilityTest {
                    text.getLayoutBounds().getHeight() == text.maxHeight(-1));
     }
 
-    @Ignore("Pending RT-19951") @Test public void testParentMinPrefMaxWidthAreEqual() {
+    @Test public void testParentMinPrefMaxWidthAreEqual() {
         Parent parent = new MockParent();
         assertTrue(parent.prefWidth(-1) == parent.minWidth(-1) &&
                    parent.prefWidth(-1) == parent.maxWidth(-1));
     }
     
-    @Ignore("Pending RT-19951") @Test public void testParentMinPrefMaxHeightAreEqual() {
+    @Test public void testParentMinPrefMaxHeightAreEqual() {
         Parent parent = new MockParent();
         assertTrue(parent.prefHeight(-1) == parent.minHeight(-1) &&
                    parent.prefHeight(-1) == parent.maxHeight(-1));
