@@ -756,6 +756,8 @@ public class MenuBarSkin extends SkinBase<MenuBar, BehaviorBase<MenuBar>> implem
         } else {
             focusedMenuIndex--;
         }
+        // RT-19359
+        if (getSkinnable().getMenus().get(focusedMenuIndex).isDisable()) return findPreviousSibling();
         clearMenuButtonHover();
         return getSkinnable().getMenus().get(focusedMenuIndex);
     }
@@ -767,6 +769,8 @@ public class MenuBarSkin extends SkinBase<MenuBar, BehaviorBase<MenuBar>> implem
         } else {
             focusedMenuIndex++;
         }
+        // RT_19359
+        if (getSkinnable().getMenus().get(focusedMenuIndex).isDisable()) return findNextSibling();
         clearMenuButtonHover();
         return getSkinnable().getMenus().get(focusedMenuIndex);
     }

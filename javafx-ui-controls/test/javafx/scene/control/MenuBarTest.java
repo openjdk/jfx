@@ -276,6 +276,48 @@ public class MenuBarTest {
         assertEquals(menu.showingProperty().get(), true);
     }
     
+    @Test public void testKeyNavigationWithDisabledMenuItem() {
+        final MouseEventGenerator generator = new MouseEventGenerator();
+        VBox root = new VBox();
+        Menu menu1 = new Menu("Menu1");
+        Menu menu2 = new Menu("Menu2");
+        Menu menu3 = new Menu("Menu3");
+        
+        MenuItem menuItem1 = new MenuItem("MenuItem1");
+        MenuItem menuItem2 = new MenuItem("MenuItem2");
+        MenuItem menuItem3 = new MenuItem("MenuItem3");
+
+        menu1.getItems().add(menuItem1);
+        menu2.getItems().add(menuItem2);
+        menu3.getItems().add(menuItem3);
+        
+        menuBar.getMenus().addAll(menu1, menu2, menu3);
+        menu2.setDisable(true);
+        
+        root.getChildren().addAll(menuBar);
+        startApp(root);
+        tk.firePulse();
+        
+        MenuBarSkin skin = (MenuBarSkin)menuBar.getSkin();
+        assertTrue(skin != null);
+        
+        double xval = (menuBar.localToScene(menuBar.getLayoutBounds())).getMinX();
+        double yval = (menuBar.localToScene(menuBar.getLayoutBounds())).getMinY();
+   
+        MenuButton mb = MenuBarMenuButtonRetriever.getNodeForMenu(skin, 0);
+        mb.getScene().getWindow().requestFocus();
+        scene.impl_processMouseEvent(
+            generator.generateMouseEvent(MouseEvent.MOUSE_PRESSED, xval+20, yval+20));
+        scene.impl_processMouseEvent(
+            generator.generateMouseEvent(MouseEvent.MOUSE_RELEASED, xval+20, yval+20));
+        assertTrue(menu1.isShowing());
+        
+        KeyEventFirer keyboard = new KeyEventFirer(mb.getScene());
+        keyboard.doKeyPress(KeyCode.RIGHT);
+        tk.firePulse(); 
+        assertTrue(menu3.isShowing());
+    }
+    
 //    static final class MouseEventTracker {
 //        private Node node;
 //        
