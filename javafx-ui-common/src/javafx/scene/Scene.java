@@ -1116,7 +1116,7 @@ public class Scene implements EventTarget {
 
         impl_setAllowPGAccess(true);
         context.x = xMin;
-        context.y = xMin;
+        context.y = yMin;
         context.width = width;
         context.height = height;
         context.transform = transform;
