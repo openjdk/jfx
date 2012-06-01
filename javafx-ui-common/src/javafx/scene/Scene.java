@@ -1251,7 +1251,7 @@ public class Scene implements EventTarget {
      * @param callback a class whose call method will be called when the image
      * is ready. The SnapshotResult that is passed into the call method of
      * the callback will contain the rendered image and the source scene
-     * that was rendered.
+     * that was rendered. The callback parameter must not be null.
      *
      * @param image the writable image that will be used to hold the rendered scene.
      * It may be null in which case a new WritableImage will be constructed.
@@ -1262,9 +1262,14 @@ public class Scene implements EventTarget {
      *
      * @throws IllegalStateException if this method is called on a thread
      *     other than the JavaFX Application Thread.
+     *
+     * @throws NullPointerException if the callback parameter is null.
      */
     public void snapshot(Callback<SnapshotResult, Void> callback, WritableImage image) {
         Toolkit.getToolkit().checkFxUserThread();
+        if (callback == null) {
+            throw new NullPointerException("The callback must not be null");
+        }
 
         final Callback<SnapshotResult, Void> theCallback = callback;
         final WritableImage theImage = image;

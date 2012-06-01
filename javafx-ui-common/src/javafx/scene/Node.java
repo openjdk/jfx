@@ -1723,6 +1723,7 @@ public abstract class Node implements EventTarget {
      * is ready. The SnapshotResult that is passed into the call method of
      * the callback will contain the rendered image, the source node
      * that was rendered, and a copy of the SnapshotParameters.
+     * The callback parameter must not be null.
      *
      * @param params the snapshot parameters containing attributes that
      * will control the rendering. If the SnapshotParameters object is null,
@@ -1739,11 +1740,15 @@ public abstract class Node implements EventTarget {
      * @throws IllegalStateException if this method is called on a thread
      *     other than the JavaFX Application Thread.
      *
+     * @throws NullPointerException if the callback parameter is null.
      */
     public void snapshot(Callback<SnapshotResult, Void> callback,
             SnapshotParameters params, WritableImage image) {
 
         Toolkit.getToolkit().checkFxUserThread();
+        if (callback == null) {
+            throw new NullPointerException("The callback must not be null");
+        }
 
         if (params == null) {
             params = new SnapshotParameters();
