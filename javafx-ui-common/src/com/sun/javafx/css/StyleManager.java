@@ -443,7 +443,7 @@ public class StyleManager {
                 // parse only if the file is not a .bss
                 // and binary.css is set to false
                 return (!fname.endsWith(".bss") && bss != null) ?
-                    Boolean.valueOf(bss) : Boolean.FALSE;
+                    !Boolean.valueOf(bss) : Boolean.FALSE;
             }
         });
 
