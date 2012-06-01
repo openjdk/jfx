@@ -749,18 +749,8 @@ public class TextAreaSkin extends TextInputControlSkin<TextArea, TextAreaBehavio
         paragraphNodes.getChildren().add(i, paragraphNode);
 
         paragraphNode.fontProperty().bind(font);
-        paragraphNode.fillProperty().bind(new ObjectBinding<Paint>() {
-            { bind(textFill); }
-            @Override protected Paint computeValue() {
-                return textFill.get();
-            }
-        });
-        paragraphNode.impl_selectionFillProperty().bind(new ObjectBinding<Paint>() {
-            { bind(highlightTextFill, textFill, textArea.focusedProperty()); }
-            @Override protected Paint computeValue() {
-                return textArea.isFocused() ? highlightTextFill.get() : textFill.get();
-            }
-        });
+        paragraphNode.fillProperty().bind(textFill);
+        paragraphNode.impl_selectionFillProperty().bind(highlightTextFill);
     }
 
     @Override public void layoutChildren() {
