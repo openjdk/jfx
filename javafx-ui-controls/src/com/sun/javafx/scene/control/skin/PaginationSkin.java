@@ -379,7 +379,7 @@ public class PaginationSkin extends SkinBase<Pagination, PaginationBehavior>  {
         // created and visible == true.
         if (!nextStackPane.isVisible()) {
             if (!createPage(nextStackPane, currentAnimatedIndex)) {
-                // The page does not exist just return without starting
+                // The next page does not exist just return without starting
                 // any animation.
                 return;
             }
@@ -628,6 +628,26 @@ public class PaginationSkin extends SkinBase<Pagination, PaginationBehavior>  {
     @Override protected void handleControlPropertyChanged(String p) {
         super.handleControlPropertyChanged(p);
         if (p == "PAGE_FACTORY") {
+            if (animate && timeline != null) {
+                // If we are in the middle of a page animation.
+                // Speedup and finish the animation then update the page factory.
+                timeline.setRate(8);
+                timeline.setOnFinished(new EventHandler<ActionEvent>() {
+                    @Override
+                    public void handle(ActionEvent arg0) {
+                        // Create a new page by removing the children.
+                        currentStackPane.getChildren().clear();
+                        nextStackPane.getChildren().clear();
+                        resetIndexes(false);
+                        navigation.initializePageIndicators();
+                        navigation.updatePageIndicators();
+                    }
+                });
+                return;
+            }
+            // Create a new page by removing the children.
+            currentStackPane.getChildren().clear();
+            nextStackPane.getChildren().clear();
             resetIndexes(false);
             navigation.initializePageIndicators();
             navigation.updatePageIndicators();
