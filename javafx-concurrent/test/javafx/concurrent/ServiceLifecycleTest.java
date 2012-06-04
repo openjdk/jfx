@@ -96,6 +96,7 @@ public class ServiceLifecycleTest extends ServiceTestBase {
     protected final class ManualTask extends AbstractTask {
         private AtomicBoolean finish = new AtomicBoolean(false);
         private AtomicReference<Exception> exception = new AtomicReference<Exception>();
+        private boolean failToCancel = false;
 
         @Override protected String call() throws Exception {
             runLater(new Sentinel());
@@ -126,6 +127,11 @@ public class ServiceLifecycleTest extends ServiceTestBase {
         public void complete() {
             finish.set(true);
             handleEvents();
+        }
+
+        @Override
+        public boolean cancel(boolean mayInterruptIfRunning) {
+            return failToCancel ? false : super.cancel(mayInterruptIfRunning);
         }
     }
 
@@ -186,6 +192,22 @@ public class ServiceLifecycleTest extends ServiceTestBase {
 
     @Test public void callingRestartInScheduledStateShouldCancelAndReschedule() {
         service.start();
+        service.restart();
+        assertSame(Worker.State.SCHEDULED, service.getState());
+        assertSame(Worker.State.SCHEDULED, service.stateProperty().get());
+    }
+
+    /**
+     * This test differs from callingRestartInScheduledStateShouldCancelAndReschedule
+     * in that under some circumstances, the cancel operation on a task may yield
+     * a task which is not marked as CANCELLED, such as when it is already run
+     * or cancelled). In such a case, the bindings have not fired yet and the
+     * state of the service is off. At least, that is what is happening with
+     * RT-20880. The fix allows this test to pass.
+     */
+    @Test public void callingRestartInScheduledStateShouldCancelAndReschedule_RT_20880() {
+        service.start();
+        task.failToCancel = true;
         service.restart();
         assertSame(Worker.State.SCHEDULED, service.getState());
         assertSame(Worker.State.SCHEDULED, service.stateProperty().get());

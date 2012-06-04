@@ -144,6 +144,12 @@ public abstract class Toolkit {
             return TOOLKIT;
         }
 
+        final boolean verbose = AccessController.doPrivileged(new PrivilegedAction<Boolean>() {
+            public Boolean run() {
+                return Boolean.getBoolean("javafx.verbose");
+            }
+        });
+
         // This loading of msvcr100.dll (VS2010) is required when run with Java 6
         // since it was build with VS2003 and doesn't include msvcr100.dll in it's JRE.
         // Note: See README-builds.html on MSVC requirement: VS2010 is required.
@@ -153,11 +159,9 @@ public abstract class Toolkit {
                     try {
                         com.sun.javafx.runtime.NativeLibLoader.loadLibrary("msvcr100");
                     } catch (Throwable t) {
-			// TODO: Suppress this message when we are ready for production
-			// release or guard it with a verbose flag.
-			// For now we want this message to be always on in our testing
-			// cycle.
-			System.err.println("Error: failed to msvcr100.dll " + t);
+			if (verbose) {
+                            System.err.println("Error: failed to load msvcr100.dll : " + t);
+                        }
                     }
                     return null;
                 }
@@ -194,12 +198,6 @@ public abstract class Toolkit {
             // Turn a short name into a fully qualified classname
             forcedToolkit = lookupToolkitClass(forcedToolkit);
         }
-
-        boolean verbose = AccessController.doPrivileged(new PrivilegedAction<Boolean>() {
-            public Boolean run() {
-                return Boolean.getBoolean("javafx.verbose");
-            }
-        });
 
         boolean printToolkit = verbose
                 || (userSpecifiedToolkit && !forcedToolkit.endsWith("StubToolkit"));

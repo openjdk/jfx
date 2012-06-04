@@ -928,8 +928,33 @@ public abstract class Task<V> extends FutureTask<V> implements Worker<V>, EventT
      *                 done will be -1 (thus, indeterminate).
      * @param max A value from -1 to Long.MAX_VALUE. Any value outside this
      *            range results in an IllegalArgumentException.
+     * @see #updateProgress(double, double)
      */
     protected void updateProgress(long workDone, long max) {
+        updateProgress((double)workDone, (double)max);
+    }
+
+    /**
+     * Updates the <code>workDone</code>, <code>totalWork</code>,
+     * and <code>progress</code> properties. Calls to updateProgress
+     * are coalesced and run later on the FX application thread, and calls
+     * to updateProgress, even from the FX Application thread, may not
+     * necessarily result in immediate updates to these properties, and
+     * intermediate workDone values may be coalesced to save on event
+     * notifications. <code>max</code> becomes the new value for
+     * <code>totalWork</code>.
+     * <p>
+     *     <em>This method is safe to be called from any thread.</em>
+     * </p>
+     *
+     * @param workDone A value from -1 up to max. If the value is greater
+     *                 than max, an illegal argument exception is thrown.
+     *                 If the value passed is -1, then the resulting percent
+     *                 done will be -1 (thus, indeterminate).
+     * @param max A value from -1 to Double.MAX_VALUE. Any value outside this
+     *            range results in an IllegalArgumentException.
+     */
+    protected void updateProgress(double workDone, double max) {
         // Perform the argument sanity check that workDone is < max
         if (workDone > max) {
             throw new IllegalArgumentException("The workDone must be <= the max");
@@ -938,6 +963,10 @@ public abstract class Task<V> extends FutureTask<V> implements Worker<V>, EventT
         // Make sure neither workDone nor max is < -1
         if (workDone < -1 || max < -1) {
             throw new IllegalArgumentException("The workDone and max cannot be less than -1");
+        }
+
+        if (Double.isInfinite(max) || Double.isNaN(max)) {
+            throw new IllegalArgumentException("The max value must not be infinite or NaN");
         }
 
         if (isFxApplicationThread()) {
