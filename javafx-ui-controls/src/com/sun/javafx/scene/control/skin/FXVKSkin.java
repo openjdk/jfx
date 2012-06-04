@@ -550,6 +550,7 @@ private void setIcon(Key key, String fileName) {
             setContentDisplay(ContentDisplay.TOP);
             setGraphicTextGap(-16);
             setText(chars[0]);
+            setId(chars[0]);
             if (getText().length() > 1) {
                 getStyleClass().add("multi-char-key");
             }
