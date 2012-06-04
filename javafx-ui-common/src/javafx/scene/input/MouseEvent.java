@@ -120,6 +120,11 @@ import com.sun.javafx.scene.input.InputEventUtils;
  * it affects both event variants. Thanks to the subtype-relationship, a
  * {@code MOUSE_ENTERED_TARGET} event handler will receive the
  * {@code MOUSE_ENTERED} event on target.
+ *
+ * <h4>Notes</h4>
+ * <ul>
+ *   <li>For triggering context menus see the {@link ContextMenuEvent}.</li>
+ * </ul>
  */
 public class MouseEvent extends InputEvent {
     /**
