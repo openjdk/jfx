@@ -113,7 +113,9 @@ public abstract class ComboBoxBase<T> extends Control {
         getStyleClass().add(DEFAULT_STYLE_CLASS);
     }
     
-    
+    void valueInvalidated() {
+        fireEvent(new ActionEvent());
+    }
     
     /***************************************************************************
      *                                                                         *
@@ -137,7 +139,7 @@ public abstract class ComboBoxBase<T> extends Control {
             
             if ((oldValue == null && newValue != null) ||
                     oldValue != null && ! oldValue.equals(newValue)) {
-                fireEvent(new ActionEvent());
+                valueInvalidated();
             }
             
             oldValue = newValue;

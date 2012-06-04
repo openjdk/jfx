@@ -67,9 +67,18 @@ public class ColorPalette extends StackPane {
         owner = colorPicker.getScene().getWindow();
         colorPickerGrid = new ColorPickerGrid(initPaint);
         colorPickerGrid.requestFocus();
+        colorPickerGrid.setFocusTraversable(true);
         customColorLabel.setAlignment(Pos.CENTER_LEFT);
         customColorLink.setPrefWidth(colorPickerGrid.prefWidth(-1));
         customColorLink.setAlignment(Pos.CENTER);
+        customColorLink.setFocusTraversable(true);
+        customColorLink.setVisited(true); // so that it always appears blue 
+        // ColorPalette should hide when save or use button is pressed in CustomColorDialog.
+        final EventHandler<ActionEvent> actionListener = new EventHandler<ActionEvent>() {
+            @Override public void handle(ActionEvent t) {
+                colorPicker.hide();
+            }
+        };
         customColorLink.setOnAction(new EventHandler<ActionEvent>() {
             @Override public void handle(ActionEvent t) {
                 if (customColorDialog == null) {
@@ -91,11 +100,8 @@ public class ColorPalette extends StackPane {
                             colorPicker.setValue(customColor);
                         }
                     });
-                    customColorDialog.dialog.showingProperty().addListener(new ChangeListener<Boolean>() {
-                        @Override public void changed(ObservableValue<? extends Boolean> ov, Boolean t, Boolean t1) {
-                            if (!t1) colorPicker.hide();
-                        }
-                    });
+                    customColorDialog.saveButton.addEventHandler(ActionEvent.ACTION, actionListener);
+                    customColorDialog.useButton.addEventHandler(ActionEvent.ACTION, actionListener);
                 }
                 customColorDialog.setCurrentColor(colorPicker.valueProperty().get());
                 if (popupControl != null) popupControl.setAutoHide(false);
@@ -103,13 +109,10 @@ public class ColorPalette extends StackPane {
                 if (popupControl != null) popupControl.setAutoHide(true);
             }
         });
-        colorPicker.addEventHandler(ActionEvent.ACTION, new EventHandler<ActionEvent>() {
-            @Override public void handle(ActionEvent t) {
-            }
-        });
         
         initNavigation();
         customColorGrid.setVisible(false);
+        customColorGrid.setFocusTraversable(true);
         for (Color c : colorPicker.getCustomColors()) {
             customSquares.add(new ColorSquare(c, true));
         }
@@ -379,7 +382,7 @@ public class ColorPalette extends StackPane {
         return getInsets().getTop() + totalHeight + getInsets().getBottom();
     }
    
-    public boolean isAddColorDialogShowing() {
+    public boolean isCustomColorDialogShowing() {
         if (customColorDialog != null) return customColorDialog.isVisible();
         return false;
     }
@@ -551,6 +554,10 @@ public class ColorPalette extends StackPane {
             setOnMouseDragged(new EventHandler<MouseEvent>() {
                 @Override
                 public void handle(MouseEvent t) {
+                    if (!dragDetected) {
+                        dragDetected = true;
+                        mouseDragColor = colorPicker.getValue();
+                    }
                     int xIndex = (int)(t.getX()/16.0);
                     int yIndex = (int)(t.getY()/16.0);
                         int index = xIndex + yIndex*12;
@@ -560,18 +567,12 @@ public class ColorPalette extends StackPane {
                     }
                 }
             });
-            addEventHandler(MouseDragEvent.DRAG_DETECTED, new EventHandler<Event>() {
-                @Override
-                public void handle(Event t) {
-                    dragDetected = true;
-                    mouseDragColor = colorPicker.getValue();
-                }
-            });
             addEventHandler(MouseEvent.MOUSE_RELEASED, new EventHandler<MouseEvent>() {
                 @Override
                 public void handle(MouseEvent t) {
                     if(colorPickerGrid.getBoundsInLocal().contains(t.getX(), t.getY())) {
                         updateSelection(colorPicker.getValue());
+                        colorPicker.fireEvent(new ActionEvent());
                         colorPicker.hide();
                     } else {
                         // restore color as mouse release happened outside the grid.

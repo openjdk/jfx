@@ -145,8 +145,8 @@ public class TextFieldBehavior extends TextInputControlBehavior<TextField> {
 
         if (textField.getOnAction() != null) {
             textField.fireEvent(new ActionEvent(textField, null));
-        } else if (textField.getParent() != null) {
-            textField.getParent().fireEvent(event);
+        } else {
+            forwardToParent(event);
         }
     }
 

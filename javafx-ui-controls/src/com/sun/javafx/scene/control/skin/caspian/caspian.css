@@ -3243,23 +3243,23 @@ Only the properties with values that are different from the TextBox are specifie
     -fx-background-color: -fx-background;
 }
 /* -------- Toggle Button ---------------- */
-.controls-pane .toggle-button {
+.custom-color-dialog .controls-pane .toggle-button {
     -fx-background-radius: 4, 4, 3, 2;
     -fx-padding: 3 6 3 6;
 }
 
-.controls-pane .toggle-button:focused {
+.custom-color-dialog .controls-pane .toggle-button:focused {
     -fx-background-color:
         rgba(23,134,248,0.2),
         -fx-focus-color,
         -fx-inner-border,
         -fx-body-color;
 }
-.controls-pane .toggle-button:selected Text {
+.custom-color-dialog .controls-pane .toggle-button:selected Text {
     -fx-effect: dropshadow( one-pass-box , rgba(0,0,0,0.9) , 2, 0.0 , 0 , 1 );
 }
 
-.controls-pane .toggle-button:selected {
+.custom-color-dialog .controls-pane .toggle-button:selected {
     -fx-background-color:
         -fx-shadow-highlight-color,
         linear-gradient( to bottom, derive(-fx-color,-90%) 0%, derive(-fx-color,-60%) 100% ),        
@@ -3269,23 +3269,23 @@ Only the properties with values that are different from the TextBox are specifie
     /* TODO: -fx-text-fill should be derived */
     -fx-text-fill: -fx-light-text-color;
 }
-.controls-pane #toggle-button-left {
+.custom-color-dialog .controls-pane #toggle-button-left {
     -fx-background-radius: 3 0 0 3;
     -fx-background-insets: 0 0 -1 0, 0, 1 0 1 1, 2 0 2 2;
     -fx-border-color: transparent -fx-outer-border transparent transparent;
     -fx-border-insets: 4 0 4 0;
     -fx-padding: -2 8 -2 8;
 }
-.controls-pane #toggle-button-left:focused {
+.custom-color-dialog .controls-pane #toggle-button-left:focused {
 	-fx-background-radius: 3 0 0 3;
 	-fx-background-insets: -1.4 0 -1.4 -1.4, 0 0 0 0, 1, 2;
 	-fx-border-color: transparent;
 }
-.controls-pane #toggle-button-left:selected, .controls-pane #toggle-button-left:selected:focused {
+.custom-color-dialog .controls-pane #toggle-button-left:selected, .controls-pane #toggle-button-left:selected:focused {
         -fx-background-insets: 0 0 -1 0, 0, 1 0 1 1, 1 0 1 1;
 	-fx-border-color: transparent;
 }
-.controls-pane #toggle-button-center {
+.custom-color-dialog .controls-pane #toggle-button-center {
 	-fx-background-radius: 0;
         -fx-background-insets: 0;
 	-fx-background-insets: 0 0 -1 0, 0, 1 0 1 0, 2 0 2 0;
@@ -3293,44 +3293,44 @@ Only the properties with values that are different from the TextBox are specifie
         -fx-border-insets: 4 0 4 0;
 	-fx-padding: -2 8 -2 8;
 }
-.controls-pane #toggle-button-center:focused {
+.custom-color-dialog .controls-pane #toggle-button-center:focused {
 	-fx-background-radius: 0;
 	-fx-background-insets: -1.4 0 -1.4 -1, 0 0 0 -1, 1 1 1 0, 2 2 2 1;
 	-fx-border-color: transparent;
 }
-.controls-pane #toggle-button-center:selected, .controls-pane #toggle-button-center:selected:focused {
+.custom-color-dialog .controls-pane #toggle-button-center:selected, .controls-pane #toggle-button-center:selected:focused {
 	-fx-background-insets: -1.4 0 -1.4 -1, 0 0 0 -1, 1 1 1 0, 1 1 1 0;
 	-fx-border-color: transparent;
 }
 
-.controls-pane #toggle-button-right {
+.custom-color-dialog .controls-pane #toggle-button-right {
 	-fx-background-radius: 0 3 3 0;
     -fx-background-insets: 0 0 -1 0, 0, 1 1 1 0, 2 2 2 0;
 	-fx-padding: 3 8 3 8;
 }
-.controls-pane #toggle-button-right:focused {
+.custom-color-dialog .controls-pane #toggle-button-right:focused {
 	-fx-background-radius: 0 3 3 0;
 	-fx-background-insets: -1.4 -1.4 -1.4 -1, 0 0 0 -1, 1 1 1 0, 2 2 2 1;
 }
-.controls-pane #toggle-button-right:selected, .controls-pane #toggle-button-right:selected:focused {
+.custom-color-dialog .controls-pane #toggle-button-right:selected, .controls-pane #toggle-button-right:selected:focused {
 	-fx-background-insets: -1.4 -1.4 -1.4 -1, 0 0 0 -1, 1 1 1 0, 1 1 1 0;
 }
 
-.controls-pane .current-new-color-grid #transparent-current, .controls-pane .current-new-color-grid #transparent-new {
+.custom-color-dialog .controls-pane .current-new-color-grid #transparent-current, .controls-pane .current-new-color-grid #transparent-new {
     -fx-background-image: url("pattern-transparent.png"); 
     -fx-background-repeat: repeat;
     -fx-background-size: auto;
     -fx-padding: 9 64 9 64;
 }
 
-.controls-pane .addcolor-controls-background {
+.custom-color-dialog .controls-pane .customcolor-controls-background {
     -fx-background-color: -fx-text-box-border, -fx-text-box-border, -fx-control-inner-background;
     -fx-background-insets: 0, 1, 2;
     -fx-background-radius: 3, 2, 2;
     -fx-padding: 3 5 3 5;
 }
 
-.controls-pane .alpha-settings .text-field {
+.custom-color-dialog .controls-pane .alpha-settings .text-field {
 /*    -fx-background-color: -fx-shadow-highlight-color, -fx-text-box-border, -fx-control-inner-background;*/
     -fx-background-color: -fx-text-box-border, -fx-control-inner-background;
     -fx-background-insets: 0, 1;
@@ -3341,15 +3341,15 @@ Only the properties with values that are different from the TextBox are specifie
     -fx-cursor: text;
 }
 
-.controls-pane .current-new-color-grid .label {
+.custom-color-dialog .controls-pane .current-new-color-grid .label {
     -fx-padding: 0 0 0 5;
 }
 
-#input-text-field {
+.custom-color-dialog #input-text-field {
     -fx-skin: "com.sun.javafx.scene.control.skin.TextFieldSkin";
 }
 
-.input-field {
+.custom-color-dialog .input-field {
     -fx-skin: "com.sun.javafx.scene.control.skin.InputFieldSkin";
     -fx-background-color: -fx-shadow-highlight-color, -fx-text-box-border, -fx-control-inner-background;
     -fx-background-insets: 0, 1, 2;
@@ -3359,17 +3359,17 @@ Only the properties with values that are different from the TextBox are specifie
     -fx-cursor: text;
 }
 
-.input-field:focused {
+.custom-color-dialog .input-field:focused {
     -fx-background-color: -fx-focus-color, -fx-text-box-border, -fx-control-inner-background;
     -fx-background-insets: -0.4, 1, 2;
     -fx-background-radius: 3.4, 2, 2;
 }
 
-.input-field:disabled {
+.custom-color-dialog .input-field:disabled {
     -fx-opacity: -fx-disabled-opacity;
 }
 
-.integer-field {
+.custom-color-dialog .integer-field {
     -fx-skin: "com.sun.javafx.scene.control.skin.IntegerFieldSkin";
     -fx-background-color: -fx-shadow-highlight-color, -fx-text-box-border, -fx-control-inner-background;
     -fx-background-insets: 0, 1, 2;
@@ -3379,7 +3379,7 @@ Only the properties with values that are different from the TextBox are specifie
     -fx-cursor: text;
 }
 
-.integer-field:focused {
+.custom-color-dialog .integer-field:focused {
     -fx-background-color: -fx-focus-color, -fx-text-box-border, -fx-control-inner-background;
     -fx-background-insets: -0.4, 1, 2;
     -fx-background-radius: 3.4, 2, 2;
@@ -3389,7 +3389,7 @@ Only the properties with values that are different from the TextBox are specifie
     -fx-opacity: -fx-disabled-opacity;
 }*/
 
-.double-field {
+.custom-color-dialog .double-field {
     -fx-skin: "com.sun.javafx.scene.control.skin.DoubleFieldSkin";
     -fx-background-color: -fx-shadow-highlight-color, -fx-text-box-border, -fx-control-inner-background;
     -fx-background-insets: 0, 1, 2;
@@ -3399,18 +3399,18 @@ Only the properties with values that are different from the TextBox are specifie
     -fx-cursor: text;
 }
 
-.double-field:focused {
+.custom-color-dialog .double-field:focused {
     -fx-background-color: -fx-focus-color, -fx-text-box-border, -fx-control-inner-background;
     -fx-background-insets: -0.4, 1, 2;
     -fx-background-radius: 3.4, 2, 2;
 }
 
-.double-field:disabled {
+.custom-color-dialog .double-field:disabled {
     -fx-opacity: -fx-disabled-opacity;
 }
 
 
-.webcolor-field {
+.custom-color-dialog .webcolor-field {
     -fx-skin: "com.sun.javafx.scene.control.skin.WebColorFieldSkin";
     -fx-background-color: -fx-shadow-highlight-color, -fx-text-box-border, -fx-control-inner-background;
     -fx-background-insets: 0, 1, 2;
@@ -3420,13 +3420,13 @@ Only the properties with values that are different from the TextBox are specifie
     -fx-cursor: text;
 }
 
-.webcolor-field:focused {
+.custom-color-dialog .webcolor-field:focused {
     -fx-background-color: -fx-focus-color, -fx-text-box-border, -fx-control-inner-background;
     -fx-background-insets: -0.4, 1, 2;
     -fx-background-radius: 3.4, 2, 2;
 }
 
-.webcolor-field:disabled {
+.custom-color-dialog .webcolor-field:disabled {
     -fx-opacity: -fx-disabled-opacity;
 }
 

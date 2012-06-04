@@ -968,7 +968,7 @@ public abstract class Parent extends Node {
      * @return the calculated min width
      */
     protected double computeMinWidth(double height) {
-        return super.prefWidth(height);
+        return prefWidth(height);
     }
 
     // PENDING_DOC_REVIEW
@@ -981,7 +981,7 @@ public abstract class Parent extends Node {
      * @return the calculated min height
      */
     protected double computeMinHeight(double width) {
-        return super.prefHeight(width);
+        return prefHeight(width);
     }
 
     /**

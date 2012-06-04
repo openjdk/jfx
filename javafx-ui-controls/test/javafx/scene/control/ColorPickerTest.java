@@ -21,6 +21,7 @@ import com.sun.javafx.scene.control.skin.ColorPickerSkin;
 import com.sun.javafx.tk.Toolkit;
 import javafx.event.ActionEvent;
 import javafx.event.EventHandler;
+import javafx.scene.input.KeyCode;
 import javafx.scene.input.MouseEvent;
 import javafx.scene.layout.GridPane;
 
@@ -151,5 +152,41 @@ public class ColorPickerTest {
         tk.firePulse();
         
         assertEquals(colorPicker.getValue().toString(), "0x330033ff");
+    }
+    
+    @Test public void testEscapeClosesCustomColorDialog() {
+        final MouseEventGenerator generator = new MouseEventGenerator();
+        ColorPickerSkin skin = (ColorPickerSkin)colorPicker.getSkin();
+        assertTrue(skin != null);
+        ColorPalette colorPalette = ColorPickerPaletteRetriever.getColorPalette(colorPicker);
+        colorPicker.show();
+        tk.firePulse();
+        assertTrue(colorPicker.isShowing());
+        Hyperlink link = ColorPickerPaletteRetriever.getCustomColorLink(colorPalette);
+        double xval = link.getBoundsInParent().getMinX();
+        double yval = link.getBoundsInParent().getMinY();
+         
+        Scene paletteScene = ColorPickerPaletteRetriever.getPopup(colorPicker).getScene();
+        paletteScene.getWindow().requestFocus();
+        //Click on CustomColor hyperlink to show the custom color dialog.
+        paletteScene.impl_processMouseEvent(
+                generator.generateMouseEvent(MouseEvent.MOUSE_PRESSED, xval+20, yval+10));
+        
+        paletteScene.impl_processMouseEvent(
+                generator.generateMouseEvent(MouseEvent.MOUSE_RELEASED, xval+20, yval+10));
+        tk.firePulse();
+        
+        Stage dialog = ColorPickerPaletteRetriever.getCustomColorDialog(colorPalette);
+        assertNotNull(dialog);
+        assertTrue(dialog.isShowing());
+        
+        dialog.requestFocus();
+        tk.firePulse();
+        
+        // fire KeyEvent (Escape) on custom color dialog to close it
+        KeyEventFirer keyboard = new KeyEventFirer(dialog);
+        keyboard.doKeyPress(KeyCode.ESCAPE);
+        tk.firePulse();   
+        assertTrue(!dialog.isShowing());
     }
 }

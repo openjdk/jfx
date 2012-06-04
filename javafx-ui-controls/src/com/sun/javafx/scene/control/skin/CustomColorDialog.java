@@ -46,6 +46,7 @@ import javafx.stage.StageStyle;
 import javafx.stage.Window;
 import com.sun.javafx.Utils;
 import javafx.geometry.Insets;
+import javafx.scene.input.KeyEvent;
 /**
  *
  * @author paru
@@ -73,8 +74,11 @@ public class CustomColorDialog extends StackPane {
     ObjectProperty<Color> customColorProperty = new SimpleObjectProperty<Color>(Color.TRANSPARENT);
     boolean saveCustomColor = false;
     boolean useCustomColor = false;
+    Button saveButton;
+    Button useButton;
     
     private WebColorField webField = null;
+    private Scene customScene;
     
     public CustomColorDialog(Window owner) {
         getStyleClass().add("custom-color-dialog");
@@ -85,11 +89,22 @@ public class CustomColorDialog extends StackPane {
         colorRectPane = new ColorRectPane();
         controlsPane = new ControlsPane();
         
-        Scene scene = new Scene(this);
+        customScene = new Scene(this);
         getChildren().addAll(colorRectPane, controlsPane);
         
-        dialog.setScene(scene);
+        dialog.setScene(customScene);
+        dialog.addEventHandler(KeyEvent.ANY, keyEventListener);
     }
+    
+    private final EventHandler<KeyEvent> keyEventListener = new EventHandler<KeyEvent>() {
+        @Override public void handle(KeyEvent e) {
+            switch (e.getCode()) {
+                case ESCAPE :
+                    dialog.setScene(null);
+                    dialog.close();
+            }
+        }
+    };
     
     public void setCurrentColor(Color currentColor) {
         this.currentColor = currentColor;
@@ -101,6 +116,7 @@ public class CustomColorDialog extends StackPane {
             dialog.setX(x);
             dialog.setY(y);
         }
+        if (dialog.getScene() == null) dialog.setScene(customScene);
         colorRectPane.updateValues();
         dialog.show();
     }
@@ -458,7 +474,7 @@ public class CustomColorDialog extends StackPane {
             Rectangle spacer = new Rectangle(0, 12);
             
             whiteBox = new StackPane();
-            whiteBox.getStyleClass().add("addcolor-controls-background");
+            whiteBox.getStyleClass().add("customcolor-controls-background");
             
             hsbButton = new ToggleButton("HSB");
             hsbButton.setId("toggle-button-left");
@@ -552,7 +568,7 @@ public class CustomColorDialog extends StackPane {
             
             buttonBox = new HBox(4);
             
-            Button saveButton = new Button("Save");
+            saveButton = new Button("Save");
             saveButton.setOnAction(new EventHandler<ActionEvent>() {
                 @Override public void handle(ActionEvent t) {
                     saveCustomColor = true;
@@ -568,7 +584,7 @@ public class CustomColorDialog extends StackPane {
                 }
             });
             
-            Button useButton = new Button("Use");
+            useButton = new Button("Use");
             useButton.setOnAction(new EventHandler<ActionEvent>() {
                 @Override public void handle(ActionEvent t) {
                     useCustomColor = true;

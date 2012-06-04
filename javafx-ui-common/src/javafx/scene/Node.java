@@ -7386,6 +7386,9 @@ public abstract class Node implements EventTarget {
 
         // set the key to null here so the next call to impl_getStyleCacheKey
         // will cause a new key to be created
+        if (styleCacheKey != null) {
+            styleCacheKey.clearCache();
+        }
         styleCacheKey = null;
         
         styleHelper = StyleManager.getInstance().getStyleHelper(this);

@@ -155,6 +155,7 @@ public abstract class TextInputControlBehavior<T extends TextInputControl> exten
             else if ("SelectEndExtend".equals(name)) selectEndExtend();
             else if ("Undo".equals(name)) undoManager.undo();
             else if ("Redo".equals(name)) undoManager.redo();
+            else if ("ToParent".equals(name)) forwardToParent(lastEvent);
             /*DEBUG*/else if ("UseVK".equals(name) && isEmbedded()) {
                 ((com.sun.javafx.scene.control.skin.TextInputControlSkin)textInputControl.getSkin()).toggleUseVK();
             } else {
@@ -348,6 +349,12 @@ public abstract class TextInputControlBehavior<T extends TextInputControl> exten
     }
 
     protected void fire(KeyEvent event) { } // TODO move to TextFieldBehavior
+
+    protected void forwardToParent(KeyEvent event) {
+        if (getControl().getParent() != null) {
+            getControl().getParent().fireEvent(event);
+        }
+    }
 
     private void selectHome() {
         getControl().selectHome();

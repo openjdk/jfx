@@ -666,7 +666,7 @@ public class TabPane extends Control {
 
         // API Implementation
         @Override public void select(int index) {
-            if (index < 0 || (getItemCount() > 0 && index >= getItemCount())) {
+            if (index < 0 || (getItemCount() > 0 && index >= getItemCount()) || getSelectedIndex() == index) {
                 return;
             }
 

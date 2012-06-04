@@ -100,8 +100,8 @@ public class TabPaneSkin extends SkinBase<TabPane, TabPaneBehavior> {
     }
 
     /**
-     * VERY HACKY - this lets us 'duplicate' ImageView nodes to be used in a
-     * Tab and the tabs menu at the same time. Any other Node type is ignored.
+     * VERY HACKY - this lets us 'duplicate' Label and ImageView nodes to be used in a
+     * Tab and the tabs menu at the same time.
      */
     private static Node clone(Node n) {
         if (n == null) {
@@ -112,6 +112,11 @@ public class TabPaneSkin extends SkinBase<TabPane, TabPaneBehavior> {
             ImageView imageview = new ImageView();
             imageview.setImage(iv.getImage());
             return imageview;
+        }
+        if (n instanceof Label) {            
+            Label l = (Label)n;
+            Label label = new Label(l.getText(), l.getGraphic());
+            return label;
         }
         return null;
     }
@@ -1610,7 +1615,7 @@ public class TabPaneSkin extends SkinBase<TabPane, TabPaneBehavior> {
             ToggleGroup group = new ToggleGroup();
             ObservableList<RadioMenuItem> menuitems = FXCollections.<RadioMenuItem>observableArrayList();
             for (final Tab tab : getSkinnable().getTabs()) {
-                TabMenuItem item = new TabMenuItem(tab);
+                TabMenuItem item = new TabMenuItem(tab);                
                 item.setToggleGroup(group);
                 item.setOnAction(new EventHandler<ActionEvent>() {
                     @Override public void handle(ActionEvent t) {
@@ -1636,9 +1641,16 @@ public class TabPaneSkin extends SkinBase<TabPane, TabPaneBehavior> {
 
     class TabMenuItem extends RadioMenuItem {
         Tab tab;
-        public TabMenuItem(Tab tab) {
-            super(tab.getText(), TabPaneSkin.clone(tab.getGraphic()));
+        public TabMenuItem(final Tab tab) {
+            super(tab.getText(), TabPaneSkin.clone(tab.getGraphic()));                        
             this.tab = tab;
+            setDisable(tab.isDisable());
+            tab.disableProperty().addListener(new InvalidationListener() {
+                @Override
+                public void invalidated(Observable arg0) {
+                    setDisable(tab.isDisable());
+                }
+            });                   
         }
 
         public Tab getTab() {

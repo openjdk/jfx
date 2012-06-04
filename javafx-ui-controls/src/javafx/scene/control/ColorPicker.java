@@ -100,6 +100,10 @@ public class ColorPicker extends ComboBoxBase<Color> {
         setValue(color);
         getStyleClass().add(DEFAULT_STYLE_CLASS);
     }
+    
+    @Override void valueInvalidated() {
+        // do nothing - we dont want to fire action event when value changes.
+    }
     /***************************************************************************
      *                                                                         *
      * Stylesheet Handling                                                     *

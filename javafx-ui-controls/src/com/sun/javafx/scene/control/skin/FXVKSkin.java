@@ -163,11 +163,14 @@ public class FXVKSkin extends SkinBase<FXVK, BehaviorBase<FXVK>> {
 
                         if (vkPopup == null) {
                             vkPopup = new Popup();
-                            vkPopup.focusedProperty().addListener(new InvalidationListener() {
-                                @Override public void invalidated(Observable ov) {
-                                    scene.getWindow().requestFocus();
-                                }
-                            });
+
+                            // RT-21860 - This is causing
+                            // IllegalStateException: The window must be focused when calling grabFocus()
+                            //vkPopup.focusedProperty().addListener(new InvalidationListener() {
+                            //    @Override public void invalidated(Observable ov) {
+                            //        scene.getWindow().requestFocus();
+                            //    }
+                            //});
 
                             double screenHeight =
                                 com.sun.javafx.Utils.getScreen(attachedNode).getBounds().getHeight();
@@ -547,6 +550,7 @@ private void setIcon(Key key, String fileName) {
             setContentDisplay(ContentDisplay.TOP);
             setGraphicTextGap(-16);
             setText(chars[0]);
+            setId(chars[0]);
             if (getText().length() > 1) {
                 getStyleClass().add("multi-char-key");
             }

@@ -15,6 +15,8 @@ import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.SimpleBooleanProperty;
 import javafx.beans.property.SimpleDoubleProperty;
 import javafx.beans.property.SimpleObjectProperty;
+import javafx.event.Event;
+import javafx.event.EventHandler;
 import javafx.geometry.Side;
 import javafx.scene.Scene;
 import javafx.scene.input.MouseEvent;
@@ -666,5 +668,44 @@ public class TabPaneTest {
         
         assertEquals(1, tabPane.getSelectionModel().getSelectedIndex());
         assertEquals(tab2, tabPane.getSelectionModel().getSelectedItem());        
+    }
+    
+    private int counter = 0;
+    @Test public void setOnSelectionChangedFiresTwice_RT21089() {
+        tabPane.getTabs().add(tab1);
+        tabPane.getTabs().add(tab2);
+        
+        tab1.setContent(new Button("TAB1"));
+        tab2.setContent(new Button("TAB2"));
+        
+        root.getChildren().add(tabPane);
+        show();
+
+        root.impl_reapplyCSS();
+        root.resize(300, 300);
+        root.layout();
+        
+        tk.firePulse();        
+        assertTrue(tabPane.isFocused());
+
+        tab2.setOnSelectionChanged(new EventHandler<Event>() {
+            @Override public void handle(Event event) {
+                assertEquals(0, counter++);
+            }
+        });
+
+        double xval = (tabPane.localToScene(tabPane.getLayoutBounds())).getMinX();
+        double yval = (tabPane.localToScene(tabPane.getLayoutBounds())).getMinY();
+   
+        scene.impl_processMouseEvent(
+            MouseEventGenerator.generateMouseEvent(MouseEvent.MOUSE_PRESSED, xval+75, yval+20));
+        tk.firePulse();
+        
+        assertEquals(tab2, tabPane.getSelectionModel().getSelectedItem());
+                
+        scene.impl_processMouseEvent(
+            MouseEventGenerator.generateMouseEvent(MouseEvent.MOUSE_PRESSED, xval+75, yval+20));
+        tk.firePulse();        
+        assertEquals(tab2, tabPane.getSelectionModel().getSelectedItem());
     }
 }
