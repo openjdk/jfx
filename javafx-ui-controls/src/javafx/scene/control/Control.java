@@ -25,6 +25,7 @@
 
 package javafx.scene.control;
 
+import com.sun.javafx.Utils;
 import com.sun.javafx.css.*;
 import com.sun.javafx.css.converters.StringConverter;
 import java.lang.reflect.Constructor;
@@ -49,7 +50,6 @@ import javafx.scene.Parent;
 
 import com.sun.javafx.logging.PlatformLogger;
 import com.sun.javafx.scene.control.Logging;
-import javafx.collections.ObservableList;
 
 /**
  * Base class for all user interface controls. A "Control" is a node in the
@@ -964,20 +964,9 @@ public abstract class Control extends Parent implements Skinnable {
             Logging.getControlsLogger().severe(msg);
             return;
         }
-        
+
         try {
-            Class<?> skinClass;
-            // RT-17525 : Use context class loader only if Class.forName fails.
-            try {
-                skinClass = Class.forName(skinClassName.get());
-            } catch (ClassNotFoundException clne) {
-                if (Thread.currentThread().getContextClassLoader() != null) {
-                    skinClass = Thread.currentThread().getContextClassLoader().loadClass(skinClassName.get());
-                } else {
-                    throw clne;
-                }
-            }
-            
+            final Class<?> skinClass = Utils.loadClass(skinClassName.get(), this);
             Constructor<?>[] constructors = skinClass.getConstructors();
             Constructor<?> skinConstructor = null;
             for (Constructor<?> c : constructors) {
@@ -1038,8 +1027,6 @@ public abstract class Control extends Parent implements Skinnable {
 
     }
 
-    
-    
     /***************************************************************************
      *                                                                         *
      * StyleSheet Handling                                                     *

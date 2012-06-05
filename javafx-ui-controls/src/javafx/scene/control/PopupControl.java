@@ -24,6 +24,7 @@
  */
 package javafx.scene.control;
 
+import com.sun.javafx.Utils;
 import javafx.beans.property.DoubleProperty;
 import javafx.beans.property.DoublePropertyBase;
 import javafx.beans.property.ObjectProperty;
@@ -1153,8 +1154,6 @@ public class PopupControl extends PopupWindow implements Skinnable {
         }
 
         private void loadSkinClass() {
-
-
             if (skinClassName == null
                 || skinClassName.get() == null 
                 || skinClassName.get().isEmpty()) {
@@ -1170,17 +1169,7 @@ public class PopupControl extends PopupWindow implements Skinnable {
             }
 
             try {
-                Class<?> skinClass;
-                // RT-17525 : Use context class loader only if Class.forName fails.
-                try {
-                    skinClass = Class.forName(skinClassName.get());
-                } catch (ClassNotFoundException clne) {
-                    if (Thread.currentThread().getContextClassLoader() != null) {
-                            skinClass = Thread.currentThread().getContextClassLoader().loadClass(skinClassName.get());
-                    } else {
-                        throw clne;
-                    }
-                }
+                final Class<?> skinClass = Utils.loadClass(skinClassName.get(), this);
                 Constructor<?>[] constructors = skinClass.getConstructors();
                 Constructor<?> skinConstructor = null;
                 for (Constructor<?> c : constructors) {

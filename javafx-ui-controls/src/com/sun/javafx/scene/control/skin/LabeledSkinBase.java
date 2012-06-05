@@ -36,6 +36,8 @@ import javafx.geometry.Orientation;
 import javafx.geometry.Pos;
 import javafx.geometry.VPos;
 import javafx.scene.Node;
+import javafx.scene.Parent;
+import javafx.scene.Scene;
 import javafx.scene.control.ContentDisplay;
 import javafx.scene.control.Label;
 import javafx.scene.control.Labeled;
@@ -151,6 +153,7 @@ public abstract class LabeledSkinBase<C extends Labeled, B extends BehaviorBase<
         registerChangeListener(labeled.textOverrunProperty(), "TEXT_OVERRUN");
         registerChangeListener(labeled.wrapTextProperty(), "WRAP_TEXT");
         registerChangeListener(labeled.underlineProperty(), "UNDERLINE");
+        registerChangeListener(labeled.parentProperty(), "PARENT");
     }
 
     /***************************************************************************
@@ -219,6 +222,8 @@ public abstract class LabeledSkinBase<C extends Labeled, B extends BehaviorBase<
             textMetricsChanged();
         } else if (p == "UNDERLINE") {
             textMetricsChanged();
+        } else if (p == "PARENT") {
+            parentChanged();
         }
     }
 
@@ -263,6 +268,57 @@ public abstract class LabeledSkinBase<C extends Labeled, B extends BehaviorBase<
     private void textMetricsChanged() {
         invalidText = true;
         requestLayout();
+    }
+
+    /*
+    ** parent has changed,
+    ** if it's null then remove any mnemonics from the scene,
+    ** if it's valid then check to see if mnemonics should
+    ** be added
+    */
+    private void parentChanged() {
+        final Labeled labeled = getSkinnable();
+        Parent newParent = labeled.getParent();
+
+        if (newParent == null) {
+            /*
+            ** we're here because we lost our parent
+            ** tidy up any mnemonics that may have been
+            ** left on the scene
+            */
+            if (mnemonicScene != null) {
+                KeyCodeCombination mnemonicKeyCombo =
+                    new KeyCodeCombination(
+                                           mnemonicCode,
+                                           com.sun.javafx.PlatformUtil.isMac()
+                                           ? KeyCombination.META_DOWN
+                                           : KeyCombination.ALT_DOWN);
+
+                Mnemonic myMnemonic = new Mnemonic(labeledNode, mnemonicKeyCombo);
+                mnemonicScene.removeMnemonic(myMnemonic);
+                mnemonicScene = null;
+            }
+        }
+        else {
+            /*
+            ** we're here because we just got a parent,
+            ** add any mnemonics etc to the scene.
+            */
+            if (containsMnemonic == true) {
+                KeyCodeCombination mnemonicKeyCombo =
+                    new KeyCodeCombination(
+                                           mnemonicCode,
+                                           com.sun.javafx.PlatformUtil.isMac()
+                                           ? KeyCombination.META_DOWN
+                                           : KeyCombination.ALT_DOWN);
+
+                if (labeledNode != null) {
+                    Mnemonic myMnemonic = new Mnemonic(labeledNode, mnemonicKeyCombo);
+                    mnemonicScene = labeledNode.getParent().getScene();
+                    mnemonicScene.addMnemonic(myMnemonic);
+                }
+            }
+        }
     }
 
     /**
@@ -321,7 +377,6 @@ public abstract class LabeledSkinBase<C extends Labeled, B extends BehaviorBase<
                 ** are we no longer a mnemonic, or have we changed code?
                 */
                 if (mnemonicIndex == -1 || (bindings != null && bindings.getMnemonic() != mnemonicCode)) {
-
                     KeyCodeCombination mnemonicKeyCombo =
                             new KeyCodeCombination(
                                     mnemonicCode,
@@ -329,18 +384,10 @@ public abstract class LabeledSkinBase<C extends Labeled, B extends BehaviorBase<
                                             ? KeyCombination.META_DOWN
                                             : KeyCombination.ALT_DOWN);
 
-                    ObservableList<Mnemonic> mnemonicsList = (ObservableList)getSkinnable().getParent().getScene().getMnemonics().get(mnemonicKeyCombo);
-
-                    if (mnemonicsList != null) {
-                        for (int i = 0 ; i < mnemonicsList.size() ; i++) {
-
-                            if (mnemonicsList.get(i).getNode() == labeledNode) {
-                                mnemonicsList.remove(i);
-                            }
-                        }
-                    }
+                    Mnemonic myMnemonic = new Mnemonic(labeledNode, mnemonicKeyCombo);
+                    mnemonicScene.removeMnemonic(myMnemonic);
                     containsMnemonic = false;
-                    mnemonicCode = null;
+                    mnemonicScene = null;
                 }
             }
 
@@ -359,10 +406,12 @@ public abstract class LabeledSkinBase<C extends Labeled, B extends BehaviorBase<
                                             ? KeyCombination.META_DOWN
                                             : KeyCombination.ALT_DOWN);
 
-
                     if (labeledNode != null) {
                         Mnemonic myMnemonic = new Mnemonic(labeledNode, mnemonicKeyCombo);
-                        labeledNode.getParent().getScene().addMnemonic(myMnemonic);
+                        if (labeledNode.getParent() != null) {
+                            mnemonicScene = labeledNode.getParent().getScene();
+                            mnemonicScene.addMnemonic(myMnemonic);
+                        }
                     }
                 }
             }
@@ -783,6 +832,7 @@ public abstract class LabeledSkinBase<C extends Labeled, B extends BehaviorBase<
     Line mnemonic_underscore;
 
     private boolean containsMnemonic = false;
+    private Scene mnemonicScene = null;
     private KeyCode mnemonicCode;
     // needs to be an object, as MenuItem isn't a node
     private Node labeledNode = null;

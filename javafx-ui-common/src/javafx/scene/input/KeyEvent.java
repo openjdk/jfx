@@ -76,6 +76,9 @@ import javafx.scene.input.ScrollEvent.VerticalTextScrollUnits;
  * generate character input (e.g., action keys, modifier keys, etc.). The key
  * being pressed or released is indicated by the code variable, which contains
  * a virtual key code.
+ *
+ * <p>
+ * For triggering context menus see the {@link ContextMenuEvent}.
  */
 public class KeyEvent extends InputEvent {
     /**

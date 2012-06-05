@@ -490,7 +490,7 @@ public class SplitPaneSkin extends SkinBase<SplitPane, BehaviorBase<SplitPane>> 
     private boolean resize = false;
 
     @Override protected void layoutChildren() {
-        if (!getSkinnable().isVisible()) {
+        if (!getSkinnable().isVisible() || (horizontal ? getWidth() == 0 : getHeight() == 0)) {
             return;
         }
 

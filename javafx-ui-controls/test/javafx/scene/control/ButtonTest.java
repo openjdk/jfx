@@ -4,6 +4,8 @@
 
 package javafx.scene.control;
 
+import com.sun.javafx.pgstub.StubToolkit;
+import com.sun.javafx.tk.Toolkit;
 import static javafx.scene.control.ControlTestUtils.*;
 import static org.junit.Assert.*;
 
@@ -13,7 +15,11 @@ import javafx.beans.property.SimpleBooleanProperty;
 import javafx.beans.property.SimpleObjectProperty;
 import javafx.event.ActionEvent;
 import javafx.event.EventHandler;
+import javafx.scene.Scene;
+import javafx.scene.input.KeyCode;
+import javafx.scene.layout.StackPane;
 import javafx.scene.shape.Rectangle;
+import javafx.stage.Stage;
 
 import org.junit.Before;
 import org.junit.Ignore;
@@ -25,10 +31,26 @@ import org.junit.Test;
  */
 public class ButtonTest {
     private Button btn;
+    private Toolkit tk;
+    private Scene scene;
+    private Stage stage;
+    private StackPane root;      
     
     @Before public void setup() {
         btn = new Button();
+        tk = (StubToolkit)Toolkit.getToolkit();//This step is not needed (Just to make sure StubToolkit is loaded into VM)
+        root = new StackPane();
+        scene = new Scene(root);
+        stage = new Stage();
+        stage.setScene(scene);         
     }
+    
+    /*********************************************************************
+     * Helper methods                                                    *
+     ********************************************************************/
+    private void show() {
+        stage.show();
+    }   
     
     /*********************************************************************
      * Tests for the constructors                                        *
@@ -145,6 +167,26 @@ public class ButtonTest {
 
     @Test public void defaultButtonPropertyHasName() {
         assertEquals("defaultButton", btn.defaultButtonProperty().getName());
+    }
+    
+    @Test public void disabledDefaultButtonCannotGetInvoked_RT20929() {
+        root.getChildren().add(btn);        
+        
+        btn.setOnAction(new EventHandler<ActionEvent>() {
+            @Override
+            public void handle(ActionEvent actionEvent) {
+                fail();
+            }
+        });
+        
+        btn.setDefaultButton(true);
+        btn.setDisable(true);
+        show();
+        
+        KeyEventFirer keyboard = new KeyEventFirer(btn);        
+        keyboard.doKeyPress(KeyCode.ENTER);
+   
+        tk.firePulse();                
     }
 
     /*********************************************************************

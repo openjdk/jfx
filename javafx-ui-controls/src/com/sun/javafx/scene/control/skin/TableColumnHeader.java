@@ -387,9 +387,8 @@ public class TableColumnHeader extends StackPane {
         // we do not support sorting in embedded devices
         if (! isSortingEnabled()) return;
         
-        if (! isSortColumn) return;
-        
         isSortColumn = sortPos != -1;
+        if (! isSortColumn) return;
         
         final int sortColumnCount = getTableView().getSortOrder().size();
         boolean showSortOrderDots = sortPos <= 3 && sortColumnCount > 1;

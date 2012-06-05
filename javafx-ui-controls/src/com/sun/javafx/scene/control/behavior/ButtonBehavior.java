@@ -110,12 +110,14 @@ public class ButtonBehavior<C extends ButtonBase> extends BehaviorBase<C> {
     }
 
     @Override protected void callAction(String name) {
-        if (PRESS_ACTION.equals(name)) {
-            keyPressed();
-        } else if (RELEASE_ACTION.equals(name)) {
-            keyReleased();
-        } else {
-            super.callAction(name);
+        if (!getControl().isDisabled()) {
+            if (PRESS_ACTION.equals(name)) {
+                keyPressed();
+            } else if (RELEASE_ACTION.equals(name)) {
+                keyReleased();
+            } else {
+                super.callAction(name);
+            }
         }
     }
 

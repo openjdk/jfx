@@ -64,6 +64,7 @@ import org.junit.Test;
 
 import com.sun.javafx.css.converters.FontConverter;
 import com.sun.javafx.css.converters.SizeConverter;
+import com.sun.javafx.css.parser.CSSParser;
 
 
 public class FontTypeTest {
@@ -138,19 +139,40 @@ public class FontTypeTest {
         
     }
 
-    /**
-     * Test of convert method, of class FontType.
-     */
-//    @Test
-//    public void testConvert_KeyArr() {
-//        System.out.println("convert");
-//        Key[] keys = null;
-//        FontType instance = new FontType();
-//        Font expResult = null;
-//        Font result = instance.convert(keys);
-//        assertEquals(expResult, result);
-//        // TODO review the generated test code and remove the default call to fail.
-//        fail("The test case is a prototype.");
-//    }
+    @Test public void test_RT_21960_Bold_Italic() {
+        
+        ParsedValue pv = CSSParser.getInstance().parseExpr("-fx-font", "italic bold 24 Amble");
+        Font f = (Font)pv.convert(null);
+        assertEquals("Bold Italic", f.getStyle());
+        assertEquals("Amble", f.getFamily());
+        assertEquals(24, f.getSize(),0);
+    }
+    
+    @Test public void test_RT_21960_Bold() {
+        
+        ParsedValue pv = CSSParser.getInstance().parseExpr("-fx-font", "bold 24 Amble");
+        Font f = (Font)pv.convert(null);
+        assertEquals("Bold", f.getStyle());
+        assertEquals("Amble", f.getFamily());
+        assertEquals(24, f.getSize(),0);
+    }
+
+    @Test public void test_RT_21960_Italic() {
+        
+        ParsedValue pv = CSSParser.getInstance().parseExpr("-fx-font", "italic 24 Amble");
+        Font f = (Font)pv.convert(null);
+        assertEquals("Italic", f.getStyle());
+        assertEquals("Amble", f.getFamily());
+        assertEquals(24, f.getSize(),0);
+    }
+
+    @Test public void test_RT_21960_Neither_Bold_Nor_Italic() {
+        
+        ParsedValue pv = CSSParser.getInstance().parseExpr("-fx-font", "24 Amble");
+        Font f = (Font)pv.convert(null);
+        assertEquals("Regular", f.getStyle());
+        assertEquals("Amble", f.getFamily());
+        assertEquals(24, f.getSize(),0);
+    }    
 
 }

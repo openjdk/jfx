@@ -167,6 +167,7 @@ public class MenuBarSkin extends SkinBase<MenuBar, BehaviorBase<MenuBar>> implem
                                 if (openMenu == null) return;
                                 if ( !openMenu.isShowing()) {
                                     selectPrevMenu(); // just move the selection bar
+                                    event.consume();
                                     return;
                                 }
                                 showPrevMenu();
@@ -180,6 +181,7 @@ public class MenuBarSkin extends SkinBase<MenuBar, BehaviorBase<MenuBar>> implem
                                 if (openMenu == null) return;
                                 if (! openMenu.isShowing()) {
                                     selectNextMenu(); // just move the selection bar
+                                    event.consume();
                                     return;
                                 }
                                 showNextMenu();
@@ -525,6 +527,7 @@ public class MenuBarSkin extends SkinBase<MenuBar, BehaviorBase<MenuBar>> implem
                         }
                         openMenuButton = menuButton;
                         openMenu = menu;
+                        if (!menu.isShowing())menu.show();
                     }
                 }
             });
@@ -753,6 +756,8 @@ public class MenuBarSkin extends SkinBase<MenuBar, BehaviorBase<MenuBar>> implem
         } else {
             focusedMenuIndex--;
         }
+        // RT-19359
+        if (getSkinnable().getMenus().get(focusedMenuIndex).isDisable()) return findPreviousSibling();
         clearMenuButtonHover();
         return getSkinnable().getMenus().get(focusedMenuIndex);
     }
@@ -764,6 +769,8 @@ public class MenuBarSkin extends SkinBase<MenuBar, BehaviorBase<MenuBar>> implem
         } else {
             focusedMenuIndex++;
         }
+        // RT_19359
+        if (getSkinnable().getMenus().get(focusedMenuIndex).isDisable()) return findNextSibling();
         clearMenuButtonHover();
         return getSkinnable().getMenus().get(focusedMenuIndex);
     }

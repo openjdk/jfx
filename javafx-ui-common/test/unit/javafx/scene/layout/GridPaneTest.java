@@ -2216,4 +2216,27 @@ public class GridPaneTest {
         assertEquals(200, gridpane.prefWidth(-1), 0);
         assertEquals(200, gridpane.prefHeight(-1), 0);
     }
+    
+    @Test public void test_RT20573_USE_PREF_SIZEisIgnored() {
+        ColumnConstraints cc = new ColumnConstraints();
+        cc.setMinWidth(100);
+        cc.setMaxWidth(Region.USE_PREF_SIZE);
+        
+        ColumnConstraints cc2 = new ColumnConstraints();
+        cc2.setMinWidth(50);
+        cc2.setMaxWidth(Region.USE_PREF_SIZE);        
+        
+        gridpane.getColumnConstraints().addAll(cc, cc2);
+
+        MockResizable child1_0 = new MockResizable(50,50);
+        GridPane.setConstraints(child1_0, 1, 0);        
+        gridpane.getChildren().add(child1_0);
+        
+        gridpane.resize(200,200);
+        gridpane.layout();        
+        double[] cw = gridpane.getColumnWidths();
+
+        assertEquals(100, cw[0], 1e-100);
+        assertEquals(50, cw[1], 1e-100);
+    }
 }

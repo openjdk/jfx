@@ -111,7 +111,7 @@ public final class TouchEvent extends InputEvent {
     /**
      * Returns number of touch points represented by this touch event set.
      * The returned number matches the size of the {@code touchPoints} list.
-     * @return
+     * @return The number of touch points represented by this touch event set.
      */
     public int getTouchCount() {
         return touchPoints.size();
@@ -133,7 +133,7 @@ public final class TouchEvent extends InputEvent {
 
 
     /**
-     * @InheritDoc
+     * @inheritDoc
      */
     @Override
     public Event copyFor(Object newSource, EventTarget newTarget) {

@@ -223,8 +223,8 @@ public class Pagination extends Control {
         return maxPageIndicatorCount;
     }
 
-    private int oldPageCount = 1;
-    private IntegerProperty pageCount = new SimpleIntegerProperty(this, "pageCount", 1) {
+    private int oldPageCount = INDETERMINATE;
+    private IntegerProperty pageCount = new SimpleIntegerProperty(this, "pageCount", INDETERMINATE) {
         @Override protected void invalidated() {
             if (getPageCount() <= 0) {
                 setPageCount(oldPageCount);
@@ -250,7 +250,7 @@ public class Pagination extends Control {
      * value must be greater than or equal to 1.  {@link INDETERMINATE} 
      * should be used as the page count if the total number of pages is unknown.
      * 
-     * The default is 1 page.
+     * The default is an {@link INDETERMINATE} number of pages.
      */    
     public final IntegerProperty pageCountProperty() { return pageCount; }
 

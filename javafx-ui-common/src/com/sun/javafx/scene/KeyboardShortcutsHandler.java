@@ -72,7 +72,7 @@ public final class KeyboardShortcutsHandler extends BasicEventDispatcher {
         ObservableList<Mnemonic> mnemonicsList = (ObservableList)getMnemonics().get(m.getKeyCombination());
         if (mnemonicsList != null) {
             for (int i = 0 ; i < mnemonicsList.size() ; i++) {
-                if (mnemonicsList.get(i) == m) {
+                if (mnemonicsList.get(i).getNode() == m.getNode()) {
                     mnemonicsList.remove(i);
                 }
             }
