@@ -604,20 +604,25 @@ public abstract class TextInputControlSkin<T extends TextInputControl, B extends
     final MenuItem deleteMI = new ContextMenuItem("DeleteSelection");
     final MenuItem selectWordMI = new ContextMenuItem("SelectWord");
     final MenuItem selectAllMI = new ContextMenuItem("SelectAll");
+    final MenuItem separatorMI = new SeparatorMenuItem();
 
     public void populateContextMenu(ContextMenu contextMenu) {
-        boolean hasText = (getSkinnable().getLength() > 0);
-        boolean hasSelection = (getSkinnable().getSelection().getLength() > 0);
+        TextInputControl textInputControl = getSkinnable();
+        boolean editable = textInputControl.isEditable();
+        boolean hasText = (textInputControl.getLength() > 0);
+        boolean hasSelection = (textInputControl.getSelection().getLength() > 0);
         boolean maskText = (maskText("A") != "A");
         ObservableList<MenuItem> items = contextMenu.getItems();
 
         if (PlatformUtil.isEmbedded()) {
             items.clear();
             if (!maskText && hasSelection) {
-                items.add(cutMI);
+                if (editable) {
+                    items.add(cutMI);
+                }
                 items.add(copyMI);
             }
-            if (Clipboard.getSystemClipboard().hasString()) {
+            if (editable && Clipboard.getSystemClipboard().hasString()) {
                 items.add(pasteMI);
             }
             if (hasText) {
@@ -629,9 +634,11 @@ public abstract class TextInputControlSkin<T extends TextInputControl, B extends
             selectWordMI.getProperties().put("refreshMenu", Boolean.TRUE);
             selectAllMI.getProperties().put("refreshMenu", Boolean.TRUE);
         } else {
-            if (items.size() == 0) {
-                items.addAll(undoMI, redoMI, cutMI, copyMI, pasteMI, deleteMI,
-                             new SeparatorMenuItem(), selectAllMI);
+            if (editable) {
+                items.setAll(undoMI, redoMI, cutMI, copyMI, pasteMI, deleteMI,
+                             separatorMI, selectAllMI);
+            } else {
+                items.setAll(copyMI, separatorMI, selectAllMI);
             }
             undoMI.setDisable(!getBehavior().canUndo());
             redoMI.setDisable(!getBehavior().canRedo());
