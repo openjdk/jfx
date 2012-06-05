@@ -117,24 +117,10 @@ public class ComboBoxListViewSkin<T> extends ComboBoxPopupControl<T> {
         });
         
         // Fix for RT-19431 (also tested via ComboBoxListViewSkinTest)
+        updateValue(comboBox.getValue());
         comboBox.valueProperty().addListener(new ChangeListener<T>() {
             @Override public void changed(ObservableValue<? extends T> ov, T oldValue, T newValue) {
-                if (newValue == null) {
-                    listView.getSelectionModel().clearSelection();
-                } else {
-                    int index = comboBox.getSelectionModel().getSelectedIndex();
-                    if (index >= 0 && index < comboBox.getItems().size()) {
-                        T itemsObj = comboBox.getItems().get(index);
-                        if (itemsObj != null && itemsObj.equals(newValue)) {
-                            listView.getSelectionModel().select(index);
-                        } else {
-                            listView.getSelectionModel().select(newValue);
-                        }
-                    } else {
-                        // just select the first instance of newValue in the list
-                        listView.getSelectionModel().select(newValue);
-                    }
-                }
+                updateValue(newValue);
             }
         });
         
@@ -145,6 +131,32 @@ public class ComboBoxListViewSkin<T> extends ComboBoxPopupControl<T> {
         registerChangeListener(comboBox.converterProperty(), "CONVERTER");
         registerChangeListener(comboBox.editorProperty(), "EDITOR");
         registerChangeListener(comboBox.buttonCellProperty(), "BUTTON_CELL");
+    }
+    
+    private void updateValue(T newValue) {
+        if (newValue == null) {
+            listView.getSelectionModel().clearSelection();
+        } else {
+            int index = comboBox.getSelectionModel().getSelectedIndex();
+            if (index >= 0 && index < comboBox.getItems().size()) {
+                T itemsObj = comboBox.getItems().get(index);
+                if (itemsObj != null && itemsObj.equals(newValue)) {
+                    listView.getSelectionModel().select(index);
+                } else {
+                    listView.getSelectionModel().select(newValue);
+                }
+            } else {
+                // just select the first instance of newValue in the list
+                int listViewIndex = listView.getItems().indexOf(newValue);
+                if (listViewIndex == -1) {
+                    // RT-21336 Show the ComboBox value even though it doesn't
+                    // exist in the ComboBox items list (part one of fix)
+                    updateDisplayNode();
+                } else {
+                    listView.getSelectionModel().select(listViewIndex);
+                }
+            }
+        }
     }
     
     public void updateListViewItems() {
@@ -253,9 +265,9 @@ public class ComboBoxListViewSkin<T> extends ComboBoxPopupControl<T> {
     private void updateDisplayNode() {
         StringConverter<T> c = comboBox.getConverter();
         if (c == null) return;
-                        
+              
+        T value = comboBox.getValue();
         if (comboBox.isEditable()) {
-            T value = comboBox.getValue();
             String stringValue = c.toString(value);
             if (value == null || stringValue == null) {
                 textField.setText("");
@@ -264,8 +276,14 @@ public class ComboBoxListViewSkin<T> extends ComboBoxPopupControl<T> {
             }
         } else {
             int index = getSelectedIndex();
-            buttonCell.updateListView(listView);
-            buttonCell.updateIndex(index);
+            if (index > -1) {
+                buttonCell.updateListView(listView);
+                buttonCell.updateIndex(index);
+            } else {
+                // RT-21336 Show the ComboBox value even though it doesn't
+                // exist in the ComboBox items list (part two of fix)
+                updateDisplayText(buttonCell, value, false);
+            }
         }
     }
     
