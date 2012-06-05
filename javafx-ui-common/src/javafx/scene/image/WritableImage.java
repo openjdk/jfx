@@ -141,7 +141,7 @@ public class WritableImage extends Image {
      * 
      * @return the {@code PixelWriter} for writing pixels to the image
      */
-    public PixelWriter getPixelWriter() {
+    public final PixelWriter getPixelWriter() {
         if (getProgress() < 1.0 || isError()) {
             return null;
         }
@@ -178,15 +178,8 @@ public class WritableImage extends Image {
                                    T buffer, int scanlineStride)
                 {
                     PlatformImage pimg = getWritablePlatformImage();
-                    for (int j = 0; j < h; j++) {
-                        for (int i = 0; i < w; i++) {
-                            int argb = pixelformat.getArgb(buffer, i, j,
-                                                           scanlineStride);
-                            pimg.setArgb(x+i, y+j, argb);
-                        }
-                    }
-//                    checkPixelAccess(true, true).setPixels(x, y, w, h,
-//                                                           buffer, pixelformat, scanlineStride);
+                    pimg.setPixels(x, y, w, h, pixelformat,
+                                   buffer, scanlineStride);
                     pixelsDirty();
                 }
 
@@ -195,11 +188,10 @@ public class WritableImage extends Image {
                                       PixelFormat<ByteBuffer> pixelformat,
                                       byte buffer[], int offset, int scanlineStride)
                 {
-                    ByteBuffer bytebuf = ByteBuffer.wrap(buffer);
-                    bytebuf.position(offset);
-                    setPixels(x, y, w, h, pixelformat, bytebuf, scanlineStride);
-//                    checkPixelAccess(true, false).getPixels(x, y, w, h,
-//                                                            buffer, pixelformat, scanlineStride);
+                    PlatformImage pimg = getWritablePlatformImage();
+                    pimg.setPixels(x, y, w, h, pixelformat,
+                                   buffer, offset, scanlineStride);
+                    pixelsDirty();
                 }
 
                 @Override
@@ -207,23 +199,19 @@ public class WritableImage extends Image {
                                       PixelFormat<IntBuffer> pixelformat,
                                       int buffer[], int offset, int scanlineStride)
                 {
-                    IntBuffer intbuf = IntBuffer.wrap(buffer);
-                    intbuf.position(offset);
-                    setPixels(x, y, w, h, pixelformat, intbuf, scanlineStride);
-//                    checkPixelAccess(true, false).getPixels(x, y, w, h,
-//                                                            buffer, pixelformat, scanlineStride);
+                    PlatformImage pimg = getWritablePlatformImage();
+                    pimg.setPixels(x, y, w, h, pixelformat,
+                                   buffer, offset, scanlineStride);
+                    pixelsDirty();
                 }
 
                 @Override
                 public void setPixels(int writex, int writey, int w, int h,
                                       PixelReader reader, int readx, int ready)
                 {
-                    for (int y = 0; y < h; y++) {
-                        for (int x = 0; x < w; x++) {
-                            setArgb(writex + x, writey + y,
-                                    reader.getArgb(readx + x, ready + y));
-                        }
-                    }
+                    PlatformImage pimg = getWritablePlatformImage();
+                    pimg.setPixels(writex, writey, w, h, reader, readx, ready);
+                    pixelsDirty();
                 }
             };
         }

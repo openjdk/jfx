@@ -1091,7 +1091,7 @@ public class Image {
      * 
      * @return the {@code PixelReader} for reading the pixel data of the image
      */
-    public PixelReader getPixelReader() {
+    public final PixelReader getPixelReader() {
         if (!pixelsReadable()) {
             return null;
         }
@@ -1100,9 +1100,6 @@ public class Image {
                 @Override
                 public PixelFormat getPixelFormat() {
                     PlatformImage pimg = platformImage.get();
-//                    if (pimg == null) {
-//                        return null;
-//                    }
                     return pimg.getPlatformPixelFormat();
                 }
 
@@ -1129,14 +1126,8 @@ public class Image {
                                    T buffer, int scanlineStride)
                 {
                     PlatformImage pimg = platformImage.get();
-                    for (int j = 0; j < h; j++) {
-                        for (int i = 0; i < w; i++) {
-                            pixelformat.setArgb(buffer, i, j, scanlineStride,
-                                                pimg.getArgb(x+i, y+j));
-                        }
-                    }
-//                    checkPixelAccess(true, false).getPixels(x, y, w, h,
-//                                                            buffer, pixelformat, scanlineStride);
+                    pimg.getPixels(x, y, w, h, pixelformat,
+                                   buffer, scanlineStride);
                 }
 
                 @Override
@@ -1144,11 +1135,9 @@ public class Image {
                                     WritablePixelFormat<ByteBuffer> pixelformat,
                                     byte buffer[], int offset, int scanlineStride)
                 {
-                    ByteBuffer bytebuf = ByteBuffer.wrap(buffer);
-                    bytebuf.position(offset);
-                    getPixels(x, y, w, h, pixelformat, bytebuf, scanlineStride);
-//                    checkPixelAccess(true, false).getPixels(x, y, w, h,
-//                                                            buffer, pixelformat, scanlineStride);
+                    PlatformImage pimg = platformImage.get();
+                    pimg.getPixels(x, y, w, h, pixelformat,
+                                   buffer, offset, scanlineStride);
                 }
 
                 @Override
@@ -1156,11 +1145,9 @@ public class Image {
                                     WritablePixelFormat<IntBuffer> pixelformat,
                                     int buffer[], int offset, int scanlineStride)
                 {
-                    IntBuffer intbuf = IntBuffer.wrap(buffer);
-                    intbuf.position(offset);
-                    getPixels(x, y, w, h, pixelformat, intbuf, scanlineStride);
-//                    checkPixelAccess(true, false).getPixels(x, y, w, h,
-//                                                            buffer, pixelformat, scanlineStride);
+                    PlatformImage pimg = platformImage.get();
+                    pimg.getPixels(x, y, w, h, pixelformat,
+                                   buffer, offset, scanlineStride);
                 }
             };
         }
@@ -1171,6 +1158,7 @@ public class Image {
         PlatformImage pimg = platformImage.get();
         if (!pimg.isWritable()) {
             pimg = pimg.promoteToWritableImage();
+            // assert pimg.isWritable();
             platformImage.set(pimg);
         }
         return pimg;
