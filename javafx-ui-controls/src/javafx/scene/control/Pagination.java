@@ -304,6 +304,8 @@ public class Pagination extends Control {
      * control.  The callback function should load and return the contents the page index.
      * Null should be returned if the page index does not exist.  The currentPageIndex 
      * will not change when null is returned.
+     * 
+     * The default is null if there is no page factory set.
      */    
     public final ObjectProperty<Callback<Integer, Node>> pageFactoryProperty() { return pageFactory; }
 
