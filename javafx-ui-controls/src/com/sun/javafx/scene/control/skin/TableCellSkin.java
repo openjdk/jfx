@@ -30,6 +30,7 @@ import javafx.beans.WeakInvalidationListener;
 import javafx.scene.control.TableCell;
 
 import com.sun.javafx.scene.control.behavior.TableCellBehavior;
+import javafx.scene.shape.Rectangle;
 
 /**
  */
@@ -51,9 +52,16 @@ public class TableCellSkin extends CellSkinBase<TableCell, TableCellBehavior> {
     
     private WeakInvalidationListener weakColumnWidthListener =
             new WeakInvalidationListener(columnWidthListener);
-
+    
     public TableCellSkin(TableCell control) {
         super(control, new TableCellBehavior(control));
+        
+        // RT-22038
+        Rectangle clip = new Rectangle();
+        clip.widthProperty().bind(widthProperty());
+        clip.heightProperty().bind(heightProperty());
+        setClip(clip);
+        // --- end of RT-22038
         
         if (getSkinnable().getTableColumn() != null) {
             getSkinnable().getTableColumn().widthProperty().addListener(
