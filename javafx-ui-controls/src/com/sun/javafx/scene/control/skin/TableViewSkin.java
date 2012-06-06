@@ -451,7 +451,8 @@ public class TableViewSkin<T> extends VirtualContainerBase<TableView<T>, TableVi
         
         // painting the overlay over the column being reordered
         if (tableHeaderRow.getReorderingRegion() != null) {
-            TableColumn reorderingColumn = tableHeaderRow.getReorderingRegion().getTableColumn();
+            TableColumnHeader reorderingColumnHeader = tableHeaderRow.getReorderingRegion();
+            TableColumn reorderingColumn = reorderingColumnHeader.getTableColumn();
             if (reorderingColumn != null) {
                 Node n = tableHeaderRow.getReorderingRegion();
                 
@@ -460,7 +461,7 @@ public class TableViewSkin<T> extends VirtualContainerBase<TableView<T>, TableVi
                 // is off the left-side of the TableView (i.e. horizontal 
                 // scrolling has occured).
                 double minX = tableHeaderRow.sceneToLocal(n.localToScene(n.getBoundsInLocal())).getMinX();
-                double overlayWidth = reorderingColumn.getWidth();
+                double overlayWidth = reorderingColumnHeader.getWidth();
                 if (minX < 0) {
                     overlayWidth += minX;
                 }
