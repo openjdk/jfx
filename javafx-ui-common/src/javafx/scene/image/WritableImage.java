@@ -62,9 +62,11 @@ public class WritableImage extends Image {
      * Images constructed this way will always be readable and writable
      * so the corresponding getPixelReader() and getPixelWriter() will
      * always return valid objects.
+     * The dimensions must both be positive numbers <code>(&gt;&nbsp;0)</code>.
      * 
      * @param width the desired width of the writable image
      * @param height the desired height of the desired image
+     * @throws IllegalArgumentException if either dimension is negative or zero.
      */
     public WritableImage(int width, int height) {
         super(width, height);
@@ -81,6 +83,7 @@ public class WritableImage extends Image {
      * Images constructed this way will always be readable and writable
      * so the corresponding getPixelReader() and getPixelWriter() will
      * always return valid objects.
+     * The dimensions must both be positive numbers <code>(&gt;&nbsp;0)</code>.
      * 
      * @param width the desired width of the writable image and the
      *        width of the region to be read from the {@code reader}
@@ -88,6 +91,7 @@ public class WritableImage extends Image {
      *        width of the region to be read from the {@code reader}
      * @throws ArrayIndexOutOfBoundsException if the {@code reader} does
      *         not access a surface of at least the requested dimensions
+     * @throws IllegalArgumentException if either dimension is negative or zero.
      */
     public WritableImage(PixelReader reader, int width, int height) {
         super(width, height);
@@ -105,6 +109,7 @@ public class WritableImage extends Image {
      * Images constructed this way will always be readable and writable
      * so the corresponding getPixelReader() and getPixelWriter() will
      * always return valid objects.
+     * The dimensions must both be positive numbers <code>(&gt;&nbsp;0)</code>.
      * 
      * @param x the X coordinate of the upper left corner of the region to
      *        read from the {@code reader}
@@ -116,6 +121,7 @@ public class WritableImage extends Image {
      *        width of the region to be read from the {@code reader}
      * @throws ArrayIndexOutOfBoundsException if the {@code reader} does
      *         not access a surface containing at least the indicated region
+     * @throws IllegalArgumentException if either dimension is negative or zero.
      */
     public WritableImage(PixelReader reader,
                          int x, int y, int width, int height)

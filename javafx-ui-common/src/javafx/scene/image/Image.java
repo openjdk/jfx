@@ -647,18 +647,18 @@ public class Image {
     }
 
     /**
-     * Construct a new empty {@code Image} with the specified dimensions
-     * filled with transparent pixels to be used with the
-     * {@link #setArgb(int, int, int) setArgb()}
-     * and
-     * {@link #setColor(int, int, javafx.scene.paint.Color) setColor()}
-     * methods to create a completely custom image.
+     * Package private internal constructor used only by {@link WritableImage}.
+     * The dimensions must both be positive numbers <code>(&gt;&nbsp;0)</code>.
      * 
      * @param width the width of the empty image
      * @param height the height of the empty image
+     * @throws IllegalArgumentException if either dimension is negative or zero.
      */
     Image(int width, int height) {
         this(null, null, width, height, false, false, false);
+        if (width <= 0 || height <= 0) {
+            throw new IllegalArgumentException("Image dimensions must be positive (w,h > 0)");
+        }
         initialize(Toolkit.getToolkit().createPlatformImage(width, height));
     }
 
