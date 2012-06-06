@@ -26,7 +26,10 @@
 package com.sun.javafx.tk;
 
 import java.nio.Buffer;
+import java.nio.ByteBuffer;
+import java.nio.IntBuffer;
 import javafx.scene.image.PixelFormat;
+import javafx.scene.image.PixelReader;
 import javafx.scene.image.WritablePixelFormat;
 
 /**
@@ -50,21 +53,6 @@ public interface PlatformImage {
     public void setArgb(int x, int y, int argb);
 
     /**
-     * @param x X coordinate of pixel
-     * @param y Y coordinate of pixel
-     * @return the premultiplied pixel in integer ARGB component ordering.
-     */
-    public int getArgbPre(int x, int y);
-
-    /**
-     * @param x X coordinate of pixel
-     * @param y Y coordinate of pixel
-     * @param argbpre premultiplied pixel data to store in integer ARGB
-     *  component ordering
-     */
-    public void setArgbPre(int x, int y, int argbpre);
-
-    /**
      * @return the PixelFormat to use for the pixel data transfer methods
      * getPixels() and setPixels().
      */
@@ -73,13 +61,30 @@ public interface PlatformImage {
     public boolean isWritable();
     public PlatformImage promoteToWritableImage();
 
-    public <T extends Buffer>
-        void getPixels(int x, int y, int w, int h,
-                       T pixels, WritablePixelFormat<T> pixelformat,
-                       int scanlineBytes);
-    
-    public <T extends Buffer>
-        void setPixels(int x, int y, int w, int h,
-                       T pixels, PixelFormat<T> pixelformat,
-                       int scanlineBytes);
+    public <T extends Buffer> void getPixels(int x, int y, int w, int h,
+                                             WritablePixelFormat<T> pixelformat,
+                                             T pixels, int scanlineElems);
+
+    public void getPixels(int x, int y, int w, int h,
+                          WritablePixelFormat<ByteBuffer> pixelformat,
+                          byte pixels[], int offset, int scanlineBytes);
+
+    public void getPixels(int x, int y, int w, int h,
+                          WritablePixelFormat<IntBuffer> pixelformat,
+                          int pixels[], int offset, int scanlineInts);
+
+    public <T extends Buffer> void setPixels(int x, int y, int w, int h,
+                                             PixelFormat<T> pixelformat,
+                                             T pixels, int scanlineBytes);
+
+    public void setPixels(int x, int y, int w, int h,
+                          PixelFormat<ByteBuffer> pixelformat,
+                          byte pixels[], int offset, int scanlineBytes);
+
+    public void setPixels(int x, int y, int w, int h,
+                          PixelFormat<IntBuffer> pixelformat,
+                          int pixels[], int offset, int scanlineInts);
+
+    public void setPixels(int dstx, int dsty, int w, int h,
+                          PixelReader reader, int srcx, int srcy);
 }

@@ -27,7 +27,10 @@ package com.sun.javafx.pgstub;
 
 import com.sun.javafx.tk.PlatformImage;
 import java.nio.Buffer;
+import java.nio.ByteBuffer;
+import java.nio.IntBuffer;
 import javafx.scene.image.PixelFormat;
+import javafx.scene.image.PixelReader;
 import javafx.scene.image.WritablePixelFormat;
 
 public final class StubPlatformImage implements PlatformImage {
@@ -77,33 +80,62 @@ public final class StubPlatformImage implements PlatformImage {
     }
 
     @Override
-    public int getArgbPre(int x, int y) {
-        throw new UnsupportedOperationException("Not supported yet.");
-    }
-
-    @Override
     public void setArgb(int x, int y, int argb) {
         throw new UnsupportedOperationException("Not supported yet.");
     }
 
     @Override
-    public void setArgbPre(int x, int y, int argbpre) {
+    public <T extends Buffer> void getPixels(int x, int y, int w, int h,
+                                             WritablePixelFormat<T> pixelformat,
+                                             T pixels, int scanlineBytes)
+    {
         throw new UnsupportedOperationException("Not supported yet.");
     }
 
     @Override
-    public <T extends Buffer> void getPixels(int x, int y, int w, int h,
-                                             T pixels,
-                                             WritablePixelFormat<T> pixelformat,
-                                             int scanlineBytes) {
+    public void getPixels(int x, int y, int w, int h,
+                          WritablePixelFormat<ByteBuffer> pixelformat,
+                          byte[] pixels, int offset, int scanlineBytes)
+    {
+        throw new UnsupportedOperationException("Not supported yet.");
+    }
+
+    @Override
+    public void getPixels(int x, int y, int w, int h,
+                          WritablePixelFormat<IntBuffer> pixelformat,
+                          int[] pixels, int offset, int scanlineInts)
+    {
         throw new UnsupportedOperationException("Not supported yet.");
     }
 
     @Override
     public <T extends Buffer> void setPixels(int x, int y, int w, int h,
-                                             T pixels,
                                              PixelFormat<T> pixelformat,
-                                             int scanlineBytes) {
+                                             T pixels, int scanlineBytes)
+    {
+        throw new UnsupportedOperationException("Not supported yet.");
+    }
+
+    @Override
+    public void setPixels(int x, int y, int w, int h,
+                          PixelFormat<ByteBuffer> pixelformat,
+                          byte[] pixels, int offset, int scanlineBytes)
+    {
+        throw new UnsupportedOperationException("Not supported yet.");
+    }
+
+    @Override
+    public void setPixels(int x, int y, int w, int h,
+                          PixelFormat<IntBuffer> pixelformat,
+                          int[] pixels, int offset, int scanlineInts)
+    {
+        throw new UnsupportedOperationException("Not supported yet.");
+    }
+
+    @Override
+    public void setPixels(int dstx, int dsty, int w, int h,
+                          PixelReader reader, int srcx, int srcy)
+    {
         throw new UnsupportedOperationException("Not supported yet.");
     }
 

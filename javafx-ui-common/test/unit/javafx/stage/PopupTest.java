@@ -312,6 +312,25 @@ public class PopupTest {
     }
 
     @Test
+    public void testDoubleShowAutofix() {
+        toolkit.setScreens(
+                new ScreenConfiguration(0, 0, 1920, 1200,
+                                        0, 200, 1920, 1000,
+                                        96));
+
+        final Popup popup = new Popup();
+        popup.getContent().add(new Rectangle(0, 0, 50, 50));
+
+        popup.show(stage, 1900, 100);
+        assertEquals(1920, popup.getX() + popup.getWidth(), 1e-100);
+        assertEquals(200, popup.getY(), 1e-100);
+
+        popup.show(stage, 1900, 100);
+        assertEquals(1920, popup.getX() + popup.getWidth(), 1e-100);
+        assertEquals(200, popup.getY(), 1e-100);
+    }
+
+    @Test
     public void testAutofixActivationAfterShow() {
         toolkit.setScreens(
                 new ScreenConfiguration(0, 0, 1920, 1200,
@@ -369,6 +388,23 @@ public class PopupTest {
 
         assertEquals(120, popup.getX(), 1e-100);
         assertEquals(1120, popup.getY(), 1e-100);
+    }
+
+    @Test
+    public void testAutofixWithFullScreen() {
+        toolkit.setScreens(
+                new ScreenConfiguration(0, 0, 1920, 1200,
+                                        0, 0, 1920, 1172,
+                                        96));
+
+        final Popup popup = new Popup();
+        popup.getContent().add(new Rectangle(0, 0, 50, 50));
+
+        stage.setFullScreen(true);
+        popup.show(stage, 100, 1160);
+
+        assertEquals(100, popup.getX(), 1e-100);
+        assertEquals(1150, popup.getY(), 1e-100);
     }
 
     @Test

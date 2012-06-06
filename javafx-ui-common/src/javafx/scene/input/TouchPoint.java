@@ -120,6 +120,16 @@ public final class TouchPoint {
         this.target = target;
     }
 
+    /**
+     * @treatAsPrivate implementation detail
+     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
+     */
+    @Deprecated
+    public void impl_reset() {
+        x = sceneX;
+        y = sceneY;
+    }
+
     private EventTarget grabbed = null;
 
     /**

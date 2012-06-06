@@ -29,6 +29,15 @@ import com.sun.javafx.geom.Path2D;
 import com.sun.javafx.geom.PathIterator;
 import com.sun.javafx.geom.transform.Affine2D;
 import com.sun.javafx.geom.transform.NoninvertibleTransformException;
+import com.sun.javafx.image.BytePixelGetter;
+import com.sun.javafx.image.BytePixelSetter;
+import com.sun.javafx.image.ByteToBytePixelConverter;
+import com.sun.javafx.image.IntPixelGetter;
+import com.sun.javafx.image.IntToBytePixelConverter;
+import com.sun.javafx.image.PixelConverter;
+import com.sun.javafx.image.PixelGetter;
+import com.sun.javafx.image.PixelUtils;
+import com.sun.javafx.image.impl.ByteBgraPre;
 import com.sun.javafx.sg.GrowableDataBuffer;
 import com.sun.javafx.sg.PGCanvas;
 import java.nio.Buffer;
@@ -1655,6 +1664,10 @@ public final class GraphicsContext {
                     return PixelFormat.getByteBgraPreInstance();
                 }
 
+                private BytePixelSetter getSetter() {
+                    return ByteBgraPre.setter;
+                }
+
                 @Override
                 public void setArgb(int x, int y, int argb) {
                     GrowableDataBuffer buf = getBuffer();
@@ -1673,18 +1686,98 @@ public final class GraphicsContext {
                     setArgb(x, y, (a << 24) | (r << 16) | (g << 8) | b);
                 }
 
+                private void writePixelBuffer(int x, int y, int w, int h,
+                                              byte[] pixels)
+                {
+                    GrowableDataBuffer buf = getBuffer();
+                    buf.putByte(PGCanvas.PUT_ARGBPRE_BUF);
+                    buf.putInt(x);
+                    buf.putInt(y);
+                    buf.putInt(w);
+                    buf.putInt(h);
+                    buf.putObject(pixels);
+                }
+
+                private int[] checkBounds(int x, int y, int w, int h,
+                                          PixelFormat pf, int scan)
+                {
+                    // assert (w >= 0 && h >= 0) - checked by caller
+                    int cw = (int) theCanvas.getWidth();
+                    int ch = (int) theCanvas.getHeight();
+                    if (x >= 0 && y >= 0 && x+w <= cw && y+h <= ch) {
+                        return null;
+                    }
+                    int offset = 0;
+                    if (x < 0) {
+                        w += x;
+                        if (w < 0) return null;
+                        if (pf != null) {
+                            switch (pf.getType()) {
+                                case BYTE_BGRA:
+                                case BYTE_BGRA_PRE:
+                                    offset -= x * 4;
+                                    break;
+                                case BYTE_RGB:
+                                    offset -= x * 3;
+                                    break;
+                                case BYTE_INDEXED:
+                                case INT_ARGB:
+                                case INT_ARGB_PRE:
+                                    offset -= x;
+                                    break;
+                                default:
+                                    throw new InternalError("unknown Pixel Format");
+                            }
+                        }
+                        x = 0;
+                    }
+                    if (y < 0) {
+                        h += y;
+                        if (h < 0) return null;
+                        offset -= y * scan;
+                        y = 0;
+                    }
+                    if (x + w > cw) {
+                        w = cw - x;
+                        if (w < 0) return null;
+                    }
+                    if (y + h > ch) {
+                        h = ch - y;
+                        if (h < 0) return null;
+                    }
+                    return new int[] {
+                        x, y, w, h, offset
+                    };
+                }
+
                 @Override
                 public <T extends Buffer> void
                     setPixels(int x, int y, int w, int h,
                               PixelFormat<T> pixelformat,
                               T buffer, int scan)
                 {
-                    for (int j = 0; j < h; j++) {
-                        for (int i = 0; i < w; i++) {
-                            int argb = pixelformat.getArgb(buffer, i, j, scan);
-                            setArgb(x + i, y + j, argb);
-                        }
+                    if (w <= 0 || h <= 0) return;
+                    int offset = buffer.position();
+                    int adjustments[] = checkBounds(x, y, w, h,
+                                                    pixelformat, scan);
+                    if (adjustments != null) {
+                        x = adjustments[0];
+                        y = adjustments[1];
+                        w = adjustments[2];
+                        h = adjustments[3];
+                        offset += adjustments[4];
                     }
+
+                    byte pixels[] = new byte[w * h * 4];
+                    ByteBuffer dst = ByteBuffer.wrap(pixels);
+
+                    PixelGetter<T> getter = PixelUtils.getGetter(pixelformat);
+                    PixelConverter<T, ByteBuffer> converter =
+                        PixelUtils.getConverter(getter, getSetter());
+                    converter.convert(buffer, offset, scan,
+                                      dst, 0, w * 4,
+                                      w, h);
+                    writePixelBuffer(x, y, w, h, pixels);
                 }
 
                 @Override
@@ -1692,9 +1785,26 @@ public final class GraphicsContext {
                                       PixelFormat<ByteBuffer> pixelformat,
                                       byte[] buffer, int offset, int scanlineStride)
                 {
-                    ByteBuffer bytebuf = ByteBuffer.wrap(buffer);
-                    bytebuf.position(offset);
-                    setPixels(x, y, w, h, pixelformat, bytebuf, scanlineStride);
+                    if (w <= 0 || h <= 0) return;
+                    int adjustments[] = checkBounds(x, y, w, h,
+                                                    pixelformat, scanlineStride);
+                    if (adjustments != null) {
+                        x = adjustments[0];
+                        y = adjustments[1];
+                        w = adjustments[2];
+                        h = adjustments[3];
+                        offset += adjustments[4];
+                    }
+
+                    byte pixels[] = new byte[w * h * 4];
+
+                    BytePixelGetter getter = PixelUtils.getByteGetter(pixelformat);
+                    ByteToBytePixelConverter converter =
+                        PixelUtils.getB2BConverter(getter, getSetter());
+                    converter.convert(buffer, offset, scanlineStride,
+                                      pixels, 0, w * 4,
+                                      w, h);
+                    writePixelBuffer(x, y, w, h, pixels);
                 }
 
                 @Override
@@ -1702,21 +1812,50 @@ public final class GraphicsContext {
                                       PixelFormat<IntBuffer> pixelformat,
                                       int[] buffer, int offset, int scanlineStride)
                 {
-                    IntBuffer bytebuf = IntBuffer.wrap(buffer);
-                    bytebuf.position(offset);
-                    setPixels(x, y, w, h, pixelformat, bytebuf, scanlineStride);
+                    if (w <= 0 || h <= 0) return;
+                    int adjustments[] = checkBounds(x, y, w, h,
+                                                    pixelformat, scanlineStride);
+                    if (adjustments != null) {
+                        x = adjustments[0];
+                        y = adjustments[1];
+                        w = adjustments[2];
+                        h = adjustments[3];
+                        offset += adjustments[4];
+                    }
+
+                    byte pixels[] = new byte[w * h * 4];
+
+                    IntPixelGetter getter = PixelUtils.getIntGetter(pixelformat);
+                    IntToBytePixelConverter converter =
+                        PixelUtils.getI2BConverter(getter, getSetter());
+                    converter.convert(buffer, offset, scanlineStride,
+                                      pixels, 0, w * 4,
+                                      w, h);
+                    writePixelBuffer(x, y, w, h, pixels);
                 }
 
                 @Override
                 public void setPixels(int dstx, int dsty, int w, int h,
                                       PixelReader reader, int srcx, int srcy)
                 {
-                    for (int j = 0; j < h; j++) {
-                        for (int i = 0; i < w; i++) {
-                            int argb = reader.getArgb(srcx + i, srcy + j);
-                            setArgb(dstx + i, dsty + j, argb);
-                        }
+                    if (w <= 0 || h <= 0) return;
+                    int adjustments[] = checkBounds(dstx, dsty, w, h, null, 0);
+                    if (adjustments != null) {
+                        int newx = adjustments[0];
+                        int newy = adjustments[1];
+                        srcx += newx - dstx;
+                        srcy += newy - dsty;
+                        dstx = newx;
+                        dsty = newy;
+                        w = adjustments[2];
+                        h = adjustments[3];
                     }
+
+                    byte pixels[] = new byte[w * h * 4];
+                    reader.getPixels(srcx, srcy, w, h,
+                                     PixelFormat.getByteBgraPreInstance(),
+                                     pixels, 0, w * 4);
+                    writePixelBuffer(dstx, dsty, w, h, pixels);
                 }
             };
         }
