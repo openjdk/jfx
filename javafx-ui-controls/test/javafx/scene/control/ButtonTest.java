@@ -189,6 +189,25 @@ public class ButtonTest {
         tk.firePulse();                
     }
 
+    @Test public void defaultButtonCanBeInvokeAfterRemovingFromTheScene_RT22106() {
+        btn.setDefaultButton(true);        
+        btn.setOnAction(new EventHandler<ActionEvent>() {
+            @Override
+            public void handle(ActionEvent actionEvent) {
+                fail();
+            }
+        });
+        root.getChildren().add(btn);
+        show();
+        
+        root.getChildren().remove(btn);        
+        
+        KeyEventFirer keyboard = new KeyEventFirer(root);        
+        keyboard.doKeyPress(KeyCode.ENTER);
+
+        tk.firePulse();                      
+    }
+    
     /*********************************************************************
      * Tests for the cancelButton state                                 *
      ********************************************************************/
@@ -258,6 +277,25 @@ public class ButtonTest {
         assertEquals("cancelButton", btn.cancelButtonProperty().getName());
     }
 
+    @Test public void cancelButtonCanBeInvokeAfterRemovingFromTheScene_RT22106() {
+        btn.setCancelButton(true);        
+        btn.setOnAction(new EventHandler<ActionEvent>() {
+            @Override
+            public void handle(ActionEvent actionEvent) {
+                fail();
+            }
+        });
+        root.getChildren().add(btn);
+        show();
+        
+        root.getChildren().remove(btn);        
+        
+        KeyEventFirer keyboard = new KeyEventFirer(root);        
+        keyboard.doKeyPress(KeyCode.ESCAPE);
+
+        tk.firePulse();                      
+    }
+    
 //  private Button button1;
 //  private Button button2;
 //
