@@ -1641,6 +1641,10 @@ public class Scene implements EventTarget {
                         break;
                 }
 
+                for (TouchPoint t : touchPoints) {
+                    t.impl_reset();
+                }
+
                 TouchEvent te = TouchEvent.impl_touchEvent(type, tp, touchList,
                         touchEventSetId, e.isShiftDown(), e.isControlDown(),
                         e.isAltDown(), e.isMetaDown());
