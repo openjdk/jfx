@@ -807,11 +807,9 @@ public class PaginationSkin extends SkinBase<Pagination, PaginationBehavior>  {
 
         // Create the indicators using fromIndex and toIndex.
         private void initializePageIndicators() {
-            if (!indicatorButtons.getToggles().isEmpty()) {
-                previousIndicatorCount = 0;
-                controlBox.getChildren().clear();
-                indicatorButtons.getToggles().clear();
-            }
+            previousIndicatorCount = 0;
+            controlBox.getChildren().clear();
+            indicatorButtons.getToggles().clear();
 
             controlBox.getChildren().add(leftArrowButton);
             for (int i = fromIndex; i <= toIndex; i++) {
@@ -878,8 +876,12 @@ public class PaginationSkin extends SkinBase<Pagination, PaginationBehavior>  {
             int indicatorCount = 0;
             for (int i = 0; i < getSkinnable().getMaxPageIndicatorCount(); i++) {
                 int index = i < indicatorButtons.getToggles().size() ? i : indicatorButtons.getToggles().size() - 1;
-                IndicatorButton ib = (IndicatorButton)indicatorButtons.getToggles().get(index);
-                double iw = snapSize(Utils.boundedSize(ib.prefWidth(-1), ib.minWidth(-1), ib.maxWidth(-1)));
+                double iw = minButtonSize;
+                if (index != -1) {
+                    IndicatorButton ib = (IndicatorButton)indicatorButtons.getToggles().get(index);
+                    iw = snapSize(Utils.boundedSize(ib.prefWidth(-1), ib.minWidth(-1), ib.maxWidth(-1)));
+                }
+
                 x += (iw + controlBox.getSpacing());
                 if (x >= w) {
                     break;
