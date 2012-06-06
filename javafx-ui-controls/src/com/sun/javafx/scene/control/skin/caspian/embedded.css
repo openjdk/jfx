@@ -92,39 +92,53 @@
 }
 
 
+
+/*******************************************************************************
+ *                                                                             *
+ * TextField, PasswordField, TextArea                                                                   *
+ *                                                                             *
+ ******************************************************************************/
+
+.text-field {
+    -fx-padding: 6 5 6 5; /* Adding 10px to bottom for handles */
+}
+
+.text-area .content {
+    -fx-padding: 13 5 13 5; /* Adding 10px to top and bottom for handles */
+}
+
+
 .caret-handle {
-    -fx-background-color: black /*#ACACAC*/,
+    -fx-background-color: transparent,
+                          black /*#ACACAC*/,
                           linear-gradient(to bottom, #AFAFAF 0%, #DFDFDF 100%);
-    -fx-background-insets: 0, 1;
-    -fx-shape: "M11.974,2.579L20,12.358V28H4V12.356L11.974,2.579z";
+    -fx-background-insets: -4 -18 -8 -18, 0, 1;
+    -fx-shape: "M11.974,2.579L20,12.358V20H4V12.356L11.974,2.579z";
 /*
     -fx-shape: "M11.972,1L3,12v17h18V12L11.972,1L11.972,1z";
     -fx-padding: 0.375em 0.291em 0.375em 0.291em;
 */
-    -fx-padding: 0.45em 0.3em 0.45em 0.3em;
+    -fx-padding: 0.32em 0.3em 0.32em 0.3em;
     -fx-cursor: hand;
 }
 
+
+
 .selection-handle {
-    -fx-background-color: transparent, #0071bc /*-fx-accent*/,
+    -fx-background-color: transparent,
+                          #0071bc /*-fx-accent*/,
                           linear-gradient(to bottom, #0063AA 0%, #008AED 100%);
-    -fx-background-insets: 0, 0, 1;
-    -fx-shape: "M10.974,2.579L19,12.358V28H3V12.356L10.974,2.579z";
+    -fx-background-insets: -4 -18 -8 -18, 0, 1;
+    -fx-shape: "M10.974,2.579L19,12.358V20H3V12.356L10.974,2.579z";
 /*
     -fx-shape: "M10.972,1L2,12v17h18V12L10.972,1L10.972,1z";
     -fx-padding: 0.375em 0.291em 0.375em 0.291em;
 */
-    -fx-padding: 0.45em 0.3em 0.45em 0.3em;
+    -fx-padding: 0.32em 0.3em 0.32em 0.3em;
     -fx-cursor: hand;
 }
 
-#selection-handle-1 {
-    -fx-background-insets: -4 0 -4 -4, 0, 1;
-}
 
-#selection-handle-2 {
-    -fx-background-insets: -4 -4 -4 0, 0, 1;
-}
 
 /*******************************************************************************
  *                                                                             *
