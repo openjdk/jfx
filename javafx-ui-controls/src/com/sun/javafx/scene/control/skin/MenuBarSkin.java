@@ -54,9 +54,11 @@ import javafx.scene.input.KeyEvent;
 import javafx.scene.input.MouseEvent;
 import javafx.scene.layout.HBox;
 import javafx.stage.Stage;
+import javafx.beans.value.WeakChangeListener;
 
 import com.sun.javafx.menu.MenuBase;
 import com.sun.javafx.scene.control.GlobalMenuAdapter;
+import com.sun.javafx.scene.control.WeakEventHandler;
 import com.sun.javafx.scene.control.behavior.BehaviorBase;
 import com.sun.javafx.scene.traversal.Direction;
 import com.sun.javafx.scene.traversal.TraversalEngine;
@@ -143,7 +145,10 @@ public class MenuBarSkin extends SkinBase<MenuBar, BehaviorBase<MenuBar>> implem
         });
     }
 
-
+    private WeakEventHandler weakSceneKeyEventHandler;
+    private WeakEventHandler weakSceneMouseEventHandler;
+    private EventHandler keyEventHandler;
+    private EventHandler mouseEventHandler;
 
     /***************************************************************************
      *                                                                         *
@@ -156,8 +161,9 @@ public class MenuBarSkin extends SkinBase<MenuBar, BehaviorBase<MenuBar>> implem
         
         container = new HBox();
         getChildren().add(container);
-     
-        control.getScene().addEventFilter(KeyEvent.KEY_PRESSED, new EventHandler<KeyEvent>() {
+        
+        // Key navigation 
+        keyEventHandler = new EventHandler<KeyEvent>() {
             @Override public void handle(KeyEvent event) {
                 // process right left and may be tab key events
                 if (openMenu != null) {
@@ -212,19 +218,25 @@ public class MenuBarSkin extends SkinBase<MenuBar, BehaviorBase<MenuBar>> implem
                     }
                 }
             }
-        });
+        };
+        weakSceneKeyEventHandler = new WeakEventHandler(control.getScene(), KeyEvent.KEY_PRESSED, 
+                keyEventHandler);
+        control.getScene().addEventFilter(KeyEvent.KEY_PRESSED, weakSceneKeyEventHandler);
+        
         // When we click else where in the scene - menu selection should be cleared.
-        control.getScene().addEventFilter(MouseEvent.MOUSE_CLICKED, new EventHandler<MouseEvent>() {
-            @Override
-            public void handle(MouseEvent t) {
+        mouseEventHandler = new EventHandler<MouseEvent>() {
+            @Override public void handle(MouseEvent t) {
                 if (!container.localToScene(container.getLayoutBounds()).contains(t.getX(), t.getY())) {
                     unSelectMenus();
                     firstF10 = true;
                 }
             }
-        });
+        };
+        weakSceneMouseEventHandler = new WeakEventHandler(control.getScene(), MouseEvent.MOUSE_CLICKED, 
+                mouseEventHandler);
+        
         // When the parent window looses focus - menu selection should be cleared
-        control.getScene().getWindow().focusedProperty().addListener(new ChangeListener<Boolean>() {
+        control.getScene().getWindow().focusedProperty().addListener(new WeakChangeListener(new ChangeListener<Boolean>() {
             @Override
             public void changed(ObservableValue<? extends Boolean> ov, Boolean t, Boolean t1) {
               if (!t1) {
@@ -232,7 +244,7 @@ public class MenuBarSkin extends SkinBase<MenuBar, BehaviorBase<MenuBar>> implem
                   firstF10 = true;
               }
             }
-        });
+        }));
         
         rebuildUI();
         control.getMenus().addListener(new ListChangeListener<Menu>() {

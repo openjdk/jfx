@@ -1589,27 +1589,47 @@ public class GridPane extends Pane {
         }
 
         double available = extraHeight; // will be negative in shrinking case
-        while (Math.abs(available) > 1.0 && adjusting.size() > 0) {
-            final double portion = available / adjusting.size(); // negative in shrinking case
-            for (int i = 0; i < adjusting.size(); i++) {
-                final int index = adjusting.get(i);
-                final double limit = (shrinking? rowMinHeight[index] : rowMaxHeight[index])
-                        - rowHeights[index]; // negative in shrinking case
-                final double change = Math.abs(limit) <= Math.abs(portion)? limit : portion;
-                //System.out.println("row "+index+": height="+rowHeights[index]+" extra="+extraHeight+"portion="+portion+" row mpm="+rowMinHeight[index]+"/"+rowPrefHeight[index]+"/"+rowMaxHeight[index]+" limit="+limit+" change="+change);
-                rowHeights[index] += change;
-                available -= change;
-                if (Math.abs(change) < Math.abs(portion)) {
-                    adjusted.add(index);
+        boolean handleRemainder = false;
+        int portion = 0;
+        while (available != 0 && adjusting.size() > 0) {
+            if (!handleRemainder) {
+                portion = (int)available / adjusting.size(); // negative in shrinking case
+            }
+            if (portion != 0) {
+                for (int i = 0; i < adjusting.size(); i++) {
+                    final int index = adjusting.get(i);
+                    final double limit = (shrinking? rowMinHeight[index] : rowMaxHeight[index])
+                            - rowHeights[index]; // negative in shrinking case
+                    final double change = Math.abs(limit) <= Math.abs(portion)? limit : portion;
+                    //System.out.println("row "+index+": height="+rowHeights[index]+" extra="+extraHeight+"portion="+portion+" row mpm="+rowMinHeight[index]+"/"+rowPrefHeight[index]+"/"+rowMaxHeight[index]+" limit="+limit+" change="+change);
+                    rowHeights[index] += change;                
+                    available -= change;
+                    if (Math.abs(change) < Math.abs(portion)) {
+                        adjusted.add(index);
+                    }
+                    if (available == 0) {
+                        break;
+                    }
+                }
+                for (int i = 0; i < adjusted.size(); i++) {
+                    adjusting.remove(adjusted.get(i));
+                }
+                adjusted.clear();
+            } else {
+                // Handle the remainder
+                portion = (int)(available) % adjusting.size();
+                if (portion == 0) {
+                    break;
+                } else {
+                    // We have a remainder evenly distribute it.
+                    portion = shrinking ? -1 : 1;
+                    handleRemainder = true;
                 }
             }
-            for (int i = 0; i < adjusted.size(); i++) {
-                adjusting.remove(adjusted.get(i));
-            }
-            adjusted.clear();
         }
+                        
         for (int i = 0; i < rowHeights.length; i++) {
-            rowHeights[i] = snapSpace(rowHeights[i]);
+            rowHeights[i] = snapSpace(rowHeights[i]);            
         }
         return available; // might be negative in shrinking case
     }
@@ -1662,26 +1682,47 @@ public class GridPane extends Pane {
                 adjusting.add(i);
             }
         }
+        
         double available = extraWidth; // will be negative in shrinking case
-        while (Math.abs(available) > 1.0 && adjusting.size() > 0) {            
-            final double portion = available / adjusting.size(); // negative in shrinking case
-            for (int i = 0; i < adjusting.size(); i++) {
-                final int index = adjusting.get(i);
-                final double limit = (shrinking? columnMinWidth[index] : columnMaxWidth[index])
-                        - columnWidths[index]; // negative in shrinking case
-                final double change = Math.abs(limit) <= Math.abs(portion)? limit : portion;
-                columnWidths[index] += change;
-                //if (node.id.startsWith("debug.")) println("{if (shrinking) "vshrink" else "vgrow"}: {node.id} portion({portion})=available({available})/({sizeof adjusting}) change={change}");
-                available -= change;
-                if (Math.abs(change) < Math.abs(portion)) {
-                    adjusted.add(index);
+        boolean handleRemainder = false;
+        int portion = 0;
+        while (available != 0 && adjusting.size() > 0) {            
+            if (!handleRemainder) {
+                portion = (int)available / adjusting.size(); // negative in shrinking case
+            }
+            if (portion != 0) {
+                for (int i = 0; i < adjusting.size(); i++) {
+                    final int index = adjusting.get(i);
+                    final double limit = (shrinking? columnMinWidth[index] : columnMaxWidth[index])
+                            - columnWidths[index]; // negative in shrinking case
+                    final double change = Math.abs(limit) <= Math.abs(portion)? limit : portion;
+                    columnWidths[index] += change;                
+                    //if (node.id.startsWith("debug.")) println("{if (shrinking) "vshrink" else "vgrow"}: {node.id} portion({portion})=available({available})/({sizeof adjusting}) change={change}");
+                    available -= change;
+                    if (Math.abs(change) < Math.abs(portion)) {
+                        adjusted.add(index);
+                    }
+                    if (available == 0) {                        
+                        break;
+                    }                    
+                }
+                for (int i = 0; i < adjusted.size(); i++) {
+                    adjusting.remove(adjusted.get(i));
+                }
+                adjusted.clear();
+            } else {
+                // Handle the remainder
+                portion = (int)(available) % adjusting.size();
+                if (portion == 0) {
+                    break;
+                } else {
+                    // We have a remainder evenly distribute it.
+                    portion = shrinking ? -1 : 1;
+                    handleRemainder = true;
                 }
             }
-            for (int i = 0; i < adjusted.size(); i++) {
-                adjusting.remove(adjusted.get(i));
-            }
-            adjusted.clear();
         }
+               
         for (int i = 0; i < columnWidths.length; i++) {
             columnWidths[i] = snapSpace(columnWidths[i]);
         }
