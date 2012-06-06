@@ -1782,7 +1782,7 @@ public class GridPaneTest {
         assertEquals(100, child1_0.getLayoutBounds().getHeight(), 1e-100);
         assertEquals(366, child2_0.getLayoutX(), 1e-100);
         assertEquals(0, child2_0.getLayoutY(), 1e-100);
-        assertEquals(233, child2_0.getLayoutBounds().getWidth(), 1e-100);
+        assertEquals(234, child2_0.getLayoutBounds().getWidth(), 1e-100);
         assertEquals(129, child2_0.getLayoutBounds().getHeight(), 1e-100);
 
         assertEquals(0, child0_1.getLayoutX(), 1e-100);
@@ -1795,7 +1795,7 @@ public class GridPaneTest {
         assertEquals(300, child1_1.getLayoutBounds().getHeight(), 1e-100);
         assertEquals(366, child2_1.getLayoutX(), 1e-100);
         assertEquals(129, child2_1.getLayoutY(), 1e-100);
-        assertEquals(233, child2_1.getLayoutBounds().getWidth(), 1e-100);
+        assertEquals(234, child2_1.getLayoutBounds().getWidth(), 1e-100);
         assertEquals(300, child2_1.getLayoutBounds().getHeight(), 1e-100);
     }
 
@@ -2239,4 +2239,69 @@ public class GridPaneTest {
         assertEquals(100, cw[0], 1e-100);
         assertEquals(50, cw[1], 1e-100);
     }
+    
+    @Test public void test_RT20931_cellHeightTotalShouldEqualColumnHeight() {
+        ColumnConstraints c1 = new ColumnConstraints();
+        c1.setMinWidth(10);
+        c1.setHgrow(Priority.SOMETIMES);
+        
+        ColumnConstraints c2 = new ColumnConstraints();
+        c2.setMinWidth(10);
+        c2.setHgrow(Priority.SOMETIMES);
+                
+        RowConstraints r1 = new RowConstraints();
+        r1.setMinHeight(10);
+        r1.setVgrow(Priority.SOMETIMES);
+        
+        RowConstraints r2 = new RowConstraints();
+        r2.setMinHeight(10);
+        r2.setVgrow(Priority.SOMETIMES);
+        
+        RowConstraints r3 = new RowConstraints();
+        r3.setMinHeight(10);
+        r3.setVgrow(Priority.SOMETIMES);        
+        
+        gridpane.getColumnConstraints().addAll(c1, c2);
+        gridpane.getRowConstraints().addAll(r1, r2, r3);
+        
+        gridpane.resize(150, 73);
+        gridpane.layout();        
+        double[] rh = gridpane.getRowHeights();
+
+        assertEquals(25, rh[0], 1e-100);
+        assertEquals(24, rh[1], 1e-100);
+        assertEquals(24, rh[2], 1e-100);
+    }
+    
+    @Test public void test_RT20931_cellWidthTotalShouldEqualRowWidth() {
+        ColumnConstraints c1 = new ColumnConstraints();
+        c1.setMinWidth(10);
+        c1.setHgrow(Priority.SOMETIMES);
+        
+        ColumnConstraints c2 = new ColumnConstraints();
+        c2.setMinWidth(10);
+        c2.setHgrow(Priority.SOMETIMES);
+                
+        RowConstraints r1 = new RowConstraints();
+        r1.setMinHeight(10);
+        r1.setVgrow(Priority.SOMETIMES);
+        
+        RowConstraints r2 = new RowConstraints();
+        r2.setMinHeight(10);
+        r2.setVgrow(Priority.SOMETIMES);
+        
+        RowConstraints r3 = new RowConstraints();
+        r3.setMinHeight(10);
+        r3.setVgrow(Priority.SOMETIMES);        
+        
+        gridpane.getColumnConstraints().addAll(c1, c2);
+        gridpane.getRowConstraints().addAll(r1, r2, r3);
+        
+        gridpane.resize(151, 73);
+        gridpane.layout();        
+        double[] cw = gridpane.getColumnWidths();
+
+        assertEquals(76, cw[0], 1e-100);
+        assertEquals(75, cw[1], 1e-100);
+    }    
 }

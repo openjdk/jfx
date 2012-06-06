@@ -119,17 +119,31 @@ public abstract class TextInputControlBehavior<T extends TextInputControl> exten
 
     @Override public void callAction(String name) {
         TextInputControl textInputControl = getControl();
-        if (textInputControl.isEditable()) {
-            setCaretAnimating(false);
-            setEditing(true);
-            final IndexRange selection = textInputControl.getSelection();
-            final int start = selection.getStart();
-            final int end = selection.getEnd();
+        boolean done = false;
 
+        setCaretAnimating(false);
+
+        if (textInputControl.isEditable()) {
+            setEditing(true);
+            done = true;
             if ("InputCharacter".equals(name)) defaultKeyTyped(lastEvent);
             else if ("Cut".equals(name)) cut();
-            else if ("Copy".equals(name)) textInputControl.copy();
             else if ("Paste".equals(name)) paste();
+            else if ("DeletePreviousChar".equals(name)) deletePreviousChar();
+            else if ("DeleteNextChar".equals(name)) deleteNextChar();
+            else if ("DeletePreviousWord".equals(name)) deletePreviousWord();
+            else if ("DeleteNextWord".equals(name)) deleteNextWord();
+            else if ("DeleteSelection".equals(name)) deleteSelection();
+            else if ("Undo".equals(name)) undoManager.undo();
+            else if ("Redo".equals(name)) undoManager.redo();
+            else {
+                done = false;
+            }
+            setEditing(false);
+        }
+        if (!done) {
+            done = true;
+            if ("Copy".equals(name)) textInputControl.copy();
             else if ("SelectBackward".equals(name)) textInputControl.selectBackward();
             else if ("SelectForward".equals(name)) textInputControl.selectForward();
             else if ("PreviousWord".equals(name)) previousWord();
@@ -140,11 +154,6 @@ public abstract class TextInputControlBehavior<T extends TextInputControl> exten
             else if ("SelectAll".equals(name)) textInputControl.selectAll();
             else if ("Home".equals(name)) textInputControl.home();
             else if ("End".equals(name)) textInputControl.end();
-            else if ("DeletePreviousChar".equals(name)) deletePreviousChar();
-            else if ("DeleteNextChar".equals(name)) deleteNextChar();
-            else if ("DeletePreviousWord".equals(name)) deletePreviousWord();
-            else if ("DeleteNextWord".equals(name)) deleteNextWord();
-            else if ("DeleteSelection".equals(name)) deleteSelection();
             else if ("Forward".equals(name)) textInputControl.forward();
             else if ("Backward".equals(name)) textInputControl.backward();
             else if ("Fire".equals(name)) fire(lastEvent);
@@ -153,25 +162,16 @@ public abstract class TextInputControlBehavior<T extends TextInputControl> exten
             else if ("SelectEnd".equals(name)) selectEnd();
             else if ("SelectHomeExtend".equals(name)) selectHomeExtend();
             else if ("SelectEndExtend".equals(name)) selectEndExtend();
-            else if ("Undo".equals(name)) undoManager.undo();
-            else if ("Redo".equals(name)) undoManager.redo();
             else if ("ToParent".equals(name)) forwardToParent(lastEvent);
             /*DEBUG*/else if ("UseVK".equals(name) && isEmbedded()) {
                 ((com.sun.javafx.scene.control.skin.TextInputControlSkin)textInputControl.getSkin()).toggleUseVK();
             } else {
-                setEditing(false);
-                super.callAction(name);
+                done = false;
             }
-            setEditing(false);
-            setCaretAnimating(true);
-        } else if ("Copy".equals(name)) {
-            // If the key event is for the "copy" action then we go ahead
-            // and execute it, but for all other key events which occur
-            // when not editable, we don't allow.
-            textInputControl.copy();
-        } else if (name.startsWith("Traverse")) {
-            // Call super.callAction() for any focus traversal actions even if
-            // it's not editable
+        }
+        setCaretAnimating(true);
+
+        if (!done) {
             super.callAction(name);
         }
         // Note, I don't have to worry about "Consume" here.

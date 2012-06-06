@@ -74,7 +74,20 @@ import javafx.util.StringConverter;
  * <p>As the ComboBox internally renders content with a ListView, API exists in
  * the ComboBox class to allow for a custom cell factory to be set. For more
  * information on cell factories, refer to the {@link Cell} and {@link ListCell}
- * classes.
+ * classes. It is important to note that if a cell factory is set on a ComboBox,
+ * cells will only be used in the ListView that shows when the ComboBox is 
+ * clicked. If you also want to customize the rendering of the 'button' area
+ * of the ComboBox, you can set a custom {@link ListCell} instance in the 
+ * {@link #buttonCellProperty() button cell} property. One way of doing this
+ * is with the following code (note the use of {@code setButtonCell}:
+ * 
+ * <pre>
+ * {@code
+ * Callback<ListView<String>, ListCell<String>> cellFactory = ...;
+ * ComboBox comboBox = new ComboBox();
+ * comboBox.setItems(items);
+ * comboBox.setButtonCell(cellFactory.call(null));
+ * comboBox.setCellFactory(cellFactory);}</pre>
  * 
  * <p>Because a ComboBox can be {@link #editableProperty() editable}, and the
  * default means of allowing user input is via a {@link TextField}, a 

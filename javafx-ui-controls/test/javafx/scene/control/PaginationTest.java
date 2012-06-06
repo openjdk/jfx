@@ -208,7 +208,7 @@ public class PaginationTest {
         pagination.setCurrentPageIndex(4);
     }
 
-    @Test public void setMaxPageIndicatorCountToZero() {
+    @Test public void setCountToZero() {
         pagination.setPageCount(0);
 
         root.setPrefSize(400, 400);
@@ -226,9 +226,40 @@ public class PaginationTest {
 
         pagination.setCurrentPageIndex(5);
         pagination.setCurrentPageIndex(-1);
-        assertEquals(5, pagination.getCurrentPageIndex());
+        assertEquals(0, pagination.getCurrentPageIndex());
     }
 
+    @Test public void setCurrentPageIndexGreaterThanPageCount() {
+        pagination.setPageCount(100);
+        root.setPrefSize(400, 400);
+        root.getChildren().add(pagination);
+        show();
+
+        pagination.setCurrentPageIndex(5);
+        pagination.setCurrentPageIndex(100);
+        assertEquals(99, pagination.getCurrentPageIndex());
+    }
+    
+    @Test public void setMaxPageIndicatorCountLessThanZero() {
+        pagination.setPageCount(100);
+        root.setPrefSize(400, 400);
+        root.getChildren().add(pagination);
+        show();
+
+        pagination.setMaxPageIndicatorCount(-1);
+        assertEquals(10, pagination.getMaxPageIndicatorCount());
+    }
+
+    @Test public void setMaxPageIndicatorCountGreaterThanPageCount() {
+        pagination.setPageCount(100);
+        root.setPrefSize(400, 400);
+        root.getChildren().add(pagination);
+        show();
+        
+        pagination.setMaxPageIndicatorCount(101);
+        assertEquals(10, pagination.getMaxPageIndicatorCount());
+    }
+    
     @Test public void pageCountIsLessThanMaxPageIndicatorCount_RT21660() {
         pagination.setPageCount(5);
         root.setPrefSize(400, 400);
