@@ -363,12 +363,13 @@ public abstract class TextInputControlSkin<T extends TextInputControl, B extends
             textInput.focusedProperty().addListener(new InvalidationListener() {
                 @Override public void invalidated(Observable observable) {
                     if (useFXVK) {
-                        if (textInput.isFocused()) {
+                        if (textInput.isEditable() && textInput.isFocused()) {
                             FXVK.attach(textInput);
                         } else if (getScene() == null ||
                                    getScene().getWindow() == null ||
                                    !getScene().getWindow().isFocused() ||
-                                   !(getScene().getFocusOwner() instanceof TextInputControl)) {
+                                   !(getScene().getFocusOwner() instanceof TextInputControl &&
+                                     ((TextInputControl)getScene().getFocusOwner()).isEditable())) {
                             FXVK.detach();
                         }
                     }
