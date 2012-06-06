@@ -27,7 +27,6 @@ package com.sun.javafx;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Locale;
 
 import javafx.geometry.BoundingBox;
 import javafx.geometry.Bounds;
@@ -40,8 +39,10 @@ import javafx.scene.Scene;
 import javafx.scene.paint.Color;
 import javafx.scene.paint.Stop;
 import javafx.stage.Screen;
+import javafx.stage.Stage;
 import javafx.stage.Window;
-import com.sun.javafx.PlatformUtil;
+
+import com.sun.javafx.stage.StageHelper;
 
 /**
  * Some basic utilities which need to be in java (for shifting operations or
@@ -597,7 +598,10 @@ public class Utils {
 
         // ...and then we get the bounds of this screen
         final Screen currentScreen = getScreen(parent);
-        final Rectangle2D screenBounds = currentScreen.getVisualBounds();
+        final Rectangle2D screenBounds =
+                hasFullScreenStage(currentScreen)
+                        ? currentScreen.getBounds()
+                        : currentScreen.getVisualBounds();
 
         // test if this layout will force the node to appear outside
         // of the screens bounds. If so, we must reposition the item to a better position.
@@ -795,6 +799,18 @@ public class Utils {
         } else {
             return VPos.CENTER;
         }
+    }
+
+    public static boolean hasFullScreenStage(final Screen screen) {
+        final List<Stage> allStages = StageHelper.getStages();
+
+        for (final Stage stage: allStages) {
+            if (stage.isFullScreen() && (getScreen(stage) == screen)) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     /*
