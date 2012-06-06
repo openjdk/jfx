@@ -325,6 +325,10 @@ public class PaginationSkin extends SkinBase<Pagination, PaginationBehavior>  {
             animate = false;
         }
 
+        // Remove the children in the pane before we create a new page.
+        currentStackPane.getChildren().clear();
+        nextStackPane.getChildren().clear();
+        
         pagination.setCurrentPageIndex(currentIndex);
         createPage(currentStackPane, currentIndex);
 
@@ -635,9 +639,6 @@ public class PaginationSkin extends SkinBase<Pagination, PaginationBehavior>  {
                 timeline.setOnFinished(new EventHandler<ActionEvent>() {
                     @Override
                     public void handle(ActionEvent arg0) {
-                        // Create a new page by removing the children.
-                        currentStackPane.getChildren().clear();
-                        nextStackPane.getChildren().clear();
                         resetIndexes(false);
                         navigation.initializePageIndicators();
                         navigation.updatePageIndicators();
@@ -645,13 +646,10 @@ public class PaginationSkin extends SkinBase<Pagination, PaginationBehavior>  {
                 });
                 return;
             }
-            // Create a new page by removing the children.
-            currentStackPane.getChildren().clear();
-            nextStackPane.getChildren().clear();
             resetIndexes(false);
             navigation.initializePageIndicators();
             navigation.updatePageIndicators();
-        } else if (p == "PAGE_COUNT") {
+        } else if (p == "PAGE_COUNT") {          
             resetIndexes(false);
             navigation.initializePageIndicators();
             navigation.updatePageIndicators();
