@@ -554,7 +554,17 @@ public class VirtualFlow extends Region {
                             virtualDelta = event.getTextDeltaY() * lastHeight;
                             break;
                         case LINES:
-                            virtualDelta = event.getTextDeltaY() * lastCellLength;
+                            /*
+                            ** if we've selected a cell, then use
+                            ** it's length for the scroll, otherwise
+                            ** use the length of the first visible cell
+                            */
+                            if (lastCellLength != -1) {
+                                virtualDelta = event.getTextDeltaY() * lastCellLength;
+                            }
+                            else if (getFirstVisibleCell() != null) {
+                                virtualDelta = event.getTextDeltaY() * getCellLength(getFirstVisibleCell());
+                            }
                             break;
                         case NONE:
                             virtualDelta = event.getDeltaY();
