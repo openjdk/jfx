@@ -742,13 +742,17 @@ public class ScrollPaneSkin extends SkinBase<ScrollPane, ScrollPaneBehavior> imp
         vsbvis = determineVerticalSBVisible();
         hsbvis = determineHorizontalSBVisible();
 
-        if (vsbvis && !PlatformUtil.isEmbedded()) {
-            contentWidth -= vsbWidth;
+        if (vsbvis) {
             hsbWidth -= vsbWidth;
+            if (!PlatformUtil.isEmbedded()) {
+                contentWidth -= vsbWidth;
+            }
         }
-        if (hsbvis && !PlatformUtil.isEmbedded()) {
-            contentHeight -= hsbHeight;
+        if (hsbvis) {
             vsbHeight -= hsbHeight;
+            if (!PlatformUtil.isEmbedded()) {
+                contentHeight -= hsbHeight;
+            }
         }
         if (scrollNode != null && scrollNode.isResizable()) {
             // maybe adjust size now that scrollbars may take up space
