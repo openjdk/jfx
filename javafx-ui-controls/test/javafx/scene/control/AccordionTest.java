@@ -3,11 +3,14 @@
  */
 package javafx.scene.control;
 
+import com.sun.javafx.pgstub.StubToolkit;
+import com.sun.javafx.tk.Toolkit;
 import javafx.scene.Scene;
 import javafx.scene.layout.StackPane;
 import javafx.stage.Stage;
 import javafx.beans.property.SimpleObjectProperty;
 import javafx.beans.value.ObservableValue;
+import javafx.scene.input.KeyCode;
 
 import org.junit.Before;
 import org.junit.Test;
@@ -16,14 +19,15 @@ import static org.junit.Assert.*;
 
 /**
  */
-public class AccordionTest {
-
+public class AccordionTest {    
     private Accordion accordion;
+    private Toolkit tk;
     private Scene scene;
     private Stage stage;
     private StackPane root;    
     
     @Before public void setup() {
+        tk = (StubToolkit)Toolkit.getToolkit();//This step is not needed (Just to make sure StubToolkit is loaded into VM)
         accordion = new Accordion();
         root = new StackPane();
         scene = new Scene(root);
@@ -153,5 +157,35 @@ public class AccordionTest {
 
         assertEquals(54, accordion.prefWidth(-1), 1e-100);
         assertEquals(170, accordion.prefHeight(-1), 1e-100);
+    }
+    
+    @Test public void aiobeWhenFocusIsOnAControlInsideTheAccordion_RT22027() {
+        Button b1 = new Button("A");
+        Button b2 = new Button("B");
+        
+        TitledPane a = new TitledPane("A", b1);
+        TitledPane b = new TitledPane("B", b2);
+        
+        accordion.getPanes().addAll(a, b);
+        accordion.setExpandedPane(a);
+        accordion.setLayoutX(200);
+        
+        root.setPrefSize(800, 800);
+        root.getChildren().add(accordion);
+        b1.requestFocus();
+        show();
+        
+        root.impl_reapplyCSS();
+        root.autosize();
+        root.layout();
+                
+        KeyEventFirer keyboard = new KeyEventFirer(b1);                
+
+        try {        
+            keyboard.doKeyPress(KeyCode.HOME);
+            tk.firePulse(); 
+        } catch (Exception e) {
+            fail();
+        }
     }
 }
