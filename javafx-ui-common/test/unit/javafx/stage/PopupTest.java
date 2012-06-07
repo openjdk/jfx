@@ -67,6 +67,7 @@ public class PopupTest {
 
     @After
     public void tearDown() {
+        stage.hide();
         toolkit.resetScreens();
     }
 
