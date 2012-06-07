@@ -25,7 +25,6 @@
 
 package com.sun.javafx.scene.control.skin;
 
-import javafx.event.ActionEvent;
 import javafx.event.EventHandler;
 import javafx.geometry.Side;
 import javafx.scene.control.Button;
@@ -66,22 +65,6 @@ public class ButtonSkin extends LabeledSkinBase<Button, ButtonBehavior<Button>> 
             setCancelButton(true);
         }       
 
-        button.addEventHandler(ActionEvent.ACTION, new EventHandler<ActionEvent>() {
-            @Override public void handle(ActionEvent e) {
-
-                ContextMenu cm = getSkinnable().getContextMenu();
-                if (cm != null) {
-                    if (!cm.isShowing()) {
-                        cm.show(getSkinnable(), Side.RIGHT, 0, 0);
-                        Utils.addMnemonics(cm, getSkinnable().getScene());
-                    }
-                    else {
-                        cm.hide();
-                        Utils.removeMnemonics(cm, getSkinnable().getScene());
-                    }
-                }
-            }
-        });                
     }
 
 

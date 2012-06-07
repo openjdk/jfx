@@ -16,10 +16,13 @@ import javafx.beans.property.SimpleObjectProperty;
 import javafx.event.ActionEvent;
 import javafx.event.EventHandler;
 import javafx.scene.Scene;
+import javafx.scene.control.ContextMenu;
 import javafx.scene.input.KeyCode;
+import javafx.scene.input.MouseEvent;
 import javafx.scene.layout.StackPane;
 import javafx.scene.shape.Rectangle;
 import javafx.stage.Stage;
+import javafx.stage.WindowEvent;
 
 import org.junit.Before;
 import org.junit.Ignore;
@@ -295,6 +298,50 @@ public class ButtonTest {
 
         tk.firePulse();                      
     }
+
+
+    @Test public void conextMenuShouldntShowOnAction() {
+        final MouseEventGenerator generator = new MouseEventGenerator();
+
+        ContextMenu popupMenu = new ContextMenu();
+        MenuItem item1 = new MenuItem("_About");
+        popupMenu.getItems().add(item1);
+        popupMenu.setOnShown(new EventHandler<WindowEvent>() {
+            @Override public void handle(WindowEvent w) {
+                fail();
+            }
+        });
+
+        btn.setContextMenu(popupMenu);
+        btn.setDefaultButton(true);
+
+        root.getChildren().add(btn);
+        show();
+
+        double xval = (btn.localToScene(btn.getLayoutBounds())).getMinX();
+        double yval = (btn.localToScene(btn.getLayoutBounds())).getMinY();
+
+
+        /*
+        ** none of these should cause the context menu to appear,
+        ** so fire them all, and see if anything happens.
+        */
+        KeyEventFirer keyboard = new KeyEventFirer(btn);        
+        keyboard.doKeyPress(KeyCode.ENTER);
+
+        btn.fireEvent(new ActionEvent());
+        btn.fire();
+        scene.impl_processMouseEvent(
+            generator.generateMouseEvent(MouseEvent.MOUSE_PRESSED, xval+10, yval+10));
+        scene.impl_processMouseEvent(
+            generator.generateMouseEvent(MouseEvent.MOUSE_RELEASED, xval+10, yval+10));
+        scene.impl_processMouseEvent(
+            generator.generateMouseEvent(MouseEvent.MOUSE_CLICKED, xval+10, yval+10));
+       
+        tk.firePulse();                      
+    }
+
+
     
 //  private Button button1;
 //  private Button button2;
