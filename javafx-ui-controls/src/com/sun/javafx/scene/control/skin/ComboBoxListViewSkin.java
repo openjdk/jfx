@@ -109,6 +109,7 @@ public class ComboBoxListViewSkin<T> extends ComboBoxPopupControl<T> {
         super(comboBox, new ComboBoxListViewBehavior<T>(comboBox));
         this.comboBox = comboBox;
         this.listView = createListView();
+        this.textField = getEditableInputNode();
         
         // Fix for RT-21207. Additional code related to this bug is further below.
         this.listView.setManaged(false);
@@ -215,9 +216,6 @@ public class ComboBoxListViewSkin<T> extends ComboBoxPopupControl<T> {
     @Override public Node getDisplayNode() {
         Node displayNode;
         if (comboBox.isEditable()) {
-            if (textField == null) {
-                textField = getEditableInputNode();
-            }
             displayNode = textField;
         } else {
             displayNode = buttonCell;
