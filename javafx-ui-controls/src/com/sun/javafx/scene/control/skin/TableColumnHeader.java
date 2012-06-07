@@ -301,7 +301,7 @@ public class TableColumnHeader extends StackPane {
     private boolean isColumnReorderingEnabled() {
         // we only allow for column reordering if there are more than one column,
         // and if we are not on an embedded platform
-        return PlatformUtil.isEmbedded() && getTableView().getVisibleLeafColumns().size() > 1;
+        return ! PlatformUtil.isEmbedded() && getTableView().getVisibleLeafColumns().size() > 1;
     }
     
     private void initUI() {
@@ -763,7 +763,7 @@ public class TableColumnHeader extends StackPane {
 
         // Based on where the mouse actually is, we have to shuffle
         // where we want the column to end up. This code handles that.
-        int currentPos = getTableView().getVisibleLeafIndex(getTableColumn());
+        int currentPos = getIndex();
         newColumnPos += newColumnPos > currentPos && beforeMidPoint ?
             -1 : (newColumnPos < currentPos && !beforeMidPoint ? 1 : 0);
         
@@ -783,6 +783,13 @@ public class TableColumnHeader extends StackPane {
         getTableHeaderRow().setReordering(true);
     }
 
+    private int getIndex() {
+        ObservableList<TableColumn> columns = column.getParentColumn() == null ?
+            getTableView().getColumns() :
+            column.getParentColumn().getColumns();
+        return columns.indexOf(column);
+    }
+    
     protected void columnReorderingComplete(MouseEvent me) {
         // Move col from where it is now to the new position.
         moveColumn(getTableColumn(), newColumnPos);
