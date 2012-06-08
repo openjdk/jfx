@@ -53,7 +53,7 @@ public final class TouchPoint {
     private EventTarget target;
     private Object source;
 
-    public TouchPoint(int id, State state, double x, double y, double screenX,
+    private TouchPoint(int id, State state, double x, double y, double screenX,
             double screenY) {
         this.target = null;
         this.id = id;
@@ -290,6 +290,16 @@ public final class TouchPoint {
         sb.append(", x = ").append(getX()).append(", y = ").append(getY());
 
         return sb.append("]").toString();
+    }
+
+    /**
+     * @treatAsPrivate implementation detail
+     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
+     */
+    @Deprecated
+    public static TouchPoint impl_touchPoint(
+            int id, State state, double x, double y, double screenX, double screenY) {
+        return new TouchPoint(id, state, x, y, screenX, screenY);
     }
 
     /**
