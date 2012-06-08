@@ -1097,18 +1097,18 @@ public class TableColumn<S,T> implements EventTarget {
         return columns;
     }
     
-    /**
-     * Returns the actual value for a cell at a given row index (and which 
-     * belongs to this TableColumn).
-     * 
-     * @param index The row index for which the data is required.
-     * @return The data that belongs to the cell at the intersection of the given
-     *      row index and the TableColumn that this method is called on.
-     */
-    public final T getCellData(final int index) {
-        ObservableValue<T> result = getCellObservableValue(index);
-        return result == null ? null : result.getValue();
-    }
+//    /**
+//     * Returns the actual value for a cell at a given row index (and which 
+//     * belongs to this TableColumn).
+//     * 
+//     * @param index The row index for which the data is required.
+//     * @return The data that belongs to the cell at the intersection of the given
+//     *      row index and the TableColumn that this method is called on.
+//     */
+//    public final T getCellData(final int index) {
+//        ObservableValue<T> result = getCellObservableValue(index);
+//        return result == null ? null : result.getValue();
+//    }
 
     /**
      * Returns the actual value for a cell from the given item.
@@ -1142,12 +1142,15 @@ public class TableColumn<S,T> implements EventTarget {
      */
     public final ObservableValue<T> getCellObservableValue(int index) {
         if (index < 0) return null;
+        
         // Get the table
         final TableView<S> table = getTableView();
         if (table == null || table.getItems() == null) return null;
+        
         // Get the rowData
         final List<S> items = table.getItems();
         if (index >= items.size()) return null; // Out of range
+        
         final S rowData = items.get(index);
         return getCellObservableValue(rowData);
     }
@@ -1172,9 +1175,11 @@ public class TableColumn<S,T> implements EventTarget {
         // Get the factory
         final Callback<CellDataFeatures<S,T>, ObservableValue<T>> factory = getCellValueFactory();
         if (factory == null) return null;
+        
         // Get the table
         final TableView<S> table = getTableView();
         if (table == null) return null;
+        
         // Call the factory
         final CellDataFeatures<S,T> cdf = new CellDataFeatures<S,T>(table, this, item);
         return factory.call(cdf);

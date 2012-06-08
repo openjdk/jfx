@@ -24,22 +24,17 @@
  */
 package javafx.scene.control;
 
-import com.sun.javafx.logging.PlatformLogger;
 import java.util.Map;
 
 import javafx.beans.InvalidationListener;
 import javafx.beans.Observable;
 import javafx.beans.WeakInvalidationListener;
-import javafx.beans.property.ObjectProperty;
-import javafx.beans.property.ObjectPropertyBase;
-import javafx.beans.property.SimpleObjectProperty;
 import javafx.beans.value.ObservableValue;
 import javafx.collections.ListChangeListener;
 import javafx.event.Event;
 import javafx.scene.control.TableView.TableViewFocusModel;
 
 import com.sun.javafx.property.PropertyReference;
-import com.sun.javafx.scene.control.Logging;
 import com.sun.javafx.scene.control.WeakListChangeListener;
 import java.lang.ref.WeakReference;
 import javafx.beans.property.ReadOnlyObjectProperty;
@@ -81,7 +76,6 @@ public class TableCell<S,T> extends IndexedCell<T> {
         // we listen to changes in the index property as this indicates that
         // the cell has been reappropriated
         indexProperty().addListener(indexListener);
-        updateItem();
     }
 
 
@@ -103,7 +97,8 @@ public class TableCell<S,T> extends IndexedCell<T> {
     };
     
     @Override void indexChanged() {
-        updateItem();
+        itemDirty = true;
+        requestLayout();
     }
 
     /*
@@ -132,7 +127,7 @@ public class TableCell<S,T> extends IndexedCell<T> {
             requestLayout();
         }
     };
-
+    
     private final InvalidationListener editingListener = new InvalidationListener() {
         @Override public void invalidated(Observable value) {
             updateEditing();
@@ -478,6 +473,15 @@ public class TableCell<S,T> extends IndexedCell<T> {
                 getTableView().getSelectionModel() != null &&
                 getTableView().getSelectionModel().isCellSelectionEnabled();
     }
+    
+    /*
+     * This was brought in to fix the issue in RT-22077, namely that the 
+     * ObservableValue was being GC'd, meaning that changes to the value were
+     * no longer being delivered. By extracting this value out of the method, 
+     * it is now referred to from TableCell and will therefore no longer be
+     * GC'd.
+     */
+    private ObservableValue<T> currentObservableValue = null;
 
     /*
      * This is called when we think that the data within this TableCell may have
@@ -510,6 +514,10 @@ public class TableCell<S,T> extends IndexedCell<T> {
      * the responsibility of the TableModel developer).
      */
     private void updateItem() {
+        if (currentObservableValue != null) {
+            currentObservableValue.removeListener(weaktableRowUpdateObserver);
+        }
+        
         // there is a whole heap of reasons why we should just punt...
         if (getIndex() < 0 || 
                 columnIndex < 0 ||
@@ -519,32 +527,30 @@ public class TableCell<S,T> extends IndexedCell<T> {
                 getTableView().getItems() == null) {
             return;
         }
-
+        
         // get the total number of items in the data model
         int itemCount = getTableView().getItems().size();
         
-        ObservableValue<T> observableValue = null;
         if (getIndex() >= itemCount) {
             updateItem(null, true);
             return;
         } else {
             if (getIndex() < itemCount) {
-                observableValue = getTableColumn().getCellObservableValue(getIndex());
+                currentObservableValue = getTableColumn().getCellObservableValue(getIndex());
             }
 
-            T value = observableValue == null ? null : observableValue.getValue();
+            T value = currentObservableValue == null ? null : currentObservableValue.getValue();
             
             // update the 'item' property of this cell.
             updateItem(value, value == null);
         }
         
-        if (observableValue == null) {
+        if (currentObservableValue == null) {
             return;
         }
         
         // add property change listeners to this item
-        observableValue.removeListener(weaktableRowUpdateObserver);
-        observableValue.addListener(weaktableRowUpdateObserver);
+        currentObservableValue.addListener(weaktableRowUpdateObserver);
     }
 
     @Override protected void layoutChildren() {
