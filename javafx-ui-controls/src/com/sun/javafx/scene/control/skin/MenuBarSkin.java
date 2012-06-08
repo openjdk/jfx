@@ -65,6 +65,9 @@ import com.sun.javafx.scene.traversal.TraversalEngine;
 import com.sun.javafx.scene.traversal.TraverseListener;
 import com.sun.javafx.stage.StageHelper;
 import com.sun.javafx.tk.Toolkit;
+import java.lang.ref.WeakReference;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 import javafx.event.ActionEvent;
 import javafx.event.EventType;
 import javafx.scene.input.*;
@@ -149,7 +152,7 @@ public class MenuBarSkin extends SkinBase<MenuBar, BehaviorBase<MenuBar>> implem
     private WeakEventHandler weakSceneMouseEventHandler;
     private EventHandler keyEventHandler;
     private EventHandler mouseEventHandler;
-
+    
     /***************************************************************************
      *                                                                         *
      * Constructors                                                            *
@@ -234,6 +237,7 @@ public class MenuBarSkin extends SkinBase<MenuBar, BehaviorBase<MenuBar>> implem
         };
         weakSceneMouseEventHandler = new WeakEventHandler(control.getScene(), MouseEvent.MOUSE_CLICKED, 
                 mouseEventHandler);
+        control.getScene().addEventFilter(MouseEvent.MOUSE_CLICKED, weakSceneMouseEventHandler);
         
         // When the parent window looses focus - menu selection should be cleared
         control.getScene().getWindow().focusedProperty().addListener(new WeakChangeListener(new ChangeListener<Boolean>() {
@@ -300,9 +304,23 @@ public class MenuBarSkin extends SkinBase<MenuBar, BehaviorBase<MenuBar>> implem
         };
         engine.addTraverseListener(this);
         setImpl_traversalEngine(engine);
+        
+        control.sceneProperty().addListener(new ChangeListener<Scene>() {
+            @Override
+            public void changed(ObservableValue<? extends Scene> ov, Scene t, Scene t1) {
+                if (weakSceneKeyEventHandler != null) {
+                    // remove event filter from the old scene (t)
+                    t.removeEventFilter(KeyEvent.KEY_PRESSED, weakSceneKeyEventHandler);
+                }
+                if (weakSceneMouseEventHandler != null) {
+                    // remove event filter from the old scene (t)
+                    t.removeEventFilter(MouseEvent.MOUSE_CLICKED, weakSceneMouseEventHandler);
+                }
+            }
+        });
     }
     
-
+    
     Runnable firstMenuRunnable = new Runnable() {
             public void run() {
                 /*
