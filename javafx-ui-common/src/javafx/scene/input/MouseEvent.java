@@ -272,12 +272,10 @@ public class MouseEvent extends InputEvent {
     private void recomputeCoordinatesToSource(MouseEvent newEvent, Object newSource) {
 
         final Point2D newCoordinates = InputEventUtils.recomputeCoordinates(
-                new Point2D(x, y), source, newSource);
+                new Point2D(sceneX, sceneY), null, newSource);
 
         newEvent.x = newCoordinates.getX();
         newEvent.y = newCoordinates.getY();
-        newEvent.sceneX = getSceneX();
-        newEvent.sceneY = getSceneY();
     }
 
     /**

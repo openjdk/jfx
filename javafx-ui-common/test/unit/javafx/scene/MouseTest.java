@@ -911,7 +911,7 @@ public class MouseTest {
     }
 
     @Test
-    public void NodeMovementsWithStillMouseShouldFireEnteredExited() {
+    public void nodeMovementsWithStillMouseShouldFireEnteredExited() {
         SimpleTestScene scene = new SimpleTestScene();
         MouseEventGenerator generator = new MouseEventGenerator();
 
@@ -932,6 +932,34 @@ public class MouseTest {
         ((Rectangle) scene.smallSquareTracker.node).setX(200);
         ((StubToolkit) Toolkit.getToolkit()).firePulse();
         assertTrue(scene.smallSquareTracker.enteredMe);
+    }
+
+    @Test
+    public void nodeWithNoninvertibleTransformShouldGetNanCoords() {
+        SimpleTestScene scene = new SimpleTestScene();
+        MouseEventGenerator generator = new MouseEventGenerator();
+
+        scene.processEvent(generator.generateMouseEvent(
+                MouseEvent.MOUSE_PRESSED, 250, 250));
+        scene.smallSquareTracker.clear();
+
+        scene.smallSquareTracker.node.addEventHandler(MouseEvent.MOUSE_RELEASED,
+                new EventHandler<MouseEvent>() {
+
+            @Override public void handle(MouseEvent event) {
+                assertEquals(Double.NaN, event.getX(), 0.0001);
+                assertEquals(Double.NaN, event.getY(), 0.0001);
+                assertEquals(251.0, event.getSceneX(), 0.0001);
+                assertEquals(251.0, event.getSceneY(), 0.0001);
+            }
+        });
+
+        ((Rectangle) scene.smallSquareTracker.node).setScaleX(0);
+
+        scene.processEvent(generator.generateMouseEvent(
+                MouseEvent.MOUSE_RELEASED, 251, 251));
+
+        assertTrue(scene.smallSquareTracker.released);
     }
 
     private static class SimpleTestScene {

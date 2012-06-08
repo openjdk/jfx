@@ -75,7 +75,7 @@ public final class TouchPoint {
     void recomputeToSource(Object oldSource, Object newSource) {
 
         final Point2D newCoordinates = InputEventUtils.recomputeCoordinates(
-                new Point2D(x, y), oldSource, newSource);
+                new Point2D(sceneX, sceneY), null, newSource);
 
         x = newCoordinates.getX();
         y = newCoordinates.getY();
