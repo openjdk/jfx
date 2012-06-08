@@ -386,7 +386,7 @@ public final class Font {
      * <code>Font</code> object will be returned.
      * <p>
      * Any failure such as abbreviated input, or an unsupported font format
-     * will result in a code>null</code> return. It is the application's
+     * will result in a <code>null</code> return. It is the application's
      * responsibility to check this before use.
      * <p>
      * On a successful (non-null) return the font will be registered

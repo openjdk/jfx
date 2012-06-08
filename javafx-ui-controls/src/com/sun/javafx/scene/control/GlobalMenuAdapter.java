@@ -27,9 +27,9 @@ package com.sun.javafx.scene.control;
 
 import javafx.beans.InvalidationListener;
 import javafx.beans.Observable;
-import javafx.collections.ObservableList;
 import javafx.collections.ListChangeListener;
 import javafx.collections.ListChangeListener.Change;
+import javafx.collections.ObservableList;
 import javafx.event.ActionEvent;
 import javafx.event.Event;
 import javafx.event.EventHandler;
@@ -170,8 +170,6 @@ public class GlobalMenuAdapter extends Menu implements MenuBase {
         if(target != null && target.getOnMenuValidation() != null) {
             Event.fireEvent(target, new Event(target.MENU_VALIDATION_EVENT));
         }
-        if (!menu.isDisable()) menu.fire();
-        
     }
 
 
@@ -195,9 +193,7 @@ public class GlobalMenuAdapter extends Menu implements MenuBase {
             if(target.getOnMenuValidation() != null) {
                 Event.fireEvent(target, new Event(target.MENU_VALIDATION_EVENT));
             }
-            if (!menuItem.isDisable()) menuItem.fire();
         }
-
     }
 
     private class CheckMenuItemAdapter extends CheckMenuItem implements CheckMenuItemBase {
@@ -221,9 +217,7 @@ public class GlobalMenuAdapter extends Menu implements MenuBase {
             if(target.getOnMenuValidation() != null) {
                 Event.fireEvent(target, new Event(target.MENU_VALIDATION_EVENT));
             }
-            if (!menuItem.isDisable()) menuItem.fire();
         }
-
     }
 
     private class RadioMenuItemAdapter extends RadioMenuItem implements RadioMenuItemBase {
@@ -248,9 +242,7 @@ public class GlobalMenuAdapter extends Menu implements MenuBase {
             if(target.getOnMenuValidation() != null) {
                 Event.fireEvent(target, new Event(target.MENU_VALIDATION_EVENT));
             }
-            if (!menuItem.isDisable()) menuItem.fire();
         }
-
     }
 
     private class SeparatorMenuItemAdapter extends SeparatorMenuItem implements SeparatorMenuItemBase {
@@ -271,9 +263,7 @@ public class GlobalMenuAdapter extends Menu implements MenuBase {
             if(target.getOnMenuValidation() != null) {
                 Event.fireEvent(target, new Event(target.MENU_VALIDATION_EVENT));
             }
-            if (!menuItem.isDisable()) menuItem.fire();
         }
-
     }
 
     private class CustomMenuItemAdapter extends CustomMenuItem implements CustomMenuItemBase {
@@ -294,8 +284,6 @@ public class GlobalMenuAdapter extends Menu implements MenuBase {
             if(target.getOnMenuValidation() != null) {
                 Event.fireEvent(target, new Event(target.MENU_VALIDATION_EVENT));
             }
-            if (!menuItem.isDisable()) menuItem.fire();
         }
-
     }
 }

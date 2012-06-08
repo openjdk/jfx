@@ -1110,6 +1110,70 @@ public class TouchEventTest {
     }
 
     @Test
+    public void pointsShouldBeTransformedCorrectly() {
+        Scene scene = createScene();
+        Rectangle rect =
+                (Rectangle) scene.getRoot().getChildrenUnmodifiable().get(0);
+        rect.setTranslateX(15);
+        rect.setTranslateY(5);
+
+        touched = 0;
+        rect.addEventHandler(TouchEvent.ANY, new EventHandler<TouchEvent>() {
+            @Override public void handle(TouchEvent event) {
+                touched++;
+                switch(touched) {
+                    case 1:
+                        assertEquals(115.0, event.getTouchPoint().getX(), 0.0001);
+                        assertEquals(125.0, event.getTouchPoint().getY(), 0.0001);
+                        assertEquals(130.0, event.getTouchPoint().getSceneX(), 0.0001);
+                        assertEquals(130.0, event.getTouchPoint().getSceneY(), 0.0001);
+                        break;
+                    case 2:
+                    case 3:
+                    case 4:
+                    case 5:
+                        assertEquals(115.0, event.getTouchPoints().get(0).getX(), 0.0001);
+                        assertEquals(125.0, event.getTouchPoints().get(0).getY(), 0.0001);
+                        assertEquals(130.0, event.getTouchPoints().get(0).getSceneX(), 0.0001);
+                        assertEquals(130.0, event.getTouchPoints().get(0).getSceneY(), 0.0001);
+                        assertEquals(125.0, event.getTouchPoints().get(1).getX(), 0.0001);
+                        assertEquals(135.0, event.getTouchPoints().get(1).getY(), 0.0001);
+                        assertEquals(140.0, event.getTouchPoints().get(1).getSceneX(), 0.0001);
+                        assertEquals(140.0, event.getTouchPoints().get(1).getSceneY(), 0.0001);
+                        break;
+                    default:
+                        fail("Wrong touch point id " + event.getTouchPoint().getId());
+                }
+            }
+        });
+
+        ((StubScene) scene.impl_getPeer()).getListener().touchEventBegin(
+                System.currentTimeMillis(), 1, true, true, false, true, false);
+        ((StubScene) scene.impl_getPeer()).getListener().touchEventNext(
+                TouchPoint.State.PRESSED, 1, 130, 130, 130, 130);
+        ((StubScene) scene.impl_getPeer()).getListener().touchEventEnd();
+
+        ((StubScene) scene.impl_getPeer()).getListener().touchEventBegin(
+                System.currentTimeMillis(), 2, true, true, false, true, false);
+        ((StubScene) scene.impl_getPeer()).getListener().touchEventNext(
+                TouchPoint.State.STATIONARY, 1, 130, 130, 130, 130);
+        ((StubScene) scene.impl_getPeer()).getListener().touchEventNext(
+                TouchPoint.State.PRESSED, 2, 140, 140, 140, 140);
+        ((StubScene) scene.impl_getPeer()).getListener().touchEventEnd();
+
+        ((StubScene) scene.impl_getPeer()).getListener().touchEventBegin(
+                System.currentTimeMillis(), 2, true, true, false, true, false);
+        ((StubScene) scene.impl_getPeer()).getListener().touchEventNext(
+                TouchPoint.State.RELEASED, 1, 130, 130, 130, 130);
+        ((StubScene) scene.impl_getPeer()).getListener().touchEventNext(
+                TouchPoint.State.RELEASED, 2, 140, 140, 140, 140);
+        ((StubScene) scene.impl_getPeer()).getListener().touchEventEnd();
+
+
+        assertEquals(5, touched);
+    }
+
+    @Test
     public void shouldIgnoreIndirectTouchEvents() {
         Scene scene = createScene();
         Rectangle rect =
