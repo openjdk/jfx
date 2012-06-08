@@ -802,9 +802,7 @@ public class ScrollPaneSkin extends SkinBase<ScrollPane, ScrollPaneBehavior> imp
         updateHorizontalSB();
 
         viewRect.resize(snapSize(contentWidth), snapSize(contentHeight));
-        clipRect.setWidth(snapSize(contentWidth));
-        clipRect.setHeight(snapSize(contentHeight));
-        clipRect.relocate(snapPosition(getInsets().getLeft() - viewRect.getLayoutX()), snapPosition(getInsets().getTop() - viewRect.getLayoutY()));
+        resetClip();
 
         if (vsbvis && hsbvis) {
             corner.setVisible(true);
@@ -936,15 +934,22 @@ public class ScrollPaneSkin extends SkinBase<ScrollPane, ScrollPaneBehavior> imp
     private double updatePosX() {
         viewRect.setLayoutX(snapPosition(getInsets().getLeft() - posX / (hsb.getMax() - hsb.getMin()) * (nodeWidth - contentWidth)));
         getSkinnable().setHvalue(Utils.clamp(getSkinnable().getHmin(), posX, getSkinnable().getHmax()));
+        resetClip();
         return posX;
     }
 
     private double updatePosY() {
         viewRect.setLayoutY(snapPosition(getInsets().getTop() - posY / (vsb.getMax() - vsb.getMin()) * (nodeHeight - contentHeight)));
         getSkinnable().setVvalue(Utils.clamp(getSkinnable().getVmin(), posY, getSkinnable().getVmax()));
+        resetClip();
         return posY;
     }
 
+    private void resetClip() {
+        clipRect.setWidth(snapSize(contentWidth));
+        clipRect.setHeight(snapSize(contentHeight));
+        clipRect.relocate(snapPosition(getInsets().getLeft() - viewRect.getLayoutX()), snapPosition(getInsets().getTop() - viewRect.getLayoutY()));
+    }
 
     Timeline sbTouchTimeline;
     KeyFrame sbTouchKF1;
