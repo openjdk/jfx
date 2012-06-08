@@ -1014,6 +1014,9 @@ public class ListView<T> extends Control {
                             clearSelection(index);
                             makeAtomic = false;
                             select(index);
+                        } else {
+                            // Fix for RT-22079
+                            clearSelection();
                         }
                     }
                 } else if (c.wasAdded() || c.wasRemoved()) {
