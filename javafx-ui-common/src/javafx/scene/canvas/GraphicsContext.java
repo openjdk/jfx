@@ -797,10 +797,25 @@ public final class GraphicsContext {
     }
 
     /**
-     * Sets the current TextAlignment attribute
+     * Defines horizontal text alignment, relative to the text {@code x} origin.
+     * <p>
+     * Let horizontal bounds represent the logical width of a single line of
+     * text. Where each line of text has a separate horizontal bounds.
+     * <p>
+     * Then TextAlignment is specified as:
+     * <ul>
+     * <li>Left: the left edge of the horizontal bounds will be at {@code x}.
+     * <li>Center: the center, halfway between left and right edge, of the 
+     * horizontal bounds will be at {@code x}.
+     * <li>Right: the right edge of the horizontal bounds will be at {@code x}.
+     * </ul>
+     * <p>
+     *
+     * Note: Canvas does not support line wrapping, therefore the text
+     * alignment Justify is identical to left aligned text.
+     * <p>
      * 
-     * @param align {@code TextAlignment} with values of Left, Center, Right, or
-     * Justify.
+     * @param align {@code TextAlignment} with values of Left, Center, Right.
      */
     public void setTextAlign(TextAlignment align) {
         if (curState.textalign != align) {
