@@ -253,7 +253,12 @@ public class TextFieldSkin extends TextInputControlSkin<TextField, TextFieldBeha
             }
         });
         textNode.fillProperty().bind(textFill);
-        textNode.impl_selectionFillProperty().bind(highlightTextFill);
+        textNode.impl_selectionFillProperty().bind(new ObjectBinding<Paint>() {
+            { bind(highlightTextFill, textFill, textField.focusedProperty()); }
+            @Override protected Paint computeValue() {
+                return textField.isFocused() ? highlightTextFill.get() : textFill.get();
+            }
+        });
         // updated by listener on caretPosition to ensure order
         textNode.impl_caretPositionProperty().set(textField.getCaretPosition());
         textField.selectionProperty().addListener(new InvalidationListener() {
