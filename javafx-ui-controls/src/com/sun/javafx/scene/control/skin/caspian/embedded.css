@@ -100,11 +100,11 @@
  ******************************************************************************/
 
 .text-field {
-    -fx-padding: 6 5 6 5; /* Adding 10px to bottom for handles */
+    -fx-padding: 6 5 6 5; /* Adding 3px to top and bottom for handles */
 }
 
 .text-area .content {
-    -fx-padding: 13 5 13 5; /* Adding 10px to top and bottom for handles */
+    -fx-padding: 9 5 9 5; /* Adding 6px to top and bottom for handles */
 }
 
 
