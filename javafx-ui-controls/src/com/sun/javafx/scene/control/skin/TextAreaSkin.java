@@ -54,6 +54,7 @@ import javafx.scene.control.IndexRange;
 import javafx.scene.control.ScrollPane;
 import javafx.scene.control.TextArea;
 import javafx.scene.input.MouseEvent;
+import javafx.scene.input.ScrollEvent;
 import javafx.scene.layout.Region;
 import javafx.scene.paint.Paint;
 import javafx.scene.shape.MoveTo;
@@ -428,6 +429,18 @@ public class TextAreaSkin extends TextInputControlSkin<TextArea, TextAreaBehavio
         scrollPane.setFitToWidth(textArea.isWrapText());
         scrollPane.setContent(contentView);
         getChildren().add(scrollPane);
+
+        // RT-21658: We can currently only handle scroll events from touch if
+        // on the embedded platform.
+        if (!PlatformUtil.isEmbedded()) {
+            scrollPane.addEventFilter(ScrollEvent.ANY, new EventHandler<ScrollEvent>() {
+                @Override public void handle(ScrollEvent event) {
+                    if (event.isDirect()) {
+                        event.consume();
+                    }
+                }
+            });
+        }
 
         // Add selection
         selectionHighlightGroup.setManaged(false);
