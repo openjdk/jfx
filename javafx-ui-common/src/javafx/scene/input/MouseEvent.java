@@ -350,6 +350,9 @@ public class MouseEvent extends InputEvent {
                         : (EventType<? extends MouseEvent>)
                                 evt.getEventType()));
 
+        copyEvent.sceneX = evt.sceneX;
+        copyEvent.sceneY = evt.sceneY;
+
         evt.recomputeCoordinatesToSource(copyEvent, source);
         return copyEvent;
     }
