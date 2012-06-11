@@ -294,7 +294,7 @@ public class ProgressIndicatorSkin extends SkinBase<ProgressIndicator, ProgressI
 
         @Override protected void layoutChildren() {
             // Position and size the circular background
-            double textHeight = doneText.getLayoutBounds().getHeight();
+            double doneTextHeight = doneText.getLayoutBounds().getHeight();
             /*
             ** use the min of width, or height, keep it a circle
             */
@@ -302,15 +302,12 @@ public class ProgressIndicatorSkin extends SkinBase<ProgressIndicator, ProgressI
             double radiusH = (control.getHeight() - (skin.getInsets().getTop() + skin.getInsets().getBottom())) / 2;
             double radius = Math.min(radiusW, radiusH);
 
-            radius = Math.min(radius, (control.getHeight() - skin.getInsets().getTop() - skin.getInsets().getBottom() - textGap - textHeight) / 2);
+            radius = Math.min(radius, (control.getHeight() - skin.getInsets().getTop() - skin.getInsets().getBottom() - textGap - doneTextHeight) / 2);
             indicator.impl_setShape(new Circle(radius));
             indicator.resize(2 * radius, 2 * radius);
 
-            final double h = indicator.getHeight() + textGap + textHeight;
-            final double y = (getHeight() - h) / 2;
-
-            indicator.setLayoutX((getWidth() - indicator.getWidth()) / 2);
-            indicator.setLayoutY(y);
+            indicator.setLayoutX(skin.getInsets().getLeft()+textGap);
+            indicator.setLayoutY(skin.getInsets().getTop());
 
             arcShape.setRadiusX(((indicator.getWidth() - indicator.getInsets().getLeft() - indicator.getInsets().getRight()) / 2));
             arcShape.setRadiusY(arcShape.getRadiusX());
@@ -329,13 +326,23 @@ public class ProgressIndicatorSkin extends SkinBase<ProgressIndicator, ProgressI
             /*
             ** if the % text can't fit anywhere in the bounds then don't display it
             */
-            if (control.getWidth() >= com.sun.javafx.scene.control.skin.Utils.computeTextWidth(font, text.getText(), 0.0) &&
-                control.getHeight() >= com.sun.javafx.scene.control.skin.Utils.computeTextHeight(font, text.getText(), 0.0)) {
+            double textWidth = com.sun.javafx.scene.control.skin.Utils.computeTextWidth(font, text.getText(), 0.0);
+            double textHeight = com.sun.javafx.scene.control.skin.Utils.computeTextHeight(font, text.getText(), 0.0);
+            if (control.getWidth() >= textWidth && control.getHeight() >= textHeight) {
                 if (!text.isVisible()) {
                     text.setVisible(true);
                 }
-                text.setLayoutY(y + indicator.getHeight() + textGap);
-                text.setLayoutX(indicator.getLayoutX() + (indicator.getWidth() - text.getLayoutBounds().getWidth()) / 2);
+                text.setLayoutY(skin.getInsets().getTop() + indicator.getHeight() + textGap);
+                /*
+                ** try to centre the text at the indicators radius.
+                ** but if it can't then use the padding
+                */
+                if (textWidth > (radius*2)) {
+                    text.setLayoutX(skin.getInsets().getLeft());
+                }
+                else {
+                    text.setLayoutX(skin.getInsets().getLeft()+((radius*2 - textWidth)/2));
+                }
             }
             else {
                 if (text.isVisible()) {
@@ -434,10 +441,9 @@ public class ProgressIndicatorSkin extends SkinBase<ProgressIndicator, ProgressI
 
             double diameter = radius*2;
             childrenG.resize(diameter, diameter);
-            final double y = (getHeight() - diameter) / 2;
 
-            childrenG.setLayoutX((getWidth() - diameter) / 2);
-            childrenG.setLayoutY(y);
+            childrenG.setLayoutX(skin.getInsets().getLeft());
+            childrenG.setLayoutY(skin.getInsets().getTop());
         }
 
         private Timeline indeterminateTimeline;

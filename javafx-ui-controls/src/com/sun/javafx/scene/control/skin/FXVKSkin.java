@@ -68,7 +68,7 @@ import javafx.animation.Animation.Status;
 import static javafx.scene.input.KeyCode.*;
 import static javafx.scene.input.MouseEvent.*;
 
-import static com.sun.javafx.scene.control.skin.resources.ControlResources.*;
+import static com.sun.javafx.scene.control.skin.resources.EmbeddedResources.*;
 
 public class FXVKSkin extends SkinBase<FXVK, BehaviorBase<FXVK>> {
 

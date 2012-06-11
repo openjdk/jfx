@@ -31,3 +31,17 @@
  * targeted at VGA screens).                                                   *
  *                                                                             *
  ******************************************************************************/
+
+/*******************************************************************************
+ *                                                                             *
+ * TextField, PasswordField, TextArea                                                                   *
+ *                                                                             *
+ ******************************************************************************/
+
+.text-field {
+    -fx-padding: 3 5 3 5; /* Restore values from caspian, as QVGA has no selection handles */
+}
+
+.text-area .content {
+    -fx-padding: 3 5 3 5; /* Restore values from caspian, as QVGA has no selection handles */
+}

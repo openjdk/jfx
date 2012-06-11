@@ -69,7 +69,7 @@ import javafx.util.Callback;
  * The control can be customized to display numeric page indicators or bullet style indicators by
  * setting the style class {@link STYLE_CLASS_BULLET}.  The 
  * {@link #maxPageIndicatorCountProperty() maxPageIndicatorCountProperty} can be used to change 
- * the number of page indicators.  The property value can also be changed 
+ * the maximum number of page indicators.  The property value can also be changed 
  * via CSS using -fx-max-page-indicator-count.
  *</p> 
  * 
@@ -185,11 +185,10 @@ public class Pagination extends Control {
     }
     
     /**
-     * The maximum number of page indicators to use for this pagination control.  This
-     * value must be greater than or equal to 1.  The page indicators will 
-     * be unselected when the {@link #currentPageIndexProperty currentPageIndex} 
-     * is greater than the maxPageIndicatorCount.  The number of page indicators will be
-     * reduced if maxPageIndicatorCount cannot fit within this control. 
+     * The maximum number of page indicators to use for this pagination control.  
+     * The maximum number of pages indicators will remain unchanged if the value is less than 1 
+     * or greater than the {@link #pageCount}.  The number of page indicators will be
+     * reduced to fit the control if the {@code maxPageIndicatorCount} cannot fit.
      * 
      * The default is 10 page indicators.
      */    
@@ -198,7 +197,7 @@ public class Pagination extends Control {
             maxPageIndicatorCount = new StyleableIntegerProperty(DEFAULT_MAX_PAGE_INDICATOR_COUNT) {
 
                 @Override protected void invalidated() {
-                    if (getMaxPageIndicatorCount() < 1) {
+                    if (getMaxPageIndicatorCount() < 1 || getMaxPageIndicatorCount() > getPageCount()) {
                         setMaxPageIndicatorCount(oldMaxPageIndicatorCount);
                     }
                     oldMaxPageIndicatorCount = getMaxPageIndicatorCount();
@@ -253,14 +252,14 @@ public class Pagination extends Control {
      * The default is an {@link INDETERMINATE} number of pages.
      */    
     public final IntegerProperty pageCountProperty() { return pageCount; }
-
-    private int oldPageIndex;
+    
     private final IntegerProperty currentPageIndex = new SimpleIntegerProperty(this, "currentPageIndex", 0) {
         @Override protected void invalidated() {
             if (getCurrentPageIndex() < 0) {
-                setCurrentPageIndex(oldPageIndex);
+                setCurrentPageIndex(0);
+            } else if (getCurrentPageIndex() > getPageCount() - 1) {
+                setCurrentPageIndex(getPageCount() - 1);
             }
-            oldPageIndex = getCurrentPageIndex();
         }
     };
     
@@ -276,9 +275,9 @@ public class Pagination extends Control {
     public final int getCurrentPageIndex() { return currentPageIndex.get(); }
     
     /**
-     * The current page index to display for this pagination control.  This value
-     * must be greater than or equal to 0.  The page indicators will be unselected when
-     * the currentPageIndex is greater than the {@link #maxPageIndicatorCountProperty maxPageIndicatorCount}.
+     * The current page index to display for this pagination control.  The first page will be 
+     * the current page if the value is less than 0.  Similarly the last page 
+     * will be the current page if the value is greater than the {@link #pageCount}
      * 
      * The default is 0 for the first page.
      */    
@@ -305,6 +304,8 @@ public class Pagination extends Control {
      * control.  The callback function should load and return the contents the page index.
      * Null should be returned if the page index does not exist.  The currentPageIndex 
      * will not change when null is returned.
+     * 
+     * The default is null if there is no page factory set.
      */    
     public final ObjectProperty<Callback<Integer, Node>> pageFactoryProperty() { return pageFactory; }
 

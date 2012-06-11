@@ -14,8 +14,10 @@ import static org.junit.Assert.assertTrue;
 import java.util.Iterator;
 import java.util.LinkedList;
 
+import javafx.event.Event;
 import javafx.scene.control.IndexedCell;
 import javafx.scene.control.SkinStub;
+import javafx.scene.input.ScrollEvent;
 
 import org.junit.Before;
 import org.junit.Ignore;
@@ -866,6 +868,55 @@ public class VirtualFlowTest {
             if (i != 29) assertEquals("Bad index: " + i, 25, flow.getCellLength(i), 0.0);
         }
     }
+
+    /*
+    ** if we scroll the flow by a number of LINES,
+    ** without having done anything to select a cell
+    ** the flow should scroll.
+    */ 
+    @Test public void testInitialScrollEventActuallyScrolls() {
+        /*
+        ** re-initialize this, as it must be the first
+        ** interaction with the flow
+        */
+        flow = new VirtualFlow();
+        flow.setVertical(true);
+        flow.setCreateCell(new Callback<VirtualFlow, IndexedCell>() {
+            @Override public IndexedCell call(VirtualFlow p) {
+                return new CellStub(flow) {
+                    @Override protected double computeMinWidth(double height) { return computePrefWidth(height); }
+                    @Override protected double computeMaxWidth(double height) { return computePrefWidth(height); }
+                    @Override protected double computePrefWidth(double height) {
+                        return flow.isVertical() ? (c.getIndex() == 29 ? 200 : 100) : (c.getIndex() == 29 ? 100 : 25);
+                    }
+
+                    @Override protected double computeMinHeight(double width) { return computePrefHeight(width); }
+                    @Override protected double computeMaxHeight(double width) { return computePrefHeight(width); }
+                    @Override protected double computePrefHeight(double width) {
+                        return flow.isVertical() ? (c.getIndex() == 29 ? 100 : 25) : (c.getIndex() == 29 ? 200 : 100);
+                    }
+                };
+            }
+        });
+        
+        flow.setCellCount(100);
+        flow.resize(300, 300);
+        pulse();
+       
+        double originalValue = flow.getPosition();
+
+        Event.fireEvent(flow, 
+              ScrollEvent.impl_scrollEvent(ScrollEvent.SCROLL,
+                          0.0, -10.0, 0.0, -10.0,
+                          ScrollEvent.HorizontalTextScrollUnits.NONE, 0.0,
+                          ScrollEvent.VerticalTextScrollUnits.LINES, -1.0,
+                          0,
+                          0, 0,
+                          0, 0,
+                          false, false, false, false, true, false));
+
+        assertTrue(originalValue != flow.getPosition());
+    }
 }
 
 class CellStub extends IndexedCell {
@@ -878,6 +929,7 @@ class CellStub extends IndexedCell {
     private void init(VirtualFlow flow) {
         this.flow = flow;
         setSkin(new SkinStub<CellStub>(this));
+        updateItem(this, false);
     }
 
     @Override

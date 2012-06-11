@@ -106,6 +106,9 @@ import com.sun.javafx.scene.control.WeakListChangeListener;
                 }
             }
             updateSelection();
+            // RT-21891 weird initial appearance: need a better fix for this instead
+            // of having to rely on impl_processCSS. 
+            popup.getScene().getRoot().impl_processCSS(true); 
             requestLayout(); // RT-18052 resize of choicebox should happen immediately.
         }
     };

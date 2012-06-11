@@ -25,7 +25,6 @@
 
 package com.sun.javafx.scene.control.skin;
 
-import javafx.event.ActionEvent;
 import javafx.event.EventHandler;
 import javafx.geometry.Side;
 import javafx.scene.control.Button;
@@ -66,26 +65,10 @@ public class ButtonSkin extends LabeledSkinBase<Button, ButtonBehavior<Button>> 
             setCancelButton(true);
         }       
 
-        button.addEventHandler(ActionEvent.ACTION, new EventHandler<ActionEvent>() {
-            @Override public void handle(ActionEvent e) {
-
-                ContextMenu cm = getSkinnable().getContextMenu();
-                if (cm != null) {
-                    if (!cm.isShowing()) {
-                        cm.show(getSkinnable(), Side.RIGHT, 0, 0);
-                        Utils.addMnemonics(cm, getSkinnable().getScene());
-                    }
-                    else {
-                        cm.hide();
-                        Utils.removeMnemonics(cm, getSkinnable().getScene());
-                    }
-                }
-            }
-        });
     }
 
 
-    @Override protected void handleControlPropertyChanged(String p) {
+    @Override protected void handleControlPropertyChanged(String p) {        
         super.handleControlPropertyChanged(p);
         if (p == "DEFAULT_BUTTON") {
             setDefaultButton(getSkinnable().isDefaultButton());
@@ -103,6 +86,11 @@ public class ButtonSkin extends LabeledSkinBase<Button, ButtonBehavior<Button>> 
                     }
                 }
            }
+        } else if (p == "PARENT") {
+            if (getSkinnable().getParent() == null) {
+                getScene().getAccelerators().remove(defaultAcceleratorKeyCodeCombination);
+                getScene().getAccelerators().remove(cancelAcceleratorKeyCodeCombination);
+            }
         }
     }
 
@@ -115,67 +103,68 @@ public class ButtonSkin extends LabeledSkinBase<Button, ButtonBehavior<Button>> 
         };
 
     Runnable cancelButtonRunnable = new Runnable() {
-            public void run() {                
+            public void run() {   
                 if (!getSkinnable().isDisabled()) {
                     getSkinnable().fire();
                 }
             }
         };
 
+    private KeyCodeCombination defaultAcceleratorKeyCodeCombination;
+    
     private void setDefaultButton(boolean value) {
 
         KeyCode acceleratorCode = KeyCode.ENTER;
-        KeyCodeCombination acceleratorKeyCombo = 
+        defaultAcceleratorKeyCodeCombination = 
                 new KeyCodeCombination(acceleratorCode);
 
         if (value == false) {
             /*
             ** first check of there's a default button already
             */
-            Runnable oldDefault = getSkinnable().getParent().getScene().getAccelerators().get(acceleratorKeyCombo);
+            Runnable oldDefault = getSkinnable().getParent().getScene().getAccelerators().get(defaultAcceleratorKeyCodeCombination);
             if (!defaultButtonRunnable.equals(oldDefault)) {
                 /*
                 ** is it us?
                 */
-                getSkinnable().getParent().getScene().getAccelerators().remove(acceleratorKeyCombo);
+                getSkinnable().getParent().getScene().getAccelerators().remove(defaultAcceleratorKeyCodeCombination);
             }
         }
         else {
             /*
             ** first check of there's a default button already
             */
-            Runnable oldDefault = getSkinnable().getParent().getScene().getAccelerators().get(acceleratorKeyCombo);
+            Runnable oldDefault = getSkinnable().getParent().getScene().getAccelerators().get(defaultAcceleratorKeyCodeCombination);
         }
-        getSkinnable().getParent().getScene().getAccelerators().put(acceleratorKeyCombo, defaultButtonRunnable);
+        getSkinnable().getParent().getScene().getAccelerators().put(defaultAcceleratorKeyCodeCombination, defaultButtonRunnable);
     }
 
-
+    private KeyCodeCombination cancelAcceleratorKeyCodeCombination;
 
     private void setCancelButton(boolean value) {
-
         KeyCode acceleratorCode = KeyCode.ESCAPE;
-        KeyCodeCombination acceleratorKeyCombo =
+        cancelAcceleratorKeyCodeCombination =
                 new KeyCodeCombination(acceleratorCode);
-
+        
         if (value == false) {
             /*
             ** first check of there's a default button already
             */
-            Runnable oldDefault = getSkinnable().getParent().getScene().getAccelerators().get(acceleratorKeyCombo);
+            Runnable oldDefault = getSkinnable().getParent().getScene().getAccelerators().get(cancelAcceleratorKeyCodeCombination);
             if (!defaultButtonRunnable.equals(oldDefault)) {
                 /*
                 ** is it us?
                 */
-                getSkinnable().getParent().getScene().getAccelerators().remove(acceleratorKeyCombo);
+                getSkinnable().getParent().getScene().getAccelerators().remove(cancelAcceleratorKeyCodeCombination);
             }
         }
         else {
             /*
             ** first check of there's a default button already
             */
-            Runnable oldDefault = getSkinnable().getParent().getScene().getAccelerators().get(acceleratorKeyCombo);
-        }
-        getSkinnable().getParent().getScene().getAccelerators().put(acceleratorKeyCombo, cancelButtonRunnable);
+            Runnable oldDefault = getSkinnable().getParent().getScene().getAccelerators().get(cancelAcceleratorKeyCodeCombination);
+        }        
+        getSkinnable().getParent().getScene().getAccelerators().put(cancelAcceleratorKeyCodeCombination, cancelButtonRunnable);
     }
 
 }

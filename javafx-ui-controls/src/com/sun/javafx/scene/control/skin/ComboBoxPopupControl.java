@@ -137,5 +137,6 @@ public abstract class ComboBoxPopupControl<T> extends ComboBoxBaseSkin<T> {
         };
         getSkinnable().layoutXProperty().addListener(layoutPosListener);
         getSkinnable().layoutYProperty().addListener(layoutPosListener);
+        getSkinnable().widthProperty().addListener(layoutPosListener);
     }
 }
