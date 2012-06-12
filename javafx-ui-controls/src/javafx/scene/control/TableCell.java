@@ -97,8 +97,12 @@ public class TableCell<S,T> extends IndexedCell<T> {
     };
     
     @Override void indexChanged() {
-        itemDirty = true;
-        requestLayout();
+        // Ideally we would just use the following two lines of code, rather
+        // than the updateItem() call beneath, but if we do this we end up with
+        // RT-22428 where all the columns are collapsed.
+        // itemDirty = true;
+        // requestLayout();
+        updateItem();
     }
 
     /*
