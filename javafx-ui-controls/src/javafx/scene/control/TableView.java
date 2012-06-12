@@ -1845,6 +1845,7 @@ public class TableView<S> extends Control {
          *                                                                     *
          **********************************************************************/
 
+        private int previousModelSize = 0;
         
         // Listen to changes in the tableview items list, such that when it 
         // changes we can update the selected indices list to refer to the 
@@ -1852,12 +1853,26 @@ public class TableView<S> extends Control {
         private void updateSelection(ListChangeListener.Change<? extends S> c) {
             while (c.next()) {
                 if (c.wasReplaced()) {
-                    // Fix for RT-18969: the items list had setAll called on it
-                    if (getSelectedIndex() < getRowCount()) {
-                        int selectedIndex = getSelectedIndex();
-                        clearSelection(selectedIndex);
-                        select(selectedIndex);
+                    if (c.getList().isEmpty()) {
+                        // the entire items list was emptied - clear selection
+                        clearSelection();
+                    } else {
+                        int index = getSelectedIndex();
+                        
+                        if (previousModelSize == c.getRemovedSize()) {
+                            // all items were removed from the model
+                            clearSelection();
+                        } else if (index < getRowCount() && index >= 0) {
+                            // Fix for RT-18969: the list had setAll called on it
+                            clearSelection(index);
+                            select(index);
+                        } else {
+                            // Fix for RT-22079
+                            clearSelection();
+                        }
                     }
+                    
+                    
                 } else if (c.wasAdded() || c.wasRemoved()) {
                     int position = c.getFrom();
                     int shift = c.wasAdded() ? c.getAddedSize() : -c.getRemovedSize();
@@ -1925,6 +1940,8 @@ public class TableView<S> extends Control {
                     selectedCellsSeq.callObservers(new NonIterableChange.SimpleAddChange<TablePosition>(0, newIndices.size(), selectedCellsSeq));
                 }
             }
+            
+            previousModelSize = getRowCount();
         }
 
         /***********************************************************************
