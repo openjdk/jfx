@@ -251,7 +251,9 @@ public class Canvas extends Node {
     @Deprecated
     @Override
     public BaseBounds impl_computeGeomBounds(BaseBounds bounds, BaseTransform tx) {
-        return new RectBounds(0f, 0f, (float) getWidth(), (float) getHeight());
+        bounds = new RectBounds(0f, 0f, (float) getWidth(), (float) getHeight());  
+        bounds = tx.transform(bounds, bounds);
+        return bounds;
     }
 
     /**
