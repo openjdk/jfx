@@ -281,6 +281,12 @@ abstract class MultipleSelectionModelBase<T> extends MultipleSelectionModel<T> {
         if (row < 0 || row >= getItemCount()) {
             return;
         }
+        
+        boolean isSameRow = row == getSelectedIndex();
+        T currentItem = getSelectedItem();
+        T newItem = getModelItem(row);
+        boolean isSameItem = newItem != null && newItem.equals(currentItem);
+        boolean fireUpdatedItemEvent = isSameRow && ! isSameItem;
 
         if (! selectedIndices.get(row)) {
             if (getSelectionMode() == SINGLE) {
@@ -294,6 +300,10 @@ abstract class MultipleSelectionModelBase<T> extends MultipleSelectionModel<T> {
         
         // TODO this isn't correct
         selectedIndicesSeq.callObservers(new NonIterableChange.SimpleAddChange<Integer>(0, 1, selectedIndicesSeq));
+        
+        if (fireUpdatedItemEvent) {
+            setSelectedItem(newItem);
+        }
     }
 
     @Override public void select(T obj) {

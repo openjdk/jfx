@@ -914,7 +914,8 @@ public class ListView<T> extends Control {
 
             this.listView.itemsProperty().addListener(weakItemsObserver);
             if (listView.getItems() != null) {
-                updateItemsObserver(null, listView.getItems());
+                this.listView.getItems().addListener(weakItemsContentObserver);
+//                updateItemsObserver(null, this.listView.getItems());
             }
         }
         

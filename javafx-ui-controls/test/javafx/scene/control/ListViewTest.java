@@ -6,6 +6,8 @@ package javafx.scene.control;
 import static javafx.scene.control.ControlTestUtils.assertStyleClassContains;
 import static org.junit.Assert.*;
 import java.util.Arrays;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.SimpleObjectProperty;
@@ -351,13 +353,22 @@ public class ListViewTest {
         assertTrue(sm.isSelected(0));
         assertEquals(1, hitCount);
         
+        // sleep for 100ms so that the currentTimeMillis is guaranteed to be
+        // a different value than the first one
+        try {
+            Thread.sleep(100);
+        } catch (InterruptedException ex) {
+            ex.printStackTrace();
+        }
+        
         // the list is totally changing (it is being cleared), so we should 
         // be nulling out the selection model state
         mod = FXCollections.observableArrayList();
         mod.add(System.currentTimeMillis()+"");
         listView.getItems().setAll(mod);
         
-        // it should be three, as there is a null event in between
-        assertEquals(3, hitCount);
+        // it should be two, as there is no null event in between (although there
+        // used to be, so the test used to be for three hits)
+        assertEquals(2, hitCount);
     }
 }
