@@ -708,4 +708,22 @@ public class TabPaneTest {
         tk.firePulse();        
         assertEquals(tab2, tabPane.getSelectionModel().getSelectedItem());
     }
+    
+    @Test public void unableToSelectNextTabWhenFirstTabIsClosed_RT22326() {
+        tabPane.getTabs().add(tab1);
+        tabPane.getTabs().add(tab2);
+        tabPane.getTabs().add(tab3);
+
+        assertEquals("one", tabPane.getTabs().get(0).getText());
+        assertEquals("two", tabPane.getTabs().get(1).getText());
+        assertEquals("three", tabPane.getTabs().get(2).getText());
+        
+        tabPane.getTabs().remove(tab1);
+
+        assertEquals(2, tabPane.getTabs().size());
+        assertEquals(0, tabPane.getSelectionModel().getSelectedIndex());
+        assertEquals(tab2, tabPane.getSelectionModel().getSelectedItem());
+        tabPane.getSelectionModel().selectNext();
+        assertEquals(tab3, tabPane.getSelectionModel().getSelectedItem());
+    }
 }
