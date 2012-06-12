@@ -1097,18 +1097,18 @@ public class TableColumn<S,T> implements EventTarget {
         return columns;
     }
     
-//    /**
-//     * Returns the actual value for a cell at a given row index (and which 
-//     * belongs to this TableColumn).
-//     * 
-//     * @param index The row index for which the data is required.
-//     * @return The data that belongs to the cell at the intersection of the given
-//     *      row index and the TableColumn that this method is called on.
-//     */
-//    public final T getCellData(final int index) {
-//        ObservableValue<T> result = getCellObservableValue(index);
-//        return result == null ? null : result.getValue();
-//    }
+    /**
+     * Returns the actual value for a cell at a given row index (and which 
+     * belongs to this TableColumn).
+     * 
+     * @param index The row index for which the data is required.
+     * @return The data that belongs to the cell at the intersection of the given
+     *      row index and the TableColumn that this method is called on.
+     */
+    public final T getCellData(final int index) {
+        ObservableValue<T> result = getCellObservableValue(index);
+        return result == null ? null : result.getValue();
+    }
 
     /**
      * Returns the actual value for a cell from the given item.
