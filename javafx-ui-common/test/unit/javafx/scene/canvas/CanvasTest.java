@@ -25,7 +25,14 @@
 package javafx.scene.canvas;
 
 import javafx.scene.NodeTest;
+import javafx.scene.effect.BlendMode;
+import javafx.scene.paint.Color;
 import javafx.scene.shape.ArcType;
+import javafx.scene.shape.StrokeLineCap;
+import javafx.scene.shape.StrokeLineJoin;
+import javafx.scene.transform.Affine;
+import javafx.scene.transform.Rotate;
+import javafx.scene.transform.Transform;
 import org.junit.Test;
 import static org.junit.Assert.*;
 
@@ -200,13 +207,165 @@ public class CanvasTest {
     
     
     
-    @Test public void testGCState_basic() throws Exception {
-        //need getters
+    @Test public void testGCState_Translate() throws Exception {
         Canvas node = new Canvas();
         GraphicsContext gc = node.getGraphicsContext2D();
         
         gc.translate(50, 50);
+        Affine result = gc.getTransform();
+        Affine expected = new Affine();
+        
+        expected.setTx(50);
+        expected.setTy(50);
+        
+        assertMatrix(result, expected);
     }
     
-            
+    @Test public void testGCState_Scale() throws Exception {
+        Canvas node = new Canvas();
+        GraphicsContext gc = node.getGraphicsContext2D();
+        
+        gc.scale(3, 3);
+        Affine result = gc.getTransform();
+        Affine expected = new Affine();
+        
+        expected.setMxx(3);
+        expected.setMyy(3);
+        
+        assertMatrix(result, expected);
+    }
+
+    @Test public void testGCState_Rotate() throws Exception {
+        Canvas node = new Canvas();
+        GraphicsContext gc = node.getGraphicsContext2D();
+        
+        gc.rotate(45.0);
+        Affine result = gc.getTransform();
+        
+        Rotate expected = new Rotate(45, 0, 0);
+                
+        assertMatrix(result, expected);
+    }
+
+    @Test public void testGCState_getTransform() throws Exception {
+        Canvas node = new Canvas();
+        GraphicsContext gc = node.getGraphicsContext2D();
+        
+
+        Affine expected = new Affine();
+        gc.setTransform(expected);
+        Affine result = gc.getTransform();
+        
+        assertMatrix(result, expected);
+        
+        gc.setTransform(expected.getMxx(), expected.getMyx(), expected.getMxy(), 
+                expected.getMyy(), expected.getTx(), expected.getTy());
+        
+        Affine result2 = gc.getTransform();
+        
+        assertMatrix(result2, expected);        
+    }
+
+    @Test public void testGCState_FillStrokeSaveRestore() throws Exception {
+        Canvas node = new Canvas();
+        GraphicsContext gc = node.getGraphicsContext2D();
+        
+        Affine expected = new Affine();
+        gc.setTransform(expected);
+        Affine result = gc.getTransform();
+        
+        assertMatrix(result, expected);
+        
+        gc.setFill(Color.BLACK);
+        assertEquals(Color.BLACK, gc.getFill());
+        gc.save();
+        gc.setFill(Color.RED);
+        assertEquals(gc.getFill(), Color.RED);
+        gc.restore();
+        assertEquals(Color.BLACK, gc.getFill());
+        gc.setStroke(Color.BLACK);
+        assertEquals(Color.BLACK, gc.getStroke());
+        gc.save();
+        gc.setStroke(Color.RED);
+        assertEquals(gc.getStroke(), Color.RED);
+        gc.restore();
+        assertEquals(Color.BLACK, gc.getStroke());
+        assertMatrix(result, expected);
+    }
+
+    @Test public void testGCState_Line() throws Exception {
+        Canvas node = new Canvas();
+        GraphicsContext gc = node.getGraphicsContext2D();
+        
+        gc.setLineCap(StrokeLineCap.BUTT);
+        gc.setLineJoin(StrokeLineJoin.MITER);
+        gc.setLineWidth(5);
+        gc.setMiterLimit(3);
+        
+        gc.save();
+        gc.setLineCap(StrokeLineCap.ROUND);
+        gc.setLineJoin(StrokeLineJoin.BEVEL);
+        gc.setLineWidth(1);
+        gc.setMiterLimit(1);
+        assertEquals(gc.getLineCap(), StrokeLineCap.ROUND);
+        assertEquals(gc.getLineJoin(), StrokeLineJoin.BEVEL);
+        assertEquals(gc.getLineWidth(), 1, 0.00001);
+        assertEquals(gc.getMiterLimit(), 1, 0.00001);
+        gc.restore();
+        
+        assertEquals(gc.getLineCap(), StrokeLineCap.BUTT);
+        assertEquals(gc.getLineJoin(), StrokeLineJoin.MITER);
+        assertEquals(gc.getLineWidth(), 5, 0.00001);
+        assertEquals(gc.getMiterLimit(), 3, 0.00001);
+    }
+
+    @Test (expected=NullPointerException.class) 
+    public void testGCState_LineNull() throws Exception {
+        Canvas node = new Canvas();
+        GraphicsContext gc = node.getGraphicsContext2D();
+        
+        gc.setLineCap(null);     
+    }
+
+    @Test (expected=NullPointerException.class) 
+    public void testGCState_LineNull2() throws Exception {
+        Canvas node = new Canvas();
+        GraphicsContext gc = node.getGraphicsContext2D();
+        
+        gc.setLineJoin(null);      
+    }
+
+    @Test public void testGCState_BlendMode() throws Exception {
+        Canvas node = new Canvas();
+        GraphicsContext gc = node.getGraphicsContext2D();
+        
+        gc.setGlobalBlendMode(BlendMode.ADD);
+        gc.setGlobalAlpha(0);
+        
+        gc.save();
+        gc.setGlobalAlpha(0.5);
+        gc.setGlobalBlendMode(BlendMode.COLOR_BURN);
+        assertEquals(gc.getGlobalBlendMode(), BlendMode.COLOR_BURN);
+        assertEquals(gc.getGlobalAlpha(), 0.5, 0.000001);
+        gc.restore();
+        
+        assertEquals(BlendMode.ADD, gc.getGlobalBlendMode());
+        assertEquals(0, gc.getGlobalAlpha(), 0.000001);       
+    }
+
+    public static void assertMatrix(Transform expected,
+            Transform result) {
+        assertEquals(expected.getMxx(), result.getMxx(), 0.00001);
+        assertEquals(expected.getMxy(), result.getMxy(), 0.00001);
+        assertEquals(expected.getMxz(), result.getMxz(), 0.00001);
+        assertEquals(expected.getTx(), result.getTx(), 0.00001);
+        assertEquals(expected.getMyx(), result.getMyx(), 0.00001);
+        assertEquals(expected.getMyy(), result.getMyy(), 0.00001);
+        assertEquals(expected.getMyz(), result.getMyz(), 0.00001);
+        assertEquals(expected.getTy(), result.getTy(), 0.00001);
+        assertEquals(expected.getMzx(), result.getMzx(), 0.00001);
+        assertEquals(expected.getMzy(), result.getMzy(), 0.00001);
+        assertEquals(expected.getMzz(), result.getMzz(), 0.00001);
+        assertEquals(expected.getTz(), result.getTz(), 0.00001);
+    }  
 }

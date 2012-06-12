@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2012, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -23,36 +23,22 @@
  * questions.
  */
 
-package javafx.scene.input;
+package com.sun.javafx.image;
 
-import com.sun.javafx.test.BuilderTestBase;
-import java.util.Arrays;
-import java.util.Collection;
-import javafx.scene.shape.Rectangle;
+import java.nio.ByteBuffer;
 
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
-import org.junit.runners.Parameterized.Parameters;
+public interface ByteToBytePixelConverter
+    extends PixelConverter<ByteBuffer, ByteBuffer>
+{
+    public void convert(byte       srcarr[], int srcoff, int srcscanbytes,
+                        byte       dstarr[], int dstoff, int dstscanbytes,
+                        int w, int h);
 
-@RunWith(Parameterized.class)
-public final class TouchPoint_builder_Test extends BuilderTestBase {
-    @Parameters
-    public static Collection data() {
-        BuilderTestBase.Configuration cfg = new BuilderTestBase.Configuration(TouchPoint.class);
+    public void convert(ByteBuffer srcbuf,   int srcoff, int srcscanbytes,
+                        byte       dstarr[], int dstoff, int dstscanbytes,
+                        int w, int h);
 
-        cfg.addProperty("x", 1.0);
-        cfg.addProperty("y", 1.0);
-        cfg.addProperty("screenX", 1.0);
-        cfg.addProperty("screenY", 1.0);
-        cfg.addProperty("state", TouchPoint.State.MOVED);
-        cfg.addProperty("id", 1);
-
-        return Arrays.asList(new Object[] {
-            config(cfg)
-        });
-    }
-
-    public TouchPoint_builder_Test(final Configuration configuration) {
-        super(configuration);
-    }
+    public void convert(byte       srcarr[], int srcoff, int srcscanbytes,
+                        ByteBuffer dstbuf,   int dstoff, int dstscanbytes,
+                        int w, int h);
 }
