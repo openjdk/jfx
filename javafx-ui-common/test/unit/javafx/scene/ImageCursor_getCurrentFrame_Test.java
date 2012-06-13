@@ -47,13 +47,13 @@ public final class ImageCursor_getCurrentFrame_Test {
     @Test
     public void specialCasesTest() {
         final Object defaultCursorFrame =
-                Cursor.DEFAULT.impl_getCurrentFrame();
+                Cursor.DEFAULT.getCurrentFrame();
 
         assertEquals(defaultCursorFrame,
-                     new ImageCursor(null).impl_getCurrentFrame());
+                     new ImageCursor(null).getCurrentFrame());
 
         assertEquals(defaultCursorFrame,
-                     new ImageCursor(TEST_ERROR_IMAGE).impl_getCurrentFrame());
+                     new ImageCursor(TEST_ERROR_IMAGE).getCurrentFrame());
     }
 
     @Test
@@ -72,28 +72,28 @@ public final class ImageCursor_getCurrentFrame_Test {
 
         animatedImageCursor.activate();
 
-        lastCursorFrame = animatedImageCursor.impl_getCurrentFrame();
+        lastCursorFrame = animatedImageCursor.getCurrentFrame();
 
         toolkit.setAnimationTime(1000);
-        currCursorFrame = animatedImageCursor.impl_getCurrentFrame();
+        currCursorFrame = animatedImageCursor.getCurrentFrame();
         assertSame(lastCursorFrame, currCursorFrame);
         
         lastCursorFrame = currCursorFrame;
 
         toolkit.setAnimationTime(2500);
-        currCursorFrame = animatedImageCursor.impl_getCurrentFrame();
+        currCursorFrame = animatedImageCursor.getCurrentFrame();
         assertNotSame(lastCursorFrame, currCursorFrame);
         
         lastCursorFrame = currCursorFrame;
 
         toolkit.setAnimationTime(4500);
-        currCursorFrame = animatedImageCursor.impl_getCurrentFrame();
+        currCursorFrame = animatedImageCursor.getCurrentFrame();
         assertNotSame(lastCursorFrame, currCursorFrame);
 
         lastCursorFrame = currCursorFrame;
 
         toolkit.setAnimationTime(7000);
-        currCursorFrame = animatedImageCursor.impl_getCurrentFrame();
+        currCursorFrame = animatedImageCursor.getCurrentFrame();
         assertNotSame(lastCursorFrame, currCursorFrame);
 
         animatedImageCursor.deactivate();
@@ -116,27 +116,27 @@ public final class ImageCursor_getCurrentFrame_Test {
 
         toolkit.setAnimationTime(1000);
         final Object time1000CursorFrame =
-                animatedImageCursor.impl_getCurrentFrame();
+                animatedImageCursor.getCurrentFrame();
 
         toolkit.setAnimationTime(2500);
         final Object time2500CursorFrame =
-                animatedImageCursor.impl_getCurrentFrame();
+                animatedImageCursor.getCurrentFrame();
 
         toolkit.setAnimationTime(4500);
         final Object time4500CursorFrame =
-                animatedImageCursor.impl_getCurrentFrame();
+                animatedImageCursor.getCurrentFrame();
 
         toolkit.setAnimationTime(6000 + 1000);
         assertSame(time1000CursorFrame,
-                   animatedImageCursor.impl_getCurrentFrame());
+                   animatedImageCursor.getCurrentFrame());
 
         toolkit.setAnimationTime(6000 + 2500);
         assertSame(time2500CursorFrame,
-                   animatedImageCursor.impl_getCurrentFrame());
+                   animatedImageCursor.getCurrentFrame());
 
         toolkit.setAnimationTime(6000 + 4500);
         assertSame(time4500CursorFrame,
-                   animatedImageCursor.impl_getCurrentFrame());
+                   animatedImageCursor.getCurrentFrame());
 
         animatedImageCursor.deactivate();
 

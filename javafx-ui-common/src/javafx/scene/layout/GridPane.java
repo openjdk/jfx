@@ -828,12 +828,12 @@ public class GridPane extends Pane {
             while (c.next()) {
                 for (RowConstraints constraints : c.getRemoved()) {
                     if (constraints != null && !rowConstraints.contains(constraints)) {
-                        constraints.impl_remove(GridPane.this);
+                        constraints.remove(GridPane.this);
                     }
                 }
                 for (RowConstraints constraints : c.getAddedSubList()) {
                     if (constraints != null) {
-                        constraints.impl_add(GridPane.this);
+                        constraints.add(GridPane.this);
                     }
                 }
             }
@@ -858,12 +858,12 @@ public class GridPane extends Pane {
             while(c.next()) {
                 for (ColumnConstraints constraints : c.getRemoved()) {
                     if (constraints != null && !columnConstraints.contains(constraints)) {
-                        constraints.impl_remove(GridPane.this);
+                        constraints.remove(GridPane.this);
                     }
                 }
                 for (ColumnConstraints constraints : c.getAddedSubList()) {
                     if (constraints != null) {
-                        constraints.impl_add(GridPane.this);
+                        constraints.add(GridPane.this);
                     }
                 }
             }
