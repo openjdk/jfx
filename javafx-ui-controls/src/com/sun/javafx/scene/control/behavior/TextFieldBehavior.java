@@ -51,6 +51,7 @@ import com.sun.javafx.scene.control.skin.TextFieldSkin;
 import com.sun.javafx.scene.text.HitInfo;
 
 import static com.sun.javafx.PlatformUtil.*;
+import javafx.geometry.Rectangle2D;
 
 /**
  * Text field behavior.
@@ -314,15 +315,15 @@ public class TextFieldBehavior extends TextInputControlBehavior<TextField> {
                 skin.populateContextMenu(contextMenu);
                 double menuWidth = contextMenu.prefWidth(-1);
                 double menuX = screenX - (PlatformUtil.isEmbedded() ? (menuWidth / 2) : 0);
-                Screen currentScreen = com.sun.javafx.Utils.getScreenForPoint(0, 0);
-                double maxWidth = currentScreen.getVisualBounds().getWidth();
+                Screen currentScreen = com.sun.javafx.Utils.getScreenForPoint(screenX, 0);
+                Rectangle2D bounds = currentScreen.getBounds();
 
-                if (menuX < 0) {
+                if (menuX < bounds.getMinX()) {
                     skin.getProperties().put("CONTEXT_MENU_SCREEN_X", screenX);
                     skin.getProperties().put("CONTEXT_MENU_SCENE_X", sceneX);
-                    contextMenu.show(getControl(), 0, screenY);
-                } else if (screenX + menuWidth > maxWidth) {
-                    double leftOver = menuWidth - (maxWidth - screenX);
+                    contextMenu.show(getControl(), bounds.getMinX(), screenY);
+                } else if (screenX + menuWidth > bounds.getMaxX()) {
+                    double leftOver = menuWidth - ( bounds.getMaxX() - screenX);
                     skin.getProperties().put("CONTEXT_MENU_SCREEN_X", screenX);
                     skin.getProperties().put("CONTEXT_MENU_SCENE_X", sceneX);
                     contextMenu.show(getControl(), screenX - leftOver, screenY);
