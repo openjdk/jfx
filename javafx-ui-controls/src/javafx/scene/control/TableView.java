@@ -60,6 +60,7 @@ import com.sun.javafx.scene.control.TableColumnComparator;
 import com.sun.javafx.scene.control.WeakListChangeListener;
 import com.sun.javafx.scene.control.skin.TableViewSkin;
 import com.sun.javafx.scene.control.skin.VirtualContainerBase;
+import java.lang.ref.WeakReference;
 import java.util.HashMap;
 import javafx.beans.DefaultProperty;
 import javafx.beans.WeakInvalidationListener;
@@ -821,19 +822,25 @@ public class TableView<S> extends Control {
     public final ObjectProperty<ObservableList<S>> itemsProperty() { return items; }
     private ObjectProperty<ObservableList<S>> items = 
         new SimpleObjectProperty<ObservableList<S>>(this, "items") {
+            WeakReference<ObservableList<S>> oldItemsRef;
+            
             @Override protected void invalidated() {
+                ObservableList<S> oldItems = oldItemsRef == null ? null : oldItemsRef.get();
+                
                 // FIXME temporary fix for RT-15793. This will need to be
                 // properly fixed when time permits
                 if (getSelectionModel() instanceof TableViewArrayListSelectionModel) {
-                    ((TableViewArrayListSelectionModel)getSelectionModel()).updateItemsObserver(null, getItems());
+                    ((TableViewArrayListSelectionModel)getSelectionModel()).updateItemsObserver(oldItems, getItems());
                 }
                 if (getFocusModel() instanceof TableViewFocusModel) {
-                    ((TableViewFocusModel)getFocusModel()).updateItemsObserver(null, getItems());
+                    ((TableViewFocusModel)getFocusModel()).updateItemsObserver(oldItems, getItems());
                 }
                 if (getSkin() instanceof TableViewSkin) {
                     TableViewSkin skin = (TableViewSkin) getSkin();
-                    skin.updateTableItems(null, getItems());
+                    skin.updateTableItems(oldItems, getItems());
                 }
+                
+                oldItemsRef = new WeakReference<ObservableList<S>>(getItems());
             }
         };
     public final void setItems(ObservableList<S> value) { itemsProperty().set(value); }
@@ -1799,11 +1806,17 @@ public class TableView<S> extends Control {
         final WeakListChangeListener weakItemsContentListener 
                 = new WeakListChangeListener(itemsContentListener);
         
+        private int newListHash = -1;
         private void updateItemsObserver(ObservableList<S> oldList, ObservableList<S> newList) {
             // the listview items list has changed, we need to observe
             // the new list, and remove any observer we had from the old list
-            if (oldList != null) oldList.removeListener(weakItemsContentListener);
-            if (newList != null) newList.addListener(weakItemsContentListener);
+            if (oldList != null) {
+                oldList.removeListener(weakItemsContentListener);
+            }
+            if (newList != null && newList.hashCode() != newListHash) {
+                newListHash = newList.hashCode();
+                newList.addListener(weakItemsContentListener);
+            }
 
             // when the items list totally changes, we should clear out
             // the selection
@@ -1845,6 +1858,7 @@ public class TableView<S> extends Control {
          *                                                                     *
          **********************************************************************/
 
+        private int previousModelSize = 0;
         
         // Listen to changes in the tableview items list, such that when it 
         // changes we can update the selected indices list to refer to the 
@@ -1852,12 +1866,26 @@ public class TableView<S> extends Control {
         private void updateSelection(ListChangeListener.Change<? extends S> c) {
             while (c.next()) {
                 if (c.wasReplaced()) {
-                    // Fix for RT-18969: the items list had setAll called on it
-                    if (getSelectedIndex() < getRowCount()) {
-                        int selectedIndex = getSelectedIndex();
-                        clearSelection(selectedIndex);
-                        select(selectedIndex);
+                    if (c.getList().isEmpty()) {
+                        // the entire items list was emptied - clear selection
+                        clearSelection();
+                    } else {
+                        int index = getSelectedIndex();
+                        
+                        if (previousModelSize == c.getRemovedSize()) {
+                            // all items were removed from the model
+                            clearSelection();
+                        } else if (index < getRowCount() && index >= 0) {
+                            // Fix for RT-18969: the list had setAll called on it
+                            clearSelection(index);
+                            select(index);
+                        } else {
+                            // Fix for RT-22079
+                            clearSelection();
+                        }
                     }
+                    
+                    
                 } else if (c.wasAdded() || c.wasRemoved()) {
                     int position = c.getFrom();
                     int shift = c.wasAdded() ? c.getAddedSize() : -c.getRemovedSize();
@@ -1925,6 +1953,8 @@ public class TableView<S> extends Control {
                     selectedCellsSeq.callObservers(new NonIterableChange.SimpleAddChange<TablePosition>(0, newIndices.size(), selectedCellsSeq));
                 }
             }
+            
+            previousModelSize = getRowCount();
         }
 
         /***********************************************************************

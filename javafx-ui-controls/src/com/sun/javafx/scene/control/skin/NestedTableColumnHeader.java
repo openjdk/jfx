@@ -158,13 +158,25 @@ class NestedTableColumnHeader extends TableColumnHeader {
         // clear the column headers list before we recreate them
         getColumnHeaders().clear();
         
-        // then iterate through all columns.
-        for (int i = 0; i < getColumns().size(); i++) {
-            TableColumn<?,?> column = getColumns().get(i);
-            
-            if (column == null) continue;
-            
-            getColumnHeaders().add(createColumnHeader(column));
+        // then iterate through all columns, unless we've got no child columns
+        // any longer, in which case we should switch to a TableColumnHeader 
+        // instead
+        if (getColumns().isEmpty()) {
+            // switch out to be a TableColumn instead
+            NestedTableColumnHeader parentHeader = getParentHeader();
+            if (parentHeader != null) {
+                TableColumnHeader newHeader = createColumnHeader(getTableColumn());
+                int index = parentHeader.getColumnHeaders().indexOf(this);
+                parentHeader.getColumnHeaders().set(index, newHeader);
+            }
+        } else {
+            for (int i = 0; i < getColumns().size(); i++) {
+                TableColumn<?,?> column = getColumns().get(i);
+
+                if (column == null) continue;
+
+                getColumnHeaders().add(createColumnHeader(column));
+            }
         }
 
         // update the content

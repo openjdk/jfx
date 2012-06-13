@@ -27,7 +27,6 @@ package com.sun.javafx.scene.control.skin;
 
 
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
 import java.util.WeakHashMap;
 
@@ -188,6 +187,8 @@ public class TableRowSkin<T> extends CellSkinBase<TableRow<T>, CellBehaviorBase<
         }
     }
 
+    private int columnCount = 0;
+    
     private void recreateCells() {
         // This function is smart in the sense that we don't recreate all
         // TableCell instances every time this function is called. Instead we
@@ -205,11 +206,13 @@ public class TableRowSkin<T> extends CellSkinBase<TableRow<T>, CellBehaviorBase<
         
         ObservableList<TableColumn<T,?>> columns = table.getVisibleLeafColumns();
         
-        if (fullRefreshCounter == 0 || cellsMap == null) {
+        if (columns.size() != columnCount || fullRefreshCounter == 0 || cellsMap == null) {
             clearCellsMap();
             cellsMap = new WeakHashMap<TableColumn, TableCell>(columns.size());
             fullRefreshCounter = DEFAULT_FULL_REFRESH_COUNTER;
+            getChildren().clear();
         }
+        columnCount = columns.size();
         fullRefreshCounter--;
         
         for (TableColumn col : columns) {
