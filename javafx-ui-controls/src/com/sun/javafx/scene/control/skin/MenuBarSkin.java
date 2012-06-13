@@ -90,13 +90,30 @@ public class MenuBarSkin extends SkinBase<MenuBar, BehaviorBase<MenuBar>> implem
     private boolean firstF10 = true;
 
     private static WeakHashMap<Stage, MenuBarSkin> systemMenuMap;
-    private static List<MenuBase> emptyMenuList = new ArrayList<MenuBase>();
+    private static List<MenuBase> wrappedDefaultMenus = new ArrayList<MenuBase>();
     private static Stage currentMenuBarStage;
     private List<MenuBase> wrappedMenus;
 
+    public static void setDefaultSystemMenuBar(final MenuBar menuBar) {
+        if (Toolkit.getToolkit().getSystemMenu().isSupported()) {
+            wrappedDefaultMenus.clear();
+            for (Menu menu : menuBar.getMenus()) {
+                wrappedDefaultMenus.add(GlobalMenuAdapter.adapt(menu));
+            }
+            menuBar.getMenus().addListener(new ListChangeListener<Menu>() {
+                @Override public void onChanged(Change<? extends Menu> c) {
+                    wrappedDefaultMenus.clear();
+                    for (Menu menu : menuBar.getMenus()) {
+                        wrappedDefaultMenus.add(GlobalMenuAdapter.adapt(menu));
+                    }
+                }
+            });
+        }
+    }
+
     private static void setSystemMenu(Stage stage) {
-        if (stage.isFocused()) {
-            while (stage.getOwner() instanceof Stage) {
+        if (stage != null && stage.isFocused()) {
+            while (stage != null && stage.getOwner() instanceof Stage) {
                 MenuBarSkin skin = systemMenuMap.get(stage);
                 if (skin != null && skin.wrappedMenus != null) {
                     break;
@@ -108,15 +125,23 @@ public class MenuBarSkin extends SkinBase<MenuBar, BehaviorBase<MenuBar>> implem
                     stage = (Stage)stage.getOwner();
                 }
             }
-            if (stage != currentMenuBarStage) {
-                List<MenuBase> menuList = null;
+        } else {
+            stage = null;
+        }
+
+        if (stage != currentMenuBarStage) {
+            List<MenuBase> menuList = null;
+            if (stage != null) {
                 MenuBarSkin skin = systemMenuMap.get(stage);
                 if (skin != null) {
                     menuList = skin.wrappedMenus;
                 }
-                Toolkit.getToolkit().getSystemMenu().setMenus((menuList != null) ? menuList : emptyMenuList);
-                currentMenuBarStage = stage;
             }
+            if (menuList == null) {
+                menuList = wrappedDefaultMenus;
+            }
+            Toolkit.getToolkit().getSystemMenu().setMenus(menuList);
+            currentMenuBarStage = stage;
         }
     }
 
