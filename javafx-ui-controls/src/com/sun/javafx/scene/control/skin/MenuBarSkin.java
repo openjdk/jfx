@@ -310,11 +310,13 @@ public class MenuBarSkin extends SkinBase<MenuBar, BehaviorBase<MenuBar>> implem
             public void changed(ObservableValue<? extends Scene> ov, Scene t, Scene t1) {
                 if (weakSceneKeyEventHandler != null) {
                     // remove event filter from the old scene (t)
-                    t.removeEventFilter(KeyEvent.KEY_PRESSED, weakSceneKeyEventHandler);
+                    if (t != null)
+                        t.removeEventFilter(KeyEvent.KEY_PRESSED, weakSceneKeyEventHandler);
                 }
                 if (weakSceneMouseEventHandler != null) {
                     // remove event filter from the old scene (t)
-                    t.removeEventFilter(MouseEvent.MOUSE_CLICKED, weakSceneMouseEventHandler);
+                    if (t != null)
+                        t.removeEventFilter(MouseEvent.MOUSE_CLICKED, weakSceneMouseEventHandler);
                 }
             }
         });
