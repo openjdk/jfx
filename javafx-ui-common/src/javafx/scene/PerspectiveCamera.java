@@ -70,7 +70,7 @@ public  class PerspectiveCamera extends Camera {
 
                 @Override
                 protected void invalidated() {
-                    impl_markDirty();
+                    markDirty();
                 }
 
                 @Override
@@ -88,7 +88,7 @@ public  class PerspectiveCamera extends Camera {
     }
 
     public PerspectiveCamera() {
-        impl_markDirty();
+        markDirty();
     }
 
     @Override
@@ -96,16 +96,11 @@ public  class PerspectiveCamera extends Camera {
         return Toolkit.getToolkit().createPerspectiveCamera();
     }
 
-    /**
-     * @treatAsPrivate implementation detail
-     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
-     */
-    @Deprecated
-    @Override protected void impl_update() {
-        if (impl_isDirty()) {
+    @Override void update() {
+        if (isDirty()) {
             PerspectiveCameraImpl perspectiveCameraImpl = (PerspectiveCameraImpl) getPlatformCamera();
             perspectiveCameraImpl.setFieldOfView((float)getFieldOfView());
-            impl_clearDirty();
+            clearDirty();
         }
     }
 

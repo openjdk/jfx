@@ -55,7 +55,9 @@ public class ContextMenuEvent extends InputEvent {
 
     /**
      * @treatAsPrivate implementation detail
+     * @deprecated
      */
+    @Deprecated
     public static ContextMenuEvent impl_contextEvent(double _x, double _y,
           double _screenX, double _screenY, boolean _keyboardTrigger,
           EventType<? extends ContextMenuEvent> _eventType

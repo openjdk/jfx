@@ -286,12 +286,7 @@ public class ImageCursor extends Cursor {
         return imageCursor;
     }
 
-    /**
-     * @treatAsPrivate implementation detail
-     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
-     */
-    @Deprecated
-    @Override public CursorFrame impl_getCurrentFrame() {
+    @Override CursorFrame getCurrentFrame() {
         if (currentCursorFrame != null) {
             return currentCursorFrame;
         }
@@ -299,13 +294,13 @@ public class ImageCursor extends Cursor {
         final Image cursorImage = getImage();
 
         if (cursorImage == null) {
-            currentCursorFrame = Cursor.DEFAULT.impl_getCurrentFrame();
+            currentCursorFrame = Cursor.DEFAULT.getCurrentFrame();
             return currentCursorFrame;
         }
 
         final Object cursorPlatformImage = cursorImage.impl_getPlatformImage();
         if (cursorPlatformImage == null) {
-            currentCursorFrame = Cursor.DEFAULT.impl_getCurrentFrame();
+            currentCursorFrame = Cursor.DEFAULT.getCurrentFrame();
             return currentCursorFrame;
         }
 

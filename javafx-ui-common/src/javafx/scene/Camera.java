@@ -49,45 +49,21 @@ public abstract class Camera {
 
     abstract CameraImpl createPlatformCamera();
 
-    /**
-     * @treatAsPrivate implementation detail
-     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
-     */
-    @Deprecated
-    protected abstract void impl_update();
+    abstract void update();
     private BooleanProperty dirty = new SimpleBooleanProperty(this, "dirty");
 
-    private void setDirty(boolean value) {
-        dirty.set(value);
-    }
+    final ObservableBooleanValue dirtyProperty() { return dirty; }
 
-    ObservableBooleanValue dirtyProperty() { return dirty; }
-
-    /**
-     * @treatAsPrivate implementation detail
-     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
-     */
-    @Deprecated
-    protected boolean impl_isDirty() {
+    final boolean isDirty() {
         return dirty.get();
     }
 
-    /**
-     * @treatAsPrivate implementation detail
-     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
-     */
-    @Deprecated
-    protected final void impl_markDirty() {
-        setDirty(true);
+    final void markDirty() {
+        dirty.set(true);
     }
 
-    /**
-     * @treatAsPrivate implementation detail
-     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
-     */
-    @Deprecated
-    protected final void impl_clearDirty() {
-        setDirty(false);
+    final void clearDirty() {
+        dirty.set(false);
     }
 
     Camera copy() {

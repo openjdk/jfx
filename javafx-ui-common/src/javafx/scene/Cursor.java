@@ -170,12 +170,7 @@ public abstract class Cursor {
         this.name = name;
     }
 
-    /**
-     * @treatAsPrivate implementation detail
-     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
-     */
-    @Deprecated
-    public abstract CursorFrame impl_getCurrentFrame();
+    abstract CursorFrame getCurrentFrame();
 
     /**
      * Activates the cursor. Cursor should be activated to make sure
@@ -287,12 +282,8 @@ public abstract class Cursor {
             singleFrame = new StandardCursorFrame(type);
         }
 
-        /**
-         * @treatAsPrivate implementation detail
-         * @deprecated This is an internal API that is not intended for use and will be removed in the next version
-         */
         @Override
-        public CursorFrame impl_getCurrentFrame() {
+        CursorFrame getCurrentFrame() {
             return singleFrame;
         }
     }
