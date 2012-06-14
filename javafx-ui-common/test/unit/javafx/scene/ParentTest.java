@@ -481,6 +481,25 @@ public class ParentTest {
 
     }
 
+    @Test
+    public void nodeCanBeAddedDuringLayout() {
+        final Rectangle rect = new Rectangle(100, 100);
+        final Group g = new Group(rect);
+
+        Group root = new Group() {
+            @Override protected void layoutChildren() {
+                getChildren().setAll(g);
+            }
+        };
+
+        Scene scene = new Scene(root);
+
+        stage.setScene(scene);
+        stage.show();
+
+        // there are assertions tested down the stack (see RT-21746)
+    }
+
     public static class MockParent extends Parent {
         public MockParent(Node... children) {
             getChildren().addAll(children);

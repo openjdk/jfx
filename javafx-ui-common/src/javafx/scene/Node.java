@@ -697,14 +697,6 @@ public abstract class Node implements EventTarget {
                 @Override
                 protected void invalidated() {
                     Scene _scene = get();
-                    if (oldScene != _scene) {
-                        //Note: no need to remove from scene's dirty list
-                        //Scene's is checking if the node's scene is correct
-                        impl_reapplyCSS();
-                        if (_scene != null && !impl_isDirtyEmpty()) {
-                            _scene.addToDirtyList(Node.this);
-                        }
-                    }
                     if (getClip() != null) {
                         getClip().setScene(_scene);
                     }
@@ -720,6 +712,14 @@ public abstract class Node implements EventTarget {
                     focusSetDirty(oldScene);
                     focusSetDirty(_scene);
                     impl_sceneChanged(oldScene);
+                    if (oldScene != _scene) {
+                        //Note: no need to remove from scene's dirty list
+                        //Scene's is checking if the node's scene is correct
+                        impl_reapplyCSS();
+                        if (_scene != null && !impl_isDirtyEmpty()) {
+                            _scene.addToDirtyList(Node.this);
+                        }
+                    }
                     oldScene = _scene;
                 }
 
