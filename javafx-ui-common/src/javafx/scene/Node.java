@@ -73,7 +73,6 @@ import com.sun.javafx.binding.ExpressionHelper;
 import com.sun.javafx.collections.TrackableObservableList;
 import com.sun.javafx.collections.UnmodifiableListSet;
 import com.sun.javafx.css.*;
-import com.sun.javafx.css.StyleHelper.StyleCacheKey;
 import com.sun.javafx.css.converters.*;
 import com.sun.javafx.effect.EffectDirtyBits;
 import com.sun.javafx.geom.BaseBounds;
@@ -887,24 +886,7 @@ public abstract class Node implements EventTarget {
 
                 @Override
                 protected void invalidated() {
-                    //
-                    // Here, we used to call reapplyCSS(). But there is 
-                    // no need to create a new StyleHelper if just the 
-                    // inline style has changed since the inline style is
-                    // not cached...unless there is no StyleHelper. If there
-                    // is an inline style, there needs to be a StyleHelper. 
-                    //
-                    if (getScene() != null) {
-                        
-                        if (cssFlag != CSSFlags.REAPPLY) {
-                            if (impl_getStyleHelper() == null) {
-                                impl_reapplyCSS();
-                            } else if (cssFlag != CSSFlags.UPDATE) {
-                                cssFlag = CSSFlags.UPDATE; 
-                                notifyParentsOfInvalidatedCSS();
-                            }
-                        }
-                    } 
+                    impl_reapplyCSS();
                 }
 
                 @Override
@@ -7383,13 +7365,6 @@ public abstract class Node implements EventTarget {
      */
     @Deprecated
     protected StyleHelper impl_createStyleHelper() {
-
-        // set the key to null here so the next call to impl_getStyleCacheKey
-        // will cause a new key to be created
-        if (styleCacheKey != null) {
-            styleCacheKey.clearCache();
-        }
-        styleCacheKey = null;
         
         styleHelper = StyleManager.getInstance().getStyleHelper(this);
         return styleHelper;
@@ -7402,41 +7377,7 @@ public abstract class Node implements EventTarget {
      */
     @Deprecated
     public StyleHelper impl_getStyleHelper() {
-
-        // if styleHelper is invalid, then StyleManager has discarded it
-        if (styleHelper != null && styleHelper.isInvalid()) {
-
-            styleHelper = impl_createStyleHelper();
-
-        }
         return styleHelper;
-    }
-
-    private StyleCacheKey styleCacheKey;
-    /**
-     * Return a key for this Node's cached values in StyleHelper. The key is
-     * unique to the set of StyleHelpers of this node and its parents'
-     * StyleHelpers, but not necessarily unique to all Nodes.
-     * @treatAsPrivate Implementation detail
-     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
-     */
-    @Deprecated
-    public StyleCacheKey impl_getStyleCacheKey() {
-
-        final StyleHelper styleHelper = impl_getStyleHelper();
-
-        // cannot have a cache key without a helper...
-        if (styleHelper == null || styleHelper.isInvalid()) {
-            styleCacheKey = null;
-            return null;
-        }
-
-        //  we have a helper, do we have a key?
-        if (styleCacheKey == null) {
-            styleCacheKey = styleHelper.createStyleCacheKey(this);
-        } 
-        
-        return styleCacheKey;
     }
 
     private static final long HOVER_PSEUDOCLASS_STATE = StyleManager.getInstance().getPseudoclassMask("hover");

@@ -345,6 +345,7 @@ public abstract class Labeled extends Control {
     private ObjectProperty<Font> font;
     public final void setFont(Font value) { fontProperty().setValue(value); }
     public final Font getFont() { return font == null ? Font.getDefault() : font.getValue(); }
+    
 
     /**
      * An optional icon for the Labeled. This can be positioned relative to the
