@@ -810,7 +810,7 @@ public class PieChart extends Chart {
         };
          
          private static final StyleableProperty<PieChart,Boolean> LABELS_VISIBLE = 
-             new StyleableProperty<PieChart,Boolean>("-fx-labels-visible",
+             new StyleableProperty<PieChart,Boolean>("-fx-pie-label-visible",
                  BooleanConverter.getInstance(), Boolean.TRUE) {
 
             @Override

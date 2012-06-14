@@ -185,7 +185,9 @@ public class ScatterChart<X,Y> extends XYChart<X,Y> {
             for (int seriesIndex=0; seriesIndex< getData().size(); seriesIndex++) {
                 Series<X,Y> series = getData().get(seriesIndex);
                 LegendItem legenditem = new LegendItem(series.getName());
-                legenditem.getSymbol().getStyleClass().addAll(series.getData().get(0).getNode().getStyleClass());
+                if (series.getData().get(0).getNode() != null) {
+                    legenditem.getSymbol().getStyleClass().addAll(series.getData().get(0).getNode().getStyleClass());
+                }
                 legend.getItems().add(legenditem);
             }
         }

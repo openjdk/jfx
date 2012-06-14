@@ -371,4 +371,15 @@ public class ListViewTest {
         // used to be, so the test used to be for three hits)
         assertEquals(2, hitCount);
     }
+    
+    @Test public void test_rt21586() {
+        listView.getItems().setAll("Apple", "Orange", "Banana");
+        listView.getSelectionModel().select(1);
+        assertEquals(1, listView.getSelectionModel().getSelectedIndex());
+        assertEquals("Orange", listView.getSelectionModel().getSelectedItem());
+        
+        listView.getItems().setAll("Kiwifruit", "Pineapple", "Grape");
+        assertEquals(-1, listView.getSelectionModel().getSelectedIndex());
+        assertNull(listView.getSelectionModel().getSelectedItem());
+    }
 }

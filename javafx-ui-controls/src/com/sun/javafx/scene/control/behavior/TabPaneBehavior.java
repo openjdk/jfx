@@ -145,7 +145,7 @@ public class TabPaneBehavior extends BehaviorBase<TabPane> {
         if (tab.isSelected()) {
             if (index == 0) {
                 if (tabPane.getTabs().size() > 1) {
-                    tabPane.getSelectionModel().selectFirst();
+                    tabPane.getSelectionModel().clearSelection();
                 }
             } else {
                 tabPane.getSelectionModel().selectPrevious();

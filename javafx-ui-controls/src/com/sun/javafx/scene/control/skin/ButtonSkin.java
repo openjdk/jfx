@@ -68,7 +68,7 @@ public class ButtonSkin extends LabeledSkinBase<Button, ButtonBehavior<Button>> 
     }
 
 
-    @Override protected void handleControlPropertyChanged(String p) {        
+    @Override protected void handleControlPropertyChanged(String p) {     
         super.handleControlPropertyChanged(p);
         if (p == "DEFAULT_BUTTON") {
             setDefaultButton(getSkinnable().isDefaultButton());
@@ -87,9 +87,13 @@ public class ButtonSkin extends LabeledSkinBase<Button, ButtonBehavior<Button>> 
                 }
            }
         } else if (p == "PARENT") {
-            if (getSkinnable().getParent() == null) {
-                getScene().getAccelerators().remove(defaultAcceleratorKeyCodeCombination);
-                getScene().getAccelerators().remove(cancelAcceleratorKeyCodeCombination);
+            if (getSkinnable().getParent() == null && getScene() != null) {  
+                if (getSkinnable().isDefaultButton()) {
+                    getScene().getAccelerators().remove(defaultAcceleratorKeyCodeCombination);
+                }
+                if (getSkinnable().isCancelButton()) {
+                    getScene().getAccelerators().remove(cancelAcceleratorKeyCodeCombination);
+                }
             }
         }
     }

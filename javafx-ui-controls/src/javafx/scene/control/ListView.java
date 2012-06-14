@@ -979,6 +979,8 @@ public class ListView<T> extends Control {
          **********************************************************************/
 
         private final ListView<T> listView;
+        
+        private int previousModelSize = 0;
 
         // Listen to changes in the listview items list, such that when it 
         // changes we can update the selected indices bitset to refer to the 
@@ -1007,9 +1009,13 @@ public class ListView<T> extends Control {
                         // the entire items list was emptied - clear selection
                         clearSelection();
                     } else {
-                        // Fix for RT-18969: the list had setAll called on it
                         int index = getSelectedIndex();
-                        if (index < getItemCount() && index >= 0) {
+                        
+                        if (previousModelSize == c.getRemovedSize()) {
+                            // all items were removed from the model
+                            clearSelection();
+                        } else if (index < getItemCount() && index >= 0) {
+                            // Fix for RT-18969: the list had setAll called on it
                             // Use of makeAtomic is a fix for RT-20945
                             makeAtomic = true;
                             clearSelection(index);
@@ -1077,6 +1083,8 @@ public class ListView<T> extends Control {
                     }
                 }
             }
+            
+            previousModelSize = getItemCount();
         }
 
 

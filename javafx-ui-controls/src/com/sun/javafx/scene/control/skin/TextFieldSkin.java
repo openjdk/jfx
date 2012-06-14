@@ -690,8 +690,9 @@ public class TextFieldSkin extends TextInputControlSkin<TextField, TextFieldBeha
 
             x = bounds.getMinX();
             y = bounds.getMinY();
-            width = bounds.getWidth();
-            height = bounds.getHeight();
+            // Sometimes the bounds is empty, in which case we must ignore the width/height
+            width  = bounds.isEmpty() ? 0 : bounds.getWidth();
+            height = bounds.isEmpty() ? 0 : bounds.getHeight();
         }
 
         Bounds textBounds = textGroup.getBoundsInParent();

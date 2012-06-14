@@ -636,6 +636,7 @@ public class TabPane extends Control {
                                     tab.setSelected(false);
                                     if (c.getFrom() == 0) {
                                         if (tabPane.getTabs().size() > 1) {
+                                            clearSelection();
                                             selectFirst();
                                         }
                                     } else {

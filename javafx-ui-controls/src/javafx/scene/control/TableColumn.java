@@ -284,10 +284,12 @@ public class TableColumn<S,T> implements EventTarget {
                     tc.setTableView(getTableView());
                 }
                 
-                // set the parent of this column to also have this tableView
-                if (getParentColumn() != null) {
-                    getParentColumn().setTableView(getTableView());
-                }
+                // This code was commented out due to RT-22391, with this enabled
+                // the parent column will be null, which is not desired
+//                // set the parent of this column to also have this tableView
+//                if (getParentColumn() != null) {
+//                    getParentColumn().setTableView(getTableView());
+//                }
             }
         });
     }
