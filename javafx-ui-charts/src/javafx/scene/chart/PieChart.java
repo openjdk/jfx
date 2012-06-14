@@ -71,6 +71,7 @@ import com.sun.javafx.css.StyleableProperty;
 import com.sun.javafx.css.converters.BooleanConverter;
 import com.sun.javafx.css.converters.SizeConverter;
 import java.util.ArrayList;
+import javafx.animation.*;
 
 /**
  * Displays a PieChart. The chart content is populated by pie slices based on
@@ -92,11 +93,11 @@ public class PieChart extends Chart {
     private Data begin = null;
     private final Path labelLinePath = new Path();
     private Legend legend = new Legend();
+    private Data dataItemBeingRemoved = null;
+    private Timeline dataRemoveTimeline = null;
     private final ListChangeListener<Data> dataChangeListener = new ListChangeListener<Data>() {
         @Override public void onChanged(Change<? extends Data> c) {
             while(c.next()) {
-            // remove chart references from old data
-            for (Data item : c.getRemoved()) item.setChart(null);
             // recreate linked list & set chart on new data
             for(int i=c.getFrom(); i<c.getTo(); i++) {
                 getData().get(i).setChart(PieChart.this);
@@ -359,6 +360,17 @@ public class PieChart extends Chart {
         final Text text = createPieLabel(itemIndex, item);
         item.getChart().getChartChildren().add(shape);
         if (shouldAnimate()) {
+            // if the same data item is being removed, first stop the remove animation,
+            // remove the item and then start the add animation.
+            if (dataRemoveTimeline != null && dataRemoveTimeline.getStatus().equals(Animation.Status.RUNNING)) {
+                if (dataItemBeingRemoved == item) {
+                    dataRemoveTimeline.stop();
+                    dataRemoveTimeline = null;
+                    getChartChildren().remove(item.textNode);
+                    getChartChildren().remove(shape);
+                    removeDataItemRef(item);
+                }
+            }
             animate(
                 new KeyFrame(Duration.ZERO,
                     new KeyValue(item.currentPieValueProperty(), item.getCurrentPieValue()),
@@ -368,7 +380,7 @@ public class PieChart extends Chart {
                         @Override public void handle(ActionEvent actionEvent) {
                             text.setOpacity(0);
                             item.getChart().getChartChildren().add(text);
-                            FadeTransition ft = new FadeTransition(Duration.millis(300),text);
+                            FadeTransition ft = new FadeTransition(Duration.millis(150),text);
                             ft.setToValue(1);
                             ft.play();
                         }
@@ -394,12 +406,11 @@ public class PieChart extends Chart {
             if(ptr != null) ptr.next = item.next;
         }
     }
-
-    private void dataItemRemoved(final Data item) {
+    
+    private Timeline createDataRemoveTimeline(final Data item) {
         final Node shape = item.getNode();
-        if (shouldAnimate()) {
-            animate(
-                new KeyFrame(Duration.ZERO,
+        Timeline t = new Timeline();
+        t.getKeyFrames().addAll(new KeyFrame(Duration.ZERO,
                     new KeyValue(item.currentPieValueProperty(), item.getCurrentPieValue()),
                     new KeyValue(item.radiusMultiplierProperty(), item.getRadiusMultiplier())),
                 new KeyFrame(Duration.millis(500),
@@ -408,25 +419,37 @@ public class PieChart extends Chart {
                             // removing item
                             getChartChildren().remove(shape);
                             // fade out label
-                            FadeTransition ft = new FadeTransition(Duration.millis(300),item.textNode);
+                            FadeTransition ft = new FadeTransition(Duration.millis(150),item.textNode);
                             ft.setFromValue(1);
                             ft.setToValue(0);
                             ft.setOnFinished(new EventHandler<ActionEvent>() {
                                  @Override public void handle(ActionEvent actionEvent) {
                                      getChartChildren().remove(item.textNode);
+                                     // remove chart references from old data - RT-22553
+                                     item.setChart(null);
+                                     removeDataItemRef(item);
                                  }
                             });
                             ft.play();
-                            removeDataItemRef(item);
                         }
                     },
                     new KeyValue(item.currentPieValueProperty(), 0, Interpolator.EASE_BOTH),
-                    new KeyValue(item.radiusMultiplierProperty(), 0)
-                )
-            );
+                    new KeyValue(item.radiusMultiplierProperty(), 0))
+                );
+        return t;
+    }
+
+    private void dataItemRemoved(final Data item) {
+        final Node shape = item.getNode();
+        if (shouldAnimate()) {
+            dataRemoveTimeline = createDataRemoveTimeline(item);
+            dataItemBeingRemoved = item;
+            animate(dataRemoveTimeline);
         } else {
             getChartChildren().remove(item.textNode);
             getChartChildren().remove(shape);
+            // remove chart references from old data
+            item.setChart(null);
             removeDataItemRef(item);
         }
     }
