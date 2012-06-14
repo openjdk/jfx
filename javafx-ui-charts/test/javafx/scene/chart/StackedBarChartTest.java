@@ -68,17 +68,17 @@ public class StackedBarChartTest extends ChartTestBase {
         // compute bounds for the first series
         sb = computeBoundsString((Region)childrenList.get(0), (Region)childrenList.get(1),
                 (Region)childrenList.get(2));
-        assertEquals("10 472 216 35 236 426 216 81 461 369 216 138 ", sb.toString());
+        assertEquals("10 483 236 36 256 436 236 83 501 378 236 141 ", sb.toString());
         
         // compute bounds for the second series
         sb = computeBoundsString((Region)childrenList.get(3), (Region)childrenList.get(4),
                 (Region)childrenList.get(5));
-        assertEquals("10 412 216 60 236 321 216 105 461 214 216 155 ", sb.toString());
+        assertEquals("10 421 236 62 256 328 236 108 501 220 236 158 ", sb.toString());
         
         // compute bounds for the third series
         sb = computeBoundsString((Region)childrenList.get(6), (Region)childrenList.get(7),
                 (Region)childrenList.get(8));
-        assertEquals("10 362 216 50 236 258 216 63 461 37 216 177 ", sb.toString());
+        assertEquals("10 370 236 51 256 264 236 64 501 39 236 181 ", sb.toString());
     }
     
     @Test

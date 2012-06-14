@@ -73,7 +73,7 @@ public abstract class Axis<T> extends Region {
 
     // -------------- PRIVATE FIELDS -----------------------------------------------------------------------------------
 
-    private Text measure = new Text();
+    Text measure = new Text();
     private Label axisLabel = new Label();
     private final Path tickMarkPath = new Path();
     private double oldLength = 0;
@@ -81,8 +81,6 @@ public abstract class Axis<T> extends Region {
     private boolean rangeValid = false;
     double maxWidth = 0;
     double maxHeight = 0;
-    private boolean tickLabelFontPropertySet = false;
-    private boolean tickLabelFillPropertySet = false;
     // -------------- PUBLIC PROPERTIES --------------------------------------------------------------------------------
 
     private final ObservableList<TickMark<T>> tickMarks = FXCollections.observableArrayList();
@@ -258,7 +256,9 @@ public abstract class Axis<T> extends Region {
         @Override protected void invalidated() {
             Font f = get();
             measure.setFont(f);
-            tickLabelFontPropertySet = true;
+            for(TickMark<T> tm : getTickMarks()) {
+                tm.textNode.setFont(f);
+            }
             requestAxisLayout();
         }
 
@@ -284,7 +284,6 @@ public abstract class Axis<T> extends Region {
     /** The fill for all tick labels */
     private ObjectProperty<Paint> tickLabelFill = new StyleableObjectProperty<Paint>(Color.BLACK) {
         @Override protected void invalidated() {
-            tickLabelFillPropertySet = true;
             requestAxisLayout();
         }
 
@@ -379,7 +378,6 @@ public abstract class Axis<T> extends Region {
         axisLabel.setAlignment(Pos.CENTER);
         tickMarkPath.getStyleClass().add("axis-tick-mark");
         getChildren().addAll(axisLabel, tickMarkPath);
-        measure.getStyleClass().addAll("text", "tick-mark");
     }
 
     // -------------- METHODS ------------------------------------------------------------------------------------------
@@ -690,15 +688,8 @@ public abstract class Axis<T> extends Region {
                 final TickMark<T> tick = new TickMark<T>();
                 tick.setValue(newValue);
                 tick.textNode.setText(getTickMarkLabel(newValue));
-                // RT-19870 : font & fill is set on text node if it is set programmatically.
-                // else it will take what ever is specified via CSS
-                if (tickLabelFontPropertySet) {
-                    tick.textNode.setFont(getTickLabelFont());
-                }
-                if (tickLabelFillPropertySet) {
-                    tick.textNode.setFill(getTickLabelFill());
-                }
-                
+                tick.textNode.setFont(getTickLabelFont());
+                tick.textNode.setFill(getTickLabelFill());
                 tick.setTextVisible(isTickLabelsVisible());
                 if (shouldAnimate()) tick.textNode.setOpacity(0);
                 getChildren().add(tick.textNode);
@@ -985,7 +976,7 @@ public abstract class Axis<T> extends Region {
         public final void setPosition(double value) { position.set(value); }
         public final DoubleExpression positionProperty() { return position; }
 
-        private Text textNode = new Text();
+        Text textNode = new Text();
 
         /** true if tick mark labels should be displayed */
         private BooleanProperty textVisible = new BooleanPropertyBase(true) {
@@ -1017,7 +1008,6 @@ public abstract class Axis<T> extends Region {
          * Creates and initializes an instance of TickMark. 
          */
         public TickMark() {
-            textNode.getStyleClass().addAll("text", "tick-mark");
         }
 
         /**
