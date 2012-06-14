@@ -31,6 +31,7 @@ import com.sun.javafx.scene.control.WeakListChangeListener;
 import javafx.scene.control.ComboBox;
 import com.sun.javafx.scene.control.behavior.ComboBoxListViewBehavior;
 import java.util.List;
+import javafx.application.Platform;
 import javafx.beans.InvalidationListener;
 import javafx.beans.Observable;
 import javafx.beans.value.ChangeListener;
@@ -124,9 +125,7 @@ public class ComboBoxListViewSkin<T> extends ComboBoxPopupControl<T> {
         // move focus in to the textfield if the comboBox is editable
         comboBox.focusedProperty().addListener(new ChangeListener<Boolean>() {
             @Override public void changed(ObservableValue<? extends Boolean> ov, Boolean t, Boolean t1) {
-                if (textField == null) return;
-                if (! (textField instanceof FocusableTextField)) return;
-                ((FocusableTextField)textField).setFakeFocus(comboBox.isFocused());
+                updateFakeFocus(comboBox.isFocused());
             }
         });
         
@@ -156,12 +155,7 @@ public class ComboBoxListViewSkin<T> extends ComboBoxPopupControl<T> {
         });
         
         // Fix for RT-19431 (also tested via ComboBoxListViewSkinTest)
-        updateValue(comboBox.getValue());
-        comboBox.valueProperty().addListener(new ChangeListener<T>() {
-            @Override public void changed(ObservableValue<? extends T> ov, T oldValue, T newValue) {
-                updateValue(newValue);
-            }
-        });
+        updateValue();
         
         registerChangeListener(comboBox.itemsProperty(), "ITEMS");
         registerChangeListener(comboBox.promptTextProperty(), "PROMPT_TEXT");
@@ -170,6 +164,7 @@ public class ComboBoxListViewSkin<T> extends ComboBoxPopupControl<T> {
         registerChangeListener(comboBox.converterProperty(), "CONVERTER");
         registerChangeListener(comboBox.editorProperty(), "EDITOR");
         registerChangeListener(comboBox.buttonCellProperty(), "BUTTON_CELL");
+        registerChangeListener(comboBox.valueProperty(), "VALUE");
     }
     
     
@@ -209,6 +204,8 @@ public class ComboBoxListViewSkin<T> extends ComboBoxPopupControl<T> {
             getEditableInputNode();
         } else if ("BUTTON_CELL".equals(p)) {
             updateButtonCell();
+        } else if ("VALUE".equals(p)) {
+            updateValue();
         }
     }
     
@@ -282,27 +279,41 @@ public class ComboBoxListViewSkin<T> extends ComboBoxPopupControl<T> {
      *                                                                         *
      **************************************************************************/    
     
-    private void updateValue(T newValue) {
+    private void updateValue() {
+        T newValue = comboBox.getValue();
+        
+        SelectionModel sm = listView.getSelectionModel();
+        
         if (newValue == null) {
-            listView.getSelectionModel().clearSelection();
+            sm.clearSelection();
         } else {
-            int index = comboBox.getSelectionModel().getSelectedIndex();
-            if (index >= 0 && index < comboBox.getItems().size()) {
-                T itemsObj = comboBox.getItems().get(index);
-                if (itemsObj != null && itemsObj.equals(newValue)) {
-                    listView.getSelectionModel().select(index);
-                } else {
-                    listView.getSelectionModel().select(newValue);
-                }
+            // RT-22386: We need to test to see if the value is in the comboBox
+            // items list. If it isn't, then we should clear the listview 
+            // selection
+            int indexOfNewValue = getIndexOfComboBoxValueInItemsList();
+            if (indexOfNewValue == -1) {
+                listSelectionLock = true;
+                sm.clearSelection();
+                listSelectionLock = false;
             } else {
-                // just select the first instance of newValue in the list
-                int listViewIndex = listView.getItems().indexOf(newValue);
-                if (listViewIndex == -1) {
-                    // RT-21336 Show the ComboBox value even though it doesn't
-                    // exist in the ComboBox items list (part one of fix)
-                    updateDisplayNode();
+                int index = comboBox.getSelectionModel().getSelectedIndex();
+                if (index >= 0 && index < comboBox.getItems().size()) {
+                    T itemsObj = comboBox.getItems().get(index);
+                    if (itemsObj != null && itemsObj.equals(newValue)) {
+                        sm.select(index);
+                    } else {
+                        sm.select(newValue);
+                    }
                 } else {
-                    listView.getSelectionModel().select(listViewIndex);
+                    // just select the first instance of newValue in the list
+                    int listViewIndex = listView.getItems().indexOf(newValue);
+                    if (listViewIndex == -1) {
+                        // RT-21336 Show the ComboBox value even though it doesn't
+                        // exist in the ComboBox items list (part one of fix)
+                        updateDisplayNode();
+                    } else {
+                        sm.select(listViewIndex);
+                    }
                 }
             }
         }
@@ -323,8 +334,19 @@ public class ComboBoxListViewSkin<T> extends ComboBoxPopupControl<T> {
         textField.focusedProperty().addListener(new ChangeListener<Boolean>() {
             @Override public void changed(ObservableValue<? extends Boolean> ov, Boolean t, Boolean hasFocus) {
                 if (hasFocus) {
-                    comboBox.requestFocus();
+                    // Using Platform.runLater here, as without it it seems we
+                    // enter into some form of race condition where we are 
+                    // wanting to set focus on the comboBox whilst the textField
+                    // is still notifying of its focus gain.
+                    // This issue was identified in RT-21088.
+                    Platform.runLater(new Runnable() {
+                        @Override public void run() {
+                            comboBox.requestFocus();
+                        }
+                    });
                 }
+                
+                updateFakeFocus(hasFocus);
                 
                 // RT-21454 starts here
                 if (! hasFocus) {
@@ -334,6 +356,12 @@ public class ComboBoxListViewSkin<T> extends ComboBoxPopupControl<T> {
         });
 
         return textField;
+    }
+    
+    private void updateFakeFocus(boolean b) {
+        if (textField == null) return;
+        if (! (textField instanceof FocusableTextField)) return;
+        ((FocusableTextField)textField).setFakeFocus(b);
     }
     
     private void updateDisplayNode() {
@@ -349,7 +377,7 @@ public class ComboBoxListViewSkin<T> extends ComboBoxPopupControl<T> {
                 textField.setText(stringValue);
             }
         } else {
-            int index = getSelectedIndex();
+            int index = getIndexOfComboBoxValueInItemsList();
             if (index > -1) {
                 buttonCell.updateListView(listView);
                 buttonCell.updateIndex(index);
@@ -397,7 +425,7 @@ public class ComboBoxListViewSkin<T> extends ComboBoxPopupControl<T> {
         comboBox.setValue(value);
     }
     
-    private int getSelectedIndex() {
+    private int getIndexOfComboBoxValueInItemsList() {
         T value = comboBox.getValue();
         int index = comboBox.getItems().indexOf(value);
         return index;

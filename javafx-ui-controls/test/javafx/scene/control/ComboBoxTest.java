@@ -35,13 +35,35 @@ public class ComboBoxTest {
     private ComboBox<String> comboBox;
     private SingleSelectionModel<String> sm;
     
+    /*********************************************************************
+     *                                                                   *
+     * Utility methods                                                   *
+     *                                                                   *
+     ********************************************************************/    
+    
+    public ListView getListView() {
+        return ((ComboBoxListViewSkin)comboBox.getSkin()).getListView();
+    }
+    
+    
+    
+    /*********************************************************************
+     *                                                                   *
+     * Setup                                                             *
+     *                                                                   *
+     ********************************************************************/      
+    
     @Before public void setup() {
         comboBox = new ComboBox<String>();
         sm = comboBox.getSelectionModel();
     }
     
+    
+    
     /*********************************************************************
+     *                                                                   *
      * Tests for the constructors                                        *
+     *                                                                   *
      ********************************************************************/
     
     @Test public void noArgConstructorSetsTheStyleClass() {
@@ -747,16 +769,16 @@ public class ComboBoxTest {
         comboBox.show();
         
         comboBox.setVisibleRowCount(5);
-        double initialHeight = ((ComboBoxListViewSkin)comboBox.getSkin()).getListView().getHeight();
+        double initialHeight = getListView().getHeight();
         assertFalse("initialHeight: " + initialHeight, Double.compare(0.0, initialHeight) == 0);
         
         comboBox.setVisibleRowCount(0);
-        double smallHeight = ((ComboBoxListViewSkin)comboBox.getSkin()).getListView().getHeight();
+        double smallHeight =    getListView().getHeight();
         assertTrue("smallHeight: " + smallHeight + ", initialHeight: " + initialHeight,
                 smallHeight != initialHeight && smallHeight < initialHeight);
         
         comboBox.setVisibleRowCount(7);
-        double biggerHeight = ((ComboBoxListViewSkin)comboBox.getSkin()).getListView().getHeight();
+        double biggerHeight = getListView().getHeight();
         assertTrue(biggerHeight != smallHeight && smallHeight < biggerHeight);
     } 
     
@@ -812,7 +834,7 @@ public class ComboBoxTest {
         comboBox.getSelectionModel().select(2);
         assertEquals("2", comboBox.getValue());
         
-        ListView listView = ((ComboBoxListViewSkin)comboBox.getSkin()).getListView();
+        ListView listView = getListView();
 //        listView.impl_processCSS(true);
         
         assertEquals("2", listView.getSelectionModel().getSelectedItem());
@@ -837,8 +859,7 @@ public class ComboBoxTest {
         comboBox.impl_processCSS(true);
         comboBox.show();
         
-        ListView listView = ((ComboBoxListViewSkin)comboBox.getSkin()).getListView();
-        SelectionModel sm = listView.getSelectionModel();
+        SelectionModel sm = getListView().getSelectionModel();
         
         comboBox.getSelectionModel().select(2);
         Object item = sm.getSelectedItem();
