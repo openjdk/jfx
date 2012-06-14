@@ -31,6 +31,7 @@ import com.sun.javafx.scene.control.WeakListChangeListener;
 import javafx.scene.control.ComboBox;
 import com.sun.javafx.scene.control.behavior.ComboBoxListViewBehavior;
 import java.util.List;
+import javafx.application.Platform;
 import javafx.beans.InvalidationListener;
 import javafx.beans.Observable;
 import javafx.beans.value.ChangeListener;
@@ -124,9 +125,7 @@ public class ComboBoxListViewSkin<T> extends ComboBoxPopupControl<T> {
         // move focus in to the textfield if the comboBox is editable
         comboBox.focusedProperty().addListener(new ChangeListener<Boolean>() {
             @Override public void changed(ObservableValue<? extends Boolean> ov, Boolean t, Boolean t1) {
-                if (textField == null) return;
-                if (! (textField instanceof FocusableTextField)) return;
-                ((FocusableTextField)textField).setFakeFocus(comboBox.isFocused());
+                updateFakeFocus(comboBox.isFocused());
             }
         });
         
@@ -335,8 +334,19 @@ public class ComboBoxListViewSkin<T> extends ComboBoxPopupControl<T> {
         textField.focusedProperty().addListener(new ChangeListener<Boolean>() {
             @Override public void changed(ObservableValue<? extends Boolean> ov, Boolean t, Boolean hasFocus) {
                 if (hasFocus) {
-                    comboBox.requestFocus();
+                    // Using Platform.runLater here, as without it it seems we
+                    // enter into some form of race condition where we are 
+                    // wanting to set focus on the comboBox whilst the textField
+                    // is still notifying of its focus gain.
+                    // This issue was identified in RT-21088.
+                    Platform.runLater(new Runnable() {
+                        @Override public void run() {
+                            comboBox.requestFocus();
+                        }
+                    });
                 }
+                
+                updateFakeFocus(hasFocus);
                 
                 // RT-21454 starts here
                 if (! hasFocus) {
@@ -346,6 +356,12 @@ public class ComboBoxListViewSkin<T> extends ComboBoxPopupControl<T> {
         });
 
         return textField;
+    }
+    
+    private void updateFakeFocus(boolean b) {
+        if (textField == null) return;
+        if (! (textField instanceof FocusableTextField)) return;
+        ((FocusableTextField)textField).setFakeFocus(b);
     }
     
     private void updateDisplayNode() {
