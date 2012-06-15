@@ -150,7 +150,7 @@ public class StructureTest {
     public void testOrphan() {
         Node n = new StubNode();
 
-        assertNull("clipParent is null", n.impl_getClipParent());
+        assertNull("clipParent is null", n.getClipParent());
         assertNull("parent is null", n.getParent());
         assertNull("scene is null", n.getScene());
     }
@@ -162,7 +162,7 @@ public class StructureTest {
         parent.setClip(child);
 
         assertSame("parent.clip is child", child, parent.getClip());
-        assertSame("child.clipParent is parent", parent, child.impl_getClipParent());
+        assertSame("child.clipParent is parent", parent, child.getClipParent());
         assertNull("child.parent is null", child.getParent());
         assertNull("scene is null", child.getScene());
     }
@@ -174,7 +174,7 @@ public class StructureTest {
 
         assertNull("group.clip is null", group.getClip());
         assertTrue("isChild of group", isChild(child, group));
-        assertNull("child.clipParent is null", child.impl_getClipParent());
+        assertNull("child.clipParent is null", child.getClipParent());
         assertSame("child.parent is parent", group, child.getParent());
         assertNull("child.getScene() is null", child.getScene());
     }
@@ -185,7 +185,7 @@ public class StructureTest {
         Scene scene = new Scene(root);
 
         assertTrue("isChild of scene", isRoot(root, scene));
-        assertNull("child.clipParent is null", root.impl_getClipParent());
+        assertNull("child.clipParent is null", root.getClipParent());
         assertSame("child.getScene() is scene", scene, root.getScene());
     }
 
@@ -219,7 +219,7 @@ public class StructureTest {
         parent.setClip(null);
 
         assertNull("parent.clip is null", parent.getClip());
-        assertNull("child.clipParent is null", child.impl_getClipParent());
+        assertNull("child.clipParent is null", child.getClipParent());
     }
 
     @Test public void testUnparentG() {
@@ -253,7 +253,7 @@ public class StructureTest {
             assertSame("p1.clip is child", child, p1.getClip());
             assertNull("p2.clip is null", p2.getClip());
             assertSame("child.clipParent is p1",
-                       p1, child.impl_getClipParent());
+                       p1, child.getClipParent());
             assertNull("child.parent is null", child.getParent());
             assertNull("child.getScene() is null", child.getScene());
             throw e;
@@ -276,7 +276,7 @@ public class StructureTest {
         assertSame("p1.clip is child", child, p1.getClip());
         assertNull("p2.clip is null", p2.getClip());
         assertTrue("notChild of p2", notChild(child, p2));
-        assertSame("child.clipParent is p1", p1, child.impl_getClipParent());
+        assertSame("child.clipParent is p1", p1, child.getClipParent());
         assertNull("child.parent is null", child.getParent());
         assertNull("child.getScene() is null", child.getScene());
     }
@@ -292,7 +292,7 @@ public class StructureTest {
             //expected
         }
         assertSame("p1.clip is child", clipNode, p1.getClip());
-        assertSame("child.clipParent is p1", p1, clipNode.impl_getClipParent());
+        assertSame("child.clipParent is p1", p1, clipNode.getClipParent());
         assertNull("child.parent is null", clipNode.getParent());
         assertNull("child.getScene() is null", clipNode.getScene());
     }
@@ -308,7 +308,7 @@ public class StructureTest {
             assertNull("p1.clip is null", p1.getClip());
             assertTrue("isChild of p1", isChild(child, p1));
             assertNull("p2.clip is null", p2.getClip());
-            assertNull("child.clipParent is null", child.impl_getClipParent());
+            assertNull("child.clipParent is null", child.getClipParent());
             assertSame("child.parent is p1", p1, child.getParent());
             assertNull("child.getScene() is null", child.getScene());
             throw e;
@@ -328,7 +328,7 @@ public class StructureTest {
 //        assertTrue("isChild of p1", isChild(child, p1));
 //        assertNull("p2.clip is null", p2.clip);
 //        assertTrue("notChild of p2", notChild(child, p2));
-//        assertNull("child.clipParent is null", child.impl_getClipParent());
+//        assertNull("child.clipParent is null", child.getClipParent());
 //        assertSame("child.parent is p1", p1, child.parent);
 //        assertNull("child.getScene() is null", child.getScene());
 //    }
@@ -345,7 +345,7 @@ public class StructureTest {
 //        assertNull("p1.clip is null", p1.clip);
 //        assertTrue("isChild of p1", isChild(child, p1));
 //        assertTrue("notChild of p2", notChild(child, p2));
-//        assertNull("child.clipParent is null", child.impl_getClipParent());
+//        assertNull("child.clipParent is null", child.getClipParent());
 //        assertSame("child.parent is p1", p1, child.parent);
 //        assertNull("child.getScene() is null", child.getScene());
 //    }
@@ -372,7 +372,7 @@ public class StructureTest {
         } catch (final IllegalArgumentException e) {
             assertTrue("isRoot of scene", isRoot(root, scene));
             assertNull("p2.clip is null", p2.getClip());
-            assertNull("root.clipParent is null", root.impl_getClipParent());
+            assertNull("root.clipParent is null", root.getClipParent());
             assertSame("root.getScene() is scene", scene, root.getScene());
             throw e;
         }
@@ -391,7 +391,7 @@ public class StructureTest {
 //        assertTrue("isChild of p1", isChild(child, p1));
 //        assertNull("p2.clip is null", p2.clip);
 //        assertTrue("notChild of p2", notChild(child, p2));
-//        assertNull("child.clipParent is null", child.impl_getClipParent());
+//        assertNull("child.clipParent is null", child.getClipParent());
 //        assertSame("child.parent is p1.impl_root", p1.impl_root, child.parent);
 //        assertSame("child.getScene() is p1", p1, child.getScene());
 //    }
@@ -406,7 +406,7 @@ public class StructureTest {
 //
 //        assertTrue("isChild of p1", isChild(child, p1));
 //        assertTrue("notChild of p2", notChild(child, p2));
-//        assertNull("child.clipParent is null", child.impl_getClipParent());
+//        assertNull("child.clipParent is null", child.getClipParent());
 //        assertSame("child.parent is p1.impl_root", p1.impl_root, child.parent);
 //        assertSame("child.getScene() is p1", p1, child.getScene());
 //    }
@@ -524,9 +524,9 @@ public class StructureTest {
             assertNull("node1.clip is null", node1.getClip());
             assertSame("node1.clipParent is node2",
                        node2,
-                       node1.impl_getClipParent());
+                       node1.getClipParent());
             assertSame("node2.clip is node1", node1, node2.getClip());
-            assertNull("node2.clipParent is null", node2.impl_getClipParent());
+            assertNull("node2.clipParent is null", node2.getClipParent());
             throw e;
         }
     }
@@ -539,10 +539,10 @@ public class StructureTest {
             node1.setClip(node2);
         } catch (final IllegalArgumentException e) {
             assertNull("node1.clip is null", node1.getClip());
-            assertNull("node1.clipParent is null", node1.impl_getClipParent());
+            assertNull("node1.clipParent is null", node1.getClipParent());
             assertSame("node1.parent is node2", node2, node1.getParent());
             assertNull("node2.clip is null", node2.getClip());
-            assertNull("node2.clipParent is null", node2.impl_getClipParent());
+            assertNull("node2.clipParent is null", node2.getClipParent());
             assertTrue("node1 is child of node2", isChild(node1, node2));
             throw e;
         }
@@ -562,10 +562,10 @@ public class StructureTest {
         }
 
         assertNull("node1.clip is null", node1.getClip());
-        assertSame("node1.clipParent is node2", node2, node1.impl_getClipParent());
+        assertSame("node1.clipParent is node2", node2, node1.getClipParent());
         assertTrue("node2 is not child of node1", notChild(node2, node1));
         assertSame("node2.clip is node1", node1, node2.getClip());
-        assertNull("node2.clipParent is null", node2.impl_getClipParent());
+        assertNull("node2.clipParent is null", node2.getClipParent());
         assertNull("node2.parent is null", node2.getParent());
     }
 
@@ -594,7 +594,7 @@ public class StructureTest {
             node1.setClip(node1);
         } catch (final IllegalArgumentException e) {
             assertNull("node1.clip is null", node1.getClip());
-            assertNull("node1.clipParent is null", node1.impl_getClipParent());
+            assertNull("node1.clipParent is null", node1.getClipParent());
             throw e;
         }
     }
@@ -639,7 +639,7 @@ public class StructureTest {
 //        println("c = {c}");
 //        println("p1.clip = {p1.clip}");
 //        println("p2.clip = {p2.clip}");
-//        println("c.clipParent = {c.impl_getClipParent()}");
+//        println("c.clipParent = {c.getClipParent()}");
 //    }
 
 }

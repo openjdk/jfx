@@ -992,23 +992,13 @@ public class Window implements EventTarget {
 
     private int focusGrabCounter;
 
-    /**
-     * @treatAsPrivate implementation detail
-     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
-     */
-    @Deprecated
-    public void impl_increaseFocusGrabCounter() {
+    void increaseFocusGrabCounter() {
         if ((++focusGrabCounter == 1) && (impl_peer != null) && isFocused()) {
             impl_peer.grabFocus();
         }
     }
 
-    /**
-     * @treatAsPrivate implementation detail
-     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
-     */
-    @Deprecated
-    public void impl_decreaseFocusGrabCounter() {
+    void decreaseFocusGrabCounter() {
         if ((--focusGrabCounter == 0) && (impl_peer != null)) {
             impl_peer.ungrabFocus();
         }

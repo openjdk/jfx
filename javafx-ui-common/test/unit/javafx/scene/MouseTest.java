@@ -493,17 +493,17 @@ public class MouseTest {
         scene.processEvent(generator.generateMouseEvent(
                 MouseEvent.MOUSE_MOVED, 250, 250));
 
-        assertSame(Cursor.HAND.impl_getCurrentFrame(), scene.getCursorFrame());
+        assertSame(Cursor.HAND.getCurrentFrame(), scene.getCursorFrame());
 
         scene.processEvent(generator.generateMouseEvent(
                 MouseEvent.MOUSE_MOVED, 150, 150));
 
-        assertSame(Cursor.TEXT.impl_getCurrentFrame(), scene.getCursorFrame());
+        assertSame(Cursor.TEXT.getCurrentFrame(), scene.getCursorFrame());
 
         scene.processEvent(generator.generateMouseEvent(
                 MouseEvent.MOUSE_MOVED, 50, 50));
 
-        assertSame(Cursor.DEFAULT.impl_getCurrentFrame(),
+        assertSame(Cursor.DEFAULT.getCurrentFrame(),
                    scene.getCursorFrame());
     }
 

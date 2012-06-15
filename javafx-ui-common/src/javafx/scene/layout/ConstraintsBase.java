@@ -72,21 +72,11 @@ public abstract class ConstraintsBase {
      ConstraintsBase() {
      }
 
-    /**
-     * @treatAsPrivate implementation detail
-     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
-     */
-    @Deprecated
-     public void impl_add(Node node) {
+     void add(Node node) {
          impl_nodes.add(node);
      }
 
-    /**
-     * @treatAsPrivate implementation detail
-     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
-     */
-    @Deprecated
-    public void impl_remove(Node node) {
+    void remove(Node node) {
         impl_nodes.remove(node);
     }
 
