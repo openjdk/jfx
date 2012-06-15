@@ -605,4 +605,23 @@ public class AnchorPaneTest {
         assertEquals(30, resizable.getLayoutBounds().getWidth(), 1e-100);
         assertEquals(30, resizable.getLayoutBounds().getHeight(), 1e-100);
     }
+    
+    @Test public void testAnchorPanePrefHeightWithHorizontalBiasedChild_RT21745() {
+        AnchorPane anchorpane = new AnchorPane();
+        
+        AnchorPane internalAnchorpane = new AnchorPane();        
+
+        MockBiased biased = new MockBiased(Orientation.HORIZONTAL, 30, 256);
+                        
+        internalAnchorpane.getChildren().add(biased);
+        anchorpane.getChildren().add(internalAnchorpane);
+      
+        anchorpane.resize(500, 500);
+        anchorpane.layout();        
+        
+        assertEquals(30, anchorpane.prefWidth(-1), 1e-100);
+        assertEquals(256, anchorpane.prefHeight(-1), 1e-100);
+        assertEquals(30, internalAnchorpane.prefWidth(-1), 1e-100);
+        assertEquals(256, internalAnchorpane.prefHeight(-1), 1e-100);        
+    }    
 }
