@@ -49,7 +49,6 @@ import javafx.scene.input.KeyCombination;
 import com.sun.javafx.event.EventHandlerManager;
 import com.sun.javafx.scene.control.skin.ContextMenuContent;
 import com.sun.javafx.scene.control.skin.ContextMenuSkin;
-import com.sun.webpane.platform.ContextMenuItem;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
