@@ -130,8 +130,8 @@ public class ContextMenuContent extends StackPane {
         setUpBinds();
     }
     
-       //For testing purpose only
-    VBox getItemsContainer() {
+    //For access from controls
+    public VBox getItemsContainer() {
         return itemsContainer;
     }
     //For testing purpose only
@@ -198,7 +198,7 @@ public class ContextMenuContent extends StackPane {
             }
         }
     }
-
+    
     private void updateVisualItems() {
         itemsContainer.getChildren().clear();
         for (int row = 0; row < getItems().size(); row++) {
@@ -981,7 +981,7 @@ public class ContextMenuContent extends StackPane {
      * words, this contains and lays out a single MenuItem, regardless of it's 
      * specific subtype.
      */
-    class MenuItemContainer extends Pane {
+    public class MenuItemContainer extends Pane {
 
         private final MenuItem item;
 
@@ -994,7 +994,7 @@ public class ContextMenuContent extends StackPane {
             return (Label) label;
         }
         
-        protected MenuItem getItem() {
+        public MenuItem getItem() {
             return item;
         }
 

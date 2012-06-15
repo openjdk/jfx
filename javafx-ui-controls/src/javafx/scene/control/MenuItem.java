@@ -47,12 +47,16 @@ import javafx.scene.Node;
 import javafx.scene.input.KeyCombination;
 
 import com.sun.javafx.event.EventHandlerManager;
+import com.sun.javafx.scene.control.skin.ContextMenuContent;
+import com.sun.javafx.scene.control.skin.ContextMenuSkin;
+import com.sun.webpane.platform.ContextMenuItem;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import javafx.beans.property.ReadOnlyObjectProperty;
 import javafx.beans.property.ReadOnlyObjectWrapper;
 import javafx.collections.ObservableMap;
+import javafx.scene.Parent;
 
 /**
  * <p>
@@ -572,13 +576,16 @@ public class MenuItem implements EventTarget {
 
                 @Override
                 public Styleable getStyleableParent() {
-                    if(MenuItem.this.getParentMenu() == null) {
-                        return MenuItem.this.getParentPopup() != null 
-                            ? MenuItem.this.getParentPopup().impl_getStyleable()
+                    Menu parentMenu = MenuItem.this.getParentMenu();
+                    ContextMenu parentPopup = MenuItem.this.getParentPopup();
+                    
+                    if(parentMenu == null) {
+                        return parentPopup != null 
+                            ? parentPopup.impl_getStyleable()
                             : null;
                     } else {
-                        return MenuItem.this.getParentMenu() != null 
-                            ? MenuItem.this.getParentMenu().impl_getStyleable()
+                        return parentMenu != null 
+                            ? parentMenu.impl_getStyleable()
                             : null;
                     }
                 }
@@ -591,6 +598,30 @@ public class MenuItem implements EventTarget {
 
                 @Override
                 public Node getNode() {
+                    // Fix for RT-20582. We dive into the visual representation
+                    // of this MenuItem so that we may return it to the caller.
+                    ContextMenu parentPopup = MenuItem.this.getParentPopup();
+                    if (! (parentPopup.getSkin() instanceof ContextMenuSkin)) return null;
+                    
+                    ContextMenuSkin skin = (ContextMenuSkin) parentPopup.getSkin();
+                    if (! (skin.getNode() instanceof ContextMenuContent)) return null;
+                    
+                    ContextMenuContent content = (ContextMenuContent) skin.getNode();
+                    Parent nodes = content.getItemsContainer();
+                    
+                    MenuItem desiredMenuItem = MenuItem.this;
+                    List<Node> childrenNodes = nodes.getChildrenUnmodifiable();
+                    for (int i = 0; i < childrenNodes.size(); i++) {
+                        if (! (childrenNodes.get(i) instanceof ContextMenuContent.MenuItemContainer)) continue;
+                        
+                        ContextMenuContent.MenuItemContainer MenuRow = 
+                                (ContextMenuContent.MenuItemContainer) childrenNodes.get(i);
+                        
+                        if (desiredMenuItem.equals(MenuRow.getItem())) {
+                            return MenuRow;
+                        }
+                    }
+                    
                     return null;
                 }
 
