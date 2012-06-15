@@ -311,7 +311,14 @@ public class TableViewSkin<T> extends VirtualContainerBase<TableView<T>, TableVi
      *                                                                         *
      * Public API                                                              *
      *                                                                         *
-     **************************************************************************/    
+     **************************************************************************/  
+    
+    /**
+     * 
+     */
+    public TableHeaderRow getTableHeaderRow() {
+        return tableHeaderRow;
+    }
     
     /** {@inheritDoc} */
     @Override public int getItemCount() {

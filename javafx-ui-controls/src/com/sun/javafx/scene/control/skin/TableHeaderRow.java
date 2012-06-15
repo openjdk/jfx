@@ -58,7 +58,7 @@ import javafx.beans.property.BooleanPropertyBase;
 /**
  * Region responsible for painting the entire row of column headers.
  */
-class TableHeaderRow extends StackPane {
+public class TableHeaderRow extends StackPane {
     
     private static final String MENU_SEPARATOR = 
             ControlResources.getString("TableView.nestedColumnControlMenuSeparator");
@@ -157,6 +157,10 @@ class TableHeaderRow extends StackPane {
      * at that level.
      */
     private final NestedTableColumnHeader header;
+    
+    public NestedTableColumnHeader getRootHeader() {
+        return header;
+    }
 
     private Region filler;
 
