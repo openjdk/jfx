@@ -51,7 +51,7 @@ import javafx.scene.shape.Rectangle;
  * TableHeaderRow class consists of just one instance of a NestedTableColumnHeader.
  *
  */
-class NestedTableColumnHeader extends TableColumnHeader {
+public class NestedTableColumnHeader extends TableColumnHeader {
     
     /***************************************************************************
      *                                                                         *
