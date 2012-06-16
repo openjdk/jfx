@@ -1325,12 +1325,34 @@ public class VirtualFlow extends Region {
                 topPadding = bottomPadding = leftPadding = rightPadding = 0.0;
             }
 
+            /*
+            ** Positioning the ScrollBar
+            **  The Padding should go between the content and the edge,
+            **  otherwise changes in padding move the ScrollBar, and could
+            **  in extreme cases size the ScrollBar to become unusable.
+            **  The -1, +1 plus one bit : 
+            **   If padding in => 1 then we allow one pixel to appear as the
+            **   outside border of the Scrollbar, and the rest on the inside.
+            **   If padding is < 1 then we just stick to the edge.
+            */
             if (isVertical()) {
-                hbar.resizeRelocate(0-leftPadding, viewportLength+topPadding,
-                                    viewportBreadth+(leftPadding+rightPadding), hbar.prefHeight(viewportBreadth));
+                if (bottomPadding < 1) {
+                    hbar.resizeRelocate(0-leftPadding, viewportLength+bottomPadding,
+                                        viewportBreadth+(leftPadding+rightPadding), hbar.prefHeight(viewportBreadth));
+                }
+                else {
+                    hbar.resizeRelocate(0-leftPadding, viewportLength+bottomPadding-1,
+                                        viewportBreadth+(leftPadding+rightPadding), hbar.prefHeight(viewportBreadth)+1);
+                }
             } else {
-                vbar.resizeRelocate(viewportLength+leftPadding, 0-topPadding,
-                                    vbar.prefWidth(viewportBreadth), viewportBreadth+(topPadding+bottomPadding));
+                if (rightPadding < 1) {
+                    vbar.resizeRelocate(viewportLength+rightPadding, 0-topPadding,
+                                        vbar.prefWidth(viewportBreadth), viewportBreadth+(topPadding+bottomPadding));
+                }
+                else {
+                    vbar.resizeRelocate(viewportLength+rightPadding-1, 0-topPadding,
+                                        vbar.prefWidth(viewportBreadth)+1, viewportBreadth+(topPadding+bottomPadding));
+                }
             }
 
             // There was a weird bug where the newMax would sometimes go < 0
@@ -1388,10 +1410,30 @@ public class VirtualFlow extends Region {
                 topPadding = bottomPadding = leftPadding = rightPadding = 0.0;
             }
 
+            /*
+            ** Positioning the ScrollBar
+            **  The Padding should go between the content and the edge,
+            **  otherwise changes in padding move the ScrollBar, and could
+            **  in extreme cases size the ScrollBar to become unusable.
+            **  The -1, +1 plus one bit : 
+            **   If padding in => 1 then we allow one pixel to appear as the
+            **   outside border of the Scrollbar, and the rest on the inside.
+            **   If padding is < 1 then we just stick to the edge.
+            */
             if (isVertical()) {
-                vbar.resizeRelocate(viewportBreadth+leftPadding, 0-topPadding, vbar.prefWidth(viewportLength), viewportLength+(topPadding+bottomPadding));
+                if (rightPadding < 1) {
+                    vbar.resizeRelocate(viewportBreadth+rightPadding, 0-topPadding, vbar.prefWidth(viewportLength), viewportLength+(topPadding+bottomPadding));
+                }
+                else {
+                    vbar.resizeRelocate(viewportBreadth+rightPadding-1, 0-topPadding, vbar.prefWidth(viewportLength)+1, viewportLength+(topPadding+bottomPadding));
+                }
             } else {
-                hbar.resizeRelocate(0-leftPadding, viewportBreadth+topPadding, viewportLength+(leftPadding+rightPadding), hbar.prefHeight(-1));
+                if (bottomPadding < 1) {
+                    hbar.resizeRelocate(0-leftPadding, viewportBreadth+bottomPadding, viewportLength+(leftPadding+rightPadding), hbar.prefHeight(-1));
+                }
+                else {
+                    hbar.resizeRelocate(0-leftPadding, viewportBreadth+bottomPadding-1, viewportLength+(leftPadding+rightPadding), hbar.prefHeight(-1)+1);
+                }
             }
         }
 

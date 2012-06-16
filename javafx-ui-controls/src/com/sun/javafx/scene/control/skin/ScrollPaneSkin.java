@@ -787,8 +787,22 @@ public class ScrollPaneSkin extends SkinBase<ScrollPane, ScrollPaneBehavior> imp
         if (vsbvis) {
             /*
             ** round up position of ScrollBar, round down it's size.
+            **
+            ** Positioning the ScrollBar
+            **  The Padding should go between the content and the edge,
+            **  otherwise changes in padding move the ScrollBar, and could
+            **  in extreme cases size the ScrollBar to become unusable.
+            **  The -1, +1 plus one bit : 
+            **   If padding in => 1 then we allow one pixel to appear as the
+            **   outside border of the Scrollbar, and the rest on the inside.
+            **   If padding is < 1 then we just stick to the edge.
             */
-            vsb.resizeRelocate(snapPosition(control.getWidth() - (vsbWidth + (getInsets().getRight()-getPadding().getRight()))), snapPosition(cy), snapSize(vsbWidth), snapSize(vsbHeight));
+            if (getPadding().getRight() < 1) {
+                vsb.resizeRelocate(snapPosition(control.getWidth() - (vsbWidth + (getInsets().getRight()-getPadding().getRight()))), snapPosition(cy), snapSize(vsbWidth), snapSize(vsbHeight));
+            }
+            else {
+                vsb.resizeRelocate(snapPosition(control.getWidth() - ((vsbWidth+1) + (getInsets().getRight()-getPadding().getRight()))), snapPosition(cy), snapSize(vsbWidth)+1, snapSize(vsbHeight));
+            }
         }
         updateVerticalSB();
 
@@ -796,8 +810,22 @@ public class ScrollPaneSkin extends SkinBase<ScrollPane, ScrollPaneBehavior> imp
         if (hsbvis) {
             /*
             ** round up position of ScrollBar, round down it's size.
+            **
+            ** Positioning the ScrollBar
+            **  The Padding should go between the content and the edge,
+            **  otherwise changes in padding move the ScrollBar, and could
+            **  in extreme cases size the ScrollBar to become unusable.
+            **  The -1, +1 plus one bit : 
+            **   If padding in => 1 then we allow one pixel to appear as the
+            **   outside border of the Scrollbar, and the rest on the inside.
+            **   If padding is < 1 then we just stick to the edge.
             */
-            hsb.resizeRelocate(snapPosition(cx), snapPosition(control.getHeight() - (hsbHeight + (getInsets().getBottom()-getPadding().getBottom()))), snapSize(hsbWidth), snapSize(hsbHeight));
+            if (getPadding().getBottom() < 1) {
+                hsb.resizeRelocate(snapPosition(cx), snapPosition(control.getHeight() - (hsbHeight + (getInsets().getBottom()-getPadding().getBottom()))), snapSize(hsbWidth), snapSize(hsbHeight));
+            }
+            else {
+                hsb.resizeRelocate(snapPosition(cx), snapPosition(control.getHeight() - ((hsbHeight+1) + (getInsets().getBottom()-getPadding().getBottom()))), snapSize(hsbWidth), snapSize(hsbHeight)+1);
+            }
         }
         updateHorizontalSB();
 
