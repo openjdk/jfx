@@ -63,7 +63,7 @@ public abstract class PixelFormat<T extends Buffer> {
         /**
          * The opaque pixels are stored in adjacent bytes with the color
          * components stored in order of increasing index:
-         * red, gree, blue.
+         * red, green, blue.
          */
         BYTE_RGB,
         /**

@@ -54,8 +54,9 @@ public interface PixelReader {
      * 
      * @param x the X coordinate of the pixel color to read
      * @param y the Y coordinate of the pixel color to read
-     * @return a 32-bit representation of the color in a format described
-     *         by the {@link PixelFormat.Type.BYTE_ARGB} PixelFormat type.
+     * @return a 32-bit representation of the color in the format
+     *         described by the {@link PixelFormat.Type#INT_ARGB INT_ARGB}
+     *         PixelFormat type.
      */
     public int getArgb(int x, int y);
 
