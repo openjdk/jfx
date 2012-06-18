@@ -40,6 +40,10 @@ import javafx.geometry.Point2D;
  * menu is platform specific.  For example, on Windows, Shift+F10
  * requests a context menu.
  * <p>
+ * The event coordinates contain default position for the context menu.
+ * For mouse-triggered events it is the position of the
+ * mouse cursor, for keyboard-triggered events it is a point
+ * inside of bounds of current focus owner (which is the event's target).
  */
 public class ContextMenuEvent extends InputEvent {
 
@@ -112,20 +116,38 @@ public class ContextMenuEvent extends InputEvent {
 
     /**
      * Horizontal x position of the event relative to the
-     * origin of the MouseEvent's node.
+     * origin of the ContextMenuEvent's node.
      */
     private double x;
 
+    /**
+     * Horizontal position of the event relative to the
+     * origin of the ContextMenuEvent's source.
+     * For more information about this event's coordinate semantics please see
+     * the general description of {@link ContextMenuEvent}.
+     *
+     * @return horizontal position of the event relative to the
+     * origin of the ContextMenuEvent's source.
+     */
     public final double getX() {
         return x;
     }
 
     /**
      * Vertical y position of the event relative to the
-     * origin of the MouseEvent's node.
+     * origin of the ContextMenuEvent's node.
      */
     private double y;
 
+    /**
+     * Vertical position of the event relative to the
+     * origin of the ContextMenuEvent's source.
+     * For more information about this event's coordinate semantics please see
+     * the general description of {@link ContextMenuEvent}.
+     *
+     * @return vertical position of the event relative to the
+     * origin of the ContextMenuEvent's source.
+     */
     public final double getY() {
         return y;
     }
@@ -135,6 +157,12 @@ public class ContextMenuEvent extends InputEvent {
      */
     private double screenX;
 
+    /**
+     * Returns absolute horizontal position of the event.
+     * For more information about this event's coordinate semantics please see
+     * the general description of {@link ContextMenuEvent}.
+     * @return absolute horizontal position of the event
+     */
     public final double getScreenX() {
         return screenX;
     }
@@ -144,34 +172,66 @@ public class ContextMenuEvent extends InputEvent {
      */
     private double screenY;
 
+    /**
+     * Returns absolute vertical position of the event.
+     * For more information about this event's coordinate semantics please see
+     * the general description of {@link ContextMenuEvent}.
+     * @return absolute vertical position of the event
+     */
     public final double getScreenY() {
         return screenY;
     }
 
     /**
      * Horizontal x position of the event relative to the
-     * origin of the {@code Scene} that contains the MouseEvent's node.
+     * origin of the {@code Scene} that contains the ContextMenuEvent's node.
      * If the node is not in a {@code Scene}, then the value is relative to
-     * the boundsInParent of the root-most parent of the MouseEvent's node.
+     * the boundsInParent of the root-most parent of the ContextMenuEvent's node.
      */
     private double sceneX;
 
+    /**
+     * Returns horizontal position of the event relative to the
+     * origin of the {@code Scene} that contains the ContextMenuEvent's source.
+     * If the node is not in a {@code Scene}, then the value is relative to
+     * the boundsInParent of the root-most parent of the ContextMenuEvent's node.
+     * For more information about this event's coordinate semantics please see
+     * the general description of {@link ContextMenuEvent}.
+     *
+     * @return horizontal position of the event relative to the
+     * origin of the {@code Scene} that contains the ContextMenuEvent's source
+     */
     public final double getSceneX() {
         return sceneX;
     }
 
     /**
      * Vertical y position of the event relative to the
-     * origin of the {@code Scene} that contains the MouseEvent's node.
+     * origin of the {@code Scene} that contains the ContextMenuEvent's node.
      * If the node is not in a {@code Scene}, then the value is relative to
-     * the boundsInParent of the root-most parent of the MouseEvent's node.
+     * the boundsInParent of the root-most parent of the ContextMenuEvent's node.
      */
     private double sceneY;
 
+    /**
+     * Returns vertical position of the event relative to the
+     * origin of the {@code Scene} that contains the ContextMenuEvent's source.
+     * If the node is not in a {@code Scene}, then the value is relative to
+     * the boundsInParent of the root-most parent of the ContextMenuEvent's node.
+     * For more information about this event's coordinate semantics please see
+     * the general description of {@link ContextMenuEvent}.
+     *
+     * @return vertical position of the event relative to the
+     * origin of the {@code Scene} that contains the ContextMenuEvent's source
+     */
     public final double getSceneY() {
         return sceneY;
     }
 
+    /**
+     * Returns a string representation of this {@code ContextMenuEvent} object.
+     * @return a string representation of this {@code ContextMenuEvent} object.
+     */
     @Override public String toString() {
         final StringBuilder sb = new StringBuilder("ContextMenuEvent [");
 

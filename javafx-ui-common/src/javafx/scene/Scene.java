@@ -110,6 +110,7 @@ import javafx.beans.property.ReadOnlyDoubleProperty;
 import javafx.beans.property.ReadOnlyDoubleWrapper;
 import javafx.beans.property.ReadOnlyObjectProperty;
 import javafx.beans.property.ReadOnlyObjectWrapper;
+import javafx.geometry.Bounds;
 import javafx.geometry.Orientation;
 import javafx.scene.image.WritableImage;
 import javafx.scene.input.GestureEvent;
@@ -1528,6 +1529,18 @@ public class Scene implements EventTarget {
         if (!isKeyboardTrigger) Scene.inMousePick = true;
         if (isKeyboardTrigger) {
             Node sceneFocusOwner = getFocusOwner();
+
+            // for keyboard triggers set coordinates inside focus owner
+            final Bounds bounds = sceneFocusOwner.localToScene(
+                    sceneFocusOwner.getBoundsInLocal());
+            final double xOffset = xAbs - x2;
+            final double yOffset = yAbs - y2;
+
+            x2 = bounds.getMinX() + bounds.getWidth() / 4;
+            y2 = bounds.getMinY() + bounds.getHeight() / 2;
+            xAbs = x2 + xOffset;
+            yAbs = y2 + yOffset;
+
             eventTarget = sceneFocusOwner != null ? sceneFocusOwner : Scene.this;
         } else {
             eventTarget = pick(x2, y2);
