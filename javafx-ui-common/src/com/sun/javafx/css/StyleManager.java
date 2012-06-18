@@ -746,7 +746,7 @@ public class StyleManager {
         return mask;
     }
 
-    List<String> getPseudoclassStrings(long mask) {
+    public List<String> getPseudoclassStrings(long mask) {
         if (mask == 0) return Collections.EMPTY_LIST;
 
         Map<Long,String> stringMap = new HashMap<Long,String>();

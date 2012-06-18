@@ -47,12 +47,15 @@ import javafx.scene.Node;
 import javafx.scene.input.KeyCombination;
 
 import com.sun.javafx.event.EventHandlerManager;
+import com.sun.javafx.scene.control.skin.ContextMenuContent;
+import com.sun.javafx.scene.control.skin.ContextMenuSkin;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import javafx.beans.property.ReadOnlyObjectProperty;
 import javafx.beans.property.ReadOnlyObjectWrapper;
 import javafx.collections.ObservableMap;
+import javafx.scene.Parent;
 
 /**
  * <p>
@@ -101,6 +104,9 @@ public class MenuItem implements EventTarget {
      *                                                                         *
      **************************************************************************/
 
+    /**
+     * Constructs a MenuItem with no display text.
+     */
     public MenuItem() {
         this(null,null);
     }
@@ -147,6 +153,10 @@ public class MenuItem implements EventTarget {
      *                                                                         *
      **************************************************************************/
     
+    /**
+     * The id of this MenuItem. This simple string identifier is useful for finding
+     * a specific MenuItem within the scene graph. 
+     */
     private StringProperty id;
     public final void setId(String value) { idProperty().set(value); }
     public final String getId() { return id == null ? null : id.get(); }
@@ -157,6 +167,12 @@ public class MenuItem implements EventTarget {
         return id;
     }
     
+    /**
+     * A string representation of the CSS style associated with this specific MenuItem. 
+     * This is analogous to the "style" attribute of an HTML element. Note that, 
+     * like the HTML style attribute, this variable contains style properties and 
+     * values and not the selector portion of a style rule.
+     */
     private StringProperty style;
     public final void setStyle(String value) { styleProperty().set(value); }
     public final String getStyle() { return style == null ? null : style.get(); }
@@ -168,8 +184,6 @@ public class MenuItem implements EventTarget {
     }
     
     // --- Parent Menu (useful for submenus)
-    private ReadOnlyObjectWrapper<Menu> parentMenu;
-
     /**
      * This is the {@link Menu} in which this {@code MenuItem} exists. It is
      * possible for an instance of this class to not have a {@code parentMenu} -
@@ -181,6 +195,8 @@ public class MenuItem implements EventTarget {
      * {@link Menu} internally.
      * </ul>
      */
+    private ReadOnlyObjectWrapper<Menu> parentMenu;
+
     protected final void setParentMenu(Menu value) {
         parentMenuPropertyImpl().set(value);
     }
@@ -202,11 +218,11 @@ public class MenuItem implements EventTarget {
 
 
     // --- Parent Popup
-    private ReadOnlyObjectWrapper<ContextMenu> parentPopup;
-
-    /**
+     /**
      * This is the {@link ContextMenu} in which this {@code MenuItem} exists.
      */
+    private ReadOnlyObjectWrapper<ContextMenu> parentPopup;
+
     protected final void setParentPopup(ContextMenu value) {
         parentPopupPropertyImpl().set(value);
     }
@@ -228,11 +244,11 @@ public class MenuItem implements EventTarget {
 
 
     // --- Text
-    private StringProperty text;
-
     /**
      * The text to display in the {@code MenuItem}.
      */
+    private StringProperty text;
+
     public final void setText(String value) {
         textProperty().set(value);
     }
@@ -250,13 +266,13 @@ public class MenuItem implements EventTarget {
 
 
     // --- Graphic
-    private ObjectProperty<Node> graphic;
-
     /**
      * An optional graphic for the {@code MenuItem}. This will normally be
      * an {@link javafx.scene.image.ImageView} node, but there is no requirement for this to be
      * the case.
      */
+    private ObjectProperty<Node> graphic;
+    
     public final void setGraphic(Node value) {
         graphicProperty().set(value);
     }
@@ -274,14 +290,14 @@ public class MenuItem implements EventTarget {
     
 
     // --- OnAction
-    private ObjectProperty<EventHandler<ActionEvent>> onAction;
-
     /**
      * The action, which is invoked whenever the MenuItem is fired. This
      * may be due to the user clicking on the button with the mouse, or by
      * a touch event, or by a key press, or if the developer programatically
      * invokes the {@link #fire()} method.
      */
+    private ObjectProperty<EventHandler<ActionEvent>> onAction;
+
     public final void setOnAction(EventHandler<ActionEvent> value) {
         onActionProperty().set( value);
     }
@@ -315,12 +331,14 @@ public class MenuItem implements EventTarget {
      * <p>Called when a accelerator for the Menuitem is invoked</p>
      */
     public final EventType<Event> MENU_VALIDATION_EVENT = new EventType<Event>();
-    private ObjectProperty<EventHandler<Event>> onMenuValidation;
+    
     /**
      * The event handler that is associated with invocation of an accelerator for a MenuItem. This 
      * can happen when a key sequence for an accelerator is pressed. The event handler is also  
      * invoked when onShowing event handler is called. 
      */
+    private ObjectProperty<EventHandler<Event>> onMenuValidation;
+    
     public final void setOnMenuValidation(EventHandler<Event> value) {
         onMenuValidationProperty().set( value);
     }
@@ -347,6 +365,10 @@ public class MenuItem implements EventTarget {
     }
     
     // --- Disable
+    /** 
+     * Sets the individual disabled state of this MenuItem.
+     * Setting disable to true will cause this MenuItem to become disabled.
+     */
     private BooleanProperty disable;
     public final void setDisable(boolean value) { disableProperty().set(value); }
     public final boolean isDisable() { return disable == null ? false : disable.get(); }
@@ -359,6 +381,9 @@ public class MenuItem implements EventTarget {
 
 
     // --- Visible
+    /**
+     * Specifies whether this MenuItem should be rendered as part of the scene graph. 
+     */
     private BooleanProperty visible;
     public final void setVisible(boolean value) { visibleProperty().set(value); }
     public final boolean isVisible() { return visible == null ? true : visible.get(); }
@@ -369,7 +394,10 @@ public class MenuItem implements EventTarget {
         return visible;
     }
 
- 
+    /**
+     * The accelerator property enables accessing the associated action in one keystroke.
+     * It is a convenience offered to perform quickly a given action. 
+     */
     private ObjectProperty<KeyCombination> accelerator;
     public final void setAccelerator(KeyCombination value) {
         acceleratorProperty().set(value);
@@ -516,12 +544,14 @@ public class MenuItem implements EventTarget {
 
     private static final String DEFAULT_STYLE_CLASS = "menu-item";
 
-    protected Styleable styleable; 
     /**
      * RT-19263
      * @treatAsPrivate implementation detail
-     * @deprecated This is an experimental API that is not intended for general use and is subject to change in future versions
-     */    
+     * @deprecated This is an experimental API that is not intended for general 
+     * use and is subject to change in future versions
+     */
+    protected Styleable styleable; 
+        
     @Deprecated // SB-dependency: RT-21094 has been filed to track this
     public Styleable impl_getStyleable() {
         
@@ -545,13 +575,16 @@ public class MenuItem implements EventTarget {
 
                 @Override
                 public Styleable getStyleableParent() {
-                    if(MenuItem.this.getParentMenu() == null) {
-                        return MenuItem.this.getParentPopup() != null 
-                            ? MenuItem.this.getParentPopup().impl_getStyleable()
+                    Menu parentMenu = MenuItem.this.getParentMenu();
+                    ContextMenu parentPopup = MenuItem.this.getParentPopup();
+                    
+                    if(parentMenu == null) {
+                        return parentPopup != null 
+                            ? parentPopup.impl_getStyleable()
                             : null;
                     } else {
-                        return MenuItem.this.getParentMenu() != null 
-                            ? MenuItem.this.getParentMenu().impl_getStyleable()
+                        return parentMenu != null 
+                            ? parentMenu.impl_getStyleable()
                             : null;
                     }
                 }
@@ -564,6 +597,30 @@ public class MenuItem implements EventTarget {
 
                 @Override
                 public Node getNode() {
+                    // Fix for RT-20582. We dive into the visual representation
+                    // of this MenuItem so that we may return it to the caller.
+                    ContextMenu parentPopup = MenuItem.this.getParentPopup();
+                    if (! (parentPopup.getSkin() instanceof ContextMenuSkin)) return null;
+                    
+                    ContextMenuSkin skin = (ContextMenuSkin) parentPopup.getSkin();
+                    if (! (skin.getNode() instanceof ContextMenuContent)) return null;
+                    
+                    ContextMenuContent content = (ContextMenuContent) skin.getNode();
+                    Parent nodes = content.getItemsContainer();
+                    
+                    MenuItem desiredMenuItem = MenuItem.this;
+                    List<Node> childrenNodes = nodes.getChildrenUnmodifiable();
+                    for (int i = 0; i < childrenNodes.size(); i++) {
+                        if (! (childrenNodes.get(i) instanceof ContextMenuContent.MenuItemContainer)) continue;
+                        
+                        ContextMenuContent.MenuItemContainer MenuRow = 
+                                (ContextMenuContent.MenuItemContainer) childrenNodes.get(i);
+                        
+                        if (desiredMenuItem.equals(MenuRow.getItem())) {
+                            return MenuRow;
+                        }
+                    }
+                    
                     return null;
                 }
 

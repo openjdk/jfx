@@ -69,7 +69,8 @@ public class StackedAreaChartTest extends ChartTestBase {
         ac.getData().addAll(series1);
         pulse();
         StringBuffer sb = getSeriesLineFromPlot();
-        assertEquals(sb.toString(), "L206.0 57.0 L247.0 171.0 L412.0 171.0 L658.0 284.0 ");
+//        assertEquals("L206.0 57.0 L247.0 171.0 L412.0 171.0 L658.0 284.0 ", sb.toString());
+        assertEquals("L220.0 59.0 L264.0 175.0 L440.0 175.0 L704.0 291.0 ", sb.toString());
     
     }
     

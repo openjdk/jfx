@@ -681,7 +681,14 @@ public class Tab implements EventTarget {
 
     private static final String DEFAULT_STYLE_CLASS = "tab";
     
+    /**
+     * RT-19263
+     * @treatAsPrivate implementation detail
+     * @deprecated This is an experimental API that is not intended for general 
+     * use and is subject to change in future versions
+     */
     protected Styleable styleable; 
+    
     /**
      * RT-19263
      * @treatAsPrivate implementation detail

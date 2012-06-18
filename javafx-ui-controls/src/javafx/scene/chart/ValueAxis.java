@@ -271,8 +271,13 @@ public abstract class ValueAxis<T extends Number> extends Axis<T> {
      */
     @Override protected final Object autoRange(double length) {
         // guess a sensible starting size for label size, that is approx 2 lines vertically or 2 charts horizontally        
-        double labelSize = getTickLabelFont().getSize() * 2;
-        return autoRange(dataMinValue,dataMaxValue,length,labelSize);
+        if (isAutoRanging()) {
+            // guess a sensible starting size for label size, that is approx 2 lines vertically or 2 charts horizontally
+            double labelSize = getTickLabelFont().getSize() * 2;
+            return autoRange(dataMinValue,dataMaxValue,length,labelSize);
+        } else {
+            return getRange();
+        }
     }
 
     /**
@@ -310,7 +315,9 @@ public abstract class ValueAxis<T extends Number> extends Axis<T> {
      * @return The calculated range
      */
     protected Object autoRange(double minValue, double maxValue, double length, double labelSize) {
-        return new Double[]{minValue,maxValue};
+        return null; // this method should have been abstract as there is no way for it to 
+        // return anything correct. so just return null.
+        
     }
 
     /**

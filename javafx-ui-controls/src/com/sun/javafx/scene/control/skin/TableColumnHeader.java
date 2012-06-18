@@ -246,7 +246,7 @@ public class TableColumnHeader extends StackPane {
     private Label label;
 
     // sort order 
-    private int sortPos;
+    private int sortPos = -1;
     private StackPane arrow;
     private Label sortOrderLabel;
     private HBox sortOrderDots;
@@ -283,6 +283,7 @@ public class TableColumnHeader extends StackPane {
         if (getTableColumn() != null) {
             getTableColumn().visibleProperty().removeListener(weakVisibleListener);
             getTableColumn().widthProperty().removeListener(weakWidthListener);
+            getTableColumn().sortTypeProperty().removeListener(weakSortTypeListener);
         }
         
         sceneProperty().removeListener(sceneListener);

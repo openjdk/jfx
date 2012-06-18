@@ -24,6 +24,8 @@
  */
 package javafx.scene.control;
 
+import com.sun.javafx.css.Styleable;
+import com.sun.javafx.css.StyleableProperty;
 import java.text.Collator;
 import java.util.Comparator;
 import javafx.beans.Observable;
@@ -52,6 +54,8 @@ import javafx.util.Callback;
 import com.sun.javafx.scene.control.skin.Utils;
 import com.sun.javafx.event.EventHandlerManager;
 import com.sun.javafx.scene.control.WeakListChangeListener;
+import com.sun.javafx.scene.control.skin.*;
+import java.util.Collections;
 import java.util.HashMap;
 
 import java.util.List;
@@ -269,6 +273,8 @@ public class TableColumn<S,T> implements EventTarget {
      * onEditCommit implementation.
      */
     public TableColumn() {
+        getStyleClass().add(DEFAULT_STYLE_CLASS);
+        
         setOnEditCommit(DEFAULT_EDIT_COMMIT_HANDLER);
 
         // we listen to the columns list here to ensure that widths are
@@ -284,10 +290,12 @@ public class TableColumn<S,T> implements EventTarget {
                     tc.setTableView(getTableView());
                 }
                 
-                // set the parent of this column to also have this tableView
-                if (getParentColumn() != null) {
-                    getParentColumn().setTableView(getTableView());
-                }
+                // This code was commented out due to RT-22391, with this enabled
+                // the parent column will be null, which is not desired
+//                // set the parent of this column to also have this tableView
+//                if (getParentColumn() != null) {
+//                    getParentColumn().setTableView(getTableView());
+//                }
             }
         });
     }
@@ -1219,6 +1227,7 @@ public class TableColumn<S,T> implements EventTarget {
     }
 
     
+    
     /***************************************************************************
      *                                                                         *
      * Private Implementation                                                  *
@@ -1235,7 +1244,92 @@ public class TableColumn<S,T> implements EventTarget {
     }
 
 
+    
+    /***************************************************************************
+     *                                                                         *
+     * Stylesheet Handling                                                     *
+     *                                                                         *
+     **************************************************************************/
 
+    private static final String DEFAULT_STYLE_CLASS = "table-column";
+
+    /**
+     * RT-19263
+     * @treatAsPrivate implementation detail
+     * @deprecated This is an experimental API that is not intended for general 
+     * use and is subject to change in future versions
+     */
+    protected Styleable styleable; 
+        
+    @Deprecated // SB-dependency: RT-21094 has been filed to track this
+    public Styleable impl_getStyleable() {
+        
+        if (styleable == null) {
+            styleable = new Styleable() {
+
+                @Override
+                public String getId() {
+                    return TableColumn.this.getId();
+                }
+
+                @Override
+                public List<String> getStyleClass() {
+                    return TableColumn.this.getStyleClass();
+                }
+
+                @Override
+                public String getStyle() {
+                    return TableColumn.this.getStyle();
+                }
+
+                @Override
+                public Styleable getStyleableParent() {
+                    return getTableView() == null ? null : getTableView().impl_getStyleable();
+                }
+
+                
+                @Override
+                public List<StyleableProperty> getStyleableProperties() {
+                    return Collections.EMPTY_LIST;
+                }                
+
+                @Override
+                public Node getNode() {
+                    if (! (getTableView().getSkin() instanceof TableViewSkin)) return null;
+                    TableViewSkin skin = (TableViewSkin) getTableView().getSkin();
+                    
+                    TableHeaderRow tableHeader = skin.getTableHeaderRow();
+                    NestedTableColumnHeader rootHeader = tableHeader.getRootHeader();
+                    
+                    // we now need to do a search for the header. We'll go depth-first.
+                    return scan(rootHeader);
+                }
+                
+                private TableColumnHeader scan(TableColumnHeader header) {
+                    // firstly test that the parent isn't what we are looking for
+                    if (TableColumn.this.equals(header.getTableColumn())) {
+                        return header;
+                    }
+                    
+                    if (header instanceof NestedTableColumnHeader) {
+                        NestedTableColumnHeader parent = (NestedTableColumnHeader) header;
+                        for (int i = 0; i < parent.getColumnHeaders().size(); i++) {
+                            TableColumnHeader result = scan(parent.getColumnHeaders().get(i));
+                            if (result != null) {
+                                return result;
+                            }
+                        }
+                    }
+                    
+                    return null;
+                }
+            };
+        }
+        return styleable;
+    }   
+    
+    
+    
     /***************************************************************************
      *                                                                         *
      * Support Interfaces                                                      *

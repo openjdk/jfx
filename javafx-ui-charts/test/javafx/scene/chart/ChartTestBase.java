@@ -31,7 +31,7 @@ import javafx.scene.shape.*;
 public abstract class ChartTestBase {
     private Scene scene;
     private Stage stage;
-    private StubToolkit toolkit = (StubToolkit) Toolkit.getToolkit(); 
+    StubToolkit toolkit = (StubToolkit) Toolkit.getToolkit(); 
     private Chart chart;
     
     @Before

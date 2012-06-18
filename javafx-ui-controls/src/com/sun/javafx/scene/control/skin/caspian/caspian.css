@@ -1143,13 +1143,10 @@
 
 .slider .axis {
     -fx-tick-mark-stroke: ladder(-fx-background, derive(-fx-background,30%) 40%, derive(-fx-background,-30%) 41%);
-    -fx-tick-label-font-size: 0.916667em; /* 11pt - 1 less than the default font */
+    -fx-tick-label-font: 0.833333em System; 
+    -fx-tick-label-fill: -fx-text-background-color;
 }
 
-.slider .axis .tick-mark {
-    -fx-font-size: 0.833333em;
-    -fx-fill: -fx-text-background-color;
-}
 .slider:disabled {
     -fx-opacity: -fx-disabled-opacity;
 }
@@ -2749,6 +2746,10 @@
 }
 
 /* ====== AXIS ============================================================================ */
+.axis {
+    -fx-tick-label-font: 0.833333em System; /* 10 pix */
+    -fx-tick-label-fill: -fx-text-background-color;
+}
 .axis:top {
     -fx-border-color: transparent transparent #666666 transparent;
 }
@@ -2770,7 +2771,7 @@
     -fx-stroke: #AAAAAA;
 }
 
-.tick-mark {
+.axis .text {
   -fx-font-smoothing-type: lcd;
 }
 

@@ -225,24 +225,24 @@ public class AnchorPane extends Pane {
     public AnchorPane() {
         super();
     }
-
+    
     @Override protected double computeMinWidth(double height) {
-        return computeWidth(true);
+        return computeWidth(true, height);
     }
 
     @Override protected double computeMinHeight(double width) {
-        return computeHeight(true);
+        return computeHeight(true, width);
     }
 
     @Override protected double computePrefWidth(double height) {
-        return computeWidth(false);
+        return computeWidth(false, height);
     }
 
     @Override protected double computePrefHeight(double width) {
-        return computeHeight(false);
+        return computeHeight(false, width);
     }
 
-    private double computeWidth(boolean minimum) {
+    private double computeWidth(boolean minimum, double height) {
         double max = 0;
         for (int i = 0; i < getChildren().size(); i++) {
             Node child = getChildren().get(i);
@@ -253,14 +253,16 @@ public class AnchorPane extends Pane {
                 double left = leftAnchor != null? leftAnchor :
                     (rightAnchor != null? 0 : child.getLayoutBounds().getMinX() + child.getLayoutX());
                 double right = rightAnchor != null? rightAnchor : 0;
-
-                max = Math.max(max, left + (minimum? child.minWidth(-1) : child.prefWidth(-1)) + right);
+                if (child.getContentBias() == Orientation.VERTICAL) {
+                    height = (minimum? child.minHeight(-1) : child.prefHeight(-1));
+                }
+                max = Math.max(max, left + (minimum? child.minWidth(height) : child.prefWidth(height)) + right);
             }
         }
         return getInsets().getLeft() + max + getInsets().getRight();
     }
 
-    private double computeHeight(boolean minimum) {
+    private double computeHeight(boolean minimum, double width) {
         double max = 0;
         for (int i = 0; i < getChildren().size(); i++) {
             Node child = getChildren().get(i);
@@ -270,9 +272,11 @@ public class AnchorPane extends Pane {
 
                 double top = topAnchor != null? topAnchor :
                     (bottomAnchor != null? 0 : child.getLayoutBounds().getMinY() + child.getLayoutY());
-                double bottom = bottomAnchor != null? bottomAnchor : 0;
-
-                max = Math.max(max, top + (minimum? child.minHeight(-1) : child.prefHeight(-1)) + bottom);
+                double bottom = bottomAnchor != null? bottomAnchor : 0;                
+                if (child.getContentBias() == Orientation.HORIZONTAL) {
+                    width = (minimum? child.minWidth(-1) : child.prefWidth(-1));
+                }                  
+                max = Math.max(max, top + (minimum? child.minHeight(width) : child.prefHeight(width)) + bottom);
             }
         }
         return getInsets().getTop() + max + getInsets().getBottom();
@@ -294,7 +298,7 @@ public class AnchorPane extends Pane {
 
     @Override protected void layoutChildren() {
         Insets insets = getInsets();
-
+        
         for (int i = 0; i < getChildren().size(); i++) {
             Node child = getChildren().get(i);
             if (child.isManaged()) {

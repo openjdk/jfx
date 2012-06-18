@@ -416,4 +416,15 @@ public class TableViewTest {
         sm.selectRange(0, 2); // select from 0 (inclusive) to 2 (exclusive)
         assertEquals(2, sm.getSelectedIndices().size());
     }
+    
+    @Test public void test_rt21586() {
+        table.getItems().setAll("Apple", "Orange", "Banana");
+        table.getSelectionModel().select(1);
+        assertEquals(1, table.getSelectionModel().getSelectedIndex());
+        assertEquals("Orange", table.getSelectionModel().getSelectedItem());
+        
+        table.getItems().setAll("Kiwifruit", "Pineapple", "Grape");
+        assertEquals(-1, table.getSelectionModel().getSelectedIndex());
+        assertNull(table.getSelectionModel().getSelectedItem());
+    }
 }

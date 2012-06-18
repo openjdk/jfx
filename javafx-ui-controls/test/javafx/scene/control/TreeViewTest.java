@@ -408,4 +408,21 @@ public class TreeViewTest {
         treeView.getSelectionModel().selectRange(0, 2); // select from 0 (inclusive) to 2 (exclusive)
         assertEquals(2, treeView.getSelectionModel().getSelectedIndices().size());
     }
+    
+    @Test public void test_rt21586() {
+        installChildren();
+        treeView.getSelectionModel().select(1);
+        assertEquals(1, treeView.getSelectionModel().getSelectedIndex());
+        assertEquals(child1, treeView.getSelectionModel().getSelectedItem());
+        
+        TreeItem root = new TreeItem<String>("New Root");
+        TreeItem child1 = new TreeItem<String>("New Child 1");
+        TreeItem child2 = new TreeItem<String>("New Child 2");
+        TreeItem child3 = new TreeItem<String>("New Child 3");
+        root.setExpanded(true);
+        root.getChildren().setAll(child1, child2, child3);
+        treeView.setRoot(root);
+        assertEquals(-1, treeView.getSelectionModel().getSelectedIndex());
+        assertNull(treeView.getSelectionModel().getSelectedItem());
+    }
 }

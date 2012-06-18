@@ -186,17 +186,17 @@ public class Tooltip extends PopupControl {
     }
     public final String getText() { return text == null ? "" : text.getValue(); }
 
-    /**
-     * Specifies the behavior for lines of text <em>when text is multiline</em>
-     * Unlike {@link #contentDisplay} which affects the graphic and text, this setting
-     * only affects multiple lines of text relative to the text bounds.
-     */
     public final void setTextAlignment(TextAlignment value) { textAlignmentProperty().setValue(value); }
     public final TextAlignment getTextAlignment() { 
         return ((Tooltip.CSSBridge)bridge).textAlignment == null 
                 ? TextAlignment.LEFT 
                 : ((Tooltip.CSSBridge)bridge).textAlignment.getValue(); 
     }
+    /**
+     * Specifies the behavior for lines of text <em>when text is multiline</em>.
+     * Unlike {@link #contentDisplay} which affects the graphic and text, this setting
+     * only affects multiple lines of text relative to the text bounds.
+     */
     public final ObjectProperty<TextAlignment> textAlignmentProperty() {
         return ((Tooltip.CSSBridge)bridge).textAlignmentProperty();
     }

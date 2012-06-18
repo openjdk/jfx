@@ -318,9 +318,7 @@ public abstract class Labeled extends Control {
                     // css might need to be reapplied since font size affects
                     // calculated values for styles with relative values
                     Stylesheet.Origin origin = StyleableProperty.getOrigin(font);
-                    if (origin == null || origin == Stylesheet.Origin.USER) {
-                        Labeled.this.impl_reapplyCSS();
-                    }
+                    if (origin == Stylesheet.Origin.USER) Labeled.this.impl_reapplyCSS();
                 }
                 
                 @Override 
