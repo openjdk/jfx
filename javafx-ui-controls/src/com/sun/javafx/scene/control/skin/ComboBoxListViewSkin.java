@@ -411,6 +411,8 @@ public class ComboBoxListViewSkin<T> extends ComboBoxPopupControl<T> {
     }
     
     private void setTextFromTextFieldIntoComboBoxValue() {
+        if (! comboBox.isEditable()) return;
+        
         StringConverter<T> c = comboBox.getConverter();
         if (c == null) return;
         
