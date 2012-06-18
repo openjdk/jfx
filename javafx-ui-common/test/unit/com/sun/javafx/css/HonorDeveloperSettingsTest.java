@@ -122,8 +122,8 @@ public class HonorDeveloperSettingsTest {
         assertEquals(.873, rect.getOpacity(), 0.01);
     }
 
-    @Test @org.junit.Ignore("fails, but works from an application")
-    public void testOpacityWithManuallyChangedValueAndInlineStyleIsSetToInlineStyle() {
+    @Test
+    public void testOpacityWithManuallyChangedValueAndAuthorStyleIsSetToAuthorStyle() {
         rect.impl_processCSS(true);
         assertEquals(.76, rect.getOpacity(), 0.01);
         rect.setStyle("-fx-opacity: 42%;");
@@ -263,7 +263,7 @@ public class HonorDeveloperSettingsTest {
         
     }
     
-    @Test @org.junit.Ignore("fails, but works from an application")
+    @Test 
     public void testInlineStyleInheritedFromParentApplies() {
 
         // Must remove the id so we don't match on the ua style.

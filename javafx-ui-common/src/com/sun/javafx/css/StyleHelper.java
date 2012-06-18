@@ -26,6 +26,7 @@ package com.sun.javafx.css;
 
 import com.sun.javafx.Logging;
 import com.sun.javafx.Utils;
+import com.sun.javafx.css.StyleHelper.StyleCacheKey;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -36,7 +37,6 @@ import javafx.scene.Node;
 import javafx.scene.Scene;
 import javafx.scene.text.Font;
 
-import com.sun.javafx.css.Stylesheet.Origin;
 import com.sun.javafx.css.converters.FontConverter;
 import com.sun.javafx.css.parser.CSSParser;
 import com.sun.javafx.logging.PlatformLogger;
@@ -45,7 +45,6 @@ import java.lang.ref.WeakReference;
 import java.util.*;
 import java.util.Map.Entry;
 import javafx.beans.property.BooleanProperty;
-import javafx.beans.property.ReadOnlyObjectProperty;
 import javafx.beans.property.SimpleBooleanProperty;
 import javafx.beans.value.WritableValue;
 import javafx.scene.text.FontPosture;
@@ -71,7 +70,7 @@ public class StyleHelper {
      * used to represent SKIP because if a String constant were used it might
      * accidentally match some actual string value specified in the CSS.
      */
-    private static final CalculatedValue SKIP = new CalculatedValue(new int[0], null, false);
+    private static final CalculatedValue SKIP = new CalculatedValue(new int[0], null, true);
 
     /**
      * Constructs and returns a StyleHelper for the given sequence of styles.
@@ -92,80 +91,18 @@ public class StyleHelper {
      * everything). This is computed in the StyleManager and passed here.
      * @param styles List of the styles. Use an ArrayList for good performance.
      */
-    public static StyleHelper create(
-            Node node,
-            Map<String, List<CascadingStyle>> smap, 
-            Map<StyleCacheKey, StyleCacheBucket> containerStyleCache,  
-            long pseudoclassStateMask, 
-            long uniqueId) {
+    public static StyleHelper create(List<CascadingStyle> styles, long pseudoclassStateMask, int helperIndex) {
 
-        // since node doesn't have a stylehelper yet and getKeys
-        // needs the stylehelper uniqueId, we get the keys for 
-        // the parent chain, but will start counting at 1 to 
-        // accomodate for this stylehelper that we are creating.
-        final long[] keys = getKeys(node.getParent(), 1);
-        keys[0] = uniqueId;
-        
-        // The List<CacheEntry> should only contain entries for those
-        // pseudoclass states that have styles. The StyleHelper's
-        // pseudoclassStateMask is a bitmask of those pseudoclasses that
-        // appear in the node's StyleHelper's smap. This list of
-        // pseudoclass masks is held by the StyleCacheKey. When a node is
-        // styled, its pseudoclasses and the pseudoclasses of its parents
-        // are gotten. By comparing the actual pseudoclass state to the
-        // pseudoclass states that apply, a CacheEntry can be created or
-        // fetched using only those pseudoclasses that matter.
-        final long[] pclassMasks = new long[keys.length];
-        pclassMasks[0] = pseudoclassStateMask;
-        int n = 1;
-        Node parent = node.getParent();
-        while (parent != null) {
-            final StyleHelper parentHelper = parent.impl_getStyleHelper();
-            pclassMasks[n++] =
-                (parentHelper != null) ? parentHelper.pseudoclassStateMask : 0;
-            parent = parent.getParent();
-        }
-        
-        // TODO: move initialization of localStyleCache somewhere else.
-        //       It should not be hidden down here. Maybe to getCacheEntry
-        final StyleCacheBucket localStyleCache = new StyleCacheBucket(pclassMasks);
-        
-        final StyleCacheKey styleCacheKey = new StyleCacheKey(keys);        
         //
-        // Look to see if there is already a cache for this set of helpers
+        // Note: nhelpers must start at one, not zero, or multiplier in
+        // Node.impl_getStyleCacheKey will be zero, causing a divide by zero.
         //
-        StyleCacheBucket sharedStyleCache = containerStyleCache.get(styleCacheKey);
-        if (sharedStyleCache == null) {
-            sharedStyleCache = new StyleCacheBucket(pclassMasks);
-            containerStyleCache.put(styleCacheKey, sharedStyleCache);
-        }
-             
-        WritableValue fontProp = null;
-        final List<StyleableProperty> props = node.impl_getStyleableProperties();
-        final int pMax = props != null ? props.size() : 0;
-        for (int p=0; p<pMax; p++) {
-            final StyleableProperty prop = props.get(p);
-            if ("-fx-font".equals(prop.getProperty())) {                
-                fontProp = prop.getWritableValue(node);
-                break;
-            }
-        }
-        final StyleHelper helper = 
-            new StyleHelper(
-                smap, 
-                fontProp,
-                localStyleCache,
-                sharedStyleCache,
-                pseudoclassStateMask, 
-                uniqueId);
-
-        if (LOGGER.isLoggable(PlatformLogger.FINE)) {
-            LOGGER.fine(node + " " + uniqueId);
-        }
-        return helper;
+        final StyleHelper helper = new StyleHelper(styles, pseudoclassStateMask, helperIndex);
+       return helper;
     }
 
-    private final long key;
+    private final int helperIndex;
+    public int getHelperIndex() { return helperIndex; }
 
     /*
      * A cache to store values from lookup.
@@ -196,8 +133,8 @@ public class StyleHelper {
      * some parent with Node.style that would affect the child Node's style,
      * then the cached value can be used.
      *
-     * The key is comprised of this helper's key, plus the
-     * keys of all this node's parents' helpers.
+     * The key is comprised of this helper's index, plus the
+     * indices of all this node's parents' helper's indices.
      *
      * The values in the cache styles that apply are determined
      * by the node's state and the state of its parents. This unique combination
@@ -218,24 +155,13 @@ public class StyleHelper {
      * 
      * Note that the Map is created as a WeakHashMap in StyleManager. 
      */
-    private final Reference<StyleCacheBucket> sharedStyleCacheRef;
+    Map<StyleCacheKey, StyleCacheEntry> styleCache;
     
-    private StyleCacheBucket getSharedStyleCache() throws IllegalStateException {
-        final StyleCacheBucket styleCache = sharedStyleCacheRef.get();
-        if (styleCache == null) throw new IllegalStateException("null style cache referent");
-        return styleCache;
-    }
-    
-    /**
-     * A place to store calculated values that cannot be stored in shared cache
-     */
-    private final StyleCacheBucket localStyleCache;
-    
-    public static class StyleCacheKey {
-        private final long[] keys;
+    public final class StyleCacheKey {
+        private final int[] indices;
         
-        private StyleCacheKey(long[] keys) {
-            this.keys = keys;
+        private StyleCacheKey(int[] indices) {
+            this.indices = indices;
         }
         
         @Override
@@ -247,7 +173,7 @@ public class StyleHelper {
                 return false;
             }
             final StyleCacheKey other = (StyleCacheKey) obj;
-            if (!Arrays.equals(this.keys, other.keys)) {
+            if (!Arrays.equals(this.indices, other.indices)) {
                 return false;
             }
             return true;
@@ -256,37 +182,85 @@ public class StyleHelper {
         @Override
         public int hashCode() {
             int hash = 5;
-            hash = 67 * hash + Arrays.hashCode(this.keys);
+            hash = 67 * hash + Arrays.hashCode(this.indices);
             return hash;
+        }
+        
+        public void clearCache() {
+            StyleCacheEntry entry = styleCache.get(this);
+            if (entry != null && entry.entries != null) entry.entries.clear();
         }
         
     }
     
-    //
-    // The key is created from the index of this StyleHelper
-    // and the hash of all the Node's parents.
-    // The key is unique to the path to the Node that owns this .
-    //    
-    private static long[] getKeys(Node node, int count) {
-        if (node == null) return new long[count];
-        long[] keys = getKeys(node.getParent(), ++count);
-        final StyleHelper sh = node.impl_getStyleHelper();        
-        keys[count-1] = sh != null ? sh.key : 0;
-        return keys;
+    private static int[] getIndices(Node node, int count) {
+        if (node == null) return new int[count];
+        int[] indices = getIndices(node.getParent(), ++count);
+        StyleHelper sh = node.impl_getStyleHelper();
+        indices[count-1] = (sh != null) ? sh.helperIndex : 0;
+        return indices;
     }
         
+    /** 
+     * This method will either create a new StyleCacheKey for the node
+     * or will return an existing one. It may return null.
+     */
+    public StyleCacheKey createStyleCacheKey(Node node) {
+
+
+        // Note: valueCache will not be null. The valueCache is owned
+        // by the StylesheetContainer (see StyleManager) and is set when the
+        // stylehelper is created.
+        assert(styleCache != null);
+
+        final int[] indices = getIndices(node, 0);
+        final StyleCacheKey styleCacheKey = new StyleCacheKey(indices);
+        
+        //
+        // Look to see if there is already a cache for this set of helpers
+        //
+        if (styleCache.containsKey(styleCacheKey)) {            
+            return styleCacheKey;
+        }
+
+        // The List<CacheEntry> should only contain entries for those
+        // pseudoclass states that have styles. The StyleHelper's
+        // pseudoclassStateMask is a bitmask of those pseudoclasses that
+        // appear in the node's StyleHelper's smap. This list of
+        // pseudoclass masks is held by the StyleCacheKey. When a node is
+        // styled, its pseudoclasses and the pseudoclasses of its parents
+        // are gotten. By comparing the actual pseudoclass state to the
+        // pseudoclass states that apply, a CacheEntry can be created or
+        // fetched using only those pseudoclasses that matter.
+        long[] pclassMasks = new long[indices.length];
+        pclassMasks[0] = pseudoclassStateMask;
+        int n = 1;
+        Node parent = node.getParent();
+        while (parent != null) {
+            StyleHelper parentHelper = parent.impl_getStyleHelper();
+            pclassMasks[n++] =
+                (parentHelper != null) ? parentHelper.pseudoclassStateMask : 0;
+            parent = parent.getParent();
+        }
+
+        final StyleCacheEntry value = new StyleCacheEntry(pclassMasks);
+        styleCache.put(styleCacheKey, value);
+                
+        return styleCacheKey;
+    }
+
     /**
      * There should only ever be one instance of a StyleCache for a given
-     * set of keys. See the createStyleCacheKey method.
+     * set of indices. See the createStyleCacheKey method.
      */
-    final static class StyleCacheBucket {
+    final static class StyleCacheEntry {
         
         // see comments in createStyleCacheKey
         private final long[] pclassMask;
         
         private final List<CacheEntry> entries;
 
-        private StyleCacheBucket(long[] pclassMask) {
+        private StyleCacheEntry(long[] pclassMask) {
             this.pclassMask = pclassMask;
             this.entries = new ArrayList<CacheEntry>();
         }
@@ -294,169 +268,108 @@ public class StyleHelper {
     }
 
     /**
-     * A drop in the StyleCacheBucket.
+     * An entry in the valueCache. See the valueCache comments for more.
      */
     static class CacheEntry {
 
-        private final long[] states;
-        private final Map<String,CalculatedValue> values;
-        private CalculatedValue  font; // for use in converting relative sizes
-        
-        //
-        // if this CacheEntry is an entry in the shared cache, then this
-        // member will be null. If this is a local cache, then this member
-        // will point to the shared cache for the same states.
-        //
-        private final CacheEntry sharedCache;
+        final long[] states;
+        final Map<String,CalculatedValue> values;
 
-        private CacheEntry(long[] states) {
-            this(states, null);
-        }
-        
-        private CacheEntry(long[] states, CacheEntry sharedCache) {
+        CacheEntry(long[] states) {
             this.states = states;
             this.values = new HashMap<String,CalculatedValue>();
-            this.sharedCache = sharedCache;
-        }
-
-        private CalculatedValue get(String property) {
-            CalculatedValue cv = null;
-            if (values.isEmpty() == false) {
-                cv = values.get(property);
-            }
-            if (cv == null && sharedCache != null) {
-                cv = sharedCache.values.get(property);
-            }
-            return cv;
-        }
-        
-        private void put(String property, CalculatedValue cv) {
-            
-            // If the origin of the calculated value is inline or user, 
-            // then use local cache. 
-            // If the origin of the calculated value is not inline or user,
-            // then use local cache if the font origin is inline or user and
-            // the value was calculated from a relative size unit. 
-            final boolean isLocal = 
-                (sharedCache == null
-                    || cv.origin == Origin.INLINE
-                    || cv.origin == Origin.USER)
-                || (cv.isRelative &&
-                    (font.origin == Origin.INLINE
-                    || font.origin == Origin.USER));
-            
-            if (isLocal) {
-                values.put(property, cv);
-            } else if (sharedCache.values.containsKey(property) == false) {
-                // don't override value already in shared cache.
-                sharedCache.values.put(property, cv);
-            }
         }
 
     }
 
     private CacheEntry getCacheEntry(Node node, long[] states) {
-
-        //
-        // Find the entry in local cache that matches the states
-        //
-       
-        //
-        // pclassMask is the set of pseudoclasses that appear in the
-        // style maps of this set of StyleHelpers. Calculated values are
-        // cached by pseudoclass state, but only the pseudoclass states
-        // that mater are used in the search.
-        //
-        // localStyleCache is created with the same pclassMask as 
-        // the shared cache - see createStyleCacheKey
-        //
-        final long[] pclassMask = new long[localStyleCache.pclassMask.length];
-        assert (pclassMask.length == states.length) : (pclassMask.length + " != " + states.length); 
-
-        for (int n=0; n<pclassMask.length; n++) {
-            pclassMask[n] = localStyleCache.pclassMask[n] & states[n];
-        }
-
-        // find the entry in the list with the same pclassMask
-        CacheEntry localCacheEntry = null;
-
-        for (int n=0, max=localStyleCache.entries.size(); n<max; n++) {
-            final CacheEntry vce = localStyleCache.entries.get(n);
-            final long[] vceStates = vce.states;
-            if (Arrays.equals(pclassMask, vceStates)) {
-                localCacheEntry = vce;
-                break;
-            }
-        }
-
-        if (localCacheEntry != null) {
-            return localCacheEntry;
-        }
-
-        //
-        // Failed to find existing entry.
-        // There may already be an existing entry in the shared cache
-        // for this pclassMask, so look for that first. 
-        //
-
         //
         // The key is created from this StyleHelper's index
         // and the index of all the StyleHelpers of the Node's parents.
         // The key is unique to this set of StyleHelpers.
         //
+        final StyleCacheKey key = node.impl_getStyleCacheKey();
+        if(key == null) return null;
         
-        final StyleCacheBucket sharedStyleCache = getSharedStyleCache();
-        assert(sharedStyleCache != null);
-                        
-        // find the shared entry in the list with the same pclassMask
-        CacheEntry sharedCacheEntry = null;
+        final StyleCacheEntry styleCacheEntry = styleCache.get(key);
+        if (styleCacheEntry == null) {
+            styleCache.remove(key);
+            return null;
+        }
+               
+        final List<CacheEntry> cachedValues = styleCacheEntry.entries;
 
-        // TODO: same block of code as above.
-        for (int n=0, max=sharedStyleCache.entries.size(); n<max; n++) {
-            final CacheEntry vce = sharedStyleCache.entries.get(n);
+        //
+        // Find the entry in the list that matches the states
+        //
+        
+        // pclassMask is the set of pseudoclasses that appear in the
+        // style maps of this set of StyleHelpers. Calculated values are
+        // cached by pseudoclass state, but only the pseudoclass states
+        // that mater are used in the search.
+        final long[] pclassMask = new long[styleCacheEntry.pclassMask.length];
+        assert (pclassMask.length == states.length);
+
+        for (int n=0; n<pclassMask.length; n++) {
+            pclassMask[n] = styleCacheEntry.pclassMask[n] & states[n];
+        }
+
+        // the return value...
+        CacheEntry cacheEntry = null;
+
+        for (int n=0, max=cachedValues.size(); n<max; n++) {
+            final CacheEntry vce = cachedValues.get(n);
             final long[] vceStates = vce.states;
             if (Arrays.equals(pclassMask, vceStates)) {
-                sharedCacheEntry = vce;
+                cacheEntry = vce;
                 break;
             }
         }
 
-        if (sharedCacheEntry == null) {
-            sharedCacheEntry = new CacheEntry(pclassMask);
-            sharedStyleCache.entries.add(sharedCacheEntry);
+        if (cacheEntry == null) {
+            cacheEntry = new CacheEntry(pclassMask);
+            cachedValues.add(cacheEntry);
         }
-        
-        localCacheEntry = new CacheEntry(pclassMask, sharedCacheEntry);
-        localStyleCache.entries.add(localCacheEntry);
 
-        return localCacheEntry;
+        return cacheEntry;
     }
 
-    public void clearLocalCache() {
-        final List<CacheEntry> entries = localStyleCache.entries;
-        final int max = entries.size();
-        for (int n=0; n<max; n++) {
-            CacheEntry entry = entries.get(n);
-            assert (entry.sharedCache != null);
-            entry.values.clear();
-            entry.font = null;
-        }
-    }
-    /**
-     * A map from Property Name (String) => List of Styles. This shortens
-     * the lookup time for each property. The smap is shared and is owned
-     * by the StyleManager Cache.
+    /* 
+     * The lookup function return an Object but also
+     * needs to return whether or not the value is cacheable.
+     * 
+     * isCacheable is true if there are no lookups, or if the resolved lookups
+     * did not come from Node.style.
+     * 
      */
-    private final Reference<Map<String, List<CascadingStyle>>> smapRef;
+    private static class CalculatedValue {
+        final Object value;
+        final Stylesheet.Origin origin;
+        final boolean isCacheable;
 
-    private Map<String, List<CascadingStyle>> getStyleMap() throws IllegalStateException {
-        final Map<String, List<CascadingStyle>> smap = smapRef.get();
-        if (smap == null) {
-            throw new IllegalStateException("null style map referent");
+        CalculatedValue(Object value, Stylesheet.Origin origin, boolean isCacheable) {
+            
+            this.value = value;            
+            this.origin = origin;
+            this.isCacheable = isCacheable;            
+            
         }
-        return smap;
     }
     
+    /**
+     * A map from Property Name (String) => List of Styles. This shortens
+     * the lookup time for each property.
+     */
+    private final Map<String, List<CascadingStyle>> smap;
+
+    void clearStyleMap() {
+
+        for(List<CascadingStyle> styles : smap.values()) {
+            styles.clear();
+        }
+        smap.clear();
+    }
+
     /**
      * A Set of all the pseudoclass states which, if they change, need to
      * cause the Node to be set to UPDATE its CSS styles on the next pulse.
@@ -479,7 +392,7 @@ public class StyleHelper {
      */
     private final long pseudoclassStateMask;
 
-    private final WritableValue fontProp;
+    private boolean invalid;
     /**
      * Creates a new StyleHelper.
      *
@@ -488,21 +401,40 @@ public class StyleHelper {
      *        an important performance optimization so that pseudoclass state
      *        changes which do not affect any children do not get handled.
      */
-    private StyleHelper(
-            Map<String, List<CascadingStyle>> smap, 
-            WritableValue fontProp,
-            StyleCacheBucket localStyleCache,
-            StyleCacheBucket sharedStyleCache,
-            long pseudoclassStateMask, 
-            long key) {
-        this.key = key;
-        this.smapRef = new WeakReference<Map<String, List<CascadingStyle>>>(smap);
-        this.sharedStyleCacheRef = new WeakReference<StyleCacheBucket>(sharedStyleCache);
-        this.localStyleCache = localStyleCache;
+    private StyleHelper(List<CascadingStyle> styles, long pseudoclassStateMask, int index) {
         this.pseudoclassStateMask = pseudoclassStateMask;
-        this.fontProp = fontProp;
+        this.smap = new HashMap<String, List<CascadingStyle>>();
+        this.helperIndex = index;
+        this.invalid = false;
+        
+        final int max = styles != null ? styles.size() : 0;
+        for (int i=0; i<max; i++) {
+            CascadingStyle style = styles.get(i);
+            final String property = style.getProperty();
+            // This is carefully written to use the minimal amount of hashing.
+            List<CascadingStyle> list = smap.get(property);
+            if (list == null) {
+                list = new ArrayList<CascadingStyle>(5);
+                smap.put(property, list);
+            }
+            list.add(style);
+        }
+
     }
 
+    /** 
+    * If the StyleHelper is invalid, then the Node needs to get a
+    * new StyleHelper.
+    * @return 
+    */
+    public boolean isInvalid() {
+        return invalid;
+    }
+
+    /* package so StyleManager can get at it */ void setInvalid(boolean b) {
+        this.invalid = b;
+    }
+    
     /**
      * Invoked by Node to determine whether a change to a specific pseudoclass
      * state should result in the Node being marked dirty with an UPDATE flag.
@@ -609,7 +541,7 @@ public class StyleHelper {
             Stylesheet authorStylesheet =
                 CSSParser.getInstance().parseInlineStyle(styleable);
             if (authorStylesheet != null) {
-                authorStylesheet.setOrigin(Origin.INLINE);
+                authorStylesheet.setOrigin(Stylesheet.Origin.INLINE);
             }
             styles = getStyles(authorStylesheet);
             
@@ -652,38 +584,9 @@ public class StyleHelper {
         long[] states = getAllPseudoClassStates(node.getParent(), ++count);
         StyleHelper sh = node.impl_getStyleHelper();
         states[count-1] = (sh != null) ? sh.getPseudoClassState(node) : 0;
-        
-        if (LOGGER.isLoggable(PlatformLogger.FINE)) {
-            LOGGER.fine(node + ": states[" + Integer.toString(count-1) + "] = " + 
-                    StyleManager.getInstance().getPseudoclassStrings(states[count-1]));
-        }
-
-        
         return states;
     }
 
-    /* 
-     * The lookup function return an Object but also
-     * needs to return whether or not the value is cacheable.
-     * 
-     * isShared is true if the value is not specific to a node. 
-     * 
-     */
-    private static class CalculatedValue {
-        final Object value;
-        final Origin origin;
-        final boolean isRelative;
-
-        CalculatedValue(Object value, Origin origin, boolean isRelative) {
-            
-            this.value = value;            
-            this.origin = origin;
-            this.isRelative = isRelative;
-            
-        }
-        
-    }
-        
     /**
      * Called by the Node whenever it has transitioned from one set of
      * pseudoclass states to another. This function will then lookup the
@@ -692,69 +595,41 @@ public class StyleHelper {
      * how things are specified in the CSS file. Currently animation support
      * is disabled until the new parser comes online with support for
      * animations and that support is detectable via the API.
-     * @throws IllegalStateException if the style map referent is null
      */
-    public void transitionToState(Node node) throws IllegalStateException {
+    public void transitionToState(Node node) {
 
-        if (smapRef.get() == null) throw new IllegalStateException("null style map referent");
-        
         //
         // The ValueCacheEntry to choose depends on this Node's state and
         // the state of its parents. Without the parent state, the fact that
         // this node in this state matched foo:blah bar { } is lost.
         //
         final long[] allstates = getAllPseudoClassStates(node, 0);
-        
+
         // allstates[0] is this node's state
         final long states = 
             (allstates != null && allstates.length > 0) ? allstates[0] : 0;
-        
+
         //
-        // inlineStyles is this node's Node.style. This is passed along and is
+        // userStyles is this node's Node.style. This is passed along and is
         // used in getStyle. Importance being the same, an author style will
         // trump a user style and a user style will trump a user_agent style.
         //
-        final Map<String,CascadingStyle> inlineStyles = this.getInlineStyleMap(node);
+        final Map<String,CascadingStyle> userStyles = this.getInlineStyleMap(node);
 
         //
         // Styles that need lookup can be cached provided none of the styles
         // are from Node.style.
         //
-                
         final CacheEntry cacheEntry = getCacheEntry(node, allstates);
         if (cacheEntry == null) return;
+
+        final List<StyleableProperty> styleables =
+            StyleableProperty.getStyleables(node);
 
         //
         // if this node has a style map, then we'll populate it.
         // 
         final Map<WritableValue, List<Style>> styleMap = node.impl_getStyleMap();
-
-        //
-        // If someone is watching the styles, then we have to take the slow path.
-        //
-        boolean fastpath = styleMap == null;
-        
-        if (cacheEntry.font == null) {
-            final CalculatedValue font = 
-                getFontForUseInConvertingRelativeSize(node, cacheEntry, states, inlineStyles);
-            
-            cacheEntry.font = font;
-            assert(cacheEntry.font != null);
-            //
-            // If the cacheEntry's font is null, then this is a new cache entry.
-            // If the font is set by the user or there are inline styles, 
-            // take the slow path to ensure that the local values are updated. 
-            // The next time transitionToState is called, we'll take the fast
-            // path since all the values will have been calculated for this entry.
-            //
-            fastpath = 
-                fastpath && 
-                cacheEntry.font.origin != Origin.USER && 
-                cacheEntry.font.origin != Origin.INLINE && 
-                inlineStyles == null;
-        } 
-        
-        final List<StyleableProperty> styleables = StyleableProperty.getStyleables(node);
         
         // Used in the for loop below, and a convenient place to stop when debugging.
         final int max = styleables.size();
@@ -785,8 +660,6 @@ public class StyleHelper {
                     ? new ArrayList<Style>() 
                     : null;
 
-            boolean isUserSet = isUserSetProperty(node, styleable);
-            
             //
             // if there are userStyles, then we cannot (at this time) use
             // the cached value since the userStyles may contain a mapping for
@@ -805,11 +678,12 @@ public class StyleHelper {
             // if we had to cache the List<Style> - especially since asking
             // for the List<Style> will be the exception rather than the rule.
             //
-//            final boolean fastpath = styleList == null;
+            final boolean fastpath = 
+                userStyles == null && cacheEntry != null && styleList == null;
             CalculatedValue calculatedValue = null;
             if (fastpath) {
 
-                calculatedValue = cacheEntry.get(property);
+                calculatedValue = cacheEntry.values.get(property);
 
                 // RT-10522:
                 // If the user set the property and there is a style and
@@ -818,23 +692,25 @@ public class StyleHelper {
                 // not override the user set style.
                 if (calculatedValue == SKIP
                     || (   calculatedValue != null
-                        && calculatedValue.origin == Origin.USER_AGENT
+                        && calculatedValue.origin == Stylesheet.Origin.USER_AGENT
                         && isUserSetProperty(node, styleable)
                        )
                     ) {
                     continue;
                 }
+
             }
 
             if (calculatedValue == null) {
+                boolean isUserSet = isUserSetProperty(node, styleable);
                 calculatedValue = lookup(node, styleable, isUserSet, states, 
-                        inlineStyles, node, cacheEntry, styleList);
+                        userStyles, node, cacheEntry, styleList);
 
-//                if (fastpath) {
+                if (fastpath && calculatedValue.isCacheable) {
                     // if userStyles is null and calculatedValue was null,
                     // then the calculatedValue didn't come from the cache
-                    cacheEntry.put(property, calculatedValue);
-//                }
+                    cacheEntry.values.put(property, calculatedValue);
+                }
 
             }
 
@@ -889,7 +765,6 @@ public class StyleHelper {
         // scene, but don't have to worry about inherit. If only Scene were
         // an actual Parent node... might be a good idea except that its
         // scene variable then makes no sense. I guess it would be null??
-        throw new UnsupportedOperationException("not yet implemented");
     }
 
     /**
@@ -909,9 +784,6 @@ public class StyleHelper {
         final CascadingStyle userStyle = (userStyles != null) ? userStyles.get(property) : null;
 
         // Get all of the Styles which may apply to this particular property
-        final Map<String, List<CascadingStyle>> smap = getStyleMap();
-        if (smap == null) return null;
-
         final List<CascadingStyle> styles = smap.get(property);
 
         // If there are no styles for this property then we can just bail
@@ -998,9 +870,8 @@ public class StyleHelper {
                 // I default the array to be the size of the number of total
                 // sub styleables to avoid having the array grow.
                 Map<StyleableProperty,Object> subs = null;
-                Origin origin = null;
-                
-                boolean isRelative = false;
+                Stylesheet.Origin origin = null;
+                boolean isCacheable = true;
                 
                 for (int i=0; i<numSubProperties; i++) {
                     StyleableProperty subkey = subProperties.get(i);
@@ -1012,18 +883,14 @@ public class StyleHelper {
                             subs = new HashMap<StyleableProperty,Object>();
                         }
                         subs.put(subkey, constituent.value);
+                        isCacheable = isCacheable && constituent.isCacheable;
 
                         // origin of this style is the most specific
-                        if ((origin != null && constituent.origin != null)
-                                ? origin.compareTo(constituent.origin) < 0
-                                : constituent.origin != null) {
+                        if (origin == null || 
+                            (constituent.origin != null && 
+                                origin.compareTo(constituent.origin) < 0)) {
                             origin = constituent.origin;
                         }
-                        
-                        // if the constiuent uses relative sizes, then 
-                        // isRelative is true;
-                        isRelative = isRelative || constituent.isRelative;
-                            
                     }
                 }
 
@@ -1035,7 +902,7 @@ public class StyleHelper {
 
                 try {
                     final Object ret = keyType.convert(subs);
-                    return new CalculatedValue(ret, origin, isRelative);
+                    return new CalculatedValue(ret, origin, isCacheable);
                 } catch (ClassCastException cce) {
                     final String msg = formatExceptionMessage(node, styleable, style.getStyle(), cce);
                     List<CssError> errors = null;
@@ -1059,7 +926,7 @@ public class StyleHelper {
             // the style came from the user agent stylesheet, then
             // skip the value. A style from a user agent stylesheet should
             // not override the user set style.
-            if (isUserSet && style.getOrigin() == Origin.USER_AGENT) {
+            if (isUserSet && style.getOrigin() == Stylesheet.Origin.USER_AGENT) {
                 return SKIP;
             }
 
@@ -1115,45 +982,39 @@ public class StyleHelper {
             // set the default value if the user set the property
             return SKIP;
 
-        } else {
+        } else if (smap.containsKey(styleable.getProperty())) {
+
+            // If there is a style in the stylemap but it just doen't apply,
+            // then it may have been set and it needs to be reset to its
+            // default value. For example, if there is a style for the hover
+            // pseudoclass state, but no style for the default state.
+            Object initialValue = styleable.getInitialValue(node);
             
-            final Map<String, List<CascadingStyle>> smap = getStyleMap();
-            if (smap == null) return SKIP;
-            
-            if (smap.containsKey(styleable.getProperty())) {
-
-                // If there is a style in the stylemap but it just doen't apply,
-                // then it may have been set and it needs to be reset to its
-                // default value. For example, if there is a style for the hover
-                // pseudoclass state, but no style for the default state.
-                Object initialValue = styleable.getInitialValue(node);
-
-                if (styleList != null) {
-
-                    Style initialStyle = stylesFromDefaults.get(styleable);
-                    if (initialStyle != null) {
-                        if (!declarationsFromDefaults.contains(initialStyle.getDeclaration())) {
-                            declarationsFromDefaults.add(initialStyle.getDeclaration());
-                        }
-                    } else {
-                        initialStyle = new Style( 
-                            Selector.getUniversalSelector(),
-                            new Declaration(styleable.getProperty(), 
-                                        new ParsedValue(initialValue, null), false));
-                        stylesFromDefaults.put(styleable, initialStyle);
+            if (styleList != null) {
+                
+                Style initialStyle = stylesFromDefaults.get(styleable);
+                if (initialStyle != null) {
+                    if (!declarationsFromDefaults.contains(initialStyle.getDeclaration())) {
                         declarationsFromDefaults.add(initialStyle.getDeclaration());
                     }
-
-                    styleList.add(initialStyle);
+                } else {
+                    initialStyle = new Style( 
+                        Selector.getUniversalSelector(),
+                        new Declaration(styleable.getProperty(), 
+                                    new ParsedValue(initialValue, null), false));
+                    stylesFromDefaults.put(styleable, initialStyle);
+                    declarationsFromDefaults.add(initialStyle.getDeclaration());
                 }
-
-                return new CalculatedValue(initialValue, null, false);
-
-            } else {
-
-                return SKIP;
-
+                                
+                styleList.add(initialStyle);
             }
+
+            return new CalculatedValue(initialValue, null, true);
+
+        } else {
+
+            return SKIP;
+
         }
     }
     /**
@@ -1220,17 +1081,8 @@ public class StyleHelper {
     }
 
     // to resolve a lookup, we just need to find the parsed value.
-    private ParsedValue resolveLookups(
-            Node node, 
-            ParsedValue value, 
-            long states,
-            Map<String,CascadingStyle> userStyles, 
-            List<Style> styleList) {
-        
-        
-        //
-        // either the value itself is a lookup, or the value contain a lookup
-        //
+    private ParsedValue resolveLookups(Node node, ParsedValue value, BooleanProperty cacheable, long states,
+            Map<String,CascadingStyle> userStyles, List<Style> styleList) {
         if (value.isLookup()) {
 
             // The value we're looking for should be a Paint, one of the
@@ -1252,10 +1104,13 @@ public class StyleHelper {
                         }
                     }
                     
+                    if (resolved.getOrigin() == Stylesheet.Origin.INLINE) {
+                        cacheable.set(false);
+                    }
                     // the resolved value may itself need to be resolved.
                     // For example, if the value "color" resolves to "base",
                     // then "base" will need to be resolved as well.
-                    return resolveLookups(node, resolved.getParsedValue(), states, userStyles, styleList);
+                    return resolveLookups(node, resolved.getParsedValue(), cacheable, states, userStyles, styleList);
                 }
             }
         }
@@ -1273,7 +1128,7 @@ public class StyleHelper {
                 for (int ll=0; ll<layers[l].length; ll++) {
                     if (layers[l][ll] == null) continue;
                     layers[l][ll].resolved = 
-                        resolveLookups(node, layers[l][ll], states, userStyles, styleList);
+                        resolveLookups(node, layers[l][ll], cacheable, states, userStyles, styleList);
                 }
             }
 
@@ -1283,7 +1138,7 @@ public class StyleHelper {
             for (int l=0; l<layer.length; l++) {
                 if (layer[l] == null) continue;
                 layer[l].resolved =
-                    resolveLookups(node, layer[l], states, userStyles, styleList);
+                    resolveLookups(node, layer[l], cacheable, states, userStyles, styleList);
             }
         }
 
@@ -1343,7 +1198,7 @@ public class StyleHelper {
             sbuf.append(" from rule '")
                 .append(style.getSelector())
                 .append("' in stylesheet ").append(url.toExternalForm());
-        } else if (stylesheet != null && Origin.INLINE == stylesheet.getOrigin()) {
+        } else if (stylesheet != null && Stylesheet.Origin.INLINE == stylesheet.getOrigin()) {
             sbuf.append(" from inline style on " )
                 .append(node.toString());            
         }
@@ -1368,7 +1223,7 @@ public class StyleHelper {
             sbuf.append(" from rule '")
                 .append(style.getSelector())
                 .append("' in stylesheet ").append(url.toExternalForm());
-        } else if (stylesheet != null && Origin.INLINE == stylesheet.getOrigin()) {
+        } else if (stylesheet != null && Stylesheet.Origin.INLINE == stylesheet.getOrigin()) {
             sbuf.append(" from inline style on " )
                 .append(node.toString());            
         }
@@ -1387,102 +1242,46 @@ public class StyleHelper {
             final List<Style> styleList) {
 
         final ParsedValue cssValue = style.getParsedValue();
-        if (cssValue != null && !("null").equals(cssValue.getValue())) {
+        if (style.value == null && cssValue != null && !("null").equals(cssValue.getValue())) {
         
+            BooleanProperty cacheable = new SimpleBooleanProperty(true);
             final ParsedValue resolved = 
-                resolveLookups(node, cssValue, states, inlineStyles, styleList);
+                resolveLookups(node, cssValue, cacheable, 
+                    states, inlineStyles, styleList);
             
             try {
                 // The computed value
                 Object val = null;
-                CalculatedValue fontValue = null;
-
-                //
-                // Avoid using a font calculated from a relative size
-                // to calculate a font with a relative size. 
-                // For example:
-                // Assume the default font size is 13 and we have a style with
-                // -fx-font-size: 1.5em, then the cacheEntry font value will 
-                // have a size of 13*1.5=19.5. 
-                // Now, when converting that same font size again in response
-                // to looking up a value for -fx-font, we do not want to use
-                // 19.5 as the font for relative size conversion since this will
-                // yield a font 19.5*1.5=29.25 when really what we want is
-                // a font size of 19.5.
-                // In this situation, then, we use the font from the parent's
-                // cache entry.
-                final String property = styleable.getProperty();
-                if (resolved.isNeedsFont() &&
-                    (cacheEntry.font == null || cacheEntry.font.isRelative) &&
-                    ("-fx-font".equals(property) ||
-                     "-fx-font-size".equals(property)))  {
-                    
-                    Node parent = node;
-                    CalculatedValue cachedFont = cacheEntry.font;
-                    while(parent != null) {
                         
-                        final CacheEntry parentCacheEntry = 
-                            getParentCacheEntry(parent);
-                        
-                        if (parentCacheEntry != null) {
-                            fontValue = parentCacheEntry.font;
-                        
-                            if (fontValue != null && fontValue.isRelative) {
-
-                                // If cacheEntry.font is null, then we're here by 
-                                // way of getFontForUseInConvertingRelativeSize
-                                // If  the fontValue is not relative, then the
-                                // cacheEntry.font needs to be calculated. If
-                                // fontValue is relative, then we can use it as
-                                // is - this is a hack for Control and SkinBase
-                                // which share the same styles (hence the check
-                                // for parent == node).
-                                // TBD - should check that they are the same styles
-    //                                if (parent == node && childCacheEntry.font == null) {
-    //                                    return fontValue;
-    //                                } 
-
-                                if (cachedFont != null) {
-                                    final Font ceFont = (Font)cachedFont.value;
-                                    final Font fvFont = (Font)fontValue.value;
-                                    if (ceFont.getSize() != fvFont.getSize()) {
-                                        // if the font sizes don't match, then
-                                        // the fonts came from distinct styles,
-                                        // otherwise, we need another level of
-                                        // indirection
-                                        break;
-                                    }
-                                } 
-
-                                // cachedFont is null or the sizes match
-                                // (implies the fonts came from the same style)
-                                cachedFont = fontValue;
-
-                            } else if (fontValue != null) {
-                                // fontValue.isRelative == false
-                                break;
-                            }
-                        }
-                        // try again
-                        parent = parent.getParent();
-                    }
-                }
-
-                // did we get a fontValue from the preceding block (from the hack)?
-                // if not, get it from our cachEntry or choose the default.cd
-                if (fontValue == null && cacheEntry != null) {
-                    fontValue = cacheEntry != null ? cacheEntry.font : null;
-                }
-                final Font font = (fontValue != null) ? (Font)fontValue.value : Font.getDefault();
-
-
+                Font font = resolved.isNeedsFont() 
+                    ? getFontForUseInConvertingRelativeSize(
+                        node, 
+                        styleable, 
+                        style,                         
+                        cacheEntry,
+                        cacheable,
+                        originatingNode,
+                        Font.getDefault(),
+                        styleList
+                      )
+                    : null;
+                if (font == null) font = Font.getDefault();
                 if (resolved.getConverter() != null)
                     val = resolved.convert(font);
                 else
                     val = styleable.getConverter().convert(resolved, font);
 
-                final Origin origin = style.getOrigin();
-                return new CalculatedValue(val, origin, resolved.isNeedsFont());
+                // We cannot store the computed val in the style.value in the
+                // case of properties which had lookups
+                final ParsedValue parsedValue = style.getParsedValue();
+                if (!parsedValue.isLookup() && !parsedValue.isContainsLookups() &&
+                    // RT-19192 - if -fx-font-size is relative, do not cache
+                      !(resolved.isNeedsFont())) {
+                    style.value = val;
+                }
+                
+                final Stylesheet.Origin origin = style.getOrigin();
+                return new CalculatedValue(val, origin, cacheable.get());
                 
             } catch (ClassCastException cce) {
                 final String msg = formatUnresolvedLookupMessage(node, styleable, style.getStyle(),resolved);
@@ -1528,189 +1327,154 @@ public class StyleHelper {
                 resolved.nullResolved();
             }
                 
+            // We cannot store the computed val in the style.value in the
+            // case of properties which had lookups
+//            final ParsedValue parsedValue = style.getParsedValue();
+//            if (!parsedValue.isLookup() && !parsedValue.isContainsLookups()) {
+//                style.value = val;
+//            }
+//            final Stylesheet.Origin origin = style.getOrigin();
+//            return new CalculatedValue(val, (origin != Stylesheet.Origin.INLINE), style.getStyle());
         }
-        // either cssValue was null or cssValue's value was "null"
-        return new CalculatedValue(null, style.getOrigin(), false);
-           
+        final Stylesheet.Origin origin = style.getOrigin();
+        return new CalculatedValue(style.value, origin, (origin != Stylesheet.Origin.INLINE));
+            
     }
     
     /** return true if the origin of the property is USER */
     private boolean isUserSetProperty(Node node, StyleableProperty styleable) {
         WritableValue writable = node != null ? styleable.getWritableValue(node) : null;
         // writable could be null if this is a sub-property
-        Origin origin = writable != null ? ((Property)writable).getOrigin() : null;
-        return (origin == Origin.USER);    
+        Stylesheet.Origin origin = writable != null ? ((Property)writable).getOrigin() : null;
+        return (origin == Stylesheet.Origin.USER);    
     }    
             
-    private static final StyleableProperty dummyFontProperty =
-            new StyleableProperty.FONT<Node>("-fx-font", Font.getDefault()) {
-
-        @Override
-        public boolean isSettable(Node node) {
-            return true;
-        }
-
-        @Override
-        public WritableValue<Font> getWritableValue(Node node) {
-            return null;
-        }
-    };
-   
-    private CacheEntry getParentCacheEntry(Node child) {
-
-        if (child == null) return null;
+    private Font getFontForUseInConvertingRelativeSize( 
+            final Node node, 
+            final StyleableProperty styleable, 
+            final CascadingStyle style,
+            final CacheEntry cacheEntry,
+            final BooleanProperty cacheable,
+            final Node originatingNode,
+            final Font font,
+            final List<Style> styleList) 
+    {
         
-        Node parent = child;
-        StyleHelper parentHelper = null;
-        do {
-            parent = parent.getParent();
-        } while (parent != null &&
-                    (parentHelper = parent.impl_getStyleHelper()) == null);
+        if (node == null) return Font.getDefault();
+                           
+        // RT-20145 - if looking for font size and the node has a font, 
+        // use the font property's value if it was set by the user. 
+        StyleableProperty fontKey =  null;
 
-        CacheEntry parentCacheEntry = null;
-        if (parent != null && parentHelper != null) {
-            final long[] pstates = getAllPseudoClassStates(parent,0);
-            parentCacheEntry = parentHelper.getCacheEntry(parent, pstates);
-//            assert(parentCacheEntry.font != null);
-        }
-        return parentCacheEntry;
-    }
-   
-    private CalculatedValue getFontForUseInConvertingRelativeSize(
-             final Node node,
-             final CacheEntry cacheEntry,
-            long pseudoclassState,
-            Map<String,CascadingStyle> inlineStyles)
-     {
-        
-                            
-        Origin origin = null;
-        Font foundFont = null;
-        CalculatedValue foundSize = null;
-        CalculatedValue foundShorhand = null;
-        boolean isRelative = false;
-         
-         // RT-20145 - if looking for font size and the node has a font, 
-         // use the font property's value if it was set by the user. 
-        // If the font wasn't set by the user, then it has either 
-        // never been set or it was set by CSS.
-        // In the case where it was never set, we need to look for a style.
-        // In the case where it was set by the user, then we need to look
-        // for font shorthand and font-size styles on this node (and this
-        // node only) since an inline or author style would override the 
-        // user style.
-        // In the case where it was been set by CSS, then 
-        // we need to look for a style again since the style may have
-        // changed for some reason.
-        // TBD - REAPPLY of css may obviate this last assertion
-        if (fontProp != null) {
- 
-            Origin fpOrigin = StyleableProperty.getOrigin(fontProp);
-            // if fpOrigin is null, then the value is just the default value
-            // and we should look for something other than the default or 
-            // inherit the font.
-            if (fpOrigin != null) {                
-                origin = fpOrigin;
-                foundFont = (Font)fontProp.getValue();
+        final List<StyleableProperty> styleables =
+                StyleableProperty.getStyleables(node);
+
+        for(int n=0, max=styleables.size(); n<max; n++) {
+            // Instance equality is fine here!
+            final StyleableProperty prop = styleables.get(n);
+            if (prop.getConverter() == FontConverter.getInstance()) {
+                fontKey = prop;
+                break;
             }
-        } 
- 
-        final CascadingStyle fontShorthand =
-            getStyle(node, "-fx-font", pseudoclassState, inlineStyles);
+        }
 
-        if (fontShorthand != null) {
-            
-            final CalculatedValue cv = 
-                calculateValue(fontShorthand, node, dummyFontProperty, 
-                    pseudoclassState, inlineStyles, 
-                    node, cacheEntry, null);
-            
-            // If we don't have an existing font, or if the origin of the existing font is
-            // less than that of the shorthand, then take the shorthand.
-            // If the origins compare equals, then take the shorthand since 
-            // the fontProp value will not have been updated yet. Man, this
-            // drove me nuts!
-            if (origin == null || origin.compareTo(cv.origin) <= 0) {
-                               
-                // cv could be SKIP
-                if (cv.value instanceof Font) {
-                    origin = cv.origin;
-                    foundShorhand = cv;
-                    foundFont = null;
-                }
-
-            }  
-         }
- 
-        final boolean isUserSet = 
-                origin == Origin.USER || origin == Origin.INLINE;
-         
-        // now look for -fx-size, but don't look past the current node (hence 
-        // distance == 0)
-        CascadingStyle fontSize = lookupFontSubPropertyStyle(node, "-fx-font-size",
-                isUserSet, fontShorthand, 0);
+        final WritableValue writable = fontKey != null 
+                ? fontKey.getWritableValue(node)
+                : null;
         
-        if (fontSize != null &&
-                (fontShorthand == null || fontShorthand.compareTo(fontSize) < 0)) {
+        if (writable != null) {
+            Stylesheet.Origin origin = StyleableProperty.getOrigin(writable);
+            if (origin == Stylesheet.Origin.USER) {
+                return (Font)fontKey.getWritableValue(node).getValue();
+            }
+        }
+        
+        
+        // for caching, need to know where the value came from
+        Stylesheet.Origin origin = null;
 
-            final CalculatedValue cv = 
-                calculateValue(fontSize, node, dummyFontProperty, pseudoclassState, inlineStyles, 
-                    node, cacheEntry, null);
+        Font inheritedFont = Font.getDefault();
             
-            if (cv.value instanceof Double) {
-                if (origin == null || origin.compareTo(cv.origin) <= 0) {  
-                    origin = cv.origin;
-                    foundSize = cv;
-                    foundShorhand = null;
-                    foundFont = null;
-                }
-             }
+        final StyleHelper helper = node.impl_getStyleHelper();
+        if (helper != null) {
 
-         }
-         
-         
-        if (foundShorhand != null) {
+            final Map<String,CascadingStyle> inlineStyles = helper.getInlineStyleMap(node);
+            //
+            // need to distinguish the "inherited" font since it could resolve
+            // to Font.getDefault() and we don't want that to look like it was
+            // inherited from a style. Without this, if we stick -fx-font into
+            // the cache, then a lookup for some Node will return the default
+            // font. The effect of this is seen in RT-15802.
+            //
+            final boolean fastPath = inlineStyles == null;
+            final String cachedInheritedFontKey = "*inherited-font*";
+            if (fastPath) {
+                // Look for a font that was previously found by this method 
+                CalculatedValue cv = cacheEntry.values.get(cachedInheritedFontKey);
+                if (cv != null && cv.value instanceof Font) return (Font)cv.value;
+            }
+
+            final long states = helper.getPseudoClassState(node);
             
-            return foundShorhand;
+            CascadingStyle fontStyle = 
+                    helper.getStyle(node, "-fx-font", states, inlineStyles);
             
-        } else if (foundSize != null) {
-            
-            Font font = Font.font("system", ((Double)foundSize.value).doubleValue());
-            return new CalculatedValue(font, foundSize.origin, foundSize.isRelative);
-            
-        } else if (foundFont != null) {
-         
-            // Did this found font come from a style? 
-            // If so, then the font used to convert it from a relative size
-            // (if conversion was needed) comes from the parent.
-            if (origin != null && origin != Origin.USER) {
+            if (fontStyle == null) {
+                // We don't really need the whole font - just the size
+                fontStyle = helper.getStyle(node, "-fx-font-size", states, inlineStyles);                
+            }
+
+            if (fontStyle != null && 
+                style.getStyle().equals(fontStyle.getStyle()) == false) {
                 
-                CacheEntry parentCacheEntry = getParentCacheEntry(node);
+                if (styleList != null) {
+                    styleList.add(fontStyle.getStyle());
+                }
+                
+                final Stylesheet.Origin fsOrigin = fontStyle.getOrigin();
+                if (origin == null || origin.compareTo(fsOrigin) < 0) {
+                    origin = fsOrigin;
+                }
+                if (origin == Stylesheet.Origin.INLINE) {
+                    cacheable.set(false);
+                }
+                
+                final ParsedValue parsedValue = fontStyle.getParsedValue();
+                // resolve lookups starting at node, not parent. 
+                final ParsedValue resolved =
+                    helper.resolveLookups(node, parsedValue, cacheable, states, 
+                        inlineStyles, null);
 
-                if (parentCacheEntry != null && parentCacheEntry.font != null) {
-                    isRelative = parentCacheEntry.font.isRelative;
-                } 
+                // if we find a style that still needs a font, keep going
+                if (resolved.isNeedsFont()) {
+                    inheritedFont =
+                        getFontForUseInConvertingRelativeSize(node.getParent(),
+                            styleable, style, cacheEntry, cacheable, 
+                            originatingNode, font, styleList);
+                }
+                
+                Object value = resolved.convert(inheritedFont);
+                if (value instanceof Font) {
+                    inheritedFont = (Font)value;
+                } else if (value instanceof Double) {
+                    inheritedFont = Font.font("system", ((Double)value).doubleValue());
+                }
+                
+                if (fastPath && cacheable.get()) {
+                    CalculatedValue cv = new CalculatedValue(inheritedFont, origin, true);
+                    cacheEntry.values.put(cachedInheritedFontKey, cv);            
+                }
+                return inheritedFont;
             }
-            return new CalculatedValue(foundFont, origin, isRelative);
-            
-        } else {
-            
-            // no font, font-size or fontProp. 
-            // inherit by taking the parent's cache entry font.
-            CacheEntry parentCacheEntry = getParentCacheEntry(node);
-            
-            if (parentCacheEntry != null && parentCacheEntry.font != null) {
-                return parentCacheEntry.font;                    
-            } 
-        } 
-        // last ditch effort -  take the default font.
-        return new CalculatedValue(Font.getDefault(), null, false);
-     }
+        }
 
+        return getFontForUseInConvertingRelativeSize(node.getParent(), 
+                styleable, style, cacheEntry, cacheable, originatingNode, font, styleList);
+    }
     
     private CascadingStyle lookupFontSubPropertyStyle(final Node node, 
             final String subProperty, final boolean isUserSet,
-            final CascadingStyle csShorthand, 
+            final BooleanProperty cacheable, final CascadingStyle csShorthand, 
             final int distance) {
     
         Node parent = node;
@@ -1724,7 +1488,7 @@ public class StyleHelper {
             final Map<String,CascadingStyle> inlineStyles = helper.getInlineStyleMap(parent);
             
             cascadingStyle = 
-                helper.getStyle(parent, subProperty, states, inlineStyles);
+                helper.getStyle(node, subProperty, states, inlineStyles);
             
             if (isUserSet) {
                 //
@@ -1732,19 +1496,24 @@ public class StyleHelper {
                 //
                 if (cascadingStyle != null) {
                     
-                    final Origin origin = cascadingStyle.getOrigin();
+                    final Stylesheet.Origin origin = cascadingStyle.getOrigin();
 
                     // if the user set the property and the origin is the
                     // user agent stylesheet, then we can't use the style
                     // since ua styles shouldn't override user set values
-                    if (origin == Origin.USER_AGENT) {
+                    if (origin == Stylesheet.Origin.USER_AGENT) {
                         cascadingStyle = null;
-                    }
+                    } else if (origin == Stylesheet.Origin.INLINE) {
+                        cacheable.set(false);
+                    }                    
                 }    
                 
                 break;
                 
             } else if (cascadingStyle != null) {
+                if (cascadingStyle.getOrigin() == Stylesheet.Origin.INLINE) {
+                    cacheable.set(false);
+                }                    
                 // Take the first non-null  
                 break;
                 
@@ -1827,8 +1596,8 @@ public class StyleHelper {
             boolean isUserSet, Node originatingNode, 
             CacheEntry cacheEntry, List<Style> styleList) {
 
-        Origin origin = null;
-        boolean isRelative = false;
+        BooleanProperty cacheable = new SimpleBooleanProperty(true);
+        Stylesheet.Origin origin = null;
             
         // distance keeps track of how far up the parent chain we had to go
         // to find a font shorthand. We'll look no further than this
@@ -1838,7 +1607,7 @@ public class StyleHelper {
         
         Node parent = node;
         StyleHelper helper = this;
-        String property = styleable.getProperty();
+        
         CascadingStyle csShorthand = null;
         while (parent != null) {
             
@@ -1846,7 +1615,7 @@ public class StyleHelper {
             final Map<String,CascadingStyle> inlineStyles = helper.getInlineStyleMap(parent);
             
             final CascadingStyle cascadingStyle =
-                helper.getStyle(parent, property, states, inlineStyles);
+                helper.getStyle(node, "-fx-font", states, inlineStyles);
             
             if (isUserSet) {
                 //
@@ -1860,9 +1629,12 @@ public class StyleHelper {
                     // if the user set font and the origin of the font shorthand
                     // is the user agent stylesheet, then we can't use the style
                     // since ua styles shouldn't override setFont
-                    if (origin != Origin.USER_AGENT) {
+                    if (origin != Stylesheet.Origin.USER_AGENT) {
                         csShorthand = cascadingStyle;
-                    }                    
+                    } else if (origin == Stylesheet.Origin.INLINE) {
+                        cacheable.set(false);
+                    }
+                    
                 }    
                 
                 break;
@@ -1872,6 +1644,9 @@ public class StyleHelper {
                 // if isUserSet is false, then take the style if we found one
                 //
                 origin = cascadingStyle.getOrigin();
+                if (origin == Stylesheet.Origin.INLINE) {
+                        cacheable.set(false);
+                }
                 csShorthand = cascadingStyle;
                 break;
                 
@@ -1908,34 +1683,33 @@ public class StyleHelper {
                 calculateValue(csShorthand, node, styleable, states, inlineStyles, 
                     originatingNode, cacheEntry, styleList);
             
-            if (origin == null || origin.compareTo(cv.origin) <= 0) {
+            if (cv.isCacheable == false) cacheable.set(false);
+            
+            if (cv.value instanceof Font) {
+                Font f = (Font)cv.value;
                 
-                if (cv.value instanceof Font) {
-                    Font f = (Font)cv.value;
-                    isRelative = cv.isRelative;
+                if (origin == null || origin.compareTo(cv.origin) < 0) {                        
                     origin = cv.origin;
-                
-                    // what did font shorthand specify? 
-                    ParsedValue[] vals = 
-                            (ParsedValue[])csShorthand.getParsedValue().getValue();
-                    // Use family and size from converted font since the actual 
-                    // values may have been resolved. The weight and posture, 
-                    // however, are hard to get reliably from the font so use 
-                    // the parsed value instead. 
-                    if (vals[0] != null) family = f.getFamily();
-                    if (vals[1] != null) size   = f.getSize();
-                    if (vals[2] != null) weight = (FontWeight)vals[2].convert(null);
-                    if (vals[3] != null) style  = (FontPosture)vals[3].convert(null);
-
                 }
+                // what did font shorthand specify? 
+                ParsedValue[] vals = 
+                        (ParsedValue[])csShorthand.getParsedValue().getValue();
+                // Use family and size from converted font since the actual 
+                // values may have been resolved. The weight and posture, 
+                // however, are hard to get reliably from the font so use 
+                // the parsed value instead. 
+                if (vals[0] != null) family = f.getFamily();
+                if (vals[1] != null) size   = f.getSize();
+                if (vals[2] != null) weight = (FontWeight)vals[2].convert(null);
+                if (vals[3] != null) style  = (FontPosture)vals[3].convert(null);
+                
             }
             
         }
         
         CascadingStyle csFamily = null; 
-        if ((csFamily = lookupFontSubPropertyStyle(node, property+"-family",
-                isUserSet, csShorthand, distance)) != null &&
-               (csShorthand == null || csShorthand.compareTo(csFamily) < 0)) {
+        if ((csFamily = lookupFontSubPropertyStyle(node, "-fx-font-family",
+                isUserSet, cacheable, csShorthand, distance)) != null) {
 
             if (styleList != null) {
                 styleList.add(csFamily.getStyle());
@@ -1945,9 +1719,10 @@ public class StyleHelper {
                 calculateValue(csFamily, node, styleable, states, inlineStyles, 
                     originatingNode, cacheEntry, styleList);
 
-            if (origin == null || origin.compareTo(cv.origin) <= 0) {                        
-                if (cv.value instanceof String) {
-                    family = Utils.stripQuotes((String)cv.value);
+            if (cv.isCacheable == false) cacheable.set(false);
+            if (cv.value instanceof String) {
+                family = Utils.stripQuotes((String)cv.value);
+                if (origin == null || origin.compareTo(cv.origin) < 0) {                        
                     origin = cv.origin;
                 }
             }
@@ -1955,9 +1730,8 @@ public class StyleHelper {
         }
         
         CascadingStyle csSize = null;
-        if ((csSize = lookupFontSubPropertyStyle(node, property+"-size",
-                isUserSet, csShorthand, distance))!= null &&
-               (csShorthand == null || csShorthand.compareTo(csSize) < 0)) {
+        if ((csSize = lookupFontSubPropertyStyle(node, "-fx-font-size",
+                isUserSet, cacheable, csShorthand, distance))!= null) {
        
             if (styleList != null) {
                 styleList.add(csSize.getStyle());
@@ -1966,11 +1740,10 @@ public class StyleHelper {
             final CalculatedValue cv = 
                 calculateValue(csSize, node, styleable, states, inlineStyles, 
                     originatingNode, cacheEntry, styleList);
-
-            if (origin == null || origin.compareTo(cv.origin) <= 0) {                        
-                if (cv.value instanceof Double) {
-                    size = ((Double)cv.value).doubleValue();
-                    isRelative = cv.isRelative;
+            if (cv.isCacheable == false) cacheable.set(false);
+            if (cv.value instanceof Double) {
+                size = ((Double)cv.value).doubleValue();
+                if (origin == null || origin.compareTo(cv.origin) < 0) {                        
                     origin = cv.origin;
                 }
             }
@@ -1978,9 +1751,8 @@ public class StyleHelper {
         }
         
         CascadingStyle csWeight = null;
-        if ((csWeight = lookupFontSubPropertyStyle(node, property+"-weight",
-                isUserSet, csShorthand, distance))!= null &&
-               (csShorthand == null || csShorthand.compareTo(csWeight) < 0)) {
+        if ((csWeight = lookupFontSubPropertyStyle(node, "-fx-font-weight",
+                isUserSet, cacheable, csShorthand, distance))!= null) {
 
             if (styleList != null) {
                 styleList.add(csWeight.getStyle());
@@ -1989,10 +1761,10 @@ public class StyleHelper {
             final CalculatedValue cv = 
                 calculateValue(csWeight, node, styleable, states, inlineStyles, 
                     originatingNode, cacheEntry, styleList);
-
-            if (origin == null || origin.compareTo(cv.origin) <= 0) {                        
-                if (cv.value instanceof FontWeight) {
-                    weight = (FontWeight)cv.value;
+            if (cv.isCacheable == false) cacheable.set(false);
+            if (cv.value instanceof FontWeight) {
+                weight = (FontWeight)cv.value;
+                if (origin == null || origin.compareTo(cv.origin) < 0) {                        
                     origin = cv.origin;
                 }
             }
@@ -2000,10 +1772,9 @@ public class StyleHelper {
         }
 
         CascadingStyle csStyle = null;
-        if ((csStyle = lookupFontSubPropertyStyle(node, property+"-style",
-                isUserSet, csShorthand, distance))!= null &&
-               (csShorthand == null || csShorthand.compareTo(csStyle) < 0)) {
-            
+        if ((csStyle = lookupFontSubPropertyStyle(node, "-fx-font-style",
+                isUserSet, cacheable, csShorthand, distance))!= null) {
+       
             if (styleList != null) {
                 styleList.add(csStyle.getStyle());
             }
@@ -2011,10 +1782,10 @@ public class StyleHelper {
             final CalculatedValue cv = 
                 calculateValue(csStyle, node, styleable, states, inlineStyles, 
                     originatingNode, cacheEntry, styleList);
-
-            if (origin == null || origin.compareTo(cv.origin) <= 0) {                        
-                if (cv.value instanceof FontPosture) {
-                    style = (FontPosture)cv.value;
+            if (cv.isCacheable == false) cacheable.set(false);
+            if (cv.value instanceof FontPosture) {
+                style = (FontPosture)cv.value;
+                if (origin == null || origin.compareTo(cv.origin) < 0) {                        
                     origin = cv.origin;
                 }
             }                
@@ -2059,7 +1830,7 @@ public class StyleHelper {
             val = Font.font(family, size);            
         }
 
-        return new CalculatedValue(val, origin, isRelative);
+        return new CalculatedValue(val, origin, cacheable.get());
     }    
     
     /**
@@ -2133,10 +1904,7 @@ public class StyleHelper {
             }
                     
             String property = styleableProperty.getProperty();
-            final Map<String, List<CascadingStyle>> smap = getStyleMap();
-            if (smap == null) return;
-            
-             List<CascadingStyle> styles = smap.get(property);            
+            List<CascadingStyle> styles = smap.get(property);
             
 //            if (inlineStyleMap != null) {
 //               if (inlineStyleMap.containsKey(property)) {
@@ -2192,10 +1960,7 @@ public class StyleHelper {
                                              
                         final int start = styleList.size();
                         
-                        final Map<String, List<CascadingStyle>> smap = getStyleMap();
-                        if (smap == null) return;
-
-                        List<CascadingStyle> styles = smap.get(property);
+                        List<CascadingStyle> styles = helper.smap.get(property);
                         
                         if (styles != null) {
                             styleList.addAll(styles);

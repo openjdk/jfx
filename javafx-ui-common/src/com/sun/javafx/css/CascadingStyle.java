@@ -42,6 +42,11 @@ class CascadingStyle implements Comparable {
     /** State variables, like &quot;hover&quot; or &quot;pressed&quot; */
     private final List<String> pseudoclasses;
 
+    /**
+     * The (temporal) value calculated in StyleHelper
+     */
+    Object value;
+    
     /* specificity of the rule that matched */
     private final int specificity;
     

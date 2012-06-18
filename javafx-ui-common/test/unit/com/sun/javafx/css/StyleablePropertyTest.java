@@ -51,7 +51,10 @@ import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
 import java.net.*;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.HashMap;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import javafx.beans.property.ObjectProperty;
@@ -284,33 +287,28 @@ public class StyleablePropertyTest {
     
         final List<CascadingStyle> cascadingStyles = new ArrayList<CascadingStyle>();
         Collections.addAll(cascadingStyles, styles);
-        final  Map<String, List<CascadingStyle>> styleMap = 
-                Node_cssStyleMap_Test.createStyleMap(cascadingStyles);
-        final Map<StyleHelper.StyleCacheKey, StyleHelper.StyleCacheBucket> styleCache = 
-                        new HashMap<StyleHelper.StyleCacheKey, StyleHelper.StyleCacheBucket>();
-        
         
         final Group group = new Group() {
             // I'm bypassing StyleManager by creating StyleHelper directly. 
             StyleHelper shelper = null;
             
-            @Override public void impl_processCSS(boolean reapply) {
-                if (reapply) {
-                    shelper = StyleHelper.create(this, styleMap, styleCache, 0, 2);
-                }
-                shelper.transitionToState(this);
+            @Override
+            public StyleHelper.StyleCacheKey impl_getStyleCacheKey() {
+                return shelper.createStyleCacheKey(this);
             }
-                                               
+
             @Override public StyleHelper impl_getStyleHelper() {
+                if (shelper == null) shelper = impl_createStyleHelper();
                 return shelper;
-            }            
-            
+            }
+                        
             @Override
             public StyleHelper impl_createStyleHelper() {
-                fail();
-                return null;
+                shelper = StyleHelper.create(cascadingStyles, 0, 0);
+                shelper.styleCache = new HashMap<StyleHelper.StyleCacheKey, StyleHelper.StyleCacheEntry>();
+                return shelper;
             }
-                                    
+            
         };
         group.getStyleClass().add("root");
         
@@ -321,32 +319,28 @@ public class StyleablePropertyTest {
     
         final List<CascadingStyle> cascadingStyles = new ArrayList<CascadingStyle>();
         Collections.addAll(cascadingStyles, styles);
-        final  Map<String, List<CascadingStyle>> styleMap = 
-                Node_cssStyleMap_Test.createStyleMap(cascadingStyles);
-        final Map<StyleHelper.StyleCacheKey, StyleHelper.StyleCacheBucket> styleCache = 
-                        new HashMap<StyleHelper.StyleCacheKey, StyleHelper.StyleCacheBucket>();
         
         Rectangle rectangle = new Rectangle() {
             // I'm bypassing StyleManager by creating StyleHelper directly. 
             StyleHelper shelper = null;
             
-            @Override public void impl_processCSS(boolean reapply) {
-                if (reapply) {
-                    shelper = StyleHelper.create(this, styleMap, styleCache, 0, 2);
-                }
-                shelper.transitionToState(this);
+            @Override
+            public StyleHelper.StyleCacheKey impl_getStyleCacheKey() {
+                return shelper.createStyleCacheKey(this);
             }
-                                               
+            
             @Override public StyleHelper impl_getStyleHelper() {
+                if (shelper == null) shelper = impl_createStyleHelper();
                 return shelper;
-            }            
+            }
             
             @Override
             public StyleHelper impl_createStyleHelper() {
-                fail();
-                return null;
+                shelper = StyleHelper.create(cascadingStyles, 0, 1);
+                shelper.styleCache = new HashMap<StyleHelper.StyleCacheKey, StyleHelper.StyleCacheEntry>();
+                return shelper;
             }
-                        
+            
         };
         rectangle.getStyleClass().add("rect");
 
@@ -356,10 +350,6 @@ public class StyleablePropertyTest {
     static class RectangleWithFont extends Rectangle {
     
         final List<CascadingStyle> cascadingStyles = new ArrayList<CascadingStyle>();
-        final  Map<String, List<CascadingStyle>> styleMap = 
-                Node_cssStyleMap_Test.createStyleMap(cascadingStyles);
-        final Map<StyleHelper.StyleCacheKey, StyleHelper.StyleCacheBucket> styleCache = 
-                        new HashMap<StyleHelper.StyleCacheKey, StyleHelper.StyleCacheBucket>();
         
         // I'm bypassing StyleManager by creating StyleHelper directly. 
         StyleHelper shelper = null;
@@ -370,23 +360,23 @@ public class StyleablePropertyTest {
             Collections.addAll(cascadingStyles, styles);
         }    
         
-            @Override public void impl_processCSS(boolean reapply) {
-                if (reapply) {
-                    shelper = StyleHelper.create(this, styleMap, styleCache, 0, 2);
-                }
-                shelper.transitionToState(this);
-            }
-                                               
-            @Override public StyleHelper impl_getStyleHelper() {
-                return shelper;
-            }            
+        @Override
+        public StyleHelper.StyleCacheKey impl_getStyleCacheKey() {
+            return shelper.createStyleCacheKey(this);
+        }
+
+        @Override public StyleHelper impl_getStyleHelper() {
+            if (shelper == null) shelper = impl_createStyleHelper();
+            return shelper;
+        }
+
+        @Override
+        public StyleHelper impl_createStyleHelper() {
+            shelper = StyleHelper.create(cascadingStyles, 0, 1);
+            shelper.styleCache = new HashMap<StyleHelper.StyleCacheKey, StyleHelper.StyleCacheEntry>();
+            return shelper;
+        }
             
-            @Override
-            public StyleHelper impl_createStyleHelper() {
-                fail();
-                return null;
-            }
-                
         ObjectProperty<Font> font = new StyleableObjectProperty<Font>() {
 
             @Override
@@ -455,7 +445,7 @@ public class StyleablePropertyTest {
         );
     }
         
-    @Test @org.junit.Ignore
+    @Test
     public void testGetMatchingStyles() {
 
         
@@ -561,7 +551,7 @@ public class StyleablePropertyTest {
         assertTrue(actuals.isEmpty());
     }
 
-    @Test  @org.junit.Ignore
+    @Test
     public void testGetMatchingStylesWithInlineStyleOnParent() {
 
         
@@ -673,7 +663,7 @@ public class StyleablePropertyTest {
         assertTrue(actuals.isEmpty());
     }
 
-    @Test @org.junit.Ignore
+    @Test
     public void testGetMatchingStylesWithInlineStyleOnLeaf() {
 
         
@@ -785,7 +775,7 @@ public class StyleablePropertyTest {
         assertTrue(actuals.isEmpty());
     }   
     
-    @Test  @org.junit.Ignore
+    @Test
     public void testGetMatchingStylesWithInlineStyleOnRootAndLeaf() {
 
         
@@ -900,7 +890,7 @@ public class StyleablePropertyTest {
         assertTrue(actuals.isEmpty());
     } 
 
-    @Test  @org.junit.Ignore
+    @Test
     public void testGetMatchingStylesShouldNotReturnAncestorPropertyIfNotInherited() {
 
         
@@ -1119,7 +1109,7 @@ public class StyleablePropertyTest {
         assertTrue(actuals.toString(), actuals.isEmpty());
     }    
     
-    @Test @org.junit.Ignore
+    @Test
     public void testGetMatchingStylesReturnsInheritedProperty() {
 
         
@@ -1199,7 +1189,7 @@ public class StyleablePropertyTest {
         assertTrue(actuals.isEmpty());
     }
     
-    @Test @org.junit.Ignore
+    @Test
     public void testGetMatchingStylesReturnsSubProperty() {
 
         
