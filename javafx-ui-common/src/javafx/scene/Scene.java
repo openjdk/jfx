@@ -1531,17 +1531,23 @@ public class Scene implements EventTarget {
             Node sceneFocusOwner = getFocusOwner();
 
             // for keyboard triggers set coordinates inside focus owner
-            final Bounds bounds = sceneFocusOwner.localToScene(
-                    sceneFocusOwner.getBoundsInLocal());
             final double xOffset = xAbs - x2;
             final double yOffset = yAbs - y2;
+            if (sceneFocusOwner != null) {
+                final Bounds bounds = sceneFocusOwner.localToScene(
+                        sceneFocusOwner.getBoundsInLocal());
+                x2 = bounds.getMinX() + bounds.getWidth() / 4;
+                y2 = bounds.getMinY() + bounds.getHeight() / 2;
+                eventTarget = sceneFocusOwner;
+            } else {
+                x2 = Scene.this.getWidth() / 4;
+                y2 = Scene.this.getWidth() / 2;
+                eventTarget = Scene.this;
+            }
 
-            x2 = bounds.getMinX() + bounds.getWidth() / 4;
-            y2 = bounds.getMinY() + bounds.getHeight() / 2;
             xAbs = x2 + xOffset;
             yAbs = y2 + yOffset;
-
-            eventTarget = sceneFocusOwner != null ? sceneFocusOwner : Scene.this;
+            
         } else {
             eventTarget = pick(x2, y2);
         }
