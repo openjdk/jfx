@@ -17,6 +17,7 @@ import com.sun.javafx.css.parser.CSSParser;
 import javafx.scene.text.Font;
 import org.junit.Assert;
 import static org.junit.Assert.assertEquals;
+import org.junit.Ignore;
 
 
 public class XYChartTest extends ChartTestBase {
@@ -43,7 +44,7 @@ public class XYChartTest extends ChartTestBase {
     }
     
     // RT-22166
-    @Test public void testTickLabelFont() {
+    @Ignore @Test public void testTickLabelFont() {
         startApp();
         Font f = yaxis.getTickLabelFont();
         // default caspian value for font size = 10
