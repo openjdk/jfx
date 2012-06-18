@@ -177,6 +177,10 @@ public abstract class TextInputControlBehavior<T extends TextInputControl> exten
         // Note, I don't have to worry about "Consume" here.
     }
 
+    protected UndoManager getUndoManager() {
+        return undoManager;
+    }
+
     /**
      * The default handler for a key typed event, which is called when none of
      * the other key bindings match. This is the method which handles basic

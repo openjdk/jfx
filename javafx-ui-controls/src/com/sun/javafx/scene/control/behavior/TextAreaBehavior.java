@@ -31,6 +31,7 @@ import javafx.event.EventHandler;
 import javafx.geometry.Point2D;
 import javafx.scene.Scene;
 import javafx.scene.control.ContextMenu;
+import javafx.scene.control.IndexRange;
 import javafx.scene.control.TextArea;
 import javafx.scene.input.MouseButton;
 import javafx.scene.input.MouseEvent;
@@ -180,10 +181,14 @@ public class TextAreaBehavior extends TextInputControlBehavior<TextArea> {
         if (textInputControl.isEditable()) {
 //            fnCaretAnim(false);
 //            setCaretOpacity(1.0);
+            setEditing(true);
             done = true;
             if ("InsertNewLine".equals(name)) insertNewLine();
             else if ("InsertTab".equals(name)) insertTab();
-            else done = false;
+            else {
+                done = false;
+            }
+            setEditing(false);
         }
 
         if (!done) {
@@ -220,10 +225,23 @@ public class TextAreaBehavior extends TextInputControlBehavior<TextArea> {
     }
 
     private void insertNewLine() {
-        getControl().replaceSelection("\n");
+        TextArea textArea = getControl();
+        IndexRange selection = textArea.getSelection();
+        int start = selection.getStart();
+        int end = selection.getEnd();
+
+        getUndoManager().addChange(start, textArea.getText().substring(start, end), "\n", false);
+        textArea.replaceSelection("\n");
     }
+
     private void insertTab() {
-        getControl().replaceSelection("\t");
+        TextArea textArea = getControl();
+        IndexRange selection = textArea.getSelection();
+        int start = selection.getStart();
+        int end = selection.getEnd();
+
+        getUndoManager().addChange(start, textArea.getText().substring(start, end), "\t", false);
+        textArea.replaceSelection("\t");
     }
 
     @Override protected void deleteChar(boolean previous) {
