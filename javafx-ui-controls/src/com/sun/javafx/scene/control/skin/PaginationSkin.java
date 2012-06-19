@@ -328,7 +328,7 @@ public class PaginationSkin extends SkinBase<Pagination, PaginationBehavior>  {
         // Remove the children in the pane before we create a new page.
         currentStackPane.getChildren().clear();
         nextStackPane.getChildren().clear();
-        
+
         pagination.setCurrentPageIndex(currentIndex);
         createPage(currentStackPane, currentIndex);
 
@@ -649,7 +649,7 @@ public class PaginationSkin extends SkinBase<Pagination, PaginationBehavior>  {
             resetIndexes(false);
             navigation.initializePageIndicators();
             navigation.updatePageIndicators();
-        } else if (p == "PAGE_COUNT") {          
+        } else if (p == "PAGE_COUNT") {
             resetIndexes(false);
             navigation.initializePageIndicators();
             navigation.updatePageIndicators();
@@ -943,11 +943,17 @@ public class PaginationSkin extends SkinBase<Pagination, PaginationBehavior>  {
         private boolean changePageSet() {
             int index = indexToIndicatorButtonsIndex(currentIndex);
             int lastIndicatorButtonIndex = maxPageIndicatorCount - 1;
-            if (previousIndex < currentIndex && index == 0 && index % lastIndicatorButtonIndex == 0) {
+            if (previousIndex < currentIndex &&
+                    index == 0 &&
+                    lastIndicatorButtonIndex != 0 &&
+                    index % lastIndicatorButtonIndex == 0) {
                 // Get the right page set
                 fromIndex = currentIndex;
                 toIndex = fromIndex + lastIndicatorButtonIndex;
-            } else if (currentIndex < previousIndex && index == lastIndicatorButtonIndex && index % lastIndicatorButtonIndex == 0) {
+            } else if (currentIndex < previousIndex &&
+                    index == lastIndicatorButtonIndex &&
+                    lastIndicatorButtonIndex != 0 &&
+                    index % lastIndicatorButtonIndex == 0) {
                 // Get the left page set
                 toIndex = currentIndex;
                 fromIndex = toIndex - lastIndicatorButtonIndex;
