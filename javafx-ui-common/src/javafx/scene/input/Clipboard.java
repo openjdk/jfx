@@ -151,13 +151,18 @@ public class Clipboard {
      * the system will invoke the provided callback to stream the image data over to the client.
      */
 
+    private static Clipboard systemClipboard = null;
+    
     /**
      * Gets the current system clipboard, through which data can be stored and
      * retrieved. There is ever only one system clipboard for a JavaFX application.
      * @return The single system clipboard, used for cut / copy / paste operations
      */
     public static Clipboard getSystemClipboard() {
-        return new Clipboard(Toolkit.getToolkit().getSystemClipboard());
+        if (systemClipboard == null) {
+            systemClipboard = new Clipboard(Toolkit.getToolkit().getSystemClipboard());
+        }
+        return systemClipboard;
     }
 
     TKClipboard peer;
@@ -165,7 +170,10 @@ public class Clipboard {
     // Only allow Dragboard to extend from this
     Clipboard(TKClipboard peer) {
         Toolkit.getToolkit().checkFxUserThread();
-        if (peer == null) throw new NullPointerException();
+        if (peer == null) {
+            throw new NullPointerException();
+        }
+        peer.initSecurityContext();
         this.peer = peer;
     }
 
