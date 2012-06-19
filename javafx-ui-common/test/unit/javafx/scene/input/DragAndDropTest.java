@@ -1191,6 +1191,8 @@ public class DragAndDropTest {
             return true;
         }
         
+        @Override public void initSecurityContext() {
+        }
     }
     
     private class DndToolkit implements StubToolkit.DndDelegate {
