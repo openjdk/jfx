@@ -52,6 +52,7 @@ public class ScrollBarSkin extends SkinBase<ScrollBar, ScrollBarBehavior> {
     public static int DEFAULT_WIDTH = 20;
 
     private StackPane thumb;
+    private StackPane trackBackground;
     private StackPane track;
     private EndButton incButton;
     private EndButton decButton;
@@ -90,6 +91,9 @@ public class ScrollBarSkin extends SkinBase<ScrollBar, ScrollBarBehavior> {
 
         track = new StackPane();
         track.getStyleClass().setAll("track");
+
+        trackBackground = new StackPane();
+        trackBackground.getStyleClass().setAll("track-background");
 
         thumb = new StackPane();
         thumb.getStyleClass().setAll("thumb");
@@ -293,7 +297,7 @@ public class ScrollBarSkin extends SkinBase<ScrollBar, ScrollBarBehavior> {
 
         getChildren().clear();
         if (!PlatformUtil.isEmbedded()) {
-            getChildren().addAll(incButton, decButton, track, thumb);
+            getChildren().addAll(trackBackground, incButton, decButton, track, thumb);
         }
         else {
             getChildren().addAll(track, thumb);
@@ -455,6 +459,7 @@ public class ScrollBarSkin extends SkinBase<ScrollBar, ScrollBarBehavior> {
                 trackLength = snapSize(hNoInsets - (decHeight + incHeight));
                 thumbLength = snapSize(Utils.clamp(minThumbLength(), (trackLength * visiblePortion), trackLength));
 
+                trackBackground.resizeRelocate(snapPosition(x), snapPosition(y), wNoInsets, trackLength+decHeight+incHeight);
                 decButton.relocate(snapPosition(x), snapPosition(y));
                 incButton.relocate(snapPosition(x), snapPosition(y + hNoInsets - incHeight));
                 track.resizeRelocate(snapPosition(x), snapPosition(y + decHeight), wNoInsets, trackLength);
@@ -480,6 +485,7 @@ public class ScrollBarSkin extends SkinBase<ScrollBar, ScrollBarBehavior> {
                 trackLength = snapSize(wNoInsets - (decWidth + incWidth));
                 thumbLength = snapSize(Utils.clamp(minThumbLength(), (trackLength * visiblePortion), trackLength));
 
+                trackBackground.resizeRelocate(snapPosition(x), snapPosition(y), trackLength+decWidth+incWidth, hNoInsets);
                 decButton.relocate(snapPosition(x), snapPosition(y));
                 incButton.relocate(snapPosition(x + wNoInsets - incWidth), snapPosition(y));
                 track.resizeRelocate(snapPosition(x + decWidth), snapPosition(y), trackLength, hNoInsets);
@@ -500,6 +506,7 @@ public class ScrollBarSkin extends SkinBase<ScrollBar, ScrollBarBehavior> {
             // things should be invisible only when well below minimum length
             if (getSkinnable().getOrientation() == Orientation.VERTICAL && hNoInsets >= (computeMinHeight(-1) - (getInsets().getTop()+getInsets().getBottom())) ||
                 getSkinnable().getOrientation() == Orientation.HORIZONTAL && wNoInsets >= (computeMinWidth(-1) - (getInsets().getLeft()+getInsets().getRight()))) {
+                trackBackground.setVisible(true);
                 track.setVisible(true);
                 thumb.setVisible(true);
                 if (!PlatformUtil.isEmbedded()) {
@@ -508,6 +515,7 @@ public class ScrollBarSkin extends SkinBase<ScrollBar, ScrollBarBehavior> {
                 }
             }
             else {
+                trackBackground.setVisible(false);
                 track.setVisible(false);
                 thumb.setVisible(false);
 
