@@ -475,6 +475,9 @@ public class StubToolkit extends Toolkit {
             modes.add(TransferMode.COPY);
             return modes;
         }
+    
+        @Override public void initSecurityContext() {
+        }
     };
 
 

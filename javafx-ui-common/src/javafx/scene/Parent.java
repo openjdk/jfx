@@ -317,7 +317,7 @@ public abstract class Parent extends Node {
                                     constructExceptionMessage(
                                         "child node is null", null));
                         }
-                        if (node.impl_getClipParent() != null) {
+                        if (node.getClipParent() != null) {
                             throw new IllegalArgumentException(
                                     constructExceptionMessage(
                                         "node already used as a clip", node));
@@ -608,7 +608,7 @@ public abstract class Parent extends Node {
         }
     }
 
-    @Override void impl_sceneChanged(Scene old) {
+    @Override void sceneChanged(Scene old) {
         computeDirtyScene(old);
     }
 
@@ -1041,15 +1041,6 @@ public abstract class Parent extends Node {
      * Subclasses should override this function to layout content as needed.
      */
     protected void layoutChildren() {
-        impl_resizeChildren(true);
-    }
-
-    /**
-     * @treatAsPrivate implementation detail
-     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
-     */
-    @Deprecated
-    protected final void impl_resizeChildren(boolean snapToPixel) {
         int size = children.size();
         for (int i = 0; i < size; ++i) {
             Node node = children.get(i);
@@ -1768,41 +1759,6 @@ public abstract class Parent extends Node {
             }
         }
         return false;
-    }
-
-    /** 
-     * temporary to help debug scene graph
-     * @treatAsPrivate implementation detail
-     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
-     */
-    @Deprecated
-    public final void impl_printBranch() {
-        final int nodecount = printBranch("");
-        System.out.println("total node count="+nodecount);
-    }
-
-    private int printBranch(String indent) {
-        int nodecount = 0;
-
-        print(this,indent);
-        nodecount++;
-        for (Node child: getChildren()) {
-            if (child instanceof Parent) {
-                nodecount += ((Parent)child).printBranch(indent+"  ");
-            } else {
-                print(child,indent);
-                nodecount++;
-            }
-        }
-
-        return nodecount;
-    }
-
-    private void print(Node node, String indent) {
-        javafx.geometry.Bounds lb = node.getLayoutBounds();
-        System.out.println(indent+node.getClass().getName()+" "+getId()+
-                " layout="+(lb.getMinX()+node.getLayoutX())+","+(lb.getMinY()+node.getLayoutY())+" "+
-                lb.getWidth()+"x"+lb.getHeight()+" needsLayout="+isNeedsLayout());
     }
 
     /**

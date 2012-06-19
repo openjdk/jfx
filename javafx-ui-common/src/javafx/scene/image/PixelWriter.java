@@ -48,14 +48,14 @@ public interface PixelWriter {
     /**
      * Stores pixel data for a color into the specified coordinates of the
      * surface.
-     * The 32-bit integer {@code argb} parameter will contain the 4 color
+     * The 32-bit integer {@code argb} parameter should contain the 4 color
      * components in separate 8-bit fields in ARGB order from the most
      * significant byte to the least significant byte.
      * 
      * @param x the X coordinate of the pixel color to write
      * @param y the Y coordinate of the pixel color to write
-     * @param argb the color information to write, specified in a format
-     *         described by the {@link PixelFormat.Type.BYTE_ARGB}
+     * @param argb the color information to write, specified in the format
+     *         described by the {@link PixelFormat.Type#INT_ARGB INT_ARGB}
      *         PixelFormat type.
      */
     public void setArgb(int x, int y, int argb);

@@ -72,4 +72,10 @@ public interface TKClipboard {
 
     // for DnD
     public Set<TransferMode> getTransferModes();
+    
+    /**
+     * Set up the security context to ensure that the clipboard access context
+     * is properly initialized.
+     */
+    public void initSecurityContext();
 }

@@ -26,6 +26,7 @@
 package javafx.stage;
 
 import com.sun.javafx.Utils;
+import com.sun.javafx.event.DirectEvent;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -50,14 +51,20 @@ import javafx.scene.Scene;
 
 import com.sun.javafx.event.EventHandlerManager;
 import com.sun.javafx.event.EventRedirector;
+import com.sun.javafx.event.EventUtil;
 import com.sun.javafx.perf.PerformanceTracker;
-import com.sun.javafx.stage.PopupEventRedirector;
+import com.sun.javafx.stage.FocusUngrabEvent;
 import com.sun.javafx.stage.PopupWindowPeerListener;
 import com.sun.javafx.stage.WindowCloseRequestHandler;
 import com.sun.javafx.stage.WindowEventDispatcher;
 import com.sun.javafx.tk.Toolkit;
 import javafx.beans.property.ReadOnlyObjectProperty;
 import javafx.beans.property.ReadOnlyObjectWrapper;
+import javafx.event.EventTarget;
+import javafx.event.EventType;
+import javafx.scene.input.KeyCombination;
+import javafx.scene.input.KeyEvent;
+import javafx.scene.input.MouseEvent;
 
 /**
  * PopupWindow is the parent for a variety of different types of popup
@@ -426,13 +433,13 @@ public abstract class PopupWindow extends Window {
             bindOwnerFocusedProperty(ownerWindowValue);
             setFocused(ownerWindowValue.isFocused());
             handleAutofixActivation(true, isAutoFix());
-            rootWindow.impl_increaseFocusGrabCounter();
+            rootWindow.increaseFocusGrabCounter();
         } else {
             stopMonitorOwnerEvents(ownerWindowValue);
             unbindOwnerFocusedProperty(ownerWindowValue);
             setFocused(false);
             handleAutofixActivation(false, isAutoFix());
-            rootWindow.impl_decreaseFocusGrabCounter();
+            rootWindow.decreaseFocusGrabCounter();
             rootWindow = null;
         }
 
@@ -451,38 +458,34 @@ public abstract class PopupWindow extends Window {
             rootNode.setTranslateX(-layoutBounds.getMinX());
             rootNode.setTranslateY(-layoutBounds.getMinY());
         }
-   }
-
-   /**
-    * Gets the root (non PopupWindow) Window for the provided window.
-    *
-    * @param win the Window for which to get the root window
-    */
-   private static Window getRootWindow(Window win) {
-       // should be enough to traverse PopupWindow hierarchy here to get to the
-       // first non-popup focusable window
-       while (win instanceof PopupWindow) {
-           win = ((PopupWindow) win).getOwnerWindow();
-       }
-       return win;
-   }
+    }
 
     /**
-     * @treatAsPrivate implementation detail
-     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
+     *
+     * Gets the root (non PopupWindow) Window for the provided window.
+     *
+     * @param win the Window for which to get the root window
      */
-    @Deprecated
-    public void doAutoHide() {
+    private static Window getRootWindow(Window win) {
+        // should be enough to traverse PopupWindow hierarchy here to get to the
+        // first non-popup focusable window
+        while (win instanceof PopupWindow) {
+            win = ((PopupWindow) win).getOwnerWindow();
+        }
+        return win;
+    }
+
+    void doAutoHide() {
         // There is a timing problem here. I would like to have this isVisible
         // check, such that we don't send an onAutoHide event if it was already
         // invisible. However, visible is already false by the time this method
         // gets called, when done by certain code paths.
 //        if (isVisible()) {
-            // hide this popup
-            hide();
-            if (getOnAutoHide() != null) {
-                getOnAutoHide().handle(new Event(this, this, Event.ANY));
-            }
+        // hide this popup
+        hide();
+        if (getOnAutoHide() != null) {
+            getOnAutoHide().handle(new Event(this, this, Event.ANY));
+        }
 //        }
     }
 
@@ -610,6 +613,123 @@ public abstract class PopupWindow extends Window {
             _y = Math.max(_y, screenBounds.getMinY());
             setX(_x);
             setY(_y);
+        }
+    }
+
+    static class PopupEventRedirector extends EventRedirector {
+
+        private static final KeyCombination ESCAPE_KEY_COMBINATION =
+                KeyCombination.keyCombination("Esc");
+        private final PopupWindow popupWindow;
+
+        public PopupEventRedirector(final PopupWindow popupWindow) {
+            super(popupWindow);
+            this.popupWindow = popupWindow;
+        }
+
+        @Override
+        protected void handleRedirectedEvent(final Object eventSource,
+                final Event event) {
+            if (event instanceof KeyEvent) {
+                handleKeyEvent((KeyEvent) event);
+                return;
+            }
+
+            final EventType<?> eventType = event.getEventType();
+
+            if (eventType == MouseEvent.MOUSE_PRESSED) {
+                handleMousePressedEvent(eventSource, event);
+                return;
+            }
+
+            if (eventType == FocusUngrabEvent.FOCUS_UNGRAB) {
+                handleFocusUngrabEvent();
+                return;
+            }
+        }
+
+        private void handleKeyEvent(final KeyEvent event) {
+            if (event.isConsumed()) {
+                return;
+            }
+
+            final Scene scene = popupWindow.getScene();
+            if (scene != null) {
+                final Node sceneFocusOwner = scene.getFocusOwner();
+                final EventTarget eventTarget =
+                        (sceneFocusOwner != null) ? sceneFocusOwner : scene;
+                if (EventUtil.fireEvent(eventTarget, new DirectEvent(event))
+                        == null) {
+                    event.consume();
+                    return;
+                }
+            }
+
+            if ((event.getEventType() == KeyEvent.KEY_PRESSED)
+                    && ESCAPE_KEY_COMBINATION.match(event)) {
+                handleEscapeKeyPressedEvent(event);
+            }
+        }
+
+        private void handleEscapeKeyPressedEvent(final Event event) {
+            if (popupWindow.isHideOnEscape()) {
+                popupWindow.doAutoHide();
+
+                if (popupWindow.getConsumeAutoHidingEvents()) {
+                    event.consume();
+                }
+            }
+        }
+
+        private void handleMousePressedEvent(final Object eventSource,
+                final Event event) {
+            // we handle mouse pressed only for the immediate parent window,
+            // where we can check whether the mouse press is inside of the owner
+            // control or not, we will force possible child popups to close
+            // by sending the FOCUS_UNGRAB event
+            if (popupWindow.getOwnerWindow() != eventSource) {
+                return;
+            }
+
+            if (popupWindow.isAutoHide() && !isOwnerNodeEvent(event)) {
+                // the mouse press is outside of the owner control,
+                // fire FOCUS_UNGRAB to child popups
+                Event.fireEvent(popupWindow, new FocusUngrabEvent());
+
+                popupWindow.doAutoHide();
+
+                if (popupWindow.getConsumeAutoHidingEvents()) {
+                    event.consume();
+                }
+            }
+        }
+
+        private void handleFocusUngrabEvent() {
+            if (popupWindow.isAutoHide()) {
+                popupWindow.doAutoHide();
+            }
+        }
+
+        private boolean isOwnerNodeEvent(final Event event) {
+            final Node ownerNode = popupWindow.getOwnerNode();
+            if (ownerNode == null) {
+                return false;
+            }
+
+            final EventTarget eventTarget = event.getTarget();
+            if (!(eventTarget instanceof Node)) {
+                return false;
+            }
+
+            Node node = (Node) eventTarget;
+            do {
+                if (node == ownerNode) {
+                    return true;
+                }
+                node = node.getParent();
+            } while (node != null);
+
+            return false;
         }
     }
 }

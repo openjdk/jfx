@@ -157,7 +157,7 @@ public  class Group extends Parent {
 
     @Override protected void layoutChildren() {
         if (isAutoSizeChildren()) {
-            impl_resizeChildren(true);
+            super.layoutChildren();
         }
     }
 }

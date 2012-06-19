@@ -71,7 +71,7 @@ public final class Scene_properties_Test extends PropertiesTestBase {
             config(testScene, "fill", null, Color.TRANSPARENT),
             config(testScene, "root", new Group(), new Pane()),
             config(testScene, "cursor", null, new Cursor("TestCursor") {
-                @Override public CursorFrame impl_getCurrentFrame() {
+                @Override public CursorFrame getCurrentFrame() {
                     throw new UnsupportedOperationException("Not supported yet.");
                 }
             }),

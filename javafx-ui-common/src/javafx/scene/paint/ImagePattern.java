@@ -39,8 +39,9 @@ import javafx.scene.image.Image;
  * then the anchor rectangle should be specified relative to the unit
  * square (0.0->1.0) and will be stretched across the shape.
  * If the {@code proportional} variable is set to false, then the anchor
- * rectangle should be specified as absolute pixel values and the image
- * will be stretched to fit the anchor rectangle.</p>
+ * rectangle should be specified in the local coordinate system of the shape 
+ * and the image will be stretched to fit the anchor rectangle. The anchor 
+ * rectangle will not be stretched across the shape.</p>
  *
  * <p>The example below demonstrates the use of the {@code proportional}
  * variable.  The shapes on the top row use proportional coordinates

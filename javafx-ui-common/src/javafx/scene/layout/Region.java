@@ -1506,17 +1506,6 @@ public class Region extends Parent {
     }
 
     /**
-     * Invoked during the layout pass to layout the children in this region.
-     * By default it will only set the size of managed, resizable content to
-     * their preferred sizes and does not do any node positioning.
-     * <p>
-     * Subclasses should override this function to layout content as needed.
-     */
-    @Override protected void layoutChildren() {
-        impl_resizeChildren(isSnapToPixel());
-    }
-
-    /**
      * If this region's snapToPixel property is true, returns a value rounded
      * to the nearest pixel, else returns the same value.
      * @param value the space value to be snapped
