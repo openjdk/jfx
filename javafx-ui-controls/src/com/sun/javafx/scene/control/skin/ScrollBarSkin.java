@@ -449,24 +449,24 @@ public class ScrollBarSkin extends SkinBase<ScrollBar, ScrollBarBehavior> {
                 double decHeight = snapSize(decButton.prefHeight(-1));
                 double incHeight = snapSize(incButton.prefHeight(-1));
 
-                decButton.resize(wTotal, decHeight);
-                incButton.resize(wTotal, incHeight);
+                decButton.resize(wNoInsets, decHeight);
+                incButton.resize(wNoInsets, incHeight);
 
                 trackLength = snapSize(hNoInsets - (decHeight + incHeight));
                 thumbLength = snapSize(Utils.clamp(minThumbLength(), (trackLength * visiblePortion), trackLength));
 
                 decButton.relocate(snapPosition(x), snapPosition(y));
                 incButton.relocate(snapPosition(x), snapPosition(y + hNoInsets - incHeight));
-                track.resizeRelocate(snapPosition(x), snapPosition(y + decHeight), wTotal, trackLength);
-                thumb.resize(snapSize(x >= 0 ? wTotal : wTotal + x), thumbLength); // Account for negative padding (see also RT-10719)
+                track.resizeRelocate(snapPosition(x), snapPosition(y + decHeight), wNoInsets, trackLength);
+                thumb.resize(snapSize(x >= 0 ? wNoInsets : wNoInsets + x), thumbLength); // Account for negative padding (see also RT-10719)
                 positionThumb();
             }
             else {
                 trackLength = snapSize(hNoInsets);
                 thumbLength = snapSize(Utils.clamp(minThumbLength(), (trackLength * visiblePortion), trackLength));
 
-                track.resizeRelocate(snapPosition(x), snapPosition(y), wTotal, trackLength);
-                thumb.resize(snapSize(x >= 0 ? wTotal : wTotal + x), thumbLength); // Account for negative padding (see also RT-10719)
+                track.resizeRelocate(snapPosition(x), snapPosition(y), wNoInsets, trackLength);
+                thumb.resize(snapSize(x >= 0 ? wNoInsets : wNoInsets + x), thumbLength); // Account for negative padding (see also RT-10719)
                 positionThumb();
             }
         } else {
@@ -474,24 +474,24 @@ public class ScrollBarSkin extends SkinBase<ScrollBar, ScrollBarBehavior> {
                 double decWidth = snapSize(decButton.prefWidth(-1));
                 double incWidth = snapSize(incButton.prefWidth(-1));
 
-                decButton.resize(decWidth, hTotal);
-                incButton.resize(incWidth, hTotal);
+                decButton.resize(decWidth, hNoInsets);
+                incButton.resize(incWidth, hNoInsets);
 
                 trackLength = snapSize(wNoInsets - (decWidth + incWidth));
                 thumbLength = snapSize(Utils.clamp(minThumbLength(), (trackLength * visiblePortion), trackLength));
 
                 decButton.relocate(snapPosition(x), snapPosition(y));
                 incButton.relocate(snapPosition(x + wNoInsets - incWidth), snapPosition(y));
-                track.resizeRelocate(snapPosition(x + decWidth), snapPosition(y), trackLength, hTotal);
-                thumb.resize(thumbLength, snapSize(y >= 0 ? hTotal : hTotal + y)); // Account for negative padding (see also RT-10719)
+                track.resizeRelocate(snapPosition(x + decWidth), snapPosition(y), trackLength, hNoInsets);
+                thumb.resize(thumbLength, snapSize(y >= 0 ? hNoInsets : hNoInsets + y)); // Account for negative padding (see also RT-10719)
                 positionThumb();
             }
             else {
                 trackLength = snapSize(wNoInsets);
                 thumbLength = snapSize(Utils.clamp(minThumbLength(), (trackLength * visiblePortion), trackLength));
 
-                track.resizeRelocate(snapPosition(x), snapPosition(y), trackLength, hTotal);
-                thumb.resize(thumbLength, snapSize(y >= 0 ? hTotal : hTotal + y)); // Account for negative padding (see also RT-10719)
+                track.resizeRelocate(snapPosition(x), snapPosition(y), trackLength, hNoInsets);
+                thumb.resize(thumbLength, snapSize(y >= 0 ? hNoInsets : hNoInsets + y)); // Account for negative padding (see also RT-10719)
                 positionThumb();
             }
 
