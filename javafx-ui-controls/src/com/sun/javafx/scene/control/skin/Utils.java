@@ -75,7 +75,7 @@ public class Utils {
             throw new IllegalArgumentException("Must specify a font");
         }
         OverrunStyle style = (type == null || OverrunStyle.CLIP.equals(type)) ? (OverrunStyle.ELLIPSIS) : (type);
-        String ellipsis = (style == CLIP) ? "" : ellipsisString;
+        final String ellipsis = (OverrunStyle.CLIP.equals(type)) ? "" : ellipsisString;
         // if the text is empty or null or no ellipsis, then it always fits
         if (text == null || "".equals(text)) {
             return text;
