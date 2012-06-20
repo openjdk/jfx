@@ -502,42 +502,41 @@ public class ScrollBarSkin extends SkinBase<ScrollBar, ScrollBarBehavior> {
             }
 
             resize(snapSize(getWidth()), snapSize(getHeight()));
+        }
 
-            // things should be invisible only when well below minimum length
-            if (getSkinnable().getOrientation() == Orientation.VERTICAL && hNoInsets >= (computeMinHeight(-1) - (getInsets().getTop()+getInsets().getBottom())) ||
-                getSkinnable().getOrientation() == Orientation.HORIZONTAL && wNoInsets >= (computeMinWidth(-1) - (getInsets().getLeft()+getInsets().getRight()))) {
-                trackBackground.setVisible(true);
-                track.setVisible(true);
-                thumb.setVisible(true);
-                if (!PlatformUtil.isEmbedded()) {
-                    incButton.setVisible(true);
+        // things should be invisible only when well below minimum length
+        if (getSkinnable().getOrientation() == Orientation.VERTICAL && hNoInsets >= (computeMinHeight(-1) - (getInsets().getTop()+getInsets().getBottom())) ||
+            getSkinnable().getOrientation() == Orientation.HORIZONTAL && wNoInsets >= (computeMinWidth(-1) - (getInsets().getLeft()+getInsets().getRight()))) {
+            trackBackground.setVisible(true);
+            track.setVisible(true);
+            thumb.setVisible(true);
+            if (!PlatformUtil.isEmbedded()) {
+                incButton.setVisible(true);
+                decButton.setVisible(true);
+            }
+        }
+        else {
+            trackBackground.setVisible(false);
+            track.setVisible(false);
+            thumb.setVisible(false);
+
+            if (!PlatformUtil.isEmbedded()) {
+                /*
+                ** once the space is big enough for one button we 
+                ** can look at drawing
+                */
+                if (hNoInsets >= decButton.computeMinWidth(-1)) {
                     decButton.setVisible(true);
                 }
-            }
-            else {
-                trackBackground.setVisible(false);
-                track.setVisible(false);
-                thumb.setVisible(false);
-
-                if (!PlatformUtil.isEmbedded()) {
-                    /*
-                    ** once the space is big enough for one button we 
-                    ** can look at drawing
-                    */
-                    if (hNoInsets >= decButton.computeMinWidth(-1)) {
-                        decButton.setVisible(true);
-                    }
-                    else {
-                        decButton.setVisible(false);
-                    }
-                    if (hNoInsets >= incButton.computeMinWidth(-1)) {
-                        incButton.setVisible(true);
-                    }
-                    else {
-                        incButton.setVisible(false);
-                    }
+                else {
+                    decButton.setVisible(false);
                 }
-            
+                if (hNoInsets >= incButton.computeMinWidth(-1)) {
+                    incButton.setVisible(true);
+                }
+                else {
+                    incButton.setVisible(false);
+                }
             }
         }
     }
