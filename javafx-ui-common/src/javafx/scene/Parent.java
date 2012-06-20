@@ -1083,7 +1083,7 @@ public abstract class Parent extends Node {
     private final ObservableList<String> stylesheets = new TrackableObservableList<String>() {
         @Override
         protected void onChanged(Change<String> c) {
-            StyleManager.getInstance().parentStylesheetsChanged(c);
+            StyleManager.getInstance().parentStylesheetsChanged(getScene(), c);
             // RT-9784 - if stylesheet is removed, reset styled properties to 
             // their initial value.
             while(c.next()) {

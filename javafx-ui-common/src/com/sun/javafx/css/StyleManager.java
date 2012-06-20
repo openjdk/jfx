@@ -136,18 +136,21 @@ public class StyleManager {
     }
 
     /**
-     * Another map from String => Stylesheet. This one is for stylesheets that
-     * hang off a Parent. These are considered "author" stylesheets but are not
-     * added to the authorStylesheetMap because we don't want the scene's
-     * list of stylesheets in the container to be updated.
-     */
-    private static Map<String,Stylesheet> parentStylesheetMap =
-            new HashMap<String,Stylesheet>();
-
-    /**
      * called from Parent's stylesheets onChanged method
      */
-    public void parentStylesheetsChanged(Change<String> c) {
+    public void parentStylesheetsChanged(Scene scene, Change c) {
+        
+        if (scene == null) return;
+
+        if (containerMap == null) {
+            containerMap = new HashMap<WeakReference<Scene>,StylesheetContainer>(); 
+        }
+        StylesheetContainer container = containerMap.get(scene);
+        if (container == null) {
+            container = new StylesheetContainer(null);
+            put(containerMap, scene, container);
+        }
+        
         while (c.next()) {
             
             List<String> list = null;
@@ -165,9 +168,11 @@ public class StyleManager {
             if (list == null) continue;
             
             for (int n=0, nMax=list.size(); n<nMax; n++) {
-                parentStylesheetMap.remove(list.get(n));
+                container.parentStylesheetMap.remove(list.get(n));
             }                
         }
+        
+        container.clearCaches();        
     }
     /**
      * A map from Scene => StylesheetContainer. This provides us a way to find
@@ -877,6 +882,15 @@ public class StyleManager {
     private static class StylesheetContainer {
 
         private final List<Stylesheet> stylesheets;
+
+        /**
+        * Another map from String => Stylesheet. This one is for stylesheets that
+        * hang off a Parent. These are considered "author" stylesheets but are not
+        * added to the authorStylesheetMap because we don't want the scene's
+        * list of stylesheets in the container to be updated.
+        */
+        private static Map<String,Stylesheet> parentStylesheetMap =
+                new HashMap<String,Stylesheet>();
 
         /**
          * The map of Caches, key'd by a combination of class name, style class,
