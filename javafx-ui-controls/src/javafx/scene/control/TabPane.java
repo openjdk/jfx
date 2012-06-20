@@ -630,14 +630,14 @@ public class TabPane extends Control {
                         for (Tab tab : c.getRemoved()) {
                             if (tab != null && !tabPane.getTabs().contains(tab)) {
                                 if (getSelectedIndex() == 0 && tabPane.getTabs().size() > 0) {
-                                    clearAndSelect(0);
+                                    clearSelection();
+                                    tab.setSelected(false);
                                 }
                                 if (tab.isSelected()) {
                                     tab.setSelected(false);
                                     if (c.getFrom() == 0) {
                                         if (tabPane.getTabs().size() > 1) {
                                             clearSelection();
-                                            selectFirst();
                                         }
                                     } else {
                                         selectPrevious();
@@ -645,9 +645,9 @@ public class TabPane extends Control {
                                 }
                             }
                         }
-                        if (c.wasAdded()) {
+                        if (c.wasAdded() || c.wasRemoved()) {
                             // The selected tab index can be out of sync with the list of tab if
-                            // we add tabs before the selected tab.
+                            // we add or remove tabs before the selected tab.
                             if (getSelectedIndex() != tabPane.getTabs().indexOf(getSelectedItem())) {
                                 clearAndSelect(tabPane.getTabs().indexOf(getSelectedItem()));
                             }
@@ -658,7 +658,7 @@ public class TabPane extends Control {
                     } else if (tabPane.getTabs().isEmpty()) {
                         clearSelection();
                     }
-                }
+                }                
             };
             if (this.tabPane.getTabs() != null) {
                 this.tabPane.getTabs().addListener(itemsContentObserver);
