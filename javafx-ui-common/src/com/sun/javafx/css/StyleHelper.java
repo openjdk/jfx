@@ -220,9 +220,8 @@ public class StyleHelper {
      */
     private final Reference<StyleCacheBucket> sharedStyleCacheRef;
     
-    private StyleCacheBucket getSharedStyleCache() throws IllegalStateException {
+    private StyleCacheBucket getSharedStyleCache() {
         final StyleCacheBucket styleCache = sharedStyleCacheRef.get();
-        if (styleCache == null) throw new IllegalStateException("null style cache referent");
         return styleCache;
     }
     
@@ -406,7 +405,9 @@ public class StyleHelper {
         //
         
         final StyleCacheBucket sharedStyleCache = getSharedStyleCache();
-        assert(sharedStyleCache != null);
+        // if sharedStyleCache is null, then this StyleHelper comes from
+        // a null referent.
+        if (sharedStyleCache == null) return null;
                         
         // find the shared entry in the list with the same pclassMask
         CacheEntry sharedCacheEntry = null;
@@ -694,7 +695,7 @@ public class StyleHelper {
      * animations and that support is detectable via the API.
      * @throws IllegalStateException if the style map referent is null
      */
-    public void transitionToState(Node node) throws IllegalStateException {
+    public void transitionToState(Node node) {
 
         if (smapRef.get() == null) throw new IllegalStateException("null style map referent");
         
