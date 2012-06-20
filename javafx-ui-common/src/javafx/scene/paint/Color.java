@@ -289,21 +289,24 @@ public class Color extends Paint implements Interpolatable<Color> { // final
      * single digit in the range {@code 0} to {@code F}.
      * <li>An {@code rgb(r,g,b)} or {@code rgba(r,g,b,a)} format string.
      * Each of the {@code r}, {@code g}, or {@code b} values can be an integer
-     * from 0 to 255 or a percent value integer from 0 to 100 followed by the
-     * percent ({@code %}) character.  The alpha component, if present, is a
+     * from 0 to 255 or a floating point percentage value from 0.0 to 100.0
+     * followed by the percent ({@code %}) character.
+     * The alpha component, if present, is a
      * floating point value from 0.0 to 1.0.  Spaces are allowed before or
      * after the numbers and between the percentage number and its percent
      * sign ({@code %}).
      * <li>An {@code hsl(h,s,l)} or {@code hsla(h,s,l,a)} format string.
-     * The {@code h} value is an integer from 0 to 360 representing the hue
-     * angle on a color wheel in degrees with {@code 0} or {@code 360}
-     * representing red, {@code 120} representing green, and {@code 240}
-     * representing blue.  The {@code s} value is the saturation of the
-     * desired color represented as a percentage from gray ({@code 0}) to
-     * the fully saturated color ({@code 100}) and the {@code l} value
+     * The {@code h} value is a floating point number from 0.0 to 360.0
+     * representing the hue angle on a color wheel in degrees with
+     * {@code 0.0} or {@code 360.0} representing red, {@code 120.0}
+     * representing green, and {@code 240.0} representing blue.  The
+     * {@code s} value is the saturation of the desired color represented
+     * as a floating point percentage from gray ({@code 0.0}) to
+     * the fully saturated color ({@code 100.0}) and the {@code l} value
      * is the desired lightness or brightness of the desired color represented
-     * as a percentage from black ({@code 0}) to the full brightness of the
-     * color ({@code 100}).  The alpha component, if present, is a floating
+     * as a floating point percentage from black ({@code 0.0}) to the full
+     * brightness of the color ({@code 100.0}).
+     * The alpha component, if present, is a floating
      * point value from 0.0 to 1.0.  Spaces are allowed before or
      * after the numbers and between the percentage number and its percent
      * sign ({@code %}).
@@ -511,16 +514,16 @@ public class Color extends Paint implements Interpolatable<Color> { // final
         } else if (type == PARSE_PERCENT) {
             throw new IllegalArgumentException("Invalid color specification");
         }
-        if (type == PARSE_ALPHA) {
-            double d = Double.parseDouble(color);
-            return (d < 0.0) ? 0.0 : ((d > 1.0) ? 1.0 : d);
-        }
-        int c = Integer.parseInt(color);
+        double c = ((type == PARSE_COMPONENT)
+                    ? Integer.parseInt(color)
+                    : Double.parseDouble(color));
         switch (type) {
+            case PARSE_ALPHA:
+                return (c < 0.0) ? 0.0 : ((c > 1.0) ? 1.0 : c);
             case PARSE_PERCENT:
-                return (c <= 0) ? 0.0 : ((c >= 100) ? 1.0 : (c / 100.0));
+                return (c <= 0.0) ? 0.0 : ((c >= 100.0) ? 1.0 : (c / 100.0));
             case PARSE_COMPONENT:
-                return (c <= 0) ? 0.0 : ((c >= 255) ? 1.0 : (c / 255.0));
+                return (c <= 0.0) ? 0.0 : ((c >= 255.0) ? 1.0 : (c / 255.0));
             case PARSE_ANGLE:
                 return ((c < 0.0)
                         ? ((c % 360.0) + 360.0)
@@ -546,21 +549,24 @@ public class Color extends Paint implements Interpolatable<Color> { // final
      * single digit in the range {@code 0} to {@code F}.
      * <li>An {@code rgb(r,g,b)} or {@code rgba(r,g,b,a)} format string.
      * Each of the {@code r}, {@code g}, or {@code b} values can be an integer
-     * from 0 to 255 or a percent value integer from 0 to 100 followed by the
-     * percent ({@code %}) character.  The alpha component, if present, is a
+     * from 0 to 255 or a floating point percentage value from 0.0 to 100.0
+     * followed by the percent ({@code %}) character.
+     * The alpha component, if present, is a
      * floating point value from 0.0 to 1.0.  Spaces are allowed before or
      * after the numbers and between the percentage number and its percent
      * sign ({@code %}).
      * <li>An {@code hsl(h,s,l)} or {@code hsla(h,s,l,a)} format string.
-     * The {@code h} value is an integer from 0 to 360 representing the hue
-     * angle on a color wheel in degrees with {@code 0} or {@code 360}
-     * representing red, {@code 120} representing green, and {@code 240}
-     * representing blue.  The {@code s} value is the saturation of the
-     * desired color represented as a percentage from gray ({@code 0}) to
-     * the fully saturated color ({@code 100}) and the {@code l} value
+     * The {@code h} value is a floating point number from 0.0 to 360.0
+     * representing the hue angle on a color wheel in degrees with
+     * {@code 0.0} or {@code 360.0} representing red, {@code 120.0}
+     * representing green, and {@code 240.0} representing blue.  The
+     * {@code s} value is the saturation of the desired color represented
+     * as a floating point percentage from gray ({@code 0.0}) to
+     * the fully saturated color ({@code 100.0}) and the {@code l} value
      * is the desired lightness or brightness of the desired color represented
-     * as a percentage from black ({@code 0}) to the full brightness of the
-     * color ({@code 100}).  The alpha component, if present, is a floating
+     * as a floating point percentage from black ({@code 0.0}) to the full
+     * brightness of the color ({@code 100.0}).
+     * The alpha component, if present, is a floating
      * point value from 0.0 to 1.0.  Spaces are allowed before or
      * after the numbers and between the percentage number and its percent
      * sign ({@code %}).
