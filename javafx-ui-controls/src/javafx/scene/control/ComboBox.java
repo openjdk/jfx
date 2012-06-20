@@ -367,8 +367,6 @@ public class ComboBox<T> extends ComboBoxBase<T> {
         if (editor == null) {
             editor = new ReadOnlyObjectWrapper<TextField>(this, "editor");
             textField = new FocusableTextField();
-            textField.promptTextProperty().bindBidirectional(promptTextProperty());
-            textField.tooltipProperty().bind(tooltipProperty());
             editor.set(textField);
         }
         return editor.getReadOnlyProperty(); 
