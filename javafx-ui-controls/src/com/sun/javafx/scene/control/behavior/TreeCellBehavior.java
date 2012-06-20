@@ -241,6 +241,7 @@ public class TreeCellBehavior extends CellBehaviorBase<TreeCell<?>> {
 
     private void simpleSelect(MouseEvent e) {
         TreeView tv = getControl().getTreeView();
+        TreeItem treeItem = getControl().getTreeItem();
         int index = getControl().getIndex();
         MultipleSelectionModel sm = tv.getSelectionModel();
         boolean isAlreadySelected = sm.isSelected(index);
@@ -250,13 +251,18 @@ public class TreeCellBehavior extends CellBehaviorBase<TreeCell<?>> {
         // handle editing, which only occurs with the primary mouse button
         if (e.getButton() == MouseButton.PRIMARY) {
             if (e.getClickCount() == 1 && isAlreadySelected) {
-                tv.edit(getControl().getTreeItem());
+                tv.edit(treeItem);
             } else if (e.getClickCount() == 1) {
                 // cancel editing
                 tv.edit(null);
             } else if (e.getClickCount() == 2/* && ! getControl().isEditable()*/) {
-                // try to expand/collapse tree item
-                getControl().getTreeItem().setExpanded(! getControl().getTreeItem().isExpanded());
+                if (treeItem.isLeaf()) {
+                    // attempt to edit
+                    tv.edit(treeItem);
+                } else {
+                    // try to expand/collapse branch tree item
+                    treeItem.setExpanded(! treeItem.isExpanded());
+                }
             }
         }
     }

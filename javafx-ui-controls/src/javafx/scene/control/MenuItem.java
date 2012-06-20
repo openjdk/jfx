@@ -600,7 +600,7 @@ public class MenuItem implements EventTarget {
                     // Fix for RT-20582. We dive into the visual representation
                     // of this MenuItem so that we may return it to the caller.
                     ContextMenu parentPopup = MenuItem.this.getParentPopup();
-                    if (! (parentPopup.getSkin() instanceof ContextMenuSkin)) return null;
+                    if (parentPopup == null || ! (parentPopup.getSkin() instanceof ContextMenuSkin)) return null;
                     
                     ContextMenuSkin skin = (ContextMenuSkin) parentPopup.getSkin();
                     if (! (skin.getNode() instanceof ContextMenuContent)) return null;

@@ -367,8 +367,6 @@ public class ComboBox<T> extends ComboBoxBase<T> {
         if (editor == null) {
             editor = new ReadOnlyObjectWrapper<TextField>(this, "editor");
             textField = new FocusableTextField();
-            textField.promptTextProperty().bindBidirectional(promptTextProperty());
-            textField.tooltipProperty().bind(tooltipProperty());
             editor.set(textField);
         }
         return editor.getReadOnlyProperty(); 
@@ -386,8 +384,14 @@ public class ComboBox<T> extends ComboBoxBase<T> {
     // When it changes, set the selectedItem in the value property.
     private ChangeListener<T> selectedItemListener = new ChangeListener<T>() {
         @Override public void changed(ObservableValue<? extends T> ov, T t, T t1) {
-            if (! valueProperty().isBound()) {
-                setValue(t1);
+            if (wasSetAllCalled) {
+                // no-op: fix for RT-22572 where the developer was completely
+                // replacing all items in the ComboBox, and expecting the 
+                // selection (and ComboBox.value) to remain set. If this isn't
+                // here, we would updateValue(null). 
+                wasSetAllCalled = false;
+            } else {
+                updateValue(t1);
             }
         }
     };
@@ -400,8 +404,12 @@ public class ComboBox<T> extends ComboBoxBase<T> {
      *                                                                         *
      **************************************************************************/        
 
-    
-    
+    private void updateValue(T newValue) {
+        if (! valueProperty().isBound()) {
+            setValue(newValue);
+        }
+    }
+     
 
     
     
@@ -412,6 +420,9 @@ public class ComboBox<T> extends ComboBoxBase<T> {
      **************************************************************************/
 
     private static final String DEFAULT_STYLE_CLASS = "combo-box";
+    
+    private boolean wasSetAllCalled = false;
+    private int previousItemCount = -1;
     
     // package for testing
     static class ComboBoxSelectionModel<T> extends SingleSelectionModel<T> {
@@ -459,11 +470,16 @@ public class ComboBox<T> extends ComboBoxBase<T> {
                 }
                 
                 while (c.next()) {
+                    comboBox.wasSetAllCalled = comboBox.previousItemCount == c.getRemovedSize();
+                    
+                    
                     if (c.getFrom() <= getSelectedIndex() && getSelectedIndex()!= -1 && (c.wasAdded() || c.wasRemoved())) {
                         int shift = c.wasAdded() ? c.getAddedSize() : -c.getRemovedSize();
                         clearAndSelect(getSelectedIndex() + shift);
                     }
                 }
+                
+                comboBox.previousItemCount = getItemCount();
             }
         };
         
