@@ -141,14 +141,14 @@ public class PaginationSkin extends SkinBase<Pagination, PaginationBehavior>  {
     }
 
     public void selectNext() {
-        if (pagination.getCurrentPageIndex() < getPageCount() - 1) {
-            pagination.setCurrentPageIndex(pagination.getCurrentPageIndex() + 1);
+        if (getCurrentPageIndex() < getPageCount() - 1) {
+            pagination.setCurrentPageIndex(getCurrentPageIndex() + 1);
         }
     }
 
     public void selectPrevious() {
-        if (pagination.getCurrentPageIndex() != 0) {
-            pagination.setCurrentPageIndex(pagination.getCurrentPageIndex() - 1);
+        if (getCurrentPageIndex() > 0) {
+            pagination.setCurrentPageIndex(getCurrentPageIndex() - 1);
         }
     }
 
@@ -224,7 +224,7 @@ public class PaginationSkin extends SkinBase<Pagination, PaginationBehavior>  {
                                 nextPageReached = true;
                             }
                             currentStackPane.setTranslateX(currentPaneX);
-                            if (pagination.getCurrentPageIndex() < getPageCount() - 1) {
+                            if (getCurrentPageIndex() < getPageCount() - 1) {
                                 createPage(nextStackPane, currentIndex + 1);
                                 nextStackPane.setVisible(true);
                                 nextStackPane.setTranslateX(nextPaneX);
@@ -247,7 +247,7 @@ public class PaginationSkin extends SkinBase<Pagination, PaginationBehavior>  {
                                 nextPageReached = true;
                             }
                             currentStackPane.setTranslateX(currentPaneX);
-                            if (pagination.getCurrentPageIndex() != 0) {
+                            if (getCurrentPageIndex() != 0) {
                                 createPage(nextStackPane, currentIndex - 1);
                                 nextStackPane.setVisible(true);
                                 nextStackPane.setTranslateX(nextPaneX);
@@ -303,7 +303,7 @@ public class PaginationSkin extends SkinBase<Pagination, PaginationBehavior>  {
     }
 
     private void resetIndexes(boolean usePageIndex) {
-        maxPageIndicatorCount = getSkinnable().getMaxPageIndicatorCount();
+        maxPageIndicatorCount = getMaxPageIndicatorCount();
         // Used to indicate that we can change a set of pages.
         pageCount = getPageCount();
         if (pageCount > maxPageIndicatorCount) {
@@ -312,7 +312,7 @@ public class PaginationSkin extends SkinBase<Pagination, PaginationBehavior>  {
 
         fromIndex = 0;
         previousIndex = 0;
-        currentIndex = usePageIndex ? getSkinnable().getCurrentPageIndex() : 0;
+        currentIndex = usePageIndex ? getCurrentPageIndex() : 0;
         toIndex = fromIndex + (pageCount - 1);
 
         if (pageCount == Pagination.INDETERMINATE && maxPageIndicatorCount == Pagination.INDETERMINATE) {
@@ -364,7 +364,18 @@ public class PaginationSkin extends SkinBase<Pagination, PaginationBehavior>  {
     }
 
     private int getPageCount() {
+        if (getSkinnable().getPageCount() < 1) {
+            return 1;
+        }
         return getSkinnable().getPageCount();
+    }
+
+    private int getMaxPageIndicatorCount() {
+        return getSkinnable().getMaxPageIndicatorCount();
+    }
+
+    private int getCurrentPageIndex() {
+        return getSkinnable().getCurrentPageIndex();
     }
 
     private static final Interpolator interpolator = Interpolator.SPLINE(0.4829, 0.5709, 0.6803, 0.9928);
@@ -872,7 +883,7 @@ public class PaginationSkin extends SkinBase<Pagination, PaginationBehavior>  {
 
             double x = 0;
             int indicatorCount = 0;
-            for (int i = 0; i < getSkinnable().getMaxPageIndicatorCount(); i++) {
+            for (int i = 0; i < getMaxPageIndicatorCount(); i++) {
                 int index = i < indicatorButtons.getToggles().size() ? i : indicatorButtons.getToggles().size() - 1;
                 double iw = minButtonSize;
                 if (index != -1) {
@@ -888,10 +899,10 @@ public class PaginationSkin extends SkinBase<Pagination, PaginationBehavior>  {
             }
 
             if (indicatorCount != previousIndicatorCount) {
-                if (indicatorCount < getSkinnable().getMaxPageIndicatorCount()) {
+                if (indicatorCount < getMaxPageIndicatorCount()) {
                     maxPageIndicatorCount = indicatorCount;
-                } else if (indicatorCount >= getSkinnable().getMaxPageIndicatorCount()) {
-                    maxPageIndicatorCount = getSkinnable().getMaxPageIndicatorCount();
+                } else if (indicatorCount >= getMaxPageIndicatorCount()) {
+                    maxPageIndicatorCount = getMaxPageIndicatorCount();
                 } else {
                     maxPageIndicatorCount = toIndex - fromIndex;
                 }
@@ -1170,7 +1181,7 @@ public class PaginationSkin extends SkinBase<Pagination, PaginationBehavior>  {
 
             setOnAction(new EventHandler<ActionEvent>() {
                 @Override public void handle(ActionEvent arg0) {
-                    int selected = pagination.getCurrentPageIndex();
+                    int selected = getCurrentPageIndex();
                     // We do not need to update the selection if it has not changed.
                     if (selected != IndicatorButton.this.pageNumber) {
                         pagination.setCurrentPageIndex(IndicatorButton.this.pageNumber);
