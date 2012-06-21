@@ -32,6 +32,7 @@ import java.util.List;
 import javafx.beans.InvalidationListener;
 import javafx.beans.Observable;
 import javafx.beans.WeakInvalidationListener;
+import javafx.collections.FXCollections;
 import javafx.collections.ListChangeListener;
 import javafx.collections.ObservableList;
 import javafx.event.EventHandler;
@@ -67,12 +68,7 @@ public class NestedTableColumnHeader extends TableColumnHeader {
 
         initUI();
         
-        // watching for changes to the view columns in either table or tableColumn.
-        if (getTableColumn() == null && getTableView() != null) {
-            setColumns(getTableView().getColumns());
-        } else if (getTableColumn() != null) {
-            setColumns(getTableColumn().getColumns());
-        }
+        updateTableColumnHeaders();
     }
     
     
@@ -85,7 +81,7 @@ public class NestedTableColumnHeader extends TableColumnHeader {
     
     private final ListChangeListener<TableColumn> columnsListener = new ListChangeListener<TableColumn>() {
         @Override public void onChanged(Change<? extends TableColumn> c) {
-            setColumns(c.getList());
+            updateTableColumnHeaders();
         }
     };
     
@@ -146,6 +142,15 @@ public class NestedTableColumnHeader extends TableColumnHeader {
         if (this.columns != null) {
             this.columns.addListener(weakColumnsListener);
         }
+    }
+    
+    void updateTableColumnHeaders() {
+        // watching for changes to the view columns in either table or tableColumn.
+        if (getTableColumn() == null && getTableView() != null) {
+            setColumns(getTableView().getColumns());
+        } else if (getTableColumn() != null) {
+            setColumns(getTableColumn().getColumns());
+        }
         
         // update the column headers....
         
@@ -155,9 +160,6 @@ public class NestedTableColumnHeader extends TableColumnHeader {
             header.dispose();
         }
         
-        // clear the column headers list before we recreate them
-        getColumnHeaders().clear();
-        
         // then iterate through all columns, unless we've got no child columns
         // any longer, in which case we should switch to a TableColumnHeader 
         // instead
@@ -166,19 +168,27 @@ public class NestedTableColumnHeader extends TableColumnHeader {
             NestedTableColumnHeader parentHeader = getParentHeader();
             if (parentHeader != null) {
                 TableColumnHeader newHeader = createColumnHeader(getTableColumn());
-                int index = parentHeader.getColumnHeaders().indexOf(this);
-                parentHeader.getColumnHeaders().set(index, newHeader);
+                List<TableColumnHeader> parentColumnHeaders = parentHeader.getColumnHeaders();
+                int index = parentColumnHeaders.indexOf(this);
+                if (index >= 0 && index < parentColumnHeaders.size()) {
+                    parentColumnHeaders.set(index, newHeader);
+                }
             }
         } else {
+            List<TableColumnHeader> newHeaders = new ArrayList<TableColumnHeader>();
+            
             for (int i = 0; i < getColumns().size(); i++) {
                 TableColumn<?,?> column = getColumns().get(i);
 
                 if (column == null) continue;
 
-                getColumnHeaders().add(createColumnHeader(column));
+                TableColumnHeader header = createColumnHeader(column);
+                newHeaders.add(header);
             }
+            
+            getColumnHeaders().setAll(newHeaders);
         }
-
+        
         // update the content
         updateContent();
     }
@@ -205,9 +215,9 @@ public class NestedTableColumnHeader extends TableColumnHeader {
 
     private TableColumnHeader label;
 
-    private List<TableColumnHeader> columnHeaders;
-    public List<TableColumnHeader> getColumnHeaders() { 
-        if (columnHeaders == null) columnHeaders = new ArrayList<TableColumnHeader>();
+    private ObservableList<TableColumnHeader> columnHeaders;
+    public ObservableList<TableColumnHeader> getColumnHeaders() { 
+        if (columnHeaders == null) columnHeaders = FXCollections.<TableColumnHeader>observableArrayList();
         return columnHeaders; 
     }
 
@@ -229,7 +239,7 @@ public class NestedTableColumnHeader extends TableColumnHeader {
     private void updateContent() {
         // create a temporary list so we only do addAll into the main content
         // observableArrayList once.
-        List<Node> content = new ArrayList<Node>();
+        final List<Node> content = new ArrayList<Node>();
 
         // the label is the region that sits above the children columns
         content.add(label);
@@ -245,6 +255,7 @@ public class NestedTableColumnHeader extends TableColumnHeader {
         }
 
         getChildren().setAll(content);
+        requestLayout();
     }
     
     private static final String TABLE_COLUMN_KEY = "TableColumn";

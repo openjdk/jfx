@@ -211,6 +211,7 @@ public class TableHeaderRow extends StackPane {
 
         updateTableWidth();
         table.widthProperty().addListener(weakTableWidthListener);
+        table.getVisibleLeafColumns().addListener(weakVisibleLeafColumnsListener);
 
         // --- popup menu for hiding/showing columns
         columnPopupMenu = new ContextMenu();
@@ -296,6 +297,13 @@ public class TableHeaderRow extends StackPane {
         }
     };
     
+    private ListChangeListener visibleLeafColumnsListener = new ListChangeListener<TableColumn<?,?>>() {
+        @Override public void onChanged(ListChangeListener.Change<? extends TableColumn<?,?>> c) {
+            // This is necessary for RT-20300
+            header.updateTableColumnHeaders();
+        }
+    };
+    
     private final ListChangeListener tableColumnsListener = new ListChangeListener<TableColumn<?,?>>() {
         @Override public void onChanged(Change<? extends TableColumn<?,?>> c) {
             while (c.next()) {
@@ -306,6 +314,9 @@ public class TableHeaderRow extends StackPane {
     
     private final WeakInvalidationListener weakTableWidthListener = 
             new WeakInvalidationListener(tableWidthListener);
+    
+    private final WeakListChangeListener weakVisibleLeafColumnsListener =
+            new WeakListChangeListener(visibleLeafColumnsListener);
     
     private final WeakListChangeListener weakTableColumnsListener =
             new WeakListChangeListener(tableColumnsListener);
