@@ -9,6 +9,7 @@ import javafx.scene.paint.Color;
  */
 class WebColorFieldSkin extends InputFieldSkin {
     private InvalidationListener integerFieldValueListener;
+    private boolean noChangeInValue = false;
 
     /**
      * Create a new IntegerFieldSkin.
@@ -51,7 +52,7 @@ class WebColorFieldSkin extends InputFieldSkin {
     //  "^#([A-Fa-f0-9]{6}|[A-Fa-f0-9]{3})$";
     protected boolean accept(String text) {
         if (text.length() == 0) return true;
-        if (text.matches("#[a-fA-F0-9]{0,6}")) {
+        if (text.matches("#[a-fA-F0-9]{0,6}") || text.matches("[a-fA-F0-9]{0,6}")) {
             return true;
         }
         return false;
@@ -64,18 +65,25 @@ class WebColorFieldSkin extends InputFieldSkin {
     }
 
     protected void updateValue() {
+        if (noChangeInValue) return;
         Color value = ((WebColorField) control).getValue();
         String text = getTextField().getText() == null ? "" : getTextField().getText().trim().toUpperCase();
-        if (text.matches("#[A-F0-9]{6}")) {
+        if (text.matches("#[A-F0-9]{6}") || text.matches("[A-F0-9]{6}")) {
             try {
-                Color newValue = Color.web(text);
+                Color newValue = (text.charAt(0) == '#')? Color.web(text) : Color.web("#"+text);
                 if (!newValue.equals(value)) {
                     ((WebColorField) control).setValue(newValue);
+                } else {
+                    // calling setText results in updateValue - so we set this flag to true
+                    // so that when this is true updateValue simply returns.
+                    noChangeInValue = true; 
+                    getTextField().setText(getWebColor(newValue));
+                    noChangeInValue = false;
                 }
             } catch (java.lang.IllegalArgumentException ex) {
                 System.out.println("Failed to parse ["+text+"]");
             }
-        }
+        } 
     }
     
     
