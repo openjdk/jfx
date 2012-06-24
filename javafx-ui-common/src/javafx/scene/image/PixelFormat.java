@@ -127,9 +127,9 @@ public abstract class PixelFormat<T extends Buffer> {
         int r = (nonpre >> 16) & 0xff;
         int g = (nonpre >>  8) & 0xff;
         int b = (nonpre      ) & 0xff;
-        r = (r * a) / 0xff;
-        g = (g * a) / 0xff;
-        b = (b * a) / 0xff;
+        r = (r * a + 127) / 0xff;
+        g = (g * a + 127) / 0xff;
+        b = (b * a + 127) / 0xff;
         return (a << 24) | (r << 16) | (g << 8) | b;
     }
 

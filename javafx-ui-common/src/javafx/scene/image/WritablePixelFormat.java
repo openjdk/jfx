@@ -152,10 +152,10 @@ public abstract class WritablePixelFormat<T extends Buffer>
                             int argb)
         {
             int index = y * scanlineStride + x * 4;
-            buf.put(index,     (byte) (argb >> 24));
-            buf.put(index + 1, (byte) (argb >> 16));
-            buf.put(index + 2, (byte) (argb >>  8));
-            buf.put(index + 3, (byte) (argb      ));
+            buf.put(index,     (byte) (argb      ));
+            buf.put(index + 1, (byte) (argb >>  8));
+            buf.put(index + 2, (byte) (argb >> 16));
+            buf.put(index + 3, (byte) (argb >> 24));
         }
     }
 
@@ -199,17 +199,17 @@ public abstract class WritablePixelFormat<T extends Buffer>
                 g = (argb >>  8) & 0xff;
                 b = (argb      ) & 0xff;
                 if (a < 0xff) {
-                    r = (r * a) / 0xff;
-                    g = (g * a) / 0xff;
-                    b = (b * a) / 0xff;
+                    r = (r * a + 127) / 0xff;
+                    g = (g * a + 127) / 0xff;
+                    b = (b * a + 127) / 0xff;
                 }
             } else {
                 a = r = g = b = 0;
             }
-            buf.put(index,     (byte) a);
-            buf.put(index + 1, (byte) r);
-            buf.put(index + 2, (byte) g);
-            buf.put(index + 3, (byte) b);
+            buf.put(index,     (byte) b);
+            buf.put(index + 1, (byte) g);
+            buf.put(index + 2, (byte) r);
+            buf.put(index + 3, (byte) a);
         }
     }
 }
