@@ -424,11 +424,13 @@ public class TableCell<S,T> extends IndexedCell<T> {
          * TableRow class might pick up the need to set an entire row to be
          * selected.
          */
+        if (isEmpty()) return;
         if (getIndex() == -1 || getTableView() == null) return;
         if (getTableView().getSelectionModel() == null) return;
         
         boolean isSelected = isInCellSelectionMode() &&
                 getTableView().getSelectionModel().isSelected(getIndex(), getTableColumn());
+        if (isSelected() == isSelected) return;
 
         updateSelected(isSelected);
     }

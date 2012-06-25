@@ -953,14 +953,12 @@ public class ListView<T> extends Control {
         private WeakChangeListener weakItemsObserver = 
                 new WeakChangeListener(itemsObserver);
         
-        private int newListHash = -1;
         private void updateItemsObserver(ObservableList<T> oldList, ObservableList<T> newList) {
             // update listeners
             if (oldList != null) {
                 oldList.removeListener(weakItemsContentObserver);
             }
-            if (newList != null && newList.hashCode() != newListHash) {
-                newListHash = newList.hashCode();
+            if (newList != null) {
                 newList.addListener(weakItemsContentObserver);
             }
 

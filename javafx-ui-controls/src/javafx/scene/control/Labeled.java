@@ -318,7 +318,9 @@ public abstract class Labeled extends Control {
                     // css might need to be reapplied since font size affects
                     // calculated values for styles with relative values
                     Stylesheet.Origin origin = StyleableProperty.getOrigin(font);
-                    if (origin == Stylesheet.Origin.USER) Labeled.this.impl_reapplyCSS();
+                    if (origin == null || origin == Stylesheet.Origin.USER) {
+                        Labeled.this.impl_reapplyCSS();
+                    }
                 }
                 
                 @Override 
@@ -343,6 +345,7 @@ public abstract class Labeled extends Control {
     private ObjectProperty<Font> font;
     public final void setFont(Font value) { fontProperty().setValue(value); }
     public final Font getFont() { return font == null ? Font.getDefault() : font.getValue(); }
+    
 
     /**
      * An optional icon for the Labeled. This can be positioned relative to the

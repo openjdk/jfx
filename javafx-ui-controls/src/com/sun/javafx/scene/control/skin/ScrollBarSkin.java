@@ -52,6 +52,7 @@ public class ScrollBarSkin extends SkinBase<ScrollBar, ScrollBarBehavior> {
     public static int DEFAULT_WIDTH = 20;
 
     private StackPane thumb;
+    private StackPane trackBackground;
     private StackPane track;
     private EndButton incButton;
     private EndButton decButton;
@@ -90,6 +91,9 @@ public class ScrollBarSkin extends SkinBase<ScrollBar, ScrollBarBehavior> {
 
         track = new StackPane();
         track.getStyleClass().setAll("track");
+
+        trackBackground = new StackPane();
+        trackBackground.getStyleClass().setAll("track-background");
 
         thumb = new StackPane();
         thumb.getStyleClass().setAll("thumb");
@@ -293,7 +297,7 @@ public class ScrollBarSkin extends SkinBase<ScrollBar, ScrollBarBehavior> {
 
         getChildren().clear();
         if (!PlatformUtil.isEmbedded()) {
-            getChildren().addAll(incButton, decButton, track, thumb);
+            getChildren().addAll(trackBackground, incButton, decButton, track, thumb);
         }
         else {
             getChildren().addAll(track, thumb);
@@ -449,24 +453,25 @@ public class ScrollBarSkin extends SkinBase<ScrollBar, ScrollBarBehavior> {
                 double decHeight = snapSize(decButton.prefHeight(-1));
                 double incHeight = snapSize(incButton.prefHeight(-1));
 
-                decButton.resize(wTotal, decHeight);
-                incButton.resize(wTotal, incHeight);
+                decButton.resize(wNoInsets, decHeight);
+                incButton.resize(wNoInsets, incHeight);
 
                 trackLength = snapSize(hNoInsets - (decHeight + incHeight));
                 thumbLength = snapSize(Utils.clamp(minThumbLength(), (trackLength * visiblePortion), trackLength));
 
+                trackBackground.resizeRelocate(snapPosition(x), snapPosition(y), wNoInsets, trackLength+decHeight+incHeight);
                 decButton.relocate(snapPosition(x), snapPosition(y));
                 incButton.relocate(snapPosition(x), snapPosition(y + hNoInsets - incHeight));
-                track.resizeRelocate(snapPosition(x), snapPosition(y + decHeight), wTotal, trackLength);
-                thumb.resize(snapSize(x >= 0 ? wTotal : wTotal + x), thumbLength); // Account for negative padding (see also RT-10719)
+                track.resizeRelocate(snapPosition(x), snapPosition(y + decHeight), wNoInsets, trackLength);
+                thumb.resize(snapSize(x >= 0 ? wNoInsets : wNoInsets + x), thumbLength); // Account for negative padding (see also RT-10719)
                 positionThumb();
             }
             else {
                 trackLength = snapSize(hNoInsets);
                 thumbLength = snapSize(Utils.clamp(minThumbLength(), (trackLength * visiblePortion), trackLength));
 
-                track.resizeRelocate(snapPosition(x), snapPosition(y), wTotal, trackLength);
-                thumb.resize(snapSize(x >= 0 ? wTotal : wTotal + x), thumbLength); // Account for negative padding (see also RT-10719)
+                track.resizeRelocate(snapPosition(x), snapPosition(y), wNoInsets, trackLength);
+                thumb.resize(snapSize(x >= 0 ? wNoInsets : wNoInsets + x), thumbLength); // Account for negative padding (see also RT-10719)
                 positionThumb();
             }
         } else {
@@ -474,62 +479,64 @@ public class ScrollBarSkin extends SkinBase<ScrollBar, ScrollBarBehavior> {
                 double decWidth = snapSize(decButton.prefWidth(-1));
                 double incWidth = snapSize(incButton.prefWidth(-1));
 
-                decButton.resize(decWidth, hTotal);
-                incButton.resize(incWidth, hTotal);
+                decButton.resize(decWidth, hNoInsets);
+                incButton.resize(incWidth, hNoInsets);
 
                 trackLength = snapSize(wNoInsets - (decWidth + incWidth));
                 thumbLength = snapSize(Utils.clamp(minThumbLength(), (trackLength * visiblePortion), trackLength));
 
+                trackBackground.resizeRelocate(snapPosition(x), snapPosition(y), trackLength+decWidth+incWidth, hNoInsets);
                 decButton.relocate(snapPosition(x), snapPosition(y));
                 incButton.relocate(snapPosition(x + wNoInsets - incWidth), snapPosition(y));
-                track.resizeRelocate(snapPosition(x + decWidth), snapPosition(y), trackLength, hTotal);
-                thumb.resize(thumbLength, snapSize(y >= 0 ? hTotal : hTotal + y)); // Account for negative padding (see also RT-10719)
+                track.resizeRelocate(snapPosition(x + decWidth), snapPosition(y), trackLength, hNoInsets);
+                thumb.resize(thumbLength, snapSize(y >= 0 ? hNoInsets : hNoInsets + y)); // Account for negative padding (see also RT-10719)
                 positionThumb();
             }
             else {
                 trackLength = snapSize(wNoInsets);
                 thumbLength = snapSize(Utils.clamp(minThumbLength(), (trackLength * visiblePortion), trackLength));
 
-                track.resizeRelocate(snapPosition(x), snapPosition(y), trackLength, hTotal);
-                thumb.resize(thumbLength, snapSize(y >= 0 ? hTotal : hTotal + y)); // Account for negative padding (see also RT-10719)
+                track.resizeRelocate(snapPosition(x), snapPosition(y), trackLength, hNoInsets);
+                thumb.resize(thumbLength, snapSize(y >= 0 ? hNoInsets : hNoInsets + y)); // Account for negative padding (see also RT-10719)
                 positionThumb();
             }
 
             resize(snapSize(getWidth()), snapSize(getHeight()));
+        }
 
-            // things should be invisible only when well below minimum length
-            if (getSkinnable().getOrientation() == Orientation.VERTICAL && hNoInsets >= (computeMinHeight(-1) - (getInsets().getTop()+getInsets().getBottom())) ||
-                getSkinnable().getOrientation() == Orientation.HORIZONTAL && wNoInsets >= (computeMinWidth(-1) - (getInsets().getLeft()+getInsets().getRight()))) {
-                track.setVisible(true);
-                thumb.setVisible(true);
-                if (!PlatformUtil.isEmbedded()) {
-                    incButton.setVisible(true);
+        // things should be invisible only when well below minimum length
+        if (getSkinnable().getOrientation() == Orientation.VERTICAL && hNoInsets >= (computeMinHeight(-1) - (getInsets().getTop()+getInsets().getBottom())) ||
+            getSkinnable().getOrientation() == Orientation.HORIZONTAL && wNoInsets >= (computeMinWidth(-1) - (getInsets().getLeft()+getInsets().getRight()))) {
+            trackBackground.setVisible(true);
+            track.setVisible(true);
+            thumb.setVisible(true);
+            if (!PlatformUtil.isEmbedded()) {
+                incButton.setVisible(true);
+                decButton.setVisible(true);
+            }
+        }
+        else {
+            trackBackground.setVisible(false);
+            track.setVisible(false);
+            thumb.setVisible(false);
+
+            if (!PlatformUtil.isEmbedded()) {
+                /*
+                ** once the space is big enough for one button we 
+                ** can look at drawing
+                */
+                if (hNoInsets >= decButton.computeMinWidth(-1)) {
                     decButton.setVisible(true);
                 }
-            }
-            else {
-                track.setVisible(false);
-                thumb.setVisible(false);
-
-                if (!PlatformUtil.isEmbedded()) {
-                    /*
-                    ** once the space is big enough for one button we 
-                    ** can look at drawing
-                    */
-                    if (hNoInsets >= decButton.computeMinWidth(-1)) {
-                        decButton.setVisible(true);
-                    }
-                    else {
-                        decButton.setVisible(false);
-                    }
-                    if (hNoInsets >= incButton.computeMinWidth(-1)) {
-                        incButton.setVisible(true);
-                    }
-                    else {
-                        incButton.setVisible(false);
-                    }
+                else {
+                    decButton.setVisible(false);
                 }
-            
+                if (hNoInsets >= incButton.computeMinWidth(-1)) {
+                    incButton.setVisible(true);
+                }
+                else {
+                    incButton.setVisible(false);
+                }
             }
         }
     }

@@ -209,7 +209,9 @@ public abstract class ComboBoxBase<T> extends Control {
     // --- prompt text
     /**
      * The {@code ComboBox} prompt text to display, or <tt>null</tt> if no 
-     * prompt text is displayed.
+     * prompt text is displayed. Prompt text is not displayed in all circumstances,
+     * it is dependent upon the subclasses of ComboBoxBase to clarify when
+     * promptText will be shown.
      */
     private StringProperty promptText = new SimpleStringProperty(this, "promptText", "") {
         @Override protected void invalidated() {

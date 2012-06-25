@@ -54,8 +54,9 @@ public class IntegerFieldSkin extends InputFieldSkin {
         if (text.matches("[0-9]*")) {
             try {
                 Integer.parseInt(text);
-                System.out.println("Integer accept :: returning true for "+Integer.parseInt(text));
-                return true;
+                int value = Integer.parseInt(text);
+                int maxValue = ((IntegerField) control).getMaxValue();
+                return (maxValue != -1) ? (value <= maxValue )  : true;
             } catch (NumberFormatException ex) { }
         }
         return false;

@@ -448,8 +448,12 @@ public class ListCell<T> extends IndexedCell<T> {
     }
 
     private void updateSelection() {
+        if (isEmpty()) return;
         if (getIndex() == -1 || getListView() == null) return;
         if (getListView().getSelectionModel() == null) return;
+        
+        boolean isSelected = getListView().getSelectionModel().isSelected(getIndex());
+        if (isSelected() == isSelected) return;
         
         updateSelected(getListView().getSelectionModel().isSelected(getIndex()));
     }

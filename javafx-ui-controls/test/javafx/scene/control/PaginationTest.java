@@ -239,7 +239,7 @@ public class PaginationTest {
         pagination.setCurrentPageIndex(100);
         assertEquals(99, pagination.getCurrentPageIndex());
     }
-    
+
     @Test public void setMaxPageIndicatorCountLessThanZero() {
         pagination.setPageCount(100);
         root.setPrefSize(400, 400);
@@ -255,17 +255,17 @@ public class PaginationTest {
         root.setPrefSize(400, 400);
         root.getChildren().add(pagination);
         show();
-        
+
         pagination.setMaxPageIndicatorCount(101);
         assertEquals(10, pagination.getMaxPageIndicatorCount());
     }
-    
+
     @Test public void pageCountIsLessThanMaxPageIndicatorCount_RT21660() {
         pagination.setPageCount(5);
         root.setPrefSize(400, 400);
         root.getChildren().add(pagination);
         show();
-        
+
         pagination.setCurrentPageIndex(4);
         tk.firePulse();
         assertTrue(pagination.isFocused());
@@ -276,7 +276,23 @@ public class PaginationTest {
 
         assertEquals(4, pagination.getCurrentPageIndex());
     }
-    
+
+    @Test public void divideByZeroErrorWhenSizeIsSmall_RT22687() {
+        pagination.setPageCount(15);
+        root.setMaxSize(100, 200);
+        root.getChildren().add(pagination);
+        show();
+
+        try {
+            KeyEventFirer keyboard = new KeyEventFirer(pagination);
+            keyboard.doRightArrowPress();
+            tk.firePulse();
+        } catch (Exception e) {
+            fail();
+        }
+        assertEquals(1, pagination.getCurrentPageIndex());
+    }
+
     public VBox createPage(int pageIndex) {
         VBox box = new VBox(5);
         int page = pageIndex * 10;

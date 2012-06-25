@@ -834,7 +834,16 @@ public class ScrollPaneSkin extends SkinBase<ScrollPane, ScrollPaneBehavior> imp
 
         if (vsbvis && hsbvis) {
             corner.setVisible(true);
-            corner.resizeRelocate(snapPosition(vsb.getLayoutX()), snapPosition(hsb.getLayoutY()), snapSize(vsbWidth), snapSize(hsbHeight));
+            double cornerWidth = vsbWidth;
+            double cornerHeight = hsbHeight;
+
+            if (getPadding().getRight() >= 1) {
+                cornerWidth++;
+            }
+            if (getPadding().getBottom() >= 1) {
+                cornerHeight++;
+            }
+            corner.resizeRelocate(snapPosition(vsb.getLayoutX()), snapPosition(hsb.getLayoutY()), snapSize(cornerWidth), snapSize(cornerHeight));
         } else {
             corner.setVisible(false);
         }

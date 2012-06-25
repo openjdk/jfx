@@ -248,7 +248,11 @@ public class ComboBoxListViewSkin<T> extends ComboBoxPopupControl<T> {
     }
     
     @Override protected double computePrefWidth(double height) {
-        return listView.prefWidth(height);
+        double pw = listView.prefWidth(height);
+        
+        reconfigurePopup();
+        
+        return pw;
     }
     
     @Override protected double computeMinWidth(double height) {
@@ -411,6 +415,8 @@ public class ComboBoxListViewSkin<T> extends ComboBoxPopupControl<T> {
     }
     
     private void setTextFromTextFieldIntoComboBoxValue() {
+        if (! comboBox.isEditable()) return;
+        
         StringConverter<T> c = comboBox.getConverter();
         if (c == null) return;
         

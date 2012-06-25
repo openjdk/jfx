@@ -298,16 +298,23 @@ public class ProgressIndicatorSkin extends SkinBase<ProgressIndicator, ProgressI
             /*
             ** use the min of width, or height, keep it a circle
             */
-            double radiusW = (control.getWidth() - (skin.getInsets().getLeft() + skin.getInsets().getRight())) / 2;
-            double radiusH = (control.getHeight() - (skin.getInsets().getTop() + skin.getInsets().getBottom())) / 2;
+            double areaW = (control.getWidth() - (skin.getInsets().getLeft() + skin.getInsets().getRight()));
+            double areaH = (control.getHeight() - (skin.getInsets().getTop() + skin.getInsets().getBottom()));
+
+            double radiusW = areaW / 2;
+            double radiusH = (areaH-(textGap+doneTextHeight)) / 2;
             double radius = Math.min(radiusW, radiusH);
 
-            radius = Math.min(radius, (control.getHeight() - skin.getInsets().getTop() - skin.getInsets().getBottom() - textGap - doneTextHeight) / 2);
             indicator.impl_setShape(new Circle(radius));
             indicator.resize(2 * radius, 2 * radius);
 
-            indicator.setLayoutX(skin.getInsets().getLeft()+textGap);
-            indicator.setLayoutY(skin.getInsets().getTop());
+            /*
+            ** we need to work out the available space between the padding,
+            ** and centre the indicator inside it
+            */
+            indicator.setLayoutX(skin.getInsets().getLeft()+(radiusW - radius));
+            indicator.setLayoutY(skin.getInsets().getTop()+(radiusH - radius));
+
 
             arcShape.setRadiusX(((indicator.getWidth() - indicator.getInsets().getLeft() - indicator.getInsets().getRight()) / 2));
             arcShape.setRadiusY(arcShape.getRadiusX());
@@ -332,16 +339,16 @@ public class ProgressIndicatorSkin extends SkinBase<ProgressIndicator, ProgressI
                 if (!text.isVisible()) {
                     text.setVisible(true);
                 }
-                text.setLayoutY(skin.getInsets().getTop() + indicator.getHeight() + textGap);
+                text.setLayoutY(indicator.getLayoutY()+indicator.getHeight() + textGap);
                 /*
                 ** try to centre the text at the indicators radius.
                 ** but if it can't then use the padding
                 */
-                if (textWidth > (radius*2)) {
-                    text.setLayoutX(skin.getInsets().getLeft());
+                if (textWidth > (radiusW*2)) {
+                    text.setLayoutX(skin.getInsets().getLeft()+(radiusW - radius));
                 }
                 else {
-                    text.setLayoutX(skin.getInsets().getLeft()+((radius*2 - textWidth)/2));
+                    text.setLayoutX(skin.getInsets().getLeft()+((radiusW*2 - textWidth)/2));
                 }
             }
             else {
@@ -442,8 +449,8 @@ public class ProgressIndicatorSkin extends SkinBase<ProgressIndicator, ProgressI
             double diameter = radius*2;
             childrenG.resize(diameter, diameter);
 
-            childrenG.setLayoutX(skin.getInsets().getLeft());
-            childrenG.setLayoutY(skin.getInsets().getTop());
+            childrenG.setLayoutX(skin.getInsets().getLeft()+(radiusW - radius));
+            childrenG.setLayoutY(skin.getInsets().getTop()+(radiusH - radius));
         }
 
         private Timeline indeterminateTimeline;
@@ -451,14 +458,14 @@ public class ProgressIndicatorSkin extends SkinBase<ProgressIndicator, ProgressI
 
 
         @Override protected double computePrefWidth(double height) {
-            return getInsets().getLeft() + doneText.getLayoutBounds().getWidth() + getInsets().getRight();
+            return getInsets().getLeft() + doneText.getLayoutBounds().getHeight() + getInsets().getRight();
         }
 
         @Override protected double computePrefHeight(double width) {
             /*
-            ** use width, to keep it square
+            ** use the same as the width, to keep it square
             */
-            return getInsets().getTop() + doneText.getLayoutBounds().getWidth() + getInsets().getBottom();
+            return getInsets().getTop() + doneText.getLayoutBounds().getHeight() + getInsets().getBottom();
         }
 
         @Override protected double computeMaxWidth(double height) {

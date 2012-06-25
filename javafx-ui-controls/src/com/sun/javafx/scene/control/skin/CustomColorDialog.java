@@ -292,13 +292,13 @@ public class CustomColorDialog extends StackPane {
             colorRectIndicator.setEffect(new DropShadow(2, 0, 1, Color.BLACK));
         
             colorRect = new Rectangle(RECT_SIZE, RECT_SIZE);
-            colorRect.fillProperty().bind(new ObjectBinding<Paint>() {
-                { bind(color); }
-                @Override protected Paint computeValue() {
-                    return Color.hsb(hue.getValue(), 1.0, 1.0, clamp(alpha.get()/100));
+            colorProperty().addListener(new ChangeListener<Color>() {
+                @Override
+                public void changed(ObservableValue<? extends Color> ov, Color t, Color t1) {
+                    colorRect.setFill(Color.hsb(hue.getValue(), 1.0, 1.0, clamp(alpha.get()/100)));
                 }
             });
-        
+            
             colorRectOverlayOne = new Rectangle(RECT_SIZE, RECT_SIZE);
             colorRectOverlayOne.setFill(new LinearGradient(0, 0, 1, 0, true, CycleMethod.NO_CYCLE, 
                     new Stop(0, Color.rgb(255, 255, 255, 1)), 
@@ -553,7 +553,7 @@ public class CustomColorDialog extends StackPane {
             alphaSlider.setPrefWidth(100);
             alphaSettings.add(alphaSlider, 1, 1);
             
-            IntegerField alphaField = new IntegerField();
+            IntegerField alphaField = new IntegerField(100);
             alphaField.setSkin(new IntegerFieldSkin(alphaField));
             alphaField.setPrefColumnCount(3);
             alphaField.setMaxWidth(38);
@@ -635,7 +635,7 @@ public class CustomColorDialog extends StackPane {
                 hueSlider.setPrefWidth(100);
                 hsbSettings.add(hueSlider, 1, 1);
 
-                IntegerField hueField = new IntegerField();
+                IntegerField hueField = new IntegerField(360);
                 hueField.setSkin(new IntegerFieldSkin(hueField));
                 hueField.setPrefColumnCount(3);
                 hueField.setMaxWidth(38);
@@ -652,7 +652,7 @@ public class CustomColorDialog extends StackPane {
                 saturationSlider.setPrefWidth(100);
                 hsbSettings.add(saturationSlider, 1, 2);
                 
-                IntegerField saturationField = new IntegerField();
+                IntegerField saturationField = new IntegerField(100);
                 saturationField.setSkin(new IntegerFieldSkin(saturationField));
                 saturationField.setPrefColumnCount(3);
                 saturationField.setMaxWidth(38);
@@ -669,7 +669,7 @@ public class CustomColorDialog extends StackPane {
                 brightnessSlider.setPrefWidth(100);
                 hsbSettings.add(brightnessSlider, 1, 3);
 
-                IntegerField brightnessField = new IntegerField();
+                IntegerField brightnessField = new IntegerField(100);
                 brightnessField.setSkin(new IntegerFieldSkin(brightnessField));
                 brightnessField.setPrefColumnCount(3);
                 brightnessField.setMaxWidth(38);
@@ -708,7 +708,7 @@ public class CustomColorDialog extends StackPane {
                 redSlider.setPrefWidth(100);
                 rgbSettings.add(redSlider, 1, 1);
 
-                IntegerField redField = new IntegerField();
+                IntegerField redField = new IntegerField(255);
                 redField.setSkin(new IntegerFieldSkin(redField));
 //                redField.setPrefColumnCount(3);
                 redField.setMaxWidth(38);
@@ -726,7 +726,7 @@ public class CustomColorDialog extends StackPane {
                 greenSlider.setPrefWidth(100);
                 rgbSettings.add(greenSlider, 1, 2);
 
-                IntegerField greenField = new IntegerField();
+                IntegerField greenField = new IntegerField(255);
                 greenField.setSkin(new IntegerFieldSkin(greenField));
 //                greenField.setPrefColumnCount(3);
                 greenField.setMaxWidth(38);
@@ -745,7 +745,7 @@ public class CustomColorDialog extends StackPane {
                 blueSlider.setPrefWidth(100);
                 rgbSettings.add(blueSlider, 1, 3);
 
-                IntegerField blueField = new IntegerField();
+                IntegerField blueField = new IntegerField(255);
                 blueField.setSkin(new IntegerFieldSkin(blueField));
 //                blueField.setPrefColumnCount(3);
                 blueField.setMaxWidth(38);
