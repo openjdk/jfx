@@ -28,7 +28,6 @@ package javafx.scene.control;
 import javafx.beans.InvalidationListener;
 import javafx.beans.Observable;
 import javafx.beans.property.BooleanProperty;
-import javafx.beans.property.BooleanPropertyBase;
 import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.SimpleBooleanProperty;
 import javafx.beans.property.SimpleObjectProperty;
@@ -383,7 +382,6 @@ public class Cell<T> extends Labeled {
     // --- selected
     private ReadOnlyBooleanWrapper selected = new ReadOnlyBooleanWrapper() {
         @Override protected void invalidated() {
-            updateSelected(get()); // TODO what is this here for???
             impl_pseudoClassStateChanged(PSEUDO_CLASS_SELECTED);
         }
 

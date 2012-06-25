@@ -410,10 +410,14 @@ public class TreeCell<T> extends IndexedCell<T> {
     }
 
     private void updateSelection() {
+        if (isEmpty()) return;
         if (getIndex() == -1 || getTreeView() == null) return;
         if (getTreeView().getSelectionModel() == null) return;
         
-        updateSelected(getTreeView().getSelectionModel().isSelected(getIndex()));
+        boolean isSelected = getTreeView().getSelectionModel().isSelected(getIndex());
+        if (isSelected() == isSelected) return;
+        
+        updateSelected(isSelected);
     }
 
     private void updateFocus() {

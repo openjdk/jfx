@@ -127,16 +127,28 @@ public abstract class ComboBoxPopupControl<T> extends ComboBoxBaseSkin<T> {
         // Fix for RT-21207
         InvalidationListener layoutPosListener = new InvalidationListener() {
             @Override public void invalidated(Observable o) {
-                if (! getPopup().isShowing()) return;
-                
-                Point2D p = getPrefPopupPosition();
-                getPopup().setX(p.getX());
-                getPopup().setY(p.getY());
-                getPopup().setMinWidth(getPopupContent().prefWidth(1));
+                reconfigurePopup();
             }
         };
         getSkinnable().layoutXProperty().addListener(layoutPosListener);
         getSkinnable().layoutYProperty().addListener(layoutPosListener);
         getSkinnable().widthProperty().addListener(layoutPosListener);
+    }
+    
+    void reconfigurePopup() {
+        if (! getPopup().isShowing()) return;
+                
+        Point2D p = getPrefPopupPosition();
+        reconfigurePopup(p.getX(), p.getY(), 
+                getPopupContent().prefWidth(1), getPopupContent().prefHeight(1));
+    }   
+    
+    void reconfigurePopup(double x, double y, double minWidth, double minHeight) {
+        if (! getPopup().isShowing()) return;
+        
+        if (x > -1) getPopup().setX(x);
+        if (y > -1) getPopup().setY(y);
+        if (minWidth > -1) getPopup().setMinWidth(minWidth);
+        if (minHeight > -1) getPopup().setMinHeight(minHeight);
     }
 }
