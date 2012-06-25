@@ -1587,26 +1587,13 @@ public class StyleHelper {
         CalculatedValue foundShorhand = null;
         boolean isRelative = false;
          
-         // RT-20145 - if looking for font size and the node has a font, 
-         // use the font property's value if it was set by the user. 
-        // If the font wasn't set by the user, then it has either 
-        // never been set or it was set by CSS.
-        // In the case where it was never set, we need to look for a style.
-        // In the case where it was set by the user, then we need to look
-        // for font shorthand and font-size styles on this node (and this
-        // node only) since an inline or author style would override the 
-        // user style.
-        // In the case where it was been set by CSS, then 
-        // we need to look for a style again since the style may have
-        // changed for some reason.
-        // TBD - REAPPLY of css may obviate this last assertion
+        // RT-20145 - if looking for font size and the node has a font, 
+        // use the font property's value if it was set by the user and
+        // there is not an inline or author style.
         if (fontProp != null) {
  
             Origin fpOrigin = StyleableProperty.getOrigin(fontProp);
-            // if fpOrigin is null, then the value is just the default value
-            // and we should look for something other than the default or 
-            // inherit the font.
-            if (fpOrigin != null) {                
+            if (fpOrigin == Origin.USER) {                
                 origin = fpOrigin;
                 foundFont = (Font)fontProp.getValue();
             }
