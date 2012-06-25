@@ -1806,15 +1806,13 @@ public class TableView<S> extends Control {
         final WeakListChangeListener weakItemsContentListener 
                 = new WeakListChangeListener(itemsContentListener);
         
-        private int newListHash = -1;
         private void updateItemsObserver(ObservableList<S> oldList, ObservableList<S> newList) {
             // the listview items list has changed, we need to observe
             // the new list, and remove any observer we had from the old list
             if (oldList != null) {
                 oldList.removeListener(weakItemsContentListener);
             }
-            if (newList != null && newList.hashCode() != newListHash) {
-                newListHash = newList.hashCode();
+            if (newList != null) {
                 newList.addListener(weakItemsContentListener);
             }
 
