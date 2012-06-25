@@ -450,11 +450,8 @@ public class StyleHelper {
      */
     private final Reference<Map<String, List<CascadingStyle>>> smapRef;
 
-    private Map<String, List<CascadingStyle>> getStyleMap() throws IllegalStateException {
+    private Map<String, List<CascadingStyle>> getStyleMap() {
         final Map<String, List<CascadingStyle>> smap = smapRef.get();
-        if (smap == null) {
-            throw new IllegalStateException("null style map referent");
-        }
         return smap;
     }
     
@@ -693,11 +690,10 @@ public class StyleHelper {
      * how things are specified in the CSS file. Currently animation support
      * is disabled until the new parser comes online with support for
      * animations and that support is detectable via the API.
-     * @throws IllegalStateException if the style map referent is null
      */
     public void transitionToState(Node node) {
 
-        if (smapRef.get() == null) throw new IllegalStateException("null style map referent");
+        if (smapRef.get() == null) return;
         
         //
         // The ValueCacheEntry to choose depends on this Node's state and
