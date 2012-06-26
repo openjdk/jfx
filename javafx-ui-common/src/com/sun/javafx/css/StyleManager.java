@@ -142,15 +142,22 @@ public class StyleManager {
         
         if (scene == null) return;
 
-        if (containerMap == null) {
-            containerMap = new HashMap<WeakReference<Scene>,StylesheetContainer>(); 
-        }
-        StylesheetContainer container = containerMap.get(scene);
-        if (container == null) {
-            container = new StylesheetContainer(null);
-            put(containerMap, scene, container);
-        }
+        final StylesheetContainer container = 
+            (containerMap != null) 
+                ? get(containerMap, scene)
+                : null;
         
+        if (container == null && defaultContainer == null) return;
+        
+        
+        boolean containerNeedsCleared = false;
+        final Map<String,Stylesheet> mapFromContainer = container != null
+                ? container.parentStylesheetMap : null;
+        
+        boolean defaultContainerNeedsCleared = false;
+        final Map<String,Stylesheet> mapFromDefaultContainer = defaultContainer != null
+                ? defaultContainer.parentStylesheetMap : null;
+
         while (c.next()) {
             
             List<String> list = null;
@@ -167,12 +174,19 @@ public class StyleManager {
             // must have been a permutation. continue on to the next change.
             if (list == null) continue;
             
-            for (int n=0, nMax=list.size(); n<nMax; n++) {
-                container.parentStylesheetMap.remove(list.get(n));
+            for (int n=0, nMax=list.size(); n<nMax; n++) {                
+                final String key = list.get(n);
+                if (mapFromContainer != null && mapFromContainer.remove(key) != null) {
+                    containerNeedsCleared = true;
+                }
+                if (mapFromDefaultContainer != null && mapFromDefaultContainer.remove(key) != null) {
+                    defaultContainerNeedsCleared = true;
+                }
             }                
         }
         
-        container.clearCaches();        
+        if (containerNeedsCleared) container.clearCaches();        
+        if (defaultContainerNeedsCleared) defaultContainer.clearCaches();
     }
     /**
      * A map from Scene => StylesheetContainer. This provides us a way to find
@@ -889,7 +903,7 @@ public class StyleManager {
         * added to the authorStylesheetMap because we don't want the scene's
         * list of stylesheets in the container to be updated.
         */
-        private static Map<String,Stylesheet> parentStylesheetMap =
+        private Map<String,Stylesheet> parentStylesheetMap =
                 new HashMap<String,Stylesheet>();
 
         /**
