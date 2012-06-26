@@ -140,7 +140,7 @@ public final class GraphicsContext {
             this(1.0, BlendMode.SRC_OVER,
                  new Affine2D(),
                  Color.BLACK, Color.BLACK,
-                 1.0, StrokeLineCap.BUTT, StrokeLineJoin.MITER, 10.0,
+                 1.0, StrokeLineCap.SQUARE, StrokeLineJoin.MITER, 10.0,
                  0, Font.getDefault(), TextAlignment.LEFT, VPos.BASELINE,
                  null, FillRule.NON_ZERO);
         }

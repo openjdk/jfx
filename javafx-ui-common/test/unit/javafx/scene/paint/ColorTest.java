@@ -526,6 +526,15 @@ public class ColorTest {
     }
 
     @Test
+    public void testWebRgbPercentFloat() {
+        Color color = Color.web("rgb(60.0%, 40.0%, 100.0%)");
+        assertEquals(0.6, color.getRed(), 0.0001);
+        assertEquals(0.4, color.getGreen(), 0.0001);
+        assertEquals(1.0, color.getBlue(), 0.0001);
+        assertEquals(1.0, color.getOpacity(), 0.0001);
+    }
+
+    @Test
     public void testWebRgbPercentRange() {
         Color c1 = Color.web("rgb(100%,  0%, 100%)");
         Color c2 = Color.web("rgb(101%, -1%, 101%)");
@@ -538,6 +547,15 @@ public class ColorTest {
     @Test
     public void testWebRgbaPercent() {
         Color color = Color.web("rgba(60%, 40%, 100%, 0.6)");
+        assertEquals(0.6, color.getRed(), 0.0001);
+        assertEquals(0.4, color.getGreen(), 0.0001);
+        assertEquals(1.0, color.getBlue(), 0.0001);
+        assertEquals(0.6, color.getOpacity(), 0.0001);
+    }
+    
+    @Test
+    public void testWebRgbaPercentFloat() {
+        Color color = Color.web("rgba(60.0%, 40.0%, 100.0%, 0.6)");
         assertEquals(0.6, color.getRed(), 0.0001);
         assertEquals(0.4, color.getGreen(), 0.0001);
         assertEquals(1.0, color.getBlue(), 0.0001);
@@ -559,7 +577,7 @@ public class ColorTest {
 
     @Test
     public void testWebRgbPercentMix() {
-        Color color = Color.web("rgb(60%, 40%, 192)");
+        Color color = Color.web("rgb(60%, 40.0%, 192)");
         assertEquals(0.6, color.getRed(), 0.0001);
         assertEquals(0.4, color.getGreen(), 0.0001);
         assertEquals(192.0/255.0, color.getBlue(), 0.0001);
@@ -568,7 +586,7 @@ public class ColorTest {
 
     @Test
     public void testWebRgbaPercentMix() {
-        Color color = Color.web("rgba(60%, 40%, 192, 0.6)");
+        Color color = Color.web("rgba(60%, 40.0%, 192, 0.6)");
         assertEquals(0.6, color.getRed(), 0.0001);
         assertEquals(0.4, color.getGreen(), 0.0001);
         assertEquals(192.0/255.0, color.getBlue(), 0.0001);
@@ -578,6 +596,16 @@ public class ColorTest {
     @Test
     public void testWebHsl() {
         Color color = Color.web("hsl(180, 50%, 100%)");
+        Color ref = Color.hsb(180, 0.5, 1.0);
+        assertEquals(ref.getRed(),     color.getRed(),     0.0001);
+        assertEquals(ref.getGreen(),   color.getGreen(),   0.0001);
+        assertEquals(ref.getBlue(),    color.getBlue(),    0.0001);
+        assertEquals(ref.getOpacity(), color.getOpacity(), 0.0001);
+    }
+
+    @Test
+    public void testWebHslFloat() {
+        Color color = Color.web("hsl(180.0, 50.0%, 100.0%)");
         Color ref = Color.hsb(180, 0.5, 1.0);
         assertEquals(ref.getRed(),     color.getRed(),     0.0001);
         assertEquals(ref.getGreen(),   color.getGreen(),   0.0001);
@@ -598,6 +626,16 @@ public class ColorTest {
     @Test
     public void testWebHsla() {
         Color color = Color.web("hsla(180, 50%, 100%, 0.6)");
+        Color ref = Color.hsb(180, 0.5, 1.0, 0.6);
+        assertEquals(ref.getRed(),     color.getRed(),     0.0001);
+        assertEquals(ref.getGreen(),   color.getGreen(),   0.0001);
+        assertEquals(ref.getBlue(),    color.getBlue(),    0.0001);
+        assertEquals(ref.getOpacity(), color.getOpacity(), 0.0001);
+    }
+
+    @Test
+    public void testWebHslaFloat() {
+        Color color = Color.web("hsla(180.0, 50.0%, 100.0%, 0.6)");
         Color ref = Color.hsb(180, 0.5, 1.0, 0.6);
         assertEquals(ref.getRed(),     color.getRed(),     0.0001);
         assertEquals(ref.getGreen(),   color.getGreen(),   0.0001);
