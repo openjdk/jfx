@@ -1051,7 +1051,10 @@ public class Scene implements EventTarget {
      */
     @Deprecated
     public Object renderToImage(Object platformImage, float scale) {
-        Toolkit.getToolkit().checkFxUserThread();
+        if (!paused) {
+            Toolkit.getToolkit().checkFxUserThread();
+        }
+
         // NOTE: that we no longer use the passed in platform image. Since this
         // API is deprecated and will be removed in 3.0 this is not a concern.
         // Also, we used to return a TK image loader and now we return
@@ -1234,7 +1237,10 @@ public class Scene implements EventTarget {
      * @return the rendered image
      */
     public WritableImage snapshot(WritableImage image) {
-        Toolkit.getToolkit().checkFxUserThread();
+        if (!paused) {
+            Toolkit.getToolkit().checkFxUserThread();
+        }
+
         return  doSnapshot(image, 1.0f);
     }
 
@@ -1633,6 +1639,10 @@ public class Scene implements EventTarget {
                     case STATIONARY:
                         type = TouchEvent.TOUCH_STATIONARY;
                         break;
+                }
+
+                for (TouchPoint t : touchPoints) {
+                    t.impl_reset();
                 }
 
                 TouchEvent te = TouchEvent.impl_touchEvent(type, tp, touchList,
@@ -2451,7 +2461,8 @@ public class Scene implements EventTarget {
                 throw new RuntimeException("Too many touch points reported");
             }
 
-            touchPoints[order] = new TouchPoint(id, state, x, y, xAbs, yAbs);
+            touchPoints[order] = TouchPoint.impl_touchPoint(id, state,
+                    x, y, xAbs, yAbs);
         }
 
         @Override

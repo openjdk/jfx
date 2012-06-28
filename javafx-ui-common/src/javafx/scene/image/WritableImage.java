@@ -62,9 +62,11 @@ public class WritableImage extends Image {
      * Images constructed this way will always be readable and writable
      * so the corresponding getPixelReader() and getPixelWriter() will
      * always return valid objects.
+     * The dimensions must both be positive numbers <code>(&gt;&nbsp;0)</code>.
      * 
      * @param width the desired width of the writable image
      * @param height the desired height of the desired image
+     * @throws IllegalArgumentException if either dimension is negative or zero.
      */
     public WritableImage(int width, int height) {
         super(width, height);
@@ -81,6 +83,7 @@ public class WritableImage extends Image {
      * Images constructed this way will always be readable and writable
      * so the corresponding getPixelReader() and getPixelWriter() will
      * always return valid objects.
+     * The dimensions must both be positive numbers <code>(&gt;&nbsp;0)</code>.
      * 
      * @param width the desired width of the writable image and the
      *        width of the region to be read from the {@code reader}
@@ -88,6 +91,7 @@ public class WritableImage extends Image {
      *        width of the region to be read from the {@code reader}
      * @throws ArrayIndexOutOfBoundsException if the {@code reader} does
      *         not access a surface of at least the requested dimensions
+     * @throws IllegalArgumentException if either dimension is negative or zero.
      */
     public WritableImage(PixelReader reader, int width, int height) {
         super(width, height);
@@ -105,6 +109,7 @@ public class WritableImage extends Image {
      * Images constructed this way will always be readable and writable
      * so the corresponding getPixelReader() and getPixelWriter() will
      * always return valid objects.
+     * The dimensions must both be positive numbers <code>(&gt;&nbsp;0)</code>.
      * 
      * @param x the X coordinate of the upper left corner of the region to
      *        read from the {@code reader}
@@ -116,6 +121,7 @@ public class WritableImage extends Image {
      *        width of the region to be read from the {@code reader}
      * @throws ArrayIndexOutOfBoundsException if the {@code reader} does
      *         not access a surface containing at least the indicated region
+     * @throws IllegalArgumentException if either dimension is negative or zero.
      */
     public WritableImage(PixelReader reader,
                          int x, int y, int width, int height)
@@ -141,7 +147,7 @@ public class WritableImage extends Image {
      * 
      * @return the {@code PixelWriter} for writing pixels to the image
      */
-    public PixelWriter getPixelWriter() {
+    public final PixelWriter getPixelWriter() {
         if (getProgress() < 1.0 || isError()) {
             return null;
         }
@@ -178,15 +184,8 @@ public class WritableImage extends Image {
                                    T buffer, int scanlineStride)
                 {
                     PlatformImage pimg = getWritablePlatformImage();
-                    for (int j = 0; j < h; j++) {
-                        for (int i = 0; i < w; i++) {
-                            int argb = pixelformat.getArgb(buffer, i, j,
-                                                           scanlineStride);
-                            pimg.setArgb(x+i, y+j, argb);
-                        }
-                    }
-//                    checkPixelAccess(true, true).setPixels(x, y, w, h,
-//                                                           buffer, pixelformat, scanlineStride);
+                    pimg.setPixels(x, y, w, h, pixelformat,
+                                   buffer, scanlineStride);
                     pixelsDirty();
                 }
 
@@ -195,11 +194,10 @@ public class WritableImage extends Image {
                                       PixelFormat<ByteBuffer> pixelformat,
                                       byte buffer[], int offset, int scanlineStride)
                 {
-                    ByteBuffer bytebuf = ByteBuffer.wrap(buffer);
-                    bytebuf.position(offset);
-                    setPixels(x, y, w, h, pixelformat, bytebuf, scanlineStride);
-//                    checkPixelAccess(true, false).getPixels(x, y, w, h,
-//                                                            buffer, pixelformat, scanlineStride);
+                    PlatformImage pimg = getWritablePlatformImage();
+                    pimg.setPixels(x, y, w, h, pixelformat,
+                                   buffer, offset, scanlineStride);
+                    pixelsDirty();
                 }
 
                 @Override
@@ -207,23 +205,19 @@ public class WritableImage extends Image {
                                       PixelFormat<IntBuffer> pixelformat,
                                       int buffer[], int offset, int scanlineStride)
                 {
-                    IntBuffer intbuf = IntBuffer.wrap(buffer);
-                    intbuf.position(offset);
-                    setPixels(x, y, w, h, pixelformat, intbuf, scanlineStride);
-//                    checkPixelAccess(true, false).getPixels(x, y, w, h,
-//                                                            buffer, pixelformat, scanlineStride);
+                    PlatformImage pimg = getWritablePlatformImage();
+                    pimg.setPixels(x, y, w, h, pixelformat,
+                                   buffer, offset, scanlineStride);
+                    pixelsDirty();
                 }
 
                 @Override
                 public void setPixels(int writex, int writey, int w, int h,
                                       PixelReader reader, int readx, int ready)
                 {
-                    for (int y = 0; y < h; y++) {
-                        for (int x = 0; x < w; x++) {
-                            setArgb(writex + x, writey + y,
-                                    reader.getArgb(readx + x, ready + y));
-                        }
-                    }
+                    PlatformImage pimg = getWritablePlatformImage();
+                    pimg.setPixels(writex, writey, w, h, reader, readx, ready);
+                    pixelsDirty();
                 }
             };
         }

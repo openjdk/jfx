@@ -339,6 +339,9 @@ public abstract class PopupWindow extends Window {
 
     private void showImpl(final Window owner) {
         if (isShowing()) {
+            if (autofixHandler != null) {
+                autofixHandler.adjustPosition();
+            }
             return;
         }
 
@@ -349,8 +352,7 @@ public abstract class PopupWindow extends Window {
         }
 
         // It is required that the root window exist and be visible to show the popup.
-        Window rootWindow = getRootWindow(getOwnerWindow());
-        if (rootWindow != null && rootWindow.isShowing()) {
+        if (getRootWindow(owner).isShowing()) {
             // We do show() first so that the width and height of the
             // popup window are initialized. This way the x,y location of the
             // popup calculated below uses the right width and height values for
@@ -397,7 +399,7 @@ public abstract class PopupWindow extends Window {
         }
     }
 
-    private Window focusGrabWindow;
+    private Window rootWindow;
 
     /**
      * @treatAsPrivate implementation detail
@@ -413,6 +415,8 @@ public abstract class PopupWindow extends Window {
 
         final Window ownerWindowValue = getOwnerWindow();
         if (visible) {
+            rootWindow = getRootWindow(ownerWindowValue);
+
             startMonitorOwnerEvents(ownerWindowValue);
             // currently we consider popup window to be focused when it is
             // visible and its owner window is focused (we need to track
@@ -421,17 +425,15 @@ public abstract class PopupWindow extends Window {
             // track focus state across multiple windows
             bindOwnerFocusedProperty(ownerWindowValue);
             setFocused(ownerWindowValue.isFocused());
-            focusGrabWindow = increaseFocusGrabInRootWindow(ownerWindowValue);
             handleAutofixActivation(true, isAutoFix());
+            rootWindow.impl_increaseFocusGrabCounter();
         } else {
             stopMonitorOwnerEvents(ownerWindowValue);
             unbindOwnerFocusedProperty(ownerWindowValue);
             setFocused(false);
-            if (focusGrabWindow != null) {
-                focusGrabWindow.impl_decreaseFocusGrabCounter();
-                focusGrabWindow = null;
-            }
             handleAutofixActivation(false, isAutoFix());
+            rootWindow.impl_decreaseFocusGrabCounter();
+            rootWindow = null;
         }
 
         PerformanceTracker.logEvent("PopupWindow.storeVisible for [PopupWindow] finished");
@@ -504,15 +506,6 @@ public abstract class PopupWindow extends Window {
                 ownerWindowValue.getInternalEventDispatcher()
                                 .getEventRedirector();
         parentEventRedirector.removeEventDispatcher(getEventDispatcher());
-    }
-
-    private Window increaseFocusGrabInRootWindow(final Window ownerWindow) {
-        final Window rootWindow = getRootWindow(ownerWindow);
-        if (rootWindow != null) {
-            rootWindow.impl_increaseFocusGrabCounter();
-        }
-
-        return rootWindow;
     }
 
     private ChangeListener<Boolean> ownerFocusedListener;
@@ -607,7 +600,10 @@ public abstract class PopupWindow extends Window {
         public void adjustPosition() {
             final Screen currentScreen =
                     Utils.getScreenForPoint(getX(), getY());
-            final Rectangle2D screenBounds = currentScreen.getVisualBounds();
+            final Rectangle2D screenBounds =
+                    Utils.hasFullScreenStage(currentScreen)
+                            ? currentScreen.getBounds()
+                            : currentScreen.getVisualBounds();
             double _x = Math.min(getX(), screenBounds.getMaxX() - getWidth());
             double _y = Math.min(getY(), screenBounds.getMaxY() - getHeight());
             _x = Math.max(_x, screenBounds.getMinX());

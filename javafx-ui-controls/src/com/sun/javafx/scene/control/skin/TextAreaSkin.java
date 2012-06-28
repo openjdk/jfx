@@ -54,6 +54,7 @@ import javafx.scene.control.IndexRange;
 import javafx.scene.control.ScrollPane;
 import javafx.scene.control.TextArea;
 import javafx.scene.input.MouseEvent;
+import javafx.scene.input.ScrollEvent;
 import javafx.scene.layout.Region;
 import javafx.scene.paint.Paint;
 import javafx.scene.shape.MoveTo;
@@ -272,11 +273,10 @@ public class TextAreaSkin extends TextInputControlSkin<TextArea, TextAreaBehavio
                     Bounds b = caretPath.getBoundsInParent();
                     if (caretPos < anchorPos) {
                         selectionHandle2.setLayoutX(b.getMinX() - selectionHandle2.getWidth() / 2);
-                        selectionHandle2.setLayoutY(b.getMaxY());
+                        selectionHandle2.setLayoutY(b.getMaxY() - 1);
                     } else {
                         selectionHandle1.setLayoutX(b.getMinX() - selectionHandle1.getWidth() / 2);
-                        //selectionHandle1.setLayoutY(b.getMinY() - selectionHandle1.getHeight());
-                        selectionHandle1.setLayoutY(b.getMaxY());
+                        selectionHandle1.setLayoutY(b.getMinY() - selectionHandle1.getHeight() + 1);
                     }
                 }
             }
@@ -342,11 +342,10 @@ public class TextAreaSkin extends TextInputControlSkin<TextArea, TextAreaBehavio
                 if (selection.getLength() > 0) {
                     if (caretPos < anchorPos) {
                         selectionHandle1.setLayoutX(b.getMinX() - selectionHandle1.getWidth() / 2);
-                        //selectionHandle1.setLayoutY(b.getMinY() - selectionHandle1.getHeight());
-                        selectionHandle1.setLayoutY(b.getMaxY());
+                        selectionHandle1.setLayoutY(b.getMinY() - selectionHandle1.getHeight() + 1);
                     } else {
                         selectionHandle2.setLayoutX(b.getMinX() - selectionHandle2.getWidth() / 2);
-                        selectionHandle2.setLayoutY(b.getMaxY());
+                        selectionHandle2.setLayoutY(b.getMaxY() - 1);
                     }
                 } else {
                     caretHandle.setLayoutX(b.getMinX() - caretHandle.getWidth() / 2 + 1);
@@ -430,6 +429,18 @@ public class TextAreaSkin extends TextInputControlSkin<TextArea, TextAreaBehavio
         scrollPane.setFitToWidth(textArea.isWrapText());
         scrollPane.setContent(contentView);
         getChildren().add(scrollPane);
+
+        // RT-21658: We can currently only handle scroll events from touch if
+        // on the embedded platform.
+        if (!PlatformUtil.isEmbedded()) {
+            scrollPane.addEventFilter(ScrollEvent.ANY, new EventHandler<ScrollEvent>() {
+                @Override public void handle(ScrollEvent event) {
+                    if (event.isDirect()) {
+                        event.consume();
+                    }
+                }
+            });
+        }
 
         // Add selection
         selectionHighlightGroup.setManaged(false);
@@ -629,7 +640,7 @@ public class TextAreaSkin extends TextInputControlSkin<TextArea, TextAreaBehavio
         if (textArea.isFocused()) setCaretAnimating(true);
 
         if (PlatformUtil.isEmbedded()) {
-            //selectionHandle1.setRotate(180);
+            selectionHandle1.setRotate(180);
 
             EventHandler<MouseEvent> handlePressHandler = new EventHandler<MouseEvent>() {
                 @Override public void handle(MouseEvent e) {
@@ -646,8 +657,9 @@ public class TextAreaSkin extends TextInputControlSkin<TextArea, TextAreaBehavio
             caretHandle.setOnMouseDragged(new EventHandler<MouseEvent>() {
                 @Override public void handle(MouseEvent e) {
                     Text textNode = getTextNode();
-                    Point2D p = new Point2D(caretHandle.getLayoutX() + e.getX() + pressX - textNode.getLayoutX(),
-                                            caretHandle.getLayoutY() + e.getY() - pressY - 6 - getTextTranslateY());
+                    Point2D tp = textNode.localToScene(0, 0);
+                    Point2D p = new Point2D(e.getSceneX() - tp.getX() + 10/*??*/ - pressX + caretHandle.getWidth() / 2,
+                                            e.getSceneY() - tp.getY() - pressY - 6);
                     HitInfo hit = textNode.impl_hitTestChar(translateCaretPosition(p));
                     int pos = hit.getCharIndex();
                     if (pos > 0) {
@@ -670,8 +682,7 @@ public class TextAreaSkin extends TextInputControlSkin<TextArea, TextAreaBehavio
                     Text textNode = getTextNode();
                     Point2D tp = textNode.localToScene(0, 0);
                     Point2D p = new Point2D(e.getSceneX() - tp.getX() + 10/*??*/ - pressX + selectionHandle1.getWidth() / 2,
-                                            //e.getSceneY() - tp.getY() - pressY + selectionHandle1.getHeight() + 5);
-                                            e.getSceneY() - tp.getY() - pressY - 6);
+                                            e.getSceneY() - tp.getY() - pressY + selectionHandle1.getHeight() + 5);
                     HitInfo hit = textNode.impl_hitTestChar(translateCaretPosition(p));
                     int pos = hit.getCharIndex();
                     if (textArea.getAnchor() < textArea.getCaretPosition()) {
@@ -958,12 +969,25 @@ public class TextAreaSkin extends TextInputControlSkin<TextArea, TextAreaBehavio
     }
 
     private void scrollCaretToVisible() {
-            Bounds bounds = caretPath.getLayoutBounds();
-            TextArea textArea = getSkinnable();
+        TextArea textArea = getSkinnable();
+        Bounds bounds = caretPath.getLayoutBounds();
+        double x = bounds.getMinX() - textArea.getScrollLeft();
+        double y = bounds.getMinY() - textArea.getScrollTop();
+        double w = bounds.getWidth();
+        double h = bounds.getHeight();
 
-            scrollBoundsToVisible(new Rectangle2D(bounds.getMinX() - textArea.getScrollLeft(),
-                                                  bounds.getMinY() - textArea.getScrollTop(),
-                                                  bounds.getWidth(), bounds.getHeight()));
+        if (PlatformUtil.isEmbedded()) {
+            if (caretHandle.isVisible()) {
+                h += caretHandle.getHeight();
+            } else if (selectionHandle1.isVisible() && selectionHandle2.isVisible()) {
+                x -= selectionHandle1.getWidth() / 2;
+                y -= selectionHandle1.getHeight();
+                w += selectionHandle1.getWidth() / 2 + selectionHandle2.getWidth() / 2;
+                h += selectionHandle1.getHeight() + selectionHandle2.getHeight();
+            }
+        }
+
+        scrollBoundsToVisible(new Rectangle2D(x, y, w, h));
     }
 
     private void scrollBoundsToVisible(Rectangle2D bounds) {
@@ -1049,11 +1073,11 @@ public class TextAreaSkin extends TextInputControlSkin<TextArea, TextAreaBehavio
     // Callbacks from Behavior class
 
     private double getTextTranslateX() {
-        return 0;
+        return contentView.getInsets().getLeft();
     }
 
     private double getTextTranslateY() {
-        return 0;
+        return contentView.getInsets().getTop();
     }
 
     private double getTextLeft() {

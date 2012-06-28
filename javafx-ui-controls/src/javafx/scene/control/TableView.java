@@ -1874,10 +1874,12 @@ public class TableView<S> extends Control {
                     }
                     
                     quietClearSelection();
-                    selectedCells.setAll(newIndices);
-                    selectedCellsSeq.callObservers(
-                            new NonIterableChange.SimpleAddChange<TablePosition>(0, 
-                            newIndices.size(), selectedCellsSeq));
+                    
+                    // Fix for RT-22079
+                    for (int i = 0; i < newIndices.size(); i++) {
+                        TablePosition tp = newIndices.get(i);
+                        select(tp.getRow(), tp.getTableColumn());
+                    }
                 } else if (c.wasPermutated()) {
                     // General approach:
                     //   -- detected a sort has happened

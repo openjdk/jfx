@@ -6151,7 +6151,7 @@ public abstract class Node implements EventTarget {
      */
     final class FocusedProperty extends ReadOnlyBooleanPropertyBase {
         private boolean value;
-        private boolean valid;
+        private boolean valid = true;
         private boolean needsChangeEvent = false;
 
         public void store(final boolean value) {

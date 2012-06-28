@@ -77,10 +77,10 @@ public class AccordionBehavior extends BehaviorBase<Accordion> {
         return ACCORDION_BINDINGS;
     }
 
-    @Override protected void callAction(String name) {       
+    @Override protected void callAction(String name) {   
         Accordion accordion = getControl();
         if ("TraverseLeft".equals(name) || "TraverseUp".equals(name) || PAGE_UP.equals(name)) {
-            if (accordion.getPanes().get(focusModel.getFocusedIndex()).isFocused()) {
+            if (focusModel.getFocusedIndex() != -1 && accordion.getPanes().get(focusModel.getFocusedIndex()).isFocused()) {
                 focusModel.focusPrevious();
                 int next = focusModel.getFocusedIndex();
                 accordion.getPanes().get(next).requestFocus();
@@ -89,7 +89,7 @@ public class AccordionBehavior extends BehaviorBase<Accordion> {
                 }
             }
         } else if ("TraverseRight".equals(name) || "TraverseDown".equals(name) || PAGE_DOWN.equals(name)) {
-            if (accordion.getPanes().get(focusModel.getFocusedIndex()).isFocused()) {
+            if (focusModel.getFocusedIndex() != -1 && accordion.getPanes().get(focusModel.getFocusedIndex()).isFocused()) {
                 focusModel.focusNext();
                 int next = focusModel.getFocusedIndex();
                 accordion.getPanes().get(next).requestFocus();
@@ -99,22 +99,26 @@ public class AccordionBehavior extends BehaviorBase<Accordion> {
             }            
         } else if (CTRL_TAB.equals(name) || CTRL_PAGE_DOWN.equals(name)) {
             focusModel.focusNext();
-            int next = focusModel.getFocusedIndex();
-            accordion.getPanes().get(next).requestFocus();
-            accordion.getPanes().get(next).setExpanded(true);
+            if (focusModel.getFocusedIndex() != -1) {
+                int next = focusModel.getFocusedIndex();
+                accordion.getPanes().get(next).requestFocus();
+                accordion.getPanes().get(next).setExpanded(true);
+            }
         } else if (CTRL_SHIFT_TAB.equals(name) || CTRL_PAGE_UP.equals(name)) {
             focusModel.focusPrevious();
-            int next = focusModel.getFocusedIndex();
-            accordion.getPanes().get(next).requestFocus();
-            accordion.getPanes().get(next).setExpanded(true);
+            if (focusModel.getFocusedIndex() != -1) {
+                int next = focusModel.getFocusedIndex();            
+                accordion.getPanes().get(next).requestFocus();
+                accordion.getPanes().get(next).setExpanded(true);
+            }
         } else if (HOME.equals(name)) {
-            if (accordion.getPanes().get(focusModel.getFocusedIndex()).isFocused()) {
+            if (focusModel.getFocusedIndex() != -1 && accordion.getPanes().get(focusModel.getFocusedIndex()).isFocused()) {
                 TitledPane tp = accordion.getPanes().get(0);
                 tp.requestFocus();
                 tp.setExpanded(!tp.isExpanded());
             }
         } else if (END.equals(name)) {
-            if (accordion.getPanes().get(focusModel.getFocusedIndex()).isFocused()) {
+            if (focusModel.getFocusedIndex() != -1 && accordion.getPanes().get(focusModel.getFocusedIndex()).isFocused()) {
                 TitledPane tp = accordion.getPanes().get(accordion.getPanes().size() - 1);
                 tp.requestFocus();
                 tp.setExpanded(!tp.isExpanded());

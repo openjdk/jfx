@@ -85,6 +85,7 @@ import com.sun.javafx.scene.control.behavior.TextInputControlBehavior;
 import com.sun.javafx.tk.FontMetrics;
 import com.sun.javafx.tk.Toolkit;
 
+import static com.sun.javafx.PlatformUtil.*;
 import static com.sun.javafx.scene.control.skin.resources.ControlResources.*;
 
 /**
@@ -92,7 +93,7 @@ import static com.sun.javafx.scene.control.skin.resources.ControlResources.*;
  */
 public abstract class TextInputControlSkin<T extends TextInputControl, B extends TextInputControlBehavior<T>> extends SkinBase<T, B> {
 
-    private static final boolean macOS = PlatformUtil.isMac();
+    private static final boolean macOS = isMac();
     /**
      * The font to use with this control. In 1.3 and prior we had a font property
      * on the TextInputControl itself, however now we just do it via CSS
@@ -235,7 +236,7 @@ public abstract class TextInputControlSkin<T extends TextInputControl, B extends
     protected StackPane selectionHandle2 = null;
 
     public Point2D getMenuPosition() {
-        if (PlatformUtil.isEmbedded()) {
+        if (isEmbedded()) {
             if (caretHandle.isVisible()) {
                 return new Point2D(caretHandle.getLayoutX() + caretHandle.getWidth() / 2,
                                    caretHandle.getLayoutY());
@@ -252,7 +253,7 @@ public abstract class TextInputControlSkin<T extends TextInputControl, B extends
     }
 
 
-    private static boolean useFXVK = PlatformUtil.isEmbedded();
+    private static boolean useFXVK = isEmbedded();
 
     /* For testing only */
     static int vkType = -1;
@@ -300,15 +301,15 @@ public abstract class TextInputControlSkin<T extends TextInputControl, B extends
             { bind(textInput.focusedProperty(), textInput.anchorProperty(), textInput.caretPositionProperty(),
                     textInput.disabledProperty(), textInput.editableProperty(), displayCaret, blink);}
             @Override protected boolean computeValue() {
-                // RT-10682: On mac, we hide the caret during selection, but on windows we show it
+                // RT-10682: On Windows, we show the caret during selection, but on others we hide it
                 return !blink.get() && displayCaret.get() && textInput.isFocused() &&
-                        (!macOS || (textInput.getCaretPosition() == textInput.getAnchor())) &&
+                        (isWindows() || (textInput.getCaretPosition() == textInput.getAnchor())) &&
                         !textInput.isDisabled() &&
                         textInput.isEditable();
             }
         };
 
-        if (PlatformUtil.isEmbedded()) {
+        if (isEmbedded()) {
             caretHandle      = new StackPane();
             selectionHandle1 = new StackPane();
             selectionHandle2 = new StackPane();
@@ -362,12 +363,13 @@ public abstract class TextInputControlSkin<T extends TextInputControl, B extends
             textInput.focusedProperty().addListener(new InvalidationListener() {
                 @Override public void invalidated(Observable observable) {
                     if (useFXVK) {
-                        if (textInput.isFocused()) {
+                        if (textInput.isEditable() && textInput.isFocused()) {
                             FXVK.attach(textInput);
                         } else if (getScene() == null ||
                                    getScene().getWindow() == null ||
                                    !getScene().getWindow().isFocused() ||
-                                   !(getScene().getFocusOwner() instanceof TextInputControl)) {
+                                   !(getScene().getFocusOwner() instanceof TextInputControl &&
+                                     ((TextInputControl)getScene().getFocusOwner()).isEditable())) {
                             FXVK.detach();
                         }
                     }
@@ -604,20 +606,25 @@ public abstract class TextInputControlSkin<T extends TextInputControl, B extends
     final MenuItem deleteMI = new ContextMenuItem("DeleteSelection");
     final MenuItem selectWordMI = new ContextMenuItem("SelectWord");
     final MenuItem selectAllMI = new ContextMenuItem("SelectAll");
+    final MenuItem separatorMI = new SeparatorMenuItem();
 
     public void populateContextMenu(ContextMenu contextMenu) {
-        boolean hasText = (getSkinnable().getLength() > 0);
-        boolean hasSelection = (getSkinnable().getSelection().getLength() > 0);
+        TextInputControl textInputControl = getSkinnable();
+        boolean editable = textInputControl.isEditable();
+        boolean hasText = (textInputControl.getLength() > 0);
+        boolean hasSelection = (textInputControl.getSelection().getLength() > 0);
         boolean maskText = (maskText("A") != "A");
         ObservableList<MenuItem> items = contextMenu.getItems();
 
-        if (PlatformUtil.isEmbedded()) {
+        if (isEmbedded()) {
             items.clear();
             if (!maskText && hasSelection) {
-                items.add(cutMI);
+                if (editable) {
+                    items.add(cutMI);
+                }
                 items.add(copyMI);
             }
-            if (Clipboard.getSystemClipboard().hasString()) {
+            if (editable && Clipboard.getSystemClipboard().hasString()) {
                 items.add(pasteMI);
             }
             if (hasText) {
@@ -629,9 +636,11 @@ public abstract class TextInputControlSkin<T extends TextInputControl, B extends
             selectWordMI.getProperties().put("refreshMenu", Boolean.TRUE);
             selectAllMI.getProperties().put("refreshMenu", Boolean.TRUE);
         } else {
-            if (items.size() == 0) {
-                items.addAll(undoMI, redoMI, cutMI, copyMI, pasteMI, deleteMI,
-                             new SeparatorMenuItem(), selectAllMI);
+            if (editable) {
+                items.setAll(undoMI, redoMI, cutMI, copyMI, pasteMI, deleteMI,
+                             separatorMI, selectAllMI);
+            } else {
+                items.setAll(copyMI, separatorMI, selectAllMI);
             }
             undoMI.setDisable(!getBehavior().canUndo());
             redoMI.setDisable(!getBehavior().canRedo());

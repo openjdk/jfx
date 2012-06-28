@@ -55,7 +55,7 @@ public final class TouchPoint implements Serializable{
     private transient EventTarget target;
     private transient Object source;
 
-    public TouchPoint(int id, State state, double x, double y, double screenX,
+    private TouchPoint(int id, State state, double x, double y, double screenX,
             double screenY) {
         this.target = null;
         this.id = id;
@@ -77,7 +77,7 @@ public final class TouchPoint implements Serializable{
     void recomputeToSource(Object oldSource, Object newSource) {
 
         final Point2D newCoordinates = InputEventUtils.recomputeCoordinates(
-                new Point2D(x, y), oldSource, newSource);
+                new Point2D(sceneX, sceneY), null, newSource);
 
         x = newCoordinates.getX();
         y = newCoordinates.getY();
@@ -120,6 +120,16 @@ public final class TouchPoint implements Serializable{
     @Deprecated
     public void impl_setTarget(EventTarget target) {
         this.target = target;
+    }
+
+    /**
+     * @treatAsPrivate implementation detail
+     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
+     */
+    @Deprecated
+    public void impl_reset() {
+        x = sceneX;
+        y = sceneY;
     }
 
     private EventTarget grabbed = null;
@@ -289,6 +299,16 @@ public final class TouchPoint implements Serializable{
         in.defaultReadObject();
         x = sceneX;
         y = sceneY;
+    }
+
+    /**
+     * @treatAsPrivate implementation detail
+     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
+     */
+    @Deprecated
+    public static TouchPoint impl_touchPoint(
+            int id, State state, double x, double y, double screenX, double screenY) {
+        return new TouchPoint(id, state, x, y, screenX, screenY);
     }
 
     /**

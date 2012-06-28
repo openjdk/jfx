@@ -176,10 +176,12 @@ abstract class MultipleSelectionModelBase<T> extends MultipleSelectionModel<T> {
 
     /***********************************************************************
      *                                                                     *
-     * Internal properties                                                 *
+     * Internal field                                                      *
      *                                                                     *
      **********************************************************************/
 
+    // Fix for RT-20945
+    boolean makeAtomic = false;
 
 
     /***********************************************************************
@@ -279,6 +281,12 @@ abstract class MultipleSelectionModelBase<T> extends MultipleSelectionModel<T> {
         if (row < 0 || row >= getItemCount()) {
             return;
         }
+        
+        boolean isSameRow = row == getSelectedIndex();
+        T currentItem = getSelectedItem();
+        T newItem = getModelItem(row);
+        boolean isSameItem = newItem != null && newItem.equals(currentItem);
+        boolean fireUpdatedItemEvent = isSameRow && ! isSameItem;
 
         if (! selectedIndices.get(row)) {
             if (getSelectionMode() == SINGLE) {
@@ -292,6 +300,10 @@ abstract class MultipleSelectionModelBase<T> extends MultipleSelectionModel<T> {
         
         // TODO this isn't correct
         selectedIndicesSeq.callObservers(new NonIterableChange.SimpleAddChange<Integer>(0, 1, selectedIndicesSeq));
+        
+        if (fireUpdatedItemEvent) {
+            setSelectedItem(newItem);
+        }
     }
 
     @Override public void select(T obj) {
@@ -441,12 +453,16 @@ abstract class MultipleSelectionModelBase<T> extends MultipleSelectionModel<T> {
 
 //            updateLeadSelection();
 //            support.fireChangedEvent(SELECTED_INDICES);
-        selectedIndicesSeq.callObservers(new NonIterableChange.GenericAddRemoveChange<Integer>(0, 0, Collections.singletonList(index), selectedIndicesSeq));
+        selectedIndicesSeq.callObservers(
+                new NonIterableChange.GenericAddRemoveChange<Integer>(0, 0, 
+                Collections.singletonList(index), selectedIndicesSeq));
     }
 
     @Override public void clearSelection() {
-        setSelectedIndex(-1);
-        focus(-1);
+        if (! makeAtomic) {
+            setSelectedIndex(-1);
+            focus(-1);
+        }
 
         if (! selectedIndices.isEmpty()) {
             List<Integer> removed = new AbstractList<Integer>() {
@@ -462,7 +478,10 @@ abstract class MultipleSelectionModelBase<T> extends MultipleSelectionModel<T> {
             };
 
             quietClearSelection();
-            selectedIndicesSeq.callObservers(new NonIterableChange.GenericAddRemoveChange<Integer>(0, 0, removed, selectedIndicesSeq));
+            
+            selectedIndicesSeq.callObservers(
+                    new NonIterableChange.GenericAddRemoveChange<Integer>(0, 0, 
+                    removed, selectedIndicesSeq));
         }
     }
 
@@ -509,4 +528,6 @@ abstract class MultipleSelectionModelBase<T> extends MultipleSelectionModel<T> {
             select(focusIndex + 1);
         }
     }
+    
+    
 }

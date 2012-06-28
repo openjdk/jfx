@@ -56,14 +56,24 @@ public class InputEventUtils {
             if (oldSourceNode != null) {
                 Point2D pt = oldSourceNode.localToScene(newX, newY);
                 pt = newSourceNode.sceneToLocal(pt);
-                newX = pt.getX();
-                newY = pt.getY();
+                if (pt != null) {
+                    newX = pt.getX();
+                    newY = pt.getY();
+                } else {
+                    newX = Double.NaN;
+                    newY = Double.NaN;
+                }
             } else {
                 // assume that since no node was in the evt, then it was in
                 // terms of the scene
                 Point2D pt = newSourceNode.sceneToLocal(newX, newY);
-                newX = pt.getX();
-                newY = pt.getY();
+                if (pt != null) {
+                    newX = pt.getX();
+                    newY = pt.getY();
+                } else {
+                    newX = Double.NaN;
+                    newY = Double.NaN;
+                }
             }
         } else {
             if (oldSourceNode != null) {

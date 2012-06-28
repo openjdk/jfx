@@ -73,7 +73,6 @@ class NestedTableColumnHeader extends TableColumnHeader {
         } else if (getTableColumn() != null) {
             setColumns(getTableColumn().getColumns());
         }
-//        getColumns().addListener(weakColumnsListener);
     }
     
     
@@ -458,7 +457,7 @@ class NestedTableColumnHeader extends TableColumnHeader {
 
         newCol.setTableHeaderRow(getTableHeaderRow());
         newCol.setParentHeader(this);
-
+        
         return newCol;
     }
 }

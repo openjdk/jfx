@@ -1142,12 +1142,15 @@ public class TableColumn<S,T> implements EventTarget {
      */
     public final ObservableValue<T> getCellObservableValue(int index) {
         if (index < 0) return null;
+        
         // Get the table
         final TableView<S> table = getTableView();
         if (table == null || table.getItems() == null) return null;
+        
         // Get the rowData
         final List<S> items = table.getItems();
         if (index >= items.size()) return null; // Out of range
+        
         final S rowData = items.get(index);
         return getCellObservableValue(rowData);
     }
@@ -1172,9 +1175,11 @@ public class TableColumn<S,T> implements EventTarget {
         // Get the factory
         final Callback<CellDataFeatures<S,T>, ObservableValue<T>> factory = getCellValueFactory();
         if (factory == null) return null;
+        
         // Get the table
         final TableView<S> table = getTableView();
         if (table == null) return null;
+        
         // Call the factory
         final CellDataFeatures<S,T> cdf = new CellDataFeatures<S,T>(table, this, item);
         return factory.call(cdf);

@@ -236,7 +236,7 @@ public class TextFieldSkin extends TextInputControlSkin<TextField, TextFieldBeha
         textGroup.getChildren().addAll(selectionHighlightPath, textNode, caretPath);
         getChildren().add(textGroup);
         if (PlatformUtil.isEmbedded()) {
-            /*textGroup.*/getChildren().addAll(caretHandle, selectionHandle1, selectionHandle2);
+            getChildren().addAll(caretHandle, selectionHandle1, selectionHandle2);
         }
 
         // Add text
@@ -253,7 +253,12 @@ public class TextFieldSkin extends TextInputControlSkin<TextField, TextFieldBeha
             }
         });
         textNode.fillProperty().bind(textFill);
-        textNode.impl_selectionFillProperty().bind(highlightTextFill);
+        textNode.impl_selectionFillProperty().bind(new ObjectBinding<Paint>() {
+            { bind(highlightTextFill, textFill, textField.focusedProperty()); }
+            @Override protected Paint computeValue() {
+                return textField.isFocused() ? highlightTextFill.get() : textFill.get();
+            }
+        });
         // updated by listener on caretPosition to ensure order
         textNode.impl_caretPositionProperty().set(textField.getCaretPosition());
         textField.selectionProperty().addListener(new InvalidationListener() {
@@ -346,6 +351,8 @@ public class TextFieldSkin extends TextInputControlSkin<TextField, TextFieldBeha
         });
 
         if (PlatformUtil.isEmbedded()) {
+            selectionHandle1.setRotate(180);
+
             EventHandler<MouseEvent> handlePressHandler = new EventHandler<MouseEvent>() {
                 @Override public void handle(MouseEvent e) {
                     pressX = e.getX();
@@ -749,9 +756,10 @@ public class TextFieldSkin extends TextInputControlSkin<TextField, TextFieldBeha
                                caretHandle.prefHeight(-1));
 
             Bounds b = caretPath.getBoundsInParent();
-            selectionHandle1.setLayoutY(b.getMaxY() - 3);
-            selectionHandle2.setLayoutY(b.getMaxY() - 3);
-            caretHandle.setLayoutY(b.getMaxY() - 3);
+            caretHandle.setLayoutY(b.getMaxY() - 1);
+            //selectionHandle1.setLayoutY(b.getMaxY() - 1);
+            selectionHandle1.setLayoutY(b.getMinY() - selectionHandle1.getHeight() + 1);
+            selectionHandle2.setLayoutY(b.getMaxY() - 1);
         }
     }
 
