@@ -408,7 +408,7 @@ public class ComboBoxListViewSkin<T> extends ComboBoxPopupControl<T> {
         } else {
             // run item through StringConverter if it isn't null
             StringConverter c = comboBox.getConverter();
-            String s = item == null ? "" : (c == null ? item.toString() : c.toString(item));
+            String s = item == null ? comboBox.getPromptText() : (c == null ? item.toString() : c.toString(item));
             cell.setText(s);
             cell.setGraphic(null);
         }
