@@ -918,6 +918,10 @@ public class TilePane extends Pane {
              new StyleableProperty<TilePane,Number>("-fx-pref-columns",
                  SizeConverter.getInstance(), 5.0) {
 
+            @Override public void set(TilePane node, Number value, Origin origin) {
+                super.set(node, value.intValue(), origin);
+            }
+            
             @Override
             public boolean isSettable(TilePane node) {
                 return node.prefColumns == null ||
