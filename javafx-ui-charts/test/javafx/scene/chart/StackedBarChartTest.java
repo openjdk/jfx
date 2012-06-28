@@ -54,7 +54,7 @@ public class StackedBarChartTest extends ChartTestBase {
         return sbc;
     }
     
-    @Ignore @Test
+    @Test
     public void testSeriesAdd() {
         startApp();
         sbc.getData().addAll(series1, series2, series3);
