@@ -12,10 +12,9 @@
     and {@link javafx.scene.control.TableCell TableCell}. At present this package
     is relatively bare, but it is where future cell-related classes will be located.</p>
     
-    <p>At present the only class available in this package is the 
-    {@link javafx.scene.control.cell.PropertyValueFactory PropertyValueFactory}, 
-    which helps to simplify the population of the TableCell
-    {@link javafx.scene.control.TableCell#itemProperty() item} property. Refer
-    to the class documentation for more information and examples of how to use it.
+    <p>It is important to note that whilst most cells in this package are editable,
+        for a cells editing functionality to be enabled it is required that all
+        related classes have editing enabled. For example, in a TableView, both
+        the TableView and the relevant TableColumn must have setEditing(true) called.
 </body>
 </html>

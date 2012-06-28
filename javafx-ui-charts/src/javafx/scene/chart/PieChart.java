@@ -335,6 +335,7 @@ public class PieChart extends Chart {
         // check if symbol has already been created
         if (arcRegion == null) {
             arcRegion = new Region();
+            arcRegion.setPickOnBounds(false); 
             item.setNode(arcRegion);
         }
         // Note: not sure if we want to add or check, ie be more careful and efficient here
