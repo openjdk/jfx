@@ -384,11 +384,16 @@ public class ComboBox<T> extends ComboBoxBase<T> {
     // When it changes, set the selectedItem in the value property.
     private ChangeListener<T> selectedItemListener = new ChangeListener<T>() {
         @Override public void changed(ObservableValue<? extends T> ov, T t, T t1) {
-            if (wasSetAllCalled) {
+            if (wasSetAllCalled && t1 == null) {
                 // no-op: fix for RT-22572 where the developer was completely
                 // replacing all items in the ComboBox, and expecting the 
                 // selection (and ComboBox.value) to remain set. If this isn't
                 // here, we would updateValue(null). 
+                // Additional fix for RT-22937: adding the '&& t1 == null'. 
+                // Without this, there would be circumstances where the user 
+                // selecting a new value from the ComboBox would end up in here,
+                // when we really should go into the updateValue(t1) call below.
+                // We should only ever go into this clause if t1 is null.
                 wasSetAllCalled = false;
             } else {
                 updateValue(t1);
