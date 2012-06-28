@@ -629,8 +629,8 @@ public class TabPane extends Control {
                     while (c.next()) {
                         for (Tab tab : c.getRemoved()) {
                             if (tab != null && !tabPane.getTabs().contains(tab)) {
-                                if (getSelectedIndex() == 0 && tabPane.getTabs().size() > 0) {
-                                    clearSelection();
+                                if (getSelectedIndex() == 0 && tabPane.getTabs().size() > 0) {                                    
+                                    clearAndSelect(0);
                                     tab.setSelected(false);
                                 }
                                 if (tab.isSelected()) {
@@ -653,7 +653,7 @@ public class TabPane extends Control {
                             }
                         }
                     }
-                    if (getSelectedIndex() == -1 && getSelectedItem() == null && tabPane.getTabs().size() > 0) {
+                    if (getSelectedIndex() == -1 && getSelectedItem() == null && tabPane.getTabs().size() > 0) {                        
                         selectFirst();
                     } else if (tabPane.getTabs().isEmpty()) {
                         clearSelection();
@@ -667,10 +667,11 @@ public class TabPane extends Control {
 
         // API Implementation
         @Override public void select(int index) {
-            if (index < 0 || (getItemCount() > 0 && index >= getItemCount()) || getSelectedIndex() == index) {
+            if (index < 0 || (getItemCount() > 0 && index >= getItemCount()) ||
+                (index == getSelectedIndex() && getModelItem(index).isSelected())) {
                 return;
             }
-
+            
             // Unselect the old tab
             if (getSelectedIndex() >= 0 && getSelectedIndex() < tabPane.getTabs().size()) {
                 tabPane.getTabs().get(getSelectedIndex()).setSelected(false);
