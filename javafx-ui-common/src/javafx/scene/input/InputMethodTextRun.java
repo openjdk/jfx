@@ -44,8 +44,6 @@
 
 package javafx.scene.input;
 
-import java.io.Serializable;
-
 /**
  * Represents a single run in which the characters have the same 
  * set of highlights in the input method text.
@@ -54,7 +52,7 @@ import java.io.Serializable;
  * {@link javafx.application.ConditionalFeature#INPUT_METHOD ConditionalFeature.INPUT_METHOD}
  * for more information.
  */
-public class InputMethodTextRun implements Serializable{
+public class InputMethodTextRun {
     /**
      * @treatAsPrivate implementation detail
      * @deprecated This is an internal API that is not intended for use and will be removed in the next version

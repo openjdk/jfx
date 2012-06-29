@@ -26,9 +26,7 @@
 
 package javafx.scene.input;
 
-import com.sun.javafx.event.EventTypeUtil;
 import com.sun.javafx.scene.input.InputEventUtils;
-import java.io.IOException;
 import javafx.event.Event;
 import javafx.event.EventTarget;
 import javafx.event.EventType;
@@ -53,7 +51,7 @@ public class ContextMenuEvent extends InputEvent {
      * This event occurs when a context menu is requested.
      */
     public static final EventType<ContextMenuEvent> CONTEXT_MENU_REQUESTED =
-            EventTypeUtil.registerInternalEventType(ContextMenuEvent.ANY, "CONTEXT_MENU_REQUESTED");
+            new EventType<ContextMenuEvent>(ContextMenuEvent.ANY, "CONTEXT_MENU_REQUESTED");
 
     private ContextMenuEvent(final EventType<? extends ContextMenuEvent> eventType) {
         super(eventType);
@@ -120,7 +118,7 @@ public class ContextMenuEvent extends InputEvent {
      * Horizontal x position of the event relative to the
      * origin of the ContextMenuEvent's node.
      */
-    private transient double x;
+    private double x;
 
     /**
      * Horizontal position of the event relative to the
@@ -139,7 +137,7 @@ public class ContextMenuEvent extends InputEvent {
      * Vertical y position of the event relative to the
      * origin of the ContextMenuEvent's node.
      */
-    private transient double y;
+    private double y;
 
     /**
      * Vertical position of the event relative to the
@@ -245,12 +243,5 @@ public class ContextMenuEvent extends InputEvent {
         sb.append(", x = ").append(getX()).append(", y = ").append(getY());
 
         return sb.append("]").toString();
-    }
-
-    private void readObject(java.io.ObjectInputStream in)
-            throws IOException, ClassNotFoundException {
-        in.defaultReadObject();
-        x = sceneX;
-        y = sceneY;
     }
 }

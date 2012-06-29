@@ -26,7 +26,6 @@
 package javafx.scene.input;
 
 import com.sun.javafx.collections.annotations.ReturnsUnmodifiableCollection;
-import com.sun.javafx.event.EventTypeUtil;
 import java.util.Collections;
 import java.util.List;
 import javafx.event.Event;
@@ -61,33 +60,33 @@ public final class TouchEvent extends InputEvent {
      * Common supertype for all touch event types.
      */
     public static final EventType<TouchEvent> ANY =
-            EventTypeUtil.registerInternalEventType(InputEvent.ANY, "TOUCH");
+            new EventType<TouchEvent>(InputEvent.ANY);
 
     /**
      * This event occurs when the touch point is pressed (touched for the
      * first time).
      */
     public static final EventType<TouchEvent> TOUCH_PRESSED =
-            EventTypeUtil.registerInternalEventType(ANY, "TOUCH_PRESSED");
+            new EventType<TouchEvent>(ANY, "TOUCH_PRESSED");
 
     /**
      * This event occurs when the touch point is moved.
      */
     public static final EventType<TouchEvent> TOUCH_MOVED =
-            EventTypeUtil.registerInternalEventType(ANY, "TOUCH_MOVED");
+            new EventType<TouchEvent>(ANY, "TOUCH_MOVED");
 
     /**
      * This event occurs when the touch point is released.
      */
     public static final EventType<TouchEvent> TOUCH_RELEASED =
-            EventTypeUtil.registerInternalEventType(ANY, "TOUCH_RELEASED");
+            new EventType<TouchEvent>(ANY, "TOUCH_RELEASED");
 
     /**
      * This event occurs when the touch point is pressed and still (doesn't
      * move).
      */
     public static final EventType<TouchEvent> TOUCH_STATIONARY =
-            EventTypeUtil.registerInternalEventType(ANY, "TOUCH_STATIONARY");
+            new EventType<TouchEvent>(ANY, "TOUCH_STATIONARY");
 
     private TouchEvent(EventType<? extends TouchEvent> eventType) {
         super(eventType);
