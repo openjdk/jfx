@@ -26,6 +26,8 @@
 package javafx.scene.input;
 
 import com.sun.javafx.scene.input.InputEventUtils;
+import java.io.IOException;
+import java.io.Serializable;
 import javafx.event.EventTarget;
 import javafx.geometry.Point2D;
 import javafx.scene.Node;
@@ -48,10 +50,10 @@ import javafx.scene.Scene;
  * node, it will next time be targeted to it; when ungrabbed, it will be
  * always targeted to the top-most node on the current location.
  */
-public final class TouchPoint {
+public final class TouchPoint implements Serializable{
 
-    private EventTarget target;
-    private Object source;
+    private transient EventTarget target;
+    private transient Object source;
 
     private TouchPoint(int id, State state, double x, double y, double screenX,
             double screenY) {
@@ -192,7 +194,7 @@ public final class TouchPoint {
     }
 
 
-    private double x;
+    private transient double x;
 
     /**
      * Gets the horizontal position of the touch point relative to the
@@ -205,7 +207,7 @@ public final class TouchPoint {
         return x;
     }
 
-    private double y;
+    private transient double y;
 
     /**
      * Gets the vertical position of the touch point relative to the
@@ -290,6 +292,13 @@ public final class TouchPoint {
         sb.append(", x = ").append(getX()).append(", y = ").append(getY());
 
         return sb.append("]").toString();
+    }
+
+    private void readObject(java.io.ObjectInputStream in)
+            throws IOException, ClassNotFoundException {
+        in.defaultReadObject();
+        x = sceneX;
+        y = sceneY;
     }
 
     /**
