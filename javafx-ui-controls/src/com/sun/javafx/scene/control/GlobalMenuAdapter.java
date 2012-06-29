@@ -164,7 +164,7 @@ public class GlobalMenuAdapter extends Menu implements MenuBase {
     @Override
     public void fireValidation() {
         if (menu.getOnMenuValidation() != null) {
-            Event.fireEvent(menu, new Event(GlobalMenuAdapter.this.MENU_VALIDATION_EVENT));
+            Event.fireEvent(menu, new Event(GlobalMenuAdapter.MENU_VALIDATION_EVENT));
         }
         Menu target = (Menu)menu.getParentMenu();
         if(target != null && target.getOnMenuValidation() != null) {
@@ -211,7 +211,7 @@ public class GlobalMenuAdapter extends Menu implements MenuBase {
         @Override
         public void fireValidation() {
             if (getOnMenuValidation() != null) {
-                Event.fireEvent(menuItem, new Event(CheckMenuItemAdapter.this.MENU_VALIDATION_EVENT));
+                Event.fireEvent(menuItem, new Event(CheckMenuItemAdapter.MENU_VALIDATION_EVENT));
             }
             Menu target = (Menu)menuItem.getParentMenu();
             if(target.getOnMenuValidation() != null) {
@@ -236,7 +236,7 @@ public class GlobalMenuAdapter extends Menu implements MenuBase {
         @Override
         public void fireValidation() {
             if (getOnMenuValidation() != null) {
-                Event.fireEvent(menuItem, new Event(RadioMenuItemAdapter.this.MENU_VALIDATION_EVENT));
+                Event.fireEvent(menuItem, new Event(RadioMenuItemAdapter.MENU_VALIDATION_EVENT));
             }
             Menu target = (Menu)menuItem.getParentMenu();
             if(target.getOnMenuValidation() != null) {
@@ -257,7 +257,7 @@ public class GlobalMenuAdapter extends Menu implements MenuBase {
         @Override
         public void fireValidation() {
             if (getOnMenuValidation() != null) {
-                Event.fireEvent(menuItem, new Event(SeparatorMenuItemAdapter.this.MENU_VALIDATION_EVENT));
+                Event.fireEvent(menuItem, new Event(SeparatorMenuItemAdapter.MENU_VALIDATION_EVENT));
             }
             Menu target = (Menu)menuItem.getParentMenu();
             if(target.getOnMenuValidation() != null) {
@@ -278,7 +278,7 @@ public class GlobalMenuAdapter extends Menu implements MenuBase {
         @Override
         public void fireValidation() {
             if (getOnMenuValidation() != null) {
-                Event.fireEvent(menuItem, new Event(CustomMenuItemAdapter.this.MENU_VALIDATION_EVENT));
+                Event.fireEvent(menuItem, new Event(CustomMenuItemAdapter.MENU_VALIDATION_EVENT));
             }
             Menu target = (Menu)menuItem.getParentMenu();
             if(target.getOnMenuValidation() != null) {
