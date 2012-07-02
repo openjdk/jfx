@@ -1232,8 +1232,11 @@ public class StyleManager {
                 }                    
 
                 for (int i = 0, imax = stylesheetsToProcess.size(); i < imax; i++) {
-                    final Stylesheet ss = stylesheetsToProcess.get(i);
-                    final List<Rule> stylesheetRules = ss.getRules();
+                    final Stylesheet ss = stylesheetsToProcess.get(i); 
+                    
+                    final List<Rule> stylesheetRules = ss != null ? ss.getRules() : null;
+                    if (stylesheetRules == null || stylesheetRules.isEmpty()) continue;
+
                     for (int j = 0, jmax = stylesheetRules.size(); j < jmax; j++) {
                         Rule rule = stylesheetRules.get(j);
                         boolean mightApply = rule.mightApply(className, id, styleClass);

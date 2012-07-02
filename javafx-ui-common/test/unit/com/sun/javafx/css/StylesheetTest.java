@@ -28,6 +28,10 @@ import com.sun.javafx.css.Stylesheet.Origin;
 import java.net.URL;
 import java.util.Collections;
 import java.util.List;
+import javafx.scene.Group;
+import javafx.scene.Scene;
+import javafx.scene.shape.Rectangle;
+import javafx.stage.Stage;
 import org.junit.*;
 import static org.junit.Assert.*;
 
@@ -192,4 +196,27 @@ public class StylesheetTest {
         fail("The test case is a prototype.");
     }
      */
+    
+    @Test
+    public void testRT_23140() {
+
+        try {
+            Group root = new Group();
+            root.getChildren().add(new Rectangle(50,50));        
+            Scene scene = new Scene(root, 500, 500);
+            root.getStylesheets().add("bogus.css");
+            Stage stage = new Stage();
+            stage.setScene(scene);
+            stage.show();
+        } catch (NullPointerException e) {
+            // RT-23140 is supposed to fix the NPE. Did it?
+            fail("Test purpose failed: " + e.toString());
+        } catch (Exception e) {
+            // Something other than an NPE should still raise a red flag,
+            // but the exception is not what RT-23140 fixed.
+            fail("Exception not expected: " + e.toString());
+        }
+        
+    }
+    
 }
