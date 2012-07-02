@@ -15,6 +15,8 @@ import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.SimpleBooleanProperty;
 import javafx.beans.property.SimpleDoubleProperty;
 import javafx.beans.property.SimpleObjectProperty;
+import javafx.beans.value.ChangeListener;
+import javafx.beans.value.ObservableValue;
 import javafx.event.Event;
 import javafx.event.EventHandler;
 import javafx.geometry.Side;
@@ -742,4 +744,27 @@ public class TabPaneTest {
         assertEquals(0, tabPane.getSelectionModel().getSelectedIndex());
         assertEquals(tab2, tabPane.getSelectionModel().getSelectedItem());        
     }
+    
+    @Test public void selectionModelShouldNotBeNullWhenClosingFirstTab_RT22925() {
+        tabPane.getTabs().add(tab1);
+        tabPane.getTabs().add(tab2);
+        tabPane.getTabs().add(tab3);        
+
+        tabPane.getSelectionModel().selectedItemProperty().addListener(new ChangeListener<Tab>() {
+            public void changed(ObservableValue<? extends Tab> ov, Tab t, Tab t1) {
+                assertEquals(t.getText(), "one");
+                assertEquals(t1.getText(), "two");
+            }            
+        });
+        
+        assertEquals("one", tabPane.getTabs().get(0).getText());
+        assertEquals("two", tabPane.getTabs().get(1).getText());
+        assertEquals("three", tabPane.getTabs().get(2).getText());
+        
+        tabPane.getTabs().remove(tab1);
+
+        assertEquals(2, tabPane.getTabs().size());
+        assertEquals(0, tabPane.getSelectionModel().getSelectedIndex());
+        assertEquals(tab2, tabPane.getSelectionModel().getSelectedItem());        
+    }    
 }

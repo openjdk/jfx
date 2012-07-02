@@ -1,9 +1,9 @@
 <!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
 <html lang="en-US">
   <head>
-    <meta name="description" content="This document describes the JavaFX 
+    <meta name="description" content="This document describes the JavaFX
               Cascading Style Sheets (CSS) for JavaFX 2 and explains the              styles, values, properties and associated grammar.">
-    <meta name="keywords" content="JavaFX 2, JavaFX CSS, JavaFX CSS 
+    <meta name="keywords" content="JavaFX 2, JavaFX CSS, JavaFX CSS
               reference, JavaFX styling, CSS styles, CSS, cascading style sheets,              JavaFX GUI development, JavaFX application development">
     <meta http-equiv="content-type" content="text/html; charset=UTF-8">
     <title>JavaFX CSS Reference Guide</title>
@@ -295,6 +295,7 @@
               <li><a href="#menubutton">MenuButton</a></li>
               <li><a href="#menuitem">MenuItem</a></li>
               <li><a href="#menuitembase">MenuItemBase</a></li>
+              <li><a href="#pagination">Pagination</a></li>
               <li><a href="#passwordfield">PasswordField</a></li>
               <li><a href="#progressbar">ProgressBar</a></li>
               <li><a href="#progressindicator">ProgressIndicator</a></li>
@@ -3050,7 +3051,7 @@
         </tr>
       </tbody>
     </table>
-    <!-- 
+    <!--
         --        --        -- Controls        --        -->
     <table summary="property table" class="package" width="100%">
       <tbody>
@@ -3577,6 +3578,72 @@
     </table>
     <h4><a name="menuitem" id="menuitem">MenuItem</a></h4>
     <p class="styleclass">Style class: menu-item</p>
+    <h4><a name="pagination" id="pagination">Pagination</a></h4>
+    <p class="styleclass">Style class: pagination</p>
+	<p>Pagination has all the pseudo-class states of <a href="#control">Control</a></p>
+    <table summary="property table" class="csspropertytable" cellpadding="2" cellspacing="1">
+      <thead>
+        <tr>
+          <th class="propertyname">CSS Property</th>
+          <th class="value">Values</th>
+          <th>Default</th>
+          <th>Comments</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td class="propertyname">-fx-max-page-indicator-count</td>
+          <td class="value"><a href="#typesize" class="typelink">&lt;number&gt;</a></td>
+          <td>10</td>
+          <td>&nbsp;</td>
+        </tr>
+        <tr>
+          <td class="propertyname">-fx-arrows-visible</td>
+          <td class="value"><a href="#typesize" class="typelink">&lt;boolean&gt;</a></td>
+          <td>true</td>
+          <td>&nbsp;</td>
+        </tr>
+        <tr>
+          <td class="propertyname">-fx-tooltip-visible</td>
+          <td class="value"><a href="#typesize" class="typelink">&lt;boolean&gt;</a></td>
+          <td>true</td>
+          <td>&nbsp;</td>
+        </tr>
+        <tr>
+          <td class="propertyname">fx-page-information-visible:</td>
+          <td class="value"><a href="#typesize" class="typelink">&lt;boolean&gt;</a></td>
+          <td>true</td>
+          <td>&nbsp;</td>
+        </tr>
+        <tr>
+          <td class="propertyname">-fx-page-information-alignment</td>
+          <td class="value">[ top | bottom | left | right ]</td>
+          <td>bottom</td>
+          <td>&nbsp;</td>
+        </tr>
+        <tr>
+          <td colspan="4" class="parents">Also has all properties of <a href="#control">Control</a></td>
+        </tr>
+      </tbody>
+    </table>
+    <h4>Substructure</h4>
+    <ul>
+	  <li>page &mdash; StackPane</li>
+      <li>pagination-control &mdash; StackPane</li>
+        <ul>
+          <li>leftArrowButton - Button</li>
+	    <ul>
+		  <li>leftArrow &mdash; StackPane</li>
+	    </ul>
+	    <li>rightArrowButton - Button</li>
+	    <ul>
+		  <li>rightArrow &mdash; StackPane</li>
+	    </ul>
+	    <li>bullet-button - ToggleButton</li>
+	    <li>number-button - ToogleButton</li>
+	    <li>page-information - Label</li>
+	  </ul>
+    </ul>
     <h4><a name="passwordfield" id="passwordfield">PasswordField</a></h4>
     <p class="styleclass">Style class: password-field</p>
     <p>The PasswordField control has all the properties of <a href="#textfield">TextField</a></p>
@@ -4561,7 +4628,7 @@
     <h4><a name="treeview" id="treeview">TreeView</a></h4>
     <p class="styleclass">Style class: tree-view</p>
     <p>TreeView has all the properites and pseudo-class state of <a href="#control">Control</a></p>
-    <!-- 
+    <!--
         --        --        -- Charts        --        -->
     <h2><a name="charts" id="charts">Charts</a></h2>
     <table summary="property table" class="package" width="100%">

@@ -417,7 +417,7 @@ public class NestedTableColumnHeader extends TableColumnHeader {
         for (TableColumnHeader n : getColumnHeaders()) {
             if (! n.isVisible()) continue;
             
-            double prefWidth = n.prefWidth(-1);
+            double prefWidth = snapSize(n.prefWidth(-1));
 //            double prefHeight = n.prefHeight(-1);
 
             // position the column header in the default location...
@@ -453,7 +453,7 @@ public class NestedTableColumnHeader extends TableColumnHeader {
         if (getColumns() != null) {
             for (TableColumnHeader c : getColumnHeaders()) {
                 if (c.isVisible()) {
-                    width += c.computePrefWidth(height);
+                    width += snapSize(c.computePrefWidth(height));
                 }
             }
         }
