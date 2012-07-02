@@ -122,7 +122,7 @@ final public class Rule {
         return matches;
     }
 
-    public boolean mightApply(String className, String id, long[] styleClasses) {
+    public boolean mightApply(String className, String id, List<String> styleClasses) {
         for (int i = 0; i < selectors.size(); i++) {
             Selector sel = selectors.get(i);
             if (sel.mightApply(className, id, styleClasses)) return true;
