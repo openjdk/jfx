@@ -60,7 +60,7 @@ import javafx.scene.Node;
  * fillHeight property to determine whether to resize their heights to
  * fill its own height or keep their heights to their preferred (fillHeight defaults to true).
  * The alignment of the content is controlled by the alignment property,
- * which defaulst to Pos.TOP_LEFT.
+ * which defaults to Pos.TOP_LEFT.
  * <p>
  * If an hbox is resized larger than its preferred width, by default it will keep
  * children to their preferred widths, leaving the extra space unused.  If an
