@@ -211,7 +211,6 @@ public final class GraphicsContext {
     }
 
     private GrowableDataBuffer getBuffer() {
-        theCanvas.markBufferDirty();
         return theCanvas.getBuffer();
     }
 
