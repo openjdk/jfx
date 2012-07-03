@@ -305,6 +305,8 @@ public class CheckBoxTreeCell<T> extends TreeCell<T> {
     
     private ObservableValue<Boolean> booleanProperty;
     
+    private BooleanProperty indeterminateProperty;
+    
     
     
     /***************************************************************************
@@ -506,9 +508,9 @@ public class CheckBoxTreeCell<T> extends TreeCell<T> {
             if (booleanProperty != null) {
                 checkBox.selectedProperty().unbindBidirectional((BooleanProperty)booleanProperty);
             }
-//            if (indeterminateProperty != null) {
-//                checkBox.indeterminateProperty().unbindBidirectional(indeterminateProperty);
-//            }
+            if (indeterminateProperty != null) {
+                checkBox.indeterminateProperty().unbindBidirectional(indeterminateProperty);
+            }
 
             // install new bindings.
             // We special case things when the TreeItem is a CheckBoxTreeItem
@@ -517,8 +519,8 @@ public class CheckBoxTreeCell<T> extends TreeCell<T> {
                 booleanProperty = cbti.selectedProperty();
                 checkBox.selectedProperty().bindBidirectional((BooleanProperty)booleanProperty);
                 
-//                indeterminateProperty = cbti.indeterminateProperty();
-//                checkBox.indeterminateProperty().bindBidirectional(indeterminateProperty);
+                indeterminateProperty = cbti.indeterminateProperty();
+                checkBox.indeterminateProperty().bindBidirectional(indeterminateProperty);
             } else {
                 booleanProperty = callback.call(getTreeItem());
                 if (booleanProperty != null) {

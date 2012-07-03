@@ -138,11 +138,14 @@ public class TreeCellBehavior extends CellBehaviorBase<TreeCell<?>> {
     @Override public void mouseDragged(MouseEvent event) {
         latePress = false;
         
+        TreeView treeView = getControl().getTreeView();
+        if (treeView == null || treeView.getSelectionModel() == null) return;
+        
         // the mouse has now been dragged on a touch device, we should
         // remove the selection if we just added it in the last mouse press
         // event
         if (isEmbedded && ! wasSelected && getControl().isSelected()) {
-            getControl().getTreeView().getSelectionModel().clearSelection(getControl().getIndex());
+            treeView.getSelectionModel().clearSelection(getControl().getIndex());
         }
     }
     

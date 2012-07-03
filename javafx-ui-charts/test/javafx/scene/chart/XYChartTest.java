@@ -44,7 +44,7 @@ public class XYChartTest extends ChartTestBase {
     }
     
     // RT-22166
-    @Ignore @Test public void testTickLabelFont() {
+    @Test public void testTickLabelFont() {
         startApp();
         Font f = yaxis.getTickLabelFont();
         // default caspian value for font size = 10

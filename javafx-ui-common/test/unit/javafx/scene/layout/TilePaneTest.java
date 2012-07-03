@@ -950,4 +950,22 @@ public class TilePaneTest {
             Assert.fail(e.toString());
         }
     }    
+    
+      
+    @Test public void testCSSsetPrefColumns_RT22929() {        
+        Scene scene = new Scene(tilepane);
+        Stage stage = new Stage();
+        stage.setScene(scene);                
+        stage.show();
+        
+        ParsedValue pv = CSSParser.getInstance().parseExpr("-fx-pref-columns","2");
+        Object val = pv.convert(null);        
+        StyleableProperty prop = StyleableProperty.getStyleableProperty(tilepane.prefColumnsProperty());
+        try {
+            prop.set(tilepane, val, null);
+            assertEquals(2, tilepane.getPrefColumns(), 0.00001);
+        } catch (Exception e) {
+            Assert.fail(e.toString());
+        }
+    }      
 }
