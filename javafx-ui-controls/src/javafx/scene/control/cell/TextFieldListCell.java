@@ -107,7 +107,11 @@ public class TextFieldListCell<T> extends ListCell<T> {
      **************************************************************************/    
     
     /**
-     * Creates a default TextFieldListCell with a null converter.
+     * Creates a default TextFieldListCell with a null converter. Without a 
+     * {@link StringConverter} specified, this cell will not be able to accept
+     * input from the TextField (as it will not know how to convert this back
+     * to the domain object). It is therefore strongly encouraged to not use
+     * this constructor unless you intend to set the converter separately.
      */
     public TextFieldListCell() { 
         this(null);

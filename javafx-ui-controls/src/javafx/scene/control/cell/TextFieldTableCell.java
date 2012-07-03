@@ -109,7 +109,11 @@ public class TextFieldTableCell<S,T> extends TableCell<S,T> {
      **************************************************************************/
 
     /**
-     * Creates a default TextFieldTableCell with a null converter.
+     * Creates a default TextFieldTableCell with a null converter. Without a 
+     * {@link StringConverter} specified, this cell will not be able to accept
+     * input from the TextField (as it will not know how to convert this back
+     * to the domain object). It is therefore strongly encouraged to not use
+     * this constructor unless you intend to set the converter separately.
      */
     public TextFieldTableCell() { 
         this(null);
