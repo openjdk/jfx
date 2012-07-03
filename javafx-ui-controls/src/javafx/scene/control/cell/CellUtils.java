@@ -96,7 +96,7 @@ class CellUtils {
             converter.toString(cell.getItem());
     }
     
-    
+
     
     /***************************************************************************
      *                                                                         *
@@ -191,6 +191,12 @@ class CellUtils {
         textField.setOnKeyReleased(new EventHandler<KeyEvent>() {
             @Override public void handle(KeyEvent t) {
                 if (t.getCode() == KeyCode.ENTER) {
+                    if (converter == null) {
+                        throw new IllegalStateException(
+                            "Attempting to convert text input into Object, but provided "
+                                + "StringConverter is null. Be sure to set a StringConverter "
+                                + "in your cell factory.");
+                    }
                     cell.commitEdit(converter.fromString(textField.getText()));
                 } else if (t.getCode() == KeyCode.ESCAPE) {
                     cell.cancelEdit();

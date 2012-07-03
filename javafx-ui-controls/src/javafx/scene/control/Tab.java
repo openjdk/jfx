@@ -514,7 +514,7 @@ public class Tab implements EventTarget {
     /**
      * Sets the disabled state of this tab. A disable tab is no longer interactive
      * or traversable, but the contents remain interactive.  A disable tab 
-     * can be selected using {@link TabPane.getSelectionModel()}.
+     * can be selected using {@link TabPane#getSelectionModel()}.
      * 
      * @defaultValue false
      */    

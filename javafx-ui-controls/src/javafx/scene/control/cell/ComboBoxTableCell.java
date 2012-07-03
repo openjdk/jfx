@@ -31,6 +31,7 @@ import javafx.beans.property.SimpleBooleanProperty;
 import javafx.beans.property.SimpleObjectProperty;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
+import javafx.event.EventHandler;
 import javafx.scene.control.ComboBox;
 import javafx.scene.control.Label;
 import javafx.scene.control.TableCell;
@@ -72,9 +73,9 @@ public class ComboBoxTableCell<S,T> extends TableCell<S,T> {
      *      type as the TableColumn. Note that it is up to the developer to set 
      *      {@link EventHandler event handlers} to listen to edit events in the 
      *      TableColumn, and react accordingly. Methods of interest include 
-     *      {@link TableColumn#setOnEditStart(EventHandler) setOnEditStart},
+     *      {@link TableColumn#setOnEditStart(javafx.event.EventHandler) setOnEditStart},
      *      {@link TableColumn#setOnEditCommit(javafx.event.EventHandler) setOnEditCommit}, 
-     *      and {@link TableColumn#setOnEditCancel(EventHandler) setOnEditCancel}.
+     *      and {@link TableColumn#setOnEditCancel(javafx.event.EventHandler) setOnEditCancel}.
      * @return A {@link Callback} that will return a TableCell that is able to 
      *      work on the type of element contained within the TableColumn.
      */
@@ -97,9 +98,9 @@ public class ComboBoxTableCell<S,T> extends TableCell<S,T> {
      *      type as the TableColumn. Note that it is up to the developer to set 
      *      {@link EventHandler event handlers} to listen to edit events in the 
      *      TableColumn, and react accordingly. Methods of interest include 
-     *      {@link TableColumn#setOnEditStart(EventHandler) setOnEditStart},
+     *      {@link TableColumn#setOnEditStart(javafx.event.EventHandler) setOnEditStart},
      *      {@link TableColumn#setOnEditCommit(javafx.event.EventHandler) setOnEditCommit}, 
-     *      and {@link TableColumn#setOnEditCancel(EventHandler) setOnEditCancel}.
+     *      and {@link TableColumn#setOnEditCancel(javafx.event.EventHandler) setOnEditCancel}.
      * @return A {@link Callback} that will return a TableCell that is able to 
      *      work on the type of element contained within the TableColumn.
      */
@@ -121,9 +122,9 @@ public class ComboBoxTableCell<S,T> extends TableCell<S,T> {
      *      type as the TableColumn. Note that it is up to the developer to set 
      *      {@link EventHandler event handlers} to listen to edit events in the 
      *      TableColumn, and react accordingly. Methods of interest include 
-     *      {@link TableColumn#setOnEditStart(EventHandler) setOnEditStart},
+     *      {@link TableColumn#setOnEditStart(javafx.event.EventHandler) setOnEditStart},
      *      {@link TableColumn#setOnEditCommit(javafx.event.EventHandler) setOnEditCommit}, 
-     *      and {@link TableColumn#setOnEditCancel(EventHandler) setOnEditCancel}.
+     *      and {@link TableColumn#setOnEditCancel(javafx.event.EventHandler) setOnEditCancel}.
      * @return A {@link Callback} that will return a TableCell that is able to 
      *      work on the type of element contained within the TableColumn.
      */
@@ -146,9 +147,9 @@ public class ComboBoxTableCell<S,T> extends TableCell<S,T> {
      *      type as the TableColumn. Note that it is up to the developer to set 
      *      {@link EventHandler event handlers} to listen to edit events in the 
      *      TableColumn, and react accordingly. Methods of interest include 
-     *      {@link TableColumn#setOnEditStart(EventHandler) setOnEditStart},
+     *      {@link TableColumn#setOnEditStart(javafx.event.EventHandler) setOnEditStart},
      *      {@link TableColumn#setOnEditCommit(javafx.event.EventHandler) setOnEditCommit}, 
-     *      and {@link TableColumn#setOnEditCancel(EventHandler) setOnEditCancel}.
+     *      and {@link TableColumn#setOnEditCancel(javafx.event.EventHandler) setOnEditCancel}.
      * @return A {@link Callback} that will return a TableCell that is able to 
      *      work on the type of element contained within the TableColumn.
      */

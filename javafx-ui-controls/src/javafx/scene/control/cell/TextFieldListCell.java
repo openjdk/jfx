@@ -107,7 +107,11 @@ public class TextFieldListCell<T> extends ListCell<T> {
      **************************************************************************/    
     
     /**
-     * Creates a default TextFieldListCell with a null converter.
+     * Creates a default TextFieldListCell with a null converter. Without a 
+     * {@link StringConverter} specified, this cell will not be able to accept
+     * input from the TextField (as it will not know how to convert this back
+     * to the domain object). It is therefore strongly encouraged to not use
+     * this constructor unless you intend to set the converter separately.
      */
     public TextFieldListCell() { 
         this(null);
@@ -122,7 +126,7 @@ public class TextFieldListCell<T> extends ListCell<T> {
      * instance of type T. This item will then be passed along to the 
      * {@link ListView#onEditCommitProperty()} callback.
      * 
-     * @param onCommit A {@link StringConverter<T> converter} that can convert 
+     * @param converter A {@link StringConverter converter} that can convert 
      *      the given String (from what the user typed in) into an instance of 
      *      type T.
      */

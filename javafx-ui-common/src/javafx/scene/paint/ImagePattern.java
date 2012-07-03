@@ -144,7 +144,7 @@ public final class ImagePattern extends Paint {
     /**
      * Gets the x origin of the anchor rectangle.
      *
-     * @default 0.0
+     * @defaultValue 0.0
      * @return The x origin of the anchor rectangle.
      */
     public final double getX() {
@@ -156,7 +156,7 @@ public final class ImagePattern extends Paint {
     /**
      * Gets the y origin of the anchor rectangle.
      *
-     * @default 0.0
+     * @defaultValue 0.0
      * @return The y origin of the anchor rectangle.
      */
     public final double getY() {
@@ -169,7 +169,7 @@ public final class ImagePattern extends Paint {
     /**
      * Gets the width of the anchor rectangle.
      *
-     * @default 1.0
+     * @defaultValue 1.0
      * @return The width of the anchor rectangle.
      */
     public final double getWidth() {
@@ -182,7 +182,7 @@ public final class ImagePattern extends Paint {
     /**
      * Gets the height of the anchor rectangle.
      *
-     * @default 1.0
+     * @defaultValue 1.0
      * @return The height of the anchor rectangle.
      */
     public final double getHeight() {
