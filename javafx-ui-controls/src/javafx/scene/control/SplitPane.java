@@ -142,7 +142,7 @@ public class SplitPane extends Control {
     /**
      * Return true if the node is resizable when the parent container is resized false otherwise.
      * @param node A node in the SplitPane.
-     * @default true
+     * @defaultValue true
      * @return true if the node is resizable false otherwise.
      */
     public static Boolean isResizableWithParent(Node node) {

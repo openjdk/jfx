@@ -126,7 +126,7 @@ public class TextFieldListCell<T> extends ListCell<T> {
      * instance of type T. This item will then be passed along to the 
      * {@link ListView#onEditCommitProperty()} callback.
      * 
-     * @param onCommit A {@link StringConverter<T> converter} that can convert 
+     * @param converter A {@link StringConverter converter} that can convert 
      *      the given String (from what the user typed in) into an instance of 
      *      type T.
      */

@@ -38,7 +38,7 @@ import javafx.scene.control.TreeItem;
 /**
  * TreeItem subclass that adds support for being in selected, unselected, and
  * indeterminate states. This is useful when used in conjunction with a TreeView
- * which has a {@link CheckBoxCellFactory} installed.
+ * which has a {@link CheckBoxTreeCell} installed.
  * 
  * <p>A CheckBoxTreeItem can be {@link #independentProperty() independent} or 
  * dependent. By default, CheckBoxTreeItem instances are dependent, which means 
@@ -55,8 +55,7 @@ import javafx.scene.control.TreeItem;
  * selected.
  * 
  * <p>A simple example of using the CheckBoxTreeItem class, in conjunction with 
- * {@link CheckBoxCellFactory} or {@link CheckBoxTreeCell} classes is shown 
- * below:
+ * {@link CheckBoxTreeCell} is shown below:
  * 
  * <pre><code>
  * // create the tree model
@@ -75,7 +74,7 @@ import javafx.scene.control.TreeItem;
  * treeView.setRoot(gilesFamily);
  *       
  * // set the cell factory
- * treeView.setCellFactory(CheckBoxCellFactory.&lt;String&gt;forTreeView());</code></pre>
+ * treeView.setCellFactory(CheckBoxTreeCell.&lt;String&gt;forTreeView());</code></pre>
  *
  * @see CheckBoxTreeCell
  * @see TreeItem

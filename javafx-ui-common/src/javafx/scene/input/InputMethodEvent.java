@@ -55,8 +55,8 @@ import javafx.scene.Node;
  * text change in a {@link Node}.
  * <p>
  * This event is delivered to the {@link Node} object that extends 
- * {@link javafx.scene.control.TextInput}, when the text under composition (composed text) is
- * generated/changed/removed, the input method commits
+ * {@link javafx.scene.control.TextInputControl}, when the text under composition 
+ * (composed text) is generated/changed/removed, the input method commits
  * the result text, or the input method caret position changes.
  * <p>
  * On receiving this event, the application is supposed to display

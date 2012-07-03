@@ -518,12 +518,7 @@ public final class GraphicsContext {
      * Sets the current transform ignoring any 3D transform by grabbing the 2x3
      * of the matrix. 3D transforms are not supported in a 2D GraphicsContext.
      * 
-     * @param mxx 
-     * @param myx
-     * @param mxy 
-     * @param myy 
-     * @param mxt
-     * @param myt  
+     * @param xform
      */
     public void setTransform(Affine xform) {
         curState.transform.setTransform(xform.getMxx(), xform.getMyx(),
@@ -655,7 +650,7 @@ public final class GraphicsContext {
     /**
      * gets the current state's stroke.
      * 
-     * @param p The Paint to be used as the stroke Paint.
+     * @return The Paint to be used as the stroke Paint.
      */
     public Paint getStroke() {
         return curState.stroke;
@@ -766,7 +761,7 @@ public final class GraphicsContext {
     /**
      * Gets the current miter limit attribute.
      * 
-     * @param miter limit value between 0 and positive infinity with 
+     * @return limit value between 0 and positive infinity with 
      * any other value being ignored and leaving the value unchanged.
      */
     public double getMiterLimit() {

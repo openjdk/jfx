@@ -194,8 +194,9 @@ public class Tooltip extends PopupControl {
     }
     /**
      * Specifies the behavior for lines of text <em>when text is multiline</em>.
-     * Unlike {@link #contentDisplay} which affects the graphic and text, this setting
-     * only affects multiple lines of text relative to the text bounds.
+     * Unlike {@link #contentDisplayProperty() contentDisplay} which affects the 
+     * graphic and text, this setting only affects multiple lines of text 
+     * relative to the text bounds.
      */
     public final ObjectProperty<TextAlignment> textAlignmentProperty() {
         return ((Tooltip.CSSBridge)bridge).textAlignmentProperty();
@@ -245,7 +246,8 @@ public class Tooltip extends PopupControl {
 
     /**
      * An optional icon for the Tooltip. This can be positioned relative to the
-     * text by using the {@link #contentDisplay} property.
+     * text by using the {@link #contentDisplayProperty() content display} 
+     * property.
      * The node specified for this variable cannot appear elsewhere in the
      * scene graph, otherwise the {@code IllegalArgumentException} is thrown.
      * See the class description of {@link javafx.scene.Node Node} for more detail.
