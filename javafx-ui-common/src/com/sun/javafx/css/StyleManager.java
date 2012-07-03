@@ -720,12 +720,6 @@ public class StyleManager {
         }        
     }
 
-    public void clearCachedValues(Scene scene) {
-
-        // Psuedoclass state for the nodes is only valid for a pulse. 
-        StyleHelper.pseudoclassMasksByNode.clear();
-    }
-
     /** 
      * Force the author stylesheets associated with the given scene to be re-parsed.
      * The author stylesheets are the stylesheets specified in
