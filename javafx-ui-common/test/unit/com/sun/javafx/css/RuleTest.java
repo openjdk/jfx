@@ -151,9 +151,10 @@ public class RuleTest {
         String className = "";
         String id = "";
         List<String> styleClasses = null;
+        long[] styleClassBits = null;
         Rule instance = null;
         boolean expResult = false;
-        boolean result = instance.mightApply(className, id, styleClasses);
+        boolean result = instance.mightApply(className, id, styleClassBits);
         assertEquals(expResult, result);
         fail("The test case is a prototype.");
     }

@@ -793,6 +793,9 @@ public abstract class Node implements EventTarget {
     private ObservableList<String> styleClass = new TrackableObservableList<String>() {
         @Override
         protected void onChanged(Change<String> c) {
+            // setting styleClassBits to null will cause the bits to get
+            // recalculated on the next call to impl_cssGetStyleClassBits
+            styleClassBits = null;
             impl_reapplyCSS();
         }
 
@@ -814,6 +817,20 @@ public abstract class Node implements EventTarget {
             }
         }
     };
+    
+    private long[] styleClassBits = new long[0];
+    /**
+     * @treatAsPrivate implementation detail
+     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
+     */
+    @Deprecated
+    public final long[] impl_cssGetStyleClassBits() {
+        if (styleClassBits == null) {
+            styleClassBits = com.sun.javafx.css.SimpleSelector.getStyleClassMasks(styleClass);
+        }
+        // return a copy so caller can't alter styleClassBits itself.
+        return Arrays.copyOf(styleClassBits, styleClassBits.length);
+    }
     
     public final ObservableList<String> getStyleClass() { 
         return styleClass; 

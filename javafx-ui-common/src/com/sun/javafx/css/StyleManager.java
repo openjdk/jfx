@@ -881,7 +881,10 @@ public class StyleManager {
                 if (value != null) strings.add(value);
             }
         }
-        return strings;
+        // even though the list returned could be modified without causing 
+        // harm, returning an unmodifiableList is consistent with 
+        // SimpleSelector.getStyleClasses()
+        return Collections.unmodifiableList(strings);
     }
 
     /*
@@ -1142,7 +1145,7 @@ public class StyleManager {
             // of the node and lookup the associated Cache in the cacheMap
             final String className = node.getClass().getName();
             final String id = node.getId();
-            final List<String> styleClass = node.getStyleClass();
+            final long[] styleClass = node.impl_cssGetStyleClassBits();
             
             final int[] indicesOfParentsWithStylesheets =  
                 getIndicesOfParentsWithStylesheets(
@@ -1325,12 +1328,7 @@ public class StyleManager {
                 final Key newKey = new Key();
                 newKey.className = className;
                 newKey.id = id;
-                // Copy the list.
-                // If the contents of the Node's styleClass changes,
-                // the cacheMap lookup should miss.
-                final int nElements = styleClass.size();
-                newKey.styleClass = new ArrayList<String>(nElements);
-                for(int n=0; n<nElements; n++) newKey.styleClass.add(styleClass.get(n));
+                newKey.styleClass = styleClass;
                 newKey.indices = hasParentStylesheets ? indicesOfParentsWithStylesheets : null;
                 
                 cache = new Cache(this, rules, pseudoclassStateMask, impactsChildren);
@@ -1545,7 +1543,7 @@ public class StyleManager {
         // necessary.
         String className;
         String id;
-        List<String> styleClass;
+        long[] styleClass;
         
         // this will be initialized if a Parent has a stylesheet and will 
         // hold the indices of those Parents with stylesheets (the Parent's
@@ -1573,7 +1571,7 @@ public class StyleManager {
                         || (id != null && id.equals(other.id))
                        )
                     && (   (styleClass == null && other.styleClass == null)
-                        || (styleClass != null && styleClass.containsAll(other.styleClass))
+                        || (styleClass != null && Arrays.equals(styleClass, other.styleClass))
                        );
                 
                 if (eq && indices != null) {
@@ -1600,7 +1598,7 @@ public class StyleManager {
         public int hashCode() {
             int hash = className.hashCode();
             hash = 31 * (hash + ((id == null || id.isEmpty()) ? 1231 : id.hashCode()));
-            hash = 31 * (hash + ((styleClass == null || styleClass.isEmpty()) ? 1237 : styleClass.hashCode()));
+            hash = 31 * (hash + ((styleClass == null) ? 1237 : Arrays.hashCode(styleClass)));
             if (indices != null) hash = 31 * (hash + Arrays.hashCode(indices));
             return hash;
         }
