@@ -525,8 +525,10 @@ public class SplitPaneSkin extends SkinBase<SplitPane, BehaviorBase<SplitPane>> 
     private boolean resize = false;
     private boolean checkDividerPos = true;
 
-    @Override protected void layoutChildren() {     
-        if (!getSkinnable().isVisible() || (horizontal ? getWidth() == 0 : getHeight() == 0)) {
+    @Override protected void layoutChildren() {
+        if (!getSkinnable().isVisible() || 
+            (horizontal ? getWidth() == 0 : getHeight() == 0) ||
+            contentRegions.isEmpty()) {
             return;
         }
         

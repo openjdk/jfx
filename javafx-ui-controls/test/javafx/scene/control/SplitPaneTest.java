@@ -9,6 +9,7 @@ import static javafx.scene.control.ControlTestUtils.*;
 import com.sun.javafx.pgstub.StubToolkit;
 import com.sun.javafx.scene.control.skin.SplitPaneSkin;
 import com.sun.javafx.tk.Toolkit;
+import javafx.application.Platform;
 import javafx.beans.property.DoubleProperty;
 import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.SimpleDoubleProperty;
@@ -1247,5 +1248,38 @@ public class SplitPaneTest {
         assertEquals(0, sp2.getLayoutBounds().getWidth(), 1e-100);
         assertEquals(0, sp3.getLayoutBounds().getWidth(), 1e-100);
         assertEquals(190, sp4.getLayoutBounds().getWidth(), 1e-100);
+    }    
+    
+    @Test public void addItemsInRunLater_RT23063() {
+        final SplitPane sp = new SplitPane();
+        Stage st = new Stage();
+        st.setScene(new Scene(sp, 2000, 2000));
+        st.show();
+           
+        Runnable runnable = new Runnable() {
+            @Override
+            public void run() {
+                StackPane rightsp = new StackPane();
+                Label right = new Label("right");
+                rightsp.getChildren().add(right);
+                
+                StackPane leftsp = new StackPane();
+                Label left = new Label("left");
+                leftsp.getChildren().add(left);
+                
+                sp.getItems().addAll(rightsp, leftsp);
+            }
+        };
+        Platform.runLater(runnable);
+                        
+        sp.impl_reapplyCSS();
+        sp.resize(400, 400);
+        sp.layout();
+        
+        assertEquals(1, sp.getDividerPositions().length);
+        
+        double pos[] = sp.getDividerPositions();
+        double p0 = convertDividerPostionToAbsolutePostion(pos[0], 398);
+        assertEquals(196, p0, 1e-100);        
     }    
 }
