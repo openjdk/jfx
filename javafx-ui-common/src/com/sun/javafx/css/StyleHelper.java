@@ -44,14 +44,10 @@ import java.lang.ref.Reference;
 import java.lang.ref.WeakReference;
 import java.util.*;
 import java.util.Map.Entry;
-import javafx.beans.property.BooleanProperty;
-import javafx.beans.property.ReadOnlyObjectProperty;
-import javafx.beans.property.SimpleBooleanProperty;
 import javafx.beans.value.WritableValue;
 import javafx.scene.Parent;
 import javafx.scene.text.FontPosture;
 import javafx.scene.text.FontWeight;
-import javafx.scene.text.Text;
 
 /**
  * The StyleHelper is a helper class used for applying CSS information to Nodes.
@@ -742,7 +738,14 @@ public class StyleHelper {
         //
                 
         final CacheEntry cacheEntry = getCacheEntry(node, pseudoClassStates);
-        if (cacheEntry == null) return;
+        if (cacheEntry == null) {
+            // If cacheEntry is null, then the StyleManager Cache from which
+            // this StyleHelper was created has been blown away and this
+            // StyleHelper is no good. If this is the case, we need to tell
+            // this node to reapply CSS
+            node.impl_reapplyCSS();
+            return;
+        }
 
         //
         // if this node has a style map, then we'll populate it.
