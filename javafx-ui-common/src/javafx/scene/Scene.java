@@ -419,7 +419,6 @@ public class Scene implements EventTarget {
     }
 
     private void doCSSPass() {
-        StyleManager.getInstance().clearCachedValues(this);
         final Parent sceneRoot = getRoot();
         //
         // RT-17547: when the tree is synchronized, the dirty bits are

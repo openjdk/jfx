@@ -55,10 +55,10 @@ public abstract class WritablePixelFormat<T extends Buffer>
      * The buffer should be positioned to the start of the pixel data such
      * that {@code buf.get(0)} would return the pixel information for the
      * pixel at coordinates {@code (0, 0)}.
-     * The {@scanlineStride} parameter defines the distance from the pixel
+     * The {@code scanlineStride} parameter defines the distance from the pixel
      * data at the start of one row to the pixel data at the start of the
      * immediately following row at the next higher Y coordinate.  Usually,
-     * {@scanlineStride} is the same as the width of the image multiplied
+     * {@code scanlineStride} is the same as the width of the image multiplied
      * by the number of data elements per pixel (1 for the case of the
      * integer and indexed formats, or 3 or 4 in the case of the byte
      * formats), but some images may have further padding between rows for

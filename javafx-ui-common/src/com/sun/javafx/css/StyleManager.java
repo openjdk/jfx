@@ -94,27 +94,6 @@ public class StyleManager {
     private Stylesheet defaultUserAgentStylesheet;
 
     /**
-     * User agent stylesheets from Control.getUserAgentStylesheet.
-     * This does not include the default ua styleheet.
-     */
-    private ObservableMap<String,Stylesheet> userAgentStylesheetMap = FXCollections.observableHashMap();
-    private void addUserAgentStylesheet(String fname, Stylesheet stylesheet) {
-
-        if (stylesheet != null) {
-            stylesheet.setOrigin(Stylesheet.Origin.USER_AGENT);
-            userAgentStylesheetMap.put(fname, stylesheet);
-        } else {
-            userAgentStylesheetMap.remove(fname);
-        }
-        
-    }
-    private Stylesheet getUserAgentStylesheet(String fname) {
-
-            return userAgentStylesheetMap.get(fname);
-            
-    }
-
-    /**
      * A map from String => Stylesheet. If a stylesheet for the given URL has
      * already been loaded then we'll simply reuse the stylesheet rather than
      * loading a duplicate.
@@ -648,6 +627,13 @@ public class StyleManager {
         return null;
     }
 
+    
+    /**
+     * User agent stylesheets from Control.getUserAgentStylesheet.
+     */
+    private Map<String,Stylesheet> userAgentStylesheetMap = new HashMap<String,Stylesheet>();
+
+    
     /**
      * Add a user agent stylesheet, possibly overriding styles in the default
      * user agent stylesheet. The node argument must be an instance of Control.
@@ -659,9 +645,15 @@ public class StyleManager {
         // nothing to add
         if (fname == null ||  fname.trim().isEmpty()) return;
 
-        Stylesheet ua_stylesheet = loadStylesheet(fname);
-
-        addUserAgentStylesheet(fname, ua_stylesheet);
+        if (userAgentStylesheetMap.containsKey(fname) == false) {
+            Stylesheet ua_stylesheet = loadStylesheet(fname);
+            ua_stylesheet.setOrigin(Stylesheet.Origin.USER_AGENT);
+            userAgentStylesheetMap.put(fname, ua_stylesheet);
+            
+            if (ua_stylesheet != null) {
+                userAgentStylesheetsChanged();                
+            }
+        }
 
     }
 
@@ -692,6 +684,10 @@ public class StyleManager {
         if (defaultUserAgentStylesheet != null) {
             defaultUserAgentStylesheet.setOrigin(Stylesheet.Origin.USER_AGENT);
         }
+        userAgentStylesheetsChanged();
+    }
+    
+    private void userAgentStylesheetsChanged() {
         if (defaultContainer != null) {
             //
             // RT-21563 if default ua stylesheet is set, then the default 
@@ -718,12 +714,6 @@ public class StyleManager {
                 scene.getRoot().impl_reapplyCSS();
             }            
         }        
-    }
-
-    public void clearCachedValues(Scene scene) {
-
-        // Psuedoclass state for the nodes is only valid for a pulse. 
-        StyleHelper.pseudoclassMasksByNode.clear();
     }
 
     /** 
@@ -1014,8 +1004,6 @@ public class StyleManager {
          */
         private final Key key;
 
-        private final MapChangeListener<String,Stylesheet> mapChangeListener;
-
         // The StyleHelper's cached values are relevant only for a given scene.
         // Since a StylesheetContainer is created for a Scene with stylesheets,
         // it makes sense that the container should own the valueCache. This
@@ -1034,31 +1022,19 @@ public class StyleManager {
             if (StyleManager.getInstance().defaultUserAgentStylesheet != null) {
                 stylesheets.add(StyleManager.getInstance().defaultUserAgentStylesheet);
             }            
-            stylesheets.addAll(StyleManager.getInstance().userAgentStylesheetMap.values());
+
+            if (StyleManager.getInstance().userAgentStylesheetMap != null &&
+                   StyleManager.getInstance().userAgentStylesheetMap.isEmpty() == false) {
+                stylesheets.addAll(StyleManager.getInstance().userAgentStylesheetMap.values());
+            }            
+            
             if (authorStylesheets != null) stylesheets.addAll(authorStylesheets);
             
-            mapChangeListener = new MapChangeListener<String,Stylesheet>() {
-
-                @Override
-                public void onChanged(Change<? extends String,? extends Stylesheet> change) {
-                    if (change.wasAdded()) {
-                        stylesheets.add(change.getValueAdded());
-                        clearCaches();
-                    } else if (change.wasRemoved()) {
-                        stylesheets.remove(change.getValueRemoved());
-                        clearCaches();
-                    }
-                }
-            };
-
-            StyleManager.getInstance().userAgentStylesheetMap.addListener(mapChangeListener);
-
             styleCache = new HashMap<StyleCacheKey, StyleCacheBucket>();
             smapCount = 0;
         }
 
         private void destroy() {
-            StyleManager.getInstance().userAgentStylesheetMap.removeListener(mapChangeListener);
             stylesheets.clear();
             clearCaches();
         }

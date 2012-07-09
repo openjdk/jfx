@@ -164,142 +164,140 @@ public class PaginationSkin extends SkinBase<Pagination, PaginationBehavior>  {
     private int direction;
 
     private void initializeSwipeAndTouchHandlers() {
-        if (PlatformUtil.isEmbedded()) {
-            setOnTouchPressed(new EventHandler<TouchEvent>() {
-                @Override public void handle(TouchEvent e) {
-                    if (touchEventId == -1) {
-                        touchEventId = e.getTouchPoint().getId();
-                    }
-                    if (touchEventId != e.getTouchPoint().getId()) {
-                        return;
-                    }
-                    lastTouchPos = startTouchPos = e.getTouchPoint().getX();
-                    lastTouchTime = startTouchTime = System.currentTimeMillis();
-                    touchThresholdBroken = false;
-                    e.consume();
+        setOnTouchPressed(new EventHandler<TouchEvent>() {
+            @Override public void handle(TouchEvent e) {
+                if (touchEventId == -1) {
+                    touchEventId = e.getTouchPoint().getId();
                 }
-            });
+                if (touchEventId != e.getTouchPoint().getId()) {
+                    return;
+                }
+                lastTouchPos = startTouchPos = e.getTouchPoint().getX();
+                lastTouchTime = startTouchTime = System.currentTimeMillis();
+                touchThresholdBroken = false;
+                e.consume();
+            }
+        });
 
-            setOnTouchMoved(new EventHandler<TouchEvent>() {
-                @Override public void handle(TouchEvent e) {
-                    if (touchEventId != e.getTouchPoint().getId()) {
-                        return;
+        setOnTouchMoved(new EventHandler<TouchEvent>() {
+            @Override public void handle(TouchEvent e) {
+                if (touchEventId != e.getTouchPoint().getId()) {
+                    return;
+                }
+
+                double drag = e.getTouchPoint().getX() - lastTouchPos;
+                long time = System.currentTimeMillis() - lastTouchTime;
+                touchVelocity = drag/time;
+                lastTouchPos = e.getTouchPoint().getX();
+                lastTouchTime = System.currentTimeMillis();
+                double delta = e.getTouchPoint().getX() - startTouchPos;
+
+                if (!touchThresholdBroken && Math.abs(delta) > TOUCH_THRESHOLD) {
+                    touchThresholdBroken = true;
+                }
+
+                if (touchThresholdBroken) {
+                    double width = getWidth() - (getInsets().getLeft() + getInsets().getRight());
+                    double currentPaneX;
+                    double nextPaneX;
+
+                    if (!setInitialDirection) {
+                        // Remember the direction travelled so we can
+                        // load the next or previous page if the touch is not released.
+                        setInitialDirection = true;
+                        direction = delta < 0 ? 1 : -1;
                     }
-
-                    double drag = e.getTouchPoint().getX() - lastTouchPos;
-                    long time = System.currentTimeMillis() - lastTouchTime;
-                    touchVelocity = drag/time;
-                    lastTouchPos = e.getTouchPoint().getX();
-                    lastTouchTime = System.currentTimeMillis();
-                    double delta = e.getTouchPoint().getX() - startTouchPos;
-
-                    if (!touchThresholdBroken && Math.abs(delta) > TOUCH_THRESHOLD) {
-                        touchThresholdBroken = true;
-                    }
-
-                    if (touchThresholdBroken) {
-                        double width = getWidth() - (getInsets().getLeft() + getInsets().getRight());
-                        double currentPaneX;
-                        double nextPaneX;
-
-                        if (!setInitialDirection) {
-                            // Remember the direction travelled so we can
-                            // load the next or previous page if the touch is not released.
-                            setInitialDirection = true;
-                            direction = delta < 0 ? 1 : -1;
+                    if (delta < 0) {
+                        if (direction == -1) {
+                            nextStackPane.getChildren().clear();
+                            direction = 1;
                         }
-                        if (delta < 0) {
-                            if (direction == -1) {
-                                nextStackPane.getChildren().clear();
-                                direction = 1;
-                            }
-                            // right to left
-                            if (Math.abs(delta) <= width) {
-                                currentPaneX = delta;
-                                nextPaneX = width + delta;
-                                nextPageReached = false;
-                            } else {
-                                currentPaneX = -width;
-                                nextPaneX = 0;
-                                nextPageReached = true;
-                            }
-                            currentStackPane.setTranslateX(currentPaneX);
-                            if (getCurrentPageIndex() < getPageCount() - 1) {
-                                createPage(nextStackPane, currentIndex + 1);
-                                nextStackPane.setVisible(true);
-                                nextStackPane.setTranslateX(nextPaneX);
-                            } else {
-                                currentStackPane.setTranslateX(0);
-                            }
+                        // right to left
+                        if (Math.abs(delta) <= width) {
+                            currentPaneX = delta;
+                            nextPaneX = width + delta;
+                            nextPageReached = false;
                         } else {
-                            // left to right
-                            if (direction == 1) {
-                                nextStackPane.getChildren().clear();
-                                direction = -1;
-                            }
-                            if (Math.abs(delta) <= width) {
-                                currentPaneX = delta;
-                                nextPaneX = -width + delta;
-                                nextPageReached = false;
-                            } else {
-                                currentPaneX = width;
-                                nextPaneX = 0;
-                                nextPageReached = true;
-                            }
-                            currentStackPane.setTranslateX(currentPaneX);
-                            if (getCurrentPageIndex() != 0) {
-                                createPage(nextStackPane, currentIndex - 1);
-                                nextStackPane.setVisible(true);
-                                nextStackPane.setTranslateX(nextPaneX);
-                            } else {
-                                currentStackPane.setTranslateX(0);
-                            }
+                            currentPaneX = -width;
+                            nextPaneX = 0;
+                            nextPageReached = true;
                         }
-                    }
-                    e.consume();
-                }
-            });
-
-            setOnTouchReleased(new EventHandler<TouchEvent>() {
-                @Override public void handle(TouchEvent e) {
-                    if (touchEventId != e.getTouchPoint().getId()) {
-                        return;
+                        currentStackPane.setTranslateX(currentPaneX);
+                        if (getCurrentPageIndex() < getPageCount() - 1) {
+                            createPage(nextStackPane, currentIndex + 1);
+                            nextStackPane.setVisible(true);
+                            nextStackPane.setTranslateX(nextPaneX);
+                        } else {
+                            currentStackPane.setTranslateX(0);
+                        }
                     } else {
-                        touchEventId = -1;
-                        setInitialDirection = false;
-                    }
-
-                    if (touchThresholdBroken) {
-                        // determin if click or swipe
-                        final double drag = e.getTouchPoint().getX() - startTouchPos;
-                        // calculate complete time from start to end of drag
-                        final long time = System.currentTimeMillis() - startTouchTime;
-                        // if time is less than 300ms then considered a quick swipe and whole time is used
-                        final boolean quick = time < 300;
-                        // calculate velocity
-                        final double velocity = quick ? (double)drag / time : touchVelocity; // pixels/ms
-                        // calculate distance we would travel at this speed for 500ms of travel
-                        final double distance = (velocity * 500);
-                        final double width = getWidth() - (getInsets().getLeft() + getInsets().getRight());
-
-                        // The swipe distance travelled.
-                        final double threshold = Math.abs(distance/width);
-                        // The touch and dragged distance travelled.
-                        final double delta = Math.abs(drag/width);
-                        if (threshold > SWIPE_THRESHOLD || delta > SWIPE_THRESHOLD) {
-                            if (startTouchPos > e.getTouchPoint().getX()) {
-                                selectNext();
-                            } else {
-                                selectPrevious();
-                            }
+                        // left to right
+                        if (direction == 1) {
+                            nextStackPane.getChildren().clear();
+                            direction = -1;
+                        }
+                        if (Math.abs(delta) <= width) {
+                            currentPaneX = delta;
+                            nextPaneX = -width + delta;
+                            nextPageReached = false;
                         } else {
-                            animateClamping(startTouchPos > e.getTouchPoint().getSceneX());
+                            currentPaneX = width;
+                            nextPaneX = 0;
+                            nextPageReached = true;
+                        }
+                        currentStackPane.setTranslateX(currentPaneX);
+                        if (getCurrentPageIndex() != 0) {
+                            createPage(nextStackPane, currentIndex - 1);
+                            nextStackPane.setVisible(true);
+                            nextStackPane.setTranslateX(nextPaneX);
+                        } else {
+                            currentStackPane.setTranslateX(0);
                         }
                     }
-                    e.consume();
                 }
-            });
-        }
+                e.consume();
+            }
+        });
+
+        setOnTouchReleased(new EventHandler<TouchEvent>() {
+            @Override public void handle(TouchEvent e) {
+                if (touchEventId != e.getTouchPoint().getId()) {
+                    return;
+                } else {
+                    touchEventId = -1;
+                    setInitialDirection = false;
+                }
+
+                if (touchThresholdBroken) {
+                    // determin if click or swipe
+                    final double drag = e.getTouchPoint().getX() - startTouchPos;
+                    // calculate complete time from start to end of drag
+                    final long time = System.currentTimeMillis() - startTouchTime;
+                    // if time is less than 300ms then considered a quick swipe and whole time is used
+                    final boolean quick = time < 300;
+                    // calculate velocity
+                    final double velocity = quick ? (double)drag / time : touchVelocity; // pixels/ms
+                    // calculate distance we would travel at this speed for 500ms of travel
+                    final double distance = (velocity * 500);
+                    final double width = getWidth() - (getInsets().getLeft() + getInsets().getRight());
+
+                    // The swipe distance travelled.
+                    final double threshold = Math.abs(distance/width);
+                    // The touch and dragged distance travelled.
+                    final double delta = Math.abs(drag/width);
+                    if (threshold > SWIPE_THRESHOLD || delta > SWIPE_THRESHOLD) {
+                        if (startTouchPos > e.getTouchPoint().getX()) {
+                            selectNext();
+                        } else {
+                            selectPrevious();
+                        }
+                    } else {
+                        animateClamping(startTouchPos > e.getTouchPoint().getSceneX());
+                    }
+                }
+                e.consume();
+            }
+        });
     }
 
     private void resetIndexes(boolean usePageIndex) {

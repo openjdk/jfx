@@ -115,19 +115,95 @@ public class SplitPaneSkin extends SkinBase<SplitPane, BehaviorBase<SplitPane>> 
             }
         });
     }
-
+          
     // This listener is to be removed from 'removed' dividers and added to 'added' dividers
-    private final ChangeListener posPropertyListener = new ChangeListener() {
-        @Override
-        public void changed(ObservableValue observable, Object oldValue, Object newValue) {
+    class PosPropertyListener implements ChangeListener<Double> {
+        ContentDivider divider;
+        
+        public PosPropertyListener(ContentDivider divider) {
+            this.divider = divider;
+        }
+        
+        @Override public void changed(ObservableValue observable, Double oldValue, Double newValue) {  
+            // If we already know the dividers are in the correct position.  We do not
+            // need to recheck their values.
+            if (checkDividerPos) {
+                checkDividerPosition(divider, posToDividerPos(divider, newValue), posToDividerPos(divider, oldValue));                
+            }
             requestLayout();
         }
-    };
+    }
+       
+    private void checkDividerPosition(ContentDivider divider, double newPos, double oldPos) {
+        double dividerWidth = divider.prefWidth(-1);
+        Content left = getLeft(divider);
+        Content right = getRight(divider);
+        double minLeft = left == null ? 0 : (horizontal) ? left.minWidth(-1) : left.minHeight(-1);
+        double minRight = right == null ? 0 : (horizontal) ? right.minWidth(-1) : right.minHeight(-1);
+        double maxLeft = left == null ? 0 :
+            left.getContent() != null ? (horizontal) ? left.getContent().maxWidth(-1) : left.getContent().maxHeight(-1) : 0;
+        double maxRight = right == null ? 0 :
+            right.getContent() != null ? (horizontal) ? right.getContent().maxWidth(-1) : right.getContent().maxHeight(-1) : 0;                        
+               
+        double previousDividerPos = 0;
+        double nextDividerPos = getSize();
+        int index = contentDividers.indexOf(divider);
 
+        if (index - 1 >= 0) {
+            previousDividerPos = contentDividers.get(index - 1).getDividerPos();
+            if (previousDividerPos == -1) {
+                // Get the divider position if it hasn't been initialized.
+                previousDividerPos = getAbsoluteDividerPos(contentDividers.get(index - 1));
+            }
+        }
+        if (index + 1 < contentDividers.size()) {
+            nextDividerPos = contentDividers.get(index + 1).getDividerPos();
+            if (nextDividerPos == -1) {
+                // Get the divider position if it hasn't been initialized.
+                nextDividerPos = getAbsoluteDividerPos(contentDividers.get(index + 1));
+            }
+        }
+        
+        // Set the divider into the correct position by looking at the max and min content sizes.
+        checkDividerPos = false;
+        if (newPos > oldPos) {
+            double max = previousDividerPos == 0 ? maxLeft : previousDividerPos + dividerWidth + maxLeft;
+            double min = nextDividerPos - minRight - dividerWidth;                
+            double stopPos = Math.min(max, min);
+            if (newPos >= stopPos) {                
+                setAbsoluteDividerPos(divider, stopPos);
+            } else {
+                double rightMax = nextDividerPos - maxRight - dividerWidth;                    
+                if (newPos <= rightMax) {
+                    setAbsoluteDividerPos(divider, rightMax);
+                } else {                    
+                    setAbsoluteDividerPos(divider, newPos);
+                }
+            }             
+        } else {
+            double max = nextDividerPos - maxRight - dividerWidth;
+            double min = previousDividerPos == 0 ? minLeft : previousDividerPos + minLeft + dividerWidth;
+            double stopPos = Math.max(max, min);
+            if (newPos <= stopPos) {
+                setAbsoluteDividerPos(divider, stopPos);
+            } else {
+                double leftMax = previousDividerPos + maxLeft + dividerWidth;
+                if (newPos >= leftMax) {
+                    setAbsoluteDividerPos(divider, leftMax);
+                } else {
+                    setAbsoluteDividerPos(divider, newPos);
+                }
+            }                
+        }                    
+        checkDividerPos = true;
+    }
+    
     private void addDivider(SplitPane.Divider d) {
-        ContentDivider c = new ContentDivider(d);
+        ContentDivider c = new ContentDivider(d);        
         c.setInitialPos(d.getPosition());
-        c.setDividerPos(d.getPosition());
+        c.setDividerPos(-1);
+        ChangeListener posPropertyListener = new PosPropertyListener(c);
+        c.setPosPropertyListener(posPropertyListener);
         d.positionProperty().addListener(posPropertyListener);
         initializeDivderEventHandlers(c);
         contentDividers.add(c);
@@ -139,7 +215,7 @@ public class SplitPaneSkin extends SkinBase<SplitPane, BehaviorBase<SplitPane>> 
         while (dividers.hasNext()) {
             ContentDivider c = dividers.next();
             getChildren().remove(c);
-            c.getDivider().positionProperty().removeListener(posPropertyListener);
+            c.getDivider().positionProperty().removeListener(c.getPosPropertyListener());
             dividers.remove();
         }
         lastDividerUpdate = 0;
@@ -168,61 +244,11 @@ public class SplitPaneSkin extends SkinBase<SplitPane, BehaviorBase<SplitPane>> 
         });
 
         divider.setOnMouseDragged(new EventHandler<MouseEvent>() {
-            @Override public void handle(MouseEvent e) {
-                double dividerWidth = divider.prefWidth(-1);
-                Content left = getLeft(divider);
-                Content right = getRight(divider);
-                double minLeft = left == null ? 0 : (horizontal) ? left.minWidth(-1) : left.minHeight(-1);
-                double minRight = right == null ? 0 : (horizontal) ? right.minWidth(-1) : right.minHeight(-1);
-                double maxLeft = left == null ? 0 :
-                    left.getContent() != null ? (horizontal) ? left.getContent().maxWidth(-1) : left.getContent().maxHeight(-1) : 0;
-                double maxRight = right == null ? 0 :
-                    right.getContent() != null ? (horizontal) ? right.getContent().maxWidth(-1) : right.getContent().maxHeight(-1) : 0;
-
-                double delta;
-                double w = 0;
-                if (horizontal) {
-                    delta = e.getSceneX() - divider.getPressPos();
-                     w = getWidth() - (getInsets().getLeft() + getInsets().getRight());
-                } else {
-                    delta = e.getSceneY() - divider.getPressPos();
-                    w = getHeight() - (getInsets().getTop() + getInsets().getBottom());
-                }
-
-                // newPos is the center of the divider;
-                double newPos = Math.ceil(divider.getInitialPos() + delta);
-
-                double previousDividerPos = 0;
-                double nextDividerPos = getSize();
-                int index = contentDividers.indexOf(divider);
-
-                if (index - 1 >= 0) {
-                    previousDividerPos = contentDividers.get(index - 1).getDividerPos();
-                }
-                if (index + 1 < contentDividers.size()) {
-                    nextDividerPos = contentDividers.get(index + 1).getDividerPos();
-                }
-                if (delta > 0) {
-                    double max = previousDividerPos == 0 ? maxLeft : previousDividerPos + dividerWidth + maxLeft;
-                    double min = nextDividerPos - minRight - dividerWidth;
-                    double stopPos = Math.min(max, min);
-
-                    if (newPos >= stopPos) {
-                        setAbsoluteDividerPos(divider, stopPos);
-                    } else {
-                        setAbsoluteDividerPos(divider, newPos);
-                    }
-                } else {
-                    double max = nextDividerPos - maxRight - dividerWidth;
-                    double min = previousDividerPos == 0 ? minLeft : previousDividerPos + minLeft + dividerWidth;
-                    double stopPos = Math.max(max, min);
-
-                    if (newPos <= stopPos) {
-                        setAbsoluteDividerPos(divider, stopPos);
-                    } else {
-                        setAbsoluteDividerPos(divider, newPos);
-                    }
-                }
+            @Override public void handle(MouseEvent e) {                
+                double delta = (horizontal ? e.getSceneX() : e.getSceneY()) - divider.getPressPos();                
+                double newPos = Math.ceil(divider.getInitialPos() + delta);    
+                checkDividerPos = true;
+                setAbsoluteDividerPos(divider, newPos);
                 e.consume();
             }
         });
@@ -258,7 +284,7 @@ public class SplitPaneSkin extends SkinBase<SplitPane, BehaviorBase<SplitPane>> 
     }
 
     // Value is the left edge of the divider
-     private void setAbsoluteDividerPos(ContentDivider divider, double value) {
+    private void setAbsoluteDividerPos(ContentDivider divider, double value) {
         if (getWidth() > 0 && getHeight() > 0 && divider != null) {
             SplitPane.Divider paneDivider = divider.getDivider();
             divider.setDividerPos(value);
@@ -273,27 +299,32 @@ public class SplitPaneSkin extends SkinBase<SplitPane, BehaviorBase<SplitPane>> 
             }
         }
     }
-
+   
     // Updates the divider with the SplitPane.Divider's position
     // The value updated to SplitPane.Divider will be the center of the divider.
     // The returned position will be the left edge of the divider
     private double getAbsoluteDividerPos(ContentDivider divider) {
         if (getWidth() > 0 && getHeight() > 0 && divider != null) {
             SplitPane.Divider paneDivider = divider.getDivider();
-            double pos = paneDivider.getPosition();
-            double newPos = getSize() * pos;
-            if (pos == 1) {                
-                newPos -= divider.prefWidth(-1);
-            } else {
-                newPos -= divider.prefWidth(-1)/2;
-            }
-            newPos = Math.round(newPos);
+            double newPos = posToDividerPos(divider, paneDivider.getPosition());
             divider.setDividerPos(newPos);
             return newPos;
         }
         return 0;
     }
 
+    // Returns the left edge of the divider at pos
+    // Pos is the percentage location from SplitPane.Divider.
+    private double posToDividerPos(ContentDivider divider, double pos) {
+        double newPos = getSize() * pos;
+        if (pos == 1) {                
+            newPos -= divider.prefWidth(-1);
+        } else {
+            newPos -= divider.prefWidth(-1)/2;
+        }       
+        return Math.round(newPos);                    
+    }
+    
     private double totalMinSize() {
         double dividerWidth = !contentDividers.isEmpty() ? contentDividers.size() * contentDividers.get(0).prefWidth(-1) : 0;
         double minSize = 0;
@@ -327,7 +358,7 @@ public class SplitPaneSkin extends SkinBase<SplitPane, BehaviorBase<SplitPane>> 
         if (available.isEmpty()) {
             return size;
         }
-
+                
         size = snapSize(size);
         int portion = (int)(size)/available.size();
         int remainder;
@@ -441,6 +472,9 @@ public class SplitPaneSkin extends SkinBase<SplitPane, BehaviorBase<SplitPane>> 
 
         startX = 0;
         startY = 0;
+        // The dividers are already in the correct positions.  Disable
+        // checking the divider positions.
+        checkDividerPos = false;
         for (int i = 0; i < contentDividers.size(); i++) {
             ContentDivider d = contentDividers.get(i);
             if (horizontal) {
@@ -449,9 +483,10 @@ public class SplitPaneSkin extends SkinBase<SplitPane, BehaviorBase<SplitPane>> 
                 startY += getLeft(d).getArea() + (i == 0 ? 0 : dividerWidth);
             }
             d.setX(startX);
-            d.setY(startY);
+            d.setY(startY);              
             setAbsoluteDividerPos(d, (horizontal ? d.getX() : d.getY()));
         }
+        checkDividerPos = true;
     }
 
     private void layoutDividersAndContent(double width, double height) {
@@ -488,12 +523,15 @@ public class SplitPaneSkin extends SkinBase<SplitPane, BehaviorBase<SplitPane>> 
     private double previousHeight = -1;
     private int lastDividerUpdate = 0;
     private boolean resize = false;
+    private boolean checkDividerPos = true;
 
     @Override protected void layoutChildren() {
-        if (!getSkinnable().isVisible() || (horizontal ? getWidth() == 0 : getHeight() == 0)) {
+        if (!getSkinnable().isVisible() || 
+            (horizontal ? getWidth() == 0 : getHeight() == 0) ||
+            contentRegions.isEmpty()) {
             return;
         }
-
+        
         double dividerWidth = contentDividers.isEmpty() ? 0 : contentDividers.get(0).prefWidth(-1);
         double w = getWidth() - (getInsets().getLeft() + getInsets().getRight());
         double h = getHeight() - (getInsets().getTop() + getInsets().getBottom());
@@ -605,7 +643,7 @@ public class SplitPaneSkin extends SkinBase<SplitPane, BehaviorBase<SplitPane>> 
         for(int trys = 0; trys < 10; trys++) {
             // Compute the area in between each divider.            
             ContentDivider previousDivider = null;
-            ContentDivider divider = null;
+            ContentDivider divider = null;            
             for (int i = 0; i < contentRegions.size(); i++) {
                 double space = 0;                
                 if (i < contentDividers.size()) {
@@ -619,12 +657,11 @@ public class SplitPaneSkin extends SkinBase<SplitPane, BehaviorBase<SplitPane>> 
                             // The current divider and the previous divider share the same position
                             // or the current divider position is less than the previous position.
                             // We will set the divider next to the previous divider.
-                            space = Double.NaN;                            
-                            double pos = getAbsoluteDividerPos(previousDivider);                            
+                            double pos = getAbsoluteDividerPos(previousDivider);                                
+                            checkDividerPos = true;
                             setAbsoluteDividerPos(divider, pos + dividerWidth);
-                        } else {
-                            space = getAbsoluteDividerPos(divider) - (getAbsoluteDividerPos(previousDivider) + dividerWidth);
                         }
+                        space = getAbsoluteDividerPos(divider) - (getAbsoluteDividerPos(previousDivider) + dividerWidth);
                     }
                 } else if (i == contentDividers.size()) {
                     // Last panel
@@ -655,21 +692,8 @@ public class SplitPaneSkin extends SkinBase<SplitPane, BehaviorBase<SplitPane>> 
                     // Add the space that needs to be distributed to the others
                     extraSpace += (c.getArea() - max);
                     c.setArea(max);
-                    c.setAvailable(c.getArea() - min);
-                } else if (c.getArea() <= min) {
-                    c.setAvailable(c.getArea() - min);
-                } else if (Double.isNaN(c.getArea())) {
-                    if (min == 0) {
-                        // We have no panels and the dividers are stacked ontop of each other.
-                        c.setArea(0);
-                        c.setAvailable(0);
-                    } else {
-                        c.setArea(0);
-                        c.setAvailable(-min);
-                    }
-                } else {
-                    c.setAvailable(c.getArea() - min);
                 }
+                c.setAvailable(c.getArea() - min);
                 if (c.getAvailable() < 0) {
                     spaceRequested += c.getAvailable();
                 }
@@ -788,7 +812,7 @@ public class SplitPaneSkin extends SkinBase<SplitPane, BehaviorBase<SplitPane>> 
         }
 
         layoutDividersAndContent(w, h);        
-        resize = false;
+        resize = false;        
     }
 
     @Override protected double computeMinWidth(double height) {
@@ -859,6 +883,13 @@ public class SplitPaneSkin extends SkinBase<SplitPane, BehaviorBase<SplitPane>> 
         }
     }
 
+    private void printDividerPositions() {
+        for (int i = 0; i < contentDividers.size(); i++) {
+            System.out.print("DIVIDER[" + i + "] " + contentDividers.get(i).getDividerPos() + " ");
+        } 
+        System.out.println("");
+    }
+    
     private void printAreaAndAvailable() {
         for (int i = 0; i < contentRegions.size(); i++) {
             System.out.print("AREA[" + i + "] " + contentRegions.get(i).getArea() + " ");
@@ -881,7 +912,8 @@ public class SplitPaneSkin extends SkinBase<SplitPane, BehaviorBase<SplitPane>> 
         private SplitPane.Divider d;
         private StackPane grabber;
         private double x;
-        private double y;
+        private double y;  
+        private ChangeListener listener;
 
         public ContentDivider(SplitPane.Divider d) {
             getStyleClass().setAll("split-pane-divider");
@@ -977,6 +1009,14 @@ public class SplitPaneSkin extends SkinBase<SplitPane, BehaviorBase<SplitPane>> 
             this.y = y;
         }
 
+        public ChangeListener getPosPropertyListener() {
+            return listener;
+        }
+
+        public void setPosPropertyListener(ChangeListener listener) {
+            this.listener = listener;
+        }
+                
         @Override protected double computeMinWidth(double height) {
             return computePrefWidth(height);
         }

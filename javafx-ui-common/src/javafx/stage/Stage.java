@@ -223,7 +223,7 @@ public class Stage extends Window {
     }
     
     /**
-     * @InheritDoc
+     * @inheritDoc
      */
     @Override public final void show() {
         super.show();

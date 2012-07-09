@@ -130,7 +130,7 @@ public class BehaviorBase<C extends Control> {
      * @return a non-null list of key bindings.
      */
     protected List<KeyBinding> createKeyBindings() {
-        return Collections.emptyList();
+        return TRAVERSAL_BINDINGS;
     }
 
     /***************************************************************************
