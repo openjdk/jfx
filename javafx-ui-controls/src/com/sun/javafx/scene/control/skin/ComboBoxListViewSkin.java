@@ -147,6 +147,14 @@ public class ComboBoxListViewSkin<T> extends ComboBoxPopupControl<T> {
                         else comboBox.show();
                         t.consume();
                         return;
+                    } else if (ke.getCode() == KeyCode.F10 || ke.getCode() == KeyCode.ESCAPE) {
+                        // RT-23275: The TextField fires F10 and ESCAPE key events
+                        // up to the parent, which are then fired back at the 
+                        // TextField, and this ends up in an infinite loop until
+                        // the stack overflows. So, here we consume these two
+                        // events and stop them from going any further.
+                        t.consume();
+                        return;
                     }
                 }
                 
