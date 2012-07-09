@@ -132,6 +132,11 @@ public class Lighting extends Effect {
 
     private final LightChangeListener lightChangeListener = new LightChangeListener();
 
+    /**
+     * 
+     * @treatAsPrivate implementation detail
+     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
+     */
     @Override
     public Effect impl_copy() {
         Lighting lighting = new Lighting(this.getLight());
