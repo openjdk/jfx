@@ -75,8 +75,8 @@ public class GridPaneDesignInfo extends PaneDesignInfo {
         final double gridPaneWidth = pane.snapSize(pane.getWidth()) - (left + right);
 
         // Compute row height
-        double[] rowHeights = pane.getRowHeights();
-        if (rowHeights == null || rowHeights.length == 0) {
+        double[] rowHeights = pane.getRowHeights();        
+        if (rowHeights == null || rowHeights.length == 0 || rowHeights.length != getRowCount(pane)) {
             rowHeights = new double[] {0};
             rowIndex = 0;
         }
@@ -97,7 +97,7 @@ public class GridPaneDesignInfo extends PaneDesignInfo {
 
         // Compute column width
         double[] columnWidths = pane.getColumnWidths();
-        if (columnWidths == null || columnWidths.length == 0) {
+        if (columnWidths == null || columnWidths.length == 0 || columnWidths.length != getColumnCount(pane)) {
             columnWidths = new double[] {0};
             columnIndex = 0;
         }
