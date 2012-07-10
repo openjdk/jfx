@@ -345,6 +345,7 @@ public class ColorAdjust extends Effect {
      * @treatAsPrivate implementation detail
      * @deprecated This is an internal API that is not intended for use and will be removed in the next version
      */
+    @Deprecated
     @Override
     public Effect impl_copy() {
         ColorAdjust ca = new ColorAdjust(this.getHue(), this.getSaturation(), 
