@@ -535,10 +535,8 @@ public class TabPaneSkin extends SkinBase<TabPane, TabPaneBehavior> {
 
                 @Override protected void layoutChildren() {
                     if (tabsFit()) {
-                        controlButtons.showTabsMenu(false);
                         setScrollOffset(0.0);
                     } else {
-                        controlButtons.showTabsMenu(true);
                         if (!removeTab.isEmpty()) {                            
                             double offset = 0;
                             double w = tabHeaderArea.getWidth() - snapSize(controlButtons.prefWidth(-1)) - firstTabIndent() - SPACER;
@@ -811,7 +809,13 @@ public class TabPaneSkin extends SkinBase<TabPane, TabPaneBehavior> {
             double tabBackgroundHeight = snapSize(prefHeight(-1));
             double headersPrefWidth = snapSize(headersRegion.prefWidth(-1));
             double headersPrefHeight = snapSize(headersRegion.prefHeight(-1));
-
+            
+            if (tabsFit()) {
+                controlButtons.showTabsMenu(false);
+            } else {
+                controlButtons.showTabsMenu(true);
+            }
+            
             updateHeaderClip();
 
             // RESIZE CONTROL BUTTONS
@@ -826,7 +830,7 @@ public class TabPaneSkin extends SkinBase<TabPane, TabPaneBehavior> {
                 headerBackground.resize(snapSize(getWidth()), snapSize(getHeight()));
                 headerBackground.setVisible(true);
             }
-
+            
             double startX = 0;
             double startY = 0;
             double controlStartX = 0;
