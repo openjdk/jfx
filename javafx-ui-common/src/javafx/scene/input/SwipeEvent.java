@@ -47,6 +47,8 @@ import javafx.event.EventType;
  * is used as gesture coordinates) or indirect (performed
  * indirectly as on track pad - the mouse cursor location is usually used
  * as the gesture coordinates in this case).
+ *
+ * @since 2.2
  */
 public class SwipeEvent extends GestureEvent {
 

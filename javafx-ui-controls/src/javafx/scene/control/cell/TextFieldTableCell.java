@@ -40,6 +40,7 @@ import javafx.util.converter.DefaultStringConverter;
  * default, stretch to fill the entire table cell.
  * 
  * @param <T> The type of the elements contained within the TableColumn.
+ * @since 2.2
  */
 public class TextFieldTableCell<S,T> extends TableCell<S,T> {
     

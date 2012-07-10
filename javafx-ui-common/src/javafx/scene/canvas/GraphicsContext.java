@@ -98,7 +98,7 @@ root.getChildren().add(canvas);
  * </pre>
  * </p>
  *
- * @since JavaFX 2.2
+ * @since 2.2
  */
 public final class GraphicsContext {
     Canvas theCanvas;

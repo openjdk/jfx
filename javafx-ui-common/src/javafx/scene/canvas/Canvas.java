@@ -68,7 +68,7 @@ root.getChildren().add(canvas);
  * </pre>
  * </p>
  *
- * @since JavaFX 2.2
+ * @since 2.2
  */
 public class Canvas extends Node {
     private static final int DEFAULT_BUF_SIZE = 1024;

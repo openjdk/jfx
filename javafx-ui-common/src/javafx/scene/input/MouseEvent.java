@@ -713,6 +713,7 @@ public class MouseEvent extends InputEvent {
      * application, this flag can be used to tell apart the usual mouse dragging
      * from the touch screen dragging already handled as scroll events.
      * @return true if this event is synthesized from using a touch screen
+     * @since 2.2
      */
     public boolean isSynthesized() {
         return synthesized;

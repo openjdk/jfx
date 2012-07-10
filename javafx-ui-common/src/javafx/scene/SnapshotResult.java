@@ -28,6 +28,7 @@ import javafx.scene.image.WritableImage;
 
 /**
  * This class holds the result of a snapshot operation.
+ * @since 2.2
  */
 public class SnapshotResult {
     private WritableImage image;

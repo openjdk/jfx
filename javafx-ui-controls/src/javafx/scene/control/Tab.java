@@ -501,6 +501,7 @@ public class Tab implements EventTarget {
      * @param value the state to set this tab
      * 
      * @defaultValue false
+     * @since 2.2
      */
     public final void setDisable(boolean value) { 
         disableProperty().set(value);
@@ -508,7 +509,8 @@ public class Tab implements EventTarget {
 
     /**
      * Returns {@code true} if this tab is disable.
-     */    
+     * @since 2.2
+     */
     public final boolean isDisable() { return disable == null ? false : disable.get(); }
 
     /**
@@ -517,7 +519,8 @@ public class Tab implements EventTarget {
      * can be selected using {@link TabPane#getSelectionModel()}.
      * 
      * @defaultValue false
-     */    
+     * @since 2.2
+     */
     public final BooleanProperty disableProperty() {
         if (disable == null) {
             disable = new BooleanPropertyBase(false) {
@@ -549,7 +552,7 @@ public class Tab implements EventTarget {
     /**
      * Returns true when the {@code Tab} {@link #disableProperty disable} is set to
      * {@code true} or if the {@code TabPane} is disabled.
-     * 
+     * @since 2.2
      */
     public final boolean isDisabled() {
         return disabled == null ? false : disabled.get();
@@ -561,7 +564,8 @@ public class Tab implements EventTarget {
      * itself or if the {@code TabPane} is disabled.
      * 
      * @defaultValue false
-     */    
+     * @since 2.2
+     */
     public final ReadOnlyBooleanProperty disabledProperty() {
         return disabledPropertyImpl().getReadOnlyProperty();
     }
@@ -599,7 +603,8 @@ public class Tab implements EventTarget {
       *
       * @return an observable map of properties on this Tab for use primarily
       * by application developers
-      */
+     * @since 2.2
+     */
      public final ObservableMap<Object, Object> getProperties() {
         if (properties == null) {
             properties = FXCollections.observableMap(new HashMap<Object, Object>());
@@ -610,6 +615,7 @@ public class Tab implements EventTarget {
     /**
      * Tests if this Tab has properties.
      * @return true if this tab has properties.
+     * @since 2.2
      */
      public boolean hasProperties() {
         return properties != null;
@@ -625,6 +631,7 @@ public class Tab implements EventTarget {
      *
      * @param value The value to be stored - this can later be retrieved by calling
      *          {@link Tab#getUserData()}.
+     * @since 2.2
      */
     public void setUserData(Object value) {
         getProperties().put(USER_DATA_KEY, value);
@@ -636,6 +643,7 @@ public class Tab implements EventTarget {
      *
      * @return The Object that was previously set, or null if no property
      *          has been set or if null was set.
+     * @since 2.2
      */
     public Object getUserData() {
         return getProperties().get(USER_DATA_KEY);

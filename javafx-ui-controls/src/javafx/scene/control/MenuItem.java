@@ -336,6 +336,7 @@ public class MenuItem implements EventTarget {
      * The event handler that is associated with invocation of an accelerator for a MenuItem. This 
      * can happen when a key sequence for an accelerator is pressed. The event handler is also  
      * invoked when onShowing event handler is called. 
+     * @since 2.2
      */
     private ObjectProperty<EventHandler<Event>> onMenuValidation;
     

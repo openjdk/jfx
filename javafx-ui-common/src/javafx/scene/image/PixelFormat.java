@@ -33,6 +33,7 @@ import java.util.Arrays;
 /**
  * A {@code PixelFormat} object defines the layout of data for a pixel of
  * a given format.
+ * @since 2.2
  */
 public abstract class PixelFormat<T extends Buffer> {
     public enum Type {

@@ -74,6 +74,7 @@ import javafx.util.StringConverter;
  * 
  * @param <T> The type of the elements contained within the TreeView TreeItem 
  *      instances.
+ * @since 2.2
  */
 public class CheckBoxTreeCell<T> extends TreeCell<T> {
     

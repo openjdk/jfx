@@ -257,6 +257,7 @@ public abstract class PopupWindow extends Window {
      * consumed. Having the event consumed prevents it from triggering some
      * additional UI response in the Popup's owner window.
      * @defaultValue true
+     * @since 2.2
      */
     private BooleanProperty consumeAutoHidingEvents =
             new SimpleBooleanProperty(this, "consumeAutoHidingEvents",

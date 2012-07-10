@@ -30,6 +30,7 @@ import javafx.scene.transform.Transform;
 
 /**
  * Parameters used to specify the rendering attributes for Node snapshot.
+ * @since 2.2
  */
 public class SnapshotParameters {
 

@@ -414,6 +414,7 @@ public class AreaChart<X,Y> extends XYChart<X,Y> {
 
     /**
      * This is called whenever a series is added or removed and the legend needs to be updated
+     * @since 2.2
      */
     @Override protected void updateLegend() {
         legend.getItems().clear();

@@ -53,6 +53,8 @@ import javafx.event.EventType;
  * node on which it was pressed, regardless of where it moves then. It is
  * possible to change this behavior by using a grabbing mechanism described
  * in {@link TouchPoint} documentation.
+ *
+ * @since 2.2
  */
 public final class TouchEvent extends InputEvent {
 

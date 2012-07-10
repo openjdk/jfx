@@ -1090,6 +1090,7 @@ public class Image {
      * is not supported for reading and writing pixels to.
      * 
      * @return the {@code PixelReader} for reading the pixel data of the image
+     * @since 2.2
      */
     public final PixelReader getPixelReader() {
         if (!pixelsReadable()) {

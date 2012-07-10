@@ -124,6 +124,8 @@ public class HelloImagePattern extends Application {
 </pre></code>
  * <p>The code above produces the following:</p>
  * <p><img src="doc-files/ImagePattern.png"/></p>
+ *
+ * @since 2.2
  */
 public final class ImagePattern extends Paint {
     

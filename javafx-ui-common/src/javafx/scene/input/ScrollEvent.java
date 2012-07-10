@@ -93,6 +93,8 @@ import javafx.event.EventType;
             break;
     }
  </pre></code>
+ *
+ * @since 2.2
  */
 public class ScrollEvent extends GestureEvent {
 

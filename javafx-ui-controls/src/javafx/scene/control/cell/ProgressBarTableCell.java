@@ -36,6 +36,7 @@ import javafx.util.Callback;
  * {@link ProgressBar} node inside the cell.
  * 
  * @param <S> The type of the elements contained within the TableView.
+ * @since 2.2
  */
 @NoBuilder // @NoBuilder because if the builder is generated, it does not compile
 public class ProgressBarTableCell<S> extends TableCell<S, Double> {

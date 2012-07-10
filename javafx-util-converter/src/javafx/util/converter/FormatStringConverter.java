@@ -31,6 +31,8 @@ import javafx.util.StringConverter;
 /**
  * <p>{@link StringConverter} implementation that can use a {@link Format} 
  * instance.</p>
+ *
+ * @since 2.2
  */
 @NoBuilder
 public class FormatStringConverter<T> extends StringConverter<T> {

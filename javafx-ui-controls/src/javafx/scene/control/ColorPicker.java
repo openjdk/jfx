@@ -73,7 +73,7 @@ import javafx.scene.paint.Color;
  * <pre><code>
  * colorPicker.getStyleClass().add("split-button");
  * </pre><code>
- * 
+ * @since 2.2
  */
 public class ColorPicker extends ComboBoxBase<Color> {
 
