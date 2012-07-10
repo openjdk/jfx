@@ -551,7 +551,11 @@ public class TitledPaneSkin extends LabeledSkinBase<TitledPane, TitledPaneBehavi
             int index = engine.registeredNodes.indexOf(node);
 
             if (index == -1 && direction.equals(Direction.PREVIOUS)) {
-                getSkinnable().requestFocus();
+                // If the parent is an accordion we want to focus to go outside of the
+                // accordion and to the previous focusable control.
+                if (getSkinnable().getParent() != null && getSkinnable().getParent() instanceof AccordionSkin) {
+                    new TraversalEngine(getSkinnable(), false).trav(getSkinnable().getParent(), Direction.PREVIOUS);
+                }
             }
             if (index == -1 && direction.equals(Direction.NEXT)) {
                 // If the parent is an accordion we want to focus to go outside of the
