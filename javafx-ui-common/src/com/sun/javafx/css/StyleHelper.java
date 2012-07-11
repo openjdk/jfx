@@ -755,7 +755,7 @@ public class StyleHelper {
         //
         // If someone is watching the styles, then we have to take the slow path.
         //
-        boolean fastpath = styleMap == null;
+        boolean fastpath = styleMap == null && inlineStyles == null;
         
         if (cacheEntry.font == null) {
             final CalculatedValue font = 
@@ -854,11 +854,11 @@ public class StyleHelper {
                 calculatedValue = lookup(node, styleable, isUserSet, states, 
                         inlineStyles, node, cacheEntry, styleList);
 
-//                if (fastpath) {
+                if (fastpath) {
                     // if userStyles is null and calculatedValue was null,
                     // then the calculatedValue didn't come from the cache
                     cacheEntry.put(property, calculatedValue);
-//                }
+                }
 
             }
 
