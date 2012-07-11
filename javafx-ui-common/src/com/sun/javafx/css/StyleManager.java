@@ -1124,6 +1124,9 @@ public class StyleManager {
             
             final List<ParentStylesheetContainer> list = new ArrayList<ParentStylesheetContainer>();
             
+            // RT-20643 
+            CssError.setCurrentScene(parent.getScene());
+            
             for (int n=0, nMax=parentStylesheets.size(); n<nMax; n++) {
                 final String fname = parentStylesheets.get(n);
                 ParentStylesheetContainer container = null;
@@ -1150,6 +1153,8 @@ public class StyleManager {
                 }
                 if (container != null) list.add(container);
             }
+            // RT-20643 
+            CssError.setCurrentScene(null);
             
             return list;
         }
