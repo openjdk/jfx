@@ -25,7 +25,11 @@
 
 package com.sun.javafx.css;
 
+import java.lang.ref.Reference;
+import java.lang.ref.WeakReference;
 import java.net.URL;
+import javafx.scene.Node;
+import javafx.scene.Scene;
 
 /**
  * Encapsulate information about the source and nature of errors encountered
@@ -33,15 +37,51 @@ import java.net.URL;
  */
 public class CssError {
  
-    /** The error message from the CSS code */
+    // RT-20643 - hold a ref so CssError doesn't leak Scene.
+    private static Reference<Scene> SCENE_REF;
+            
+    /** 
+     * Set the static scene variable. This scene will be set on all CssErrors
+     * generated after the call is made. The argument may be null. Null should
+     * be passed when the code exits a method from which CssErrors may be 
+     * created. This is intended internal use and should not be called from
+     * outside the css code.
+     */
+    public static void setCurrentScene(Scene scene) {
+        
+        if (scene != null) {
+            // don't make new ref for same scene
+            final Scene oldScene = SCENE_REF != null ? SCENE_REF.get() : null;
+            if (oldScene != scene) {
+                SCENE_REF = new WeakReference<Scene>(scene);
+            }
+        } else {
+            SCENE_REF = null;
+        }
+    }
+    
+    /** @return The error message from the CSS code. */
     public final String getMessage() {
         return message;
     }
-        
+
     public CssError(String message) {
         this.message = message;
+        // RT-20643        
+        this.sceneRef = SCENE_REF;
     }
     
+    /** 
+     * @return The Scene in which this error occurred, if known, or null.
+     */
+    public Scene getScene() {
+        return sceneRef != null ? sceneRef.get() : null;
+    }
+    
+    // RT-20643 - track the scene that this error belongs to       
+    // Note that CssError has the potential to leak Scene so the Scene
+    // variable is held as a Reference.
+    private final Reference<Scene> sceneRef;
     protected final String message;
 
     @Override
@@ -125,14 +165,14 @@ public class CssError {
     public final static class PropertySetError extends CssError { 
         
         public PropertySetError(StyleableProperty styleableProperty, 
-                Styleable styleable, String message) {
+                Node node, String message) {
             super(message);
             this.styleableProperty = styleableProperty;
-            this.styleable = styleable;
+            this.node = node;
         }
         
-        public Styleable getStyleable() {
-            return styleable;
+        public Node getNode() {
+            return node;
         }
         
         public StyleableProperty getProperty() {
@@ -140,7 +180,7 @@ public class CssError {
         }
         
         private final StyleableProperty styleableProperty;
-        private final Styleable styleable;
+        private final Node node;
         
     }
 }     

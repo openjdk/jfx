@@ -782,6 +782,9 @@ public class StyleHelper {
         // Used in the for loop below, and a convenient place to stop when debugging.
         final int max = styleables.size();
 
+        // RT-20643
+        CssError.setCurrentScene(node.getScene());
+        
         // For each property that is settable, we need to do a lookup and
         // transition to that value.
         for(int n=0; n<max; n++) {
@@ -883,7 +886,7 @@ public class StyleHelper {
                     List<CssError> errors = null;
                     if ((errors = StyleManager.getInstance().getErrors()) != null) {
                         final String msg = String.format("Failed to set css [%s] due to %s\n", styleable, e.getMessage());
-                        final CssError error = new CssError.PropertySetError(styleable, node.impl_getStyleable(), msg);
+                        final CssError error = new CssError.PropertySetError(styleable, node, msg);
                         errors.add(error);
                     }
                     // TODO: use logger here
@@ -894,6 +897,10 @@ public class StyleHelper {
                 }
 
             }
+        
+        // RT-20643
+        CssError.setCurrentScene(null);
+
         // If the list weren't empty, we'd worry about animations at this
         // point. TODO need to implement animation trickery here
     }
@@ -1064,7 +1071,7 @@ public class StyleHelper {
                     final String msg = formatExceptionMessage(node, styleable, style.getStyle(), cce);
                     List<CssError> errors = null;
                     if ((errors = StyleManager.getInstance().getErrors()) != null) {
-                        final CssError error = new CssError.PropertySetError(styleable, node.impl_getStyleable(), msg);
+                        final CssError error = new CssError.PropertySetError(styleable, node, msg);
                         errors.add(error);
                     }
                     if (LOGGER.isLoggable(PlatformLogger.WARNING)) {
@@ -1512,7 +1519,7 @@ public class StyleHelper {
                 final String msg = formatUnresolvedLookupMessage(node, styleable, style.getStyle(),resolved);
                 List<CssError> errors = null;
                 if ((errors = StyleManager.getInstance().getErrors()) != null) {
-                    final CssError error = new CssError.PropertySetError(styleable, node.impl_getStyleable(), msg);
+                    final CssError error = new CssError.PropertySetError(styleable, node, msg);
                     errors.add(error);
                 }
                 if (LOGGER.isLoggable(PlatformLogger.WARNING)) {
@@ -1526,7 +1533,7 @@ public class StyleHelper {
                 final String msg = formatExceptionMessage(node, styleable, style.getStyle(), iae);
                 List<CssError> errors = null;
                 if ((errors = StyleManager.getInstance().getErrors()) != null) {
-                    final CssError error = new CssError.PropertySetError(styleable, node.impl_getStyleable(), msg);
+                    final CssError error = new CssError.PropertySetError(styleable, node, msg);
                     errors.add(error);
                 }
                 if (LOGGER.isLoggable(PlatformLogger.WARNING)) {
@@ -1539,7 +1546,7 @@ public class StyleHelper {
                 final String msg = formatExceptionMessage(node, styleable, style.getStyle(), npe);
                 List<CssError> errors = null;
                 if ((errors = StyleManager.getInstance().getErrors()) != null) {
-                    final CssError error = new CssError.PropertySetError(styleable, node.impl_getStyleable(), msg);
+                    final CssError error = new CssError.PropertySetError(styleable, node, msg);
                     errors.add(error);
                 }
                 if (LOGGER.isLoggable(PlatformLogger.WARNING)) {

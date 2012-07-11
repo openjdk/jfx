@@ -636,16 +636,31 @@ public class StyleManager {
     
     /**
      * Add a user agent stylesheet, possibly overriding styles in the default
-     * user agent stylesheet. The node argument must be an instance of Control.
+     * user agent stylesheet.
      *
      * @param fname The file URL, either relative or absolute, as a String.
      */
     public void addUserAgentStylesheet(String fname) {
+        addUserAgentStylesheet(null, fname);
+    }
+    
+    /**
+     * Add a user agent stylesheet, possibly overriding styles in the default
+     * user agent stylesheet.
+     * @param scene Only used in CssError for tracking back to the scene that loaded the stylesheet
+     * @param fname  The file URL, either relative or absolute, as a String.
+     */
+    // For RT-20643    
+    public void addUserAgentStylesheet(Scene scene, String fname) {
                 
         // nothing to add
         if (fname == null ||  fname.trim().isEmpty()) return;
 
         if (userAgentStylesheetMap.containsKey(fname) == false) {
+
+            // RT-20643
+            CssError.setCurrentScene(scene);
+            
             Stylesheet ua_stylesheet = loadStylesheet(fname);
             ua_stylesheet.setOrigin(Stylesheet.Origin.USER_AGENT);
             userAgentStylesheetMap.put(fname, ua_stylesheet);
@@ -653,6 +668,9 @@ public class StyleManager {
             if (ua_stylesheet != null) {
                 userAgentStylesheetsChanged();                
             }
+            
+            // RT-20643
+            CssError.setCurrentScene(null);
         }
 
     }
@@ -663,15 +681,31 @@ public class StyleManager {
      * @param fname The file URL, either relative or absolute, as a String.
      */
     public void setDefaultUserAgentStylesheet(String fname) {
+        setDefaultUserAgentStylesheet(null, fname);
+    }
+    
+    /**
+     * Set the default user agent stylesheet
+     * @param scene Only used in CssError for tracking back to the scene that loaded the stylesheet
+     * @param fname  The file URL, either relative or absolute, as a String.
+     */
+    // For RT-20643
+    public void setDefaultUserAgentStylesheet(Scene scene, String fname) {
 
         if (fname == null || fname.trim().isEmpty())
             throw new IllegalArgumentException("null arg fname");
 
+        // RT-20643
+        CssError.setCurrentScene(scene);
+        
         Stylesheet ua_stylesheet = loadStylesheet(fname);
         if (ua_stylesheet != null) {
             ua_stylesheet.setOrigin(Stylesheet.Origin.USER_AGENT);
             setDefaultUserAgentStylesheet(ua_stylesheet);
         } 
+        
+        // RT-20643
+        CssError.setCurrentScene(null);
 
     }
     
@@ -811,6 +845,9 @@ public class StyleManager {
         // if there are no stylesheets, then they were probably all removed.
         if (scene.getStylesheets().size() == 0) return;
 
+        // RT-20643
+        CssError.setCurrentScene(scene);
+        
         // create the stylesheets, one per URL supplied
         final Collection<Stylesheet> stylesheets = new ArrayList<Stylesheet>();
         for (int i = 0; i < scene.getStylesheets().size(); i++) {
@@ -830,6 +867,9 @@ public class StyleManager {
             }
         }
 
+        // RT-20643
+        CssError.setCurrentScene(scene);
+        
         // Look up existing user stylesheets and add new stylesheets.
         // We defer creation of the containerMap until needed
         if (containerMap == null) containerMap =
@@ -1347,12 +1387,26 @@ public class StyleManager {
     }
 
     private ObservableList<CssError> errors = null;
+    /** 
+     * Errors that may have occurred during css processing. 
+     * This list is null until errorsProperty() is called.
+     * @return 
+     */
     public ObservableList<CssError> errorsProperty() {
         if (errors == null) {
             errors = FXCollections.observableArrayList();
         }
         return errors;
     }
+    
+    /** 
+     * Errors that may have occurred during css processing.
+     * This list is null until errorsProperty() is called and is used 
+     * internally to figure out whether or  not anyone is interested in 
+     * receiving CssError.
+     * Not meant for general use - call errorsProperty() instead. 
+     * @return 
+     */
     public ObservableList<CssError> getErrors() {
         return errors;
     }
