@@ -57,7 +57,7 @@ import com.sun.javafx.charts.Legend.LegendItem;
 import com.sun.javafx.css.StyleableBooleanProperty;
 import com.sun.javafx.css.StyleableProperty;
 import com.sun.javafx.css.converters.BooleanConverter;
-import java.util.Collections;
+import java.util.*;
 
 /**
  * Line Chart plots a line connecting the data points in a series. The data points
@@ -259,8 +259,12 @@ public class LineChart<X,Y> extends XYChart<X,Y> {
                 }
             } else if (itemIndex == 0 && series.getDataSize() > 1) {
                 animate = true;
-                item.setXValue(series.getData().get(0).getXValue());
-                item.setYValue(series.getData().get(0).getYValue());
+                Iterator<Data<X,Y>> iter = getDisplayedDataIterator(series);
+                if (iter.hasNext()) { // get first data value
+                    Data<X,Y> d = iter.next();
+                    item.setXValue(d.getXValue());
+                    item.setYValue(d.getYValue());
+                }
             } else if (itemIndex == (series.getDataSize() - 1) && series.getDataSize() > 1) {
                 animate = true;
                 int last = series.getData().size() - 1;
