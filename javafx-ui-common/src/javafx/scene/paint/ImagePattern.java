@@ -216,8 +216,16 @@ public final class ImagePattern extends Paint {
      * values are used for all other parameters.
      * 
      * @param image the image to be used as the paint.
+     * @throws NullPointerException if the image is null.
+     * @throws IllegalArgumentException if image is not done loading, 
+     * that is if progress is < 1.
      */
     public ImagePattern(Image image) {
+        if (image == null) {
+            throw new NullPointerException("Image must be non-null.");
+        } else if (image.getProgress() < 1.0) {
+            throw new IllegalArgumentException("Image not yet loaded");
+        }
         this.image = image;
     }
 
@@ -231,10 +239,18 @@ public final class ImagePattern extends Paint {
      * @param height the height of the anchor rectangle.
      * @param proportional whether the coordinates are proportional
      * to the shape which ImagePattern fills
+     * @throws NullPointerException if the image is null.
+     * @throws IllegalArgumentException if image is not done loading, 
+     * that is if progress is < 1.
      */
     public ImagePattern(Image image, double x, double y, double width,
             double height, boolean proportional) {
 
+        if (image == null) {
+            throw new NullPointerException("Image must be non-null.");
+        } else if (image.getProgress() < 1.0) {
+            throw new IllegalArgumentException("Image not yet loaded");
+        }
         this.image = image;
         this.x = x;
         this.y = y;
