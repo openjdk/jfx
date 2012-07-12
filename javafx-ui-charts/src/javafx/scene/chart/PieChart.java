@@ -24,6 +24,7 @@
  */
 package javafx.scene.chart;
 
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 
@@ -52,14 +53,10 @@ import javafx.event.EventHandler;
 import javafx.geometry.Side;
 import javafx.scene.Node;
 import javafx.scene.layout.Region;
-import javafx.scene.shape.Arc;
-import javafx.scene.shape.ArcTo;
-import javafx.scene.shape.ArcType;
-import javafx.scene.shape.ClosePath;
-import javafx.scene.shape.LineTo;
-import javafx.scene.shape.MoveTo;
-import javafx.scene.shape.Path;
+import javafx.scene.paint.Color;
+import javafx.scene.shape.*;
 import javafx.scene.text.Text;
+import javafx.scene.transform.Scale;
 import javafx.util.Duration;
 
 import com.sun.javafx.charts.Legend;
@@ -84,6 +81,7 @@ import javafx.animation.*;
 public class PieChart extends Chart {
 
     // -------------- PRIVATE FIELDS -----------------------------------------------------------------------------------
+    private static final int MIN_PIE_RADIUS = 25;
     private int defaultColorIndex = 0;
     private static final double LABEL_TICK_GAP = 6;
     private static final double LABEL_BALL_RADIUS = 2;
@@ -474,7 +472,9 @@ public class PieChart extends Chart {
         double[] labelsX = null;
         double[] labelsY = null;
         double[] labelAngles = null;
+        double labelScale = 1;
         ArrayList<LabelLayoutInfo> fullPie = null;
+        boolean shouldShowLabels = true;
         if(getLabelsVisible()) {
             labelsX = new double[getDataSize()];
             labelsY = new double[getDataSize()];
@@ -483,17 +483,20 @@ public class PieChart extends Chart {
             int index = 0;
             double start = getStartAngle();
             for (Data item = begin; item != null; item = item.next) {
+                // remove any scale on the text node
+                item.textNode.getTransforms().clear();
+
                 double size = (isClockwise()) ? (-scale * Math.abs(item.getCurrentPieValue())) : (scale * Math.abs(item.getCurrentPieValue()));
                 labelAngles[index] = normalizeAngle(start + (size / 2));
-                final boolean isLeftSide = !(labelAngles[index] > -90 && labelAngles[index] < 90);
                 final double sproutX = calcX(labelAngles[index], getLabelLineLength(), 0);
                 final double sproutY = calcY(labelAngles[index], getLabelLineLength(), 0);
                 labelsX[index] = sproutX;
                 labelsY[index] = sproutY;
-                if (sproutX > 0) { // on left
+                if (sproutX < 0) { // on left
                     minX = Math.min(minX, sproutX-item.textNode.getLayoutBounds().getWidth()-LABEL_TICK_GAP);
                 } else { // on right
                     maxX = Math.max(maxX, sproutX+item.textNode.getLayoutBounds().getWidth()+LABEL_TICK_GAP);
+
                 }
                 if (sproutY > 0) { // on bottom
                     maxY = Math.max(maxY, sproutY+item.textNode.getLayoutBounds().getMaxY());
@@ -506,16 +509,41 @@ public class PieChart extends Chart {
             double xPad = (Math.max(Math.abs(minX), Math.abs(maxX))) * 2;
             double yPad = (Math.max(Math.abs(minY), Math.abs(maxY))) * 2;
             pieRadius = Math.min(contentWidth - xPad, contentHeight - yPad) / 2;
-        } else {
+            // check if this makes the pie too small
+            if (pieRadius < MIN_PIE_RADIUS ) {
+                // calculate scale for text to fit labels in
+                final double roomX = contentWidth-MIN_PIE_RADIUS-MIN_PIE_RADIUS;
+                final double roomY = contentHeight-MIN_PIE_RADIUS-MIN_PIE_RADIUS;
+                labelScale = Math.min(
+                        roomX/xPad,
+                        roomY/yPad
+                );
+                // hide labels if pie radius is less than minimum
+                if ((begin == null && labelScale < 0.7) || ((begin.textNode.getFont().getSize()*labelScale) < 9)) {
+                    shouldShowLabels = false;
+                    labelScale = 1;
+                } else {
+                    // set pieRadius to minimum
+                    pieRadius = MIN_PIE_RADIUS;
+                    // apply scale to all label positions
+                    for(int i=0; i< labelsX.length; i++) {
+                        labelsX[i] =  labelsX[i] * labelScale;
+                        labelsY[i] =  labelsY[i] * labelScale;
+                    }
+                }
+            }
+        }
+
+        if(!shouldShowLabels) {
             pieRadius = Math.min(contentWidth,contentHeight) / 2;
         }
-      
+
         if (getChartChildren().size() > 0) {
             int index = 0;
             for (Data item = begin; item != null; item = item.next) {
                 // layout labels for pie slice
-                item.textNode.setVisible(getLabelsVisible());
-                if (getLabelsVisible()) {
+                item.textNode.setVisible(shouldShowLabels);
+                if (shouldShowLabels) {
                     double size = (isClockwise()) ? (-scale * Math.abs(item.getCurrentPieValue())) : (scale * Math.abs(item.getCurrentPieValue()));
                     final boolean isLeftSide = !(labelAngles[index] > -90 && labelAngles[index] < 90);
                     
@@ -532,13 +560,26 @@ public class PieChart extends Chart {
                     LabelLayoutInfo info = new LabelLayoutInfo(sliceCenterEdgeX,
                             sliceCenterEdgeY,lineEndX, lineEndY, xval, yval, item.textNode, Math.abs(size));
                     fullPie.add(info);
+
+                    // set label scales
+                    if (labelScale < 1) {
+                        item.textNode.getTransforms().add(
+                            new Scale(
+                                    labelScale, labelScale,
+                                    isLeftSide ? item.textNode.getLayoutBounds().getWidth() : 0,
+//                                    0,
+                                    0
+                            )
+                        );
+                    }
                 }
                 index++;
             }
 
              // Check for collision and resolve by hiding the label of the smaller pie slice
             resolveCollision(fullPie);
-            
+
+            // update/draw pie slices
             double sAngle = getStartAngle();
             for (Data item = begin; item != null; item = item.next) {
              Node node = item.getNode();
