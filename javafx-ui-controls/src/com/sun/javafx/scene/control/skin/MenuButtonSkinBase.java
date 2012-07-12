@@ -300,11 +300,11 @@ public abstract class MenuButtonSkinBase<C extends MenuButton, B extends MenuBut
                         Runnable acceleratorRunnable = new Runnable() {
                             public void run() {
                                 if (menuitem.getOnMenuValidation() != null) {
-                                    Event.fireEvent(menuitem, new Event(menuitem.MENU_VALIDATION_EVENT));
+                                    Event.fireEvent(menuitem, new Event(MenuItem.MENU_VALIDATION_EVENT));
                                 }
                                 Menu target = (Menu)menuitem.getParentMenu();
                                 if(target.getOnMenuValidation() != null) {
-                                    Event.fireEvent(target, new Event(target.MENU_VALIDATION_EVENT));
+                                    Event.fireEvent(target, new Event(MenuItem.MENU_VALIDATION_EVENT));
                                 }
                                 if (!menuitem.isDisable()) menuitem.fire();
                             }

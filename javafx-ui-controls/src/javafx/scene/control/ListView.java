@@ -55,6 +55,7 @@ import com.sun.javafx.css.StyleManager;
 import com.sun.javafx.css.StyleableObjectProperty;
 import com.sun.javafx.css.StyleableProperty;
 import com.sun.javafx.css.converters.EnumConverter;
+import com.sun.javafx.event.EventTypeUtil;
 import com.sun.javafx.scene.control.WeakListChangeListener;
 import com.sun.javafx.scene.control.skin.ListViewSkin;
 import com.sun.javafx.scene.control.skin.VirtualContainerBase;
@@ -166,7 +167,7 @@ public class ListView<T> extends Control {
         return (EventType<EditEvent<T>>) EDIT_ANY_EVENT;
     }
     private static final EventType<?> EDIT_ANY_EVENT =
-            new EventType<EditEvent<Object>>(Event.ANY, "EDIT");
+            EventTypeUtil.registerInternalEventType(Event.ANY, "LIST_VIEW_EDIT");
     
     /**
      * An EventType used to indicate that an edit event has started within the
@@ -177,7 +178,7 @@ public class ListView<T> extends Control {
         return (EventType<EditEvent<T>>) EDIT_START_EVENT;
     }
     private static final EventType<?> EDIT_START_EVENT =
-            new EventType<EditEvent<Object>>(editAnyEvent(), "EDIT_START");
+            EventTypeUtil.registerInternalEventType(editAnyEvent(), "EDIT_START");
 
     /**
      * An EventType used to indicate that an edit event has just been canceled
@@ -188,7 +189,7 @@ public class ListView<T> extends Control {
         return (EventType<EditEvent<T>>) EDIT_CANCEL_EVENT;
     }
     private static final EventType<?> EDIT_CANCEL_EVENT =
-            new EventType<EditEvent<Object>>(editAnyEvent(), "EDIT_CANCEL");
+            EventTypeUtil.registerInternalEventType(editAnyEvent(), "EDIT_CANCEL");
 
     /**
      * An EventType used to indicate that an edit event has been committed
@@ -199,7 +200,7 @@ public class ListView<T> extends Control {
         return (EventType<EditEvent<T>>) EDIT_COMMIT_EVENT;
     }
     private static final EventType<?> EDIT_COMMIT_EVENT =
-            new EventType<EditEvent<Object>>(editAnyEvent(), "EDIT_COMMIT");
+            EventTypeUtil.registerInternalEventType(editAnyEvent(), "EDIT_COMMIT");
     
     
 

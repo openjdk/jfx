@@ -3114,7 +3114,10 @@ public class Scene implements EventTarget {
 
             @Override
             public void run() {
-                process(lastEvent, true);
+                if (Scene.this.impl_peer != null) { // Make sure this is run only if
+                                                    // the peer is still alive
+                    process(lastEvent, true);
+                }
             }
         };
 
