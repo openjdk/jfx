@@ -303,7 +303,8 @@ public class StyleHelper {
         // member will be null. If this is a local cache, then this member
         // will point to the shared cache for the same states.
         //
-        private final CacheEntry sharedCache;
+        // RT-23079 - weakly reference the shared CacheEntry
+        private final Reference<CacheEntry> sharedCacheRef;
 
         private CacheEntry(long[] states) {
             this(states, null);
@@ -312,16 +313,20 @@ public class StyleHelper {
         private CacheEntry(long[] states, CacheEntry sharedCache) {
             this.states = states;
             this.values = new HashMap<String,CalculatedValue>();
-            this.sharedCache = sharedCache;
+            this.sharedCacheRef = new WeakReference<CacheEntry>(sharedCache);
         }
 
         private CalculatedValue get(String property) {
+            
             CalculatedValue cv = null;
             if (values.isEmpty() == false) {
                 cv = values.get(property);
             }
-            if (cv == null && sharedCache != null) {
-                cv = sharedCache.values.get(property);
+            if (cv == null && sharedCacheRef != null) {
+                final CacheEntry ce = sharedCacheRef.get();
+                if (ce != null) cv = ce.values.get(property);
+                // if referent is null, we should skip the value. 
+                else cv = SKIP; 
             }
             return cv;
         }
@@ -334,7 +339,7 @@ public class StyleHelper {
             // then use local cache if the font origin is inline or user and
             // the value was calculated from a relative size unit. 
             final boolean isLocal = 
-                (sharedCache == null
+                (sharedCacheRef == null
                     || cv.origin == Origin.INLINE
                     || cv.origin == Origin.USER)
                 || (cv.isRelative &&
@@ -343,9 +348,13 @@ public class StyleHelper {
             
             if (isLocal) {
                 values.put(property, cv);
-            } else if (sharedCache.values.containsKey(property) == false) {
-                // don't override value already in shared cache.
-                sharedCache.values.put(property, cv);
+            } else {
+                // if isLocal is false, then sharedCacheRef cannot be null. 
+                final CacheEntry ce = sharedCacheRef.get();
+                if (ce != null && ce.values.containsKey(property) == false) {
+                    // don't override value already in shared cache.
+                    ce.values.put(property, cv);
+                }
             }
         }
 
@@ -435,7 +444,7 @@ public class StyleHelper {
         final int max = entries.size();
         for (int n=0; n<max; n++) {
             CacheEntry entry = entries.get(n);
-            assert (entry.sharedCache != null);
+            assert (entry.sharedCacheRef != null);
             entry.values.clear();
             entry.font = null;
         }
@@ -738,15 +747,23 @@ public class StyleHelper {
         //
                 
         final CacheEntry cacheEntry = getCacheEntry(node, pseudoClassStates);
-        if (cacheEntry == null) {
+        if (cacheEntry == null 
+            || (cacheEntry.sharedCacheRef != null 
+                && cacheEntry.sharedCacheRef.get() == null)) {
             // If cacheEntry is null, then the StyleManager Cache from which
             // this StyleHelper was created has been blown away and this
             // StyleHelper is no good. If this is the case, we need to tell
             // this node to reapply CSS
+            //
+            // RT-23079 - if this is local cache, then the sharedCacheRef 
+            // will not be null. If sharedCacheRef is not null, but its 
+            // referent is null, then the styleMap in the StylesheetContainer
+            // has been cleared and we're working with a cache that is no good.
+            // 
             node.impl_reapplyCSS();
             return;
         }
-
+        
         //
         // if this node has a style map, then we'll populate it.
         // 

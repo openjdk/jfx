@@ -1360,7 +1360,7 @@ public class StyleManager {
                 for(int n=0; n<nElements; n++) newKey.styleClass.add(styleClass.get(n));
                 newKey.indices = hasParentStylesheets ? indicesOfParentsWithStylesheets : null;
                 
-                cache = new Cache(this, rules, pseudoclassStateMask, impactsChildren);
+                cache = new Cache(rules, pseudoclassStateMask, impactsChildren);
                 cacheMap.put(newKey, cache);
                 
                 // RT-22565: remember where this cache is used if there are 
@@ -1376,7 +1376,7 @@ public class StyleManager {
             // Return the style helper looked up by the cache. The cache will
             // create a style helper if necessary (and possible), so we don't
             // have to worry about that part.
-            StyleMap smap = cache.getStyleMap(node);
+            StyleMap smap = cache.getStyleMap(this, node);
             if (smap == null) return null;
             
             StyleHelper helper = 
@@ -1435,7 +1435,7 @@ public class StyleManager {
      * Creates and caches maps of styles, reusing them as often as practical.
      */
     private static class Cache {
-        private final StylesheetContainer owner;
+
         // this must be initialized to the appropriate possible rules when
         // the helper cache is created by the StylesheetContainer
         private final List<Rule> rules;
@@ -1443,15 +1443,14 @@ public class StyleManager {
         private final boolean impactsChildren;
         private final Map<Long, StyleMap> cache;
         
-        Cache(StylesheetContainer owner, List<Rule> rules, long pseudoclassStateMask, boolean impactsChildren) {
-            this.owner = owner;
+        Cache(List<Rule> rules, long pseudoclassStateMask, boolean impactsChildren) {
             this.rules = rules;
             this.pseudoclassStateMask = pseudoclassStateMask;
             this.impactsChildren = impactsChildren;
             this.cache = new HashMap<Long, StyleMap>();
         }
 
-        private StyleMap getStyleMap(Node node) {
+        private StyleMap getStyleMap(StylesheetContainer owner, Node node) {
 
             // If this set of rules (which may be empty) impacts children,
             // then this node will get a StyleHelper.
