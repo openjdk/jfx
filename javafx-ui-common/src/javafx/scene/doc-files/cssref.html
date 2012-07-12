@@ -282,6 +282,7 @@
               <li><a href="#checkbox">CheckBox</a></li>
               <li><a href="#checkmenuitem">CheckMenuItem</a></li>
               <li><a href="#choicebox">ChoiceBox</a></li>
+              <li><a href="#colorpicker">ColorPicker</a></li>
               <li><a href="#combobox">ComboBox</a></li>
               <li><a href="#control">Control</a></li>
               <li><a href="#hyperlink">Hyperlink</a></li>
@@ -1481,7 +1482,7 @@
     <p>With looked-up colors you can refer to any other color property that is
       set on the current node or any of its parents. This is a very powerful
       feature, as it allows a generic palette of colors to be specified on the
-      scene then used thoughout the application. If you want tochange one of
+      scene then used thoughout the application. If you want to change one of
       those palette colors you can do so at any level in the scene tree and it
       will affect that node and all its decendents. Looked-up colors are not
       looked up until they are applied, so they are live and react to any style
@@ -3242,6 +3243,39 @@
         </ul>
       </li>
     </ul>
+    <h4><a name="colorpicker" id="colorpicker">ColorPicker</a></h4>
+    <p class="styleclass">Style class: color-picker</p>
+	<p>The ColorPicker control has all the properties and pseudo-classes of <a href="#comboboxbase">ComboBoxBase</a></p>
+    <table summary="property table" class="csspropertytable" cellpadding="2" cellspacing="1">
+      <thead>
+        <tr>
+          <th class="propertyname">CSS Property</th>
+          <th class="value">Values</th>
+          <th>Default</th>
+          <th>Comments</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td class="propertyname">-fx-color-label-visible</td>
+          <td class="value"><a href="#typesize" class="typelink">&lt;boolean&gt;</a></td>
+          <td>true</td>
+          <td>&nbsp;</td>
+        </tr>
+        <tr>
+          <td colspan="4" class="parents">Also has all properties of <a href="#control">Control</a></td>
+        </tr>
+      </tbody>
+    </table>
+    <h4>Substructure</h4>
+    <ul>
+	  <li>color display node  &mdash; Label</li>
+      <li>arrow-button - StackPane</li>
+	    <ul>
+		  <li>arrow &mdash; StackPane</li>
+	    </ul>
+	  </ul>
+    </ul>
     <h4><a name="combobox" id="combobox">ComboBox</a></h4>
     <p class="styleclass">Style class: combo-box</p>
     <p>The ComboBox control has all the properties and pseudo-classes of <a href="#comboboxbase">ComboBoxBase</a></p>
@@ -3456,6 +3490,12 @@
           <td>&nbsp;</td>
         </tr>
         <tr>
+          <td class="propertyname">-fx-ellipsis-string</td>
+          <td class="value"><a href="#typestring" class="typelink">&lt;string&gt;</a></td>
+          <td>...</td>
+          <td>&nbsp;</td>
+        </tr>
+        <tr>
           <td colspan="4" class="parents">Also has properties of <a href="#control">Control</a></td>
         </tr>
       </tbody>
@@ -3610,7 +3650,7 @@
           <td>&nbsp;</td>
         </tr>
         <tr>
-          <td class="propertyname">fx-page-information-visible:</td>
+          <td class="propertyname">-fx-page-information-visible:</td>
           <td class="value"><a href="#typesize" class="typelink">&lt;boolean&gt;</a></td>
           <td>true</td>
           <td>&nbsp;</td>
@@ -3650,6 +3690,42 @@
     <h4><a name="popupcontrol" id="popupcontrol">PopupControl</a></h4>
     <h4><a name="progressbar" id="progressbar">ProgressBar</a></h4>
     <p class="styleclass">Style class: progress-bar</p>
+    <table summary="property table" class="csspropertytable" cellpadding="2" cellspacing="1">
+      <thead>
+        <tr>
+          <th class="propertyname">CSS Property</th>
+          <th class="value">Values</th>
+          <th>Default</th>
+          <th>Comments</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td class="propertyname">-fx-indeterminate-bar-length</td>
+          <td class="value"><a href="#typenumber" class="typelink">&lt;number&gt;</a></td>
+          <td>60</td>
+          <td>&nbsp;</td>
+        </tr>
+        <tr>
+          <td class="propertyname">-fx-indeterminate-bar-escape</td>
+          <td class="value"><a href="#typesize" class="typelink">&lt;boolean&gt;</a></td>
+          <td>true</td>
+          <td>&nbsp;</td>
+        </tr>
+        <tr>
+          <td class="propertyname">-fx-indeterminate-bar-flip</td>
+          <td class="value"><a href="#typesize" class="typelink">&lt;boolean&gt;</a></td>
+          <td>true</td>
+          <td>&nbsp;</td>
+        </tr>
+        <tr>
+          <td class="propertyname">-fx-indeterminate-bar-animation-time</td>
+          <td class="value"><a href="#typenumber" class="typelink">&lt;number&gt;</a></td>
+          <td>2.0</td>
+          <td>&nbsp;</td>
+        </tr>
+      </tbody>
+    </table>
     <p>The ProgressBar control has all the properties of and pseudo-class state
       of <a href="#progressindicator">ProgressIndicator</a></p>
     <h4>Substructure</h4>
@@ -4219,6 +4295,12 @@
           <th class="value">Values</th>
           <th>Default</th>
           <th>Comments</th>
+        <tr>
+          <td class="propertyname">-fx-size</td>
+          <td class="value"><a href="#typesize" class="typelink">&lt;size&gt;</a></td>
+          <td>20</td>
+          <td>The table column header size.</td>
+        </tr>
         </tr>
       </thead>
       <tbody>
@@ -4889,7 +4971,7 @@
         </thead>
         <tbody>
           <tr>
-            <td class="propertyname">-fx-symbol-visible</td>
+            <td class="propertyname">-fx-create-symbols</td>
             <td class="value"><a href="#typeboolean" class="typelink">&lt;boolean&gt;</a></td>
             <td>true</td>
             <td>&nbsp;</td>
@@ -5148,7 +5230,6 @@
     <ul>
       <li>axis-label &mdash; Text</li>
       <li>axis-tick-mark &mdash; Path</li>
-      <li>tick-mark &mdash; Text</li>
     </ul>
     <h4><a name="valueaxis" id="valueaxis">ValueAxis</a></h4>
     <p class="styleclass">Style class: axis</p>
