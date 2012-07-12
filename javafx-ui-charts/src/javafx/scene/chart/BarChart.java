@@ -256,7 +256,9 @@ public class BarChart<X,Y> extends XYChart<X,Y> {
              item.getNode().getStyleClass().add("negative");
          } else if (currentVal < 0 && barVal > 0) { // going from negative to positive
              // remove style class negative
-             item.getNode().getStyleClass().add("negative");
+             // RT-21164 upside down bars: was adding "negative" styleclass
+             // instead of removing it; when going from negative to positive
+             item.getNode().getStyleClass().remove("negative");
          }
     }
     
@@ -314,6 +316,12 @@ public class BarChart<X,Y> extends XYChart<X,Y> {
             if (shouldAnimate()) {
                 animateDataAdd(item, bar);
             } else {
+                // RT-21164 check if bar value is negative to add "negative" style class 
+                double barVal = (orientation == Orientation.VERTICAL) ? ((Number)item.getYValue()).doubleValue() :
+                        ((Number)item.getXValue()).doubleValue();
+                if (barVal < 0) {
+                    bar.getStyleClass().add("negative");
+                }
                 getPlotChildren().add(bar);
             }
         }

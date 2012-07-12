@@ -1096,7 +1096,7 @@ public abstract class Control extends Parent implements Skinnable {
     @Deprecated
     @Override public void impl_processCSS(boolean reapply) {
         if (reapply && getUserAgentStylesheet() != null) {
-            StyleManager.getInstance().addUserAgentStylesheet(getUserAgentStylesheet());
+            StyleManager.getInstance().addUserAgentStylesheet(getScene(), getUserAgentStylesheet());
         }
 
         super.impl_processCSS(reapply);

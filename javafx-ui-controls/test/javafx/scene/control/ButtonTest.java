@@ -5,7 +5,9 @@
 package javafx.scene.control;
 
 import com.sun.javafx.pgstub.StubToolkit;
+import com.sun.javafx.scene.layout.region.BackgroundFill;
 import com.sun.javafx.tk.Toolkit;
+import java.util.List;
 import static javafx.scene.control.ControlTestUtils.*;
 import static org.junit.Assert.*;
 
@@ -19,7 +21,12 @@ import javafx.scene.Scene;
 import javafx.scene.control.ContextMenu;
 import javafx.scene.input.KeyCode;
 import javafx.scene.input.MouseEvent;
+import javafx.scene.layout.HBox;
+import javafx.scene.layout.Region;
 import javafx.scene.layout.StackPane;
+import javafx.scene.layout.VBox;
+import javafx.scene.paint.LinearGradient;
+import javafx.scene.paint.Stop;
 import javafx.scene.shape.Rectangle;
 import javafx.stage.Stage;
 import javafx.stage.WindowEvent;
@@ -341,6 +348,85 @@ public class ButtonTest {
         tk.firePulse();                      
     }
 
+    static class MyButton extends Button {
+        MyButton(String text) {
+            super(text);
+        }
+        
+        void setHoverPseudoclassState(boolean b) {
+            setHover(b);
+        }
+    }    
+    
+    List<Stop> getStops(Button button) {
+        Skin skin = button.getSkin();
+        Region region = (Region)skin.getNode();
+        List<BackgroundFill> fills = region.impl_getBackgroundFills();
+        BackgroundFill top = fills.get(fills.size()-1);
+        LinearGradient topFill = (LinearGradient)top.getFill();
+        return topFill.getStops();        
+    }
+
+    @Test
+    public void testRT_23207() {
+        
+        HBox hBox = new HBox();
+        hBox.setSpacing(5);
+        hBox.setTranslateY(30);
+        MyButton red = new MyButton("Red");
+        red.setStyle("-fx-base: red;");
+        MyButton green = new MyButton("Green");
+        green.setStyle("-fx-base: green;");
+        hBox.getChildren().add(red);
+        hBox.getChildren().add(green);
+                
+        Scene scene = new Scene(hBox, 500, 300);
+        Stage stage = new Stage();
+        stage.setScene(scene);
+        stage.show();
+        
+        Toolkit.getToolkit().firePulse();
+        
+        List<Stop> redStops0 = getStops(red);
+        List<Stop> greenStops0 = getStops(green);
+        
+        red.setHoverPseudoclassState(true);
+        
+        Toolkit.getToolkit().firePulse();
+
+        List<Stop> redStops1 = getStops(red);
+        List<Stop> greenStops1 = getStops(green);
+                
+        red.setHoverPseudoclassState(false);
+        green.setHoverPseudoclassState(true);
+        
+        Toolkit.getToolkit().firePulse();
+        
+        List<Stop> redStops2 = getStops(red);
+        List<Stop> greenStops2 = getStops(green);
+
+        green.setHoverPseudoclassState(false);
+        
+        Toolkit.getToolkit().firePulse();
+
+        List<Stop> redStops3 = getStops(red);
+        List<Stop> greenStops3 = getStops(green);
+        
+        // did red change color after red hover=true?
+        assertFalse(redStops0.equals(redStops1));
+        // did red change back to original color after green hover=true?
+        assertTrue(redStops0.equals(redStops2));
+        // did red stay original color after green hover=false?
+        assertTrue(redStops0.equals(redStops3));
+        // did green stay green after red hover=true?
+        assertTrue(greenStops0.equals(greenStops1));
+        // did green change after green hover=true?
+        assertFalse(greenStops0.equals(greenStops2));
+        // did green revert to original after green hover=false?
+        // This is the acid test. If this fails, then RT-23207 is present.
+        assertTrue(greenStops0.equals(greenStops3));
+        
+    }    
 
     
 //  private Button button1;

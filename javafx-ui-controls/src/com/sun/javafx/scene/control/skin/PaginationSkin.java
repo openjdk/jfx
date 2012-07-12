@@ -350,7 +350,13 @@ public class PaginationSkin extends SkinBase<Pagination, PaginationBehavior>  {
                     animate = false;
                 }
 
-                pagination.setCurrentPageIndex(previousIndex);
+                if (pagination.getPageFactory().call(previousIndex) != null) {
+                    pagination.setCurrentPageIndex(previousIndex);
+                } else {
+                    // Set the page index to 0 because both the current,
+                    // and the previous pages have no content.
+                    pagination.setCurrentPageIndex(0);
+                }
 
                 if (isAnimate) {
                     animate = true;
