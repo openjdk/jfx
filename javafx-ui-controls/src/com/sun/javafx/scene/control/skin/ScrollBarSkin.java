@@ -284,12 +284,27 @@ public class ScrollBarSkin extends SkinBase<ScrollBar, ScrollBarBehavior> {
 
                     double delta = (getSkinnable().getOrientation() == Orientation.VERTICAL ? dy : dx);
 
-                    if (delta > 0.0 && sb.getValue() > sb.getMin()) {
-                        sb.decrement();
-                        event.consume();
-                    } else if (delta < 0.0 && sb.getValue() < sb.getMax()) {
-                        sb.increment();
-                        event.consume();
+                    /*
+                    ** RT-22941 - If this is either a touch or inertia scroll
+                    ** then we move to the position of the touch point.
+                    *
+                    * TODO: this fix causes RT-23406 ([ScrollBar, touch] Dragging scrollbar from the 
+                    * track on touchscreen causes flickering)
+                    */
+                    if (event.isDirect()) {
+                        if (trackLength > thumbLength) {
+                            getBehavior().thumbDragged(null, (getSkinnable().getOrientation() == Orientation.VERTICAL ? event.getY(): event.getX()) / trackLength);
+                            event.consume();
+                        }
+                    }
+                    else {
+                        if (delta > 0.0 && sb.getValue() > sb.getMin()) {
+                            sb.decrement();
+                            event.consume();
+                        } else if (delta < 0.0 && sb.getValue() < sb.getMax()) {
+                            sb.increment();
+                            event.consume();
+                        }
                     }
                 }
             }
