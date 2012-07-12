@@ -470,7 +470,13 @@ public class ScrollPaneSkin extends SkinBase<ScrollPane, ScrollPaneBehavior> imp
                 */
                 if (vsb.getVisibleAmount() < vsb.getMax()) {
                     double vRange = getSkinnable().getVmax()-getSkinnable().getVmin();
-                    double vPixelValue = vRange / getSkinnable().getHeight();
+                    double vPixelValue;
+                    if (nodeHeight > 0.0) {
+                        vPixelValue = vRange / nodeHeight;
+                    }
+                    else {
+                        vPixelValue = 0.0;
+                    }
                     double newValue = vsb.getValue()+(-event.getDeltaY())*vPixelValue;
                     if (!PlatformUtil.isEmbedded()) {
                         if ((event.getDeltaY() > 0.0 && vsb.getValue() > vsb.getMin()) ||
@@ -496,7 +502,14 @@ public class ScrollPaneSkin extends SkinBase<ScrollPane, ScrollPaneBehavior> imp
 
                 if (hsb.getVisibleAmount() < hsb.getMax()) {
                     double hRange = getSkinnable().getHmax()-getSkinnable().getHmin();
-                    double hPixelValue = hRange / getSkinnable().getWidth();
+                    double hPixelValue;
+                    if (nodeWidth > 0.0) {
+                        hPixelValue = hRange / nodeWidth;
+                    }
+                    else {
+                        hPixelValue = 0.0;
+                    }
+
                     double newValue = hsb.getValue()+(-event.getDeltaX())*hPixelValue;
                     if (!PlatformUtil.isEmbedded()) {
                         if ((event.getDeltaX() > 0.0 && hsb.getValue() > hsb.getMin()) ||
