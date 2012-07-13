@@ -36,6 +36,12 @@ import javafx.scene.control.*;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.StackPane;
 
+/**
+ * The embedded context menu for a text input control.  
+ * The menu will be displayed horizontally underneath the cursor 
+ * with the available text editing options i.e. cut, copy, paste, select all.
+ *
+ */
 public class EmbeddedTextContextMenuContent extends StackPane {
 
     private ContextMenu contextMenu;
@@ -131,6 +137,7 @@ public class EmbeddedTextContextMenuContent extends StackPane {
         double screenX = 0;
         double pointerX = 0;
 
+        // Get the positions of the cursor from the TextArea/TextField and draw the arrow underneath it.
         if (contextMenu.getOwnerNode() instanceof TextArea) {
             TextArea ta = (TextArea)contextMenu.getOwnerNode();
             TextAreaSkin tas = (TextAreaSkin)ta.getSkin();
