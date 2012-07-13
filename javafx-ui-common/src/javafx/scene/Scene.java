@@ -577,16 +577,19 @@ public class Scene implements EventTarget {
     private ReadOnlyObjectWrapper<Window> windowPropertyImpl() {
         if (window == null) {
             window = new ReadOnlyObjectWrapper<Window>() {
+                private Window oldWindow;
+
                 @Override protected void invalidated() {
-                    if (get() != null) {
+                    final Window newWindow = get();
+                    getKeyHandler().windowForSceneChanged(oldWindow, newWindow);
+                    if (oldWindow != null) {
                         impl_disposePeer();
                     }
-                    Window oldWindow = get();
-                    KeyHandler kh = getKeyHandler();
-                    kh.windowForSceneChanged(oldWindow, get());
-                    if (get() != null) {
+                    if (newWindow != null) {
                         impl_initPeer();
                     }
+
+                    oldWindow = newWindow;
                 }
 
                 @Override
@@ -3437,7 +3440,7 @@ public class Scene implements EventTarget {
             focusOwner.set(value);
         }
 
-        private boolean windowFocused = true;
+        private boolean windowFocused;
         protected boolean isWindowFocused() { return windowFocused; }
         protected void setWindowFocused(boolean value) {
             windowFocused = value;
@@ -3464,10 +3467,6 @@ public class Scene implements EventTarget {
                 setWindowFocused(((ReadOnlyBooleanProperty)valueModel).get());
             }
         };
-
-        public KeyHandler() {
-            windowForSceneChanged(Scene.this.getWindow(), Scene.this.getWindow()); // to init windowFocused properly
-        }
 
         private void process(KeyEvent e) {
             final Node sceneFocusOwner = getFocusOwner();
