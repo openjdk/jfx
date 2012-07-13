@@ -852,19 +852,6 @@ public class StyleHelper {
 
                 calculatedValue = cacheEntry.get(property);
 
-                // RT-10522:
-                // If the user set the property and there is a style and
-                // the style came from the user agent stylesheet, then
-                // skip the value. A style from a user agent stylesheet should
-                // not override the user set style.
-                if (calculatedValue == SKIP
-                    || (   calculatedValue != null
-                        && calculatedValue.origin == Origin.USER_AGENT
-                        && isUserSetProperty(node, styleable)
-                       )
-                    ) {
-                    continue;
-                }
             }
 
             if (calculatedValue == null) {
@@ -882,8 +869,28 @@ public class StyleHelper {
 
             }
 
-            // If the CalculatedValue value is not SKIP then we will set it.
-            if (calculatedValue == SKIP) continue;
+            // RT-10522:
+            // If the user set the property and there is a style and
+            // the style came from the user agent stylesheet, then
+            // skip the value. A style from a user agent stylesheet should
+            // not override the user set style.
+            //
+            // RT-21894: the origin might be null if the calculatedValue 
+            // comes from reverting back to the initial value. In this case,
+            // make sure the initial value doesn't overwrite the user set value.
+            // Also moved this condition from the fastpath block to here since
+            // the check needs to be done on any calculated value, not just
+            // calculatedValues from cache
+            //
+            if (calculatedValue == SKIP
+                || (   calculatedValue != null
+                    && (   calculatedValue.origin == Origin.USER_AGENT
+                        || calculatedValue.origin == null) 
+                    && isUserSetProperty(node, styleable)
+                    )
+                ) {
+                continue;
+            }
             
                 final Object value = calculatedValue.value;
                 if (LOGGER.isLoggable(PlatformLogger.FINER)) {
