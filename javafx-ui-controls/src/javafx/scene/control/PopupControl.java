@@ -975,7 +975,12 @@ public class PopupControl extends PopupWindow implements Skinnable {
                     return null;
                 }
 
-                @Override
+                /**
+                * RT-19263
+                * @treatAsPrivate implementation detail
+                * @deprecated This is an experimental API that is not intended for general use and is subject to change in future versions
+                */
+                @Deprecated @Override
                 public List<StyleableProperty> getStyleableProperties() {
                     return PopupControl.this.impl_getStyleableProperties();
                 }                
@@ -992,11 +997,22 @@ public class PopupControl extends PopupWindow implements Skinnable {
 
     protected class CSSBridge extends Group {
         private String currentSkinClassName = null;
-        @Override public void impl_pseudoClassStateChanged(String s) {
+        
+        /**
+        * @treatAsPrivate implementation detail
+        * @deprecated This is an internal API that is not intended for use and will be removed in the next version
+        */
+        @Deprecated @Override public void impl_pseudoClassStateChanged(String s) {
             super.impl_pseudoClassStateChanged(s);
         }
         
-        @Override public List<StyleableProperty> impl_getStyleableProperties() {
+        /**
+        * RT-19263
+        * @treatAsPrivate implementation detail
+        * @deprecated This is an experimental API that is not intended for general use and is subject to change in future versions
+        */
+        @Deprecated @Override 
+        public List<StyleableProperty> impl_getStyleableProperties() {
             return PopupControl.this.impl_getStyleableProperties();
         }
 
