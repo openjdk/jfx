@@ -405,7 +405,7 @@ public class ComboBoxListViewSkin<T> extends ComboBoxPopupControl<T> {
         if (empty) {
             if (buttonCell == null) return;
             cell.setGraphic(null);
-            cell.setText(null);
+            cell.setText(comboBox.getPromptText() == null ? null : comboBox.getPromptText());
         } else if (item instanceof Node) {
             Node currentNode = buttonCell.getGraphic();
             Node newNode = (Node) item;
