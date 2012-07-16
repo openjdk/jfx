@@ -362,7 +362,11 @@ public class Window implements EventTarget {
     /**
      * Requests that this {@code Window} get the input focus.
      */
-    public final void requestFocus() { setFocused(true); }
+    public final void requestFocus() {
+        if (impl_peer != null) {
+            impl_peer.requestFocus();
+        }
+    }
     public final boolean isFocused() { return focused.get(); }
     public final ReadOnlyBooleanProperty focusedProperty() { return focused.getReadOnlyProperty(); }
 
