@@ -568,9 +568,11 @@ public final class GraphicsContext {
 
     /**
      * Sets the Global Alpha of the current state.
-     * @param alpha 
+     * @param alpha value in the range {@code 0.0-1.0}. The value is clamped if it is 
+     * out of range.
      */
     public void setGlobalAlpha(double alpha) {
+        alpha = (alpha > 1.0) ? 1.0 : (alpha < 0.0) ? 0.0 : alpha;
         if (curState.globalAlpha != alpha) {
             curState.globalAlpha = alpha;
             writeParam(alpha, PGCanvas.GLOBAL_ALPHA);
