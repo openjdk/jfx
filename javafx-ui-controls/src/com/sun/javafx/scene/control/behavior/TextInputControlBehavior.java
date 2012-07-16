@@ -216,7 +216,7 @@ public abstract class TextInputControlBehavior<T extends TextInputControl> exten
 //                + character.length() > textInput.getMaximumLength()) {
 //                // TODO Beep?
 //            } else {
-                undoManager.addChange(start, textInput.getText().substring(start, end), character, true);
+                undoManager.addChange(start, textInput.textProperty().getValueSafe().substring(start, end), character, true);
                 replaceText(start, end, character);
 //            }
 
@@ -294,10 +294,12 @@ public abstract class TextInputControlBehavior<T extends TextInputControl> exten
     private void cut() {
         TextInputControl textInputControl = getControl();
         IndexRange selection = textInputControl.getSelection();
-        int start = selection.getStart();
-        int end = selection.getEnd();
 
-        undoManager.addChange(start, textInputControl.getText().substring(start, end), null);
+        if (selection.getLength() > 0) {
+            int start = selection.getStart();
+            int end = selection.getEnd();
+            undoManager.addChange(start, textInputControl.getText().substring(start, end), null);
+        }
         textInputControl.cut();
     }
 
@@ -306,13 +308,13 @@ public abstract class TextInputControlBehavior<T extends TextInputControl> exten
         IndexRange selection = textInputControl.getSelection();
         int start = selection.getStart();
         int end = selection.getEnd();
-        String text = textInputControl.getText();
+        String text = textInputControl.textProperty().getValueSafe();
         String deleted = text.substring(start, end);
         int tail = text.length() - end;
 
         textInputControl.paste();
 
-        text = textInputControl.getText();
+        text = textInputControl.textProperty().getValueSafe();
         undoManager.addChange(start, deleted, text.substring(start, text.length() - tail));
     }
 
