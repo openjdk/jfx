@@ -572,9 +572,9 @@ public final class GraphicsContext {
      * out of range.
      */
     public void setGlobalAlpha(double alpha) {
-        alpha = (alpha > 1.0) ? 1.0 : (alpha < 0.0) ? 0.0 : alpha;
         if (curState.globalAlpha != alpha) {
             curState.globalAlpha = alpha;
+            alpha = (alpha > 1.0) ? 1.0 : (alpha < 0.0) ? 0.0 : alpha;
             writeParam(alpha, PGCanvas.GLOBAL_ALPHA);
         }
     }
