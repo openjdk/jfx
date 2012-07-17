@@ -1658,6 +1658,7 @@ public abstract class Node implements EventTarget {
      *     other than the JavaFX Application Thread.
      *
      * @return the rendered image
+     * @since 2.2
      */
     public WritableImage snapshot(SnapshotParameters params, WritableImage image) {
         Toolkit.getToolkit().checkFxUserThread();
@@ -1709,6 +1710,7 @@ public abstract class Node implements EventTarget {
      *     other than the JavaFX Application Thread.
      *
      * @throws NullPointerException if the callback parameter is null.
+     * @since 2.2
      */
     public void snapshot(Callback<SnapshotResult, Void> callback,
             SnapshotParameters params, WritableImage image) {
@@ -4214,6 +4216,7 @@ public abstract class Node implements EventTarget {
      * An affine transform that holds the computed local-to-parent transform.
      * This is the concatenation of all transforms in this node, including all
      * of the convenience transforms.
+     * @since 2.2
      */
     public final ReadOnlyObjectProperty<Transform> localToParentTransformProperty() {
         return getNodeTransformation().localToParentTransformProperty();
@@ -4241,6 +4244,7 @@ public abstract class Node implements EventTarget {
      * property on many nodes may negatively affect performance of
      * transformation changes in their common parents.
      * </p>
+     * @since 2.2
      */
     public final ReadOnlyObjectProperty<Transform> localToSceneTransformProperty() {
         return getNodeTransformation().localToSceneTransformProperty();
@@ -5673,6 +5677,7 @@ public abstract class Node implements EventTarget {
 
     /**
      * Defines a function to be called when a scrolling gesture is detected.
+     * @since 2.2
      */
     public final ObjectProperty<EventHandler<? super ScrollEvent>>
             onScrollStartedProperty() {
@@ -5709,6 +5714,7 @@ public abstract class Node implements EventTarget {
 
     /**
      * Defines a function to be called when a scrolling gesture ends.
+     * @since 2.2
      */
     public final ObjectProperty<EventHandler<? super ScrollEvent>>
             onScrollFinishedProperty() {
@@ -5727,6 +5733,7 @@ public abstract class Node implements EventTarget {
 
     /**
      * Defines a function to be called when a rotation gesture is detected.
+     * @since 2.2
      */
     public final ObjectProperty<EventHandler<? super RotateEvent>>
             onRotationStartedProperty() {
@@ -5745,6 +5752,7 @@ public abstract class Node implements EventTarget {
 
     /**
      * Defines a function to be called when user performs a rotation action.
+     * @since 2.2
      */
     public final ObjectProperty<EventHandler<? super RotateEvent>>
             onRotateProperty() {
@@ -5763,6 +5771,7 @@ public abstract class Node implements EventTarget {
 
     /**
      * Defines a function to be called when a rotation gesture ends.
+     * @since 2.2
      */
     public final ObjectProperty<EventHandler<? super RotateEvent>>
             onRotationFinishedProperty() {
@@ -5781,6 +5790,7 @@ public abstract class Node implements EventTarget {
 
     /**
      * Defines a function to be called when a zooming gesture is detected.
+     * @since 2.2
      */
     public final ObjectProperty<EventHandler<? super ZoomEvent>>
             onZoomStartedProperty() {
@@ -5799,6 +5809,7 @@ public abstract class Node implements EventTarget {
 
     /**
      * Defines a function to be called when user performs a zooming action.
+     * @since 2.2
      */
     public final ObjectProperty<EventHandler<? super ZoomEvent>>
             onZoomProperty() {
@@ -5817,6 +5828,7 @@ public abstract class Node implements EventTarget {
 
     /**
      * Defines a function to be called when a zooming gesture ends.
+     * @since 2.2
      */
     public final ObjectProperty<EventHandler<? super ZoomEvent>>
             onZoomFinishedProperty() {
@@ -5836,6 +5848,7 @@ public abstract class Node implements EventTarget {
     /**
      * Defines a function to be called when an upward swipe gesture
      * centered over this node happens.
+     * @since 2.2
      */
     public final ObjectProperty<EventHandler<? super SwipeEvent>>
             onSwipeUpProperty() {
@@ -5855,6 +5868,7 @@ public abstract class Node implements EventTarget {
     /**
      * Defines a function to be called when a downward swipe gesture
      * centered over this node happens.
+     * @since 2.2
      */
     public final ObjectProperty<EventHandler<? super SwipeEvent>>
             onSwipeDownProperty() {
@@ -5874,6 +5888,7 @@ public abstract class Node implements EventTarget {
     /**
      * Defines a function to be called when a leftward swipe gesture
      * centered over this node happens.
+     * @since 2.2
      */
     public final ObjectProperty<EventHandler<? super SwipeEvent>>
             onSwipeLeftProperty() {
@@ -5893,6 +5908,7 @@ public abstract class Node implements EventTarget {
     /**
      * Defines a function to be called when an rightward swipe gesture
      * centered over this node happens.
+     * @since 2.2
      */
     public final ObjectProperty<EventHandler<? super SwipeEvent>>
             onSwipeRightProperty() {
@@ -5918,6 +5934,7 @@ public abstract class Node implements EventTarget {
 
     /**
      * Defines a function to be called when a new touch point is pressed.
+     * @since 2.2
      */
     public final ObjectProperty<EventHandler<? super TouchEvent>>
             onTouchPressedProperty() {
@@ -5936,6 +5953,7 @@ public abstract class Node implements EventTarget {
 
     /**
      * Defines a function to be called when a touch point is moved.
+     * @since 2.2
      */
     public final ObjectProperty<EventHandler<? super TouchEvent>>
             onTouchMovedProperty() {
@@ -5954,6 +5972,7 @@ public abstract class Node implements EventTarget {
 
     /**
      * Defines a function to be called when a touch point is released.
+     * @since 2.2
      */
     public final ObjectProperty<EventHandler<? super TouchEvent>>
             onTouchReleasedProperty() {
@@ -5973,6 +5992,7 @@ public abstract class Node implements EventTarget {
     /**
      * Defines a function to be called when a touch point stays pressed and
      * still.
+     * @since 2.2
      */
     public final ObjectProperty<EventHandler<? super TouchEvent>>
             onTouchStationaryProperty() {

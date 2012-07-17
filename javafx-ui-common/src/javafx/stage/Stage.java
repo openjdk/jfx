@@ -373,6 +373,7 @@ public class Stage extends Window {
      * @throws IllegalStateException if this method is called on the
      *     primary stage.
      * @throws IllegalStateException if this stage is already showing.
+     * @since 2.2
      */
     public void showAndWait() {
 

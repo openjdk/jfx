@@ -109,8 +109,8 @@ import javafx.util.Callback;
  *       }
  *   });
  * }</pre>
+ * @since 2.2
  */
-
 @DefaultProperty("pages")
 public class Pagination extends Control {
 

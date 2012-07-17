@@ -577,16 +577,19 @@ public class Scene implements EventTarget {
     private ReadOnlyObjectWrapper<Window> windowPropertyImpl() {
         if (window == null) {
             window = new ReadOnlyObjectWrapper<Window>() {
+                private Window oldWindow;
+
                 @Override protected void invalidated() {
-                    if (get() != null) {
+                    final Window newWindow = get();
+                    getKeyHandler().windowForSceneChanged(oldWindow, newWindow);
+                    if (oldWindow != null) {
                         impl_disposePeer();
                     }
-                    Window oldWindow = get();
-                    KeyHandler kh = getKeyHandler();
-                    kh.windowForSceneChanged(oldWindow, get());
-                    if (get() != null) {
+                    if (newWindow != null) {
                         impl_initPeer();
                     }
+
+                    oldWindow = newWindow;
                 }
 
                 @Override
@@ -1232,6 +1235,7 @@ public class Scene implements EventTarget {
      *     other than the JavaFX Application Thread.
      *
      * @return the rendered image
+     * @since 2.2
      */
     public WritableImage snapshot(WritableImage image) {
         if (!paused) {
@@ -1267,6 +1271,7 @@ public class Scene implements EventTarget {
      *     other than the JavaFX Application Thread.
      *
      * @throws NullPointerException if the callback parameter is null.
+     * @since 2.2
      */
     public void snapshot(Callback<SnapshotResult, Void> callback, WritableImage image) {
         Toolkit.getToolkit().checkFxUserThread();
@@ -3435,7 +3440,7 @@ public class Scene implements EventTarget {
             focusOwner.set(value);
         }
 
-        private boolean windowFocused = true;
+        private boolean windowFocused;
         protected boolean isWindowFocused() { return windowFocused; }
         protected void setWindowFocused(boolean value) {
             windowFocused = value;
@@ -3462,10 +3467,6 @@ public class Scene implements EventTarget {
                 setWindowFocused(((ReadOnlyBooleanProperty)valueModel).get());
             }
         };
-
-        public KeyHandler() {
-            windowForSceneChanged(Scene.this.getWindow(), Scene.this.getWindow()); // to init windowFocused properly
-        }
 
         private void process(KeyEvent e) {
             final Node sceneFocusOwner = getFocusOwner();
@@ -4246,6 +4247,7 @@ public class Scene implements EventTarget {
 
     /**
      * Defines a function to be called when a scrolling gesture is detected.
+     * @since 2.2
      */
     private ObjectProperty<EventHandler<? super ScrollEvent>> onScrollStarted;
 
@@ -4318,6 +4320,7 @@ public class Scene implements EventTarget {
 
     /**
      * Defines a function to be called when a scrolling gesture ends.
+     * @since 2.2
      */
     private ObjectProperty<EventHandler<? super ScrollEvent>> onScrollFinished;
 
@@ -4354,6 +4357,7 @@ public class Scene implements EventTarget {
 
     /**
      * Defines a function to be called when a rotating gesture is detected.
+     * @since 2.2
      */
     private ObjectProperty<EventHandler<? super RotateEvent>> onRotationStarted;
 
@@ -4390,6 +4394,7 @@ public class Scene implements EventTarget {
 
     /**
      * Defines a function to be called when user performs a rotating action.
+     * @since 2.2
      */
     private ObjectProperty<EventHandler<? super RotateEvent>> onRotate;
 
@@ -4426,6 +4431,7 @@ public class Scene implements EventTarget {
 
     /**
      * Defines a function to be called when a rotating gesture ends.
+     * @since 2.2
      */
     private ObjectProperty<EventHandler<? super RotateEvent>> onRotationFinished;
 
@@ -4462,6 +4468,7 @@ public class Scene implements EventTarget {
 
     /**
      * Defines a function to be called when a zooming gesture is detected.
+     * @since 2.2
      */
     private ObjectProperty<EventHandler<? super ZoomEvent>> onZoomStarted;
 
@@ -4498,6 +4505,7 @@ public class Scene implements EventTarget {
 
     /**
      * Defines a function to be called when user performs a zooming action.
+     * @since 2.2
      */
     private ObjectProperty<EventHandler<? super ZoomEvent>> onZoom;
 
@@ -4534,6 +4542,7 @@ public class Scene implements EventTarget {
 
     /**
      * Defines a function to be called when a zooming gesture ends.
+     * @since 2.2
      */
     private ObjectProperty<EventHandler<? super ZoomEvent>> onZoomFinished;
 
@@ -4571,6 +4580,7 @@ public class Scene implements EventTarget {
     /**
      * Defines a function to be called when an upward swipe gesture
      * happens in this scene.
+     * @since 2.2
      */
     private ObjectProperty<EventHandler<? super SwipeEvent>> onSwipeUp;
 
@@ -4608,6 +4618,7 @@ public class Scene implements EventTarget {
     /**
      * Defines a function to be called when an downward swipe gesture
      * happens in this scene.
+     * @since 2.2
      */
     private ObjectProperty<EventHandler<? super SwipeEvent>> onSwipeDown;
 
@@ -4645,6 +4656,7 @@ public class Scene implements EventTarget {
     /**
      * Defines a function to be called when an leftward swipe gesture
      * happens in this scene.
+     * @since 2.2
      */
     private ObjectProperty<EventHandler<? super SwipeEvent>> onSwipeLeft;
 
@@ -4682,6 +4694,7 @@ public class Scene implements EventTarget {
     /**
      * Defines a function to be called when an rightward swipe gesture
      * happens in this scene.
+     * @since 2.2
      */
     private ObjectProperty<EventHandler<? super SwipeEvent>> onSwipeRight;
 
@@ -4724,6 +4737,7 @@ public class Scene implements EventTarget {
 
     /**
      * Defines a function to be called when a new touch point is pressed.
+     * @since 2.2
      */
     private ObjectProperty<EventHandler<? super TouchEvent>> onTouchPressed;
 
@@ -4760,6 +4774,7 @@ public class Scene implements EventTarget {
 
     /**
      * Defines a function to be called when a touch point is moved.
+     * @since 2.2
      */
     private ObjectProperty<EventHandler<? super TouchEvent>> onTouchMoved;
 
@@ -4796,6 +4811,7 @@ public class Scene implements EventTarget {
 
     /**
      * Defines a function to be called when a new touch point is pressed.
+     * @since 2.2
      */
     private ObjectProperty<EventHandler<? super TouchEvent>> onTouchReleased;
 
@@ -4833,6 +4849,7 @@ public class Scene implements EventTarget {
     /**
      * Defines a function to be called when a touch point stays pressed and
      * still.
+     * @since 2.2
      */
     private ObjectProperty<EventHandler<? super TouchEvent>> onTouchStationary;
 

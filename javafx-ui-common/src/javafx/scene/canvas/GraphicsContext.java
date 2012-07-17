@@ -98,7 +98,7 @@ root.getChildren().add(canvas);
  * </pre>
  * </p>
  *
- * @since JavaFX 2.2
+ * @since 2.2
  */
 public final class GraphicsContext {
     Canvas theCanvas;
@@ -568,11 +568,13 @@ public final class GraphicsContext {
 
     /**
      * Sets the Global Alpha of the current state.
-     * @param alpha 
+     * @param alpha value in the range {@code 0.0-1.0}. The value is clamped if it is 
+     * out of range.
      */
     public void setGlobalAlpha(double alpha) {
         if (curState.globalAlpha != alpha) {
             curState.globalAlpha = alpha;
+            alpha = (alpha > 1.0) ? 1.0 : (alpha < 0.0) ? 0.0 : alpha;
             writeParam(alpha, PGCanvas.GLOBAL_ALPHA);
         }
     }

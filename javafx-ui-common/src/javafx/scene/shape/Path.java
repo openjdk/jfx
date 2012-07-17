@@ -115,8 +115,8 @@ public class Path extends Shape {
     
     /**
      * Creates new instance of Path
-     * @since 2.2
      * @param elements The collection of the elements of the Path
+     * @since 2.2
      */
     public Path(Collection<? extends PathElement> elements) {
         if (elements != null) {

@@ -43,6 +43,7 @@ import javafx.util.converter.DefaultStringConverter;
  * default, stretch to fill the entire list cell.
  * 
  * @param <T> The type of the elements contained within the ListView.
+ * @since 2.2
  */
 public class TextFieldListCell<T> extends ListCell<T> {
     

@@ -159,6 +159,7 @@ public abstract class TextInputControl extends Control {
     /**
      * The prompt text to display in the {@code TextInputControl}, or
      * <tt>null</tt> if no prompt text is displayed.
+     * @since 2.2
      */
     private StringProperty promptText = new SimpleStringProperty(this, "promptText", "") {
         @Override protected void invalidated() {

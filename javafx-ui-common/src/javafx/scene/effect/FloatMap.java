@@ -299,6 +299,7 @@ public class FloatMap {
      * @treatAsPrivate implementation detail
      * @deprecated This is an internal API that is not intended for use and will be removed in the next version
      */
+    @Deprecated
     public FloatMap impl_copy() {
         FloatMap dest = new FloatMap(this.getWidth(), this.getHeight());
         System.arraycopy(buf, 0, dest.buf, 0, buf.length);

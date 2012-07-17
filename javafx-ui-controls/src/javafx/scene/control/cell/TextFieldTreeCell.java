@@ -43,6 +43,7 @@ import javafx.util.converter.DefaultStringConverter;
  * default, stretch to fill the entire tree cell.
  * 
  * @param <T> The type of the elements contained within the TreeView.
+ * @since 2.2
  */
 public class TextFieldTreeCell<T> extends TreeCell<T> {
     

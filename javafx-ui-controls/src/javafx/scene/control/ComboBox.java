@@ -309,6 +309,7 @@ public class ComboBox<T> extends ComboBoxBase<T> {
      * area. If a cell is set here, it does not change the rendering of the
      * ComboBox popup list - that rendering is controlled via the 
      * {@link #cellFactoryProperty() cell factory} API.
+     * @since 2.2
      */
     public ObjectProperty<ListCell<T>> buttonCellProperty() { return buttonCell; }
     private ObjectProperty<ListCell<T>> buttonCell = 
@@ -358,6 +359,7 @@ public class ComboBox<T> extends ComboBoxBase<T> {
     /**
      * The editor for the ComboBox. The editor is null if the ComboBox is not
      * {@link #editableProperty() editable}.
+     * @since 2.2
      */
     private ReadOnlyObjectWrapper<TextField> editor;
     public final TextField getEditor() { 

@@ -33,6 +33,7 @@ import java.nio.IntBuffer;
  * A {@link PixelFormat} object representing a pixel format that can store
  * full colors and so can be used as a destination format to write pixel
  * data from an arbitrary image.
+ * @since 2.2
  */
 public abstract class WritablePixelFormat<T extends Buffer>
     extends PixelFormat<T>

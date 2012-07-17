@@ -953,6 +953,7 @@ public abstract class Task<V> extends FutureTask<V> implements Worker<V>, EventT
      *                 done will be -1 (thus, indeterminate).
      * @param max A value from -1 to Double.MAX_VALUE. Any value outside this
      *            range results in an IllegalArgumentException.
+     * @since 2.2
      */
     protected void updateProgress(double workDone, double max) {
         // Perform the argument sanity check that workDone is < max

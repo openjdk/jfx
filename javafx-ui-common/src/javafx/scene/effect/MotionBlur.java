@@ -264,6 +264,7 @@ public class MotionBlur extends Effect {
      * @treatAsPrivate implementation detail
      * @deprecated This is an internal API that is not intended for use and will be removed in the next version
      */
+    @Deprecated
     @Override
     public Effect impl_copy() {
         MotionBlur mb = new MotionBlur(this.getAngle(), this.getRadius());

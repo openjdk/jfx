@@ -590,6 +590,7 @@ public class TableColumn<S,T> implements EventTarget {
      * Sets the id of this TableColumn. This simple string identifier is useful 
      * for finding a specific TableColumn within the {@code TableView}. The 
      * default value is {@code null}.
+     * @since 2.2
      */
     public final void setId(String value) { idProperty().set(value); }
 
@@ -597,11 +598,13 @@ public class TableColumn<S,T> implements EventTarget {
      * The id of this TableColumn.
      *
      * @return The id of the TableColumn.
+     * @since 2.2
      */
     public final String getId() { return id == null ? null : id.get(); }
 
     /**
      * The id of this TableColumn.
+     * @since 2.2
      */
     public final StringProperty idProperty() {
         if (id == null) {
@@ -621,7 +624,7 @@ public class TableColumn<S,T> implements EventTarget {
      * <p>
      * Parsing this style might not be supported on some limited
      * platforms. It is recommended to use a standalone CSS file instead.
-     *     
+     * @since 2.2
      */
     public final void setStyle(String value) { styleProperty().set(value); }
 
@@ -629,11 +632,13 @@ public class TableColumn<S,T> implements EventTarget {
      * The CSS style string associated to this TableColumn.
      *
      * @return The CSS style string associated to this TableColumn.
+     * @since 2.2
      */
     public final String getStyle() { return style == null ? null : style.get(); }
 
     /**
      * The CSS style string associated to this TableColumn.
+     * @since 2.2
      */
     public final StringProperty styleProperty() {
         if (style == null) {
@@ -652,6 +657,7 @@ public class TableColumn<S,T> implements EventTarget {
      * each element of the list is a style class to which this Node belongs.
      *
      * @see <a href="http://www.w3.org/TR/css3-selectors/#class-html">CSS3 class selectors</a>
+     * @since 2.2
      */
     public ObservableList<String> getStyleClass() {
         return styleClass;
@@ -664,6 +670,7 @@ public class TableColumn<S,T> implements EventTarget {
     /**
      * <p>Sets the graphic to show in the TableColumn to allow the user to
      * indicate graphically what is in the column. </p>
+     * @since 2.2
      */
     public final void setGraphic(Node value) {
         graphicProperty().set(value);
@@ -673,6 +680,7 @@ public class TableColumn<S,T> implements EventTarget {
      * The graphic shown in the TableColumn.
      *
      * @return The graphic shown in the TableColumn.
+     * @since 2.2
      */
     public final Node getGraphic() {
         return graphic == null ? null : graphic.get();
@@ -682,6 +690,7 @@ public class TableColumn<S,T> implements EventTarget {
      * The graphic in the TableColumn.
      * 
      * @return The graphic in the TableColumn.
+     * @since 2.2
      */
     public final ObjectProperty<Node> graphicProperty() {
         if (graphic == null) {
@@ -702,11 +711,13 @@ public class TableColumn<S,T> implements EventTarget {
      * the TableColumn being in the sort order. If not specified, the
      * TableColumn skin implementation is responsible for providing a default
      * sort node.
+     * @since 2.2
      */
     public final void setSortNode(Node value) { sortNodeProperty().set(value); }
     
     /**
      * Returns the current sort node set in this TableColumn.
+     * @since 2.2
      */
     public final Node getSortNode() { return sortNode.get(); }
     
@@ -714,6 +725,7 @@ public class TableColumn<S,T> implements EventTarget {
      * The sort node is commonly seen represented as a triangle that rotates
      * on screen to indicate whether the TableColumn is part of the sort order, 
      * and if so, what position in the sort order it is in.
+     * @since 2.2
      */
     public final ObjectProperty<Node> sortNodeProperty() { return sortNode; }
     
@@ -1036,8 +1048,9 @@ public class TableColumn<S,T> implements EventTarget {
       *
       * @return an observable map of properties on this TableColumn for use primarily
       * by application developers
-      */
-     public final ObservableMap<Object, Object> getProperties() {
+     * @since 2.2
+     */
+    public final ObservableMap<Object, Object> getProperties() {
         if (properties == null) {
             properties = FXCollections.observableMap(new HashMap<Object, Object>());
         }
@@ -1047,8 +1060,9 @@ public class TableColumn<S,T> implements EventTarget {
     /**
      * Tests if this TableColumn has properties.
      * @return true if node has properties.
+     * @since 2.2
      */
-     public boolean hasProperties() {
+    public boolean hasProperties() {
         return properties != null;
     }
 
@@ -1062,6 +1076,7 @@ public class TableColumn<S,T> implements EventTarget {
      *
      * @param value The value to be stored - this can later be retrieved by calling
      *          {@link TableColumn#getUserData()}.
+     * @since 2.2
      */
     public void setUserData(Object value) {
         getProperties().put(USER_DATA_KEY, value);
@@ -1073,6 +1088,7 @@ public class TableColumn<S,T> implements EventTarget {
      *
      * @return The Object that was previously set, or null if no property
      *          has been set or if null was set.
+     * @since 2.2
      */
     public Object getUserData() {
         return getProperties().get(USER_DATA_KEY);

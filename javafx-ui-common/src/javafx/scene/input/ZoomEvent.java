@@ -53,6 +53,8 @@ import javafx.event.EventType;
  * and {@code ZOOM_FINISHED} events. If zooming inertia is active on the
  * given platform, some {@code ZOOM} events with {@code isInertia()} returning
  * {@code true} can come after {@code ZOOM_FINISHED}.
+ *
+ * @since 2.2
  */
 public class ZoomEvent extends GestureEvent {
 
