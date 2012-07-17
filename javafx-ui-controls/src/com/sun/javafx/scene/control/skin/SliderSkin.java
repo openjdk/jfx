@@ -38,7 +38,7 @@ import com.sun.javafx.scene.control.behavior.SliderBehavior;
 /**
  * Region/css based skin for Slider
 */
-public class SliderSkin extends SkinBase<Slider, SliderBehavior> {
+public class SliderSkin extends javafx.scene.control.SkinBase<Slider, SliderBehavior> {
 
     /** Track if slider is vertical/horizontal and cause re layout */
 //    private boolean horizontal;
