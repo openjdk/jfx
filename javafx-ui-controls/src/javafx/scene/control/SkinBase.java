@@ -24,9 +24,9 @@
  */
 package javafx.scene.control;
 
+import com.sun.javafx.css.StyleableProperty;
 import com.sun.javafx.scene.control.behavior.BehaviorBase;
-import java.util.HashMap;
-import java.util.Map;
+import java.util.*;
 import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
 import javafx.beans.value.WeakChangeListener;
@@ -34,7 +34,9 @@ import javafx.collections.FXCollections;
 import javafx.collections.ListChangeListener;
 import javafx.collections.ListChangeListener.Change;
 import javafx.collections.ObservableList;
+import javafx.geometry.HPos;
 import javafx.geometry.Insets;
+import javafx.geometry.VPos;
 import javafx.scene.Node;
 import javafx.scene.layout.Region;
 
@@ -184,7 +186,9 @@ public abstract class SkinBase<C extends Control, B extends BehaviorBase<C>> imp
     /**
      * Called during the layout pass of the scenegraph. 
      */
-    protected abstract void layoutChildren();
+    protected void layoutChildren() {
+        // no-op
+    }
     
     /**
      * Subclasses can invoke this method to register that we want to listen to
@@ -351,6 +355,13 @@ public abstract class SkinBase<C extends Control, B extends BehaviorBase<C>> imp
     }
     
     /**
+     * Calls getPadding() on the Skinnable
+     */
+    protected Insets getPadding() {
+        return getSkinnable().getPadding();
+    }
+    
+    /**
      * Calls getWidth() on the Skinnable
      */
     protected double getWidth() {
@@ -363,6 +374,79 @@ public abstract class SkinBase<C extends Control, B extends BehaviorBase<C>> imp
     protected double getHeight() {
         return getSkinnable().getHeight();
     }    
+    
+    
+    
+    /***************************************************************************
+     *                                                                         *
+     * (Mostly ugly) Skin -> Control forwarding API                            *
+     *                                                                         *
+     **************************************************************************/      
+    
+//    /**
+//     * If this region's snapToPixel property is true, returns a value rounded
+//     * to the nearest pixel, else returns the same value.
+//     * @param value the space value to be snapped
+//     * @return value rounded to nearest pixel
+//     */
+    protected double snapSpace(double value) {
+        return getSkinnable()._snapSpace(value);
+    }
+    
+//    /**
+//     * If this region's snapToPixel property is true, returns a value ceiled
+//     * to the nearest pixel, else returns the same value.
+//     * @param value the size value to be snapped
+//     * @return value ceiled to nearest pixel
+//     */
+    protected double snapSize(double value) {
+        return getSkinnable()._snapSize(value);
+    }
+
+//    /**
+//     * If this region's snapToPixel property is true, returns a value rounded
+//     * to the nearest pixel, else returns the same value.
+//     * @param value the position value to be snapped
+//     * @return value rounded to nearest pixel
+//     */
+    protected double snapPosition(double value) {
+        return getSkinnable()._snapPosition(value);
+    }
+    
+    protected void positionInArea(Node child, double areaX, double areaY, double areaWidth, double areaHeight, double areaBaselineOffset, HPos halignment, VPos valignment) {
+        getSkinnable()._positionInArea(child, areaX, areaY, areaWidth, areaHeight, areaBaselineOffset, halignment, valignment);
+    }
+    
+    protected void positionInArea(Node child, double areaX, double areaY, double areaWidth, double areaHeight, double areaBaselineOffset, Insets margin, HPos halignment, VPos valignment) {
+        getSkinnable()._positionInArea(child, areaX, areaY, areaWidth, areaHeight, areaBaselineOffset, margin, halignment, valignment);
+    }
+    
+    protected void layoutInArea(Node child, double areaX, double areaY,
+                               double areaWidth, double areaHeight,
+                               double areaBaselineOffset,
+                               HPos halignment, VPos valignment) {
+        getSkinnable()._layoutInArea(child, areaX, areaY, areaWidth, areaHeight, areaBaselineOffset, halignment, valignment);
+    }
+    
+    protected void layoutInArea(Node child, double areaX, double areaY,
+                               double areaWidth, double areaHeight,
+                               double areaBaselineOffset,
+                               Insets margin,
+                               HPos halignment, VPos valignment) {
+        getSkinnable()._layoutInArea(child, areaX, areaY, areaWidth, areaHeight, areaBaselineOffset, margin, halignment, valignment);
+    }
+    
+    protected void layoutInArea(Node child, double areaX, double areaY,
+                               double areaWidth, double areaHeight,
+                               double areaBaselineOffset,
+                               Insets margin, boolean fillWidth, boolean fillHeight,
+                               HPos halignment, VPos valignment) {
+        getSkinnable()._layoutInArea(child, areaX, areaY, areaWidth, areaHeight, areaBaselineOffset, margin, fillWidth, fillHeight, halignment, valignment);
+    }
+    
+    protected void consumeMouseEvents(boolean consume) {
+        getSkinnable().consumeMouseEvents(consume);
+    }
     
     
     /***************************************************************************
@@ -396,5 +480,42 @@ public abstract class SkinBase<C extends Control, B extends BehaviorBase<C>> imp
                 getSkinnable().getControlChildren().addAll(change.getAddedSubList());
             }
         }
+    }
+    
+    
+    
+     /***************************************************************************
+     * Specialization of CSS handling code                                     *
+     **************************************************************************/
+
+    /**
+     * @treatAsPrivate implementation detail
+     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
+     */
+    @Deprecated public long impl_getPseudoClassState() {
+        return 0;
+    }
+
+    private static class StyleableProperties {
+
+        private static final List<StyleableProperty> STYLEABLES;
+
+        static {
+            STYLEABLES = Collections.unmodifiableList(Control.impl_CSS_STYLEABLES());
+        }
+    }
+
+     public static List<StyleableProperty> impl_CSS_STYLEABLES() {
+         return SkinBase.StyleableProperties.STYLEABLES;
+     }
+
+    /**
+     * RT-19263
+     * @treatAsPrivate implementation detail
+     * @deprecated This is an experimental API that is not intended for general use and is subject to change in future versions
+     */
+    @Deprecated
+    public List<StyleableProperty> impl_getStyleableProperties() {
+        return impl_CSS_STYLEABLES();
     }
 }

@@ -81,24 +81,10 @@ public class TitledPaneBehavior extends BehaviorBase<TitledPane> {
             tps.getContentRegion().getImpl_traversalEngine().getTopLeftFocusableNode();
             // Are there any focusable node in the TitlePane content
             if (!tp.isExpanded() || tps.getContentRegion().getImpl_traversalEngine().registeredNodes.isEmpty()) {
-                // If the parent is an accordion we want to focus to go outside of the
-                // accordion and to the next focusable control.
-                if (getControl().getParent() != null && getControl().getParent() instanceof AccordionSkin) {
-                    tps.getContentRegion().getImpl_traversalEngine().trav(getControl().getParent(), Direction.NEXT);
-                } else {                    
-                    super.callAction(name);
-                }
-            }
-        } else if ("TraversePrevious".equals(name)) {
-            TitledPane tp = getControl();
-            TitledPaneSkin tps = (TitledPaneSkin)tp.getSkin();
-            // If the parent is an accordion we want to focus to go outside of the
-            // accordion and to the next focusable control.
-            if (getControl().getParent() != null && getControl().getParent() instanceof AccordionSkin) {
-                tps.getContentRegion().getImpl_traversalEngine().trav(getControl().getParent(), Direction.PREVIOUS);
-            } else {
                 super.callAction(name);
             }
+        } else if ("TraversePrevious".equals(name)) {
+            super.callAction(name);
         } else {
             super.callAction(name);
         }

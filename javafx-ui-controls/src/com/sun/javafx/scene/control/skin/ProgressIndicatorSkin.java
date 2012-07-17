@@ -35,6 +35,7 @@ import javafx.event.EventHandler;
 import javafx.geometry.VPos;
 import javafx.scene.Group;
 import javafx.scene.control.ProgressIndicator;
+import javafx.scene.control.SkinBase;
 import javafx.scene.layout.Region;
 import javafx.scene.layout.StackPane;
 import javafx.scene.paint.Color;
@@ -541,7 +542,7 @@ public class ProgressIndicatorSkin extends SkinBase<ProgressIndicator, ProgressI
 
         @Override
         public StyleableProperty getStyleableProperty() {
-            return StyleableProperties.PROGRESS_COLOR;
+            return null;//StyleableProperties.PROGRESS_COLOR;
         }
     };
         
@@ -553,28 +554,28 @@ public class ProgressIndicatorSkin extends SkinBase<ProgressIndicator, ProgressI
      * @treatAsPrivate implementation detail
      */
     private static class StyleableProperties {
-        private static final StyleableProperty<ProgressIndicatorSkin,Paint> PROGRESS_COLOR =
-            new StyleableProperty<ProgressIndicatorSkin,Paint>("-fx-progress-color",
-                PaintConverter.getInstance(), Color.DODGERBLUE) {
-
-            @Override
-            public boolean isSettable(ProgressIndicatorSkin n) {
-                return n.progressColor == null || 
-                        !n.progressColor.isBound();
-            }
-
-            @Override
-            public WritableValue<Paint> getWritableValue(ProgressIndicatorSkin n) {
-                return n.progressColor;
-            }
-        };
+//        private static final StyleableProperty<ProgressIndicatorSkin,Paint> PROGRESS_COLOR =
+//            new StyleableProperty<ProgressIndicatorSkin,Paint>("-fx-progress-color",
+//                PaintConverter.getInstance(), Color.DODGERBLUE) {
+//
+//            @Override
+//            public boolean isSettable(ProgressIndicatorSkin n) {
+//                return n.progressColor == null || 
+//                        !n.progressColor.isBound();
+//            }
+//
+//            @Override
+//            public WritableValue<Paint> getWritableValue(ProgressIndicatorSkin n) {
+//                return n.progressColor;
+//            }
+//        };
 
         public static final List<StyleableProperty> STYLEABLES;
         static {
             final List<StyleableProperty> styleables = 
                 new ArrayList<StyleableProperty>(SkinBase.impl_CSS_STYLEABLES());
-            Collections.addAll(styleables,
-                               PROGRESS_COLOR
+            Collections.addAll(styleables
+//                               PROGRESS_COLOR
             );
             STYLEABLES = Collections.unmodifiableList(styleables);
         }

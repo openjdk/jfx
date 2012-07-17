@@ -94,8 +94,8 @@ public class RadioButtonSkin extends LabeledSkinBase<RadioButton, ButtonBehavior
         final double h = getHeight() - padding.getTop() - padding.getBottom();
         final double radioWidth = radio.prefWidth(-1);
         final double radioHeight = radio.prefHeight(-1);
-        final double labelWidth = Math.min(prefWidth(-1) - radioWidth, w - snapSize(radioWidth));
-        final double labelHeight = Math.min(prefHeight(labelWidth), h);
+        final double labelWidth = Math.min(getSkinnable().prefWidth(-1) - radioWidth, w - snapSize(radioWidth));
+        final double labelHeight = Math.min(getSkinnable().prefHeight(labelWidth), h);
         final double maxHeight = Math.max(radioHeight, labelHeight);
         final double x = Utils.computeXOffset(w, labelWidth + radioWidth, getSkinnable().getAlignment().getHpos()) + padding.getLeft();
         final double y = Utils.computeYOffset(h, maxHeight, getSkinnable().getAlignment().getVpos()) + padding.getTop();

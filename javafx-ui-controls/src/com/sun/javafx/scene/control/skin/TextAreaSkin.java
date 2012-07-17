@@ -420,7 +420,7 @@ public class TextAreaSkin extends TextInputControlSkin<TextArea, TextAreaBehavio
             }
         });
 
-        setManaged(false);
+//        setManaged(false);
 
         // Initialize content
         scrollPane = new ScrollPane();
@@ -768,7 +768,7 @@ public class TextAreaSkin extends TextInputControlSkin<TextArea, TextAreaBehavio
         scrollPane.setHbarPolicy(ScrollPane.ScrollBarPolicy.AS_NEEDED);
         scrollPane.setVbarPolicy(ScrollPane.ScrollBarPolicy.AS_NEEDED);
 
-        super.layoutChildren();
+//        super.layoutChildren();
 
         Bounds bounds = scrollPane.getViewportBounds();
         if (bounds != null && (bounds.getWidth() < contentView.minWidth(-1) ||

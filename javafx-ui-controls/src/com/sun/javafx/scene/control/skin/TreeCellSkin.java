@@ -87,7 +87,8 @@ public class TreeCellSkin extends CellSkinBase<TreeCell<?>, TreeCellBehavior> {
 
                 @Override
                 public StyleableProperty getStyleableProperty() {
-                    return StyleableProperties.INDENT;
+//                    return StyleableProperties.INDENT;
+                    return null;
                 }
                 
             };
@@ -131,12 +132,12 @@ public class TreeCellSkin extends CellSkinBase<TreeCell<?>, TreeCellBehavior> {
         }
     }
 
-    @Override public void impl_processCSS(boolean reapply) {
-        // This is needed now that TreeCell is Labeled - otherwise RT-15450 occurs
-        updateDisclosureNode();
-        
-        super.impl_processCSS(reapply);
-    }
+//    @Override public void impl_processCSS(boolean reapply) {
+//        // This is needed now that TreeCell is Labeled - otherwise RT-15450 occurs
+//        updateDisclosureNode();
+//        
+//        super.impl_processCSS(reapply);
+//    }
     
     @Override protected void layoutChildren() {
         TreeItem treeItem = getSkinnable().getTreeItem();
@@ -230,27 +231,27 @@ public class TreeCellSkin extends CellSkinBase<TreeCell<?>, TreeCellBehavior> {
 
     /** @treatAsPrivate */
     private static class StyleableProperties {
-        private static final StyleableProperty<TreeCellSkin,Number> INDENT = 
-            new StyleableProperty<TreeCellSkin,Number>("-fx-indent",
-                SizeConverter.getInstance(), 10.0) {
-
-            @Override
-            public boolean isSettable(TreeCellSkin n) {
-                return n.indent == null || !n.indent.isBound();
-            }
-
-            @Override
-            public WritableValue<Number> getWritableValue(TreeCellSkin n) {
-                return n.indentProperty();
-            }
-        };
+//        private static final StyleableProperty<TreeCellSkin,Number> INDENT = 
+//            new StyleableProperty<TreeCellSkin,Number>("-fx-indent",
+//                SizeConverter.getInstance(), 10.0) {
+//
+//            @Override
+//            public boolean isSettable(TreeCellSkin n) {
+//                return n.indent == null || !n.indent.isBound();
+//            }
+//
+//            @Override
+//            public WritableValue<Number> getWritableValue(TreeCellSkin n) {
+//                return n.indentProperty();
+//            }
+//        };
         
         private static final List<StyleableProperty> STYLEABLES;
         static {
             final List<StyleableProperty> styleables =
                 new ArrayList<StyleableProperty>(CellSkinBase.impl_CSS_STYLEABLES());
-            Collections.addAll(styleables,
-                INDENT
+            Collections.addAll(styleables
+//                INDENT
             );
             STYLEABLES = Collections.unmodifiableList(styleables);
         }

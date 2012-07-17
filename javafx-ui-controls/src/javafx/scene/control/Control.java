@@ -50,6 +50,7 @@ import com.sun.javafx.scene.control.Logging;
 import javafx.collections.ObservableList;
 import javafx.event.EventHandler;
 import javafx.event.EventType;
+import javafx.geometry.*;
 import javafx.scene.input.ContextMenuEvent;
 import javafx.scene.input.MouseEvent;
 
@@ -353,7 +354,7 @@ public abstract class Control extends Region implements Skinnable {
     /**
      * Determines whether all mouse events should be automatically consumed.
      */
-    protected final void consumeMouseEvents(boolean value) {
+    final void consumeMouseEvents(boolean value) {
         if (value) {
             addEventHandler(MouseEvent.ANY, mouseEventConsumer);
         } else {
@@ -539,11 +540,84 @@ public abstract class Control extends Region implements Skinnable {
         return n == null ? false : n.intersects(localX, localY, localWidth, localHeight);
     }
     
+    /**
+     * @treatAsPrivate implementation detail
+     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
+     */
+    @Deprecated @Override public long impl_getPseudoClassState() {
+        long mask = super.impl_getPseudoClassState();
+        
+        Skin skin = getSkin();
+        if (skin instanceof SkinBase) {
+            mask |= ((SkinBase)skin).impl_getPseudoClassState();
+//        } else if (skin instanceof com.sun.javafx.scene.control.skin.SkinBase) {
+//            mask |= ((com.sun.javafx.scene.control.skin.SkinBase)skin).impl_getPseudoClassState();
+        }
+        
+        return mask;
+    }
+    
+    
+    /***************************************************************************
+     *                                                                         *
+     * Package API for SkinBase                                                *
+     *                                                                         *
+     **************************************************************************/       
     
     // package private for SkinBase
     ObservableList<Node> getControlChildren() {
         return getChildren();
     }
+    
+    
+    // These three methods are required because Region has static methods that
+    // are not public, and SkinBase (and children) no longer extend from Region
+    // to use the public API used below. The best solution is to make the 
+    // static methods on Region public.
+    double _snapSpace(double value) {
+        return super.snapSpace(value);
+    }
+    
+    double _snapSize(double value) {
+        return super.snapSize(value);
+    }
+    
+    double _snapPosition(double value) {
+        return super.snapPosition(value);
+    }
+    
+    void _positionInArea(Node child, double areaX, double areaY, double areaWidth, double areaHeight, double areaBaselineOffset, HPos halignment, VPos valignment) {
+        super.positionInArea(child, areaX, areaY, areaWidth, areaHeight, areaBaselineOffset, halignment, valignment);
+    }
+    
+    void _positionInArea(Node child, double areaX, double areaY, double areaWidth, double areaHeight, double areaBaselineOffset, Insets margin, HPos halignment, VPos valignment) {
+        super.positionInArea(child, areaX, areaY, areaWidth, areaHeight, areaBaselineOffset, margin, halignment, valignment);
+    }
+    
+    void _layoutInArea(Node child, double areaX, double areaY,
+                               double areaWidth, double areaHeight,
+                               double areaBaselineOffset,
+                               HPos halignment, VPos valignment) {
+        super.layoutInArea(child, areaX, areaY, areaWidth, areaHeight, areaBaselineOffset, halignment, valignment);
+    }
+    
+    void _layoutInArea(Node child, double areaX, double areaY,
+                               double areaWidth, double areaHeight,
+                               double areaBaselineOffset,
+                               Insets margin,
+                               HPos halignment, VPos valignment) {
+        super.layoutInArea(child, areaX, areaY, areaWidth, areaHeight, areaBaselineOffset, margin, halignment, valignment);
+    }
+    
+    void _layoutInArea(Node child, double areaX, double areaY,
+                               double areaWidth, double areaHeight,
+                               double areaBaselineOffset,
+                               Insets margin, boolean fillWidth, boolean fillHeight,
+                               HPos halignment, VPos valignment) {
+        super.layoutInArea(child, areaX, areaY, areaWidth, areaHeight, areaBaselineOffset, margin, fillWidth, fillHeight, halignment, valignment);
+    }
+    
+    
     
     /***************************************************************************
      *                                                                         *
@@ -729,7 +803,7 @@ public abstract class Control extends Region implements Skinnable {
         private static final List<StyleableProperty> STYLEABLES;
         static {
             final List<StyleableProperty> styleables =
-                new ArrayList<StyleableProperty>(Parent.impl_CSS_STYLEABLES());
+                new ArrayList<StyleableProperty>(Region.impl_CSS_STYLEABLES());
             Collections.addAll(styleables,
                 SKIN
             );

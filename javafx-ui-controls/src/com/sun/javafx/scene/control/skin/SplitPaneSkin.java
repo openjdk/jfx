@@ -38,6 +38,7 @@ import javafx.geometry.Orientation;
 import javafx.geometry.VPos;
 import javafx.scene.Cursor;
 import javafx.scene.Node;
+import javafx.scene.control.SkinBase;
 import javafx.scene.control.SplitPane;
 import javafx.scene.input.MouseEvent;
 import javafx.scene.layout.StackPane;
@@ -56,7 +57,7 @@ public class SplitPaneSkin extends SkinBase<SplitPane, BehaviorBase<SplitPane>> 
 
     public SplitPaneSkin(final SplitPane splitPane) {
         super(splitPane, new BehaviorBase<SplitPane>(splitPane));
-        setManaged(false);
+//        setManaged(false);
         horizontal = getSkinnable().getOrientation() == Orientation.HORIZONTAL;
 
         contentRegions = FXCollections.<Content>observableArrayList();

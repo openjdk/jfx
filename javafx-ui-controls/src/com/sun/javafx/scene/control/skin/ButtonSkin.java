@@ -87,12 +87,12 @@ public class ButtonSkin extends LabeledSkinBase<Button, ButtonBehavior<Button>> 
                 }
            }
         } else if (p == "PARENT") {
-            if (getSkinnable().getParent() == null && getScene() != null) {  
+            if (getSkinnable().getParent() == null && getSkinnable().getScene() != null) {  
                 if (getSkinnable().isDefaultButton()) {
-                    getScene().getAccelerators().remove(defaultAcceleratorKeyCodeCombination);
+                    getSkinnable().getScene().getAccelerators().remove(defaultAcceleratorKeyCodeCombination);
                 }
                 if (getSkinnable().isCancelButton()) {
-                    getScene().getAccelerators().remove(cancelAcceleratorKeyCodeCombination);
+                    getSkinnable().getScene().getAccelerators().remove(cancelAcceleratorKeyCodeCombination);
                 }
             }
         }

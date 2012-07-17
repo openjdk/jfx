@@ -33,8 +33,6 @@ import javafx.scene.input.KeyEvent;
 import java.util.ArrayList;
 import java.util.List;
 
-import com.sun.javafx.scene.control.skin.SkinBase;
-
 import static javafx.scene.input.KeyEvent.KEY_PRESSED;
 
 import static com.sun.javafx.PlatformUtil.*;

@@ -27,6 +27,7 @@ package com.sun.javafx.scene.control.skin;
 import javafx.geometry.Insets;
 import javafx.geometry.Orientation;
 import javafx.scene.control.Separator;
+import javafx.scene.control.SkinBase;
 import javafx.scene.layout.Region;
 
 import com.sun.javafx.scene.control.behavior.BehaviorBase;

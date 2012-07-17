@@ -37,6 +37,7 @@ import javafx.scene.Scene;
 import javafx.scene.control.ContextMenu;
 import javafx.scene.control.MenuButton;
 import javafx.scene.control.MenuItem;
+import javafx.scene.control.SkinBase;
 import javafx.scene.input.MouseEvent;
 import javafx.scene.layout.StackPane;
 
@@ -45,6 +46,7 @@ import javafx.event.Event;
 import javafx.event.Event;
 import javafx.event.EventType;
 import javafx.scene.control.Menu;
+import javafx.scene.layout.Region;
 
 /**
  * Base class for MenuButtonSkin and SplitMenuButtonSkin. It consists of the
@@ -103,8 +105,8 @@ public abstract class MenuButtonSkinBase<C extends MenuButton, B extends MenuBut
 
         arrow = new StackPane();
         arrow.getStyleClass().setAll("arrow");
-        arrow.setMaxWidth(USE_PREF_SIZE);
-        arrow.setMaxHeight(USE_PREF_SIZE);
+        arrow.setMaxWidth(Region.USE_PREF_SIZE);
+        arrow.setMaxHeight(Region.USE_PREF_SIZE);
 
         arrowButton = new StackPane();
         arrowButton.getStyleClass().setAll("arrow-button");

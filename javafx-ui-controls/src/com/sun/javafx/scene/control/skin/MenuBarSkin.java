@@ -50,6 +50,7 @@ import javafx.scene.control.MenuBar;
 import javafx.scene.control.MenuButton;
 import javafx.scene.control.MenuItem;
 import javafx.scene.control.SeparatorMenuItem;
+import javafx.scene.control.SkinBase;
 import javafx.scene.input.KeyEvent;
 import javafx.scene.input.MouseEvent;
 import javafx.scene.layout.HBox;
@@ -321,14 +322,14 @@ public class MenuBarSkin extends SkinBase<MenuBar, BehaviorBase<MenuBar>> implem
            acceleratorKeyCombo = KeyCombination.keyCombination("F10");
         }
         getSkinnable().getParent().getScene().getAccelerators().put(acceleratorKeyCombo, firstMenuRunnable);
-        engine = new TraversalEngine(this, false) {
+        engine = new TraversalEngine(getSkinnable(), false) {
             @Override public void trav(Node node, Direction dir) {
                 direction = dir;
                 super.trav(node,dir);
             }
         };
         engine.addTraverseListener(this);
-        setImpl_traversalEngine(engine);
+        getSkinnable().setImpl_traversalEngine(engine);
         
         control.sceneProperty().addListener(new ChangeListener<Scene>() {
             @Override
@@ -472,7 +473,7 @@ public class MenuBarSkin extends SkinBase<MenuBar, BehaviorBase<MenuBar>> implem
                 MenuBarSkin curMBSkin = (systemMenuMap != null) ? systemMenuMap.get(stage) : null;
                 if (getSkinnable().isUseSystemMenuBar() && !menusContainCustomMenuItem()) {
                     if (curMBSkin != null &&
-                        (curMBSkin.getScene() == null || curMBSkin.getScene().getWindow() == null)) {
+                        (curMBSkin.getSkinnable().getScene() == null || curMBSkin.getSkinnable().getScene().getWindow() == null)) {
                         // Fix for RT-20951. The MenuBar may have been removed from the Stage.
                         systemMenuMap.remove(stage);
                         curMBSkin = null;

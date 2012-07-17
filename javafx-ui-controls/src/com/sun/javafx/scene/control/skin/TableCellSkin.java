@@ -58,9 +58,9 @@ public class TableCellSkin extends CellSkinBase<TableCell, TableCellBehavior> {
         
         // RT-22038
         Rectangle clip = new Rectangle();
-        clip.widthProperty().bind(widthProperty());
-        clip.heightProperty().bind(heightProperty());
-        setClip(clip);
+        clip.widthProperty().bind(getSkinnable().widthProperty());
+        clip.heightProperty().bind(getSkinnable().heightProperty());
+        getSkinnable().setClip(clip);
         // --- end of RT-22038
         
         if (getSkinnable().getTableColumn() != null) {
@@ -78,7 +78,7 @@ public class TableCellSkin extends CellSkinBase<TableCell, TableCellBehavior> {
     @Override protected void handleControlPropertyChanged(String p) {
         super.handleControlPropertyChanged(p);
         if (p == "VISIBLE") {
-            setVisible(getSkinnable().getTableColumn().isVisible());
+            getSkinnable().setVisible(getSkinnable().getTableColumn().isVisible());
         }
     }
     

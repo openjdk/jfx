@@ -73,6 +73,7 @@ import javafx.scene.control.RadioMenuItem;
 import javafx.scene.control.ToggleGroup;
 
 import com.sun.javafx.css.StyleManager;
+import com.sun.javafx.scene.control.behavior.BehaviorBase;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Iterator;
@@ -80,9 +81,10 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import javafx.application.Platform;
+import javafx.scene.control.Control;
 import javafx.scene.input.*;
 
-public class TabPaneSkin extends SkinBase<TabPane, TabPaneBehavior> {
+public class TabPaneSkin extends javafx.scene.control.SkinBase<TabPane, TabPaneBehavior> {
 
     private static int getRotation(Side pos) {
         switch (pos) {
@@ -136,7 +138,7 @@ public class TabPaneSkin extends SkinBase<TabPane, TabPaneBehavior> {
         super(tabPane, new TabPaneBehavior(tabPane));
 
         clipRect = new Rectangle();
-        setClip(clipRect);
+        getSkinnable().setClip(clipRect);
 
         tabContentRegions = FXCollections.<TabContentRegion>observableArrayList();
 
@@ -156,6 +158,8 @@ public class TabPaneSkin extends SkinBase<TabPane, TabPaneBehavior> {
 
         registerChangeListener(tabPane.getSelectionModel().selectedItemProperty(), "SELECTED_TAB");
         registerChangeListener(tabPane.sideProperty(), "SIDE");
+        registerChangeListener(tabPane.widthProperty(), "WIDTH");
+        registerChangeListener(tabPane.heightProperty(), "HEIGHT");
 
         previousSelectedTab = null;        
         selectedTab = getSkinnable().getSelectionModel().getSelectedItem();
@@ -192,6 +196,10 @@ public class TabPaneSkin extends SkinBase<TabPane, TabPaneBehavior> {
             requestLayout();
         } else if (property == "SIDE") {
             updateTabPosition();
+        } else if (property == "WIDTH") {
+            clipRect.setWidth(getWidth());
+        } else if (property == "HEIGHT") {
+            clipRect.setHeight(getHeight());
         }
     }
 
@@ -302,7 +310,7 @@ public class TabPaneSkin extends SkinBase<TabPane, TabPaneBehavior> {
 
     private void updateTabPosition() {
         tabHeaderArea.setScrollOffset(0.0F);
-        impl_reapplyCSS();
+        getSkinnable().impl_reapplyCSS();
         requestLayout();
     }
 
@@ -324,13 +332,13 @@ public class TabPaneSkin extends SkinBase<TabPane, TabPaneBehavior> {
 
     private void initializeSwipeHandlers() {
         if (PlatformUtil.isEmbedded()) {
-            setOnSwipeLeft(new EventHandler<SwipeEvent>() {
+            getSkinnable().setOnSwipeLeft(new EventHandler<SwipeEvent>() {
                 @Override public void handle(SwipeEvent t) {
                     getBehavior().selectNextTab();
                 }
             });
 
-            setOnSwipeRight(new EventHandler<SwipeEvent>() {
+            getSkinnable().setOnSwipeRight(new EventHandler<SwipeEvent>() {
                 @Override public void handle(SwipeEvent t) {
                     getBehavior().selectPreviousTab();
                 }
@@ -343,15 +351,15 @@ public class TabPaneSkin extends SkinBase<TabPane, TabPaneBehavior> {
         return getSkinnable().getStyleClass().contains(TabPane.STYLE_CLASS_FLOATING);
     }
 
-    @Override protected void setWidth(double value) {
-        super.setWidth(value);
-        clipRect.setWidth(value);
-    }
-
-    @Override protected void setHeight(double value) {
-        super.setHeight(value);
-        clipRect.setHeight(value);
-    }
+//    @Override protected void setWidth(double value) {
+//        super.setWidth(value);
+//        clipRect.setWidth(value);
+//    }
+//
+//    @Override protected void setHeight(double value) {
+//        super.setHeight(value);
+//        clipRect.setHeight(value);
+//    }
 
     private double maxw = 0.0d;
     @Override protected double computePrefWidth(double height) {

@@ -37,10 +37,12 @@ import javafx.scene.layout.StackPane;
 import javafx.scene.input.ScrollEvent;
 
 import com.sun.javafx.Utils;
+import com.sun.javafx.scene.control.behavior.BehaviorBase;
 import com.sun.javafx.scene.control.behavior.ScrollBarBehavior;
 import javafx.event.EventType;
+import javafx.scene.control.Control;
 
-public class ScrollBarSkin extends SkinBase<ScrollBar, ScrollBarBehavior> {
+public class ScrollBarSkin extends javafx.scene.control.SkinBase<ScrollBar, ScrollBarBehavior> {
 
     /***************************************************************************
      *                                                                         *
@@ -261,7 +263,7 @@ public class ScrollBarSkin extends SkinBase<ScrollBar, ScrollBarBehavior> {
         });
 
 
-        setOnScroll(new EventHandler<javafx.scene.input.ScrollEvent>() {
+        getSkinnable().setOnScroll(new EventHandler<javafx.scene.input.ScrollEvent>() {
             @Override public void handle(ScrollEvent event) {
                 /*
                 ** if the tracklength isn't greater then do nothing....
@@ -501,7 +503,7 @@ public class ScrollBarSkin extends SkinBase<ScrollBar, ScrollBarBehavior> {
                 positionThumb();
             }
 
-            resize(snapSize(getWidth()), snapSize(getHeight()));
+            getSkinnable().resize(snapSize(getWidth()), snapSize(getHeight()));
         }
 
         // things should be invisible only when well below minimum length

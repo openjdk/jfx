@@ -50,6 +50,7 @@ import javafx.scene.control.MenuItem;
 import javafx.scene.control.CustomMenuItem;
 import javafx.scene.control.Separator;
 import javafx.scene.control.SeparatorMenuItem;
+import javafx.scene.control.SkinBase;
 import javafx.scene.control.ToolBar;
 import javafx.scene.input.KeyCode;
 import javafx.scene.input.KeyEvent;
@@ -89,7 +90,7 @@ public class ToolBarSkin extends SkinBase<ToolBar, ToolBarBehavior> implements T
         initialize();
         registerChangeListener(toolbar.orientationProperty(), "ORIENTATION");
 
-        engine = new TraversalEngine(this, false) {
+        engine = new TraversalEngine(getSkinnable(), false) {
             @Override public void trav(Node owner, Direction dir) {
                 // This allows the right arrow to select the overflow menu
                 // without it only the tab key can select the overflow menu.
@@ -104,7 +105,7 @@ public class ToolBarSkin extends SkinBase<ToolBar, ToolBarBehavior> implements T
             }
         };
         engine.addTraverseListener(this);
-        setImpl_traversalEngine(engine);
+        getSkinnable().setImpl_traversalEngine(engine);
 
         toolbar.focusedProperty().addListener(new ChangeListener<Boolean>() {
             @Override
@@ -172,7 +173,7 @@ public class ToolBarSkin extends SkinBase<ToolBar, ToolBarBehavior> implements T
 
                 @Override
                 public StyleableProperty getStyleableProperty() {
-                    return StyleableProperties.SPACING;
+                    return null;//StyleableProperties.SPACING;
                 }
             };
         }
@@ -214,7 +215,7 @@ public class ToolBarSkin extends SkinBase<ToolBar, ToolBarBehavior> implements T
 
                 @Override
                 public StyleableProperty getStyleableProperty() {
-                    return StyleableProperties.ALIGNMENT;
+                    return null;//StyleableProperties.ALIGNMENT;
                 }
             };
         }
@@ -293,7 +294,7 @@ public class ToolBarSkin extends SkinBase<ToolBar, ToolBarBehavior> implements T
     }
 
     @Override protected void layoutChildren() {
-        super.layoutChildren();
+//        super.layoutChildren();
 
         if (getSkinnable().getOrientation() == Orientation.VERTICAL) {
             if (snapSize(getHeight()) != previousHeight || needsUpdate) {
@@ -619,35 +620,35 @@ public class ToolBarSkin extends SkinBase<ToolBar, ToolBarBehavior> implements T
       * @treatAsPrivate implementation detail
       */
      private static class StyleableProperties {
-         private static final StyleableProperty<ToolBarSkin,Number> SPACING =
-             new StyleableProperty<ToolBarSkin,Number>("-fx-spacing",
-                 SizeConverter.getInstance(), 0.0) {
-
-            @Override
-            public boolean isSettable(ToolBarSkin n) {
-                return n.spacing == null || !n.spacing.isBound();
-            }
-
-            @Override
-            public WritableValue<Number> getWritableValue(ToolBarSkin n) {
-                return n.spacingProperty();
-            }
-        };
-         
-        private static final StyleableProperty<ToolBarSkin,Pos>ALIGNMENT =
-                new StyleableProperty<ToolBarSkin,Pos>("-fx-alignment",
-                new EnumConverter<Pos>(Pos.class), Pos.TOP_LEFT ) {
-
-            @Override
-            public boolean isSettable(ToolBarSkin n) {
-                return n.boxAlignment == null || !n.boxAlignment.isBound();
-            }
-
-            @Override
-            public WritableValue<Pos> getWritableValue(ToolBarSkin n) {
-                return n.boxAlignmentProperty();
-            }
-        };
+//         private static final StyleableProperty<ToolBarSkin,Number> SPACING =
+//             new StyleableProperty<ToolBarSkin,Number>("-fx-spacing",
+//                 SizeConverter.getInstance(), 0.0) {
+//
+//            @Override
+//            public boolean isSettable(ToolBarSkin n) {
+//                return n.spacing == null || !n.spacing.isBound();
+//            }
+//
+//            @Override
+//            public WritableValue<Number> getWritableValue(ToolBarSkin n) {
+//                return n.spacingProperty();
+//            }
+//        };
+//         
+//        private static final StyleableProperty<ToolBarSkin,Pos>ALIGNMENT =
+//                new StyleableProperty<ToolBarSkin,Pos>("-fx-alignment",
+//                new EnumConverter<Pos>(Pos.class), Pos.TOP_LEFT ) {
+//
+//            @Override
+//            public boolean isSettable(ToolBarSkin n) {
+//                return n.boxAlignment == null || !n.boxAlignment.isBound();
+//            }
+//
+//            @Override
+//            public WritableValue<Pos> getWritableValue(ToolBarSkin n) {
+//                return n.boxAlignmentProperty();
+//            }
+//        };
 
          
          private static final List<StyleableProperty> STYLEABLES;
@@ -659,15 +660,15 @@ public class ToolBarSkin extends SkinBase<ToolBar, ToolBarBehavior> implements T
             // StackPane also has -fx-alignment. Replace it with 
             // ToolBarSkin's. 
             // TODO: Really should be able to reference StackPane.StyleableProperties.ALIGNMENT
-            final String alignmentProperty = ALIGNMENT.getProperty();
-            for (int n=0, nMax=styleables.size(); n<nMax; n++) {
-                final StyleableProperty prop = styleables.get(n);
-                if (alignmentProperty.equals(prop.getProperty())) styleables.remove(prop);
-            }
+//            final String alignmentProperty = ALIGNMENT.getProperty();
+//            for (int n=0, nMax=styleables.size(); n<nMax; n++) {
+//                final StyleableProperty prop = styleables.get(n);
+//                if (alignmentProperty.equals(prop.getProperty())) styleables.remove(prop);
+//            }
             
-            Collections.addAll(styleables,
-                SPACING, 
-                ALIGNMENT
+            Collections.addAll(styleables
+//                SPACING, 
+//                ALIGNMENT
             );
             STYLEABLES = Collections.unmodifiableList(styleables);
 

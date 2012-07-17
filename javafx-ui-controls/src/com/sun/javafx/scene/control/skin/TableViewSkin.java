@@ -53,6 +53,8 @@ import com.sun.javafx.scene.control.WeakListChangeListener;
 import com.sun.javafx.scene.control.skin.resources.ControlResources;
 import javafx.beans.WeakInvalidationListener;
 import javafx.beans.value.WeakChangeListener;
+import javafx.geometry.HPos;
+import javafx.geometry.VPos;
 
 public class TableViewSkin<T> extends VirtualContainerBase<TableView<T>, TableViewBehavior<T>, TableRow<T>> {
 
@@ -102,7 +104,7 @@ public class TableViewSkin<T> extends VirtualContainerBase<TableView<T>, TableVi
         tableHeaderRow.setColumnReorderLine(columnReorderLine);
         tableHeaderRow.setTablePadding(getInsets());
         tableHeaderRow.setFocusTraversable(false);
-        paddingProperty().addListener(new InvalidationListener() {
+        getSkinnable().paddingProperty().addListener(new InvalidationListener() {
             @Override public void invalidated(Observable valueModel) {
                 tableHeaderRow.setTablePadding(getInsets());
             }
@@ -432,12 +434,12 @@ public class TableViewSkin<T> extends VirtualContainerBase<TableView<T>, TableVi
         double w = getWidth() - (getInsets().getLeft() + getInsets().getRight());
         double h = getHeight() - (getInsets().getTop() + getInsets().getBottom());
         
-        final double baselineOffset = getLayoutBounds().getHeight() / 2;
+        final double baselineOffset = getSkinnable().getLayoutBounds().getHeight() / 2;
 
         // position the table header
         double tableHeaderRowHeight = tableHeaderRow.prefHeight(-1);
-        layoutInArea(tableHeaderRow, x, y, w, tableHeaderRowHeight, baselineOffset,
-                getAlignment().getHpos(), getAlignment().getVpos());
+        layoutInArea(tableHeaderRow, x, y, w, tableHeaderRowHeight, baselineOffset, 
+                HPos.CENTER, VPos.CENTER);
         y += tableHeaderRowHeight;
 
         // let the virtual flow take up all remaining space
@@ -449,11 +451,11 @@ public class TableViewSkin<T> extends VirtualContainerBase<TableView<T>, TableVi
             // show message overlay instead of empty table
             layoutInArea(placeholderRegion, x, y,
                     w, flowHeight,
-                    baselineOffset, getAlignment().getHpos(), getAlignment().getVpos());
+                    baselineOffset, HPos.CENTER, VPos.CENTER);
         } else {
             layoutInArea(flow, x, y,
                     w, flowHeight,
-                    baselineOffset, getAlignment().getHpos(), getAlignment().getVpos());
+                    baselineOffset, HPos.CENTER, VPos.CENTER);
         }
         
         // painting the overlay over the column being reordered

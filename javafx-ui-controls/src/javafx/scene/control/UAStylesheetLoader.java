@@ -25,7 +25,7 @@
 package javafx.scene.control;
 
 import com.sun.javafx.css.StyleManager;
-import com.sun.javafx.scene.control.skin.SkinBase;
+import com.sun.javafx.scene.control.skin.LabelSkin;
 import java.net.URL;
 import java.security.AccessController;
 import java.security.PrivilegedAction;
@@ -58,15 +58,15 @@ class UAStylesheetLoader {
             AccessController.doPrivileged(new PrivilegedAction() {
                 @Override
                 public Object run() {
-                        URL url = SkinBase.class.getResource("caspian/caspian.css");
+                        URL url = LabelSkin.class.getResource("caspian/caspian.css");
                         StyleManager.getInstance().setDefaultUserAgentStylesheet(url.toExternalForm());
                         
                         if (com.sun.javafx.PlatformUtil.isEmbedded()) {
-                            url = SkinBase.class.getResource("caspian/embedded.css");
+                            url = LabelSkin.class.getResource("caspian/embedded.css");
                             StyleManager.getInstance().addUserAgentStylesheet(url.toExternalForm());
                             
                             if (com.sun.javafx.Utils.isQVGAScreen()) {
-                                url = SkinBase.class.getResource("caspian/embedded-qvga.css");
+                                url = LabelSkin.class.getResource("caspian/embedded-qvga.css");
                                 StyleManager.getInstance().addUserAgentStylesheet(url.toExternalForm());
                             }
                         }

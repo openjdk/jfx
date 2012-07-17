@@ -55,14 +55,14 @@ public class EmbeddedTextContextMenuContent extends StackPane {
             @Override public void invalidated(Observable arg0) {
                 if (contextMenu.getOwnerNode() instanceof TextArea) {
                     TextAreaSkin tas = (TextAreaSkin)((TextArea)contextMenu.getOwnerNode()).getSkin();
-                    tas.getProperties().addListener(new InvalidationListener() {
+                    tas.getSkinnable().getProperties().addListener(new InvalidationListener() {
                         @Override public void invalidated(Observable arg0) {
                             requestLayout();
                         }
                     });
                 } else if (contextMenu.getOwnerNode() instanceof TextField) {
                     TextFieldSkin tfs = (TextFieldSkin)((TextField)contextMenu.getOwnerNode()).getSkin();
-                    tfs.getProperties().addListener(new InvalidationListener() {
+                    tfs.getSkinnable().getProperties().addListener(new InvalidationListener() {
                         @Override public void invalidated(Observable arg0) {
                             requestLayout();
                         }
@@ -134,15 +134,15 @@ public class EmbeddedTextContextMenuContent extends StackPane {
         if (contextMenu.getOwnerNode() instanceof TextArea) {
             TextArea ta = (TextArea)contextMenu.getOwnerNode();
             TextAreaSkin tas = (TextAreaSkin)ta.getSkin();
-            sceneX = Double.valueOf(tas.getProperties().get("CONTEXT_MENU_SCENE_X").toString());
-            screenX = Double.valueOf(tas.getProperties().get("CONTEXT_MENU_SCREEN_X").toString());
-            tas.getProperties().clear();
+            sceneX = Double.valueOf(tas.getSkinnable().getProperties().get("CONTEXT_MENU_SCENE_X").toString());
+            screenX = Double.valueOf(tas.getSkinnable().getProperties().get("CONTEXT_MENU_SCREEN_X").toString());
+            tas.getSkinnable().getProperties().clear();
         } else if (contextMenu.getOwnerNode() instanceof TextField) {
             TextField tf = (TextField)contextMenu.getOwnerNode();
             TextFieldSkin tfs = (TextFieldSkin)tf.getSkin();
-            sceneX = Double.valueOf(tfs.getProperties().get("CONTEXT_MENU_SCENE_X").toString());
-            screenX = Double.valueOf(tfs.getProperties().get("CONTEXT_MENU_SCREEN_X").toString());
-            tfs.getProperties().clear();
+            sceneX = Double.valueOf(tfs.getSkinnable().getProperties().get("CONTEXT_MENU_SCENE_X").toString());
+            screenX = Double.valueOf(tfs.getSkinnable().getProperties().get("CONTEXT_MENU_SCREEN_X").toString());
+            tfs.getSkinnable().getProperties().clear();
         }
         if (sceneX == 0) {
             pointerX = width/2;

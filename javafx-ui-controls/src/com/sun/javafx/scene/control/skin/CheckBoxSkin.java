@@ -77,8 +77,8 @@ public class CheckBoxSkin extends LabeledSkinBase<CheckBox, ButtonBehavior<Check
         final double h = getHeight() - padding.getTop() - padding.getBottom();
         final double boxWidth = box.prefWidth(-1);
         final double boxHeight = box.prefHeight(-1);
-        final double labelWidth = Math.min(prefWidth(-1) - boxWidth, w - snapSize(boxWidth));
-        final double labelHeight = Math.min(prefHeight(labelWidth), h);
+        final double labelWidth = Math.min(getSkinnable().prefWidth(-1) - boxWidth, w - snapSize(boxWidth));
+        final double labelHeight = Math.min(getSkinnable().prefHeight(labelWidth), h);
         final double maxHeight = Math.max(boxHeight, labelHeight);
         final double x = Utils.computeXOffset(w, labelWidth + boxWidth, getSkinnable().getAlignment().getHpos()) + padding.getLeft();
         final double y = Utils.computeYOffset(h, maxHeight, getSkinnable().getAlignment().getVpos()) + padding.getTop();

@@ -26,6 +26,7 @@
 package com.sun.javafx.scene.control.skin;
 
 import javafx.scene.control.ComboBoxBase;
+import javafx.scene.control.SkinBase;
 import com.sun.javafx.scene.control.behavior.ComboBoxBaseBehavior;
 import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
@@ -33,6 +34,7 @@ import javafx.geometry.HPos;
 import javafx.geometry.Insets;
 import javafx.geometry.VPos;
 import javafx.scene.Node;
+import javafx.scene.layout.Region;
 import javafx.scene.layout.StackPane;
 
 public abstract class ComboBoxBaseSkin<T> extends SkinBase<ComboBoxBase<T>, ComboBoxBaseBehavior<T>> {
@@ -56,8 +58,8 @@ public abstract class ComboBoxBaseSkin<T> extends SkinBase<ComboBoxBase<T>, Comb
         arrow = new StackPane();
         arrow.setFocusTraversable(false);
         arrow.getStyleClass().setAll("arrow");
-        arrow.setMaxWidth(USE_PREF_SIZE);
-        arrow.setMaxHeight(USE_PREF_SIZE);
+        arrow.setMaxWidth(Region.USE_PREF_SIZE);
+        arrow.setMaxHeight(Region.USE_PREF_SIZE);
         arrowButton = new StackPane();
         arrowButton.setFocusTraversable(false);
         arrowButton.setId("arrow-button");

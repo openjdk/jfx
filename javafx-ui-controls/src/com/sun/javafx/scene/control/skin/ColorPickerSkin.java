@@ -74,7 +74,7 @@ public class ColorPickerSkin extends ComboBoxPopupControl<Color> {
         }
         
         @Override public StyleableProperty getStyleableProperty() {
-            return StyleableProperties.COLOR_LABEL_VISIBLE;
+            return null;//StyleableProperties.COLOR_LABEL_VISIBLE;
         }
     };
     
@@ -266,25 +266,25 @@ public class ColorPickerSkin extends ComboBoxPopupControl<Color> {
     **************************************************************************/
     
      private static class StyleableProperties {
-        private static final StyleableProperty<ColorPickerSkin,Boolean> COLOR_LABEL_VISIBLE = 
-                new StyleableProperty<ColorPickerSkin,Boolean>("-fx-color-label-visible",
-                BooleanConverter.getInstance(), Boolean.TRUE) {
-
-            @Override public WritableValue<Boolean> getWritableValue(ColorPickerSkin n) {
-                return n.colorLabelVisible;
-            }
-
-            @Override
-            public boolean isSettable(ColorPickerSkin n) {
-                return n.colorLabelVisible == null || !n.colorLabelVisible.isBound();
-            }
-        };
+//        private static final StyleableProperty<ColorPickerSkin,Boolean> COLOR_LABEL_VISIBLE = 
+//                new StyleableProperty<ColorPickerSkin,Boolean>("-fx-color-label-visible",
+//                BooleanConverter.getInstance(), Boolean.TRUE) {
+//
+//            @Override public WritableValue<Boolean> getWritableValue(ColorPickerSkin n) {
+//                return n.colorLabelVisible;
+//            }
+//
+//            @Override
+//            public boolean isSettable(ColorPickerSkin n) {
+//                return n.colorLabelVisible == null || !n.colorLabelVisible.isBound();
+//            }
+//        };
         private static final List<StyleableProperty> STYLEABLES;
         static {
             final List<StyleableProperty> styleables =
                 new ArrayList<StyleableProperty>(ComboBoxBaseSkin.impl_CSS_STYLEABLES());
-            Collections.addAll(styleables,
-                COLOR_LABEL_VISIBLE
+            Collections.addAll(styleables
+//                COLOR_LABEL_VISIBLE
             );
             STYLEABLES = Collections.unmodifiableList(styleables);
         }

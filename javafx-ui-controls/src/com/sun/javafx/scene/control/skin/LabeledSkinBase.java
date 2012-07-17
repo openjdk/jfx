@@ -29,9 +29,7 @@ import com.sun.javafx.tk.Toolkit;
 import com.sun.javafx.tk.FontMetrics;
 import javafx.beans.InvalidationListener;
 import javafx.beans.Observable;
-import javafx.collections.ObservableList;
 import javafx.geometry.HPos;
-import javafx.geometry.Insets;
 import javafx.geometry.Orientation;
 import javafx.geometry.Pos;
 import javafx.geometry.VPos;
@@ -49,17 +47,15 @@ import javafx.scene.input.Mnemonic;
 import javafx.scene.shape.Line;
 import javafx.scene.shape.Rectangle;
 import javafx.scene.text.Font;
-import javafx.scene.text.Text;
 
 import com.sun.javafx.scene.control.behavior.BehaviorBase;
 import com.sun.javafx.scene.control.behavior.TextBinding;
-import java.util.Collections;
 
 import static javafx.scene.control.ContentDisplay.*;
 import static javafx.scene.control.OverrunStyle.*;
 import javafx.scene.image.ImageView;
 
-public abstract class LabeledSkinBase<C extends Labeled, B extends BehaviorBase<C>> extends SkinBase<C, B> {
+public abstract class LabeledSkinBase<C extends Labeled, B extends BehaviorBase<C>> extends javafx.scene.control.SkinBase<C, B> {
 
     /**
      *  The Text node used to display the text. This is package only
@@ -471,7 +467,7 @@ public abstract class LabeledSkinBase<C extends Labeled, B extends BehaviorBase<
             if (w == -1) {
                 w = availableWidth;
             }
-            double minW = Math.min(minWidth(-1), availableWidth);
+            double minW = Math.min(getSkinnable().minWidth(-1), availableWidth);
             if (horizontalPosition && !isIgnoreGraphic()) {
                 double graphicW = (labeled.getGraphic().getLayoutBounds().getWidth() + labeled.getGraphicTextGap());
                 w -= graphicW;
@@ -490,7 +486,7 @@ public abstract class LabeledSkinBase<C extends Labeled, B extends BehaviorBase<
             if (h == -1) {
                 h = availableHeight;
             }
-            double minH = Math.min(minHeight(w), availableHeight);
+            double minH = Math.min(getSkinnable().minHeight(w), availableHeight);
             if (verticalPosition && labeled.getGraphic() != null) {
                 double graphicH = labeled.getGraphic().getLayoutBounds().getHeight() + labeled.getGraphicTextGap();
                 h -= graphicH;
