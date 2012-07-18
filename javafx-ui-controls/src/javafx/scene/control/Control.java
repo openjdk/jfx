@@ -540,6 +540,17 @@ public abstract class Control extends Region implements Skinnable {
         return skin == null ? null : skin.getNode();
     }
 
+    /**
+     * A private reference directly to the SkinBase instance that is used as the
+     * Skin for this Control. A Control's Skin doesn't have to be of type
+     * SkinBase, although 98% of the time or greater it probably will be.
+     * Because instanceof checks and reading a value from a property are
+     * not cheap (on interpreters on slower hardware or mobile devices)
+     * it pays to have a direct reference here to the skinBase. We simply
+     * need to check this variable -- if it is not null then we know the
+     * Skin is a SkinBase and this is a direct reference to it. If it is null
+     * then we know the skin is not a SkinBase and we need to call getSkin().
+     */
     private SkinBase skinBase;
     
     /**
