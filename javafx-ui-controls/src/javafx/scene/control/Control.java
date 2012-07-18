@@ -87,13 +87,25 @@ public abstract class Control extends Region implements Skinnable {
      **************************************************************************/  
     
     private List<StyleableProperty> styleableProperties;
-    
-    
+
+    /**
+     * A private reference directly to the SkinBase instance that is used as the
+     * Skin for this Control. A Control's Skin doesn't have to be of type
+     * SkinBase, although 98% of the time or greater it probably will be.
+     * Because instanceof checks and reading a value from a property are
+     * not cheap (on interpreters on slower hardware or mobile devices)
+     * it pays to have a direct reference here to the skinBase. We simply
+     * need to check this variable -- if it is not null then we know the
+     * Skin is a SkinBase and this is a direct reference to it. If it is null
+     * then we know the skin is not a SkinBase and we need to call getSkin().
+     */
+    private SkinBase skinBase;
+
     /***************************************************************************
-     *                                                                         *
-     * Event Handlers / Listeners                                              *
-     *                                                                         *
-     **************************************************************************/     
+    *                                                                         *
+    * Event Handlers / Listeners                                              *
+    *                                                                         *
+    **************************************************************************/
     
     /**
      * Handles context menu requests by popping up the menu.
@@ -188,10 +200,8 @@ public abstract class Control extends Region implements Skinnable {
             
             // record a reference of the skin, if it is a SkinBase, for 
             // performance reasons
-            if (skin instanceof SkinBase) {
-                skinBase = (SkinBase) skin;
-            }
-            
+            skinBase = (skin instanceof SkinBase) ? (SkinBase) skin : null;
+
             // DEBUG: Log that we've changed the skin
             final PlatformLogger logger = Logging.getControlsLogger();
             if (logger.isLoggable(PlatformLogger.FINEST)) {
@@ -540,19 +550,6 @@ public abstract class Control extends Region implements Skinnable {
         return skin == null ? null : skin.getNode();
     }
 
-    /**
-     * A private reference directly to the SkinBase instance that is used as the
-     * Skin for this Control. A Control's Skin doesn't have to be of type
-     * SkinBase, although 98% of the time or greater it probably will be.
-     * Because instanceof checks and reading a value from a property are
-     * not cheap (on interpreters on slower hardware or mobile devices)
-     * it pays to have a direct reference here to the skinBase. We simply
-     * need to check this variable -- if it is not null then we know the
-     * Skin is a SkinBase and this is a direct reference to it. If it is null
-     * then we know the skin is not a SkinBase and we need to call getSkin().
-     */
-    private SkinBase skinBase;
-    
     /**
      * Keeps a reference to the name of the class currently acting as the skin.
      */
