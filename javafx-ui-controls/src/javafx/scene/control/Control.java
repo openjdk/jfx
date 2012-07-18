@@ -557,6 +557,7 @@ public abstract class Control extends Region implements Skinnable {
      * @return The Skin's node, or null.
      */
     private Node getSkinNode() {
+        assert skinBase == null;
         Skin skin = getSkin();
         return skin == null ? null : skin.getNode();
     }
