@@ -479,26 +479,6 @@ public abstract class Control extends Region implements Skinnable {
      * Forward the following to the skin                                       *
      **************************************************************************/
 
-    // overridden to base containment on the Skin rather than on the bounds
-    // of the Skin, allowing the Skin to dictate containment.
-    /**
-     * @treatAsPrivate implementation detail
-     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
-     */
-    @Deprecated
-    @Override protected boolean impl_computeContains(double localX, double localY) {
-        Node n = getSkinNode();
-        return n == null ? false : n.contains(localX, localY);
-    }
-
-    // overridden to base intersects on the Skin rather than on the bounds
-    // of the Skin, allowing the Skin to dictate intersection
-    /** {@inheritDoc} */
-    @Override public boolean intersects(double localX, double localY, double localWidth, double localHeight) {
-        Node n = getSkinNode();
-        return n == null ? false : n.intersects(localX, localY, localWidth, localHeight);
-    }
-    
     /**
      * @treatAsPrivate implementation detail
      * @deprecated This is an internal API that is not intended for use and will be removed in the next version
@@ -524,7 +504,6 @@ public abstract class Control extends Region implements Skinnable {
     ObservableList<Node> getControlChildren() {
         return getChildren();
     }
-    
 
     
     /***************************************************************************
