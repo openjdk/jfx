@@ -159,7 +159,6 @@ public abstract class Control extends Region implements Skinnable {
 
         @Override
         public void set(Skin<?> v) {
-
             if (v == null 
                 ? oldValue == null
                 : oldValue != null && v.getClass().equals(oldValue.getClass()))
@@ -179,28 +178,40 @@ public abstract class Control extends Region implements Skinnable {
         }
 
         @Override protected void invalidated() {
-
             // Dispose of the old skin
             if (oldValue != null) oldValue.dispose();
             
             // Get the new value, and save it off as the new oldValue
             final Skin<?> skin = oldValue = getValue();
-            
-            // check if the skin is a new-style skin that defers to the 
-            // Control for the children. If this is the case, we don't add
-            // the skin node into the children list of the Control
-            boolean isNewStyleSkin = skin instanceof SkinBase;
-            
-            // Update the children list with the new skin node
-            if (! isNewStyleSkin) {
+
+            // We have two paths, one for "legacy" Skins, and one for
+            // any Skin which extends from SkinBase. Legacy Skins will
+            // produce a single node which will be the only child of
+            // the Control via the getNode() method on the Skin. A
+            // SkinBase will manipulate the children of the Control
+            // directly. Further, we maintain a direct reference to
+            // the skinBase for more optimal updates later.
+            if (skin instanceof SkinBase) {
+                // record a reference of the skin, if it is a SkinBase, for
+                // performance reasons
+                skinBase = (SkinBase) skin;
+                // Note I do not remove any children here, because the
+                // skin will have already configured all the children
+                // by the time setSkin has been called. This is because
+                // our Skin interface was lacking an initialize method (doh!)
+                // and so the Skin constructor is where it adds listeners
+                // and so forth. For SkinBase implementations, the
+                // constructor is also where it will take ownership of
+                // the children.
+            } else {
                 final Node n = getSkinNode();
-                if (n != null) getChildren().setAll(n);
-                else getChildren().clear();
+                if (n != null) {
+                    getChildren().setAll(n);
+                } else {
+                    getChildren().clear();
+                }
+                skinBase = null;
             }
-            
-            // record a reference of the skin, if it is a SkinBase, for 
-            // performance reasons
-            skinBase = (skin instanceof SkinBase) ? (SkinBase) skin : null;
 
             // DEBUG: Log that we've changed the skin
             final PlatformLogger logger = Logging.getControlsLogger();
