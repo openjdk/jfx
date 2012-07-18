@@ -2443,7 +2443,9 @@ public class Region extends Parent {
      */
     @Deprecated
     @Override final protected void impl_notifyLayoutBoundsChanged() {
-        // change in geometric bounds does not necessarily change layoutBounds
+        // override Node's default behavior of having a geometric bounds change
+        // trigger a change in layoutBounds. For Resizable nodes, layoutBounds
+        // is unrelated to geometric bounds.
     }
 
     /**

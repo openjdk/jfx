@@ -363,6 +363,7 @@ public abstract class Control extends Region implements Skinnable {
             return skinNode == null ? 0 : skinNode.minWidth(height);
         }
     }
+
     /**
      * Computes the minimum allowable height of the Control, based on the provided
      * width. The minimum height is not calculated within the Control, instead
@@ -381,6 +382,7 @@ public abstract class Control extends Region implements Skinnable {
             return skinNode == null ? 0 : skinNode.minHeight(width);
         }
     }
+
     /**
      * Computes the maximum allowable width of the Control, based on the provided
      * height. The maximum width is not calculated within the Control, instead
@@ -399,6 +401,7 @@ public abstract class Control extends Region implements Skinnable {
             return skinNode == null ? 0 : skinNode.maxWidth(height);
         }
     }
+
     /**
      * Computes the maximum allowable height of the Control, based on the provided
      * width. The maximum height is not calculated within the Control, instead
@@ -417,22 +420,24 @@ public abstract class Control extends Region implements Skinnable {
             return skinNode == null ? 0 : skinNode.maxHeight(width);
         }
     }
+
     /** {@inheritDoc} */
     @Override protected double computePrefWidth(double height) {
         if (skinBase != null) {  
             return skinBase.computePrefWidth(height);
         } else {
             final Node skinNode = getSkinNode();
-            return skinNode == null? 0 : skinNode.prefWidth(height);
+            return skinNode == null ? 0 : skinNode.prefWidth(height);
         }
     }
+
     /** {@inheritDoc} */
     @Override protected double computePrefHeight(double width) {
         if (skinBase != null) {  
             return skinBase.computePrefHeight(width);
         } else {
             final Node skinNode = getSkinNode();
-            return skinNode == null? 0 : skinNode.prefHeight(width);
+            return skinNode == null ? 0 : skinNode.prefHeight(width);
         }
     }
     
@@ -442,7 +447,7 @@ public abstract class Control extends Region implements Skinnable {
             return skinBase.getBaselineOffset();
         } else {
             final Node skinNode = getSkinNode();
-            return skinNode == null? 0 : skinNode.getBaselineOffset(); 
+            return skinNode == null ? 0 : skinNode.getBaselineOffset();
         }
     }
 
@@ -452,17 +457,6 @@ public abstract class Control extends Region implements Skinnable {
      * changes on the node, we end up invalidating layout bounds. We then      *
      * recompute it on demand.                                                 *
      **************************************************************************/
-
-//    /**
-//     * @treatAsPrivate
-//     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
-//     */
-//    @Deprecated
-//    @Override protected void impl_notifyLayoutBoundsChanged() {
-//        // override Node's default behavior of having a geometric bounds change
-//        // trigger a change in layoutBounds. For Resizable nodes, layoutBounds
-//        // is unrelated to geometric bounds.
-//    }
 
     /**
      * @treatAsPrivate implementation detail
