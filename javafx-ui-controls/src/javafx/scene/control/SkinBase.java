@@ -30,9 +30,6 @@ import java.util.*;
 import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
 import javafx.beans.value.WeakChangeListener;
-import javafx.collections.FXCollections;
-import javafx.collections.ListChangeListener;
-import javafx.collections.ListChangeListener.Change;
 import javafx.collections.ObservableList;
 import javafx.event.EventHandler;
 import javafx.event.EventType;
@@ -46,7 +43,7 @@ import javafx.scene.layout.Region;
 /**
  *
  */
-public abstract class SkinBase<C extends Control, B extends BehaviorBase<C>> implements Skin<C> {
+public abstract class SkinBase<C extends Control, A extends BehaviorBase<C>> implements Skin<C> {
     
     /***************************************************************************
      *                                                                         *
@@ -62,6 +59,9 @@ public abstract class SkinBase<C extends Control, B extends BehaviorBase<C>> imp
      */
     private C control;
     
+    /**
+     * A local field that directly refers to the children list inside the Control.
+     */
     private ObservableList<Node> children;
     
     /**
@@ -73,7 +73,7 @@ public abstract class SkinBase<C extends Control, B extends BehaviorBase<C>> imp
      * {@code Skin} implementations will require specific {@code BehaviorBase}
      * implementations. For example, a ButtonSkin might require a ButtonBehavior.
      */
-    private B behavior;
+    private A behavior;
     
     /**
      * This is part of the workaround introduced during delomboking. We probably will
@@ -144,7 +144,7 @@ public abstract class SkinBase<C extends Control, B extends BehaviorBase<C>> imp
      * @param control The control for which this Skin should attach to.
      * @param behavior The behavior for which this Skin should defer to.
      */
-    protected SkinBase(final C control, final B behavior) {
+    protected SkinBase(final C control, final A behavior) {
         if (control == null || behavior == null) {
             throw new IllegalArgumentException("Cannot pass null for control or behavior");
         }
@@ -185,7 +185,7 @@ public abstract class SkinBase<C extends Control, B extends BehaviorBase<C>> imp
     }
     
     /** {@inheritDoc} */
-    public final B getBehavior() {
+    public final A getBehavior() {
         return behavior;
     }
 
@@ -219,7 +219,7 @@ public abstract class SkinBase<C extends Control, B extends BehaviorBase<C>> imp
     /**
      * Returns the children of the skin.
      */
-    protected final ObservableList<Node> getChildren() {
+    public final ObservableList<Node> getChildren() {
         return children;
     }
     
@@ -332,8 +332,8 @@ public abstract class SkinBase<C extends Control, B extends BehaviorBase<C>> imp
     protected double computePrefWidth(double height) {
         double minX = 0;
         double maxX = 0;
-        for (int i = 0; i < getChildren().size(); i++) {
-            Node node = getChildren().get(i);
+        for (int i = 0; i < children.size(); i++) {
+            Node node = children.get(i);
             if (node.isManaged()) {
                 final double x = node.getLayoutBounds().getMinX() + node.getLayoutX();
                 minX = Math.min(minX, x);
@@ -357,8 +357,8 @@ public abstract class SkinBase<C extends Control, B extends BehaviorBase<C>> imp
     protected double computePrefHeight(double width) {
         double minY = 0;
         double maxY = 0;
-        for (int i = 0; i < getChildren().size(); i++) {
-            Node node = getChildren().get(i);
+        for (int i = 0; i < children.size(); i++) {
+            Node node = children.get(i);
             if (node.isManaged()) {
                 final double y = node.getLayoutBounds().getMinY() + node.getLayoutY();
                 minY = Math.min(minY, y);
@@ -562,11 +562,4 @@ public abstract class SkinBase<C extends Control, B extends BehaviorBase<C>> imp
      *                                                                         *
      **************************************************************************/      
     
-    /**
-     * @treatAsPrivate implementation detail
-     * @deprecated This is an experimental API that is not intended for general use and is subject to change in future versions
-     */
-    @Deprecated List<Node> impl_getChildren() {
-        return getChildren();
-    }
 }

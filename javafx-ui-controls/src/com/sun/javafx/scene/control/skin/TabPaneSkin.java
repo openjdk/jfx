@@ -73,18 +73,15 @@ import javafx.scene.control.RadioMenuItem;
 import javafx.scene.control.ToggleGroup;
 
 import com.sun.javafx.css.StyleManager;
-import com.sun.javafx.scene.control.behavior.BehaviorBase;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
-import javafx.application.Platform;
-import javafx.scene.control.Control;
+import javafx.scene.control.SkinBase;
 import javafx.scene.input.*;
 
-public class TabPaneSkin extends javafx.scene.control.SkinBase<TabPane, TabPaneBehavior> {
+public class TabPaneSkin extends SkinBase<TabPane, TabPaneBehavior> {
 
     private static int getRotation(Side pos) {
         switch (pos) {

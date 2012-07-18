@@ -315,7 +315,7 @@ public class TreeViewSkin<T> extends VirtualContainerBase<TreeView<T>, TreeViewB
             updateItemCount();
             needItemCountUpdate = false;
         }
-        super.layoutChildren(x,y,w,h);
+        flow.resizeRelocate(x, y, w, h);
     }
     
     private void onFocusPreviousCell() {

@@ -519,8 +519,8 @@ public abstract class Control extends Region implements Skinnable {
         return getChildren();
     }
     
-    
 
+    
     /***************************************************************************
      *                                                                         *
      * Private implementation                                                  *
@@ -758,6 +758,10 @@ public abstract class Control extends Region implements Skinnable {
         }
 
         super.impl_processCSS(reapply);
+        
+//        if (skinBase != null) {
+//            skinBase.impl_processCSS(reapply);
+//        }
 
         if (getSkin() == null) {
             final String msg = 

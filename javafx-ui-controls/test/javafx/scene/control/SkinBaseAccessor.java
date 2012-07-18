@@ -14,6 +14,6 @@ import javafx.scene.Node;
 public class SkinBaseAccessor {
     
     public static List<Node> getChildren(SkinBase skin) {
-        return skin.impl_getChildren();
+        return skin.getChildren();
     }
 }
