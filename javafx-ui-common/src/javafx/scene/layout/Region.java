@@ -1403,7 +1403,7 @@ public class Region extends Parent {
         return override;
     }
 
-   /**
+    /**
      * Called during layout to determine the maximum height for this node.
      * Returns the value from <code>computeMaxHeight(forWidth)</code> unless
      * the application overrode the maximum height by setting the maxHeight property.
@@ -2433,7 +2433,7 @@ public class Region extends Parent {
      * @deprecated This is an internal API that is not intended for use and will be removed in the next version
      */
     @Deprecated
-    @Override protected Bounds impl_computeLayoutBounds() {
+    @Override protected final Bounds impl_computeLayoutBounds() {
         return new BoundingBox(0, 0, 0, getWidth(), getHeight(), 0);
     }
 

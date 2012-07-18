@@ -458,15 +458,6 @@ public abstract class Control extends Region implements Skinnable {
      * recompute it on demand.                                                 *
      **************************************************************************/
 
-    /**
-     * @treatAsPrivate implementation detail
-     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
-     */
-    @Deprecated
-    @Override protected Bounds impl_computeLayoutBounds() {
-        return new BoundingBox(0, 0, getWidth(), getHeight());
-    }
-
     /** {@inheritDoc} */
     @Override protected void layoutChildren() {
         if (skinBase != null) {
