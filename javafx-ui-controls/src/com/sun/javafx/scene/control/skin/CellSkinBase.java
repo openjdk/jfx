@@ -37,7 +37,6 @@ import com.sun.javafx.css.converters.SizeConverter;
 import com.sun.javafx.scene.control.behavior.CellBehaviorBase;
 import javafx.beans.property.DoubleProperty;
 import javafx.beans.property.ReadOnlyDoubleProperty;
-import javafx.beans.property.ReadOnlyDoubleWrapper;
 import javafx.beans.value.WritableValue;
 import javafx.scene.control.SkinBase;
 
@@ -92,7 +91,7 @@ public class CellSkinBase<C extends Cell, B extends CellBehaviorBase<C>> extends
 
                 @Override
                 public StyleableProperty getStyleableProperty() {
-                    return null;//StyleableProperties.CELL_SIZE;
+                    return StyleableProperties.CELL_SIZE;
                 }
             }; 
         }
@@ -125,35 +124,37 @@ public class CellSkinBase<C extends Cell, B extends CellBehaviorBase<C>> extends
       * @treatAsPrivate implementation detail
       */
      private static class StyleableProperties {
-//         private final static StyleableProperty<CellSkinBase,Number> CELL_SIZE =
-//                new StyleableProperty<CellSkinBase,Number>("-fx-cell-size",
-//                 SizeConverter.getInstance(), DEFAULT_CELL_SIZE) {
-//
-//            @Override
-//            public void set(CellSkinBase node, Number value) {
-//                double size = value == null ? DEFAULT_CELL_SIZE : ((Number)value).doubleValue();
-//                // guard against a 0 or negative size
-//                super.set(node, size <= 0 ? DEFAULT_CELL_SIZE : size);
-//            }
-//
-//            @Override
-//            public boolean isSettable(CellSkinBase n) {
-//                return n.cellSize == null || !n.cellSize.isBound();
-//            }
-//
-//            @Override
-//            public WritableValue<Number> getWritableValue(CellSkinBase n) {
-//                return n.cellSizePropertyImpl();
-//            }
-//        };
+         private final static StyleableProperty<Cell,Number> CELL_SIZE =
+                new StyleableProperty<Cell,Number>("-fx-cell-size",
+                 SizeConverter.getInstance(), DEFAULT_CELL_SIZE) {
+
+            @Override
+            public void set(Cell node, Number value) {
+                double size = value == null ? DEFAULT_CELL_SIZE : ((Number)value).doubleValue();
+                // guard against a 0 or negative size
+                super.set(node, size <= 0 ? DEFAULT_CELL_SIZE : size);
+            }
+
+            @Override
+            public boolean isSettable(Cell n) {
+                final CellSkinBase skin = (CellSkinBase) n.getSkin();
+                return skin.cellSize == null || !skin.cellSize.isBound();
+            }
+
+            @Override
+            public WritableValue<Number> getWritableValue(Cell n) {
+                final CellSkinBase skin = (CellSkinBase) n.getSkin();
+                return skin.cellSizePropertyImpl();
+            }
+        };
 
          private static final List<StyleableProperty> STYLEABLES;
          static {
 
             final List<StyleableProperty> styleables = 
                 new ArrayList<StyleableProperty>(SkinBase.impl_CSS_STYLEABLES());
-            Collections.addAll(styleables
-//                CELL_SIZE
+            Collections.addAll(styleables,
+                CELL_SIZE
             );
             STYLEABLES = Collections.unmodifiableList(styleables);
 

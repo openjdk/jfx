@@ -911,13 +911,9 @@ public class MenuBarSkin extends SkinBase<MenuBar, BehaviorBase<MenuBar>> implem
      * Layout the menu bar. This is a simple horizontal layout like an hbox.
      * Any menu items which don't fit into it will simply be made invisible.
      */
-    @Override protected void layoutChildren() {
+    @Override protected void layoutChildren(final double x, final double y,
+            final double w, final double h) {
         // layout the menus one after another
-        double x = getInsets().getLeft();
-        double y = getInsets().getTop();
-        double w = getWidth() - (getInsets().getLeft() + getInsets().getRight());
-        double h = getHeight() - (getInsets().getTop() + getInsets().getBottom());
-        
         container.resizeRelocate(x, y, w, h);
     }
 

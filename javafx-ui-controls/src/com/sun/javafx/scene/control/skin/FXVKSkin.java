@@ -648,7 +648,8 @@ private void setIcon(Key key, String fileName) {
         }
     }
 
-    @Override public void layoutChildren() {
+    @Override public void layoutChildren(final double x, final double y,
+            final double w, final double h) {
         double kw, kh;
         Insets insets = getInsets();
         if (vbox == null) {

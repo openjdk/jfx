@@ -1,7 +1,7 @@
 /*
  * Copyright (c) 2011, Oracle and/or its affiliates. All rights reserved.
  */
-package com.sun.javafx.scene.control.skin;
+package javafx.scene.control;
 
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertSame;

@@ -423,16 +423,12 @@ public class TableViewSkin<T> extends VirtualContainerBase<TableView<T>, TableVi
     }
     
     /** {@inheritDoc} */
-    @Override protected void layoutChildren() {
+    @Override protected void layoutChildren(final double x, double y,
+            final double w, final double h) {
         if (rowCountDirty) {
             updateRowCount();
             rowCountDirty = false;
         }
-        
-        double x = getInsets().getLeft();
-        double y = getInsets().getTop();
-        double w = getWidth() - (getInsets().getLeft() + getInsets().getRight());
-        double h = getHeight() - (getInsets().getTop() + getInsets().getBottom());
         
         final double baselineOffset = getSkinnable().getLayoutBounds().getHeight() / 2;
 

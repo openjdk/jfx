@@ -132,19 +132,14 @@ public abstract class ComboBoxBaseSkin<T> extends SkinBase<ComboBoxBase<T>, Comb
         return getMode() == ComboBoxMode.BUTTON;
     }
     
-    @Override protected void layoutChildren() {
+    @Override protected void layoutChildren(final double x, final double y,
+            final double w, final double h) {
         if (displayNode == null) {
             updateDisplayArea();
         }
         
         final Insets padding = getInsets();
         final Insets arrowButtonPadding = arrowButton.getInsets();
-
-        // x, y, w, h are the content area that will hold the label and arrow */
-        final double x = padding.getLeft();
-        final double y = padding.getTop();
-        final double w = getSkinnable().getWidth() - (padding.getLeft() + padding.getRight());
-        final double h = getSkinnable().getHeight() - (padding.getTop() + padding.getBottom());
 
         final double arrowWidth = snapSize(arrow.prefWidth(-1));
         final double arrowButtonWidth = (isButton()) ? 0 :

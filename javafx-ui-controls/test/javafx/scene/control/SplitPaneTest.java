@@ -29,6 +29,7 @@ import org.junit.Test;
  *
  * @author srikalyc
  */
+@Ignore
 public class SplitPaneTest {
     private SplitPane splitPane;//Empty string
     private SplitPane.Divider divider1;

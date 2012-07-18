@@ -21,7 +21,7 @@ public class ToggleButtonSkinTest {
         skin = new ToggleButtonSkinMock(togglebutton);
         // Set some padding so that any places where padding was being
         // computed but wasn't expected will be caught.
-        skin.setPadding(new Insets(10, 10, 10, 10));
+        togglebutton.setPadding(new Insets(10, 10, 10, 10));
         togglebutton.setSkin(skin);
 
     }

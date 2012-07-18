@@ -173,7 +173,7 @@ public class ToolBarSkin extends SkinBase<ToolBar, ToolBarBehavior> implements T
 
                 @Override
                 public StyleableProperty getStyleableProperty() {
-                    return null;//StyleableProperties.SPACING;
+                    return StyleableProperties.SPACING;
                 }
             };
         }
@@ -215,7 +215,7 @@ public class ToolBarSkin extends SkinBase<ToolBar, ToolBarBehavior> implements T
 
                 @Override
                 public StyleableProperty getStyleableProperty() {
-                    return null;//StyleableProperties.ALIGNMENT;
+                    return StyleableProperties.ALIGNMENT;
                 }
             };
         }
@@ -293,7 +293,8 @@ public class ToolBarSkin extends SkinBase<ToolBar, ToolBarBehavior> implements T
                 Double.MAX_VALUE : snapSize(getSkinnable().prefHeight(-1));
     }
 
-    @Override protected void layoutChildren() {
+    @Override protected void layoutChildren(double x, double y,
+            final double w, final double h) {
 //        super.layoutChildren();
 
         if (getSkinnable().getOrientation() == Orientation.VERTICAL) {
@@ -328,8 +329,6 @@ public class ToolBarSkin extends SkinBase<ToolBar, ToolBarBehavior> implements T
 
         // If popup menu is not null show the overflowControl
         if (overflow) {
-            double x;
-            double y;
             double overflowMenuWidth = snapSize(overflowMenu.prefWidth(-1));
             double overflowMenuHeight = snapSize(overflowMenu.prefHeight(-1));
             if (getSkinnable().getOrientation() == Orientation.VERTICAL) {
@@ -620,35 +619,39 @@ public class ToolBarSkin extends SkinBase<ToolBar, ToolBarBehavior> implements T
       * @treatAsPrivate implementation detail
       */
      private static class StyleableProperties {
-//         private static final StyleableProperty<ToolBarSkin,Number> SPACING =
-//             new StyleableProperty<ToolBarSkin,Number>("-fx-spacing",
-//                 SizeConverter.getInstance(), 0.0) {
-//
-//            @Override
-//            public boolean isSettable(ToolBarSkin n) {
-//                return n.spacing == null || !n.spacing.isBound();
-//            }
-//
-//            @Override
-//            public WritableValue<Number> getWritableValue(ToolBarSkin n) {
-//                return n.spacingProperty();
-//            }
-//        };
-//         
-//        private static final StyleableProperty<ToolBarSkin,Pos>ALIGNMENT =
-//                new StyleableProperty<ToolBarSkin,Pos>("-fx-alignment",
-//                new EnumConverter<Pos>(Pos.class), Pos.TOP_LEFT ) {
-//
-//            @Override
-//            public boolean isSettable(ToolBarSkin n) {
-//                return n.boxAlignment == null || !n.boxAlignment.isBound();
-//            }
-//
-//            @Override
-//            public WritableValue<Pos> getWritableValue(ToolBarSkin n) {
-//                return n.boxAlignmentProperty();
-//            }
-//        };
+         private static final StyleableProperty<ToolBar,Number> SPACING =
+             new StyleableProperty<ToolBar,Number>("-fx-spacing",
+                 SizeConverter.getInstance(), 0.0) {
+
+            @Override
+            public boolean isSettable(ToolBar n) {
+                final ToolBarSkin skin = (ToolBarSkin) n.getSkin();
+                return skin.spacing == null || !skin.spacing.isBound();
+            }
+
+            @Override
+            public WritableValue<Number> getWritableValue(ToolBar n) {
+                final ToolBarSkin skin = (ToolBarSkin) n.getSkin();
+                return skin.spacingProperty();
+            }
+        };
+         
+        private static final StyleableProperty<ToolBar,Pos>ALIGNMENT =
+                new StyleableProperty<ToolBar,Pos>("-fx-alignment",
+                new EnumConverter<Pos>(Pos.class), Pos.TOP_LEFT ) {
+
+            @Override
+            public boolean isSettable(ToolBar n) {
+                final ToolBarSkin skin = (ToolBarSkin) n.getSkin();
+                return skin.boxAlignment == null || !skin.boxAlignment.isBound();
+            }
+
+            @Override
+            public WritableValue<Pos> getWritableValue(ToolBar n) {
+                final ToolBarSkin skin = (ToolBarSkin) n.getSkin();
+                return skin.boxAlignmentProperty();
+            }
+        };
 
          
          private static final List<StyleableProperty> STYLEABLES;
@@ -660,15 +663,15 @@ public class ToolBarSkin extends SkinBase<ToolBar, ToolBarBehavior> implements T
             // StackPane also has -fx-alignment. Replace it with 
             // ToolBarSkin's. 
             // TODO: Really should be able to reference StackPane.StyleableProperties.ALIGNMENT
-//            final String alignmentProperty = ALIGNMENT.getProperty();
-//            for (int n=0, nMax=styleables.size(); n<nMax; n++) {
-//                final StyleableProperty prop = styleables.get(n);
-//                if (alignmentProperty.equals(prop.getProperty())) styleables.remove(prop);
-//            }
+            final String alignmentProperty = ALIGNMENT.getProperty();
+            for (int n=0, nMax=styleables.size(); n<nMax; n++) {
+                final StyleableProperty prop = styleables.get(n);
+                if (alignmentProperty.equals(prop.getProperty())) styleables.remove(prop);
+            }
             
-            Collections.addAll(styleables
-//                SPACING, 
-//                ALIGNMENT
+            Collections.addAll(styleables,
+                SPACING, 
+                ALIGNMENT
             );
             STYLEABLES = Collections.unmodifiableList(styleables);
 

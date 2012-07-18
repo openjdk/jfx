@@ -387,15 +387,10 @@ public class TabPaneSkin extends javafx.scene.control.SkinBase<TabPane, TabPaneB
         return tabHeaderArea.getBaselineOffset() + tabHeaderArea.getLayoutY();
     }
 
-    @Override protected void layoutChildren() {
+    @Override protected void layoutChildren(final double x, final double y,
+            final double w, final double h) {
         TabPane tabPane = getSkinnable();
         Side tabPosition = tabPane.getSide();
-        Insets padding = getInsets();
-
-        final double w = snapSize(getWidth()) - snapSize(padding.getLeft()) - snapSize(padding.getRight());
-        final double h = snapSize(getHeight()) - snapSize(padding.getTop()) - snapSize(padding.getBottom());
-        final double x = snapSize(padding.getLeft());
-        final double y = snapSize(padding.getTop());
 
         double headerHeight = snapSize(tabHeaderArea.prefHeight(-1));
         double tabsStartX = tabPosition.equals(Side.RIGHT)? x + w - headerHeight : x;

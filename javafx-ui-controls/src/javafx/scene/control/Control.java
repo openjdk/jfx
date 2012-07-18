@@ -49,10 +49,8 @@ import com.sun.javafx.logging.PlatformLogger;
 import com.sun.javafx.scene.control.Logging;
 import javafx.collections.ObservableList;
 import javafx.event.EventHandler;
-import javafx.event.EventType;
 import javafx.geometry.*;
 import javafx.scene.input.ContextMenuEvent;
-import javafx.scene.input.MouseEvent;
 
 
 /**
@@ -84,35 +82,18 @@ public abstract class Control extends Region implements Skinnable {
     
     /***************************************************************************
      *                                                                         *
+     * Private fields                                                          *
+     *                                                                         *
+     **************************************************************************/  
+    
+    private List<StyleableProperty> styleableProperties;
+    
+    
+    /***************************************************************************
+     *                                                                         *
      * Event Handlers / Listeners                                              *
      *                                                                         *
      **************************************************************************/     
-    
-    /**
-     * Forwards mouse events received by a MouseListener to the behavior.
-     * Note that we use this pattern to remove some of the anonymous inner
-     * classes which we'd otherwise have to create. When lambda expressions
-     * are supported, we could do it that way instead (or use MethodHandles).
-     */
-    private final EventHandler<MouseEvent> mouseHandler =
-            new EventHandler<MouseEvent>() {
-        @Override public void handle(MouseEvent e) {
-            if (! ((getSkin() instanceof SkinBase))) return;
-            
-            SkinBase skin = (SkinBase) getSkin();
-            
-            final EventType<?> type = e.getEventType();
-
-            if (type == MouseEvent.MOUSE_ENTERED) skin.getBehavior().mouseEntered(e);
-            else if (type == MouseEvent.MOUSE_EXITED) skin.getBehavior().mouseExited(e);
-            else if (type == MouseEvent.MOUSE_PRESSED) skin.getBehavior().mousePressed(e);
-            else if (type == MouseEvent.MOUSE_RELEASED) skin.getBehavior().mouseReleased(e);
-            else if (type == MouseEvent.MOUSE_DRAGGED) skin.getBehavior().mouseDragged(e);
-            else { // no op
-                throw new AssertionError("Unsupported event type received");
-            }
-        }
-    };
     
     /**
      * Handles context menu requests by popping up the menu.
@@ -130,21 +111,6 @@ public abstract class Control extends Region implements Skinnable {
         }
     };
     
-    /**
-     * Mouse handler used for consuming all mouse events (preventing them
-     * from bubbling up to parent)
-     */
-    private static final EventHandler<MouseEvent> mouseEventConsumer = new EventHandler<MouseEvent>() {
-        @Override public void handle(MouseEvent event) {
-            /*
-            ** we used to consume mouse wheel rotations here, 
-            ** be we've switched to ScrollEvents, and only consume those which we use.
-            ** See RT-13995 & RT-14480
-            */
-            event.consume();
-        }
-    };
-
 
     
     /***************************************************************************
@@ -198,7 +164,6 @@ public abstract class Control extends Region implements Skinnable {
             // called set on skinClassName in order to keep CSS from overwriting
             // the skin. 
             skinClassNameProperty().set(currentSkinClassName);
-            
         }
 
         @Override protected void invalidated() {
@@ -219,6 +184,12 @@ public abstract class Control extends Region implements Skinnable {
                 final Node n = getSkinNode();
                 if (n != null) getChildren().setAll(n);
                 else getChildren().clear();
+            }
+            
+            // record a reference of the skin, if it is a SkinBase, for 
+            // performance reasons
+            if (skin instanceof SkinBase) {
+                skinBase = (SkinBase) skin;
             }
             
             // DEBUG: Log that we've changed the skin
@@ -327,20 +298,9 @@ public abstract class Control extends Region implements Skinnable {
         final StyleableProperty prop = StyleableProperty.getStyleableProperty(focusTraversableProperty());
         prop.set(this, Boolean.TRUE);  
         
-        // We will auto-add listeners for wiring up Region mouse events to
-        // be sent to the behavior
-        this.addEventHandler(MouseEvent.MOUSE_ENTERED, mouseHandler);
-        this.addEventHandler(MouseEvent.MOUSE_EXITED, mouseHandler);
-        this.addEventHandler(MouseEvent.MOUSE_PRESSED, mouseHandler);
-        this.addEventHandler(MouseEvent.MOUSE_RELEASED, mouseHandler);
-        this.addEventHandler(MouseEvent.MOUSE_DRAGGED, mouseHandler);
-        
         // we add a listener for menu request events to show the context menu
         // that may be set on the Control
         this.addEventHandler(ContextMenuEvent.CONTEXT_MENU_REQUESTED, contextMenuHandler);
-
-        // Default behavior for controls is to consume all mouse events
-        consumeMouseEvents(true);
     }
     
     
@@ -350,17 +310,6 @@ public abstract class Control extends Region implements Skinnable {
      * Public API                                                              *
      *                                                                         *
      **************************************************************************/
-    
-    /**
-     * Determines whether all mouse events should be automatically consumed.
-     */
-    final void consumeMouseEvents(boolean value) {
-        if (value) {
-            addEventHandler(MouseEvent.ANY, mouseEventConsumer);
-        } else {
-            removeEventHandler(MouseEvent.ANY, mouseEventConsumer);
-        }
-    }
     
     /**
      * Returns <code>true</code> since all Controls are resizable.
@@ -385,12 +334,12 @@ public abstract class Control extends Region implements Skinnable {
      *      the minimum width.
      * @return A double representing the minimum width of this control.
      */
-    @Override protected double computeMinWidth(double height) {
-        if (getSkin() instanceof SkinBase) {    
-            SkinBase skin = (SkinBase) getSkin();
-            return skin == null ? 0 : skin.computeMinWidth(height);
+    @Override protected double computeMinWidth(final double height) {
+        if (skinBase != null) {    
+            return skinBase.computeMinWidth(height);
         } else {
-            return getSkinNode() == null ? 0 : getSkinNode().minWidth(height);
+            final Node skinNode = getSkinNode();
+            return skinNode == null ? 0 : skinNode.minWidth(height);
         }
     }
     /**
@@ -403,12 +352,12 @@ public abstract class Control extends Region implements Skinnable {
      *      the minimum height.
      * @return A double representing the minimum height of this control.
      */
-    @Override protected double computeMinHeight(double width) {
-        if (getSkin() instanceof SkinBase) {    
-            SkinBase skin = (SkinBase) getSkin();
-            return skin == null ? 0 : skin.computeMinHeight(width);
+    @Override protected double computeMinHeight(final double width) {
+        if (skinBase != null) {    
+            return skinBase.computeMinHeight(width);
         } else {
-            return getSkinNode() == null ? 0 : getSkinNode().minHeight(width);
+            final Node skinNode = getSkinNode();
+            return skinNode == null ? 0 : skinNode.minHeight(width);
         }
     }
     /**
@@ -422,11 +371,11 @@ public abstract class Control extends Region implements Skinnable {
      * @return A double representing the maximum width of this control.
      */
     @Override protected double computeMaxWidth(double height) {
-        if (getSkin() instanceof SkinBase) {    
-            SkinBase skin = (SkinBase) getSkin();
-            return skin == null ? 0 : skin.computeMaxWidth(height);
+        if (skinBase != null) {  
+            return skinBase.computeMaxWidth(height);
         } else {
-            return getSkinNode() == null ? 0 : getSkinNode().maxWidth(height);
+            final Node skinNode = getSkinNode();
+            return skinNode == null ? 0 : skinNode.maxWidth(height);
         }
     }
     /**
@@ -440,39 +389,39 @@ public abstract class Control extends Region implements Skinnable {
      * @return A double representing the maximum height of this control.
      */
     @Override protected double computeMaxHeight(double width) {
-        if (getSkin() instanceof SkinBase) {    
-            SkinBase skin = (SkinBase) getSkin();
-            return skin == null ? 0 : skin.computeMaxHeight(width);
+        if (skinBase != null) {  
+            return skinBase.computeMaxHeight(width);
         } else {
-            return getSkinNode() == null ? 0 : getSkinNode().maxHeight(width);
+            final Node skinNode = getSkinNode();
+            return skinNode == null ? 0 : skinNode.maxHeight(width);
         }
     }
     /** {@inheritDoc} */
     @Override protected double computePrefWidth(double height) {
-        if (getSkin() instanceof SkinBase) {    
-            SkinBase skin = (SkinBase) getSkin();
-            return skin == null ? 0 : skin.computePrefWidth(height);
+        if (skinBase != null) {  
+            return skinBase.computePrefWidth(height);
         } else {
-            return getSkinNode() == null? 0 : getSkinNode().prefWidth(height);
+            final Node skinNode = getSkinNode();
+            return skinNode == null? 0 : skinNode.prefWidth(height);
         }
     }
     /** {@inheritDoc} */
     @Override protected double computePrefHeight(double width) {
-        if (getSkin() instanceof SkinBase) {    
-            SkinBase skin = (SkinBase) getSkin();
-            return skin == null ? 0 : skin.computePrefHeight(width);
+        if (skinBase != null) {  
+            return skinBase.computePrefHeight(width);
         } else {
-            return getSkinNode() == null? 0 : getSkinNode().prefHeight(width);
+            final Node skinNode = getSkinNode();
+            return skinNode == null? 0 : skinNode.prefHeight(width);
         }
     }
     
     /** {@inheritDoc} */
     @Override public double getBaselineOffset() { 
-        if (getSkin() instanceof SkinBase) {    
-            SkinBase skin = (SkinBase) getSkin();
-            return skin == null ? 0 : skin.getBaselineOffset();
+        if (skinBase != null) {  
+            return skinBase.getBaselineOffset();
         } else {
-            return getSkinNode() == null? 0 : getSkinNode().getBaselineOffset(); 
+            final Node skinNode = getSkinNode();
+            return skinNode == null? 0 : skinNode.getBaselineOffset(); 
         }
     }
 
@@ -505,9 +454,13 @@ public abstract class Control extends Region implements Skinnable {
 
     /** {@inheritDoc} */
     @Override protected void layoutChildren() {
-        Skin skin = getSkin();
-        if (skin instanceof SkinBase) {
-            ((SkinBase)skin).layoutChildren();
+        if (skinBase != null) {
+            final Insets padding = getInsets();
+            final double x = snapSize(padding.getLeft());
+            final double y = snapSize(padding.getTop());
+            final double w = snapSize(getWidth()) - snapSize(padding.getLeft()) - snapSize(padding.getRight());
+            final double h = snapSize(getHeight()) - snapSize(padding.getTop()) - snapSize(padding.getBottom());
+            skinBase.layoutChildren(x, y, w, h);
         } else {
             Node n = getSkinNode();
             if (n != null) {
@@ -547,11 +500,8 @@ public abstract class Control extends Region implements Skinnable {
     @Deprecated @Override public long impl_getPseudoClassState() {
         long mask = super.impl_getPseudoClassState();
         
-        Skin skin = getSkin();
-        if (skin instanceof SkinBase) {
-            mask |= ((SkinBase)skin).impl_getPseudoClassState();
-//        } else if (skin instanceof com.sun.javafx.scene.control.skin.SkinBase) {
-//            mask |= ((com.sun.javafx.scene.control.skin.SkinBase)skin).impl_getPseudoClassState();
+        if (skinBase != null) {
+            mask |= skinBase.impl_getPseudoClassState();
         }
         
         return mask;
@@ -570,55 +520,7 @@ public abstract class Control extends Region implements Skinnable {
     }
     
     
-    // These three methods are required because Region has static methods that
-    // are not public, and SkinBase (and children) no longer extend from Region
-    // to use the public API used below. The best solution is to make the 
-    // static methods on Region public.
-    double _snapSpace(double value) {
-        return super.snapSpace(value);
-    }
-    
-    double _snapSize(double value) {
-        return super.snapSize(value);
-    }
-    
-    double _snapPosition(double value) {
-        return super.snapPosition(value);
-    }
-    
-    void _positionInArea(Node child, double areaX, double areaY, double areaWidth, double areaHeight, double areaBaselineOffset, HPos halignment, VPos valignment) {
-        super.positionInArea(child, areaX, areaY, areaWidth, areaHeight, areaBaselineOffset, halignment, valignment);
-    }
-    
-    void _positionInArea(Node child, double areaX, double areaY, double areaWidth, double areaHeight, double areaBaselineOffset, Insets margin, HPos halignment, VPos valignment) {
-        super.positionInArea(child, areaX, areaY, areaWidth, areaHeight, areaBaselineOffset, margin, halignment, valignment);
-    }
-    
-    void _layoutInArea(Node child, double areaX, double areaY,
-                               double areaWidth, double areaHeight,
-                               double areaBaselineOffset,
-                               HPos halignment, VPos valignment) {
-        super.layoutInArea(child, areaX, areaY, areaWidth, areaHeight, areaBaselineOffset, halignment, valignment);
-    }
-    
-    void _layoutInArea(Node child, double areaX, double areaY,
-                               double areaWidth, double areaHeight,
-                               double areaBaselineOffset,
-                               Insets margin,
-                               HPos halignment, VPos valignment) {
-        super.layoutInArea(child, areaX, areaY, areaWidth, areaHeight, areaBaselineOffset, margin, halignment, valignment);
-    }
-    
-    void _layoutInArea(Node child, double areaX, double areaY,
-                               double areaWidth, double areaHeight,
-                               double areaBaselineOffset,
-                               Insets margin, boolean fillWidth, boolean fillHeight,
-                               HPos halignment, VPos valignment) {
-        super.layoutInArea(child, areaX, areaY, areaWidth, areaHeight, areaBaselineOffset, margin, fillWidth, fillHeight, halignment, valignment);
-    }
-    
-    
-    
+
     /***************************************************************************
      *                                                                         *
      * Private implementation                                                  *
@@ -634,9 +536,12 @@ public abstract class Control extends Region implements Skinnable {
      * @return The Skin's node, or null.
      */
     private Node getSkinNode() {
-        return getSkin() == null ? null : getSkin().getNode();
+        Skin skin = getSkin();
+        return skin == null ? null : skin.getNode();
     }
 
+    private SkinBase skinBase;
+    
     /**
      * Keeps a reference to the name of the class currently acting as the skin.
      */
@@ -655,6 +560,10 @@ public abstract class Control extends Region implements Skinnable {
                 
                 @Override
                 public void invalidated() {
+                    
+                    // reset the styleable properties so we get the new ones from
+                    // the new skin
+                    styleableProperties = null;
 
                     if (get() != null) {
                         if (!get().equals(currentSkinClassName)) {
@@ -827,7 +736,15 @@ public abstract class Control extends Region implements Skinnable {
      */
     @Deprecated
     public List<StyleableProperty> impl_getStyleableProperties() {
-        return impl_CSS_STYLEABLES();
+        if (styleableProperties == null) {
+            styleableProperties = new ArrayList<StyleableProperty>();
+            styleableProperties.addAll(Control.StyleableProperties.STYLEABLES);
+            
+            if (skinBase != null) {
+                styleableProperties.addAll(skinBase.impl_getStyleableProperties());
+            }
+        }
+        return styleableProperties;
     }
 
     /**

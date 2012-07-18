@@ -70,21 +70,20 @@ public class CheckBoxSkin extends LabeledSkinBase<CheckBox, ButtonBehavior<Check
     }
 
 
-    @Override protected void layoutChildren() {
+    @Override protected void layoutChildren(final double x, final double y,
+            final double w, final double h) {
         Insets padding = getInsets();
 
-        final double w = getWidth() - padding.getLeft() - padding.getRight();
-        final double h = getHeight() - padding.getTop() - padding.getBottom();
         final double boxWidth = box.prefWidth(-1);
         final double boxHeight = box.prefHeight(-1);
         final double labelWidth = Math.min(getSkinnable().prefWidth(-1) - boxWidth, w - snapSize(boxWidth));
         final double labelHeight = Math.min(getSkinnable().prefHeight(labelWidth), h);
         final double maxHeight = Math.max(boxHeight, labelHeight);
-        final double x = Utils.computeXOffset(w, labelWidth + boxWidth, getSkinnable().getAlignment().getHpos()) + padding.getLeft();
-        final double y = Utils.computeYOffset(h, maxHeight, getSkinnable().getAlignment().getVpos()) + padding.getTop();
+        final double xOffset = Utils.computeXOffset(w, labelWidth + boxWidth, getSkinnable().getAlignment().getHpos()) + padding.getLeft();
+        final double yOffset = Utils.computeYOffset(h, maxHeight, getSkinnable().getAlignment().getVpos()) + padding.getTop();
 
-        layoutLabelInArea(x + boxWidth, y, labelWidth, maxHeight, Pos.CENTER_LEFT);
+        layoutLabelInArea(xOffset + boxWidth, yOffset, labelWidth, maxHeight, Pos.CENTER_LEFT);
         box.resize(snapSize(boxWidth), snapSize(boxHeight));
-        positionInArea(box, x, y, boxWidth, maxHeight, getBaselineOffset(), HPos.CENTER, VPos.CENTER);
+        positionInArea(box, xOffset, yOffset, boxWidth, maxHeight, getBaselineOffset(), HPos.CENTER, VPos.CENTER);
     }
 }

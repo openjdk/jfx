@@ -133,15 +133,15 @@ public class Region extends Parent {
         return Math.min(Math.max(value, min), Math.max(min,max));
     }
 
-    static double snapSpace(double value, boolean snapToPixel) {
+    public static double snapSpace(double value, boolean snapToPixel) {
          return snapToPixel? Math.round(value) : value;
     }
 
-    static double snapSize(double value, boolean snapToPixel) {
+    public static double snapSize(double value, boolean snapToPixel) {
         return snapToPixel? Math.ceil(value) : value;
     }
 
-    static double snapPosition(double value, boolean snapToPixel) {
+    public static double snapPosition(double value, boolean snapToPixel) {
         return snapToPixel? Math.round(value) : value;
     }
 
@@ -257,7 +257,7 @@ public class Region extends Parent {
     private BooleanProperty snapToPixel;
     public final void setSnapToPixel(boolean value) { snapToPixelProperty().set(value); }
     public final boolean isSnapToPixel() { return snapToPixel == null ? true : snapToPixel.get(); }
-
+    
     /**
      * The top,right,bottom,left padding around the region's content.
      * This space will be included in the calculation of the region's
@@ -1766,7 +1766,7 @@ public class Region extends Parent {
     protected void positionInArea(Node child, double areaX, double areaY, double areaWidth, double areaHeight,
                                double areaBaselineOffset, HPos halignment, VPos valignment) {
         positionInArea(child, areaX, areaY, areaWidth, areaHeight, areaBaselineOffset,
-                Insets.EMPTY, halignment, valignment);
+                Insets.EMPTY, halignment, valignment, isSnapToPixel());
     }
 
     /**
@@ -1798,14 +1798,16 @@ public class Region extends Parent {
      * @param valignment the vertical alignment for the child within the area
      *
      */
-    protected void positionInArea(Node child, double areaX, double areaY, double areaWidth, double areaHeight,
-                               double areaBaselineOffset, Insets margin, HPos halignment, VPos valignment) {
+    public static void positionInArea(Node child, double areaX, double areaY, double areaWidth, double areaHeight,
+                               double areaBaselineOffset, Insets margin, HPos halignment, VPos valignment, boolean isSnapToPixel) {
         Insets childMargin = margin != null? margin : Insets.EMPTY;
 
         position(child, areaX, areaY, areaWidth, areaHeight, areaBaselineOffset,
-                snapSpace(childMargin.getTop()), snapSpace(childMargin.getRight()),
-                snapSpace(childMargin.getBottom()), snapSpace(childMargin.getLeft()),
-                halignment, valignment);
+                snapSpace(childMargin.getTop(), isSnapToPixel), 
+                snapSpace(childMargin.getRight(), isSnapToPixel),
+                snapSpace(childMargin.getBottom(), isSnapToPixel), 
+                snapSpace(childMargin.getLeft(), isSnapToPixel),
+                halignment, valignment, isSnapToPixel);
     }
 
     /**
@@ -1971,11 +1973,20 @@ public class Region extends Parent {
                                double areaBaselineOffset,
                                Insets margin, boolean fillWidth, boolean fillHeight,
                                HPos halignment, VPos valignment) {
+        layoutInArea(child, areaX, areaY, areaWidth, areaHeight, areaBaselineOffset, margin, fillWidth, fillHeight, halignment, valignment, isSnapToPixel());
+    }
+    
+    public static void layoutInArea(Node child, double areaX, double areaY,
+                               double areaWidth, double areaHeight,
+                               double areaBaselineOffset,
+                               Insets margin, boolean fillWidth, boolean fillHeight,
+                               HPos halignment, VPos valignment, boolean isSnapToPixel) {
+        
         Insets childMargin = margin != null? margin : Insets.EMPTY;
-        double top = snapSpace(childMargin.getTop());
-        double bottom = snapSpace(childMargin.getBottom());
-        double left = snapSpace(childMargin.getLeft());
-        double right = snapSpace(childMargin.getRight());
+        double top = snapSpace(childMargin.getTop(), isSnapToPixel);
+        double bottom = snapSpace(childMargin.getBottom(), isSnapToPixel);
+        double left = snapSpace(childMargin.getLeft(), isSnapToPixel);
+        double right = snapSpace(childMargin.getRight(), isSnapToPixel);
         if (child.isResizable()) {
             Orientation bias = child.getContentBias();
 
@@ -2009,16 +2020,16 @@ public class Region extends Parent {
                                          Math.min(innerAreaWidth,child.prefWidth(childHeight)),
                                          child.minWidth(childHeight),child.maxWidth(childHeight));
             }
-            child.resize(snapSize(childWidth),snapSize(childHeight));
+            child.resize(snapSize(childWidth, isSnapToPixel),snapSize(childHeight, isSnapToPixel));
         }
         position(child, areaX, areaY, areaWidth, areaHeight, areaBaselineOffset,
-                top, right, bottom, left, halignment, valignment);
+                top, right, bottom, left, halignment, valignment, isSnapToPixel);
     }
 
-    private void position(Node child, double areaX, double areaY, double areaWidth, double areaHeight,
+    private static void position(Node child, double areaX, double areaY, double areaWidth, double areaHeight,
                           double areaBaselineOffset,
                           double topMargin, double rightMargin, double bottomMargin, double leftMargin,
-                          HPos hpos, VPos vpos) {
+                          HPos hpos, VPos vpos, boolean isSnapToPixel) {
         final double xoffset = leftMargin + computeXOffset(areaWidth - leftMargin - rightMargin,
                                                      child.getLayoutBounds().getWidth(), hpos);
         final double yoffset = topMargin +
@@ -2027,8 +2038,8 @@ public class Region extends Parent {
                           computeYOffset(areaHeight - topMargin - bottomMargin,
                                          child.getLayoutBounds().getHeight(), vpos));
         // do not snap position if child is not resizable because it can cause gaps
-        final double x = child.isResizable()? snapPosition(areaX + xoffset) : areaX + xoffset;
-        final double y = child.isResizable()? snapPosition(areaY + yoffset) : areaY + yoffset;
+        final double x = child.isResizable()? snapPosition(areaX + xoffset, isSnapToPixel) : areaX + xoffset;
+        final double y = child.isResizable()? snapPosition(areaY + yoffset, isSnapToPixel) : areaY + yoffset;
 
         child.relocate(x,y);
     }

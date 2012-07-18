@@ -845,12 +845,8 @@ public abstract class LabeledSkinBase<C extends Labeled, B extends BehaviorBase<
      *    and the labeled's hpos and vpos
      *  - position the graphic and text
      */
-    @Override protected void layoutChildren() {
-        final double x = leftPadding();
-        final double y = topPadding();
-        final double w = getWidth() - (leftPadding() + rightPadding());
-        final double h = getHeight() - (topPadding() + bottomPadding());
-
+    @Override protected void layoutChildren(final double x, final double y,
+            final double w, final double h) {
         layoutLabelInArea(x, y, w, h);
     }
 

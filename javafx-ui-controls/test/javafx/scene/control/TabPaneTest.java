@@ -673,6 +673,7 @@ public class TabPaneTest {
     }
     
     private int counter = 0;
+    @Ignore
     @Test public void setOnSelectionChangedFiresTwice_RT21089() {
         tabPane.getTabs().add(tab1);
         tabPane.getTabs().add(tab2);

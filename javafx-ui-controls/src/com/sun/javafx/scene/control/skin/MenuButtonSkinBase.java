@@ -264,15 +264,10 @@ public abstract class MenuButtonSkinBase<C extends MenuButton, B extends MenuBut
         return getSkinnable().prefHeight(width);
     }
 
-    @Override protected void layoutChildren() {
+    @Override protected void layoutChildren(final double x, final double y,
+            final double w, final double h) {
         final Insets padding = getInsets();
         final Insets arrowButtonPadding = arrowButton.getInsets();
-
-        // x, y, w, h are the content area that will hold the label and arrow */
-        final double x = padding.getLeft();
-        final double y = padding.getTop();
-        final double w = getWidth() - (padding.getLeft() + padding.getRight());
-        final double h = getHeight() - (padding.getTop() + padding.getBottom());
 
         final double arrowWidth = arrow.prefWidth(-1);
         final double arrowButtonWidth = arrowButtonPadding.getLeft() + arrowWidth + arrowButtonPadding.getRight();

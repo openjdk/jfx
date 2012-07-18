@@ -215,13 +215,9 @@ public class SliderSkin extends javafx.scene.control.SkinBase<Slider, SliderBeha
         thumb.setLayoutY(ly);
     }
 
-    @Override protected void layoutChildren() {
+    @Override protected void layoutChildren(final double x, final double y,
+            final double w, final double h) {
          // calculate the available space
-
-        double x = getInsets().getLeft();
-        double y = getInsets().getTop();
-        double w = getWidth() - (getInsets().getLeft() + getInsets().getRight());
-        double h = getHeight() - (getInsets().getTop() + getInsets().getBottom());
 
         // resize thumb to preferred size
         thumbWidth = thumb.prefWidth(-1);

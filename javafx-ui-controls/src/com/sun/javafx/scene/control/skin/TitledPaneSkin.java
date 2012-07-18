@@ -186,10 +186,8 @@ public class TitledPaneSkin extends LabeledSkinBase<TitledPane, TitledPaneBehavi
         return transition;
     }
 
-    @Override protected void layoutChildren() {
-        double w = snapSize(getWidth()) - (snapSpace(getInsets().getLeft()) + snapSpace(getInsets().getRight()));
-        double h = snapSize(getHeight()) - (snapSpace(getInsets().getTop()) + snapSpace(getInsets().getBottom()));
-
+    @Override protected void layoutChildren(final double x, double y,
+            final double w, final double h) {
         // header
         double headerHeight = Math.max(MIN_HEADER_HEIGHT, snapSize(titleRegion.prefHeight(-1)));
 
@@ -201,7 +199,7 @@ public class TitledPaneSkin extends LabeledSkinBase<TitledPane, TitledPaneBehavi
         double contentWidth = w;
         double contentHeight = h - headerHeight;
 
-        double y = snapSpace(getInsets().getTop()) + snapSpace(headerHeight) - (contentHeight * (1 - getTransition()));
+        y = snapSpace(getInsets().getTop()) + snapSpace(headerHeight) - (contentHeight * (1 - getTransition()));
         double clipY = contentHeight * (1 - getTransition());                
         ((Rectangle)contentContainer.getClip()).setY(clipY);
 

@@ -717,8 +717,9 @@ public class TextFieldSkin extends TextInputControlSkin<TextField, TextFieldBeha
         textGroup.getChildren().removeAll(nodes);
     }
 
-    @Override protected void layoutChildren() {
-//        super.layoutChildren();
+    @Override protected void layoutChildren(final double x, final double y,
+            final double w, final double h) {
+        super.layoutChildren(x,y,w,h);
 
         if (textNode != null) {
             double textY;
@@ -748,7 +749,7 @@ public class TextFieldSkin extends TextInputControlSkin<TextField, TextFieldBeha
             TextField textField = getSkinnable();
 
             // Resize handles for caret and anchor.
-            IndexRange selection = textField.getSelection();
+//            IndexRange selection = textField.getSelection();
             selectionHandle1.resize(selectionHandle1.prefWidth(-1),
                                     selectionHandle1.prefHeight(-1));
             selectionHandle2.resize(selectionHandle2.prefWidth(-1),

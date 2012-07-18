@@ -526,7 +526,8 @@ public class SplitPaneSkin extends SkinBase<SplitPane, BehaviorBase<SplitPane>> 
     private boolean resize = false;
     private boolean checkDividerPos = true;
 
-    @Override protected void layoutChildren() {
+    @Override protected void layoutChildren(final double x, final double y,
+            final double w, final double h) {
         if (!getSkinnable().isVisible() || 
             (horizontal ? getWidth() == 0 : getHeight() == 0) ||
             contentRegions.isEmpty()) {
@@ -534,8 +535,6 @@ public class SplitPaneSkin extends SkinBase<SplitPane, BehaviorBase<SplitPane>> 
         }
         
         double dividerWidth = contentDividers.isEmpty() ? 0 : contentDividers.get(0).prefWidth(-1);
-        double w = getWidth() - (getInsets().getLeft() + getInsets().getRight());
-        double h = getHeight() - (getInsets().getTop() + getInsets().getBottom());
 
         if (contentDividers.size() > 0 && previousArea != -1 && previousArea != (getWidth() * getHeight())) {
             //This algorithm adds/subracts a little to each panel on every resize
@@ -884,27 +883,27 @@ public class SplitPaneSkin extends SkinBase<SplitPane, BehaviorBase<SplitPane>> 
         }
     }
 
-    private void printDividerPositions() {
-        for (int i = 0; i < contentDividers.size(); i++) {
-            System.out.print("DIVIDER[" + i + "] " + contentDividers.get(i).getDividerPos() + " ");
-        } 
-        System.out.println("");
-    }
-    
-    private void printAreaAndAvailable() {
-        for (int i = 0; i < contentRegions.size(); i++) {
-            System.out.print("AREA[" + i + "] " + contentRegions.get(i).getArea() + " ");
-        }
-        System.out.println("");
-        for (int i = 0; i < contentRegions.size(); i++) {
-            System.out.print("AVAILABLE[" + i + "] " + contentRegions.get(i).getAvailable() + " ");
-        }
-        System.out.println("");
-        for (int i = 0; i < contentRegions.size(); i++) {
-            System.out.print("RESIZABLEWTIHPARENT[" + i + "] " + contentRegions.get(i).getResizableWithParentArea() + " ");
-        }
-        System.out.println("");
-    }
+//    private void printDividerPositions() {
+//        for (int i = 0; i < contentDividers.size(); i++) {
+//            System.out.print("DIVIDER[" + i + "] " + contentDividers.get(i).getDividerPos() + " ");
+//        } 
+//        System.out.println("");
+//    }
+//    
+//    private void printAreaAndAvailable() {
+//        for (int i = 0; i < contentRegions.size(); i++) {
+//            System.out.print("AREA[" + i + "] " + contentRegions.get(i).getArea() + " ");
+//        }
+//        System.out.println("");
+//        for (int i = 0; i < contentRegions.size(); i++) {
+//            System.out.print("AVAILABLE[" + i + "] " + contentRegions.get(i).getAvailable() + " ");
+//        }
+//        System.out.println("");
+//        for (int i = 0; i < contentRegions.size(); i++) {
+//            System.out.print("RESIZABLEWTIHPARENT[" + i + "] " + contentRegions.get(i).getResizableWithParentArea() + " ");
+//        }
+//        System.out.println("");
+//    }
 
     class ContentDivider extends StackPane {
         private double initialPos;

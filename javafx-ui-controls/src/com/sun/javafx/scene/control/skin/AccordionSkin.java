@@ -129,11 +129,8 @@ public class AccordionSkin extends SkinBase<Accordion, AccordionBehavior> {
         return h + snapSpace(getInsets().getTop()) + snapSpace(getInsets().getBottom());
     }
 
-    @Override protected void layoutChildren() {
-        double w = snapSize(getWidth()) - (snapSpace(getInsets().getLeft()) + snapSpace(getInsets().getRight()));
-        double h = snapSize(getHeight()) - (snapSpace(getInsets().getTop()) + snapSpace(getInsets().getBottom()));
-        double x = snapSpace(getInsets().getLeft());
-        double y = snapSpace(getInsets().getTop());
+    @Override protected void layoutChildren(final double x, double y,
+            final double w, final double h) {
 
         // TODO need to replace spacing with margins.
         double spacing = 0;

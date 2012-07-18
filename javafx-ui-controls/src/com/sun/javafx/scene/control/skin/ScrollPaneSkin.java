@@ -719,7 +719,8 @@ public class ScrollPaneSkin extends SkinBase<ScrollPane, ScrollPaneBehavior> imp
         return (h > 0) ? (3 * h) : (DEFAULT_MIN_SIZE);
     }
 
-    @Override protected void layoutChildren() {
+    @Override protected void layoutChildren(final double x, final double y,
+            final double w, final double h) {
         ScrollPane control = getSkinnable();
 
         vsb.setMin(control.getVmin());
@@ -729,8 +730,8 @@ public class ScrollPaneSkin extends SkinBase<ScrollPane, ScrollPaneBehavior> imp
         hsb.setMin(control.getHmin());
         hsb.setMax(control.getHmax());
 
-        contentWidth = control.getWidth() - (getInsets().getLeft() + getInsets().getRight());
-        contentHeight = control.getHeight() - (getInsets().getTop() + getInsets().getBottom());
+        contentWidth = w;
+        contentHeight = h;
 
         /*
         ** we want the scrollbars to go right to the border

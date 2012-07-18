@@ -82,13 +82,8 @@ public class TableCellSkin extends CellSkinBase<TableCell, TableCellBehavior> {
         }
     }
     
-    @Override protected void layoutChildren() {
-        // figure out the content area that is to be filled
-        double x = getInsets().getLeft();
-        double y = getInsets().getTop();
-        double w = snapSize(getWidth()) - (snapSpace(getInsets().getLeft()) + snapSpace(getInsets().getRight()));
-        double h = getHeight() - (getInsets().getTop() + getInsets().getBottom());
-        
+    @Override protected void layoutChildren(final double x, final double y,
+            final double w, final double h) {
         // fit the cell within this space
         // FIXME the subtraction of bottom padding isn't right here - but it
         // results in better visuals, so I'm leaving it in place for now.

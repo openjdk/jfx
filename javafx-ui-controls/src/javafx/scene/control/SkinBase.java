@@ -34,10 +34,13 @@ import javafx.collections.FXCollections;
 import javafx.collections.ListChangeListener;
 import javafx.collections.ListChangeListener.Change;
 import javafx.collections.ObservableList;
+import javafx.event.EventHandler;
+import javafx.event.EventType;
 import javafx.geometry.HPos;
 import javafx.geometry.Insets;
 import javafx.geometry.VPos;
 import javafx.scene.Node;
+import javafx.scene.input.MouseEvent;
 import javafx.scene.layout.Region;
 
 /**
@@ -59,6 +62,8 @@ public abstract class SkinBase<C extends Control, B extends BehaviorBase<C>> imp
      */
     private C control;
     
+    private ObservableList<Node> children;
+    
     /**
      * The {@link BehaviorBase} that encapsulates the interaction with the
      * {@link Control} from this {@code Skin}. The {@code Skin} does not modify
@@ -69,15 +74,6 @@ public abstract class SkinBase<C extends Control, B extends BehaviorBase<C>> imp
      * implementations. For example, a ButtonSkin might require a ButtonBehavior.
      */
     private B behavior;
-    
-    /**
-     * An ObservableList of the Nodes that make up the skin. This list differs
-     * from the Controls children list, in that it will be a subset (not including
-     * children such as the tooltip). When this children list changes, we 
-     * manually update the children of the Control itself, so that the Nodes
-     * are part of the scenegraph (as the Skin is not a member of the scenegraph).
-     */
-    private ObservableList<Node> children;
     
     /**
      * This is part of the workaround introduced during delomboking. We probably will
@@ -99,7 +95,42 @@ public abstract class SkinBase<C extends Control, B extends BehaviorBase<C>> imp
         }
     };
     
+    /**
+     * Mouse handler used for consuming all mouse events (preventing them
+     * from bubbling up to parent)
+     */
+    private static final EventHandler<MouseEvent> mouseEventConsumer = new EventHandler<MouseEvent>() {
+        @Override public void handle(MouseEvent event) {
+            /*
+            ** we used to consume mouse wheel rotations here, 
+            ** be we've switched to ScrollEvents, and only consume those which we use.
+            ** See RT-13995 & RT-14480
+            */
+            event.consume();
+        }
+    };
     
+    /**
+     * Forwards mouse events received by a MouseListener to the behavior.
+     * Note that we use this pattern to remove some of the anonymous inner
+     * classes which we'd otherwise have to create. When lambda expressions
+     * are supported, we could do it that way instead (or use MethodHandles).
+     */
+    private final EventHandler<MouseEvent> mouseHandler =
+            new EventHandler<MouseEvent>() {
+        @Override public void handle(MouseEvent e) {
+            final EventType<?> type = e.getEventType();
+
+            if (type == MouseEvent.MOUSE_ENTERED) behavior.mouseEntered(e);
+            else if (type == MouseEvent.MOUSE_EXITED) behavior.mouseExited(e);
+            else if (type == MouseEvent.MOUSE_PRESSED) behavior.mousePressed(e);
+            else if (type == MouseEvent.MOUSE_RELEASED) behavior.mouseReleased(e);
+            else if (type == MouseEvent.MOUSE_DRAGGED) behavior.mouseDragged(e);
+            else { // no op
+                throw new AssertionError("Unsupported event type received");
+            }
+        }
+    };
     
     /***************************************************************************
      *                                                                         *
@@ -121,6 +152,18 @@ public abstract class SkinBase<C extends Control, B extends BehaviorBase<C>> imp
         // Update the control and behavior
         this.control = control;
         this.behavior = behavior;
+        this.children = control.getControlChildren();
+        
+        // We will auto-add listeners for wiring up Region mouse events to
+        // be sent to the behavior
+        control.addEventHandler(MouseEvent.MOUSE_ENTERED, mouseHandler);
+        control.addEventHandler(MouseEvent.MOUSE_EXITED, mouseHandler);
+        control.addEventHandler(MouseEvent.MOUSE_PRESSED, mouseHandler);
+        control.addEventHandler(MouseEvent.MOUSE_RELEASED, mouseHandler);
+        control.addEventHandler(MouseEvent.MOUSE_DRAGGED, mouseHandler);
+        
+        // Default behavior for controls is to consume all mouse events
+        consumeMouseEvents(true);
     }
     
     
@@ -132,17 +175,17 @@ public abstract class SkinBase<C extends Control, B extends BehaviorBase<C>> imp
      **************************************************************************/    
 
     /** {@inheritDoc} */
-    @Override public C getSkinnable() {
+    @Override public final C getSkinnable() {
         return control;
     }
 
     /** {@inheritDoc} */
-    @Override public Node getNode() {
+    @Override public final Node getNode() {
         return control; 
     }
     
     /** {@inheritDoc} */
-    public B getBehavior() {
+    public final B getBehavior() {
         return behavior;
     }
 
@@ -153,11 +196,11 @@ public abstract class SkinBase<C extends Control, B extends BehaviorBase<C>> imp
             value.removeListener(controlPropertyChangedListener);
         }
 
-//        this.removeEventHandler(MouseEvent.MOUSE_ENTERED, mouseHandler);
-//        this.removeEventHandler(MouseEvent.MOUSE_EXITED, mouseHandler);
-//        this.removeEventHandler(MouseEvent.MOUSE_PRESSED, mouseHandler);
-//        this.removeEventHandler(MouseEvent.MOUSE_RELEASED, mouseHandler);
-//        this.removeEventHandler(MouseEvent.MOUSE_DRAGGED, mouseHandler);
+        control.removeEventHandler(MouseEvent.MOUSE_ENTERED, mouseHandler);
+        control.removeEventHandler(MouseEvent.MOUSE_EXITED, mouseHandler);
+        control.removeEventHandler(MouseEvent.MOUSE_PRESSED, mouseHandler);
+        control.removeEventHandler(MouseEvent.MOUSE_RELEASED, mouseHandler);
+        control.removeEventHandler(MouseEvent.MOUSE_DRAGGED, mouseHandler);
 //        
 //        control.removeEventHandler(ContextMenuEvent.CONTEXT_MENU_REQUESTED, contextMenuHandler);
 
@@ -176,17 +219,15 @@ public abstract class SkinBase<C extends Control, B extends BehaviorBase<C>> imp
     /**
      * Returns the children of the skin.
      */
-    protected ObservableList<Node> getChildren() {
-        if (children == null) {
-            instantiateChildren();
-        }
+    protected final ObservableList<Node> getChildren() {
         return children;
     }
     
     /**
      * Called during the layout pass of the scenegraph. 
      */
-    protected void layoutChildren() {
+    protected void layoutChildren(final double contentX, final double contentY,
+            final double contentWidth, final double contentHeight) {
         // no-op
     }
     
@@ -210,6 +251,17 @@ public abstract class SkinBase<C extends Control, B extends BehaviorBase<C>> imp
      */
     protected void handleControlPropertyChanged(String propertyReference) {
         // no-op
+    }
+    
+    /**
+     * Determines whether all mouse events should be automatically consumed.
+     */
+    protected final void consumeMouseEvents(boolean value) {
+        if (value) {
+            control.addEventHandler(MouseEvent.ANY, mouseEventConsumer);
+        } else {
+            control.removeEventHandler(MouseEvent.ANY, mouseEventConsumer);
+        }
     }
     
     
@@ -330,7 +382,7 @@ public abstract class SkinBase<C extends Control, B extends BehaviorBase<C>> imp
                 return child.getLayoutBounds().getMinY() + child.getLayoutY() + child.getBaselineOffset();
             }
         }
-        return getSkinnable().getLayoutBounds().getHeight();
+        return control.getLayoutBounds().getHeight();
     }
     
     
@@ -344,35 +396,35 @@ public abstract class SkinBase<C extends Control, B extends BehaviorBase<C>> imp
      * Calls requestLayout() on the Skinnable
      */
     protected void requestLayout() {
-        getSkinnable().requestLayout();
+        control.requestLayout();
     }
     
     /**
      * Calls getInsets() on the Skinnable
      */
     protected Insets getInsets() {
-        return getSkinnable().getInsets();
+        return control.getInsets();
     }
     
     /**
      * Calls getPadding() on the Skinnable
      */
     protected Insets getPadding() {
-        return getSkinnable().getPadding();
+        return control.getPadding();
     }
     
     /**
      * Calls getWidth() on the Skinnable
      */
     protected double getWidth() {
-        return getSkinnable().getWidth();
+        return control.getWidth();
     }
     
     /**
      * Calls getHeight() on the Skinnable
      */
     protected double getHeight() {
-        return getSkinnable().getHeight();
+        return control.getHeight();
     }    
     
     
@@ -390,7 +442,7 @@ public abstract class SkinBase<C extends Control, B extends BehaviorBase<C>> imp
 //     * @return value rounded to nearest pixel
 //     */
     protected double snapSpace(double value) {
-        return getSkinnable()._snapSpace(value);
+        return Region.snapSpace(value, control.isSnapToPixel());
     }
     
 //    /**
@@ -400,7 +452,7 @@ public abstract class SkinBase<C extends Control, B extends BehaviorBase<C>> imp
 //     * @return value ceiled to nearest pixel
 //     */
     protected double snapSize(double value) {
-        return getSkinnable()._snapSize(value);
+        return Region.snapSize(value, control.isSnapToPixel());
     }
 
 //    /**
@@ -410,22 +462,30 @@ public abstract class SkinBase<C extends Control, B extends BehaviorBase<C>> imp
 //     * @return value rounded to nearest pixel
 //     */
     protected double snapPosition(double value) {
-        return getSkinnable()._snapPosition(value);
+        return Region.snapPosition(value, control.isSnapToPixel());
     }
     
-    protected void positionInArea(Node child, double areaX, double areaY, double areaWidth, double areaHeight, double areaBaselineOffset, HPos halignment, VPos valignment) {
-        getSkinnable()._positionInArea(child, areaX, areaY, areaWidth, areaHeight, areaBaselineOffset, halignment, valignment);
+    protected void positionInArea(Node child, double areaX, double areaY, 
+            double areaWidth, double areaHeight, double areaBaselineOffset, 
+            HPos halignment, VPos valignment) {
+        positionInArea(child, areaX, areaY, areaWidth, areaHeight, 
+                areaBaselineOffset, Insets.EMPTY, halignment, valignment);
     }
     
-    protected void positionInArea(Node child, double areaX, double areaY, double areaWidth, double areaHeight, double areaBaselineOffset, Insets margin, HPos halignment, VPos valignment) {
-        getSkinnable()._positionInArea(child, areaX, areaY, areaWidth, areaHeight, areaBaselineOffset, margin, halignment, valignment);
+    protected void positionInArea(Node child, double areaX, double areaY, 
+            double areaWidth, double areaHeight, double areaBaselineOffset, 
+            Insets margin, HPos halignment, VPos valignment) {
+        Region.positionInArea(child, areaX, areaY, areaWidth, areaHeight, 
+                areaBaselineOffset, margin, halignment, valignment, 
+                control.isSnapToPixel());
     }
     
     protected void layoutInArea(Node child, double areaX, double areaY,
                                double areaWidth, double areaHeight,
                                double areaBaselineOffset,
                                HPos halignment, VPos valignment) {
-        getSkinnable()._layoutInArea(child, areaX, areaY, areaWidth, areaHeight, areaBaselineOffset, halignment, valignment);
+        layoutInArea(child, areaX, areaY, areaWidth, areaHeight, areaBaselineOffset, 
+                Insets.EMPTY, true, true, halignment, valignment);
     }
     
     protected void layoutInArea(Node child, double areaX, double areaY,
@@ -433,7 +493,8 @@ public abstract class SkinBase<C extends Control, B extends BehaviorBase<C>> imp
                                double areaBaselineOffset,
                                Insets margin,
                                HPos halignment, VPos valignment) {
-        getSkinnable()._layoutInArea(child, areaX, areaY, areaWidth, areaHeight, areaBaselineOffset, margin, halignment, valignment);
+        layoutInArea(child, areaX, areaY, areaWidth, areaHeight, areaBaselineOffset,
+                margin, true, true, halignment, valignment);
     }
     
     protected void layoutInArea(Node child, double areaX, double areaY,
@@ -441,12 +502,11 @@ public abstract class SkinBase<C extends Control, B extends BehaviorBase<C>> imp
                                double areaBaselineOffset,
                                Insets margin, boolean fillWidth, boolean fillHeight,
                                HPos halignment, VPos valignment) {
-        getSkinnable()._layoutInArea(child, areaX, areaY, areaWidth, areaHeight, areaBaselineOffset, margin, fillWidth, fillHeight, halignment, valignment);
+        Region.layoutInArea(child, areaX, areaY, areaWidth, areaHeight, 
+                areaBaselineOffset, margin, fillWidth, fillHeight, halignment, 
+                valignment, control.isSnapToPixel());
     }
     
-    protected void consumeMouseEvents(boolean consume) {
-        getSkinnable().consumeMouseEvents(consume);
-    }
     
     
     /***************************************************************************
@@ -455,37 +515,12 @@ public abstract class SkinBase<C extends Control, B extends BehaviorBase<C>> imp
      *                                                                         *
      **************************************************************************/     
     
-    private void instantiateChildren() {
-        this.children = FXCollections.observableArrayList();
-        
-        // listen to the children in this skin so that we may add it to the 
-        // scenegraph (which is the children of Control)
-        this.children.addListener(new ListChangeListener<Node>() {
-            @Override public void onChanged(Change<? extends Node> change) {
-                handleSkinChildrenChanges(change);
-            }
-        });
-    }
-
-    // TODO this should be improved to retain the children z-order
-    private void handleSkinChildrenChanges(Change<? extends Node> change) {
-        while (change.next()) {
-            if (change.wasRemoved()) {
-                // remove nodes from Control children
-                getSkinnable().getControlChildren().removeAll(change.getRemoved());
-            }
-
-            if (change.wasAdded()) {
-                // add new nodes to Control children
-                getSkinnable().getControlChildren().addAll(change.getAddedSubList());
-            }
-        }
-    }
     
     
-    
-     /***************************************************************************
-     * Specialization of CSS handling code                                     *
+     /**************************************************************************
+      *                                                                        *
+      * Specialization of CSS handling code                                    *
+      *                                                                        *
      **************************************************************************/
 
     /**
@@ -505,9 +540,9 @@ public abstract class SkinBase<C extends Control, B extends BehaviorBase<C>> imp
         }
     }
 
-     public static List<StyleableProperty> impl_CSS_STYLEABLES() {
-         return SkinBase.StyleableProperties.STYLEABLES;
-     }
+    public static List<StyleableProperty> impl_CSS_STYLEABLES() {
+        return SkinBase.StyleableProperties.STYLEABLES;
+    }
 
     /**
      * RT-19263
@@ -517,5 +552,21 @@ public abstract class SkinBase<C extends Control, B extends BehaviorBase<C>> imp
     @Deprecated
     public List<StyleableProperty> impl_getStyleableProperties() {
         return impl_CSS_STYLEABLES();
+    }
+    
+    
+    
+    /***************************************************************************
+     *                                                                         *
+     * Testing-only API                                                        *
+     *                                                                         *
+     **************************************************************************/      
+    
+    /**
+     * @treatAsPrivate implementation detail
+     * @deprecated This is an experimental API that is not intended for general use and is subject to change in future versions
+     */
+    @Deprecated List<Node> impl_getChildren() {
+        return getChildren();
     }
 }

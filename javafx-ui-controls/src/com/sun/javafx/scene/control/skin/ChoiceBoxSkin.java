@@ -324,20 +324,15 @@ import com.sun.javafx.scene.control.WeakListChangeListener;
         }
     }
 
-    @Override protected void layoutChildren() {
+    @Override protected void layoutChildren(final double x, final double y,
+            final double w, final double h) {
         // open button width/height
         double obw = openButton.prefWidth(-1);
 
-        // calculate area available to the display (i.e. the label)
-        double height = getSkinnable().getHeight() - (getInsets().getTop()
-                + getInsets().getBottom());
-        double displayWidth = getSkinnable().getWidth() -
-                (getInsets().getLeft() + getInsets().getRight() + obw);
-
-        label.resizeRelocate(getInsets().getLeft(), getInsets().getTop(), displayWidth, height);
+        label.resizeRelocate(getInsets().getLeft(), getInsets().getTop(), w, h);
         openButton.resize(obw, openButton.prefHeight(-1));
         positionInArea(openButton, getWidth() - getInsets().getRight() - obw,
-                getInsets().getTop(), obw, height, /*baseline ignored*/0, HPos.CENTER, VPos.CENTER);
+                getInsets().getTop(), obw, h, /*baseline ignored*/0, HPos.CENTER, VPos.CENTER);
     }
 
     @Override protected double computeMinWidth(double height) {

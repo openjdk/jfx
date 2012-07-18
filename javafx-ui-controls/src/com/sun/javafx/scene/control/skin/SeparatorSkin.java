@@ -89,24 +89,21 @@ public class SeparatorSkin extends SkinBase<Separator, BehaviorBase<Separator>> 
      * Then position the line within the separator such that the alignment
      * properties are honored.
      */
-    @Override protected void layoutChildren() {
+    @Override protected void layoutChildren(final double x, final double y,
+            final double w, final double h) {
         final Separator sep = getSkinnable();
         final Insets p = getInsets();
 
-        // content width and height
-        final double cw = getWidth() - (p.getLeft() + p.getRight());
-        final double ch = getHeight() - (p.getTop() + p.getBottom());
-
         if (sep.getOrientation() == Orientation.HORIZONTAL) {
             // Resize to the content width, and the pref height of the line.
-            line.resize(cw, line.prefHeight(-1));
+            line.resize(w, line.prefHeight(-1));
         } else {
             // Resize to the pref width of the line and the content height.
-            line.resize(line.prefWidth(-1), ch);
+            line.resize(line.prefWidth(-1), h);
         }
 
         // Now that the line has been sized, simply position it
-        positionInArea(line, p.getLeft(), p.getTop(), cw, ch, 0, sep.getHalignment(), sep.getValignment());
+        positionInArea(line, p.getLeft(), p.getTop(), w, h, 0, sep.getHalignment(), sep.getValignment());
     }
 
     @Override protected double computePrefWidth(double h) {

@@ -153,7 +153,8 @@ public class TableRowSkin<T> extends CellSkinBase<TableRow<T>, CellBehaviorBase<
         }
     }
 
-    @Override protected void layoutChildren() {
+    @Override protected void layoutChildren(double x, final double y,
+            final double w, final double h) {
         doUpdateCheck();
         
         TableView<T> table = getSkinnable().getTableView();
@@ -162,7 +163,6 @@ public class TableRowSkin<T> extends CellSkinBase<TableRow<T>, CellBehaviorBase<
         
         if (showColumns && ! table.getVisibleLeafColumns().isEmpty()) {
             // layout the individual column cells
-            double x = getInsets().getLeft();
             double width;
             double height;
             
@@ -183,7 +183,7 @@ public class TableRowSkin<T> extends CellSkinBase<TableRow<T>, CellBehaviorBase<
                 x += width;
             }
         } else {
-            super.layoutChildren();
+            super.layoutChildren(x,y,w,h);
         }
     }
 

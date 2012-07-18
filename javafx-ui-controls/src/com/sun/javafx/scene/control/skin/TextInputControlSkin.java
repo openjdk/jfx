@@ -113,7 +113,7 @@ public abstract class TextInputControlSkin<T extends TextInputControl, B extends
 
         @Override
         public StyleableProperty getStyleableProperty() {
-            return null;//StyleableProperties.FONT;
+            return StyleableProperties.FONT;
         }
     };
     protected final ObservableObjectValue<FontMetrics> fontMetrics = new ObjectBinding<FontMetrics>() {
@@ -142,7 +142,7 @@ public abstract class TextInputControlSkin<T extends TextInputControl, B extends
 
         @Override
         public StyleableProperty getStyleableProperty() {
-            return null;//StyleableProperties.TEXT_FILL;
+            return StyleableProperties.TEXT_FILL;
         }
     };
     protected final ObjectProperty<Paint> promptTextFill = 
@@ -160,7 +160,7 @@ public abstract class TextInputControlSkin<T extends TextInputControl, B extends
 
         @Override
         public StyleableProperty getStyleableProperty() {
-            return null;//StyleableProperties.PROMPT_TEXT_FILL;
+            return StyleableProperties.PROMPT_TEXT_FILL;
         }
     };
     /**
@@ -181,7 +181,7 @@ public abstract class TextInputControlSkin<T extends TextInputControl, B extends
 
         @Override
         public StyleableProperty getStyleableProperty() {
-            return null;//StyleableProperties.HIGHLIGHT_FILL;
+            return StyleableProperties.HIGHLIGHT_FILL;
         }
     };
     protected final ObjectProperty<Paint> highlightTextFill = 
@@ -199,7 +199,7 @@ public abstract class TextInputControlSkin<T extends TextInputControl, B extends
 
         @Override
         public StyleableProperty getStyleableProperty() {
-            return null;//StyleableProperties.HIGHLIGHT_TEXT_FILL;
+            return StyleableProperties.HIGHLIGHT_TEXT_FILL;
         }
     };
     protected final BooleanProperty displayCaret = 
@@ -217,7 +217,7 @@ public abstract class TextInputControlSkin<T extends TextInputControl, B extends
 
         @Override
         public StyleableProperty getStyleableProperty() {
-            return null;//StyleableProperties.DISPLAY_CARET;
+            return StyleableProperties.DISPLAY_CARET;
         }
     };
 
@@ -654,105 +654,117 @@ public abstract class TextInputControlSkin<T extends TextInputControl, B extends
     }
 
     private static class StyleableProperties {
-//        private static final StyleableProperty<TextInputControlSkin,Font> FONT =
-//           new StyleableProperty.FONT<TextInputControlSkin>("-fx-font", Font.getDefault()) {
-//
-//            @Override
-//            public boolean isSettable(TextInputControlSkin n) {
-//                return n.font == null || !n.font.isBound();
-//            }
-//
-//            @Override
-//            public WritableValue<Font> getWritableValue(TextInputControlSkin n) {
-//                return n.font;
-//            }
-//        };
-//        
-//        private static final StyleableProperty<TextInputControlSkin,Paint> TEXT_FILL =
-//            new StyleableProperty<TextInputControlSkin,Paint>("-fx-text-fill",
-//                PaintConverter.getInstance(), Color.BLACK) {
-//
-//            @Override
-//            public boolean isSettable(TextInputControlSkin n) {
-//                return n.textFill == null || !n.textFill.isBound();
-//            }
-//
-//            @Override
-//            public WritableValue<Paint> getWritableValue(TextInputControlSkin n) {
-//                return n.textFill;
-//            }
-//        };
-//       
-//        private static final StyleableProperty<TextInputControlSkin,Paint> PROMPT_TEXT_FILL =
-//            new StyleableProperty<TextInputControlSkin,Paint>("-fx-prompt-text-fill",
-//                PaintConverter.getInstance(), Color.GRAY) {
-//
-//            @Override
-//            public boolean isSettable(TextInputControlSkin n) {
-//                return n.promptTextFill == null || !n.promptTextFill.isBound();
-//            }
-//
-//            @Override
-//            public WritableValue<Paint> getWritableValue(TextInputControlSkin n) {
-//                return n.promptTextFill;
-//            }
-//        };
-//        
-//        private static final StyleableProperty<TextInputControlSkin,Paint> HIGHLIGHT_FILL =
-//            new StyleableProperty<TextInputControlSkin,Paint>("-fx-highlight-fill",
-//                PaintConverter.getInstance(), Color.DODGERBLUE) {
-//
-//            @Override
-//            public boolean isSettable(TextInputControlSkin n) {
-//                return n.highlightFill == null || !n.highlightFill.isBound();
-//            }
-//
-//            @Override
-//            public WritableValue<Paint> getWritableValue(TextInputControlSkin n) {
-//                return n.highlightFill;
-//            }
-//        };
-//        
-//        private static final StyleableProperty<TextInputControlSkin,Paint> HIGHLIGHT_TEXT_FILL =
-//            new StyleableProperty<TextInputControlSkin,Paint>("-fx-highlight-text-fill",
-//                PaintConverter.getInstance(), Color.WHITE) {
-//
-//            @Override
-//            public boolean isSettable(TextInputControlSkin n) {
-//                return n.highlightTextFill == null || !n.highlightTextFill.isBound();
-//            }
-//
-//            @Override
-//            public WritableValue<Paint> getWritableValue(TextInputControlSkin n) {
-//                return n.highlightTextFill;
-//            }
-//        };
-//        
-//        private static final StyleableProperty<TextInputControlSkin,Boolean> DISPLAY_CARET =
-//            new StyleableProperty<TextInputControlSkin,Boolean>("-fx-display-caret",
-//                BooleanConverter.getInstance(), Boolean.TRUE) {
-//
-//            @Override
-//            public boolean isSettable(TextInputControlSkin n) {
-//                return n.displayCaret == null || !n.displayCaret.isBound();
-//            }
-//
-//            @Override
-//            public WritableValue<Boolean> getWritableValue(TextInputControlSkin n) {
-//                return n.displayCaret;
-//            }
-//        };
+        private static final StyleableProperty<TextInputControl,Font> FONT =
+           new StyleableProperty.FONT<TextInputControl>("-fx-font", Font.getDefault()) {
+
+            @Override
+            public boolean isSettable(TextInputControl n) {
+                final TextInputControlSkin skin = (TextInputControlSkin) n.getSkin();
+                return skin.font == null || !skin.font.isBound();
+            }
+
+            @Override
+            public WritableValue<Font> getWritableValue(TextInputControl n) {
+                final TextInputControlSkin skin = (TextInputControlSkin) n.getSkin();
+                return skin.font;
+            }
+        };
+        
+        private static final StyleableProperty<TextInputControl,Paint> TEXT_FILL =
+            new StyleableProperty<TextInputControl,Paint>("-fx-text-fill",
+                PaintConverter.getInstance(), Color.BLACK) {
+
+            @Override
+            public boolean isSettable(TextInputControl n) {
+                final TextInputControlSkin skin = (TextInputControlSkin) n.getSkin();
+                return skin.textFill == null || !skin.textFill.isBound();
+            }
+
+            @Override
+            public WritableValue<Paint> getWritableValue(TextInputControl n) {
+                final TextInputControlSkin skin = (TextInputControlSkin) n.getSkin();
+                return skin.textFill;
+            }
+        };
+       
+        private static final StyleableProperty<TextInputControl,Paint> PROMPT_TEXT_FILL =
+            new StyleableProperty<TextInputControl,Paint>("-fx-prompt-text-fill",
+                PaintConverter.getInstance(), Color.GRAY) {
+
+            @Override
+            public boolean isSettable(TextInputControl n) {
+                final TextInputControlSkin skin = (TextInputControlSkin) n.getSkin();
+                return skin.promptTextFill == null || !skin.promptTextFill.isBound();
+            }
+
+            @Override
+            public WritableValue<Paint> getWritableValue(TextInputControl n) {
+                final TextInputControlSkin skin = (TextInputControlSkin) n.getSkin();
+                return skin.promptTextFill;
+            }
+        };
+        
+        private static final StyleableProperty<TextInputControl,Paint> HIGHLIGHT_FILL =
+            new StyleableProperty<TextInputControl,Paint>("-fx-highlight-fill",
+                PaintConverter.getInstance(), Color.DODGERBLUE) {
+
+            @Override
+            public boolean isSettable(TextInputControl n) {
+                final TextInputControlSkin skin = (TextInputControlSkin) n.getSkin();
+                return skin.highlightFill == null || !skin.highlightFill.isBound();
+            }
+
+            @Override
+            public WritableValue<Paint> getWritableValue(TextInputControl n) {
+                final TextInputControlSkin skin = (TextInputControlSkin) n.getSkin();
+                return skin.highlightFill;
+            }
+        };
+        
+        private static final StyleableProperty<TextInputControl,Paint> HIGHLIGHT_TEXT_FILL =
+            new StyleableProperty<TextInputControl,Paint>("-fx-highlight-text-fill",
+                PaintConverter.getInstance(), Color.WHITE) {
+
+            @Override
+            public boolean isSettable(TextInputControl n) {
+                final TextInputControlSkin skin = (TextInputControlSkin) n.getSkin();
+                return skin.highlightTextFill == null || !skin.highlightTextFill.isBound();
+            }
+
+            @Override
+            public WritableValue<Paint> getWritableValue(TextInputControl n) {
+                final TextInputControlSkin skin = (TextInputControlSkin) n.getSkin();
+                return skin.highlightTextFill;
+            }
+        };
+        
+        private static final StyleableProperty<TextInputControl,Boolean> DISPLAY_CARET =
+            new StyleableProperty<TextInputControl,Boolean>("-fx-display-caret",
+                BooleanConverter.getInstance(), Boolean.TRUE) {
+
+            @Override
+            public boolean isSettable(TextInputControl n) {
+                final TextInputControlSkin skin = (TextInputControlSkin) n.getSkin();
+                return skin.displayCaret == null || !skin.displayCaret.isBound();
+            }
+
+            @Override
+            public WritableValue<Boolean> getWritableValue(TextInputControl n) {
+                final TextInputControlSkin skin = (TextInputControlSkin) n.getSkin();
+                return skin.displayCaret;
+            }
+        };
 
         private static final List<StyleableProperty> STYLEABLES;
         static {
             List<StyleableProperty> styleables = new ArrayList<StyleableProperty>(SkinBase.impl_CSS_STYLEABLES());
-            Collections.addAll(styleables
-//                FONT,
-//                TEXT_FILL,
-//                PROMPT_TEXT_FILL,
-//                HIGHLIGHT_FILL,
-//                HIGHLIGHT_TEXT_FILL,
-//                DISPLAY_CARET
+            Collections.addAll(styleables,
+                FONT,
+                TEXT_FILL,
+                PROMPT_TEXT_FILL,
+                HIGHLIGHT_FILL,
+                HIGHLIGHT_TEXT_FILL,
+                DISPLAY_CARET
             );
 
             STYLEABLES = Collections.unmodifiableList(styleables);

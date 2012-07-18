@@ -306,7 +306,8 @@ public class TreeViewSkin<T> extends VirtualContainerBase<TreeView<T>, TreeViewB
     }
 
     @Override
-    protected void layoutChildren() {
+    protected void layoutChildren(final double x, final double y,
+            final double w, final double h) {
         if (needCellsRecreated) {
             flow.recreateCells();
             needCellsRecreated = false;
@@ -314,7 +315,7 @@ public class TreeViewSkin<T> extends VirtualContainerBase<TreeView<T>, TreeViewB
             updateItemCount();
             needItemCountUpdate = false;
         }
-//        super.layoutChildren();
+        super.layoutChildren(x,y,w,h);
     }
     
     private void onFocusPreviousCell() {
