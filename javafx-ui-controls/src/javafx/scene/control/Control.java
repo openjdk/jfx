@@ -553,9 +553,7 @@ public abstract class Control extends Region implements Skinnable {
                         if (!get().equals(currentSkinClassName)) {
                             loadSkinClass();
                         }
-                      // CSS should not set skin to null
-//                    } else {
-//                        setSkin(null);
+                        // Note: CSS should not set skin to null
                     }
                 }
                 
@@ -579,12 +577,7 @@ public abstract class Control extends Region implements Skinnable {
         return skinClassName;
     }
     
-    protected void setSkinClassName(String skinClassName) {
-        skinClassNameProperty().set(skinClassName);        
-    }
-    
     private void loadSkinClass() {
-        
         if (skinClassName == null 
                 || skinClassName.get() == null 
                 || skinClassName.get().isEmpty()) {
@@ -646,19 +639,7 @@ public abstract class Control extends Region implements Skinnable {
                 errors.add(error); // RT-19884
             } 
             Logging.getControlsLogger().severe(msg, e);            
-//            Node parent = this;
-//            int n = 0;
-//            while (parent != null) {
-//                for(int j=0; j<n*2; j++) {
-//                    System.err.print(' ');
-//                }
-//                n+=1;
-//                System.err.println(parent);
-//                parent = parent.getParent();
-//            }
-            
         }
-
     }
 
     /***************************************************************************
