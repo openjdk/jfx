@@ -550,7 +550,7 @@ public class TitledPaneSkin extends LabeledSkinBase<TitledPane, TitledPaneBehavi
             int index = engine.registeredNodes.indexOf(node);
 
             if (index == -1 && direction.equals(Direction.PREVIOUS)) {
-                // If the parent is an accordion we want to focus to go outside of the
+                getSkinnable().requestFocus();
             }
             if (index == -1 && direction.equals(Direction.NEXT)) {
                 // If the parent is an accordion we want to focus to go outside of the
