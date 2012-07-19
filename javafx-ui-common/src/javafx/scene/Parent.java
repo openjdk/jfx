@@ -1283,7 +1283,7 @@ public abstract class Parent extends Node {
             } else {
                 bounds = bounds.deriveWithNewBounds(cachedBounds);
             }
-            if (dirtyChildren != null) dirtyChildren.clear();
+
             return bounds;
         } else {
             // there is a scale, shear, or rotation happening, so need to
@@ -1323,7 +1323,7 @@ public abstract class Parent extends Node {
             else
                 bounds = bounds.deriveWithNewBounds((float)minX, (float)minY, (float)minZ,
                         (float)maxX, (float)maxY, (float)maxZ);
-            if (dirtyChildren != null) dirtyChildren.clear();
+
             return bounds;
         }
     }

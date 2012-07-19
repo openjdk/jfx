@@ -24,6 +24,7 @@
  */
 package javafx.scene.input;
 
+import com.sun.javafx.event.EventTypeUtil;
 import javafx.event.Event;
 import javafx.event.EventTarget;
 import javafx.event.EventType;
@@ -37,7 +38,7 @@ public class InputEvent extends Event {
      * Common supertype for all input event types.
      */
     public static final EventType<InputEvent> ANY =
-            new EventType<InputEvent>(Event.ANY, "INPUT");
+            EventTypeUtil.registerInternalEventType(Event.ANY, "INPUT");
 
     /**
      * Creates new instance of InputEvent.

@@ -25,13 +25,14 @@
 
 package com.sun.javafx.stage;
 
+import com.sun.javafx.event.EventTypeUtil;
 import javafx.event.Event;
 import javafx.event.EventTarget;
 import javafx.event.EventType;
 
 public final class FocusUngrabEvent extends Event {
     public static final EventType<FocusUngrabEvent> FOCUS_UNGRAB =
-            new EventType<FocusUngrabEvent>();
+            EventTypeUtil.registerInternalEventType(Event.ANY, "FOCUS_UNGRAB");
 
     public FocusUngrabEvent() {
         super(FOCUS_UNGRAB);
