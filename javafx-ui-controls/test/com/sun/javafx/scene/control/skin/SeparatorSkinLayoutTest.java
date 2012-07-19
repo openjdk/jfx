@@ -10,6 +10,7 @@ import javafx.geometry.Insets;
 import javafx.geometry.Orientation;
 import javafx.geometry.VPos;
 import javafx.scene.control.Separator;
+import javafx.scene.control.SkinBaseAccessor;
 import javafx.scene.layout.Region;
 
 import org.junit.Before;
@@ -27,10 +28,10 @@ public class SeparatorSkinLayoutTest {
         skin = new SeparatorSkin(separator);
         // Set some padding so that any places where padding was being
         // computed but wasn't expected will be caught.
-        skin.setPadding(new Insets(10, 8, 6, 4));
+        separator.setPadding(new Insets(10, 8, 6, 4));
         separator.setSkin(skin);
         // It so happens that SeparatorSkin has exactly one child: line
-        line = (Region) skin.getChildrenUnmodifiable().get(0);
+        line = (Region) SkinBaseAccessor.getChildren(skin).get(0);
         line.setPadding((new Insets(4, 3, 2, 1)));
         separator.resize(100, 100);
         separator.layout();
@@ -38,14 +39,14 @@ public class SeparatorSkinLayoutTest {
 
     private void assertLineWidthMatchesSkinWidth() {
         Bounds lineBounds = line.getBoundsInParent();
-        assertEquals(skin.getWidth() - skin.getInsets().getRight(), lineBounds.getMaxX(), .1);
-        assertEquals(skin.getInsets().getLeft(), lineBounds.getMinX(), .1);
+        assertEquals(separator.getWidth() - separator.getInsets().getRight(), lineBounds.getMaxX(), .1);
+        assertEquals(separator.getInsets().getLeft(), lineBounds.getMinX(), .1);
     }
 
     private void assertLineHeightMatchesSkinHeight() {
         Bounds lineBounds = line.getBoundsInParent();
-        assertEquals(skin.getInsets().getTop(), lineBounds.getMinY(), .1);
-        assertEquals(skin.getHeight() - skin.getInsets().getBottom(), lineBounds.getMaxY(), .1);
+        assertEquals(separator.getInsets().getTop(), lineBounds.getMinY(), .1);
+        assertEquals(separator.getHeight() - separator.getInsets().getBottom(), lineBounds.getMaxY(), .1);
     }
 
     // ----------------------- Horizontal Tests
@@ -58,7 +59,7 @@ public class SeparatorSkinLayoutTest {
         separator.setValignment(VPos.TOP);
         separator.layout();
         Bounds lineBounds = line.getBoundsInParent();
-        assertEquals(skin.getInsets().getTop(), lineBounds.getMinY(), .1);
+        assertEquals(separator.getInsets().getTop(), lineBounds.getMinY(), .1);
         assertEquals(line.prefHeight(-1), lineBounds.getHeight(), .1);
         assertLineWidthMatchesSkinWidth();
     }
@@ -71,8 +72,8 @@ public class SeparatorSkinLayoutTest {
         separator.setValignment(VPos.CENTER);
         separator.layout();
         Bounds lineBounds = line.getBoundsInParent();
-        final double ch = skin.getHeight() - (skin.getInsets().getTop() + skin.getInsets().getBottom());
-        final double centerLine = skin.getInsets().getTop() + (ch / 2.0);
+        final double ch = separator.getHeight() - (separator.getInsets().getTop() + separator.getInsets().getBottom());
+        final double centerLine = separator.getInsets().getTop() + (ch / 2.0);
         assertEquals(centerLine - (lineBounds.getHeight() / 2.0), lineBounds.getMinY(), .1);
         assertEquals(line.prefHeight(-1), lineBounds.getHeight(), .1);
         assertLineWidthMatchesSkinWidth();
@@ -86,7 +87,7 @@ public class SeparatorSkinLayoutTest {
         separator.setValignment(VPos.BOTTOM);
         separator.layout();
         Bounds lineBounds = line.getBoundsInParent();
-        final double y = skin.getHeight() - (skin.getInsets().getBottom() + line.prefHeight(-1));
+        final double y = separator.getHeight() - (separator.getInsets().getBottom() + line.prefHeight(-1));
         assertEquals(y, lineBounds.getMinY(), .1);
         assertEquals(line.prefHeight(-1), lineBounds.getHeight(), .1);
         assertLineWidthMatchesSkinWidth();
@@ -103,7 +104,7 @@ public class SeparatorSkinLayoutTest {
         separator.setOrientation(Orientation.VERTICAL);
         separator.layout();
         Bounds lineBounds = line.getBoundsInParent();
-        assertEquals(skin.getInsets().getLeft(), lineBounds.getMinX(), .1);
+        assertEquals(separator.getInsets().getLeft(), lineBounds.getMinX(), .1);
         assertEquals(line.prefWidth(-1), lineBounds.getWidth(), .1);
         assertLineHeightMatchesSkinHeight();
     }
@@ -117,8 +118,8 @@ public class SeparatorSkinLayoutTest {
         separator.setOrientation(Orientation.VERTICAL);
         separator.layout();
         Bounds lineBounds = line.getBoundsInParent();
-        final double cw = skin.getWidth() - (skin.getInsets().getLeft() + skin.getInsets().getRight());
-        final double centerLine = skin.getInsets().getLeft() + (cw / 2.0);
+        final double cw = separator.getWidth() - (separator.getInsets().getLeft() + separator.getInsets().getRight());
+        final double centerLine = separator.getInsets().getLeft() + (cw / 2.0);
         assertEquals(centerLine - (lineBounds.getWidth() / 2.0), lineBounds.getMinX(), .1);
         assertEquals(line.prefWidth(-1), lineBounds.getWidth(), .1);
         assertLineHeightMatchesSkinHeight();
@@ -133,7 +134,7 @@ public class SeparatorSkinLayoutTest {
         separator.setOrientation(Orientation.VERTICAL);
         separator.layout();
         Bounds lineBounds = line.getBoundsInParent();
-        final double x = skin.getWidth() - (skin.getInsets().getRight() + line.prefWidth(-1));
+        final double x = separator.getWidth() - (separator.getInsets().getRight() + line.prefWidth(-1));
         assertEquals(x, lineBounds.getMinX(), .1);
         assertEquals(line.prefWidth(-1), lineBounds.getWidth(), .1);
         assertLineHeightMatchesSkinHeight();

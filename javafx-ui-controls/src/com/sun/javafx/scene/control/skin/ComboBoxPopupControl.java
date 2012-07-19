@@ -88,7 +88,7 @@ public abstract class ComboBoxPopupControl<T> extends ComboBoxBaseSkin<T> {
     
     private void positionAndShowPopup() {
         if (getPopup().getSkin() == null) {
-            getScene().getRoot().impl_processCSS(true);
+            getSkinnable().getScene().getRoot().impl_processCSS(true);
         }
         
         Point2D p = getPrefPopupPosition();

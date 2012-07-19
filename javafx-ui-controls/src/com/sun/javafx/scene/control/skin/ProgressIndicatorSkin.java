@@ -35,6 +35,7 @@ import javafx.event.EventHandler;
 import javafx.geometry.VPos;
 import javafx.scene.Group;
 import javafx.scene.control.ProgressIndicator;
+import javafx.scene.control.SkinBase;
 import javafx.scene.layout.Region;
 import javafx.scene.layout.StackPane;
 import javafx.scene.paint.Color;
@@ -191,14 +192,14 @@ public class ProgressIndicatorSkin extends SkinBase<ProgressIndicator, ProgressI
         }
     }
 
-    @Override protected void layoutChildren() {
+    @Override protected void layoutChildren(final double x, final double y,
+            final double w, final double h) {
         if (spinner != null && getSkinnable().isIndeterminate()) { 
             spinner.layoutChildren();
-            spinner.resizeRelocate(0, 0, getSkinnable().getWidth(), getSkinnable().getHeight());
-        }
-        else if (determinateIndicator != null) { 
+            spinner.resizeRelocate(0, 0, w, h);
+        } else if (determinateIndicator != null) { 
             determinateIndicator.layoutChildren();
-            determinateIndicator.resizeRelocate(0, 0, getSkinnable().getWidth(), getSkinnable().getHeight());
+            determinateIndicator.resizeRelocate(0, 0, w, h);
         }
     }
 
@@ -553,19 +554,21 @@ public class ProgressIndicatorSkin extends SkinBase<ProgressIndicator, ProgressI
      * @treatAsPrivate implementation detail
      */
     private static class StyleableProperties {
-        private static final StyleableProperty<ProgressIndicatorSkin,Paint> PROGRESS_COLOR =
-            new StyleableProperty<ProgressIndicatorSkin,Paint>("-fx-progress-color",
+        private static final StyleableProperty<ProgressIndicator,Paint> PROGRESS_COLOR =
+            new StyleableProperty<ProgressIndicator,Paint>("-fx-progress-color",
                 PaintConverter.getInstance(), Color.DODGERBLUE) {
 
             @Override
-            public boolean isSettable(ProgressIndicatorSkin n) {
-                return n.progressColor == null || 
-                        !n.progressColor.isBound();
+            public boolean isSettable(ProgressIndicator n) {
+                final ProgressIndicatorSkin skin = (ProgressIndicatorSkin) n.getSkin();
+                return skin.progressColor == null || 
+                        !skin.progressColor.isBound();
             }
 
             @Override
-            public WritableValue<Paint> getWritableValue(ProgressIndicatorSkin n) {
-                return n.progressColor;
+            public WritableValue<Paint> getWritableValue(ProgressIndicator n) {
+                final ProgressIndicatorSkin skin = (ProgressIndicatorSkin) n.getSkin();
+                return skin.progressColor;
             }
         };
 

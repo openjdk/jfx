@@ -32,6 +32,7 @@ import javafx.scene.Node;
 import javafx.scene.control.Accordion;
 import javafx.scene.control.TitledPane;
 import javafx.scene.shape.Rectangle;
+import javafx.scene.control.SkinBase;
 
 import com.sun.javafx.scene.control.behavior.AccordionBehavior;
 
@@ -73,16 +74,35 @@ public class AccordionSkin extends SkinBase<Accordion, AccordionBehavior> {
         }
 
         clipRect = new Rectangle();
-        setClip(clipRect);
+        getSkinnable().setClip(clipRect);
 
         initTitledPaneListeners(accordion.getPanes());
         getChildren().setAll(accordion.getPanes());
         requestLayout();
+        
+        registerChangeListener(getSkinnable().widthProperty(), "WIDTH");
+        registerChangeListener(getSkinnable().heightProperty(), "HEIGHT");
+    }
+    
+    @Override
+    protected void handleControlPropertyChanged(String property) {
+        super.handleControlPropertyChanged(property);
+        if (property == "WIDTH") {
+            clipRect.setWidth(getWidth());
+        } else if (property == "HEIGHT") {
+            clipRect.setHeight(getHeight());
+            if (previousHeight != getHeight()) {
+                previousHeight = getHeight();
+                resize = true;
+            } else {
+                resize = false;
+            }
+        }
     }
 
     @Override protected double computeMinHeight(double width) {
         double h = 0;
-        for (Node child: getManagedChildren()) {
+        for (Node child: getChildren()) {
             h += snapSize(child.minHeight(width));
         }
         return h;
@@ -97,7 +117,7 @@ public class AccordionSkin extends SkinBase<Accordion, AccordionBehavior> {
         if (expandedTitledPane != null) {
             h = expandedTitledPane.prefHeight(-1);
         }
-        for (Node child: getManagedChildren()) {
+        for (Node child: getChildren()) {
             TitledPane pane = (TitledPane)child;
             if (!pane.equals(expandedTitledPane)) {
                 // The min height is the height of the TitledPane's title bar.
@@ -109,11 +129,8 @@ public class AccordionSkin extends SkinBase<Accordion, AccordionBehavior> {
         return h + snapSpace(getInsets().getTop()) + snapSpace(getInsets().getBottom());
     }
 
-    @Override protected void layoutChildren() {
-        double w = snapSize(getWidth()) - (snapSpace(getInsets().getLeft()) + snapSpace(getInsets().getRight()));
-        double h = snapSize(getHeight()) - (snapSpace(getInsets().getTop()) + snapSpace(getInsets().getBottom()));
-        double x = snapSpace(getInsets().getLeft());
-        double y = snapSpace(getInsets().getTop());
+    @Override protected void layoutChildren(final double x, double y,
+            final double w, final double h) {
 
         // TODO need to replace spacing with margins.
         double spacing = 0;
@@ -180,22 +197,6 @@ public class AccordionSkin extends SkinBase<Accordion, AccordionBehavior> {
         if (expandedPane != null &&
                 ((TitledPaneSkin)expandedPane.getSkin()).getTitledPaneHeightForAccordion() == maxTitledPaneHeight) {
             relocateAllPanes = false;
-        }
-    }
-
-    @Override protected void setWidth(double value) {
-        super.setWidth(value);
-        clipRect.setWidth(value);
-    }
-
-    @Override protected void setHeight(double value) {
-        super.setHeight(value);
-        clipRect.setHeight(value);
-        if (previousHeight != value) {
-            previousHeight = value;
-            resize = true;
-        } else {
-            resize = false;
         }
     }
 

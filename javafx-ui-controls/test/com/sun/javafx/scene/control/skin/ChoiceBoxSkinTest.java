@@ -24,7 +24,7 @@ public class ChoiceBoxSkinTest {
         skin = new ChoiceBoxSkinMock(choicebox);
         // Set some padding so that any places where padding was being
         // computed but wasn't expected will be caught.
-        skin.setPadding(new Insets(10, 10, 10, 10));
+        choicebox.setPadding(new Insets(10, 10, 10, 10));
         choicebox.setSkin(skin);
     }
 

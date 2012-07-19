@@ -72,6 +72,7 @@ import javafx.util.Duration;
 import com.sun.javafx.css.StyleableProperty;
 import com.sun.javafx.css.StyleManager;
 import java.util.Iterator;
+import javafx.scene.control.*;
 import javafx.stage.Window;
 
 /**
@@ -825,7 +826,7 @@ public class ContextMenuContent extends StackPane {
         static {
 
             final List<StyleableProperty> styleables =
-                new ArrayList<StyleableProperty>(SkinBase.impl_CSS_STYLEABLES());
+                new ArrayList<StyleableProperty>(Region.impl_CSS_STYLEABLES());
 
             //
             // SkinBase only has Region's unique StlyleableProperty's, none of Nodes

@@ -26,7 +26,7 @@ public class MenuBarSkinTest {
         skin = new MenuBarSkinMock(menubar);
         // Set some padding so that any places where padding was being
         // computed but wasn't expected will be caught.
-        skin.setPadding(new Insets(10, 10, 10, 10));
+        menubar.setPadding(new Insets(10, 10, 10, 10));
         menubar.setSkin(skin);
 
     }

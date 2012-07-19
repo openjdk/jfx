@@ -2501,11 +2501,11 @@
  *                                                                             *
  ******************************************************************************/
 
-.split-pane > * > * > .table-view { -fx-padding: 0px; }
-.split-pane > * > * > .list-view { -fx-padding: 0px; }
-.split-pane > * > * > .tree-view { -fx-padding: 0px; }
-.split-pane > * > * > .scroll-pane { -fx-padding: 0px; }
-.split-pane > * > * > .split-pane {
+.split-pane .table-view { -fx-padding: 0px; }
+.split-pane .list-view { -fx-padding: 0px; }
+.split-pane .tree-view { -fx-padding: 0px; }
+.split-pane .scroll-pane { -fx-padding: 0px; }
+.split-pane .split-pane {
     -fx-background-insets: 0, 0;
     -fx-padding: 0;
  }
@@ -2522,14 +2522,14 @@
 }
 
 /* horizontal the two nodes are placed to the left/right of each other. */
-.split-pane:horizontal > * > .split-pane-divider {
+.split-pane:horizontal .split-pane-divider {
    -fx-border-color: transparent -fx-box-border transparent #BBBBBB;
    -fx-background-color: transparent, -fx-inner-border-horizontal;
    -fx-background-insets: 0, 0 1 0 1;
 }
 
 /* vertical the two nodes are placed on top of each other. */
-.split-pane:vertical > * > .split-pane-divider {
+.split-pane:vertical .split-pane-divider {
    -fx-border-color:  #BBBBBB transparent -fx-box-border transparent;
    -fx-background-color: transparent, -fx-inner-border;
    -fx-background-insets: 0, 1 0 1 0;

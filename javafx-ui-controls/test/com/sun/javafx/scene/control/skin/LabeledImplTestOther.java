@@ -73,7 +73,7 @@ public class LabeledImplTestOther {
         stage.show(); 
         
         
-        LabeledImpl labeledImpl = (LabeledImpl)mbs.lookup(".label");
+        LabeledImpl labeledImpl = (LabeledImpl)mb.lookup(".label");
         assertNotNull(labeledImpl);
         // LabeledImpl should not mirror the translateX/Y of the MenuButton
         assertEquals(100, mb.getTranslateX(), 0.00001);

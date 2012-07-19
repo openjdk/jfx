@@ -420,7 +420,7 @@ public class TextAreaSkin extends TextInputControlSkin<TextArea, TextAreaBehavio
             }
         });
 
-        setManaged(false);
+//        setManaged(false);
 
         // Initialize content
         scrollPane = new ScrollPane();
@@ -764,11 +764,12 @@ public class TextAreaSkin extends TextInputControlSkin<TextArea, TextAreaBehavio
         paragraphNode.impl_selectionFillProperty().bind(highlightTextFill);
     }
 
-    @Override public void layoutChildren() {
+    @Override public void layoutChildren(final double x, final double y,
+            final double w, final double h) {
         scrollPane.setHbarPolicy(ScrollPane.ScrollBarPolicy.AS_NEEDED);
         scrollPane.setVbarPolicy(ScrollPane.ScrollBarPolicy.AS_NEEDED);
 
-        super.layoutChildren();
+        super.layoutChildren(x,y,w,h);
 
         Bounds bounds = scrollPane.getViewportBounds();
         if (bounds != null && (bounds.getWidth() < contentView.minWidth(-1) ||

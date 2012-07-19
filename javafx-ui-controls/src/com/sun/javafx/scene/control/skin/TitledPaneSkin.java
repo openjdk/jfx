@@ -74,7 +74,7 @@ public class TitledPaneSkin extends LabeledSkinBase<TitledPane, TitledPaneBehavi
         super(titledPane, new TitledPaneBehavior(titledPane));
 
         clipRect = new Rectangle();
-        setClip(clipRect);
+        getSkinnable().setClip(clipRect);
 
         transitionStartValue = 0;
         titleRegion = new TitleRegion();
@@ -95,6 +95,8 @@ public class TitledPaneSkin extends LabeledSkinBase<TitledPane, TitledPaneBehavi
         registerChangeListener(titledPane.expandedProperty(), "EXPANDED");
         registerChangeListener(titledPane.collapsibleProperty(), "COLLAPSIBLE");
         registerChangeListener(titledPane.alignmentProperty(), "ALIGNMENT");
+        registerChangeListener(titledPane.widthProperty(), "WIDTH");
+        registerChangeListener(titledPane.heightProperty(), "HEIGHT");
         registerChangeListener(titleRegion.alignmentProperty(), "TITLE_REGION_ALIGNMENT");        
         
         pos = titledPane.getAlignment();
@@ -104,16 +106,6 @@ public class TitledPaneSkin extends LabeledSkinBase<TitledPane, TitledPaneBehavi
 
     public StackPane getContentRegion() {
         return contentRegion;
-    }
-
-    @Override protected void setWidth(double value) {
-        super.setWidth(value);
-        clipRect.setWidth(value);
-    }
-
-    @Override protected void setHeight(double value) {
-        super.setHeight(value);
-        clipRect.setHeight(value);
     }
 
     @Override
@@ -133,6 +125,10 @@ public class TitledPaneSkin extends LabeledSkinBase<TitledPane, TitledPaneBehavi
             pos = titleRegion.getAlignment();
             hpos = pos.getHpos();
             vpos = pos.getVpos();
+        } else if (property == "WIDTH") {
+            clipRect.setWidth(getWidth());
+        } else if (property == "HEIGHT") {
+            clipRect.setHeight(getHeight());
         }
     }
 
@@ -190,10 +186,8 @@ public class TitledPaneSkin extends LabeledSkinBase<TitledPane, TitledPaneBehavi
         return transition;
     }
 
-    @Override protected void layoutChildren() {
-        double w = snapSize(getWidth()) - (snapSpace(getInsets().getLeft()) + snapSpace(getInsets().getRight()));
-        double h = snapSize(getHeight()) - (snapSpace(getInsets().getTop()) + snapSpace(getInsets().getBottom()));
-
+    @Override protected void layoutChildren(final double x, double y,
+            final double w, final double h) {
         // header
         double headerHeight = Math.max(MIN_HEADER_HEIGHT, snapSize(titleRegion.prefHeight(-1)));
 
@@ -204,13 +198,8 @@ public class TitledPaneSkin extends LabeledSkinBase<TitledPane, TitledPaneBehavi
         // content
         double contentWidth = w;
         double contentHeight = h - headerHeight;
-        if (getSkinnable().getParent() != null && getSkinnable().getParent() instanceof AccordionSkin) {
-            if (prefHeightFromAccordion != 0) {
-                contentHeight = prefHeightFromAccordion - headerHeight;
-            }
-        }
 
-        double y = snapSpace(getInsets().getTop()) + snapSpace(headerHeight) - (contentHeight * (1 - getTransition()));
+        y = snapSpace(getInsets().getTop()) + snapSpace(headerHeight) - (contentHeight * (1 - getTransition()));
         double clipY = contentHeight * (1 - getTransition());                
         ((Rectangle)contentContainer.getClip()).setY(clipY);
 
@@ -237,11 +226,7 @@ public class TitledPaneSkin extends LabeledSkinBase<TitledPane, TitledPaneBehavi
     @Override protected double computePrefHeight(double width) {
         double headerHeight = Math.max(MIN_HEADER_HEIGHT, snapSize(titleRegion.prefHeight(-1)));
         double contentHeight = 0;
-        if (getSkinnable().getParent() != null && getSkinnable().getParent() instanceof AccordionSkin) {
-            contentHeight = contentContainer.prefHeight(-1);
-        } else {
-            contentHeight = contentContainer.prefHeight(-1) * getTransition();
-        }
+        contentHeight = contentContainer.prefHeight(-1) * getTransition();
         return headerHeight + snapSize(contentHeight) + snapSpace(getInsets().getTop()) + snapSpace(getInsets().getBottom());
     }
        
@@ -555,13 +540,6 @@ public class TitledPaneSkin extends LabeledSkinBase<TitledPane, TitledPaneBehavi
                 // accordion and to the previous focusable control.
                 if (getSkinnable().getParent() != null && getSkinnable().getParent() instanceof AccordionSkin) {
                     new TraversalEngine(getSkinnable(), false).trav(getSkinnable().getParent(), Direction.PREVIOUS);
-                }
-            }
-            if (index == -1 && direction.equals(Direction.NEXT)) {
-                // If the parent is an accordion we want to focus to go outside of the
-                // accordion and to the next focusable control.
-                if (getSkinnable().getParent() != null && getSkinnable().getParent() instanceof AccordionSkin) {
-                    new TraversalEngine(getSkinnable(), false).trav(getSkinnable().getParent(), Direction.NEXT);
                 }
             }
         }

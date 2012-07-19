@@ -78,8 +78,7 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
-import javafx.application.Platform;
+import javafx.scene.control.SkinBase;
 import javafx.scene.input.*;
 
 public class TabPaneSkin extends SkinBase<TabPane, TabPaneBehavior> {
@@ -136,7 +135,7 @@ public class TabPaneSkin extends SkinBase<TabPane, TabPaneBehavior> {
         super(tabPane, new TabPaneBehavior(tabPane));
 
         clipRect = new Rectangle();
-        setClip(clipRect);
+        getSkinnable().setClip(clipRect);
 
         tabContentRegions = FXCollections.<TabContentRegion>observableArrayList();
 
@@ -156,6 +155,8 @@ public class TabPaneSkin extends SkinBase<TabPane, TabPaneBehavior> {
 
         registerChangeListener(tabPane.getSelectionModel().selectedItemProperty(), "SELECTED_TAB");
         registerChangeListener(tabPane.sideProperty(), "SIDE");
+        registerChangeListener(tabPane.widthProperty(), "WIDTH");
+        registerChangeListener(tabPane.heightProperty(), "HEIGHT");
 
         previousSelectedTab = null;        
         selectedTab = getSkinnable().getSelectionModel().getSelectedItem();
@@ -192,6 +193,10 @@ public class TabPaneSkin extends SkinBase<TabPane, TabPaneBehavior> {
             requestLayout();
         } else if (property == "SIDE") {
             updateTabPosition();
+        } else if (property == "WIDTH") {
+            clipRect.setWidth(getWidth());
+        } else if (property == "HEIGHT") {
+            clipRect.setHeight(getHeight());
         }
     }
 
@@ -302,7 +307,7 @@ public class TabPaneSkin extends SkinBase<TabPane, TabPaneBehavior> {
 
     private void updateTabPosition() {
         tabHeaderArea.setScrollOffset(0.0F);
-        impl_reapplyCSS();
+        getSkinnable().impl_reapplyCSS();
         requestLayout();
     }
 
@@ -324,13 +329,13 @@ public class TabPaneSkin extends SkinBase<TabPane, TabPaneBehavior> {
 
     private void initializeSwipeHandlers() {
         if (PlatformUtil.isEmbedded()) {
-            setOnSwipeLeft(new EventHandler<SwipeEvent>() {
+            getSkinnable().setOnSwipeLeft(new EventHandler<SwipeEvent>() {
                 @Override public void handle(SwipeEvent t) {
                     getBehavior().selectNextTab();
                 }
             });
 
-            setOnSwipeRight(new EventHandler<SwipeEvent>() {
+            getSkinnable().setOnSwipeRight(new EventHandler<SwipeEvent>() {
                 @Override public void handle(SwipeEvent t) {
                     getBehavior().selectPreviousTab();
                 }
@@ -343,15 +348,15 @@ public class TabPaneSkin extends SkinBase<TabPane, TabPaneBehavior> {
         return getSkinnable().getStyleClass().contains(TabPane.STYLE_CLASS_FLOATING);
     }
 
-    @Override protected void setWidth(double value) {
-        super.setWidth(value);
-        clipRect.setWidth(value);
-    }
-
-    @Override protected void setHeight(double value) {
-        super.setHeight(value);
-        clipRect.setHeight(value);
-    }
+//    @Override protected void setWidth(double value) {
+//        super.setWidth(value);
+//        clipRect.setWidth(value);
+//    }
+//
+//    @Override protected void setHeight(double value) {
+//        super.setHeight(value);
+//        clipRect.setHeight(value);
+//    }
 
     private double maxw = 0.0d;
     @Override protected double computePrefWidth(double height) {
@@ -379,15 +384,10 @@ public class TabPaneSkin extends SkinBase<TabPane, TabPaneBehavior> {
         return tabHeaderArea.getBaselineOffset() + tabHeaderArea.getLayoutY();
     }
 
-    @Override protected void layoutChildren() {
+    @Override protected void layoutChildren(final double x, final double y,
+            final double w, final double h) {
         TabPane tabPane = getSkinnable();
         Side tabPosition = tabPane.getSide();
-        Insets padding = getInsets();
-
-        final double w = snapSize(getWidth()) - snapSize(padding.getLeft()) - snapSize(padding.getRight());
-        final double h = snapSize(getHeight()) - snapSize(padding.getTop()) - snapSize(padding.getBottom());
-        final double x = snapSize(padding.getLeft());
-        final double y = snapSize(padding.getTop());
 
         double headerHeight = snapSize(tabHeaderArea.prefHeight(-1));
         double tabsStartX = tabPosition.equals(Side.RIGHT)? x + w - headerHeight : x;

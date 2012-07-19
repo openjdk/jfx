@@ -27,7 +27,7 @@ public class ToolBarSkinTest {
         skin = new ToolBarSkinMock(toolbar);
         // Set some padding so that any places where padding was being
         // computed but wasn't expected will be caught.
-        skin.setPadding(new Insets(10, 10, 10, 10));
+        toolbar.setPadding(new Insets(10, 10, 10, 10));
         toolbar.setSkin(skin);
 
     }

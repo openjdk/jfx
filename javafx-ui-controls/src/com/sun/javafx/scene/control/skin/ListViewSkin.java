@@ -243,16 +243,12 @@ public class ListViewSkin<T> extends VirtualContainerBase<ListView<T>, ListViewB
 //    }
 
     @Override
-    protected void layoutChildren() {
+    protected void layoutChildren(final double x, final double y,
+            final double w, final double h) {
         if (itemCountDirty) {
             updateCellCount();
             itemCountDirty = false;
         }
-        
-        double x = getInsets().getLeft();
-        double y = getInsets().getTop();
-        double w = getWidth() - (getInsets().getLeft() + getInsets().getRight());
-        double h = getHeight() - (getInsets().getTop() + getInsets().getBottom());
         
         flow.resizeRelocate(x, y, w, h);
     }

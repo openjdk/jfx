@@ -107,7 +107,7 @@ public class TableRowSkin<T> extends CellSkinBase<TableRow<T>, CellBehaviorBase<
         if (p == "ITEM") {
             updateCells = true;
             requestLayout();
-            layout();
+            getSkinnable().layout();
         } else if (p == "TABLE_VIEW") {
             for (int i = 0; i < getChildren().size(); i++) {
                 Node n = getChildren().get(i);
@@ -153,7 +153,8 @@ public class TableRowSkin<T> extends CellSkinBase<TableRow<T>, CellBehaviorBase<
         }
     }
 
-    @Override protected void layoutChildren() {
+    @Override protected void layoutChildren(double x, final double y,
+            final double w, final double h) {
         doUpdateCheck();
         
         TableView<T> table = getSkinnable().getTableView();
@@ -162,7 +163,6 @@ public class TableRowSkin<T> extends CellSkinBase<TableRow<T>, CellBehaviorBase<
         
         if (showColumns && ! table.getVisibleLeafColumns().isEmpty()) {
             // layout the individual column cells
-            double x = getInsets().getLeft();
             double width;
             double height;
             
@@ -183,7 +183,7 @@ public class TableRowSkin<T> extends CellSkinBase<TableRow<T>, CellBehaviorBase<
                 x += width;
             }
         } else {
-            super.layoutChildren();
+            super.layoutChildren(x,y,w,h);
         }
     }
 
@@ -313,7 +313,7 @@ public class TableRowSkin<T> extends CellSkinBase<TableRow<T>, CellBehaviorBase<
                 final TableCell tableCell = cells.get(i);
                 prefHeight = Math.max(prefHeight, tableCell.prefHeight(-1));
             }
-            return Math.max(prefHeight, Math.max(getCellSize(), minHeight(-1)));
+            return Math.max(prefHeight, Math.max(getCellSize(), getSkinnable().minHeight(-1)));
         } else {
             return super.computePrefHeight(width);
         }

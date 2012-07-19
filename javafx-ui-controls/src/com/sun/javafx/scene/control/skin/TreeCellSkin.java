@@ -131,26 +131,21 @@ public class TreeCellSkin extends CellSkinBase<TreeCell<?>, TreeCellBehavior> {
         }
     }
 
-    @Override public void impl_processCSS(boolean reapply) {
-        // This is needed now that TreeCell is Labeled - otherwise RT-15450 occurs
-        updateDisclosureNode();
-        
-        super.impl_processCSS(reapply);
-    }
+//    @Override public void impl_processCSS(boolean reapply) {
+//        // This is needed now that TreeCell is Labeled - otherwise RT-15450 occurs
+//        updateDisclosureNode();
+//        
+//        super.impl_processCSS(reapply);
+//    }
     
-    @Override protected void layoutChildren() {
+    @Override protected void layoutChildren(double x, final double y,
+            double w, final double h) {
         TreeItem treeItem = getSkinnable().getTreeItem();
         if (treeItem == null) return;
         
         TreeView tree = getSkinnable().getTreeView();
         if (tree == null) return;
         
-        // figure out the content area that is to be filled
-        double x = getInsets().getLeft();
-        double y = getInsets().getTop();
-        double w = getWidth() - (getInsets().getLeft() + getInsets().getRight());
-        double h = getHeight() - (getInsets().getTop() + getInsets().getBottom());
-
         Node disclosureNode = getSkinnable().getDisclosureNode();
         
         int level = TreeView.getNodeLevel(getSkinnable().getTreeItem());
@@ -230,18 +225,19 @@ public class TreeCellSkin extends CellSkinBase<TreeCell<?>, TreeCellBehavior> {
 
     /** @treatAsPrivate */
     private static class StyleableProperties {
-        private static final StyleableProperty<TreeCellSkin,Number> INDENT = 
-            new StyleableProperty<TreeCellSkin,Number>("-fx-indent",
+        
+        private static final StyleableProperty<TreeCell,Number> INDENT = 
+            new StyleableProperty<TreeCell,Number>("-fx-indent",
                 SizeConverter.getInstance(), 10.0) {
-
-            @Override
-            public boolean isSettable(TreeCellSkin n) {
-                return n.indent == null || !n.indent.isBound();
+                    
+            @Override public boolean isSettable(TreeCell n) {
+                final TreeCellSkin skin = (TreeCellSkin) n.getSkin();
+                return skin.indent == null || !skin.indent.isBound();
             }
 
-            @Override
-            public WritableValue<Number> getWritableValue(TreeCellSkin n) {
-                return n.indentProperty();
+            @Override public WritableValue<Number> getWritableValue(TreeCell n) {
+                final TreeCellSkin skin = (TreeCellSkin) n.getSkin();
+                return skin.indent;
             }
         };
         
