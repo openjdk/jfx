@@ -143,10 +143,10 @@ public class ControlTest {
         assertTrue(c.contains(50, 50));
     }
 
-    @Test public void intersectsReturnsFalseWhenThereIsNoSkin() {
+    @Test public void intersectsReturnsTrueWhenThereIsNoSkin() {
         c.relocate(0, 0);
         c.resize(100, 100);
-        assertTrue(!c.intersects(50, 50, 100, 100));
+        assertTrue(c.intersects(50, 50, 100, 100));
     }
 
     @Test public void intersectsDelegatesToTheSkinWhenSet() {
