@@ -52,6 +52,7 @@ import com.sun.javafx.scene.traversal.Direction;
 import com.sun.javafx.scene.traversal.TraversalEngine;
 import com.sun.javafx.scene.traversal.TraverseListener;
 import javafx.geometry.Insets;
+import javafx.scene.control.Accordion;
 import javafx.scene.control.Labeled;
 import javafx.scene.text.Font;
 
@@ -185,6 +186,10 @@ public class TitledPaneSkin extends LabeledSkinBase<TitledPane, TitledPaneBehavi
         }
         return transition;
     }
+    
+    private boolean isInsideAccordion() {
+        return getSkinnable().getParent() != null && getSkinnable().getParent() instanceof Accordion;
+    }
 
     @Override protected void layoutChildren(final double x, double y,
             final double w, final double h) {
@@ -198,6 +203,11 @@ public class TitledPaneSkin extends LabeledSkinBase<TitledPane, TitledPaneBehavi
         // content
         double contentWidth = w;
         double contentHeight = h - headerHeight;
+        if (isInsideAccordion()) {
+            if (prefHeightFromAccordion != 0) {
+                contentHeight = prefHeightFromAccordion - headerHeight;
+            }
+        }
 
         y = snapSpace(getInsets().getTop()) + snapSpace(headerHeight) - (contentHeight * (1 - getTransition()));
         double clipY = contentHeight * (1 - getTransition());                
@@ -226,7 +236,11 @@ public class TitledPaneSkin extends LabeledSkinBase<TitledPane, TitledPaneBehavi
     @Override protected double computePrefHeight(double width) {
         double headerHeight = Math.max(MIN_HEADER_HEIGHT, snapSize(titleRegion.prefHeight(-1)));
         double contentHeight = 0;
-        contentHeight = contentContainer.prefHeight(-1) * getTransition();
+        if (isInsideAccordion()) {
+            contentHeight = contentContainer.prefHeight(-1);
+        } else {
+            contentHeight = contentContainer.prefHeight(-1) * getTransition();
+        }
         return headerHeight + snapSize(contentHeight) + snapSpace(getInsets().getTop()) + snapSpace(getInsets().getBottom());
     }
        
@@ -537,6 +551,13 @@ public class TitledPaneSkin extends LabeledSkinBase<TitledPane, TitledPaneBehavi
 
             if (index == -1 && direction.equals(Direction.PREVIOUS)) {
                 getSkinnable().requestFocus();
+            }
+            if (index == -1 && direction.equals(Direction.NEXT)) {
+                // If the parent is an accordion we want to focus to go outside of the
+                // accordion and to the next focusable control.
+                if (isInsideAccordion()) {
+                    new TraversalEngine(getSkinnable(), false).trav(getSkinnable().getParent(), Direction.NEXT);
+                }
             }
         }
     }
