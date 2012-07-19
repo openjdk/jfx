@@ -294,6 +294,7 @@ public abstract class SkinBase<C extends Control, BB extends BehaviorBase<C>> im
     protected double computeMinHeight(double width) {
         return computePrefHeight(width);
     }
+
     /**
      * Computes the maximum allowable width of the Skin, based on the provided
      * height.
@@ -303,7 +304,7 @@ public abstract class SkinBase<C extends Control, BB extends BehaviorBase<C>> im
      * @return A double representing the maximum width of this Skin.
      */
     protected double computeMaxWidth(double height) {
-        return computePrefWidth(height);
+        return Double.MAX_VALUE;
     }
     
     /**
@@ -315,7 +316,7 @@ public abstract class SkinBase<C extends Control, BB extends BehaviorBase<C>> im
      * @return A double representing the maximum height of this Skin.
      */
     protected double computeMaxHeight(double width) {
-        return computePrefHeight(width);
+        return Double.MAX_VALUE;
     }
     
     // PENDING_DOC_REVIEW

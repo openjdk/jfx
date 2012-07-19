@@ -58,7 +58,7 @@ public class SplitPaneSkin extends SkinBase<SplitPane, BehaviorBase<SplitPane>> 
     
     public SplitPaneSkin(final SplitPane splitPane) {
         super(splitPane, new BehaviorBase<SplitPane>(splitPane));
-//        setManaged(false);
+//        splitPane.setManaged(false);
         horizontal = getSkinnable().getOrientation() == Orientation.HORIZONTAL;
         
         contentRegions = FXCollections.<Content>observableArrayList();
@@ -538,7 +538,7 @@ public class SplitPaneSkin extends SkinBase<SplitPane, BehaviorBase<SplitPane>> 
         double dividerWidth = contentDividers.isEmpty() ? 0 : contentDividers.get(0).prefWidth(-1);
 
         if (contentDividers.size() > 0 && previousArea != -1 && previousArea != (getWidth() * getHeight())) {
-            //This algorithm adds/subracts a little to each panel on every resize
+            //This algorithm adds/subtracts a little to each panel on every resize
             List<Content> resizeList = new ArrayList<Content>();
             for (Content c: contentRegions) {
                 if (c.isResizableWithParent()) {
