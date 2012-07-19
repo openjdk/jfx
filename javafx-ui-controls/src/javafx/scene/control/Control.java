@@ -183,6 +183,10 @@ public abstract class Control extends Region implements Skinnable {
             
             // Get the new value, and save it off as the new oldValue
             final Skin<?> skin = oldValue = getValue();
+            
+            // Reset skinBase to null - it will be set to the new Skin if it
+            // is a SkinBase, otherwise it will remain null, as expected
+            skinBase = null;
 
             // We have two paths, one for "legacy" Skins, and one for
             // any Skin which extends from SkinBase. Legacy Skins will
@@ -210,7 +214,6 @@ public abstract class Control extends Region implements Skinnable {
                 } else {
                     getChildren().clear();
                 }
-                skinBase = null;
             }
 
             // DEBUG: Log that we've changed the skin
