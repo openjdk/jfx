@@ -883,15 +883,6 @@ public class SplitPaneSkin extends SkinBase<SplitPane, BehaviorBase<SplitPane>> 
             return prefHeight + getInsets().getTop() + getInsets().getBottom();
         }
     }
-
-    @Override protected double computeMaxHeight(double width) {
-        return Double.MAX_VALUE;
-    }
-
-    @Override protected double computeMaxWidth(double height) {
-        return Double.MAX_VALUE;
-    }
-    
     
 
 //    private void printDividerPositions() {
