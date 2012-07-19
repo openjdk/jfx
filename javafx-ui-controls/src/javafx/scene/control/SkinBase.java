@@ -43,7 +43,7 @@ import javafx.scene.layout.Region;
 /**
  *
  */
-public abstract class SkinBase<C extends Control, A extends BehaviorBase<C>> implements Skin<C> {
+public abstract class SkinBase<C extends Control, BB extends BehaviorBase<C>> implements Skin<C> {
     
     /***************************************************************************
      *                                                                         *
@@ -73,7 +73,7 @@ public abstract class SkinBase<C extends Control, A extends BehaviorBase<C>> imp
      * {@code Skin} implementations will require specific {@code BehaviorBase}
      * implementations. For example, a ButtonSkin might require a ButtonBehavior.
      */
-    private A behavior;
+    private BB behavior;
     
     /**
      * This is part of the workaround introduced during delomboking. We probably will
@@ -144,7 +144,7 @@ public abstract class SkinBase<C extends Control, A extends BehaviorBase<C>> imp
      * @param control The control for which this Skin should attach to.
      * @param behavior The behavior for which this Skin should defer to.
      */
-    protected SkinBase(final C control, final A behavior) {
+    protected SkinBase(final C control, final BB behavior) {
         if (control == null || behavior == null) {
             throw new IllegalArgumentException("Cannot pass null for control or behavior");
         }
@@ -185,7 +185,7 @@ public abstract class SkinBase<C extends Control, A extends BehaviorBase<C>> imp
     }
     
     /** {@inheritDoc} */
-    public final A getBehavior() {
+    public final BB getBehavior() {
         return behavior;
     }
 
