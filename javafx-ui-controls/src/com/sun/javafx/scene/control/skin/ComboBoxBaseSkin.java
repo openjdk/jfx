@@ -50,9 +50,9 @@ public abstract class ComboBoxBaseSkin<T> extends SkinBase<ComboBoxBase<T>, Comb
     protected final void setMode(ComboBoxMode value) { mode = value; }
     
     public ComboBoxBaseSkin(final ComboBoxBase<T> comboBox, final ComboBoxBaseBehavior behavior) {
-        // Call the super method with the button we were just given in the 
+        // Call the super method with the ComboBox we were just given in the 
         // constructor, as well as an instance of the behavior class.
-        super(comboBox, behavior);//new ComboBoxBaseBehavior(comboBox));
+        super(comboBox, behavior);
         
         // open button / arrow
         arrow = new StackPane();
