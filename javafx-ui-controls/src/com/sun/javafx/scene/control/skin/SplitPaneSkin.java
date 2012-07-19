@@ -48,18 +48,19 @@ import com.sun.javafx.scene.control.behavior.BehaviorBase;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
+import javafx.scene.Group;
 
 public class SplitPaneSkin extends SkinBase<SplitPane, BehaviorBase<SplitPane>>  {
 
     private ObservableList<Content> contentRegions;
     private ObservableList<ContentDivider> contentDividers;
     private boolean horizontal;
-
+    
     public SplitPaneSkin(final SplitPane splitPane) {
         super(splitPane, new BehaviorBase<SplitPane>(splitPane));
 //        setManaged(false);
         horizontal = getSkinnable().getOrientation() == Orientation.HORIZONTAL;
-
+        
         contentRegions = FXCollections.<Content>observableArrayList();
         contentDividers = FXCollections.<ContentDivider>observableArrayList();
 
@@ -882,6 +883,16 @@ public class SplitPaneSkin extends SkinBase<SplitPane, BehaviorBase<SplitPane>> 
             return prefHeight + getInsets().getTop() + getInsets().getBottom();
         }
     }
+
+    @Override protected double computeMaxHeight(double width) {
+        return Double.MAX_VALUE;
+    }
+
+    @Override protected double computeMaxWidth(double height) {
+        return Double.MAX_VALUE;
+    }
+    
+    
 
 //    private void printDividerPositions() {
 //        for (int i = 0; i < contentDividers.size(); i++) {
