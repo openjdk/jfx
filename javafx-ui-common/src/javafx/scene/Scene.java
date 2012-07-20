@@ -3487,12 +3487,6 @@ public class Scene implements EventTarget {
                 return;
             }
             setFocusOwner(node);
-
-            if (getFocusOwner() != null) {
-                if (impl_peer != null) {
-                    impl_peer.requestFocus();
-                }
-            }
         }
     }
     /***************************************************************************

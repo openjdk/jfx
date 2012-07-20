@@ -56,6 +56,7 @@ public class FocusTest {
         scene = new Scene(new Group(), 500, 500);
         stage.setScene(scene);
         stage.show();
+        stage.requestFocus();
         nodes = new ArrayList();
         nodeIndex = 0;
 

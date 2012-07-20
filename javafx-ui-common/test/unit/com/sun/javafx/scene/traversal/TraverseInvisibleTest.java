@@ -101,6 +101,7 @@ public final class TraverseInvisibleTest {
 
         keypadNodes = createKeypadNodesInScene(scene, traversalEngine);
         stage.show();
+        stage.requestFocus();
     }
 
     @After
