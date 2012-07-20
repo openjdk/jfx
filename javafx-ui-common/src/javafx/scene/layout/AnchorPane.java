@@ -324,22 +324,18 @@ public class AnchorPane extends Pane {
                 double y = child.getLayoutY() + childLayoutBounds.getMinY();
                 double w = -1;
                 double h = -1;
-                
-                switch (bias) {
-                    case VERTICAL:
-                        // width depends on height
-                        w = computeChildWidth(child, leftAnchor, rightAnchor, h);
-                        h = computeChildHeight(child, topAnchor, bottomAnchor, -1);
-                        break;
-                    case HORIZONTAL:
-                        // height depends on width
-                        w = computeChildWidth(child, leftAnchor, rightAnchor, -1);
-                        h = computeChildHeight(child, topAnchor, bottomAnchor, w);
-                        break;
-                    default:
-                        w = computeChildWidth(child, leftAnchor, rightAnchor, -1);
-                        h = computeChildHeight(child, topAnchor, bottomAnchor, -1);
-                        break;
+
+                if (bias == Orientation.VERTICAL) {
+                    // width depends on height
+                    w = computeChildWidth(child, leftAnchor, rightAnchor, h);
+                    h = computeChildHeight(child, topAnchor, bottomAnchor, -1);
+                } else if (bias == Orientation.HORIZONTAL) {
+                    w = computeChildWidth(child, leftAnchor, rightAnchor, -1);
+                    h = computeChildHeight(child, topAnchor, bottomAnchor, w);
+                } else {
+                    // bias may be null
+                    w = computeChildWidth(child, leftAnchor, rightAnchor, -1);
+                    h = computeChildHeight(child, topAnchor, bottomAnchor, -1);
                 }
 
                 if (leftAnchor != null) {

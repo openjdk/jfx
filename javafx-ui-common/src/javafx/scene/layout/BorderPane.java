@@ -462,11 +462,11 @@ public class BorderPane extends Pane {
             bottomPrefHeight = getAreaHeight(b, width, false);
             maxHeight = Math.max(centerPrefHeight, Math.max(rightPrefHeight, leftPrefHeight));
         } else {
-            final Insets centerMargin = getMargin(c);
-            final Insets rightMargin = getMargin(r);
-            final Insets bottomMargin = getMargin(b);
-            final Insets leftMargin = getMargin(l);
-            final Insets topMargin = getMargin(t);
+            final Insets centerMargin = c == null ? null : getMargin(c);
+            final Insets rightMargin = r == null ? null : getMargin(r);
+            final Insets bottomMargin = b == null ? null : getMargin(b);
+            final Insets leftMargin = l == null ? null : getMargin(l);
+            final Insets topMargin = t == null ? null : getMargin(t);
             centerPrefHeight = c != null? computeChildPrefAreaHeight(c, centerMargin) : 0;
             leftPrefHeight = l != null? computeChildPrefAreaHeight(l, leftMargin) : 0;
             rightPrefHeight = r != null? computeChildPrefAreaHeight(r, rightMargin) : 0;
