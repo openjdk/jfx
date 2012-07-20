@@ -2098,8 +2098,9 @@ public abstract class Node implements EventTarget {
 
                 @Override
                 protected void invalidated() {
-                    if (getParent() != null) {
-                        getParent().requestLayout();
+                    final Parent parent = getParent();
+                    if (parent != null) {
+                        parent.managedChildChanged();
                     }
                 }
 

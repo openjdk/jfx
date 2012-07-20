@@ -34,7 +34,6 @@ import java.util.Set;
 import com.sun.javafx.jmx.MXNodeAlgorithm;
 import com.sun.javafx.jmx.MXNodeAlgorithmContext;
 import javafx.beans.property.ObjectProperty;
-import javafx.beans.property.SimpleBooleanProperty;
 import javafx.beans.property.SimpleObjectProperty;
 import javafx.collections.FXCollections;
 import javafx.collections.ListChangeListener.Change;
@@ -71,11 +70,10 @@ import javafx.beans.property.ReadOnlyBooleanWrapper;
  * child nodes, marking branches dirty for layout and rendering, picking,
  * bounds calculations, and executing the layout pass on each pulse.
  * <p>
- * There are three direct concrete Parent subclasses
+ * There are two direct concrete Parent subclasses
  * <ul>
  * <li>{@link Group} effects and transforms to be applied to a collection of child nodes.</li>
  * <li>{@link javafx.scene.layout.Region} class for nodes that can be styled with CSS and layout children. </li>
- * <li>{@link javafx.scene.control.Control base Control} class for high-level skinnable nodes designed for user interaction.</li>
  * </ul>
  *
  */
@@ -91,7 +89,7 @@ public abstract class Parent extends Node {
      * Threshold when it's worth to populate list of removed children.
      */
     private static final int REMOVED_CHILDREN_THRESHOLD = 20;
-    
+
     /**
      * Do not populate list of removed children when its number exceeds threshold,
      * but mark whole parent dirty.
@@ -212,7 +210,7 @@ public abstract class Parent extends Node {
 
     //accumulates all removed nodes between pulses, for dirty area calculation.
     private List<Node> removed;
-    
+
     /**
      * A ObservableList of child {@code Node}s.
      * <p>
@@ -382,8 +380,9 @@ public abstract class Parent extends Node {
         protected void onChanged(Change<Node> c) {
             // proceed with updating the scene graph
             if (childrenModified) {
+                unmodifiableManagedChildren = null;
                 boolean relayout = false;
-                
+
                 while (c.next()) {
                     int from = c.getFrom();
                     int to = c.getTo();
@@ -413,7 +412,7 @@ public abstract class Parent extends Node {
                             relayout = true;
                         }
                     }
-                    
+
                     // update the parent and scene for each new node
                     for (int i = from; i < to; ++i) {
                         Node node = children.get(i);
@@ -461,8 +460,8 @@ public abstract class Parent extends Node {
                 // its siblings. Thus, it is only necessary to reapply css to
                 // the Node just added and not to this parent and all of its
                 // children. So the following call to impl_reapplyCSS was moved
-                // to Node.parentProperty. The orginal comment and code were
-                // purpopsely left here as documentation should there be any
+                // to Node.parentProperty. The original comment and code were
+                // purposely left here as documentation should there be any
                 // question about how the code used to work and why the change
                 // was made.
                 //
@@ -505,6 +504,24 @@ public abstract class Parent extends Node {
     };
 
     /**
+     * A constant reference to an unmodifiable view of the children, such that every time
+     * we ask for an unmodifiable list of children, we don't actually create a new
+     * collection and return it. The memory overhead is pretty lightweight compared
+     * to all the garbage we would otherwise generate.
+     */
+    private final ObservableList<Node> unmodifiableChildren =
+            FXCollections.unmodifiableObservableList(children);
+
+    /**
+     * A cached reference to the unmodifiable managed children of this Parent. This is
+     * created whenever first asked for, and thrown away whenever children are added
+     * or removed or when their managed state changes. This could be written
+     * differently, such that this list is essentially a filtered copy of the
+     * main children, but that additional overhead might not be worth it.
+     */
+    private List<Node> unmodifiableManagedChildren = null;
+
+    /**
      * Gets the list of children of this {@code Parent}.
      *
      * <p>
@@ -520,6 +537,13 @@ public abstract class Parent extends Node {
      * An {@link IllegalStateException} is thrown if this restriction is
      * violated.
      *
+     * <p>
+     * Note to subclasses: if you override this method, you must return from
+     * your implementation the result of calling this super method. The actual
+     * list instance returned from any getChildren() implementation must be
+     * the list owned and managed by this Parent. The only typical purpose
+     * for overriding this method is to promote the method to be public.
+     *
      * @return the list of children of this {@code Parent}.
      */
     protected ObservableList<Node> getChildren() {
@@ -534,7 +558,7 @@ public abstract class Parent extends Node {
      */
     @ReturnsUnmodifiableCollection
     public ObservableList<Node> getChildrenUnmodifiable() {
-        return FXCollections.unmodifiableObservableList(children);
+        return unmodifiableChildren;
     }
 
     /**
@@ -543,14 +567,28 @@ public abstract class Parent extends Node {
      * @param <E> the type of the children nodes
      * @return list of all managed children in this parent
      */
+    @ReturnsUnmodifiableCollection
     protected <E extends Node> List<E> getManagedChildren() {
-        List<E> managed = new ArrayList<E>();
-        for (E e : (ObservableList<E>)getChildren()) {
-            if (e != null && e.isManaged()) {
-                managed.add(e);
+        if (unmodifiableManagedChildren == null) {
+            unmodifiableManagedChildren = new ArrayList<Node>();
+            for (int i=0, max=children.size(); i<max; i++) {
+                Node e = children.get(i);
+                if (e != null && e.isManaged()) {
+                    unmodifiableManagedChildren.add(e);
+                }
             }
         }
-        return managed;
+        return (List<E>)unmodifiableManagedChildren;
+    }
+
+    /**
+     * Called by Node whenever its managed state may have changed, this
+     * method will cause the view of managed children to be updated
+     * such that it properly includes or excludes this child.
+     */
+    final void managedChildChanged() {
+        requestLayout();
+        unmodifiableManagedChildren = null;
     }
 
     // implementation of Node.toFront function
@@ -593,73 +631,37 @@ public abstract class Parent extends Node {
         }
     }
 
-    private void computeDirtyScene(Scene old) {
-        for (Node node : getChildren()) {
+    @Override void sceneChanged(final Scene old) {
+        // Give all of the children the new scene
+        final Scene scene = getScene();
+        for (int i=0, max=children.size(); i<max; i++) {
+            final Node node = children.get(i);
             if (node != null) {
-                node.setScene(getScene());
+                node.setScene(scene);
             }
         }
 
-        if (isNeedsLayout() && old != null) {
+        // If this node was in the old scene's dirty layout
+        // list, then remove it from that list so that it is
+        // not processed on the next pulse
+        final boolean awaitingLayout = isNeedsLayout();
+        if (awaitingLayout && old != null) {
             old.removeFromDirtyLayoutList(this);
         }
-        if (getScene() != null && isNeedsLayout() && isLayoutRoot()) {
-            getScene().addToDirtyLayoutList(this);
-        }
-    }
 
-    @Override void sceneChanged(Scene old) {
-        computeDirtyScene(old);
-    }
-
-    // define focus traversal order
-    // keep it package private for now
-    Node getFirstChild() {
-        if (children.size() > 0) {
-            return children.get(0);
-        } else {
-            return null;
+        // If this node is dirty and the new scene is not null
+        // then add this node to the new scene's dirty list
+        if (scene != null && awaitingLayout && isLayoutRoot()) {
+            scene.addToDirtyLayoutList(this);
         }
-    }
-
-    Node getLastChild() {
-        if (!children.isEmpty()) {
-            return children.get(children.size() - 1);
-        } else {
-            return null;
-        }
-    }
-
-    Node getNextChild(Node child) {
-        Node previous = null;
-        for (Node node : children)  {
-            if (child == previous) {
-                return node;
-            }
-            previous = node;
-        }
-        return null;
-    }
-
-    Node getPreviousChild(Node child) {
-        Node previous = null;
-        for (int i = (children.size()-1); i >= 0; i--) {
-            Node node = children.get(i);
-            if (child == previous) {
-                return node;
-            }
-            previous = node;
-        }
-        return null;
     }
 
     @Override
     void setDerivedDepthTest(boolean value) {
         super.setDerivedDepthTest(value);
 
-        ObservableList<Node> myChildren = getChildren();
-        for (int i = 0; i < myChildren.size(); i++) {
-            Node node = myChildren.get(i);
+        for (int i=0, max=children.size(); i<max; i++) {
+            final Node node = children.get(i);
             node.computeDerivedDepthTest();
         }
     }
@@ -687,13 +689,13 @@ public abstract class Parent extends Node {
      */
     @Deprecated
     @Override protected Node impl_pickNodeLocal(PickRay pickRay) {
-            for (int i = children.size()-1; i >= 0; i--) {
-                Node picked = children.get(i).impl_pickNode(pickRay);
+        for (int i = children.size()-1; i >= 0; i--) {
+            Node picked = children.get(i).impl_pickNode(pickRay);
 
-                if (picked != null) {
-                    return picked;
-                }
+            if (picked != null) {
+                return picked;
             }
+        }
         return null;
     }
 
@@ -704,9 +706,9 @@ public abstract class Parent extends Node {
     @Override public Node lookup(String selector) {
         Node n = super.lookup(selector);
         if (n == null) {
-            int size = children.size();
-            for (int i = 0; i < size; ++i) {
-                n = children.get(i).lookup(selector);
+            for (int i=0, max=children.size(); i<max; i++) {
+                final Node node = children.get(i);
+                n = node.lookup(selector);
                 if (n != null) return n;
             }
         }
@@ -719,16 +721,15 @@ public abstract class Parent extends Node {
      */
     @Override List<Node> lookupAll(Selector selector, List<Node> results) {
         results = super.lookupAll(selector, results);
-        int size = children.size();
-            for (int i = 0; i < size; ++i) {
-            results = children.get(i).lookupAll(selector, results);
+        for (int i=0, max=children.size(); i<max; i++) {
+            final Node node = children.get(i);
+            results = node.lookupAll(selector, results);
         }
         return results;
     }
-    
+
     /** @treatAsPrivate implementation detail */
     private javafx.beans.property.ObjectProperty<TraversalEngine> impl_traversalEngine;
-
 
     /**
      * @treatAsPrivate implementation detail
@@ -774,25 +775,18 @@ public abstract class Parent extends Node {
      * Indicates that this Node and its subnodes requires a layout pass on
      * the next pulse.
      */
-    private ReadOnlyBooleanWrapper needsLayout;
+    private ReadOnlyBooleanWrapper needsLayout = new ReadOnlyBooleanWrapper(this, "needsLayout", true);
 
     protected final void setNeedsLayout(boolean value) {
-        needsLayoutPropertyImpl().set(value);
+        needsLayout.set(value);
     }
 
     public final boolean isNeedsLayout() {
-        return needsLayout == null ? true : needsLayout.get();
+        return needsLayout.get();
     }
 
     public final ReadOnlyBooleanProperty needsLayoutProperty() {
-        return needsLayoutPropertyImpl().getReadOnlyProperty();
-    }
-
-    private ReadOnlyBooleanWrapper needsLayoutPropertyImpl() {
-        if (needsLayout == null) {
-            needsLayout = new ReadOnlyBooleanWrapper(this, "needsLayout", true);
-        }
-        return needsLayout;
+        return needsLayout.getReadOnlyProperty();
     }
 
     /**
@@ -831,14 +825,18 @@ public abstract class Parent extends Node {
 
             setNeedsLayout(true);
             if (isLayoutRoot()) {
-                if (getScene() != null) {
+                final Scene scene = getScene();
+                if (scene != null) {
                     if (logger.isLoggable(PlatformLogger.FINER)) {
                         logger.finer(this.toString()+" layoutRoot added to scene dirty layout list");
                     }
-                    getScene().addToDirtyLayoutList(this);
+                    scene.addToDirtyLayoutList(this);
                 }
-            } else if (getParent() != null) {
-                getParent().requestLayout();
+            } else {
+                final Parent parent = getParent();
+                if (parent != null) {
+                    parent.requestLayout();
+                }
             }
         } else {
             clearSizeCache();
@@ -855,8 +853,9 @@ public abstract class Parent extends Node {
         minWidthCache = -1;
         minHeightCache = -1;
         if (!isLayoutRoot()) {
-            if (getParent() != null) {
-                getParent().clearSizeCache();
+            final Parent parent = getParent();
+            if (parent != null) {
+                parent.clearSizeCache();
             }
         }
     }
@@ -866,7 +865,7 @@ public abstract class Parent extends Node {
             if (prefWidthCache == -1) {
                 prefWidthCache = computePrefWidth(-1);
                 sizeCacheClear = false;
-            } 
+            }
             return prefWidthCache;
         } else {
             return computePrefWidth(height);
@@ -878,7 +877,7 @@ public abstract class Parent extends Node {
             if (prefHeightCache == -1) {
                 prefHeightCache = computePrefHeight(-1);
                 sizeCacheClear = false;
-            } 
+            }
             return prefHeightCache;
         } else {
             return computePrefHeight(width);
@@ -923,8 +922,8 @@ public abstract class Parent extends Node {
     protected double computePrefWidth(double height) {
         double minX = 0;
         double maxX = 0;
-        for (int i = 0; i < getChildren().size(); i++) {
-            Node node = getChildren().get(i);
+        for (int i=0, max=children.size(); i<max; i++) {
+            Node node = children.get(i);
             if (node.isManaged()) {
                 final double x = node.getLayoutBounds().getMinX() + node.getLayoutX();
                 minX = Math.min(minX, x);
@@ -948,8 +947,8 @@ public abstract class Parent extends Node {
     protected double computePrefHeight(double width) {
         double minY = 0;
         double maxY = 0;
-        for (int i = 0; i < getChildren().size(); i++) {
-            Node node = getChildren().get(i);
+        for (int i=0, max=children.size(); i<max; i++) {
+            Node node = children.get(i);
             if (node.isManaged()) {
                 final double y = node.getLayoutBounds().getMinY() + node.getLayoutY();
                 minY = Math.min(minY, y);
@@ -991,9 +990,8 @@ public abstract class Parent extends Node {
      * @return baseline offset
      */
     @Override public double getBaselineOffset() {
-        int size = children.size();
-        for (int i = 0; i < size; ++i) {
-            Node child = children.get(i);
+        for (int i=0, max=children.size(); i<max; i++) {
+            final Node child = children.get(i);
             if (child.isManaged()) {
                 return child.getLayoutBounds().getMinY() + child.getLayoutY() + child.getBaselineOffset();
             }
@@ -1020,12 +1018,10 @@ public abstract class Parent extends Node {
             setNeedsLayout(false);
 
             // Perform layout on each child, hoping it has random access performance!
-            final ObservableList<Node> _children_ = getChildren();
-            final int count = _children_.size();
-            for (int i=0; i<count; i++) {
-                final Node c = _children_.get(i);
-                if (c instanceof Parent) {
-                    ((Parent) c).layout();
+            for (int i=0, max=children.size(); i<max; i++) {
+                final Node child = children.get(i);
+                if (child instanceof Parent) {
+                    ((Parent) child).layout();
                 }
             }
             performingLayout = false;
@@ -1041,9 +1037,8 @@ public abstract class Parent extends Node {
      * Subclasses should override this function to layout content as needed.
      */
     protected void layoutChildren() {
-        int size = children.size();
-        for (int i = 0; i < size; ++i) {
-            Node node = children.get(i);
+        for (int i=0, max=children.size(); i<max; i++) {
+            final Node node = children.get(i);
             if (node.isResizable() && node.isManaged()) {
                 node.autosize();
             }
@@ -1051,7 +1046,8 @@ public abstract class Parent extends Node {
     }
 
     boolean isSceneRoot() {
-        return getScene() != null? getScene().getRoot() == this : false;
+        final Scene scene = getScene();
+        return scene != null ? scene.getRoot() == this : false;
     }
 
     boolean isLayoutRoot() {
@@ -1095,7 +1091,6 @@ public abstract class Parent extends Node {
      * @return the list of stylesheets to use with this Parent
      */
     public final ObservableList<String> getStylesheets() { return stylesheets; }
-    
     
     /**
      * This method recurses up the parent chain until parent is null. As the
@@ -1145,10 +1140,8 @@ public abstract class Parent extends Node {
         // Let the super implementation handle CSS for this node
         super.impl_processCSS(flag);
         // For each child, process CSS
-        final List kids = this.getChildren();
-        final int max = kids.size();
-        for (int c=0; c<max; c++) {
-            Node kid = (Node)kids.get(c);
+        for (int i=0, max=children.size(); i<max; i++) {
+            final Node kid = children.get(i);
             if (kid != null) {
                 kid.impl_processCSS(flag);
             }
@@ -1161,15 +1154,11 @@ public abstract class Parent extends Node {
      */
     @Deprecated
     @Override public void impl_cssResetInitialValues() {
-        
         // RT-9784
-        
         super.impl_cssResetInitialValues();
 
-        final List kids = this.getChildren();
-        final int max = kids.size();
-        for (int c=0; c<max; c++) {
-            Node kid = (Node)kids.get(c);
+        for (int i=0, max=children.size(); i<max; i++) {
+            final Node kid = children.get(i);
             if (kid != null) {
                 kid.impl_cssResetInitialValues();
             }
@@ -1188,11 +1177,7 @@ public abstract class Parent extends Node {
     /**
      * Constructs a new {@code Parent}.
      */
-    protected Parent() {
-        computeDirtyScene(null);
-        requestLayout();
-    }
-
+    protected Parent() { }
 
     /**
      * @treatAsPrivate implementation detail
@@ -1225,6 +1210,7 @@ public abstract class Parent extends Node {
      **************************************************************************/
 
     private BaseBounds tmp = new RectBounds();
+
     /**
      * The cached bounds for the Group. If the cachedBounds are invalid
      * then we have no history of what the bounds are, or were.
@@ -1291,7 +1277,8 @@ public abstract class Parent extends Node {
             double minX = Double.MAX_VALUE, minY = Double.MAX_VALUE, minZ = Double.MAX_VALUE;
             double maxX = Double.MIN_VALUE, maxY = Double.MIN_VALUE, maxZ = Double.MIN_VALUE;
             boolean first = true;
-            for (Node node : getChildren()) {
+            for (int i=0, max=children.size(); i<max; i++) {
+                final Node node = children.get(i);
                 if (node.isVisible()) {
                     bounds = node.getTransformedBounds(bounds, tx);
                     // if the bounds of the child are invalid, we don't want
@@ -1567,10 +1554,8 @@ public abstract class Parent extends Node {
                         node.boundsChanged = false;
                     }
                 } else {
-                    final ObservableList<Node> _children_ = getChildren();
-                    final int count = _children_.size();
-                    for (int i=0; i<count; i++) {
-                        final Node node = _children_.get(i);
+                    for (int i=0, max=children.size(); i<max; i++) {
+                        final Node node = children.get(i);
                         if (node == null)
                             continue;
                         if (node.isVisible() && node.boundsChanged) {
@@ -1643,10 +1628,8 @@ public abstract class Parent extends Node {
         // the bounds of each node, figure out the edge nodes, get the min/max
         // for the x/y/x2/y2 and then update cachedBounds and cachedBoundsInvalid
         boolean first = true;
-        final ObservableList<Node> _children_ = getChildren();
-        final int count = _children_.size();
-        for (int i=0; i<count; i++) {
-            final Node node = _children_.get(i);
+        for (int i=0, max=children.size(); i<max; i++) {
+            final Node node = children.get(i);
             if (node == null)
                 continue;
 
@@ -1746,7 +1729,8 @@ public abstract class Parent extends Node {
     @Override
     protected boolean impl_computeContains(double localX, double localY) {
         final Point2D tempPt = TempState.getInstance().point;
-        for (Node node : getChildren()) {
+        for (int i=0, max=children.size(); i<max; i++) {
+            final Node node = children.get(i);
             tempPt.x = (float)localX;
             tempPt.y = (float)localY;
             try {
