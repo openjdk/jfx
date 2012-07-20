@@ -2102,6 +2102,7 @@ public abstract class Node implements EventTarget {
                     if (parent != null) {
                         parent.managedChildChanged();
                     }
+                    notifyManagedChanged();
                 }
 
                 @Override
@@ -2118,6 +2119,13 @@ public abstract class Node implements EventTarget {
         }
         return managed;
     }
+
+    /**
+     * Called whenever the "managed" flag has changed. This is only
+     * used by Parent as an optimization to keep track of whether a
+     * Parent node is a layout root or not.
+     */
+    void notifyManagedChanged() { }
 
     /**
      * Defines the x coordinate of the translation that is added to this {@code Node}'s

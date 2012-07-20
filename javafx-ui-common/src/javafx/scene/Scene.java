@@ -991,6 +991,7 @@ public class Scene implements EventTarget {
                     if (oldRoot != null) {
                         oldRoot.setScene(null);
                         oldRoot.setImpl_traversalEngine(null);
+                        oldRoot.updateSceneRoot(false);
                     }
                     oldRoot = _value;
                     if (_value.getImpl_traversalEngine() == null) {
@@ -998,6 +999,7 @@ public class Scene implements EventTarget {
                     }
                     _value.getStyleClass().add(0, "root");
                     _value.setScene(Scene.this);
+                    _value.updateSceneRoot(true);
                     markDirty(DirtyBits.ROOT_DIRTY);
                     _value.resize(getWidth(), getHeight()); // maybe no-op if root is not resizable
                     _value.requestLayout();

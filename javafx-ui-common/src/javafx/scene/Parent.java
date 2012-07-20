@@ -33,8 +33,7 @@ import java.util.Set;
 
 import com.sun.javafx.jmx.MXNodeAlgorithm;
 import com.sun.javafx.jmx.MXNodeAlgorithmContext;
-import javafx.beans.property.ObjectProperty;
-import javafx.beans.property.SimpleObjectProperty;
+import javafx.beans.property.*;
 import javafx.collections.FXCollections;
 import javafx.collections.ListChangeListener.Change;
 import javafx.collections.ObservableList;
@@ -60,8 +59,6 @@ import com.sun.javafx.scene.traversal.TraversalEngine;
 import com.sun.javafx.sg.PGGroup;
 import com.sun.javafx.sg.PGNode;
 import com.sun.javafx.tk.Toolkit;
-import javafx.beans.property.ReadOnlyBooleanProperty;
-import javafx.beans.property.ReadOnlyBooleanWrapper;
 
 /**
  * The base class for all nodes that have children in the scene graph.
@@ -651,7 +648,7 @@ public abstract class Parent extends Node {
 
         // If this node is dirty and the new scene is not null
         // then add this node to the new scene's dirty list
-        if (scene != null && awaitingLayout && isLayoutRoot()) {
+        if (scene != null && awaitingLayout && layoutRoot) {
             scene.addToDirtyLayoutList(this);
         }
     }
@@ -700,7 +697,7 @@ public abstract class Parent extends Node {
     }
 
     @Override boolean isConnected() {
-        return super.isConnected() || isSceneRoot();
+        return super.isConnected() || sceneRoot;
     }
 
     @Override public Node lookup(String selector) {
@@ -824,7 +821,7 @@ public abstract class Parent extends Node {
             }
 
             setNeedsLayout(true);
-            if (isLayoutRoot()) {
+            if (layoutRoot) {
                 final Scene scene = getScene();
                 if (scene != null) {
                     if (logger.isLoggable(PlatformLogger.FINER)) {
@@ -852,7 +849,7 @@ public abstract class Parent extends Node {
         prefHeightCache = -1;
         minWidthCache = -1;
         minHeightCache = -1;
-        if (!isLayoutRoot()) {
+        if (!layoutRoot) {
             final Parent parent = getParent();
             if (parent != null) {
                 parent.clearSizeCache();
@@ -1045,13 +1042,25 @@ public abstract class Parent extends Node {
         }
     }
 
-    boolean isSceneRoot() {
-        final Scene scene = getScene();
-        return scene != null ? scene.getRoot() == this : false;
+    /**
+     * This field is managed by the Scene, and set on any node which is the
+     * root of a Scene.
+     */
+    private boolean sceneRoot = false;
+    final boolean isSceneRoot() { return sceneRoot; }
+    final void updateSceneRoot(boolean value) {
+        this.sceneRoot = value;
+        layoutRoot = !isManaged() || sceneRoot;
     }
 
-    boolean isLayoutRoot() {
-        return !isManaged() || isSceneRoot();
+    /**
+     * Keeps track of whether this node is a layout root. This is updated
+     * whenever the sceneRoot field changes, or whenever the managed
+     * property changes.
+     */
+    private boolean layoutRoot = false;
+    @Override final void notifyManagedChanged() {
+        layoutRoot = !isManaged() || sceneRoot;
     }
 
     /***********************************************************************
