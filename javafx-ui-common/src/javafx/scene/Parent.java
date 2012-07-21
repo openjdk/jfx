@@ -646,7 +646,7 @@ public abstract class Parent extends Node {
             old.removeFromDirtyLayoutList(this);
         }
 
-        sceneRoot = scene.getRoot() == this;
+        sceneRoot = scene != null && scene.getRoot() == this;
         layoutRoot = !isManaged() || sceneRoot;
 
         // If this node is dirty and the new scene is not null
