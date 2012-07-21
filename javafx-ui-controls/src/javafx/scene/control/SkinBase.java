@@ -281,8 +281,9 @@ public abstract class SkinBase<C extends Control, BB extends BehaviorBase<C>> im
      * @return A double representing the minimum width of this Skin.
      */
     protected double computeMinWidth(double height) {
-        return computePrefWidth(height);
+        return control.prefWidth(height);
     }
+
     /**
      * Computes the minimum allowable height of the Skin, based on the provided
      * width.
@@ -292,7 +293,7 @@ public abstract class SkinBase<C extends Control, BB extends BehaviorBase<C>> im
      * @return A double representing the minimum height of this Skin.
      */
     protected double computeMinHeight(double width) {
-        return computePrefHeight(width);
+        return control.prefHeight(width);
     }
 
     /**

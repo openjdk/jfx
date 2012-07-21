@@ -1257,7 +1257,7 @@ public class TabPaneSkin extends SkinBase<TabPane, TabPaneBehavior> {
             StyleManager.getInstance().getPseudoclassMask("disabled");    
 
 
-   /**************************************************************************
+    /**************************************************************************
      *
      * TabContentRegion: each tab has one to contain the tab's content node
      *
