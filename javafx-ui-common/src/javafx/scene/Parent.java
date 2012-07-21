@@ -646,6 +646,9 @@ public abstract class Parent extends Node {
             old.removeFromDirtyLayoutList(this);
         }
 
+        sceneRoot = scene.getRoot() == this;
+        layoutRoot = !isManaged() || sceneRoot;
+
         // If this node is dirty and the new scene is not null
         // then add this node to the new scene's dirty list
         if (scene != null && awaitingLayout && layoutRoot) {
@@ -1047,11 +1050,6 @@ public abstract class Parent extends Node {
      * root of a Scene.
      */
     private boolean sceneRoot = false;
-    final boolean isSceneRoot() { return sceneRoot; }
-    final void updateSceneRoot(boolean value) {
-        this.sceneRoot = value;
-        layoutRoot = !isManaged() || sceneRoot;
-    }
 
     /**
      * Keeps track of whether this node is a layout root. This is updated

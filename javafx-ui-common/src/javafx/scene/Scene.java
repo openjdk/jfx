@@ -982,7 +982,7 @@ public class Scene implements EventTarget {
                         throw new IllegalArgumentException(_value +
                                 "is set as a clip on another node, so cannot be set as root");
                     }
-                    if (_value.isSceneRoot() && _value.getScene() != Scene.this) {
+                    if (_value.getScene() != null && _value.getScene().getRoot() == _value && _value.getScene() != Scene.this) {
                         if (isBound()) forceUnbind();
                         throw new IllegalArgumentException(_value +
                                 "is already set as root of another scene");
@@ -991,7 +991,6 @@ public class Scene implements EventTarget {
                     if (oldRoot != null) {
                         oldRoot.setScene(null);
                         oldRoot.setImpl_traversalEngine(null);
-                        oldRoot.updateSceneRoot(false);
                     }
                     oldRoot = _value;
                     if (_value.getImpl_traversalEngine() == null) {
@@ -999,7 +998,6 @@ public class Scene implements EventTarget {
                     }
                     _value.getStyleClass().add(0, "root");
                     _value.setScene(Scene.this);
-                    _value.updateSceneRoot(true);
                     markDirty(DirtyBits.ROOT_DIRTY);
                     _value.resize(getWidth(), getHeight()); // maybe no-op if root is not resizable
                     _value.requestLayout();
