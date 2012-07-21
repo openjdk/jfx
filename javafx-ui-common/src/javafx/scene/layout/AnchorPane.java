@@ -327,8 +327,10 @@ public class AnchorPane extends Pane {
 
                 if (bias == Orientation.VERTICAL) {
                     // width depends on height
-                    w = computeChildWidth(child, leftAnchor, rightAnchor, h);
+                    // WARNING: The order of these calls is crucial, there is some
+                    // hidden ordering dependency here!
                     h = computeChildHeight(child, topAnchor, bottomAnchor, -1);
+                    w = computeChildWidth(child, leftAnchor, rightAnchor, h);
                 } else if (bias == Orientation.HORIZONTAL) {
                     w = computeChildWidth(child, leftAnchor, rightAnchor, -1);
                     h = computeChildHeight(child, topAnchor, bottomAnchor, w);
