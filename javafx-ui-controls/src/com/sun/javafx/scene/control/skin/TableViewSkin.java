@@ -57,13 +57,17 @@ import javafx.geometry.HPos;
 import javafx.geometry.VPos;
 
 public class TableViewSkin<T> extends VirtualContainerBase<TableView<T>, TableViewBehavior<T>, TableRow<T>> {
+    
+    private final TableView<T> tableView;
 
     public TableViewSkin(final TableView tableView) {
         super(tableView, new TableViewBehavior(tableView));
+        
+        this.tableView = tableView;
 
         // init the VirtualFlow
         flow.setPannable(false);
-        flow.setFocusTraversable(getSkinnable().isFocusTraversable());
+        flow.setFocusTraversable(tableView.isFocusTraversable());
         flow.setCreateCell(new Callback<VirtualFlow, TableRow>() {
             @Override public TableRow call(VirtualFlow flow) {
                 return TableViewSkin.this.createCell();
@@ -104,7 +108,7 @@ public class TableViewSkin<T> extends VirtualContainerBase<TableView<T>, TableVi
         tableHeaderRow.setColumnReorderLine(columnReorderLine);
         tableHeaderRow.setTablePadding(getInsets());
         tableHeaderRow.setFocusTraversable(false);
-        getSkinnable().paddingProperty().addListener(new InvalidationListener() {
+        tableView.paddingProperty().addListener(new InvalidationListener() {
             @Override public void invalidated(Observable valueModel) {
                 tableHeaderRow.setTablePadding(getInsets());
             }
@@ -113,7 +117,7 @@ public class TableViewSkin<T> extends VirtualContainerBase<TableView<T>, TableVi
         getChildren().addAll(tableHeaderRow, flow, columnReorderOverlay, columnReorderLine);
 
         updateVisibleColumnCount();
-        updateVisibleLeafColumnWidthListeners(getSkinnable().getVisibleLeafColumns(), FXCollections.<TableColumn<T,?>>emptyObservableList());
+        updateVisibleLeafColumnWidthListeners(tableView.getVisibleLeafColumns(), FXCollections.<TableColumn<T,?>>emptyObservableList());
 
         tableHeaderRow.reorderingProperty().addListener(new InvalidationListener() {
             @Override public void invalidated(Observable valueModel) {
@@ -121,12 +125,12 @@ public class TableViewSkin<T> extends VirtualContainerBase<TableView<T>, TableVi
             }
         });
 
-        getSkinnable().getVisibleLeafColumns().addListener(weakVisibleLeafColumnsListener);
+        tableView.getVisibleLeafColumns().addListener(weakVisibleLeafColumnsListener);
         
-        updateTableItems(null, getSkinnable().getItems());
-        getSkinnable().itemsProperty().addListener(weakItemsChangeListener);
+        updateTableItems(null, tableView.getItems());
+        tableView.itemsProperty().addListener(weakItemsChangeListener);
 
-        getSkinnable().getProperties().addListener(new MapChangeListener<Object, Object>() {
+        tableView.getProperties().addListener(new MapChangeListener<Object, Object>() {
             @Override public void onChanged(Change<? extends Object, ? extends Object> c) {
                 if (c.wasAdded() && "TableView.refresh".equals(c.getKey())) {
                     refreshView();
@@ -188,7 +192,7 @@ public class TableViewSkin<T> extends VirtualContainerBase<TableView<T>, TableVi
 
         if (p == "ROW_FACTORY") {
             Callback<TableView<T>, ? extends TableRow<T>> oldFactory = rowFactory;
-            rowFactory = getSkinnable().getRowFactory();
+            rowFactory = tableView.getRowFactory();
 
             // TODO tighten this up
             if (oldFactory != rowFactory) {
@@ -197,7 +201,7 @@ public class TableViewSkin<T> extends VirtualContainerBase<TableView<T>, TableVi
         } else if (p == "PLACEHOLDER") {
             updatePlaceholderRegionVisibility();
         } else if (p == "FOCUS_TRAVERSABLE") {
-            flow.setFocusTraversable(getSkinnable().isFocusTraversable());
+            flow.setFocusTraversable(tableView.isFocusTraversable());
         } else if (p == "WIDTH") {
             tableHeaderRow.setTablePadding(getInsets());
         }
@@ -324,20 +328,20 @@ public class TableViewSkin<T> extends VirtualContainerBase<TableView<T>, TableVi
     
     /** {@inheritDoc} */
     @Override public int getItemCount() {
-        return getSkinnable().getItems() == null ? 0 : getSkinnable().getItems().size();
+        return tableView.getItems() == null ? 0 : tableView.getItems().size();
     }
     
     /** {@inheritDoc} */
     @Override public TableRow createCell() {
         TableRow cell;
 
-        if (getSkinnable().getRowFactory() != null) {
-            cell = getSkinnable().getRowFactory().call(getSkinnable());
+        if (tableView.getRowFactory() != null) {
+            cell = tableView.getRowFactory().call(tableView);
         } else {
             cell = new TableRow();
         }
 
-        cell.updateTableView(getSkinnable());
+        cell.updateTableView(tableView);
         return cell;
     }
 
@@ -349,10 +353,12 @@ public class TableViewSkin<T> extends VirtualContainerBase<TableView<T>, TableVi
         TableRow lastVisibleCell = (TableRow) flow.getLastVisibleCellWithinViewPort();
         if (lastVisibleCell == null) return -1;
         
+        int lastVisibleCellIndex = lastVisibleCell.getIndex();
+        
         boolean isSelected = lastVisibleCell.isSelected() || 
                 lastVisibleCell.isFocused() || 
-                isCellSelected(lastVisibleCell.getIndex()) ||
-                isCellFocused(lastVisibleCell.getIndex());
+                isCellSelected(lastVisibleCellIndex) ||
+                isCellFocused(lastVisibleCellIndex);
         
         if (isSelected) {
             // if the last visible cell is selected, we want to shift that cell up
@@ -374,10 +380,12 @@ public class TableViewSkin<T> extends VirtualContainerBase<TableView<T>, TableVi
         TableRow firstVisibleCell = (TableRow) flow.getFirstVisibleCellWithinViewPort();
         if (firstVisibleCell == null) return -1;
         
+        int firstVisibleCellIndex = firstVisibleCell.getIndex();
+        
         boolean isSelected = firstVisibleCell.isSelected() || 
                 firstVisibleCell.isFocused() || 
-                isCellSelected(firstVisibleCell.getIndex()) ||
-                isCellFocused(firstVisibleCell.getIndex());
+                isCellSelected(firstVisibleCellIndex) ||
+                isCellFocused(firstVisibleCellIndex);
         
         if (isSelected) {
             // if the first visible cell is selected, we want to shift that cell down
@@ -409,13 +417,14 @@ public class TableViewSkin<T> extends VirtualContainerBase<TableView<T>, TableVi
     @Override protected double computePrefWidth(double height) {
         double prefHeight = computePrefHeight(-1);
         
-        List<TableColumn<T,?>> cols = getSkinnable().getVisibleLeafColumns();
+        List<TableColumn<T,?>> cols = tableView.getVisibleLeafColumns();
         if (cols == null || cols.isEmpty()) {
             return prefHeight * GOLDEN_RATIO_MULTIPLIER;
         } 
         
         double pw = getInsets().getLeft() + getInsets().getRight();
-        for (TableColumn<T,?> tc : cols) {
+        for (int i = 0, max = cols.size(); i < max; i++) {
+            TableColumn tc = cols.get(i);
             pw += Math.max(tc.getPrefWidth(), tc.getMinWidth());
         }
 //        return pw;
@@ -430,7 +439,7 @@ public class TableViewSkin<T> extends VirtualContainerBase<TableView<T>, TableVi
             rowCountDirty = false;
         }
         
-        final double baselineOffset = getSkinnable().getLayoutBounds().getHeight() / 2;
+        final double baselineOffset = tableView.getLayoutBounds().getHeight() / 2;
 
         // position the table header
         double tableHeaderRowHeight = tableHeaderRow.prefHeight(-1);
@@ -537,7 +546,7 @@ public class TableViewSkin<T> extends VirtualContainerBase<TableView<T>, TableVi
      * Keeps track of how many leaf columns are currently visible in this table.
      */
     private void updateVisibleColumnCount() {
-        visibleColCount = getSkinnable().getVisibleLeafColumns().size();
+        visibleColCount = tableView.getVisibleLeafColumns().size();
 
         updatePlaceholderRegionVisibility();
         reconfigureCells();
@@ -546,10 +555,12 @@ public class TableViewSkin<T> extends VirtualContainerBase<TableView<T>, TableVi
     private void updateVisibleLeafColumnWidthListeners(
             List<? extends TableColumn<T,?>> added, List<? extends TableColumn<T,?>> removed) {
         
-        for (TableColumn<T,?> tc : removed) {
+        for (int i = 0, max = removed.size(); i < max; i++) {
+            TableColumn tc = removed.get(i);
             tc.widthProperty().removeListener(weakWidthListener);
         }
-        for (TableColumn<T,?> tc : added) {
+        for (int i = 0, max = added.size(); i < max; i++) {
+            TableColumn tc = added.get(i);
             tc.widthProperty().addListener(weakWidthListener);
         }
         flow.reconfigureCells();
@@ -565,7 +576,7 @@ public class TableViewSkin<T> extends VirtualContainerBase<TableView<T>, TableVi
                 getChildren().add(placeholderRegion);
             }
             
-            Node placeholderNode = getSkinnable().getPlaceholder();
+            Node placeholderNode = tableView.getPlaceholder();
 
             if (placeholderNode == null) {
                 if (placeholderLabel == null) {
@@ -605,7 +616,7 @@ public class TableViewSkin<T> extends VirtualContainerBase<TableView<T>, TableVi
 
         // FIXME this isn't perfect, but it prevents RT-14885, which results in
         // undesired horizontal scrollbars when in constrained resize mode
-        getSkinnable().getProperties().put("TableView.contentWidth", Math.floor(contentWidth));
+        tableView.getProperties().put("TableView.contentWidth", Math.floor(contentWidth));
     }
 
     private void refreshView() {
@@ -639,28 +650,28 @@ public class TableViewSkin<T> extends VirtualContainerBase<TableView<T>, TableVi
     }
 
     private void onFocusPreviousCell() {
-        TableViewFocusModel fm = getSkinnable().getFocusModel();
+        TableViewFocusModel fm = tableView.getFocusModel();
         if (fm == null) return;
 
         flow.show(fm.getFocusedIndex());
     }
 
     private void onFocusNextCell() {
-        TableViewFocusModel fm = getSkinnable().getFocusModel();
+        TableViewFocusModel fm = tableView.getFocusModel();
         if (fm == null) return;
 
         flow.show(fm.getFocusedIndex());
     }
 
     private void onSelectPreviousCell() {
-        SelectionModel sm = getSkinnable().getSelectionModel();
+        SelectionModel sm = tableView.getSelectionModel();
         if (sm == null) return;
 
         flow.show(sm.getSelectedIndex());
     }
 
     private void onSelectNextCell() {
-        SelectionModel sm = getSkinnable().getSelectionModel();
+        SelectionModel sm = tableView.getSelectionModel();
         if (sm == null) return;
 
         flow.show(sm.getSelectedIndex());
@@ -674,19 +685,19 @@ public class TableViewSkin<T> extends VirtualContainerBase<TableView<T>, TableVi
         scrollHorizontally();
     }
     
-    private void moveToLeftMostColumn() {
-        scrollHorizontally(getSkinnable().getVisibleLeafColumn(0));
-    }
-    
-    private void moveToRightMostColumn() {
-        scrollHorizontally(getSkinnable().getVisibleLeafColumn(getSkinnable().getVisibleLeafColumns().size() - 1));
-    }
+//    private void moveToLeftMostColumn() {
+//        scrollHorizontally(tableView.getVisibleLeafColumn(0));
+//    }
+//    
+//    private void moveToRightMostColumn() {
+//        scrollHorizontally(tableView.getVisibleLeafColumn(tableView.getVisibleLeafColumns().size() - 1));
+//    }
 
     // Handles the horizontal scrolling when the selection mode is cell-based
     // and the newly selected cell belongs to a column which is not totally
     // visible.
     private void scrollHorizontally() {
-        TableViewFocusModel fm = getSkinnable().getFocusModel();
+        TableViewFocusModel fm = tableView.getFocusModel();
         if (fm == null) return;
 
         TableColumn col = fm.getFocusedCell().getTableColumn();
@@ -707,14 +718,14 @@ public class TableViewSkin<T> extends VirtualContainerBase<TableView<T>, TableVi
 //
 //        // work out where this column header is, and it's width (start -> end)
 //        double start = scrollX;
-//        for (TableColumn c : getSkinnable().getVisibleLeafColumns()) {
+//        for (TableColumn c : tableView.getVisibleLeafColumns()) {
 //            if (c.equals(col)) break;
 //            start += c.getWidth();
 //        }
 //        double end = start + col.getWidth();
 //
 //        // determine the width of the table
-//        double headerWidth = getSkinnable().getWidth() - getInsets().getLeft() + getInsets().getRight();
+//        double headerWidth = tableView.getWidth() - getInsets().getLeft() + getInsets().getRight();
 //        
 //        boolean isVisible =(start >= pos || end > pos) && (start < (headerWidth + pos) || end <= (headerWidth + pos));
 //        
@@ -737,14 +748,14 @@ public class TableViewSkin<T> extends VirtualContainerBase<TableView<T>, TableVi
 
         // work out where this column header is, and it's width (start -> end)
         double start = scrollX;
-        for (TableColumn c : getSkinnable().getVisibleLeafColumns()) {
+        for (TableColumn c : tableView.getVisibleLeafColumns()) {
             if (c.equals(col)) break;
             start += c.getWidth();
         }
         double end = start + col.getWidth();
 
         // determine the width of the table
-        double headerWidth = getSkinnable().getWidth() - getInsets().getLeft() + getInsets().getRight();
+        double headerWidth = tableView.getWidth() - getInsets().getLeft() + getInsets().getRight();
 
         // determine by how much we need to translate the table to ensure that
         // the start position of this column lines up with the left edge of the
@@ -752,7 +763,7 @@ public class TableViewSkin<T> extends VirtualContainerBase<TableView<T>, TableVi
         // right edge of the table
         double pos = flow.getHbar().getValue();
         double max = flow.getHbar().getMax();
-        double newPos = pos;
+        double newPos;
         
         if (start < pos && start >= 0) {
             newPos = start;
@@ -769,7 +780,7 @@ public class TableViewSkin<T> extends VirtualContainerBase<TableView<T>, TableVi
     }
 
     private void onMoveToFirstCell() {
-        SelectionModel sm = getSkinnable().getSelectionModel();
+        SelectionModel sm = tableView.getSelectionModel();
         if (sm == null) return;
 
         flow.show(0);
@@ -777,7 +788,7 @@ public class TableViewSkin<T> extends VirtualContainerBase<TableView<T>, TableVi
     }
 
     private void onMoveToLastCell() {
-        SelectionModel sm = getSkinnable().getSelectionModel();
+        SelectionModel sm = tableView.getSelectionModel();
         if (sm == null) return;
 
         int endPos = getItemCount();
@@ -786,10 +797,10 @@ public class TableViewSkin<T> extends VirtualContainerBase<TableView<T>, TableVi
     }
 
 //    private void updateSelection(TableRow tableRow) {
-//        TableViewSelectionModel sm = getSkinnable().getSelectionModel();
+//        TableViewSelectionModel sm = tableView.getSelectionModel();
 //        if (sm == null) return;
 //
-//        TableViewFocusModel fm = getSkinnable().getFocusModel();
+//        TableViewFocusModel fm = tableView.getFocusModel();
 //        if (fm == null) return;
 //
 //        int row = tableRow.getIndex();
@@ -800,13 +811,13 @@ public class TableViewSkin<T> extends VirtualContainerBase<TableView<T>, TableVi
 //    }
     
     private boolean isCellSelected(int row) {
-        TableView.TableViewSelectionModel sm = getSkinnable().getSelectionModel();
+        TableView.TableViewSelectionModel sm = tableView.getSelectionModel();
         if (sm == null) return false;
         if (! sm.isCellSelectionEnabled()) return false;
 
-        int columnCount = getSkinnable().getVisibleLeafColumns().size();
+        int columnCount = tableView.getVisibleLeafColumns().size();
         for (int col = 0; col < columnCount; col++) {
-            if (sm.isSelected(row, getSkinnable().getVisibleLeafColumn(col))) {
+            if (sm.isSelected(row, tableView.getVisibleLeafColumn(col))) {
                 return true;
             }
         }
@@ -814,12 +825,12 @@ public class TableViewSkin<T> extends VirtualContainerBase<TableView<T>, TableVi
     }
     
     private boolean isCellFocused(int row) {
-        TableViewFocusModel fm = getSkinnable().getFocusModel();
+        TableViewFocusModel fm = tableView.getFocusModel();
         if (fm == null) return false;
 
-        int columnCount = getSkinnable().getVisibleLeafColumns().size();
+        int columnCount = tableView.getVisibleLeafColumns().size();
         for (int col = 0; col < columnCount; col++) {
-            if (fm.isFocused(row, getSkinnable().getVisibleLeafColumn(col))) {
+            if (fm.isFocused(row, tableView.getVisibleLeafColumn(col))) {
                 return true;
             }
         }
