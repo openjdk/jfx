@@ -7332,8 +7332,9 @@ public abstract class Node implements EventTarget {
      */
     @Deprecated // SB-dependency: RT-21206 has been filed to track this
     public void impl_processCSS(boolean reapply) {
+        if (!reapply && cssFlag == CSSFlags.CLEAN) return;
 
-        StyleHelper styleHelper = null;
+        StyleHelper styleHelper;
         // Create a new StyleHelper either if I am told I need to reapply
         // or if my own flag indicates I need to reapply
         if (reapply || (cssFlag == CSSFlags.REAPPLY)) {

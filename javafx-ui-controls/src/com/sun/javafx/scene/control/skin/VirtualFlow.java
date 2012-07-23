@@ -839,15 +839,13 @@ public class VirtualFlow extends Region {
         // we may not perform a layout here, meaning that the cell will likely
         // 'jump' (in height normally) when the user drags the virtual thumb as
         // that is the first time the layout would occur otherwise.
-        Cell cell;
         boolean cellNeedsLayout = false;
-        for (int i = 0; i < cells.size(); i++) {
-            cell = cells.get(i);
+        for (int i=0, max=cells.size(); i<max; i++) {
+            final Cell cell = cells.get(i);
             cellNeedsLayout = cell.isNeedsLayout();
             if (cellNeedsLayout) break;
         }
-        cell = null;
-        
+
         IndexedCell firstCell = getFirstVisibleCell();
 
         // If no cells need layout, we check other criteria to see if this 
@@ -1240,15 +1238,19 @@ public class VirtualFlow extends Region {
     }
 
     @Override protected void setWidth(double value) {
-        super.setWidth(value);
-        setNeedsLayout(true);
-        requestLayout();
+        if (getWidth() != value) {
+            super.setWidth(value);
+            setNeedsLayout(true);
+            requestLayout();
+        }
     }
     
     @Override protected void setHeight(double value) {
-        super.setHeight(value);
-        setNeedsLayout(true);
-        requestLayout();
+        if (getHeight() != value) {
+            super.setHeight(value);
+            setNeedsLayout(true);
+            requestLayout();
+        }
     }
 
     private void updateScrollBarsAndViewport(double lastViewportLength) {
@@ -1481,8 +1483,8 @@ public class VirtualFlow extends Region {
         }
 
         // check the pile
-        for (int i = 0; i < pile.size(); i++) {
-            IndexedCell cell = pile.get(i);
+        for (int i=0, max=pile.size(); i<max; i++) {
+            final IndexedCell cell = pile.get(i);
             if (cell != null && cell.getIndex() == index) {
                 // Note that we don't remove from the pile: if we do it leads
                 // to a severe performance decrease. This seems to be OK, as
@@ -1493,8 +1495,9 @@ public class VirtualFlow extends Region {
         }
 
         // We need to use the accumCell and return that
-        if (accumCell == null && getCreateCell() != null) {
-            accumCell = getCreateCell().call(this);
+        final Callback<VirtualFlow, ? extends IndexedCell> factory = getCreateCell();
+        if (accumCell == null && factory != null) {
+            accumCell = factory.call(this);
             accumCellParent.getChildren().add(accumCell);
         }
         setCellIndex(accumCell, index);
@@ -1615,11 +1618,12 @@ public class VirtualFlow extends Region {
         
         // Fix for RT-12822. We try to retrieve the cell from the pile rather
         // than just grab a random cell from the pile (or create another cell).
-        for (int i = 0; i < pile.size(); i++) {
-            IndexedCell _cell = pile.get(i);
+        for (int i=0, max=pile.size(); i<max; i++) {
+            final IndexedCell _cell = pile.get(i);
             if (_cell != null && _cell.getIndex() == prefIndex) {
                 pile.remove(i);
                 cell = _cell;
+                break;
             }
         }
 

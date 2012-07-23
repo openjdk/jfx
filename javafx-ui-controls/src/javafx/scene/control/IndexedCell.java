@@ -73,9 +73,14 @@ public class IndexedCell<T> extends Cell<T> {
     
     // --- Index
     private ReadOnlyIntegerWrapper index = new ReadOnlyIntegerWrapper(this, "index", -1) {
+        private boolean oldEven = true;
         @Override protected void invalidated() {
-            impl_pseudoClassStateChanged(PSEUDO_CLASS_EVEN);
-            impl_pseudoClassStateChanged(PSEUDO_CLASS_ODD);
+            final boolean _even = get() % 2 == 0;
+            if (oldEven != _even) {
+                impl_pseudoClassStateChanged(PSEUDO_CLASS_EVEN);
+                impl_pseudoClassStateChanged(PSEUDO_CLASS_ODD);
+                oldEven = _even;
+            }
         }
     };
 
@@ -108,9 +113,11 @@ public class IndexedCell<T> extends Cell<T> {
      *         by those implementing new Skins. It is not common
      *         for developers or designers to access this function directly.
      */
-    public void updateIndex(int i) { 
-        index.set(i);
-        indexChanged();
+    public void updateIndex(int i) {
+        if (getIndex() != i) {
+            index.set(i);
+            indexChanged();
+        }
     }
     
     void indexChanged() { 

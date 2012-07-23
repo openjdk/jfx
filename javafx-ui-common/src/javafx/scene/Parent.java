@@ -1142,6 +1142,8 @@ public abstract class Parent extends Node {
      */
     @Deprecated
     @Override public void impl_processCSS(boolean reapply) {
+        if (!reapply && cssFlag == CSSFlags.CLEAN) return;
+
         // Determine whether we will need to reapply from here on down
         boolean flag = reapply || cssFlag == CSSFlags.REAPPLY;
         // Let the super implementation handle CSS for this node
