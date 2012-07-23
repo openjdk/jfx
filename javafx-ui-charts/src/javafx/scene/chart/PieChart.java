@@ -125,7 +125,7 @@ public class PieChart extends Chart {
                 dataItemAdded(i, item);
             }
             // update legend if any data has changed
-            if (c.getRemoved().size() > 0 || c.getFrom() < c.getTo()) updateLegend();
+            if (isLegendVisible() && (c.getRemoved().size() > 0 || c.getFrom() < c.getTo())) updateLegend();
             // re-layout everything
             }
             requestChartLayout();
@@ -681,6 +681,7 @@ public class PieChart extends Chart {
      * This is called whenever a series is added or removed and the legend needs to be updated
      */
     private void updateLegend() {
+        if (getLegend() != legend) return; // RT-23569 dont update when user has set legend.
         legend.setVertical(getLegendSide().equals(Side.LEFT) || getLegendSide().equals(Side.RIGHT));
         legend.getItems().clear();
         if (getData() != null) {
