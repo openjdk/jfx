@@ -148,7 +148,7 @@ public class Region extends Parent {
 
     static double getMaxAreaBaselineOffset(List<Node> content, Insets margins[]) {
         double max = 0;
-        for (int i = 0; i < content.size(); i++) {
+        for (int i = 0, maxPos = content.size(); i < maxPos; i++) {
             Node node = content.get(i);
             Insets margin = margins[i] != null? margins[i] : Insets.EMPTY;
             max = Math.max(max, (margin != null? margin.getTop() : 0)  + node.getBaselineOffset());
@@ -158,7 +158,7 @@ public class Region extends Parent {
 
     static double getMaxBaselineOffset(List<Node> content) {
         double max = 0;
-        for (int i = 0; i < content.size(); i++) {
+        for (int i = 0, maxPos = content.size(); i < maxPos; i++) {
             Node node = content.get(i);
             max = Math.max(max, node.getBaselineOffset());
         }
@@ -192,7 +192,7 @@ public class Region extends Parent {
     static double max(List<Double> seq) {
         double max = 0;
         if (seq != null) {
-            for (int i = 0; i < seq.size(); i++) {
+            for (int i = 0, maxPos = seq.size(); i < maxPos; i++) {
                 double value = seq.get(i);
                 max = Math.max(max, value);
             }
@@ -209,13 +209,15 @@ public class Region extends Parent {
     }
 
     /* END static convenience methods */
-
+    
+    
+    
     /***************************************************************************
      *                                                                         *
-     * Region properties                                                    *
+     * Constructors                                                            *
      *                                                                         *
      **************************************************************************/
-
+    
     /**
      * Creates a Region layout.
      */
@@ -223,6 +225,14 @@ public class Region extends Parent {
         super();
         setPickOnBounds(true);
     }
+    
+    
+
+    /***************************************************************************
+     *                                                                         *
+     * Region properties                                                       *
+     *                                                                         *
+     **************************************************************************/
 
     /**
      * Defines whether this region rounds position/spacing and ceils size
@@ -231,23 +241,19 @@ public class Region extends Parent {
     public final BooleanProperty snapToPixelProperty() {
         if (snapToPixel == null) {
             snapToPixel = new StyleableBooleanProperty(true) {
-                @Override
-                public void invalidated() {
+                @Override public void invalidated() {
                     requestLayout();
                 }
                     
-                @Override
-                public StyleableProperty getStyleableProperty() {   
+                @Override public StyleableProperty getStyleableProperty() {   
                     return StyleableProperties.SNAP_TO_PIXEL;
                 }
 
-                @Override
-                public Object getBean() {
+                @Override public Object getBean() {
                     return Region.this;
                 }
 
-                @Override
-                public String getName() {
+                @Override public String getName() {
                     return "snapToPixel";
                 }
             };
@@ -270,8 +276,7 @@ public class Region extends Parent {
             padding = new StyleableObjectProperty<Insets>(Insets.EMPTY) {
                 private Insets lastValidValue = Insets.EMPTY;
 
-                @Override
-                public void invalidated() {
+                @Override public void invalidated() {
                     final Insets newValue = get();
                     if (newValue == null) {
                         // rollback
@@ -286,18 +291,15 @@ public class Region extends Parent {
                     requestLayout();
                 }
                 
-                @Override
-                public StyleableProperty getStyleableProperty() {
+                @Override public StyleableProperty getStyleableProperty() {
                     return StyleableProperties.PADDING;
                 }
 
-                @Override
-                public Object getBean() {
+                @Override public Object getBean() {
                     return Region.this;
                 }
 
-                @Override
-                public String getName() {
+                @Override public String getName() {
                     return "padding";
                 }
             };
@@ -385,23 +387,19 @@ public class Region extends Parent {
             return get();
         }
 
-        @Override
-        public void addListener(InvalidationListener listener) {
+        @Override public void addListener(InvalidationListener listener) {
             helper = ExpressionHelper.addListener(helper, this, listener);
         }
 
-        @Override
-        public void removeListener(InvalidationListener listener) {
+        @Override public void removeListener(InvalidationListener listener) {
             helper = ExpressionHelper.removeListener(helper, listener);
         }
 
-        @Override
-        public void addListener(ChangeListener<? super Insets> listener) {
+        @Override public void addListener(ChangeListener<? super Insets> listener) {
             helper = ExpressionHelper.addListener(helper, this, listener);
         }
 
-        @Override
-        public void removeListener(ChangeListener<? super Insets> listener) {
+        @Override public void removeListener(ChangeListener<? super Insets> listener) {
             helper = ExpressionHelper.removeListener(helper, listener);
         }
     };
@@ -420,21 +418,19 @@ public class Region extends Parent {
     private ReadOnlyDoubleWrapper widthPropertyImpl() {
         if (width == null) {
             width = new ReadOnlyDoubleWrapper(0.0) {
-                @Override
-                protected void invalidated() {
+                @Override protected void invalidated() {
+                    boundingBox = null;
                     impl_layoutBoundsChanged();
                     impl_geomChanged();
                     impl_markDirty(DirtyBits.NODE_GEOMETRY);
                     requestLayout();
                 }
 
-                @Override
-                public Object getBean() {
+                @Override public Object getBean() {
                     return Region.this;
                 }
 
-                @Override
-                public String getName() {
+                @Override public String getName() {
                     return "width";
                 }
             };
@@ -459,21 +455,19 @@ public class Region extends Parent {
     private ReadOnlyDoubleWrapper heightPropertyImpl() {
         if (height == null) {
             height = new ReadOnlyDoubleWrapper(0.0) {
-                @Override
-                protected void invalidated() {
+                @Override protected void invalidated() {
+                    boundingBox = null;
                     impl_layoutBoundsChanged();
                     impl_geomChanged();
                     impl_markDirty(DirtyBits.NODE_GEOMETRY);
                     requestLayout();
                 }
 
-                @Override
-                public Object getBean() {
+                @Override public Object getBean() {
                     return Region.this;
                 }
 
-                @Override
-                public String getName() {
+                @Override public String getName() {
                     return "height";
                 }
             };
@@ -501,21 +495,18 @@ public class Region extends Parent {
     public final DoubleProperty minWidthProperty() {
         if (minWidth == null) {
             minWidth = new DoublePropertyBase(USE_COMPUTED_SIZE) {
-                @Override
-                public void invalidated() {
+                @Override public void invalidated() {
                     Parent parent = getParent();
                     if (parent != null) {
                         parent.requestLayout();
                     }
                 }
 
-                @Override
-                public Object getBean() {
+                @Override public Object getBean() {
                     return Region.this;
                 }
 
-                @Override
-                public String getName() {
+                @Override public String getName() {
                     return "minWidth";
                 }
             };
@@ -544,21 +535,18 @@ public class Region extends Parent {
     public final DoubleProperty minHeightProperty() {
         if (minHeight == null) {
             minHeight = new DoublePropertyBase(USE_COMPUTED_SIZE) {
-                @Override
-                public void invalidated() {
+                @Override public void invalidated() {
                     Parent parent = getParent();
                     if (parent != null) {
                         parent.requestLayout();
                     }
                 }
 
-                @Override
-                public Object getBean() {
+                @Override public Object getBean() {
                     return Region.this;
                 }
 
-                @Override
-                public String getName() {
+                @Override public String getName() {
                     return "minHeight";
                 }
             };
@@ -597,21 +585,18 @@ public class Region extends Parent {
     public final DoubleProperty prefWidthProperty() {
         if (prefWidth == null) {
             prefWidth = new DoublePropertyBase(USE_COMPUTED_SIZE) {
-                @Override
-                public void invalidated() {
+                @Override public void invalidated() {
                     Parent parent = getParent();
                     if (parent != null) {
                         parent.requestLayout();
                     }
                 }
 
-                @Override
-                public Object getBean() {
+                @Override public Object getBean() {
                     return Region.this;
                 }
 
-                @Override
-                public String getName() {
+                @Override public String getName() {
                     return "prefWidth";
                 }
             };
@@ -636,21 +621,18 @@ public class Region extends Parent {
     public final DoubleProperty prefHeightProperty() {
         if (prefHeight == null) {
             prefHeight = new DoublePropertyBase(USE_COMPUTED_SIZE) {
-                @Override
-                public void invalidated() {
+                @Override public void invalidated() {
                     Parent parent = getParent();
                     if (parent != null) {
                         parent.requestLayout();
                     }
                 }
 
-                @Override
-                public Object getBean() {
+                @Override public Object getBean() {
                     return Region.this;
                 }
 
-                @Override
-                public String getName() {
+                @Override public String getName() {
                     return "prefHeight";
                 }
             };
@@ -693,21 +675,18 @@ public class Region extends Parent {
     public final DoubleProperty maxWidthProperty() {
         if (maxWidth == null) {
             maxWidth = new DoublePropertyBase(USE_COMPUTED_SIZE) {
-                @Override
-                public void invalidated() {
+                @Override public void invalidated() {
                     Parent parent = getParent();
                     if (parent != null) {
                         parent.requestLayout();
                     }
                 }
 
-                @Override
-                public Object getBean() {
+                @Override public Object getBean() {
                     return Region.this;
                 }
 
-                @Override
-                public String getName() {
+                @Override public String getName() {
                     return "maxWidth";
                 }
             };
@@ -736,21 +715,18 @@ public class Region extends Parent {
     public final DoubleProperty maxHeightProperty() {
         if (maxHeight == null) {
             maxHeight = new DoublePropertyBase(USE_COMPUTED_SIZE) {
-                @Override
-                public void invalidated() {
+                @Override public void invalidated() {
                     Parent parent = getParent();
                     if (parent != null) {
                         parent.requestLayout();
                     }
                 }
 
-                @Override
-                public Object getBean() {
+                @Override public Object getBean() {
                     return Region.this;
                 }
 
-                @Override
-                public String getName() {
+                @Override public String getName() {
                     return "maxHeight";
                 }
             };
@@ -793,20 +769,17 @@ public class Region extends Parent {
     private ObjectProperty<Shape> shapeProperty() {
         if (shape == null) {
             shape = new ObjectPropertyBase<Shape>() {
-                @Override
-                protected void invalidated() {
+                @Override protected void invalidated() {
                     impl_geomChanged();
                     requestLayout();
                     impl_markDirty(DirtyBits.REGION_SHAPE);
                 }
 
-                @Override
-                public Object getBean() {
+                @Override public Object getBean() {
                     return Region.this;
                 }
 
-                @Override
-                public String getName() {
+                @Override public String getName() {
                     return "shape";
                 }
 
@@ -840,18 +813,15 @@ public class Region extends Parent {
                     }                    
                 }
                 
-                @Override
-                public Object getBean() {
+                @Override public Object getBean() {
                     return Region.this;
                 }
 
-                @Override
-                public String getName() {
+                @Override public String getName() {
                     return "shapeContent";
                 }
 
-                @Override
-                public StyleableProperty getStyleableProperty() {
+                @Override public StyleableProperty getStyleableProperty() {
                     return StyleableProperties.SHAPE;
                 }
                 
@@ -881,8 +851,7 @@ public class Region extends Parent {
     private ShapeChangeListener getShapeChangeListener() {
         if (shapeChangeListener == null) {
             shapeChangeListener = new ShapeChangeListener() {
-                @Override
-                public void changed() {
+                @Override public void changed() {
                     impl_geomChanged();
                     requestLayout();
                     impl_markDirty(DirtyBits.REGION_SHAPE);
@@ -918,28 +887,22 @@ public class Region extends Parent {
     private BooleanProperty scaleShapeProperty() {
         if (scaleShape == null) {
             scaleShape = new StyleableBooleanProperty(true) {
-
-                @Override 
-                public void invalidated() {
+                @Override public void invalidated() {
                     requestLayout();
                     impl_markDirty(DirtyBits.REGION_SHAPE);                    
                 }
                 
-                @Override
-                public Object getBean() {
+                @Override public Object getBean() {
                     return Region.this;
                 }
 
-                @Override
-                public String getName() {
+                @Override public String getName() {
                     return "scaleShape";
                 }
 
-                @Override
-                public StyleableProperty getStyleableProperty() {
+                @Override public StyleableProperty getStyleableProperty() {
                     return StyleableProperties.SCALE_SHAPE;
                 }
-                
             };
         }
         return scaleShape;
@@ -980,28 +943,22 @@ public class Region extends Parent {
     private BooleanProperty positionShapeProperty() {
         if (positionShape == null) {
             positionShape = new StyleableBooleanProperty(true) {
-
-                @Override 
-                public void invalidated() {
+                @Override public void invalidated() {
                     requestLayout();
                     impl_markDirty(DirtyBits.REGION_SHAPE);                    
                 }
                 
-                @Override
-                public Object getBean() {
+                @Override public Object getBean() {
                     return Region.this;
                 }
 
-                @Override
-                public String getName() {
+                @Override public String getName() {
                     return "positionShape";
                 }
 
-                @Override
-                public StyleableProperty getStyleableProperty() {
+                @Override public StyleableProperty getStyleableProperty() {
                     return StyleableProperties.SCALE_SHAPE;
                 }
-                
             };
         }
         return positionShape;
@@ -1040,36 +997,29 @@ public class Region extends Parent {
     private ObjectProperty<List<BackgroundFill>> backgroundFillsProperty() {
         if (backgroundFills == null) {
             backgroundFills = new StyleableObjectProperty<List<BackgroundFill>>() {
-
-                @Override 
-                public void invalidated() {
+                @Override public void invalidated() {
                     impl_geomChanged();
                     impl_markDirty(DirtyBits.SHAPE_FILL);                    
                 }
                 
-                @Override 
-                public void set(List<BackgroundFill> newValue) {
+                @Override public void set(List<BackgroundFill> newValue) {
                     final List<BackgroundFill> oldValue = get();                        
                     if (oldValue == null ? newValue != null :  !oldValue.equals(newValue)) {
                         super.set(newValue);
                     }
                 }
                 
-                @Override
-                public Object getBean() {
+                @Override public Object getBean() {
                     return Region.this;
                 }
 
-                @Override
-                public String getName() {
+                @Override public String getName() {
                     return "backgroundFills";
                 }
 
-                @Override
-                public StyleableProperty getStyleableProperty() {
+                @Override public StyleableProperty getStyleableProperty() {
                     return StyleableProperties.BACKGROUND_FILLS;
                 }
-                
             };
         }
         return backgroundFills;
@@ -1077,7 +1027,6 @@ public class Region extends Parent {
     
     private List<BackgroundFill> getBackgroundFills() {
         return backgroundFills == null ? null : backgroundFills.get(); 
-
     }
     
     /**
@@ -1117,36 +1066,29 @@ public class Region extends Parent {
     private ObjectProperty<List<BackgroundImage>> backgroundImagesProperty() {
         if (backgroundImages == null) {
             backgroundImages = new StyleableObjectProperty<List<BackgroundImage>>() {
-
-                @Override 
-                public void invalidated() {
+                @Override public void invalidated() {
                     impl_geomChanged();
                     impl_markDirty(DirtyBits.NODE_CONTENTS);                    
                 }
 
-                @Override 
-                public void set(List<BackgroundImage> newValue) {
+                @Override public void set(List<BackgroundImage> newValue) {
                     final List<BackgroundImage> oldValue = get();                        
                     if (oldValue == null ? newValue != null :  !oldValue.equals(newValue)) {
                         super.set(newValue);
                     }
                 }
                 
-                @Override
-                public Object getBean() {
+                @Override public Object getBean() {
                     return Region.this;
                 }
 
-                @Override
-                public String getName() {
+                @Override public String getName() {
                     return "backgroundImages";
                 }
 
-                @Override
-                public StyleableProperty getStyleableProperty() {
+                @Override public StyleableProperty getStyleableProperty() {
                     return StyleableProperties.BACKGROUND_IMAGES;
                 }
-                
             };
         }
         return backgroundImages;
@@ -1154,13 +1096,10 @@ public class Region extends Parent {
     
     private List<BackgroundImage> getBackgroundImages() {
         return backgroundImages == null ?  null : backgroundImages.get();
-        
     }
     
     private void setBackgroundImages(List<BackgroundImage> value) {
-        
         final List<BackgroundImage> background_images =  getBackgroundImages();
-        
         if (background_images == null ? value == null : !background_images.equals(value)) {
             this.backgroundImagesProperty().set(value);
         }
@@ -1172,37 +1111,30 @@ public class Region extends Parent {
     private ObjectProperty<List<StrokeBorder>> strokeBordersProperty() {
         if (strokeBorders == null) {
             strokeBorders = new StyleableObjectProperty<List<StrokeBorder>>() {
-
-                @Override 
-                public void invalidated() {
+                @Override public void invalidated() {
                     insets.fireValueChanged();
                     impl_geomChanged();
                     impl_markDirty(DirtyBits.SHAPE_STROKE);                    
                 }
 
-                @Override 
-                public void set(List<StrokeBorder> newValue) {
+                @Override public void set(List<StrokeBorder> newValue) {
                     final List<StrokeBorder> oldValue = get();                        
                     if (oldValue == null ? newValue != null :  !oldValue.equals(newValue)) {
                         super.set(newValue);
                     }
                 }
                 
-                @Override
-                public Object getBean() {
+                @Override public Object getBean() {
                     return Region.this;
                 }
 
-                @Override
-                public String getName() {
+                @Override public String getName() {
                     return "strokeBorders";
                 }
 
-                @Override
-                public StyleableProperty getStyleableProperty() {
+                @Override public StyleableProperty getStyleableProperty() {
                     return StyleableProperties.STROKE_BORDERS;
                 }
-                
             };
         }
         return strokeBorders;
@@ -1213,9 +1145,7 @@ public class Region extends Parent {
     }
     
     private void setStrokeBorders(List<StrokeBorder> value) {
-
         final List<StrokeBorder> stroke_borders = getStrokeBorders();
-        
         if ((stroke_borders == null) ? (value != null) : !stroke_borders.equals(value)) { 
             this.strokeBordersProperty().set(value);
         }
@@ -1228,37 +1158,30 @@ public class Region extends Parent {
     private ObjectProperty<List<BorderImage>> imageBordersProperty() {
         if (imageBorders == null) {
             imageBorders = new StyleableObjectProperty<List<BorderImage>>() {
-
-                @Override 
-                public void invalidated() {
+                @Override public void invalidated() {
                     insets.fireValueChanged();
                     impl_geomChanged();
                     impl_markDirty(DirtyBits.SHAPE_STROKE);                    
                 }
 
-                @Override 
-                public void set(List<BorderImage> newValue) {
+                @Override public void set(List<BorderImage> newValue) {
                     final List<BorderImage> oldValue = get();                        
                     if (oldValue == null ? newValue != null : !oldValue.equals(newValue)) {
                         super.set(newValue);
                     }
                 }
                 
-                @Override
-                public Object getBean() {
+                @Override public Object getBean() {
                     return Region.this;
                 }
 
-                @Override
-                public String getName() {
+                @Override public String getName() {
                     return "imageBorders";
                 }
 
-                @Override
-                public StyleableProperty getStyleableProperty() {
+                @Override public StyleableProperty getStyleableProperty() {
                     return StyleableProperties.IMAGE_BORDERS;
                 }
-                
             };
         }
         return imageBorders;
@@ -1269,13 +1192,13 @@ public class Region extends Parent {
     }
     
     private void setImageBorders(List<BorderImage> value) {
-        
         final List<BorderImage> image_borders = getImageBorders();
-        
         if (image_borders == null ? value == null :  !image_borders.equals(value)) {
             this.imageBordersProperty().set(value);
         }
     }
+    
+    
     
     /***************************************************************************
      *                                                                         *
@@ -1707,7 +1630,6 @@ public class Region extends Parent {
                         baseline + bottom);
             }
             return maxAbove + maxBelow; //remind(aim): ceil this value?
-
         } else {
             double max = 0;
             for (int i = 0, maxPos = children.size(); i < maxPos; i++) {
@@ -2399,7 +2321,7 @@ public class Region extends Parent {
     @Override protected Node impl_pickNodeLocal(double localX, double localY) {
         if (containsBounds(localX, localY)) {
             ObservableList<Node> children = getChildren();
-            for (int i = children.size()-1; i >= 0; i--) {
+            for (int i = children.size() - 1; i >= 0; i--) {
                 Node picked = children.get(i).impl_pickNode(localX, localY);
                 if (picked != null) {
                     return picked;
@@ -2422,7 +2344,7 @@ public class Region extends Parent {
         if (impl_intersects(pickRay)) {
             ObservableList<Node> children = getChildren();
 
-            for (int i = children.size()-1; i >= 0; i--) {
+            for (int i = children.size() - 1; i >= 0; i--) {
                 Node picked = children.get(i).impl_pickNode(pickRay);
 
                 if (picked != null) {
@@ -2436,6 +2358,8 @@ public class Region extends Parent {
         return null;
     }
 
+    private Bounds boundingBox;
+    
     /**
      * The layout bounds of this region: {@code 0, 0  width x height}
      *
@@ -2444,7 +2368,11 @@ public class Region extends Parent {
      */
     @Deprecated
     @Override protected final Bounds impl_computeLayoutBounds() {
-        return new BoundingBox(0, 0, 0, getWidth(), getHeight(), 0);
+        if (boundingBox == null) {
+            // we reuse the bounding box if the width and height haven't changed.
+            boundingBox = new BoundingBox(0, 0, 0, getWidth(), getHeight(), 0);
+        }
+        return boundingBox;
     }
 
     /**
@@ -2612,16 +2540,13 @@ public class Region extends Parent {
              new StyleableProperty<Region,Insets>("-fx-padding",
                  InsetsConverter.getInstance(), Insets.EMPTY) {
 
-            @Override
-            public boolean isSettable(Region node) {
+            @Override public boolean isSettable(Region node) {
                 return node.padding == null || !node.padding.isBound();
             }
 
-            @Override
-            public WritableValue<Insets> getWritableValue(Region node) {
+            @Override public WritableValue<Insets> getWritableValue(Region node) {
                 return node.paddingProperty();
             }
-                     
          };
 
          private static final StyleableProperty<Region,List<BackgroundFill>> BACKGROUND_FILLS =
@@ -2631,16 +2556,13 @@ public class Region extends Parent {
                  false,
                  BackgroundFill.impl_CSS_STYLEABLES()) {
 
-            @Override
-            public boolean isSettable(Region node) {
+            @Override public boolean isSettable(Region node) {
                 return node.backgroundFills == null || !node.backgroundFills.isBound();                        
             }
 
-            @Override
-            public WritableValue<List<BackgroundFill>> getWritableValue(Region node) {
+            @Override public WritableValue<List<BackgroundFill>> getWritableValue(Region node) {
                 return node.backgroundFillsProperty();
             }
-                     
          };
 
          private static final StyleableProperty<Region,List<BackgroundImage>> BACKGROUND_IMAGES =
@@ -2650,16 +2572,13 @@ public class Region extends Parent {
                  false,
                  BackgroundImage.impl_CSS_STYLEABLES()) {
 
-            @Override
-            public boolean isSettable(Region node) {
+            @Override public boolean isSettable(Region node) {
                 return node.backgroundImages == null || !node.backgroundImages.isBound();
             }
 
-            @Override
-            public WritableValue<List<BackgroundImage>> getWritableValue(Region node) {
+            @Override public WritableValue<List<BackgroundImage>> getWritableValue(Region node) {
                 return node.backgroundImagesProperty();
             }
-                     
          };
 
         private static final StyleableProperty<Region,List<BorderImage>> IMAGE_BORDERS =
@@ -2669,13 +2588,11 @@ public class Region extends Parent {
                 false,
                 BorderImage.impl_CSS_STYLEABLES()) {
 
-            @Override
-            public boolean isSettable(Region node) {
+            @Override public boolean isSettable(Region node) {
                 return node.imageBorders == null || !node.imageBorders.isBound();
             }
 
-            @Override
-            public WritableValue<List<BorderImage>> getWritableValue(Region node) {
+            @Override public WritableValue<List<BorderImage>> getWritableValue(Region node) {
                 return node.imageBordersProperty();
             }
         };
@@ -2687,30 +2604,25 @@ public class Region extends Parent {
                  false,
                  StrokeBorder.impl_CSS_STYLEABLES()) {
 
-            @Override
-            public boolean isSettable(Region node) {
+            @Override public boolean isSettable(Region node) {
                 return node.strokeBorders == null || !node.strokeBorders.isBound();
             }
 
-            @Override
-            public WritableValue<List<StrokeBorder>> getWritableValue(Region node) {
+            @Override public WritableValue<List<StrokeBorder>> getWritableValue(Region node) {
                 return node.strokeBordersProperty();
             }
-                     
          };
 
          private static final StyleableProperty<Region,String> SHAPE = 
              new StyleableProperty<Region,String>("-fx-shape",
                  StringConverter.getInstance()) {
 
-            @Override
-            public boolean isSettable(Region node) {
+            @Override public boolean isSettable(Region node) {
                 // isSettable depends on node.shape, not node.shapeContent
                 return node.shape == null || !node.shape.isBound();
             }
 
-            @Override
-            public WritableValue<String> getWritableValue(Region node) {
+            @Override public WritableValue<String> getWritableValue(Region node) {
                 return node.shapeContentProperty();
             }
          };
@@ -2719,13 +2631,11 @@ public class Region extends Parent {
              new StyleableProperty<Region,Boolean>("-fx-scale-shape",
                  BooleanConverter.getInstance(), Boolean.TRUE){
 
-            @Override
-            public boolean isSettable(Region node) {
+            @Override public boolean isSettable(Region node) {
                 return node.scaleShape == null || !node.scaleShape.isBound();
             }
 
-            @Override
-            public WritableValue<Boolean> getWritableValue(Region node) {
+            @Override public WritableValue<Boolean> getWritableValue(Region node) {
                 return node.scaleShapeProperty();
             }
         };
@@ -2734,13 +2644,11 @@ public class Region extends Parent {
              new StyleableProperty<Region,Boolean>("-fx-position-shape",
                  BooleanConverter.getInstance(), Boolean.TRUE){
 
-            @Override
-            public boolean isSettable(Region node) {
+            @Override public boolean isSettable(Region node) {
                 return node.positionShape == null || !node.positionShape.isBound();
             }
 
-            @Override
-            public WritableValue<Boolean> getWritableValue(Region node) {
+            @Override public WritableValue<Boolean> getWritableValue(Region node) {
                 return node.positionShapeProperty();
             }
         };
@@ -2749,14 +2657,12 @@ public class Region extends Parent {
              new StyleableProperty<Region,Boolean>("-fx-snap-to-pixel",
                  BooleanConverter.getInstance(), Boolean.TRUE){
 
-            @Override
-            public boolean isSettable(Region node) {
+            @Override public boolean isSettable(Region node) {
                 return node.snapToPixel == null ||
                         !node.snapToPixel.isBound();
             }
 
-            @Override
-            public WritableValue<Boolean> getWritableValue(Region node) {
+            @Override public WritableValue<Boolean> getWritableValue(Region node) {
                 return node.snapToPixelProperty();
             }
         };
@@ -2778,7 +2684,6 @@ public class Region extends Parent {
                     SNAP_TO_PIXEL
             );
             STYLEABLES = Collections.unmodifiableList(styleables);
-
          }
     }
 
@@ -2800,7 +2705,7 @@ public class Region extends Parent {
      * @deprecated This is an experimental API that is not intended for general use and is subject to change in future versions
      */
     @Deprecated
-    public List<StyleableProperty> impl_getStyleableProperties() {
+    @Override public List<StyleableProperty> impl_getStyleableProperties() {
         return impl_CSS_STYLEABLES();
     }
 
