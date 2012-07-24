@@ -32,7 +32,7 @@ import javafx.scene.image.Image;
  * <p>The {@code ImagePattern} class fills a shape with an image pattern. The
  * user may specify the anchor rectangle, which defines the position,
  * width, and height of the image relative to the upper left corner of the
- * shape. If the shape is larger than the anchor rectangle, the image is tiled.
+ * shape. If the shape extends out of the anchor rectangle, the image is tiled.
  * </p>
  *
  * <p>If the {@code proportional} variable is set to true (the default)
