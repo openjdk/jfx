@@ -35,6 +35,12 @@ import javafx.geometry.Point2D;
 /**
  * An event indicating gesture input. Gestures are typically caused by
  * direct (touch screen) or indirect (track pad) touch events.
+ *
+ * <p>
+ * Delivery of gestures is dependent on the capabilities of the underlying
+ * platform and connected input devices. For instance on a PC with mouse
+ * and keyboard there is no way of producing a rotating gesture.
+ * </p>
  * @since 2.2
  */
 public class GestureEvent extends InputEvent {
