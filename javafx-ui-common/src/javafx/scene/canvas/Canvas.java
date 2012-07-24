@@ -68,7 +68,7 @@ root.getChildren().add(canvas);
  * </pre>
  * </p>
  *
- * @since 2.2
+ * @since JavaFX 2.2
  */
 public class Canvas extends Node {
     private static final int DEFAULT_BUF_SIZE = 1024;
@@ -95,7 +95,6 @@ public class Canvas extends Node {
     }
 
     GrowableDataBuffer<Object> getBuffer() {
-        impl_markDirty(DirtyBits.NODE_CONTENTS);
         if (theBuffer == null) {
             theBuffer = new GrowableDataBuffer<Object>(DEFAULT_BUF_SIZE);
         }
@@ -110,6 +109,12 @@ public class Canvas extends Node {
             theContext = new GraphicsContext(this);
         }
         return theContext;
+    }
+
+    void markBufferDirty() {
+        if (theBuffer == null || theBuffer.position() == 0) {
+            impl_markDirty(DirtyBits.NODE_CONTENTS);
+        }
     }
 
     /**
