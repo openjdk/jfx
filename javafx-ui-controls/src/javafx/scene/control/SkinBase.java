@@ -228,7 +228,11 @@ public abstract class SkinBase<C extends Control, BB extends BehaviorBase<C>> im
      */
     protected void layoutChildren(final double contentX, final double contentY,
             final double contentWidth, final double contentHeight) {
-        // no-op
+        // By default simply sizes all children to fit within the space provided
+        for (int i=0, max=children.size(); i<max; i++) {
+            Node child = children.get(i);
+            layoutInArea(child, contentX, contentY, contentWidth, contentHeight, -1, HPos.CENTER, VPos.CENTER);
+        }
     }
     
     /**

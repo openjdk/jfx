@@ -91,7 +91,6 @@ public class TextAreaSkin extends TextInputControlSkin<TextArea, TextAreaBehavio
         computedPrefHeight = Double.NEGATIVE_INFINITY;
     }
 
-
     private class ContentView extends Region {
         {
             getStyleClass().add("content");
@@ -170,13 +169,11 @@ public class TextAreaSkin extends TextInputControlSkin<TextArea, TextAreaBehavio
 
             double prefHeight = 0;
 
-            int i = 0;
             for (Node node : paragraphNodes.getChildren()) {
                 Text paragraphNode = (Text)node;
                 prefHeight += Utils.computeTextHeight(paragraphNode.getFont(),
                                                       paragraphNode.getText(),
                                                       wrappingWidth);
-                i++;
             }
 
             prefHeight += padding.getTop() + padding.getBottom();

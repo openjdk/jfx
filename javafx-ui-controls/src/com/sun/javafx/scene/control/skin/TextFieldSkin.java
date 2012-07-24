@@ -719,8 +719,6 @@ public class TextFieldSkin extends TextInputControlSkin<TextField, TextFieldBeha
 
     @Override protected void layoutChildren(final double x, final double y,
             final double w, final double h) {
-        super.layoutChildren(x,y,w,h);
-
         if (textNode != null) {
             double textY;
             Insets insets = getInsets();

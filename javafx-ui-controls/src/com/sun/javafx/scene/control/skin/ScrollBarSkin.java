@@ -446,10 +446,6 @@ public class ScrollBarSkin extends javafx.scene.control.SkinBase<ScrollBar, Scro
 
     @Override protected void layoutChildren(final double x, final double y,
             final double w, final double h) {
-        // compute x,y,w,h of content area
-        double wTotal = snapSize(getWidth());
-        double hTotal = snapSize(getHeight());
-
         /**
          * Compute the percentage length of thumb as (visibleAmount/range)
          * if max isn't greater than min then there is nothing to do here
