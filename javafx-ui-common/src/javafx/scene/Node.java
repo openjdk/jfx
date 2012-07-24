@@ -1641,6 +1641,34 @@ public abstract class Node implements EventTarget {
      * it is ready.
      * CSS and layout processing will be done for the node, and any of its
      * children, prior to rendering it.
+     * The entire destination image is cleared to the fill {@code Paint}
+     * specified by the SnapshotParameters. This node is then rendered to
+     * the image.
+     * If the viewport specified by the SnapshotParameters is null, the
+     * upper-left pixel of the {@code boundsInParent} of this
+     * node, after first applying the transform specified by the
+     * SnapshotParameters,
+     * is mapped to the upper-left pixel (0,0) in the image.
+     * If a non-null viewport is specified,
+     * the upper-left pixel of the viewport is mapped to upper-left pixel
+     * (0,0) in the image.
+     * In both cases, this mapping to (0,0) of the image is done with an integer
+     * translation. The portion of the node that is outside of the rendered
+     * image will be clipped by the image.
+     *
+     * <p>
+     * When taking a snapshot of a scene that is being animated, either
+     * explicitly by the application or implicitly (such as chart animation),
+     * the snapshot will be rendered based on the state of the scene graph at
+     * the moment the snapshot is taken and will not reflect any subsequent
+     * animation changes.
+     * </p>
+     *
+     * <p>
+     * NOTE: In order for CSS and layout to function correctly, the node
+     * must be part of a Scene (the Scene may be attached to a Stage, but need
+     * not be).
+     * </p>
      *
      * @param params the snapshot parameters containing attributes that
      * will control the rendering. If the SnapshotParameters object is null,
@@ -1649,10 +1677,16 @@ public abstract class Node implements EventTarget {
      *
      * @param image the writable image that will be used to hold the rendered node.
      * It may be null in which case a new WritableImage will be constructed.
+     * The new image is constructed using integer width and
+     * height values that are derived either from the transformed bounds of this
+     * Node or from the size of the viewport as specified in the
+     * SnapShotParameters. These integer values are chosen such that the image
+     * will wholly contain the bounds of this Node or the specified viewport.
      * If the image is non-null, the node will be rendered into the
      * existing image.
      * In this case, the width and height of the image determine the area
-     * that is rendered instead of the width and height of the Node's bounds.
+     * that is rendered instead of the width and height of the bounds or
+     * viewport.
      *
      * @throws IllegalStateException if this method is called on a thread
      *     other than the JavaFX Application Thread.
@@ -1681,12 +1715,43 @@ public abstract class Node implements EventTarget {
      * specified callback method when the image is ready.
      * CSS and layout processing will be done for the node, and any of its
      * children, prior to rendering it.
+     * The entire destination image is cleared to the fill {@code Paint}
+     * specified by the SnapshotParameters. This node is then rendered to
+     * the image.
+     * If the viewport specified by the SnapshotParameters is null, the
+     * upper-left pixel of the {@code boundsInParent} of this
+     * node, after first applying the transform specified by the
+     * SnapshotParameters,
+     * is mapped to the upper-left pixel (0,0) in the image.
+     * If a non-null viewport is specified,
+     * the upper-left pixel of the viewport is mapped to upper-left pixel
+     * (0,0) in the image.
+     * In both cases, this mapping to (0,0) of the image is done with an integer
+     * translation. The portion of the node that is outside of the rendered
+     * image will be clipped by the image.
+     *
+     * <p>
      * This is an asynchronous call, which means that other
      * events or animation might be processed before the node is rendered.
      * If any such events modify the node, or any of its children, that
      * modification will be reflected in the rendered image (just like it
      * will also be reflected in the frame rendered to the Stage, if this node
      * is part of a live scene graph).
+     * </p>
+     *
+     * <p>
+     * When taking a snapshot of a node that is being animated, either
+     * explicitly by the application or implicitly (such as chart animation),
+     * the snapshot will be rendered based on the state of the scene graph at
+     * the moment the snapshot is taken and will not reflect any subsequent
+     * animation changes.
+     * </p>
+     *
+     * <p>
+     * NOTE: In order for CSS and layout to function correctly, the node
+     * must be part of a Scene (the Scene may be attached to a Stage, but need
+     * not be).
+     * </p>
      *
      * @param callback a class whose call method will be called when the image
      * is ready. The SnapshotResult that is passed into the call method of
@@ -1701,10 +1766,16 @@ public abstract class Node implements EventTarget {
      *
      * @param image the writable image that will be used to hold the rendered node.
      * It may be null in which case a new WritableImage will be constructed.
+     * The new image is constructed using integer width and
+     * height values that are derived either from the transformed bounds of this
+     * Node or from the size of the viewport as specified in the
+     * SnapShotParameters. These integer values are chosen such that the image
+     * will wholly contain the bounds of this Node or the specified viewport.
      * If the image is non-null, the node will be rendered into the
      * existing image.
      * In this case, the width and height of the image determine the area
-     * that is rendered instead of the width and height of the Node's bounds.
+     * that is rendered instead of the width and height of the bounds or
+     * viewport.
      *
      * @throws IllegalStateException if this method is called on a thread
      *     other than the JavaFX Application Thread.

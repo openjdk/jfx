@@ -1223,6 +1223,19 @@ public class Scene implements EventTarget {
      * it is ready.
      * CSS and layout processing will be done for the scene prior to
      * rendering it.
+     * The entire destination image is cleared using the fill {@code Paint}
+     * of this scene. The nodes in the scene are then rendered to the image.
+     * The point (0,0) in scene coordinates is mapped to (0,0) in the image.
+     * If the image is smaller than the size of the scene, then the rendering
+     * will be clipped by the image.
+     *
+     * <p>
+     * When taking a snapshot of a scene that is being animated, either
+     * explicitly by the application or implicitly (such as chart animation),
+     * the snapshot will be rendered based on the state of the scene graph at
+     * the moment the snapshot is taken and will not reflect any subsequent
+     * animation changes.
+     * </p>
      *
      * @param image the writable image that will be used to hold the rendered scene.
      * It may be null in which case a new WritableImage will be constructed.
@@ -1249,11 +1262,28 @@ public class Scene implements EventTarget {
      * Takes a snapshot of this scene at the next frame and calls the
      * specified callback method when the image is ready.
      * CSS and layout processing will be done for the scene prior to
-     * rendering it. This is an asynchronous call, which means that other
+     * rendering it.
+     * The entire destination image is cleared using the fill {@code Paint}
+     * of this scene. The nodes in the scene are then rendered to the image.
+     * The point (0,0) in scene coordinates is mapped to (0,0) in the image.
+     * If the image is smaller than the size of the scene, then the rendering
+     * will be clipped by the image.
+     *
+     * <p>
+     * This is an asynchronous call, which means that other
      * events or animation might be processed before the scene is rendered.
      * If any such events modify a node in the scene that modification will
      * be reflected in the rendered image (as it will also be reflected in
      * the frame rendered to the Stage).
+     * </p>
+     *
+     * <p>
+     * When taking a snapshot of a scene that is being animated, either
+     * explicitly by the application or implicitly (such as chart animation),
+     * the snapshot will be rendered based on the state of the scene graph at
+     * the moment the snapshot is taken and will not reflect any subsequent
+     * animation changes.
+     * </p>
      *
      * @param callback a class whose call method will be called when the image
      * is ready. The SnapshotResult that is passed into the call method of

@@ -62,8 +62,10 @@ public class SnapshotResult {
 
     /**
      * Gets a copy of the SnapshotParameters used to generate the snapshot.
+     * This will be null in the case of snapshot being called on a Scene.
      *
-     * @return a copy of the SnapshotParameters used to perform the snapshot
+     * @return a copy of the SnapshotParameters used to perform the snapshot,
+     * or null
      */
     public SnapshotParameters getSnapshotParameters() {
         return params;
