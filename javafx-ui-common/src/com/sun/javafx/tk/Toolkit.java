@@ -134,6 +134,8 @@ public abstract class Toolkit {
             return DEFAULT_TOOLKIT;
         } else if (PlatformUtil.isLinux()) {
             return DEFAULT_TOOLKIT;
+        } else if (PlatformUtil.isIOS()) {
+            return DEFAULT_TOOLKIT;
         }
 
         throw new UnsupportedOperationException(System.getProperty("os.name") + " is not supported");
