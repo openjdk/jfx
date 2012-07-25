@@ -2969,13 +2969,13 @@
                           linear-gradient(to top, derive(-fx-bar-fill,30%), derive(-fx-bar-fill,-10%));
    -fx-background-radius: 0 0 5 5, 0 0 4 4, 0 0 3 3;
 }
-.bar-chart:horizontal .chart-bar {
+.bar-chart:horizontal .chart-bar, .stacked-bar-chart:horizontal .chart-bar {
     -fx-background-color: linear-gradient(to left, derive(-fx-bar-fill,-30%), derive(-fx-bar-fill,-40%)),
                           linear-gradient(to left, derive(-fx-bar-fill,80%), derive(-fx-bar-fill, 0%)),
                           linear-gradient(to left, derive(-fx-bar-fill,30%), derive(-fx-bar-fill,-10%));
     -fx-background-radius: 0 5 5 0, 0 4 4 0, 0 3 3 0;
 }
-.bar-chart:horizontal .negative.chart-bar {
+.bar-chart:horizontal .negative.chart-bar, .stacked-bar-chart:horizontal .negative.chart-bar {
     -fx-background-color: linear-gradient(to right, derive(-fx-bar-fill,-30%), derive(-fx-bar-fill,-40%)),
                           linear-gradient(to right, derive(-fx-bar-fill, 80%), derive(-fx-bar-fill, 0%)),
                           linear-gradient(to right, derive(-fx-bar-fill,30%), derive(-fx-bar-fill,-10%));
