@@ -38,6 +38,7 @@ import com.sun.javafx.scene.control.behavior.CellBehaviorBase;
 import javafx.beans.property.DoubleProperty;
 import javafx.beans.property.ReadOnlyDoubleProperty;
 import javafx.beans.value.WritableValue;
+import javafx.scene.control.IndexedCell;
 import javafx.scene.control.SkinBase;
 
 
@@ -53,7 +54,7 @@ public class CellSkinBase<C extends Cell, B extends CellBehaviorBase<C>> extends
      * is settable from CSS
      */
     private DoubleProperty cellSize;
-    boolean cellSizeSet = false;
+//    boolean cellSizeSet = false;
 
     public final double getCellSize() {
         return cellSize == null ? DEFAULT_CELL_SIZE : cellSize.get();
@@ -69,14 +70,15 @@ public class CellSkinBase<C extends Cell, B extends CellBehaviorBase<C>> extends
 
                 @Override
                 public void set(double value) {
-                    // Commented this out due to RT-19794, because otherwise
-                    // cellSizeSet would be false when the default caspian.css
-                    // cell size was set. This would lead to 
-                    // ListCellSkin.computePrefHeight computing the pref height
-                    // of the cell (which is about 22px), rather than use the 
-                    // value provided by caspian.css (which is 24px).
-                    cellSizeSet = true;//value != DEFAULT_CELL_SIZE;
-                    super.set(value);
+//                    // Commented this out due to RT-19794, because otherwise
+//                    // cellSizeSet would be false when the default caspian.css
+//                    // cell size was set. This would lead to 
+//                    // ListCellSkin.computePrefHeight computing the pref height
+//                    // of the cell (which is about 22px), rather than use the 
+//                    // value provided by caspian.css (which is 24px).
+//                    // cellSizeSet = true;//value != DEFAULT_CELL_SIZE;
+                     super.set(value);
+                    requestLayout();
                 }
                 
                 @Override

@@ -215,6 +215,10 @@ public abstract class Control extends Region implements Skinnable {
                     getChildren().clear();
                 }
             }
+            
+            // clear out the styleable properties so that the list is rebuilt
+            // next time they are requested.
+            styleableProperties = null;
 
             // DEBUG: Log that we've changed the skin
             final PlatformLogger logger = Logging.getControlsLogger();
@@ -547,7 +551,6 @@ public abstract class Control extends Region implements Skinnable {
                 
                 @Override
                 public void invalidated() {
-                    
                     // reset the styleable properties so we get the new ones from
                     // the new skin
                     styleableProperties = null;
@@ -696,6 +699,15 @@ public abstract class Control extends Region implements Skinnable {
     public static List<StyleableProperty> impl_CSS_STYLEABLES() {
         return Control.StyleableProperties.STYLEABLES;
     }
+    
+    /**
+     * @treatAsPrivate implementation detail
+     * @deprecated This is an experimental API that is not intended for general use and is subject to change in future versions
+     */
+    @Deprecated
+    protected List<StyleableProperty> impl_getControlStyleableProperties() {
+        return impl_CSS_STYLEABLES();
+    }
 
     /**
      * RT-19263
@@ -706,7 +718,7 @@ public abstract class Control extends Region implements Skinnable {
     public List<StyleableProperty> impl_getStyleableProperties() {
         if (styleableProperties == null) {
             styleableProperties = new ArrayList<StyleableProperty>();
-            styleableProperties.addAll(Control.StyleableProperties.STYLEABLES);
+            styleableProperties.addAll(impl_getControlStyleableProperties());
             
             if (skinBase != null) {
                 styleableProperties.addAll(skinBase.impl_getStyleableProperties());
@@ -726,10 +738,6 @@ public abstract class Control extends Region implements Skinnable {
         }
 
         super.impl_processCSS(reapply);
-        
-//        if (skinBase != null) {
-//            skinBase.impl_processCSS(reapply);
-//        }
 
         if (getSkin() == null) {
             final String msg = 
