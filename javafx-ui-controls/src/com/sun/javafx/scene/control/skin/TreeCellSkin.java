@@ -131,12 +131,10 @@ public class TreeCellSkin extends CellSkinBase<TreeCell<?>, TreeCellBehavior> {
         }
     }
 
-//    @Override public void impl_processCSS(boolean reapply) {
-//        // This is needed now that TreeCell is Labeled - otherwise RT-15450 occurs
-//        updateDisclosureNode();
-//        
-//        super.impl_processCSS(reapply);
-//    }
+    @Override protected void updateChildren() {
+        super.updateChildren();
+        updateDisclosureNode();
+    }
     
     @Override protected void layoutChildren(double x, final double y,
             double w, final double h) {
