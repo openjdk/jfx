@@ -133,7 +133,7 @@ public class FontTypeTest {
                 FontConverter.getInstance()
             );
 
-        expResult = Font.font(font.getFamily(), font.getSize() * (96/72));
+        expResult = Font.font(font.getFamily(), font.getSize() * (96.0/72.0));
         result = value.convert(font);
         checkFont(expResult, result);
         
