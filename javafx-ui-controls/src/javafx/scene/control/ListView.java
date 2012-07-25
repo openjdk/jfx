@@ -787,8 +787,6 @@ public class ListView<T> extends Control {
         return ListView.StyleableProperties.STYLEABLES;
     }
 
-    private List<StyleableProperty> styleableProperties;
-    
     /**
      * RT-19263
      * @treatAsPrivate implementation detail
