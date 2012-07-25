@@ -1283,7 +1283,6 @@ public class TouchEventTest {
         ((StubScene) scene.impl_getPeer()).getListener().touchEventEnd();
     }
 
-    @Ignore("In Scene is workaround for RT-20139 which makes this test fail")
     @Test(expected=RuntimeException.class)
     public void shouldThrowREOnLostIndirectRelease() {
         Scene scene = createScene();

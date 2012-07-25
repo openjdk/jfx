@@ -2458,10 +2458,6 @@ public class Scene implements EventTarget {
             }
             int order = touchMap.getOrder(id);
 
-            if (!nextTouchEvent.impl_isDirect()) {
-                order = touchPointIndex - 1;
-            }
-
             if (order >= touchPoints.length) {
                 throw new RuntimeException("Too many touch points reported");
             }
@@ -3517,12 +3513,6 @@ public class Scene implements EventTarget {
                 return;
             }
             setFocusOwner(node);
-
-            if (getFocusOwner() != null) {
-                if (impl_peer != null) {
-                    impl_peer.requestFocus();
-                }
-            }
         }
     }
     /***************************************************************************

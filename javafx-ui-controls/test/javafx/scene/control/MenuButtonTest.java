@@ -214,7 +214,8 @@ public class MenuButtonTest {
         Scene scene = new Scene(vbox, 300, 300); 
         Stage stage = new Stage();
         stage.setScene(scene); 
-        stage.show();         
+        stage.show();
+        stage.requestFocus();
         
         other.requestFocus();
         assertFalse(mb.isFocused());
