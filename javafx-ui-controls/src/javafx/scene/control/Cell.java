@@ -341,14 +341,9 @@ public class Cell<T> extends Labeled {
 
     // --- empty
     private ReadOnlyBooleanWrapper empty = new ReadOnlyBooleanWrapper(true) {
-        private boolean oldEmpty = true;
         @Override protected void invalidated() {
-            boolean _empty = get();
-            if (oldEmpty != _empty) {
-                impl_pseudoClassStateChanged(PSEUDO_CLASS_EMPTY);
-                impl_pseudoClassStateChanged(PSEUDO_CLASS_FILLED);
-                oldEmpty = _empty;
-            }
+            impl_pseudoClassStateChanged(PSEUDO_CLASS_EMPTY);
+            impl_pseudoClassStateChanged(PSEUDO_CLASS_FILLED);
         }
 
         @Override
