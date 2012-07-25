@@ -43,6 +43,7 @@ import javafx.event.EventType;
 import javafx.scene.Node;
 
 import com.sun.javafx.event.EventHandlerManager;
+import com.sun.javafx.event.EventTypeUtil;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
@@ -379,7 +380,8 @@ public class Tab implements EventTarget {
     /**
      * <p>Called when the tab becomes selected or unselected.</p>
      */
-    public static final EventType<Event> SELECTION_CHANGED_EVENT = new EventType<Event>();
+    public static final EventType<Event> SELECTION_CHANGED_EVENT = 
+            EventTypeUtil.registerInternalEventType(Event.ANY, "SELECTION_CHANGED_EVENT");
     private ObjectProperty<EventHandler<Event>> onSelectionChanged;
 
     /**
@@ -425,7 +427,7 @@ public class Tab implements EventTarget {
     /**
      * <p>Called when a user closes this tab. This is useful for freeing up memory.</p>
      */
-    public static final EventType<Event> CLOSED_EVENT = new EventType<Event>();
+    public static final EventType<Event> CLOSED_EVENT = EventTypeUtil.registerInternalEventType(Event.ANY, "TAB_CLOSED");
     private ObjectProperty<EventHandler<Event>> onClosed;
 
     /**

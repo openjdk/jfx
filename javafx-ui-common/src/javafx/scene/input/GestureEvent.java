@@ -25,8 +25,10 @@
 
 package javafx.scene.input;
 
+import com.sun.javafx.event.EventTypeUtil;
 import com.sun.javafx.scene.input.InputEventUtils;
 import com.sun.javafx.tk.Toolkit;
+import java.io.IOException;
 import javafx.event.Event;
 import javafx.event.EventTarget;
 import javafx.event.EventType;
@@ -49,7 +51,7 @@ public class GestureEvent extends InputEvent {
      * Common supertype for all gestures.
      */
     public static final EventType<GestureEvent> ANY =
-            new EventType<GestureEvent>(InputEvent.ANY, "GESTURE");
+            EventTypeUtil.registerInternalEventType(InputEvent.ANY, "GESTURE");
 
     /**
      * Creates a new instance of {@code GestureEvent}.
@@ -136,7 +138,7 @@ public class GestureEvent extends InputEvent {
         from.recomputeCoordinatesToSource(to, source);
     }
 
-    private double x;
+    private transient double x;
 
     /**
      * Gets the horizontal position of the event relative to the
@@ -151,7 +153,7 @@ public class GestureEvent extends InputEvent {
         return x;
     }
 
-    private double y;
+    private transient double y;
 
     /**
      * Gets the vertical position of the event relative to the
@@ -350,5 +352,12 @@ public class GestureEvent extends InputEvent {
         }
 
         return sb.append("]").toString();
+    }
+
+    private void readObject(java.io.ObjectInputStream in)
+            throws IOException, ClassNotFoundException {
+        in.defaultReadObject();
+        x = sceneX;
+        y = sceneY;
     }
 }

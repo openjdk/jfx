@@ -3074,11 +3074,17 @@
 }*/
 
 /* ------- ARROW* ------- */
-.combo-box-base .arrow {
+.combo-box-base .arrow,
+.web-view .form-select-button .arrow {
     -fx-background-insets: 1 0 -1 0, 0;
     -fx-background-color: -fx-mark-highlight-color, -fx-mark-color;
     -fx-padding: 0.166667em 0.333333em 0.166667em 0.333333em; /* 2 4 2 4 */
     -fx-shape: "M 0 0 h 7 l -3.5 4 z";
+}
+
+.web-view .form-select-button {
+    -fx-background-radius: 2, 2, 1, 0;
+    -fx-background-insets: 2 2 1 2, 2, 3, 4;
 }
 
 /* ------- POPUP MENU ------- */

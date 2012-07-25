@@ -25,6 +25,7 @@
 
 package com.sun.javafx.menu;
 
+import com.sun.javafx.event.EventTypeUtil;
 import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.ReadOnlyBooleanProperty;
 import javafx.collections.ObservableList;
@@ -35,33 +36,33 @@ import javafx.event.EventType;
 
 public interface MenuBase extends MenuItemBase {
 
-    /**
-     * <p>Called when the menu <b>will</b> be shown.
-     * </p>
-     */
-    public static EventType<Event> ON_SHOWING =
-            new EventType<Event>(Event.ANY, "ON_SHOWING");
-
-    /**
-     * <p>Called when the menu is shown.
-     * </p>
-     */
-    public static EventType<Event> ON_SHOWN =
-            new EventType<Event>(Event.ANY, "ON_SHOWN");
-
-    /**
-     * <p>Called when the menu <b>will</b> be hidden.
-     * </p>
-     */
-    public static EventType<Event> ON_HIDING =
-            new EventType<Event>(Event.ANY, "ON_HIDING");
-
-    /**
-     * <p>Called when the menu is hidden.
-     * </p>
-     */
-    public static EventType<Event> ON_HIDDEN =
-            new EventType<Event>(Event.ANY, "ON_HIDDEN");
+//    /**
+//     * <p>Called when the menu <b>will</b> be shown.
+//     * </p>
+//     */
+//    public static EventType<Event> ON_SHOWING =
+//            EventTypeUtil.registerInternalEventType(Event.ANY, "ON_SHOWING");
+//
+//    /**
+//     * <p>Called when the menu is shown.
+//     * </p>
+//     */
+//    public static EventType<Event> ON_SHOWN =
+//            EventTypeUtil.registerInternalEventType(Event.ANY, "ON_SHOWN");
+//
+//    /**
+//     * <p>Called when the menu <b>will</b> be hidden.
+//     * </p>
+//     */
+//    public static EventType<Event> ON_HIDING =
+//            EventTypeUtil.registerInternalEventType(Event.ANY, "ON_HIDING");
+//
+//    /**
+//     * <p>Called when the menu is hidden.
+//     * </p>
+//     */
+//    public static EventType<Event> ON_HIDDEN =
+//            EventTypeUtil.registerInternalEventType(Event.ANY, "ON_HIDDEN");
 
 
 

@@ -26,6 +26,7 @@
 
 package javafx.scene.input;
 
+import com.sun.javafx.event.EventTypeUtil;
 import com.sun.javafx.tk.Toolkit;
 import javafx.event.EventTarget;
 import javafx.event.EventType;
@@ -85,19 +86,19 @@ public class KeyEvent extends InputEvent {
      * Common supertype for all key event types.
      */
     public static final EventType<KeyEvent> ANY =
-            new EventType<KeyEvent>(InputEvent.ANY, "KEY");
+            EventTypeUtil.registerInternalEventType(InputEvent.ANY, "KEY");
 
     /**
      * This event occurs when a key has been pressed.
      */
     public static final EventType<KeyEvent> KEY_PRESSED =
-            new EventType<KeyEvent>(KeyEvent.ANY, "KEY_PRESSED");
+            EventTypeUtil.registerInternalEventType(KeyEvent.ANY, "KEY_PRESSED");
 
     /**
      * This event occurs when a key has been released.
      */
     public static final EventType<KeyEvent> KEY_RELEASED =
-            new EventType<KeyEvent>(KeyEvent.ANY, "KEY_RELEASED");
+            EventTypeUtil.registerInternalEventType(KeyEvent.ANY, "KEY_RELEASED");
 
     /**
      * This event occurs when a key has been typed (pressed and released).
@@ -105,7 +106,7 @@ public class KeyEvent extends InputEvent {
      * string, the {@code code} and {@code text} fields are not used.
      */
     public static final EventType<KeyEvent> KEY_TYPED =
-            new EventType<KeyEvent>(KeyEvent.ANY, "KEY_TYPED");
+            EventTypeUtil.registerInternalEventType(KeyEvent.ANY, "KEY_TYPED");
 
     private KeyEvent(final EventType<? extends KeyEvent> eventType) {
         super(eventType);
