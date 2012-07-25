@@ -262,11 +262,11 @@ public enum SizeUnits {
 
     // RT-14711: The spec says 1px is equal to 0.75pt
     //           72 / 0.75 = 96
-    static final private int DOTS_PER_INCH = 96;
-    static final private int POINTS_PER_INCH = 72;
+    static final private double DOTS_PER_INCH = 96.0;
+    static final private double POINTS_PER_INCH = 72.0;
     static final private double CM_PER_INCH = 2.54;
     static final private double MM_PER_INCH = CM_PER_INCH * 10;
-    static final private int POINTS_PER_PICA = 12;
+    static final private double POINTS_PER_PICA = 12.0;
 
     /* Get the font size in points */
     private static double pointSize(Font font) {
