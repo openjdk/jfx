@@ -594,7 +594,7 @@ public abstract class Node implements EventTarget {
                 protected void invalidated() {
                     if (oldParent != null) {
                         oldParent.disabledProperty().removeListener(parentDisabledChangedListener);
-                        oldParent.treeVisibleProperty().removeListener(parentTreeVisibleChangedListener);
+                        oldParent.impl_treeVisibleProperty().removeListener(parentTreeVisibleChangedListener);
                         if (nodeTransformation != null && nodeTransformation.listenerReasons > 0) {
                             ((Node) oldParent).localToSceneTransformProperty().removeListener(
                                     nodeTransformation.getLocalToSceneInvalidationListener());
@@ -604,8 +604,8 @@ public abstract class Node implements EventTarget {
                     computeDerivedDepthTest();
                     final Parent newParent = get();
                     if (newParent != null) {
-                    	newParent.disabledProperty().addListener(parentDisabledChangedListener);
-                    	newParent.treeVisibleProperty().addListener(parentTreeVisibleChangedListener);
+                        newParent.disabledProperty().addListener(parentDisabledChangedListener);
+                        newParent.impl_treeVisibleProperty().addListener(parentTreeVisibleChangedListener);
                         if (nodeTransformation != null && nodeTransformation.listenerReasons > 0) {
                             ((Node) newParent).localToSceneTransformProperty().addListener(
                                     nodeTransformation.getLocalToSceneInvalidationListener());
@@ -3767,7 +3767,7 @@ public abstract class Node implements EventTarget {
      * @deprecated This is an internal API that is not intended for use and will be removed in the next version
      */
     @Deprecated
-    public final void impl_transformsChanged() {
+    public void impl_transformsChanged() {
         if (!transformDirty) {
             impl_markDirty(DirtyBits.NODE_TRANSFORM);
             transformDirty = true;
@@ -6484,7 +6484,7 @@ public abstract class Node implements EventTarget {
             treeVisible = value;
             updateCanReceiveFocus();
             focusSetDirty(getScene());
-            ((TreeVisiblePropertyReadOnly)treeVisibleProperty()).invalidate();
+            ((TreeVisiblePropertyReadOnly)impl_treeVisibleProperty()).invalidate();
         }
     }
 
@@ -6494,10 +6494,15 @@ public abstract class Node implements EventTarget {
      */
     @Deprecated
     public final boolean impl_isTreeVisible() {
-        return treeVisibleProperty().get();
+        return impl_treeVisibleProperty().get();
     }
 
-    BooleanExpression treeVisibleProperty() {
+    /**
+     * @treatAsPrivate implementation detail
+     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
+     */
+    @Deprecated
+    protected final BooleanExpression impl_treeVisibleProperty() {
         if (treeVisibleRO == null) {
             treeVisibleRO = new TreeVisiblePropertyReadOnly();
         }
