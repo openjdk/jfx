@@ -74,22 +74,17 @@ public class TreeCellSkin extends CellSkinBase<TreeCell<?>, TreeCellBehavior> {
     public final DoubleProperty indentProperty() { 
         if (indent == null) {
             indent = new StyleableDoubleProperty(10.0) {
-
-                @Override
-                public Object getBean() {
+                @Override public Object getBean() {
                     return TreeCellSkin.this;
                 }
 
-                @Override
-                public String getName() {
+                @Override public String getName() {
                     return "indent";
                 }
 
-                @Override
-                public StyleableProperty getStyleableProperty() {
+                @Override public StyleableProperty getStyleableProperty() {
                     return StyleableProperties.INDENT;
                 }
-                
             };
         }
         return indent; 
@@ -229,13 +224,13 @@ public class TreeCellSkin extends CellSkinBase<TreeCell<?>, TreeCellBehavior> {
                 SizeConverter.getInstance(), 10.0) {
                     
             @Override public boolean isSettable(TreeCell n) {
-                final TreeCellSkin skin = (TreeCellSkin) n.getSkin();
-                return skin.indent == null || !skin.indent.isBound();
+                DoubleProperty p = ((TreeCellSkin) n.getSkin()).indentProperty();
+                return p == null || !p.isBound();
             }
 
             @Override public WritableValue<Number> getWritableValue(TreeCell n) {
                 final TreeCellSkin skin = (TreeCellSkin) n.getSkin();
-                return skin.indent;
+                return skin.indentProperty();
             }
         };
         
