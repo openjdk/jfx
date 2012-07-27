@@ -88,6 +88,9 @@ public class TitledPaneSkin extends LabeledSkinBase<TitledPane, TitledPaneBehavi
             setExpanded(titledPane.isExpanded());
         } else {
             setTransition(0.0f);
+            if (contentRegion.getContent() != null) {
+                contentRegion.getContent().setVisible(false);
+            }
         }
 
         getChildren().setAll(contentContainer, titleRegion);
@@ -158,7 +161,9 @@ public class TitledPaneSkin extends LabeledSkinBase<TitledPane, TitledPaneBehavi
             } else {
                 setTransition(0.0f);
             }
-            contentRegion.setVisible(expanded);
+            if (contentRegion.getContent() != null) {
+                contentRegion.getContent().setVisible(expanded);
+             }
             requestLayout();
         }
     }
@@ -530,6 +535,7 @@ public class TitledPaneSkin extends LabeledSkinBase<TitledPane, TitledPaneBehavi
 
         public final void setContent(Node n) {
             this.content = n;
+            content.setVisible(getSkinnable().isExpanded());
             getChildren().clear();
             if (n != null) {
                 getChildren().setAll(n);
