@@ -60,8 +60,8 @@ public class AccordionSkin extends SkinBase<Accordion, AccordionBehavior> {
                     firstTitledPane.getStyleClass().add("first-titled-pane");
                 }
                 // TODO there may be a more efficient way to keep these in sync
-                getChildren().setAll(accordion.getPanes());                
-                while (c.next()) {          
+                getChildren().setAll(accordion.getPanes());
+                while (c.next()) {
                     removeTitledPaneListeners(c.getRemoved());
                     initTitledPaneListeners(c.getAddedSubList());
                 }
@@ -79,11 +79,11 @@ public class AccordionSkin extends SkinBase<Accordion, AccordionBehavior> {
         initTitledPaneListeners(accordion.getPanes());
         getChildren().setAll(accordion.getPanes());
         requestLayout();
-        
+
         registerChangeListener(getSkinnable().widthProperty(), "WIDTH");
         registerChangeListener(getSkinnable().heightProperty(), "HEIGHT");
     }
-    
+
     @Override
     protected void handleControlPropertyChanged(String property) {
         super.handleControlPropertyChanged(property);
@@ -91,12 +91,6 @@ public class AccordionSkin extends SkinBase<Accordion, AccordionBehavior> {
             clipRect.setWidth(getWidth());
         } else if (property == "HEIGHT") {
             clipRect.setHeight(getHeight());
-            if (previousHeight != getHeight()) {
-                previousHeight = getHeight();
-                resize = true;
-            } else {
-                resize = false;
-            }
         }
     }
 
@@ -110,16 +104,18 @@ public class AccordionSkin extends SkinBase<Accordion, AccordionBehavior> {
 
     @Override protected double computePrefHeight(double width) {
         double h = 0;
-        // We want the current expanded pane or the currently collapsing one (previousPane).
-        // This is because getExpandedPane() will be null when the expanded pane
-        // is collapsing.
-        TitledPane expandedTitledPane = getSkinnable().getExpandedPane() != null ? getSkinnable().getExpandedPane() : previousPane;
-        if (expandedTitledPane != null) {
-            h = expandedTitledPane.prefHeight(-1);
+
+        if (expandedPane != null) {
+            h += expandedPane.prefHeight(-1);
         }
+
+        if (previousPane != null && !previousPane.equals(expandedPane)) {
+            h += previousPane.prefHeight(-1);
+        }
+
         for (Node child: getChildren()) {
             TitledPane pane = (TitledPane)child;
-            if (!pane.equals(expandedTitledPane)) {
+            if (!pane.equals(expandedPane) && !pane.equals(previousPane)) {
                 // The min height is the height of the TitledPane's title bar.
                 // We use the sum of all the TitledPane's title bars
                 // to compute the pref height of the accordion.
@@ -132,6 +128,13 @@ public class AccordionSkin extends SkinBase<Accordion, AccordionBehavior> {
     @Override protected void layoutChildren(final double x, double y,
             final double w, final double h) {
 
+        if (previousHeight != h) {
+            previousHeight = h;
+            resize = true;
+        } else {
+            resize = false;
+        }
+
         // TODO need to replace spacing with margins.
         double spacing = 0;
         double collapsedPanesHeight = 0;
@@ -139,24 +142,12 @@ public class AccordionSkin extends SkinBase<Accordion, AccordionBehavior> {
         // Compute height of all the collapsed panes
         for(Node n: getSkinnable().getPanes()) {
             TitledPane tp = ((TitledPane)n);
-            if (!tp.isExpanded()) {
+            if (!tp.equals(expandedPane)) {
                 // min height is the TitledPane's title bar height.
                 collapsedPanesHeight += snapSize(tp.minHeight(-1));
             }
         }
-
-        double maxTitledPaneHeight = 0;
-        if (previousPane != null && previousPane.equals(expandedPane) && getSkinnable().getExpandedPane() == null) {
-            if (getSkinnable().getPanes().size() ==  1) {
-                // Open and close same pane.
-                maxTitledPaneHeight = h;
-            } else {
-                // Open and close same pane if there are more than one pane.
-                maxTitledPaneHeight = h - collapsedPanesHeight + previousPane.minHeight(-1);
-            }
-        } else {
-            maxTitledPaneHeight = h - collapsedPanesHeight;
-        }
+        double maxTitledPaneHeight = h - collapsedPanesHeight;
 
         for(Node n: getSkinnable().getPanes()) {
             TitledPane tp = ((TitledPane)n);
@@ -204,7 +195,7 @@ public class AccordionSkin extends SkinBase<Accordion, AccordionBehavior> {
     private TitledPane previousPane = null;
     private Map<TitledPane, ChangeListener>listeners = new HashMap();
 
-    private void initTitledPaneListeners(List<? extends TitledPane> list) {        
+    private void initTitledPaneListeners(List<? extends TitledPane> list) {
         for (final TitledPane tp: list) {
             tp.setExpanded(tp == getSkinnable().getExpandedPane());
             if (tp.isExpanded()) {
@@ -215,16 +206,16 @@ public class AccordionSkin extends SkinBase<Accordion, AccordionBehavior> {
             listeners.put(tp, changeListener);
         }
     }
-    
+
     private void removeTitledPaneListeners(List<? extends TitledPane> list) {
         for (final TitledPane tp: list) {
             if (listeners.containsKey(tp)) {
                 tp.expandedProperty().removeListener(listeners.get(tp));
                 listeners.remove(tp);
             }
-        }        
+        }
     }
-    
+
     private ChangeListener<Boolean> expandedPropertyListener(final TitledPane tp) {
         return new ChangeListener<Boolean>() {
             @Override public void changed(ObservableValue<? extends Boolean> observable, Boolean wasExpanded, Boolean expanded) {
@@ -242,6 +233,6 @@ public class AccordionSkin extends SkinBase<Accordion, AccordionBehavior> {
                     getSkinnable().setExpandedPane(null);
                 }
             }
-        };        
+        };
     }
 }
