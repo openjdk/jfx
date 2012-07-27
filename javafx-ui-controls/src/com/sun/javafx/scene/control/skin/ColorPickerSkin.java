@@ -254,9 +254,10 @@ public class ColorPickerSkin extends ComboBoxPopupControl<Color> {
         }
     }
     
-    @Override protected void layoutChildren() {
+    @Override protected void layoutChildren(final double x, final double y,
+            final double w, final double h) {
         updateComboBoxMode();
-        super.layoutChildren();
+        super.layoutChildren(x,y,w,h);
     }
     
     /***************************************************************************
@@ -266,17 +267,18 @@ public class ColorPickerSkin extends ComboBoxPopupControl<Color> {
     **************************************************************************/
     
      private static class StyleableProperties {
-        private static final StyleableProperty<ColorPickerSkin,Boolean> COLOR_LABEL_VISIBLE = 
-                new StyleableProperty<ColorPickerSkin,Boolean>("-fx-color-label-visible",
+        private static final StyleableProperty<ColorPicker,Boolean> COLOR_LABEL_VISIBLE = 
+                new StyleableProperty<ColorPicker,Boolean>("-fx-color-label-visible",
                 BooleanConverter.getInstance(), Boolean.TRUE) {
 
-            @Override public WritableValue<Boolean> getWritableValue(ColorPickerSkin n) {
-                return n.colorLabelVisible;
+            @Override public boolean isSettable(ColorPicker n) {
+                final ColorPickerSkin skin = (ColorPickerSkin) n.getSkin();
+                return skin.colorLabelVisible == null || !skin.colorLabelVisible.isBound();
             }
-
-            @Override
-            public boolean isSettable(ColorPickerSkin n) {
-                return n.colorLabelVisible == null || !n.colorLabelVisible.isBound();
+            
+            @Override public WritableValue<Boolean> getWritableValue(ColorPicker n) {
+                final ColorPickerSkin skin = (ColorPickerSkin) n.getSkin();
+                return skin.colorLabelVisible;
             }
         };
         private static final List<StyleableProperty> STYLEABLES;

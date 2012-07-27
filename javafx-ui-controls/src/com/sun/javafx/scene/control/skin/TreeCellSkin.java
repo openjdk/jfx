@@ -74,22 +74,17 @@ public class TreeCellSkin extends CellSkinBase<TreeCell<?>, TreeCellBehavior> {
     public final DoubleProperty indentProperty() { 
         if (indent == null) {
             indent = new StyleableDoubleProperty(10.0) {
-
-                @Override
-                public Object getBean() {
+                @Override public Object getBean() {
                     return TreeCellSkin.this;
                 }
 
-                @Override
-                public String getName() {
+                @Override public String getName() {
                     return "indent";
                 }
 
-                @Override
-                public StyleableProperty getStyleableProperty() {
+                @Override public StyleableProperty getStyleableProperty() {
                     return StyleableProperties.INDENT;
                 }
-                
             };
         }
         return indent; 
@@ -131,26 +126,19 @@ public class TreeCellSkin extends CellSkinBase<TreeCell<?>, TreeCellBehavior> {
         }
     }
 
-    @Override public void impl_processCSS(boolean reapply) {
-        // This is needed now that TreeCell is Labeled - otherwise RT-15450 occurs
+    @Override protected void updateChildren() {
+        super.updateChildren();
         updateDisclosureNode();
-        
-        super.impl_processCSS(reapply);
     }
     
-    @Override protected void layoutChildren() {
+    @Override protected void layoutChildren(double x, final double y,
+            double w, final double h) {
         TreeItem treeItem = getSkinnable().getTreeItem();
         if (treeItem == null) return;
         
         TreeView tree = getSkinnable().getTreeView();
         if (tree == null) return;
         
-        // figure out the content area that is to be filled
-        double x = getInsets().getLeft();
-        double y = getInsets().getTop();
-        double w = getWidth() - (getInsets().getLeft() + getInsets().getRight());
-        double h = getHeight() - (getInsets().getTop() + getInsets().getBottom());
-
         Node disclosureNode = getSkinnable().getDisclosureNode();
         
         int level = TreeView.getNodeLevel(getSkinnable().getTreeItem());
@@ -230,18 +218,19 @@ public class TreeCellSkin extends CellSkinBase<TreeCell<?>, TreeCellBehavior> {
 
     /** @treatAsPrivate */
     private static class StyleableProperties {
-        private static final StyleableProperty<TreeCellSkin,Number> INDENT = 
-            new StyleableProperty<TreeCellSkin,Number>("-fx-indent",
+        
+        private static final StyleableProperty<TreeCell,Number> INDENT = 
+            new StyleableProperty<TreeCell,Number>("-fx-indent",
                 SizeConverter.getInstance(), 10.0) {
-
-            @Override
-            public boolean isSettable(TreeCellSkin n) {
-                return n.indent == null || !n.indent.isBound();
+                    
+            @Override public boolean isSettable(TreeCell n) {
+                DoubleProperty p = ((TreeCellSkin) n.getSkin()).indentProperty();
+                return p == null || !p.isBound();
             }
 
-            @Override
-            public WritableValue<Number> getWritableValue(TreeCellSkin n) {
-                return n.indentProperty();
+            @Override public WritableValue<Number> getWritableValue(TreeCell n) {
+                final TreeCellSkin skin = (TreeCellSkin) n.getSkin();
+                return skin.indentProperty();
             }
         };
         

@@ -50,6 +50,7 @@ import javafx.scene.control.MenuItem;
 import javafx.scene.control.CustomMenuItem;
 import javafx.scene.control.Separator;
 import javafx.scene.control.SeparatorMenuItem;
+import javafx.scene.control.SkinBase;
 import javafx.scene.control.ToolBar;
 import javafx.scene.input.KeyCode;
 import javafx.scene.input.KeyEvent;
@@ -89,7 +90,7 @@ public class ToolBarSkin extends SkinBase<ToolBar, ToolBarBehavior> implements T
         initialize();
         registerChangeListener(toolbar.orientationProperty(), "ORIENTATION");
 
-        engine = new TraversalEngine(this, false) {
+        engine = new TraversalEngine(getSkinnable(), false) {
             @Override public void trav(Node owner, Direction dir) {
                 // This allows the right arrow to select the overflow menu
                 // without it only the tab key can select the overflow menu.
@@ -104,7 +105,7 @@ public class ToolBarSkin extends SkinBase<ToolBar, ToolBarBehavior> implements T
             }
         };
         engine.addTraverseListener(this);
-        setImpl_traversalEngine(engine);
+        getSkinnable().setImpl_traversalEngine(engine);
 
         toolbar.focusedProperty().addListener(new ChangeListener<Boolean>() {
             @Override
@@ -292,8 +293,9 @@ public class ToolBarSkin extends SkinBase<ToolBar, ToolBarBehavior> implements T
                 Double.MAX_VALUE : snapSize(getSkinnable().prefHeight(-1));
     }
 
-    @Override protected void layoutChildren() {
-        super.layoutChildren();
+    @Override protected void layoutChildren(double x, double y,
+            final double w, final double h) {
+//        super.layoutChildren();
 
         if (getSkinnable().getOrientation() == Orientation.VERTICAL) {
             if (snapSize(getHeight()) != previousHeight || needsUpdate) {
@@ -327,8 +329,6 @@ public class ToolBarSkin extends SkinBase<ToolBar, ToolBarBehavior> implements T
 
         // If popup menu is not null show the overflowControl
         if (overflow) {
-            double x;
-            double y;
             double overflowMenuWidth = snapSize(overflowMenu.prefWidth(-1));
             double overflowMenuHeight = snapSize(overflowMenu.prefHeight(-1));
             if (getSkinnable().getOrientation() == Orientation.VERTICAL) {
@@ -619,33 +619,37 @@ public class ToolBarSkin extends SkinBase<ToolBar, ToolBarBehavior> implements T
       * @treatAsPrivate implementation detail
       */
      private static class StyleableProperties {
-         private static final StyleableProperty<ToolBarSkin,Number> SPACING =
-             new StyleableProperty<ToolBarSkin,Number>("-fx-spacing",
+         private static final StyleableProperty<ToolBar,Number> SPACING =
+             new StyleableProperty<ToolBar,Number>("-fx-spacing",
                  SizeConverter.getInstance(), 0.0) {
 
             @Override
-            public boolean isSettable(ToolBarSkin n) {
-                return n.spacing == null || !n.spacing.isBound();
+            public boolean isSettable(ToolBar n) {
+                final ToolBarSkin skin = (ToolBarSkin) n.getSkin();
+                return skin.spacing == null || !skin.spacing.isBound();
             }
 
             @Override
-            public WritableValue<Number> getWritableValue(ToolBarSkin n) {
-                return n.spacingProperty();
+            public WritableValue<Number> getWritableValue(ToolBar n) {
+                final ToolBarSkin skin = (ToolBarSkin) n.getSkin();
+                return skin.spacingProperty();
             }
         };
          
-        private static final StyleableProperty<ToolBarSkin,Pos>ALIGNMENT =
-                new StyleableProperty<ToolBarSkin,Pos>("-fx-alignment",
+        private static final StyleableProperty<ToolBar,Pos>ALIGNMENT =
+                new StyleableProperty<ToolBar,Pos>("-fx-alignment",
                 new EnumConverter<Pos>(Pos.class), Pos.TOP_LEFT ) {
 
             @Override
-            public boolean isSettable(ToolBarSkin n) {
-                return n.boxAlignment == null || !n.boxAlignment.isBound();
+            public boolean isSettable(ToolBar n) {
+                final ToolBarSkin skin = (ToolBarSkin) n.getSkin();
+                return skin.boxAlignment == null || !skin.boxAlignment.isBound();
             }
 
             @Override
-            public WritableValue<Pos> getWritableValue(ToolBarSkin n) {
-                return n.boxAlignmentProperty();
+            public WritableValue<Pos> getWritableValue(ToolBar n) {
+                final ToolBarSkin skin = (ToolBarSkin) n.getSkin();
+                return skin.boxAlignmentProperty();
             }
         };
 

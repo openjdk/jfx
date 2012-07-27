@@ -199,7 +199,7 @@ public class MenuBar extends Control {
      * @deprecated This is an experimental API that is not intended for general use and is subject to change in future versions
      */
     @Deprecated
-    public List<StyleableProperty> impl_getStyleableProperties() {
+    @Override protected List<StyleableProperty> impl_getControlStyleableProperties() {
         return impl_CSS_STYLEABLES();
     }
 

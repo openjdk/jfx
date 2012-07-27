@@ -45,13 +45,13 @@ public class ListCellSkin extends CellSkinBase<ListCell, ListCellBehavior> {
     }
  
     @Override protected double computePrefHeight(double width) {
-        if (cellSizeSet) {
+//        if (cellSizeSet) {
             // Added the comparison between the default cell size and the requested
             // cell size to prevent the issue identified in RT-19873.
             double cellSize = getCellSize();
             return cellSize == DEFAULT_CELL_SIZE ? super.computePrefHeight(width) : cellSize;
-        } else {
-            return Math.max(DEFAULT_CELL_SIZE, super.computePrefHeight(width));
-        }
+//        } else {
+//            return Math.max(DEFAULT_CELL_SIZE, super.computePrefHeight(width));
+//        }
     }
 }

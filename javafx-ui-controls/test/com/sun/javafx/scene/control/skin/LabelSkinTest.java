@@ -11,6 +11,7 @@ import javafx.geometry.Pos;
 import javafx.scene.control.ContentDisplay;
 import javafx.scene.control.Label;
 import javafx.scene.control.OverrunStyle;
+import javafx.scene.control.SkinBaseAccessor;
 import javafx.scene.effect.BlendMode;
 import javafx.scene.paint.Color;
 import javafx.scene.shape.Rectangle;
@@ -37,11 +38,11 @@ public class LabelSkinTest {
         skin = new LabelSkinMock(label);
         // Set some padding so that any places where padding was being
         // computed but wasn't expected will be caught.
-        skin.setPadding(new Insets(10, 10, 10, 10));
+        label.setPadding(new Insets(10, 10, 10, 10));
         label.setSkin(skin);
         // It so happens that a brand new LabelSkin on a plain Label
         // will have as its only child the Text node
-        text = (Text) skin.getChildrenUnmodifiable().get(0);
+        text = (Text) SkinBaseAccessor.getChildren(skin).get(0);
     }
     
     /****************************************************************************
@@ -293,33 +294,33 @@ public class LabelSkinTest {
      ***************************************************************************/
 
     @Test public void whenTextIsNullAndNoGraphic_computeMinWidth_ReturnsZero() {
-        skin.setPadding(new Insets(7, 7, 7, 7));
+        label.setPadding(new Insets(7, 7, 7, 7));
         label.setText(null);
         assertEquals(0.0 + 14, label.minWidth(-1), 0);
     }
     
     @Test public void whenTextIsEmptyAndNoGraphic_computeMinWidth_ReturnsZero() {
-        skin.setPadding(new Insets(7, 7, 7, 7));
+        label.setPadding(new Insets(7, 7, 7, 7));
         label.setText("");
         assertEquals(0.0 + 14, label.minWidth(-1), 0);
     }
     
     @Test public void whenTextIsShorterThanEllipsisAndNoGraphic_computeMinWidth_ReturnsTextWidth() {
-        skin.setPadding(new Insets(7, 7, 7, 7));
+        label.setPadding(new Insets(7, 7, 7, 7));
         label.setText(".");
         assertTrue(label.minWidth(-1) >= 0);
         assertEquals(skin.textWidth + 14, label.minWidth(-1), 0);
     }
 
     @Test public void whenTextIsGreaterThanEllipsisAndNoGraphic_computeMinWidth_ReturnsEllipsisWidth() {
-        skin.setPadding(new Insets(7, 7, 7, 7));
+        label.setPadding(new Insets(7, 7, 7, 7));
         label.setText("These are the times that try men's souls.");
         assertTrue(label.minWidth(-1) >= 0);
         assertEquals(skin.ellipsisWidth + 14, label.minWidth(-1), 0);
     }
 
     @Test public void whenTextIsNullAndGraphicIsUnmanaged_computeMinWidth_ReturnsZero() {
-        skin.setPadding(new Insets(7, 7, 7, 7));
+        label.setPadding(new Insets(7, 7, 7, 7));
         Rectangle r = new Rectangle(23, 500);
         r.setManaged(false);
         label.setGraphic(r);
@@ -328,7 +329,7 @@ public class LabelSkinTest {
     }
     
     @Test public void whenTextIsEmptyAndGraphicIsUnmanaged_computeMinWidth_ReturnsZero() {
-        skin.setPadding(new Insets(7, 7, 7, 7));
+        label.setPadding(new Insets(7, 7, 7, 7));
         Rectangle r = new Rectangle(23, 500);
         r.setManaged(false);
         label.setGraphic(r);
@@ -337,7 +338,7 @@ public class LabelSkinTest {
     }
     
     @Test public void whenTextIsShorterThanEllipsisAndGraphicIsUnmanaged_computeMinWidth_ReturnsTextWidth() {
-        skin.setPadding(new Insets(7, 7, 7, 7));
+        label.setPadding(new Insets(7, 7, 7, 7));
         Rectangle r = new Rectangle(23, 500);
         r.setManaged(false);
         label.setGraphic(r);
@@ -347,7 +348,7 @@ public class LabelSkinTest {
     }
 
     @Test public void whenTextIsGreaterThanEllipsisAndGraphicIsUnmanaged_computeMinWidth_ReturnsEllipsisWidth() {
-        skin.setPadding(new Insets(7, 7, 7, 7));
+        label.setPadding(new Insets(7, 7, 7, 7));
         Rectangle r = new Rectangle(23, 500);
         r.setManaged(false);
         label.setGraphic(r);
@@ -357,7 +358,7 @@ public class LabelSkinTest {
     }
 
     @Test public void whenTextIsNullAndGraphicIsSet_computeMinWidth_ReturnsGraphicWidth() {
-        skin.setPadding(new Insets(7, 7, 7, 7));
+        label.setPadding(new Insets(7, 7, 7, 7));
         Rectangle r = new Rectangle(23, 23);
         label.setGraphic(r);
         label.setText(null);
@@ -366,7 +367,7 @@ public class LabelSkinTest {
     }
     
     @Test public void whenTextIsEmptyAndGraphicIsSet_computeMinWidth_ReturnsGraphicWidth() {
-        skin.setPadding(new Insets(7, 7, 7, 7));
+        label.setPadding(new Insets(7, 7, 7, 7));
         Rectangle r = new Rectangle(23, 23);
         label.setGraphic(r);
         label.setText("");
@@ -375,7 +376,7 @@ public class LabelSkinTest {
     }
 
     @Test public void whenTextIsShorterThanEllipsisAndGraphicIsSetAndContentDisplayIsLEFT_computeMinWidth_ReturnsGraphicWidthPlusGraphicTextGapPlusTextWidth() {
-        skin.setPadding(new Insets(7, 7, 7, 7));
+        label.setPadding(new Insets(7, 7, 7, 7));
         Rectangle r = new Rectangle(23, 23);
         label.setGraphicTextGap(2);
         label.setGraphic(r);
@@ -386,7 +387,7 @@ public class LabelSkinTest {
     }
 
     @Test public void whenTextIsLongThanEllipsisAndGraphicIsSetAndContentDisplayIsLEFT_computeMinWidth_ReturnsGraphicWidthPlusGraphicTextGapPlusEllipsisWidth() {
-        skin.setPadding(new Insets(7, 7, 7, 7));
+        label.setPadding(new Insets(7, 7, 7, 7));
         Rectangle r = new Rectangle(23, 23);
         label.setGraphicTextGap(2);
         label.setGraphic(r);
@@ -397,7 +398,7 @@ public class LabelSkinTest {
     }
 
     @Test public void whenTextIsShorterThanEllipsisAndGraphicIsSetAndContentDisplayIsRIGHT_computeMinWidth_ReturnsGraphicWidthPlusGraphicTextGapPlusTextWidth() {
-        skin.setPadding(new Insets(7, 7, 7, 7));
+        label.setPadding(new Insets(7, 7, 7, 7));
         Rectangle r = new Rectangle(23, 23);
         label.setGraphicTextGap(2);
         label.setGraphic(r);
@@ -408,7 +409,7 @@ public class LabelSkinTest {
     }
 
     @Test public void whenTextIsLongThanEllipsisAndGraphicIsSetAndContentDisplayIsRIGHT_computeMinWidth_ReturnsGraphicWidthPlusGraphicTextGapPlusEllipsisWidth() {
-        skin.setPadding(new Insets(7, 7, 7, 7));
+        label.setPadding(new Insets(7, 7, 7, 7));
         Rectangle r = new Rectangle(23, 23);
         label.setGraphicTextGap(2);
         label.setGraphic(r);
@@ -419,7 +420,7 @@ public class LabelSkinTest {
     }
 
     @Test public void whenTextIsShorterThanEllipsisAndGraphicIsSetAndContentDisplayIsCENTER_computeMinWidth_ReturnsRightAnswer() {
-        skin.setPadding(new Insets(7, 7, 7, 7));
+        label.setPadding(new Insets(7, 7, 7, 7));
         Rectangle r = new Rectangle(23, 23);
         label.setGraphicTextGap(2);
         label.setGraphic(r);
@@ -430,7 +431,7 @@ public class LabelSkinTest {
     }
 
     @Test public void whenTextIsLongThanEllipsisAndGraphicIsSetAndContentDisplayIsCENTER_computeMinWidth_ReturnsRightAnswer() {
-        skin.setPadding(new Insets(7, 7, 7, 7));
+        label.setPadding(new Insets(7, 7, 7, 7));
         Rectangle r = new Rectangle(23, 23);
         label.setGraphicTextGap(2);
         label.setGraphic(r);
@@ -441,7 +442,7 @@ public class LabelSkinTest {
     }
 
     @Test public void whenTextIsShorterThanEllipsisAndGraphicIsSetAndContentDisplayIsTOP_computeMinWidth_ReturnsRightAnswer() {
-        skin.setPadding(new Insets(7, 7, 7, 7));
+        label.setPadding(new Insets(7, 7, 7, 7));
         Rectangle r = new Rectangle(23, 23);
         label.setGraphicTextGap(2);
         label.setGraphic(r);
@@ -452,7 +453,7 @@ public class LabelSkinTest {
     }
 
     @Test public void whenTextIsLongThanEllipsisAndGraphicIsSetAndContentDisplayIsTOP_computeMinWidth_ReturnsRightAnswer() {
-        skin.setPadding(new Insets(7, 7, 7, 7));
+        label.setPadding(new Insets(7, 7, 7, 7));
         Rectangle r = new Rectangle(23, 23);
         label.setGraphicTextGap(2);
         label.setGraphic(r);
@@ -463,7 +464,7 @@ public class LabelSkinTest {
     }
 
     @Test public void whenTextIsShorterThanEllipsisAndGraphicIsSetAndContentDisplayIsBOTTOM_computeMinWidth_ReturnsRightAnswer() {
-        skin.setPadding(new Insets(7, 7, 7, 7));
+        label.setPadding(new Insets(7, 7, 7, 7));
         Rectangle r = new Rectangle(23, 23);
         label.setGraphicTextGap(2);
         label.setGraphic(r);
@@ -474,7 +475,7 @@ public class LabelSkinTest {
     }
 
     @Test public void whenTextIsLongThanEllipsisAndGraphicIsSetAndContentDisplayIsBOTTOM_computeMinWidth_ReturnsRightAnswer() {
-        skin.setPadding(new Insets(7, 7, 7, 7));
+        label.setPadding(new Insets(7, 7, 7, 7));
         Rectangle r = new Rectangle(23, 23);
         label.setGraphicTextGap(2);
         label.setGraphic(r);
@@ -485,7 +486,7 @@ public class LabelSkinTest {
     }
 
     @Test public void whenTextIsShorterThanEllipsisAndGraphicIsSetAndContentDisplayIsGRAPHIC_ONLY_computeMinWidth_ReturnsRightAnswer() {
-        skin.setPadding(new Insets(7, 7, 7, 7));
+        label.setPadding(new Insets(7, 7, 7, 7));
         Rectangle r = new Rectangle(3, 3);
         label.setGraphicTextGap(2);
         label.setGraphic(r);
@@ -496,7 +497,7 @@ public class LabelSkinTest {
     }
 
     @Test public void whenTextIsLongThanEllipsisAndGraphicIsSetAndContentDisplayIsGRAPHIC_ONLY_computeMinWidth_ReturnsRightAnswer() {
-        skin.setPadding(new Insets(7, 7, 7, 7));
+        label.setPadding(new Insets(7, 7, 7, 7));
         Rectangle r = new Rectangle(3, 3);
         label.setGraphicTextGap(2);
         label.setGraphic(r);
@@ -507,7 +508,7 @@ public class LabelSkinTest {
     }
 
     @Test public void whenTextIsShorterThanEllipsisAndGraphicIsSetAndContentDisplayIsTEXT_ONLY_computeMinWidth_ReturnsRightAnswer() {
-        skin.setPadding(new Insets(7, 7, 7, 7));
+        label.setPadding(new Insets(7, 7, 7, 7));
         Rectangle r = new Rectangle(230, 230);
         label.setGraphicTextGap(2);
         label.setGraphic(r);
@@ -518,7 +519,7 @@ public class LabelSkinTest {
     }
 
     @Test public void whenTextIsLongThanEllipsisAndGraphicIsSetAndContentDisplayIsTEXT_ONLY_computeMinWidth_ReturnsRightAnswer() {
-        skin.setPadding(new Insets(7, 7, 7, 7));
+        label.setPadding(new Insets(7, 7, 7, 7));
         Rectangle r = new Rectangle(230, 230);
         label.setGraphicTextGap(2);
         label.setGraphic(r);
@@ -536,21 +537,21 @@ public class LabelSkinTest {
 
     @Test public void whenTextIsNullAndNoGraphic_computeMinHeight_ReturnsSingleLineStringHeight() {
         label.setText(null);
-        skin.setPadding(new Insets(7, 7, 7, 7));
+        label.setPadding(new Insets(7, 7, 7, 7));
         final double lineHeight = Utils.computeTextHeight(label.getFont(), " ", 0);
         assertEquals(lineHeight + 14, label.minHeight(-1), 0);
     }
     
     @Test public void whenTextIsEmptyAndNoGraphic_computeMinHeight_ReturnsSingleLineStringHeight() {
         label.setText("");
-        skin.setPadding(new Insets(7, 7, 7, 7));
+        label.setPadding(new Insets(7, 7, 7, 7));
         final double lineHeight = Utils.computeTextHeight(label.getFont(), " ", 0);
         assertEquals(lineHeight + 14, label.minHeight(-1), 0);
     }
     
     @Test public void whenTextIsSetAndNoGraphic_computeMinHeight_ReturnsSingleLineStringHeight() {
         label.setText("Howdy Pardner");
-        skin.setPadding(new Insets(7, 7, 7, 7));
+        label.setPadding(new Insets(7, 7, 7, 7));
         assertTrue(label.minHeight(-1) >= 0);
         final double lineHeight = Utils.computeTextHeight(label.getFont(), " ", 0);
         assertEquals(lineHeight + 14, label.minHeight(-1), 0);
@@ -558,7 +559,7 @@ public class LabelSkinTest {
     
     @Test public void whenTextIsNullAndUnmanagedGraphic_computeMinHeight_ReturnsSingleLineStringHeight() {
         label.setText(null);
-        skin.setPadding(new Insets(7, 7, 7, 7));
+        label.setPadding(new Insets(7, 7, 7, 7));
         Rectangle r = new Rectangle(23, 500);
         r.setManaged(false);
         label.setGraphic(r);
@@ -568,7 +569,7 @@ public class LabelSkinTest {
     
     @Test public void whenTextIsEmptyAndUnmanagedGraphic_computeMinHeight_ReturnsSingleLineStringHeight() {
         label.setText("");
-        skin.setPadding(new Insets(7, 7, 7, 7));
+        label.setPadding(new Insets(7, 7, 7, 7));
         Rectangle r = new Rectangle(23, 500);
         r.setManaged(false);
         label.setGraphic(r);
@@ -578,7 +579,7 @@ public class LabelSkinTest {
     
     @Test public void whenTextIsSetAndUnmanagedGraphic_computeMinHeight_ReturnsSingleLineStringHeight() {
         label.setText("Howdy Pardner");
-        skin.setPadding(new Insets(7, 7, 7, 7));
+        label.setPadding(new Insets(7, 7, 7, 7));
         Rectangle r = new Rectangle(23, 500);
         r.setManaged(false);
         label.setGraphic(r);
@@ -589,7 +590,7 @@ public class LabelSkinTest {
     
     @Test public void whenTextIsNullAndGraphicIsSetWithTOPContentDisplay_computeMinHeight_ReturnsRightAnswer() {
         label.setText(null);
-        skin.setPadding(new Insets(7, 7, 7, 7));
+        label.setPadding(new Insets(7, 7, 7, 7));
         Rectangle r = new Rectangle(23, 23);
         label.setGraphicTextGap(2);
         label.setGraphic(r);
@@ -600,7 +601,7 @@ public class LabelSkinTest {
     
     @Test public void whenTextIsEmptyAndGraphicIsSetWithTOPContentDisplay_computeMinHeight_ReturnsRightAnswer() {
         label.setText("");
-        skin.setPadding(new Insets(7, 7, 7, 7));
+        label.setPadding(new Insets(7, 7, 7, 7));
         Rectangle r = new Rectangle(23, 23);
         label.setGraphicTextGap(2);
         label.setGraphic(r);
@@ -611,7 +612,7 @@ public class LabelSkinTest {
     
     @Test public void whenTextIsSetAndGraphicIsSetWithTOPContentDisplay_computeMinHeight_ReturnsRightAnswer() {
         label.setText("For crying in the mud");
-        skin.setPadding(new Insets(7, 7, 7, 7));
+        label.setPadding(new Insets(7, 7, 7, 7));
         Rectangle r = new Rectangle(23, 23);
         label.setGraphic(r);
         label.setGraphicTextGap(2);
@@ -622,7 +623,7 @@ public class LabelSkinTest {
     
     @Test public void whenTextIsNullAndGraphicIsSetWithRIGHTContentDisplay_computeMinHeight_ReturnsRightAnswer() {
         label.setText(null);
-        skin.setPadding(new Insets(7, 7, 7, 7));
+        label.setPadding(new Insets(7, 7, 7, 7));
         Rectangle r = new Rectangle(23, 23);
         label.setGraphic(r);
         label.setContentDisplay(ContentDisplay.RIGHT);
@@ -632,7 +633,7 @@ public class LabelSkinTest {
     
     @Test public void whenTextIsEmptyAndGraphicIsSetWithRIGHTContentDisplay_computeMinHeight_ReturnsRightAnswer() {
         label.setText("");
-        skin.setPadding(new Insets(7, 7, 7, 7));
+        label.setPadding(new Insets(7, 7, 7, 7));
         Rectangle r = new Rectangle(23, 23);
         label.setGraphic(r);
         label.setContentDisplay(ContentDisplay.RIGHT);
@@ -642,7 +643,7 @@ public class LabelSkinTest {
     
     @Test public void whenTextIsSetAndGraphicIsSetWithRIGHTContentDisplay_computeMinHeight_ReturnsRightAnswer() {
         label.setText("For crying in the mud");
-        skin.setPadding(new Insets(7, 7, 7, 7));
+        label.setPadding(new Insets(7, 7, 7, 7));
         Rectangle r = new Rectangle(23, 23);
         label.setGraphic(r);
         label.setContentDisplay(ContentDisplay.RIGHT);
@@ -652,7 +653,7 @@ public class LabelSkinTest {
     
     @Test public void whenTextIsNullAndGraphicIsSetWithBOTTOMContentDisplay_computeMinHeight_ReturnsRightAnswer() {
         label.setText(null);
-        skin.setPadding(new Insets(7, 7, 7, 7));
+        label.setPadding(new Insets(7, 7, 7, 7));
         Rectangle r = new Rectangle(23, 23);
         label.setGraphicTextGap(2);
         label.setGraphic(r);
@@ -663,7 +664,7 @@ public class LabelSkinTest {
     
     @Test public void whenTextIsEmptyAndGraphicIsSetWithBOTTOMContentDisplay_computeMinHeight_ReturnsRightAnswer() {
         label.setText("");
-        skin.setPadding(new Insets(7, 7, 7, 7));
+        label.setPadding(new Insets(7, 7, 7, 7));
         Rectangle r = new Rectangle(23, 23);
         label.setGraphicTextGap(2);
         label.setGraphic(r);
@@ -674,7 +675,7 @@ public class LabelSkinTest {
     
     @Test public void whenTextIsSetAndGraphicIsSetWithBOTTOMContentDisplay_computeMinHeight_ReturnsRightAnswer() {
         label.setText("For crying in the mud");
-        skin.setPadding(new Insets(7, 7, 7, 7));
+        label.setPadding(new Insets(7, 7, 7, 7));
         Rectangle r = new Rectangle(23, 23);
         label.setGraphic(r);
         label.setGraphicTextGap(2);
@@ -685,7 +686,7 @@ public class LabelSkinTest {
     
     @Test public void whenTextIsNullAndGraphicIsSetWithLEFTContentDisplay_computeMinHeight_ReturnsRightAnswer() {
         label.setText(null);
-        skin.setPadding(new Insets(7, 7, 7, 7));
+        label.setPadding(new Insets(7, 7, 7, 7));
         Rectangle r = new Rectangle(23, 23);
         label.setGraphic(r);
         label.setContentDisplay(ContentDisplay.LEFT);
@@ -695,7 +696,7 @@ public class LabelSkinTest {
     
     @Test public void whenTextIsEmptyAndGraphicIsSetWithLEFTContentDisplay_computeMinHeight_ReturnsRightAnswer() {
         label.setText("");
-        skin.setPadding(new Insets(7, 7, 7, 7));
+        label.setPadding(new Insets(7, 7, 7, 7));
         Rectangle r = new Rectangle(23, 23);
         label.setGraphic(r);
         label.setContentDisplay(ContentDisplay.LEFT);
@@ -705,7 +706,7 @@ public class LabelSkinTest {
     
     @Test public void whenTextIsSetAndGraphicIsSetWithLEFTContentDisplay_computeMinHeight_ReturnsRightAnswer() {
         label.setText("For crying in the mud");
-        skin.setPadding(new Insets(7, 7, 7, 7));
+        label.setPadding(new Insets(7, 7, 7, 7));
         Rectangle r = new Rectangle(23, 23);
         label.setGraphic(r);
         label.setContentDisplay(ContentDisplay.LEFT);
@@ -715,7 +716,7 @@ public class LabelSkinTest {
     
     @Test public void whenTextIsNullAndGraphicIsSetWithCENTERContentDisplay_computeMinHeight_ReturnsRightAnswer() {
         label.setText(null);
-        skin.setPadding(new Insets(7, 7, 7, 7));
+        label.setPadding(new Insets(7, 7, 7, 7));
         Rectangle r = new Rectangle(23, 23);
         label.setGraphic(r);
         label.setContentDisplay(ContentDisplay.CENTER);
@@ -725,7 +726,7 @@ public class LabelSkinTest {
     
     @Test public void whenTextIsEmptyAndGraphicIsSetWithCENTERContentDisplay_computeMinHeight_ReturnsRightAnswer() {
         label.setText("");
-        skin.setPadding(new Insets(7, 7, 7, 7));
+        label.setPadding(new Insets(7, 7, 7, 7));
         Rectangle r = new Rectangle(23, 23);
         label.setGraphic(r);
         label.setContentDisplay(ContentDisplay.CENTER);
@@ -735,7 +736,7 @@ public class LabelSkinTest {
     
     @Test public void whenTextIsSetAndGraphicIsSetWithCENTERContentDisplay_computeMinHeight_ReturnsRightAnswer() {
         label.setText("For crying in the mud");
-        skin.setPadding(new Insets(7, 7, 7, 7));
+        label.setPadding(new Insets(7, 7, 7, 7));
         Rectangle r = new Rectangle(23, 23);
         label.setGraphic(r);
         label.setContentDisplay(ContentDisplay.CENTER);
@@ -745,7 +746,7 @@ public class LabelSkinTest {
     
     @Test public void whenTextIsNullAndGraphicIsSetWithGRAPHIC_ONLYContentDisplay_computeMinHeight_ReturnsRightAnswer() {
         label.setText(null);
-        skin.setPadding(new Insets(7, 7, 7, 7));
+        label.setPadding(new Insets(7, 7, 7, 7));
         Rectangle r = new Rectangle(23, 23);
         label.setGraphic(r);
         label.setContentDisplay(ContentDisplay.GRAPHIC_ONLY);
@@ -754,7 +755,7 @@ public class LabelSkinTest {
     
     @Test public void whenTextIsEmptyAndGraphicIsSetWithGRAPHIC_ONLYContentDisplay_computeMinHeight_ReturnsRightAnswer() {
         label.setText("");
-        skin.setPadding(new Insets(7, 7, 7, 7));
+        label.setPadding(new Insets(7, 7, 7, 7));
         Rectangle r = new Rectangle(23, 23);
         label.setGraphic(r);
         label.setContentDisplay(ContentDisplay.GRAPHIC_ONLY);
@@ -763,7 +764,7 @@ public class LabelSkinTest {
     
     @Test public void whenTextIsSetAndGraphicIsSetWithGRAPHIC_ONLYContentDisplay_computeMinHeight_ReturnsRightAnswer() {
         label.setText("For crying in the mud");
-        skin.setPadding(new Insets(7, 7, 7, 7));
+        label.setPadding(new Insets(7, 7, 7, 7));
         Rectangle r = new Rectangle(23, 23);
         label.setGraphic(r);
         label.setContentDisplay(ContentDisplay.GRAPHIC_ONLY);
@@ -772,7 +773,7 @@ public class LabelSkinTest {
     
     @Test public void whenTextIsNullAndGraphicIsSetWithTEXT_ONLYContentDisplay_computeMinHeight_ReturnsRightAnswer() {
         label.setText(null);
-        skin.setPadding(new Insets(7, 7, 7, 7));
+        label.setPadding(new Insets(7, 7, 7, 7));
         Rectangle r = new Rectangle(23, 23);
         label.setGraphic(r);
         label.setContentDisplay(ContentDisplay.TEXT_ONLY);
@@ -782,7 +783,7 @@ public class LabelSkinTest {
     
     @Test public void whenTextIsEmptyAndGraphicIsSetWithTEXT_ONLYContentDisplay_computeMinHeight_ReturnsRightAnswer() {
         label.setText("");
-        skin.setPadding(new Insets(7, 7, 7, 7));
+        label.setPadding(new Insets(7, 7, 7, 7));
         Rectangle r = new Rectangle(23, 23);
         label.setGraphic(r);
         label.setContentDisplay(ContentDisplay.TEXT_ONLY);
@@ -792,7 +793,7 @@ public class LabelSkinTest {
     
     @Test public void whenTextIsSetAndGraphicIsSetWithTEXT_ONLYContentDisplay_computeMinHeight_ReturnsRightAnswer() {
         label.setText("For crying in the mud");
-        skin.setPadding(new Insets(7, 7, 7, 7));
+        label.setPadding(new Insets(7, 7, 7, 7));
         Rectangle r = new Rectangle(23, 23);
         label.setGraphic(r);
         label.setContentDisplay(ContentDisplay.TEXT_ONLY);
@@ -808,19 +809,19 @@ public class LabelSkinTest {
 
     @Test public void whenTextIsNullAndNoGraphic_computePrefWidth_ReturnsPadding() {
         label.setText(null);
-        skin.setPadding(new Insets(7, 7, 7, 7));
+        label.setPadding(new Insets(7, 7, 7, 7));
         assertEquals(14, label.prefWidth(-1), 0);
     }
     
     @Test public void whenTextIsEmptyAndNoGraphic_computePrefWidth_ReturnsPadding() {
         label.setText("");
-        skin.setPadding(new Insets(7, 7, 7, 7));
+        label.setPadding(new Insets(7, 7, 7, 7));
         assertEquals(14, label.prefWidth(-1), 0);
     }
     
     @Test public void whenTextIsSetAndNoGraphic_computePrefWidth_ReturnsTextWidthPlusPadding() {
         label.setText("Lollipop");
-        skin.setPadding(new Insets(7, 7, 7, 7));
+        label.setPadding(new Insets(7, 7, 7, 7));
         final double textWidth = Utils.computeTextWidth(label.getFont(), "Lollipop", 0);
         assertEquals(14 + textWidth, label.prefWidth(-1), 0);
     }
@@ -830,7 +831,7 @@ public class LabelSkinTest {
         Rectangle r = new Rectangle(0, 0, 50, 50);
         r.setManaged(false);
         label.setGraphic(r);
-        skin.setPadding(new Insets(7, 7, 7, 7));
+        label.setPadding(new Insets(7, 7, 7, 7));
         assertEquals(14, label.prefWidth(-1), 0);
     }
     
@@ -839,7 +840,7 @@ public class LabelSkinTest {
         Rectangle r = new Rectangle(0, 0, 50, 50);
         r.setManaged(false);
         label.setGraphic(r);
-        skin.setPadding(new Insets(7, 7, 7, 7));
+        label.setPadding(new Insets(7, 7, 7, 7));
         assertEquals(14, label.prefWidth(-1), 0);
     }
     
@@ -848,7 +849,7 @@ public class LabelSkinTest {
         Rectangle r = new Rectangle(0, 0, 50, 50);
         r.setManaged(false);
         label.setGraphic(r);
-        skin.setPadding(new Insets(7, 7, 7, 7));
+        label.setPadding(new Insets(7, 7, 7, 7));
         final double textWidth = Utils.computeTextWidth(label.getFont(), "Lollipop", 0);
         assertEquals(14 + textWidth, label.prefWidth(-1), 0);
     }
@@ -858,7 +859,7 @@ public class LabelSkinTest {
         label.setGraphic(new Rectangle(0, 0, 20, 20));
         label.setGraphicTextGap(6.5);
         label.setContentDisplay(ContentDisplay.TOP);
-        skin.setPadding(new Insets(7, 7, 7, 7));
+        label.setPadding(new Insets(7, 7, 7, 7));
         assertEquals(14 + 20, label.prefWidth(-1), 0);
     }
     
@@ -867,7 +868,7 @@ public class LabelSkinTest {
         label.setGraphic(new Rectangle(0, 0, 20, 20));
         label.setGraphicTextGap(6.5);
         label.setContentDisplay(ContentDisplay.TOP);
-        skin.setPadding(new Insets(7, 7, 7, 7));
+        label.setPadding(new Insets(7, 7, 7, 7));
         assertEquals(14 + 20, label.prefWidth(-1), 0);
     }
     
@@ -876,7 +877,7 @@ public class LabelSkinTest {
         label.setGraphic(new Rectangle(0, 0, 200, 20));
         label.setGraphicTextGap(6.5);
         label.setContentDisplay(ContentDisplay.TOP);
-        skin.setPadding(new Insets(7, 7, 7, 7));
+        label.setPadding(new Insets(7, 7, 7, 7));
         assertEquals(14 + 200, label.prefWidth(-1), 0);
     }
     
@@ -885,7 +886,7 @@ public class LabelSkinTest {
         label.setGraphic(new Rectangle(0, 0, 20, 20));
         label.setGraphicTextGap(6.5);
         label.setContentDisplay(ContentDisplay.TOP);
-        skin.setPadding(new Insets(7, 7, 7, 7));
+        label.setPadding(new Insets(7, 7, 7, 7));
         final double textWidth = Utils.computeTextWidth(label.getFont(), "This is the right place", 0);
         assertEquals(14 + textWidth, label.prefWidth(-1), 0);
     }
@@ -895,7 +896,7 @@ public class LabelSkinTest {
         label.setGraphic(new Rectangle(0, 0, 20, 20));
         label.setGraphicTextGap(6.5);
         label.setContentDisplay(ContentDisplay.RIGHT);
-        skin.setPadding(new Insets(7, 7, 7, 7));
+        label.setPadding(new Insets(7, 7, 7, 7));
         assertEquals(20 + 14, label.prefWidth(-1), 0);
     }
 
@@ -904,7 +905,7 @@ public class LabelSkinTest {
         label.setGraphic(new Rectangle(0, 0, 20, 20));
         label.setGraphicTextGap(6.5);
         label.setContentDisplay(ContentDisplay.RIGHT);
-        skin.setPadding(new Insets(7, 7, 7, 7));
+        label.setPadding(new Insets(7, 7, 7, 7));
         assertEquals(20 + 14, label.prefWidth(-1), 0);
     }
     
@@ -913,7 +914,7 @@ public class LabelSkinTest {
         label.setGraphic(new Rectangle(0, 0, 20, 20));
         label.setGraphicTextGap(6.5);
         label.setContentDisplay(ContentDisplay.RIGHT);
-        skin.setPadding(new Insets(7, 7, 7, 7));
+        label.setPadding(new Insets(7, 7, 7, 7));
         final double textWidth = Utils.computeTextWidth(label.getFont(), "Howdy", 0);
         assertEquals(14 + textWidth + 6.5 + 20, label.prefWidth(-1), 0);
     }
@@ -923,7 +924,7 @@ public class LabelSkinTest {
         label.setGraphic(new Rectangle(0, 0, 20, 20));
         label.setGraphicTextGap(6.5);
         label.setContentDisplay(ContentDisplay.BOTTOM);
-        skin.setPadding(new Insets(7, 7, 7, 7));
+        label.setPadding(new Insets(7, 7, 7, 7));
         assertEquals(14 + 20, label.prefWidth(-1), 0);
     }
     
@@ -932,7 +933,7 @@ public class LabelSkinTest {
         label.setGraphic(new Rectangle(0, 0, 20, 20));
         label.setGraphicTextGap(6.5);
         label.setContentDisplay(ContentDisplay.BOTTOM);
-        skin.setPadding(new Insets(7, 7, 7, 7));
+        label.setPadding(new Insets(7, 7, 7, 7));
         assertEquals(14 + 20, label.prefWidth(-1), 0);
     }
     
@@ -941,7 +942,7 @@ public class LabelSkinTest {
         label.setGraphic(new Rectangle(0, 0, 200, 20));
         label.setGraphicTextGap(6.5);
         label.setContentDisplay(ContentDisplay.BOTTOM);
-        skin.setPadding(new Insets(7, 7, 7, 7));
+        label.setPadding(new Insets(7, 7, 7, 7));
         assertEquals(14 + 200, label.prefWidth(-1), 0);
     }
     
@@ -950,7 +951,7 @@ public class LabelSkinTest {
         label.setGraphic(new Rectangle(0, 0, 20, 20));
         label.setGraphicTextGap(6.5);
         label.setContentDisplay(ContentDisplay.BOTTOM);
-        skin.setPadding(new Insets(7, 7, 7, 7));
+        label.setPadding(new Insets(7, 7, 7, 7));
         final double textWidth = Utils.computeTextWidth(label.getFont(), "This is the right place", 0);
         assertEquals(14 + textWidth, label.prefWidth(-1), 0);
     }
@@ -960,7 +961,7 @@ public class LabelSkinTest {
         label.setGraphic(new Rectangle(0, 0, 20, 20));
         label.setGraphicTextGap(6.5);
         label.setContentDisplay(ContentDisplay.LEFT);
-        skin.setPadding(new Insets(7, 7, 7, 7));
+        label.setPadding(new Insets(7, 7, 7, 7));
         assertEquals(20 + 14, label.prefWidth(-1), 0);
     }
 
@@ -969,7 +970,7 @@ public class LabelSkinTest {
         label.setGraphic(new Rectangle(0, 0, 20, 20));
         label.setGraphicTextGap(6.5);
         label.setContentDisplay(ContentDisplay.LEFT);
-        skin.setPadding(new Insets(7, 7, 7, 7));
+        label.setPadding(new Insets(7, 7, 7, 7));
         assertEquals(20 + 14, label.prefWidth(-1), 0);
     }
     
@@ -978,7 +979,7 @@ public class LabelSkinTest {
         label.setGraphic(new Rectangle(0, 0, 20, 20));
         label.setGraphicTextGap(6.5);
         label.setContentDisplay(ContentDisplay.LEFT);
-        skin.setPadding(new Insets(7, 7, 7, 7));
+        label.setPadding(new Insets(7, 7, 7, 7));
         final double textWidth = Utils.computeTextWidth(label.getFont(), "Howdy", 0);
         assertEquals(14 + textWidth + 6.5 + 20, label.prefWidth(-1), 0);
     }
@@ -988,7 +989,7 @@ public class LabelSkinTest {
         label.setGraphic(new Rectangle(0, 0, 20, 20));
         label.setGraphicTextGap(6.5);
         label.setContentDisplay(ContentDisplay.CENTER);
-        skin.setPadding(new Insets(7, 7, 7, 7));
+        label.setPadding(new Insets(7, 7, 7, 7));
         assertEquals(14 + 20, label.prefWidth(-1), 0);
     }
     
@@ -997,7 +998,7 @@ public class LabelSkinTest {
         label.setGraphic(new Rectangle(0, 0, 20, 20));
         label.setGraphicTextGap(6.5);
         label.setContentDisplay(ContentDisplay.CENTER);
-        skin.setPadding(new Insets(7, 7, 7, 7));
+        label.setPadding(new Insets(7, 7, 7, 7));
         assertEquals(14 + 20, label.prefWidth(-1), 0);
     }
     
@@ -1006,7 +1007,7 @@ public class LabelSkinTest {
         label.setGraphic(new Rectangle(0, 0, 200, 20));
         label.setGraphicTextGap(6.5);
         label.setContentDisplay(ContentDisplay.CENTER);
-        skin.setPadding(new Insets(7, 7, 7, 7));
+        label.setPadding(new Insets(7, 7, 7, 7));
         assertEquals(14 + 200, label.prefWidth(-1), 0);
     }
     
@@ -1015,7 +1016,7 @@ public class LabelSkinTest {
         label.setGraphic(new Rectangle(0, 0, 20, 20));
         label.setGraphicTextGap(6.5);
         label.setContentDisplay(ContentDisplay.CENTER);
-        skin.setPadding(new Insets(7, 7, 7, 7));
+        label.setPadding(new Insets(7, 7, 7, 7));
         final double textWidth = Utils.computeTextWidth(label.getFont(), "This is the right place", 0);
         assertEquals(14 + textWidth, label.prefWidth(-1), 0);
     }
@@ -1025,7 +1026,7 @@ public class LabelSkinTest {
         label.setGraphic(new Rectangle(0, 0, 20, 20));
         label.setGraphicTextGap(6.5);
         label.setContentDisplay(ContentDisplay.GRAPHIC_ONLY);
-        skin.setPadding(new Insets(7, 7, 7, 7));
+        label.setPadding(new Insets(7, 7, 7, 7));
         assertEquals(14 + 20, label.prefWidth(-1), 0);
     }
     
@@ -1034,7 +1035,7 @@ public class LabelSkinTest {
         label.setGraphic(new Rectangle(0, 0, 20, 20));
         label.setGraphicTextGap(6.5);
         label.setContentDisplay(ContentDisplay.GRAPHIC_ONLY);
-        skin.setPadding(new Insets(7, 7, 7, 7));
+        label.setPadding(new Insets(7, 7, 7, 7));
         assertEquals(14 + 20, label.prefWidth(-1), 0);
     }
     
@@ -1043,7 +1044,7 @@ public class LabelSkinTest {
         label.setGraphic(new Rectangle(0, 0, 200, 20));
         label.setGraphicTextGap(6.5);
         label.setContentDisplay(ContentDisplay.GRAPHIC_ONLY);
-        skin.setPadding(new Insets(7, 7, 7, 7));
+        label.setPadding(new Insets(7, 7, 7, 7));
         assertEquals(14 + 200, label.prefWidth(-1), 0);
     }
     
@@ -1052,7 +1053,7 @@ public class LabelSkinTest {
         label.setGraphic(new Rectangle(0, 0, 20, 20));
         label.setGraphicTextGap(6.5);
         label.setContentDisplay(ContentDisplay.GRAPHIC_ONLY);
-        skin.setPadding(new Insets(7, 7, 7, 7));
+        label.setPadding(new Insets(7, 7, 7, 7));
         assertEquals(14 + 20, label.prefWidth(-1), 0);
     }
     
@@ -1062,7 +1063,7 @@ public class LabelSkinTest {
         label.setGraphic(new Rectangle(0, 0, 20, 20));
         label.setGraphicTextGap(6.5);
         label.setContentDisplay(ContentDisplay.TEXT_ONLY);
-        skin.setPadding(new Insets(7, 7, 7, 7));
+        label.setPadding(new Insets(7, 7, 7, 7));
         assertEquals(14, label.prefWidth(-1), 0);
     }
     
@@ -1071,7 +1072,7 @@ public class LabelSkinTest {
         label.setGraphic(new Rectangle(0, 0, 20, 20));
         label.setGraphicTextGap(6.5);
         label.setContentDisplay(ContentDisplay.TEXT_ONLY);
-        skin.setPadding(new Insets(7, 7, 7, 7));
+        label.setPadding(new Insets(7, 7, 7, 7));
         assertEquals(14, label.prefWidth(-1), 0);
     }
     
@@ -1081,7 +1082,7 @@ public class LabelSkinTest {
         label.setGraphic(new Rectangle(0, 0, 20, 20));
         label.setGraphicTextGap(6.5);
         label.setContentDisplay(ContentDisplay.TEXT_ONLY);
-        skin.setPadding(new Insets(7, 7, 7, 7));
+        label.setPadding(new Insets(7, 7, 7, 7));
         final double textWidth = Utils.computeTextWidth(label.getFont(), "Yippee Skippee", 0);
         assertEquals(14 + textWidth, label.prefWidth(-1), 0);
     }
@@ -1094,7 +1095,7 @@ public class LabelSkinTest {
 
     @Test public void whenTextHasNewlines_computePrefHeight_IncludesTheMultipleLinesInThePrefHeight() {
         label.setText("This\nis a test\nof the emergency\nbroadcast system.\nThis is only a test");
-        skin.setPadding(new Insets(0, 0, 0, 0));
+        label.setPadding(new Insets(0, 0, 0, 0));
         final double singleLineHeight = Utils.computeTextHeight(label.getFont(), " ", 0);
         final double height = label.prefHeight(-1);
         assertTrue(height >= singleLineHeight * 5);
@@ -1110,21 +1111,21 @@ public class LabelSkinTest {
     
     @Test public void whenTextIsNullAndNoGraphic_computePrefHeight_ReturnsSingleLineStringHeightPlusPadding() {
         label.setText(null);
-        skin.setPadding(new Insets(7, 7, 7, 7));
+        label.setPadding(new Insets(7, 7, 7, 7));
         final double lineHeight = Utils.computeTextHeight(label.getFont(), " ", 0);
         assertEquals(14 + lineHeight, label.prefHeight(-1), 0);
     }
     
     @Test public void whenTextIsEmptyAndNoGraphic_computePrefHeight_ReturnsSingleLineStringHeightPlusPadding() {
         label.setText("");
-        skin.setPadding(new Insets(7, 7, 7, 7));
+        label.setPadding(new Insets(7, 7, 7, 7));
         final double lineHeight = Utils.computeTextHeight(label.getFont(), " ", 0);
         assertEquals(14 + lineHeight, label.prefHeight(-1), 0);
     }
     
     @Test public void whenTextIsSetAndNoGraphic_computePrefHeight_ReturnsSingleLineStringHeightPlusPadding() {
         label.setText("Howdy Pardner");
-        skin.setPadding(new Insets(7, 7, 7, 7));
+        label.setPadding(new Insets(7, 7, 7, 7));
         assertTrue(label.prefHeight(-1) >= 0);
         final double lineHeight = Utils.computeTextHeight(label.getFont(), " ", 0);
         assertEquals(14 + lineHeight, label.prefHeight(-1), 0);
@@ -1132,7 +1133,7 @@ public class LabelSkinTest {
     
     @Test public void whenTextIsNullAndUnmanagedGraphic_computePrefHeight_ReturnsSingleLineStringHeightPlusPadding() {
         label.setText(null);
-        skin.setPadding(new Insets(7, 7, 7, 7));
+        label.setPadding(new Insets(7, 7, 7, 7));
         Rectangle r = new Rectangle(23, 500);
         r.setManaged(false);
         label.setGraphic(r);
@@ -1142,7 +1143,7 @@ public class LabelSkinTest {
     
     @Test public void whenTextIsEmptyAndUnmanagedGraphic_computePrefHeight_ReturnsSingleLineStringHeightPlusPadding() {
         label.setText("");
-        skin.setPadding(new Insets(7, 7, 7, 7));
+        label.setPadding(new Insets(7, 7, 7, 7));
         Rectangle r = new Rectangle(23, 500);
         r.setManaged(false);
         label.setGraphic(r);
@@ -1152,7 +1153,7 @@ public class LabelSkinTest {
     
     @Test public void whenTextIsSetAndUnmanagedGraphic_computePrefHeight_ReturnsSingleLineStringHeightPlusPadding() {
         label.setText("Howdy Pardner");
-        skin.setPadding(new Insets(7, 7, 7, 7));
+        label.setPadding(new Insets(7, 7, 7, 7));
         Rectangle r = new Rectangle(23, 500);
         r.setManaged(false);
         label.setGraphic(r);
@@ -1163,7 +1164,7 @@ public class LabelSkinTest {
     
     @Test public void whenTextIsNullAndGraphicIsSetWithTOPContentDisplay_computePrefHeight_ReturnsRightAnswer() {
         label.setText(null);
-        skin.setPadding(new Insets(7, 7, 7, 7));
+        label.setPadding(new Insets(7, 7, 7, 7));
         Rectangle r = new Rectangle(23, 23);
         label.setGraphicTextGap(2);
         label.setGraphic(r);
@@ -1174,7 +1175,7 @@ public class LabelSkinTest {
     
     @Test public void whenTextIsEmptyAndGraphicIsSetWithTOPContentDisplay_computePrefHeight_ReturnsRightAnswer() {
         label.setText("");
-        skin.setPadding(new Insets(7, 7, 7, 7));
+        label.setPadding(new Insets(7, 7, 7, 7));
         Rectangle r = new Rectangle(23, 23);
         label.setGraphicTextGap(2);
         label.setGraphic(r);
@@ -1185,7 +1186,7 @@ public class LabelSkinTest {
     
     @Test public void whenTextIsSetAndGraphicIsSetWithTOPContentDisplay_computePrefHeight_ReturnsRightAnswer() {
         label.setText("For crying in the mud");
-        skin.setPadding(new Insets(7, 7, 7, 7));
+        label.setPadding(new Insets(7, 7, 7, 7));
         Rectangle r = new Rectangle(23, 23);
         label.setGraphic(r);
         label.setGraphicTextGap(2);
@@ -1196,7 +1197,7 @@ public class LabelSkinTest {
     
     @Test public void whenTextIsNullAndGraphicIsSetWithRIGHTContentDisplay_computePrefHeight_ReturnsRightAnswer() {
         label.setText(null);
-        skin.setPadding(new Insets(7, 7, 7, 7));
+        label.setPadding(new Insets(7, 7, 7, 7));
         Rectangle r = new Rectangle(23, 23);
         label.setGraphic(r);
         label.setContentDisplay(ContentDisplay.RIGHT);
@@ -1206,7 +1207,7 @@ public class LabelSkinTest {
     
     @Test public void whenTextIsEmptyAndGraphicIsSetWithRIGHTContentDisplay_computePrefHeight_ReturnsRightAnswer() {
         label.setText("");
-        skin.setPadding(new Insets(7, 7, 7, 7));
+        label.setPadding(new Insets(7, 7, 7, 7));
         Rectangle r = new Rectangle(23, 23);
         label.setGraphic(r);
         label.setContentDisplay(ContentDisplay.RIGHT);
@@ -1216,7 +1217,7 @@ public class LabelSkinTest {
     
     @Test public void whenTextIsSetAndGraphicIsSetWithRIGHTContentDisplay_computePrefHeight_ReturnsRightAnswer() {
         label.setText("For crying in the mud");
-        skin.setPadding(new Insets(7, 7, 7, 7));
+        label.setPadding(new Insets(7, 7, 7, 7));
         Rectangle r = new Rectangle(23, 23);
         label.setGraphic(r);
         label.setContentDisplay(ContentDisplay.RIGHT);
@@ -1226,7 +1227,7 @@ public class LabelSkinTest {
     
     @Test public void whenTextIsNullAndGraphicIsSetWithBOTTOMContentDisplay_computePrefHeight_ReturnsRightAnswer() {
         label.setText(null);
-        skin.setPadding(new Insets(7, 7, 7, 7));
+        label.setPadding(new Insets(7, 7, 7, 7));
         Rectangle r = new Rectangle(23, 23);
         label.setGraphicTextGap(2);
         label.setGraphic(r);
@@ -1237,7 +1238,7 @@ public class LabelSkinTest {
     
     @Test public void whenTextIsEmptyAndGraphicIsSetWithBOTTOMContentDisplay_computePrefHeight_ReturnsRightAnswer() {
         label.setText("");
-        skin.setPadding(new Insets(7, 7, 7, 7));
+        label.setPadding(new Insets(7, 7, 7, 7));
         Rectangle r = new Rectangle(23, 23);
         label.setGraphicTextGap(2);
         label.setGraphic(r);
@@ -1248,7 +1249,7 @@ public class LabelSkinTest {
     
     @Test public void whenTextIsSetAndGraphicIsSetWithBOTTOMContentDisplay_computePrefHeight_ReturnsRightAnswer() {
         label.setText("For crying in the mud");
-        skin.setPadding(new Insets(7, 7, 7, 7));
+        label.setPadding(new Insets(7, 7, 7, 7));
         Rectangle r = new Rectangle(23, 23);
         label.setGraphic(r);
         label.setGraphicTextGap(2);
@@ -1259,7 +1260,7 @@ public class LabelSkinTest {
     
     @Test public void whenTextIsNullAndGraphicIsSetWithLEFTContentDisplay_computePrefHeight_ReturnsRightAnswer() {
         label.setText(null);
-        skin.setPadding(new Insets(7, 7, 7, 7));
+        label.setPadding(new Insets(7, 7, 7, 7));
         Rectangle r = new Rectangle(23, 23);
         label.setGraphic(r);
         label.setContentDisplay(ContentDisplay.LEFT);
@@ -1269,7 +1270,7 @@ public class LabelSkinTest {
     
     @Test public void whenTextIsEmptyAndGraphicIsSetWithLEFTContentDisplay_computePrefHeight_ReturnsRightAnswer() {
         label.setText("");
-        skin.setPadding(new Insets(7, 7, 7, 7));
+        label.setPadding(new Insets(7, 7, 7, 7));
         Rectangle r = new Rectangle(23, 23);
         label.setGraphic(r);
         label.setContentDisplay(ContentDisplay.LEFT);
@@ -1279,7 +1280,7 @@ public class LabelSkinTest {
     
     @Test public void whenTextIsSetAndGraphicIsSetWithLEFTContentDisplay_computePrefHeight_ReturnsRightAnswer() {
         label.setText("For crying in the mud");
-        skin.setPadding(new Insets(7, 7, 7, 7));
+        label.setPadding(new Insets(7, 7, 7, 7));
         Rectangle r = new Rectangle(23, 23);
         label.setGraphic(r);
         label.setContentDisplay(ContentDisplay.LEFT);
@@ -1289,7 +1290,7 @@ public class LabelSkinTest {
     
     @Test public void whenTextIsNullAndGraphicIsSetWithCENTERContentDisplay_computePrefHeight_ReturnsRightAnswer() {
         label.setText(null);
-        skin.setPadding(new Insets(7, 7, 7, 7));
+        label.setPadding(new Insets(7, 7, 7, 7));
         Rectangle r = new Rectangle(23, 23);
         label.setGraphic(r);
         label.setContentDisplay(ContentDisplay.CENTER);
@@ -1299,7 +1300,7 @@ public class LabelSkinTest {
     
     @Test public void whenTextIsEmptyAndGraphicIsSetWithCENTERContentDisplay_computePrefHeight_ReturnsRightAnswer() {
         label.setText("");
-        skin.setPadding(new Insets(7, 7, 7, 7));
+        label.setPadding(new Insets(7, 7, 7, 7));
         Rectangle r = new Rectangle(23, 23);
         label.setGraphic(r);
         label.setContentDisplay(ContentDisplay.CENTER);
@@ -1309,7 +1310,7 @@ public class LabelSkinTest {
     
     @Test public void whenTextIsSetAndGraphicIsSetWithCENTERContentDisplay_computePrefHeight_ReturnsRightAnswer() {
         label.setText("For crying in the mud");
-        skin.setPadding(new Insets(7, 7, 7, 7));
+        label.setPadding(new Insets(7, 7, 7, 7));
         Rectangle r = new Rectangle(23, 23);
         label.setGraphic(r);
         label.setContentDisplay(ContentDisplay.CENTER);
@@ -1319,7 +1320,7 @@ public class LabelSkinTest {
     
     @Test public void whenTextIsNullAndGraphicIsSetWithGRAPHIC_ONLYContentDisplay_computePrefHeight_ReturnsRightAnswer() {
         label.setText(null);
-        skin.setPadding(new Insets(7, 7, 7, 7));
+        label.setPadding(new Insets(7, 7, 7, 7));
         Rectangle r = new Rectangle(23, 23);
         label.setGraphic(r);
         label.setContentDisplay(ContentDisplay.GRAPHIC_ONLY);
@@ -1328,7 +1329,7 @@ public class LabelSkinTest {
     
     @Test public void whenTextIsEmptyAndGraphicIsSetWithGRAPHIC_ONLYContentDisplay_computePrefHeight_ReturnsRightAnswer() {
         label.setText("");
-        skin.setPadding(new Insets(7, 7, 7, 7));
+        label.setPadding(new Insets(7, 7, 7, 7));
         Rectangle r = new Rectangle(23, 23);
         label.setGraphic(r);
         label.setContentDisplay(ContentDisplay.GRAPHIC_ONLY);
@@ -1337,7 +1338,7 @@ public class LabelSkinTest {
     
     @Test public void whenTextIsSetAndGraphicIsSetWithGRAPHIC_ONLYContentDisplay_computePrefHeight_ReturnsRightAnswer() {
         label.setText("For crying in the mud");
-        skin.setPadding(new Insets(7, 7, 7, 7));
+        label.setPadding(new Insets(7, 7, 7, 7));
         Rectangle r = new Rectangle(23, 23);
         label.setGraphic(r);
         label.setContentDisplay(ContentDisplay.GRAPHIC_ONLY);
@@ -1346,7 +1347,7 @@ public class LabelSkinTest {
     
     @Test public void whenTextIsNullAndGraphicIsSetWithTEXT_ONLYContentDisplay_computePrefHeight_ReturnsRightAnswer() {
         label.setText(null);
-        skin.setPadding(new Insets(7, 7, 7, 7));
+        label.setPadding(new Insets(7, 7, 7, 7));
         Rectangle r = new Rectangle(23, 23);
         label.setGraphic(r);
         label.setContentDisplay(ContentDisplay.TEXT_ONLY);
@@ -1356,7 +1357,7 @@ public class LabelSkinTest {
     
     @Test public void whenTextIsEmptyAndGraphicIsSetWithTEXT_ONLYContentDisplay_computePrefHeight_ReturnsRightAnswer() {
         label.setText("");
-        skin.setPadding(new Insets(7, 7, 7, 7));
+        label.setPadding(new Insets(7, 7, 7, 7));
         Rectangle r = new Rectangle(23, 23);
         label.setGraphic(r);
         label.setContentDisplay(ContentDisplay.TEXT_ONLY);
@@ -1366,7 +1367,7 @@ public class LabelSkinTest {
     
     @Test public void whenTextIsSetAndGraphicIsSetWithTEXT_ONLYContentDisplay_computePrefHeight_ReturnsRightAnswer() {
         label.setText("For crying in the mud");
-        skin.setPadding(new Insets(7, 7, 7, 7));
+        label.setPadding(new Insets(7, 7, 7, 7));
         Rectangle r = new Rectangle(23, 23);
         label.setGraphic(r);
         label.setContentDisplay(ContentDisplay.TEXT_ONLY);
@@ -1382,19 +1383,19 @@ public class LabelSkinTest {
 
     @Test public void whenTextIsNullAndNoGraphic_computeMaxWidth_ReturnsPadding() {
         label.setText(null);
-        skin.setPadding(new Insets(7, 7, 7, 7));
+        label.setPadding(new Insets(7, 7, 7, 7));
         assertEquals(14, label.maxWidth(-1), 0);
     }
     
     @Test public void whenTextIsEmptyAndNoGraphic_computeMaxWidth_ReturnsPadding() {
         label.setText("");
-        skin.setPadding(new Insets(7, 7, 7, 7));
+        label.setPadding(new Insets(7, 7, 7, 7));
         assertEquals(14, label.maxWidth(-1), 0);
     }
     
     @Test public void whenTextIsSetAndNoGraphic_computeMaxWidth_ReturnsTextWidthPlusPadding() {
         label.setText("Lollipop");
-        skin.setPadding(new Insets(7, 7, 7, 7));
+        label.setPadding(new Insets(7, 7, 7, 7));
         final double textWidth = Utils.computeTextWidth(label.getFont(), "Lollipop", 0);
         assertEquals(14 + textWidth, label.maxWidth(-1), 0);
     }
@@ -1404,7 +1405,7 @@ public class LabelSkinTest {
         Rectangle r = new Rectangle(0, 0, 50, 50);
         r.setManaged(false);
         label.setGraphic(r);
-        skin.setPadding(new Insets(7, 7, 7, 7));
+        label.setPadding(new Insets(7, 7, 7, 7));
         assertEquals(14, label.maxWidth(-1), 0);
     }
     
@@ -1413,7 +1414,7 @@ public class LabelSkinTest {
         Rectangle r = new Rectangle(0, 0, 50, 50);
         r.setManaged(false);
         label.setGraphic(r);
-        skin.setPadding(new Insets(7, 7, 7, 7));
+        label.setPadding(new Insets(7, 7, 7, 7));
         assertEquals(14, label.maxWidth(-1), 0);
     }
     
@@ -1422,7 +1423,7 @@ public class LabelSkinTest {
         Rectangle r = new Rectangle(0, 0, 50, 50);
         r.setManaged(false);
         label.setGraphic(r);
-        skin.setPadding(new Insets(7, 7, 7, 7));
+        label.setPadding(new Insets(7, 7, 7, 7));
         final double textWidth = Utils.computeTextWidth(label.getFont(), "Lollipop", 0);
         assertEquals(14 + textWidth, label.maxWidth(-1), 0);
     }
@@ -1432,7 +1433,7 @@ public class LabelSkinTest {
         label.setGraphic(new Rectangle(0, 0, 20, 20));
         label.setGraphicTextGap(6.5);
         label.setContentDisplay(ContentDisplay.TOP);
-        skin.setPadding(new Insets(7, 7, 7, 7));
+        label.setPadding(new Insets(7, 7, 7, 7));
         assertEquals(14 + 20, label.maxWidth(-1), 0);
     }
     
@@ -1441,7 +1442,7 @@ public class LabelSkinTest {
         label.setGraphic(new Rectangle(0, 0, 20, 20));
         label.setGraphicTextGap(6.5);
         label.setContentDisplay(ContentDisplay.TOP);
-        skin.setPadding(new Insets(7, 7, 7, 7));
+        label.setPadding(new Insets(7, 7, 7, 7));
         assertEquals(14 + 20, label.maxWidth(-1), 0);
     }
     
@@ -1450,7 +1451,7 @@ public class LabelSkinTest {
         label.setGraphic(new Rectangle(0, 0, 200, 20));
         label.setGraphicTextGap(6.5);
         label.setContentDisplay(ContentDisplay.TOP);
-        skin.setPadding(new Insets(7, 7, 7, 7));
+        label.setPadding(new Insets(7, 7, 7, 7));
         assertEquals(14 + 200, label.maxWidth(-1), 0);
     }
     
@@ -1459,7 +1460,7 @@ public class LabelSkinTest {
         label.setGraphic(new Rectangle(0, 0, 20, 20));
         label.setGraphicTextGap(6.5);
         label.setContentDisplay(ContentDisplay.TOP);
-        skin.setPadding(new Insets(7, 7, 7, 7));
+        label.setPadding(new Insets(7, 7, 7, 7));
         final double textWidth = Utils.computeTextWidth(label.getFont(), "This is the right place", 0);
         assertEquals(14 + textWidth, label.maxWidth(-1), 0);
     }
@@ -1469,7 +1470,7 @@ public class LabelSkinTest {
         label.setGraphic(new Rectangle(0, 0, 20, 20));
         label.setGraphicTextGap(6.5);
         label.setContentDisplay(ContentDisplay.RIGHT);
-        skin.setPadding(new Insets(7, 7, 7, 7));
+        label.setPadding(new Insets(7, 7, 7, 7));
         assertEquals(20 + 14, label.maxWidth(-1), 0);
     }
 
@@ -1478,7 +1479,7 @@ public class LabelSkinTest {
         label.setGraphic(new Rectangle(0, 0, 20, 20));
         label.setGraphicTextGap(6.5);
         label.setContentDisplay(ContentDisplay.RIGHT);
-        skin.setPadding(new Insets(7, 7, 7, 7));
+        label.setPadding(new Insets(7, 7, 7, 7));
         assertEquals(20 + 14, label.maxWidth(-1), 0);
     }
     
@@ -1487,7 +1488,7 @@ public class LabelSkinTest {
         label.setGraphic(new Rectangle(0, 0, 20, 20));
         label.setGraphicTextGap(6.5);
         label.setContentDisplay(ContentDisplay.RIGHT);
-        skin.setPadding(new Insets(7, 7, 7, 7));
+        label.setPadding(new Insets(7, 7, 7, 7));
         final double textWidth = Utils.computeTextWidth(label.getFont(), "Howdy", 0);
         assertEquals(14 + textWidth + 6.5 + 20, label.maxWidth(-1), 0);
     }
@@ -1497,7 +1498,7 @@ public class LabelSkinTest {
         label.setGraphic(new Rectangle(0, 0, 20, 20));
         label.setGraphicTextGap(6.5);
         label.setContentDisplay(ContentDisplay.BOTTOM);
-        skin.setPadding(new Insets(7, 7, 7, 7));
+        label.setPadding(new Insets(7, 7, 7, 7));
         assertEquals(14 + 20, label.maxWidth(-1), 0);
     }
     
@@ -1506,7 +1507,7 @@ public class LabelSkinTest {
         label.setGraphic(new Rectangle(0, 0, 20, 20));
         label.setGraphicTextGap(6.5);
         label.setContentDisplay(ContentDisplay.BOTTOM);
-        skin.setPadding(new Insets(7, 7, 7, 7));
+        label.setPadding(new Insets(7, 7, 7, 7));
         assertEquals(14 + 20, label.maxWidth(-1), 0);
     }
     
@@ -1515,7 +1516,7 @@ public class LabelSkinTest {
         label.setGraphic(new Rectangle(0, 0, 200, 20));
         label.setGraphicTextGap(6.5);
         label.setContentDisplay(ContentDisplay.BOTTOM);
-        skin.setPadding(new Insets(7, 7, 7, 7));
+        label.setPadding(new Insets(7, 7, 7, 7));
         assertEquals(14 + 200, label.maxWidth(-1), 0);
     }
     
@@ -1524,7 +1525,7 @@ public class LabelSkinTest {
         label.setGraphic(new Rectangle(0, 0, 20, 20));
         label.setGraphicTextGap(6.5);
         label.setContentDisplay(ContentDisplay.BOTTOM);
-        skin.setPadding(new Insets(7, 7, 7, 7));
+        label.setPadding(new Insets(7, 7, 7, 7));
         final double textWidth = Utils.computeTextWidth(label.getFont(), "This is the right place", 0);
         assertEquals(14 + textWidth, label.maxWidth(-1), 0);
     }
@@ -1534,7 +1535,7 @@ public class LabelSkinTest {
         label.setGraphic(new Rectangle(0, 0, 20, 20));
         label.setGraphicTextGap(6.5);
         label.setContentDisplay(ContentDisplay.LEFT);
-        skin.setPadding(new Insets(7, 7, 7, 7));
+        label.setPadding(new Insets(7, 7, 7, 7));
         assertEquals(20 + 14, label.maxWidth(-1), 0);
     }
 
@@ -1543,7 +1544,7 @@ public class LabelSkinTest {
         label.setGraphic(new Rectangle(0, 0, 20, 20));
         label.setGraphicTextGap(6.5);
         label.setContentDisplay(ContentDisplay.LEFT);
-        skin.setPadding(new Insets(7, 7, 7, 7));
+        label.setPadding(new Insets(7, 7, 7, 7));
         assertEquals(20 + 14, label.maxWidth(-1), 0);
     }
     
@@ -1552,7 +1553,7 @@ public class LabelSkinTest {
         label.setGraphic(new Rectangle(0, 0, 20, 20));
         label.setGraphicTextGap(6.5);
         label.setContentDisplay(ContentDisplay.LEFT);
-        skin.setPadding(new Insets(7, 7, 7, 7));
+        label.setPadding(new Insets(7, 7, 7, 7));
         final double textWidth = Utils.computeTextWidth(label.getFont(), "Howdy", 0);
         assertEquals(14 + textWidth + 6.5 + 20, label.maxWidth(-1), 0);
     }
@@ -1562,7 +1563,7 @@ public class LabelSkinTest {
         label.setGraphic(new Rectangle(0, 0, 20, 20));
         label.setGraphicTextGap(6.5);
         label.setContentDisplay(ContentDisplay.CENTER);
-        skin.setPadding(new Insets(7, 7, 7, 7));
+        label.setPadding(new Insets(7, 7, 7, 7));
         assertEquals(14 + 20, label.maxWidth(-1), 0);
     }
     
@@ -1571,7 +1572,7 @@ public class LabelSkinTest {
         label.setGraphic(new Rectangle(0, 0, 20, 20));
         label.setGraphicTextGap(6.5);
         label.setContentDisplay(ContentDisplay.CENTER);
-        skin.setPadding(new Insets(7, 7, 7, 7));
+        label.setPadding(new Insets(7, 7, 7, 7));
         assertEquals(14 + 20, label.maxWidth(-1), 0);
     }
     
@@ -1580,7 +1581,7 @@ public class LabelSkinTest {
         label.setGraphic(new Rectangle(0, 0, 200, 20));
         label.setGraphicTextGap(6.5);
         label.setContentDisplay(ContentDisplay.CENTER);
-        skin.setPadding(new Insets(7, 7, 7, 7));
+        label.setPadding(new Insets(7, 7, 7, 7));
         assertEquals(14 + 200, label.maxWidth(-1), 0);
     }
     
@@ -1589,7 +1590,7 @@ public class LabelSkinTest {
         label.setGraphic(new Rectangle(0, 0, 20, 20));
         label.setGraphicTextGap(6.5);
         label.setContentDisplay(ContentDisplay.CENTER);
-        skin.setPadding(new Insets(7, 7, 7, 7));
+        label.setPadding(new Insets(7, 7, 7, 7));
         final double textWidth = Utils.computeTextWidth(label.getFont(), "This is the right place", 0);
         assertEquals(14 + textWidth, label.maxWidth(-1), 0);
     }
@@ -1599,7 +1600,7 @@ public class LabelSkinTest {
         label.setGraphic(new Rectangle(0, 0, 20, 20));
         label.setGraphicTextGap(6.5);
         label.setContentDisplay(ContentDisplay.GRAPHIC_ONLY);
-        skin.setPadding(new Insets(7, 7, 7, 7));
+        label.setPadding(new Insets(7, 7, 7, 7));
         assertEquals(14 + 20, label.maxWidth(-1), 0);
     }
     
@@ -1608,7 +1609,7 @@ public class LabelSkinTest {
         label.setGraphic(new Rectangle(0, 0, 20, 20));
         label.setGraphicTextGap(6.5);
         label.setContentDisplay(ContentDisplay.GRAPHIC_ONLY);
-        skin.setPadding(new Insets(7, 7, 7, 7));
+        label.setPadding(new Insets(7, 7, 7, 7));
         assertEquals(14 + 20, label.maxWidth(-1), 0);
     }
     
@@ -1617,7 +1618,7 @@ public class LabelSkinTest {
         label.setGraphic(new Rectangle(0, 0, 200, 20));
         label.setGraphicTextGap(6.5);
         label.setContentDisplay(ContentDisplay.GRAPHIC_ONLY);
-        skin.setPadding(new Insets(7, 7, 7, 7));
+        label.setPadding(new Insets(7, 7, 7, 7));
         assertEquals(14 + 200, label.maxWidth(-1), 0);
     }
     
@@ -1626,7 +1627,7 @@ public class LabelSkinTest {
         label.setGraphic(new Rectangle(0, 0, 20, 20));
         label.setGraphicTextGap(6.5);
         label.setContentDisplay(ContentDisplay.GRAPHIC_ONLY);
-        skin.setPadding(new Insets(7, 7, 7, 7));
+        label.setPadding(new Insets(7, 7, 7, 7));
         assertEquals(14 + 20, label.maxWidth(-1), 0);
     }
     
@@ -1636,7 +1637,7 @@ public class LabelSkinTest {
         label.setGraphic(new Rectangle(0, 0, 20, 20));
         label.setGraphicTextGap(6.5);
         label.setContentDisplay(ContentDisplay.TEXT_ONLY);
-        skin.setPadding(new Insets(7, 7, 7, 7));
+        label.setPadding(new Insets(7, 7, 7, 7));
         assertEquals(14, label.maxWidth(-1), 0);
     }
     
@@ -1645,7 +1646,7 @@ public class LabelSkinTest {
         label.setGraphic(new Rectangle(0, 0, 20, 20));
         label.setGraphicTextGap(6.5);
         label.setContentDisplay(ContentDisplay.TEXT_ONLY);
-        skin.setPadding(new Insets(7, 7, 7, 7));
+        label.setPadding(new Insets(7, 7, 7, 7));
         assertEquals(14, label.maxWidth(-1), 0);
     }
     
@@ -1655,7 +1656,7 @@ public class LabelSkinTest {
         label.setGraphic(new Rectangle(0, 0, 20, 20));
         label.setGraphicTextGap(6.5);
         label.setContentDisplay(ContentDisplay.TEXT_ONLY);
-        skin.setPadding(new Insets(7, 7, 7, 7));
+        label.setPadding(new Insets(7, 7, 7, 7));
         final double textWidth = Utils.computeTextWidth(label.getFont(), "Yippee Skippee", 0);
         assertEquals(14 + textWidth, label.maxWidth(-1), 0);
     }
@@ -1668,21 +1669,21 @@ public class LabelSkinTest {
 
     @Test public void whenTextIsNullAndNoGraphic_computeMaxHeight_ReturnsSingleLineStringHeightPlusPadding() {
         label.setText(null);
-        skin.setPadding(new Insets(7, 7, 7, 7));
+        label.setPadding(new Insets(7, 7, 7, 7));
         final double lineHeight = Utils.computeTextHeight(label.getFont(), " ", 0);
         assertEquals(14 + lineHeight, label.maxHeight(-1), 0);
     }
     
     @Test public void whenTextIsEmptyAndNoGraphic_computeMaxHeight_ReturnsSingleLineStringHeightPlusPadding() {
         label.setText("");
-        skin.setPadding(new Insets(7, 7, 7, 7));
+        label.setPadding(new Insets(7, 7, 7, 7));
         final double lineHeight = Utils.computeTextHeight(label.getFont(), " ", 0);
         assertEquals(14 + lineHeight, label.maxHeight(-1), 0);
     }
     
     @Test public void whenTextIsSetAndNoGraphic_computeMaxHeight_ReturnsSingleLineStringHeightPlusPadding() {
         label.setText("Howdy Pardner");
-        skin.setPadding(new Insets(7, 7, 7, 7));
+        label.setPadding(new Insets(7, 7, 7, 7));
         assertTrue(label.maxHeight(-1) >= 0);
         final double lineHeight = Utils.computeTextHeight(label.getFont(), " ", 0);
         assertEquals(14 + lineHeight, label.maxHeight(-1), 0);
@@ -1690,7 +1691,7 @@ public class LabelSkinTest {
     
     @Test public void whenTextIsNullAndUnmanagedGraphic_computeMaxHeight_ReturnsSingleLineStringHeightPlusPadding() {
         label.setText(null);
-        skin.setPadding(new Insets(7, 7, 7, 7));
+        label.setPadding(new Insets(7, 7, 7, 7));
         Rectangle r = new Rectangle(23, 500);
         r.setManaged(false);
         label.setGraphic(r);
@@ -1700,7 +1701,7 @@ public class LabelSkinTest {
     
     @Test public void whenTextIsEmptyAndUnmanagedGraphic_computeMaxHeight_ReturnsSingleLineStringHeightPlusPadding() {
         label.setText("");
-        skin.setPadding(new Insets(7, 7, 7, 7));
+        label.setPadding(new Insets(7, 7, 7, 7));
         Rectangle r = new Rectangle(23, 500);
         r.setManaged(false);
         label.setGraphic(r);
@@ -1710,7 +1711,7 @@ public class LabelSkinTest {
     
     @Test public void whenTextIsSetAndUnmanagedGraphic_computeMaxHeight_ReturnsSingleLineStringHeightPlusPadding() {
         label.setText("Howdy Pardner");
-        skin.setPadding(new Insets(7, 7, 7, 7));
+        label.setPadding(new Insets(7, 7, 7, 7));
         Rectangle r = new Rectangle(23, 500);
         r.setManaged(false);
         label.setGraphic(r);
@@ -1721,7 +1722,7 @@ public class LabelSkinTest {
     
     @Test public void whenTextIsNullAndGraphicIsSetWithTOPContentDisplay_computeMaxHeight_ReturnsRightAnswer() {
         label.setText(null);
-        skin.setPadding(new Insets(7, 7, 7, 7));
+        label.setPadding(new Insets(7, 7, 7, 7));
         Rectangle r = new Rectangle(23, 23);
         label.setGraphicTextGap(2);
         label.setGraphic(r);
@@ -1732,7 +1733,7 @@ public class LabelSkinTest {
     
     @Test public void whenTextIsEmptyAndGraphicIsSetWithTOPContentDisplay_computeMaxHeight_ReturnsRightAnswer() {
         label.setText("");
-        skin.setPadding(new Insets(7, 7, 7, 7));
+        label.setPadding(new Insets(7, 7, 7, 7));
         Rectangle r = new Rectangle(23, 23);
         label.setGraphicTextGap(2);
         label.setGraphic(r);
@@ -1743,7 +1744,7 @@ public class LabelSkinTest {
     
     @Test public void whenTextIsSetAndGraphicIsSetWithTOPContentDisplay_computeMaxHeight_ReturnsRightAnswer() {
         label.setText("For crying in the mud");
-        skin.setPadding(new Insets(7, 7, 7, 7));
+        label.setPadding(new Insets(7, 7, 7, 7));
         Rectangle r = new Rectangle(23, 23);
         label.setGraphic(r);
         label.setGraphicTextGap(2);
@@ -1754,7 +1755,7 @@ public class LabelSkinTest {
     
     @Test public void whenTextIsNullAndGraphicIsSetWithRIGHTContentDisplay_computeMaxHeight_ReturnsRightAnswer() {
         label.setText(null);
-        skin.setPadding(new Insets(7, 7, 7, 7));
+        label.setPadding(new Insets(7, 7, 7, 7));
         Rectangle r = new Rectangle(23, 23);
         label.setGraphic(r);
         label.setContentDisplay(ContentDisplay.RIGHT);
@@ -1764,7 +1765,7 @@ public class LabelSkinTest {
     
     @Test public void whenTextIsEmptyAndGraphicIsSetWithRIGHTContentDisplay_computeMaxHeight_ReturnsRightAnswer() {
         label.setText("");
-        skin.setPadding(new Insets(7, 7, 7, 7));
+        label.setPadding(new Insets(7, 7, 7, 7));
         Rectangle r = new Rectangle(23, 23);
         label.setGraphic(r);
         label.setContentDisplay(ContentDisplay.RIGHT);
@@ -1774,7 +1775,7 @@ public class LabelSkinTest {
     
     @Test public void whenTextIsSetAndGraphicIsSetWithRIGHTContentDisplay_computeMaxHeight_ReturnsRightAnswer() {
         label.setText("For crying in the mud");
-        skin.setPadding(new Insets(7, 7, 7, 7));
+        label.setPadding(new Insets(7, 7, 7, 7));
         Rectangle r = new Rectangle(23, 23);
         label.setGraphic(r);
         label.setContentDisplay(ContentDisplay.RIGHT);
@@ -1784,7 +1785,7 @@ public class LabelSkinTest {
     
     @Test public void whenTextIsNullAndGraphicIsSetWithBOTTOMContentDisplay_computeMaxHeight_ReturnsRightAnswer() {
         label.setText(null);
-        skin.setPadding(new Insets(7, 7, 7, 7));
+        label.setPadding(new Insets(7, 7, 7, 7));
         Rectangle r = new Rectangle(23, 23);
         label.setGraphicTextGap(2);
         label.setGraphic(r);
@@ -1795,7 +1796,7 @@ public class LabelSkinTest {
     
     @Test public void whenTextIsEmptyAndGraphicIsSetWithBOTTOMContentDisplay_computeMaxHeight_ReturnsRightAnswer() {
         label.setText("");
-        skin.setPadding(new Insets(7, 7, 7, 7));
+        label.setPadding(new Insets(7, 7, 7, 7));
         Rectangle r = new Rectangle(23, 23);
         label.setGraphicTextGap(2);
         label.setGraphic(r);
@@ -1806,7 +1807,7 @@ public class LabelSkinTest {
     
     @Test public void whenTextIsSetAndGraphicIsSetWithBOTTOMContentDisplay_computeMaxHeight_ReturnsRightAnswer() {
         label.setText("For crying in the mud");
-        skin.setPadding(new Insets(7, 7, 7, 7));
+        label.setPadding(new Insets(7, 7, 7, 7));
         Rectangle r = new Rectangle(23, 23);
         label.setGraphic(r);
         label.setGraphicTextGap(2);
@@ -1817,7 +1818,7 @@ public class LabelSkinTest {
     
     @Test public void whenTextIsNullAndGraphicIsSetWithLEFTContentDisplay_computeMaxHeight_ReturnsRightAnswer() {
         label.setText(null);
-        skin.setPadding(new Insets(7, 7, 7, 7));
+        label.setPadding(new Insets(7, 7, 7, 7));
         Rectangle r = new Rectangle(23, 23);
         label.setGraphic(r);
         label.setContentDisplay(ContentDisplay.LEFT);
@@ -1827,7 +1828,7 @@ public class LabelSkinTest {
     
     @Test public void whenTextIsEmptyAndGraphicIsSetWithLEFTContentDisplay_computeMaxHeight_ReturnsRightAnswer() {
         label.setText("");
-        skin.setPadding(new Insets(7, 7, 7, 7));
+        label.setPadding(new Insets(7, 7, 7, 7));
         Rectangle r = new Rectangle(23, 23);
         label.setGraphic(r);
         label.setContentDisplay(ContentDisplay.LEFT);
@@ -1837,7 +1838,7 @@ public class LabelSkinTest {
     
     @Test public void whenTextIsSetAndGraphicIsSetWithLEFTContentDisplay_computeMaxHeight_ReturnsRightAnswer() {
         label.setText("For crying in the mud");
-        skin.setPadding(new Insets(7, 7, 7, 7));
+        label.setPadding(new Insets(7, 7, 7, 7));
         Rectangle r = new Rectangle(23, 23);
         label.setGraphic(r);
         label.setContentDisplay(ContentDisplay.LEFT);
@@ -1847,7 +1848,7 @@ public class LabelSkinTest {
     
     @Test public void whenTextIsNullAndGraphicIsSetWithCENTERContentDisplay_computeMaxHeight_ReturnsRightAnswer() {
         label.setText(null);
-        skin.setPadding(new Insets(7, 7, 7, 7));
+        label.setPadding(new Insets(7, 7, 7, 7));
         Rectangle r = new Rectangle(23, 23);
         label.setGraphic(r);
         label.setContentDisplay(ContentDisplay.CENTER);
@@ -1857,7 +1858,7 @@ public class LabelSkinTest {
     
     @Test public void whenTextIsEmptyAndGraphicIsSetWithCENTERContentDisplay_computeMaxHeight_ReturnsRightAnswer() {
         label.setText("");
-        skin.setPadding(new Insets(7, 7, 7, 7));
+        label.setPadding(new Insets(7, 7, 7, 7));
         Rectangle r = new Rectangle(23, 23);
         label.setGraphic(r);
         label.setContentDisplay(ContentDisplay.CENTER);
@@ -1867,7 +1868,7 @@ public class LabelSkinTest {
     
     @Test public void whenTextIsSetAndGraphicIsSetWithCENTERContentDisplay_computeMaxHeight_ReturnsRightAnswer() {
         label.setText("For crying in the mud");
-        skin.setPadding(new Insets(7, 7, 7, 7));
+        label.setPadding(new Insets(7, 7, 7, 7));
         Rectangle r = new Rectangle(23, 23);
         label.setGraphic(r);
         label.setContentDisplay(ContentDisplay.CENTER);
@@ -1877,7 +1878,7 @@ public class LabelSkinTest {
     
     @Test public void whenTextIsNullAndGraphicIsSetWithGRAPHIC_ONLYContentDisplay_computeMaxHeight_ReturnsRightAnswer() {
         label.setText(null);
-        skin.setPadding(new Insets(7, 7, 7, 7));
+        label.setPadding(new Insets(7, 7, 7, 7));
         Rectangle r = new Rectangle(23, 23);
         label.setGraphic(r);
         label.setContentDisplay(ContentDisplay.GRAPHIC_ONLY);
@@ -1886,7 +1887,7 @@ public class LabelSkinTest {
     
     @Test public void whenTextIsEmptyAndGraphicIsSetWithGRAPHIC_ONLYContentDisplay_computeMaxHeight_ReturnsRightAnswer() {
         label.setText("");
-        skin.setPadding(new Insets(7, 7, 7, 7));
+        label.setPadding(new Insets(7, 7, 7, 7));
         Rectangle r = new Rectangle(23, 23);
         label.setGraphic(r);
         label.setContentDisplay(ContentDisplay.GRAPHIC_ONLY);
@@ -1895,7 +1896,7 @@ public class LabelSkinTest {
     
     @Test public void whenTextIsSetAndGraphicIsSetWithGRAPHIC_ONLYContentDisplay_computeMaxHeight_ReturnsRightAnswer() {
         label.setText("For crying in the mud");
-        skin.setPadding(new Insets(7, 7, 7, 7));
+        label.setPadding(new Insets(7, 7, 7, 7));
         Rectangle r = new Rectangle(23, 23);
         label.setGraphic(r);
         label.setContentDisplay(ContentDisplay.GRAPHIC_ONLY);
@@ -1904,7 +1905,7 @@ public class LabelSkinTest {
     
     @Test public void whenTextIsNullAndGraphicIsSetWithTEXT_ONLYContentDisplay_computeMaxHeight_ReturnsRightAnswer() {
         label.setText(null);
-        skin.setPadding(new Insets(7, 7, 7, 7));
+        label.setPadding(new Insets(7, 7, 7, 7));
         Rectangle r = new Rectangle(23, 23);
         label.setGraphic(r);
         label.setContentDisplay(ContentDisplay.TEXT_ONLY);
@@ -1914,7 +1915,7 @@ public class LabelSkinTest {
     
     @Test public void whenTextIsEmptyAndGraphicIsSetWithTEXT_ONLYContentDisplay_computeMaxHeight_ReturnsRightAnswer() {
         label.setText("");
-        skin.setPadding(new Insets(7, 7, 7, 7));
+        label.setPadding(new Insets(7, 7, 7, 7));
         Rectangle r = new Rectangle(23, 23);
         label.setGraphic(r);
         label.setContentDisplay(ContentDisplay.TEXT_ONLY);
@@ -1924,7 +1925,7 @@ public class LabelSkinTest {
     
     @Test public void whenTextIsSetAndGraphicIsSetWithTEXT_ONLYContentDisplay_computeMaxHeight_ReturnsRightAnswer() {
         label.setText("For crying in the mud");
-        skin.setPadding(new Insets(7, 7, 7, 7));
+        label.setPadding(new Insets(7, 7, 7, 7));
         Rectangle r = new Rectangle(23, 23);
         label.setGraphic(r);
         label.setContentDisplay(ContentDisplay.TEXT_ONLY);

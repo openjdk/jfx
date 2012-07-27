@@ -348,41 +348,6 @@ public class ParentTest {
     }
 
     @Test
-    public void testChildrenTraversalOfEmptyParent() {
-        Group g = new Group();
-        Rectangle r = new Rectangle();
-
-        assertNull(g.getFirstChild());
-        assertNull(g.getLastChild());
-        assertNull(g.getNextChild(r));
-        assertNull(g.getPreviousChild(r));
-    }
-
-    @Test
-    public void testChildrenTraversal() {
-        Group g = new Group();
-        Rectangle r1 = new Rectangle();
-        Rectangle r2 = new Rectangle();
-        Rectangle r3 = new Rectangle();
-        Rectangle r4 = new Rectangle();
-
-        g.getChildren().add(r1);
-        g.getChildren().add(r2);
-        g.getChildren().add(r3);
-
-        assertSame(r1, g.getFirstChild());
-        assertSame(r3, g.getLastChild());
-        assertSame(r2, g.getNextChild(r1));
-        assertSame(r2, g.getPreviousChild(r3));
-        assertSame(r3, g.getNextChild(r2));
-        assertSame(r1, g.getPreviousChild(r2));
-        assertNull(g.getNextChild(r3));
-        assertNull(g.getPreviousChild(r1));
-        assertNull(g.getNextChild(r4));
-        assertNull(g.getPreviousChild(r4));
-    }
-
-    @Test
     public void testDuplicates() {
         Group g = new Group();
 

@@ -125,7 +125,7 @@ public class PieChart extends Chart {
                 dataItemAdded(i, item);
             }
             // update legend if any data has changed
-            if (c.getRemoved().size() > 0 || c.getFrom() < c.getTo()) updateLegend();
+            if (isLegendVisible() && (c.getRemoved().size() > 0 || c.getFrom() < c.getTo())) updateLegend();
             // re-layout everything
             }
             requestChartLayout();
@@ -378,6 +378,9 @@ public class PieChart extends Chart {
                     new EventHandler<ActionEvent>() {
                         @Override public void handle(ActionEvent actionEvent) {
                             text.setOpacity(0);
+                            // RT-23597 : item's chart might have been set to null if
+                            // this item is added and removed before its add animation finishes.
+                            if (item.getChart() == null) item.setChart(PieChart.this);
                             item.getChart().getChartChildren().add(text);
                             FadeTransition ft = new FadeTransition(Duration.millis(150),text);
                             ft.setToValue(1);
@@ -474,7 +477,7 @@ public class PieChart extends Chart {
         double[] labelAngles = null;
         double labelScale = 1;
         ArrayList<LabelLayoutInfo> fullPie = null;
-        boolean shouldShowLabels = true;
+        boolean shouldShowLabels = getLabelsVisible();
         if(getLabelsVisible()) {
             labelsX = new double[getDataSize()];
             labelsY = new double[getDataSize()];
@@ -678,6 +681,7 @@ public class PieChart extends Chart {
      * This is called whenever a series is added or removed and the legend needs to be updated
      */
     private void updateLegend() {
+        if (getLegend() != legend) return; // RT-23569 dont update when user has set legend.
         legend.setVertical(getLegendSide().equals(Side.LEFT) || getLegendSide().equals(Side.RIGHT));
         legend.getItems().clear();
         if (getData() != null) {

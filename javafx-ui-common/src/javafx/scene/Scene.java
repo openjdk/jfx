@@ -982,7 +982,7 @@ public class Scene implements EventTarget {
                         throw new IllegalArgumentException(_value +
                                 "is set as a clip on another node, so cannot be set as root");
                     }
-                    if (_value.isSceneRoot() && _value.getScene() != Scene.this) {
+                    if (_value.getScene() != null && _value.getScene().getRoot() == _value && _value.getScene() != Scene.this) {
                         if (isBound()) forceUnbind();
                         throw new IllegalArgumentException(_value +
                                 "is already set as root of another scene");

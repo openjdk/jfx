@@ -271,11 +271,13 @@ public class TableRow<T> extends IndexedCell<T> {
         if (getIndex() == -1) return;
         
         TableView<T> table = getTableView();
+        TableView.TableViewSelectionModel sm = table.getSelectionModel();
+        TableView.TableViewFocusModel fm = table.getFocusModel();
         boolean isFocused = table != null &&
-                table.getSelectionModel() != null &&
-                ! table.getSelectionModel().isCellSelectionEnabled() &&
-                table.getFocusModel() != null &&
-                table.getFocusModel().isFocused(getIndex());
+                sm != null &&
+                ! sm.isCellSelectionEnabled() &&
+                fm != null &&
+                fm.isFocused(getIndex());
 
         setFocused(isFocused);
     }
@@ -286,7 +288,7 @@ public class TableRow<T> extends IndexedCell<T> {
         TableView<T> table = getTableView();
         if (table == null) return;
 
-        TableView.TableViewSelectionModel sm = getTableView().getSelectionModel();
+        TableView.TableViewSelectionModel sm = table.getSelectionModel();
         if (sm == null || sm.isCellSelectionEnabled()) return;
 
         TablePosition editCell = table.getEditingCell();
