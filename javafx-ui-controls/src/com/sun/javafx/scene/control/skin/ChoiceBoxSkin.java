@@ -239,7 +239,7 @@ import com.sun.javafx.scene.control.WeakListChangeListener;
                 // choice box changes size when the popup is shown
                 // popup.setWidth(getWidth());
                 
-                popup.show(getSkinnable(), Side.BOTTOM, 0, y);
+                popup.show(getSkinnable(), Side.BOTTOM, 2, y);
             } else {
                 popup.hide();
             }
