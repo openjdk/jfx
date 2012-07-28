@@ -535,9 +535,9 @@ public class TitledPaneSkin extends LabeledSkinBase<TitledPane, TitledPaneBehavi
 
         public final void setContent(Node n) {
             this.content = n;
-            content.setVisible(getSkinnable().isExpanded());
             getChildren().clear();
             if (n != null) {
+                content.setVisible(getSkinnable().isExpanded());
                 getChildren().setAll(n);
             }
         }
