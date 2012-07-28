@@ -189,6 +189,7 @@ public class MenuBarSkin extends SkinBase<MenuBar, BehaviorBase<MenuBar>> implem
         super(control, new BehaviorBase<MenuBar>(control));
         
         container = new HBox();
+        container.getStyleClass().add("container");
         getChildren().add(container);
         
         // Key navigation 

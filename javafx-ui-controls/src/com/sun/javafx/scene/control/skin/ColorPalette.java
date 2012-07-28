@@ -111,6 +111,7 @@ public class ColorPalette extends StackPane {
         });
         
         initNavigation();
+        customColorGrid.getStyleClass().add("color-picker-grid");
         customColorGrid.setVisible(false);
         customColorGrid.setFocusTraversable(true);
         for (Color c : colorPicker.getCustomColors()) {

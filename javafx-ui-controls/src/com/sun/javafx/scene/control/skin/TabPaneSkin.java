@@ -978,6 +978,7 @@ public class TabPaneSkin extends SkinBase<TabPane, TabPaneBehavior> {
                     }
                 }
             };
+            inner.getStyleClass().add("tab-container");
             inner.setRotate(getSkinnable().getSide().equals(Side.BOTTOM) ? 180.0F : 0.0F);
             inner.getChildren().addAll(label, closeBtn);
 
@@ -1452,6 +1453,7 @@ public class TabPaneSkin extends SkinBase<TabPane, TabPaneBehavior> {
                             /*baseline ignored*/0, HPos.CENTER, VPos.CENTER);
                 }
             };
+            inner.getStyleClass().add("container");
             inner.getChildren().add(downArrowBtn);
 
             getChildren().add(inner);

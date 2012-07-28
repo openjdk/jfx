@@ -230,6 +230,8 @@ public class ProgressIndicatorSkin extends SkinBase<ProgressIndicator, ProgressI
         public DeterminateIndicator(ProgressIndicator control, ProgressIndicatorSkin s) {
             this.control = control;
             this.skin = s;
+            
+            getStyleClass().add("determinate-indicator");
 
             intProgress = (int) Math.round(control.getProgress() * 100.0) ;
             degProgress = (int) (360 * control.getProgress());
