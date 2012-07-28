@@ -35,7 +35,7 @@ import javafx.event.EventType;
 import javafx.scene.Node;
 
 import com.sun.javafx.collections.TrackableObservableList;
-import com.sun.javafx.event.EventHandlerManager;
+import com.sun.javafx.event.EventTypeUtil;
 import com.sun.javafx.scene.control.Logging;
 import javafx.beans.DefaultProperty;
 import javafx.beans.property.ReadOnlyBooleanProperty;
@@ -89,7 +89,7 @@ public class Menu extends MenuItem {
      * </p>
      */
     public static final EventType<Event> ON_SHOWING =
-            new EventType<Event>(Event.ANY, "ON_SHOWING");
+            EventTypeUtil.registerInternalEventType(Event.ANY, "MENU_ON_SHOWING");
 
     /**
      * <p>Called when the contentMenu for this menu shows. However if the
@@ -97,7 +97,7 @@ public class Menu extends MenuItem {
      * </p>
      */
     public static final EventType<Event> ON_SHOWN =
-            new EventType<Event>(Event.ANY, "ON_SHOWN");
+            EventTypeUtil.registerInternalEventType(Event.ANY, "MENU_ON_SHOWN");
 
     /**
      * <p>Called when the contentMenu for this menu <b>will</b> be hidden. However if the
@@ -105,7 +105,7 @@ public class Menu extends MenuItem {
      * </p>
      */
     public static final EventType<Event> ON_HIDING =
-            new EventType<Event>(Event.ANY, "ON_HIDING");
+            EventTypeUtil.registerInternalEventType(Event.ANY, "MENU_ON_HIDING");
 
     /**
      * <p>Called when the contentMenu for this menu is hidden. However if the
@@ -113,7 +113,7 @@ public class Menu extends MenuItem {
      * </p>
      */
     public static final EventType<Event> ON_HIDDEN =
-            new EventType<Event>(Event.ANY, "ON_HIDDEN");
+            EventTypeUtil.registerInternalEventType(Event.ANY, "MENU_ON_HIDDEN");
 
     /***************************************************************************
      *                                                                         *
@@ -169,7 +169,7 @@ public class Menu extends MenuItem {
                 Event.fireEvent(this, new Event(MENU_VALIDATION_EVENT));
                 for(MenuItem m : getItems()) {
                     if (!(m instanceof Menu) && m.getOnMenuValidation() != null) {
-                        Event.fireEvent(m, new Event(m.MENU_VALIDATION_EVENT));
+                        Event.fireEvent(m, new Event(MenuItem.MENU_VALIDATION_EVENT));
                     }
                 }
            }

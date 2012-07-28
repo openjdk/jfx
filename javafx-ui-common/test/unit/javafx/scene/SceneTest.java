@@ -57,6 +57,7 @@ public class SceneTest {
     public void setUp() {
         stage = new Stage();
         stage.show();
+        stage.requestFocus();
     }
 
     @After

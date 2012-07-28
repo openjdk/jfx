@@ -25,6 +25,7 @@
 
 package javafx.scene;
 
+import javafx.scene.transform.Rotate;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 import javafx.geometry.Bounds;
@@ -326,6 +327,49 @@ public class Parent_recomputeBounds_Test {
         rm2.setY(151);
 
         b = g.getBoundsInParent();
+        assertEquals(50, b.getMinX(), 0.0001);
+        assertEquals(50, b.getMinY(), 0.0001);
+        assertEquals(300, b.getWidth(), 0.0001);
+        assertEquals(300, b.getHeight(), 0.0001);
+    }
+
+    @Test
+    public void transformedBoundsCalculationShouldNotInfluenceUntransformed() {
+        final Group g = new Group();
+        final Rectangle lt = new Rectangle(100, 100, 100, 100);
+        final Rectangle rt = new Rectangle(200, 100, 100, 100);
+        final Rectangle lb = new Rectangle(100, 200, 100, 100);
+        final Rectangle rb = new Rectangle(200, 200, 100, 100);
+        final Rectangle rm1 = new Rectangle(150, 150, 50, 50);
+        final Rectangle rm2 = new Rectangle(150, 150, 50, 50);
+        Bounds b;
+
+        g.getChildren().addAll(lt, rt, lb, rb, rm1, rm2);
+        for (int i = 0; i < 20; i++) {
+            g.getChildren().add(new Rectangle(150 + i, 150 + i, 50 + i, 50 + i));
+        }
+
+        b = g.getBoundsInLocal();
+        assertEquals(100, b.getMinX(), 0.0001);
+        assertEquals(100, b.getMinY(), 0.0001);
+        assertEquals(200, b.getWidth(), 0.0001);
+        assertEquals(200, b.getHeight(), 0.0001);
+
+        g.getTransforms().add(new Rotate(45));
+
+        lt.setX(50);
+        rt.setX(250);
+        lb.setY(250);
+        rb.setX(220);
+        rm1.setY(50);
+        rm2.setX(151);
+        rm2.setY(151);
+
+        // this call gets transformed Parent bounds and shouldn't clear the
+        // Parent's dirty children list
+        g.getBoundsInParent();
+
+        b = g.getBoundsInLocal();
         assertEquals(50, b.getMinX(), 0.0001);
         assertEquals(50, b.getMinY(), 0.0001);
         assertEquals(300, b.getWidth(), 0.0001);

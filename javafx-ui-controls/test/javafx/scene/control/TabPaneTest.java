@@ -68,6 +68,7 @@ public class TabPaneTest {
      ********************************************************************/
     private void show() {
         stage.show();
+        stage.requestFocus();
     }
 
     /*********************************************************************
@@ -802,6 +803,7 @@ public class TabPaneTest {
         
         stage.setScene(scene1);
         stage.show();
+        stage.requestFocus();
 
         final KeyEvent tabEvent = KeyEvent.impl_keyEvent(null, "", "", 0x09,
                                                          false, false, false, false,

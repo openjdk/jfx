@@ -27,6 +27,7 @@ import javafx.scene.shape.Rectangle;
 
 
 import org.junit.Before;
+import org.junit.BeforeClass;
 import org.junit.Ignore;
 import org.junit.Test;
 
@@ -36,7 +37,12 @@ import org.junit.Test;
  * @author lubermud
  */
 public class MenuItemTest {
+    public static EventType<Event> eventType;
     private MenuItem menuItem;
+
+    @BeforeClass public static void classSetup() {
+        eventType = new EventType<Event>(Event.ANY, "ON_EVENT");
+    }
 
     @Before public void setup() {
         menuItem = new MenuItem();
@@ -466,57 +472,51 @@ public class MenuItemTest {
     }
 
     @Test public void addedEventHandler1() {
-        EventType<Event> et1 = new EventType<Event>(Event.ANY, "ON_EVENT");
         NewEventHandlerStub handler = new NewEventHandlerStub();
-        Event.fireEvent(menuItem, new Event(et1));
-        menuItem.addEventHandler(et1, handler);
+        Event.fireEvent(menuItem, new Event(eventType));
+        menuItem.addEventHandler(eventType, handler);
 
         assertFalse(handler.called);
     }
     
     @Test public void addedEventHandler2() {
-        EventType<Event> et1 = new EventType<Event>(Event.ANY, "ON_EVENT");
         NewEventHandlerStub handler = new NewEventHandlerStub();
-        menuItem.addEventHandler(et1, handler);
-        Event.fireEvent(menuItem, new Event(et1));
+        menuItem.addEventHandler(eventType, handler);
+        Event.fireEvent(menuItem, new Event(eventType));
 
         assertTrue(handler.called);
     }
 
     @Test public void addedRemovedEventHandler1() {
-        EventType<Event> et1 = new EventType<Event>(Event.ANY, "ON_EVENT");
         NewEventHandlerStub handler = new NewEventHandlerStub();
-        menuItem.removeEventHandler(et1, handler);
-        Event.fireEvent(menuItem, new Event(et1));
+        menuItem.removeEventHandler(eventType, handler);
+        Event.fireEvent(menuItem, new Event(eventType));
 
         assertFalse(handler.called);
     }
 
     @Test public void addedRemovedEventHandler2() {
-        EventType<Event> et1 = new EventType<Event>(Event.ANY, "ON_EVENT");
         NewEventHandlerStub handler = new NewEventHandlerStub();
-        Event.fireEvent(menuItem, new Event(et1));
-        menuItem.removeEventHandler(et1, handler);
+        Event.fireEvent(menuItem, new Event(eventType));
+        menuItem.removeEventHandler(eventType, handler);
 
         assertFalse(handler.called);
     }
     
     @Test public void addedRemovedEventHandler3() {
-        EventType<Event> et1 = new EventType<Event>(Event.ANY, "ON_EVENT");
         NewEventHandlerStub handler = new NewEventHandlerStub();
-        menuItem.addEventHandler(et1, handler);
-        menuItem.removeEventHandler(et1, handler);
-        Event.fireEvent(menuItem, new Event(et1));
+        menuItem.addEventHandler(eventType, handler);
+        menuItem.removeEventHandler(eventType, handler);
+        Event.fireEvent(menuItem, new Event(eventType));
 
         assertFalse(handler.called);
     }
 
     @Test public void addedRemovedEventHandler4() {
-        EventType<Event> et1 = new EventType<Event>(Event.ANY, "ON_EVENT");
         NewEventHandlerStub handler = new NewEventHandlerStub();
-        menuItem.addEventHandler(et1, handler);
-        Event.fireEvent(menuItem, new Event(et1));
-        menuItem.removeEventHandler(et1, handler);
+        menuItem.addEventHandler(eventType, handler);
+        Event.fireEvent(menuItem, new Event(eventType));
+        menuItem.removeEventHandler(eventType, handler);
 
         assertTrue(handler.called);
     }

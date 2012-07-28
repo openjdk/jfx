@@ -26,6 +26,8 @@
 package javafx.scene.input;
 
 import com.sun.javafx.scene.input.InputEventUtils;
+import java.io.IOException;
+import java.io.Serializable;
 import javafx.event.EventTarget;
 import javafx.geometry.Point2D;
 import javafx.scene.Node;
@@ -50,10 +52,10 @@ import javafx.scene.Scene;
  *
  * @since 2.2
  */
-public final class TouchPoint {
+public final class TouchPoint implements Serializable{
 
-    private EventTarget target;
-    private Object source;
+    private transient EventTarget target;
+    private transient Object source;
 
     private TouchPoint(int id, State state, double x, double y, double screenX,
             double screenY) {
@@ -194,7 +196,7 @@ public final class TouchPoint {
     }
 
 
-    private double x;
+    private transient double x;
 
     /**
      * Gets the horizontal position of the touch point relative to the
@@ -207,7 +209,7 @@ public final class TouchPoint {
         return x;
     }
 
-    private double y;
+    private transient double y;
 
     /**
      * Gets the vertical position of the touch point relative to the
@@ -302,6 +304,13 @@ public final class TouchPoint {
     public static TouchPoint impl_touchPoint(
             int id, State state, double x, double y, double screenX, double screenY) {
         return new TouchPoint(id, state, x, y, screenX, screenY);
+    }
+
+    private void readObject(java.io.ObjectInputStream in)
+            throws IOException, ClassNotFoundException {
+        in.defaultReadObject();
+        x = sceneX;
+        y = sceneY;
     }
 
     /**
