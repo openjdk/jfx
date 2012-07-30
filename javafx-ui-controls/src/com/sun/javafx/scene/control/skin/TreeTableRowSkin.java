@@ -55,7 +55,6 @@ import javafx.scene.control.*;
 
 /**
  *
- * @author Jonathan
  */
 public class TreeTableRowSkin<T> extends CellSkinBase<TreeTableRow<T>, CellBehaviorBase<TreeTableRow<T>>> {
 
