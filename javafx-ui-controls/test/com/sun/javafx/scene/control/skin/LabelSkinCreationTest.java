@@ -26,6 +26,7 @@ import org.junit.runners.Parameterized;
 import org.junit.runners.Parameterized.Parameters;
 
 import static javafx.scene.control.ContentDisplay.*;
+import javafx.scene.control.SkinBaseAccessor;
 
 
 /**
@@ -135,25 +136,25 @@ public class LabelSkinCreationTest {
         if (label.getContentDisplay() == ContentDisplay.GRAPHIC_ONLY) {
             // 1 child, graphic, if it is not null, otherwise 0
             if (label.getGraphic() == null) {
-                assertEquals(0, skin.getChildrenUnmodifiable().size());
+                assertEquals(0, SkinBaseAccessor.getChildren(skin).size());
             } else {
-                assertEquals(1, skin.getChildrenUnmodifiable().size());
-                assertEquals(label.getGraphic(), skin.getChildrenUnmodifiable().get(0));
+                assertEquals(1, SkinBaseAccessor.getChildren(skin).size());
+                assertEquals(label.getGraphic(), SkinBaseAccessor.getChildren(skin).get(0));
             }
         } else if (label.getContentDisplay() == ContentDisplay.TEXT_ONLY) {
             // 1 child, text
-            assertEquals(1, skin.getChildrenUnmodifiable().size());
-            assertEquals(text, skin.getChildrenUnmodifiable().get(0));
+            assertEquals(1, SkinBaseAccessor.getChildren(skin).size());
+            assertEquals(text, SkinBaseAccessor.getChildren(skin).get(0));
         } else {
             if (label.getGraphic() == null) {
                 // 1 child, text
-                assertEquals(1, skin.getChildrenUnmodifiable().size());
-                assertEquals(text, skin.getChildrenUnmodifiable().get(0));
+                assertEquals(1, SkinBaseAccessor.getChildren(skin).size());
+                assertEquals(text, SkinBaseAccessor.getChildren(skin).get(0));
             } else {
                 // 2 children, graphic + text
-                assertEquals(2, skin.getChildrenUnmodifiable().size());
-                assertEquals(label.getGraphic(), skin.getChildrenUnmodifiable().get(0));
-                assertEquals(text, skin.getChildrenUnmodifiable().get(1));
+                assertEquals(2, SkinBaseAccessor.getChildren(skin).size());
+                assertEquals(label.getGraphic(), SkinBaseAccessor.getChildren(skin).get(0));
+                assertEquals(text, SkinBaseAccessor.getChildren(skin).get(1));
             }
         }
         

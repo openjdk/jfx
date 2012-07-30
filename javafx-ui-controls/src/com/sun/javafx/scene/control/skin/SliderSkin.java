@@ -38,7 +38,7 @@ import com.sun.javafx.scene.control.behavior.SliderBehavior;
 /**
  * Region/css based skin for Slider
 */
-public class SliderSkin extends SkinBase<Slider, SliderBehavior> {
+public class SliderSkin extends javafx.scene.control.SkinBase<Slider, SliderBehavior> {
 
     /** Track if slider is vertical/horizontal and cause re layout */
 //    private boolean horizontal;
@@ -215,13 +215,9 @@ public class SliderSkin extends SkinBase<Slider, SliderBehavior> {
         thumb.setLayoutY(ly);
     }
 
-    @Override protected void layoutChildren() {
+    @Override protected void layoutChildren(final double x, final double y,
+            final double w, final double h) {
          // calculate the available space
-
-        double x = getInsets().getLeft();
-        double y = getInsets().getTop();
-        double w = getWidth() - (getInsets().getLeft() + getInsets().getRight());
-        double h = getHeight() - (getInsets().getTop() + getInsets().getBottom());
 
         // resize thumb to preferred size
         thumbWidth = thumb.prefWidth(-1);

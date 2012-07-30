@@ -26,40 +26,43 @@
 
 package javafx.scene.layout;
 
+import javafx.geometry.Bounds;
 import javafx.geometry.Insets;
 import javafx.geometry.Orientation;
 import javafx.scene.Node;
 
+import java.util.List;
+
 /**
  * AnchorPane allows the edges of child nodes to be anchored to an offset from
- * the anchorpane's edges.  If the anchorpane has a border and/or padding set, the
+ * the anchor pane's edges.  If the anchor pane has a border and/or padding set, the
  * offsets will be measured from the inside edge of those insets.
  * <p>
  * AnchorPane lays out each managed child regardless of the child's visible property value;
  * unmanaged children are ignored for all layout calculations.</p>
  * <p>
- * Anchorpanes may be styled with backgrounds and borders using CSS.  See
+ * AnchorPanes may be styled with backgrounds and borders using CSS.  See
  * {@link javafx.scene.layout.Region Region} superclass for details.</p>
  *
  * <h4>Anchor Constraints</h4>
  * The application sets anchor constraints on each child to configure the anchors
  * on one or more sides.  If a child is anchored on opposite sides (and is resizable), the
- * anchorpane will resize it to maintain both offsets, otherwise the anchorpane
+ * anchor pane will resize it to maintain both offsets, otherwise the anchor pane
  * will resize it to its preferred size.  If in the former case (anchored on opposite
  * sides) and the child is not resizable, then only the top/left anchor will be honored.
  * AnchorPane provides a static method for setting each anchor constraint.
  * <p>
  * <table border="1">
  * <tr><th>Constraint</th><th>Type</th><th>Description</th></tr>
- * <tr><td>topAnchor</td><td>double</td><td>distance from the anchorpane's top insets to the child's top edge.</td></tr>
- * <tr><td>leftAnchor</td><td>double</td><td>distance from the anchorpane's left insets to the child's left edge.</td></tr>
- * <tr><td>bottomAnchor</td><td>double</td><td>distance from the anchorpane's bottom insets to the child's bottom edge.</td></tr>
- * <tr><td>rightAnchor</td><td>double</td><td>distance from the anchorpane's right insets to the child's right edge.</td></tr>
+ * <tr><td>topAnchor</td><td>double</td><td>distance from the anchor pane's top insets to the child's top edge.</td></tr>
+ * <tr><td>leftAnchor</td><td>double</td><td>distance from the anchor pane's left insets to the child's left edge.</td></tr>
+ * <tr><td>bottomAnchor</td><td>double</td><td>distance from the anchor pane's bottom insets to the child's bottom edge.</td></tr>
+ * <tr><td>rightAnchor</td><td>double</td><td>distance from the anchor pane's right insets to the child's right edge.</td></tr>
  * </table>
  * <p>
  * AnchorPane Example:
- * <pre><code>     AnchorPane anchorpane = new AnchorPane();
- *     // List should stretch as anchorpane is resized
+ * <pre><code>     AnchorPane anchorPane = new AnchorPane();
+ *     // List should stretch as anchorPane is resized
  *     ListView list = new ListView();
  *    <b> AnchorPane.setTopAnchor(list, 10.0);
  *     AnchorPane.setLeftAnchor(list, 10.0);
@@ -68,12 +71,12 @@ import javafx.scene.Node;
  *     Button button = new Button("Add");
  *     <b>AnchorPane.setTopAnchor(button, 10.0);
  *     AnchorPane.setRightAnchor(button, 10.0);</b>
- *     anchorpane.getChildren().addAll(list, button);
+ *     anchorPane.getChildren().addAll(list, button);
  * </code></pre>
  *
  * <h4>Resizable Range</h4>
- * An anchorpane's parent will resize the anchorpane within the anchorpane's resizable range
- * during layout.   By default the anchorpane computes this range based on its content
+ * An anchor pane's parent will resize the anchor pane within the anchor pane's resizable range
+ * during layout.   By default the anchor pane computes this range based on its content
  * as outlined in the table below.
  * <p>
  * <table border="1">
@@ -88,20 +91,20 @@ import javafx.scene.Node;
  * <td>Double.MAX_VALUE</td><td>Double.MAX_VALUE</td></tr>
  * </table>
  * <p>
- * An anchorpane's unbounded maximum width and height are an indication to the parent that
+ * An anchor pane's unbounded maximum width and height are an indication to the parent that
  * it may be resized beyond its preferred size to fill whatever space is assigned
  * to it.
  * <p>
  * AnchorPane provides properties for setting the size range directly.  These
  * properties default to the sentinel value Region.USE_COMPUTED_SIZE, however the
  * application may set them to other values as needed:
- * <pre><code>     <b>anchorpane.setPrefSize(300, 300);</b>
+ * <pre><code>     <b>anchorPane.setPrefSize(300, 300);</b>
  * </code></pre>
  * Applications may restore the computed values by setting these properties back
  * to Region.USE_COMPUTED_SIZE.
  * <p>
  * AnchorPane does not clip its content by default, so it is possible that childrens'
- * bounds may extend outside its own bounds if the anchorpane is resized smaller
+ * bounds may extend outside its own bounds if the anchor pane is resized smaller
  * than its preferred size.</p>
  *
  */
@@ -117,13 +120,13 @@ public class AnchorPane extends Pane {
      ********************************************************************/
 
     /**
-     * Sets the top anchor for the child when contained by an anchorpane.
-     * If set, the anchorpane will maintain the child's size and position so
-     * that it's top is always offset by that amount from the anchorpane's top
+     * Sets the top anchor for the child when contained by an anchor pane.
+     * If set, the anchor pane will maintain the child's size and position so
+     * that it's top is always offset by that amount from the anchor pane's top
      * content edge.
      * Setting the value to null will remove the constraint.
-     * @param child the child node of an anchorpane
-     * @param value the offset from the top of the anchorpane
+     * @param child the child node of an anchor pane
+     * @param value the offset from the top of the anchor pane
      */
     public static void setTopAnchor(Node child, Double value) {
         setConstraint(child, TOP_ANCHOR, value);
@@ -131,21 +134,21 @@ public class AnchorPane extends Pane {
 
     /**
      * Returns the child's top anchor constraint if set.
-     * @param child the child node of an anchorpane
-     * @return the offset from the top of the anchorpane or null if no top anchor was set
+     * @param child the child node of an anchor pane
+     * @return the offset from the top of the anchor pane or null if no top anchor was set
      */
     public static Double getTopAnchor(Node child) {
         return (Double)getConstraint(child, TOP_ANCHOR);
     }
 
     /**
-     * Sets the left anchor for the child when contained by an anchorpane.
-     * If set, the anchorpane will maintain the child's size and position so
-     * that it's left is always offset by that amount from the anchorpane's left
+     * Sets the left anchor for the child when contained by an anchor pane.
+     * If set, the anchor pane will maintain the child's size and position so
+     * that it's left is always offset by that amount from the anchor pane's left
      * content edge.
      * Setting the value to null will remove the constraint.
-     * @param child the child node of an anchorpane
-     * @param value the offset from the left of the anchorpane
+     * @param child the child node of an anchor pane
+     * @param value the offset from the left of the anchor pane
      */
     public static void setLeftAnchor(Node child, Double value) {
         setConstraint(child, LEFT_ANCHOR, value);
@@ -153,21 +156,21 @@ public class AnchorPane extends Pane {
 
     /**
      * Returns the child's left anchor constraint if set.
-     * @param child the child node of an anchorpane
-     * @return the offset from the left of the anchorpane or null if no left anchor was set
+     * @param child the child node of an anchor pane
+     * @return the offset from the left of the anchor pane or null if no left anchor was set
      */
     public static Double getLeftAnchor(Node child) {
         return (Double)getConstraint(child, LEFT_ANCHOR);
     }
 
     /**
-     * Sets the bottom anchor for the child when contained by an anchorpane.
-     * If set, the anchorpane will maintain the child's size and position so
-     * that it's bottom is always offset by that amount from the anchorpane's bottom
+     * Sets the bottom anchor for the child when contained by an anchor pane.
+     * If set, the anchor pane will maintain the child's size and position so
+     * that it's bottom is always offset by that amount from the anchor pane's bottom
      * content edge.
      * Setting the value to null will remove the constraint.
-     * @param child the child node of an anchorpane
-     * @param value the offset from the bottom of the anchorpane
+     * @param child the child node of an anchor pane
+     * @param value the offset from the bottom of the anchor pane
      */
     public static void setBottomAnchor(Node child, Double value) {
         setConstraint(child, BOTTOM_ANCHOR, value);
@@ -175,21 +178,21 @@ public class AnchorPane extends Pane {
 
     /**
      * Returns the child's bottom anchor constraint if set.
-     * @param child the child node of an anchorpane
-     * @return the offset from the bottom of the anchorpane or null if no bottom anchor was set
+     * @param child the child node of an anchor pane
+     * @return the offset from the bottom of the anchor pane or null if no bottom anchor was set
      */
     public static Double getBottomAnchor(Node child) {
         return (Double)getConstraint(child, BOTTOM_ANCHOR);
     }
 
     /**
-     * Sets the bottom anchor for the child when contained by an anchorpane.
-     * If set, the anchorpane will maintain the child's size and position so
-     * that it's right is always offset by that amount from the anchorpane's right
+     * Sets the bottom anchor for the child when contained by an anchor pane.
+     * If set, the anchor pane will maintain the child's size and position so
+     * that it's right is always offset by that amount from the anchor pane's right
      * content edge.
      * Setting the value to null will remove the constraint.
-     * @param child the child node of an anchorpane
-     * @param value the offset from the right of the anchorpane
+     * @param child the child node of an anchor pane
+     * @param value the offset from the right of the anchor pane
      */
     public static void setRightAnchor(Node child, Double value) {
         setConstraint(child, RIGHT_ANCHOR, value);
@@ -197,15 +200,15 @@ public class AnchorPane extends Pane {
 
     /**
      * Returns the child's right anchor constraint if set.
-     * @param child the child node of an anchorpane
-     * @return the offset from the right of the anchorpane or null if no right anchor was set
+     * @param child the child node of an anchor pane
+     * @return the offset from the right of the anchor pane or null if no right anchor was set
      */
     public static Double getRightAnchor(Node child) {
         return (Double)getConstraint(child, RIGHT_ANCHOR);
     }
 
     /**
-     * Removes all anchorpane constraints from the child node.
+     * Removes all anchor pane constraints from the child node.
      * @param child the child node
      */
     public static void clearConstraints(Node child) {
@@ -244,8 +247,9 @@ public class AnchorPane extends Pane {
 
     private double computeWidth(boolean minimum, double height) {
         double max = 0;
-        for (int i = 0; i < getChildren().size(); i++) {
-            Node child = getChildren().get(i);
+        final List<Node> children = getChildren();
+        for (int i=0, size=children.size(); i<size; i++) {
+            Node child = children.get(i);
             if (child.isManaged()) {
                 Double leftAnchor = getLeftAnchor(child);
                 Double rightAnchor = getRightAnchor(child);
@@ -259,13 +263,16 @@ public class AnchorPane extends Pane {
                 max = Math.max(max, left + (minimum? child.minWidth(height) : child.prefWidth(height)) + right);
             }
         }
-        return getInsets().getLeft() + max + getInsets().getRight();
+        
+        final Insets insets = getInsets();
+        return insets.getLeft() + max + insets.getRight();
     }
 
     private double computeHeight(boolean minimum, double width) {
         double max = 0;
-        for (int i = 0; i < getChildren().size(); i++) {
-            Node child = getChildren().get(i);
+        final List<Node> children = getChildren();
+        for (int i=0, size=children.size(); i<size; i++) {
+            Node child = children.get(i);
             if (child.isManaged()) {
                 Double topAnchor = getTopAnchor(child);
                 Double bottomAnchor = getBottomAnchor(child);
@@ -279,66 +286,72 @@ public class AnchorPane extends Pane {
                 max = Math.max(max, top + (minimum? child.minHeight(width) : child.prefHeight(width)) + bottom);
             }
         }
-        return getInsets().getTop() + max + getInsets().getBottom();
+
+        final Insets insets = getInsets();
+        return insets.getTop() + max + insets.getBottom();
     }
 
     private double computeChildWidth(Node child, Double leftAnchor, Double rightAnchor, double height) {
         if (leftAnchor != null && rightAnchor != null && child.isResizable()) {
-             return getWidth() - getInsets().getLeft() - getInsets().getRight() - leftAnchor - rightAnchor;
+            final Insets insets = getInsets();
+            return getWidth() - insets.getLeft() - insets.getRight() - leftAnchor - rightAnchor;
         }
         return computeChildPrefAreaWidth(child, Insets.EMPTY, height);
     }
 
     private double computeChildHeight(Node child, Double topAnchor, Double bottomAnchor, double width) {
         if (topAnchor != null && bottomAnchor != null && child.isResizable()) {
-             return getHeight() - getInsets().getTop() - getInsets().getBottom() - topAnchor - bottomAnchor;
+            final Insets insets = getInsets();
+            return getHeight() - insets.getTop() - insets.getBottom() - topAnchor - bottomAnchor;
         }
         return computeChildPrefAreaHeight(child, Insets.EMPTY, width);
     }
 
     @Override protected void layoutChildren() {
-        Insets insets = getInsets();
-        
-        for (int i = 0; i < getChildren().size(); i++) {
-            Node child = getChildren().get(i);
+        final Insets insets = getInsets();
+        final List<Node> children = getChildren();
+        for (int i=0, size=children.size(); i<size; i++) {
+            Node child = children.get(i);
             if (child.isManaged()) {
-                Double topAnchor = getTopAnchor(child);
-                Double bottomAnchor = getBottomAnchor(child);
-                Double leftAnchor = getLeftAnchor(child);
-                Double rightAnchor = getRightAnchor(child);
+                final Double topAnchor = getTopAnchor(child);
+                final Double bottomAnchor = getBottomAnchor(child);
+                final Double leftAnchor = getLeftAnchor(child);
+                final Double rightAnchor = getRightAnchor(child);
+                final Bounds childLayoutBounds = child.getLayoutBounds();
+                final Orientation bias = child.getContentBias();
 
-                double x = child.getLayoutX() + child.getLayoutBounds().getMinX();
-                double y = child.getLayoutY() + child.getLayoutBounds().getMinY();
-
+                double x = child.getLayoutX() + childLayoutBounds.getMinX();
+                double y = child.getLayoutY() + childLayoutBounds.getMinY();
                 double w = -1;
                 double h = -1;
-                Orientation bias = child.getContentBias();
+
                 if (bias == Orientation.VERTICAL) {
                     // width depends on height
+                    // WARNING: The order of these calls is crucial, there is some
+                    // hidden ordering dependency here!
                     h = computeChildHeight(child, topAnchor, bottomAnchor, -1);
                     w = computeChildWidth(child, leftAnchor, rightAnchor, h);
-
                 } else if (bias == Orientation.HORIZONTAL) {
-                    // height depends on width
                     w = computeChildWidth(child, leftAnchor, rightAnchor, -1);
                     h = computeChildHeight(child, topAnchor, bottomAnchor, w);
-                } else {                    
+                } else {
+                    // bias may be null
                     w = computeChildWidth(child, leftAnchor, rightAnchor, -1);
                     h = computeChildHeight(child, topAnchor, bottomAnchor, -1);
                 }
 
                 if (leftAnchor != null) {
                     x = insets.getLeft() + leftAnchor;
-
                 } else if (rightAnchor != null) {                   
                     x = getWidth() - insets.getRight() - rightAnchor - w;
                 }
+                
                 if (topAnchor != null) {
                     y = insets.getTop() + topAnchor;
-
                 } else if (bottomAnchor != null) {
                     y = getHeight() - insets.getBottom() - bottomAnchor - h;
                 }
+                
                 child.resizeRelocate(x, y, w, h);
             }
         }

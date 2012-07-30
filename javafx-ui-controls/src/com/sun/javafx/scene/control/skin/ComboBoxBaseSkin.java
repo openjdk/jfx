@@ -26,6 +26,7 @@
 package com.sun.javafx.scene.control.skin;
 
 import javafx.scene.control.ComboBoxBase;
+import javafx.scene.control.SkinBase;
 import com.sun.javafx.scene.control.behavior.ComboBoxBaseBehavior;
 import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
@@ -33,6 +34,7 @@ import javafx.geometry.HPos;
 import javafx.geometry.Insets;
 import javafx.geometry.VPos;
 import javafx.scene.Node;
+import javafx.scene.layout.Region;
 import javafx.scene.layout.StackPane;
 
 public abstract class ComboBoxBaseSkin<T> extends SkinBase<ComboBoxBase<T>, ComboBoxBaseBehavior<T>> {
@@ -48,16 +50,16 @@ public abstract class ComboBoxBaseSkin<T> extends SkinBase<ComboBoxBase<T>, Comb
     protected final void setMode(ComboBoxMode value) { mode = value; }
     
     public ComboBoxBaseSkin(final ComboBoxBase<T> comboBox, final ComboBoxBaseBehavior behavior) {
-        // Call the super method with the button we were just given in the 
+        // Call the super method with the ComboBox we were just given in the 
         // constructor, as well as an instance of the behavior class.
-        super(comboBox, behavior);//new ComboBoxBaseBehavior(comboBox));
+        super(comboBox, behavior);
         
         // open button / arrow
         arrow = new StackPane();
         arrow.setFocusTraversable(false);
         arrow.getStyleClass().setAll("arrow");
-        arrow.setMaxWidth(USE_PREF_SIZE);
-        arrow.setMaxHeight(USE_PREF_SIZE);
+        arrow.setMaxWidth(Region.USE_PREF_SIZE);
+        arrow.setMaxHeight(Region.USE_PREF_SIZE);
         arrowButton = new StackPane();
         arrowButton.setFocusTraversable(false);
         arrowButton.setId("arrow-button");
@@ -130,19 +132,14 @@ public abstract class ComboBoxBaseSkin<T> extends SkinBase<ComboBoxBase<T>, Comb
         return getMode() == ComboBoxMode.BUTTON;
     }
     
-    @Override protected void layoutChildren() {
+    @Override protected void layoutChildren(final double x, final double y,
+            final double w, final double h) {
         if (displayNode == null) {
             updateDisplayArea();
         }
         
         final Insets padding = getInsets();
         final Insets arrowButtonPadding = arrowButton.getInsets();
-
-        // x, y, w, h are the content area that will hold the label and arrow */
-        final double x = padding.getLeft();
-        final double y = padding.getTop();
-        final double w = getSkinnable().getWidth() - (padding.getLeft() + padding.getRight());
-        final double h = getSkinnable().getHeight() - (padding.getTop() + padding.getBottom());
 
         final double arrowWidth = snapSize(arrow.prefWidth(-1));
         final double arrowButtonWidth = (isButton()) ? 0 :
@@ -155,9 +152,9 @@ public abstract class ComboBoxBaseSkin<T> extends SkinBase<ComboBoxBase<T>, Comb
         
         if (isButton()) return;
         
-        arrowButton.resize(arrowButtonWidth, getHeight() - padding.getTop() - padding.getBottom());
+        arrowButton.resize(arrowButtonWidth, h);
         positionInArea(arrowButton, getWidth() - padding.getRight() - arrowButtonWidth, 0, 
-                arrowButtonWidth, getHeight(), 0, HPos.CENTER, VPos.CENTER);
+                arrowButtonWidth, h, 0, HPos.CENTER, VPos.CENTER);
     }
     
     @Override protected double computePrefWidth(double height) {

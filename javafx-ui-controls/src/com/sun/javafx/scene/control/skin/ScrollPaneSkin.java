@@ -54,6 +54,7 @@ import javafx.scene.Node;
 import javafx.scene.control.ScrollBar;
 import javafx.scene.control.ScrollPane;
 import javafx.scene.control.ScrollPane.ScrollBarPolicy;
+import javafx.scene.control.SkinBase;
 import javafx.scene.input.MouseEvent;
 import javafx.scene.input.ScrollEvent;
 import javafx.scene.input.TouchEvent;
@@ -213,7 +214,7 @@ public class ScrollPaneSkin extends SkinBase<ScrollPane, ScrollPaneBehavior> imp
 
     private void initialize() {
         // requestLayout calls below should not trigger requestLayout above ScrollPane
-        setManaged(false);
+//        setManaged(false);
 
         ScrollPane control = getSkinnable();
         scrollNode = control.getContent();
@@ -318,11 +319,11 @@ public class ScrollPaneSkin extends SkinBase<ScrollPane, ScrollPaneBehavior> imp
                if (getSkinnable().isPannable()) {
                  dragDetected = true;
                  if (saveCursor == null) {
-                     saveCursor = getCursor();
+                     saveCursor = getSkinnable().getCursor();
                      if (saveCursor == null) {
                          saveCursor = Cursor.DEFAULT;
                      }
-                     setCursor(Cursor.MOVE);
+                     getSkinnable().setCursor(Cursor.MOVE);
                      requestLayout();
                  }
                }
@@ -338,7 +339,7 @@ public class ScrollPaneSkin extends SkinBase<ScrollPane, ScrollPaneBehavior> imp
 
                  if (dragDetected == true) {
                      if (saveCursor != null) {
-                         setCursor(saveCursor);
+                         getSkinnable().setCursor(saveCursor);
                          saveCursor = null;
                          requestLayout();
                      }
@@ -459,7 +460,7 @@ public class ScrollPaneSkin extends SkinBase<ScrollPane, ScrollPaneBehavior> imp
         ** area, the above dispatcher having removed the ScrollBars
         ** scroll event handling.
         */
-        setOnScroll(new EventHandler<javafx.scene.input.ScrollEvent>() {
+        getSkinnable().setOnScroll(new EventHandler<javafx.scene.input.ScrollEvent>() {
             @Override public void handle(ScrollEvent event) {
                 if (PlatformUtil.isEmbedded()) {
                     startSBReleasedAnimation();
@@ -540,7 +541,7 @@ public class ScrollPaneSkin extends SkinBase<ScrollPane, ScrollPaneBehavior> imp
         ** there are certain animations that need to know if the touch is
         ** happening.....
         */
-        setOnTouchPressed(new EventHandler<TouchEvent>() {
+        getSkinnable().setOnTouchPressed(new EventHandler<TouchEvent>() {
             @Override public void handle(TouchEvent e) {
                 touchDetected = true;
                 startSBReleasedAnimation();
@@ -548,7 +549,7 @@ public class ScrollPaneSkin extends SkinBase<ScrollPane, ScrollPaneBehavior> imp
             }
         });
 
-        setOnTouchReleased(new EventHandler<TouchEvent>() {
+        getSkinnable().setOnTouchReleased(new EventHandler<TouchEvent>() {
             @Override public void handle(TouchEvent e) {
                 touchDetected = false;
                 startSBReleasedAnimation();
@@ -556,9 +557,9 @@ public class ScrollPaneSkin extends SkinBase<ScrollPane, ScrollPaneBehavior> imp
             }
         });
 
-        TraversalEngine traversalEngine = new TraversalEngine(this, false);
+        TraversalEngine traversalEngine = new TraversalEngine(getSkinnable(), false);
         traversalEngine.addTraverseListener(this);
-        setImpl_traversalEngine(traversalEngine);
+        getSkinnable().setImpl_traversalEngine(traversalEngine);
 
         // ScrollPanes do not block all MouseEvents by default, unlike most other UI Controls.
         consumeMouseEvents(false);
@@ -731,7 +732,8 @@ public class ScrollPaneSkin extends SkinBase<ScrollPane, ScrollPaneBehavior> imp
         return (h > 0) ? (3 * h) : (DEFAULT_MIN_SIZE);
     }
 
-    @Override protected void layoutChildren() {
+    @Override protected void layoutChildren(final double x, final double y,
+            final double w, final double h) {
         ScrollPane control = getSkinnable();
 
         vsb.setMin(control.getVmin());
@@ -741,8 +743,8 @@ public class ScrollPaneSkin extends SkinBase<ScrollPane, ScrollPaneBehavior> imp
         hsb.setMin(control.getHmin());
         hsb.setMax(control.getHmax());
 
-        contentWidth = control.getWidth() - (getInsets().getLeft() + getInsets().getRight());
-        contentHeight = control.getHeight() - (getInsets().getTop() + getInsets().getBottom());
+        contentWidth = w;
+        contentHeight = h;
 
         /*
         ** we want the scrollbars to go right to the border

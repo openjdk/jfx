@@ -106,9 +106,9 @@ public class PaginationSkin extends SkinBase<Pagination, PaginationBehavior>  {
     public PaginationSkin(final Pagination pagination) {
         super(pagination, new PaginationBehavior(pagination));
 
-        setManaged(false);
+//        setManaged(false);
         clipRect = new Rectangle();
-        setClip(clipRect);
+        getSkinnable().setClip(clipRect);
 
         this.pagination = pagination;
 
@@ -134,6 +134,8 @@ public class PaginationSkin extends SkinBase<Pagination, PaginationBehavior>  {
             }
         });
 
+        registerChangeListener(pagination.widthProperty(), "WIDTH");
+        registerChangeListener(pagination.heightProperty(), "HEIGHT");
         registerChangeListener(pagination.pageCountProperty(), "PAGE_COUNT");
         registerChangeListener(pagination.pageFactoryProperty(), "PAGE_FACTORY");
 
@@ -164,7 +166,7 @@ public class PaginationSkin extends SkinBase<Pagination, PaginationBehavior>  {
     private int direction;
 
     private void initializeSwipeAndTouchHandlers() {
-        setOnTouchPressed(new EventHandler<TouchEvent>() {
+        getSkinnable().setOnTouchPressed(new EventHandler<TouchEvent>() {
             @Override public void handle(TouchEvent e) {
                 if (touchEventId == -1) {
                     touchEventId = e.getTouchPoint().getId();
@@ -179,7 +181,7 @@ public class PaginationSkin extends SkinBase<Pagination, PaginationBehavior>  {
             }
         });
 
-        setOnTouchMoved(new EventHandler<TouchEvent>() {
+        getSkinnable().setOnTouchMoved(new EventHandler<TouchEvent>() {
             @Override public void handle(TouchEvent e) {
                 if (touchEventId != e.getTouchPoint().getId()) {
                     return;
@@ -259,7 +261,7 @@ public class PaginationSkin extends SkinBase<Pagination, PaginationBehavior>  {
             }
         });
 
-        setOnTouchReleased(new EventHandler<TouchEvent>() {
+        getSkinnable().setOnTouchReleased(new EventHandler<TouchEvent>() {
             @Override public void handle(TouchEvent e) {
                 if (touchEventId != e.getTouchPoint().getId()) {
                     return;
@@ -668,18 +670,13 @@ public class PaginationSkin extends SkinBase<Pagination, PaginationBehavior>  {
             resetIndexes(false);
             navigation.initializePageIndicators();
             navigation.updatePageIndicators();
+        } else if (p == "WIDTH") {
+            clipRect.setWidth(getWidth());
+        } else if (p == "HEIGHT") {
+            clipRect.setHeight(getHeight());
         }
+        
         requestLayout();
-    }
-
-    @Override protected void setWidth(double value) {
-        super.setWidth(value);
-        clipRect.setWidth(value);
-    }
-
-    @Override protected void setHeight(double value) {
-        super.setHeight(value);
-        clipRect.setHeight(value);
     }
 
     @Override protected double computeMinWidth(double height) {
@@ -710,19 +707,16 @@ public class PaginationSkin extends SkinBase<Pagination, PaginationBehavior>  {
         return top + currentStackPane.prefHeight(width) + navigationHeight + bottom;
     }
 
-    @Override protected void layoutChildren() {
+    @Override protected void layoutChildren(final double x, final double y,
+            final double w, final double h) {
         double left = snapSpace(getInsets().getLeft());
-        double right = snapSpace(getInsets().getRight());
         double top = snapSpace(getInsets().getTop());
-        double bottom = snapSpace(getInsets().getBottom());
-        double width = snapSize(getWidth() - (left + right));
-        double height = snapSize(getHeight() - (top + bottom));
         double navigationHeight = navigation.isVisible() ? snapSize(navigation.prefHeight(-1)) : 0;
-        double stackPaneHeight = snapSize(height - navigationHeight);
+        double stackPaneHeight = snapSize(h - navigationHeight);
 
-        layoutInArea(currentStackPane, left, top, width, stackPaneHeight, 0, HPos.CENTER, VPos.CENTER);
-        layoutInArea(nextStackPane, left, top, width, stackPaneHeight, 0, HPos.CENTER, VPos.CENTER);
-        layoutInArea(navigation, left, stackPaneHeight, width, navigationHeight, 0, HPos.CENTER, VPos.CENTER);
+        layoutInArea(currentStackPane, left, top, w, stackPaneHeight, 0, HPos.CENTER, VPos.CENTER);
+        layoutInArea(nextStackPane, left, top, w, stackPaneHeight, 0, HPos.CENTER, VPos.CENTER);
+        layoutInArea(navigation, left, stackPaneHeight, h, navigationHeight, 0, HPos.CENTER, VPos.CENTER);
     }
 
     class NavigationControl extends StackPane {
@@ -1246,63 +1240,71 @@ public class PaginationSkin extends SkinBase<Pagination, PaginationBehavior>  {
     private static final Boolean DEFAULT_TOOLTIP_VISIBLE = Boolean.FALSE;
 
     private static class StyleableProperties {
-        private static final StyleableProperty<PaginationSkin,Boolean> ARROWS_VISIBLE =
-            new StyleableProperty<PaginationSkin,Boolean>("-fx-arrows-visible",
+        private static final StyleableProperty<Pagination,Boolean> ARROWS_VISIBLE =
+            new StyleableProperty<Pagination,Boolean>("-fx-arrows-visible",
                 BooleanConverter.getInstance(), DEFAULT_ARROW_VISIBLE) {
 
             @Override
-            public boolean isSettable(PaginationSkin n) {
-                return n.arrowsVisible == null || !n.arrowsVisible.isBound();
+            public boolean isSettable(Pagination n) {
+                final PaginationSkin skin = (PaginationSkin) n.getSkin();
+                return skin.arrowsVisible == null || !skin.arrowsVisible.isBound();
             }
 
             @Override
-            public WritableValue<Boolean> getWritableValue(PaginationSkin n) {
-                return n.arrowsVisibleProperty();
+            public WritableValue<Boolean> getWritableValue(Pagination n) {
+                final PaginationSkin skin = (PaginationSkin) n.getSkin();
+                return skin.arrowsVisibleProperty();
             }
         };
 
-        private static final StyleableProperty<PaginationSkin,Boolean> PAGE_INFORMATION_VISIBLE =
-            new StyleableProperty<PaginationSkin,Boolean>("-fx-page-information-visible",
+        private static final StyleableProperty<Pagination,Boolean> PAGE_INFORMATION_VISIBLE =
+            new StyleableProperty<Pagination,Boolean>("-fx-page-information-visible",
                 BooleanConverter.getInstance(), DEFAULT_PAGE_INFORMATION_VISIBLE) {
 
             @Override
-            public boolean isSettable(PaginationSkin n) {
-                return n.pageInformationVisible == null || !n.pageInformationVisible.isBound();
+            public boolean isSettable(Pagination n) {
+                final PaginationSkin skin = (PaginationSkin) n.getSkin();
+                return skin.pageInformationVisible == null || !skin.pageInformationVisible.isBound();
             }
 
             @Override
-            public WritableValue<Boolean> getWritableValue(PaginationSkin n) {
-                return n.pageInformationVisibleProperty();
+            public WritableValue<Boolean> getWritableValue(Pagination n) {
+                final PaginationSkin skin = (PaginationSkin) n.getSkin();
+                return skin.pageInformationVisibleProperty();
             }
         };
 
-        private static final StyleableProperty<PaginationSkin,Side> PAGE_INFORMATION_ALIGNMENT =
-            new StyleableProperty<PaginationSkin,Side>("-fx-page-information-alignment",
+        private static final StyleableProperty<Pagination,Side> PAGE_INFORMATION_ALIGNMENT =
+            new StyleableProperty<Pagination,Side>("-fx-page-information-alignment",
                 new EnumConverter<Side>(Side.class), DEFAULT_PAGE_INFORMATION_ALIGNMENT) {
 
             @Override
-            public boolean isSettable(PaginationSkin n) {
-                return n.pageInformationAlignment == null || !n.pageInformationAlignment.isBound();
+            public boolean isSettable(Pagination n) {
+                final PaginationSkin skin = (PaginationSkin) n.getSkin();
+                return skin.pageInformationAlignment == null || !skin.pageInformationAlignment.isBound();
             }
 
             @Override
-            public WritableValue<Side> getWritableValue(PaginationSkin n) {
-                return n.pageInformationAlignmentProperty();
+            public WritableValue<Side> getWritableValue(Pagination n) {
+                final PaginationSkin skin = (PaginationSkin) n.getSkin();
+                return skin.pageInformationAlignmentProperty();
             }
         };
 
-        private static final StyleableProperty<PaginationSkin,Boolean> TOOLTIP_VISIBLE =
-            new StyleableProperty<PaginationSkin,Boolean>("-fx-tooltip-visible",
+        private static final StyleableProperty<Pagination,Boolean> TOOLTIP_VISIBLE =
+            new StyleableProperty<Pagination,Boolean>("-fx-tooltip-visible",
                 BooleanConverter.getInstance(), DEFAULT_TOOLTIP_VISIBLE) {
 
             @Override
-            public boolean isSettable(PaginationSkin n) {
-                return n.tooltipVisible == null || !n.tooltipVisible.isBound();
+            public boolean isSettable(Pagination n) {
+                final PaginationSkin skin = (PaginationSkin) n.getSkin();
+                return skin.tooltipVisible == null || !skin.tooltipVisible.isBound();
             }
 
             @Override
-            public WritableValue<Boolean> getWritableValue(PaginationSkin n) {
-                return n.tooltipVisibleProperty();
+            public WritableValue<Boolean> getWritableValue(Pagination n) {
+                final PaginationSkin skin = (PaginationSkin) n.getSkin();
+                return skin.tooltipVisibleProperty();
             }
         };
 

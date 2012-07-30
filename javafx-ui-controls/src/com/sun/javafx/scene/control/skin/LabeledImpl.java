@@ -41,6 +41,7 @@ import java.util.Collections;
 import java.util.List;
 import javafx.beans.value.WritableValue;
 import javafx.scene.Parent;
+import javafx.scene.layout.Region;
 
 
 public class LabeledImpl extends Label {
@@ -137,7 +138,7 @@ public class LabeledImpl extends Label {
             // -fx-opacity (for example) would be meaningless to the Labeled. 
             // 
             final List<StyleableProperty> labeledStyleables = Labeled.impl_CSS_STYLEABLES();
-            final List<StyleableProperty> parentStyleables = Parent.impl_CSS_STYLEABLES();
+            final List<StyleableProperty> parentStyleables = Region.impl_CSS_STYLEABLES();
             final List<StyleableProperty> styleables = 
                 new ArrayList<StyleableProperty>(labeledStyleables);
             styleables.removeAll(parentStyleables);

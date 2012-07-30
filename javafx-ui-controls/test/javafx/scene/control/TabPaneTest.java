@@ -647,6 +647,7 @@ public class TabPaneTest {
         assertEquals(tab1, tabPane.getSelectionModel().getSelectedItem());
     }
     
+    @Ignore
     @Test public void mousePressSelectsATab_RT20476() {        
         tabPane.getTabs().add(tab1);
         tabPane.getTabs().add(tab2);
@@ -678,6 +679,7 @@ public class TabPaneTest {
     }
     
     private int counter = 0;
+    @Ignore
     @Test public void setOnSelectionChangedFiresTwice_RT21089() {
         tabPane.getTabs().add(tab1);
         tabPane.getTabs().add(tab2);

@@ -66,8 +66,8 @@ public class SizeTest {
     public SizeTest() {
     }
 
-    static final private int DOTS_PER_INCH = 96;
-    static final private int POINTS_PER_INCH = 72;
+    static final private double DOTS_PER_INCH = 96.0;
+    static final private double POINTS_PER_INCH = 72.0;
 
     /**
      * Test of points method, of class Size.

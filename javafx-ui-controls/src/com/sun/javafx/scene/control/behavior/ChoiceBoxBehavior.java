@@ -31,10 +31,11 @@ import static javafx.scene.input.KeyCode.SPACE;
 import static javafx.scene.input.KeyEvent.KEY_PRESSED;
 import static javafx.scene.input.KeyEvent.KEY_RELEASED;
 import static javafx.scene.input.KeyCode.DOWN;
-import static javafx.scene.input.KeyCode.ENTER;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 import javafx.scene.control.ChoiceBox;
 import javafx.scene.control.SelectionModel;
@@ -105,13 +106,7 @@ public class ChoiceBoxBehavior<T> extends BehaviorBase<ChoiceBox<T>> {
     @Override public void mousePressed(MouseEvent e) {
         ChoiceBox choiceButton = getControl();
         super.mousePressed(e);
-        if (choiceButton.isShowing()) {
-            getControl().hide(); // hide if already showing 
-        }
-        else {
-            if (choiceButton.isFocusTraversable()) choiceButton.requestFocus();
-            choiceButton.show();
-        }
+        if (choiceButton.isFocusTraversable()) choiceButton.requestFocus();
     }
 
     /**
@@ -122,8 +117,11 @@ public class ChoiceBoxBehavior<T> extends BehaviorBase<ChoiceBox<T>> {
     @Override public void mouseReleased(MouseEvent e) {
         ChoiceBox choiceButton = getControl();
         super.mouseReleased(e);
-        if (!choiceButton.contains(e.getX(), e.getY())) {
-            choiceButton.hide();
+        if (choiceButton.isShowing() || !choiceButton.contains(e.getX(), e.getY())) {
+            choiceButton.hide(); // hide if already showing 
+        }
+        else {
+            choiceButton.show();
         }
     }
 

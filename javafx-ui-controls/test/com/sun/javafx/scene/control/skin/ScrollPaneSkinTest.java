@@ -606,12 +606,12 @@ public class ScrollPaneSkinTest {
         */
         ScrollPaneSkinMock skin = (ScrollPaneSkinMock) scrollPane.getSkin();
 
-        double skinWidth = skin.getWidth();
-        double vsbPosAndWidth = skin.getVsbX()+skin.getVsbWidth()+(skin.getInsets().getRight() - skin.getPadding().getRight());
+        double skinWidth = scrollPane.getWidth();
+        double vsbPosAndWidth = skin.getVsbX()+skin.getVsbWidth()+(scrollPane.getInsets().getRight() - scrollPane.getPadding().getRight());
         assertEquals(skinWidth,  vsbPosAndWidth, 0.1);
 
-        double skinHeight = skin.getHeight();
-        double hsbPosAndHeight = skin.getHsbY()+skin.getHsbHeight()+(skin.getInsets().getBottom() - skin.getPadding().getBottom());
+        double skinHeight = scrollPane.getHeight();
+        double hsbPosAndHeight = skin.getHsbY()+skin.getHsbHeight()+(scrollPane.getInsets().getBottom() - scrollPane.getPadding().getBottom());
         assertEquals(skinHeight,  hsbPosAndHeight, 0.1);
 
     }

@@ -497,13 +497,15 @@ public class FlowPane extends Pane {
     @Override protected double computeMinWidth(double height) {
         if (getContentBias() == HORIZONTAL) {
             double maxPref = 0;
-            for (int i = 0; i < getChildren().size(); i++) {
-                Node child = getChildren().get(i);
+            final List<Node> children = getChildren();
+            for (int i=0, size=children.size(); i<size; i++) {
+                Node child = children.get(i);
                 if (child.isManaged()) {
                     maxPref = Math.max(maxPref, child.prefWidth(-1));
                 }
             }
-            return getInsets().getLeft() + snapSize(maxPref) + getInsets().getRight();
+            final Insets insets = getInsets();
+            return insets.getLeft() + snapSize(maxPref) + insets.getRight();
         }
         return computePrefWidth(height);
     }
@@ -511,48 +513,52 @@ public class FlowPane extends Pane {
     @Override protected double computeMinHeight(double width) {
         if (getContentBias() == VERTICAL) {
             double maxPref = 0;
-            for (int i = 0; i < getChildren().size(); i++) {
-                Node child = getChildren().get(i);
+            final List<Node> children = getChildren();
+            for (int i=0, size=children.size(); i<size; i++) {
+                Node child = children.get(i);
                 if (child.isManaged()) {
                     maxPref = Math.max(maxPref, child.prefHeight(-1));
                 }
             }
-            return getInsets().getTop() + snapSize(maxPref) + getInsets().getBottom();
+            final Insets insets = getInsets();
+            return insets.getTop() + snapSize(maxPref) + insets.getBottom();
         }
         return computePrefHeight(width);
     }
 
     @Override protected double computePrefWidth(double forHeight) {
+        final Insets insets = getInsets();
         if (getOrientation() == HORIZONTAL) {
             // horizontal
             double maxRunWidth = getPrefWrapLength();
             List<Run> hruns = getRuns(maxRunWidth);            
             double w = computeContentWidth(hruns);
             w = getPrefWrapLength() > w ? getPrefWrapLength() : w;            
-            return getInsets().getLeft() + snapSize(w) + getInsets().getRight();
+            return insets.getLeft() + snapSize(w) + insets.getRight();
         } else {
             // vertical
             double maxRunHeight = forHeight != -1?
-                forHeight - getInsets().getTop() - getInsets().getBottom() : getPrefWrapLength();
+                forHeight - insets.getTop() - insets.getBottom() : getPrefWrapLength();
             List<Run> vruns = getRuns(maxRunHeight);
-            return getInsets().getLeft() + computeContentWidth(vruns) + getInsets().getRight();
+            return insets.getLeft() + computeContentWidth(vruns) + insets.getRight();
         }
     }
 
     @Override protected double computePrefHeight(double forWidth) {
+        final Insets insets = getInsets();
         if (getOrientation() == HORIZONTAL) {
             // horizontal
             double maxRunWidth = forWidth != -1?
-                forWidth - getInsets().getLeft() - getInsets().getRight() : getPrefWrapLength();
+                forWidth - insets.getLeft() - insets.getRight() : getPrefWrapLength();
             List<Run> hruns = getRuns(maxRunWidth);
-            return getInsets().getTop() + computeContentHeight(hruns) + getInsets().getBottom();
+            return insets.getTop() + computeContentHeight(hruns) + insets.getBottom();
         } else {
             // vertical
             double maxRunHeight = getPrefWrapLength();
             List<Run> vruns = getRuns(maxRunHeight);
             double h = computeContentHeight(vruns);
             h = getPrefWrapLength() > h ? getPrefWrapLength() : h;            
-            return getInsets().getTop() + snapSize(h) + getInsets().getBottom();
+            return insets.getTop() + snapSize(h) + insets.getBottom();
         }
     }
 
@@ -578,8 +584,9 @@ public class FlowPane extends Pane {
             double vgap = snapSpace(this.getVgap());
             double hgap = snapSpace(this.getHgap());
 
-            for (int i = 0; i < getChildren().size(); i++) {
-                Node child = getChildren().get(i);
+            final List<Node> children = getChildren();
+            for (int i=0, size=children.size(); i<size; i++) {
+                Node child = children.get(i);
                 if (child.isManaged()) {
                     LayoutRect nodeRect = new LayoutRect();
                     nodeRect.node = child;
@@ -628,7 +635,7 @@ public class FlowPane extends Pane {
             ArrayList<Node> rownodes = new ArrayList();
             run.width = (run.rects.size()-1)*snapSpace(getHgap());
             Insets margins[] = new Insets[run.rects.size()];
-            for (int i = 0; i < run.rects.size(); i++) {
+            for (int i=0, max=run.rects.size(); i<max; i++) {
                 LayoutRect lrect = run.rects.get(i);
                 margins[i] = getMargin(lrect.node);
                 rownodes.add(lrect.node);
@@ -642,7 +649,7 @@ public class FlowPane extends Pane {
             // vertical
             run.height = (run.rects.size()-1)*snapSpace(getVgap());
             double maxw = 0;
-            for (int i = 0; i < run.rects.size(); i++) {
+            for (int i=0, max=run.rects.size(); i<max; i++) {
                 LayoutRect lrect = run.rects.get(i);
                 run.height += lrect.height;
                 lrect.x = runOffset;
@@ -651,13 +658,12 @@ public class FlowPane extends Pane {
 
             run.width = maxw;
             run.baselineOffset = run.height;
-
         }
     }
 
     private double computeContentWidth(List<Run> runs) {
         double cwidth = getOrientation() == HORIZONTAL ? 0 : (runs.size()-1)*snapSpace(getHgap());
-        for (int i = 0; i < runs.size(); i++) {
+        for (int i=0, max=runs.size(); i<max; i++) {
             Run run = runs.get(i);
             if (getOrientation() == HORIZONTAL) {
                 cwidth = Math.max(cwidth, run.width);
@@ -671,7 +677,7 @@ public class FlowPane extends Pane {
 
     private double computeContentHeight(List<Run> runs) {
         double cheight = getOrientation() == VERTICAL ? 0 : (runs.size()-1)*snapSpace(getVgap());
-        for (int i = 0; i < runs.size(); i++) {
+        for (int i=0, max=runs.size(); i<max; i++) {
             Run run = runs.get(i);
             if (getOrientation() == VERTICAL) {
                 cheight = Math.max(cheight, run.height);
@@ -684,27 +690,26 @@ public class FlowPane extends Pane {
     }
 
     @Override protected void layoutChildren() {
-        double width = getWidth();
-        double height = getHeight();
-        double top = getInsets().getTop();
-        double left = getInsets().getLeft();
-        double bottom = getInsets().getBottom();
-        double right = getInsets().getRight();
-        double vgap = snapSpace(getVgap());
-        double hgap = snapSpace(getHgap());
-        double insideWidth = width - left - right;
-        double insideHeight = height - top - bottom;
+        final Insets insets = getInsets();
+        final double width = getWidth();
+        final double height = getHeight();
+        final double top = insets.getTop();
+        final double left = insets.getLeft();
+        final double bottom = insets.getBottom();
+        final double right = insets.getRight();
+        final double insideWidth = width - left - right;
+        final double insideHeight = height - top - bottom;
 
         //REMIND(aim): need to figure out how to cache the runs to avoid over-calculation
-        List<Run> runs = getRuns(getOrientation() == HORIZONTAL ? insideWidth : insideHeight);
+        final List<Run> runs = getRuns(getOrientation() == HORIZONTAL ? insideWidth : insideHeight);
 
         // Now that the nodes are broken into runs, figure out alignments
-        for (int i = 0; i < runs.size(); i++) {
-            Run run = runs.get(i);
-            double xoffset = left + computeXOffset(insideWidth,
+        for (int i=0, max=runs.size(); i<max; i++) {
+            final Run run = runs.get(i);
+            final double xoffset = left + computeXOffset(insideWidth,
                                      getOrientation() == HORIZONTAL ? run.width : computeContentWidth(runs),
                                      getAlignment().getHpos());
-            double yoffset = top + computeYOffset(insideHeight,
+            final double yoffset = top + computeYOffset(insideHeight,
                                     getOrientation() == VERTICAL ? run.height : computeContentHeight(runs),
                                     getAlignment().getVpos());
             for (int j = 0; j < run.rects.size(); j++) {

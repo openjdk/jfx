@@ -14,6 +14,7 @@ import javafx.geometry.Bounds;
 import javafx.scene.Node;
 import javafx.scene.control.ContentDisplay;
 import javafx.scene.control.Label;
+import javafx.scene.control.SkinBaseAccessor;
 import javafx.scene.shape.Rectangle;
 import javafx.scene.text.Font;
 import javafx.scene.text.Text;
@@ -99,7 +100,7 @@ public class LabelSkinLayoutTest {
 
     private Bounds getContentBounds() {
         Bounds b = null;
-        for (Node child : skin.getChildrenUnmodifiable()) {
+        for (Node child : SkinBaseAccessor.getChildren(skin)) {
             if (child.isManaged()) {
                 Bounds childBounds = child.getBoundsInParent();
                 if (b == null) {

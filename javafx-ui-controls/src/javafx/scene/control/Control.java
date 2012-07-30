@@ -34,12 +34,8 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
-import javafx.beans.property.DoubleProperty;
-import javafx.beans.property.DoublePropertyBase;
 import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.ObjectPropertyBase;
-import javafx.beans.property.ReadOnlyDoubleProperty;
-import javafx.beans.property.ReadOnlyDoubleWrapper;
 import javafx.beans.property.SimpleObjectProperty;
 import javafx.beans.property.StringProperty;
 import javafx.beans.value.WritableValue;
@@ -47,9 +43,15 @@ import javafx.geometry.BoundingBox;
 import javafx.geometry.Bounds;
 import javafx.scene.Node;
 import javafx.scene.Parent;
+import javafx.scene.layout.Region;
 
 import com.sun.javafx.logging.PlatformLogger;
 import com.sun.javafx.scene.control.Logging;
+import javafx.collections.ObservableList;
+import javafx.event.EventHandler;
+import javafx.geometry.*;
+import javafx.scene.input.ContextMenuEvent;
+
 
 /**
  * Base class for all user interface controls. A "Control" is a node in the
@@ -68,23 +70,7 @@ import com.sun.javafx.scene.control.Logging;
  * controls that are containers {@link ScrollPane} and {@link ToolBar} do not.
  * Consult individual control documentation for details.
  */
-public abstract class Control extends Parent implements Skinnable {
-
-    /**
-     * Sentinel value which can be passed to a control's setMinWidth(), setMinHeight(),
-     * setMaxWidth() or setMaxHeight() methods to indicate that the preferred dimension
-     * should be used for that max and/or min constraint.
-     */
-    public static final double USE_PREF_SIZE = Double.NEGATIVE_INFINITY;
-
-    /**
-     * Sentinel value which can be passed to a control's setMinWidth(), setMinHeight(),
-     * setPrefWidth(), setPrefHeight(), setMaxWidth(), setMaxHeight() methods
-     * to reset the control's size constraint back to it's intrinsic size returned
-     * by computeMinWidth(), computeMinHeight(), computePrefWidth(), computePrefHeight(),
-     * computeMaxWidth(), or computeMaxHeight().
-     */
-    public static final double USE_COMPUTED_SIZE = -1;
+public abstract class Control extends Region implements Skinnable {
 
     static {
         // Ensures that the caspian.css file is set as the user agent style sheet
@@ -93,11 +79,59 @@ public abstract class Control extends Parent implements Skinnable {
     }
     
     
+    
+    /***************************************************************************
+     *                                                                         *
+     * Private fields                                                          *
+     *                                                                         *
+     **************************************************************************/  
+    
+    private List<StyleableProperty> styleableProperties;
+
+    /**
+     * A private reference directly to the SkinBase instance that is used as the
+     * Skin for this Control. A Control's Skin doesn't have to be of type
+     * SkinBase, although 98% of the time or greater it probably will be.
+     * Because instanceof checks and reading a value from a property are
+     * not cheap (on interpreters on slower hardware or mobile devices)
+     * it pays to have a direct reference here to the skinBase. We simply
+     * need to check this variable -- if it is not null then we know the
+     * Skin is a SkinBase and this is a direct reference to it. If it is null
+     * then we know the skin is not a SkinBase and we need to call getSkin().
+     */
+    private SkinBase skinBase;
+
+    /***************************************************************************
+    *                                                                         *
+    * Event Handlers / Listeners                                              *
+    *                                                                         *
+    **************************************************************************/
+    
+    /**
+     * Handles context menu requests by popping up the menu.
+     * Note that we use this pattern to remove some of the anonymous inner
+     * classes which we'd otherwise have to create. When lambda expressions
+     * are supported, we could do it that way instead (or use MethodHandles).
+     */
+    private final EventHandler<ContextMenuEvent> contextMenuHandler = new EventHandler<ContextMenuEvent>() {
+        @Override public void handle(ContextMenuEvent event) {
+            // If a context menu was shown, consume the event to prevent multiple context menus
+            if (getContextMenu() != null) {
+                getContextMenu().show(Control.this, event.getScreenX(), event.getScreenY());
+                event.consume();
+            }
+        }
+    };
+    
+
+    
     /***************************************************************************
      *                                                                         *
      * Properties                                                              *
      *                                                                         *
      **************************************************************************/    
+    
+    
     
     // --- skin
     /**
@@ -125,7 +159,6 @@ public abstract class Control extends Parent implements Skinnable {
 
         @Override
         public void set(Skin<?> v) {
-
             if (v == null 
                 ? oldValue == null
                 : oldValue != null && v.getClass().equals(oldValue.getClass()))
@@ -142,17 +175,51 @@ public abstract class Control extends Parent implements Skinnable {
             // called set on skinClassName in order to keep CSS from overwriting
             // the skin. 
             skinClassNameProperty().set(currentSkinClassName);
-            
         }
 
         @Override protected void invalidated() {
-
             // Dispose of the old skin
             if (oldValue != null) oldValue.dispose();
+            
             // Get the new value, and save it off as the new oldValue
             final Skin<?> skin = oldValue = getValue();
-            // Update the children list with the new skin node
-            updateChildren();
+            
+            // Reset skinBase to null - it will be set to the new Skin if it
+            // is a SkinBase, otherwise it will remain null, as expected
+            skinBase = null;
+
+            // We have two paths, one for "legacy" Skins, and one for
+            // any Skin which extends from SkinBase. Legacy Skins will
+            // produce a single node which will be the only child of
+            // the Control via the getNode() method on the Skin. A
+            // SkinBase will manipulate the children of the Control
+            // directly. Further, we maintain a direct reference to
+            // the skinBase for more optimal updates later.
+            if (skin instanceof SkinBase) {
+                // record a reference of the skin, if it is a SkinBase, for
+                // performance reasons
+                skinBase = (SkinBase) skin;
+                // Note I do not remove any children here, because the
+                // skin will have already configured all the children
+                // by the time setSkin has been called. This is because
+                // our Skin interface was lacking an initialize method (doh!)
+                // and so the Skin constructor is where it adds listeners
+                // and so forth. For SkinBase implementations, the
+                // constructor is also where it will take ownership of
+                // the children.
+            } else {
+                final Node n = getSkinNode();
+                if (n != null) {
+                    getChildren().setAll(n);
+                } else {
+                    getChildren().clear();
+                }
+            }
+            
+            // clear out the styleable properties so that the list is rebuilt
+            // next time they are requested.
+            styleableProperties = null;
+
             // DEBUG: Log that we've changed the skin
             final PlatformLogger logger = Logging.getControlsLogger();
             if (logger.isLoggable(PlatformLogger.FINEST)) {
@@ -241,331 +308,7 @@ public abstract class Control extends Parent implements Skinnable {
     public final ContextMenu getContextMenu() { return contextMenu == null ? null : contextMenu.getValue(); }
 
     
-    // --- width
-    /**
-     * The width of this control.
-     */
-    public final ReadOnlyDoubleProperty widthProperty() { return width.getReadOnlyProperty(); }
-    protected final void setWidth(double value) { width.set(value); }
-    public final double getWidth() { return width.get(); }
-    private ReadOnlyDoubleWrapper width = new ReadOnlyDoubleWrapper() {
-        @Override protected void invalidated() {
-            impl_layoutBoundsChanged();
-            requestLayout();
-        }
 
-        @Override
-        public Object getBean() {
-            return Control.this;
-        }
-
-        @Override
-        public String getName() {
-            return "width";
-        }
-    };
-
-    
-    // --- height
-    /**
-     * The height of this control.
-     */
-    public final ReadOnlyDoubleProperty heightProperty() { return height.getReadOnlyProperty(); }
-    protected final void setHeight(double value) { height.set(value); }
-    public final double getHeight() { return height.get(); }
-    private ReadOnlyDoubleWrapper height = new ReadOnlyDoubleWrapper() {
-        @Override protected void invalidated() {
-            impl_layoutBoundsChanged();
-            requestLayout();
-        }
-
-        @Override
-        public Object getBean() {
-            return Control.this;
-        }
-
-        @Override
-        public String getName() {
-            return "height";
-        }
-    };
-
-    
-    // --- min width
-    /**
-     * Property for overriding the control's computed minimum width.
-     * This should only be set if the control's internally computed minimum width
-     * doesn't meet the application's layout needs.
-     * <p>
-     * Defaults to the <code>USE_COMPUTED_SIZE</code> flag, which means that
-     * <code>getMinWidth(forHeight)</code> will return the control's internally
-     * computed minimum width.
-     * <p>
-     * Setting this value to the <code>USE_PREF_SIZE</code> flag will cause
-     * <code>getMinWidth(forHeight)</code> to return the control's preferred width,
-     * enabling applications to easily restrict the resizability of the control.
-     *
-     */
-    public final DoubleProperty minWidthProperty() {
-        if (minWidth == null) {
-            minWidth = new DoublePropertyBase(USE_COMPUTED_SIZE) {
-                @Override
-                public void invalidated() {
-                    if (getParent() != null) {
-                        getParent().requestLayout();
-                    }
-                }
-
-                @Override
-                public Object getBean() {
-                    return Control.this;
-                }
-
-                @Override
-                public String getName() {
-                    return "minWidth";
-                }
-            };
-        }
-        return minWidth;
-    }
-    private DoubleProperty minWidth;
-    public final void setMinWidth(double value) { minWidthProperty().set(value); }
-    public final double getMinWidth() { return minWidth == null ? USE_COMPUTED_SIZE : minWidth.get(); }
-
-
-    // --- min height
-    /**
-     * Property for overriding the control's computed minimum height.
-     * This should only be set if the control's internally computed minimum height
-     * doesn't meet the application's layout needs.
-     * <p>
-     * Defaults to the <code>USE_COMPUTED_SIZE</code> flag, which means that
-     * <code>getMinHeight(forWidth)</code> will return the control's internally
-     * computed minimum height.
-     * <p>
-     * Setting this value to the <code>USE_PREF_SIZE</code> flag will cause
-     * <code>getMinHeight(forWidth)</code> to return the control's preferred height,
-     * enabling applications to easily restrict the resizability of the control.
-     *
-     */
-    public final DoubleProperty minHeightProperty() {
-        if (minHeight == null) {
-            minHeight = new DoublePropertyBase(USE_COMPUTED_SIZE) {
-                @Override
-                public void invalidated() {
-                    if (getParent() != null) {
-                        getParent().requestLayout();
-                    }
-                }
-
-                @Override
-                public Object getBean() {
-                    return Control.this;
-                }
-
-                @Override
-                public String getName() {
-                    return "minHeight";
-                }
-            };
-        }
-        return minHeight;
-    }
-    private DoubleProperty minHeight;
-    public final void setMinHeight(double value) { minHeightProperty().set(value); }
-    public final double getMinHeight() { return minHeight == null ? USE_COMPUTED_SIZE : minHeight.get(); }
-
-    /**
-     * Convenience method for overriding the control's computed minimum width and height.
-     * This should only be called if the control's internally computed minimum size
-     * doesn't meet the application's layout needs.
-     *
-     * @see #setMinWidth(double)
-     * @see #setMinHeight(double)
-     * @param minWidth  the override value for minimum width
-     * @param minHeight the override value for minimum height
-     */
-    public void setMinSize(double minWidth, double minHeight) {
-        setMinWidth(minWidth);
-        setMinHeight(minHeight);
-    }
-
-    /**
-     * Property for overriding the control's computed preferred width.
-     * This should only be set if the control's internally computed preferred width
-     * doesn't meet the application's layout needs.
-     * <p>
-     * Defaults to the <code>USE_COMPUTED_SIZE</code> flag, which means that
-     * <code>getPrefWidth(forHeight)</code> will return the control's internally
-     * computed preferred width.
-     *
-     */
-    public final DoubleProperty prefWidthProperty() {
-        if (prefWidth == null) {
-            prefWidth = new DoublePropertyBase(USE_COMPUTED_SIZE) {
-                @Override
-                public void invalidated() {
-                    if (getParent() != null) {
-                        getParent().requestLayout();
-                    }
-                }
-
-                @Override
-                public Object getBean() {
-                    return Control.this;
-                }
-
-                @Override
-                public String getName() {
-                    return "prefWidth";
-                }
-            };
-        }
-        return prefWidth;
-    }
-    private DoubleProperty prefWidth;
-    public final void setPrefWidth(double value) { prefWidthProperty().set(value); }
-    public final double getPrefWidth() { return prefWidth == null ? USE_COMPUTED_SIZE : prefWidth.get(); }
-
-
-    /**
-     * Property for overriding the control's computed preferred height.
-     * This should only be set if the control's internally computed preferred height
-     * doesn't meet the application's layout needs.
-     * <p>
-     * Defaults to the <code>USE_COMPUTED_SIZE</code> flag, which means that
-     * <code>getPrefHeight(forWidth)</code> will return the control's internally
-     * computed preferred width.
-     *
-     */
-    public final DoubleProperty prefHeightProperty() {
-        if (prefHeight == null) {
-            prefHeight = new DoublePropertyBase(USE_COMPUTED_SIZE) {
-                @Override
-                public void invalidated() {
-                    if (getParent() != null) {
-                        getParent().requestLayout();
-                    }
-                }
-
-                @Override
-                public Object getBean() {
-                    return Control.this;
-                }
-
-                @Override
-                public String getName() {
-                    return "prefHeight";
-                }
-            };
-        }
-        return prefHeight;
-    }
-    private DoubleProperty prefHeight;
-    public final void setPrefHeight(double value) { prefHeightProperty().set(value); }
-    public final double getPrefHeight() { return prefHeight == null ? USE_COMPUTED_SIZE : prefHeight.get(); }
-
-
-    /**
-     * Convenience method for overriding the control's computed preferred width and height.
-     * This should only be called if the control's internally computed preferred size
-     * doesn't meet the application's layout needs.
-     *
-     * @see #setPrefWidth(double)
-     * @see #setPrefHeight(double)
-     * @param prefWidth the override value for preferred width
-     * @param prefHeight the override value for preferred height
-     */
-    public void setPrefSize(double prefWidth, double prefHeight) {
-        setPrefWidth(prefWidth);
-        setPrefHeight(prefHeight);
-    }
-
-    /**
-     * Property for overriding the control's computed maximum width.
-     * This should only be set if the control's internally computed maximum width
-     * doesn't meet the application's layout needs.
-     * <p>
-     * Defaults to the <code>USE_COMPUTED_SIZE</code> flag, which means that
-     * <code>getMaxWidth(forHeight)</code> will return the control's internally
-     * computed maximum width.
-     * <p>
-     * Setting this value to the <code>USE_PREF_SIZE</code> flag will cause
-     * <code>getMaxWidth(forHeight)</code> to return the control's preferred width,
-     * enabling applications to easily restrict the resizability of the control.
-     *
-     */
-    public final DoubleProperty maxWidthProperty() {
-        if (maxWidth == null) {
-            maxWidth = new DoublePropertyBase(USE_COMPUTED_SIZE) {
-                @Override
-                public void invalidated() {
-                    if (getParent() != null) {
-                        getParent().requestLayout();
-                    }
-                }
-
-                @Override
-                public Object getBean() {
-                    return Control.this;
-                }
-
-                @Override
-                public String getName() {
-                    return "maxWidth";
-                }
-            };
-        }
-        return maxWidth;
-    }
-    private DoubleProperty maxWidth;
-    public final void setMaxWidth(double value) { maxWidthProperty().set(value); }
-    public final double getMaxWidth() { return maxWidth == null ? USE_COMPUTED_SIZE : maxWidth.get(); }
-
-    /**
-     * Property for overriding the control's computed maximum height.
-     * This should only be set if the control's internally computed maximum height
-     * doesn't meet the application's layout needs.
-     * <p>
-     * Defaults to the <code>USE_COMPUTED_SIZE</code> flag, which means that
-     * <code>getMaxHeight(forWidth)</code> will return the control's internally
-     * computed maximum height.
-     * <p>
-     * Setting this value to the <code>USE_PREF_SIZE</code> flag will cause
-     * <code>getMaxHeight(forWidth)</code> to return the control's preferred height,
-     * enabling applications to easily restrict the resizability of the control.
-     *
-     */
-    public final DoubleProperty maxHeightProperty() {
-        if (maxHeight == null) {
-            maxHeight = new DoublePropertyBase(USE_COMPUTED_SIZE) {
-                @Override
-                public void invalidated() {
-                    if (getParent() != null) {
-                        getParent().requestLayout();
-                    }
-                }
-
-                @Override
-                public Object getBean() {
-                    return Control.this;
-                }
-
-                @Override
-                public String getName() {
-                    return "maxHeight";
-                }
-            };
-        }
-        return maxHeight;
-    }
-    private DoubleProperty maxHeight;
-    public final void setMaxHeight(double value) { maxHeightProperty().set(value); }
-    public final double getMaxHeight() { return maxHeight == null ? USE_COMPUTED_SIZE : maxHeight.get(); }
-
-    
-    
     /***************************************************************************
      *                                                                         *
      * Constructors                                                            *
@@ -581,7 +324,11 @@ public abstract class Control extends Parent implements Skinnable {
         // override. Initializing focusTraversable by calling set on the 
         // StyleableProperty ensures that css will be able to override the value.        
         final StyleableProperty prop = StyleableProperty.getStyleableProperty(focusTraversableProperty());
-        prop.set(this, Boolean.TRUE);            
+        prop.set(this, Boolean.TRUE);  
+        
+        // we add a listener for menu request events to show the context menu
+        // that may be set on the Control
+        this.addEventHandler(ContextMenuEvent.CONTEXT_MENU_REQUESTED, contextMenuHandler);
     }
     
     
@@ -590,152 +337,14 @@ public abstract class Control extends Parent implements Skinnable {
      *                                                                         *
      * Public API                                                              *
      *                                                                         *
-     **************************************************************************/    
-
+     **************************************************************************/
+    
     /**
      * Returns <code>true</code> since all Controls are resizable.
      * @return whether this node can be resized by its parent during layout
      */
     @Override public boolean isResizable() {
         return true;
-    }
-
-    /**
-     * Invoked by the control's parent during layout to set the control's
-     * width and height.  <b>Applications should not invoke this method directly</b>.
-     * If an application needs to directly set the size of the control, it should
-     * override its size constraints by calling <code>setMinSize()</code>,
-     *  <code>setPrefSize()</code>, or <code>setMaxSize()</code> and it's parent
-     * will honor those overrides during layout.
-     *
-     * @param width the target layout bounds width
-     * @param height the target layout bounds height
-     */
-    @Override public void resize(double width, double height) {
-        setWidth(width);
-        setHeight(height);
-        final PlatformLogger logger = com.sun.javafx.Logging.getLayoutLogger();
-        if (logger.isLoggable(PlatformLogger.FINER)) {
-            logger.finer(this.toString()+" resized to "+width+" x "+height);
-        }
-    }
-
-    /**
-     * Called during layout to determine the minimum width for this node.
-     * Returns the value from <code>computeMinWidth(forHeight)</code> unless
-     * the application overrode the minimum width by setting the minWidth property.
-     *
-     * @see #setMinWidth(double)
-     * @return the minimum width that this node should be resized to during layout
-     */
-    @Override public final double minWidth(double height) {
-        double override = getMinWidth();
-        if (override == USE_COMPUTED_SIZE) {
-            return super.minWidth(height);
-        } else if (override == USE_PREF_SIZE) {
-            return prefWidth(height);
-        }
-        return override;
-    }
-
-    /**
-     * Called during layout to determine the minimum height for this node.
-     * Returns the value from <code>computeMinHeight(forWidth)</code> unless
-     * the application overrode the minimum height by setting the minHeight property.
-     *
-     * @see #setMinHeight(double)
-     * @return the minimum height that this node should be resized to during layout
-     */
-    @Override public final double minHeight(double width) {
-        double override = getMinHeight();
-        if (override == USE_COMPUTED_SIZE) {
-            return super.minHeight(width);
-        } else if (override == USE_PREF_SIZE) {
-            return prefHeight(width);
-        }
-        return override;
-    }
-
-    /**
-     * Called during layout to determine the preferred width for this node.
-     * Returns the value from <code>computePrefWidth(forHeight)</code> unless
-     * the application overrode the preferred width by setting the prefWidth property.
-     *
-     * @see #setPrefWidth(double)
-     * @return the preferred width that this node should be resized to during layout
-     */
-    @Override public final double prefWidth(double height) {
-        double override = getPrefWidth();
-        if (override == USE_COMPUTED_SIZE) {
-            return super.prefWidth(height);
-        } 
-        return override;
-    }
-
-    /**
-     * Called during layout to determine the preferred height for this node.
-     * Returns the value from <code>computePrefHeight(forWidth)</code> unless
-     * the application overrode the preferred height by setting the prefHeight property.
-     *
-     * @see #setPrefHeight(double)
-     * @return the preferred height that this node should be resized to during layout
-     */
-    @Override public final double prefHeight(double width) {
-        double override = getPrefHeight();
-        if (override == USE_COMPUTED_SIZE) {
-            return super.prefHeight(width);
-        } 
-        return override;
-    }
-    /**
-     * Called during layout to determine the maximum width for this node.
-     * Returns the value from <code>computeMaxWidth(forHeight)</code> unless
-     * the application overrode the maximum width by setting the maxWidth property.
-     *
-     * @see #setMaxWidth(double)
-     * @return the maximum width that this node should be resized to during layout
-     */
-    @Override public final double maxWidth(double height) {
-        double override = getMaxWidth();
-        if (override == USE_COMPUTED_SIZE) {
-            return computeMaxWidth(height);
-        } else if (override == USE_PREF_SIZE) {
-            return prefWidth(height);
-        }
-        return override;
-    }
-
-    /**
-     * Called during layout to determine the maximum height for this node.
-     * Returns the value from <code>computeMaxHeight(forWidth)</code> unless
-     * the application overrode the maximum height by setting the maxHeight property.
-     *
-     * @see #setMaxHeight(double)
-     * @return the maximum height that this node should be resized to during layout
-     */
-    @Override public final double maxHeight(double width) {
-        double override = getMaxHeight();
-        if (override == USE_COMPUTED_SIZE) {
-            return computeMaxHeight(width);
-        } else if (override == USE_PREF_SIZE) {
-            return prefHeight(width);
-        }
-        return override;
-    }
-    
-    /**
-     * Convenience method for overriding the control's computed maximum width and height.
-     * This should only be called if the control's internally computed maximum size
-     * doesn't meet the application's layout needs.
-     *
-     * @see #setMaxWidth(double)
-     * @see #setMaxHeight(double)
-     * @param maxWidth  the override value for maximum width
-     * @param maxHeight the override value for maximum height
-     */
-    public void setMaxSize(double maxWidth, double maxHeight) {
-        setMaxWidth(maxWidth);
-        setMaxHeight(maxHeight);
     }
 
     // Implementation of the Resizable interface.
@@ -753,9 +362,15 @@ public abstract class Control extends Parent implements Skinnable {
      *      the minimum width.
      * @return A double representing the minimum width of this control.
      */
-    @Override protected double computeMinWidth(double height) {
-        return getSkinNode() == null ? 0 : getSkinNode().minWidth(height);
+    @Override protected double computeMinWidth(final double height) {
+        if (skinBase != null) {    
+            return skinBase.computeMinWidth(height);
+        } else {
+            final Node skinNode = getSkinNode();
+            return skinNode == null ? 0 : skinNode.minWidth(height);
+        }
     }
+
     /**
      * Computes the minimum allowable height of the Control, based on the provided
      * width. The minimum height is not calculated within the Control, instead
@@ -766,9 +381,15 @@ public abstract class Control extends Parent implements Skinnable {
      *      the minimum height.
      * @return A double representing the minimum height of this control.
      */
-    @Override protected double computeMinHeight(double width) {
-        return getSkinNode() == null ? 0 : getSkinNode().minHeight(width);
+    @Override protected double computeMinHeight(final double width) {
+        if (skinBase != null) {    
+            return skinBase.computeMinHeight(width);
+        } else {
+            final Node skinNode = getSkinNode();
+            return skinNode == null ? 0 : skinNode.minHeight(width);
+        }
     }
+
     /**
      * Computes the maximum allowable width of the Control, based on the provided
      * height. The maximum width is not calculated within the Control, instead
@@ -779,9 +400,15 @@ public abstract class Control extends Parent implements Skinnable {
      *      the maximum width.
      * @return A double representing the maximum width of this control.
      */
-    protected double computeMaxWidth(double height) {
-        return getSkinNode() == null ? 0 : getSkinNode().maxWidth(height);
+    @Override protected double computeMaxWidth(double height) {
+        if (skinBase != null) {  
+            return skinBase.computeMaxWidth(height);
+        } else {
+            final Node skinNode = getSkinNode();
+            return skinNode == null ? 0 : skinNode.maxWidth(height);
+        }
     }
+
     /**
      * Computes the maximum allowable height of the Control, based on the provided
      * width. The maximum height is not calculated within the Control, instead
@@ -792,19 +419,44 @@ public abstract class Control extends Parent implements Skinnable {
      *      the maximum height.
      * @return A double representing the maximum height of this control.
      */
-    protected double computeMaxHeight(double width) {
-        return getSkinNode() == null ? 0 : getSkinNode().maxHeight(width);
+    @Override protected double computeMaxHeight(double width) {
+        if (skinBase != null) {  
+            return skinBase.computeMaxHeight(width);
+        } else {
+            final Node skinNode = getSkinNode();
+            return skinNode == null ? 0 : skinNode.maxHeight(width);
+        }
     }
+
     /** {@inheritDoc} */
     @Override protected double computePrefWidth(double height) {
-        return getSkinNode() == null? 0 : getSkinNode().prefWidth(height);
+        if (skinBase != null) {  
+            return skinBase.computePrefWidth(height);
+        } else {
+            final Node skinNode = getSkinNode();
+            return skinNode == null ? 0 : skinNode.prefWidth(height);
+        }
     }
+
     /** {@inheritDoc} */
     @Override protected double computePrefHeight(double width) {
-        return getSkinNode() == null? 0 : getSkinNode().prefHeight(width);
+        if (skinBase != null) {  
+            return skinBase.computePrefHeight(width);
+        } else {
+            final Node skinNode = getSkinNode();
+            return skinNode == null ? 0 : skinNode.prefHeight(width);
+        }
     }
+    
     /** {@inheritDoc} */
-    @Override public double getBaselineOffset() { return getSkinNode() == null? 0 : getSkinNode().getBaselineOffset(); }
+    @Override public double getBaselineOffset() { 
+        if (skinBase != null) {  
+            return skinBase.getBaselineOffset();
+        } else {
+            final Node skinNode = getSkinNode();
+            return skinNode == null ? 0 : skinNode.getBaselineOffset();
+        }
+    }
 
     /***************************************************************************
      * Implementation of layout bounds for the Control. We want to preserve    *
@@ -813,31 +465,20 @@ public abstract class Control extends Parent implements Skinnable {
      * recompute it on demand.                                                 *
      **************************************************************************/
 
-    /**
-     * @treatAsPrivate
-     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
-     */
-    @Deprecated
-    @Override protected void impl_notifyLayoutBoundsChanged() {
-        // override Node's default behavior of having a geometric bounds change
-        // trigger a change in layoutBounds. For Resizable nodes, layoutBounds
-        // is unrelated to geometric bounds.
-    }
-
-    /**
-     * @treatAsPrivate implementation detail
-     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
-     */
-    @Deprecated
-    @Override protected Bounds impl_computeLayoutBounds() {
-        return new BoundingBox(0, 0, getWidth(), getHeight());
-    }
-
     /** {@inheritDoc} */
     @Override protected void layoutChildren() {
-        Node n = getSkinNode();
-        if (n != null) {
-            n.resizeRelocate(0, 0, getWidth(), getHeight());
+        if (skinBase != null) {
+            final Insets padding = getInsets();
+            final double x = snapSize(padding.getLeft());
+            final double y = snapSize(padding.getTop());
+            final double w = snapSize(getWidth()) - snapSize(padding.getLeft()) - snapSize(padding.getRight());
+            final double h = snapSize(getHeight()) - snapSize(padding.getTop()) - snapSize(padding.getBottom());
+            skinBase.layoutChildren(x, y, w, h);
+        } else {
+            Node n = getSkinNode();
+            if (n != null) {
+                n.resizeRelocate(0, 0, getWidth(), getHeight());
+            }
         }
     }
 
@@ -845,27 +486,32 @@ public abstract class Control extends Parent implements Skinnable {
      * Forward the following to the skin                                       *
      **************************************************************************/
 
-    // overridden to base containment on the Skin rather than on the bounds
-    // of the Skin, allowing the Skin to dictate containment.
     /**
      * @treatAsPrivate implementation detail
      * @deprecated This is an internal API that is not intended for use and will be removed in the next version
      */
-    @Deprecated
-    @Override protected boolean impl_computeContains(double localX, double localY) {
-        Node n = getSkinNode();
-        return n == null ? false : n.contains(localX, localY);
+    @Deprecated @Override public long impl_getPseudoClassState() {
+        long mask = super.impl_getPseudoClassState();
+        
+        if (skinBase != null) {
+            mask |= skinBase.impl_getPseudoClassState();
+        }
+        
+        return mask;
+    }
+    
+    
+    /***************************************************************************
+     *                                                                         *
+     * Package API for SkinBase                                                *
+     *                                                                         *
+     **************************************************************************/       
+    
+    // package private for SkinBase
+    ObservableList<Node> getControlChildren() {
+        return getChildren();
     }
 
-    // overridden to base intersects on the Skin rather than on the bounds
-    // of the Skin, allowing the Skin to dictate intersection
-    /** {@inheritDoc} */
-    @Override public boolean intersects(double localX, double localY, double localWidth, double localHeight) {
-        Node n = getSkinNode();
-        return n == null ? false : n.intersects(localX, localY, localWidth, localHeight);
-    }
-    
-    
     
     /***************************************************************************
      *                                                                         *
@@ -882,18 +528,9 @@ public abstract class Control extends Parent implements Skinnable {
      * @return The Skin's node, or null.
      */
     private Node getSkinNode() {
-        return getSkin() == null ? null : getSkin().getNode();
-    }
-
-    /**
-     * Called from several places whenever the children of the Control
-     * may need to be updated (principally, when the tool tip changes,
-     * the skin changes, or the skin.node changes).
-     */
-    private void updateChildren() {
-        final Node n = getSkinNode();
-        if (n != null) getChildren().setAll(n);
-        else getChildren().clear();
+        assert skinBase == null;
+        Skin skin = getSkin();
+        return skin == null ? null : skin.getNode();
     }
 
     /**
@@ -914,14 +551,15 @@ public abstract class Control extends Parent implements Skinnable {
                 
                 @Override
                 public void invalidated() {
+                    // reset the styleable properties so we get the new ones from
+                    // the new skin
+                    styleableProperties = null;
 
                     if (get() != null) {
                         if (!get().equals(currentSkinClassName)) {
                             loadSkinClass();
                         }
-                      // CSS should not set skin to null
-//                    } else {
-//                        setSkin(null);
+                        // Note: CSS should not set skin to null
                     }
                 }
                 
@@ -945,12 +583,7 @@ public abstract class Control extends Parent implements Skinnable {
         return skinClassName;
     }
     
-    protected void setSkinClassName(String skinClassName) {
-        skinClassNameProperty().set(skinClassName);        
-    }
-    
     private void loadSkinClass() {
-        
         if (skinClassName == null 
                 || skinClassName.get() == null 
                 || skinClassName.get().isEmpty()) {
@@ -1012,19 +645,7 @@ public abstract class Control extends Parent implements Skinnable {
                 errors.add(error); // RT-19884
             } 
             Logging.getControlsLogger().severe(msg, e);            
-//            Node parent = this;
-//            int n = 0;
-//            while (parent != null) {
-//                for(int j=0; j<n*2; j++) {
-//                    System.err.print(' ');
-//                }
-//                n+=1;
-//                System.err.println(parent);
-//                parent = parent.getParent();
-//            }
-            
         }
-
     }
 
     /***************************************************************************
@@ -1062,7 +683,7 @@ public abstract class Control extends Parent implements Skinnable {
         private static final List<StyleableProperty> STYLEABLES;
         static {
             final List<StyleableProperty> styleables =
-                new ArrayList<StyleableProperty>(Parent.impl_CSS_STYLEABLES());
+                new ArrayList<StyleableProperty>(Region.impl_CSS_STYLEABLES());
             Collections.addAll(styleables,
                 SKIN
             );
@@ -1078,6 +699,15 @@ public abstract class Control extends Parent implements Skinnable {
     public static List<StyleableProperty> impl_CSS_STYLEABLES() {
         return Control.StyleableProperties.STYLEABLES;
     }
+    
+    /**
+     * @treatAsPrivate implementation detail
+     * @deprecated This is an experimental API that is not intended for general use and is subject to change in future versions
+     */
+    @Deprecated
+    protected List<StyleableProperty> impl_getControlStyleableProperties() {
+        return impl_CSS_STYLEABLES();
+    }
 
     /**
      * RT-19263
@@ -1086,7 +716,15 @@ public abstract class Control extends Parent implements Skinnable {
      */
     @Deprecated
     public List<StyleableProperty> impl_getStyleableProperties() {
-        return impl_CSS_STYLEABLES();
+        if (styleableProperties == null) {
+            styleableProperties = new ArrayList<StyleableProperty>();
+            styleableProperties.addAll(impl_getControlStyleableProperties());
+            
+            if (skinBase != null) {
+                styleableProperties.addAll(skinBase.impl_getStyleableProperties());
+            }
+        }
+        return styleableProperties;
     }
 
     /**

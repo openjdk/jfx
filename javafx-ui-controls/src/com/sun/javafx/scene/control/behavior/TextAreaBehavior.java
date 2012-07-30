@@ -386,8 +386,8 @@ public class TextAreaBehavior extends TextInputControlBehavior<TextArea> {
                     }
 
                     if (menuPos != null) {
-                        Point2D p = skin.localToScene(menuPos);
-                        Scene scene = skin.getScene();
+                        Point2D p = getControl().localToScene(menuPos);
+                        Scene scene = getControl().getScene();
                         Window window = scene.getWindow();
                         Point2D location = new Point2D(window.getX() + scene.getX() + p.getX(),
                                                        window.getY() + scene.getY() + p.getY());
@@ -404,17 +404,17 @@ public class TextAreaBehavior extends TextInputControlBehavior<TextArea> {
                 Rectangle2D bounds = currentScreen.getBounds();
 
                 if (menuX < bounds.getMinX()) {
-                    skin.getProperties().put("CONTEXT_MENU_SCREEN_X", screenX);
-                    skin.getProperties().put("CONTEXT_MENU_SCENE_X", sceneX);
+                    getControl().getProperties().put("CONTEXT_MENU_SCREEN_X", screenX);
+                    getControl().getProperties().put("CONTEXT_MENU_SCENE_X", sceneX);
                     contextMenu.show(getControl(), bounds.getMinX(), screenY);
                 } else if (screenX + menuWidth > bounds.getMaxX()) {
                     double leftOver = menuWidth - ( bounds.getMaxX() - screenX);
-                    skin.getProperties().put("CONTEXT_MENU_SCREEN_X", screenX);
-                    skin.getProperties().put("CONTEXT_MENU_SCENE_X", sceneX);
+                    getControl().getProperties().put("CONTEXT_MENU_SCREEN_X", screenX);
+                    getControl().getProperties().put("CONTEXT_MENU_SCENE_X", sceneX);
                     contextMenu.show(getControl(), screenX - leftOver, screenY);
                 } else {
-                    skin.getProperties().put("CONTEXT_MENU_SCREEN_X", 0);
-                    skin.getProperties().put("CONTEXT_MENU_SCENE_X", 0);
+                    getControl().getProperties().put("CONTEXT_MENU_SCREEN_X", 0);
+                    getControl().getProperties().put("CONTEXT_MENU_SCENE_X", 0);
                     contextMenu.show(getControl(), menuX, screenY);
                 }
             }
