@@ -3542,3 +3542,18 @@ Only the properties with values that are different from the TextBox are specifie
 .pagination > .pagination-control > .page-information {   
     -fx-padding: 0.416em 0 0 0;
 }
+
+
+/*******************************************************************************
+ *                                                                             *
+ * TreeTableView                                                               *
+ *                                                                             *
+ ******************************************************************************/
+
+.tree-table-view {
+    -fx-skin: "com.sun.javafx.scene.control.skin.TreeTableViewSkin";
+}
+
+.tree-table-row {
+    -fx-skin: "com.sun.javafx.scene.control.skin.TreeTableRowSkin";
+}
