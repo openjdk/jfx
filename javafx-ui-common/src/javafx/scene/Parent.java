@@ -1331,14 +1331,12 @@ public abstract class Parent extends Node {
     // Returns TRUE if the bounds have changed, FALSE otherwise
     boolean childAdded(Node node) {
         // If there is no history as to what the bounds were (ie, if
-        // cachedBounds are invalid) then we punt since the next call
+        // cachedBounds are empty) then we punt since the next call
         // to get the bounds will force a full recomputation anyway.
-        
-        // The above comment is not right. With invalid but non-empty bounds 
-        // the recomputation goes through fast-path which doesn't consider
-        // added and removed nodes. I'm turning off this optimizaion.
 
-        //if (cachedBoundsInvalid) return true;
+        if (cachedBounds.isEmpty()) {
+            return true;
+        }
 
         // If one of the edges has been cleared by the removal of a node,
         // then there is no point to continuing because we will have to
@@ -1410,14 +1408,12 @@ public abstract class Parent extends Node {
         // have changed or not relative to itself
         node.boundsChanged = false;
         // If there is no history as to what the bounds were (ie, if
-        // cachedBounds are invalid) then we punt since the next call
+        // cachedBounds are empty) then we punt since the next call
         // to get the bounds will force a full recomputation anyway.
 
-        // The above comment is not right. With invalid but non-empty bounds 
-        // the recomputation goes through fast-path which doesn't consider
-        // added and removed nodes. I'm turning off this optimizaion.
-
-        // if (cachedBoundsInvalid) return true;
+        if (cachedBounds.isEmpty()) {
+            return true;
+        }
 
         // Since there was some prior size to the Group, all the nodes that
         // were removed are checked to see if they formed one of the edges. If

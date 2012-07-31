@@ -375,4 +375,33 @@ public class Parent_recomputeBounds_Test {
         assertEquals(300, b.getWidth(), 0.0001);
         assertEquals(300, b.getHeight(), 0.0001);
     }
+
+    @Test
+    public void dontStartBoundsCalculationFromEmptyBounds() {
+        final Group g = new Group();
+        final Rectangle lt = new Rectangle(50, 50, 50, 50);
+        final Rectangle rb = new Rectangle(100, 100, 50, 50);
+        Bounds b;
+
+        g.getChildren().addAll(lt, rb);
+
+        b = g.getBoundsInLocal();
+        assertEquals(50, b.getMinX(), 0.0001);
+        assertEquals(50, b.getMinY(), 0.0001);
+        assertEquals(100, b.getWidth(), 0.0001);
+        assertEquals(100, b.getHeight(), 0.0001);
+
+        // invalidate (empty) bounds
+        rb.setVisible(false);
+
+        // add new rectangle, bounds should not be recalculated by using
+        // empty bounds
+        g.getChildren().add(new Rectangle(150, 150, 50, 50));
+
+        b = g.getBoundsInLocal();
+        assertEquals(50, b.getMinX(), 0.0001);
+        assertEquals(50, b.getMinY(), 0.0001);
+        assertEquals(150, b.getWidth(), 0.0001);
+        assertEquals(150, b.getHeight(), 0.0001);
+    }
 }
