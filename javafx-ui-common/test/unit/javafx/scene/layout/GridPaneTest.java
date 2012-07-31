@@ -460,7 +460,38 @@ public class GridPaneTest {
         assertNull(GridPane.getColumnSpan(child1));
     }
 
+    @Test public void testGridPaneSetColumnSpanConstraintWithHorizontalContentBias_RT_23718() {
+        MockBiased child0_0 = new MockBiased(Orientation.HORIZONTAL, 300, 100);
 
+        GridPane.setColumnSpan(child0_0, 2);        
+        
+        gridpane.getChildren().addAll(child0_0);
+        
+        gridpane.resize(500, 500);
+        gridpane.layout();
+
+        assertEquals(0, child0_0.getLayoutX(), 1e-100);
+        assertEquals(0, child0_0.getLayoutY(), 1e-100);
+        assertEquals(300, child0_0.getLayoutBounds().getWidth(), 1e-100);
+        assertEquals(100, child0_0.getLayoutBounds().getHeight(), 1e-100);        
+    }    
+
+    @Test public void testGridPaneSetColumnSpanConstraintWithVerticalContentBias_RT_23718() {
+        MockBiased child0_0 = new MockBiased(Orientation.VERTICAL, 100, 300);
+
+        GridPane.setRowSpan(child0_0, 2);
+        
+        gridpane.getChildren().addAll(child0_0);
+        
+        gridpane.resize(500, 500);
+        gridpane.layout();
+  
+        assertEquals(0, child0_0.getLayoutX(), 1e-100);
+        assertEquals(0, child0_0.getLayoutY(), 1e-100);
+        assertEquals(100, child0_0.getLayoutBounds().getWidth(), 1e-100);
+        assertEquals(300, child0_0.getLayoutBounds().getHeight(), 1e-100);        
+    } 
+    
     @Test public void testGridPaneSetMarginConstraint() {
         MockResizable child1 = new MockResizable(100,200, 300,400, 500,600);
 

@@ -1130,7 +1130,8 @@ public class GridPane extends Pane {
         rowBaseline = createDoubleArray(numRows, 0);
         rowGrow = createPriorityArray(numRows, Priority.NEVER);
 
-        double snapvgap = snapSpace(getVgap());
+        final double snapvgap = snapSpace(getVgap());
+        final double snaphgap = snapSpace(getHgap());
         for (int i = 0; i < numRows; i++) {
             boolean computeMin = true;
             boolean computeMax = true;
@@ -1198,13 +1199,24 @@ public class GridPane extends Pane {
                     Insets margin = getMargin(child);
                     double top = margin != null? margin.getTop() : 0;
                     int rowIndex = getNodeRowIndex(child);
-                    int rowspan = getNodeRowSpan(child);
+                    int rowspan = getNodeRowSpan(child);                    
                     if (rowspan == REMAINING) {
                         rowspan = numRows - rowIndex;
                     }
                     int colIndex = getNodeColumnIndex(child);
+                    int colspan = getNodeColumnSpan(child);
+                    double width = widths[colIndex];
+                    if (colspan != REMAINING && colspan > 1) {
+                        for (int k = colIndex; k < colIndex + colspan; k++) {
+                            if (widths[k] != USE_COMPUTED_SIZE) {
+                                width += widths[k];
+                            }
+                        }
+                        width += ((colspan - 1) * snaphgap);
+                    }
+                    
                     if (computePref) {
-                        double preferredHeight = computeChildPrefAreaHeight(child, margin, widths[colIndex]);
+                        double preferredHeight = computeChildPrefAreaHeight(child, margin, width);
                         if (rowspan > 1) {
                             double h = 0.0f;
                             for (int k = rowIndex; k < rowIndex+rowspan-1 ; k++) {
@@ -1217,7 +1229,7 @@ public class GridPane extends Pane {
                         rowPrefHeight[i] = Math.max(rowPrefHeight[i], preferredHeight);
                     }
                     if (computeMin) {
-                        double minimumHeight = computeChildMinAreaHeight(child, margin, widths[colIndex]);
+                        double minimumHeight = computeChildMinAreaHeight(child, margin, width);
                         if (rowspan > 1) {
                             double h = 0.0f;
                             for (int k = rowIndex; k < rowIndex+rowspan-1 ; k++) {
@@ -1230,7 +1242,7 @@ public class GridPane extends Pane {
                         rowMinHeight[i] = Math.max(rowMinHeight[i], minimumHeight);
                     }
                     if (computeMax) {
-                        double maximumHeight = computeChildMaxAreaHeight(child, margin, widths[colIndex]);
+                        double maximumHeight = computeChildMaxAreaHeight(child, margin, width);
                         if (rowspan > 1) {
                             double h = 0.0f;
                             for (int k = rowIndex; k < rowIndex+rowspan-1 ; k++) {
@@ -1288,8 +1300,9 @@ public class GridPane extends Pane {
         columnMaxWidth = createDoubleArray(numColumns, java.lang.Integer.MAX_VALUE);
         columnWidths = createDoubleArray(numColumns, 0);
         columnGrow = createPriorityArray(numColumns, Priority.NEVER);
-
+        
         final double snaphgap = snapSpace(getHgap());
+        final double snapvgap = snapSpace(getVgap());
         for (int i = 0; i < numColumns; i++) {
             boolean computeMin = true;
             boolean computeMax = true;
@@ -1349,8 +1362,19 @@ public class GridPane extends Pane {
                         colspan = numColumns - columnIndex;
                     }
                     int rowIndex = getNodeRowIndex(child);
+                    int rowspan = getNodeRowSpan(child);
+                    double height = heights[rowIndex];
+                    if (rowspan != REMAINING && rowspan > 1) {
+                        for (int k = rowIndex; k < rowIndex + rowspan; k++) {
+                            if (heights[k] != USE_COMPUTED_SIZE) {
+                                height += heights[k];
+                            }
+                        }
+                        height += ((rowspan - 1) * snapvgap);
+                    }
+                    
                     if (computePref) {
-                        double preferredWidth = computeChildPrefAreaWidth(child, margin, heights[rowIndex]);
+                        double preferredWidth = computeChildPrefAreaWidth(child, margin, height);
                         if (colspan > 1) {
                             double w = 0.0f;
                             for (int k = columnIndex; k < columnIndex + colspan - 1; k++) {
@@ -1358,10 +1382,10 @@ public class GridPane extends Pane {
                             }
                             preferredWidth -= w + ((colspan-1)*snaphgap);
                         }
-                        columnPrefWidth[i] = Math.max(columnPrefWidth[i], preferredWidth);
+                        columnPrefWidth[i] = Math.max(columnPrefWidth[i], preferredWidth);                             
                     }
                     if (computeMin) {
-                        double minimumWidth = computeChildMinAreaWidth(child, margin, heights[rowIndex]);
+                        double minimumWidth = computeChildMinAreaWidth(child, margin, height);
                         if (colspan > 1) {
                             double w = 0.0f;
                             for (int k = columnIndex; k < columnIndex + colspan - 1; k++) {
@@ -1372,7 +1396,7 @@ public class GridPane extends Pane {
                         columnMinWidth[i] = Math.max(columnMinWidth[i], minimumWidth);
                     }
                     if (computeMax) {
-                        double maximumWidth = computeChildMaxAreaWidth(child, margin, heights[rowIndex]);
+                        double maximumWidth = computeChildMaxAreaWidth(child, margin, height);
                         if (colspan > 1) {
                             double w = 0.0f;
                             for (int k = columnIndex; k < columnIndex + colspan - 1; k++) {
@@ -1404,7 +1428,7 @@ public class GridPane extends Pane {
                     columnPrefWidth[i];
             }                        
             columnPrefWidth[i] = boundedSize(columnPrefWidth[i], columnMinWidth[i], columnMaxWidth[i]);            
-            //System.out.println("column "+i+": h="+columnWidths[i]+" percent="+columnPercentWidth[i]+" min="+columnMinWidth[i]+" pref="+columnPrefWidth[i]+" max="+columnMaxWidth[i]+" grow="+columnGrow[i]);
+            //System.out.println("column "+i+": w="+columnWidths[i]+" percent="+columnPercentWidth[i]+" min="+columnMinWidth[i]+" pref="+columnPrefWidth[i]+" max="+columnMaxWidth[i]+" grow="+columnGrow[i]);
         }
         // if percentages sum is bigger than 100, treat them as weights
         columnPercentTotal = 0;
@@ -1479,7 +1503,7 @@ public class GridPane extends Pane {
         if (contentBias == null) {
             rowTotal = adjustRowHeights(rowPrefHeight, height);
             columnTotal = adjustColumnWidths(columnPrefWidth, width);
-        } else if (contentBias == Orientation.HORIZONTAL) {
+        } else if (contentBias == Orientation.HORIZONTAL) {         
             columnTotal = adjustColumnWidths(columnPrefWidth, width);
             computeRowMetrics(rowHeights.length, columnWidths);
             rowTotal = adjustRowHeights(rowPrefHeight, height);
@@ -1629,7 +1653,7 @@ public class GridPane extends Pane {
         }
                         
         for (int i = 0; i < rowHeights.length; i++) {
-            rowHeights[i] = snapSpace(rowHeights[i]);            
+            rowHeights[i] = snapSpace(rowHeights[i]);       
         }
         return available; // might be negative in shrinking case
     }
@@ -1642,7 +1666,7 @@ public class GridPane extends Pane {
         final double hgaps = snaphgap * (numColumns - 1);
         double columnTotal = hgaps;
         final double contentWidth = getWidth() - left - right;
-
+        
         // if there are percentage columns, give them their percentages first
         if (columnPercentTotal > 0) {
             for (int i = 0; i < columnPercentWidth.length; i++) {
@@ -1659,7 +1683,7 @@ public class GridPane extends Pane {
                 columnTotal += columnWidths[i];
             }
         }
-
+        
         double widthAvailable = (width == -1 ? prefWidth(-1) : width) - left - right - columnTotal;
         // now that both fixed and percentage columns have been computed, divy up any surplus or deficit
         if (widthAvailable != 0) {
