@@ -20,6 +20,7 @@ import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
 import javafx.event.Event;
 import javafx.event.EventHandler;
+import javafx.geometry.Bounds;
 import javafx.geometry.Side;
 import javafx.scene.Group;
 import javafx.scene.Scene;
@@ -66,6 +67,7 @@ public class TabPaneTest {
     /*********************************************************************
      * Helper methods                                                    *
      ********************************************************************/
+
     private void show() {
         stage.show();
         stage.requestFocus();
@@ -121,6 +123,14 @@ public class TabPaneTest {
         assertTrue(tabPane.getSelectionModel().isEmpty());
     }
 
+    @Test public void initialBoundsInParentMatchesWidthAndHeight() {
+        TabPane testPane = new TabPane();
+        testPane.resize(400, 400);
+        testPane.setSkin(new TabPaneSkin(testPane));
+        Bounds boundsInParent = testPane.getBoundsInParent();
+        assertEquals(testPane.getWidth(), boundsInParent.getWidth(), 0.0);
+        assertEquals(testPane.getHeight(), boundsInParent.getHeight(), 0.0);
+    }
 
     /*********************************************************************
      * Tests for property binding                                        *
@@ -256,11 +266,10 @@ public class TabPaneTest {
     }
 
 
-
-
     /*********************************************************************
      * Check for Pseudo classes                                          *
      ********************************************************************/
+
     @Test public void settingSideSetsPseudoClass() {
         tabPane.setSide(Side.BOTTOM);
         assertPseudoClassExists(tabPane, "bottom");
@@ -279,10 +288,10 @@ public class TabPaneTest {
     }
 
 
-
     /*********************************************************************
      * CSS related Tests                                                 *
      ********************************************************************/
+
     @Test public void whenTabMinWidthIsBound_impl_cssSettable_ReturnsFalse() {
         StyleableProperty styleable = StyleableProperty.getStyleableProperty(tabPane.tabMinWidthProperty());
         assertTrue(styleable.isSettable(tabPane));
@@ -364,10 +373,10 @@ public class TabPaneTest {
     }
 
 
-
     /*********************************************************************
-     * Miscellaneous Tests                                         *
+     * Miscellaneous Tests                                               *
      ********************************************************************/
+
     @Test public void setSelectionModelAndSeeValueIsReflectedInModel() {
         tabPane.setSelectionModel(sm);
         assertSame(tabPane.selectionModelProperty().getValue(), sm);

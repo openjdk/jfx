@@ -134,7 +134,7 @@ public class TabPaneSkin extends SkinBase<TabPane, TabPaneBehavior> {
     public TabPaneSkin(TabPane tabPane) {
         super(tabPane, new TabPaneBehavior(tabPane));
 
-        clipRect = new Rectangle();
+        clipRect = new Rectangle(tabPane.getWidth(), tabPane.getHeight());
         getSkinnable().setClip(clipRect);
 
         tabContentRegions = FXCollections.<TabContentRegion>observableArrayList();
