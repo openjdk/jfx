@@ -2200,14 +2200,24 @@ public class Scene implements EventTarget {
 
             boolean dirty = dirtyNodes == null || dirtyNodesSize != 0 || !isDirtyEmpty();
             if (dirty) {
-                // synchronize scene properties
-                synchronizeSceneProperties();
-                // Run the synchronizer
-                synchronizeSceneNodes();
-                Scene.this.mouseHandler.pulse();
-                // Tell the sceen peer that it needs to repaint
+                getRoot().updateBounds();
                 if (impl_peer != null) {
-                    impl_peer.markDirty();
+                    try {
+                        impl_peer.waitForSynchronization();
+                        // synchronize scene properties
+                        synchronizeSceneProperties();
+                        // Run the synchronizer
+                        synchronizeSceneNodes();
+                        Scene.this.mouseHandler.pulse();
+                        // Tell the scene peer that it needs to repaint
+                        impl_peer.markDirty();
+                    } finally {
+                        impl_peer.releaseSynchronization();
+                    }
+                } else {
+                    synchronizeSceneProperties();
+                    synchronizeSceneNodes();
+                    Scene.this.mouseHandler.pulse();
                 }
             }
 

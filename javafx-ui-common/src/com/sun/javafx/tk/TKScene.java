@@ -54,6 +54,19 @@ import javafx.scene.input.Dragboard;
  */
 public interface TKScene {
 
+    /**
+     * Waits until the render thread is available for synchronization
+     * from the scene graph. Once this method returns, the caller has
+     * the lock, and will continue to hold the lock until releaseSynchronization
+     * is called.
+     */
+    public void waitForSynchronization();
+
+    /**
+     * Releases the synchronization lock previously held.
+     */
+    public void releaseSynchronization();
+
     public void setTKSceneListener(TKSceneListener listener);
     public void setTKScenePaintListener(final TKScenePaintListener listener);
 

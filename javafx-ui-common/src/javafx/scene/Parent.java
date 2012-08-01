@@ -1691,6 +1691,13 @@ public abstract class Parent extends Node {
         super.impl_geomChanged();
     }
 
+    @Override void updateBounds() {
+        for (int i=0, max=children.size(); i<max; i++) {
+            children.get(i).updateBounds();
+        }
+        super.updateBounds();
+    }
+
     /**
      * Called by Node whenever its bounds have changed.
      */

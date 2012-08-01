@@ -324,6 +324,15 @@ public class NodeTest {
     }
 
     public static void syncNode(Node node) {
+        // Eeek, this is gross! I have to use reflection to invoke this
+        // method so that bounds are updated...
+        try {
+            java.lang.reflect.Method method = Node.class.getDeclaredMethod("updateBounds");
+            method.setAccessible(true);
+            method.invoke(node);
+        } catch (Exception e) {
+            throw new RuntimeException("Failed to update bounds", e);
+        }
         node.impl_syncPGNode();
     }
 
