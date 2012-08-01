@@ -1333,11 +1333,11 @@ public class ContextMenuContent extends StackPane {
 
 
     private static final long SELECTED_PSEUDOCLASS_STATE =
-            StyleManager.getInstance().getPseudoclassMask("selected");
+            StyleManager.getPseudoclassMask("selected");
     private static final long DISABLED_PSEUDOCLASS_STATE =
-            StyleManager.getInstance().getPseudoclassMask("disabled");
+            StyleManager.getPseudoclassMask("disabled");
     private static final long CHECKED_PSEUDOCLASS_STATE =
-            StyleManager.getInstance().getPseudoclassMask("checked");
+            StyleManager.getPseudoclassMask("checked");
 
     private class MenuLabel extends Label {
 

@@ -208,8 +208,8 @@ public class ProgressIndicator extends Control {
      */
     private static final String PSEUDO_CLASS_INDETERMINATE = "indeterminate";
 
-    private static final long INDETERMINATE_PSEUDOCLASS_STATE = StyleManager.getInstance().getPseudoclassMask("indeterminate");
-    private static final long DETERMINATE_PSEUDOCLASS_STATE = StyleManager.getInstance().getPseudoclassMask("determinate");
+    private static final long INDETERMINATE_PSEUDOCLASS_STATE = StyleManager.getPseudoclassMask("indeterminate");
+    private static final long DETERMINATE_PSEUDOCLASS_STATE = StyleManager.getPseudoclassMask("determinate");
 
     /**
      * @treatAsPrivate implementation detail

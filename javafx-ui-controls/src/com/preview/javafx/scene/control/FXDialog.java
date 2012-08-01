@@ -293,7 +293,7 @@ class FXDialog extends Stage {
          *                                                                         *
          **************************************************************************/
 
-        private static final long PSEUDO_CLASS_ACTIVE_MASK = StyleManager.getInstance().getPseudoclassMask("active");
+        private static final long PSEUDO_CLASS_ACTIVE_MASK = StyleManager.getPseudoclassMask("active");
 
         @Override public long impl_getPseudoClassState() {
             long mask = super.impl_getPseudoClassState();

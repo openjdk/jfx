@@ -574,10 +574,8 @@ public class StackedBarChart<X, Y> extends XYChart<X, Y> {
         return impl_CSS_STYLEABLES();
     }
 
-    private static final long VERTICAL_PSEUDOCLASS_STATE =
-            StyleManager.getInstance().getPseudoclassMask("vertical");
-    private static final long HORIZONTAL_PSEUDOCLASS_STATE =
-            StyleManager.getInstance().getPseudoclassMask("horizontal");
+    private static final long VERTICAL_PSEUDOCLASS_STATE = StyleManager.getPseudoclassMask("vertical");
+    private static final long HORIZONTAL_PSEUDOCLASS_STATE = StyleManager.getPseudoclassMask("horizontal");
 
     /**
     * @treatAsPrivate implementation detail

@@ -589,7 +589,7 @@ public abstract class Control extends Region implements Skinnable {
                 || skinClassName.get().isEmpty()) {
             final String msg = 
                 "Empty -fx-skin property specified for control " + this;   
-            final List<CssError> errors = StyleManager.getInstance().getErrors();
+            final List<CssError> errors = StyleManager.getErrors();
             if (errors != null) {
                 CssError error = new CssError(msg);
                 errors.add(error); // RT-19884
@@ -615,7 +615,7 @@ public abstract class Control extends Region implements Skinnable {
                     "No valid constructor defined in '" + skinClassName + "' for control " + this +
                         ".\r\nYou must provide a constructor that accepts a single "
                         + "Control parameter in " + skinClassName + ".";
-                final List<CssError> errors = StyleManager.getInstance().getErrors();
+                final List<CssError> errors = StyleManager.getErrors();
                 if (errors != null) {
                     CssError error = new CssError(msg);
                     errors.add(error); // RT-19884
@@ -630,7 +630,7 @@ public abstract class Control extends Region implements Skinnable {
         } catch (InvocationTargetException e) {
             final String msg = 
                 "Failed to load skin '" + skinClassName + "' for control " + this;
-            final List<CssError> errors = StyleManager.getInstance().getErrors();
+            final List<CssError> errors = StyleManager.getErrors();
             if (errors != null) {
                 CssError error = new CssError(msg + " :" + e.getLocalizedMessage());
                 errors.add(error); // RT-19884
@@ -639,7 +639,7 @@ public abstract class Control extends Region implements Skinnable {
         } catch (Exception e) {
             final String msg = 
                 "Failed to load skin '" + skinClassName + "' for control " + this;
-            final List<CssError> errors = StyleManager.getInstance().getErrors();
+            final List<CssError> errors = StyleManager.getErrors();
             if (errors != null) {
                 CssError error = new CssError(msg + " :" + e.getLocalizedMessage());
                 errors.add(error); // RT-19884
@@ -734,7 +734,7 @@ public abstract class Control extends Region implements Skinnable {
     @Deprecated
     @Override public void impl_processCSS(boolean reapply) {
         if (reapply && getUserAgentStylesheet() != null) {
-            StyleManager.getInstance().addUserAgentStylesheet(getScene(), getUserAgentStylesheet());
+            StyleManager.getStyleManager(getScene()).addUserAgentStylesheet(getUserAgentStylesheet());
         }
 
         super.impl_processCSS(reapply);
@@ -742,7 +742,7 @@ public abstract class Control extends Region implements Skinnable {
         if (getSkin() == null) {
             final String msg = 
                 "The -fx-skin property has not been defined in CSS for " + this;
-            final List<CssError> errors = StyleManager.getInstance().getErrors();
+            final List<CssError> errors = StyleManager.getErrors();
             if (errors != null) {
                 CssError error = new CssError(msg);
                 errors.add(error); // RT-19884

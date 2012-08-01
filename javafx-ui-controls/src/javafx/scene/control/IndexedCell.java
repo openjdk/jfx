@@ -128,8 +128,8 @@ public class IndexedCell<T> extends Cell<T> {
     private static final String PSEUDO_CLASS_EVEN = "even";
     private static final String PSEUDO_CLASS_ODD = "odd";
 
-    private static final long ODD_PSEUDOCLASS_STATE = StyleManager.getInstance().getPseudoclassMask("odd");
-    private static final long EVEN_PSEUDOCLASS_STATE = StyleManager.getInstance().getPseudoclassMask("even");
+    private static final long ODD_PSEUDOCLASS_STATE = StyleManager.getPseudoclassMask("odd");
+    private static final long EVEN_PSEUDOCLASS_STATE = StyleManager.getPseudoclassMask("even");
 
     /**
      * @treatAsPrivate implementation detail

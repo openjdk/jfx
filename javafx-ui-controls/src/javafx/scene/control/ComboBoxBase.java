@@ -438,11 +438,11 @@ public abstract class ComboBoxBase<T> extends Control {
     private static final String PSEUDO_CLASS_ARMED = "armed";
     
     private static final long PSEUDO_CLASS_EDITABLE_MASK
-            = StyleManager.getInstance().getPseudoclassMask(PSEUDO_CLASS_EDITABLE);
+            = StyleManager.getPseudoclassMask(PSEUDO_CLASS_EDITABLE);
     private static final long PSEUDO_CLASS_SHOWING_MASK
-            = StyleManager.getInstance().getPseudoclassMask(PSEUDO_CLASS_SHOWING);
+            = StyleManager.getPseudoclassMask(PSEUDO_CLASS_SHOWING);
     private static final long PSEUDO_CLASS_ARMED_MASK
-            = StyleManager.getInstance().getPseudoclassMask(PSEUDO_CLASS_ARMED);
+            = StyleManager.getPseudoclassMask(PSEUDO_CLASS_ARMED);
     
     /**
      * @treatAsPrivate implementation detail

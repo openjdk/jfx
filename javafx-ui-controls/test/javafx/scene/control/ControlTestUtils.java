@@ -93,7 +93,7 @@ public final class ControlTestUtils {
     
     public static void assertPseudoClassExists(String message, Control control, String pseudoClass) {
         long allStates = control.impl_getPseudoClassState();
-        long state = StyleManager.getInstance().getPseudoclassMask(pseudoClass);
+        long state = StyleManager.getPseudoclassMask(pseudoClass);
         assertTrue(message, (allStates & state) != 0);
     }
     
@@ -105,7 +105,7 @@ public final class ControlTestUtils {
 
     public static void assertPseudoClassDoesNotExist(String message, Control control, String pseudoClass) {
         long allStates = control.impl_getPseudoClassState();
-        long state = StyleManager.getInstance().getPseudoclassMask(pseudoClass);
+        long state = StyleManager.getPseudoclassMask(pseudoClass);
         assertFalse(message, (allStates & state) != 0);
     }    
 
@@ -120,7 +120,7 @@ public final class ControlTestUtils {
     
     public static void assertPseudoClassExists(String message, Axis axis, String pseudoClass) {
         long allStates = axis.impl_getPseudoClassState();
-        long state = StyleManager.getInstance().getPseudoclassMask(pseudoClass);
+        long state = StyleManager.getPseudoclassMask(pseudoClass);
         assertTrue(message, (allStates & state) != 0);
     }
     
@@ -132,7 +132,7 @@ public final class ControlTestUtils {
 
     public static void assertPseudoClassDoesNotExist(String message, Axis axis, String pseudoClass) {
         long allStates = axis.impl_getPseudoClassState();
-        long state = StyleManager.getInstance().getPseudoclassMask(pseudoClass);
+        long state = StyleManager.getPseudoclassMask(pseudoClass);
         assertFalse(message, (allStates & state) != 0);
     }    
     

@@ -196,9 +196,9 @@ public class Button extends ButtonBase {
     private static final String PSEUDO_CLASS_CANCEL = "cancel";
 
     private static final long PSEUDO_CLASS_DEFAULT_MASK
-            = StyleManager.getInstance().getPseudoclassMask(PSEUDO_CLASS_DEFAULT);
+            = StyleManager.getPseudoclassMask(PSEUDO_CLASS_DEFAULT);
     private static final long PSEUDO_CLASS_CANCEL_MASK
-            = StyleManager.getInstance().getPseudoclassMask(PSEUDO_CLASS_CANCEL);
+            = StyleManager.getPseudoclassMask(PSEUDO_CLASS_CANCEL);
 
     /**
      * @treatAsPrivate implementation detail

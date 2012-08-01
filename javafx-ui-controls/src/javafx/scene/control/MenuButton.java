@@ -243,8 +243,8 @@ public class MenuButton extends ButtonBase {
     private static final String PSEUDO_CLASS_OPENVERTICALLY = "openvertically";
     private static final String PSEUDO_CLASS_SHOWING = "showing";
 
-    private static final long OPENVERTICALLY_PSEUDOCLASS_STATE = StyleManager.getInstance().getPseudoclassMask("openvertically");
-    private static final long SHOWING_PSEUDOCLASS_STATE = StyleManager.getInstance().getPseudoclassMask("showing");
+    private static final long OPENVERTICALLY_PSEUDOCLASS_STATE = StyleManager.getPseudoclassMask("openvertically");
+    private static final long SHOWING_PSEUDOCLASS_STATE = StyleManager.getPseudoclassMask("showing");
 
     /**
      * @treatAsPrivate implementation detail

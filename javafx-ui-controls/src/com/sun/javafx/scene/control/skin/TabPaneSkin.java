@@ -1245,17 +1245,17 @@ public class TabPaneSkin extends SkinBase<TabPane, TabPaneBehavior> {
     } /* End TabHeaderSkin */
 
     private static final long SELECTED_PSEUDOCLASS_STATE =
-            StyleManager.getInstance().getPseudoclassMask("selected");
+            StyleManager.getPseudoclassMask("selected");
     private static final long TOP_PSEUDOCLASS_STATE =
-            StyleManager.getInstance().getPseudoclassMask("top");
+            StyleManager.getPseudoclassMask("top");
     private static final long BOTTOM_PSEUDOCLASS_STATE =
-            StyleManager.getInstance().getPseudoclassMask("bottom");
+            StyleManager.getPseudoclassMask("bottom");
     private static final long LEFT_PSEUDOCLASS_STATE =
-            StyleManager.getInstance().getPseudoclassMask("left");
+            StyleManager.getPseudoclassMask("left");
     private static final long RIGHT_PSEUDOCLASS_STATE =
-            StyleManager.getInstance().getPseudoclassMask("right");
+            StyleManager.getPseudoclassMask("right");
     private static final long DISABLED_PSEUDOCLASS_STATE =
-            StyleManager.getInstance().getPseudoclassMask("disabled");    
+            StyleManager.getPseudoclassMask("disabled");    
 
 
     /**************************************************************************

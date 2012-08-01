@@ -1445,9 +1445,9 @@ public class TableView<S> extends Control {
 
 
     private static final long CELL_SELECTION_PSEUDOCLASS_STATE =
-            StyleManager.getInstance().getPseudoclassMask(PSEUDO_CLASS_CELL_SELECTION);
+            StyleManager.getPseudoclassMask(PSEUDO_CLASS_CELL_SELECTION);
     private static final long ROW_SELECTION_PSEUDOCLASS_STATE =
-            StyleManager.getInstance().getPseudoclassMask(PSEUDO_CLASS_ROW_SELECTION);
+            StyleManager.getPseudoclassMask(PSEUDO_CLASS_ROW_SELECTION);
 
     /**
      * @treatAsPrivate implementation detail

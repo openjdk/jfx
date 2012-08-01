@@ -481,8 +481,8 @@ public class TreeCell<T> extends IndexedCell<T> {
 
     private static final String DEFAULT_STYLE_CLASS = "tree-cell";
 
-    private static final long EXPANDED_PSEUDOCLASS_STATE = StyleManager.getInstance().getPseudoclassMask("expanded");
-    private static final long COLLAPSED_PSEUDOCLASS_STATE = StyleManager.getInstance().getPseudoclassMask("collapsed");
+    private static final long EXPANDED_PSEUDOCLASS_STATE = StyleManager.getPseudoclassMask("expanded");
+    private static final long COLLAPSED_PSEUDOCLASS_STATE = StyleManager.getPseudoclassMask("collapsed");
 
    /**
      * @treatAsPrivate implementation detail

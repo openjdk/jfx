@@ -702,11 +702,11 @@ public class ScrollPane extends Control {
     }
 
     private static final long PANNABLE_PSEUDOCLASS_STATE =
-            StyleManager.getInstance().getPseudoclassMask("pannable");
+            StyleManager.getPseudoclassMask("pannable");
     private static final long FIT_TO_WIDTH_PSEUDOCLASS_STATE =
-            StyleManager.getInstance().getPseudoclassMask("fitToWidth");
+            StyleManager.getPseudoclassMask("fitToWidth");
     private static final long FIT_TO_HEIGHT_PSEUDOCLASS_STATE =
-            StyleManager.getInstance().getPseudoclassMask("fitToHeight");
+            StyleManager.getPseudoclassMask("fitToHeight");
 
     /**
      * @treatAsPrivate implementation detail
