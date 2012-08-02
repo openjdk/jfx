@@ -304,12 +304,12 @@ abstract class MultipleSelectionModelBase<T> extends MultipleSelectionModel<T> {
 
     @Override public void select(T obj) {
 //        if (getItemCount() <= 0) return;
-
+        
         // We have no option but to iterate through the model and select the
         // first occurrence of the given object. Once we find the first one, we
         // don't proceed to select any others.
         Object rowObj = null;
-        for (int i = 0; i < getItemCount(); i++) {
+        for (int i = 0, max = getItemCount(); i < max; i++) {
             rowObj = getModelItem(i);
             if (rowObj == null) continue;
 
