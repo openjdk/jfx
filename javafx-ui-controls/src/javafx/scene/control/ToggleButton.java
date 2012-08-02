@@ -243,7 +243,7 @@ import com.sun.javafx.css.StyleableProperty;
     private static final String DEFAULT_STYLE_CLASS = "toggle-button";
     private static final String PSEUDO_CLASS_SELECTED = "selected";
 
-    private static final long SELECTED_PSEUDOCLASS_STATE = StyleManager.getInstance().getPseudoclassMask("selected");
+    private static final long SELECTED_PSEUDOCLASS_STATE = StyleManager.getPseudoclassMask("selected");
 
     /**
      * @treatAsPrivate implementation detail

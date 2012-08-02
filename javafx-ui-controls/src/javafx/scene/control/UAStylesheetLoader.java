@@ -59,15 +59,15 @@ class UAStylesheetLoader {
                 @Override
                 public Object run() {
                         URL url = LabelSkin.class.getResource("caspian/caspian.css");
-                        StyleManager.getInstance().setDefaultUserAgentStylesheet(url.toExternalForm());
+                        StyleManager.setDefaultUserAgentStylesheet(url.toExternalForm());
                         
                         if (com.sun.javafx.PlatformUtil.isEmbedded()) {
                             url = LabelSkin.class.getResource("caspian/embedded.css");
-                            StyleManager.getInstance().addUserAgentStylesheet(url.toExternalForm());
+                            StyleManager.addUserAgentStylesheet(url.toExternalForm());
                             
                             if (com.sun.javafx.Utils.isQVGAScreen()) {
                                 url = LabelSkin.class.getResource("caspian/embedded-qvga.css");
-                                StyleManager.getInstance().addUserAgentStylesheet(url.toExternalForm());
+                                StyleManager.addUserAgentStylesheet(url.toExternalForm());
                             }
                         }
                         

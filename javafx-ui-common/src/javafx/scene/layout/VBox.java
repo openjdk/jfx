@@ -46,6 +46,8 @@ import com.sun.javafx.css.converters.BooleanConverter;
 import com.sun.javafx.css.converters.EnumConverter;
 import com.sun.javafx.css.converters.SizeConverter;
 import javafx.beans.value.WritableValue;
+import javafx.geometry.HPos;
+import javafx.geometry.VPos;
 
 /**
  * VBox lays out its children in a single vertical column.
@@ -324,8 +326,9 @@ public class VBox extends Pane {
      * @return null unless one of its children has a content bias.
      */
     @Override public Orientation getContentBias() {        
-        for (int i = 0; i < getChildren().size(); i++) {
-            Node child = getChildren().get(i);
+        final List<Node> children = getChildren();
+        for (int i=0, size=children.size(); i<size; i++) {
+            Node child = children.get(i);
             if (child.isManaged() && child.getContentBias() != null) {
                 return child.getContentBias();
             }
@@ -388,7 +391,7 @@ public class VBox extends Pane {
         double[] prefAreaHeights = new double [managed.size()];
         final double insideWidth = width == -1? -1 : width -
                 snapSpace(getInsets().getLeft()) - snapSpace(getInsets().getRight());
-        for (int i = 0; i < managed.size(); i++) {
+        for (int i = 0, size = managed.size(); i < size; i++) {
             Node child = managed.get(i);
             Insets margin = getMargin(child);
             prefAreaHeights[i] = minimum?
@@ -425,7 +428,7 @@ public class VBox extends Pane {
         List<Node> adjustList = new ArrayList<Node>();
         List<Node> adjusting = new ArrayList<Node>();
 
-        for (int i = 0; i < managed.size(); i++) {
+        for (int i = 0, size = managed.size(); i < size; i++) {
             Node child = managed.get(i);
             if (shrinking || getVgrow(child) == priority) {
                 adjustList.add(child);
@@ -434,7 +437,7 @@ public class VBox extends Pane {
         }
 
         double[] areaLimitHeights = new double[adjustList.size()];
-        for (int i = 0; i < adjustList.size(); i++) {
+        for (int i = 0, size = adjustList.size(); i < size; i++) {        
             Node child = adjustList.get(i);
             Insets margin  = getMargin(child);
             areaLimitHeights[i] = shrinking?
@@ -445,7 +448,7 @@ public class VBox extends Pane {
         while (Math.abs(available) > 1.0 && adjusting.size() > 0) {
             Node[] adjusted = new Node[adjustList.size()];
             final double portion = available / adjusting.size(); // negative in shrinking case
-            for (int i = 0; i < adjusting.size(); i++) {
+            for (int i = 0, size = adjustList.size(); i < size; i++) {
                 final Node child = adjusting.get(i);
                 final int childIndex = managed.indexOf(child);
                 final double limit = areaLimitHeights[adjustList.indexOf(child)] - areaHeights[childIndex]; // negative in shrinking case
@@ -486,20 +489,22 @@ public class VBox extends Pane {
         double bottom = snapSpace(insets.getBottom());
         double right = snapSpace(insets.getRight());
         double space = snapSpace(getSpacing());
+        HPos hpos = getAlignment().getHpos();
+        VPos vpos = getAlignment().getVpos();
 
         actualAreaHeights = getAreaHeights(managed, width, false);
         double contentWidth = width - left - right;
         double contentHeight = adjustAreaHeights(managed, actualAreaHeights, height, width);
 
         double x = left;
-        double y = top + computeYOffset(height - top - bottom, contentHeight, getAlignment().getVpos());
+        double y = top + computeYOffset(height - top - bottom, contentHeight, vpos);
 
-        for (int i = 0; i < managed.size(); i++) {
+        for (int i = 0, size = managed.size(); i < size; i++) {
             Node child = managed.get(i);            
             layoutInArea(child, x, y, contentWidth, actualAreaHeights[i],
                        /* baseline shouldn't matter */actualAreaHeights[i],
                        getMargin(child), isFillWidth(), true,
-                       getAlignment().getHpos(), getAlignment().getVpos());
+                       hpos, vpos);
             y += actualAreaHeights[i] + space;
         }
     }

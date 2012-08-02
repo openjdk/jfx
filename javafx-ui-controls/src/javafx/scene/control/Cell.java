@@ -587,11 +587,11 @@ public class Cell<T> extends Labeled {
 
 
     private static final long SELECTED_PSEUDOCLASS_STATE =
-            StyleManager.getInstance().getPseudoclassMask("selected");
+            StyleManager.getPseudoclassMask("selected");
     private static final long EMPTY_PSEUDOCLASS_STATE =
-            StyleManager.getInstance().getPseudoclassMask("empty");
+            StyleManager.getPseudoclassMask("empty");
     private static final long FILLED_PSEUDOCLASS_STATE =
-            StyleManager.getInstance().getPseudoclassMask("filled");
+            StyleManager.getPseudoclassMask("filled");
 
     /**
      * @treatAsPrivate implementation detail

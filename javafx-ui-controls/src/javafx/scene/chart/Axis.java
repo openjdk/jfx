@@ -1174,13 +1174,13 @@ public abstract class Axis<T> extends Region {
     }
 
     private static final long TOP_PSEUDOCLASS_STATE =
-            StyleManager.getInstance().getPseudoclassMask("top");
+            StyleManager.getPseudoclassMask("top");
     private static final long BOTTOM_PSEUDOCLASS_STATE =
-            StyleManager.getInstance().getPseudoclassMask("bottom");
+            StyleManager.getPseudoclassMask("bottom");
     private static final long LEFT_PSEUDOCLASS_STATE =
-            StyleManager.getInstance().getPseudoclassMask("left");
+            StyleManager.getPseudoclassMask("left");
     private static final long RIGHT_PSEUDOCLASS_STATE =
-            StyleManager.getInstance().getPseudoclassMask("right");
+            StyleManager.getPseudoclassMask("right");
 
     /**
      * @treatAsPrivate implementation detail

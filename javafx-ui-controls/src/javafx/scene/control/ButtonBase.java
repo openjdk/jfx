@@ -179,7 +179,7 @@ public abstract class ButtonBase extends Labeled {
      *                                                                         *
      **************************************************************************/
 
-    private static final long ARMED_PSEUDOCLASS_STATE = StyleManager.getInstance().getPseudoclassMask("armed");
+    private static final long ARMED_PSEUDOCLASS_STATE = StyleManager.getPseudoclassMask("armed");
 
     /**
      * @treatAsPrivate implementation detail

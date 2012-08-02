@@ -317,7 +317,7 @@ public class ChoiceBox<T> extends Control {
      **************************************************************************/
 
     private static final long SHOWING_PSEUDOCLASS_STATE =
-            StyleManager.getInstance().getPseudoclassMask("showing");
+            StyleManager.getPseudoclassMask("showing");
 
     /**
      * @treatAsPrivate implementation detail

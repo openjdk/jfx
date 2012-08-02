@@ -500,7 +500,7 @@ public class ColorPalette extends StackPane {
             return selected;
         }
         private final long SELECTED_PSEUDOCLASS_STATE =
-            StyleManager.getInstance().getPseudoclassMask("selected");
+            StyleManager.getPseudoclassMask("selected");
 
         public long impl_getPseudoClassState() {
             return super.impl_getPseudoClassState() | (isSelected() ? SELECTED_PSEUDOCLASS_STATE : 0);

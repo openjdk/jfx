@@ -87,7 +87,7 @@ abstract public class Selector {
      * matches the pseudoclasses defined (if any) for this selector.
      */
     boolean stateMatches(Node node, List<String> states) {
-        long mask = StyleManager.getInstance().getPseudoclassMask(states);
+        long mask = StyleManager.getPseudoclassMask(states);
         return stateMatches(node, mask);
     }
     abstract boolean stateMatches(Node node, long states);

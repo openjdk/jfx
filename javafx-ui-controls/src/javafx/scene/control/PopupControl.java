@@ -1175,7 +1175,7 @@ public class PopupControl extends PopupWindow implements Skinnable {
                 || skinClassName.get().isEmpty()) {
                 final String msg = 
                     "Empty -fx-skin property specified for popup control " + this;   
-                final List<CssError> errors = StyleManager.getInstance().getErrors();
+                final List<CssError> errors = StyleManager.getErrors();
                 if (errors != null) {
                     CssError error = new CssError(msg);
                     errors.add(error); // RT-19884
@@ -1202,7 +1202,7 @@ public class PopupControl extends PopupWindow implements Skinnable {
                         + "' for popup control " + this 
                         + ".\r\nYou must provide a constructor that accepts a single "
                         + "PopupControl parameter in " + skinClassName + ".";
-                    final List<CssError> errors = StyleManager.getInstance().getErrors();
+                    final List<CssError> errors = StyleManager.getErrors();
                     if (errors != null) {
                         CssError error = new CssError(msg);
                         errors.add(error); // RT-19884
@@ -1220,7 +1220,7 @@ public class PopupControl extends PopupWindow implements Skinnable {
                 final String msg = 
                     "Failed to load skin '" + skinClassName 
                     + "' for popup control " + this;
-                final List<CssError> errors = StyleManager.getInstance().getErrors();
+                final List<CssError> errors = StyleManager.getErrors();
                 if (errors != null) {
                     CssError error = new CssError(msg + " :" + e.getLocalizedMessage());
                     errors.add(error); // RT-19884
@@ -1230,7 +1230,7 @@ public class PopupControl extends PopupWindow implements Skinnable {
                 final String msg = 
                     "Failed to load skin '" + skinClassName 
                     + "' for popup control " + this;
-                final List<CssError> errors = StyleManager.getInstance().getErrors();
+                final List<CssError> errors = StyleManager.getErrors();
                 if (errors != null) {
                     CssError error = new CssError(msg + " :" + e.getLocalizedMessage());
                     errors.add(error); // RT-19884

@@ -585,10 +585,10 @@ public class TabPane extends Control {
     private Side cachedSide;
     private String cachedSideString;
 
-    private static final long TOP_PSEUDOCLASS_STATE = StyleManager.getInstance().getPseudoclassMask("top");
-    private static final long BOTTOM_PSEUDOCLASS_STATE = StyleManager.getInstance().getPseudoclassMask("bottom");
-    private static final long LEFT_PSEUDOCLASS_STATE = StyleManager.getInstance().getPseudoclassMask("left");
-    private static final long RIGHT_PSEUDOCLASS_STATE = StyleManager.getInstance().getPseudoclassMask("right");
+    private static final long TOP_PSEUDOCLASS_STATE = StyleManager.getPseudoclassMask("top");
+    private static final long BOTTOM_PSEUDOCLASS_STATE = StyleManager.getPseudoclassMask("bottom");
+    private static final long LEFT_PSEUDOCLASS_STATE = StyleManager.getPseudoclassMask("left");
+    private static final long RIGHT_PSEUDOCLASS_STATE = StyleManager.getPseudoclassMask("right");
 
     /**
      * @treatAsPrivate implementation detail

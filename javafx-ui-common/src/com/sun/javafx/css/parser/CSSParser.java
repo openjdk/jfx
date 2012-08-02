@@ -415,7 +415,7 @@ final public class CSSParser {
     
     private void reportError(CssError error) {
         List<CssError> errors = null;
-        if ((errors = StyleManager.getInstance().getErrors()) != null) {        
+        if ((errors = StyleManager.getErrors()) != null) {        
             errors.add(error);
         }
     }

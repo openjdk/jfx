@@ -512,7 +512,7 @@ public class StyleHelper {
      * state should result in the Node being marked dirty with an UPDATE flag.
      */
     public boolean isPseudoclassUsed(String pseudoclass) {
-        final long mask = StyleManager.getInstance().getPseudoclassMask(pseudoclass);
+        final long mask = StyleManager.getPseudoclassMask(pseudoclass);
         return ((pseudoclassStateMask & mask) == mask);
     }
 
@@ -908,7 +908,7 @@ public class StyleHelper {
                     
                 } catch (Exception e) {
                     List<CssError> errors = null;
-                    if ((errors = StyleManager.getInstance().getErrors()) != null) {
+                    if ((errors = StyleManager.getErrors()) != null) {
                         final String msg = String.format("Failed to set css [%s] due to %s\n", styleable, e.getMessage());
                         final CssError error = new CssError.PropertySetError(styleable, node, msg);
                         errors.add(error);
@@ -1094,7 +1094,7 @@ public class StyleHelper {
                 } catch (ClassCastException cce) {
                     final String msg = formatExceptionMessage(node, styleable, style.getStyle(), cce);
                     List<CssError> errors = null;
-                    if ((errors = StyleManager.getInstance().getErrors()) != null) {
+                    if ((errors = StyleManager.getErrors()) != null) {
                         final CssError error = new CssError.PropertySetError(styleable, node, msg);
                         errors.add(error);
                     }
@@ -1542,7 +1542,7 @@ public class StyleHelper {
             } catch (ClassCastException cce) {
                 final String msg = formatUnresolvedLookupMessage(node, styleable, style.getStyle(),resolved);
                 List<CssError> errors = null;
-                if ((errors = StyleManager.getInstance().getErrors()) != null) {
+                if ((errors = StyleManager.getErrors()) != null) {
                     final CssError error = new CssError.PropertySetError(styleable, node, msg);
                     errors.add(error);
                 }
@@ -1556,7 +1556,7 @@ public class StyleHelper {
             } catch (IllegalArgumentException iae) {
                 final String msg = formatExceptionMessage(node, styleable, style.getStyle(), iae);
                 List<CssError> errors = null;
-                if ((errors = StyleManager.getInstance().getErrors()) != null) {
+                if ((errors = StyleManager.getErrors()) != null) {
                     final CssError error = new CssError.PropertySetError(styleable, node, msg);
                     errors.add(error);
                 }
@@ -1569,7 +1569,7 @@ public class StyleHelper {
             } catch (NullPointerException npe) {
                 final String msg = formatExceptionMessage(node, styleable, style.getStyle(), npe);
                 List<CssError> errors = null;
-                if ((errors = StyleManager.getInstance().getErrors()) != null) {
+                if ((errors = StyleManager.getErrors()) != null) {
                     final CssError error = new CssError.PropertySetError(styleable, node, msg);
                     errors.add(error);
                 }

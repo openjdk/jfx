@@ -285,6 +285,7 @@ public class Scene implements EventTarget {
             @Default("javafx.scene.paint.Color.WHITE") Paint fill,
             boolean depthBuffer) {
         Toolkit.getToolkit().checkFxUserThread();
+        styleManager = new StyleManager(this);
         setRoot(root);
         init(width, height, depthBuffer);
         setFill(fill);
@@ -1375,17 +1376,18 @@ public class Scene implements EventTarget {
      * scene graph, see the <a href="doc-files/cssref.html">CSS Reference
      * Guide</a>.
      */
-    private final ObservableList<String> stylesheets = new TrackableObservableList<String>() {
+    private final ObservableList<String> stylesheets  = new TrackableObservableList<String>() {
         @Override
-        protected void onChanged(Change<String> c) {
-            StyleManager.getInstance().updateStylesheets(Scene.this);
+        protected void onChanged(Change<String> c) {        
+            styleManager.updateStylesheets();
             // RT-9784 - if stylesheet is removed, reset styled properties to 
             // their initial value.
             while(c.next()) {
                 if (c.wasRemoved() == false) continue;
                 getRoot().impl_cssResetInitialValues();
                 break; // no point in resetting more than once...
-            }
+        }
+            c.reset();
             getRoot().impl_reapplyCSS();
         }
     };
@@ -1400,6 +1402,11 @@ public class Scene implements EventTarget {
      */
     public final ObservableList<String> getStylesheets() { return stylesheets; }
 
+    /* 
+     * StyleManager manages stylesheets and mapping styles to Nodes
+     */
+    final StyleManager styleManager;
+        
     /**
      * Retrieves the depth buffer attribute for this scene.
      * @return the depth buffer attribute.

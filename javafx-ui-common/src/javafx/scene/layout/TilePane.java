@@ -737,7 +737,8 @@ public class TilePane extends Pane {
                 Insets[] margins = getMargins(managed);
                 double h = -1;
                 boolean vertBias = false;
-                for (Node child: managed) {
+                for (int i = 0, size = managed.size(); i < size; i++) {
+                    Node child = managed.get(i);
                     if (child.getContentBias() == VERTICAL) {
                         vertBias = true;
                         break;
@@ -761,7 +762,8 @@ public class TilePane extends Pane {
                 Insets[] margins = getMargins(managed);
                 double w = -1;
                 boolean horizBias = false;
-                for (Node child: managed) {
+                for (int i = 0, size = managed.size(); i < size; i++) {
+                    Node child = managed.get(i);
                     if (child.getContentBias() == Orientation.HORIZONTAL) {
                         horizBias = true;
                         break;
@@ -853,7 +855,7 @@ public class TilePane extends Pane {
         
         int r = 0;
         int c = 0;
-        for (int i = 0; i < managed.size(); i++) {
+        for (int i = 0, size = managed.size(); i < size; i++) {
             Node child = managed.get(i);
             double xoffset = r == (actualRows - 1)? lastRowX : rowX;
             double yoffset = c == (actualColumns - 1)? lastColumnY : columnY;

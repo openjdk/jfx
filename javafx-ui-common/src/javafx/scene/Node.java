@@ -7439,7 +7439,7 @@ public abstract class Node implements EventTarget {
     @Deprecated
     protected StyleHelper impl_createStyleHelper() {
         
-        styleHelper = StyleManager.getInstance().getStyleHelper(this);
+        styleHelper = getScene().styleManager.getStyleHelper(this);
         return styleHelper;
     }
 
@@ -7453,11 +7453,11 @@ public abstract class Node implements EventTarget {
         return styleHelper;
     }
 
-    private static final long HOVER_PSEUDOCLASS_STATE = StyleManager.getInstance().getPseudoclassMask("hover");
-    private static final long PRESSED_PSEUDOCLASS_STATE = StyleManager.getInstance().getPseudoclassMask("pressed");
-    private static final long DISABLED_PSEUDOCLASS_STATE = StyleManager.getInstance().getPseudoclassMask("disabled");
-    private static final long FOCUSED_PSEUDOCLASS_STATE = StyleManager.getInstance().getPseudoclassMask("focused");
-    private static final long SHOW_MNEMONICS_PSEUDOCLASS_STATE = StyleManager.getInstance().getPseudoclassMask("show-mnemonics");
+    private static final long HOVER_PSEUDOCLASS_STATE = StyleManager.getPseudoclassMask("hover");
+    private static final long PRESSED_PSEUDOCLASS_STATE = StyleManager.getPseudoclassMask("pressed");
+    private static final long DISABLED_PSEUDOCLASS_STATE = StyleManager.getPseudoclassMask("disabled");
+    private static final long FOCUSED_PSEUDOCLASS_STATE = StyleManager.getPseudoclassMask("focused");
+    private static final long SHOW_MNEMONICS_PSEUDOCLASS_STATE = StyleManager.getPseudoclassMask("show-mnemonics");
 
     /**
      * @treatAsPrivate implementation detail

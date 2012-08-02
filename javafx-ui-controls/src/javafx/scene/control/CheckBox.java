@@ -237,9 +237,9 @@ public class CheckBox extends ButtonBase {
     private static final String PSEUDO_CLASS_INDETERMINATE = "indeterminate";
     private static final String PSEUDO_CLASS_SELECTED = "selected";
 
-    private static final long SELECTED_PSEUDOCLASS_STATE = StyleManager.getInstance().getPseudoclassMask("selected");
-    private static final long INDETERMINATE_PSEUDOCLASS_STATE = StyleManager.getInstance().getPseudoclassMask("indeterminate");
-    private static final long DETERMINATE_PSEUDOCLASS_STATE = StyleManager.getInstance().getPseudoclassMask("determinate");
+    private static final long SELECTED_PSEUDOCLASS_STATE = StyleManager.getPseudoclassMask("selected");
+    private static final long INDETERMINATE_PSEUDOCLASS_STATE = StyleManager.getPseudoclassMask("indeterminate");
+    private static final long DETERMINATE_PSEUDOCLASS_STATE = StyleManager.getPseudoclassMask("determinate");
 
     /**
      * @treatAsPrivate implementation detail

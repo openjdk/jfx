@@ -86,7 +86,7 @@ public class HonorDeveloperSettingsTest {
         
         System.setProperty("binary.css", "false");
         String url = getClass().getResource("HonorDeveloperSettingsTest_UA.css").toExternalForm();
-        StyleManager.getInstance().setDefaultUserAgentStylesheet(url);
+        StyleManager.setDefaultUserAgentStylesheet(url);
         
         Stage stage = new Stage();
         stage.setScene(scene);

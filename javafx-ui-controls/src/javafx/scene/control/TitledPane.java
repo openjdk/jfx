@@ -322,9 +322,9 @@ public class TitledPane extends Labeled {
     }
 
     private static final long EXPANDED_PSEUDOCLASS_STATE =
-            StyleManager.getInstance().getPseudoclassMask("expanded");
+            StyleManager.getPseudoclassMask("expanded");
     private static final long COLLAPSED_PSEUDOCLASS_STATE =
-            StyleManager.getInstance().getPseudoclassMask("collapsed");
+            StyleManager.getPseudoclassMask("collapsed");
 
     /**
      * @treatAsPrivate implementation detail

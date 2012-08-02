@@ -50,7 +50,7 @@ public class CssError {
     public static void setCurrentScene(Scene scene) {
         
         // Treat as a no-op if noone cares about CssErrors
-        if (StyleManager.getInstance().getErrors() == null) return;
+        if (StyleManager.getErrors() == null) return;
         
         if (scene != null) {
             // don't make new ref for same scene

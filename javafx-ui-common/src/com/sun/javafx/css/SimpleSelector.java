@@ -132,7 +132,7 @@ final public class SimpleSelector extends Selector {
                 (pseudoclasses != null) 
                 ? Collections.unmodifiableList(pseudoclasses)  
                 : Collections.EMPTY_LIST;
-        pclassMask = StyleManager.getInstance().getPseudoclassMask(pseudoclasses);
+        pclassMask = StyleManager.getPseudoclassMask(pseudoclasses);
 
         this.id = id == null ? "" : id;
         // if id is not null and not empty, then match needs to check id

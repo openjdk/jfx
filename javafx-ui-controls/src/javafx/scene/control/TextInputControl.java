@@ -1075,7 +1075,7 @@ public abstract class TextInputControl extends Control {
     private static final String PSEUDO_CLASS_READONLY = "readonly";
 
     private static final long PSEUDO_CLASS_READONLY_MASK
-            = StyleManager.getInstance().getPseudoclassMask(PSEUDO_CLASS_READONLY);
+            = StyleManager.getPseudoclassMask(PSEUDO_CLASS_READONLY);
 
     /**
      * @treatAsPrivate implementation detail

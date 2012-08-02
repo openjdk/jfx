@@ -448,9 +448,9 @@ public class ScrollBar extends Control {
     }
 
     private static final long VERTICAL_PSEUDOCLASS_STATE =
-            StyleManager.getInstance().getPseudoclassMask("vertical");
+            StyleManager.getPseudoclassMask("vertical");
     private static final long HORIZONTAL_PSEUDOCLASS_STATE =
-            StyleManager.getInstance().getPseudoclassMask("horizontal");
+            StyleManager.getPseudoclassMask("horizontal");
 
     /**
      * @treatAsPrivate implementation detail

@@ -155,7 +155,7 @@ public class Hyperlink extends ButtonBase {
     private static final String PSEUDO_CLASS_VISITED = "visited";
 
     private static final long VISITED_PSEUDOCLASS_STATE =
-            StyleManager.getInstance().getPseudoclassMask("visited");
+            StyleManager.getPseudoclassMask("visited");
 
     /**
      * @treatAsPrivate implementation detail
