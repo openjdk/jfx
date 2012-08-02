@@ -82,7 +82,17 @@ public class ListCell<T> extends IndexedCell<T> {
      */
     public ListCell() {
         getStyleClass().addAll(DEFAULT_STYLE_CLASS);
-        indexProperty().addListener(indexListener);
+        
+        /**
+         * Listens to the index changing (on the super class). Whenever the index has
+         * been changed, we need to update the item, and potentially the selection and
+         * focus as well.
+         */
+        indexProperty().addListener(new InvalidationListener() {
+            @Override public void invalidated(Observable valueModel) {
+                indexChanged();
+            }
+        });
     }
 
 
@@ -97,23 +107,6 @@ public class ListCell<T> extends IndexedCell<T> {
      *     or items).                                                          *
      *                                                                         *
      **************************************************************************/
-
-    /**
-     * Listens to the index changing (on the super class). Whenever the index has
-     * been changed, we need to update the item, and potentially the selection and
-     * focus as well.
-     */
-    private InvalidationListener indexListener = new InvalidationListener() {
-        @Override public void invalidated(Observable valueModel) {
-            indexChanged();
-         }
-     };
-    
-    @Override void indexChanged() {
-        updateItem();
-        updateSelection();
-        updateFocus();
-    }
 
     /**
      * Listens to the editing index on the ListView. It is possible for the developer
@@ -328,6 +321,22 @@ public class ListCell<T> extends IndexedCell<T> {
     public final ListView<T> getListView() { return listView.get(); }
     public final ReadOnlyObjectProperty<ListView<T>> listViewProperty() { return listView.getReadOnlyProperty(); }
 
+    
+    
+    /***************************************************************************
+     *                                                                         *
+     * Public API                                                              *
+     *                                                                         *
+     **************************************************************************/
+    
+    /** {@inheritDoc} */
+    @Override void indexChanged() {
+        updateItem();
+        updateSelection();
+        updateFocus();
+    }
+
+
 
     /***************************************************************************
      *                                                                         *
@@ -421,13 +430,14 @@ public class ListCell<T> extends IndexedCell<T> {
     private void updateItem() {
         ListView<T> lv = getListView();
         List<T> items = lv == null ? null : lv.getItems();
-
+        int index = getIndex();
+        
         // Compute whether the index for this cell is for a real item
-        boolean valid = items != null && getIndex() >=0 && getIndex() < items.size();
+        boolean valid = items != null && index >=0 && index < items.size();
 
         // Cause the cell to update itself
         if (valid) {
-            T newItem = items.get(getIndex());
+            T newItem = items.get(index);
             if (newItem == null || ! newItem.equals(getItem())) {
                 updateItem(newItem, false);
             }
@@ -449,22 +459,32 @@ public class ListCell<T> extends IndexedCell<T> {
 
     private void updateSelection() {
         if (isEmpty()) return;
-        if (getIndex() == -1 || getListView() == null) return;
-        if (getListView().getSelectionModel() == null) return;
+        int index = getIndex();
+        ListView listView = getListView();
+        if (index == -1 || listView == null) return;
         
-        boolean isSelected = getListView().getSelectionModel().isSelected(getIndex());
+        SelectionModel sm = listView.getSelectionModel();
+        if (sm == null) return;
+        
+        boolean isSelected = sm.isSelected(index);
         if (isSelected() == isSelected) return;
         
-        updateSelected(getListView().getSelectionModel().isSelected(getIndex()));
+        updateSelected(isSelected);
     }
 
     private void updateFocus() {
-        if (getIndex() == -1 || getListView() == null) return;
-        if (getListView().getFocusModel() == null) return;
+        int index = getIndex();
+        ListView listView = getListView();
+        if (index == -1 || listView == null) return;
         
-        setFocused(getListView().getFocusModel().isFocused(getIndex()));
+        FocusModel fm = listView.getFocusModel();
+        if (fm == null) return;
+        
+        setFocused(fm.isFocused(index));
     }
+     
 
+    
     /***************************************************************************
      *                                                                         *
      * Stylesheet Handling                                                     *

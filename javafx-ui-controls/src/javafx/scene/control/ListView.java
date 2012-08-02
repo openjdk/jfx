@@ -163,8 +163,8 @@ public class ListView<T> extends Control {
      *  {@link #EDIT_COMMIT_EVENT} and {@link #EDIT_CANCEL_EVENT}.
      */
     @SuppressWarnings("unchecked")
-    public static <T> EventType<EditEvent<T>> editAnyEvent() {
-        return (EventType<EditEvent<T>>) EDIT_ANY_EVENT;
+    public static <T> EventType<ListView.EditEvent<T>> editAnyEvent() {
+        return (EventType<ListView.EditEvent<T>>) EDIT_ANY_EVENT;
     }
     private static final EventType<?> EDIT_ANY_EVENT =
             EventTypeUtil.registerInternalEventType(Event.ANY, "LIST_VIEW_EDIT");
@@ -174,8 +174,8 @@ public class ListView<T> extends Control {
      * ListView upon which the event was fired.
      */
     @SuppressWarnings("unchecked")
-    public static <T> EventType<EditEvent<T>> editStartEvent() {
-        return (EventType<EditEvent<T>>) EDIT_START_EVENT;
+    public static <T> EventType<ListView.EditEvent<T>> editStartEvent() {
+        return (EventType<ListView.EditEvent<T>>) EDIT_START_EVENT;
     }
     private static final EventType<?> EDIT_START_EVENT =
             EventTypeUtil.registerInternalEventType(editAnyEvent(), "EDIT_START");
@@ -185,8 +185,8 @@ public class ListView<T> extends Control {
      * within the ListView upon which the event was fired.
      */
     @SuppressWarnings("unchecked")
-    public static <T> EventType<EditEvent<T>> editCancelEvent() {
-        return (EventType<EditEvent<T>>) EDIT_CANCEL_EVENT;
+    public static <T> EventType<ListView.EditEvent<T>> editCancelEvent() {
+        return (EventType<ListView.EditEvent<T>>) EDIT_CANCEL_EVENT;
     }
     private static final EventType<?> EDIT_CANCEL_EVENT =
             EventTypeUtil.registerInternalEventType(editAnyEvent(), "EDIT_CANCEL");
@@ -196,8 +196,8 @@ public class ListView<T> extends Control {
      * within the ListView upon which the event was fired.
      */
     @SuppressWarnings("unchecked")
-    public static <T> EventType<EditEvent<T>> editCommitEvent() {
-        return (EventType<EditEvent<T>>) EDIT_COMMIT_EVENT;
+    public static <T> EventType<ListView.EditEvent<T>> editCommitEvent() {
+        return (EventType<ListView.EditEvent<T>>) EDIT_COMMIT_EVENT;
     }
     private static final EventType<?> EDIT_COMMIT_EVENT =
             EventTypeUtil.registerInternalEventType(editAnyEvent(), "EDIT_COMMIT");
@@ -242,10 +242,10 @@ public class ListView<T> extends Control {
 
         // Install default....
         // ...selection model
-        setSelectionModel(new ListViewBitSetSelectionModel<T>(this));
+        setSelectionModel(new ListView.ListViewBitSetSelectionModel<T>(this));
 
         // ...focus model
-        setFocusModel(new ListViewFocusModel<T>(this));
+        setFocusModel(new ListView.ListViewFocusModel<T>(this));
 
         // ...edit commit handler
         setOnEditCommit(DEFAULT_EDIT_COMMIT_HANDLER);
@@ -259,8 +259,8 @@ public class ListView<T> extends Control {
      *                                                                         *
      **************************************************************************/
     
-    private EventHandler<EditEvent<T>> DEFAULT_EDIT_COMMIT_HANDLER = new EventHandler<EditEvent<T>>() {
-        @Override public void handle(EditEvent<T> t) {
+    private EventHandler<ListView.EditEvent<T>> DEFAULT_EDIT_COMMIT_HANDLER = new EventHandler<ListView.EditEvent<T>>() {
+        @Override public void handle(ListView.EditEvent<T> t) {
             int index = t.getIndex();
             List<T> list = getItems();
             if (index < 0 || index >= list.size()) return;
@@ -314,11 +314,11 @@ public class ListView<T> extends Control {
                     
                     // FIXME temporary fix for RT-15793. This will need to be
                     // properly fixed when time permits
-                    if (getSelectionModel() instanceof ListViewBitSetSelectionModel) {
-                        ((ListViewBitSetSelectionModel)getSelectionModel()).updateItemsObserver(oldItems, getItems());
+                    if (getSelectionModel() instanceof ListView.ListViewBitSetSelectionModel) {
+                        ((ListView.ListViewBitSetSelectionModel)getSelectionModel()).updateItemsObserver(oldItems, getItems());
                     }
-                    if (getFocusModel() instanceof ListViewFocusModel) {
-                        ((ListViewFocusModel)getFocusModel()).updateItemsObserver(oldItems, getItems());
+                    if (getFocusModel() instanceof ListView.ListViewFocusModel) {
+                        ((ListView.ListViewFocusModel)getFocusModel()).updateItemsObserver(oldItems, getItems());
                     }
                     if (getSkin() instanceof ListViewSkin) {
                         ListViewSkin skin = (ListViewSkin) getSkin();
@@ -428,7 +428,7 @@ public class ListView<T> extends Control {
                 
                 @Override 
                 public StyleableProperty getStyleableProperty() {
-                    return StyleableProperties.ORIENTATION;
+                    return ListView.StyleableProperties.ORIENTATION;
                 }
                 
                 @Override
@@ -540,7 +540,7 @@ public class ListView<T> extends Control {
 
 
     // --- On Edit Start
-    private ObjectProperty<EventHandler<EditEvent<T>>> onEditStart;
+    private ObjectProperty<EventHandler<ListView.EditEvent<T>>> onEditStart;
 
     /**
      * Sets the {@link EventHandler} that will be called when the user begins
@@ -550,7 +550,7 @@ public class ListView<T> extends Control {
      * achieved by calling 
      * <code>addEventHandler(ListView.EDIT_START_EVENT, eventHandler)</code>.
      */
-    public final void setOnEditStart(EventHandler<EditEvent<T>> value) {
+    public final void setOnEditStart(EventHandler<ListView.EditEvent<T>> value) {
         onEditStartProperty().set(value);
     }
 
@@ -558,7 +558,7 @@ public class ListView<T> extends Control {
      * Returns the {@link EventHandler} that will be called when the user begins
      * an edit.
      */
-    public final EventHandler<EditEvent<T>> getOnEditStart() {
+    public final EventHandler<ListView.EditEvent<T>> getOnEditStart() {
         return onEditStart == null ? null : onEditStart.get();
     }
 
@@ -566,9 +566,9 @@ public class ListView<T> extends Control {
      * This event handler will be fired when the user successfully initiates
      * editing.
      */
-    public final ObjectProperty<EventHandler<EditEvent<T>>> onEditStartProperty() {
+    public final ObjectProperty<EventHandler<ListView.EditEvent<T>>> onEditStartProperty() {
         if (onEditStart == null) {
-            onEditStart = new ObjectPropertyBase<EventHandler<EditEvent<T>>>() {
+            onEditStart = new ObjectPropertyBase<EventHandler<ListView.EditEvent<T>>>() {
                 @Override protected void invalidated() {
                     setEventHandler(ListView.<T>editStartEvent(), get());
                 }
@@ -589,7 +589,7 @@ public class ListView<T> extends Control {
 
 
     // --- On Edit Commit
-    private ObjectProperty<EventHandler<EditEvent<T>>> onEditCommit;
+    private ObjectProperty<EventHandler<ListView.EditEvent<T>>> onEditCommit;
 
     /**
      * Sets the {@link EventHandler} that will be called when the user has
@@ -600,7 +600,7 @@ public class ListView<T> extends Control {
      * achieved by calling 
      * <code>addEventHandler(ListView.EDIT_START_EVENT, eventHandler)</code>.
      */
-    public final void setOnEditCommit(EventHandler<EditEvent<T>> value) {
+    public final void setOnEditCommit(EventHandler<ListView.EditEvent<T>> value) {
         onEditCommitProperty().set(value);
     }
 
@@ -608,7 +608,7 @@ public class ListView<T> extends Control {
      * Returns the {@link EventHandler} that will be called when the user commits
      * an edit.
      */
-    public final EventHandler<EditEvent<T>> getOnEditCommit() {
+    public final EventHandler<ListView.EditEvent<T>> getOnEditCommit() {
         return onEditCommit == null ? null : onEditCommit.get();
     }
 
@@ -621,9 +621,9 @@ public class ListView<T> extends Control {
      * your custom ListCell. This will handle firing this event, updating the 
      * view, and switching out of the editing state.</p>
      */
-    public final ObjectProperty<EventHandler<EditEvent<T>>> onEditCommitProperty() {
+    public final ObjectProperty<EventHandler<ListView.EditEvent<T>>> onEditCommitProperty() {
         if (onEditCommit == null) {
-            onEditCommit = new ObjectPropertyBase<EventHandler<EditEvent<T>>>() {
+            onEditCommit = new ObjectPropertyBase<EventHandler<ListView.EditEvent<T>>>() {
                 @Override protected void invalidated() {
                     setEventHandler(ListView.<T>editCommitEvent(), get());
                 }
@@ -644,13 +644,13 @@ public class ListView<T> extends Control {
 
 
     // --- On Edit Cancel
-    private ObjectProperty<EventHandler<EditEvent<T>>> onEditCancel;
+    private ObjectProperty<EventHandler<ListView.EditEvent<T>>> onEditCancel;
 
     /**
      * Sets the {@link EventHandler} that will be called when the user cancels
      * an edit.
      */
-    public final void setOnEditCancel(EventHandler<EditEvent<T>> value) {
+    public final void setOnEditCancel(EventHandler<ListView.EditEvent<T>> value) {
         onEditCancelProperty().set(value);
     }
 
@@ -658,16 +658,16 @@ public class ListView<T> extends Control {
      * Returns the {@link EventHandler} that will be called when the user cancels
      * an edit.
      */
-    public final EventHandler<EditEvent<T>> getOnEditCancel() {
+    public final EventHandler<ListView.EditEvent<T>> getOnEditCancel() {
         return onEditCancel == null ? null : onEditCancel.get();
     }
 
     /**
      * This event handler will be fired when the user cancels editing a cell.
      */
-    public final ObjectProperty<EventHandler<EditEvent<T>>> onEditCancelProperty() {
+    public final ObjectProperty<EventHandler<ListView.EditEvent<T>>> onEditCancelProperty() {
         if (onEditCancel == null) {
-            onEditCancel = new ObjectPropertyBase<EventHandler<EditEvent<T>>>() {
+            onEditCancel = new ObjectPropertyBase<EventHandler<ListView.EditEvent<T>>>() {
                 @Override protected void invalidated() {
                     setEventHandler(ListView.<T>editCancelEvent(), get());
                 }
@@ -847,7 +847,7 @@ public class ListView<T> extends Control {
          * {@link #EDIT_COMMIT_EVENT} and {@link #EDIT_CANCEL_EVENT} types.
          */
         public EditEvent(ListView<T> source,
-                         EventType<? extends EditEvent<T>> eventType,
+                         EventType<? extends ListView.EditEvent<T>> eventType,
                          T newValue,
                          int editIndex) {
             super(source, Event.NULL_SOURCE_TARGET, eventType);
@@ -918,11 +918,15 @@ public class ListView<T> extends Control {
                 this.listView.getItems().addListener(weakItemsContentObserver);
 //                updateItemsObserver(null, this.listView.getItems());
             }
+            
+            updateItemCount();
         }
         
         // watching for changes to the items list content
         private final ListChangeListener<T> itemsContentObserver = new ListChangeListener<T>() {
             @Override public void onChanged(Change<? extends T> c) {
+                updateItemCount();
+                
                 while (c.next()) {
                     if (listView.getItems() == null || listView.getItems().isEmpty()) {
                         setSelectedIndex(-1);
@@ -962,6 +966,8 @@ public class ListView<T> extends Control {
             if (newList != null) {
                 newList.addListener(weakItemsContentObserver);
             }
+            
+            updateItemCount();
 
             // when the items list totally changes, we should clear out
             // the selection and focus
@@ -978,6 +984,8 @@ public class ListView<T> extends Control {
          **********************************************************************/
 
         private final ListView<T> listView;
+        
+        private int itemCount = 0;
         
         private int previousModelSize = 0;
 
@@ -1106,19 +1114,26 @@ public class ListView<T> extends Control {
             return listView.getFocusModel().getFocusedIndex();
         }
 
-        /** {@inheritDoc} */
         @Override protected int getItemCount() {
-            return listView.getItems() == null ? -1 : listView.getItems().size();
+            return itemCount;
         }
 
-        /** {@inheritDoc} */
-        @Override public T getModelItem(int index) {
-            if (listView.getItems() == null) return null;
+        @Override protected T getModelItem(int index) {
+            List<T> items = listView.getItems();
+            if (items == null) return null;
+            if (index < 0 || index >= itemCount) return null;
 
-            if (index < 0 || index >= getItemCount()) return null;
-
-            return listView.getItems().get((int) index);
+            return items.get(index);
         }
+
+        private void updateItemCount() {
+            if (listView == null) {
+                itemCount = -1;
+            } else {
+                List items = listView.getItems();
+                itemCount = items == null ? -1 : items.size();
+            }
+        } 
     }
 
 
@@ -1127,6 +1142,7 @@ public class ListView<T> extends Control {
     static class ListViewFocusModel<T> extends FocusModel<T> {
 
         private final ListView<T> listView;
+        private int itemCount = 0;
 
         public ListViewFocusModel(final ListView<T> listView) {
             if (listView == null) {
@@ -1138,6 +1154,8 @@ public class ListView<T> extends Control {
             if (listView.getItems() != null) {
                 this.listView.getItems().addListener(weakItemsContentListener);
             }
+            
+            updateItemCount();
         }
 
         private ChangeListener<ObservableList<T>> itemsListener = new ChangeListener<ObservableList<T>>() {
@@ -1156,12 +1174,16 @@ public class ListView<T> extends Control {
             // the new list, and remove any observer we had from the old list
             if (oldList != null) oldList.removeListener(weakItemsContentListener);
             if (newList != null) newList.addListener(weakItemsContentListener);
+            
+            updateItemCount();
         }
         
         // Listen to changes in the listview items list, such that when it
         // changes we can update the focused index to refer to the new indices.
         private final ListChangeListener<T> itemsContentListener = new ListChangeListener<T>() {
             @Override public void onChanged(Change<? extends T> c) {
+                updateItemCount();
+                
                 c.next();
                 // looking at the first change
                 int from = c.getFrom();
@@ -1193,19 +1215,27 @@ public class ListView<T> extends Control {
                 = new WeakListChangeListener<T>(itemsContentListener);
         
         @Override protected int getItemCount() {
-            return isEmpty() ? -1 : listView.getItems().size();
+            return itemCount;
         }
 
         @Override protected T getModelItem(int index) {
             if (isEmpty()) return null;
-
-            if (index < 0 || index >= getItemCount()) return null;
+            if (index < 0 || index >= itemCount) return null;
 
             return listView.getItems().get(index);
         }
 
         private boolean isEmpty() {
-            return listView == null || listView.getItems() == null;
+            return itemCount == -1;
         }
+        
+        private void updateItemCount() {
+            if (listView == null) {
+                itemCount = -1;
+            } else {
+                List items = listView.getItems();
+                itemCount = items == null ? -1 : items.size();
+            }
+        } 
     }
 }
