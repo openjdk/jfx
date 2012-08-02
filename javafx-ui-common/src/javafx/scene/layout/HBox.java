@@ -412,7 +412,7 @@ public class HBox extends Pane {
         double[] prefAreaWidths = new double [managed.size()];
         final double insideHeight = height == -1? -1 : height -
                                      snapSpace(getInsets().getTop()) - snapSpace(getInsets().getBottom());
-        for (int i = 0; i < managed.size(); i++) {
+        for (int i = 0, size = managed.size(); i < size; i++) {
             Node child = managed.get(i);
             Insets margin = getMargin(child);
             prefAreaWidths[i] = minimum?
@@ -448,7 +448,7 @@ public class HBox extends Pane {
         List<Node> adjustList = new ArrayList<Node>();
         List<Node> adjusting = new ArrayList<Node>();
 
-        for (int i = 0; i < managed.size(); i++) {
+        for (int i = 0, size = managed.size(); i < size; i++) {
             final Node child = managed.get(i);
             if (shrinking || getHgrow(child) == priority) {
                 adjustList.add(child);
@@ -457,7 +457,7 @@ public class HBox extends Pane {
         }
 
         double[] areaLimitWidths = new double[adjustList.size()];
-        for (int i = 0; i < adjustList.size(); i++) {
+        for (int i = 0, size = adjustList.size(); i < size; i++) {
             final Node child = adjustList.get(i);
             final Insets margin = getMargin(child);
             areaLimitWidths[i] = shrinking?
@@ -468,7 +468,7 @@ public class HBox extends Pane {
         while (Math.abs(available) > 1.0 && adjusting.size() > 0) {
             Node[] adjusted = new Node[adjustList.size()];
             final double portion = available / adjusting.size(); // negative in shrinking case
-            for (int i = 0; i < adjusting.size(); i++) {
+            for (int i = 0, size = adjusting.size(); i < size; i++) {
                 final Node child = adjusting.get(i);
                 final int childIndex = managed.indexOf(child);
                 final double limit = areaLimitWidths[adjustList.indexOf(child)] - areaWidths[childIndex]; // negative in shrinking case                
@@ -480,7 +480,8 @@ public class HBox extends Pane {
                     adjusted[i] = child;
                 }
             }
-            for (Node node : adjusted) {
+            for (int i = 0; i < adjusted.length; i++) {
+                Node node = adjusted[i];
                 if (node != null) {
                     adjusting.remove(node);
                 }
@@ -522,7 +523,7 @@ public class HBox extends Pane {
         double baselineOffset = getAlignment().getVpos() == VPos.BASELINE ? getMaxBaselineOffset(managed)
                                     : height/2;
 
-        for (int i = 0; i < managed.size(); i++) {
+        for (int i = 0, size = managed.size(); i < size; i++) {
             Node child = managed.get(i);
             Insets margin = getMargin(child);
             layoutInArea(child, x, y, actualAreaWidths[i], contentHeight,

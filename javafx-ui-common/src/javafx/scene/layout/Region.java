@@ -350,7 +350,7 @@ public class Region extends Parent {
                 
                 final List<BorderImage> image_borders = getImageBorders();
                 if (image_borders != null) {
-                    for (int i = 0; i < image_borders.size(); i++) {
+                    for (int i = 0, size = image_borders.size(); i < size; i++) {
                         BorderImage borderImage = image_borders.get(i);
                         Insets offsets = borderImage.getOffsets();
                         // stoked borders assume centered strokes for now
@@ -363,7 +363,7 @@ public class Region extends Parent {
                 
                 final List<StrokeBorder> stroke_borders = getStrokeBorders();
                 if (stroke_borders != null) {
-                    for (int i = 0; i < stroke_borders.size(); i++) {
+                    for (int i = 0, size = stroke_borders.size(); i < size; i++) {
                         StrokeBorder strokeBorder = stroke_borders.get(i);
                         Insets offsets = strokeBorder.getOffsets();
                         // stoked borders assume centered strokes for now
@@ -2199,7 +2199,7 @@ public class Region extends Parent {
         
         final List<BackgroundFill> background_fills = getBackgroundFills();
         if (background_fills != null) {
-            for (int i = 0; i < background_fills.size(); i++) {
+            for (int i = 0, size = background_fills.size(); i < size; i++) {
                 BackgroundFill bgFill = background_fills.get(i);
                 Insets offsets = bgFill.getOffsets();
 

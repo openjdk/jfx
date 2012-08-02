@@ -918,9 +918,10 @@ public class GridPane extends Pane {
      * @param children the nodes to be added as a row in the gridpane
      */
     public void addRow(int rowIndex, Node... children) {
-        int columnIndex = 0;
-        for (int i = 0; i < getChildren().size(); i++) {
-            Node child = getChildren().get(i);
+        int columnIndex = 0;       
+        final List<Node> list = getChildren();
+        for (int i = 0, size = list.size(); i < size; i++) {
+            Node child = list.get(i);
             if (child.isManaged() && rowIndex == getNodeRowIndex(child)) {
                 int index = getNodeColumnIndex(child);
                 int end = getNodeColumnEnd(child);
@@ -944,8 +945,9 @@ public class GridPane extends Pane {
      */
     public void addColumn(int columnIndex, Node... children)  {
         int rowIndex = 0;
-        for (int i = 0; i < getChildren().size(); i++) {
-            Node child = getChildren().get(i);
+        final List<Node> list = getChildren();
+        for (int i = 0, size = list.size(); i < size; i++) {
+            Node child = list.get(i);
             if (child.isManaged() && columnIndex == getNodeColumnIndex(child)) {
                 int index = getNodeRowIndex(child);
                 int end = getNodeRowEnd(child);
@@ -1103,8 +1105,9 @@ public class GridPane extends Pane {
         if (metricsDirty) {
             int numRows = getRowConstraints().size();
             int numColumns = getColumnConstraints().size();
-            for (int i = 0; i < getChildren().size(); i++) {
-                Node child = getChildren().get(i);
+            final List<Node> children = getChildren();
+            for (int i = 0, size = children.size(); i < size; i++) {
+                Node child = children.get(i);
                 if (child.isManaged()) {
                     int rowIndex = getNodeRowIndex(child);
                     int columnIndex = getNodeColumnIndex(child);
@@ -1139,8 +1142,9 @@ public class GridPane extends Pane {
             boolean computeGrow = true;
             List<Node> startNodes = new ArrayList<Node>();
             List<Node> endNodes = new ArrayList<Node>();
-            for (int j = 0; j < getChildren().size(); j++) {
-                Node child = getChildren().get(j);
+            final List<Node> children = getChildren();
+            for (int j = 0, size = children.size(); j < size; j++) {
+                Node child = children.get(j);
                 if (child.isManaged()) {
                     if (getNodeRowIndex(child) == i) {
                         startNodes.add(child);
@@ -1182,7 +1186,7 @@ public class GridPane extends Pane {
             VPos rowVPos = getRowValignment(i);
             Insets margins[] = new Insets[startNodes.size()];
             List<Node> baselineNodes = new ArrayList<Node>();
-            for(int j = 0, k = 0; j < startNodes.size(); j++) {
+            for(int j = 0, k = 0, size = startNodes.size(); j < size; j++) {
                 Node n = startNodes.get(j);
                 if (getValignment(n) == VPos.BASELINE) {
                     baselineNodes.add(n);
@@ -1194,7 +1198,7 @@ public class GridPane extends Pane {
 
             if (computeMin || computeMax || computePref || computeGrow || rowVPos == VPos.BASELINE) {
                 // compute from content
-                for (int j = 0; j < endNodes.size(); j++) {
+                for (int j = 0, size = endNodes.size(); j < size; j++) {
                     Node child = endNodes.get(j);                    
                     Insets margin = getMargin(child);
                     double top = margin != null? margin.getTop() : 0;
@@ -1310,8 +1314,9 @@ public class GridPane extends Pane {
             boolean computeGrow = true;
             List<Node> startNodes = new ArrayList<Node>();
             List<Node> endNodes = new ArrayList<Node>();
-            for (int j = 0; j < getChildren().size(); j++) {
-                Node child = getChildren().get(j);
+            final List<Node> children = getChildren();
+            for (int j = 0, size = children.size(); j < size; j++) {
+                Node child = children.get(j);
                 if (child.isManaged()) {
                     if (getNodeColumnIndex(child) == i) {
                         startNodes.add(child);
@@ -1353,7 +1358,7 @@ public class GridPane extends Pane {
 
             if (computeMin || computeMax || computePref || computeGrow) {
                 // compute from content                
-                for (int j = 0; j < endNodes.size(); j++) {
+                for (int j = 0, size = endNodes.size(); j < size; j++) {
                     Node child = endNodes.get(j);
                     Insets margin = getMargin(child);
                     int columnIndex = getNodeColumnIndex(child);
@@ -1462,8 +1467,9 @@ public class GridPane extends Pane {
      * @return null unless one of its children has a content bias.
      */
     @Override public Orientation getContentBias() {
-        for (int i = 0; i < getChildren().size(); i++) {
-            Node child = getChildren().get(i);
+        final List<Node> children = getChildren();
+        for (int i = 0, size = children.size(); i < size; i++) {
+            Node child = children.get(i);
             if (child.isManaged() && child.getContentBias() != null) {
                 return child.getContentBias();
             }
@@ -1515,8 +1521,9 @@ public class GridPane extends Pane {
 
         final double x = left + computeXOffset(contentWidth, columnTotal, getAlignment().getHpos());
         final double y = top + computeYOffset(contentHeight, rowTotal, getAlignment().getVpos());
-        for (int i = 0; i < getChildren().size(); i++) {
-            Node child = getChildren().get(i);
+        final List<Node> children = getChildren();
+        for (int i = 0, size = children.size(); i < size; i++) {
+            Node child = children.get(i);
             if (child.isManaged()) {
                 int rowIndex = getNodeRowIndex(child);
                 int columnIndex = getNodeColumnIndex(child);
@@ -1620,7 +1627,7 @@ public class GridPane extends Pane {
                 portion = (int)available / adjusting.size(); // negative in shrinking case
             }
             if (portion != 0) {
-                for (int i = 0; i < adjusting.size(); i++) {
+                for (int i = 0, size = adjusting.size(); i < size; i++) {
                     final int index = adjusting.get(i);
                     final double limit = (shrinking? rowMinHeight[index] : rowMaxHeight[index])
                             - rowHeights[index]; // negative in shrinking case
@@ -1633,9 +1640,9 @@ public class GridPane extends Pane {
                     }
                     if (available == 0) {
                         break;
-                    }
+                    }   
                 }
-                for (int i = 0; i < adjusted.size(); i++) {
+                for (int i = 0, size = adjusted.size(); i < size; i++) {
                     adjusting.remove(adjusted.get(i));
                 }
                 adjusted.clear();
@@ -1715,7 +1722,7 @@ public class GridPane extends Pane {
                 portion = (int)available / adjusting.size(); // negative in shrinking case
             }
             if (portion != 0) {
-                for (int i = 0; i < adjusting.size(); i++) {
+                for (int i = 0, size = adjusting.size(); i < size; i++) {                
                     final int index = adjusting.get(i);
                     final double limit = (shrinking? columnMinWidth[index] : columnMaxWidth[index])
                             - columnWidths[index]; // negative in shrinking case
@@ -1730,7 +1737,7 @@ public class GridPane extends Pane {
                         break;
                     }                    
                 }
-                for (int i = 0; i < adjusted.size(); i++) {
+                for (int i = 0, size = adjusted.size(); i < size; i++) {                
                     adjusting.remove(adjusted.get(i));
                 }
                 adjusted.clear();
