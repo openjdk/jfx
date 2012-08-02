@@ -76,6 +76,8 @@ public class IndexedCell<T> extends Cell<T> {
         @Override protected void invalidated() {
             impl_pseudoClassStateChanged(PSEUDO_CLASS_EVEN);
             impl_pseudoClassStateChanged(PSEUDO_CLASS_ODD);
+            
+            indexChanged();
         }
     };
 

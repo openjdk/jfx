@@ -82,17 +82,6 @@ public class ListCell<T> extends IndexedCell<T> {
      */
     public ListCell() {
         getStyleClass().addAll(DEFAULT_STYLE_CLASS);
-        
-        /**
-         * Listens to the index changing (on the super class). Whenever the index has
-         * been changed, we need to update the item, and potentially the selection and
-         * focus as well.
-         */
-        indexProperty().addListener(new InvalidationListener() {
-            @Override public void invalidated(Observable valueModel) {
-                indexChanged();
-            }
-        });
     }
 
 
