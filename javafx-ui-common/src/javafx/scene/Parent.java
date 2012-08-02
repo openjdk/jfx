@@ -76,7 +76,8 @@ import com.sun.javafx.tk.Toolkit;
  */
 public abstract class Parent extends Node {
 
-    private static final int DIRTY_CHILDREN_THRESHOLD = 10;
+    // package private for testing
+    static final int DIRTY_CHILDREN_THRESHOLD = 10;
 
     // If set to true, generate a warning message whenever adding a node to a
     // parent if it is currently a child of another parent.
