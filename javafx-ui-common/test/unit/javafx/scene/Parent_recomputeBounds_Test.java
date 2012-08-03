@@ -470,7 +470,7 @@ public class Parent_recomputeBounds_Test {
         b = g.getBoundsInLocal();
         assertEquals(50, b.getMinX(), 0.0001);
         assertEquals(100, b.getMinY(), 0.0001);
-        assertEquals(200, b.getWidth(), 0.0001);
+        assertEquals(250, b.getWidth(), 0.0001);
         assertEquals(200, b.getHeight(), 0.0001);
     }
 
