@@ -437,8 +437,8 @@ public abstract class Node implements EventTarget {
      * that we can pass the right data down to the PG side later during
      * synchronization (rather than statics as they were before).
      */
-    public BaseBounds _geomBounds = new RectBounds(0, 0, -1, -1);
-    public BaseBounds _txBounds = new RectBounds(0, 0, -1, -1);
+    private BaseBounds _geomBounds = new RectBounds(0, 0, -1, -1);
+    private BaseBounds _txBounds = new RectBounds(0, 0, -1, -1);
 
     // Happens before we hold the sync lock
     void updateBounds() {
