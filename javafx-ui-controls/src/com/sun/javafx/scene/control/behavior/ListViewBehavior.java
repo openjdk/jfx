@@ -240,6 +240,8 @@ public class ListViewBehavior<T> extends BehaviorBase<ListView<T>> {
     /**************************************************************************
      *                         State and Functions                            *
      *************************************************************************/
+    
+    private int rowCount = 0;
 
     private boolean isShiftDown = false;
     private boolean isCtrlDown = false;
@@ -339,7 +341,7 @@ public class ListViewBehavior<T> extends BehaviorBase<ListView<T>> {
             control.getSelectionModel().getSelectedIndices().addListener(selectedIndicesListener);
         }
     }
-    
+
     private void setAnchor(int anchor) {
         ListCellBehavior.setAnchor(getControl(), anchor);
     }
@@ -364,12 +366,13 @@ public class ListViewBehavior<T> extends BehaviorBase<ListView<T>> {
             getControl().requestFocus();
         }
     }
+    
+    public void setRowCount(int rowCount) {
+        this.rowCount = rowCount;
+    }
 
     private int getRowCount() {
-        List<?> listViewItems = getControl().getItems();
-        if (listViewItems == null) return 0;
-
-        return listViewItems.size();
+        return rowCount;
     }
 
     private void clearSelection() {
@@ -556,7 +559,8 @@ public class ListViewBehavior<T> extends BehaviorBase<ListView<T>> {
     }
 
     private void selectNextRow() {
-        FocusModel fm = getControl().getFocusModel();
+        ListView listView = getControl();
+        FocusModel fm = listView.getFocusModel();
         if (fm == null) return;
         
         int focusIndex = fm.getFocusedIndex();
@@ -564,7 +568,7 @@ public class ListViewBehavior<T> extends BehaviorBase<ListView<T>> {
             return;
         }
         
-        MultipleSelectionModel sm = getControl().getSelectionModel();
+        MultipleSelectionModel sm = listView.getSelectionModel();
         if (sm == null) return;
         
         setAnchor(focusIndex + 1);
