@@ -98,7 +98,7 @@ public class StubScene implements TKScene {
 
     @Override
     public Dragboard createDragboard() {
-        return Toolkit.getToolkit().createDragboard();
+        return StubToolkit.createDragboard();
     }
 
     @Override

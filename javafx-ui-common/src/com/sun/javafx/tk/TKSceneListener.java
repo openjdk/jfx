@@ -43,12 +43,9 @@
  */
 package com.sun.javafx.tk;
 
-import javafx.scene.input.TouchPoint;
+import javafx.collections.ObservableList;
 import javafx.event.EventType;
-import javafx.scene.input.RotateEvent;
-import javafx.scene.input.ScrollEvent;
-import javafx.scene.input.SwipeEvent;
-import javafx.scene.input.ZoomEvent;
+import javafx.scene.input.*;
 
 /**
  * TKSceneListener - Listener for the Scene Peer TKScene to pass updates and events back to the scene
@@ -74,25 +71,24 @@ public interface TKSceneListener {
 
     /**
      * Pass a mouse event to the scene to handle
-     *
-     * @param event The event, this should be of type javafx.scene.input.MouseEvent
      */
-    public void mouseEvent(Object event);
+    public void mouseEvent(EventType<MouseEvent> type, double x, double y, double screenX, double screenY,
+                           MouseButton button, int clickCount, boolean popupTrigger, boolean synthesized,
+                           boolean shiftDown, boolean controlDown, boolean altDown, boolean metaDown,
+                           boolean primaryDown, boolean middleDown, boolean secondaryDown);
 
     /**
      * Pass a key event to the scene to handle
-     *
-     * @param event The event, this should be of type javafx.scene.input.KeyEvent
      */
-    public void keyEvent(Object event);
+    public void keyEvent(EventType<KeyEvent> type, int key, char[] chars,
+                         boolean shiftDown, boolean controlDown, boolean altDown, boolean metaDown);
 
     /**
      * Pass an input method event to the scene to handle
-     *
-     * @param event The event, this should be of type 
-     *     javafx.scene.input.InputMethodEvent
      */
-    public void inputMethodEvent(Object event);
+    public void inputMethodEvent(EventType<InputMethodEvent> type,
+                                 ObservableList<InputMethodTextRun> composed, String committed,
+                                 int caretPosition);
 
     public void scrollEvent(
             EventType<ScrollEvent> eventType, double scrollX, double scrollY,

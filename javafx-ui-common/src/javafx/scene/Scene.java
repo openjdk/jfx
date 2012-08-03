@@ -59,15 +59,24 @@ import javafx.geometry.Point2D;
 import javafx.scene.input.ContextMenuEvent;
 import javafx.scene.input.DragEvent;
 import javafx.scene.input.Dragboard;
+import javafx.scene.input.GestureEvent;
 import javafx.scene.input.InputMethodEvent;
 import javafx.scene.input.InputMethodRequests;
+import javafx.scene.input.InputMethodTextRun;
 import javafx.scene.input.KeyCode;
 import javafx.scene.input.KeyCombination;
 import javafx.scene.input.KeyEvent;
 import javafx.scene.input.Mnemonic;
 import javafx.scene.input.MouseButton;
+import javafx.scene.input.MouseDragEvent;
 import javafx.scene.input.MouseEvent;
+import javafx.scene.input.RotateEvent;
+import javafx.scene.input.ScrollEvent;
+import javafx.scene.input.SwipeEvent;
+import javafx.scene.input.TouchEvent;
+import javafx.scene.input.TouchPoint;
 import javafx.scene.input.TransferMode;
+import javafx.scene.input.ZoomEvent;
 import javafx.scene.paint.Color;
 import javafx.scene.paint.Paint;
 import javafx.stage.Window;
@@ -113,14 +122,6 @@ import javafx.beans.property.ReadOnlyObjectWrapper;
 import javafx.geometry.Bounds;
 import javafx.geometry.Orientation;
 import javafx.scene.image.WritableImage;
-import javafx.scene.input.GestureEvent;
-import javafx.scene.input.MouseDragEvent;
-import javafx.scene.input.RotateEvent;
-import javafx.scene.input.ScrollEvent;
-import javafx.scene.input.SwipeEvent;
-import javafx.scene.input.TouchEvent;
-import javafx.scene.input.TouchPoint;
-import javafx.scene.input.ZoomEvent;
 import javafx.stage.Stage;
 import javafx.stage.StageStyle;
 import javafx.util.Callback;
@@ -2267,18 +2268,36 @@ public class Scene implements EventTarget {
         }
 
         @Override
-        public void mouseEvent(Object event) {
-            Scene.this.impl_processMouseEvent(Toolkit.getToolkit().convertMouseEventToFX(event));
+        public void mouseEvent(EventType<MouseEvent> type, double x, double y, double screenX, double screenY,
+                               MouseButton button, int clickCount, boolean popupTrigger, boolean synthesized,
+                               boolean shiftDown, boolean controlDown, boolean altDown, boolean metaDown,
+                               boolean primaryDown, boolean middleDown, boolean secondaryDown)
+        {
+            MouseEvent mouseEvent = MouseEvent.impl_mouseEvent(x, y, screenX, screenY, button, clickCount,
+                    shiftDown, controlDown, altDown, metaDown, popupTrigger,
+                    primaryDown, middleDown, secondaryDown, synthesized, type);
+            impl_processMouseEvent(mouseEvent);
         }
 
         @Override
-        public void keyEvent(Object event) {
-            Scene.this.impl_processKeyEvent(Toolkit.getToolkit().convertKeyEventToFX(event));
+        public void keyEvent(EventType<KeyEvent> type, int key, char[] cs,
+                             boolean shiftDown, boolean controlDown, boolean altDown, boolean metaDown)
+        {
+            String chars = new String(cs);
+            String text = chars; // TODO: this must be a text like "HOME", "F1", or "A"
+            KeyEvent keyEvent = KeyEvent.impl_keyEvent(Scene.this, chars, text, key,
+                    shiftDown, controlDown, altDown, metaDown, type);
+            impl_processKeyEvent(keyEvent);
         }
 
         @Override
-        public void inputMethodEvent(Object event) {
-            Scene.this.processInputMethodEvent(Toolkit.getToolkit().convertInputMethodEventToFX(event));
+        public void inputMethodEvent(EventType<InputMethodEvent> type,
+                                     ObservableList<InputMethodTextRun> composed, String committed,
+                                     int caretPosition)
+        {
+            InputMethodEvent inputMethodEvent = InputMethodEvent.impl_inputMethodEvent(
+                Scene.this, composed, committed, caretPosition, type);
+            processInputMethodEvent(inputMethodEvent);
         }
 
         public void menuEvent(double x, double y, double xAbs, double yAbs,
@@ -2518,87 +2537,77 @@ public class Scene implements EventTarget {
          * This may be from either an internal or external dnd operation.
          */
         @Override
-        public TransferMode dragEnter(Object e) {
-            if (Scene.this.dndGesture == null) {
-                Scene.this.dndGesture = new DnDGesture();
+        public TransferMode dragEnter(double x, double y, double screenX, double screenY,
+                                      TransferMode transferMode, Dragboard dragboard)
+        {
+            if (dndGesture == null) {
+                dndGesture = new DnDGesture();
             }
-            return Scene.this.dndGesture.processTargetEnterOver(
-                    Toolkit.getToolkit().convertDropTargetEventToFX(
-                        e, Scene.this.dndGesture.dragboard));
+            DragEvent dragEvent =
+                    DragEvent.impl_create(x, y, screenX, screenY, transferMode, dragboard);
+            return dndGesture.processTargetEnterOver(dragEvent);
         }
 
         @Override
-        public TransferMode dragOver(Object e) {
+        public TransferMode dragOver(double x, double y, double screenX, double screenY,
+                                     TransferMode transferMode, Dragboard dragboard)
+        {
             if (Scene.this.dndGesture == null) {
-                System.out.println("GOT A dragOver when dndGesture is null!");
+                System.err.println("GOT A dragOver when dndGesture is null!");
                 return null;
             } else {
-                return Scene.this.dndGesture.processTargetEnterOver(
-                        Toolkit.getToolkit().convertDropTargetEventToFX(
-                            e, Scene.this.dndGesture.dragboard));
+                DragEvent dragEvent =
+                        DragEvent.impl_create(x, y, screenX, screenY, transferMode, dragboard);
+                return dndGesture.processTargetEnterOver(dragEvent);
             }
         }
 
         @Override
-        public void dropActionChanged(Object e) {
-            if (Scene.this.dndGesture == null) {
-                System.out.println("GOT A dropActionChanged when dndGesture is null!");
+        public void dragExit(double x, double y, double screenX, double screenY, Dragboard dragboard) {
+            if (dndGesture == null) {
+                System.err.println("GOT A dragExit when dndGesture is null!");
             } else {
-                Scene.this.dndGesture.processTargetActionChanged(
-                        Toolkit.getToolkit().convertDropTargetEventToFX(
-                            e, Scene.this.dndGesture.dragboard));
-            }
-        }
-
-
-        @Override
-        public void dragExit(Object e) {
-            if (Scene.this.dndGesture == null) {
-                System.out.println("GOT A dragExit when dndGesture is null!");
-            } else {
-                Scene.this.dndGesture.processTargetExit(
-                        Toolkit.getToolkit().convertDropTargetEventToFX(
-                            e, Scene.this.dndGesture.dragboard));
-
-                if (Scene.this.dndGesture.source == null) {
-                    Scene.this.dndGesture = null;
+                DragEvent dragEvent =
+                        DragEvent.impl_create(x, y, screenX, screenY, null, dragboard);
+                dndGesture.processTargetExit(dragEvent);
+                if (dndGesture.source == null) {
+                    dndGesture = null;
                 }
             }
         }
 
 
         @Override
-        public TransferMode drop(Object e) {
-            if (Scene.this.dndGesture == null) {
-                System.out.println("GOT A drop when dndGesture is null!");
+        public TransferMode drop(double x, double y, double screenX, double screenY,
+                                  TransferMode transferMode, Dragboard dragboard)
+        {
+            if (dndGesture == null) {
+                System.err.println("GOT A drop when dndGesture is null!");
                 return null;
             } else {
-                TransferMode tm = Scene.this.dndGesture.processTargetDrop(
-                        Toolkit.getToolkit().convertDropTargetEventToFX(
-                            e, Scene.this.dndGesture.dragboard));
-
-                if (Scene.this.dndGesture.source == null) {
-                    Scene.this.dndGesture = null;
+                DragEvent dragEvent =
+                        DragEvent.impl_create(x, y, screenX, screenY, null, dragboard);
+                TransferMode tm = dndGesture.processTargetDrop(dragEvent);
+                if (dndGesture.source == null) {
+                    dndGesture = null;
                 }
-
                 return tm;
-
             }
         }
     }
 
     class DragGestureListener implements TKDragGestureListener {
        @Override
-       public void dragGestureRecognized(Object e) {
-
-           Scene.this.dndGesture = new DnDGesture();
-           final DragEvent de = Toolkit.getToolkit().convertDragRecognizedEventToFX(e, null);
-           final EventTarget pickedNode = pick(de.getX(), de.getY());
-           Scene.this.dndGesture.dragboard = de.impl_getPlatformDragboard();
-
-            Scene.this.dndGesture.processRecognized(pickedNode, de);
-
-            Scene.this.dndGesture = null;
+       public void dragGestureRecognized(double x, double y, double screenX, double screenY,
+                                         int button, Dragboard dragboard)
+       {
+           dndGesture = new DnDGesture();
+           dndGesture.dragboard = dragboard;
+           // TODO: support mouse buttons in DragEvent
+           DragEvent dragEvent = DragEvent.impl_create(x, y, screenX, screenY, null, dragboard);
+           final EventTarget pickedNode = pick(dragEvent.getX(), dragEvent.getY());
+           dndGesture.processRecognized(pickedNode, dragEvent);
+           dndGesture = null;
         }
     }
 
@@ -2900,8 +2909,7 @@ public class Scene implements EventTarget {
 
                 // cancel drag and drop
                 DragEvent de = DragEvent.impl_create(DragEvent.DRAG_DONE,
-                        source, source, source, null, 0, 0, 0, 0, null,
-                        dragboard, null);
+                        source, source, source, null, 0, 0, 0, 0, null, dragboard);
 
                 if (source != null) {
                     Event.fireEvent(source, de);
@@ -2967,18 +2975,15 @@ public class Scene implements EventTarget {
     class DragSourceListener implements TKDragSourceListener {
 
         @Override
-        public void dropActionChanged(Object e) {
-            //System.out.println("Scene.DragSourceListener.dropActionChanged() - no action taken");
-        }
-
-        @Override
-        public void dragDropEnd(Object e) {
-            if (Scene.this.dndGesture != null) {
-                Scene.this.dndGesture.processDropEnd(Toolkit.getToolkit().convertDragSourceEventToFX(e, Scene.this.dndGesture.dragboard));
-                Scene.this.dndGesture = null;
-            }/* else {
-                System.out.println("Scene.DragSourceListener.dragDropEnd() - UNEXPECTD - dndGesture is NULL");
-            }*/
+        public void dragDropEnd(double x, double y, double screenX, double screenY,
+                                TransferMode transferMode, Dragboard dragboard)
+        {
+            if (dndGesture != null) {
+                DragEvent dragEvent =
+                        DragEvent.impl_create(x, y, screenX, screenY, transferMode, dragboard);
+                dndGesture.processDropEnd(dragEvent);
+                dndGesture = null;
+            }
         }
     }
 

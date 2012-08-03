@@ -617,12 +617,6 @@ public abstract class Toolkit {
                            float dashOffset);
 
     public abstract int getKeyCodeForChar(String character);
-    public abstract MouseEvent convertMouseEventToFX(Object event);
-    public abstract KeyEvent convertKeyEventToFX(Object event);
-    public abstract DragEvent convertDragRecognizedEventToFX(Object event, Dragboard dragboard);
-    public abstract DragEvent convertDragSourceEventToFX(Object event, Dragboard dragboard);
-    public abstract DragEvent convertDropTargetEventToFX(Object event, Dragboard dragboard);
-    public abstract InputMethodEvent convertInputMethodEventToFX(Object event);
     public abstract Dimension2D getBestCursorSize(int preferredWidth, int preferredHeight);
     public abstract int getMaximumCursorColors();
     public abstract PathElement[] convertShapeToFXPath(Object shape);
@@ -672,11 +666,6 @@ public abstract class Toolkit {
     
     public abstract TKClipboard getNamedClipboard(String name);
 
-    /**
-     * Creates a default, empty dragboard for use in drag and drop operations.
-     */
-    public abstract Dragboard createDragboard();
-
     public boolean isSupported(ConditionalFeature feature) { return false; }
 
     public abstract ScreenConfigurationAccessor setScreenConfigurationListener(TKScreenConfigurationListener listener);
@@ -694,7 +683,7 @@ public abstract class Toolkit {
      * The argument o represents an object used to identify a scene on which
      * the drag has started.
      */
-    public abstract void startDrag(Object o, Set<TransferMode> tm, TKDragSourceListener l, Dragboard dragboard);
+    public abstract void startDrag(TKScene scene, Set<TransferMode> tm, TKDragSourceListener l, Dragboard dragboard);
 
     // template function which can be implemented by toolkit impls such that they
     // can be informed when a drag and drop operation has completed. This allows
