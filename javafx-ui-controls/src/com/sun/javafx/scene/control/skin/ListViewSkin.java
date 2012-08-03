@@ -163,18 +163,24 @@ public class ListViewSkin<T> extends VirtualContainerBase<ListView<T>, ListViewB
         itemCountDirty = true;
         requestLayout();
     }
+    
+    private int itemCount = -1;
 
     @Override public int getItemCount() {
-        return listViewItems == null ? 0 : listViewItems.size();
+//        return listViewItems == null ? 0 : listViewItems.size();
+        return itemCount;
     }
 
     void updateCellCount() {
         if (flow == null) return;
         
         int oldCount = flow.getCellCount();
-        int newCount = getItemCount();
+        int newCount = listViewItems == null ? 0 : listViewItems.size();
         
-        flow.setCellCount(getItemCount());
+        itemCount = newCount;
+        getBehavior().setRowCount(itemCount);
+        
+        flow.setCellCount(newCount);
         
         if (newCount != oldCount) {
             flow.recreateCells();
