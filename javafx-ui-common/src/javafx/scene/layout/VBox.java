@@ -448,7 +448,7 @@ public class VBox extends Pane {
         while (Math.abs(available) > 1.0 && adjusting.size() > 0) {
             Node[] adjusted = new Node[adjustList.size()];
             final double portion = available / adjusting.size(); // negative in shrinking case
-            for (int i = 0, size = adjustList.size(); i < size; i++) {
+            for (int i = 0, size = adjusting.size(); i < size; i++) {
                 final Node child = adjusting.get(i);
                 final int childIndex = managed.indexOf(child);
                 final double limit = areaLimitHeights[adjustList.indexOf(child)] - areaHeights[childIndex]; // negative in shrinking case
