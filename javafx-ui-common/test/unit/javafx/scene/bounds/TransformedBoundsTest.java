@@ -35,6 +35,7 @@ import javafx.scene.transform.Rotate;
 import javafx.scene.transform.Scale;
 import javafx.scene.transform.Translate;
 
+import org.junit.Ignore;
 import org.junit.Test;
 
 public class TransformedBoundsTest {
@@ -265,6 +266,32 @@ public class TransformedBoundsTest {
         rect.setWidth(100);
         rect.setHeight(30);
         assertBoundsEqual(box(50, 50, 100, 30), rect.getBoundsInLocal());
+    }
+
+    @Test
+    @Ignore("To be fixed.")
+    public void testNotificationOnBoundsChangeForTransformedLeafNode() {
+        final Rectangle rect = new Rectangle(-50, -50, 100, 100);
+        rect.getTransforms().add(new Rotate(-45));
+
+        assertSimilar(
+                box(-Math.sqrt(2) * 50,
+                    -Math.sqrt(2) * 50,
+                    Math.sqrt(2) * 100,
+                    Math.sqrt(2) * 100),
+                rect.getBoundsInParent());
+
+        rect.setX(-100);
+        rect.setY(-100);
+        rect.setWidth(200);
+        rect.setHeight(200);
+
+        assertSimilar(
+                box(-Math.sqrt(2) * 100,
+                    -Math.sqrt(2) * 100,
+                    Math.sqrt(2) * 200,
+                    Math.sqrt(2) * 200),
+                rect.getBoundsInParent());
     }
 
     public @Test
