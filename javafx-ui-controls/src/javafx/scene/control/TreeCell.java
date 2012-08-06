@@ -77,6 +77,7 @@ public class TreeCell<T> extends IndexedCell<T> {
      */
     public TreeCell() {
         getStyleClass().addAll(DEFAULT_STYLE_CLASS);
+        indexProperty().addListener(indexListener);
     }
 
 
@@ -87,6 +88,16 @@ public class TreeCell<T> extends IndexedCell<T> {
      *                                                                         *
      **************************************************************************/
     
+    private final InvalidationListener indexListener = new InvalidationListener() {
+        @Override public void invalidated(Observable valueModel) {
+            // when the cell index changes, this may result in the cell
+            // changing state to be selected and/or focused.
+            updateItem();
+            updateSelection();
+            updateFocus();
+        }
+    };
+
     private final ListChangeListener selectedListener = new ListChangeListener() {
         @Override public void onChanged(Change c) {
             updateSelection();
@@ -272,27 +283,12 @@ public class TreeCell<T> extends IndexedCell<T> {
      * which is represented by this property.
      */
     public final ReadOnlyObjectProperty<TreeView<T>> treeViewProperty() { return treeView.getReadOnlyProperty(); }
-    
-    
-    
+
+
+
     /***************************************************************************
      *                                                                         *
      * Public API                                                              *
-     *                                                                         *
-     **************************************************************************/
-    
-    /** {@inheritDoc} */
-    @Override void indexChanged() {
-        updateItem();
-        updateSelection();
-        updateFocus();
-    }
-
-
-
-    /***************************************************************************
-     *                                                                         *
-     * Editing API                                                             *
      *                                                                         *
      **************************************************************************/
 
@@ -391,16 +387,14 @@ public class TreeCell<T> extends IndexedCell<T> {
         TreeView<T> tv = getTreeView();
         if (tv == null) return;
         
-        int index = getIndex();
-        
         // Compute whether the index for this cell is for a real item
-        boolean valid = index >=0 && index < tv.impl_getTreeItemCount();
+        boolean valid = getIndex() >=0 && getIndex() < tv.impl_getTreeItemCount();
 
         // Cause the cell to update itself
         if (valid) {
             // update the TreeCell state.
             // get the new treeItem that is about to go in to the TreeCell
-            TreeItem<T> treeItem = valid ? tv.getTreeItem(index) : null;
+            TreeItem<T> treeItem = valid ? tv.getTreeItem(getIndex()) : null;
         
             // For the sake of RT-14279, it is important that the order of these
             // method calls is as shown below. If the order is switched, it is
@@ -417,41 +411,29 @@ public class TreeCell<T> extends IndexedCell<T> {
 
     private void updateSelection() {
         if (isEmpty()) return;
+        if (getIndex() == -1 || getTreeView() == null) return;
+        if (getTreeView().getSelectionModel() == null) return;
         
-        int index = getIndex();
-        TreeView treeView = getTreeView();
-        if (index == -1 || treeView == null) return;
-        
-        SelectionModel sm = treeView.getSelectionModel();
-        if (sm == null) return;
-        
-        boolean isSelected = sm.isSelected(index);
+        boolean isSelected = getTreeView().getSelectionModel().isSelected(getIndex());
         if (isSelected() == isSelected) return;
         
         updateSelected(isSelected);
     }
 
     private void updateFocus() {
-        int index = getIndex();
-        TreeView treeView = getTreeView();
-        if (index == -1 || treeView == null) return;
+        if (getIndex() == -1 || getTreeView() == null) return;
+        if (getTreeView().getFocusModel() == null) return;
         
-        FocusModel fm = treeView.getFocusModel();
-        if (fm == null) return;
-        
-        setFocused(fm.isFocused(index));
+        setFocused(getTreeView().getFocusModel().isFocused(getIndex()));
     }
 
     private void updateEditing() {
-        TreeView treeView = getTreeView();
-        TreeItem treeItem = getTreeItem();
-        if (getIndex() == -1 || treeView == null || treeItem == null) return;
+        if (getIndex() == -1 || getTreeView() == null || getTreeItem() == null) return;
         
-        boolean isEditing = isEditing();
-        TreeItem editItem = treeView.getEditingItem();
-        if (! isEditing && treeItem.equals(editItem)) {
+        TreeItem editItem = getTreeView().getEditingItem();
+        if (! isEditing() && getTreeItem().equals(editItem)) {
             startEdit();
-        } else if (isEditing && ! treeItem.equals(editItem)) {
+        } else if (isEditing() && ! getTreeItem().equals(editItem)) {
             cancelEdit();
         }
     }
@@ -508,9 +490,8 @@ public class TreeCell<T> extends IndexedCell<T> {
      */
     @Deprecated @Override public long impl_getPseudoClassState() {
         long mask = super.impl_getPseudoClassState();
-        TreeItem treeItem = getTreeItem();
-        if (treeItem != null && ! treeItem.isLeaf()) {
-            mask |= treeItem.isExpanded() ? EXPANDED_PSEUDOCLASS_STATE : COLLAPSED_PSEUDOCLASS_STATE;
+        if (getTreeItem() != null && ! getTreeItem().isLeaf()) {
+            mask |= getTreeItem().isExpanded() ? EXPANDED_PSEUDOCLASS_STATE : COLLAPSED_PSEUDOCLASS_STATE;
         }
         return mask;
     }

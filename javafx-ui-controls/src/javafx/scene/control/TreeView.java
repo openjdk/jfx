@@ -1217,13 +1217,11 @@ public class TreeView<T> extends Control {
     static class TreeViewFocusModel<T> extends FocusModel<TreeItem<T>> {
 
         private final TreeView<T> treeView;
-        private int itemCount = 0;
 
         public TreeViewFocusModel(final TreeView<T> treeView) {
             this.treeView = treeView;
             this.treeView.rootProperty().addListener(weakRootPropertyListener);
             updateTreeEventListener(null, treeView.getRoot());
-            updateItemCount();
         }
         
         private final ChangeListener rootPropertyListener = new ChangeListener<TreeItem<T>>() {
@@ -1245,14 +1243,10 @@ public class TreeView<T> extends Control {
                 weakTreeItemListener = new WeakEventHandler(newRoot, TreeItem.<T>treeItemCountChangeEvent(), treeItemListener);
                 newRoot.addEventHandler(TreeItem.<T>treeItemCountChangeEvent(), weakTreeItemListener);
             }
-            
-            updateItemCount();
         }
         
         private EventHandler<TreeModificationEvent<T>> treeItemListener = new EventHandler<TreeModificationEvent<T>>() {
             @Override public void handle(TreeModificationEvent<T> e) {
-                updateItemCount();
-                
                 // don't shift focus if the event occurred on a tree item after
                 // the focused row, or if there is no focus index at present
                 if (getFocusedIndex() == -1) return;
@@ -1302,22 +1296,15 @@ public class TreeView<T> extends Control {
         private WeakEventHandler weakTreeItemListener;
 
         @Override protected int getItemCount() {
-            return itemCount;
+            return treeView == null ? -1 : treeView.impl_getTreeItemCount();
         }
 
         @Override protected TreeItem<T> getModelItem(int index) {
             if (treeView == null) return null;
-            if (index < 0 || index >= itemCount) return null;
+
+            if (index < 0 || index >= treeView.impl_getTreeItemCount()) return null;
 
             return treeView.getTreeItem(index);
         }
-        
-        private void updateItemCount() {
-            if (treeView == null) {
-                itemCount = -1;
-            } else {
-                itemCount = treeView.impl_getTreeItemCount();
-            }
-        } 
     }
 }
