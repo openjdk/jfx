@@ -920,20 +920,21 @@
     -fx-padding: 0.333333em 0.41777em 0.333333em 0.41777em;  /* 4 5 4 5 */
 }
 
-.menu-item .left-container {
+.menu-item > .left-container {
     -fx-padding: 0.458em 0.791em 0.458em 0.458em;
+    -fx-background-color: green;
 }
 
-.menu-item .graphic-container {
+.menu-item > .graphic-container {
     -fx-padding: 0em 0.333em 0em 0em;
 }
 
-.menu-item .label {
+.menu-item >.label {
     -fx-padding: 0em 0.5em 0em 0em;
     -fx-text-fill: -fx-text-base-color;
 }
 
-.menu-item:disabled .label {
+.menu-item:disabled > .label {
     -fx-opacity: -fx-disabled-opacity;
 }
 
@@ -943,19 +944,18 @@
      -fx-text-fill: -fx-selection-bar-text;
 }
 
-.menu-item:focused .label {
+.menu-item:focused > .label {
     -fx-text-fill: white;
 }
-.menu-item .right-container {
+.menu-item > .right-container {
     -fx-padding: 0em 0em 0em 0.5em;
 }
 
-.menu-item:show-mnemonics .mnemonic-underline {
+.menu-item:show-mnemonics > .mnemonic-underline {
     -fx-stroke: -fx-text-fill;
 } 
 
-
-.radio-menu-item:checked .radio {
+.radio-menu-item:checked > .radio {
     -fx-background-color: -fx-mark-color;
     -fx-shape: "M0,5H2L4,8L8,0H10L5,10H3Z";
     -fx-scale-shape: false;
@@ -965,24 +965,24 @@
     -fx-background-color: white;
 }
 
-.check-menu-item:checked .check {
+.check-menu-item:checked > .check {
     -fx-background-color: -fx-mark-color;
     -fx-shape: "M0,5H2L4,8L8,0H10L5,10H3Z";
     -fx-scale-shape: false;
 }
 
-.check-menu-item:focused:checked .check {
+.check-menu-item:focused:checked > .check {
     -fx-background-color: white;
 }
 
-.menu .arrow {
+.menu > .arrow {
     -fx-padding: 0.458em 0.167em 0.458em 0.167em; /* 4.5 2 4.5 2 */
     -fx-background-color: -fx-mark-color;
     -fx-shape: "M0,-4L4,0L0,4Z";
     -fx-scale-shape: false;
 }
 
-.menu:selected .arrow {
+.menu:selected > .arrow {
     -fx-background-color: white;
 }
 /*.radio.selected {
@@ -1463,7 +1463,7 @@
  *                                                                             *
  ******************************************************************************/
 
-.cell .choice-box {
+.cell > .choice-box {
     -fx-background-color: transparent;
     -fx-background-insets: 0;
     -fx-background-radius: 0;
@@ -1472,15 +1472,15 @@
     -fx-content-display: LEFT;
 }
 
-.cell .choice-box .label {
+.cell > .choice-box > .label {
     -fx-padding: 0em 0.333333em 0.0em 0.333333; /* 2 4 3 6 */
 }
 
-.cell:focused:selected .choice-box .label {
+.cell:focused:selected > .choice-box > .label {
     -fx-text-fill: white;
 }
 
-.cell:focused:selected .choice-box .arrow {
+.cell:focused:selected > .choice-box > .arrow {
     -fx-background-color: -fx-mark-highlight-color, white;
 }
 
