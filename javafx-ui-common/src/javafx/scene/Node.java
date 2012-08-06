@@ -3340,9 +3340,13 @@ public abstract class Node implements EventTarget {
     @Deprecated
     protected void impl_geomChanged() {
         if (geomBoundsInvalid) {
-            //We need to call this even if geomBounds are already invalid.
-            //Text is relying on this behaviour.
-            impl_notifyLayoutBoundsChanged(); 
+            // GeomBoundsInvalid is false when node geometry changed and
+            // the untransformed node bounds haven't been recalculated yet.
+            // Most of the time, the recalculation of layout and transformed
+            // node bounds don't require validation of untransformed bounds
+            // and so we can not skip the following notifications.
+            impl_notifyLayoutBoundsChanged();
+            transformedBoundsChanged();
             return;
         }
         geomBounds.makeEmpty();

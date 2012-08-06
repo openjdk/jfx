@@ -35,7 +35,6 @@ import javafx.scene.transform.Rotate;
 import javafx.scene.transform.Scale;
 import javafx.scene.transform.Translate;
 
-import org.junit.Ignore;
 import org.junit.Test;
 
 public class TransformedBoundsTest {
@@ -269,7 +268,6 @@ public class TransformedBoundsTest {
     }
 
     @Test
-    @Ignore("To be fixed.")
     public void testNotificationOnBoundsChangeForTransformedLeafNode() {
         final Rectangle rect = new Rectangle(-50, -50, 100, 100);
         rect.getTransforms().add(new Rotate(-45));
