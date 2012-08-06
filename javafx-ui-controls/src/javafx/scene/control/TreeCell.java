@@ -72,12 +72,12 @@ public class TreeCell<T> extends IndexedCell<T> {
      *                                                                         *
      **************************************************************************/
 
+    private static int counter = 0;
     /**
      * Creates a default TreeCell instance.
      */
     public TreeCell() {
         getStyleClass().addAll(DEFAULT_STYLE_CLASS);
-        indexProperty().addListener(indexListener);
     }
 
 
@@ -88,16 +88,6 @@ public class TreeCell<T> extends IndexedCell<T> {
      *                                                                         *
      **************************************************************************/
     
-    private final InvalidationListener indexListener = new InvalidationListener() {
-        @Override public void invalidated(Observable valueModel) {
-            // when the cell index changes, this may result in the cell
-            // changing state to be selected and/or focused.
-            updateItem();
-            updateSelection();
-            updateFocus();
-        }
-    };
-
     private final ListChangeListener selectedListener = new ListChangeListener() {
         @Override public void onChanged(Change c) {
             updateSelection();
@@ -157,6 +147,7 @@ public class TreeCell<T> extends IndexedCell<T> {
     private final WeakInvalidationListener weakFocusedListener = new WeakInvalidationListener(focusedListener);
     private final WeakChangeListener weakFocusModelPropertyListener = new WeakChangeListener(focusModelPropertyListener);
     private final WeakInvalidationListener weakEditingListener = new WeakInvalidationListener(editingListener);
+    
     
     
     /***************************************************************************
@@ -383,6 +374,17 @@ public class TreeCell<T> extends IndexedCell<T> {
      *                                                                         *
      **************************************************************************/
     
+    /** {@inheritDoc} */
+    @Override void indexChanged() {
+        super.indexChanged();
+        
+        // when the cell index changes, this may result in the cell
+        // changing state to be selected and/or focused.
+        updateItem();
+        updateSelection();
+        updateFocus();
+    }
+    
     private void updateItem() {
         TreeView<T> tv = getTreeView();
         if (tv == null) return;
@@ -445,6 +447,8 @@ public class TreeCell<T> extends IndexedCell<T> {
      * Expert API                                                              *
      *                                                                         *
      **************************************************************************/
+    
+    
 
     /**
      * Updates the TreeView associated with this TreeCell.

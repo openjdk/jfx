@@ -72,10 +72,6 @@ public class TableCell<S,T> extends IndexedCell<T> {
         getStyleClass().addAll(DEFAULT_STYLE_CLASS);
         
         updateColumnIndex();
-
-        // we listen to changes in the index property as this indicates that
-        // the cell has been reappropriated
-        indexProperty().addListener(indexListener);
     }
 
 
@@ -88,23 +84,6 @@ public class TableCell<S,T> extends IndexedCell<T> {
     
     private boolean itemDirty = false;
     
-    private InvalidationListener indexListener = new InvalidationListener() {
-        @Override public void invalidated(Observable valueModel) {
-            indexChanged();
-            updateSelection();
-            updateFocus();
-        }
-    };
-    
-    @Override void indexChanged() {
-        // Ideally we would just use the following two lines of code, rather
-        // than the updateItem() call beneath, but if we do this we end up with
-        // RT-22428 where all the columns are collapsed.
-        // itemDirty = true;
-        // requestLayout();
-        updateItem();
-    }
-
     /*
      * This is the list observer we use to keep an eye on the SelectedCells
      * ObservableList in the table view. Because it is possible that the table can
@@ -386,12 +365,25 @@ public class TableCell<S,T> extends IndexedCell<T> {
         setSelected(selected);
     }
 
+    
 
     /* *************************************************************************
      *                                                                         *
      * Private Implementation                                                  *
      *                                                                         *
      **************************************************************************/
+    
+    @Override void indexChanged() {
+        super.indexChanged();
+        // Ideally we would just use the following two lines of code, rather
+        // than the updateItem() call beneath, but if we do this we end up with
+        // RT-22428 where all the columns are collapsed.
+        // itemDirty = true;
+        // requestLayout();
+        updateItem();
+        updateSelection();
+        updateFocus();
+    }
     
     private Map<String, PropertyReference> observablePropertyReferences;
     

@@ -68,8 +68,6 @@ public class TableRow<T> extends IndexedCell<T> {
      */
     public TableRow() {
         getStyleClass().addAll(DEFAULT_STYLE_CLASS);
-
-        indexProperty().addListener(indexInvalidationListener);
     }
 
 
@@ -80,17 +78,6 @@ public class TableRow<T> extends IndexedCell<T> {
      *                                                                         *
      **************************************************************************/
 
-    private InvalidationListener indexInvalidationListener = new InvalidationListener() {
-        @Override public void invalidated(Observable valueModel) {
-            indexChanged();
-            updateSelection();
-            updateFocus();
-        }
-    };
-    
-    @Override void indexChanged() {
-        updateItem();
-    }
     
 
     /***************************************************************************
@@ -130,6 +117,8 @@ public class TableRow<T> extends IndexedCell<T> {
     private final WeakInvalidationListener weakFocusedListener = new WeakInvalidationListener(focusedListener);
     private final WeakInvalidationListener weakEditingListener = new WeakInvalidationListener(editingListener);
 
+    
+    
     /***************************************************************************
      *                                                                         *
      * Properties                                                              *
@@ -227,6 +216,14 @@ public class TableRow<T> extends IndexedCell<T> {
      *                                                                         *
      **************************************************************************/
 
+    /** {@inheritDoc} */
+    @Override void indexChanged() {
+        super.indexChanged();
+        updateItem();
+        updateSelection();
+        updateFocus();
+    }
+    
     private void updateItem() {
         TableView<T> tv = getTableView();
         if (tv == null || tv.getItems() == null) return;
