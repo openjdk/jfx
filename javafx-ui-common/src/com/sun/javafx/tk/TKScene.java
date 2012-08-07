@@ -21,25 +21,6 @@
  * Please contact Oracle, 500 Oracle Parkway, Redwood Shores, CA 94065 USA
  * or visit www.oracle.com if you need additional information or have any
  * questions.
- * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
- *
- * This code is free software; you can redistribute it and/or modify it
- * under the terms of the GNU General Public License version 2 only, as
- * published by the Free Software Foundation.
- *
- * This code is distributed in the hope that it will be useful, but WITHOUT
- * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
- * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
- * version 2 for more details (a copy is included in the LICENSE file that
- * accompanied this code).
- *
- * You should have received a copy of the GNU General Public License version
- * 2 along with this work; if not, write to the Free Software Foundation,
- * Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301 USA.
- *
- * Please contact Sun Microsystems, Inc., 4150 Network Circle, Santa Clara,
- * CA 95054 USA or visit www.sun.com if you need additional information or
- * have any questions.
  */
 package com.sun.javafx.tk;
 
@@ -53,6 +34,19 @@ import javafx.scene.input.Dragboard;
  *
  */
 public interface TKScene {
+
+    /**
+     * Waits until the render thread is available for synchronization
+     * from the scene graph. Once this method returns, the caller has
+     * the lock, and will continue to hold the lock until releaseSynchronization
+     * is called.
+     */
+    public void waitForSynchronization();
+
+    /**
+     * Releases the synchronization lock previously held.
+     */
+    public void releaseSynchronization();
 
     public void setTKSceneListener(TKSceneListener listener);
     public void setTKScenePaintListener(final TKScenePaintListener listener);

@@ -312,6 +312,38 @@ public class Region extends Parent {
     public final Insets getPadding() { return padding == null ? Insets.EMPTY : padding.get(); }
 
     /**
+     * Defines the area of the region within which completely opaque pixels
+     * are drawn. This is used for various performance optimizations.
+     * The pixels within this area MUST BE fully opaque, or rendering
+     * artifacts will result.
+     */
+    public final ObjectProperty<Insets> opaqueInsetsProperty() {
+        if (opaqueInsets == null) {
+            opaqueInsets = new StyleableObjectProperty<Insets>(Insets.EMPTY) {
+                @Override
+                public StyleableProperty getStyleableProperty() {
+                    return StyleableProperties.OPAQUE_INSETS;
+                }
+
+                @Override
+                public Object getBean() {
+                    return Region.this;
+                }
+
+                @Override
+                public String getName() {
+                    return "opaqueInsets";
+                }
+            };
+        }
+        return opaqueInsets;
+    }
+
+    private ObjectProperty<Insets> opaqueInsets;
+    public final void setOpaqueInsets(Insets value) { opaqueInsetsProperty().set(value); }
+    public final Insets getOpaqueInsets() { return opaqueInsets == null ? Insets.EMPTY : opaqueInsets.get(); }
+
+    /**
      * Gets the space around content, which will include any borders plus padding if set.
      * @return the space around content, which will include any borders plus padding if set.
      */
@@ -1971,6 +2003,17 @@ public class Region extends Parent {
         super.impl_updatePG();
         PGRegion pg = (PGRegion) impl_getPGNode();
 
+        if (opaqueInsets != null) {
+            final Insets i = opaqueInsets.get();
+            if (i.getBottom()!=0 || i.getTop()!=0 || i.getLeft()!=0 || i.getRight()!=0) {
+                pg.setOpaqueInsets(
+                        (float) i.getTop(),
+                        (float) i.getRight(),
+                        (float) i.getBottom(),
+                        (float) i.getLeft());
+            }
+        }
+
         if (impl_isDirty(DirtyBits.NODE_GEOMETRY)) {
             pg.setSize((float)getWidth(), (float)getHeight());
         }
@@ -2549,6 +2592,22 @@ public class Region extends Parent {
             }
          };
 
+         private static final StyleableProperty<Region,Insets> OPAQUE_INSETS =
+                 new StyleableProperty<Region,Insets>("-fx-opaque-insets",
+                         InsetsConverter.getInstance(), Insets.EMPTY) {
+
+                     @Override
+                     public boolean isSettable(Region node) {
+                         return node.opaqueInsets == null || !node.opaqueInsets.isBound();
+                     }
+
+                     @Override
+                     public WritableValue<Insets> getWritableValue(Region node) {
+                         return node.opaqueInsetsProperty();
+                     }
+
+                 };
+
          private static final StyleableProperty<Region,List<BackgroundFill>> BACKGROUND_FILLS =
              new StyleableProperty<Region,List<BackgroundFill>>("-fx-background-fills", 
                  BackgroundFillConverter.getInstance(),
@@ -2674,6 +2733,7 @@ public class Region extends Parent {
                 new ArrayList<StyleableProperty>(Parent.impl_CSS_STYLEABLES());
             Collections.addAll(styleables,
                     PADDING,
+                    OPAQUE_INSETS,
                     BACKGROUND_FILLS,
                     BACKGROUND_IMAGES,
                     IMAGE_BORDERS,

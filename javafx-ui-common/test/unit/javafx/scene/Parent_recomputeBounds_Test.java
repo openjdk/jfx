@@ -30,7 +30,9 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 import javafx.geometry.Bounds;
 import javafx.scene.shape.Rectangle;
+import javafx.scene.shape.Circle;
 
+import org.junit.Ignore;
 import org.junit.Test;
 
 public class Parent_recomputeBounds_Test {
@@ -377,7 +379,7 @@ public class Parent_recomputeBounds_Test {
     }
 
     @Test
-    public void dontStartBoundsCalculationFromEmptyBounds() {
+    public void shouldNotStartBoundsCalculationFromEmptyBounds() {
         final Group g = new Group();
         final Rectangle lt = new Rectangle(50, 50, 50, 50);
         final Rectangle rb = new Rectangle(100, 100, 50, 50);
@@ -403,5 +405,130 @@ public class Parent_recomputeBounds_Test {
         assertEquals(50, b.getMinY(), 0.0001);
         assertEquals(150, b.getWidth(), 0.0001);
         assertEquals(150, b.getHeight(), 0.0001);
+    }
+
+    @Test
+    @Ignore("To be fixed.")
+    public void shouldNotIgnoreMultipleAddedNodes() {
+        final Group g = new Group();
+        final Rectangle lt = new Rectangle(100, 100, 100, 100);
+        final Rectangle mt = new Rectangle(200, 100, 100, 100);
+        final Rectangle rt = new Rectangle(300, 100, 100, 100);
+        final Rectangle rb = new Rectangle(300, 200, 100, 100);
+        Bounds b;
+
+        g.getChildren().addAll(lt, mt);
+
+        b = g.getBoundsInLocal();
+        assertEquals(100, b.getMinX(), 0.0001);
+        assertEquals(100, b.getMinY(), 0.0001);
+        assertEquals(200, b.getWidth(), 0.0001);
+        assertEquals(100, b.getHeight(), 0.0001);
+
+        ((Node) rb).boundsChanged = false;
+        // rt, rb should be either incorporated into parent bounds directly
+        // or marked as dirty for parent bounds calculation
+        g.getChildren().addAll(rt, rb);
+
+        b = g.getBoundsInLocal();
+        assertEquals(100, b.getMinX(), 0.0001);
+        assertEquals(100, b.getMinY(), 0.0001);
+        assertEquals(300, b.getWidth(), 0.0001);
+        assertEquals(200, b.getHeight(), 0.0001);
+    }
+
+    @Test
+    @Ignore("To be fixed.")
+    public void shouldNotCreateEmptyDirtyChildrenList() {
+        final Group g = new Group();
+        final Rectangle lt = new Rectangle(100, 100, 100, 100);
+        final Rectangle rt = new Rectangle(200, 100, 100, 100);
+        final Rectangle lb = new Rectangle(100, 200, 100, 100);
+        final Rectangle rb = new Rectangle(200, 200, 100, 100);
+        Bounds b;
+
+        g.getChildren().addAll(lt, rt, lb, rb);
+        final int toAdd = Parent.DIRTY_CHILDREN_THRESHOLD - 4;
+        for (int i = 0; i < toAdd; ++i) {
+            g.getChildren().add(
+                    new Rectangle(150 + i * 80 / (toAdd - 1), 190, 20, 20));
+        }
+
+        b = g.getBoundsInLocal();
+        assertEquals(100, b.getMinX(), 0.0001);
+        assertEquals(100, b.getMinY(), 0.0001);
+        assertEquals(200, b.getWidth(), 0.0001);
+        assertEquals(200, b.getHeight(), 0.0001);
+
+        lt.setX(50);
+        // this should create a dirty children list on Parent, even though
+        // the added node doesn't change the group gemetry, the created
+        // dirty children list should still contain the previously modified
+        // corner node (lt)
+        g.getChildren().add(new Rectangle(150, 150, 100, 100));
+
+        b = g.getBoundsInLocal();
+        assertEquals(50, b.getMinX(), 0.0001);
+        assertEquals(100, b.getMinY(), 0.0001);
+        assertEquals(250, b.getWidth(), 0.0001);
+        assertEquals(200, b.getHeight(), 0.0001);
+    }
+
+    @Test
+    @Ignore("To be fixed.")
+    public void
+            shouldNotSkipGeomChangedForChildAdditionInsideUntransformedBounds()
+    {
+        final Group g = new Group(new Circle(0, -100, 0.001),
+                                  new Circle(0, 100, 0.001),
+                                  new Circle(-100, 0, 0.001),
+                                  new Circle(100, 0, 0.001));
+        g.getTransforms().add(new Rotate(-45));
+
+        Bounds b;
+
+        b = g.getBoundsInParent();
+        assertEquals(-100 * Math.sqrt(2) / 2, b.getMinX(), 0.1);
+        assertEquals(-100 * Math.sqrt(2) / 2, b.getMinY(), 0.1);
+        assertEquals(100 * Math.sqrt(2), b.getWidth(), 0.1);
+        assertEquals(100 * Math.sqrt(2), b.getHeight(), 0.1);
+
+        g.getChildren().add(new Circle(95, -95, 0.001));
+
+        b = g.getBoundsInParent();
+        assertEquals(-100 * Math.sqrt(2) / 2, b.getMinX(), 0.1);
+        assertEquals(-95 * Math.sqrt(2), b.getMinY(), 0.1);
+        assertEquals(100 * Math.sqrt(2), b.getWidth(), 0.1);
+        assertEquals((50 + 95) * Math.sqrt(2), b.getHeight(), 0.1);
+    }
+
+    @Test
+    @Ignore("To be fixed.")
+    public void
+            shouldNotSkipGeomChangedForChildRemovalInsideUntransformedBounds()
+    {
+        final Circle toRemove = new Circle(95, -95, 0.001);
+        final Group g = new Group(toRemove,
+                                  new Circle(0, -100, 0.001),
+                                  new Circle(0, 100, 0.001),
+                                  new Circle(-100, 0, 0.001),
+                                  new Circle(100, 0, 0.001));
+        g.getTransforms().add(new Rotate(-45));
+
+        Bounds b;
+
+        b = g.getBoundsInParent();
+        assertEquals(-100 * Math.sqrt(2) / 2, b.getMinX(), 0.1);
+        assertEquals(-95 * Math.sqrt(2), b.getMinY(), 0.1);
+        assertEquals(100 * Math.sqrt(2), b.getWidth(), 0.1);
+        assertEquals((50 + 95) * Math.sqrt(2), b.getHeight(), 0.1);
+
+        g.getChildren().remove(toRemove);
+
+        b = g.getBoundsInParent();
+        assertEquals(-100 * Math.sqrt(2) / 2, b.getMinX(), 0.1);
+        assertEquals(-100 * Math.sqrt(2) / 2, b.getMinY(), 0.1);
+        assertEquals(100 * Math.sqrt(2), b.getWidth(), 0.1);
+        assertEquals(100 * Math.sqrt(2), b.getHeight(), 0.1);
     }
 }

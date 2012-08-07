@@ -233,7 +233,10 @@ public class TextFieldSkin extends TextInputControlSkin<TextField, TextFieldBeha
         // Add content
         textGroup.setManaged(false);
         textGroup.setClip(clip);
-        textGroup.getChildren().addAll(selectionHighlightPath, textNode, caretPath);
+        // Hack to defeat the fact that otherwise when the caret blinks the parent group
+        // bounds are completely invalidated and therefore the dirty region is much
+        // larger than necessary.
+        textGroup.getChildren().addAll(selectionHighlightPath, textNode, new Group(caretPath));
         getChildren().add(textGroup);
         if (PlatformUtil.isEmbedded()) {
             getChildren().addAll(caretHandle, selectionHandle1, selectionHandle2);

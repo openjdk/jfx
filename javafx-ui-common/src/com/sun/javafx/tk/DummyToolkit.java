@@ -250,36 +250,6 @@ final public class DummyToolkit extends Toolkit {
     }
 
     @Override
-    public MouseEvent convertMouseEventToFX(Object event) {
-        throw new UnsupportedOperationException("Not supported yet.");
-    }
-
-    @Override
-    public KeyEvent convertKeyEventToFX(Object event) {
-        throw new UnsupportedOperationException("Not supported yet.");
-    }
-
-    @Override
-    public DragEvent convertDragRecognizedEventToFX(Object event, Dragboard dragboard) {
-        throw new UnsupportedOperationException("Not supported yet.");
-    }
-
-    @Override
-    public DragEvent convertDragSourceEventToFX(Object event, Dragboard dragboard) {
-        throw new UnsupportedOperationException("Not supported yet.");
-    }
-
-    @Override
-    public DragEvent convertDropTargetEventToFX(Object event, Dragboard dragboard) {
-        throw new UnsupportedOperationException("Not supported yet.");
-    }
-
-    @Override
-    public InputMethodEvent convertInputMethodEventToFX(Object event) {
-        throw new UnsupportedOperationException("Not supported yet.");
-    }
-
-    @Override
     public Dimension2D getBestCursorSize(int preferredWidth, int preferredHeight) {
         throw new UnsupportedOperationException("Not supported yet.");
     }
@@ -441,11 +411,6 @@ final public class DummyToolkit extends Toolkit {
     }
 
     @Override
-    public Dragboard createDragboard() {
-        throw new UnsupportedOperationException("Not supported yet.");
-    }
-
-    @Override
     public ScreenConfigurationAccessor setScreenConfigurationListener(TKScreenConfigurationListener listener) {
         throw new UnsupportedOperationException("Not supported yet.");
     }
@@ -466,7 +431,7 @@ final public class DummyToolkit extends Toolkit {
     }
 
     @Override
-    public void startDrag(Object o, Set<TransferMode> tms, TKDragSourceListener l, Dragboard dragboard) {
+    public void startDrag(TKScene scene, Set<TransferMode> tms, TKDragSourceListener l, Dragboard dragboard) {
         throw new UnsupportedOperationException("Not supported yet.");
     }
 

@@ -69,7 +69,7 @@ public class AbstractEvents {
     public final static int MODIFIER_ALT = 4;
     public final static int MODIFIER_META = 8;
 
-    public static EventType<? extends InputEvent> mouseIDToFXEventID(int embedMouseID) {
+    public static EventType<MouseEvent> mouseIDToFXEventID(int embedMouseID) {
         switch (embedMouseID) {
             case MOUSEEVENT_PRESSED:
                 return MouseEvent.MOUSE_PRESSED;
@@ -85,8 +85,6 @@ public class AbstractEvents {
                 return MouseEvent.MOUSE_MOVED;
             case MOUSEEVENT_DRAGGED:
                 return MouseEvent.MOUSE_DRAGGED;
-            case MOUSEEVENT_WHEEL:
-                return ScrollEvent.SCROLL;
         }
         // Should never reach here
         return MouseEvent.MOUSE_MOVED;

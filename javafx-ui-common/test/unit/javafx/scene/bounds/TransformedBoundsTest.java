@@ -267,6 +267,31 @@ public class TransformedBoundsTest {
         assertBoundsEqual(box(50, 50, 100, 30), rect.getBoundsInLocal());
     }
 
+    @Test
+    public void testNotificationOnBoundsChangeForTransformedLeafNode() {
+        final Rectangle rect = new Rectangle(-50, -50, 100, 100);
+        rect.getTransforms().add(new Rotate(-45));
+
+        assertSimilar(
+                box(-Math.sqrt(2) * 50,
+                    -Math.sqrt(2) * 50,
+                    Math.sqrt(2) * 100,
+                    Math.sqrt(2) * 100),
+                rect.getBoundsInParent());
+
+        rect.setX(-100);
+        rect.setY(-100);
+        rect.setWidth(200);
+        rect.setHeight(200);
+
+        assertSimilar(
+                box(-Math.sqrt(2) * 100,
+                    -Math.sqrt(2) * 100,
+                    Math.sqrt(2) * 200,
+                    Math.sqrt(2) * 200),
+                rect.getBoundsInParent());
+    }
+
     public @Test
     void testBoundsWithTransform() {
         Rectangle rect = new Rectangle();
