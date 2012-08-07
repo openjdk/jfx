@@ -198,13 +198,12 @@
 
 .fxvk .key .label { 
     -fx-text-fill: #959595;
-    -fx-font-size: 14px;
-    -fx-font-weight: bold;
+    -fx-font: bold 14px "Amble";
     -fx-alignment: TOP_RIGHT;
 }
 
 .fxvk .multi-char-key .label { 
-    -fx-font-size: 12px;
+    -fx-font: bold 12px "Amble";
 }
 
 .fxvk .special-key { 
