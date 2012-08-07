@@ -912,17 +912,20 @@ public abstract class Node implements EventTarget {
     public final BooleanProperty visibleProperty() {
         if (visible == null) {
             visible = new StyleableBooleanProperty(true) {
-
+                boolean oldValue = true;
                 @Override
                 protected void invalidated() {
-                    impl_markDirty(DirtyBits.NODE_VISIBLE);
-                    impl_geomChanged();
-                    updateTreeVisible();
-                    if (getParent() != null) {
-                        // notify the parent of the potential change in visibility
-                        // of this node, since visibility affects bounds of the
-                        // parent node
-                        getParent().childVisibilityChanged(Node.this);
+                    if (oldValue != get()) {
+                        impl_markDirty(DirtyBits.NODE_VISIBLE);
+                        impl_geomChanged();
+                        updateTreeVisible();
+                        if (getParent() != null) {
+                            // notify the parent of the potential change in visibility
+                            // of this node, since visibility affects bounds of the
+                            // parent node
+                            getParent().childVisibilityChanged(Node.this);
+                        }
+                        oldValue = get();
                     }
                 }
 

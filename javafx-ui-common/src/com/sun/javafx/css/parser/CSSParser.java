@@ -682,6 +682,8 @@ final public class CSSParser {
             return parseURILayers(root);
         } else if ("-fx-background-insets".equals(prop)) {
              return parseInsetsLayers(root);
+        } else if ("-fx-opaque-insets".equals(prop)) {
+            return parseInsetsLayer(root);
         } else if ("-fx-background-position".equals(prop)) {
              return parseBackgroundPositionLayers(root);
         } else if ("-fx-background-radius".equals(prop)) {
@@ -2194,6 +2196,27 @@ final public class CSSParser {
         }
 
         return new ParsedValue<ParsedValue<ParsedValue<?,Size>[],Insets>[], Insets[]>(layers, InsetsConverter.SequenceConverter.getInstance());
+    }
+
+    // A single inset (1, 2, 3, or 4 digits)
+    // <size> | <size> <size> <size> <size>
+    private ParsedValue<ParsedValue<?,Size>[],Insets> parseInsetsLayer(Term root)
+            throws ParseException {
+
+        int nLayers = numberOfLayers(root);
+
+        Term temp = root;
+        ParsedValue<ParsedValue<?,Size>[],Insets> layer = null;
+
+        while(temp != null) {
+            ParsedValue<?,Size>[] sides = parseSizeSeries(temp);
+            layer = new ParsedValue<ParsedValue<?,Size>[],Insets>(sides, InsetsConverter.getInstance());
+            while(temp.nextInSeries != null) {
+                temp = temp.nextInSeries;
+            }
+            temp = nextLayer(temp);
+        }
+        return layer;
     }
 
     // <size> | <size> <size> <size> <size>
