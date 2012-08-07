@@ -40,6 +40,8 @@ import com.sun.javafx.sg.PGShape;
  * @author aim
  */
 public class StubRegion extends StubGroup implements PGRegion {
+    public void setOpaqueInsets(float top, float right, float bottom, float left) {
+    }
     public void setBorders(Border[] borders) {
     }
     public void setBackgroundImages(BackgroundImage[] backgroundImages) {

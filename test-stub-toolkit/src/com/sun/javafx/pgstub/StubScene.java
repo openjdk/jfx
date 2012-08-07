@@ -39,6 +39,14 @@ public class StubScene implements TKScene {
     private TKSceneListener listener;
     private Object cursor;
 
+    public void waitForSynchronization() {
+        //ignore
+    }
+
+    public void releaseSynchronization() {
+        // ignore
+    }
+
     public void setTKSceneListener(TKSceneListener listener) {
         this.listener = listener;
     }
@@ -90,7 +98,7 @@ public class StubScene implements TKScene {
 
     @Override
     public Dragboard createDragboard() {
-        return Toolkit.getToolkit().createDragboard();
+        return StubToolkit.createDragboard();
     }
 
     @Override

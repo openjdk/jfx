@@ -37,6 +37,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
+import com.sun.javafx.tk.TKScene;
 import javafx.event.EventHandler;
 import javafx.event.EventType;
 import javafx.scene.Group;
@@ -1202,7 +1203,6 @@ public class DragAndDropTest {
         TKDragGestureListener gstrListener;
         TKDropTargetListener trgListener;
         Dragboard db;
-        DragEventGenerator gen = new DragEventGenerator();
 
         @Override
         public void registerListener(TKDragGestureListener l) {
@@ -1222,7 +1222,7 @@ public class DragAndDropTest {
         }
 
         @Override
-        public void startDrag(Object o, Set<TransferMode> tm, 
+        public void startDrag(TKScene scene, Set<TransferMode> tm, 
                 TKDragSourceListener l, Dragboard dragboard) {
             ((ClipboardImpl) db.impl_getPeer()).setTransferModes(tm);
             dragging = true;
@@ -1237,15 +1237,15 @@ public class DragAndDropTest {
         }
         
         public TransferMode dragTo(double x, double y, TransferMode tm) {
-            return trgListener.dragOver(gen.generateDragEvent(x, y, db, tm));
+            return trgListener.dragOver(x, y, x, y, tm, db);
         }
         
         public TransferMode drop(double x, double y, TransferMode tm) {
-            return trgListener.drop(gen.generateDragEvent(x, y, db, tm));
+            return trgListener.drop(x, y, x, y, tm, db);
         }
         
         public void done(TransferMode tm) {
-            srcListener.dragDropEnd(gen.generateDragEvent(0, 0, db, tm));
+            srcListener.dragDropEnd(0, 0, 0, 0, tm, db);
         }
         
         public void stopDrag() {
@@ -1253,13 +1253,4 @@ public class DragAndDropTest {
         }
         
     }
-    
-    private static class DragEventGenerator {
-        public DragEvent generateDragEvent(double x,
-                double y, Dragboard db, TransferMode tm) {
-            return DragEvent.impl_create(DragEvent.ANY, null, null, null, 
-                    null, x, y, x, y, tm, db, null);
-        }
-    }
-    
 }

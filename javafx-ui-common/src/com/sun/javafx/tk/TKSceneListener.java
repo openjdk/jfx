@@ -21,34 +21,12 @@
  * Please contact Oracle, 500 Oracle Parkway, Redwood Shores, CA 94065 USA
  * or visit www.oracle.com if you need additional information or have any
  * questions.
- * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
- *
- * This code is free software; you can redistribute it and/or modify it
- * under the terms of the GNU General Public License version 2 only, as
- * published by the Free Software Foundation.
- *
- * This code is distributed in the hope that it will be useful, but WITHOUT
- * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
- * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
- * version 2 for more details (a copy is included in the LICENSE file that
- * accompanied this code).
- *
- * You should have received a copy of the GNU General Public License version
- * 2 along with this work; if not, write to the Free Software Foundation,
- * Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301 USA.
- *
- * Please contact Sun Microsystems, Inc., 4150 Network Circle, Santa Clara,
- * CA 95054 USA or visit www.sun.com if you need additional information or
- * have any questions.
  */
 package com.sun.javafx.tk;
 
-import javafx.scene.input.TouchPoint;
+import javafx.collections.ObservableList;
 import javafx.event.EventType;
-import javafx.scene.input.RotateEvent;
-import javafx.scene.input.ScrollEvent;
-import javafx.scene.input.SwipeEvent;
-import javafx.scene.input.ZoomEvent;
+import javafx.scene.input.*;
 
 /**
  * TKSceneListener - Listener for the Scene Peer TKScene to pass updates and events back to the scene
@@ -74,25 +52,24 @@ public interface TKSceneListener {
 
     /**
      * Pass a mouse event to the scene to handle
-     *
-     * @param event The event, this should be of type javafx.scene.input.MouseEvent
      */
-    public void mouseEvent(Object event);
+    public void mouseEvent(EventType<MouseEvent> type, double x, double y, double screenX, double screenY,
+                           MouseButton button, int clickCount, boolean popupTrigger, boolean synthesized,
+                           boolean shiftDown, boolean controlDown, boolean altDown, boolean metaDown,
+                           boolean primaryDown, boolean middleDown, boolean secondaryDown);
 
     /**
      * Pass a key event to the scene to handle
-     *
-     * @param event The event, this should be of type javafx.scene.input.KeyEvent
      */
-    public void keyEvent(Object event);
+    public void keyEvent(EventType<KeyEvent> type, int key, char[] chars,
+                         boolean shiftDown, boolean controlDown, boolean altDown, boolean metaDown);
 
     /**
      * Pass an input method event to the scene to handle
-     *
-     * @param event The event, this should be of type 
-     *     javafx.scene.input.InputMethodEvent
      */
-    public void inputMethodEvent(Object event);
+    public void inputMethodEvent(EventType<InputMethodEvent> type,
+                                 ObservableList<InputMethodTextRun> composed, String committed,
+                                 int caretPosition);
 
     public void scrollEvent(
             EventType<ScrollEvent> eventType, double scrollX, double scrollY,

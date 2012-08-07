@@ -34,13 +34,12 @@ import javafx.event.EventType;
 import javafx.geometry.Point2D;
 
 import com.sun.javafx.scene.input.InputEventUtils;
-import com.sun.javafx.tk.TKDropEvent;
 
 // PENDING_DOC_REVIEW
 /**
  * Drag events replace mouse events during drag-and-drop gesture.
  * The difference between press-drag-release and drag-and-drop gestures
- * is described at {@link javafx.scene.input#MouseEvent MouseEvent}.
+ * is described at {@link javafx.scene.input.MouseEvent MouseEvent}.
  * <p>
  * Drag and drop gesture can be started by calling {@code startDragAndDrop()}
  * (on a node or scene) inside of a {@link MouseEvent#DRAG_DETECTED DRAG_DETECTED} event handler.
@@ -365,8 +364,6 @@ public class DragEvent extends InputEvent {
                                 evt.getEventType()), evt.dragboard);
 
         evt.recomputeCoordinatesToSource(copyEvent, source);
-        copyEvent.tkDropEvent = evt.tkDropEvent;
-        copyEvent.tkRecognizedEvent = evt.tkRecognizedEvent;
         copyEvent.transferMode = transferMode;
         if (eventType == DragEvent.DRAG_DROPPED ||
                 eventType == DragEvent.DRAG_DONE) {
@@ -380,8 +377,8 @@ public class DragEvent extends InputEvent {
             Object _gestureSource, Object _gestureTarget,
             double _x, double _y,
             double _screenX, double _screenY, TransferMode _transferMode,
-            EventType<? extends DragEvent> _eventType, Dragboard _dragboard) {
-
+            EventType<? extends DragEvent> _eventType, Dragboard _dragboard)
+    {
         DragEvent e = new DragEvent(_source, _target, _eventType);
         e.gestureSource = _gestureSource;
         e.gestureTarget = _gestureTarget;
@@ -582,9 +579,6 @@ public class DragEvent extends InputEvent {
         return state.acceptingObject;
     }
 
-    private TKDropEvent tkDropEvent;
-    private Object tkRecognizedEvent;
-
     /**
      * A dragboard that is available to transfer data.
      * Data can be placed onto this dragboard in handler of the
@@ -595,18 +589,6 @@ public class DragEvent extends InputEvent {
         return dragboard;
     }
     private transient Dragboard dragboard;
-
-    /**
-     * @treatAsPrivate implementation detail
-     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
-     */
-    @Deprecated
-    public Dragboard impl_getPlatformDragboard() {
-        if (tkDropEvent == null) {
-            return null;
-        }
-        return (Dragboard) tkDropEvent.getDragboard();
-    }
 
     /**
      * Chooses a transfer mode for the operation
@@ -671,13 +653,6 @@ public class DragEvent extends InputEvent {
         }
 
         state.accepted = tm != null;
-        if (tkDropEvent != null) {
-            if (state.accepted) {
-                tkDropEvent.accept(tm);
-            } else {
-                tkDropEvent.reject();
-            }
-        }
         state.acceptedTrasferMode = tm;
         state.acceptingObject = state.accepted ? source : null;
     }
@@ -694,10 +669,6 @@ public class DragEvent extends InputEvent {
         if (getEventType() != DRAG_DROPPED) {
             throw new IllegalStateException("setDropCompleted can be called " +
                     "only from DRAG_DROPPED handler");
-        }
-
-        if (tkDropEvent != null) {
-            tkDropEvent.dropComplete(isTransferDone);
         }
 
         state.dropCompleted = isTransferDone;
@@ -717,20 +688,9 @@ public class DragEvent extends InputEvent {
      * @deprecated This is an internal API that is not intended for use and will be removed in the next version
      */
     @Deprecated
-    public void impl_setRecognizedEvent(Object e) {
-        tkRecognizedEvent = e;
-    }
-
-    /**
-     * Used by toolkit
-     * @treatAsPrivate implementation detail
-     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
-     */
-    @Deprecated
-    public static DragEvent impl_create(double _x, double _y,
-            double _screenX, double _screenY, TransferMode _transferMode,
-            Dragboard _dragboard, TKDropEvent _tkDropEvent) {
-        
+    public static DragEvent impl_create(double _x, double _y, double _screenX, double _screenY,
+                                        TransferMode _transferMode, Dragboard _dragboard)
+    {
         DragEvent de = new DragEvent(DragEvent.ANY);
 
         de.x = _x;
@@ -741,7 +701,6 @@ public class DragEvent extends InputEvent {
         de.sceneY = _y;
         de.transferMode = _transferMode;
         de.dragboard = _dragboard;
-        de.tkDropEvent = _tkDropEvent;
         return de;
     }
 
@@ -754,8 +713,8 @@ public class DragEvent extends InputEvent {
             Object _source, EventTarget _target, Object _gestureSource,
             Object _gestureTarget, double _x, double _y,
             double _screenX, double _screenY, TransferMode _transferMode,
-            Dragboard _dragboard, TKDropEvent _tkDropEvent) {
-
+            Dragboard _dragboard)
+    {
         DragEvent de = new DragEvent(_source, _target, _eventType);
 
         de.gestureSource = _gestureSource;
@@ -768,7 +727,6 @@ public class DragEvent extends InputEvent {
         de.sceneY = _y;
         de.transferMode = _transferMode;
         de.dragboard = _dragboard;
-        de.tkDropEvent = _tkDropEvent;
         return de;
     }
 

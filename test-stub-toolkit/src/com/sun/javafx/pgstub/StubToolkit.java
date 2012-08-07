@@ -490,26 +490,10 @@ public class StubToolkit extends Toolkit {
         return null;
     }
 
-    public @Override
-    Dragboard createDragboard() {
-        if (dndDelegate != null) {
-            return dndDelegate.createDragboard();
-        }
-        return null;
-    }
-
-    public @Override
-    DragEvent convertDragSourceEventToFX(Object event, Dragboard dragboard) {
-        if (dndDelegate != null) {
-            return dndDelegate.convertDragEventToFx(event, dragboard);
-        }
-        return null;
-    }
-
-    public @Override
-    DragEvent convertDropTargetEventToFX(Object event, Dragboard dragboard) {
-        if (dndDelegate != null) {
-            return dndDelegate.convertDragEventToFx(event, dragboard);
+    public static Dragboard createDragboard() {
+        StubToolkit tk = (StubToolkit)Toolkit.getToolkit();
+        if (tk.dndDelegate != null) {
+            return tk.dndDelegate.createDragboard();
         }
         return null;
     }
@@ -519,14 +503,6 @@ public class StubToolkit extends Toolkit {
         if (dndDelegate != null) {
             dndDelegate.enableDrop(l);
         }
-    }
-
-    @Override
-    public DragEvent convertDragRecognizedEventToFX(Object event,
-            Dragboard dragboard) {
-        System.out
-                .println("Not implemented: StubToolkit.convertDragRecognizedEventToFX(Object):DragEvent");
-        return null;
     }
 
     private ScreenConfigurationAccessor accessor = new ScreenConfigurationAccessor() {
@@ -610,9 +586,9 @@ public class StubToolkit extends Toolkit {
         }
     }
 
-    @Override public void startDrag(Object o, Set<TransferMode> tm, TKDragSourceListener l, Dragboard dragboard) {
+    @Override public void startDrag(TKScene scene, Set<TransferMode> tm, TKDragSourceListener l, Dragboard dragboard) {
         if (dndDelegate != null) {
-            dndDelegate.startDrag(o, tm, l, dragboard);
+            dndDelegate.startDrag(scene, tm, l, dragboard);
         }
     }
 
@@ -664,21 +640,6 @@ public class StubToolkit extends Toolkit {
         }
 
         return 0;
-    }
-
-    @Override
-    public MouseEvent convertMouseEventToFX(Object event) {
-        throw new UnsupportedOperationException();
-    }
-
-    @Override
-    public KeyEvent convertKeyEventToFX(Object event) {
-        throw new UnsupportedOperationException();
-    }
-
-    @Override
-    public InputMethodEvent convertInputMethodEventToFX(Object event) {
-        throw new UnsupportedOperationException();
     }
 
     @Override
@@ -838,7 +799,7 @@ public class StubToolkit extends Toolkit {
     }
 
     public interface DndDelegate {
-        void startDrag(Object o, Set<TransferMode> tm,
+        void startDrag(TKScene scene, Set<TransferMode> tm,
                 TKDragSourceListener l, Dragboard dragboard);
 
         Dragboard createDragboard();
