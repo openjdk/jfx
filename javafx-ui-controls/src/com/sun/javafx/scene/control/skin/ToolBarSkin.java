@@ -382,6 +382,7 @@ public class ToolBarSkin extends SkinBase<ToolBar, ToolBarBehavior> implements T
         } else {
             box = new HBox();
         }
+        box.getStyleClass().add("container");
         box.getChildren().addAll(getSkinnable().getItems());
         overflowMenu = new ToolBarOverflowMenu(overflowMenuItems);
         overflowMenu.setVisible(false);
