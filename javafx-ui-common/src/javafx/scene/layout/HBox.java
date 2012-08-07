@@ -60,7 +60,7 @@ import javafx.scene.Node;
  * fillHeight property to determine whether to resize their heights to
  * fill its own height or keep their heights to their preferred (fillHeight defaults to true).
  * The alignment of the content is controlled by the alignment property,
- * which defaulst to Pos.TOP_LEFT.
+ * which defaults to Pos.TOP_LEFT.
  * <p>
  * If an hbox is resized larger than its preferred width, by default it will keep
  * children to their preferred widths, leaving the extra space unused.  If an
@@ -339,8 +339,9 @@ public class HBox extends Pane {
      * @return null unless one of its children has a content bias.
      */
     @Override public Orientation getContentBias() {
-        for (int i = 0; i < getChildren().size(); i++) {
-            Node child = getChildren().get(i);
+        final List<Node> children = getChildren();
+        for (int i=0, size=children.size(); i<size; i++) {
+            Node child = children.get(i);
             if (child.isManaged() && child.getContentBias() != null) {
                 return child.getContentBias();
             }
@@ -427,7 +428,6 @@ public class HBox extends Pane {
         Insets insets = getInsets();
         double top = snapSpace(insets.getTop());
         double bottom = snapSpace(insets.getBottom());
-        double space = snapSpace(getSpacing());
 
         double contentWidth = computeContentWidth(areaWidths);
         double extraWidth = (width == -1? prefWidth(-1) : width) -

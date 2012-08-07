@@ -196,8 +196,8 @@ public class ByteBgra {
         static final ByteToIntPixelConverter    premul = new ToIntArgbSameConv(true);
 
         private ToIntArgbSameConv(boolean isPremult) {
-            super(isPremult ? ByteBgra.getter : ByteBgraPre.getter,
-                  isPremult ?  IntArgb.setter :  IntArgbPre.setter);
+            super(isPremult ? ByteBgraPre.getter : ByteBgra.getter,
+                  isPremult ?  IntArgbPre.setter :  IntArgb.setter);
         }
 
         @Override

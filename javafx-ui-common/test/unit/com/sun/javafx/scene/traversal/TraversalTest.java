@@ -159,6 +159,7 @@ public final class TraversalTest {
         keypadNodes = createKeypadNodesInScene(scene, traversalEngine);
 
         stage.show();
+        stage.requestFocus();
     }
 
     @After

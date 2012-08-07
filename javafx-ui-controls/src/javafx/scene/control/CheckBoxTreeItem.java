@@ -37,16 +37,24 @@ import javafx.scene.Node;
 /**
  * TreeItem subclass that adds support for being in selected, unselected, and
  * indeterminate states. This is useful when used in conjunction with a TreeView
- * which has a {@link CheckBoxCellFactory} installed.
+ * which has a {@link CheckBoxTreeCell} installed.
  * 
  * <p>A CheckBoxTreeItem can be {@link #independentProperty() independent} or 
  * dependent. By default, CheckBoxTreeItem instances are dependent, which means 
  * that any changes to the selection state of a TreeItem will have an impact on 
- * parent and children CheckBoxTreeItem instances. 
+ * parent and children CheckBoxTreeItem instances. If a CheckBoxTreeItem is
+ * set to be independent, this means that any changes to that CheckBoxTreeItem
+ * will not directly impact the state of parent and children CheckBoxTreeItem
+ * instances.
+ * 
+ * <p>The {@link #indeterminateProperty() indeterminate} property is used to
+ * represent the same concept as that in {@link CheckBox#indeterminateProperty()},
+ * namely, that the CheckBox is neither selected or unselected. This is commonly
+ * used inside a TreeView when some, but not all, of a branches children are
+ * selected.
  * 
  * <p>A simple example of using the CheckBoxTreeItem class, in conjunction with 
- * {@link CheckBoxCellFactory} or {@link CheckBoxTreeCell} classes is shown 
- * below:
+ * {@link CheckBoxTreeCell} is shown below:
  * 
  * <pre><code>
  * // create the tree model
@@ -65,11 +73,12 @@ import javafx.scene.Node;
  * treeView.setRoot(gilesFamily);
  *       
  * // set the cell factory
- * treeView.setCellFactory(CheckBoxCellFactory.&lt;String&gt;forTreeView());</code></pre>
+ * treeView.setCellFactory(CheckBoxTreeCell.&lt;String&gt;forTreeView());</code></pre>
  *
  * @see CheckBoxTreeCell
  * @see TreeItem
  * @see CheckBox
+ * @since 2.2
  */
 // TODO the TreeModificationEvent doesn't actually bubble in the same way as
 // TreeItem - it just looks that way as the 'bubbling' is done via changing the

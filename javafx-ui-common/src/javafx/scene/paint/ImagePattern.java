@@ -32,7 +32,7 @@ import javafx.scene.image.Image;
  * <p>The {@code ImagePattern} class fills a shape with an image pattern. The
  * user may specify the anchor rectangle, which defines the position,
  * width, and height of the image relative to the upper left corner of the
- * shape. If the shape is larger than the anchor rectangle, the image is tiled.
+ * shape. If the shape extends out of the anchor rectangle, the image is tiled.
  * </p>
  *
  * <p>If the {@code proportional} variable is set to true (the default)
@@ -124,6 +124,8 @@ public class HelloImagePattern extends Application {
 </pre></code>
  * <p>The code above produces the following:</p>
  * <p><img src="doc-files/ImagePattern.png"/></p>
+ *
+ * @since 2.2
  */
 public final class ImagePattern extends Paint {
     
@@ -144,7 +146,7 @@ public final class ImagePattern extends Paint {
     /**
      * Gets the x origin of the anchor rectangle.
      *
-     * @default 0.0
+     * @defaultValue 0.0
      * @return The x origin of the anchor rectangle.
      */
     public final double getX() {
@@ -156,7 +158,7 @@ public final class ImagePattern extends Paint {
     /**
      * Gets the y origin of the anchor rectangle.
      *
-     * @default 0.0
+     * @defaultValue 0.0
      * @return The y origin of the anchor rectangle.
      */
     public final double getY() {
@@ -169,7 +171,7 @@ public final class ImagePattern extends Paint {
     /**
      * Gets the width of the anchor rectangle.
      *
-     * @default 1.0
+     * @defaultValue 1.0
      * @return The width of the anchor rectangle.
      */
     public final double getWidth() {
@@ -182,7 +184,7 @@ public final class ImagePattern extends Paint {
     /**
      * Gets the height of the anchor rectangle.
      *
-     * @default 1.0
+     * @defaultValue 1.0
      * @return The height of the anchor rectangle.
      */
     public final double getHeight() {
@@ -214,8 +216,16 @@ public final class ImagePattern extends Paint {
      * values are used for all other parameters.
      * 
      * @param image the image to be used as the paint.
+     * @throws NullPointerException if the image is null.
+     * @throws IllegalArgumentException if image is not done loading, 
+     * that is if progress is < 1.
      */
     public ImagePattern(Image image) {
+        if (image == null) {
+            throw new NullPointerException("Image must be non-null.");
+        } else if (image.getProgress() < 1.0) {
+            throw new IllegalArgumentException("Image not yet loaded");
+        }
         this.image = image;
     }
 
@@ -229,10 +239,18 @@ public final class ImagePattern extends Paint {
      * @param height the height of the anchor rectangle.
      * @param proportional whether the coordinates are proportional
      * to the shape which ImagePattern fills
+     * @throws NullPointerException if the image is null.
+     * @throws IllegalArgumentException if image is not done loading, 
+     * that is if progress is < 1.
      */
     public ImagePattern(Image image, double x, double y, double width,
             double height, boolean proportional) {
 
+        if (image == null) {
+            throw new NullPointerException("Image must be non-null.");
+        } else if (image.getProgress() < 1.0) {
+            throw new IllegalArgumentException("Image not yet loaded");
+        }
         this.image = image;
         this.x = x;
         this.y = y;

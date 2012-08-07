@@ -9,18 +9,24 @@ import static javafx.scene.control.ControlTestUtils.*;
 import com.sun.javafx.pgstub.StubToolkit;
 import com.sun.javafx.scene.control.skin.TabPaneSkin;
 import com.sun.javafx.tk.Toolkit;
+import javafx.application.Platform;
 import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.DoubleProperty;
 import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.SimpleBooleanProperty;
 import javafx.beans.property.SimpleDoubleProperty;
 import javafx.beans.property.SimpleObjectProperty;
+import javafx.beans.value.ChangeListener;
+import javafx.beans.value.ObservableValue;
 import javafx.event.Event;
 import javafx.event.EventHandler;
 import javafx.geometry.Side;
+import javafx.scene.Group;
 import javafx.scene.Scene;
+import javafx.scene.input.KeyEvent;
 import javafx.scene.input.MouseEvent;
 import javafx.scene.layout.StackPane;
+import javafx.scene.layout.VBox;
 import javafx.stage.Stage;
 import static org.junit.Assert.*;
 
@@ -62,6 +68,7 @@ public class TabPaneTest {
      ********************************************************************/
     private void show() {
         stage.show();
+        stage.requestFocus();
     }
 
     /*********************************************************************
@@ -640,6 +647,7 @@ public class TabPaneTest {
         assertEquals(tab1, tabPane.getSelectionModel().getSelectedItem());
     }
     
+    @Ignore
     @Test public void mousePressSelectsATab_RT20476() {        
         tabPane.getTabs().add(tab1);
         tabPane.getTabs().add(tab2);
@@ -671,6 +679,7 @@ public class TabPaneTest {
     }
     
     private int counter = 0;
+    @Ignore
     @Test public void setOnSelectionChangedFiresTwice_RT21089() {
         tabPane.getTabs().add(tab1);
         tabPane.getTabs().add(tab2);
@@ -742,4 +751,74 @@ public class TabPaneTest {
         assertEquals(0, tabPane.getSelectionModel().getSelectedIndex());
         assertEquals(tab2, tabPane.getSelectionModel().getSelectedItem());        
     }
+    
+    @Test public void selectionModelShouldNotBeNullWhenClosingFirstTab_RT22925() {
+        tabPane.getTabs().add(tab1);
+        tabPane.getTabs().add(tab2);
+        tabPane.getTabs().add(tab3);        
+
+        tabPane.getSelectionModel().selectedItemProperty().addListener(new ChangeListener<Tab>() {
+            public void changed(ObservableValue<? extends Tab> ov, Tab t, Tab t1) {
+                assertEquals(t.getText(), "one");
+                assertEquals(t1.getText(), "two");
+            }            
+        });
+        
+        assertEquals("one", tabPane.getTabs().get(0).getText());
+        assertEquals("two", tabPane.getTabs().get(1).getText());
+        assertEquals("three", tabPane.getTabs().get(2).getText());
+        
+        tabPane.getTabs().remove(tab1);
+
+        assertEquals(2, tabPane.getTabs().size());
+        assertEquals(0, tabPane.getSelectionModel().getSelectedIndex());
+        assertEquals(tab2, tabPane.getSelectionModel().getSelectedItem());        
+    }    
+
+
+    boolean button1Focused = false;
+    @Test public void focusTraversalShouldLookInsideEmbeddedEngines() {
+
+        Button b1 = new Button("Button1");
+        final ChangeListener<Boolean> focusListener = new ChangeListener<Boolean>() {
+            @Override public void changed(ObservableValue<? extends Boolean> observable, Boolean oldVal, Boolean newVal) {
+                button1Focused = true;
+            }
+        };
+        b1.focusedProperty().addListener(focusListener);
+
+        final ScrollPane sp = new ScrollPane();
+        final VBox vbox1 = new VBox();
+        vbox1.setSpacing(10);
+        vbox1.setTranslateX(10);
+        vbox1.setTranslateY(10);
+        vbox1.getChildren().addAll(b1);
+        tab1.setContent(vbox1);
+        sp.setContent(vbox1);
+        tab1.setContent(sp);
+        tabPane.getTabs().add(tab1);
+
+        tabPane.getTabs().add(tab2);
+
+        final Scene scene1 = new Scene(new Group(), 400, 400);
+        ((Group)scene1.getRoot()).getChildren().add(tabPane);
+        
+        stage.setScene(scene1);
+        stage.show();
+        stage.requestFocus();
+
+        final KeyEvent tabEvent = KeyEvent.impl_keyEvent(null, "", "", 0x09,
+                                                         false, false, false, false,
+                                                         KeyEvent.KEY_PRESSED);
+        Platform.runLater(new Runnable() {
+            @Override public void run() {
+                tabPane.requestFocus();
+                Event.fireEvent(tabPane, tabEvent);
+
+            }
+        });
+
+        assertTrue(button1Focused);
+
+    }    
 }

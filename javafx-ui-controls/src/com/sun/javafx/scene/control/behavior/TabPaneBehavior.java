@@ -27,7 +27,10 @@ package com.sun.javafx.scene.control.behavior;
 import java.util.ArrayList;
 import java.util.List;
 
+import javafx.collections.ObservableList;
 import javafx.event.Event;
+import javafx.scene.Parent;
+import javafx.scene.Node;
 import javafx.scene.control.Tab;
 import javafx.scene.control.TabPane;
 import javafx.scene.input.KeyCode;
@@ -80,7 +83,26 @@ public class TabPaneBehavior extends BehaviorBase<TabPane> {
             if (tps.getSelectedTabContentRegion() != null) {
                 tps.getSelectedTabContentRegion().getImpl_traversalEngine().getTopLeftFocusableNode();
                 if (tps.getSelectedTabContentRegion().getImpl_traversalEngine().registeredNodes.isEmpty()) {
-                    super.callAction(name);
+
+                    Parent traversableParent = null;
+                    traversableParent = getFirstPopulatedInnerTraversalEngine(tps.getSelectedTabContentRegion().getChildren());
+                    if (traversableParent != null) {
+                        boolean nodeFound = false;
+                        for (Node n : traversableParent.getImpl_traversalEngine().registeredNodes) {
+                            if (!n.isFocused() && n.impl_isTreeVisible() && !n.isDisabled()) {
+                                n.requestFocus();
+                                nodeFound = true;
+                                break;
+                            }
+                        }
+                        if (nodeFound == false) {
+                            super.callAction(name);
+                        }
+                    }
+                    else {
+                        super.callAction(name);
+                    }
+
                 }
             } else {
                 super.callAction(name);
@@ -114,6 +136,27 @@ public class TabPaneBehavior extends BehaviorBase<TabPane> {
         }
     }
 
+
+    public static Parent getFirstPopulatedInnerTraversalEngine(ObservableList<Node> root) {
+        Parent firstPopulatedEngine = null;
+        for (Node node : root) {
+            if (node instanceof Parent) {
+                if (((Parent)node).getImpl_traversalEngine() != null && !((Parent)node).getImpl_traversalEngine().registeredNodes.isEmpty()) {
+                    firstPopulatedEngine = (Parent)node;
+                    break;
+                }
+                else {
+                    firstPopulatedEngine = getFirstPopulatedInnerTraversalEngine(((Parent)node).getChildrenUnmodifiable());
+                    if (firstPopulatedEngine != null) {
+                        break;
+                    }
+                }
+            }
+        }
+        return firstPopulatedEngine;
+    }
+
+
     /***************************************************************************
      *                                                                         *
      * Mouse event handling                                                    *
@@ -144,8 +187,8 @@ public class TabPaneBehavior extends BehaviorBase<TabPane> {
         int index = tabPane.getTabs().indexOf(tab);
         if (tab.isSelected()) {
             if (index == 0) {
-                if (tabPane.getTabs().size() > 1) {
-                    tabPane.getSelectionModel().clearSelection();
+                if (tabPane.getTabs().size() > 0) {
+                    tabPane.getSelectionModel().selectFirst();
                 }
             } else {
                 tabPane.getSelectionModel().selectPrevious();

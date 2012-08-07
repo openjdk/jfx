@@ -23,11 +23,18 @@
  * questions.
  */
 
-
 package com.sun.javafx.tk;
 
+import javafx.scene.input.Dragboard;
+import javafx.scene.input.TransferMode;
 
+/**
+ * Listens for drag source events on a TKScene.
+ * <br>
+ * TODO: extend this interface to include dropActionChanged() notification
+ */
 public interface TKDragSourceListener {
-    void dropActionChanged(Object e);
-    void dragDropEnd(Object e);
+
+    void dragDropEnd(double x, double y, double screenX, double screenY,
+                     TransferMode transferMode, Dragboard dragboard);
 }

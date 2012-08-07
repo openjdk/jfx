@@ -34,9 +34,10 @@ import javafx.beans.property.ReadOnlyLongWrapper;
 import javafx.beans.property.ReadOnlyObjectWrapper;
 import javafx.beans.property.ReadOnlyStringWrapper;
 import javafx.beans.value.ObservableValue;
+import javafx.scene.control.TableCell;
 import javafx.scene.control.TableColumn;
 import javafx.scene.control.TableColumn.CellDataFeatures;
-import javafx.scene.control.cell.PropertyValueFactory;
+import javafx.scene.control.TableView;
 import javafx.util.Callback;
 
 /**
@@ -66,6 +67,7 @@ import javafx.util.Callback;
  * @see TableCell
  * @see PropertyValueFactory
  * @param <T> The type of the class contained within the TableColumn cells.
+ * @since 2.2
  */
 public class MapValueFactory<T> implements Callback<CellDataFeatures<Map,T>, ObservableValue<T>> {
 

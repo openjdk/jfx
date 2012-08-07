@@ -44,57 +44,44 @@
 
 package com.sun.javafx.tk;
 
+import javafx.scene.input.Dragboard;
 import javafx.scene.input.TransferMode;
 
 /**
  * Listens for drop target events on a TKScene.
- * Event objects are passed transparently as java.lang.Object and are expected
- * to be converted to {@link javafx.scene.transfer.DragEvent}s by the implementation
- * of this interface through the use of
- * {@link Toolkit#convertDropTargetEventToFX(Object):javafx.scene.transfer.DragEvent}
- * as necessary.
  * <br>
  * The implementation of this interface uses the event objects' pointer position
  * to determine if any nodes in the scene graph are to be notified
  * of drag gesture events.
+ * <br>
+ * TODO: extend this interface to include dropActionChanged() notification  
  */
 public interface TKDropTargetListener {
+
     /**
      * Called during a drag gesture, when the mouse pointer enters
      * the operable part of the Scene.
      *
-     * @param dropTargetDragEvent a drop target drag event
      * @return transfer mode chosen by potential target
      */
-
-    public TransferMode dragEnter(Object dropTargetDragEvent);
+    public TransferMode dragEnter(double x, double y, double screenX, double screenY,
+                                  TransferMode transferMode, Dragboard dragboard);
 
     /**
      * Called during a drag gesture, while the mouse pointer is still
      * over (is moving over) the operable part of the Sceme.
      *
-     * @param dropTargetDragEvent a drop target drag event
      * @return transfer mode chosen by potential target
      */
-    public TransferMode dragOver(Object dropTargetDragEvent);
-
-    /**
-     * Called if the user has modified the intended 
-     * {@link javafx.scene.input.TransferMode} of the drag gesture.
-     * This usually happens as a result of different keys being pressed/released
-     * during the gesture (alt, shift, ctrl, etc.)
-     *
-     * @param dropTargetDragEvent a drop target drag event
-     */
-    public void dropActionChanged(Object dropTargetDragEvent);
+    public TransferMode dragOver(double x, double y, double screenX, double screenY,
+                                 TransferMode transferMode, Dragboard dragboard);
 
     /**
      * Called during a drag gesture, when the mouse pointer exits
      * the operable part of the Scene.
-     *
-     * @param dropTargetDragEvent a drop target drag event
      */
-    public void dragExit(Object dropTargetDragEvent);
+    public void dragExit(double x, double y, double screenX, double screenY,
+                         Dragboard dragboard);
 
     /**
      * Called when the drag gesture is being terminated with a drop on
@@ -124,8 +111,8 @@ public interface TKDropTargetListener {
      * After that, the transfer of data can only succeed if the data transfer is
      * local (within the same VM hosting the running JavaFX code).
      * <br>
-     * @param dropTargetDropEvent a drop target drop event
      * @return transfer mode chosen by target
      */
-    public TransferMode drop(Object dropTargetDropEvent);
+    public TransferMode drop(double x, double y, double screenX, double screenY,
+                             TransferMode transferMode, Dragboard dragboard);
 }

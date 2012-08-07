@@ -90,7 +90,7 @@ public class ByteRgba {
 
         @Override
         public void setArgb(byte arr[], int offset, int argb) {
-            arr[offset    ] = (byte) (argb >> 24);
+            arr[offset    ] = (byte) (argb >> 16);
             arr[offset + 1] = (byte) (argb >>  8);
             arr[offset + 2] = (byte) (argb      );
             arr[offset + 3] = (byte) (argb >> 24);

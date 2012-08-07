@@ -53,10 +53,10 @@ import javafx.util.StringConverter;
  * interactions, and the CheckBox will reflect the state of the 
  * ObservableValue<Boolean>, if it changes externally).
  * 
- * @see CheckBoxCellFactory
  * @see CheckBox
  * @see ListCell
  * @param <T> The type of the elements contained within the ListView.
+ * @since 2.2
  */
 public class CheckBoxListCell<T> extends ListCell<T> {
     

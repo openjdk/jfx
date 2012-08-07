@@ -240,6 +240,7 @@ public abstract class Labeled extends Control {
      * <p>Note that not all fonts support all Unicode characters.
      *
      * @see <a href="http://en.wikipedia.org/wiki/Ellipsis#Computer_representations">Wikipedia:ellipsis</a>
+     * @since 2.2
      */
     public final StringProperty ellipsisStringProperty() {
         if (ellipsisString == null) {
@@ -883,7 +884,7 @@ public abstract class Labeled extends Control {
      * @deprecated This is an experimental API that is not intended for general use and is subject to change in future versions
      */
     @Deprecated
-    public List<StyleableProperty> impl_getStyleableProperties() {
+    @Override protected List<StyleableProperty> impl_getControlStyleableProperties() {
         return impl_CSS_STYLEABLES();
     }
 

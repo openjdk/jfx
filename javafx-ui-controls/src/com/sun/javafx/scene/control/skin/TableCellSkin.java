@@ -30,6 +30,7 @@ import javafx.beans.WeakInvalidationListener;
 import javafx.scene.control.TableCell;
 
 import com.sun.javafx.scene.control.behavior.TableCellBehavior;
+import javafx.scene.control.TableColumn;
 import javafx.scene.shape.Rectangle;
 
 /**
@@ -56,21 +57,24 @@ public class TableCellSkin extends CellSkinBase<TableCell, TableCellBehavior> {
     public TableCellSkin(TableCell control) {
         super(control, new TableCellBehavior(control));
         
+        TableCell skinnable = getSkinnable();
+        TableColumn tableColumn = skinnable.getTableColumn();
+        
         // RT-22038
         Rectangle clip = new Rectangle();
-        clip.widthProperty().bind(widthProperty());
-        clip.heightProperty().bind(heightProperty());
-        setClip(clip);
+        clip.widthProperty().bind(skinnable.widthProperty());
+        clip.heightProperty().bind(skinnable.heightProperty());
+        getSkinnable().setClip(clip);
         // --- end of RT-22038
         
-        if (getSkinnable().getTableColumn() != null) {
-            getSkinnable().getTableColumn().widthProperty().addListener(
+        if (tableColumn != null) {
+            tableColumn.widthProperty().addListener(
                 new WeakInvalidationListener(weakColumnWidthListener));
         }
 
         registerChangeListener(control.visibleProperty(), "VISIBLE");
         
-        if (getSkinnable().getProperties().containsKey(DEFER_TO_PARENT_PREF_WIDTH)) {
+        if (skinnable.getProperties().containsKey(DEFER_TO_PARENT_PREF_WIDTH)) {
             isDeferToParentForPrefWidth = true;
         }
     }
@@ -78,17 +82,12 @@ public class TableCellSkin extends CellSkinBase<TableCell, TableCellBehavior> {
     @Override protected void handleControlPropertyChanged(String p) {
         super.handleControlPropertyChanged(p);
         if (p == "VISIBLE") {
-            setVisible(getSkinnable().getTableColumn().isVisible());
+            getSkinnable().setVisible(getSkinnable().getTableColumn().isVisible());
         }
     }
     
-    @Override protected void layoutChildren() {
-        // figure out the content area that is to be filled
-        double x = getInsets().getLeft();
-        double y = getInsets().getTop();
-        double w = snapSize(getWidth()) - (snapSpace(getInsets().getLeft()) + snapSpace(getInsets().getRight()));
-        double h = getHeight() - (getInsets().getTop() + getInsets().getBottom());
-        
+    @Override protected void layoutChildren(final double x, final double y,
+            final double w, final double h) {
         // fit the cell within this space
         // FIXME the subtraction of bottom padding isn't right here - but it
         // results in better visuals, so I'm leaving it in place for now.

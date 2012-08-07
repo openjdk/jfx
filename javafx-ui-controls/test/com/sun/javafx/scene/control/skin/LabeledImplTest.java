@@ -98,7 +98,7 @@ public class LabeledImplTest {
             } else if ("-fx-wrap-text".equals(prop)) {
                 value = Boolean.TRUE;
             } else if ("-fx-graphic".equals(prop)) {
-                value = SkinBase.class.getResource("caspian/center-btn.png").toExternalForm();
+                value = LabeledImpl.class.getResource("caspian/center-btn.png").toExternalForm();
             } else if ("-fx-underline".equals(prop)) {
                 value = Boolean.TRUE;
             } else if ("-fx-content-display".equals(prop)) {

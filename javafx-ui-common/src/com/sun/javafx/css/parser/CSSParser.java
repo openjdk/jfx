@@ -273,6 +273,10 @@ final public class CSSParser {
             }
             stylesheet.getRules().addAll(rules);
         }
+
+        // don't retain reference to the styleable
+        setInputSource((Styleable) null);
+
         return stylesheet;
     }
 

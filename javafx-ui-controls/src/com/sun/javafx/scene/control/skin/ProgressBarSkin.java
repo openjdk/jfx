@@ -38,6 +38,7 @@ import javafx.collections.ObservableList;
 import javafx.event.ActionEvent;
 import javafx.event.EventHandler;
 import javafx.scene.control.ProgressBar;
+import javafx.scene.control.SkinBase;
 import javafx.scene.layout.StackPane;
 import javafx.scene.shape.Rectangle;
 import javafx.util.Duration;
@@ -270,7 +271,7 @@ public class ProgressBarSkin extends SkinBase<ProgressBar, ProgressBarBehavior<P
          * used to prevent an indeterminate bar from drawing outside the skin
          */
         clipRectangle = new Rectangle();
-        setClip(clipRectangle);
+        getSkinnable().setClip(clipRectangle);
 
         initialize();
         requestLayout();
@@ -372,14 +373,9 @@ public class ProgressBarSkin extends SkinBase<ProgressBar, ProgressBarBehavior<P
         return getSkinnable().prefHeight(width);
     }
 
-    @Override protected void layoutChildren() {
+    @Override protected void layoutChildren(final double x, final double y,
+            final double w, final double h) {
         boolean isIndeterminate = getSkinnable().isIndeterminate();
-
-        // compute x,y,w,h of content area
-        double x = getInsets().getLeft();
-        double y = getInsets().getTop();
-        double w = getWidth() - (getInsets().getLeft() + getInsets().getRight());
-        double h = getHeight() - (getInsets().getTop() + getInsets().getBottom());
 
         // Prevent the indeterminate bar from drawing outside the skin
         if (clipRectangle != null) {
@@ -418,67 +414,75 @@ public class ProgressBarSkin extends SkinBase<ProgressBar, ProgressBarBehavior<P
       * @treatAsPrivate implementation detail
       */
      private static class StyleableProperties {
-         private static final StyleableProperty<ProgressBarSkin,Number> INDETERMINATE_BAR_LENGTH =
-            new StyleableProperty<ProgressBarSkin,Number>("-fx-indeterminate-bar-length",
+         private static final StyleableProperty<ProgressBar,Number> INDETERMINATE_BAR_LENGTH =
+            new StyleableProperty<ProgressBar,Number>("-fx-indeterminate-bar-length",
                  SizeConverter.getInstance(), 60.0) {
 
             @Override
-            public boolean isSettable(ProgressBarSkin n) {
-                return n.indeterminateBarLength == null ||
-                        !n.indeterminateBarLength.isBound();
+            public boolean isSettable(ProgressBar n) {
+                final ProgressBarSkin skin = (ProgressBarSkin) n.getSkin();
+                return skin.indeterminateBarLength == null ||
+                        !skin.indeterminateBarLength.isBound();
             }
 
             @Override
-            public WritableValue<Number> getWritableValue(ProgressBarSkin n) {
-                return n.indeterminateBarLengthProperty();
-            }
-        };
-         
-         private static final StyleableProperty<ProgressBarSkin,Boolean> INDETERMINATE_BAR_ESCAPE =
-            new StyleableProperty<ProgressBarSkin,Boolean>("-fx-indeterminate-bar-escape",
-                 BooleanConverter.getInstance(), Boolean.TRUE) {
-
-            @Override
-            public boolean isSettable(ProgressBarSkin n) {
-                return n.indeterminateBarEscape == null || 
-                        !n.indeterminateBarEscape.isBound();
-            }
-
-            @Override
-            public WritableValue<Boolean> getWritableValue(ProgressBarSkin n) {
-                return n.indeterminateBarEscapeProperty();
+            public WritableValue<Number> getWritableValue(ProgressBar n) {
+                final ProgressBarSkin skin = (ProgressBarSkin) n.getSkin();
+                return skin.indeterminateBarLengthProperty();
             }
         };
          
-         private static final StyleableProperty<ProgressBarSkin,Boolean> INDETERMINATE_BAR_FLIP =
-            new StyleableProperty<ProgressBarSkin,Boolean>("-fx-indeterminate-bar-flip",
+         private static final StyleableProperty<ProgressBar,Boolean> INDETERMINATE_BAR_ESCAPE =
+            new StyleableProperty<ProgressBar,Boolean>("-fx-indeterminate-bar-escape",
                  BooleanConverter.getInstance(), Boolean.TRUE) {
 
             @Override
-            public boolean isSettable(ProgressBarSkin n) {
-                return n.indeterminateBarFlip == null ||
-                        !n.indeterminateBarFlip.isBound();
+            public boolean isSettable(ProgressBar n) {
+                final ProgressBarSkin skin = (ProgressBarSkin) n.getSkin();
+                return skin.indeterminateBarEscape == null || 
+                        !skin.indeterminateBarEscape.isBound();
             }
 
             @Override
-            public WritableValue<Boolean> getWritableValue(ProgressBarSkin n) {
-                return n.indeterminateBarFlipProperty();
+            public WritableValue<Boolean> getWritableValue(ProgressBar n) {
+                final ProgressBarSkin skin = (ProgressBarSkin) n.getSkin();
+                return skin.indeterminateBarEscapeProperty();
+            }
+        };
+         
+         private static final StyleableProperty<ProgressBar,Boolean> INDETERMINATE_BAR_FLIP =
+            new StyleableProperty<ProgressBar,Boolean>("-fx-indeterminate-bar-flip",
+                 BooleanConverter.getInstance(), Boolean.TRUE) {
+
+            @Override
+            public boolean isSettable(ProgressBar n) {
+                final ProgressBarSkin skin = (ProgressBarSkin) n.getSkin();
+                return skin.indeterminateBarFlip == null ||
+                        !skin.indeterminateBarFlip.isBound();
+            }
+
+            @Override
+            public WritableValue<Boolean> getWritableValue(ProgressBar n) {
+                final ProgressBarSkin skin = (ProgressBarSkin) n.getSkin();
+                return skin.indeterminateBarFlipProperty();
             }
         }; 
          
-         private static final StyleableProperty<ProgressBarSkin,Number> INDETERMINATE_BAR_ANIMATION_TIME =
-            new StyleableProperty<ProgressBarSkin,Number>("-fx-indeterminate-bar-animation-time",
+         private static final StyleableProperty<ProgressBar,Number> INDETERMINATE_BAR_ANIMATION_TIME =
+            new StyleableProperty<ProgressBar,Number>("-fx-indeterminate-bar-animation-time",
                  SizeConverter.getInstance(), 2.0) {
 
             @Override
-            public boolean isSettable(ProgressBarSkin n) {
-                return n.indeterminateBarAnimationTime == null ||
-                        !n.indeterminateBarAnimationTime.isBound();
+            public boolean isSettable(ProgressBar n) {
+                final ProgressBarSkin skin = (ProgressBarSkin) n.getSkin();
+                return skin.indeterminateBarAnimationTime == null ||
+                        !skin.indeterminateBarAnimationTime.isBound();
             }
 
             @Override
-            public WritableValue<Number> getWritableValue(ProgressBarSkin n) {
-                return n.indeterminateBarAnimationTimeProperty();
+            public WritableValue<Number> getWritableValue(ProgressBar n) {
+                final ProgressBarSkin skin = (ProgressBarSkin) n.getSkin();
+                return skin.indeterminateBarAnimationTimeProperty();
             }
         };
 

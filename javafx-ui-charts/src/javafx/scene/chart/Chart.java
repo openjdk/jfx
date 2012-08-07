@@ -62,6 +62,9 @@ public abstract class Chart extends Region {
 
     // -------------- PRIVATE FIELDS -----------------------------------------------------------------------------------
 
+    private static final int MIN_WIDTH_TO_LEAVE_FOR_CHART_CONTENT = 200;
+    private static final int MIN_HEIGHT_TO_LEAVE_FOR_CHART_CONTENT = 150;
+
     /** Title Label */
     private final Label titleLabel = new Label();
     /**
@@ -169,12 +172,7 @@ public abstract class Chart extends Region {
      */
     private final BooleanProperty legendVisible = new StyleableBooleanProperty(true) {
         @Override protected void invalidated() {
-            boolean vis = get();
-            Node legend = getLegend();
-            if(legend != null) {
-                legend.setVisible(vis);
-                requestLayout();
-            }
+            requestLayout();
         }
             
         @Override
@@ -340,28 +338,48 @@ public abstract class Chart extends Region {
         }
         // layout legend
         final Node legend = getLegend();
-        if (legend != null && isLegendVisible()) {
-            if (getLegendSide().equals(Side.TOP)) {
-                final double legendHeight = snapSize(legend.prefHeight(width-left-right));
-                final double legendWidth = snapSize(legend.prefWidth(-1));
-                legend.resizeRelocate(left + (((width - left - right)-legendWidth)/2), top, legendWidth, legendHeight);
-                top += legendHeight;
-            } else if (getLegendSide().equals(Side.BOTTOM)) {
-                final double legendHeight = snapSize(legend.prefHeight(width-left-right));
-                final double legendWidth = snapSize(legend.prefWidth(-1));
-                legend.resizeRelocate(left + (((width - left - right)-legendWidth)/2), height-bottom-legendHeight, legendWidth, legendHeight);
-                bottom += legendHeight;
-            } else if (getLegendSide().equals(Side.LEFT)) {
-                final double legendWidth = snapSize(legend.prefWidth(height-top-bottom));
-                final double legendHeight = snapSize(legend.prefHeight(-1));
-                legend.resizeRelocate(left,top +(((height-top-bottom)-legendHeight)/2),legendWidth,legendHeight);
-                left += legendWidth;
-            } else if (getLegendSide().equals(Side.RIGHT)) {
-                final double legendWidth = snapSize(legend.prefWidth(height-top-bottom));
-                final double legendHeight = snapSize(legend.prefHeight(-1));
-                legend.resizeRelocate(width-right-legendWidth,top +(((height-top-bottom)-legendHeight)/2),legendWidth,legendHeight);
-                right += legendWidth;
+        if (legend != null) {
+            boolean shouldShowLegend = isLegendVisible();
+            if (shouldShowLegend) {
+                if (getLegendSide().equals(Side.TOP)) {
+                    final double legendHeight = snapSize(legend.prefHeight(width-left-right));
+                    final double legendWidth = snapSize(legend.prefWidth(-1));
+                    legend.resizeRelocate(left + (((width - left - right)-legendWidth)/2), top, legendWidth, legendHeight);
+                    if ((height - bottom - top - legendHeight) < MIN_HEIGHT_TO_LEAVE_FOR_CHART_CONTENT) {
+                        shouldShowLegend = false;
+                    } else {
+                        top += legendHeight;
+                    }
+                } else if (getLegendSide().equals(Side.BOTTOM)) {
+                    final double legendHeight = snapSize(legend.prefHeight(width-left-right));
+                    final double legendWidth = snapSize(legend.prefWidth(-1));
+                    legend.resizeRelocate(left + (((width - left - right)-legendWidth)/2), height-bottom-legendHeight, legendWidth, legendHeight);
+                    if ((height - bottom - top - legendHeight) < MIN_HEIGHT_TO_LEAVE_FOR_CHART_CONTENT) {
+                        shouldShowLegend = false;
+                    } else {
+                        bottom += legendHeight;
+                    }
+                } else if (getLegendSide().equals(Side.LEFT)) {
+                    final double legendWidth = snapSize(legend.prefWidth(height-top-bottom));
+                    final double legendHeight = snapSize(legend.prefHeight(-1));
+                    legend.resizeRelocate(left,top +(((height-top-bottom)-legendHeight)/2),legendWidth,legendHeight);
+                    if ((width - left - right - legendWidth) < MIN_WIDTH_TO_LEAVE_FOR_CHART_CONTENT) {
+                        shouldShowLegend = false;
+                    } else {
+                        left += legendWidth;
+                    }
+                } else if (getLegendSide().equals(Side.RIGHT)) {
+                    final double legendWidth = snapSize(legend.prefWidth(height-top-bottom));
+                    final double legendHeight = snapSize(legend.prefHeight(-1));
+                    legend.resizeRelocate(width-right-legendWidth,top +(((height-top-bottom)-legendHeight)/2),legendWidth,legendHeight);
+                    if ((width - left - right - legendWidth) < MIN_WIDTH_TO_LEAVE_FOR_CHART_CONTENT) {
+                        shouldShowLegend = false;
+                    } else {
+                        right += legendWidth;
+                    }
+                }
             }
+            legend.setVisible(shouldShowLegend);
         }
         // whats left is for the chart content
         chartContent.resizeRelocate(left,top,width-left-right,height-top-bottom);

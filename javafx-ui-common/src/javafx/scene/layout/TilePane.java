@@ -163,9 +163,10 @@ import javafx.scene.Node;
  * <pre><code>
  *     TilePane tilepane = new TilePane();
  *     for (int i = 0; i < 20; i++) {
- *        Label label = new Label(imageTitle[i]):
+ *        Label title = new Label(imageTitle[i]):
+ *        Imageview imageview = new ImageView(new Image(imageName[i])); 
  *        TilePane.setAlignment(label, Pos.BOTTOM_RIGHT);
- *        tilepane.getChildren().addAll(title, imageview[i]);
+ *        tilepane.getChildren().addAll(title, imageview);
  *     }
  * </code></pre>
  */
@@ -918,6 +919,10 @@ public class TilePane extends Pane {
              new StyleableProperty<TilePane,Number>("-fx-pref-columns",
                  SizeConverter.getInstance(), 5.0) {
 
+            @Override public void set(TilePane node, Number value, Origin origin) {
+                super.set(node, value.intValue(), origin);
+            }
+            
             @Override
             public boolean isSettable(TilePane node) {
                 return node.prefColumns == null ||

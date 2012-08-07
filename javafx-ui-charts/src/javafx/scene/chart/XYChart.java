@@ -169,8 +169,9 @@ public abstract class XYChart<X,Y> extends Chart {
             if(old != null) {
                 old.removeListener(seriesChanged);
                 // Set animated to false so we don't animate both remove and add
-                // at the same time. RT-14163
-                if (old.size() > 0) {
+                // at the same time. RT-14163 
+                // RT-21295 - disable animated only when current is also not null. 
+                if (current != null && old.size() > 0) {
                     saveAnimationState = (old.get(0).getChart().getAnimated()) ? 1 : 2;
                     old.get(0).getChart().setAnimated(false);
                 }

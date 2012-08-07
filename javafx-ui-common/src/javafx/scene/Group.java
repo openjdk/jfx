@@ -25,6 +25,7 @@
 
 package javafx.scene;
 
+import java.util.Collection;
 import javafx.beans.DefaultProperty;
 import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.BooleanPropertyBase;
@@ -84,6 +85,16 @@ public  class Group extends Parent {
      * @param children children.
      */
     public Group(Node... children) {
+        getChildren().addAll(children);
+    }
+
+    /**
+     * Constructs a group consisting of the given children.
+     *
+     * @param Children children of the group
+     * @throws NullPointerException if the specified collection is null
+     */
+    public Group(Collection<Node> children) {
         getChildren().addAll(children);
     }
 

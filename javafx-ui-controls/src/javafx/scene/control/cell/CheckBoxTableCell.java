@@ -56,6 +56,7 @@ import javafx.util.StringConverter;
  * if it changes externally).
  * 
  * @param <T> The type of the elements contained within the TableColumn.
+ * @since 2.2
  */
 public class CheckBoxTableCell<S,T> extends TableCell<S,T> {
     
@@ -134,8 +135,9 @@ public class CheckBoxTableCell<S,T> extends TableCell<S,T> {
      *      the TableCell beside the {@link CheckBox}. By default a label is not 
      *      shown, but by setting this to true the item in the cell will also 
      *      have toString() called on it. If this is not the desired behavior, 
-     *      consider using {@link #forTableColumn(Callback, Callback)}, which 
-     *      allows for you to provide a callback that specifies the label for a 
+     *      consider using 
+     *      {@link #forTableColumn(javafx.util.Callback, javafx.util.StringConverter) }, 
+     *      which allows for you to provide a callback that specifies the label for a 
      *      given row item.
      * @return A {@link Callback} that will return a {@link TableCell} that is 
      *      able to work on the type of element contained within the TableColumn.

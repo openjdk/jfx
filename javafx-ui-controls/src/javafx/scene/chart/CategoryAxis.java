@@ -269,6 +269,7 @@ public final class CategoryAxis extends Axis<String> {
     @Override protected void setRange(Object range, boolean animate) {
         Object[] rangeArray = (Object[]) range;
         @SuppressWarnings({"unchecked"}) List<String> categories = (List<String>)rangeArray[0];
+//        if (categories.isEmpty()) new java.lang.Throwable().printStackTrace();
         double newCategorySpacing = (Double)rangeArray[1];
         double newFirstCategoryPos = (Double)rangeArray[2];
         double tickLabelRotation = (Double)rangeArray[3];
@@ -383,9 +384,19 @@ public final class CategoryAxis extends Axis<String> {
      */
     @Override public void invalidateRange(List<String> data) {
         super.invalidateRange(data);
-        // Create unique set of category names
+        // Create unique set of category names        
         LinkedHashSet<String> categoryNames = new LinkedHashSet<String>();
-        categoryNames.addAll(data);
+        categoryNames.addAll(allDataCategories);
+        //RT-21141 allDataCategories needs to be updated based on data -
+        // and should maintain the order it originally had for the categories already present.
+        // and remove categories not present in data
+        for(String cat : allDataCategories) {
+            if (!data.contains(cat)) categoryNames.remove(cat); 
+        }
+        // add any new category found in data
+        for(String cat : data) {
+            if (!categoryNames.contains(cat)) categoryNames.add(cat);
+        }
         allDataCategories.clear();
         allDataCategories.addAll(categoryNames);
     }

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008, 2011, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -39,7 +39,9 @@ import javafx.scene.control.TableView;
 import com.sun.javafx.scene.control.behavior.CellBehaviorBase;
 import com.sun.javafx.scene.control.WeakListChangeListener;
 import javafx.collections.ObservableList;
+import javafx.geometry.Insets;
 import javafx.scene.Node;
+import javafx.scene.control.*;
 
 /**
  */
@@ -107,7 +109,7 @@ public class TableRowSkin<T> extends CellSkinBase<TableRow<T>, CellBehaviorBase<
         if (p == "ITEM") {
             updateCells = true;
             requestLayout();
-            layout();
+            getSkinnable().layout();
         } else if (p == "TABLE_VIEW") {
             for (int i = 0; i < getChildren().size(); i++) {
                 Node n = getChildren().get(i);
@@ -153,7 +155,8 @@ public class TableRowSkin<T> extends CellSkinBase<TableRow<T>, CellBehaviorBase<
         }
     }
 
-    @Override protected void layoutChildren() {
+    @Override protected void layoutChildren(double x, final double y,
+            final double w, final double h) {
         doUpdateCheck();
         
         TableView<T> table = getSkinnable().getTableView();
@@ -162,12 +165,13 @@ public class TableRowSkin<T> extends CellSkinBase<TableRow<T>, CellBehaviorBase<
         
         if (showColumns && ! table.getVisibleLeafColumns().isEmpty()) {
             // layout the individual column cells
-            double x = getInsets().getLeft();
             double width;
             double height;
             
-            double verticalPadding = getInsets().getTop() + getInsets().getBottom();
-            double horizontalPadding = getInsets().getLeft() + getInsets().getRight();
+            Insets insets = getInsets();
+            
+            double verticalPadding = insets.getTop() + insets.getBottom();
+            double horizontalPadding = insets.getLeft() + insets.getRight();
             
             for (int i = 0; i < getChildren().size(); i++) {
                 // in most cases all children are TableCell instances, but this
@@ -179,11 +183,11 @@ public class TableRowSkin<T> extends CellSkinBase<TableRow<T>, CellBehaviorBase<
                 height = snapSize(height - verticalPadding);
                 
                 node.resize(width, height);
-                node.relocate(x, getInsets().getTop());
+                node.relocate(x, insets.getTop());
                 x += width;
             }
         } else {
-            super.layoutChildren();
+            super.layoutChildren(x,y,w,h);
         }
     }
 
@@ -215,6 +219,8 @@ public class TableRowSkin<T> extends CellSkinBase<TableRow<T>, CellBehaviorBase<
         columnCount = columns.size();
         fullRefreshCounter--;
         
+        TableRow skinnable = getSkinnable();
+        
         for (TableColumn col : columns) {
             if (cellsMap.containsKey(col)) {
                 continue;
@@ -226,7 +232,7 @@ public class TableRowSkin<T> extends CellSkinBase<TableRow<T>, CellBehaviorBase<
             // we set it's TableColumn, TableView and TableRow
             cell.updateTableColumn(col);
             cell.updateTableView(table);
-            cell.updateTableRow(getSkinnable());
+            cell.updateTableRow(skinnable);
 
             // and store this in our HashMap until needed
             cellsMap.put(col, cell);
@@ -242,34 +248,39 @@ public class TableRowSkin<T> extends CellSkinBase<TableRow<T>, CellBehaviorBase<
         // cells aren't updated properly.
         cells.clear();
 
-        TableView<T> table = getSkinnable().getTableView();
+        TableRow skinnable = getSkinnable();
+        int skinnableIndex = skinnable.getIndex();
+        TableView<T> table = skinnable.getTableView();
         if (table != null) {
-            for (TableColumn<T,?> col : table.getVisibleLeafColumns()) {
+            List<TableColumn<T,?>> visibleLeafColumns = table.getVisibleLeafColumns();
+            for (int i = 0, max = visibleLeafColumns.size(); i < max; i++) {
+                TableColumn<T,?> col = visibleLeafColumns.get(i);
                 TableCell cell = cellsMap.get(col);
                 if (cell == null) continue;
 
-                cell.updateIndex(getSkinnable().getIndex());
-                cell.updateTableRow(getSkinnable());
+                cell.updateIndex(skinnableIndex);
+                cell.updateTableRow(skinnable);
                 cells.add(cell);
             }
         }
 
         // update children of each row
+        ObservableList<Node> children = getChildren();
         if (resetChildren) {
             if (showColumns) {
                 if (cells.isEmpty()) {
-                    getChildren().clear();
+                    children.clear();
                 } else {
                     // TODO we can optimise this by only showing cells that are 
                     // visible based on the table width and the amount of horizontal
                     // scrolling.
-                    getChildren().setAll(cells);
+                    children.setAll(cells);
                 }
             } else {
-                getChildren().clear();
+                children.clear();
 
                 if (!isIgnoreText() || !isIgnoreGraphic()) {
-                    getChildren().add(getSkinnable());
+                    children.add(skinnable);
                 }
             }
         }
@@ -282,7 +293,9 @@ public class TableRowSkin<T> extends CellSkinBase<TableRow<T>, CellBehaviorBase<
             double prefWidth = 0.0F;
 
             if (getSkinnable().getTableView() != null) {
-                for (TableColumn<T,?> tableColumn : getSkinnable().getTableView().getVisibleLeafColumns()) {
+                List<TableColumn<T,?>> visibleLeafColumns = getSkinnable().getTableView().getVisibleLeafColumns();
+                for (int i = 0, max = visibleLeafColumns.size(); i < max; i++) {
+                    TableColumn<T,?> tableColumn = visibleLeafColumns.get(i);
                     prefWidth += tableColumn.getWidth();
                 }
             }
@@ -313,7 +326,7 @@ public class TableRowSkin<T> extends CellSkinBase<TableRow<T>, CellBehaviorBase<
                 final TableCell tableCell = cells.get(i);
                 prefHeight = Math.max(prefHeight, tableCell.prefHeight(-1));
             }
-            return Math.max(prefHeight, Math.max(getCellSize(), minHeight(-1)));
+            return Math.max(prefHeight, Math.max(getCellSize(), getSkinnable().minHeight(-1)));
         } else {
             return super.computePrefHeight(width);
         }

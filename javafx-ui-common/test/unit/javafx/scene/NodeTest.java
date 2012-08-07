@@ -324,6 +324,7 @@ public class NodeTest {
     }
 
     public static void syncNode(Node node) {
+        node.updateBounds();
         node.impl_syncPGNode();
     }
 

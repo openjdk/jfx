@@ -49,6 +49,7 @@ import javafx.scene.control.ContextMenu;
 import javafx.scene.control.IndexRange;
 import javafx.scene.control.MenuItem;
 import javafx.scene.control.SeparatorMenuItem;
+import javafx.scene.control.SkinBase;
 import javafx.scene.control.TextInputControl;
 import javafx.scene.input.Clipboard;
 import javafx.scene.input.InputMethodEvent;
@@ -363,13 +364,14 @@ public abstract class TextInputControlSkin<T extends TextInputControl, B extends
             textInput.focusedProperty().addListener(new InvalidationListener() {
                 @Override public void invalidated(Observable observable) {
                     if (useFXVK) {
+                        Scene scene = getSkinnable().getScene();
                         if (textInput.isEditable() && textInput.isFocused()) {
                             FXVK.attach(textInput);
-                        } else if (getScene() == null ||
-                                   getScene().getWindow() == null ||
-                                   !getScene().getWindow().isFocused() ||
-                                   !(getScene().getFocusOwner() instanceof TextInputControl &&
-                                     ((TextInputControl)getScene().getFocusOwner()).isEditable())) {
+                        } else if (scene == null ||
+                                   scene.getWindow() == null ||
+                                   !scene.getWindow().isFocused() ||
+                                   !(scene.getFocusOwner() instanceof TextInputControl &&
+                                     ((TextInputControl)scene.getFocusOwner()).isEditable())) {
                             FXVK.detach();
                         }
                     }
@@ -387,10 +389,10 @@ public abstract class TextInputControlSkin<T extends TextInputControl, B extends
 
         textInput.setInputMethodRequests(new InputMethodRequests() {
             @Override public Point2D getTextLocation(int offset) {
-                Scene scene = getScene();
+                Scene scene = getSkinnable().getScene();
                 Window window = scene.getWindow();
                 Rectangle2D characterBounds = getCharacterBounds(imstart + offset);
-                Point2D p = localToScene(characterBounds.getMinX(), characterBounds.getMaxY());
+                Point2D p = getSkinnable().localToScene(characterBounds.getMinX(), characterBounds.getMaxY());
                 // TODO: Find out where these offsets come from
                 Point2D location = new Point2D(window.getX() + scene.getX() + p.getX() -  6,
                                                window.getY() + scene.getY() + p.getY() - 42);
@@ -652,92 +654,104 @@ public abstract class TextInputControlSkin<T extends TextInputControl, B extends
     }
 
     private static class StyleableProperties {
-        private static final StyleableProperty<TextInputControlSkin,Font> FONT =
-           new StyleableProperty.FONT<TextInputControlSkin>("-fx-font", Font.getDefault()) {
+        private static final StyleableProperty<TextInputControl,Font> FONT =
+           new StyleableProperty.FONT<TextInputControl>("-fx-font", Font.getDefault()) {
 
             @Override
-            public boolean isSettable(TextInputControlSkin n) {
-                return n.font == null || !n.font.isBound();
+            public boolean isSettable(TextInputControl n) {
+                final TextInputControlSkin skin = (TextInputControlSkin) n.getSkin();
+                return skin.font == null || !skin.font.isBound();
             }
 
             @Override
-            public WritableValue<Font> getWritableValue(TextInputControlSkin n) {
-                return n.font;
+            public WritableValue<Font> getWritableValue(TextInputControl n) {
+                final TextInputControlSkin skin = (TextInputControlSkin) n.getSkin();
+                return skin.font;
             }
         };
         
-        private static final StyleableProperty<TextInputControlSkin,Paint> TEXT_FILL =
-            new StyleableProperty<TextInputControlSkin,Paint>("-fx-text-fill",
+        private static final StyleableProperty<TextInputControl,Paint> TEXT_FILL =
+            new StyleableProperty<TextInputControl,Paint>("-fx-text-fill",
                 PaintConverter.getInstance(), Color.BLACK) {
 
             @Override
-            public boolean isSettable(TextInputControlSkin n) {
-                return n.textFill == null || !n.textFill.isBound();
+            public boolean isSettable(TextInputControl n) {
+                final TextInputControlSkin skin = (TextInputControlSkin) n.getSkin();
+                return skin.textFill == null || !skin.textFill.isBound();
             }
 
             @Override
-            public WritableValue<Paint> getWritableValue(TextInputControlSkin n) {
-                return n.textFill;
+            public WritableValue<Paint> getWritableValue(TextInputControl n) {
+                final TextInputControlSkin skin = (TextInputControlSkin) n.getSkin();
+                return skin.textFill;
             }
         };
        
-        private static final StyleableProperty<TextInputControlSkin,Paint> PROMPT_TEXT_FILL =
-            new StyleableProperty<TextInputControlSkin,Paint>("-fx-prompt-text-fill",
+        private static final StyleableProperty<TextInputControl,Paint> PROMPT_TEXT_FILL =
+            new StyleableProperty<TextInputControl,Paint>("-fx-prompt-text-fill",
                 PaintConverter.getInstance(), Color.GRAY) {
 
             @Override
-            public boolean isSettable(TextInputControlSkin n) {
-                return n.promptTextFill == null || !n.promptTextFill.isBound();
+            public boolean isSettable(TextInputControl n) {
+                final TextInputControlSkin skin = (TextInputControlSkin) n.getSkin();
+                return skin.promptTextFill == null || !skin.promptTextFill.isBound();
             }
 
             @Override
-            public WritableValue<Paint> getWritableValue(TextInputControlSkin n) {
-                return n.promptTextFill;
+            public WritableValue<Paint> getWritableValue(TextInputControl n) {
+                final TextInputControlSkin skin = (TextInputControlSkin) n.getSkin();
+                return skin.promptTextFill;
             }
         };
         
-        private static final StyleableProperty<TextInputControlSkin,Paint> HIGHLIGHT_FILL =
-            new StyleableProperty<TextInputControlSkin,Paint>("-fx-highlight-fill",
+        private static final StyleableProperty<TextInputControl,Paint> HIGHLIGHT_FILL =
+            new StyleableProperty<TextInputControl,Paint>("-fx-highlight-fill",
                 PaintConverter.getInstance(), Color.DODGERBLUE) {
 
             @Override
-            public boolean isSettable(TextInputControlSkin n) {
-                return n.highlightFill == null || !n.highlightFill.isBound();
+            public boolean isSettable(TextInputControl n) {
+                final TextInputControlSkin skin = (TextInputControlSkin) n.getSkin();
+                return skin.highlightFill == null || !skin.highlightFill.isBound();
             }
 
             @Override
-            public WritableValue<Paint> getWritableValue(TextInputControlSkin n) {
-                return n.highlightFill;
+            public WritableValue<Paint> getWritableValue(TextInputControl n) {
+                final TextInputControlSkin skin = (TextInputControlSkin) n.getSkin();
+                return skin.highlightFill;
             }
         };
         
-        private static final StyleableProperty<TextInputControlSkin,Paint> HIGHLIGHT_TEXT_FILL =
-            new StyleableProperty<TextInputControlSkin,Paint>("-fx-highlight-text-fill",
+        private static final StyleableProperty<TextInputControl,Paint> HIGHLIGHT_TEXT_FILL =
+            new StyleableProperty<TextInputControl,Paint>("-fx-highlight-text-fill",
                 PaintConverter.getInstance(), Color.WHITE) {
 
             @Override
-            public boolean isSettable(TextInputControlSkin n) {
-                return n.highlightTextFill == null || !n.highlightTextFill.isBound();
+            public boolean isSettable(TextInputControl n) {
+                final TextInputControlSkin skin = (TextInputControlSkin) n.getSkin();
+                return skin.highlightTextFill == null || !skin.highlightTextFill.isBound();
             }
 
             @Override
-            public WritableValue<Paint> getWritableValue(TextInputControlSkin n) {
-                return n.highlightTextFill;
+            public WritableValue<Paint> getWritableValue(TextInputControl n) {
+                final TextInputControlSkin skin = (TextInputControlSkin) n.getSkin();
+                return skin.highlightTextFill;
             }
         };
         
-        private static final StyleableProperty<TextInputControlSkin,Boolean> DISPLAY_CARET =
-            new StyleableProperty<TextInputControlSkin,Boolean>("-fx-display-caret",
+        private static final StyleableProperty<TextInputControl,Boolean> DISPLAY_CARET =
+            new StyleableProperty<TextInputControl,Boolean>("-fx-display-caret",
                 BooleanConverter.getInstance(), Boolean.TRUE) {
 
             @Override
-            public boolean isSettable(TextInputControlSkin n) {
-                return n.displayCaret == null || !n.displayCaret.isBound();
+            public boolean isSettable(TextInputControl n) {
+                final TextInputControlSkin skin = (TextInputControlSkin) n.getSkin();
+                return skin.displayCaret == null || !skin.displayCaret.isBound();
             }
 
             @Override
-            public WritableValue<Boolean> getWritableValue(TextInputControlSkin n) {
-                return n.displayCaret;
+            public WritableValue<Boolean> getWritableValue(TextInputControl n) {
+                final TextInputControlSkin skin = (TextInputControlSkin) n.getSkin();
+                return skin.displayCaret;
             }
         };
 

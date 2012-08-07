@@ -157,7 +157,7 @@ public class ContainerTabOrder implements Algorithm {
         for (int i = startIndex ; i < nodeList.size() ; i++) {
 
             Node nextNode = nodeList.get(i);
-            if (nextNode.isFocusTraversable() == true && nextNode.isDisabled() == false && nextNode.isVisible() == true) {
+            if (nextNode.isFocusTraversable() == true && nextNode.isDisabled() == false && nextNode.impl_isTreeVisible() == true) {
                 newNode = nextNode;
                 break;
             }
@@ -233,7 +233,7 @@ public class ContainerTabOrder implements Algorithm {
 
         for (int i = startIndex ; i >= 0 ; i--) {
             Node prevNode = nodeList.get(i);
-            if (prevNode.isFocusTraversable() == true && prevNode.isDisabled() == false && prevNode.isVisible() == true) {
+            if (prevNode.isFocusTraversable() == true && prevNode.isDisabled() == false && prevNode.impl_isTreeVisible() == true) {
                 newNode = prevNode;
                 break;
             }

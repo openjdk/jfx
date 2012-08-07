@@ -147,6 +147,14 @@ public class ComboBoxListViewSkin<T> extends ComboBoxPopupControl<T> {
                         else comboBox.show();
                         t.consume();
                         return;
+                    } else if (ke.getCode() == KeyCode.F10 || ke.getCode() == KeyCode.ESCAPE) {
+                        // RT-23275: The TextField fires F10 and ESCAPE key events
+                        // up to the parent, which are then fired back at the 
+                        // TextField, and this ends up in an infinite loop until
+                        // the stack overflows. So, here we consume these two
+                        // events and stop them from going any further.
+                        t.consume();
+                        return;
                     }
                 }
                 
@@ -259,7 +267,8 @@ public class ComboBoxListViewSkin<T> extends ComboBoxPopupControl<T> {
         return 50;
     }
     
-    @Override protected void layoutChildren() {
+    @Override protected void layoutChildren(final double x, final double y,
+            final double w, final double h) {
         if (listViewSelectionDirty) {
             try {
                 listSelectionLock = true;
@@ -272,7 +281,7 @@ public class ComboBoxListViewSkin<T> extends ComboBoxPopupControl<T> {
             }
         }
         
-        super.layoutChildren();
+        super.layoutChildren(x,y,w,h);
     }
     
     
@@ -408,7 +417,7 @@ public class ComboBoxListViewSkin<T> extends ComboBoxPopupControl<T> {
         } else {
             // run item through StringConverter if it isn't null
             StringConverter c = comboBox.getConverter();
-            String s = item == null ? "" : (c == null ? item.toString() : c.toString(item));
+            String s = item == null ? comboBox.getPromptText() : (c == null ? item.toString() : c.toString(item));
             cell.setText(s);
             cell.setGraphic(null);
         }

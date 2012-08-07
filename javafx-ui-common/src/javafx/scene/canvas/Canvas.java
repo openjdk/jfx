@@ -68,12 +68,14 @@ root.getChildren().add(canvas);
  * </pre>
  * </p>
  *
- * @since JavaFX 2.2
+ * @since 2.2
  */
 public class Canvas extends Node {
     private static final int DEFAULT_BUF_SIZE = 1024;
 
-    private GrowableDataBuffer<Object> theBuffer;
+    private GrowableDataBuffer<Object> empty;
+    private GrowableDataBuffer<Object> full;
+
     private GraphicsContext theContext;
 
     /**
@@ -95,10 +97,11 @@ public class Canvas extends Node {
     }
 
     GrowableDataBuffer<Object> getBuffer() {
-        if (theBuffer == null) {
-            theBuffer = new GrowableDataBuffer<Object>(DEFAULT_BUF_SIZE);
+        impl_markDirty(DirtyBits.NODE_CONTENTS);
+        if (empty == null) {
+            empty = new GrowableDataBuffer<Object>(DEFAULT_BUF_SIZE);
         }
-        return theBuffer;
+        return empty;
     }
 
     /**
@@ -109,12 +112,6 @@ public class Canvas extends Node {
             theContext = new GraphicsContext(this);
         }
         return theContext;
-    }
-
-    void markBufferDirty() {
-        if (theBuffer == null || theBuffer.position() == 0) {
-            impl_markDirty(DirtyBits.NODE_CONTENTS);
-        }
     }
 
     /**
@@ -225,8 +222,14 @@ public class Canvas extends Node {
         }
         if (impl_isDirty(DirtyBits.NODE_CONTENTS)) {
             PGCanvas peer = getPGCanvas();
-            if (theBuffer != null && theBuffer.position() > 0) {
-                peer.updateRendering(theBuffer);
+            if (empty != null && empty.position() > 0) {
+                 peer.updateRendering(empty);
+                 if (full != null) {
+                    full.resetForWrite();
+                 }
+                 GrowableDataBuffer tmp = empty;
+                 empty = full;
+                 full = tmp;
             }
         }
     }

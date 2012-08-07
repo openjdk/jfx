@@ -221,6 +221,8 @@ public abstract class Transform {
 
     /**
      * Gets the X coordinate scaling element of the 3x4 matrix.
+     *
+     * @since 2.2
      */
     public  double getMxx() {
         return 1.0;
@@ -228,6 +230,8 @@ public abstract class Transform {
 
     /**
      * Gets the XY coordinate element of the 3x4 matrix.
+     *
+     * @since 2.2
      */
     public  double getMxy() {
         return 0.0;
@@ -235,6 +239,8 @@ public abstract class Transform {
 
     /**
      * Gets the XZ coordinate element of the 3x4 matrix.
+     *
+     * @since 2.2
      */
     public  double getMxz() {
         return 0.0;
@@ -242,6 +248,8 @@ public abstract class Transform {
 
     /**
      * Gets the X coordinate translation element of the 3x4 matrix.
+     *
+     * @since 2.2
      */
     public  double getTx() {
         return 0.0;
@@ -249,6 +257,8 @@ public abstract class Transform {
 
     /**
      * Gets the YX coordinate element of the 3x4 matrix.
+     *
+     * @since 2.2
      */
     public  double getMyx() {
         return 0.0;
@@ -256,6 +266,8 @@ public abstract class Transform {
 
     /**
      * Gets the Y coordinate scaling element of the 3x4 matrix.
+     *
+     * @since 2.2
      */
     public  double getMyy() {
         return 1.0;
@@ -263,6 +275,8 @@ public abstract class Transform {
 
     /**
      * Gets the YZ coordinate element of the 3x4 matrix.
+     *
+     * @since 2.2
      */
     public  double getMyz() {
         return 0.0;
@@ -270,6 +284,8 @@ public abstract class Transform {
 
     /**
      * Gets the Y coordinate translation element of the 3x4 matrix.
+     *
+     * @since 2.2
      */
     public  double getTy() {
         return 0.0;
@@ -277,6 +293,8 @@ public abstract class Transform {
 
     /**
      * Gets the ZX coordinate element of the 3x4 matrix.
+     *
+     * @since 2.2
      */
     public  double getMzx() {
         return 0.0;
@@ -284,6 +302,8 @@ public abstract class Transform {
 
     /**
      * Gets the ZY coordinate element of the 3x4 matrix.
+     *
+     * @since 2.2
      */
     public  double getMzy() {
         return 0.0;
@@ -291,6 +311,8 @@ public abstract class Transform {
 
     /**
      * Gets the Z coordinate scaling element of the 3x4 matrix.
+     *
+     * @since 2.2
      */
     public  double getMzz() {
         return 1.0;
@@ -298,6 +320,8 @@ public abstract class Transform {
 
     /**
      * Gets the Z coordinate translation element of the 3x4 matrix.
+     *
+     * @since 2.2
      */
     public  double getTz() {
         return 0.0;

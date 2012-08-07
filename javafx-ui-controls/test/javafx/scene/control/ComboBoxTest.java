@@ -841,7 +841,7 @@ public class ComboBoxTest {
         
         System.out.println(listView.getSkin());
         
-        VirtualFlow flow = (VirtualFlow)((ListViewSkin)listView.getSkin()).lookup("#virtual-flow");
+        VirtualFlow flow = (VirtualFlow)listView.lookup("#virtual-flow");
         assertNotNull(flow);
         
         IndexedCell cell = flow.getVisibleCell(2);

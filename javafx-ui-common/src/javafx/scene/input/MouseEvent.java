@@ -715,6 +715,7 @@ public class MouseEvent extends InputEvent {
      * application, this flag can be used to tell apart the usual mouse dragging
      * from the touch screen dragging already handled as scroll events.
      * @return true if this event is synthesized from using a touch screen
+     * @since 2.2
      */
     public boolean isSynthesized() {
         return synthesized;
@@ -760,8 +761,8 @@ public class MouseEvent extends InputEvent {
 
     /**
      * {@code true} if primary button (button 1, usually the left) is currently
-     * pressed. Note that this is different from the {@link button} variable in
-     * that the {@code button} variable indicates which button press was
+     * pressed. Note that this is different from the {@link #getButton() button}
+     * variable in that the {@code button} variable indicates which button press was
      * responsible for this event while this variable indicates whether the
      * primary button is depressed.
      */
@@ -783,8 +784,8 @@ public class MouseEvent extends InputEvent {
 
     /**
      * {@code true} if secondary button (button 3, usually the right) is currently
-     * pressed. Note that this is different from the {@link button} variable in
-     * that the {@code button} variable indicates which button press was
+     * pressed. Note that this is different from the {@link #getButton() button} 
+     * variable in that the {@code button} variable indicates which button press was
      * responsible for this event while this variable indicates whether the
      * primary button is depressed.
      */
@@ -806,7 +807,7 @@ public class MouseEvent extends InputEvent {
 
     /**
      * {@code true} if middle button (button 2) is currently pressed.
-     * Note that this is different from the {@link button} variable in
+     * Note that this is different from the {@link #getButton() button} variable in
      * that the {@code button} variable indicates which button press was
      * responsible for this event while this variable indicates whether the
      * middle button is depressed.

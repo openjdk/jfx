@@ -282,6 +282,7 @@ public abstract class ComboBoxBase<T> extends Control {
     public final ObjectProperty<EventHandler<Event>> onShowingProperty() { return onShowing; }
     /**
      * Called just prior to the {@code ComboBoxBase} popup/display being shown, 
+     * @since 2.2
      */
     public final void setOnShowing(EventHandler<Event> value) { onShowingProperty().set(value); }
     public final EventHandler<Event> getOnShowing() { return onShowingProperty().get(); }
@@ -304,6 +305,7 @@ public abstract class ComboBoxBase<T> extends Control {
     public final ObjectProperty<EventHandler<Event>> onShownProperty() { return onShown; }
     /**
      * Called just after the {@link ComboBoxBase} popup/display is shown.
+     * @since 2.2
      */
     public final void setOnShown(EventHandler<Event> value) { onShownProperty().set(value); }
     public final EventHandler<Event> getOnShown() { return onShownProperty().get(); }
@@ -326,6 +328,7 @@ public abstract class ComboBoxBase<T> extends Control {
     public final ObjectProperty<EventHandler<Event>> onHidingProperty() { return onHiding; }
     /**
      * Called just prior to the {@link ComboBox} popup/display being hidden.
+     * @since 2.2
      */
     public final void setOnHiding(EventHandler<Event> value) { onHidingProperty().set(value); }
     public final EventHandler<Event> getOnHiding() { return onHidingProperty().get(); }
@@ -348,6 +351,7 @@ public abstract class ComboBoxBase<T> extends Control {
     public final ObjectProperty<EventHandler<Event>> onHiddenProperty() { return onHidden; }
     /**
      * Called just after the {@link ComboBoxBase} popup/display has been hidden.
+     * @since 2.2
      */
     public final void setOnHidden(EventHandler<Event> value) { onHiddenProperty().set(value); }
     public final EventHandler<Event> getOnHidden() { return onHiddenProperty().get(); }

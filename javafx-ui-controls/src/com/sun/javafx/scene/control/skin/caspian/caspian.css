@@ -480,7 +480,7 @@
     -fx-opacity: -fx-disabled-opacity;
 }
 
-.label:show-mnemonics .mnemonic-underline {
+.label:show-mnemonics > .mnemonic-underline {
     -fx-stroke: -fx-text-fill;
 } 
 
@@ -534,7 +534,7 @@
     -fx-opacity: -fx-disabled-opacity;
 }
 
-.button:show-mnemonics .mnemonic-underline {
+.button:show-mnemonics > .mnemonic-underline {
     -fx-stroke: -fx-text-fill;
 } 
 /*******************************************************************************
@@ -594,7 +594,7 @@
     -fx-opacity: -fx-disabled-opacity;
 }
 
-.toggle-button:show-mnemonics .mnemonic-underline {
+.toggle-button:show-mnemonics > .mnemonic-underline {
     -fx-stroke: -fx-text-fill;
 } 
 
@@ -614,34 +614,34 @@
     -fx-color: -fx-focused-base;
 }
 
-.radio-button .radio  {
+.radio-button > .radio  {
    -fx-background-color: -fx-shadow-highlight-color, -fx-outer-border, -fx-inner-border, -fx-body-color;
    -fx-background-insets: 0 0 -1 0,  0,  1,  2;
    -fx-background-radius: 1.0em; /* large value to make sure this remains circular */
    -fx-padding: 0.333333em; /* 4 -- padding from outside edge to the inner black dot */
 }
 
-.radio-button:focused .radio {
+.radio-button:focused > .radio {
     -fx-background-color: -fx-focus-color, -fx-outer-border, -fx-inner-border, -fx-body-color;
     -fx-background-radius: 1.0em; /* large value to make sure this remains circular */
     -fx-background-insets: -1.4, 0, 1, 2;
 }
 
-.radio-button:hover .radio {
+.radio-button:hover > .radio {
     -fx-color: -fx-hover-base;
 }
-.radio-button:armed .radio {
+.radio-button:armed > .radio {
     -fx-color: -fx-pressed-base;
 }
 
-.radio-button .dot {
+.radio-button > .radio > .dot {
    -fx-background-color: transparent;
    -fx-background-insets: 0;
    -fx-background-radius: 1.0em; /* large value to make sure this remains circular */
    -fx-padding: 0.25em; /* 3 -- radius of the inner black dot when selected */
 }
 
-.radio-button:selected .dot {
+.radio-button:selected > .radio > .dot {
    -fx-background-color: -fx-mark-highlight-color, -fx-mark-color;
    -fx-background-insets: 0 0 -1 0, 0;
 }
@@ -650,7 +650,7 @@
     -fx-opacity: -fx-disabled-opacity;
 }
 
-.radio-button:show-mnemonics .mnemonic-underline {
+.radio-button:show-mnemonics > .mnemonic-underline {
     -fx-stroke: -fx-text-fill;
 } 
 
@@ -670,28 +670,28 @@
     -fx-color: -fx-focused-base;
 }
 
-.check-box .box {
+.check-box > .box {
     -fx-background-color: -fx-shadow-highlight-color, -fx-outer-border, -fx-inner-border, -fx-body-color;
     -fx-background-insets: 0 0 -1 0, 0, 1, 2;
     -fx-background-radius: 2, 2, 1, 1;
     -fx-padding: 0.25em; /* 3 -- padding from the outside edge to the mark */
 }
 
-.check-box:focused .box {
+.check-box:focused > .box {
     -fx-background-color: -fx-focus-color, -fx-outer-border, -fx-inner-border, -fx-body-color;
     -fx-background-insets: -1.4, 0, 1, 2;
     -fx-background-radius: 3.4, 2, 1, 1;
 }
 
-.check-box:hover .box {
+.check-box:hover > .box {
     -fx-color: -fx-hover-base;
 }
 
-.check-box:armed .box {
+.check-box:armed > .box {
     -fx-color: -fx-pressed-base;
 }
 
-.check-box .mark {
+.check-box > .box > .mark {
     -fx-background-color: transparent;
     -fx-background-insets: 1 0 -1 0, 0;
     -fx-padding: 0.333333em; /* 4 -- this is half the size of the mark */
@@ -701,13 +701,13 @@
 /* TODO: scale the shape - the problem is that it is not within a square
  * boundary.
  */
-.check-box:indeterminate .mark {
+.check-box:indeterminate > .box > .mark {
     -fx-background-color: -fx-mark-highlight-color, -fx-mark-color;
     -fx-shape: "M0,0H8V2H0Z";
     -fx-scale-shape: false;
 }
 
-.check-box:selected .mark {
+.check-box:selected > .box > .mark {
     -fx-background-color: -fx-mark-highlight-color, -fx-mark-color;
 }
 
@@ -715,7 +715,7 @@
     -fx-opacity: -fx-disabled-opacity;
 }
 
-.check-box:show-mnemonics .mnemonic-underline {
+.check-box:show-mnemonics > .mnemonic-underline {
     -fx-stroke: -fx-text-fill;
 } 
 
@@ -754,7 +754,7 @@
     -fx-underline: true;
 }
 
-.hyperlink:show-mnemonics .mnemonic-underline {
+.hyperlink:show-mnemonics > .mnemonic-underline {
     -fx-stroke: -fx-text-fill;
 } 
 
@@ -777,22 +777,22 @@
     -fx-padding: 0.333333em 0.083333em 0.666667em 0.083333em; /* 4 1 8 1 */
 }
 
-.context-menu .separator {
+.context-menu > .separator {
     -fx-padding: 0.0em 0.333333em 0.0em 0.333333em; /* 0 4 0 4 */
 }
 
-.context-menu .scroll-arrow {
+.context-menu > .scroll-arrow {
     -fx-padding: 0.416667em 0.416667em 0.416667em 0.416667em; /* 5 */
     -fx-background-color: transparent;
 }
 
-.context-menu .scroll-arrow:hover {
+.context-menu > .scroll-arrow:hover {
     -fx-background: -fx-accent;
     -fx-background-color: -fx-selection-bar;
     -fx-text-fill: -fx-selection-bar-text;
 }
 
-.context-menu:show-mnemonics .mnemonic-underline {
+.context-menu:show-mnemonics > .mnemonic-underline {
     -fx-stroke: -fx-text-fill;
 } 
 
@@ -813,28 +813,28 @@
     -fx-opacity: -fx-disabled-opacity;
 }
 
-.menu:show-mnemonics .mnemonic-underline {
+.menu:show-mnemonics > .mnemonic-underline {
     -fx-stroke: -fx-text-fill;
 }
 
 /* This hides the down arrow that would show on a menu placed in a menubar */
-.menu-bar .menu .arrow {
+.menu-bar > .container > .menu > .arrow-button > .arrow {
     -fx-padding: 0;
     -fx-background-color: transparent;
     -fx-shape: null;
 }
 
-.menu-bar .menu .arrow-button {
+.menu-bar > .container > .menu > .arrow-button {
     -fx-padding: 0;
 }
 
-.menu .arrow {
+.menu > .arrow {
     -fx-background-color: -fx-mark-color;
     -fx-shape: "M0,-4L4,0L0,4Z";
     -fx-scale-shape: false;
 }
 
-.menu:focused:showing .arrow, .menu:hover:showing .arrow, .menu:focused .arrow, .menu:showing .arrow {
+.menu:focused:showing > .arrow, .menu:hover:showing > .arrow, .menu:focused > .arrow, .menu:showing > .arrow {
     -fx-background-color: white;
 }
 
@@ -875,17 +875,17 @@
 }
 
 /* Show nothing for background of normal menu button in a menu bar */
-.menu-bar .menu-button {
+.menu-bar > .container > .menu-button {
     -fx-background-radius: 0;
     -fx-background-color: transparent;
     -fx-background-insets: 0; 
 }
 /* Change padding of menu buttons when in menu bar */
-.menu-bar .menu-button .label {
+.menu-bar > .container > .menu-button > .label {
     -fx-padding: 0.333em 0.5em 0.333em 0.5em; /* 4 6 4 6*/
 }
 
-.menu-bar .menu-button:hover, .menu-bar .menu-button:focused, .menu-bar .menu-button:showing {
+.menu-bar > .container > .menu-button:hover, .menu-bar > .container > .menu-button:focused, .menu-bar > .container > .menu-button:showing {
     -fx-background: -fx-accent;
     -fx-background-color: -fx-selection-bar;
     -fx-text-fill: -fx-selection-bar-text;
@@ -898,13 +898,13 @@
     -fx-text-fill: -fx-selection-bar-text;
 }*/
 
-.menu-bar .menu-button:hover {
+.menu-bar > .container > .menu-button:hover {
     -fx-background: -fx-accent;
     -fx-background-color: -fx-selection-bar;
     -fx-text-fill: -fx-selection-bar-text;
 }
 
-.menu-bar:show-mnemonics .mnemonic-underline {
+.menu-bar:show-mnemonics > .mnemonic-underline {
     -fx-stroke: -fx-text-fill;
 }
 
@@ -961,7 +961,7 @@
     -fx-scale-shape: false;
 }
 
-.radio-menu-item:focused:checked .radio {
+.radio-menu-item:focused:checked > .radio {
     -fx-background-color: white;
 }
 
@@ -1039,17 +1039,17 @@
     -fx-color: -fx-pressed-base;
 }
 
-.choice-box .label {
+.choice-box > .label {
     -fx-padding: 0.166667em 0.333333em 0.25em 0.5em; /* 2 4 3 6 */
     -fx-text-fill: -fx-text-base-color;
 }
 
-.choice-box .open-button {
+.choice-box > .open-button {
     -fx-background-color: null;
     -fx-padding: 0.083333em 0.0em 0.0em 0.666667em; /* 1 0 0 8 */
 }
 
-.choice-box .arrow {
+.choice-box > .open-button > .arrow {
     -fx-background-color: -fx-mark-highlight-color, -fx-mark-color;
     -fx-background-insets: 1 0 -1 0, 0;
     /* padding determines the size of the arrow;
@@ -1058,13 +1058,13 @@
     -fx-shape: "M 0 0 h 7 l -3.5 4 z";
 }
 
-.choice-box .context-menu {
+.choice-box > .context-menu {
     -fx-background-radius: 6, 5, 4;
 }
 
-.choice-box .menu-item {
+/*.choice-box > .context-menu > .menu-item {
     -fx-accelerator-gutter: 0;
-}
+}*/
 
 /* TODO: need to use the ID here.  For some reason, the other form does not
  * work.  This might be related to popup issues.
@@ -1092,7 +1092,7 @@
     -fx-skin: "com.sun.javafx.scene.control.skin.SliderSkin";
 }
 
-.slider .thumb {
+.slider > .thumb {
     -fx-background-color:
         derive(-fx-color,-36%),
         derive(-fx-color,73%),
@@ -1102,7 +1102,7 @@
     -fx-padding: 0.583333em; /* 7 */
 }
 
-.slider:focused .thumb {
+.slider:focused > .thumb {
     -fx-color: -fx-focused-base;
     -fx-background-color:
         -fx-focus-color,
@@ -1113,7 +1113,7 @@
     -fx-background-radius: 1.0em; /* makes sure this remains circular */
 }
 
-.slider .thumb:hover {
+.slider > .thumb:hover {
     -fx-color: -fx-hover-base;
 }
 
@@ -1123,7 +1123,7 @@
 }
 */
 
-.slider .track {
+.slider > .track {
     -fx-background-color:
         -fx-shadow-highlight-color,
         derive(-fx-color,-22%),
@@ -1133,7 +1133,7 @@
     -fx-padding: 0.208333em; /* 2.5 */
 }
 
-.slider:vertical .track {
+.slider:vertical > .track {
     -fx-background-color:
         -fx-shadow-highlight-color,
         derive(-fx-color,-22%),
@@ -1141,7 +1141,7 @@
     -fx-background-insets: 0 -1 0 1, 0, 1;
 }
 
-.slider .axis {
+.slider > .axis {
     -fx-tick-mark-stroke: ladder(-fx-background, derive(-fx-background,30%) 40%, derive(-fx-background,-30%) 41%);
     -fx-tick-label-font: 0.833333em System; 
     -fx-tick-label-fill: -fx-text-background-color;
@@ -1191,7 +1191,7 @@
     -fx-background-insets: -1.4, 0, 1;
 }
 
-.scroll-bar:horizontal .thumb {
+.scroll-bar:horizontal > .thumb {
     -fx-background-color:
         -fx-box-border,
         linear-gradient(to bottom, derive(-fx-color,95%), derive(-fx-color,10%)),
@@ -1200,7 +1200,7 @@
     -fx-background-radius: 0.5em; /* makes sure this remains circular */
 }
 
-.scroll-bar:vertical .thumb {
+.scroll-bar:vertical > .thumb {
     -fx-background-color:
         -fx-box-border,
         linear-gradient(to right, derive(-fx-color,95%), derive(-fx-color,10%)),
@@ -1209,11 +1209,11 @@
     -fx-background-radius: 0.5em; /* makes sure this remains circular */
 }
 
-.scroll-bar:focused .thumb {
+.scroll-bar:focused > .thumb {
     -fx-color: -fx-focused-base;
 }
 
-.scroll-bar .thumb:hover {
+.scroll-bar > .thumb:hover {
     -fx-color: -fx-hover-base;
 }
 
@@ -1223,21 +1223,21 @@
 }
 */
 
-.scroll-bar:horizontal .track {
+.scroll-bar:horizontal > .track {
      -fx-background-color:
         -fx-box-border,
         linear-gradient(to bottom, derive(-fx-color,-15%), derive(-fx-color,2.2%) 20%, derive(-fx-color,60%));
     -fx-background-insets:  0, 1;
     -fx-background-radius: 0.5em; /* makes sure this remains circular */
 }
-.scroll-bar:horizontal .track-background {
+.scroll-bar:horizontal > .track-background {
      -fx-background-color:
         -fx-box-border,
         linear-gradient(to bottom, derive(-fx-color,-15%), derive(-fx-color,2.2%) 20%, derive(-fx-color,60%));
     -fx-background-insets:  0, 1;
 }
 
-.scroll-bar:vertical .track {
+.scroll-bar:vertical > .track {
      -fx-background-color:
         -fx-box-border,
         linear-gradient(to right, derive(-fx-color,-15%), derive(-fx-color,2.2%) 20%, derive(-fx-color,60%));
@@ -1245,14 +1245,14 @@
     -fx-background-radius: 0.5em; /* makes sure this remains circular */
 }
 
-.scroll-bar:vertical .track-background {
+.scroll-bar:vertical > .track-background {
      -fx-background-color:
         -fx-box-border,
         linear-gradient(to right, derive(-fx-color,-15%), derive(-fx-color,2.2%) 20%, derive(-fx-color,60%));
     -fx-background-insets:  0, 1;
 }
 
-.scroll-bar .increment-button {
+.scroll-bar > .increment-button {
     -fx-background-color:
         -fx-box-border,
         linear-gradient(to bottom, derive(-fx-color,30%) 5%, derive(-fx-color,-17%));
@@ -1260,7 +1260,7 @@
     -fx-padding: 0.25em; /* 3 */
 }
 
-.scroll-bar .decrement-button {
+.scroll-bar > .decrement-button {
     -fx-background-color:
         -fx-box-border,
         linear-gradient(to bottom, derive(-fx-color,30%) 5%, derive(-fx-color,-17%));
@@ -1268,28 +1268,28 @@
     -fx-padding: 0.25em; /* 3 */
 }
 
-.scroll-bar:horizontal .increment-arrow {
+.scroll-bar:horizontal > .increment-button > .increment-arrow {
     -fx-background-color: -fx-mark-highlight-color, -fx-mark-color;
     -fx-background-insets: 1 0 -1 0, 0;
     -fx-padding: 0.5em 0.333333em 0.0em 0.0em; /* 6 4 0 0 */
     -fx-shape: "M 4 0 L 0 -3 L 0 3 z";
 }
 
-.scroll-bar:vertical .increment-arrow {
+.scroll-bar:vertical > .increment-button > .increment-arrow {
     -fx-background-color: -fx-mark-highlight-color, -fx-mark-color;
     -fx-background-insets: 1 0 -1 0, 0;
     -fx-padding: 0.333333em 0.5em 0.0em 0.0em; /* 4 6 0 0 */
     -fx-shape: "M -3 0 L 0 4 L 3 0 z";
 }
 
-.scroll-bar:horizontal .decrement-arrow {
+.scroll-bar:horizontal > .decrement-button > .decrement-arrow {
     -fx-background-color: -fx-mark-highlight-color, -fx-mark-color;
     -fx-background-insets: 1 0 -1 0, 0;
     -fx-padding: 0.5em 0.333333em 0.0em 0.0em; /* 6 4 0 0 */
     -fx-shape: "M 0 0 L 4 -3 L 4 3 z";
 }
 
-.scroll-bar:vertical .decrement-arrow {
+.scroll-bar:vertical > .decrement-button > .decrement-arrow {
     -fx-background-color: -fx-mark-highlight-color, -fx-mark-color;
     -fx-background-insets: 1 0 -1 0, 0;
     -fx-padding: 0.333333em 0.5em 0.0em 0.0em; /* 4 6 0 0 */
@@ -1335,7 +1335,7 @@
     -fx-padding: 0.0 0.0 0.0 0.0;
 }
 
-.scroll-pane .corner {
+.scroll-pane > .corner {
     -fx-background-color: -fx-box-border, -fx-base;
     -fx-background-insets: 0, 1 0 0 1;
 }
@@ -1354,18 +1354,18 @@
     -fx-skin: "com.sun.javafx.scene.control.skin.SeparatorSkin";
 }
 
-.separator .line {
+.separator > .line {
     -fx-border-style: segments(0.166667em, 0.166667em);
     -fx-border-width: 0.083333em; /* 1 */
 }
 
-.separator:horizontal .line {
+.separator:horizontal > .line {
     -fx-background-color: null;
     -fx-padding: 0.083333em 0.0em 0.0em 0.0em; /* 1 0 0 0 */
     -fx-border-color: derive(-fx-background,-20%) transparent transparent transparent;
 }
 
-.separator:vertical .line {
+.separator:vertical > .line {
     -fx-background-color: null;
     -fx-padding: 0.0em 0.083333em 0.0em 0.0em; /* 0 1 0 0 */
     -fx-border-color:  transparent derive(-fx-background,-20%) transparent transparent;
@@ -1437,11 +1437,11 @@
     -fx-prompt-text-fill: derive(-fx-control-inner-background,-30%);
 }
 
-.text-area .scroll-pane {
+.text-area > .scroll-pane {
     -fx-background-color: transparent;
 }
 
-.text-area .content {
+.text-area > .content {
     -fx-padding: 3 5 3 5; 
     -fx-cursor: text;
 }
@@ -1510,21 +1510,21 @@
     -fx-padding: 1; /* 0.083333em; */
 }
 
-.list-view .scroll-bar:vertical{
+.list-view > .virtual-flow > .scroll-bar:vertical{
     -fx-background-insets: 0, 0 0 0 1;
-    -fx-padding: 0.0 0.0 0.0 0.0;
+    -fx-padding: -1 -1 -1 0;
 }
 
-.list-view .scroll-bar:horizontal{
+.list-view > .virtual-flow > .scroll-bar:horizontal{
     -fx-background-insets: 0, 1 0 0 0;
-    -fx-padding: 0.0 0.0 0.0 0.0;
+    -fx-padding: 0 -1 -1 -1;
 }
 
 .list-view:disabled {
     -fx-opacity: -fx-disabled-opacity;
 }
 
-.list-view .corner {
+.list-view > .virtual-flow > .corner {
     -fx-background-color: -fx-box-border, -fx-base;
     -fx-background-insets: 0, 1 0 0 1;
 }
@@ -1541,31 +1541,32 @@
     -fx-background-color: derive(-fx-control-inner-background,-5%);
 }
 
-.list-view:focused .list-cell:focused {
+.list-view:focused > .virtual-flow > .clipped-container > .sheet > .list-cell:focused {
     -fx-background-color: -fx-focus-color, -fx-cell-focus-inner-border, -fx-control-inner-background;
     -fx-background-insets: 0, 1, 2;
 }
 
-.list-view:focused .list-cell:focused:odd {
+.list-view:focused > .virtual-flow > .clipped-container > .sheet > .list-cell:focused:odd {
     -fx-background-color: -fx-focus-color, -fx-cell-focus-inner-border, derive(-fx-control-inner-background,-5%);
     -fx-background-insets: 0, 1, 2;
 }
 
 /* When the list-cell is selected and focused */
-.list-view:focused .list-cell:filled:focused:selected {
+.list-view:focused > .virtual-flow > .clipped-container > .sheet > .list-cell:filled:focused:selected {
     -fx-background-color: -fx-focus-color, -fx-cell-focus-inner-border, -fx-selection-bar;
     -fx-background-insets: 0, 1, 2;
     -fx-background: -fx-accent;
     -fx-text-fill: -fx-selection-bar-text;
 }
 
-.list-view:focused .list-cell:filled:selected, .list-view:focused .list-cell:filled:selected:hover {
+.list-view:focused > .virtual-flow > .clipped-container > .sheet > .list-cell:filled:selected, 
+.list-view:focused > .virtual-flow > .clipped-container > .sheet > .list-cell:filled:selected:hover {
     -fx-background: -fx-accent;
     -fx-background-color: -fx-selection-bar;
     -fx-text-fill: -fx-selection-bar-text;
 }
 
-.list-view:focused .list-cell:filled:focused:selected:hover {
+.list-view:focused > .virtual-flow > .clipped-container > .sheet > .list-cell:filled:focused:selected:hover {
     -fx-background: -fx-accent;
     -fx-background-color: -fx-focus-color, -fx-cell-focus-inner-border, -fx-selection-bar;
     -fx-background-insets: 0, 1, 2;
@@ -1573,12 +1574,15 @@
 }
 
 /* When the ListView is _not_ focused, we show alternate selection colors */
-.list-cell:filled:selected:focused, .list-cell:filled:selected, .list-view:horizontal .list-cell:filled:selected {
+.list-cell:filled:selected:focused,
+.list-cell:filled:selected,
+.list-view:horizontal > .virtual-flow > .clipped-container > .sheet > .list-cell:filled:selected {
     -fx-background-color: lightgray;
     -fx-text-fill: -fx-selection-bar-text;
 }
 
-.list-cell:filled:selected:focused:disabled, .list-cell:filled:selected:disabled {
+.list-cell:filled:selected:focused:disabled, 
+.list-cell:filled:selected:disabled {
     -fx-opacity: -fx-disabled-opacity;
 }
 
@@ -1587,13 +1591,14 @@
     -fx-text-fill: -fx-text-inner-color;
 }
 
-.list-view:focused .list-cell:filled:focused:hover {
+.list-view:focused > .virtual-flow > .clipped-container > .sheet > .list-cell:filled:focused:hover {
     -fx-background-color: -fx-focus-color, -fx-cell-focus-inner-border, -fx-cell-hover-color;
     -fx-background-insets: 0, 1, 2;
     -fx-text-fill: -fx-text-inner-color;
 }
 
-.list-view:horizontal .list-cell:filled:selected, .list-view:horizontal .list-cell:filled:selected:hover {
+.list-view:horizontal > .virtual-flow > .clipped-container > .sheet > .list-cell:filled:selected,
+.list-view:horizontal > .virtual-flow > .clipped-container > .sheet > .list-cell:filled:selected:hover {
     -fx-background-color: linear-gradient(to right, derive(-fx-accent,-7%), derive(-fx-accent,-25%));
 }
 
@@ -1623,21 +1628,21 @@
     -fx-padding: 1; /* 0.083333em; */
 }
 
-.tree-view .scroll-bar:vertical{
+.tree-view > .virtual-flow > .scroll-bar:vertical{
     -fx-background-insets: 0, 0 0 0 1;
-    -fx-padding: 0.0 0.0 0.0 0.0;
+    -fx-padding: -1 -1 -1 0;
 }
 
-.tree-view .scroll-bar:horizontal{
+.tree-view > .virtual-flow > .scroll-bar:horizontal{
     -fx-background-insets: 0, 1 0 0 0;
-    -fx-padding: 0.0 0.0 0.0 0.0;
+    -fx-padding: 0 -1 -1 -1;
 }
 
 .tree-view:disabled {
     -fx-opacity: -fx-disabled-opacity;
 }
 
-.tree-view .corner {
+.tree-view > .virtual-flow > .corner {
     -fx-background-color: -fx-box-border, -fx-base;
     -fx-background-insets: 0, 1 0 0 1;
 }
@@ -1654,27 +1659,26 @@
     -fx-padding: 0.0em 0.0em 0.0em 0.25em; /* 0 0 0 3 */
 }
 
-
-
-.tree-view:focused .tree-cell:focused {
+.tree-view:focused > .virtual-flow > .clipped-container > .sheet > .tree-cell:focused {
     -fx-background-color: -fx-focus-color, -fx-cell-focus-inner-border, -fx-control-inner-background;
     -fx-background-insets: 0, 1, 2;
 }
 
-.tree-view:focused .tree-cell:filled:focused:selected {
+.tree-view:focused > .virtual-flow > .clipped-container > .sheet > .tree-cell:filled:focused:selected {
     -fx-background-color: -fx-focus-color, -fx-cell-focus-inner-border, -fx-selection-bar;
     -fx-background-insets: 0, 1, 2;
     -fx-background: -fx-accent;
     -fx-text-fill: -fx-selection-bar-text;
 }
 
-.tree-view:focused .tree-cell:filled:selected, .tree-view:focused .tree-cell:filled:selected:hover {
+.tree-view:focused > .virtual-flow > .clipped-container > .sheet > .tree-cell:filled:selected, 
+.tree-view:focused > .virtual-flow > .clipped-container > .sheet > .tree-cell:filled:selected:hover {
     -fx-background: -fx-accent;
     -fx-background-color: -fx-selection-bar;
     -fx-text-fill: -fx-selection-bar-text;
 }
 
-.tree-view:focused .tree-cell:filled:focused:selected:hover {
+.tree-view:focused > .virtual-flow > .clipped-container > .sheet > .tree-cell:filled:focused:selected:hover {
     -fx-background: -fx-accent;
     -fx-background-color: -fx-focus-color, -fx-cell-focus-inner-border, -fx-selection-bar;
     -fx-background-insets: 0, 1, 2;
@@ -1682,36 +1686,38 @@
 }
 
 /* When the TreeView is _not_ focused, we show alternate selection colors */
-.tree-cell:filled:selected:focused, .tree-cell:filled:selected {
+.tree-cell:filled:selected:focused, 
+.tree-cell:filled:selected {
     -fx-background-color: lightgray;
     -fx-text-fill: -fx-selection-bar-text;
 }
 
-.tree-cell:filled:selected:focused:disabled, .tree-cell:filled:selected:disabled {
+.tree-cell:filled:selected:focused:disabled, 
+.tree-cell:filled:selected:disabled {
     -fx-opacity: -fx-disabled-opacity;
 }
 
-.tree-cell .tree-disclosure-node {
+.tree-cell > .tree-disclosure-node {
     /** put a bit of padding around the disclosure node to make the clicking region larger */
     -fx-padding: 4 2 4 8;
     -fx-background-color: transparent;
 }
 
-.tree-cell .tree-disclosure-node:disabled {
+.tree-cell > .tree-disclosure-node:disabled {
     -fx-opacity: -fx-disabled-opacity;
 }
 
-.tree-cell .tree-disclosure-node .arrow {
+.tree-cell > .tree-disclosure-node > .arrow {
     -fx-background-color: -fx-mark-color;
     -fx-padding: 0.333333em; /* 4 */
     -fx-shape: "M 0 -4 L 8 0 L 0 4 z";
 }
 
-.tree-cell:expanded .tree-disclosure-node .arrow {
+.tree-cell:expanded > .tree-disclosure-node > .arrow {
     -fx-rotate: 90;
 }
 
-.tree-cell:filled:selected .tree-disclosure-node .arrow {
+.tree-cell:filled:selected > .tree-disclosure-node > .arrow {
     -fx-background-color: -fx-selection-bar-text;
 }
 
@@ -1720,17 +1726,17 @@
     -fx-text-fill: -fx-text-inner-color;
 }
 
-.tree-cell:filled:hover .tree-disclosure-node .arrow {
+.tree-cell:filled:hover > .tree-disclosure-node > .arrow {
     -fx-background-color: -fx-mark-color;
 }
 
-.tree-view:focused .tree-cell:filled:focused:hover {
+.tree-view:focused > .virtual-flow > .clipped-container > .sheet > .tree-cell:filled:focused:hover {
     -fx-background-color: -fx-focus-color, -fx-cell-focus-inner-border, -fx-cell-hover-color;
     -fx-background-insets: 0, 1, 2;
     -fx-text-fill: -fx-text-inner-color;
 }
 
-.tree-cell:filled:selected:hover .tree-disclosure-node .arrow {
+.tree-cell:filled:selected:hover > .tree-disclosure-node > .arrow {
     -fx-background-color: -fx-selection-bar-text;
 }
 
@@ -1749,8 +1755,13 @@
     -fx-text-fill: -fx-text-base-color;
 }
 
-/* TODO workaround for RT-19062 */
-.menu-button .label { -fx-text-fill: -fx-text-base-color; }
+.menu-button > .label { 
+    /* TODO workaround for RT-19062 */
+    -fx-text-fill: -fx-text-base-color; 
+    
+    /* The MenuButton skin uses an inner Label part */
+    -fx-padding: 0.166667em 1.5em 0.25em 0.833333em; /* 2 18 3 10 */
+}
 
 .menu-button:focused {
     -fx-color: -fx-focused-base;
@@ -1767,25 +1778,20 @@
     -fx-color: -fx-pressed-base;
 }
 
-/* The MenuButton skin uses an inner Label part */
-.menu-button .label {
-    -fx-padding: 0.166667em 1.5em 0.25em 0.833333em; /* 2 18 3 10 */
-}
-
-.menu-button .arrow-button {
+.menu-button > .arrow-button {
     -fx-background-insets: 0;
     -fx-background-radius: 0;
     -fx-padding: 0.5em 0.416667em 0.5em 0.0em; /* 6 5 6 0 */
 }
 
-.menu-button .arrow {
+.menu-button > .arrow-button > .arrow {
     -fx-background-insets: 1 0 -1 0, 0;
     -fx-background-color: -fx-mark-highlight-color, -fx-mark-color;
     -fx-padding: 0.25em; /* 3 */
     -fx-shape: "M 0 -3.5 v 7 l 4 -3.5 z";
 }
 
-.menu-button:openvertically .arrow {
+.menu-button:openvertically > .arrow-button > .arrow {
     -fx-padding: 0.166667em 0.333333em 0.166667em 0.333333em; /* 2 4 2 4 */
     -fx-shape: "M 0 0 h 7 l -3.5 4 z";
 }
@@ -1794,7 +1800,7 @@
     -fx-opacity: -fx-disabled-opacity;
 }
 
-.menu-button:show-mnemonics .mnemonic-underline {
+.menu-button:show-mnemonics > .mnemonic-underline {
     -fx-stroke: -fx-text-fill;
 } 
 
@@ -1822,45 +1828,45 @@
     -fx-background-radius: 6.4;
 }
 
-.split-menu-button .label:hover {
+.split-menu-button > .label:hover {
     -fx-color: -fx-hover-base;
 }
 
-.split-menu-button:armed .label {
+.split-menu-button:armed > .label {
     -fx-color: -fx-pressed-base;
 }
 
 /* The SplitMenuButton skin uses an inner Label part */
-.split-menu-button .label {
+.split-menu-button > .label {
     -fx-background-color:  -fx-outer-border, -fx-inner-border, -fx-body-color;
     -fx-background-insets: 0, 1, 2;
     -fx-background-radius: 5 0 0 5, 4 0 0 4, 3 0 0 3;
     -fx-padding: 0.166667em 1.5em 0.25em 0.833333em; /* 2 18 3 10 */
 }
 
-.split-menu-button .arrow-button {
+.split-menu-button > .arrow-button {
     -fx-background-color: -fx-outer-border, -fx-inner-border, -fx-body-color;
     -fx-background-insets: 0, 1, 2;
     -fx-background-radius: 0 5 5 0, 0 4 4 0, 0 3 3 0;
     -fx-padding: 0.5em 0.416667em 0.5em 0.416667em; /* 6 5 6 5 */
 }
 
-.split-menu-button .arrow-button:hover {
+.split-menu-button > .arrow-button:hover {
     -fx-color: -fx-hover-base;
 }
 
-.split-menu-button .arrow-button:armed {
+.split-menu-button > .arrow-button:armed {
     -fx-color: -fx-pressed-base;
 }
 
-.split-menu-button .arrow {
+.split-menu-button > .arrow-button > .arrow {
     -fx-background-color: -fx-mark-highlight-color, -fx-mark-color;
     -fx-background-insets: 1 0 -1 0, 0;
     -fx-padding: 0.25em; /* 3 */
     -fx-shape: "M 0 -3.5 v 7 l 4 -3.5 z";
 }
 
-.split-menu-button:openvertically .arrow {
+.split-menu-button:openvertically > .arrow-button > .arrow {
     -fx-padding: 0.166667em 0.333333em 0.166667em 0.333333em; /* 2 4 2 4 */
     -fx-shape: "M 0 0 h 7 l -3.5 4 z";
 }
@@ -1869,7 +1875,7 @@
     -fx-opacity: -fx-disabled-opacity;
 }
 
-.split-menu-button:show-mnemonics .mnemonic-underline {
+.split-menu-button:show-mnemonics > .mnemonic-underline {
     -fx-stroke: -fx-text-fill;
 } 
 
@@ -1930,19 +1936,19 @@
     -fx-alignment: TOP_LEFT;
 }
 
-.tool-bar .separator:vertical .line {
+.tool-bar > .separator:vertical > .line {
     -fx-border-style: solid;
     -fx-background-color: null;
     -fx-border-color:  transparent derive(-fx-base,-35%) transparent transparent;
 }
 
-.tool-bar .separator:horizontal .line {
+.tool-bar > .separator:horizontal > .line {
     -fx-border-style: solid;
     -fx-background-color: null;
     -fx-border-color:  transparent transparent derive(-fx-base,-35%) transparent;
 }
 
-.tool-bar:vertical .separator {
+.tool-bar:vertical > .separator {
     -fx-orientation: horizontal;    
     -fx-padding: 0.0em 0.0835em 0.0em 0.0835em; /* 0 1 0 1 */
 }
@@ -1959,7 +1965,7 @@
     -fx-alignment: CENTER_LEFT;
 }
 
-.tool-bar:horizontal .separator {
+.tool-bar:horizontal > .separator {
     -fx-orientation: vertical;
     -fx-padding: 0.0835em 0.0em 0.0835em 0.0em; /* 1 0 1 0 */
 }
@@ -1969,19 +1975,19 @@
     -fx-padding: 0.666667em 0.916667em 0em 0em; /* 8 11 0 0 */
 }
 
-.tool-bar-overflow-button .arrow {
+.tool-bar-overflow-button > .arrow {
     -fx-background-color: -fx-mark-highlight-color, -fx-mark-color;
     -fx-background-insets: 1 0 -1 0, 0;
     -fx-padding: 0.666667em 0.916667em 0em 0em; /* 8 11 0 0 */
     -fx-shape: "M337.273,297.622l-0.016,1.069l2.724,2.639l-2.723,2.628l0.015,1.048h0.881l3.81-3.685l-3.788-3.699H337.273z M343.783,297.622h-0.902l-0.015,1.069l2.724,2.639l-2.724,2.628l0.015,1.048h0.882l3.809-3.685L343.783,297.622z" ;
 }
 
-.tool-bar-overflow-button:focused .arrow {
+.tool-bar-overflow-button:focused > .arrow {
    -fx-background-color: -fx-mark-highlight-color, derive(-fx-accent, -15%);
    -fx-background-insets: 1 0 -1 0, 0;
 }
 
-.tool-bar-overflow-button:hover .arrow {
+.tool-bar-overflow-button:hover > .arrow {
    -fx-background-color: -fx-mark-highlight-color, derive(-fx-hover-base, -35%);
    -fx-background-insets: 1 0 -1 0, 0;
 }
@@ -2004,7 +2010,7 @@
     -fx-indeterminate-bar-animation-time: 2;
 }
 
-.progress-bar .bar {
+.progress-bar > .bar {
     -fx-background-color:
         -fx-box-border,
         linear-gradient(to bottom, derive(-fx-accent,95%), derive(-fx-accent,10%)),
@@ -2013,11 +2019,11 @@
     -fx-padding: 0.416667em; /* 5 */
 }
 
-.progress-bar:indeterminate .bar {
+.progress-bar:indeterminate > .bar {
     -fx-background-color: linear-gradient(to left, transparent, -fx-accent);
 }
 
-.progress-bar .track {
+.progress-bar > .track {
      -fx-background-color:
         -fx-box-border,
         linear-gradient(to bottom, derive(-fx-color,-15%), derive(-fx-color,2.2%) 20%, derive(-fx-color,60%));
@@ -2039,7 +2045,7 @@
     -fx-progress-color: dodgerblue;
 }
 
-.progress-indicator .indicator {
+.progress-indicator > .determinate-indicator > .indicator {
     -fx-background-color:
         -fx-box-border,
         -fx-outer-border,
@@ -2049,7 +2055,7 @@
     -fx-padding: 0.083333em; /* 1 */
 }
 
-.progress-indicator .progress {
+.progress-indicator > .determinate-indicator > .progress {
     -fx-background-color:
         linear-gradient(to bottom, derive(-fx-box-border,38%), derive(-fx-box-border,-60%)),
         linear-gradient(to bottom, derive(-fx-box-border,38%), -fx-box-border);
@@ -2058,7 +2064,7 @@
 }
 
 /* TODO: scaling the shape seems to make it disappear */
-.progress-indicator .tick {
+.progress-indicator > .determinate-indicator > .tick {
     -fx-background-color: -fx-mark-color, white;
     -fx-background-insets: 1 0 -1 0, 0;
     -fx-padding: 0.416667em; /* 5 */
@@ -2066,11 +2072,11 @@
     -fx-scale-shape: false;
 }
 
-.progress-indicator:indeterminate .spinner {
+.progress-indicator:indeterminate > .spinner {
     -fx-padding: 0.833333em; /* 10 */
 }
 
-.progress-indicator .percentage {
+.progress-indicator > .percentage {
     -fx-font-size: 0.916667em; /* 11pt - 1 less than the default font */
     -fx-fill: -fx-text-background-color;
 }
@@ -2117,17 +2123,17 @@
     -fx-opacity: -fx-disabled-opacity;
 }
 
-.table-view .scroll-bar:vertical{
+.table-view > .virtual-flow > .scroll-bar:vertical{
     -fx-background-insets: 0, 0 0 0 1;
-    -fx-padding: 0.0 0.0 0.0 0.0;
+    -fx-padding: -1 -1 -1 0;
 }
 
-.table-view .scroll-bar:horizontal{
+.table-view > .virtual-flow > .scroll-bar:horizontal{
     -fx-background-insets: 0, 1 0 0 0;
-    -fx-padding: 0.0 0.0 0.0 0.0;
+    -fx-padding: 0 -1 -1 -1;
 }
 
-.table-view .corner {
+.table-view > .virtual-flow > .corner {
     -fx-background-color: -fx-box-border, -fx-base;
     -fx-background-insets: 0, 1 0 0 1;
 }
@@ -2158,24 +2164,25 @@
 }
 
 /* When the table-row-cell is selected and focused */
-.table-view:focused .table-row-cell:filled:focused:selected {
+.table-view:focused > .virtual-flow > .clipped-container > .sheet > .table-row-cell:filled:focused:selected {
     -fx-background-color: -fx-focus-color, -fx-cell-focus-inner-border, -fx-selection-bar;
     -fx-background-insets: 0, 1, 2;
     -fx-background: -fx-accent;
     -fx-text-fill: -fx-selection-bar-text;
 }
 
-.table-view:focused .table-row-cell:filled:selected .table-cell {
+.table-view:focused > .virtual-flow > .clipped-container > .sheet > .table-row-cell:filled:selected > .table-cell {
     -fx-text-fill: -fx-selection-bar-text;
 }
 
-.table-view:focused .table-row-cell:filled:selected, .table-view:row-selection .table-row-cell:filled:hover:selected {
+.table-view:focused > .virtual-flow > .clipped-container > .sheet > .table-row-cell:filled:selected, 
+.table-view:row-selection > .virtual-flow > .clipped-container > .sheet > .table-row-cell:filled:hover:selected {
     -fx-background: -fx-accent;
     -fx-background-color: -fx-selection-bar;
     -fx-text-fill: -fx-selection-bar-text;
 }
 
-.table-view:focused .table-row-cell:filled:focused:selected:hover {
+.table-view:focused > .virtual-flow > .clipped-container > .sheet > .table-row-cell:filled:focused:selected:hover {
     -fx-background: -fx-accent;
     -fx-background-color: -fx-focus-color, -fx-cell-focus-inner-border, -fx-selection-bar;
     -fx-background-insets: 0, 1, 2;
@@ -2183,7 +2190,8 @@
 }
 
 /* When the TableView is _not_ focused, we show alternate selection colors */
-.table-row-cell:filled:selected:focused, .table-row-cell:filled:selected {
+.table-row-cell:filled:selected:focused, 
+.table-row-cell:filled:selected {
     -fx-background-color: lightgray;
     -fx-text-fill: -fx-selection-bar-text;
 }
@@ -2192,13 +2200,13 @@
     -fx-opacity: -fx-disabled-opacity;
 }
 
-.table-view:row-selection .table-row-cell:filled:hover { 
+.table-view:row-selection > .virtual-flow > .clipped-container > .sheet > .table-row-cell:filled:hover { 
     -fx-background-color: -fx-table-cell-border-color, -fx-cell-hover-color;
     -fx-background-insets: 0, 0 0 1 0;
     -fx-text-fill: -fx-text-inner-color;
 }
 
-.table-view:row-selection .table-row-cell:filled:focused:hover { 
+.table-view:row-selection > .virtual-flow > .clipped-container > .sheet > .table-row-cell:filled:focused:hover { 
     -fx-background-color: -fx-table-cell-border-color, -fx-focus-color, -fx-cell-focus-inner-border, -fx-cell-hover-color;
     -fx-background-insets: 0, 0 0 1 0, 1 1 2 1, 2 2 3 2, 3 3 4 3;
     -fx-text-fill: -fx-text-inner-color;
@@ -2218,10 +2226,10 @@
 /* When in constrained resize mode, the right-most visible cell should not have
    a right-border, as it is not possible to get this cleanly out of view without
    introducing horizontal scrollbars (see RT-14886). */
-.table-view:constrained-resize .table-cell:last-visible {
+.table-view:constrained-resize > .virtual-flow > .clipped-container > .sheet > .table-row-cell > .table-cell:last-visible {
     -fx-border-color: transparent;
 }
-.table-view:constrained-resize .column-header:last-visible {
+.table-view:constrained-resize > .column-header:last-visible {
     -fx-border-width: 0.083333em 0.0em 0.083333em 0.083333em, 0.083333em 0.0em 0.083333em 0.083333em;
 }
 .table-view:constrained-resize .filler {
@@ -2235,26 +2243,27 @@
     -fx-border-insets: 0 1 1 1, 0 0 0 0;
 }
 
-.table-view:focused .table-cell:focused {
+.table-view:focused > .virtual-flow > .clipped-container > .sheet > .table-row-cell > .table-cell:focused {
     -fx-background-color: -fx-focus-color, -fx-cell-focus-inner-border, -fx-control-inner-background;
     -fx-background-insets: 0 1 0 0, 1 2 1 1, 2 3 2 2;
 }
 
-.table-view:focused .table-row-cell:filled .table-cell:focused:selected {
+.table-view:focused > .virtual-flow > .clipped-container > .sheet > .table-row-cell:filled .table-cell:focused:selected {
     -fx-background-color: -fx-focus-color, -fx-cell-focus-inner-border, -fx-selection-bar;
     -fx-background-insets: 0 1 0 0, 1 2 1 1, 2 3 2 2;
     -fx-background: -fx-accent;
     -fx-text-fill: -fx-selection-bar-text;
 }
 
-.table-view:focused .table-row-cell:filled .table-cell:selected, .table-view:cell-selection .table-row-cell:filled .table-cell:hover:selected {
+.table-view:focused > .virtual-flow > .clipped-container > .sheet > .table-row-cell:filled > .table-cell:selected, 
+.table-view:cell-selection > .virtual-flow > .clipped-container > .sheet > .table-row-cell:filled > .table-cell:hover:selected {
     -fx-background: -fx-accent;
     -fx-background-color: -fx-selection-bar;
     -fx-text-fill: -fx-selection-bar-text;
     -fx-background-insets: 0 0 1 0;
 }
 
-.table-view:focused .table-row-cell:filled .table-cell:focused:selected:hover {
+.table-view:focused > .virtual-flow > .clipped-container > .sheet > .table-row-cell:filled > .table-cell:focused:selected:hover {
     -fx-background: -fx-accent;
     -fx-background-color: -fx-focus-color, -fx-cell-focus-inner-border, -fx-selection-bar;
     -fx-background-insets: 0 1 0 0, 1 2 1 1, 2 3 2 2;
@@ -2262,7 +2271,8 @@
 }
 
 /* When the TableView is _not_ focused, we show alternate selection colors */
- .table-row-cell:filled .table-cell:selected:focused,  .table-row-cell:filled .table-cell:selected {
+ .table-row-cell:filled > .table-cell:selected:focused, 
+ .table-row-cell:filled > .table-cell:selected {
     -fx-background-color: lightgray;
     -fx-text-fill: -fx-selection-bar-text;
 }
@@ -2276,13 +2286,13 @@
     -fx-background-insets: 0, 1.4;
 }*/
 
-.table-view:cell-selection  .table-row-cell:filled .table-cell:hover {
+.table-view:cell-selection > .virtual-flow > .clipped-container > .sheet > .table-row-cell:filled > .table-cell:hover {
     -fx-background-color: -fx-cell-hover-color;
     -fx-text-fill: -fx-text-inner-color;
     -fx-background-insets: 0 0 1 0;
 }
 
-.table-view:cell-selection .table-row-cell:filled .table-cell:focused:hover {
+.table-view:cell-selection > .virtual-flow > .clipped-container > .sheet > .table-row-cell:filled > .table-cell:focused:hover {
     -fx-background-color: -fx-focus-color, -fx-cell-focus-inner-border, -fx-cell-hover-color;
     -fx-background-insets: 0 1 0 0, 1 2 1 1, 2 3 2 2;
     -fx-text-fill: -fx-text-inner-color;
@@ -2305,7 +2315,8 @@
 /* The column header row is made up of a number of column-header, one for each
    TableColumn, and a 'filler' area that extends from the right-most column
    to the edge of the tableview, or up to the 'column control' button. */
-.table-view .column-header, .table-view .filler {
+.table-view .column-header,
+.table-view .filler {
     -fx-text-fill: -fx-selection-bar-text;
 
     /* TODO: for some reason, this doesn't scale. */
@@ -2331,7 +2342,7 @@
     -fx-font-size: 0.916667em; /* 11pt - 1 less than the default font */
 }
 
-.table-view .show-hide-columns-button {
+.table-view > .column-header-background > .show-hide-columns-button {
     -fx-background-color: -fx-body-color;
 
     -fx-border-color:
@@ -2342,7 +2353,7 @@
         linear-gradient(to bottom, derive(-fx-base,80%) 20%, derive(-fx-base,-10%) 90%),
         /* outer border: Slightly different to the above*/
         transparent transparent -fx-table-header-border-color -fx-table-header-border-color;
-    -fx-border-insets: 0 0 1 1, 0 0 0 0;
+    -fx-border-insets: 0 0 0 1, 0 0 0 0;
 }
 
 .table-view .show-hide-column-image {
@@ -2374,7 +2385,7 @@
     -fx-opacity: 0.3;
 }
 
-.table-view .arrow {
+.table-view /*> column-header-background > nested-column-header >*/ .arrow {
     -fx-background-color: -fx-mark-highlight-color, -fx-mark-color;
     -fx-background-insets: 1 0 -1 0, 0;
     -fx-padding: 0.25em 0.3125em 0.25em 0.3125em; /* 3 3.75 3 3.75 */
@@ -2420,14 +2431,14 @@
     -fx-padding: 0.0em 0.25em 0.0em 0.0em; /* 0 3 0 0 */
 }
 
-.titled-pane > .title > .arrow-button .arrow {
+.titled-pane > .title > .arrow-button > .arrow {
     -fx-background-color: -fx-mark-highlight-color, -fx-mark-color;
     -fx-background-insets: 1 0 -1 0, 0;
     -fx-padding: 0.25em 0.3125em 0.25em 0.3125em; /* 3 3.75 3 3.75 */
     -fx-shape: "M 0 0 h 7 l -3.5 4 z";
 }
 
-.titled-pane:collapsed > .title > .arrow-button .arrow {
+.titled-pane:collapsed > .title > .arrow-button > .arrow {
     -fx-rotate: -90;
 }
 
@@ -2439,7 +2450,7 @@
     -fx-padding: 0.167em;
 }
 
-.titled-pane:focused > .title > .arrow-button .arrow {
+.titled-pane:focused > .title > .arrow-button > .arrow {
     -fx-background-color: white;
 }
 
@@ -2454,7 +2465,7 @@
     -fx-skin: "com.sun.javafx.scene.control.skin.AccordionSkin";
 }
 
-.accordion .titled-pane .title {
+.accordion > .titled-pane > .title {
     -fx-background-color:
         -fx-box-border,
         -fx-inner-border,
@@ -2463,35 +2474,35 @@
     -fx-background-radius: 0, 0, 0;
 }
 
-.accordion .first-titled-pane .title {
+.accordion > .first-titled-pane > .title {
     -fx-background-insets: 0, 1, 2;
 }
 
-.accordion .titled-pane:focused > .title {
+.accordion > .titled-pane:focused > .title {
     -fx-color: -fx-focus-color;
 }
 
-.accordion .titled-pane:focused {
+.accordion > .titled-pane:focused {
     -fx-text-fill: white;
 }
 
-.accordion .titled-pane:focused > .title > .arrow-button .arrow {
+.accordion > .titled-pane:focused > .title > .arrow-button > .arrow {
     -fx-background-color: white;
 }
 
-.accordion .titled-pane:focused .titled-pane:collapsed > .title > .arrow-button .arrow {
+.accordion > .titled-pane:focused > .titled-pane:collapsed > .title > .arrow-button > .arrow {
     -fx-background-color: white;
 }
 
-.accordion .titled-pane:collapsed:focused > .title {
+.accordion > .titled-pane:collapsed:focused > .title {
     -fx-color: -fx-focus-color;
 }
 
-.accordion .titled-pane:expanded:focused > .title {
+.accordion > .titled-pane:expanded:focused > .title {
     -fx-color: -fx-focus-color;
 }
 
-.accordion .titled-pane:hover > .title {
+.accordion > .titled-pane:hover > .title {
     -fx-color: -fx-hover-base;
 }
 
@@ -2501,11 +2512,11 @@
  *                                                                             *
  ******************************************************************************/
 
-.split-pane > * > * > .table-view { -fx-padding: 0px; }
-.split-pane > * > * > .list-view { -fx-padding: 0px; }
-.split-pane > * > * > .tree-view { -fx-padding: 0px; }
-.split-pane > * > * > .scroll-pane { -fx-padding: 0px; }
-.split-pane > * > * > .split-pane {
+.split-pane .table-view { -fx-padding: 0px; }
+.split-pane .list-view { -fx-padding: 0px; }
+.split-pane .tree-view { -fx-padding: 0px; }
+.split-pane .scroll-pane { -fx-padding: 0px; }
+.split-pane .split-pane {
     -fx-background-insets: 0, 0;
     -fx-padding: 0;
  }
@@ -2517,32 +2528,32 @@
     -fx-padding: 1;
 }
 
-.split-pane *.split-pane-divider {
+.split-pane > .split-pane-divider {
     -fx-padding: 0 2 0 2; /* 0 3 0 3 */
 }
 
 /* horizontal the two nodes are placed to the left/right of each other. */
-.split-pane:horizontal > * > .split-pane-divider {
+.split-pane:horizontal > .split-pane-divider {
    -fx-border-color: transparent -fx-box-border transparent #BBBBBB;
    -fx-background-color: transparent, -fx-inner-border-horizontal;
    -fx-background-insets: 0, 0 1 0 1;
 }
 
 /* vertical the two nodes are placed on top of each other. */
-.split-pane:vertical > * > .split-pane-divider {
+.split-pane:vertical > .split-pane-divider {
    -fx-border-color:  #BBBBBB transparent -fx-box-border transparent;
    -fx-background-color: transparent, -fx-inner-border;
    -fx-background-insets: 0, 1 0 1 0;
 }
 
-.split-pane *.horizontal-grabber {
+.split-pane > .split-pane-divider > .horizontal-grabber {
     -fx-padding: 5 1 5 1;
     -fx-background-color: #FFFFFF, -fx-box-border;
     -fx-background-insets: 1 0 -1 0, 0;
     -fx-shape: "M0 0 L0 0 L2 0 L2 2 L0 2 Z M0 4 L0 4 L2 4 L2 6 L0 6 Z M0 8 L0 8 L2 8 L2 10 L0 10 Z";
 }
 
-.split-pane *.vertical-grabber {
+.split-pane > .split-pane-divider > .vertical-grabber {
     -fx-padding: 1 5 1 5;
     -fx-background-color: #FFFFFF, -fx-box-border;
     -fx-background-insets: 1 0 -1 0, 0;
@@ -2563,7 +2574,7 @@
     -fx-tab-max-height: 2em; /* 24 */
 }
 
-.tab .tab-label {
+.tab-pane > .tab-header-area > .headers-region > .tab > .tab-container > .tab-label {
     -fx-skin: "com.sun.javafx.scene.control.skin.LabelSkin";
     -fx-background-color: transparent;    
     -fx-alignment: CENTER;
@@ -2574,13 +2585,13 @@
     -fx-effect: dropshadow(two-pass-box , rgba(255, 255, 255, 0.4), 1, 0.0 , 0, 1);
 }*/
 
-.tab-content-area {
+.tab-pane > .tab-content-area {
     -fx-background-color: -fx-control-inner-background;
     -fx-padding: 0.0em; /* 0 */
     /* -fx-opacity: -fx-disabled-opacity;*/
 }
 
-.tab {
+.tab-pane > .tab-header-area > .headers-region > .tab {
     /* This is how it is done in Button, but the -1 inset caused a white line  */
     /* to appear beneath the tab, which looks bad, so it's taken out below.    */
 /*    -fx-background-color: -fx-shadow-highlight-color, -fx-tab-border-color, -fx-inner-border, -fx-body-color;
@@ -2592,27 +2603,27 @@
 /*    -fx-text-fill: -fx-text-base-color;*/
 }
 
-.tab:top {
+.tab-pane > .tab-header-area > .headers-region > .tab:top {
     -fx-background-color: -fx-tab-border-color, -fx-inner-border, -fx-body-color;
 }
 
-.tab:right {
+.tab-pane > .tab-header-area > .headers-region > .tab:right {
     -fx-background-color: -fx-tab-border-color, -fx-inner-border-bottomup, -fx-body-color-bottomup;
 }
 
-.tab:bottom {
+.tab-pane > .tab-header-area > .headers-region > .tab:bottom {
     -fx-background-color: -fx-tab-border-color, -fx-inner-border-bottomup, -fx-body-color-bottomup;
 }
 
-.tab:left {
+.tab-pane > .tab-header-area > .headers-region > .tab:left {
     -fx-background-color: -fx-tab-border-color, -fx-inner-border, -fx-body-color;
 }
 
-.tab:hover {
+.tab-pane > .tab-header-area > .headers-region > .tab:hover {
     -fx-color: -fx-hover-base;
 }
 
-.tab:selected {
+.tab-pane > .tab-header-area > .headers-region > .tab:selected {
 /*    -fx-background-color: white;*/
 
 /*    -fx-background-color: -fx-tab-border-color, -fx-inner-border, -fx-body-color;
@@ -2623,16 +2634,16 @@
     -fx-background-radius: 5 5 0 0, 4 4 0 0;
 }
 
-.tab:disabled {
+.tab-pane > .tab-header-area > .headers-region > .tab:disabled {
     -fx-opacity: -fx-disabled-opacity;
 }
 
-.tab:disabled:hover {
+.tab-pane > .tab-header-area > .headers-region > .tab:disabled:hover {
     -fx-color: -fx-base;
     -fx-opacity: -fx-disabled-opacity;
 }
 
-.tab-pane *.tab-header-background {
+.tab-pane > .tab-header-area > .tab-header-background {
     -fx-background-color: -fx-outer-border, -fx-inner-border, derive(-fx-color, -20%);
     -fx-effect: innershadow(two-pass-box , rgba(0,0,0,0.6) , 4, 0.0 , 0 , 0);
 }
@@ -2643,61 +2654,61 @@
 /*    -fx-background-color: -fx-tab-border-color, lightgray;*/
 /*}*/
 
-.tab-pane:top *.tab-header-area {
+.tab-pane:top > .tab-header-area {
     -fx-background-insets: 0, 0 0 1 0;
     -fx-padding: 0.416667em 0.166667em 0.0em 0.833em; /* 5 2 0 10 */
 }
 
-.tab-pane:bottom *.tab-header-area {
+.tab-pane:bottom > .tab-header-area {
     -fx-background-insets: 0, 1 0 0 0;
     -fx-padding: 0 0.166667em 0.416667em 0.833em; /* 0 2 5 0 */
 }
 
-.tab-pane:left *.tab-header-area {
+.tab-pane:left > .tab-header-area {
     -fx-background-insets: 0, 0 1 0 0;
     -fx-padding: 0.833em 0.0em 0.166667em 0.416667em; /* 10 0 2 5 */
 }
 
-.tab-pane:right *.tab-header-area {
+.tab-pane:right > .tab-header-area {
     -fx-background-insets: 0, 0 0 0 1;
     -fx-padding: 0.833em 0.416667em 0.166667em 0.0em; /* 10 5 2 0 */
 }
 
-.tab-pane .headers-region {
+.tab-pane > .tab-header-area > .headers-region {
     -fx-effect: dropshadow(two-pass-box , rgba(0,0,0,0.6) , 4, 0.0 , 0, 0);
 }
 
 /* TODO: scaling the shape seems to make it way too large */
-.tab-close-button {
+.tab-pane > .tab-header-area > .headers-region > .tab > .tab-container > .tab-close-button {
     -fx-background-color: -fx-mark-color;
     -fx-shape: "M 0,0 H1 L 4,3 7,0 H8 V1 L 5,4 8,7 V8 H7 L 4,5 1,8 H0 V7 L 3,4 0,1 Z";
     -fx-scale-shape: false;
     -fx-effect: dropshadow(two-pass-box , rgba(255, 255, 255, 0.4), 1, 0.0 , 0, 1);
 }
 
-.tab-close-button:hover {
+.tab-pane > .tab-header-area > .headers-region > .tab > .tab-container > .tab-close-button:hover {
     -fx-background-color: derive(-fx-mark-color, -30%);
 }
 
 /* CONTROL BUTTONS */
-.control-buttons-tab {
+.tab-pane > .tab-header-area > .headers-region > .control-buttons-tab {
     -fx-background-color: -fx-tab-border-color, -fx-inner-border, -fx-body-color;
     -fx-background-insets: 0, 1, 2;
     -fx-background-radius: 5 5 0 0, 4 4 0 0, 3 3 0 0;
     -fx-padding: 0.083333em 0.25em 0.083333em 0.25em; /* 1 3 1 3 */
 }
 
-.tab-down-button {
+.tab-pane > .tab-header-area > .control-buttons-tab > .tab-down-button {
     -fx-background-color: transparent;
     -fx-padding: 0.0em 0.416667em 0.0em 0.416667em; /* 0 5 0 5 */
 }
 
-.tab-down-button:hover {
+.tab-pane > .tab-header-area > .control-buttons-tab > .tab-down-button:hover {
     -fx-background-color: -fx-body-color;
     -fx-color: -fx-hover-base;
 }
 
-.tab-down-button .arrow {
+.tab-pane > .tab-header-area > .control-buttons-tab > .tab-down-button .arrow {
     -fx-background-color: -fx-mark-highlight-color, -fx-mark-color;
     -fx-background-insets: 1 0 -1 0, 0;
     -fx-padding: 0.238083em 0.416667em 0.238083em 0.416667em; /* 2.857 5 2.857 5 */
@@ -2705,27 +2716,27 @@
 }
 
 /* FLOATING TABS CUSTOMISATION */
-.tab-pane.floating *.tab-header-background {
+.tab-pane.floating > .tab-header-area > .tab-header-background {
     -fx-background-color: null;
 }
 
-.tab-pane.floating *.tab-header-area {
+.tab-pane.floating > .tab-header-area {
     -fx-background-color: null;
 }
 
-.tab-pane.floating *.tab-content-area {
+.tab-pane.floating > .tab-content-area {
     -fx-background-color: -fx-tab-border-color, -fx-control-inner-background;
     -fx-background-insets: 0, 1;
     -fx-background-radius: 5, 4;
 }
 
-.tab-pane.floating *.tab {
+.tab-pane.floating > .tab-header-area > .headers-region > .tab {
     -fx-background-color: -fx-tab-border-color, -fx-inner-border, -fx-body-color;
     -fx-background-insets: 0, 1, 2;
     -fx-background-radius: 5 5 0 0, 4 4 0 0, 3 3 0 0;
 }
 
-.tab-pane.floating *.tab:selected {
+.tab-pane.floating  > .tab-header-area > .headers-region > .tab:selected {
     -fx-background-color: -fx-tab-border-color, -fx-control-inner-background;
     -fx-background-insets: 0 0 -1 0, 1 1 -1 1;
     -fx-background-radius: 5 5 0 0, 4 4 0 0;
@@ -2969,13 +2980,13 @@
                           linear-gradient(to top, derive(-fx-bar-fill,30%), derive(-fx-bar-fill,-10%));
    -fx-background-radius: 0 0 5 5, 0 0 4 4, 0 0 3 3;
 }
-.bar-chart:horizontal .chart-bar {
+.bar-chart:horizontal .chart-bar, .stacked-bar-chart:horizontal .chart-bar {
     -fx-background-color: linear-gradient(to left, derive(-fx-bar-fill,-30%), derive(-fx-bar-fill,-40%)),
                           linear-gradient(to left, derive(-fx-bar-fill,80%), derive(-fx-bar-fill, 0%)),
                           linear-gradient(to left, derive(-fx-bar-fill,30%), derive(-fx-bar-fill,-10%));
     -fx-background-radius: 0 5 5 0, 0 4 4 0, 0 3 3 0;
 }
-.bar-chart:horizontal .negative.chart-bar {
+.bar-chart:horizontal .negative.chart-bar, .stacked-bar-chart:horizontal .negative.chart-bar {
     -fx-background-color: linear-gradient(to right, derive(-fx-bar-fill,-30%), derive(-fx-bar-fill,-40%)),
                           linear-gradient(to right, derive(-fx-bar-fill, 80%), derive(-fx-bar-fill, 0%)),
                           linear-gradient(to right, derive(-fx-bar-fill,30%), derive(-fx-bar-fill,-10%));
@@ -3055,7 +3066,7 @@
 }
 
 /* ------- OPEN BUTTON ------- */
-.combo-box-base .arrow-button {
+.combo-box-base > .arrow-button {
     -fx-background-color: -fx-outer-border, -fx-inner-border, -fx-body-color;
     -fx-background-insets: 0, 1, 2;
     -fx-background-radius: 0 5 5 0, 0 4 4 0, 0 3 3 0;
@@ -3074,11 +3085,17 @@
 }*/
 
 /* ------- ARROW* ------- */
-.combo-box-base .arrow {
+.combo-box-base > .arrow-button > .arrow,
+.web-view .form-select-button .arrow {
     -fx-background-insets: 1 0 -1 0, 0;
     -fx-background-color: -fx-mark-highlight-color, -fx-mark-color;
     -fx-padding: 0.166667em 0.333333em 0.166667em 0.333333em; /* 2 4 2 4 */
     -fx-shape: "M 0 0 h 7 l -3.5 4 z";
+}
+
+.web-view .form-select-button {
+    -fx-background-radius: 2, 2, 1, 0;
+    -fx-background-insets: 2 2 1 2, 2, 3, 4;
 }
 
 /* ------- POPUP MENU ------- */
@@ -3092,7 +3109,7 @@ all inherit from Menu Control's popup-menu. --- */
 /*--- The editable ComboBox TextBox inherits its properties from the TextBox Control.
 Only the properties with values that are different from the TextBox are specified here. ---*/
 
-.combo-box-base:editable .text-field {
+.combo-box-base:editable > .text-field {
     -fx-padding: 3 5 2 5;
     -fx-background-radius: 4 5 5 4, 3 4 4 3, 2 3 3 2;
     -fx-background-insets: 0 0 -1 0, 0, 1;
@@ -3100,7 +3117,7 @@ Only the properties with values that are different from the TextBox are specifie
     -fx-content-display: LEFT;
 }
 
-.combo-box-base:editable .text-field:focused {
+.combo-box-base:editable > .text-field:focused {
     -fx-background-color: -fx-focus-color, -fx-outer-border, -fx-control-inner-background;
     -fx-background-radius: 5.4, 3, 2;
     -fx-background-insets: -1.4, 0, 1;
@@ -3118,34 +3135,35 @@ Only the properties with values that are different from the TextBox are specifie
 }
 
 /* Customie the ListCell that appears in the ComboBox button itself */
-.combo-box .list-cell {
+.combo-box > .list-cell {
     -fx-background: transparent;
     -fx-background-color: transparent;
     -fx-text-fill: -fx-text-base-color;
     -fx-padding: 3 0 2 7;
-    -fx-cell-size: 1.66667em; /* 20 */
+    -fx-cell-size: 1.7500em; /* 21 */
 }
 
-.combo-box-popup .list-view {
+.combo-box-popup > .list-view {
     -fx-background-color: -fx-box-border, -fx-control-inner-background;
     -fx-background-insets: 0, 1;
     -fx-effect: dropshadow( three-pass-box , rgba(0,0,0,0.6) , 8, 0.0 , 0 , 0 );
 }
 
-.combo-box-popup .list-view .list-cell {
+.combo-box-popup > .list-view > .virtual-flow > .clipped-container > .sheet > .list-cell {
     -fx-padding: 4 0 4 5;
     
     /* No alternate highlighting */
     -fx-background-color: -fx-control-inner-background;
 }
 
-.combo-box-popup .list-view .list-cell:filled:selected, .combo-box-popup .list-view .list-cell:filled:selected:hover {
+.combo-box-popup > .list-view > .virtual-flow > .clipped-container > .sheet > .list-cell:filled:selected, 
+.combo-box-popup  > .list-view > .virtual-flow > .clipped-container > .sheet > .list-cell:filled:selected:hover {
     -fx-background: -fx-accent;
     -fx-background-color: -fx-selection-bar;
     -fx-text-fill: -fx-selection-bar-text;
 }
 
-.combo-box-popup .list-view .list-cell:filled:hover {
+.combo-box-popup  > .list-view > .virtual-flow > .clipped-container > .sheet > .list-cell:filled:hover {
     -fx-background-color: -fx-cell-hover-color;
     -fx-text-fill: -fx-text-inner-color;
 }
@@ -3155,18 +3173,18 @@ Only the properties with values that are different from the TextBox are specifie
     -fx-skin: "com.sun.javafx.scene.control.skin.ColorPickerSkin";
 }
 
-.color-picker .arrow-button {
+.color-picker > .arrow-button {
     -fx-background-color: null;
     -fx-background-insets: 0, 1, 2;
     -fx-background-radius: 0 5 5 0, 0 4 4 0, 0 3 3 0;
     -fx-padding: 0.5em 0.416667em 0.5em 0.416667em; /* 6 5 6 5 */
 }
 
-.color-picker .color-picker-label .text {
+.color-picker > .color-picker-label > .text {
     -fx-padding: 0.0em 0.833333em 0.0em 0.0em;  /* 0 10 0 0 */
 }
 
-.color-picker .split-button .arrow-button {
+.color-picker > .split-button > .arrow-button {
     -fx-background-color: -fx-outer-border, -fx-inner-border, -fx-body-color;
     -fx-background-insets: 0, 1, 2;
     -fx-background-radius: 0 5 5 0, 0 4 4 0, 0 3 3 0;
@@ -3177,20 +3195,20 @@ Only the properties with values that are different from the TextBox are specifie
     -fx-color: -fx-base;
 }
 
-.color-picker .split-button .arrow-button:hover {
+.color-picker > .split-button > .arrow-button:hover {
     -fx-color: -fx-hover-base;
 }
 
-.color-picker .split-button .color-picker-label:hover {
+.color-picker > .split-button > .color-picker-label:hover {
      -fx-color: -fx-hover-base;
 }
 
-.color-picker .picker-color {
+.color-picker > .color-picker-label > .picker-color {
     -fx-padding: 4;
     -fx-background-color: null;
 }
 
-.color-picker .picker-color .picker-color-rect {
+.color-picker > .color-picker-label > .picker-color > .picker-color-rect {
     -fx-stroke: -fx-pressed-base;
 }
 
@@ -3209,34 +3227,35 @@ Only the properties with values that are different from the TextBox are specifie
     -fx-effect: dropshadow( three-pass-box , rgba(0,0,0,0.6) , 8, 0.0 , 0 , 0 );
 }
 
-.color-palette .color-rect {
+.color-palette > .color-picker-grid > .color-square > .color-rect {
     -fx-stroke: black;
     -fx-stroke-width: 0.4;
     -fx-border-color: black;
 }
 
-.color-palette .color-picker-grid {
+.color-palette > .color-picker-grid {
     -fx-border-color: black;
 }
 
-.color-palette .color-square {
+.color-palette > .color-picker-grid > .color-square {
     -fx-background-color: transparent;
     -fx-background-insets: -1, 0;   
     -fx-padding: 0.5;
     -fx-border: black;
 }
 /* the color over which the user is hovering */
-.color-palette .color-square:focused, .color-palette .color-square:selected:focused {
+.color-palette > .color-picker-grid > .color-square:focused, 
+.color-palette > .color-picker-grid > .color-square:selected:focused {
     -fx-background-color: -fx-focus-color;
 }
 
 /* the currently selected color */
-.color-palette .color-square:selected {
+.color-palette > .color-picker-grid > .color-square:selected {
 /*    -fx-background-color: derive(-fx-base, -27%)  #989898 , white, derive(-fx-base, -59%)  #555555 ;*/
     -fx-background-color: black;
 } 
 
-.color-palette .separator .line {
+.color-palette > .separator > .line {
     -fx-background-color: -fx-pressed-base;
 /*    -fx-background-color: white;*/
     -fx-padding: 6 0 0 0;
@@ -3244,12 +3263,13 @@ Only the properties with values that are different from the TextBox are specifie
     -fx-border-style: none;
     -fx-border-color: null;
 }
-.custom-color-dialog .color-rect-pane {
+
+.custom-color-dialog > .color-rect-pane {
     -fx-padding: 15 8 15 15;
 /*    -fx-background-color: -fx-background;*/
 }
 
-.custom-color-dialog .controls-pane {
+.custom-color-dialog > .controls-pane {
     -fx-padding: 15 15 15 0;
 /*    -fx-background-color: -fx-background;*/
 }
@@ -3454,30 +3474,30 @@ Only the properties with values that are different from the TextBox are specifie
     -fx-page-information-visible: true;
     -fx-page-information-alignment: bottom;    
 }
-.pagination .page {
+.pagination > .page {
     -fx-background-color: transparent;
 }
 
-.pagination .pagination-control {
+.pagination > .pagination-control {
     -fx-background-color: transparent;    
     -fx-padding: 0.833333em 0em 0.833333em 0em;
 }
 
-.pagination .pagination-control .control-box {
+.pagination > .pagination-control > .control-box {
     -fx-spacing: 4;
     -fx-alignment: center;
 }
 
-.pagination .pagination-control .left-arrow-button{
+.pagination > .pagination-control > .left-arrow-button{
     -fx-background-radius: 0;
     -fx-padding: 0.166667em 0.416em 0.25em 0.333em;
 }
-.pagination .pagination-control .right-arrow-button {
+.pagination > .pagination-control > .right-arrow-button {
     -fx-background-radius: 0;
     -fx-padding: 0.166667em 0.333em 0.25em 0.416em;
 }
 
-.pagination .pagination-control .left-arrow {
+.pagination > .pagination-control > .left-arrow {
     -fx-background-color: -fx-mark-highlight-color, -fx-mark-color;
     -fx-background-insets: 1 0 -1 0, 0;
     -fx-padding: 0.375em 0.291em 0.375em 0.291em;
@@ -3485,7 +3505,7 @@ Only the properties with values that are different from the TextBox are specifie
     -fx-scale-shape: true;
 }
 
-.pagination .pagination-control .right-arrow {
+.pagination > .pagination-control > .right-arrow {
     -fx-background-color: -fx-mark-highlight-color, -fx-mark-color;
     -fx-background-insets: 1 0 -1 0, 0;
     -fx-padding: 0.375em 0.291em 0.375em 0.291em;
@@ -3493,7 +3513,7 @@ Only the properties with values that are different from the TextBox are specifie
     -fx-scale-shape: true;
 }
 
-.pagination .pagination-control .bullet-button {   
+.pagination > .pagination-control > .control-box > .bullet-button {   
    -fx-background-radius: 0, 4em, 4em, 4em, 4em;
    -fx-padding: 0.333em;
    
@@ -3501,23 +3521,39 @@ Only the properties with values that are different from the TextBox are specifie
    -fx-background-insets: 0, 4 4 3 4,  5,  6,  7;
 }
 
-.pagination .pagination-control .bullet-button:selected {   
+.pagination > .pagination-control > .control-box > .bullet-button:selected {   
     -fx-base: -fx-accent;
 }
 
-.pagination.bullet .pagination-control .left-arrow-button, .pagination.bullet .pagination-control .right-arrow-button {
+.pagination.bullet > .pagination-control > .left-arrow-button, 
+.pagination.bullet > .pagination-control > .right-arrow-button {
     -fx-background-radius: 4em;
 }
 
-.pagination .pagination-control .number-button {
+.pagination > .pagination-control > .control-box > .number-button {
     -fx-background-radius: 0;
     -fx-padding: 0.166667em 0.25em 0.25em 0.333em;
     -fx-background-color: -fx-shadow-highlight-color, -fx-outer-border, -fx-inner-border, -fx-body-color;
 }
 
-.pagination .pagination-control .number-button:selected {   
+.pagination > .pagination-control > .control-box > .number-button:selected {   
     -fx-base: -fx-accent;
 }
-.pagination .pagination-control .page-information {   
+.pagination > .pagination-control > .page-information {   
     -fx-padding: 0.416em 0 0 0;
+}
+
+
+/*******************************************************************************
+ *                                                                             *
+ * TreeTableView                                                               *
+ *                                                                             *
+ ******************************************************************************/
+
+.tree-table-view {
+    -fx-skin: "com.sun.javafx.scene.control.skin.TreeTableViewSkin";
+}
+
+.tree-table-row {
+    -fx-skin: "com.sun.javafx.scene.control.skin.TreeTableRowSkin";
 }

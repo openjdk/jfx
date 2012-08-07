@@ -68,11 +68,15 @@ import javafx.scene.transform.Affine;
  * Each call pushes the necessary parameters onto the buffer
  * where it is executed on the image of the {@code Canvas} node.
  * <p>
- * A {@code Canvas} only contains one {@code GraphicsContext} and only one 
- * buffer and you can only issue commands to its GraphicsContext from one thread. 
- * Like any node, if the {@code Canvas} node is not attached to the scene, 
- * it can be modified by any thread. Once a {@code Canvas} node is attached to
- * the scene, it must be modified on the JavaFX Application Thread.
+ * A {@code Canvas} only contains one {@code GraphicsContext}, and only one buffer.
+ * If it is not attached to any scene, then it can be modified by any thread,
+ * as long as it is only used from one thread at a time. Once a {@code Canvas} 
+ * node is attached to a scene, it must be modified on the JavaFX Application 
+ * Thread.
+ * <p>
+ * Calling any method on the {@code GraphicsContext} is considered modifying
+ * its corresponding {@code Canvas} and is subject to the same threading
+ * rules. 
  * <p>
  * A {@code GraphicsContext} also manages a stack of state objects that can
  * be saved or restored at anytime. 
@@ -98,7 +102,7 @@ root.getChildren().add(canvas);
  * </pre>
  * </p>
  *
- * @since JavaFX 2.2
+ * @since 2.2
  */
 public final class GraphicsContext {
     Canvas theCanvas;
@@ -211,7 +215,6 @@ public final class GraphicsContext {
     }
 
     private GrowableDataBuffer getBuffer() {
-        theCanvas.markBufferDirty();
         return theCanvas.getBuffer();
     }
 
@@ -402,26 +405,64 @@ public final class GraphicsContext {
     
    /**
     * Gets the {@code Canvas} that the {@code GraphicsContext} is issuing draw
-    * calls to. There is only ever one {@code Canvas} for a {@code GraphicsContext}.
+    * commands to. There is only ever one {@code Canvas} for a 
+    * {@code GraphicsContext}.
     *
     * @return Canvas the canvas that this {@code GraphicsContext} is issuing draw
-    * calls to.
+    * commands to.
     */
     public Canvas getCanvas() {
         return theCanvas;
     } 
 
     /**
-     * Saves the current State, pushing it onto a Stack.
-     * This method does NOT alter the current state in any way.
+     * Saves the following attributes onto a stack.
+     * <ul>
+     *     <li>Global Alpha</li>
+     *     <li>Global Blend Operation</li>
+     *     <li>Transform</li>
+     *     <li>Fill Paint</li>
+     *     <li>Stroke Paint</li>
+     *     <li>Line Width</li>
+     *     <li>Line Cap</li>
+     *     <li>Line Join</li>
+     *     <li>Miter Limit</li>
+     *     <li>Number of Clip Paths</li>
+     *     <li>Font</li>
+     *     <li>Text Align</li>
+     *     <li>Text Baseline</li>
+     *     <li>Effect</li>
+     *     <li>Fill Rule</li>
+     * </ul>
+     * This method does NOT alter the current state in any way. Also, not that
+     * the current path is not saved.
      */
     public void save() {
         stateStack.push(curState.copy());
     }
 
     /**
-     * Pops the state off of the stack, setting all state attributes to their 
-     * value at the time the state was saved.
+     * Pops the state off of the stack, setting the following attributes to their 
+     * value at the time when that state was pushed onto the stack. If the stack
+     * is empty then nothing is changed.
+     * 
+     * <ul>
+     *     <li>Global Alpha</li>
+     *     <li>Global Blend Operation</li>
+     *     <li>Transform</li>
+     *     <li>Fill Paint</li>
+     *     <li>Stroke Paint</li>
+     *     <li>Line Width</li>
+     *     <li>Line Cap</li>
+     *     <li>Line Join</li>
+     *     <li>Miter Limit</li>
+     *     <li>Number of Clip Paths</li>
+     *     <li>Font</li>
+     *     <li>Text Align</li>
+     *     <li>Text Baseline</li>
+     *     <li>Effect</li>
+     *     <li>Fill Rule</li>
+     * </ul>
      */
     public void restore() {
         if (!stateStack.isEmpty()) {
@@ -432,7 +473,7 @@ public final class GraphicsContext {
     }
 
     /**
-     * Translates the current transform by x, y
+     * Translates the current transform by x, y.
      * @param x value to translate along the x axis.
      * @param y value to translate along the y axis.
      */
@@ -442,7 +483,7 @@ public final class GraphicsContext {
     }
 
     /**
-     * Scales the current transform by x, y
+     * Scales the current transform by x, y.
      * @param x value to scale in the x axis.
      * @param y value to scale in the y axis.
      */
@@ -452,7 +493,7 @@ public final class GraphicsContext {
     }
 
     /**
-     * Rotates the current transform in degrees
+     * Rotates the current transform in degrees.
      * @param degrees value in degrees to rotate the current transform.
      */
     public void rotate(double degrees) {
@@ -464,12 +505,12 @@ public final class GraphicsContext {
     /**
      * Concatenates the input with the current transform.
      * 
-     * @param mxx
-     * @param myx
-     * @param mxy
-     * @param myy
-     * @param mxt
-     * @param myt
+     * @param mxx - the X coordinate scaling element of the 3x4 matrix
+     * @param myx - the Y coordinate shearing element of the 3x4 matrix
+     * @param mxy - the X coordinate shearing element of the 3x4 matrix
+     * @param myy - the Y coordinate scaling element of the 3x4 matrix
+     * @param mxt - the X coordinate translation element of the 3x4 matrix
+     * @param myt - the Y coordinate translation element of the 3x4 matrix
      */
     public void transform(double mxx, double myx,
                           double mxy, double myy,
@@ -483,9 +524,11 @@ public final class GraphicsContext {
     }
     
     /**
-     * Concatenates the input with the current transform.
+     * Concatenates the input with the current transform. Only 2D transforms are
+     * supported. The only values used are the X and Y scaling, translation, and
+     * shearing components of a transform.
      * 
-     * @param xform
+     * @param xform The affine to be concatenated with the current transform.
      */
     public void transform(Affine xform) {
         scratchTX.setTransform(xform.getMxx(), xform.getMyx(),
@@ -496,13 +539,13 @@ public final class GraphicsContext {
     }
 
     /**
-     * Sets the current transform
-     * @param mxx 
-     * @param myx
-     * @param mxy 
-     * @param myy 
-     * @param mxt
-     * @param myt  
+     * Sets the current transform.
+     * @param mxx - the X coordinate scaling element of the 3x4 matrix
+     * @param myx - the Y coordinate shearing element of the 3x4 matrix
+     * @param mxy - the X coordinate shearing element of the 3x4 matrix
+     * @param myy - the Y coordinate scaling element of the 3x4 matrix
+     * @param mxt - the X coordinate translation element of the 3x4 matrix
+     * @param myt - the Y coordinate translation element of the 3x4 matrix 
      */
     public void setTransform(double mxx, double myx,
                              double mxy, double myy,
@@ -515,15 +558,11 @@ public final class GraphicsContext {
     }
     
     /**
-     * Sets the current transform ignoring any 3D transform by grabbing the 2x3
-     * of the matrix. 3D transforms are not supported in a 2D GraphicsContext.
+     * Sets the current transform. Only 2D transforms are supported. The only 
+     * values used are the X and Y scaling, translation, and shearing components
+     * of a transform.
      * 
-     * @param mxx 
-     * @param myx
-     * @param mxy 
-     * @param myy 
-     * @param mxt
-     * @param myt  
+     * @param xform The affine to be copied and used as the current transform.
      */
     public void setTransform(Affine xform) {
         curState.transform.setTransform(xform.getMxx(), xform.getMyx(),
@@ -541,7 +580,7 @@ public final class GraphicsContext {
      * constructed. In either case, the return value is a copy of the current 
      * transform. 
      *
-     * @return A copy Current State's transform  
+     * @return A copy of the current transform.  
      */
     public Affine getTransform(Affine xform) {
         if (xform == null) {
@@ -566,26 +605,31 @@ public final class GraphicsContext {
     
     /**
      * Returns a copy of the current transform.
-     * @return A copy Current State's transform  
+     * 
+     * @return a copy of the transform of the current state. 
      */
     public Affine getTransform() {
         return getTransform(null);
     }
 
     /**
-     * Sets the Global Alpha of the current state.
-     * @param alpha 
+     * Sets the global alpha of the current state.
+     * 
+     * @param alpha value in the range {@code 0.0-1.0}. The value is clamped if it is 
+     * out of range.
      */
     public void setGlobalAlpha(double alpha) {
         if (curState.globalAlpha != alpha) {
             curState.globalAlpha = alpha;
+            alpha = (alpha > 1.0) ? 1.0 : (alpha < 0.0) ? 0.0 : alpha;
             writeParam(alpha, PGCanvas.GLOBAL_ALPHA);
         }
     }
     
     /**
-     * Gets the Global Alpha of the current state.
-     * @return double global alpha 
+     * Gets the current global alpha.
+     * 
+     * @return the current global alpha. 
      */
     public double getGlobalAlpha() {
         return curState.globalAlpha;
@@ -593,9 +637,9 @@ public final class GraphicsContext {
     
     private static Blend TMP_BLEND = new Blend(BlendMode.SRC_OVER); 
     /**
-     * Sets the Global Blend Mode of the current state.
+     * Sets the global blend mode.
      * 
-     * @param op
+     * @param op the {@code BlendMode} that will be set.
      */
     public void setGlobalBlendMode(BlendMode op) {
         if (op != null && op != curState.blendop) {
@@ -609,9 +653,9 @@ public final class GraphicsContext {
     }
     
     /**
-     * Gets the Global Blend Mode of the current state.
+     * Gets the global blend mode.
      * 
-     * @return BlendMode 
+     * @return the global {@code BlendMode} of the current state.
      */
     public BlendMode getGlobalBlendMode() {
         return curState.blendop;
@@ -641,7 +685,7 @@ public final class GraphicsContext {
     }
 
     /**
-     * Sets the current state's stroke.
+     * Sets the current stroke.
      * 
      * @param p The Paint to be used as the stroke Paint.
      */
@@ -653,20 +697,19 @@ public final class GraphicsContext {
     }
     
     /**
-     * gets the current state's stroke.
+     * Gets the current stroke.
      * 
-     * @param p The Paint to be used as the stroke Paint.
+     * @return the {@code Paint} to be used as the stroke {@code Paint}.
      */
     public Paint getStroke() {
         return curState.stroke;
     }
 
     /**
-     * Sets the current line width attribute.
+     * Sets the current line width.
      * 
-     * @param lw value between 0 and infinity, with any other value being
-     * ignored and leaving the value unchanged.
-     * 
+     * @param lw value in the range {0-positive infinity}, with any other value 
+     * being ignored and leaving the value unchanged.
      */
     public void setLineWidth(double lw) {
         // Per W3C spec: On setting, zero, negative, infinite, and NaN
@@ -680,18 +723,16 @@ public final class GraphicsContext {
     }
     
     /**
-     * Gets the current line width attribute.
+     * Gets the current line width.
      * 
-     * @return value between 0 and infinity, with any other value being
-     * ignored and leaving the value unchanged.
-     * 
+     * @return value between 0 and infinity.
      */
     public double getLineWidth() {
         return curState.linewidth;
     }
 
     /**
-     * Sets the current stroke line cap attribute. 
+     * Sets the current stroke line cap. 
      * 
      * @param cap {@code StrokeLineCap} with a value of Butt, Round, or Square.
      */
@@ -710,7 +751,7 @@ public final class GraphicsContext {
     }
     
     /**
-     * Gets the current stroke line cap attribute. 
+     * Gets the current stroke line cap. 
      * 
      * @return {@code StrokeLineCap} with a value of Butt, Round, or Square.
      */
@@ -719,7 +760,7 @@ public final class GraphicsContext {
     }
 
     /**
-     * Sets the current stroke line join attribute.
+     * Sets the current stroke line join.
      * 
      * @param join {@code StrokeLineJoin} with a value of Miter, Bevel, or Round.
      */
@@ -738,7 +779,7 @@ public final class GraphicsContext {
     }
     
     /**
-     * Gets the current stroke line join attribute.
+     * Gets the current stroke line join.
      * 
      * @return {@code StrokeLineJoin} with a value of Miter, Bevel, or Round.
      */
@@ -747,7 +788,7 @@ public final class GraphicsContext {
     }
 
     /**
-     * Sets the current miter limit attribute.
+     * Sets the current miter limit.
      * 
      * @param ml miter limit value between 0 and positive infinity with 
      * any other value being ignored and leaving the value unchanged.
@@ -764,17 +805,16 @@ public final class GraphicsContext {
     }
     
     /**
-     * Gets the current miter limit attribute.
+     * Gets the current miter limit.
      * 
-     * @param miter limit value between 0 and positive infinity with 
-     * any other value being ignored and leaving the value unchanged.
+     * @return the miter limit value in the range {@code 0.0-positive infinity}
      */
     public double getMiterLimit() {
         return curState.miterlimit;
     }
 
     /**
-     * Sets the current state's Font attribute.
+     * Sets the current Font.
      * 
      * @param f the Font 
      */
@@ -788,7 +828,7 @@ public final class GraphicsContext {
     }
     
     /**
-     * Gets the current state's Font attribute.
+     * Gets the current Font.
      * 
      * @return the Font 
      */
@@ -833,7 +873,7 @@ public final class GraphicsContext {
     }
     
     /**
-     * Gets the current TextAlignment attribute
+     * Gets the current {@code TextAlignment}.
      * 
      * @return {@code TextAlignment} with values of Left, Center, Right, or
      * Justify.
@@ -843,7 +883,7 @@ public final class GraphicsContext {
     }
 
     /**
-     * Sets the current Text Baseline attribute.
+     * Sets the current Text Baseline.
      * 
      * @param baseline {@code VPos} with values of Top, Center, Baseline, or Bottom
      */
@@ -863,7 +903,7 @@ public final class GraphicsContext {
     }
     
     /**
-     * Gets the current Text Baseline attribute.
+     * Gets the current Text Baseline.
      * 
      * @return {@code VPos} with values of Top, Center, Baseline, or Bottom
      */
@@ -875,7 +915,7 @@ public final class GraphicsContext {
      * Fills the given string of text at position x, y (0,0 at top left)
      * with the current fill paint attribute.
      * 
-     * @param text the string of text
+     * @param text the string of text.
      * @param x position on the x axis.
      * @param y position on the y axis.
      */
@@ -887,7 +927,7 @@ public final class GraphicsContext {
      * draws the given string of text at position x, y (0,0 at top left)
      * with the current stroke paint attribute.
      * 
-     * @param text the string of text
+     * @param text the string of text.
      * @param x position on the x axis.
      * @param y position on the y axis.
      */
@@ -901,7 +941,7 @@ public final class GraphicsContext {
      * If the width of the text extends past max width, then it will be sized
      * to fit.
      * 
-     * @param text
+     * @param text the string of text.
      * @param x position on the x axis.
      * @param y position on the y axis.
      * @param maxWidth  maximum width the text string can have.
@@ -917,7 +957,7 @@ public final class GraphicsContext {
      * If the width of the text extends past max width, then it will be sized
      * to fit.
      * 
-     * @param text
+     * @param text the string of text.
      * @param x position on the x axis.
      * @param y position on the y axis.
      * @param maxWidth  maximum width the text string can have.
@@ -953,7 +993,7 @@ public final class GraphicsContext {
      * Get the filling rule constant for determining the interior of the path.
      * The default value is {@code FillRule.NON_ZERO}.
      *
-     * @return current state's fill rule
+     * @return current fill rule.
      */
      public FillRule getFillRule() {
          return curState.fillRule;
@@ -970,8 +1010,8 @@ public final class GraphicsContext {
     /**
      * Issues a move command for the current path to the given x,y coordinate.
      * 
-     * @param x0 
-     * @param y0 
+     * @param x0 the X position for the move to command.
+     * @param y0 the Y position for the move to command.
      */
     public void moveTo(double x0, double y0) {
         coords[0] = (float) x0;
@@ -982,10 +1022,11 @@ public final class GraphicsContext {
     }
 
     /**
-     * Issues a lineTo command for the current path to the given x,y coordinate
+     * Adds segments to the current path to make a line at the given x,y
+     * coordinate.
      * 
-     * @param x1 
-     * @param y1 
+     * @param x1 the X coordinate of the ending point of the line.
+     * @param y1 the Y coordinate of the ending point of the line.
      */
     public void lineTo(double x1, double y1) {
         coords[0] = (float) x1;
@@ -996,12 +1037,12 @@ public final class GraphicsContext {
     }
 
     /**
-     * Issues a quadraticCurveTo command for the current path.
+     * Adds segments to the current path to make a quadratic curve.
      * 
-     * @param xc 
-     * @param yc
-     * @param x1 
-     * @param y1  
+     * @param xc the X coordinate of the control point
+     * @param yc the Y coordinate of the control point
+     * @param x1 the X coordinate of the end point
+     * @param y1 the Y coordinate of the end point
      */
     public void quadraticCurveTo(double xc, double yc, double x1, double y1) {
         coords[0] = (float) xc;
@@ -1014,14 +1055,14 @@ public final class GraphicsContext {
     }
 
     /**
-     * Issues a bezierCurveTo command for the current path.
+     * Adds segments to the current path to make a cubic bezier curve.
      * 
-     * @param xc1 
-     * @param yc1
-     * @param y1
-     * @param xc2 
-     * @param yc2
-     * @param x1  
+     * @param xc1 the X coordinate of first bezier control point.
+     * @param yc1 the Y coordinate of the first bezier control point.
+     * @param xc2 the X coordinate of the second bezier control point.
+     * @param yc2 the Y coordinate of the second bezier control point.
+     * @param x1  the X coordinate of the end point.
+     * @param y1  the Y coordinate of the end point.
      */
     public void bezierCurveTo(double xc1, double yc1, double xc2, double yc2, double x1, double y1) {
         coords[0] = (float) xc1;
@@ -1036,13 +1077,13 @@ public final class GraphicsContext {
     }
 
     /**
-     * Issues a arcTo command for the current path.
+     * Adds segments to the current path to make an arc.
      * 
-     * @param x1 
-     * @param y1
-     * @param x2 
-     * @param y2
-     * @param radius  
+     * @param x1 the X coordinate of the first point of the arc.
+     * @param y1 the Y coordinate of the first point of the arc.
+     * @param x2 the X coordinate of the second point of the arc.
+     * @param y2 the Y coordinate of the second point of the arc.
+     * @param radius the radius of the arc in the range {0.0-positive infinity}.
      */
     public void arcTo(double x1, double y1, double x2, double y2, double radius) {
         if (path.getNumCommands() == 0) {
@@ -1197,65 +1238,18 @@ public final class GraphicsContext {
     }
 
     private static final Arc2D TEMP_ARC = new Arc2D();
-    // Takes ESWNE angle in radians with no limits
-    // Returns ENWSE angle in degrees 0 <= a < 360
-//    private static float getNormDegrees(double radians) {
-//        float deg = (float) Math.toDegrees(-radians) % 360.0f;
-//        if (deg < 0.0f) {
-//            deg += 360.0f;
-//        }
-//        return deg;
-//    }
     /**
-     * Like HTML5 Canvas arc() function, but we use Euclidean degrees rather
-     * than screen-oriented radians.  Euclidean orientation sweeps from East
-     * to North, then West, then South, then back to East whereas the screen
-     * oriented system that HTML5 Canvas uses sweeps E->S->W->N->E.
-     * @param centerX 
-     * @param centerY 
-     * @param radiusX 
-     * @param startAngle
-     * @param radiusY 
-     * @param length  
+     * Adds path elements to the current path to make an arc that uses Euclidean
+     * degrees. This Euclidean orientation sweeps from East to North, then West,
+     * then South, then back to East. 
+     *
+     * @param centerX the center x position of the arc.
+     * @param centerY the center y position of the arc.
+     * @param radiusX the x radius of the arc.
+     * @param radiusY the y radius of the arc.
+     * @param startAngle the starting angle of the arc in the range {@code 0-360.0}
+     * @param length  the length of the baseline of the arc.
      */
-    /*
-    private void arcHTML5(double cx, double cy, double radius,
-                    double startAngle, double endAngle,
-                    boolean anticlockwise)
-    {
-        // HTML5 Canvas.arc() sweeps angles in radians from E->S->W->N->E
-        // Arc2D sweeps angles in degrees from E->N->W->S->E
-        float sa = getNormDegrees(startAngle);
-        float extent;
-        if (startAngle == endAngle) {
-            extent = 0.0f;
-        } else {
-            float ea = getNormDegrees(endAngle);
-            // sa,ea are now degrees in ENWSE system 0 <= a < 360
-            extent = ea - sa;
-            if (anticlockwise) {
-                // extent must be 0 <= extent <= 360
-                if (startAngle - endAngle > 2.0 * Math.PI) {
-                    extent = 360.0f;
-                } else {
-                    if (extent <= 0f) extent += 360.0f;
-                }
-            } else {
-                // extent must be 0 >= extent >= -360
-                if (endAngle - startAngle > 2.0 * Math.PI) {
-                    extent = -360.0f;
-                } else {
-                    if (extent >= 0f) extent -= 360.0f;
-                }
-            }
-        }
-        TEMP_ARC.setArc((float) (cx - radius), (float) (cy - radius),
-                        (float) (radius * 2.0), (float) (radius * 2.0),
-                        sa, extent, Arc2D.OPEN);
-        path.append(TEMP_ARC.getPathIterator(curState.transform), true);
-    }
-    */
-
     public void arc(double centerX, double centerY,
                     double radiusX, double radiusY,
                     double startAngle, double length)
@@ -1272,12 +1266,12 @@ public final class GraphicsContext {
     }
 
     /**
-     * Strokes a rectangle using a path.
+     * Adds path elements to the current path to make a rectangle.
      * 
-     * @param x
-     * @param y
-     * @param w
-     * @param h
+     * @param x x position of the upper left corner of the rectangle.
+     * @param y y position of the upper left corner of the rectangle.
+     * @param w width of the rectangle.
+     * @param h height of the rectangle.
      */
     public void rect(double x, double y, double w, double h) {
         coords[0] = (float) x;
@@ -1306,7 +1300,7 @@ public final class GraphicsContext {
      * Appends an SVG Path string to the current path. If there is no current 
      * path the string must then start with either type of move command.
      * 
-     * @param svgpath the SVG Path string to be used.
+     * @param svgpath the SVG Path string.
      */
     public void appendSVGPath(String svgpath) {
         boolean prependMoveto = true;
@@ -1374,14 +1368,14 @@ public final class GraphicsContext {
     }
 
     /**
-     * Fills the path with the current fill paint attribute.
+     * Fills the path with the current fill paint.
      */
     public void fill() {
         writePath(PGCanvas.FILL_PATH);
     }
 
     /**
-     * Strokes the path with the current stroke paint attribute.
+     * Strokes the path with the current stroke paint.
      */
     public void stroke() {
         writePath(PGCanvas.STROKE_PATH);
@@ -1400,11 +1394,12 @@ public final class GraphicsContext {
     }
 
     /**
-     * Returns true of the the given x,y point is touching the path.
+     * Returns true if the the given x,y point is inside the path.
      * 
-     * @param x
-     * @param y
-     * @return
+     * @param x the X coordinate to use for the check.
+     * @param y the Y coordinate to use for the check.
+     * @return true if the point given is inside the path, false 
+     * otherwise.
      */
     public boolean isPointInPath(double x, double y) {
         // TODO: HTML5 considers points on the path to be inside, but we
@@ -1413,12 +1408,12 @@ public final class GraphicsContext {
     }
 
     /**
-     * Clears the canvas with the current fill color attribute.
+     * Clears a portion of the canvas with a transparent color value.
      * 
-     * @param x
-     * @param y
-     * @param w
-     * @param h
+     * @param x X position of the upper left corner of the rectangle.
+     * @param y Y position of the upper left corner of the rectangle.
+     * @param w width of the rectangle.
+     * @param h height of the rectangle.
      */
     public void clearRect(double x, double y, double w, double h) {
         if (w != 0 && h != 0) {
@@ -1427,12 +1422,12 @@ public final class GraphicsContext {
     }
 
     /**
-     * Fills a rectangle using the current Fill paint attribute.
+     * Fills a rectangle using the current fill paint.
      * 
-     * @param x
-     * @param y
-     * @param w
-     * @param h
+     * @param x the X position of the upper left corner of the rectangle.
+     * @param y the Y position of the upper left corner of the rectangle.
+     * @param w the width of the rectangle.
+     * @param h the height of the rectangle.
      */
     public void fillRect(double x, double y, double w, double h) {
         if (w != 0 && h != 0) {
@@ -1441,12 +1436,12 @@ public final class GraphicsContext {
     }
 
     /**
-     * Strokes a rectangle using the current stroke paint attribute.
+     * Strokes a rectangle using the current stroke paint.
      * 
-     * @param x
-     * @param y
-     * @param w
-     * @param h
+     * @param x the X position of the upper left corner of the rectangle.
+     * @param y the Y position of the upper left corner of the rectangle.
+     * @param w the width of the rectangle.
+     * @param h the height of the rectangle.
      */
     public void strokeRect(double x, double y, double w, double h) {
         if (w != 0 || h != 0) {
@@ -1455,12 +1450,12 @@ public final class GraphicsContext {
     }
 
     /**
-     * Fills an Oval using the current Fill paint attribute.
+     * Fills an oval using the current fill paint.
      * 
-     * @param x
-     * @param y
-     * @param w
-     * @param h
+     * @param x the X coordinate of the upper left bound of the oval.
+     * @param y the Y coordinate of the upper left bound of the oval.
+     * @param w the width at the center of the oval.
+     * @param h the height at the center of the oval.
      */
     public void fillOval(double x, double y, double w, double h) {
         if (w != 0 && h != 0) {
@@ -1469,12 +1464,12 @@ public final class GraphicsContext {
     }
 
     /**
-     * Strokes a rectangle using the current stroke paint attribute.
+     * Strokes a rectangle using the current stroke paint.
      * 
-     * @param x
-     * @param y
-     * @param w
-     * @param h
+     * @param x the X coordinate of the upper left bound of the oval.
+     * @param y the Y coordinate of the upper left bound of the oval.
+     * @param w the width at the center of the oval.
+     * @param h the height at the center of the oval.
      */
     public void strokeOval(double x, double y, double w, double h) {
         if (w != 0 || h != 0) {
@@ -1483,15 +1478,15 @@ public final class GraphicsContext {
     }
 
     /**
-     * Fills an Arc using the current Fill paint attribute.
+     * Fills an arc using the current fill paint.
      * 
-     * @param x
-     * @param y
-     * @param w
-     * @param h
-     * @param startAngle
-     * @param arcExtent
-     * @param closure
+     * @param x the X coordinate of the arc.
+     * @param y the Y coordinate of the arc.
+     * @param w the width of the arc.
+     * @param h the height of the arc.
+     * @param startAngle the starting angle of the arc in degrees.
+     * @param arcExtent the angular extent of the arc in degrees.
+     * @param closure closure type (Round, Chord, Open).
      */
     public void fillArc(double x, double y, double w, double h,
                         double startAngle, double arcExtent, ArcType closure)
@@ -1503,15 +1498,15 @@ public final class GraphicsContext {
     }
 
     /**
-     * Strokes an Arc using the current stroke paint attribute.
+     * Strokes an Arc using the current stroke paint.
      * 
-     * @param x
-     * @param y
-     * @param w
-     * @param h
-     * @param startAngle
-     * @param arcExtent
-     * @param closure
+     * @param x the X coordinate of the arc.
+     * @param y the Y coordinate of the arc.
+     * @param w the width of the arc.
+     * @param h the height of the arc.
+     * @param startAngle the starting angle of the arc in degrees.
+     * @param arcExtent arcExtent the angular extent of the arc in degrees.
+     * @param closure closure type (Round, Chord, Open).
      */
     public void strokeArc(double x, double y, double w, double h,
                         double startAngle, double arcExtent, ArcType closure)
@@ -1523,14 +1518,14 @@ public final class GraphicsContext {
     }
 
     /**
-     * Fills a rounded rectangle using the current fill paint attribute.
+     * Fills a rounded rectangle using the current fill paint.
      * 
-     * @param x
-     * @param y
-     * @param w
-     * @param h
-     * @param arcWidth
-     * @param arcHeight
+     * @param x the X coordinate of the upper left bound of the oval.
+     * @param y the Y coordinate of the upper left bound of the oval.
+     * @param w the width at the center of the oval.
+     * @param h the height at the center of the oval.
+     * @param arcWidth the arc width of the rectangle corners.
+     * @param arcHeight the arc height of the rectangle corners. 
      */
     public void fillRoundRect(double x, double y, double w, double h,
                               double arcWidth, double arcHeight)
@@ -1541,14 +1536,14 @@ public final class GraphicsContext {
     }
 
     /**
-     * Strokes a rounded rectangle using the current Stroke paint attribute.
+     * Strokes a rounded rectangle using the current stroke paint.
      * 
-     * @param x
-     * @param y
-     * @param w
-     * @param h
-     * @param arcWidth
-     * @param arcHeight
+     * @param x the X coordinate of the upper left bound of the oval.
+     * @param y the Y coordinate of the upper left bound of the oval.
+     * @param w the width at the center of the oval.
+     * @param h the height at the center of the oval.
+     * @param arcWidth the arc width of the rectangle corners.
+     * @param arcHeight the arc height of the rectangle corners.
      */
     public void strokeRoundRect(double x, double y, double w, double h,
                               double arcWidth, double arcHeight)
@@ -1559,24 +1554,23 @@ public final class GraphicsContext {
     }
 
     /**
-     * Strokes a line using the current Stroke paint attribute.
+     * Strokes a line using the current stroke paint.
      * 
-     * @param x1
-     * @param y1
-     * @param x2
-     * @param y2
+     * @param x1 the X coordinate of the starting point of the line.
+     * @param y1 the Y coordinate of the starting point of the line.
+     * @param x2 the X coordinate of the ending point of the line.
+     * @param y2 the Y coordinate of the ending point of the line.
      */
     public void strokeLine(double x1, double y1, double x2, double y2) {
         writeOp4(x1, y1, x2, y2, PGCanvas.STROKE_LINE);
     }
 
     /**
-     * Fills a polygon with the given points using the currently set fill paint
-     * attribute.
+     * Fills a polygon with the given points using the currently set fill paint.
      * 
-     * @param xPoints
-     * @param yPoints
-     * @param nPoints
+     * @param xPoints array containing the x coordinates of the polygon's points.
+     * @param yPoints array containing the y coordinates of the polygon's points.
+     * @param nPoints the number of points that make the polygon.
      */
     public void fillPolygon(double xPoints[], double yPoints[], int nPoints) {
         if (nPoints >= 3) {
@@ -1585,12 +1579,11 @@ public final class GraphicsContext {
     }
 
     /**
-     * Strokes a polygon with the given points using the currently set stroke paint
-     * attribute.
+     * Strokes a polygon with the given points using the currently set stroke paint.
      * 
-     * @param xPoints
-     * @param yPoints
-     * @param nPoints
+     * @param xPoints array containing the x coordinates of the polygon's points.
+     * @param yPoints array containing the y coordinates of the polygon's points.
+     * @param nPoints the number of points that make the polygon.
      */
     public void strokePolygon(double xPoints[], double yPoints[], int nPoints) {
         if (nPoints >= 2) {
@@ -1602,9 +1595,9 @@ public final class GraphicsContext {
      * Draws a polyline with the given points using the currently set stroke 
      * paint attribute.
      * 
-     * @param xPoints
-     * @param yPoints
-     * @param nPoints
+     * @param xPoints array containing the x coordinates of the polyline's points.
+     * @param yPoints array containing the y coordinates of the polyline's points.
+     * @param nPoints the number of points that make the polyline.
      */
     public void strokePolyline(double xPoints[], double yPoints[], int nPoints) {
         if (nPoints >= 2) {
@@ -1616,9 +1609,9 @@ public final class GraphicsContext {
      * Draws an image at the given x, y position using the width
      * and height of the given image.
      * 
-     * @param img
-     * @param x
-     * @param y
+     * @param img the image to be drawn.
+     * @param x the X coordinate on the destination for the upper left of the image.
+     * @param y the Y coordinate on the destination for the upper left of the image.
      */
     public void drawImage(Image img, double x, double y) {
         double sw = img.getWidth();
@@ -1627,13 +1620,14 @@ public final class GraphicsContext {
     }
 
     /**
-     * Draws an image into the given destination rectangle of the canvas.
+     * Draws an image into the given destination rectangle of the canvas. The
+     * Image is scaled to fit into the destination rectagnle.
      * 
-     * @param img
-     * @param x
-     * @param y
-     * @param w
-     * @param h
+     * @param img the image to be drawn.
+     * @param x the X coordinate on the destination for the upper left of the image.
+     * @param y the Y coordinate on the destination for the upper left of the image.
+     * @param w the width of the destination rectangle. 
+     * @param h the height of the destination rectangle.
      */
     public void drawImage(Image img, double x, double y, double w, double h) {
         writeImage(img, x, y, w, h);
@@ -1643,15 +1637,15 @@ public final class GraphicsContext {
      * Draws the current source rectangle of the given image to the given 
      * destination rectangle of the Canvas.
      * 
-     * @param img
-     * @param sx
-     * @param sy
-     * @param sw
-     * @param sh
-     * @param dx
-     * @param dy
-     * @param dw
-     * @param dh
+     * @param img the image to be drawn.
+     * @param sx the source rectangle's X coordinate position.
+     * @param sy the source rectangle's Y coordinate position.
+     * @param sw the source rectangle's width.
+     * @param sh the source rectangle's height.
+     * @param dx the destination rectangle's X coordinate position.
+     * @param dy the destination rectangle's Y coordinate position.
+     * @param dw the destination rectangle's width.
+     * @param dh the destination rectangle's height.
      */
     public void drawImage(Image img,
                           double sx, double sy, double sw, double sh,
@@ -1909,8 +1903,8 @@ public final class GraphicsContext {
     }
 
     /**
-     * Applies the given effect before the next.
-     * @param e
+     * Applies the given effect to the entire canvas.
+     * @param e the effect to apply onto the entire destination.
      */
     public void applyEffect(Effect e) {
         GrowableDataBuffer buf = getBuffer();

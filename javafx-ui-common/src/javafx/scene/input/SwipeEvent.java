@@ -43,11 +43,18 @@ import javafx.event.EventType;
  * Note that swipe and scroll gestures are not exclusive. A single touch screen
  * action can result in both gestures being delivered.
  * <p>
+ * Note that the capability to produce swipes is dependent on the used input
+ * devices and underlying platform's capabilities and settings (especially
+ * without touch-screen user's possibilities of producing swipes are
+ * significantly reduced).
+ * <p>
  * As all gestures, swipe can be direct (performed directly at
  * the concrete coordinates as on touch screen - the center of the gesture
  * is used as gesture coordinates) or indirect (performed
  * indirectly as on track pad - the mouse cursor location is usually used
  * as the gesture coordinates in this case).
+ *
+ * @since 2.2
  */
 public class SwipeEvent extends GestureEvent {
 

@@ -67,7 +67,7 @@ import javafx.util.Callback;
  * <h3>Styling the page indicators</h3>
  * <p>
  * The control can be customized to display numeric page indicators or bullet style indicators by
- * setting the style class {@link STYLE_CLASS_BULLET}.  The
+ * setting the style class {@link #STYLE_CLASS_BULLET}.  The
  * {@link #maxPageIndicatorCountProperty() maxPageIndicatorCountProperty} can be used to change
  * the maximum number of page indicators.  The property value can also be changed
  * via CSS using -fx-max-page-indicator-count.
@@ -109,8 +109,8 @@ import javafx.util.Callback;
  *       }
  *   });
  * }</pre>
+ * @since 2.2
  */
-
 @DefaultProperty("pages")
 public class Pagination extends Control {
 
@@ -154,7 +154,7 @@ public class Pagination extends Control {
     }
 
     /**
-     * Constructs a Pagination control with an {@link INDETERMINATE} page count
+     * Constructs a Pagination control with an {@link #INDETERMINATE} page count
      * and a page index equal to zero.
      */
     public Pagination() {
@@ -250,10 +250,10 @@ public class Pagination extends Control {
 
     /**
      * The number of pages for this pagination control.  This
-     * value must be greater than or equal to 1.  {@link INDETERMINATE}
+     * value must be greater than or equal to 1. {@link #INDETERMINATE}
      * should be used as the page count if the total number of pages is unknown.
      *
-     * The default is an {@link INDETERMINATE} number of pages.
+     * The default is an {@link #INDETERMINATE} number of pages.
      */
     public final IntegerProperty pageCountProperty() { return pageCount; }
 
@@ -368,7 +368,7 @@ public class Pagination extends Control {
      * @deprecated This is an experimental API that is not intended for general use and is subject to change in future versions
      */
     @Deprecated
-    public List<StyleableProperty> impl_getStyleableProperties() {
+    @Override protected List<StyleableProperty> impl_getControlStyleableProperties() {
         return impl_CSS_STYLEABLES();
     }
 }

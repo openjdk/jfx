@@ -49,6 +49,8 @@ import javafx.scene.Scene;
  * can be used to alter the event delivery target. When grabbed by a different
  * node, it will next time be targeted to it; when ungrabbed, it will be
  * always targeted to the top-most node on the current location.
+ *
+ * @since 2.2
  */
 public final class TouchPoint implements Serializable{
 
@@ -313,6 +315,8 @@ public final class TouchPoint implements Serializable{
 
     /**
      * Represents current state of the touch point
+     *
+     * @since 2.2
      */
     public enum State {
         /**

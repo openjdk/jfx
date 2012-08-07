@@ -102,7 +102,11 @@ public class ByteRgb {
             new ToByteBgrfConv(ByteBgraPre.setter);
 
         private ToByteBgrfConv(BytePixelSetter setter) {
-            super(ByteRgb.getter, setter);
+            // Note that using ByteRgb.getter here causes a circular reference
+            // between the classes that prevents the above *premult fields
+            // from being initialized before the ByteRgb class copies their
+            // (not yet inited = null) values into its owns static fields.
+            super(ByteRgb.Getter.instance, setter);
         }
 
         @Override
@@ -154,7 +158,11 @@ public class ByteRgb {
             new ToIntFrgbConv(IntArgbPre.setter);
 
         private ToIntFrgbConv(IntPixelSetter setter) {
-            super(ByteRgb.getter, setter);
+            // Note that using ByteRgb.getter here causes a circular reference
+            // between the classes that prevents the above *premult fields
+            // from being initialized before the ByteRgb class copies their
+            // (not yet inited = null) values into its owns static fields.
+            super(ByteRgb.Getter.instance, setter);
         }
 
         @Override
@@ -200,7 +208,11 @@ public class ByteRgb {
             new ToByteFrgbConv(ByteArgb.setter);
 
         private ToByteFrgbConv(BytePixelSetter setter) {
-            super(ByteRgb.getter, setter);
+            // Note that using ByteRgb.getter here causes a circular reference
+            // between the classes that prevents the above *premult fields
+            // from being initialized before the ByteRgb class copies their
+            // (not yet inited = null) values into its owns static fields.
+            super(ByteRgb.Getter.instance, setter);
         }
 
         @Override

@@ -472,6 +472,7 @@ public class VirtualFlow extends Region {
     private boolean isPanning = false;
 
     public VirtualFlow() {
+        getStyleClass().add("virtual-flow");
         mapper = new PositionMapper();
         mapper.setGetItemSize(new Callback<Integer, Double>() {
             @Override public Double call(Integer itemIndex) {
@@ -486,6 +487,7 @@ public class VirtualFlow extends Region {
     private void initContent() {
         // --- sheet
         sheet = new Group();
+        sheet.getStyleClass().add("sheet");
         sheet.setAutoSizeChildren(false);
 
         // --- clipView
@@ -2022,19 +2024,18 @@ public class VirtualFlow extends Region {
         public void setNode(Node n) {
             this.node = n;
 
-            contentGroup.getChildren().clear();
-            contentGroup.getChildren().add(node);
+            getChildren().clear();
+            getChildren().add(node);
         }
 
         public void setClipX(double clipX) {
-            contentGroup.setLayoutX(-clipX);
+            setLayoutX(-clipX);
         }
 
         public void setClipY(double clipY) {
-            contentGroup.setLayoutY(-clipY);
+            setLayoutY(-clipY);
         }
 
-        private final Group contentGroup;
         private final Rectangle clipRect;
 
         public ClippedContainer(final VirtualFlow flow) {
@@ -2042,20 +2043,15 @@ public class VirtualFlow extends Region {
                 throw new IllegalArgumentException("VirtualFlow can not be null");
             }
 
+            getStyleClass().add("clipped-container");
             this.flow = flow;
-//            setManaged(false);
+            setManaged(false);
 
             // clipping
             clipRect = new Rectangle();
             clipRect.setSmooth(false);
             setClip(clipRect);
             // --- clipping
-
-            // We create a contentGroup to store the content. This makes it easier
-            // to translate its position (using clipX/clipY), which keeping
-            // the actual clipRect located in the same location
-            contentGroup = new Group();
-            getChildren().add(contentGroup);
 
             super.widthProperty().addListener(new InvalidationListener() {
                 @Override public void invalidated(Observable valueModel) {
@@ -2068,90 +2064,6 @@ public class VirtualFlow extends Region {
                 }
             });
         }
-
-//        /*
-//         * TODO
-//         * This code does have it's uses, but for the life of me I can't remember
-//         * what they are. I'm leaving the code here for now until we get unit
-//         * tests back up - at which point we can see how the tests go with this
-//         * code missing, and in place.
-//         */
-//        @Override public void requestLayout() {
-////            if (flow.layingOut) {
-////                super.requestLayout();
-////                return;
-////            }
-//
-//            if (flow == null) {
-//                return;
-//            }
-//            
-//            ArrayLinkedList<IndexedCell> cells = flow.cells;
-//            if (cells.size() > 0) {
-////                flow.layingOut = true;
-//
-//                // we reset the maxPrefBreadth here so that if all cell widths
-//                // have reduced, we won't keep the scrollbar unnecessarily.
-//                flow.maxPrefBreadth = 0.0;
-//
-//                double offset = flow.getCellPosition(cells.getFirst());
-//                for (int i = 0; i < cells.size(); i++) {
-//                    IndexedCell cell = cells.get(i);
-//                    flow.positionCell(cell, offset);
-//                    cell.impl_processCSS(true);
-//                    double prefLength = flow.getCellPrefLength(cell);
-//                    offset += prefLength;
-//                    flow.resizeCellSize(cell);
-//                    flow.maxPrefBreadth = Math.max(flow.maxPrefBreadth, flow.getCellBreadth(cell));
-//                }
-//
-//                // Add any necessary leading cells
-//                IndexedCell firstCell = cells.getFirst();
-//                int firstIndex = firstCell.getIndex();
-//                double prevIndexSize = flow.getCellLength(firstIndex - 1);
-//                flow.addLeadingCells(firstIndex - 1, flow.getCellPosition(firstCell) - prevIndexSize);
-//
-//                // Starting at the tail of the list, loop adding cells until
-//                // all the space on the table is filled up. We want to make
-//                // sure that we DO NOT add empty trailing cells (since we are
-//                // in the full virtual case and so there are no trailing empty
-//                // cells).
-//                flow.addTrailingCells(true);
-//
-//                // Reached the end, but not enough cells to fill up to
-//                // the end. So, remove the trailing empty space, and translate
-//                // the cells down
-//                IndexedCell lastCell = flow.getLastVisibleCell();
-//                double lastCellSize = flow.getCellLength(lastCell);
-//                double lastCellEnd = flow.getCellPosition(lastCell) + lastCellSize;
-//                if (flow.getPosition() == 1.0f && lastCellEnd > flow.viewportLength && lastCell == cells.getLast()) {
-//                    // Reposition the nodes
-//                    double tooFar = flow.viewportLength - lastCellEnd;
-//                    for (int i = 0; i < cells.size(); i++) {
-//                        IndexedCell cell = cells.get(i);
-//                        flow.positionCell(cell, flow.getCellPosition(cell) + tooFar);
-//                    }
-//                }
-//
-//                // Now throw away any cells that don't fit
-//                flow.cull();
-//
-//                // Finally, update the scroll bars
-//                if (flow.getPosition() == 0.0f && lastCell != cells.getLast()) {
-//                    // hide the dang virtual scroll bar
-//                    VirtualScrollBar lengthBar = flow.isVertical() ? flow.vbar : flow.hbar;
-//                    if (lengthBar.isVisible()) {
-//                        flow.viewportBreadth += flow.isVertical() ? flow.vbar.getWidth() : flow.hbar.getHeight();
-//                        lengthBar.setVisible(false);
-//                    }
-//                }
-//                flow.updateScrollBarsAndViewport(flow.viewportLength);
-//                flow.lastPosition = flow.getPosition();
-////                flow.layingOut = false;
-//            }
-//
-//            super.requestLayout();
-//        }
     }
 
     /**

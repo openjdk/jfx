@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2012, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -22,21 +22,20 @@
  * or visit www.oracle.com if you need additional information or have any
  * questions.
  */
-package com.sun.javafx.tk;
+package com.preview.javafx.scene.control;
 
-import javafx.scene.input.TransferMode;
-import javafx.scene.input.Dragboard;
+import javafx.scene.control.TableColumn;
+import javafx.scene.control.TreeItem;
 
 /**
- * Implementation note: This used to be a Java interface, but due to compilation
- * order issues, it is now an abstract class. This doesn't seem to have impacted
- * on any other code, and has the added benefit that we can return the FX-based
- * Dragboard, rather than Clipboard, which used to be a Java interface also.
  *
  */
-public abstract class TKDropEvent {
-    public abstract Dragboard getDragboard();
-    public abstract void accept(TransferMode tm);
-    public abstract void reject();
-    public abstract void dropComplete(boolean isComplete);
+public class TreeTableColumn<S, T> extends TableColumn<TreeItem<S>, T> {
+
+    public TreeTableColumn() {
+    }
+    
+    public TreeTableColumn(String text) {
+        super(text);
+    }
 }

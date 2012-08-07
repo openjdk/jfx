@@ -743,7 +743,7 @@ public abstract class Axis<T> extends Region {
                                  tick.getPosition(),getTickLabelRotation(),side);
 
                 // check if position is inside bounds
-                if(tick.getPosition() >= 0 && tick.getPosition() <= length) {
+                if(tick.getPosition() >= 0 && tick.getPosition() <= Math.ceil(length)) {
                     if (isTickLabelsVisible()) {
                         tick.textNode.setVisible((tickIndex % numLabelsToSkip) == 0);
                         tickIndex++;
@@ -767,7 +767,7 @@ public abstract class Axis<T> extends Region {
                 positionTextNode(tick.textNode, getTickLabelGap() + tickMarkLength,
                                  tick.getPosition(),getTickLabelRotation(),side);
                 // check if position is inside bounds
-                if(tick.getPosition() >= 0 && tick.getPosition() <= length) {
+                if(tick.getPosition() >= 0 && tick.getPosition() <= Math.ceil(length)) {
                     if (isTickLabelsVisible()) {
                         tick.textNode.setVisible((tickIndex % numLabelsToSkip) == 0);
                         tickIndex++;
@@ -805,7 +805,7 @@ public abstract class Axis<T> extends Region {
                 positionTextNode(tick.textNode, tick.getPosition(), height - tickMarkLength - getTickLabelGap(),
                         getTickLabelRotation(), side);
                 // check if position is inside bounds
-                if(tick.getPosition() >= 0 && tick.getPosition() <= length) {
+                if(tick.getPosition() >= 0 && tick.getPosition() <= Math.ceil(length)) {
                     if (isTickLabelsVisible()) {
                         tick.textNode.setVisible((tickIndex % numLabelsToSkip) == 0);
                         tickIndex++;
@@ -832,7 +832,7 @@ public abstract class Axis<T> extends Region {
                 positionTextNode(tick.textNode,xPos, tickMarkLength + getTickLabelGap(),
                                 getTickLabelRotation(),side);
                 // check if position is inside bounds
-                if(xPos >= 0 && xPos <= length) {
+                if(xPos >= 0 && xPos <= Math.ceil(length)) {
                     if (isTickLabelsVisible()) {
                         tick.textNode.setVisible((tickIndex % numLabelsToSkip) == 0);
                         tickIndex++;

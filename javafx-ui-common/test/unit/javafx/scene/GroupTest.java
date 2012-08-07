@@ -25,8 +25,11 @@
 
 package javafx.scene;
 
+import java.util.HashSet;
+import java.util.Set;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertSame;
 import static org.junit.Assert.fail;
@@ -110,6 +113,30 @@ public class GroupTest {
 //            assertNotNull(g.getChildren()[index]);
 //            assertSame(g.getChildren()[index].impl_getPGNode(), sgChildren.get(index));
 //        }
+    }
+
+
+    @Test
+    public void testVarArgConstructor() {
+        Rectangle r1 = new Rectangle();
+        Rectangle r2 = new Rectangle();
+
+        Group g = new Group(r1, r2);
+        assertTrue(g.getChildren().contains(r1));
+        assertTrue(g.getChildren().contains(r2));
+    }
+
+    @Test
+    public void testCollectionConstructor() {
+        Rectangle r1 = new Rectangle();
+        Rectangle r2 = new Rectangle();
+        Set s = new HashSet();
+        s.add(r1);
+        s.add(r2);
+
+        Group g = new Group(s);
+        assertTrue(g.getChildren().contains(r1));
+        assertTrue(g.getChildren().contains(r2));
     }
 
     // Test the creation of a cyclic graph

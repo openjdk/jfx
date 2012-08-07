@@ -42,7 +42,8 @@ import javafx.util.converter.DefaultStringConverter;
  * being edited, and as a TextField when in editing mode. The TextField will, by 
  * default, stretch to fill the entire tree cell.
  * 
- * @param <T> The type of the elements contained within the ListView.
+ * @param <T> The type of the elements contained within the TreeView.
+ * @since 2.2
  */
 public class TextFieldTreeCell<T> extends TreeCell<T> {
     
@@ -54,7 +55,8 @@ public class TextFieldTreeCell<T> extends TreeCell<T> {
     
     /**
      * Provides a {@link TextField} that allows editing of the cell content when 
-     * the cell is double-clicked, or when {@link ListView#edit(int)} is called. 
+     * the cell is double-clicked, or when 
+     * {@link TreeView#edit(javafx.scene.control.TreeItem)} is called. 
      * This method will only work on {@link TreeView} instances which are of 
      * type String.
      * 
@@ -111,7 +113,11 @@ public class TextFieldTreeCell<T> extends TreeCell<T> {
      **************************************************************************/
     
     /**
-     * Creates a default TextFieldTreeCell with a null converter.
+     * Creates a default TextFieldTreeCell with a null converter. Without a 
+     * {@link StringConverter} specified, this cell will not be able to accept
+     * input from the TextField (as it will not know how to convert this back
+     * to the domain object). It is therefore strongly encouraged to not use
+     * this constructor unless you intend to set the converter separately.
      */
     public TextFieldTreeCell() { 
         this(null);
@@ -126,7 +132,7 @@ public class TextFieldTreeCell<T> extends TreeCell<T> {
      * instance of type T. This item will then be passed along to the 
      * {@link TreeView#onEditCommitProperty()} callback.
      * 
-     * @param onCommit A {@link StringConverter<T> converter} that can convert 
+     * @param converter A {@link StringConverter converter} that can convert 
      *      the given String (from what the user typed in) into an instance of 
      *      type T.
      */

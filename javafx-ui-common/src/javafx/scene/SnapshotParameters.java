@@ -30,6 +30,7 @@ import javafx.scene.transform.Transform;
 
 /**
  * Parameters used to specify the rendering attributes for Node snapshot.
+ * @since 2.2
  */
 public class SnapshotParameters {
 
@@ -137,12 +138,19 @@ public class SnapshotParameters {
 
     /**
      * Sets the viewport used for rendering.
+     * The viewport is specified in the parent coordinate system of the
+     * node being rendered. It is not transformed by the transform
+     * of this SnapshotParameters.
      * If this viewport is non-null it is used instead of the bounds of the
      * node being rendered and specifies the source rectangle that will be
      * rendered into the image.
+     * In this case, the upper-left pixel of the viewport will map to
+     * the upper-left pixel (0,0)
+     * in the rendered image.
      * If the viewport is null, then the entire area of the node defined
-     * by the boundsInParent of that node, transformed by the transform
-     * object of this SnapshotParameters, will be rendered.
+     * by its boundsInParent, after first applying the
+     * transform of this SnapshotParameters, will be rendered.
+     * The default value is null.
      *
      * @param viewport the viewport to set
      */

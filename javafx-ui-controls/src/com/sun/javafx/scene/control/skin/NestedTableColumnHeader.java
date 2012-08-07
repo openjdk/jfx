@@ -209,6 +209,10 @@ public class NestedTableColumnHeader extends TableColumnHeader {
             header.dispose();
         }
         
+        for (int i = 0; i < dragRects.size(); i++) {
+            Rectangle rect = dragRects.get(i);
+            rect.visibleProperty().unbind();
+        }
         dragRects.clear();
         getChildren().clear();
     }
@@ -348,7 +352,7 @@ public class NestedTableColumnHeader extends TableColumnHeader {
             rect.setWidth(DRAG_RECT_WIDTH);
             rect.setHeight(getHeight() - label.getHeight());
             rect.setFill(Color.TRANSPARENT);
-            rect.setVisible(false);
+            rect.visibleProperty().bind(c.visibleProperty());
             rect.setSmooth(false);
             rect.setOnMousePressed(rectMousePressed);
             rect.setOnMouseDragged(rectMouseDragged);
@@ -417,7 +421,7 @@ public class NestedTableColumnHeader extends TableColumnHeader {
         for (TableColumnHeader n : getColumnHeaders()) {
             if (! n.isVisible()) continue;
             
-            double prefWidth = n.prefWidth(-1);
+            double prefWidth = snapSize(n.prefWidth(-1));
 //            double prefHeight = n.prefHeight(-1);
 
             // position the column header in the default location...
@@ -439,7 +443,6 @@ public class NestedTableColumnHeader extends TableColumnHeader {
             // position drag overlay to intercept column resize requests
             if (dragRects != null && i < dragRects.size()) {
                 Rectangle dragRect = dragRects.get(i++);
-                dragRect.setVisible(true);
                 dragRect.setHeight(getHeight() - label.getHeight());
                 dragRect.relocate(x - DRAG_RECT_WIDTH / 2, getInsets().getTop() + labelHeight);
             }
@@ -453,7 +456,7 @@ public class NestedTableColumnHeader extends TableColumnHeader {
         if (getColumns() != null) {
             for (TableColumnHeader c : getColumnHeaders()) {
                 if (c.isVisible()) {
-                    width += c.computePrefWidth(height);
+                    width += snapSize(c.computePrefWidth(height));
                 }
             }
         }

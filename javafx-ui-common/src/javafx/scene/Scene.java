@@ -59,15 +59,24 @@ import javafx.geometry.Point2D;
 import javafx.scene.input.ContextMenuEvent;
 import javafx.scene.input.DragEvent;
 import javafx.scene.input.Dragboard;
+import javafx.scene.input.GestureEvent;
 import javafx.scene.input.InputMethodEvent;
 import javafx.scene.input.InputMethodRequests;
+import javafx.scene.input.InputMethodTextRun;
 import javafx.scene.input.KeyCode;
 import javafx.scene.input.KeyCombination;
 import javafx.scene.input.KeyEvent;
 import javafx.scene.input.Mnemonic;
 import javafx.scene.input.MouseButton;
+import javafx.scene.input.MouseDragEvent;
 import javafx.scene.input.MouseEvent;
+import javafx.scene.input.RotateEvent;
+import javafx.scene.input.ScrollEvent;
+import javafx.scene.input.SwipeEvent;
+import javafx.scene.input.TouchEvent;
+import javafx.scene.input.TouchPoint;
 import javafx.scene.input.TransferMode;
+import javafx.scene.input.ZoomEvent;
 import javafx.scene.paint.Color;
 import javafx.scene.paint.Paint;
 import javafx.stage.Window;
@@ -113,14 +122,6 @@ import javafx.beans.property.ReadOnlyObjectWrapper;
 import javafx.geometry.Bounds;
 import javafx.geometry.Orientation;
 import javafx.scene.image.WritableImage;
-import javafx.scene.input.GestureEvent;
-import javafx.scene.input.MouseDragEvent;
-import javafx.scene.input.RotateEvent;
-import javafx.scene.input.ScrollEvent;
-import javafx.scene.input.SwipeEvent;
-import javafx.scene.input.TouchEvent;
-import javafx.scene.input.TouchPoint;
-import javafx.scene.input.ZoomEvent;
 import javafx.stage.Stage;
 import javafx.stage.StageStyle;
 import javafx.util.Callback;
@@ -419,7 +420,6 @@ public class Scene implements EventTarget {
     }
 
     private void doCSSPass() {
-        StyleManager.getInstance().clearCachedValues(this);
         final Parent sceneRoot = getRoot();
         //
         // RT-17547: when the tree is synchronized, the dirty bits are
@@ -578,16 +578,19 @@ public class Scene implements EventTarget {
     private ReadOnlyObjectWrapper<Window> windowPropertyImpl() {
         if (window == null) {
             window = new ReadOnlyObjectWrapper<Window>() {
+                private Window oldWindow;
+
                 @Override protected void invalidated() {
-                    if (get() != null) {
+                    final Window newWindow = get();
+                    getKeyHandler().windowForSceneChanged(oldWindow, newWindow);
+                    if (oldWindow != null) {
                         impl_disposePeer();
                     }
-                    Window oldWindow = get();
-                    KeyHandler kh = getKeyHandler();
-                    kh.windowForSceneChanged(oldWindow, get());
-                    if (get() != null) {
+                    if (newWindow != null) {
                         impl_initPeer();
                     }
+
+                    oldWindow = newWindow;
                 }
 
                 @Override
@@ -980,7 +983,7 @@ public class Scene implements EventTarget {
                         throw new IllegalArgumentException(_value +
                                 "is set as a clip on another node, so cannot be set as root");
                     }
-                    if (_value.isSceneRoot() && _value.getScene() != Scene.this) {
+                    if (_value.getScene() != null && _value.getScene().getRoot() == _value && _value.getScene() != Scene.this) {
                         if (isBound()) forceUnbind();
                         throw new IllegalArgumentException(_value +
                                 "is already set as root of another scene");
@@ -1221,6 +1224,19 @@ public class Scene implements EventTarget {
      * it is ready.
      * CSS and layout processing will be done for the scene prior to
      * rendering it.
+     * The entire destination image is cleared using the fill {@code Paint}
+     * of this scene. The nodes in the scene are then rendered to the image.
+     * The point (0,0) in scene coordinates is mapped to (0,0) in the image.
+     * If the image is smaller than the size of the scene, then the rendering
+     * will be clipped by the image.
+     *
+     * <p>
+     * When taking a snapshot of a scene that is being animated, either
+     * explicitly by the application or implicitly (such as chart animation),
+     * the snapshot will be rendered based on the state of the scene graph at
+     * the moment the snapshot is taken and will not reflect any subsequent
+     * animation changes.
+     * </p>
      *
      * @param image the writable image that will be used to hold the rendered scene.
      * It may be null in which case a new WritableImage will be constructed.
@@ -1233,6 +1249,7 @@ public class Scene implements EventTarget {
      *     other than the JavaFX Application Thread.
      *
      * @return the rendered image
+     * @since 2.2
      */
     public WritableImage snapshot(WritableImage image) {
         if (!paused) {
@@ -1246,11 +1263,28 @@ public class Scene implements EventTarget {
      * Takes a snapshot of this scene at the next frame and calls the
      * specified callback method when the image is ready.
      * CSS and layout processing will be done for the scene prior to
-     * rendering it. This is an asynchronous call, which means that other
+     * rendering it.
+     * The entire destination image is cleared using the fill {@code Paint}
+     * of this scene. The nodes in the scene are then rendered to the image.
+     * The point (0,0) in scene coordinates is mapped to (0,0) in the image.
+     * If the image is smaller than the size of the scene, then the rendering
+     * will be clipped by the image.
+     *
+     * <p>
+     * This is an asynchronous call, which means that other
      * events or animation might be processed before the scene is rendered.
      * If any such events modify a node in the scene that modification will
      * be reflected in the rendered image (as it will also be reflected in
      * the frame rendered to the Stage).
+     * </p>
+     *
+     * <p>
+     * When taking a snapshot of a scene that is being animated, either
+     * explicitly by the application or implicitly (such as chart animation),
+     * the snapshot will be rendered based on the state of the scene graph at
+     * the moment the snapshot is taken and will not reflect any subsequent
+     * animation changes.
+     * </p>
      *
      * @param callback a class whose call method will be called when the image
      * is ready. The SnapshotResult that is passed into the call method of
@@ -1268,6 +1302,7 @@ public class Scene implements EventTarget {
      *     other than the JavaFX Application Thread.
      *
      * @throws NullPointerException if the callback parameter is null.
+     * @since 2.2
      */
     public void snapshot(Callback<SnapshotResult, Void> callback, WritableImage image) {
         Toolkit.getToolkit().checkFxUserThread();
@@ -1514,6 +1549,7 @@ public class Scene implements EventTarget {
      * @treatAsPrivate implementation detail
      * @deprecated This is an internal API that is not intended for use and will be removed in the next version
      */
+    // SB-dependency: RT-22747 has been filed to track this
     @Deprecated
     public void impl_processMouseEvent(MouseEvent e) {
         if (e.getEventType() == MouseEvent.MOUSE_CLICKED) {
@@ -2165,14 +2201,24 @@ public class Scene implements EventTarget {
 
             boolean dirty = dirtyNodes == null || dirtyNodesSize != 0 || !isDirtyEmpty();
             if (dirty) {
-                // synchronize scene properties
-                synchronizeSceneProperties();
-                // Run the synchronizer
-                synchronizeSceneNodes();
-                Scene.this.mouseHandler.pulse();
-                // Tell the sceen peer that it needs to repaint
+                getRoot().updateBounds();
                 if (impl_peer != null) {
-                    impl_peer.markDirty();
+                    try {
+                        impl_peer.waitForSynchronization();
+                        // synchronize scene properties
+                        synchronizeSceneProperties();
+                        // Run the synchronizer
+                        synchronizeSceneNodes();
+                        Scene.this.mouseHandler.pulse();
+                        // Tell the scene peer that it needs to repaint
+                        impl_peer.markDirty();
+                    } finally {
+                        impl_peer.releaseSynchronization();
+                    }
+                } else {
+                    synchronizeSceneProperties();
+                    synchronizeSceneNodes();
+                    Scene.this.mouseHandler.pulse();
                 }
             }
 
@@ -2222,18 +2268,36 @@ public class Scene implements EventTarget {
         }
 
         @Override
-        public void mouseEvent(Object event) {
-            Scene.this.impl_processMouseEvent(Toolkit.getToolkit().convertMouseEventToFX(event));
+        public void mouseEvent(EventType<MouseEvent> type, double x, double y, double screenX, double screenY,
+                               MouseButton button, int clickCount, boolean popupTrigger, boolean synthesized,
+                               boolean shiftDown, boolean controlDown, boolean altDown, boolean metaDown,
+                               boolean primaryDown, boolean middleDown, boolean secondaryDown)
+        {
+            MouseEvent mouseEvent = MouseEvent.impl_mouseEvent(x, y, screenX, screenY, button, clickCount,
+                    shiftDown, controlDown, altDown, metaDown, popupTrigger,
+                    primaryDown, middleDown, secondaryDown, synthesized, type);
+            impl_processMouseEvent(mouseEvent);
         }
 
         @Override
-        public void keyEvent(Object event) {
-            Scene.this.impl_processKeyEvent(Toolkit.getToolkit().convertKeyEventToFX(event));
+        public void keyEvent(EventType<KeyEvent> type, int key, char[] cs,
+                             boolean shiftDown, boolean controlDown, boolean altDown, boolean metaDown)
+        {
+            String chars = new String(cs);
+            String text = chars; // TODO: this must be a text like "HOME", "F1", or "A"
+            KeyEvent keyEvent = KeyEvent.impl_keyEvent(Scene.this, chars, text, key,
+                    shiftDown, controlDown, altDown, metaDown, type);
+            impl_processKeyEvent(keyEvent);
         }
 
         @Override
-        public void inputMethodEvent(Object event) {
-            Scene.this.processInputMethodEvent(Toolkit.getToolkit().convertInputMethodEventToFX(event));
+        public void inputMethodEvent(EventType<InputMethodEvent> type,
+                                     ObservableList<InputMethodTextRun> composed, String committed,
+                                     int caretPosition)
+        {
+            InputMethodEvent inputMethodEvent = InputMethodEvent.impl_inputMethodEvent(
+                Scene.this, composed, committed, caretPosition, type);
+            processInputMethodEvent(inputMethodEvent);
         }
 
         public void menuEvent(double x, double y, double xAbs, double yAbs,
@@ -2423,10 +2487,6 @@ public class Scene implements EventTarget {
             }
             int order = touchMap.getOrder(id);
 
-            if (!nextTouchEvent.impl_isDirect()) {
-                order = touchPointIndex - 1;
-            }
-
             if (order >= touchPoints.length) {
                 throw new RuntimeException("Too many touch points reported");
             }
@@ -2477,87 +2537,77 @@ public class Scene implements EventTarget {
          * This may be from either an internal or external dnd operation.
          */
         @Override
-        public TransferMode dragEnter(Object e) {
-            if (Scene.this.dndGesture == null) {
-                Scene.this.dndGesture = new DnDGesture();
+        public TransferMode dragEnter(double x, double y, double screenX, double screenY,
+                                      TransferMode transferMode, Dragboard dragboard)
+        {
+            if (dndGesture == null) {
+                dndGesture = new DnDGesture();
             }
-            return Scene.this.dndGesture.processTargetEnterOver(
-                    Toolkit.getToolkit().convertDropTargetEventToFX(
-                        e, Scene.this.dndGesture.dragboard));
+            DragEvent dragEvent =
+                    DragEvent.impl_create(x, y, screenX, screenY, transferMode, dragboard);
+            return dndGesture.processTargetEnterOver(dragEvent);
         }
 
         @Override
-        public TransferMode dragOver(Object e) {
+        public TransferMode dragOver(double x, double y, double screenX, double screenY,
+                                     TransferMode transferMode, Dragboard dragboard)
+        {
             if (Scene.this.dndGesture == null) {
-                System.out.println("GOT A dragOver when dndGesture is null!");
+                System.err.println("GOT A dragOver when dndGesture is null!");
                 return null;
             } else {
-                return Scene.this.dndGesture.processTargetEnterOver(
-                        Toolkit.getToolkit().convertDropTargetEventToFX(
-                            e, Scene.this.dndGesture.dragboard));
+                DragEvent dragEvent =
+                        DragEvent.impl_create(x, y, screenX, screenY, transferMode, dragboard);
+                return dndGesture.processTargetEnterOver(dragEvent);
             }
         }
 
         @Override
-        public void dropActionChanged(Object e) {
-            if (Scene.this.dndGesture == null) {
-                System.out.println("GOT A dropActionChanged when dndGesture is null!");
+        public void dragExit(double x, double y, double screenX, double screenY, Dragboard dragboard) {
+            if (dndGesture == null) {
+                System.err.println("GOT A dragExit when dndGesture is null!");
             } else {
-                Scene.this.dndGesture.processTargetActionChanged(
-                        Toolkit.getToolkit().convertDropTargetEventToFX(
-                            e, Scene.this.dndGesture.dragboard));
-            }
-        }
-
-
-        @Override
-        public void dragExit(Object e) {
-            if (Scene.this.dndGesture == null) {
-                System.out.println("GOT A dragExit when dndGesture is null!");
-            } else {
-                Scene.this.dndGesture.processTargetExit(
-                        Toolkit.getToolkit().convertDropTargetEventToFX(
-                            e, Scene.this.dndGesture.dragboard));
-
-                if (Scene.this.dndGesture.source == null) {
-                    Scene.this.dndGesture = null;
+                DragEvent dragEvent =
+                        DragEvent.impl_create(x, y, screenX, screenY, null, dragboard);
+                dndGesture.processTargetExit(dragEvent);
+                if (dndGesture.source == null) {
+                    dndGesture = null;
                 }
             }
         }
 
 
         @Override
-        public TransferMode drop(Object e) {
-            if (Scene.this.dndGesture == null) {
-                System.out.println("GOT A drop when dndGesture is null!");
+        public TransferMode drop(double x, double y, double screenX, double screenY,
+                                  TransferMode transferMode, Dragboard dragboard)
+        {
+            if (dndGesture == null) {
+                System.err.println("GOT A drop when dndGesture is null!");
                 return null;
             } else {
-                TransferMode tm = Scene.this.dndGesture.processTargetDrop(
-                        Toolkit.getToolkit().convertDropTargetEventToFX(
-                            e, Scene.this.dndGesture.dragboard));
-
-                if (Scene.this.dndGesture.source == null) {
-                    Scene.this.dndGesture = null;
+                DragEvent dragEvent =
+                        DragEvent.impl_create(x, y, screenX, screenY, null, dragboard);
+                TransferMode tm = dndGesture.processTargetDrop(dragEvent);
+                if (dndGesture.source == null) {
+                    dndGesture = null;
                 }
-
                 return tm;
-
             }
         }
     }
 
     class DragGestureListener implements TKDragGestureListener {
        @Override
-       public void dragGestureRecognized(Object e) {
-
-           Scene.this.dndGesture = new DnDGesture();
-           final DragEvent de = Toolkit.getToolkit().convertDragRecognizedEventToFX(e, null);
-           final EventTarget pickedNode = pick(de.getX(), de.getY());
-           Scene.this.dndGesture.dragboard = de.impl_getPlatformDragboard();
-
-            Scene.this.dndGesture.processRecognized(pickedNode, de);
-
-            Scene.this.dndGesture = null;
+       public void dragGestureRecognized(double x, double y, double screenX, double screenY,
+                                         int button, Dragboard dragboard)
+       {
+           dndGesture = new DnDGesture();
+           dndGesture.dragboard = dragboard;
+           // TODO: support mouse buttons in DragEvent
+           DragEvent dragEvent = DragEvent.impl_create(x, y, screenX, screenY, null, dragboard);
+           final EventTarget pickedNode = pick(dragEvent.getX(), dragEvent.getY());
+           dndGesture.processRecognized(pickedNode, dragEvent);
+           dndGesture = null;
         }
     }
 
@@ -2859,8 +2909,7 @@ public class Scene implements EventTarget {
 
                 // cancel drag and drop
                 DragEvent de = DragEvent.impl_create(DragEvent.DRAG_DONE,
-                        source, source, source, null, 0, 0, 0, 0, null,
-                        dragboard, null);
+                        source, source, source, null, 0, 0, 0, 0, null, dragboard);
 
                 if (source != null) {
                     Event.fireEvent(source, de);
@@ -2926,18 +2975,15 @@ public class Scene implements EventTarget {
     class DragSourceListener implements TKDragSourceListener {
 
         @Override
-        public void dropActionChanged(Object e) {
-            //System.out.println("Scene.DragSourceListener.dropActionChanged() - no action taken");
-        }
-
-        @Override
-        public void dragDropEnd(Object e) {
-            if (Scene.this.dndGesture != null) {
-                Scene.this.dndGesture.processDropEnd(Toolkit.getToolkit().convertDragSourceEventToFX(e, Scene.this.dndGesture.dragboard));
-                Scene.this.dndGesture = null;
-            }/* else {
-                System.out.println("Scene.DragSourceListener.dragDropEnd() - UNEXPECTD - dndGesture is NULL");
-            }*/
+        public void dragDropEnd(double x, double y, double screenX, double screenY,
+                                TransferMode transferMode, Dragboard dragboard)
+        {
+            if (dndGesture != null) {
+                DragEvent dragEvent =
+                        DragEvent.impl_create(x, y, screenX, screenY, transferMode, dragboard);
+                dndGesture.processDropEnd(dragEvent);
+                dndGesture = null;
+            }
         }
     }
 
@@ -3114,7 +3160,10 @@ public class Scene implements EventTarget {
 
             @Override
             public void run() {
-                process(lastEvent, true);
+                if (Scene.this.impl_peer != null) { // Make sure this is run only if
+                                                    // the peer is still alive
+                    process(lastEvent, true);
+                }
             }
         };
 
@@ -3435,7 +3484,7 @@ public class Scene implements EventTarget {
             focusOwner.set(value);
         }
 
-        private boolean windowFocused = true;
+        private boolean windowFocused;
         protected boolean isWindowFocused() { return windowFocused; }
         protected void setWindowFocused(boolean value) {
             windowFocused = value;
@@ -3463,10 +3512,6 @@ public class Scene implements EventTarget {
             }
         };
 
-        public KeyHandler() {
-            windowForSceneChanged(Scene.this.getWindow(), Scene.this.getWindow()); // to init windowFocused properly
-        }
-
         private void process(KeyEvent e) {
             final Node sceneFocusOwner = getFocusOwner();
             final EventTarget eventTarget =
@@ -3483,12 +3528,6 @@ public class Scene implements EventTarget {
                 return;
             }
             setFocusOwner(node);
-
-            if (getFocusOwner() != null) {
-                if (impl_peer != null) {
-                    impl_peer.requestFocus();
-                }
-            }
         }
     }
     /***************************************************************************
@@ -4246,6 +4285,7 @@ public class Scene implements EventTarget {
 
     /**
      * Defines a function to be called when a scrolling gesture is detected.
+     * @since 2.2
      */
     private ObjectProperty<EventHandler<? super ScrollEvent>> onScrollStarted;
 
@@ -4318,6 +4358,7 @@ public class Scene implements EventTarget {
 
     /**
      * Defines a function to be called when a scrolling gesture ends.
+     * @since 2.2
      */
     private ObjectProperty<EventHandler<? super ScrollEvent>> onScrollFinished;
 
@@ -4354,6 +4395,7 @@ public class Scene implements EventTarget {
 
     /**
      * Defines a function to be called when a rotating gesture is detected.
+     * @since 2.2
      */
     private ObjectProperty<EventHandler<? super RotateEvent>> onRotationStarted;
 
@@ -4390,6 +4432,7 @@ public class Scene implements EventTarget {
 
     /**
      * Defines a function to be called when user performs a rotating action.
+     * @since 2.2
      */
     private ObjectProperty<EventHandler<? super RotateEvent>> onRotate;
 
@@ -4426,6 +4469,7 @@ public class Scene implements EventTarget {
 
     /**
      * Defines a function to be called when a rotating gesture ends.
+     * @since 2.2
      */
     private ObjectProperty<EventHandler<? super RotateEvent>> onRotationFinished;
 
@@ -4462,6 +4506,7 @@ public class Scene implements EventTarget {
 
     /**
      * Defines a function to be called when a zooming gesture is detected.
+     * @since 2.2
      */
     private ObjectProperty<EventHandler<? super ZoomEvent>> onZoomStarted;
 
@@ -4498,6 +4543,7 @@ public class Scene implements EventTarget {
 
     /**
      * Defines a function to be called when user performs a zooming action.
+     * @since 2.2
      */
     private ObjectProperty<EventHandler<? super ZoomEvent>> onZoom;
 
@@ -4534,6 +4580,7 @@ public class Scene implements EventTarget {
 
     /**
      * Defines a function to be called when a zooming gesture ends.
+     * @since 2.2
      */
     private ObjectProperty<EventHandler<? super ZoomEvent>> onZoomFinished;
 
@@ -4571,6 +4618,7 @@ public class Scene implements EventTarget {
     /**
      * Defines a function to be called when an upward swipe gesture
      * happens in this scene.
+     * @since 2.2
      */
     private ObjectProperty<EventHandler<? super SwipeEvent>> onSwipeUp;
 
@@ -4608,6 +4656,7 @@ public class Scene implements EventTarget {
     /**
      * Defines a function to be called when an downward swipe gesture
      * happens in this scene.
+     * @since 2.2
      */
     private ObjectProperty<EventHandler<? super SwipeEvent>> onSwipeDown;
 
@@ -4645,6 +4694,7 @@ public class Scene implements EventTarget {
     /**
      * Defines a function to be called when an leftward swipe gesture
      * happens in this scene.
+     * @since 2.2
      */
     private ObjectProperty<EventHandler<? super SwipeEvent>> onSwipeLeft;
 
@@ -4682,6 +4732,7 @@ public class Scene implements EventTarget {
     /**
      * Defines a function to be called when an rightward swipe gesture
      * happens in this scene.
+     * @since 2.2
      */
     private ObjectProperty<EventHandler<? super SwipeEvent>> onSwipeRight;
 
@@ -4724,6 +4775,7 @@ public class Scene implements EventTarget {
 
     /**
      * Defines a function to be called when a new touch point is pressed.
+     * @since 2.2
      */
     private ObjectProperty<EventHandler<? super TouchEvent>> onTouchPressed;
 
@@ -4760,6 +4812,7 @@ public class Scene implements EventTarget {
 
     /**
      * Defines a function to be called when a touch point is moved.
+     * @since 2.2
      */
     private ObjectProperty<EventHandler<? super TouchEvent>> onTouchMoved;
 
@@ -4796,6 +4849,7 @@ public class Scene implements EventTarget {
 
     /**
      * Defines a function to be called when a new touch point is pressed.
+     * @since 2.2
      */
     private ObjectProperty<EventHandler<? super TouchEvent>> onTouchReleased;
 
@@ -4833,6 +4887,7 @@ public class Scene implements EventTarget {
     /**
      * Defines a function to be called when a touch point stays pressed and
      * still.
+     * @since 2.2
      */
     private ObjectProperty<EventHandler<? super TouchEvent>> onTouchStationary;
 

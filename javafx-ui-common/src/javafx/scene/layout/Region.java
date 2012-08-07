@@ -70,6 +70,7 @@ import com.sun.javafx.sg.PGShape;
 import com.sun.javafx.sg.Repeat;
 import com.sun.javafx.tk.Toolkit;
 import javafx.beans.property.*;
+import javafx.scene.image.Image;
 
 /**
  * A Region is an area of the screen that can contain other nodes and be styled
@@ -133,21 +134,21 @@ public class Region extends Parent {
         return Math.min(Math.max(value, min), Math.max(min,max));
     }
 
-    static double snapSpace(double value, boolean snapToPixel) {
+    public static double snapSpace(double value, boolean snapToPixel) {
          return snapToPixel? Math.round(value) : value;
     }
 
-    static double snapSize(double value, boolean snapToPixel) {
+    public static double snapSize(double value, boolean snapToPixel) {
         return snapToPixel? Math.ceil(value) : value;
     }
 
-    static double snapPosition(double value, boolean snapToPixel) {
+    public static double snapPosition(double value, boolean snapToPixel) {
         return snapToPixel? Math.round(value) : value;
     }
 
     static double getMaxAreaBaselineOffset(List<Node> content, Insets margins[]) {
         double max = 0;
-        for (int i = 0; i < content.size(); i++) {
+        for (int i = 0, maxPos = content.size(); i < maxPos; i++) {
             Node node = content.get(i);
             Insets margin = margins[i] != null? margins[i] : Insets.EMPTY;
             max = Math.max(max, (margin != null? margin.getTop() : 0)  + node.getBaselineOffset());
@@ -157,7 +158,7 @@ public class Region extends Parent {
 
     static double getMaxBaselineOffset(List<Node> content) {
         double max = 0;
-        for (int i = 0; i < content.size(); i++) {
+        for (int i = 0, maxPos = content.size(); i < maxPos; i++) {
             Node node = content.get(i);
             max = Math.max(max, node.getBaselineOffset());
         }
@@ -191,7 +192,7 @@ public class Region extends Parent {
     static double max(List<Double> seq) {
         double max = 0;
         if (seq != null) {
-            for (int i = 0; i < seq.size(); i++) {
+            for (int i = 0, maxPos = seq.size(); i < maxPos; i++) {
                 double value = seq.get(i);
                 max = Math.max(max, value);
             }
@@ -208,13 +209,15 @@ public class Region extends Parent {
     }
 
     /* END static convenience methods */
-
+    
+    
+    
     /***************************************************************************
      *                                                                         *
-     * Region properties                                                    *
+     * Constructors                                                            *
      *                                                                         *
      **************************************************************************/
-
+    
     /**
      * Creates a Region layout.
      */
@@ -222,6 +225,14 @@ public class Region extends Parent {
         super();
         setPickOnBounds(true);
     }
+    
+    
+
+    /***************************************************************************
+     *                                                                         *
+     * Region properties                                                       *
+     *                                                                         *
+     **************************************************************************/
 
     /**
      * Defines whether this region rounds position/spacing and ceils size
@@ -230,23 +241,19 @@ public class Region extends Parent {
     public final BooleanProperty snapToPixelProperty() {
         if (snapToPixel == null) {
             snapToPixel = new StyleableBooleanProperty(true) {
-                @Override
-                public void invalidated() {
+                @Override public void invalidated() {
                     requestLayout();
                 }
                     
-                @Override
-                public StyleableProperty getStyleableProperty() {   
+                @Override public StyleableProperty getStyleableProperty() {   
                     return StyleableProperties.SNAP_TO_PIXEL;
                 }
 
-                @Override
-                public Object getBean() {
+                @Override public Object getBean() {
                     return Region.this;
                 }
 
-                @Override
-                public String getName() {
+                @Override public String getName() {
                     return "snapToPixel";
                 }
             };
@@ -257,7 +264,7 @@ public class Region extends Parent {
     private BooleanProperty snapToPixel;
     public final void setSnapToPixel(boolean value) { snapToPixelProperty().set(value); }
     public final boolean isSnapToPixel() { return snapToPixel == null ? true : snapToPixel.get(); }
-
+    
     /**
      * The top,right,bottom,left padding around the region's content.
      * This space will be included in the calculation of the region's
@@ -269,8 +276,7 @@ public class Region extends Parent {
             padding = new StyleableObjectProperty<Insets>(Insets.EMPTY) {
                 private Insets lastValidValue = Insets.EMPTY;
 
-                @Override
-                public void invalidated() {
+                @Override public void invalidated() {
                     final Insets newValue = get();
                     if (newValue == null) {
                         // rollback
@@ -285,18 +291,15 @@ public class Region extends Parent {
                     requestLayout();
                 }
                 
-                @Override
-                public StyleableProperty getStyleableProperty() {
+                @Override public StyleableProperty getStyleableProperty() {
                     return StyleableProperties.PADDING;
                 }
 
-                @Override
-                public Object getBean() {
+                @Override public Object getBean() {
                     return Region.this;
                 }
 
-                @Override
-                public String getName() {
+                @Override public String getName() {
                     return "padding";
                 }
             };
@@ -380,24 +383,26 @@ public class Region extends Parent {
                 final List<BorderImage> image_borders = getImageBorders();
                 if (image_borders != null) {
                     for (int i = 0; i < image_borders.size(); i++) {
-                        Insets offsets = image_borders.get(i).getOffsets();
+                        BorderImage borderImage = image_borders.get(i);
+                        Insets offsets = borderImage.getOffsets();
                         // stoked borders assume centered strokes for now
-                        left = Math.max(left, offsets.getLeft() + image_borders.get(i).getLeftWidth());
-                        top = Math.max(top, offsets.getTop() + (image_borders.get(i).getTopWidth()));
-                        right = Math.max(right, offsets.getRight() + (image_borders.get(i).getRightWidth()));
-                        bottom = Math.max(bottom, offsets.getBottom() + (image_borders.get(i).getBottomWidth()));
+                        left = Math.max(left, offsets.getLeft() + borderImage.getLeftWidth());
+                        top = Math.max(top, offsets.getTop() + (borderImage.getTopWidth()));
+                        right = Math.max(right, offsets.getRight() + (borderImage.getRightWidth()));
+                        bottom = Math.max(bottom, offsets.getBottom() + (borderImage.getBottomWidth()));
                     }
                 }
                 
                 final List<StrokeBorder> stroke_borders = getStrokeBorders();
                 if (stroke_borders != null) {
                     for (int i = 0; i < stroke_borders.size(); i++) {
-                        Insets offsets = stroke_borders.get(i).getOffsets();
+                        StrokeBorder strokeBorder = stroke_borders.get(i);
+                        Insets offsets = strokeBorder.getOffsets();
                         // stoked borders assume centered strokes for now
-                        left = Math.max(left, offsets.getLeft() + (stroke_borders.get(i).getLeftWidth()));
-                        top = Math.max(top, offsets.getTop() + (stroke_borders.get(i).getTopWidth()));
-                        right = Math.max(right, offsets.getRight() + (stroke_borders.get(i).getRightWidth()));
-                        bottom = Math.max(bottom, offsets.getBottom() + (stroke_borders.get(i).getBottomWidth()));
+                        left = Math.max(left, offsets.getLeft() + (strokeBorder.getLeftWidth()));
+                        top = Math.max(top, offsets.getTop() + (strokeBorder.getTopWidth()));
+                        right = Math.max(right, offsets.getRight() + (strokeBorder.getRightWidth()));
+                        bottom = Math.max(bottom, offsets.getBottom() + (strokeBorder.getBottomWidth()));
                     }
                 }
                 Insets padding = getPadding();
@@ -414,23 +419,19 @@ public class Region extends Parent {
             return get();
         }
 
-        @Override
-        public void addListener(InvalidationListener listener) {
+        @Override public void addListener(InvalidationListener listener) {
             helper = ExpressionHelper.addListener(helper, this, listener);
         }
 
-        @Override
-        public void removeListener(InvalidationListener listener) {
+        @Override public void removeListener(InvalidationListener listener) {
             helper = ExpressionHelper.removeListener(helper, listener);
         }
 
-        @Override
-        public void addListener(ChangeListener<? super Insets> listener) {
+        @Override public void addListener(ChangeListener<? super Insets> listener) {
             helper = ExpressionHelper.addListener(helper, this, listener);
         }
 
-        @Override
-        public void removeListener(ChangeListener<? super Insets> listener) {
+        @Override public void removeListener(ChangeListener<? super Insets> listener) {
             helper = ExpressionHelper.removeListener(helper, listener);
         }
     };
@@ -449,21 +450,19 @@ public class Region extends Parent {
     private ReadOnlyDoubleWrapper widthPropertyImpl() {
         if (width == null) {
             width = new ReadOnlyDoubleWrapper(0.0) {
-                @Override
-                protected void invalidated() {
+                @Override protected void invalidated() {
+                    boundingBox = null;
                     impl_layoutBoundsChanged();
                     impl_geomChanged();
                     impl_markDirty(DirtyBits.NODE_GEOMETRY);
                     requestLayout();
                 }
 
-                @Override
-                public Object getBean() {
+                @Override public Object getBean() {
                     return Region.this;
                 }
 
-                @Override
-                public String getName() {
+                @Override public String getName() {
                     return "width";
                 }
             };
@@ -488,21 +487,19 @@ public class Region extends Parent {
     private ReadOnlyDoubleWrapper heightPropertyImpl() {
         if (height == null) {
             height = new ReadOnlyDoubleWrapper(0.0) {
-                @Override
-                protected void invalidated() {
+                @Override protected void invalidated() {
+                    boundingBox = null;
                     impl_layoutBoundsChanged();
                     impl_geomChanged();
                     impl_markDirty(DirtyBits.NODE_GEOMETRY);
                     requestLayout();
                 }
 
-                @Override
-                public Object getBean() {
+                @Override public Object getBean() {
                     return Region.this;
                 }
 
-                @Override
-                public String getName() {
+                @Override public String getName() {
                     return "height";
                 }
             };
@@ -530,20 +527,18 @@ public class Region extends Parent {
     public final DoubleProperty minWidthProperty() {
         if (minWidth == null) {
             minWidth = new DoublePropertyBase(USE_COMPUTED_SIZE) {
-                @Override
-                public void invalidated() {
-                    if (getParent() != null) {
-                        getParent().requestLayout();
+                @Override public void invalidated() {
+                    Parent parent = getParent();
+                    if (parent != null) {
+                        parent.requestLayout();
                     }
                 }
 
-                @Override
-                public Object getBean() {
+                @Override public Object getBean() {
                     return Region.this;
                 }
 
-                @Override
-                public String getName() {
+                @Override public String getName() {
                     return "minWidth";
                 }
             };
@@ -572,20 +567,18 @@ public class Region extends Parent {
     public final DoubleProperty minHeightProperty() {
         if (minHeight == null) {
             minHeight = new DoublePropertyBase(USE_COMPUTED_SIZE) {
-                @Override
-                public void invalidated() {
-                    if (getParent() != null) {
-                        getParent().requestLayout();
+                @Override public void invalidated() {
+                    Parent parent = getParent();
+                    if (parent != null) {
+                        parent.requestLayout();
                     }
                 }
 
-                @Override
-                public Object getBean() {
+                @Override public Object getBean() {
                     return Region.this;
                 }
 
-                @Override
-                public String getName() {
+                @Override public String getName() {
                     return "minHeight";
                 }
             };
@@ -624,20 +617,18 @@ public class Region extends Parent {
     public final DoubleProperty prefWidthProperty() {
         if (prefWidth == null) {
             prefWidth = new DoublePropertyBase(USE_COMPUTED_SIZE) {
-                @Override
-                public void invalidated() {
-                    if (getParent() != null) {
-                        getParent().requestLayout();
+                @Override public void invalidated() {
+                    Parent parent = getParent();
+                    if (parent != null) {
+                        parent.requestLayout();
                     }
                 }
 
-                @Override
-                public Object getBean() {
+                @Override public Object getBean() {
                     return Region.this;
                 }
 
-                @Override
-                public String getName() {
+                @Override public String getName() {
                     return "prefWidth";
                 }
             };
@@ -662,20 +653,18 @@ public class Region extends Parent {
     public final DoubleProperty prefHeightProperty() {
         if (prefHeight == null) {
             prefHeight = new DoublePropertyBase(USE_COMPUTED_SIZE) {
-                @Override
-                public void invalidated() {
-                    if (getParent() != null) {
-                        getParent().requestLayout();
+                @Override public void invalidated() {
+                    Parent parent = getParent();
+                    if (parent != null) {
+                        parent.requestLayout();
                     }
                 }
 
-                @Override
-                public Object getBean() {
+                @Override public Object getBean() {
                     return Region.this;
                 }
 
-                @Override
-                public String getName() {
+                @Override public String getName() {
                     return "prefHeight";
                 }
             };
@@ -718,20 +707,18 @@ public class Region extends Parent {
     public final DoubleProperty maxWidthProperty() {
         if (maxWidth == null) {
             maxWidth = new DoublePropertyBase(USE_COMPUTED_SIZE) {
-                @Override
-                public void invalidated() {
-                    if (getParent() != null) {
-                        getParent().requestLayout();
+                @Override public void invalidated() {
+                    Parent parent = getParent();
+                    if (parent != null) {
+                        parent.requestLayout();
                     }
                 }
 
-                @Override
-                public Object getBean() {
+                @Override public Object getBean() {
                     return Region.this;
                 }
 
-                @Override
-                public String getName() {
+                @Override public String getName() {
                     return "maxWidth";
                 }
             };
@@ -760,20 +747,18 @@ public class Region extends Parent {
     public final DoubleProperty maxHeightProperty() {
         if (maxHeight == null) {
             maxHeight = new DoublePropertyBase(USE_COMPUTED_SIZE) {
-                @Override
-                public void invalidated() {
-                    if (getParent() != null) {
-                        getParent().requestLayout();
+                @Override public void invalidated() {
+                    Parent parent = getParent();
+                    if (parent != null) {
+                        parent.requestLayout();
                     }
                 }
 
-                @Override
-                public Object getBean() {
+                @Override public Object getBean() {
                     return Region.this;
                 }
 
-                @Override
-                public String getName() {
+                @Override public String getName() {
                     return "maxHeight";
                 }
             };
@@ -816,23 +801,17 @@ public class Region extends Parent {
     private ObjectProperty<Shape> shapeProperty() {
         if (shape == null) {
             shape = new ObjectPropertyBase<Shape>() {
-
-                @Override
-                protected void invalidated() {
-                    
+                @Override protected void invalidated() {
                     impl_geomChanged();
                     requestLayout();
                     impl_markDirty(DirtyBits.REGION_SHAPE);
-                    
                 }
 
-                @Override
-                public Object getBean() {
+                @Override public Object getBean() {
                     return Region.this;
                 }
 
-                @Override
-                public String getName() {
+                @Override public String getName() {
                     return "shape";
                 }
 
@@ -846,48 +825,35 @@ public class Region extends Parent {
     private StringProperty shapeContentProperty() {
         if (shapeContent == null) {
             shapeContent = new StyleableStringProperty() {
-
-                @Override
-                protected void invalidated() {
-
+                @Override protected void invalidated() {
                     final String newContent = get();
                     if (newContent != null && !newContent.isEmpty()) {
-                        
                         final Shape shape = getShape();
                         if (shape instanceof SVGPath) {
-                            
                             final SVGPath svgPath = (SVGPath)shape;
                             if (!newContent.equals(svgPath.getContent())) {
                                 svgPath.setContent(newContent);
                             }
-                            
                         } else {
-                            
                             final SVGPath svgPath = new SVGPath();
                             svgPath.setContent(newContent);
 //                            shapeProperty().set(svgPath);
                             impl_setShape(svgPath);
-                            
                         }
-                        
                     } else {
                         shapeProperty().set(null);
                     }                    
-
                 }
                 
-                @Override
-                public Object getBean() {
+                @Override public Object getBean() {
                     return Region.this;
                 }
 
-                @Override
-                public String getName() {
+                @Override public String getName() {
                     return "shapeContent";
                 }
 
-                @Override
-                public StyleableProperty getStyleableProperty() {
+                @Override public StyleableProperty getStyleableProperty() {
                     return StyleableProperties.SHAPE;
                 }
                 
@@ -903,7 +869,6 @@ public class Region extends Parent {
      */
     @Deprecated
     public void impl_setShape(Shape value) {
-        
         final Shape thisShape = impl_getShape();
         if (thisShape != null && !thisShape.equals(value)) {
             thisShape.impl_setShapeChangeListener(null);
@@ -918,9 +883,7 @@ public class Region extends Parent {
     private ShapeChangeListener getShapeChangeListener() {
         if (shapeChangeListener == null) {
             shapeChangeListener = new ShapeChangeListener() {
-
-                @Override
-                public void changed() {
+                @Override public void changed() {
                     impl_geomChanged();
                     requestLayout();
                     impl_markDirty(DirtyBits.REGION_SHAPE);
@@ -956,28 +919,22 @@ public class Region extends Parent {
     private BooleanProperty scaleShapeProperty() {
         if (scaleShape == null) {
             scaleShape = new StyleableBooleanProperty(true) {
-
-                @Override 
-                public void invalidated() {
+                @Override public void invalidated() {
                     requestLayout();
                     impl_markDirty(DirtyBits.REGION_SHAPE);                    
                 }
                 
-                @Override
-                public Object getBean() {
+                @Override public Object getBean() {
                     return Region.this;
                 }
 
-                @Override
-                public String getName() {
+                @Override public String getName() {
                     return "scaleShape";
                 }
 
-                @Override
-                public StyleableProperty getStyleableProperty() {
+                @Override public StyleableProperty getStyleableProperty() {
                     return StyleableProperties.SCALE_SHAPE;
                 }
-                
             };
         }
         return scaleShape;
@@ -1018,28 +975,22 @@ public class Region extends Parent {
     private BooleanProperty positionShapeProperty() {
         if (positionShape == null) {
             positionShape = new StyleableBooleanProperty(true) {
-
-                @Override 
-                public void invalidated() {
+                @Override public void invalidated() {
                     requestLayout();
                     impl_markDirty(DirtyBits.REGION_SHAPE);                    
                 }
                 
-                @Override
-                public Object getBean() {
+                @Override public Object getBean() {
                     return Region.this;
                 }
 
-                @Override
-                public String getName() {
+                @Override public String getName() {
                     return "positionShape";
                 }
 
-                @Override
-                public StyleableProperty getStyleableProperty() {
+                @Override public StyleableProperty getStyleableProperty() {
                     return StyleableProperties.SCALE_SHAPE;
                 }
-                
             };
         }
         return positionShape;
@@ -1078,36 +1029,29 @@ public class Region extends Parent {
     private ObjectProperty<List<BackgroundFill>> backgroundFillsProperty() {
         if (backgroundFills == null) {
             backgroundFills = new StyleableObjectProperty<List<BackgroundFill>>() {
-
-                @Override 
-                public void invalidated() {
+                @Override public void invalidated() {
                     impl_geomChanged();
                     impl_markDirty(DirtyBits.SHAPE_FILL);                    
                 }
                 
-                @Override 
-                public void set(List<BackgroundFill> newValue) {
+                @Override public void set(List<BackgroundFill> newValue) {
                     final List<BackgroundFill> oldValue = get();                        
                     if (oldValue == null ? newValue != null :  !oldValue.equals(newValue)) {
                         super.set(newValue);
                     }
                 }
                 
-                @Override
-                public Object getBean() {
+                @Override public Object getBean() {
                     return Region.this;
                 }
 
-                @Override
-                public String getName() {
+                @Override public String getName() {
                     return "backgroundFills";
                 }
 
-                @Override
-                public StyleableProperty getStyleableProperty() {
+                @Override public StyleableProperty getStyleableProperty() {
                     return StyleableProperties.BACKGROUND_FILLS;
                 }
-                
             };
         }
         return backgroundFills;
@@ -1115,7 +1059,6 @@ public class Region extends Parent {
     
     private List<BackgroundFill> getBackgroundFills() {
         return backgroundFills == null ? null : backgroundFills.get(); 
-
     }
     
     /**
@@ -1155,36 +1098,29 @@ public class Region extends Parent {
     private ObjectProperty<List<BackgroundImage>> backgroundImagesProperty() {
         if (backgroundImages == null) {
             backgroundImages = new StyleableObjectProperty<List<BackgroundImage>>() {
-
-                @Override 
-                public void invalidated() {
+                @Override public void invalidated() {
                     impl_geomChanged();
                     impl_markDirty(DirtyBits.NODE_CONTENTS);                    
                 }
 
-                @Override 
-                public void set(List<BackgroundImage> newValue) {
+                @Override public void set(List<BackgroundImage> newValue) {
                     final List<BackgroundImage> oldValue = get();                        
                     if (oldValue == null ? newValue != null :  !oldValue.equals(newValue)) {
                         super.set(newValue);
                     }
                 }
                 
-                @Override
-                public Object getBean() {
+                @Override public Object getBean() {
                     return Region.this;
                 }
 
-                @Override
-                public String getName() {
+                @Override public String getName() {
                     return "backgroundImages";
                 }
 
-                @Override
-                public StyleableProperty getStyleableProperty() {
+                @Override public StyleableProperty getStyleableProperty() {
                     return StyleableProperties.BACKGROUND_IMAGES;
                 }
-                
             };
         }
         return backgroundImages;
@@ -1192,13 +1128,10 @@ public class Region extends Parent {
     
     private List<BackgroundImage> getBackgroundImages() {
         return backgroundImages == null ?  null : backgroundImages.get();
-        
     }
     
     private void setBackgroundImages(List<BackgroundImage> value) {
-        
         final List<BackgroundImage> background_images =  getBackgroundImages();
-        
         if (background_images == null ? value == null : !background_images.equals(value)) {
             this.backgroundImagesProperty().set(value);
         }
@@ -1210,37 +1143,30 @@ public class Region extends Parent {
     private ObjectProperty<List<StrokeBorder>> strokeBordersProperty() {
         if (strokeBorders == null) {
             strokeBorders = new StyleableObjectProperty<List<StrokeBorder>>() {
-
-                @Override 
-                public void invalidated() {
+                @Override public void invalidated() {
                     insets.fireValueChanged();
                     impl_geomChanged();
                     impl_markDirty(DirtyBits.SHAPE_STROKE);                    
                 }
 
-                @Override 
-                public void set(List<StrokeBorder> newValue) {
+                @Override public void set(List<StrokeBorder> newValue) {
                     final List<StrokeBorder> oldValue = get();                        
                     if (oldValue == null ? newValue != null :  !oldValue.equals(newValue)) {
                         super.set(newValue);
                     }
                 }
                 
-                @Override
-                public Object getBean() {
+                @Override public Object getBean() {
                     return Region.this;
                 }
 
-                @Override
-                public String getName() {
+                @Override public String getName() {
                     return "strokeBorders";
                 }
 
-                @Override
-                public StyleableProperty getStyleableProperty() {
+                @Override public StyleableProperty getStyleableProperty() {
                     return StyleableProperties.STROKE_BORDERS;
                 }
-                
             };
         }
         return strokeBorders;
@@ -1251,9 +1177,7 @@ public class Region extends Parent {
     }
     
     private void setStrokeBorders(List<StrokeBorder> value) {
-
         final List<StrokeBorder> stroke_borders = getStrokeBorders();
-        
         if ((stroke_borders == null) ? (value != null) : !stroke_borders.equals(value)) { 
             this.strokeBordersProperty().set(value);
         }
@@ -1266,37 +1190,30 @@ public class Region extends Parent {
     private ObjectProperty<List<BorderImage>> imageBordersProperty() {
         if (imageBorders == null) {
             imageBorders = new StyleableObjectProperty<List<BorderImage>>() {
-
-                @Override 
-                public void invalidated() {
+                @Override public void invalidated() {
                     insets.fireValueChanged();
                     impl_geomChanged();
                     impl_markDirty(DirtyBits.SHAPE_STROKE);                    
                 }
 
-                @Override 
-                public void set(List<BorderImage> newValue) {
+                @Override public void set(List<BorderImage> newValue) {
                     final List<BorderImage> oldValue = get();                        
                     if (oldValue == null ? newValue != null : !oldValue.equals(newValue)) {
                         super.set(newValue);
                     }
                 }
                 
-                @Override
-                public Object getBean() {
+                @Override public Object getBean() {
                     return Region.this;
                 }
 
-                @Override
-                public String getName() {
+                @Override public String getName() {
                     return "imageBorders";
                 }
 
-                @Override
-                public StyleableProperty getStyleableProperty() {
+                @Override public StyleableProperty getStyleableProperty() {
                     return StyleableProperties.IMAGE_BORDERS;
                 }
-                
             };
         }
         return imageBorders;
@@ -1307,13 +1224,13 @@ public class Region extends Parent {
     }
     
     private void setImageBorders(List<BorderImage> value) {
-        
         final List<BorderImage> image_borders = getImageBorders();
-        
         if (image_borders == null ? value == null :  !image_borders.equals(value)) {
             this.imageBordersProperty().set(value);
         }
     }
+    
+    
     
     /***************************************************************************
      *                                                                         *
@@ -1435,7 +1352,7 @@ public class Region extends Parent {
         return override;
     }
 
-   /**
+    /**
      * Called during layout to determine the maximum height for this node.
      * Returns the value from <code>computeMaxHeight(forWidth)</code> unless
      * the application overrode the maximum height by setting the maxHeight property.
@@ -1463,7 +1380,7 @@ public class Region extends Parent {
      *
      * @return the computed minimum width of this region
      */
-    protected double computeMinWidth(double height) {
+    @Override protected double computeMinWidth(double height) {
         return getInsets().getLeft() + getInsets().getRight();
     }
 
@@ -1477,7 +1394,7 @@ public class Region extends Parent {
      *
      * @return the computed minimum height for this region
      */
-    protected double computeMinHeight(double width) {
+    @Override protected double computeMinHeight(double width) {
         return getInsets().getTop() + getInsets().getBottom();
     }
 
@@ -1734,7 +1651,7 @@ public class Region extends Parent {
         if (valignment == VPos.BASELINE) {
             double maxAbove = 0;
             double maxBelow = 0;
-            for (int i = 0; i < children.size(); i++) {
+            for (int i = 0, maxPos = children.size(); i < maxPos; i++) {
                 Node child = children.get(i);
                 double baseline = child.getBaselineOffset();
                 double top = childMargins[i] != null? snapSpace(childMargins[i].getTop()) : 0;
@@ -1745,10 +1662,9 @@ public class Region extends Parent {
                         baseline + bottom);
             }
             return maxAbove + maxBelow; //remind(aim): ceil this value?
-
         } else {
             double max = 0;
-            for (int i = 0; i < children.size(); i++) {
+            for (int i = 0, maxPos = children.size(); i < maxPos; i++) {
                 Node child = children.get(i);
                 max = Math.max(max, minimum?
                     computeChildMinAreaHeight(child, childMargins[i], childWidths[i]) :
@@ -1761,7 +1677,7 @@ public class Region extends Parent {
     /* utility method for computing the max of children's min or pref width, horizontal alignment is ignored for now */
     private double getMaxAreaWidth(List<Node> children, Insets childMargins[], double childHeights[], HPos halignment, boolean minimum) {
         double max = 0;
-        for (int i = 0; i < children.size(); i++) {
+        for (int i = 0, maxPos = children.size(); i < maxPos; i++) {
             Node child = children.get(i);
             max = Math.max(max, minimum?
                 computeChildMinAreaWidth(children.get(i), childMargins[i], childHeights[i]) :
@@ -1798,7 +1714,7 @@ public class Region extends Parent {
     protected void positionInArea(Node child, double areaX, double areaY, double areaWidth, double areaHeight,
                                double areaBaselineOffset, HPos halignment, VPos valignment) {
         positionInArea(child, areaX, areaY, areaWidth, areaHeight, areaBaselineOffset,
-                Insets.EMPTY, halignment, valignment);
+                Insets.EMPTY, halignment, valignment, isSnapToPixel());
     }
 
     /**
@@ -1830,14 +1746,16 @@ public class Region extends Parent {
      * @param valignment the vertical alignment for the child within the area
      *
      */
-    protected void positionInArea(Node child, double areaX, double areaY, double areaWidth, double areaHeight,
-                               double areaBaselineOffset, Insets margin, HPos halignment, VPos valignment) {
+    public static void positionInArea(Node child, double areaX, double areaY, double areaWidth, double areaHeight,
+                               double areaBaselineOffset, Insets margin, HPos halignment, VPos valignment, boolean isSnapToPixel) {
         Insets childMargin = margin != null? margin : Insets.EMPTY;
 
         position(child, areaX, areaY, areaWidth, areaHeight, areaBaselineOffset,
-                snapSpace(childMargin.getTop()), snapSpace(childMargin.getRight()),
-                snapSpace(childMargin.getBottom()), snapSpace(childMargin.getLeft()),
-                halignment, valignment);
+                snapSpace(childMargin.getTop(), isSnapToPixel), 
+                snapSpace(childMargin.getRight(), isSnapToPixel),
+                snapSpace(childMargin.getBottom(), isSnapToPixel), 
+                snapSpace(childMargin.getLeft(), isSnapToPixel),
+                halignment, valignment, isSnapToPixel);
     }
 
     /**
@@ -2003,11 +1921,20 @@ public class Region extends Parent {
                                double areaBaselineOffset,
                                Insets margin, boolean fillWidth, boolean fillHeight,
                                HPos halignment, VPos valignment) {
+        layoutInArea(child, areaX, areaY, areaWidth, areaHeight, areaBaselineOffset, margin, fillWidth, fillHeight, halignment, valignment, isSnapToPixel());
+    }
+    
+    public static void layoutInArea(Node child, double areaX, double areaY,
+                               double areaWidth, double areaHeight,
+                               double areaBaselineOffset,
+                               Insets margin, boolean fillWidth, boolean fillHeight,
+                               HPos halignment, VPos valignment, boolean isSnapToPixel) {
+        
         Insets childMargin = margin != null? margin : Insets.EMPTY;
-        double top = snapSpace(childMargin.getTop());
-        double bottom = snapSpace(childMargin.getBottom());
-        double left = snapSpace(childMargin.getLeft());
-        double right = snapSpace(childMargin.getRight());
+        double top = snapSpace(childMargin.getTop(), isSnapToPixel);
+        double bottom = snapSpace(childMargin.getBottom(), isSnapToPixel);
+        double left = snapSpace(childMargin.getLeft(), isSnapToPixel);
+        double right = snapSpace(childMargin.getRight(), isSnapToPixel);
         if (child.isResizable()) {
             Orientation bias = child.getContentBias();
 
@@ -2041,16 +1968,16 @@ public class Region extends Parent {
                                          Math.min(innerAreaWidth,child.prefWidth(childHeight)),
                                          child.minWidth(childHeight),child.maxWidth(childHeight));
             }
-            child.resize(snapSize(childWidth),snapSize(childHeight));
+            child.resize(snapSize(childWidth, isSnapToPixel),snapSize(childHeight, isSnapToPixel));
         }
         position(child, areaX, areaY, areaWidth, areaHeight, areaBaselineOffset,
-                top, right, bottom, left, halignment, valignment);
+                top, right, bottom, left, halignment, valignment, isSnapToPixel);
     }
 
-    private void position(Node child, double areaX, double areaY, double areaWidth, double areaHeight,
+    private static void position(Node child, double areaX, double areaY, double areaWidth, double areaHeight,
                           double areaBaselineOffset,
                           double topMargin, double rightMargin, double bottomMargin, double leftMargin,
-                          HPos hpos, VPos vpos) {
+                          HPos hpos, VPos vpos, boolean isSnapToPixel) {
         final double xoffset = leftMargin + computeXOffset(areaWidth - leftMargin - rightMargin,
                                                      child.getLayoutBounds().getWidth(), hpos);
         final double yoffset = topMargin +
@@ -2059,8 +1986,8 @@ public class Region extends Parent {
                           computeYOffset(areaHeight - topMargin - bottomMargin,
                                          child.getLayoutBounds().getHeight(), vpos));
         // do not snap position if child is not resizable because it can cause gaps
-        final double x = child.isResizable()? snapPosition(areaX + xoffset) : areaX + xoffset;
-        final double y = child.isResizable()? snapPosition(areaY + yoffset) : areaY + yoffset;
+        final double x = child.isResizable()? snapPosition(areaX + xoffset, isSnapToPixel) : areaX + xoffset;
+        final double y = child.isResizable()? snapPosition(areaY + yoffset, isSnapToPixel) : areaY + yoffset;
 
         child.relocate(x,y);
     }
@@ -2090,6 +2017,8 @@ public class Region extends Parent {
         if (impl_isDirty(DirtyBits.NODE_GEOMETRY)) {
             pg.setSize((float)getWidth(), (float)getHeight());
         }
+        
+        Toolkit toolkit = Toolkit.getToolkit();
 
         if (impl_isDirty(DirtyBits.SHAPE_FILL)) {
             // sync the backgrounds
@@ -2099,17 +2028,19 @@ public class Region extends Parent {
                 final int backgroundFillCount = background_fills != null ? background_fills.size() : 0;
 
                 com.sun.javafx.sg.BackgroundFill[] b = new com.sun.javafx.sg.BackgroundFill[backgroundFillCount];
+                Insets offsets = null;
                 for (int i = 0; i < backgroundFillCount; i++) {
                     lastBf = background_fills.get(i);
+                    offsets = lastBf.getOffsets();
 
                     b[i] = new com.sun.javafx.sg.BackgroundFill(
-                        Toolkit.getToolkit().getPaint(background_fills.get(i).getFill()),
-                        (float)background_fills.get(i).getTopLeftCornerRadius(),
-                        (float)background_fills.get(i).getTopRightCornerRadius(),
-                        (float)background_fills.get(i).getBottomLeftCornerRadius(),
-                        (float)background_fills.get(i).getBottomRightCornerRadius(),
-                        (float)background_fills.get(i).getOffsets().getTop(), (float)background_fills.get(i).getOffsets().getLeft(),
-                        (float)background_fills.get(i).getOffsets().getBottom(), (float)background_fills.get(i).getOffsets().getRight()
+                        toolkit.getPaint(lastBf.getFill()),
+                        (float)lastBf.getTopLeftCornerRadius(),
+                        (float)lastBf.getTopRightCornerRadius(),
+                        (float)lastBf.getBottomLeftCornerRadius(),
+                        (float)lastBf.getBottomRightCornerRadius(),
+                        (float)offsets.getTop(), (float)offsets.getLeft(),
+                        (float)offsets.getBottom(), (float)offsets.getRight()
                     );
                 }
                 pg.setBackgroundFills(b);
@@ -2141,63 +2072,71 @@ public class Region extends Parent {
             com.sun.javafx.sg.Border[] b2 = new com.sun.javafx.sg.Border[imageBorderCount + strokeBorderCount];
 
             for (int i = 0; i < imageBorderCount; i++) {
-
+                BorderImage borderImage = image_borders.get(i);
+                Image image = borderImage.getImage();
+                boolean proportionalWidth = borderImage.isProportionalWidth();
+                boolean proportionalSlice = borderImage.isProportionalSlice();
+                Insets offsets = borderImage.getOffsets();
+                
                 // width multiplier horizontal direction
-                double hwx = image_borders.get(i).isProportionalWidth() ? getWidth() : 1;
+                double hwx = proportionalWidth ? getWidth() : 1;
 
                 // width multiplier vertical direction
-                double vwx = image_borders.get(i).isProportionalWidth() ? getHeight() : 1;
+                double vwx = proportionalWidth ? getHeight() : 1;
 
                 // slice multiplier horizontal direction
-                double hsx = image_borders.get(i).isProportionalSlice() ? image_borders.get(i).getImage().getWidth() : 1.0f;
+                double hsx = proportionalSlice ? image.getWidth() : 1.0f;
 
                 // slice multiplier vertical direction
-                double vsx = image_borders.get(i).isProportionalSlice() ? image_borders.get(i).getImage().getHeight() : 1.0f;
+                double vsx = proportionalSlice ? image.getHeight() : 1.0f;
 
                 b2[i] = new com.sun.javafx.sg.ImageBorder(
-                    (float) (image_borders.get(i).getTopWidth()*vwx),
-                    (float) (image_borders.get(i).getLeftWidth()*hwx),
-                    (float) (image_borders.get(i).getBottomWidth()*vwx),
-                    (float) (image_borders.get(i).getRightWidth()*hwx),
-                    (float)image_borders.get(i).getOffsets().getTop(), (float)image_borders.get(i).getOffsets().getLeft(),
-                    (float)image_borders.get(i).getOffsets().getBottom(), (float)image_borders.get(i).getOffsets().getRight(),
-                    image_borders.get(i).getImage().impl_getPlatformImage(),
-                    (float) (image_borders.get(i).getTopSlice()*vsx),
-                    (float) (image_borders.get(i).getLeftSlice()*hsx),
-                    (float) (image_borders.get(i).getBottomSlice()*vsx),
-                    (float) (image_borders.get(i).getRightSlice()*hsx),
-                    com.sun.javafx.sg.Repeat.values()[image_borders.get(i).getRepeatX().ordinal()],
-                    com.sun.javafx.sg.Repeat.values()[image_borders.get(i).getRepeatY().ordinal()],
-                    image_borders.get(i).isFillCenter()
+                    (float) (borderImage.getTopWidth()*vwx),
+                    (float) (borderImage.getLeftWidth()*hwx),
+                    (float) (borderImage.getBottomWidth()*vwx),
+                    (float) (borderImage.getRightWidth()*hwx),
+                    (float) offsets.getTop(), (float) offsets.getLeft(),
+                    (float) offsets.getBottom(), (float) offsets.getRight(),
+                    image.impl_getPlatformImage(),
+                    (float) (borderImage.getTopSlice()*vsx),
+                    (float) (borderImage.getLeftSlice()*hsx),
+                    (float) (borderImage.getBottomSlice()*vsx),
+                    (float) (borderImage.getRightSlice()*hsx),
+                    com.sun.javafx.sg.Repeat.values()[borderImage.getRepeatX().ordinal()],
+                    com.sun.javafx.sg.Repeat.values()[borderImage.getRepeatY().ordinal()],
+                    borderImage.isFillCenter()
                 );
             }
             for (int i = 0; i < strokeBorderCount; i++) {
+                StrokeBorder strokeBorder = stroke_borders.get(i);
+                boolean proportionalWidth = strokeBorder.isProportionalWidth();
+                Insets offsets = strokeBorder.getOffsets();
 
                 // width multiplier horizontal direction
-                double hwx = stroke_borders.get(i).isProportionalWidth() ? getWidth() : 1;
+                double hwx = proportionalWidth ? getWidth() : 1;
 
                 // width multiplier vertical direction
-                double vwx = stroke_borders.get(i).isProportionalWidth() ? getHeight() : 1;
+                double vwx = proportionalWidth ? getHeight() : 1;
 
                 b2[i+imageBorderCount] = new com.sun.javafx.sg.StrokedBorder (
-                    (float) (stroke_borders.get(i).getTopWidth()*vwx),
-                    (float) (stroke_borders.get(i).getLeftWidth()*hwx),
-                    (float) (stroke_borders.get(i).getBottomWidth()*vwx),
-                    (float) (stroke_borders.get(i).getRightWidth()*hwx),
-                    (float) stroke_borders.get(i).getOffsets().getTop(), (float) stroke_borders.get(i).getOffsets().getLeft(),
-                    (float) stroke_borders.get(i).getOffsets().getBottom(), (float) stroke_borders.get(i).getOffsets().getRight(),
-                    (float) stroke_borders.get(i).getTopLeftCornerRadius(),
-                    (float) stroke_borders.get(i).getTopRightCornerRadius(),
-                    (float) stroke_borders.get(i).getBottomLeftCornerRadius(),
-                    (float) stroke_borders.get(i).getBottomRightCornerRadius(),
-                    Toolkit.getToolkit().getPaint(stroke_borders.get(i).getTopFill()),
-                    Toolkit.getToolkit().getPaint(stroke_borders.get(i).getLeftFill()),
-                    Toolkit.getToolkit().getPaint(stroke_borders.get(i).getBottomFill()),
-                    Toolkit.getToolkit().getPaint(stroke_borders.get(i).getRightFill()),
-                    createSgBorderStyle(stroke_borders.get(i).getTopStyle()),
-                    createSgBorderStyle(stroke_borders.get(i).getLeftStyle()),
-                    createSgBorderStyle(stroke_borders.get(i).getBottomStyle()),
-                    createSgBorderStyle(stroke_borders.get(i).getRightStyle())
+                    (float) (strokeBorder.getTopWidth()*vwx),
+                    (float) (strokeBorder.getLeftWidth()*hwx),
+                    (float) (strokeBorder.getBottomWidth()*vwx),
+                    (float) (strokeBorder.getRightWidth()*hwx),
+                    (float) offsets.getTop(), (float) offsets.getLeft(),
+                    (float) offsets.getBottom(), (float) offsets.getRight(),
+                    (float) strokeBorder.getTopLeftCornerRadius(),
+                    (float) strokeBorder.getTopRightCornerRadius(),
+                    (float) strokeBorder.getBottomLeftCornerRadius(),
+                    (float) strokeBorder.getBottomRightCornerRadius(),
+                    toolkit.getPaint(strokeBorder.getTopFill()),
+                    toolkit.getPaint(strokeBorder.getLeftFill()),
+                    toolkit.getPaint(strokeBorder.getBottomFill()),
+                    toolkit.getPaint(strokeBorder.getRightFill()),
+                    createSgBorderStyle(strokeBorder.getTopStyle()),
+                    createSgBorderStyle(strokeBorder.getLeftStyle()),
+                    createSgBorderStyle(strokeBorder.getBottomStyle()),
+                    createSgBorderStyle(strokeBorder.getRightStyle())
                 );
             }
             pg.setBorders(b2);
@@ -2285,27 +2224,29 @@ public class Region extends Parent {
             if (theShape.contains(localX,localY)) {
                 return true;
             }
-            double shapeWidth = theShape.getLayoutBounds().getWidth();
-            double shapeHeight = theShape.getLayoutBounds().getHeight();
+            Bounds layoutBounds = theShape.getLayoutBounds();
+            double shapeWidth = layoutBounds.getWidth();
+            double shapeHeight = layoutBounds.getHeight();
             if (positionShape != null && positionShape.get()) {
                 bx0 = (getWidth() - shapeWidth)/2;
                 by0 = (getHeight() - shapeHeight)/2;
                 bx1 = bx0+shapeWidth;
                 by1 = by0+shapeHeight;
             } else {
-                bx0 = theShape.getLayoutBounds().getMinX();
-                by0 = theShape.getLayoutBounds().getMinY();
-                bx1 = theShape.getLayoutBounds().getMaxX();
-                by1 = theShape.getLayoutBounds().getMaxY();
+                bx0 = layoutBounds.getMinX();
+                by0 = layoutBounds.getMinY();
+                bx1 = layoutBounds.getMaxX();
+                by1 = layoutBounds.getMaxY();
             }
         }
         
         final List<BackgroundFill> background_fills = getBackgroundFills();
         if (background_fills != null) {
             for (int i = 0; i < background_fills.size(); i++) {
-                Insets offsets = background_fills.get(i).getOffsets();
+                BackgroundFill bgFill = background_fills.get(i);
+                Insets offsets = bgFill.getOffsets();
 
-                if (background_fills.get(i).getFill() != null) {
+                if (bgFill.getFill() != null) {
                     double rrx0 = bx0 + offsets.getLeft();
                     double rry0 = by0 + offsets.getTop();
                     double rrx1 = bx1 - offsets.getRight();
@@ -2313,10 +2254,10 @@ public class Region extends Parent {
 
                     // Check for trivial rejection - point is inside bounding rectangle
                     if (localX >= rrx0 && localY >= rry0 && localX < rrx1 && localY < rry1) {
-                        double tlr = background_fills.get(i).getTopLeftCornerRadius() / 2f;
-                        double trr = background_fills.get(i).getTopRightCornerRadius() / 2f;
-                        double blr = background_fills.get(i).getBottomLeftCornerRadius() / 2f;
-                        double brr = background_fills.get(i).getBottomRightCornerRadius() / 2f;
+                        double tlr = bgFill.getTopLeftCornerRadius() / 2f;
+                        double trr = bgFill.getTopRightCornerRadius() / 2f;
+                        double blr = bgFill.getBottomLeftCornerRadius() / 2f;
+                        double brr = bgFill.getBottomRightCornerRadius() / 2f;
 
                         // need to check if pt is outside rounded corners
                         double x = 1.0;
@@ -2361,11 +2302,12 @@ public class Region extends Parent {
 
         final List<BackgroundImage> background_images = getBackgroundImages();
         if (background_images != null) {
-            for (int i = 0; i < background_images.size(); i++) {
-                if (localX >= (bx0 + background_images.get(i).getLeft()) &&
-                    localX <= (bx1 - background_images.get(i).getRight()) &&
-                    localY >= (by0 + background_images.get(i).getTop()) &&
-                    localY <= (by1 - background_images.get(i).getBottom())) {
+            for (int i = 0, max = background_images.size(); i < max; i++) {
+                BackgroundImage backgroundImage = background_images.get(i);
+                if (localX >= (bx0 + backgroundImage.getLeft()) &&
+                    localX <= (bx1 - backgroundImage.getRight()) &&
+                    localY >= (by0 + backgroundImage.getTop()) &&
+                    localY <= (by1 - backgroundImage.getBottom())) {
                     return true;
                 }
             }
@@ -2373,13 +2315,14 @@ public class Region extends Parent {
         
         final List<BorderImage> image_borders = getImageBorders();
         if (image_borders != null) {
-            for (int i = 0; i < image_borders.size(); i++) {
-                Insets offsets = image_borders.get(i).getOffsets();
+            for (int i = 0, max = image_borders.size(); i < max; i++) {
+                BorderImage borderImage = image_borders.get(i);
+                Insets offsets = borderImage.getOffsets();
                 if (borderContains(localX, localY,
                         bx0 + offsets.getLeft(), by0 + offsets.getTop(),
                         bx1 - offsets.getRight(), by1 - offsets.getBottom(),
-                        image_borders.get(i).getTopWidth(), image_borders.get(i).getRightWidth(),
-                        image_borders.get(i).getBottomWidth(), image_borders.get(i).getLeftWidth())) {
+                        borderImage.getTopWidth(), borderImage.getRightWidth(),
+                        borderImage.getBottomWidth(), borderImage.getLeftWidth())) {
                      return true;
                 }
             }
@@ -2387,13 +2330,14 @@ public class Region extends Parent {
         
         final List<StrokeBorder> stroke_borders = getStrokeBorders();
         if (stroke_borders != null) {
-            for (int i = 0; i < stroke_borders.size(); i++) {
-                Insets offsets = stroke_borders.get(i).getOffsets();
+            for (int i = 0, max = stroke_borders.size(); i < max; i++) {
+                StrokeBorder strokeBorder = stroke_borders.get(i);
+                Insets offsets = strokeBorder.getOffsets();
                 if (borderContains(localX, localY,
                         bx0 + offsets.getLeft(), by0 + offsets.getTop(),
                         bx1 - offsets.getRight(), by1 - offsets.getBottom(),
-                        stroke_borders.get(i).getTopWidth(), stroke_borders.get(i).getRightWidth(),
-                        stroke_borders.get(i).getBottomWidth(), stroke_borders.get(i).getLeftWidth())) {
+                        strokeBorder.getTopWidth(), strokeBorder.getRightWidth(),
+                        strokeBorder.getBottomWidth(), strokeBorder.getLeftWidth())) {
                      return true;
                 }
             }
@@ -2420,7 +2364,7 @@ public class Region extends Parent {
     @Override protected Node impl_pickNodeLocal(double localX, double localY) {
         if (containsBounds(localX, localY)) {
             ObservableList<Node> children = getChildren();
-            for (int i = children.size()-1; i >= 0; i--) {
+            for (int i = children.size() - 1; i >= 0; i--) {
                 Node picked = children.get(i).impl_pickNode(localX, localY);
                 if (picked != null) {
                     return picked;
@@ -2440,11 +2384,10 @@ public class Region extends Parent {
      */
     @Deprecated
     @Override protected Node impl_pickNodeLocal(PickRay pickRay) {
-
         if (impl_intersects(pickRay)) {
             ObservableList<Node> children = getChildren();
 
-            for (int i = children.size()-1; i >= 0; i--) {
+            for (int i = children.size() - 1; i >= 0; i--) {
                 Node picked = children.get(i).impl_pickNode(pickRay);
 
                 if (picked != null) {
@@ -2458,6 +2401,8 @@ public class Region extends Parent {
         return null;
     }
 
+    private Bounds boundingBox;
+    
     /**
      * The layout bounds of this region: {@code 0, 0  width x height}
      *
@@ -2465,8 +2410,12 @@ public class Region extends Parent {
      * @deprecated This is an internal API that is not intended for use and will be removed in the next version
      */
     @Deprecated
-    @Override protected Bounds impl_computeLayoutBounds() {
-        return new BoundingBox(0, 0, 0, getWidth(), getHeight(), 0);
+    @Override protected final Bounds impl_computeLayoutBounds() {
+        if (boundingBox == null) {
+            // we reuse the bounding box if the width and height haven't changed.
+            boundingBox = new BoundingBox(0, 0, 0, getWidth(), getHeight(), 0);
+        }
+        return boundingBox;
     }
 
     /**
@@ -2475,7 +2424,9 @@ public class Region extends Parent {
      */
     @Deprecated
     @Override final protected void impl_notifyLayoutBoundsChanged() {
-        // change in geometric bounds does not necessarily change layoutBounds
+        // override Node's default behavior of having a geometric bounds change
+        // trigger a change in layoutBounds. For Resizable nodes, layoutBounds
+        // is unrelated to geometric bounds.
     }
 
     /**
@@ -2491,18 +2442,19 @@ public class Region extends Parent {
         double by2 = getHeight();
         final Shape theShape = getShape();
         if (theShape != null && getScaleShape() == false) {
-            double shapeWidth = theShape.getLayoutBounds().getWidth();
-            double shapeHeight = theShape.getLayoutBounds().getHeight();
+            Bounds layoutBounds = theShape.getLayoutBounds();
+            double shapeWidth = layoutBounds.getWidth();
+            double shapeHeight = layoutBounds.getHeight();
             if (getPositionShape()) {
                 bx1 = (getWidth() - shapeWidth)/2;
                 by1 = (getHeight() - shapeHeight)/2;
                 bx2 = bx1+shapeWidth;
                 by2 = by1+shapeHeight;
             } else {
-                bx1 = theShape.getLayoutBounds().getMinX();
-                by1 = theShape.getLayoutBounds().getMinY();
-                bx2 = theShape.getLayoutBounds().getMaxX();
-                by2 = theShape.getLayoutBounds().getMaxY();
+                bx1 = layoutBounds.getMinX();
+                by1 = layoutBounds.getMinY();
+                bx2 = layoutBounds.getMaxX();
+                by2 = layoutBounds.getMaxY();
             }
         }
         double x1 = bx1;
@@ -2512,7 +2464,7 @@ public class Region extends Parent {
         // calculate the bounds accounting for offsets and strokes
         final List<BackgroundFill> background_fills = getBackgroundFills();
         if (background_fills != null) {
-            for (int i = 0; i < background_fills.size(); i++) {
+            for (int i = 0, max = background_fills.size(); i < max; i++) {
                 Insets offsets = background_fills.get(i).getOffsets();
                 x1 = Math.min(x1, bx1 + offsets.getLeft());
                 y1 = Math.min(y1, by1 + offsets.getTop());
@@ -2523,35 +2475,38 @@ public class Region extends Parent {
         
         final List<BackgroundImage> background_images = getBackgroundImages();
         if (background_images != null) {
-            for (int i = 0; i < background_images.size(); i++) {
-                x1 = Math.min(x1, bx1 + background_images.get(i).getLeft());
-                y1 = Math.min(y1, by1 + background_images.get(i).getTop());
-                x2 = Math.max(x2, bx2 - background_images.get(i).getRight());
-                y2 = Math.max(y2, by2 - background_images.get(i).getBottom());
+            for (int i = 0, max = background_images.size(); i < max; i++) {
+                BackgroundImage backgroundImage = background_images.get(i);
+                x1 = Math.min(x1, bx1 + backgroundImage.getLeft());
+                y1 = Math.min(y1, by1 + backgroundImage.getTop());
+                x2 = Math.max(x2, bx2 - backgroundImage.getRight());
+                y2 = Math.max(y2, by2 - backgroundImage.getBottom());
             }
         }
         
         final List<BorderImage> image_borders = getImageBorders();
         if (image_borders != null) {
-            for (int i = 0; i < image_borders.size(); i++) {
-                Insets offsets = image_borders.get(i).getOffsets();
+            for (int i = 0, max = image_borders.size(); i < max; i++) {
+                BorderImage borderImage = image_borders.get(i);
+                Insets offsets = borderImage.getOffsets();
                 // stoked borders assume centered strokes for now
-                x1 = Math.min(x1, bx1 + offsets.getLeft() - (image_borders.get(i).getLeftWidth()/2.0));
-                y1 = Math.min(y1, by1 + offsets.getTop() - (image_borders.get(i).getTopWidth()/2.0));
-                x2 = Math.max(x2, bx2 - offsets.getRight() + (image_borders.get(i).getRightWidth()/2.0));
-                y2 = Math.max(y2, by2 - offsets.getBottom() + (image_borders.get(i).getBottomWidth()/2.0));
+                x1 = Math.min(x1, bx1 + offsets.getLeft() - (borderImage.getLeftWidth()/2.0));
+                y1 = Math.min(y1, by1 + offsets.getTop() - (borderImage.getTopWidth()/2.0));
+                x2 = Math.max(x2, bx2 - offsets.getRight() + (borderImage.getRightWidth()/2.0));
+                y2 = Math.max(y2, by2 - offsets.getBottom() + (borderImage.getBottomWidth()/2.0));
             }
         }
         
         final List<StrokeBorder> stroke_borders = getStrokeBorders();
         if (stroke_borders != null) {
-            for (int i = 0; i < stroke_borders.size(); i++) {
-                Insets offsets = stroke_borders.get(i).getOffsets();
+            for (int i = 0, max = stroke_borders.size(); i < max; i++) {
+                StrokeBorder strokeBorder = stroke_borders.get(i);
+                Insets offsets = strokeBorder.getOffsets();
                 // stoked borders assume centered strokes for now
-                x1 = Math.min(x1, bx1 + offsets.getLeft() - (stroke_borders.get(i).getLeftWidth()/2.0));
-                y1 = Math.min(y1, by1 + offsets.getTop() - (stroke_borders.get(i).getTopWidth()/2.0));
-                x2 = Math.max(x2, bx2 - offsets.getRight() + (stroke_borders.get(i).getRightWidth()/2.0));
-                y2 = Math.max(y2, by2 - offsets.getBottom() + (stroke_borders.get(i).getBottomWidth()/2.0));
+                x1 = Math.min(x1, bx1 + offsets.getLeft() - (strokeBorder.getLeftWidth()/2.0));
+                y1 = Math.min(y1, by1 + offsets.getTop() - (strokeBorder.getTopWidth()/2.0));
+                x2 = Math.max(x2, bx2 - offsets.getRight() + (strokeBorder.getRightWidth()/2.0));
+                y2 = Math.max(y2, by2 - offsets.getBottom() + (strokeBorder.getBottomWidth()/2.0));
             }
         }
 
@@ -2628,16 +2583,13 @@ public class Region extends Parent {
              new StyleableProperty<Region,Insets>("-fx-padding",
                  InsetsConverter.getInstance(), Insets.EMPTY) {
 
-            @Override
-            public boolean isSettable(Region node) {
+            @Override public boolean isSettable(Region node) {
                 return node.padding == null || !node.padding.isBound();
             }
 
-            @Override
-            public WritableValue<Insets> getWritableValue(Region node) {
+            @Override public WritableValue<Insets> getWritableValue(Region node) {
                 return node.paddingProperty();
             }
-                     
          };
 
          private static final StyleableProperty<Region,Insets> OPAQUE_INSETS =
@@ -2663,16 +2615,13 @@ public class Region extends Parent {
                  false,
                  BackgroundFill.impl_CSS_STYLEABLES()) {
 
-            @Override
-            public boolean isSettable(Region node) {
+            @Override public boolean isSettable(Region node) {
                 return node.backgroundFills == null || !node.backgroundFills.isBound();                        
             }
 
-            @Override
-            public WritableValue<List<BackgroundFill>> getWritableValue(Region node) {
+            @Override public WritableValue<List<BackgroundFill>> getWritableValue(Region node) {
                 return node.backgroundFillsProperty();
             }
-                     
          };
 
          private static final StyleableProperty<Region,List<BackgroundImage>> BACKGROUND_IMAGES =
@@ -2682,16 +2631,13 @@ public class Region extends Parent {
                  false,
                  BackgroundImage.impl_CSS_STYLEABLES()) {
 
-            @Override
-            public boolean isSettable(Region node) {
+            @Override public boolean isSettable(Region node) {
                 return node.backgroundImages == null || !node.backgroundImages.isBound();
             }
 
-            @Override
-            public WritableValue<List<BackgroundImage>> getWritableValue(Region node) {
+            @Override public WritableValue<List<BackgroundImage>> getWritableValue(Region node) {
                 return node.backgroundImagesProperty();
             }
-                     
          };
 
         private static final StyleableProperty<Region,List<BorderImage>> IMAGE_BORDERS =
@@ -2701,13 +2647,11 @@ public class Region extends Parent {
                 false,
                 BorderImage.impl_CSS_STYLEABLES()) {
 
-            @Override
-            public boolean isSettable(Region node) {
+            @Override public boolean isSettable(Region node) {
                 return node.imageBorders == null || !node.imageBorders.isBound();
             }
 
-            @Override
-            public WritableValue<List<BorderImage>> getWritableValue(Region node) {
+            @Override public WritableValue<List<BorderImage>> getWritableValue(Region node) {
                 return node.imageBordersProperty();
             }
         };
@@ -2719,30 +2663,25 @@ public class Region extends Parent {
                  false,
                  StrokeBorder.impl_CSS_STYLEABLES()) {
 
-            @Override
-            public boolean isSettable(Region node) {
+            @Override public boolean isSettable(Region node) {
                 return node.strokeBorders == null || !node.strokeBorders.isBound();
             }
 
-            @Override
-            public WritableValue<List<StrokeBorder>> getWritableValue(Region node) {
+            @Override public WritableValue<List<StrokeBorder>> getWritableValue(Region node) {
                 return node.strokeBordersProperty();
             }
-                     
          };
 
          private static final StyleableProperty<Region,String> SHAPE = 
              new StyleableProperty<Region,String>("-fx-shape",
                  StringConverter.getInstance()) {
 
-            @Override
-            public boolean isSettable(Region node) {
+            @Override public boolean isSettable(Region node) {
                 // isSettable depends on node.shape, not node.shapeContent
                 return node.shape == null || !node.shape.isBound();
             }
 
-            @Override
-            public WritableValue<String> getWritableValue(Region node) {
+            @Override public WritableValue<String> getWritableValue(Region node) {
                 return node.shapeContentProperty();
             }
          };
@@ -2751,13 +2690,11 @@ public class Region extends Parent {
              new StyleableProperty<Region,Boolean>("-fx-scale-shape",
                  BooleanConverter.getInstance(), Boolean.TRUE){
 
-            @Override
-            public boolean isSettable(Region node) {
+            @Override public boolean isSettable(Region node) {
                 return node.scaleShape == null || !node.scaleShape.isBound();
             }
 
-            @Override
-            public WritableValue<Boolean> getWritableValue(Region node) {
+            @Override public WritableValue<Boolean> getWritableValue(Region node) {
                 return node.scaleShapeProperty();
             }
         };
@@ -2766,13 +2703,11 @@ public class Region extends Parent {
              new StyleableProperty<Region,Boolean>("-fx-position-shape",
                  BooleanConverter.getInstance(), Boolean.TRUE){
 
-            @Override
-            public boolean isSettable(Region node) {
+            @Override public boolean isSettable(Region node) {
                 return node.positionShape == null || !node.positionShape.isBound();
             }
 
-            @Override
-            public WritableValue<Boolean> getWritableValue(Region node) {
+            @Override public WritableValue<Boolean> getWritableValue(Region node) {
                 return node.positionShapeProperty();
             }
         };
@@ -2781,14 +2716,12 @@ public class Region extends Parent {
              new StyleableProperty<Region,Boolean>("-fx-snap-to-pixel",
                  BooleanConverter.getInstance(), Boolean.TRUE){
 
-            @Override
-            public boolean isSettable(Region node) {
+            @Override public boolean isSettable(Region node) {
                 return node.snapToPixel == null ||
                         !node.snapToPixel.isBound();
             }
 
-            @Override
-            public WritableValue<Boolean> getWritableValue(Region node) {
+            @Override public WritableValue<Boolean> getWritableValue(Region node) {
                 return node.snapToPixelProperty();
             }
         };
@@ -2811,7 +2744,6 @@ public class Region extends Parent {
                     SNAP_TO_PIXEL
             );
             STYLEABLES = Collections.unmodifiableList(styleables);
-
          }
     }
 
@@ -2833,7 +2765,7 @@ public class Region extends Parent {
      * @deprecated This is an experimental API that is not intended for general use and is subject to change in future versions
      */
     @Deprecated
-    public List<StyleableProperty> impl_getStyleableProperties() {
+    @Override public List<StyleableProperty> impl_getStyleableProperties() {
         return impl_CSS_STYLEABLES();
     }
 

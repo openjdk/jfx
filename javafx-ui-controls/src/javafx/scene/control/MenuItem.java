@@ -338,6 +338,7 @@ public class MenuItem implements EventTarget {
      * The event handler that is associated with invocation of an accelerator for a MenuItem. This 
      * can happen when a key sequence for an accelerator is pressed. The event handler is also  
      * invoked when onShowing event handler is called. 
+     * @since 2.2
      */
     private ObjectProperty<EventHandler<Event>> onMenuValidation;
     
@@ -552,8 +553,14 @@ public class MenuItem implements EventTarget {
      * @deprecated This is an experimental API that is not intended for general 
      * use and is subject to change in future versions
      */
+    @Deprecated
     protected Styleable styleable; 
         
+    /**
+     * @treatAsPrivate implementation detail
+     * @deprecated This is an experimental API that is not intended for general 
+     * use and is subject to change in future versions
+     */
     @Deprecated // SB-dependency: RT-21094 has been filed to track this
     public Styleable impl_getStyleable() {
         

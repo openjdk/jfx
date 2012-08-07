@@ -176,7 +176,7 @@ public class TextFieldSkin extends TextInputControlSkin<TextField, TextFieldBeha
             }
         });
         textLeft = new DoubleBinding() {
-            { bind(insets()); }
+            { bind(getSkinnable().insets()); }
             @Override protected double computeValue() {
                 return getInsets().getLeft();
             }
@@ -192,7 +192,7 @@ public class TextFieldSkin extends TextInputControlSkin<TextField, TextFieldBeha
         };
         textLeft.addListener(leftRightListener);
         textRight = new DoubleBinding() {
-            { bind(widthProperty(), insets()); }
+            { bind(getSkinnable().widthProperty(), getSkinnable().insets()); }
             @Override protected double computeValue() {
                 return getWidth() - getInsets().getRight();
             }
@@ -201,30 +201,30 @@ public class TextFieldSkin extends TextInputControlSkin<TextField, TextFieldBeha
 
         // Pretty much everything here is getting managed set to false,
         // because we want to control when layout is triggered
-        setManaged(false);
+//        setManaged(false);
 
         // Once this was crucial for performance, not sure now.
         clip.setSmooth(false);
         clip.xProperty().bind(new DoubleBinding() {
-            { bind(insets()); }
+            { bind(getSkinnable().insets()); }
             @Override protected double computeValue() {
                 return getInsets().getLeft();
             }
         });
         clip.yProperty().bind(new DoubleBinding() {
-            { bind(insets()); }
+            { bind(getSkinnable().insets()); }
             @Override protected double computeValue() {
                 return getInsets().getTop();
             }
         });
         clip.widthProperty().bind(new DoubleBinding() {
-            { bind(widthProperty(), insets()); }
+            { bind(getSkinnable().widthProperty(), getSkinnable().insets()); }
             @Override protected double computeValue() {
                 return getWidth() - getInsets().getRight() - getInsets().getLeft();
             }
         });
         clip.heightProperty().bind(new DoubleBinding() {
-            { bind(heightProperty(), insets()); }
+            { bind(getSkinnable().heightProperty(), getSkinnable().insets()); }
             @Override protected double computeValue() {
                 return getHeight() - getInsets().getTop() - getInsets().getBottom();
             }
@@ -720,9 +720,8 @@ public class TextFieldSkin extends TextInputControlSkin<TextField, TextFieldBeha
         textGroup.getChildren().removeAll(nodes);
     }
 
-    @Override protected void layoutChildren() {
-        super.layoutChildren();
-
+    @Override protected void layoutChildren(final double x, final double y,
+            final double w, final double h) {
         if (textNode != null) {
             double textY;
             Insets insets = getInsets();
@@ -751,7 +750,7 @@ public class TextFieldSkin extends TextInputControlSkin<TextField, TextFieldBeha
             TextField textField = getSkinnable();
 
             // Resize handles for caret and anchor.
-            IndexRange selection = textField.getSelection();
+//            IndexRange selection = textField.getSelection();
             selectionHandle1.resize(selectionHandle1.prefWidth(-1),
                                     selectionHandle1.prefHeight(-1));
             selectionHandle2.resize(selectionHandle2.prefWidth(-1),

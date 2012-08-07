@@ -212,7 +212,6 @@ abstract class MultipleSelectionModelBase<T> extends MultipleSelectionModel<T> {
     protected abstract int getFocusedIndex();
     
     
-    // FIXME not optimal: each shift requires a whole new loop
     // package only
     void shiftSelection(int position, int shift) {
         // with no check here, we get RT-15024
@@ -228,26 +227,23 @@ abstract class MultipleSelectionModelBase<T> extends MultipleSelectionModel<T> {
         int idx = 0;
         
         if (shift > 0) {
-            for (int iter = 0; iter < shift; iter++) {
-                for (int i = selectedIndicesSize - 1; i >= position && i >= 0; i--) {
-                    boolean selected = selectedIndices.get(i);
-                    selectedIndices.set(i+1, selected);
-                    
-                    if (selected) {
-                        perm[idx++] = i + 1;
-                    }
+            for (int i = selectedIndicesSize - 1; i >= position && i >= 0; i--) {
+                boolean selected = selectedIndices.get(i);
+                selectedIndices.set(i + shift, selected);
+
+                if (selected) {
+                    perm[idx++] = i + 1;
                 }
-                selectedIndices.clear(position);
-             }
+            }
+            selectedIndices.clear(position);
         } else if (shift < 0) {
-            for (int iter = 0; iter < Math.abs(shift); iter++) {
-                for (int i = position; i < selectedIndicesSize; i++) {
-                    boolean selected = selectedIndices.get(i + 1);
-                    selectedIndices.set(i, selected);
-                    
-                    if (selected) {
-                        perm[idx++] = i;
-                    }
+            for (int i = position; i < selectedIndicesSize; i++) {
+                if ((i + shift) < 0) continue;
+                boolean selected = selectedIndices.get(i + 1);
+                selectedIndices.set(i + 1 + shift, selected);
+
+                if (selected) {
+                    perm[idx++] = i;
                 }
             }
         }
