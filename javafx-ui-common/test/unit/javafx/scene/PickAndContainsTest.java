@@ -169,11 +169,14 @@ public class PickAndContainsTest {
         r1.setId("Rect 1");
         r2.setId("Rect 2");
 
-        grp.setPickOnBounds(true);
-
         int pickX = 45;
         int pickY = 50;
+
         assertNull(scene.test_pick(pickX, pickY));
+        
+        grp.setPickOnBounds(true);
+
+        assertSame(grp, scene.test_pick(pickX, pickY));
         assertTrue(grp.contains(pickX, pickY));
         assertFalse(r0.contains(pickX, pickY));
         assertFalse(r1.contains(pickX, pickY));

@@ -680,6 +680,9 @@ public abstract class Parent extends Node {
                     return picked;
                 }
             }
+            if (isPickOnBounds()) {
+                return this;
+            }
         }
         return null;
     }
