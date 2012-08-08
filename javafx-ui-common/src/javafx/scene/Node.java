@@ -1551,7 +1551,7 @@ public abstract class Node implements EventTarget {
             // TODO: is this the right thing to do?
             // this.impl_clearDirty(com.sun.javafx.scene.DirtyBits.NODE_CSS);
 
-            this.processCSS();
+            this.processCSS(getScene().styleManager);
         }
     }
 
@@ -7308,7 +7308,6 @@ public abstract class Node implements EventTarget {
 
     // this function primarily exists as a hook to aid in testing
     boolean isPseudoclassUsed(String pseudoclass) {
-        final StyleHelper styleHelper = impl_getStyleHelper();
         return (styleHelper != null) ? styleHelper.isPseudoclassUsed(pseudoclass) : false;
     }
 
@@ -7372,7 +7371,7 @@ public abstract class Node implements EventTarget {
         }
     }
 
-    void processCSS() {
+    void processCSS(StyleManager styleManager) {
         switch (cssFlag) {
             case CLEAN:
                 break;
@@ -7383,13 +7382,13 @@ public abstract class Node implements EventTarget {
                 me.cssFlag = CSSFlags.CLEAN;
                 List<Node> children = me.getChildren();
                 for (int i=0, max=children.size(); i<max; i++) {
-                    children.get(i).processCSS();
+                    children.get(i).processCSS(styleManager);
                 }
                 break;
             case REAPPLY:
             case UPDATE:
             default:
-                impl_processCSS(cssFlag == CSSFlags.REAPPLY);
+                impl_processCSS(styleManager, cssFlag == CSSFlags.REAPPLY);
         }
     }
 
@@ -7402,18 +7401,29 @@ public abstract class Node implements EventTarget {
      * @deprecated This is an internal API that is not intended for use and will be removed in the next version
      */
     @Deprecated // SB-dependency: RT-21206 has been filed to track this
-    public void impl_processCSS(boolean reapply) {
+    public void impl_processCSS(boolean reapply) {        
+        final StyleManager styleManager = StyleManager.getStyleManager(this.getScene());
+        impl_processCSS(styleManager, reapply);
+    }
+    
+    /**
+     * If invoked, will update / reapply styles from here on down. If reapply
+     * is false, then we will only update from here on down, otherwise we will
+     * do a full reapply.
+     *
+     * @treatAsPrivate implementation detail
+     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
+     */
+    @Deprecated // SB-dependency: RT-21206 has been filed to track this    
+    public void impl_processCSS(StyleManager styleManager, boolean reapply) {
 
-        StyleHelper styleHelper = null;
         // Create a new StyleHelper either if I am told I need to reapply
         // or if my own flag indicates I need to reapply
         if (reapply || (cssFlag == CSSFlags.REAPPLY)) {
 
-            styleHelper = impl_createStyleHelper();
+            styleHelper = styleManager.getStyleHelper(this);
 
-        } else {
-            styleHelper = impl_getStyleHelper();
-        }
+        } 
         
         // Clear the flag first in case the flag is set to something
         // other than clean by downstream processing.
@@ -7436,12 +7446,12 @@ public abstract class Node implements EventTarget {
      * @treatAsPrivate implementation detail
      * @deprecated This is an internal API that is not intended for use and will be removed in the next version
      */
-    @Deprecated
-    protected StyleHelper impl_createStyleHelper() {
-        
-        styleHelper = getScene().styleManager.getStyleHelper(this);
-        return styleHelper;
-    }
+//    @Deprecated
+//    protected StyleHelper impl_createStyleHelper() {
+//        
+//        styleHelper = getScene().styleManager.getStyleHelper(this);
+//        return styleHelper;
+//    }
 
     /**
      * Get this nodes StyleHelper

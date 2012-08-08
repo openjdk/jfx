@@ -58,7 +58,7 @@ public class StyleManagerTest {
     public void testMethod_getStyleManager() {
         Scene scene = new Scene(new Group());
         StyleManager sm = StyleManager.getStyleManager(scene);
-        assert (scene == sm.getScene());
+        assert (scene == sm.getOwner());
     }
     
     @Test
@@ -66,7 +66,7 @@ public class StyleManagerTest {
         Popup popup = new Popup();
         Scene scene = popup.getScene();
         StyleManager sm = StyleManager.getStyleManager(scene);
-        assert (scene == sm.getScene());
+        assert (scene == sm.getOwner());
     }
     
     @Test
@@ -82,7 +82,7 @@ public class StyleManagerTest {
         Scene scene = popup.getScene();        
 
         StyleManager sm = StyleManager.getStyleManager(scene);
-        assert (rootScene == sm.getRootScene());    
+        assert (rootScene == ((SceneStyleManager)sm).getPopupOwnerScene());
     }
     
 }

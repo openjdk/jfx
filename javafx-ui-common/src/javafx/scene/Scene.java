@@ -285,7 +285,7 @@ public class Scene implements EventTarget {
             @Default("javafx.scene.paint.Color.WHITE") Paint fill,
             boolean depthBuffer) {
         Toolkit.getToolkit().checkFxUserThread();
-        styleManager = new StyleManager(this);
+        styleManager = StyleManager.createStyleManager(this);
         setRoot(root);
         init(width, height, depthBuffer);
         setFill(fill);
@@ -441,7 +441,7 @@ public class Scene implements EventTarget {
             // The cssFlag is set to clean in either Node.processCSS or 
             // Node.impl_processCSS(boolean)
             sceneRoot.impl_clearDirty(com.sun.javafx.scene.DirtyBits.NODE_CSS);
-            sceneRoot.processCSS();
+            sceneRoot.processCSS(styleManager);
         }
     }
 
@@ -1379,7 +1379,7 @@ public class Scene implements EventTarget {
     private final ObservableList<String> stylesheets  = new TrackableObservableList<String>() {
         @Override
         protected void onChanged(Change<String> c) {        
-            styleManager.updateStylesheets();
+            styleManager.stylesheetsChanged(c);
             // RT-9784 - if stylesheet is removed, reset styled properties to 
             // their initial value.
             while(c.next()) {
