@@ -157,6 +157,7 @@ public class TreeCell<T> extends IndexedCell<T> {
     private final WeakInvalidationListener weakFocusedListener = new WeakInvalidationListener(focusedListener);
     private final WeakChangeListener weakFocusModelPropertyListener = new WeakChangeListener(focusModelPropertyListener);
     private final WeakInvalidationListener weakEditingListener = new WeakInvalidationListener(editingListener);
+    private final WeakInvalidationListener weakLeafListener = new WeakInvalidationListener(leafListener);
     
     
     
@@ -485,11 +486,11 @@ public class TreeCell<T> extends IndexedCell<T> {
     public final void updateTreeItem(TreeItem<T> treeItem) {
         TreeItem _treeItem = getTreeItem();
         if (_treeItem != null) {
-            _treeItem.leafProperty().removeListener(leafListener);
+            _treeItem.leafProperty().removeListener(weakLeafListener);
         }
         setTreeItem(treeItem);
         if (treeItem != null) {
-            treeItem.leafProperty().addListener(leafListener);
+            treeItem.leafProperty().addListener(weakLeafListener);
         }
     }
 
