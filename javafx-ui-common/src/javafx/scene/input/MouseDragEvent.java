@@ -31,7 +31,7 @@ import javafx.event.EventType;
 /**
  * Mouse drag events are delivered to potential gesture targets during
  * full press-drag-release gestures. The difference among different
- * gesture types is described at {@link javafx.scene.input#MouseEvent MouseEvent}.
+ * gesture types is described at {@link javafx.scene.input.MouseEvent MouseEvent}.
  * <p>
  * Full press-drag-release gesture can be started by calling
  * {@code startFullDrag()} (on a node or scene) inside of a DRAG_DETECTED

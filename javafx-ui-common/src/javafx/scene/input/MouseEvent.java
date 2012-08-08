@@ -41,7 +41,7 @@ import java.io.IOException;
 /**
  * When mouse event occurs, the top-most node under cursor is picked and
  * the event is delivered to it through capturing and bubbling phases
- * described at {@link javafx.event#EventDispatcher EventDispatcher}.
+ * described at {@link javafx.event.EventDispatcher EventDispatcher}.
  * <p>
  * The mouse (pointer's) location is available relative to several
  * coordinate systems: x,y - relative to the origin of the
@@ -69,13 +69,13 @@ import java.io.IOException;
  * full press-drag-release gesture has to be activated. This gesture is 
  * best used for connecting nodes by "wires", dragging nodes to other nodes etc.
  * This gesture type is more closely described at 
- * {@link javafx.scene.input#MouseDragEvent MouseDragEvent} which contains
+ * {@link javafx.scene.input.MouseDragEvent MouseDragEvent} which contains
  * the events delivered to the gesture targets.
  * <p>
  * The third gesture type is platform-supported drag-and-drop gesture. It serves
  * best to transfer data and works also between (not necessarily FX)
  * applications. This gesture type is more closely described
- * at {@link javafx.scene.input#DragEvent DragEvent}.
+ * at {@link javafx.scene.input.DragEvent DragEvent}.
  * <p>
  * In a short summary, simple press-drag-release gesture is activated
  * automatically when a mouse button is pressed and delivers all
