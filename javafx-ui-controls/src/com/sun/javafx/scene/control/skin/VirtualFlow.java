@@ -1057,7 +1057,6 @@ public class VirtualFlow extends Region {
         while (index >= 0 && (offset > 0 || first)) {
             cell = getAvailableCell(index);
             setCellIndex(cell, index);
-            processCell(cell);
             resizeCellSize(cell); // resize must be after config
             cells.addFirst(cell);
 
@@ -1123,7 +1122,6 @@ public class VirtualFlow extends Region {
             }
             IndexedCell cell = getAvailableCell(index);
             setCellIndex(cell, index);
-            processCell(cell);
             resizeCellSize(cell); // resize happens after config!
             cells.addLast(cell);
 
@@ -1157,7 +1155,6 @@ public class VirtualFlow extends Region {
                 index--;
                 IndexedCell cell = getAvailableCell(index);
                 setCellIndex(cell, index);
-                processCell(cell);
                 resizeCellSize(cell); // resize must be after config
                 cells.addFirst(cell);
                 double cellLength = getCellLength(cell);
@@ -1610,9 +1607,6 @@ public class VirtualFlow extends Region {
         if (cell == null) return;
 
         cell.updateIndex(index);
-    }
-    
-    private void processCell(IndexedCell cell) {
         if (cell.isNeedsLayout() && cell.getScene() != null) {
             cell.impl_processCSS(false);
         }
