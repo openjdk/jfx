@@ -72,7 +72,6 @@ public class TreeCell<T> extends IndexedCell<T> {
      *                                                                         *
      **************************************************************************/
 
-    private static int counter = 0;
     /**
      * Creates a default TreeCell instance.
      */
@@ -139,6 +138,17 @@ public class TreeCell<T> extends IndexedCell<T> {
     private final InvalidationListener editingListener = new InvalidationListener() {
         @Override public void invalidated(Observable valueModel) {
             updateEditing();
+        }
+    };
+    
+    private final InvalidationListener leafListener = new InvalidationListener() {
+        @Override public void invalidated(Observable valueModel) {
+            // necessary to update the disclosure node in the skin when the
+            // leaf property changes
+            TreeItem treeItem = getTreeItem();
+            if (treeItem != null) {
+                requestLayout();
+            }
         }
     };
     
@@ -248,6 +258,7 @@ public class TreeCell<T> extends IndexedCell<T> {
                 weakTreeViewRef = new WeakReference<TreeView<T>>(get());
             }
 
+            updateItem();
             requestLayout();
         }
 
@@ -396,15 +407,15 @@ public class TreeCell<T> extends IndexedCell<T> {
         if (valid) {
             // update the TreeCell state.
             // get the new treeItem that is about to go in to the TreeCell
-            TreeItem<T> treeItem = valid ? tv.getTreeItem(getIndex()) : null;
+            TreeItem<T> _treeItem = tv.getTreeItem(getIndex());
         
             // For the sake of RT-14279, it is important that the order of these
             // method calls is as shown below. If the order is switched, it is
             // likely that events will be fired where the item is null, even
             // though calling cell.getTreeItem().getValue() returns the value
             // as expected
-            updateTreeItem(treeItem);
-            updateItem(treeItem == null ? null : treeItem.getValue(), treeItem == null);
+            updateTreeItem(_treeItem);
+            updateItem(_treeItem == null ? null : _treeItem.getValue(), false);
         } else {
             updateTreeItem(null);
             updateItem(null, true);
@@ -472,7 +483,14 @@ public class TreeCell<T> extends IndexedCell<T> {
      *      for developers or designers to access this function directly.
      */
     public final void updateTreeItem(TreeItem<T> treeItem) {
+        TreeItem _treeItem = getTreeItem();
+        if (_treeItem != null) {
+            _treeItem.leafProperty().removeListener(leafListener);
+        }
         setTreeItem(treeItem);
+        if (treeItem != null) {
+            treeItem.leafProperty().addListener(leafListener);
+        }
     }
 
 

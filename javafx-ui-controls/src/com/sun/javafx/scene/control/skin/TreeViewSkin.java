@@ -108,7 +108,6 @@ public class TreeViewSkin<T> extends VirtualContainerBase<TreeView<T>, TreeViewB
         registerChangeListener(treeView.rootProperty(), "ROOT");
         registerChangeListener(treeView.showRootProperty(), "SHOW_ROOT");
         registerChangeListener(treeView.cellFactoryProperty(), "CELL_FACTORY");
-        registerChangeListener(treeView.impl_treeItemCountProperty(), "TREE_ITEM_COUNT");
         registerChangeListener(treeView.focusTraversableProperty(), "FOCUS_TRAVERSABLE");
         
         updateItemCount();
@@ -131,15 +130,14 @@ public class TreeViewSkin<T> extends VirtualContainerBase<TreeView<T>, TreeViewB
             }
         } else if (p == "CELL_FACTORY") {
             flow.recreateCells();
-        } else if (p == "TREE_ITEM_COUNT") {
-            updateItemCount();
         } else if (p == "FOCUS_TRAVERSABLE") {
             flow.setFocusTraversable(getSkinnable().isFocusTraversable());
         }
     }
     
     private boolean needItemCountUpdate = false;
-    private boolean needCellsRecreated = false;
+    private boolean needCellsRecreated = true;
+    private boolean needCellsReconfigured = false;
     
     private EventHandler<TreeModificationEvent> rootListener = new EventHandler<TreeModificationEvent>() {
         @Override public void handle(TreeModificationEvent e) {
@@ -150,20 +148,6 @@ public class TreeViewSkin<T> extends VirtualContainerBase<TreeView<T>, TreeViewB
                 // had changed. So, here we just watch for the case where the number
                 // of items being added is equal to the number of items being removed.
                 needItemCountUpdate = true;
-                requestLayout();
-            } else if ((e.wasAdded() && e.getAddedSize() == e.getTreeItem().getChildren().size())
-                    || (e.wasRemoved() && e.getTreeItem().getChildren().isEmpty())) {
-                
-                // Fix for RT-14850, where a TreeItem with no children would not
-                // show a disclosure node when a child was added. Similarly, if
-                // a TreeItem with children had all children removed, the 
-                // disclosure node would not be removed. This forces the cells
-                // to repaint themselves.
-                // The alternative approach is to have many listeners, one for
-                // each TreeCell, watching the children list of the assigned 
-                // TreeItem. This is likely much less efficient, so for now this
-                // approach seems the most sane.
-                needCellsRecreated = true;
                 requestLayout();
             } else if (e.getEventType().equals(TreeItem.valueChangedEvent())) {
                 // Fix for RT-14971 and RT-15338. 
@@ -208,13 +192,13 @@ public class TreeViewSkin<T> extends VirtualContainerBase<TreeView<T>, TreeViewB
     }
 
     private void updateItemCount() {
-        // we're about to recreate all cells - but before that we detach them
-        // from the TreeView, such that their listeners can be uninstalled.
-        // If we don't do this, we start to get multiple events firing when
-        // properties on the TreeView trigger listeners in the cells.
-        for (int i = 0; i < flow.cells.size(); i++) {
-            ((TreeCell)flow.cells.get(i)).updateTreeView(null);
-        }
+//        // we're about to recreate all cells - but before that we detach them
+//        // from the TreeView, such that their listeners can be uninstalled.
+//        // If we don't do this, we start to get multiple events firing when
+//        // properties on the TreeView trigger listeners in the cells.
+//        for (int i = 0; i < flow.cells.size(); i++) {
+//            ((TreeCell)flow.cells.get(i)).updateTreeView(null);
+//        }
         
         int oldCount = flow.getCellCount();
         int newCount = getItemCount();
@@ -223,7 +207,12 @@ public class TreeViewSkin<T> extends VirtualContainerBase<TreeView<T>, TreeViewB
         // memory leak in VirtualFlow.sheet.children. This can probably be 
         // optimised in the future when time permits.
         flow.setCellCount(newCount);
-        flow.recreateCells();
+        
+        if (newCount != oldCount) {
+            needCellsRecreated = true;
+        } else {
+            needCellsReconfigured = true;
+        }
     }
 
     @Override public TreeCell<T> createCell() {
@@ -308,13 +297,21 @@ public class TreeViewSkin<T> extends VirtualContainerBase<TreeView<T>, TreeViewB
     @Override
     protected void layoutChildren(final double x, final double y,
             final double w, final double h) {
-        if (needCellsRecreated) {
-            flow.recreateCells();
-            needCellsRecreated = false;
-        } else if (needItemCountUpdate) {
+        if (needItemCountUpdate) {
             updateItemCount();
             needItemCountUpdate = false;
         }
+        
+        if (needCellsRecreated) {
+            flow.recreateCells();
+            needCellsRecreated = false;
+        } 
+        
+        if (needCellsReconfigured) {
+            flow.reconfigureCells();
+            needCellsReconfigured = false;
+        } 
+        
         flow.resizeRelocate(x, y, w, h);
     }
     
