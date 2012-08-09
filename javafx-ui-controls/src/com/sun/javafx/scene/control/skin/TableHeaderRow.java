@@ -299,8 +299,8 @@ public class TableHeaderRow extends StackPane {
     
     private ListChangeListener visibleLeafColumnsListener = new ListChangeListener<TableColumn<?,?>>() {
         @Override public void onChanged(ListChangeListener.Change<? extends TableColumn<?,?>> c) {
-            // This is necessary for RT-20300
-            header.updateTableColumnHeaders();
+            // This is necessary for RT-20300 (but was updated for RT-20840)
+            header.setHeadersNeedUpdate();
         }
     };
     

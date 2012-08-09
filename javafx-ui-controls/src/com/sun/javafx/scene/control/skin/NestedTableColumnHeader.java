@@ -62,13 +62,21 @@ public class NestedTableColumnHeader extends TableColumnHeader {
     
     NestedTableColumnHeader(TableView table, TableColumn tc) {
         super(table, tc);
-
+        
         getStyleClass().setAll("nested-column-header");
         setFocusTraversable(false);
 
-        initUI();
+        // init UI
+        label = new TableColumnHeader(getTableView(), getTableColumn());
+        label.setTableHeaderRow(getTableHeaderRow());
+        label.setParentHeader(getParentHeader());
+        label.setNestedColumnHeader(this);
+
+        if (getTableColumn() != null) {
+            getTableColumn().textProperty().addListener(weakColumnTextListener);
+        }
         
-        updateTableColumnHeaders();
+        getTableView().columnResizePolicyProperty().addListener(weakResizePolicyListener);
     }
     
     
@@ -81,7 +89,7 @@ public class NestedTableColumnHeader extends TableColumnHeader {
     
     private final ListChangeListener<TableColumn> columnsListener = new ListChangeListener<TableColumn>() {
         @Override public void onChanged(Change<? extends TableColumn> c) {
-            updateTableColumnHeaders();
+            setHeadersNeedUpdate();
         }
     };
     
@@ -167,11 +175,10 @@ public class NestedTableColumnHeader extends TableColumnHeader {
             // switch out to be a TableColumn instead
             NestedTableColumnHeader parentHeader = getParentHeader();
             if (parentHeader != null) {
-                TableColumnHeader newHeader = createColumnHeader(getTableColumn());
                 List<TableColumnHeader> parentColumnHeaders = parentHeader.getColumnHeaders();
                 int index = parentColumnHeaders.indexOf(this);
                 if (index >= 0 && index < parentColumnHeaders.size()) {
-                    parentColumnHeaders.set(index, newHeader);
+                    parentColumnHeaders.set(index, createColumnHeader(getTableColumn()));
                 }
             }
         } else {
@@ -179,11 +186,8 @@ public class NestedTableColumnHeader extends TableColumnHeader {
             
             for (int i = 0; i < getColumns().size(); i++) {
                 TableColumn<?,?> column = getColumns().get(i);
-
                 if (column == null) continue;
-
-                TableColumnHeader header = createColumnHeader(column);
-                newHeaders.add(header);
+                newHeaders.add(createColumnHeader(column));
             }
             
             getColumnHeaders().setAll(newHeaders);
@@ -198,7 +202,9 @@ public class NestedTableColumnHeader extends TableColumnHeader {
         
         if (label != null) label.dispose();
         
-        getColumns().removeListener(weakColumnsListener);
+        if (getColumns() != null) {
+            getColumns().removeListener(weakColumnsListener);
+        }
         
         getTableColumn().textProperty().removeListener(weakColumnTextListener);
         
@@ -225,21 +231,6 @@ public class NestedTableColumnHeader extends TableColumnHeader {
         return columnHeaders; 
     }
 
-    private void initUI() {
-        label = new TableColumnHeader(getTableView(), getTableColumn());
-        label.setTableHeaderRow(getTableHeaderRow());
-        label.setParentHeader(getParentHeader());
-        label.setNestedColumnHeader(this);
-
-        if (getTableColumn() != null) {
-            getTableColumn().textProperty().addListener(weakColumnTextListener);
-        }
-        
-        getTableView().columnResizePolicyProperty().addListener(weakResizePolicyListener);
-
-        updateContent();
-    }
-
     private void updateContent() {
         // create a temporary list so we only do addAll into the main content
         // observableArrayList once.
@@ -259,7 +250,6 @@ public class NestedTableColumnHeader extends TableColumnHeader {
         }
 
         getChildren().setAll(content);
-        requestLayout();
     }
     
     private static final String TABLE_COLUMN_KEY = "TableColumn";
@@ -331,6 +321,11 @@ public class NestedTableColumnHeader extends TableColumnHeader {
         if (! isColumnResizingEnabled()) return;
         
         getChildren().removeAll(dragRects);
+        
+        for (int i = 0, max = dragRects.size(); i < max; i++) {
+            Rectangle rect = dragRects.get(i);
+            rect.visibleProperty().unbind();
+        }
         dragRects.clear();
         
         if (getColumns() == null) {
@@ -403,7 +398,25 @@ public class NestedTableColumnHeader extends TableColumnHeader {
     /* END OF COLUMN RESIZING   */
     /* **************************/
 
+    void setHeadersNeedUpdate() {
+        updateColumns = true;
+        // go through children columns - they should update too
+        for (int i = 0; i < getColumnHeaders().size(); i++) {
+            TableColumnHeader header = getColumnHeaders().get(i);
+            if (header instanceof NestedTableColumnHeader) {
+                ((NestedTableColumnHeader)header).setHeadersNeedUpdate();
+            }
+        }
+        requestLayout();
+    }
+    
+    boolean updateColumns = true;
     @Override protected void layoutChildren() {
+        if (updateColumns) {
+            updateTableColumnHeaders();
+            updateColumns = false;
+            getParent().requestLayout();
+        }
         double w = getWidth() - getInsets().getLeft() - getInsets().getRight();
         double h = getHeight() - getInsets().getTop() - getInsets().getBottom();
         
