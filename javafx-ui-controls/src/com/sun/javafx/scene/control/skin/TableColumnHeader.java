@@ -69,8 +69,7 @@ import com.sun.javafx.scene.control.WeakListChangeListener;
 /**
  * Region responsible for painting a single column header.
  */
-public class TableColumnHeader extends StackPane {
-    
+public class TableColumnHeader extends Region {
     // Copied from TableColumn. The value here should always be in-sync with
     // the value in TableColumn
     private static final double DEFAULT_WIDTH = 80.0F;
@@ -86,7 +85,7 @@ public class TableColumnHeader extends StackPane {
     public TableColumnHeader(final TableView table, final TableColumn tc) {
         this.column = tc;
         this.table = table;
-
+        
         getStyleClass().setAll("column-header");
         if (getTableColumn() != null) {
             idProperty().bind(column.idProperty());
@@ -841,7 +840,7 @@ public class TableColumnHeader extends StackPane {
          static {
 
             final List<StyleableProperty> styleables = 
-                new ArrayList<StyleableProperty>(StackPane.impl_CSS_STYLEABLES());
+                new ArrayList<StyleableProperty>(Region.impl_CSS_STYLEABLES());
             Collections.addAll(styleables,
                 SIZE
             );
