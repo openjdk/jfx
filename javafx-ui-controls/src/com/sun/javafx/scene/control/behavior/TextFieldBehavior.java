@@ -25,6 +25,7 @@
 
 package com.sun.javafx.scene.control.behavior;
 
+import com.sun.javafx.PlatformUtil;
 import javafx.animation.KeyFrame;
 import javafx.animation.Timeline;
 import javafx.beans.value.ChangeListener;
@@ -51,7 +52,14 @@ import com.sun.javafx.scene.control.skin.TextFieldSkin;
 import com.sun.javafx.scene.text.HitInfo;
 
 import static com.sun.javafx.PlatformUtil.*;
+
+import com.sun.javafx.geom.transform.Affine3D;
+import javafx.scene.Node;
+import javafx.scene.text.Font;
+
 import javafx.geometry.Rectangle2D;
+import javafx.geometry.Bounds;
+import javafx.geometry.Insets;
 
 /**
  * Text field behavior.
@@ -125,17 +133,51 @@ public class TextFieldBehavior extends TextInputControlBehavior<TextField> {
         TextField textField = getControl();
 
         if (textField.isFocused()) {
+            if (PlatformUtil.isIOS()) {
+                TextInputTypes type = TextInputTypes.TEXT_FIELD;
+                if (textField.getClass().equals(javafx.scene.control.PasswordField.class)) {
+                    type = TextInputTypes.PASSWORD_FIELD;
+                } else if (textField.getClass().equals(com.sun.javafx.scene.control.FocusableTextField.class)) {
+                    type = TextInputTypes.EDITABLE_COMBO;
+                }
+                Bounds bnds = textField.getBoundsInParent();
+                double w = bnds.getWidth();
+                double h = bnds.getHeight();
+                Affine3D trans = calculateNodeToSceneTransform(textField);
+//                Insets insets = skin.getInsets();
+//                w -= insets.getLeft() + insets.getRight();
+//                h -= insets.getTop() + insets.getBottom();
+                String text = textField.getText();
+                
+                textField.getScene().getWindow().impl_getPeer().requestInput(text, type.ordinal(), w, h, 
+                        trans.getMxx(), trans.getMxy(), trans.getMxz(), trans.getMxt(),// + insets.getLeft(),
+                        trans.getMyx(), trans.getMyy(), trans.getMyz(), trans.getMyt(),// + insets.getTop(),
+                        trans.getMzx(), trans.getMzy(), trans.getMzz(), trans.getMzt());
+            }
             if (!focusGainedByMouseClick) {
                 textField.selectRange(textField.getLength(), 0);
                 setCaretAnimating(true);
             }
         } else {
+            if (PlatformUtil.isIOS() && textField.getScene() != null) {
+                textField.getScene().getWindow().impl_getPeer().releaseInput();
+            }
             textField.selectRange(0, 0);
             focusGainedByMouseClick = false;
             setCaretAnimating(false);
         }
     }
 
+    static Affine3D calculateNodeToSceneTransform(Node node) {
+        final Affine3D transform = new Affine3D();
+        do {
+            transform.preConcatenate(node.impl_getLeafTransform());
+            node = node.getParent();
+        } while (node != null);
+        
+        return transform;
+    }
+    
     // An unholy back-reference!
     public void setTextFieldSkin(TextFieldSkin skin) {
         this.skin = skin;
@@ -377,4 +419,12 @@ public class TextFieldBehavior extends TextInputControlBehavior<TextField> {
     protected void mouseTripleClick(HitInfo hit) {
         getControl().selectAll();
     }
+    
+    public enum TextInputTypes {
+        TEXT_FIELD,
+        PASSWORD_FIELD,
+        EDITABLE_COMBO,
+        TEXT_AREA;
+    }
+    
 }
