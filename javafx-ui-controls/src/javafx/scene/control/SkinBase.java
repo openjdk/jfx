@@ -87,13 +87,16 @@ public abstract class SkinBase<C extends Control, BB extends BehaviorBase<C>> im
      *                                                                         *
      * Event Handlers / Listeners                                              *
      *                                                                         *
-     **************************************************************************/     
+     **************************************************************************/
     
     private final ChangeListener controlPropertyChangedListener = new ChangeListener() {
         @Override public void changed(ObservableValue property, Object oldValue, Object newValue) {
             handleControlPropertyChanged(propertyReferenceMap.get(property));
         }
     };
+    
+    private final WeakChangeListener weakControlPropertyChangedListener = 
+            new WeakChangeListener(controlPropertyChangedListener);
     
     /**
      * Mouse handler used for consuming all mouse events (preventing them
@@ -193,7 +196,7 @@ public abstract class SkinBase<C extends Control, BB extends BehaviorBase<C>> im
     @Override public void dispose() { 
         // unhook listeners
         for (ObservableValue value : propertyReferenceMap.keySet()) {
-            value.removeListener(controlPropertyChangedListener);
+            value.removeListener(weakControlPropertyChangedListener);
         }
 
         control.removeEventHandler(MouseEvent.MOUSE_ENTERED, mouseHandler);
@@ -245,7 +248,7 @@ public abstract class SkinBase<C extends Control, BB extends BehaviorBase<C>> im
     protected final void registerChangeListener(ObservableValue property, String reference) {
         if (!propertyReferenceMap.containsKey(property)) {
             propertyReferenceMap.put(property, reference);
-            property.addListener(new WeakChangeListener(controlPropertyChangedListener));
+            property.addListener(weakControlPropertyChangedListener);
         }
     }
     
