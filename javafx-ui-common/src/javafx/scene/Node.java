@@ -2966,7 +2966,7 @@ public abstract class Node implements EventTarget {
      * really belongs to the Parent of the node and should *only* be modified
      * by the parent.
      */
-    boolean boundsChanged = true;
+    boolean boundsChanged;
 
     /**
      * Returns geometric bounds, but may be over-ridden by a subclass.
