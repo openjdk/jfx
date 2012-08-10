@@ -39,6 +39,7 @@ import com.sun.javafx.scene.control.WeakListChangeListener;
 import java.lang.ref.WeakReference;
 import javafx.beans.property.ReadOnlyObjectProperty;
 import javafx.beans.property.ReadOnlyObjectWrapper;
+import javafx.collections.ObservableList;
 
 import javafx.scene.control.TableColumn.CellEditEvent;
 
@@ -123,16 +124,16 @@ public class TableCell<S,T> extends IndexedCell<T> {
         }
     };
     
-    private final WeakListChangeListener weakSelectedListener = 
-            new WeakListChangeListener(selectedListener);
+    private WeakListChangeListener weakSelectedListener;
+    private WeakListChangeListener weakVisibleLeafColumnsListener;
+    
     private final WeakInvalidationListener weakFocusedListener = 
             new WeakInvalidationListener(focusedListener);
     private final WeakInvalidationListener weaktableRowUpdateObserver = 
             new WeakInvalidationListener(tableRowUpdateObserver);
     private final WeakInvalidationListener weakEditingListener = 
             new WeakInvalidationListener(editingListener);
-    private final WeakListChangeListener weakVisibleLeafColumnsListener =
-            new WeakListChangeListener(visibleLeafColumnsListener);
+    
 
     
     /***************************************************************************
@@ -191,7 +192,7 @@ public class TableCell<S,T> extends IndexedCell<T> {
                         TableView<S> oldTableView = weakTableViewRef.get();
                         if (oldTableView != null) {
                             sm = oldTableView.getSelectionModel();
-                            if (sm != null) {
+                            if (sm != null && weakSelectedListener != null) {
                                 sm.getSelectedCells().removeListener(weakSelectedListener);
                             }
 
@@ -201,14 +202,19 @@ public class TableCell<S,T> extends IndexedCell<T> {
                             }
 
                             oldTableView.editingCellProperty().removeListener(weakEditingListener);
-                            oldTableView.getVisibleLeafColumns().removeListener(weakVisibleLeafColumnsListener);
+                            
+                            if (weakVisibleLeafColumnsListener != null) {
+                                oldTableView.getVisibleLeafColumns().removeListener(weakVisibleLeafColumnsListener);
+                            }
                         }
                     }
                     
                     if (get() != null) {
                         sm = get().getSelectionModel();
                         if (sm != null) {
-                            sm.getSelectedCells().addListener(weakSelectedListener);
+                            ObservableList<TablePosition> selectedCells = sm.getSelectedCells();
+                            weakSelectedListener = new WeakListChangeListener(selectedCells, selectedListener);
+                            selectedCells.addListener(weakSelectedListener);
                         }
 
                         fm = get().getFocusModel();
@@ -217,7 +223,10 @@ public class TableCell<S,T> extends IndexedCell<T> {
                         }
 
                         get().editingCellProperty().addListener(weakEditingListener);
-                        get().getVisibleLeafColumns().addListener(weakVisibleLeafColumnsListener);
+                        
+                        ObservableList<TableColumn<S,?>> visibleLeafColumns = get().getVisibleLeafColumns();
+                        weakVisibleLeafColumnsListener = new WeakListChangeListener(visibleLeafColumns, visibleLeafColumnsListener);
+                        visibleLeafColumns.addListener(weakVisibleLeafColumnsListener);
                         
                         weakTableViewRef = new WeakReference<TableView<S>>(get());
                     }

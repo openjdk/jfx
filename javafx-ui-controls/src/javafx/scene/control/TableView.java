@@ -805,7 +805,7 @@ public class TableView<S> extends Control {
             new WeakInvalidationListener(columnSortTypeObserver);
     
     private final WeakListChangeListener weakColumnsObserver = 
-            new WeakListChangeListener(columnsObserver);
+            new WeakListChangeListener(getColumns(), columnsObserver);
     
     /***************************************************************************
      *                                                                         *
@@ -1771,8 +1771,10 @@ public class TableView<S> extends Control {
             tableView.itemsProperty().addListener(weakItemsPropertyListener);
             
             // watching for changes to the items list content
-            if (tableView.getItems() != null) {
-                tableView.getItems().addListener(weakItemsContentListener);
+            ObservableList<S> items = this.tableView.getItems();
+            if (items != null) {
+                weakItemsContentListener = new WeakListChangeListener(items, itemsContentListener);
+                items.addListener(weakItemsContentListener);
             }
         }
         
@@ -1803,16 +1805,16 @@ public class TableView<S> extends Control {
             }
         };
         
-        final WeakListChangeListener weakItemsContentListener 
-                = new WeakListChangeListener(itemsContentListener);
+        private WeakListChangeListener weakItemsContentListener;
         
         private void updateItemsObserver(ObservableList<S> oldList, ObservableList<S> newList) {
             // the listview items list has changed, we need to observe
             // the new list, and remove any observer we had from the old list
-            if (oldList != null) {
+            if (oldList != null && weakItemsContentListener != null) {
                 oldList.removeListener(weakItemsContentListener);
             }
             if (newList != null) {
+                weakItemsContentListener = new WeakListChangeListener(newList, itemsContentListener);
                 newList.addListener(weakItemsContentListener);
             }
 
@@ -2393,8 +2395,10 @@ public class TableView<S> extends Control {
             this.tableView = tableView;
             
             this.tableView.itemsProperty().addListener(weakItemsPropertyListener);
-            if (tableView.getItems() != null) {
-                this.tableView.getItems().addListener(weakItemsContentListener);
+            ObservableList<S> items = this.tableView.getItems();
+            if (items != null) {
+                weakItemsContentListener = new WeakListChangeListener(items, itemsContentListener);
+                items.addListener(weakItemsContentListener);
             }
 
             TablePosition pos = new TablePosition(tableView, -1, null);
@@ -2438,14 +2442,18 @@ public class TableView<S> extends Control {
             }
         };
         
-        private WeakListChangeListener<S> weakItemsContentListener 
-                = new WeakListChangeListener<S>(itemsContentListener);
+        private WeakListChangeListener<S> weakItemsContentListener;
         
         private void updateItemsObserver(ObservableList<S> oldList, ObservableList<S> newList) {
             // the tableview items list has changed, we need to observe
             // the new list, and remove any observer we had from the old list
-            if (oldList != null) oldList.removeListener(weakItemsContentListener);
-            if (newList != null) newList.addListener(weakItemsContentListener);
+            if (oldList != null && weakItemsContentListener != null) {
+                oldList.removeListener(weakItemsContentListener);
+            }
+            if (newList != null) {
+                weakItemsContentListener = new WeakListChangeListener<S>(newList, itemsContentListener);
+                newList.addListener(weakItemsContentListener);
+            }
         }
 
         /** {@inheritDoc} */

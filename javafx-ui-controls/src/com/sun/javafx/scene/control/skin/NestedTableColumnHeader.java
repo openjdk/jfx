@@ -103,8 +103,7 @@ public class NestedTableColumnHeader extends TableColumnHeader {
         }
     };
     
-    private final WeakListChangeListener weakColumnsListener =
-            new WeakListChangeListener(columnsListener);
+    private WeakListChangeListener weakColumnsListener;
     
     
 
@@ -133,13 +132,14 @@ public class NestedTableColumnHeader extends TableColumnHeader {
     private ObservableList<? extends TableColumn> columns;
     ObservableList<? extends TableColumn> getColumns() { return columns; }
     void setColumns(ObservableList<? extends TableColumn> newColumns) {
-        if (this.columns != null) {
+        if (this.columns != null && weakColumnsListener != null) {
             this.columns.removeListener(weakColumnsListener);
         }
         
         this.columns = newColumns;  
         
         if (this.columns != null) {
+            weakColumnsListener = new WeakListChangeListener(columns, columnsListener);
             this.columns.addListener(weakColumnsListener);
         }
     }

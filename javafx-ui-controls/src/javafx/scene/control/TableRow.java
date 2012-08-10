@@ -35,6 +35,7 @@ import java.lang.ref.WeakReference;
 import java.util.List;
 import javafx.beans.property.ReadOnlyObjectProperty;
 import javafx.beans.property.ReadOnlyObjectWrapper;
+import javafx.collections.ObservableList;
 
 /**
  * <p>TableRow is an {@link javafx.scene.control.IndexedCell IndexedCell}, but
@@ -113,7 +114,7 @@ public class TableRow<T> extends IndexedCell<T> {
         }
     };
 
-    private final WeakListChangeListener weakSelectedListener = new WeakListChangeListener(selectedListener);
+    private WeakListChangeListener weakSelectedListener;
     private final WeakInvalidationListener weakFocusedListener = new WeakInvalidationListener(focusedListener);
     private final WeakInvalidationListener weakEditingListener = new WeakInvalidationListener(editingListener);
 
@@ -154,7 +155,7 @@ public class TableRow<T> extends IndexedCell<T> {
                         TableView oldTableView = weakTableViewRef.get();
                         if (oldTableView != null) {
                             sm = oldTableView.getSelectionModel();
-                            if (sm != null) {
+                            if (sm != null && weakSelectedListener != null) {
                                 sm.getSelectedCells().removeListener(weakSelectedListener);
                             }
 
@@ -172,7 +173,9 @@ public class TableRow<T> extends IndexedCell<T> {
                     if (getTableView() != null) {
                         sm = getTableView().getSelectionModel();
                         if (sm != null) {
-                            sm.getSelectedCells().addListener(weakSelectedListener);
+                            ObservableList<TablePosition> selectedCells = sm.getSelectedCells();
+                            weakSelectedListener = new WeakListChangeListener(selectedCells, selectedListener);
+                            selectedCells.addListener(weakSelectedListener);
                         }
 
                         fm = getTableView().getFocusModel();

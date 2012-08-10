@@ -94,7 +94,7 @@ public class TreeTableRow<T> extends TableRow<T> {
         }
     };
     
-    private final WeakListChangeListener weakSelectedListener = new WeakListChangeListener(selectedListener);
+    private WeakListChangeListener weakSelectedListener;
     private final WeakInvalidationListener weakFocusedListener = new WeakInvalidationListener(focusedListener);
     private final WeakInvalidationListener weakEditingListener = new WeakInvalidationListener(editingListener);
     
@@ -159,7 +159,7 @@ public class TreeTableRow<T> extends TableRow<T> {
                 if (oldTreeTableView != null) {
                     // remove old listeners
                     sm = oldTreeTableView.getSelectionModel();
-                    if (sm != null) {
+                    if (sm != null && weakSelectedListener != null) {
                         sm.getSelectedIndices().removeListener(weakSelectedListener);
                     }
 
@@ -179,6 +179,7 @@ public class TreeTableRow<T> extends TableRow<T> {
                 if (sm != null) {
                     // listening for changes to treeView.selectedIndex and IndexedCell.index,
                     // to determine if this cell is selected
+                    weakSelectedListener = new WeakListChangeListener(sm.getSelectedIndices(), selectedListener);
                     sm.getSelectedIndices().addListener(weakSelectedListener);
                 }
 

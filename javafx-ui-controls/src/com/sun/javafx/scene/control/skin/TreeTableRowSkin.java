@@ -34,14 +34,12 @@ import java.util.Map;
 import java.util.WeakHashMap;
 
 import javafx.beans.property.DoubleProperty;
-import javafx.beans.property.SimpleDoubleProperty;
 import javafx.geometry.HPos;
 import javafx.geometry.VPos;
 import javafx.scene.Node;
 import javafx.scene.control.TreeItem;
 import javafx.scene.control.TreeView;
 
-import com.sun.javafx.css.Styleable;
 import com.sun.javafx.css.StyleableDoubleProperty;
 import com.sun.javafx.css.StyleableProperty;
 import com.sun.javafx.css.converters.SizeConverter;
@@ -474,8 +472,8 @@ public class TreeTableRowSkin<T> extends CellSkinBase<TreeTableRow<T>, CellBehav
             throw new IllegalStateException("TableRow not have the TableView property set");
         }
         
-        getSkinnable().getTableView().getVisibleLeafColumns().addListener(
-                new WeakListChangeListener(visibleLeafColumnsListener));
+        ObservableList<TableColumn<T,?>> visibleLeafColumns = getSkinnable().getTableView().getVisibleLeafColumns();
+        visibleLeafColumns.addListener(new WeakListChangeListener(visibleLeafColumns, visibleLeafColumnsListener));
     }
     
     private void doUpdateCheck() {

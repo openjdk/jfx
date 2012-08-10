@@ -104,8 +104,14 @@ public class TableColumnHeader extends Region {
         
         if (column != null && table != null) {
             setSortPos(! column.isSortable() ? -1 : table.getSortOrder().indexOf(column));
-            table.getSortOrder().addListener(weakSortOrderListener);
-            table.getVisibleLeafColumns().addListener(weakVisibleLeafColumnsListener);
+            
+            ObservableList<TableColumn<?,?>> sortOrderList = table.getSortOrder();
+            weakSortOrderListener = new WeakListChangeListener<TableColumn<?,?>>(sortOrderList, sortOrderListener);
+            sortOrderList.addListener(weakSortOrderListener);
+            
+            ObservableList<TableColumn<?,?>> visibleLeafColumns = table.getVisibleLeafColumns();
+            weakVisibleLeafColumnsListener = new WeakListChangeListener(visibleLeafColumns,visibleLeafColumnsListener);
+            visibleLeafColumns.addListener(weakVisibleLeafColumnsListener);
         }
 
         if (column != null) {
@@ -165,10 +171,8 @@ public class TableColumnHeader extends Region {
         }
     };
     
-    private WeakListChangeListener<TableColumn<?,?>> weakSortOrderListener =
-            new WeakListChangeListener<TableColumn<?,?>>(sortOrderListener);
-    private final WeakListChangeListener weakVisibleLeafColumnsListener =
-            new WeakListChangeListener(visibleLeafColumnsListener);
+    private WeakListChangeListener<TableColumn<?,?>> weakSortOrderListener;
+    private WeakListChangeListener weakVisibleLeafColumnsListener;
     
     private static final EventHandler<MouseEvent> mousePressedHandler = new EventHandler<MouseEvent>() {
         @Override public void handle(MouseEvent me) {

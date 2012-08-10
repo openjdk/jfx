@@ -114,8 +114,7 @@ import com.sun.javafx.scene.control.WeakListChangeListener;
         }
     };
     
-    private final WeakListChangeListener weakChoiceBoxItemsListener =
-            new WeakListChangeListener(choiceBoxItemsListener);
+    private WeakListChangeListener weakChoiceBoxItemsListener;
 
     private void initialize() {
         updateChoiceBoxItems();
@@ -176,11 +175,12 @@ import com.sun.javafx.scene.control.WeakListChangeListener;
     }
 
     private void updateChoiceBoxItems() {
-        if (choiceBoxItems != null) {
+        if (choiceBoxItems != null && weakChoiceBoxItemsListener != null) {
             choiceBoxItems.removeListener(weakChoiceBoxItemsListener);
         }
         choiceBoxItems = getSkinnable().getItems();
         if (choiceBoxItems != null) {
+            weakChoiceBoxItemsListener = new WeakListChangeListener(choiceBoxItems, choiceBoxItemsListener);
             choiceBoxItems.addListener(weakChoiceBoxItemsListener);
         }
     }

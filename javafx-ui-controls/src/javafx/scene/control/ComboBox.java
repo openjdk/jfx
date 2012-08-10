@@ -459,8 +459,10 @@ public class ComboBox<T> extends ComboBoxBase<T> {
              */
 
             this.comboBox.itemsProperty().addListener(weakItemsObserver);
-            if (comboBox.getItems() != null) {
-                this.comboBox.getItems().addListener(weakItemsContentObserver);
+            ObservableList<T> items = this.comboBox.getItems();
+            if (items != null) {
+                weakItemsContentObserver = new WeakListChangeListener(items, itemsContentObserver);
+                items.addListener(weakItemsContentObserver);
             }
         }
         
@@ -499,18 +501,19 @@ public class ComboBox<T> extends ComboBoxBase<T> {
             }
         };
         
-        private WeakListChangeListener weakItemsContentObserver =
-                new WeakListChangeListener(itemsContentObserver);
+        private WeakListChangeListener weakItemsContentObserver;
         
         private WeakChangeListener weakItemsObserver = 
                 new WeakChangeListener(itemsObserver);
         
         private void updateItemsObserver(ObservableList<T> oldList, ObservableList<T> newList) {
             // update listeners
-            if (oldList != null) {
+            if (oldList != null && weakItemsContentObserver != null) {
                 oldList.removeListener(weakItemsContentObserver);
             }
+            
             if (newList != null) {
+                weakItemsContentObserver = new WeakListChangeListener(newList, itemsContentObserver);
                 newList.addListener(weakItemsContentObserver);
             }
 
@@ -532,8 +535,4 @@ public class ComboBox<T> extends ComboBoxBase<T> {
             return items == null ? 0 : items.size();
         }
     }
-    
-    
-    
-    
 }
