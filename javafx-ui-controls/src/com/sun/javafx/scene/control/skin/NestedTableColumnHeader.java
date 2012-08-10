@@ -73,12 +73,12 @@ public class NestedTableColumnHeader extends TableColumnHeader {
         label.setNestedColumnHeader(this);
 
         if (getTableColumn() != null) {
-            getTableColumn().textProperty().addListener(weakColumnTextListener);
+            changeListenerHandler.registerChangeListener(getTableColumn().textProperty(), "TABLE_COLUMN_TEXT");
         }
         
-        getTableView().columnResizePolicyProperty().addListener(weakResizePolicyListener);
+        changeListenerHandler.registerChangeListener(getTableView().columnResizePolicyProperty(), "TABLE_VIEW_COLUMN_RESIZE_POLICY");
     }
-    
+
     
     
     /***************************************************************************
@@ -87,32 +87,24 @@ public class NestedTableColumnHeader extends TableColumnHeader {
      *                                                                         *
      **************************************************************************/
     
+    @Override protected void handlePropertyChanged(String p) {
+        super.handlePropertyChanged(p);
+        
+        if (p == "TABLE_VIEW_COLUMN_RESIZE_POLICY") {
+            updateContent();
+        } else if (p == "TABLE_COLUMN_TEXT") {
+            label.setVisible(getTableColumn().getText() != null && ! getTableColumn().getText().isEmpty());
+        }
+    }
+    
     private final ListChangeListener<TableColumn> columnsListener = new ListChangeListener<TableColumn>() {
         @Override public void onChanged(Change<? extends TableColumn> c) {
             setHeadersNeedUpdate();
         }
     };
     
-    private final InvalidationListener columnTextListener = new InvalidationListener() {
-        @Override public void invalidated(Observable property) {
-            label.setVisible(getTableColumn().getText() != null && ! getTableColumn().getText().isEmpty());
-        }
-    };
-    
-    private final InvalidationListener resizePolicyListener = new InvalidationListener() {
-        @Override public void invalidated(Observable property) {
-            updateContent();
-        }
-    };
-    
     private final WeakListChangeListener weakColumnsListener =
             new WeakListChangeListener(columnsListener);
-    
-    private final WeakInvalidationListener weakColumnTextListener =
-            new WeakInvalidationListener(columnTextListener);
-    
-    private final WeakInvalidationListener weakResizePolicyListener =
-            new WeakInvalidationListener(resizePolicyListener);
     
     
 
@@ -205,10 +197,6 @@ public class NestedTableColumnHeader extends TableColumnHeader {
         if (getColumns() != null) {
             getColumns().removeListener(weakColumnsListener);
         }
-        
-        getTableColumn().textProperty().removeListener(weakColumnTextListener);
-        
-        getTableView().columnResizePolicyProperty().removeListener(weakResizePolicyListener);
         
         for (int i = 0; i < getColumnHeaders().size(); i++) {
             TableColumnHeader header = getColumnHeaders().get(i);
