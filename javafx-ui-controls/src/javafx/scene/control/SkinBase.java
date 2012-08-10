@@ -187,7 +187,7 @@ public abstract class SkinBase<C extends Control, BB extends BehaviorBase<C>> im
     /** {@inheritDoc} */
     @Override public void dispose() { 
         // unhook listeners
-        if (changeListenerHandler == null) {
+        if (changeListenerHandler != null) {
             changeListenerHandler.dispose();
         }
 
