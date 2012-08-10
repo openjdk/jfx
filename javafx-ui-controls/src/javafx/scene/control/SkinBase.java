@@ -25,6 +25,7 @@
 package javafx.scene.control;
 
 import com.sun.javafx.css.StyleableProperty;
+import com.sun.javafx.scene.control.MultiplePropertyChangeListenerHandler;
 import com.sun.javafx.scene.control.behavior.BehaviorBase;
 import java.util.*;
 import javafx.beans.value.ChangeListener;
@@ -39,6 +40,7 @@ import javafx.geometry.VPos;
 import javafx.scene.Node;
 import javafx.scene.input.MouseEvent;
 import javafx.scene.layout.Region;
+import javafx.util.Callback;
 
 /**
  *
@@ -80,23 +82,13 @@ public abstract class SkinBase<C extends Control, BB extends BehaviorBase<C>> im
      * want to adjust the way listeners are added rather than continuing to use this
      * map (although it doesn't really do much harm).
      */
-    private Map<ObservableValue,String> propertyReferenceMap =
-            new HashMap<ObservableValue,String>();
+    private MultiplePropertyChangeListenerHandler changeListenerHandler;
     
     /***************************************************************************
      *                                                                         *
      * Event Handlers / Listeners                                              *
      *                                                                         *
      **************************************************************************/
-    
-    private final ChangeListener controlPropertyChangedListener = new ChangeListener() {
-        @Override public void changed(ObservableValue property, Object oldValue, Object newValue) {
-            handleControlPropertyChanged(propertyReferenceMap.get(property));
-        }
-    };
-    
-    private final WeakChangeListener weakControlPropertyChangedListener = 
-            new WeakChangeListener(controlPropertyChangedListener);
     
     /**
      * Mouse handler used for consuming all mouse events (preventing them
@@ -195,8 +187,8 @@ public abstract class SkinBase<C extends Control, BB extends BehaviorBase<C>> im
     /** {@inheritDoc} */
     @Override public void dispose() { 
         // unhook listeners
-        for (ObservableValue value : propertyReferenceMap.keySet()) {
-            value.removeListener(weakControlPropertyChangedListener);
+        if (changeListenerHandler == null) {
+            changeListenerHandler.dispose();
         }
 
         control.removeEventHandler(MouseEvent.MOUSE_ENTERED, mouseHandler);
@@ -246,10 +238,15 @@ public abstract class SkinBase<C extends Control, BB extends BehaviorBase<C>> im
      * @param reference
      */
     protected final void registerChangeListener(ObservableValue property, String reference) {
-        if (!propertyReferenceMap.containsKey(property)) {
-            propertyReferenceMap.put(property, reference);
-            property.addListener(weakControlPropertyChangedListener);
+        if (changeListenerHandler == null) {
+            changeListenerHandler = new MultiplePropertyChangeListenerHandler(new Callback<String, Void>() {
+                @Override public Void call(String p) {
+                    handleControlPropertyChanged(p);
+                    return null;
+                }
+            });
         }
+        changeListenerHandler.registerChangeListener(property, reference);
     }
     
     /**
