@@ -39,6 +39,7 @@ import javafx.beans.property.ReadOnlyObjectWrapper;
 import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
 import javafx.beans.value.WeakChangeListener;
+import javafx.collections.ObservableList;
 
 /**
  * The {@link Cell} type used with the {@link TreeView} control. In addition to 
@@ -152,7 +153,7 @@ public class TreeCell<T> extends IndexedCell<T> {
         }
     };
     
-    private final WeakListChangeListener weakSelectedListener = new WeakListChangeListener(selectedListener);
+    private WeakListChangeListener weakSelectedListener;
     private final WeakChangeListener weakSelectionModelPropertyListener = new WeakChangeListener(selectionModelPropertyListener);
     private final WeakInvalidationListener weakFocusedListener = new WeakInvalidationListener(focusedListener);
     private final WeakChangeListener weakFocusModelPropertyListener = new WeakChangeListener(focusModelPropertyListener);
@@ -243,7 +244,9 @@ public class TreeCell<T> extends IndexedCell<T> {
                 if (sm != null) {
                     // listening for changes to treeView.selectedIndex and IndexedCell.index,
                     // to determine if this cell is selected
-                    sm.getSelectedIndices().addListener(weakSelectedListener);
+                    ObservableList<Integer> selectedIndices = sm.getSelectedIndices();
+                    weakSelectedListener = new WeakListChangeListener(selectedIndices, selectedListener);
+                    selectedIndices.addListener(weakSelectedListener);
                 }
 
                 fm = get().getFocusModel();
