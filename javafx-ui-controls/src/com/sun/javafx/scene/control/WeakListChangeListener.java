@@ -24,9 +24,13 @@
  */
 package com.sun.javafx.scene.control;
 
+import java.lang.ref.Reference;
+import java.lang.ref.ReferenceQueue;
 import java.lang.ref.WeakReference;
+import java.util.WeakHashMap;
 import javafx.collections.ListChangeListener;
 import javafx.collections.ListChangeListener.Change;
+import javafx.collections.ObservableList;
 
 /**
  * A {@code WeakListChangeListener} can be used, if an {@code ObservableList}
@@ -40,7 +44,7 @@ import javafx.collections.ListChangeListener.Change;
  * <p>
  * Note: You have to keep a reference to the {@code ListChangeListener}, that
  * was passed in as long as it is in use, otherwise it will be garbage collected
- * to soon.
+ * too soon.
  * 
  * @see ListChangeListener
  * @see ObservableList
@@ -49,31 +53,78 @@ import javafx.collections.ListChangeListener.Change;
  * 
  */
 public class WeakListChangeListener<T> implements ListChangeListener<T> {
+    private static final WeakHashMap<ObservableList, ReferenceQueue<ListChangeListener>> refQueueMap = 
+            new WeakHashMap<ObservableList, ReferenceQueue<ListChangeListener>>();
     
-    private final WeakReference<ListChangeListener<T>> ref;
+    private final ReferenceQueue<ListChangeListener> refQueue;
+    private final WeakReference<ListChangeListener<T>> listenerRef;
+    private final ObservableList<T> list;
 
     /**
      * The constructor of {@code WeakListChangeListener}.
      * 
+     * @param list
+     *          The list on which this listener will be attached. By doing this
+     *          we are able to clean up when the WeakReference becomes null
      * @param listener
      *            The original listener that should be notified
      */
-    public WeakListChangeListener(ListChangeListener<T> listener) {
+    public WeakListChangeListener(final ObservableList<T> list, final ListChangeListener<T> listener) {
         if (listener == null) {
             throw new NullPointerException("Listener must be specified.");
         }
-        this.ref = new WeakReference<ListChangeListener<T>>(listener);
+        if (list == null) {
+            throw new NullPointerException("ObservableList must be specified.");
+        }
+        
+        this.list = list;
+        
+        // get, or create a new, reference queue for this list
+        if (refQueueMap.containsKey(list)) {
+            refQueue = refQueueMap.get(list);
+        } else {
+            refQueue = new ReferenceQueue<ListChangeListener>();
+            refQueueMap.put(list, refQueue);
+        }
+        
+        this.listenerRef = new BackReference<ListChangeListener<T>>(listener, refQueue, this);
+        
+        // do a reference queue check now
+        checkReferenceQueue(refQueue, list);
     }
 
     @Override public void onChanged(Change<? extends T> c) {
-        ListChangeListener<T> listener = ref.get();
+        ListChangeListener<T> listener = listenerRef.get();
         if (listener != null) {
             listener.onChanged(c);
         } else {
             // The weakly reference listener has been garbage collected,
             // so this WeakListener will now unhook itself from the
             // source bean
-            c.getList().removeListener(this);
+            list.removeListener(this);
+        }
+        
+        // check reference queue for empty references to clean up
+        checkReferenceQueue(refQueue, list);
+    }
+    
+    private static <T> void checkReferenceQueue(final ReferenceQueue<ListChangeListener> refQueue, 
+            final ObservableList list) {
+        BackReference ref;
+        WeakListChangeListener backRef;
+        while ((ref = (BackReference)refQueue.poll()) != null) {
+            backRef = ref.backRef;
+            list.removeListener(backRef);
+        }
+    }
+    
+    private static class BackReference<T> extends WeakReference<T> {
+        
+        private final WeakListChangeListener backRef;
+
+        public BackReference(T referent, ReferenceQueue<? super T> q, WeakListChangeListener backRef) {
+            super(referent, q);
+            this.backRef = backRef;
         }
     }
 }

@@ -914,9 +914,10 @@ public class ListView<T> extends Control {
              */
 
             this.listView.itemsProperty().addListener(weakItemsObserver);
-            if (listView.getItems() != null) {
-                this.listView.getItems().addListener(weakItemsContentObserver);
-//                updateItemsObserver(null, this.listView.getItems());
+            ObservableList<T> items = this.listView.getItems();
+            if (items != null) {
+                weakItemsContentObserver = new WeakListChangeListener(items, itemsContentObserver);
+                items.addListener(weakItemsContentObserver);
             }
             
             updateItemCount();
@@ -952,18 +953,19 @@ public class ListView<T> extends Control {
             }
         };
         
-        private WeakListChangeListener weakItemsContentObserver =
-                new WeakListChangeListener(itemsContentObserver);
+        private WeakListChangeListener weakItemsContentObserver;
         
         private WeakChangeListener weakItemsObserver = 
                 new WeakChangeListener(itemsObserver);
         
         private void updateItemsObserver(ObservableList<T> oldList, ObservableList<T> newList) {
             // update listeners
-            if (oldList != null) {
+            if (oldList != null && weakItemsContentObserver != null) {
                 oldList.removeListener(weakItemsContentObserver);
             }
+            
             if (newList != null) {
+                weakItemsContentObserver = new WeakListChangeListener(newList, itemsContentObserver);
                 newList.addListener(weakItemsContentObserver);
             }
             
@@ -1150,9 +1152,10 @@ public class ListView<T> extends Control {
             }
 
             this.listView = listView;
-            this.listView.itemsProperty().addListener(weakItemsListener);
-            if (listView.getItems() != null) {
-                this.listView.getItems().addListener(weakItemsContentListener);
+            ObservableList<T> items = this.listView.getItems();
+            if (items != null) {
+                weakItemsContentListener = new WeakListChangeListener(items, itemsContentListener);
+                items.addListener(weakItemsContentListener);
             }
             
             updateItemCount();
@@ -1172,8 +1175,14 @@ public class ListView<T> extends Control {
         private void updateItemsObserver(ObservableList<T> oldList, ObservableList<T> newList) {
             // the listview items list has changed, we need to observe
             // the new list, and remove any observer we had from the old list
-            if (oldList != null) oldList.removeListener(weakItemsContentListener);
-            if (newList != null) newList.addListener(weakItemsContentListener);
+            if (oldList != null && weakItemsContentListener != null) {
+                oldList.removeListener(weakItemsContentListener);
+            }
+            
+            if (newList != null) {
+                weakItemsContentListener = new WeakListChangeListener<T>(newList, itemsContentListener);
+                newList.addListener(weakItemsContentListener);
+            }
             
             updateItemCount();
         }
@@ -1211,8 +1220,7 @@ public class ListView<T> extends Control {
             }
         };
         
-        private WeakListChangeListener<T> weakItemsContentListener 
-                = new WeakListChangeListener<T>(itemsContentListener);
+        private WeakListChangeListener<T> weakItemsContentListener;
         
         @Override protected int getItemCount() {
             return itemCount;

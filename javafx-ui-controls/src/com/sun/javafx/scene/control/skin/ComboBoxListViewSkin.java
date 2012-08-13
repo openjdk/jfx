@@ -95,8 +95,7 @@ public class ComboBoxListViewSkin<T> extends ComboBoxPopupControl<T> {
         }
     };
     
-    private final WeakListChangeListener weakListViewItemsListener =
-            new WeakListChangeListener(listViewItemsListener);
+    private WeakListChangeListener weakListViewItemsListener;
     
     
     
@@ -242,6 +241,7 @@ public class ComboBoxListViewSkin<T> extends ComboBoxPopupControl<T> {
         this.listViewItems = comboBox.getItems();
         listView.setItems(null);
         listView.setItems(listViewItems);
+        weakListViewItemsListener = new WeakListChangeListener(listViewItems, listViewItemsListener);
 
         if (listViewItems != null) {
             listViewItems.addListener(weakListViewItemsListener);

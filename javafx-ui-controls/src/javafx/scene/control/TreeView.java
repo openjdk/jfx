@@ -233,7 +233,7 @@ public class TreeView<T> extends Control {
         getStyleClass().setAll("tree-view");
 
         setRoot(root);
-        updateTreeItemCount();
+        updateTreeItemCount(root);
 
         // install default selection and focus models - it's unlikely this will be changed
         // by many users.
@@ -355,7 +355,7 @@ public class TreeView<T> extends Control {
                 weakOldItem = new WeakReference<TreeItem<T>>(root);
             }
 
-            setTreeItemCount(0);
+            treeItemCountDirty = true;
             updateRootExpanded();
         }
 
@@ -427,6 +427,7 @@ public class TreeView<T> extends Control {
             showRoot = new BooleanPropertyBase(true) {
                 @Override protected void invalidated() {
                     updateRootExpanded();
+                    updateTreeItemCount(getRoot());
                 }
 
                 @Override
@@ -531,7 +532,7 @@ public class TreeView<T> extends Control {
     @Deprecated
     public final int impl_getTreeItemCount() {
         if (treeItemCountDirty) {
-            updateTreeItemCount();
+            updateTreeItemCount(getRoot());
         }
         return treeItemCount.get();
     }
@@ -751,7 +752,7 @@ public class TreeView<T> extends Control {
     /** {@inheritDoc} */
     @Override protected void layoutChildren() {
         if (treeItemCountDirty) {
-            updateTreeItemCount();
+            updateTreeItemCount(getRoot());
         }
         
         super.layoutChildren();
@@ -865,13 +866,13 @@ public class TreeView<T> extends Control {
         return node.getExpandedDescendentCount(treeItemCountDirty);
     }
     
-    private void updateTreeItemCount() {
-        if (getRoot() == null) {
+    private void updateTreeItemCount(TreeItem treeItem) {
+        if (treeItem == null) {
             setTreeItemCount(0);
-        } else if (! getRoot().isExpanded()) {
+        } else if (! treeItem.isExpanded()) {
             setTreeItemCount(1);
         } else {
-            int count = getExpandedDescendantCount(getRoot());
+            int count = getExpandedDescendantCount(treeItem);
             if (! isShowRoot()) count--;
 
             setTreeItemCount(count);
@@ -925,8 +926,6 @@ public class TreeView<T> extends Control {
         if (!isShowRoot() && getRoot() != null && ! getRoot().isExpanded()) {
             getRoot().setExpanded(true);
         }
-
-        updateTreeItemCount();
     }
 
 
@@ -1153,7 +1152,7 @@ public class TreeView<T> extends Control {
             
             // Fix for RT-15419. We eagerly update the tree item count, such that
             // selection occurs on the row
-            treeView.updateTreeItemCount();
+            treeView.updateTreeItemCount(treeView.getRoot());
             
             // We have no option but to iterate through the model and select the
             // first occurrence of the given object. Once we find the first one, we
@@ -1217,13 +1216,11 @@ public class TreeView<T> extends Control {
     static class TreeViewFocusModel<T> extends FocusModel<TreeItem<T>> {
 
         private final TreeView<T> treeView;
-        private int itemCount = 0;
 
         public TreeViewFocusModel(final TreeView<T> treeView) {
             this.treeView = treeView;
             this.treeView.rootProperty().addListener(weakRootPropertyListener);
             updateTreeEventListener(null, treeView.getRoot());
-            updateItemCount();
         }
         
         private final ChangeListener rootPropertyListener = new ChangeListener<TreeItem<T>>() {
@@ -1245,14 +1242,10 @@ public class TreeView<T> extends Control {
                 weakTreeItemListener = new WeakEventHandler(newRoot, TreeItem.<T>treeItemCountChangeEvent(), treeItemListener);
                 newRoot.addEventHandler(TreeItem.<T>treeItemCountChangeEvent(), weakTreeItemListener);
             }
-            
-            updateItemCount();
         }
         
         private EventHandler<TreeModificationEvent<T>> treeItemListener = new EventHandler<TreeModificationEvent<T>>() {
             @Override public void handle(TreeModificationEvent<T> e) {
-                updateItemCount();
-                
                 // don't shift focus if the event occurred on a tree item after
                 // the focused row, or if there is no focus index at present
                 if (getFocusedIndex() == -1) return;
@@ -1302,22 +1295,15 @@ public class TreeView<T> extends Control {
         private WeakEventHandler weakTreeItemListener;
 
         @Override protected int getItemCount() {
-            return itemCount;
+            return treeView == null ? -1 : treeView.impl_getTreeItemCount();
         }
 
         @Override protected TreeItem<T> getModelItem(int index) {
             if (treeView == null) return null;
-            if (index < 0 || index >= itemCount) return null;
+
+            if (index < 0 || index >= treeView.impl_getTreeItemCount()) return null;
 
             return treeView.getTreeItem(index);
         }
-        
-        private void updateItemCount() {
-            if (treeView == null) {
-                itemCount = -1;
-            } else {
-                itemCount = treeView.impl_getTreeItemCount();
-            }
-        } 
     }
 }

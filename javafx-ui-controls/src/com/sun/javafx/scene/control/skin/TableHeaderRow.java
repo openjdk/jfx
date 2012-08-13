@@ -54,18 +54,19 @@ import javafx.scene.shape.Rectangle;
 import com.sun.javafx.scene.control.skin.resources.ControlResources;
 import javafx.beans.WeakInvalidationListener;
 import javafx.beans.property.BooleanPropertyBase;
+import javafx.collections.ObservableList;
 
 /**
  * Region responsible for painting the entire row of column headers.
  */
-public class TableHeaderRow extends StackPane {
+public class TableHeaderRow<S> extends StackPane {
     
     private static final String MENU_SEPARATOR = 
             ControlResources.getString("TableView.nestedColumnControlMenuSeparator");
     
     private final VirtualFlow flow;
     VirtualFlow getVirtualFlow() { return flow; }
-    private final TableView<?> table;
+    private final TableView<S> table;
 
     private Insets tablePadding;
     public void setTablePadding(Insets tablePadding) {
@@ -184,7 +185,7 @@ public class TableHeaderRow extends StackPane {
      *                                                                         *
      **************************************************************************/
     
-    public TableHeaderRow(final TableView<?> table, final VirtualFlow flow) {
+    public TableHeaderRow(final TableView<S> table, final VirtualFlow flow) {
         this.table = table;
         this.flow = flow;
 
@@ -211,13 +212,18 @@ public class TableHeaderRow extends StackPane {
 
         updateTableWidth();
         table.widthProperty().addListener(weakTableWidthListener);
-        table.getVisibleLeafColumns().addListener(weakVisibleLeafColumnsListener);
+        
+        ObservableList<TableColumn<S,?>> visibleLeafColumns = table.getVisibleLeafColumns();
+        weakVisibleLeafColumnsListener = new WeakListChangeListener(visibleLeafColumns, visibleLeafColumnsListener);
+        visibleLeafColumns.addListener(weakVisibleLeafColumnsListener);
 
         // --- popup menu for hiding/showing columns
         columnPopupMenu = new ContextMenu();
 
-        updateTableColumnListeners(table.getColumns(), Collections.<TableColumn<?,?>>emptyList());
-        table.getColumns().addListener(weakTableColumnsListener);
+        ObservableList<TableColumn<S,?>> columns = table.getColumns();
+        updateTableColumnListeners(columns, Collections.<TableColumn<?,?>>emptyList());
+        weakTableColumnsListener = new WeakListChangeListener(columns, tableColumnsListener);
+        columns.addListener(weakTableColumnsListener);
         // --- end of popup menu
 
         // drag header region. Used to indicate the current column being reordered
@@ -299,8 +305,8 @@ public class TableHeaderRow extends StackPane {
     
     private ListChangeListener visibleLeafColumnsListener = new ListChangeListener<TableColumn<?,?>>() {
         @Override public void onChanged(ListChangeListener.Change<? extends TableColumn<?,?>> c) {
-            // This is necessary for RT-20300
-            header.updateTableColumnHeaders();
+            // This is necessary for RT-20300 (but was updated for RT-20840)
+            header.setHeadersNeedUpdate();
         }
     };
     
@@ -315,11 +321,9 @@ public class TableHeaderRow extends StackPane {
     private final WeakInvalidationListener weakTableWidthListener = 
             new WeakInvalidationListener(tableWidthListener);
     
-    private final WeakListChangeListener weakVisibleLeafColumnsListener =
-            new WeakListChangeListener(visibleLeafColumnsListener);
+    private final WeakListChangeListener weakVisibleLeafColumnsListener;
     
-    private final WeakListChangeListener weakTableColumnsListener =
-            new WeakListChangeListener(tableColumnsListener);
+    private final WeakListChangeListener weakTableColumnsListener;
     
 
     private Map<TableColumn, CheckMenuItem> columnMenuItems = new HashMap<TableColumn, CheckMenuItem>();

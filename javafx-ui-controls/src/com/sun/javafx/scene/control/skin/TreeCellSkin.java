@@ -155,6 +155,10 @@ public class TreeCellSkin extends CellSkinBase<TreeCell<?>, TreeCellBehavior> {
         double disclosureWidth = defaultDisclosureWidth;
 
         if (disclosureVisible) {
+            if (disclosureNode == null || disclosureNode.getScene() == null) {
+                updateChildren();
+            }
+            
             disclosureWidth = disclosureNode.prefWidth(-1);
             if (disclosureWidth > defaultDisclosureWidth) {
                 maxDisclosureWidthMap.put(tree, disclosureWidth);

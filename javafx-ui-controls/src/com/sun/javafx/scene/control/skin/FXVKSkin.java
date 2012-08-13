@@ -67,6 +67,7 @@ import com.sun.javafx.scene.control.behavior.BehaviorBase;
 import javafx.animation.Animation.Status;
 import static javafx.scene.input.KeyCode.*;
 import static javafx.scene.input.MouseEvent.*;
+import static javafx.scene.layout.Region.*;
 
 import static com.sun.javafx.scene.control.skin.resources.EmbeddedResources.*;
 
@@ -206,7 +207,7 @@ public class FXVKSkin extends SkinBase<FXVK, BehaviorBase<FXVK>> {
 
                         if (oldNode == null || oldNode.getScene() != attachedNode.getScene()) {
                             fxvk.setPrefWidth(scene.getWidth());
-                            fxvk.setMaxWidth(Region.USE_PREF_SIZE);
+                            fxvk.setMaxWidth(USE_PREF_SIZE);
                             fxvk.setPrefHeight(200);
                         }
 
@@ -221,10 +222,10 @@ public class FXVKSkin extends SkinBase<FXVK, BehaviorBase<FXVK>> {
 
                         if (oldNode == null || oldNode.getScene() != attachedNode.getScene()) {
                             fxvk.setPrefWidth(VK_WIDTH);
-                            fxvk.setMinWidth(Region.USE_PREF_SIZE);
-                            fxvk.setMaxWidth(Region.USE_PREF_SIZE);
+                            fxvk.setMinWidth(USE_PREF_SIZE);
+                            fxvk.setMaxWidth(USE_PREF_SIZE);
                             fxvk.setPrefHeight(VK_HEIGHT);
-                            fxvk.setMinHeight(Region.USE_PREF_SIZE);
+                            fxvk.setMinHeight(USE_PREF_SIZE);
                         }
                     }
                 } else {
@@ -689,7 +690,7 @@ private void setIcon(Key key, String fileName) {
             createKeys();
         }
 
-//        super.layoutChildren();
+        super.layoutChildren(x, y, w, h);
 
         for (Node vnode : vbox.getChildren()) {
             hbox = (HBox)vnode;
@@ -782,9 +783,9 @@ private void setIcon(Key key, String fileName) {
                 final double h = insets.getTop() + insets.getBottom() +
                                  nRows * primarySkin.keyHeight + (nRows-1) * vbox.getSpacing();
                 secondaryVK.setPrefWidth(w);
-                secondaryVK.setMinWidth(Region.USE_PREF_SIZE);
+                secondaryVK.setMinWidth(USE_PREF_SIZE);
                 secondaryVK.setPrefHeight(h);
-                secondaryVK.setMinHeight(Region.USE_PREF_SIZE);
+                secondaryVK.setMinHeight(USE_PREF_SIZE);
                 Platform.runLater(new Runnable() {
                     public void run() {
                         // Position popup on screen

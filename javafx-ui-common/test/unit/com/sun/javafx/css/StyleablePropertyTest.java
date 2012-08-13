@@ -305,12 +305,6 @@ public class StyleablePropertyTest {
                 return shelper;
             }            
             
-            @Override
-            public StyleHelper impl_createStyleHelper() {
-                fail();
-                return null;
-            }
-                                    
         };
         group.getStyleClass().add("root");
         
@@ -340,13 +334,7 @@ public class StyleablePropertyTest {
             @Override public StyleHelper impl_getStyleHelper() {
                 return shelper;
             }            
-            
-            @Override
-            public StyleHelper impl_createStyleHelper() {
-                fail();
-                return null;
-            }
-                        
+                                    
         };
         rectangle.getStyleClass().add("rect");
 
@@ -381,12 +369,6 @@ public class StyleablePropertyTest {
                 return shelper;
             }            
             
-            @Override
-            public StyleHelper impl_createStyleHelper() {
-                fail();
-                return null;
-            }
-                
         ObjectProperty<Font> font = new StyleableObjectProperty<Font>() {
 
             @Override
