@@ -27,7 +27,6 @@ package javafx.scene;
 
 import java.util.ArrayList;
 import java.util.HashSet;
-import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Set;
 
@@ -75,7 +74,6 @@ import com.sun.javafx.tk.Toolkit;
  *
  */
 public abstract class Parent extends Node {
-
     // package private for testing
     static final int DIRTY_CHILDREN_THRESHOLD = 10;
 
@@ -118,11 +116,8 @@ public abstract class Parent extends Node {
             // sides, so we only need to update the remaining portion.
             peer.clearFrom(startIdx);
             for (int idx = startIdx; idx < children.size(); idx++) {
-                    Node n = children.get(idx);
-                    if (n != null) {
-                        peer.add(idx, n.impl_getPGNode());
-                    }
-                }
+                peer.add(idx, children.get(idx).impl_getPGNode());
+            }
             if (removedChildrenExceedsThreshold) {
                 peer.markDirty();
                 removedChildrenExceedsThreshold = false;
@@ -356,12 +351,9 @@ public abstract class Parent extends Node {
                     if (dirtyChildren != null) {
                         dirtyChildren.remove(old);
                     }
-                    if (old == null) {
-                        continue;
-                    }
-
-                    if (!geomChanged && old.isVisible()) {
-                        geomChanged = childRemoved(old);
+                    if (old.isVisible()) {
+                        geomChanged = true;
+                        childExcluded(old);
                     }
                     if (old.getParent() == Parent.this) {
                         old.setParent(null);
@@ -386,7 +378,7 @@ public abstract class Parent extends Node {
                     int to = c.getTo();
                     for (int i = from; i < to; ++i) {
                         Node n = children.get(i);
-                        if (n != null && n.getParent() != null && n.getParent() != Parent.this) {
+                        if (n.getParent() != null && n.getParent() != Parent.this) {
                             if (warnOnAutoMove) {
                                 java.lang.System.err.println("WARNING added to a new parent without first removing it from its current");
                                 java.lang.System.err.println("    parent. It will be automatically removed from its current parent.");
@@ -405,8 +397,7 @@ public abstract class Parent extends Node {
                     List<Node> removed = c.getRemoved();
                     int removedSize = removed.size();
                     for (int i = 0; i < removedSize; ++i) {
-                        Node node = removed.get(i);
-                        if (node != null && node.isManaged()) {
+                        if (removed.get(i).isManaged()) {
                             relayout = true;
                         }
                     }
@@ -414,18 +405,15 @@ public abstract class Parent extends Node {
                     // update the parent and scene for each new node
                     for (int i = from; i < to; ++i) {
                         Node node = children.get(i);
-                        if (node != null) {
-                            if (node.isManaged()) {
-                                relayout = true;
-                            }
-                            node.setParent(Parent.this);
-                            node.setScene(getScene());
-                            if (dirtyChildren != null) {
-                                dirtyChildren.add(node);
-                            }
-                            if (!geomChanged && node.isVisible()) {
-                                geomChanged = childAdded(node);
-                            }
+                        if (node.isManaged()) {
+                            relayout = true;
+                        }
+                        node.setParent(Parent.this);
+                        node.setScene(getScene());
+                        // assert !node.boundsChanged;
+                        if (node.isVisible()) {
+                            geomChanged = true;
+                            childIncluded(node);
                         }
                     }
                 }
@@ -435,10 +423,11 @@ public abstract class Parent extends Node {
                 // If so, then we need to create dirtyChildren and
                 // populate it.
                 if (dirtyChildren == null && children.size() > DIRTY_CHILDREN_THRESHOLD) {
-                    dirtyChildren = new LinkedHashSet<Node>(2 * children.size());
+                    dirtyChildren =
+                            new ArrayList<Node>(2 * DIRTY_CHILDREN_THRESHOLD);
                     // only bother populating children if geom has
                     // changed, otherwise there is no need
-                    if (geomChanged) {
+                    if (dirtyChildrenCount > 0) {
                         int size = children.size();
                         for (int i = 0; i < size; ++i) {
                             Node ch = children.get(i);
@@ -571,7 +560,7 @@ public abstract class Parent extends Node {
             unmodifiableManagedChildren = new ArrayList<Node>();
             for (int i=0, max=children.size(); i<max; i++) {
                 Node e = children.get(i);
-                if (e != null && e.isManaged()) {
+                if (e.isManaged()) {
                     unmodifiableManagedChildren.add(e);
                 }
             }
@@ -633,10 +622,7 @@ public abstract class Parent extends Node {
         // Give all of the children the new scene
         final Scene scene = getScene();
         for (int i=0, max=children.size(); i<max; i++) {
-            final Node node = children.get(i);
-            if (node != null) {
-                node.setScene(scene);
-            }
+            children.get(i).setScene(scene);
         }
 
         // If this node was in the old scene's dirty layout
@@ -679,6 +665,9 @@ public abstract class Parent extends Node {
                 if (picked != null) {
                     return picked;
                 }
+            }
+            if (isPickOnBounds()) {
+                return this;
             }
         }
         return null;
@@ -1184,10 +1173,7 @@ public abstract class Parent extends Node {
         super.impl_processCSS(relevantStyleManager, flag);
         // For each child, process CSS
         for (int i=0, max=children.size(); i<max; i++) {
-            final Node kid = children.get(i);
-            if (kid != null) {
-                kid.impl_processCSS(relevantStyleManager, flag);
-            }
+            children.get(i).impl_processCSS(relevantStyleManager, flag);
         }
     }
     
@@ -1201,10 +1187,7 @@ public abstract class Parent extends Node {
         super.impl_cssResetInitialValues();
 
         for (int i=0, max=children.size(); i<max; i++) {
-            final Node kid = children.get(i);
-            if (kid != null) {
-                kid.impl_cssResetInitialValues();
-            }
+            children.get(i).impl_cssResetInitialValues();
         }
     }
     
@@ -1263,12 +1246,18 @@ public abstract class Parent extends Node {
 
     /**
      * Indicates that the cachedBounds is invalid (or old) and need to be recomputed.
-     * If cachedBoundsInvalid is true, but cachedBounds is not empty,
+     * If cachedBoundsInvalid is true and dirtyChildrenCount is non-zero,
      * then when we recompute the cachedBounds we can consider the
      * values in cachedBounds to represent the last valid bounds for the group.
      * This is useful for several fast paths.
      */
-    private boolean cachedBoundsInvalid = true;
+    private boolean cachedBoundsInvalid;
+
+    /**
+     * The number of dirty children which bounds haven't been incorporated
+     * into the cached bounds yet. Can be used even when dirtyChildren is null.
+     */
+    private int dirtyChildrenCount;
 
     /**
      * This set is used to track all of the children of this group which are
@@ -1278,7 +1267,7 @@ public abstract class Parent extends Node {
      * null unless the number of children ever crosses the threshold where
      * it will be activated.
      */
-    private LinkedHashSet<Node> dirtyChildren = null;
+    private ArrayList<Node> dirtyChildren;
 
     private Node top;
     private Node left;
@@ -1302,7 +1291,15 @@ public abstract class Parent extends Node {
             // this is a transform which is only doing translations, or nothing
             // at all (no scales, rotates, or shears)
             // so in this case we can easily use the cached bounds
-            if (cachedBoundsInvalid) recomputeBounds();
+            if (cachedBoundsInvalid) {
+                recomputeBounds();
+
+                if (dirtyChildren != null) {
+                    dirtyChildren.clear();
+                }
+                cachedBoundsInvalid = false;
+                dirtyChildrenCount = 0;
+            }
             if (!tx.isIdentity()) {
                 bounds = bounds.deriveWithNewBounds((float)(cachedBounds.getMinX() + tx.getMxt()),
                                  (float)(cachedBounds.getMinY() + tx.getMyt()),
@@ -1359,373 +1356,270 @@ public abstract class Parent extends Node {
         }
     }
 
-    // Returns TRUE if the bounds have changed, FALSE otherwise
-    boolean childAdded(Node node) {
-        // If there is no history as to what the bounds were (ie, if
-        // cachedBounds are empty) then we punt since the next call
-        // to get the bounds will force a full recomputation anyway.
-
-        if (cachedBounds.isEmpty()) {
-            return true;
+    private void setChildDirty(final Node node, final boolean dirty) {
+        if (node.boundsChanged == dirty) {
+            return;
         }
 
-        // If one of the edges has been cleared by the removal of a node,
-        // then there is no point to continuing because we will have to
-        // completely revalidate later.
-        if (top == null || bottom == null || left == null || right == null
-                || near == null || far == null) {
-            cachedBounds.makeEmpty();
-            cachedBoundsInvalid = true;
-            return true;
-        }
-
-        // If we got here then the top/bottom/left/right/near/far are still set
-        // to a valid node and we know the old size of the Group. So what we are
-        // going to do is execute a fastpath where we figure out if any of the
-        // new Nodes "extend" the bounds, and if so, they will form the new
-        // edges and the cachedBounds will be updated accordingly. We will
-        // also communicate that as a result of adding these Nodes, the
-        // bounds have changed.
-
-        boolean extended = false;
-
-        // set to indicate which edges need to be cleared so we can recompute
-        if (node.isVisible()) {
-            tmp = node.getTransformedBounds(tmp, BaseTransform.IDENTITY_TRANSFORM);
-            if (!tmp.isEmpty()) {
-                node.boundsChanged = false;
-                double tmpx = tmp.getMinX();
-                double tmpy = tmp.getMinY();
-                double tmpz = tmp.getMinZ();
-                double tmpx2 = tmp.getMaxX();
-                double tmpy2 = tmp.getMaxY();
-                double tmpz2 = tmp.getMaxZ();
-                double cx = cachedBounds.getMinX();
-                double cy = cachedBounds.getMinY();
-                double cz = cachedBounds.getMinZ();
-                double cx2 = cachedBounds.getMaxX();
-                double cy2 = cachedBounds.getMaxY();
-                double cz2 = cachedBounds.getMaxZ();
-
-                double minX = Math.min(tmpx, cx);
-                double minY = Math.min(tmpy, cy);
-                double minZ = Math.min(tmpz, cz);
-                double maxX = Math.max(tmpx2, cx2);
-                double maxY = Math.max(tmpy2, cy2);
-                double maxZ = Math.max(tmpz2, cz2);
-
-                if (tmpy < cy) { extended = true; top = node; }
-                if (tmpx < cx) { extended = true; left = node; }
-                if (tmpz < cz) { extended = true; near = node; }
-                if (tmpy2 > cy2) { extended = true; bottom = node; }
-                if (tmpx2 > cx2) { extended = true; right = node; }
-                if (tmpz2 > cz2) { extended = true; far = node; }
-
-                // update the cached bounds
-                cachedBounds = cachedBounds.deriveWithNewBounds((float)minX, (float)minY, (float)minZ,
-                        (float)maxX, (float)maxY, (float)maxZ);
+        node.boundsChanged = dirty;
+        if (dirty) {
+            if (dirtyChildren != null) {
+                dirtyChildren.add(node);
             }
+            ++dirtyChildrenCount;
+        } else {
+            if (dirtyChildren != null) {
+                dirtyChildren.remove(node);
+            }
+            --dirtyChildrenCount;
         }
-        // return whether or not the bounds have been extended (and thus, are
-        // dirty)
-        return extended;
+    }
+
+    private void childIncluded(final Node node) {
+        // assert node.isVisible();
+        cachedBoundsInvalid = true;
+        setChildDirty(node, true);
     }
 
     // This is called when either the child is actually removed, OR IF IT IS
     // TOGGLED TO BE INVISIBLE. This is because in both cases it needs to be
     // cleared from the state which manages bounds.
-    boolean childRemoved(Node node) {
-        // clear this flag because Group no longer knows whether the bounds
-        // have changed or not relative to itself
-        node.boundsChanged = false;
-        // If there is no history as to what the bounds were (ie, if
-        // cachedBounds are empty) then we punt since the next call
-        // to get the bounds will force a full recomputation anyway.
-
-        if (cachedBounds.isEmpty()) {
-            return true;
-        }
-
-        // Since there was some prior size to the Group, all the nodes that
-        // were removed are checked to see if they formed one of the edges. If
-        // so, the edge variable is cleared
-        if (node == top) top = null;
-        if (node == left) left = null;
-        if (node == bottom) bottom = null;
-        if (node == right) right = null;
-        if (node == near) near = null;
-        if (node == far) far = null;
-
-        // If one of the edges has been cleared by the removal of a node,
-        // then there is no point to continuing because we will have to
-        // completely revalidate later.
-        if (top == null || bottom == null || left == null || right == null
-                || near == null || far == null) {
-            cachedBounds.makeEmpty();
+    private void childExcluded(final Node node) {
+        if (node == left) {
+            left = null;
             cachedBoundsInvalid = true;
-            top = left = bottom = right = near = far = null;
-            return true;
+        }
+        if (node == top) {
+            top = null;
+            cachedBoundsInvalid = true;
+        }
+        if (node == near) {
+            near = null;
+            cachedBoundsInvalid = true;
+        }
+        if (node == right) {
+            right = null;
+            cachedBoundsInvalid = true;
+        }
+        if (node == bottom) {
+            bottom = null;
+            cachedBoundsInvalid = true;
+        }
+        if (node == far) {
+            far = null;
+            cachedBoundsInvalid = true;
         }
 
-        // Return false since nothing has changed that will affect the bounds.
-        return false;
+        setChildDirty(node, false);
     }
 
     /**
      * Recomputes the bounds from scratch and saves the cached bounds.
      */
-    void recomputeBounds() {
+    private void recomputeBounds() {
         // fast path for case of no children
         if (children.isEmpty()) {
-            if (dirtyChildren != null) dirtyChildren.clear();
-            cachedBoundsInvalid = false;
             cachedBounds.makeEmpty();
             return;
         }
 
         // fast path for case of 1 child
         if (children.size() == 1) {
-            if (dirtyChildren != null) dirtyChildren.clear();
-            cachedBoundsInvalid = false;
             Node node = children.get(0);
-            if (node == null) return;
-
+            node.boundsChanged = false;
             if (node.isVisible()) {
-                cachedBounds = node.getTransformedBounds(cachedBounds, BaseTransform.IDENTITY_TRANSFORM);
+                cachedBounds = node.getTransformedBounds(
+                                        cachedBounds,
+                                        BaseTransform.IDENTITY_TRANSFORM);
+                top = left = bottom = right = near = far = node;
             } else {
                 cachedBounds.makeEmpty();
+                // no need to null edge nodes here, it was done in childExcluded
+                // top = left = bottom = right = near = far = null;
             }
-            node.boundsChanged = false;
             return;
         }
 
-        // We will attempt to use a fastpath through this function. We can use
-        // the fastpath as long as we have an old size of the Group recorded
-        // (cachedBounds is invalid but not empty), and each of the edge
-        // variables have a value.
-        if (cachedBounds != null
-            && !cachedBounds.isEmpty()
-            && top != null
-            && left != null
-            && bottom != null
-            && right != null
-            && near != null
-            && far != null)
-        {
-            // The fastpath will simply iterate over each of the Nodes in the
-            // group. If any node has "dirty" bounds, then I know that I must
-            // recompute its bounds. When I do so, I will take special care
-            // if it was once one of my edges, and also special care if it has
-            // moved to become a new edge.
-
-            // First, look at the nodes which form the top, left, bottom, right,
-            // near and far edges. If any of them are now invisible (visible = false)
-            // then they no longer contribute to the bounds of the group and
-            // therefore, this fast path cannot be used
-            if (top.isVisible() && left.isVisible() && bottom.isVisible() && right.isVisible()
-                    && near.isVisible() && far.isVisible()) {
-                // This fastpath becomes degenerate if I get to the end only to
-                // discover that the very last node has moved inward, in which
-                // case I have to throw away my work and simply sum up all the
-                // nodes in the group.
-                boolean quit = false;
-
-                // These are local references to the cached bounds vars
-                double cx = cachedBounds.getMinX();
-                double cy = cachedBounds.getMinY();
-                double cz = cachedBounds.getMinZ();
-                double cx2 = cachedBounds.getMaxX();
-                double cy2 = cachedBounds.getMaxY();
-                double cz2 = cachedBounds.getMaxZ();
-
-                // These indicate the bounds of the Group as computed by this
-                // function (had to add the 'b' suffix to suppress a spurious
-                // compiler error message)
-                double minXb=cx;
-                double minYb=cy;
-                double minZb=cz;
-                double maxXb=cx2;
-                double maxYb=cy2;
-                double maxZb=cz2;
-
-                // iterate over all the dirty nodes
-                if (dirtyChildren != null) {
-                    for (Node node : dirtyChildren) {
-                        if (node.isVisible() && node.boundsChanged) {
-                            tmp = node.getTransformedBounds(tmp, BaseTransform.IDENTITY_TRANSFORM);
-                            if (tmp.isEmpty()) {
-                                // If this node formed one of the edges, and if it has
-                                // moved off that edge (inward), then we break out of this
-                                // loop and quit the fast path
-                                if (node == top) { quit = true; break; }
-                                if (node == left) { quit = true; break; }
-                                if (node == bottom) { quit = true; break; }
-                                if (node == right) { quit = true; break; }
-                                if (node == near) { quit = true; break; }
-                                if (node == far) { quit = true; break; }
-                            } else {
-                                double tmpx = tmp.getMinX();
-                                double tmpy = tmp.getMinY();
-                                double tmpz = tmp.getMinZ();
-                                double tmpx2 = tmp.getMaxX();
-                                double tmpy2 = tmp.getMaxY();
-                                double tmpz2 = tmp.getMaxZ();
-
-                                // If this node formed one of the edges, and if it has
-                                // moved off that edge (inward), then we break out of this
-                                // loop and quit the fast path
-                                if (node == top && tmpy > cy) { quit = true; break; }
-                                if (node == left && tmpx > cx) { quit = true; break; }
-                                if (node == near && tmpz > cz) { quit = true; break; }
-                                if (node == bottom && tmpy2 < cy2) { quit = true; break; }
-                                if (node == right && tmpx2 < cx2) { quit = true; break; }
-                                if (node == far && tmpz2 < cz2) { quit = true; break; }
-
-                                // If this node forms an edge, then we will set it to be the
-                                // node for this edge and update the min/max values
-                                if (tmpy < minYb) { minYb = tmpy; top = node; }
-                                if (tmpx < minXb) { minXb = tmpx; left = node; }
-                                if (tmpz < minZb) { minZb = tmpz; near = node; }
-                                if (tmpy2 > maxYb) { maxYb = tmpy2; bottom = node; }
-                                if (tmpx2 > maxXb) { maxXb = tmpx2; right = node; }
-                                if (tmpz2 > maxZb) { maxZb = tmpz2; far = node; }
-                            }
-                        }
-                        node.boundsChanged = false;
-                    }
-                } else {
-                    for (int i=0, max=children.size(); i<max; i++) {
-                        final Node node = children.get(i);
-                        if (node == null)
-                            continue;
-                        if (node.isVisible() && node.boundsChanged) {
-                            tmp = node.getTransformedBounds(tmp, BaseTransform.IDENTITY_TRANSFORM);
-                            if (tmp.isEmpty()) {
-                                // If this node formed one of the edges, and if it has
-                                // moved off that edge (inward), then we break out of this
-                                // loop and quit the fast path
-                                if (node == top) { quit = true; break; }
-                                if (node == left) { quit = true; break; }
-                                if (node == bottom) { quit = true; break; }
-                                if (node == right) { quit = true; break; }
-                                if (node == near) { quit = true; break; }
-                                if (node == far) { quit = true; break; }
-                            } else {
-                                double tmpx = tmp.getMinX();
-                                double tmpy = tmp.getMinY();
-                                double tmpz = tmp.getMinZ();
-                                double tmpx2 = tmp.getMaxX();
-                                double tmpy2 = tmp.getMaxY();
-                                double tmpz2 = tmp.getMaxZ();
-
-                                // If this node formed one of the edges, and if it has
-                                // moved off that edge (inward), then we break out of this
-                                // loop and quit the fast path
-                                if (node == top && tmpy > cy) { quit = true; break; }
-                                if (node == left && tmpx > cx) { quit = true; break; }
-                                if (node == near && tmpz > cz) { quit = true; break; }
-                                if (node == bottom && tmpy2 < cy2) { quit = true; break; }
-                                if (node == right && tmpx2 < cx2) { quit = true; break; }
-                                if (node == far && tmpz2 < cz2) { quit = true; break; }
-
-                                // If this node forms an edge, then we will set it to be the
-                                // node for this edge and update the min/max values
-                                if (tmpy < minYb) { minYb = tmpy; top = node; }
-                                if (tmpx < minXb) { minXb = tmpx; left = node; }
-                                if (tmpz < minZb) { minZb = tmpz; near = node; }
-                                if (tmpy2 > maxYb) { maxYb = tmpy2; bottom = node; }
-                                if (tmpx2 > maxXb) { maxXb = tmpx2; right = node; }
-                                if (tmpz2 > maxZb) { maxZb = tmpz2; far = node; }
-                            }
-                        }
-                        node.boundsChanged = false;
-                    }
-                }
-
-                if (dirtyChildren != null) dirtyChildren.clear();
-
-                if (!quit) {
-                    // The fastpath succeeded, so we can simply update the
-                    // cachedBounds, clear the cachedBoundsInvalid flag and return
-                    cachedBoundsInvalid = false;
-                    cachedBounds = cachedBounds.deriveWithNewBounds((float)minXb, (float)minYb, (float)minZb,
-                            (float)maxXb, (float)maxYb, (float)maxZb);
-                    return;
-                }
-            }
-            // fall through to the long case
-        }
-
-        // These indicate the bounds of the Group as computed by this function
-        double minX = 0;
-        double minY = 0;
-        double minZ = 0;
-        double maxX = 0;
-        double maxY = 0;
-        double maxZ = 0;
-
-        // The long case is pretty simple -- visit each and every node, get
-        // the bounds of each node, figure out the edge nodes, get the min/max
-        // for the x/y/x2/y2 and then update cachedBounds and cachedBoundsInvalid
-        boolean first = true;
-        for (int i=0, max=children.size(); i<max; i++) {
-            final Node node = children.get(i);
-            if (node == null)
-                continue;
-
-            node.boundsChanged = false;
-            if (node.isVisible()) {
-                tmp = node.getTransformedBounds(tmp, BaseTransform.IDENTITY_TRANSFORM);
-                if (!tmp.isEmpty()) {
-                    double tmpx = tmp.getMinX();
-                    double tmpy = tmp.getMinY();
-                    double tmpz = tmp.getMinZ();
-                    double tmpx2 = tmp.getMaxX();
-                    double tmpy2 = tmp.getMaxY();
-                    double tmpz2 = tmp.getMaxZ();
-
-                    if (first) {
-                        top = left = bottom = right = near = far = node;
-                        minX = tmpx;
-                        minY = tmpy;
-                        minZ = tmpz;
-                        maxX = tmpx2;
-                        maxY = tmpy2;
-                        maxZ = tmpz2;
-                        first = false;
-                    } else {
-                        if (tmpy < minY) { minY = tmpy; top = node; }
-                        if (tmpx < minX) { minX = tmpx; left = node; }
-                        if (tmpz < minZ) { minZ = tmpz; near = node; }
-                        if (tmpy2 > maxY) { maxY = tmpy2; bottom = node; }
-                        if (tmpx2 > maxX) { maxX = tmpx2; right = node; }
-                        if (tmpz2 > maxZ) { maxZ = tmpz2; far = node; }
-                    }
-                }
-            }
-        }
-
-        if (dirtyChildren != null) dirtyChildren.clear();
-        cachedBoundsInvalid = false;
-        if (first) {
-            top = left = bottom = right = near = far = null;
-            cachedBounds.makeEmpty();
-        } else {
-            cachedBounds = cachedBounds.deriveWithNewBounds((float)minX, (float)minY, (float)minZ,
-                    (float)maxX, (float)maxY, (float)maxZ);
+        if ((dirtyChildrenCount == 0) ||
+                !updateCachedBounds(dirtyChildren != null
+                                        ? dirtyChildren : children,
+                                    dirtyChildrenCount)) {
+            // failed to update cached bounds, recreate them
+            createCachedBounds(children);
         }
     }
 
-    /**
-     * Overridden to make sure boundsInvalid gets set to true
-     *
-     * @treatAsPrivate implementation detail
-     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
-     */
-    @Deprecated
-    @Override protected void impl_geomChanged() {
-        cachedBoundsInvalid = true;
-        super.impl_geomChanged();
+    private final int LEFT_INVALID = 1;
+    private final int TOP_INVALID = 1 << 1;
+    private final int NEAR_INVALID = 1 << 2;
+    private final int RIGHT_INVALID = 1 << 3;
+    private final int BOTTOM_INVALID = 1 << 4;
+    private final int FAR_INVALID = 1 << 5;
+
+    private boolean updateCachedBounds(final List<Node> dirtyNodes,
+                                       int remainingDirtyNodes) {
+        // fast path for untransformed bounds calculation
+        if (cachedBounds.isEmpty()) {
+            createCachedBounds(dirtyNodes);
+            return true;
+        }
+
+        int invalidEdges = 0;
+
+        if ((left == null) || left.boundsChanged) {
+            invalidEdges |= LEFT_INVALID;
+        }
+        if ((top == null) || top.boundsChanged) {
+            invalidEdges |= TOP_INVALID;
+        }
+        if ((near == null) || near.boundsChanged) {
+            invalidEdges |= NEAR_INVALID;
+        }
+        if ((right == null) || right.boundsChanged) {
+            invalidEdges |= RIGHT_INVALID;
+        }
+        if ((bottom == null) || bottom.boundsChanged) {
+            invalidEdges |= BOTTOM_INVALID;
+        }
+        if ((far == null) || far.boundsChanged) {
+            invalidEdges |= FAR_INVALID;
+        }
+
+        // These indicate the bounds of the Group as computed by this
+        // function
+        float minX = cachedBounds.getMinX();
+        float minY = cachedBounds.getMinY();
+        float minZ = cachedBounds.getMinZ();
+        float maxX = cachedBounds.getMaxX();
+        float maxY = cachedBounds.getMaxY();
+        float maxZ = cachedBounds.getMaxZ();
+
+        // this checks the newly added nodes first, so if dirtyNodes is the
+        // whole children list, we can end early
+        for (int i = dirtyNodes.size() - 1; remainingDirtyNodes > 0; --i) {
+            final Node node = dirtyNodes.get(i);
+            if (node.boundsChanged) {
+                // assert node.isVisible();
+                node.boundsChanged = false;
+                --remainingDirtyNodes;
+                tmp = node.getTransformedBounds(
+                               tmp, BaseTransform.IDENTITY_TRANSFORM);
+                if (!tmp.isEmpty()) {
+                    float tmpx = tmp.getMinX();
+                    float tmpy = tmp.getMinY();
+                    float tmpz = tmp.getMinZ();
+                    float tmpx2 = tmp.getMaxX();
+                    float tmpy2 = tmp.getMaxY();
+                    float tmpz2 = tmp.getMaxZ();
+                    
+                    // If this node forms an edge, then we will set it to be the
+                    // node for this edge and update the min/max values
+                    if (tmpx <= minX) {
+                        minX = tmpx;
+                        left = node;
+                        invalidEdges &= ~LEFT_INVALID;
+                    }
+                    if (tmpy <= minY) {
+                        minY = tmpy;
+                        top = node;
+                        invalidEdges &= ~TOP_INVALID;
+                    }
+                    if (tmpz <= minZ) {
+                        minZ = tmpz;
+                        near = node;
+                        invalidEdges &= ~NEAR_INVALID;
+                    }
+                    if (tmpx2 >= maxX) {
+                        maxX = tmpx2;
+                        right = node;
+                        invalidEdges &= ~RIGHT_INVALID;
+                    }
+                    if (tmpy2 >= maxY) {
+                        maxY = tmpy2;
+                        bottom = node;
+                        invalidEdges &= ~BOTTOM_INVALID;
+                    }
+                    if (tmpz2 >= maxZ) {
+                        maxZ = tmpz2;
+                        far = node;
+                        invalidEdges &= ~FAR_INVALID;
+                    }
+                }
+            }
+        }
+
+        if (invalidEdges != 0) {
+            // failed to validate some edges
+            return false;
+        }
+
+        cachedBounds = cachedBounds.deriveWithNewBounds(minX, minY, minZ,
+                                                        maxX, maxY, maxZ);
+        return true;
+    }
+
+    private void createCachedBounds(final List<Node> fromNodes) {
+        // These indicate the bounds of the Group as computed by this function
+        float minX, minY, minZ;
+        float maxX, maxY, maxZ;
+
+        final int nodeCount = fromNodes.size();
+        int i;
+
+        // handle first visible non-empty node
+        for (i = 0; i < nodeCount; ++i) {
+            final Node node = fromNodes.get(i);
+            node.boundsChanged = false;
+            if (node.isVisible()) {
+                tmp = node.getTransformedBounds(
+                               tmp, BaseTransform.IDENTITY_TRANSFORM);
+                if (!tmp.isEmpty()) {
+                    left = top = near = right = bottom = far = node;
+                    break;
+                }
+            }
+        }
+
+        if (i == nodeCount) {
+            left = top = near = right = bottom = far = null;
+            cachedBounds.makeEmpty();
+            return;
+        }
+
+        minX = tmp.getMinX();
+        minY = tmp.getMinY();
+        minZ = tmp.getMinZ();
+        maxX = tmp.getMaxX();
+        maxY = tmp.getMaxY();
+        maxZ = tmp.getMaxZ();
+
+        // handle remaining visible non-empty nodes
+        for (++i; i < nodeCount; ++i) {
+            final Node node = fromNodes.get(i);
+            node.boundsChanged = false;
+            if (node.isVisible()) {
+                tmp = node.getTransformedBounds(
+                               tmp, BaseTransform.IDENTITY_TRANSFORM);
+                if (!tmp.isEmpty()) {
+                    final float tmpx = tmp.getMinX();
+                    final float tmpy = tmp.getMinY();
+                    final float tmpz = tmp.getMinZ();
+                    final float tmpx2 = tmp.getMaxX();
+                    final float tmpy2 = tmp.getMaxY();
+                    final float tmpz2 = tmp.getMaxZ();
+
+                    if (tmpx < minX) { minX = tmpx; left = node; }
+                    if (tmpy < minY) { minY = tmpy; top = node; }
+                    if (tmpz < minZ) { minZ = tmpz; near = node; }
+                    if (tmpx2 > maxX) { maxX = tmpx2; right = node; }
+                    if (tmpy2 > maxY) { maxY = tmpy2; bottom = node; }
+                    if (tmpz2 > maxZ) { maxZ = tmpz2; far = node; }
+                }
+            }
+        }
+
+        cachedBounds = cachedBounds.deriveWithNewBounds(minX, minY, minZ,
+                                                        maxX, maxY, maxZ);
     }
 
     @Override void updateBounds() {
@@ -1739,20 +1633,16 @@ public abstract class Parent extends Node {
      * Called by Node whenever its bounds have changed.
      */
     void childBoundsChanged(Node node) {
-        if (!node.isVisible()) {
-            // the change in bounds of this child node has no bearing on
-            // the bounds of the group, so forget it
-            return;
-        }
+        // assert node.isVisible();
+
+        cachedBoundsInvalid = true;
 
         // mark the node such that the parent knows that the child's bounds
         // are not in sync with this parent. In this way, when the bounds
         // need to be computed, we'll come back and figure out the new bounds
         // for all the children which have boundsChanged set to true
-        if (!node.boundsChanged) {
-            node.boundsChanged = true;
-            if (dirtyChildren != null) dirtyChildren.add(node);
-        }
+        setChildDirty(node, true);
+
         // go ahead and indicate that the geom has changed for this parent,
         // even though once we figure it all out it may be that the bounds
         // have not changed
@@ -1763,8 +1653,12 @@ public abstract class Parent extends Node {
      * Called by node whenever the visibility of the node changes.
      */
     void childVisibilityChanged(Node node) {
-        // cachedBoundsInvalid will be set to true in impl_geomChanged();
-        cachedBounds.makeEmpty();
+        if (node.isVisible()) {
+            childIncluded(node);
+        } else {
+            childExcluded(node);
+        }
+
         impl_geomChanged();
     }
 

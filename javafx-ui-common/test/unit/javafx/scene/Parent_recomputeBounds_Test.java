@@ -32,7 +32,6 @@ import javafx.geometry.Bounds;
 import javafx.scene.shape.Rectangle;
 import javafx.scene.shape.Circle;
 
-import org.junit.Ignore;
 import org.junit.Test;
 
 public class Parent_recomputeBounds_Test {
@@ -408,7 +407,6 @@ public class Parent_recomputeBounds_Test {
     }
 
     @Test
-    @Ignore("To be fixed.")
     public void shouldNotIgnoreMultipleAddedNodes() {
         final Group g = new Group();
         final Rectangle lt = new Rectangle(100, 100, 100, 100);
@@ -438,7 +436,6 @@ public class Parent_recomputeBounds_Test {
     }
 
     @Test
-    @Ignore("To be fixed.")
     public void shouldNotCreateEmptyDirtyChildrenList() {
         final Group g = new Group();
         final Rectangle lt = new Rectangle(100, 100, 100, 100);
@@ -475,7 +472,6 @@ public class Parent_recomputeBounds_Test {
     }
 
     @Test
-    @Ignore("To be fixed.")
     public void
             shouldNotSkipGeomChangedForChildAdditionInsideUntransformedBounds()
     {
@@ -503,7 +499,6 @@ public class Parent_recomputeBounds_Test {
     }
 
     @Test
-    @Ignore("To be fixed.")
     public void
             shouldNotSkipGeomChangedForChildRemovalInsideUntransformedBounds()
     {
