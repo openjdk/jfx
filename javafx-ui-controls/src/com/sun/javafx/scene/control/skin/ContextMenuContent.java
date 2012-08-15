@@ -81,7 +81,7 @@ import javafx.stage.Window;
  * {@link PopupControlSkin} should be changed to use SkinBase instead of Resizable
  * for its content and popup content.
  */
-public class ContextMenuContent extends StackPane {
+public class ContextMenuContent extends Region {
 
     private ContextMenu contextMenu;
 
@@ -105,6 +105,9 @@ public class ContextMenuContent extends StackPane {
      * in keyboard navigation of menu items.
      */
     private int currentFocusedIndex = -1;
+    
+    private boolean itemsDirty = true;
+    
     /***************************************************************************
      * Constructors
      **************************************************************************/
@@ -126,9 +129,15 @@ public class ContextMenuContent extends StackPane {
         getChildren().add(itemsContainer);
         getChildren().add(upArrow);
         getChildren().add(downArrow);
-        updateVisualItems();
+        computeInitialSize();
         initialize();
         setUpBinds();
+        // RT-20197 add menuitems only on first show.
+        popupMenu.showingProperty().addListener(new InvalidationListener() {
+            @Override public void invalidated(Observable arg0) {
+                updateItems();
+            }
+        });
     }
     
     //For access from controls
@@ -143,6 +152,17 @@ public class ContextMenuContent extends StackPane {
     void setCurrentFocusedIndex(int index) {
         if (index < itemsContainer.getChildren().size()) {
             currentFocusedIndex = index;
+        }
+    }
+    
+    private void updateItems() {
+        if (itemsDirty) {
+            updateVisualItems();
+            itemsDirty = false;
+
+            if (getScene() != null) {
+                impl_processCSS(true);
+            }
         }
     }
 
@@ -368,6 +388,35 @@ public class ContextMenuContent extends StackPane {
         itemsContainer.requestLayout();
     }
 
+    /**
+    * Optimization part of RT-20197. In order to match the width of the choiceBox
+    * with the width of the widest menu item, we get the index of the widest 
+    * menuItem and add it to the itemsContainer so the visual metrics is calculated 
+    * correctly even though all the items are not added before show.
+    * This item will be removed when the first show happens.
+    */
+    private void computeInitialSize() {
+        int index = getLongestLabel();
+        itemsContainer.getChildren().clear();
+        final MenuItem item = getItems().get(index);
+        MenuItemContainer menuItemContainer = new MenuItemContainer(item);
+        itemsContainer.getChildren().add(menuItemContainer);
+    }
+    
+    private int getLongestLabel() {
+        int len = 0;
+        int index = 0;
+        for (int row = 0; row < getItems().size(); row++) {
+            final MenuItem item = getItems().get(row);
+            if ((item instanceof CustomMenuItem && ((CustomMenuItem) item).getContent() == null) ||
+                    item instanceof SeparatorMenuItem)  continue;
+            if ( item != null && item.getText().length() > len) {
+                index = row;
+                len =  item.getText().length();
+            }
+        }
+        return index;
+    }
 //    /**
 //     * When we have a scrollable menu, and the mouse is left hovering over a menu
 //     * item when the user is scrolling using keyboard up/down arrows, as soon as
@@ -715,7 +764,7 @@ public class ContextMenuContent extends StackPane {
                 }
 
                 // Listener to items in PopupMenu to update items in PopupMenuContent
-                updateVisualItems();
+                itemsDirty = true;
             }
         });
     }
@@ -982,7 +1031,7 @@ public class ContextMenuContent extends StackPane {
      * words, this contains and lays out a single MenuItem, regardless of it's 
      * specific subtype.
      */
-    public class MenuItemContainer extends Pane {
+    public class MenuItemContainer extends Region {
 
         private final MenuItem item;
 
@@ -1305,7 +1354,7 @@ public class ContextMenuContent extends StackPane {
         // property, or it may be a check/radio item if necessary.
         private Node getLeftGraphic(MenuItem item) {
             if (item instanceof RadioMenuItem) {
-                final StackPane _graphic = new StackPane();
+                 final Region _graphic = new Region();
                 _graphic.getStyleClass().add("radio");
                 return _graphic;
             } else if (item instanceof CheckMenuItem) {
