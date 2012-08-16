@@ -146,17 +146,17 @@ public class ListViewSkin<T> extends VirtualContainerBase<ListView<T>, ListViewB
         }
     };
     
-    private WeakListChangeListener weakListViewItemsListener;
+    private final WeakListChangeListener weakListViewItemsListener =
+            new WeakListChangeListener(listViewItemsListener);
 
     public void updateListViewItems() {
-        if (listViewItems != null && weakListViewItemsListener != null) {
+        if (listViewItems != null) {
             listViewItems.removeListener(weakListViewItemsListener);
         }
 
         this.listViewItems = getSkinnable().getItems();
-        
+
         if (listViewItems != null) {
-            weakListViewItemsListener = new WeakListChangeListener(listViewItems, listViewItemsListener);
             listViewItems.addListener(weakListViewItemsListener);
         }
 

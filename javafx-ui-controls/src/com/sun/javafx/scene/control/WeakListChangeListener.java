@@ -27,7 +27,6 @@ package com.sun.javafx.scene.control;
 import java.lang.ref.Reference;
 import java.lang.ref.ReferenceQueue;
 import java.lang.ref.WeakReference;
-import java.util.WeakHashMap;
 import javafx.collections.ListChangeListener;
 import javafx.collections.ListChangeListener.Change;
 import javafx.collections.ObservableList;
@@ -44,7 +43,7 @@ import javafx.collections.ObservableList;
  * <p>
  * Note: You have to keep a reference to the {@code ListChangeListener}, that
  * was passed in as long as it is in use, otherwise it will be garbage collected
- * too soon.
+ * to soon.
  * 
  * @see ListChangeListener
  * @see ObservableList
@@ -53,44 +52,30 @@ import javafx.collections.ObservableList;
  * 
  */
 public class WeakListChangeListener<T> implements ListChangeListener<T> {
-    private static final WeakHashMap<ObservableList, ReferenceQueue<ListChangeListener>> refQueueMap = 
-            new WeakHashMap<ObservableList, ReferenceQueue<ListChangeListener>>();
+    private static final ReferenceQueue<ListChangeListener> refQueue = new ReferenceQueue<ListChangeListener>();
     
-    private final ReferenceQueue<ListChangeListener> refQueue;
     private final WeakReference<ListChangeListener<T>> listenerRef;
-    private final ObservableList<T> list;
 
     /**
      * The constructor of {@code WeakListChangeListener}.
      * 
-     * @param list
-     *          The list on which this listener will be attached. By doing this
-     *          we are able to clean up when the WeakReference becomes null
      * @param listener
      *            The original listener that should be notified
      */
+    public WeakListChangeListener(final ListChangeListener<T> listener) {
+        this(null, listener);
+    }
+    
     public WeakListChangeListener(final ObservableList<T> list, final ListChangeListener<T> listener) {
         if (listener == null) {
             throw new NullPointerException("Listener must be specified.");
         }
-        if (list == null) {
-            throw new NullPointerException("ObservableList must be specified.");
+        
+        this.listenerRef = new WeakReference<ListChangeListener<T>>(listener, refQueue);
+        
+        if (list != null) {
+            checkReferenceQueue(list, this);
         }
-        
-        this.list = list;
-        
-        // get, or create a new, reference queue for this list
-        if (refQueueMap.containsKey(list)) {
-            refQueue = refQueueMap.get(list);
-        } else {
-            refQueue = new ReferenceQueue<ListChangeListener>();
-            refQueueMap.put(list, refQueue);
-        }
-        
-        this.listenerRef = new BackReference<ListChangeListener<T>>(listener, refQueue, this);
-        
-        // do a reference queue check now
-        checkReferenceQueue(refQueue, list);
     }
 
     @Override public void onChanged(Change<? extends T> c) {
@@ -101,30 +86,16 @@ public class WeakListChangeListener<T> implements ListChangeListener<T> {
             // The weakly reference listener has been garbage collected,
             // so this WeakListener will now unhook itself from the
             // source bean
-            list.removeListener(this);
+            c.getList().removeListener(this);
         }
         
-        // check reference queue for empty references to clean up
-        checkReferenceQueue(refQueue, list);
+        // check reference queue for ones to clean up
+        checkReferenceQueue(c.getList(), this);
     }
     
-    private static <T> void checkReferenceQueue(final ReferenceQueue<ListChangeListener> refQueue, 
-            final ObservableList list) {
-        BackReference ref;
-        WeakListChangeListener backRef;
-        while ((ref = (BackReference)refQueue.poll()) != null) {
-            backRef = ref.backRef;
-            list.removeListener(backRef);
-        }
-    }
-    
-    private static class BackReference<T> extends WeakReference<T> {
-        
-        private final WeakListChangeListener backRef;
-
-        public BackReference(T referent, ReferenceQueue<? super T> q, WeakListChangeListener backRef) {
-            super(referent, q);
-            this.backRef = backRef;
+    private static <T> void checkReferenceQueue(final ObservableList list, final ListChangeListener listener) {
+        while (refQueue.poll() != null) {
+            list.removeListener(listener);
         }
     }
 }

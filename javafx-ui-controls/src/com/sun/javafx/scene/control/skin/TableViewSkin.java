@@ -125,9 +125,7 @@ public class TableViewSkin<T> extends VirtualContainerBase<TableView<T>, TableVi
             }
         });
 
-        ObservableList<TableColumn<T, ?>> visibleLeafColumns = tableView.getVisibleLeafColumns();
-        weakVisibleLeafColumnsListener = new WeakListChangeListener<TableColumn<T,?>>(visibleLeafColumns, visibleLeafColumnsListener);
-        visibleLeafColumns.addListener(weakVisibleLeafColumnsListener);
+        tableView.getVisibleLeafColumns().addListener(weakVisibleLeafColumnsListener);
         
         updateTableItems(null, tableView.getItems());
         tableView.itemsProperty().addListener(weakItemsChangeListener);
@@ -252,8 +250,10 @@ public class TableViewSkin<T> extends VirtualContainerBase<TableView<T>, TableVi
             }
     };
     
-    private WeakListChangeListener<T> weakRowCountListener;
-    private WeakListChangeListener<TableColumn<T,?>> weakVisibleLeafColumnsListener;
+    private WeakListChangeListener<T> weakRowCountListener =
+            new WeakListChangeListener<T>(rowCountListener);
+    private WeakListChangeListener<TableColumn<T,?>> weakVisibleLeafColumnsListener =
+            new WeakListChangeListener<TableColumn<T,?>>(visibleLeafColumnsListener);
     private WeakInvalidationListener weakWidthListener = 
             new WeakInvalidationListener(widthListener);
     private WeakChangeListener<ObservableList<T>> weakItemsChangeListener = 
@@ -530,12 +530,11 @@ public class TableViewSkin<T> extends VirtualContainerBase<TableView<T>, TableVi
      **************************************************************************/
     
     public void updateTableItems(ObservableList<T> oldList, ObservableList<T> newList) {
-        if (oldList != null && weakRowCountListener != null) {
+        if (oldList != null) {
             oldList.removeListener(weakRowCountListener);
         }
 
         if (newList != null) {
-            weakRowCountListener = new WeakListChangeListener<T>(newList, rowCountListener);
             newList.addListener(weakRowCountListener);
         }
 

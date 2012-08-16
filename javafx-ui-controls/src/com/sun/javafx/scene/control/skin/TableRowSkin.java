@@ -140,8 +140,8 @@ public class TableRowSkin<T> extends CellSkinBase<TableRow<T>, CellBehaviorBase<
             throw new IllegalStateException("TableRow not have the TableView property set");
         }
         
-        ObservableList<TableColumn<T,?>> visibleLeafColumns = getSkinnable().getTableView().getVisibleLeafColumns();
-        visibleLeafColumns.addListener(new WeakListChangeListener(visibleLeafColumns, visibleLeafColumnsListener));
+        getSkinnable().getTableView().getVisibleLeafColumns().addListener(
+                new WeakListChangeListener(visibleLeafColumnsListener));
     }
     
     private void doUpdateCheck() {

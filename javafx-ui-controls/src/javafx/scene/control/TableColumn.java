@@ -281,7 +281,6 @@ public class TableColumn<S,T> implements EventTarget {
         // we listen to the columns list here to ensure that widths are
         // maintained properly, and to also set the column hierarchy such that
         // all children columns know that this TableColumn is their parent.
-        weakColumnsListener = new WeakListChangeListener(getColumns(), columnsListener);
         getColumns().addListener(weakColumnsListener);
 
         tableViewProperty().addListener(new InvalidationListener() {
@@ -380,7 +379,8 @@ public class TableColumn<S,T> implements EventTarget {
         }
     };
     
-    private final WeakListChangeListener weakColumnsListener;
+    private WeakListChangeListener weakColumnsListener = 
+            new WeakListChangeListener(columnsListener);
     
     
     /***************************************************************************
