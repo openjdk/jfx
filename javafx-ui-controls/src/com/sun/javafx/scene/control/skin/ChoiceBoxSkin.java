@@ -52,7 +52,7 @@ import javafx.scene.layout.StackPane;
 import javafx.scene.text.Text;
 
 import com.sun.javafx.scene.control.behavior.ChoiceBoxBehavior;
-import com.sun.javafx.scene.control.WeakListChangeListener;
+import javafx.collections.WeakListChangeListener;
 
 
 /**
@@ -114,7 +114,8 @@ import com.sun.javafx.scene.control.WeakListChangeListener;
         }
     };
     
-    private WeakListChangeListener weakChoiceBoxItemsListener;
+    private final WeakListChangeListener weakChoiceBoxItemsListener =
+            new WeakListChangeListener(choiceBoxItemsListener);
 
     private void initialize() {
         updateChoiceBoxItems();
@@ -175,12 +176,11 @@ import com.sun.javafx.scene.control.WeakListChangeListener;
     }
 
     private void updateChoiceBoxItems() {
-        if (choiceBoxItems != null && weakChoiceBoxItemsListener != null) {
+        if (choiceBoxItems != null) {
             choiceBoxItems.removeListener(weakChoiceBoxItemsListener);
         }
         choiceBoxItems = getSkinnable().getItems();
         if (choiceBoxItems != null) {
-            weakChoiceBoxItemsListener = new WeakListChangeListener(choiceBoxItems, choiceBoxItemsListener);
             choiceBoxItems.addListener(weakChoiceBoxItemsListener);
         }
     }

@@ -27,7 +27,7 @@ package com.sun.javafx.scene.control.skin;
 
 import com.sun.javafx.event.EventDispatchChainImpl;
 import com.sun.javafx.scene.control.FocusableTextField;
-import com.sun.javafx.scene.control.WeakListChangeListener;
+import javafx.collections.WeakListChangeListener;
 import javafx.scene.control.ComboBox;
 import com.sun.javafx.scene.control.behavior.ComboBoxListViewBehavior;
 import java.util.List;
@@ -95,7 +95,8 @@ public class ComboBoxListViewSkin<T> extends ComboBoxPopupControl<T> {
         }
     };
     
-    private WeakListChangeListener weakListViewItemsListener;
+    private final WeakListChangeListener weakListViewItemsListener =
+            new WeakListChangeListener(listViewItemsListener);
     
     
     
@@ -241,7 +242,6 @@ public class ComboBoxListViewSkin<T> extends ComboBoxPopupControl<T> {
         this.listViewItems = comboBox.getItems();
         listView.setItems(null);
         listView.setItems(listViewItems);
-        weakListViewItemsListener = new WeakListChangeListener(listViewItems, listViewItemsListener);
 
         if (listViewItems != null) {
             listViewItems.addListener(weakListViewItemsListener);

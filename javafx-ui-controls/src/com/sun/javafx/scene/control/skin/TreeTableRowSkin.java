@@ -43,7 +43,7 @@ import javafx.scene.control.TreeView;
 import com.sun.javafx.css.StyleableDoubleProperty;
 import com.sun.javafx.css.StyleableProperty;
 import com.sun.javafx.css.converters.SizeConverter;
-import com.sun.javafx.scene.control.WeakListChangeListener;
+import javafx.collections.WeakListChangeListener;
 import com.sun.javafx.scene.control.behavior.CellBehaviorBase;
 import com.sun.javafx.scene.control.behavior.TreeTableRowBehavior;
 import javafx.beans.value.WritableValue;
@@ -472,8 +472,8 @@ public class TreeTableRowSkin<T> extends CellSkinBase<TreeTableRow<T>, CellBehav
             throw new IllegalStateException("TableRow not have the TableView property set");
         }
         
-        ObservableList<TableColumn<T,?>> visibleLeafColumns = getSkinnable().getTableView().getVisibleLeafColumns();
-        visibleLeafColumns.addListener(new WeakListChangeListener(visibleLeafColumns, visibleLeafColumnsListener));
+        getSkinnable().getTableView().getVisibleLeafColumns().addListener(
+                new WeakListChangeListener(visibleLeafColumnsListener));
     }
     
     private void doUpdateCheck() {

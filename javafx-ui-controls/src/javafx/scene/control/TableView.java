@@ -54,10 +54,9 @@ import javafx.util.Callback;
 
 import com.sun.javafx.collections.annotations.ReturnsUnmodifiableCollection;
 import com.sun.javafx.css.StyleManager;
-import com.sun.javafx.css.StyleableProperty;
 import com.sun.javafx.scene.control.ReadOnlyUnbackedObservableList;
 import com.sun.javafx.scene.control.TableColumnComparator;
-import com.sun.javafx.scene.control.WeakListChangeListener;
+import javafx.collections.WeakListChangeListener;
 import com.sun.javafx.scene.control.skin.TableViewSkin;
 import com.sun.javafx.scene.control.skin.VirtualContainerBase;
 import java.lang.ref.WeakReference;
@@ -805,7 +804,7 @@ public class TableView<S> extends Control {
             new WeakInvalidationListener(columnSortTypeObserver);
     
     private final WeakListChangeListener weakColumnsObserver = 
-            new WeakListChangeListener(getColumns(), columnsObserver);
+            new WeakListChangeListener(columnsObserver);
     
     /***************************************************************************
      *                                                                         *
@@ -1771,10 +1770,8 @@ public class TableView<S> extends Control {
             tableView.itemsProperty().addListener(weakItemsPropertyListener);
             
             // watching for changes to the items list content
-            ObservableList<S> items = this.tableView.getItems();
-            if (items != null) {
-                weakItemsContentListener = new WeakListChangeListener(items, itemsContentListener);
-                items.addListener(weakItemsContentListener);
+            if (tableView.getItems() != null) {
+                tableView.getItems().addListener(weakItemsContentListener);
             }
         }
         
@@ -1805,16 +1802,16 @@ public class TableView<S> extends Control {
             }
         };
         
-        private WeakListChangeListener weakItemsContentListener;
+        final WeakListChangeListener weakItemsContentListener 
+                = new WeakListChangeListener(itemsContentListener);
         
         private void updateItemsObserver(ObservableList<S> oldList, ObservableList<S> newList) {
             // the listview items list has changed, we need to observe
             // the new list, and remove any observer we had from the old list
-            if (oldList != null && weakItemsContentListener != null) {
+            if (oldList != null) {
                 oldList.removeListener(weakItemsContentListener);
             }
             if (newList != null) {
-                weakItemsContentListener = new WeakListChangeListener(newList, itemsContentListener);
                 newList.addListener(weakItemsContentListener);
             }
 
@@ -2395,10 +2392,8 @@ public class TableView<S> extends Control {
             this.tableView = tableView;
             
             this.tableView.itemsProperty().addListener(weakItemsPropertyListener);
-            ObservableList<S> items = this.tableView.getItems();
-            if (items != null) {
-                weakItemsContentListener = new WeakListChangeListener(items, itemsContentListener);
-                items.addListener(weakItemsContentListener);
+            if (tableView.getItems() != null) {
+                this.tableView.getItems().addListener(weakItemsContentListener);
             }
 
             TablePosition pos = new TablePosition(tableView, -1, null);
@@ -2442,18 +2437,14 @@ public class TableView<S> extends Control {
             }
         };
         
-        private WeakListChangeListener<S> weakItemsContentListener;
+        private WeakListChangeListener<S> weakItemsContentListener 
+                = new WeakListChangeListener<S>(itemsContentListener);
         
         private void updateItemsObserver(ObservableList<S> oldList, ObservableList<S> newList) {
             // the tableview items list has changed, we need to observe
             // the new list, and remove any observer we had from the old list
-            if (oldList != null && weakItemsContentListener != null) {
-                oldList.removeListener(weakItemsContentListener);
-            }
-            if (newList != null) {
-                weakItemsContentListener = new WeakListChangeListener<S>(newList, itemsContentListener);
-                newList.addListener(weakItemsContentListener);
-            }
+            if (oldList != null) oldList.removeListener(weakItemsContentListener);
+            if (newList != null) newList.addListener(weakItemsContentListener);
         }
 
         /** {@inheritDoc} */

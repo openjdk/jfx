@@ -30,12 +30,11 @@ import javafx.beans.WeakInvalidationListener;
 import javafx.collections.ListChangeListener;
 import javafx.scene.control.TableView.TableViewFocusModel;
 
-import com.sun.javafx.scene.control.WeakListChangeListener;
+import javafx.collections.WeakListChangeListener;
 import java.lang.ref.WeakReference;
 import java.util.List;
 import javafx.beans.property.ReadOnlyObjectProperty;
 import javafx.beans.property.ReadOnlyObjectWrapper;
-import javafx.collections.ObservableList;
 
 /**
  * <p>TableRow is an {@link javafx.scene.control.IndexedCell IndexedCell}, but
@@ -114,7 +113,7 @@ public class TableRow<T> extends IndexedCell<T> {
         }
     };
 
-    private WeakListChangeListener weakSelectedListener;
+    private final WeakListChangeListener weakSelectedListener = new WeakListChangeListener(selectedListener);
     private final WeakInvalidationListener weakFocusedListener = new WeakInvalidationListener(focusedListener);
     private final WeakInvalidationListener weakEditingListener = new WeakInvalidationListener(editingListener);
 
@@ -155,7 +154,7 @@ public class TableRow<T> extends IndexedCell<T> {
                         TableView oldTableView = weakTableViewRef.get();
                         if (oldTableView != null) {
                             sm = oldTableView.getSelectionModel();
-                            if (sm != null && weakSelectedListener != null) {
+                            if (sm != null) {
                                 sm.getSelectedCells().removeListener(weakSelectedListener);
                             }
 
@@ -173,9 +172,7 @@ public class TableRow<T> extends IndexedCell<T> {
                     if (getTableView() != null) {
                         sm = getTableView().getSelectionModel();
                         if (sm != null) {
-                            ObservableList<TablePosition> selectedCells = sm.getSelectedCells();
-                            weakSelectedListener = new WeakListChangeListener(selectedCells, selectedListener);
-                            selectedCells.addListener(weakSelectedListener);
+                            sm.getSelectedCells().addListener(weakSelectedListener);
                         }
 
                         fm = getTableView().getFocusModel();

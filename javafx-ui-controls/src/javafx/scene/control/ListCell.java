@@ -26,16 +26,19 @@
 package javafx.scene.control;
 
 import com.sun.javafx.logging.PlatformLogger;
+import com.sun.javafx.scene.control.Logging;
 import javafx.beans.InvalidationListener;
 import javafx.beans.Observable;
 import javafx.beans.WeakInvalidationListener;
+import javafx.beans.property.ReadOnlyObjectProperty;
+import javafx.beans.property.ReadOnlyObjectWrapper;
 import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
 import javafx.beans.value.WeakChangeListener;
 import javafx.collections.ListChangeListener;
 import javafx.collections.ObservableList;
 
-import com.sun.javafx.scene.control.WeakListChangeListener;
+import javafx.collections.WeakListChangeListener;
 import java.lang.ref.WeakReference;
 import java.util.List;
 import javafx.beans.property.ReadOnlyObjectProperty;
@@ -147,11 +150,10 @@ public class ListCell<T> extends IndexedCell<T> {
         @Override public void changed(ObservableValue observable,
                                       MultipleSelectionModel oldValue,
                                       MultipleSelectionModel newValue) {
-            if (oldValue != null && weakSelectedListener != null) {
+            if (oldValue != null) {
                 oldValue.getSelectedIndices().removeListener(weakSelectedListener);
             }
             if (newValue != null) {
-                weakSelectedListener = new WeakListChangeListener(newValue.getSelectedIndices(), selectedListener);
                 newValue.getSelectedIndices().addListener(weakSelectedListener);
             }
             updateSelection();
@@ -176,11 +178,10 @@ public class ListCell<T> extends IndexedCell<T> {
         @Override public void changed(ObservableValue observable,
                                       ObservableList oldValue,
                                       ObservableList newValue) {
-            if (oldValue != null && weakItemsListener != null) {
+            if (oldValue != null) {
                 oldValue.removeListener(weakItemsListener);
             }
             if (newValue != null) {
-                weakItemsListener = new WeakListChangeListener(newValue, itemsListener);
                 newValue.addListener(weakItemsListener);
             }
             updateItem();
@@ -215,11 +216,11 @@ public class ListCell<T> extends IndexedCell<T> {
         }
     };
 
-    private WeakListChangeListener weakSelectedListener;
-    private WeakListChangeListener weakItemsListener;
-    
+
     private final WeakInvalidationListener weakEditingListener = new WeakInvalidationListener(editingListener);
+    private final WeakListChangeListener weakSelectedListener = new WeakListChangeListener(selectedListener);
     private final WeakChangeListener weakSelectionModelPropertyListener = new WeakChangeListener(selectionModelPropertyListener);
+    private final WeakListChangeListener weakItemsListener = new WeakListChangeListener(itemsListener);
     private final WeakChangeListener weakItemsPropertyListener = new WeakChangeListener(itemsPropertyListener);
     private final WeakInvalidationListener weakFocusedListener = new WeakInvalidationListener(focusedListener);
     private final WeakChangeListener weakFocusModelPropertyListener = new WeakChangeListener(focusModelPropertyListener);
@@ -278,7 +279,6 @@ public class ListCell<T> extends IndexedCell<T> {
             if (currentListView != null) {
                 final MultipleSelectionModel sm = currentListView.getSelectionModel();
                 if (sm != null) {
-                    weakSelectedListener = new WeakListChangeListener(sm.getSelectedIndices(), selectedListener);
                     sm.getSelectedIndices().addListener(weakSelectedListener);
                 }
 
@@ -289,7 +289,6 @@ public class ListCell<T> extends IndexedCell<T> {
 
                 final ObservableList items = currentListView.getItems();
                 if (items != null) {
-                    weakItemsListener = new WeakListChangeListener(items, itemsListener);
                     items.addListener(weakItemsListener);
                 }
 

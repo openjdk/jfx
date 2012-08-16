@@ -37,7 +37,7 @@ import javafx.scene.control.ListView;
 import javafx.scene.control.SelectionModel;
 import javafx.scene.input.MouseEvent;
 
-import com.sun.javafx.scene.control.WeakListChangeListener;
+import javafx.collections.WeakListChangeListener;
 import com.sun.javafx.scene.control.behavior.ListViewBehavior;
 import javafx.util.Callback;
 
@@ -146,17 +146,17 @@ public class ListViewSkin<T> extends VirtualContainerBase<ListView<T>, ListViewB
         }
     };
     
-    private WeakListChangeListener weakListViewItemsListener;
+    private final WeakListChangeListener weakListViewItemsListener =
+            new WeakListChangeListener(listViewItemsListener);
 
     public void updateListViewItems() {
-        if (listViewItems != null && weakListViewItemsListener != null) {
+        if (listViewItems != null) {
             listViewItems.removeListener(weakListViewItemsListener);
         }
 
         this.listViewItems = getSkinnable().getItems();
-        
+
         if (listViewItems != null) {
-            weakListViewItemsListener = new WeakListChangeListener(listViewItems, listViewItemsListener);
             listViewItems.addListener(weakListViewItemsListener);
         }
 
