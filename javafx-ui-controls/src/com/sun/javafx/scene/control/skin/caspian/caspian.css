@@ -2690,24 +2690,24 @@
 }
 
 /* CONTROL BUTTONS */
-.tab-pane > .tab-header-area > .headers-region > .control-buttons-tab {
+.tab-pane > .tab-header-area > .control-buttons-tab {
     -fx-background-color: -fx-tab-border-color, -fx-inner-border, -fx-body-color;
     -fx-background-insets: 0, 1, 2;
     -fx-background-radius: 5 5 0 0, 4 4 0 0, 3 3 0 0;
     -fx-padding: 0.083333em 0.25em 0.083333em 0.25em; /* 1 3 1 3 */
 }
 
-.tab-pane > .tab-header-area > .control-buttons-tab > .tab-down-button {
+.tab-pane > .tab-header-area > .control-buttons-tab > .container > .tab-down-button {
     -fx-background-color: transparent;
     -fx-padding: 0.0em 0.416667em 0.0em 0.416667em; /* 0 5 0 5 */
 }
 
-.tab-pane > .tab-header-area > .control-buttons-tab > .tab-down-button:hover {
+.tab-pane > .tab-header-area > .control-buttons-tab > .container > .tab-down-button:hover {
     -fx-background-color: -fx-body-color;
     -fx-color: -fx-hover-base;
 }
 
-.tab-pane > .tab-header-area > .control-buttons-tab > .tab-down-button .arrow {
+.tab-pane > .tab-header-area > .control-buttons-tab > .container > .tab-down-button .arrow {
     -fx-background-color: -fx-mark-highlight-color, -fx-mark-color;
     -fx-background-insets: 1 0 -1 0, 0;
     -fx-padding: 0.238083em 0.416667em 0.238083em 0.416667em; /* 2.857 5 2.857 5 */

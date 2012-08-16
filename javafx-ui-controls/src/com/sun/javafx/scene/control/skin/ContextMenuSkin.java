@@ -31,9 +31,9 @@ import javafx.scene.Node;
 import javafx.scene.control.ContextMenu;
 import javafx.scene.control.Menu;
 import javafx.scene.control.Skin;
-import javafx.scene.layout.StackPane;
 
 import com.sun.javafx.PlatformUtil;
+import javafx.scene.layout.Region;
 
 /**
  * Default Skin implementation for PopupMenu. Several controls use PopupMenu in
@@ -50,7 +50,7 @@ public class ContextMenuSkin implements Skin<ContextMenu> {
      * returns null in PopupControlSkin. */
     private ContextMenu popupMenu;
     
-    private final StackPane root;
+    private final Region root;
     
     /***/
     public ContextMenuSkin(final ContextMenu popupMenu) {
