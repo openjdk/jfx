@@ -24,7 +24,7 @@
  */
 package com.sun.javafx.scene.control.skin;
 
-import com.sun.javafx.scene.control.WeakListChangeListener;
+import javafx.collections.WeakListChangeListener;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;

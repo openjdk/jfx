@@ -34,18 +34,16 @@ import java.util.Map;
 import java.util.WeakHashMap;
 
 import javafx.beans.property.DoubleProperty;
-import javafx.beans.property.SimpleDoubleProperty;
 import javafx.geometry.HPos;
 import javafx.geometry.VPos;
 import javafx.scene.Node;
 import javafx.scene.control.TreeItem;
 import javafx.scene.control.TreeView;
 
-import com.sun.javafx.css.Styleable;
 import com.sun.javafx.css.StyleableDoubleProperty;
 import com.sun.javafx.css.StyleableProperty;
 import com.sun.javafx.css.converters.SizeConverter;
-import com.sun.javafx.scene.control.WeakListChangeListener;
+import javafx.collections.WeakListChangeListener;
 import com.sun.javafx.scene.control.behavior.CellBehaviorBase;
 import com.sun.javafx.scene.control.behavior.TreeTableRowBehavior;
 import javafx.beans.value.WritableValue;

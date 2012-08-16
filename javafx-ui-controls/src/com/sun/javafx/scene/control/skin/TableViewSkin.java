@@ -49,7 +49,7 @@ import javafx.scene.layout.StackPane;
 import javafx.util.Callback;
 
 import com.sun.javafx.scene.control.behavior.TableViewBehavior;
-import com.sun.javafx.scene.control.WeakListChangeListener;
+import javafx.collections.WeakListChangeListener;
 import com.sun.javafx.scene.control.skin.resources.ControlResources;
 import javafx.beans.WeakInvalidationListener;
 import javafx.beans.value.WeakChangeListener;

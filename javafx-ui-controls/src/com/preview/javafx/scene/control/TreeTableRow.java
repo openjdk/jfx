@@ -25,7 +25,6 @@
 package com.preview.javafx.scene.control;
 
 import com.sun.javafx.css.StyleManager;
-import com.sun.javafx.scene.control.WeakListChangeListener;
 import java.lang.ref.WeakReference;
 import javafx.beans.InvalidationListener;
 import javafx.beans.Observable;
@@ -35,6 +34,7 @@ import javafx.beans.property.ReadOnlyObjectProperty;
 import javafx.beans.property.ReadOnlyObjectWrapper;
 import javafx.beans.property.SimpleObjectProperty;
 import javafx.collections.ListChangeListener;
+import javafx.collections.WeakListChangeListener;
 import javafx.scene.Node;
 import javafx.scene.control.*;
 

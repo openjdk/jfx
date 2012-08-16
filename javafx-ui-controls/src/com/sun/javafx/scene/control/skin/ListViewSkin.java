@@ -37,7 +37,7 @@ import javafx.scene.control.ListView;
 import javafx.scene.control.SelectionModel;
 import javafx.scene.input.MouseEvent;
 
-import com.sun.javafx.scene.control.WeakListChangeListener;
+import javafx.collections.WeakListChangeListener;
 import com.sun.javafx.scene.control.behavior.ListViewBehavior;
 import javafx.util.Callback;
 

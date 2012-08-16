@@ -27,7 +27,7 @@ package javafx.scene.control;
 
 import com.sun.javafx.event.EventDispatchChainImpl;
 import com.sun.javafx.scene.control.FocusableTextField;
-import com.sun.javafx.scene.control.WeakListChangeListener;
+import javafx.collections.WeakListChangeListener;
 import com.sun.javafx.scene.control.skin.ComboBoxListViewSkin;
 import javafx.beans.InvalidationListener;
 import javafx.beans.Observable;

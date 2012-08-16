@@ -37,7 +37,7 @@ import javafx.scene.control.TableRow;
 import javafx.scene.control.TableView;
 
 import com.sun.javafx.scene.control.behavior.CellBehaviorBase;
-import com.sun.javafx.scene.control.WeakListChangeListener;
+import javafx.collections.WeakListChangeListener;
 import javafx.collections.ObservableList;
 import javafx.geometry.Insets;
 import javafx.scene.Node;

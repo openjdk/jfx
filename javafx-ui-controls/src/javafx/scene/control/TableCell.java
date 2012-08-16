@@ -35,7 +35,7 @@ import javafx.event.Event;
 import javafx.scene.control.TableView.TableViewFocusModel;
 
 import com.sun.javafx.property.PropertyReference;
-import com.sun.javafx.scene.control.WeakListChangeListener;
+import javafx.collections.WeakListChangeListener;
 import java.lang.ref.WeakReference;
 import javafx.beans.property.ReadOnlyObjectProperty;
 import javafx.beans.property.ReadOnlyObjectWrapper;

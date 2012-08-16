@@ -30,7 +30,7 @@ import javafx.beans.WeakInvalidationListener;
 import javafx.collections.ListChangeListener;
 import javafx.scene.control.TableView.TableViewFocusModel;
 
-import com.sun.javafx.scene.control.WeakListChangeListener;
+import javafx.collections.WeakListChangeListener;
 import java.lang.ref.WeakReference;
 import java.util.List;
 import javafx.beans.property.ReadOnlyObjectProperty;

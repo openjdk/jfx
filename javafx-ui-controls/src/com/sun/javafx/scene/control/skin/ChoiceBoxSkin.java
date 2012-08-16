@@ -52,7 +52,7 @@ import javafx.scene.layout.StackPane;
 import javafx.scene.text.Text;
 
 import com.sun.javafx.scene.control.behavior.ChoiceBoxBehavior;
-import com.sun.javafx.scene.control.WeakListChangeListener;
+import javafx.collections.WeakListChangeListener;
 
 
 /**

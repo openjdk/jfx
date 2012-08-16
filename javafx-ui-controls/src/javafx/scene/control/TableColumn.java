@@ -54,7 +54,7 @@ import javafx.util.Callback;
 import com.sun.javafx.scene.control.skin.Utils;
 import com.sun.javafx.event.EventHandlerManager;
 import com.sun.javafx.event.EventTypeUtil;
-import com.sun.javafx.scene.control.WeakListChangeListener;
+import javafx.collections.WeakListChangeListener;
 import com.sun.javafx.scene.control.skin.*;
 import java.util.Collections;
 import java.util.HashMap;
