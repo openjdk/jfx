@@ -840,41 +840,41 @@ public abstract class Task<V> extends FutureTask<V> implements Worker<V>, EventT
      */
     protected void failed() { }
 
-    private ObjectProperty<V> value = new SimpleObjectProperty<V>(this, "value");
+    private final ObjectProperty<V> value = new SimpleObjectProperty<V>(this, "value");
     private void setValue(V v) { checkThread(); value.set(v); }
     @Override public final V getValue() { checkThread(); return value.get(); }
     @Override public final ReadOnlyObjectProperty<V> valueProperty() { checkThread(); return value; }
 
-    private ObjectProperty<Throwable> exception = new SimpleObjectProperty<Throwable>(this, "exception");
+    private final ObjectProperty<Throwable> exception = new SimpleObjectProperty<Throwable>(this, "exception");
     private void _setException(Throwable value) { checkThread(); exception.set(value); }
     @Override public final Throwable getException() { checkThread(); return exception.get(); }
     @Override public final ReadOnlyObjectProperty<Throwable> exceptionProperty() { checkThread(); return exception; }
 
-    private DoubleProperty workDone = new SimpleDoubleProperty(this, "workDone", -1);
+    private final DoubleProperty workDone = new SimpleDoubleProperty(this, "workDone", -1);
     private void setWorkDone(double value) { checkThread(); workDone.set(value); }
     @Override public final double getWorkDone() { checkThread(); return workDone.get(); }
     @Override public final ReadOnlyDoubleProperty workDoneProperty() { checkThread(); return workDone; }
 
-    private DoubleProperty totalWork = new SimpleDoubleProperty(this, "totalWork", -1);
+    private final DoubleProperty totalWork = new SimpleDoubleProperty(this, "totalWork", -1);
     private void setTotalWork(double value) { checkThread(); totalWork.set(value); }
     @Override public final double getTotalWork() { checkThread(); return totalWork.get(); }
     @Override public final ReadOnlyDoubleProperty totalWorkProperty() { checkThread(); return totalWork; }
 
-    private DoubleProperty progress = new SimpleDoubleProperty(this, "progress", -1);
+    private final DoubleProperty progress = new SimpleDoubleProperty(this, "progress", -1);
     private void setProgress(double value) { checkThread(); progress.set(value); }
     @Override public final double getProgress() { checkThread(); return progress.get(); }
     @Override public final ReadOnlyDoubleProperty progressProperty() { checkThread(); return progress; }
 
-    private BooleanProperty running = new SimpleBooleanProperty(this, "running", false);
+    private final BooleanProperty running = new SimpleBooleanProperty(this, "running", false);
     private void setRunning(boolean value) { checkThread(); running.set(value); }
     @Override public final boolean isRunning() { checkThread(); return running.get(); }
     @Override public final ReadOnlyBooleanProperty runningProperty() { checkThread(); return running; }
 
-    private StringProperty message = new SimpleStringProperty(this, "message", "");
+    private final StringProperty message = new SimpleStringProperty(this, "message", "");
     @Override public final String getMessage() { return message.get(); }
     @Override public final ReadOnlyStringProperty messageProperty() { return message; }
 
-    private StringProperty title = new SimpleStringProperty(this, "title", "");
+    private final StringProperty title = new SimpleStringProperty(this, "title", "");
     @Override public final String getTitle() { return title.get(); }
     @Override public final ReadOnlyStringProperty titleProperty() { return title; }
 
@@ -1205,8 +1205,8 @@ public abstract class Task<V> extends FutureTask<V> implements Worker<V>, EventT
      * atomically. If it was not null, then we simply update it.
      */
     private static final class ProgressUpdate {
-        private double workDone;
-        private double totalWork;
+        private final double workDone;
+        private final double totalWork;
 
         private ProgressUpdate(double p, double m) {
             this.workDone = p;

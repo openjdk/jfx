@@ -210,7 +210,7 @@ public interface Worker<V> {
 
     /**
      * Indicates the current amount of work that has been completed. Zero or a
-     * positive value indicate progress toward completion. This variable's value
+     * positive value indicate progress toward completion. This variables value
      * may or may not change from its default value depending on the specific
      * Worker implementation. A value of -1 means that the current amount of work
      * done cannot be determined (ie: it is indeterminate). The value of
