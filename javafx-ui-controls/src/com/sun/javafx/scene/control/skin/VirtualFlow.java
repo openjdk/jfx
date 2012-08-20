@@ -139,7 +139,7 @@ public class VirtualFlow extends Region {
                     viewportBreadth = viewportLength = lastPosition = 0;
                     hbar.setValue(0);
                     vbar.setValue(0);
-                    mapper.adjustPosition(0.0f);
+                    adjustPosition(0.0f);
                     setNeedsLayout(true);
                     requestLayout();
                 }
@@ -204,7 +204,9 @@ public class VirtualFlow extends Region {
         // was at its maximum position.
         // FIXME this should be only executed on the pulse, so this will likely
         // lead to performance degradation until it is handled properly.
-        if (countChanged) layoutChildren();
+        if (countChanged) {
+            layoutChildren();
+        }
 
         // Fix for RT-13965: Without this line of code, the number of items in
         // the sheet would constantly grow, leaking memory for the life of the
@@ -226,42 +228,19 @@ public class VirtualFlow extends Region {
      * The position of the VirtualFlow within its list of cells. This is a value
      * between 0 and 1.
      */
-    private DoubleProperty position;
+    private double position;
 
-    public final void setPosition(double value) {
-        positionProperty().set(value);
-    }
-
-    public final double getPosition() {
-        return position == null ? 0.0 : position.get();
-    }
-
-    public final DoubleProperty positionProperty() {
-        if (position == null) {
-            position = new DoublePropertyBase() {
-                /**
-                 * Sets the position of the contents within the VirtualFlow and updates
-                 * the ui accordingly.
-                 */
-                @Override protected void invalidated() {
-                    if (get() != mapper.getPosition()) {
-                        mapper.adjustPosition(get());
-                        requestLayout();
-                    }
-                }
-
-                @Override
-                public Object getBean() {
-                    return VirtualFlow.this;
-                }
-
-                @Override
-                public String getName() {
-                    return "position";
-                }
-            };
-        }
+    public double getPosition() {
         return position;
+    }
+
+    public void setPosition(double position) {
+        boolean needsUpdate = this.position != position;
+        this.position = position;
+        if (needsUpdate) {
+            adjustPosition(position);
+            requestLayout();
+        }
     }
 
     /**
@@ -282,45 +261,12 @@ public class VirtualFlow extends Region {
         }
     }
 
-//    /**
-//     * Called when the cell's visuals need to be reconfigured.
-//     */
-//    private Runnable1<Void, IndexedCell> configCell;
-//    public Runnable1<Void, IndexedCell> getConfigCell() { return configCell; }
-//    protected void setConfigCell(Runnable1<Void, IndexedCell> cc) {
-//        this.configCell = cc;
-//
-//        if (configCell != null) {
-//            // If this function changes dynamically then we need to
-//            // reconfigure all of the cells.
-//            maxPrefBreadth = -1;
-//            requestLayout();
-//            if (getParent() != null) getParent().requestLayout();
-//        }
-//    }
-
-    /**
-     * The mapper is used to map from the VirtualFlow's "position" to the actual
-     * cells and so forth that are represented by that position.
-     */
-    private final PositionMapper mapper;
-
     /**
      * The number of cells on the first full page. This is recomputed whenever
      * the viewportLength changes, and is used for computing the visibleAmount
      * of the lengthBar.
      */
     private int numCellsVisibleOnScreen = -1;
-
-//    /**
-//     * Set to true during layoutChildren() and adjustPixels. This flag is used by the
-//     * ClippedContainer class. If a requestLayout happens on the ClippedContainer and
-//     * layingOut is false, then we assume one of the cells may have changed
-//     * size. So we will then ask all the existing cells what their sizes are,
-//     * and if the sum is different from the sum of their preferred sizes, then
-//     * we know we need to adjust the sizes of all the cells.
-//     */
-//    private boolean layingOut = false;
 
     /**
      * The maximum preferred size in the non-virtual direction. For example,
@@ -477,12 +423,6 @@ public class VirtualFlow extends Region {
 
     public VirtualFlow() {
         getStyleClass().add("virtual-flow");
-        mapper = new PositionMapper();
-        mapper.setGetItemSize(new Callback<Integer, Double>() {
-            @Override public Double call(Integer itemIndex) {
-                return getCellLength(itemIndex);
-            }
-        });
 
         // initContent
         // --- sheet
@@ -735,25 +675,12 @@ public class VirtualFlow extends Region {
 //        vbar.addChangedListener(ScrollBar.VALUE, listenerY);
 
         ChangeListener listenerY = new ChangeListener() {
-            @Override
-            public void changed(ObservableValue ov, Object t, Object t1) {
+            @Override public void changed(ObservableValue ov, Object t, Object t1) {
                 clipView.setClipY(isVertical() ? 0 : vbar.getValue());
             }
         };
         vbar.valueProperty().addListener(listenerY);
         
-        /*
-         * Watch the PositionMapper.position property, and when it changes
-         * update the location position value within this VirtualFlow instance.
-         * We don't expose the PositionMapper instance, but we do expose this
-         * position property externally.
-         */
-        mapper.positionProperty().addListener(new InvalidationListener() {
-            @Override public void invalidated(Observable valueModel) {
-                setPosition(mapper.getPosition());
-            }
-        });
-
         super.heightProperty().addListener(new ChangeListener<Number>() {
             @Override
             public void changed(ObservableValue<? extends Number> observable, Number oldHeight, Number newHeight) {
@@ -964,17 +891,11 @@ public class VirtualFlow extends Region {
             }
         }
 
-        // we update the viewport both here and after the following code.
-        // Without this it is possible to run in to the following issues:
-        // 1) The breadth bar may not show when a long item is added
-        // 2) The breadth bar may disappear when another item is added.
-        //    This is due to maxPrefBreadth being reset in reconfigureCells()
-        // 3) The viewportLength being incorrectly set to not take into account
-        //    the hbar protruding out and taking vertical space.
         updateViewport();
+        updateScrollBarsAndCells();  
 
         // Get the index of the "current" cell
-        int currentIndex = mapper.computeCurrentIndex();
+        int currentIndex = computeCurrentIndex();
         if (lastCellCount != cellCount) {
             // The cell count has changed. We want to keep the viewport
             // stable if possible. If position was 0 or 1, we want to keep
@@ -984,49 +905,52 @@ public class VirtualFlow extends Region {
             // top consistent, with the same translation etc.
             if (position == 0 || position == 1) {
                 // Update the item count
-                mapper.setItemCount(cellCount);
+//                setItemCount(cellCount);
             } else if (currentIndex >= cellCount) {
-                mapper.adjustPosition(1.0f);
-                mapper.setItemCount(cellCount);
+                adjustPosition(1.0f);
+//                setItemCount(cellCount);
             } else if (firstCell != null) {
                 double firstCellOffset = getCellPosition(firstCell);
                 int firstCellIndex = firstCell.getIndex();
-                mapper.setItemCount(cellCount);
+//                setItemCount(cellCount);
                 if (firstCell != null) {
-                    mapper.adjustPositionToIndex(firstCellIndex);
-                    double viewportTopToCellTop = -mapper.computeOffsetForCell(firstCellIndex);
-                    mapper.adjustByPixelAmount(viewportTopToCellTop - firstCellOffset);
+                    adjustPositionToIndex(firstCellIndex);
+                    double viewportTopToCellTop = -computeOffsetForCell(firstCellIndex);
+                    adjustByPixelAmount(viewportTopToCellTop - firstCellOffset);
                 }
             }
 
             // Update the current index
-            currentIndex = mapper.computeCurrentIndex();
+            currentIndex = computeCurrentIndex();
         }
 
         if (rebuild) {
             // Start by dumping all the cells into the pile
             addAllToPile();
+            
             // The distance from the top of the viewport to the top of the
             // cell for the current index.
-            double offset = -mapper.computeViewportOffset(mapper.getPosition());
+            double offset = -computeViewportOffset(getPosition());
+            
             // Add all the leading and trailing cells (the call to add leading
             // cells will add the current cell as well -- that is, the one that
             // represents the current position on the mapper).
             addLeadingCells(currentIndex, offset);
+            
             // Force filling of space with empty cells if necessary
             addTrailingCells(true);
         } else if (needTrailingCells) {
             addTrailingCells(true);
         }
 
-        updateViewport();
+        updateViewport(); 
+        updateScrollBarsAndCells();
 
         lastWidth = getWidth();
         lastHeight = getHeight();
         lastCellCount = getCellCount();
         lastVertical = isVertical();
         lastPosition = getPosition();
-//        layingOut = false;
     }
 
     /**
@@ -1087,7 +1011,7 @@ public class VirtualFlow extends Region {
         int firstIndex = cell.getIndex();
         double firstCellPos = getCellPosition(cell);
         if (firstIndex == 0 && firstCellPos > 0) {
-            mapper.adjustPosition(0.0f);
+            adjustPosition(0.0f);
             offset = 0;
             for (int i = 0; i < cells.size(); i++) {
                 cell = cells.get(i);
@@ -1183,9 +1107,9 @@ public class VirtualFlow extends Region {
             // to be at 0 instead of 1.
             start = getCellPosition(firstCell);
             if (firstCell.getIndex() == 0 && start == 0) {
-                mapper.adjustPosition(0);
+                adjustPosition(0);
             } else if (getPosition() != 1) {
-                mapper.adjustPosition(1);
+                adjustPosition(1);
             }
         }
 
@@ -1196,9 +1120,10 @@ public class VirtualFlow extends Region {
         // Initialize the viewportLength and viewportBreadth to match the
         // width/height of the flow
         final boolean isVertical = isVertical();
-        double lastViewportLength = viewportLength;
-        viewportLength = snapSize(isVertical ? getHeight() : getWidth());
-        viewportBreadth = snapSize(isVertical ? getWidth() : getHeight());
+        double width = getWidth();
+        double height = getHeight();
+        viewportLength = snapSize(isVertical ? height : width);
+        viewportBreadth = snapSize(isVertical ? width : height);
 
         // Assign the hbar and vbar to the breadthBar and lengthBar so as
         // to make some subsequent calculations easier.
@@ -1230,9 +1155,8 @@ public class VirtualFlow extends Region {
         // we need the breadth bar and the length bar.
         // The last condition here (viewportLength >= getHeight()) was added to
         // resolve the edge-case identified in RT-14350.
-        boolean needLengthBar = getPosition() > 0 && (cellCount >= cells.size() || viewportLength >= getHeight());
+        boolean needLengthBar = getPosition() > 0 && (cellCount >= cells.size() || viewportLength >= height);
         boolean needBreadthBar = maxPrefBreadth > viewportBreadth || (needLengthBar && maxPrefBreadth > (viewportBreadth - lengthBarBreadth));
-//        System.out.println(maxPrefBreadth + " > " + viewportBreadth + " || " + "(" + needLengthBar + " && " + maxPrefBreadth + " > ( " + viewportBreadth + " - " + lengthBarBreadth + "))");
 
         // Start by optimistically deciding whether the length bar and
         // breadth bar are needed and adjust the viewport dimensions
@@ -1241,13 +1165,8 @@ public class VirtualFlow extends Region {
         if (needBreadthBar) viewportLength -= breadthBarLength;
         if (needLengthBar) viewportBreadth -= lengthBarBreadth;
 
-        // Update the viewport size based on our prospective viewportLength
-        mapper.setViewportSize(viewportLength);
-
         breadthBar.setVisible(needBreadthBar);
         lengthBar.setVisible(needLengthBar);
-//        System.out.println("breadthBar is visible: " + breadthBar.isVisible());
-        updateScrollBarsAndViewport(lastViewportLength);
     }
 
     @Override protected void setWidth(double value) {
@@ -1262,12 +1181,13 @@ public class VirtualFlow extends Region {
         requestLayout();
     }
 
-    private void updateScrollBarsAndViewport(double lastViewportLength) {
+    private void updateScrollBarsAndCells() {
         // Assign the hbar and vbar to the breadthBar and lengthBar so as
         // to make some subsequent calculations easier.
         final boolean isVertical = isVertical();
         VirtualScrollBar breadthBar = isVertical ? hbar : vbar;
         VirtualScrollBar lengthBar = isVertical ? vbar : hbar;
+        
         double breadthBarLength = snapSize(isVertical ? hbar.prefHeight(-1) : vbar.prefWidth(-1));
         double lengthBarBreadth = snapSize(isVertical ? vbar.prefWidth(-1) : hbar.prefHeight(-1));
         
@@ -1277,13 +1197,14 @@ public class VirtualFlow extends Region {
         // through the loop may have made the breadth bar visible, which will
         // adjust the viewportLength, which may make the lengthBar need to
         // be visible as well.
+        final int cellsSize = cells.size();
         for (int i = 0; i < 2; i++) {
             if (! lengthBar.isVisible()) {
                 // If cellCount is > than cells.size(), then we know we need the
                 // length bar.
-                if (cellCount > cells.size()) {
+                if (cellCount > cellsSize) {
                     lengthBar.setVisible(true);
-                } else if (cellCount == cells.size()) {
+                } else if (cellCount == cellsSize) {
                     // We must check a corner case here where the cell count
                     // exactly matches the number of cells laid out. In this case,
                     // we need to check the last cell's layout position + length
@@ -1291,12 +1212,19 @@ public class VirtualFlow extends Region {
                     IndexedCell lastCell = cells.getLast();
                     lengthBar.setVisible((getCellPosition(lastCell) + getCellLength(lastCell)) > viewportLength);
                 }
+                
                 // If the bar is needed, adjust the viewportBreadth
-                if (lengthBar.isVisible()) viewportBreadth -= lengthBarBreadth;
+                if (lengthBar.isVisible()) {
+                    viewportBreadth -= lengthBarBreadth;
+                }
             }
+            
             if (! breadthBar.isVisible()) {
-                breadthBar.setVisible(maxPrefBreadth > viewportBreadth);
-                if (breadthBar.isVisible()) viewportLength -= breadthBarLength;
+                final boolean visible = maxPrefBreadth > viewportBreadth;
+                breadthBar.setVisible(visible);
+                if (visible) {
+                    viewportLength -= breadthBarLength;
+                }
             }
         }
 
@@ -1307,7 +1235,7 @@ public class VirtualFlow extends Region {
         double sumCellLength = 0;
         double flowLength = (isVertical ? getHeight() : getWidth()) -
             (breadthBar.isVisible() ? breadthBar.prefHeight(-1) : 0);
-        for (int i = 0; i < cells.size(); i++) {
+        for (int i = 0, max = cells.size(); i < max; i++) {
             IndexedCell cell = cells.get(i);
             if (cell != null && ! cell.isEmpty()) {
                 sumCellLength += (isVertical ? cell.getHeight() : cell.getWidth());
@@ -1321,22 +1249,6 @@ public class VirtualFlow extends Region {
 
         // Now position and update the scroll bars
         if (breadthBar.isVisible()) {
-            double topPadding;
-            double bottomPadding;
-            double leftPadding;
-            double rightPadding;
-
-            Parent parent = getParent();
-            if (parent instanceof Region) {
-                topPadding = ((Region)parent).getInsets().getTop();
-                bottomPadding = ((Region)parent).getInsets().getBottom();
-                leftPadding = ((Region)parent).getInsets().getLeft();
-                rightPadding = ((Region)parent).getInsets().getRight();
-            }
-            else {
-                topPadding = bottomPadding = leftPadding = rightPadding = 0.0;
-            }
-
             /*
             ** Positioning the ScrollBar
             */
@@ -1355,8 +1267,9 @@ public class VirtualFlow extends Region {
             if (newMax != breadthBar.getMax()) {
                 breadthBar.setMax(newMax);
 
-                boolean maxed = breadthBar.getValue() != 0 && breadthBar.getMax() == breadthBar.getValue();
-                if (maxed || breadthBar.getValue() > newMax) {
+                double breadthBarValue = breadthBar.getValue();
+                boolean maxed = breadthBarValue != 0 && newMax == breadthBarValue;
+                if (maxed || breadthBarValue > newMax) {
                     breadthBar.setValue(newMax);
                 }
 
@@ -1387,22 +1300,6 @@ public class VirtualFlow extends Region {
 //                lengthBar.setValue(0.99);
 //            }
 
-            double topPadding;
-            double bottomPadding;
-            double leftPadding;
-            double rightPadding;
-
-            Parent parent = getParent();
-            if (parent instanceof Region) {
-                topPadding = ((Region)parent).getInsets().getTop();
-                bottomPadding = ((Region)parent).getInsets().getBottom();
-                leftPadding = ((Region)parent).getInsets().getLeft();
-                rightPadding = ((Region)parent).getInsets().getRight();
-            }
-            else {
-                topPadding = bottomPadding = leftPadding = rightPadding = 0.0;
-            }
-
             /*
             ** Positioning the ScrollBar
             */
@@ -1420,11 +1317,6 @@ public class VirtualFlow extends Region {
 
         clipView.resize(snapSize(isVertical ? viewportBreadth : viewportLength),
                         snapSize(isVertical ? viewportLength : viewportBreadth));
-
-        // Update the viewport size based on our final viewportLength
-        if (mapper.getViewportSize() != viewportLength) {
-            mapper.setViewportSize(viewportLength);
-        }
 
         // We may have adjusted the viewport length and breadth after the
         // layout due to scroll bars becoming visible. So we need to perform
@@ -1449,9 +1341,10 @@ public class VirtualFlow extends Region {
      */
     private void fitCells() {
         double size = Math.max(maxPrefBreadth, viewportBreadth);
-        for (int i = 0; i < cells.size(); i++) {
+        boolean isVertical = isVertical();
+        for (int i = 0, max = cells.size(); i < max; i++) {
             Cell cell = cells.get(i);
-            if (isVertical()) {
+            if (isVertical) {
                 cell.resize(size, cell.getHeight());
             } else {
                 cell.resize(cell.getWidth(), size);
@@ -1559,11 +1452,11 @@ public class VirtualFlow extends Region {
             : cell.getLayoutBounds().getWidth();
     }
 
-    private double getCellPrefLength(IndexedCell cell) {
-        return isVertical() ?
-            cell.prefHeight(-1)
-            : cell.prefWidth(-1);
-    }
+//    private double getCellPrefLength(IndexedCell cell) {
+//        return isVertical() ?
+//            cell.prefHeight(-1)
+//            : cell.prefWidth(-1);
+//    }
 
     /**
      * Gets the breadth of a specific cell
@@ -1655,7 +1548,7 @@ public class VirtualFlow extends Region {
     }
 
     private void addAllToPile() {
-        while (cells.size() > 0) {
+        for (int i = 0, max = cells.size(); i < max; i++) {
             addToPile(cells.removeFirst());
         }
     }
@@ -1842,7 +1735,7 @@ public class VirtualFlow extends Region {
 
             // In this case, we're asked to show a random cell
 //            layingOut = true;
-            mapper.adjustPositionToIndex(index);
+            adjustPositionToIndex(index);
             addAllToPile();
             requestLayout();
 //            layingOut = false;            
@@ -1871,7 +1764,7 @@ public class VirtualFlow extends Region {
                 offset -= (getHeight() / 2.0);// + (getHbar() == null ? 0 : getHbar().getHeight()));
             }
 
-            mapper.adjustByPixelChunk(offset);
+            adjustByPixelChunk(offset);
         }
         
         requestLayout();        
@@ -1889,24 +1782,24 @@ public class VirtualFlow extends Region {
      * negative is up/left) the given number of pixels. It returns the number of
      * pixels actually moved.
      */
-    public double adjustPixels(double delta) {
+    public double adjustPixels(final double delta) {
         // Short cut this method for cases where nothing should be done
         if (delta == 0) return 0;
 
         final boolean isVertical = isVertical();
         if ((isVertical && ! vbar.isVisible()) || (! isVertical && ! hbar.isVisible())) return 0;
-        if (mapper.getPosition() == 0.0f && delta < 0) return 0;
-        if (mapper.getPosition() == 1.0f && delta > 0) return 0;
+        
+        double pos = getPosition();
+        if (pos == 0.0f && delta < 0) return 0;
+        if (pos == 1.0f && delta > 0) return 0;
 
-        double pos = mapper.getPosition();
-        mapper.adjustByPixelAmount(delta);
-        if (pos == mapper.getPosition()) {
+        adjustByPixelAmount(delta);
+        if (pos == getPosition()) {
             // The pos hasn't changed, there's nothing to do. This is likely
             // to occur when we hit either extremity
             return 0;
         }
 
-//        layingOut = true;
         // Now move stuff around. Translating by pixels fundamentally means
         // moving the cells by the delta. However, after having
         // done that, we need to go through the cells and see which cells,
@@ -1920,8 +1813,9 @@ public class VirtualFlow extends Region {
         // if we find that the maxPrefBreadth exceeds the viewportBreadth,
         // then we will be sure to show the breadthBar and update it
         // accordingly.
-        if (cells.size() > 0) {
-            for (int i = 0; i < cells.size(); i++) {
+        int cellsSize = cells.size();
+        if (cellsSize > 0) {
+            for (int i = 0; i < cellsSize; i++) {
                 IndexedCell cell = cells.get(i);
                 positionCell(cell, getCellPosition(cell) - delta);
             }
@@ -1951,7 +1845,7 @@ public class VirtualFlow extends Region {
                         IndexedCell cell = cells.get(i);
                         positionCell(cell, getCellPosition(cell) + emptySize);
                     }
-                    mapper.adjustPosition(1.0f);
+                    adjustPosition(1.0f);
                 }
             }
 
@@ -1960,9 +1854,8 @@ public class VirtualFlow extends Region {
         }
 
         // Finally, update the scroll bars
-        updateScrollBarsAndViewport(viewportLength);
+        updateScrollBarsAndCells();
         lastPosition = getPosition();
-//        layingOut = false;
 
         // notify
         return delta; // TODO fake
@@ -2025,7 +1918,151 @@ public class VirtualFlow extends Region {
         }
         return max;
     }
+    
+    
+    
+    // Old PositionMapper
+    /**
+     * Given a position value between 0 and 1, compute and return the viewport
+     * offset from the "current" cell associated with that position value.
+     * That is, if the return value of this function where used as a translation
+     * factor for a sheet that contained all the items, then the current
+     * item would end up positioned correctly.
+     */
+    private double computeViewportOffset(double position) {
+        double p = com.sun.javafx.Utils.clamp(0, position, 1);
+        double fractionalPosition = p * getCellCount();
+        int cellIndex = (int) fractionalPosition;
+        double fraction = fractionalPosition - cellIndex;
+        double cellSize = getCellLength(cellIndex);
+        double pixelOffset = cellSize * fraction;
+        double viewportOffset = viewportLength * p;
+        return pixelOffset - viewportOffset;
+    }
 
+    /**
+     * Simply adjusts the position to the given value, clamped between 0 and 1
+     * inclusive.
+     */
+    private void adjustPosition(double pos) {
+        setPosition(com.sun.javafx.Utils.clamp(0, pos, 1));
+    }
+
+    private void adjustPositionToIndex(int index) {
+        int cellCount = getCellCount();
+        if (cellCount <= 0) {
+            setPosition(0.0f);
+        } else {            
+            adjustPosition(((double)index) / cellCount);
+        }
+    }
+
+    /**
+     * Adjust the position based on a delta of pixels. If negative, then the
+     * position will be adjusted negatively. If positive, then the position will
+     * be adjusted positively. If the pixel amount is too great for the range of
+     * the position, then it will be clamped such that position is always
+     * strictly between 0 and 1
+     */
+    private void adjustByPixelAmount(double numPixels) {
+        if (numPixels == 0) return;
+        // Starting from the current cell, we move in the direction indicated
+        // by numPixels one cell at a team. For each cell, we discover how many
+        // pixels the "position" line would move within that cell, and adjust
+        // our count of numPixels accordingly. When we come to the "final" cell,
+        // then we can take the remaining number of pixels and multiply it by
+        // the "travel rate" of "p" within that cell to get the delta. Add
+        // the delta to "p" to get position.
+
+        // get some basic info about the list and the current cell
+        boolean forward = numPixels > 0;
+        int cellCount = getCellCount();
+        double fractionalPosition = getPosition() * cellCount;
+        int cellIndex = (int) fractionalPosition;
+        if (forward && cellIndex == cellCount) return;
+        double cellSize = getCellLength(cellIndex);
+        double fraction = fractionalPosition - cellIndex;
+        double pixelOffset = cellSize * fraction;
+
+        // compute the percentage of "position" that represents each cell
+        double cellPercent = 1.0 / cellCount;
+
+        // To help simplify the algorithm, we pretend as though the current
+        // position is at the beginning of the current cell. This reduces some
+        // of the corner cases and provides a simpler algorithm without adding
+        // any overhead to performance.
+        double start = computeOffsetForCell(cellIndex);
+        double end = cellSize + computeOffsetForCell(cellIndex + 1);
+
+        // We need to discover the distance that the fictional "position line"
+        // would travel within this cell, from its current position to the end.
+        double remaining = end - start;
+
+        // Keep track of the number of pixels left to travel
+        double n = forward ?
+              numPixels + pixelOffset - (viewportLength * getPosition()) - start
+            : -numPixels + end - (pixelOffset - (viewportLength * getPosition()));
+
+        // "p" represents the most recent value for position. This is always
+        // based on the edge between two cells, except at the very end of the
+        // algorithm where it is added to the computed "p" offset for the final
+        // value of Position.
+        double p = cellPercent * cellIndex;
+
+        // Loop over the cells one at a time until either we reach the end of
+        // the cells, or we find that the "n" will fall within the cell we're on
+        while (n > remaining && ((forward && cellIndex < cellCount - 1) || (! forward && cellIndex > 0))) {
+            if (forward) cellIndex++; else cellIndex--;
+            n -= remaining;
+            cellSize = getCellLength(cellIndex);
+            start = computeOffsetForCell(cellIndex);
+            end = cellSize + computeOffsetForCell(cellIndex + 1);
+            remaining = end - start;
+            p = cellPercent * cellIndex;
+        }
+
+        // if remaining is < n, then we must have hit an end, so as a
+        // fast path, we can just set position to 1.0 or 0.0 and return
+        // because we know we hit the end
+        if (n > remaining) {
+            setPosition(forward ? 1.0f : 0.0f);
+        } else if (forward) {
+            double rate = cellPercent / Math.abs(end - start);
+            setPosition(p + (rate * n));
+        } else {
+            double rate = cellPercent / Math.abs(end - start);
+            setPosition((p + cellPercent) - (rate * n));
+        }
+    }
+
+    private int computeCurrentIndex() {
+        return (int) (getPosition() * getCellCount());
+    }
+
+    /**
+     * Given an item index, this function will compute and return the viewport
+     * offset from the beginning of the specified item. Notice that because each
+     * item has the same percentage of the position dedicated to it, and since
+     * we are measuring from the start of each item, this is a very simple
+     * calculation.
+     */
+    private double computeOffsetForCell(int itemIndex) {
+        double cellCount = getCellCount();
+        double p = com.sun.javafx.Utils.clamp(0, itemIndex, cellCount) / cellCount;
+        return -(viewportLength * p);
+    }
+    
+    /**
+     * Adjust the position based on a chunk of pixels. The position is based
+     * on the start of the scrollbar position.
+     */
+    private void adjustByPixelChunk(double numPixels) {
+        setPosition(0);
+        adjustByPixelAmount(numPixels);
+    }
+    // end of old PositionMapper code
+    
+    
     /**
      * A simple extension to Region that ensures that anything wanting to flow
      * outside of the bounds of the Region is clipped.
