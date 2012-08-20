@@ -26,7 +26,6 @@
 package javafx.scene.input;
 
 import com.sun.javafx.collections.annotations.ReturnsUnmodifiableCollection;
-import com.sun.javafx.event.EventTypeUtil;
 import java.util.Collections;
 import java.util.List;
 import javafx.event.Event;

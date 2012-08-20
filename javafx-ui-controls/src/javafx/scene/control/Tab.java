@@ -43,7 +43,6 @@ import javafx.event.EventType;
 import javafx.scene.Node;
 
 import com.sun.javafx.event.EventHandlerManager;
-import com.sun.javafx.event.EventTypeUtil;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;

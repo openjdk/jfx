@@ -25,7 +25,6 @@
 
 package javafx.scene.input;
 
-import com.sun.javafx.event.EventTypeUtil;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.event.EventTarget;

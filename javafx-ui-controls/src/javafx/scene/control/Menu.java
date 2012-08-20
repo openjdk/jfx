@@ -35,7 +35,6 @@ import javafx.event.EventType;
 import javafx.scene.Node;
 
 import com.sun.javafx.collections.TrackableObservableList;
-import com.sun.javafx.event.EventTypeUtil;
 import com.sun.javafx.scene.control.Logging;
 import javafx.beans.DefaultProperty;
 import javafx.beans.property.ReadOnlyBooleanProperty;

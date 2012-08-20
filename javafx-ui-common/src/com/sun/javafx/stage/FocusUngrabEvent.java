@@ -25,7 +25,6 @@
 
 package com.sun.javafx.stage;
 
-import com.sun.javafx.event.EventTypeUtil;
 import javafx.event.Event;
 import javafx.event.EventTarget;
 import javafx.event.EventType;

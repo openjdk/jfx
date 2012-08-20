@@ -24,7 +24,6 @@
  */
 package javafx.scene.input;
 
-import com.sun.javafx.event.EventTypeUtil;
 import java.util.EnumSet;
 import java.util.Set;
 

@@ -26,7 +26,6 @@
 package javafx.scene.control;
 
 import com.sun.javafx.css.StyleManager;
-import com.sun.javafx.event.EventTypeUtil;
 import javafx.beans.property.*;
 import javafx.event.ActionEvent;
 import javafx.event.Event;

@@ -24,7 +24,6 @@
  */
 package javafx.scene.control;
 
-import com.sun.javafx.event.EventTypeUtil;
 import javafx.scene.control.cell.CheckBoxTreeCell;
 import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.SimpleBooleanProperty;
