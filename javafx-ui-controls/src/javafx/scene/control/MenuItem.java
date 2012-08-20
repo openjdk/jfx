@@ -331,7 +331,7 @@ public class MenuItem implements EventTarget {
     /**
      * <p>Called when a accelerator for the Menuitem is invoked</p>
      */
-    public static final EventType<Event> MENU_VALIDATION_EVENT = EventTypeUtil.registerInternalEventType
+    public static final EventType<Event> MENU_VALIDATION_EVENT = new EventType<Event>
             (Event.ANY, "MENU_VALIDATION_EVENT");
     
     /**

@@ -381,7 +381,7 @@ public class Tab implements EventTarget {
      * <p>Called when the tab becomes selected or unselected.</p>
      */
     public static final EventType<Event> SELECTION_CHANGED_EVENT = 
-            EventTypeUtil.registerInternalEventType(Event.ANY, "SELECTION_CHANGED_EVENT");
+            new EventType<Event> (Event.ANY, "SELECTION_CHANGED_EVENT");
     private ObjectProperty<EventHandler<Event>> onSelectionChanged;
 
     /**
@@ -427,7 +427,7 @@ public class Tab implements EventTarget {
     /**
      * <p>Called when a user closes this tab. This is useful for freeing up memory.</p>
      */
-    public static final EventType<Event> CLOSED_EVENT = EventTypeUtil.registerInternalEventType(Event.ANY, "TAB_CLOSED");
+    public static final EventType<Event> CLOSED_EVENT = new EventType<Event> (Event.ANY, "TAB_CLOSED");
     private ObjectProperty<EventHandler<Event>> onClosed;
 
     /**

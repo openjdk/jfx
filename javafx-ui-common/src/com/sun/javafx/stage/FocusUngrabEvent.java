@@ -32,7 +32,7 @@ import javafx.event.EventType;
 
 public final class FocusUngrabEvent extends Event {
     public static final EventType<FocusUngrabEvent> FOCUS_UNGRAB =
-            EventTypeUtil.registerInternalEventType(Event.ANY, "FOCUS_UNGRAB");
+            new EventType<FocusUngrabEvent>(Event.ANY, "FOCUS_UNGRAB");
 
     public FocusUngrabEvent() {
         super(FOCUS_UNGRAB);

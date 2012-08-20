@@ -62,31 +62,31 @@ public class SwipeEvent extends GestureEvent {
      * Common supertype for all swipe event types.
      */
     public static final EventType<SwipeEvent> ANY =
-            EventTypeUtil.registerInternalEventType(GestureEvent.ANY, "ANY_SWIPE");
+            new EventType<SwipeEvent>(GestureEvent.ANY, "ANY_SWIPE");
 
     /**
      * This event occurs when user performs leftward swipe gesture.
      */
     public static final EventType<SwipeEvent> SWIPE_LEFT =
-            EventTypeUtil.registerInternalEventType(SwipeEvent.ANY, "SWIPE_LEFT");
+            new EventType<SwipeEvent>(SwipeEvent.ANY, "SWIPE_LEFT");
 
     /**
      * This event occurs when user performs rightward swipe gesture.
      */
     public static final EventType<SwipeEvent> SWIPE_RIGHT =
-            EventTypeUtil.registerInternalEventType(SwipeEvent.ANY, "SWIPE_RIGHT");
+            new EventType<SwipeEvent>(SwipeEvent.ANY, "SWIPE_RIGHT");
 
     /**
      * This event occurs when user performs upward swipe gesture.
      */
     public static final EventType<SwipeEvent> SWIPE_UP =
-            EventTypeUtil.registerInternalEventType(SwipeEvent.ANY, "SWIPE_UP");
+            new EventType<SwipeEvent>(SwipeEvent.ANY, "SWIPE_UP");
 
     /**
      * This event occurs when user performs downward swipe gesture.
      */
     public static final EventType<SwipeEvent> SWIPE_DOWN =
-            EventTypeUtil.registerInternalEventType(SwipeEvent.ANY, "SWIPE_DOWN");
+            new EventType<SwipeEvent>(SwipeEvent.ANY, "SWIPE_DOWN");
 
     private SwipeEvent(final EventType<? extends SwipeEvent> eventType) {
         super(eventType);

@@ -59,20 +59,20 @@ public class MouseDragEvent extends MouseEvent {
      * Common supertype for all mouse event types.
      */
     public static final EventType<MouseDragEvent> ANY =
-            EventTypeUtil.registerInternalEventType(MouseEvent.ANY, "MOUSE-DRAG");
+            new EventType<MouseDragEvent>(MouseEvent.ANY, "MOUSE-DRAG");
 
     /**
      * This event occurs when the gesture progresses within this node.
      */
     public static final EventType<MouseDragEvent> MOUSE_DRAG_OVER =
-            EventTypeUtil.registerInternalEventType(MouseDragEvent.ANY, "MOUSE-DRAG_OVER");
+            new EventType<MouseDragEvent>(MouseDragEvent.ANY, "MOUSE-DRAG_OVER");
 
     /**
      * This event occurs when the gesture ends (by releasing mouse button)
      * on this node.
      */
     public static final EventType<MouseDragEvent> MOUSE_DRAG_RELEASED =
-            EventTypeUtil.registerInternalEventType(MouseDragEvent.ANY, "MOUSE-DRAG_RELEASED");
+            new EventType<MouseDragEvent>(MouseDragEvent.ANY, "MOUSE-DRAG_RELEASED");
 
     /**
      * This event occurs when the gesture enters a node. It's the bubbling variant,
@@ -85,7 +85,7 @@ public class MouseDragEvent extends MouseEvent {
      * which is similar
      */
     public static final EventType<MouseDragEvent> MOUSE_DRAG_ENTERED_TARGET =
-            EventTypeUtil.registerInternalEventType(MouseDragEvent.ANY, "MOUSE-DRAG_ENTERED_TARGET");
+            new EventType<MouseDragEvent>(MouseDragEvent.ANY, "MOUSE-DRAG_ENTERED_TARGET");
 
     /**
      * This event occurs when the gesture enters a node. This event type is
@@ -96,7 +96,7 @@ public class MouseDragEvent extends MouseEvent {
      * which is similar
      */
     public static final EventType<MouseDragEvent> MOUSE_DRAG_ENTERED =
-            EventTypeUtil.registerInternalEventType(MouseDragEvent.MOUSE_DRAG_ENTERED_TARGET,
+            new EventType<MouseDragEvent>(MouseDragEvent.MOUSE_DRAG_ENTERED_TARGET,
                     "MOUSE-DRAG_ENTERED");
 
     /**
@@ -110,7 +110,7 @@ public class MouseDragEvent extends MouseEvent {
      * which is similar
      */
     public static final EventType<MouseDragEvent> MOUSE_DRAG_EXITED_TARGET =
-            EventTypeUtil.registerInternalEventType(MouseDragEvent.ANY, "MOUSE-DRAG_EXITED_TARGET");
+            new EventType<MouseDragEvent>(MouseDragEvent.ANY, "MOUSE-DRAG_EXITED_TARGET");
 
     /**
      * This event occurs when the gesture exits a node. This event type is
@@ -121,7 +121,7 @@ public class MouseDragEvent extends MouseEvent {
      * which is similar
      */
     public static final EventType<MouseDragEvent> MOUSE_DRAG_EXITED =
-            EventTypeUtil.registerInternalEventType(MouseDragEvent.MOUSE_DRAG_EXITED_TARGET,
+            new EventType<MouseDragEvent>(MouseDragEvent.MOUSE_DRAG_EXITED_TARGET,
                     "MOUSE-DRAG_EXITED");
 
     private MouseDragEvent(Object source, EventTarget target,

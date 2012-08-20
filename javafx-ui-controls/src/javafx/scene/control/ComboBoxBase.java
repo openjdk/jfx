@@ -79,25 +79,25 @@ public abstract class ComboBoxBase<T> extends Control {
      * has clicked or otherwise interacted with the ComboBox.
      */
     public static final EventType<Event> ON_SHOWING =
-            EventTypeUtil.registerInternalEventType(Event.ANY, "COMBO_BOX_BASE_ON_SHOWING");
+            new EventType<Event>(Event.ANY, "COMBO_BOX_BASE_ON_SHOWING");
 
     /**
      * <p>Called after the ComboBox has shown its popup/display.
      */
     public static final EventType<Event> ON_SHOWN =
-            EventTypeUtil.registerInternalEventType(Event.ANY, "COMBO_BOX_BASE_ON_SHOWN");
+            new EventType<Event>(Event.ANY, "COMBO_BOX_BASE_ON_SHOWN");
 
     /**
      * <p>Called when the ComboBox popup/display <b>will</b> be hidden. 
      */
     public static final EventType<Event> ON_HIDING =
-            EventTypeUtil.registerInternalEventType(Event.ANY, "COMBO_BOX_BASE_ON_HIDING");
+            new EventType<Event>(Event.ANY, "COMBO_BOX_BASE_ON_HIDING");
 
     /**
      * <p>Called when the ComboBox popup/display has been hidden.
      */
     public static final EventType<Event> ON_HIDDEN =
-            EventTypeUtil.registerInternalEventType(Event.ANY, "COMBO_BOX_BASE_ON_HIDDEN");
+            new EventType<Event>(Event.ANY, "COMBO_BOX_BASE_ON_HIDDEN");
     
     
     

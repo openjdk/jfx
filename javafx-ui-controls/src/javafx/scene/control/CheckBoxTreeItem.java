@@ -96,7 +96,7 @@ public class CheckBoxTreeItem<T> extends TreeItem<T> {
         return (EventType<TreeModificationEvent<T>>) CHECK_BOX_SELECTION_CHANGED_EVENT;
     }
     private static final EventType<?> CHECK_BOX_SELECTION_CHANGED_EVENT
-            = EventTypeUtil.registerInternalEventType(Event.ANY, "checkBoxSelectionChangedEvent");
+            = new EventType(Event.ANY, "checkBoxSelectionChangedEvent");
 
     /***************************************************************************
      *                                                                         *

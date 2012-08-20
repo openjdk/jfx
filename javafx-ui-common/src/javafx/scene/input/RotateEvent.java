@@ -63,26 +63,26 @@ public class RotateEvent extends GestureEvent {
      * Common supertype for all rotate event types.
      */
     public static final EventType<RotateEvent> ANY =
-            EventTypeUtil.registerInternalEventType(GestureEvent.ANY, "ANY_ROTATE");
+            new EventType<RotateEvent>(GestureEvent.ANY, "ANY_ROTATE");
 
     /**
      * This event occurs when user performs a rotating gesture such as
      * dragging two fingers around each other.
      */
     public static final EventType<RotateEvent> ROTATE =
-            EventTypeUtil.registerInternalEventType(RotateEvent.ANY, "ROTATE");
+            new EventType<RotateEvent>(RotateEvent.ANY, "ROTATE");
 
     /**
      * This event occurs when a rotating gesture is detected.
      */
     public static final EventType<RotateEvent> ROTATION_STARTED =
-            EventTypeUtil.registerInternalEventType(RotateEvent.ANY, "ROTATION_STARTED");
+            new EventType<RotateEvent>(RotateEvent.ANY, "ROTATION_STARTED");
 
     /**
      * This event occurs when a rotating gesture ends.
      */
     public static final EventType<RotateEvent> ROTATION_FINISHED =
-            EventTypeUtil.registerInternalEventType(RotateEvent.ANY, "ROTATION_FINISHED");
+            new EventType<RotateEvent>(RotateEvent.ANY, "ROTATION_FINISHED");
 
     private RotateEvent(final EventType<? extends RotateEvent> eventType) {
         super(eventType);

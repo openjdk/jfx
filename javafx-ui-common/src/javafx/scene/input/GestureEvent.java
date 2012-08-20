@@ -51,7 +51,7 @@ public class GestureEvent extends InputEvent {
      * Common supertype for all gestures.
      */
     public static final EventType<GestureEvent> ANY =
-            EventTypeUtil.registerInternalEventType(InputEvent.ANY, "GESTURE");
+            new EventType<GestureEvent>(InputEvent.ANY, "GESTURE");
 
     /**
      * Creates a new instance of {@code GestureEvent}.

@@ -103,28 +103,28 @@ public class ScrollEvent extends GestureEvent {
      * Common supertype for all scroll event types.
      */
     public static final EventType<ScrollEvent> ANY =
-            EventTypeUtil.registerInternalEventType(GestureEvent.ANY, "ANY_SCROLL");
+            new EventType<ScrollEvent> (GestureEvent.ANY, "ANY_SCROLL");
 
     /**
      * This event occurs when user performs a scrolling action such as
      * rotating mouse wheel or dragging a finger over touch screen.
      */
     public static final EventType<ScrollEvent> SCROLL =
-            EventTypeUtil.registerInternalEventType(ScrollEvent.ANY, "SCROLL");
+            new EventType<ScrollEvent> (ScrollEvent.ANY, "SCROLL");
 
     /**
      * This event occurs when a scrolling gesture is detected. It doesn't
      * occur for mouse wheel scrolling.
      */
     public static final EventType<ScrollEvent> SCROLL_STARTED =
-            EventTypeUtil.registerInternalEventType(ScrollEvent.ANY, "SCROLL_STARTED");
+            new EventType<ScrollEvent> (ScrollEvent.ANY, "SCROLL_STARTED");
 
     /**
      * This event occurs when a scrolling gesture ends. It doesn't
      * occur for mouse wheel scrolling.
      */
     public static final EventType<ScrollEvent> SCROLL_FINISHED =
-            EventTypeUtil.registerInternalEventType(ScrollEvent.ANY, "SCROLL_FINISHED");
+            new EventType<ScrollEvent> (ScrollEvent.ANY, "SCROLL_FINISHED");
 
     
     private ScrollEvent(final EventType<? extends ScrollEvent> eventType) {
