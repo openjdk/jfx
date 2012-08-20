@@ -41,7 +41,6 @@ import javafx.collections.WeakListChangeListener;
 import javafx.collections.ObservableList;
 import javafx.geometry.Insets;
 import javafx.scene.Node;
-import javafx.scene.control.*;
 
 /**
  */

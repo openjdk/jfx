@@ -206,15 +206,13 @@ public class VirtualFlow extends Region {
         // lead to performance degradation until it is handled properly.
         if (countChanged) {
             layoutChildren();
-        }
 
-        // Fix for RT-13965: Without this line of code, the number of items in
-        // the sheet would constantly grow, leaking memory for the life of the
-        // application. This was especially apparent when the total number of
-        // cells changes - regardless of whether it became bigger or smaller.
-        sheetChildren.clear();
+            // Fix for RT-13965: Without this line of code, the number of items in
+            // the sheet would constantly grow, leaking memory for the life of the
+            // application. This was especially apparent when the total number of
+            // cells changes - regardless of whether it became bigger or smaller.
+            sheetChildren.clear();
 
-        if (countChanged) {
             Parent parent = getParent();
             if (parent != null) parent.requestLayout();
         }
