@@ -133,8 +133,8 @@ final public class CSSParser {
     static {
         LOGGER = com.sun.javafx.Logging.getCSSLogger();
         final int level = LOGGER.getLevel();
-        if (LOGGER.getLevel() > PlatformLogger.WARNING &&
-            LOGGER.getLevel() != PlatformLogger.OFF) {
+        if (level > PlatformLogger.WARNING &&
+            level != PlatformLogger.OFF) {
             LOGGER.setLevel(PlatformLogger.WARNING);
         }
     }
@@ -1683,7 +1683,7 @@ final public class CSSParser {
 
             prev = arg;
             if ((arg = arg.nextInSeries) == null ||
-                arg.token == null |
+                arg.token == null ||
                 arg.token.getType() != CSSLexer.IDENT ||
                 arg.token.getText().isEmpty()) {
                 error (prev, "Expected \'<side-or-corner>\'");
@@ -2206,8 +2206,6 @@ final public class CSSParser {
     // <size> | <size> <size> <size> <size>
     private ParsedValue<ParsedValue<?,Size>[],Insets> parseInsetsLayer(Term root)
             throws ParseException {
-
-        int nLayers = numberOfLayers(root);
 
         Term temp = root;
         ParsedValue<ParsedValue<?,Size>[],Insets> layer = null;
@@ -3005,7 +3003,7 @@ final public class CSSParser {
         }
 
         Term arg = root.firstArg;
-        if (arg == null) error(arg, "Expected \'<size>\'");
+        if (arg == null) error(null, "Expected \'<size>\'");
 
         int nArgs = numberOfArgs(root);
         ParsedValue<?,Size>[] segments = new ParsedValue[nArgs];
@@ -3469,8 +3467,8 @@ final public class CSSParser {
 
             if ((currentToken != null) &&
                 (currentToken.getType() != CSSLexer.RBRACE)) {
-                    final int line = currentToken != null ? currentToken.getLine() : -1;
-                    final int pos = currentToken != null ? currentToken.getOffset() : -1;
+                    final int line = currentToken.getLine();
+                    final int pos = currentToken.getOffset();
                     final String msg = 
                         MessageFormat.format("Expected RBRACE at [{0,number,#},{1,number,#}]",
                         line,pos);
@@ -3717,7 +3715,7 @@ final public class CSSParser {
                 }
 
                 // current token is either SEMI, RBRACE or EOF.
-                if (currentToken == null &&
+                if (currentToken != null &&
                     currentToken.getType() != CSSLexer.SEMI)
                     return declarations;
             }
@@ -3771,8 +3769,8 @@ final public class CSSParser {
 
         if ((currentToken == null) ||
             (currentToken.getType() != CSSLexer.COLON)) {
-                final int line = currentToken != null ? currentToken.getLine() : -1;
-                final int pos = currentToken != null ? currentToken.getOffset() : -1;
+                final int line = currentToken.getLine();
+                final int pos = currentToken.getOffset();
                 final String msg = 
                         MessageFormat.format("Expected COLON at [{0,number,#},{1,number,#}]",
                     line,pos);

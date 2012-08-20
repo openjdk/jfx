@@ -106,7 +106,7 @@ import javafx.stage.Window;
 
 abstract public class StyleManager<T> {
 
-    protected static PlatformLogger LOGGER = com.sun.javafx.Logging.getCSSLogger();
+    protected final static PlatformLogger LOGGER = com.sun.javafx.Logging.getCSSLogger();
 
     /**
      * Return the StyleManager for the given Scene, or null if the scene
@@ -217,7 +217,7 @@ abstract public class StyleManager<T> {
      * setDefaultUserAgentStylesheet function call) then we will end up clearing
      * all of the caches.
      */
-    protected static Stylesheet defaultUserAgentStylesheet;
+    static Stylesheet defaultUserAgentStylesheet;
 
 
     /**
@@ -386,7 +386,7 @@ abstract public class StyleManager<T> {
                     ** it's the correct jar, check it's a file access
                     ** strip off the leading jar
                     */
-                    if (styleManagerJarPath.equals(requestedFileJarPart.toString())) {
+                    if (styleManagerJarPath.equals(requestedFileJarPart)) {
                         /*
                         ** strip off the leading "jar",
                         ** the css file name is past the last '!'
@@ -590,10 +590,10 @@ abstract public class StyleManager<T> {
             CssError.setCurrentScene(scene);
 
             Stylesheet ua_stylesheet = loadStylesheet(fname);
-            ua_stylesheet.setOrigin(Stylesheet.Origin.USER_AGENT);
-            userAgentStylesheetMap.put(fname, ua_stylesheet);
 
             if (ua_stylesheet != null) {
+                ua_stylesheet.setOrigin(Stylesheet.Origin.USER_AGENT);
+                userAgentStylesheetMap.put(fname, ua_stylesheet);
                 userAgentStylesheetsChanged();
             }
 

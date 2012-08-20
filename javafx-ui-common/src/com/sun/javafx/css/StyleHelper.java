@@ -1092,7 +1092,7 @@ public class StyleHelper {
                     final Object ret = keyType.convert(subs);
                     return new CalculatedValue(ret, origin, isRelative);
                 } catch (ClassCastException cce) {
-                    final String msg = formatExceptionMessage(node, styleable, style.getStyle(), cce);
+                    final String msg = formatExceptionMessage(node, styleable, null, cce);
                     List<CssError> errors = null;
                     if ((errors = StyleManager.getErrors()) != null) {
                         final CssError error = new CssError.PropertySetError(styleable, node, msg);
@@ -1526,7 +1526,7 @@ public class StyleHelper {
                 // did we get a fontValue from the preceding block (from the hack)?
                 // if not, get it from our cachEntry or choose the default.cd
                 if (fontValue == null && cacheEntry != null) {
-                    fontValue = cacheEntry != null ? cacheEntry.font : null;
+                    fontValue = cacheEntry.font;
                 }
                 final Font font = (fontValue != null) ? (Font)fontValue.value : Font.getDefault();
 
@@ -1880,7 +1880,7 @@ public class StyleHelper {
         
         Node parent = node;
         StyleHelper helper = this;
-        String property = styleable.getProperty();
+        String property = styleable == null ? null : styleable.getProperty();
         CascadingStyle csShorthand = null;
         while (parent != null) {
             

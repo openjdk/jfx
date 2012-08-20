@@ -32,6 +32,7 @@ import java.io.DataOutputStream;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
+import java.net.URI;
 import java.net.URL;
 import java.util.ArrayList;
 import java.util.List;
@@ -141,9 +142,24 @@ final public class Stylesheet {
         if (this == obj) return true;
         if (obj instanceof Stylesheet) {
             Stylesheet other = (Stylesheet)obj;
-            return (this.url == null) ? (other.url == null) : url.equals(other.url);
+            
+            if (this.url == null && other.url == null) {
+                return true;
+            } else {
+                // convert to Strings, as URL.equals is slow. See here:
+                // http://michaelscharf.blogspot.com/2006/11/javaneturlequals-and-hashcode-make.html
+                String thisUrlString = this.url.toExternalForm();
+                String otherUrlString = other.url.toExternalForm();
+                return thisUrlString.equals(otherUrlString);
+            }
         }
         return false;
+    }
+    
+    @Override public int hashCode() {
+        int hash = 7;
+        hash = 13 * hash + (this.url != null ? this.url.hashCode() : 0);
+        return hash;
     }
 
     /** Returns a string representation of this object. */
