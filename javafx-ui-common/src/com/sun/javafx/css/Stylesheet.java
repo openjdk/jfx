@@ -145,6 +145,8 @@ final public class Stylesheet {
             
             if (this.url == null && other.url == null) {
                 return true;
+            } else if (this.url == null || other.url == null) {
+                return false;
             } else {
                 // convert to Strings, as URL.equals is slow. See here:
                 // http://michaelscharf.blogspot.com/2006/11/javaneturlequals-and-hashcode-make.html
