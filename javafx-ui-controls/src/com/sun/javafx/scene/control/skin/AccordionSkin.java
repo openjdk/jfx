@@ -87,9 +87,9 @@ public class AccordionSkin extends SkinBase<Accordion, AccordionBehavior> {
     @Override
     protected void handleControlPropertyChanged(String property) {
         super.handleControlPropertyChanged(property);
-        if (property == "WIDTH") {
+        if ("WIDTH".equals(property)) {
             clipRect.setWidth(getWidth());
-        } else if (property == "HEIGHT") {
+        } else if ("HEIGHT".equals(property)) {
             clipRect.setHeight(getHeight());
         }
     }

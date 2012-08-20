@@ -283,7 +283,7 @@ public class ChoiceBox<T> extends Control {
             // Update selection
             final SingleSelectionModel<T> sm = getSelectionModel();
             if (sm != null) {
-                sm.select(getValue());
+                sm.select(super.getValue());
             }
         }
     };

@@ -1434,6 +1434,7 @@ public class TableColumn<S,T> implements EventTarget {
      * An event that is fired when a user performs an edit on a table cell.
      */
     public static class CellEditEvent<S,T> extends Event {
+        private static final long serialVersionUID = -609964441682677579L;
 
         // represents the new value input by the end user. This is NOT the value
         // to go back into the TableView.items list - this new value represents

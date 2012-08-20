@@ -405,7 +405,7 @@ public class TableView<S> extends Control {
                         // finishes early due to a series of "fixed" entries at the end.
                         // In this case, lowerBound == upperBound, for all subsequent terms.
                         double newSize;
-                        if (totalLowerBound == totalUpperBound) {
+                        if (Math.abs(totalLowerBound - totalUpperBound) < .0000001) {
                             newSize = lowerBound;
                         } else {
                             double f = (target - totalLowerBound) / (totalUpperBound - totalLowerBound);
@@ -831,7 +831,7 @@ public class TableView<S> extends Control {
                 if (getSelectionModel() instanceof TableViewArrayListSelectionModel) {
                     ((TableViewArrayListSelectionModel)getSelectionModel()).updateItemsObserver(oldItems, getItems());
                 }
-                if (getFocusModel() instanceof TableViewFocusModel) {
+                if (getFocusModel() != null) {
                     ((TableViewFocusModel)getFocusModel()).updateItemsObserver(oldItems, getItems());
                 }
                 if (getSkin() instanceof TableViewSkin) {

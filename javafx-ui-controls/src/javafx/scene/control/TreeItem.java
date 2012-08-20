@@ -823,7 +823,8 @@ public class TreeItem<T> implements EventTarget {
      * TreeItem modifications.
      */
     public static class TreeModificationEvent<T> extends Event {
-
+        private static final long serialVersionUID = 4741889985221719579L;
+        
         private transient final TreeItem<T> treeItem;
         private final T newValue;
 

@@ -116,9 +116,9 @@ public class TreeViewSkin<T> extends VirtualContainerBase<TreeView<T>, TreeViewB
     @Override protected void handleControlPropertyChanged(String p) {
         super.handleControlPropertyChanged(p);
         
-        if (p == "ROOT") {
+        if ("ROOT".equals(p)) {
             setRoot(getSkinnable().getRoot());
-        } else if (p == "SHOW_ROOT") {
+        } else if ("SHOW_ROOT".equals(p)) {
             // if we turn off showing the root, then we must ensure the root
             // is expanded - otherwise we end up with no visible items in
             // the tree.
@@ -128,9 +128,9 @@ public class TreeViewSkin<T> extends VirtualContainerBase<TreeView<T>, TreeViewB
                  // update the item count in the flow and behavior instances
                 updateItemCount();
             }
-        } else if (p == "CELL_FACTORY") {
+        } else if ("CELL_FACTORY".equals(p)) {
             flow.recreateCells();
-        } else if (p == "FOCUS_TRAVERSABLE") {
+        } else if ("FOCUS_TRAVERSABLE".equals(p)) {
             flow.setFocusTraversable(getSkinnable().isFocusTraversable());
         }
     }

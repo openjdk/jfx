@@ -100,17 +100,17 @@ public class TableRowSkin<T> extends CellSkinBase<TableRow<T>, CellBehaviorBase<
         // we run this before the super call because we want to update whether
         // we are showing columns or the node (if it isn't null) before the
         // parent class updates the content
-        if (p == "TEXT" || p == "GRAPHIC" || p == "EDITING") {
+        if ("TEXT".equals(p) || "GRAPHIC".equals(p) || "EDITING".equals(p)) {
             updateShowColumns();
         }
 
         super.handleControlPropertyChanged(p);
 
-        if (p == "ITEM") {
+        if ("ITEM".equals(p)) {
             updateCells = true;
             requestLayout();
             getSkinnable().layout();
-        } else if (p == "TABLE_VIEW") {
+        } else if ("TABLE_VIEW".equals(p)) {
             for (int i = 0; i < getChildren().size(); i++) {
                 Node n = getChildren().get(i);
                 if (n instanceof TableCell) {

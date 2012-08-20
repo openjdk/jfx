@@ -963,6 +963,8 @@ public class TreeView<T> extends Control {
      *      itself.
      */
     public static class EditEvent<T> extends Event {
+        private static final long serialVersionUID = -4437033058917528976L;
+        
         private final T oldValue;
         private final T newValue;
         private transient final TreeItem<T> treeItem;

@@ -2068,7 +2068,6 @@ public class VirtualFlow extends Region {
      * outside of the bounds of the Region is clipped.
      */
     static class ClippedContainer extends Region {
-        private VirtualFlow flow;
 
         /**
          * The Node which is embedded within this {@code ClipView}.
@@ -2098,7 +2097,6 @@ public class VirtualFlow extends Region {
             }
 
             getStyleClass().add("clipped-container");
-            this.flow = flow;
             setManaged(false);
 
             // clipping

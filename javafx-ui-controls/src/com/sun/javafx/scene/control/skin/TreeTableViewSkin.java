@@ -26,7 +26,6 @@ package com.sun.javafx.scene.control.skin;
 
 import com.preview.javafx.scene.control.TreeTableRow;
 import com.preview.javafx.scene.control.TreeTableView;
-import com.sun.javafx.scene.control.WeakEventHandler;
 import com.sun.javafx.scene.control.behavior.TreeTableViewBehavior;
 import java.lang.ref.WeakReference;
 import javafx.collections.FXCollections;
@@ -99,9 +98,9 @@ public class TreeTableViewSkin<T> extends SkinBase<TreeTableView<T>, TreeTableVi
     @Override protected void handleControlPropertyChanged(String p) {
         super.handleControlPropertyChanged(p);
         
-        if (p == "ROOT") {
+        if ("ROOT".equals(p)) {
             setRoot(getSkinnable().getRoot());
-        } else if (p == "SHOW_ROOT") {
+        } else if ("SHOW_ROOT".equals(p)) {
             // if we turn off showing the root, then we must ensure the root
             // is expanded - otherwise we end up with no visible items in
             // the tree.
@@ -111,29 +110,21 @@ public class TreeTableViewSkin<T> extends SkinBase<TreeTableView<T>, TreeTableVi
                  // update the item count in the flow and behavior instances
                 updateItemCount();
             }
-        } else if (p == "CELL_FACTORY") {
+        } else if ("CELL_FACTORY".equals(p)) {
             // FIXME can't set treeview cell factory in to a table!
-        } else if (p == "TREE_ITEM_COUNT") {
+        } else if ("TREE_ITEM_COUNT".equals(p)) {
             updateItemCount();
 //        } else if (p == "FOCUS_TRAVERSABLE") {
 //            flow.setFocusTraversable(getSkinnable().isFocusTraversable());
         }
     }
     
-    private WeakEventHandler weakRootListener;
     private WeakReference<TreeItem> weakRoot;
     private TreeItem getRoot() {
         return weakRoot == null ? null : weakRoot.get();
     }
     private void setRoot(TreeItem newRoot) {
-//        if (getRoot() != null && weakRootListener != null) {
-//            getRoot().removeEventHandler(TreeItem.<T>treeNotificationEvent(), weakRootListener);
-//        }
         weakRoot = new WeakReference<TreeItem>(newRoot);
-//        if (getRoot() != null) {
-//            weakRootListener = new WeakEventHandler(getRoot(), TreeItem.<T>treeNotificationEvent(), rootListener);
-//            getRoot().addEventHandler(TreeItem.<T>treeNotificationEvent(), weakRootListener);
-//        }
     }
 
     private int getItemCount() {

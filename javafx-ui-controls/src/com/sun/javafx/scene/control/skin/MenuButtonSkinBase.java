@@ -196,13 +196,13 @@ public abstract class MenuButtonSkinBase<C extends MenuButton, B extends MenuBut
     @Override protected void handleControlPropertyChanged(String p) {
         super.handleControlPropertyChanged(p);
 
-        if (p == "SHOWING") {
+        if ("SHOWING".equals(p)) {
             if (getSkinnable().isShowing()) {
                 show();
             } else {
                 hide();
             }
-        } else if (p == "FOCUSED") {
+        } else if ("FOCUSED".equals(p)) {
            // Handle tabbing away from an open MenuButton
            if (!getSkinnable().isFocused() && getSkinnable().isShowing()) {
                hide();
@@ -210,7 +210,7 @@ public abstract class MenuButtonSkinBase<C extends MenuButton, B extends MenuBut
            if (!getSkinnable().isFocused() && popup.isShowing()) {
                hide();
            }
-        } else if (p == "POPUP_VISIBLE") {
+        } else if ("POPUP_VISIBLE".equals(p)) {
             if (!popup.isShowing() && getSkinnable().isShowing()) {
                 // Popup was dismissed. Maybe user clicked outside or typed ESCAPE.
                 // Make sure button is in sync.
@@ -225,7 +225,7 @@ public abstract class MenuButtonSkinBase<C extends MenuButton, B extends MenuBut
             }
 
 
-        } else if (p == "MNEMONIC_PARSING") {
+        } else if ("MNEMONIC_PARSING".equals(p)) {
             label.setMnemonicParsing(getSkinnable().isMnemonicParsing());
             requestLayout();
         }

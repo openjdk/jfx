@@ -110,15 +110,15 @@ public abstract class ComboBoxBaseSkin<T> extends SkinBase<ComboBoxBase<T>, Comb
     @Override protected void handleControlPropertyChanged(String p) {
         super.handleControlPropertyChanged(p);
 
-        if (p == "SHOWING") {
+        if ("SHOWING".equals(p)) {
             if (getSkinnable().isShowing()) {
                 show();
             } else {
                 hide();
             }
-        } else if (p == "EDITABLE") {
+        } else if ("EDITABLE".equals(p)) {
             updateDisplayArea();
-        } else if (p == "VALUE") {
+        } else if ("VALUE".equals(p)) {
             updateDisplayArea();
         } 
     }

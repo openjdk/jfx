@@ -317,8 +317,9 @@ public class CheckBoxTreeItem<T> extends TreeItem<T> {
      *      {@link CheckBoxTreeItem#valueProperty() value} property.
      */
     public static class TreeModificationEvent<T> extends Event {
+        private static final long serialVersionUID = -8445355590698862999L;
 
-        private final CheckBoxTreeItem<T> treeItem;
+        private transient final CheckBoxTreeItem<T> treeItem;
         private final boolean selectionChanged;
 
         /**

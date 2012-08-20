@@ -186,16 +186,16 @@ public class TabPaneSkin extends SkinBase<TabPane, TabPaneBehavior> {
 
     @Override protected void handleControlPropertyChanged(String property) {
         super.handleControlPropertyChanged(property);
-        if (property == "SELECTED_TAB") {            
+        if ("SELECTED_TAB".equals(property)) {            
             isSelectingTab = true;
             previousSelectedTab = selectedTab;
             selectedTab = getSkinnable().getSelectionModel().getSelectedItem();
             requestLayout();
-        } else if (property == "SIDE") {
+        } else if ("SIDE".equals(property)) {
             updateTabPosition();
-        } else if (property == "WIDTH") {
+        } else if ("WIDTH".equals(property)) {
             clipRect.setWidth(getWidth());
-        } else if (property == "HEIGHT") {
+        } else if ("HEIGHT".equals(property)) {
             clipRect.setHeight(getHeight());
         }
     }

@@ -100,8 +100,8 @@ class DialogTemplate<T> {
     
     // Visual indication of security level alert - either high or medium.
     // Located in the lower left corner at the bottom of the dialog.
-    private final String SECURITY_ALERT_HIGH = "security.alert.high.image";
-    private final String SECURITY_ALERT_LOW  = "security.alert.low.image";
+    private static final String SECURITY_ALERT_HIGH = "security.alert.high.image";
+    private static final String SECURITY_ALERT_LOW  = "security.alert.low.image";
     private ImageView securityIcon;
 
     // These are for security dialog only.

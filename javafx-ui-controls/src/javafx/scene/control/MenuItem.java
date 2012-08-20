@@ -592,9 +592,7 @@ public class MenuItem implements EventTarget {
                             ? parentPopup.impl_getStyleable()
                             : null;
                     } else {
-                        return parentMenu != null 
-                            ? parentMenu.impl_getStyleable()
-                            : null;
+                        return parentMenu.impl_getStyleable();
                     }
                 }
 

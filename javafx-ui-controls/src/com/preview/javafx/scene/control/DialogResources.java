@@ -110,13 +110,9 @@ class DialogResources {
         if (url == null) {
             System.out.println("Can't create ImageView for key '" + key + 
                     "', which has resource name '" + resourceName + 
-                    "' and URL '" + url + "'");
+                    "' and URL 'null'");
+            return null;
         }
-//        String className = rbFX.getClass().getName();
-//        if (url == null || key.equals("about.java.image")) {
-//            url = rbJRE.getClass().getResource(resourceName);
-//            className = rbJRE.getClass().getName();
-//        }
         return getIcon(url);
     }
 

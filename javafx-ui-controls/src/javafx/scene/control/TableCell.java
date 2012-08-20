@@ -385,8 +385,6 @@ public class TableCell<S,T> extends IndexedCell<T> {
         updateFocus();
     }
     
-    private Map<String, PropertyReference> observablePropertyReferences;
-    
     private boolean isLastVisibleColumn = false;
     private int columnIndex = -1;
     

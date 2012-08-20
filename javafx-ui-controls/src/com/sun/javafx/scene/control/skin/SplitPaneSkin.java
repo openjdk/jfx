@@ -274,13 +274,13 @@ public class SplitPaneSkin extends SkinBase<SplitPane, BehaviorBase<SplitPane>> 
 
     @Override protected void handleControlPropertyChanged(String property) {
         super.handleControlPropertyChanged(property);
-        if (property == "ORIENTATION") {
+        if ("ORIENTATION".equals(property)) {
             this.horizontal = getSkinnable().getOrientation() == Orientation.HORIZONTAL;
             for (ContentDivider c: contentDividers) {
                 c.setGrabberStyle(horizontal);
             }
             getSkinnable().requestLayout();
-        } else if (property == "WIDTH" || property == "HEIGHT") {
+        } else if ("WIDTH".equals(property) || "HEIGHT".equals(property)) {
             requestLayout();
         }
     }
@@ -1054,7 +1054,7 @@ public class SplitPaneSkin extends SkinBase<SplitPane, BehaviorBase<SplitPane>> 
         }
     }
 
-    class Content extends StackPane {
+    static class Content extends StackPane {
         private Node content;
         private Rectangle clipRect;
         private double x;

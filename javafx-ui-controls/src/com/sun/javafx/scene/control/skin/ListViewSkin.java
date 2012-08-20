@@ -123,17 +123,17 @@ public class ListViewSkin<T> extends VirtualContainerBase<ListView<T>, ListViewB
 
     @Override protected void handleControlPropertyChanged(String p) {
         super.handleControlPropertyChanged(p);
-        if (p == "ITEMS") {
+        if ("ITEMS".equals(p)) {
             updateListViewItems();
-        } else if (p == "ORIENTATION") {
+        } else if ("ORIENTATION".equals(p)) {
             flow.setVertical(getSkinnable().getOrientation() == Orientation.VERTICAL);
-        } else if (p == "CELL_FACTORY") {
+        } else if ("CELL_FACTORY".equals(p)) {
             flow.recreateCells();
-        } else if (p == "PARENT") {
+        } else if ("PARENT".equals(p)) {
             if (getSkinnable().getParent() != null && getSkinnable().isVisible()) {
                 requestLayout();
             }
-        } else if (p == "FOCUS_TRAVERSABLE") {
+        } else if ("FOCUS_TRAVERSABLE".equals(p)) {
             flow.setFocusTraversable(getSkinnable().isFocusTraversable());
         }
     }
