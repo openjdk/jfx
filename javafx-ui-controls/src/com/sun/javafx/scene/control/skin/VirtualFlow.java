@@ -1399,6 +1399,7 @@ public class VirtualFlow extends Region {
         Callback<VirtualFlow,? extends IndexedCell> createCell = getCreateCell();
         if (accumCell == null && createCell != null) {
             accumCell = createCell.call(this);
+            accumCell.getProperties().put(NEW_CELL, null);
             accumCellParent.getChildren().setAll(accumCell);
         }
         setCellIndex(accumCell, index);
@@ -1498,8 +1499,9 @@ public class VirtualFlow extends Region {
         if (cell == null) return;
 
         cell.updateIndex(index);
-        if (cell.isNeedsLayout() && cell.getScene() != null) {
+        if (cell.isNeedsLayout() && cell.getScene() != null && cell.getProperties().containsKey(NEW_CELL)) {
             cell.impl_processCSS(false);
+            cell.getProperties().remove(NEW_CELL);
         }
     }
 
@@ -1509,6 +1511,11 @@ public class VirtualFlow extends Region {
      *                                                                         *
      **************************************************************************/
 
+    /**
+     * Indicates that this is a new cell and we need to process CSS for it.
+     */
+    private static final String NEW_CELL = "newcell";
+    
     /**
      * Get a cell which can be used in the layout. This function will reuse
      * cells from the pile where possible, and will create new cells when
@@ -1533,6 +1540,7 @@ public class VirtualFlow extends Region {
                 cell = (prefIndex < pile.getFirst().getIndex())? pile.removeLast() : pile.removeFirst();
             } else {
                 cell = createCell.call(this);
+                cell.getProperties().put(NEW_CELL, null);
             }
         }
 
