@@ -108,7 +108,7 @@ public class TableRowSkin<T> extends CellSkinBase<TableRow<T>, CellBehaviorBase<
         if ("ITEM".equals(p)) {
             updateCells = true;
             requestLayout();
-            getSkinnable().layout();
+//            getSkinnable().layout();
         } else if ("TABLE_VIEW".equals(p)) {
             for (int i = 0; i < getChildren().size(); i++) {
                 Node n = getChildren().get(i);
@@ -143,7 +143,9 @@ public class TableRowSkin<T> extends CellSkinBase<TableRow<T>, CellBehaviorBase<
                 new WeakListChangeListener(visibleLeafColumnsListener));
     }
     
-    private void doUpdateCheck() {
+    @Override protected void layoutChildren(double x, final double y,
+            final double w, final double h) {
+        
         if (isDirty) {
             recreateCells();
             updateCells(true);
@@ -152,11 +154,6 @@ public class TableRowSkin<T> extends CellSkinBase<TableRow<T>, CellBehaviorBase<
             updateCells(false);
             updateCells = false;
         }
-    }
-
-    @Override protected void layoutChildren(double x, final double y,
-            final double w, final double h) {
-        doUpdateCheck();
         
         TableView<T> table = getSkinnable().getTableView();
         if (table == null) return;
@@ -286,8 +283,6 @@ public class TableRowSkin<T> extends CellSkinBase<TableRow<T>, CellBehaviorBase<
     }
     
     @Override protected double computePrefWidth(double height) {
-        doUpdateCheck();
-        
         if (showColumns) {
             double prefWidth = 0.0F;
 
@@ -306,8 +301,6 @@ public class TableRowSkin<T> extends CellSkinBase<TableRow<T>, CellBehaviorBase<
     }
     
     @Override protected double computePrefHeight(double width) {
-        doUpdateCheck();
-        
         if (showColumns) {
             // Support for RT-18467: making it easier to specify a height for
             // cells via CSS, where the desired height is less than the height
