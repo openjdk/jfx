@@ -480,6 +480,12 @@ public abstract class TextInputControlSkin<T extends TextInputControl, B extends
         final TextInputControl textInput = getSkinnable();
         if (textInput.isEditable() && !textInput.textProperty().isBound() && !textInput.isDisabled()) {
 
+            // just replace the text on iOS
+            if (PlatformUtil.isIOS()) {
+               textInput.setText(event.getCommitted());
+               return;
+            }
+            
             // remove previous input method text (if any) or selected text
             if (imlength != 0) {
                 removeHighlight(imattrs);

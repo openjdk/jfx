@@ -151,25 +151,6 @@ public abstract class Toolkit {
                 return Boolean.getBoolean("javafx.verbose");
             }
         });
-
-        // This loading of msvcr100.dll (VS2010) is required when run with Java 6
-        // since it was build with VS2003 and doesn't include msvcr100.dll in it's JRE.
-        // Note: See README-builds.html on MSVC requirement: VS2010 is required.
-        if (PlatformUtil.isWindows()) {
-            AccessController.doPrivileged(new PrivilegedAction<Object>() {
-                public Object run() {
-                    try {
-                        com.sun.javafx.runtime.NativeLibLoader.loadLibrary("msvcr100");
-                    } catch (Throwable t) {
-			if (verbose) {
-                            System.err.println("Error: failed to load msvcr100.dll : " + t);
-                        }
-                    }
-                    return null;
-                }
-            });
-        }
-
         AccessController.doPrivileged(new PrivilegedAction<Object>() {
             public Object run() {
                 // Get the javafx.version and javafx.runtime.version from a preconstructed

@@ -49,6 +49,8 @@ import static javafx.scene.input.KeyCode.*;
 import static javafx.scene.input.KeyEvent.*;
 import static com.sun.javafx.PlatformUtil.*;
 import javafx.geometry.Rectangle2D;
+import com.sun.javafx.geom.transform.Affine3D;
+import javafx.geometry.Bounds;
 
 
 /**
@@ -148,11 +150,26 @@ public class TextAreaBehavior extends TextInputControlBehavior<TextArea> {
             public void changed(ObservableValue<? extends Boolean> observable, Boolean oldValue, Boolean newValue) {
                 TextArea textArea = getControl();
                 if (textArea.isFocused()) {
+                    if (PlatformUtil.isIOS()) {
+                        Bounds bnds = textArea.getBoundsInParent();
+                        double w = bnds.getWidth();
+                        double h = bnds.getHeight();
+                        Affine3D trans = TextFieldBehavior.calculateNodeToSceneTransform(textArea);
+                        String text = textArea.getText();
+
+                        textArea.getScene().getWindow().impl_getPeer().requestInput(text, TextFieldBehavior.TextInputTypes.TEXT_AREA.ordinal(), w, h, 
+                                trans.getMxx(), trans.getMxy(), trans.getMxz(), trans.getMxt(),
+                                trans.getMyx(), trans.getMyy(), trans.getMyz(), trans.getMyt(),
+                                trans.getMzx(), trans.getMzy(), trans.getMzz(), trans.getMzt());
+                    }
                     if (!focusGainedByMouseClick) {
                         setCaretAnimating(true);
                     }
                 } else {
 //                    skin.hideCaret();
+                    if (PlatformUtil.isIOS() && textArea.getScene() != null) {
+                        textArea.getScene().getWindow().impl_getPeer().releaseInput();
+                    }
                     focusGainedByMouseClick = false;
                     setCaretAnimating(false);
                 }
