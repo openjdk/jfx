@@ -26,7 +26,6 @@ package javafx.scene.control;
 
 import com.sun.javafx.css.StyleManager;
 import com.sun.javafx.scene.control.skin.LabelSkin;
-import com.sun.javafx.scene.control.skin.caspian.Caspian;
 import java.net.URL;
 import java.security.AccessController;
 import java.security.PrivilegedAction;
@@ -49,7 +48,7 @@ class UAStylesheetLoader {
     
     
     static void doLoad() {
-        Holder.stylesheetLoader.loadUAStylesheet();
+        UAStylesheetLoader.Holder.stylesheetLoader.loadUAStylesheet();
     }
     
     private void loadUAStylesheet() {
@@ -60,19 +59,19 @@ class UAStylesheetLoader {
                 @Override
                 public Object run() {
                     // Old approach:
-                    URL caspianUrl = LabelSkin.class.getResource("caspian/caspian.css");
-                    StyleManager.addUserAgentStylesheet(caspianUrl.toExternalForm());
+                    URL url = LabelSkin.class.getResource("caspian/caspian.css");
+                    StyleManager.setDefaultUserAgentStylesheet(url.toExternalForm());
                     
                     // New approach:
-//                    StyleManager.setDefaultUserAgentStylesheet(new Caspian());
-                        
+                    // StyleManager.setDefaultUserAgentStylesheet(new Caspian());
+
                     if (com.sun.javafx.PlatformUtil.isEmbedded()) {
-                        URL embeddedUrl = LabelSkin.class.getResource("caspian/embedded.css");
-                        StyleManager.addUserAgentStylesheet(embeddedUrl.toExternalForm());
+                        url = LabelSkin.class.getResource("caspian/embedded.css");
+                        StyleManager.addUserAgentStylesheet(url.toExternalForm());
 
                         if (com.sun.javafx.Utils.isQVGAScreen()) {
-                            URL qvgaUrl = LabelSkin.class.getResource("caspian/embedded-qvga.css");
-                            StyleManager.addUserAgentStylesheet(qvgaUrl.toExternalForm());
+                            url = LabelSkin.class.getResource("caspian/embedded-qvga.css");
+                            StyleManager.addUserAgentStylesheet(url.toExternalForm());
                         }
                     }
 
