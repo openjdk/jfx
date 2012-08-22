@@ -221,7 +221,7 @@ public class ColorPickerSkin extends ComboBoxPopupControl<Color> {
             // label graphic
             icon = new StackPane();
             icon.getStyleClass().add("picker-color");
-            colorRect = new Rectangle(16, 16);
+            colorRect = new Rectangle(12, 12);
             colorRect.getStyleClass().add("picker-color-rect");
             
             updateColor();
