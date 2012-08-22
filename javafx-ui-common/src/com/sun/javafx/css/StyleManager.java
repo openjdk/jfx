@@ -106,7 +106,13 @@ import javafx.stage.Window;
 
 abstract public class StyleManager<T> {
 
-    protected static PlatformLogger LOGGER = com.sun.javafx.Logging.getCSSLogger();
+    private static PlatformLogger LOGGER;
+    protected static PlatformLogger getLogger() {
+        if (LOGGER == null) {
+            LOGGER = com.sun.javafx.Logging.getCSSLogger();
+        }
+        return LOGGER;
+    }
 
     /**
      * Return the StyleManager for the given Scene, or null if the scene
@@ -217,7 +223,7 @@ abstract public class StyleManager<T> {
      * setDefaultUserAgentStylesheet function call) then we will end up clearing
      * all of the caches.
      */
-    protected static Stylesheet defaultUserAgentStylesheet;
+    static Stylesheet defaultUserAgentStylesheet;
 
 
     /**
@@ -339,8 +345,8 @@ abstract public class StyleManager<T> {
         try {
             return loadStylesheetUnPrivileged(fname);
         } catch (java.security.AccessControlException ace) {
-            if (LOGGER.isLoggable(PlatformLogger.INFO)) {
-                LOGGER.info("Could not load the stylesheet, trying with FilePermissions : " + fname);
+            if (getLogger().isLoggable(PlatformLogger.INFO)) {
+                getLogger().info("Could not load the stylesheet, trying with FilePermissions : " + fname);
             }
 
             /*
@@ -386,7 +392,7 @@ abstract public class StyleManager<T> {
                     ** it's the correct jar, check it's a file access
                     ** strip off the leading jar
                     */
-                    if (styleManagerJarPath.equals(requestedFileJarPart.toString())) {
+                    if (styleManagerJarPath.equals(requestedFileJarPart)) {
                         /*
                         ** strip off the leading "jar",
                         ** the css file name is past the last '!'
@@ -522,8 +528,8 @@ abstract public class StyleManager<T> {
                         );
                     errors.add(error);
                 }
-                if (LOGGER.isLoggable(PlatformLogger.WARNING)) {
-                    LOGGER.warning(
+                if (getLogger().isLoggable(PlatformLogger.WARNING)) {
+                    getLogger().warning(
                         String.format("Resource \"%s\" not found.", fname)
                     );
                 }
@@ -538,8 +544,8 @@ abstract public class StyleManager<T> {
                     );
                 errors.add(error);
             }
-            if (LOGGER.isLoggable(PlatformLogger.INFO)) {
-                LOGGER.info("Could not find stylesheet: " + fname);//, fnfe);
+            if (getLogger().isLoggable(PlatformLogger.INFO)) {
+                getLogger().info("Could not find stylesheet: " + fname);//, fnfe);
             }
         } catch (IOException ioe) {
                 if (errors != null) {
@@ -549,8 +555,8 @@ abstract public class StyleManager<T> {
                         );
                     errors.add(error);
                 }
-            if (LOGGER.isLoggable(PlatformLogger.INFO)) {
-                LOGGER.info("Could not load stylesheet: " + fname);//, ioe);
+            if (getLogger().isLoggable(PlatformLogger.INFO)) {
+                getLogger().info("Could not load stylesheet: " + fname);//, ioe);
             }
         }
         return null;
@@ -590,10 +596,10 @@ abstract public class StyleManager<T> {
             CssError.setCurrentScene(scene);
 
             Stylesheet ua_stylesheet = loadStylesheet(fname);
-            ua_stylesheet.setOrigin(Stylesheet.Origin.USER_AGENT);
-            userAgentStylesheetMap.put(fname, ua_stylesheet);
 
             if (ua_stylesheet != null) {
+                ua_stylesheet.setOrigin(Stylesheet.Origin.USER_AGENT);
+                userAgentStylesheetMap.put(fname, ua_stylesheet);
                 userAgentStylesheetsChanged();
             }
 

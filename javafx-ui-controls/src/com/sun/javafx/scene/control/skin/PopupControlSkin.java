@@ -69,7 +69,7 @@ public class PopupControlSkin<C extends PopupControl> implements Skin<C>{
     * This var keeps a count of visible Popup controls other than the tooltip
     * There should only be at most one visible popup control at any given time
     */
-    protected static int visiblePopupControlCount=0;
+    private static int visiblePopupControlCount=0;
 
     /**
      * The visual representation for the Control in the "base" scenegraph. This

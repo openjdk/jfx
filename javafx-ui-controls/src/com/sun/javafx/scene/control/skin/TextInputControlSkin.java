@@ -573,9 +573,12 @@ public abstract class TextInputControlSkin<T extends TextInputControl, B extends
                     attr.setStroke(textFill.get());
                     attr.setStrokeWidth(maxY - minY);
                 }
-                attr.setManaged(false);
-                attr.setSmooth(false);
-                imattrs.add(attr);
+                
+                if (attr != null) {
+                    attr.setManaged(false);
+                    attr.setSmooth(false);
+                    imattrs.add(attr);
+                }
             }
         }
     }

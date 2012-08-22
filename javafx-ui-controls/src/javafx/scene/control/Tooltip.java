@@ -153,11 +153,12 @@ public class Tooltip extends PopupControl {
             getContent().clear();
             bridge.idProperty().unbind();
             bridge.styleProperty().unbind();
+            
+            // Bind up these two properties. Note that the third, styleClass, is
+            // handled in the onChange listener for that list.
+            bridge.idProperty().bind(idProperty());
+            bridge.styleProperty().bind(styleProperty());
         }
-        // Bind up these two properties. Note that the third, styleClass, is
-        // handled in the onChange listener for that list.
-        bridge.idProperty().bind(idProperty());
-        bridge.styleProperty().bind(styleProperty());
 
         getContent().add(bridge);
         

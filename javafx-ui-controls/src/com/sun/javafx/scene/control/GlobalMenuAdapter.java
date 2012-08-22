@@ -90,11 +90,11 @@ public class GlobalMenuAdapter extends Menu implements MenuBase {
             }
         });
 
-        EventHandler<Event> showHideHandler = new EventHandler<Event>() {
-            public void handle(Event ev) {
-                Event.fireEvent(menu, new Event(ev.getEventType()));
-            }
-        };
+//        EventHandler<Event> showHideHandler = new EventHandler<Event>() {
+//            public void handle(Event ev) {
+//                Event.fireEvent(menu, new Event(ev.getEventType()));
+//            }
+//        };
 
         menu.getItems().addListener(new ListChangeListener<MenuItem>() {
             @Override public void onChanged(Change<? extends MenuItem> change) {
@@ -155,7 +155,7 @@ public class GlobalMenuAdapter extends Menu implements MenuBase {
         adapter.mnemonicParsingProperty().bind(menuItem.mnemonicParsingProperty());
 
         adapter.setOnAction(new EventHandler<ActionEvent>() {
-            public void handle(ActionEvent ev) {
+            @Override public void handle(ActionEvent ev) {
                 menuItem.fire();
             }
         });
@@ -173,7 +173,7 @@ public class GlobalMenuAdapter extends Menu implements MenuBase {
     }
 
 
-    private class MenuItemAdapter extends MenuItem implements MenuItemBase {
+    private static class MenuItemAdapter extends MenuItem implements MenuItemBase {
         private MenuItem menuItem;
 
         private MenuItemAdapter(final MenuItem menuItem) {
@@ -196,7 +196,7 @@ public class GlobalMenuAdapter extends Menu implements MenuBase {
         }
     }
 
-    private class CheckMenuItemAdapter extends CheckMenuItem implements CheckMenuItemBase {
+    private static class CheckMenuItemAdapter extends CheckMenuItem implements CheckMenuItemBase {
         private CheckMenuItem menuItem;
 
         private CheckMenuItemAdapter(final CheckMenuItem menuItem) {
@@ -220,7 +220,7 @@ public class GlobalMenuAdapter extends Menu implements MenuBase {
         }
     }
 
-    private class RadioMenuItemAdapter extends RadioMenuItem implements RadioMenuItemBase {
+    private static class RadioMenuItemAdapter extends RadioMenuItem implements RadioMenuItemBase {
         private RadioMenuItem menuItem;
 
         private RadioMenuItemAdapter(final RadioMenuItem menuItem) {
@@ -245,7 +245,7 @@ public class GlobalMenuAdapter extends Menu implements MenuBase {
         }
     }
 
-    private class SeparatorMenuItemAdapter extends SeparatorMenuItem implements SeparatorMenuItemBase {
+    private static class SeparatorMenuItemAdapter extends SeparatorMenuItem implements SeparatorMenuItemBase {
         private SeparatorMenuItem menuItem;
 
         private SeparatorMenuItemAdapter(final SeparatorMenuItem menuItem) {
@@ -266,7 +266,7 @@ public class GlobalMenuAdapter extends Menu implements MenuBase {
         }
     }
 
-    private class CustomMenuItemAdapter extends CustomMenuItem implements CustomMenuItemBase {
+    private static class CustomMenuItemAdapter extends CustomMenuItem implements CustomMenuItemBase {
         private CustomMenuItem menuItem;
 
         private CustomMenuItemAdapter(final CustomMenuItem menuItem) {

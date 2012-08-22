@@ -100,7 +100,7 @@ public class TreeCellSkin extends CellSkinBase<TreeCell<?>, TreeCellBehavior> {
     
     @Override protected void handleControlPropertyChanged(String p) {
         super.handleControlPropertyChanged(p);
-        if ( p == "TREE_ITEM") {
+        if ("TREE_ITEM".equals(p)) {
             updateDisclosureNode();
         }
     }
@@ -159,17 +159,19 @@ public class TreeCellSkin extends CellSkinBase<TreeCell<?>, TreeCellBehavior> {
                 updateChildren();
             }
             
-            disclosureWidth = disclosureNode.prefWidth(-1);
-            if (disclosureWidth > defaultDisclosureWidth) {
-                maxDisclosureWidthMap.put(tree, disclosureWidth);
+            if (disclosureNode != null) {
+                disclosureWidth = disclosureNode.prefWidth(-1);
+                if (disclosureWidth > defaultDisclosureWidth) {
+                    maxDisclosureWidthMap.put(tree, disclosureWidth);
+                }
+
+                double ph = disclosureNode.prefHeight(-1);
+
+                disclosureNode.resize(disclosureWidth, ph);
+                positionInArea(disclosureNode, x, y,
+                        disclosureWidth, h, /*baseline ignored*/0,
+                        HPos.CENTER, VPos.CENTER);
             }
-
-            double ph = disclosureNode.prefHeight(-1);
-
-            disclosureNode.resize(disclosureWidth, ph);
-            positionInArea(disclosureNode, x, y,
-                    disclosureWidth, h, /*baseline ignored*/0,
-                    HPos.CENTER, VPos.CENTER);
         }
 
         // determine starting point of the graphic or cell node, and the

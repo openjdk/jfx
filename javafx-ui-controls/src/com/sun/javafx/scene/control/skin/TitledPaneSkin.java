@@ -115,23 +115,23 @@ public class TitledPaneSkin extends LabeledSkinBase<TitledPane, TitledPaneBehavi
     @Override
     protected void handleControlPropertyChanged(String property) {
         super.handleControlPropertyChanged(property);
-        if (property == "CONTENT") {
+        if ("CONTENT".equals(property)) {
             contentRegion.setContent(getSkinnable().getContent());
-        } else if (property == "EXPANDED") {
+        } else if ("EXPANDED".equals(property)) {
             setExpanded(getSkinnable().isExpanded());
-        } else if (property == "COLLAPSIBLE") {
+        } else if ("COLLAPSIBLE".equals(property)) {
             titleRegion.update();
-        } else if (property == "ALIGNMENT") {
+        } else if ("ALIGNMENT".equals(property)) {
             pos = getSkinnable().getAlignment();
             hpos = pos.getHpos();
             vpos = pos.getVpos();
-        } else if (property == "TITLE_REGION_ALIGNMENT") {
+        } else if ("TITLE_REGION_ALIGNMENT".equals(property)) {
             pos = titleRegion.getAlignment();
             hpos = pos.getHpos();
             vpos = pos.getVpos();
-        } else if (property == "WIDTH") {
+        } else if ("WIDTH".equals(property)) {
             clipRect.setWidth(getWidth());
-        } else if (property == "HEIGHT") {
+        } else if ("HEIGHT".equals(property)) {
             clipRect.setHeight(getHeight());
         }
     }
@@ -563,7 +563,7 @@ public class TitledPaneSkin extends LabeledSkinBase<TitledPane, TitledPaneBehavi
         }
     }
 
-    class ContentContainer extends StackPane {
+    static class ContentContainer extends StackPane {
         private Rectangle clipRect;
 
         public ContentContainer() {

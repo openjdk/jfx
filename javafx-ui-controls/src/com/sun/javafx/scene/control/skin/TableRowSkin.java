@@ -41,7 +41,6 @@ import javafx.collections.WeakListChangeListener;
 import javafx.collections.ObservableList;
 import javafx.geometry.Insets;
 import javafx.scene.Node;
-import javafx.scene.control.*;
 
 /**
  */
@@ -100,17 +99,17 @@ public class TableRowSkin<T> extends CellSkinBase<TableRow<T>, CellBehaviorBase<
         // we run this before the super call because we want to update whether
         // we are showing columns or the node (if it isn't null) before the
         // parent class updates the content
-        if (p == "TEXT" || p == "GRAPHIC" || p == "EDITING") {
+        if ("TEXT".equals(p) || "GRAPHIC".equals(p) || "EDITING".equals(p)) {
             updateShowColumns();
         }
 
         super.handleControlPropertyChanged(p);
 
-        if (p == "ITEM") {
+        if ("ITEM".equals(p)) {
             updateCells = true;
             requestLayout();
-            getSkinnable().layout();
-        } else if (p == "TABLE_VIEW") {
+//            getSkinnable().layout();
+        } else if ("TABLE_VIEW".equals(p)) {
             for (int i = 0; i < getChildren().size(); i++) {
                 Node n = getChildren().get(i);
                 if (n instanceof TableCell) {
@@ -144,7 +143,9 @@ public class TableRowSkin<T> extends CellSkinBase<TableRow<T>, CellBehaviorBase<
                 new WeakListChangeListener(visibleLeafColumnsListener));
     }
     
-    private void doUpdateCheck() {
+    @Override protected void layoutChildren(double x, final double y,
+            final double w, final double h) {
+        
         if (isDirty) {
             recreateCells();
             updateCells(true);
@@ -153,11 +154,6 @@ public class TableRowSkin<T> extends CellSkinBase<TableRow<T>, CellBehaviorBase<
             updateCells(false);
             updateCells = false;
         }
-    }
-
-    @Override protected void layoutChildren(double x, final double y,
-            final double w, final double h) {
-        doUpdateCheck();
         
         TableView<T> table = getSkinnable().getTableView();
         if (table == null) return;
@@ -287,8 +283,6 @@ public class TableRowSkin<T> extends CellSkinBase<TableRow<T>, CellBehaviorBase<
     }
     
     @Override protected double computePrefWidth(double height) {
-        doUpdateCheck();
-        
         if (showColumns) {
             double prefWidth = 0.0F;
 
@@ -307,8 +301,6 @@ public class TableRowSkin<T> extends CellSkinBase<TableRow<T>, CellBehaviorBase<
     }
     
     @Override protected double computePrefHeight(double width) {
-        doUpdateCheck();
-        
         if (showColumns) {
             // Support for RT-18467: making it easier to specify a height for
             // cells via CSS, where the desired height is less than the height

@@ -53,8 +53,7 @@ final public class Style {
         this.declaration = declaration;
     }
 
-    @Override
-    public boolean equals(Object obj) {
+    @Override public boolean equals(Object obj) {
         if (obj == this) {
             return true;
         }
@@ -72,10 +71,16 @@ final public class Style {
             return false;
         }
         return true;
-    }    
+    }
+
+    @Override public int hashCode() {
+        int hash = 3;
+        hash = 83 * hash + (this.selector != null ? this.selector.hashCode() : 0);
+        hash = 83 * hash + (this.declaration != null ? this.declaration.hashCode() : 0);
+        return hash;
+    }
     
-    @Override
-    public String toString() {
+    @Override public String toString() {
         final StringBuilder sb = new StringBuilder()
                 .append(String.valueOf(selector))
                 .append(" { ")

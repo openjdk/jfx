@@ -66,11 +66,7 @@ import com.sun.javafx.scene.traversal.TraversalEngine;
 import com.sun.javafx.scene.traversal.TraverseListener;
 import com.sun.javafx.stage.StageHelper;
 import com.sun.javafx.tk.Toolkit;
-import java.lang.ref.WeakReference;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 import javafx.event.ActionEvent;
-import javafx.event.EventType;
 import javafx.scene.input.*;
 
 
@@ -866,7 +862,7 @@ public class MenuBarSkin extends SkinBase<MenuBar, BehaviorBase<MenuBar>> implem
         }
     }
 
-    class MenuBarButton extends MenuButton {
+    static class MenuBarButton extends MenuButton {
         private ChangeListener<Boolean> menuListener;
         private Menu menu;
 

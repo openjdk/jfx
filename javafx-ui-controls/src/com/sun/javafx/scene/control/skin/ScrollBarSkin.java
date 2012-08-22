@@ -50,8 +50,8 @@ public class ScrollBarSkin extends javafx.scene.control.SkinBase<ScrollBar, Scro
      *                                                                         *
      **************************************************************************/
 
-    public static int DEFAULT_LENGTH = 100;
-    public static int DEFAULT_WIDTH = 20;
+    public final static int DEFAULT_LENGTH = 100;
+    public final static int DEFAULT_WIDTH = 20;
 
     private StackPane thumb;
     private StackPane trackBackground;
@@ -325,9 +325,9 @@ public class ScrollBarSkin extends javafx.scene.control.SkinBase<ScrollBar, Scro
 
     @Override protected void handleControlPropertyChanged(String p) {
         super.handleControlPropertyChanged(p);
-        if (p == "ORIENTATION") {
+        if ("ORIENTATION".equals(p)) {
             requestLayout();
-        } else if (p == "MIN" || p == "MAX" || p == "VALUE" || p == "VISIBLE_AMOUNT") {
+        } else if ("MIN".equals(p) || "MAX".equals(p) || "VALUE".equals(p) || "VISIBLE_AMOUNT".equals(p)) {
             positionThumb();
             requestLayout();
         }

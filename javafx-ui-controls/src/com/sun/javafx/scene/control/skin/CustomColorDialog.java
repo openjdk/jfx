@@ -865,6 +865,6 @@ public class CustomColorDialog extends StackPane {
     }
     
     private static int doubleToInt(double value) {
-        return new Double(value*255).intValue();
+        return (int)value * 255;
     }
 }

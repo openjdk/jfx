@@ -568,7 +568,7 @@ public class ScrollPaneSkin extends SkinBase<ScrollPane, ScrollPaneBehavior> imp
 
     @Override protected void handleControlPropertyChanged(String p) {
         super.handleControlPropertyChanged(p);
-        if (p == "NODE") {
+        if ("NODE".equals(p)) {
             if (scrollNode != getSkinnable().getContent()) {
                 if (scrollNode != null) {
                     scrollNode.layoutBoundsProperty().removeListener(nodeListener);
@@ -585,28 +585,18 @@ public class ScrollPaneSkin extends SkinBase<ScrollPane, ScrollPaneBehavior> imp
                 }
             }
             requestLayout();
-        } else if (p == "FIT_TO_WIDTH") {
+        } else if ("FIT_TO_WIDTH".equals(p) || "FIT_TO_HEIGHT".equals(p)) {
             requestLayout();
             viewRect.requestLayout();
-        } else if (p == "FIT_TO_HEIGHT") {
-            requestLayout();
-            viewRect.requestLayout();
-        } else if (p == "HBAR_POLICY") {
+        } else if ("HBAR_POLICY".equals(p) || "VBAR_POLICY".equals(p)) {
             // change might affect pref size, so requestLayout on control
             getSkinnable().requestLayout();
             requestLayout();
-        } else if (p == "VBAR_POLICY") {
-            // change might affect pref size, so requestLayout on control
-            getSkinnable().requestLayout();
-            requestLayout();
-        } else if (p == "HVALUE") {
+        } else if ("HVALUE".equals(p)) {
             hsb.setValue(getSkinnable().getHvalue());
-        } else if (p == "VVALUE") {
+        } else if ("VVALUE".equals(p)) {
             vsb.setValue(getSkinnable().getVvalue());
-        } else if (p == "PREF_VIEWPORT_WIDTH") {
-            // change affects pref size, so requestLayout on control
-            getSkinnable().requestLayout();
-        } else if (p == "PREF_VIEWPORT_HEIGHT") {
+        } else if ("PREF_VIEWPORT_WIDTH".equals(p) || "PREF_VIEWPORT_HEIGHT".equals(p)) {
             // change affects pref size, so requestLayout on control
             getSkinnable().requestLayout();
         }
@@ -615,7 +605,7 @@ public class ScrollPaneSkin extends SkinBase<ScrollPane, ScrollPaneBehavior> imp
     /*
     ** auto-scroll so node is within (0,0),(contentWidth,contentHeight)
     */
-    public void onTraverse(Node n, Bounds b) {
+    @Override public void onTraverse(Node n, Bounds b) {
         double dx = 0.0;
         double dy = 0.0;
         boolean needsLayout = false;

@@ -114,20 +114,20 @@ public class TreeTableRowSkin<T> extends CellSkinBase<TreeTableRow<T>, CellBehav
         // we run this before the super call because we want to update whether
         // we are showing columns or the node (if it isn't null) before the
         // parent class updates the content
-        if (p == "TEXT" || p == "GRAPHIC" || p == "EDITING") {
+        if ("TEXT".equals(p) || "GRAPHIC".equals(p) || "EDITING".equals(p)) {
             updateShowColumns();
         }
 
         super.handleControlPropertyChanged(p);
 
-        if (p == "ROW") {
+        if ("ROW".equals(p)) {
             updateCells = true;
             requestLayout();
-        } else if (p == "TABLE_VIEW") {
+//        } else if ("TABLE_VIEW".equals(p)) {
 //            for (int i = 0; i < getChildren().size(); i++) {
 //                ((TableCell)getChildren().get(i)).updateTableView(getSkinnable().getTableView());
 //            }
-        } else if ( p == "TREE_ITEM") {
+        } else if ("TREE_ITEM".equals(p)) {
             updateDisclosureNode();
         }
         

@@ -62,7 +62,6 @@ import javafx.scene.control.SeparatorMenuItem;
 import javafx.scene.input.KeyEvent;
 import javafx.scene.input.MouseEvent;
 import javafx.scene.input.ScrollEvent;
-import javafx.scene.layout.Pane;
 import javafx.scene.layout.Region;
 import javafx.scene.layout.StackPane;
 import javafx.scene.layout.VBox;
@@ -72,7 +71,6 @@ import javafx.util.Duration;
 import com.sun.javafx.css.StyleableProperty;
 import com.sun.javafx.css.StyleManager;
 import java.util.Iterator;
-import javafx.scene.control.*;
 import javafx.stage.Window;
 
 /**
@@ -480,6 +478,7 @@ public class ContextMenuContent extends Region {
                         break;
                     case CANCEL:
                         ke.consume();
+                        break;
                     case ESCAPE:
                         // event not consumed for ESCAPE to let the Popup hide
                         // on it
@@ -988,8 +987,6 @@ public class ContextMenuContent extends Region {
         @Override protected void layoutChildren() {
             double w = snapSize(upDownArrow.prefWidth(-1));
             double h = snapSize(upDownArrow.prefHeight(-1));
-            double x = (snapSize(getWidth()) - w)/2;
-            double y = (snapSize(getHeight()) - h)/2;
 
             upDownArrow.resize(w, h);
             positionInArea(upDownArrow, 0, 0, getWidth(), getHeight(),

@@ -190,7 +190,7 @@ public class TableViewSkin<T> extends VirtualContainerBase<TableView<T>, TableVi
     @Override protected void handleControlPropertyChanged(String p) {
         super.handleControlPropertyChanged(p);
 
-        if (p == "ROW_FACTORY") {
+        if ("ROW_FACTORY".equals(p)) {
             Callback<TableView<T>, ? extends TableRow<T>> oldFactory = rowFactory;
             rowFactory = tableView.getRowFactory();
 
@@ -198,11 +198,11 @@ public class TableViewSkin<T> extends VirtualContainerBase<TableView<T>, TableVi
             if (oldFactory != rowFactory) {
                 flow.recreateCells();
             }
-        } else if (p == "PLACEHOLDER") {
+        } else if ("PLACEHOLDER".equals(p)) {
             updatePlaceholderRegionVisibility();
-        } else if (p == "FOCUS_TRAVERSABLE") {
+        } else if ("FOCUS_TRAVERSABLE".equals(p)) {
             flow.setFocusTraversable(tableView.isFocusTraversable());
-        } else if (p == "WIDTH") {
+        } else if ("WIDTH".equals(p)) {
             tableHeaderRow.setTablePadding(getInsets());
         }
     }

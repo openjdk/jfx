@@ -208,7 +208,7 @@ public class TextBinding {
      */ 
     private boolean alt = false;
     public boolean getAlt() {
-        return shift;
+        return alt;
     }
 
     /**
@@ -216,7 +216,7 @@ public class TextBinding {
      */ 
     private boolean meta = false;
     public boolean getMeta() {
-        return shift;
+        return meta;
     }
 
     /**
@@ -276,7 +276,7 @@ public class TextBinding {
         index = temp.indexOf(MNEMONIC_SYMBOL);
         while (index >= 0 && index < (temp.length() - 1)) {
             // Skip two _'s in a row
-            if (MNEMONIC_SYMBOL.equals(temp.charAt(index + 1))) {
+            if (MNEMONIC_SYMBOL.equals(temp.substring(index + 1, index + 2))) {
                 temp.delete(index, index + 1); // delete the extra MNEMONIC_SYMBOL
             } else if (temp.charAt(index + 1) != '('
                        || index == temp.length() - 2) {

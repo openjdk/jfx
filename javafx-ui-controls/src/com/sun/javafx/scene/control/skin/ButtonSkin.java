@@ -70,13 +70,13 @@ public class ButtonSkin extends LabeledSkinBase<Button, ButtonBehavior<Button>> 
 
     @Override protected void handleControlPropertyChanged(String p) {     
         super.handleControlPropertyChanged(p);
-        if (p == "DEFAULT_BUTTON") {
+        if ("DEFAULT_BUTTON".equals(p)) {
             setDefaultButton(getSkinnable().isDefaultButton());
         }
-        else if (p == "CANCEL_BUTTON") {
+        else if ("CANCEL_BUTTON".equals(p)) {
             setCancelButton(getSkinnable().isCancelButton());
         }
-        else if (p == "FOCUSED") {
+        else if ("FOCUSED".equals(p)) {
            if (!getSkinnable().isFocused()) {
                 ContextMenu cm = getSkinnable().getContextMenu();
                 if (cm != null) {
@@ -86,7 +86,7 @@ public class ButtonSkin extends LabeledSkinBase<Button, ButtonBehavior<Button>> 
                     }
                 }
            }
-        } else if (p == "PARENT") {
+        } else if ("PARENT".equals(p)) {
             if (getSkinnable().getParent() == null && getSkinnable().getScene() != null) {  
                 if (getSkinnable().isDefaultButton()) {
                     getSkinnable().getScene().getAccelerators().remove(defaultAcceleratorKeyCodeCombination);

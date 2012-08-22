@@ -29,9 +29,6 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
-import javafx.beans.InvalidationListener;
-import javafx.beans.Observable;
-import javafx.beans.WeakInvalidationListener;
 import javafx.beans.property.DoubleProperty;
 import javafx.beans.value.WritableValue;
 import javafx.collections.ListChangeListener;
@@ -127,25 +124,25 @@ public class TableColumnHeader extends Region {
     protected final MultiplePropertyChangeListenerHandler changeListenerHandler;
     
     protected void handlePropertyChanged(String p) {
-        if (p == "SCENE") {
+        if ("SCENE".equals(p)) {
             updateScene();
-        } else if (p == "TABLE_COLUMN_VISIBLE") {
+        } else if ("TABLE_COLUMN_VISIBLE".equals(p)) {
             setVisible(getTableColumn().isVisible());
-        } else if (p == "TABLE_COLUMN_WIDTH") {
+        } else if ("TABLE_COLUMN_WIDTH".equals(p)) {
             // It is this that ensures that when a column is resized that the header
             // visually adjusts its width as necessary.
             isSizeDirty = true;
             requestLayout();
-        } else if (p == "TABLE_COLUMN_WIDTH") {
+        } else if ("TABLE_COLUMN_WIDTH".equals(p)) {
             // It is this that ensures that when a column is resized that the header
             // visually adjusts its width as necessary.
             isSizeDirty = true;
             requestLayout();
-        } else if (p == "TABLE_COLUMN_ID") {
+        } else if ("TABLE_COLUMN_ID".equals(p)) {
             setId(column.getId());
-        } else if (p == "TABLE_COLUMN_STYLE") {
+        } else if ("TABLE_COLUMN_STYLE".equals(p)) {
             setStyle(column.getStyle());
-        } else if (p == "TABLE_COLUMN_SORT_TYPE") {
+        } else if ("TABLE_COLUMN_SORT_TYPE".equals(p)) {
             updateSortGrid();
             if (arrow != null) {
                 arrow.setRotate(column.getSortType() == ASCENDING ? 180 : 0.0);

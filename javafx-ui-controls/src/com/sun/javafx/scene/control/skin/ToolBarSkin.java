@@ -224,7 +224,7 @@ public class ToolBarSkin extends SkinBase<ToolBar, ToolBarBehavior> implements T
 
     @Override protected void handleControlPropertyChanged(String property) {
         super.handleControlPropertyChanged(property);
-        if (property == "ORIENTATION") {
+        if ("ORIENTATION".equals(property)) {
             initialize();
         }
     }

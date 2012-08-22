@@ -26,12 +26,8 @@
 package com.sun.javafx.css;
 
 import com.sun.javafx.collections.TrackableObservableList;
-import java.io.BufferedInputStream;
-import java.io.DataInputStream;
-import java.io.DataOutputStream;
-import java.io.FileNotFoundException;
-import java.io.IOException;
-import java.io.InputStream;
+import java.io.*;
+import java.net.URI;
 import java.net.URL;
 import java.util.ArrayList;
 import java.util.List;
@@ -52,7 +48,7 @@ import javafx.collections.ObservableList;
  * {@link #reapply}.
  *
  */
-final public class Stylesheet {
+public class Stylesheet {
 
     public enum Origin {
         USER_AGENT,
@@ -141,9 +137,26 @@ final public class Stylesheet {
         if (this == obj) return true;
         if (obj instanceof Stylesheet) {
             Stylesheet other = (Stylesheet)obj;
-            return (this.url == null) ? (other.url == null) : url.equals(other.url);
+            
+            if (this.url == null && other.url == null) {
+                return true;
+            } else if (this.url == null || other.url == null) {
+                return false;
+            } else {
+                // convert to Strings, as URL.equals is slow. See here:
+                // http://michaelscharf.blogspot.com/2006/11/javaneturlequals-and-hashcode-make.html
+                String thisUrlString = this.url.toExternalForm();
+                String otherUrlString = other.url.toExternalForm();
+                return thisUrlString.equals(otherUrlString);
+            }
         }
         return false;
+    }
+    
+    @Override public int hashCode() {
+        int hash = 7;
+        hash = 13 * hash + (this.url != null ? this.url.hashCode() : 0);
+        return hash;
     }
 
     /** Returns a string representation of this object. */
@@ -171,7 +184,7 @@ final public class Stylesheet {
         os.writeShort(rules.size());
         for (Rule r : rules) r.writeBinary(os,stringStore);
     }
-
+    
     // protected for unit testing 
     /** @treatAsPrivate public to allow unit testing */
     public void readBinary(DataInputStream is, String[] strings)
@@ -237,7 +250,93 @@ final public class Stylesheet {
         // return stylesheet
         return stylesheet;
     }
+    
+    public void writeJava(final PrintWriter writer, String className) throws IOException {
+        final String NEW_LINE = Rule.NEW_LINE;
+        final String INDENT = Rule.INDENT;
+        final String TWO_INDENT = Rule.TWO_INDENT;
+        
+        final int RULES_PER_METHOD = 50;
+        final int NUMBER_OF_METHODS = (rules.size() / RULES_PER_METHOD);
+
+        writer.write("import com.sun.javafx.css.*;" + NEW_LINE);
+        writer.write("import com.sun.javafx.css.parser.*;" + NEW_LINE);
+        writer.write("import java.util.*;" + NEW_LINE);
+        writer.write("import javafx.scene.paint.*;" + NEW_LINE);
+        
+        writer.write(NEW_LINE);
+        writer.write("public class " + className + " extends Stylesheet {");
+        writer.write(NEW_LINE);
+        writer.write(NEW_LINE);
+        
+        writer.write(INDENT);
+        writer.write("public ");
+        writer.write(className);
+        writer.write("() {");
+        writer.write(NEW_LINE);
+        
+        writer.write(TWO_INDENT);
+        writer.write("final List<Rule> rules = getRules();");
+        writer.write(NEW_LINE);
+        
+        for (int i = 0, max = NUMBER_OF_METHODS; i <= max; i++) {
+            writer.write(TWO_INDENT);
+            writer.write("loadRules");
+            writer.write(i+"");
+            writer.write("(rules);");
+            writer.write(NEW_LINE);
+        }
+        
+        // close the constructor
+        writer.write(INDENT);
+        writer.write("}");
+        writer.write(NEW_LINE);
+        writer.write(NEW_LINE);
+        
+        // get all the rules strings
+        String[] rulesStrings = new String[rules.size()];
+        for (int j = 0; j < rules.size(); j++) {
+            Rule r = rules.get(j);
+            rulesStrings[j] = r.writeJava();
+        }
+        
+        // write out methods
+        for (int i = 0; i <= NUMBER_OF_METHODS; i++) {
+            writer.write(INDENT);
+            writer.write("private final void loadRules");
+            writer.write(i+"");
+            writer.write("(final List<Rule> rules) {");
+            writer.write(NEW_LINE);
+            
+            writer.write(TWO_INDENT);
+            writer.write("Collections.addAll(rules, ");
+            writer.write(NEW_LINE);
+            
+            for (int j = 0; j < RULES_PER_METHOD; j++) {
+                int pos = i * RULES_PER_METHOD + j;
+                if (pos == rulesStrings.length) break;
+                
+                writer.write(TWO_INDENT);
+                writer.write(rulesStrings[pos]);
+                
+                if ((j < RULES_PER_METHOD - 1) && (pos < (rulesStrings.length - 1))) {
+                    writer.write(", ");
+                    writer.write(NEW_LINE);
+                }
+            }
+            
+            writer.write(NEW_LINE);
+            writer.write(TWO_INDENT);
+            writer.write(");");
+            
+            writer.write(NEW_LINE);
+            writer.write(INDENT);
+            writer.write("}");
+            writer.write(NEW_LINE);
+            writer.write(NEW_LINE);
+        }
+        
+        // close class
+        writer.write("}");
+    }
 }
-
-
-

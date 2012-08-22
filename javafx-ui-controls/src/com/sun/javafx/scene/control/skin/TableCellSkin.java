@@ -81,7 +81,7 @@ public class TableCellSkin extends CellSkinBase<TableCell, TableCellBehavior> {
     
     @Override protected void handleControlPropertyChanged(String p) {
         super.handleControlPropertyChanged(p);
-        if (p == "VISIBLE") {
+        if ("VISIBLE".equals(p)) {
             getSkinnable().setVisible(getSkinnable().getTableColumn().isVisible());
         }
     }

@@ -30,33 +30,33 @@ import javafx.scene.paint.Paint;
 
 
 final public class BorderPaint {
-    private javafx.beans.property.ObjectProperty<Paint> top;
-
+    private final Paint top;
+    private final Paint right;
+    private final Paint bottom;
+    private final Paint left;
+    
     public final Paint getTop() {
-        return top == null ? null : top.get();
+        return top;
     }
-    private javafx.beans.property.ObjectProperty<Paint> right;
 
-    public final Paint getRight() {
-        return right == null ? null : right.get();
+    public Paint getRight() {
+        return right;
     }
-    private javafx.beans.property.ObjectProperty<Paint> bottom;
 
-    public final Paint getBottom() {
-        return bottom == null ? null : bottom.get();
+    public Paint getBottom() {
+        return bottom;
     }
-    private javafx.beans.property.ObjectProperty<Paint> left;
 
-    public final Paint getLeft() {
-        return left == null ? null : left.get();
+    public Paint getLeft() {
+        return left;
     }
 
     public BorderPaint(final Paint top, final Paint right,
                        final Paint bottom, final Paint left) {
-        this.top.set(top);
-        this.right.set(right);
-        this.bottom.set(bottom);
-        this.left.set(left);
+        this.top = top;
+        this.right = right;
+        this.bottom = bottom;
+        this.left = left;
     }
 
     @Override public String toString() {

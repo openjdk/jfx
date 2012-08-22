@@ -648,7 +648,7 @@ public class PaginationSkin extends SkinBase<Pagination, PaginationBehavior>  {
 
     @Override protected void handleControlPropertyChanged(String p) {
         super.handleControlPropertyChanged(p);
-        if (p == "PAGE_FACTORY") {
+        if ("PAGE_FACTORY".equals(p)) {
             if (animate && timeline != null) {
                 // If we are in the middle of a page animation.
                 // Speedup and finish the animation then update the page factory.
@@ -666,13 +666,13 @@ public class PaginationSkin extends SkinBase<Pagination, PaginationBehavior>  {
             resetIndexes(false);
             navigation.initializePageIndicators();
             navigation.updatePageIndicators();
-        } else if (p == "PAGE_COUNT") {
+        } else if ("PAGE_COUNT".equals(p)) {
             resetIndexes(false);
             navigation.initializePageIndicators();
             navigation.updatePageIndicators();
-        } else if (p == "WIDTH") {
+        } else if ("WIDTH".equals(p)) {
             clipRect.setWidth(getWidth());
-        } else if (p == "HEIGHT") {
+        } else if ("HEIGHT".equals(p)) {
             clipRect.setHeight(getHeight());
         }
         

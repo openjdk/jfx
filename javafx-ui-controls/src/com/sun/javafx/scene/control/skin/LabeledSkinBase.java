@@ -168,28 +168,28 @@ public abstract class LabeledSkinBase<C extends Labeled, B extends BehaviorBase<
          * If the metrics have changed, we need to request a layout and invalidate
          * the text so that we recompute the display text on next read.
          */
-        if (p == "WIDTH") {
+        if ("WIDTH".equals(p)) {
             updateWrappingWidth();
             invalidText = true;
             // No requestLayout() because Control will force a layout
-        } else if (p == "HEIGHT") {
+        } else if ("HEIGHT".equals(p)) {
             invalidText = true;
             // No requestLayout() because Control will force a layout
-        } else if (p == "FONT") {
+        } else if ("FONT".equals(p)) {
             textMetricsChanged();
             invalidateWidths();
             ellipsisWidth = Double.NEGATIVE_INFINITY;
-        } else if (p == "GRAPHIC") {
+        } else if ("GRAPHIC".equals(p)) {
             updateChildren();
             textMetricsChanged();
-        } else if (p == "CONTENT_DISPLAY") {
+        } else if ("CONTENT_DISPLAY".equals(p)) {
             updateChildren();
             textMetricsChanged();
-        } else if (p == "LABEL_PADDING") {
+        } else if ("LABEL_PADDING".equals(p)) {
             textMetricsChanged();
-        } else if (p == "GRAPHIC_TEXT_GAP") {
+        } else if ("GRAPHIC_TEXT_GAP".equals(p)) {
             textMetricsChanged();
-        } else if (p == "ALIGNMENT") {
+        } else if ("ALIGNMENT".equals(p)) {
             // Doesn't involve text metrics because if the text is too long, then
             // it will already have fit all available width and a change to hpos
             // has no effect. Or it is too short (i.e. it all fits) and we don't
@@ -199,26 +199,26 @@ public abstract class LabeledSkinBase<C extends Labeled, B extends BehaviorBase<
             // has no effect. Or it is too short (i.e. it all fits) and we don't
             // have to worry about truncation. So just call request layout.
             requestLayout();
-        } else if (p == "MNEMONIC_PARSING") {
+        } else if ("MNEMONIC_PARSING".equals(p)) {
             textMetricsChanged();
-        } else if (p == "TEXT") {
+        } else if ("TEXT".equals(p)) {
             updateChildren();
             textMetricsChanged();
             invalidateWidths();
-        } else if (p == "TEXT_ALIGNMENT") {
+        } else if ("TEXT_ALIGNMENT".equals(p)) {
             // NO-OP
-        } else if (p == "TEXT_OVERRUN") {
+        } else if ("TEXT_OVERRUN".equals(p)) {
             textMetricsChanged();
-        } else if (p == "ELLIPSIS_STRING") {
+        } else if ("ELLIPSIS_STRING".equals(p)) {
             textMetricsChanged();
             invalidateWidths();
             ellipsisWidth = Double.NEGATIVE_INFINITY;
-        } else if (p == "WRAP_TEXT") {
+        } else if ("WRAP_TEXT".equals(p)) {
             updateWrappingWidth();
             textMetricsChanged();
-        } else if (p == "UNDERLINE") {
+        } else if ("UNDERLINE".equals(p)) {
             textMetricsChanged();
-        } else if (p == "PARENT") {
+        } else if ("PARENT".equals(p)) {
             parentChanged();
         }
     }

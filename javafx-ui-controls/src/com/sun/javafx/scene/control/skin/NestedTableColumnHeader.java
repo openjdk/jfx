@@ -87,9 +87,9 @@ public class NestedTableColumnHeader extends TableColumnHeader {
     @Override protected void handlePropertyChanged(String p) {
         super.handlePropertyChanged(p);
         
-        if (p == "TABLE_VIEW_COLUMN_RESIZE_POLICY") {
+        if ("TABLE_VIEW_COLUMN_RESIZE_POLICY".equals(p)) {
             updateContent();
-        } else if (p == "TABLE_COLUMN_TEXT") {
+        } else if ("TABLE_COLUMN_TEXT".equals(p)) {
             label.setVisible(getTableColumn().getText() != null && ! getTableColumn().getText().isEmpty());
         }
     }
