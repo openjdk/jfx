@@ -106,7 +106,13 @@ import javafx.stage.Window;
 
 abstract public class StyleManager<T> {
 
-    protected final static PlatformLogger LOGGER = com.sun.javafx.Logging.getCSSLogger();
+    private static PlatformLogger LOGGER;
+    protected static PlatformLogger getLogger() {
+        if (LOGGER == null) {
+            LOGGER = com.sun.javafx.Logging.getCSSLogger();
+        }
+        return LOGGER;
+    }
 
     /**
      * Return the StyleManager for the given Scene, or null if the scene
@@ -339,8 +345,8 @@ abstract public class StyleManager<T> {
         try {
             return loadStylesheetUnPrivileged(fname);
         } catch (java.security.AccessControlException ace) {
-            if (LOGGER.isLoggable(PlatformLogger.INFO)) {
-                LOGGER.info("Could not load the stylesheet, trying with FilePermissions : " + fname);
+            if (getLogger().isLoggable(PlatformLogger.INFO)) {
+                getLogger().info("Could not load the stylesheet, trying with FilePermissions : " + fname);
             }
 
             /*
@@ -522,8 +528,8 @@ abstract public class StyleManager<T> {
                         );
                     errors.add(error);
                 }
-                if (LOGGER.isLoggable(PlatformLogger.WARNING)) {
-                    LOGGER.warning(
+                if (getLogger().isLoggable(PlatformLogger.WARNING)) {
+                    getLogger().warning(
                         String.format("Resource \"%s\" not found.", fname)
                     );
                 }
@@ -538,8 +544,8 @@ abstract public class StyleManager<T> {
                     );
                 errors.add(error);
             }
-            if (LOGGER.isLoggable(PlatformLogger.INFO)) {
-                LOGGER.info("Could not find stylesheet: " + fname);//, fnfe);
+            if (getLogger().isLoggable(PlatformLogger.INFO)) {
+                getLogger().info("Could not find stylesheet: " + fname);//, fnfe);
             }
         } catch (IOException ioe) {
                 if (errors != null) {
@@ -549,8 +555,8 @@ abstract public class StyleManager<T> {
                         );
                     errors.add(error);
                 }
-            if (LOGGER.isLoggable(PlatformLogger.INFO)) {
-                LOGGER.info("Could not load stylesheet: " + fname);//, ioe);
+            if (getLogger().isLoggable(PlatformLogger.INFO)) {
+                getLogger().info("Could not load stylesheet: " + fname);//, ioe);
             }
         }
         return null;
