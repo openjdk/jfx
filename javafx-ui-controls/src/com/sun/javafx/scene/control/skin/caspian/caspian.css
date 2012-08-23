@@ -2511,11 +2511,11 @@
  *                                                                             *
  ******************************************************************************/
 
-.split-pane .table-view { -fx-padding: 0px; }
-.split-pane .list-view { -fx-padding: 0px; }
-.split-pane .tree-view { -fx-padding: 0px; }
-.split-pane .scroll-pane { -fx-padding: 0px; }
-.split-pane .split-pane {
+.split-pane > * > * > .table-view { -fx-padding: 0px; }
+.split-pane > * > * > .list-view { -fx-padding: 0px; }
+.split-pane > * > * > .tree-view { -fx-padding: 0px; }
+.split-pane > * > * > .scroll-pane { -fx-padding: 0px; }
+.split-pane > * > * > .split-pane {
     -fx-background-insets: 0, 0;
     -fx-padding: 0;
  }
