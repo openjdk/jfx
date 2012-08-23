@@ -40,7 +40,9 @@ import javafx.scene.input.MouseEvent;
 import com.sun.javafx.PlatformUtil;
 import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
+import javafx.beans.value.WeakChangeListener;
 import javafx.collections.ListChangeListener;
+import javafx.collections.WeakListChangeListener;
 import javafx.scene.input.KeyCode;
 import javafx.util.Callback;
 
@@ -213,7 +215,7 @@ public class TreeViewBehavior<T> extends BehaviorBase<TreeView<T>> {
     
     private boolean selectionChanging = false;
     
-    private ListChangeListener<Integer> selectedIndicesListener = new ListChangeListener<Integer>() {
+    private final ListChangeListener<Integer> selectedIndicesListener = new ListChangeListener<Integer>() {
         @Override public void onChanged(ListChangeListener.Change c) {
             while (c.next()) {
                 // there are no selected items, so lets clear out the anchor
@@ -239,26 +241,33 @@ public class TreeViewBehavior<T> extends BehaviorBase<TreeView<T>> {
             }
         }
     };
+    
+    private final ChangeListener<MultipleSelectionModel<TreeItem<T>>> selectionModelListener = 
+            new ChangeListener<MultipleSelectionModel<TreeItem<T>>>() {
+        @Override public void changed(ObservableValue<? extends MultipleSelectionModel<TreeItem<T>>> observable, 
+                    MultipleSelectionModel<TreeItem<T>> oldValue, 
+                    MultipleSelectionModel<TreeItem<T>> newValue) {
+            if (oldValue != null) {
+                oldValue.getSelectedIndices().removeListener(weakSelectedIndicesListener);
+            }
+            if (newValue != null) {
+                newValue.getSelectedIndices().addListener(weakSelectedIndicesListener);
+            }
+        }
+    };
+    
+    private final WeakListChangeListener<Integer> weakSelectedIndicesListener = 
+            new WeakListChangeListener<Integer>(selectedIndicesListener);
+    private final WeakChangeListener<MultipleSelectionModel<TreeItem<T>>> weakSelectionModelListener =
+            new WeakChangeListener<MultipleSelectionModel<TreeItem<T>>>(selectionModelListener);
 
     public TreeViewBehavior(TreeView control) {
         super(control);
         
         // Fix for RT-16565
-        getControl().selectionModelProperty().addListener(new ChangeListener<MultipleSelectionModel<TreeItem<T>>>() {
-            @Override
-            public void changed(ObservableValue<? extends MultipleSelectionModel<TreeItem<T>>> observable, 
-                        MultipleSelectionModel<TreeItem<T>> oldValue, 
-                        MultipleSelectionModel<TreeItem<T>> newValue) {
-                if (oldValue != null) {
-                    oldValue.getSelectedIndices().removeListener(selectedIndicesListener);
-                }
-                if (newValue != null) {
-                    newValue.getSelectedIndices().addListener(selectedIndicesListener);
-                }
-            }
-        });
+        getControl().selectionModelProperty().addListener(weakSelectionModelListener);
         if (control.getSelectionModel() != null) {
-            control.getSelectionModel().getSelectedIndices().addListener(selectedIndicesListener);
+            control.getSelectionModel().getSelectedIndices().addListener(weakSelectedIndicesListener);
         }
     }
     

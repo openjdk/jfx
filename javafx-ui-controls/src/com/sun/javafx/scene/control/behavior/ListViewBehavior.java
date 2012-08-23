@@ -61,9 +61,11 @@ import javafx.scene.input.MouseEvent;
 import com.sun.javafx.PlatformUtil;
 import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
+import javafx.beans.value.WeakChangeListener;
 import javafx.collections.ListChangeListener;
 import javafx.collections.ListChangeListener.Change;
 import javafx.collections.ObservableList;
+import javafx.collections.WeakListChangeListener;
 import javafx.scene.control.*;
 import javafx.util.Callback;
 
@@ -266,7 +268,7 @@ public class ListViewBehavior<T> extends BehaviorBase<ListView<T>> {
     
     private boolean selectionChanging = false;
     
-    private ListChangeListener<Integer> selectedIndicesListener = new ListChangeListener<Integer>() {
+    private final ListChangeListener<Integer> selectedIndicesListener = new ListChangeListener<Integer>() {
         @Override public void onChanged(ListChangeListener.Change c) {
             while (c.next()) {
                 // there are no selected items, so lets clear out the anchor
@@ -304,41 +306,55 @@ public class ListViewBehavior<T> extends BehaviorBase<ListView<T>> {
             }
         }
     };
+    
+    private final ChangeListener<ObservableList<T>> itemsListener = new ChangeListener<ObservableList<T>>() {
+        @Override public void changed(ObservableValue ov, 
+                    ObservableList oldValue, 
+                    ObservableList newValue) {
+            if (oldValue != null) {
+                oldValue.removeListener(weakItemsListListener);
+            } if (newValue != null) {
+                newValue.addListener(weakItemsListListener);
+            }
+        }
+    };
+    
+    private final ChangeListener<MultipleSelectionModel<T>> selectionModelListener = new ChangeListener<MultipleSelectionModel<T>>() {
+        @Override public void changed(
+                    ObservableValue<? extends MultipleSelectionModel<T>> observable, 
+                    MultipleSelectionModel<T> oldValue, 
+                    MultipleSelectionModel<T> newValue) {
+            if (oldValue != null) {
+                oldValue.getSelectedIndices().removeListener(weakSelectedIndicesListener);
+            }
+            if (newValue != null) {
+                newValue.getSelectedIndices().addListener(weakSelectedIndicesListener);
+            }
+        }
+    };
+    
+    private final WeakChangeListener<ObservableList<T>> weakItemsListener = 
+            new WeakChangeListener<ObservableList<T>>(itemsListener);
+    private final WeakListChangeListener<Integer> weakSelectedIndicesListener = 
+            new WeakListChangeListener<Integer>(selectedIndicesListener);
+    private final WeakListChangeListener weakItemsListListener = 
+            new WeakListChangeListener(itemsListListener);
+    private final WeakChangeListener<MultipleSelectionModel<T>> weakSelectionModelListener = 
+            new WeakChangeListener<MultipleSelectionModel<T>>(selectionModelListener);
+    
 
     public ListViewBehavior(ListView control) {
         super(control);
         
-        control.itemsProperty().addListener(new ChangeListener<ObservableList<T>>() {
-            @Override public void changed(ObservableValue ov, 
-                        ObservableList oldValue, 
-                        ObservableList newValue) {
-                if (oldValue != null) {
-                    oldValue.removeListener(itemsListListener);
-                } if (newValue != null) {
-                    newValue.addListener(itemsListListener);
-                }
-            }
-        });
+        control.itemsProperty().addListener(weakItemsListener);
         if (control.getItems() != null) {
-            control.getItems().addListener(itemsListListener);
+            control.getItems().addListener(weakItemsListListener);
         }
         
         // Fix for RT-16565
-        getControl().selectionModelProperty().addListener(new ChangeListener<MultipleSelectionModel<T>>() {
-            @Override
-            public void changed(ObservableValue<? extends MultipleSelectionModel<T>> observable, 
-                        MultipleSelectionModel<T> oldValue, 
-                        MultipleSelectionModel<T> newValue) {
-                if (oldValue != null) {
-                    oldValue.getSelectedIndices().removeListener(selectedIndicesListener);
-                }
-                if (newValue != null) {
-                    newValue.getSelectedIndices().addListener(selectedIndicesListener);
-                }
-            }
-        });
+        getControl().selectionModelProperty().addListener(weakSelectionModelListener);
         if (control.getSelectionModel() != null) {
-            control.getSelectionModel().getSelectedIndices().addListener(selectedIndicesListener);
+            control.getSelectionModel().getSelectedIndices().addListener(weakSelectedIndicesListener);
         }
     }
 
