@@ -2103,7 +2103,6 @@ public class VirtualFlow extends Region {
             }
 
             getStyleClass().add("clipped-container");
-            setManaged(false);
 
             // clipping
             clipRect = new Rectangle();
