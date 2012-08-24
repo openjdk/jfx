@@ -225,7 +225,7 @@ public abstract class Control extends Region implements Skinnable {
             // belonging to the skin. If impl_process(true) is not called, the 
             // impl_getStyleableProperties() method is never called, so the 
             // skin properties are never exposed.
-            impl_processCSS(true);
+//            impl_processCSS(true);
 
             // DEBUG: Log that we've changed the skin
             final PlatformLogger logger = Logging.getControlsLogger();
