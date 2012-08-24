@@ -698,4 +698,117 @@ public class ParsedValue<V, T> {
         }
     }
 
+    public String writeJava() {
+        StringBuilder sb = new StringBuilder();
+        
+        sb.append("new ParsedValue("); 
+
+        // ---- Value
+        if (value instanceof ParsedValue) {
+            sb.append(((ParsedValue)value).writeJava());
+        } else if (value instanceof ParsedValue[]) {
+            final ParsedValue[] values = (ParsedValue[])value;
+            sb.append("new ParsedValue[] {");
+            
+            for (int v=0; v<values.length; v++) {
+                if (values[v] != null) {
+                    sb.append(((ParsedValue)values[v]).writeJava());
+                } else {
+                    sb.append("null");
+                }
+                
+                if (v < (values.length - 1)) {
+                    sb.append(", ");
+                }
+            }
+            
+            sb.append("}");
+        } else if (value instanceof ParsedValue[][]) {
+            final ParsedValue[][] layers = (ParsedValue[][])value;
+            sb.append("new ParsedValue[][] {");
+            
+            for (int l=0; l<layers.length; l++) {
+                final ParsedValue[] values = layers[l];
+                sb.append("new ParsedValue[] {");
+                
+                for (int v=0; v<values.length; v++) {
+                    if (values[v] != null) {
+                        sb.append(((ParsedValue)values[v]).writeJava());
+                    } else {
+                        sb.append("null");
+                    }
+                    
+                    if (v < (values.length - 1)) {
+                        sb.append(", ");
+                    }
+                }
+                
+                sb.append("}");
+            }
+            
+            sb.append("}");
+        } else if (value instanceof Color) {
+            final Color c = (Color)value;
+            sb.append("new Color(");
+            sb.append(c.getRed());
+            sb.append(", ");
+            sb.append(c.getGreen());
+            sb.append(", ");
+            sb.append(c.getBlue());
+            sb.append(", ");
+            sb.append(c.getOpacity());
+            sb.append(")");
+        } else if (value instanceof Enum) {
+            final Enum e = (Enum)value;
+            sb.append(e.getClass().getName());
+            sb.append(".");
+            sb.append(e);
+        } else if (value instanceof Boolean) {
+            final Boolean b = (Boolean)value;
+            sb.append(b);
+        } else if (value instanceof Size) {
+            final Size size = (Size)value;
+            final double sz = size.getValue();
+            sb.append("new Size(");
+            sb.append(sz);
+            sb.append(", SizeUnits.");
+            sb.append(size.getUnits().name());
+            sb.append(")");
+        } else if (value instanceof String) {
+            String str = (String)value;
+            if (! str.startsWith("\"")) sb.append("\"");
+            sb.append(str);
+            if (! str.endsWith("\"")) sb.append("\"");
+        } else if (value instanceof URL) {
+            URL url = (URL)value;
+            String urlString = url.toString();
+            
+            // convert all escaped slashes (\\) into \, and then convert all
+            // backslashes into escaped versions.
+            urlString = urlString.replace("\\\\", "\\");
+            urlString = urlString.replace("\\", "\\\\");
+            
+            sb.append("\"");
+            sb.append(urlString);
+            sb.append("\"");
+        } else if (value == null) {
+            sb.append("null");
+        } else {
+            throw new InternalError("cannot writeJava " + this);
+        }
+        
+        // --- Style Converter
+        sb.append(", ");
+        String styleConverterString = getConverter() == null ? "null" : getConverter().writeJava();
+        sb.append(styleConverterString);
+        
+        // --- IsLookup
+        sb.append(", ");
+        sb.append(isLookup());
+        
+        // close ParsedValue constructor
+        sb.append(")"); 
+        
+        return sb.toString();
+    }
 }

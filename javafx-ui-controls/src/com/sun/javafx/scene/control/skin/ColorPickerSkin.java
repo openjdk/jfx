@@ -42,6 +42,8 @@ import javafx.scene.input.MouseEvent;
 import javafx.scene.layout.StackPane;
 import javafx.scene.shape.Rectangle;
 import com.sun.javafx.scene.control.behavior.ColorPickerBehavior;
+import javafx.beans.InvalidationListener;
+import javafx.beans.Observable;
 import javafx.scene.control.ColorPicker;
 import javafx.beans.property.BooleanProperty;
 import javafx.beans.value.WritableValue;
@@ -62,6 +64,14 @@ public class ColorPickerSkin extends ComboBoxPopupControl<Color> {
     private ColorPalette popupContent;
 //    private ColorPickerPanel popup = new ColorPickerPanel(Color.WHITE);
     BooleanProperty colorLabelVisible = new StyleableBooleanProperty(true) {
+        
+        @Override public void invalidated() {
+            if (colorLabelVisible.get()) {
+                displayNode.setText(colorValueToWeb(((ColorPicker)getSkinnable()).getValue()));
+            } else {
+                displayNode.setText("");
+            }
+        }
         
         @Override
         public Object getBean() {
@@ -211,7 +221,7 @@ public class ColorPickerSkin extends ComboBoxPopupControl<Color> {
             // label graphic
             icon = new StackPane();
             icon.getStyleClass().add("picker-color");
-            colorRect = new Rectangle(16, 16);
+            colorRect = new Rectangle(12, 12);
             colorRect.getStyleClass().add("picker-color-rect");
             
             updateColor();
