@@ -39,10 +39,7 @@ import javafx.beans.property.ObjectPropertyBase;
 import javafx.beans.property.SimpleObjectProperty;
 import javafx.beans.property.StringProperty;
 import javafx.beans.value.WritableValue;
-import javafx.geometry.BoundingBox;
-import javafx.geometry.Bounds;
 import javafx.scene.Node;
-import javafx.scene.Parent;
 import javafx.scene.layout.Region;
 
 import com.sun.javafx.logging.PlatformLogger;
@@ -220,12 +217,12 @@ public abstract class Control extends Region implements Skinnable {
             // next time they are requested.
             styleableProperties = null;
             
-            // calling impl_processCSS(true) as the styleable properties may now
+            // calling impl_reapplyCSS() as the styleable properties may now
             // be different, as we will now be able to return styleable properties 
-            // belonging to the skin. If impl_process(true) is not called, the 
+            // belonging to the skin. If impl_reapplyCSS() is not called, the 
             // impl_getStyleableProperties() method is never called, so the 
             // skin properties are never exposed.
-//            impl_processCSS(true);
+            impl_reapplyCSS();
 
             // DEBUG: Log that we've changed the skin
             final PlatformLogger logger = Logging.getControlsLogger();
