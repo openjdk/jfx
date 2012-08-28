@@ -25,10 +25,14 @@
 
 package javafx.scene.shape;
 
+import com.sun.javafx.test.TestHelper;
+import javafx.geometry.Bounds;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertSame;
 import javafx.scene.NodeTest;
 import javafx.scene.paint.Color;
+import static org.junit.Assert.*;
+import static com.sun.javafx.test.TestHelper.*;
 
 import org.junit.Test;
 
@@ -128,5 +132,17 @@ public class RectangleTest {
         NodeTest.assertDoublePropertySynced(
                 new Rectangle(200.0, 100.0),
                 "arcHeight", "arcHeight", 30.0);
+    }
+
+
+    @Test
+    public void testTransformedBounds_rotation() {
+        Rectangle r = new Rectangle(50, 100, 10, 20);
+        r.setArcHeight(5);
+        r.setArcWidth(10);
+        Bounds original = r.getBoundsInParent();
+        r.setRotate(90);
+        assertSimilar(TestHelper.box(45, 105,
+                original.getHeight(), original.getWidth()), r.getBoundsInParent());
     }
 }

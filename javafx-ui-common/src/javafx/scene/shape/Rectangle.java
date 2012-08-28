@@ -78,6 +78,7 @@ public  class Rectangle extends Shape {
     private static final int NON_RECTILINEAR_TYPE_MASK = ~(
             BaseTransform.TYPE_TRANSLATION |
             BaseTransform.TYPE_MASK_SCALE |
+            BaseTransform.TYPE_QUADRANT_ROTATION | 
             BaseTransform.TYPE_FLIP);
 
     /**
