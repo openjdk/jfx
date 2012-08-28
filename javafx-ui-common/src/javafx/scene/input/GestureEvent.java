@@ -25,7 +25,6 @@
 
 package javafx.scene.input;
 
-import com.sun.javafx.event.EventTypeUtil;
 import com.sun.javafx.scene.input.InputEventUtils;
 import com.sun.javafx.tk.Toolkit;
 import java.io.IOException;
@@ -51,7 +50,7 @@ public class GestureEvent extends InputEvent {
      * Common supertype for all gestures.
      */
     public static final EventType<GestureEvent> ANY =
-            EventTypeUtil.registerInternalEventType(InputEvent.ANY, "GESTURE");
+            new EventType<GestureEvent>(InputEvent.ANY, "GESTURE");
 
     /**
      * Creates a new instance of {@code GestureEvent}.

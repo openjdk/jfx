@@ -25,6 +25,7 @@
 
 package javafx.scene.control;
 
+import com.sun.javafx.beans.annotations.DuplicateInBuilderProperties;
 import javafx.beans.InvalidationListener;
 import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.DoubleProperty;
@@ -61,6 +62,7 @@ import com.sun.javafx.collections.NonIterableChange;
  *
  * @see TextField
  */
+@DuplicateInBuilderProperties(properties = {"promptText"})
 public class TextArea extends TextInputControl {
     // Text area content model
     private static final class TextAreaContent implements Content {

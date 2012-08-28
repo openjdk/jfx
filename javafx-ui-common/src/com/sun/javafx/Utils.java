@@ -1084,90 +1084,74 @@ public class Utils {
      *                                                                         *
      **************************************************************************/
 
-    private static UnicodeProcessor unicodeProcessor = new UnicodeProcessor();
     public static String convertUnicode(String src) {
-        return unicodeProcessor.process(src);
-    }
-
-    private static final class UnicodeProcessor {
         /** The input buffer, index of next character to be read,
          *  index of one past last character in buffer.
          */
-        private char[] buf;
-        private int bp;
-        private int buflen;
+        char[] buf;
+        int bp;
+        int buflen;
 
         /** The current character.
          */
-        private char ch;
+        char ch;
 
         /** The buffer index of the last converted unicode character
          */
-        private int unicodeConversionBp = -1;
+        int unicodeConversionBp = -1;
+        
+        buf = src.toCharArray();
+        buflen = buf.length;
+        bp = -1;
 
-        public String process(String src) {
-            buf = src.toCharArray();
-            buflen = buf.length;
-            bp = -1;
+        char[] dst = new char[buflen];
+        int dstIndex = 0;
 
-            char[] dst = new char[buflen];
-            int dstIndex = 0;
-
-            while (bp < buflen - 1) {
-                ch = buf[++bp];
-                if (ch == '\\') {
-                    convertUnicode();
-                }
-                dst[dstIndex++] = ch;
-            }
-
-            return new String(dst, 0, dstIndex);
-        }
-
-        /** Convert unicode escape; bp points to initial '\' character
-         *  (Spec 3.3).
-         */
-        private void convertUnicode() {
-            if (ch == '\\' && unicodeConversionBp != bp) {
-                bp++; ch = buf[bp];
-                if (ch == 'u') {
-                    do {
-                        bp++; ch = buf[bp];
-                    } while (ch == 'u');
-                    int limit = bp + 3;
-                    if (limit < buflen) {
-                        int d = digit(16);
-                        int code = d;
-                        while (bp < limit && d >= 0) {
+        while (bp < buflen - 1) {
+            ch = buf[++bp];
+            if (ch == '\\') {
+                if (unicodeConversionBp != bp) {
+                    bp++; ch = buf[bp];
+                    if (ch == 'u') {
+                        do {
                             bp++; ch = buf[bp];
-                            d = digit(16);
-                            code = (code << 4) + d;
+                        } while (ch == 'u');
+                        int limit = bp + 3;
+                        if (limit < buflen) {
+                            char c = ch;
+                            int result = Character.digit(c, 16);
+                            if (result >= 0 && c > 0x7f) {
+                                //lexError(pos+1, "illegal.nonascii.digit");
+                                ch = "0123456789abcdef".charAt(result);
+                            }
+                            int d = result;
+                            int code = d;
+                            while (bp < limit && d >= 0) {
+                                bp++; ch = buf[bp];
+                                char c1 = ch;
+                                int result1 = Character.digit(c1, 16);
+                                if (result1 >= 0 && c1 > 0x7f) {
+                                    //lexError(pos+1, "illegal.nonascii.digit");
+                                    ch = "0123456789abcdef".charAt(result1);
+                                }
+                                d = result1;
+                                code = (code << 4) + d;
+                            }
+                            if (d >= 0) {
+                                ch = (char)code;
+                                unicodeConversionBp = bp;
+                            }
                         }
-                        if (d >= 0) {
-                            ch = (char)code;
-                            unicodeConversionBp = bp;
-                            return;
-                        }
+                        //lexError(bp, "illegal.unicode.esc");
+                    } else {
+                        bp--;
+                        ch = '\\';
                     }
-                    //lexError(bp, "illegal.unicode.esc");
-                } else {
-                    bp--;
-                    ch = '\\';
                 }
             }
+            dst[dstIndex++] = ch;
         }
-
-        /** Convert an ASCII digit from its base (8, 10, or 16)
-         *  to its value.
-         */
-        private int digit(int base) {
-            char c = ch;
-            int result = Character.digit(c, base);
-            if (result >= 0 && c > 0x7f) {
-                //lexError(pos+1, "illegal.nonascii.digit");
-                ch = "0123456789abcdef".charAt(result);
-            }
-            return result;
-        }
+        
+        return new String(dst, 0, dstIndex);
     }
 }

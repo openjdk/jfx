@@ -59,6 +59,9 @@ import com.sun.javafx.sg.PGGroup;
 import com.sun.javafx.sg.PGNode;
 import com.sun.javafx.tk.Toolkit;
 
+import static com.sun.javafx.logging.PulseLogger.PULSE_LOGGING_ENABLED;
+import static com.sun.javafx.logging.PulseLogger.PULSE_LOGGER;
+
 /**
  * The base class for all nodes that have children in the scene graph.
  * <p>
@@ -994,6 +997,7 @@ public abstract class Parent extends Node {
      */
     public final void layout() {
         if (isNeedsLayout()) {
+            if (PULSE_LOGGING_ENABLED) PULSE_LOGGER.fxIncrementCounter("Parent#layout() on dirty Node");
             performingLayout = true;
 
             PlatformLogger logger = Logging.getLayoutLogger();
@@ -1015,6 +1019,8 @@ public abstract class Parent extends Node {
                 }
             }
             performingLayout = false;
+        } else {
+            if (PULSE_LOGGING_ENABLED) PULSE_LOGGER.fxIncrementCounter("Parent#layout() on clean Node");
         }
     }
 

@@ -238,6 +238,19 @@ public class StubStage implements TKStage {
         return notificationSender;
     }
 
+    @Override
+    public void requestInput(String text, int type, double width, double height, 
+                                double Mxx, double Mxy, double Mxz, double Mxt,
+                                double Myx, double Myy, double Myz, double Myt, 
+                                double Mzx, double Mzy, double Mzz, double Mzt) {
+        throw new UnsupportedOperationException("Not supported yet.");
+    }
+
+    @Override
+    public void releaseInput() {
+        throw new UnsupportedOperationException("Not supported yet.");
+    }
+
     private interface Notification {
         void execute(TKStageListener listener);
     }
