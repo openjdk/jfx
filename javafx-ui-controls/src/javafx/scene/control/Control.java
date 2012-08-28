@@ -26,6 +26,7 @@
 package javafx.scene.control;
 
 import com.sun.javafx.Utils;
+import com.sun.javafx.beans.annotations.DuplicateInBuilderProperties;
 import com.sun.javafx.css.*;
 import com.sun.javafx.css.converters.StringConverter;
 import java.lang.reflect.Constructor;
@@ -70,6 +71,7 @@ import javafx.scene.input.ContextMenuEvent;
  * controls that are containers {@link ScrollPane} and {@link ToolBar} do not.
  * Consult individual control documentation for details.
  */
+@DuplicateInBuilderProperties(properties = {"minHeight", "minWidth", "maxHeight", "maxWidth", "prefHeight", "prefWidth"})
 public abstract class Control extends Region implements Skinnable {
 
     static {
