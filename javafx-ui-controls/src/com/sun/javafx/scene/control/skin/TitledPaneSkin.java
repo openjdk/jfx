@@ -133,6 +133,8 @@ public class TitledPaneSkin extends LabeledSkinBase<TitledPane, TitledPaneBehavi
             clipRect.setWidth(getWidth());
         } else if ("HEIGHT".equals(property)) {
             clipRect.setHeight(getHeight());
+        } else if ("GRAPHIC_TEXT_GAP".equals(property)) {
+            titleRegion.requestLayout();            
         }
     }
 
