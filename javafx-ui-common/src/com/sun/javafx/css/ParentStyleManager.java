@@ -121,8 +121,8 @@ final class ParentStyleManager extends StyleManager<Parent> {
                 // If an exception occurred while loading one of the stylesheets
                 // then we will simply print warning into system.err and skip the
                 // stylesheet, allowing other stylesheets to attempt to load
-                if (LOGGER.isLoggable(PlatformLogger.WARNING)) {
-                    LOGGER.warning("Cannot add stylesheet. %s\n", e.getLocalizedMessage());
+                if (getLogger().isLoggable(PlatformLogger.WARNING)) {
+                    getLogger().warning("Cannot add stylesheet. %s\n", e.getLocalizedMessage());
                 }
 
             }

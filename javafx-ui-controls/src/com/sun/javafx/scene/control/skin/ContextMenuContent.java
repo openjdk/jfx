@@ -408,7 +408,7 @@ public class ContextMenuContent extends Region {
             final MenuItem item = getItems().get(row);
             if ((item instanceof CustomMenuItem && ((CustomMenuItem) item).getContent() == null) ||
                     item instanceof SeparatorMenuItem)  continue;
-            if ( item != null && item.getText().length() > len) {
+            if ( item != null && item.getText() != null && item.getText().length() > len) {
                 index = row;
                 len =  item.getText().length();
             }

@@ -216,26 +216,37 @@ public class TableRow<T> extends IndexedCell<T> {
      *                                                                         *
      **************************************************************************/
 
+    private int oldIndex = -1;
+    
     /** {@inheritDoc} */
     @Override void indexChanged() {
+        int newIndex = getIndex();
+        
         super.indexChanged();
-        updateItem();
+        
+        // Below we check if the index has changed, but we always call updateItem,
+        // as the value in the given index may have changed.
+        updateItem(newIndex);
+        
+        if (oldIndex == newIndex) return;
+        oldIndex = newIndex;
+        
         updateSelection();
         updateFocus();
     }
     
-    private void updateItem() {
+    private void updateItem(int newIndex) {
         TableView<T> tv = getTableView();
         if (tv == null || tv.getItems() == null) return;
         
         List<T> items = tv.getItems();
 
         // Compute whether the index for this cell is for a real item
-        boolean valid = getIndex() >= 0 && getIndex() < items.size();
+        boolean valid = newIndex >= 0 && newIndex < items.size();
 
         // Cause the cell to update itself
         if (valid) {
-            T newItem = items.get(getIndex());
+            T newItem = items.get(newIndex);
             if (newItem == null || ! newItem.equals(getItem())) {
                 updateItem(newItem, false);
             }

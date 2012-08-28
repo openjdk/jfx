@@ -369,7 +369,10 @@ public class LineChart<X,Y> extends XYChart<X,Y> {
             // create list of all nodes we need to fade out
             final List<Node> nodes = new ArrayList<Node>();
             nodes.add(series.getNode());
-            for (Data d: series.getData()) nodes.add(d.getNode());
+            if (getCreateSymbols()) { // RT-22124 
+                // done need to fade the symbols if createSymbols is false
+                for (Data d: series.getData()) nodes.add(d.getNode());
+            }
             // fade out old and symbols
             KeyValue[] startValues = new KeyValue[nodes.size()];
             KeyValue[] endValues = new KeyValue[nodes.size()];

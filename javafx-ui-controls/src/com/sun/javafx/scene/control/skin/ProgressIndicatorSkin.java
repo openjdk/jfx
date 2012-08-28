@@ -63,6 +63,9 @@ import com.sun.javafx.scene.control.skin.resources.ControlResources;
 import javafx.beans.property.ObjectProperty;
 import javafx.beans.value.WritableValue;
 
+import javafx.beans.value.ChangeListener;
+import javafx.beans.value.ObservableValue;
+
 public class ProgressIndicatorSkin extends SkinBase<ProgressIndicator, ProgressIndicatorBehavior<ProgressIndicator>> {
 
     /***************************************************************************
@@ -115,7 +118,7 @@ public class ProgressIndicatorSkin extends SkinBase<ProgressIndicator, ProgressI
                 }
                 
                 if (spinner != null) {
-                    if (getSkinnable().isVisible() && getSkinnable().getScene() != null) {
+                    if (getSkinnable().impl_isTreeVisible() && getSkinnable().getScene() != null) {
                         spinner.indeterminateTimeline.play();
                     }
                     else {
@@ -145,7 +148,9 @@ public class ProgressIndicatorSkin extends SkinBase<ProgressIndicator, ProgressI
                         timelineNulled = false;
                         spinner = new IndeterminateSpinner(getSkinnable(), ProgressIndicatorSkin.this);
                         getChildren().add(spinner);
-                        spinner.indeterminateTimeline.play();
+                        if (getSkinnable().impl_isTreeVisible()) {
+                            spinner.indeterminateTimeline.play();
+                        }
                         requestLayout();
                     }
                 }
@@ -167,7 +172,7 @@ public class ProgressIndicatorSkin extends SkinBase<ProgressIndicator, ProgressI
             spinner = new IndeterminateSpinner(control, this);
             getChildren().clear();
             getChildren().add(spinner);
-            if (getSkinnable().isVisible()) {
+            if (getSkinnable().impl_isTreeVisible()) {
                 spinner.indeterminateTimeline.play();
             }
         } else {
@@ -390,8 +395,8 @@ public class ProgressIndicatorSkin extends SkinBase<ProgressIndicator, ProgressI
     static class IndeterminateSpinner extends Region {
 
         private ProgressIndicator control;
-        private ProgressIndicatorSkin skin;
-        private Group childrenG;
+        protected ProgressIndicatorSkin skin;
+        private IndicatorPaths pathsG;
         Scale scaleTransform;
         Rotate rotateTransform;
 
@@ -405,15 +410,15 @@ public class ProgressIndicatorSkin extends SkinBase<ProgressIndicator, ProgressI
             skin.svgpaths = FXCollections.<SVGPath>observableArrayList();
             skin.setColors(skin.getProgressColor());
 
-            childrenG = new Group();
+            pathsG = new IndicatorPaths(this);
 
             scaleTransform = new Scale();
 
             rotateTransform = new Rotate();
             rotateTransform.setAngle(angle);
 
-            childrenG.getChildren().clear();
-            childrenG.getChildren().addAll(skin.svgpaths);
+            pathsG.getChildren().clear();
+            pathsG.getChildren().addAll(skin.svgpaths);
 
             indeterminateTimeline = new Timeline();
             indeterminateTimeline.setCycleCount(Timeline.INDEFINITE);
@@ -431,9 +436,41 @@ public class ProgressIndicatorSkin extends SkinBase<ProgressIndicator, ProgressI
             indeterminateTimeline.getKeyFrames().addAll(keyframes);
 
             getChildren().clear();
-            getChildren().addAll(childrenG);
+            getChildren().addAll(pathsG);
             requestLayout();
         }
+
+        void pauseIndicator(boolean pause) {
+            if (indeterminateTimeline != null) {
+                if (pause) {
+                    indeterminateTimeline.pause();
+                }
+                else {
+                    indeterminateTimeline.play();
+                }
+            }
+        }
+
+
+    class IndicatorPaths extends Group {
+        IndeterminateSpinner piSkin;
+        IndicatorPaths(IndeterminateSpinner pi) {
+            super();
+            piSkin = pi;
+            InvalidationListener treeVisibilityListener = new InvalidationListener() {
+                    @Override public void invalidated(Observable valueModel) {
+                        if (piSkin.skin.getSkinnable().impl_isTreeVisible()) {
+                            piSkin.pauseIndicator(false);
+                        }
+                        else {
+                            piSkin.pauseIndicator(true);
+                        }
+                    }
+                };
+            impl_treeVisibleProperty().addListener(treeVisibilityListener);
+        }
+    }
+
 
         @Override protected void layoutChildren() {
             double radiusW = (control.getWidth() - (skin.getInsets().getLeft() + skin.getInsets().getRight())) / 2;
@@ -446,14 +483,14 @@ public class ProgressIndicatorSkin extends SkinBase<ProgressIndicator, ProgressI
             rotateTransform.setPivotX(radius);
             rotateTransform.setPivotY(radius);
 
-            childrenG.getTransforms().clear();
-            childrenG.getTransforms().addAll(scaleTransform, rotateTransform);
+            pathsG.getTransforms().clear();
+            pathsG.getTransforms().addAll(scaleTransform, rotateTransform);
 
             double diameter = radius*2;
-            childrenG.resize(diameter, diameter);
+            pathsG.resize(diameter, diameter);
 
-            childrenG.setLayoutX(skin.getInsets().getLeft()+(radiusW - radius));
-            childrenG.setLayoutY(skin.getInsets().getTop()+(radiusH - radius));
+            pathsG.setLayoutX(skin.getInsets().getLeft()+(radiusW - radius));
+            pathsG.setLayoutY(skin.getInsets().getTop()+(radiusH - radius));
         }
 
         private Timeline indeterminateTimeline;
