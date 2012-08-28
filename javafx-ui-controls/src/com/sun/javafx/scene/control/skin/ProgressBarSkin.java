@@ -62,7 +62,7 @@ public class ProgressBarSkin extends SkinBase<ProgressBar, ProgressBarBehavior<P
      *                                                                         *
      **************************************************************************/
 
-    private StackPane bar;
+    private Bar bar;
     private StackPane track;
     private Rectangle clipRectangle;
 
@@ -221,7 +221,7 @@ public class ProgressBarSkin extends SkinBase<ProgressBar, ProgressBarBehavior<P
                 }
                 
                 if (indeterminateTimeline != null) {
-                    if (getSkinnable().isVisible() && getSkinnable().getScene() != null) {
+                    if (getSkinnable().impl_isTreeVisible() && getSkinnable().getScene() != null) {
                         indeterminateTimeline.play();
                     }
                     else {
@@ -248,7 +248,9 @@ public class ProgressBarSkin extends SkinBase<ProgressBar, ProgressBarBehavior<P
                     if (getSkinnable().getScene() != null && getSkinnable().isIndeterminate()) {
                         timelineNulled = false;
                         createIndeterminateTimeline();
-                        indeterminateTimeline.play();
+                        if (getSkinnable().impl_isTreeVisible()) {
+                            indeterminateTimeline.play();
+                        }
                         requestLayout();
                     }
                 }
@@ -284,10 +286,40 @@ public class ProgressBarSkin extends SkinBase<ProgressBar, ProgressBarBehavior<P
         track = new StackPane();
         track.getStyleClass().setAll("track");
 
-        bar = new StackPane();
+        bar = new Bar(this);
         bar.getStyleClass().setAll("bar");
 
         getChildren().setAll(track, bar);
+    }
+
+    void pauseBar(boolean pause) {
+        if (indeterminateTimeline != null) {
+            if (pause) {
+                indeterminateTimeline.pause();
+            }
+            else {
+                indeterminateTimeline.play();
+            }
+        }
+    }
+
+    class Bar extends StackPane {
+        ProgressBarSkin pbSkin;
+        Bar(ProgressBarSkin pb) {
+            super();
+            pbSkin = pb;
+            InvalidationListener treeVisibilityListener = new InvalidationListener() {
+                    @Override public void invalidated(Observable valueModel) {
+                        if (getSkinnable().impl_isTreeVisible()) {
+                            pbSkin.pauseBar(false);
+                        }
+                        else {
+                            pbSkin.pauseBar(true);
+                        }
+                    }
+                };
+            impl_treeVisibleProperty().addListener(treeVisibilityListener);
+        }
     }
 
     private void createIndeterminateTimeline() {
@@ -394,7 +426,7 @@ public class ProgressBarSkin extends SkinBase<ProgressBar, ProgressBarBehavior<P
         // width might have changed so recreate our animation if needed
         if (isIndeterminate) {
             createIndeterminateTimeline();
-            if (getSkinnable().isVisible()) {
+            if (getSkinnable().impl_isTreeVisible()) {
                 indeterminateTimeline.play();
             }
         } else if (indeterminateTimeline != null) {
