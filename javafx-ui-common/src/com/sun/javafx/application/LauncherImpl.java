@@ -347,33 +347,6 @@ public class LauncherImpl {
                 });
             }
 
-            // RT-19600: workaround for Mac crash on exit with J2D pipeline
-            boolean isMac = PlatformUtil.isMac();
-            if (isMac) {
-                // Exit if using the J2D pipeline. Note that currently SCENE3D
-                // is false only if we are running the J2D pipeline.
-                boolean exitOnClose = !PlatformImpl.isSupported(ConditionalFeature.SCENE3D);
-                boolean keepAlive = AccessController.doPrivileged(new PrivilegedAction<Boolean>() {
-                    @Override public Boolean run() {
-                        return Boolean.getBoolean("javafx.keepalive");
-                    }
-                });
-                if (exitOnClose && !keepAlive) {
-                    if (constructorError != null) {
-                        constructorError.printStackTrace();
-                    } else if (initError != null) {
-                        initError.printStackTrace();
-                    } else if(startError != null) {
-                        startError.printStackTrace();
-                    } else if (stopError != null) {
-                        stopError.printStackTrace();
-                    }
-                    System.err.println("JavaFX application launcher: calling System.exit");
-                    System.exit(0);
-                }
-            }
-            // END OF WORKAROUND
-
             if (error) {
                 if (pConstructorError != null) {
                     throw new RuntimeException("Unable to construct Preloader instance: "
