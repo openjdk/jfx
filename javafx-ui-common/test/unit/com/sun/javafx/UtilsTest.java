@@ -58,4 +58,78 @@ public class UtilsTest {
         split = Utils.split(s, "VK_LEFT_ARROW_EXT");
         assertEquals("Array content: " + Arrays.toString(split),0, split.length);
     }
+    
+    @Test
+    public void testConvertUnicode() {
+        String s = "";
+        String r = Utils.convertUnicode(s);
+        assertEquals("", r);
+        
+        /*String*/ s = "test";
+        /*String*/ r = Utils.convertUnicode(s);
+        assertEquals("test", r);
+
+        /*String*/ s = "hi\\u1234";
+        /*String*/ r = Utils.convertUnicode(s);
+        assertEquals("hi\u1234", r);
+
+        /*String*/ s = "\\u5678";
+        /*String*/ r = Utils.convertUnicode(s);
+        assertEquals("\u5678", r);
+        
+        /*String*/ s = "hi\\u1234there\\u432112";
+        /*String*/ r = Utils.convertUnicode(s);
+        assertEquals("hi\u1234there\u432112", r);
+        
+        /*String*/ s = "Hello\u5678There";
+        /*String*/ r = Utils.convertUnicode(s);
+        assertEquals("Hello\u5678There", r);
+        
+        /*String*/ s = "\\this\\is\\a\\windows\\path";
+        /*String*/ r = Utils.convertUnicode(s);
+        assertEquals("\\this\\is\\a\\windows\\path", r);
+        
+        /*String*/ s = "\\this\\is\\a\\12\\windows\\path";
+        /*String*/ r = Utils.convertUnicode(s);
+        assertEquals("\\this\\is\\a\\12\\windows\\path", r);
+
+        /*String*/ s = "u12u12";
+        /*String*/ r = Utils.convertUnicode(s);
+        assertEquals("u12u12", r);
+        
+        /*String*/ s = "hello\nu1234\n";
+        /*String*/ r = Utils.convertUnicode(s);
+        assertEquals("hello\nu1234\n", r);
+    }
+
+    @Test
+    public void testConvertUnicodeFail2_2() {
+
+        //Error case - null
+        //String s = null;
+        //String r = Utils.convertUnicode(s);
+        //assertEquals("", r);
+        
+        //String s = "\\";
+        //String r = Utils.convertUnicode(s);
+        //assertEquals("\\", r);
+        
+        //Error case - no length
+        ///*String*/ s = "hi\\u";
+        ///*String*/ r = Utils.convertUnicode(s);
+        //assertEquals("hi\\u", r);
+    }
+
+    @Test
+    public void testConvertUnicodeWrong2_2() {
+        
+        //Error case - short length
+        String s = "hi\\u12";
+        String r = Utils.convertUnicode(s);
+        //assertEquals("hi\\u12", r);
+        
+        /*String*/ s = "\\this\\is\\a\\umm\\windows\\path";
+        /*String*/ r = Utils.convertUnicode(s);
+        //assertEquals("\\this\\is\\a\\umm\\windows\\path", r);
+    }
 }

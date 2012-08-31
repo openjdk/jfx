@@ -55,7 +55,6 @@ import com.sun.javafx.css.StyleManager;
 import com.sun.javafx.css.StyleableObjectProperty;
 import com.sun.javafx.css.StyleableProperty;
 import com.sun.javafx.css.converters.EnumConverter;
-import com.sun.javafx.event.EventTypeUtil;
 import javafx.collections.WeakListChangeListener;
 import com.sun.javafx.scene.control.skin.ListViewSkin;
 import com.sun.javafx.scene.control.skin.VirtualContainerBase;
@@ -167,7 +166,7 @@ public class ListView<T> extends Control {
         return (EventType<ListView.EditEvent<T>>) EDIT_ANY_EVENT;
     }
     private static final EventType<?> EDIT_ANY_EVENT =
-            EventTypeUtil.registerInternalEventType(Event.ANY, "LIST_VIEW_EDIT");
+            new EventType(Event.ANY, "LIST_VIEW_EDIT");
     
     /**
      * An EventType used to indicate that an edit event has started within the
@@ -178,7 +177,7 @@ public class ListView<T> extends Control {
         return (EventType<ListView.EditEvent<T>>) EDIT_START_EVENT;
     }
     private static final EventType<?> EDIT_START_EVENT =
-            EventTypeUtil.registerInternalEventType(editAnyEvent(), "EDIT_START");
+            new EventType(editAnyEvent(), "EDIT_START");
 
     /**
      * An EventType used to indicate that an edit event has just been canceled
@@ -189,7 +188,7 @@ public class ListView<T> extends Control {
         return (EventType<ListView.EditEvent<T>>) EDIT_CANCEL_EVENT;
     }
     private static final EventType<?> EDIT_CANCEL_EVENT =
-            EventTypeUtil.registerInternalEventType(editAnyEvent(), "EDIT_CANCEL");
+            new EventType(editAnyEvent(), "EDIT_CANCEL");
 
     /**
      * An EventType used to indicate that an edit event has been committed
@@ -200,7 +199,7 @@ public class ListView<T> extends Control {
         return (EventType<ListView.EditEvent<T>>) EDIT_COMMIT_EVENT;
     }
     private static final EventType<?> EDIT_COMMIT_EVENT =
-            EventTypeUtil.registerInternalEventType(editAnyEvent(), "EDIT_COMMIT");
+            new EventType(editAnyEvent(), "EDIT_COMMIT");
     
     
 

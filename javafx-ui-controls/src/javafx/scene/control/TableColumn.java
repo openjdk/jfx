@@ -53,7 +53,6 @@ import javafx.util.Callback;
 
 import com.sun.javafx.scene.control.skin.Utils;
 import com.sun.javafx.event.EventHandlerManager;
-import com.sun.javafx.event.EventTypeUtil;
 import javafx.collections.WeakListChangeListener;
 import com.sun.javafx.scene.control.skin.*;
 import java.util.Collections;
@@ -170,7 +169,7 @@ public class TableColumn<S,T> implements EventTarget {
         return (EventType<CellEditEvent<S,T>>) EDIT_ANY_EVENT;
     }
     private static final EventType<?> EDIT_ANY_EVENT =
-            EventTypeUtil.registerInternalEventType(Event.ANY, "TABLE_COLUMN_EDIT");
+            new EventType(Event.ANY, "TABLE_COLUMN_EDIT");
 
     /**
      * Indicates that the user has performed some interaction to start an edit
@@ -182,7 +181,7 @@ public class TableColumn<S,T> implements EventTarget {
         return (EventType<CellEditEvent<S,T>>) EDIT_START_EVENT;
     }
     private static final EventType<?> EDIT_START_EVENT =
-            EventTypeUtil.registerInternalEventType(editAnyEvent(), "EDIT_START");
+            new EventType(editAnyEvent(), "EDIT_START");
 
     /**
      * Indicates that the editing has been canceled, meaning that no change should
@@ -193,7 +192,7 @@ public class TableColumn<S,T> implements EventTarget {
         return (EventType<CellEditEvent<S,T>>) EDIT_CANCEL_EVENT;
     }
     private static final EventType<?> EDIT_CANCEL_EVENT =
-            EventTypeUtil.registerInternalEventType(editAnyEvent(), "EDIT_CANCEL");
+            new EventType(editAnyEvent(), "EDIT_CANCEL");
 
     /**
      * Indicates that the editing has been committed by the user, meaning that
@@ -205,7 +204,7 @@ public class TableColumn<S,T> implements EventTarget {
         return (EventType<CellEditEvent<S,T>>) EDIT_COMMIT_EVENT;
     }
     private static final EventType<?> EDIT_COMMIT_EVENT =
-            EventTypeUtil.registerInternalEventType(editAnyEvent(), "EDIT_COMMIT");
+            new EventType(editAnyEvent(), "EDIT_COMMIT");
     
     
     

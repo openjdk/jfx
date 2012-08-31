@@ -2511,11 +2511,11 @@
  *                                                                             *
  ******************************************************************************/
 
-.split-pane .table-view { -fx-padding: 0px; }
-.split-pane .list-view { -fx-padding: 0px; }
-.split-pane .tree-view { -fx-padding: 0px; }
-.split-pane .scroll-pane { -fx-padding: 0px; }
-.split-pane .split-pane {
+.split-pane > * > * > .table-view { -fx-padding: 0px; }
+.split-pane > * > * > .list-view { -fx-padding: 0px; }
+.split-pane > * > * > .tree-view { -fx-padding: 0px; }
+.split-pane > * > * > .scroll-pane { -fx-padding: 0px; }
+.split-pane > * > * > .split-pane {
     -fx-background-insets: 0, 0;
     -fx-padding: 0;
  }
@@ -3471,7 +3471,7 @@ Only the properties with values that are different from the TextBox are specifie
     -fx-arrows-visible: true;
     -fx-tooltip-visible: true;
     -fx-page-information-visible: true;
-    -fx-page-information-alignment: bottom;    
+    -fx-page-information-alignment: bottom;        
 }
 .pagination > .page {
     -fx-background-color: transparent;
@@ -3487,16 +3487,16 @@ Only the properties with values that are different from the TextBox are specifie
     -fx-alignment: center;
 }
 
-.pagination > .pagination-control > .left-arrow-button{
+.pagination > .pagination-control > .control-box > .left-arrow-button{
     -fx-background-radius: 0;
     -fx-padding: 0.166667em 0.416em 0.25em 0.333em;
 }
-.pagination > .pagination-control > .right-arrow-button {
+.pagination > .pagination-control > .control-box > .right-arrow-button {
     -fx-background-radius: 0;
     -fx-padding: 0.166667em 0.333em 0.25em 0.416em;
 }
 
-.pagination > .pagination-control > .left-arrow {
+.pagination > .pagination-control .left-arrow {
     -fx-background-color: -fx-mark-highlight-color, -fx-mark-color;
     -fx-background-insets: 1 0 -1 0, 0;
     -fx-padding: 0.375em 0.291em 0.375em 0.291em;
@@ -3504,7 +3504,7 @@ Only the properties with values that are different from the TextBox are specifie
     -fx-scale-shape: true;
 }
 
-.pagination > .pagination-control > .right-arrow {
+.pagination > .pagination-control .right-arrow {
     -fx-background-color: -fx-mark-highlight-color, -fx-mark-color;
     -fx-background-insets: 1 0 -1 0, 0;
     -fx-padding: 0.375em 0.291em 0.375em 0.291em;
@@ -3524,8 +3524,8 @@ Only the properties with values that are different from the TextBox are specifie
     -fx-base: -fx-accent;
 }
 
-.pagination.bullet > .pagination-control > .left-arrow-button, 
-.pagination.bullet > .pagination-control > .right-arrow-button {
+.pagination.bullet > .pagination-control > .control-box > .left-arrow-button, 
+.pagination.bullet > .pagination-control > .control-box > .right-arrow-button {
     -fx-background-radius: 4em;
 }
 

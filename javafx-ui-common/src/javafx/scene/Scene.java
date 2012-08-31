@@ -44,7 +44,6 @@ import javafx.beans.InvalidationListener;
 import javafx.beans.Observable;
 import javafx.beans.property.ReadOnlyBooleanProperty;
 import javafx.beans.property.SimpleObjectProperty;
-import javafx.collections.FXCollections;
 import javafx.collections.ListChangeListener.Change;
 import javafx.collections.ObservableList;
 import javafx.collections.ObservableMap;
@@ -126,6 +125,8 @@ import javafx.stage.Stage;
 import javafx.stage.StageStyle;
 import javafx.util.Callback;
 
+import static com.sun.javafx.logging.PulseLogger.PULSE_LOGGING_ENABLED;
+import static com.sun.javafx.logging.PulseLogger.PULSE_LOGGER;
 
 /**
  * The JavaFX {@code Scene} class is the container for all content in a scene graph.
@@ -2203,15 +2204,30 @@ public class Scene implements EventTarget {
                 PerformanceTracker.logEvent("Scene - first repaint");
             }
 
-            Scene.this.doCSSPass();
-            Scene.this.doLayoutPass();
+            if (PULSE_LOGGING_ENABLED) {
+                long start = System.currentTimeMillis();
+                Scene.this.doCSSPass();
+                PULSE_LOGGER.fxMessage(start, System.currentTimeMillis(), "CSS Pass");
+                
+                start = System.currentTimeMillis();
+                Scene.this.doLayoutPass();
+                PULSE_LOGGER.fxMessage(start, System.currentTimeMillis(), "Layout Pass");
+            } else {
+                Scene.this.doCSSPass();
+                Scene.this.doLayoutPass();
+            }
 
             boolean dirty = dirtyNodes == null || dirtyNodesSize != 0 || !isDirtyEmpty();
             if (dirty) {
                 getRoot().updateBounds();
                 if (impl_peer != null) {
                     try {
+                        long start = PULSE_LOGGING_ENABLED ? System.currentTimeMillis() : 0;
                         impl_peer.waitForSynchronization();
+                        if (PULSE_LOGGING_ENABLED) {
+                            PULSE_LOGGER.fxMessage(start, System.currentTimeMillis(), "Waiting for previous rendering");
+                        }
+                        start = PULSE_LOGGING_ENABLED ? System.currentTimeMillis() : 0;
                         // synchronize scene properties
                         synchronizeSceneProperties();
                         // Run the synchronizer
@@ -2219,13 +2235,21 @@ public class Scene implements EventTarget {
                         Scene.this.mouseHandler.pulse();
                         // Tell the scene peer that it needs to repaint
                         impl_peer.markDirty();
+                        if (PULSE_LOGGING_ENABLED) {
+                            PULSE_LOGGER.fxMessage(start, System.currentTimeMillis(), "Copy state to render graph");
+                        }
                     } finally {
                         impl_peer.releaseSynchronization();
                     }
                 } else {
+                    long start = PULSE_LOGGING_ENABLED ? System.currentTimeMillis() : 0;
                     synchronizeSceneProperties();
                     synchronizeSceneNodes();
                     Scene.this.mouseHandler.pulse();
+                    if (PULSE_LOGGING_ENABLED) {
+                        PULSE_LOGGER.fxMessage(start, System.currentTimeMillis(), "Synchronize with null peer");
+                    }
+
                 }
             }
 

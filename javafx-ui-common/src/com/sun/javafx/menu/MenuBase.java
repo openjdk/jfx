@@ -25,13 +25,11 @@
 
 package com.sun.javafx.menu;
 
-import com.sun.javafx.event.EventTypeUtil;
 import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.ReadOnlyBooleanProperty;
 import javafx.collections.ObservableList;
 import javafx.event.Event;
 import javafx.event.EventHandler;
-import javafx.event.EventType;
 
 
 public interface MenuBase extends MenuItemBase {

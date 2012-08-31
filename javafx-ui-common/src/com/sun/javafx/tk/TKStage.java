@@ -179,4 +179,28 @@ public interface TKStage {
      * @see #grabFocus
      */
     public void ungrabFocus();
+
+    /**
+     * Requests text input in form of native keyboard for text component
+     * contained by this Window. Native text input component is drawn on the place
+     * of JavaFX component to cover it completely and to provide native text editing
+     * techniques. Any change of text is immediately reflected in JavaFX text component.
+     *
+     * @param text text to be shown in the native text input component
+     * @param type type of text input component @see com.sun.javafx.scene.control.behavior.TextInputTypes
+     * @param width width of JavaFX text input component
+     * @param height height of JavaFX text input component
+     * @param M standard transformation matrix for drawing the native text component derived from JavaFX component
+     */
+    void requestInput(String text, int type, double width, double height,
+                        double Mxx, double Mxy, double Mxz, double Mxt,
+                        double Myx, double Myy, double Myz, double Myt,
+                        double Mzx, double Mzy, double Mzz, double Mzt);
+
+    /**
+     * Native keyboard for text input is no longer necessary.
+     * Keyboard will be hidden and native text input component too.
+     */
+    void releaseInput();
+
 }

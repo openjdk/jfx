@@ -25,7 +25,6 @@
 
 package javafx.scene.input;
 
-import com.sun.javafx.event.EventTypeUtil;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.event.EventTarget;
@@ -53,7 +52,7 @@ public class InputMethodEvent extends InputEvent {
      * The only valid EventType for the InputMethodEvent.
      */
     public static final EventType<InputMethodEvent> INPUT_METHOD_TEXT_CHANGED =
-            EventTypeUtil.registerInternalEventType(InputEvent.ANY, "INPUT_METHOD_TEXT_CHANGED");
+            new EventType<InputMethodEvent>(InputEvent.ANY, "INPUT_METHOD_TEXT_CHANGED");
 
     private InputMethodEvent(final EventType<? extends InputMethodEvent> eventType) {
         super(eventType);

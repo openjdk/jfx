@@ -61,11 +61,6 @@ public class Circle extends Shape {
 
     private final Ellipse2D shape = new Ellipse2D();
 
-    private static final int NON_RECTILINEAR_TYPE_MASK = ~(
-            BaseTransform.TYPE_TRANSLATION |
-            BaseTransform.TYPE_MASK_SCALE |
-            BaseTransform.TYPE_FLIP);
-
     /**
      * Creates a new instance of Circle with a specified radius.
      * @param radius the radius of the circle in pixels
@@ -286,28 +281,42 @@ public class Circle extends Shape {
         if (impl_mode == Mode.EMPTY) {
             return bounds.makeEmpty();
         }
-        if ((tx.getType() & NON_RECTILINEAR_TYPE_MASK) != 0) {
-            return computeShapeBounds(bounds, tx, impl_configShape());
+
+        final double cX = getCenterX();
+        final double cY = getCenterY();
+
+        if ((tx.getType() & ~(BaseTransform.TYPE_MASK_ROTATION | BaseTransform.TYPE_TRANSLATION)) == 0) {
+
+            double tCX = cX * tx.getMxx() + cY * tx.getMxy() + tx.getMxt();
+            double tCY = cX * tx.getMyx() + cY * tx.getMyy() + tx.getMyt();
+            double r = getRadius();
+
+            if (impl_mode != Mode.FILL && getStrokeType() != StrokeType.INSIDE) {
+                double upad = getStrokeWidth();
+                if (getStrokeType() == StrokeType.CENTERED) {
+                    upad /= 2.0f;
+                }
+                r += upad;
+            }
+
+            return bounds.deriveWithNewBounds((float) (tCX - r), (float) (tCY - r), 0,
+                    (float) (tCX + r), (float) (tCY + r), 0);
+        } else if ((tx.getType() & ~(BaseTransform.TYPE_MASK_SCALE | BaseTransform.TYPE_TRANSLATION | BaseTransform.TYPE_FLIP)) == 0) {
+            final double r = getRadius();
+            final double x = getCenterX() - r;
+            final double y = getCenterY() - r;
+            final double width = 2.0 * r;
+            final double height = width;
+            double upad;
+            if (impl_mode == Mode.FILL || getStrokeType() == StrokeType.INSIDE) {
+                upad = 0.0f;
+            } else {
+                upad = getStrokeWidth();
+            }
+            return computeBounds(bounds, tx, upad, 0, x, y, width, height);
         }
 
-        // compute the x, y, width and height of the circle
-        final double r = getRadius();
-        final double x = getCenterX() - r;
-        final double y = getCenterY() - r;
-        final double width = 2.0 * r;
-        final double height = width;
-        double upad;
-        double dpad;
-        if (impl_mode == Mode.FILL || getStrokeType() == StrokeType.INSIDE) {
-            upad = dpad = 0.0f;
-        } else {
-            upad = getStrokeWidth();
-            if (getStrokeType() == StrokeType.CENTERED) {
-                upad /= 2.0f;
-            }
-            dpad = 0.0f;
-        }
-        return computeBounds(bounds, tx, upad, dpad, x, y, width, height);
+        return computeShapeBounds(bounds, tx, impl_configShape());
     }
 
     /**

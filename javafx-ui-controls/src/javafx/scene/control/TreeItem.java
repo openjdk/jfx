@@ -42,7 +42,6 @@ import javafx.event.EventType;
 import javafx.scene.Node;
 
 import com.sun.javafx.event.EventHandlerManager;
-import com.sun.javafx.event.EventTypeUtil;
 import javafx.beans.property.ReadOnlyBooleanProperty;
 import javafx.beans.property.ReadOnlyBooleanWrapper;
 import javafx.beans.property.ReadOnlyObjectProperty;
@@ -221,7 +220,7 @@ public class TreeItem<T> implements EventTarget {
         return (EventType<TreeModificationEvent<T>>) TREE_NOTIFICATION_EVENT;
     }
     private static final EventType TREE_NOTIFICATION_EVENT
-            = EventTypeUtil.registerInternalEventType(Event.ANY, "TreeNotificationEvent");
+            = new EventType(Event.ANY, "TreeNotificationEvent");
 
     /**
      * The general EventType used when the TreeItem receives a modification that
@@ -238,7 +237,7 @@ public class TreeItem<T> implements EventTarget {
         return (EventType<TreeModificationEvent<T>>) TREE_ITEM_COUNT_CHANGE_EVENT;
     }
     private static final EventType TREE_ITEM_COUNT_CHANGE_EVENT
-            = EventTypeUtil.registerInternalEventType(treeNotificationEvent(), "TreeItemCountChangeEvent");
+            = new EventType(treeNotificationEvent(), "TreeItemCountChangeEvent");
 
     /**
      * An EventType used when the TreeItem receives a modification to its
@@ -251,7 +250,7 @@ public class TreeItem<T> implements EventTarget {
         return (EventType<TreeModificationEvent<T>>) BRANCH_EXPANDED_EVENT;
     }
     private static final EventType<?> BRANCH_EXPANDED_EVENT
-            = EventTypeUtil.registerInternalEventType(treeItemCountChangeEvent(), "BranchExpandedEvent");
+            = new EventType(treeItemCountChangeEvent(), "BranchExpandedEvent");
 
     /**
      * An EventType used when the TreeItem receives a modification to its
@@ -264,7 +263,7 @@ public class TreeItem<T> implements EventTarget {
         return (EventType<TreeModificationEvent<T>>) BRANCH_COLLAPSED_EVENT;
     }
     private static final EventType<?> BRANCH_COLLAPSED_EVENT
-            = EventTypeUtil.registerInternalEventType(treeItemCountChangeEvent(), "BranchCollapsedEvent");
+            = new EventType(treeItemCountChangeEvent(), "BranchCollapsedEvent");
 
     /**
      * An EventType used when the TreeItem receives a direct modification to its
@@ -277,7 +276,7 @@ public class TreeItem<T> implements EventTarget {
         return (EventType<TreeModificationEvent<T>>) CHILDREN_MODIFICATION_EVENT;
     }
     private static final EventType<?> CHILDREN_MODIFICATION_EVENT
-            = EventTypeUtil.registerInternalEventType(treeItemCountChangeEvent(), "ChildrenModificationEvent");
+            = new EventType(treeItemCountChangeEvent(), "ChildrenModificationEvent");
 
     /**
      * An EventType used when the TreeItem receives a modification to its
@@ -290,7 +289,7 @@ public class TreeItem<T> implements EventTarget {
         return (EventType<TreeModificationEvent<T>>) VALUE_CHANGED_EVENT;
     }
     private static final EventType<?> VALUE_CHANGED_EVENT
-            = EventTypeUtil.registerInternalEventType(treeNotificationEvent(), "ValueChangedEvent");
+            = new EventType(treeNotificationEvent(), "ValueChangedEvent");
 
     /**
      * An EventType used when the TreeItem receives a modification to its
@@ -303,7 +302,7 @@ public class TreeItem<T> implements EventTarget {
         return (EventType<TreeModificationEvent<T>>) GRAPHIC_CHANGED_EVENT;
     }
     private static final EventType<?> GRAPHIC_CHANGED_EVENT
-            = EventTypeUtil.registerInternalEventType(treeNotificationEvent(), "GraphicChangedEvent");
+            = new EventType(treeNotificationEvent(), "GraphicChangedEvent");
     
     
 

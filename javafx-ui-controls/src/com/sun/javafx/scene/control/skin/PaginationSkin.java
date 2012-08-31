@@ -716,7 +716,7 @@ public class PaginationSkin extends SkinBase<Pagination, PaginationBehavior>  {
 
         layoutInArea(currentStackPane, left, top, w, stackPaneHeight, 0, HPos.CENTER, VPos.CENTER);
         layoutInArea(nextStackPane, left, top, w, stackPaneHeight, 0, HPos.CENTER, VPos.CENTER);
-        layoutInArea(navigation, left, stackPaneHeight, h, navigationHeight, 0, HPos.CENTER, VPos.CENTER);
+        layoutInArea(navigation, left, stackPaneHeight, w, navigationHeight, 0, HPos.CENTER, VPos.CENTER);
     }
 
     class NavigationControl extends StackPane {
