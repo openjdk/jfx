@@ -49,16 +49,16 @@ public class StyleConverterTest {
         for (int i = 0; i < files.length; i++) {
             if (files[i].isFile()) {
                 String name = files[i].getName();
-		if (! name.endsWith("class")) continue;
-		try {
+                if (! name.endsWith("class")) continue;
+                try {
                     // strip .class
                     name = (name.substring(0, name.length()-6));
                     name = (pkgPrefix != null) ? pkgPrefix.concat(".").concat(name) : name;
                     Class cl = Class.forName(name, false, loader);
                     if (converterClass.isAssignableFrom(cl)) converterClassList.add(cl);
-		} catch (Exception any) {
+                } catch (Exception any) {
                     System.out.println(any.toString());
-		}
+                }
             } else if (files[i].isDirectory()) {
                 String pkg =
                     (pkgPrefix != null) ? pkgPrefix.concat(".").concat(files[i].getName()) : files[i].getName();
@@ -69,8 +69,7 @@ public class StyleConverterTest {
 
     @Test
     public void testGetInstance_Class_ForAllInstancesOfStyleConverter() {
-
-	try {
+        try {
             converterClass = Class.forName("com.sun.javafx.css.StyleConverter");
             loader = converterClass.getClassLoader();
             URL url = converterClass.getClassLoader().getResource("");
@@ -88,8 +87,8 @@ public class StyleConverterTest {
                     assertNotNull(cl.getName(), result);
                 }
             }
-	} catch(Exception any) {
+        } catch(Exception any) {
             fail(any.toString());
-	}
+        }
     }
 }
