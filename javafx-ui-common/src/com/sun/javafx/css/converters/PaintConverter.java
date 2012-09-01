@@ -24,7 +24,9 @@
  */
 package com.sun.javafx.css.converters;
 
+import javafx.scene.image.Image;
 import javafx.scene.paint.CycleMethod;
+import javafx.scene.paint.ImagePattern;
 import javafx.scene.paint.LinearGradient;
 import javafx.scene.paint.Paint;
 import javafx.scene.paint.RadialGradient;
@@ -44,6 +46,8 @@ public final class PaintConverter extends StyleConverter<ParsedValue<?, Paint>, 
         static PaintConverter INSTANCE = new PaintConverter();
         static SequenceConverter SEQUENCE_INSTANCE = new SequenceConverter();
         static LinearGradientConverter LINEAR_GRADIENT_INSTANCE = new LinearGradientConverter();
+        static ImagePatternConverter IMAGE_PATTERN_INSTANCE = new ImagePatternConverter();
+        static RepeatingImagePatternConverter REPEATING_IMAGE_PATTERN_INSTANCE = new RepeatingImagePatternConverter();
         static RadialGradientConverter RADIAL_GRADIENT_INSTANCE = new RadialGradientConverter();
     }
 
@@ -98,7 +102,6 @@ public final class PaintConverter extends StyleConverter<ParsedValue<?, Paint>, 
         }
     }
 
-
     public static final class LinearGradientConverter extends StyleConverter<ParsedValue[], Paint> {
 
         public static LinearGradientConverter getInstance() {
@@ -113,10 +116,10 @@ public final class PaintConverter extends StyleConverter<ParsedValue<?, Paint>, 
         public Paint convert(ParsedValue<ParsedValue[], Paint> value, Font font) {
             ParsedValue[] values = value.getValue();
             int v = 0;
-            final Size startX = (Size) ((ParsedValue<?, Size>) values[v++]).convert(font);
-            final Size startY = (Size) ((ParsedValue<?, Size>) values[v++]).convert(font);
-            final Size endX = (Size) ((ParsedValue<?, Size>) values[v++]).convert(font);
-            final Size endY = (Size) ((ParsedValue<?, Size>) values[v++]).convert(font);
+            final Size startX = ((ParsedValue<?, Size>) values[v++]).convert(font);
+            final Size startY = ((ParsedValue<?, Size>) values[v++]).convert(font);
+            final Size endX = ((ParsedValue<?, Size>) values[v++]).convert(font);
+            final Size endY = ((ParsedValue<?, Size>) values[v++]).convert(font);
             boolean proportional = startX.getUnits() == SizeUnits.PERCENT && startX.getUnits() == startY.getUnits() && startX.getUnits() == endX.getUnits() && startX.getUnits() == endY.getUnits();
             final CycleMethod cycleMethod = (CycleMethod) values[v++].convert(font);
             final Stop[] stops = new Stop[values.length - v];
@@ -129,6 +132,68 @@ public final class PaintConverter extends StyleConverter<ParsedValue<?, Paint>, 
         @Override
         public String toString() {
             return "LinearGradientConverter";
+        }
+    }
+
+    public static final class ImagePatternConverter extends StyleConverter<ParsedValue[], Paint> {
+
+        public static ImagePatternConverter getInstance() {
+            return Holder.IMAGE_PATTERN_INSTANCE;
+        }
+
+        private ImagePatternConverter() {
+            super();
+        }
+
+        @Override
+        public Paint convert(ParsedValue<ParsedValue[], Paint> value, Font font) {
+            ParsedValue[] values = value.getValue();
+            ParsedValue<ParsedValue[],String> url = values[0];
+            if (values.length == 1) {
+                return new ImagePattern(new Image(url.convert(font)));
+            }
+
+            ParsedValue<?, Size> x = values[1];
+            ParsedValue<?, Size> y = values[2];
+            ParsedValue<?, Size> w = values[3];
+            ParsedValue<?, Size> h = values[4];
+            boolean p = values.length < 6 ? true : (Boolean) values[5].getValue();
+
+            return new ImagePattern(
+                    new Image(url.convert(font)),
+                    x.convert(font).getValue(),
+                    y.convert(font).getValue(),
+                    w.convert(font).getValue(),
+                    h.convert(font).getValue(), p);
+        }
+
+        @Override
+        public String toString() {
+            return "ImagePatternConverter";
+        }
+    }
+
+    public static final class RepeatingImagePatternConverter extends StyleConverter<ParsedValue[], Paint> {
+
+        public static RepeatingImagePatternConverter getInstance() {
+            return Holder.REPEATING_IMAGE_PATTERN_INSTANCE;
+        }
+
+        private RepeatingImagePatternConverter() {
+            super();
+        }
+
+        @Override
+        public Paint convert(ParsedValue<ParsedValue[], Paint> value, Font font) {
+            ParsedValue[] values = value.getValue();
+            ParsedValue<ParsedValue[],String> url = values[0];
+            final Image image = new Image(url.convert(font));
+            return new ImagePattern(image, 0, 0, image.getWidth(), image.getHeight(), false);
+        }
+
+        @Override
+        public String toString() {
+            return "RepeatingImagePatternConverter";
         }
     }
 
@@ -151,11 +216,11 @@ public final class PaintConverter extends StyleConverter<ParsedValue<?, Paint>, 
             // proportional, we need to get to the Size. getValue() will
             // return ParsedValue<?,Size>, so getValue().convert(font) will
             // give us the size.
-            final Size focusAngle = values[v++] != null ? (Size) ((ParsedValue<?, Size>) values[v-1]).convert(font) : null;
-            final Size focusDistance = values[v++] != null ? (Size) ((ParsedValue<?, Size>) values[v-1]).convert(font) : null;
-            final Size centerX = values[v++] != null ? (Size) ((ParsedValue<?, Size>) values[v-1]).convert(font) : null;
-            final Size centerY = values[v++] != null ? (Size) ((ParsedValue<?, Size>) values[v-1]).convert(font) : null;
-            final Size radius = (Size) ((ParsedValue<?, Size>) values[v++]).convert(font);
+            final Size focusAngle = values[v++] != null ? ((ParsedValue<?, Size>) values[v-1]).convert(font) : null;
+            final Size focusDistance = values[v++] != null ? ((ParsedValue<?, Size>) values[v-1]).convert(font) : null;
+            final Size centerX = values[v++] != null ? ((ParsedValue<?, Size>) values[v-1]).convert(font) : null;
+            final Size centerY = values[v++] != null ? ((ParsedValue<?, Size>) values[v-1]).convert(font) : null;
+            final Size radius = ((ParsedValue<?, Size>) values[v++]).convert(font);
             boolean proportional = radius.getUnits().equals(SizeUnits.PERCENT);
             boolean unitsAgree = centerX != null ? proportional == centerX.getUnits().equals(SizeUnits.PERCENT) : true;
             unitsAgree = unitsAgree && centerY != null ? proportional == centerY.getUnits().equals(SizeUnits.PERCENT) : true;
