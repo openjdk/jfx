@@ -171,11 +171,12 @@ public class PlatformImpl {
                 @Override public void run() {
                     try {
                         r.run();
-                        pendingRunnables.decrementAndGet();
-                        checkIdle();
                     } catch (Throwable t) {
                         System.err.println("Exception in runnable");
                         t.printStackTrace();
+                    } finally {
+                        pendingRunnables.decrementAndGet();
+                        checkIdle();
                     }
                 }
             });
