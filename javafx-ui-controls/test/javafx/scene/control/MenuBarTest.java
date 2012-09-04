@@ -9,6 +9,8 @@ import com.sun.javafx.scene.control.skin.ContextMenuContent;
 import com.sun.javafx.scene.control.skin.MenuBarMenuButtonRetriever;
 import com.sun.javafx.scene.control.skin.MenuBarSkin;
 import com.sun.javafx.tk.Toolkit;
+import javafx.event.Event;
+import javafx.event.EventHandler;
 import javafx.scene.Parent;
 import javafx.scene.Scene;
 import javafx.scene.input.MouseEvent;
@@ -316,6 +318,59 @@ public class MenuBarTest {
         keyboard.doKeyPress(KeyCode.RIGHT);
         tk.firePulse(); 
         assertTrue(menu3.isShowing());
+    }
+    
+    
+     @Test public void testMenuOnShowingEventFiringWithMenuHideOperation() {
+        final MouseEventGenerator generator = new MouseEventGenerator();
+        VBox root = new VBox();
+        Menu menu = new Menu("Menu");
+
+        MenuItem menuItem1 = new MenuItem("MenuItem1");
+        menu.getItems().addAll(menuItem1);
+        
+        menuBar.getMenus().add(menu);
+        menuBar.setLayoutX(100);
+        menuBar.setLayoutY(100);
+        
+        root.getChildren().addAll(menuBar);
+        startApp(root);
+        tk.firePulse();
+        
+        MenuBarSkin skin = (MenuBarSkin)menuBar.getSkin();
+        assertTrue(skin != null);
+        double xval = (menuBar.localToScene(menuBar.getLayoutBounds())).getMinX();
+        double yval = (menuBar.localToScene(menuBar.getLayoutBounds())).getMinY();
+        
+        boolean click = true;
+        final Boolean firstClick = new Boolean(click);
+        
+        menu.setOnShowing(new EventHandler<Event>() {
+            @Override public void handle(Event t) {
+                // we should not get here when the menu is hidden
+                assertEquals(firstClick.booleanValue(), true);
+            }
+        });
+        
+        MenuButton mb = MenuBarMenuButtonRetriever.getNodeForMenu(skin, 0);
+        mb.getScene().getWindow().requestFocus();
+        mb.requestFocus();
+        assertTrue(mb.isFocused());
+        // click on menu to show 
+        scene.impl_processMouseEvent(
+            generator.generateMouseEvent(MouseEvent.MOUSE_PRESSED, xval+20, yval+20));
+        scene.impl_processMouseEvent(
+            generator.generateMouseEvent(MouseEvent.MOUSE_RELEASED, xval+20, yval+20));
+        tk.firePulse(); 
+        assertEquals(menu.showingProperty().get(), true);
+        click = false;
+        // click on menu to hide
+        scene.impl_processMouseEvent(
+            generator.generateMouseEvent(MouseEvent.MOUSE_PRESSED, xval+20, yval+20));
+        scene.impl_processMouseEvent(
+            generator.generateMouseEvent(MouseEvent.MOUSE_RELEASED, xval+20, yval+20));
+        tk.firePulse(); 
+        assertEquals(menu.showingProperty().get(), false);
     }
     
 //    static final class MouseEventTracker {

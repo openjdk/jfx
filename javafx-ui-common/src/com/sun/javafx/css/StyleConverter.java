@@ -30,11 +30,9 @@ import java.io.DataOutputStream;
 import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
-
 import javafx.scene.text.Font;
-
 import com.sun.javafx.css.converters.EnumConverter;
-import java.util.List;
+import com.sun.javafx.css.converters.PaintConverter;
 
 /**
  * Converter converts ParsedValue&lt;F,T&gt; from type F to type T.
@@ -176,6 +174,10 @@ public class StyleConverter<F, T> {
             styleConverter = com.sun.javafx.css.converters.PaintConverter.LinearGradientConverter.getInstance();
         }  else if (com.sun.javafx.css.converters.PaintConverter.RadialGradientConverter.class == converterClass) {
             styleConverter = com.sun.javafx.css.converters.PaintConverter.RadialGradientConverter.getInstance();
+        }  else if (PaintConverter.ImagePatternConverter.class == converterClass) {
+            styleConverter = PaintConverter.ImagePatternConverter.getInstance();
+        }  else if (PaintConverter.RepeatingImagePatternConverter.class == converterClass) {
+            styleConverter = PaintConverter.RepeatingImagePatternConverter.getInstance();
 
         }  else if (com.sun.javafx.css.converters.SizeConverter.class == converterClass) {
             styleConverter = com.sun.javafx.css.converters.SizeConverter.getInstance();
