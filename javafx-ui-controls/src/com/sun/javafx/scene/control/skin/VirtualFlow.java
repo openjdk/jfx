@@ -129,8 +129,7 @@ public class VirtualFlow extends Region {
     public final BooleanProperty verticalProperty() {
         if (vertical == null) {
             vertical = new BooleanPropertyBase(true) {
-                @Override protected void invalidated() {
-                    addAllToPile();
+                @Override protected void invalidated() {                    
                     pile.clear();
                     sheetChildren.clear();
                     cells.clear();
@@ -742,7 +741,7 @@ public class VirtualFlow extends Region {
             releaseCell(accumCell);
 //            accumCell = null;
 //            accumCellParent.getChildren().clear();
-            addAllToPile();
+            cells.clear();
             pile.clear();
             needsRecreateCells = false;
         } 
@@ -1512,7 +1511,9 @@ public class VirtualFlow extends Region {
      **************************************************************************/
 
     /**
-     * Indicates that this is a new cell and we need to process CSS for it.
+     * Indicates that this is a newly created cell and we need call impl_processCSS for it.
+     * 
+     * See RT-23616 for more details.
      */
     private static final String NEW_CELL = "newcell";
     
