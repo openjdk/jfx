@@ -2089,10 +2089,12 @@ public class VirtualFlow extends Region {
 
         public void setClipX(double clipX) {
             setLayoutX(-clipX);
+            clipRect.setLayoutX(clipX);
         }
 
         public void setClipY(double clipY) {
             setLayoutY(-clipY);
+            clipRect.setLayoutY(clipY);
         }
 
         private final Rectangle clipRect;
@@ -2109,7 +2111,7 @@ public class VirtualFlow extends Region {
             clipRect.setSmooth(false);
             setClip(clipRect);
             // --- clipping
-
+            
             super.widthProperty().addListener(new InvalidationListener() {
                 @Override public void invalidated(Observable valueModel) {
                     clipRect.setWidth(getWidth());
