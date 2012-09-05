@@ -108,7 +108,9 @@ public class TableRowSkin<T> extends CellSkinBase<TableRow<T>, CellBehaviorBase<
         if ("ITEM".equals(p)) {
             updateCells = true;
             requestLayout();
-//            getSkinnable().layout();
+            
+            // Required to fix RT-24725
+            getSkinnable().layout();
         } else if ("TABLE_VIEW".equals(p)) {
             for (int i = 0; i < getChildren().size(); i++) {
                 Node n = getChildren().get(i);
