@@ -24,19 +24,18 @@
  */
 package com.sun.javafx.css.parser;
 
-import com.sun.javafx.css.*;
 import java.io.BufferedReader;
 import java.io.CharArrayReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.Reader;
 import java.net.URL;
+import java.text.MessageFormat;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-
 import javafx.geometry.Insets;
 import javafx.scene.effect.BlurType;
 import javafx.scene.effect.Effect;
@@ -50,7 +49,20 @@ import javafx.scene.shape.StrokeType;
 import javafx.scene.text.Font;
 import javafx.scene.text.FontPosture;
 import javafx.scene.text.FontWeight;
-
+import com.sun.javafx.css.Combinator;
+import com.sun.javafx.css.CompoundSelector;
+import com.sun.javafx.css.CssError;
+import com.sun.javafx.css.Declaration;
+import com.sun.javafx.css.FontUnits;
+import com.sun.javafx.css.ParsedValue;
+import com.sun.javafx.css.Rule;
+import com.sun.javafx.css.Selector;
+import com.sun.javafx.css.SimpleSelector;
+import com.sun.javafx.css.Size;
+import com.sun.javafx.css.SizeUnits;
+import com.sun.javafx.css.StyleManager;
+import com.sun.javafx.css.Styleable;
+import com.sun.javafx.css.Stylesheet;
 import com.sun.javafx.css.converters.BooleanConverter;
 import com.sun.javafx.css.converters.EffectConverter;
 import com.sun.javafx.css.converters.EnumConverter;
@@ -68,10 +80,6 @@ import com.sun.javafx.scene.layout.region.BorderStyle;
 import com.sun.javafx.scene.layout.region.Margins;
 import com.sun.javafx.scene.layout.region.Repeat;
 import com.sun.javafx.scene.layout.region.StrokeBorder;
-import java.net.MalformedURLException;
-import java.text.MessageFormat;
-import javafx.collections.ObservableList;
-import javafx.scene.Node;
 
 final public class CSSParser {
     static boolean EXIT_ON_ERROR = false;
@@ -468,8 +476,8 @@ final public class CSSParser {
         return buf.toString();
     }
     
-   // Assumes string is not a lookup!
-   private ParsedValue<Color,Color> colorValueOfString(String str) {
+    // Assumes string is not a lookup!
+    private ParsedValue<Color,Color> colorValueOfString(String str) {
 
         if(str.startsWith("#") || str.startsWith("0x")) {
 
@@ -1347,6 +1355,10 @@ final public class CSSParser {
             return parseLinearGradient(root);
         } else if ("radial-gradient".regionMatches(true, 0, fcn, 0, 15)) {
             return parseRadialGradient(root);
+        } else if ("image-pattern".regionMatches(true, 0, fcn, 0, 13)) {
+            return parseImagePattern(root);
+        } else if ("repeating-image-pattern".regionMatches(true, 0, fcn, 0, 23)) {
+            return parseRepeatingImagePattern(root);
         } else if ("ladder".regionMatches(true, 0, fcn, 0, 6)) {
             return parseLadder(root);
         } else if ("url".regionMatches(true, 0, fcn, 0, 3)) {
@@ -2131,6 +2143,114 @@ final public class CSSParser {
         
     }
     
+    // Based off ImagePattern constructor
+    //
+    // image-pattern(<uri-string>[,<size>,<size>,<size>,<size>[,<boolean>]?]?)
+    //
+    private ParsedValue<ParsedValue[], Paint> parseImagePattern(final Term root) throws ParseException {
+
+        // first term in the chain is the function name...
+        final String fn = (root.token != null) ? root.token.getText() : null;
+        // NOTE: We should put this in an assertion, so as not to do this work ordinarily, because only a
+        // bug in the parser can cause this.
+        assert !"image-pattern".regionMatches(true, 0, fn, 0, 13) : "Expected \'image-pattern\'";
+
+        Term arg;
+        if ((arg = root.firstArg) == null ||
+             arg.token == null ||
+             arg.token.getText().isEmpty()) {
+            error(root,
+                "Expected \'<uri-string>\'");
+        }
+
+        Term prev = arg;
+
+        final String uri = arg.token.getText();
+        ParsedValue[] uriValues = new ParsedValue[] {
+            new ParsedValue<String,String>(uri, StringConverter.getInstance()),
+            new ParsedValue<URL,URL>(sourceOfStylesheet, null)
+        };
+        ParsedValue parsedURI = new ParsedValue<ParsedValue[],String>(uriValues, URLConverter.getInstance());
+
+        // If nextArg is null, then there are no remaining arguments, so we are done.
+        if (arg.nextArg == null) {
+            ParsedValue[] values = new ParsedValue[1];
+            values[0] = parsedURI;
+            return new ParsedValue<ParsedValue[], Paint>(values, PaintConverter.ImagePatternConverter.getInstance());
+        }
+
+        // There must now be 4 sizes in a row.
+        Token token;
+        if ((arg = arg.nextArg) == null) error(prev, "Expected \'<size>\'");
+        ParsedValue<?, Size> x = parseSize(arg);
+
+        prev = arg;
+        if ((arg = arg.nextArg) == null) error(prev, "Expected \'<size>\'");
+        ParsedValue<?, Size> y = parseSize(arg);
+
+        prev = arg;
+        if ((arg = arg.nextArg) == null) error(prev, "Expected \'<size>\'");
+        ParsedValue<?, Size> w = parseSize(arg);
+
+        prev = arg;
+        if ((arg = arg.nextArg) == null) error(prev, "Expected \'<size>\'");
+        ParsedValue<?, Size> h = parseSize(arg);
+
+        // If there are no more args, then we are done.
+        if (arg.nextArg == null) {
+            ParsedValue[] values = new ParsedValue[5];
+            values[0] = parsedURI;
+            values[1] = x;
+            values[2] = y;
+            values[3] = w;
+            values[4] = h;
+            return new ParsedValue<ParsedValue[], Paint>(values, PaintConverter.ImagePatternConverter.getInstance());
+        }
+
+        prev = arg;
+        if ((arg = arg.nextArg) == null) error(prev, "Expected \'<boolean>\'");
+        if ((token = arg.token) == null || token.getText() == null) error(arg, "Expected \'<boolean>\'");
+
+        ParsedValue[] values = new ParsedValue[6];
+        values[0] = parsedURI;
+        values[1] = x;
+        values[2] = y;
+        values[3] = w;
+        values[4] = h;
+        values[5] = new ParsedValue<Boolean, Boolean>(Boolean.parseBoolean(token.getText()), null);
+        return new ParsedValue<ParsedValue[], Paint>(values, PaintConverter.ImagePatternConverter.getInstance());
+    }
+
+    // For tiling ImagePatterns easily.
+    //
+    // repeating-image-pattern(<uri-string>)
+    //
+    private ParsedValue<ParsedValue[], Paint> parseRepeatingImagePattern(final Term root) throws ParseException {
+        // first term in the chain is the function name...
+        final String fn = (root.token != null) ? root.token.getText() : null;
+        // NOTE: We should put this in an assertion, so as not to do this work ordinarily, because only a
+        // bug in the parser can cause this.
+        assert !"repeating-image-pattern".regionMatches(true, 0, fn, 0, 23) : "Expected \'repeating-image-pattern\'";
+
+        Term arg;
+        if ((arg = root.firstArg) == null ||
+             arg.token == null ||
+             arg.token.getText().isEmpty()) {
+            error(root,
+                "Expected \'<uri-string>\'");
+        }
+
+        final String uri = arg.token.getText();
+        ParsedValue[] uriValues = new ParsedValue[] {
+            new ParsedValue<String,String>(uri, StringConverter.getInstance()),
+            new ParsedValue<URL,URL>(sourceOfStylesheet, null)
+        };
+        ParsedValue parsedURI = new ParsedValue<ParsedValue[],String>(uriValues, URLConverter.getInstance());
+        ParsedValue[] values = new ParsedValue[1];
+        values[0] = parsedURI;
+        return new ParsedValue<ParsedValue[], Paint>(values, PaintConverter.RepeatingImagePatternConverter.getInstance());
+    }
+
     // parse a series of paint values separated by commas.
     // i.e., <paint> [, <paint>]*
     private ParsedValue<ParsedValue<?,Paint>[],Paint[]> parsePaintLayers(Term root)
@@ -3159,7 +3279,7 @@ final public class CSSParser {
         if (arg.token == null ||
             arg.token.getType() != CSSLexer.STRING ||
             arg.token.getText() == null ||
-            arg.token.getText().isEmpty()) error(arg, "Excpected \'url(\"<uri-string>\")\'");
+            arg.token.getText().isEmpty()) error(arg, "Expected \'url(\"<uri-string>\")\'");
 
         final String uri = arg.token.getText();
         ParsedValue[] uriValues = new ParsedValue[] {

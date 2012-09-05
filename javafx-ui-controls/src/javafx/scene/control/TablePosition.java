@@ -24,6 +24,8 @@
  */
 package javafx.scene.control;
 
+import java.lang.ref.WeakReference;
+
 /**
  * This class is used to represent a single row/column/cell in a TableView.
  * This is used throughout the TableView API to represent which rows/columns/cells
@@ -51,7 +53,9 @@ public class TablePosition<S,T> {
 
     /**
      * Constructs a TablePosition instance to represent the given row/column
-     * position in the given TableView instance.
+     * position in the given TableView instance. Both the TableView and 
+     * TableColumn are referenced weakly in this class, so it is possible that
+     * they will be null when their respective getters are called.
      * 
      * @param tableView The TableView that this position is related to.
      * @param row The row that this TablePosition is representing.
@@ -59,8 +63,8 @@ public class TablePosition<S,T> {
      */
     public TablePosition(TableView<S> tableView, int row, TableColumn<S,T> tableColumn) {
         this.row = row;
-        this.tableColumn = tableColumn;
-        this.tableView = tableView;
+        this.tableColumnRef = new WeakReference<TableColumn<S, T>>(tableColumn);
+        this.tableViewRef = new WeakReference<TableView<S>>(tableView);
     }
     
     
@@ -72,8 +76,8 @@ public class TablePosition<S,T> {
      **************************************************************************/
 
     private final int row;
-    private final TableColumn<S,T> tableColumn;
-    private final TableView<S> tableView;
+    private final WeakReference<TableColumn<S,T>> tableColumnRef;
+    private final WeakReference<TableView<S>> tableViewRef;
 
 
 
@@ -95,6 +99,8 @@ public class TablePosition<S,T> {
      * is -1 if the TableView or TableColumn instances are null.
      */
     public final int getColumn() {
+        TableView tableView = getTableView();
+        TableColumn tableColumn = getTableColumn();
         return tableView == null || tableColumn == null ? -1 : 
                 tableView.getVisibleLeafIndex(tableColumn);
     }
@@ -103,14 +109,14 @@ public class TablePosition<S,T> {
      * The TableView that this TablePosition is related to.
      */
     public final TableView<S> getTableView() {
-        return tableView;
+        return tableViewRef.get();
     }
     
     /**
      * The TableColumn that this TablePosition represents in the TableView.
      */
     public final TableColumn<S,T> getTableColumn() {
-        return tableColumn;
+        return tableColumnRef.get();
     }
 
     /**
@@ -130,10 +136,14 @@ public class TablePosition<S,T> {
         if (this.row != other.row) {
             return false;
         }
-        if (this.tableColumn != other.tableColumn && (this.tableColumn == null || !this.tableColumn.equals(other.tableColumn))) {
+        TableColumn tableColumn = getTableColumn();
+        TableColumn otherTableColumn = other.getTableColumn();
+        if (tableColumn != otherTableColumn && (tableColumn == null || !tableColumn.equals(otherTableColumn))) {
             return false;
         }
-        if (this.tableView != other.tableView && (this.tableView == null || !this.tableView.equals(other.tableView))) {
+        TableView tableView = getTableView();
+        TableView otherTableView = other.getTableView();
+        if (tableView != otherTableView && (tableView == null || !tableView.equals(otherTableView))) {
             return false;
         }
         return true;
@@ -146,8 +156,8 @@ public class TablePosition<S,T> {
     @Override public int hashCode() {
         int hash = 5;
         hash = 79 * hash + this.row;
-        hash = 79 * hash + (this.tableColumn != null ? this.tableColumn.hashCode() : 0);
-        hash = 79 * hash + (this.tableView != null ? this.tableView.hashCode() : 0);
+        hash = 79 * hash + (getTableColumn() != null ? getTableColumn().hashCode() : 0);
+        hash = 79 * hash + (getTableView() != null ? getTableView().hashCode() : 0);
         return hash;
     }
 
@@ -156,7 +166,7 @@ public class TablePosition<S,T> {
      * @return a string representation of this {@code TablePosition} object.
      */ 
     @Override public String toString() {
-        return "TablePosition [ row: " + row + ", column: " + tableColumn + ", "
-                + "tableView: " + tableView + " ]";
+        return "TablePosition [ row: " + row + ", column: " + getTableColumn() + ", "
+                + "tableView: " + getTableView() + " ]";
     }
 }

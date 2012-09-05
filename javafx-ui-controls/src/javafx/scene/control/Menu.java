@@ -160,7 +160,7 @@ public class Menu extends MenuItem {
     private ReadOnlyBooleanWrapper showing;
     
     private void setShowing(boolean value) {
-        if (getItems().size() == 0) return;
+        if (getItems().size() == 0 || (value && isShowing())) return;
         
         // these events will not fire if the showing property is bound
         if (value) {

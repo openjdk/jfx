@@ -659,7 +659,7 @@
     <h3><a name="typesize" id="typesize">&lt;size&gt;</a></h3>
     <p>A size is a <a href="#typenumber" class="typeref">&lt;number&gt;</a>
       with units of <a href="#typelength" class="typeref">&lt;length&gt;</a> or
-      <a href="#typepercentage" class="typeref">&lt;percentage&gt;</a>If units
+      <a href="#typepercentage" class="typeref">&lt;percentage&gt;</a>. If units
       are not specified then specified the 'px' is assumed.</p>
     <h4><a name="typelength" id="typelength">&lt;length&gt;</a></h4>
     <p class="grammar"><a href="#typenumber">&lt;number&gt;</a>[ px | mm | cm |
@@ -877,10 +877,15 @@
     </table>
     <h3><a name="typepaint" id="typepaint">&lt;paint&gt;</a></h3>
     <p>Paint values can either be a solid color specified in one of the color
-      syntaxes or they can be a linear or radial gradient.</p>
+      syntaxes, they can be a linear or radial gradient, or an image-pattern.</p>
     <p class="grammar"><a href="#typecolor" class="typelink">&lt;color&gt;</a> |
-      &lt;linear-gradient&gt; | &lt;radial-gradient&gt;</p>
-    <h4>Linear Gradients <span class="grammar" style="font-size: smaller;">&lt;linear-gradient&gt;</span></h4>
+      <a href="#typelinear-gradient" class="typelink">&lt;linear-gradient&gt;</a> |
+      <a href="#typeradial-gradient" class="typelink">&lt;radial-gradient&gt;</a> |
+      <a href="#typeimage-pattern" class="typelink">&lt;image-pattern&gt;</a></p>
+      <a href="#typeimage-pattern" class="typelink">&lt;repeating-image-pattern&gt;</a></p>
+    <h4>Linear Gradients<span class="grammar" style="font-size: smaller;">
+            <a name="typelinear-gradient" id="typelinear-gradient">&lt;linear-gradient&gt;</a>
+        </span></h4>
     <p class="grammar">linear-gradient( [ [from <a href="#typepoint" class="typelink">&lt;point&gt;</a>
       to <a href="#typepoint" class="typelink">&lt;point&gt;</a>] | [ to
       &lt;side-or-corner&gt;], ]? [ [ repeat | reflect ], ]? <a href="#color-stop"
@@ -920,7 +925,9 @@
     <p class="grammar"><font color="#af0000">linear (&lt;size&gt;, &lt;size&gt;)
         to (&lt;size&gt;, &lt;size&gt;) stops [ (&lt;number&gt;,&lt;color&gt;)
         ]+ [ repeat | reflect ]?</font></p>
-    <h4>Radial Gradients <span class="grammar" style="font-size: smaller;">&lt;radial-gradient&gt;</span></h4>
+    <h4>Radial Gradients <span class="grammar" style="font-size: smaller;">
+            <a name="typeradial-gradient" id="typeradial-gradient">&lt;radial-gradient&gt;</a>
+        </span></h4>
     <p class="grammar">radial-gradient([ focus-angle <a href="#typeangle" class="typelink">&lt;angle&gt;</a>,
       ]? [ focus-distance <a href="#typepercentage" class="typelink">&lt;percentage&gt;</a>,
       ]? [ center <a href="#typepoint" class="typelink">&lt;point&gt;</a>, ]?
@@ -946,6 +953,49 @@
         | &lt;number&gt; ] ]? [ focus-distance &lt;size&gt; ]? [ center
         &lt;size,size&gt; ]? &lt;size&gt; stops [ ( &lt;number&gt;,
         &lt;color&gt; ) ]+ [ repeat | reflect ]?</font></p>
+    <h4>Image Paint <span class="grammar" style="font-size: smaller;">
+            <a name="typeimage-pattern" id="typeimage-pattern">&lt;image-pattern&gt;</a>
+        </span></h4>
+    <p class="grammar">image-pattern(<a href="#typestring" class="typelink">&lt;string&gt;</a>,
+      [<a href="#typesize" class="typelink">&lt;size&gt;</a>,
+      <a href="#typesize" class="typelink">&lt;size&gt;</a>,
+      <a href="#typesize" class="typelink">&lt;size&gt;</a>,
+      <a href="#typesize" class="typelink">&lt;size&gt;</a>[,
+      <a href="#typeboolean" class="typelink">&lt;boolean&gt;</a>]?]?)</p>
+    <p>The parameters, in order, are:<br>
+    <p style="margin-left: 40px;">  
+    <span class="grammar"><a href="#typestring" class="typelink">&lt;string&gt;</a></span>
+      The URL of the image.<br>
+      <span class="grammar"><a href="#typesize" class="typelink">&lt;size&gt;</a></span>
+      The <i>x</i> origin of the anchor rectangle.<br>
+      <span class="grammar"><a href="#typesize" class="typelink">&lt;size&gt;</a></span>
+      The <i>y</i> origin of the anchor rectangle.<br>
+      <span class="grammar"><a href="#typesize" class="typelink">&lt;size&gt;</a></span>
+      The width of the anchor rectangle.<br>
+      <span class="grammar"><a href="#typesize" class="typelink">&lt;size&gt;</a></span>
+      The height of the anchor rectangle.<br>
+      <span class="grammar"><a href="#typeboolean" class="typelink">&lt;boolean&gt;</a></span>
+      The proportional flag which indicates whether start and end locations are proportional or absolute<br>
+    </p>
+    <p>For a full explanation of the parameters, refer to the 
+        <a href="../paint/ImagePattern.html" class="typelink">ImagePattern</a> javadoc.</p>    
+    <p>Following are examples of the use of image-pattern:</p>
+    <p class="example">image-pattern("images/Duke.png")</p>
+    <p class="example">image-pattern("images/Duke.png", 20%, 20%, 80%, 80%)</p>
+    <p class="example">image-pattern("images/Duke.png", 20%, 20%, 80%, 80%, true)</p>
+    <p class="example">image-pattern("images/Duke.png", 20, 20, 80, 80, false)</p>
+
+    <p>Related, there is the <code>repeating-image-pattern</code> function which is a shorthand
+    for producing tiled image based fills. It is equivalent to
+    <p class="example">image-pattern("images/Duke.png", 0, 0, imageWidth, imageHeight, false)</p>
+    </p>
+
+    <p class="grammar">repeating-image-pattern(<a href="#typestring" class="typelink">&lt;string&gt;</a>)</p>
+    <p>The only parameter is the uri of the image. Following is an example of the use of image-pattern:</p>
+    <p class="example">repeating-image-pattern("com/mycompany/myapp/images/Duke.png")</p>
+
+
+
     <h3><a name="typecolor" id="typecolor">&lt;color&gt;</a></h3>
     <p class="grammar">&lt;named-color&gt; | &lt;looked-up-color&gt; |
       &lt;rgb-color&gt; | &lt;hsb-color&gt; | &lt;color-function&gt;</p>
@@ -2480,8 +2530,8 @@
                 class="typelink">&lt;size&gt;</a>
               <a href="#typesize" class="typelink">&lt;size&gt;</a> ] fill? [ ,
               [ <a href="#typesize" class="typelink">&lt;size&gt;</a> | <a href="#typesize"
-                class="typelink">&lt;size&gt;</a><a
-                <a=""
+                class="typelink">&lt;size&gt;</a>
+                <a
                 href="#typesize"
                 class="typelink">&lt;size&gt;</a>
               <a href="#typesize" class="typelink">&lt;size&gt;</a> <a href="#typesize"
@@ -5367,5 +5417,6 @@
         rights reserved. Use is subject to <a href="http://download.oracle.com/javafx/2.0/api/license.html">license
           terms</a>. </small> </p>
     <br>
+    </table>
   </body>
 </html>
