@@ -39,7 +39,7 @@ public class CurrencyStringConverterTest {
     private CurrencyStringConverter converter;
     
     @Before public void setup() {
-        converter = new CurrencyStringConverter();
+        converter = new CurrencyStringConverter(Locale.US);
     }
     
     /*********************************************************************
@@ -108,17 +108,14 @@ public class CurrencyStringConverterTest {
      ********************************************************************/    
     
     @Test public void fromString_testValidStringInput() {
-        Locale.setDefault(Locale.US);
         assertEquals(10.32, converter.fromString("$10.32"));
     }
     
     @Test public void fromString_testValidStringInputWithWhiteSpace() {
-        Locale.setDefault(Locale.US);
         assertEquals(10.32, converter.fromString("      $10.32      "));
     }
     
     @Test public void toString_validInput() {
-        Locale.setDefault(Locale.US);
         assertEquals("$10.32", converter.toString(10.32));
     }
 }

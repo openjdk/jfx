@@ -38,7 +38,7 @@ public class PercentageStringConverterTest {
     private PercentageStringConverter converter;
     
     @Before public void setup() {
-        converter = new PercentageStringConverter();
+        converter = new PercentageStringConverter(Locale.US);
     }
     
     /*********************************************************************
