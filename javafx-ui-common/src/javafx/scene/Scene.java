@@ -1092,6 +1092,7 @@ public class Scene implements EventTarget {
         doLayoutPassWithoutPulse(3);
 
         if (!paused) {
+            getRoot().updateBounds();
             scenePulseListener.synchronizeSceneNodes();
         }
 

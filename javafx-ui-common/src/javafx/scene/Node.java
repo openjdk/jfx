@@ -1615,6 +1615,7 @@ public abstract class Node implements EventTarget {
     private void doCSSLayoutSyncForSnapshot() {
         doCSSPass();
         doLayoutPass();
+        updateBounds();
         Scene.impl_setAllowPGAccess(true);
         syncAll(this);
         Scene.impl_setAllowPGAccess(false);
