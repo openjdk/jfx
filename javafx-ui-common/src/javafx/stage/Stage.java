@@ -119,14 +119,17 @@ import javafx.beans.property.ReadOnlyBooleanWrapper;
 <pre><code>
 import javafx.application.Application;
 import javafx.scene.Group;
-import javafx.scene.Scene; 
-import javafx.scene.text.Text; 
-import javafx.stage.Stage; 
+import javafx.scene.Scene;
+import javafx.scene.text.Font;
+import javafx.scene.text.Text;
+import javafx.stage.Stage;
 
 public class HelloWorld extends Application {
 
     &#64;Override public void start(Stage stage) {
-        Scene scene = new Scene(new Group(new Text(25, 25, "Hello World!"))); 
+        Text text = new Text(10, 40, "Hello World!");
+        text.setFont(new Font(40));
+        Scene scene = new Scene(new Group(text));
 
         stage.setTitle("Welcome to JavaFX!"); 
         stage.setScene(scene); 
@@ -140,16 +143,14 @@ public class HelloWorld extends Application {
 }
 
  * </code></pre>
+ * <p>produces the following on Windows:</p>
+ * <p><img src="doc-files/Stage-win.png"/></p>
+ *
  * <p>produces the following on Mac OSX:</p>
- * <p><img src="doc-files/Stage0-mac.png"/></p>
+ * <p><img src="doc-files/Stage-mac.png"/></p>
  *
- * <p>produces the following on Windows XP:</p>
- * <p><img src="doc-files/Stage0-xp.png"/></p>
- *
- * <p>produces the following on Windows Vista:</p>
- * <p><img src="doc-files/Stage0-vista.png"/></p>
- *
- * 
+ * <p>produces the following on Linux:</p>
+ * <p><img src="doc-files/Stage-linux.png"/></p>
  */
 public class Stage extends Window {
 
