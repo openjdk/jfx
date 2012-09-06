@@ -1440,7 +1440,7 @@
     -fx-background-color: transparent;
 }
 
-.text-area > .content {
+.text-area .content {
     -fx-padding: 3 5 3 5; 
     -fx-cursor: text;
 }
