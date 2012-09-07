@@ -39,6 +39,7 @@ import javafx.scene.control.TableView;
 import com.sun.javafx.scene.control.behavior.CellBehaviorBase;
 import javafx.collections.WeakListChangeListener;
 import javafx.collections.ObservableList;
+import javafx.collections.ObservableMap;
 import javafx.geometry.Insets;
 import javafx.scene.Node;
 
@@ -75,6 +76,11 @@ public class TableRowSkin<T> extends CellSkinBase<TableRow<T>, CellBehaviorBase<
     private boolean isDirty = false;
     private boolean updateCells = false;
     
+    private TableViewSkin tableViewSkin;
+    
+    private final double fixedCellLength;
+    private final boolean fixedCellLengthEnabled;
+    
     private ListChangeListener visibleLeafColumnsListener = new ListChangeListener() {
         @Override public void onChanged(Change c) {
             isDirty = true;
@@ -84,15 +90,41 @@ public class TableRowSkin<T> extends CellSkinBase<TableRow<T>, CellBehaviorBase<
 
     public TableRowSkin(TableRow<T> tableRow) {
         super(tableRow, new CellBehaviorBase<TableRow<T>>(tableRow));
+        
+        if (getSkinnable() == null) {
+            throw new IllegalStateException("TableRowSkin does not have a Skinnable set to a TableRow instance");
+        }
+        
+        TableView tableView = tableRow.getTableView();
+        if (tableView == null) {
+            throw new IllegalStateException("TableRow not have the TableView property set");
+        }
+        
+        updateTableViewSkin();
 
         recreateCells();
         updateCells(true);
 
-        initBindings();
+        // init bindings
+        // watches for any change in the leaf columns observableArrayList - this will indicate
+        // that the column order has changed and that we should update the row
+        // such that the cells are in the new order
+        tableView.getVisibleLeafColumns().addListener(
+                new WeakListChangeListener(visibleLeafColumnsListener));
+        // --- end init bindings
+        
+        // TEMPORARY CODE (RT-24975)
+        // we check the TableView to see if a fixed cell length is specified
+        ObservableMap p = tableView.getProperties();
+        String k = VirtualFlow.FIXED_CELL_LENGTH_KEY;
+        fixedCellLength = (Double) (p.containsKey(k) ? p.get(k) : 0.0);
+        fixedCellLengthEnabled = fixedCellLength > 0;
+        // --- end of TEMPORARY CODE
 
         registerChangeListener(tableRow.itemProperty(), "ITEM");
         registerChangeListener(tableRow.editingProperty(), "EDITING");
         registerChangeListener(tableRow.tableViewProperty(), "TABLE_VIEW");
+//        registerChangeListener(tableView.widthProperty(), "WIDTH");
     }
 
     @Override protected void handleControlPropertyChanged(String p) {
@@ -112,12 +144,16 @@ public class TableRowSkin<T> extends CellSkinBase<TableRow<T>, CellBehaviorBase<
             // Required to fix RT-24725
             getSkinnable().layout();
         } else if ("TABLE_VIEW".equals(p)) {
-            for (int i = 0; i < getChildren().size(); i++) {
-                Node n = getChildren().get(i);
+            updateTableViewSkin();
+            
+            for (int i = 0, max = cells.size(); i < max; i++) {
+                Node n = cells.get(i);
                 if (n instanceof TableCell) {
                     ((TableCell)n).updateTableView(getSkinnable().getTableView());
                 }
             }
+//        } else if ("WIDTH".equals(p)) {
+//            requestLayout();
         }
     }
 
@@ -128,21 +164,6 @@ public class TableRowSkin<T> extends CellSkinBase<TableRow<T>, CellBehaviorBase<
         showColumns = newValue;
 
         requestLayout();
-    }
-    
-    private void initBindings() {
-        // watches for any change in the leaf columns observableArrayList - this will indicate
-        // that the column order has changed and that we should update the row
-        // such that the cells are in the new order
-        if (getSkinnable() == null) {
-            throw new IllegalStateException("TableRowSkin does not have a Skinnable set to a TableRow instance");
-        }
-        if (getSkinnable().getTableView() == null) {
-            throw new IllegalStateException("TableRow not have the TableView property set");
-        }
-        
-        getSkinnable().getTableView().getVisibleLeafColumns().addListener(
-                new WeakListChangeListener(visibleLeafColumnsListener));
     }
     
     @Override protected void layoutChildren(double x, final double y,
@@ -163,25 +184,58 @@ public class TableRowSkin<T> extends CellSkinBase<TableRow<T>, CellBehaviorBase<
         
         if (showColumns && ! table.getVisibleLeafColumns().isEmpty()) {
             // layout the individual column cells
-            double width;
-            double height;
-            
             Insets insets = getInsets();
             
             double verticalPadding = insets.getTop() + insets.getBottom();
             double horizontalPadding = insets.getLeft() + insets.getRight();
             
-            for (int i = 0; i < getChildren().size(); i++) {
+            for (int i = 0, max = cells.size(); i < max; i++) {
                 // in most cases all children are TableCell instances, but this
                 // is not always the case. For example, see RT-17694
-                Node node = getChildren().get(i);
-
-                width = snapSize(node.prefWidth(-1) - horizontalPadding);
-                height = Math.max(getHeight(), node.prefHeight(-1));
-                height = snapSize(height - verticalPadding);
+                TableCell tableCell = cells.get(i);
+                TableColumn tableColumn = tableCell.getTableColumn();
                 
-                node.resize(width, height);
-                node.relocate(x, insets.getTop());
+                boolean isVisible = true;
+                if (fixedCellLengthEnabled) {
+                    // we determine if the cell is visible, and if not we have the
+                    // ability to take it out of the scenegraph to help improve 
+                    // performance. However, we only do this when there is a 
+                    // fixed cell length specified in the TableView. This is because
+                    // when we have a fixed cell length it is possible to know with
+                    // certainty the height of each TableCell - it is the fixed value
+                    // provided by the developer, and this means that we do not have
+                    // to concern ourselves with the possibility that the height
+                    // may be variable and / or dynamic.
+                    isVisible = tableViewSkin != null && 
+                            tableViewSkin.isColumnPartiallyOrFullyVisible(tableColumn);
+                } 
+
+                final double width = snapSize(tableColumn.getWidth() - horizontalPadding);
+                
+                if (isVisible) {
+                    // not ideal to have to do this O(n) lookup, but compared
+                    // to what we had previously this is still a massive step
+                    // forward
+                    if (fixedCellLengthEnabled && ! getChildren().contains(tableCell)) {
+                        getChildren().add(tableCell);
+                    }
+                    
+                    final double height = snapSize(
+                            Math.max(
+                                getHeight(), 
+                                tableCell.prefHeight(-1)) - verticalPadding);
+
+                    tableCell.resize(width, height);
+                    tableCell.relocate(x, insets.getTop());
+                } else {
+                    if (fixedCellLengthEnabled) {
+                        // we only add/remove to the scenegraph if the fixed cell
+                        // length support is enabled - otherwise we keep all
+                        // TableCells in the scenegraph
+                        getChildren().remove(tableCell);
+                    }
+                }
+                       
                 x += width;
             }
         } else {
@@ -202,14 +256,18 @@ public class TableRowSkin<T> extends CellSkinBase<TableRow<T>, CellBehaviorBase<
         
         TableView<T> table = getSkinnable().getTableView();
         if (table == null) {
-            clearCellsMap();
+            if (cellsMap != null) {
+                cellsMap.clear();
+            }
             return;
         }
         
         ObservableList<TableColumn<T,?>> columns = table.getVisibleLeafColumns();
         
         if (columns.size() != columnCount || fullRefreshCounter == 0 || cellsMap == null) {
-            clearCellsMap();
+            if (cellsMap != null) {
+                cellsMap.clear();
+            }
             cellsMap = new WeakHashMap<TableColumn, TableCell>(columns.size());
             fullRefreshCounter = DEFAULT_FULL_REFRESH_COUNTER;
             getChildren().clear();
@@ -236,13 +294,9 @@ public class TableRowSkin<T> extends CellSkinBase<TableRow<T>, CellBehaviorBase<
             cellsMap.put(col, cell);
         }
     }
-    
-    private void clearCellsMap() {
-        if (cellsMap != null) cellsMap.clear();
-    }
 
     private void updateCells(boolean resetChildren) {
-        // if delete isn't called first, we can run into situations where the
+        // if clear isn't called first, we can run into situations where the
         // cells aren't updated properly.
         cells.clear();
 
@@ -263,17 +317,10 @@ public class TableRowSkin<T> extends CellSkinBase<TableRow<T>, CellBehaviorBase<
         }
 
         // update children of each row
-        ObservableList<Node> children = getChildren();
-        if (resetChildren) {
+        if (! fixedCellLengthEnabled && resetChildren) {
+            ObservableList<Node> children = getChildren();
             if (showColumns) {
-                if (cells.isEmpty()) {
-                    children.clear();
-                } else {
-                    // TODO we can optimise this by only showing cells that are 
-                    // visible based on the table width and the amount of horizontal
-                    // scrolling.
-                    children.setAll(cells);
-                }
+                children.setAll(cells);
             } else {
                 children.clear();
 
@@ -303,6 +350,10 @@ public class TableRowSkin<T> extends CellSkinBase<TableRow<T>, CellBehaviorBase<
     }
     
     @Override protected double computePrefHeight(double width) {
+        if (fixedCellLengthEnabled) {
+            return fixedCellLength;
+        }
+        
         if (showColumns) {
             // Support for RT-18467: making it easier to specify a height for
             // cells via CSS, where the desired height is less than the height
@@ -325,5 +376,11 @@ public class TableRowSkin<T> extends CellSkinBase<TableRow<T>, CellBehaviorBase<
             return super.computePrefHeight(width);
         }
     }
-    
+
+    private void updateTableViewSkin() {
+        TableView tableView = getSkinnable().getTableView();
+        if (tableView.getSkin() instanceof TableViewSkin) {
+            tableViewSkin = (TableViewSkin)tableView.getSkin();
+        }
+    }
 }
