@@ -124,7 +124,7 @@ public class TableRowSkin<T> extends CellSkinBase<TableRow<T>, CellBehaviorBase<
         registerChangeListener(tableRow.itemProperty(), "ITEM");
         registerChangeListener(tableRow.editingProperty(), "EDITING");
         registerChangeListener(tableRow.tableViewProperty(), "TABLE_VIEW");
-        registerChangeListener(tableView.widthProperty(), "WIDTH");
+//        registerChangeListener(tableView.widthProperty(), "WIDTH");
     }
 
     @Override protected void handleControlPropertyChanged(String p) {
@@ -152,8 +152,8 @@ public class TableRowSkin<T> extends CellSkinBase<TableRow<T>, CellBehaviorBase<
                     ((TableCell)n).updateTableView(getSkinnable().getTableView());
                 }
             }
-        } else if ("WIDTH".equals(p)) {
-            requestLayout();
+//        } else if ("WIDTH".equals(p)) {
+//            requestLayout();
         }
     }
 
@@ -208,7 +208,7 @@ public class TableRowSkin<T> extends CellSkinBase<TableRow<T>, CellBehaviorBase<
                     // may be variable and / or dynamic.
                     isVisible = tableViewSkin != null && 
                             tableViewSkin.isColumnPartiallyOrFullyVisible(tableColumn);
-                }
+                } 
 
                 final double width = snapSize(tableColumn.getWidth() - horizontalPadding);
                 
@@ -227,11 +227,13 @@ public class TableRowSkin<T> extends CellSkinBase<TableRow<T>, CellBehaviorBase<
 
                     tableCell.resize(width, height);
                     tableCell.relocate(x, insets.getTop());
-                } else if (fixedCellLengthEnabled) {
-                    // we only add/remove to the scenegraph if the fixed cell
-                    // length support is enabled - otherwise we keep all
-                    // TableCells in the scenegraph
-                    getChildren().remove(tableCell);
+                } else {
+                    if (fixedCellLengthEnabled) {
+                        // we only add/remove to the scenegraph if the fixed cell
+                        // length support is enabled - otherwise we keep all
+                        // TableCells in the scenegraph
+                        getChildren().remove(tableCell);
+                    }
                 }
                        
                 x += width;
@@ -294,12 +296,9 @@ public class TableRowSkin<T> extends CellSkinBase<TableRow<T>, CellBehaviorBase<
     }
 
     private void updateCells(boolean resetChildren) {
-        // if delete isn't called first, we can run into situations where the
+        // if clear isn't called first, we can run into situations where the
         // cells aren't updated properly.
         cells.clear();
-        if (! fixedCellLengthEnabled) {
-            getChildren().clear();
-        }
 
         TableRow skinnable = getSkinnable();
         int skinnableIndex = skinnable.getIndex();
@@ -314,32 +313,19 @@ public class TableRowSkin<T> extends CellSkinBase<TableRow<T>, CellBehaviorBase<
                 cell.updateIndex(skinnableIndex);
                 cell.updateTableRow(skinnable);
                 cells.add(cell);
-                
-                if (! fixedCellLengthEnabled) {
-                    getChildren().add(cell);
-                }
             }
         }
 
         // update children of each row
-        if (! fixedCellLengthEnabled) {
+        if (! fixedCellLengthEnabled && resetChildren) {
             ObservableList<Node> children = getChildren();
-            if (resetChildren) {
-                if (showColumns) {
-                    if (cells.isEmpty()) {
-                        children.clear();
-                    } else {
-                        // TODO we can optimise this by only showing cells that are 
-                        // visible based on the table width and the amount of horizontal
-                        // scrolling.
-                        children.setAll(cells);
-                    }
-                } else {
-                    children.clear();
+            if (showColumns) {
+                children.setAll(cells);
+            } else {
+                children.clear();
 
-                    if (!isIgnoreText() || !isIgnoreGraphic()) {
-                        children.add(skinnable);
-                    }
+                if (!isIgnoreText() || !isIgnoreGraphic()) {
+                    children.add(skinnable);
                 }
             }
         }

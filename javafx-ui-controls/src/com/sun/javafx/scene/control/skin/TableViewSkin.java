@@ -79,7 +79,8 @@ public class TableViewSkin<T> extends VirtualContainerBase<TableView<T>, TableVi
         // we check the TableView to see if a fixed cell length is specified
         ObservableMap p = tableView.getProperties();
         String k = VirtualFlow.FIXED_CELL_LENGTH_KEY;
-        double fixedCellLength = (Double) (p.containsKey(k) ? p.get(k) : 0.0);
+        final double fixedCellLength = (Double) (p.containsKey(k) ? p.get(k) : 0.0);
+        final boolean fixedCellLengthEnabled = fixedCellLength > 0;
         flow.setFixedCellLength(fixedCellLength);
         // --- end of TEMPORARY CODE
         
@@ -111,7 +112,9 @@ public class TableViewSkin<T> extends VirtualContainerBase<TableView<T>, TableVi
             @Override public void invalidated(Observable valueModel) {
                 tableHeaderRow.updateScrollX();
                 
-                flow.requestCellLayout();
+                if (fixedCellLengthEnabled) {
+                    flow.requestCellLayout();
+                }
             }
         };
         flow.getHbar().valueProperty().addListener(hbarValueListener);
@@ -425,14 +428,9 @@ public class TableViewSkin<T> extends VirtualContainerBase<TableView<T>, TableVi
         if (col == null || !col.isVisible()) return false;
         
         double scrollX = flow.getHbar().getValue(); 
-//        if (pos == flowScrollX && columnVisibilityMap.containsKey(col)) {
-//            return columnVisibilityMap.get(col);
-//        } else if (pos != flowScrollX) {
-//            columnVisibilityMap.clear();
-//        }
 
         // work out where this column header is, and it's width (start -> end)
-        double start = 0;//scrollX;
+        double start = 0;
         final TableView tableView = getSkinnable();
         final ObservableList<TableColumn<T,?>> visibleLeafColumns = tableView.getVisibleLeafColumns();
         for (int i = 0, max = visibleLeafColumns.size(); i < max; i++) {
@@ -446,16 +444,7 @@ public class TableViewSkin<T> extends VirtualContainerBase<TableView<T>, TableVi
         final Insets padding = getPadding();
         double headerWidth = tableView.getWidth() - padding.getLeft() + padding.getRight();
         
-        boolean isVisible = (start >= scrollX || end > scrollX) && (start < (headerWidth + scrollX) || end <= (headerWidth + scrollX));
-//        
-//        if (! isVisible) {
-//            System.out.println("\t" + isVisible + " column name: " + col.getText() + ", start: " + start + ", scrollX: " + scrollX + ", end: " + end);
-//        }
-        
-//        columnVisibilityMap.put(col, isVisible);
-//        flowScrollX = pos;
-        
-        return isVisible;
+        return (start >= scrollX || end > scrollX) && (start < (headerWidth + scrollX) || end <= (headerWidth + scrollX));
     }
     
     
