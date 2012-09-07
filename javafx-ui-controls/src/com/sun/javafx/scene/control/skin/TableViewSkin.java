@@ -53,6 +53,7 @@ import javafx.collections.WeakListChangeListener;
 import com.sun.javafx.scene.control.skin.resources.ControlResources;
 import javafx.beans.WeakInvalidationListener;
 import javafx.beans.value.WeakChangeListener;
+import javafx.collections.ObservableMap;
 import javafx.geometry.HPos;
 import javafx.geometry.VPos;
 
@@ -73,6 +74,14 @@ public class TableViewSkin<T> extends VirtualContainerBase<TableView<T>, TableVi
                 return TableViewSkin.this.createCell();
             }
         });
+        
+        // TEMPORARY CODE (RT-24795)
+        // we check the TableView to see if a fixed cell length is specified
+        ObservableMap p = tableView.getProperties();
+        String k = VirtualFlow.FIXED_CELL_LENGTH_KEY;
+        double fixedCellLength = (Double) (p.containsKey(k) ? p.get(k) : 0.0);
+        flow.setFixedCellLength(fixedCellLength);
+        // --- end of TEMPORARY CODE
         
         EventHandler<MouseEvent> ml = new EventHandler<MouseEvent>() {
             @Override public void handle(MouseEvent event) { 

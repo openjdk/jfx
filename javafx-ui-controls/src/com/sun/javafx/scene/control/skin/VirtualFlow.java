@@ -240,6 +240,29 @@ public class VirtualFlow extends Region {
             requestLayout();
         }
     }
+    
+    /**
+     * Use this (temporary) key to set a fixed cell length in the ListView,
+     * TreeView and TableView controls.
+     */
+    public static final String FIXED_CELL_LENGTH_KEY = 
+            "com.sun.javafx.scene.control.virtualFlow.fixedCellLength";
+    
+    /**
+     * For optimisation purposes, some use cases can trade dynamic cell length
+     * for speed - if fixedCellLength is greater than zero we'll use that rather
+     * than determine it by querying the cell itself.
+     */
+    private double fixedCellLength = 0;
+
+    public double getFixedCellLength() {
+        return fixedCellLength;
+    }
+    
+    public void setFixedCellLength(final double value) {
+        this.fixedCellLength = value;
+        layoutChildren();
+    }
 
     /**
      * Callback which is invoked whenever the VirtualFlow needs a new
@@ -1425,6 +1448,7 @@ public class VirtualFlow extends Region {
      * to use a cell as a helper for computing cell size in some cases.
      */
     double getCellLength(int index) {
+        if (fixedCellLength > 0) return fixedCellLength;
         IndexedCell cell = getCell(index);
         double length = getCellLength(cell);
         releaseCell(cell);
@@ -1445,6 +1469,7 @@ public class VirtualFlow extends Region {
      */
     private double getCellLength(IndexedCell cell) {
         if (cell == null) return 0;
+        if (fixedCellLength > 0) return fixedCellLength;
 
         return isVertical() ?
             cell.getLayoutBounds().getHeight()

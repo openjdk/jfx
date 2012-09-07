@@ -39,6 +39,7 @@ import javafx.scene.input.MouseEvent;
 
 import javafx.collections.WeakListChangeListener;
 import com.sun.javafx.scene.control.behavior.ListViewBehavior;
+import javafx.collections.ObservableMap;
 import javafx.util.Callback;
 
 /**
@@ -64,6 +65,14 @@ public class ListViewSkin<T> extends VirtualContainerBase<ListView<T>, ListViewB
             }
         });
         getChildren().add(flow);
+        
+        // TEMPORARY CODE (RT-24795)
+        // we check the TableView to see if a fixed cell length is specified
+        ObservableMap p = listView.getProperties();
+        String k = VirtualFlow.FIXED_CELL_LENGTH_KEY;
+        double fixedCellLength = (Double) (p.containsKey(k) ? p.get(k) : 0.0);
+        flow.setFixedCellLength(fixedCellLength);
+        // --- end of TEMPORARY CODE
         
         EventHandler<MouseEvent> ml = new EventHandler<MouseEvent>() {
             @Override public void handle(MouseEvent event) { 
