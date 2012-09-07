@@ -102,6 +102,19 @@ public class TableViewSkin<T> extends VirtualContainerBase<TableView<T>, TableVi
         };
         flow.getVbar().addEventFilter(MouseEvent.MOUSE_PRESSED, ml);
         flow.getHbar().addEventFilter(MouseEvent.MOUSE_PRESSED, ml);
+        
+        /*
+         * Listening for scrolling along the X axis, but we need to be careful
+         * to handle the situation appropriately when the hbar is invisible.
+         */
+        final InvalidationListener hbarValueListener = new InvalidationListener() {
+            @Override public void invalidated(Observable valueModel) {
+                tableHeaderRow.updateScrollX();
+                
+                flow.requestCellLayout();
+            }
+        };
+        flow.getHbar().valueProperty().addListener(hbarValueListener);
 
         columnReorderLine = new Region();
         columnReorderLine.getStyleClass().setAll("column-resize-line");
@@ -279,7 +292,7 @@ public class TableViewSkin<T> extends VirtualContainerBase<TableView<T>, TableVi
     private boolean rowCountDirty;
     private boolean contentWidthDirty = true;
     
-    private double scrollX;
+//    private double scrollX;
     
     /**
      * This region is used to overlay atop the table when the user is performing
@@ -408,7 +421,44 @@ public class TableViewSkin<T> extends VirtualContainerBase<TableView<T>, TableVi
         return newSelectionIndex;
     }
     
+     boolean isColumnPartiallyOrFullyVisible(TableColumn col) {
+        if (col == null || !col.isVisible()) return false;
+        
+        double scrollX = flow.getHbar().getValue(); 
+//        if (pos == flowScrollX && columnVisibilityMap.containsKey(col)) {
+//            return columnVisibilityMap.get(col);
+//        } else if (pos != flowScrollX) {
+//            columnVisibilityMap.clear();
+//        }
 
+        // work out where this column header is, and it's width (start -> end)
+        double start = 0;//scrollX;
+        final TableView tableView = getSkinnable();
+        final ObservableList<TableColumn<T,?>> visibleLeafColumns = tableView.getVisibleLeafColumns();
+        for (int i = 0, max = visibleLeafColumns.size(); i < max; i++) {
+            TableColumn c = visibleLeafColumns.get(i);
+            if (c.equals(col)) break;
+            start += c.getWidth();
+        }
+        double end = start + col.getWidth();
+
+        // determine the width of the table
+        final Insets padding = getPadding();
+        double headerWidth = tableView.getWidth() - padding.getLeft() + padding.getRight();
+        
+        boolean isVisible = (start >= scrollX || end > scrollX) && (start < (headerWidth + scrollX) || end <= (headerWidth + scrollX));
+//        
+//        if (! isVisible) {
+//            System.out.println("\t" + isVisible + " column name: " + col.getText() + ", start: " + start + ", scrollX: " + scrollX + ", end: " + end);
+//        }
+        
+//        columnVisibilityMap.put(col, isVisible);
+//        flowScrollX = pos;
+        
+        return isVisible;
+    }
+    
+    
     
     /***************************************************************************
      *                                                                         *
@@ -756,7 +806,7 @@ public class TableViewSkin<T> extends VirtualContainerBase<TableView<T>, TableVi
         if (col == null || !col.isVisible()) return;
 
         // work out where this column header is, and it's width (start -> end)
-        double start = scrollX;
+        double start = 0;//scrollX;
         for (TableColumn c : tableView.getVisibleLeafColumns()) {
             if (c.equals(col)) break;
             start += c.getWidth();

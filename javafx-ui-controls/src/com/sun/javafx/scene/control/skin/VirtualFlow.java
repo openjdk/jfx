@@ -777,6 +777,20 @@ public class VirtualFlow extends Region {
             needsReconfigureCells = false;
         }
         
+        if (needsCellsLayout) {
+            for (int i = 0, max = cells.size(); i < max; i++) {
+                Cell cell = cells.get(i);
+                if (cell != null) {
+                    cell.requestLayout();
+                }
+            }
+            needsCellsLayout = false;
+
+            // yes, we return here - if needsCellsLayout was set to true, we 
+            // only did it to do the above - not rerun the entire layout.
+            return;
+        }
+        
         final double width = getWidth();
         final double height = getHeight();
         final boolean isVertical = isVertical();
@@ -1449,6 +1463,7 @@ public class VirtualFlow extends Region {
      */
     double getCellLength(int index) {
         if (fixedCellLength > 0) return fixedCellLength;
+        
         IndexedCell cell = getCell(index);
         double length = getCellLength(cell);
         releaseCell(cell);
@@ -1894,6 +1909,7 @@ public class VirtualFlow extends Region {
 
     private boolean needsReconfigureCells = false;
     private boolean needsRecreateCells = false;
+    private boolean needsCellsLayout = false;
     
     public void reconfigureCells() {
         needsReconfigureCells = true;
@@ -1902,6 +1918,11 @@ public class VirtualFlow extends Region {
 
     public void recreateCells() {
         needsRecreateCells = true;
+        requestLayout();
+    }
+    
+    public void requestCellLayout() {
+        needsCellsLayout = true;
         requestLayout();
     }
 
