@@ -441,34 +441,34 @@ public abstract class SkinBase<C extends Control, BB extends BehaviorBase<C>> im
      *                                                                         *
      **************************************************************************/      
     
-//    /**
-//     * If this region's snapToPixel property is true, returns a value rounded
-//     * to the nearest pixel, else returns the same value.
-//     * @param value the space value to be snapped
-//     * @return value rounded to nearest pixel
-//     */
+    /**
+     * If this region's snapToPixel property is true, returns a value rounded
+     * to the nearest pixel, else returns the same value.
+     * @param value the space value to be snapped
+     * @return value rounded to nearest pixel
+     */
     protected double snapSpace(double value) {
-        return Region.snapSpace(value, control.isSnapToPixel());
+        return control.isSnapToPixel() ? Math.round(value) : value;
     }
     
-//    /**
-//     * If this region's snapToPixel property is true, returns a value ceiled
-//     * to the nearest pixel, else returns the same value.
-//     * @param value the size value to be snapped
-//     * @return value ceiled to nearest pixel
-//     */
+    /**
+     * If this region's snapToPixel property is true, returns a value ceiled
+     * to the nearest pixel, else returns the same value.
+     * @param value the size value to be snapped
+     * @return value ceiled to nearest pixel
+     */
     protected double snapSize(double value) {
-        return Region.snapSize(value, control.isSnapToPixel());
+        return control.isSnapToPixel() ? Math.ceil(value) : value;
     }
 
-//    /**
-//     * If this region's snapToPixel property is true, returns a value rounded
-//     * to the nearest pixel, else returns the same value.
-//     * @param value the position value to be snapped
-//     * @return value rounded to nearest pixel
-//     */
+    /**
+     * If this region's snapToPixel property is true, returns a value rounded
+     * to the nearest pixel, else returns the same value.
+     * @param value the position value to be snapped
+     * @return value rounded to nearest pixel
+     */
     protected double snapPosition(double value) {
-        return Region.snapPosition(value, control.isSnapToPixel());
+        return control.isSnapToPixel() ? Math.round(value) : value;
     }
     
     protected void positionInArea(Node child, double areaX, double areaY, 

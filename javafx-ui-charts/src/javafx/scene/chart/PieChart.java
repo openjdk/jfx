@@ -24,7 +24,6 @@
  */
 package javafx.scene.chart;
 
-import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 
@@ -46,14 +45,12 @@ import javafx.beans.property.StringPropertyBase;
 import javafx.beans.value.WritableValue;
 import javafx.collections.FXCollections;
 import javafx.collections.ListChangeListener;
-import javafx.collections.ListChangeListener.Change;
 import javafx.collections.ObservableList;
 import javafx.event.ActionEvent;
 import javafx.event.EventHandler;
 import javafx.geometry.Side;
 import javafx.scene.Node;
 import javafx.scene.layout.Region;
-import javafx.scene.paint.Color;
 import javafx.scene.shape.*;
 import javafx.scene.text.Text;
 import javafx.scene.transform.Scale;
@@ -590,16 +587,16 @@ public class PieChart extends Chart {
                  if (node != null) {
                     if (node instanceof Region) {
                         Region arcRegion = (Region)node;
-                        if( arcRegion.impl_getShape() == null) {
+                        if( arcRegion.getShape() == null) {
                             arc = new Arc();
-                            arcRegion.impl_setShape(arc);
+                            arcRegion.setShape(arc);
                         } else {
-                            arc = (Arc)arcRegion.impl_getShape();
+                            arc = (Arc)arcRegion.getShape();
                         }
-                        arcRegion.impl_setShape(null);
-                        arcRegion.impl_setShape(arc);
-                        arcRegion.impl_setScaleShape(false);
-                        arcRegion.impl_setPositionShape(false);
+                        arcRegion.setShape(null);
+                        arcRegion.setShape(arc);
+                        arcRegion.setScaleShape(false);
+                        arcRegion.setCenterShape(false);
                     }
                 }
                 double size = (isClockwise()) ? (-scale * Math.abs(item.getCurrentPieValue())) : (scale * Math.abs(item.getCurrentPieValue()));

@@ -224,8 +224,8 @@ public class SliderSkin extends javafx.scene.control.SkinBase<Slider, SliderBeha
         thumbHeight = thumb.prefHeight(-1);
         thumb.resize(thumbWidth, thumbHeight);
         // we are assuming the is common radius's for all corners on the track
-        double trackRadius = (track.impl_getBackgroundFills() != null && track.impl_getBackgroundFills().size() > 0) ?
-            track.impl_getBackgroundFills().get(0).getTopLeftCornerRadius() : 0;
+        double trackRadius = track.getBackground().getFills().size() > 0 ?
+                track.getBackground().getFills().get(0).getRadii().getTopLeftHorizontalRadius() : 0;
 
         if (getSkinnable().getOrientation() == Orientation.HORIZONTAL) {
             double tickLineHeight =  (showTickMarks) ? tickLine.prefHeight(-1) : 0;
@@ -237,7 +237,7 @@ public class SliderSkin extends javafx.scene.control.SkinBase<Slider, SliderBeha
             trackStart = x + (thumbWidth/2);
             double trackTop = (int)(startY + ((trackAreaHeight-trackHeight)/2));
             thumbTop = (int)(startY + ((trackAreaHeight-thumbHeight)/2));
-            
+
             positionThumb();
             // layout track
             track.resizeRelocate(trackStart - trackRadius, trackTop , trackLength + trackRadius + trackRadius, trackHeight);

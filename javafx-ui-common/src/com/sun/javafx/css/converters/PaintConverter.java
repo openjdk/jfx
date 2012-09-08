@@ -187,7 +187,10 @@ public final class PaintConverter extends StyleConverter<ParsedValue<?, Paint>, 
         public Paint convert(ParsedValue<ParsedValue[], Paint> value, Font font) {
             ParsedValue[] values = value.getValue();
             ParsedValue<ParsedValue[],String> url = values[0];
-            final Image image = new Image(url.convert(font));
+            String u = url.convert(font);
+            // If u is null, then we failed to locate the image associated with the url specified in the CSS file.
+            if (u == null) return null;
+            final Image image = new Image(u);
             return new ImagePattern(image, 0, 0, image.getWidth(), image.getHeight(), false);
         }
 

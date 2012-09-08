@@ -23,20 +23,17 @@
  * questions.
  */
 
-
 package javafx.scene.layout;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.fail;
 import javafx.geometry.HPos;
 import javafx.geometry.Insets;
 import javafx.geometry.VPos;
 import javafx.scene.shape.Rectangle;
-
 import org.junit.Test;
 
+import static org.junit.Assert.*;
+
 /**
- * Tests baseline offsets on various classes
  *
  */
 public class RegionTest {
@@ -72,27 +69,27 @@ public class RegionTest {
     }
 
     @Test public void testBoundedSizeReturnsPrefWhenPrefBetweenMinAndMax() {
-        assertEquals(200, Region.boundedSize(200, 100, 300), 0);
-    }
-
-    @Test public void testBoundedSizeReturnsMinWhenMinGreaterThanPref() {
         assertEquals(200, Region.boundedSize(100, 200, 300), 0);
     }
 
+    @Test public void testBoundedSizeReturnsMinWhenMinGreaterThanPrefButLessThanMax() {
+        assertEquals(200, Region.boundedSize(200, 100, 300), 0);
+    }
+
     @Test public void testBoundedSizeReturnsMinWhenMinGreaterThanPrefAndMax() {
-        assertEquals(300, Region.boundedSize(100, 300, 200), 0);
+        assertEquals(300, Region.boundedSize(300, 100, 200), 0);
     }
 
-    @Test public void testBoundedSizeReturnsMaxWhenMaxLessThanPref() {
-        assertEquals(200, Region.boundedSize(300, 100, 200), 0);
-    }
-
-    @Test public void testBoundedSizeReturnsMinWhenMaxLessThanMin() {
-        assertEquals(200, Region.boundedSize(300, 200, 100), 0);
+    @Test public void testBoundedSizeReturnsMaxWhenMaxLessThanPrefButGreaterThanMin() {
+        assertEquals(200, Region.boundedSize(100, 300, 200), 0);
     }
 
     @Test public void testBoundedSizeReturnsMinWhenMaxLessThanPrefAndMin() {
-        assertEquals(300, Region.boundedSize(200, 300, 100), 0);
+        assertEquals(200, Region.boundedSize(200, 300, 100), 0);
+    }
+
+    @Test public void testBoundedSizeReturnsMinWhenMaxLessThanPrefAndMinAndPrefLessThanMin() {
+        assertEquals(300, Region.boundedSize(300, 200, 100), 0);
     }
 
     @Test public void testMinWidthOverride() {
