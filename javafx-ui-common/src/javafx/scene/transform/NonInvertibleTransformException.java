@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2012, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -22,40 +22,21 @@
  * or visit www.oracle.com if you need additional information or have any
  * questions.
  */
-
 package javafx.scene.transform;
 
-import com.sun.javafx.test.BuilderTestBase;
-import java.util.Arrays;
-import java.util.Collection;
-import javafx.event.EventHandler;
+/**
+ * The <code>NonInvertibleTransformException</code> class represents
+ * an exception that is thrown if an operation is performed requiring
+ * the inverse of a {@code Transform} object which is in a non-invertible state.
+ */
+public class NonInvertibleTransformException extends java.lang.Exception {
 
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
-import org.junit.runners.Parameterized.Parameters;
-
-@RunWith(Parameterized.class)
-public final class Shear_builder_Test extends BuilderTestBase {
-    @Parameters
-    public static Collection data() {
-        BuilderTestBase.Configuration cfg = new BuilderTestBase.Configuration(Shear.class);
-
-        cfg.addProperty("pivotX", 1.0);
-        cfg.addProperty("pivotY", 2.0);
-        cfg.addProperty("x", 10.0);
-        cfg.addProperty("y", 20.0);
-        cfg.addProperty("onTransformChanged", new EventHandler<TransformChangedEvent>() {
-            @Override public void handle(TransformChangedEvent event) {
-                // empty
-            }
-        });
-
-        return Arrays.asList(new Object[] {
-            config(cfg)
-        });
-    }
-
-    public Shear_builder_Test(final Configuration configuration) {
-        super(configuration);
+    /**
+     * Creates a new instance of {@code NonInvertibleTransformException}
+     * with the specified detail message.
+     * @param message the detail message
+     */
+    public NonInvertibleTransformException(String message) {
+        super (message);
     }
 }

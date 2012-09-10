@@ -169,7 +169,7 @@ public class SnapshotParameters {
         params.depthBuffer = depthBuffer;
         params.fill = fill;
         params.viewport = viewport;
-        params.transform = transform == null ? null : transform.impl_copy();
+        params.transform = transform == null ? null : transform.clone();
         return params;
     }
 }

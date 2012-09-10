@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2012, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -31,7 +31,7 @@ import static org.junit.Assert.*;
 
 import org.junit.Test;
 
-public class TrasformUtilsTest {
+public class TransformUtilsTest {
     @Test
     public void shouldCreateCorrectImmutableTransform() {
         Transform t = TransformUtils.immutableTransform(
@@ -70,7 +70,7 @@ public class TrasformUtilsTest {
                 5,  6,  7,  8,
                 9, 10, 11, 12);
 
-        Transform t = src.impl_copy();
+        Transform t = src.clone();
 
         TransformHelper.assertMatrix(t,
                 1,  2,  3,  4,

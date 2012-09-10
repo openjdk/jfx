@@ -4513,7 +4513,7 @@ public abstract class Node implements EventTarget {
                         Node parentNode = Node.this.getParent();
                         if (parentNode != null) {
                             result = parentNode.getLocalToSceneTransform();
-                            result = result.impl_getConcatenation(getLocalToParentTransform());
+                            result = result.createConcatenation(getLocalToParentTransform());
                         } else {
                             result = getLocalToParentTransform();
                         }

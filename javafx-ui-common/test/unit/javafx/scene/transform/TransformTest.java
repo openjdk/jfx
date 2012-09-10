@@ -44,6 +44,7 @@ import com.sun.javafx.geom.transform.BaseTransform;
 import com.sun.javafx.pgstub.StubRectangle;
 import com.sun.javafx.scene.transform.TransformUtils;
 import com.sun.javafx.test.TransformHelper;
+import javafx.geometry.BoundingBox;
 import javafx.geometry.Point3D;
 
 
@@ -153,8 +154,6 @@ public class TransformTest {
         final Transform t = new Transform() {
             @Override
             public void impl_apply(com.sun.javafx.geom.transform.Affine3D ad) {}
-            @Override
-            public Transform impl_copy() { return null; }
         };
 
         TransformHelper.assertMatrix(t,
@@ -172,12 +171,45 @@ public class TransformTest {
 
         Point3D point = new Point3D(2, 5, 7);
 
-        Point3D transformed = t.impl_transform(point);
+        Point3D transformed = t.transform(point);
 
         assertEquals(37, transformed.getX(), 0.0001);
         assertEquals(97, transformed.getY(), 0.0001);
         assertEquals(157, transformed.getZ(), 0.0001);
     }
+
+    @Test
+    public void eachCornerShouldBeConsideredBySimilarTo3D() {
+        final Transform t1 = new Affine();
+        final Transform t2 = new Scale(11, 11, 11);
+        final double limit = Math.sqrt(200);
+
+        assertTrue(t1.similarTo(t2, new BoundingBox(0, 0, 0, 0, 0, 0), limit));
+        assertTrue(t1.similarTo(t2, new BoundingBox(0, 0, 0, 0.1, 0.1, 0.1), limit));
+        assertFalse(t1.similarTo(t2, new BoundingBox(-1, -1, -1, 0, 0, 0), limit));
+        assertFalse(t1.similarTo(t2, new BoundingBox(0, -1, -1, 1, 0, 0), limit));
+        assertFalse(t1.similarTo(t2, new BoundingBox(-1, 0, -1, 0, 1, 0), limit));
+        assertFalse(t1.similarTo(t2, new BoundingBox(0, 0, -1, 1, 1, 0), limit));
+        assertFalse(t1.similarTo(t2, new BoundingBox(-1, -1, 0, 0, 0, 1), limit));
+        assertFalse(t1.similarTo(t2, new BoundingBox(0, -1, 0, 1, 0, 1), limit));
+        assertFalse(t1.similarTo(t2, new BoundingBox(-1, 0, 0, 0, 1, 1), limit));
+        assertFalse(t1.similarTo(t2, new BoundingBox(0, 0, 0, 1, 1, 1), limit));
+    }
+
+    @Test
+    public void eachCornerShouldBeConsideredBySimilarTo2D() {
+        final Transform t1 = new Affine();
+        final Transform t2 = new Scale(11, 11);
+        final double limit = Math.sqrt(200) - 1;
+
+        assertTrue(t1.similarTo(t2, new BoundingBox(0, 0, 0, 0, 0, 0), limit));
+        assertTrue(t1.similarTo(t2, new BoundingBox(0, 0, 0, 0.1, 0.1, 0.1), limit));
+        assertFalse(t1.similarTo(t2, new BoundingBox(-1, -1, 0, 0, 0, 0), limit));
+        assertFalse(t1.similarTo(t2, new BoundingBox(0, -1, 0, 1, 0, 0), limit));
+        assertFalse(t1.similarTo(t2, new BoundingBox(-1, 0, 0, 0, 1, 0), limit));
+        assertFalse(t1.similarTo(t2, new BoundingBox(0, 0, 0, 1, 1, 0), limit));
+    }
+
 
     static void checkDoublePropertySynced(Transform tr, String propertyName, double val)
         throws Exception {

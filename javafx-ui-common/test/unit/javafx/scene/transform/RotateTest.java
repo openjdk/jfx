@@ -177,7 +177,7 @@ public class RotateTest {
         trans.setPivotZ(88);
         trans.setAxis(new Point3D(20, 30, 40));
 
-        Transform copy = trans.impl_copy();
+        Transform copy = trans.clone();
 
         final Point3D a = new Point3D(20.0 / Math.sqrt(2900.0),
                                 30.0 / Math.sqrt(2900.0),

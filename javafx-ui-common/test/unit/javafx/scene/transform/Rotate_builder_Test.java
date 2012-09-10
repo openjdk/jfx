@@ -28,6 +28,7 @@ package javafx.scene.transform;
 import com.sun.javafx.test.BuilderTestBase;
 import java.util.Arrays;
 import java.util.Collection;
+import javafx.event.EventHandler;
 
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
@@ -44,6 +45,11 @@ public final class Rotate_builder_Test extends BuilderTestBase {
         cfg.addProperty("pivotZ", 3.0);
         cfg.addProperty("angle", 4.0);
         cfg.addProperty("axis", Rotate.X_AXIS);
+        cfg.addProperty("onTransformChanged", new EventHandler<TransformChangedEvent>() {
+            @Override public void handle(TransformChangedEvent event) {
+                // empty
+            }
+        });
 
         return Arrays.asList(new Object[] {
             config(cfg)
