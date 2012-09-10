@@ -22,17 +22,13 @@
  * or visit www.oracle.com if you need additional information or have any
  * questions.
  */
-package com.sun.javafx.scene.layout.region;
+
+package javafx.scene.layout;
 
 /**
- * Enumation of options for repeating images in backgrounds and borders
- *
+ * Enumeration of options for repeating images in backgrounds
  */
-public enum Repeat {
-    /**
-     * The image is placed once and not repeated
-     */
-    NO_REPEAT,
+public enum BackgroundRepeat {
     /**
      * The image is repeated as often as needed to cover the area.
      */
@@ -47,5 +43,9 @@ public enum Repeat {
      * The image is repeated as often as will fit within the area. If it
      * doesn't fit a whole number of times, it is reduced in size until it does.
      */
-    ROUND
+    ROUND,
+    /**
+     * The image is placed once and not repeated
+     */
+    NO_REPEAT
 }

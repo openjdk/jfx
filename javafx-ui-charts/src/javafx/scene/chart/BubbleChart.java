@@ -106,11 +106,11 @@ public class BubbleChart<X,Y> extends XYChart<X,Y> {
                 if (bubble != null) {
                     if (bubble instanceof StackPane) {
                         StackPane region = (StackPane)item.getNode();
-                        if (region.impl_getShape() == null) {
+                        if (region.getShape() == null) {
                             ellipse = new Ellipse(getDoubleValue(item.getExtraValue(), 1), getDoubleValue(item.getExtraValue(), 1));
-                            region.impl_setShape(ellipse);
-                        } else if (region.impl_getShape() instanceof Ellipse) {
-                            ellipse = (Ellipse)region.impl_getShape();
+                            region.setShape(ellipse);
+                        } else if (region.getShape() instanceof Ellipse) {
+                            ellipse = (Ellipse)region.getShape();
                         } else {
                             return;
                         }
@@ -119,10 +119,10 @@ public class BubbleChart<X,Y> extends XYChart<X,Y> {
                         // Note: workaround for RT-7689 - saw this in ProgressControlSkin
                         // The region doesn't update itself when the shape is mutated in place, so we
                         // null out and then restore the shape in order to force invalidation.
-                        region.impl_setShape(null);
-                        region.impl_setShape(ellipse);
-                        region.impl_setScaleShape(false);
-                        region.impl_setPositionShape(false);
+                        region.setShape(null);
+                        region.setShape(ellipse);
+                        region.setScaleShape(false);
+                        region.setCenterShape(false);
                         // position the bubble
                         bubble.setLayoutX(x);
                         bubble.setLayoutY(y);

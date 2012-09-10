@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2012, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -22,9 +22,34 @@
  * or visit www.oracle.com if you need additional information or have any
  * questions.
  */
-package com.sun.javafx.scene.layout.region;
 
+package javafx.scene.layout;
 
-public interface ShapeChangeListener {
-    void changed();
+import java.util.Arrays;
+import java.util.Collection;
+import javafx.geometry.Insets;
+import javafx.scene.paint.Color;
+import com.sun.javafx.test.BuilderTestBase;
+import org.junit.runner.RunWith;
+import org.junit.runners.Parameterized;
+
+/**
+ */
+@RunWith(Parameterized.class)
+public class BackgroundFill_builder_Test extends BuilderTestBase {
+    @Parameterized.Parameters
+    public static Collection data() {
+        BuilderTestBase.Configuration cfg = new BuilderTestBase.Configuration(BackgroundFill.class);
+        cfg.addProperty("fill", Color.ORANGE);
+        cfg.addProperty("radii", new CornerRadii(20));
+        cfg.addProperty("insets", new Insets(5));
+
+        return Arrays.asList(new Object[] {
+            config(cfg)
+        });
+    }
+
+    public BackgroundFill_builder_Test(final Configuration configuration) {
+        super(configuration);
+    }
 }

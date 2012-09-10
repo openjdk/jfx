@@ -276,9 +276,9 @@ public class ProgressIndicatorSkin extends SkinBase<ProgressIndicator, ProgressI
             };
 
             progress.getStyleClass().setAll("progress");
-            progress.impl_setScaleShape(false);
-            progress.impl_setPositionShape(false);
-            progress.impl_setShape(arcShape);
+            progress.setScaleShape(false);
+            progress.setCenterShape(false);
+            progress.setShape(arcShape);
             progress.getChildren().clear();
             progress.getChildren().addAll(arcProgress);
 
@@ -313,7 +313,7 @@ public class ProgressIndicatorSkin extends SkinBase<ProgressIndicator, ProgressI
             double radiusH = (areaH-(textGap+doneTextHeight)) / 2;
             double radius = Math.min(radiusW, radiusH);
 
-            indicator.impl_setShape(new Circle(radius));
+            indicator.setShape(new Circle(radius));
             indicator.resize(2 * radius, 2 * radius);
 
             /*

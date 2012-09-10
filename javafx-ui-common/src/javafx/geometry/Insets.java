@@ -62,7 +62,7 @@ public class Insets {
      * The cached hash code, used to improve performance in situations where
      * we cache gradients, such as in the CSS routines.
      */
-    int hash = 0;
+    private int hash = 0;
 
     /**
      * Constructs a new Insets instance with four different offsets.
@@ -121,7 +121,7 @@ public class Insets {
             bits = 37L * bits + Double.doubleToLongBits(right);
             bits = 37L * bits + Double.doubleToLongBits(bottom);
             bits = 37L * bits + Double.doubleToLongBits(left);
-	    hash = (int) (bits ^ (bits >> 32));
+            hash = (int) (bits ^ (bits >> 32));
         }
         return hash;
     }
@@ -132,6 +132,6 @@ public class Insets {
      */
     @Override public String toString() {
         return "Insets [top=" + top + ", right=" + right + ", bottom="
-                + bottom + ",left=" + left + "]";
+                + bottom + ", left=" + left + "]";
     }
 }

@@ -36,7 +36,19 @@ public abstract class Paint {
      */
     @Deprecated
     public abstract Object impl_getPlatformPaint();
-    
+
+    /**
+     * Gets whether this Paint is completely opaque. An opaque paint is one that
+     * has no alpha component in any of its colors. It may be possible for a Paint
+     * to be opaque and yet return false, if it cannot be easily determined
+     * whether the paint is actually opaque. For example, the ImagePattern may not
+     * be able to cheaply determine its opacity.
+     *
+     * @return true if the Paint is opaque, false if it is not opaque or if
+     *         it cannot be determined.
+     */
+    public abstract boolean isOpaque();
+
     /**
      * Creates a paint value from a string representation. Recognizes strings 
      * representing {@code Color}, {@code RadialGradient} or {@code LinearGradient}.

@@ -69,13 +69,24 @@ public class Utils {
         return helper.getLayoutBounds().getHeight();
     }
 
+    static int computeTruncationIndex(Font font, String text, double width) {
+        helper.setText(text);
+        helper.setFont(font);
+        helper.setWrappingWidth(0);
+        // The -2 is a fudge to make sure the result more often matches
+        // what we get from using computeTextWidth instead. It's not yet
+        // clear what causes the small discrepancies.
+        Point2D endPoint = new Point2D(width - 2, helper.getLayoutBounds().getHeight() / 2);
+        return helper.impl_hitTestChar(endPoint).getCharIndex();
+    }
+
     static String computeClippedText(Font font, String text, double width,
                                      OverrunStyle type, String ellipsisString) {
         if (font == null) {
             throw new IllegalArgumentException("Must specify a font");
         }
-        OverrunStyle style = (type == null || OverrunStyle.CLIP.equals(type)) ? (OverrunStyle.ELLIPSIS) : (type);
-        final String ellipsis = (OverrunStyle.CLIP.equals(type)) ? "" : ellipsisString;
+        OverrunStyle style = (type == null || type == CLIP) ? ELLIPSIS : type;
+        final String ellipsis = (type == CLIP) ? "" : ellipsisString;
         // if the text is empty or null or no ellipsis, then it always fits
         if (text == null || "".equals(text)) {
             return text;
@@ -93,7 +104,7 @@ public class Utils {
         // the width used by the ellipsis string
         final double ellipsisWidth = computeTextWidth(font, ellipsis, 0);
         // the available maximum width to fit chars into. This is essentially
-        // the width minus the space required for the E ellipsis string
+        // the width minus the space required for the ellipsis string
         final double availableWidth = width - ellipsisWidth;
 
         if (width < ellipsisWidth) {
@@ -115,20 +126,33 @@ public class Utils {
         //requiresComplexLayout(font, text);
 
         // generally all we want to do is count characters and add their widths.
-        // For ellipses which break on words, we do NOT want to include any
+        // For ellipsis that breaks on words, we do NOT want to include any
         // hanging whitespace.
-        if (style.equals(OverrunStyle.ELLIPSIS) ||
-            style.equals(OverrunStyle.WORD_ELLIPSIS) ||
-            style.equals(OverrunStyle.LEADING_ELLIPSIS) ||
-            style.equals(OverrunStyle.LEADING_WORD_ELLIPSIS)) {
+        if (style == ELLIPSIS ||
+            style == WORD_ELLIPSIS ||
+            style == LEADING_ELLIPSIS ||
+            style == LEADING_WORD_ELLIPSIS) {
 
-            final boolean wordTrim = OverrunStyle.WORD_ELLIPSIS.equals(style) || OverrunStyle.LEADING_WORD_ELLIPSIS.equals(style);
+            final boolean wordTrim =
+                (style == WORD_ELLIPSIS || style == LEADING_WORD_ELLIPSIS);
             String substring;
             if (complexLayout) {
-            }  else //            AttributedString a = new AttributedString(text);
+            //            AttributedString a = new AttributedString(text);
             //            LineBreakMeasurer m = new LineBreakMeasurer(a.getIterator(), frc);
             //            substring = text.substring(0, m.nextOffset((double)availableWidth));
-            {
+            } else {
+                // RT-23458: Use a faster algorithm for the most common case
+                // where truncation happens at the end, i.e. for ELLIPSIS and
+                // CLIP, but not for other cases such as WORD_ELLIPSIS, etc.
+                if (style == ELLIPSIS) {
+                    int hit = computeTruncationIndex(font, text, width - ellipsisWidth);
+                    if (hit < 0 || hit >= text.length()) {
+                        return text;
+                    } else {
+                        return text.substring(0, hit) + ellipsis;
+                    }
+                }
+
                 // simply total up the widths of all chars to determine how many
                 // will fit in the available space. Remember the last whitespace
                 // encountered so that if we're breaking on words we can trim
@@ -138,10 +162,10 @@ public class Utils {
                 // at the termination of the loop, index will be one past the
                 // end of the substring
                 int index = 0;
-                int start = (style.equals(OverrunStyle.LEADING_ELLIPSIS) || style.equals(OverrunStyle.LEADING_WORD_ELLIPSIS)) ? (text.length() - 1) : (0);
-                int end = (start == 0) ? (text.length() - 1) : (0);
-                int stepValue = (start == 0) ? (1) : (-1);
-                boolean done = start == 0? start > end : start < end;
+                int start = (style == LEADING_ELLIPSIS || style == LEADING_WORD_ELLIPSIS) ? (text.length() - 1) : (0);
+                int end = (start == 0) ? (text.length() - 1) : 0;
+                int stepValue = (start == 0) ? 1 : -1;
+                boolean done = (start == 0) ? start > end : start < end;
                 for (int i = start; !done ; i += stepValue) {
                     index = i;
                     char c = text.charAt(index);
@@ -159,14 +183,14 @@ public class Utils {
                 }
                 final boolean fullTrim = !wordTrim || whitespaceIndex == -1;
                 substring = (start == 0) ?
-                    (text.substring(0, (fullTrim) ? (index) : (whitespaceIndex))) :
-                        (text.substring(((fullTrim) ? (index) : (whitespaceIndex)) + 1));
-
+                    (text.substring(0, fullTrim ? index : whitespaceIndex)) :
+                        (text.substring((fullTrim ? index : whitespaceIndex) + 1));
+                assert(!text.equals(substring));
             }
-            if (OverrunStyle.ELLIPSIS.equals(style) || OverrunStyle.WORD_ELLIPSIS.equals(style)) {
-                return substring + ellipsis;
+            if (style == ELLIPSIS || style == WORD_ELLIPSIS) {
+                 return substring + ellipsis;
             } else {
-                //style == LEADING_ELLIPSIS or style == LEADING_WORD_ELLIPSIS
+                //style is LEADING_ELLIPSIS or LEADING_WORD_ELLIPSIS
                 return ellipsis + substring;
             }
         } else {
@@ -235,7 +259,7 @@ public class Utils {
             if (leadingIndex < 0) {
                 return ellipsis;
             }
-            if (OverrunStyle.CENTER_ELLIPSIS.equals(style)) {
+            if (style == CENTER_ELLIPSIS) {
                 if (trailingIndex < 0) {
                     return text.substring(0, leadingIndex + 1) + ellipsis;
                 }

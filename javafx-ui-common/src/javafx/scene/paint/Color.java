@@ -1708,6 +1708,13 @@ public class Color extends Paint implements Interpolatable<Color> { // final
     public final double getOpacity() { return opacity; }
     private float opacity = 1;
 
+    /**
+     * @inheritDoc
+     */
+    @Override public final boolean isOpaque() {
+        return opacity >= 1f;
+    }
+
     private Object platformPaint;
 
     /**
