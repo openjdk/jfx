@@ -25,6 +25,8 @@
 
 package javafx.scene;
 
+import com.sun.javafx.pgstub.StubGroup;
+import com.sun.javafx.pgstub.StubCircle;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
@@ -59,6 +61,7 @@ import org.junit.rules.ExpectedException;
 
 import com.sun.javafx.scene.DirtyBits;
 import com.sun.javafx.sg.PGNode;
+import javafx.scene.shape.Circle;
 /**
  * Tests various aspects of Node.
  *
@@ -986,5 +989,42 @@ public class NodeTest {
         node.setStyle(null);
         assertEquals("", node.styleProperty().get());
         assertEquals("", node.getStyle());
+    }
+
+    @Test
+    public void testSynchronizationOfInvisibleNodes() {
+        final Group g = new Group();
+        final Circle c = new Circle(50);
+        final StubGroup sg = (StubGroup)g.impl_getPGNode();
+        final StubCircle sc = (StubCircle)c.impl_getPGNode();
+        g.getChildren().add(c);
+
+        syncNode(g);
+        syncNode(c);
+        assertFalse(sg.getChildren().isEmpty());
+        assertEquals(50.0, sc.getRadius(), 0.01);
+
+        g.setVisible(false);
+
+        syncNode(g);
+        syncNode(c);
+        assertFalse(sg.isVisible());
+
+        final Rectangle r = new Rectangle();
+        g.getChildren().add(r);
+        c.setRadius(100);
+
+        syncNode(g);
+        syncNode(c);
+        assertEquals(1, sg.getChildren().size());
+        assertEquals(50.0, sc.getRadius(), 0.01);
+
+        g.setVisible(true);
+
+        syncNode(g);
+        syncNode(c);
+        assertEquals(2, sg.getChildren().size());
+        assertEquals(100.0, sc.getRadius(), 0.01);
+        
     }
 }
