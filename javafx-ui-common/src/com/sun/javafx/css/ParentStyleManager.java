@@ -140,7 +140,7 @@ final class ParentStyleManager extends StyleManager<Parent> {
         // of the node and lookup the associated Cache in the cacheMap
         key.className = node.getClass().getName();
         key.id = node.getId();
-        key.styleClass = node.getStyleClass();
+        key.styleClass = node.impl_cssGetStyleClassBits();
 
         key.indices = indices;
         
@@ -326,11 +326,9 @@ final class ParentStyleManager extends StyleManager<Parent> {
             ParentKey key = new ParentKey();
             key.className  = className;
             key.id = id;
-            final int nElements = styleClass.size();
-            key.styleClass = new ArrayList<String>(nElements);
-            for (int n = 0; n < nElements; n++) {
-                key.styleClass.add(styleClass.get(n));
-            }
+            final int nElements = styleClass.length;
+            key.styleClass = new long[nElements];
+            System.arraycopy(styleClass, 0, key.styleClass, 0, nElements);
             key.indices = indices;
             
             return key;

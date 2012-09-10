@@ -260,7 +260,7 @@ final class SceneStyleManager extends StyleManager<Scene> {
         // of the node and lookup the associated Cache in the cacheMap
         key.className = node.getClass().getName();
         key.id = node.getId();
-        key.styleClass = node.getStyleClass();
+        key.styleClass = node.impl_cssGetStyleClassBits();
 
         return key;
         

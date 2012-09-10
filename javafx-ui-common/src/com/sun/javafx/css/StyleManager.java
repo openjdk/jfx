@@ -714,7 +714,10 @@ abstract public class StyleManager<T> {
                 if (value != null) strings.add(value);
             }
         }
-        return strings;
+        // even though the list returned could be modified without causing 
+        // harm, returning an unmodifiableList is consistent with 
+        // SimpleSelector.getStyleClasses()
+        return Collections.unmodifiableList(strings);
     }
 
     protected final void clearCache() {
@@ -764,7 +767,7 @@ abstract public class StyleManager<T> {
             //
             final String className = node.getClass().getName();
             final String id = node.getId();
-            final List<String> styleClass = node.getStyleClass();
+            final long[] styleClass = node.impl_cssGetStyleClassBits();
             
             List<Stylesheet> stylesheetsToProcess = referencedStylesheets;
 
@@ -1108,11 +1111,9 @@ abstract public class StyleManager<T> {
             Key key = new Key();
             key.className  = className;
             key.id = id;
-            final int nElements = styleClass.size();
-            key.styleClass = new ArrayList<String>(nElements);
-            for (int n = 0; n < nElements; n++) {
-                key.styleClass.add(styleClass.get(n));
-            }
+            final int nElements = styleClass.length;
+            key.styleClass = new long[nElements];
+            System.arraycopy(styleClass, 0, key.styleClass, 0, nElements);
             
             return key;
         }
@@ -1124,7 +1125,7 @@ abstract public class StyleManager<T> {
         // necessary.
         protected String className;
         protected String id;
-        protected List<String> styleClass;
+        protected long[] styleClass;
 
         @Override
         public boolean equals(Object o) {
@@ -1137,7 +1138,7 @@ abstract public class StyleManager<T> {
                         || (id != null && id.equals(other.id))
                        )
                     && (   (styleClass == null && other.styleClass == null)
-                        || (styleClass != null && styleClass.containsAll(other.styleClass))
+                        || (styleClass != null && Arrays.equals(styleClass, other.styleClass))
                        );
                 return eq;
             }
@@ -1148,13 +1149,13 @@ abstract public class StyleManager<T> {
         public int hashCode() {
             int hash = className.hashCode();
             hash = 31 * (hash + ((id == null || id.isEmpty()) ? 1231 : id.hashCode()));
-            hash = 31 * (hash + ((styleClass == null || styleClass.isEmpty()) ? 1237 : styleClass.hashCode()));
+            hash = 31 * (hash + ((styleClass == null) ? 1237 : Arrays.hashCode(styleClass)));
             return hash;
         }
 
         @Override
         public String toString() {
-            return "Key ["+className+", "+String.valueOf(id)+", "+String.valueOf(styleClass)+"]";
+            return "Key ["+className+", "+String.valueOf(id)+", "+SimpleSelector.getStyleClassStrings(styleClass).toString()+"]";
         }
 
     }
