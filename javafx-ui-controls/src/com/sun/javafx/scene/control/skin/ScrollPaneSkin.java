@@ -29,7 +29,6 @@ import com.sun.javafx.PlatformUtil;
 import static com.sun.javafx.Utils.clamp;
 import static com.sun.javafx.scene.control.skin.Utils.boundedSize;
 import javafx.animation.Animation.Status;
-import javafx.animation.Interpolator;
 import javafx.animation.KeyFrame;
 import javafx.animation.KeyValue;
 import javafx.animation.Timeline;
@@ -37,7 +36,6 @@ import javafx.beans.InvalidationListener;
 import javafx.beans.Observable;
 import javafx.beans.property.DoubleProperty;
 import javafx.beans.property.DoublePropertyBase;
-import javafx.beans.property.SimpleDoubleProperty;
 import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
 import javafx.event.ActionEvent;
@@ -48,7 +46,6 @@ import javafx.event.EventHandler;
 import javafx.geometry.BoundingBox;
 import javafx.geometry.Bounds;
 import javafx.geometry.Orientation;
-import javafx.geometry.Pos;
 import javafx.scene.Cursor;
 import javafx.scene.Node;
 import javafx.scene.control.ScrollBar;
@@ -66,6 +63,7 @@ import com.sun.javafx.scene.control.behavior.ScrollPaneBehavior;
 import com.sun.javafx.scene.traversal.TraversalEngine;
 import com.sun.javafx.scene.traversal.TraverseListener;
 import com.sun.javafx.Utils;
+import javafx.scene.Group;
 
 public class ScrollPaneSkin extends SkinBase<ScrollPane, ScrollPaneBehavior> implements TraverseListener {
     /***************************************************************************
@@ -102,6 +100,7 @@ public class ScrollPaneSkin extends SkinBase<ScrollPane, ScrollPaneBehavior> imp
     // substructure
 
     private StackPane viewRect;
+    private StackPane viewContent;
     private double contentWidth;
     private double contentHeight;
     private StackPane corner;
@@ -158,8 +157,8 @@ public class ScrollPaneSkin extends SkinBase<ScrollPane, ScrollPaneBehavior> imp
 
     /*
     ** The content of the ScrollPane has just changed bounds, check scrollBar positions.
-    */
-    private final ChangeListener<Bounds> boundsChangeListener = new ChangeListener<Bounds>() {
+    */ 
+   private final ChangeListener<Bounds> boundsChangeListener = new ChangeListener<Bounds>() {
         @Override public void changed(ObservableValue<? extends Bounds> observable, Bounds oldBounds, Bounds newBounds) {
             /*
             ** For a height change then we want to reduce
@@ -225,6 +224,29 @@ public class ScrollPaneSkin extends SkinBase<ScrollPane, ScrollPaneBehavior> imp
         }
 
         viewRect = new StackPane() {
+
+            @Override
+            protected void layoutChildren() {
+                viewContent.resize(getWidth(), getHeight());
+            }
+
+        };
+        // prevent requestLayout requests from within scrollNode from percolating up
+        viewRect.setManaged(false);
+        viewRect.setCache(true);
+
+        clipRect = new Rectangle();
+        viewRect.setClip(clipRect);
+
+        hsb = new ScrollBar();
+
+        vsb = new ScrollBar();
+        vsb.setOrientation(Orientation.VERTICAL);
+
+        corner = new StackPane();
+        corner.getStyleClass().setAll("corner");
+
+        viewContent = new StackPane() {
             @Override public void requestLayout() {
                 // if scrollNode requested layout, will want to recompute
                 nodeWidth = -1;
@@ -246,23 +268,10 @@ public class ScrollPaneSkin extends SkinBase<ScrollPane, ScrollPaneBehavior> imp
                 }
             }
         };
-        // prevent requestLayout requests from within scrollNode from percolating up
-        viewRect.setManaged(false);
-
-        clipRect = new Rectangle();
-        viewRect.setClip(clipRect);
-
-        hsb = new ScrollBar();
-
-        vsb = new ScrollBar();
-        vsb.setOrientation(Orientation.VERTICAL);
-
-        corner = new StackPane();
-        corner.getStyleClass().setAll("corner");
-
-        viewRect.getChildren().clear();
+        viewRect.getChildren().add(viewContent);
+        
         if (scrollNode != null) {
-            viewRect.getChildren().add(scrollNode);
+            viewContent.getChildren().add(scrollNode);
         }
 
         getChildren().clear();
@@ -303,8 +312,8 @@ public class ScrollPaneSkin extends SkinBase<ScrollPane, ScrollPaneBehavior> imp
                    startSBReleasedAnimation();
                }
                mouseDown = true;
-               pressX = e.getX() + viewRect.getLayoutX();
-               pressY = e.getY() + viewRect.getLayoutY();
+               pressX = e.getX();
+               pressY = e.getY();
                ohvalue = hsb.getValue();
                ovvalue = vsb.getValue();
            }
@@ -365,8 +374,8 @@ public class ScrollPaneSkin extends SkinBase<ScrollPane, ScrollPaneBehavior> imp
                ** for mobile-touch we allow drag, even if not pannagle
                */
                if (getSkinnable().isPannable() || PlatformUtil.isEmbedded()) {
-                   double deltaX = pressX - (e.getX() + viewRect.getLayoutX());
-                   double deltaY = pressY - (e.getY() + viewRect.getLayoutY());
+                   double deltaX = pressX - e.getX();
+                   double deltaY = pressY - e.getY();
                    /*
                    ** we only drag if not all of the content is visible.
                    */
@@ -573,13 +582,13 @@ public class ScrollPaneSkin extends SkinBase<ScrollPane, ScrollPaneBehavior> imp
                 if (scrollNode != null) {
                     scrollNode.layoutBoundsProperty().removeListener(nodeListener);
                     scrollNode.layoutBoundsProperty().removeListener(boundsChangeListener);
-                    viewRect.getChildren().remove(scrollNode);
+                    viewContent.getChildren().remove(scrollNode);
                 }
                 scrollNode = getSkinnable().getContent();
                 if (scrollNode != null) {
                     nodeWidth = snapSize(scrollNode.getLayoutBounds().getWidth());
                     nodeHeight = snapSize(scrollNode.getLayoutBounds().getHeight());
-                    viewRect.getChildren().setAll(scrollNode);
+                    viewContent.getChildren().setAll(scrollNode);
                     scrollNode.layoutBoundsProperty().addListener(nodeListener);
                     scrollNode.layoutBoundsProperty().addListener(boundsChangeListener);
                 }
@@ -852,7 +861,7 @@ public class ScrollPaneSkin extends SkinBase<ScrollPane, ScrollPaneBehavior> imp
         } else {
             corner.setVisible(false);
         }
-        control.setViewportBounds(new BoundingBox(snapPosition(viewRect.getLayoutX()), snapPosition(viewRect.getLayoutY()), snapSize(contentWidth), snapSize(contentHeight)));
+        control.setViewportBounds(new BoundingBox(snapPosition(viewContent.getLayoutX()), snapPosition(viewContent.getLayoutY()), snapSize(contentWidth), snapSize(contentHeight)));
     }
     
     private void computeScrollNodeSize(double contentWidth, double contentHeight) {
@@ -944,7 +953,7 @@ public class ScrollPaneSkin extends SkinBase<ScrollPane, ScrollPaneBehavior> imp
             if (nodeWidth > contentWidth) {
                 updatePosX();
             } else {
-                viewRect.setLayoutX(getInsets().getLeft());
+                viewContent.setLayoutX(getInsets().getLeft());
             }
         }
     }
@@ -968,29 +977,27 @@ public class ScrollPaneSkin extends SkinBase<ScrollPane, ScrollPaneBehavior> imp
             if (nodeHeight > contentHeight) {
                 updatePosY();
             } else {
-                viewRect.setLayoutY(getInsets().getTop());
+                viewContent.setLayoutY(getInsets().getTop());
             }
         }
     }
 
     private double updatePosX() {
-        viewRect.setLayoutX(snapPosition(getInsets().getLeft() - posX / (hsb.getMax() - hsb.getMin()) * (nodeWidth - contentWidth)));
+        viewContent.setLayoutX(snapPosition(getInsets().getLeft() - posX / (hsb.getMax() - hsb.getMin()) * (nodeWidth - contentWidth)));
         getSkinnable().setHvalue(Utils.clamp(getSkinnable().getHmin(), posX, getSkinnable().getHmax()));
-        resetClip();
         return posX;
     }
 
     private double updatePosY() {
-        viewRect.setLayoutY(snapPosition(getInsets().getTop() - posY / (vsb.getMax() - vsb.getMin()) * (nodeHeight - contentHeight)));
+        viewContent.setLayoutY(snapPosition(getInsets().getTop() - posY / (vsb.getMax() - vsb.getMin()) * (nodeHeight - contentHeight)));
         getSkinnable().setVvalue(Utils.clamp(getSkinnable().getVmin(), posY, getSkinnable().getVmax()));
-        resetClip();
         return posY;
     }
 
     private void resetClip() {
         clipRect.setWidth(snapSize(contentWidth));
         clipRect.setHeight(snapSize(contentHeight));
-        clipRect.relocate(snapPosition(getInsets().getLeft() - viewRect.getLayoutX()), snapPosition(getInsets().getTop() - viewRect.getLayoutY()));
+        clipRect.relocate(snapPosition(getInsets().getLeft()), snapPosition(getInsets().getTop()));
     }
 
     Timeline sbTouchTimeline;

@@ -451,8 +451,10 @@ public abstract class Node implements EventTarget {
         if (!treeVisible && !impl_isDirty(DirtyBits.NODE_VISIBLE)) {
             return;
         }
-        if (impl_isDirty(DirtyBits.NODE_TRANSFORM)) {
-            updateLocalToParentTransform();
+        if (impl_isDirty(DirtyBits.NODE_TRANSFORM) || impl_isDirty(DirtyBits.NODE_TRANSFORMED_BOUNDS)) {
+            if (impl_isDirty(DirtyBits.NODE_TRANSFORM)) {
+                updateLocalToParentTransform();
+            }
             _txBounds = getTransformedBounds(_txBounds,
                                              BaseTransform.IDENTITY_TRANSFORM);
         }
@@ -460,10 +462,6 @@ public abstract class Node implements EventTarget {
         if (impl_isDirty(DirtyBits.NODE_BOUNDS)) {
             _geomBounds = getGeomBounds(_geomBounds,
                     BaseTransform.IDENTITY_TRANSFORM);
-            if (!impl_isDirty(DirtyBits.NODE_TRANSFORM)) {
-                _txBounds = getTransformedBounds(_txBounds,
-                                                 BaseTransform.IDENTITY_TRANSFORM);
-            }
         }
 
         Node n = getClip();
@@ -485,14 +483,14 @@ public abstract class Node implements EventTarget {
         final PGNode peer = impl_getPGNode();
         if (impl_isDirty(DirtyBits.NODE_TRANSFORM)) {
             peer.setTransformMatrix(localToParentTx);
-            peer.setTransformedBounds(_txBounds);
         }
 
         if (impl_isDirty(DirtyBits.NODE_BOUNDS)) {
             peer.setContentBounds(_geomBounds);
-            if (!impl_isDirty(DirtyBits.NODE_TRANSFORM)) {
-                peer.setTransformedBounds(_txBounds);
-            }
+        }
+        
+        if (impl_isDirty(DirtyBits.NODE_TRANSFORMED_BOUNDS)) {
+            peer.setTransformedBounds(_txBounds, !impl_isDirty(DirtyBits.NODE_BOUNDS));
         }
 
         if (impl_isDirty(DirtyBits.NODE_OPACITY)) {
@@ -3398,7 +3396,7 @@ public abstract class Node implements EventTarget {
         if (isVisible()) {
             notifyParentOfBoundsChange();
         }
-        impl_markDirty(DirtyBits.NODE_BOUNDS);
+        impl_markDirty(DirtyBits.NODE_TRANSFORMED_BOUNDS);
     }
 
     /**
