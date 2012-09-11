@@ -91,7 +91,7 @@ public  class Group extends Parent {
     /**
      * Constructs a group consisting of the given children.
      *
-     * @param Children children of the group
+     * @param children children of the group
      * @throws NullPointerException if the specified collection is null
      */
     public Group(Collection<Node> children) {

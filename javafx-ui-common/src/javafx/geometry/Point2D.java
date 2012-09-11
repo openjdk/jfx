@@ -25,8 +25,10 @@
 
 package javafx.geometry;
 
+// PENDING_DOC_REVIEW of this whole class
 /**
- * A 2D geometric point that represents the x, y coordinates.
+ * A 2D geometric point that usually represents the x, y coordinates.
+ * It can also represent a relative magnitude vector's x, y magnitudes.
  */
 public class Point2D {
     /**
@@ -88,13 +90,232 @@ public class Point2D {
     }
 
     /**
-     * Computes the distance between this point and point {@code p}.
+     * Computes the distance between this point and the specified {@code point}.
      *
-     * @param p the other point
-     * @return the distance between this point and point {@code p}.
+     * @param point the other point
+     * @return the distance between this point and the specified {@code point}.
+     * @throws NullPointerException if the specified {@code point} is null
      */
-    public double distance(Point2D p) {
-        return distance(p.getX(), p.getY());
+    public double distance(Point2D point) {
+        return distance(point.getX(), point.getY());
+    }
+
+    /**
+     * Returns a point with the specified coordinates added to the coordinates
+     * of this point.
+     * @param x the X coordinate addition
+     * @param y the Y coordinate addition
+     * @return the point with added coordinates
+     * @since JavaFX 8.0
+     */
+    public Point2D add(double x, double y) {
+        return new Point2D(
+                getX() + x,
+                getY() + y);
+    }
+
+    /**
+     * Returns a point with the coordinates of the specified point added to the
+     * coordinates of this point.
+     * @param point the point whose coordinates are to be added
+     * @return the point with added coordinates
+     * @throws NullPointerException if the specified {@code point} is null
+     * @since JavaFX 8.0
+     */
+    public Point2D add(Point2D point) {
+        return add(point.getX(), point.getY());
+    }
+
+    /**
+     * Returns a point with the specified coordinates subtracted from
+     * the coordinates of this point.
+     * @param x the X coordinate subtraction
+     * @param y the Y coordinate subtraction
+     * @return the point with subtracted coordinates
+     * @since JavaFX 8.0
+     */
+    public Point2D subtract(double x, double y) {
+        return new Point2D(
+                getX() - x,
+                getY() - y);
+    }
+
+    /**
+     * Returns a point with the coordinates of the specified point subtracted
+     * from the coordinates of this point.
+     * @param point the point whose coordinates are to be subtracted
+     * @return the point with subtracted coordinates
+     * @throws NullPointerException if the specified {@code point} is null
+     * @since JavaFX 8.0
+     */
+    public Point2D subtract(Point2D point) {
+        return subtract(point.getX(), point.getY());
+    }
+
+    /**
+     * Normalizes the relative magnitude vector represented by this instance.
+     * Returns a vector with the same direction and magnitude equal to 1.
+     * If this is a zero vector, a zero vector is returned.
+     * @return the normalized vector represented by a {@code Point2D} instance
+     * @since JavaFX 8.0
+     */
+    public Point2D normalize() {
+        final double mag = magnitude();
+
+        if (mag == 0.0) {
+            return new Point2D(0.0, 0.0);
+        }
+
+        return new Point2D(
+                getX() / mag,
+                getY() / mag);
+    }
+
+    /**
+     * Returns a point which lies in the middle between this point and the
+     * specified coordinates.
+     * @param x the X coordinate of the second endpoint
+     * @param y the Y coordinate of the second endpoint
+     * @return the point in the middle
+     * @since JavaFX 8.0
+     */
+    public Point2D midpoint(double x, double y) {
+        return new Point2D(
+                x + (getX() - x) / 2.0,
+                y + (getY() - y) / 2.0);
+    }
+
+    /**
+     * Returns a point which lies in the middle between this point and the
+     * specified point.
+     * @param point the other endpoint
+     * @return the point in the middle
+     * @throws NullPointerException if the specified {@code point} is null
+     * @since JavaFX 8.0
+     */
+    public Point2D midpoint(Point2D point) {
+        return midpoint(point.getX(), point.getY());
+    }
+
+    /**
+     * Computes the angle between the vector represented
+     * by this point and the specified vector.
+     * @param x the X magnitude of the other vector
+     * @param y the Y magnitude of the other vector
+     * @return the angle between the two vectors
+     * @since JavaFX 8.0
+     */
+    public double angle(double x, double y) {
+        final double ax = getX();
+        final double ay = getY();
+
+        final double dotProduct = ax * x + ay * y;
+
+        return Math.toDegrees(Math.acos(dotProduct / Math.sqrt(
+                (ax * ax + ay * ay) * (x * x + y * y))));
+    }
+
+    /**
+     * Computes the angle between the vector represented
+     * by this point and the vector represented by the specified point.
+     * @param point the other vector
+     * @return the angle between the two vectors, {@code NaN} if any of the two
+     *         vectors is a zero vector
+     * @throws NullPointerException if the specified {@code point} is null
+     * @since JavaFX 8.0
+     */
+    public double angle(Point2D point) {
+        return angle(point.getX(), point.getY());
+    }
+
+    /**
+     * Computes the angle between the three points with this point as a vertex.
+     * @param p1 one point
+     * @param p2 other point
+     * @return angle between the vectors (this, p1) and (this, p2),
+     *         {@code NaN} if the three points are not different from
+     *         one another
+     * @throws NullPointerException if {@code p1} or {@code p2} is null
+     * @since JavaFX 8.0
+     */
+    public double angle(Point2D p1, Point2D p2) {
+        final double x = getX();
+        final double y = getY();
+
+        final double ax = p1.getX() - x;
+        final double ay = p1.getY() - y;
+        final double bx = p2.getX() - x;
+        final double by = p2.getY() - y;
+
+        final double dotProduct = ax * bx + ay * by;
+
+        return Math.toDegrees(Math.acos(dotProduct / Math.sqrt(
+                (ax * ax + ay * ay) * (bx * bx + by * by))));
+    }
+
+    /**
+     * Computes magnitude (length) of the relative magnitude vector represented
+     * by this instance.
+     * @return magnitude of the vector
+     * @since JavaFX 8.0
+     */
+    public double magnitude() {
+        final double x = getX();
+        final double y = getY();
+
+        return Math.sqrt(x * x + y * y);
+    }
+
+    /**
+     * Computes dot (scalar) product of the vector represented by this instance
+     * and the specified vector.
+     * @param x the X magnitude of the other vector
+     * @param y the Y magnitude of the other vector
+     * @return the dot product of the two vectors
+     * @since JavaFX 8.0
+     */
+    public double dotProduct(double x, double y) {
+        return getX() * x + getY() * y;
+    }
+
+    /**
+     * Computes dot (scalar) product of the vector represented by this instance
+     * and the specified vector.
+     * @param vector the other vector
+     * @return the dot product of the two vectors
+     * @throws NullPointerException if the specified {@code vector} is null
+     * @since JavaFX 8.0
+     */
+    public double dotProduct(Point2D vector) {
+        return dotProduct(vector.getX(), vector.getY());
+    }
+
+    /**
+     * Computes cross product of the vector represented by this instance
+     * and the specified vector.
+     * @param x the X magnitude of the other vector
+     * @param y the Y magnitude of the other vector
+     * @return the cross product of the two vectors
+     * @since JavaFX 8.0
+     */
+    public Point3D crossProduct(double x, double y) {
+        final double ax = getX();
+        final double ay = getY();
+
+        return new Point3D(
+                0, 0, ax * y - ay * x);
+    }
+
+    /**
+     * Computes cross product of the vector represented by this instance
+     * and the specified vector.
+     * @param vector the other vector
+     * @return the cross product of the two vectors
+     * @throws NullPointerException if the specified {@code vector} is null
+     * @since JavaFX 8.0
+     */
+    public Point3D crossProduct(Point2D vector) {
+        return crossProduct(vector.getX(), vector.getY());
     }
 
     /**

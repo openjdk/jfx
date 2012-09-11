@@ -79,7 +79,7 @@ public class TranslateTest {
     public void testCopying() {
         final Translate trans = new Translate(34, 67, 33);
 
-        Transform copy = trans.impl_copy();
+        Transform copy = trans.clone();
 
         TransformHelper.assertMatrix(copy,
                 1, 0, 0, 34,

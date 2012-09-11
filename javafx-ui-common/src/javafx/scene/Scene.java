@@ -1092,6 +1092,7 @@ public class Scene implements EventTarget {
         doLayoutPassWithoutPulse(3);
 
         if (!paused) {
+            getRoot().updateBounds();
             scenePulseListener.synchronizeSceneNodes();
         }
 
@@ -1898,6 +1899,7 @@ public class Scene implements EventTarget {
      * @treatAsPrivate implementation detail
      * @deprecated This is an internal API that is not intended for use and will be removed in the next version
      */
+    // SB-dependency: RT-24668 has been filed to track this
     @Deprecated
     public void impl_processKeyEvent(KeyEvent e) {
         if (dndGesture != null) {

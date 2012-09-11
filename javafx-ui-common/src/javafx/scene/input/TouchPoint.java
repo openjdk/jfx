@@ -167,6 +167,11 @@ public final class TouchPoint implements Serializable{
         grabbed = target;
     }
 
+    /**
+     * Ungrabs this touch point from its target. Since the next event this
+     * touch point will be delivered to the top-most node picked on its
+     * respective location until it is grabbed again or released.
+     */
     public void ungrab() {
         grabbed = null;
     }

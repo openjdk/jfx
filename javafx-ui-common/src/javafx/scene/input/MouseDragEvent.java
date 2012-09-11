@@ -155,4 +155,56 @@ public class MouseDragEvent extends MouseEvent {
     public Object getGestureSource() {
         return gestureSource;
     }
+
+    /**
+     * Returns a string representation of this {@code MouseDragEvent} object.
+     * @return a string representation of this {@code MouseDragEvent} object.
+     */
+    @Override public String toString() {
+        final StringBuilder sb = new StringBuilder("MouseDragEvent [");
+
+        sb.append("source = ").append(getSource());
+        sb.append(", target = ").append(getTarget());
+        sb.append(", gestureSource = ").append(getGestureSource());
+        sb.append(", eventType = ").append(getEventType());
+        sb.append(", consumed = ").append(isConsumed());
+
+        sb.append(", x = ").append(getX()).append(", y = ").append(getY());
+
+        if (getButton() != null) {
+            sb.append(", button = ").append(getButton());
+        }
+        if (getClickCount() > 1) {
+            sb.append(", clickCount = ").append(getClickCount());
+        }
+        if (isPrimaryButtonDown()) {
+            sb.append(", primaryButtonDown");
+        }
+        if (isMiddleButtonDown()) {
+            sb.append(", middleButtonDown");
+        }
+        if (isSecondaryButtonDown()) {
+            sb.append(", secondaryButtonDown");
+        }
+        if (isShiftDown()) {
+            sb.append(", shiftDown");
+        }
+        if (isControlDown()) {
+            sb.append(", controlDown");
+        }
+        if (isAltDown()) {
+            sb.append(", altDown");
+        }
+        if (isMetaDown()) {
+            sb.append(", metaDown");
+        }
+        if (isShortcutDown()) {
+            sb.append(", shortcutDown");
+        }
+        if (isSynthesized()) {
+            sb.append(", synthesized");
+        }
+
+        return sb.append("]").toString();
+    }
 }
