@@ -31,6 +31,7 @@ import javafx.beans.property.ObjectPropertyBase;
 import javafx.geometry.Point3D;
 
 import com.sun.javafx.geom.transform.Affine3D;
+import javafx.geometry.Point2D;
 
 
 /**
@@ -80,6 +81,18 @@ public class Rotate extends Transform {
      * Specifies the Z-axis as the axis of rotation.
      */
     public static final Point3D Z_AXIS = new Point3D(0,0,1);
+
+    /**
+     * Avoids lot of repeated computation.
+     * @see #MatrixCache
+     */
+    private MatrixCache cache;
+
+    /**
+     * Avoids lot of repeated computation.
+     * @see #MatrixCache
+     */
+    private MatrixCache inverseCache;
 
     /**
      * Creates a default Rotate transform (identity).
@@ -328,106 +341,373 @@ public class Rotate extends Transform {
         return axis;
     }
 
-    private double cos() {
-        return Math.cos(Math.toRadians(getAngle()));
-    }
-
-    private double sin() {
-        return Math.sin(Math.toRadians(getAngle()));
-    }
-
-    private Point3D normalizedAxis() {
-        final Point3D axis = getAxis();
-        final double mag = Math.sqrt(axis.getX() * axis.getX() +
-                axis.getY() * axis.getY() + axis.getZ() * axis.getZ());
-
-        if (mag == 0.0) {
-            return Z_AXIS;
-        }
-
-        return new Point3D(axis.getX() / mag, axis.getY() / mag, axis.getZ() / mag);
-    }
+    /* *************************************************************************
+     *                                                                         *
+     *                         Element getters                                 *
+     *                                                                         *
+     **************************************************************************/
 
     @Override
     public double getMxx() {
-        final double axisX = normalizedAxis().getX();
-        final double cos = cos();
-        return cos + axisX * axisX * (1 - cos);
+        updateCache();
+        return cache.mxx;
     }
 
     @Override
     public double getMxy() {
-        final Point3D axis = normalizedAxis();
-        return axis.getX() * axis.getY() * (1 - cos()) - axis.getZ() * sin();
+        updateCache();
+        return cache.mxy;
     }
 
     @Override
     public double getMxz() {
-        final Point3D axis = normalizedAxis();
-        return axis.getX() * axis.getZ() * (1 - cos()) + axis.getY() * sin();
+        updateCache();
+        return cache.mxz;
     }
 
     @Override
     public double getTx() {
-        return getPivotX()
-                - getPivotX() * getMxx()
-                - getPivotY() * getMxy()
-                - getPivotZ() * getMxz();
+        updateCache();
+        return cache.tx;
     }
 
     @Override
     public double getMyx() {
-        final Point3D axis = normalizedAxis();
-        return axis.getY() * axis.getX() * (1 - cos()) + axis.getZ() * sin();
+        updateCache();
+        return cache.myx;
     }
 
     @Override
     public double getMyy() {
-        final double axisY = normalizedAxis().getY();
-        final double cos = cos();
-        return cos + axisY * axisY * (1 - cos);
+        updateCache();
+        return cache.myy;
     }
 
     @Override
     public double getMyz() {
-        final Point3D axis = normalizedAxis();
-        return axis.getY() * axis.getZ() * (1 - cos()) - axis.getX() * sin();
+        updateCache();
+        return cache.myz;
     }
 
     @Override
     public double getTy() {
-        return getPivotY()
-                - getPivotX() * getMyx()
-                - getPivotY() * getMyy()
-                - getPivotZ() * getMyz();
+        updateCache();
+        return cache.ty;
     }
 
     @Override
     public double getMzx() {
-        final Point3D axis = normalizedAxis();
-        return axis.getZ() * axis.getX() * (1 - cos()) - axis.getY() * sin();
+        updateCache();
+        return cache.mzx;
     }
 
     @Override
     public double getMzy() {
-        final Point3D axis = normalizedAxis();
-        return axis.getZ() * axis.getY() * (1 - cos()) + axis.getX() * sin();
+        updateCache();
+        return cache.mzy;
     }
 
     @Override
     public double getMzz() {
-        final double axisZ = normalizedAxis().getZ();
-        final double cos = cos();
-        return cos + axisZ * axisZ * (1 - cos);
+        updateCache();
+        return cache.mzz;
     }
 
     @Override
     public double getTz() {
-        return getPivotZ()
-                - getPivotX() * getMzx()
-                - getPivotY() * getMzy()
-                - getPivotZ() * getMzz();
+        updateCache();
+        return cache.tz;
     }
+
+    /* *************************************************************************
+     *                                                                         *
+     *                           State getters                                 *
+     *                                                                         *
+     **************************************************************************/
+
+    @Override
+    boolean computeIs2D() {
+        final Point3D a = getAxis();
+        return (a.getX() == 0.0 && a.getY() == 0.0) || getAngle() == 0;
+    }
+
+    @Override
+    boolean computeIsIdentity() {
+        if (getAngle() == 0.0) {
+            return true;
+        }
+
+        final Point3D a = getAxis();
+        return a.getX() == 0 && a.getY() == 0 && a.getZ() == 0.0;
+    }
+
+    /* *************************************************************************
+     *                                                                         *
+     *                           Array getters                                 *
+     *                                                                         *
+     **************************************************************************/
+
+    @Override
+    void fill2DArray(double[] array) {
+        updateCache();
+        array[0] = cache.mxx;
+        array[1] = cache.mxy;
+        array[2] = cache.tx;
+        array[3] = cache.myx;
+        array[4] = cache.myy;
+        array[5] = cache.ty;
+    }
+
+    @Override
+    void fill3DArray(double[] array) {
+        updateCache();
+        array[0] = cache.mxx;
+        array[1] = cache.mxy;
+        array[2] = cache.mxz;
+        array[3] = cache.tx;
+        array[4] = cache.myx;
+        array[5] = cache.myy;
+        array[6] = cache.myz;
+        array[7] = cache.ty;
+        array[8] = cache.mzx;
+        array[9] = cache.mzy;
+        array[10] = cache.mzz;
+        array[11] = cache.tz;
+        return;
+    }
+
+    /* *************************************************************************
+     *                                                                         *
+     *                         Transform creators                              *
+     *                                                                         *
+     **************************************************************************/
+
+    @Override
+    public Transform createConcatenation(Transform transform) {
+        if (transform instanceof Rotate) {
+            Rotate r = (Rotate) transform;
+            final double px = getPivotX();
+            final double py = getPivotY();
+            final double pz = getPivotZ();
+
+            if ((r.getAxis() == getAxis() ||
+                        r.getAxis().normalize().equals(getAxis().normalize())) &&
+                    px == r.getPivotX() &&
+                    py == r.getPivotY() &&
+                    pz == r.getPivotZ()) {
+                return new Rotate(getAngle() + r.getAngle(), px, py, pz, getAxis());
+            }
+        }
+
+        if (transform instanceof Affine) {
+            Affine a = (Affine) transform.clone();
+            a.prepend(this);
+            return a;
+        }
+
+        return super.createConcatenation(transform);
+    }
+
+    @Override
+    public Transform createInverse() throws NonInvertibleTransformException {
+        return new Rotate(-getAngle(), getPivotX(), getPivotY(), getPivotZ(),
+                getAxis());
+    }
+
+    @Override
+    public Rotate clone() {
+        return new Rotate(getAngle(), getPivotX(), getPivotY(), getPivotZ(),
+                getAxis());
+    }
+
+    /* *************************************************************************
+     *                                                                         *
+     *                     Transform, Inverse Transform                        *
+     *                                                                         *
+     **************************************************************************/
+
+    @Override
+    public Point2D transform(double x, double y) {
+        ensureCanTransform2DPoint();
+
+        updateCache();
+
+        return new Point2D(
+            cache.mxx * x + cache.mxy * y + cache.tx,
+            cache.myx * x + cache.myy * y + cache.ty);
+    }
+
+    @Override
+    public Point3D transform(double x, double y, double z) {
+        updateCache();
+
+        return new Point3D(
+            cache.mxx * x + cache.mxy * y + cache.mxz * z + cache.tx,
+            cache.myx * x + cache.myy * y + cache.myz * z + cache.ty,
+            cache.mzx * x + cache.mzy * y + cache.mzz * z + cache.tz);
+    }
+
+    @Override
+    void transform2DPointsImpl(double[] srcPts, int srcOff,
+            double[] dstPts, int dstOff, int numPts) {
+        updateCache();
+
+        while (--numPts >= 0) {
+            final double x = srcPts[srcOff++];
+            final double y = srcPts[srcOff++];
+
+            dstPts[dstOff++] = cache.mxx * x + cache.mxy * y + cache.tx;
+            dstPts[dstOff++] = cache.myx * x + cache.myy * y + cache.ty;
+        }
+    }
+
+    @Override
+    void transform3DPointsImpl(double[] srcPts, int srcOff,
+            double[] dstPts, int dstOff, int numPts) {
+
+        updateCache();
+
+        while (--numPts >= 0) {
+            final double x = srcPts[srcOff++];
+            final double y = srcPts[srcOff++];
+            final double z = srcPts[srcOff++];
+
+            dstPts[dstOff++] = cache.mxx * x + cache.mxy * y + cache.mxz * z + cache.tx;
+            dstPts[dstOff++] = cache.myx * x + cache.myy * y + cache.myz * z + cache.ty;
+            dstPts[dstOff++] = cache.mzx * x + cache.mzy * y + cache.mzz * z + cache.tz;
+        }
+    }
+
+    @Override
+    public Point2D deltaTransform(double x, double y) {
+        ensureCanTransform2DPoint();
+
+        updateCache();
+
+        return new Point2D(
+            cache.mxx * x + cache.mxy * y,
+            cache.myx * x + cache.myy * y);
+    }
+
+    @Override
+    public Point3D deltaTransform(double x, double y, double z) {
+        updateCache();
+
+        return new Point3D(
+            cache.mxx * x + cache.mxy * y + cache.mxz * z,
+            cache.myx * x + cache.myy * y + cache.myz * z,
+            cache.mzx * x + cache.mzy * y + cache.mzz * z);
+    }
+
+    @Override
+    public Point2D inverseTransform(double x, double y) {
+        ensureCanTransform2DPoint();
+
+        updateInverseCache();
+
+        return new Point2D(
+            inverseCache.mxx * x + inverseCache.mxy * y + inverseCache.tx,
+            inverseCache.myx * x + inverseCache.myy * y + inverseCache.ty);
+    }
+
+    @Override
+    public Point3D inverseTransform(double x, double y, double z) {
+        updateInverseCache();
+
+        return new Point3D(
+            inverseCache.mxx * x + inverseCache.mxy * y + inverseCache.mxz * z
+                + inverseCache.tx,
+            inverseCache.myx * x + inverseCache.myy * y + inverseCache.myz * z
+                + inverseCache.ty,
+            inverseCache.mzx * x + inverseCache.mzy * y + inverseCache.mzz * z
+                + inverseCache.tz);
+    }
+
+    @Override
+    void inverseTransform2DPointsImpl(double[] srcPts, int srcOff,
+            double[] dstPts, int dstOff, int numPts) {
+        updateInverseCache();
+
+        while (--numPts >= 0) {
+            final double x = srcPts[srcOff++];
+            final double y = srcPts[srcOff++];
+
+            dstPts[dstOff++] = inverseCache.mxx * x + inverseCache.mxy * y
+                    + inverseCache.tx;
+            dstPts[dstOff++] = inverseCache.myx * x + inverseCache.myy * y
+                    + inverseCache.ty;
+        }
+    }
+
+    @Override
+    void inverseTransform3DPointsImpl(double[] srcPts, int srcOff,
+            double[] dstPts, int dstOff, int numPts) {
+
+        updateInverseCache();
+
+        while (--numPts >= 0) {
+            final double x = srcPts[srcOff++];
+            final double y = srcPts[srcOff++];
+            final double z = srcPts[srcOff++];
+
+            dstPts[dstOff++] = inverseCache.mxx * x + inverseCache.mxy * y
+                    + inverseCache.mxz * z + inverseCache.tx;
+            dstPts[dstOff++] = inverseCache.myx * x + inverseCache.myy * y
+                    + inverseCache.myz * z + inverseCache.ty;
+            dstPts[dstOff++] = inverseCache.mzx * x + inverseCache.mzy * y
+                    + inverseCache.mzz * z + inverseCache.tz;
+        }
+    }
+
+    @Override
+    public Point2D inverseDeltaTransform(double x, double y) {
+        ensureCanTransform2DPoint();
+
+        updateInverseCache();
+
+        return new Point2D(
+            inverseCache.mxx * x + inverseCache.mxy * y,
+            inverseCache.myx * x + inverseCache.myy * y);
+    }
+
+    @Override
+    public Point3D inverseDeltaTransform(double x, double y, double z) {
+        updateInverseCache();
+
+        return new Point3D(
+            inverseCache.mxx * x + inverseCache.mxy * y + inverseCache.mxz * z,
+            inverseCache.myx * x + inverseCache.myy * y + inverseCache.myz * z,
+            inverseCache.mzx * x + inverseCache.mzy * y + inverseCache.mzz * z);
+    }
+
+    /* *************************************************************************
+     *                                                                         *
+     *                               Other API                                 *
+     *                                                                         *
+     **************************************************************************/
+
+    /**
+     * Returns a string representation of this {@code Rotate} object.
+     * @return a string representation of this {@code Rotate} object.
+     */
+    @Override
+    public String toString() {
+        final StringBuilder sb = new StringBuilder("Rotate [");
+
+        sb.append("angle=").append(getAngle());
+        sb.append(", pivotX=").append(getPivotX());
+        sb.append(", pivotY=").append(getPivotY());
+        sb.append(", pivotZ=").append(getPivotZ());
+        sb.append(", axis=").append(getAxis());
+
+        return sb.append("]").toString();
+    }
+
+    /* *************************************************************************
+     *                                                                         *
+     *                    Internal implementation stuff                        *
+     *                                                                         *
+     **************************************************************************/
 
     /**
      * @treatAsPrivate implementation detail
@@ -452,31 +732,168 @@ public class Rotate extends Transform {
         }
     }
 
-    /**
-     * @treatAsPrivate implementation detail
-     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
-     */
-    @Deprecated
     @Override
-    public Transform impl_copy() {
-        return new Rotate(getAngle(), getPivotX(), getPivotY(), getPivotZ(),
-                          getAxis());
+    void validate() {
+        getAxis();
+        getAngle();
+        getPivotX();
+        getPivotY();
+        getPivotZ();
+    }
+
+    @Override
+    protected void transformChanged() {
+        if (cache != null) {
+            cache.invalidate();
+        }
+        super.transformChanged();
+    }
+
+    @Override
+    void appendTo(Affine a) {
+        a.appendRotation(getAngle(), getPivotX(), getPivotY(), getPivotZ(),
+                getAxis());
+    }
+
+    @Override
+    void prependTo(Affine a) {
+        a.prependRotation(getAngle(), getPivotX(), getPivotY(), getPivotZ(),
+                getAxis());
     }
 
     /**
-     * Returns a string representation of this {@code Rotate} object.
-     * @return a string representation of this {@code Rotate} object.
-     */ 
-    @Override
-    public String toString() {
-        final StringBuilder sb = new StringBuilder("Rotate [");
+     * Updates the matrix cache
+     */
+    private void updateCache() {
+        if (cache == null) {
+            cache = new MatrixCache();
+        }
 
-        sb.append("angle=").append(getAngle());
-        sb.append(", pivotX=").append(getPivotX());
-        sb.append(", pivotY=").append(getPivotY());
-        sb.append(", pivotZ=").append(getPivotZ());
-        sb.append(", axis=").append(getAxis());
+        if (!cache.valid) {
+            cache.update(getAngle(), getAxis(),
+                    getPivotX(), getPivotY(), getPivotZ());
+        }
+    }
 
-        return sb.append("]").toString();
+    /**
+     * Updates the inverse matrix cache
+     */
+    private void updateInverseCache() {
+        if (inverseCache == null) {
+            inverseCache = new MatrixCache();
+        }
+
+        if (!inverseCache.valid) {
+            inverseCache.update(-getAngle(), getAxis(),
+                    getPivotX(), getPivotY(), getPivotZ());
+        }
+    }
+
+    /**
+     * Matrix cache. Computing single transformation matrix elements for
+     * a general rotation is quite expensive. Also each of those partial
+     * computations need some common operations to be made (compute sin
+     * and cos, normalize axis). Therefore with the direct element computations
+     * if all the getters for the elements are called to get the matrix,
+     * the result is slow.
+     *
+     * If a matrix element is asked for, we can reasonably anticipate that
+     * some other elements will be asked for as well. So when any element
+     * needs to be computed, we compute the entire matrix, cache it,
+     * and use the stored values until the transform changes.
+     */
+    private static class MatrixCache {
+        boolean valid = false;
+        boolean is3D = false;
+
+        double mxx, mxy, mxz, tx,
+               myx, myy, myz, ty,
+               mzx, mzy, mzz, tz;
+
+        public MatrixCache() {
+            // to have the 3D part right when using 2D-only
+            mzz = 1.0;
+        }
+
+        public void update(double angle, Point3D axis,
+                double px, double py, double pz) {
+
+            final double rads = Math.toRadians(angle);
+            final double sin = Math.sin(rads);
+            final double cos = Math.cos(rads);
+
+            if (axis == Z_AXIS ||
+                    (axis.getX() == 0.0 &&
+                     axis.getY() == 0.0 && 
+                     axis.getZ() > 0.0)) {
+                // 2D case
+                mxx = cos;
+                mxy = -sin;
+                tx = px * (1 - cos) + py * sin;
+                myx = sin;
+                myy = cos;
+                ty = py * (1 - cos) - px * sin;
+
+                if (is3D) {
+                    // Was 3D, needs to set the 3D values
+                    mxz = 0.0;
+                    myz = 0.0;
+                    mzx = 0.0;
+                    mzy = 0.0;
+                    mzz = 1.0;
+                    tz = 0.0;
+                    is3D = false;
+                }
+                valid = true;
+                return;
+            }
+            // 3D case
+            is3D = true;
+
+            double axisX, axisY, axisZ;
+
+            if (axis == X_AXIS || axis == Y_AXIS || axis == Z_AXIS) {
+                axisX = axis.getX();
+                axisY = axis.getY();
+                axisZ = axis.getZ();
+            } else {
+                // normalize
+                final double mag = Math.sqrt(axis.getX() * axis.getX() +
+                        axis.getY() * axis.getY() + axis.getZ() * axis.getZ());
+
+                if (mag == 0.0) {
+                    mxx = 1; mxy = 0; mxz = 0; tx = 0;
+                    myx = 0; myy = 1; myz = 0; ty = 0;
+                    mzx = 0; mzy = 0; mzz = 1; tz = 0;
+                    valid = true;
+                    return;
+                } else {
+                    axisX = axis.getX() / mag;
+                    axisY = axis.getY() / mag;
+                    axisZ = axis.getZ() / mag;
+                }
+            }
+
+            mxx = cos + axisX * axisX * (1 - cos);
+            mxy = axisX * axisY * (1 - cos) - axisZ * sin;
+            mxz = axisX * axisZ * (1 - cos) + axisY * sin;
+            tx = px * (1 - mxx) - py * mxy - pz * mxz;
+
+            myx = axisY * axisX * (1 - cos) + axisZ * sin;
+            myy = cos + axisY * axisY * (1 - cos);
+            myz = axisY * axisZ * (1 - cos) - axisX * sin;
+            ty = py * (1 - myy) - px * myx - pz * myz;
+
+            mzx = axisZ * axisX * (1 - cos) - axisY * sin;
+            mzy = axisZ * axisY * (1 - cos) + axisX * sin;
+            mzz = cos + axisZ * axisZ * (1 - cos);
+            tz = pz * (1 - mzz) - px * mzx - py * mzy;
+
+            valid = true;
+        }
+
+        public void invalidate() {
+            valid = false;
+        }
     }
 }

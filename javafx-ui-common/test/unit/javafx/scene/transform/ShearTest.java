@@ -107,7 +107,7 @@ public class ShearTest {
     public void testCopying() {
         final Shear trans = new Shear(34, 67, 66, 77);
 
-        Transform copy = trans.impl_copy();
+        Transform copy = trans.clone();
 
         TransformHelper.assertMatrix(copy,
                  1, 34, 0, -34*77,

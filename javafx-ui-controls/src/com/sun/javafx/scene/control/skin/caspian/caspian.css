@@ -1,7 +1,4 @@
 /*
-    Document   : caspian
-*/
-/*
  * Copyright (c) 2009, 2011, Oracle and/or its affiliates. All rights reserved. 
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER. 
  *  
@@ -24,7 +21,6 @@
  * Please contact Oracle, 500 Oracle Parkway, Redwood Shores, CA 94065 USA 
  * or visit www.oracle.com if you need additional information or have any 
  * questions.
- *                                                                              
  */
 
 /*******************************************************************************
@@ -392,7 +388,7 @@
  **            with corners with a smaller radius (radius = 4).               **
  **    d/h/l = -fx-body-color, 2, 3                                           **
  **            Draws the body last, inset 2 pixels from the control edge and  **
- **            with cornersd with an even smaller radius (radius = 3).        **
+ **            with corners with an even smaller radius (radius = 3).         **
  **    m     = Padding from the edge of the control to the outer edge of the  **
  **            skin content.                                                  **
  **    n     = If specified, the color chosen for -fx-text-fill should match  **
@@ -1440,7 +1436,7 @@
     -fx-background-color: transparent;
 }
 
-.text-area > .content {
+.text-area .content {
     -fx-padding: 3 5 3 5; 
     -fx-cursor: text;
 }

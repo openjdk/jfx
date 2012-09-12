@@ -143,7 +143,7 @@ public class TextAreaBehavior extends TextInputControlBehavior<TextArea> {
         if (PlatformUtil.isEmbedded()) {
             contextMenu.getStyleClass().add("text-input-context-menu");
         }
-        
+
         // Register for change events
         textArea.focusedProperty().addListener(new ChangeListener<Boolean>() {
             @Override
@@ -157,7 +157,7 @@ public class TextAreaBehavior extends TextInputControlBehavior<TextArea> {
                         Affine3D trans = TextFieldBehavior.calculateNodeToSceneTransform(textArea);
                         String text = textArea.getText();
 
-                        textArea.getScene().getWindow().impl_getPeer().requestInput(text, TextFieldBehavior.TextInputTypes.TEXT_AREA.ordinal(), w, h, 
+                        textArea.getScene().getWindow().impl_getPeer().requestInput(text, TextFieldBehavior.TextInputTypes.TEXT_AREA.ordinal(), w, h,
                                 trans.getMxx(), trans.getMxy(), trans.getMxz(), trans.getMxt(),
                                 trans.getMyx(), trans.getMyy(), trans.getMyz(), trans.getMyt(),
                                 trans.getMzx(), trans.getMzy(), trans.getMzz(), trans.getMzt());
@@ -174,7 +174,7 @@ public class TextAreaBehavior extends TextInputControlBehavior<TextArea> {
                     setCaretAnimating(false);
                 }
             }
-        });        
+        });
     }
 
     // An unholy back-reference!
@@ -349,8 +349,8 @@ public class TextAreaBehavior extends TextInputControlBehavior<TextArea> {
 //                    displaySoftwareKeyboard(true);
             }
             if (contextMenu.isShowing()) {
-                contextMenu.hide();                
-            }            
+                contextMenu.hide();
+            }
         }
     }
 
@@ -384,11 +384,11 @@ public class TextAreaBehavior extends TextInputControlBehavior<TextArea> {
         if (e.getButton() == MouseButton.SECONDARY) {
             if (contextMenu.isShowing()) {
                 contextMenu.hide();
-            } else {
+            } else if (textArea.getContextMenu() == null) {
                 double screenX = e.getScreenX();
                 double screenY = e.getScreenY();
                 double sceneX = e.getSceneX();
-                
+
                 if (PlatformUtil.isEmbedded()) {
                     Point2D menuPos;
                     if (textArea.getSelection().getLength() == 0) {
@@ -413,7 +413,7 @@ public class TextAreaBehavior extends TextInputControlBehavior<TextArea> {
                         screenY = location.getY();
                     }
                 }
-                
+
                 skin.populateContextMenu(contextMenu);
                 double menuWidth = contextMenu.prefWidth(-1);
                 double menuX = screenX - (PlatformUtil.isEmbedded() ? (menuWidth / 2) : 0);

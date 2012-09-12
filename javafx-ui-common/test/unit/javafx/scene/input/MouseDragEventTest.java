@@ -532,6 +532,16 @@ public class MouseDragEventTest {
         w.clear();
     }
 
+    @Test
+    public void shouldGetNonEmptyDescription() {
+        String s = MouseDragEvent.impl_copy(null, null,
+                MouseEvent.impl_mouseEvent(10, 20, 20, 30, MouseButton.NONE, 0,
+                true, true, true, true, true, true, true, true, true,
+                MouseEvent.MOUSE_MOVED)).toString();
+        assertNotNull(s);
+        assertFalse(s.isEmpty());
+    }
+
     private class World {
         private HandledNode scene;
         private HandledNode source;

@@ -48,7 +48,22 @@ public class TransformUtils {
                 mzx, mzy, mzz, tz);
     }
 
+    /**
+     * Creates an immutable Affine transformation filled with current values
+     * from the given transformation.
+     * This method is not intended for public use, users should use the Affine
+     * class.
+     */
+    public static Transform immutableTransform(Transform t) {
+        return new ImmutableTransform(
+                t.getMxx(), t.getMxy(), t.getMxz(), t.getTx(),
+                t.getMyx(), t.getMyy(), t.getMyz(), t.getTy(),
+                t.getMzx(), t.getMzy(), t.getMzz(), t.getTz());
+    }
 
+    /**
+     * Immutable transform implementation.
+     */
     private static class ImmutableTransform extends Transform {
         private final double mxx, mxy, mxz, tx;
         private final double myx, myy, myz, ty;
@@ -140,17 +155,9 @@ public class TransformUtils {
                     getMzx(), getMzy(), getMzz(), getTz());
         }
 
-        @Override
-        public Transform impl_copy() {
-            return new ImmutableTransform(
-                    getMxx(), getMxy(), getMxz(), getTx(),
-                    getMyx(), getMyy(), getMyz(), getTy(),
-                    getMzx(), getMzy(), getMzz(), getTz());
-        }
-
         /**
-         * Returns a string representation of this {@code Affine} object.
-         * @return a string representation of this {@code Affine} object.
+         * Returns a string representation of this transform.
+         * @return a string representation of this transform.
          */
         @Override
         public String toString() {

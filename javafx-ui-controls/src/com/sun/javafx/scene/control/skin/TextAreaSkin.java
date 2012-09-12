@@ -1199,14 +1199,14 @@ public class TextAreaSkin extends TextInputControlSkin<TextArea, TextAreaBehavio
         int pos = textArea.getCaretPosition();
         int len = text.length();
 
-        if (pos < len - 1) {
+        if (pos < len) {
             if (nextIfAtEnd && text.codePointAt(pos) == 0x0a) {
                 // We are at the end of a paragraph.
                 // Move to the next paragraph.
                 pos++;
             }
             // Go to the end of this paragraph
-            while (pos < len - 1 && text.codePointAt(pos) != 0x0a) {
+            while (pos < len && text.codePointAt(pos) != 0x0a) {
                 pos++;
             }
             if (select) {

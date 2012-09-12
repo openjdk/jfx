@@ -176,7 +176,7 @@ public class TextFieldSkin extends TextInputControlSkin<TextField, TextFieldBeha
             }
         });
         textLeft = new DoubleBinding() {
-            { bind(getSkinnable().insets()); }
+            { bind(getSkinnable().insetsProperty()); }
             @Override protected double computeValue() {
                 return getInsets().getLeft();
             }
@@ -192,7 +192,7 @@ public class TextFieldSkin extends TextInputControlSkin<TextField, TextFieldBeha
         };
         textLeft.addListener(leftRightListener);
         textRight = new DoubleBinding() {
-            { bind(getSkinnable().widthProperty(), getSkinnable().insets()); }
+            { bind(getSkinnable().widthProperty(), getSkinnable().insetsProperty()); }
             @Override protected double computeValue() {
                 return getWidth() - getInsets().getRight();
             }
@@ -206,25 +206,25 @@ public class TextFieldSkin extends TextInputControlSkin<TextField, TextFieldBeha
         // Once this was crucial for performance, not sure now.
         clip.setSmooth(false);
         clip.xProperty().bind(new DoubleBinding() {
-            { bind(getSkinnable().insets()); }
+            { bind(getSkinnable().insetsProperty()); }
             @Override protected double computeValue() {
                 return getInsets().getLeft();
             }
         });
         clip.yProperty().bind(new DoubleBinding() {
-            { bind(getSkinnable().insets()); }
+            { bind(getSkinnable().insetsProperty()); }
             @Override protected double computeValue() {
                 return getInsets().getTop();
             }
         });
         clip.widthProperty().bind(new DoubleBinding() {
-            { bind(getSkinnable().widthProperty(), getSkinnable().insets()); }
+            { bind(getSkinnable().widthProperty(), getSkinnable().insetsProperty()); }
             @Override protected double computeValue() {
                 return getWidth() - getInsets().getRight() - getInsets().getLeft();
             }
         });
         clip.heightProperty().bind(new DoubleBinding() {
-            { bind(getSkinnable().heightProperty(), getSkinnable().insets()); }
+            { bind(getSkinnable().heightProperty(), getSkinnable().insetsProperty()); }
             @Override protected double computeValue() {
                 return getHeight() - getInsets().getTop() - getInsets().getBottom();
             }

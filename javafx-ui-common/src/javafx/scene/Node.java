@@ -348,12 +348,16 @@ public abstract class Node implements EventTarget {
     @Deprecated
     protected void impl_markDirty(DirtyBits dirtyBit) {
         if (impl_isDirtyEmpty()) {
-            Scene s = getScene();
-            if (s != null)
-                s.addToDirtyList(this);
+            addToSceneDirtyList();
         }
 
         dirtyBits |= dirtyBit.getMask();
+    }
+
+    private void addToSceneDirtyList() {
+        Scene s = getScene();
+        if (s != null)
+            s.addToDirtyList(this);
     }
 
     /**
@@ -421,7 +425,8 @@ public abstract class Node implements EventTarget {
      */
     @Deprecated
     public final void impl_syncPGNode() {
-        if (!impl_isDirtyEmpty()) {
+        // Do not synchronize invisible nodes unless their visibility has changed
+        if (!impl_isDirtyEmpty() && (treeVisible || impl_isDirty(DirtyBits.NODE_VISIBLE))) {
             impl_updatePG();
             clearDirty();
         }
@@ -442,8 +447,14 @@ public abstract class Node implements EventTarget {
 
     // Happens before we hold the sync lock
     void updateBounds() {
-        if (impl_isDirty(DirtyBits.NODE_TRANSFORM)) {
-            updateLocalToParentTransform();
+        // See impl_syncPGNode()
+        if (!treeVisible && !impl_isDirty(DirtyBits.NODE_VISIBLE)) {
+            return;
+        }
+        if (impl_isDirty(DirtyBits.NODE_TRANSFORM) || impl_isDirty(DirtyBits.NODE_TRANSFORMED_BOUNDS)) {
+            if (impl_isDirty(DirtyBits.NODE_TRANSFORM)) {
+                updateLocalToParentTransform();
+            }
             _txBounds = getTransformedBounds(_txBounds,
                                              BaseTransform.IDENTITY_TRANSFORM);
         }
@@ -451,10 +462,6 @@ public abstract class Node implements EventTarget {
         if (impl_isDirty(DirtyBits.NODE_BOUNDS)) {
             _geomBounds = getGeomBounds(_geomBounds,
                     BaseTransform.IDENTITY_TRANSFORM);
-            if (!impl_isDirty(DirtyBits.NODE_TRANSFORM)) {
-                _txBounds = getTransformedBounds(_txBounds,
-                                                 BaseTransform.IDENTITY_TRANSFORM);
-            }
         }
 
         Node n = getClip();
@@ -476,14 +483,14 @@ public abstract class Node implements EventTarget {
         final PGNode peer = impl_getPGNode();
         if (impl_isDirty(DirtyBits.NODE_TRANSFORM)) {
             peer.setTransformMatrix(localToParentTx);
-            peer.setTransformedBounds(_txBounds);
         }
 
         if (impl_isDirty(DirtyBits.NODE_BOUNDS)) {
             peer.setContentBounds(_geomBounds);
-            if (!impl_isDirty(DirtyBits.NODE_TRANSFORM)) {
-                peer.setTransformedBounds(_txBounds);
-            }
+        }
+        
+        if (impl_isDirty(DirtyBits.NODE_TRANSFORMED_BOUNDS)) {
+            peer.setTransformedBounds(_txBounds, !impl_isDirty(DirtyBits.NODE_BOUNDS));
         }
 
         if (impl_isDirty(DirtyBits.NODE_OPACITY)) {
@@ -3389,7 +3396,7 @@ public abstract class Node implements EventTarget {
         if (isVisible()) {
             notifyParentOfBoundsChange();
         }
-        impl_markDirty(DirtyBits.NODE_BOUNDS);
+        impl_markDirty(DirtyBits.NODE_TRANSFORMED_BOUNDS);
     }
 
     /**
@@ -4513,7 +4520,7 @@ public abstract class Node implements EventTarget {
                         Node parentNode = Node.this.getParent();
                         if (parentNode != null) {
                             result = parentNode.getLocalToSceneTransform();
-                            result = result.impl_getConcatenation(getLocalToParentTransform());
+                            result = result.createConcatenation(getLocalToParentTransform());
                         } else {
                             result = getLocalToParentTransform();
                         }
@@ -6523,6 +6530,11 @@ public abstract class Node implements EventTarget {
             treeVisible = value;
             updateCanReceiveFocus();
             focusSetDirty(getScene());
+            if (treeVisible && !impl_isDirtyEmpty()) {
+                // The node hasn't been synchronized while invisible, so
+                // synchronize now
+                addToSceneDirtyList();
+            }
             ((TreeVisiblePropertyReadOnly)impl_treeVisibleProperty()).invalidate();
         }
     }

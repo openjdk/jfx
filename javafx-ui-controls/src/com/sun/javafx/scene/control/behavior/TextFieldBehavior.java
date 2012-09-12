@@ -103,17 +103,17 @@ public class TextFieldBehavior extends TextInputControlBehavior<TextField> {
             }
         }
     };
-    
+
     private ContextMenu contextMenu;
 
     public TextFieldBehavior(final TextField textField) {
         super(textField);
-        
+
         contextMenu = new ContextMenu();
         if (PlatformUtil.isEmbedded()) {
             contextMenu.getStyleClass().add("text-input-context-menu");
         }
-        
+
         // Initialize scroll timeline
         scrollSelectionTimeline.setCycleCount(Timeline.INDEFINITE);
         List<KeyFrame> scrollTimelineKeyFrames = scrollSelectionTimeline.getKeyFrames();
@@ -148,7 +148,7 @@ public class TextFieldBehavior extends TextInputControlBehavior<TextField> {
 //                w -= insets.getLeft() + insets.getRight();
 //                h -= insets.getTop() + insets.getBottom();
                 String text = textField.getText();
-                
+
                 textField.getScene().getWindow().impl_getPeer().requestInput(text, type.ordinal(), w, h, 
                         trans.getMxx(), trans.getMxy(), trans.getMxz(), trans.getMxt(),// + insets.getLeft(),
                         trans.getMyx(), trans.getMyy(), trans.getMyz(), trans.getMyt(),// + insets.getTop(),
@@ -174,10 +174,10 @@ public class TextFieldBehavior extends TextInputControlBehavior<TextField> {
             transform.preConcatenate(node.impl_getLeafTransform());
             node = node.getParent();
         } while (node != null);
-        
+
         return transform;
     }
-    
+
     // An unholy back-reference!
     public void setTextFieldSkin(TextFieldSkin skin) {
         this.skin = skin;
@@ -290,8 +290,8 @@ public class TextFieldBehavior extends TextInputControlBehavior<TextField> {
             }
         }
         if (contextMenu.isShowing()) {
-            contextMenu.hide();                
-        }         
+            contextMenu.hide();
+        }
     }
 
     @Override public void mouseDragged(MouseEvent e) {
@@ -324,7 +324,7 @@ public class TextFieldBehavior extends TextInputControlBehavior<TextField> {
         if (e.getButton() == MouseButton.SECONDARY) {
             if (contextMenu.isShowing()) {
                 contextMenu.hide();
-            } else {
+            } else if (textField.getContextMenu() == null) {
                 double screenX = e.getScreenX();
                 double screenY = e.getScreenY();
                 double sceneX = e.getSceneX();

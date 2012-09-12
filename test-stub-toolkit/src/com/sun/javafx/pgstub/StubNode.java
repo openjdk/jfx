@@ -54,7 +54,7 @@ public class StubNode implements PGNode {
     }
 
     @Override
-    public void setTransformedBounds(BaseBounds bounds) {
+    public void setTransformedBounds(BaseBounds bounds, boolean byTransformChangeOnly) {
     }
 
     @Override public void setVisible(boolean visible) {

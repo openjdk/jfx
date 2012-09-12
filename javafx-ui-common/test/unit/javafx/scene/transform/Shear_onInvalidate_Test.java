@@ -45,10 +45,10 @@ public class Shear_onInvalidate_Test extends OnInvalidateMethodsTestBase {
     @Parameters
     public static Collection<Object[]> data() {
         Object[][] data = new Object[][] {
-            {new Configuration(Shear.class, "pivotX", 2.0, new DirtyBits[] {DirtyBits.NODE_TRANSFORM, DirtyBits.NODE_BOUNDS })},
-            {new Configuration(Shear.class, "pivotY", 2.0, new DirtyBits[] {DirtyBits.NODE_TRANSFORM, DirtyBits.NODE_BOUNDS })},
-            {new Configuration(Shear.class, "x", 20.0, new DirtyBits[] {DirtyBits.NODE_TRANSFORM, DirtyBits.NODE_BOUNDS })},
-            {new Configuration(Shear.class, "y", 20.0, new DirtyBits[] {DirtyBits.NODE_TRANSFORM, DirtyBits.NODE_BOUNDS })}
+            {new Configuration(Shear.class, "pivotX", 2.0, new DirtyBits[] {DirtyBits.NODE_TRANSFORM, DirtyBits.NODE_TRANSFORMED_BOUNDS })},
+            {new Configuration(Shear.class, "pivotY", 2.0, new DirtyBits[] {DirtyBits.NODE_TRANSFORM, DirtyBits.NODE_TRANSFORMED_BOUNDS })},
+            {new Configuration(Shear.class, "x", 20.0, new DirtyBits[] {DirtyBits.NODE_TRANSFORM, DirtyBits.NODE_TRANSFORMED_BOUNDS })},
+            {new Configuration(Shear.class, "y", 20.0, new DirtyBits[] {DirtyBits.NODE_TRANSFORM, DirtyBits.NODE_TRANSFORMED_BOUNDS })}
         };
         return Arrays.asList(data);
     }

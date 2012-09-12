@@ -131,7 +131,7 @@ public class ScaleTest {
     public void testCopying() {
         final Scale trans = new Scale(34, 67, 10, 66, 77, 5);
 
-        Transform copy = trans.impl_copy();
+        Transform copy = trans.clone();
 
         TransformHelper.assertMatrix(copy,
                 34,  0,  0, -2178,

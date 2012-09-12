@@ -78,7 +78,7 @@ public class Window implements EventTarget {
 
     /**
      * Allows window peer listeners to directly change window location and size
-     * without changing the xExplicit, yExcplicit, widthExplicit and
+     * without changing the xExplicit, yExplicit, widthExplicit and
      * heightExplicit values.
      */
     private static final WindowBoundsAccessor BOUNDS_ACCESSOR =

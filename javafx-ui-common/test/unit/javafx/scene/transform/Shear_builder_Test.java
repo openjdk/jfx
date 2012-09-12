@@ -28,6 +28,7 @@ package javafx.scene.transform;
 import com.sun.javafx.test.BuilderTestBase;
 import java.util.Arrays;
 import java.util.Collection;
+import javafx.event.EventHandler;
 
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
@@ -43,6 +44,11 @@ public final class Shear_builder_Test extends BuilderTestBase {
         cfg.addProperty("pivotY", 2.0);
         cfg.addProperty("x", 10.0);
         cfg.addProperty("y", 20.0);
+        cfg.addProperty("onTransformChanged", new EventHandler<TransformChangedEvent>() {
+            @Override public void handle(TransformChangedEvent event) {
+                // empty
+            }
+        });
 
         return Arrays.asList(new Object[] {
             config(cfg)
