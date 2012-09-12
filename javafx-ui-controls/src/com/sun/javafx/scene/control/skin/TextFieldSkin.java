@@ -530,14 +530,18 @@ public class TextFieldSkin extends TextInputControlSkin<TextField, TextFieldBeha
           case RIGHT:
             textTranslateX.set(textRight.get() - textNode.getLayoutBounds().getWidth() -
                                caretWidth / 2 - 5);
-            promptNode.setLayoutX(textRight.get() - promptNode.getLayoutBounds().getWidth() -
-                               caretWidth / 2 - 5);
+            if (usePromptText.get()) {
+                promptNode.setLayoutX(textRight.get() - promptNode.getLayoutBounds().getWidth() -
+                                      caretWidth / 2 - 5);
+            }
             break;
 
           case LEFT:
           default:
             textTranslateX.set(caretWidth / 2);
-            promptNode.layoutXProperty().set(caretWidth / 2);
+            if (usePromptText.get()) {
+                promptNode.layoutXProperty().set(caretWidth / 2);
+            }
         }
     }
 
