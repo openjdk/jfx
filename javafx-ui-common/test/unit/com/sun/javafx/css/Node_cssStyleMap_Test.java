@@ -103,7 +103,7 @@ public class Node_cssStyleMap_Test {
         return smap;
     }
     
-    @Test @org.junit.Ignore
+    @Test @org.junit.Ignore("will not compile, no StyleHelper#create mehod")
     public void testStyleMapTracksChanges() {
 
         final List<Declaration> decls = new ArrayList<Declaration>();
@@ -136,25 +136,25 @@ public class Node_cssStyleMap_Test {
         rect = new Rectangle(50,50) {
 
             // I'm bypassing StyleManager by creating StyleHelper directly. 
-            StyleHelper shelper = null;
+//            StyleHelper shelper = null;
                                    
             
-            @Override public StyleHelper impl_getStyleHelper() {
-                if (shelper == null) {
-                    // If no styleclass, then create an StyleHelper with no mappings.
-                    // Otherwise, create a StyleHelper matching the "rect" style class.
-                    if (getStyleClass().isEmpty()) {
-                        Map<StyleCacheKey, StyleCacheBucket> styleCache = 
-                            new HashMap<StyleHelper.StyleCacheKey, StyleHelper.StyleCacheBucket>();
-                        shelper = StyleHelper.create(rect, emptyMap, styleCache, 0, 0);
-                    } else  {
-                        Map<StyleCacheKey, StyleCacheBucket> styleCache = 
-                            new HashMap<StyleHelper.StyleCacheKey, StyleHelper.StyleCacheBucket>();
-                        shelper = StyleHelper.create(rect, styleMap, styleCache, 0, 0);
-                    }
-                }
-                return shelper;
-            }
+//            @Override public StyleHelper impl_getStyleHelper() {
+//                if (shelper == null) {
+//                    // If no styleclass, then create an StyleHelper with no mappings.
+//                    // Otherwise, create a StyleHelper matching the "rect" style class.
+//                    if (getStyleClass().isEmpty()) {
+//                        Map<StyleCacheKey, StyleCacheBucket> styleCache = 
+//                            new HashMap<StyleHelper.StyleCacheKey, StyleHelper.StyleCacheBucket>();
+//                        shelper = StyleHelper.create(rect, emptyMap, styleCache, 0, 0);
+//                    } else  {
+//                        Map<StyleCacheKey, StyleCacheBucket> styleCache = 
+//                            new HashMap<StyleHelper.StyleCacheKey, StyleHelper.StyleCacheBucket>();
+//                        shelper = StyleHelper.create(rect, styleMap, styleCache, 0, 0);
+//                    }
+//                }
+//                return shelper;
+//            }
         };
                 
         rect.getStyleClass().add("rect");
@@ -225,18 +225,18 @@ public class Node_cssStyleMap_Test {
         group = new Group() {
 
             // I'm bypassing StyleManager by creating StyleHelper directly. 
-            StyleHelper shelper = null;
-                                               
-            @Override public void impl_processCSS(boolean reapply) {
-                if (shelper == null) {
-                    shelper = StyleHelper.create(text, rootStyleMap, styleCache, 0, 1);
-                };
-                shelper.transitionToState(group);
-            }
-            
-            @Override public StyleHelper impl_getStyleHelper() {
-                return shelper;
-            }            
+//            StyleHelper shelper = null;
+//                                               
+//            @Override public void impl_processCSS(boolean reapply) {
+//                if (shelper == null) {
+//                    shelper = StyleHelper.create(text, rootStyleMap, styleCache, 0, 1);
+//                };
+//                shelper.transitionToState(group);
+//            }
+//            
+//            @Override public StyleHelper impl_getStyleHelper() {
+//                return shelper;
+//            }            
         };
         group.getStyleClass().add("root");
         
@@ -271,24 +271,24 @@ public class Node_cssStyleMap_Test {
         text = new Text("HelloWorld") {
 
             // I'm bypassing StyleManager by creating StyleHelper directly. 
-            StyleHelper shelper = null;
-            
-            @Override public void impl_processCSS(boolean reapply) {
-                if (reapply) {
-                    shelper = null;
-                    if (getStyleClass().isEmpty()) {
-                        shelper = StyleHelper.create(text, emptyMap, styleCache, 0, 2);
-                    } else  {
-                        shelper = StyleHelper.create(text, styleMap, styleCache, 0, 2);
-                    }
-                }
-                shelper.transitionToState(text);
-            }
-                                               
-            @Override public StyleHelper impl_getStyleHelper() {
-                return shelper;
-            }            
-            
+//            StyleHelper shelper = null;
+//            
+//            @Override public void impl_processCSS(boolean reapply) {
+//                if (reapply) {
+//                    shelper = null;
+//                    if (getStyleClass().isEmpty()) {
+//                        shelper = StyleHelper.create(text, emptyMap, styleCache, 0, 2);
+//                    } else  {
+//                        shelper = StyleHelper.create(text, styleMap, styleCache, 0, 2);
+//                    }
+//                }
+//                shelper.transitionToState(text);
+//            }
+//                                               
+//            @Override public StyleHelper impl_getStyleHelper() {
+//                return shelper;
+//            }            
+//            
         };
         
         group.getChildren().add(text);

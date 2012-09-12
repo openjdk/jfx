@@ -31,7 +31,6 @@ import java.util.*;
 import javafx.scene.Scene;
 
 import javafx.collections.ListChangeListener.Change;
-import javafx.scene.Node;
 import javafx.scene.Parent;
 
 /**
@@ -47,22 +46,12 @@ final class ParentStyleManager extends StyleManager<Parent> {
 
         super(parent);
         this.ancestorStyleManager = ancestorStyleManager;
-        this.key = new ParentKey();
-        this.indices = getIndicesOfParentsWithStylesheets(parent, 0);
         updateStylesheets();
     }
 
     /** Either the Scene styleManager or the styleManager of a Parent */
     private final StyleManager ancestorStyleManager;
-    
-    /**
-     * This instance is reused for each lookup in the cache so as to avoid
-     * creating temporary objects as much as reasonable.
-     */
-    private final ParentKey key;    
-    
-    private final int[] indices;
-    
+        
     /**
      * Another map from String => Stylesheet for a Parent. If a stylesheet for the 
      * given URL has already been loaded then we'll simply reuse the stylesheet
@@ -78,28 +67,16 @@ final class ParentStyleManager extends StyleManager<Parent> {
     ////////////////////////////////////////////////////////////////////////////
     
     @Override
-    public void updateStylesheets() {
-        // The list of referenced stylesheets is about to be recalculated, 
-        // so clear the current list. The style maps are no longer valid, so
-        // annihilate the cache
-        referencedStylesheets.clear();
-        clearCache();
-
-        if (defaultUserAgentStylesheet != null) {
-            referencedStylesheets.add(defaultUserAgentStylesheet);
-        }
-        
-        if (userAgentStylesheetMap.isEmpty() == false) {
-            // TODO: This isn't right. They should be in the same order that
-            // they were first added.
-            referencedStylesheets.addAll(userAgentStylesheetMap.values());
-        }
+    protected void updateStylesheetsImpl() {
         
         referencedStylesheets.addAll(ancestorStyleManager.referencedStylesheets);
         
         // RT-20643
-        CssError.setCurrentScene(owner.getScene());
-
+        CssError.setCurrentScene(owner.getScene());        
+        
+        // RT-20643
+        CssError.setCurrentScene(null);                
+        
         // create the stylesheets, one per URL supplied
         List<String> stylesheetURLs = owner.getStylesheets();
         
@@ -133,21 +110,6 @@ final class ParentStyleManager extends StyleManager<Parent> {
         
     }
     
-    @Override
-    protected Key getKey(Node node) {
-        
-        // Populate our helper key with the class name, id, and style class
-        // of the node and lookup the associated Cache in the cacheMap
-        key.className = node.getClass().getName();
-        key.id = node.getId();
-        key.styleClass = node.impl_cssGetStyleClassBits();
-
-        key.indices = indices;
-        
-        return key;
-        
-    }
-
     ////////////////////////////////////////////////////////////////////////////
     //
     // Parent stylesheet handling
@@ -209,7 +171,7 @@ final class ParentStyleManager extends StyleManager<Parent> {
     private void clearParentCache(StylesheetContainer<Parent> psc) {
 
         final List<Reference<Parent>> parentList = psc.users.list;
-        final List<Reference<StyleManager.Key>>    keyList    = psc.keys.list;
+        final List<Reference<SimpleSelector>>    keyList    = psc.keys.list;
         for (int n=parentList.size()-1; 0<=n; --n) {
 
             final Reference<Parent> ref = parentList.get(n);
@@ -230,14 +192,14 @@ final class ParentStyleManager extends StyleManager<Parent> {
     }
 
     // RT-22565: Called from clearParentCache to clear the cache entries.
-    private void clearParentCache(List<Reference<StyleManager.Key>> keyList) {
+    private void clearParentCache(List<Reference<SimpleSelector>> keyList) {
 
         if (cacheMap.isEmpty()) return;
 
         for (int n=keyList.size()-1; 0<=n; --n) {
 
-            final Reference<StyleManager.Key> ref = keyList.get(n);
-            final StyleManager.Key key = ref.get();
+            final Reference<SimpleSelector> ref = keyList.get(n);
+            final SimpleSelector key = ref.get();
             if (key == null) continue;
 
             final StyleManager.Cache cache = cacheMap.remove(key);
@@ -309,89 +271,5 @@ final class ParentStyleManager extends StyleManager<Parent> {
 
         return stylesheet;
     }
-    
-    
-    /**
-     * The key used in the cacheMap of the StylesheetContainer
-     */
-    private static class ParentKey extends StyleManager.Key {
-        
-        ParentKey() {
-            super();
-            indices = null;
-        }
-
-        protected Key dup() {
             
-            ParentKey key = new ParentKey();
-            key.className  = className;
-            key.id = id;
-            final int nElements = styleClass.length;
-            key.styleClass = new long[nElements];
-            System.arraycopy(styleClass, 0, key.styleClass, 0, nElements);
-            key.indices = indices;
-            
-            return key;
-        }
-        
-        // this will be initialized if a Parent has a stylesheet and will
-        // hold the indices of those Parents with stylesheets (the Parent's
-        // hash code is used). If the parent does not have a stylesheet, the
-        // indice will be -1. When finding the equals Key in the cache lookup,
-        // we only need to check up to the last parent that has a stylesheet.
-        // In other words, if one node is at level n and nearest parent with
-        // a stylesheet is at level m, then the indices match provided
-        // indices[x] == other.indices[x] for 0 <= x <= m and all other
-        // indices are -1. Thus, [1, -1, 2] and [1, -1, 2, -1, -1] are equivalent
-        // whereas [1, -1, 2] and [1, -1, 2, -1, 3] are not.
-        private int[] indices;
-
-        public int[] getIndices() {
-            return indices;
-        }
-
-        public void setIndices(int[] indices) {
-            this.indices = indices;
-        }
-
-        @Override
-        public boolean equals(Object o) {
-            if (o instanceof ParentKey && super.equals(o)) {
-                ParentKey other = (ParentKey)o;
-                if(indices != null && other.indices != null) {
-                    boolean eq = true;
-                    final int max = Math.min(indices.length, other.indices.length);
-                    for (int x = 0; eq && (x < max); x++) {
-                        eq = indices[x] == other.indices[x];
-                    }
-                    if (eq) {
-                        // ensure the remainder are -1
-                        for(int x=max; eq && x<indices.length; x++) {
-                            eq = indices[x] == -1;
-                        }
-                        for(int x=max; eq && x<other.indices.length; x++) {
-                            eq = other.indices[x] == -1;
-                        }
-                    }
-                    return eq;
-                }
-            }
-            return false;
-        }
-
-        @Override
-        public int hashCode() {
-            int hash = super.hashCode();
-            if (indices != null) hash = 31 * (hash + Arrays.hashCode(indices));
-            return hash;
-        }
-
-        @Override
-        public String toString() {
-            final String istr = indices != null ? Arrays.toString(indices) : "[]";
-            return "ParentKey {"+className+", "+id+", "+String.valueOf(styleClass)+", "+istr+"}";
-        }
-
-    }
-    
 }

@@ -89,6 +89,7 @@ final public class Stylesheet {
 
         @Override
         protected void onChanged(Change<Rule> c) {
+            c.reset();
             while (c.next()) {
                 if (c.wasAdded()) {
                     for(Rule rule : c.getAddedSubList()) {

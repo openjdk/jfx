@@ -281,6 +281,9 @@ public class StyleablePropertyTest {
     }
     
     Group createGroup(final CascadingStyle... styles ) {
+        
+        // TBD: can't execute this code because there is no StyleHelper.create method
+        assert false : "caller should be @Ignored";
     
         final List<CascadingStyle> cascadingStyles = new ArrayList<CascadingStyle>();
         Collections.addAll(cascadingStyles, styles);
@@ -292,18 +295,18 @@ public class StyleablePropertyTest {
         
         final Group group = new Group() {
             // I'm bypassing StyleManager by creating StyleHelper directly. 
-            StyleHelper shelper = null;
-            
-            @Override public void impl_processCSS(boolean reapply) {
-                if (reapply) {
-                    shelper = StyleHelper.create(this, styleMap, styleCache, 0, 2);
-                }
-                shelper.transitionToState(this);
-            }
-                                               
-            @Override public StyleHelper impl_getStyleHelper() {
-                return shelper;
-            }            
+//            StyleHelper shelper = null;
+//            
+//            @Override public void impl_processCSS(boolean reapply) {
+//                if (reapply) {
+//                    shelper = StyleHelper.create(this, styleMap, styleCache, 0, 2);
+//                }
+//                shelper.transitionToState(this);
+//            }
+//                                               
+//            @Override public StyleHelper impl_getStyleHelper() {
+//                return shelper;
+//            }            
             
         };
         group.getStyleClass().add("root");
@@ -312,7 +315,10 @@ public class StyleablePropertyTest {
     }
     
     Rectangle createRectangle(final CascadingStyle... styles ) {
-    
+
+        // TBD: can't execute this code because there is no StyleHelper.create method
+        assert false : "caller should be @Ignored";
+            
         final List<CascadingStyle> cascadingStyles = new ArrayList<CascadingStyle>();
         Collections.addAll(cascadingStyles, styles);
         final  Map<String, List<CascadingStyle>> styleMap = 
@@ -322,18 +328,18 @@ public class StyleablePropertyTest {
         
         Rectangle rectangle = new Rectangle() {
             // I'm bypassing StyleManager by creating StyleHelper directly. 
-            StyleHelper shelper = null;
-            
-            @Override public void impl_processCSS(boolean reapply) {
-                if (reapply) {
-                    shelper = StyleHelper.create(this, styleMap, styleCache, 0, 2);
-                }
-                shelper.transitionToState(this);
-            }
-                                               
-            @Override public StyleHelper impl_getStyleHelper() {
-                return shelper;
-            }            
+//            StyleHelper shelper = null;
+//            
+//            @Override public void impl_processCSS(boolean reapply) {
+//                if (reapply) {
+//                    shelper = StyleHelper.create(this, styleMap, styleCache, 0, 2);
+//                }
+//                shelper.transitionToState(this);
+//            }
+//                                               
+//            @Override public StyleHelper impl_getStyleHelper() {
+//                return shelper;
+//            }            
                                     
         };
         rectangle.getStyleClass().add("rect");
@@ -342,7 +348,7 @@ public class StyleablePropertyTest {
     }
 
     static class RectangleWithFont extends Rectangle {
-    
+                
         final List<CascadingStyle> cascadingStyles = new ArrayList<CascadingStyle>();
         final  Map<String, List<CascadingStyle>> styleMap = 
                 Node_cssStyleMap_Test.createStyleMap(cascadingStyles);
@@ -356,18 +362,21 @@ public class StyleablePropertyTest {
             super();
             getStyleClass().add("rect");
             Collections.addAll(cascadingStyles, styles);
+            
+            assert false : "caller should be @Ignored";
+            // TBD: can't execute this code because there is no StyleHelper.create method
         }    
         
-            @Override public void impl_processCSS(boolean reapply) {
-                if (reapply) {
-                    shelper = StyleHelper.create(this, styleMap, styleCache, 0, 2);
-                }
-                shelper.transitionToState(this);
-            }
-                                               
-            @Override public StyleHelper impl_getStyleHelper() {
-                return shelper;
-            }            
+//            @Override public void impl_processCSS(boolean reapply) {
+//                if (reapply) {
+//                    shelper = StyleHelper.create(this, styleMap, styleCache, 0, 2);
+//                }
+//                shelper.transitionToState(this);
+//            }
+//                                               
+//            @Override public StyleHelper impl_getStyleHelper() {
+//                return shelper;
+//            }            
             
         ObjectProperty<Font> font = new StyleableObjectProperty<Font>() {
 

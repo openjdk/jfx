@@ -146,19 +146,6 @@ public class RuleTest {
     }
 
     @Ignore @Test
-    public void testMightApply() {
-        System.out.println("mightApply");
-        String className = "";
-        String id = "";
-        List<String> styleClasses = null;
-        Rule instance = null;
-        boolean expResult = false;
-        boolean result = instance.mightApply(className, id, styleClasses);
-        assertEquals(expResult, result);
-        fail("The test case is a prototype.");
-    }
-
-    @Ignore @Test
     public void testApplies() {
         System.out.println("applies");
         Node node = null;

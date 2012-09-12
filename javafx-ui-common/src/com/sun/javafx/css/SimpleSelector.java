@@ -162,6 +162,10 @@ final public class SimpleSelector extends Selector {
         return getStyleClassStrings(styleClassMasks);
     }
 
+    long[] getStyleClassMasks() {
+        return styleClassMasks;
+    }
+    
     /** styleClasses converted to a set of bit masks */
     final private long[] styleClassMasks;
     
@@ -220,6 +224,35 @@ final public class SimpleSelector extends Selector {
         this.matchOnId = (id != null && !("".equals(id)));
 
     }
+    
+    /** copy constructor used by StyleManager */
+    SimpleSelector(final SimpleSelector other) {
+        
+        this.name = other.name;
+        this.matchOnName = other.matchOnName;
+        
+        if (other.matchOnStyleClass) {
+            this.styleClassMasks = new long[other.styleClassMasks.length];
+        } else {
+            // other is long[0]
+            this.styleClassMasks = other.styleClassMasks;
+        }
+        this.matchOnStyleClass = other.matchOnStyleClass;
+        
+        if (other.pseudoclasses != null && other.pseudoclasses.isEmpty() == false) {
+            final List<String> temp = new ArrayList<String>(other.pseudoclasses.size());
+            for(int p=0, pMax=other.pseudoclasses.size(); p<pMax; p++) {
+                temp.add(other.pseudoclasses.get(p));
+            }
+            this.pseudoclasses = Collections.unmodifiableList(temp);
+        } else {
+            this.pseudoclasses = Collections.EMPTY_LIST;
+        }
+        this.pclassMask = other.pclassMask;
+        
+        this.id = other.id;
+        this.matchOnId = other.matchOnId;
+    }
 
     /**
      * Returns a {@link Match} if this selector matches the specified object, or 
@@ -233,7 +266,11 @@ final public class SimpleSelector extends Selector {
     Match matches(final Node node) {
         if (applies(node)) {
             final int idCount = (matchOnId) ? 1 : 0;
-            return new Match(this, pseudoclasses, idCount, styleClassMasks.length);
+            int styleClassCount = 0;
+            for (int n=0; n<styleClassMasks.length; n++) {
+                styleClassCount += Long.bitCount(styleClassMasks[n] & VALUE_MASK);
+            }
+            return new Match(this, pseudoclasses, idCount, styleClassCount);
         }
         return null;
     }
@@ -258,11 +295,15 @@ final public class SimpleSelector extends Selector {
 
     @Override 
     public boolean applies(Node node) {
+        
+        final StyleHelper styleHelper = node.impl_getStyleHelper();
+        final SimpleSelector selector = styleHelper.getSelector();
+        
         // if the selector has an id,
         // then bail if it doesn't match the node's id
         // (do this first since it is potentially the cheapest check)
         if (matchOnId) {
-            boolean idMatch = id.equals(node.getId());
+            boolean idMatch = id.equals(selector.id);
             if (!idMatch) return false;
         }
 
@@ -270,24 +311,15 @@ final public class SimpleSelector extends Selector {
         // then bail if it doesn't match the node's class name
         // if not wildcard, then match name with node's class name
         if (matchOnName) {
-            final String className = node.getClass().getName();
-            boolean classMatch = nameMatchesAtEnd(className);
+            boolean classMatch = nameMatchesAtEnd(selector.name);
             if (!classMatch) return false;
         }
 
         if (matchOnStyleClass) {
-            boolean styleClassMatch = matchStyleClasses(node.impl_cssGetStyleClassBits());
+            boolean styleClassMatch = matchStyleClasses(selector.styleClassMasks);                
             if (!styleClassMatch) return false;
         }
         return true;
-    }
-
-    @Override
-    boolean mightApply(final String className, final String id, final long[] styleClasses) {
-        if (matchOnName && nameMatchesAtEnd(className)) return true;
-        if (matchOnId   && this.id.equals(id)) return true;
-        if (matchOnStyleClass) return matchStyleClasses(styleClasses);
-        return false;
     }
 
     @Override
@@ -378,7 +410,9 @@ final public class SimpleSelector extends Selector {
         if ((this.id == null) ? (other.id != null) : !this.id.equals(other.id)) {
             return false;
         }
-        if (this.styleClassMasks != other.styleClassMasks && (this.styleClassMasks == null || !Arrays.equals(this.styleClassMasks, other.styleClassMasks))) {
+        if (this.styleClassMasks != other.styleClassMasks && 
+                (this.styleClassMasks == null || 
+                    !Arrays.equals(this.styleClassMasks, other.styleClassMasks))) {
             return false;
         }
         return true;
