@@ -29,26 +29,25 @@ import com.sun.javafx.Utils;
 import com.sun.javafx.beans.annotations.DuplicateInBuilderProperties;
 import com.sun.javafx.css.*;
 import com.sun.javafx.css.converters.StringConverter;
-import java.lang.reflect.Constructor;
-import java.lang.reflect.InvocationTargetException;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
-
+import com.sun.javafx.logging.PlatformLogger;
+import com.sun.javafx.scene.control.Logging;
 import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.ObjectPropertyBase;
 import javafx.beans.property.SimpleObjectProperty;
 import javafx.beans.property.StringProperty;
 import javafx.beans.value.WritableValue;
-import javafx.scene.Node;
-import javafx.scene.layout.Region;
-
-import com.sun.javafx.logging.PlatformLogger;
-import com.sun.javafx.scene.control.Logging;
 import javafx.collections.ObservableList;
 import javafx.event.EventHandler;
-import javafx.geometry.*;
+import javafx.geometry.Insets;
+import javafx.scene.Node;
 import javafx.scene.input.ContextMenuEvent;
+import javafx.scene.layout.Region;
+
+import java.lang.reflect.Constructor;
+import java.lang.reflect.InvocationTargetException;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
 
 
 /**
@@ -544,7 +543,11 @@ public abstract class Control extends Region implements Skinnable {
      */
     private String currentSkinClassName = null;
     private StringProperty skinClassName;
-    protected StringProperty skinClassNameProperty() {
+
+    /**
+     * @treatAsPrivate
+     */
+    @Deprecated protected StringProperty skinClassNameProperty() {
         if (skinClassName == null) {
             skinClassName = new StyleableStringProperty() {
 
