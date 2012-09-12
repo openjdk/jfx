@@ -25,14 +25,11 @@
 
 package javafx.scene.shape;
 
-
-
-import com.sun.javafx.Logging;
 import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.ObjectPropertyBase;
 import javafx.beans.property.StringProperty;
 import javafx.beans.property.StringPropertyBase;
-
+import com.sun.javafx.Logging;
 import com.sun.javafx.geom.Path2D;
 import com.sun.javafx.scene.DirtyBits;
 import com.sun.javafx.sg.PGNode;

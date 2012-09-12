@@ -4,36 +4,31 @@
 
 package javafx.scene.control;
 
-import com.sun.javafx.pgstub.StubToolkit;
-import com.sun.javafx.scene.layout.region.BackgroundFill;
-import com.sun.javafx.tk.Toolkit;
 import java.util.List;
-import static javafx.scene.control.ControlTestUtils.*;
-import static org.junit.Assert.*;
-
 import javafx.beans.property.BooleanProperty;
-import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.SimpleBooleanProperty;
-import javafx.beans.property.SimpleObjectProperty;
 import javafx.event.ActionEvent;
 import javafx.event.EventHandler;
 import javafx.scene.Scene;
-import javafx.scene.control.ContextMenu;
 import javafx.scene.input.KeyCode;
 import javafx.scene.input.MouseEvent;
+import javafx.scene.layout.BackgroundFill;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.Region;
 import javafx.scene.layout.StackPane;
-import javafx.scene.layout.VBox;
 import javafx.scene.paint.LinearGradient;
 import javafx.scene.paint.Stop;
 import javafx.scene.shape.Rectangle;
 import javafx.stage.Stage;
 import javafx.stage.WindowEvent;
-
+import com.sun.javafx.pgstub.StubToolkit;
+import com.sun.javafx.tk.Toolkit;
 import org.junit.Before;
 import org.junit.Ignore;
 import org.junit.Test;
+
+import static javafx.scene.control.ControlTestUtils.*;
+import static org.junit.Assert.*;
 
 /**
  * action (which can be bound, and can be null),
@@ -361,10 +356,10 @@ public class ButtonTest {
     List<Stop> getStops(Button button) {
         Skin skin = button.getSkin();
         Region region = (Region)skin.getNode();
-        List<BackgroundFill> fills = region.impl_getBackgroundFills();
+        List<BackgroundFill> fills = region.getBackground().getFills();
         BackgroundFill top = fills.get(fills.size()-1);
         LinearGradient topFill = (LinearGradient)top.getFill();
-        return topFill.getStops();        
+        return topFill.getStops();
     }
 
     @Test

@@ -25,7 +25,14 @@
 
 package javafx.scene.shape;
 
+import com.sun.javafx.test.TestHelper;
+import javafx.geometry.Bounds;
 import javafx.scene.NodeTest;
+import javafx.scene.paint.Color;
+import static org.junit.Assert.*;
+import static com.sun.javafx.test.TestHelper.*;
+import javafx.scene.transform.Rotate;
+import javafx.scene.transform.Scale;
 
 import org.junit.Test;
 
@@ -72,4 +79,56 @@ public class CircleTest {
                 "radius", "radius",
                 100.0);
     }
+
+    @Test
+    public void testTransformedBounds_rotation() {
+        Circle c = new Circle(50, 100, 10, Color.RED);
+        Bounds original = c.getBoundsInParent();
+        c.setRotate(15);
+        assertSimilar(original, c.getBoundsInParent());
+    }
+    
+    @Test
+    public void testTransformedBounds_rotation2() {
+        final int centerX = 50;
+        final int centerY = 200;
+        Circle c = new Circle(centerX, centerY, 10, Color.RED);
+        Bounds original = c.getBoundsInParent();
+        // Using integer isosceles triangle of (38, 181, 181)
+        Rotate r = new Rotate();
+        final double angle = Math.asin((38.0/2)/181)*2;
+        r.setAngle(Math.toDegrees(angle));
+        r.setPivotX(centerX + 181);
+        r.setPivotY(centerY);
+        c.getTransforms().add(r);
+
+        final double centerXDelta = Math.cos((Math.PI - angle)/2) * 38;
+        final double centerYDelta = - (Math.sin((Math.PI - angle)/2) * 38);
+
+        assertSimilar(TestHelper.box(original.getMinX() + centerXDelta, original.getMinY() + centerYDelta,
+                original.getWidth(), original.getHeight()), c.getBoundsInParent());
+    }
+
+    @Test
+    public void testTransformedBounds_translate() {
+        Circle c = new Circle(50, 100, 10, Color.RED);
+        Bounds original = c.getBoundsInParent();
+        c.setTranslateX(10);
+        c.setTranslateY(20);
+        assertSimilar(TestHelper.box(original.getMinX() + 10, original.getMinY() + 20,
+                original.getWidth(), original.getHeight()), c.getBoundsInParent());
+    }
+
+
+    @Test public void testTransformedBounds_scale() {
+        Circle c = new Circle(50, 100, 10, Color.RED);
+        double scalePivotX = (c.getCenterX() + c.getRadius()) / 2;
+        double scalePivotY = (c.getCenterY() + c.getRadius()) / 2;
+        Bounds original = c.getBoundsInParent();
+        Scale s = new Scale(2.0, 1.5, scalePivotX, scalePivotY);
+        c.getTransforms().setAll(s);
+        assertSimilar(TestHelper.box(2 * original.getMinX() - scalePivotX, 1.5 * original.getMinY() - 0.5 * scalePivotY,
+                2 * original.getWidth(), 1.5 * original.getHeight()), c.getBoundsInParent());
+    }
+
 }

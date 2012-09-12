@@ -129,8 +129,7 @@ public class VirtualFlow extends Region {
     public final BooleanProperty verticalProperty() {
         if (vertical == null) {
             vertical = new BooleanPropertyBase(true) {
-                @Override protected void invalidated() {
-                    addAllToPile();
+                @Override protected void invalidated() {                    
                     pile.clear();
                     sheetChildren.clear();
                     cells.clear();
@@ -239,6 +238,29 @@ public class VirtualFlow extends Region {
             adjustPosition(position);
             requestLayout();
         }
+    }
+    
+    /**
+     * Use this (temporary) key to set a fixed cell length in the ListView,
+     * TreeView and TableView controls.
+     */
+    public static final String FIXED_CELL_LENGTH_KEY = 
+            "com.sun.javafx.scene.control.virtualFlow.fixedCellLength";
+    
+    /**
+     * For optimisation purposes, some use cases can trade dynamic cell length
+     * for speed - if fixedCellLength is greater than zero we'll use that rather
+     * than determine it by querying the cell itself.
+     */
+    private double fixedCellLength = 0;
+
+    public double getFixedCellLength() {
+        return fixedCellLength;
+    }
+    
+    public void setFixedCellLength(final double value) {
+        this.fixedCellLength = value;
+        layoutChildren();
     }
 
     /**
@@ -742,7 +764,7 @@ public class VirtualFlow extends Region {
             releaseCell(accumCell);
 //            accumCell = null;
 //            accumCellParent.getChildren().clear();
-            addAllToPile();
+            cells.clear();
             pile.clear();
             needsRecreateCells = false;
         } 
@@ -752,6 +774,20 @@ public class VirtualFlow extends Region {
             lastWidth = -1;
             lastHeight = -1;
             needsReconfigureCells = false;
+        }
+        
+        if (needsCellsLayout) {
+            for (int i = 0, max = cells.size(); i < max; i++) {
+                Cell cell = cells.get(i);
+                if (cell != null) {
+                    cell.requestLayout();
+                }
+            }
+            needsCellsLayout = false;
+
+            // yes, we return here - if needsCellsLayout was set to true, we 
+            // only did it to do the above - not rerun the entire layout.
+            return;
         }
         
         final double width = getWidth();
@@ -1425,6 +1461,8 @@ public class VirtualFlow extends Region {
      * to use a cell as a helper for computing cell size in some cases.
      */
     double getCellLength(int index) {
+        if (fixedCellLength > 0) return fixedCellLength;
+        
         IndexedCell cell = getCell(index);
         double length = getCellLength(cell);
         releaseCell(cell);
@@ -1445,6 +1483,7 @@ public class VirtualFlow extends Region {
      */
     private double getCellLength(IndexedCell cell) {
         if (cell == null) return 0;
+        if (fixedCellLength > 0) return fixedCellLength;
 
         return isVertical() ?
             cell.getLayoutBounds().getHeight()
@@ -1512,7 +1551,9 @@ public class VirtualFlow extends Region {
      **************************************************************************/
 
     /**
-     * Indicates that this is a new cell and we need to process CSS for it.
+     * Indicates that this is a newly created cell and we need call impl_processCSS for it.
+     * 
+     * See RT-23616 for more details.
      */
     private static final String NEW_CELL = "newcell";
     
@@ -1869,6 +1910,7 @@ public class VirtualFlow extends Region {
 
     private boolean needsReconfigureCells = false;
     private boolean needsRecreateCells = false;
+    private boolean needsCellsLayout = false;
     
     public void reconfigureCells() {
         needsReconfigureCells = true;
@@ -1877,6 +1919,11 @@ public class VirtualFlow extends Region {
 
     public void recreateCells() {
         needsRecreateCells = true;
+        requestLayout();
+    }
+    
+    public void requestCellLayout() {
+        needsCellsLayout = true;
         requestLayout();
     }
 
@@ -2089,10 +2136,12 @@ public class VirtualFlow extends Region {
 
         public void setClipX(double clipX) {
             setLayoutX(-clipX);
+            clipRect.setLayoutX(clipX);
         }
 
         public void setClipY(double clipY) {
             setLayoutY(-clipY);
+            clipRect.setLayoutY(clipY);
         }
 
         private final Rectangle clipRect;
@@ -2103,14 +2152,13 @@ public class VirtualFlow extends Region {
             }
 
             getStyleClass().add("clipped-container");
-            setManaged(false);
 
             // clipping
             clipRect = new Rectangle();
             clipRect.setSmooth(false);
             setClip(clipRect);
             // --- clipping
-
+            
             super.widthProperty().addListener(new InvalidationListener() {
                 @Override public void invalidated(Observable valueModel) {
                     clipRect.setWidth(getWidth());

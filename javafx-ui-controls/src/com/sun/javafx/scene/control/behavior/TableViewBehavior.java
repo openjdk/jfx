@@ -59,7 +59,9 @@ import javafx.scene.input.MouseEvent;
 import com.sun.javafx.PlatformUtil;
 import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
+import javafx.beans.value.WeakChangeListener;
 import javafx.collections.ListChangeListener;
+import javafx.collections.WeakListChangeListener;
 import javafx.scene.control.*;
 import javafx.util.Callback;
 
@@ -241,7 +243,7 @@ public class TableViewBehavior<T> extends BehaviorBase<TableView<T>> {
     
     private boolean selectionChanging = false;
     
-    private ListChangeListener<TablePosition> selectedCellsListener = new ListChangeListener<TablePosition>() {
+    private final ListChangeListener<TablePosition> selectedCellsListener = new ListChangeListener<TablePosition>() {
         @Override public void onChanged(ListChangeListener.Change c) {
             while (c.next()) {
                 TableView.TableViewSelectionModel sm = getControl().getSelectionModel();
@@ -286,24 +288,32 @@ public class TableViewBehavior<T> extends BehaviorBase<TableView<T>> {
             }
         }
     };
+    
+    private final ChangeListener<TableView.TableViewSelectionModel<T>> selectionModelListener = 
+            new ChangeListener<TableView.TableViewSelectionModel<T>>() {
+        @Override
+        public void changed(ObservableValue<? extends TableView.TableViewSelectionModel<T>> observable, 
+                    TableView.TableViewSelectionModel<T> oldValue, 
+                    TableView.TableViewSelectionModel<T> newValue) {
+            if (oldValue != null) {
+                oldValue.getSelectedCells().removeListener(weakSelectedCellsListener);
+            }
+            if (newValue != null) {
+                newValue.getSelectedCells().addListener(weakSelectedCellsListener);
+            }
+        }
+    };
+    
+    private final WeakListChangeListener<TablePosition> weakSelectedCellsListener = 
+            new WeakListChangeListener<TablePosition>(selectedCellsListener);
+    private final WeakChangeListener<TableView.TableViewSelectionModel<T>> weakSelectionModelListener = 
+            new WeakChangeListener<TableView.TableViewSelectionModel<T>>(selectionModelListener);
 
     public TableViewBehavior(TableView control) {
         super(control);
         
         // Fix for RT-16565
-        getControl().selectionModelProperty().addListener(new ChangeListener<TableView.TableViewSelectionModel<T>>() {
-            @Override
-            public void changed(ObservableValue<? extends TableView.TableViewSelectionModel<T>> observable, 
-                        TableView.TableViewSelectionModel<T> oldValue, 
-                        TableView.TableViewSelectionModel<T> newValue) {
-                if (oldValue != null) {
-                    oldValue.getSelectedCells().removeListener(selectedCellsListener);
-                }
-                if (newValue != null) {
-                    newValue.getSelectedCells().addListener(selectedCellsListener);
-                }
-            }
-        });
+        getControl().selectionModelProperty().addListener(weakSelectionModelListener);
         if (getControl().getSelectionModel() != null) {
             getControl().getSelectionModel().getSelectedCells().addListener(selectedCellsListener);
         }

@@ -29,6 +29,7 @@ import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import javafx.collections.ListChangeListener.Change;
 import javafx.collections.ObservableList;
@@ -53,11 +54,17 @@ final public class Rule {
         protected void onChanged(Change<Declaration> c) {
             while (c.next()) {
                 if (c.wasAdded()) {
-                    for(Declaration decl : c.getAddedSubList()) {
+                    List<Declaration> added = c.getAddedSubList();
+                    for(int i = 0, max = added.size(); i < max; i++) {
+                        Declaration decl = added.get(i);
                         decl.rule = Rule.this;
                     }
-                } else if (c.wasRemoved()) {
-                    for(Declaration decl : c.getRemoved()) {
+                }
+                
+                if (c.wasRemoved()) {
+                    List<Declaration> removed = c.getRemoved();
+                    for(int i = 0, max = removed.size(); i < max; i++) {
+                        Declaration decl = removed.get(i);
                         if (decl.rule == Rule.this) decl.rule = null;
                     }
                 }
@@ -191,4 +198,48 @@ final public class Rule {
         return new Rule(selectors, declarations);
     }
 
+    public static final String NEW_LINE = "\r\n";
+    public static final String INDENT = "    ";
+    public static final String TWO_INDENT = "        ";
+    
+    String writeJava() throws IOException {
+        final String THREE_INDENT = INDENT + TWO_INDENT;
+        final String FOUR_INDENT = TWO_INDENT + TWO_INDENT;
+        
+        StringBuilder sb = new StringBuilder();
+        sb.append("new Rule(");
+        sb.append(NEW_LINE);
+        
+        // selectors
+        sb.append(THREE_INDENT);
+        sb.append("Arrays.<Selector>asList(");
+        for (int i = 0; i < selectors.size(); i++) {
+            Selector sel = selectors.get(i);
+            sb.append(sel.writeJava());
+            
+            if (i < (selectors.size() - 1)) {
+                sb.append(", ");
+            }
+        }
+        sb.append("), ");
+        
+        // declarations
+        sb.append(NEW_LINE);
+        sb.append(THREE_INDENT);
+        sb.append("Arrays.<Declaration>asList(");
+        for (int i = 0; i < declarations.size(); i++) {
+            Declaration decl = declarations.get(i);
+            
+            sb.append(NEW_LINE);
+            sb.append(FOUR_INDENT);
+            sb.append(decl.writeJava());
+            
+            if (i < (declarations.size() - 1)) {
+                sb.append(", ");
+            }
+        }
+        sb.append("))");
+        
+        return sb.toString();
+    }
 }

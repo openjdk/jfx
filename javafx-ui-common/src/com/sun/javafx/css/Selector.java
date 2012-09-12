@@ -93,6 +93,8 @@ abstract public class Selector {
         else
             return CompoundSelector.readBinary(is,strings);
     }
+    
+    protected abstract String writeJava();
 
     public static Selector createSelector(final String cssSelector) {
         if (cssSelector == null || cssSelector.length() == 0) {

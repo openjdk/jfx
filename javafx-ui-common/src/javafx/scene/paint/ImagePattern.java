@@ -25,8 +25,8 @@
 
 package javafx.scene.paint;
 
-import com.sun.javafx.tk.Toolkit;
 import javafx.scene.image.Image;
+import com.sun.javafx.tk.Toolkit;
 
 /**
  * <p>The {@code ImagePattern} class fills a shape with an image pattern. The
@@ -207,6 +207,12 @@ public final class ImagePattern extends Paint {
      */
     public final boolean isProportional() {
         return proportional;
+    }
+
+    @Override public final boolean isOpaque() {
+        // RT-24827: isOpaque should return true if the image doesn't have an alpha.
+        // We haven't implemented this support yet, but should!
+        return false;
     }
 
     private Object platformPaint;

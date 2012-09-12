@@ -1,7 +1,4 @@
 /*
-    Document   : caspian
-*/
-/*
  * Copyright (c) 2009, 2011, Oracle and/or its affiliates. All rights reserved. 
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER. 
  *  
@@ -24,7 +21,6 @@
  * Please contact Oracle, 500 Oracle Parkway, Redwood Shores, CA 94065 USA 
  * or visit www.oracle.com if you need additional information or have any 
  * questions.
- *                                                                              
  */
 
 /*******************************************************************************
@@ -392,7 +388,7 @@
  **            with corners with a smaller radius (radius = 4).               **
  **    d/h/l = -fx-body-color, 2, 3                                           **
  **            Draws the body last, inset 2 pixels from the control edge and  **
- **            with cornersd with an even smaller radius (radius = 3).        **
+ **            with corners with an even smaller radius (radius = 3).         **
  **    m     = Padding from the edge of the control to the outer edge of the  **
  **            skin content.                                                  **
  **    n     = If specified, the color chosen for -fx-text-fill should match  **
@@ -1440,7 +1436,7 @@
     -fx-background-color: transparent;
 }
 
-.text-area > .content {
+.text-area .content {
     -fx-padding: 3 5 3 5; 
     -fx-cursor: text;
 }
@@ -2511,11 +2507,11 @@
  *                                                                             *
  ******************************************************************************/
 
-.split-pane .table-view { -fx-padding: 0px; }
-.split-pane .list-view { -fx-padding: 0px; }
-.split-pane .tree-view { -fx-padding: 0px; }
-.split-pane .scroll-pane { -fx-padding: 0px; }
-.split-pane .split-pane {
+.split-pane > * > * > .table-view { -fx-padding: 0px; }
+.split-pane > * > * > .list-view { -fx-padding: 0px; }
+.split-pane > * > * > .tree-view { -fx-padding: 0px; }
+.split-pane > * > * > .scroll-pane { -fx-padding: 0px; }
+.split-pane > * > * > .split-pane {
     -fx-background-insets: 0, 0;
     -fx-padding: 0;
  }
@@ -3471,7 +3467,7 @@ Only the properties with values that are different from the TextBox are specifie
     -fx-arrows-visible: true;
     -fx-tooltip-visible: true;
     -fx-page-information-visible: true;
-    -fx-page-information-alignment: bottom;    
+    -fx-page-information-alignment: bottom;        
 }
 .pagination > .page {
     -fx-background-color: transparent;
@@ -3487,16 +3483,16 @@ Only the properties with values that are different from the TextBox are specifie
     -fx-alignment: center;
 }
 
-.pagination > .pagination-control > .left-arrow-button{
+.pagination > .pagination-control > .control-box > .left-arrow-button{
     -fx-background-radius: 0;
     -fx-padding: 0.166667em 0.416em 0.25em 0.333em;
 }
-.pagination > .pagination-control > .right-arrow-button {
+.pagination > .pagination-control > .control-box > .right-arrow-button {
     -fx-background-radius: 0;
     -fx-padding: 0.166667em 0.333em 0.25em 0.416em;
 }
 
-.pagination > .pagination-control > .left-arrow {
+.pagination > .pagination-control .left-arrow {
     -fx-background-color: -fx-mark-highlight-color, -fx-mark-color;
     -fx-background-insets: 1 0 -1 0, 0;
     -fx-padding: 0.375em 0.291em 0.375em 0.291em;
@@ -3504,7 +3500,7 @@ Only the properties with values that are different from the TextBox are specifie
     -fx-scale-shape: true;
 }
 
-.pagination > .pagination-control > .right-arrow {
+.pagination > .pagination-control .right-arrow {
     -fx-background-color: -fx-mark-highlight-color, -fx-mark-color;
     -fx-background-insets: 1 0 -1 0, 0;
     -fx-padding: 0.375em 0.291em 0.375em 0.291em;
@@ -3524,8 +3520,8 @@ Only the properties with values that are different from the TextBox are specifie
     -fx-base: -fx-accent;
 }
 
-.pagination.bullet > .pagination-control > .left-arrow-button, 
-.pagination.bullet > .pagination-control > .right-arrow-button {
+.pagination.bullet > .pagination-control > .control-box > .left-arrow-button, 
+.pagination.bullet > .pagination-control > .control-box > .right-arrow-button {
     -fx-background-radius: 4em;
 }
 

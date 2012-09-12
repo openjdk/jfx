@@ -26,7 +26,6 @@
 
 package javafx.scene.input;
 
-import com.sun.javafx.event.EventTypeUtil;
 import com.sun.javafx.scene.input.InputEventUtils;
 import java.io.IOException;
 import javafx.event.Event;
@@ -53,7 +52,7 @@ public class ContextMenuEvent extends InputEvent {
      * This event occurs when a context menu is requested.
      */
     public static final EventType<ContextMenuEvent> CONTEXT_MENU_REQUESTED =
-            EventTypeUtil.registerInternalEventType(ContextMenuEvent.ANY, "CONTEXT_MENU_REQUESTED");
+            new EventType<ContextMenuEvent>(ContextMenuEvent.ANY, "CONTEXT_MENU_REQUESTED");
 
     private ContextMenuEvent(final EventType<? extends ContextMenuEvent> eventType) {
         super(eventType);

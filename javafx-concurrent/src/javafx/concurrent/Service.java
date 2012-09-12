@@ -158,39 +158,39 @@ public abstract class Service<V> implements Worker<V>, EventTarget {
         EXECUTOR.allowCoreThreadTimeOut(true);
     }
 
-    private ObjectProperty<State> state = new SimpleObjectProperty<State>(this, "state", State.READY);
+    private final ObjectProperty<State> state = new SimpleObjectProperty<State>(this, "state", State.READY);
     @Override public final State getState() { checkThread(); return state.get(); }
     @Override public final ReadOnlyObjectProperty<State> stateProperty() { checkThread(); return state; }
 
-    private ObjectProperty<V> value = new SimpleObjectProperty<V>(this, "value");
+    private final ObjectProperty<V> value = new SimpleObjectProperty<V>(this, "value");
     @Override public final V getValue() { checkThread(); return value.get(); }
     @Override public final ReadOnlyObjectProperty<V> valueProperty() { checkThread(); return value; }
 
-    private ObjectProperty<Throwable> exception = new SimpleObjectProperty<Throwable>(this, "exception");
+    private final ObjectProperty<Throwable> exception = new SimpleObjectProperty<Throwable>(this, "exception");
     @Override public final Throwable getException() { checkThread(); return exception.get(); }
     @Override public final ReadOnlyObjectProperty<Throwable> exceptionProperty() { checkThread(); return exception; }
 
-    private DoubleProperty workDone = new SimpleDoubleProperty(this, "workDone", -1);
+    private final DoubleProperty workDone = new SimpleDoubleProperty(this, "workDone", -1);
     @Override public final double getWorkDone() { checkThread(); return workDone.get(); }
     @Override public final ReadOnlyDoubleProperty workDoneProperty() { checkThread(); return workDone; }
 
-    private DoubleProperty totalWorkToBeDone = new SimpleDoubleProperty(this, "totalWork", -1);
+    private final DoubleProperty totalWorkToBeDone = new SimpleDoubleProperty(this, "totalWork", -1);
     @Override public final double getTotalWork() { checkThread(); return totalWorkToBeDone.get(); }
     @Override public final ReadOnlyDoubleProperty totalWorkProperty() { checkThread(); return totalWorkToBeDone; }
 
-    private DoubleProperty progress = new SimpleDoubleProperty(this, "progress", -1);
+    private final DoubleProperty progress = new SimpleDoubleProperty(this, "progress", -1);
     @Override public final double getProgress() { checkThread(); return progress.get(); }
     @Override public final ReadOnlyDoubleProperty progressProperty() { checkThread(); return progress; }
 
-    private BooleanProperty running = new SimpleBooleanProperty(this, "running", false);
+    private final BooleanProperty running = new SimpleBooleanProperty(this, "running", false);
     @Override public final boolean isRunning() { checkThread(); return running.get(); }
     @Override public final ReadOnlyBooleanProperty runningProperty() { checkThread(); return running; }
 
-    private StringProperty message = new SimpleStringProperty(this, "message", "");
+    private final StringProperty message = new SimpleStringProperty(this, "message", "");
     @Override public final String getMessage() { return message.get(); }
     @Override public final ReadOnlyStringProperty messageProperty() { return message; }
 
-    private StringProperty title = new SimpleStringProperty(this, "title", "");
+    private final StringProperty title = new SimpleStringProperty(this, "title", "");
     @Override public final String getTitle() { return title.get(); }
     @Override public final ReadOnlyStringProperty titleProperty() { return title; }
 
@@ -199,7 +199,7 @@ public abstract class Service<V> implements Worker<V>, EventTarget {
      * a new daemon thread will be created and used for running the Service using some
      * default executor.
      */
-    private ObjectProperty<Executor> executor = new SimpleObjectProperty<Executor>(this, "executor");
+    private final ObjectProperty<Executor> executor = new SimpleObjectProperty<Executor>(this, "executor");
     public final void setExecutor(Executor value) { checkThread(); executor.set(value); }
     public final Executor getExecutor() { checkThread(); return executor.get(); }
     public final ObjectProperty<Executor> executorProperty() { return executor; }

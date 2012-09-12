@@ -7,10 +7,12 @@
          the unit test workspace. This is necessary so that the
          FontManagerTest unit test can check that the embedded font logic
          works -->
+    <!--
     <mkdir dir="${build.test.classes.dir}/META-INF" />
     <copy todir="${build.test.classes.dir}/META-INF"
           file="test/unit/com/sun/javafx/scene/text/fonts.mf" />
     <unzip src="${jfx.amble-fonts.jar}" dest="${build.test.classes.dir}" />
+    -->
     <test-project />
   </target>
 
@@ -19,9 +21,11 @@
            the unit test workspace. This is necessary so that the
            FontManagerTest unit test can check that the embedded font logic
            works -->
+  	<!--
     <mkdir dir="${build.test.classes.dir}/META-INF" />
     <copy todir="${build.test.classes.dir}/META-INF"
           file="test/unit/com/sun/javafx/scene/text/fonts.mf" />
+     -->
   </target>
 
   <target name="debug-test-file" depends="jar">

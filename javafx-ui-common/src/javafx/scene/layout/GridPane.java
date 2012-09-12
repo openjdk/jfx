@@ -1265,17 +1265,17 @@ public class GridPane extends Pane {
             if (rowMinHeight[i] == USE_PREF_SIZE) {
                 //RT-20573 Use the bounded size if the pref has not been set
                 rowMinHeight[i] = rowPrefHeight[i] == 0 ?
-                        boundedSize(rowPrefHeight[i], rowMinHeight[i], rowMaxHeight[i]) == USE_PREF_SIZE ?
-                            0 : boundedSize(rowPrefHeight[i], rowMinHeight[i], rowMaxHeight[i]) :
+                        boundedSize(rowMinHeight[i], rowPrefHeight[i], rowMaxHeight[i]) == USE_PREF_SIZE ?
+                            0 : boundedSize(rowMinHeight[i], rowPrefHeight[i], rowMaxHeight[i]) :
                         rowPrefHeight[i];
             }
             if (rowMaxHeight[i] == USE_PREF_SIZE) {
                 rowMaxHeight[i] = rowPrefHeight[i] == 0 ?
-                        boundedSize(rowPrefHeight[i], rowMinHeight[i], rowMaxHeight[i]) == USE_PREF_SIZE ?
-                            0 : boundedSize(rowPrefHeight[i], rowMinHeight[i], rowMaxHeight[i]) :
+                        boundedSize(rowMinHeight[i], rowPrefHeight[i], rowMaxHeight[i]) == USE_PREF_SIZE ?
+                            0 : boundedSize(rowMinHeight[i], rowPrefHeight[i], rowMaxHeight[i]) :
                         rowPrefHeight[i];
             }
-            rowPrefHeight[i] = boundedSize(rowPrefHeight[i], rowMinHeight[i], rowMaxHeight[i]);
+            rowPrefHeight[i] = boundedSize(rowMinHeight[i], rowPrefHeight[i], rowMaxHeight[i]);
             //System.out.println("row "+i+": h="+rowHeights[i]+" percent="+rowPercentHeight[i]+" min="+rowMinHeight[i]+" pref="+rowPrefHeight[i]+" max="+rowMaxHeight[i]+" grow="+rowGrow[i]);
         }
 
@@ -1422,17 +1422,17 @@ public class GridPane extends Pane {
             if (columnMinWidth[i] == USE_PREF_SIZE) {
                 //RT-20573 Use the bounded size if the pref has not been set
                 columnMinWidth[i] = columnPrefWidth[i] == 0 ? 
-                    boundedSize(columnPrefWidth[i], columnMinWidth[i], columnMaxWidth[i]) == USE_PREF_SIZE ? 
-                        0 : boundedSize(columnPrefWidth[i], columnMinWidth[i], columnMaxWidth[i]) : 
+                    boundedSize(columnMinWidth[i], columnPrefWidth[i], columnMaxWidth[i]) == USE_PREF_SIZE ?
+                        0 : boundedSize(columnMinWidth[i], columnPrefWidth[i], columnMaxWidth[i]) :
                     columnPrefWidth[i];
             }
             if (columnMaxWidth[i] == USE_PREF_SIZE) {
                 columnMaxWidth[i] = columnPrefWidth[i] == 0 ? 
-                    boundedSize(columnPrefWidth[i], columnMinWidth[i], columnMaxWidth[i]) == USE_PREF_SIZE ? 
-                        0 : boundedSize(columnPrefWidth[i], columnMinWidth[i], columnMaxWidth[i]) : 
+                    boundedSize(columnMinWidth[i], columnPrefWidth[i], columnMaxWidth[i]) == USE_PREF_SIZE ?
+                        0 : boundedSize(columnMinWidth[i], columnPrefWidth[i], columnMaxWidth[i]) :
                     columnPrefWidth[i];
             }                        
-            columnPrefWidth[i] = boundedSize(columnPrefWidth[i], columnMinWidth[i], columnMaxWidth[i]);            
+            columnPrefWidth[i] = boundedSize(columnMinWidth[i], columnPrefWidth[i], columnMaxWidth[i]);
             //System.out.println("column "+i+": w="+columnWidths[i]+" percent="+columnPercentWidth[i]+" min="+columnMinWidth[i]+" pref="+columnPrefWidth[i]+" max="+columnMaxWidth[i]+" grow="+columnGrow[i]);
         }
         // if percentages sum is bigger than 100, treat them as weights
@@ -1593,7 +1593,7 @@ public class GridPane extends Pane {
         // compute non-percentage row heights
         for (int i = 0; i < numRows; i++) {
             if (rowPercentHeight[i] < 0) {
-                rowHeights[i] = boundedSize(areaHeights[i], rowMinHeight[i], rowMaxHeight[i]);
+                rowHeights[i] = boundedSize(rowMinHeight[i], areaHeights[i], rowMaxHeight[i]);
                 rowTotal += rowHeights[i];
             }
         }
@@ -1686,7 +1686,7 @@ public class GridPane extends Pane {
         // compute non-percentage column widths
         for (int i = 0; i < numColumns; i++) {
             if (columnPercentWidth[i] < 0) {
-                columnWidths[i] = boundedSize(areaWidths[i], columnMinWidth[i], columnMaxWidth[i]);
+                columnWidths[i] = boundedSize(columnMinWidth[i], areaWidths[i], columnMaxWidth[i]);
                 columnTotal += columnWidths[i];
             }
         }

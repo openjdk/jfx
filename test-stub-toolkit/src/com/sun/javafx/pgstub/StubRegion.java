@@ -29,11 +29,7 @@
 
 package com.sun.javafx.pgstub;
 
-import com.sun.javafx.sg.BackgroundFill;
-import com.sun.javafx.sg.BackgroundImage;
-import com.sun.javafx.sg.Border;
 import com.sun.javafx.sg.PGRegion;
-import com.sun.javafx.sg.PGShape;
 
 /**
  *
@@ -42,17 +38,11 @@ import com.sun.javafx.sg.PGShape;
 public class StubRegion extends StubGroup implements PGRegion {
     public void setOpaqueInsets(float top, float right, float bottom, float left) {
     }
-    public void setBorders(Border[] borders) {
+    public void updateBorder(Object border) {
     }
-    public void setBackgroundImages(BackgroundImage[] backgroundImages) {
+    public void updateBackground(Object background) {
     }
-    public void setBackgroundFills(BackgroundFill[] backgroundFills) {
-    }
-    public void setShape(PGShape shape) {
-    }
-    public void setResizeShape(boolean b) {
-    }
-    public void setPositionShape(boolean b) {
+    public void updateShape(Object shape, boolean scale, boolean center) {
     }
     public void setSize(float width, float height) {
     }

@@ -26,6 +26,7 @@
 package javafx.scene.control;
 
 import com.sun.javafx.Utils;
+import com.sun.javafx.beans.annotations.DuplicateInBuilderProperties;
 import com.sun.javafx.css.*;
 import com.sun.javafx.css.converters.StringConverter;
 import java.lang.reflect.Constructor;
@@ -39,10 +40,7 @@ import javafx.beans.property.ObjectPropertyBase;
 import javafx.beans.property.SimpleObjectProperty;
 import javafx.beans.property.StringProperty;
 import javafx.beans.value.WritableValue;
-import javafx.geometry.BoundingBox;
-import javafx.geometry.Bounds;
 import javafx.scene.Node;
-import javafx.scene.Parent;
 import javafx.scene.layout.Region;
 
 import com.sun.javafx.logging.PlatformLogger;
@@ -70,6 +68,7 @@ import javafx.scene.input.ContextMenuEvent;
  * controls that are containers {@link ScrollPane} and {@link ToolBar} do not.
  * Consult individual control documentation for details.
  */
+@DuplicateInBuilderProperties(properties = {"minHeight", "minWidth", "maxHeight", "maxWidth", "prefHeight", "prefWidth"})
 public abstract class Control extends Region implements Skinnable {
 
     static {
@@ -219,6 +218,13 @@ public abstract class Control extends Region implements Skinnable {
             // clear out the styleable properties so that the list is rebuilt
             // next time they are requested.
             styleableProperties = null;
+            
+            // calling impl_reapplyCSS() as the styleable properties may now
+            // be different, as we will now be able to return styleable properties 
+            // belonging to the skin. If impl_reapplyCSS() is not called, the 
+            // impl_getStyleableProperties() method is never called, so the 
+            // skin properties are never exposed.
+            impl_reapplyCSS();
 
             // DEBUG: Log that we've changed the skin
             final PlatformLogger logger = Logging.getControlsLogger();

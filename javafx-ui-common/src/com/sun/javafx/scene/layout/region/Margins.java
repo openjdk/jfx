@@ -38,25 +38,25 @@ import com.sun.javafx.css.ParsedValue;
  */
 public class Margins {
 
-    // lazy, thread-safe instatiation
+    // lazy, thread-safe instantiation
     private static class Holder {
         static Converter CONVERTER_INSTANCE = new Converter();
         static SequenceConverter SEQUENCE_CONVERTER_INSTANCE = new SequenceConverter();
     }
 
-    final private double top;
+    final double top;
     public final double getTop() { return top; }
 
-    final private double right;
+    final double right;
     public final double getRight() { return right; }
 
-    final private double bottom;
+    final double bottom;
     public final double getBottom() { return bottom; }
 
-    final private double left;
+    final double left;
     public final double getLeft() { return left; }
 
-    final private boolean proportional;
+    final boolean proportional;
     public final boolean isProportional() { return proportional; }
 
     public Margins(double top, double right, double bottom, double left, boolean proportional) {

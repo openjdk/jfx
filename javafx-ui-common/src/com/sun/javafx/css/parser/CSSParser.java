@@ -24,22 +24,26 @@
  */
 package com.sun.javafx.css.parser;
 
-import com.sun.javafx.css.*;
 import java.io.BufferedReader;
 import java.io.CharArrayReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.Reader;
 import java.net.URL;
+import java.text.MessageFormat;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-
 import javafx.geometry.Insets;
 import javafx.scene.effect.BlurType;
 import javafx.scene.effect.Effect;
+import javafx.scene.layout.BackgroundPosition;
+import javafx.scene.layout.BackgroundRepeat;
+import javafx.scene.layout.BackgroundSize;
+import javafx.scene.layout.BorderStrokeStyle;
+import javafx.scene.layout.BorderWidths;
 import javafx.scene.paint.Color;
 import javafx.scene.paint.CycleMethod;
 import javafx.scene.paint.Paint;
@@ -50,7 +54,20 @@ import javafx.scene.shape.StrokeType;
 import javafx.scene.text.Font;
 import javafx.scene.text.FontPosture;
 import javafx.scene.text.FontWeight;
-
+import com.sun.javafx.css.Combinator;
+import com.sun.javafx.css.CompoundSelector;
+import com.sun.javafx.css.CssError;
+import com.sun.javafx.css.Declaration;
+import com.sun.javafx.css.FontUnits;
+import com.sun.javafx.css.ParsedValue;
+import com.sun.javafx.css.Rule;
+import com.sun.javafx.css.Selector;
+import com.sun.javafx.css.SimpleSelector;
+import com.sun.javafx.css.Size;
+import com.sun.javafx.css.SizeUnits;
+import com.sun.javafx.css.StyleManager;
+import com.sun.javafx.css.Styleable;
+import com.sun.javafx.css.Stylesheet;
 import com.sun.javafx.css.converters.BooleanConverter;
 import com.sun.javafx.css.converters.EffectConverter;
 import com.sun.javafx.css.converters.EnumConverter;
@@ -62,16 +79,23 @@ import com.sun.javafx.css.converters.SizeConverter.SequenceConverter;
 import com.sun.javafx.css.converters.StringConverter;
 import com.sun.javafx.css.converters.URLConverter;
 import com.sun.javafx.logging.PlatformLogger;
-import com.sun.javafx.scene.layout.region.BackgroundImage;
-import com.sun.javafx.scene.layout.region.BorderImage;
-import com.sun.javafx.scene.layout.region.BorderStyle;
+import com.sun.javafx.scene.layout.region.BackgroundPositionConverter;
+import com.sun.javafx.scene.layout.region.BackgroundSizeConverter;
+import com.sun.javafx.scene.layout.region.BorderImageSliceConverter;
+import com.sun.javafx.scene.layout.region.BorderImageSlices;
+import com.sun.javafx.scene.layout.region.BorderImageWidthConverter;
+import com.sun.javafx.scene.layout.region.BorderImageWidthsSequenceConverter;
+import com.sun.javafx.scene.layout.region.BorderStrokeStyleSequenceConverter;
+import com.sun.javafx.scene.layout.region.BorderStyleConverter;
+import com.sun.javafx.scene.layout.region.LayeredBackgroundPositionConverter;
+import com.sun.javafx.scene.layout.region.LayeredBackgroundSizeConverter;
+import com.sun.javafx.scene.layout.region.LayeredBorderPaintConverter;
+import com.sun.javafx.scene.layout.region.LayeredBorderStyleConverter;
 import com.sun.javafx.scene.layout.region.Margins;
-import com.sun.javafx.scene.layout.region.Repeat;
-import com.sun.javafx.scene.layout.region.StrokeBorder;
-import java.net.MalformedURLException;
-import java.text.MessageFormat;
-import javafx.collections.ObservableList;
-import javafx.scene.Node;
+import com.sun.javafx.scene.layout.region.RepeatStruct;
+import com.sun.javafx.scene.layout.region.RepeatStructConverter;
+import com.sun.javafx.scene.layout.region.SliceSequenceConverter;
+import com.sun.javafx.scene.layout.region.StrokeBorderPaintConverter;
 
 final public class CSSParser {
     static boolean EXIT_ON_ERROR = false;
@@ -415,7 +439,7 @@ final public class CSSParser {
     
     private void reportError(CssError error) {
         List<CssError> errors = null;
-        if ((errors = StyleManager.getErrors()) != null) {        
+        if ((errors = StyleManager.getErrors()) != null) {
             errors.add(error);
         }
     }
@@ -468,8 +492,8 @@ final public class CSSParser {
         return buf.toString();
     }
     
-   // Assumes string is not a lookup!
-   private ParsedValue<Color,Color> colorValueOfString(String str) {
+    // Assumes string is not a lookup!
+    private ParsedValue<Color,Color> colorValueOfString(String str) {
 
         if(str.startsWith("#") || str.startsWith("0x")) {
 
@@ -715,7 +739,7 @@ final public class CSSParser {
         } else if ("-fx-border-image-source".equals(prop)) {
              return parseURILayers(root);
         } else if ("-fx-border-image-width".equals(prop)) {
-             return parseMarginsLayers(root);
+             return parseBorderImageWidthLayers(root);
         } else if ("-fx-padding".equals(prop)) {
             ParsedValue<?,Size>[] sides = parseSizeSeries(root);
             return new ParsedValue<ParsedValue<?,Size>[],Insets>(sides, InsetsConverter.getInstance());
@@ -1347,6 +1371,10 @@ final public class CSSParser {
             return parseLinearGradient(root);
         } else if ("radial-gradient".regionMatches(true, 0, fcn, 0, 15)) {
             return parseRadialGradient(root);
+        } else if ("image-pattern".regionMatches(true, 0, fcn, 0, 13)) {
+            return parseImagePattern(root);
+        } else if ("repeating-image-pattern".regionMatches(true, 0, fcn, 0, 23)) {
+            return parseRepeatingImagePattern(root);
         } else if ("ladder".regionMatches(true, 0, fcn, 0, 6)) {
             return parseLadder(root);
         } else if ("url".regionMatches(true, 0, fcn, 0, 3)) {
@@ -2131,6 +2159,114 @@ final public class CSSParser {
         
     }
     
+    // Based off ImagePattern constructor
+    //
+    // image-pattern(<uri-string>[,<size>,<size>,<size>,<size>[,<boolean>]?]?)
+    //
+    private ParsedValue<ParsedValue[], Paint> parseImagePattern(final Term root) throws ParseException {
+
+        // first term in the chain is the function name...
+        final String fn = (root.token != null) ? root.token.getText() : null;
+        // NOTE: We should put this in an assertion, so as not to do this work ordinarily, because only a
+        // bug in the parser can cause this.
+        assert !"image-pattern".regionMatches(true, 0, fn, 0, 13) : "Expected \'image-pattern\'";
+
+        Term arg;
+        if ((arg = root.firstArg) == null ||
+             arg.token == null ||
+             arg.token.getText().isEmpty()) {
+            error(root,
+                "Expected \'<uri-string>\'");
+        }
+
+        Term prev = arg;
+
+        final String uri = arg.token.getText();
+        ParsedValue[] uriValues = new ParsedValue[] {
+            new ParsedValue<String,String>(uri, StringConverter.getInstance()),
+            new ParsedValue<URL,URL>(sourceOfStylesheet, null)
+        };
+        ParsedValue parsedURI = new ParsedValue<ParsedValue[],String>(uriValues, URLConverter.getInstance());
+
+        // If nextArg is null, then there are no remaining arguments, so we are done.
+        if (arg.nextArg == null) {
+            ParsedValue[] values = new ParsedValue[1];
+            values[0] = parsedURI;
+            return new ParsedValue<ParsedValue[], Paint>(values, PaintConverter.ImagePatternConverter.getInstance());
+        }
+
+        // There must now be 4 sizes in a row.
+        Token token;
+        if ((arg = arg.nextArg) == null) error(prev, "Expected \'<size>\'");
+        ParsedValue<?, Size> x = parseSize(arg);
+
+        prev = arg;
+        if ((arg = arg.nextArg) == null) error(prev, "Expected \'<size>\'");
+        ParsedValue<?, Size> y = parseSize(arg);
+
+        prev = arg;
+        if ((arg = arg.nextArg) == null) error(prev, "Expected \'<size>\'");
+        ParsedValue<?, Size> w = parseSize(arg);
+
+        prev = arg;
+        if ((arg = arg.nextArg) == null) error(prev, "Expected \'<size>\'");
+        ParsedValue<?, Size> h = parseSize(arg);
+
+        // If there are no more args, then we are done.
+        if (arg.nextArg == null) {
+            ParsedValue[] values = new ParsedValue[5];
+            values[0] = parsedURI;
+            values[1] = x;
+            values[2] = y;
+            values[3] = w;
+            values[4] = h;
+            return new ParsedValue<ParsedValue[], Paint>(values, PaintConverter.ImagePatternConverter.getInstance());
+        }
+
+        prev = arg;
+        if ((arg = arg.nextArg) == null) error(prev, "Expected \'<boolean>\'");
+        if ((token = arg.token) == null || token.getText() == null) error(arg, "Expected \'<boolean>\'");
+
+        ParsedValue[] values = new ParsedValue[6];
+        values[0] = parsedURI;
+        values[1] = x;
+        values[2] = y;
+        values[3] = w;
+        values[4] = h;
+        values[5] = new ParsedValue<Boolean, Boolean>(Boolean.parseBoolean(token.getText()), null);
+        return new ParsedValue<ParsedValue[], Paint>(values, PaintConverter.ImagePatternConverter.getInstance());
+    }
+
+    // For tiling ImagePatterns easily.
+    //
+    // repeating-image-pattern(<uri-string>)
+    //
+    private ParsedValue<ParsedValue[], Paint> parseRepeatingImagePattern(final Term root) throws ParseException {
+        // first term in the chain is the function name...
+        final String fn = (root.token != null) ? root.token.getText() : null;
+        // NOTE: We should put this in an assertion, so as not to do this work ordinarily, because only a
+        // bug in the parser can cause this.
+        assert !"repeating-image-pattern".regionMatches(true, 0, fn, 0, 23) : "Expected \'repeating-image-pattern\'";
+
+        Term arg;
+        if ((arg = root.firstArg) == null ||
+             arg.token == null ||
+             arg.token.getText().isEmpty()) {
+            error(root,
+                "Expected \'<uri-string>\'");
+        }
+
+        final String uri = arg.token.getText();
+        ParsedValue[] uriValues = new ParsedValue[] {
+            new ParsedValue<String,String>(uri, StringConverter.getInstance()),
+            new ParsedValue<URL,URL>(sourceOfStylesheet, null)
+        };
+        ParsedValue parsedURI = new ParsedValue<ParsedValue[],String>(uriValues, URLConverter.getInstance());
+        ParsedValue[] values = new ParsedValue[1];
+        values[0] = parsedURI;
+        return new ParsedValue<ParsedValue[], Paint>(values, PaintConverter.RepeatingImagePatternConverter.getInstance());
+    }
+
     // parse a series of paint values separated by commas.
     // i.e., <paint> [, <paint>]*
     private ParsedValue<ParsedValue<?,Paint>[],Paint[]> parsePaintLayers(Term root)
@@ -2271,7 +2407,7 @@ final public class CSSParser {
      * returned ParsedValue is [size, size, size, size] with the semantics
      * [top offset, right offset, bottom offset left offset]
      */
-    private ParsedValue<ParsedValue<?,Size>[], BackgroundImage.BackgroundPosition> parseBackgroundPosition(Term term)
+    private ParsedValue<ParsedValue<?,Size>[], BackgroundPosition> parseBackgroundPosition(Term term)
         throws ParseException {
 
         if (term.token == null ||
@@ -2515,32 +2651,32 @@ final public class CSSParser {
         }
 
         ParsedValue<?,Size>[] values = new ParsedValue[] {top, right, bottom, left};
-        return new ParsedValue<ParsedValue<?,Size>[], BackgroundImage.BackgroundPosition>(values, BackgroundImage.BackgroundPositionConverter.getInstance());
+        return new ParsedValue<ParsedValue<?,Size>[], BackgroundPosition>(values, BackgroundPositionConverter.getInstance());
     }
 
-    private ParsedValue<ParsedValue<ParsedValue<?,Size>[], BackgroundImage.BackgroundPosition>[],BackgroundImage.BackgroundPosition[]>
+    private ParsedValue<ParsedValue<ParsedValue<?,Size>[], BackgroundPosition>[], BackgroundPosition[]>
             parseBackgroundPositionLayers(final Term root) throws ParseException {
 
         int nLayers = numberOfLayers(root);
-        ParsedValue<ParsedValue<?,Size>[], BackgroundImage.BackgroundPosition>[] layers = new ParsedValue[nLayers];
+        ParsedValue<ParsedValue<?,Size>[], BackgroundPosition>[] layers = new ParsedValue[nLayers];
         int layer = 0;
         Term term = root;
         while (term != null) {
             layers[layer++] = parseBackgroundPosition(term);
             term = nextLayer(term);
         }
-        return new ParsedValue<ParsedValue<ParsedValue<?,Size>[], BackgroundImage.BackgroundPosition>[],BackgroundImage.BackgroundPosition[]>(layers,BackgroundImage.LayeredBackgroundPositionConverter.getInstance());
+        return new ParsedValue<ParsedValue<ParsedValue<?,Size>[], BackgroundPosition>[], BackgroundPosition[]>(layers, LayeredBackgroundPositionConverter.getInstance());
     }
 
     /*
     http://www.w3.org/TR/css3-background/#the-background-repeat
     <repeat-style> = repeat-x | repeat-y | [repeat | space | round | no-repeat]{1,2}
     */
-    private ParsedValue<Repeat, Repeat>[] parseRepeatStyle(final Term root)
+    private ParsedValue<BackgroundRepeat, BackgroundRepeat>[] parseRepeatStyle(final Term root)
             throws ParseException {
 
-        Repeat xAxis, yAxis;
-        xAxis = yAxis = Repeat.NO_REPEAT;
+        BackgroundRepeat xAxis, yAxis;
+        xAxis = yAxis = BackgroundRepeat.NO_REPEAT;
 
         Term term = root;
 
@@ -2551,26 +2687,26 @@ final public class CSSParser {
 
         String text = term.token.getText().toLowerCase();
         if ("repeat-x".equals(text)) {
-            xAxis = Repeat.REPEAT;
-            yAxis = Repeat.NO_REPEAT;
+            xAxis = BackgroundRepeat.REPEAT;
+            yAxis = BackgroundRepeat.NO_REPEAT;
         } else if ("repeat-y".equals(text)) {
-            xAxis = Repeat.NO_REPEAT;
-            yAxis = Repeat.REPEAT;
+            xAxis = BackgroundRepeat.NO_REPEAT;
+            yAxis = BackgroundRepeat.REPEAT;
         } else if ("repeat".equals(text)) {
-            xAxis = Repeat.REPEAT;
-            yAxis = Repeat.REPEAT;
+            xAxis = BackgroundRepeat.REPEAT;
+            yAxis = BackgroundRepeat.REPEAT;
         } else if ("space".equals(text)) {
-            xAxis = Repeat.SPACE;
-            yAxis = Repeat.SPACE;
+            xAxis = BackgroundRepeat.SPACE;
+            yAxis = BackgroundRepeat.SPACE;
         } else if ("round".equals(text)) {
-            xAxis = Repeat.ROUND;
-            yAxis = Repeat.ROUND;
+            xAxis = BackgroundRepeat.ROUND;
+            yAxis = BackgroundRepeat.ROUND;
         } else if ("no-repeat".equals(text)) {
-            xAxis = Repeat.NO_REPEAT;
-            yAxis = Repeat.NO_REPEAT;
+            xAxis = BackgroundRepeat.NO_REPEAT;
+            yAxis = BackgroundRepeat.NO_REPEAT;
         } else if ("stretch".equals(text)) {
-            xAxis = Repeat.NO_REPEAT;
-            yAxis = Repeat.NO_REPEAT;
+            xAxis = BackgroundRepeat.NO_REPEAT;
+            yAxis = BackgroundRepeat.NO_REPEAT;
         } else {
             error(term, "Expected  \'<repeat-style>\' " + text);
         }
@@ -2587,62 +2723,62 @@ final public class CSSParser {
             } else if ("repeat-y".equals(text)) {
                 error(term, "Unexpected \'repeat-y\'");
             } else if ("repeat".equals(text)) {
-                yAxis = Repeat.REPEAT;
+                yAxis = BackgroundRepeat.REPEAT;
             } else if ("space".equals(text)) {
-                yAxis = Repeat.SPACE;
+                yAxis = BackgroundRepeat.SPACE;
             } else if ("round".equals(text)) {
-                yAxis = Repeat.ROUND;
+                yAxis = BackgroundRepeat.ROUND;
             } else if ("no-repeat".equals(text)) {
-                yAxis = Repeat.NO_REPEAT;
+                yAxis = BackgroundRepeat.NO_REPEAT;
             } else if ("stretch".equals(text)) {
-                yAxis = Repeat.NO_REPEAT;
+                yAxis = BackgroundRepeat.NO_REPEAT;
             } else {
                 error(term, "Expected  \'<repeat-style>\'");
             }
         }
 
         return new ParsedValue[] {
-            new ParsedValue<Repeat,Repeat>(xAxis, null),
-            new ParsedValue<Repeat,Repeat>(yAxis, null)
+            new ParsedValue<BackgroundRepeat,BackgroundRepeat>(xAxis, null),
+            new ParsedValue<BackgroundRepeat,BackgroundRepeat>(yAxis, null)
         };
     }
 
-    private ParsedValue<ParsedValue<Repeat, Repeat>[][],BorderImage.BorderImageRepeat[]>
+    private ParsedValue<ParsedValue<BackgroundRepeat, BackgroundRepeat>[][],RepeatStruct[]>
             parseBorderImageRepeatStyleLayers(final Term root) throws ParseException {
 
         int nLayers = numberOfLayers(root);
-        ParsedValue<Repeat, Repeat>[][] layers = new ParsedValue[nLayers][];
+        ParsedValue<BackgroundRepeat, BackgroundRepeat>[][] layers = new ParsedValue[nLayers][];
         int layer = 0;
         Term term = root;
         while (term != null) {
             layers[layer++] = parseRepeatStyle(term);
             term = nextLayer(term);
         }
-        return new ParsedValue<ParsedValue<Repeat, Repeat>[][],BorderImage.BorderImageRepeat[]>(layers, BorderImage.RepeatConverter.getInstance());
+        return new ParsedValue<ParsedValue<BackgroundRepeat, BackgroundRepeat>[][],RepeatStruct[]>(layers, RepeatStructConverter.getInstance());
     }
 
-    private ParsedValue<ParsedValue<Repeat, Repeat>[][],BackgroundImage.BackgroundRepeat[]>
+    private ParsedValue<ParsedValue<BackgroundRepeat, BackgroundRepeat>[][], RepeatStruct[]>
             parseBackgroundRepeatStyleLayers(final Term root) throws ParseException {
 
         int nLayers = numberOfLayers(root);
-        ParsedValue<Repeat, Repeat>[][] layers = new ParsedValue[nLayers][];
+        ParsedValue<BackgroundRepeat, BackgroundRepeat>[][] layers = new ParsedValue[nLayers][];
         int layer = 0;
         Term term = root;
         while (term != null) {
             layers[layer++] = parseRepeatStyle(term);
             term = nextLayer(term);
         }
-        return new ParsedValue<ParsedValue<Repeat, Repeat>[][],BackgroundImage.BackgroundRepeat[]>(layers, BackgroundImage.BackgroundRepeatConverter.getInstance());
+        return new ParsedValue<ParsedValue<BackgroundRepeat, BackgroundRepeat>[][], RepeatStruct[]>(layers, RepeatStructConverter.getInstance());
     }
 
     /*
     http://www.w3.org/TR/css3-background/#the-background-size
     <bg-size> = [ <length> | <percentage> | auto ]{1,2} | cover | contain
     */
-    private ParsedValue<ParsedValue[],BackgroundImage.BackgroundSize> parseBackgroundSize(final Term root)
+    private ParsedValue<ParsedValue[], BackgroundSize> parseBackgroundSize(final Term root)
         throws ParseException {
 
-        ParsedValue<?,Size> height = ZERO_PERCENT, width = ZERO_PERCENT;
+        ParsedValue<?,Size> height = null, width = null;
         boolean cover = false, contain = false;
 
         Term term = root;
@@ -2653,8 +2789,7 @@ final public class CSSParser {
                 (term.token.getText() != null) ? term.token.getText().toLowerCase() : null;
 
             if ("auto".equals(text)) {
-                width = ZERO_PERCENT;
-                height = ZERO_PERCENT;
+                // We don't do anything because width / height are already initialized
             } else if ("cover".equals(text)) {
                 cover = true;
             } else if ("contain".equals(text)) {
@@ -2667,7 +2802,7 @@ final public class CSSParser {
             }
         } else if (isSize(term.token)) {
             width = parseSize(term);
-            height = ZERO_PERCENT;
+            height = null;
         } else {
             error(term, "Expected \'<bg-size>\'");
         }
@@ -2680,7 +2815,7 @@ final public class CSSParser {
                     (term.token.getText() != null) ? term.token.getText().toLowerCase() : null;
 
                 if ("auto".equals(text)) {
-                    height = ZERO_PERCENT;
+                    height = null;
                 } else if ("cover".equals(text)) {
                     error(term, "Unexpected \'cover\'");
                 } else if ("contain".equals(text)) {
@@ -2705,21 +2840,21 @@ final public class CSSParser {
             new ParsedValue<String,Boolean>((cover ? "true" : "false"), BooleanConverter.getInstance()),
             new ParsedValue<String,Boolean>((contain ? "true" : "false"), BooleanConverter.getInstance())
         };
-        return new ParsedValue<ParsedValue[],BackgroundImage.BackgroundSize>(values, BackgroundImage.BackgroundSizeConverter.getInstance());
+        return new ParsedValue<ParsedValue[], BackgroundSize>(values, BackgroundSizeConverter.getInstance());
     }
 
-    private ParsedValue<ParsedValue<ParsedValue[],BackgroundImage.BackgroundSize>[], BackgroundImage.BackgroundSize[]>
+    private ParsedValue<ParsedValue<ParsedValue[], BackgroundSize>[],  BackgroundSize[]>
             parseBackgroundSizeLayers(final Term root) throws ParseException {
 
         int nLayers = numberOfLayers(root);
-        ParsedValue<ParsedValue[],BackgroundImage.BackgroundSize>[] layers = new ParsedValue[nLayers];
+        ParsedValue<ParsedValue[], BackgroundSize>[] layers = new ParsedValue[nLayers];
         int layer = 0;
         Term term = root;
         while (term != null) {
             layers[layer++] = parseBackgroundSize(term);
             term = nextLayer(term);
         }
-        return new ParsedValue<ParsedValue<ParsedValue[],BackgroundImage.BackgroundSize>[], BackgroundImage.BackgroundSize[]>(layers, BackgroundImage.LayeredBackgroundSizeConverter.getInstance());
+        return new ParsedValue<ParsedValue<ParsedValue[], BackgroundSize>[], BackgroundSize[]>(layers, LayeredBackgroundSizeConverter.getInstance());
     }
 
     private ParsedValue<ParsedValue<?,Paint>[], Paint[]> parseBorderPaint(final Term root)
@@ -2739,7 +2874,7 @@ final public class CSSParser {
         if (paint < 3) paints[2] = paints[0]; // bottom = top
         if (paint < 4) paints[3] = paints[1]; // left = right
 
-        return new ParsedValue<ParsedValue<?,Paint>[], Paint[]>(paints, StrokeBorder.BorderPaintConverter.getInstance());
+        return new ParsedValue<ParsedValue<?,Paint>[], Paint[]>(paints, StrokeBorderPaintConverter.getInstance());
     }
 
     private ParsedValue<ParsedValue<ParsedValue<?,Paint>[],Paint[]>[], Paint[][]> parseBorderPaintLayers(final Term root)
@@ -2753,15 +2888,15 @@ final public class CSSParser {
             layers[layer++] = parseBorderPaint(term);
             term = nextLayer(term);
         }
-        return new ParsedValue<ParsedValue<ParsedValue<?,Paint>[],Paint[]>[], Paint[][]>(layers, StrokeBorder.LayeredBorderPaintConverter.getInstance());
+        return new ParsedValue<ParsedValue<ParsedValue<?,Paint>[],Paint[]>[], Paint[][]>(layers, LayeredBorderPaintConverter.getInstance());
     }
 
     // borderStyle (borderStyle (borderStyle borderStyle?)?)?
-    private ParsedValue<ParsedValue<ParsedValue[],BorderStyle>[],BorderStyle[]> parseBorderStyleSeries(final Term root)
+    private ParsedValue<ParsedValue<ParsedValue[],BorderStrokeStyle>[],BorderStrokeStyle[]> parseBorderStyleSeries(final Term root)
             throws ParseException {
 
         Term term = root;
-        ParsedValue<ParsedValue[],BorderStyle>[] borders = new ParsedValue[4];
+        ParsedValue<ParsedValue[],BorderStrokeStyle>[] borders = new ParsedValue[4];
         int border = 0;
         while (term != null) {
             borders[border++] = parseBorderStyle(term);
@@ -2772,22 +2907,22 @@ final public class CSSParser {
         if (border < 3) borders[2] = borders[0]; // bottom = top
         if (border < 4) borders[3] = borders[1]; // left = right
 
-        return new ParsedValue<ParsedValue<ParsedValue[],BorderStyle>[],BorderStyle[]>(borders, StrokeBorder.BorderStyleSequenceConverter.getInstance());
+        return new ParsedValue<ParsedValue<ParsedValue[],BorderStrokeStyle>[],BorderStrokeStyle[]>(borders, BorderStrokeStyleSequenceConverter.getInstance());
     }
 
 
-    private ParsedValue<ParsedValue<ParsedValue<ParsedValue[],BorderStyle>[],BorderStyle[]>[], BorderStyle[][]>
+    private ParsedValue<ParsedValue<ParsedValue<ParsedValue[],BorderStrokeStyle>[],BorderStrokeStyle[]>[], BorderStrokeStyle[][]>
             parseBorderStyleLayers(final Term root) throws ParseException {
 
         int nLayers = numberOfLayers(root);
-        ParsedValue<ParsedValue<ParsedValue[],BorderStyle>[],BorderStyle[]>[] layers = new ParsedValue[nLayers];
+        ParsedValue<ParsedValue<ParsedValue[],BorderStrokeStyle>[],BorderStrokeStyle[]>[] layers = new ParsedValue[nLayers];
         int layer = 0;
         Term term = root;
         while (term != null) {
             layers[layer++] = parseBorderStyleSeries(term);
             term = nextLayer(term);
         }
-        return new ParsedValue<ParsedValue<ParsedValue<ParsedValue[],BorderStyle>[],BorderStyle[]>[], BorderStyle[][]>(layers,StrokeBorder.LayeredBorderStyleConverter.getInstance());
+        return new ParsedValue<ParsedValue<ParsedValue<ParsedValue[],BorderStrokeStyle>[],BorderStrokeStyle[]>[], BorderStrokeStyle[][]>(layers, LayeredBorderStyleConverter.getInstance());
     }
 
     // Only meant to be used from parseBorderStyle, but might be useful elsewhere
@@ -2808,7 +2943,7 @@ final public class CSSParser {
     //      <dash-style> [centered | inside | outside]? [line-join [miter <number> | bevel | round]]? [line-cap [square | butt | round]]?
     // where <dash-style> =
     //      [ none | solid | dotted | dashed ]
-    private ParsedValue<ParsedValue[],BorderStyle> parseBorderStyle(final Term root)
+    private ParsedValue<ParsedValue[],BorderStrokeStyle> parseBorderStyle(final Term root)
             throws ParseException {
 
 
@@ -2903,7 +3038,7 @@ final public class CSSParser {
             strokeLineCap
         };
 
-        return new ParsedValue(values, StrokeBorder.BorderStyleConverter.getInstance());
+        return new ParsedValue(values, BorderStyleConverter.getInstance());
     }
 
     //
@@ -2927,31 +3062,6 @@ final public class CSSParser {
         return segments;
     }
 
-
-    private static final ParsedValue<ParsedValue<?,Size>[],Double[]> DASHED =
-            new ParsedValue<ParsedValue<?,Size>[],Double[]>(
-                new ParsedValue[] {
-                    new ParsedValue<Size,Size>(new Size(5.0f, SizeUnits.PX), null),
-                    new ParsedValue<Size,Size>(new Size(3.0f, SizeUnits.PX), null)
-                }, SizeConverter.SequenceConverter.getInstance());
-
-    private static final ParsedValue<ParsedValue<?,Size>[],Double[]> DOTTED =
-            new ParsedValue<ParsedValue<?,Size>[],Double[]>(
-                new ParsedValue[]{
-                    new ParsedValue<Size,Size>(new Size(1.0f, SizeUnits.PX), null),
-                    new ParsedValue<Size,Size>(new Size(3.0f, SizeUnits.PX), null)
-                }, SizeConverter.SequenceConverter.getInstance());
-
-    private static final ParsedValue<ParsedValue<?,Size>[],Double[]> SOLID =
-            new ParsedValue<ParsedValue<?,Size>[],Double[]>(
-                new ParsedValue[]{
-                    /* empty array */
-                }, SizeConverter.SequenceConverter.getInstance());
-
-
-    private static final ParsedValue<ParsedValue<?,Size>[],Double[]> NONE =
-            new ParsedValue<ParsedValue<?,Size>[],Double[]>(null, SizeConverter.SequenceConverter.getInstance());
-
     /*
     <border-style> = none | hidden | dotted | dashed | solid | double | groove | ridge | inset | outset
     */
@@ -2966,15 +3076,17 @@ final public class CSSParser {
         final String text = root.token.getText().toLowerCase();
 
         if ("none".equals(text)) {
-            return NONE;
+            return BorderStyleConverter.NONE;
         } else if ("hidden".equals(text)) {
-            return NONE;
+            // The "hidden" mode doesn't make sense for FX, because it is the
+            // same as "none" except for border-collapsed CSS tables
+            return BorderStyleConverter.NONE;
         } else if ("dotted".equals(text)) {
-            return DOTTED;
+            return BorderStyleConverter.DOTTED;
         } else if ("dashed".equals(text)) {
-            return DASHED;
+            return BorderStyleConverter.DASHED;
         } else if ("solid".equals(text)) {
-            return SOLID;
+            return BorderStyleConverter.SOLID;
         } else if ("double".equals(text)) {
             error(root, "Unsupported <border-style> \'double\'");
         } else if ("groove".equals(text)) {
@@ -2990,7 +3102,7 @@ final public class CSSParser {
         }
         // error throws so we should never get here.
         // but the compiler wants a return, so here it is.
-        return SOLID;
+        return BorderStyleConverter.SOLID;
     }
 
     private ParsedValue<ParsedValue<?,Size>[],Double[]> segments(Term root)
@@ -3090,7 +3202,7 @@ final public class CSSParser {
      * http://www.w3.org/TR/css3-background/#the-border-image-slice
      * [<number> | <percentage>]{1,4} && fill?
      */
-    private ParsedValue<ParsedValue[],BorderImage.BorderImageSlice> parseBorderImageSlice(final Term root)
+    private ParsedValue<ParsedValue[],BorderImageSlices> parseBorderImageSlice(final Term root)
         throws ParseException {
 
         Term term = root;
@@ -3123,21 +3235,65 @@ final public class CSSParser {
                 new ParsedValue<ParsedValue<?,Size>[],Insets>(insets, InsetsConverter.getInstance()),
                 new ParsedValue<Boolean,Boolean>(fill, null)
         };
-        return new ParsedValue<ParsedValue[], BorderImage.BorderImageSlice>(values, BorderImage.SliceConverter.getInstance());
+        return new ParsedValue<ParsedValue[], BorderImageSlices>(values, BorderImageSliceConverter.getInstance());
     }
 
-    private ParsedValue<ParsedValue<ParsedValue[],BorderImage.BorderImageSlice>[],BorderImage.BorderImageSlice[]>
+    private ParsedValue<ParsedValue<ParsedValue[],BorderImageSlices>[],BorderImageSlices[]>
             parseBorderImageSliceLayers(final Term root) throws ParseException {
 
         int nLayers = numberOfLayers(root);
-        ParsedValue<ParsedValue[], BorderImage.BorderImageSlice>[] layers = new ParsedValue[nLayers];
+        ParsedValue<ParsedValue[], BorderImageSlices>[] layers = new ParsedValue[nLayers];
         int layer = 0;
         Term term = root;
         while (term != null) {
             layers[layer++] = parseBorderImageSlice(term);
             term = nextLayer(term);
         }
-        return new ParsedValue<ParsedValue<ParsedValue[],BorderImage.BorderImageSlice>[],BorderImage.BorderImageSlice[]> (layers, BorderImage.SliceSequenceConverter.getInstance());
+        return new ParsedValue<ParsedValue<ParsedValue[],BorderImageSlices>[],BorderImageSlices[]> (layers, SliceSequenceConverter.getInstance());
+    }
+
+    /*
+     * http://www.w3.org/TR/css3-background/#border-image-width
+     * [ <length> | <percentage> | <number> | auto ]{1,4}
+     */
+    private ParsedValue<ParsedValue<?,Size>[], BorderWidths> parseBorderImageWidth(final Term root)
+            throws ParseException {
+
+        Term term = root;
+        if (term.token == null || !isSize(term.token))
+            error(term, "Expected \'<size>\'");
+
+        ParsedValue<?,Size>[] insets = new ParsedValue[4];
+
+        int inset = 0;
+        while (inset < 4 && term != null) {
+            insets[inset++] = parseSize(term);
+
+            if ((term = term.nextInSeries) != null &&
+                    term.token != null &&
+                    term.token.getType() == CSSLexer.IDENT) {
+            }
+        }
+
+        if (inset < 2) insets[1] = insets[0]; // right = top
+        if (inset < 3) insets[2] = insets[0]; // bottom = top
+        if (inset < 4) insets[3] = insets[1]; // left = right
+
+        return new ParsedValue<ParsedValue<?,Size>[], BorderWidths>(insets, BorderImageWidthConverter.getInstance());
+    }
+
+    private ParsedValue<ParsedValue<ParsedValue<?,Size>[],BorderWidths>[],BorderWidths[]>
+        parseBorderImageWidthLayers(final Term root) throws ParseException {
+
+        int nLayers = numberOfLayers(root);
+        ParsedValue<ParsedValue<?,Size>[], BorderWidths>[] layers = new ParsedValue[nLayers];
+        int layer = 0;
+        Term term = root;
+        while (term != null) {
+            layers[layer++] = parseBorderImageWidth(term);
+            term = nextLayer(term);
+        }
+        return new ParsedValue<ParsedValue<ParsedValue<?,Size>[],BorderWidths>[],BorderWidths[]> (layers, BorderImageWidthsSequenceConverter.getInstance());
     }
 
 
@@ -3159,7 +3315,7 @@ final public class CSSParser {
         if (arg.token == null ||
             arg.token.getType() != CSSLexer.STRING ||
             arg.token.getText() == null ||
-            arg.token.getText().isEmpty()) error(arg, "Excpected \'url(\"<uri-string>\")\'");
+            arg.token.getText().isEmpty()) error(arg, "Expected \'url(\"<uri-string>\")\'");
 
         final String uri = arg.token.getText();
         ParsedValue[] uriValues = new ParsedValue[] {

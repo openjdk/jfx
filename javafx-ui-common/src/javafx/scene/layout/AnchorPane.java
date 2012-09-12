@@ -23,7 +23,6 @@
  * questions.
  */
 
-
 package javafx.scene.layout;
 
 import javafx.geometry.Bounds;

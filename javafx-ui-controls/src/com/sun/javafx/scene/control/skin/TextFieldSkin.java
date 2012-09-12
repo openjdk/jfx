@@ -51,6 +51,7 @@ import javafx.scene.Node;
 import javafx.scene.control.IndexRange;
 import javafx.scene.control.TextField;
 import javafx.scene.input.MouseEvent;
+import javafx.scene.paint.Color;
 import javafx.scene.paint.Paint;
 import javafx.scene.shape.Path;
 import javafx.scene.shape.PathElement;
@@ -176,7 +177,7 @@ public class TextFieldSkin extends TextInputControlSkin<TextField, TextFieldBeha
             }
         });
         textLeft = new DoubleBinding() {
-            { bind(getSkinnable().insets()); }
+            { bind(getSkinnable().insetsProperty()); }
             @Override protected double computeValue() {
                 return getInsets().getLeft();
             }
@@ -192,7 +193,7 @@ public class TextFieldSkin extends TextInputControlSkin<TextField, TextFieldBeha
         };
         textLeft.addListener(leftRightListener);
         textRight = new DoubleBinding() {
-            { bind(getSkinnable().widthProperty(), getSkinnable().insets()); }
+            { bind(getSkinnable().widthProperty(), getSkinnable().insetsProperty()); }
             @Override protected double computeValue() {
                 return getWidth() - getInsets().getRight();
             }
@@ -206,25 +207,25 @@ public class TextFieldSkin extends TextInputControlSkin<TextField, TextFieldBeha
         // Once this was crucial for performance, not sure now.
         clip.setSmooth(false);
         clip.xProperty().bind(new DoubleBinding() {
-            { bind(getSkinnable().insets()); }
+            { bind(getSkinnable().insetsProperty()); }
             @Override protected double computeValue() {
                 return getInsets().getLeft();
             }
         });
         clip.yProperty().bind(new DoubleBinding() {
-            { bind(getSkinnable().insets()); }
+            { bind(getSkinnable().insetsProperty()); }
             @Override protected double computeValue() {
                 return getInsets().getTop();
             }
         });
         clip.widthProperty().bind(new DoubleBinding() {
-            { bind(getSkinnable().widthProperty(), getSkinnable().insets()); }
+            { bind(getSkinnable().widthProperty(), getSkinnable().insetsProperty()); }
             @Override protected double computeValue() {
                 return getWidth() - getInsets().getRight() - getInsets().getLeft();
             }
         });
         clip.heightProperty().bind(new DoubleBinding() {
-            { bind(getSkinnable().heightProperty(), getSkinnable().insets()); }
+            { bind(getSkinnable().heightProperty(), getSkinnable().insetsProperty()); }
             @Override protected double computeValue() {
                 return getHeight() - getInsets().getTop() - getInsets().getBottom();
             }
@@ -309,7 +310,7 @@ public class TextFieldSkin extends TextInputControlSkin<TextField, TextFieldBeha
                 getSkinnable().requestLayout();
             }
         });
-        
+
         registerChangeListener(textField.prefColumnCountProperty(), "prefColumnCount");
         if (textField.isFocused()) setCaretAnimating(true);
 
@@ -324,14 +325,23 @@ public class TextFieldSkin extends TextInputControlSkin<TextField, TextFieldBeha
         });
 
         usePromptText = new BooleanBinding() {
-            { bind(textField.textProperty(), textField.promptTextProperty()); }
+            { bind(textField.textProperty(),
+                   textField.promptTextProperty(),
+                   promptTextFill); }
             @Override protected boolean computeValue() {
                 String txt = textField.getText();
                 String promptTxt = textField.getPromptText();
                 return ((txt == null || txt.isEmpty()) &&
-                        promptTxt != null && !promptTxt.isEmpty());
+                        promptTxt != null && !promptTxt.isEmpty() &&
+                        !promptTextFill.get().equals(Color.TRANSPARENT));
             }
         };
+
+        promptTextFill.addListener(new InvalidationListener() {
+            @Override public void invalidated(Observable observable) {
+                updateTextPos();
+            }
+        });
 
         textField.textProperty().addListener(new InvalidationListener() {
             @Override public void invalidated(Observable observable) {
@@ -435,7 +445,6 @@ public class TextFieldSkin extends TextInputControlSkin<TextField, TextFieldBeha
         promptNode.visibleProperty().bind(usePromptText);
         promptNode.fontProperty().bind(font);
         promptNode.xProperty().bind(textLeft);
-        promptNode.layoutXProperty().set(0.0);
         promptNode.textProperty().bind(getSkinnable().promptTextProperty());
         promptNode.fillProperty().bind(promptTextFill);
         updateSelection();
@@ -502,7 +511,7 @@ public class TextFieldSkin extends TextInputControlSkin<TextField, TextFieldBeha
 
     @Override
     public double getBaselineOffset() {
-        FontMetrics fontMetrics = super.fontMetrics.get();       
+        FontMetrics fontMetrics = super.fontMetrics.get();
         return getInsets().getTop() + fontMetrics.getAscent();
     }
 
@@ -510,17 +519,25 @@ public class TextFieldSkin extends TextInputControlSkin<TextField, TextFieldBeha
         switch (getSkinnable().getAlignment().getHpos()) {
           case CENTER:
             double midPoint = (textRight.get() - textLeft.get()) / 2;
-            textTranslateX.set(midPoint - textNode.getLayoutBounds().getWidth() / 2);
+            if (usePromptText.get()) {
+                promptNode.setLayoutX(midPoint - promptNode.getLayoutBounds().getWidth() / 2);
+                textTranslateX.set(promptNode.getLayoutX());
+            } else {
+                textTranslateX.set(midPoint - textNode.getLayoutBounds().getWidth() / 2);
+            }
             break;
 
           case RIGHT:
             textTranslateX.set(textRight.get() - textNode.getLayoutBounds().getWidth() -
+                               caretWidth / 2 - 5);
+            promptNode.setLayoutX(textRight.get() - promptNode.getLayoutBounds().getWidth() -
                                caretWidth / 2 - 5);
             break;
 
           case LEFT:
           default:
             textTranslateX.set(caretWidth / 2);
+            promptNode.layoutXProperty().set(caretWidth / 2);
         }
     }
 

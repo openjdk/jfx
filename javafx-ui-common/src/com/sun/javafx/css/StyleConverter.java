@@ -28,13 +28,11 @@ package com.sun.javafx.css;
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
+import java.lang.reflect.Method;
 import java.util.HashMap;
 import java.util.Map;
-
 import javafx.scene.text.Font;
-
 import com.sun.javafx.css.converters.EnumConverter;
-import java.util.List;
 
 /**
  * Converter converts ParsedValue&lt;F,T&gt; from type F to type T.
@@ -68,18 +66,14 @@ public class StyleConverter<F, T> {
         return null;
     }
 
-    private static class Holder {
-        private static StyleConverter CONVERTER = new StyleConverter();
-    }
+    private static StyleConverter CONVERTER = new StyleConverter();
 
     /** This converter simply returns value.getValue() */
     public static StyleConverter getInstance() {
-        return Holder.CONVERTER;
+        return CONVERTER;
     }
 
-    protected StyleConverter() {
-    }
-
+    protected StyleConverter() { }
 
     public void writeBinary(DataOutputStream os, StringStore sstore)
             throws IOException {
@@ -90,7 +84,7 @@ public class StyleConverter<F, T> {
     }
 
     // map of StyleConverter class name to StyleConverter
-    static Map<String,StyleConverter> tmap;
+    private static Map<String,StyleConverter> tmap;
 
     public static StyleConverter readBinary(DataInputStream is, String[] strings)
             throws IOException {
@@ -107,11 +101,15 @@ public class StyleConverter<F, T> {
                 if (EnumConverter.class.isAssignableFrom(cl)) {
                     converter = new EnumConverter(is, strings);
                 } else {
-                    converter = getInstance(cl);
+                    Method getInstanceMethod = cl.getMethod("getInstance");
+                    converter = (StyleConverter) getInstanceMethod.invoke(null);
                 }
             } catch (ClassNotFoundException cnfe) {
                 // Class.forName failed
                 System.err.println(cnfe.toString());
+            } catch (Exception nsme) {
+                // Class.forName failed
+                System.err.println(nsme.toString());
             }
             if (converter == null) {
                 System.err.println("could not deserialize " + cname);
@@ -122,128 +120,9 @@ public class StyleConverter<F, T> {
         }
         return tmap.get(cname);
     }
-
-
-    // package for unit test purposes
-    static StyleConverter getInstance(final Class converterClass) {
-
-        StyleConverter styleConverter = null;
-        // TODO: giant if-then-else block
-        if (com.sun.javafx.css.StyleConverter.class.equals(converterClass)) {
-            styleConverter = com.sun.javafx.css.StyleConverter.getInstance();
-
-        } else if (com.sun.javafx.css.converters.BooleanConverter.class.equals(converterClass)) {
-            styleConverter = com.sun.javafx.css.converters.BooleanConverter.getInstance();
-
-        } else if (com.sun.javafx.css.converters.ColorConverter.class.equals(converterClass)) {
-            styleConverter = com.sun.javafx.css.converters.ColorConverter.getInstance();
-
-        } else if (com.sun.javafx.css.converters.CursorConverter.class.equals(converterClass)) {
-            styleConverter = com.sun.javafx.css.converters.CursorConverter.getInstance();
-
-        } else if (com.sun.javafx.css.converters.EffectConverter.class.equals(converterClass)) {
-            styleConverter = com.sun.javafx.css.converters.EffectConverter.getInstance();
-        } else if (com.sun.javafx.css.converters.EffectConverter.DropShadowConverter.class.equals(converterClass)) {
-            styleConverter = com.sun.javafx.css.converters.EffectConverter.DropShadowConverter.getInstance();
-        } else if (com.sun.javafx.css.converters.EffectConverter.InnerShadowConverter.class.equals(converterClass)) {
-            styleConverter = com.sun.javafx.css.converters.EffectConverter.InnerShadowConverter.getInstance();
-
-        // enum is handled differently
-
-        } else if (com.sun.javafx.css.converters.FontConverter.class.equals(converterClass)) {
-            styleConverter = com.sun.javafx.css.converters.FontConverter.getInstance();
-        } else if (com.sun.javafx.css.converters.FontConverter.StyleConverter.class.equals(converterClass)) {
-            styleConverter = com.sun.javafx.css.converters.FontConverter.StyleConverter.getInstance();
-        } else if (com.sun.javafx.css.converters.FontConverter.WeightConverter.class.equals(converterClass)) {
-            styleConverter = com.sun.javafx.css.converters.FontConverter.WeightConverter.getInstance();
-        } else if (com.sun.javafx.css.converters.FontConverter.SizeConverter.class.equals(converterClass)) {
-            styleConverter = com.sun.javafx.css.converters.FontConverter.SizeConverter.getInstance();
-
-        }  else if (com.sun.javafx.css.converters.InsetsConverter.class.equals(converterClass)) {
-            styleConverter = com.sun.javafx.css.converters.InsetsConverter.getInstance();
-        }  else if (com.sun.javafx.css.converters.InsetsConverter.SequenceConverter.class.equals(converterClass)) {
-            styleConverter = com.sun.javafx.css.converters.InsetsConverter.SequenceConverter.getInstance();
-
-        }  else if (com.sun.javafx.css.converters.PaintConverter.class.equals(converterClass)) {
-            styleConverter = com.sun.javafx.css.converters.PaintConverter.getInstance();
-        }  else if (com.sun.javafx.css.converters.PaintConverter.SequenceConverter.class.equals(converterClass)) {
-            styleConverter = com.sun.javafx.css.converters.PaintConverter.SequenceConverter.getInstance();
-        }  else if (com.sun.javafx.css.converters.PaintConverter.LinearGradientConverter.class.equals(converterClass)) {
-            styleConverter = com.sun.javafx.css.converters.PaintConverter.LinearGradientConverter.getInstance();
-        }  else if (com.sun.javafx.css.converters.PaintConverter.RadialGradientConverter.class.equals(converterClass)) {
-            styleConverter = com.sun.javafx.css.converters.PaintConverter.RadialGradientConverter.getInstance();
-
-        }  else if (com.sun.javafx.css.converters.SizeConverter.class.equals(converterClass)) {
-            styleConverter = com.sun.javafx.css.converters.SizeConverter.getInstance();
-        }  else if (com.sun.javafx.css.converters.SizeConverter.SequenceConverter.class.equals(converterClass)) {
-            styleConverter = com.sun.javafx.css.converters.SizeConverter.SequenceConverter.getInstance();
-
-        }  else if (com.sun.javafx.css.converters.StringConverter.class.equals(converterClass)) {
-            styleConverter = com.sun.javafx.css.converters.StringConverter.getInstance();
-        }  else if (com.sun.javafx.css.converters.StringConverter.SequenceConverter.class.equals(converterClass)) {
-            styleConverter = com.sun.javafx.css.converters.StringConverter.SequenceConverter.getInstance();
-
-        }  else if (com.sun.javafx.css.converters.URLConverter.class.equals(converterClass)) {
-            styleConverter = com.sun.javafx.css.converters.URLConverter.getInstance();
-        }  else if (com.sun.javafx.css.converters.URLConverter.SequenceConverter.class.equals(converterClass)) {
-            styleConverter = com.sun.javafx.css.converters.URLConverter.SequenceConverter.getInstance();
-
-        // Region stuff
-        }  else if (com.sun.javafx.scene.layout.region.BackgroundFillConverter.class.equals(converterClass)) {
-            styleConverter = com.sun.javafx.scene.layout.region.BackgroundFillConverter.getInstance();
-
-        }  else if (com.sun.javafx.scene.layout.region.BackgroundImageConverter.class.equals(converterClass)) {
-            styleConverter = com.sun.javafx.scene.layout.region.BackgroundImageConverter.getInstance();
-        }  else if (com.sun.javafx.scene.layout.region.BackgroundImage.BackgroundPositionConverter.class.equals(converterClass)) {
-            styleConverter = com.sun.javafx.scene.layout.region.BackgroundImage.BackgroundPositionConverter.getInstance();
-        }  else if (com.sun.javafx.scene.layout.region.BackgroundImage.BackgroundRepeatConverter.class.equals(converterClass)) {
-            styleConverter = com.sun.javafx.scene.layout.region.BackgroundImage.BackgroundRepeatConverter.getInstance();
-        }  else if (com.sun.javafx.scene.layout.region.BackgroundImage.BackgroundSizeConverter.class.equals(converterClass)) {
-            styleConverter = com.sun.javafx.scene.layout.region.BackgroundImage.BackgroundSizeConverter.getInstance();
-        }  else if (com.sun.javafx.scene.layout.region.BackgroundImage.LayeredBackgroundPositionConverter.class.equals(converterClass)) {
-            styleConverter = com.sun.javafx.scene.layout.region.BackgroundImage.LayeredBackgroundPositionConverter.getInstance();
-        }  else if (com.sun.javafx.scene.layout.region.BackgroundImage.LayeredBackgroundSizeConverter.class.equals(converterClass)) {
-            styleConverter = com.sun.javafx.scene.layout.region.BackgroundImage.LayeredBackgroundSizeConverter.getInstance();
-
-        }  else if (com.sun.javafx.scene.layout.region.BorderImageConverter.class.equals(converterClass)) {
-            styleConverter = com.sun.javafx.scene.layout.region.BorderImageConverter.getInstance();
-        }  else if (com.sun.javafx.scene.layout.region.BorderImage.RepeatConverter.class.equals(converterClass)) {
-            styleConverter = com.sun.javafx.scene.layout.region.BorderImage.RepeatConverter.getInstance();
-        }  else if (com.sun.javafx.scene.layout.region.BorderImage.SliceConverter.class.equals(converterClass)) {
-            styleConverter = com.sun.javafx.scene.layout.region.BorderImage.SliceConverter.getInstance();
-        }  else if (com.sun.javafx.scene.layout.region.BorderImage.SliceSequenceConverter.class.equals(converterClass)) {
-            styleConverter = com.sun.javafx.scene.layout.region.BorderImage.SliceSequenceConverter.getInstance();
-
-        }  else if (com.sun.javafx.scene.layout.region.StrokeBorderConverter.class.equals(converterClass)) {
-            styleConverter = com.sun.javafx.scene.layout.region.StrokeBorderConverter.getInstance();
-        }  else if (com.sun.javafx.scene.layout.region.StrokeBorder.BorderPaintConverter.class.equals(converterClass)) {
-            styleConverter = com.sun.javafx.scene.layout.region.StrokeBorder.BorderPaintConverter.getInstance();
-        }  else if (com.sun.javafx.scene.layout.region.StrokeBorder.BorderStyleConverter.class.equals(converterClass)) {
-            styleConverter = com.sun.javafx.scene.layout.region.StrokeBorder.BorderStyleConverter.getInstance();
-        }  else if (com.sun.javafx.scene.layout.region.StrokeBorder.BorderStyleSequenceConverter.class.equals(converterClass)) {
-            styleConverter = com.sun.javafx.scene.layout.region.StrokeBorder.BorderStyleSequenceConverter.getInstance();
-        }  else if (com.sun.javafx.scene.layout.region.StrokeBorder.LayeredBorderPaintConverter.class.equals(converterClass)) {
-            styleConverter = com.sun.javafx.scene.layout.region.StrokeBorder.LayeredBorderPaintConverter.getInstance();
-        }  else if (com.sun.javafx.scene.layout.region.StrokeBorder.LayeredBorderStyleConverter.class.equals(converterClass)) {
-            styleConverter = com.sun.javafx.scene.layout.region.StrokeBorder.LayeredBorderStyleConverter.getInstance();
-
-        }  else if (com.sun.javafx.scene.layout.region.Margins.Converter.class.equals(converterClass)) {
-            styleConverter = com.sun.javafx.scene.layout.region.Margins.Converter.getInstance();
-        }  else if (com.sun.javafx.scene.layout.region.Margins.SequenceConverter.class.equals(converterClass)) {
-            styleConverter = com.sun.javafx.scene.layout.region.Margins.SequenceConverter.getInstance();
-
-        // parser stuff
-        }  else if (com.sun.javafx.css.parser.DeriveColorConverter.class.equals(converterClass)) {
-            styleConverter = com.sun.javafx.css.parser.DeriveColorConverter.getInstance();
-        }  else if (com.sun.javafx.css.parser.DeriveSizeConverter.class.equals(converterClass)) {
-            styleConverter = com.sun.javafx.css.parser.DeriveSizeConverter.getInstance();
-        }  else if (com.sun.javafx.css.parser.LadderConverter.class.equals(converterClass)) {
-            styleConverter = com.sun.javafx.css.parser.LadderConverter.getInstance();
-        }  else if (com.sun.javafx.css.parser.StopConverter.class.equals(converterClass)) {
-            styleConverter = com.sun.javafx.css.parser.StopConverter.getInstance();
-        }
-
-        return styleConverter;
+    
+    public String writeJava() {
+        return getClass().getCanonicalName() + ".getInstance()";
     }
 
 }

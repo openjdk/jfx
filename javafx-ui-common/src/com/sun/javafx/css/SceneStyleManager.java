@@ -209,8 +209,8 @@ final class SceneStyleManager extends StyleManager<Scene> {
                     // If an exception occurred while loading one of the stylesheets
                     // then we will simply print warning into system.err and skip the
                     // stylesheet, allowing other stylesheets to attempt to load
-                    if (LOGGER.isLoggable(PlatformLogger.WARNING)) {
-                        LOGGER.warning("Cannot add stylesheet. %s\n", e.getLocalizedMessage());
+                    if (getLogger().isLoggable(PlatformLogger.WARNING)) {
+                        getLogger().warning("Cannot add stylesheet. %s\n", e.getLocalizedMessage());
                     }
                     // no telling what condition stylesheet is in. make it null
                     stylesheet = null;

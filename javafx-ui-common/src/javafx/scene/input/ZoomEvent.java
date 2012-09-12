@@ -25,7 +25,6 @@
 
 package javafx.scene.input;
 
-import com.sun.javafx.event.EventTypeUtil;
 import javafx.event.EventTarget;
 import javafx.event.EventType;
 
@@ -63,26 +62,26 @@ public class ZoomEvent extends GestureEvent {
      * Common supertype for all zoom event types.
      */
     public static final EventType<ZoomEvent> ANY =
-            EventTypeUtil.registerInternalEventType(GestureEvent.ANY, "ANY_ZOOM");
+            new EventType<ZoomEvent>(GestureEvent.ANY, "ANY_ZOOM");
 
     /**
      * This event occurs when user performs a zooming gesture such as
      * dragging two fingers apart.
      */
     public static final EventType<ZoomEvent> ZOOM =
-            EventTypeUtil.registerInternalEventType(ZoomEvent.ANY, "ZOOM");
+            new EventType<ZoomEvent>(ZoomEvent.ANY, "ZOOM");
 
     /**
      * This event occurs when a zooming gesture is detected.
      */
     public static final EventType<ZoomEvent> ZOOM_STARTED =
-            EventTypeUtil.registerInternalEventType(ZoomEvent.ANY, "ZOOM_STARTED");
+            new EventType<ZoomEvent>(ZoomEvent.ANY, "ZOOM_STARTED");
 
     /**
      * This event occurs when a zooming gesture ends.
      */
     public static final EventType<ZoomEvent> ZOOM_FINISHED =
-            EventTypeUtil.registerInternalEventType(ZoomEvent.ANY, "ZOOM_FINISHED");
+            new EventType<ZoomEvent>(ZoomEvent.ANY, "ZOOM_FINISHED");
 
     private ZoomEvent(final EventType<? extends ZoomEvent> eventType) {
         super(eventType);

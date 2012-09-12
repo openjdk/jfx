@@ -35,7 +35,6 @@ import javafx.event.EventType;
 import javafx.scene.Node;
 
 import com.sun.javafx.collections.TrackableObservableList;
-import com.sun.javafx.event.EventTypeUtil;
 import com.sun.javafx.scene.control.Logging;
 import javafx.beans.DefaultProperty;
 import javafx.beans.property.ReadOnlyBooleanProperty;
@@ -89,7 +88,7 @@ public class Menu extends MenuItem {
      * </p>
      */
     public static final EventType<Event> ON_SHOWING =
-            EventTypeUtil.registerInternalEventType(Event.ANY, "MENU_ON_SHOWING");
+            new EventType<Event>(Event.ANY, "MENU_ON_SHOWING");
 
     /**
      * <p>Called when the contentMenu for this menu shows. However if the
@@ -97,7 +96,7 @@ public class Menu extends MenuItem {
      * </p>
      */
     public static final EventType<Event> ON_SHOWN =
-            EventTypeUtil.registerInternalEventType(Event.ANY, "MENU_ON_SHOWN");
+            new EventType<Event>(Event.ANY, "MENU_ON_SHOWN");
 
     /**
      * <p>Called when the contentMenu for this menu <b>will</b> be hidden. However if the
@@ -105,7 +104,7 @@ public class Menu extends MenuItem {
      * </p>
      */
     public static final EventType<Event> ON_HIDING =
-            EventTypeUtil.registerInternalEventType(Event.ANY, "MENU_ON_HIDING");
+            new EventType<Event>(Event.ANY, "MENU_ON_HIDING");
 
     /**
      * <p>Called when the contentMenu for this menu is hidden. However if the
@@ -113,7 +112,7 @@ public class Menu extends MenuItem {
      * </p>
      */
     public static final EventType<Event> ON_HIDDEN =
-            EventTypeUtil.registerInternalEventType(Event.ANY, "MENU_ON_HIDDEN");
+            new EventType<Event>(Event.ANY, "MENU_ON_HIDDEN");
 
     /***************************************************************************
      *                                                                         *
@@ -161,7 +160,7 @@ public class Menu extends MenuItem {
     private ReadOnlyBooleanWrapper showing;
     
     private void setShowing(boolean value) {
-        if (getItems().size() == 0) return;
+        if (getItems().size() == 0 || (value && isShowing())) return;
         
         // these events will not fire if the showing property is bound
         if (value) {

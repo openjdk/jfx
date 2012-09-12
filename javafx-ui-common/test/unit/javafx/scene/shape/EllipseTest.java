@@ -25,7 +25,11 @@
 
 package javafx.scene.shape;
 
+import com.sun.javafx.test.TestHelper;
+import javafx.geometry.Bounds;
 import javafx.scene.NodeTest;
+import static org.junit.Assert.*;
+import static com.sun.javafx.test.TestHelper.*;
 
 import org.junit.Test;
 
@@ -79,5 +83,14 @@ public class EllipseTest {
         NodeTest.assertDoublePropertySynced(
                 new Ellipse(300.0, 300.0, 100.0, 100.0),
                 "centerY", "centerY", 10.0);
+    }
+
+    @Test
+    public void testTransformedBounds_rotation() {
+        Ellipse e = new Ellipse(50, 100, 10, 20);
+        Bounds original = e.getBoundsInParent();
+        e.setRotate(90);
+        assertSimilar(TestHelper.box(30, 90,
+                original.getHeight(), original.getWidth()), e.getBoundsInParent());
     }
 }

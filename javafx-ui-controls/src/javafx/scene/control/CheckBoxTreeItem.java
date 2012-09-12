@@ -24,7 +24,6 @@
  */
 package javafx.scene.control;
 
-import com.sun.javafx.event.EventTypeUtil;
 import javafx.scene.control.cell.CheckBoxTreeCell;
 import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.SimpleBooleanProperty;
@@ -96,7 +95,7 @@ public class CheckBoxTreeItem<T> extends TreeItem<T> {
         return (EventType<TreeModificationEvent<T>>) CHECK_BOX_SELECTION_CHANGED_EVENT;
     }
     private static final EventType<?> CHECK_BOX_SELECTION_CHANGED_EVENT
-            = EventTypeUtil.registerInternalEventType(Event.ANY, "checkBoxSelectionChangedEvent");
+            = new EventType(Event.ANY, "checkBoxSelectionChangedEvent");
 
     /***************************************************************************
      *                                                                         *

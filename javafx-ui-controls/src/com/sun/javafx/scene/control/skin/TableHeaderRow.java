@@ -190,20 +190,6 @@ public class TableHeaderRow extends StackPane {
 
         getStyleClass().setAll("column-header-background");
 
-        /*
-         * Listening for scrolling along the X axis, but we need to be careful
-         * to handle the situation appropriately when the hbar is invisible.
-         * It basically maps to the following JavaFX Script code:
-         *
-         * scrollX = bind (flow.hbar.getVisible()) ? (-flow.hbar.getValue()) : (0.0F);
-         */
-        final InvalidationListener hbarValueListener = new InvalidationListener() {
-            @Override public void invalidated(Observable valueModel) {
-                updateScrollX();
-            }
-        };
-        flow.getHbar().valueProperty().addListener(hbarValueListener);
-        
         clip = new Rectangle();
         clip.setSmooth(false);
         clip.heightProperty().bind(heightProperty());
@@ -381,7 +367,7 @@ public class TableHeaderRow extends StackPane {
         }
     }
 
-    private void updateScrollX() {
+    void updateScrollX() {
         scrollX = flow.getHbar().isVisible() ? -flow.getHbar().getValue() : 0.0F;
         requestLayout();
     }

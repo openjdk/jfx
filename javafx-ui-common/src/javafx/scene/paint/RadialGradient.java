@@ -184,6 +184,15 @@ public final class RadialGradient extends Paint {
     }
 
     /**
+     * @inheritDoc
+     */
+    @Override public final boolean isOpaque() {
+        return opaque;
+    }
+
+    private final boolean opaque;
+
+    /**
      * A cached reference to the platform paint, no point recomputing twice
      */
     private Object platformPaint;
@@ -225,6 +234,7 @@ public final class RadialGradient extends Paint {
         this.proportional = proportional;
         this.cycleMethod = (cycleMethod == null) ? CycleMethod.NO_CYCLE : cycleMethod;
         this.stops = Stop.normalize(stops);
+        this.opaque = determineOpacity();
     }
 
     /**
@@ -258,6 +268,25 @@ public final class RadialGradient extends Paint {
         this.proportional = proportional;
         this.cycleMethod = (cycleMethod == null) ? CycleMethod.NO_CYCLE : cycleMethod;
         this.stops = Stop.normalize(stops);
+        this.opaque = determineOpacity();
+    }
+
+    /**
+     * Iterate over all the stops. If any one of them has a transparent
+     * color, then we return false. If there are no stops, we return false.
+     * Otherwise, we return true. Note that this is called AFTER Stop.normalize,
+     * which ensures that we always have at least 2 stops.
+     *
+     * @return Whether this gradient is opaque
+     */
+    private boolean determineOpacity() {
+        final int numStops = this.stops.size();
+        for (int i = 0; i < numStops; i++) {
+            if (!stops.get(i).getColor().isOpaque()) {
+                return false;
+            }
+        }
+        return true;
     }
 
     /**

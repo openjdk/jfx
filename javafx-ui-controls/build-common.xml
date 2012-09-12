@@ -1,15 +1,59 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project name="javafx-ui-controls-common" default="jar" basedir=".">
 
+    <path id="class-path-ref">
+      <pathelement location="${rt.dist.root.dir}/javafx-ui-common/dist/javafx-ui-common.jar"/>
+      <pathelement location="${runtime.dist.root.dir}/javafx-beans/dist/javafx-beans.jar"/>
+      <pathelement location="${runtime.dist.root.dir}/javafx-anim/dist/javafx-anim.jar"/>
+      <pathelement location="${runtime.dist.root.dir}/javafx-common/dist/javafx-common.jar"/>
+      <pathelement location="${runtime.dist.root.dir}/javafx-logging/dist/javafx-logging.jar"/>
+      <pathelement location="${JFXRT_HOME}/jfxrt.jar"/>
+    </path>
+
+    <!-- .css -> .bss -->
     <target name="check-binary-css">
-        <uptodate property="binaryCssUpToDate" targetfile="${build.dir}/classes/com/sun/javafx/scene/control/skin/caspian/caspian.bss">
+      <uptodate property="binaryCssUpToDate" targetfile="${basedir}/${build.dir}/classes/com/sun/javafx/scene/control/skin/caspian/caspian.bss">
+        <srcfiles dir="${basedir}/${src.dir}/com/sun/javafx/scene/control/skin/caspian" includes="*.css"/>
+      </uptodate>
+    </target>
+
+
+    <target name="-pre-init" depends="check-binary-css, compile-java-css" unless="binaryCssUpToDate">
+      <mkdir dir="${basedir}/${build.dir}/classes/com/sun/javafx/scene/control/skin/caspian"/>
+
+      <!-- compile all .css files in the build dir to .bss files, for faster startup -->
+      <java classname="com.sun.javafx.css.parser.Css2Bin" fork="true" failonerror="true" classpathref="class-path-ref">
+        <jvmarg value="-Djavafx.toolkit=com.sun.javafx.tk.DummyToolkit"/>
+        <arg value="${basedir}/${src.dir}/com/sun/javafx/scene/control/skin/caspian/caspian.css"/>
+        <arg value="${basedir}/${build.dir}/classes/com/sun/javafx/scene/control/skin/caspian/caspian.bss"/>
+      </java>
+      <java classname="com.sun.javafx.css.parser.Css2Bin" fork="true" failonerror="true" classpathref="class-path-ref">
+        <jvmarg value="-Djavafx.toolkit=com.sun.javafx.tk.DummyToolkit"/>
+        <arg value="${basedir}/${src.dir}/com/sun/javafx/scene/control/skin/caspian/highcontrast.css"/>
+        <arg value="${basedir}/${build.dir}/classes/com/sun/javafx/scene/control/skin/caspian/highcontrast.bss"/>
+      </java>
+      <java classname="com.sun.javafx.css.parser.Css2Bin" fork="true" failonerror="true" classpathref="class-path-ref">
+        <jvmarg value="-Djavafx.toolkit=com.sun.javafx.tk.DummyToolkit"/>
+        <arg value="${basedir}/${src.dir}/com/sun/javafx/scene/control/skin/caspian/embedded.css"/>
+        <arg value="${basedir}/${build.dir}/classes/com/sun/javafx/scene/control/skin/caspian/embedded.bss"/>
+      </java>
+      <java classname="com.sun.javafx.css.parser.Css2Bin" fork="true" failonerror="true" classpathref="class-path-ref">
+        <jvmarg value="-Djavafx.toolkit=com.sun.javafx.tk.DummyToolkit"/>
+        <arg value="${basedir}/${src.dir}/com/sun/javafx/scene/control/skin/caspian/embedded-qvga.css"/>
+        <arg value="${basedir}/${build.dir}/classes/com/sun/javafx/scene/control/skin/caspian/embedded-qvga.bss"/>
+      </java>
+    </target>
+
+    <!-- .css -> .java -->
+    <target name="check-java-css">
+        <uptodate property="javaCssUpToDate" targetfile="${build.dir}/classes/com/sun/javafx/scene/control/skin/caspian/caspian.java">
             <srcfiles dir="${src.dir}/com/sun/javafx/scene/control/skin/caspian" includes="caspian.css"/>
         </uptodate>
     </target> 
 
-    <target name="-pre-init" depends="check-binary-css" unless="binaryCssUpToDate">
+    <target name="compile-java-css" depends="check-java-css" unless="javaCssUpToDate">
         <mkdir dir="${build.dir}/classes/com/sun/javafx/scene/control/skin/caspian"/>
-        <java classname="com.sun.javafx.css.parser.Css2Bin" fork="true" failonerror="true">
+        <java classname="com.sun.javafx.css.parser.Css2Java" fork="true" failonerror="true">
           <jvmarg value="-Djavafx.toolkit=com.sun.javafx.tk.DummyToolkit"/>
           <classpath> 
             <pathelement location="${rt.dist.root.dir}/javafx-ui-common/dist/javafx-ui-common.jar"/>
@@ -20,10 +64,12 @@
             <pathelement location="${JFXRT_HOME}/jfxrt.jar"/>
           </classpath> 
           <arg value="${src.dir}/com/sun/javafx/scene/control/skin/caspian/caspian.css"/>
-          <arg value="${build.dir}/classes/com/sun/javafx/scene/control/skin/caspian/caspian.bss"/>
+          <arg value="com.sun.javafx.scene.control.skin.caspian"/>
+          <arg value="${build.dir}/classes/com/sun/javafx/scene/control/skin/caspian/Caspian.java"/>
         </java>
     </target>
-
+    
+    <!-- misc -->
     <target name="debug-test-file" depends="jar">
         <echo message="${run.test.classpath}" />
         <debug-selected-file-in-test/>

@@ -25,6 +25,7 @@
 
 package javafx.scene.control;
 
+import com.sun.javafx.beans.annotations.DuplicateInBuilderProperties;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -61,6 +62,7 @@ import com.sun.javafx.css.converters.*;
  * 
  * @see TextArea
  */
+@DuplicateInBuilderProperties(properties = {"promptText"})
 public class TextField extends TextInputControl {
     // Text field content
     private static final class TextFieldContent implements Content {

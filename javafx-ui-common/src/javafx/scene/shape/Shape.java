@@ -56,7 +56,6 @@ import com.sun.javafx.geom.transform.BaseTransform;
 import com.sun.javafx.jmx.MXNodeAlgorithm;
 import com.sun.javafx.jmx.MXNodeAlgorithmContext;
 import com.sun.javafx.scene.DirtyBits;
-import com.sun.javafx.scene.layout.region.ShapeChangeListener;
 import com.sun.javafx.sg.PGNode;
 import com.sun.javafx.sg.PGShape;
 import com.sun.javafx.sg.PGShape.Mode;
@@ -917,20 +916,20 @@ public abstract class Shape extends Node {
     @Override
     protected void impl_markDirty(DirtyBits dirtyBits) {
         if (shapeChangeListener != null && impl_isDirtyEmpty()) {
-            shapeChangeListener.changed();
+            shapeChangeListener.run();
         }
 
         super.impl_markDirty(dirtyBits);
     }
 
-    private ShapeChangeListener shapeChangeListener;
+    private Runnable shapeChangeListener;
 
     /**
      * @treatAsPrivate implementation detail
      * @deprecated This is an internal API that is not intended for use and will be removed in the next version
      */
     @Deprecated
-    public void impl_setShapeChangeListener(ShapeChangeListener listener) {
+    public void impl_setShapeChangeListener(Runnable listener) {
         shapeChangeListener = listener;
     }
 

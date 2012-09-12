@@ -48,7 +48,7 @@ class UAStylesheetLoader {
     
     
     static void doLoad() {
-        Holder.stylesheetLoader.loadUAStylesheet();
+        UAStylesheetLoader.Holder.stylesheetLoader.loadUAStylesheet();
     }
     
     private void loadUAStylesheet() {
@@ -58,20 +58,24 @@ class UAStylesheetLoader {
             AccessController.doPrivileged(new PrivilegedAction() {
                 @Override
                 public Object run() {
-                        URL url = LabelSkin.class.getResource("caspian/caspian.css");
-                        StyleManager.setDefaultUserAgentStylesheet(url.toExternalForm());
-                        
-                        if (com.sun.javafx.PlatformUtil.isEmbedded()) {
-                            url = LabelSkin.class.getResource("caspian/embedded.css");
+                    // Old approach:
+                    URL url = LabelSkin.class.getResource("caspian/caspian.css");
+                    StyleManager.setDefaultUserAgentStylesheet(url.toExternalForm());
+                    
+                    // New approach:
+                    // StyleManager.setDefaultUserAgentStylesheet(new Caspian());
+
+                    if (com.sun.javafx.PlatformUtil.isEmbedded()) {
+                        url = LabelSkin.class.getResource("caspian/embedded.css");
+                        StyleManager.addUserAgentStylesheet(url.toExternalForm());
+
+                        if (com.sun.javafx.Utils.isQVGAScreen()) {
+                            url = LabelSkin.class.getResource("caspian/embedded-qvga.css");
                             StyleManager.addUserAgentStylesheet(url.toExternalForm());
-                            
-                            if (com.sun.javafx.Utils.isQVGAScreen()) {
-                                url = LabelSkin.class.getResource("caspian/embedded-qvga.css");
-                                StyleManager.addUserAgentStylesheet(url.toExternalForm());
-                            }
                         }
-                        
-                        stylesheetLoaded = true;
+                    }
+
+                    stylesheetLoaded = true;
                     return null;
                 }
             });    
