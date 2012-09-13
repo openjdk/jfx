@@ -997,7 +997,7 @@ public class StyleablePropertyTest {
     } 
 
 
-    @Test
+    @Test @org.junit.Ignore("uses createGroup which, in turn, relies on a method that is no longer available")
     public void testGetMatchingStylesShouldNotReturnInlineAncestorPropertyIfNotInherited() {
 
         

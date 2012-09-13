@@ -293,7 +293,8 @@ public class LabeledTextTest {
                 };
         label.setTextFill(Color.YELLOW);
         stage.setScene(scene = new Scene(label));
-        label.impl_processCSS(true);
+        stage.show();
+//        label.impl_processCSS(true);
         labeledText = ((com.sun.javafx.scene.control.skin.LabeledSkinBase)label.getSkin()).text; 
         assertEquals(Color.YELLOW, labeledText.getFill());
     }
@@ -310,7 +311,8 @@ public class LabeledTextTest {
         Font font = Font.font("Amble", 30);
         label.setFont(font);
         stage.setScene(scene = new Scene(label));
-        label.impl_processCSS(true);
+        stage.show();
+//        label.impl_processCSS(true);
         labeledText = ((com.sun.javafx.scene.control.skin.LabeledSkinBase)label.getSkin()).text; 
         assertEquals(font, labeledText.getFont());
     }
@@ -326,7 +328,8 @@ public class LabeledTextTest {
                 };
         label.setTextAlignment(TextAlignment.JUSTIFY);
         stage.setScene(scene = new Scene(label));
-        label.impl_processCSS(true);
+        stage.show();
+//        label.impl_processCSS(true);
         labeledText = ((com.sun.javafx.scene.control.skin.LabeledSkinBase)label.getSkin()).text; 
         assertEquals(TextAlignment.JUSTIFY, labeledText.getTextAlignment());
     }
@@ -342,7 +345,8 @@ public class LabeledTextTest {
                 };
         label.setUnderline(true);
         stage.setScene(scene = new Scene(label));
-        label.impl_processCSS(true);
+        stage.show();
+//        label.impl_processCSS(true);
         labeledText = ((com.sun.javafx.scene.control.skin.LabeledSkinBase)label.getSkin()).text; 
         assertTrue(labeledText.isUnderline());
     }

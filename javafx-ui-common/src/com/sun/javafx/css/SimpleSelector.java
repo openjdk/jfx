@@ -232,7 +232,10 @@ final public class SimpleSelector extends Selector {
         this.matchOnName = other.matchOnName;
         
         if (other.matchOnStyleClass) {
-            this.styleClassMasks = new long[other.styleClassMasks.length];
+            final int length = other.styleClassMasks.length;
+            final long[] src = other.styleClassMasks;
+            final long[] dest = this.styleClassMasks = new long[length];
+            System.arraycopy(src, 0, dest, 0, length);
         } else {
             // other is long[0]
             this.styleClassMasks = other.styleClassMasks;
@@ -297,7 +300,7 @@ final public class SimpleSelector extends Selector {
     public boolean applies(Node node) {
         
         final StyleHelper styleHelper = node.impl_getStyleHelper();
-        final SimpleSelector selector = styleHelper.getSelector();
+        final SimpleSelector selector = styleHelper.getSimpleSelector();
         
         // if the selector has an id,
         // then bail if it doesn't match the node's id

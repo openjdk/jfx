@@ -2139,7 +2139,7 @@ public abstract class Node implements EventTarget {
         //if (PerformanceTracker.isLoggingEnabled()) {
         //    PerformanceTracker.logEvent("Node.init for [{this}, id=\"{id}\"]");
         //}
-        this.styleHelper = new StyleHelper(this);
+        styleHelper = new StyleHelper(this);
         setDirty();
         updateTreeVisible();
         //if (PerformanceTracker.isLoggingEnabled()) {
@@ -7455,7 +7455,7 @@ public abstract class Node implements EventTarget {
         // or if my own flag indicates I need to reapply
         if (reapply || (cssFlag == CSSFlags.REAPPLY)) {
 
-            styleHelper.resetStyleMap(styleManager);
+            styleHelper.setStyles(styleManager);
 
         } 
         

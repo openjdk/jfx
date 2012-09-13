@@ -170,7 +170,30 @@ public final class SelectorPartitioning {
             return hash;
         }                
         
-    }    
+    }   
+    
+    /** 
+     * Since Rules are retrieved from the tree in an indeterminate manner,
+     * we need to keep track of the order in which the rule was added. This
+     * can't be kept in Rule itself since the order depends on both the
+     * order of the stylesheets and the order of the rules in the stylesheets.
+     * Also, rules can be added and removed from the stylesheet which would
+     * invalidate the order.
+     */
+    private static class RuleData implements Comparable {
+        final Rule rule;
+        final int ordinal;
+        
+        private RuleData(Rule rule, int ordinal) {
+            this.rule = rule;
+            this.ordinal = ordinal;
+        }
+
+        @Override
+        public int compareTo(Object t) {
+            return ordinal - ((RuleData)t).ordinal;
+        }
+    }
     
     /**
      * A Partition corresponds to a selector type, id or styleclass. For any
@@ -195,21 +218,21 @@ public final class SelectorPartitioning {
         
         private final PartitionKey key;
         private final Map<PartitionKey, Slot> slots;
-        private List<Rule> rules;
+        private List<RuleData> rules;
         
         private Partition(PartitionKey key) {
            this.key = key;
             slots = new HashMap<PartitionKey,Slot>();
         }
         
-        private void addRule(Rule rule) {
+        private void addRule(Rule rule, int ordinal) {
             if (rules == null) {
-                rules = new ArrayList<Rule>();
+                rules = new ArrayList<RuleData>();
             }
-            rules.add(rule);
+            rules.add(new RuleData(rule,ordinal));
         }
         
-        private void copyRules(List<Rule> to) {
+        private void copyRules(List<RuleData> to) {
             if (rules != null && rules.isEmpty() == false) {
                 to.addAll(rules);
             }
@@ -245,21 +268,21 @@ public final class SelectorPartitioning {
         private final Map<PartitionKey, Slot> referents;
 
         // Rules from selectors that matches the path to this slot
-        private List<Rule> rules;
+        private List<RuleData> rules;
         
         private Slot(Partition partition) {
             this.partition = partition;
             this.referents = new HashMap<PartitionKey, Slot>();            
         }
         
-        private void addRule(Rule rule) {
+        private void addRule(Rule rule, int ordinal) {
             if (rules == null) {
-                rules = new ArrayList<Rule>();
+                rules = new ArrayList<RuleData>();
             }
-            rules.add(rule);
+            rules.add(new RuleData(rule,ordinal));
         }
         
-        private void copyRules(List<Rule> to) {
+        private void copyRules(List<RuleData> to) {
             if (rules != null && rules.isEmpty() == false) {
                 to.addAll(rules);
             }
@@ -293,11 +316,18 @@ public final class SelectorPartitioning {
     /* A Map for selectors that have style classes */
     private Map<PartitionKey, Partition> styleClassMap = new HashMap<PartitionKey,Partition>();
 
+    /** 
+     * Keep track of the order in which a rule is added to the mapping so
+     * the original order can be restored for the cascade.
+     */
+    private int ordinal;
+    
     /** clear current partitioning */
     void reset() {
         idMap.clear();
         typeMap.clear();
         styleClassMap.clear();
+        ordinal = 0;
     }
     
     
@@ -372,7 +402,7 @@ public final class SelectorPartitioning {
                 if ((c & STYLECLASS_BIT) == STYLECLASS_BIT) {
                     slot = slot.partition(styleClassKey, styleClassMap);
                 }                
-                slot.addRule(rule);
+                slot.addRule(rule, ordinal++);
                 break;
                 
             case TYPE_BIT | STYLECLASS_BIT:
@@ -381,9 +411,9 @@ public final class SelectorPartitioning {
                 partition = getPartition(typeKey, typeMap);
                 if ((c & STYLECLASS_BIT) == STYLECLASS_BIT) {
                     slot = partition.partition(styleClassKey, styleClassMap);
-                    slot.addRule(rule);
+                    slot.addRule(rule, ordinal++);
                 } else {
-                    partition.addRule(rule);                    
+                    partition.addRule(rule, ordinal++);                    
                 }
                 break;
                 
@@ -423,7 +453,7 @@ public final class SelectorPartitioning {
 
         Partition partition = null;
         Slot slot = null;
-        List<Rule> rules = new ArrayList<Rule>();
+        List<RuleData> ruleData = new ArrayList<RuleData>();
         
         while (c != 0) {
             
@@ -434,7 +464,7 @@ public final class SelectorPartitioning {
 
                     partition = idMap.get(idKey);
                     if (partition != null) {
-                        partition.copyRules(rules);
+                        partition.copyRules(ruleData);
 
                         // do-while handles A.b#c also matches A#c by first
                         // doing A.b#c then doing *.b#c
@@ -443,14 +473,14 @@ public final class SelectorPartitioning {
                             slot = partition.slots.get(typePK);                    
                             if (slot != null) {
 
-                                slot.copyRules(rules);
+                                slot.copyRules(ruleData);
 
                                 if ((c & STYLECLASS_BIT) == STYLECLASS_BIT) {
                                     StyleClassKey key = (StyleClassKey)styleClassKey.key;
                                     for (Slot s : slot.referents.values()) {
                                         StyleClassKey other = (StyleClassKey)s.partition.key.key;
                                         if (other.isSubsetOf(key)) {
-                                            s.copyRules(rules);
+                                            s.copyRules(ruleData);
                                         }
                                     }
                                 }
@@ -483,14 +513,14 @@ public final class SelectorPartitioning {
                     do {
                         partition = typeMap.get(typePK);
                         if (partition != null) {
-                            partition.copyRules(rules);
+                            partition.copyRules(ruleData);
 
                             if ((c & STYLECLASS_BIT) == STYLECLASS_BIT) {
                                 StyleClassKey key = (StyleClassKey)styleClassKey.key;
                                 for (Slot s : partition.slots.values()) {
                                     StyleClassKey other = (StyleClassKey)s.partition.key.key;
                                     if (other.isSubsetOf(key)) {
-                                        s.copyRules(rules);
+                                        s.copyRules(ruleData);
                                     }
                                 }
                             }
@@ -514,6 +544,14 @@ public final class SelectorPartitioning {
             }
         }
         
+        Collections.sort(ruleData);
+        
+        // TODO: Unfortunate copy :(
+        List<Rule> rules = new ArrayList<Rule>(ruleData.size());
+        for (int r=0,rMax=ruleData.size(); r<rMax; r++) {
+            final RuleData datum = ruleData.get(r);
+            rules.add(datum.rule);
+        }
         return rules;
     }
 

@@ -417,6 +417,7 @@ abstract public class StyleManager<T> {
                     ** runtime jar
                     */
                     URI styleManagerJarURI = AccessController.doPrivileged(new PrivilegedExceptionAction<URI>() {
+                            @Override
                             public URI run() throws java.net.URISyntaxException, java.security.PrivilegedActionException {
                             return StyleManager.class.getProtectionDomain().getCodeSource().getLocation().toURI();
                         }
@@ -457,6 +458,7 @@ abstract public class StyleManager<T> {
                             JarFile jar = null;
                             try {
                                 jar = AccessController.doPrivileged(new PrivilegedExceptionAction<JarFile>() {
+                                        @Override
                                         public JarFile run() throws FileNotFoundException, IOException {
                                             return new JarFile(styleManagerJarPath);
                                         }
@@ -776,9 +778,16 @@ abstract public class StyleManager<T> {
     /**
      * Finds matching styles for this Node.
      */
-    StyleMap findMatchingStyles(StyleHelper styleHelper) {
-
-        final SimpleSelector key = styleHelper.getSelector();        
+    StyleMap findMatchingStyles(Node node, SimpleSelector key) {
+        
+        //
+        // Are there any stylesheets at all?
+        // If not, then there is nothing to match and the
+        // resulting StyleMap is going to end up empty
+        // 
+        if (referencedStylesheets.isEmpty()) {
+            return StyleMap.EMPTY_MAP;
+        }
         
         Cache cache = cacheMap.get(key);
 
@@ -809,7 +818,7 @@ abstract public class StyleManager<T> {
         //
         // Create a style helper for this node from the styles that match. 
         //
-        StyleMap smap = cache.getStyleMap(this, styleHelper.getNode());
+        StyleMap smap = cache.getStyleMap(this, node);
         
         return smap;        
     }
@@ -866,6 +875,9 @@ abstract public class StyleManager<T> {
             this.uniqueId = key;
             this.map  = map;
         }
+        
+        private static final StyleMap EMPTY_MAP = 
+            new StyleMap(0, Collections.EMPTY_MAP);
 
     }
 
@@ -886,7 +898,9 @@ abstract public class StyleManager<T> {
 
         private StyleMap getStyleMap(StyleManager owner, Node node) {
             
-            if (rules.isEmpty()) return null;
+            if (rules == null || rules.isEmpty()) {                
+                return StyleMap.EMPTY_MAP;
+            }
 
 
             //
@@ -979,7 +993,7 @@ abstract public class StyleManager<T> {
             Collections.sort(styles);
 
             
-            // We need to create a new StyleHelper, add it to the cache,
+            // We need to create a new style map, add it to the cache,
             // and then return it.
             final Map<String, List<CascadingStyle>> smap =
                 new HashMap<String, List<CascadingStyle>>();

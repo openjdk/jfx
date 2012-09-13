@@ -35,7 +35,6 @@ import java.util.Map;
 import java.util.Map.Entry;
 import javafx.beans.value.WritableValue;
 import javafx.scene.Node;
-import javafx.scene.Parent;
 import javafx.scene.Scene;
 import javafx.scene.text.Font;
 import javafx.scene.text.FontPosture;
@@ -46,6 +45,7 @@ import com.sun.javafx.css.Stylesheet.Origin;
 import com.sun.javafx.css.converters.FontConverter;
 import com.sun.javafx.css.parser.CSSParser;
 import com.sun.javafx.logging.PlatformLogger;
+import java.util.Collection;
 
 /**
  * The StyleHelper is a helper class used for applying CSS information to Nodes.
@@ -53,7 +53,7 @@ import com.sun.javafx.logging.PlatformLogger;
  * same id/styleClass combination (ie: if the same exact set of styles apply
  * to the same nodes, then they should be able to use the same StyleHelper).
  */
-public class StyleHelper {
+final public class StyleHelper {
 
     private static final PlatformLogger LOGGER = com.sun.javafx.Logging.getCSSLogger();
 
@@ -69,28 +69,44 @@ public class StyleHelper {
     private static final CalculatedValue SKIP = new CalculatedValue(new int[0], null, false);
 
     /**
-     * Called when a Node needs to reapply styles, this method causes the
-     * StyleHelper to adopt the style map and reinitialize its internals.
-     * This function is mandatory for creation of a StyleHelper because we want
-     * to reduce the memory usage of the helper and so don't want to specify the
-     * styles directly on the helper, but also need to process the styles into a
-     * lookup table and want that code to be localized to the StyleHelper
-     * script file.
+     * Creates a new StyleHelper.
      */
-    public void resetStyleMap(StyleManager styleManager) {
+    public StyleHelper(Node node) {
+        this.node = node;
+    }
+    
+    /**
+     * Called from StyleManager when a Node needs to reapply styles, 
+     * this method causes the StyleHelper to adopt the style map and 
+     * reinitialize its internals.
+     */
+    public void setStyles(StyleManager styleManager) {
 
-        this.key = 0;
-        this.smapRef = null;
-        this.sharedStyleCacheRef = null;
-        this.localStyleCache = null;
-        this.pseudoclassStateMask = 0;
-        this.fontProp = null;
-        this.selector = null;
+        // We could be here because the node changed id or styleclass, 
+        // so the selector needs to be recreated. Setting it to null
+        // causes the next call to getSimpleSelector() to create it anew.
+        this.simpleSelector = null;
         
-        StyleManager.StyleMap styleMap = styleManager.findMatchingStyles(this);            
+        StyleManager.StyleMap styleMap = 
+                styleManager.findMatchingStyles(node, this.getSimpleSelector());            
 
         final Map<String, List<CascadingStyle>> smap = styleMap != null ? styleMap.map : null;
-        if (smap == null || smap.isEmpty()) return;
+        if (smap == null || smap.isEmpty()) {
+            
+            // If there are no styles at all, then return
+            final String inlineStyles = node.getStyle();
+            if (inlineStyles == null || inlineStyles.trim().isEmpty()) {
+                
+                this.key = 0;
+                this.smapRef = null;
+                this.sharedStyleCacheRef = null;
+                this.localStyleCache = null;
+                this.pseudoclassStateMask = 0;
+                this.fontProp = null;
+
+                return;
+            }
+        }
         
         this.smapRef = new WeakReference<Map<String, List<CascadingStyle>>>(smap);
         
@@ -158,7 +174,7 @@ public class StyleHelper {
                 break;
             }
         }        
-
+        
         if (LOGGER.isLoggable(PlatformLogger.FINE)) {
             LOGGER.fine(node + " " + key);
         }
@@ -229,7 +245,7 @@ public class StyleHelper {
      */
     private StyleCacheBucket localStyleCache;
     
-    static class StyleCacheKey {
+    final static class StyleCacheKey {
         private final long[] keys;
         
         private StyleCacheKey(long[] keys) {
@@ -326,7 +342,7 @@ public class StyleHelper {
     /**
      * A drop in the StyleCacheBucket.
      */
-    static class CacheEntry {
+    final static class CacheEntry {
 
         private final long[] states;
         private final Map<String,CalculatedValue> values;
@@ -474,7 +490,7 @@ public class StyleHelper {
         return localCacheEntry;
     }
 
-    public void clearLocalCache() {
+    private void clearLocalCache() {
         final List<CacheEntry> entries = localStyleCache.entries;
         final int max = entries.size();
         for (int n=0; n<max; n++) {
@@ -522,41 +538,31 @@ public class StyleHelper {
     private WritableValue fontProp;
 
     /** 
-     * The Node's SimpleSelector equivalent of name, style-class, and id.
-     */
-    private SimpleSelector selector;
-            
-    final SimpleSelector getSelector() {
-        if (selector == null) {
-            final String selectorType = node.getClass().getName();               
-            final String selectorId = node.getId();
-            final List<String> selectorStyleClasses =node.getStyleClass();
-
-            this.selector = new SimpleSelector(                    
-                    selectorType, 
-                    selectorStyleClasses, 
-                    null, 
-                    selectorId
-                );
-            
-        }
-        return selector;
-    }
-    /**
-     * Hold a reference to Node so it doesn't have to be passed everywhere. 
-     * StyleHelper is a final in Node, so this won't leak.
+     * The node to which this selector belongs. StyleHelper is a final in Node.
      */
     private final Node node;
     
-    final Node getNode() {
-        return node;
-    }
-    
-    /**
-     * Creates a new StyleHelper.
+    /** 
+     * The Node's name, id and style-class as a Selector. This is used as a 
+     * key to the StyleManager's Cache.
      */
-    public StyleHelper(Node node) {
-        this.node = node;
+    private SimpleSelector simpleSelector;
+            
+    SimpleSelector getSimpleSelector() {
+
+        if (simpleSelector == null) {
+
+            final String name = node.getClass().getName();
+            final String id = node.getId();
+            final List<String> selectorStyleClasses = node.getStyleClass();
+            simpleSelector = new SimpleSelector(
+                    name,
+                    selectorStyleClasses,
+                    null,
+                    id);
+        }            
+        
+        return simpleSelector;
     }
     
     /**
@@ -609,7 +615,7 @@ public class StyleHelper {
      * in the stylesheet. There is no need to do selector matching here since
      * the stylesheet is from parsing Node.style.
      */
-    private Map<String,CascadingStyle> getStyles(Stylesheet authorStylesheet) {
+    private static Map<String,CascadingStyle> getStyles(Stylesheet authorStylesheet) {
 
         final Map<String,CascadingStyle> authorStyles = new HashMap<String,CascadingStyle>();
         if (authorStylesheet != null) {
@@ -643,7 +649,7 @@ public class StyleHelper {
     /**
      * Get the mapping of property to style from Node.style for this node.
      */
-    private Map<String,CascadingStyle> getInlineStyleMap(Node node) {
+    private static Map<String,CascadingStyle> getInlineStyleMap(Node node) {
 
         return getInlineStyleMap(node.impl_getStyleable());
     }
@@ -651,7 +657,7 @@ public class StyleHelper {
     /**
      * Get the mapping of property to style from Node.style for this node.
      */
-    private Map<String,CascadingStyle> getInlineStyleMap(Styleable styleable) {
+    private static Map<String,CascadingStyle> getInlineStyleMap(Styleable styleable) {
         
         final String inlineStyles = styleable.getStyle();
 
@@ -724,7 +730,7 @@ public class StyleHelper {
      * isShared is true if the value is not specific to a node. 
      * 
      */
-    private static class CalculatedValue {
+    final private static class CalculatedValue {
         final Object value;
         final Origin origin;
         final boolean isRelative;
@@ -751,7 +757,7 @@ public class StyleHelper {
     public void transitionToState() {
 
         if (smapRef == null || smapRef.get() == null) return;
-        
+
         //
         // The ValueCacheEntry to choose depends on this Node's state and
         // the state of its parents. Without the parent state, the fact that
@@ -954,24 +960,6 @@ public class StyleHelper {
 
         // If the list weren't empty, we'd worry about animations at this
         // point. TODO need to implement animation trickery here
-    }
-
-    /**
-     * Called by the Scene whenever it has transitioned from one set of
-     * pseudoclass states to another. This function will then lookup the
-     * new values for each of the styleable variables on the Scene, and
-     * then either set the value directly or start an animation based on
-     * how things are specified in the CSS file. Currently animation support
-     * is disabled until the new parser comes online with support for
-     * animations and that support is detectable via the API.
-     */
-    public void transitionToState(Scene scene, List<String> states) {
-        // TODO the majority of this function is exactly the same as the
-        // Node variant. We also need to implement the lookup for the
-        // scene, but don't have to worry about inherit. If only Scene were
-        // an actual Parent node... might be a good idea except that its
-        // scene variable then makes no sense. I guess it would be null??
-        throw new UnsupportedOperationException("not yet implemented");
     }
 
     /**
@@ -1269,7 +1257,7 @@ public class StyleHelper {
      */
     private CascadingStyle resolveRef(Node node, String property, long states,
             Map<String,CascadingStyle> userStyles) {
-
+        
         final CascadingStyle style = getStyle(node, property, states, userStyles);
         if (style != null) {
             return style;
@@ -1470,7 +1458,7 @@ public class StyleHelper {
 
         final ParsedValue cssValue = style.getParsedValue();
         if (cssValue != null && !("null").equals(cssValue.getValue())) {
-        
+
             final ParsedValue resolved = 
                 resolveLookups(node, cssValue, states, inlineStyles, styleList);
             
