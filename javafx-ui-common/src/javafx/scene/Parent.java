@@ -41,7 +41,7 @@ import com.sun.javafx.Logging;
 import com.sun.javafx.TempState;
 import com.sun.javafx.Utils;
 import com.sun.javafx.collections.TrackableObservableList;
-import com.sun.javafx.collections.VetoableObservableList;
+import com.sun.javafx.collections.VetoableListDecorator;
 import com.sun.javafx.collections.annotations.ReturnsUnmodifiableCollection;
 import com.sun.javafx.css.Selector;
 import com.sun.javafx.css.StyleManager;
@@ -222,13 +222,126 @@ public abstract class Parent extends Node {
      * @defaultValue empty
      * @since JavaFX 1.3
      */
-    private final ObservableList<Node> children = new VetoableObservableList<Node>() {
-        // set to true if either childRemoved or childAdded returns
-        // true. These functions will indicate whether the geom
-        // bounds for the parent have changed
-        private boolean geomChanged;
-        private boolean childrenModified;
 
+    // set to true if either childRemoved or childAdded returns
+    // true. These functions will indicate whether the geom
+    // bounds for the parent have changed
+    private boolean geomChanged;
+    private boolean childrenModified;
+    private final ObservableList<Node> children = new VetoableListDecorator<Node>(new TrackableObservableList<Node>() {
+
+
+        protected void onChanged(Change<Node> c) {
+            // proceed with updating the scene graph
+            if (childrenModified) {
+                unmodifiableManagedChildren = null;
+                boolean relayout = false;
+
+                while (c.next()) {
+                    int from = c.getFrom();
+                    int to = c.getTo();
+                    for (int i = from; i < to; ++i) {
+                        Node n = children.get(i);
+                        if (n.getParent() != null && n.getParent() != Parent.this) {
+                            if (warnOnAutoMove) {
+                                java.lang.System.err.println("WARNING added to a new parent without first removing it from its current");
+                                java.lang.System.err.println("    parent. It will be automatically removed from its current parent.");
+                                java.lang.System.err.println("    node=" + n + " oldparent= " + n.getParent() + " newparent=" + this);
+                            }
+                            n.getParent().children.remove(n);
+                            if (n.isManaged()) {
+                                relayout = true;
+                            }
+                            if (warnOnAutoMove) {
+                                Thread.dumpStack();
+                            }
+                        }
+                    }
+
+                    List<Node> removed = c.getRemoved();
+                    int removedSize = removed.size();
+                    for (int i = 0; i < removedSize; ++i) {
+                        if (removed.get(i).isManaged()) {
+                            relayout = true;
+                        }
+                    }
+
+                    // update the parent and scene for each new node
+                    for (int i = from; i < to; ++i) {
+                        Node node = children.get(i);
+                        if (node.isManaged()) {
+                            relayout = true;
+                        }
+                        node.setParent(Parent.this);
+                        node.setScene(getScene());
+                        // assert !node.boundsChanged;
+                        if (node.isVisible()) {
+                            geomChanged = true;
+                            childIncluded(node);
+                        }
+                    }
+                }
+
+                // check to see if the number of children exceeds
+                // DIRTY_CHILDREN_THRESHOLD and dirtyChildren is null.
+                // If so, then we need to create dirtyChildren and
+                // populate it.
+                if (dirtyChildren == null && children.size() > DIRTY_CHILDREN_THRESHOLD) {
+                    dirtyChildren =
+                            new ArrayList<Node>(2 * DIRTY_CHILDREN_THRESHOLD);
+                    // only bother populating children if geom has
+                    // changed, otherwise there is no need
+                    if (dirtyChildrenCount > 0) {
+                        int size = children.size();
+                        for (int i = 0; i < size; ++i) {
+                            Node ch = children.get(i);
+                            if (ch.isVisible() && ch.boundsChanged) {
+                                dirtyChildren.add(ch);
+                            }
+                        }
+                    }
+                }
+
+                if (geomChanged) {
+                    impl_geomChanged();
+                }
+
+                //
+                // Note that the styles of a child do not affect the parent or
+                // its siblings. Thus, it is only necessary to reapply css to
+                // the Node just added and not to this parent and all of its
+                // children. So the following call to impl_reapplyCSS was moved
+                // to Node.parentProperty. The original comment and code were
+                // purposely left here as documentation should there be any
+                // question about how the code used to work and why the change
+                // was made.
+                //
+                // if children have changed then I need to reapply
+                // CSS from this node on down
+//                impl_reapplyCSS();
+                //
+
+                // request layout if a Group subclass has overridden doLayout OR
+                // if one of the new children needs layout, in which case need to ensure
+                // the needsLayout flag is set all the way to the root so the next layout
+                // pass will reach the child.
+                if (relayout) {
+                    requestLayout();
+                }
+            }
+
+            // Note the starting index at which we need to update the
+            // PGGroup on the next update, and mark the children dirty
+            c.reset();
+            c.next();
+            if (startIdx > c.getFrom()) {
+                startIdx = c.getFrom();
+            }
+
+            impl_markDirty(DirtyBits.PARENT_CHILDREN);
+        }
+
+    }) {
         @Override
         protected void onProposedChange(final List<Node> newNodes, int[] toBeRemoved) {
             if (ignoreChildrenTrigger) {
@@ -369,117 +482,6 @@ public abstract class Parent extends Node {
             }
         }
 
-        @Override
-        protected void onChanged(Change<Node> c) {
-            // proceed with updating the scene graph
-            if (childrenModified) {
-                unmodifiableManagedChildren = null;
-                boolean relayout = false;
-
-                while (c.next()) {
-                    int from = c.getFrom();
-                    int to = c.getTo();
-                    for (int i = from; i < to; ++i) {
-                        Node n = children.get(i);
-                        if (n.getParent() != null && n.getParent() != Parent.this) {
-                            if (warnOnAutoMove) {
-                                java.lang.System.err.println("WARNING added to a new parent without first removing it from its current");
-                                java.lang.System.err.println("    parent. It will be automatically removed from its current parent.");
-                                java.lang.System.err.println("    node=" + n + " oldparent= " + n.getParent() + " newparent=" + this);
-                            }
-                            n.getParent().children.remove(n);
-                            if (n.isManaged()) {
-                                relayout = true;
-                            }
-                            if (warnOnAutoMove) {
-                                Thread.dumpStack();
-                            }
-                        }
-                    }
-
-                    List<Node> removed = c.getRemoved();
-                    int removedSize = removed.size();
-                    for (int i = 0; i < removedSize; ++i) {
-                        if (removed.get(i).isManaged()) {
-                            relayout = true;
-                        }
-                    }
-
-                    // update the parent and scene for each new node
-                    for (int i = from; i < to; ++i) {
-                        Node node = children.get(i);
-                        if (node.isManaged()) {
-                            relayout = true;
-                        }
-                        node.setParent(Parent.this);
-                        node.setScene(getScene());
-                        // assert !node.boundsChanged;
-                        if (node.isVisible()) {
-                            geomChanged = true;
-                            childIncluded(node);
-                        }
-                    }
-                }
-
-                // check to see if the number of children exceeds
-                // DIRTY_CHILDREN_THRESHOLD and dirtyChildren is null.
-                // If so, then we need to create dirtyChildren and
-                // populate it.
-                if (dirtyChildren == null && children.size() > DIRTY_CHILDREN_THRESHOLD) {
-                    dirtyChildren =
-                            new ArrayList<Node>(2 * DIRTY_CHILDREN_THRESHOLD);
-                    // only bother populating children if geom has
-                    // changed, otherwise there is no need
-                    if (dirtyChildrenCount > 0) {
-                        int size = children.size();
-                        for (int i = 0; i < size; ++i) {
-                            Node ch = children.get(i);
-                            if (ch.isVisible() && ch.boundsChanged) {
-                                dirtyChildren.add(ch);
-                            }
-                        }
-                    }
-                }
-
-                if (geomChanged) {
-                    impl_geomChanged();
-                }
-
-                //
-                // Note that the styles of a child do not affect the parent or
-                // its siblings. Thus, it is only necessary to reapply css to
-                // the Node just added and not to this parent and all of its
-                // children. So the following call to impl_reapplyCSS was moved
-                // to Node.parentProperty. The original comment and code were
-                // purposely left here as documentation should there be any
-                // question about how the code used to work and why the change
-                // was made.
-                //
-                // if children have changed then I need to reapply
-                // CSS from this node on down
-//                impl_reapplyCSS();
-                //
-
-                // request layout if a Group subclass has overridden doLayout OR
-                // if one of the new children needs layout, in which case need to ensure
-                // the needsLayout flag is set all the way to the root so the next layout
-                // pass will reach the child.
-                if (relayout) {
-                    requestLayout();
-                }
-            }
-
-            // Note the starting index at which we need to update the
-            // PGGroup on the next update, and mark the children dirty
-            c.reset();
-            c.next();
-            if (startIdx > c.getFrom()) {
-                startIdx = c.getFrom();
-            }
-
-            impl_markDirty(DirtyBits.PARENT_CHILDREN);
-        }
-
         private String constructExceptionMessage(
                 String cause, Node offendingNode) {
             final StringBuilder sb = new StringBuilder("Children: ");
@@ -565,8 +567,8 @@ public abstract class Parent extends Node {
                 Node e = children.get(i);
                 if (e.isManaged()) {
                     unmodifiableManagedChildren.add(e);
+                        }
                 }
-            }
         }
         return (List<E>)unmodifiableManagedChildren;
     }
