@@ -40,6 +40,105 @@ import javafx.scene.Scene;
 final public class SimpleSelector extends Selector {
     static final private Object MAX_CLASS_DEPTH = 255;
     
+    //
+    // The Long value is a bit mask. The upper 4 bits of the mask are used to
+    // hold the index of the mask within the long[] and the remaining bits are
+    // used to hold the mask value. If, for example, "foo" is the 96th entry in
+    // styleClassMask, the upper 4 bits will be 0x01 (foo will be at mask[1]) 
+    // and the remaining bits will have the 36th bit set. 
+    //
+    // When creating the long[] bit set, you get the value from styleClassMask,
+    // mask and shift the upper 4 bits to get the index of the style class in 
+    // the long[], then or the value from styleClassMask with the mask[index]. 
+    // In our example, "foo" will always be at mask[1]
+    //
+    private static final Map<String,Long> styleClassMask = new HashMap<String,Long>();
+    
+    
+    // 4 is arbitrary but allows for 960 style classes. Well, actually 
+    // less since the first bit of each mask[index>0] is wasted since
+    // 61 % 60 is 1, even though the 61st entry is the zeroth value in mask[1]. 
+    // So, 945 style classes.
+    private static final int VALUE_BITS = Long.SIZE-4;
+    
+    // 0x0fffffffffffffff
+    private static final long VALUE_MASK = ~(0xfL << VALUE_BITS);
+        
+    /** 
+     * Convert styleClass string to a bit mask
+     * @param styleClass
+     * @return The upper 4 bits is an index into the long[] mask representation 
+     * of styleClasses. The remaining bits are the bit mask for this styleClass
+     * within the mask[index]
+     */
+    public static long getStyleClassMask(String styleClass) {
+        Long mask = styleClassMask.get(styleClass);
+        if (mask == null) {
+            final int size = styleClassMask.size();
+            final long element = size / VALUE_BITS; // use top bits for element
+            final int exp = size % VALUE_BITS; // remaining bits for value
+            mask = Long.valueOf(
+                (element << VALUE_BITS) | (1L << exp) // same as Math.pow(2,exp)
+            ); 
+            styleClassMask.put(styleClass, mask);
+        }
+        return mask.longValue();
+    }
+
+    /**
+     * Convert a list of style class strings to an array of bit masks.
+     * @param styleClasses
+     * @return The upper 4 bits of each element is an index into the long[] mask
+     * representation of styleClasses. The remaining bits of each element are 
+     * the bit mask for this styleClass within the mask[index]
+     */
+    public static long[] getStyleClassMasks(List<String> styleClasses) {
+        
+        long[] mask = new long[0]; // return zero length if styleClasses is null
+        
+        final int max = styleClasses != null ? styleClasses.size() : -1;
+        for (int n=0; n<max; n++) {
+            final String styleClass = styleClasses.get(n);
+            final long m = getStyleClassMask(styleClass);
+            final long element = (m & ~VALUE_MASK);
+            final int  index = (int)(element >> VALUE_BITS);
+            // need to grow?
+            if (index >= mask.length) {
+                final long[] temp = new long[index+1];
+                System.arraycopy(mask, 0, temp, 0, mask.length);
+                mask = temp;
+            }
+            mask[index] = mask[index] | m;
+        }
+        return mask;
+    }
+
+    public static List<String> getStyleClassStrings(long[] mask) {
+        
+        if (mask == null || mask.length == 0) return Collections.EMPTY_LIST;
+
+        final Map<Long,String> stringMap = new HashMap<Long,String>();
+        for (Map.Entry<String,Long> entry : styleClassMask.entrySet()) {
+            stringMap.put(entry.getValue(), entry.getKey());
+        }
+        final List<String> strings = new ArrayList<String>();
+        for(int index=0; index<mask.length; index++) {
+            final long m = mask[index];
+            final long element = (m & ~VALUE_MASK);
+            for (int exp=0; exp < VALUE_BITS; exp++) {
+                final long key = element | ((1L << exp) & m);
+                if (key != 0) {
+                    final String value = stringMap.get(key);
+                    if (value != null) strings.add(value);
+                }
+            }
+        }
+        // even though the list returned could be modified without causing 
+        // harm, returning an unmodifiableList is consistent with 
+        // SimpleSelector.getStyleClasses()         
+        return Collections.unmodifiableList(strings);
+    }    
+    
     /**
      * If specified in the CSS file, the name of the java class to which
      * this selector is applied. For example, if the CSS file had:
@@ -56,15 +155,20 @@ final public class SimpleSelector extends Selector {
         return name;
     }
     
-    final private List<String> styleClasses;
-    
     /**
      * @return Immutable List&lt;String&gt; of style-classes of the selector
      */
     public List<String> getStyleClasses() {
-        return styleClasses;
+        return getStyleClassStrings(styleClassMasks);
     }
 
+    long[] getStyleClassMasks() {
+        return styleClassMasks;
+    }
+    
+    /** styleClasses converted to a set of bit masks */
+    final private long[] styleClassMasks;
+    
     final private List<String> pseudoclasses;
     /**
      * @return Immutable List&lt;String&gt; of pseudo-classes of the selector
@@ -103,11 +207,11 @@ final public class SimpleSelector extends Selector {
         // then match needs to check name
         this.matchOnName = (name != null && !("".equals(name)) && !("*".equals(name)));
 
-        this.styleClasses = 
-                (styleClasses != null) 
-                ? Collections.unmodifiableList(styleClasses)  
-                : Collections.EMPTY_LIST;
-        this.matchOnStyleClass = (this.styleClasses.size() > 0);
+        this.styleClassMasks = 
+                (styleClasses != null && styleClasses.isEmpty() == false)
+                ? getStyleClassMasks(styleClasses)
+                : new long[0];
+        this.matchOnStyleClass = (this.styleClassMasks.length > 0);
 
         this.pseudoclasses = 
                 (pseudoclasses != null) 
@@ -119,6 +223,38 @@ final public class SimpleSelector extends Selector {
         // if id is not null and not empty, then match needs to check id
         this.matchOnId = (id != null && !("".equals(id)));
 
+    }
+    
+    /** copy constructor used by StyleManager */
+    SimpleSelector(final SimpleSelector other) {
+        
+        this.name = other.name;
+        this.matchOnName = other.matchOnName;
+        
+        if (other.matchOnStyleClass) {
+            final int length = other.styleClassMasks.length;
+            final long[] src = other.styleClassMasks;
+            final long[] dest = this.styleClassMasks = new long[length];
+            System.arraycopy(src, 0, dest, 0, length);
+        } else {
+            // other is long[0]
+            this.styleClassMasks = other.styleClassMasks;
+        }
+        this.matchOnStyleClass = other.matchOnStyleClass;
+        
+        if (other.pseudoclasses != null && other.pseudoclasses.isEmpty() == false) {
+            final List<String> temp = new ArrayList<String>(other.pseudoclasses.size());
+            for(int p=0, pMax=other.pseudoclasses.size(); p<pMax; p++) {
+                temp.add(other.pseudoclasses.get(p));
+            }
+            this.pseudoclasses = Collections.unmodifiableList(temp);
+        } else {
+            this.pseudoclasses = Collections.EMPTY_LIST;
+        }
+        this.pclassMask = other.pclassMask;
+        
+        this.id = other.id;
+        this.matchOnId = other.matchOnId;
     }
 
     /**
@@ -133,7 +269,11 @@ final public class SimpleSelector extends Selector {
     Match matches(final Node node) {
         if (applies(node)) {
             final int idCount = (matchOnId) ? 1 : 0;
-            return new Match(this, pseudoclasses, idCount, styleClasses.size());
+            int styleClassCount = 0;
+            for (int n=0; n<styleClassMasks.length; n++) {
+                styleClassCount += Long.bitCount(styleClassMasks[n] & VALUE_MASK);
+            }
+            return new Match(this, pseudoclasses, idCount, styleClassCount);
         }
         return null;
     }
@@ -157,12 +297,16 @@ final public class SimpleSelector extends Selector {
     }
 
     @Override 
-    public boolean applies(final Node node) {
+    public boolean applies(Node node) {
+        
+        final StyleHelper styleHelper = node.impl_getStyleHelper();
+        final SimpleSelector selector = styleHelper.getSimpleSelector();
+        
         // if the selector has an id,
         // then bail if it doesn't match the node's id
         // (do this first since it is potentially the cheapest check)
         if (matchOnId) {
-            boolean idMatch = id.equals(node.getId());
+            boolean idMatch = id.equals(selector.id);
             if (!idMatch) return false;
         }
 
@@ -170,24 +314,15 @@ final public class SimpleSelector extends Selector {
         // then bail if it doesn't match the node's class name
         // if not wildcard, then match name with node's class name
         if (matchOnName) {
-            final String className = node.getClass().getName();
-            boolean classMatch = nameMatchesAtEnd(className);
+            boolean classMatch = nameMatchesAtEnd(selector.name);
             if (!classMatch) return false;
         }
 
         if (matchOnStyleClass) {
-            boolean styleClassMatch = matchStyleClasses(node.getStyleClass());
+            boolean styleClassMatch = matchStyleClasses(selector.styleClassMasks);                
             if (!styleClassMatch) return false;
         }
         return true;
-    }
-
-    @Override
-    boolean mightApply(final String className, final String id, final List<String> styleClasses) {
-        if (matchOnName && nameMatchesAtEnd(className)) return true;
-        if (matchOnId   && this.id.equals(id)) return true;
-        if (matchOnStyleClass) return matchStyleClasses(styleClasses);
-        return false;
     }
 
     @Override
@@ -227,8 +362,8 @@ final public class SimpleSelector extends Selector {
     //
     // This rule matches when class="pastoral blue aqua marine" but does not
     // match for class="pastoral blue".
-    private boolean matchStyleClasses(final List<String> nodeStyleClasses) {
-        return isSubsetOf(styleClasses, nodeStyleClasses);
+    private boolean matchStyleClasses(long[] nodeStyleClasses) {
+        return isSubsetOf(styleClassMasks, nodeStyleClasses);
     }
 
     /**
@@ -241,36 +376,20 @@ final public class SimpleSelector extends Selector {
       * return true if seq1 is a subset of seq2. That is, all the strings
       * in seq1 are contained in seq2
       */
-    boolean isSubsetOf(final List<String> seq1, final List<String> seq2) {
+    boolean isSubsetOf(long[] seq1, long[] seq2) {
+        
         // if one or the other is null, then they are a subset if both are null
         if (seq1 == null || seq2 == null) return seq1 == null && seq2 == null;
         
         // they are a subset if both are empty
-        if (seq1.isEmpty() && seq2.isEmpty()) return true;
+        if (seq1.length == 0 && seq2.length == 0) return true;
 
         // [foo bar] cannot be a subset of [foo]
-        if (seq1.size() > seq2.size()) return false;
-
-        // is [foo] a subset of [foo bar bang]?
-        // Just need to find the first string in seq2 that equals seq1[0]
-        if (seq1.size() == 1) {
-            final String otherString = seq1.get(0);
-            if (otherString == null) return false;
-
-            for (int n=0, max=seq2.size(); n<max; n++) {
-                String item = seq2.get(n);
-                if (item == null) continue;
-                if (item.equals(otherString)) return true;
-            }
-            return false;
-        }
+        if (seq1.length > seq2.length) return false;
 
         // is [foo bar] a subset of [foo bar bang]?
-        // Check if each string in seq1 is in seq2
-        strSet.clear();
-        for (int n=0, max=seq2.size(); n<max; n++) strSet.add(seq2.get(n));
-        for (int n=0, max=seq1.size(); n<max; n++) {
-            if (! strSet.contains(seq1.get(n))) return false;
+        for (int n=0, max=seq1.length; n<max; n++) {
+            if ((seq1[n] & seq2[n]) != seq1[n]) return false;
         }
         return true;
 
@@ -294,7 +413,9 @@ final public class SimpleSelector extends Selector {
         if ((this.id == null) ? (other.id != null) : !this.id.equals(other.id)) {
             return false;
         }
-        if (this.styleClasses != other.styleClasses && (this.styleClasses == null || !this.styleClasses.equals(other.styleClasses))) {
+        if (this.styleClassMasks != other.styleClassMasks && 
+                (this.styleClassMasks == null || 
+                    !Arrays.equals(this.styleClassMasks, other.styleClassMasks))) {
             return false;
         }
         return true;
@@ -306,7 +427,7 @@ final public class SimpleSelector extends Selector {
     @Override public int hashCode() {
         if (hash == -1) {
             hash = name.hashCode();
-            hash = 31 * (hash + styleClasses.hashCode());
+            hash = 31 * (hash + (styleClassMasks != null ? Arrays.hashCode(styleClassMasks) : 37));
             hash = 31 * (hash + (id != null ? id.hashCode() : 1229));
             hash = 31 * (int)(pclassMask ^ (pclassMask >>> 32));
         }
@@ -318,9 +439,12 @@ final public class SimpleSelector extends Selector {
         StringBuilder sbuf = new StringBuilder();
         if (name != null && name.isEmpty() == false) sbuf.append(name);
         else sbuf.append("*");
-        for (int n=0; n<styleClasses.size(); n++) {
-            sbuf.append('.');
-            sbuf.append(styleClasses.get(n));
+        if (styleClassMasks != null && styleClassMasks.length > 0) {
+            List<String> strings = getStyleClassStrings(styleClassMasks);
+            for(String styleClass : strings) {
+                sbuf.append('.');
+                sbuf.append(styleClass);
+            }
         }
         if (id != null && id.isEmpty() == false) {
             sbuf.append('#');
@@ -338,6 +462,7 @@ final public class SimpleSelector extends Selector {
     {
         super.writeBinary(os, stringStore);
         os.writeShort(stringStore.addString(name));
+        final List<String> styleClasses = getStyleClasses();
         os.writeShort(styleClasses.size());
         for (String sc  : styleClasses) os.writeShort(stringStore.addString(sc));
         os.writeShort(stringStore.addString(id));

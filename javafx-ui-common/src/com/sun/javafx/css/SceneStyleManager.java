@@ -54,8 +54,6 @@ final class SceneStyleManager extends StyleManager<Scene> {
 
         this.popupOwnerScene = scene;
         
-        this.key = new StyleManager.Key();
-        
         // We have special handling for the case of a node which is in a popup
         // scene. The problem is that the root scene used for the purpose of style
         // sheet support isn't the scene of the popup (which is a hidden API
@@ -137,8 +135,6 @@ final class SceneStyleManager extends StyleManager<Scene> {
         
     }
 
-    private final StyleManager.Key key;
-    
     /*
      * In the case of a popup, this is the Scene of the ownerWindow. If
      * the Scene's window is not a PopupWindow, then the rootScene == scene.
@@ -173,24 +169,9 @@ final class SceneStyleManager extends StyleManager<Scene> {
      *
      * @param scene     The scene to update stylesheets for
      */
-    public void updateStylesheets() {
-        
-        // The list of referenced stylesheets is about to be recalculated, 
-        // so clear the current list. The style maps are no longer valid, so
-        // annihilate the cache
-        referencedStylesheets.clear();
-        clearCache();
-
-        if (defaultUserAgentStylesheet != null) {
-            referencedStylesheets.add(defaultUserAgentStylesheet);
-        }
-        
-        if (userAgentStylesheetMap.isEmpty() == false) {
-            // TODO: This isn't right. They should be in the same order that
-            // they were first added.
-            referencedStylesheets.addAll(userAgentStylesheetMap.values());
-        }
-        
+    @Override
+    protected void updateStylesheetsImpl() {
+                
         // RT-20643
         CssError.setCurrentScene(owner);
 
@@ -241,29 +222,14 @@ final class SceneStyleManager extends StyleManager<Scene> {
                     container = new StylesheetContainer<Scene>(url, stylesheet);
                     container.users.add(owner);
                     if (stylesheet != null) {
-                        referencedStylesheets.add(stylesheet); 
-                    }
+                        referencedStylesheets.add(stylesheet);
+                   }
                     
                 }
             }
+            
         }
                             
-        // RT-20643
-        CssError.setCurrentScene(null);
-            
-    }
+   }
     
-    @Override
-    protected Key getKey(Node node) {
-        
-        // Populate our helper key with the class name, id, and style class
-        // of the node and lookup the associated Cache in the cacheMap
-        key.className = node.getClass().getName();
-        key.id = node.getId();
-        key.styleClass = node.getStyleClass();
-
-        return key;
-        
-    }
-
 }

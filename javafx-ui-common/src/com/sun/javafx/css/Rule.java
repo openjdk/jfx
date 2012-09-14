@@ -115,7 +115,10 @@ final public class Rule {
         List<Match> matches = new ArrayList<Match>();
         for (int i = 0; i < selectors.size(); i++) {
             Selector sel = selectors.get(i);
-            matches.add(sel.matches(node));
+            Match match = sel.matches(node);
+            if (match != null) {
+                matches.add(match);
+            }
         }
         return matches;
     }
@@ -124,17 +127,12 @@ final public class Rule {
         List<Match> matches = new ArrayList<Match>();
         for (int i = 0; i < selectors.size(); i++) {
             Selector sel = selectors.get(i);
-            matches.add(sel.matches(scene));
+            Match match = sel.matches(scene);
+            if (match != null) {
+                matches.add(match);
+            }
         }
         return matches;
-    }
-
-    public boolean mightApply(String className, String id, List<String> styleClasses) {
-        for (int i = 0; i < selectors.size(); i++) {
-            Selector sel = selectors.get(i);
-            if (sel.mightApply(className, id, styleClasses)) return true;
-        }
-        return false;
     }
 
     public boolean applies(Node node) {

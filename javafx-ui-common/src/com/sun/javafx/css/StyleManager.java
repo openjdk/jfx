@@ -142,7 +142,7 @@ abstract public class StyleManager<T> {
 
         this.owner = owner;
 
-        cacheMap = new HashMap<Key, Cache>();
+        cacheMap = new HashMap<SimpleSelector, Cache>();
 
         referencedStylesheets = new ArrayList<Stylesheet>();
         if (defaultUserAgentStylesheet != null) {
@@ -173,8 +173,7 @@ abstract public class StyleManager<T> {
     // for testing
     List<Stylesheet> getReferencedStylesheets() { return referencedStylesheets; }
     
-    
-    /*
+       /*
      * Scene does not have a inline style, but an applet might. This is
      * the applet's stylesheet from a 'style' attribute. 
      */
@@ -186,9 +185,9 @@ abstract public class StyleManager<T> {
      * The map of Caches, key'd by a combination of class name, style class, and
      * id.
      */
-    protected final Map<Key, Cache> cacheMap;
+    protected final Map<SimpleSelector, Cache> cacheMap;
     // for testing
-    Map<Key, Cache> getCacheMap() { return cacheMap; }
+    Map<SimpleSelector, Cache> getCacheMap() { return cacheMap; }
 
     /*
      * The StyleHelper's cached values are relevant only for a given scene.
@@ -197,7 +196,7 @@ abstract public class StyleManager<T> {
      * way, each scene gets its own valueCache.
      */
     private final Map<StyleCacheKey, StyleCacheBucket> styleCache;
-    // for testing
+    /** StyleHelper uses this cache. */
     Map<StyleCacheKey, StyleCacheBucket> getStyleCache() { return styleCache; }
     
     /*
@@ -257,13 +256,13 @@ abstract public class StyleManager<T> {
         final RefList<T> users;
         // the keys for finding Cache entries that use this stylesheet.
         // This list should also be fairly small
-        final RefList<Key> keys;
+        final RefList<SimpleSelector> keys;
 
         StylesheetContainer(String fname, Stylesheet stylesheet) {
             this.fname = fname;
             this.stylesheet = stylesheet;
             this.users = new RefList<T>();
-            this.keys = new RefList<Key>();
+            this.keys = new RefList<SimpleSelector>();
         }
     }
 
@@ -295,7 +294,45 @@ abstract public class StyleManager<T> {
 
     }
 
-    public abstract void updateStylesheets();
+    public void updateStylesheets() {
+     
+        selectorPartitioning.reset();
+
+        // The list of referenced stylesheets is about to be recalculated, 
+        // so clear the current list. The style maps are no longer valid, so
+        // annihilate the cache
+        referencedStylesheets.clear();
+        clearCache();
+
+        if (defaultUserAgentStylesheet != null) {
+            referencedStylesheets.add(defaultUserAgentStylesheet);
+        }
+        
+        if (userAgentStylesheetMap.isEmpty() == false) {
+            // TODO: This isn't right. They should be in the same order that
+            // they were first added.
+            referencedStylesheets.addAll(userAgentStylesheetMap.values());
+        }
+
+        updateStylesheetsImpl();
+        
+        for(int n=0, nMax=referencedStylesheets.size(); n<nMax; n++) {
+            
+            final Stylesheet stylesheet = referencedStylesheets.get(n);
+            final List<Rule> rules = stylesheet.getRules();
+            for (int r=0, rMax=rules.size(); r<rMax; r++) {
+                final Rule rule = rules.get(r);
+                final List<Selector> selectors = rule.getSelectors();
+                for (int s=0, sMax=selectors.size(); s<sMax; s++) {
+                    Selector selector = selectors.get(s);
+                    selectorPartitioning.partition(selector, rule);
+                }
+            }
+        }
+        
+    }
+    
+    protected abstract void updateStylesheetsImpl();
     
     public void stylesheetsChanged(ListChangeListener.Change<String> c) {
         // for now, just call updateStylesheets
@@ -380,6 +417,7 @@ abstract public class StyleManager<T> {
                     ** runtime jar
                     */
                     URI styleManagerJarURI = AccessController.doPrivileged(new PrivilegedExceptionAction<URI>() {
+                            @Override
                             public URI run() throws java.net.URISyntaxException, java.security.PrivilegedActionException {
                             return StyleManager.class.getProtectionDomain().getCodeSource().getLocation().toURI();
                         }
@@ -420,6 +458,7 @@ abstract public class StyleManager<T> {
                             JarFile jar = null;
                             try {
                                 jar = AccessController.doPrivileged(new PrivilegedExceptionAction<JarFile>() {
+                                        @Override
                                         public JarFile run() throws FileNotFoundException, IOException {
                                             return new JarFile(styleManagerJarPath);
                                         }
@@ -591,7 +630,7 @@ abstract public class StyleManager<T> {
         if (fname == null ||  fname.trim().isEmpty()) return;
 
         if (userAgentStylesheetMap.containsKey(fname) == false) {
-
+            
             // RT-20643
             CssError.setCurrentScene(scene);
 
@@ -720,7 +759,10 @@ abstract public class StyleManager<T> {
                 if (value != null) strings.add(value);
             }
         }
-        return strings;
+        // even though the list returned could be modified without causing 
+        // harm, returning an unmodifiableList is consistent with 
+        // SimpleSelector.getStyleClasses()
+        return Collections.unmodifiableList(strings);
     }
 
     protected final void clearCache() {
@@ -733,177 +775,52 @@ abstract public class StyleManager<T> {
         return ++smapCount;
     }
 
-    abstract protected Key getKey(Node node);
-
     /**
-     * Returns a StyleHelper for the given Node, or null if there are no styles
-     * for this node.
+     * Finds matching styles for this Node.
      */
-    public final StyleHelper getStyleHelper(Node node) {
-
-        final Key key = getKey(node);
+    StyleMap findMatchingStyles(Node node, SimpleSelector key) {
+        
+        //
+        // Are there any stylesheets at all?
+        // If not, then there is nothing to match and the
+        // resulting StyleMap is going to end up empty
+        // 
+        if (referencedStylesheets.isEmpty()) {
+            return StyleMap.EMPTY_MAP;
+        }
+        
         Cache cache = cacheMap.get(key);
 
         // If the cache is null, then we need to create a new Cache and
         // add it to the cache map
         if (cache == null) {
-            // Construct the list of Rules that could possibly apply
-            final List<Rule> rules = new ArrayList<Rule>();
-
-            /*
-             * A Set of all the pseudoclass states which, if they change, need
-             * to cause the Node to be set to UPDATE its CSS styles on the next
-             * pulse. For a full explanation, see the StyleHelper's
-             * mayImpactChildren variable.
-             */
-            long pseudoclassStateMask = 0;
-
-            // If the node can have children, look at the ancestors
-            // in a compound selector for pseudoclassBits
-            final boolean canHaveChildren = node instanceof Parent;
-
-            // It may be that there are no pseudoclassBits in the ancestor
-            // selectors, but if one of the ancestor selectors might apply,
-            // then the selector impacts its children.
-            boolean impactsChildren = false;
-
-            //
-            final String className = node.getClass().getName();
-            final String id = node.getId();
-            final List<String> styleClass = node.getStyleClass();
             
-            List<Stylesheet> stylesheetsToProcess = referencedStylesheets;
-
-            for (int i = 0, imax = stylesheetsToProcess.size(); i < imax; i++) {
-                final Stylesheet ss = stylesheetsToProcess.get(i);
-
-                final List<Rule> stylesheetRules = ss != null ? ss.getRules() : null;
-                if (stylesheetRules == null || stylesheetRules.isEmpty()) {
-                    continue;
-                }
-
-                for (int j = 0, jmax = stylesheetRules.size(); j < jmax; j++) {
-                    Rule rule = stylesheetRules.get(j);
-                    boolean mightApply = rule.mightApply(className, id, styleClass);
-                    if (mightApply) {
-                        rules.add(rule);
-                    }
-
-                    //
-                    // The following logic used to be in a separate routine,
-                    // but the need to flag compound selectors with no
-                    // pseudoclass state that might impact the node's
-                    // children encouraged moving it here.
-                    //
-
-                    // The following loop creates the pseudoclassStateMask.
-                    // For a leaf node, the loop will just gather the
-                    // pseudoclass state bits. For a parent node, this loop
-                    // looks at the ancestor selectors to see if the parent
-                    // matches. If so, then the pseudoclass state from that
-                    // parent will affect the styling of its child nodes.
-                    // For example, in the selector A:foo B { }, whenever the
-                    // "foo" pseudoclass of A changes it must notify child
-                    // nodes of the change so that if one of them happens to
-                    // be a B it can update itself accordingly. Since this
-                    // can be quite expensive, we want to make sure we
-                    // support this capability only for nodes that need it.
-                    // This function determines whether this support is
-                    // necessary (setting impactsChildren to true),
-                    // and what pseudoclasses on the parent (A) that matter.
-
-                    // The node has to have rules that apply or be a Parent
-                    // in order for the pseudoclass state to matter.
-                    if (!mightApply && !canHaveChildren) {
-                        continue;
-                    }
-
-                    // For each selector, rule, stylesheet look for whether this Node
-                    // is referenced in the ancestor part of the selector, and whether or
-                    // not it also has pseudoclasses specified
-                    final int smax = rule.selectors != null ? rule.selectors.size() : 0;
-                    for (int s = 0; s < smax; s++) {
-                        final Selector selector = rule.selectors.get(s);
-                        if (selector instanceof CompoundSelector) {
-
-                            final CompoundSelector cs = (CompoundSelector) selector;
-                            final List<SimpleSelector> csSelectors = cs.getSelectors();
-
-                            // if mightApply is true, then the right-most selector
-                            // was matched and we just need the pseudoclass state
-                            // from that selector.
-                            if (mightApply) {
-                                final SimpleSelector simple =
-                                        csSelectors.get(csSelectors.size() - 1);
-                                pseudoclassStateMask = pseudoclassStateMask
-                                        | getPseudoclassMask(simple.getPseudoclasses());
-
-
-                                // Otherwise, the rule did not match but we need to check
-                                // to see if this node matches one of the ancestor selectors.
-                                // This only matters for nodes that can have children. You
-                                // wouldn't find a Rectangle, for example, as an ancestor
-                                // in a compound selector (you might, but the selector
-                                // wouldn't match anything)
-                            } else if (canHaveChildren) {
-                                // only check the ancestor selectors. If we are here,
-                                // then we know mightApply is false, meaning the rule
-                                // does not apply to this node because this node does
-                                // not match the right-most selector.
-                                for (int sctr = 0, max_sctr = csSelectors.size() - 1; sctr < max_sctr; sctr++) {
-                                    final SimpleSelector simple = csSelectors.get(sctr);
-                                    if (simple.mightApply(className, id, styleClass)) {
-                                        pseudoclassStateMask = pseudoclassStateMask
-                                                | getPseudoclassMask(simple.getPseudoclasses());
-                                        impactsChildren = true;
-                                    }
-                                }
-                            }
-                            // Not a compound selector. If the selector might apply,
-                            // then save off the pseudoclass state. StyleHelper
-                            // checks this to see if a pseudoclass matters or not.
-                        } else if (mightApply) {
-                            SimpleSelector simple = (SimpleSelector) selector;
-                            pseudoclassStateMask = pseudoclassStateMask
-                                    | getPseudoclassMask(simple.getPseudoclasses());
-                        }
-                    }
-                }
-            }
-
-            //
-            // regardless of whether or not the cache is shared, a Cache
-            // object is still needed in order to do the lookup.
-            //
-            final Key newKey = key.dup();
-
-            cache = new Cache(rules, pseudoclassStateMask, impactsChildren);
+            final String id = key.getId();
+            final String name = key.getName();
+            final long[] styleClassBits = key.getStyleClassMasks();
+            
+            // Construct the list of Rules that could possibly apply
+            final List<Rule> rules =
+                selectorPartitioning.match(
+                        key.getId(), 
+                        key.getName(), 
+                        key.getStyleClassMasks()
+                    );
+            
+            // create a new Cache from these rules.
+            cache = new Cache(rules);
+            
+            final SimpleSelector newKey = new SimpleSelector(key);                    
             cacheMap.put(newKey, cache);
 
         }
 
-        // the key is an instance variable and so we need to null the
-        // key.styleClass to prevent holding a hard reference to the
-        // styleClass (and its Node)
-        key.styleClass = null;
-        
-        // Return the style helper looked up by the cache. The cache will
-        // create a style helper if necessary (and possible), so we don't
-        // have to worry about that part.
+        //
+        // Create a style helper for this node from the styles that match. 
+        //
         StyleMap smap = cache.getStyleMap(this, node);
-        if (smap == null) {
-            return null;
-        }
-
-        StyleHelper helper =
-                StyleHelper.create(
-                node,
-                smap.map,
-                styleCache,
-                cache.pseudoclassStateMask,
-                smap.uniqueId);
         
-        return helper;
+        return smap;        
     }
 
     ////////////////////////////////////////////////////////////////////////////
@@ -939,9 +856,12 @@ abstract public class StyleManager<T> {
     
     ////////////////////////////////////////////////////////////////////////////
     //
-    // Inner classes
+    // Classes and routines for mapping styles to a Node
     //
     ////////////////////////////////////////////////////////////////////////////
+
+    private final SelectorPartitioning selectorPartitioning = new SelectorPartitioning();
+    
     
     //
     // Used by StyleHelper. The key uniquely identifies this style map.
@@ -955,6 +875,9 @@ abstract public class StyleManager<T> {
             this.uniqueId = key;
             this.map  = map;
         }
+        
+        private static final StyleMap EMPTY_MAP = 
+            new StyleMap(0, Collections.EMPTY_MAP);
 
     }
 
@@ -966,74 +889,120 @@ abstract public class StyleManager<T> {
         // this must be initialized to the appropriate possible rules when
         // the helper cache is created by the StylesheetContainer
         private final List<Rule> rules;
-        private final long pseudoclassStateMask;
-        private final boolean impactsChildren;
         private final Map<Long, StyleMap> cache;
 
-        Cache(List<Rule> rules, long pseudoclassStateMask, boolean impactsChildren) {
+        Cache(List<Rule> rules) {
             this.rules = rules;
-            this.pseudoclassStateMask = pseudoclassStateMask;
-            this.impactsChildren = impactsChildren;
             this.cache = new HashMap<Long, StyleMap>();
         }
 
         private StyleMap getStyleMap(StyleManager owner, Node node) {
-
-            // If this set of rules (which may be empty) impacts children,
-            // then this node will get a StyleHelper.
-            if (!impactsChildren) {
-
-                // Since this set of rules does not impact children, this node
-                // will only get a StyleHelper if there are styles that might
-                // apply. There are styles that might apply if there are rules
-                // or if the node has an in-line style.
-                final String nodeStyle = node.getStyle();
-                final boolean hasStyle = nodeStyle != null && !nodeStyle.isEmpty();
-
-                if (rules.isEmpty() && pseudoclassStateMask == 0 && hasStyle == false) {
-                    boolean hasInheritAsDefault = false;
-                    // TODO This is questionable as what happens when a node has no style helper and inherits styles
-                    final List<StyleableProperty> styleables = node.impl_getStyleableProperties();
-                    final int max = styleables != null ? styleables.size() : 0;
-                    for (int i = 0; i < max; i++) {
-                        if (styleables.get(i).isInherits()) {
-                            hasInheritAsDefault = true;
-                            break;
-                        }
-                    }
-                    // if we have no rules and no inherited properties we don't need a StyleHelper
-                    if (! hasInheritAsDefault) return null;
-                }
+            
+            if (rules == null || rules.isEmpty()) {                
+                return StyleMap.EMPTY_MAP;
             }
 
+
+            //
+            // Since the list of rules is found by matching only the
+            // rightmost selector, the set of rules may larger than those 
+            // rules that actually match the node. The following loop
+            // whittles the list down to those rules that actually match.
+            //
+            // listOfMatches is dual purpose. First, it keeps track
+            // of what rules match the node. Second, it keeps track
+            // of the indices of the matching rules. These indices
+            // are used to create the bit mask for the cache key. If
+            // the cache misses, then a new entry is created by looping
+            // through listOfMatches and creating CascadingStyles for
+            // entries that are not null. Ok, so that's three.
+            //
+            final List<Match>[] listOfMatches = new List[rules.size()];
+            
+            //
+            // do we have a cache for the set of matching rules?
+            //
             // To lookup from the cache, we construct a key from a Long
-            // where the rules that apply to this particular node are
+            // where the rules that match this particular node are
             // represented by bits on the Long.
+            //
             long key = 0;
             long mask = 1;
-            for (int i = 0, imax = rules.size(); i < imax; i++) {
-                Rule rule = rules.get(i);
-                if (rule.applies(node)) {
+            for (int r = 0, rMax = rules.size(); r < rMax; r++) {
+                
+                final Rule rule = rules.get(r);
+                final List<Match> matches = rule.matches(node);
+                if (matches  != null && matches.isEmpty() == false) {
+                    
+                    listOfMatches[r] = matches;
                     key = key | mask;
+                    
+                } else {
+                    
+                    listOfMatches[r] = null;
+                    
                 }
                 mask = mask << 1;
             }
-
+            
+            // nothing matched!
+            if (key == 0) return null;
+            
             final Long keyObj = Long.valueOf(key);
             if (cache.containsKey(keyObj)) {
                 final StyleMap styleMap = cache.get(keyObj);
                 return styleMap;
             }
+                        
+            final List<CascadingStyle> styles = new ArrayList<CascadingStyle>();
+            int ordinal = 0;
+            
+            for (int m = 0, mMax = listOfMatches.length; m<mMax; m++) {
+                
+                final List<Match> matches = listOfMatches[m];
+                if (matches == null) continue; 
+                
+                // the rule that matched
+                Rule rule = rules.get(m);
+                
+                for (int n=0, nMax = matches.size(); n<nMax; n++) {
+                    
+                    final Match match = matches.get(n);
+                    // TODO: should never get nulls in this list. Fix Rule#matches
+                    if (match == null) continue;
+                
+                    for (int k = 0, kmax = rule.declarations.size(); k < kmax; k++) {
+                        final Declaration decl = rule.declarations.get(k);
 
-            // We need to create a new StyleHelper, add it to the cache,
+                        final CascadingStyle s = new CascadingStyle(
+                            new Style(match.selector, decl),
+                            match.pseudoclasses,
+                            match.specificity,
+                            // ordinal increments at declaration level since
+                            // there may be more than one declaration for the
+                            // same attribute within a rule or within a stylesheet
+                            ordinal++
+                        );
+
+                        styles.add(s);
+                    }
+                }
+            }
+
+                // return sorted styles
+            Collections.sort(styles);
+
+            
+            // We need to create a new style map, add it to the cache,
             // and then return it.
-            final List<CascadingStyle> styles = getStyles(node);
             final Map<String, List<CascadingStyle>> smap =
                 new HashMap<String, List<CascadingStyle>>();
-            final int max = styles != null ? styles.size() : 0;
-            for (int i=0; i<max; i++) {
+            
+            for (int i=0, max=styles.size(); i<max; i++) {
+                
                 final CascadingStyle style = styles.get(i);
                 final String property = style.getProperty();
+                
                 // This is carefully written to use the minimal amount of hashing.
                 List<CascadingStyle> list = smap.get(property);
                 if (list == null) {
@@ -1048,121 +1017,7 @@ abstract public class StyleManager<T> {
             return styleMap;
         }
 
-        /**
-         * Looks up all the styles for this Node. This function takes no advantage
-         * of any caches but simply does a complete fresh lookup. The styles
-         * returned are sorted such that the most specific style is first.
-         */
-        private List<CascadingStyle> getStyles(Node node) {
-            // The priority of stylesheets from the CSS spec is
-            // (1) user agent declarations
-            // (2) user normal declarations
-            // (3) author normal declarations
-            // (4) author important declarations
-            // (5) user important declarations
-            // we have the correct order here for 1,2,3 and the 4 & 5
-            // we handle when sorting the styles
-
-            if (rules == null || rules.isEmpty()) return null;
-
-            List<CascadingStyle> styles = new ArrayList<CascadingStyle>(rules.size());
-                // Order in which the declaration of a Style appears (see below)
-                int ordinal = 0;
-                // For each declaration in the matching rules, create a Style object
-                //final List<Style> styles = new ArrayList<Style>();
-                for (int i = 0, imax = rules.size(); i < imax; i++) {
-                    final Rule rule = rules.get(i);
-                    List<Match> matches = rule.matches(node);
-                    for (int j = 0, jmax = matches.size(); j < jmax; j++) {
-                        final Match match = matches.get(j);
-                        if (match == null) continue;
-                        for (int k = 0, kmax = rule.declarations.size(); k < kmax; k++) {
-                            final Declaration decl = rule.declarations.get(k);
-
-                            final CascadingStyle s = new CascadingStyle(
-                                new Style(match.selector, decl),
-                                match.pseudoclasses,
-                                match.specificity,
-                                // ordinal increments at declaration level since
-                                // there may be more than one declaration for the
-                                // same attribute within a rule or within a stylesheet
-                                ordinal++
-                            );
-
-                        styles.add(s);
-                        }
-                    }
-                }
-
-                // return sorted styles
-            Collections.sort(styles);
-            return styles;
-            }
-
-        }
-
-    /**
-     * The key used in the cacheMap of the StylesheetContainer
-     */
-    static class Key {
-        
-        public Key() {
-        }
-
-        protected Key dup() {
-            
-            Key key = new Key();
-            key.className  = className;
-            key.id = id;
-            final int nElements = styleClass.size();
-            key.styleClass = new ArrayList<String>(nElements);
-            for (int n = 0; n < nElements; n++) {
-                key.styleClass.add(styleClass.get(n));
-            }
-            
-            return key;
-        }
-        
-        // note that the class name here is the *full* class name, such as
-        // javafx.scene.control.Button. We only bother parsing this down to the
-        // last part when doing matching against selectors, and so want to avoid
-        // having to do a bunch of preliminary parsing in places where it isn't
-        // necessary.
-        protected String className;
-        protected String id;
-        protected List<String> styleClass;
-
-        @Override
-        public boolean equals(Object o) {
-            if (this == o) return true;
-            if (o instanceof Key) {
-                Key other = (Key)o;
-                boolean eq =
-                        className.equals(other.className)
-                    && (   (id == null && other.id == null)
-                        || (id != null && id.equals(other.id))
-                       )
-                    && (   (styleClass == null && other.styleClass == null)
-                        || (styleClass != null && styleClass.containsAll(other.styleClass))
-                       );
-                return eq;
-            }
-            return false;
-        }
-
-        @Override
-        public int hashCode() {
-            int hash = className.hashCode();
-            hash = 31 * (hash + ((id == null || id.isEmpty()) ? 1231 : id.hashCode()));
-            hash = 31 * (hash + ((styleClass == null || styleClass.isEmpty()) ? 1237 : styleClass.hashCode()));
-            return hash;
-        }
-
-        @Override
-        public String toString() {
-            return "Key ["+className+", "+String.valueOf(id)+", "+String.valueOf(styleClass)+"]";
-        }
-
     }
+    
 
 }

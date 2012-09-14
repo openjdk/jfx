@@ -62,7 +62,7 @@ abstract public class Selector {
     abstract Match matches(Scene scene);
     // same as the matches method expect return true/false rather than a match
     public abstract boolean applies(Node node);
-    abstract boolean mightApply(String className, String id, List<String> styleClasses);
+    
     /**
      * Determines whether the current state of the node and its parents
      * matches the pseudoclasses defined (if any) for this selector.
