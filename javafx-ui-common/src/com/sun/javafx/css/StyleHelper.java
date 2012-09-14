@@ -717,7 +717,7 @@ final public class StyleHelper {
         // avoid calling impl_getPseudoClassState if there 
         // aren't any pseudoclasses that matter
         states[count-1] = (helper.pseudoclassStateMask != 0) 
-                ? node.impl_getPseudoClassState() & helper.pseudoclassStateMask
+                ? node.impl_getPseudoClassState()
                 : 0;
 
         return states;
