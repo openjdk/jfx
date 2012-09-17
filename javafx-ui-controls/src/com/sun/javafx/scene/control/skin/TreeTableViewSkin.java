@@ -26,12 +26,13 @@ package com.sun.javafx.scene.control.skin;
 
 import com.preview.javafx.scene.control.TreeTableRow;
 import com.preview.javafx.scene.control.TreeTableView;
+import com.sun.javafx.collections.NonIterableChange;
+import com.sun.javafx.scene.control.ReadOnlyUnbackedObservableList;
 import com.sun.javafx.scene.control.behavior.TreeTableViewBehavior;
 import java.lang.ref.WeakReference;
 import javafx.collections.FXCollections;
 import javafx.collections.ListChangeListener;
 import javafx.collections.ListChangeListener.Change;
-import javafx.collections.ObservableList;
 import javafx.scene.control.SkinBase;
 import javafx.scene.control.TableColumn;
 import javafx.scene.control.TableRow;
@@ -46,13 +47,20 @@ import javafx.util.Callback;
 public class TreeTableViewSkin<T> extends SkinBase<TreeTableView<T>, TreeTableViewBehavior<T>> {
     
     private final TableView<TreeItem<T>> table;
+    private final TreeTableViewBackingList<T> tableBackingList;
+    
+    private WeakReference<TreeItem> weakRootRef;
 
     public TreeTableViewSkin(final TreeTableView<T> control) {
         super(control, new TreeTableViewBehavior<T>(control));
         
         table = new TableView<TreeItem<T>>();
         
-        // get defined columns
+        tableBackingList = new TreeTableViewBackingList(control);
+        table.setItems(tableBackingList);
+        
+        // get defined columns and set up listener so that the embedded TableView
+        // always has the same columns as what is in the TreeTableView columns list
         updateColumns();
         control.getColumns().addListener(new ListChangeListener<TableColumn<TreeItem<T>, ?>>() {
             @Override public void onChanged(Change<? extends TableColumn<TreeItem<T>, ?>> change) {
@@ -61,7 +69,6 @@ public class TreeTableViewSkin<T> extends SkinBase<TreeTableView<T>, TreeTableVi
         });
         
         // install custom row factory to handle indentation
-//        table.setRowFactory(new Callback<TableView<TreeItem<T>>, TreeTableRow<TreeItem<T>>>() {
         table.setRowFactory(new Callback<TableView<TreeItem<T>>, TableRow<TreeItem<T>>>() {
             @Override public TreeTableRow<TreeItem<T>> call(TableView<TreeItem<T>> p) {
                 TreeTableRow row = new TreeTableRow<TreeItem<T>>();
@@ -85,12 +92,10 @@ public class TreeTableViewSkin<T> extends SkinBase<TreeTableView<T>, TreeTableVi
         
         getChildren().add(table);
         
-
         registerChangeListener(control.rootProperty(), "ROOT");
         registerChangeListener(control.showRootProperty(), "SHOW_ROOT");
         registerChangeListener(control.cellFactoryProperty(), "CELL_FACTORY");
         registerChangeListener(control.impl_treeItemCountProperty(), "TREE_ITEM_COUNT");
-//        registerChangeListener(control.focusTraversableProperty(), "FOCUS_TRAVERSABLE");
         
         updateItemCount();
     }
@@ -114,35 +119,52 @@ public class TreeTableViewSkin<T> extends SkinBase<TreeTableView<T>, TreeTableVi
             // FIXME can't set treeview cell factory in to a table!
         } else if ("TREE_ITEM_COUNT".equals(p)) {
             updateItemCount();
-//        } else if (p == "FOCUS_TRAVERSABLE") {
-//            flow.setFocusTraversable(getSkinnable().isFocusTraversable());
         }
     }
     
-    private WeakReference<TreeItem> weakRoot;
     private TreeItem getRoot() {
-        return weakRoot == null ? null : weakRoot.get();
-    }
-    private void setRoot(TreeItem newRoot) {
-        weakRoot = new WeakReference<TreeItem>(newRoot);
-    }
-
-    private int getItemCount() {
-        return getSkinnable().impl_getTreeItemCount();
+        return weakRootRef == null ? null : weakRootRef.get();
     }
     
+    private void setRoot(TreeItem newRoot) {
+        weakRootRef = new WeakReference<TreeItem>(newRoot);
+    }
+
     private void updateColumns() {
         table.getColumns().setAll(getSkinnable().getColumns());
     }
     
     private void updateItemCount() {
-        int size = getItemCount();
-        ObservableList<TreeItem<T>> temp = FXCollections.observableArrayList();
+        tableBackingList.resetSize();
+    }
+
+    private static class TreeTableViewBackingList<T> extends ReadOnlyUnbackedObservableList<TreeItem<T>> {
+        private final TreeTableView<T> treeTable;
         
-        for (int i = 0; i < size; i++) {
-            temp.add(getSkinnable().getTreeItem(i));
+        private int size = -1;
+        
+        TreeTableViewBackingList(TreeTableView<T> treeTable) {
+            this.treeTable = treeTable;
         }
         
-        table.setItems(temp);
+        void resetSize() {
+            int oldSize = size;
+            size = -1;
+            
+            // TODO we can certainly make this better....but it may not really matter
+            callObservers(new NonIterableChange.GenericAddRemoveChange<TreeItem<T>>(
+                    0, oldSize, FXCollections.<TreeItem<T>>emptyObservableList(), this));
+        }
+        
+        @Override public TreeItem<T> get(int i) {
+            return treeTable.getTreeItem(i);
+        }
+
+        @Override public int size() {
+            if (size == -1) {
+                size = treeTable.impl_getTreeItemCount();
+            }
+            return size;
+        }
     }
 }
