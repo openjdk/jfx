@@ -414,9 +414,6 @@ public class TreeTableRow<T> extends TableRow<T> {
 
     private static final String DEFAULT_STYLE_CLASS = "tree-cell";
 
-//    private static final String PSEUDO_CLASS_EXPANDED = "expanded";
-//    private static final String PSEUDO_CLASS_COLLAPSED = "collapsed";
-
     private static final long EXPANDED_PSEUDOCLASS_STATE = StyleManager.getPseudoclassMask("expanded");
     private static final long COLLAPSED_PSEUDOCLASS_STATE = StyleManager.getPseudoclassMask("collapsed");
 
