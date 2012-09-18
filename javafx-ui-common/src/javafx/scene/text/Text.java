@@ -1042,7 +1042,7 @@ public class Text extends Shape {
     }
 
     /**
-     * caret bias in the content. true means a bias towards forward charcter
+     * caret bias in the content. true means a bias towards forward character
      *
      * @treatAsPrivate implementation detail
      * @deprecated This is an internal API that is not intended
@@ -1109,9 +1109,13 @@ public class Text extends Shape {
      */
     @Deprecated
     public final HitInfo impl_hitTestChar(Point2D point) {
-        return Toolkit.getToolkit().convertHitInfoToFX(
-            getTextHelper().getHitInfo((float)point.getX(),
-                                      (float)point.getY()));
+        Object hit = getTextHelper().getHitInfo((float)point.getX(),
+                                                (float)point.getY());
+
+        if (hit instanceof HitInfo) return (HitInfo)hit;
+
+        //Delete this in the future.
+        return Toolkit.getToolkit().convertHitInfoToFX(hit);
     }
 
     /**
@@ -1145,8 +1149,8 @@ public class Text extends Shape {
      */
     private void getDecorationShapes() {
         if (getImpl_caretPosition() >= 0) {
-            //convert insertion postiion into character index
-            int charIndex = getImpl_caretPosition() - ((isImpl_caretBias()) ? 0 : 1);
+            //convert insertion position into character index
+            int charIndex = getImpl_caretPosition();
             Object nativeShape =
                 getTextHelper().getCaretShape(charIndex, isImpl_caretBias());
             setImpl_caretShape(

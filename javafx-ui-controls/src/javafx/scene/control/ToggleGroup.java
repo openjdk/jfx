@@ -29,8 +29,8 @@ import javafx.beans.property.ReadOnlyObjectProperty;
 import javafx.beans.property.ReadOnlyObjectWrapper;
 import javafx.collections.ListChangeListener.Change;
 import javafx.collections.ObservableList;
-
-import com.sun.javafx.collections.VetoableObservableList;
+import com.sun.javafx.collections.VetoableListDecorator;
+import com.sun.javafx.collections.TrackableObservableList;
 
 /**
  * A class which contains a reference to all {@code Toggles} whose
@@ -52,19 +52,7 @@ public class ToggleGroup {
         return toggles;
     }
 
-    private final ObservableList<Toggle> toggles = new VetoableObservableList<Toggle>() {
-        @Override protected void onProposedChange(List<Toggle> toBeAdded, int... indexes) {
-            for (Toggle t: toBeAdded) {
-                if (indexes[0] == 0 && indexes[1] == size()) {
-                    // we don't need to check for duplicates because this is a setAll.                    
-                    break;
-                }
-                if (toggles.contains(t)) {
-                    throw new IllegalArgumentException("Duplicate toggles are not allow in a ToggleGroup.");
-                }
-            }
-        }
-
+    private final ObservableList<Toggle> toggles = new VetoableListDecorator<Toggle>(new TrackableObservableList<Toggle>() {
         @Override protected void onChanged(Change<Toggle> c) {            
             while (c.next()) {
                 // Look through the removed toggles, and if any of them was the
@@ -96,6 +84,18 @@ public class ToggleGroup {
                         selectToggle(t);
                         break;
                     }
+                }
+            }
+        }
+    }) {
+        @Override protected void onProposedChange(List<Toggle> toBeAdded, int... indexes) {
+            for (Toggle t: toBeAdded) {
+                if (indexes[0] == 0 && indexes[1] == size()) {
+                    // we don't need to check for duplicates because this is a setAll.
+                    break;
+                }
+                if (toggles.contains(t)) {
+                    throw new IllegalArgumentException("Duplicate toggles are not allow in a ToggleGroup.");
                 }
             }
         }
