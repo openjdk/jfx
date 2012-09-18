@@ -509,13 +509,28 @@ public class ComboBoxListViewSkin<T> extends ComboBoxPopupControl<T> {
                 return getListViewPrefHeight();
             }
             
+            @Override 
+            public void impl_processCSS(com.sun.javafx.css.StyleManager styleManger, boolean reapply) {
+                
+                //
+                // If the popup doesn't have an owner window, then css won't 
+                // have any stylesheets for the popup yet since the popup gets
+                // the stylesheets from the scene of the owner window.
+                //
+                final PopupControl popup = getPopup();
+                if (popup.getOwnerWindow() == null) return;
+                
+                super.impl_processCSS(styleManger, reapply);
+            }
+            
             private void doCSSCheck() {
-                Parent parent = getPopup().getScene().getRoot();
-                if ((isFirstSizeCalculation || getSkin() == null) && parent.getScene() != null) {
+                final PopupControl popup = getPopup();
+                if ((isFirstSizeCalculation || getSkin() == null) && popup.getOwnerWindow() != null) {
                     // if the skin is null, it means that the css related to the
                     // listview skin hasn't been loaded yet, so we force it here.
                     // This ensures the combobox button is the correct width
                     // when it is first displayed, before the listview is shown.
+                    final Parent parent = getPopup().getScene().getRoot();
                     parent.impl_processCSS(true);
                     isFirstSizeCalculation = false;
                 }

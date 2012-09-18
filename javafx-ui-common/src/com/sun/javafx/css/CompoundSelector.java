@@ -192,11 +192,6 @@ final public class CompoundSelector extends Selector {
     }
 
     @Override
-    boolean mightApply(final String className, final String id, final List<String> styleClasses) {
-        return selectors.get(selectors.size()-1).mightApply(className, id, styleClasses);
-    }
-
-    @Override
     boolean stateMatches(final Node node, long states) {
         return stateMatches(node, states, selectors.size()-1);
     }

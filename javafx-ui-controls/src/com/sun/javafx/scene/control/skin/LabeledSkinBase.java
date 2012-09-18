@@ -467,7 +467,7 @@ public abstract class LabeledSkinBase<C extends Labeled, B extends BehaviorBase<
             if (w == -1) {
                 w = availableWidth;
             }
-            double minW = Math.min(getSkinnable().minWidth(-1), availableWidth);
+            double minW = Math.min(computeMinWidth(-1), availableWidth);
             if (horizontalPosition && !isIgnoreGraphic()) {
                 double graphicW = (labeled.getGraphic().getLayoutBounds().getWidth() + labeled.getGraphicTextGap());
                 w -= graphicW;
@@ -486,7 +486,7 @@ public abstract class LabeledSkinBase<C extends Labeled, B extends BehaviorBase<
             if (h == -1) {
                 h = availableHeight;
             }
-            double minH = Math.min(getSkinnable().minHeight(w), availableHeight);
+            double minH = Math.min(computeMinHeight(w), availableHeight);
             if (verticalPosition && labeled.getGraphic() != null) {
                 double graphicH = labeled.getGraphic().getLayoutBounds().getHeight() + labeled.getGraphicTextGap();
                 h -= graphicH;

@@ -741,12 +741,12 @@ public abstract class Control extends Region implements Skinnable {
      * @deprecated This is an internal API that is not intended for use and will be removed in the next version
      */
     @Deprecated
-    @Override public void impl_processCSS(boolean reapply) {
+    @Override public void impl_processCSS(StyleManager styleManager, boolean reapply) {
         if (reapply && getUserAgentStylesheet() != null) {
-            StyleManager.getStyleManager(getScene()).addUserAgentStylesheet(getUserAgentStylesheet());
+            styleManager.addUserAgentStylesheet(getUserAgentStylesheet());
         }
 
-        super.impl_processCSS(reapply);
+        super.impl_processCSS(styleManager, reapply);
 
         if (getSkin() == null) {
             final String msg = 

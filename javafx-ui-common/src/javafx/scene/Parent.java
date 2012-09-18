@@ -1078,6 +1078,9 @@ public abstract class Parent extends Node {
             final Scene scene = getScene();
             if (scene != null) {
 
+                // if stylesheets change, 
+                //    then this Parent needs a new StyleManager 
+                Parent.this.styleManager = null;
                 StyleManager sm = getStyleManager();
                 if (sm != null) sm.stylesheetsChanged(c);
                 
@@ -1110,19 +1113,21 @@ public abstract class Parent extends Node {
         final Scene scene = getScene();
         final boolean hasStylesheets = (getStylesheets().isEmpty() == false);
         
-        if (hasStylesheets == false || scene == null) {
+        if (scene == null) {
             
             styleManager = null;
             
-        } else if (styleManager == null) {            
+        } else if (styleManager == null) {
             
-            Parent parent = getParent();
-            StyleManager sm = null;
-            while (parent != null && (sm = parent.styleManager) == null) {
-                parent = parent.getParent();
-            }
-            if (sm == null) sm = scene.styleManager;
-            styleManager = StyleManager.createStyleManager(this, sm);
+            // My styleManager is my parent's styleManager, 
+            // unless I have stylesheets of my own. 
+            final Parent parent = getParent();
+            styleManager = 
+                (parent != null) ? parent.getStyleManager() : scene.styleManager;
+            
+            if (hasStylesheets) {                        
+                styleManager = StyleManager.createStyleManager(Parent.this, styleManager);            
+            } 
         }
         
         return styleManager;
@@ -1170,18 +1175,18 @@ public abstract class Parent extends Node {
      */
     @Deprecated
     @Override public void impl_processCSS(StyleManager styleManager, boolean reapply) {
-        
+
+        // Parent has its own StyleManager which is either adopted from 
+        // Scene or is created new if this Parent has its own stylesheets.
         final StyleManager parentStyleManager = getStyleManager();
-        final StyleManager relevantStyleManager = 
-                parentStyleManager != null ? parentStyleManager : styleManager; 
         
         // Determine whether we will need to reapply from here on down
         boolean flag = reapply || cssFlag == CSSFlags.REAPPLY;
         // Let the super implementation handle CSS for this node
-        super.impl_processCSS(relevantStyleManager, flag);
+        super.impl_processCSS(parentStyleManager, flag);
         // For each child, process CSS
         for (int i=0, max=children.size(); i<max; i++) {
-            children.get(i).impl_processCSS(relevantStyleManager, flag);
+            children.get(i).impl_processCSS(parentStyleManager, flag);
         }
     }
     
