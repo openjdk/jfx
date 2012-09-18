@@ -26,19 +26,16 @@
 package com.sun.javafx.scene.control.skin;
 
 import java.util.ArrayList;
-
 import javafx.beans.InvalidationListener;
 import javafx.beans.Observable;
 import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.BooleanPropertyBase;
-import javafx.beans.property.DoubleProperty;
-import javafx.beans.property.DoublePropertyBase;
 import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
 import javafx.collections.ObservableList;
 import javafx.event.Event;
-import javafx.event.EventDispatcher;
 import javafx.event.EventDispatchChain;
+import javafx.event.EventDispatcher;
 import javafx.event.EventHandler;
 import javafx.geometry.Orientation;
 import javafx.scene.Group;
@@ -52,7 +49,6 @@ import javafx.scene.input.ScrollEvent;
 import javafx.scene.layout.Region;
 import javafx.scene.layout.StackPane;
 import javafx.scene.shape.Rectangle;
-
 import javafx.util.Callback;
 
 /**
@@ -1313,12 +1309,13 @@ public class VirtualFlow extends Region {
 
         if (lengthBar.isVisible()) {
             lengthBar.setMax(1);
-            
-            if (numCellsVisibleOnScreen == 0) {
-                // special case to help resolve RT-17701
+
+            if (numCellsVisibleOnScreen == 0 && cellCount == 1) {
+                // special case to help resolve RT-17701 and the case where we have
+                // only a single row and it is bigger than the viewport
                 lengthBar.setVisibleAmount(flowLength / sumCellLength);
             } else {
-                lengthBar.setVisibleAmount(numCellsVisibleOnScreen / (float) cellCount);
+                lengthBar.setVisibleAmount(cellCount / viewportLength);
             }
 
             // Fix for RT-11873. If this isn't here, we can have a situation where
