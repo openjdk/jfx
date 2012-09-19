@@ -29,14 +29,13 @@ import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
-
-import com.sun.javafx.jmx.MXNodeAlgorithm;
-import com.sun.javafx.jmx.MXNodeAlgorithmContext;
-import javafx.beans.property.*;
+import javafx.beans.property.ObjectProperty;
+import javafx.beans.property.ReadOnlyBooleanProperty;
+import javafx.beans.property.ReadOnlyBooleanWrapper;
+import javafx.beans.property.SimpleObjectProperty;
 import javafx.collections.FXCollections;
 import javafx.collections.ListChangeListener.Change;
 import javafx.collections.ObservableList;
-
 import com.sun.javafx.Logging;
 import com.sun.javafx.TempState;
 import com.sun.javafx.Utils;
@@ -51,6 +50,8 @@ import com.sun.javafx.geom.Point2D;
 import com.sun.javafx.geom.RectBounds;
 import com.sun.javafx.geom.transform.BaseTransform;
 import com.sun.javafx.geom.transform.NoninvertibleTransformException;
+import com.sun.javafx.jmx.MXNodeAlgorithm;
+import com.sun.javafx.jmx.MXNodeAlgorithmContext;
 import com.sun.javafx.logging.PlatformLogger;
 import com.sun.javafx.scene.CSSFlags;
 import com.sun.javafx.scene.DirtyBits;
@@ -59,8 +60,7 @@ import com.sun.javafx.sg.PGGroup;
 import com.sun.javafx.sg.PGNode;
 import com.sun.javafx.tk.Toolkit;
 
-import static com.sun.javafx.logging.PulseLogger.PULSE_LOGGING_ENABLED;
-import static com.sun.javafx.logging.PulseLogger.PULSE_LOGGER;
+import static com.sun.javafx.logging.PulseLogger.*;
 
 /**
  * The base class for all nodes that have children in the scene graph.
