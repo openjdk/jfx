@@ -1,0 +1,132 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+Copyright (c) 2010, 2012, Oracle and/or its affiliates. All rights reserved.
+DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+
+This code is free software; you can redistribute it and/or modify it
+under the terms of the GNU General Public License version 2 only, as
+published by the Free Software Foundation.  Oracle designates this
+particular file as subject to the "Classpath" exception as provided
+by Oracle in the LICENSE file that accompanied this code.
+
+This code is distributed in the hope that it will be useful, but WITHOUT
+ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
+version 2 for more details (a copy is included in the LICENSE file that
+accompanied this code).
+
+You should have received a copy of the GNU General Public License version
+2 along with this work; if not, write to the Free Software Foundation,
+Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301 USA.
+
+Please contact Oracle, 500 Oracle Parkway, Redwood Shores, CA 94065 USA
+or visit www.oracle.com if you need additional information or have any
+questions.
+-->
+
+<?import javafx.geometry.*?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.image.*?>
+<?import javafx.scene.layout.*?>
+
+<VBox xmlns:fx="http://javafx.com/fxml">
+    <Label text="The example below shows GridPane content placement by specifying rows and columns:" 
+        wrapText="true"/>    
+    <GridPane hgap="4" vgap="6">
+        <padding><Insets top="18" left="18" bottom="18" right="18"/></padding>
+        <Label GridPane.columnIndex="0" GridPane.rowIndex="0" 
+            GridPane.halignment="RIGHT"
+            text="Name:"/>
+        <Label GridPane.columnIndex="1" GridPane.rowIndex="0" 
+            GridPane.columnSpan="2" GridPane.rowSpan="1"
+            GridPane.halignment="LEFT"
+            text="John Q. Public"/>
+        <Label GridPane.columnIndex="0" GridPane.rowIndex="1"
+            GridPane.halignment="RIGHT"
+            text="Address:"/>
+        <Label GridPane.columnIndex="1" GridPane.rowIndex="1" 
+            GridPane.columnSpan="5" GridPane.rowSpan="1"
+            GridPane.halignment="LEFT"
+            text="12345 Main Street, Some City, CA"/>
+    </GridPane>    
+    <Separator/>
+    
+    <Label text="The example below shows GridPane content placement by influencing the rows and columns themselves."
+        wrapText="true"/>
+    <GridPane>
+        <fx:define>
+            <RowConstraints fx:id="rowinfo" minHeight="40" prefHeight="40" maxHeight="40"/>
+            <ColumnConstraints fx:id="colinfo" minWidth="90" prefWidth="90" maxWidth="90"/>
+        </fx:define>
+        <padding><Insets top="18" left="18" bottom="18" right="18"/></padding>
+        <rowConstraints>
+            <fx:reference source="rowinfo"/>
+            <fx:reference source="rowinfo"/>
+            <fx:reference source="rowinfo"/>
+        </rowConstraints>
+        <columnConstraints>
+            <fx:reference source="colinfo"/>
+            <fx:reference source="colinfo"/>
+            <fx:reference source="colinfo"/>
+        </columnConstraints>
+    
+        <Label GridPane.rowIndex="0" GridPane.columnIndex="0"
+            GridPane.halignment="RIGHT"
+            text="Category:"/>        
+        <Label GridPane.rowIndex="0" GridPane.columnIndex="1"
+            text="Wines"/>        
+        <Label GridPane.rowIndex="1" GridPane.columnIndex="0"
+            GridPane.halignment="RIGHT"
+            text="Company:"/>        
+        <Label GridPane.rowIndex="1" GridPane.columnIndex="1"
+            text="Acme Winery"/>        
+        <ImageView GridPane.rowIndex="1" GridPane.columnIndex="2"
+            GridPane.halignment="CENTER"
+            image="$ICON_48"/>
+        <Label GridPane.rowIndex="2" GridPane.columnIndex="0"
+            GridPane.halignment="RIGHT"
+            text="Rating:"/>        
+        <Label GridPane.rowIndex="2" GridPane.columnIndex="1"
+            text="Excellent"/>                    
+    </GridPane>
+    <Separator/>
+
+    <Label text="The example below shows GridPane content placement by influencing row and column percentages.  Also, grid lines are made visible in this example.  The lines can be helpful in debugging."
+        wrapText="true"/>
+    <GridPane gridLinesVisible="true">
+        <fx:define>
+            <RowConstraints fx:id="rowinfo3" percentHeight="50"/>
+            <ColumnConstraints fx:id="colInfo2" percentWidth="25"/>
+            <ColumnConstraints fx:id="colInfo3" percentWidth="50"/>
+        </fx:define>        
+        <padding><Insets top="18" left="18" bottom="18" right="18"/></padding>
+        <rowConstraints>
+            <fx:reference source="rowinfo3"/>
+            <fx:reference source="rowinfo3"/>
+        </rowConstraints>
+        <columnConstraints>
+            <fx:reference source="colInfo2"/>
+            <fx:reference source="colInfo3"/>
+            <fx:reference source="colInfo2"/>
+        </columnConstraints>
+        
+        <Label GridPane.rowIndex="0" GridPane.columnIndex="0" 
+            GridPane.halignment="RIGHT"
+            text=" Member Name:"/>
+        <Label GridPane.rowIndex="0" GridPane.columnIndex="1" 
+            text="MyName">
+            <GridPane.margin><Insets top="0" left="0" bottom="0" right="10"/></GridPane.margin>
+        </Label>
+        <Button GridPane.rowIndex="1" GridPane.columnIndex="2"
+            GridPane.margin="10, 10, 10, 10"
+            GridPane.halignment="CENTER"
+            text="Help"/>
+        <Label GridPane.rowIndex="1" GridPane.columnIndex="0"
+            GridPane.halignment="RIGHT"
+            text="Member Number:"/>
+        <TextField GridPane.rowIndex="1" GridPane.columnIndex="1" 
+            text="Your Number">
+            <GridPane.margin><Insets top="10" left="10" bottom="10" right="10"/></GridPane.margin>
+        </TextField>
+    </GridPane>
+</VBox>

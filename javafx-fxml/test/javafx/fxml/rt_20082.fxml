@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+Copyright (c) 2011 Oracle and/or its affiliates. All rights reserved.
+-->
+
+<?import javafx.fxml.*?>
+
+<Widget name="root" xmlns:fx="http://javafx.com/fxml">
+    <fx:include source="rt_20082_include.fxml"/>
+</Widget>

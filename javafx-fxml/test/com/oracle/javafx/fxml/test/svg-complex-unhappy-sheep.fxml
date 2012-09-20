@@ -1,0 +1,609 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+Copyright (c) 2010, 2012, Oracle and/or its affiliates. All rights reserved.
+DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+
+This code is free software; you can redistribute it and/or modify it
+under the terms of the GNU General Public License version 2 only, as
+published by the Free Software Foundation.  Oracle designates this
+particular file as subject to the "Classpath" exception as provided
+by Oracle in the LICENSE file that accompanied this code.
+
+This code is distributed in the hope that it will be useful, but WITHOUT
+ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
+version 2 for more details (a copy is included in the LICENSE file that
+accompanied this code).
+
+You should have received a copy of the GNU General Public License version
+2 along with this work; if not, write to the Free Software Foundation,
+Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301 USA.
+
+Please contact Oracle, 500 Oracle Parkway, Redwood Shores, CA 94065 USA
+or visit www.oracle.com if you need additional information or have any
+questions.
+-->
+
+<?import java.lang.*?>
+<?import javafx.animation.*?>
+<?import javafx.animation.transition.*?>
+<?import javafx.event.*?>
+<?import javafx.fxd.*?>
+<?import javafx.geometry.*?>
+<?import javafx.scene.*?>
+<?import javafx.scene.chart.*?>
+<?import javafx.scene.chart.data.*?>
+<?import javafx.scene.chart.part.*?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.control.table.*?>
+<?import javafx.scene.effect.*?>
+<?import javafx.scene.effect.light.*?>
+<?import javafx.scene.image.*?>
+<?import javafx.scene.input.*?>
+<?import javafx.scene.layout.*?>
+<?import javafx.scene.media.*?>
+<?import javafx.scene.paint.*?>
+<?import javafx.scene.shape.*?>
+<?import javafx.scene.text.*?>
+<?import javafx.scene.transform.*?>
+<?import javafx.scene.web.*?>
+<?import javafx.stage.*?>
+<?import javafx.util.*?>
+
+<Group xmlns:fx="http://javafx.com/fxml">
+  <children>
+      <Group>
+        <clip>
+          <Rectangle height="208.0" width="176.0" strokeWidth="0.0050"/>
+        </clip>
+        <children>
+            <Group translateY="103.0" translateX="87.0">
+              <clip>
+                <Rectangle height="208.0" width="176.0" y="-103.0" x="-87.0"/>
+              </clip>
+              <children>
+                  <Rectangle fx:id="Rectangle" id="Rectangle" stroke="$null" height="208.0" width="176.0" fill="#c4e7ffff" y="-104.0" x="-88.0"/>
+                  <Group fx:id="Scene_2" id="Scene_2">
+                    <children>
+                        <Rectangle fx:id="Rectangle_1" id="Rectangle_1" stroke="$null" height="208.0" width="176.0" fill="#c4e7ffff" y="-104.0" x="-88.0"/>
+                        <Ellipse fx:id="Ellipse_256" id="Ellipse_256" stroke="$null" centerY="-78.0" radiusY="16.0" centerX="-59.49" radiusX="17.49" fill="#ffffccff"/>
+                        <SVGPath fx:id="Free_Hand_255" id="Free_Hand_255" content="M2.36,-28.47 C-24.65,-22.3 -25.98,-57.67 0.14,-54.46 C-14.39,-76.81 21.51,-72.4 24.06,-57.63 C22.86,-66.81 33.94,-100.16 46.76,-82.51 C62.24,-105.79 98.66,-74.96 74.47,-56.83 C88.53,-63.4 110.23,-45.09 95.67,-31.76 C78.93,-23.27 59.09,-24.5 42.05,-31.6 C39.65,-7.22 16.19,-26.86 5.63,-30.07" stroke="$null" fill="#ffffffff"/>
+                        <SVGPath fx:id="Free_Hand_254" id="Free_Hand_254" content="M-83.27,26.98 C-82.76,12.93 -62.94,8.75 -52.84,14.79 C-65.69,-1.31 -39.79,-27.91 -29.83,-3.56 C-35.89,-29.52 7.7,-26.19 -2.58,-1.1 C14.92,-28.66 33.22,3.53 27.06,21.11 C34.44,11.96 49.05,-1.05 61.24,9.1 C65.22,40.86 27.07,37.93 8.06,39.76 C-24.24,43.21 -57.43,41.69 -89.08,34.19 C-90.07,29.84 -91.04,23.35 -86.03,20.91" stroke="$null" fill="#ffffffff"/>
+                        <SVGPath fx:id="Bezier_245" id="Bezier_245" content="M-87,50 C-88,50 -94,-53 -94,-53 C-94,-53 -42,-55 -42,-55 C-42,-55 -53,51 -53,51 C-53,51 -88,50 -87,50 Z" stroke="$null" fill="#8e7cbfff"/>
+                        <SVGPath fx:id="Bezier_246" id="Bezier_246" content="M-87,-49 C-87,-50 -77,-49 -77,-49 C-77,-49 -76,47 -76,47 C-76,47 -82,46 -82,46 C-82,46 -87,-50 -87,-49 Z" stroke="$null" fill="#a08dd7ff"/>
+                        <SVGPath fx:id="Bezier_247" id="Bezier_247" content="M-72,44 C-71,43 -71,-50 -71,-50 C-71,-50 -59,-50 -59,-50 C-59,-50 -67,45 -67,45 C-67,45 -71,43 -72,44 Z" stroke="$null" fill="#a08dd7ff"/>
+                        <SVGPath fx:id="Bezier_248" id="Bezier_248" content="M-62,45 C-63,44 -55,-50 -55,-50 C-55,-50 -46,-50 -46,-50 C-46,-50 -58,47 -58,47 C-58,47 -63,44 -62,45 Z" stroke="$null" fill="#a08dd7ff"/>
+                        <SVGPath fx:id="Bezier_244" id="Bezier_244" content="M-99,-68 C-100,-68 -66,-75 -66,-75 C-66,-75 -69,80 -69,80 C-69,80 -103,79 -103,79 C-103,79 -100,-68 -99,-68 Z" stroke="$null" fill="#c6a9d7ff"/>
+                        <SVGPath fx:id="Bezier_249" id="Bezier_249" content="M-73,-67 C-74,-67 -81,-66 -81,-66 C-81,-66 -79,74 -79,74 C-79,74 -74,73 -74,73 C-74,73 -74,-67 -73,-67 Z" stroke="$null" fill="#8e7cbfff"/>
+                        <SVGPath fx:id="Bezier_250" id="Bezier_250" content="M-94,-64 C-95,-64 -85,-64 -85,-64 C-85,-64 -84,74 -84,74 C-84,74 -90,73 -90,73 C-90,73 -95,-64 -94,-64 Z" stroke="$null" fill="#8e7cbfff"/>
+                        <Group fx:id="Animation_3" id="Animation_3">
+                          <children>
+                              <SVGPath fx:id="Bezier_217" id="Bezier_217" content="M-100,92 C-101,91 -109,2 -109,2 C-109,2 -56,-4 -56,-4 C-56,-4 -62,27 -62,27 C-62,27 -25,27 -25,27 C-25,27 -34,-36 -34,-36 C-34,-36 80,-38 80,-38 C80,-38 56,90 56,90 C56,90 -101,91 -100,92 Z" stroke="$null" fill="#bebef1ff"/>
+                              <SVGPath fx:id="Bezier_218" id="Bezier_218" content="M-17,-22 C-16,-22 -16,6 -16,6 C-16,6 4,6 4,6 C4,6 7,-23 7,-23 C7,-23 -16,-22 -17,-22 Z" stroke="$null" fill="#8787b4ff"/>
+                              <SVGPath fx:id="Bezier_219" id="Bezier_219" content="M-54,33 C-55,33 -54,48 -54,48 C-54,48 -29,48 -29,48 C-29,48 -28,36 -28,36 C-28,36 -55,33 -54,33 Z" stroke="$null" fill="#8787b4ff"/>
+                              <SVGPath fx:id="Bezier_220" id="Bezier_220" content="M-53,59 C-53,59 -53,73 -53,73 C-53,73 -30,72 -30,72 C-30,72 -30,61 -30,61 C-30,61 -53,59 -53,59 Z" stroke="$null" fill="#8787b4ff"/>
+                              <SVGPath fx:id="Bezier_221" id="Bezier_221" content="M-99,9 C-98,10 -65,4 -65,4 C-65,4 -70,28 -70,28 C-70,28 -99,26 -99,26 C-99,26 -98,10 -99,9 Z" stroke="$null" fill="#8787b4ff"/>
+                              <SVGPath fx:id="Bezier_222" id="Bezier_222" content="M2,84 C2,85 -3,32 -3,32 C-3,32 36,32 36,32 C36,32 27,86 27,86 C27,86 2,85 2,84 Z" stroke="$null" fill="#8787b4ff"/>
+                              <SVGPath fx:id="Bezier_223" id="Bezier_223" content="M24,-23 C23,-22 18,5 18,5 C18,5 42,4 42,4 C42,4 53,-25 53,-25 C53,-25 23,-22 24,-23 Z" stroke="$null" fill="#8787b4ff"/>
+                              <SVGPath fx:id="Bezier_224" id="Bezier_224" content="M-80,58 C-80,58 -81,97 -81,97 C-81,97 -97,95 -97,95 C-97,95 -99,58 -99,58 C-99,58 -80,58 -80,58 Z" stroke="$null" fill="#8787b4ff"/>
+                              <Polyline fx:id="Free_Hand_225" id="Free_Hand_225" stroke="#ababe4ff" strokeLineJoin="bevel" fill="#a7a7a7ff">
+                                <points>
+                                    <Double fx:value="3.0"/>
+                                    <Double fx:value="-38.01"/>
+                                    <Double fx:value="2.93"/>
+                                    <Double fx:value="-65.01"/>
+                                </points>
+                              </Polyline>
+                              <Polyline fx:id="Free_Hand_226" id="Free_Hand_226" stroke="#ababe4ff" strokeLineJoin="bevel" fill="#a7a7a7ff">
+                                <points>
+                                    <Double fx:value="-12.0"/>
+                                    <Double fx:value="-51.0"/>
+                                    <Double fx:value="11.2"/>
+                                    <Double fx:value="-59.79"/>
+                                </points>
+                              </Polyline>
+                              <Polyline fx:id="Free_Hand_227" id="Free_Hand_227" stroke="#ababe4ff" strokeLineJoin="bevel" fill="#a7a7a7ff">
+                                <points>
+                                    <Double fx:value="-4.99"/>
+                                    <Double fx:value="-46.0"/>
+                                    <Double fx:value="11.49"/>
+                                    <Double fx:value="-48.24"/>
+                                </points>
+                              </Polyline>
+                              <Polyline fx:id="Free_Hand_228" id="Free_Hand_228" stroke="#ababe4ff" strokeLineJoin="bevel" fill="#a7a7a7ff">
+                                <points>
+                                    <Double fx:value="-74.99"/>
+                                    <Double fx:value="-2.99"/>
+                                    <Double fx:value="-76.49"/>
+                                    <Double fx:value="-19.5"/>
+                                </points>
+                              </Polyline>
+                              <Polyline fx:id="Free_Hand_229" id="Free_Hand_229" stroke="#ababe4ff" strokeLineJoin="bevel" fill="#a7a7a7ff">
+                                <points>
+                                    <Double fx:value="-84.99"/>
+                                    <Double fx:value="-9.99"/>
+                                    <Double fx:value="-72.99"/>
+                                    <Double fx:value="-10.0"/>
+                                </points>
+                              </Polyline>
+                              <Polyline fx:id="Free_Hand_230" id="Free_Hand_230" stroke="#ababe4ff" strokeLineJoin="bevel" fill="#a7a7a7ff">
+                                <points>
+                                    <Double fx:value="-82.0"/>
+                                    <Double fx:value="-15.0"/>
+                                    <Double fx:value="-73.33"/>
+                                    <Double fx:value="-15.66"/>
+                                </points>
+                              </Polyline>
+                              <Polyline fx:id="Free_Hand_231" id="Free_Hand_231" stroke="#ababe4ff" strokeLineJoin="bevel" fill="#a7a7a7ff">
+                                <points>
+                                    <Double fx:value="-50.03"/>
+                                    <Double fx:value="26.0"/>
+                                    <Double fx:value="-49.68"/>
+                                    <Double fx:value="13.66"/>
+                                </points>
+                              </Polyline>
+                              <Polyline fx:id="Free_Hand_232" id="Free_Hand_232" stroke="#ababe4ff" strokeLineJoin="bevel" fill="#a7a7a7ff">
+                                <points>
+                                    <Double fx:value="-53.0"/>
+                                    <Double fx:value="18.99"/>
+                                    <Double fx:value="-49.0"/>
+                                    <Double fx:value="19.0"/>
+                                </points>
+                              </Polyline>
+                              <Polyline fx:id="Free_Hand_233" id="Free_Hand_233" stroke="#ababe4ff" strokeLineJoin="bevel" fill="#a7a7a7ff">
+                                <points>
+                                    <Double fx:value="-52.0"/>
+                                    <Double fx:value="22.0"/>
+                                    <Double fx:value="-47.5"/>
+                                    <Double fx:value="22.0"/>
+                                </points>
+                              </Polyline>
+                              <Ellipse fx:id="Ellipse_235" id="Ellipse_235" stroke="$null" centerY="-41.0" radiusY="5.0" centerX="-13.49" radiusX="6.49" fill="#ababe4ff"/>
+                              <Ellipse fx:id="Ellipse_236" id="Ellipse_236" stroke="$null" centerY="-44.0" radiusY="7.0" centerX="17.0" radiusX="9.0" fill="#ababe4ff"/>
+                              <Ellipse fx:id="Ellipse_237" id="Ellipse_237" stroke="$null" centerY="-5.49" radiusY="6.49" centerX="-91.0" radiusX="8.0" fill="#ababe4ff"/>
+                              <SVGPath content="M-18.33,8 C-18.99,8 -20.33,-26 -20.33,-26 C-20.33,-26 10.33,-26 10.33,-26 C10.33,-26 6.34,8.66 6.34,8.66 C6.34,8.66 -18.99,8 -18.32,8 Z" fx:id="Bezier_263" id="Bezier_263" stroke="#9b9bcfff" strokeLineJoin="bevel" fill="$null"/>
+                              <SVGPath fx:id="Bezier_264" id="Bezier_264" content="M15.66,8 C16.99,8 20.99,-28 20.99,-28 C20.99,-28 57.65,-27.34 57.65,-27.34 C57.65,-27.34 44.32,7.99 44.32,7.99 C44.32,7.99 16.99,7.99 15.66,7.99 Z" stroke="#9b9bcfff" strokeLineJoin="bevel" fill="$null">
+                                <transforms>
+                                    <Affine mxx="1.0" myx="0.0" mxy="0.0" myy="1.0" tx="-1.0" ty="0.0"/>
+                                </transforms>
+                              </SVGPath>
+                              <SVGPath content="M-5.66,27.33 C-6.32,27.99 -0.33,88.66 -0.33,88.66 C-0.33,88.66 31.66,89.32 31.66,89.32 C31.66,89.32 39.66,25.32 39.66,25.32 C39.66,25.32 -6.34,27.98 -5.67,27.32 Z" fx:id="Bezier_265" id="Bezier_265" stroke="#9b9bcfff" strokeLineJoin="bevel" fill="$null"/>
+                              <SVGPath content="M-63.66,1.33 C-63,1.99 -92.32,5.99 -92.32,5.99 C-92.32,5.99 -91.66,29.99 -91.66,29.99 C-91.66,29.99 -68.33,30.65 -68.33,30.65 C-68.33,30.65 -63,1.99 -63.67,1.32 Z" fx:id="Bezier_266" id="Bezier_266" stroke="#9b9bcfff" strokeLineJoin="bevel" fill="$null"/>
+                              <SVGPath content="M-101,55.33 C-101.66,55.33 -78.34,55.33 -78.34,55.33 C-78.34,55.33 -78.34,103.33 -78.34,103.33 C-78.34,103.33 -98.34,102.67 -98.34,102.67 C-98.34,102.67 -101.67,55.34 -101,55.34 Z" fx:id="Bezier_267" id="Bezier_267" stroke="#9b9bcfff" strokeLineJoin="bevel" fill="$null"/>
+                              <Polyline fx:id="Line_269" id="Line_269" stroke="#bebef1ff" fill="$null">
+                                <points>
+                                    <Double fx:value="-55.66"/>
+                                    <Double fx:value="36.66"/>
+                                    <Double fx:value="-25.0"/>
+                                    <Double fx:value="39.33"/>
+                                </points>
+                              </Polyline>
+                              <Polyline fx:id="Line_270" id="Line_270" stroke="#bebef1ff" fill="$null">
+                                <points>
+                                    <Double fx:value="-56.33"/>
+                                    <Double fx:value="40.0"/>
+                                    <Double fx:value="-22.33"/>
+                                    <Double fx:value="44.66"/>
+                                </points>
+                              </Polyline>
+                              <Polyline fx:id="Line_271" id="Line_271" stroke="#bebef1ff" fill="$null">
+                                <points>
+                                    <Double fx:value="-57.0"/>
+                                    <Double fx:value="45.33"/>
+                                    <Double fx:value="-25.0"/>
+                                    <Double fx:value="47.33"/>
+                                </points>
+                              </Polyline>
+                              <Polyline fx:id="Line_272" id="Line_272" stroke="#bebef1ff" fill="$null">
+                                <points>
+                                    <Double fx:value="-54.33"/>
+                                    <Double fx:value="62.66"/>
+                                    <Double fx:value="-27.0"/>
+                                    <Double fx:value="60.0"/>
+                                </points>
+                              </Polyline>
+                              <Polyline fx:id="Line_273" id="Line_273" stroke="#bebef1ff" fill="$null">
+                                <points>
+                                    <Double fx:value="-57.0"/>
+                                    <Double fx:value="66.66"/>
+                                    <Double fx:value="-26.33"/>
+                                    <Double fx:value="65.33"/>
+                                </points>
+                              </Polyline>
+                              <Polyline fx:id="Line_274" id="Line_274" stroke="#bebef1ff" fill="$null">
+                                <points>
+                                    <Double fx:value="-55.0"/>
+                                    <Double fx:value="69.33"/>
+                                    <Double fx:value="-23.66"/>
+                                    <Double fx:value="71.33"/>
+                                </points>
+                              </Polyline>
+                              <Ellipse fx:id="Ellipse_275" id="Ellipse_275" stroke="#8f8fbfff" strokeLineJoin="bevel" centerY="-44.5" radiusY="2.83" centerX="17.5" radiusX="3.16" fill="$null"/>
+                              <Ellipse fx:id="Ellipse_276" id="Ellipse_276" stroke="#9393c4ff" strokeLineJoin="bevel" centerY="-41.16" radiusY="2.5" centerX="-12.5" radiusX="2.5" fill="$null"/>
+                              <Ellipse fx:id="Ellipse_277" id="Ellipse_277" stroke="#9191c1ff" strokeLineJoin="bevel" centerY="-6.16" radiusY="2.5" centerX="-89.83" radiusX="3.16" fill="$null"/>
+                              <Polyline fx:id="Free_Hand_278" id="Free_Hand_278" stroke="#9b9bcfff" strokeLineJoin="bevel" fill="$null">
+                                <points>
+                                    <Double fx:value="-0.99"/>
+                                    <Double fx:value="82.66"/>
+                                    <Double fx:value="-12.11"/>
+                                    <Double fx:value="81.77"/>
+                                </points>
+                              </Polyline>
+                              <Polyline fx:id="Free_Hand_279" id="Free_Hand_279" stroke="#9b9bcfff" strokeLineJoin="bevel" fill="$null">
+                                <points>
+                                    <Double fx:value="-1.66"/>
+                                    <Double fx:value="76.0"/>
+                                    <Double fx:value="-18.16"/>
+                                    <Double fx:value="74.49"/>
+                                </points>
+                              </Polyline>
+                              <Polyline fx:id="Free_Hand_280" id="Free_Hand_280" stroke="#9b9bcfff" strokeLineJoin="bevel" fill="$null">
+                                <points>
+                                    <Double fx:value="-2.33"/>
+                                    <Double fx:value="67.33"/>
+                                    <Double fx:value="-11.66"/>
+                                    <Double fx:value="66.88"/>
+                                </points>
+                              </Polyline>
+                              <Polyline fx:id="Free_Hand_281" id="Free_Hand_281" stroke="#9b9bcfff" strokeLineJoin="bevel" fill="$null">
+                                <points>
+                                    <Double fx:value="-7.66"/>
+                                    <Double fx:value="67.33"/>
+                                    <Double fx:value="-7.66"/>
+                                    <Double fx:value="71.66"/>
+                                </points>
+                              </Polyline>
+                              <Polyline fx:id="Free_Hand_282" id="Free_Hand_282" stroke="#9b9bcfff" strokeLineJoin="bevel" fill="$null">
+                                <points>
+                                    <Double fx:value="-13.0"/>
+                                    <Double fx:value="75.33"/>
+                                    <Double fx:value="-12.0"/>
+                                    <Double fx:value="79.33"/>
+                                </points>
+                              </Polyline>
+                          </children>
+                          <transforms>
+                              <Affine mxx="1.0" myx="0.0" mxy="0.0" myy="1.0" tx="-1.0" ty="-6.0"/>
+                          </transforms>
+                        </Group>
+                        <Group fx:id="Animation_4" id="Animation_4">
+                          <children>
+                              <SVGPath fx:id="Free_Hand_261" id="Free_Hand_261" content="M-114.09,88.13 C-108.67,80.04 -96.56,83.66 -91.95,90.29 C-87.64,84.27 -93.93,56.24 -81.46,61.93 C-90.43,49.52 -68.02,45.77 -67.57,58.81 C-69.66,39.13 -41.71,52.66 -51.85,65.07 C-43.88,71.85 -26.26,63.96 -20.23,78.82 C-4.88,58.71 16.77,89.64 -1.66,100.07" stroke="$null" fill="#78cf77ff"/>
+                              <SVGPath fx:id="Free_Hand_303" id="Free_Hand_303" content="M-79.1,90.25 C-89.78,83.36 -85.53,68.18 -72.76,78.77 C-81.14,56.68 -52.09,61.1 -60.56,80.44 C-54.51,73.82 -41.01,76.76 -40.9,86.49 C-35.77,79.25 -23.73,81.78 -21.28,90.44 C-2.62,62.42 1.11,111.22 -22.72,102.05 C-41.57,96.48 -62.72,101.88 -79.97,90.2" stroke="$null" fill="#26cf4dff">
+                                <transforms>
+                                    <Affine mxx="1.0" myx="0.0" mxy="0.0" myy="1.0" tx="1.0" ty="-6.0"/>
+                                </transforms>
+                              </SVGPath>
+                          </children>
+                          <transforms>
+                              <Affine mxx="1.0" myx="0.0" mxy="0.0" myy="1.0" tx="-1.0" ty="-3.0"/>
+                          </transforms>
+                        </Group>
+                        <Ellipse fx:id="Ellipse_262" id="Ellipse_262" stroke="$null" centerY="76.5" radiusY="19.49" centerX="45.0" radiusX="28.99" fill="#78cf77ff"/>
+                        <Group fx:id="Animation_2" id="Animation_2">
+                          <children>
+                              <Group fx:id="Group_copy_7" id="Group_copy_7">
+                                <children>
+                                    <Rectangle fx:id="Rectangle_119_copy_3" id="Rectangle_119_copy_3" stroke="$null" height="77.32" width="339.44" fill="#a0e74fff" y="71.37" x="-144.49"/>
+                                    <SVGPath fx:id="Bezier_121_copy_3" id="Bezier_121_copy_3" content="M4.91,71.37 C6.22,71.37 6.22,-210.41 6.22,-210.41 C6.22,-210.41 193.63,-210.41 193.63,-210.41 C193.63,-210.41 194.94,201.12 194.94,201.12 C194.94,201.12 6.22,71.38 4.91,71.38 Z" stroke="$null" fill="#fcffaeff"/>
+                                    <Polyline fx:id="Line_64_copy_3" id="Line_64_copy_3" stroke="#c2c485ff" strokeLineJoin="bevel" strokeLineCap="butt" fill="#e76f2dff" strokeWidth="2.62">
+                                      <points>
+                                          <Double fx:value="5.02"/>
+                                          <Double fx:value="71.99"/>
+                                          <Double fx:value="86.59"/>
+                                          <Double fx:value="127.25"/>
+                                      </points>
+                                    </Polyline>
+                                    <Polyline fx:id="Line_63_copy_3" id="Line_63_copy_3" stroke="#c2c485ff" strokeLineJoin="bevel" strokeLineCap="butt" fill="#e76f2dff" strokeWidth="2.62">
+                                      <points>
+                                          <Double fx:value="5.02"/>
+                                          <Double fx:value="71.99"/>
+                                          <Double fx:value="5.02"/>
+                                          <Double fx:value="-180.77"/>
+                                      </points>
+                                    </Polyline>
+                                    <Polyline fx:id="Line_97_copy_7" id="Line_97_copy_7" stroke="#c2c485ff" strokeLineCap="butt" fill="#e76f2dff" strokeWidth="2.62">
+                                      <points>
+                                          <Double fx:value="4.91"/>
+                                          <Double fx:value="49.09"/>
+                                          <Double fx:value="130.73"/>
+                                          <Double fx:value="101.51"/>
+                                      </points>
+                                    </Polyline>
+                                    <Polyline fx:id="Line_98_copy_7" id="Line_98_copy_7" stroke="#c2c485ff" strokeLineCap="butt" fill="#e76f2dff" strokeWidth="2.62">
+                                      <points>
+                                          <Double fx:value="4.91"/>
+                                          <Double fx:value="24.84"/>
+                                          <Double fx:value="147.77"/>
+                                          <Double fx:value="53.02"/>
+                                      </points>
+                                    </Polyline>
+                                    <Polyline fx:id="Line_99_copy_7" id="Line_99_copy_7" stroke="#c2c485ff" strokeLineCap="butt" fill="#e76f2dff" strokeWidth="2.62">
+                                      <points>
+                                          <Double fx:value="5.57"/>
+                                          <Double fx:value="-0.7"/>
+                                          <Double fx:value="155.63"/>
+                                          <Double fx:value="8.46"/>
+                                      </points>
+                                    </Polyline>
+                                    <Polyline fx:id="Line_100_copy_7" id="Line_100_copy_7" stroke="#c2c485ff" strokeLineCap="butt" fill="#e76f2dff" strokeWidth="2.62">
+                                      <points>
+                                          <Double fx:value="5.57"/>
+                                          <Double fx:value="-30.85"/>
+                                          <Double fx:value="138.59"/>
+                                          <Double fx:value="-33.47"/>
+                                      </points>
+                                    </Polyline>
+                                    <Polyline fx:id="Line_101_copy_7" id="Line_101_copy_7" stroke="#c2c485ff" strokeLineCap="butt" fill="#e76f2dff" strokeWidth="2.62">
+                                      <points>
+                                          <Double fx:value="4.91"/>
+                                          <Double fx:value="-57.06"/>
+                                          <Double fx:value="155.63"/>
+                                          <Double fx:value="-76.72"/>
+                                      </points>
+                                    </Polyline>
+                                    <Polyline fx:id="Line_102_copy_7" id="Line_102_copy_7" stroke="#c2c485ff" strokeLineCap="butt" fill="#e76f2dff" strokeWidth="2.62">
+                                      <points>
+                                          <Double fx:value="4.91"/>
+                                          <Double fx:value="-85.89"/>
+                                          <Double fx:value="158.25"/>
+                                          <Double fx:value="-123.9"/>
+                                      </points>
+                                    </Polyline>
+                                    <Polyline fx:id="Line_103_copy_7" id="Line_103_copy_7" stroke="#c2c485ff" strokeLineCap="butt" fill="#e76f2dff" strokeWidth="2.62">
+                                      <points>
+                                          <Double fx:value="4.91"/>
+                                          <Double fx:value="-113.42"/>
+                                          <Double fx:value="153.01"/>
+                                          <Double fx:value="-177.64"/>
+                                      </points>
+                                    </Polyline>
+                                    <Polyline fx:id="Line_106_copy_7" id="Line_106_copy_7" stroke="#c2c485ff" strokeLineCap="butt" fill="#e76f2dff" strokeWidth="2.62">
+                                      <points>
+                                          <Double fx:value="4.91"/>
+                                          <Double fx:value="-143.56"/>
+                                          <Double fx:value="138.59"/>
+                                          <Double fx:value="-210.4"/>
+                                      </points>
+                                    </Polyline>
+                                    <Polyline fx:id="Line_107_copy_7" id="Line_107_copy_7" stroke="#c2c485ff" strokeLineCap="butt" fill="#e76f2dff" strokeWidth="2.62">
+                                      <points>
+                                          <Double fx:value="25.88"/>
+                                          <Double fx:value="-153.39"/>
+                                          <Double fx:value="25.88"/>
+                                          <Double fx:value="-121.28"/>
+                                      </points>
+                                    </Polyline>
+                                    <Polyline fx:id="Line_108_copy_7" id="Line_108_copy_7" stroke="#c2c485ff" strokeLineCap="butt" fill="#e76f2dff" strokeWidth="2.62">
+                                      <points>
+                                          <Double fx:value="52.09"/>
+                                          <Double fx:value="-132.42"/>
+                                          <Double fx:value="52.09"/>
+                                          <Double fx:value="-96.38"/>
+                                      </points>
+                                    </Polyline>
+                                    <Polyline fx:id="Line_109_copy_7" id="Line_109_copy_7" stroke="#c2c485ff" strokeLineCap="butt" fill="#e76f2dff" strokeWidth="2.62">
+                                      <points>
+                                          <Double fx:value="82.24"/>
+                                          <Double fx:value="-147.49"/>
+                                          <Double fx:value="83.55"/>
+                                          <Double fx:value="-184.19"/>
+                                      </points>
+                                    </Polyline>
+                                    <Polyline fx:id="Line_110_copy_7" id="Line_110_copy_7" stroke="#c2c485ff" strokeLineCap="butt" fill="#e76f2dff" strokeWidth="2.62">
+                                      <points>
+                                          <Double fx:value="27.19"/>
+                                          <Double fx:value="-91.14"/>
+                                          <Double fx:value="27.85"/>
+                                          <Double fx:value="-59.03"/>
+                                      </points>
+                                    </Polyline>
+                                    <Polyline fx:id="Line_111_copy_7" id="Line_111_copy_7" stroke="#c2c485ff" strokeLineCap="butt" fill="#e76f2dff" strokeWidth="2.62">
+                                      <points>
+                                          <Double fx:value="82.89"/>
+                                          <Double fx:value="-104.24"/>
+                                          <Double fx:value="83.55"/>
+                                          <Double fx:value="-66.89"/>
+                                      </points>
+                                    </Polyline>
+                                    <Polyline fx:id="Line_112_copy_7" id="Line_112_copy_7" stroke="#c2c485ff" strokeLineCap="butt" fill="#e76f2dff" strokeWidth="2.62">
+                                      <points>
+                                          <Double fx:value="52.09"/>
+                                          <Double fx:value="-60.99"/>
+                                          <Double fx:value="52.09"/>
+                                          <Double fx:value="-31.5"/>
+                                      </points>
+                                    </Polyline>
+                                    <Polyline fx:id="Line_113_copy_7" id="Line_113_copy_7" stroke="#c2c485ff" strokeLineCap="butt" fill="#e76f2dff" strokeWidth="2.62">
+                                      <points>
+                                          <Double fx:value="29.16"/>
+                                          <Double fx:value="-30.85"/>
+                                          <Double fx:value="28.5"/>
+                                          <Double fx:value="0.6"/>
+                                      </points>
+                                    </Polyline>
+                                    <Polyline fx:id="Line_114_copy_7" id="Line_114_copy_7" stroke="#c2c485ff" strokeLineCap="butt" fill="#e76f2dff" strokeWidth="2.62">
+                                      <points>
+                                          <Double fx:value="81.58"/>
+                                          <Double fx:value="-30.85"/>
+                                          <Double fx:value="81.58"/>
+                                          <Double fx:value="3.87"/>
+                                      </points>
+                                    </Polyline>
+                                    <Polyline fx:id="Line_115_copy_7" id="Line_115_copy_7" stroke="#c2c485ff" strokeLineCap="butt" fill="#e76f2dff" strokeWidth="2.62">
+                                      <points>
+                                          <Double fx:value="54.71"/>
+                                          <Double fx:value="3.22"/>
+                                          <Double fx:value="54.71"/>
+                                          <Double fx:value="34.67"/>
+                                      </points>
+                                    </Polyline>
+                                    <Polyline fx:id="Line_116_copy_7" id="Line_116_copy_7" stroke="#c2c485ff" strokeLineCap="butt" fill="#e76f2dff" strokeWidth="2.62">
+                                      <points>
+                                          <Double fx:value="28.5"/>
+                                          <Double fx:value="29.43"/>
+                                          <Double fx:value="28.5"/>
+                                          <Double fx:value="58.26"/>
+                                      </points>
+                                    </Polyline>
+                                    <Polyline fx:id="Line_117_copy_7" id="Line_117_copy_7" stroke="#c2c485ff" strokeLineCap="butt" fill="#e76f2dff" strokeWidth="2.62">
+                                      <points>
+                                          <Double fx:value="84.86"/>
+                                          <Double fx:value="39.92"/>
+                                          <Double fx:value="85.51"/>
+                                          <Double fx:value="82.51"/>
+                                      </points>
+                                    </Polyline>
+                                    <Polyline fx:id="Line_118_copy_7" id="Line_118_copy_7" stroke="#c2c485ff" strokeLineCap="butt" fill="#e76f2dff" strokeWidth="2.62">
+                                      <points>
+                                          <Double fx:value="46.85"/>
+                                          <Double fx:value="67.44"/>
+                                          <Double fx:value="48.16"/>
+                                          <Double fx:value="102.82"/>
+                                      </points>
+                                    </Polyline>
+                                </children>
+                                <transforms>
+                                    <Affine mxx="1.0" myx="0.0" mxy="0.0" myy="1.0" tx="10.51" ty="0.0"/>
+                                </transforms>
+                              </Group>
+                              <SVGPath content="M-1.63,13.7 C-1.63,13.7 -90.75,-78.04 -90.75,-78.04 C-90.75,-78.04 10.16,-25.62 10.16,-25.62 C10.16,-25.62 -22.6,-127.84 -22.6,-127.84 C-22.6,-127.84 33.75,-51.83 33.75,-51.83 C33.75,-51.83 57.34,-147.5 57.34,-147.5 C57.34,-147.5 65.2,-45.28 65.2,-45.28 C65.2,-45.28 97.96,-63.62 97.96,-63.62 C97.96,-63.62 69.13,-17.75 69.13,-17.75 C69.13,-17.75 126.79,1.9 126.79,1.9 C126.79,1.9 62.58,18.93 62.58,18.93 C62.58,18.93 117.62,93.63 117.62,93.63 C117.62,93.63 50.78,47.76 50.78,47.76 C50.78,47.76 57.33,101.49 57.33,101.49 C57.33,101.49 35.05,55.62 35.05,55.62 C35.05,55.62 -18.68,97.55 -18.68,97.55 C-18.68,97.55 10.15,47.75 10.15,47.75 C10.15,47.75 -90.76,76.58 -90.76,76.58 C-90.76,76.58 -1.64,13.68 -1.64,13.68 Z" fx:id="Bezier_80_copy_3" id="Bezier_80_copy_3" stroke="$null" fill="#ffffffff"/>
+                              <SVGPath fx:id="Free_Hand_12_copy_5" id="Free_Hand_12_copy_5" content="M-38.57,56.39 C-36.83,77.75 -53.52,90.84 -31.71,85.31 C-35.13,76.86 -38.2,82.8 -35.69,57.37" stroke="$null" fill="black">
+                                <transforms>
+                                    <Affine mxx="1.0" myx="0.0" mxy="0.0" myy="1.0" tx="0.0" ty="0.0"/>
+                                </transforms>
+                              </SVGPath>
+                              <SVGPath fx:id="Free_Hand_12_copy_6" id="Free_Hand_12_copy_6" content="M-38.57,56.39 C-36.83,77.75 -53.52,90.84 -31.71,85.31 C-35.13,76.86 -38.2,82.8 -35.69,57.37" stroke="$null" fill="black">
+                                <transforms>
+                                    <Affine mxx="1.0" myx="0.0" mxy="0.0" myy="1.0" tx="0.0" ty="0.0"/>
+                                </transforms>
+                              </SVGPath>
+                              <SVGPath fx:id="Free_Hand_23_copy_8" id="Free_Hand_23_copy_8" content="M-12.4,-23.99 C-10.65,-39.63 -42.46,-39.33 -34.2,-23.19 C-31.46,-17.82 -17.57,-26 -26.64,-22.66 C-41.04,-27.83 -17.44,-41.37 -17.86,-19.89" stroke="$null" fill="#996633ff">
+                                <transforms>
+                                    <Affine mxx="1.0" myx="0.0" mxy="0.0" myy="1.0" tx="0.0" ty="0.0"/>
+                                </transforms>
+                              </SVGPath>
+                              <SVGPath fx:id="Free_Hand_16_copy_4" id="Free_Hand_16_copy_4" content="M-8.79,22.36 C-0.98,22.62 9.28,20.67 16.94,23.52 C20.07,43.21 3.18,20.33 -5.52,26.05" stroke="$null" fill="black">
+                                <transforms>
+                                    <Affine mxx="1.0" myx="0.0" mxy="0.0" myy="1.0" tx="0.0" ty="0.0"/>
+                                </transforms>
+                              </SVGPath>
+                              <SVGPath fx:id="Free_Hand_6_copy_4" id="Free_Hand_6_copy_4" content="M-34.18,9.41 C-37.69,-11.75 -6.59,-36.93 7.33,-19.32 C29.69,8.96 -28.94,-16.07 -30.59,10.34" stroke="$null" fill="black">
+                                <transforms>
+                                    <Affine mxx="1.0" myx="0.0" mxy="0.0" myy="1.0" tx="0.0" ty="0.0"/>
+                                </transforms>
+                              </SVGPath>
+                              <SVGPath fx:id="Free_Hand_1_copy_4" id="Free_Hand_1_copy_4" content="M-33,4.96 C-28.74,-6.21 -64.46,-5.6 -41.76,12.47 C-51.4,4.86 -70.51,25.75 -51.61,27.65 C-67.19,31.88 -55.58,56.59 -44.03,44.67 C-53.07,63.16 -31.2,75.57 -29.77,52.49 C-25.26,71.45 0.08,56.8 -10.33,41.24 C10,37.38 -1.32,10.95 -14.66,18.78 C0.96,7.81 -24.15,-9.21 -32.62,5.34" stroke="#979797ff" strokeLineJoin="bevel" strokeLineCap="butt" fill="#ffffffff" strokeWidth="2.62">
+                                <transforms>
+                                    <Affine mxx="1.0" myx="0.0" mxy="0.0" myy="1.0" tx="0.0" ty="0.0"/>
+                                </transforms>
+                              </SVGPath>
+                              <SVGPath fx:id="Free_Hand_15_copy_4" id="Free_Hand_15_copy_4" content="M-45.32,18.76 C-53.95,24.4 -83.54,25.36 -69.76,38.34 C-68.29,39.72 -55.69,25.27 -46.86,22.68" stroke="$null" fill="black">
+                                <transforms>
+                                    <Affine mxx="1.0" myx="0.0" mxy="0.0" myy="1.0" tx="0.0" ty="0.0"/>
+                                </transforms>
+                              </SVGPath>
+                              <Ellipse fx:id="Ellipse_20_copy_4" id="Ellipse_20_copy_4" stroke="#000000ff" strokeLineJoin="bevel" centerY="-23.49" radiusY="3.59" centerX="-5.21" radiusX="3.59" fill="#ffffffff">
+                                <transforms>
+                                    <Affine mxx="1.0" myx="0.0" mxy="0.0" myy="1.0" tx="0.0" ty="0.0"/>
+                                </transforms>
+                              </Ellipse>
+                              <Ellipse fx:id="Ellipse_19_copy_4" id="Ellipse_19_copy_4" stroke="#000000ff" strokeLineJoin="bevel" centerY="-22.78" radiusY="4.64" centerX="-10.07" radiusX="3.59" fill="#ffffffff">
+                                <transforms>
+                                    <Affine mxx="1.0" myx="0.0" mxy="0.0" myy="1.0" tx="0.0" ty="0.0"/>
+                                </transforms>
+                              </Ellipse>
+                              <Ellipse fx:id="Ellipse_24_copy_4" id="Ellipse_24_copy_4" stroke="$null" centerY="-22.45" radiusY="2.5" centerX="-8.47" radiusX="2.5" fill="black">
+                                <transforms>
+                                    <Affine mxx="1.0" myx="0.0" mxy="0.0" myy="1.0" tx="0.0" ty="0.0"/>
+                                </transforms>
+                              </Ellipse>
+                              <Ellipse fx:id="Ellipse_25_copy_4" id="Ellipse_25_copy_4" stroke="$null" centerY="-23.11" radiusY="2.5" centerX="-3.5" radiusX="2.5" fill="black">
+                                <transforms>
+                                    <Affine mxx="1.0" myx="0.0" mxy="0.0" myy="1.0" tx="0.0" ty="0.0"/>
+                                </transforms>
+                              </Ellipse>
+                              <SVGPath fx:id="Free_Hand_23_copy_9" id="Free_Hand_23_copy_9" content="M-17.25,-20.28 C-15.5,-35.92 -47.31,-35.62 -39.05,-19.48 C-36.31,-14.11 -22.42,-22.29 -31.49,-18.95 C-45.89,-24.12 -22.29,-37.66 -22.71,-16.18" stroke="$null" fill="#cc6633ff">
+                                <transforms>
+                                    <Affine mxx="1.0" myx="0.0" mxy="0.0" myy="1.0" tx="0.0" ty="0.0"/>
+                                </transforms>
+                              </SVGPath>
+                              <SVGPath fx:id="Free_Hand_8_copy_4" id="Free_Hand_8_copy_4" content="M-21.18,-15.62 C-29.13,-8.85 -26.19,14.97 -18.33,9.9 C-12.68,6.26 -12.83,-7.6 -14.45,-14.55" stroke="#676767ff" strokeLineJoin="bevel" fill="black">
+                                <transforms>
+                                    <Affine mxx="1.0" myx="0.0" mxy="0.0" myy="1.0" tx="0.0" ty="0.0"/>
+                                </transforms>
+                              </SVGPath>
+                              <SVGPath fx:id="Free_Hand_125" id="Free_Hand_125" content="M17.94,1.06 C16.01,-5.1 1.98,-9.06 4.08,1.02" stroke="$null" fill="#ffffffff">
+                                <transforms>
+                                    <Affine mxx="1.0" myx="0.0" mxy="0.0" myy="1.0" tx="0.0" ty="0.0"/>
+                                </transforms>
+                              </SVGPath>
+                              <Polyline fx:id="Free_Hand_126" id="Free_Hand_126" stroke="#000000ff" strokeLineJoin="bevel" fill="$null">
+                                <points>
+                                    <Double fx:value="6.81"/>
+                                    <Double fx:value="-5.81"/>
+                                    <Double fx:value="6.66"/>
+                                    <Double fx:value="-4.88"/>
+                                    <Double fx:value="6.66"/>
+                                    <Double fx:value="-3.76"/>
+                                    <Double fx:value="6.66"/>
+                                    <Double fx:value="-3.01"/>
+                                    <Double fx:value="6.52"/>
+                                    <Double fx:value="-1.9"/>
+                                    <Double fx:value="6.52"/>
+                                    <Double fx:value="-0.78"/>
+                                    <Double fx:value="6.52"/>
+                                    <Double fx:value="0.14"/>
+                                    <Double fx:value="6.52"/>
+                                    <Double fx:value="0.89"/>
+                                    <Double fx:value="6.52"/>
+                                    <Double fx:value="1.26"/>
+                                </points>
+                                <transforms>
+                                    <Affine mxx="1.0" myx="0.0" mxy="0.0" myy="1.0" tx="0.0" ty="0.0"/>
+                                </transforms>
+                              </Polyline>
+                              <Ellipse fx:id="Free_Hand_127" id="Free_Hand_127" stroke="#000000ff" strokeLineJoin="bevel" centerY="-1.97" radiusY="3.94" centerX="10.59" radiusX="2.5" fill="$null" strokeWidth="0.85">
+                                <transforms>
+                                    <Affine mxx="1.0" myx="0.0" mxy="0.0" myy="1.0" tx="0.0" ty="0.0"/>
+                                </transforms>
+                              </Ellipse>
+                              <Polyline fx:id="Free_Hand_128" id="Free_Hand_128" stroke="#000000ff" strokeLineJoin="bevel" fill="$null">
+                                <points>
+                                    <Double fx:value="13.96"/>
+                                    <Double fx:value="-3.95"/>
+                                    <Double fx:value="13.96"/>
+                                    <Double fx:value="-2.92"/>
+                                    <Double fx:value="13.96"/>
+                                    <Double fx:value="-1.89"/>
+                                    <Double fx:value="13.96"/>
+                                    <Double fx:value="-1.07"/>
+                                    <Double fx:value="13.96"/>
+                                    <Double fx:value="-0.04"/>
+                                    <Double fx:value="13.96"/>
+                                    <Double fx:value="0.78"/>
+                                    <Double fx:value="13.96"/>
+                                    <Double fx:value="0.98"/>
+                                </points>
+                                <transforms>
+                                    <Affine mxx="1.0" myx="0.0" mxy="0.0" myy="1.0" tx="0.0" ty="0.0"/>
+                                </transforms>
+                              </Polyline>
+                          </children>
+                          <transforms>
+                              <Affine mxx="0.856" myx="0.0" mxy="0.0" myy="0.856" tx="10.66" ty="16.35"/>
+                          </transforms>
+                        </Group>
+                        <Text fx:id="Text_307" id="Text_307" text="(c) Edik Mitgartz" textOrigin="baseline" y="100.0">
+                          <font>
+                            <Font style="Regular" name="Arial" size="12.0"/>
+                          </font>
+                        </Text>
+                    </children>
+                  </Group>
+              </children>
+            </Group>
+        </children>
+      </Group>
+  </children>
+</Group>

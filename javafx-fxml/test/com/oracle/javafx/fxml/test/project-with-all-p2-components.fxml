@@ -1,0 +1,443 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+Copyright (c) 2010, 2012, Oracle and/or its affiliates. All rights reserved.
+DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+
+This code is free software; you can redistribute it and/or modify it
+under the terms of the GNU General Public License version 2 only, as
+published by the Free Software Foundation.  Oracle designates this
+particular file as subject to the "Classpath" exception as provided
+by Oracle in the LICENSE file that accompanied this code.
+
+This code is distributed in the hope that it will be useful, but WITHOUT
+ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
+version 2 for more details (a copy is included in the LICENSE file that
+accompanied this code).
+
+You should have received a copy of the GNU General Public License version
+2 along with this work; if not, write to the Free Software Foundation,
+Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301 USA.
+
+Please contact Oracle, 500 Oracle Parkway, Redwood Shores, CA 94065 USA
+or visit www.oracle.com if you need additional information or have any
+questions.
+-->
+
+<?import java.lang.*?>
+<?import javafx.collections.*?>
+<?import javafx.scene.chart.*?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.control.cell.*?>
+<?import javafx.scene.layout.*?>
+<?import javafx.scene.shape.*?>
+
+<AnchorPane id="Project" prefHeight="600.0" prefWidth="800.0" xmlns:fx="http://javafx.com/fxml">
+  <children>
+    <AnchorPane id="anchorPane1" maxHeight="-Infinity" maxWidth="-Infinity" minHeight="90.0" minWidth="220.0" prefHeight="100.0" prefWidth="230.0">
+      <children>
+        <CheckBox id="OptOutCheckBox" text="Keep Me Informed" AnchorPane.bottomAnchor="8.0" AnchorPane.leftAnchor="5.0" />
+        <Button id="SubmitButton" text="Submit" AnchorPane.bottomAnchor="5.0" AnchorPane.rightAnchor="5.0" />
+        <AnchorPane id="ValuePane" minHeight="55.0" minWidth="149.0" prefHeight="55.0" prefWidth="149.0" AnchorPane.leftAnchor="72.0" AnchorPane.rightAnchor="5.0" AnchorPane.topAnchor="5.0">
+          <children>
+            <TextField id="NameTextField" AnchorPane.leftAnchor="0.0" AnchorPane.rightAnchor="0.0" AnchorPane.topAnchor="0.0" />
+            <TextField id="EmailTextField" AnchorPane.leftAnchor="0.0" AnchorPane.rightAnchor="0.0" AnchorPane.topAnchor="33.0" />
+          </children>
+        </AnchorPane>
+        <AnchorPane id="LabelPane" AnchorPane.leftAnchor="5.0" AnchorPane.topAnchor="8.0">
+          <children>
+            <Label id="NameLabel" text="Name:" AnchorPane.leftAnchor="0.0" AnchorPane.rightAnchor="0.0" AnchorPane.topAnchor="0.0" />
+            <Label id="EmailLabel" text="Email:" AnchorPane.leftAnchor="0.0" AnchorPane.rightAnchor="0.0" AnchorPane.topAnchor="34.0" />
+          </children>
+        </AnchorPane>
+      </children>
+    </AnchorPane>
+    <GridPane id="gridPane1" prefHeight="150.0" prefWidth="200.0">
+      <columnConstraints>
+        <ColumnConstraints hgrow="SOMETIMES" minWidth="10.0" prefWidth="50.0" />
+        <ColumnConstraints hgrow="SOMETIMES" minWidth="10.0" prefWidth="50.0" />
+        <ColumnConstraints hgrow="SOMETIMES" minWidth="10.0" prefWidth="50.0" />
+        <ColumnConstraints hgrow="SOMETIMES" minWidth="10.0" prefWidth="50.0" />
+      </columnConstraints>
+      <rowConstraints>
+        <RowConstraints minHeight="10.0" prefHeight="50.0" vgrow="SOMETIMES" />
+        <RowConstraints minHeight="10.0" prefHeight="50.0" vgrow="SOMETIMES" />
+        <RowConstraints minHeight="10.0" prefHeight="50.0" vgrow="SOMETIMES" />
+      </rowConstraints>
+    </GridPane>
+    <GridPane id="gridPane2" prefHeight="150.0" prefWidth="200.0">
+      <columnConstraints>
+        <ColumnConstraints hgrow="SOMETIMES" minWidth="10.0" percentWidth="25.0" />
+        <ColumnConstraints hgrow="SOMETIMES" minWidth="10.0" percentWidth="25.0" />
+        <ColumnConstraints hgrow="SOMETIMES" minWidth="10.0" percentWidth="25.0" />
+        <ColumnConstraints hgrow="SOMETIMES" minWidth="10.0" percentWidth="25.0" />
+      </columnConstraints>
+      <rowConstraints>
+        <RowConstraints minHeight="10.0" percentHeight="33.0" vgrow="SOMETIMES" />
+        <RowConstraints minHeight="10.0" percentHeight="33.0" vgrow="SOMETIMES" />
+        <RowConstraints minHeight="10.0" percentHeight="34.0" vgrow="SOMETIMES" />
+      </rowConstraints>
+    </GridPane>
+    <ListView id="listView1">
+      <items>
+        <FXCollections fx:factory="observableArrayList">
+          <HBox id="hboxred1">
+            <children>
+              <Rectangle id="rectred1" fill="RED" height="16.0" width="16.0" />
+              <Label id="labelred1" text="Red" />
+            </children>
+          </HBox>
+          <HBox id="hboxgreen1">
+            <children>
+              <Rectangle id="rectgreen1" fill="GREEN" height="16.0" width="16.0" />
+              <Label id="labelgreen1" text="Green" />
+            </children>
+          </HBox>
+          <HBox id="hboxblue1">
+            <children>
+              <Rectangle id="rectblue1" fill="BLUE" height="16.0" width="16.0" />
+              <Label id="labelblue1" text="Blue" />
+            </children>
+          </HBox>
+        </FXCollections>
+      </items>
+    </ListView>
+    <MenuBar id="menuBar1">
+      <menus>
+        <Menu id="fileMenu" mnemonicParsing="false" text="File">
+          <items>
+            <MenuItem text="Open..." />
+            <Menu text="Open Recent...">
+              <items>
+                <MenuItem mnemonicParsing="false" text="File1" />
+                <MenuItem mnemonicParsing="false" text="File2" />
+              </items>
+            </Menu>
+            <SeparatorMenuItem mnemonicParsing="false" />
+            <MenuItem mnemonicParsing="false" text="Save" />
+            <MenuItem mnemonicParsing="false" text="Save As..." />
+            <SeparatorMenuItem mnemonicParsing="false" />
+            <CheckMenuItem mnemonicParsing="false" selected="true" text="Automatic Save" />
+          </items>
+        </Menu>
+        <Menu id="editMenu" mnemonicParsing="false" text="Edit">
+          <items>
+            <MenuItem mnemonicParsing="false" text="Copy" />
+            <MenuItem mnemonicParsing="false" text="Paste" />
+            <MenuItem mnemonicParsing="false" text="Delete" />
+            <Menu mnemonicParsing="false" text="Select">
+              <items>
+                <MenuItem mnemonicParsing="false" text="All" />
+                <MenuItem mnemonicParsing="false" text="None" />
+                <Menu mnemonicParsing="false" text="Table">
+                  <items>
+                    <MenuItem mnemonicParsing="false" text="All Columns" />
+                    <MenuItem mnemonicParsing="false" text="All Rows" />
+                  </items>
+                </Menu>
+              </items>
+            </Menu>
+          </items>
+        </Menu>
+        <Menu id="helpMenu" mnemonicParsing="false" text="Help">
+          <items>
+            <MenuItem id="about" mnemonicParsing="false" text="About">
+              <graphic>
+                <Rectangle fill="AZURE" height="5.0" stroke="BLACK" width="5.0" />
+              </graphic>
+            </MenuItem>
+            <CustomMenuItem mnemonicParsing="false">
+              <content>
+                <AnchorPane id="anchorPane2">
+                  <children>
+                    <Slider id="slider1" />
+                  </children>
+                </AnchorPane>
+              </content>
+            </CustomMenuItem>
+          </items>
+        </Menu>
+      </menus>
+    </MenuBar>
+    <Polyline id="polyline1" fill="DODGERBLUE" strokeType="INSIDE">
+      <points>
+        <Double fx:value="-50.0" />
+        <Double fx:value="-40.0" />
+        <Double fx:value="50.0" />
+        <Double fx:value="-40.0" />
+        <Double fx:value="0.0" />
+        <Double fx:value="60.0" />
+        <Double fx:value="-50.0" />
+        <Double fx:value="-40.0" />
+      </points>
+    </Polyline>
+    <QuadCurve id="quadCurve1" controlX="-50.0" controlY="-100.0" endX="50.0" fill="DODGERBLUE" startX="-50.0" stroke="BLACK" strokeType="INSIDE" />
+    <BarChart id="barChart1" title="Basic BarChart">
+      <xAxis>
+        <CategoryAxis id="xAxis1" label="Year" side="BOTTOM">
+          <categories>
+            <FXCollections fx:factory="observableArrayList">
+              <String fx:value="2007" />
+              <String fx:value="2008" />
+              <String fx:value="2009" />
+            </FXCollections>
+          </categories>
+        </CategoryAxis>
+      </xAxis>
+      <yAxis>
+        <NumberAxis id="yAxis1" label="Price" side="LEFT" />
+      </yAxis>
+      <data>
+        <FXCollections fx:factory="observableArrayList">
+          <javafx.scene.chart.XYChart.Series name="Data Series 1">
+            <data>
+              <FXCollections fx:factory="observableArrayList">
+                <javafx.scene.chart.XYChart.Data xValue="2007">
+                  <yValue>
+                    <Integer fx:value="567" />
+                  </yValue>
+                </javafx.scene.chart.XYChart.Data>
+                <javafx.scene.chart.XYChart.Data xValue="2008">
+                  <yValue>
+                    <Integer fx:value="1292" />
+                  </yValue>
+                </javafx.scene.chart.XYChart.Data>
+                <javafx.scene.chart.XYChart.Data xValue="2009">
+                  <yValue>
+                    <Integer fx:value="2180" />
+                  </yValue>
+                </javafx.scene.chart.XYChart.Data>
+              </FXCollections>
+            </data>
+          </javafx.scene.chart.XYChart.Series>
+          <javafx.scene.chart.XYChart.Series name="Data Series 2">
+            <data>
+              <FXCollections fx:factory="observableArrayList">
+                <javafx.scene.chart.XYChart.Data xValue="2007">
+                  <yValue>
+                    <Integer fx:value="956" />
+                  </yValue>
+                </javafx.scene.chart.XYChart.Data>
+                <javafx.scene.chart.XYChart.Data xValue="2008">
+                  <yValue>
+                    <Integer fx:value="1665" />
+                  </yValue>
+                </javafx.scene.chart.XYChart.Data>
+                <javafx.scene.chart.XYChart.Data xValue="2009">
+                  <yValue>
+                    <Integer fx:value="2450" />
+                  </yValue>
+                </javafx.scene.chart.XYChart.Data>
+              </FXCollections>
+            </data>
+          </javafx.scene.chart.XYChart.Series>
+          <javafx.scene.chart.XYChart.Series name="Data Series 3">
+            <data>
+              <FXCollections fx:factory="observableArrayList">
+                <javafx.scene.chart.XYChart.Data xValue="2007">
+                  <yValue>
+                    <Integer fx:value="800" />
+                  </yValue>
+                </javafx.scene.chart.XYChart.Data>
+                <javafx.scene.chart.XYChart.Data xValue="2008">
+                  <yValue>
+                    <Integer fx:value="1000" />
+                  </yValue>
+                </javafx.scene.chart.XYChart.Data>
+                <javafx.scene.chart.XYChart.Data xValue="2009">
+                  <yValue>
+                    <Integer fx:value="2800" />
+                  </yValue>
+                </javafx.scene.chart.XYChart.Data>
+              </FXCollections>
+            </data>
+          </javafx.scene.chart.XYChart.Series>
+        </FXCollections>
+      </data>
+    </BarChart>
+    <AnchorPane id="anchorPane3" prefHeight="150.0" prefWidth="200.0">
+      <children>
+        <ToolBar id="hbar1" AnchorPane.leftAnchor="30.0" AnchorPane.rightAnchor="2.0" AnchorPane.topAnchor="2.0">
+          <contextMenu>
+            <ContextMenu fx:id="x1">
+              <items>
+                <MenuItem mnemonicParsing="false" text="red" />
+                <MenuItem mnemonicParsing="false" text="green" />
+                <MenuItem mnemonicParsing="false" text="blue" />
+              </items>
+            </ContextMenu>
+          </contextMenu>
+          <items>
+            <Rectangle id="hred1" fill="RED" height="16.0" width="16.0" />
+            <Rectangle id="hgreen1" fill="GREEN" height="16.0" width="16.0" />
+            <Rectangle id="hblue1" fill="BLUE" height="16.0" width="16.0" />
+          </items>
+          <tooltip>
+            <Tooltip text="Color Bar" fx:id="x2" />
+          </tooltip>
+        </ToolBar>
+        <ToolBar id="vbar1" contextMenu="$x1" orientation="VERTICAL" tooltip="$x2" AnchorPane.bottomAnchor="2.0" AnchorPane.leftAnchor="2.0" AnchorPane.topAnchor="30.0">
+          <items>
+            <Circle id="vred1" fill="RED" radius="8.0" />
+            <Circle id="vgreen1" fill="GREEN" radius="8.0" />
+            <Circle id="vblue1" fill="BLUE" radius="8.0" />
+          </items>
+        </ToolBar>
+        <ToolBar id="cbar1" contextMenu="$x1" prefHeight="26.0" prefWidth="26.0" AnchorPane.leftAnchor="2.0" AnchorPane.topAnchor="2.0">
+          <tooltip>
+            <Tooltip text="No Bar" />
+          </tooltip>
+        </ToolBar>
+      </children>
+    </AnchorPane>
+    <TableView id="tableView1" prefHeight="200.0" prefWidth="550.0">
+      <columns>
+        <TableColumn maxWidth="10000.0" minWidth="20.0" prefWidth="160.0" text="Name">
+          <columns>
+            <TableColumn text="First Name">
+              <cellValueFactory>
+                <PropertyValueFactory property="firstName" />
+              </cellValueFactory>
+            </TableColumn>
+            <TableColumn text="Last Name">
+              <cellValueFactory>
+                <PropertyValueFactory property="lastName" />
+              </cellValueFactory>
+            </TableColumn>
+          </columns>
+        </TableColumn>
+        <TableColumn maxWidth="15100.0" minWidth="50.0" prefWidth="320.0" text="Birth Date">
+          <columns>
+            <TableColumn text="Day Of Week" />
+            <TableColumn maxWidth="10100.0" minWidth="40.0" prefWidth="240.0" text="Date">
+              <columns>
+                <TableColumn maxWidth="100.0" minWidth="20.0" text="YY" />
+                <TableColumn text="MM" />
+                <TableColumn text="DD" />
+              </columns>
+            </TableColumn>
+          </columns>
+        </TableColumn>
+        <TableColumn text="Gender" />
+      </columns>
+    </TableView>
+    <AnchorPane id="anchorPane4" maxHeight="-Infinity" maxWidth="-Infinity" minHeight="-Infinity" minWidth="-Infinity" prefHeight="300.0" prefWidth="400.0">
+      <children>
+        <SplitPane id="Split Pane (Vertical Splits)" dividerPositions="0.3" focusTraversable="true" minHeight="300.0" minWidth="400.0" prefHeight="300.0" prefWidth="400.0" AnchorPane.bottomAnchor="0.0" AnchorPane.leftAnchor="0.0" AnchorPane.rightAnchor="0.0" AnchorPane.topAnchor="0.0">
+          <items>
+            <AnchorPane id="Left AnchorPane" minHeight="50.0" minWidth="50.0" prefHeight="300.0" prefWidth="400.0">
+              <children>
+                <ListView id="Left ListView" minHeight="598.0" minWidth="238.0" prefHeight="598.0" prefWidth="238.0" AnchorPane.bottomAnchor="0.0" AnchorPane.leftAnchor="0.0" AnchorPane.rightAnchor="0.0" AnchorPane.topAnchor="0.0" />
+              </children>
+            </AnchorPane>
+            <AnchorPane id="Right AnchorPane" minHeight="50.0" minWidth="50.0" prefHeight="160.0" prefWidth="100.0">
+              <children>
+                <SplitPane id="Split Pane (Horizontal Splits)" dividerPositions="0.395" focusTraversable="true" minHeight="598.0" minWidth="554.0" orientation="VERTICAL" prefHeight="598.0" prefWidth="554.0" AnchorPane.bottomAnchor="0.0" AnchorPane.leftAnchor="0.0" AnchorPane.rightAnchor="0.0" AnchorPane.topAnchor="0.0">
+                  <items>
+                    <AnchorPane id="Top AnchorPane" minHeight="50.0" minWidth="50.0" prefHeight="100.0" prefWidth="160.0">
+                      <children>
+                        <ListView id="Top ListView" minHeight="232.0" minWidth="552.0" prefHeight="232.0" prefWidth="552.0" AnchorPane.bottomAnchor="0.0" AnchorPane.leftAnchor="0.0" AnchorPane.rightAnchor="0.0" AnchorPane.topAnchor="0.0" />
+                      </children>
+                    </AnchorPane>
+                    <AnchorPane id="Bottom AnchorPane" minHeight="50.0" minWidth="50.0" prefHeight="100.0" prefWidth="160.0">
+                      <children>
+                        <CheckBox id="OptOutCheckBox" text="Keep Me Informed" AnchorPane.bottomAnchor="8.0" AnchorPane.leftAnchor="5.0" />
+                        <Button id="SubmitButton" text="Submit" AnchorPane.bottomAnchor="5.0" AnchorPane.rightAnchor="5.0" />
+                        <AnchorPane id="ValuePane" minHeight="55.0" minWidth="149.0" prefHeight="55.0" prefWidth="149.0" AnchorPane.leftAnchor="72.0" AnchorPane.rightAnchor="5.0" AnchorPane.topAnchor="5.0">
+                          <children>
+                            <TextField id="NameTextField" AnchorPane.leftAnchor="0.0" AnchorPane.rightAnchor="0.0" AnchorPane.topAnchor="0.0" />
+                            <TextField id="EmailTextField" AnchorPane.leftAnchor="0.0" AnchorPane.rightAnchor="0.0" AnchorPane.topAnchor="33.0" />
+                          </children>
+                        </AnchorPane>
+                        <AnchorPane id="LabelPane" AnchorPane.leftAnchor="5.0" AnchorPane.topAnchor="8.0">
+                          <children>
+                            <Label id="NameLabel" text="Name:" AnchorPane.leftAnchor="0.0" AnchorPane.rightAnchor="0.0" AnchorPane.topAnchor="0.0" />
+                            <Label id="EmailLabel" text="Email:" AnchorPane.leftAnchor="0.0" AnchorPane.rightAnchor="0.0" AnchorPane.topAnchor="34.0" />
+                          </children>
+                        </AnchorPane>
+                      </children>
+                    </AnchorPane>
+                  </items>
+                </SplitPane>
+              </children>
+            </AnchorPane>
+          </items>
+        </SplitPane>
+      </children>
+    </AnchorPane>
+    <TreeView id="treeView1">
+      <root>
+        <TreeItem value="colors">
+          <children>
+            <TreeItem>
+              <children>
+                <TreeItem value="red=255">
+                  <graphic>
+                    <Circle id="red1" fill="RED" radius="8.0" />
+                  </graphic>
+                </TreeItem>
+                <TreeItem value="green=0">
+                  <graphic>
+                    <Circle id="green1" fill="GREEN" radius="8.0" />
+                  </graphic>
+                </TreeItem>
+                <TreeItem value="blue=0">
+                  <graphic>
+                    <Circle id="blue1" fill="BLUE" radius="8.0" />
+                  </graphic>
+                </TreeItem>
+              </children>
+              <value>
+                <Rectangle id="red1" fill="RED" height="16.0" width="16.0" />
+              </value>
+            </TreeItem>
+            <TreeItem>
+              <children>
+                <TreeItem value="red=0">
+                  <graphic>
+                    <Circle id="red1" fill="RED" radius="8.0" />
+                  </graphic>
+                </TreeItem>
+                <TreeItem value="green=255">
+                  <graphic>
+                    <Circle id="green1" fill="GREEN" radius="8.0" />
+                  </graphic>
+                </TreeItem>
+                <TreeItem value="blue=0">
+                  <graphic>
+                    <Circle id="blue1" fill="BLUE" radius="8.0" />
+                  </graphic>
+                </TreeItem>
+              </children>
+              <value>
+                <Rectangle id="green1" fill="GREEN" height="16.0" width="16.0" />
+              </value>
+            </TreeItem>
+            <TreeItem>
+              <children>
+                <TreeItem value="red=0">
+                  <graphic>
+                    <Circle id="red1" fill="RED" radius="8.0" />
+                  </graphic>
+                </TreeItem>
+                <TreeItem value="green=0">
+                  <graphic>
+                    <Circle id="green1" fill="GREEN" radius="8.0" />
+                  </graphic>
+                </TreeItem>
+                <TreeItem value="blue=255">
+                  <graphic>
+                    <Circle id="blue1" fill="BLUE" radius="8.0" />
+                  </graphic>
+                </TreeItem>
+              </children>
+              <value>
+                <Rectangle id="blue1" fill="BLUE" height="16.0" width="16.0" />
+              </value>
+            </TreeItem>
+          </children>
+        </TreeItem>
+      </root>
+    </TreeView>
+  </children>
+</AnchorPane>

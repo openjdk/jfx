@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project name="javafx-fxml" default="jar" basedir=".">
+    <description>Builds, tests, and runs the OpenJFX javafx-fxml project.</description>
+
+    <import file="../build-defs.xml"/>
+    <import file="build-common.xml"/>
+</project>

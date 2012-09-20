@@ -1,0 +1,1060 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+Copyright (c) 2010, 2012, Oracle and/or its affiliates. All rights reserved.
+DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+
+This code is free software; you can redistribute it and/or modify it
+under the terms of the GNU General Public License version 2 only, as
+published by the Free Software Foundation.  Oracle designates this
+particular file as subject to the "Classpath" exception as provided
+by Oracle in the LICENSE file that accompanied this code.
+
+This code is distributed in the hope that it will be useful, but WITHOUT
+ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
+version 2 for more details (a copy is included in the LICENSE file that
+accompanied this code).
+
+You should have received a copy of the GNU General Public License version
+2 along with this work; if not, write to the Free Software Foundation,
+Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301 USA.
+
+Please contact Oracle, 500 Oracle Parkway, Redwood Shores, CA 94065 USA
+or visit www.oracle.com if you need additional information or have any
+questions.
+-->
+
+<?import java.lang.*?>
+<?import javafx.animation.*?>
+<?import javafx.animation.transition.*?>
+<?import javafx.event.*?>
+<?import javafx.fxd.*?>
+<?import javafx.geometry.*?>
+<?import javafx.scene.*?>
+<?import javafx.scene.chart.*?>
+<?import javafx.scene.chart.data.*?>
+<?import javafx.scene.chart.part.*?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.control.table.*?>
+<?import javafx.scene.effect.*?>
+<?import javafx.scene.effect.light.*?>
+<?import javafx.scene.image.*?>
+<?import javafx.scene.input.*?>
+<?import javafx.scene.layout.*?>
+<?import javafx.scene.media.*?>
+<?import javafx.scene.paint.*?>
+<?import javafx.scene.shape.*?>
+<?import javafx.scene.text.*?>
+<?import javafx.scene.transform.*?>
+<?import javafx.scene.web.*?>
+<?import javafx.stage.*?>
+<?import javafx.util.*?>
+
+<Group xmlns:fx="http://javafx.com/fxml">
+  <children>
+      <Group>
+        <clip>
+          <Rectangle height="500.0" width="450.0" strokeWidth="0.0050"/>
+        </clip>
+        <children>
+            <Group>
+              <clip>
+                <Rectangle height="500.0" width="450.0" y="0.0" x="0.0"/>
+              </clip>
+              <children>
+                  <Text text="&#60;radialGradient&#62; Test 1 (Simple)" textOrigin="baseline" y="40.0" x="109.23828">
+                    <font>
+                      <Font name="Arial" size="16.0"/>
+                    </font>
+                  </Text>
+                  <Group>
+                    <children>
+                        <Group>
+                          <children>
+                              <Group>
+                                <children>
+                                    <Group fx:id="testShape" id="testShape">
+                                      <children>
+                                          <Rectangle stroke="$null" height="40.0" width="50.0" fill="black" y="-20.0" x="-25.0">
+                                            <clip>
+                                              <Group fx:id="qualityClip" id="qualityClip">
+                                                <children>
+                                                    <Rectangle stroke="$null" height="40.0" width="17.0" fill="black" y="-20.0" x="-25.0"/>
+                                                </children>
+                                              </Group>
+                                            </clip>
+                                          </Rectangle>
+                                          <Rectangle stroke="$null" height="40.0" width="50.0" fill="black" y="-20.0" x="-25.0">
+                                            <clip>
+                                              <Group fx:id="defaultClip" id="defaultClip">
+                                                <children>
+                                                    <Rectangle stroke="$null" height="40.0" width="16.0" fill="black" y="-20.0" x="-8.0"/>
+                                                </children>
+                                              </Group>
+                                            </clip>
+                                          </Rectangle>
+                                          <Rectangle stroke="$null" height="40.0" width="50.0" fill="black" y="-20.0" x="-25.0">
+                                            <clip>
+                                              <Group fx:id="speedClip" id="speedClip">
+                                                <children>
+                                                    <Rectangle stroke="$null" height="40.0" width="17.0" fill="black" y="-20.0" x="8.0"/>
+                                                </children>
+                                              </Group>
+                                            </clip>
+                                          </Rectangle>
+                                          <Text text="Q" stroke="$null" fill="black" textOrigin="baseline" y="24.0" x="-16.5">
+                                            <font>
+                                              <Font name="Verdana" size="5.0"/>
+                                            </font>
+                                          </Text>
+                                          <Line stroke="black" startX="-8.0" startY="20.0" endX="-8.0" endY="25.0" fill="$null" strokeWidth="0.25"/>
+                                          <Text text="A" stroke="$null" fill="black" textOrigin="baseline" y="24.0">
+                                            <font>
+                                              <Font name="Verdana" size="5.0"/>
+                                            </font>
+                                          </Text>
+                                          <Line stroke="black" startX="8.0" startY="20.0" endX="8.0" endY="25.0" fill="$null" strokeWidth="0.25"/>
+                                          <Text text="S" stroke="$null" fill="black" textOrigin="baseline" y="24.0" x="16.5">
+                                            <font>
+                                              <Font name="Verdana" size="5.0"/>
+                                            </font>
+                                          </Text>
+                                      </children>
+                                    </Group>
+                                    <Text text="Defaults" textOrigin="baseline" y="-30.0" x="-18.150229">
+                                      <font>
+                                        <Font name="Arial" size="10.0"/>
+                                      </font>
+                                    </Text>
+                                </children>
+                                <transforms>
+                                    <Translate x="0.0" y="100.0"/>
+                                </transforms>
+                              </Group>
+                              <Group>
+                                <children>
+                                    <Group fx:id="testShape" id="testShape">
+                                      <children>
+                                          <Rectangle stroke="$null" height="40.0" width="50.0" fill="black" y="-20.0" x="-25.0">
+                                            <clip>
+                                              <Group fx:id="qualityClip" id="qualityClip">
+                                                <children>
+                                                    <Rectangle stroke="$null" height="40.0" width="17.0" fill="black" y="-20.0" x="-25.0"/>
+                                                </children>
+                                              </Group>
+                                            </clip>
+                                          </Rectangle>
+                                          <Rectangle stroke="$null" height="40.0" width="50.0" fill="black" y="-20.0" x="-25.0">
+                                            <clip>
+                                              <Group fx:id="defaultClip" id="defaultClip">
+                                                <children>
+                                                    <Rectangle stroke="$null" height="40.0" width="16.0" fill="black" y="-20.0" x="-8.0"/>
+                                                </children>
+                                              </Group>
+                                            </clip>
+                                          </Rectangle>
+                                          <Rectangle stroke="$null" height="40.0" width="50.0" fill="black" y="-20.0" x="-25.0">
+                                            <clip>
+                                              <Group fx:id="speedClip" id="speedClip">
+                                                <children>
+                                                    <Rectangle stroke="$null" height="40.0" width="17.0" fill="black" y="-20.0" x="8.0"/>
+                                                </children>
+                                              </Group>
+                                            </clip>
+                                          </Rectangle>
+                                          <Text text="Q" stroke="$null" fill="black" textOrigin="baseline" y="24.0" x="-16.5">
+                                            <font>
+                                              <Font name="Verdana" size="5.0"/>
+                                            </font>
+                                          </Text>
+                                          <Line stroke="black" startX="-8.0" startY="20.0" endX="-8.0" endY="25.0" fill="$null" strokeWidth="0.25"/>
+                                          <Text text="A" stroke="$null" fill="black" textOrigin="baseline" y="24.0">
+                                            <font>
+                                              <Font name="Verdana" size="5.0"/>
+                                            </font>
+                                          </Text>
+                                          <Line stroke="black" startX="8.0" startY="20.0" endX="8.0" endY="25.0" fill="$null" strokeWidth="0.25"/>
+                                          <Text text="S" stroke="$null" fill="black" textOrigin="baseline" y="24.0" x="16.5">
+                                            <font>
+                                              <Font name="Verdana" size="5.0"/>
+                                            </font>
+                                          </Text>
+                                      </children>
+                                    </Group>
+                                    <Text text="Forced Defaults" textOrigin="baseline" y="-30.0" x="-35.10091">
+                                      <font>
+                                        <Font name="Arial" size="10.0"/>
+                                      </font>
+                                    </Text>
+                                </children>
+                                <transforms>
+                                    <Translate x="0.0" y="170.0"/>
+                                </transforms>
+                              </Group>
+                              <Group>
+                                <children>
+                                    <Group fx:id="testShape" id="testShape">
+                                      <children>
+                                          <Rectangle stroke="$null" height="40.0" width="50.0" fill="black" y="-20.0" x="-25.0">
+                                            <clip>
+                                              <Group fx:id="qualityClip" id="qualityClip">
+                                                <children>
+                                                    <Rectangle stroke="$null" height="40.0" width="17.0" fill="black" y="-20.0" x="-25.0"/>
+                                                </children>
+                                              </Group>
+                                            </clip>
+                                          </Rectangle>
+                                          <Rectangle stroke="$null" height="40.0" width="50.0" fill="black" y="-20.0" x="-25.0">
+                                            <clip>
+                                              <Group fx:id="defaultClip" id="defaultClip">
+                                                <children>
+                                                    <Rectangle stroke="$null" height="40.0" width="16.0" fill="black" y="-20.0" x="-8.0"/>
+                                                </children>
+                                              </Group>
+                                            </clip>
+                                          </Rectangle>
+                                          <Rectangle stroke="$null" height="40.0" width="50.0" fill="black" y="-20.0" x="-25.0">
+                                            <clip>
+                                              <Group fx:id="speedClip" id="speedClip">
+                                                <children>
+                                                    <Rectangle stroke="$null" height="40.0" width="17.0" fill="black" y="-20.0" x="8.0"/>
+                                                </children>
+                                              </Group>
+                                            </clip>
+                                          </Rectangle>
+                                          <Text text="Q" stroke="$null" fill="black" textOrigin="baseline" y="24.0" x="-16.5">
+                                            <font>
+                                              <Font name="Verdana" size="5.0"/>
+                                            </font>
+                                          </Text>
+                                          <Line stroke="black" startX="-8.0" startY="20.0" endX="-8.0" endY="25.0" fill="$null" strokeWidth="0.25"/>
+                                          <Text text="A" stroke="$null" fill="black" textOrigin="baseline" y="24.0">
+                                            <font>
+                                              <Font name="Verdana" size="5.0"/>
+                                            </font>
+                                          </Text>
+                                          <Line stroke="black" startX="8.0" startY="20.0" endX="8.0" endY="25.0" fill="$null" strokeWidth="0.25"/>
+                                          <Text text="S" stroke="$null" fill="black" textOrigin="baseline" y="24.0" x="16.5">
+                                            <font>
+                                              <Font name="Verdana" size="5.0"/>
+                                            </font>
+                                          </Text>
+                                      </children>
+                                    </Group>
+                                    <Text text="userSpaceOnUse" textOrigin="baseline" y="-30.0" x="-39.257812">
+                                      <font>
+                                        <Font name="Arial" size="10.0"/>
+                                      </font>
+                                    </Text>
+                                </children>
+                                <transforms>
+                                    <Translate x="0.0" y="240.0"/>
+                                </transforms>
+                              </Group>
+                              <Group>
+                                <children>
+                                    <Group fx:id="testShape" id="testShape">
+                                      <children>
+                                          <Rectangle stroke="$null" height="40.0" width="50.0" fill="black" y="-20.0" x="-25.0">
+                                            <clip>
+                                              <Group fx:id="qualityClip" id="qualityClip">
+                                                <children>
+                                                    <Rectangle stroke="$null" height="40.0" width="17.0" fill="black" y="-20.0" x="-25.0"/>
+                                                </children>
+                                              </Group>
+                                            </clip>
+                                          </Rectangle>
+                                          <Rectangle stroke="$null" height="40.0" width="50.0" fill="black" y="-20.0" x="-25.0">
+                                            <clip>
+                                              <Group fx:id="defaultClip" id="defaultClip">
+                                                <children>
+                                                    <Rectangle stroke="$null" height="40.0" width="16.0" fill="black" y="-20.0" x="-8.0"/>
+                                                </children>
+                                              </Group>
+                                            </clip>
+                                          </Rectangle>
+                                          <Rectangle stroke="$null" height="40.0" width="50.0" fill="black" y="-20.0" x="-25.0">
+                                            <clip>
+                                              <Group fx:id="speedClip" id="speedClip">
+                                                <children>
+                                                    <Rectangle stroke="$null" height="40.0" width="17.0" fill="black" y="-20.0" x="8.0"/>
+                                                </children>
+                                              </Group>
+                                            </clip>
+                                          </Rectangle>
+                                          <Text text="Q" stroke="$null" fill="black" textOrigin="baseline" y="24.0" x="-16.5">
+                                            <font>
+                                              <Font name="Verdana" size="5.0"/>
+                                            </font>
+                                          </Text>
+                                          <Line stroke="black" startX="-8.0" startY="20.0" endX="-8.0" endY="25.0" fill="$null" strokeWidth="0.25"/>
+                                          <Text text="A" stroke="$null" fill="black" textOrigin="baseline" y="24.0">
+                                            <font>
+                                              <Font name="Verdana" size="5.0"/>
+                                            </font>
+                                          </Text>
+                                          <Line stroke="black" startX="8.0" startY="20.0" endX="8.0" endY="25.0" fill="$null" strokeWidth="0.25"/>
+                                          <Text text="S" stroke="$null" fill="black" textOrigin="baseline" y="24.0" x="16.5">
+                                            <font>
+                                              <Font name="Verdana" size="5.0"/>
+                                            </font>
+                                          </Text>
+                                      </children>
+                                    </Group>
+                                    <Text text="(cx,cy) = (0%, 100%)" textOrigin="baseline" y="-30.0" x="-46.359863">
+                                      <font>
+                                        <Font name="Arial" size="10.0"/>
+                                      </font>
+                                    </Text>
+                                </children>
+                                <transforms>
+                                    <Translate x="0.0" y="310.0"/>
+                                </transforms>
+                              </Group>
+                              <Group>
+                                <children>
+                                    <Group fx:id="testShape" id="testShape">
+                                      <children>
+                                          <Rectangle stroke="$null" height="40.0" width="50.0" fill="black" y="-20.0" x="-25.0">
+                                            <clip>
+                                              <Group fx:id="qualityClip" id="qualityClip">
+                                                <children>
+                                                    <Rectangle stroke="$null" height="40.0" width="17.0" fill="black" y="-20.0" x="-25.0"/>
+                                                </children>
+                                              </Group>
+                                            </clip>
+                                          </Rectangle>
+                                          <Rectangle stroke="$null" height="40.0" width="50.0" fill="black" y="-20.0" x="-25.0">
+                                            <clip>
+                                              <Group fx:id="defaultClip" id="defaultClip">
+                                                <children>
+                                                    <Rectangle stroke="$null" height="40.0" width="16.0" fill="black" y="-20.0" x="-8.0"/>
+                                                </children>
+                                              </Group>
+                                            </clip>
+                                          </Rectangle>
+                                          <Rectangle stroke="$null" height="40.0" width="50.0" fill="black" y="-20.0" x="-25.0">
+                                            <clip>
+                                              <Group fx:id="speedClip" id="speedClip">
+                                                <children>
+                                                    <Rectangle stroke="$null" height="40.0" width="17.0" fill="black" y="-20.0" x="8.0"/>
+                                                </children>
+                                              </Group>
+                                            </clip>
+                                          </Rectangle>
+                                          <Text text="Q" stroke="$null" fill="black" textOrigin="baseline" y="24.0" x="-16.5">
+                                            <font>
+                                              <Font name="Verdana" size="5.0"/>
+                                            </font>
+                                          </Text>
+                                          <Line stroke="black" startX="-8.0" startY="20.0" endX="-8.0" endY="25.0" fill="$null" strokeWidth="0.25"/>
+                                          <Text text="A" stroke="$null" fill="black" textOrigin="baseline" y="24.0">
+                                            <font>
+                                              <Font name="Verdana" size="5.0"/>
+                                            </font>
+                                          </Text>
+                                          <Line stroke="black" startX="8.0" startY="20.0" endX="8.0" endY="25.0" fill="$null" strokeWidth="0.25"/>
+                                          <Text text="S" stroke="$null" fill="black" textOrigin="baseline" y="24.0" x="16.5">
+                                            <font>
+                                              <Font name="Verdana" size="5.0"/>
+                                            </font>
+                                          </Text>
+                                      </children>
+                                    </Group>
+                                    <Text text="(cx,cy) = (75%, 25%)" textOrigin="baseline" y="-30.0" x="-46.359863">
+                                      <font>
+                                        <Font name="Arial" size="10.0"/>
+                                      </font>
+                                    </Text>
+                                </children>
+                                <transforms>
+                                    <Translate x="0.0" y="380.0"/>
+                                </transforms>
+                              </Group>
+                          </children>
+                          <transforms>
+                              <Translate x="70.0" y="0.0"/>
+                          </transforms>
+                        </Group>
+                        <Group>
+                          <children>
+                              <Group>
+                                <children>
+                                    <Group fx:id="testShape" id="testShape">
+                                      <children>
+                                          <Rectangle stroke="$null" height="40.0" width="50.0" fill="black" y="-20.0" x="-25.0">
+                                            <clip>
+                                              <Group fx:id="qualityClip" id="qualityClip">
+                                                <children>
+                                                    <Rectangle stroke="$null" height="40.0" width="17.0" fill="black" y="-20.0" x="-25.0"/>
+                                                </children>
+                                              </Group>
+                                            </clip>
+                                          </Rectangle>
+                                          <Rectangle stroke="$null" height="40.0" width="50.0" fill="black" y="-20.0" x="-25.0">
+                                            <clip>
+                                              <Group fx:id="defaultClip" id="defaultClip">
+                                                <children>
+                                                    <Rectangle stroke="$null" height="40.0" width="16.0" fill="black" y="-20.0" x="-8.0"/>
+                                                </children>
+                                              </Group>
+                                            </clip>
+                                          </Rectangle>
+                                          <Rectangle stroke="$null" height="40.0" width="50.0" fill="black" y="-20.0" x="-25.0">
+                                            <clip>
+                                              <Group fx:id="speedClip" id="speedClip">
+                                                <children>
+                                                    <Rectangle stroke="$null" height="40.0" width="17.0" fill="black" y="-20.0" x="8.0"/>
+                                                </children>
+                                              </Group>
+                                            </clip>
+                                          </Rectangle>
+                                          <Text text="Q" stroke="$null" fill="black" textOrigin="baseline" y="24.0" x="-16.5">
+                                            <font>
+                                              <Font name="Verdana" size="5.0"/>
+                                            </font>
+                                          </Text>
+                                          <Line stroke="black" startX="-8.0" startY="20.0" endX="-8.0" endY="25.0" fill="$null" strokeWidth="0.25"/>
+                                          <Text text="A" stroke="$null" fill="black" textOrigin="baseline" y="24.0">
+                                            <font>
+                                              <Font name="Verdana" size="5.0"/>
+                                            </font>
+                                          </Text>
+                                          <Line stroke="black" startX="8.0" startY="20.0" endX="8.0" endY="25.0" fill="$null" strokeWidth="0.25"/>
+                                          <Text text="S" stroke="$null" fill="black" textOrigin="baseline" y="24.0" x="16.5">
+                                            <font>
+                                              <Font name="Verdana" size="5.0"/>
+                                            </font>
+                                          </Text>
+                                      </children>
+                                    </Group>
+                                    <Text text="(fx,fy)=(60%,40%)" textOrigin="baseline" y="-30.0" x="-39.970703">
+                                      <font>
+                                        <Font name="Arial" size="10.0"/>
+                                      </font>
+                                    </Text>
+                                </children>
+                                <transforms>
+                                    <Translate x="0.0" y="100.0"/>
+                                </transforms>
+                              </Group>
+                              <Group>
+                                <children>
+                                    <Group fx:id="testShape" id="testShape">
+                                      <children>
+                                          <Rectangle stroke="$null" height="40.0" width="50.0" fill="black" y="-20.0" x="-25.0">
+                                            <clip>
+                                              <Group fx:id="qualityClip" id="qualityClip">
+                                                <children>
+                                                    <Rectangle stroke="$null" height="40.0" width="17.0" fill="black" y="-20.0" x="-25.0"/>
+                                                </children>
+                                              </Group>
+                                            </clip>
+                                          </Rectangle>
+                                          <Rectangle stroke="$null" height="40.0" width="50.0" fill="black" y="-20.0" x="-25.0">
+                                            <clip>
+                                              <Group fx:id="defaultClip" id="defaultClip">
+                                                <children>
+                                                    <Rectangle stroke="$null" height="40.0" width="16.0" fill="black" y="-20.0" x="-8.0"/>
+                                                </children>
+                                              </Group>
+                                            </clip>
+                                          </Rectangle>
+                                          <Rectangle stroke="$null" height="40.0" width="50.0" fill="black" y="-20.0" x="-25.0">
+                                            <clip>
+                                              <Group fx:id="speedClip" id="speedClip">
+                                                <children>
+                                                    <Rectangle stroke="$null" height="40.0" width="17.0" fill="black" y="-20.0" x="8.0"/>
+                                                </children>
+                                              </Group>
+                                            </clip>
+                                          </Rectangle>
+                                          <Text text="Q" stroke="$null" fill="black" textOrigin="baseline" y="24.0" x="-16.5">
+                                            <font>
+                                              <Font name="Verdana" size="5.0"/>
+                                            </font>
+                                          </Text>
+                                          <Line stroke="black" startX="-8.0" startY="20.0" endX="-8.0" endY="25.0" fill="$null" strokeWidth="0.25"/>
+                                          <Text text="A" stroke="$null" fill="black" textOrigin="baseline" y="24.0">
+                                            <font>
+                                              <Font name="Verdana" size="5.0"/>
+                                            </font>
+                                          </Text>
+                                          <Line stroke="black" startX="8.0" startY="20.0" endX="8.0" endY="25.0" fill="$null" strokeWidth="0.25"/>
+                                          <Text text="S" stroke="$null" fill="black" textOrigin="baseline" y="24.0" x="16.5">
+                                            <font>
+                                              <Font name="Verdana" size="5.0"/>
+                                            </font>
+                                          </Text>
+                                      </children>
+                                    </Group>
+                                    <Text text="(fx,fy)=(0%,50%)" textOrigin="baseline" y="-30.0" x="-37.18994">
+                                      <font>
+                                        <Font name="Arial" size="10.0"/>
+                                      </font>
+                                    </Text>
+                                </children>
+                                <transforms>
+                                    <Translate x="0.0" y="170.0"/>
+                                </transforms>
+                              </Group>
+                              <Group>
+                                <children>
+                                    <Group fx:id="testShape" id="testShape">
+                                      <children>
+                                          <Rectangle stroke="$null" height="40.0" width="50.0" fill="black" y="-20.0" x="-25.0">
+                                            <clip>
+                                              <Group fx:id="qualityClip" id="qualityClip">
+                                                <children>
+                                                    <Rectangle stroke="$null" height="40.0" width="17.0" fill="black" y="-20.0" x="-25.0"/>
+                                                </children>
+                                              </Group>
+                                            </clip>
+                                          </Rectangle>
+                                          <Rectangle stroke="$null" height="40.0" width="50.0" fill="black" y="-20.0" x="-25.0">
+                                            <clip>
+                                              <Group fx:id="defaultClip" id="defaultClip">
+                                                <children>
+                                                    <Rectangle stroke="$null" height="40.0" width="16.0" fill="black" y="-20.0" x="-8.0"/>
+                                                </children>
+                                              </Group>
+                                            </clip>
+                                          </Rectangle>
+                                          <Rectangle stroke="$null" height="40.0" width="50.0" fill="black" y="-20.0" x="-25.0">
+                                            <clip>
+                                              <Group fx:id="speedClip" id="speedClip">
+                                                <children>
+                                                    <Rectangle stroke="$null" height="40.0" width="17.0" fill="black" y="-20.0" x="8.0"/>
+                                                </children>
+                                              </Group>
+                                            </clip>
+                                          </Rectangle>
+                                          <Text text="Q" stroke="$null" fill="black" textOrigin="baseline" y="24.0" x="-16.5">
+                                            <font>
+                                              <Font name="Verdana" size="5.0"/>
+                                            </font>
+                                          </Text>
+                                          <Line stroke="black" startX="-8.0" startY="20.0" endX="-8.0" endY="25.0" fill="$null" strokeWidth="0.25"/>
+                                          <Text text="A" stroke="$null" fill="black" textOrigin="baseline" y="24.0">
+                                            <font>
+                                              <Font name="Verdana" size="5.0"/>
+                                            </font>
+                                          </Text>
+                                          <Line stroke="black" startX="8.0" startY="20.0" endX="8.0" endY="25.0" fill="$null" strokeWidth="0.25"/>
+                                          <Text text="S" stroke="$null" fill="black" textOrigin="baseline" y="24.0" x="16.5">
+                                            <font>
+                                              <Font name="Verdana" size="5.0"/>
+                                            </font>
+                                          </Text>
+                                      </children>
+                                    </Group>
+                                    <Text text="(fx,fy)=(0%,0%)" textOrigin="baseline" y="-30.0" x="-34.40918">
+                                      <font>
+                                        <Font name="Arial" size="10.0"/>
+                                      </font>
+                                    </Text>
+                                </children>
+                                <transforms>
+                                    <Translate x="0.0" y="240.0"/>
+                                </transforms>
+                              </Group>
+                              <Group>
+                                <children>
+                                    <Group fx:id="testShape" id="testShape">
+                                      <children>
+                                          <Rectangle stroke="$null" height="40.0" width="50.0" fill="black" y="-20.0" x="-25.0">
+                                            <clip>
+                                              <Group fx:id="qualityClip" id="qualityClip">
+                                                <children>
+                                                    <Rectangle stroke="$null" height="40.0" width="17.0" fill="black" y="-20.0" x="-25.0"/>
+                                                </children>
+                                              </Group>
+                                            </clip>
+                                          </Rectangle>
+                                          <Rectangle stroke="$null" height="40.0" width="50.0" fill="black" y="-20.0" x="-25.0">
+                                            <clip>
+                                              <Group fx:id="defaultClip" id="defaultClip">
+                                                <children>
+                                                    <Rectangle stroke="$null" height="40.0" width="16.0" fill="black" y="-20.0" x="-8.0"/>
+                                                </children>
+                                              </Group>
+                                            </clip>
+                                          </Rectangle>
+                                          <Rectangle stroke="$null" height="40.0" width="50.0" fill="black" y="-20.0" x="-25.0">
+                                            <clip>
+                                              <Group fx:id="speedClip" id="speedClip">
+                                                <children>
+                                                    <Rectangle stroke="$null" height="40.0" width="17.0" fill="black" y="-20.0" x="8.0"/>
+                                                </children>
+                                              </Group>
+                                            </clip>
+                                          </Rectangle>
+                                          <Text text="Q" stroke="$null" fill="black" textOrigin="baseline" y="24.0" x="-16.5">
+                                            <font>
+                                              <Font name="Verdana" size="5.0"/>
+                                            </font>
+                                          </Text>
+                                          <Line stroke="black" startX="-8.0" startY="20.0" endX="-8.0" endY="25.0" fill="$null" strokeWidth="0.25"/>
+                                          <Text text="A" stroke="$null" fill="black" textOrigin="baseline" y="24.0">
+                                            <font>
+                                              <Font name="Verdana" size="5.0"/>
+                                            </font>
+                                          </Text>
+                                          <Line stroke="black" startX="8.0" startY="20.0" endX="8.0" endY="25.0" fill="$null" strokeWidth="0.25"/>
+                                          <Text text="S" stroke="$null" fill="black" textOrigin="baseline" y="24.0" x="16.5">
+                                            <font>
+                                              <Font name="Verdana" size="5.0"/>
+                                            </font>
+                                          </Text>
+                                      </children>
+                                    </Group>
+                                    <Text text="r=.125, spread=default" textOrigin="baseline" y="-30.0" x="-50.27832">
+                                      <font>
+                                        <Font name="Arial" size="10.0"/>
+                                      </font>
+                                    </Text>
+                                </children>
+                                <transforms>
+                                    <Translate x="0.0" y="310.0"/>
+                                </transforms>
+                              </Group>
+                              <Group>
+                                <children>
+                                    <Group fx:id="testShape" id="testShape">
+                                      <children>
+                                          <Rectangle stroke="$null" height="40.0" width="50.0" fill="black" y="-20.0" x="-25.0">
+                                            <clip>
+                                              <Group fx:id="qualityClip" id="qualityClip">
+                                                <children>
+                                                    <Rectangle stroke="$null" height="40.0" width="17.0" fill="black" y="-20.0" x="-25.0"/>
+                                                </children>
+                                              </Group>
+                                            </clip>
+                                          </Rectangle>
+                                          <Rectangle stroke="$null" height="40.0" width="50.0" fill="black" y="-20.0" x="-25.0">
+                                            <clip>
+                                              <Group fx:id="defaultClip" id="defaultClip">
+                                                <children>
+                                                    <Rectangle stroke="$null" height="40.0" width="16.0" fill="black" y="-20.0" x="-8.0"/>
+                                                </children>
+                                              </Group>
+                                            </clip>
+                                          </Rectangle>
+                                          <Rectangle stroke="$null" height="40.0" width="50.0" fill="black" y="-20.0" x="-25.0">
+                                            <clip>
+                                              <Group fx:id="speedClip" id="speedClip">
+                                                <children>
+                                                    <Rectangle stroke="$null" height="40.0" width="17.0" fill="black" y="-20.0" x="8.0"/>
+                                                </children>
+                                              </Group>
+                                            </clip>
+                                          </Rectangle>
+                                          <Text text="Q" stroke="$null" fill="black" textOrigin="baseline" y="24.0" x="-16.5">
+                                            <font>
+                                              <Font name="Verdana" size="5.0"/>
+                                            </font>
+                                          </Text>
+                                          <Line stroke="black" startX="-8.0" startY="20.0" endX="-8.0" endY="25.0" fill="$null" strokeWidth="0.25"/>
+                                          <Text text="A" stroke="$null" fill="black" textOrigin="baseline" y="24.0">
+                                            <font>
+                                              <Font name="Verdana" size="5.0"/>
+                                            </font>
+                                          </Text>
+                                          <Line stroke="black" startX="8.0" startY="20.0" endX="8.0" endY="25.0" fill="$null" strokeWidth="0.25"/>
+                                          <Text text="S" stroke="$null" fill="black" textOrigin="baseline" y="24.0" x="16.5">
+                                            <font>
+                                              <Font name="Verdana" size="5.0"/>
+                                            </font>
+                                          </Text>
+                                      </children>
+                                    </Group>
+                                    <Text text="r=.125, spread=reflect" textOrigin="baseline" y="-30.0" x="-48.881836">
+                                      <font>
+                                        <Font name="Arial" size="10.0"/>
+                                      </font>
+                                    </Text>
+                                </children>
+                                <transforms>
+                                    <Translate x="0.0" y="380.0"/>
+                                </transforms>
+                              </Group>
+                              <Group>
+                                <children>
+                                    <Group fx:id="testShape" id="testShape">
+                                      <children>
+                                          <Rectangle stroke="$null" height="40.0" width="50.0" fill="black" y="-20.0" x="-25.0">
+                                            <clip>
+                                              <Group fx:id="qualityClip" id="qualityClip">
+                                                <children>
+                                                    <Rectangle stroke="$null" height="40.0" width="17.0" fill="black" y="-20.0" x="-25.0"/>
+                                                </children>
+                                              </Group>
+                                            </clip>
+                                          </Rectangle>
+                                          <Rectangle stroke="$null" height="40.0" width="50.0" fill="black" y="-20.0" x="-25.0">
+                                            <clip>
+                                              <Group fx:id="defaultClip" id="defaultClip">
+                                                <children>
+                                                    <Rectangle stroke="$null" height="40.0" width="16.0" fill="black" y="-20.0" x="-8.0"/>
+                                                </children>
+                                              </Group>
+                                            </clip>
+                                          </Rectangle>
+                                          <Rectangle stroke="$null" height="40.0" width="50.0" fill="black" y="-20.0" x="-25.0">
+                                            <clip>
+                                              <Group fx:id="speedClip" id="speedClip">
+                                                <children>
+                                                    <Rectangle stroke="$null" height="40.0" width="17.0" fill="black" y="-20.0" x="8.0"/>
+                                                </children>
+                                              </Group>
+                                            </clip>
+                                          </Rectangle>
+                                          <Text text="Q" stroke="$null" fill="black" textOrigin="baseline" y="24.0" x="-16.5">
+                                            <font>
+                                              <Font name="Verdana" size="5.0"/>
+                                            </font>
+                                          </Text>
+                                          <Line stroke="black" startX="-8.0" startY="20.0" endX="-8.0" endY="25.0" fill="$null" strokeWidth="0.25"/>
+                                          <Text text="A" stroke="$null" fill="black" textOrigin="baseline" y="24.0">
+                                            <font>
+                                              <Font name="Verdana" size="5.0"/>
+                                            </font>
+                                          </Text>
+                                          <Line stroke="black" startX="8.0" startY="20.0" endX="8.0" endY="25.0" fill="$null" strokeWidth="0.25"/>
+                                          <Text text="S" stroke="$null" fill="black" textOrigin="baseline" y="24.0" x="16.5">
+                                            <font>
+                                              <Font name="Verdana" size="5.0"/>
+                                            </font>
+                                          </Text>
+                                      </children>
+                                    </Group>
+                                    <Text text="r=.125, spread=repeat" textOrigin="baseline" y="-30.0" x="-49.44336">
+                                      <font>
+                                        <Font name="Arial" size="10.0"/>
+                                      </font>
+                                    </Text>
+                                </children>
+                                <transforms>
+                                    <Translate x="0.0" y="450.0"/>
+                                </transforms>
+                              </Group>
+                          </children>
+                          <transforms>
+                              <Translate x="200.0" y="0.0"/>
+                          </transforms>
+                        </Group>
+                        <Group>
+                          <children>
+                              <Group>
+                                <children>
+                                    <Group fx:id="testShape" id="testShape">
+                                      <children>
+                                          <Rectangle stroke="$null" height="40.0" width="50.0" fill="black" y="-20.0" x="-25.0">
+                                            <clip>
+                                              <Group fx:id="qualityClip" id="qualityClip">
+                                                <children>
+                                                    <Rectangle stroke="$null" height="40.0" width="17.0" fill="black" y="-20.0" x="-25.0"/>
+                                                </children>
+                                              </Group>
+                                            </clip>
+                                          </Rectangle>
+                                          <Rectangle stroke="$null" height="40.0" width="50.0" fill="black" y="-20.0" x="-25.0">
+                                            <clip>
+                                              <Group fx:id="defaultClip" id="defaultClip">
+                                                <children>
+                                                    <Rectangle stroke="$null" height="40.0" width="16.0" fill="black" y="-20.0" x="-8.0"/>
+                                                </children>
+                                              </Group>
+                                            </clip>
+                                          </Rectangle>
+                                          <Rectangle stroke="$null" height="40.0" width="50.0" fill="black" y="-20.0" x="-25.0">
+                                            <clip>
+                                              <Group fx:id="speedClip" id="speedClip">
+                                                <children>
+                                                    <Rectangle stroke="$null" height="40.0" width="17.0" fill="black" y="-20.0" x="8.0"/>
+                                                </children>
+                                              </Group>
+                                            </clip>
+                                          </Rectangle>
+                                          <Text text="Q" stroke="$null" fill="black" textOrigin="baseline" y="24.0" x="-16.5">
+                                            <font>
+                                              <Font name="Verdana" size="5.0"/>
+                                            </font>
+                                          </Text>
+                                          <Line stroke="black" startX="-8.0" startY="20.0" endX="-8.0" endY="25.0" fill="$null" strokeWidth="0.25"/>
+                                          <Text text="A" stroke="$null" fill="black" textOrigin="baseline" y="24.0">
+                                            <font>
+                                              <Font name="Verdana" size="5.0"/>
+                                            </font>
+                                          </Text>
+                                          <Line stroke="black" startX="8.0" startY="20.0" endX="8.0" endY="25.0" fill="$null" strokeWidth="0.25"/>
+                                          <Text text="S" stroke="$null" fill="black" textOrigin="baseline" y="24.0" x="16.5">
+                                            <font>
+                                              <Font name="Verdana" size="5.0"/>
+                                            </font>
+                                          </Text>
+                                      </children>
+                                    </Group>
+                                    <Text text="translate(.5,.5)" textOrigin="baseline" y="-30.0" x="-32.055664">
+                                      <font>
+                                        <Font name="Arial" size="10.0"/>
+                                      </font>
+                                    </Text>
+                                </children>
+                                <transforms>
+                                    <Translate x="0.0" y="100.0"/>
+                                </transforms>
+                              </Group>
+                              <Group>
+                                <children>
+                                    <Group fx:id="testShape" id="testShape">
+                                      <children>
+                                          <Rectangle stroke="$null" height="40.0" width="50.0" fill="black" y="-20.0" x="-25.0">
+                                            <clip>
+                                              <Group fx:id="qualityClip" id="qualityClip">
+                                                <children>
+                                                    <Rectangle stroke="$null" height="40.0" width="17.0" fill="black" y="-20.0" x="-25.0"/>
+                                                </children>
+                                              </Group>
+                                            </clip>
+                                          </Rectangle>
+                                          <Rectangle stroke="$null" height="40.0" width="50.0" fill="black" y="-20.0" x="-25.0">
+                                            <clip>
+                                              <Group fx:id="defaultClip" id="defaultClip">
+                                                <children>
+                                                    <Rectangle stroke="$null" height="40.0" width="16.0" fill="black" y="-20.0" x="-8.0"/>
+                                                </children>
+                                              </Group>
+                                            </clip>
+                                          </Rectangle>
+                                          <Rectangle stroke="$null" height="40.0" width="50.0" fill="black" y="-20.0" x="-25.0">
+                                            <clip>
+                                              <Group fx:id="speedClip" id="speedClip">
+                                                <children>
+                                                    <Rectangle stroke="$null" height="40.0" width="17.0" fill="black" y="-20.0" x="8.0"/>
+                                                </children>
+                                              </Group>
+                                            </clip>
+                                          </Rectangle>
+                                          <Text text="Q" stroke="$null" fill="black" textOrigin="baseline" y="24.0" x="-16.5">
+                                            <font>
+                                              <Font name="Verdana" size="5.0"/>
+                                            </font>
+                                          </Text>
+                                          <Line stroke="black" startX="-8.0" startY="20.0" endX="-8.0" endY="25.0" fill="$null" strokeWidth="0.25"/>
+                                          <Text text="A" stroke="$null" fill="black" textOrigin="baseline" y="24.0">
+                                            <font>
+                                              <Font name="Verdana" size="5.0"/>
+                                            </font>
+                                          </Text>
+                                          <Line stroke="black" startX="8.0" startY="20.0" endX="8.0" endY="25.0" fill="$null" strokeWidth="0.25"/>
+                                          <Text text="S" stroke="$null" fill="black" textOrigin="baseline" y="24.0" x="16.5">
+                                            <font>
+                                              <Font name="Verdana" size="5.0"/>
+                                            </font>
+                                          </Text>
+                                      </children>
+                                    </Group>
+                                    <Text text="(cx,cy)=(0%,0%) translate(.5,.5)" textOrigin="baseline" y="-30.0" x="-70.25635">
+                                      <font>
+                                        <Font name="Arial" size="10.0"/>
+                                      </font>
+                                    </Text>
+                                </children>
+                                <transforms>
+                                    <Translate x="0.0" y="170.0"/>
+                                </transforms>
+                              </Group>
+                              <Group>
+                                <children>
+                                    <Group fx:id="testShape" id="testShape">
+                                      <children>
+                                          <Rectangle stroke="$null" height="40.0" width="50.0" fill="black" y="-20.0" x="-25.0">
+                                            <clip>
+                                              <Group fx:id="qualityClip" id="qualityClip">
+                                                <children>
+                                                    <Rectangle stroke="$null" height="40.0" width="17.0" fill="black" y="-20.0" x="-25.0"/>
+                                                </children>
+                                              </Group>
+                                            </clip>
+                                          </Rectangle>
+                                          <Rectangle stroke="$null" height="40.0" width="50.0" fill="black" y="-20.0" x="-25.0">
+                                            <clip>
+                                              <Group fx:id="defaultClip" id="defaultClip">
+                                                <children>
+                                                    <Rectangle stroke="$null" height="40.0" width="16.0" fill="black" y="-20.0" x="-8.0"/>
+                                                </children>
+                                              </Group>
+                                            </clip>
+                                          </Rectangle>
+                                          <Rectangle stroke="$null" height="40.0" width="50.0" fill="black" y="-20.0" x="-25.0">
+                                            <clip>
+                                              <Group fx:id="speedClip" id="speedClip">
+                                                <children>
+                                                    <Rectangle stroke="$null" height="40.0" width="17.0" fill="black" y="-20.0" x="8.0"/>
+                                                </children>
+                                              </Group>
+                                            </clip>
+                                          </Rectangle>
+                                          <Text text="Q" stroke="$null" fill="black" textOrigin="baseline" y="24.0" x="-16.5">
+                                            <font>
+                                              <Font name="Verdana" size="5.0"/>
+                                            </font>
+                                          </Text>
+                                          <Line stroke="black" startX="-8.0" startY="20.0" endX="-8.0" endY="25.0" fill="$null" strokeWidth="0.25"/>
+                                          <Text text="A" stroke="$null" fill="black" textOrigin="baseline" y="24.0">
+                                            <font>
+                                              <Font name="Verdana" size="5.0"/>
+                                            </font>
+                                          </Text>
+                                          <Line stroke="black" startX="8.0" startY="20.0" endX="8.0" endY="25.0" fill="$null" strokeWidth="0.25"/>
+                                          <Text text="S" stroke="$null" fill="black" textOrigin="baseline" y="24.0" x="16.5">
+                                            <font>
+                                              <Font name="Verdana" size="5.0"/>
+                                            </font>
+                                          </Text>
+                                      </children>
+                                    </Group>
+                                    <Text text="scale(1.5,.25)" textOrigin="baseline" y="-30.0" x="-30.112305">
+                                      <font>
+                                        <Font name="Arial" size="10.0"/>
+                                      </font>
+                                    </Text>
+                                </children>
+                                <transforms>
+                                    <Translate x="0.0" y="240.0"/>
+                                </transforms>
+                              </Group>
+                              <Group>
+                                <children>
+                                    <Group fx:id="testShape" id="testShape">
+                                      <children>
+                                          <Rectangle stroke="$null" height="40.0" width="50.0" fill="black" y="-20.0" x="-25.0">
+                                            <clip>
+                                              <Group fx:id="qualityClip" id="qualityClip">
+                                                <children>
+                                                    <Rectangle stroke="$null" height="40.0" width="17.0" fill="black" y="-20.0" x="-25.0"/>
+                                                </children>
+                                              </Group>
+                                            </clip>
+                                          </Rectangle>
+                                          <Rectangle stroke="$null" height="40.0" width="50.0" fill="black" y="-20.0" x="-25.0">
+                                            <clip>
+                                              <Group fx:id="defaultClip" id="defaultClip">
+                                                <children>
+                                                    <Rectangle stroke="$null" height="40.0" width="16.0" fill="black" y="-20.0" x="-8.0"/>
+                                                </children>
+                                              </Group>
+                                            </clip>
+                                          </Rectangle>
+                                          <Rectangle stroke="$null" height="40.0" width="50.0" fill="black" y="-20.0" x="-25.0">
+                                            <clip>
+                                              <Group fx:id="speedClip" id="speedClip">
+                                                <children>
+                                                    <Rectangle stroke="$null" height="40.0" width="17.0" fill="black" y="-20.0" x="8.0"/>
+                                                </children>
+                                              </Group>
+                                            </clip>
+                                          </Rectangle>
+                                          <Text text="Q" stroke="$null" fill="black" textOrigin="baseline" y="24.0" x="-16.5">
+                                            <font>
+                                              <Font name="Verdana" size="5.0"/>
+                                            </font>
+                                          </Text>
+                                          <Line stroke="black" startX="-8.0" startY="20.0" endX="-8.0" endY="25.0" fill="$null" strokeWidth="0.25"/>
+                                          <Text text="A" stroke="$null" fill="black" textOrigin="baseline" y="24.0">
+                                            <font>
+                                              <Font name="Verdana" size="5.0"/>
+                                            </font>
+                                          </Text>
+                                          <Line stroke="black" startX="8.0" startY="20.0" endX="8.0" endY="25.0" fill="$null" strokeWidth="0.25"/>
+                                          <Text text="S" stroke="$null" fill="black" textOrigin="baseline" y="24.0" x="16.5">
+                                            <font>
+                                              <Font name="Verdana" size="5.0"/>
+                                            </font>
+                                          </Text>
+                                      </children>
+                                    </Group>
+                                    <Text text="(fx,fy)=(0,0) scale(.5, .5)" textOrigin="baseline" y="-30.0" x="-53.027344">
+                                      <font>
+                                        <Font name="Arial" size="10.0"/>
+                                      </font>
+                                    </Text>
+                                </children>
+                                <transforms>
+                                    <Translate x="0.0" y="310.0"/>
+                                </transforms>
+                              </Group>
+                              <Group>
+                                <children>
+                                    <Group fx:id="testShape" id="testShape">
+                                      <children>
+                                          <Rectangle stroke="$null" height="40.0" width="50.0" fill="black" y="-20.0" x="-25.0">
+                                            <clip>
+                                              <Group fx:id="qualityClip" id="qualityClip">
+                                                <children>
+                                                    <Rectangle stroke="$null" height="40.0" width="17.0" fill="black" y="-20.0" x="-25.0"/>
+                                                </children>
+                                              </Group>
+                                            </clip>
+                                          </Rectangle>
+                                          <Rectangle stroke="$null" height="40.0" width="50.0" fill="black" y="-20.0" x="-25.0">
+                                            <clip>
+                                              <Group fx:id="defaultClip" id="defaultClip">
+                                                <children>
+                                                    <Rectangle stroke="$null" height="40.0" width="16.0" fill="black" y="-20.0" x="-8.0"/>
+                                                </children>
+                                              </Group>
+                                            </clip>
+                                          </Rectangle>
+                                          <Rectangle stroke="$null" height="40.0" width="50.0" fill="black" y="-20.0" x="-25.0">
+                                            <clip>
+                                              <Group fx:id="speedClip" id="speedClip">
+                                                <children>
+                                                    <Rectangle stroke="$null" height="40.0" width="17.0" fill="black" y="-20.0" x="8.0"/>
+                                                </children>
+                                              </Group>
+                                            </clip>
+                                          </Rectangle>
+                                          <Text text="Q" stroke="$null" fill="black" textOrigin="baseline" y="24.0" x="-16.5">
+                                            <font>
+                                              <Font name="Verdana" size="5.0"/>
+                                            </font>
+                                          </Text>
+                                          <Line stroke="black" startX="-8.0" startY="20.0" endX="-8.0" endY="25.0" fill="$null" strokeWidth="0.25"/>
+                                          <Text text="A" stroke="$null" fill="black" textOrigin="baseline" y="24.0">
+                                            <font>
+                                              <Font name="Verdana" size="5.0"/>
+                                            </font>
+                                          </Text>
+                                          <Line stroke="black" startX="8.0" startY="20.0" endX="8.0" endY="25.0" fill="$null" strokeWidth="0.25"/>
+                                          <Text text="S" stroke="$null" fill="black" textOrigin="baseline" y="24.0" x="16.5">
+                                            <font>
+                                              <Font name="Verdana" size="5.0"/>
+                                            </font>
+                                          </Text>
+                                      </children>
+                                    </Group>
+                                    <Text text="(fx,fy)=(cx, cy)=(0%, 100%)" textOrigin="baseline" y="-30.0" x="-60.388184">
+                                      <font>
+                                        <Font name="Arial" size="10.0"/>
+                                      </font>
+                                    </Text>
+                                </children>
+                                <transforms>
+                                    <Translate x="0.0" y="380.0"/>
+                                </transforms>
+                              </Group>
+                          </children>
+                          <transforms>
+                              <Translate x="330.0" y="0.0"/>
+                          </transforms>
+                        </Group>
+                    </children>
+                  </Group>
+              </children>
+            </Group>
+        </children>
+      </Group>
+  </children>
+</Group>
