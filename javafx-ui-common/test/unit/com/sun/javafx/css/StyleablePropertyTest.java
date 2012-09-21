@@ -50,9 +50,11 @@ import com.sun.javafx.geom.transform.BaseTransform;
 import com.sun.javafx.jmx.MXNodeAlgorithm;
 import com.sun.javafx.jmx.MXNodeAlgorithmContext;
 import com.sun.javafx.sg.PGNode;
-import org.junit.AfterClass;
+import com.sun.javafx.tk.Toolkit;
+import javafx.scene.Scene;
+import javafx.scene.text.Text;
+import javafx.stage.Stage;
 import org.junit.Before;
-import org.junit.BeforeClass;
 import org.junit.Test;
 
 import static org.junit.Assert.*;
@@ -62,19 +64,7 @@ public class StyleablePropertyTest {
 
     public StyleablePropertyTest() {
     }
-
-    @BeforeClass
-    public static void setUpClass() throws Exception {
-    }
-
-    @AfterClass
-    public static void tearDownClass() throws Exception {
-    }
-
-    @Before
-    public void setUp() {
-    }
-
+    
     private static StyleableProperty get(List<StyleableProperty> list, String prop) {
         for (StyleableProperty styleable : list) {
             if (prop.equals(styleable.getProperty())) return styleable;
@@ -274,151 +264,7 @@ public class StyleablePropertyTest {
         
         return styles;
     }
-    
-    Group createGroup(final CascadingStyle... styles ) {
         
-        // TBD: can't execute this code because there is no StyleHelper.create method
-        assert false : "caller should be @Ignored";
-    
-        final List<CascadingStyle> cascadingStyles = new ArrayList<CascadingStyle>();
-        Collections.addAll(cascadingStyles, styles);
-        final  Map<String, List<CascadingStyle>> styleMap = 
-                Node_cssStyleMap_Test.createStyleMap(cascadingStyles);
-        final Map<StyleHelper.StyleCacheKey, StyleHelper.StyleCacheBucket> styleCache = 
-                        new HashMap<StyleHelper.StyleCacheKey, StyleHelper.StyleCacheBucket>();
-        
-        
-        final Group group = new Group() {
-            // I'm bypassing StyleManager by creating StyleHelper directly. 
-//            StyleHelper shelper = null;
-//            
-//            @Override public void impl_processCSS(boolean reapply) {
-//                if (reapply) {
-//                    shelper = StyleHelper.create(this, styleMap, styleCache, 0, 2);
-//                }
-//                shelper.transitionToState(this);
-//            }
-//                                               
-//            @Override public StyleHelper impl_getStyleHelper() {
-//                return shelper;
-//            }            
-            
-        };
-        group.getStyleClass().add("root");
-        
-        return group;
-    }
-    
-    Rectangle createRectangle(final CascadingStyle... styles ) {
-
-        // TBD: can't execute this code because there is no StyleHelper.create method
-        assert false : "caller should be @Ignored";
-            
-        final List<CascadingStyle> cascadingStyles = new ArrayList<CascadingStyle>();
-        Collections.addAll(cascadingStyles, styles);
-        final  Map<String, List<CascadingStyle>> styleMap = 
-                Node_cssStyleMap_Test.createStyleMap(cascadingStyles);
-        final Map<StyleHelper.StyleCacheKey, StyleHelper.StyleCacheBucket> styleCache = 
-                        new HashMap<StyleHelper.StyleCacheKey, StyleHelper.StyleCacheBucket>();
-        
-        Rectangle rectangle = new Rectangle() {
-            // I'm bypassing StyleManager by creating StyleHelper directly. 
-//            StyleHelper shelper = null;
-//            
-//            @Override public void impl_processCSS(boolean reapply) {
-//                if (reapply) {
-//                    shelper = StyleHelper.create(this, styleMap, styleCache, 0, 2);
-//                }
-//                shelper.transitionToState(this);
-//            }
-//                                               
-//            @Override public StyleHelper impl_getStyleHelper() {
-//                return shelper;
-//            }            
-                                    
-        };
-        rectangle.getStyleClass().add("rect");
-
-        return rectangle;
-    }
-
-    static class RectangleWithFont extends Rectangle {
-                
-        final List<CascadingStyle> cascadingStyles = new ArrayList<CascadingStyle>();
-        final  Map<String, List<CascadingStyle>> styleMap = 
-                Node_cssStyleMap_Test.createStyleMap(cascadingStyles);
-        final Map<StyleHelper.StyleCacheKey, StyleHelper.StyleCacheBucket> styleCache = 
-                        new HashMap<StyleHelper.StyleCacheKey, StyleHelper.StyleCacheBucket>();
-        
-        // I'm bypassing StyleManager by creating StyleHelper directly. 
-        StyleHelper shelper = null;
-        
-        RectangleWithFont(final CascadingStyle... styles) {
-            super();
-            getStyleClass().add("rect");
-            Collections.addAll(cascadingStyles, styles);
-            
-            assert false : "caller should be @Ignored";
-            // TBD: can't execute this code because there is no StyleHelper.create method
-        }    
-        
-//            @Override public void impl_processCSS(boolean reapply) {
-//                if (reapply) {
-//                    shelper = StyleHelper.create(this, styleMap, styleCache, 0, 2);
-//                }
-//                shelper.transitionToState(this);
-//            }
-//                                               
-//            @Override public StyleHelper impl_getStyleHelper() {
-//                return shelper;
-//            }            
-            
-        ObjectProperty<Font> font = new StyleableObjectProperty<Font>() {
-
-            @Override
-            public Object getBean() {
-                return RectangleWithFont.this;
-            }
-
-            @Override
-            public String getName() {
-                return "font";
-            }
-
-            @Override
-            public StyleableProperty getStyleableProperty() {
-                return FONT;
-            }
-
-        };
-
-        private static final StyleableProperty<RectangleWithFont,Font> FONT =
-            new StyleableProperty.FONT<RectangleWithFont>("-fx-font", Font.getDefault()) {
-
-                @Override
-                public boolean isSettable(RectangleWithFont node) {
-                    return true;
-                }
-
-                @Override
-                public WritableValue<Font> getWritableValue(RectangleWithFont node) {
-                    return node.font;
-                }
-            };
-            
-        public static List<StyleableProperty> impl_CSS_STYLEABLES() {
-            List<StyleableProperty> styleables = new ArrayList<StyleableProperty>();
-            styleables.addAll(Rectangle.impl_CSS_STYLEABLES());
-            styleables.add(FONT);
-            return styleables;
-        }
-        
-        @Override public List<StyleableProperty> impl_getStyleableProperties() {
-            return impl_CSS_STYLEABLES();
-        }
-            
-    }    
-    
     static int ord = 0;
     static CascadingStyle createCascadingStyle(Selector selector, Declaration declaration) {
         List<String> pseudoclasses = null;
@@ -441,24 +287,22 @@ public class StyleablePropertyTest {
         );
     }
         
-    @Test @org.junit.Ignore
+    @Test
     public void testGetMatchingStyles() {
 
         
         final Stylesheet stylesheet = new Stylesheet();
         stylesheet.setOrigin(Stylesheet.Origin.USER_AGENT);
+        StyleManager.setDefaultUserAgentStylesheet(stylesheet);
         
         final List<Rule> rules = stylesheet.getRules();
-        
-        List<String> rootStyleClass = new ArrayList<String>();
-        rootStyleClass.add("root");
-        
-        List<String> rectStyleClass = new ArrayList<String>();
-        rootStyleClass.add("rect");
         
         //
         // .root { -fx-base: red; -fx-color: -fx-base; }
         //
+        List<String> rootStyleClass = new ArrayList<String>();
+        rootStyleClass.add("root");
+        
         Selector root = new SimpleSelector("*", rootStyleClass, null, null);
         
         ParsedValue fxBaseValue = CSSParser.getInstance().parseExpr("-fx-base", "red");
@@ -479,6 +323,9 @@ public class StyleablePropertyTest {
         //
         // .rect { -fx-fill: -fx-color; }
         //
+        List<String> rectStyleClass = new ArrayList<String>();
+        rectStyleClass.add("rect");
+        
         Selector rect = new SimpleSelector("*", rectStyleClass, null, null);
         
         ParsedValue fxFillValue = CSSParser.getInstance().parseExpr("-fx-fill", "-fx-color");
@@ -510,17 +357,7 @@ public class StyleablePropertyTest {
         
         Rule rectHoverRule = new Rule(selectors, declarations);
         rules.add(rectHoverRule);
-                
-        final Group group = createGroup(
-            createCascadingStyle(root, fxBase), 
-            createCascadingStyle(root, fxColor)
-        );
-        
-        final Rectangle rectangle = createRectangle(
-            createCascadingStyle(rect, fxFill), 
-            createCascadingStyle(rectHover, fxFillHover)                
-        );
-        
+
         List<Style> expecteds = new ArrayList<Style>();
         Collections.addAll(expecteds, 
                 new Style(root, fxBase), 
@@ -529,15 +366,23 @@ public class StyleablePropertyTest {
                 new Style(rectHover, fxFillHover)
         );
         
-        group.getChildren().add(rectangle);        
-        group.impl_processCSS(true);
+        final Rectangle rectangle = new Rectangle();
+        rectangle.getStyleClass().add("rect");
+        
+        final Group group = new Group();
+        group.getChildren().add(rectangle);
+        
+        Scene scene = new Scene(group);
+        Stage stage = new Stage();
+        stage.setScene(scene);
+        stage.show();
         
         final StyleableProperty FILL = get(StyleableProperty.getStyleables(rectangle), "-fx-fill");
         final List<Style> actuals = FILL.getMatchingStyles(rectangle);
 
-//        System.out.println("matchingStyles: " + matchingStyles);
-//        System.out.println("expecteds: " + expecteds);
-//        System.out.println("actuals: " + actuals);
+//        System.err.println("matchingStyles: " + matchingStyles);
+//        System.err.println("expecteds: " + expecteds);
+//        System.err.println("actuals: " + actuals);
         
         assertEquals(expecteds.size(), actuals.size(), 0);
         
@@ -547,24 +392,22 @@ public class StyleablePropertyTest {
         assertTrue(actuals.isEmpty());
     }
 
-    @Test  @org.junit.Ignore
+    @Test
     public void testGetMatchingStylesWithInlineStyleOnParent() {
 
         
         final Stylesheet stylesheet = new Stylesheet();
         stylesheet.setOrigin(Stylesheet.Origin.USER_AGENT);
+        StyleManager.setDefaultUserAgentStylesheet(stylesheet);
         
         final List<Rule> rules = stylesheet.getRules();
-        
-        List<String> rootStyleClass = new ArrayList<String>();
-        rootStyleClass.add("root");
-        
-        List<String> rectStyleClass = new ArrayList<String>();
-        rootStyleClass.add("rect");
         
         //
         // .root { -fx-base: red; -fx-color: -fx-base; }
         //
+        List<String> rootStyleClass = new ArrayList<String>();
+        rootStyleClass.add("root");
+        
         Selector root = new SimpleSelector("*", rootStyleClass, null, null);
         
         ParsedValue fxBaseValue = CSSParser.getInstance().parseExpr("-fx-base", "red");
@@ -585,6 +428,9 @@ public class StyleablePropertyTest {
         //
         // .rect { -fx-fill: -fx-color; }
         //
+        List<String> rectStyleClass = new ArrayList<String>();
+        rectStyleClass.add("rect");
+        
         Selector rect = new SimpleSelector("*", rectStyleClass, null, null);
         
         ParsedValue fxFillValue = CSSParser.getInstance().parseExpr("-fx-fill", "-fx-color");
@@ -616,40 +462,50 @@ public class StyleablePropertyTest {
         
         Rule rectHoverRule = new Rule(selectors, declarations);
         rules.add(rectHoverRule);
-                
-        final Group group = createGroup(
-            createCascadingStyle(root, fxBase), 
-            createCascadingStyle(root, fxColor)
-        );
-        group.setStyle("-fx-base: green;");
-        
-        final Rectangle rectangle = createRectangle(
-            createCascadingStyle(rect, fxFill), 
-            createCascadingStyle(rectHover, fxFillHover)                
-        );
-        
+
+        // Declaration now checks origin, so we need to make this expected
+        // value look like it came from an inline
+        final Declaration decl = new Declaration("-fx-base", new ParsedValue<Color,Color>(Color.GREEN, null), false);
+    
+        Stylesheet ss = new Stylesheet() {
+            {
+                setOrigin(Stylesheet.Origin.INLINE);
+                getRules().add(
+                    new Rule(Arrays.asList(SimpleSelector.getUniversalSelector()), Arrays.asList(decl))
+                );
+            }
+        };
+       
         List<Style> expecteds = new ArrayList<Style>();
         Collections.addAll(expecteds, 
-                new Style(SimpleSelector.getUniversalSelector(), 
-                          new Declaration("-fx-base", new ParsedValue<Color,Color>(Color.GREEN, null), false)), 
+                new Style(SimpleSelector.getUniversalSelector(), decl),
                 new Style(root, fxBase),
                 new Style(root, fxColor), 
                 new Style(rect, fxFill),
                 new Style(rectHover, fxFillHover)
         );
+                
+        final Rectangle rectangle = new Rectangle();
+        rectangle.getStyleClass().add("rect");
         
+        final Group group = new Group();
+        group.setStyle("-fx-base: green;");
         group.getChildren().add(rectangle);        
-        group.impl_processCSS(true);
         
+        Scene scene = new Scene(group);
+        Stage stage = new Stage();
+        stage.setScene(scene);
+        stage.show();        
+                
         final StyleableProperty FILL = get(StyleableProperty.getStyleables(rectangle), "-fx-fill");
         final List<Style> actuals = FILL.getMatchingStyles(rectangle);
 
-//        System.out.println("matchingStyles: " + matchingStyles);
-//        System.out.println("expecteds: " + expecteds);
-//        System.out.println("actuals: " + actuals);
+//        System.err.println("matchingStyles: " + matchingStyles);
+//        System.err.println("expecteds: " + expecteds);
+//        System.err.println("actuals: " + actuals);
         
         assertEquals(expecteds.size(), actuals.size(), 0);
-        
+
         // inline style should be first
         assertEquals(expecteds.get(0), actuals.get(0));
         
@@ -659,24 +515,22 @@ public class StyleablePropertyTest {
         assertTrue(actuals.isEmpty());
     }
 
-    @Test @org.junit.Ignore
+    @Test
     public void testGetMatchingStylesWithInlineStyleOnLeaf() {
 
         
         final Stylesheet stylesheet = new Stylesheet();
         stylesheet.setOrigin(Stylesheet.Origin.USER_AGENT);
+        StyleManager.setDefaultUserAgentStylesheet(stylesheet);
         
         final List<Rule> rules = stylesheet.getRules();
-        
-        List<String> rootStyleClass = new ArrayList<String>();
-        rootStyleClass.add("root");
-        
-        List<String> rectStyleClass = new ArrayList<String>();
-        rootStyleClass.add("rect");
         
         //
         // .root { -fx-base: red; -fx-color: -fx-base; }
         //
+        List<String> rootStyleClass = new ArrayList<String>();
+        rootStyleClass.add("root");
+        
         Selector root = new SimpleSelector("*", rootStyleClass, null, null);
         
         ParsedValue fxBaseValue = CSSParser.getInstance().parseExpr("-fx-base", "red");
@@ -697,6 +551,9 @@ public class StyleablePropertyTest {
         //
         // .rect { -fx-fill: -fx-color; }
         //
+        List<String> rectStyleClass = new ArrayList<String>();
+        rectStyleClass.add("rect");
+        
         Selector rect = new SimpleSelector("*", rectStyleClass, null, null);
         
         ParsedValue fxFillValue = CSSParser.getInstance().parseExpr("-fx-fill", "-fx-color");
@@ -729,36 +586,46 @@ public class StyleablePropertyTest {
         Rule rectHoverRule = new Rule(selectors, declarations);
         rules.add(rectHoverRule);
                 
-        final Group group = createGroup(
-            createCascadingStyle(root, fxBase), 
-            createCascadingStyle(root, fxColor)
-        );
-        
-        final Rectangle rectangle = createRectangle(
-            createCascadingStyle(rect, fxFill), 
-            createCascadingStyle(rectHover, fxFillHover)                
-        );
-        rectangle.setStyle("-fx-base: green;");
-        
+        // Declaration now checks origin, so we need to make this expected
+        // value look like it came from an inline
+        final Declaration decl = new Declaration("-fx-base", new ParsedValue<Color,Color>(Color.GREEN, null), false);
+    
+        Stylesheet ss = new Stylesheet() {
+            {
+                setOrigin(Stylesheet.Origin.INLINE);
+                getRules().add(
+                    new Rule(Arrays.asList(SimpleSelector.getUniversalSelector()), Arrays.asList(decl))
+                );
+            }
+        };
+       
         List<Style> expecteds = new ArrayList<Style>();
         Collections.addAll(expecteds, 
-                new Style(SimpleSelector.getUniversalSelector(), 
-                          new Declaration("-fx-base", new ParsedValue<Color,Color>(Color.GREEN, null), false)), 
+                new Style(SimpleSelector.getUniversalSelector(), decl),
                 new Style(root, fxBase),
                 new Style(root, fxColor), 
                 new Style(rect, fxFill),
                 new Style(rectHover, fxFillHover)
         );
         
-        group.getChildren().add(rectangle);        
-        group.impl_processCSS(true);
+        final Rectangle rectangle = new Rectangle();
+        rectangle.getStyleClass().add("rect");
+        rectangle.setStyle("-fx-base: green;");
         
+        final Group group = new Group();        
+        group.getChildren().add(rectangle);        
+        
+        Scene scene = new Scene(group);
+        Stage stage = new Stage();
+        stage.setScene(scene);
+        stage.show();
+
         final StyleableProperty FILL = get(StyleableProperty.getStyleables(rectangle), "-fx-fill");
         final List<Style> actuals = FILL.getMatchingStyles(rectangle);
-
-//        System.out.println("matchingStyles: " + matchingStyles);
-//        System.out.println("expecteds: " + expecteds);
-//        System.out.println("actuals: " + actuals);
+                
+//        System.err.println("matchingStyles: " + matchingStyles);
+//        System.err.println("expecteds: " + expecteds);
+//        System.err.println("actuals: " + actuals);
 
         assertEquals(expecteds.size(), actuals.size(), 0);
         
@@ -771,24 +638,22 @@ public class StyleablePropertyTest {
         assertTrue(actuals.isEmpty());
     }   
     
-    @Test  @org.junit.Ignore
+    @Test
     public void testGetMatchingStylesWithInlineStyleOnRootAndLeaf() {
 
-        
+
         final Stylesheet stylesheet = new Stylesheet();
         stylesheet.setOrigin(Stylesheet.Origin.USER_AGENT);
+        StyleManager.setDefaultUserAgentStylesheet(stylesheet);
         
         final List<Rule> rules = stylesheet.getRules();
-        
-        List<String> rootStyleClass = new ArrayList<String>();
-        rootStyleClass.add("root");
-        
-        List<String> rectStyleClass = new ArrayList<String>();
-        rootStyleClass.add("rect");
         
         //
         // .root { -fx-base: red; -fx-color: -fx-base; }
         //
+        List<String> rootStyleClass = new ArrayList<String>();
+        rootStyleClass.add("root");
+        
         Selector root = new SimpleSelector("*", rootStyleClass, null, null);
         
         ParsedValue fxBaseValue = CSSParser.getInstance().parseExpr("-fx-base", "red");
@@ -809,6 +674,9 @@ public class StyleablePropertyTest {
         //
         // .rect { -fx-fill: -fx-color; }
         //
+        List<String> rectStyleClass = new ArrayList<String>();
+        rectStyleClass.add("rect");
+        
         Selector rect = new SimpleSelector("*", rectStyleClass, null, null);
         
         ParsedValue fxFillValue = CSSParser.getInstance().parseExpr("-fx-fill", "-fx-color");
@@ -840,40 +708,51 @@ public class StyleablePropertyTest {
         
         Rule rectHoverRule = new Rule(selectors, declarations);
         rules.add(rectHoverRule);
-                
-        final Group group = createGroup(
-            createCascadingStyle(root, fxBase), 
-            createCascadingStyle(root, fxColor)
-        );
-        group.setStyle("-fx-color: yellow;");
-        
-        final Rectangle rectangle = createRectangle(
-            createCascadingStyle(rect, fxFill), 
-            createCascadingStyle(rectHover, fxFillHover)                
-        );
-        rectangle.setStyle("-fx-base: green;");
-        
+
+        // Declaration now checks origin, so we need to make this expected
+        // value look like it came from an inline
+        final Declaration gdecl = new Declaration("-fx-base", new ParsedValue<Color,Color>(Color.GREEN, null), false);
+        final Declaration ydecl = new Declaration("-fx-color", new ParsedValue<Color,Color>(Color.YELLOW, null), false);
+    
+        Stylesheet ss = new Stylesheet() {
+            {
+                setOrigin(Stylesheet.Origin.INLINE);
+                Collections.addAll(getRules(),
+                    new Rule(Arrays.asList(SimpleSelector.getUniversalSelector()), Arrays.asList(gdecl)),
+                    new Rule(Arrays.asList(SimpleSelector.getUniversalSelector()), Arrays.asList(ydecl))
+                );
+            }
+        };
+       
         List<Style> expecteds = new ArrayList<Style>();
         Collections.addAll(expecteds, 
-                new Style(SimpleSelector.getUniversalSelector(), 
-                          new Declaration("-fx-color", new ParsedValue<Color,Color>(Color.YELLOW, null), false)), 
-                new Style(SimpleSelector.getUniversalSelector(), 
-                          new Declaration("-fx-base", new ParsedValue<Color,Color>(Color.GREEN, null), false)), 
+                new Style(SimpleSelector.getUniversalSelector(), ydecl),
+                new Style(SimpleSelector.getUniversalSelector(), gdecl),
                 new Style(root, fxBase),
                 new Style(root, fxColor), 
                 new Style(rect, fxFill),
                 new Style(rectHover, fxFillHover)
         );
         
+        final Rectangle rectangle = new Rectangle();
+        rectangle.getStyleClass().add("rect");
+        rectangle.setStyle("-fx-base: green;");
+                
+        final Group group = new Group();
+        group.setStyle("-fx-color: yellow;");
         group.getChildren().add(rectangle);        
-        group.impl_processCSS(true);
+
+        Scene scene = new Scene(group);
+        Stage stage = new Stage();
+        stage.setScene(scene);
+        stage.show();
         
         final StyleableProperty FILL = get(StyleableProperty.getStyleables(rectangle), "-fx-fill");
         final List<Style> actuals = FILL.getMatchingStyles(rectangle);
 
-//        System.out.println("matchingStyles: " + matchingStyles);
-//        System.out.println("expecteds: " + expecteds);
-//        System.out.println("actuals: " + actuals);
+//        System.err.println("matchingStyles: " + matchingStyles);
+//        System.err.println("expecteds: " + expecteds);
+        System.err.println("actuals: " + actuals);
 
         assertEquals(expecteds.size(), actuals.size(), 0);
         
@@ -881,29 +760,27 @@ public class StyleablePropertyTest {
         assertEquals(expecteds.get(0), actuals.get(0));
         
         for (Style style : expecteds) {
-            if (!actuals.remove(style)) fail();
+            if (!actuals.remove(style)) fail(style.toString());
         }
         assertTrue(actuals.isEmpty());
     } 
 
-    @Test  @org.junit.Ignore
+    @Test
     public void testGetMatchingStylesShouldNotReturnAncestorPropertyIfNotInherited() {
 
         
         final Stylesheet stylesheet = new Stylesheet();
         stylesheet.setOrigin(Stylesheet.Origin.USER_AGENT);
+        StyleManager.setDefaultUserAgentStylesheet(stylesheet);
         
         final List<Rule> rules = stylesheet.getRules();
-        
-        List<String> rootStyleClass = new ArrayList<String>();
-        rootStyleClass.add("root");
-        
-        List<String> rectStyleClass = new ArrayList<String>();
-        rootStyleClass.add("rect");
         
         //
         // .root { -fx-base: red; -fx-color: -fx-base; }
         //
+        List<String> rootStyleClass = new ArrayList<String>();
+        rootStyleClass.add("root");
+        
         Selector root = new SimpleSelector("*", rootStyleClass, null, null);
         
         ParsedValue fxBaseValue = CSSParser.getInstance().parseExpr("-fx-base", "red");
@@ -927,6 +804,9 @@ public class StyleablePropertyTest {
         //
         // .rect { -fx-fill: -fx-color; }
         //
+        List<String> rectStyleClass = new ArrayList<String>();
+        rectStyleClass.add("rect");
+        
         Selector rect = new SimpleSelector("*", rectStyleClass, null, null);
         
         ParsedValue fxFillValue = CSSParser.getInstance().parseExpr("-fx-fill", "-fx-color");
@@ -959,17 +839,6 @@ public class StyleablePropertyTest {
         Rule rectHoverRule = new Rule(selectors, declarations);
         rules.add(rectHoverRule);
                 
-        final Group group = createGroup(
-            createCascadingStyle(root, fxBase), 
-            createCascadingStyle(root, fxColor),
-            createCascadingStyle(root, fxFillShouldNotMatch)
-        );
-        
-        final Rectangle rectangle = createRectangle(
-            createCascadingStyle(rect, fxFill), 
-            createCascadingStyle(rectHover, fxFillHover)                
-        );
-        
         List<Style> expecteds = new ArrayList<Style>();
         Collections.addAll(expecteds, 
                 new Style(root, fxBase),
@@ -978,15 +847,23 @@ public class StyleablePropertyTest {
                 new Style(rectHover, fxFillHover)
         );
         
-        group.getChildren().add(rectangle);        
-        group.impl_processCSS(true);
+        final Rectangle rectangle = new Rectangle();
+        rectangle.getStyleClass().add("rect");
         
+        final Group group = new Group();
+        group.getChildren().add(rectangle);        
+
+        Scene scene = new Scene(group);
+        Stage stage = new Stage();
+        stage.setScene(scene);
+        stage.show();
+                
         final StyleableProperty FILL = get(StyleableProperty.getStyleables(rectangle), "-fx-fill");
         final List<Style> actuals = FILL.getMatchingStyles(rectangle);
 
-//        System.out.println("matchingStyles: " + matchingStyles);
-//        System.out.println("expecteds: " + expecteds);
-//        System.out.println("actuals: " + actuals);
+//        System.err.println("matchingStyles: " + matchingStyles);
+//        System.err.println("expecteds: " + expecteds);
+//        System.err.println("actuals: " + actuals);
 
         assertEquals(expecteds.size(), actuals.size(), 0);
                 
@@ -997,120 +874,12 @@ public class StyleablePropertyTest {
     } 
 
 
-    @Test @org.junit.Ignore("uses createGroup which, in turn, relies on a method that is no longer available")
+    @Test
     public void testGetMatchingStylesShouldNotReturnInlineAncestorPropertyIfNotInherited() {
-
         
         final Stylesheet stylesheet = new Stylesheet();
         stylesheet.setOrigin(Stylesheet.Origin.USER_AGENT);
-        
-        final List<Rule> rules = stylesheet.getRules();
-        
-        List<String> rootStyleClass = new ArrayList<String>();
-        rootStyleClass.add("root");
-        
-        List<String> rectStyleClass = new ArrayList<String>();
-        rootStyleClass.add("rect");
-        
-        //
-        // .root { -fx-base: red; -fx-color: -fx-base; }
-        //
-        Selector root = new SimpleSelector("*", rootStyleClass, null, null);
-        
-        ParsedValue fxBaseValue = CSSParser.getInstance().parseExpr("-fx-base", "red");
-        Declaration fxBase = new Declaration("-fx-base", fxBaseValue, false);
-
-        ParsedValue<String,String> fxColorValue = new ParsedValue<String,String>(fxBase.getProperty(), null, true);
-        Declaration fxColor = new Declaration("-fx-color", fxColorValue, false);
-
-        ParsedValue<Color,Color> fxFillShouldNotMatchValue = new ParsedValue<Color,Color>(Color.RED, null);        
-        Declaration fxFillShouldNotMatch = new Declaration("-fx-fill", fxFillShouldNotMatchValue, false);
-        
-        List<Selector> selectors = new ArrayList<Selector>();
-        Collections.addAll(selectors, root); 
-        
-        List<Declaration> declarations = new ArrayList<Declaration>(); 
-        Collections.addAll(declarations, fxBase, fxColor, fxFillShouldNotMatch);
-        
-        Rule baseRule = new Rule(selectors, declarations);
-        rules.add(baseRule);
-        
-        //
-        // .rect { -fx-fill: -fx-color; }
-        //
-        Selector rect = new SimpleSelector("*", rectStyleClass, null, null);
-        
-        ParsedValue fxFillValue = CSSParser.getInstance().parseExpr("-fx-fill", "-fx-color");
-        Declaration fxFill = new Declaration("-fx-fill", fxFillValue, false);
-        
-        selectors = new ArrayList<Selector>();
-        Collections.addAll(selectors, rect); 
-        
-        declarations = new ArrayList<Declaration>(); 
-        Collections.addAll(declarations, fxFill);
-        
-        Rule rectRule = new Rule(selectors, declarations);
-        rules.add(rectRule);
-        
-        // .rect:hover { -fx-fill: yellow; }
-        List<String> pseudoclasses = new ArrayList<String>();
-        pseudoclasses.add("hover");
-        
-        Selector rectHover = new SimpleSelector("*", rectStyleClass, pseudoclasses, null);
-        
-        ParsedValue<Color,Color> fxFillHoverValue = new ParsedValue<Color,Color>(Color.YELLOW, null);        
-        Declaration fxFillHover = new Declaration("-fx-fill", fxFillHoverValue, false);
-        
-        selectors = new ArrayList<Selector>();
-        Collections.addAll(selectors, rectHover); 
-        
-        declarations = new ArrayList<Declaration>(); 
-        Collections.addAll(declarations, fxFillHover);
-        
-        Rule rectHoverRule = new Rule(selectors, declarations);
-        rules.add(rectHoverRule);
-                
-        final Group group = createGroup(
-            createCascadingStyle(root, fxBase), 
-            createCascadingStyle(root, fxColor)
-        );
-        group.setStyle("-fx-fill: black;");
-        
-        final Rectangle rectangle = createRectangle(
-            createCascadingStyle(rect, fxFill), 
-            createCascadingStyle(rectHover, fxFillHover)                
-        );
-        
-        List<Style> expecteds = new ArrayList<Style>();
-        Collections.addAll(expecteds, 
-                new Style(root, fxBase),
-                new Style(root, fxColor), 
-                new Style(rect, fxFill),
-                new Style(rectHover, fxFillHover)
-        );
-        
-        group.getChildren().add(rectangle);        
-        group.impl_processCSS(true);
-        
-        final StyleableProperty FILL = get(StyleableProperty.getStyleables(rectangle), "-fx-fill");
-        final List<Style> actuals = FILL.getMatchingStyles(rectangle);
-
-//        System.out.println("matchingStyles: " + matchingStyles);
-//        System.out.println("expecteds: " + expecteds);
-//        System.out.println("actuals: " + actuals);
-                
-        for (Style style : expecteds) {
-            actuals.remove(style);
-        }
-        assertTrue(actuals.toString(), actuals.isEmpty());
-    }    
-    
-    @Test @org.junit.Ignore
-    public void testGetMatchingStylesReturnsInheritedProperty() {
-
-        
-        final Stylesheet stylesheet = new Stylesheet();
-        stylesheet.setOrigin(Stylesheet.Origin.USER_AGENT);
+        StyleManager.setDefaultUserAgentStylesheet(stylesheet);
         
         final List<Rule> rules = stylesheet.getRules();
         
@@ -1123,6 +892,109 @@ public class StyleablePropertyTest {
         //
         // .root { -fx-base: red; -fx-color: -fx-base; }
         //
+        Selector root = new SimpleSelector("*", rootStyleClass, null, null);
+        
+        ParsedValue fxBaseValue = CSSParser.getInstance().parseExpr("-fx-base", "red");
+        Declaration fxBase = new Declaration("-fx-base", fxBaseValue, false);
+
+        ParsedValue<String,String> fxColorValue = new ParsedValue<String,String>(fxBase.getProperty(), null, true);
+        Declaration fxColor = new Declaration("-fx-color", fxColorValue, false);
+
+        ParsedValue<Color,Color> fxFillShouldNotMatchValue = new ParsedValue<Color,Color>(Color.RED, null);        
+        Declaration fxFillShouldNotMatch = new Declaration("-fx-fill", fxFillShouldNotMatchValue, false);
+        
+        List<Selector> selectors = new ArrayList<Selector>();
+        Collections.addAll(selectors, root); 
+        
+        List<Declaration> declarations = new ArrayList<Declaration>(); 
+        Collections.addAll(declarations, fxBase, fxColor, fxFillShouldNotMatch);
+        
+        Rule baseRule = new Rule(selectors, declarations);
+        rules.add(baseRule);
+        
+        //
+        // .rect { -fx-fill: -fx-color; }
+        //
+        Selector rect = new SimpleSelector("*", rectStyleClass, null, null);
+        
+        ParsedValue fxFillValue = CSSParser.getInstance().parseExpr("-fx-fill", "-fx-color");
+        Declaration fxFill = new Declaration("-fx-fill", fxFillValue, false);
+        
+        selectors = new ArrayList<Selector>();
+        Collections.addAll(selectors, rect); 
+        
+        declarations = new ArrayList<Declaration>(); 
+        Collections.addAll(declarations, fxFill);
+        
+        Rule rectRule = new Rule(selectors, declarations);
+        rules.add(rectRule);
+        
+        // .rect:hover { -fx-fill: yellow; }
+        List<String> pseudoclasses = new ArrayList<String>();
+        pseudoclasses.add("hover");
+        
+        Selector rectHover = new SimpleSelector("*", rectStyleClass, pseudoclasses, null);
+        
+        ParsedValue<Color,Color> fxFillHoverValue = new ParsedValue<Color,Color>(Color.YELLOW, null);        
+        Declaration fxFillHover = new Declaration("-fx-fill", fxFillHoverValue, false);
+        
+        selectors = new ArrayList<Selector>();
+        Collections.addAll(selectors, rectHover); 
+        
+        declarations = new ArrayList<Declaration>(); 
+        Collections.addAll(declarations, fxFillHover);
+        
+        Rule rectHoverRule = new Rule(selectors, declarations);
+        rules.add(rectHoverRule);
+                
+        List<Style> expecteds = new ArrayList<Style>();
+        Collections.addAll(expecteds, 
+                new Style(root, fxBase),
+                new Style(root, fxColor), 
+                new Style(rect, fxFill),
+                new Style(rectHover, fxFillHover)
+        );
+        
+        final Rectangle rectangle = new Rectangle();
+        rectangle.getStyleClass().add("rect");
+        
+        final Group group = new Group();
+        group.getChildren().add(rectangle);        
+        
+        Scene scene = new Scene(group);
+        Stage stage = new Stage();
+        stage.setScene(scene);
+        stage.show();
+                
+        final StyleableProperty FILL = get(StyleableProperty.getStyleables(rectangle), "-fx-fill");
+        final List<Style> actuals = FILL.getMatchingStyles(rectangle);
+
+//        System.err.println("matchingStyles: " + matchingStyles);
+//        System.err.println("expecteds: " + expecteds);
+//        System.err.println("actuals: " + actuals);
+                
+        for (Style style : expecteds) {
+            actuals.remove(style);
+        }
+        assertTrue(actuals.toString(), actuals.isEmpty());
+    }    
+    
+    @Test
+    public void testGetMatchingStylesReturnsInheritedProperty() {
+
+
+        final Stylesheet stylesheet = new Stylesheet();
+        stylesheet.setOrigin(Stylesheet.Origin.USER_AGENT);
+        StyleManager.setDefaultUserAgentStylesheet(stylesheet);
+        
+        final List<Rule> rules = stylesheet.getRules();
+        
+        //
+        // .root { -fx-base: red; -fx-color: -fx-base; }
+        //
+        List<String> rootStyleClass = new ArrayList<String>();
+        rootStyleClass.add("root");
+        
         Selector root = new SimpleSelector("*", rootStyleClass, null, null);
         
         ParsedValue<Color,Color> fxFontShouldInheritValue = CSSParser.getInstance().parseExpr("-fx-font", "12px system");       
@@ -1138,15 +1010,18 @@ public class StyleablePropertyTest {
         rules.add(baseRule);
         
         //
-        // .rect { -fx-fill: -fx-color; }
+        // .text { -fx-fill: -fx-color; }
         //
-        Selector rect = new SimpleSelector("*", rectStyleClass, null, null);
+        List<String> textStyleClass = new ArrayList<String>();
+        textStyleClass.add("text");
+        
+        Selector textSelector = new SimpleSelector("*", textStyleClass, null, null);
         
         ParsedValue fxFillValue = CSSParser.getInstance().parseExpr("-fx-fill", "red");
         Declaration fxFill = new Declaration("-fx-fill", fxFillValue, false);
         
         selectors = new ArrayList<Selector>();
-        Collections.addAll(selectors, rect); 
+        Collections.addAll(selectors, textSelector); 
         
         declarations = new ArrayList<Declaration>(); 
         Collections.addAll(declarations, fxFill);
@@ -1154,28 +1029,28 @@ public class StyleablePropertyTest {
         Rule rectRule = new Rule(selectors, declarations);
         rules.add(rectRule);
                
-        final Group group = createGroup(
-            createCascadingStyle(root, fxFontShouldInherit)
-        );
-        
-        final RectangleWithFont rectangle  = new RectangleWithFont(
-            createCascadingStyle(rect, fxFill) 
-        );
-        
         List<Style> expecteds = new ArrayList<Style>();
         Collections.addAll(expecteds, 
                 new Style(root, fxFontShouldInherit)
         );
         
-        group.getChildren().add(rectangle);        
-        group.impl_processCSS(true);
+        final Text text = new Text("text");
+        text.getStyleClass().add("text");
         
-        final StyleableProperty FONT = get(StyleableProperty.getStyleables(rectangle), "-fx-font");
-        final List<Style> actuals = FONT.getMatchingStyles(rectangle);
+        final Group group = new Group();
+        group.getChildren().add(text);        
+        
+        Scene scene = new Scene(group);
+        Stage stage = new Stage();
+        stage.setScene(scene);
+        stage.show();
+                
+        final StyleableProperty FONT = get(StyleableProperty.getStyleables(text), "-fx-font");
+        final List<Style> actuals = FONT.getMatchingStyles(text);
 
-//        System.out.println("matchingStyles: " + matchingStyles);
-//        System.out.println("expecteds: " + expecteds);
-//        System.out.println("actuals: " + actuals);
+//        System.err.println("matchingStyles: " + matchingStyles);
+//        System.err.println("expecteds: " + expecteds);
+//        System.err.println("actuals: " + actuals);
 
         assertEquals(expecteds.size(), actuals.size(), 0);
                 
@@ -1185,24 +1060,21 @@ public class StyleablePropertyTest {
         assertTrue(actuals.isEmpty());
     }
     
-    @Test @org.junit.Ignore
+    @Test
     public void testGetMatchingStylesReturnsSubProperty() {
 
-        
         final Stylesheet stylesheet = new Stylesheet();
         stylesheet.setOrigin(Stylesheet.Origin.USER_AGENT);
-        
+        StyleManager.setDefaultUserAgentStylesheet(stylesheet);        
+                
         final List<Rule> rules = stylesheet.getRules();
-        
-        List<String> rootStyleClass = new ArrayList<String>();
-        rootStyleClass.add("root");
-        
-        List<String> rectStyleClass = new ArrayList<String>();
-        rectStyleClass.add("rect");
         
         //
         // .root { -fx-base: red; -fx-color: -fx-base; }
         //
+        List<String> rootStyleClass = new ArrayList<String>();
+        rootStyleClass.add("root");
+        
         Selector root = new SimpleSelector("*", rootStyleClass, null, null);
         
         ParsedValue<Color,Color> fxFontShouldInheritValue = CSSParser.getInstance().parseExpr("-fx-font", "12px system");       
@@ -1218,9 +1090,12 @@ public class StyleablePropertyTest {
         rules.add(baseRule);
         
         //
-        // .rect { -fx-fill: -fx-color; }
+        // .text { -fx-fill: -fx-color; }
         //
-        Selector rect = new SimpleSelector("*", rectStyleClass, null, null);
+        List<String> rectStyleClass = new ArrayList<String>();
+        rectStyleClass.add("text");
+        
+        Selector textSelector = new SimpleSelector("*", rectStyleClass, null, null);
         
         ParsedValue fxFillValue = CSSParser.getInstance().parseExpr("-fx-fill", "red");
         Declaration fxFill = new Declaration("-fx-fill", fxFillValue, false);
@@ -1229,38 +1104,37 @@ public class StyleablePropertyTest {
         Declaration fxFontFamily = new Declaration("-fx-font-family", fxFontFamilyValue, false);
         
         selectors = new ArrayList<Selector>();
-        Collections.addAll(selectors, rect); 
+        Collections.addAll(selectors, textSelector); 
         
         declarations = new ArrayList<Declaration>(); 
         Collections.addAll(declarations, fxFill, fxFontFamily);
         
         Rule rectRule = new Rule(selectors, declarations);
         rules.add(rectRule);
-               
-        final Group group = createGroup(
-            createCascadingStyle(root, fxFontShouldInherit)
-        );
-        
-        final RectangleWithFont rectangle  = new RectangleWithFont(
-            createCascadingStyle(rect, fxFill),
-            createCascadingStyle(rect, fxFontFamily)
-        );
-        
+
         List<Style> expecteds = new ArrayList<Style>();
         Collections.addAll(expecteds, 
-                new Style(rect, fxFontFamily),
+                new Style(textSelector, fxFontFamily),
                 new Style(root, fxFontShouldInherit)
         );
         
-        group.getChildren().add(rectangle);        
-        group.impl_processCSS(true);
+        final Text text  = new Text();
+        text.getStyleClass().add("text");
         
-        final StyleableProperty FONT = get(StyleableProperty.getStyleables(rectangle), "-fx-font");
-        final List<Style> actuals = FONT.getMatchingStyles(rectangle);
+        final Group group = new Group();
+        group.getChildren().add(text);        
 
-//        System.out.println("matchingStyles: " + matchingStyles);
-//        System.out.println("expecteds: " + expecteds);
-//        System.out.println("actuals: " + actuals);
+        Scene scene = new Scene(group);
+        Stage stage = new Stage();
+        stage.setScene(scene);
+        stage.show();
+                        
+        final StyleableProperty FONT = get(StyleableProperty.getStyleables(text), "-fx-font");
+        final List<Style> actuals = FONT.getMatchingStyles(text);
+
+//        System.err.println("matchingStyles: " + matchingStyles);
+//        System.err.println("expecteds: " + expecteds);
+//        System.err.println("actuals: " + actuals);
 
         assertEquals(expecteds.size(), actuals.size(), 0);
                 
@@ -1276,7 +1150,7 @@ public class StyleablePropertyTest {
             ClassLoader cl = Thread.currentThread().getContextClassLoader();
             URL base = cl.getResource("javafx/..");
             File f = new File(base.toURI());
-            System.out.println(f.getPath());
+//            System.err.println(f.getPath());
             recursiveCheck(f, f.getPath().length());
         } catch (Exception ex) {
             ex.printStackTrace(System.err);
@@ -1356,7 +1230,7 @@ public class StyleablePropertyTest {
 
     private static void recursiveCheck(File directory, int pathLength) {
         if (directory.isDirectory()) {
-//            System.out.println(directory.getPath());
+//            System.err.println(directory.getPath());
             checkDirectory(directory, pathLength);
 
             for (File subFile : directory.listFiles()) {
@@ -1367,7 +1241,7 @@ public class StyleablePropertyTest {
     
     @Test
     public void testRT_21185() {
-        
+
         Color c1 = new Color(.1,.2,.3,1.0);
         Color c2 = new Color(.1,.2,.3,1.0);
                 
@@ -1402,5 +1276,40 @@ public class StyleablePropertyTest {
         assertNull(rect.getFill());
         
     }
+    
+    
+    @Test
+    public void testRT_24606() {
+
+        final Stylesheet stylesheet = CSSParser.getInstance().parse(
+                ".root { -fx-base: red; }" +
+                ".group { -fx-color: -fx-base; }" +
+                ".text { -fx-fill: -fx-color; }" 
+        );
+        stylesheet.setOrigin(Stylesheet.Origin.USER_AGENT);
+        StyleManager.setDefaultUserAgentStylesheet(stylesheet);        
+       
+        final Text text = new Text("HelloWorld");
+        text.getStyleClass().add("text");
+        text.setFill(Color.BLUE);
+        
+        final Group group = new Group();
+        group.getStyleClass().add("group");
+        group.getChildren().add(text);
+
+        final Group root = new Group();
+        root.getChildren().add(group);
+        
+        Scene scene = new Scene(root);
+        Stage stage = new Stage();
+        stage.setScene(scene);
+        stage.show();
+
+        StyleableProperty prop = StyleableProperty.getStyleableProperty(text.fillProperty());
+        List list = prop.getMatchingStyles(text);
+        
+        assertEquals(3, list.size(), 0);
+                
+    }    
     
 }
