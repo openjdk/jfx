@@ -697,7 +697,7 @@ public abstract class Node implements EventTarget {
             };
         }
         return parent;
-                    }
+    }
 
     private final InvalidationListener parentDisabledChangedListener = new InvalidationListener() {
         @Override public void invalidated(Observable valueModel) {

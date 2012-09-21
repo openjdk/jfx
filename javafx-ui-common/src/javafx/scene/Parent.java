@@ -567,8 +567,8 @@ public abstract class Parent extends Node {
                 Node e = children.get(i);
                 if (e.isManaged()) {
                     unmodifiableManagedChildren.add(e);
-                        }
                 }
+            }
         }
         return (List<E>)unmodifiableManagedChildren;
     }
