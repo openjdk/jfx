@@ -86,24 +86,27 @@ final public class StyleHelper {
         // so the selector needs to be recreated. Setting it to null
         // causes the next call to getSimpleSelector() to create it anew.
         this.simpleSelector = null;
+        this.key = 0;
+        this.smapRef = null;
+        this.sharedStyleCacheRef = null;
+        this.localStyleCache = null;
+        this.pseudoclassStateMask = 0;
+        this.fontProp = null;
         
-        StyleManager.StyleMap styleMap = 
-                styleManager.findMatchingStyles(node, this.getSimpleSelector());            
+        // styleManager can be null if  
+        if (styleManager == null) return;
+        
+        StyleManager.StyleMap styleMap = styleManager != null
+                ? styleManager.findMatchingStyles(node, this.getSimpleSelector())
+                : null;
 
+        
         final Map<String, List<CascadingStyle>> smap = styleMap != null ? styleMap.map : null;
         if (smap == null || smap.isEmpty()) {
             
             // If there are no styles at all, then return
             final String inlineStyles = node.getStyle();
-            if (inlineStyles == null || inlineStyles.trim().isEmpty()) {
-                
-                this.key = 0;
-                this.smapRef = null;
-                this.sharedStyleCacheRef = null;
-                this.localStyleCache = null;
-                this.pseudoclassStateMask = 0;
-                this.fontProp = null;
-
+            if (inlineStyles == null || inlineStyles.trim().isEmpty()) {                
                 return;
             }
         }
@@ -2249,13 +2252,15 @@ final public class StyleHelper {
                                              
                         final int start = styleList.size();
                         
-                        final Map<String, List<CascadingStyle>> smap = getStyleMap();
-                        if (smap == null) return;
+                        final Map<String, List<CascadingStyle>> smap = helper.getStyleMap();
+                        if (smap != null) {
 
-                        List<CascadingStyle> styles = smap.get(property);
-                        
-                        if (styles != null) {
-                            styleList.addAll(styles);
+                            List<CascadingStyle> styles = smap.get(property);
+
+                            if (styles != null) {
+                                styleList.addAll(styles);
+                            }
+
                         }
                         
                         List<CascadingStyle> inlineStyles = (inlineStyleMap != null) 
