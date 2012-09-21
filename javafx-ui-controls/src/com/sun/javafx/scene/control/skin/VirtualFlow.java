@@ -757,6 +757,7 @@ public class VirtualFlow extends Region {
             maxPrefBreadth = -1;
             lastWidth = -1;
             lastHeight = -1;
+            numCellsVisibleOnScreen = -1;
             releaseCell(accumCell);
 //            accumCell = null;
 //            accumCellParent.getChildren().clear();
@@ -769,6 +770,7 @@ public class VirtualFlow extends Region {
             maxPrefBreadth = -1;
             lastWidth = -1;
             lastHeight = -1;
+            numCellsVisibleOnScreen = -1;
             needsReconfigureCells = false;
         }
         
@@ -1261,19 +1263,21 @@ public class VirtualFlow extends Region {
         // Toggle visibility on the corner
         corner.setVisible(breadthBar.isVisible() && lengthBar.isVisible());
 
-        numCellsVisibleOnScreen = 0;
         double sumCellLength = 0;
         double flowLength = (isVertical ? getHeight() : getWidth()) -
             (breadthBar.isVisible() ? breadthBar.prefHeight(-1) : 0);
-        for (int i = 0, max = cells.size(); i < max; i++) {
-            IndexedCell cell = cells.get(i);
-            if (cell != null && ! cell.isEmpty()) {
-                sumCellLength += (isVertical ? cell.getHeight() : cell.getWidth());
-                if (sumCellLength > flowLength) {
-                    break;
-                }
+        if (numCellsVisibleOnScreen == -1) {
+            numCellsVisibleOnScreen = 0;
+            for (int i = 0, max = cells.size(); i < max; i++) {
+                IndexedCell cell = cells.get(i);
+                if (cell != null && ! cell.isEmpty()) {
+                    sumCellLength += (isVertical ? cell.getHeight() : cell.getWidth());
+                    if (sumCellLength > flowLength) {
+                        break;
+                    }
 
-                numCellsVisibleOnScreen++;
+                    numCellsVisibleOnScreen++;
+                }
             }
         }
 
@@ -1315,7 +1319,7 @@ public class VirtualFlow extends Region {
                 // only a single row and it is bigger than the viewport
                 lengthBar.setVisibleAmount(flowLength / sumCellLength);
             } else {
-                lengthBar.setVisibleAmount(cellCount / viewportLength);
+                lengthBar.setVisibleAmount(numCellsVisibleOnScreen / (float) cellCount);
             }
 
             // Fix for RT-11873. If this isn't here, we can have a situation where
