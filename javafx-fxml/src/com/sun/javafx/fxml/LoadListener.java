@@ -27,8 +27,6 @@ package com.sun.javafx.fxml;
 
 /**
  * Load listener interface.
- *
- * @author Greg Brown
  */
 public interface LoadListener {
     /**

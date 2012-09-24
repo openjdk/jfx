@@ -33,8 +33,6 @@ import javafx.event.EventType;
 
 /**
  * Observable list change event.
- *
- * @author Greg Brown
  */
 public class ObservableListChangeEvent<E> extends Event {
     private static final long serialVersionUID = 0;

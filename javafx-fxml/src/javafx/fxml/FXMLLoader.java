@@ -90,8 +90,6 @@ import com.sun.javafx.fxml.expression.KeyPath;
 
 /**
  * Loads an object hierarchy from an XML document.
- *
- * @author Greg Brown
  */
 public class FXMLLoader {
     // Abstract base class for elements

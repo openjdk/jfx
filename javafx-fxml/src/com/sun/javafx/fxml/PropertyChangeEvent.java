@@ -30,8 +30,6 @@ import javafx.event.EventType;
 
 /**
  * Property change event.
- *
- * @author Greg Brown
  */
 public class PropertyChangeEvent<V> extends Event {
     private static final long serialVersionUID = 0;

@@ -33,8 +33,6 @@ import javafx.util.Builder;
 
 /**
  * JavaFX image builder.
- *
- * @author Pavel
  */
 public class JavaFXImageBuilder extends AbstractMap<String, Object> implements Builder<Image> {
     private String      url = "";

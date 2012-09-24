@@ -32,8 +32,6 @@ import java.lang.annotation.Target;
 
 /**
  * Annotation that tags a class or member as accessible to markup.
- *
- * @author Greg Brown
  */
 @Retention(RetentionPolicy.RUNTIME)
 @Target({ElementType.FIELD, ElementType.METHOD})

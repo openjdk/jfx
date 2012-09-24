@@ -31,8 +31,6 @@ import javafx.event.EventType;
 
 /**
  * Observable map change event.
- *
- * @author Greg Brown
  */
 public class ObservableMapChangeEvent<K, V> extends Event {
     private static final long serialVersionUID = 0;

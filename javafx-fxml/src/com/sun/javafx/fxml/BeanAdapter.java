@@ -51,8 +51,6 @@ import javafx.beans.value.ObservableValue;
  * property, and a call to {@link Map#put(Object, Object)} invokes the
  * property's setter. Appending a "Property" suffix to the key returns the
  * corresponding property model.
- *
- * @author Greg Brown
  */
 public class BeanAdapter extends AbstractMap<String, Object> {
     private Object bean;

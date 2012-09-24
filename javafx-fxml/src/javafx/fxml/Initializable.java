@@ -36,8 +36,6 @@ import java.util.ResourceBundle;
  * controller. {@link FXMLLoader} will now automatically call any suitably
  * annotated no-arg <code>initialize()</code> method defined by the controller.
  * It is recommended that the injection approach be used whenever possible.
- *
- * @author Greg Brown
  */
 public interface Initializable {
     /**

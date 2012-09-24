@@ -28,8 +28,6 @@ package com.sun.javafx.fxml;
 /**
  * Thrown when a caller attempts to set the value of a non-existent bean
  * property.
- *
- * @author Greg Brown
  */
 public class PropertyNotFoundException extends RuntimeException {
     private static final long serialVersionUID = 0;

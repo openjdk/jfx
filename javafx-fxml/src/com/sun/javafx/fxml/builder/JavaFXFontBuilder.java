@@ -38,8 +38,6 @@ import javafx.util.Builder;
 
 /**
  * JavaFX font builder.
- *
- * @author Pavel
  */
 public final class JavaFXFontBuilder extends AbstractMap<String, Object> implements Builder<Font> {
     private String      name = null;

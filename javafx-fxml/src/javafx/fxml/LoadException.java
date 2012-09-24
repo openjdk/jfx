@@ -29,8 +29,6 @@ import java.io.IOException;
 
 /**
  * Thrown when an error is encountered during a load operation.
- *
- * @author Greg Brown
  */
 public class LoadException extends IOException {
     private static final long serialVersionUID = 0;
