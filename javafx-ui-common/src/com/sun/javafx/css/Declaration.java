@@ -62,6 +62,14 @@ final public class Declaration {
         return important;
     }
 
+    /** Helper */
+    private Stylesheet.Origin getOrigin() {
+        Rule rule = getRule();
+        if (rule != null)  {
+            return rule.getOrigin();
+        }
+        return null;
+    }
     /** 
      * One declaration is the equal to another regardless of the Rule to which
      * the Declaration belongs. Only the property, value and importance are
@@ -79,13 +87,16 @@ final public class Declaration {
             return false;
         }
         final Declaration other = (Declaration) obj;
+        if (this.important != other.important) {
+            return false;
+        }
+        if (this.getOrigin() != other.getOrigin()) {
+            return false;
+        }
         if ((this.property == null) ? (other.property != null) : !this.property.equals(other.property)) {
             return false;
         }
         if (this.parsedValue != other.parsedValue && (this.parsedValue == null || !this.parsedValue.equals(other.parsedValue))) {
-            return false;
-        }
-        if (this.important != other.important) {
             return false;
         }
         return true;

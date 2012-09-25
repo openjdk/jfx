@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project name="javafx-fxml-common" default="jar" basedir=".">
+    <target name="trim-whitespace">
+        <fileset id="trimfiles" dir=".">
+            <include name="**/*.css"/>
+            <include name="**/*.html"/>
+            <include name="**/*.java"/>
+            <include name="**/*.js"/>
+            <include name="**/*.properties"/>
+            <include name="**/*.txt"/>
+            <include name="**/*.xml"/>
+        </fileset>
+        <replaceregexp match="[\t]" replace="    " flags="gm" byline="true">
+            <fileset refid="trimfiles"/>
+        </replaceregexp>
+        <replaceregexp match="[\t ]+$" replace="" flags="gm" byline="true">
+            <fileset refid="trimfiles"/>
+        </replaceregexp>
+    </target>
+</project>

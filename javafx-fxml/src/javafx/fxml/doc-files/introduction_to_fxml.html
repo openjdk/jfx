@@ -1,0 +1,1017 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<html lang="en" xml:lang="en" xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<meta http-equiv="content-type" content="text/html; charset=UTF-8">
+<title>Introduction to FXML | JavaFX 2.2</title>
+<meta name="description" content="The document introduces FXML, an XML-based declarative markup language for defining user interfaces in JavaFX 2.2 applications."/>
+<meta name="keywords" content="JavaFX 2.2, FXML, JavaFX GUI development, web development, Java application development, GUI applications, rich internet applications, RIA, expressive content"/>
+<style>
+body {
+    font-family: Helvetica, Arial, sans-serif;
+    font-size: 14px;
+}
+
+h1 {
+    font-size: 28px;
+    color:#385E76
+}
+
+h2 {
+    border-top: 3px dashed #DDD;
+    margin-top: 30px;
+    padding-top: 15px;
+    font-size: 22px;
+    color:#385E76
+}
+
+h3 {
+    background-color: #EEE;
+    padding: 3px;
+    font-size: 18px;
+}
+
+h4 {
+    font-size: 16px;
+    margin: 18px 0px 10px 0px;
+}
+
+h5 {
+    font-size: 14px;
+    font-style: italic;
+    margin: 18px 0px 10px 0px;
+}
+
+ul.contents li {
+    font-size: 12px;
+    font-weight:bold;
+    list-style-type:circle;
+    margin: 3px 0px 3px 0px;
+}
+
+ul.contents li li {
+    font-weight:normal;
+    list-style-type:circle;
+}
+
+a {
+    text-decoration:none;
+    color:#06C
+}
+
+p.subtitle {
+    font-style: italic;
+    color:#999;
+}
+
+span.code {
+    font-size: 10pt;
+    font-family: Courier New;
+}
+
+pre.code {
+    font-size: 10pt;
+    font-family: Courier New;
+    background: #dddddd;
+    padding:12;
+}
+
+span.variable {
+    font-style: italic;
+}
+
+span.filename {
+    font-size: 10pt;
+    font-family: Courier New;
+}
+
+div.caption {
+    font-style: italic;
+}
+
+p.copyright {
+    font-style: italic;
+}
+
+.fx-code-header {
+   background: #ffffff;
+   background-image:url(fx_code_header.jpg);
+   height: 50px;
+   width: 656px;
+}
+
+.version  {
+   font-family:Verdana, Arial, Helvetica, sans-serif;
+   font-size:10px;
+   padding-top:2px;
+   color:#265F7F;
+   line-height:1.2em;
+   position:relative;
+   left:425px;
+   top:10px;
+   width:200px;
+   text-align:right;
+}
+</style>
+</head>
+<body>
+<p>
+<div class="fx-code-header">
+<div class="version"><br/>Release: JavaFX 2.2</div>
+</div>
+</p>
+
+<h1>Introduction to FXML</h1>
+<p class="subtitle">Last updated: 6/21/2012</p>
+
+<h2>Contents</h2>
+<ul class="contents">
+<li><a href="#overview">Overview</a></li>
+<li>
+    <a href="#elements">Elements</a>
+    <ul>
+    <li>
+        <a href="#class_instance_elements">Class Instance Elements</a>
+        <ul>
+        <li><a href="#instance_declaration_elements">Instance Declarations</a></li>
+        <li><a href="#include_elements">&lt;fx:include&gt;</a></li>
+        <li><a href="#constant_elements">&lt;fx:constant&gt;</a></li>
+        <li><a href="#reference_elements">&lt;fx:reference&gt;</a></li>
+        <li><a href="#copy_elements">&lt;fx:copy&gt;</a></li>
+        <li><a href="#root_elements">&lt;fx:root&gt;</a></li>
+        </ul>
+    </li>
+
+    <li>
+        <a href="#property_elements">Property Elements</a>
+        <ul>
+        <li><a href="#property_setter_elements">Property Setters</a></li>
+        <li><a href="#read_only_list_property_elements">Read-Only List Properties</a></li>
+        <li><a href="#read_only_map_property_elements">Read-Only Map Properties</a></li>
+        <li><a href="#default_properties">Default Properties</a></li>
+        </ul>
+    </li>
+
+    <li><a href="#static_property_elements">Static Properties</a></li>
+    <li><a href="#define_elements">Define Blocks</a></li>
+    </ul>
+</li>
+<li>
+    <a href="#attributes">Attributes</a>
+    <ul>
+    <li>
+        <a href="#instance_property_attributes">Instance Properties</a>
+        <ul>
+        <li><a href="#location_resolution">Location Resolution</a></li>
+        <li><a href="#resource_resolution">Resource Resolution</a></li>
+        <li><a href="#variable_resolution">Variable Resolution</a></li>
+        <li><a href="#escape_sequences">Escape Sequences</a></li>
+        <li><a href="#expression_binding">Expression Binding</a></li>
+        </ul>
+    </li>
+
+    <li><a href="#static_property_attributes">Static Properties</a></li>
+    <li>
+        <a href="#event_handler_attributes">Event Handlers</a>
+        <ul>
+        <li><a href="#script_event_handlers">Script Event Handlers</a></li>
+        <li><a href="#controller_method_event_handlers">Controller Method Event Handlers</a></li>
+        </ul>
+    </li>
+    </ul>
+</li>
+<li><a href="#scripting">Scripting</a></li>
+<li>
+    <a href="#controllers">Controllers</a>
+    <ul>
+    <li><a href="#fxml_annotation">@FXML</a></li>
+    <li><a href="#nested_controllers">Nested Controllers</a></li>
+    </ul>
+</li>
+<li>
+    <a href="#fxmlloader">FXMLLoader</a>
+    <ul>
+    <li><a href="#custom_components">Custom Components</a></li>
+    </ul>
+</li>
+</ul>
+
+<h2><a name="overview">Overview</a></h2>
+<p>FXML is a scriptable, XML-based markup language for constructing Java object graphs. It provides a convenient alternative to constructing such graphs in procedural code, and is ideally suited to defining the user interface of a JavaFX application, since the hierarchical structure of an XML document closely parallels the structure of the JavaFX scene graph.</p>
+
+<p>This document introduces the FXML markup language and explains how it can be used to simplify development of JavaFX applications.</p>
+
+<h2><a name="elements">Elements</a></h2>
+<p>In FXML, an XML element represents one of the following:</p>
+<ul>
+<li>A class instance</li>
+<li>A property of a class instance</li>
+<li>A "static" property</li>
+<li>A "define" block</li>
+<li>A block of script code</li>
+</ul>
+
+<p>Class instances, instance properties, static properties, and define blocks are discussed in this section below. Scripting is discussed in a later section.</p>
+
+<h3><a name="class_instance_elements">Class Instance Elements</a></h3>
+<p>Class instances can be constructed in FXML in several ways. The most common is via instance declaration elements, which simply create a new instance of a class by name. Other ways of creating class instances include referencing existing values, copying existing values, and including external FXML files. Each is discussed in more detail below.</p>
+
+<h4><a name="instance_declaration_elements">Instance Declarations</a></h4>
+<p>If an element's tag name begins with an uppercase letter (and it is not a "static" property setter, described later), it is considered an instance declaration. When the FXML loader (also introduced later) encounters such an element, it creates an instance of that class.</p>
+
+<p>As in Java, class names can be fully-qualified (including the package name), or they can be imported using the "import" processing instruction (PI). For example, the following PI imports the <span class="code">javafx.scene.control.Label</span> class into the current FXML document’s namespace:</p>
+
+<pre class="code">
+&lt;?import javafx.scene.control.Label?&gt;
+</pre>
+
+<p>This PI imports all classes from the javafx.scene.control package into the current namespace:</p>
+
+<pre class="code">
+&lt;?import javafx.scene.control.*?&gt;
+</pre>
+
+<p>Any class that adheres to JavaBean constructor and property naming conventions can be readily instantiated and configured using FXML. The following is a simple but complete example that creates an instance of <span class="code">javafx.scene.control.Label</span> and sets its "text" property to "Hello, World!":</p>
+
+<pre class="code">
+&lt;?import javafx.scene.control.Label?&gt;
+&lt;Label text="Hello, World!"/&gt;
+</pre>
+
+<p>Note that the <span class="code">Label</span>’s "text" property in this example is set using an XML attribute. Properties can also be set using nested property elements. Property elements are discussed in more detail later in this section. Property attributes are discussed in a later section.</p>
+
+<p>Classes that don't conform to Bean conventions can also be constructed in FXML, using an object called a "builder". Builders are discussed in more detail later.</p>
+
+<h5>Maps</h5>
+<p>Internally, the FXML loader uses an instance of <span class="code">com.sun.javafx.fxml.BeanAdapter</span> to wrap an instantiated object and invoke its setter methods. This (currently) private class implements the <span class="code">java.util.Map</span> interface and allows a caller to get and set Bean property values as key/value pairs.</p>
+
+<p>If an element represents a type that already implements <span class="code">Map</span> (such as <span class="code">java.util.HashMap</span>), it is not wrapped and its <span class="code">get()</span> and <span class="code">put()</span> methods are invoked directly. For example, the following FXML creates an instance of <span class="code">HashMap</span> and sets its "foo" and "bar" values to "123" and "456", respectively:
+
+<pre class="code">
+&lt;HashMap foo="123" bar="456"/&gt;
+</pre>
+
+<h5>fx:value</h5>
+<p>The <span class="code">fx:value</span> attribute can be used to initialize an instance of a type that does not have a default constructor but provides a static <span class="code">valueOf(String)</span> method. For example, <span class="code">java.lang.String</span> as well as each of the primitive wrapper types define a <span class="code">valueOf()</span> method and can be constructed in FXML as follows:</p>
+
+<pre class="code">
+&lt;String fx:value="Hello, World!"/&gt;
+&lt;Double fx:value="1.0"/&gt;
+&lt;Boolean fx:value="false"/&gt;
+</pre>
+
+<p>Custom classes that define a static <span class="code">valueOf(String)</span> method can also be constructed this way.</p>
+
+<h5>fx:factory</h5>
+<p>The <span class="code">fx:factory</span> attribute is another means of creating objects whose classes do not have a default constructor. The value of the attribute is the name of a static, no-arg factory method for producing class instances. For example, the following markup creates an instance of an observable array list, populated with three string values:</p>
+
+<pre class="code">
+&lt;FXCollections fx:factory="observableArrayList"&gt;
+    &lt;String fx:value="A"/&gt;
+    &lt;String fx:value="B"/&gt;
+    &lt;String fx:value="C"/&gt;
+&lt;/FXCollections&gt;
+</pre>
+
+<h5>Builders</h5>
+<p>A third means of creating instances of classes that do not conform to Bean conventions (such as those representing immutable values) is a "builder". The builder design pattern delegates object construction to a mutable helper class (called a "builder") that is responsible for manufacturing instances of the immutable type.</p>
+
+<p>Builder support in FXML is provided by two interfaces. The <span class="code">javafx.util.Builder</span> interface defines a single method named <span class="code">build()</span> which is responsible for constructing the actual object:</p>
+
+<pre class="code">
+public interface Builder&lt;T&gt; {
+    public T build();
+}
+</pre>
+
+<p>A <span class="code">javafx.util.BuilderFactory</span> is responsible for producing builders that are capable of instantiating a given type:</p>
+
+<pre class="code">
+public interface BuilderFactory {
+    public Builder&lt;?&gt; getBuilder(Class&lt;?&gt; type);
+}
+</pre>
+
+<p>A default builder factory, <span class="code">JavaFXBuilderFactory</span>, is provided in the <span class="code">javafx.fxml</span> package. This factory is capable of creating and configuring most immutable JavaFX types. For example, the following markup uses the default builder to create an instance of the immutable <span class="code">javafx.scene.paint.Color</span> class:
+
+<pre class="code">
+&lt;Color red="1.0" green="0.0" blue="0.0"/&gt;
+</pre>
+
+<p>Note that, unlike Bean types, which are constructed when the element's start tag is processed, objects constructed by a builder are not instantiated until the element's closing tag is reached. This is because all of the required arguments may not be available until the element has been fully processed. For example, the Color object in the preceding example could also be written as:</p>
+
+<pre class="code">
+&lt;Color&gt;
+    &lt;red&gt;1.0&lt;/red&gt;
+    &lt;green&gt;0.0&lt;/green&gt;
+    &lt;blue&gt;0.0&lt;/blue&gt;
+&lt;/Color&gt;
+</pre>
+
+<p>The <span class="code">Color</span> instance cannot be fully constructed until all three of the color components are known.</p>
+
+<p>When processing markup for an object that will be constructed by a builder, the <span class="code">Builder</span> instances are treated like value objects - if a <span class="code">Builder</span> implements the <span class="code">Map</span> interface, the <span class="code">put()</span> method is used to set the builder's attribute values. Otherwise, the builder is wrapped in a <span class="code">BeanAdapter</span> and its properties are assumed to be exposed via standard Bean setters.</p>
+
+<h4><a name="include_elements">&lt;fx:include&gt;</a></h4>
+<p>The <span class="code">&lt;fx:include&gt;</span> tag creates an object from FXML markup defined in another file. It is used as follows:</p>
+
+<pre class="code">
+&lt;fx:include source="<span class="variable">filename</span>"/&gt;
+</pre>
+
+<p>where <span class="variable">filename</span> is the name of the FXML file to include. Values that begin with a leading slash character are treated as relative to the classpath. Values with no leading slash are considered relative to the path of the current document.</p>
+
+<p>For example, given the following markup:</p>
+
+<pre class="code">
+&lt;?import javafx.scene.control.*?&gt;
+&lt;?import javafx.scene.layout.*?&gt;
+&lt;VBox xmlns:fx="http://javafx.com/fxml"&gt;
+    &lt;children&gt;
+        &lt;fx:include source="my_button.fxml"/&gt;
+    &lt;/children&gt;
+&lt;/VBox&gt;
+</pre>
+
+<p>If <span class="filename">my_button.fxml</span> contains the following:
+
+<pre class="code">
+&lt;?import javafx.scene.control.*?&gt;
+&lt;Button text="My Button"/&gt;
+</pre>
+
+<p>the resulting scene graph would contain a <span class="code">VBox</span> as a root object with a single <span class="code">Button</span> as a child node.</p>
+
+<p>Note the use of the "fx" namespace prefix. This is a reserved prefix that defines a number of elements and attributes that are used for internal processing of an FXML source file. It is generally declared on the root element of a FXML document. Other features provided by the "fx" namespace are described in the following sections.</p>
+
+<p><span class="code">&lt;fx:include&gt;</span> also supports attributes for specifying the name of the resource bundle that should be used to localize the included content, as well as the character set used to encode the source file. Resource resolution is discussed in a later section.</p>
+
+<h4><a name="constant_elements">&lt;fx:constant&gt;</a></h4>
+<p>The <span class="code">&lt;fx:constant&gt;</span> element creates a reference to a class constant. For example, the following markup sets the value of the "minWidth" property of a<span class="code">Button</span> instance to the value of the <span class="code">NEGATIVE_INFINITY</span> constant defined by the <span class="code">java.lang.Double</span> class:</p>
+
+<pre class="code">
+&lt;Button&gt;
+    &lt;minHeight&gt;&lt;Double fx:constant="NEGATIVE_INFINITY"/&gt;&lt;/minHeight&gt;
+&lt;/Button&gt;
+</pre>
+
+<h4><a name="reference_elements">&lt;fx:reference&gt;</a></h4>
+<p>The <span class="code">&lt;fx:reference&gt;</span> element creates a new reference to an existing element. Wherever this tag appears, it will effectively be replaced by the value of the named element. It is used in conjunction with either the <span class="code">fx:id</span> attribute or with a script variables, both of which are discussed in more detail in later sections. The "source" attribute of the <span class="code">&lt;fx:reference&gt;</span> element specifies the name of the object to which the new element will refer.</p>
+
+<p>For example, the following markup assigns a previously-defined <span class="code">Image</span> instance named "myImage" to the "image" property of an <span class="code">ImageView</span> control:</p>
+
+<pre class="code">
+&lt;ImageView&gt;
+    &lt;image&gt;
+        &lt;fx:reference source="myImage"/&gt;
+    &lt;/image&gt;
+&lt;/ImageView&gt;
+</pre>
+
+<p>Note that, since it is also possible to dereference a variable using the attribute variable resolution operator (discussed later in the <a href="#attributes">Attributes</a> section), <span class="code">fx:reference</span> is generally only used when a reference value must be specified as an element, such as when adding the reference to a collection:</p>
+
+<pre class="code">
+&lt;ArrayList&gt;
+    &lt;fx:reference source="element1"/&gt;
+    &lt;fx:reference source="element2"/&gt;
+    &lt;fx:reference source="element3"/&gt;
+&lt;/ArrayList&gt;
+</pre>
+
+<p>For most other cases, using an attribute is simpler and more concise.</p>
+
+<h4><a name="copy_elements">&lt;fx:copy&gt;</a></h4>
+<p>The <span class="code">&lt;fx:copy&gt;</span> element creates a copy of an existing element. Like <span class="code">&lt;fx:reference&gt;</span>, it is used with the fx:id attribute or a script variable. The element's "source" attribute specifies the name of the object that will be copied. The source type must define a copy constructor that will be used to construct the copy from the source value.</p>
+
+<p>At the moment, no JavaFX platform classes provide such a copy constructor, so this element is provided primarily for use by application developers. This may change in a future release.</p>
+
+<h4><a name="root_elements">&lt;fx:root&gt;</a></h4>
+<p>The <span class="code">&lt;fx:root&gt;</span> element creates a reference to a previously defined root element. It is only valid as the root node of an FXML document. <span class="code">&lt;fx:root&gt;</span> is used primarily when creating custom controls that are backed by FXML markup. This is discussed in more detail in the <a href="#fxmlloader">FXMLLoader</a> section.</p>
+
+<h3><a name="property_elements">Property Elements</a></h3>
+<p>Elements whose tag names begin with a lowercase letter represent object properties. A property element may represent one of the following:</p>
+
+<ul>
+<li>A property setter</li>
+<li>A read-only list property</li>
+<li>A read-only map property</li>
+</ul>
+
+<h4><a name="property_setter_elements">Property Setters</a></h4>
+<p>If an element represents a property setter, the contents of the element (which must be either a text node or a nested class instance element) are passed as the value to the setter for the property.</p>
+
+<p>For example, the following FXML creates an instance of the <span class="code">Label</span> class and sets the value of the label's "text" property to "Hello, World!":</p>
+
+<pre class="code">
+&lt;?import javafx.scene.control.Label?&gt;
+&lt;Label&gt;
+    &lt;text&gt;Hello, World!&lt;/text&gt;
+&lt;/Label&gt;
+</pre>
+
+<p>This produces the same result as the earlier example which used an attribute to set the "text" property:</p>
+
+<pre class="code">
+&lt;?import javafx.scene.control.Label?&gt;
+&lt;Label text="Hello, World!"/&gt;
+</pre>
+
+<p>Property elements are generally used when the property value is a complex type that can't be represented using a simple string-based attribute value, or when the character length of the value is so long that specifying it as an attribute would have a negative impact on readability.</p>
+
+<h5>Type Coercion</h5>
+<p>FXML uses "type coercion" to convert property values to the appropriate type as needed. Type coercion is required because the only data types supported by XML are elements, text, and attributes (whose values are also text). However, Java supports a number of different data types including built-in primitive value types as well as extensible reference types.</p>
+
+<p>The FXML loader uses the <span class="code">coerce()</span> method of <span class="code">BeanAdapter</span> to perform any required type conversions. This method is capable of performing basic primitive type conversions such as <span class="code">String</span> to <span class="code">boolean</span> or <span class="code">int</span> to <span class="code">double</span>, and will also convert <span class="code">String</span> to <span class="code">Class</span> or <span class="code">String</span> to <span class="code">Enum</span>. Additional conversions can be implemented by defining a static <span class="code">valueOf()</span> method on the target type.</p>
+
+<h4><a name="read_only_list_property_elements">Read-Only List Properties</a></h4>
+<p>A read-only list property is a Bean property whose getter returns an instance of <span class="code">java.util.List</span> and has no corresponding setter method. The contents of a read-only list element are automatically added to the list as they are processed.</p>
+
+<p>For example, the "children" property of <span class="code">javafx.scene.Group</span> is a read-only list property representing the group's child nodes:</p>
+
+<pre class="code">
+&lt;?import javafx.scene.*?&gt;
+&lt;?import javafx.scene.shape.*?&gt;
+&lt;Group xmlns:fx="http://javafx.com/fxml"&gt;
+    &lt;children&gt;
+        &lt;Rectangle fx:id="rectangle" x="10" y="10" width="320" height="240"
+            fill="#ff0000"/&gt;
+        ...
+    &lt;/children&gt;
+&lt;/Group&gt;
+</pre>
+
+<p>As each sub-element of the <span class="code">&lt;children&gt;</span> element is read, it is added to the list returned by <span class="code">Group#getChildren()</span>.
+
+<h4><a name="read_only_map_property_elements">Read-Only Map Properties</a></h4>
+<p>A read-only map property is a bean property whose getter returns an instance of <span class="code">java.util.Map</span> and has no corresponding setter method. The attributes of a read-only map element are applied to the map when the closing tag is processed.</p>
+
+<p>The "properties" property of <span class="code">javafx.scene.Node</span> is an example of a read-only map property. The following markup sets the "foo" and "bar" properties of a <span class="code">Label</span> instance to "123" and "456", respectively:</p>
+
+<pre class="code">
+&lt;?import javafx.scene.control.*?&gt;
+&lt;Button&gt;
+    &lt;properties foo="123" bar="456"/&gt;
+&lt;/Button&gt;
+</pre>
+
+<p>Note that a read-only property whose type is neither a <span class="code">List</span> nor a <span class="code">Map</span> will be treated as if it were a read-only map. The return value of the getter method will be wrapped in a <span class="code">BeanAdapter</span> and can be used in the same way as any other read-only map.</p>
+
+<h4><a name="default_properties">Default Properties</a></h4>
+<p>A class may define a "default property" using the <span class="code">@DefaultProperty</span> annotation defined in the <span class="code">javafx.beans</span> package. If present, the sub-element representing the default property can be omitted from the markup.</p>
+
+<p>For example, since <span class="code">javafx.scene.layout.Pane</span> (the superclass of <span class="code">javafx.scene.layout.VBox</span>) defines a default property of "children", a <span class="code">&lt;children&gt;</span> element is not required; the loader will automatically add the sub-elements of the <span class="code">VBox</span> to the container's "children" collection:</p>
+
+<pre class="code">
+&lt;?import javafx.scene.*?&gt;
+&lt;?import javafx.scene.shape.*?&gt;
+&lt;VBox xmlns:fx="http://javafx.com/fxml"&gt;
+    &lt;Button text="Click Me!"/&gt;
+    ...
+&lt;/VBox&gt;
+</pre>
+
+<p>Note that default properties are not limited to collections. If an element's default property refers to a scalar value, any sub-element of that element will be set as the value of the property.</p>
+
+<p>For example, since <span class="code">javafx.scene.control.ScrollPane</span> defines a default property of "content", a scroll pane containing a <span class="code">TextArea</span> as its content can be specified as follows:
+
+<pre class="code">
+&lt;ScrollPane&gt;
+    &lt;TextArea text="Once upon a time..."/&gt;
+&lt;/ScrollPane&gt;
+</pre>
+
+<p>Taking advantage of default properties can significantly reduce the verbosity of FXML markup.</p>
+
+<h3><a name="static_property_elements">Static Properties</a></h3>
+<p>An element may also represent a "static" property (sometimes called an "attached property"). Static properties are properties that only make sense in a particular context. They are not intrinsic to the class to which they are applied, but are defined by another class (often, the parent container of a control).</p>
+
+<p>Static properties are prefixed with the name of class that defines them. For example, The following FXML invokes the static setter for <span class="code">GridPane</span>'s "rowIndex" and "columnIndex" properties:</p>
+
+<pre class="code">
+&lt;GridPane&gt;
+    &lt;children&gt;
+        &lt;Label text="My Label"&gt;
+            &lt;GridPane.rowIndex&gt;0&lt;/GridPane.rowIndex&gt;
+       &lt;GridPane.columnIndex&gt;0&lt;/GridPane.columnIndex&gt;
+        &lt;/Label&gt;
+    &lt;/children&gt;
+&lt;/TabPane&gt;
+</pre>
+
+<p>This translates roughly to the following in Java:</p>
+
+<pre class="code">
+GridPane gridPane = new GridPane();
+
+Label label = new Label();
+label.setText("My Label");
+
+GridPane.setRowIndex(label, 0);
+GridPane.setColumnIndex(label, 0);
+
+gridPane.getChildren().add(label);
+</pre>
+
+The calls to <span class="code">GridPane#setRowIndex()</span> and <span class="code">GridPane#setColumnIndex()</span> "attach" the index data to the <span class="code">Label</span> instance. <span class="code">GridPane</span> then uses these during layout to arrange its children appropriately. Other containers, including <span class="code">AnchorPane</span>, <span class="code">BorderPane</span>, and <span class="code">StackPane</span>, define similar properties.</p>
+
+<p>As with instance properties, static property elements are generally used when the property value cannot be efficiently represented by an attribute value. Otherwise, static property attributes (discussed in a later section) will generally produce more concise and readable markup.</p>
+
+<h3><a name="define_elements">Define Blocks</a></h3>
+<p>The <span class="code">&lt;fx:define&gt;</span> element is used to create objects that exist outside of the object hierarchy but may need to be referred to elsewhere.</p>
+
+<p>For example, when working with radio buttons, it is common to define a <span class="code">ToggleGroup</span> that will manage the buttons' selection state. This group is not part of the scene graph itself, so should not be added to the buttons' parent. A define block can be used to create the button group without interfering with the overall structure of the document:</p>
+
+<pre class="code">
+&lt;VBox&gt;
+    &lt;fx:define&gt;
+        &lt;ToggleGroup fx:id="myToggleGroup"/&gt;
+    &lt;/fx:define&gt;
+    &lt;children&gt;
+        &lt;RadioButton text="A" toggleGroup="$myToggleGroup"/&gt;
+        &lt;RadioButton text="B" toggleGroup="$myToggleGroup"/&gt;
+        &lt;RadioButton text="C" toggleGroup="$myToggleGroup"/&gt;
+    &lt;/children&gt;
+&lt;/VBox&gt;
+</pre>
+
+<p>Elements in define blocks are usually assigned an ID that can be used to refer to the element's value later. IDs are discussed in more detail in later sections.</p>
+
+<h2><a name="attributes">Attributes</a></h2>
+<p>An attribute in FXML may represent one of the following:</p>
+<ul>
+<li>A property of a class instance</li>
+<li>A "static" property</li>
+<li>An event handler</li>
+</ul>
+
+<p>Each are discussed in more detail in the following sections.</p>
+
+<h3><a name="instance_property_attributes">Instance Properties</a></h3>
+<p>Like property elements, attributes can also be used to configure the properties of a class instance. For example, the following markup creates a <span class="code">Button</span> whose text reads "Click Me!":</p>
+
+<pre class="code">
+&lt;?import javafx.scene.control.*?&gt;
+&lt;Button text="Click Me!"/&gt;
+</pre>
+
+<p>As with property elements, property attributes support type coercion. When the following markup is processed, the "x", "y", "width", and "height" values will be converted to doubles, and the "fill" value will be converted to a <span class="code">Color</span>:</p>
+
+<pre class="code">
+&lt;Rectangle fx:id="rectangle" x="10" y="10" width="320" height="240"
+    fill="#ff0000"/&gt;
+</pre>
+
+<p>Unlike property elements, which are applied as they are processed, property attributes are not applied until the closing tag of their respective element is reached. This is done primarily to facilitate the case where an attribute value depends on some information that won't be available until after the element's content has been completely processed (for example, the selected index of a <span class="code">TabPane</span> control, which can't be set until all of the tabs have been added).</p>
+
+<p>Another key difference between property attributes and property elements in FXML is that attributes support a number of "resolution operators" that extend their functionality. The following operators are supported and are discussed in more detail below:</p>
+
+<ul>
+<li>Location resolution</li>
+<li>Resource resolution</li>
+<li>Variable resolution</li>
+</ul>
+
+<h4><a name="location_resolution">Location Resolution</a></h4>
+<p>As strings, XML attributes cannot natively represent typed location information such as a URL. However, it is often necessary to specify such locations in markup; for example, the source of an image resource. The location resolution operator (represented by an "@" prefix to the attribute value) is used to specify that an attribute value should be treated as a location relative to the current file rather than a simple string.</p>
+
+<p>For example, the following markup creates an ImageView and populates it with image data from <span class="filename">my_image.png</span>, which is assumed to be located at a path relative to the current FXML file:</p>
+
+<pre class="code">
+&lt;ImageView&gt;
+    &lt;image&gt;
+        &lt;Image url="@my_image.png"/&gt;
+    &lt;/image&gt;
+&lt;/ImageView&gt;
+</pre>
+
+<p>Since <span class="code">Image</span> is an immutable object, a builder is required to construct it. Alternatively, if <span class="code">Image</span> were to define a <span class="code">valueOf(URL)</span> factory method, the image view could be populated as follows:</p>
+
+<pre class="code">
+&lt;ImageView image="@my_image.png"/&gt;
+</pre>
+
+<p>The value of the "image" attribute would be converted to a URL by the FXML loader, then coerced to an <span class="code">Image</span> using the <span class="code">valueOf()</span> method.</p>
+
+<p>Note that whitespace values in the URL must be encoded; for example, to refer to a file named "My Image.png", the FXML document should contain the following:</p>
+
+<pre class="code">
+&lt;Image url="@My%20Image.png"/&gt;
+</pre>
+
+<p>rather than:</p>
+
+<pre class="code">
+&lt;Image url="@My Image.png"/&gt;
+</pre>
+
+<h4><a name="resource_resolution">Resource Resolution</a></h4>
+<p>In FXML, resource substitution can be performed at load time for localization purposes. When provided with an instance of <span class="code">java.util.ResourceBundle</span>, the FXML loader will replace instances of resource names with their locale-specific values. Resource names are identified by a "%" prefix, as shown below:</p>
+
+<pre class="code">
+&lt;Label text="%myText"/&gt;
+</pre>
+
+<p>If the loader is given a resource bundle defined as follows:</p>
+
+<pre class="code">
+myText = This is the text!
+</pre>
+
+<p>the output of the FXML loader would be a <span class="code">Label</span> instance containing the text "This is the text!".</p>
+
+<h4><a name="variable_resolution">Variable Resolution</a></h4>
+<p>An FXML document defines a variable namespace in which named elements and script variables may be uniquely identified. The variable resolution operator allows a caller to replace an attribute value with an instance of a named object before the corresponding setter method is invoked. Variable references are identified by a "$" prefix, as shown below:</p>
+
+<pre class="code">
+&lt;fx:define&gt;
+    &lt;ToggleGroup fx:id="myToggleGroup"/&gt;
+&lt;/fx:define&gt;
+...
+&lt;RadioButton text="A" toggleGroup="$myToggleGroup"/&gt;
+&lt;RadioButton text="B" toggleGroup="$myToggleGroup"/&gt;
+&lt;RadioButton text="C" toggleGroup="$myToggleGroup"/&gt;
+</pre>
+
+<p>Assigning an <span class="code">fx:id</span> value to an element creates a variable in the document's namespace that can later be referred to by variable dereference attributes, such as the "toggleGroup" attribute shown above, or in script code, discussed in a later section. Additionally, if the object's type defines an "id" property, this value will also be passed to the objects <span class="code">setId()</span> method.</p>
+
+<h4><a name="escape_sequences">Escape Sequences</a></h4>
+
+<p>If the value of an attribute begins with one of the resource resolution prefixes, the character can be escaped by prepending it with a leading backslash ("\") character. For example, the following markup creates a <span class="code">Label</span> instance whose text reads "$10.00":</p>
+
+<pre class="code">
+&lt;Label text="\$10.00"/&gt;
+</pre>
+
+<h4><a name="expression_binding">Expression Binding</a></h4>
+<p>Attribute variables as shown above are resolved once at load time. Later updates to the variables value are not automatically reflected in any properties to which the value was assigned. In many cases, this is sufficient; however, it is often convenient to "bind" a property value to a variable or expression such that changes to the variable are automatically propagated to the target property. Expression bindings can be used for this purpose.</p>
+
+<p>An expression binding also begins with the variable resolution operator, but is followed by a set of curly braces which wrap the expression value. For example, the following markup binds the value of a text input's "text" property to the "text" property of a <span class="code">Label</span> instance:</p>
+
+<pre class="code">
+&lt;TextField fx:id="textField"/&gt;
+&lt;Label text="${textField.text}"/&gt;
+</pre>
+
+<p>As the user types in the text input, the label's text content will be automatically updated.</p>
+
+<p>Only simple expressions that resolve to property values or page variables are currently supported. Support for more complex expressions involving boolean or other operators may be added in the future.</p>
+
+<h3><a name="static_property_attributes">Static Properties</a></h3>
+<p>Attributes representing static properties are handled similarly to static property elements and use a similar syntax. For example, the earlier <span class="code">GridPane</span> markup shown earlier to demonstrate static property elements could be rewritten as follows:</p>
+
+<pre class="code">
+&lt;GridPane&gt;
+    &lt;children&gt;
+        &lt;Label text="My Label" GridPane.rowIndex="0" GridPane.columnIndex="0"/&gt;
+    &lt;/children&gt;
+&lt;/TabPane&gt;
+</pre>
+
+<p>In addition to being more concise, static property attributes, like instance property attributes, support location, resource, and variable resolution operators, the only limitation being that it is not possible to create an expression binding to a static property.</p>
+
+<h3><a name="event_handler_attributes">Event Handlers</a></h3>
+<p>Event handler attributes are a convenient means of attaching behaviors to document elements. Any class that defines a <span class="code">setOn<span class="variable">Event</span>()</span> method can be assigned an event handler in markup, as can any observable property (via an "on<span class="variable">Property</span>Change" attribute).</p>
+
+<p>FXML supports two types of event handler attributes: script event handlers and controller method event handlers. Each are discussed below.</p>
+
+<h4><a name="script_event_handlers">Script Event Handlers</a></h4>
+<p>A script event handler is an event handler that executes script code when the event is fired, similar to event handlers in HTML. For example, the following script-based handler for the button's "onAction" event uses JavaScript to write the text "You clicked me!" to the console when the user presses the button:</p>
+
+<pre class="code">
+&lt;?language javascript?&gt;
+...
+
+&lt;VBox&gt;
+    &lt;children&gt;
+        &lt;Button text="Click Me!"
+            onAction="java.lang.System.out.println('You clicked me!');"/&gt;
+    &lt;/children&gt;
+&lt;/VBox&gt;
+</pre>
+
+<p>Note the use of the language processing instruction at the beginning of the code snippet. This PI tells the FXML loader which scripting language should be used to execute the event handler. A page language must be specified whenever inline script is used in an FXML document, and can only be specified once per document. However, this does not apply to external scripts, which may be implemented using any number of supported scripting languages. Scripting is discussed in more detail in the next section.</p>
+
+<h4><a name="controller_method_event_handlers">Controller Method Event Handlers</a></h4>
+<p>A controller method event handler is a method defined by a document's "controller". A controller is an object that is associated with the deserialized contents of an FXML document and is responsible for coordinating the behaviors of the objects (often user interface elements) defined by the document.</p>
+
+<p>A controller method event handler is specified by a leading hash symbol followed by the name of the handler method. For example:</p>
+
+<pre class="code">
+&lt;VBox fx:controller="com.foo.MyController"
+    xmlns:fx="http://javafx.com/fxml"&gt;
+    &lt;children&gt;
+        &lt;Button text="Click Me!" onAction="#handleButtonAction"/&gt;
+    &lt;/children&gt;
+&lt;/VBox&gt;
+</pre>
+
+<p>Note the use of the <span class="code">fx:controller</span> attribute on the root element. This attribute is used to associate a controller class with the document. If <span class="code">MyController</span> is defined as follows:</p>
+
+<pre class="code">
+package com.foo;
+
+public class MyController {
+    public void handleButtonAction(ActionEvent event) {
+        System.out.println("You clicked me!");
+    }
+}
+</pre>
+
+<p>the <span class="code">handleButtonAction()</span> will be called when the user presses the button, and the text "You clicked me!" will be written to the console.</p>
+
+<p>In general, a handler method should conform to the signature of a standard event handler; that is, it should take a single argument of a type that extends <span class="code">javafx.event.Event</span> and should return void (similar to an event delegate in C#). The event argument often carries important and useful information about the nature of the event; however, it is optional and may be omitted if desired.</p>
+
+<p>Controllers are discussed in more detail in a later section.</p>
+
+<h2><a name="scripting">Scripting</a></h2>
+The <span class="code">&lt;fx:script&gt;</span> tag allows a caller to import scripting code into or embed script within a FXML file. Any JVM scripting language can be used, including JavaScript, Groovy, and Clojure, among others. Script code is often used to define event handlers directly in markup or in an associated source file, since event handlers can often be written more concisely in more loosely-typed scripting languages than they can in a statically-typed language such as Java.</p>
+
+<p>For example, the following markup defines a function called <span class="code">handleButtonAction()</span> that is called by the action handler attached to the <span class="code">Button</span> element:</p>
+
+<pre class="code">
+&lt;?language javascript?&gt;
+
+&lt;?import javafx.scene.control.*?&gt;
+&lt;?import javafx.scene.layout.*?&gt;
+
+&lt;VBox xmlns:fx="http://javafx.com/fxml"&gt;
+    &lt;fx:script&gt;
+    importClass(java.lang.System);
+
+    function handleButtonAction(event) {
+       System.out.println('You clicked me!');
+    }
+    &lt;/fx:script&gt;
+
+    &lt;children&gt;
+        &lt;Button text="Click Me!" onAction="handleButtonAction(event);"/&gt;
+    &lt;/children&gt;
+&lt;/VBox&gt;
+</pre>
+
+<p>Clicking the button triggers the event handler, which invokes the function, producing output identical to the previous examples.</p>
+
+<p>Script code may also be defined in external files. The previous example could be split into an FXML file and a JavaScript source file with no difference in functionality:</p>
+
+<div class="caption">example.fxml</div>
+<pre class="code">
+&lt;?import javafx.scene.control.*?&gt;
+&lt;?import javafx.scene.layout.*?&gt;
+
+&lt;VBox xmlns:fx="http://javafx.com/fxml"&gt;
+    &lt;fx:script source="example.js"/&gt;
+
+    &lt;children&gt;
+        &lt;Button text="Click Me!" onAction="handleButtonAction(event);"/&gt;
+    &lt;/children&gt;
+&lt;/VBox&gt;
+</pre>
+
+<div class="caption">example.js</div>
+<pre class="code">
+importClass(java.lang.System);
+
+function handleButtonAction(event) {
+   System.out.println('You clicked me!');
+}
+</pre>
+
+<p>It is often preferable to separate code from markup in this way, since many text editors support syntax highlighting for the various scripting languages supported by the JVM. It can also help improve readability of the source code and markup.</p>
+
+<p>Note that script blocks are not limited to defining event handler functions. Script code is executed as it is processed, so it can also be used to dynamically configure the structure of the resulting output. As a simple example, the following FXML includes a script block that defines a variable named "labelText". The value of this variable is used to populate the text property of a <span class="code">Label</span> instance:</p>
+
+<pre class="code">
+&lt;fx:script&gt;
+var myText = "This is the text of my label.";
+&lt;/fx:script&gt;
+
+...
+
+&lt;Label text="$myText"/&gt;
+</pre>
+
+<h2><a name="controllers">Controllers</a></h2>
+<p>While it can be convenient to write simple event handlers in script, either inline or defined in external files, it is often preferable to define more complex application logic in a compiled, strongly-typed language such as Java. As discussed earlier, the <span class="code">fx:controller</span> attribute allows a caller to associate a "controller" class with an FXML document. A controller is a compiled class that implements the "code behind" the object hierarchy defined by the document.</p>
+
+<p>As shown earlier, controllers are often used to implement event handlers for user interface elements defined in markup:</p>
+
+<pre class="code">
+&lt;VBox fx:controller="com.foo.MyController"
+    xmlns:fx="http://javafx.com/fxml"&gt;
+    &lt;children&gt;
+        &lt;Button text="Click Me!" onAction="#handleButtonAction"/&gt;
+    &lt;/children&gt;
+&lt;/VBox&gt;
+</pre>
+
+<pre class="code">
+package com.foo;
+
+public class MyController {
+    public void handleButtonAction(ActionEvent event) {
+        System.out.println("You clicked me!");
+    }
+}
+</pre>
+
+<p>In many cases, it is sufficient to simply declare event handlers in this manner. However, when more control over the behavior of the controller and the elements it manages is required, the controller can define an <span class="code">initialize()</span> method, which will be called once on an implementing controller when the contents of its associated document have been completely loaded:</p>
+
+<pre class="code">
+public void initialize();
+</pre>
+
+<p>This allows the implementing class to perform any necessary post-processing on the content. It also provides the controller with access to the resources that were used to load the document and the location that was used to resolve relative paths within the document (commonly equivalent to the location of the document itself).</p>
+
+<p>For example, the following code defines an <span class="code">initialize()</span> method that attaches an action handler to a button in code rather than via an event handler attribute, as was done in the previous example. The button instance variable is injected by the loader as the document is read. The resulting application behavior is identical:</p>
+
+<pre class="code">
+&lt;VBox fx:controller="com.foo.MyController"
+    xmlns:fx="http://javafx.com/fxml"&gt;
+    &lt;children&gt;
+        &lt;Button fx:id="button" text="Click Me!"/&gt;
+    &lt;/children&gt;
+&lt;/VBox&gt;
+</pre>
+
+<pre class="code">
+package com.foo;
+
+public class MyController implements Initializable {
+    public Button button;
+
+    @Override
+    public void initialize(URL location, Resources resources)
+        button.setOnAction(new EventHandler&lt;ActionEvent&gt;() {
+            @Override
+            public void handle(ActionEvent event) {
+                System.out.println("You clicked me!");
+            }
+        });
+    }
+}
+</pre>
+
+<h3><a name="fxml_annotation">@FXML</a></h3>
+<p>Note that, in the previous examples, the controller member fields and event handler methods were declared as public so they can be set or invoked by the loader. In practice, this is not often an issue, since a controller is generally only visible to the FXML loader that creates it. However, for developers who prefer more restricted visibility for controller fields or handler methods, the <span class="code">javafx.fxml.FXML</span> annotation can be used. This annotation marks a protected or private class member as accessible to FXML.</span>
+
+<p>For example, the controllers from the previous examples could be rewritten as follows:</p>
+
+<pre class="code">
+package com.foo;
+
+public class MyController {
+    @FXML
+    private void handleButtonAction(ActionEvent event) {
+        System.out.println("You clicked me!");
+    }
+}
+</pre>
+
+<pre class="code">
+package com.foo;
+
+public class MyController implements Initializable {
+    @FXML private Button button;
+
+    @FXML
+    protected void initialize()
+        button.setOnAction(new EventHandler&lt;ActionEvent&gt;() {
+            @Override
+            public void handle(ActionEvent event) {
+                System.out.println("You clicked me!");
+            }
+        });
+    }
+}
+</pre>
+
+<p>In the first version, the <span class="code">handleButtonAction()</span> is tagged with <span class="code">@FXML</span> to allow markup defined in the controller's document to invoke it. In the second example, the button field is annotated to allow the loader to set its value. The <span class="code">initialize()</span> method is similarly annotated.</p>
+
+<p>Note that the <span class="code">@FXML</span> annotation can currently only be used with trusted code. Because the FXML loader relies on reflection to set member fields and invoke member methods, it must call <span class="code">setAccessible()</span> on any non-public <span class="code">Field</span>. <span class="code">setAccessible()</span> is a privileged operation that can only be executed in a secure context. This may change in a future release.</p>
+
+<h3><a name="nested_controllers">Nested Controllers</a></h3>
+<p>Controller instances for nested FXML documents loaded via the <span class="code">&lt;fx:include&gt;</span> element are mapped directly to member fields of the including controller. This allows a developer to easily access functionality defined by an include (such as a dialog window presented by an application's main window controller). For example, given the following code:
+
+<div class="caption">main_window_content.fxml</div>
+<pre class="code">
+&lt;VBox fx:controller="com.foo.MainController"&gt;
+   &lt;fx:include fx:id="dialog" source="dialog.fxml"/&gt;
+   ...
+&lt;/VBox&gt;
+</pre>
+
+<div class="caption">MainController.java</div>
+<pre class="code">
+public class MainController extends Controller {
+    @FXML private Window dialog;
+    @FXML private DialogController dialogController;
+
+    ...
+}
+</pre>
+
+<p>when the controller's <span class="code">initialize()</span> method is called, the <span class="code">dialog</span> field will contain the root element loaded from the "dialog.fxml" include, and the <span class="code">dialogController</span> field will contain the include's controller. The main controller can then invoke methods on the included controller, to populate and show the dialog, for example.</p>
+
+<h2><a name="fxmlloader">FXMLLoader</a></h2>
+<p>The <span class="code">FXMLLoader</span> class is responsible for actually loading an FXML source file and returning the resulting object graph. For example, the following code loads an FXML file from a location on the classpath relative to the loading class and localizes it with a resource bundle named "com.foo.example". The type of the root element is assumed to be a subclass of <span class="code">javafx.scene.layout.Pane</span>, and the document is assumed to define a controller of type <span class="code">MyController</span>:</p>
+
+<pre class="code">
+URL location = getClass().getResource("example.fxml");
+ResourceBundle resources = ResourceBundle.getBundle("com.foo.example");
+FXMLLoader fxmlLoader = new FXMLLoader(location, resources);
+
+Pane root = (Pane)fxmlLoader.load();
+MyController controller = (MyController)fxmlLoader.getController();
+</pre>
+
+<p>Note that the output of an <span class="code">FXMLLoader#load()</span> operation is an instance hierarchy that reflects the actual named classes in the document, not <span class="code">org.w3c.dom</span> nodes representing those classes. Internally, <span class="code">FXMLLoader</span> uses the <span class="code">javax.xml.stream</span> API (also known as the <i>Streaming API for XML</i>, or <i>StAX</i>) to load an FXML document. StAX is an extremely efficient event-based XML parsing API that is conceptually similar to its W3C predecessor, SAX. It allows an FXML document to be processed in a single pass, rather than loaded into an intermediate DOM structure and then post-processed.</p>
+
+<h3><a name="custom_components">Custom Components</a></h3>
+<p>The <span class="code">setRoot()</span> and <span class="code">setController()</span> methods of <span class="code">FXMLLoader</span> allow a caller to inject document root and controller values, respectively, into the document namespace, rather than delegating creation of these values to <span class="code">FXMLLoader</span> itself. This allows a developer to easily create reusable controls that are internally implemented using markup, but (from an API perspective) appear identically to controls implemented programmatically.</p>
+
+<p>For example, the following markup defines the structure of a simple custom control containing a <span class="code">TextField</span> and a <span class="code">Button</span> instance. The root container is defined as an instance of <span class="code">javafx.scene.layout.VBox</span>:</p>
+
+<pre class="code">
+&lt;?import javafx.scene.*?&gt;
+&lt;?import javafx.scene.control.*?&gt;
+&lt;?import javafx.scene.layout.*?&gt;
+
+&lt;fx:root type="javafx.scene.layout.VBox" xmlns:fx="http://javafx.com/fxml"&gt;
+    &lt;TextField fx:id="textField"/&gt;
+    &lt;Button text="Click Me" onAction="#doSomething"/&gt;
+&lt;/fx:root&gt;
+</pre>
+
+<p>As mentioned earlier, the <span class="code">&lt;fx:root&gt;</span> tag creates a reference to a previously defined root element. The value of this element is obtained by calling the <span class="code">getRoot()</span> method of <span class="code">FXMLLoader</span>. Prior to calling <span class="code">load()</span>, the caller must specify this value via a call to <span class="code">setRoot()</span>. The caller may similarly provide a value for the document's controller by calling <span class="code">setController()</span>, which sets the value that will be used as the document's controller when the document is read. These two methods are commonly used together when creating custom FXML-based components.</p>
+
+<p>In the following example, the <span class="code">CustomControl</span> class extends <span class="code">VBox</span> (the type declared by the <span class="code">&lt;fx:root&gt;</span> element), and sets itself as both the root and controller of the FXML document in its constructor. When the document is loaded, the contents of <span class="code">CustomControl</span> will be populated with the contents of the previous FXML document:</p>
+
+<pre class="code">
+package fxml;
+
+import java.io.IOException;
+
+import javafx.beans.property.StringProperty;
+import javafx.fxml.FXML;
+import javafx.fxml.FXMLLoader;
+import javafx.scene.control.TextField;
+import javafx.scene.layout.VBox;
+
+public class CustomControl extends VBox {
+    @FXML private TextField textField;
+
+    public CustomControl() {
+        FXMLLoader fxmlLoader = new FXMLLoader(getClass().getResource("custom_control.fxml"));
+        fxmlLoader.setRoot(this);
+        fxmlLoader.setController(this);
+
+        try {
+            fxmlLoader.load();
+        } catch (IOException exception) {
+            throw new RuntimeException(exception);
+        }
+    }
+
+    public String getText() {
+        return textProperty().get();
+    }
+
+    public void setText(String value) {
+        textProperty().set(value);
+    }
+
+    public StringProperty textProperty() {
+        return textField.textProperty();
+    }
+
+    @FXML
+    protected void doSomething() {
+        System.out.println("The button was clicked!");
+    }
+}
+</pre>
+
+<p>Now, callers can use instances of this control in code or in markup, just like any other control; e.g.:</p>
+
+<div class="caption">Java</div>
+<pre class="code">
+HBox hbox = new HBox();
+CustomControl customControl = new CustomControl();
+customControl.setText("Hello World!");
+hbox.getChildren().add(customControl);
+</pre>
+
+<div class="caption">FXML</div>
+<pre class="code">
+&lt;HBox&gt;
+    &lt;CustomControl text="Hello World!"/&gt;
+&lt;/HBox&gt;
+</pre>
+
+<hr>
+<p>
+<small>Copyright (c) 2008, 2012, Oracle and/or its affiliates. All rights reserved. Use is subject to <a href="http://docs.oracle.com/javafx/2/api/license.html">license terms</a>.
+</small>
+</p>
+</body>
+</html>

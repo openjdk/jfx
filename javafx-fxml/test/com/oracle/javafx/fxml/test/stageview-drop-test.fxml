@@ -1,0 +1,253 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+Copyright (c) 2010, 2012, Oracle and/or its affiliates. All rights reserved.
+DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+
+This code is free software; you can redistribute it and/or modify it
+under the terms of the GNU General Public License version 2 only, as
+published by the Free Software Foundation.  Oracle designates this
+particular file as subject to the "Classpath" exception as provided
+by Oracle in the LICENSE file that accompanied this code.
+
+This code is distributed in the hope that it will be useful, but WITHOUT
+ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
+version 2 for more details (a copy is included in the LICENSE file that
+accompanied this code).
+
+You should have received a copy of the GNU General Public License version
+2 along with this work; if not, write to the Free Software Foundation,
+Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301 USA.
+
+Please contact Oracle, 500 Oracle Parkway, Redwood Shores, CA 94065 USA
+or visit www.oracle.com if you need additional information or have any
+questions.
+-->
+
+<?import java.lang.*?>
+<?import java.util.*?>
+<?import javafx.collections.*?>
+<?import javafx.geometry.*?>
+<?import javafx.scene.chart.*?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.image.*?>
+<?import javafx.scene.layout.*?>
+<?import javafx.scene.paint.*?>
+<?import javafx.scene.shape.*?>
+<?import javafx.scene.text.*?>
+<?import javafx.scene.web.*?>
+
+<AnchorPane id="" maxHeight="-Infinity" maxWidth="-Infinity" minHeight="-Infinity" minWidth="-Infinity" prefHeight="1313.0" prefWidth="900.0" xmlns:fx="http://javafx.com/fxml">
+  <children>
+    <Label id="" alignment="CENTER" layoutX="15.0" layoutY="9.0" prefWidth="340.0" text="Generic Containers">
+      <font>
+        <Font size="18.0" fx:id="x3" />
+      </font>
+      <textFill>
+        <Color blue="0.750" green="0.750" red="0.750" fx:id="x1" />
+      </textFill>
+    </Label>
+    <VBox id="" alignment="CENTER" layoutX="14.0" layoutY="53.0" spacing="5.0">
+      <children>
+        <AnchorPane id="myAnchorPane" cache="true" prefHeight="100.0" prefWidth="100.0" style="-fx-background-color: pink;" />
+        <Label id="" alignment="CENTER" text="AnchorPane" textFill="$x1" />
+      </children>
+    </VBox>
+    <VBox id="" alignment="CENTER" layoutX="136.0" layoutY="52.0" spacing="5.0">
+      <children>
+        <FlowPane id="myFlowPane" prefHeight="100.0" prefWidth="100.0" style="-fx-background-color: green;" />
+        <Label id="" alignment="CENTER" text="FlowPane">
+          <textFill>
+            <Color blue="0.749" green="0.749" red="0.749" fx:id="x2" />
+          </textFill>
+        </Label>
+      </children>
+    </VBox>
+    <VBox id="" alignment="CENTER" layoutX="255.0" layoutY="53.0" spacing="5.0">
+      <children>
+        <StackPane id="myStackPane" prefHeight="100.0" prefWidth="100.0" style="-fx-background-color: grey;" />
+        <Label id="" alignment="CENTER" text="StackPane" textFill="$x2" />
+      </children>
+    </VBox>
+    <Label id="" alignment="CENTER" font="$x3" layoutX="405.0" layoutY="14.0" prefWidth="412.0" text="Singleton Containers" textFill="$x2" />
+    <VBox id="" alignment="CENTER" layoutX="406.0" layoutY="59.0" spacing="5.0">
+      <children>
+        <ScrollPane id="myScrollPane" prefHeight="150.0" prefWidth="182.0" />
+        <Label id="" alignment="CENTER" text="ScrollPane" textFill="$x2" />
+      </children>
+    </VBox>
+    <VBox id="" alignment="CENTER" layoutX="607.0" layoutY="58.0" spacing="5.0">
+      <children>
+        <TabPane id="myTabPaneEnclosingTab" prefHeight="150.0" prefWidth="210.0" tabClosingPolicy="UNAVAILABLE">
+          <tabs>
+            <Tab id="myTab" text="Untitled Tab" />
+          </tabs>
+        </TabPane>
+        <Label id="" alignment="CENTER" text="Tab" textFill="$x2" />
+      </children>
+    </VBox>
+    <Label id="" alignment="CENTER" font="$x3" layoutX="17.0" layoutY="288.0" prefWidth="865.0" text="Specialized Containers" textFill="$x2" />
+    <VBox id="" alignment="CENTER" layoutX="18.0" layoutY="331.0" spacing="5.0">
+      <children>
+        <Accordion id="myAccordion" prefHeight="100.0" prefWidth="100.0" style="-fx-background-color: pink;" />
+        <Label id="" alignment="CENTER" text="Accordion" textFill="$x2" />
+        <Label id="" alignment="CENTER" text="(only TitledPane)" textFill="$x2" />
+      </children>
+    </VBox>
+    <VBox id="" alignment="CENTER" layoutX="278.0" layoutY="310.0" spacing="5.0">
+      <children>
+        <MenuBar id="myMenuBar" prefHeight="20.0" prefWidth="100.0" />
+        <Label id="" alignment="CENTER" text="MenuBar" textFill="$x2" />
+        <MenuButton id="myMenuButton" text="MenuButton" />
+        <Label id="" alignment="CENTER" text="MenuButton" textFill="$x2" />
+        <SplitMenuButton id="mySplitMenuButton" text="SplitMenuButton" />
+        <Label id="" alignment="CENTER" text="SplitMenuButton" textFill="$x2" />
+        <MenuBar id="myMenuBarEnclosingMenu" prefHeight="20.0" prefWidth="100.0">
+          <menus>
+            <Menu id="myMenu" text="Unspecified Menu" />
+          </menus>
+        </MenuBar>
+        <Label id="" alignment="CENTER" text="(only MenuItem)" textFill="$x2" />
+      </children>
+    </VBox>
+    <VBox id="" alignment="CENTER" layoutX="148.0" layoutY="331.0" spacing="5.0">
+      <children>
+        <TabPane id="tabPane" prefHeight="100.0" prefWidth="100.0" style="-fx-background-color: green;" tabClosingPolicy="UNAVAILABLE" />
+        <Label id="" alignment="CENTER" text="TabPane" textFill="$x2" />
+        <Label id="" alignment="CENTER" text="(only Tab)" textFill="$x2" />
+      </children>
+    </VBox>
+    <VBox id="" alignment="CENTER" layoutX="615.0" layoutY="333.0" spacing="5.0">
+      <children>
+        <TableView id="myTableView" prefHeight="114.0" prefWidth="100.0" />
+        <Label id="" alignment="CENTER" text="TableView" textFill="$x2" />
+        <Label id="" alignment="CENTER" text="(only TableColumn)" textFill="$x2" />
+      </children>
+    </VBox>
+    <Separator id="" layoutX="380.0" layoutY="25.0" orientation="VERTICAL" prefHeight="235.0" />
+    <Separator id="" layoutX="18.0" layoutY="271.0" prefWidth="865.0" />
+    <VBox id="" alignment="CENTER" layoutX="753.0" layoutY="333.0" spacing="5.0">
+      <children>
+        <TableView id="myTableViewWithColumn" prefHeight="114.0" prefWidth="100.0">
+          <columns>
+            <TableColumn prefWidth="100.0" text="Column X" />
+          </columns>
+        </TableView>
+        <Label id="" alignment="CENTER" text="TableColumn" textFill="$x2" />
+        <Label id="" alignment="CENTER" text="(only TableColumn)" textFill="$x2" />
+      </children>
+    </VBox>
+    <Separator id="" layoutX="11.0" layoutY="498.0" prefWidth="865.0" />
+    <Label id="" alignment="CENTER" font="$x3" layoutX="11.0" layoutY="511.0" prefWidth="865.0" text="Controls" textFill="$x2" />
+    <VBox id="myVboxEnclosingImageView" alignment="CENTER" layoutX="390.0" layoutY="572.0" spacing="5.0" style="-fx-background-color: pink;">
+      <children>
+        <ImageView id="myImageView" fitHeight="100.0" fitWidth="100.0" preserveRatio="true" />
+        <Label id="" alignment="CENTER" text="ImageView" textFill="$x2" />
+      </children>
+    </VBox>
+    <VBox id="myVboxEnclosingHtmlEditor" alignment="CENTER" layoutX="14.0" layoutY="856.0" spacing="5.0">
+      <children>
+        <HTMLEditor id="myHtmlEditor" prefHeight="135.0" prefWidth="848.0" />
+        <Label id="" alignment="CENTER" text="HTMLEditor" textFill="$x2" />
+      </children>
+    </VBox>
+    <VBox id="myVboxEnclosingListView" alignment="CENTER" layoutX="642.0" layoutY="571.0" spacing="5.0">
+      <children>
+        <ListView id="myListView" prefHeight="200.0" prefWidth="100.0" />
+        <Label id="" alignment="CENTER" text="ListView" textFill="$x2" />
+      </children>
+    </VBox>
+    <VBox id="myVboxEnclosingTextArea" alignment="CENTER" layoutX="390.0" layoutY="715.0" spacing="5.0">
+      <children>
+        <TextArea id="myTextArea" prefHeight="100.0" prefWidth="100.0" wrapText="true" />
+        <Label id="" alignment="CENTER" text="TextArea" textFill="$x2" />
+      </children>
+    </VBox>
+    <VBox id="myVboxEnclosingTreeView" alignment="CENTER" layoutX="761.0" layoutY="571.0" spacing="5.0">
+      <children>
+        <TreeView id="myTreeView" prefHeight="200.0" prefWidth="100.0" />
+        <Label id="" alignment="CENTER" text="TreeView" textFill="$x2" />
+      </children>
+    </VBox>
+    <VBox id="myVboxEnclosingWebView" alignment="CENTER" layoutX="513.0" layoutY="571.0" spacing="5.0" style="-fx-background-color: green;">
+      <children>
+        <WebView id="myWebView" prefHeight="200.0" prefWidth="100.0" />
+        <Label id="" alignment="CENTER" text="WebView" textFill="$x2" />
+      </children>
+      <padding>
+        <Insets bottom="1.0" left="1.0" right="1.0" top="1.0" />
+      </padding>
+    </VBox>
+    <VBox id="myVboxEnclosingOtherControls" alignment="CENTER" layoutX="151.0" layoutY="571.0" spacing="5.0">
+      <children>
+        <ChoiceBox id="myChoiceBox">
+          <items>
+            <FXCollections fx:factory="observableArrayList">
+              <String fx:value="Item 1" />
+              <String fx:value="Item 2" />
+              <String fx:value="Item 3" />
+            </FXCollections>
+          </items>
+        </ChoiceBox>
+        <ComboBox id="myComboBox">
+          <items>
+            <FXCollections fx:factory="observableArrayList">
+              <String fx:value="Item 1" />
+              <String fx:value="Item 2" />
+              <String fx:value="Item 3" />
+            </FXCollections>
+          </items>
+        </ComboBox>
+        <PasswordField id="myPasswordField" prefWidth="200.0" promptText="PasswordField" />
+        <ProgressBar id="myProgressBar" prefWidth="200.0" />
+        <ProgressIndicator id="myProgressIndicator" />
+        <ScrollBar id="myScrollBar" />
+        <Separator id="mySeparator" prefWidth="200.0" />
+        <Slider id="mySlider" />
+        <TextField id="myTextField" prefWidth="200.0" promptText="TextField" />
+      </children>
+    </VBox>
+    <VBox id="" alignment="CENTER" layoutX="27.0" layoutY="572.0" spacing="5.0">
+      <children>
+        <VBox id="myVboxEnclosingLabeledControls" alignment="CENTER" spacing="5.0">
+          <children>
+            <Button id="myButton" text="Button" />
+            <CheckBox id="myCheckBox" text="CheckBox" />
+            <Hyperlink id="myHyperlink" text="Hyperlink" />
+            <RadioButton id="myRadioButton" text="RadioButton" />
+            <ToggleButton id="myToggleButton" text="ToggleButton" />
+          </children>
+        </VBox>
+        <Label id="" alignment="CENTER" text="Labeled Controls" textFill="$x2" />
+      </children>
+    </VBox>
+    <VBox id="myVboxEnclosingBarChart" alignment="CENTER" layoutX="137.0" layoutY="1059.0" spacing="5.0">
+      <children>
+        <BarChart id="myBarChart" prefHeight="200.0" prefWidth="256.0">
+          <xAxis>
+            <CategoryAxis id="myXAxis" side="BOTTOM">
+              <categories>
+                <FXCollections fx:factory="observableArrayList" />
+              </categories>
+            </CategoryAxis>
+          </xAxis>
+          <yAxis>
+            <NumberAxis id="myYAxis" side="LEFT" />
+          </yAxis>
+        </BarChart>
+        <Label id="" alignment="CENTER" text="AreaChart" textFill="$x2" />
+      </children>
+    </VBox>
+    <Separator id="" layoutX="14.0" layoutY="1023.0" prefWidth="855.0" />
+    <Label id="" alignment="CENTER" font="$x3" layoutX="15.0" layoutY="1037.0" prefWidth="499.0" text="Charts" textFill="$x2" />
+    <Separator id="" layoutX="548.0" layoutY="1037.0" orientation="VERTICAL" prefHeight="235.0" />
+    <Label id="" alignment="CENTER" font="$x3" layoutX="552.0" layoutY="1037.0" prefWidth="317.0" text="Shapes" textFill="$x2" />
+    <HBox id="myHboxEnclosingShapes" alignment="CENTER" layoutX="600.0" layoutY="1120.0" spacing="5.0">
+      <children>
+        <Circle id="myCircle" fill="DODGERBLUE" radius="50.0" stroke="BLACK" strokeType="INSIDE" />
+        <Rectangle id="myRectangle" fill="DODGERBLUE" height="100.0" stroke="BLACK" strokeType="INSIDE" width="100.0" />
+      </children>
+    </HBox>
+    <TabPane id="myTabPane" layoutX="465.0" layoutY="330.0" prefHeight="119.0" prefWidth="142.0" tabClosingPolicy="UNAVAILABLE" />
+  </children>
+</AnchorPane>

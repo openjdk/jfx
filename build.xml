@@ -64,6 +64,7 @@
         <!--<ant antfile="${rt.root.dir}/javafx-designtime/build.xml" target="jar" inheritAll="false"/>-->
         <ant antfile="${rt.root.dir}/javafx-ui-controls/build.xml" target="jar" inheritAll="false"/>
         <ant antfile="${rt.root.dir}/javafx-ui-charts/build.xml" target="jar" inheritAll="false"/>
+        <ant antfile="${rt.root.dir}/javafx-fxml/build.xml" target="jar" inheritAll="false"/>
     </target>
 
     <!--
@@ -78,6 +79,7 @@
         <ant antfile="${rt.root.dir}/javafx-ui-charts/build.xml" target="test" inheritAll="false"/>
         <ant antfile="${rt.root.dir}/javafx-ui-common/build.xml" target="test" inheritAll="false"/>
         <ant antfile="${rt.root.dir}/javafx-util-converter/build.xml" target="test" inheritAll="false"/>
+        <ant antfile="${rt.root.dir}/javafx-fxml/build.xml" target="test" inheritAll="false"/>
     </target>
 
     <!--
@@ -94,6 +96,7 @@
         <ant antfile="${rt.root.dir}/javafx-ui-charts/build.xml" target="clean" inheritAll="false"/>
         <ant antfile="${rt.root.dir}/javafx-ui-common/build.xml" target="clean" inheritAll="false"/>
         <ant antfile="${rt.root.dir}/javafx-util-converter/build.xml" target="clean" inheritAll="false"/>
+        <ant antfile="${rt.root.dir}/javafx-fxml/build.xml" target="clean" inheritAll="false"/>
     </target>
  
     <!--

@@ -29,6 +29,7 @@ import com.sun.javafx.css.StyleHelper.StyleCacheBucket;
 import com.sun.javafx.css.StyleHelper.StyleCacheKey;
 import com.sun.javafx.css.converters.FontConverter;
 import com.sun.javafx.css.converters.SizeConverter;
+import com.sun.javafx.css.parser.CSSParser;
 import com.sun.javafx.tk.Toolkit;
 import javafx.scene.paint.Color;
 import java.lang.ref.Reference;
@@ -61,6 +62,9 @@ public class Node_cssStyleMap_Test {
     }
 
     int nchanges = 0;
+    int nadds = 0;
+    int nremoves = 0;
+    boolean disabled = false;
     Group group;
     Rectangle rect;
     Text text;    
@@ -103,11 +107,11 @@ public class Node_cssStyleMap_Test {
         return smap;
     }
     
-    @Test @org.junit.Ignore("will not compile, no StyleHelper#create mehod")
+    @Test
     public void testStyleMapTracksChanges() {
-
-        final List<Declaration> decls = new ArrayList<Declaration>();
-        Collections.addAll(decls, 
+                
+        final List<Declaration> declsNoState = new ArrayList<Declaration>();
+        Collections.addAll(declsNoState, 
             new Declaration("-fx-fill", new ParsedValue<Color,Color>(Color.RED, null), false),
             new Declaration("-fx-stroke", new ParsedValue<Color,Color>(Color.YELLOW, null), false),
             new Declaration("-fx-stroke-width", new ParsedValue<ParsedValue<?,Size>,Double>(
@@ -115,88 +119,101 @@ public class Node_cssStyleMap_Test {
                 SizeConverter.getInstance()), false)
         );
         
-        final List<Selector> sels = new ArrayList<Selector>();
-        Collections.addAll(sels, 
-            Selector.createSelector("rect")
+        
+        final List<Selector> selsNoState = new ArrayList<Selector>();
+        Collections.addAll(selsNoState, 
+            Selector.createSelector(".rect")
         );
         
-        Rule rule = new Rule(sels, decls);        
+        Rule rule = new Rule(selsNoState, declsNoState);        
         
         Stylesheet stylesheet = new Stylesheet();
         stylesheet.setOrigin(Stylesheet.Origin.USER_AGENT);
         stylesheet.getRules().add(rule);
         
-        final List<CascadingStyle> styles = createStyleList(decls);
-        final Map<String,List<CascadingStyle>> styleMap = createStyleMap(styles);
-        final Map<String,List<CascadingStyle>> emptyMap = createStyleMap(null);
+        final List<Declaration> declsDisabledState = new ArrayList<Declaration>();
+        Collections.addAll(declsDisabledState, 
+            new Declaration("-fx-fill", new ParsedValue<Color,Color>(Color.GRAY, null), false),
+            new Declaration("-fx-stroke", new ParsedValue<Color,Color>(Color.DARKGRAY, null), false)
+        );
+        
+        final List<Selector> selsDisabledState = new ArrayList<Selector>();
+        Collections.addAll(selsDisabledState, 
+            Selector.createSelector(".rect:disabled")
+        );
+        
+        rule = new Rule(selsDisabledState, declsDisabledState);        
+        stylesheet.getRules().add(rule);
+        
+        final List<CascadingStyle> stylesNoState = createStyleList(declsNoState);
+        final List<CascadingStyle> stylesDisabledState = createStyleList(declsDisabledState);
         
         // add to this list on wasAdded, check bean on wasRemoved.
         final List<WritableValue> beans = new ArrayList<WritableValue>();
         
-        rect = new Rectangle(50,50) {
-
-            // I'm bypassing StyleManager by creating StyleHelper directly. 
-//            StyleHelper shelper = null;
-                                   
-            
-//            @Override public StyleHelper impl_getStyleHelper() {
-//                if (shelper == null) {
-//                    // If no styleclass, then create an StyleHelper with no mappings.
-//                    // Otherwise, create a StyleHelper matching the "rect" style class.
-//                    if (getStyleClass().isEmpty()) {
-//                        Map<StyleCacheKey, StyleCacheBucket> styleCache = 
-//                            new HashMap<StyleHelper.StyleCacheKey, StyleHelper.StyleCacheBucket>();
-//                        shelper = StyleHelper.create(rect, emptyMap, styleCache, 0, 0);
-//                    } else  {
-//                        Map<StyleCacheKey, StyleCacheBucket> styleCache = 
-//                            new HashMap<StyleHelper.StyleCacheKey, StyleHelper.StyleCacheBucket>();
-//                        shelper = StyleHelper.create(rect, styleMap, styleCache, 0, 0);
-//                    }
-//                }
-//                return shelper;
-//            }
-        };
-                
+        Rectangle rect = new Rectangle(50,50);
         rect.getStyleClass().add("rect");
         rect.impl_setStyleMap(FXCollections.observableMap(new HashMap<WritableValue, List<Style>>()));
         rect.impl_getStyleMap().addListener(new MapChangeListener<WritableValue, List<Style>>() {
 
             public void onChanged(MapChangeListener.Change<? extends WritableValue, ? extends List<Style>> change) {
+
                 if (change.wasAdded()) {
+                    
                     List<Style> styles = change.getValueAdded();
                     for (Style style : styles) {
-                        assert(decls.contains(style.getDeclaration()));
-                        assert(sels.contains(style.getSelector()));
+
+                        // stroke width comes from ".rect" even for disabled state.
+                        if (disabled == false || "-fx-stroke-width".equals(style.getDeclaration().getProperty())) {
+                            assertTrue(style.getDeclaration().toString(),declsNoState.contains(style.getDeclaration()));
+                            assertTrue(style.getSelector().toString(),selsNoState.contains(style.getSelector()));
+                        } else {
+                            assertTrue(style.getDeclaration().toString(),declsDisabledState.contains(style.getDeclaration()));
+                            assertTrue(style.getSelector().toString(),selsDisabledState.contains(style.getSelector()));                            
+                        }
                         Object value = style.getDeclaration().parsedValue.convert(null);
                         WritableValue writable = change.getKey();
                         beans.add(writable);
                         assertEquals(writable.getValue(), value);
-                        nchanges += 1;                        
+                        nadds += 1;                        
                     }
+                    
                 } if (change.wasRemoved()) {
                     WritableValue writable = change.getKey();
                     assert(beans.contains(writable));
-                    nchanges -= 1;
+                    nremoves += 1;
                 }
             }
         });
 
         Group root = new Group();
-        Scene scene = new Scene(root);
         root.getChildren().add(rect);
-        rect.impl_processCSS(true);
-        assertEquals(decls.size(), nchanges);
+        StyleManager.setDefaultUserAgentStylesheet(stylesheet);        
+        Scene scene = new Scene(root);
+        Stage stage = new Stage();
+        stage.setScene(scene);
+        stage.show();
 
-        rect.getStyleClass().clear();
-        rect.impl_processCSS(true);
-        // Nothing new should be added since there are no styles.
-        // nchanges is decremented on remove, so it should be zero
-        assertEquals(0, nchanges);
-        assert(rect.impl_getStyleMap().isEmpty());
+        // The three no state styles should be applied
+        assertEquals(3, nadds);
+        assertEquals(0, nremoves);
+
+        rect.setDisable(true);
+        disabled = true;
+        nadds = 0;
+        nremoves = 0;
+        
+        Toolkit.getToolkit().firePulse();
+        
+        // The three no state styles should be removed and the 
+        // two disabled state styles plus the stroke width style 
+        // should be applied. 
+        assertEquals(3, nadds);
+        assertEquals(3, nremoves);
         
     }
     
-    @Test @org.junit.Ignore("causes assertion error in StyleHelper.getCacheEntry ")
+    @Test
     public void testRT_21212() {
 
         final List<Declaration> rootDecls = new ArrayList<Declaration>();
@@ -208,13 +225,13 @@ public class Node_cssStyleMap_Test {
         
         final List<Selector> rootSels = new ArrayList<Selector>();
         Collections.addAll(rootSels, 
-            Selector.createSelector("root")
+            Selector.createSelector(".root")
         );
         
         Rule rootRule = new Rule(rootSels, rootDecls);        
         
         Stylesheet stylesheet = new Stylesheet();
-        stylesheet.setOrigin(Stylesheet.Origin.AUTHOR);
+        stylesheet.setOrigin(Stylesheet.Origin.USER_AGENT);
         stylesheet.getRules().add(rootRule);
 
         final List<CascadingStyle> rootStyles = createStyleList(rootDecls);
@@ -222,22 +239,7 @@ public class Node_cssStyleMap_Test {
         final Map<StyleCacheKey, StyleCacheBucket> styleCache = 
             new HashMap<StyleHelper.StyleCacheKey, StyleHelper.StyleCacheBucket>();
         
-        group = new Group() {
-
-            // I'm bypassing StyleManager by creating StyleHelper directly. 
-//            StyleHelper shelper = null;
-//                                               
-//            @Override public void impl_processCSS(boolean reapply) {
-//                if (shelper == null) {
-//                    shelper = StyleHelper.create(text, rootStyleMap, styleCache, 0, 1);
-//                };
-//                shelper.transitionToState(group);
-//            }
-//            
-//            @Override public StyleHelper impl_getStyleHelper() {
-//                return shelper;
-//            }            
-        };
+        group = new Group();
         group.getStyleClass().add("root");
         
         
@@ -258,7 +260,7 @@ public class Node_cssStyleMap_Test {
         
         final List<Selector> textSels = new ArrayList<Selector>();
         Collections.addAll(textSels, 
-            Selector.createSelector("text")
+            Selector.createSelector(".text")
         );
         
         Rule textRule = new Rule(textSels, textDecls);        
@@ -269,32 +271,16 @@ public class Node_cssStyleMap_Test {
         final Map<String,List<CascadingStyle>> emptyMap = createStyleMap(null);
 
         text = new Text("HelloWorld") {
-
-            // I'm bypassing StyleManager by creating StyleHelper directly. 
-//            StyleHelper shelper = null;
-//            
-//            @Override public void impl_processCSS(boolean reapply) {
-//                if (reapply) {
-//                    shelper = null;
-//                    if (getStyleClass().isEmpty()) {
-//                        shelper = StyleHelper.create(text, emptyMap, styleCache, 0, 2);
-//                    } else  {
-//                        shelper = StyleHelper.create(text, styleMap, styleCache, 0, 2);
-//                    }
-//                }
-//                shelper.transitionToState(text);
-//            }
-//                                               
-//            @Override public StyleHelper impl_getStyleHelper() {
-//                return shelper;
-//            }            
-//            
+            @Override public void impl_processCSS(StyleManager sm, boolean b) {
+                System.err.println("impl_processCSS " + b);
+                super.impl_processCSS(sm,b);
+            }
         };
         
         group.getChildren().add(text);
 
         final List<Declaration> expecteds = new ArrayList<Declaration>();
-        expecteds.addAll(rootDecls);
+//        expecteds.addAll(rootDecls);
         expecteds.addAll(textDecls);
         text.getStyleClass().add("text");
         text.impl_setStyleMap(FXCollections.observableMap(new HashMap<WritableValue, List<Style>>()));
@@ -310,19 +296,34 @@ public class Node_cssStyleMap_Test {
                         assertTrue(expecteds.contains(style.getDeclaration()));
                         expecteds.remove(style.getDeclaration());
                     }
+                } else if (change.wasRemoved()) {
+                    List<Style> styles = change.getValueRemoved();
+                    for (Style style : styles) {
+                        System.err.println("removed " + style.toString());
+                    }
+                    
                 }
+                
             }
         });
-               
-        group.impl_processCSS(true);
+             
+        StyleManager.setDefaultUserAgentStylesheet(stylesheet);        
+        Scene scene = new Scene(group);
+        Stage stage = new Stage();
+        stage.setScene(scene);
+        stage.show();
+        
         assertEquals(18, text.getFont().getSize(),0);
-        assertTrue(expecteds.isEmpty());
+        assertTrue(Integer.toString(expecteds.size()), expecteds.isEmpty());
 
         text.getStyleClass().clear();
-        group.impl_processCSS(true);
-        // Nothing new should be added since there are no styles.
-        // nchanges is decremented on remove, so it should be zero
-        assert(text.impl_getStyleMap().isEmpty());
+
+        Toolkit.getToolkit().firePulse();
         
-    }    
+        // PENDING RT-25002
+//        assertEquals(12, text.getFont().getSize(),0);
+//        assertTrue(text.impl_getStyleMap().toString(), text.impl_getStyleMap().isEmpty());
+        
+    } 
+    
 }
