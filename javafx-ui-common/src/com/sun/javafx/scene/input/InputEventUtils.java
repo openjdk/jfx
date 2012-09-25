@@ -25,8 +25,13 @@
 
 package com.sun.javafx.scene.input;
 
+import java.util.Arrays;
+import java.util.List;
+import java.util.ArrayList;
+import java.util.Collections;
 import javafx.geometry.Point2D;
 import javafx.scene.Node;
+import javafx.scene.input.TransferMode;
 
 /**
  * Utility class for helper methods needed by input events.
@@ -87,4 +92,34 @@ public class InputEventUtils {
         return new Point2D(newX, newY);
     }
 
+    private static final List<TransferMode> TM_ANY =
+            Collections.unmodifiableList(Arrays.asList(
+                TransferMode.COPY,
+                TransferMode.MOVE,
+                TransferMode.LINK
+            ));
+
+    private static final List<TransferMode> TM_COPY_OR_MOVE =
+            Collections.unmodifiableList(Arrays.asList(
+                TransferMode.COPY,
+                TransferMode.MOVE
+            ));
+
+    /**
+     * Makes sure changes to the static arrays specified in TransferMode
+     * don't have any effect on the transfer modes used.
+     * @param modes Modes passed in by user
+     * @return list containing the passed modes. If one of the static arrays
+     *         is passed, the expected modes are returned regardless of the
+     *         values in those arrays.
+     */
+    public static List<TransferMode> safeTransferModes(TransferMode[] modes) {
+        if (modes == TransferMode.ANY) {
+            return TM_ANY;
+        } else if (modes == TransferMode.COPY_OR_MOVE) {
+            return TM_COPY_OR_MOVE;
+        } else {
+            return Arrays.asList(modes);
+        }
+    }
 }

@@ -97,6 +97,7 @@ import com.sun.javafx.perf.PerformanceTracker;
 import com.sun.javafx.robot.impl.FXRobotHelper;
 import com.sun.javafx.scene.CSSFlags;
 import com.sun.javafx.scene.SceneEventDispatcher;
+import com.sun.javafx.scene.input.InputEventUtils;
 import com.sun.javafx.scene.traversal.Direction;
 import com.sun.javafx.scene.traversal.TraversalEngine;
 import com.sun.javafx.tk.TKDragGestureListener;
@@ -5317,7 +5318,7 @@ public class Scene implements EventTarget {
 
         if (dndGesture != null) {
             Set<TransferMode> set = EnumSet.noneOf(TransferMode.class);
-            for (TransferMode tm : transferModes) {
+            for (TransferMode tm : InputEventUtils.safeTransferModes(transferModes)) {
                 set.add(tm);
             }
             return dndGesture.startDrag(source, set);

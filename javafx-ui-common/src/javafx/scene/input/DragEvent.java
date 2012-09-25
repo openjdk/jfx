@@ -602,7 +602,7 @@ public class DragEvent extends InputEvent {
         TransferMode result = null;
         Set<TransferMode> intersect = EnumSet.noneOf(TransferMode.class);
 
-        for (TransferMode tm : accepted) {
+        for (TransferMode tm : InputEventUtils.safeTransferModes(accepted)) {
             if (supported.contains(tm)) {
                 intersect.add(tm);
             }
