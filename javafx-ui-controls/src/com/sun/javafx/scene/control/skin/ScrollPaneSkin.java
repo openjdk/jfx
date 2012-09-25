@@ -25,9 +25,6 @@
 
 package com.sun.javafx.scene.control.skin;
 
-import com.sun.javafx.PlatformUtil;
-import static com.sun.javafx.Utils.clamp;
-import static com.sun.javafx.scene.control.skin.Utils.boundedSize;
 import javafx.animation.Animation.Status;
 import javafx.animation.KeyFrame;
 import javafx.animation.KeyValue;
@@ -40,8 +37,8 @@ import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
 import javafx.event.ActionEvent;
 import javafx.event.Event;
-import javafx.event.EventDispatcher;
 import javafx.event.EventDispatchChain;
+import javafx.event.EventDispatcher;
 import javafx.event.EventHandler;
 import javafx.geometry.BoundingBox;
 import javafx.geometry.Bounds;
@@ -58,12 +55,14 @@ import javafx.scene.input.TouchEvent;
 import javafx.scene.layout.StackPane;
 import javafx.scene.shape.Rectangle;
 import javafx.util.Duration;
-
+import com.sun.javafx.PlatformUtil;
+import com.sun.javafx.Utils;
 import com.sun.javafx.scene.control.behavior.ScrollPaneBehavior;
 import com.sun.javafx.scene.traversal.TraversalEngine;
 import com.sun.javafx.scene.traversal.TraverseListener;
-import com.sun.javafx.Utils;
-import javafx.scene.Group;
+
+import static com.sun.javafx.Utils.*;
+import static com.sun.javafx.scene.control.skin.Utils.*;
 
 public class ScrollPaneSkin extends SkinBase<ScrollPane, ScrollPaneBehavior> implements TraverseListener {
     /***************************************************************************
@@ -1011,7 +1010,7 @@ public class ScrollPaneSkin extends SkinBase<ScrollPane, ScrollPaneBehavior> imp
     private boolean tempVisibility;
 
 
-    void startSBReleasedAnimation() {
+    protected void startSBReleasedAnimation() {
         if (sbTouchTimeline == null) {
             /*
             ** timeline to leave the scrollbars visible for a short
@@ -1037,7 +1036,7 @@ public class ScrollPaneSkin extends SkinBase<ScrollPane, ScrollPaneBehavior> imp
 
 
 
-    void startContentsToViewport() {
+    protected void startContentsToViewport() {
         double newPosX = posX;
         double newPosY = posY;
         double hRange = getSkinnable().getHmax() - getSkinnable().getHmin();
@@ -1072,13 +1071,13 @@ public class ScrollPaneSkin extends SkinBase<ScrollPane, ScrollPaneBehavior> imp
             contentsToViewTimeline.stop();
         }
         contentsToViewTimeline = new Timeline();
-	/*
-	** short pause before animation starts
-	*/
+        /*
+        ** short pause before animation starts
+        */
         contentsToViewKF1 = new KeyFrame(Duration.millis(50));
-	/*
-	** reposition
-	*/
+        /*
+        ** reposition
+        */
         contentsToViewKF2 = new KeyFrame(Duration.millis(150), new EventHandler<ActionEvent>() {
                 @Override public void handle(ActionEvent event) {
                     requestLayout();
@@ -1087,10 +1086,10 @@ public class ScrollPaneSkin extends SkinBase<ScrollPane, ScrollPaneBehavior> imp
             new KeyValue(contentPosX, newPosX),
             new KeyValue(contentPosY, newPosY)
             );
-	/*
-	** block out 'aftershocks', but real events will
-	** still reactivate
-	*/
+        /*
+        ** block out 'aftershocks', but real events will
+        ** still reactivate
+        */
         contentsToViewKF3 = new KeyFrame(Duration.millis(1500));
         contentsToViewTimeline.getKeyFrames().addAll(contentsToViewKF1, contentsToViewKF2, contentsToViewKF3);
         contentsToViewTimeline.playFromStart();

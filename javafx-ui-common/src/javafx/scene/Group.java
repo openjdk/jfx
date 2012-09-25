@@ -158,14 +158,35 @@ public  class Group extends Parent {
     // adjust.  Scene handles this in doLayoutPass().  If this becomes a
     // performance issue, we can revisit doing the proper computation/predicting here.
 
+    /**
+     * Group defines the preferred width as simply being the width of its layout bounds, which
+     * in turn is simply the sum of the positions & widths of all of its children. That is,
+     * the preferred width is the one that it is at, because a Group cannot be resized.
+     *
+     * @param height This parameter is ignored by Group
+     * @return The layout bounds width
+     */
     @Override public double prefWidth(double height) {
         return getLayoutBounds().getWidth();
     }
 
+    /**
+     * Group defines the preferred height as simply being the height of its layout bounds, which
+     * in turn is simply the sum of the positions & heights of all of its children. That is,
+     * the preferred height is the one that it is at, because a Group cannot be resized.
+     *
+     * @param width This parameter is ignored by Group
+     * @return The layout bounds height
+     */
     @Override public double prefHeight(double width) {
         return getLayoutBounds().getHeight();
     }
 
+    /**
+     * Group implements layoutChildren such that each child is resized to its preferred
+     * size, if the child is resizable. Non-resizable children are simply left alone.
+     * If {@link #autoSizeChildren} is false, then Group does nothing in this method.
+     */
     @Override protected void layoutChildren() {
         if (isAutoSizeChildren()) {
             super.layoutChildren();

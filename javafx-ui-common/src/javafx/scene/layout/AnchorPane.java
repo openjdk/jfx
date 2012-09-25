@@ -25,12 +25,11 @@
 
 package javafx.scene.layout;
 
+import java.util.List;
 import javafx.geometry.Bounds;
 import javafx.geometry.Insets;
 import javafx.geometry.Orientation;
 import javafx.scene.Node;
-
-import java.util.List;
 
 /**
  * AnchorPane allows the edges of child nodes to be anchored to an offset from
@@ -257,6 +256,7 @@ public class AnchorPane extends Pane {
                     (rightAnchor != null? 0 : child.getLayoutBounds().getMinX() + child.getLayoutX());
                 double right = rightAnchor != null? rightAnchor : 0;
                 if (child.getContentBias() == Orientation.VERTICAL) {
+                    // The width depends on the node's height!
                     height = (minimum? child.minHeight(-1) : child.prefHeight(-1));
                 }
                 max = Math.max(max, left + (minimum? child.minWidth(height) : child.prefWidth(height)) + right);

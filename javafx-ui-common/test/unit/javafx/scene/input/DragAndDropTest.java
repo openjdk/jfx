@@ -645,7 +645,46 @@ public class DragAndDropTest {
         
         assertEquals(1, counter);
     }
-    
+
+    @Test
+    public void modifyingStaticArraysShouldNotInfluenceResult() {
+        TransferMode.ANY[0] = TransferMode.LINK;
+        TransferMode.ANY[1] = TransferMode.LINK;
+        TransferMode.ANY[2] = TransferMode.LINK;
+
+        TransferMode.COPY_OR_MOVE[0] = TransferMode.LINK;
+        TransferMode.COPY_OR_MOVE[1] = TransferMode.LINK;
+
+        final Node n = oneNode();
+        final MouseEventGenerator gen = new MouseEventGenerator();
+
+        dragSource = n;
+        n.setOnMousePressed(doDetect);
+        n.setOnDragDetected(stringSource(TransferMode.ANY));
+        n.setOnDragOver(acceptCopyOrMove);
+        n.setOnDragDropped(new EventHandler<DragEvent>() {
+            @Override public void handle(DragEvent event) {
+                event.acceptTransferModes(TransferMode.ANY);
+                event.setDropCompleted(true);
+            }
+        });
+
+        /* start drag */
+        n.getScene().impl_processMouseEvent(
+                gen.generateMouseEvent(MouseEvent.MOUSE_PRESSED, 50, 50));
+
+        /* drag and drop*/
+        assertSame(TransferMode.COPY, toolkit.dragTo(52, 52, TransferMode.COPY));
+        assertSame(TransferMode.COPY, toolkit.drop(52, 52, TransferMode.COPY));
+
+        TransferMode.ANY[0] = TransferMode.COPY;
+        TransferMode.ANY[1] = TransferMode.MOVE;
+        TransferMode.ANY[2] = TransferMode.LINK;
+
+        TransferMode.COPY_OR_MOVE[0] = TransferMode.COPY;
+        TransferMode.COPY_OR_MOVE[1] = TransferMode.MOVE;
+    }
+
     /************************************************************************/
     /*                           GESTURE FINISH                             */
     /************************************************************************/
