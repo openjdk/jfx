@@ -31,6 +31,7 @@ package com.sun.javafx.scene.control.skin;
 
 import static javafx.scene.control.OverrunStyle.*;
 import javafx.collections.ObservableList;
+import javafx.geometry.Bounds;
 import javafx.geometry.HPos;
 import javafx.geometry.Point2D;
 import javafx.geometry.VPos;
@@ -76,7 +77,8 @@ public class Utils {
         // The -2 is a fudge to make sure the result more often matches
         // what we get from using computeTextWidth instead. It's not yet
         // clear what causes the small discrepancies.
-        Point2D endPoint = new Point2D(width - 2, helper.getLayoutBounds().getHeight() / 2);
+        Bounds bounds = helper.getLayoutBounds();
+        Point2D endPoint = new Point2D(width - 2, bounds.getMinY() + bounds.getHeight() / 2);
         return helper.impl_hitTestChar(endPoint).getCharIndex();
     }
 
