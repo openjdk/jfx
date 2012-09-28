@@ -16,6 +16,7 @@
 	<classpathentry kind="src" path="javafx-concurrent/build/builders"/>
 	<classpathentry kind="src" path="javafx-util-converter/src"/>
 	<classpathentry kind="src" path="javafx-util-converter/test"/>
+	<classpathentry kind="src" path="javafx-fxml/src"/>
 	<classpathentry kind="src" path="javafx-beans-dt/src"/>
 	<classpathentry kind="src" path="javafx-beans-dt/test"/>
 	<classpathentry kind="src" path="javafx-designtime/src"/>
