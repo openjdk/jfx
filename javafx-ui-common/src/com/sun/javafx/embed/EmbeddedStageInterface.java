@@ -46,4 +46,9 @@ public interface EmbeddedStageInterface {
      * traversed forward in the focus chain in embedding app. 
      */
     public void setFocused(boolean focused, int focusCause);
+
+    /*
+     * FOCUS_UNGRAB notification.
+     */
+    public void focusUngrab();
 }
