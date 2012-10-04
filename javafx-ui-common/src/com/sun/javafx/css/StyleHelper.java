@@ -485,10 +485,11 @@ final public class StyleHelper {
         if (simpleSelector == null) {
 
             final String name = node.getClass().getName();
+            final int dotPos = name.lastIndexOf('.');
             final String id = node.getId();
             final List<String> selectorStyleClasses = node.getStyleClass();
             simpleSelector = new SimpleSelector(
-                    name,
+                    name.substring(dotPos+1), // want Foo, not bada.bing.Foo
                     selectorStyleClasses,
                     null,
                     id);
