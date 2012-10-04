@@ -229,6 +229,7 @@ abstract class MultipleSelectionModelBase<T> extends MultipleSelectionModel<T> {
         if (shift > 0) {
             for (int i = selectedIndicesSize - 1; i >= position && i >= 0; i--) {
                 boolean selected = selectedIndices.get(i);
+                selectedIndices.clear(i);
                 selectedIndices.set(i + shift, selected);
 
                 if (selected) {
@@ -240,6 +241,7 @@ abstract class MultipleSelectionModelBase<T> extends MultipleSelectionModel<T> {
             for (int i = position; i < selectedIndicesSize; i++) {
                 if ((i + shift) < 0) continue;
                 boolean selected = selectedIndices.get(i + 1);
+                selectedIndices.clear(i + 1);
                 selectedIndices.set(i + 1 + shift, selected);
 
                 if (selected) {
@@ -251,6 +253,7 @@ abstract class MultipleSelectionModelBase<T> extends MultipleSelectionModel<T> {
         // This ensure that the selection remains accurate when a shift occurs.
         if (getFocusedIndex() >= position && getFocusedIndex() > -1 && getFocusedIndex() + shift > -1) {
             setSelectedIndex(getFocusedIndex() + shift);
+            focus(getFocusedIndex() + shift);
         }
          
         selectedIndicesSeq.callObservers(

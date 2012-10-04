@@ -77,7 +77,7 @@ public class Node_cssStyleMap_Test {
             styles.add(
                 new CascadingStyle(
                     new Style(decl.rule.selectors.get(0), decl), 
-                    Collections.EMPTY_LIST,
+                    0,
                     0, 
                     0
                 )
@@ -270,13 +270,7 @@ public class Node_cssStyleMap_Test {
         final Map<String,List<CascadingStyle>> styleMap = createStyleMap(styles);
         final Map<String,List<CascadingStyle>> emptyMap = createStyleMap(null);
 
-        text = new Text("HelloWorld") {
-            @Override public void impl_processCSS(StyleManager sm, boolean b) {
-                System.err.println("impl_processCSS " + b);
-                super.impl_processCSS(sm,b);
-            }
-        };
-        
+        text = new Text("HelloWorld");
         group.getChildren().add(text);
 
         final List<Declaration> expecteds = new ArrayList<Declaration>();
@@ -296,14 +290,7 @@ public class Node_cssStyleMap_Test {
                         assertTrue(expecteds.contains(style.getDeclaration()));
                         expecteds.remove(style.getDeclaration());
                     }
-                } else if (change.wasRemoved()) {
-                    List<Style> styles = change.getValueRemoved();
-                    for (Style style : styles) {
-                        System.err.println("removed " + style.toString());
-                    }
-                    
-                }
-                
+                } 
             }
         });
              

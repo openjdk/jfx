@@ -63,6 +63,9 @@ abstract public class Selector {
     // same as the matches method expect return true/false rather than a match
     public abstract boolean applies(Node node);
     
+    // same as applies, but will return pseudoclass state that it finds along the way
+    abstract boolean applies(Node node, long[] pseudoclassBits, int bit);
+    
     /**
      * Determines whether the current state of the node and its parents
      * matches the pseudoclasses defined (if any) for this selector.

@@ -169,15 +169,6 @@ final public class SimpleSelector extends Selector {
     /** styleClasses converted to a set of bit masks */
     final private long[] styleClassMasks;
     
-    final private List<String> pseudoclasses;
-    /**
-     * @return Immutable List&lt;String&gt; of pseudo-classes of the selector
-     */
-    public List<String> getPseudoclasses() {
-        return pseudoclasses;
-    }
-    
-
     final private String id;
     /*
      * @return The value of the selector id, which may be an empty string.
@@ -188,7 +179,18 @@ final public class SimpleSelector extends Selector {
     
     // a mask of bits corresponding to the pseudoclasses
     final private long pclassMask;
+    
+    long getPseudoclassMask() {
+        return pclassMask;
+    }
 
+    /**
+     * @return Immutable List&lt;String&gt; of pseudo-classes of the selector
+     */
+    public List<String> getPseudoclasses() {
+        return StyleManager.getPseudoclassStrings(pclassMask);
+    }
+        
     // true if name is not a wildcard
     final private boolean matchOnName;
 
@@ -213,11 +215,10 @@ final public class SimpleSelector extends Selector {
                 : new long[0];
         this.matchOnStyleClass = (this.styleClassMasks.length > 0);
 
-        this.pseudoclasses = 
+        this.pclassMask = 
                 (pseudoclasses != null) 
-                ? Collections.unmodifiableList(pseudoclasses)  
-                : Collections.EMPTY_LIST;
-        pclassMask = StyleManager.getPseudoclassMask(pseudoclasses);
+                ? StyleManager.getPseudoclassMask(pseudoclasses)
+                : 0;
 
         this.id = id == null ? "" : id;
         // if id is not null and not empty, then match needs to check id
@@ -242,15 +243,6 @@ final public class SimpleSelector extends Selector {
         }
         this.matchOnStyleClass = other.matchOnStyleClass;
         
-        if (other.pseudoclasses != null && other.pseudoclasses.isEmpty() == false) {
-            final List<String> temp = new ArrayList<String>(other.pseudoclasses.size());
-            for(int p=0, pMax=other.pseudoclasses.size(); p<pMax; p++) {
-                temp.add(other.pseudoclasses.get(p));
-            }
-            this.pseudoclasses = Collections.unmodifiableList(temp);
-        } else {
-            this.pseudoclasses = Collections.EMPTY_LIST;
-        }
         this.pclassMask = other.pclassMask;
         
         this.id = other.id;
@@ -273,7 +265,7 @@ final public class SimpleSelector extends Selector {
             for (int n=0; n<styleClassMasks.length; n++) {
                 styleClassCount += Long.bitCount(styleClassMasks[n] & VALUE_MASK);
             }
-            return new Match(this, pseudoclasses, idCount, styleClassCount);
+            return new Match(this, pclassMask, idCount, styleClassCount);
         }
         return null;
     }
@@ -281,7 +273,7 @@ final public class SimpleSelector extends Selector {
     @Override 
     Match matches(final Scene scene) {
         // Scene should match wildcard or specific java class name only.
-        if (!matchOnStyleClass && !matchOnId && pseudoclasses.isEmpty()) {
+        if (!matchOnStyleClass && !matchOnId && pclassMask == 0) {
 
             final String className = scene.getClass().getName();
             final boolean classMatch =
@@ -290,7 +282,7 @@ final public class SimpleSelector extends Selector {
             if (classMatch) {
                 // we know idCount and styleClassCount are zero from
                 // the condition for entering the outer block
-                return new Match(this, pseudoclasses, 0, 0 );
+                return new Match(this, pclassMask, 0, 0 );
             }
         }
         return null;
@@ -306,7 +298,10 @@ final public class SimpleSelector extends Selector {
         // then bail if it doesn't match the node's id
         // (do this first since it is potentially the cheapest check)
         if (matchOnId) {
-            boolean idMatch = id.equals(selector.id);
+            boolean idMatch = 
+                    selector.matchOnId 
+                    ? id.equals(selector.id) 
+                    : false;
             if (!idMatch) return false;
         }
 
@@ -319,12 +314,38 @@ final public class SimpleSelector extends Selector {
         }
 
         if (matchOnStyleClass) {
-            boolean styleClassMatch = matchStyleClasses(selector.styleClassMasks);                
+            boolean styleClassMatch = 
+                    selector.matchOnStyleClass 
+                    ? matchStyleClasses(selector.styleClassMasks) 
+                    : false;
             if (!styleClassMatch) return false;
         }
+        
         return true;
     }
+    
+    @Override 
+    boolean applies(Node node, long[] pseudoclassBits, int bit) {
 
+        final boolean applies = applies(node);
+        //
+        // We only need the pseudoclassBits if the selector applies to the node.
+        // 
+        assert(pseudoclassBits == null || bit < pseudoclassBits.length);
+        if (applies && pseudoclassBits != null && bit < pseudoclassBits.length) {
+            final long mask = pseudoclassBits[bit] | this.pclassMask;
+            pseudoclassBits[bit] = mask;
+        }
+        return applies;
+    }
+
+    boolean mightApply(final String className, final String id, long[] styleClasses) {
+        if (matchOnName && nameMatchesAtEnd(className)) return true;
+        if (matchOnId   && this.id.equals(id)) return true;
+        if (matchOnStyleClass) return matchStyleClasses(styleClasses);
+        return false;
+    }
+    
     @Override
     boolean stateMatches(final Node node, long states) {
         return ((pclassMask & states) == pclassMask);
@@ -376,7 +397,7 @@ final public class SimpleSelector extends Selector {
       * return true if seq1 is a subset of seq2. That is, all the strings
       * in seq1 are contained in seq2
       */
-    boolean isSubsetOf(long[] seq1, long[] seq2) {
+    static boolean isSubsetOf(long[] seq1, long[] seq2) {
         
         // if one or the other is null, then they are a subset if both are null
         if (seq1 == null || seq2 == null) return seq1 == null && seq2 == null;
@@ -389,7 +410,12 @@ final public class SimpleSelector extends Selector {
 
         // is [foo bar] a subset of [foo bar bang]?
         for (int n=0, max=seq1.length; n<max; n++) {
-            if ((seq1[n] & seq2[n]) != seq1[n]) return false;
+  
+            // if ((seq1[n] & seq2[n]) != seq1[n]) return false;
+            // is slower than the following... 
+            final long m1 = seq1[n];
+            final long m2 = m1 & seq2[n];
+            if (m1 != m2) return false;
         }
         return true;
 
@@ -450,6 +476,7 @@ final public class SimpleSelector extends Selector {
             sbuf.append('#');
             sbuf.append(id);
         }
+        List<String> pseudoclasses = getPseudoclasses();
         for (int n=0; n<pseudoclasses.size(); n++) {
             sbuf.append(':');
             sbuf.append(pseudoclasses.get(n));
@@ -466,6 +493,7 @@ final public class SimpleSelector extends Selector {
         os.writeShort(styleClasses.size());
         for (String sc  : styleClasses) os.writeShort(stringStore.addString(sc));
         os.writeShort(stringStore.addString(id));
+        List<String> pseudoclasses = getPseudoclasses();
         os.writeShort(pseudoclasses.size());
         for (String p : pseudoclasses)  os.writeShort(stringStore.addString(p));
     }

@@ -35,7 +35,6 @@ import java.util.Map;
 import java.util.Map.Entry;
 import javafx.beans.value.WritableValue;
 import javafx.scene.Node;
-import javafx.scene.Scene;
 import javafx.scene.text.Font;
 import javafx.scene.text.FontPosture;
 import javafx.scene.text.FontWeight;
@@ -45,7 +44,7 @@ import com.sun.javafx.css.Stylesheet.Origin;
 import com.sun.javafx.css.converters.FontConverter;
 import com.sun.javafx.css.parser.CSSParser;
 import com.sun.javafx.logging.PlatformLogger;
-import java.util.Collection;
+import javafx.scene.Parent;
 
 /**
  * The StyleHelper is a helper class used for applying CSS information to Nodes.
@@ -92,27 +91,11 @@ final public class StyleHelper {
         this.localStyleCache = null;
         this.pseudoclassStateMask = 0;
         this.fontProp = null;
+        this.transitionStates = null;
         
         // styleManager can be null if  
         if (styleManager == null) return;
-        
-        StyleManager.StyleMap styleMap = styleManager != null
-                ? styleManager.findMatchingStyles(node, this.getSimpleSelector())
-                : null;
 
-        
-        final Map<String, List<CascadingStyle>> smap = styleMap != null ? styleMap.map : null;
-        if (smap == null || smap.isEmpty()) {
-            
-            // If there are no styles at all, then return
-            final String inlineStyles = node.getStyle();
-            if (inlineStyles == null || inlineStyles.trim().isEmpty()) {                
-                return;
-            }
-        }
-        
-        this.smapRef = new WeakReference<Map<String, List<CascadingStyle>>>(smap);
-        
         // need to know how far we are to root in order to init arrays.
         Node parent = node;
         int depth = 0;
@@ -132,15 +115,31 @@ final public class StyleHelper {
         // fetched using only those pseudoclasses that matter.
         final long[] pclassMasks = new long[depth];
         
-        final Collection<List<CascadingStyle>> smapValues = smap.values();
-        final List<CascadingStyle>[] styles = smapValues.toArray(new List[smapValues.size()]);
-        for (int i=0; i<styles.length; i++) {
-            for (int j=0, jMax=styles[i].size(); j<jMax; j++) {
-                final CascadingStyle style = styles[i].get(j);
-                final Selector selector = style.getSelector();
-                setPseudoclassStateMasks(node, selector, pclassMasks);
+        final StyleManager.StyleMap styleMap = styleManager != null
+                ? styleManager.findMatchingStyles(node, this.getSimpleSelector(), pclassMasks)
+                : null;
+
+        
+        final Map<String, List<CascadingStyle>> smap = styleMap != null ? styleMap.map : null;
+        if (smap == null || smap.isEmpty()) {
+            
+            // If there are no styles at all, then return
+            final String inlineStyles = node.getStyle();
+            if (inlineStyles == null || inlineStyles.trim().isEmpty()) {                
+                return;
             }
         }
+        
+        this.smapRef = new WeakReference<Map<String, List<CascadingStyle>>>(smap);
+
+        this.pseudoclassStateMask = pclassMasks[0];
+        
+        parent = node.getParent();
+        for(int n=1; n<depth; n++) {
+            final StyleHelper parentHelper = parent.impl_getStyleHelper();
+            parentHelper.pseudoclassStateMask = parentHelper.pseudoclassStateMask | pclassMasks[n];
+            parent = parent.getParent();
+        } 
         
         // TODO: move initialization of localStyleCache somewhere else.
         //       It should not be hidden down here. Maybe to getCacheEntry
@@ -178,9 +177,6 @@ final public class StyleHelper {
             }
         }        
         
-        if (LOGGER.isLoggable(PlatformLogger.FINE)) {
-            LOGGER.fine(node + " " + key);
-        }
     }
 
     private long key;
@@ -277,51 +273,6 @@ final public class StyleHelper {
             return hash;
         }
         
-    }
-    
-    //
-    // get pseudoclass state from the selector and set it in the mask.
-    //
-    private static void setPseudoclassStateMasks(Node node, Selector selector, long[] masks) {
-        
-        if (selector instanceof CompoundSelector) {
-            final CompoundSelector compoundSelector = (CompoundSelector)selector;
-            final List<SimpleSelector> selectors = compoundSelector.getSelectors();
-            
-            Node parent = node;
-            int  index = 0;
-            // Loop control variable decreases but index increases because
-            // selectors run right to left, but mask runs child to root.
-            // 
-            for (int n=selectors.size()-1; 0<=n; --n) {
-                
-                final SimpleSelector simpleSelector = selectors.get(n);
-                
-                while(parent != null && simpleSelector.applies(parent) == false) {
-                    parent = parent.getParent();
-                    index += 1;
-                }
-                
-                assert(parent != null);
-                long bits = StyleManager.getPseudoclassMask(simpleSelector.getPseudoclasses());
-                masks[index] |= bits;
-                
-                // update the corresponding StyleHelper's pseudoclassStateMask
-                // since this is state that affects children.
-                StyleHelper styleHelper = parent.impl_getStyleHelper();
-                styleHelper.pseudoclassStateMask |= bits;
-                
-            }
-        } else {
-            SimpleSelector simpleSelector = (SimpleSelector)selector;
-            long bits = StyleManager.getPseudoclassMask(simpleSelector.getPseudoclasses());
-            masks[0] |= bits;
-
-            // update the StyleHelper's pseudoclassStateMask
-            // since this is state that matters.
-            StyleHelper styleHelper = node.impl_getStyleHelper();
-            styleHelper.pseudoclassStateMask |= bits;
-        }
     }
         
     /**
@@ -515,28 +466,6 @@ final public class StyleHelper {
         return smap;
     }
     
-    /**
-     * A Set of all the pseudoclass states which, if they change, need to
-     * cause the Node to be set to UPDATE its CSS styles on the next pulse.
-     * For example, your stylesheet might have:
-     * <pre><code>
-     * .button { ... }
-     * .button:hover { ... }
-     * .button *.label { text-fill: black }
-     * .button:hover *.label { text-fill: blue }
-     * </code></pre>
-     * In this case, the first 2 rules apply to the Button itself, but the
-     * second two rules apply to the label within a Button. When the hover
-     * changes on the Button, however, we must mark the Button as needing
-     * an UPDATE. StyleHelper though only contains styles for the first two
-     * rules for Button. The pseudoclassStateMask would in this case have
-     * only a single bit set for "hover". In this way the StyleHelper associated
-     * with the Button would know whether a change to "hover" requires the
-     * button and all children to be update. Other pseudoclass state changes
-     * that are not in this hash set are ignored.
-     */
-    private long pseudoclassStateMask;
-
     /** The node's font property, if there is one */
     private WritableValue fontProp;
 
@@ -634,7 +563,7 @@ final public class StyleHelper {
 
                     CascadingStyle s = new CascadingStyle(
                         new Style(Selector.getUniversalSelector(), decl),
-                        null, // no pseudo classes
+                        0, // no pseudo classes
                         0, // specificity is zero
                         // ordinal increments at declaration level since
                         // there may be more than one declaration for the
@@ -685,48 +614,84 @@ final public class StyleHelper {
     }
 
     /**
-     * dynamic pseudoclass state for this helper - only valid during a pulse 
-     * Set in setPseudoClassStatesForTransition which is called upon entering 
-     * transitionToState. 
+     * A Set of all the pseudoclass states which, if they change, need to
+     * cause the Node to be set to UPDATE its CSS styles on the next pulse.
+     * For example, your stylesheet might have:
+     * <pre><code>
+     * .button { ... }
+     * .button:hover { ... }
+     * .button *.label { text-fill: black }
+     * .button:hover *.label { text-fill: blue }
+     * </code></pre>
+     * In this case, the first 2 rules apply to the Button itself, but the
+     * second two rules apply to the label within a Button. When the hover
+     * changes on the Button, however, we must mark the Button as needing
+     * an UPDATE. StyleHelper though only contains styles for the first two
+     * rules for Button. The pseudoclassStateMask would in this case have
+     * only a single bit set for "hover". In this way the StyleHelper associated
+     * with the Button would know whether a change to "hover" requires the
+     * button and all children to be update. Other pseudoclass state changes
+     * that are not in this hash set are ignored.
      */
-    private long[] pseudoClassStates;
+    private long pseudoclassStateMask;
 
-    // cache pseudoclass state. cleared on each pulse.
-    final static Map<Node,Long> pseudoclassMasksByNode = new HashMap<Node,Long>();
-
-    // get pseudoclass state for the node (set at StyleHelper creation)
-    long getPseudoClassState() {
-        return pseudoClassStates != null && pseudoClassStates.length > 0 ? pseudoClassStates[0] : 0;
-    }
-    
-    private long[] getPseudoClassStates() {
-        return pseudoClassStates;
-    }
-    
-    /* 
-     * Note Well: The array runs from leaf to root. That is 
-     * pseudoClassStates[0] is the states for node and 
-     * pseudoClassStates[1..(pseudoClassStates.length-1)] is the states for the 
+    /**
+     * dynamic pseudoclass state for this helper - only valid during a pulse. 
+     * Note Well: The array runs from leaf to root. That is, 
+     * transitionStates[0] is the pseudoclassState for node and 
+     * transitionStates[1..(states.length-1)] are the pseudoclassStates for the 
      * node's parents.
      */ 
-    private static long[] getPseudoClassStatesForTransition(Node node, int count) {
-    
-        if (node == null) return new long[count];
-        
-        long[] states = getPseudoClassStatesForTransition(node.getParent(), ++count);
-        
-        StyleHelper helper = node.impl_getStyleHelper();
-        
-        // avoid calling impl_getPseudoClassState if there 
-        // aren't any pseudoclasses that matter
-//        states[count-1] = (helper.pseudoclassStateMask != 0) 
-//                ? node.impl_getPseudoClassState()
-//                : 0;
-        states[count-1] = node.impl_getPseudoClassState();
+    private long[] transitionStates;
 
-        return states;
+    
+    // get pseudoclass state for the node 
+    long getPseudoClassState() {
+        // setTransitionState should have been called on this StyleHelper
+        assert (transitionStates != null && transitionStates.length > 0);        
+        return transitionStates != null && transitionStates.length > 0 ? transitionStates[0] : 0;
     }
     
+    public void setTransitionState(long state) {
+        
+        Parent parent = node.getParent();
+        if (parent != null) {
+            
+            // My transitionStates include those of my parents
+            final StyleHelper helper = parent.impl_getStyleHelper();
+            final long[] parentTransitionStates = helper.getTransitionStates();
+            
+            // setTransitionState should have been called on parent
+            assert (parentTransitionStates != null && parentTransitionStates.length > 0);
+            
+            final int nStates = 
+                (parentTransitionStates != null && parentTransitionStates.length > 0) 
+                    ? parentTransitionStates.length+1 
+                    : 1;
+            
+            if (transitionStates == null || transitionStates.length != nStates) {
+                transitionStates = new long[nStates];
+            }
+            
+            // transtitionStates[0] is my state, so copy parent states to 
+            // transitionStates[1..nStates-1]
+            if (nStates > 1) {
+                // if nStates <= 1, then parentTransitionStates must be null or length zero.
+                System.arraycopy(parentTransitionStates, 0, transitionStates, 1, parentTransitionStates.length);
+            }
+            
+        } else {
+            if (transitionStates == null || transitionStates.length != 1) {
+                transitionStates = new long[1];
+            }            
+        }
+        transitionStates[0] = state;
+    }
+    
+    private long[] getTransitionStates() {
+        return transitionStates;
+    }
+
     /* 
      * The lookup function return an Object but also
      * needs to return whether or not the value is cacheable.
@@ -759,31 +724,22 @@ final public class StyleHelper {
      * animations and that support is detectable via the API.
      */
     public void transitionToState() {
-
+       
         if (smapRef == null || smapRef.get() == null) return;
 
         //
-        // The ValueCacheEntry to choose depends on this Node's state and
+        // The CacheEntry to choose depends on this Node's state and
         // the state of its parents. Without the parent state, the fact that
         // this node in this state matched foo:blah bar { } is lost.
         //
-        pseudoClassStates = getPseudoClassStatesForTransition(node, 0);
-
-        // allstates[0] is this node's state
-        long states = pseudoClassStates[0];
-        //
-        // inlineStyles is this node's Node.style. This is passed along and is
-        // used in getStyle. Importance being the same, an author style will
-        // trump a user style and a user style will trump a user_agent style.
-        //
-        final Map<String,CascadingStyle> inlineStyles = this.getInlineStyleMap(node);
-
+        long[] states = getTransitionStates();
+        
         //
         // Styles that need lookup can be cached provided none of the styles
         // are from Node.style.
         //
                 
-        final CacheEntry cacheEntry = getCacheEntry(node, pseudoClassStates);
+        final CacheEntry cacheEntry = getCacheEntry(node, states);
         if (cacheEntry == null 
             || (cacheEntry.sharedCacheRef != null 
                 && cacheEntry.sharedCacheRef.get() == null)) {
@@ -800,6 +756,13 @@ final public class StyleHelper {
             node.impl_reapplyCSS();
             return;
         }
+
+        //
+        // inlineStyles is this node's Node.style. This is passed along and is
+        // used in getStyle. Importance being the same, an author style will
+        // trump a user style and a user style will trump a user_agent style.
+        //
+        final Map<String,CascadingStyle> inlineStyles = StyleHelper.getInlineStyleMap(node);
         
         //
         // if this node has a style map, then we'll populate it.
@@ -813,7 +776,7 @@ final public class StyleHelper {
         
         if (cacheEntry.font == null) {
             final CalculatedValue font = 
-                getFontForUseInConvertingRelativeSize(node, cacheEntry, states, inlineStyles);
+                getFontForUseInConvertingRelativeSize(node, cacheEntry, getPseudoClassState(), inlineStyles);
             
             cacheEntry.font = font;
             assert(cacheEntry.font != null);
@@ -895,7 +858,7 @@ final public class StyleHelper {
 
                 boolean isUserSet = isUserSetProperty(node, styleable);            
 
-                calculatedValue = lookup(node, styleable, isUserSet, states, 
+                calculatedValue = lookup(node, styleable, isUserSet, getPseudoClassState(), 
                         inlineStyles, node, cacheEntry, styleList);
 
                 if (fastpath) {
@@ -905,7 +868,7 @@ final public class StyleHelper {
                 }
 
             }
-
+            
             // RT-10522:
             // If the user set the property and there is a style and
             // the style came from the user agent stylesheet, then
@@ -995,7 +958,7 @@ final public class StyleHelper {
         // order finding the first that matches the current node & set of
         // pseudoclass states. We use an iteration style that avoids creating
         // garbage iterators (and wish javac did it for us...)
-        CascadingStyle style = null;
+       CascadingStyle style = null;
         final int max = (styles == null) ? 0 : styles.size();
         for (int i=0; i<max; i++) {
             final CascadingStyle s = styles.get(i);
@@ -1641,7 +1604,7 @@ final public class StyleHelper {
             parent = parent.getParent();
             if (parent != null) {
                 parentHelper = parent.impl_getStyleHelper();
-                final long[] pstates = parentHelper.getPseudoClassStates();
+                final long[] pstates = parentHelper.getTransitionStates();
                 parentCacheEntry = parentHelper.getCacheEntry(parent, pstates);                
             }
         } while (parent != null && parentCacheEntry == null);
@@ -1903,7 +1866,7 @@ final public class StyleHelper {
         while (parent != null) {
             
             final long states = helper.getPseudoClassState();
-            final Map<String,CascadingStyle> inlineStyles = helper.getInlineStyleMap(parent);
+            final Map<String,CascadingStyle> inlineStyles = StyleHelper.getInlineStyleMap(parent);
             
             final CascadingStyle cascadingStyle =
                 helper.getStyle(parent, property, states, inlineStyles);
@@ -1949,7 +1912,7 @@ final public class StyleHelper {
             }
         }
         
-        final long states = pseudoClassStates[0];
+        final long states = getPseudoClassState();
         final Map<String,CascadingStyle> inlineStyles = getInlineStyleMap(node);
 
         String family = null;
@@ -2169,7 +2132,7 @@ final public class StyleHelper {
                 
                 if (parentHelper != null) {
                     
-                    Map<String,CascadingStyle> inlineStyles = parentHelper.getInlineStyleMap(parent);
+                    Map<String,CascadingStyle> inlineStyles = StyleHelper.getInlineStyleMap(parent);
                     
                     if (inlineStyles != null) {
                         
@@ -2178,12 +2141,12 @@ final public class StyleHelper {
                         }
                         
                         for(Entry<String,CascadingStyle> entry : inlineStyles.entrySet()) {                            
-                            String key = entry.getKey();
+                            String kee = entry.getKey();
                             
-                            List<CascadingStyle> inlineStyleList = inlineStyleMap.get(key);
+                            List<CascadingStyle> inlineStyleList = inlineStyleMap.get(kee);
                             if (inlineStyleList == null) {
                                 inlineStyleList = new ArrayList<CascadingStyle>();
-                                inlineStyleMap.put(key, inlineStyleList);
+                                inlineStyleMap.put(kee, inlineStyleList);
                             }
                             inlineStyleList.add(entry.getValue());
                         }

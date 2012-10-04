@@ -151,7 +151,7 @@ public class RuleTest {
         Node node = null;
         Rule instance = null;
         boolean expResult = false;
-        boolean result = instance.applies(node);
+        boolean result = instance.applies(node, null);
         assertEquals(expResult, result);
         fail("The test case is a prototype.");
     }

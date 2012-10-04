@@ -25,6 +25,7 @@
 
 package com.sun.javafx.css;
 
+import java.util.Arrays;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -40,7 +41,7 @@ class CascadingStyle implements Comparable {
     }
     
     /** State variables, like &quot;hover&quot; or &quot;pressed&quot; */
-    private final List<String> pseudoclasses;
+    private long pseudoclasses;
 
     /* specificity of the rule that matched */
     private final int specificity;
@@ -55,12 +56,9 @@ class CascadingStyle implements Comparable {
     private final boolean skinProp;
 
     // internal to Style
-    private int hash = -1;
-
-    // internal to Style
     static private Set<String> strSet = new HashSet<String>();
 
-    CascadingStyle(final Style style, final List<String> pseudoclasses, 
+    CascadingStyle(final Style style, long pseudoclasses, 
             final int specificity, final int ordinal) {
         this.style = style;
         this.pseudoclasses = pseudoclasses;
@@ -114,24 +112,8 @@ class CascadingStyle implements Comparable {
             return false;
         }
         
-        // if either pseudoclass is null, both have to be null
-        if (pseudoclasses == null && other.pseudoclasses == null) {
-            return true;
-        } else if (pseudoclasses == null || other.pseudoclasses == null) {
-            return false;
-        }
-
-        if (pseudoclasses.size() != other.pseudoclasses.size()) return false;
-
         // is [foo bar] a subset of [foo bar bang]?
-        // Check if each string in seq1 is in seq2
-        strSet.clear();
-        for (int n=0, max=pseudoclasses.size(); n<max; n++)
-            strSet.add(other.pseudoclasses.get(n));
-        for (int n=0, max=other.pseudoclasses.size(); n<max; n++) {
-            if (! strSet.contains(other.pseudoclasses.get(n))) return false;
-        }
-        return true;
+        return ((pseudoclasses & other.pseudoclasses) ==  pseudoclasses);
 
     }
 
@@ -139,15 +121,12 @@ class CascadingStyle implements Comparable {
      * Hash on property and pseudoclasses since
      * obj1.hashCode() should equal obj2.hashCode() if obj1.equals(obj2)
      */
-    @Override public int hashCode() {
-        if (hash == -1) {
-            hash = super.hashCode();
-            if (pseudoclasses != null) {
-                for (int n=0, max=pseudoclasses.size(); n<max; n++) {
-                    hash = 31*hash + pseudoclasses.get(n).hashCode();
-                }
-            }
-        }
+    @Override
+    public int hashCode() {
+        int hash = 7;
+        final String property = getProperty();
+        hash = 47 * hash + (property != null ? property.hashCode() : 0);
+        hash = 47 * hash + (int) (this.pseudoclasses ^ (this.pseudoclasses >>> 32));
         return hash;
     }
 

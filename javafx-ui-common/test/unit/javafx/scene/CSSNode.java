@@ -24,6 +24,7 @@
  */
 package javafx.scene;
 
+import com.sun.javafx.css.StyleManager;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -229,10 +230,10 @@ public  class CSSNode extends Node {
     public boolean applyCalled = false;
 
     @Override
-    public void impl_processCSS(boolean reapply) {
+    protected void impl_processCSS(StyleManager mgr, boolean reapply) {
         this.reapply = reapply;
         processCalled = true;
-        super.impl_processCSS(reapply);
+        super.impl_processCSS(mgr, reapply);
     }
 
     @Override

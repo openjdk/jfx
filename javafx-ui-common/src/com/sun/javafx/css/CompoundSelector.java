@@ -121,13 +121,10 @@ final public class CompoundSelector extends Selector {
             final Match ancestorMatch = matches(parent, index-1);
             if (ancestorMatch != null) {
 
-                List<String> ancestorPseudoclasses = ancestorMatch.pseudoclasses;
-                List<String> descendantPseudoclasses = descendantMatch.pseudoclasses;
-                List<String> pseudoclasses = new ArrayList<String>();
-                pseudoclasses.addAll(ancestorMatch.pseudoclasses);
-                pseudoclasses.addAll(descendantMatch.pseudoclasses);
-
-                return new Match(this, pseudoclasses,
+                long ancestorPseudoclasses = ancestorMatch.pseudoclasses;
+                long descendantPseudoclasses = descendantMatch.pseudoclasses;
+                return new Match(this, 
+                        ancestorPseudoclasses | descendantPseudoclasses,
                         ancestorMatch.idCount + descendantMatch.idCount,
                         ancestorMatch.styleClassCount + descendantMatch.styleClassCount);
             }
@@ -147,16 +144,34 @@ final public class CompoundSelector extends Selector {
 
     @Override
     public boolean applies(final Node node) {
-        return applies(node, selectors.size()-1);
+        return applies(node, selectors.size()-1, null, 0);
     }
 
-    private boolean applies(final Node node, final int index) {
+    @Override
+    boolean applies(final Node node, long[] pseudoclassBits, int bit) {
+        
+        // 
+        // We only care about pseudoclassBits if the selector applies. But in
+        // the case of a compound selector, we don't know whether it applies
+        // until all the selectors have been checked (in the worse case). So
+        // the setting of pseudoclassBits has to be deferred until we know
+        // that this compound selector applies. So we'll send a clone and if 
+        // the compound selector applies, we can just copy the bits back.        
+        final long[] tempBits = pseudoclassBits != null ? pseudoclassBits.clone() : null;
+        final boolean applies = applies(node, selectors.size()-1, tempBits, bit);
+        if (applies && (tempBits != null)) {
+            System.arraycopy(tempBits, 0, pseudoclassBits, 0, pseudoclassBits.length);
+        }
+        return applies;
+    }
+
+    private boolean applies(final Node node, final int index, long[] pseudoclassBits, int bit) {
         // If the index is < 0 then we know we don't apply
         if (index < 0) return false;
 
         // Simply check the selector associated with this index and see if it
         // applies to the Node
-        if (! selectors.get(index).applies(node)) return false;
+        if (! selectors.get(index).applies(node, pseudoclassBits, bit)) return false;
 
         // If there are no more selectors to check (ie: index == 0) then we
         // know we know we apply
@@ -176,11 +191,11 @@ final public class CompoundSelector extends Selector {
             if (parent == null) return false;
             // If this call succeeds, then all preceding selectors will have
             // matched due to the recursive nature of the call
-            return applies(parent, index - 1);
+            return applies(parent, index - 1, pseudoclassBits, ++bit);
         } else {
              Node parent = node.getParent();
             while (parent != null) {
-                boolean answer = applies(parent, index - 1);
+                boolean answer = applies(parent, index - 1, pseudoclassBits, ++bit);
                 // If a call to stateMatches succeeded, then we know that
                 // all preceding selectors will have also matched.
                 if (answer) return true;

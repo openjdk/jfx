@@ -135,10 +135,10 @@ final public class Rule {
         return matches;
     }
 
-    public boolean applies(Node node) {
+    boolean applies(Node node, long[] pseudoclassBits) {
         for (int i = 0; i < selectors.size(); i++) {
             Selector sel = selectors.get(i);
-            if (sel.applies(node)) return true;
+            if (sel.applies(node, pseudoclassBits, 0)) return true;
         }
         return false;
     }
