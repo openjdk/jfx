@@ -101,7 +101,7 @@ final public class SimpleSelector extends Selector {
             final String styleClass = styleClasses.get(n);
             final long m = getStyleClassMask(styleClass);
             final long element = (m & ~VALUE_MASK);
-            final int  index = (int)(element >> VALUE_BITS);
+            final int  index = (int)(element >>> VALUE_BITS);
             // need to grow?
             if (index >= mask.length) {
                 final long[] temp = new long[index+1];
