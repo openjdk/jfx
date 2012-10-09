@@ -7443,7 +7443,7 @@ public abstract class Node implements EventTarget {
         // apply the CSS immediately and not add it to the scene's queue
         // for deferred action.
         if (getParent() != null && getParent().performingLayout) {
-            impl_processCSS(true);
+            impl_processCSS(getScene().styleManager, true);
         } else if (getScene() != null) {
             notifyParentsOfInvalidatedCSS();
         }
@@ -7453,7 +7453,8 @@ public abstract class Node implements EventTarget {
         switch (cssFlag) {
             case CLEAN:
                 break;
-            case DIRTY_BRANCH:
+            case DIRTY_BRANCH:     
+                styleHelper.setTransitionState(impl_getPseudoClassState());
                 Parent me = (Parent)this;
                 // clear the flag first in case the flag is set to something
                 // other than clean by downstream processing.
@@ -7479,9 +7480,36 @@ public abstract class Node implements EventTarget {
      * @deprecated This is an internal API that is not intended for use and will be removed in the next version
      */
     @Deprecated // SB-dependency: RT-21206 has been filed to track this
-    public void impl_processCSS(boolean reapply) {        
-        final StyleManager styleManager = StyleManager.getStyleManager(this.getScene());
-        impl_processCSS(styleManager, reapply);
+    public final void impl_processCSS(boolean reapply) {
+        
+        assert(getScene() != null);
+        if (getScene() == null) return;
+        
+        //
+        // Normally, css is processed from the root down. If this method
+        // is called, then the code is trying to force css to be applied 
+        // in the middle of a pulse.
+        //
+        
+        //
+        // Since StyleHelper expects css to be applied top-down, follow
+        // the path from this node to the root and set the transition states. 
+        // The transitionsStates _have_ to be set from the root on down. 
+        final java.util.Stack<Parent> parents = new java.util.Stack<Parent>();
+        Parent parent = getParent();
+        while (parent != null) {
+            parents.push(parent);
+            parent = parent.getParent();
+        }
+        while (parents.isEmpty() == false) {
+            parent = parents.pop();
+            parent.impl_getStyleHelper().setTransitionState(parent.impl_getPseudoClassState());
+        }
+        
+        final boolean flag = (reapply || cssFlag == CSSFlags.REAPPLY);
+        cssFlag = flag ? CSSFlags.REAPPLY : CSSFlags.UPDATE;
+        final StyleManager styleManager = getScene().styleManager;
+        impl_processCSS(styleManager, flag);
     }
     
     /**
@@ -7493,8 +7521,11 @@ public abstract class Node implements EventTarget {
      * @deprecated This is an internal API that is not intended for use and will be removed in the next version
      */
     @Deprecated // SB-dependency: RT-21206 has been filed to track this    
-    public void impl_processCSS(StyleManager styleManager, boolean reapply) {
-
+    protected void impl_processCSS(StyleManager styleManager, boolean reapply) {
+        
+        // Nothing to do...
+        if (!reapply && (cssFlag == CSSFlags.CLEAN)) return;
+        
         // Match new styles if I am told I need to reapply
         // or if my own flag indicates I need to reapply
         if (reapply || (cssFlag == CSSFlags.REAPPLY)) {
@@ -7507,10 +7538,9 @@ public abstract class Node implements EventTarget {
         // other than clean by downstream processing.
         cssFlag = CSSFlags.CLEAN;
 
-        // Transition to the new state
-        if (styleHelper != null) {
-            styleHelper.transitionToState();
-        }
+        // Transition to the new state and apply styles
+        styleHelper.setTransitionState(impl_getPseudoClassState());        
+        styleHelper.transitionToState();
     }
     
     /**

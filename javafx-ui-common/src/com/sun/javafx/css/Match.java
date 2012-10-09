@@ -25,6 +25,7 @@
 package com.sun.javafx.css;
 
 import java.util.List;
+import javafx.scene.Node;
 
 /**
  * Used by {@link Rule} to determine whether or not the rule applies to a
@@ -36,30 +37,28 @@ import java.util.List;
 final class Match implements Comparable {
 
     final Selector selector;
-    final List<String> pseudoclasses;
+    final long pseudoclasses;
     final int idCount;
     final int styleClassCount;
-
+    
+    List<Match> descendantMatches;
+    
     // CSS3 spec gives weight to id count, then style class count,
     // then pseudoclass count, and finally matching types (i.e., java name count)
     final int specificity;
 
-    public Match(final Selector selector, final List<String> pseudoclasses,
+    Match(final Selector selector, long pseudoclasses,
             final int idCount, final int styleClassCount) {
         assert selector != null;
         this.selector = selector;
-        this.pseudoclasses = pseudoclasses;
         this.idCount = idCount;
         this.styleClassCount = styleClassCount;
-        final int nPseudoclasses = (pseudoclasses != null) ?  pseudoclasses.size() : 0;
+        this.pseudoclasses = pseudoclasses;
+        int nPseudoclasses = Long.bitCount(pseudoclasses);
+        
         specificity = (idCount << 8) | (styleClassCount << 4) | nPseudoclasses;
     }
-
-    private Match() {
-        this(null, null, 0, 0);
-        assert false : "null arg ctor \'Match\' called";
-    }
-    
+        
     @Override
     public int compareTo(Object o) {
         Match m = (Match)o;
@@ -70,7 +69,7 @@ final class Match implements Comparable {
     public String toString() {
         StringBuilder sb = new StringBuilder();
         sb.append(selector);
-        for (String s : pseudoclasses) {
+        for(String s : StyleManager.getPseudoclassStrings(pseudoclasses)) {
             sb.append(":");
             sb.append(s);
         }

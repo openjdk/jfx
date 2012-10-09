@@ -281,7 +281,7 @@ public class StyleablePropertyTest {
         }
         return new CascadingStyle(
             new Style(selector, declaration),
-            pseudoclasses,
+            StyleManager.getPseudoclassMask(pseudoclasses),
             0,
             ord++
         );
@@ -752,7 +752,7 @@ public class StyleablePropertyTest {
 
 //        System.err.println("matchingStyles: " + matchingStyles);
 //        System.err.println("expecteds: " + expecteds);
-        System.err.println("actuals: " + actuals);
+//        System.err.println("actuals: " + actuals);
 
         assertEquals(expecteds.size(), actuals.size(), 0);
         

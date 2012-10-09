@@ -118,7 +118,8 @@ public class TextFieldSkin extends TextInputControlSkin<TextField, TextFieldBeha
 
         @Override protected void invalidated() {
             if (getWidth() > 0) {
-                textNode.impl_caretBiasProperty().set(get());
+                // RT-25479: Disable caret bias handling for now.
+                // textNode.impl_caretBiasProperty().set(get());
                 updateCaretOff();
             }
         }
@@ -383,7 +384,6 @@ public class TextFieldSkin extends TextInputControlSkin<TextField, TextFieldBeha
                     Point2D p = new Point2D(caretHandle.getLayoutX() + e.getX() + pressX - textNode.getLayoutX(),
                                             caretHandle.getLayoutY() + e.getY() - pressY - 6);
                     HitInfo hit = textNode.impl_hitTestChar(translateCaretPosition(p));
-                    int pos = hit.getCharIndex();
                     positionCaret(hit, false);
                     e.consume();
                 }
@@ -674,7 +674,8 @@ public class TextFieldSkin extends TextInputControlSkin<TextField, TextFieldBeha
     }
 
     public void positionCaret(HitInfo hit, boolean select) {
-        int pos = hit.getCharIndex();
+//         int pos = hit.getCharIndex();
+        int pos = hit.getInsertionIndex();
         boolean isNewLine =
                (pos > 0 &&
                 pos < getSkinnable().getLength() &&

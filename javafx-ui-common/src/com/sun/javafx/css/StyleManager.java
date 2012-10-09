@@ -778,7 +778,7 @@ abstract public class StyleManager<T> {
     /**
      * Finds matching styles for this Node.
      */
-    StyleMap findMatchingStyles(Node node, SimpleSelector key) {
+    StyleMap findMatchingStyles(Node node, SimpleSelector key, long[] pseudoclassBits) {
         
         //
         // Are there any stylesheets at all?
@@ -812,13 +812,13 @@ abstract public class StyleManager<T> {
             
             final SimpleSelector newKey = new SimpleSelector(key);                    
             cacheMap.put(newKey, cache);
-
+            
         }
 
         //
         // Create a style helper for this node from the styles that match. 
         //
-        StyleMap smap = cache.getStyleMap(this, node);
+        StyleMap smap = cache.getStyleMap(this, node, pseudoclassBits);
         
         return smap;        
     }
@@ -896,7 +896,7 @@ abstract public class StyleManager<T> {
             this.cache = new HashMap<Long, StyleMap>();
         }
 
-        private StyleMap getStyleMap(StyleManager owner, Node node) {
+        private StyleMap getStyleMap(StyleManager owner, Node node, long[] pseudoclassBits) {
             
             if (rules == null || rules.isEmpty()) {                
                 return StyleMap.EMPTY_MAP;
@@ -907,20 +907,10 @@ abstract public class StyleManager<T> {
             // Since the list of rules is found by matching only the
             // rightmost selector, the set of rules may larger than those 
             // rules that actually match the node. The following loop
-            // whittles the list down to those rules that actually match.
+            // whittles the list down to those rules that apply.
             //
-            // listOfMatches is dual purpose. First, it keeps track
-            // of what rules match the node. Second, it keeps track
-            // of the indices of the matching rules. These indices
-            // are used to create the bit mask for the cache key. If
-            // the cache misses, then a new entry is created by looping
-            // through listOfMatches and creating CascadingStyles for
-            // entries that are not null. Ok, so that's three.
-            //
-            final List<Match>[] listOfMatches = new List[rules.size()];
+            final Rule[] applicableRules = new Rule[rules.size()];
             
-            //
-            // do we have a cache for the set of matching rules?
             //
             // To lookup from the cache, we construct a key from a Long
             // where the rules that match this particular node are
@@ -931,46 +921,74 @@ abstract public class StyleManager<T> {
             for (int r = 0, rMax = rules.size(); r < rMax; r++) {
                 
                 final Rule rule = rules.get(r);
-                final List<Match> matches = rule.matches(node);
-                if (matches  != null && matches.isEmpty() == false) {
+
+                //
+                // This particular flavor of applies takes a long[] and fills 
+                // in the pseudoclass states from the selectors where they apply
+                // to a node. This is an expedient to looking the applies loop
+                // a second time on the matching rules. This has to be done 
+                // ahead of the cache lookup since not all nodes that have the 
+                // same set of rules will have the same node hierarchy. 
+                // 
+                // For example, if I have .foo:hover:focused .bar:selected {...}
+                // and the "bar" node is 4 away from the root and the foo
+                // node is two away from the root, pseudoclassBits would be
+                // [selected, 0, hover:focused, 0]
+                // Note that the states run from leaf to root. This is how
+                // the code in StyleHelper expects things. 
+                // Note also that, if the rule does not apply, the pseudoclassBits
+                // is unchanged. 
+                //
+                if (rule.applies(node, pseudoclassBits)) {
                     
-                    listOfMatches[r] = matches;
+                    applicableRules[r] = rule;
                     key = key | mask;
                     
                 } else {
                     
-                    listOfMatches[r] = null;
+                    applicableRules[r] = null;
                     
                 }
                 mask = mask << 1;
             }
             
             // nothing matched!
-            if (key == 0) return null;
+            if (key == 0) return StyleMap.EMPTY_MAP;
             
             final Long keyObj = Long.valueOf(key);
             if (cache.containsKey(keyObj)) {
                 final StyleMap styleMap = cache.get(keyObj);
                 return styleMap;
             }
-                        
-            final List<CascadingStyle> styles = new ArrayList<CascadingStyle>();
+
             int ordinal = 0;
             
-            for (int m = 0, mMax = listOfMatches.length; m<mMax; m++) {
+            // if there isn't a map in cache already, create one. 
+            // 
+            // We know the rules apply, so they should also match. A rule
+            // might have more than one selector and match will return the
+            // selector that matches. Matches is more expensive than applies, 
+            // so we pay for it here, but only for the first time the 
+            // cache is created.
+            //
+            final List<CascadingStyle> styles = new ArrayList<CascadingStyle>();
+            
+            for (int r = 0, rMax = applicableRules.length; r<rMax; r++) {
                 
-                final List<Match> matches = listOfMatches[m];
-                if (matches == null) continue; 
+                final Rule rule = applicableRules[r];
                 
-                // the rule that matched
-                Rule rule = rules.get(m);
+                // if the rule didn't apply, then applicableRules[r] will be null
+                if (rule == null) continue;
                 
-                for (int n=0, nMax = matches.size(); n<nMax; n++) {
-                    
-                    final Match match = matches.get(n);
+                final List<Match> matches = rule.matches(node);
+                if (matches == null || matches.isEmpty()) continue;
+                
+                for (int m=0, mMax=matches.size(); m<mMax; m++) {
+                
+                    final Match match = matches.get(m);
                     // TODO: should never get nulls in this list. Fix Rule#matches
                     if (match == null) continue;
-                
+                    
                     for (int k = 0, kmax = rule.declarations.size(); k < kmax; k++) {
                         final Declaration decl = rule.declarations.get(k);
 
