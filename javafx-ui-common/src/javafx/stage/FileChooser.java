@@ -42,10 +42,44 @@ import com.sun.javafx.tk.FileChooserType;
 import com.sun.javafx.tk.Toolkit;
 
 /**
- * Provides support for standard file dialogs. On some platforms where file
- * access may be restricted or not part of the user model (for example, on some
- * mobile devices), opening a file dialog may always result in a no-op (that is,
- * null file(s) being returned).
+ * Provides support for standard platform file dialogs. These dialogs have look
+ * and feel of the platform UI components which is independent of JavaFX.
+ * <p>
+ * On some platforms where file access may be restricted or not part of the user
+ * model (for example, on some mobile devices), opening a file dialog may always
+ * result in a no-op (that is, null file(s) being returned).
+ * </p>
+ * <p>
+ * A {@code FileChooser} can be used to invoke file open dialogs for selecting
+ * single file ({@code showOpenDialog}), file open dialogs for selecting
+ * multiple files ({@code showOpenMultipleDialog}) and file save dialogs
+ * ({@code showSaveDialog}). The configuration of the displayed dialog is
+ * controlled by the values of the {@code FileChooser} properties set before the
+ * corresponding {@code show*Dialog} method is called. This configuration
+ * includes the dialog's title, the initial directory displayed in the dialog
+ * and the extension filter(s) for the listed files. For configuration
+ * properties which values haven't been set explicitly, the displayed dialog
+ * uses their platform default values. A call to a show dialog method is
+ * blocked until the user makes a choice or cancels the dialog. The return
+ * value specifies the selected file(s) or equals to {@code null} if the dialog
+ * has been canceled.
+ * </p>
+ * <p>
+ * Example:
+ * <pre><code>
+ * FileChooser fileChooser = new FileChooser();
+ * fileChooser.setTitle("Open Resource File");
+ * fileChooser.getExtensionFilters().addAll(
+ *         new ExtensionFilter("Text Files", "*.txt"),
+ *         new ExtensionFilter("Image Files", "*.png", "*.jpg", "*.gif"),
+ *         new ExtensionFilter("Audio Files", "*.wav", "*.mp3", "*.aac"),
+ *         new ExtensionFilter("All Files", "*.*"));
+ * File selectedFile = fileChooser.showOpenDialog(mainStage);
+ * if (selectedFile != null) {
+ *    mainStage.display(selectedFile);
+ * }
+ * </code></pre>
+ * </p>
  */
 public final class FileChooser {
     /**
@@ -212,7 +246,14 @@ public final class FileChooser {
             FXCollections.<ExtensionFilter>observableArrayList();
 
     /**
-     * Gets the extension filters used in the displayed file dialog.
+     * Gets the extension filters used in the displayed file dialog. Only
+     * one extension filter from the list is active at any time in the displayed
+     * dialog and only files which correspond to this extension filter are
+     * shown. The first extension filter from the list is activated when the
+     * dialog is invoked. Then the user can switch the active extension filter
+     * to any other extension filter from the list and in this way control the
+     * set of displayed files.
+     *
      * @return An observable list of the extension filters used in this dialog
      */
     public ObservableList<ExtensionFilter> getExtensionFilters() {
