@@ -33,10 +33,12 @@ import javafx.beans.property.StringProperty;
 
 // PENDING_DOC_REVIEW
 /**
- * Provides support for standard directory chooser dialogs. On some platforms
- * where file access may be restricted or not part of the user model (for
- * example, on some mobile devices), opening a directory dialog may always
- * result in a no-op (that is, null file being returned).
+ * Provides support for standard directory chooser dialogs. These dialogs have
+ * look and feel of the platform UI components which is independent of JavaFX.
+ * 
+ * On some platforms where file access may be restricted or not part of the user
+ * model (for example, on some mobile devices), opening a directory dialog may
+ * always result in a no-op (that is, null file being returned).
  *
  * @since JavaFX 2.1
  */
