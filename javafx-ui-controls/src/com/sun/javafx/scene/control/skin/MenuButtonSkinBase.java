@@ -29,24 +29,19 @@ import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
 import javafx.collections.ListChangeListener;
 import javafx.event.ActionEvent;
+import javafx.event.Event;
 import javafx.event.EventHandler;
-import javafx.geometry.HPos;
 import javafx.geometry.Insets;
-import javafx.geometry.VPos;
 import javafx.scene.Scene;
 import javafx.scene.control.ContextMenu;
+import javafx.scene.control.Menu;
 import javafx.scene.control.MenuButton;
 import javafx.scene.control.MenuItem;
 import javafx.scene.control.SkinBase;
 import javafx.scene.input.MouseEvent;
-import javafx.scene.layout.StackPane;
-
-import com.sun.javafx.scene.control.behavior.MenuButtonBehaviorBase;
-import javafx.event.Event;
-import javafx.event.Event;
-import javafx.event.EventType;
-import javafx.scene.control.Menu;
 import javafx.scene.layout.Region;
+import javafx.scene.layout.StackPane;
+import com.sun.javafx.scene.control.behavior.MenuButtonBehaviorBase;
 
 /**
  * Base class for MenuButtonSkin and SplitMenuButtonSkin. It consists of the
@@ -266,20 +261,9 @@ public abstract class MenuButtonSkinBase<C extends MenuButton, B extends MenuBut
 
     @Override protected void layoutChildren(final double x, final double y,
             final double w, final double h) {
-        final Insets padding = getInsets();
-        final Insets arrowButtonPadding = arrowButton.getInsets();
-
-        final double arrowWidth = arrow.prefWidth(-1);
-        final double arrowButtonWidth = arrowButtonPadding.getLeft() + arrowWidth + arrowButtonPadding.getRight();
-
+        final double arrowButtonWidth = Math.ceil(arrowButton.prefWidth(-1));
         label.resizeRelocate(x, y, w - arrowButtonWidth, h);
-
-        arrowButton.resize(arrowButtonWidth, h);
-        positionInArea(arrowButton, getWidth() - padding.getRight() - arrowButtonWidth, y, arrowButtonWidth, h,
-                /*baseline ignored*/0, HPos.CENTER, VPos.CENTER);
-
-        // size popup to its pref size
-//        popup.autosize();
+        arrowButton.resizeRelocate(x+(w-arrowButtonWidth), y, arrowButtonWidth, h);
     }
 
     private void addAccelerators(javafx.collections.ObservableList<javafx.scene.control.MenuItem> mItems) {

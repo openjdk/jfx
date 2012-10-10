@@ -1834,7 +1834,7 @@
 /* The SplitMenuButton skin uses an inner Label part */
 .split-menu-button > .label {
     -fx-background-color:  -fx-outer-border, -fx-inner-border, -fx-body-color;
-    -fx-background-insets: 0, 1, 2;
+    -fx-background-insets: 0, 1 0 1 1, 2 1 2 2;
     -fx-background-radius: 5 0 0 5, 4 0 0 4, 3 0 0 3;
     -fx-padding: 0.166667em 1.5em 0.25em 0.833333em; /* 2 18 3 10 */
 }
@@ -1850,7 +1850,7 @@
     -fx-color: -fx-hover-base;
 }
 
-.split-menu-button > .arrow-button:armed {
+.split-menu-button > .arrow-button:pressed {
     -fx-color: -fx-pressed-base;
 }
 

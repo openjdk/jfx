@@ -371,4 +371,39 @@ public class CornerRadii {
     @Override public int hashCode() {
         return hash;
     }
+
+    @Override public String toString() {
+        if (isUniform()) {
+            return "CornerRadii [uniform radius = " + topLeftHorizontalRadius + "]";
+        }
+
+        return "CornerRadii [" +
+                (topLeftHorizontalRadius == topLeftVerticalRadius ?
+                    "topLeft=" + topLeftHorizontalRadius :
+                    "topLeftHorizontalRadius=" + topLeftHorizontalRadius +
+                    ", topLeftVerticalRadius=" + topLeftVerticalRadius) +
+                (topRightHorizontalRadius == topRightVerticalRadius ?
+                    ", topRight=" + topRightHorizontalRadius :
+                    ", topRightVerticalRadius=" + topRightVerticalRadius +
+                    ", topRightHorizontalRadius=" + topRightHorizontalRadius) +
+                (bottomRightHorizontalRadius == bottomRightVerticalRadius ?
+                    ", bottomRight=" + bottomRightHorizontalRadius :
+                    ", bottomRightHorizontalRadius=" + bottomRightHorizontalRadius +
+                    ", bottomRightVerticalRadius=" + bottomRightVerticalRadius) +
+                (bottomLeftHorizontalRadius == bottomLeftVerticalRadius ?
+                    ", bottomLeft=" + bottomLeftHorizontalRadius :
+                    ", bottomLeftVerticalRadius=" + bottomLeftVerticalRadius +
+                    ", bottomLeftHorizontalRadius=" + bottomLeftHorizontalRadius) +
+//                ", topLeftHorizontalRadiusAsPercentage=" + topLeftHorizontalRadiusAsPercentage +
+//                ", topLeftVerticalRadiusAsPercentage=" + topLeftVerticalRadiusAsPercentage +
+//                ", topRightVerticalRadiusAsPercentage=" + topRightVerticalRadiusAsPercentage +
+//                ", topRightHorizontalRadiusAsPercentage=" + topRightHorizontalRadiusAsPercentage +
+//                ", bottomRightHorizontalRadiusAsPercentage=" + bottomRightHorizontalRadiusAsPercentage +
+//                ", bottomRightVerticalRadiusAsPercentage=" + bottomRightVerticalRadiusAsPercentage +
+//                ", bottomLeftVerticalRadiusAsPercentage=" + bottomLeftVerticalRadiusAsPercentage +
+//                ", bottomLeftHorizontalRadiusAsPercentage=" + bottomLeftHorizontalRadiusAsPercentage +
+//                ", hasPercentBasedRadii=" + hasPercentBasedRadii +
+//                ", uniform=" + uniform +
+                ']';
+    }
 }
