@@ -234,20 +234,16 @@ public abstract class MenuButtonSkinBase<C extends MenuButton, B extends MenuBut
 
     @Override protected double computePrefWidth(double height) {
         final Insets padding = getInsets();
-        final Insets arrowButtonPadding = arrowButton.getInsets();
         return padding.getLeft()
                 + label.prefWidth(height)
-                + arrowButtonPadding.getLeft()
-                + arrow.prefWidth(height)
-                + arrowButtonPadding.getRight()
+                + snapSize(arrowButton.prefWidth(height))
                 + padding.getRight();
     }
 
     @Override protected double computePrefHeight(double width) {
         final Insets padding = getInsets();
-        final Insets arrowButtonPadding = arrowButton.getInsets();
         return padding.getTop()
-                + Math.max(label.prefHeight(width), arrowButtonPadding.getTop() + arrow.prefHeight(-1) + arrowButtonPadding.getBottom())
+                + Math.max(label.prefHeight(width), snapSize(arrowButton.prefHeight(-1)))
                 + padding.getBottom();
     }
 
@@ -260,8 +256,8 @@ public abstract class MenuButtonSkinBase<C extends MenuButton, B extends MenuBut
     }
 
     @Override protected void layoutChildren(final double x, final double y,
-            final double w, final double h) {
-        final double arrowButtonWidth = Math.ceil(arrowButton.prefWidth(-1));
+                                            final double w, final double h) {
+        final double arrowButtonWidth = snapSize(arrowButton.prefWidth(-1));
         label.resizeRelocate(x, y, w - arrowButtonWidth, h);
         arrowButton.resizeRelocate(x+(w-arrowButtonWidth), y, arrowButtonWidth, h);
     }
