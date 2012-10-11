@@ -44,6 +44,8 @@ import com.sun.javafx.css.Stylesheet.Origin;
 import com.sun.javafx.css.converters.FontConverter;
 import com.sun.javafx.css.parser.CSSParser;
 import com.sun.javafx.logging.PlatformLogger;
+import javafx.beans.property.ObjectProperty;
+import javafx.beans.property.SimpleObjectProperty;
 import javafx.scene.Parent;
 
 /**
@@ -862,11 +864,7 @@ final public class StyleHelper {
                 calculatedValue = lookup(node, styleable, isUserSet, getPseudoClassState(), 
                         inlineStyles, node, cacheEntry, styleList);
 
-                if (fastpath) {
-                    // if userStyles is null and calculatedValue was null,
-                    // then the calculatedValue didn't come from the cache
-                    cacheEntry.put(property, calculatedValue);
-                }
+                cacheEntry.put(property, calculatedValue);
 
             }
             
@@ -1224,9 +1222,9 @@ final public class StyleHelper {
      * Find the property among the styles that pertain to the Node
      */
     private CascadingStyle resolveRef(Node node, String property, long states,
-            Map<String,CascadingStyle> userStyles) {
+            Map<String,CascadingStyle> inlineStyles) {
         
-        final CascadingStyle style = getStyle(node, property, states, userStyles);
+        final CascadingStyle style = getStyle(node, property, states, inlineStyles);
         if (style != null) {
             return style;
         } else {
@@ -1235,7 +1233,7 @@ final public class StyleHelper {
             if (states > 0) {
                 // if states > 0, then we need to check this node again,
                 // but without any states.
-                return resolveRef(node,property,0,userStyles);
+                return resolveRef(node,property,0,inlineStyles);
             } else {
                 // TODO: This block was copied from inherit. Both should use same code somehow.
                 Node parent = node.getParent();
@@ -1262,7 +1260,8 @@ final public class StyleHelper {
             Node node, 
             ParsedValue value, 
             long states,
-            Map<String,CascadingStyle> userStyles, 
+            Map<String,CascadingStyle> inlineStyles,
+            ObjectProperty<Origin> whence,
             List<Style> styleList) {
         
         
@@ -1279,7 +1278,7 @@ final public class StyleHelper {
                 final String sval = (String)val;
                 
                 CascadingStyle resolved = 
-                    resolveRef(node, sval, states, userStyles);
+                    resolveRef(node, sval, states, inlineStyles);
 
                 if (resolved != null) {
                     
@@ -1290,10 +1289,22 @@ final public class StyleHelper {
                         }
                     }
                     
+                    // The origin of this parsed value is the greatest of 
+                    // any of the resolved reference. If a resolved reference
+                    // comes from an inline style, for example, then the value
+                    // calculated from the resolved lookup should have inline
+                    // as its origin. Otherwise, an inline style could be 
+                    // stored in shared cache.
+                    final Origin wOrigin = whence.get();
+                    final Origin rOrigin = resolved.getOrigin();
+                    if (rOrigin != null && (wOrigin == null ||  wOrigin.compareTo(rOrigin) < 0)) {
+                        whence.set(rOrigin);
+                    } 
+                    
                     // the resolved value may itself need to be resolved.
                     // For example, if the value "color" resolves to "base",
                     // then "base" will need to be resolved as well.
-                    return resolveLookups(node, resolved.getParsedValue(), states, userStyles, styleList);
+                    return resolveLookups(node, resolved.getParsedValue(), states, inlineStyles, whence, styleList);
                 }
             }
         }
@@ -1311,7 +1322,7 @@ final public class StyleHelper {
                 for (int ll=0; ll<layers[l].length; ll++) {
                     if (layers[l][ll] == null) continue;
                     layers[l][ll].resolved = 
-                        resolveLookups(node, layers[l][ll], states, userStyles, styleList);
+                        resolveLookups(node, layers[l][ll], states, inlineStyles, whence, styleList);
                 }
             }
 
@@ -1321,7 +1332,7 @@ final public class StyleHelper {
             for (int l=0; l<layer.length; l++) {
                 if (layer[l] == null) continue;
                 layer[l].resolved =
-                    resolveLookups(node, layer[l], states, userStyles, styleList);
+                    resolveLookups(node, layer[l], states, inlineStyles, whence, styleList);
             }
         }
 
@@ -1414,6 +1425,7 @@ final public class StyleHelper {
         return sbuf.toString();
     }
     
+    
     private CalculatedValue calculateValue(
             final CascadingStyle style, 
             final Node node, 
@@ -1427,8 +1439,9 @@ final public class StyleHelper {
         final ParsedValue cssValue = style.getParsedValue();
         if (cssValue != null && !("null").equals(cssValue.getValue())) {
 
+            ObjectProperty<Origin> whence = new SimpleObjectProperty<Origin>(style.getOrigin());
             final ParsedValue resolved = 
-                resolveLookups(node, cssValue, states, inlineStyles, styleList);
+                resolveLookups(node, cssValue, states, inlineStyles, whence, styleList);
             
             try {
                 // The computed value
@@ -1519,7 +1532,7 @@ final public class StyleHelper {
                 else
                     val = styleable.getConverter().convert(resolved, font);
 
-                final Origin origin = style.getOrigin();
+                final Origin origin = whence.get();
                 return new CalculatedValue(val, origin, resolved.isNeedsFont());
                 
             } catch (ClassCastException cce) {
