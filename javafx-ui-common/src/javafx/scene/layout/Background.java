@@ -69,7 +69,7 @@ public final class Background {
     static final StyleableProperty<Node,Paint[]> BACKGROUND_COLOR =
             new SubStyleableProperty<Paint[]>("-fx-background-color",
                     PaintConverter.SequenceConverter.getInstance(),
-                    new Paint[] {Color.BLACK});
+                    new Paint[] {Color.TRANSPARENT});
 
     static final StyleableProperty<Node,Insets[]> BACKGROUND_RADIUS =
             new SubStyleableProperty<Insets[]>("-fx-background-radius",
