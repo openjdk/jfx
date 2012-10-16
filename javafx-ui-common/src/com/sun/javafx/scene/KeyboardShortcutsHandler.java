@@ -44,6 +44,13 @@ import com.sun.javafx.PlatformUtil;
 import com.sun.javafx.collections.ObservableListWrapper;
 import com.sun.javafx.collections.ObservableMapWrapper;
 import com.sun.javafx.event.BasicEventDispatcher;
+import com.sun.javafx.scene.traversal.Direction;
+
+import static javafx.scene.input.KeyCode.DOWN;
+import static javafx.scene.input.KeyCode.LEFT;
+import static javafx.scene.input.KeyCode.RIGHT;
+import static javafx.scene.input.KeyCode.TAB;
+import static javafx.scene.input.KeyCode.UP;
 
 public final class KeyboardShortcutsHandler extends BasicEventDispatcher {
     private ObservableMap<KeyCombination, Runnable> accelerators;
@@ -93,14 +100,58 @@ public final class KeyboardShortcutsHandler extends BasicEventDispatcher {
         return accelerators;
     }
 
+    public void traverse(Node node, Direction dir) {
+        node.impl_traverse(dir);
+    }
+
+    public void processTraversal(Event event) {
+        if (event instanceof KeyEvent && event.getEventType() == KeyEvent.KEY_PRESSED) {
+            if (!((KeyEvent)event).isMetaDown() && !((KeyEvent)event).isControlDown() && !((KeyEvent)event).isAltDown()) {
+                Object obj = event.getTarget();
+                if (obj instanceof Node) {
+                
+                    switch (((KeyEvent)event).getCode()) {
+                      case TAB :
+                          if (((KeyEvent)event).isShiftDown()) {
+                              traverse(((Node)obj), com.sun.javafx.scene.traversal.Direction.PREVIOUS);
+                          }
+                          else {
+                              traverse(((Node)obj), com.sun.javafx.scene.traversal.Direction.NEXT);
+                          }
+                          event.consume();
+                          break;
+                      case UP :
+                          traverse(((Node)obj), com.sun.javafx.scene.traversal.Direction.UP);
+                          event.consume();
+                          break;
+                      case DOWN :
+                          traverse(((Node)obj), com.sun.javafx.scene.traversal.Direction.DOWN);
+                          event.consume();
+                          break;
+                      case LEFT :
+                          traverse(((Node)obj), com.sun.javafx.scene.traversal.Direction.LEFT);
+                          event.consume();
+                          break;
+                      case RIGHT :
+                          traverse(((Node)obj), com.sun.javafx.scene.traversal.Direction.RIGHT);
+                          event.consume();
+                          break;
+                      default :
+                          break;
+                    }
+                }
+            }
+        }
+    }
+
     @Override
     public Event dispatchBubblingEvent(Event event) {
         /*
         ** If the key event hasn't been consumed then
         ** we will process global events in the order :
-        **    . Navigation, -> handled by the traversalEngine
         **    . Mnemonics,
-        **    . Accelerators.
+        **    . Accelerators,
+        **    . Navigation.
         ** This processing is extra to that of listeners and
         ** the focus Node.
         */
@@ -117,6 +168,10 @@ public final class KeyboardShortcutsHandler extends BasicEventDispatcher {
 
             if (!event.isConsumed()) {
                 processAccelerators((KeyEvent)event);
+            }
+
+            if (!event.isConsumed()) {
+                processTraversal(event);
             }
         }
 

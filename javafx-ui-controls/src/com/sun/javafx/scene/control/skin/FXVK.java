@@ -51,7 +51,7 @@ import javafx.beans.DefaultProperty;
 
 public class FXVK extends Control {
 
-    public final static String[] VK_TYPE_NAMES = new String[] { "text", "numeric", "url", "email" };
+    final static String[] VK_TYPE_NAMES = new String[] { "text", "numeric", "url", "email" };
     public final static String VK_TYPE_PROP_KEY = "vkType";
 
     String[] chars;

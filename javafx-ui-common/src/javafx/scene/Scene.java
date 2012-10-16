@@ -1840,6 +1840,8 @@ public class Scene implements EventTarget {
      * on this scene.
      */
     void registerTraversable(Node n) {
+        initializeInternalEventDispatcher();
+
         final TraversalEngine te = lookupTraversalEngine(n);
         if (te != null) {
             if (traversalRegistry == null) {

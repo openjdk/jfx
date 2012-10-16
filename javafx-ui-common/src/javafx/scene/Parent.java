@@ -1115,28 +1115,28 @@ public abstract class Parent extends Node {
         
         styleManager = null;
         
-        final boolean hasStylesheets = (getStylesheets().isEmpty() == false);
-        
-        if (hasStylesheets) {
+        final Scene scene = getScene();
+        if (scene == null) return null;
 
-            // This Parent's styleManager will chain to the styleManager of 
-            // one of its ancestors, or to the scene styleManager.
-            StyleManager parentStyleManager = null;
-            Parent parent = getParent();
-            while (parent != null && 
-                    (parentStyleManager = parent.getStyleManager()) == null) {
-                parent = parent.getParent();
-            }
+        // This Parent's styleManager will chain to the styleManager of 
+        // one of its ancestors, or to the scene styleManager.
+        StyleManager parentStyleManager = null;
+        Parent parent = getParent();
+        while (parent != null && parentStyleManager == null) {
+            parentStyleManager = parent.getStyleManager();
+            parent = parent.getParent();
+        }
+        
+        if (parentStyleManager == null) parentStyleManager = scene.styleManager;
+        
+        if (getStylesheets().isEmpty() == false) {
             
-            if (parentStyleManager != null) {
-                styleManager = 
-                    StyleManager.createStyleManager(Parent.this, parentStyleManager);
-            } else {
-                final Scene scene = getScene();
-                if (scene != null) {
-                    StyleManager.createStyleManager(Parent.this, scene.styleManager);
-                }
-            } 
+            styleManager = 
+                StyleManager.createStyleManager(Parent.this, parentStyleManager);
+            
+        } else {
+            
+            styleManager = parentStyleManager; 
         
         }
         return styleManager;
