@@ -39,8 +39,8 @@ public class GradientUtils {
 
     public static class Point {
 
-        public static Point MIN = new Point(0, true);
-        public static Point MAX = new Point(1, true);
+        public static final Point MIN = new Point(0, true);
+        public static final Point MAX = new Point(1, true);
         public double value;
         public boolean proportional;
 
