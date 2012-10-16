@@ -116,7 +116,7 @@ public abstract class Toolkit {
     private static final String QUANTUM_TOOLKIT     = "com.sun.javafx.tk.quantum.QuantumToolkit";
     private static final String DEFAULT_TOOLKIT     = QUANTUM_TOOLKIT;
     
-    protected static Map gradientMap = new WeakHashMap();
+    private static final Map gradientMap = new WeakHashMap();
 
     private static String lookupToolkitClass(String name) {
         if ("prism".equalsIgnoreCase(name)) {
