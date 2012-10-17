@@ -51,11 +51,6 @@ public final class StubImageLoaderFactory {
                 }
 
                 @Override
-                public PlatformImage[] getFrames() {
-                    throw new IllegalStateException();
-                }
-
-                @Override
                 public PlatformImage getFrame(int i) {
                     throw new IllegalStateException();
                 }

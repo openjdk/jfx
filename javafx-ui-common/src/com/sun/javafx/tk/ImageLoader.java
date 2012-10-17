@@ -29,7 +29,6 @@ package com.sun.javafx.tk;
 public interface ImageLoader {
     public boolean getError();
     public int getFrameCount();
-    public PlatformImage[] getFrames();
     public PlatformImage getFrame(int index);
     public int getFrameDelay(int index);
     public int getWidth();
