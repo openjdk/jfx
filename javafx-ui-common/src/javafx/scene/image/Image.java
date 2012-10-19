@@ -752,7 +752,7 @@ public class Image {
     // Generates the animation Timeline for multiframe images.
     private void makeAnimationTimeline(ImageLoader loader) {
         // create and start the animation thread.
-        final PlatformImage[] frames = loader.getFrames();
+        final int frameCount = loader.getFrameCount();
 
         timeline = new Timeline();
         timeline.setCycleCount(Timeline.INDEFINITE);
@@ -760,16 +760,18 @@ public class Image {
         final ObservableList<KeyFrame> keyFrames = timeline.getKeyFrames();
 
         int duration = 0;
-        for (int i = 0; i < frames.length; ++i) {
-            keyFrames.add(createPlatformImageSetKeyFrame(duration, frames[i]));
+        for (int i = 0; i < frameCount; ++i) {
+            keyFrames.add(createPlatformImageSetKeyFrame(duration, loader.getFrame(i)));
             duration = duration + loader.getFrameDelay(i);
         }
+        
+        PlatformImage zeroFrame = loader.getFrame(0);
 
         // Note: we need one extra frame in the timeline to define how long
         // the last frame is shown, the wrap around is "instantaneous"
-        keyFrames.add(createPlatformImageSetKeyFrame(duration, frames[0]));
+        keyFrames.add(createPlatformImageSetKeyFrame(duration, zeroFrame));
 
-        setPlatformImageWH(frames[0], loader.getWidth(), loader.getHeight());
+        setPlatformImageWH(zeroFrame, loader.getWidth(), loader.getHeight());
         timeline.play();
     }
 

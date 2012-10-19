@@ -74,11 +74,6 @@ public final class StubImageLoader implements ImageLoader {
     }
 
     @Override
-    public PlatformImage[] getFrames() {
-        return frames;
-    }
-
-    @Override
     public PlatformImage getFrame(final int i) {
         return frames[i];
     }
