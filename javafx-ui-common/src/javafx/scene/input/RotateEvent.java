@@ -169,6 +169,10 @@ public class RotateEvent extends GestureEvent {
         sb.append(", x = ").append(getX()).append(", y = ").append(getY());
         sb.append(isDirect() ? ", direct" : ", indirect");
 
+        if (isInertia()) {
+            sb.append(", inertia");
+        }
+
         if (isShiftDown()) {
             sb.append(", shiftDown");
         }
