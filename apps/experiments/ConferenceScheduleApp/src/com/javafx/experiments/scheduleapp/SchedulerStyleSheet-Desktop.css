@@ -1,0 +1,38 @@
+.scroll-bar {
+    -fx-skin: "com.sun.javafx.scene.control.skin.ScrollBarSkin";
+    -fx-background-color: null !important;
+    -fx-background-insets: 0;
+    -fx-padding: 5;
+}
+.scroll-bar .thumb {
+    -fx-background-color: rgba(0,0,0,0.4);
+    -fx-background-insets: 0;
+    -fx-background-radius: 10;
+}
+.scroll-bar .track  {
+    -fx-background-color: null !important;
+    -fx-background-insets:  0;
+}
+.scroll-bar .track-background  {
+    -fx-background-color: null !important;
+    -fx-background-insets:  0;
+    -fx-border-color: rgba(0,0,0,0.2);
+    -fx-border-radius: 0.5em;
+}
+.scroll-bar .increment-button {
+    -fx-background-color: null;
+}
+.scroll-bar:horizontal .increment-button {
+    -fx-padding: 0.5em 0 0.5em 0;
+}
+.scroll-bar:vertical .increment-button {
+    -fx-padding: 0 0.5em 0 0.5em;
+}
+.scroll-bar .decrement-button, .scroll-bar .increment-arrow, .scroll-bar .decrement-arrow {
+    -fx-background-color: null;
+    -fx-padding: 0;
+}
+
+.popover .scroll-bar {
+    -fx-background-color: white !important;
+}

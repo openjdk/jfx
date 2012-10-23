@@ -1,0 +1,638 @@
+.root {    
+    -fx-font: 14px "Helvetica";
+}
+
+#Clock {
+    -fx-font: 24px "Helvetica";
+    -fx-fill: #666666;
+}
+
+.hyperlink {
+    -fx-text-fill: #00a8cc;
+}
+#page-container-header {
+    -fx-font-size: 16px;
+    -fx-font-weight: bold;
+    -fx-background-color: rgba(0,0,0,0.05);
+    -fx-padding: 0 10 0 10;
+}
+.page-container-header-title {
+    -fx-padding: 0 10 0 10;
+    -fx-font-weight: bold;
+}
+
+.light-box-veil {
+    -fx-background-color: rgba(0, 0, 0, 0.8);
+}
+
+.light-box {
+    -fx-background-color: white, repeating-image-pattern("images/rough_diagonal_blue.jpg");
+    -fx-background-radius: 24, 18;
+    -fx-background-insets: 0, 6;
+    -fx-padding: 24;
+}
+
+.auto-logout-text {
+    -fx-font-size: 18pt;
+    -fx-fill: white;
+}
+
+.list-of-links {
+    -fx-border-image-source: url("images/popover-list-border.png");
+    -fx-border-image-slice: 11 fill;
+    -fx-border-image-width: 11;
+    -fx-padding: -11; 
+}
+
+.list-of-links-transparent {
+    -fx-border-image-source: url("images/ios-list-transparent.png");
+    -fx-border-image-slice: 11 fill;
+    -fx-border-image-width: 11;
+    -fx-padding: -11; 
+}
+.popover-dialog {
+    -fx-border-image-source: url("images/popover-no-arrow.png");
+    -fx-border-image-slice: 78 50 60 50 fill;
+    -fx-border-image-width: 78 50 60 50;
+    -fx-padding: -42 -36 0 0; 
+}
+.popover-dialog-linen {
+    -fx-background-image: url("images/blue-linen.jpg");
+    -fx-border-image-source: url("images/popover-no-arrow-empty.png");
+    -fx-border-image-slice: 78 50 60 50;
+    -fx-border-image-width: 78 50 60 50;
+    -fx-padding: -42 -36 0 0; 
+    -fx-border-image-insets: -71 -44 -54 -44;
+}
+
+.large-red-button .text{   
+    -fx-effect: dropshadow( three-pass-box , rgba(0,0,0,0.9) , 0, 0.0 , 0 , -1 );
+}
+.large-red-button {
+    -fx-skin: "com.sun.javafx.scene.control.skin.ButtonSkin";
+    -fx-font-weight: bold;
+    -fx-font-size: 20px;
+    -fx-text-fill: white;
+    -fx-alignment: center;
+    -fx-border-image-source: url("images/large-red-button.png");
+    -fx-border-image-slice: 14 fill;
+    -fx-border-image-width: 14;
+    -fx-padding: -3 10 -3 10; 
+}
+.large-red-button:disabled, .large-blue-button:disabled  {
+    -fx-opacity: 0.2;
+}
+
+.large-blue-button .text{   
+    -fx-effect: dropshadow( three-pass-box , rgba(0,0,0,0.9) , 0, 0.0 , 0 , -1 );
+}
+.large-blue-button {
+    -fx-skin: "com.sun.javafx.scene.control.skin.ButtonSkin";
+    -fx-font-weight: bold;
+    -fx-font-size: 20px;
+    -fx-text-fill: white;
+    -fx-alignment: center;
+    -fx-border-image-source: url("images/large-blue-button.png");
+    -fx-border-image-slice: 14 fill;
+    -fx-border-image-width: 14;
+    -fx-padding: -3 10 -3 10; 
+}
+
+.large-light-blue-button .text{   
+    -fx-effect: dropshadow( three-pass-box , rgba(0,0,0,0.9) , 0, 0.0 , 0 , -1 );
+}
+.large-light-blue-button {
+    -fx-skin: "com.sun.javafx.scene.control.skin.ButtonSkin";
+    -fx-font-weight: bold;
+    -fx-font-size: 20px;
+    -fx-text-fill: white;
+    -fx-alignment: center;
+    -fx-border-image-source: url("images/large-light-blue-button.png");
+    -fx-border-image-slice: 14 fill;
+    -fx-border-image-width: 14;
+    -fx-padding: -3 10 -3 10; 
+}
+.large-light-blue-button:pressed {
+    -fx-border-image-source: url("images/large-light-blue-button-pressed.png");
+}
+.large-gray-blue-button {
+    -fx-skin: "com.sun.javafx.scene.control.skin.ButtonSkin";
+    -fx-font-weight: bold;
+    -fx-font-size: 20px;
+    -fx-text-fill: white;
+    -fx-alignment: center;
+    -fx-border-image-source: url("images/large-gray-button.png");
+    -fx-border-image-slice: 14 fill;
+    -fx-border-image-width: 14;
+    -fx-padding: -3 10 -3 10; 
+}
+.large-gray-button:pressed {
+    -fx-border-image-source: url("images/large-gray-button-pressed.png");
+}
+
+.search-box {
+    -fx-skin: "com.sun.javafx.scene.control.skin.TextFieldSkin";
+    -fx-border-image-source: url("images/search.png");
+    -fx-border-image-slice: 0 15 0 30 fill;
+    -fx-border-image-width: 0 15 0 30;
+    -fx-padding: 0 50 0 0; 
+    -fx-prompt-text-fill: #b4b3b4;
+    -fx-text-fill: black;
+    -fx-cursor: text;
+    -fx-font-size: 16px;
+    -fx-border-color: null;
+}
+
+.search-box:focused {
+    -fx-text-fill: black;
+    -fx-border-color: #00a8cc;
+    -fx-border-width: 1.5;
+    -fx-border-radius: 30;
+    -fx-border-insets: -1 -1 0 -1;
+}
+
+/* ****** POPOVER ******************************************************************************* */
+
+.popover {
+    -fx-padding: 44 7 7 7; 
+}
+
+.popover-frame {
+    -fx-border-image-source: url("images/popover-no-arrow-empty.png");
+    -fx-border-image-slice: 78 50 60 50;
+    -fx-border-image-width: 78 50 60 50;
+    -fx-border-image-insets: -27 -37 -47 -37;
+}
+
+.session-popover .popover-frame {
+    -fx-border-image-source: url("images/filter-popover.png");
+    -fx-border-image-slice: 92 65 58 44;
+    -fx-border-image-width: 92 65 58 44;
+    -fx-border-image-insets: -42 -7 -46 -30;
+}
+
+.popover-left-button {
+    -fx-skin: "com.sun.javafx.scene.control.skin.ButtonSkin";
+    -fx-padding: 5 10 5 10;
+    -fx-border-image-source: url("images/popover-blue-btn.png");
+    -fx-border-image-slice: 0 5 0 5 fill;
+    -fx-border-image-width: 0 5 0 5;
+    -fx-font-weight: bold;
+    -fx-text-fill: white;
+}
+
+.popover-left-button .text {
+    -fx-effect: dropshadow( three-pass-box , rgba(0,0,0,0.9) , 0, 0.0 , 0 , -1 );
+}
+
+.popover-right-button {
+    -fx-skin: "com.sun.javafx.scene.control.skin.ButtonSkin";
+    -fx-padding: 5 10 5 10;
+    -fx-border-image-source: url("images/popover-light-blue-btn.png");
+    -fx-border-image-slice: 0 5 0 5 fill;
+    -fx-border-image-width: 0 5 0 5;
+    -fx-font-weight: bold;
+    -fx-text-fill: white;
+}
+
+.popover-right-button .text {
+    -fx-effect: dropshadow( three-pass-box , rgba(0,0,0,0.9) , 0, 0.0 , 0 , -1 );
+}
+
+.event-popover-page {
+    -fx-background-image: url("images/blue-linen.jpg");
+}
+
+.popover-tree-list-cell {
+    -fx-background-color: white;
+    -fx-border-color: transparent transparent #dfdfdf transparent;
+    -fx-padding: 0 30 0 12;
+}
+
+.popover-box-cell {
+    -fx-background-color: transparent;
+    -fx-border-color: transparent transparent #dfdfdf transparent;
+    -fx-border-insets: 0 1 0 1;
+    -fx-padding: 10;
+}
+
+.popover-box {
+    -fx-border-image-source: url("images/popover-list-border.png");
+    -fx-border-image-slice: 11 fill;
+    -fx-border-image-width: 11;
+    -fx-padding: -11;
+}
+
+#PopoverBackground {
+    -fx-background-image: url("images/blue-linen.jpg");
+}
+
+/* ****** TIMELINE ******************************************************************************* */
+
+.timelinev2-bubble {
+    -fx-border-image-source: url("images/timeline-bubble.png");
+    -fx-border-image-slice: 4 4 4 4 fill;
+    -fx-border-image-width: 4 4 4 4;
+}
+
+#now-button {
+    -fx-skin: "com.sun.javafx.scene.control.skin.ButtonSkin";
+    -fx-background-image: url("images/now-btn.png");
+}
+
+#now-button:pressed {
+    -fx-background-image: url("images/now-btn-pressed.png");
+}
+/* ====== For Timeline v1 ========== */
+.timeline-bubble {
+    -fx-border-image-source: url("images/timeline-bubble.png");
+    -fx-border-image-slice: 4 4 4 4 fill;
+    -fx-border-image-width: 4 4 4 4;
+    /*-fx-padding: 3 3 3 16;*/
+}
+.timeline-day {
+    -fx-font-weight: bold;
+    -fx-background-color: #00a8cc;
+    -fx-background-radius: 5;
+    -fx-padding: 0 4 0 4;
+    -fx-text-fill: white;
+}
+.timeline-time {
+    -fx-font-size: 20px;
+    -fx-font-weight: bold;
+    -fx-fill: #00a8cc;
+}
+.timeline-bubble-title {
+    -fx-font-weight: bold;
+}
+.timeline-bubble-speakers {
+    -fx-font-size: 12px;
+    -fx-font-weight: bold;
+    -fx-text-fill: #666;
+}
+.timeline-bubble-summary {
+    -fx-font-size: 11px;
+}
+/* ====== END For Timeline v1 ========== */
+
+/* ****** CATALOG ******************************************************************************* */
+
+.catalog-session-tile {
+    -fx-font-size: 12px;
+    -fx-font-weight: bold;
+    -fx-padding: 2;
+    -fx-alignment: top-left
+}
+.catalog-session-speaker {
+    -fx-font-size: 12px;
+    -fx-alignment: top-left;
+}
+.catalog-time {
+    -fx-font-size: 20px;
+    -fx-font-weight: bold;
+    -fx-fill: #00a8cc;
+}
+.catalog-day {
+    -fx-font-weight: bold;
+    -fx-fill: #00a8cc;
+}
+
+/* ****** SCROLL BARS ******************************************************************************* */
+
+.scroll-bar {
+    -fx-skin: "com.javafx.experiments.scheduleapp.control.NoopScrollBarSkin";
+}
+
+.scroll-pane {
+    -fx-background-color: null;
+    -fx-background-insets: 0;
+    -fx-skin: "com.javafx.experiments.scheduleapp.control.ScrollPaneSkin3"
+}
+
+/* ****** SESSION FILTER *************************************************************************** */
+#session-filter-button {
+    -fx-skin: "com.sun.javafx.scene.control.skin.ButtonSkin";
+    -fx-background-image: url("images/filter-btn.png");
+}
+#session-filter-button:armed {
+    -fx-background-image: url("images/filter-btn-pressed.png");
+}
+#filter-popover {
+    -fx-border-image-source: url("images/filter-popover.png");
+    -fx-border-image-slice: 92 56 59 45 fill;
+    -fx-border-image-width: 92 56 59 45;
+    -fx-padding: -42 -36 0 0; 
+}
+.session-filter-pane-titlebar-text {
+    -fx-font-size: 20px;
+    -fx-font-weight: bold;
+    -fx-fill: white;    
+    -fx-effect: dropshadow( three-pass-box , rgba(0,0,0,0.9) , 0, 0.0 , 0 , -1 );
+}
+#session-filter-pane-cancel-button {
+    -fx-skin: "com.sun.javafx.scene.control.skin.ButtonSkin";
+    -fx-background-image: url("images/cancel.png");
+}
+#session-filter-pane-done-button {
+    -fx-skin: "com.sun.javafx.scene.control.skin.ButtonSkin";
+    -fx-background-image: url("images/done.png");
+}
+.session-filter-popover-content {
+    -fx-font-size: 12px;
+    -fx-font-weight: bold;
+    -fx-padding: -11; 
+}
+.popover-list-item {
+    -fx-border-color: transparent transparent #cacaca transparent;
+    -fx-padding: 0 12 0 12;
+    -fx-font-size: 14px;
+}
+.popover-list-item.last {
+    -fx-border-color: null;
+}
+.popover-list-item-text {
+    -fx-font-weight: bold;
+}
+.popover-config-setting-value {
+    -fx-text-fill: #324f85;
+}
+.popover-option-node-toggle {
+    -fx-skin: "com.sun.javafx.scene.control.skin.ToggleButtonSkin";
+    -fx-padding: 0 37 0 12;
+    -fx-font-weight: bold;
+    -fx-alignment: center-left;
+}
+.popover-option-node-toggle:selected {
+    -fx-text-fill: #324f85;
+}
+
+/* ****** SOCIAL PAGE *************************************************************************** */
+.twitter-list-view {
+    -fx-border-image-source: url("images/ios-list-transparent.png");
+    -fx-border-image-slice: 11 fill;
+    -fx-border-image-width: 11;
+    /*-fx-padding: -11;*/ 
+}
+#tweet-button {
+    -fx-skin: "com.sun.javafx.scene.control.skin.ButtonSkin";
+    -fx-background-image: url("images/tweet.png");
+}
+#tweet-button:pressed {
+    -fx-background-image: url("images/tweet-pressed.png");
+}
+#refresh-button {
+    -fx-skin: "com.sun.javafx.scene.control.skin.ButtonSkin";
+    -fx-background-image: url("images/refresh-btn.png");
+}
+#refresh-button:pressed {
+    -fx-background-image: url("images/refresh-btn-pressed.png");
+}
+
+/* ****** SPEAKERS PAGE *************************************************************************** */
+.speaker-session-list {
+/*    -fx-border-image-source: url("images/ios-list-transparent.png");
+    -fx-border-image-slice: 11 fill;
+    -fx-border-image-width: 11;*/
+    -fx-background-color: white;
+    -fx-background-radius: 10px;
+    -fx-border-color: #dddddd;
+    -fx-border-radius: 10px;
+}
+.speaker-session-list .label{
+    -fx-padding: 0 12px 0 12px;
+}
+.session-list-item {
+    -fx-border-color: #dddddd transparent transparent transparent;
+}
+
+/* ****** VENUES PAGE *************************************************************************** */
+#venue-room-session-list {
+    -fx-border-image-source: url("images/ios-list-transparent.png");
+    -fx-border-image-slice: 11 fill;
+    -fx-border-image-width: 11;
+    -fx-padding: -11; 
+}
+#venue-room-session-list .popover-tree-list-cell {
+    -fx-background-color: null;
+}
+
+/* ****** TRACKS PAGE *************************************************************************** */
+.view-sessions-button {
+    -fx-skin: "com.sun.javafx.scene.control.skin.ButtonSkin";
+    -fx-background-image: url("images/view-sessions-btn.png");
+}
+.view-sessions-button:pressed {
+    -fx-background-image: url("images/view-sessions-btn-pressed.png");
+}
+
+/* ****** LOGIN SCREEN *************************************************************************** */
+#LoginBadge {
+    -fx-border-image-source: url("images/login-badge-background.png");
+    -fx-border-image-slice: 34 20 21 16 fill;
+    -fx-border-image-width: 34 20 21 16;
+    -fx-font-size: 30px;
+}
+#LoginGuestBtn {
+    -fx-skin: "com.sun.javafx.scene.control.skin.ButtonSkin";
+    -fx-background-image: url("images/login-guest-btn.png");
+}
+#LoginGuestBtn:pressed {
+    -fx-background-image: url("images/login-guest-btn-pressed.png");
+}
+#LoginLoginBtn {
+    -fx-skin: "com.sun.javafx.scene.control.skin.ButtonSkin";
+    -fx-background-image: url("images/login-login-btn.png");
+}
+#LoginLoginBtn:pressed {
+    -fx-background-image: url("images/login-login-btn-pressed.png");
+}
+#LoginBadge .text-field {
+    -fx-background-color: null;
+    -fx-border-color: transparent transparent #c8c8c8 transparent;
+    -fx-border-width: 2;
+    -fx-font: 30px "Helvetica Neue Light";
+    -fx-prompt-text-fill: #a8a8a8;
+}
+#LoginBadge .password-field {
+    -fx-background-color: null;
+    -fx-border-color: transparent transparent #c8c8c8 transparent;
+    -fx-border-width: 2;
+    -fx-font: 30px "Helvetica Neue Light";
+    -fx-prompt-text-fill: #a8a8a8;
+}
+#LoginProgressBar {
+    -fx-skin: "com.javafx.experiments.scheduleapp.control.LoginProgressBarSkin";
+    -fx-background-color: rgba(255, 255, 255, .3), #555;
+    -fx-background-radius: 25px, 25px;
+    -fx-background-insets: 1 0 -1 0, 0;
+    -fx-padding: 7px;
+}
+
+#LoginProgressBar > .bar {
+    -fx-background-radius: 20px;
+    -fx-background-color:
+        linear-gradient(
+            to bottom,
+            rgb(93,175,212) 37%,
+            rgb(60,135,172) 69%);
+    /* Prevents from having a bar where the right < left. Designed so left + right == radius */
+    -fx-padding: 0 10 0 10;
+}
+
+.LoginMessageBox {
+    -fx-font: 15px "Helvetica Neue Light";
+    -fx-background-color: red, pink;
+    -fx-background-radius: 8px, 5px;
+    -fx-background-insets: 0px, 1px;
+    -fx-padding: 0 10 0 40;
+}
+
+#LoginLogout {
+    -fx-skin: "com.sun.javafx.scene.control.skin.ToggleButtonSkin";
+    -fx-background-image: url("images/login-btn.png");
+}
+#LoginLogout:pressed {
+    -fx-background-image: url("images/login-btn-pressed.png");
+}
+#LoginLogout:selected {
+    -fx-background-image: url("images/logout-btn.png");
+}
+#LoginLogout:selected:pressed {
+    -fx-background-image: url("images/logout-btn-pressed.png");
+}
+
+/*******************************************************************************
+ *                                                                             *
+ * Virtual Keyboard                                                            *
+ *                                                                             *
+ ******************************************************************************/
+.virtual-keyboard {
+    -fx-skin: "com.javafx.experiments.scheduleapp.control.VirtualKeyboardSkin";
+    -fx-cursor: default;
+    /*-fx-background-color: linear-gradient(to bottom, rgb(126, 126, 126) 0%, rgb(76, 76, 76) 10%, rgb(84, 84, 84) 100%);*/
+    -fx-background-color: linear-gradient(to bottom, rgb(100, 100, 100, 0.8) 0%, rgb(50, 50, 50, 0.7) 10%, rgb(50, 50, 50, 0.7) 100%);
+    -fx-background-insets: 0;
+    -fx-padding: 8 4 10 4;
+}
+
+.backspace-icon {
+    -fx-background-image: url("images/backspace-icon.png");
+    -fx-background-repeat: no-repeat;
+    -fx-background-position: center;
+}
+
+.enter-icon {
+    -fx-background-image: url("images/enter-icon.png");
+    -fx-background-repeat: no-repeat;
+    -fx-background-position: center;
+}
+
+.shift-icon {
+    -fx-background-image: url("images/shift-icon.png");
+    -fx-background-repeat: no-repeat;
+    -fx-background-position: center;
+}
+
+.hide-icon {
+    -fx-background-image: url("images/vk-hide.png");
+    -fx-background-repeat: no-repeat;
+    -fx-background-position: center;
+}
+
+.key {
+    -fx-border-image-source: url("images/vk-light.png");
+    -fx-border-image-slice: 14 fill;
+    -fx-border-image-width: 14;
+    -fx-border-image-repeat: stretch;
+    -fx-border-image-insets: -3 -3 -3 -3;
+    -fx-padding: 3 3 5 0;
+}
+
+.key:pressed {
+    -fx-border-image-source: url("images/vk-light-pressed.png");
+    -fx-padding: 5 3 3 0;
+}
+
+.key-text {
+    -fx-font-size: 22px;
+    /*-fx-font-weight: bold;*/
+    -fx-fill: #333333;
+}
+
+.key.special {
+    -fx-border-image-source: url("images/vk-dark.png");
+}
+
+.key.special:pressed {
+    -fx-border-image-source: url("images/vk-dark-pressed.png");
+    -fx-padding: 5 3 3 0;
+}
+
+.special-text {
+    -fx-font-size: 18px;
+    /*-fx-font-weight: normal;*/
+    -fx-fill: rgb(230, 230, 230);
+}
+
+.key.short {
+    -fx-border-image-source: url("images/vk-medium.png");
+}
+
+.key.short:pressed {
+    -fx-border-image-source: url("images/vk-medium-pressed.png");
+    -fx-padding: 5 3 3 0;
+}
+/*
+.short .key-text {
+    -fx-font-size: 20px;
+    -fx-font-weight: normal;
+    -fx-fill: #333333;
+}*/
+/*
+.key {
+    -fx-background-color: rgb(45, 45, 45),
+                          rgb(148, 148, 148),
+                          linear-gradient(to bottom, rgb(251, 251, 251) 0%, rgb(216, 216, 216) 100%),
+                          linear-gradient(to bottom, rgb(240, 240, 240) 0%, rgb(208, 208, 208) 75%, rgb(196, 196, 196) 100%);
+    -fx-background-insets: 3 -.5 -1 -.5, 0, 0 1 2 1, 1 1 3 1;
+    -fx-font-size: 18px;
+    -fx-fill: #333333;
+    -fx-padding: 3 3 5 0;
+    -fx-background-radius: 8, 8, 5, 4;
+}
+
+.key:pressed {
+    -fx-background-color: rgb(45, 45, 45),
+                          linear-gradient(to bottom, rgb(251, 251, 251) 0%, rgb(216, 216, 216) 100%),
+                          linear-gradient(to bottom, rgb(240, 240, 240) 0%, rgb(208, 208, 208) 75%, rgb(196, 196, 196) 100%);
+    -fx-background-insets: 3 -.5 -1 -.5, 0, 0 1 2 1;
+}
+
+.key.special {
+    -fx-background-color: rgb(45, 45, 45),
+                          rgb(81, 81, 81),
+                          linear-gradient(to bottom, rgb(154, 154, 154) 0%, rgb(121, 121, 121) 100%),
+                          linear-gradient(to bottom, rgb(112, 112, 112) 0%, rgb(94, 94, 94) 75%, rgb(84, 84, 84) 100%);
+    -fx-fill: rgb(210, 210, 210);
+}
+
+.key.special:pressed {
+    -fx-background-color: rgb(45, 45, 45),
+                          linear-gradient(to bottom, rgb(154, 154, 154) 0%, rgb(121, 121, 121) 100%),
+                          linear-gradient(to bottom, rgb(112, 112, 112) 0%, rgb(94, 94, 94) 75%, rgb(84, 84, 84) 100%);
+}
+
+.key.short {
+    -fx-background-color: rgb(45, 45, 45),
+                          rgb(124, 124, 124),
+                          linear-gradient(to bottom, rgb(214, 214, 214) 0%, rgb(182, 182, 182) 100%),
+                          linear-gradient(to bottom, rgb(181, 181, 181) 0%, rgb(158, 158, 158) 75%, rgb(153, 153, 153) 100%);
+    -fx-fill: rgb(210, 210, 210);
+}
+
+.key.short:pressed {
+    -fx-background-color: rgb(45, 45, 45),
+                          linear-gradient(to bottom, rgb(214, 214, 214) 0%, rgb(182, 182, 182) 100%),
+                          linear-gradient(to bottom, rgb(181, 181, 181) 0%, rgb(158, 158, 158) 75%, rgb(153, 153, 153) 100%);
+}
+*/
