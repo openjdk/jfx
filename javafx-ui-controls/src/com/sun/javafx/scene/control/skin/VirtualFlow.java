@@ -222,7 +222,6 @@ public class VirtualFlow extends Region {
      * between 0 and 1.
      */
     private double position;
-    public Runnable cellChangeNotification;
 
     public double getPosition() {
         return position;
@@ -235,6 +234,33 @@ public class VirtualFlow extends Region {
             adjustPosition(position);
             requestLayout();
         }
+    }
+
+    /**
+     * Cell change notification listener.
+     */
+    private Runnable cellChangeNotification;
+
+    /**
+     * Get the cell change notification listener. This can be set by the control
+     * skin when it needs to react to changes in the set of visible cells.
+     *
+     * @return The current cell change notification listener
+     */
+    public Runnable getCellChangeNotificationListener() {
+        return cellChangeNotification;
+    }
+
+    /**
+     * Set the cell change notification listener. This can be set by the control
+     * skin when it needs to react to changes in the set of visible cells. There
+     * is only one listener for performance reasons so setting it will replace
+     * any existing listener.
+     *
+     * @param listener The cell change notification listener to set
+     */
+    public void setCellChangeNotificationListener(Runnable listener) {
+        this.cellChangeNotification = listener;
     }
     
     /**
