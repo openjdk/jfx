@@ -27,6 +27,8 @@ package com.sun.javafx.scene.control.skin;
 
 import java.lang.reflect.Field;
 import java.util.*;
+import java.security.AccessController;
+import java.security.PrivilegedAction;
 
 import javafx.animation.Interpolator;
 import javafx.animation.KeyFrame;
@@ -123,6 +125,12 @@ public class FXVKSkin extends SkinBase<FXVK, BehaviorBase<FXVK>> {
         });
     }
 
+    private static Boolean enableCaching = AccessController.doPrivileged(
+    new PrivilegedAction<Boolean>() {
+        @Override public Boolean run() {
+            return Boolean.getBoolean("com.sun.javafx.scene.control.skin.FXVK.cache");
+        }
+    });
 
 
     public FXVKSkin(final FXVK fxvk) {
@@ -327,6 +335,9 @@ public class FXVKSkin extends SkinBase<FXVK, BehaviorBase<FXVK>> {
             hbox.setAlignment((fxvk.chars != null) ? Pos.CENTER_LEFT : Pos.CENTER);
             vbox.getChildren().add(hbox);
             for (Control c : row) {
+                if (enableCaching) {
+                    c.setCache(true);
+                }
                 hbox.getChildren().add(c);
                 HBox.setHgrow(c, Priority.ALWAYS);
                 if (c instanceof Key) {
