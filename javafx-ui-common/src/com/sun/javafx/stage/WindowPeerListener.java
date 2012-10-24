@@ -92,4 +92,12 @@ public class WindowPeerListener implements TKStageListener {
     @Override public void focusUngrab() {
         Event.fireEvent(window, new FocusUngrabEvent());
     }
+   
+    /**
+     * Initialize accessibility
+     */
+    @Override
+    public void initAccessibleTKStageListener(long ptr) {
+        // Overridden in subclasses
+    }
 }

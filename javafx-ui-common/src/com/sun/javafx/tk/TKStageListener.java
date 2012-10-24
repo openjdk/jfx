@@ -96,4 +96,9 @@ public interface TKStageListener {
      * stage), or via a call to {@link TKStage#ungrabFocus}.
      */
     public void focusUngrab();
+ 
+    /**
+     * Initialize accessibility
+     */
+    public void initAccessibleTKStageListener(long ptr);
 }

@@ -25,12 +25,14 @@
 
 package com.sun.javafx.stage;
 
+import com.sun.javafx.accessible.AccessibleStage;
 import javafx.stage.Stage;
 
 
 public class StagePeerListener extends WindowPeerListener {
     private final Stage stage;
     private final StageAccessor stageAccessor;
+    private AccessibleStage accessibleController ;
 
     public static interface StageAccessor {
         public void setIconified(Stage stage, boolean iconified);
@@ -59,4 +61,15 @@ public class StagePeerListener extends WindowPeerListener {
     public void changedFullscreen(boolean fs) {
         stageAccessor.setFullScreen(stage, fs);
     }
+
+    /**
+     * Initialize accessibility
+     */
+    @Override 
+    public void initAccessibleTKStageListener(long ptr) {
+        accessibleController = new  AccessibleStage(stage,ptr) ;
+        
+        stage.impl_getPeer().accessibleInitIsComplete(accessibleController.getStageAccessible());
+    }
+
 }

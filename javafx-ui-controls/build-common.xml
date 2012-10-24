@@ -57,6 +57,7 @@
           <jvmarg value="-Djavafx.toolkit=com.sun.javafx.tk.DummyToolkit"/>
           <classpath> 
             <pathelement location="${rt.dist.root.dir}/javafx-ui-common/dist/javafx-ui-common.jar"/>
+            <pathelement location="${runtime.dist.root.dir}/javafx-accessible/dist/javafx-accessible.jar"/>
             <pathelement location="${runtime.dist.root.dir}/javafx-beans/dist/javafx-beans.jar"/>
             <pathelement location="${runtime.dist.root.dir}/javafx-anim/dist/javafx-anim.jar"/>
             <pathelement location="${runtime.dist.root.dir}/javafx-common/dist/javafx-common.jar"/>

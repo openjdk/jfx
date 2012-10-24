@@ -27,6 +27,8 @@ package javafx.scene.control;
 
 import com.sun.javafx.css.StyleableProperty;
 import javafx.geometry.Pos;
+import com.sun.javafx.scene.control.accessible.AccessibleRadioButton;
+import com.sun.javafx.accessible.providers.AccessibleProvider;
 import static javafx.geometry.Pos.CENTER_LEFT;
 
 /**
@@ -115,8 +117,18 @@ import static javafx.geometry.Pos.CENTER_LEFT;
      **************************************************************************/
 
     private static final String DEFAULT_STYLE_CLASS = "radio-button";
-
     
+    private AccessibleRadioButton accRadioButton ;
+    /**
+     * @treatAsPrivate implementation detail
+     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
+     */
+    @Deprecated @Override public AccessibleProvider impl_getAccessible() {
+        if( accRadioButton == null)
+            accRadioButton = new AccessibleRadioButton(this);
+        return (AccessibleProvider)accRadioButton ;
+    }
+
     /**
       * Labeled return CENTER_LEFT for alignment, but ToggleButton returns
       * CENTER. RadioButton also returns CENTER_LEFT so we have to override
@@ -127,4 +139,5 @@ import static javafx.geometry.Pos.CENTER_LEFT;
     protected Pos impl_cssGetAlignmentInitialValue() {
         return Pos.CENTER_LEFT;
     }
+
 }
