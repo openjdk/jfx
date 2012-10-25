@@ -409,9 +409,8 @@ public class JSONParserJP {
                         state = QUOTE;
                         continue;
                     case QUOTE_UNICODE:
-                        if (unicode.length() <= 3) {
-                            unicode += c;
-                        } else {
+                        unicode += c;
+                        if (unicode.length() == 4) {
                             c = (char) Integer.parseInt(unicode, 16);
                             if(charBufferLength == charBuffer.length) {
                                 char[] newCharBuffer = new char[charBuffer.length*2];
