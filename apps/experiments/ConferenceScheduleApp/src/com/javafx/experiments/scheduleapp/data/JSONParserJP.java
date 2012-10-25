@@ -409,7 +409,7 @@ public class JSONParserJP {
                         state = QUOTE;
                         continue;
                     case QUOTE_UNICODE:
-                        if (unicode.length() < 3) {
+                        if (unicode.length() <= 3) {
                             unicode += c;
                         } else {
                             c = (char) Integer.parseInt(unicode, 16);
