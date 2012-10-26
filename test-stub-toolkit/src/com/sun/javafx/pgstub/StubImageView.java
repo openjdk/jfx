@@ -40,10 +40,9 @@ public class StubImageView extends StubShape implements PGImageView {
     private float y;
     private boolean smooth;
 
-    private float fitWidth;
-    private float fitHeight;
+    private float cw;
+    private float ch;
     private Rectangle2D viewport;
-    private boolean preserveRatio;
 
     @Override
     public void setImage(Object image) {
@@ -73,13 +72,11 @@ public class StubImageView extends StubShape implements PGImageView {
     }
 
     @Override
-    public void setViewport(float fitWidth, float fitHeight,
-                            float vx, float vy, float vw, float vh,
-                            boolean preserveRatio) {
-        this.fitWidth = fitWidth;
-        this.fitHeight = fitHeight;
+    public void setViewport(float vx, float vy, float vw, float vh,
+                            float cw, float ch) {
         this.viewport = new Rectangle2D(vx, vy, vw, vh);
-        this.preserveRatio = preserveRatio;
+        this.cw = cw;
+        this.ch = ch;
     }
 
     @Override
@@ -89,19 +86,18 @@ public class StubImageView extends StubShape implements PGImageView {
 
     public boolean isSmooth() { return this.smooth; }
 
-    public float getFitWidth() {
-        return fitWidth;
-    }
-
-    public float getFitHeight() {
-        return fitHeight;
-    }
-
     public Rectangle2D getViewport() {
         return viewport;
     }
 
-    public boolean isPreserveRatio() {
-        return preserveRatio;
+    public float getContentWidth() {
+        return cw;
     }
+
+    public float getContentHeight() {
+        return ch;
+    }
+
+
+
 }

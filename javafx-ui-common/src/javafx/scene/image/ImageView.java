@@ -210,6 +210,7 @@ public class ImageView extends Node {
                     }
                     if (dimensionChanged) {
                         impl_geomChanged();
+                        invalidateWidthHeight();
                     }
                     impl_markDirty(DirtyBits.NODE_CONTENTS);
                 }
@@ -286,6 +287,7 @@ public class ImageView extends Node {
         public void invalidated(Observable valueModel) {
             impl_markDirty(DirtyBits.NODE_CONTENTS);
             impl_geomChanged();
+            invalidateWidthHeight();
         }
     };
     /**
@@ -398,6 +400,7 @@ public class ImageView extends Node {
                 protected void invalidated() {
                     impl_markDirty(DirtyBits.NODE_VIEWPORT);
                     impl_geomChanged();
+                    invalidateWidthHeight();
                 }
 
                 @Override
@@ -445,6 +448,7 @@ public class ImageView extends Node {
                 protected void invalidated() {
                     impl_markDirty(DirtyBits.NODE_VIEWPORT);
                     impl_geomChanged();
+                    invalidateWidthHeight();
                 }
 
                 @Override
@@ -509,6 +513,7 @@ public class ImageView extends Node {
                 protected void invalidated() {
                     impl_markDirty(DirtyBits.NODE_VIEWPORT);
                     impl_geomChanged();
+                    invalidateWidthHeight();
                 }
 
                 @Override
@@ -612,6 +617,7 @@ public class ImageView extends Node {
                 protected void invalidated() {
                     impl_markDirty(DirtyBits.NODE_VIEWPORT);
                     impl_geomChanged();
+                    invalidateWidthHeight();
                 }
 
                 @Override
@@ -659,75 +665,63 @@ public class ImageView extends Node {
      */
     @Deprecated
     @Override public BaseBounds impl_computeGeomBounds(BaseBounds bounds, BaseTransform tx) {
+        recomputeWidthHeight();
 
-        // need to figure out the width/height to use for computing bounds
+        bounds = bounds.deriveWithNewBounds((float)getX(), (float)getY(), 0.0f,
+                (float)(getX() + destWidth), (float)(getY() + destHeight), 0.0f);
+        bounds = tx.transform(bounds, bounds);
+        return bounds;
+    }
+    
+    private boolean validWH;
+
+    private void invalidateWidthHeight() {
+        validWH = false;
+    }
+
+    private void recomputeWidthHeight() {
+        if (validWH) {
+            return;
+        }
+        Image localImage = getImage();
+        Rectangle2D localViewport = getViewport();
+
         double w = 0;
         double h = 0;
-        Image localImage = getImage();
-        if (localImage != null) {
+        if (localViewport != null && localViewport.getWidth() > 0 && localViewport.getHeight() > 0) {
+            w = localViewport.getWidth();
+            h = localViewport.getHeight();
+        } else if (localImage != null) {
             w = localImage.getWidth();
             h = localImage.getHeight();
         }
+
         double localFitWidth = getFitWidth();
         double localFitHeight = getFitHeight();
-        double newW = localFitWidth;
-        double newH = localFitHeight;
-        double vw = 0;
-        double vh = 0;
-        Rectangle2D localViewport = getViewport();
-        if (localViewport != null) {
-            vw = localViewport.getWidth();
-            vh = localViewport.getHeight();
-        }
 
-        if (vw > 0 && vh > 0) {
-            w = vw;
-            h = vh;
-        }
-
-        if (localFitWidth <= 0.0 && localFitHeight <= 0.0) {
-            newW = w;
-            newH = h;
-        } else if (isPreserveRatio()) {
-            if (localFitWidth <= 0.0) {
-                newW = (h > 0) ? w * (localFitHeight / h) : 0;
-                newH = localFitHeight;
-            } else if (localFitHeight <= 0.0) {
-                newW = localFitWidth;
-                newH = (w > 0) ? h * (localFitWidth / w) : 0;
+        if (isPreserveRatio() && w > 0 && h > 0 && (localFitWidth > 0 || localFitHeight > 0)) {
+            if (localFitWidth <= 0 || (localFitHeight > 0 && localFitWidth * h > localFitHeight * w)) {
+                w = w * localFitHeight / h;
+                h = localFitHeight;
             } else {
-                if (w == 0.0)
-                    w = localFitWidth;
-                if (h == 0.0)
-                    h = localFitHeight;
-                double scale = Math.min(localFitWidth / w, localFitHeight / h);
-                newW = w * scale;
-                newH = h * scale;
+                h = h * localFitWidth / w;
+                w = localFitWidth;
             }
-        } else if (getFitHeight() <= 0.0) {
-            newH = h;
-        } else if (getFitWidth() <= 0.0) {
-            newW = w;
-        }
-        if (newH < 1) {
-            newH = 1;
-        }
-        if (newW < 1) {
-            newW = 1;
+        } else {
+            if (localFitWidth > 0f) {
+                w = localFitWidth;
+            }
+            if (localFitHeight > 0f) {
+                h = localFitHeight;
+            }
         }
 
         // Store these values for use later in impl_computeContains() to support
         // Node.contains().
-        destWidth = newW;
-        destHeight = newH;
+        destWidth = w;
+        destHeight = h;
 
-        w = newW;
-        h = newH;
-
-        bounds = bounds.deriveWithNewBounds((float)getX(), (float)getY(), 0.0f,
-                (float)(getX() + w), (float)(getY() + h), 0.0f);
-        bounds = tx.transform(bounds, bounds);
-        return bounds;
+        validWH = true;
     }
 
     /**
@@ -739,6 +733,8 @@ public class ImageView extends Node {
         if (getImage() == null) {
             return false;
         }
+
+        recomputeWidthHeight();
         // Local Note bounds contain test is already done by the caller.
         // (Node.contains()).
 
@@ -843,19 +839,18 @@ public class ImageView extends Node {
     }
 
     void updateViewport() {
-
+        recomputeWidthHeight();
         if (getImage() == null || getImage().impl_getPlatformImage() == null) {
             return;
         }
 
         Rectangle2D localViewport = getViewport();
         if (localViewport != null) {
-            getPGImageView().setViewport((float)getFitWidth(), (float)getFitHeight(),
-                    (float)localViewport.getMinX(), (float)localViewport.getMinY(),
-                    (float)localViewport.getWidth(), (float)localViewport.getHeight(), isPreserveRatio());
+            getPGImageView().setViewport((float)localViewport.getMinX(), (float)localViewport.getMinY(),
+                    (float)localViewport.getWidth(), (float)localViewport.getHeight(),
+                    (float)destWidth, (float)destHeight);
         } else {
-            getPGImageView().setViewport((float)getFitWidth(), (float)getFitHeight(), 0, 0, 0, 0,
-                    isPreserveRatio());
+            getPGImageView().setViewport(0, 0, 0, 0, (float)destWidth, (float)destHeight);
         }
     }
 
@@ -875,11 +870,11 @@ public class ImageView extends Node {
         if (impl_isDirty(DirtyBits.NODE_SMOOTH)) {
             getPGImageView().setSmooth(isSmooth());
         }
-        if (impl_isDirty(DirtyBits.NODE_VIEWPORT)) {
-            updateViewport();
-        }
         if (impl_isDirty(DirtyBits.NODE_CONTENTS)) {
             getPGImageView().setImage(getImage()!= null? getImage().impl_getPlatformImage():null);
+        }
+        // The NG part expects this to be called when image changes
+        if (impl_isDirty(DirtyBits.NODE_VIEWPORT) || impl_isDirty(DirtyBits.NODE_CONTENTS)) {
             updateViewport();
         }
     }
