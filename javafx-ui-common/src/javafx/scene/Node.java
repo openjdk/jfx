@@ -717,14 +717,56 @@ public abstract class Node implements EventTarget {
      *
      * @defaultValue null
      */
-    private ReadOnlyObjectWrapper<Scene> scene;
+    private ReadOnlyObjectWrapper<Scene> scene = new ReadOnlyObjectWrapper<Scene>() {
+
+        private Scene oldScene;
+
+        @Override
+        protected void invalidated() {
+            Scene _scene = get();
+            if (getClip() != null) {
+                getClip().setScene(_scene);
+            }
+            updateCanReceiveFocus();
+            if (isFocusTraversable()) {
+                if (oldScene != null) {
+                    oldScene.unregisterTraversable(Node.this);
+                }
+                if (_scene != null) {
+                    _scene.registerTraversable(Node.this);
+                }
+            }
+            focusSetDirty(oldScene);
+            focusSetDirty(_scene);
+            sceneChanged(oldScene);
+            if (oldScene != _scene) {
+                //Note: no need to remove from scene's dirty list
+                //Scene's is checking if the node's scene is correct
+                impl_reapplyCSS();
+                if (_scene != null && !impl_isDirtyEmpty()) {
+                    _scene.addToDirtyList(Node.this);
+                }
+            }
+            oldScene = _scene;
+        }
+
+        @Override
+        public Object getBean() {
+            return Node.this;
+        }
+
+        @Override
+        public String getName() {
+            return "scene";
+        }
+    };
 
     final void setScene(Scene value) {
-        scenePropertyImpl().set(value);
+        scene.set(value);
     }
 
     public final Scene getScene() {
-        return scene == null ? null : scene.get();
+        return scene.get();
     }
 
     /**
@@ -733,55 +775,7 @@ public abstract class Node implements EventTarget {
     void sceneChanged(Scene old) { }
 
     public final ReadOnlyObjectProperty<Scene> sceneProperty() {
-        return scenePropertyImpl().getReadOnlyProperty();
-    }
-
-    private ReadOnlyObjectWrapper<Scene> scenePropertyImpl() {
-        if (scene == null) {
-            scene = new ReadOnlyObjectWrapper<Scene>() {
-                private Scene oldScene;
-
-                @Override
-                protected void invalidated() {
-                    Scene _scene = get();
-                    if (getClip() != null) {
-                        getClip().setScene(_scene);
-                    }
-                    updateCanReceiveFocus();
-                    if (isFocusTraversable()) {
-                        if (oldScene != null) {
-                            oldScene.unregisterTraversable(Node.this);
-                        }
-                        if (_scene != null) {
-                            _scene.registerTraversable(Node.this);
-                        }
-                    }
-                    focusSetDirty(oldScene);
-                    focusSetDirty(_scene);
-                    sceneChanged(oldScene);
-                    if (oldScene != _scene) {
-                        //Note: no need to remove from scene's dirty list
-                        //Scene's is checking if the node's scene is correct
-                        impl_reapplyCSS();
-                        if (_scene != null && !impl_isDirtyEmpty()) {
-                            _scene.addToDirtyList(Node.this);
-                        }
-                    }
-                    oldScene = _scene;
-                }
-
-                @Override
-                public Object getBean() {
-                    return Node.this;
-                }
-
-                @Override
-                public String getName() {
-                    return "scene";
-                }
-            };
-        }
-        return scene;
+        return scene.getReadOnlyProperty();
     }
 
     /**
@@ -3186,10 +3180,17 @@ public abstract class Node implements EventTarget {
                         (float) (bounds.getMaxZ() + translateZ));
             }
             return bounds;
-        } else if (tx.is2D()) {
-            // this is a scale / rotate / skew transform
+        } else if (tx.is2D()
+                && (tx.getType()
+                & ~(BaseTransform.TYPE_UNIFORM_SCALE | BaseTransform.TYPE_TRANSLATION
+                | BaseTransform.TYPE_FLIP | BaseTransform.TYPE_QUADRANT_ROTATION)) != 0) {
+            // this is a non-uniform scale / non-quadrant rotate / skew transform
             return impl_computeGeomBounds(bounds, tx);
         } else {
+            // 3D transformations and
+            // selected 2D transformations (unifrom transform, flip, quadrant rotation).
+            // These 2D transformation will yield tight bounds when applied on the pre-computed
+            // geomBounds
             // Note: Transforming the local geomBounds into a 3D space will yield a bounds
             // that isn't as tight as transforming its geometry and compute it bounds.
             updateGeomBounds();
