@@ -42,6 +42,16 @@ public class StubFilterable implements Filterable {
     }
 
     @Override
+    public int getContentWidth() {
+        return image.getImageInfo().getWidth();
+    }
+
+    @Override
+    public int getContentHeight() {
+        return image.getImageInfo().getHeight();
+    }
+
+    @Override
     public int getPhysicalWidth() {
         return image.getImageInfo().getWidth();
     }
