@@ -82,22 +82,6 @@ public final class ImageViewTest {
     }
 
     @Test
-    public void testPropertyPropagation_fitWidth() throws Exception {
-        NodeTest.testDoublePropertyPropagation(imageView, "fitWidth", 100, 200);
-    }
-
-    @Test
-    public void testPropertyPropagation_fitHeight() throws Exception {
-        NodeTest.testDoublePropertyPropagation(imageView, "fitHeight", 100, 200);
-    }
-
-    @Test
-    public void testPropertyPropagation_preserveRatio() throws Exception {
-        NodeTest.testBooleanPropertyPropagation(
-                imageView, "preserveRatio", true, false);
-    }
-
-    @Test
     public void testPropertyPropagation_image() throws Exception {
         NodeTest.testObjectPropertyPropagation(
                 imageView, "image", "image",
