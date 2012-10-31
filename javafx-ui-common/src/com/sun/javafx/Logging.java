@@ -117,4 +117,21 @@ public class Logging {
         return javafxLogger;
     }
 
+    /**
+     * A PlatformLogger to use for logging layout-related activities.  Created
+     * lazily to delay calls to com.sun.javafx.tk.Toolkit.getToolkit() so that
+     * it will not intefere with the build.
+     */
+    private static PlatformLogger accessibilityLogger = null;
+    
+    /**
+     * Returns the PlatformLogger for logging layout-related activities.
+     */
+    public static final PlatformLogger getAccessibilityLogger() {
+        if (accessibilityLogger == null) {
+            accessibilityLogger = com.sun.javafx.tk.Toolkit.getToolkit().getLogger("accessibility");
+        }
+        return accessibilityLogger;
+    }
+    
 }

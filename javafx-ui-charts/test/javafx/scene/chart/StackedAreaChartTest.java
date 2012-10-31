@@ -28,21 +28,36 @@ public class StackedAreaChartTest extends ChartTestBase {
     private Stage stage;
     StackedAreaChart<Number,Number> ac;
     final XYChart.Series<Number, Number> series1 = new XYChart.Series<Number, Number>();
-    
+    boolean useCategoryAxis = false;
+    final String[] countries = {"USA", "Italy", "France", "China", "India"};
     protected Chart createChart() {
-        final NumberAxis xAxis = new NumberAxis();
         final NumberAxis yAxis = new NumberAxis();
-        ac = new StackedAreaChart<Number,Number>(xAxis,yAxis);
-        xAxis.setLabel("X Axis");
-        yAxis.setLabel("Y Axis");
-        ac.setTitle("HelloStackedAreaChart");
-        // add starting data
         ObservableList<XYChart.Data> data = FXCollections.observableArrayList();
+        Axis xAxis;
+        if (useCategoryAxis) {
+            xAxis = new CategoryAxis();
+            ((CategoryAxis)xAxis).setCategories(FXCollections.observableArrayList(countries));
+            // add starting data
+        series1.getData().add(new XYChart.Data(countries[0], 10d));
+        series1.getData().add(new XYChart.Data(countries[1], 20d));
+        series1.getData().add(new XYChart.Data(countries[2], 15d));
+        series1.getData().add(new XYChart.Data(countries[3], 15d));
+        series1.getData().add(new XYChart.Data(countries[4], 10d));
+        } else {
+            xAxis = new NumberAxis();
+            ac = new StackedAreaChart<Number,Number>(xAxis,yAxis);
+            // add starting data
         series1.getData().add(new XYChart.Data(10d, 10d));
         series1.getData().add(new XYChart.Data(25d, 20d));
         series1.getData().add(new XYChart.Data(30d, 15d));
         series1.getData().add(new XYChart.Data(50d, 15d));
         series1.getData().add(new XYChart.Data(80d, 10d));
+        }
+        
+        xAxis.setLabel("X Axis");
+        yAxis.setLabel("Y Axis");
+        ac.setTitle("HelloStackedAreaChart");
+        
         return ac;
     }
     
@@ -139,5 +154,12 @@ public class StackedAreaChartTest extends ChartTestBase {
             StringBuffer sb = getSeriesLineFromPlot();
             assertEquals(sb.toString(), "L206.0 197.0 L329.0 40.0 L412.0 276.0 L658.0 354.0 ");
         }
+    }
+    
+    @Test 
+    public void testStackedAreaChartWithCategoryAxis() {
+        useCategoryAxis = true;
+        startApp();
+        useCategoryAxis = false;
     }
 }

@@ -30,6 +30,8 @@ import javafx.event.ActionEvent;
 import javafx.scene.Node;
 
 import com.sun.javafx.css.StyleManager;
+import com.sun.javafx.scene.control.accessible.AccessibleButton;
+import com.sun.javafx.accessible.providers.AccessibleProvider;
 
 /**
  * <p>A simple button control.  The button control can contain
@@ -211,4 +213,16 @@ public class Button extends ButtonBase {
         if (isCancelButton()) mask |= PSEUDO_CLASS_CANCEL_MASK;
         return mask;
     }
+    
+    private AccessibleButton accButton ;
+    /**
+     * @treatAsPrivate implementation detail
+     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
+     */
+    @Deprecated @Override public AccessibleProvider impl_getAccessible() {
+        if( accButton == null)
+            accButton = new AccessibleButton(this);
+        return (AccessibleProvider)accButton ;
+    }
+    
 }

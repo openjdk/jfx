@@ -24,6 +24,9 @@
  */
 package com.sun.javafx.tk;
 
+import com.sun.javafx.accessible.providers.AccessibleProvider;
+import com.sun.javafx.accessible.providers.AccessibleStageProvider;
+
 /**
  * TKStage - Peer interface for a Stage
  *
@@ -179,7 +182,7 @@ public interface TKStage {
      * @see #grabFocus
      */
     public void ungrabFocus();
-
+    
     /**
      * Requests text input in form of native keyboard for text component
      * contained by this Window. Native text input component is drawn on the place
@@ -203,4 +206,55 @@ public interface TKStage {
      */
     void releaseInput();
 
+    /**
+     * Accessibility methods
+     */
+    /**
+     * Notify accessibility initialization completion to AT
+     * 
+     * @param ac 
+     */
+    public void accessibleInitIsComplete(Object ac) ;
+
+    /**
+     * Create accessible native object corresponding to stage
+     * 
+     * @param ac 
+     * returns native Object
+     */
+    public Object accessibleCreateStageProvider(AccessibleStageProvider ac, long ptr) ;
+
+    /**
+     * Create accessible native object corresponding to controls
+     * 
+     * @param ac 
+     * returns native Object
+     */
+    public Object accessibleCreateBasicProvider(AccessibleProvider ac) ;
+
+    /**
+     * Delete accessible native object corresponding to controls
+     * 
+     * @param ac 
+     * returns native Object
+     */
+    public void accessibleDestroyBasicProvider(Object nativeAcc) ;
+
+    /**
+     * Fire accessible event
+     * 
+     * @param eventID   identifies the event.
+     */
+    public void accessibleFireEvent(Object nativeAcc, int eventID);
+    
+    /** Fire accessible property change event
+     * 
+     * @param propertyId    identifies the property
+     * @param oldProperty   the old value of the property
+     * @param newProperty   the new value of the property
+     */
+    public void accessibleFirePropertyChange(Object nativeAcc, int propertyId, int oldProperty,
+                                             int newProperty );
+    public void accessibleFirePropertyChange(Object nativeAcc, int propertyId, boolean oldProperty,
+                                             boolean newProperty );    
 }

@@ -48,6 +48,9 @@ import com.sun.javafx.css.converters.BooleanConverter;
 import com.sun.javafx.css.converters.EnumConverter;
 import com.sun.javafx.css.converters.SizeConverter;
 
+import com.sun.javafx.scene.control.accessible.AccessibleSlider;
+import com.sun.javafx.accessible.providers.AccessibleProvider;
+
 /**
  * The Slider Control is used to display a continuous or discrete range of
  * valid numeric choices and allows the user to interact with the control. It is
@@ -796,6 +799,17 @@ public class Slider extends Control {
         mask |= (getOrientation() == Orientation.VERTICAL) ?
             VERTICAL_PSEUDOCLASS_STATE : HORIZONTAL_PSEUDOCLASS_STATE;
         return mask;
+    }
+    
+    private AccessibleSlider accSlider ;
+    /**
+     * @treatAsPrivate implementation detail
+     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
+     */
+    @Deprecated @Override public AccessibleProvider impl_getAccessible() {
+        if( accSlider == null)
+            accSlider = new AccessibleSlider(this);
+        return (AccessibleProvider)accSlider ;
     }
 
 }

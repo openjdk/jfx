@@ -202,9 +202,11 @@ public final class CategoryAxis extends Axis<String> {
     // -------------- CONSTRUCTORS -------------------------------------------------------------------------------------
 
     /**
-     * Create a auto-ranging category axis
+     * Create a auto-ranging category axis with an empty list of categories.
      */
-    public CategoryAxis() { }
+    public CategoryAxis() { 
+        this(FXCollections.<String>observableArrayList());
+    }
 
     /**
      * Create a category axis with the given categories. This will not auto-range but be fixed with the given categories.

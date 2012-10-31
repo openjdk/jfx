@@ -55,15 +55,13 @@ public class CategoryAxisTest {
         assertTrue(axis.isGapStartAndEnd());
     }
 
-    @Test public void defaultCategoriesIsNull() {
-        assertNull(axis.getCategories());
-    }
-
     @Test public void defaultCategorySpacing() {
         assertEquals(axis.getCategorySpacing(), 1.0 , 0.0);
     }
 
-
+    @Test public void noArgConstructorSetsNonNullCategories() {
+        assertNotNull(axis.getCategories());
+    }
 
 
     /*********************************************************************
