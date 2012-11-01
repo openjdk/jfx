@@ -24,6 +24,8 @@
  */
 package com.sun.javafx.scene.paint;
 
+import java.util.LinkedList;
+import java.util.List;
 import javafx.scene.paint.Color;
 import javafx.scene.paint.Stop;
 
@@ -65,8 +67,51 @@ public class GradientUtils {
         private boolean proportional;
         private boolean proportionalSet = false;
 
+        private interface Delimiter {
+            public boolean isDelimiter(char value);
+        }
+
+        private String[] splitString(String string, Delimiter delimiter, boolean canRepeat) {
+            List<String> tokenList = new LinkedList<String>();
+            StringBuilder token = new StringBuilder();
+            int i = 0;
+            char[] input = string.toCharArray();
+            while (i < input.length) {
+                char currentChar = input[i];
+
+                if (delimiter.isDelimiter(currentChar)) {
+                    if (!canRepeat || token.length() > 0) {
+                        tokenList.add(token.toString());
+                    }
+                    token.setLength(0);
+                } else if (currentChar == '(') {
+                    while (i < input.length) {
+                        token.append(input[i]);
+                        if (input[i] == ')') {
+                            break;
+                        }
+                        i++;
+                    }
+                } else {
+                    token.append(input[i]);
+                }
+                i++;
+            }
+            if (!canRepeat || token.length() > 0) {
+                tokenList.add(token.toString());
+            }
+
+            return tokenList.toArray(new String[tokenList.size()]);
+        }
+
         public Parser(String content) {
-            tokens = content.split(",");
+            tokens = splitString(content, new Delimiter() {
+                @Override
+                public boolean isDelimiter(char value) {
+                    return (value == ',');
+                }
+            }, false);
+
             index = 0;
         }
 
@@ -79,11 +124,16 @@ public class GradientUtils {
         }
 
         public String getCurrentToken() {
-            return tokens[index].trim();
+            String currentToken = tokens[index].trim();
+            if (currentToken.isEmpty()) {
+                throw new IllegalArgumentException("Invalid gradient specification: "
+                        + "found empty token.");
+            }
+            return currentToken;
         }
 
         public String[] splitCurrentToken() {
-            return tokens[index].trim().split("\\s");
+            return getCurrentToken().split("\\s");
         }
 
         public static void checkNumberOfArguments(String[] tokens, int count) {
@@ -163,7 +213,19 @@ public class GradientUtils {
             Stop[] stops = new Stop[stopsCount];
 
             for (int i = 0; i < stopsCount; i++) {
-                String[] stopTokens = tokens[i + index].trim().split("\\s+");
+                String stopString = tokens[i + index].trim();
+                String[] stopTokens = splitString(stopString, new Delimiter() {
+                    @Override
+                    public boolean isDelimiter(char value) {
+                        return Character.isWhitespace(value);
+                    }
+                }, true);
+
+                if (stopTokens.length == 0) {
+                    throw new IllegalArgumentException("Invalid gradient specification, "
+                                + "empty stop found");
+                }
+
                 String currentToken = stopTokens[0];
                 double offset = -1;
 
