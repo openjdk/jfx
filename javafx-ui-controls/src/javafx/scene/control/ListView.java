@@ -56,9 +56,11 @@ import com.sun.javafx.css.StyleableObjectProperty;
 import com.sun.javafx.css.StyleableProperty;
 import com.sun.javafx.css.converters.EnumConverter;
 import javafx.collections.WeakListChangeListener;
+import com.sun.javafx.scene.control.accessible.AccessibleList;
 import com.sun.javafx.scene.control.skin.ListViewSkin;
 import com.sun.javafx.scene.control.skin.VirtualContainerBase;
 import java.lang.ref.WeakReference;
+import com.sun.javafx.accessible.providers.AccessibleProvider;
 import javafx.beans.DefaultProperty;
 
 /**
@@ -721,7 +723,16 @@ public class ListView<T> extends Control {
        getProperties().put(VirtualContainerBase.SCROLL_TO_INDEX_CENTERED, index);
     }
 
-
+    private AccessibleList accListView ;
+    /**
+     * @treatAsPrivate implementation detail
+     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
+     */
+    @Deprecated @Override public AccessibleProvider impl_getAccessible() {
+        if( accListView == null)
+            accListView = new AccessibleList(this);
+        return (AccessibleProvider)accListView ;
+    }
     
     /***************************************************************************
      *                                                                         *

@@ -55,6 +55,32 @@ public class StackedBarChartTest extends ChartTestBase {
     }
     
     @Test
+    public void testAddingAutoRangingCategoryAxis() {
+        CategoryAxis xAxis = new CategoryAxis();
+        String[] years = {"2007", "2008", "2009"};
+        NumberAxis yAxis = new NumberAxis();
+        ObservableList<StackedBarChart.Series> barChartData = FXCollections.observableArrayList(
+            new StackedBarChart.Series("Region 1", FXCollections.observableArrayList(
+               new StackedBarChart.Data(years[0], 567d),
+               new StackedBarChart.Data(years[1], 1292d),
+               new StackedBarChart.Data(years[2], 1292d)
+            )),
+            new StackedBarChart.Series("Region 2", FXCollections.observableArrayList(
+               new StackedBarChart.Data(years[0], 956),
+               new StackedBarChart.Data(years[1], 1665),
+               new StackedBarChart.Data(years[2], 2559)
+            ))
+        );
+        StackedBarChart sbc = new StackedBarChart(xAxis, yAxis, barChartData, 25.0d);
+        scene = new Scene(sbc,800,600);
+        stage = new Stage();
+        stage.setScene(scene);
+        stage.show();
+        pulse();
+         assertEquals(6, sbc.getPlotChildren().size());
+    }
+    
+    @Test
     public void testSeriesAdd() {
         startApp();
         sbc.getData().addAll(series1, series2, series3);

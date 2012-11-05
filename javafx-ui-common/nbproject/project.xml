@@ -130,7 +130,7 @@
         <java-data xmlns="http://www.netbeans.org/ns/freeform-project-java/3">
             <compilation-unit>
                 <package-root>${src.dir}</package-root>
-                <classpath mode="compile">../../rt-closed/javafx-beans/dist/javafx-beans.jar:../../rt-closed/javafx-geom/dist/javafx-geom.jar:../../rt-closed/javafx-logging/dist/javafx-logging.jar:../../rt-closed/javafx-anim/dist/javafx-anim.jar:../../rt-closed/javafx-common/dist/javafx-common.jar:../../rt-closed/javafx-mx-common/dist/javafx-mx-common.jar:../../rt-closed/javafx-sg-common/dist/javafx-sg-common.jar:../../rt-closed/decora-runtime/dist/decora-runtime.jar:../../rt-closed/build/deps/plugin_exports.jar:../../rt-closed/aria/dist/aria.jar:../../import/checkstyle-5.1/checkstyle-5.1.jar</classpath>
+                <classpath mode="compile">../../rt-closed/javafx-beans/dist/javafx-beans.jar:../../rt-closed/javafx-geom/dist/javafx-geom.jar:../../rt-closed/javafx-logging/dist/javafx-logging.jar:../../rt-closed/javafx-anim/dist/javafx-anim.jar:../../rt-closed/javafx-common/dist/javafx-common.jar:../../rt-closed/javafx-mx-common/dist/javafx-mx-common.jar:../../rt-closed/javafx-sg-common/dist/javafx-sg-common.jar:../../rt-closed/decora-runtime/dist/decora-runtime.jar:../../rt-closed/build/deps/plugin_exports.jar:../../import/checkstyle-5.1/checkstyle-5.1.jar:../../rt-closed/javafx-accessible/dist/javafx-accessible.jar</classpath>
                 <built-to>dist/javafx-ui-common.jar</built-to>
                 <source-level>1.6</source-level>
             </compilation-unit>

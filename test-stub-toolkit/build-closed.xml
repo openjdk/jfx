@@ -11,6 +11,7 @@
         ${runtime.dist.root.dir}/decora-runtime/dist/decora-runtime.jar:
         ${runtime.dist.root.dir}/prism-common/dist/prism-common.jar:
         ${runtime.dist.root.dir}/javafx-sg-common/dist/javafx-sg-common.jar:
+        ${runtime.dist.root.dir}/javafx-accessible/dist/javafx-accessible.jar:
         ${rt.dist.root.dir}/javafx-ui-common/dist/javafx-ui-common.jar" />
     <property name="javac.classpath" refid="javac.closed.classpath.path"/>
     

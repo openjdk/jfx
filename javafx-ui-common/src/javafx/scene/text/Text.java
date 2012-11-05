@@ -64,6 +64,7 @@ import com.sun.javafx.geom.BaseBounds;
 import com.sun.javafx.geom.RectBounds;
 import com.sun.javafx.geom.transform.Affine3D;
 import com.sun.javafx.geom.transform.BaseTransform;
+import com.sun.javafx.accessible.AccessibleText;
 import com.sun.javafx.scene.DirtyBits;
 import com.sun.javafx.scene.shape.PathUtils;
 import com.sun.javafx.scene.text.HitInfo;
@@ -73,6 +74,8 @@ import com.sun.javafx.sg.PGText;
 import com.sun.javafx.sg.PGTextHelper;
 import com.sun.javafx.tk.FontLoader;
 import com.sun.javafx.tk.Toolkit;
+import com.sun.javafx.accessible.providers.AccessibleProvider;
+import com.sun.javafx.accessible.AccessibleNode;
 
 /**
  * The {@code Text} class defines a node that displays a text.
@@ -1642,4 +1645,16 @@ public class Text extends Shape {
         super.impl_updatePG();
         updatePGText();
     }
+
+    private AccessibleNode accText ;
+    /**
+     * @treatAsPrivate implementation detail
+     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
+     */
+    @Deprecated public AccessibleProvider impl_getAccessible() {
+        if( accText == null)
+            accText = new AccessibleText(this);
+        return (AccessibleProvider)accText ;
+    }    
+    
 }

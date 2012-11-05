@@ -39,6 +39,8 @@ import javafx.scene.shape.Rectangle;
 
 import com.sun.javafx.css.StyleManager;
 import com.sun.javafx.css.StyleableProperty;
+import com.sun.javafx.scene.control.accessible.AccessibleListItem;
+import com.sun.javafx.accessible.providers.AccessibleProvider;
 import javafx.beans.property.ReadOnlyBooleanProperty;
 import javafx.beans.property.ReadOnlyBooleanWrapper;
 
@@ -571,6 +573,16 @@ public class Cell<T> extends Labeled {
         setSelected(selected);
     }
 
+    private AccessibleListItem accListItem ;
+    /**
+     * @treatAsPrivate implementation detail
+     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
+     */
+    @Deprecated @Override public AccessibleProvider impl_getAccessible() {
+        if( accListItem == null)
+            accListItem = new AccessibleListItem(this);
+        return (AccessibleProvider)accListItem ;
+    }
     
     
     /***************************************************************************

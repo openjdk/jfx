@@ -32,6 +32,8 @@ import javafx.beans.property.SimpleBooleanProperty;
 import javafx.event.ActionEvent;
 import javafx.geometry.Pos;
 import com.sun.javafx.css.StyleManager;
+import com.sun.javafx.scene.control.accessible.AccessibleCheckBox;
+import com.sun.javafx.accessible.providers.AccessibleProvider;
 
 /**
  * A tri-state selection Control typically skinned as a box with a checkmark or
@@ -250,6 +252,17 @@ public class CheckBox extends ButtonBase {
         if (isSelected()) mask |= SELECTED_PSEUDOCLASS_STATE;
         mask |= isIndeterminate() ? INDETERMINATE_PSEUDOCLASS_STATE : DETERMINATE_PSEUDOCLASS_STATE;
         return mask;
-}
+    }
+    
+    private AccessibleCheckBox accCheckBox ;
+    /**
+     * @treatAsPrivate implementation detail
+     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
+     */
+    @Deprecated @Override public AccessibleProvider impl_getAccessible() {
+        if( accCheckBox == null)
+            accCheckBox = new AccessibleCheckBox(this);
+        return (AccessibleProvider)accCheckBox ;
+    }
 
 }
