@@ -49,35 +49,35 @@ import com.sun.javafx.tk.Toolkit;
 
 
 public class KeyCombinationTest {
-    final KeyEvent ctrlAltQEvent = KeyEvent.impl_keyEvent(Event.NULL_SOURCE_TARGET, 
-            "q", null, 0x51, false, true, true, false, KeyEvent.KEY_PRESSED);
+    final KeyEvent ctrlAltQEvent = new KeyEvent(null, Event.NULL_SOURCE_TARGET, KeyEvent.KEY_PRESSED, 
+            "q", null, 0x51, false, true, true, false);
 
-    final KeyEvent ctrlAltQUpEvent = KeyEvent.impl_keyEvent(Event.NULL_SOURCE_TARGET,
-            "q", null, 0x51, false, true, true, false, KeyEvent.KEY_RELEASED);
+    final KeyEvent ctrlAltQUpEvent = new KeyEvent(null, Event.NULL_SOURCE_TARGET, KeyEvent.KEY_RELEASED, 
+            "q", null, 0x51, false, true, true, false);
 
-    final KeyEvent ctrlShiftQEvent = KeyEvent.impl_keyEvent(Event.NULL_SOURCE_TARGET,
-            "Q", null, 0x51, true, true, false, false, KeyEvent.KEY_PRESSED);
+    final KeyEvent ctrlShiftQEvent = new KeyEvent(null, Event.NULL_SOURCE_TARGET, KeyEvent.KEY_PRESSED, 
+            "Q", null, 0x51, true, true, false, false);
 
-    final KeyEvent ctrlAltShiftQEvent = KeyEvent.impl_keyEvent(Event.NULL_SOURCE_TARGET,
-            "Q", null, 0x51, true, true, true, false, KeyEvent.KEY_PRESSED);
+    final KeyEvent ctrlAltShiftQEvent = new KeyEvent(null, Event.NULL_SOURCE_TARGET, KeyEvent.KEY_PRESSED, 
+            "Q", null, 0x51, true, true, true, false);
 
-    final KeyEvent alt2Event = KeyEvent.impl_keyEvent(Event.NULL_SOURCE_TARGET,
-            "2", null, 0x32, false, false, true, false, KeyEvent.KEY_PRESSED);
+    final KeyEvent alt2Event = new KeyEvent(null, Event.NULL_SOURCE_TARGET, KeyEvent.KEY_PRESSED, 
+            "2", null, 0x32, false, false, true, false);
 
-    final KeyEvent altShift2Event = KeyEvent.impl_keyEvent(Event.NULL_SOURCE_TARGET,
-            "@", null, 0x32, true, false, true, false, KeyEvent.KEY_PRESSED);
+    final KeyEvent altShift2Event = new KeyEvent(null, Event.NULL_SOURCE_TARGET, KeyEvent.KEY_PRESSED, 
+            "@", null, 0x32, true, false, true, false);
 
-    final KeyEvent altSoftkey0Event = KeyEvent.impl_keyEvent(Event.NULL_SOURCE_TARGET,
-            "~", null, 0x1000, false, false, true, false, KeyEvent.KEY_PRESSED);
+    final KeyEvent altSoftkey0Event = new KeyEvent(null, Event.NULL_SOURCE_TARGET, KeyEvent.KEY_PRESSED, 
+            "~", null, 0x1000, false, false, true, false);
 
-    final KeyEvent altShiftSoftkey0Event = KeyEvent.impl_keyEvent(Event.NULL_SOURCE_TARGET,
-            "~", null, 0x1000, true, false, true, false, KeyEvent.KEY_PRESSED);
+    final KeyEvent altShiftSoftkey0Event = new KeyEvent(null, Event.NULL_SOURCE_TARGET, KeyEvent.KEY_PRESSED, 
+            "~", null, 0x1000, true, false, true, false);
 
-    final KeyEvent altShiftPlusEvent = KeyEvent.impl_keyEvent(Event.NULL_SOURCE_TARGET,
-            "~", null, 0x209, true, false, true, false, KeyEvent.KEY_PRESSED);
+    final KeyEvent altShiftPlusEvent = new KeyEvent(null, Event.NULL_SOURCE_TARGET, KeyEvent.KEY_PRESSED, 
+            "~", null, 0x209, true, false, true, false);
 
-    final KeyEvent altShiftQuoteEvent = KeyEvent.impl_keyEvent(Event.NULL_SOURCE_TARGET,
-            "~", null, 0xDE, true, false, true, false, KeyEvent.KEY_PRESSED);
+    final KeyEvent altShiftQuoteEvent = new KeyEvent(null, Event.NULL_SOURCE_TARGET, KeyEvent.KEY_PRESSED, 
+            "~", null, 0xDE, true, false, true, false);
 
     @BeforeClass
     public static void setUpCharToKeyCodeMap() {
@@ -313,18 +313,18 @@ public class KeyCombinationTest {
 
     @Test
     public void testKeyCombinationWithShortcutModifier() {
-        final KeyEvent ctrlC = KeyEvent.impl_keyEvent(
-                                   null, "c", null, 0x43,
-                                   false, true, false, false,
-                                   KeyEvent.KEY_PRESSED);
-        final KeyEvent metaC = KeyEvent.impl_keyEvent(
-                                   null, "c", null, 0x43,
-                                   false, false, false, true,
-                                   KeyEvent.KEY_PRESSED);
-        final KeyEvent metaAltC = KeyEvent.impl_keyEvent(
-                                      null, "c", null, 0x43,
-                                      false, false, true, true,
-                                      KeyEvent.KEY_PRESSED);
+        final KeyEvent ctrlC = new KeyEvent(
+                                   KeyEvent.KEY_PRESSED,
+                                   "c", null, 0x43,
+                                   false, true, false, false);
+        final KeyEvent metaC = new KeyEvent(
+                                   KeyEvent.KEY_PRESSED,
+                                   "c", null, 0x43,
+                                   false, false, false, true);
+        final KeyEvent metaAltC = new KeyEvent(
+                                   KeyEvent.KEY_PRESSED,
+                                      "c", null, 0x43,
+                                      false, false, true, true);
 
         final KeyCombination shortcutC =
                 KeyCombination.keyCombination("Shortcut+C");

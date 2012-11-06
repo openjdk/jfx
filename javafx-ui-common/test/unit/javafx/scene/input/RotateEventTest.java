@@ -429,11 +429,10 @@ public class RotateEventTest {
     }
 
     @Test public void testToString() {
-        RotateEvent e = RotateEvent.impl_rotateEvent(RotateEvent.ROTATE,
-            10, 20,
+        RotateEvent e = new RotateEvent(RotateEvent.ROTATE,
             100, 100, 200, 200,
             false, false, false, false,
-            true, false);
+            true, false, 10, 20);
 
         String s = e.toString();
 

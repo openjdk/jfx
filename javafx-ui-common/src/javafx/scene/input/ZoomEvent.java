@@ -56,7 +56,7 @@ import javafx.event.EventType;
  *
  * @since 2.2
  */
-public class ZoomEvent extends GestureEvent {
+public final class ZoomEvent extends GestureEvent {
 
     /**
      * Common supertype for all zoom event types.
@@ -83,18 +83,26 @@ public class ZoomEvent extends GestureEvent {
     public static final EventType<ZoomEvent> ZOOM_FINISHED =
             new EventType<ZoomEvent>(ZoomEvent.ANY, "ZOOM_FINISHED");
 
-    private ZoomEvent(final EventType<? extends ZoomEvent> eventType) {
-        super(eventType);
-    }
-
-    private ZoomEvent(Object source, EventTarget target,
-            final EventType<? extends ZoomEvent> eventType) {
-        super(source, target, eventType);
-    }
-
-    private ZoomEvent(final EventType<? extends ZoomEvent> eventType,
-            double zoomFactor,
-            double totalZoomFactor,
+    /**
+     * Constructs new ZoomEvent event.
+     * @param source the source of the event. Can be null.
+     * @param target the target of the event. Can be null.
+     * @param eventType The type of the event.
+     * @param x The x with respect to the source. Should be in scene coordinates if source == null or source is not a Node.
+     * @param y The y with respect to the source. Should be in scene coordinates if source == null or source is not a Node.
+     * @param screenX The x coordinate relative to screen.
+     * @param screenY The y coordinate relative to screen.
+     * @param shiftDown true if shift modifier was pressed.
+     * @param controlDown true if control modifier was pressed.
+     * @param altDown true if alt modifier was pressed.
+     * @param metaDown true if meta modifier was pressed.
+     * @param direct true if the event was caused by direct input device. See {@link #isDirect() }
+     * @param touchCount number of touch points
+     * @param inertia if represents inertia of an already finished gesture.
+     * @param zoomFactor zoom amount
+     * @param totalZoomFactor cumulative zoom amount
+     */
+    public ZoomEvent(Object source, EventTarget target, final EventType<ZoomEvent> eventType,
             double x, double y,
             double screenX, double screenY,
             boolean shiftDown,
@@ -102,21 +110,34 @@ public class ZoomEvent extends GestureEvent {
             boolean altDown,
             boolean metaDown,
             boolean direct,
-            boolean inertia) {
+            boolean inertia,
+            double zoomFactor,
+            double totalZoomFactor) {
 
-        super(eventType, x, y, screenX, screenY,
+        super(source, target, eventType, x, y, screenX, screenY,
                 shiftDown, controlDown, altDown, metaDown, direct, inertia);
         this.zoomFactor = zoomFactor;
         this.totalZoomFactor = totalZoomFactor;
     }
 
     /**
-     * @treatAsPrivate implementation detail
-     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
+     * Constructs new ZoomEvent event with null source and target.
+     * @param eventType The type of the event.
+     * @param x The x with respect to the scene.
+     * @param y The y with respect to the scene.
+     * @param screenX The x coordinate relative to screen.
+     * @param screenY The y coordinate relative to screen.
+     * @param shiftDown true if shift modifier was pressed.
+     * @param controlDown true if control modifier was pressed.
+     * @param altDown true if alt modifier was pressed.
+     * @param metaDown true if meta modifier was pressed.
+     * @param direct true if the event was caused by direct input device. See {@link #isDirect() }
+     * @param touchCount number of touch points
+     * @param inertia if represents inertia of an already finished gesture.
+     * @param zoomFactor zoom amount
+     * @param totalZoomFactor cumulative zoom amount
      */
-    public static ZoomEvent impl_zoomEvent(final EventType<? extends ZoomEvent> eventType,
-            double zoomFactor,
-            double totalZoomFactor,
+    public ZoomEvent(final EventType<ZoomEvent> eventType,
             double x, double y,
             double screenX, double screenY,
             boolean shiftDown,
@@ -124,14 +145,14 @@ public class ZoomEvent extends GestureEvent {
             boolean altDown,
             boolean metaDown,
             boolean direct,
-            boolean inertia) {
-        return new ZoomEvent(eventType, zoomFactor, totalZoomFactor,
-                x, y, screenX, screenY,
-                shiftDown, controlDown, altDown, metaDown, direct, inertia);
+            boolean inertia,
+            double zoomFactor,
+            double totalZoomFactor) {
+        this(null, null, eventType, x, y, screenX, screenY, shiftDown, controlDown,
+                altDown, metaDown, direct, inertia, zoomFactor, totalZoomFactor);
     }
 
-
-    private double zoomFactor;
+    private final double zoomFactor;
 
     /**
      * Gets the zooming amount of this event. The factor value works well when
@@ -144,7 +165,7 @@ public class ZoomEvent extends GestureEvent {
         return zoomFactor;
     }
 
-    private double totalZoomFactor;
+    private final double totalZoomFactor;
 
     /**
      * Gets the zooming amount of this gesture. The factor value works well when
@@ -196,4 +217,29 @@ public class ZoomEvent extends GestureEvent {
 
         return sb.append("]").toString();
     }
+
+    @Override
+    public ZoomEvent copyFor(Object newSource, EventTarget newTarget) {
+        return (ZoomEvent) super.copyFor(newSource, newTarget);
+    }
+
+    /**
+     * Creates a copy of the given event with the given fields substituted.
+     * @param source the new source of the copied event
+     * @param target the new target of the copied event
+     * @param eventType the new eventType
+     * @return the event copy with the fields substituted
+     */
+    public ZoomEvent copyFor(Object newSource, EventTarget newTarget, EventType<ZoomEvent> type) {
+        ZoomEvent e = copyFor(newSource, newTarget);
+        e.eventType = type;
+        return e;
+    }
+
+    @Override
+    public EventType<ZoomEvent> getEventType() {
+        return (EventType<ZoomEvent>) super.getEventType();
+    }
+    
+    
 }

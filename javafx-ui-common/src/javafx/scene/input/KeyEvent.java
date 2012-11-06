@@ -32,6 +32,7 @@ import javafx.event.EventType;
 
 import com.sun.javafx.robot.impl.FXRobotHelper;
 import com.sun.javafx.robot.impl.FXRobotHelper.FXRobotInputAccessor;
+import javafx.event.Event;
 import javafx.scene.input.ScrollEvent.HorizontalTextScrollUnits;
 import javafx.scene.input.ScrollEvent.VerticalTextScrollUnits;
 
@@ -80,7 +81,7 @@ import javafx.scene.input.ScrollEvent.VerticalTextScrollUnits;
  * <p>
  * For triggering context menus see the {@link ContextMenuEvent}.
  */
-public class KeyEvent extends InputEvent {
+public final class KeyEvent extends InputEvent {
     /**
      * Common supertype for all key event types.
      */
@@ -107,23 +108,13 @@ public class KeyEvent extends InputEvent {
     public static final EventType<KeyEvent> KEY_TYPED =
             new EventType<KeyEvent>(KeyEvent.ANY, "KEY_TYPED");
 
-    private KeyEvent(final EventType<? extends KeyEvent> eventType) {
-        super(eventType);
-    }
-
-    private KeyEvent(final Object source,
-                     final EventTarget target,
-                     final EventType<? extends KeyEvent> eventType) {
-        super(source, target, eventType);
-    }
-
     static {
         FXRobotInputAccessor a = new FXRobotInputAccessor() {
             @Override public int getCodeForKeyCode(KeyCode keyCode) {
                 return keyCode.code;
             }
             @Override public KeyCode getKeyCodeForCode(int code) {
-                return KeyCode.impl_valueOf(code);
+                return KeyCode.valueOf(code);
             }
             @Override public KeyEvent createKeyEvent(
                 EventType<? extends KeyEvent> eventType,
@@ -131,15 +122,8 @@ public class KeyEvent extends InputEvent {
                 boolean shiftDown, boolean controlDown,
                 boolean altDown, boolean metaDown)
             {
-                KeyEvent e = new KeyEvent(eventType);
-                e.character = character;
-                e.code = code;
-                e.text = text;
-                e.shiftDown = shiftDown;
-                e.controlDown = controlDown;
-                e.altDown = altDown;
-                e.metaDown = metaDown;
-                return e;
+                return new KeyEvent((EventType<KeyEvent>)eventType, character, text, code,
+                        shiftDown, controlDown, altDown, metaDown);
             }
             @Override public MouseEvent createMouseEvent(
                 EventType<? extends MouseEvent> eventType,
@@ -149,19 +133,19 @@ public class KeyEvent extends InputEvent {
                 boolean popupTrigger, boolean primaryButtonDown,
                 boolean middleButtonDown, boolean secondaryButtonDown)
             {
-                return MouseEvent.impl_mouseEvent(x, y,
+                return new MouseEvent(eventType, x, y,
                                            screenX, screenY,
                                            button, clickCount,
                                            shiftDown,
                                            controlDown,
                                            altDown,
                                            metaDown,
-                                           popupTrigger,
                                            primaryButtonDown,
                                            middleButtonDown,
                                            secondaryButtonDown,
                                            false,
-                                           eventType);
+                                           popupTrigger
+                                           );
             }
 
             @Override
@@ -173,46 +157,87 @@ public class KeyEvent extends InputEvent {
                     int x, int y, int screenX, int screenY, 
                     boolean shiftDown, boolean controlDown, 
                     boolean altDown, boolean metaDown) {
-                return ScrollEvent.impl_scrollEvent(ScrollEvent.SCROLL, 
+                return new ScrollEvent(ScrollEvent.SCROLL,
+                        x, y, screenX, screenY, 
+                        shiftDown, controlDown, altDown, metaDown, false, false,
                         scrollX, scrollY, 0, 0,
                         xTextUnits, xText, yTextUnits, yText,
-                        0,
-                        x, y, screenX, screenY, 
-                        shiftDown, controlDown, altDown, metaDown, false, false);
+                        0);
             }
         };
         FXRobotHelper.setInputAccessor(a);
     }
 
+
     /**
-     * @treatAsPrivate implementation detail
-     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
+     * Constructs new KeyEvent event with null source and target.
+     * @param eventType The type of the event.
+     * @param character The character or sequence of characters associated with the event
+     * @param text A String describing the key code
+     * @param code The integer key code
+     * @param shiftDown true if shift modifier was pressed.
+     * @param controlDown true if control modifier was pressed.
+     * @param altDown true if alt modifier was pressed.
+     * @param metaDown true if meta modifier was pressed.
      */
-    @Deprecated
-    public static KeyEvent impl_copy(EventTarget target, KeyEvent evt) {
-        return (KeyEvent) evt.copyFor(evt.source, target);
+    public KeyEvent(EventType<KeyEvent> eventType, String character,
+            String text, int code, boolean shiftDown, boolean controlDown,
+            boolean altDown, boolean metaDown) {
+        this(null, null, eventType, character, text, code, shiftDown, controlDown, altDown, metaDown);
     }
 
     /**
-     * @treatAsPrivate implementation detail
-     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
+     * Constructs new KeyEvent event.
+     * @param source the source of the event. Can be null.
+     * @param target the target of the event. Can be null.
+     * @param eventType The type of the event.
+     * @param character The character or sequence of characters associated with the event
+     * @param text A String describing the key code
+     * @param code The integer key code
+     * @param shiftDown true if shift modifier was pressed.
+     * @param controlDown true if control modifier was pressed.
+     * @param altDown true if alt modifier was pressed.
+     * @param metaDown true if meta modifier was pressed.
      */
-    @Deprecated
-    public static KeyEvent impl_keyEvent(EventTarget target, String character,
+    public KeyEvent(Object source, EventTarget target, EventType<KeyEvent> eventType, String character,
             String text, int code, boolean shiftDown, boolean controlDown,
-            boolean altDown, boolean metaDown, 
-            EventType<? extends KeyEvent> eventType) {
+            boolean altDown, boolean metaDown) {
+        super(source, target, eventType);
         boolean isKeyTyped = eventType == KEY_TYPED;
 
-        KeyEvent e = new KeyEvent(null, target, eventType);
-        e.character = isKeyTyped ? character : KeyEvent.CHAR_UNDEFINED;
-        e.text = isKeyTyped ? "" : text;
-        e.code = isKeyTyped ? KeyCode.UNDEFINED : KeyCode.impl_valueOf(code);
-        e.shiftDown = shiftDown;
-        e.controlDown = controlDown;
-        e.altDown = altDown;
-        e.metaDown = metaDown;
-        return e;
+        this.character = isKeyTyped ? character : KeyEvent.CHAR_UNDEFINED;
+        this.text = isKeyTyped ? "" : text;
+        this.code = isKeyTyped ? KeyCode.UNDEFINED : KeyCode.valueOf(code);
+        this.shiftDown = shiftDown;
+        this.controlDown = controlDown;
+        this.altDown = altDown;
+        this.metaDown = metaDown;
+    }
+
+    /**
+     * Constructs new KeyEvent event with null source and target and KeyCode object directly specified.
+     * @param eventType The type of the event.
+     * @param character The character or sequence of characters associated with the event
+     * @param text A String describing the key code
+     * @param code The integer key code
+     * @param shiftDown true if shift modifier was pressed.
+     * @param controlDown true if control modifier was pressed.
+     * @param altDown true if alt modifier was pressed.
+     * @param metaDown true if meta modifier was pressed.
+     */
+    public KeyEvent(EventType<KeyEvent> eventType, String character,
+            String text, KeyCode code, boolean shiftDown, boolean controlDown,
+            boolean altDown, boolean metaDown) {
+        super(eventType);
+        boolean isKeyTyped = eventType == KEY_TYPED;
+
+        this.character = isKeyTyped ? character : KeyEvent.CHAR_UNDEFINED;
+        this.text = isKeyTyped ? "" : text;
+        this.code = isKeyTyped ? KeyCode.UNDEFINED : code;
+        this.shiftDown = shiftDown;
+        this.controlDown = controlDown;
+        this.altDown = altDown;
+        this.metaDown = metaDown;
     }
 
     /**
@@ -220,25 +245,7 @@ public class KeyEvent extends InputEvent {
      * character use this for the keyChar value.
      */
     public static final String CHAR_UNDEFINED = KeyCode.UNDEFINED.ch;
-
-    /**
-     * For use by unit testing
-     * @treatAsPrivate implementation detail
-     */
-    static KeyEvent testKeyEvent(EventTarget target, String character,
-            KeyCode code, boolean shiftDown, boolean controlDown,
-            boolean altDown, boolean metaDown)
-    {
-        KeyEvent e = new KeyEvent(null, target, KEY_PRESSED);
-        e.character = character;
-        e.code = code;
-        e.shiftDown = shiftDown;
-        e.controlDown = controlDown;
-        e.altDown = altDown;
-        e.metaDown = metaDown;
-        return e;
-    }
-
+    
     /**
      * The Unicode character or sequence of characters associated with the key
      * typed event. Contains multiple elements if the key produced a single
@@ -251,7 +258,7 @@ public class KeyEvent extends InputEvent {
      * For key pressed and key released events, {@code character} is always
      * {@code CHAR_UNDEFINED}.
      */
-    private String character;
+    private final String character;
 
     /**
      * The Unicode character or sequence of characters associated with the key
@@ -276,7 +283,7 @@ public class KeyEvent extends InputEvent {
      * for key pressed and key released events.
      * For key typed events, {@code text} is always the empty string.
      */
-    private String text;
+    private final String text;
 
     /**
      * A String describing the key code, such as "HOME", "F1" or "A",
@@ -294,7 +301,7 @@ public class KeyEvent extends InputEvent {
      * pressed or key released event.
      * For key typed events, {@code code} is always {@code KeyCode.UNDEFINED}.
      */
-    private KeyCode code;
+    private final KeyCode code;
 
     /**
      * The key code associated with the key in this key pressed or key released 
@@ -310,7 +317,7 @@ public class KeyEvent extends InputEvent {
     /**
      * Returns whether or not the Shift modifier is down on this event.
      */
-    private boolean shiftDown;
+    private final boolean shiftDown;
 
     /**
      * Returns whether or not the Shift modifier is down on this event.
@@ -323,7 +330,7 @@ public class KeyEvent extends InputEvent {
     /**
      * Returns whether or not the Control modifier is down on this event.
      */
-    private boolean controlDown;
+    private final boolean controlDown;
 
     /**
      * Returns whether or not the Control modifier is down on this event.
@@ -336,7 +343,7 @@ public class KeyEvent extends InputEvent {
     /**
      * Returns whether or not the Alt modifier is down on this event.
      */
-    private boolean altDown;
+    private final boolean altDown;
 
     /**
      * Returns whether or not the Alt modifier is down on this event.
@@ -349,7 +356,7 @@ public class KeyEvent extends InputEvent {
     /**
      * Returns whether or not the Meta modifier is down on this event.
      */
-    private boolean metaDown;
+    private final boolean metaDown;
 
     /**
      * Returns whether or not the Meta modifier is down on this event.
@@ -422,5 +429,30 @@ public class KeyEvent extends InputEvent {
 
         return sb.append("]").toString();
     }
+
+    @Override
+    public KeyEvent copyFor(Object newSource, EventTarget newTarget) {
+        return (KeyEvent) super.copyFor(newSource, newTarget);
+    }
+
+    /**
+     * Creates a copy of the given event with the given fields substituted.
+     * @param source the new source of the copied event
+     * @param target the new target of the copied event
+     * @param type the new event type.
+     * @return the event copy with the fields substituted
+     */
+    public KeyEvent copyFor(Object source, EventTarget target, EventType<KeyEvent> type) {
+        KeyEvent e = copyFor(source, target);
+        e.eventType = type;
+        return e;
+    }
+
+    @Override
+    public EventType<KeyEvent> getEventType() {
+        return (EventType<KeyEvent>) super.getEventType();
+    }
+    
+    
 
 }

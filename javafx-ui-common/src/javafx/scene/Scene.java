@@ -1598,8 +1598,8 @@ public class Scene implements EventTarget {
             eventTarget = pick(x2, y2);
         }
         if (eventTarget != null) {
-            ContextMenuEvent context = ContextMenuEvent.impl_contextEvent(
-                    x2, y2, xAbs, yAbs, isKeyboardTrigger, ContextMenuEvent.CONTEXT_MENU_REQUESTED);
+            ContextMenuEvent context = new ContextMenuEvent(ContextMenuEvent.CONTEXT_MENU_REQUESTED,
+                    x2, y2, xAbs, yAbs, isKeyboardTrigger);
             Event.fireEvent(eventTarget, context);
         }
         if (!isKeyboardTrigger) Scene.inMousePick = false;
@@ -1697,9 +1697,9 @@ public class Scene implements EventTarget {
                     t.impl_reset();
                 }
 
-                TouchEvent te = TouchEvent.impl_touchEvent(type, tp, touchList,
+                TouchEvent te = new TouchEvent(type, tp, touchList,
                         touchEventSetId, e.isShiftDown(), e.isControlDown(),
-                        e.isAltDown(), e.isMetaDown());
+                        e.isAltDown(), e.isMetaDown(), e.isDirect());
 
                 Event.fireEvent(tp.getTarget(), te);
             }
@@ -2321,8 +2321,8 @@ public class Scene implements EventTarget {
         {
             String chars = new String(cs);
             String text = chars; // TODO: this must be a text like "HOME", "F1", or "A"
-            KeyEvent keyEvent = KeyEvent.impl_keyEvent(Scene.this, chars, text, key,
-                    shiftDown, controlDown, altDown, metaDown, type);
+            KeyEvent keyEvent = new KeyEvent(type, chars, text, key,
+                    shiftDown, controlDown, altDown, metaDown);
             impl_processKeyEvent(keyEvent);
         }
 
@@ -2331,8 +2331,8 @@ public class Scene implements EventTarget {
                                      ObservableList<InputMethodTextRun> composed, String committed,
                                      int caretPosition)
         {
-            InputMethodEvent inputMethodEvent = InputMethodEvent.impl_inputMethodEvent(
-                Scene.this, composed, committed, caretPosition, type);
+            InputMethodEvent inputMethodEvent = new InputMethodEvent(
+               type, composed, committed, caretPosition);
             processInputMethodEvent(inputMethodEvent);
         }
 
@@ -2393,16 +2393,14 @@ public class Scene implements EventTarget {
                 screenY = cursorScreenPos.getY();
             } 
 
-            Scene.this.processGestureEvent(ScrollEvent.impl_scrollEvent(
+            Scene.this.processGestureEvent(new ScrollEvent(
                     eventType,
-                    scrollX * xMultiplier, scrollY * yMultiplier,
-                    totalScrollX * xMultiplier, totalScrollY * yMultiplier,
-                    xUnits, xText, yUnits, yText,
-                    touchCount,
                     x, y, screenX, screenY, 
                     _shiftDown, _controlDown, _altDown, _metaDown, 
-                    _direct, _inertia),
-                    scrollGesture);
+                    _direct, _inertia,
+                    scrollX * xMultiplier, scrollY * yMultiplier,
+                    totalScrollX * xMultiplier, totalScrollY * yMultiplier,
+                    xUnits, xText, yUnits, yText, touchCount), scrollGesture);
         }
 
         @Override
@@ -2430,11 +2428,11 @@ public class Scene implements EventTarget {
                 screenY = cursorScreenPos.getY();
             }
 
-            Scene.this.processGestureEvent(ZoomEvent.impl_zoomEvent(
-                    eventType, zoomFactor, totalZoomFactor,
+            Scene.this.processGestureEvent(new ZoomEvent(eventType,
                     x, y, screenX, screenY,
                     _shiftDown, _controlDown, _altDown, _metaDown, 
-                    _direct, _inertia),
+                    _direct, _inertia,
+                    zoomFactor, totalZoomFactor),
                     zoomGesture);
         }
 
@@ -2462,10 +2460,10 @@ public class Scene implements EventTarget {
                 screenY = cursorScreenPos.getY();
             }
 
-            Scene.this.processGestureEvent(RotateEvent.impl_rotateEvent(
-                    eventType, angle, totalAngle, x, y, screenX, screenY,
+            Scene.this.processGestureEvent(new RotateEvent(
+                    eventType, x, y, screenX, screenY,
                     _shiftDown, _controlDown, _altDown, _metaDown, 
-                    _direct, _inertia),
+                    _direct, _inertia, angle, totalAngle),
                     rotateGesture);
 
         }
@@ -2488,9 +2486,9 @@ public class Scene implements EventTarget {
                 screenY = cursorScreenPos.getY();
             }
 
-            Scene.this.processGestureEvent(SwipeEvent.impl_swipeEvent(
-                    eventType, touchCount, x, y, screenX, screenY,
-                    _shiftDown, _controlDown, _altDown, _metaDown, _direct), 
+            Scene.this.processGestureEvent(new SwipeEvent(
+                    eventType, x, y, screenX, screenY,
+                    _shiftDown, _controlDown, _altDown, _metaDown, _direct, touchCount),
                     swipeGesture);
         }
 
@@ -2500,10 +2498,9 @@ public class Scene implements EventTarget {
                 boolean _shiftDown, boolean _controlDown,
                 boolean _altDown, boolean _metaDown) {
 
-            nextTouchEvent = TouchEvent.impl_touchEvent(
+            nextTouchEvent = new TouchEvent(
                     TouchEvent.ANY, null, null, 0,
-                    _shiftDown, _controlDown, _altDown, _metaDown);
-            nextTouchEvent.impl_setDirect(isDirect);
+                    _shiftDown, _controlDown, _altDown, _metaDown, isDirect);
             if (touchPoints == null || touchPoints.length != touchCount) {
                 touchPoints = new TouchPoint[touchCount];
             }
@@ -2538,7 +2535,7 @@ public class Scene implements EventTarget {
             }
 
             // for now we don't want to process indirect touch events
-            if (nextTouchEvent.impl_isDirect()) {
+            if (nextTouchEvent.isDirect()) {
                 Scene.this.processTouchEvent(nextTouchEvent, touchPoints);
             }
 
@@ -2580,7 +2577,7 @@ public class Scene implements EventTarget {
                 dndGesture = new DnDGesture();
             }
             DragEvent dragEvent =
-                    DragEvent.impl_create(x, y, screenX, screenY, transferMode, dragboard);
+                    new DragEvent(DragEvent.ANY, dragboard, x, y, screenX, screenY, transferMode, null, null);
             return dndGesture.processTargetEnterOver(dragEvent);
         }
 
@@ -2593,7 +2590,7 @@ public class Scene implements EventTarget {
                 return null;
             } else {
                 DragEvent dragEvent =
-                        DragEvent.impl_create(x, y, screenX, screenY, transferMode, dragboard);
+                        new DragEvent(DragEvent.ANY, dragboard, x, y, screenX, screenY, transferMode, null, null);
                 return dndGesture.processTargetEnterOver(dragEvent);
             }
         }
@@ -2604,7 +2601,7 @@ public class Scene implements EventTarget {
                 System.err.println("GOT A dragExit when dndGesture is null!");
             } else {
                 DragEvent dragEvent =
-                        DragEvent.impl_create(x, y, screenX, screenY, null, dragboard);
+                        new DragEvent(DragEvent.ANY, dragboard, x, y, screenX, screenY, null, null, null);
                 dndGesture.processTargetExit(dragEvent);
                 if (dndGesture.source == null) {
                     dndGesture = null;
@@ -2622,7 +2619,7 @@ public class Scene implements EventTarget {
                 return null;
             } else {
                 DragEvent dragEvent =
-                        DragEvent.impl_create(x, y, screenX, screenY, null, dragboard);
+                        new DragEvent(DragEvent.ANY, dragboard, x, y, screenX, screenY, null, null, null);
                 TransferMode tm = dndGesture.processTargetDrop(dragEvent);
                 if (dndGesture.source == null) {
                     dndGesture = null;
@@ -2640,7 +2637,7 @@ public class Scene implements EventTarget {
            dndGesture = new DnDGesture();
            dndGesture.dragboard = dragboard;
            // TODO: support mouse buttons in DragEvent
-           DragEvent dragEvent = DragEvent.impl_create(x, y, screenX, screenY, null, dragboard);
+           DragEvent dragEvent = new DragEvent(DragEvent.ANY, dragboard, x, y, screenX, screenY, null, null, null);
            final EventTarget pickedNode = pick(dragEvent.getX(), dragEvent.getY());
            dndGesture.processRecognized(pickedNode, dragEvent);
            dndGesture = null;
@@ -2750,8 +2747,8 @@ public class Scene implements EventTarget {
                     processingDragDetected();
 
                     if (target != null) {
-                        final MouseEvent detectedEvent = MouseEvent.impl_copy(
-                                mouseEvent.getSource(), target, mouseEvent,
+                        final MouseEvent detectedEvent = mouseEvent.copyFor(
+                                mouseEvent.getSource(), target,
                                 MouseEvent.DRAG_DETECTED);
 
                         fireEvent(target, detectedEvent);
@@ -2773,10 +2770,10 @@ public class Scene implements EventTarget {
          * the Node.onDragSourceRecognized function.
          */
         private boolean processRecognized(EventTarget target, DragEvent de) {
-            MouseEvent me = MouseEvent.impl_mouseEvent(de.getX(), de.getY(),
+            MouseEvent me = new MouseEvent(
+                    MouseEvent.DRAG_DETECTED, de.getX(), de.getY(),
                     de.getSceneX(), de.getScreenY(), MouseButton.PRIMARY, 1,
-                    false, false, false, false, false, true, false, false, false,
-                    MouseEvent.DRAG_DETECTED);
+                    false, false, false, false, false, true, false, false, false);
 
             processingDragDetected();
 
@@ -2795,7 +2792,7 @@ public class Scene implements EventTarget {
                 return;
             }
 
-            de = DragEvent.impl_copy(de.getSource(), source, source, target, de,
+            de = de.copyFor(de.getSource(), source, source, target,
                     DragEvent.DRAG_DONE);
 
             Event.fireEvent(source, de);
@@ -2816,17 +2813,17 @@ public class Scene implements EventTarget {
                 dragboard = createDragboard(de);
             }
 
-            de = DragEvent.impl_copy(de.getSource(), pickedTarget, source,
-                    potentialTarget, dragboard, de);
+            de = de.copyFor(de.getSource(), pickedTarget, source,
+                    potentialTarget, dragboard);
 
             handleExitEnter(de, tmpTargetWrapper);
 
-            de = DragEvent.impl_copy(de.getSource(), pickedTarget, source,
-                    potentialTarget, de, DragEvent.DRAG_OVER);
+            de = de.copyFor(de.getSource(), pickedTarget, source,
+                    potentialTarget, DragEvent.DRAG_OVER);
 
             fireEvent(pickedTarget, de);
 
-            Object acceptingObject = de.impl_getAcceptingObject();
+            Object acceptingObject = de.getAcceptingObject();
             potentialTarget = acceptingObject instanceof EventTarget
                     ? (EventTarget) acceptingObject : null;
             acceptedTransferMode = de.getAcceptedTransferMode();
@@ -2861,8 +2858,8 @@ public class Scene implements EventTarget {
             pick(tmpTargetWrapper, de.getX(), de.getY());
             final EventTarget pickedTarget = tmpTargetWrapper.getEventTarget();
 
-            de = DragEvent.impl_copy(de.getSource(), pickedTarget, source,
-                    potentialTarget, acceptedTransferMode, de,
+            de = de.copyFor(de.getSource(), pickedTarget, source,
+                    potentialTarget, acceptedTransferMode,
                     DragEvent.DRAG_DROPPED);
 
             if (dragboard == null) {
@@ -2873,7 +2870,7 @@ public class Scene implements EventTarget {
 
             fireEvent(pickedTarget, de);
 
-            Object acceptingObject = de.impl_getAcceptingObject();
+            Object acceptingObject = de.getAcceptingObject();
             potentialTarget = acceptingObject instanceof EventTarget
                     ? (EventTarget) acceptingObject : null;
             target = potentialTarget;
@@ -2908,17 +2905,17 @@ public class Scene implements EventTarget {
                     if (potentialTarget == t) {
                         potentialTarget = null;
                     }
-                    e = DragEvent.impl_copy(e.getSource(), t, source,
-                            potentialTarget, e, DragEvent.DRAG_EXITED_TARGET);
+                    e = e.copyFor(e.getSource(), t, source,
+                            potentialTarget, DragEvent.DRAG_EXITED_TARGET);
                     Event.fireEvent(t, e);
                 }
 
                 potentialTarget = null;
                 for (; j >= 0; j--) {
                     EventTarget t = newTargets.get(j);
-                    e = DragEvent.impl_copy(e.getSource(), t, source,
-                            potentialTarget, e, DragEvent.DRAG_ENTERED_TARGET);
-                    Object acceptingObject = e.impl_getAcceptingObject();
+                    e = e.copyFor(e.getSource(), t, source,
+                            potentialTarget, DragEvent.DRAG_ENTERED_TARGET);
+                    Object acceptingObject = e.getAcceptingObject();
                     if (acceptingObject instanceof EventTarget) {
                         potentialTarget = (EventTarget) acceptingObject;
                     }
@@ -2944,9 +2941,8 @@ public class Scene implements EventTarget {
             if ((e.getEventType() == KeyEvent.KEY_PRESSED) && (e.getCode() == KeyCode.ESCAPE)) {
 
                 // cancel drag and drop
-                DragEvent de = DragEvent.impl_create(DragEvent.DRAG_DONE,
-                        source, source, source, null, 0, 0, 0, 0, null, dragboard);
-
+                DragEvent de = new DragEvent(
+                        source, source, DragEvent.DRAG_DONE, dragboard, 0, 0, 0, 0, null, source, null);
                 if (source != null) {
                     Event.fireEvent(source, de);
                 }
@@ -3016,7 +3012,7 @@ public class Scene implements EventTarget {
         {
             if (dndGesture != null) {
                 DragEvent dragEvent =
-                        DragEvent.impl_create(x, y, screenX, screenY, transferMode, dragboard);
+                        new DragEvent(DragEvent.ANY, dragboard, x, y, screenX, screenY, transferMode, null, null);
                 dndGesture.processDropEnd(dragEvent);
                 dndGesture = null;
             }
@@ -3111,7 +3107,7 @@ public class Scene implements EventTarget {
             }
         }
 
-        private void preProcess(MouseEvent e) {
+        private MouseEvent preProcess(MouseEvent e) {
             for (ClickCounter cc : counters.values()) {
                 cc.moved(e.getSceneX(), e.getSceneY());
             }
@@ -3131,9 +3127,12 @@ public class Scene implements EventTarget {
                 lastPress = cc;
             }
 
-            e.impl_setClickParams(
+            return new MouseEvent(e.getEventType(), e.getX(), e.getY(),
+                    e.getScreenX(), e.getScreenY(), e.getButton(),
                     cc != null && e.getEventType() != MouseEvent.MOUSE_MOVED ? cc.get() : 0,
-                    still);
+                    e.isShiftDown(), e.isControlDown(), e.isAltDown(), e.isMetaDown(),
+                    e.isPrimaryButtonDown(), e.isMiddleButtonDown(), e.isSecondaryButtonDown(),
+                    e.isSynthesized(), e.isPopupTrigger(), still);
         }
 
         private void postProcess(MouseEvent e, TargetWrapper target, TargetWrapper pickedTarget) {
@@ -3154,9 +3153,13 @@ public class Scene implements EventTarget {
                 }
 
                 if (clickedTarget != null) {
-                    MouseEvent click = MouseEvent.impl_copy(null, clickedTarget, e,
-                            MouseEvent.MOUSE_CLICKED);
-                    click.impl_setClickParams(cc.get(), lastPress.isStill());
+                    MouseEvent click = new MouseEvent(null, clickedTarget,
+                            MouseEvent.MOUSE_CLICKED, e.getX(), e.getY(),
+                            e.getScreenX(), e.getScreenY(), e.getButton(),
+                            cc.get(),
+                            e.isShiftDown(), e.isControlDown(), e.isAltDown(), e.isMetaDown(),
+                            e.isPrimaryButtonDown(), e.isMiddleButtonDown(), e.isSecondaryButtonDown(),
+                            e.isSynthesized(), e.isPopupTrigger(), lastPress.isStill());
                     Event.fireEvent(clickedTarget, click);
                 }
             }
@@ -3235,9 +3238,10 @@ public class Scene implements EventTarget {
             fullPDREntered = false;
             for (int i = fullPDRCurrentEventTargets.size() - 1; i >= 0; i--) {
                 EventTarget entered = fullPDRCurrentEventTargets.get(i);
-                Event.fireEvent(entered, MouseDragEvent.impl_copy(
-                        entered, entered, fullPDRSource, e,
-                        MouseDragEvent.MOUSE_DRAG_EXITED_TARGET));
+                Event.fireEvent(entered, MouseEvent.copyForMouseDragEvent(e,
+                        entered, entered,
+                        MouseDragEvent.MOUSE_DRAG_EXITED_TARGET,
+                        fullPDRSource));
             }
             fullPDRSource = null;
             fullPDRCurrentEventTargets.clear();
@@ -3272,8 +3276,8 @@ public class Scene implements EventTarget {
                             (k < 0 || exitedEventTarget != pdrEventTargets.get(k))) {
                          break;
                     }
-                    queue.postEvent(MouseEvent.impl_copy(
-                            exitedEventTarget, exitedEventTarget, e,
+                    queue.postEvent(e.copyFor(
+                            exitedEventTarget, exitedEventTarget,
                             MouseEvent.MOUSE_EXITED_TARGET));
                 }
 
@@ -3284,8 +3288,8 @@ public class Scene implements EventTarget {
                             (k < 0 || enteredEventTarget != pdrEventTargets.get(k))) {
                         break;
                     }
-                    queue.postEvent(MouseEvent.impl_copy(
-                            enteredEventTarget, enteredEventTarget, e,
+                    queue.postEvent(e.copyFor(
+                            enteredEventTarget, enteredEventTarget,
                             MouseEvent.MOUSE_ENTERED_TARGET));
                 }
 
@@ -3349,7 +3353,7 @@ public class Scene implements EventTarget {
             }
 
             if (!onPulse) {
-                clickGenerator.preProcess(e);
+                e = clickGenerator.preProcess(e);
             }
 
             // enter/exit handling
@@ -3439,16 +3443,18 @@ public class Scene implements EventTarget {
 
                 for (; i >= 0; i--) {
                     final EventTarget exitedEventTarget = fullPDRCurrentEventTargets.get(i);
-                    Event.fireEvent(exitedEventTarget, MouseDragEvent.impl_copy(
-                            exitedEventTarget, exitedEventTarget, fullPDRSource, e,
-                            MouseDragEvent.MOUSE_DRAG_EXITED_TARGET));
+                    Event.fireEvent(exitedEventTarget, MouseEvent.copyForMouseDragEvent(e,
+                            exitedEventTarget, exitedEventTarget,
+                            MouseDragEvent.MOUSE_DRAG_EXITED_TARGET,
+                            fullPDRSource));
                 }
 
                 for (; j >= 0; j--) {
                     final EventTarget enteredEventTarget = fullPDRNewEventTargets.get(j);
-                    Event.fireEvent(enteredEventTarget, MouseDragEvent.impl_copy(
-                            enteredEventTarget, enteredEventTarget, fullPDRSource, e,
-                            MouseDragEvent.MOUSE_DRAG_ENTERED_TARGET));
+                    Event.fireEvent(enteredEventTarget, MouseEvent.copyForMouseDragEvent(e,
+                            enteredEventTarget, enteredEventTarget,
+                            MouseDragEvent.MOUSE_DRAG_ENTERED_TARGET,
+                            fullPDRSource));
                 }
 
                 fullPDRCurrentTarget = eventTarget;
@@ -3460,14 +3466,16 @@ public class Scene implements EventTarget {
             // event delivery
             if (eventTarget != null && !onPulse) {
                 if (e.getEventType() == MouseEvent.MOUSE_DRAGGED) {
-                    Event.fireEvent(eventTarget, MouseDragEvent.impl_copy(
-                            eventTarget, eventTarget, fullPDRSource, e,
-                            MouseDragEvent.MOUSE_DRAG_OVER));
+                    Event.fireEvent(eventTarget, MouseEvent.copyForMouseDragEvent(e,
+                            eventTarget, eventTarget,
+                            MouseDragEvent.MOUSE_DRAG_OVER,
+                            fullPDRSource));
                 }
                 if (e.getEventType() == MouseEvent.MOUSE_RELEASED) {
-                    Event.fireEvent(eventTarget, MouseDragEvent.impl_copy(
-                            eventTarget, eventTarget, fullPDRSource, e,
-                            MouseDragEvent.MOUSE_DRAG_RELEASED));
+                    Event.fireEvent(eventTarget, MouseEvent.copyForMouseDragEvent(e,
+                            eventTarget, eventTarget,
+                            MouseDragEvent.MOUSE_DRAG_RELEASED,
+                            fullPDRSource));
                 }
             }
         }

@@ -430,11 +430,10 @@ public class ZoomEventTest {
     }
 
     @Test public void testToString() {
-        ZoomEvent e = ZoomEvent.impl_zoomEvent(ZoomEvent.ZOOM,
-            10, 20,
+        ZoomEvent e = new ZoomEvent(ZoomEvent.ZOOM,
             100, 100, 200, 200,
             false, false, false, false,
-            true, false);
+            true, false, 10, 20);
 
         String s = e.toString();
 

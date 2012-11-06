@@ -35,7 +35,7 @@ import org.junit.Test;
 public class InputMethodTextRunTest {
 
     private final InputMethodTextRun imtr =
-            InputMethodTextRun.impl_inputMethodTextRun("Text",
+            new InputMethodTextRun("Text",
             InputMethodHighlight.SELECTED_RAW);
 
     @Test
