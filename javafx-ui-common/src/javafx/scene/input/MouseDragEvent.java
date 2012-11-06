@@ -52,7 +52,7 @@ import javafx.event.EventType;
  * The entered/exited events behave similarly to mouse entered/exited
  * events, please see {@link MouseEvent} overview.
  */
-public class MouseDragEvent extends MouseEvent {
+public final class MouseDragEvent extends MouseEvent{
 
     /**
      * Common supertype for all mouse event types.
@@ -123,28 +123,77 @@ public class MouseDragEvent extends MouseEvent {
             new EventType<MouseDragEvent>(MouseDragEvent.MOUSE_DRAG_EXITED_TARGET,
                     "MOUSE-DRAG_EXITED");
 
-    private MouseDragEvent(Object source, EventTarget target,
-            EventType<? extends MouseEvent> eventType) {
-        super(source, target, eventType);
+    /**
+     * Constructs new MouseDragEvent event.
+     * @param source the source of the event. Can be null.
+     * @param target the target of the event. Can be null.
+     * @param eventType The type of the event.
+     * @param x The x with respect to the source. Should be in scene coordinates if source == null or source is not a Node.
+     * @param y The y with respect to the source. Should be in scene coordinates if source == null or source is not a Node.
+     * @param screenX The x coordinate relative to screen.
+     * @param screenY The y coordinate relative to screen.
+     * @param button the mouse button used
+     * @param clickCount number of click counts
+     * @param shiftDown true if shift modifier was pressed.
+     * @param controlDown true if control modifier was pressed.
+     * @param altDown true if alt modifier was pressed.
+     * @param metaDown true if meta modifier was pressed.
+     * @param primaryButtonDown true if primary button was pressed.
+     * @param middleButtonDown true if middle button was pressed.
+     * @param secondaryButtonDown true if secondary button was pressed.
+     * @param synthesized if this event was synthesized
+     * @param popupTrigger whether this event denotes a popup trigger for current platform
+     * @param gestureSource source object of the ongoing gesture.
+     */
+    public MouseDragEvent(Object source, EventTarget target, EventType<MouseDragEvent> eventType,
+            double x, double y, double screenX, double screenY,
+            MouseButton button, int clickCount,
+            boolean shiftDown, boolean controlDown, boolean altDown, boolean metaDown,
+            boolean primaryButtonDown, boolean middleButtonDown, boolean secondaryButtonDown,
+            boolean synthesized, boolean popupTrigger,
+            Object gestureSource) {
+        super(source, target, eventType, x, y, screenX, screenY, button,
+                clickCount, shiftDown, controlDown, altDown, metaDown,
+                primaryButtonDown, middleButtonDown, secondaryButtonDown,
+                synthesized, popupTrigger, false);
+        this.gestureSource = gestureSource;
     }
 
     /**
-     * @treatAsPrivate implementation detail
-     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
+     * Constructs new MouseDragEvent event with null source and target.
+     *
+     * @param eventType The type of the event.
+     * @param x The x with respect to the scene.
+     * @param y The y with respect to the scene.
+     * @param screenX The x coordinate relative to screen.
+     * @param screenY The y coordinate relative to screen.
+     * @param button the mouse button used
+     * @param clickCount number of click counts
+     * @param shiftDown true if shift modifier was pressed.
+     * @param controlDown true if control modifier was pressed.
+     * @param altDown true if alt modifier was pressed.
+     * @param metaDown true if meta modifier was pressed.
+     * @param primaryButtonDown true if primary button was pressed.
+     * @param middleButtonDown true if middle button was pressed.
+     * @param secondaryButtonDown true if secondary button was pressed.
+     * @param synthesized if this event was synthesized
+     * @param popupTrigger whether this event denotes a popup trigger for current platform
+     * @param gestureSource source object of the ongoing gesture.
      */
-    @Deprecated
-    public static MouseEvent impl_copy(Object source, EventTarget target,
-            Object gestureSource, MouseEvent evt,
-            EventType<? extends MouseEvent> eventType) {
+    public MouseDragEvent(EventType<MouseDragEvent> eventType,
+            double x, double y, double screenX, double screenY,
+            MouseButton button, int clickCount,
+            boolean shiftDown, boolean controlDown, boolean altDown, boolean metaDown,
+            boolean primaryButtonDown, boolean middleButtonDown, boolean secondaryButtonDown,
+            boolean synthesized, boolean popupTrigger,
+            Object gestureSource) {
+        this(null, null, eventType, x, y, screenX, screenY, button, clickCount,
+                shiftDown, controlDown, altDown, metaDown, primaryButtonDown,
+                middleButtonDown, secondaryButtonDown, synthesized, popupTrigger, gestureSource);
+     }
 
-        MouseDragEvent copyEvent = new MouseDragEvent(source, target, eventType);
-        MouseEvent.copyFields(evt, copyEvent, source, target);
-        copyEvent.gestureSource = gestureSource;
-
-        return copyEvent;
-    }
-
-    private transient Object gestureSource;
+   
+    private final transient Object gestureSource;
 
     /**
      * Returns the source object of the ongoing gesture.
@@ -206,5 +255,20 @@ public class MouseDragEvent extends MouseEvent {
         }
 
         return sb.append("]").toString();
+    }
+
+    @Override
+    public MouseDragEvent copyFor(Object newSource, EventTarget newTarget) {
+        return (MouseDragEvent) super.copyFor(newSource, newTarget);
+    }
+
+    @Override
+    public MouseDragEvent copyFor(Object newSource, EventTarget newTarget, EventType<? extends MouseEvent> type) {
+        return (MouseDragEvent) super.copyFor(newSource, newTarget, type);
+    }
+
+    @Override
+    public EventType<MouseDragEvent> getEventType() {
+        return (EventType<MouseDragEvent>) super.getEventType();
     }
 }

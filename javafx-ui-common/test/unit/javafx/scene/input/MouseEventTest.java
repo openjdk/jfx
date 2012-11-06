@@ -39,10 +39,10 @@ public class MouseEventTest {
 
     private final Node node1 = new TestNode(5);
     private final Node node2 = new TestNode(10);
-    private final MouseEvent doubleclick = MouseEvent.impl_mouseEvent(
+    private final MouseEvent doubleclick = new MouseEvent(
+            MouseEvent.MOUSE_CLICKED,
             11, 12, 13, 14, MouseButton.PRIMARY, 2,
-            true, false, true, false, true, false, true, false, false,
-            MouseEvent.MOUSE_CLICKED);
+            true, false, true, false, false, true, false, false, true);
 
     @Test
     public void shouldCreateDoubleClickMouseEvent() {
@@ -59,7 +59,7 @@ public class MouseEventTest {
         assertFalse(doubleclick.isControlDown());
         assertTrue(doubleclick.isAltDown());
         assertFalse(doubleclick.isMetaDown());
-        assertTrue(MouseEvent.impl_getPopupTrigger(doubleclick));
+        assertTrue(doubleclick.isPopupTrigger());
         assertFalse(doubleclick.isPrimaryButtonDown());
         assertTrue(doubleclick.isMiddleButtonDown());
         assertFalse(doubleclick.isSecondaryButtonDown());
@@ -69,7 +69,7 @@ public class MouseEventTest {
 
     @Test
     public void shouldCopyMouseEvent() {
-        MouseEvent copy = MouseEvent.impl_copy(node1, node2, doubleclick);
+        MouseEvent copy = doubleclick.copyFor(node1, node2);
 
         assertEquals(6f, copy.getX(), 0.0001);
         assertEquals(7f, copy.getY(), 0.0001);
@@ -83,8 +83,8 @@ public class MouseEventTest {
         assertEquals(doubleclick.isControlDown(), copy.isControlDown());
         assertEquals(doubleclick.isAltDown(), copy.isAltDown());
         assertEquals(doubleclick.isMetaDown(), copy.isMetaDown());
-        assertEquals(MouseEvent.impl_getPopupTrigger(doubleclick),
-                     MouseEvent.impl_getPopupTrigger(copy));
+        assertEquals(doubleclick.isPopupTrigger(),
+                     copy.isPopupTrigger());
         assertEquals(doubleclick.isPrimaryButtonDown(), copy.isPrimaryButtonDown());
         assertEquals(doubleclick.isMiddleButtonDown(), copy.isMiddleButtonDown());
         assertEquals(doubleclick.isSecondaryButtonDown(), copy.isSecondaryButtonDown());
@@ -95,7 +95,7 @@ public class MouseEventTest {
 
     @Test
     public void shouldCopyMouseEventWithEventId() {
-        MouseEvent copy = MouseEvent.impl_copy(node1, node2, doubleclick,
+        MouseEvent copy = doubleclick.copyFor(node1, node2,
                 MouseEvent.MOUSE_ENTERED);
 
         assertEquals(6f, copy.getX(), 0.0001);
@@ -110,8 +110,8 @@ public class MouseEventTest {
         assertEquals(doubleclick.isControlDown(), copy.isControlDown());
         assertEquals(doubleclick.isAltDown(), copy.isAltDown());
         assertEquals(doubleclick.isMetaDown(), copy.isMetaDown());
-        assertEquals(MouseEvent.impl_getPopupTrigger(doubleclick),
-                     MouseEvent.impl_getPopupTrigger(copy));
+        assertEquals(doubleclick.isPopupTrigger(),
+                     copy.isPopupTrigger());
         assertEquals(doubleclick.isPrimaryButtonDown(), copy.isPrimaryButtonDown());
         assertEquals(doubleclick.isMiddleButtonDown(), copy.isMiddleButtonDown());
         assertEquals(doubleclick.isSecondaryButtonDown(), copy.isSecondaryButtonDown());
@@ -122,8 +122,8 @@ public class MouseEventTest {
 
     @Test
     public void shouldCopyMouseEventWithNode() {
-        MouseEvent temp = MouseEvent.impl_copy(node1, node2, doubleclick);
-        MouseEvent copy = MouseEvent.impl_copy(node2, node1, temp);
+        MouseEvent temp = doubleclick.copyFor(node1, node2);
+        MouseEvent copy = temp.copyFor(node2, node1);
 
         assertEquals(1f, copy.getX(), 0.0001);
         assertEquals(2f, copy.getY(), 0.0001);
@@ -137,8 +137,8 @@ public class MouseEventTest {
         assertEquals(doubleclick.isControlDown(), copy.isControlDown());
         assertEquals(doubleclick.isAltDown(), copy.isAltDown());
         assertEquals(doubleclick.isMetaDown(), copy.isMetaDown());
-        assertEquals(MouseEvent.impl_getPopupTrigger(doubleclick),
-                     MouseEvent.impl_getPopupTrigger(copy));
+        assertEquals(doubleclick.isPopupTrigger(),
+                     copy.isPopupTrigger());
         assertEquals(doubleclick.isPrimaryButtonDown(), copy.isPrimaryButtonDown());
         assertEquals(doubleclick.isMiddleButtonDown(), copy.isMiddleButtonDown());
         assertEquals(doubleclick.isSecondaryButtonDown(), copy.isSecondaryButtonDown());
@@ -149,7 +149,7 @@ public class MouseEventTest {
 
     @Test
     public void shouldCopyMouseEventWithDrag() {
-        MouseEvent copy = MouseEvent.impl_copy(node1, node2, doubleclick);
+        MouseEvent copy = doubleclick.copyFor(node1, node2);
 
         assertEquals(6f, copy.getX(), 0.0001);
         assertEquals(7f, copy.getY(), 0.0001);
@@ -163,8 +163,8 @@ public class MouseEventTest {
         assertEquals(doubleclick.isControlDown(), copy.isControlDown());
         assertEquals(doubleclick.isAltDown(), copy.isAltDown());
         assertEquals(doubleclick.isMetaDown(), copy.isMetaDown());
-        assertEquals(MouseEvent.impl_getPopupTrigger(doubleclick),
-                     MouseEvent.impl_getPopupTrigger(copy));
+        assertEquals(doubleclick.isPopupTrigger(),
+                     copy.isPopupTrigger());
         assertEquals(doubleclick.isPrimaryButtonDown(), copy.isPrimaryButtonDown());
         assertEquals(doubleclick.isMiddleButtonDown(), copy.isMiddleButtonDown());
         assertEquals(doubleclick.isSecondaryButtonDown(), copy.isSecondaryButtonDown());

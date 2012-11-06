@@ -35,25 +35,24 @@ import java.io.Serializable;
  * {@link javafx.application.ConditionalFeature#INPUT_METHOD ConditionalFeature.INPUT_METHOD}
  * for more information.
  */
-public class InputMethodTextRun implements Serializable{
+public class InputMethodTextRun implements Serializable {
+
     /**
-     * @treatAsPrivate implementation detail
-     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
+     * Constructs a single text run of an input method.
+     * @param text the text in the text run
+     * @param highlight the highlighting of the text
      */
-    @Deprecated
-    public static InputMethodTextRun impl_inputMethodTextRun(String text,
+    public InputMethodTextRun(String text,
             InputMethodHighlight highlight) {
-        InputMethodTextRun run = new InputMethodTextRun();
-        run.text = text;
-        run.highlight = highlight;
-        return run;
+        this.text = text;
+        this.highlight = highlight;
     }
     /**
      * The text in this run.
      *
      * @defaultValue empty string
      */
-    private String text = "";
+    private final String text;
 
     /**
      * Gets the text in this run.
@@ -67,7 +66,7 @@ public class InputMethodTextRun implements Serializable{
      *
      * @defaultValue null
      */
-    private InputMethodHighlight highlight;
+    private final InputMethodHighlight highlight;
 
     /**
      * Gets the highlight used for displaying this text.

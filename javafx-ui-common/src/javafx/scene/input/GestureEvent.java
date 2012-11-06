@@ -55,9 +55,11 @@ public class GestureEvent extends InputEvent {
     /**
      * Creates a new instance of {@code GestureEvent}.
      * @param eventType Type of the event
+     * @deprecated Do not use this constructor. Constructs empty event.
      */
+    @Deprecated
     protected GestureEvent(final EventType<? extends GestureEvent> eventType) {
-        super(eventType);
+        this(eventType, 0, 0, 0, 0, false, false, false, false, false, false);
     }
 
     /**
@@ -65,17 +67,37 @@ public class GestureEvent extends InputEvent {
      * @param source Event source
      * @param target Event target
      * @param eventType Type of the event
+     * @deprecated Do not use this constructor. Constructs empty event.
      */
+    @Deprecated
     protected GestureEvent(Object source, EventTarget target,
             final EventType<? extends GestureEvent> eventType) {
         super(source, target, eventType);
+        x = y = screenX = screenY = sceneX = sceneY = 0;
+        shiftDown = controlDown = altDown = metaDown = direct = inertia = false;
     }
 
-    GestureEvent(final EventType<? extends GestureEvent> eventType,
+    /**
+     * Constructs new GestureEvent event.
+     * @param source the source of the event. Can be null.
+     * @param target the target of the event. Can be null.
+     * @param eventType The type of the event.
+     * @param x The x with respect to the source. Should be in scene coordinates if source == null or source is not a Node.
+     * @param y The y with respect to the source. Should be in scene coordinates if source == null or source is not a Node.
+     * @param screenX The x coordinate relative to screen.
+     * @param screenY The y coordinate relative to screen.
+     * @param shiftDown true if shift modifier was pressed.
+     * @param controlDown true if control modifier was pressed.
+     * @param altDown true if alt modifier was pressed.
+     * @param metaDown true if meta modifier was pressed.
+     * @param direct true if the event was caused by direct input device. See {@link #isDirect() }
+     * @param inertia if represents inertia of an already finished gesture.
+     */
+    protected GestureEvent(Object source, EventTarget target, final EventType<? extends GestureEvent> eventType,
             double x, double y, double screenX, double screenY,
             boolean shiftDown, boolean controlDown, boolean altDown,
             boolean metaDown, boolean direct, boolean inertia) {
-        super(eventType);
+        super(source, target, eventType);
         this.x = x;
         this.y = y;
         this.screenX = screenX;
@@ -88,6 +110,27 @@ public class GestureEvent extends InputEvent {
         this.metaDown = metaDown;
         this.direct = direct;
         this.inertia = inertia;
+    }
+
+    /**
+     * Constructs new GestureEvent event with empty source and target
+     * @param eventType The type of the event.
+     * @param x The x with respect to the scene.
+     * @param y The y with respect to the scene.
+     * @param screenX The x coordinate relative to screen.
+     * @param screenY The y coordinate relative to screen.
+     * @param shiftDown true if shift modifier was pressed.
+     * @param controlDown true if control modifier was pressed.
+     * @param altDown true if alt modifier was pressed.
+     * @param metaDown true if meta modifier was pressed.
+     * @param direct true if the event was caused by direct input device. See {@link #isDirect() }
+     * @param inertia if represents inertia of an already finished gesture.
+     */
+    protected GestureEvent(final EventType<? extends GestureEvent> eventType,
+            double x, double y, double screenX, double screenY,
+            boolean shiftDown, boolean controlDown, boolean altDown,
+            boolean metaDown, boolean direct, boolean inertia) {
+        this(null, null, eventType, x, y, screenX, screenY, shiftDown, controlDown, altDown, metaDown, direct, inertia);
     }
 
     /**
@@ -109,32 +152,10 @@ public class GestureEvent extends InputEvent {
      * @inheritDoc
      */
     @Override
-    public Event copyFor(Object newSource, EventTarget newTarget) {
+    public GestureEvent copyFor(Object newSource, EventTarget newTarget) {
         GestureEvent e = (GestureEvent) super.copyFor(newSource, newTarget);
         recomputeCoordinatesToSource(e, newSource);
         return e;
-    }
-
-    /**
-     * Copies all private fields (except of event type) from one event to
-     * another event. This is for implementing impl_copy in subclasses.
-     */
-    static void copyFields(GestureEvent from, GestureEvent to,
-            Object source, EventTarget target) {
-        to.x = from.x;
-        to.y = from.y;
-        to.screenX = from.screenX;
-        to.screenY = from.screenY;
-        to.sceneX = from.sceneX;
-        to.sceneY = from.sceneY;
-        to.shiftDown = from.shiftDown;
-        to.controlDown = from.controlDown;
-        to.altDown = from.altDown;
-        to.metaDown = from.metaDown;
-        to.source = source;
-        to.target = target;
-
-        from.recomputeCoordinatesToSource(to, source);
     }
 
     private transient double x;
@@ -167,7 +188,7 @@ public class GestureEvent extends InputEvent {
         return y;
     }
 
-    private double screenX;
+    private final double screenX;
 
     /**
      * Gets the absolute horizontal position of the event.
@@ -179,7 +200,7 @@ public class GestureEvent extends InputEvent {
         return screenX;
     }
 
-    private double screenY;
+    private final double screenY;
 
     /**
      * Gets the absolute vertical position of the event.
@@ -191,7 +212,7 @@ public class GestureEvent extends InputEvent {
         return screenY;
     }
 
-    private double sceneX;
+    private final double sceneX;
 
     /**
      * Gets the horizontal position of the event relative to the
@@ -208,7 +229,7 @@ public class GestureEvent extends InputEvent {
         return sceneX;
     }
 
-    private double sceneY;
+    private final double sceneY;
 
     /**
      * Gets the vertical position of the event relative to the
@@ -225,7 +246,7 @@ public class GestureEvent extends InputEvent {
         return sceneY;
     }
 
-    private boolean shiftDown;
+    private final boolean shiftDown;
 
     /**
      * Indicates whether or not the Shift modifier is down on this event.
@@ -235,7 +256,7 @@ public class GestureEvent extends InputEvent {
         return shiftDown;
     }
 
-    private boolean controlDown;
+    private final boolean controlDown;
 
     /**
      * Indicates whether or not the Control modifier is down on this event.
@@ -245,7 +266,7 @@ public class GestureEvent extends InputEvent {
         return controlDown;
     }
 
-    private boolean altDown;
+    private final boolean altDown;
 
     /**
      * Indicates whether or not the Alt modifier is down on this event.
@@ -255,7 +276,7 @@ public class GestureEvent extends InputEvent {
         return altDown;
     }
 
-    private boolean metaDown;
+    private final boolean metaDown;
 
     /**
      * Indicates whether or not the Meta modifier is down on this event.
@@ -265,7 +286,7 @@ public class GestureEvent extends InputEvent {
         return metaDown;
     }
 
-    private boolean direct;
+    private final boolean direct;
 
     /**
      * Indicates whether this gesture is caused by a direct or indirect input
@@ -280,7 +301,7 @@ public class GestureEvent extends InputEvent {
         return direct;
     }
 
-    private boolean inertia;
+    private final boolean inertia;
 
     /**
      * Indicates if this event represents an inertia of an already finished
@@ -362,5 +383,10 @@ public class GestureEvent extends InputEvent {
         in.defaultReadObject();
         x = sceneX;
         y = sceneY;
+    }
+
+    @Override
+    public EventType<? extends GestureEvent> getEventType() {
+        return (EventType<? extends GestureEvent>) super.getEventType();
     }
 }

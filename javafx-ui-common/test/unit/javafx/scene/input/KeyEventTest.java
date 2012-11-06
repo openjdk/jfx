@@ -31,6 +31,7 @@ import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertSame;
 import static org.junit.Assert.assertTrue;
 import javafx.scene.Node;
+import javafx.event.EventTarget;
 
 import org.junit.Test;
 
@@ -38,11 +39,15 @@ public class KeyEventTest {
 
     private final Node node1 = new TestNode();
     private final Node node2 = new TestNode();
+    
+    public KeyEvent testKeyEvent(EventTarget target, String character, KeyCode code, boolean shiftDown, boolean controlDown, boolean altDown, boolean metaDown) {
+        return new KeyEvent(null, target, KeyEvent.KEY_PRESSED, character, null, code.impl_getCode(), shiftDown, controlDown, altDown, metaDown);
+    }
 
     @Test
     public void shouldCreateKeyTypedEvent() {
-        KeyEvent event = KeyEvent.impl_keyEvent(node1, "A", "A", 0x41, true,
-                false, false, false, KeyEvent.KEY_TYPED);
+        KeyEvent event = new KeyEvent(null, node1, KeyEvent.KEY_TYPED, "A", "A", 0x41, true,
+                false, false, false);
 
         assertSame(node1, event.getTarget());
         assertEquals("A", event.getCharacter());
@@ -57,8 +62,8 @@ public class KeyEventTest {
 
     @Test
     public void shouldCreateKeyReleasedEvent() {
-        KeyEvent event = KeyEvent.impl_keyEvent(node1, "A", "A", 0x41, true,
-                false, false, false, KeyEvent.KEY_RELEASED);
+        KeyEvent event = new KeyEvent(null, node1, KeyEvent.KEY_RELEASED, "A", "A", 0x41, true,
+                false, false, false);
 
         assertSame(node1, event.getTarget());
         assertEquals(KeyEvent.CHAR_UNDEFINED, event.getCharacter());
@@ -73,9 +78,9 @@ public class KeyEventTest {
 
     @Test
     public void shouldCopyKeyTypedEvent() {
-        KeyEvent original = KeyEvent.impl_keyEvent(node1, "A", "A", 0x41, true,
-                false, false, false, KeyEvent.KEY_TYPED);
-        KeyEvent event = KeyEvent.impl_copy(node2, original);
+        KeyEvent original = new KeyEvent(null, node1, KeyEvent.KEY_TYPED, "A", "A", 0x41, true,
+                false, false, false);
+        KeyEvent event = original.copyFor(null, node2);
 
         assertSame(node2, event.getTarget());
         assertEquals("A", event.getCharacter());
@@ -90,9 +95,9 @@ public class KeyEventTest {
 
     @Test
     public void shouldGetNonEmptyDescription() {
-        KeyEvent event1 = KeyEvent.testKeyEvent(node1, "A", KeyCode.A,
+        KeyEvent event1 = testKeyEvent(node1, "A", KeyCode.A,
             false, false, false, false);
-        KeyEvent event2 = KeyEvent.testKeyEvent(node1, "", KeyCode.UNDEFINED,
+        KeyEvent event2 = testKeyEvent(node1, "", KeyCode.UNDEFINED,
             true, true, true, true);
 
         String s1 = event1.toString();

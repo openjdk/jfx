@@ -28,10 +28,10 @@ package javafx.scene.input;
 
 import com.sun.javafx.scene.input.InputEventUtils;
 import java.io.IOException;
-import javafx.event.Event;
 import javafx.event.EventTarget;
 import javafx.event.EventType;
 import javafx.geometry.Point2D;
+import javafx.scene.Node;
 
 // PENDING_DOC_REVIEW
 /**
@@ -52,31 +52,50 @@ public class ContextMenuEvent extends InputEvent {
      * This event occurs when a context menu is requested.
      */
     public static final EventType<ContextMenuEvent> CONTEXT_MENU_REQUESTED =
-            new EventType<ContextMenuEvent>(ContextMenuEvent.ANY, "CONTEXT_MENU_REQUESTED");
-
-    private ContextMenuEvent(final EventType<? extends ContextMenuEvent> eventType) {
-        super(eventType);
-    }
+            new EventType<ContextMenuEvent>(ContextMenuEvent.ANY, "CONTEXTMENUREQUESTED");
 
     /**
-     * @treatAsPrivate implementation detail
-     * @deprecated
+     * Constructs new ContextMenu event.
+     * @param source the source of the event. Can be null.
+     * @param target the target of the event. Can be null.
+     * @param eventType The type of the event.
+     * @param x The x with respect to the source. Should be in scene coordinates if source == null or source is not a Node.
+     * @param y The y with respect to the source. Should be in scene coordinates if source == null or source is not a Node.
+     * @param screenX The x coordinate relative to screen.
+     * @param screenY The y coordinate relative to screen.
+     * @param keyboardTrigger true if this event was triggered by keyboard.
      */
-    @Deprecated
-    public static ContextMenuEvent impl_contextEvent(double _x, double _y,
-          double _screenX, double _screenY, boolean _keyboardTrigger,
-          EventType<? extends ContextMenuEvent> _eventType
-          )
-    {
-        ContextMenuEvent e = new ContextMenuEvent(_eventType);
-        e.x = _x;
-        e.y = _y;
-        e.screenX = _screenX;
-        e.screenY = _screenY;
-        e.sceneX = _x;
-        e.sceneY = _y;
-        e.keyboardTrigger = _keyboardTrigger;
-        return e;
+    public ContextMenuEvent(Object source, EventTarget target, EventType<ContextMenuEvent> eventType, double x, double y,
+            double screenX, double screenY, boolean keyboardTrigger) {
+        super(source, target, eventType);
+        this.x = x;
+        this.y = y;
+        if (source != null && source instanceof Node) {
+            Node sourceNode = (Node) source;
+            Point2D localToScene = sourceNode.localToScene(x, y);
+            this.sceneX = localToScene.getX();
+            this.sceneY = localToScene.getY();
+        } else {
+            this.sceneX = x;
+            this.sceneY = y;
+        }
+        this.screenX = screenX;
+        this.screenY = screenY;
+        this.keyboardTrigger = keyboardTrigger;
+     }
+
+    /**
+     * Constructs new ContextMenu event with empty source and target.
+     * @param eventType The type of the event.
+     * @param x The x with respect to the screen.
+     * @param y The y with respect to the screen.
+     * @param screenX The x coordinate relative to screen.
+     * @param screenY The y coordinate relative to screen.
+     * @param keyboardTrigger true if this event was triggered by keyboard.
+     */
+    public ContextMenuEvent(EventType<ContextMenuEvent> eventType, double x, double y,
+            double screenX, double screenY, boolean keyboardTrigger) {
+        this(null, null, eventType, x, y, screenX, screenY, keyboardTrigger);
     }
 
     /**
@@ -95,16 +114,21 @@ public class ContextMenuEvent extends InputEvent {
     }
 
     @Override
-    public Event copyFor(Object newSource, EventTarget newTarget) {
+    public ContextMenuEvent copyFor(Object newSource, EventTarget newTarget) {
         ContextMenuEvent e = (ContextMenuEvent) super.copyFor(newSource, newTarget);
         recomputeCoordinatesToSource(e, newSource);
         return e;
+    }
+
+    @Override
+    public EventType<ContextMenuEvent> getEventType() {
+        return (EventType<ContextMenuEvent>) super.getEventType();
     }
     
     /**
      * The boolean that indicates the event was triggered by a keyboard gesture.
      */
-    private boolean keyboardTrigger;
+    private final boolean keyboardTrigger;
     
     /**
      * Determines whether this event originated from the keyboard.
@@ -156,7 +180,7 @@ public class ContextMenuEvent extends InputEvent {
     /**
      * Absolute horizontal x position of the event.
      */
-    private double screenX;
+    private final double screenX;
 
     /**
      * Returns absolute horizontal position of the event.
@@ -171,7 +195,7 @@ public class ContextMenuEvent extends InputEvent {
     /**
      * Absolute vertical y position of the event.
      */
-    private double screenY;
+    private final double screenY;
 
     /**
      * Returns absolute vertical position of the event.
@@ -189,7 +213,7 @@ public class ContextMenuEvent extends InputEvent {
      * If the node is not in a {@code Scene}, then the value is relative to
      * the boundsInParent of the root-most parent of the ContextMenuEvent's node.
      */
-    private double sceneX;
+    private final double sceneX;
 
     /**
      * Returns horizontal position of the event relative to the
@@ -212,7 +236,7 @@ public class ContextMenuEvent extends InputEvent {
      * If the node is not in a {@code Scene}, then the value is relative to
      * the boundsInParent of the root-most parent of the ContextMenuEvent's node.
      */
-    private double sceneY;
+    private final double sceneY;
 
     /**
      * Returns vertical position of the event relative to the

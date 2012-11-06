@@ -339,23 +339,21 @@ public final class Scenegraph_eventHandlers_Test {
             keyCode = KeyCode.Q;
         }
 
-        return KeyEvent.impl_keyEvent(null, character, text,
+        return new KeyEvent(keyEventType, character, text,
                                       keyCode.impl_getCode(),
-                                      false, false, false, false,
-                                      keyEventType);
+                                      false, false, false, false);
     }
 
     private static Event createContextMenuEvent() {
-        return ContextMenuEvent.impl_contextEvent(10, 10,
-          10, 10, false, ContextMenuEvent.CONTEXT_MENU_REQUESTED);
+        return new ContextMenuEvent(ContextMenuEvent.CONTEXT_MENU_REQUESTED, 10, 10,
+          10, 10, false);
     }
 
     private static Event createSwipeEvent(final EventType<SwipeEvent> type) {
-        return SwipeEvent.impl_swipeEvent(
+        return new SwipeEvent(
                 type,
-                1,
                 100, 100, 100, 100,
-                false, false, false, false, true);
+                false, false, false, false, true, 1);
     }
 
     private static void setEventHandler(

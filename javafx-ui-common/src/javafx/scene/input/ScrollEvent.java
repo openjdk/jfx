@@ -96,7 +96,7 @@ import javafx.event.EventType;
  *
  * @since 2.2
  */
-public class ScrollEvent extends GestureEvent {
+public final class ScrollEvent extends GestureEvent {
 
     /**
      * Common supertype for all scroll event types.
@@ -125,22 +125,33 @@ public class ScrollEvent extends GestureEvent {
     public static final EventType<ScrollEvent> SCROLL_FINISHED =
             new EventType<ScrollEvent> (ScrollEvent.ANY, "SCROLL_FINISHED");
 
-    
-    private ScrollEvent(final EventType<? extends ScrollEvent> eventType) {
-        super(eventType);
-    }
-
-    private ScrollEvent(Object source, EventTarget target,
-            final EventType<? extends ScrollEvent> eventType) {
-        super(source, target, eventType);
-    }
-
-    private ScrollEvent(final EventType<? extends ScrollEvent> eventType,
-            double deltaX, double deltaY,
-            double gestureDeltaX, double gestureDeltaY,
-            HorizontalTextScrollUnits textDeltaXUnits, double textDeltaX,
-            VerticalTextScrollUnits textDeltaYUnits, double textDeltaY,
-            int touchCount,
+    /**
+     * Constructs new ScrollEvent event.
+     * @param source the source of the event. Can be null.
+     * @param target the target of the event. Can be null.
+     * @param eventType The type of the event.
+     * @param x The x with respect to the source. Should be in scene coordinates if source == null or source is not a Node.
+     * @param y The y with respect to the source. Should be in scene coordinates if source == null or source is not a Node.
+     * @param screenX The x coordinate relative to screen.
+     * @param screenY The y coordinate relative to screen.
+     * @param shiftDown true if shift modifier was pressed.
+     * @param controlDown true if control modifier was pressed.
+     * @param altDown true if alt modifier was pressed.
+     * @param metaDown true if meta modifier was pressed.
+     * @param direct true if the event was caused by direct input device. See {@link #isDirect() }
+     * @param inertia if represents inertia of an already finished gesture.
+     * @param deltaX horizontal scroll amount
+     * @param deltaY vertical scroll amount
+     * @param totalDeltaX cumulative horizontal scroll amount
+     * @param totalDeltaY cumulative vertical scroll amount
+     * @param textDeltaXUnits units for horizontal text-based scroll amount
+     * @param textDeltaX horizontal text-based scroll amount
+     * @param textDeltaYUnits units for vertical text-based scroll amount
+     * @param textDeltaY vertical text-based scroll amount
+     * @param touchCount number of touch points
+     */
+    public ScrollEvent(Object source, EventTarget target,
+            final EventType<ScrollEvent> eventType,
             double x, double y,
             double screenX, double screenY,
             boolean shiftDown,
@@ -148,22 +159,70 @@ public class ScrollEvent extends GestureEvent {
             boolean altDown,
             boolean metaDown,
             boolean direct,
-            boolean inertia) {
+            boolean inertia,
+            double deltaX, double deltaY,
+            double totalDeltaX, double totalDeltaY,
+            HorizontalTextScrollUnits textDeltaXUnits, double textDeltaX,
+            VerticalTextScrollUnits textDeltaYUnits, double textDeltaY,
+            int touchCount) {
 
-        super(eventType, x, y, screenX, screenY,
+        super(source, target, eventType, x, y, screenX, screenY,
                 shiftDown, controlDown, altDown, metaDown, direct, inertia);
         this.deltaX = deltaX;
         this.deltaY = deltaY;
-        this.totalDeltaX = gestureDeltaX;
-        this.totalDeltaY = gestureDeltaY;
+        this.totalDeltaX = totalDeltaX;
+        this.totalDeltaY = totalDeltaY;
         this.textDeltaXUnits = textDeltaXUnits;
         this.textDeltaX = textDeltaX;
         this.textDeltaYUnits = textDeltaYUnits;
         this.textDeltaY = textDeltaY;
         this.touchCount = touchCount;
     }
+
+    /**
+     * Constructs new ScrollEvent event with null source and target
+     * @param eventType The type of the event.
+     * @param x The x with respect to the scene.
+     * @param y The y with respect to the scene.
+     * @param screenX The x coordinate relative to screen.
+     * @param screenY The y coordinate relative to screen.
+     * @param shiftDown true if shift modifier was pressed.
+     * @param controlDown true if control modifier was pressed.
+     * @param altDown true if alt modifier was pressed.
+     * @param metaDown true if meta modifier was pressed.
+     * @param direct true if the event was caused by direct input device. See {@link #isDirect() }
+     * @param inertia if represents inertia of an already finished gesture.
+     * @param deltaX horizontal scroll amount
+     * @param deltaY vertical scroll amount
+     * @param totalDeltaX cumulative horizontal scroll amount
+     * @param totalDeltaY cumulative vertical scroll amount
+     * @param textDeltaXUnits units for horizontal text-based scroll amount
+     * @param textDeltaX horizontal text-based scroll amount
+     * @param textDeltaYUnits units for vertical text-based scroll amount
+     * @param textDeltaY vertical text-based scroll amount
+     * @param touchCount number of touch points
+     */
+    public ScrollEvent(final EventType<ScrollEvent> eventType,
+            double x, double y,
+            double screenX, double screenY,
+            boolean shiftDown,
+            boolean controlDown,
+            boolean altDown,
+            boolean metaDown,
+            boolean direct,
+            boolean inertia,
+            double deltaX, double deltaY,
+            double gestureDeltaX, double gestureDeltaY,
+            HorizontalTextScrollUnits textDeltaXUnits, double textDeltaX,
+            VerticalTextScrollUnits textDeltaYUnits, double textDeltaY,
+            int touchCount) {
+        this(null, null, eventType, x, y, screenX, screenY, shiftDown, controlDown,
+                altDown, metaDown, direct, inertia, deltaX, deltaY, gestureDeltaX,
+                gestureDeltaY, textDeltaXUnits, textDeltaX, textDeltaYUnits, textDeltaY, touchCount);
+    }
     
-    private double deltaX;
+    
+    private final double deltaX;
 
     /**
      * Gets the horizontal scroll amount. This value should be interpreted
@@ -182,7 +241,7 @@ public class ScrollEvent extends GestureEvent {
         return deltaX;
     }
 
-    private double deltaY;
+    private final double deltaY;
 
     /**
      * Gets the vertical scroll amount. This value should be interpreted
@@ -220,7 +279,7 @@ public class ScrollEvent extends GestureEvent {
         return totalDeltaX;
     }
 
-    private double totalDeltaY;
+    private final double totalDeltaY;
 
     /**
      * Gets the cumulative vertical scroll amount for the whole gesture.
@@ -239,7 +298,7 @@ public class ScrollEvent extends GestureEvent {
         return totalDeltaY;
     }
 
-    private HorizontalTextScrollUnits textDeltaXUnits;
+    private final HorizontalTextScrollUnits textDeltaXUnits;
 
     /**
      * Gets the horizontal scrolling units for text-based scrolling.
@@ -254,7 +313,7 @@ public class ScrollEvent extends GestureEvent {
         return textDeltaXUnits;
     }
 
-    private VerticalTextScrollUnits textDeltaYUnits;
+    private final VerticalTextScrollUnits textDeltaYUnits;
 
     /**
      * Gets the vertical scrolling units for text-based scrolling.
@@ -269,7 +328,7 @@ public class ScrollEvent extends GestureEvent {
         return textDeltaYUnits;
     }
     
-    private double textDeltaX;
+    private final double textDeltaX;
 
     /**
      * Gets the horizontal text-based scroll amount. This value should be 
@@ -283,7 +342,7 @@ public class ScrollEvent extends GestureEvent {
         return textDeltaX;
     }
     
-    private double textDeltaY;
+    private final double textDeltaY;
 
     /**
      * Gets the vertical text-based scroll amount. This value should be 
@@ -297,7 +356,7 @@ public class ScrollEvent extends GestureEvent {
         return textDeltaY;
     }
 
-    private int touchCount;
+    private final int touchCount;
 
     /**
      * Gets number of touch points that caused this event. For non-touch source
@@ -309,37 +368,6 @@ public class ScrollEvent extends GestureEvent {
         return touchCount;
     }
 
-    /**
-     * @treatAsPrivate implementation detail
-     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
-     */
-    @Deprecated
-    public static ScrollEvent impl_scrollEvent(EventType<ScrollEvent> eventType,
-            double _scrollX, double _scrollY,
-            double _totalScrollX, double _totalScrollY,
-            HorizontalTextScrollUnits _scrollTextXUnits, double _scrollTextX,
-            VerticalTextScrollUnits _scrollTextYUnits, double _scrollTextY,
-            int _touchPoints,
-            double _x, double _y,
-            double _screenX, double _screenY,
-            boolean _shiftDown,
-            boolean _controlDown,
-            boolean _altDown,
-            boolean _metaDown,
-            boolean _direct,
-            boolean _inertia
-          )
-    {
-        return new ScrollEvent(eventType, _scrollX, _scrollY,
-                _totalScrollX, _totalScrollY,
-                _scrollTextXUnits, _scrollTextX,
-                _scrollTextYUnits, _scrollTextY,
-                _touchPoints,
-                _x, _y, _screenX, _screenY,
-                _shiftDown, _controlDown, _altDown, _metaDown, 
-                _direct, _inertia);
-    }
-    
     /**
      * Returns a string representation of this {@code ScrollEvent} object.
      * @return a string representation of this {@code ScrollEvent} object.
@@ -385,6 +413,29 @@ public class ScrollEvent extends GestureEvent {
         }
 
         return sb.append("]").toString();
+    }
+
+    @Override
+    public ScrollEvent copyFor(Object newSource, EventTarget newTarget) {
+        return (ScrollEvent) super.copyFor(newSource, newTarget);
+    }
+
+    /**
+     * Creates a copy of the given event with the given fields substituted.
+     * @param source the new source of the copied event
+     * @param target the new target of the copied event
+     * @param eventType the new eventType
+     * @return the event copy with the fields substituted
+     */
+    public ScrollEvent copyFor(Object newSource, EventTarget newTarget, EventType<ScrollEvent> type) {
+        ScrollEvent e = copyFor(newSource, newTarget);
+        e.eventType = type;
+        return e;
+    }
+
+    @Override
+    public EventType<ScrollEvent> getEventType() {
+        return (EventType<ScrollEvent>) super.getEventType();
     }
     
     /**
