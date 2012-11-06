@@ -17,6 +17,7 @@ import javafx.collections.ListChangeListener.Change;
 import javafx.event.ActionEvent;
 import javafx.event.Event;
 import javafx.event.EventHandler;
+import javafx.geometry.NodeOrientation;
 import javafx.geometry.Pos;
 import javafx.geometry.Side;
 import javafx.scene.control.*;
@@ -181,10 +182,18 @@ public class ColorPalette extends StackPane {
             @Override public void handle(KeyEvent ke) {
                 switch (ke.getCode()) {
                     case LEFT:
-                        processLeftKey(ke);
+                        if (getEffectiveNodeOrientation() == NodeOrientation.RIGHT_TO_LEFT) {
+                            processRightKey(ke);
+                        } else {
+                            processLeftKey(ke);
+                        }
                         break;
                     case RIGHT:
-                        processRightKey(ke);
+                        if (getEffectiveNodeOrientation() == NodeOrientation.RIGHT_TO_LEFT) {
+                            processLeftKey(ke);
+                        } else {
+                            processRightKey(ke);
+                        }
                         break;
                     case UP:
                         processUpKey(ke);

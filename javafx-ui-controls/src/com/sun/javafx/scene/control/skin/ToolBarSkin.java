@@ -40,6 +40,7 @@ import javafx.collections.ObservableList;
 import javafx.event.EventHandler;
 import javafx.geometry.Bounds;
 import javafx.geometry.HPos;
+import javafx.geometry.NodeOrientation;
 import javafx.geometry.Orientation;
 import javafx.geometry.Pos;
 import javafx.geometry.Side;
@@ -523,24 +524,33 @@ public class ToolBarSkin extends SkinBase<ToolBar, ToolBarBehavior> implements T
                             popup.getItems().addAll(menuItems);
                             popup.show(downArrow, Side.BOTTOM, 0, 0);
                         }
-                    } else if (KeyCode.UP.equals(ke.getCode()) || KeyCode.LEFT.equals(ke.getCode()) ||
-                        (KeyCode.TAB.equals(ke.getCode()) && ke.isShiftDown())) {
-                        if (engine.registeredNodes.isEmpty()) {
-                            return;
+                    } else {
+                        boolean isRTL = getEffectiveNodeOrientation() == NodeOrientation.RIGHT_TO_LEFT;
+                        boolean leftAction = KeyCode.LEFT.equals(ke.getCode());
+                        boolean rightAction = KeyCode.RIGHT.equals(ke.getCode()) || KeyCode.TAB.equals(ke.getCode());
+                        if (isRTL) {
+                            boolean swap = leftAction;
+                            leftAction = rightAction;
+                            rightAction = swap;
                         }
-                        int index = box.getChildren().indexOf(engine.registeredNodes.get(engine.registeredNodes.size() - 1));
-                        if (index != -1) {
-                            box.getChildren().get(index).requestFocus();                            
-                        } else {
-                            if (!box.getChildren().isEmpty()) {
-                                box.getChildren().get(0).requestFocus();
-                            } else {
-                                new TraversalEngine(getSkinnable(), false).trav(getSkinnable(), Direction.PREVIOUS);
+                        if (KeyCode.UP.equals(ke.getCode()) || leftAction ||
+                            (KeyCode.TAB.equals(ke.getCode()) && ke.isShiftDown())) {
+                            if (engine.registeredNodes.isEmpty()) {
+                                return;
                             }
+                            int index = box.getChildren().indexOf(engine.registeredNodes.get(engine.registeredNodes.size() - 1));
+                            if (index != -1) {
+                                box.getChildren().get(index).requestFocus();                            
+                            } else {
+                                if (!box.getChildren().isEmpty()) {
+                                    box.getChildren().get(0).requestFocus();
+                                } else {
+                                    new TraversalEngine(getSkinnable(), false).trav(getSkinnable(), Direction.PREVIOUS);
+                                }
+                            }
+                        } else if (KeyCode.DOWN.equals(ke.getCode()) || rightAction) {                        
+                            new TraversalEngine(getSkinnable(), false).trav(getSkinnable(), Direction.NEXT);
                         }
-                    } else if (KeyCode.DOWN.equals(ke.getCode()) ||  KeyCode.RIGHT.equals(ke.getCode()) ||
-                            KeyCode.TAB.equals(ke.getCode())) {                        
-                        new TraversalEngine(getSkinnable(), false).trav(getSkinnable(), Direction.NEXT);
                     }
                     ke.consume();
                 }

@@ -43,6 +43,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 import javafx.event.EventType;
+import javafx.geometry.NodeOrientation;
 import javafx.geometry.Orientation;
 import javafx.scene.control.Control;
 import javafx.scene.control.Skin;
@@ -89,6 +90,22 @@ public class SliderBehavior extends BehaviorBase<Slider> {
         SLIDER_BINDINGS.add(new KeyBinding(END, KEY_RELEASED, "End"));
     }
 
+    protected /*final*/ String matchActionForEvent(KeyEvent e) {
+        String action = super.matchActionForEvent(e);
+        if (action != null) {
+            if (e.getCode() == LEFT || e.getCode() == KP_LEFT) {
+                if (getControl().getEffectiveNodeOrientation() == NodeOrientation.RIGHT_TO_LEFT) {
+                    action = getControl().getOrientation() == Orientation.HORIZONTAL ? "IncrementValue" : "DecrementValue";
+                }
+            } else if (e.getCode() == RIGHT || e.getCode() == KP_RIGHT) {
+                if (getControl().getEffectiveNodeOrientation() == NodeOrientation.RIGHT_TO_LEFT) {
+                    action = getControl().getOrientation() == Orientation.HORIZONTAL ? "DecrementValue" : "IncrementValue";
+                }
+            }
+        }
+        return action;
+    }
+    
     @Override
     protected void callAction(String name) {
         if ("Home".equals(name)) home();

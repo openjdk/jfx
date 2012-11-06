@@ -169,7 +169,7 @@ public class StubToolkit extends Toolkit {
     }
 
     public TKStage createTKStage(StageStyle stageStyle, boolean primary,
-            Modality modality, TKStage owner) {
+            Modality modality, TKStage owner, boolean rtl) {
 
         return new StubStage();
     }

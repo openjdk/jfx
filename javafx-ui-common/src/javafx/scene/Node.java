@@ -137,6 +137,7 @@ import com.sun.javafx.scene.transform.TransformUtils;
 import com.sun.javafx.scene.traversal.Direction;
 import com.sun.javafx.sg.PGNode;
 import com.sun.javafx.tk.Toolkit;
+import javafx.geometry.NodeOrientation;
 
 /**
  * Base class for scene graph nodes. A scene graph is a set of tree data structures
@@ -3037,7 +3038,7 @@ public abstract class Node implements EventTarget {
             return;
         }
         layoutBounds.invalidate();
-        if (nodeTransformation != null && nodeTransformation.hasScaleOrRotate()) {
+        if ((nodeTransformation != null && nodeTransformation.hasScaleOrRotate()) || hasMirroring()) {
             // if either the scale or rotate convenience variables are used,
             // then we need a valid pivot point. Since the layoutBounds
             // affects the pivot we need to invalidate the transform
@@ -3911,6 +3912,28 @@ public abstract class Node implements EventTarget {
                 }
             }
 
+            // Check to see whether the node requires mirroring
+            if (getParent() == null) {
+                Scene scene = getScene();
+                if (scene != null && equals(scene.getRoot())) {
+                    // Mirror the root node
+                    if (hasMirroring()) {
+                        double xOffset = scene.getWidth() / 2;
+                        localToParentTx.translate(xOffset, 0, 0);
+                        localToParentTx.scale(-1, 1);
+                        localToParentTx.translate(-xOffset, 0, 0);
+                    }
+                }
+            } else {
+                // Mirror a leaf node
+                if (hasMirroring()) {
+                    double xOffset = impl_getPivotX();
+                    localToParentTx.translate(xOffset, 0, 0);
+                    localToParentTx.scale(-1, 1);
+                    localToParentTx.translate(-xOffset, 0, 0);
+                }
+            }
+            
             transformDirty = false;
         }
     }
@@ -4970,6 +4993,127 @@ public abstract class Node implements EventTarget {
         return eventHandlerProperties;
     }
 
+    /***************************************************************************
+     *                                                                         *
+     *                       Component Orientation Properties                  *
+     *                                                                         *
+     **************************************************************************/
+    
+    private ObjectProperty<NodeOrientation> nodeOrientation;
+    
+    public final void setNodeOrientation(NodeOrientation orientation) {
+        nodeOrientationProperty().set(orientation);
+    }
+    
+    public final NodeOrientation getNodeOrientation() {
+        return nodeOrientation == null ? NodeOrientation.INHERIT : nodeOrientation.get();
+    }
+    /**
+     * Property holding NodeOrientation.
+     * <p>
+     * Node orientation describes the flow of visual data within a node.
+     * In the English speaking world, visual data normally flows from
+     * left-to-right. In an Arabic or Hebrew world, visual data flows
+     * from right-to-left.  This is consistent with the reading order
+     * of text in both worlds.  The default value is left-to-right.
+     * </p>
+     *
+     * @return NodeOrientation
+     */
+    public final ObjectProperty<NodeOrientation> nodeOrientationProperty() {
+        if (nodeOrientation == null) {
+            nodeOrientation = new StyleableObjectProperty<NodeOrientation>(NodeOrientation.INHERIT) {
+                @Override
+                protected void invalidated() {
+                    impl_transformsChanged();
+                    // Apply the transform to all the children of this node
+                    if (Node.this instanceof Parent) {
+                        Parent p = (Parent)Node.this;
+                        List<Node> children = p.getChildren();
+                        for (int i = 0, max = children.size(); i < max; i++) {
+                            Node n = p.getChildren().get(i);
+                            n.impl_transformsChanged();
+                        }
+                    }
+                }
+                
+                @Override
+                public Object getBean() {
+                    return Node.this;
+                }
+
+                @Override
+                public String getName() {
+                    return "nodeOrientation";
+                }
+
+                @Override
+                public StyleableProperty getStyleableProperty() {
+                    //TODO - not supported
+                    throw new UnsupportedOperationException("Not supported yet.");
+                }
+                
+            };
+        }
+        return nodeOrientation;
+    }
+
+    /**
+     * Returns the NodeOrientation that is used to draw the node.
+     * <p>
+     * The effective orientation of a node resolves the inheritance of
+     * node orientation, returning either left-to-right or right-to-left.
+     * </p>
+     */
+    public final NodeOrientation getEffectiveNodeOrientation() {
+        return getEffectiveNodeOrientation(false);
+    }
+    
+    /**
+     * Determines whether a node should be mirrored when node orientation
+     * is right-to-left.
+     * <p>
+     * When a node is mirrored, the origin is automtically moved to the
+     * top right corner causing the node to layout children and draw from
+     * right to left using a mirroring transformation.  Some nodes may wish
+     * to draw from right to left without using a transformation.  These
+     * nodes will will answer {@code false} and implement right-to-left
+     * orientation without using the automatic transformation.
+     * </p>
+     */
+    public boolean isAutomaticallyMirrored() {
+        return true;
+    }
+    
+    NodeOrientation getNodeOrientation(boolean actual) {
+        if (actual && !isAutomaticallyMirrored()) return NodeOrientation.LEFT_TO_RIGHT;
+        return nodeOrientation == null ? NodeOrientation.INHERIT : nodeOrientation.get();
+    }
+    
+    final NodeOrientation getEffectiveNodeOrientation(boolean actual) {
+        NodeOrientation orientation = getNodeOrientation(actual);
+        if (orientation == NodeOrientation.INHERIT) {
+            Parent parent = getParent();
+            if (parent != null) return parent.getEffectiveNodeOrientation(actual);
+            Scene scene = getScene();
+            if (scene != null) return scene.getEffectiveNodeOrientation();
+            return NodeOrientation.LEFT_TO_RIGHT;
+        }
+        return orientation;
+    }
+    
+    // Return true if the node needs to be mirrored.
+    // A node has mirroring if the orientation differs from the parent
+    private boolean hasMirroring() {
+        Parent parent = getParent();
+        if (parent == null) {
+            return getEffectiveNodeOrientation(true) == NodeOrientation.RIGHT_TO_LEFT;
+        }
+        NodeOrientation orientation = getNodeOrientation(true);
+        if (orientation == NodeOrientation.INHERIT) return false;
+        return orientation != parent.getEffectiveNodeOrientation(true);
+    }
+    
     /***************************************************************************
      *                                                                         *
      *                       Misc Seldom Used Properties                       *

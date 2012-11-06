@@ -48,6 +48,7 @@ import com.sun.javafx.scene.control.behavior.BehaviorBase;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
+import javafx.geometry.NodeOrientation;
 import javafx.scene.Group;
 
 public class SplitPaneSkin extends SkinBase<SplitPane, BehaviorBase<SplitPane>>  {
@@ -237,6 +238,8 @@ public class SplitPaneSkin extends SkinBase<SplitPane, BehaviorBase<SplitPane>> 
                 if (horizontal) {
                     divider.setInitialPos(divider.getDividerPos());
                     divider.setPressPos(e.getSceneX());
+                    divider.setPressPos(getSkinnable().getEffectiveNodeOrientation() == NodeOrientation.RIGHT_TO_LEFT
+                            ? getWidth() - e.getSceneX() : e.getSceneX());
                 } else {
                     divider.setInitialPos(divider.getDividerPos());
                     divider.setPressPos(e.getSceneY());
@@ -247,7 +250,14 @@ public class SplitPaneSkin extends SkinBase<SplitPane, BehaviorBase<SplitPane>> 
 
         divider.setOnMouseDragged(new EventHandler<MouseEvent>() {
             @Override public void handle(MouseEvent e) {                
-                double delta = (horizontal ? e.getSceneX() : e.getSceneY()) - divider.getPressPos();                
+                double delta = 0; 
+                if (horizontal) {
+                    delta = getSkinnable().getEffectiveNodeOrientation() == NodeOrientation.RIGHT_TO_LEFT 
+                            ? getWidth() - e.getSceneX() : e.getSceneX();
+                } else {
+                    delta = e.getSceneY();
+                }
+                delta -= divider.getPressPos();
                 double newPos = Math.ceil(divider.getInitialPos() + delta);    
                 checkDividerPos = true;
                 setAbsoluteDividerPos(divider, newPos);

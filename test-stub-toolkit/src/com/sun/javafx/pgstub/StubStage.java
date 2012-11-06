@@ -473,4 +473,7 @@ public class StubStage implements TKStage {
         }
                 
     }
+
+    public void setRTL(boolean b) {
+    }
 }
