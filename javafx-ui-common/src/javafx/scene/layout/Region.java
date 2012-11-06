@@ -1347,7 +1347,7 @@ public class Region extends Parent {
         double top = margin != null? snapSpace(margin.getTop(), snap) : 0;
         double bottom = margin != null? snapSpace(margin.getBottom(), snap) : 0;
         double alt = -1;
-        if (child.getContentBias() == Orientation.HORIZONTAL) { // width depends on height
+        if (child.getContentBias() == Orientation.HORIZONTAL) { // height depends on width
             alt = snapSize(width != -1? boundedSize(child.minWidth(-1), width, child.maxWidth(-1)) :
                                         child.minWidth(-1));
         }
@@ -1384,7 +1384,7 @@ public class Region extends Parent {
         double left = margin != null? snapSpace(margin.getLeft(), snap) : 0;
         double right = margin != null? snapSpace(margin.getRight(), snap) : 0;
         double alt = -1;
-        if (child.getContentBias() == Orientation.HORIZONTAL) { // width depends on height
+        if (child.getContentBias() == Orientation.HORIZONTAL) { // height depends on width
             alt = snapSize(boundedSize(
                     child.minWidth(-1), width != -1? width - left - right :
                            child.prefWidth(-1), child.maxWidth(-1)));
@@ -1420,7 +1420,7 @@ public class Region extends Parent {
         double top = margin != null? snapSpace(margin.getTop(), snap) : 0;
         double bottom = margin != null? snapSpace(margin.getBottom(), snap) : 0;
         double alt = -1;
-        if (child.getContentBias() == Orientation.HORIZONTAL) { // width depends on height
+        if (child.getContentBias() == Orientation.HORIZONTAL) { // height depends on width
             alt = snapSize(width != -1? boundedSize(child.minWidth(-1), width, child.maxWidth(-1)) :
                 child.maxWidth(-1));
             max = child.maxHeight(alt);

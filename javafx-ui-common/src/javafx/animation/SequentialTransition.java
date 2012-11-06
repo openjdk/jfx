@@ -40,6 +40,8 @@ import javafx.scene.Node;
 import javafx.util.Duration;
 
 import com.sun.javafx.collections.TrackableObservableList;
+import javafx.beans.value.ChangeListener;
+import javafx.beans.value.ObservableValue;
 
 /**
  * This {@link Transition} plays a list of {@link javafx.animation.Animation
@@ -109,6 +111,7 @@ public final class SequentialTransition extends Transition {
     private long oldTicks = -1L;
     private long offsetTicks;
     private boolean childrenChanged = true;
+    private boolean toggledRate;
 
     private final InvalidationListener childrenListener = new InvalidationListener() {
         @Override
@@ -118,6 +121,21 @@ public final class SequentialTransition extends Transition {
                 setCycleDuration(computeCycleDuration());
             }
         }
+    };
+
+    private final ChangeListener<Number> rateListener = new ChangeListener<Number>() {
+
+        @Override
+        public void changed(ObservableValue<? extends Number> observable, Number oldValue, Number newValue) {
+            if (oldValue.doubleValue() * newValue.doubleValue() < 0) {
+                for (int i = 0; i < cachedChildren.length; ++i) {
+                    Animation child = cachedChildren[i];
+                    child.setRate(rates[i] * Math.signum(newValue.doubleValue()));
+                }
+                toggledRate = true;
+            }
+        }
+
     };
     
     /**
@@ -327,6 +345,8 @@ public final class SequentialTransition extends Transition {
     @Override
     void impl_start(boolean forceSync) {
         super.impl_start(forceSync);
+        toggledRate = false;
+        currentRateProperty().addListener(rateListener);
         curIndex = (getCurrentRate() > 0) ? BEFORE : end;
         offsetTicks = 0L;
     }
@@ -365,6 +385,7 @@ public final class SequentialTransition extends Transition {
         if (childrenChanged) {
             setCycleDuration(computeCycleDuration());
         }
+        currentRateProperty().removeListener(rateListener);
     }
 
     private boolean startChild(Animation child, int index) {
@@ -389,6 +410,12 @@ public final class SequentialTransition extends Transition {
         final long newTicks = Math.max(0, Math.min(getCachedInterpolator().interpolate(0, cycleTicks, frac), cycleTicks));
         final int newIndex = findNewIndex(newTicks);
         final Animation current = ((curIndex == BEFORE) || (curIndex == end)) ? null : cachedChildren[curIndex];
+        if (toggledRate) {
+            if (current.getStatus() == Status.RUNNING) {
+                offsetTicks -= Math.signum(getCurrentRate()) * (durations[curIndex] - 2 * (oldTicks - delays[curIndex] - startTimes[curIndex]));
+            }
+            toggledRate = false;
+        }
         if (curIndex == newIndex) {
             if (getCurrentRate() > 0) {
                 final long currentDelay = add(startTimes[curIndex], delays[curIndex]);
@@ -605,6 +632,7 @@ public final class SequentialTransition extends Transition {
     }
 
     private long calcTimePulse(long ticks) {
-        return sub(Math.round(ticks * Math.abs(rates[curIndex])), offsetTicks);
+         long r =  Math.round(ticks * Math.abs(rates[curIndex])) -  offsetTicks;
+        return r > 0 ? r : 0;
     }
 }

@@ -38,6 +38,8 @@ import javafx.scene.Node;
 import javafx.util.Duration;
 
 import com.sun.javafx.collections.TrackableObservableList;
+import javafx.beans.value.ChangeListener;
+import javafx.beans.value.ObservableValue;
 
 /**
  * This {@link Transition} plays a list of {@link javafx.animation.Animation
@@ -102,6 +104,7 @@ public final class ParallelTransition extends Transition {
     private boolean[] forceChildSync;
     private long oldTicks;
     private boolean childrenChanged = true;
+    private boolean toggledRate;
     
     private final InvalidationListener childrenListener = new InvalidationListener() {
         @Override
@@ -112,7 +115,21 @@ public final class ParallelTransition extends Transition {
             }
         }
     };
+    
+    private final ChangeListener<Number> rateListener = new ChangeListener<Number>() {
 
+        @Override
+        public void changed(ObservableValue<? extends Number> observable, Number oldValue, Number newValue) {
+            if (oldValue.doubleValue() * newValue.doubleValue() < 0) {
+                for (int i = 0; i < cachedChildren.length; ++i) {
+                    Animation child = cachedChildren[i];
+                    child.setRate(rates[i] * Math.signum(newValue.doubleValue()));
+                }
+                toggledRate = true;
+            }
+        }
+
+    };
     /**
      * This {@link javafx.scene.Node} is used in all child {@link Transition
      * Transitions}, that do not define a target {@code Node} themselves. This
@@ -331,6 +348,13 @@ public final class ParallelTransition extends Transition {
     }
 
     @Override
+    void impl_start(boolean forceSync) {
+        super.impl_start(forceSync);
+        toggledRate = false;
+        currentRateProperty().addListener(rateListener);
+    }
+
+    @Override
     void impl_stop() {
         super.impl_stop();
         for (final Animation animation : cachedChildren) {
@@ -341,7 +365,9 @@ public final class ParallelTransition extends Transition {
         if (childrenChanged) {
             setCycleDuration(computeCycleDuration());
         }
+        currentRateProperty().removeListener(rateListener);
     }
+
 
     /**
      * @treatAsPrivate implementation detail
@@ -352,6 +378,14 @@ public final class ParallelTransition extends Transition {
         impl_setCurrentTicks(currentTicks);
         final double frac = calculateFraction(currentTicks, cycleTicks);
         final long newTicks = Math.max(0, Math.min(getCachedInterpolator().interpolate(0, cycleTicks, frac), cycleTicks));
+        if (toggledRate) {
+            for (int i = 0; i < cachedChildren.length; ++i) {
+                if (cachedChildren[i].getStatus() == Status.RUNNING) {
+                    offsetTicks[i] -= Math.signum(getCurrentRate()) * (durations[i] - 2 * (oldTicks - delays[i]));
+                }
+            }
+            toggledRate = false;
+        }
         if (getCurrentRate() > 0) {
             int i = 0;
             for (final Animation animation : cachedChildren) {
@@ -440,7 +474,7 @@ public final class ParallelTransition extends Transition {
             } else {
                 // TODO: This does probably not work if animation is paused (getCurrentRate() == 0)
                 // TODO: Do I have to use newTicks or currentTicks?
-                offsetTicks[i] = (getCurrentRate() < 0)? sub(add(durations[i], delays[i]), newTicks) : sub(newTicks, delays[i]);
+                offsetTicks[i] += (getCurrentRate() < 0)? sub(add(durations[i], delays[i]), newTicks) : sub(newTicks, delays[i]);
                 animation.jumpTo(toDuration(sub(newTicks, delays[i]), rates[i]));
             }
             i++;
@@ -457,6 +491,7 @@ public final class ParallelTransition extends Transition {
     }
     
     private long calcTimePulse(long ticks, int index) {
-        return sub(Math.round(ticks * Math.abs(rates[index])), offsetTicks[index]);
+        long r =  Math.round(ticks * Math.abs(rates[index])) -  offsetTicks[index];
+        return r > 0 ? r : 0;
     }
 }
