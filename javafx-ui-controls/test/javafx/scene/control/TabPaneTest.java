@@ -816,9 +816,8 @@ public class TabPaneTest {
         stage.show();
         stage.requestFocus();
 
-        final KeyEvent tabEvent = KeyEvent.impl_keyEvent(null, "", "", 0x09,
-                                                         false, false, false, false,
-                                                         KeyEvent.KEY_PRESSED);
+        final KeyEvent tabEvent = new KeyEvent(KeyEvent.KEY_PRESSED, "", "", 0x09,
+                                                         false, false, false, false);
         Platform.runLater(new Runnable() {
             @Override public void run() {
                 tabPane.requestFocus();

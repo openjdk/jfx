@@ -746,6 +746,9 @@ public abstract class Node implements EventTarget {
                 if (_scene != null && !impl_isDirtyEmpty()) {
                     _scene.addToDirtyList(Node.this);
                 }
+                if (_scene == null && peer != null) {
+                    peer.release();
+                }
             }
             oldScene = _scene;
         }

@@ -582,14 +582,12 @@ public class ScrollEventTest {
     }
 
     @Test public void testToString() {
-        ScrollEvent e = ScrollEvent.impl_scrollEvent(ScrollEvent.SCROLL,
-            10, 10, 20, 20,
-            ScrollEvent.HorizontalTextScrollUnits.NONE, 0,
-            ScrollEvent.VerticalTextScrollUnits.NONE, 0,
-            3,
+        ScrollEvent e = new ScrollEvent(ScrollEvent.SCROLL,
             100, 100, 200, 200,
             false, false, false, false,
-            true, false);
+            true, false, 10, 10, 20, 20,ScrollEvent.HorizontalTextScrollUnits.NONE, 0,
+            ScrollEvent.VerticalTextScrollUnits.NONE, 0,
+            3);
 
         String s = e.toString();
 

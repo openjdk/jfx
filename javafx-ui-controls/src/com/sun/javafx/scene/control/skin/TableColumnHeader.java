@@ -196,7 +196,7 @@ public class TableColumnHeader extends Region {
     
     private static final EventHandler<MouseEvent> mouseReleasedHandler = new EventHandler<MouseEvent>() {
         @Override public void handle(MouseEvent me) {
-            if (MouseEvent.impl_getPopupTrigger(me)) return;
+            if (me.isPopupTrigger()) return;
             
             TableColumnHeader header = (TableColumnHeader) me.getSource(); 
             TableColumn tableColumn = header.getTableColumn();

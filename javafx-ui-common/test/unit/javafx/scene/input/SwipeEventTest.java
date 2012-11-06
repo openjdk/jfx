@@ -215,11 +215,10 @@ public class SwipeEventTest {
     }
 
     @Test public void testToString() {
-        SwipeEvent e = SwipeEvent.impl_swipeEvent(SwipeEvent.SWIPE_RIGHT,
-            3,
+        SwipeEvent e = new SwipeEvent(SwipeEvent.SWIPE_RIGHT,
             100, 100, 200, 200,
             false, false, false, false,
-            true);
+            true, 3);
 
         String s = e.toString();
 

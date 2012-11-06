@@ -224,15 +224,14 @@ public final class KeyboardShortcutsHandler extends BasicEventDispatcher {
                     ** we act as is the alt key is being held down.
                     */
 
-                    KeyEvent fakeEvent = KeyEvent.impl_keyEvent(event.getTarget(), 
+                    KeyEvent fakeEvent = new KeyEvent(null, event.getTarget(), KeyEvent.KEY_PRESSED,
                                                                 event.getCharacter(),
                                                                 event.getText(),
                                                                 ((KeyCode)event.getCode()).impl_getCode(),
                                                                 event.isShiftDown(),
                                                                 event.isControlDown(),
                                                                 true,
-                                                                event.isMetaDown(),
-                                                                KeyEvent.KEY_PRESSED);
+                                                                event.isMetaDown());
 
 
                     if (mnemonic.getKey().match(fakeEvent)) {

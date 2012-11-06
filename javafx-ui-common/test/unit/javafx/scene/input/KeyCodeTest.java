@@ -45,7 +45,7 @@ public class KeyCodeTest {
     @Test
     public void shouldFindCorrectCode() {
         for (KeyCode code : KeyCode.values()) {
-            assertSame(code, KeyCode.impl_valueOf(code.impl_getCode()));
+            assertSame(code, KeyCode.valueOf(code.impl_getCode()));
         }
     }
 }

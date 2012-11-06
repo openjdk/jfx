@@ -41,8 +41,7 @@ public class InputMethodEventTest {
     private final ObservableList<InputMethodTextRun> observableArrayList =
             javafx.collections.FXCollections.<InputMethodTextRun>observableArrayList();
     private final InputMethodEvent event =
-            InputMethodEvent.impl_inputMethodEvent(node1, observableArrayList, "Text", 2,
-            InputMethodEvent.INPUT_METHOD_TEXT_CHANGED);
+            new InputMethodEvent(null, node1, InputMethodEvent.INPUT_METHOD_TEXT_CHANGED, observableArrayList, "Text", 2);
 
     @Test
     public void shouldCreateInputMethodEvent() {
@@ -55,7 +54,7 @@ public class InputMethodEventTest {
 
     @Test
     public void shouldCopyInputMethodEvent() {
-        InputMethodEvent copied = InputMethodEvent.impl_copy(node2, event);
+        InputMethodEvent copied = event.copyFor(null, node2);
 
         assertSame(node2, copied.getTarget());
         assertEquals(observableArrayList, copied.getComposed());

@@ -33,6 +33,7 @@ import javafx.event.EventType;
 import javafx.geometry.Point2D;
 
 import com.sun.javafx.scene.input.InputEventUtils;
+import java.io.IOException;
 
 // PENDING_DOC_REVIEW
 /**
@@ -198,7 +199,7 @@ rect.setOnDragDropped(new EventHandler<DragEvent>() {
  * the gesture target reporting an unsuccessful data transfer.
  * </p>
  */
-public class DragEvent extends InputEvent {
+public final class DragEvent extends InputEvent {
 
     /**
      * Common supertype for all drag event types.
@@ -294,102 +295,117 @@ public class DragEvent extends InputEvent {
     public static final EventType<DragEvent> DRAG_DONE =
             new EventType<DragEvent>(DragEvent.ANY, "DRAG_DONE");
 
-    private DragEvent(final EventType<? extends DragEvent> eventType) {
-        super(eventType);
-    }
-
-    private DragEvent(Object source, EventTarget target,
-            final EventType<? extends DragEvent> eventType) {
-        super(source, target, eventType);
-    }
-
     /**
      * Creates a copy of the given drag event with the given fields substituted.
-     * @treatAsPrivate implementation detail
-     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
+     * @param source the new source of the copied event
+     * @param target the new target of the copied event
+     * @param gestureSource the new gesture source.
+     * @param gestureTarget the new gesture target.
+     * @param dragboard the new dragboard
+     * @return the event copy with the fields
      */
-    @Deprecated
-    public static DragEvent impl_copy(Object source, EventTarget target,
-            Object gestureSource, Object gestureTarget, Dragboard dragboard,
-            DragEvent evt) {
-        DragEvent e = impl_copy(source, target, gestureSource, gestureTarget,
-                evt, null);
+    public DragEvent copyFor(Object source, EventTarget target,
+            Object gestureSource, Object gestureTarget, Dragboard dragboard) {
+        DragEvent e = copyFor(source, target, gestureSource, gestureTarget,
+                (EventType) null);
         e.dragboard = dragboard;
         return e;
     }
 
     /**
      * Creates a copy of the given drag event with the given fields substituted.
-     * @treatAsPrivate implementation detail
-     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
+     * @param source the new source of the copied event
+     * @param target the new target of the copied event
+     * @param gestureSource the new gesture source.
+     * @param gestureTarget the new gesture target.
+     * @param eventType the new eventType
+     * @return the event copy with the fields
      */
-    @Deprecated
-    public static DragEvent impl_copy(Object source, EventTarget target,
-            DragEvent evt, EventType<DragEvent> eventType) {
-        return impl_copy(source, target, evt.getGestureSource(),
-                evt.getGestureTarget(), evt, eventType);
-    }
-
-    /**
-     * Creates a copy of the given drag event with the given fields substituted.
-     * @treatAsPrivate implementation detail
-     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
-     */
-    @Deprecated
-    public static DragEvent impl_copy(Object source, EventTarget target,
-            Object gestureSource, Object gestureTarget, DragEvent evt,
+    public DragEvent copyFor(Object source, EventTarget target,
+            Object gestureSource, Object gestureTarget,
             EventType<DragEvent> eventType) {
 
-        return impl_copy(source, target, gestureSource, gestureTarget,
-                evt.getTransferMode(), evt, eventType);
+        return copyFor(source, target, gestureSource, gestureTarget, getTransferMode(), eventType);
     }
 
     /**
      * Creates a copy of the given drag event with the given fields substituted.
-     * @treatAsPrivate implementation detail
-     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
+     * @param source the new source of the copied event
+     * @param target the new target of the copied event
+     * @param gestureSource the new gesture source of the copied event.
+     * @param gestureTarget the new gesture target of the copied event.
+     * @param transferMode the new transfer mde
+     * @param eventType the new eventType
+     * @return the event copy with the fields
      */
-    @Deprecated
-    public static DragEvent impl_copy(Object source, EventTarget target,
+    public DragEvent copyFor(Object source, EventTarget target,
             Object gestureSource, Object gestureTarget, TransferMode transferMode,
-            DragEvent evt, EventType<DragEvent> eventType) {
+            EventType<DragEvent> eventType) {
 
-        DragEvent copyEvent = impl_dragEvent(source, target, gestureSource,
-                gestureTarget, evt.x, evt.y, evt.screenX,
-                evt.screenY, evt.transferMode,
-                (eventType != null
-                        ? eventType
-                        : (EventType<? extends DragEvent>)
-                                evt.getEventType()), evt.dragboard);
-
-        evt.recomputeCoordinatesToSource(copyEvent, source);
-        copyEvent.transferMode = transferMode;
-        if (eventType == DragEvent.DRAG_DROPPED ||
-                eventType == DragEvent.DRAG_DONE) {
+        DragEvent copyEvent = copyFor(source, target, eventType);
+        recomputeCoordinatesToSource(copyEvent, source);
+        if (transferMode != null) {
+            copyEvent.transferMode = transferMode;
+        }
+        copyEvent.gestureSource = gestureSource;
+        copyEvent.gestureTarget = gestureTarget;
+        if (eventType == DragEvent.DRAG_DROPPED
+                || eventType == DragEvent.DRAG_DONE) {
             copyEvent.state.accepted = transferMode != null;
             copyEvent.state.acceptedTrasferMode = transferMode;
         }
         return copyEvent;
     }
 
-    private static DragEvent impl_dragEvent(Object _source, EventTarget _target,
-            Object _gestureSource, Object _gestureTarget,
-            double _x, double _y,
-            double _screenX, double _screenY, TransferMode _transferMode,
-            EventType<? extends DragEvent> _eventType, Dragboard _dragboard)
-    {
-        DragEvent e = new DragEvent(_source, _target, _eventType);
-        e.gestureSource = _gestureSource;
-        e.gestureTarget = _gestureTarget;
-        e.x = _x;
-        e.y = _y;
-        e.screenX = _screenX;
-        e.screenY = _screenY;
-        e.sceneX = _x;
-        e.sceneY = _y;
-        e.transferMode = _transferMode;
-        e.dragboard = _dragboard;
-        return e;
+    /**
+     * Constructs new DragEvent event.
+     * @param source the source of the event. Can be null.
+     * @param target the target of the event. Can be null.
+     * @param eventType The type of the event.
+     * @param dragboard the dragboard of the event.
+     * @param x The x with respect to the source. Should be in scene coordinates if source == null or source is not a Node.
+     * @param y The y with respect to the source. Should be in scene coordinates if source == null or source is not a Node.
+     * @param screenX The x coordinate relative to screen.
+     * @param screenY The y coordinate relative to screen.
+     * @param transferMode the transfer mode of the event.
+     * @param gestureSource the source of the DnD gesture of the event.
+     * @param gestureTarget the target of the DnD gesture of the event.
+     */
+    public DragEvent(Object source, EventTarget target, EventType<DragEvent> eventType, Dragboard dragboard,
+            double x, double y,
+            double screenX, double screenY, TransferMode transferMode,
+            Object gestureSource, Object gestureTarget) {
+        super(source, target, eventType);
+        this.gestureSource = gestureSource;
+        this.gestureTarget = gestureTarget;
+        this.x = x;
+        this.y = y;
+        this.screenX = screenX;
+        this.screenY = screenY;
+        this.sceneX = x;
+        this.sceneY = y;
+        this.transferMode = transferMode;
+        this.dragboard = dragboard;
+    }
+
+    /**
+     * Constructs new DragEvent event with empty source and target.
+     * @param eventType The type of the event.
+     * @param dragboard the dragboard of the event.
+     * @param x The x with respect to the scene.
+     * @param y The y with respect to the scene.
+     * @param screenX The x coordinate relative to screen.
+     * @param screenY The y coordinate relative to screen.
+     * @param transferMode the transfer mode of the event.
+     * @param gestureSource the source of the DnD gesture of the event.
+     * @param gestureTarget the target of the DnD gesture of the event.
+     */
+    public DragEvent(EventType<DragEvent> eventType, Dragboard dragboard,
+            double x, double y,
+            double screenX, double screenY, TransferMode transferMode,
+            Object gestureSource, Object gestureTarget) {
+        this(null, null, eventType, dragboard, x, y, screenX, screenY, transferMode,
+                gestureSource, gestureTarget);
     }
 
     /**
@@ -413,17 +429,35 @@ public class DragEvent extends InputEvent {
     }
     
     @Override
-    public Event copyFor(Object newSource, EventTarget newTarget) {
+    public DragEvent copyFor(Object newSource, EventTarget newTarget) {
         DragEvent e = (DragEvent) super.copyFor(newSource, newTarget);
         recomputeCoordinatesToSource(e, newSource);
         return e;
     }
 
     /**
+     * Creates a copy of the given drag event with the given fields substituted.
+     * @param source the new source of the copied event
+     * @param target the new target of the copied event
+     * @param eventType the new eventType
+     * @return the event copy with the fields
+     */
+    public DragEvent copyFor(Object source, EventTarget target, EventType<DragEvent> type) {
+        DragEvent e = (DragEvent) copyFor(source, target);
+        e.eventType = type;
+        return e;
+    }
+
+    @Override
+    public EventType<DragEvent> getEventType() {
+        return (EventType<DragEvent>) super.getEventType();
+    }
+
+    /**
      * Horizontal x position of the event relative to the
      * origin of the MouseEvent's node.
      */
-    private double x;
+    private transient double x;
 
     /**
      * Horizontal position of the event relative to the
@@ -440,7 +474,7 @@ public class DragEvent extends InputEvent {
      * Vertical y position of the event relative to the
      * origin of the MouseEvent's node.
      */
-    private double y;
+    private transient double y;
 
     /**
      * Vertical position of the event relative to the
@@ -456,7 +490,7 @@ public class DragEvent extends InputEvent {
     /**
      * Absolute horizontal x position of the event.
      */
-    private double screenX;
+    private final double screenX;
 
     /**
      * Returns absolute horizontal position of the event.
@@ -469,7 +503,7 @@ public class DragEvent extends InputEvent {
     /**
      * Absolute vertical y position of the event.
      */
-    private double screenY;
+    private final double screenY;
 
     /**
      * Returns absolute vertical position of the event.
@@ -485,7 +519,7 @@ public class DragEvent extends InputEvent {
      * If the node is not in a {@code Scene}, then the value is relative to
      * the boundsInParent of the root-most parent of the DragEvent's node.
      */
-    private double sceneX;
+    private final double sceneX;
 
     /**
      * Returns horizontal position of the event relative to the
@@ -506,7 +540,7 @@ public class DragEvent extends InputEvent {
      * If the node is not in a {@code Scene}, then the value is relative to
      * the boundsInParent of the root-most parent of the DragEvent's node.
      */
-    private double sceneY;
+    private final double sceneY;
 
     /**
      * Returns vertical position of the event relative to the
@@ -552,7 +586,7 @@ public class DragEvent extends InputEvent {
     public final TransferMode getTransferMode() { return transferMode; }
     private TransferMode transferMode;
 
-    private State state = new State();
+    private final State state = new State();
 
     /**
      * Indicates if this event has been accepted.
@@ -570,11 +604,10 @@ public class DragEvent extends InputEvent {
     }
 
     /**
-     * @treatAsPrivate implementation detail
-     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
+     * The object that accepted the drag.
+     * @return the object that accepted the drag.
      */
-    @Deprecated
-    public Object impl_getAcceptingObject() {
+    public final Object getAcceptingObject() {
         return state.acceptingObject;
     }
 
@@ -681,52 +714,11 @@ public class DragEvent extends InputEvent {
         return state.dropCompleted;
     }
 
-    /**
-     * Used by toolkit
-     * @treatAsPrivate implementation detail
-     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
-     */
-    @Deprecated
-    public static DragEvent impl_create(double _x, double _y, double _screenX, double _screenY,
-                                        TransferMode _transferMode, Dragboard _dragboard)
-    {
-        DragEvent de = new DragEvent(DragEvent.ANY);
-
-        de.x = _x;
-        de.y = _y;
-        de.screenX = _screenX;
-        de.screenY = _screenY;
-        de.sceneX = _x;
-        de.sceneY = _y;
-        de.transferMode = _transferMode;
-        de.dragboard = _dragboard;
-        return de;
-    }
-
-    /**
-     * @treatAsPrivate implementation detail
-     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
-     */
-    @Deprecated
-    public static DragEvent impl_create(EventType<DragEvent> _eventType,
-            Object _source, EventTarget _target, Object _gestureSource,
-            Object _gestureTarget, double _x, double _y,
-            double _screenX, double _screenY, TransferMode _transferMode,
-            Dragboard _dragboard)
-    {
-        DragEvent de = new DragEvent(_source, _target, _eventType);
-
-        de.gestureSource = _gestureSource;
-        de.gestureTarget = _gestureTarget;
-        de.x = _x;
-        de.y = _y;
-        de.screenX = _screenX;
-        de.screenY = _screenY;
-        de.sceneX = _x;
-        de.sceneY = _y;
-        de.transferMode = _transferMode;
-        de.dragboard = _dragboard;
-        return de;
+    private void readObject(java.io.ObjectInputStream in)
+            throws IOException, ClassNotFoundException {
+        in.defaultReadObject();
+        x = sceneX;
+        y = sceneY;
     }
 
     /**

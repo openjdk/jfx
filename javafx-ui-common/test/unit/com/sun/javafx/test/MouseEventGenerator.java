@@ -50,9 +50,9 @@ public final class MouseEventGenerator {
             primaryButtonDown = false;
         }
 
-        MouseEvent event = MouseEvent.impl_mouseEvent(x, y, x, y, button,
-                1, false, false, false, false, false, primaryButtonDown,
-                false, false, false, type);
+        MouseEvent event = new MouseEvent(type, x, y, x, y, button,
+                1, false, false, false, false, primaryButtonDown,
+                false, false, false, false);
 
         return event;
     }

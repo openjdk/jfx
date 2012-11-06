@@ -90,24 +90,53 @@ public final class TouchEvent extends InputEvent {
     public static final EventType<TouchEvent> TOUCH_STATIONARY =
             new EventType<TouchEvent>(ANY, "TOUCH_STATIONARY");
 
-    private TouchEvent(EventType<? extends TouchEvent> eventType) {
-        super(eventType);
-    }
-
-    private TouchEvent(EventType<? extends TouchEvent> eventType,
+    /**
+     * Constructs new TouchEvent event.
+     * @param source the source of the event. Can be null.
+     * @param target the target of the event. Can be null.
+     * @param eventType The type of the event.
+     * @param touchPoint the touch point of this event
+     * @param touchPoints set of touch points for the multi-touch action
+     * @param eventSetId set id of the multi-touch action
+     * @param shiftDown true if shift modifier was pressed.
+     * @param controlDown true if control modifier was pressed.
+     * @param altDown true if alt modifier was pressed.
+     * @param metaDown true if meta modifier was pressed.
+     * @param direct true if the event was caused by direct input device. See {@link #isDirect() }
+     */
+    public TouchEvent(Object source, EventTarget target, EventType<TouchEvent> eventType,
             TouchPoint touchPoint, List<TouchPoint> touchPoints, int eventSetId,
             boolean shiftDown, boolean controlDown, boolean altDown,
-            boolean metaDown) {
-        super(eventType);
-        if (touchPoints != null) {
-            this.touchPoints = Collections.unmodifiableList(touchPoints);
-        }
+            boolean metaDown, boolean direct) {
+        super(source, target, eventType);
+        this.touchPoints = touchPoints != null ? Collections.unmodifiableList(touchPoints) : null;
         this.eventSetId = eventSetId;
         this.shiftDown = shiftDown;
         this.controlDown = controlDown;
         this.altDown = altDown;
         this.metaDown = metaDown;
         this.touchPoint = touchPoint;
+        this.isDirect = direct;
+    }
+
+    /**
+     * Constructs new TouchEvent event with null source and target.
+     * @param eventType The type of the event.
+     * @param touchPoint the touch point of this event
+     * @param touchPoints set of touch points for the multi-touch action
+     * @param eventSetId set id of the multi-touch action
+     * @param shiftDown true if shift modifier was pressed.
+     * @param controlDown true if control modifier was pressed.
+     * @param altDown true if alt modifier was pressed.
+     * @param metaDown true if meta modifier was pressed.
+     * @param direct true if the event was caused by direct input device. See {@link #isDirect() }
+     */
+    public TouchEvent(EventType<TouchEvent> eventType,
+            TouchPoint touchPoint, List<TouchPoint> touchPoints, int eventSetId,
+            boolean shiftDown, boolean controlDown, boolean altDown,
+            boolean metaDown, boolean direct) {
+        this(null, null, eventType, touchPoint, touchPoints, eventSetId,
+                shiftDown, controlDown, altDown, metaDown, direct);
     }
 
     /**
@@ -138,37 +167,42 @@ public final class TouchEvent extends InputEvent {
      * @inheritDoc
      */
     @Override
-    public Event copyFor(Object newSource, EventTarget newTarget) {
+    public TouchEvent copyFor(Object newSource, EventTarget newTarget) {
         TouchEvent e = (TouchEvent) super.copyFor(newSource, newTarget);
         recomputeToSource(e, getSource(), newSource);
-
         return e;
     }
+    
+    /**
+     * Creates a copy of the given event with the given fields substituted.
+     * @param source the new source of the copied event
+     * @param target the new target of the copied event
+     * @param eventType the new eventType
+     * @return the event copy with the fields substituted
+     */
+    public TouchEvent copyFor(Object newSource, EventTarget newTarget, EventType<TouchEvent> type) {
+        TouchEvent e = copyFor(newSource, newTarget);
+        e.eventType = type;
+        return e;
+    }
+
+    @Override
+    public EventType<TouchEvent> getEventType() {
+        return (EventType<TouchEvent>) super.getEventType();
+    }
+    
+    
 
     // isDirect doesn't currently have public getter because we are currently
     // ignoring indirect touch events and claim that touch events always
     // represent a direct touch-screen action
-    private boolean isDirect;
+    private final boolean isDirect;
 
-    /**
-     * @treatAsPrivate implementation detail
-     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
-     */
-    @Deprecated
-    public boolean impl_isDirect() {
+    public boolean isDirect() {
         return isDirect;
     }
 
-    /**
-     * @treatAsPrivate implementation detail
-     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
-     */
-    @Deprecated
-    public void impl_setDirect(boolean direct) {
-        isDirect = direct;
-    }
-
-    private int eventSetId;
+    private final int eventSetId;
 
     /**
      * Gets sequential number of the set of touch events representing the same
@@ -190,7 +224,7 @@ public final class TouchEvent extends InputEvent {
     /**
      * Whether or not the Shift modifier is down on this event.
      */
-    private boolean shiftDown;
+    private final boolean shiftDown;
 
     /**
      * Whether or not the Shift modifier is down on this event.
@@ -203,7 +237,7 @@ public final class TouchEvent extends InputEvent {
     /**
      * Whether or not the Control modifier is down on this event.
      */
-    private boolean controlDown;
+    private final boolean controlDown;
 
     /**
      * Whether or not the Control modifier is down on this event.
@@ -216,7 +250,7 @@ public final class TouchEvent extends InputEvent {
     /**
      * Whether or not the Alt modifier is down on this event.
      */
-    private boolean altDown;
+    private final boolean altDown;
 
     /**
      * Whether or not the Alt modifier is down on this event.
@@ -229,7 +263,7 @@ public final class TouchEvent extends InputEvent {
     /**
      * Whether or not the Meta modifier is down on this event.
      */
-    private boolean metaDown;
+    private final boolean metaDown;
 
     /**
      * Whether or not the Meta modifier is down on this event.
@@ -239,7 +273,7 @@ public final class TouchEvent extends InputEvent {
         return metaDown;
     }
 
-    private TouchPoint touchPoint;
+    private final TouchPoint touchPoint;
 
     /**
      * Gets the touch point of this event.
@@ -249,7 +283,7 @@ public final class TouchEvent extends InputEvent {
         return touchPoint;
     }
 
-    private List<TouchPoint> touchPoints;
+    private final List<TouchPoint> touchPoints;
 
     /**
      * Gets all the touch points represented by this set of touch events,
@@ -282,19 +316,6 @@ public final class TouchEvent extends InputEvent {
         sb.append(", touchPoint = ").append(getTouchPoint().toString());
 
         return sb.append("]").toString();
-    }
-
-    /**
-     * @treatAsPrivate implementation detail
-     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
-     */
-    @Deprecated
-    public static TouchEvent impl_touchEvent(EventType<? extends TouchEvent> eventType,
-            TouchPoint touchPoint, List<TouchPoint> touchPoints, int eventSetId,
-            boolean shiftDown, boolean controlDown, boolean altDown,
-            boolean metaDown) {
-        return new TouchEvent(eventType, touchPoint, touchPoints, eventSetId,
-                shiftDown, controlDown, altDown, metaDown);
     }
 
 }

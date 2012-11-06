@@ -54,7 +54,7 @@ public enum
      * {@code DragEvent.acceptTransferModes()} calls.
      */
     public static final TransferMode[] ANY = { COPY, MOVE, LINK };
-
+    
     /**
      * Array containing transfer modes COPY and MOVE. This is a convenience
      * constant intended to be used in {@code startDragAndDrop} and

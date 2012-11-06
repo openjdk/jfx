@@ -25,6 +25,7 @@
 
 package javafx.scene.input;
 
+import java.util.List;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.event.EventTarget;
@@ -47,47 +48,44 @@ import javafx.scene.Node;
  * {@link javafx.application.ConditionalFeature#INPUT_METHOD ConditionalFeature.INPUT_METHOD}
  * for more information.
  */
-public class InputMethodEvent extends InputEvent {
+public final class InputMethodEvent extends InputEvent{
     /**
      * The only valid EventType for the InputMethodEvent.
      */
     public static final EventType<InputMethodEvent> INPUT_METHOD_TEXT_CHANGED =
             new EventType<InputMethodEvent>(InputEvent.ANY, "INPUT_METHOD_TEXT_CHANGED");
 
-    private InputMethodEvent(final EventType<? extends InputMethodEvent> eventType) {
-        super(eventType);
-    }
-
-    private InputMethodEvent(final Object source,
-                             final EventTarget target,
-                             final EventType<? extends InputMethodEvent> eventType) {
+    /**
+     * Constructs new InputMethodEvent event.
+     * @param source the source of the event. Can be null.
+     * @param target the target of the event. Can be null.
+     * @param eventType The type of the event.
+     * @param composed the text under composition
+     * @param committed the text that is committed as a result of composition
+     * @param caretPosition the current position of the caret.
+     */
+    public InputMethodEvent(Object source, EventTarget target, EventType<InputMethodEvent> eventType,
+            List<InputMethodTextRun> composed, String committed,
+            int caretPosition) {
         super(source, target, eventType);
+        this.composed = FXCollections.unmodifiableObservableList(FXCollections.observableArrayList(composed));
+        this.committed = committed;
+        this.caretPosition = caretPosition;
     }
 
     /**
-     * @treatAsPrivate implementation detail
-     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
+     * Constructs new InputMethodEvent event with empty source and target.
+     * @param eventType The type of the event.
+     * @param composed the text under composition
+     * @param committed the text that is committed as a result of composition
+     * @param caretPosition the current position of the caret.
      */
-    @Deprecated
-    public static InputMethodEvent impl_copy(EventTarget target,
-                                             InputMethodEvent evt) {
-        return (InputMethodEvent) evt.copyFor(evt.source, target);
+    public InputMethodEvent(EventType<InputMethodEvent> eventType,
+            List<InputMethodTextRun> composed, String committed,
+            int caretPosition) {
+        this(null, null, eventType, composed, committed, caretPosition);
     }
-
-    /**
-     * @treatAsPrivate implementation detail
-     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
-     */
-    @Deprecated
-    public static InputMethodEvent impl_inputMethodEvent(EventTarget target,
-            ObservableList<InputMethodTextRun> composed, String committed,
-            int caretPosition, EventType<? extends InputMethodEvent> eventType) {
-        InputMethodEvent e = new InputMethodEvent(null, target, eventType);
-        e.getComposed().addAll(composed);
-        e.committed = committed;
-        e.caretPosition = caretPosition;
-        return e;
-    }
+    
 
     /**
      * The text under composition.  This text should be displayed with the
@@ -96,7 +94,7 @@ public class InputMethodEvent extends InputEvent {
      *
      * @defaultValue null
      */
-    private ObservableList<InputMethodTextRun> composed;
+    private final ObservableList<InputMethodTextRun> composed;
 
     /**
      * Gets the text under composition.  This text should be displayed with the
@@ -106,9 +104,6 @@ public class InputMethodEvent extends InputEvent {
      * @return The text under composition
      */
     public final ObservableList<InputMethodTextRun> getComposed() {
-        if (composed == null) {
-            composed = FXCollections.observableArrayList();
-        }
         return composed;
     }
 
@@ -118,7 +113,7 @@ public class InputMethodEvent extends InputEvent {
      *
      * @defaultValue empty string
      */
-    private String committed = "";
+    private final String committed;
 
     /**
      * Gets the text that is committed by the input method as the result of the
@@ -136,7 +131,7 @@ public class InputMethodEvent extends InputEvent {
      *
      * @defaultValue 0
      */
-    private int caretPosition;
+    private final int caretPosition;
 
     /**
      * The input method caret position within the composed text.
@@ -166,5 +161,17 @@ public class InputMethodEvent extends InputEvent {
 
         return sb.append("]").toString();
     }
+
+    @Override
+    public InputMethodEvent copyFor(Object newSource, EventTarget newTarget) {
+        return (InputMethodEvent) super.copyFor(newSource, newTarget);
+    }
+
+    @Override
+    public EventType<InputMethodEvent> getEventType() {
+        return (EventType<InputMethodEvent>) super.getEventType();
+    }
+    
+    
 
 }
