@@ -290,18 +290,18 @@ public class StageTest {
     public void testResizableNotLostForAsyncNotifications() {
         peer.holdNotifications();
 
-        s.setResizable(true);
-        assertTrue(s.isResizable());
-
         s.setResizable(false);
         assertFalse(s.isResizable());
 
-        peer.releaseSingleNotification();
+        s.setResizable(true);
         assertTrue(s.isResizable());
+
+        peer.releaseSingleNotification();
+        assertFalse(s.isResizable());
 
         peer.releaseNotifications();
 
-        assertFalse(s.isResizable());
+        assertTrue(s.isResizable());
     }
 
     @Test

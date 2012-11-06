@@ -445,12 +445,11 @@ public class PopupTest {
 
             popup.show(stage);
             Event.fireEvent(stage,
-                            KeyEvent.impl_keyEvent(
-                                stage, KeyEvent.CHAR_UNDEFINED,
+                            new KeyEvent(null, stage,
+                                KeyEvent.KEY_PRESSED, KeyEvent.CHAR_UNDEFINED,
                                 KeyCode.ESCAPE.getName(),
                                 KeyCode.ESCAPE.impl_getCode(),
-                                false, false, false, false,
-                                KeyEvent.KEY_PRESSED));
+                                false, false, false, false));
             assertEquals(0, keyEventCounter.getValue());
 
             popup.setConsumeAutoHidingEvents(false);
@@ -463,12 +462,12 @@ public class PopupTest {
 
             popup.show(stage);
             Event.fireEvent(stage,
-                            KeyEvent.impl_keyEvent(
-                                stage, KeyEvent.CHAR_UNDEFINED,
+                            new KeyEvent(null, stage,
+                                KeyEvent.KEY_PRESSED,
+                                KeyEvent.CHAR_UNDEFINED,
                                 KeyCode.ESCAPE.getName(),
                                 KeyCode.ESCAPE.impl_getCode(),
-                                false, false, false, false,
-                                KeyEvent.KEY_PRESSED));
+                                false, false, false, false));
             assertEquals(1, keyEventCounter.getValue());
             
         } finally {

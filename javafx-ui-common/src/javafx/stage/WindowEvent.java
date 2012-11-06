@@ -26,6 +26,7 @@
 package javafx.stage;
 
 import javafx.event.Event;
+import javafx.event.EventTarget;
 import javafx.event.EventType;
 
 /**
@@ -97,4 +98,29 @@ public class WindowEvent extends Event {
 
         return sb.append("]").toString();
     }
+
+    @Override
+    public WindowEvent copyFor(Object newSource, EventTarget newTarget) {
+        return (WindowEvent) super.copyFor(newSource, newTarget);
+    }
+
+    /**
+     * Creates a copy of the given event with the given fields substituted.
+     * @param source the new source of the copied event
+     * @param target the new target of the copied event
+     * @param eventType the new eventType
+     * @return the event copy with the fields substituted
+     */
+    public WindowEvent copyFor(Object newSource, EventTarget newTarget, EventType<WindowEvent> type) {
+        WindowEvent e = copyFor(newSource, newTarget);
+        e.eventType = type;
+        return e;
+    }
+
+    @Override
+    public EventType<WindowEvent> getEventType() {
+        return (EventType<WindowEvent>) super.getEventType();
+    }
+    
+    
 }

@@ -906,14 +906,14 @@ public class VirtualFlowTest {
         double originalValue = flow.getPosition();
 
         Event.fireEvent(flow, 
-              ScrollEvent.impl_scrollEvent(ScrollEvent.SCROLL,
+              new ScrollEvent(ScrollEvent.SCROLL,
                           0.0, -10.0, 0.0, -10.0,
+                          false, false, false, false, true, false,
+                          0, 0,
+                          0, 0,
                           ScrollEvent.HorizontalTextScrollUnits.NONE, 0.0,
                           ScrollEvent.VerticalTextScrollUnits.LINES, -1.0,
-                          0,
-                          0, 0,
-                          0, 0,
-                          false, false, false, false, true, false));
+                          0));
 
         assertTrue(originalValue != flow.getPosition());
     }

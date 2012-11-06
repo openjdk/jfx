@@ -206,6 +206,45 @@ public class LinearGradientTest {
         } catch (IllegalArgumentException iae) {
             // expected
         }
+
+        // rgb( must end with ')'
+        try {
+            LinearGradient.valueOf("linear-gradient(hsl(240,100%,100%), rgb(250, 0, 0)");
+            fail("IllegalArgument should have been thrown.");
+        } catch (IllegalArgumentException iae) {
+            // expected
+        }
+        
+        // stop can't be empty
+        try {
+            LinearGradient.valueOf("linear-gradient(from 0 100 to 100 100, red  0% ,,   black 100%)");
+            fail("IllegalArgument should have been thrown.");
+        } catch (IllegalArgumentException iae) {
+            // expected
+        }
+
+        try {
+            LinearGradient.valueOf("linear-gradient(from 0 100 to 100 100, red  0% ,black 100%,   )");
+            fail("IllegalArgument should have been thrown.");
+        } catch (IllegalArgumentException iae) {
+            // expected
+        }
+        
+       // token can't be empty
+        try {
+            LinearGradient.valueOf("linear-gradient(, from 0 100 to 100 100, red  0% ,   black 100%)");
+            fail("IllegalArgument should have been thrown.");
+        } catch (IllegalArgumentException iae) {
+            // expected
+        }
+
+        try {
+            LinearGradient.valueOf("linear-gradient(from 0 100 to 100 100, ,repeat, red  0% ,   black 100%)");
+            fail("IllegalArgument should have been thrown.");
+        } catch (IllegalArgumentException iae) {
+            // expected
+        }
+
     }
     
     @Test
@@ -355,6 +394,19 @@ public class LinearGradientTest {
         assertEquals(expected, actual);
     }
     
+    @Test
+    public void testValueOfColor() {
+        LinearGradient actual =
+                LinearGradient.valueOf("linear-gradient(rgb(0,0,255), rgb(255, 0, 0))");
+        LinearGradient expected =
+                LinearGradientBuilder.create().startX(0).startY(0).endX(0).endY(1)
+                .proportional(true)
+                .stops(new Stop(0, Color.BLUE),
+                       new Stop(1.0, Color.RED))
+                .build();
+        assertEquals(expected, actual);
+    }
+
     @Test
     public void testValueOfDefaultsToBottom() {
         LinearGradient actual =

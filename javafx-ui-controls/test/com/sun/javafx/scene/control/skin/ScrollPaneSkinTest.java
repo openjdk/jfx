@@ -298,14 +298,14 @@ public class ScrollPaneSkinTest {
         stage.show();
  
         Event.fireEvent(rect, 
-              ScrollEvent.impl_scrollEvent(ScrollEvent.SCROLL,
+              new ScrollEvent(ScrollEvent.SCROLL,
+                          50, 50,
+                          50, 50,
+                          false, false, false, false, true, false, 
                           0.0, -50.0, 0.0, -50.0,
                           ScrollEvent.HorizontalTextScrollUnits.NONE, 10.0,
                           ScrollEvent.VerticalTextScrollUnits.NONE, 10.0,
-                          0,
-                          50, 50,
-                          50, 50,
-                          false, false, false, false, true, false));
+                          0));
 
         /*
         ** did it work?
@@ -666,15 +666,16 @@ public class ScrollPaneSkinTest {
         stage.show();
          
         Event.fireEvent(rect,      
-         SwipeEvent.impl_swipeEvent(SwipeEvent.SWIPE_DOWN,
-            1,
+         new SwipeEvent(SwipeEvent.SWIPE_DOWN,
             0.0, -50.0,
             0.0, -50.0,
             false,
             false,
             false,
             false,
-            false));
+            false,
+            1
+            ));
 
         /*
         ** did it work?
@@ -732,15 +733,16 @@ public class ScrollPaneSkinTest {
         stage.show();
          
         Event.fireEvent(rect,      
-            SwipeEvent.impl_swipeEvent(SwipeEvent.SWIPE_RIGHT,
-            1,
+            new SwipeEvent(SwipeEvent.SWIPE_RIGHT,
             0.0, -50.0,
             0.0, -50.0,
             false,
             false,
             false,
             false,
-            false));
+            false,
+            1
+            ));
 
          /*
          ** did it work?

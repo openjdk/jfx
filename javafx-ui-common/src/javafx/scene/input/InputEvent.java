@@ -58,4 +58,10 @@ public class InputEvent extends Event {
                       final EventType<? extends InputEvent> eventType) {
         super(source, target, eventType);
     }
+
+    @Override
+    public EventType<? extends InputEvent> getEventType() {
+        return (EventType<? extends InputEvent>) super.getEventType();
+    }
+    
 }

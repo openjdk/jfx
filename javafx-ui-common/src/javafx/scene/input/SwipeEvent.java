@@ -55,7 +55,7 @@ import javafx.event.EventType;
  *
  * @since 2.2
  */
-public class SwipeEvent extends GestureEvent {
+public final class SwipeEvent extends GestureEvent {
 
     /**
      * Common supertype for all swipe event types.
@@ -87,50 +87,66 @@ public class SwipeEvent extends GestureEvent {
     public static final EventType<SwipeEvent> SWIPE_DOWN =
             new EventType<SwipeEvent>(SwipeEvent.ANY, "SWIPE_DOWN");
 
-    private SwipeEvent(final EventType<? extends SwipeEvent> eventType) {
-        super(eventType);
-    }
-
-    private SwipeEvent(Object source, EventTarget target,
-            final EventType<? extends SwipeEvent> eventType) {
-        super(source, target, eventType);
-    }
-
-    private SwipeEvent(final EventType<? extends SwipeEvent> eventType,
-            int touchCount,
+    /**
+     * Constructs new SwipeEvent event.
+     * @param source the source of the event. Can be null.
+     * @param target the target of the event. Can be null.
+     * @param eventType The type of the event.
+     * @param x The x with respect to the source. Should be in scene coordinates if source == null or source is not a Node.
+     * @param y The y with respect to the source. Should be in scene coordinates if source == null or source is not a Node.
+     * @param screenX The x coordinate relative to screen.
+     * @param screenY The y coordinate relative to screen.
+     * @param shiftDown true if shift modifier was pressed.
+     * @param controlDown true if control modifier was pressed.
+     * @param altDown true if alt modifier was pressed.
+     * @param metaDown true if meta modifier was pressed.
+     * @param direct true if the event was caused by direct input device. See {@link #isDirect() }
+     * @param touchCount number of touch points
+     */
+    public SwipeEvent(Object source, EventTarget target,
+            final EventType<SwipeEvent> eventType,
             double x, double y,
             double screenX, double screenY,
             boolean shiftDown,
             boolean controlDown,
             boolean altDown,
             boolean metaDown,
-            boolean direct) {
+            boolean direct,
+            int touchCount) {
 
-        super(eventType, x, y, screenX, screenY,
+        super(source, target, eventType, x, y, screenX, screenY,
                 shiftDown, controlDown, altDown, metaDown, direct, false);
         this.touchCount = touchCount;
     }
 
     /**
-     * @treatAsPrivate implementation detail
-     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
+     * Constructs new SwipeEvent event with null source and target.
+     * @param eventType The type of the event.
+     * @param x The x with respect to the scene.
+     * @param y The y with respect to the scene.
+     * @param screenX The x coordinate relative to screen.
+     * @param screenY The y coordinate relative to screen.
+     * @param shiftDown true if shift modifier was pressed.
+     * @param controlDown true if control modifier was pressed.
+     * @param altDown true if alt modifier was pressed.
+     * @param metaDown true if meta modifier was pressed.
+     * @param direct true if the event was caused by direct input device. See {@link #isDirect() }
+     * @param touchCount number of touch points
      */
-    public static SwipeEvent impl_swipeEvent(final EventType<? extends SwipeEvent> eventType,
-            int touchCount,
+    public SwipeEvent(final EventType<SwipeEvent> eventType,
             double x, double y,
             double screenX, double screenY,
             boolean shiftDown,
             boolean controlDown,
             boolean altDown,
             boolean metaDown,
-            boolean direct) {
-        return new SwipeEvent(eventType, touchCount,
-                x, y, screenX, screenY,
-                shiftDown, controlDown, altDown, metaDown, direct);
+            boolean direct,
+            int touchCount) {
+        this(null, null, eventType, x, y, screenX, screenY, shiftDown, controlDown,
+                altDown, metaDown, direct, touchCount);
     }
 
-
-    private int touchCount;
+    private final int touchCount;
 
     /**
      * Gets number of touch points that caused this event.
@@ -174,4 +190,29 @@ public class SwipeEvent extends GestureEvent {
 
         return sb.append("]").toString();
     }
+
+    @Override
+    public SwipeEvent copyFor(Object newSource, EventTarget newTarget) {
+        return (SwipeEvent) super.copyFor(newSource, newTarget);
+    }
+    
+    /**
+     * Creates a copy of the given event with the given fields substituted.
+     * @param source the new source of the copied event
+     * @param target the new target of the copied event
+     * @param eventType the new eventType
+     * @return the event copy with the fields substituted
+     */
+    public SwipeEvent copyFor(Object newSource, EventTarget newTarget, EventType<SwipeEvent> type) {
+        SwipeEvent e = copyFor(newSource, newTarget);
+        e.eventType = type;
+        return e;
+    }
+
+    @Override
+    public EventType<SwipeEvent> getEventType() {
+        return (EventType<SwipeEvent>) super.getEventType();
+    }
+    
+    
 }

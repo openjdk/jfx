@@ -243,6 +243,44 @@ public class RadialGradientTest {
         } catch (IllegalArgumentException iae) {
             // expected
         }
+        
+        // rgb( must end with ')'
+        try {
+            RadialGradient.valueOf("radial-gradient(radius 10, rgb(0,0,250), rgb(250, 0, 0)");
+            fail("IllegalArgument should have been thrown.");
+        } catch (IllegalArgumentException iae) {
+            // expected
+        }
+
+        // stop can't be empty
+        try {
+            RadialGradient.valueOf("radial-gradient(red 30%,,black 100%)");
+            fail("IllegalArgument should have been thrown.");
+        } catch (IllegalArgumentException iae) {
+            // expected
+        }
+
+        try {
+            RadialGradient.valueOf("radial-gradient(red 30%,black 100%,)");
+            fail("IllegalArgument should have been thrown.");
+        } catch (IllegalArgumentException iae) {
+            // expected
+        }
+        
+        // token can't be empty
+        try {
+            RadialGradient.valueOf("radial-gradient(,radius 100%, red  0% , blue 30%,  black 100%)");
+            fail("IllegalArgument should have been thrown.");
+        } catch (IllegalArgumentException iae) {
+            // expected
+        }
+
+        try {
+            RadialGradient.valueOf("radial-gradient(radius 100%,,repeat, red  0% , blue 30%,  black 100%)");
+            fail("IllegalArgument should have been thrown.");
+        } catch (IllegalArgumentException iae) {
+            // expected
+        }
     }
 
     @Test
@@ -427,6 +465,19 @@ public class RadialGradientTest {
                        new Stop(0.1, Color.BLUE),
                        new Stop(0.1, Color.RED),
                        new Stop(1.0, Color.BLACK))
+                .build();
+        assertEquals(expected, actual);
+    }
+
+    @Test
+    public void testValueOfColor() {
+        RadialGradient actual =
+                RadialGradient.valueOf("radial-gradient(radius 10, rgb(0,0,255), rgb(255, 0,  0))");
+        RadialGradient expected =
+                RadialGradientBuilder.create().centerX(0).centerY(0).radius(10)
+                .proportional(false)
+                .stops(new Stop(0, Color.BLUE),
+                       new Stop(1.0, Color.RED))
                 .build();
         assertEquals(expected, actual);
     }

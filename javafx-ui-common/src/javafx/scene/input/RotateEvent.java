@@ -56,7 +56,7 @@ import javafx.event.EventType;
  *
  * @since 2.2
  */
-public class RotateEvent extends GestureEvent {
+public final class RotateEvent extends GestureEvent {
 
     /**
      * Common supertype for all rotate event types.
@@ -83,17 +83,26 @@ public class RotateEvent extends GestureEvent {
     public static final EventType<RotateEvent> ROTATION_FINISHED =
             new EventType<RotateEvent>(RotateEvent.ANY, "ROTATION_FINISHED");
 
-    private RotateEvent(final EventType<? extends RotateEvent> eventType) {
-        super(eventType);
-    }
-
-    private RotateEvent(Object source, EventTarget target,
-            final EventType<? extends RotateEvent> eventType) {
-        super(source, target, eventType);
-    }
-
-    private RotateEvent(final EventType<? extends RotateEvent> eventType,
-            double angle, double totalAngle,
+    /**
+     * Constructs new RotateEvent event.
+     * @param source the source of the event. Can be null.
+     * @param target the target of the event. Can be null.
+     * @param eventType The type of the event.
+     * @param x The x with respect to the source. Should be in scene coordinates if source == null or source is not a Node.
+     * @param y The y with respect to the source. Should be in scene coordinates if source == null or source is not a Node.
+     * @param screenX The x coordinate relative to screen.
+     * @param screenY The y coordinate relative to screen.
+     * @param shiftDown true if shift modifier was pressed.
+     * @param controlDown true if control modifier was pressed.
+     * @param altDown true if alt modifier was pressed.
+     * @param metaDown true if meta modifier was pressed.
+     * @param direct true if the event was caused by direct input device. See {@link #isDirect() }
+     * @param inertia if represents inertia of an already finished gesture.
+     * @param angle the rotational angle
+     * @param totalAngle the cumulative rotational angle
+     */
+    public RotateEvent(Object source, EventTarget target,
+            final EventType<RotateEvent> eventType,
             double x, double y,
             double screenX, double screenY,
             boolean shiftDown,
@@ -101,20 +110,31 @@ public class RotateEvent extends GestureEvent {
             boolean altDown,
             boolean metaDown,
             boolean direct,
-            boolean inertia) {
+            boolean inertia, double angle, double totalAngle) {
 
-        super(eventType, x, y, screenX, screenY,
+        super(source, target, eventType, x, y, screenX, screenY,
                 shiftDown, controlDown, altDown, metaDown, direct, inertia);
         this.angle = angle;
         this.totalAngle = totalAngle;
     }
 
     /**
-     * @treatAsPrivate implementation detail
-     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
+     * Constructs new RotateEvent event with null source and target
+     * @param eventType The type of the event.
+     * @param x The x with respect to the scene.
+     * @param y The y with respect to the scene.
+     * @param screenX The x coordinate relative to screen.
+     * @param screenY The y coordinate relative to screen.
+     * @param shiftDown true if shift modifier was pressed.
+     * @param controlDown true if control modifier was pressed.
+     * @param altDown true if alt modifier was pressed.
+     * @param metaDown true if meta modifier was pressed.
+     * @param direct true if the event was caused by direct input device. See {@link #isDirect() }
+     * @param inertia if represents inertia of an already finished gesture.
+     * @param angle the rotational angle
+     * @param totalAngle the cumulative rotational angle
      */
-    public static RotateEvent impl_rotateEvent(final EventType<? extends RotateEvent> eventType,
-            double angle, double totalAngle,
+    public RotateEvent(final EventType<RotateEvent> eventType,
             double x, double y,
             double screenX, double screenY,
             boolean shiftDown,
@@ -122,13 +142,12 @@ public class RotateEvent extends GestureEvent {
             boolean altDown,
             boolean metaDown,
             boolean direct,
-            boolean inertia) {
-        return new RotateEvent(eventType, angle, totalAngle,
-                x, y, screenX, screenY,
-                shiftDown, controlDown, altDown, metaDown, direct, inertia);
+            boolean inertia, double angle, double totalAngle) {
+        this(null, null, eventType, x, y, screenX, screenY, shiftDown, controlDown,
+                altDown, metaDown, direct, inertia, angle, totalAngle);
     }
 
-    private double angle;
+    private final double angle;
 
     /**
      * Gets the rotation angle of this event.
@@ -140,7 +159,7 @@ public class RotateEvent extends GestureEvent {
         return angle;
     }
 
-    private double totalAngle;
+    private final double totalAngle;
 
     /**
      * Gets the cumulative rotation angle of this gesture.
@@ -191,4 +210,29 @@ public class RotateEvent extends GestureEvent {
 
         return sb.append("]").toString();
     }
+
+    @Override
+    public RotateEvent copyFor(Object newSource, EventTarget newTarget) {
+        return (RotateEvent) super.copyFor(newSource, newTarget);
+    }
+
+    /**
+     * Creates a copy of the given event with the given fields substituted.
+     * @param source the new source of the copied event
+     * @param target the new target of the copied event
+     * @param eventType the new eventType
+     * @return the event copy with the fields substituted
+     */
+    public RotateEvent copyFor(Object newSource, EventTarget newTarget, EventType<RotateEvent> type) {
+        RotateEvent e = copyFor(newSource, newTarget);
+        e.eventType = type;
+        return e;
+    }
+    
+    @Override
+    public EventType<RotateEvent> getEventType() {
+        return (EventType<RotateEvent>) super.getEventType();
+    }
+    
+    
 }

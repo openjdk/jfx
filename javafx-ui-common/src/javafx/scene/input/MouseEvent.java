@@ -241,42 +241,24 @@ public class MouseEvent extends InputEvent {
     public static final EventType<MouseEvent> DRAG_DETECTED =
             new EventType<MouseEvent>(MouseEvent.ANY, "DRAG_DETECTED");
 
-    MouseEvent(final EventType<? extends MouseEvent> eventType) {
-        super(eventType);
-    }
-
-    MouseEvent(Object source, EventTarget target,
-            final EventType<? extends MouseEvent> eventType) {
-        super(source, target, eventType);
-    }
-
-    /**
-     * Creates a copy of the given mouse event, substituting the given node for
-     * the one in the original event. This function will also adjust the location
-     * properties (x, y, screenX, screenY, etc) such that the event is in values
-     * relative to the new source.
-     *
-     * @treatAsPrivate implementation detail
-     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
-     */
-    @Deprecated
-    public static MouseEvent impl_copy(Node source, Node target, MouseEvent evt) {
-         return impl_copy(source, target, evt, null);
-    }
-
     /**
      * Fills the given event by this event's coordinates recomputed to the given
      * source object
      * @param newEvent Event whose coordinates are to be filled
      * @param newSource Source object to compute coordinates for
      */
-    private void recomputeCoordinatesToSource(MouseEvent newEvent, Object newSource) {
+    void recomputeCoordinatesToSource(MouseEvent oldEvent, Object newSource) {
 
         final Point2D newCoordinates = InputEventUtils.recomputeCoordinates(
-                new Point2D(sceneX, sceneY), null, newSource);
+                new Point2D(oldEvent.x, oldEvent.y), oldEvent.source, newSource);
 
-        newEvent.x = newCoordinates.getX();
-        newEvent.y = newCoordinates.getY();
+        x = newCoordinates.getX();
+        y = newCoordinates.getY();
+    }
+
+    @Override
+    public EventType<? extends MouseEvent> getEventType() {
+        return (EventType<? extends MouseEvent>) super.getEventType();
     }
 
     /**
@@ -288,76 +270,26 @@ public class MouseEvent extends InputEvent {
      * @return copy of this event for a different source and target
      */
     @Override
-    public Event copyFor(Object newSource, EventTarget newTarget) {
+    public MouseEvent copyFor(Object newSource, EventTarget newTarget) {
         MouseEvent e = (MouseEvent) super.copyFor(newSource, newTarget);
-        recomputeCoordinatesToSource(e, newSource);
+        e.recomputeCoordinatesToSource(this, newSource);
         return e;
     }
 
     /**
-     * @treatAsPrivate implementation detail
-     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
+     * Creates a copy of the given event with the given fields substituted.
+     * @param source the new source of the copied event
+     * @param target the new target of the copied event
+     * @param eventType the new eventType
+     * @return the event copy with the fields substituted
      */
-    @Deprecated
-    public void impl_setClickParams(int clickCount, boolean stillSincePress) {
-        this.clickCount = clickCount;
-        this.stillSincePress = stillSincePress;
+    public MouseEvent copyFor(Object newSource, EventTarget newTarget, EventType<? extends MouseEvent> eventType) {
+        MouseEvent e = copyFor(newSource, newTarget);
+        e.eventType = eventType;
+        return e;
     }
 
-    /**
-     * Copies all private fields (except of event type) from one event to
-     * another event. This is for implementing impl_copy in subclasses.
-     */
-    static void copyFields(MouseEvent from, MouseEvent to,
-            Object source, EventTarget target) {
-        to.x = from.x;
-        to.y = from.y;
-        to.screenX = from.screenX;
-        to.screenY = from.screenY;
-        to.sceneX = from.sceneX;
-        to.sceneY = from.sceneY;
-        to.button = from.button;
-        to.clickCount = from.clickCount;
-        to.stillSincePress = from.stillSincePress;
-        to.shiftDown = from.shiftDown;
-        to.controlDown = from.controlDown;
-        to.altDown = from.altDown;
-        to.metaDown = from.metaDown;
-        to.popupTrigger = from.popupTrigger;
-        to.primaryButtonDown = from.primaryButtonDown;
-        to.secondaryButtonDown = from.secondaryButtonDown;
-        to.middleButtonDown = from.middleButtonDown;
-        to.synthesized = from.synthesized;
-        to.source = source;
-        to.target = target;
-
-        from.recomputeCoordinatesToSource(to, source);
-    }
-
-    /**
-     * @treatAsPrivate implementation detail
-     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
-     */
-    @Deprecated
-    public static MouseEvent impl_copy(Object source, EventTarget target, MouseEvent evt,
-            EventType<? extends MouseEvent> impl_EventType) {
-        MouseEvent copyEvent = impl_mouseEvent(source, target, evt.x, evt.y, evt.screenX,
-                evt.screenY, evt.button, evt.clickCount, evt.stillSincePress,
-                evt.shiftDown, evt.controlDown, evt.altDown, evt.metaDown,
-                evt.popupTrigger, evt.primaryButtonDown, evt.middleButtonDown,
-                evt.secondaryButtonDown, evt.synthesized,
-                (impl_EventType != null
-                        ? impl_EventType
-                        : (EventType<? extends MouseEvent>)
-                                evt.getEventType()));
-
-        copyEvent.sceneX = evt.sceneX;
-        copyEvent.sceneY = evt.sceneY;
-
-        evt.recomputeCoordinatesToSource(copyEvent, source);
-        return copyEvent;
-    }
-
+    //SB-dependency: RT-21224. Need to be sure that SB does use new API before removing this.
     /**
      * @treatAsPrivate implementation detail
      * @deprecated This is an internal API that is not intended for use and will be removed in the next version
@@ -377,87 +309,180 @@ public class MouseEvent extends InputEvent {
           boolean _secondaryButtonDown,
           boolean _synthesized,
           EventType<? extends MouseEvent> _eventType
-          )
-    {
-        MouseEvent e = new MouseEvent(_eventType);
-        e.x = _x;
-        e.y = _y;
-        e.screenX = _screenX;
-        e.screenY = _screenY;
-        e.sceneX = _x;
-        e.sceneY = _y;
-        e.button = _button;
-        e.clickCount = _clickCount;
-        e.stillSincePress = false;
-        e.shiftDown = _shiftDown;
-        e.controlDown = _controlDown;
-        e.altDown = _altDown;
-        e.metaDown = _metaDown;
-        e.popupTrigger = _popupTrigger;
-        e.primaryButtonDown = _primaryButtonDown;
-        e.middleButtonDown = _middleButtonDown;
-        e.secondaryButtonDown = _secondaryButtonDown;
-        e.synthesized = _synthesized;
-        return e;
+          ) {
+        return new MouseEvent(
+                _eventType, _x, _y, _screenX, _screenY,
+                _button, _clickCount,
+                _shiftDown, _controlDown, _altDown, _metaDown,
+                _primaryButtonDown, _middleButtonDown, _secondaryButtonDown, _popupTrigger,
+                _synthesized);
     }
 
     /**
-     * @treatAsPrivate implementation detail
-     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
+     * Constructs new MouseEvent event with null source and target.
+     * Still since press is set to false.
+     * @param eventType The type of the event.
+     * @param x The x with respect to the scene.
+     * @param y The y with respect to the scene.
+     * @param screenX The x coordinate relative to screen.
+     * @param screenY The y coordinate relative to screen.
+     * @param button the mouse button used
+     * @param clickCount number of click counts
+     * @param shiftDown true if shift modifier was pressed.
+     * @param controlDown true if control modifier was pressed.
+     * @param altDown true if alt modifier was pressed.
+     * @param metaDown true if meta modifier was pressed.
+     * @param primaryButtonDown true if primary button was pressed.
+     * @param middleButtonDown true if middle button was pressed.
+     * @param secondaryButtonDown true if secondary button was pressed.
+     * @param synthesized if this event was synthesized
+     * @param popupTrigger whether this event denotes a popup trigger for current platform
      */
-    // SB-dependency: RT-21224 has been filed to track this
-    @Deprecated
-    private static MouseEvent impl_mouseEvent(Object _source, EventTarget _target,
-          double _x, double _y,
-          double _screenX, double _screenY,
-          MouseButton _button,
-          int _clickCount,
-          boolean _stillSincePress,
-          boolean _shiftDown,
-          boolean _controlDown,
-          boolean _altDown,
-          boolean _metaDown,
-          boolean _popupTrigger,
-          boolean _primaryButtonDown,
-          boolean _middleButtonDown,
-          boolean _secondaryButtonDown,
-          boolean _synthesized,
-          EventType<? extends MouseEvent> _eventType
-          )
-    {
-        MouseEvent e = new MouseEvent(_source, _target, _eventType);
-        e.x = _x;
-        e.y = _y;
-        e.screenX = _screenX;
-        e.screenY = _screenY;
-        e.sceneX = _x;
-        e.sceneY = _y;
-        e.button = _button;
-        e.clickCount = _clickCount;
-        e.stillSincePress = _stillSincePress;
-        e.shiftDown = _shiftDown;
-        e.controlDown = _controlDown;
-        e.altDown = _altDown;
-        e.metaDown = _metaDown;
-        e.popupTrigger = _popupTrigger;
-        e.primaryButtonDown = _primaryButtonDown;
-        e.middleButtonDown = _middleButtonDown;
-        e.secondaryButtonDown = _secondaryButtonDown;
-        e.synthesized = _synthesized;
-        return e;
+    public MouseEvent(
+            EventType<? extends MouseEvent> eventType,
+            double x, double y,
+            double screenX, double screenY,
+            MouseButton button,
+            int clickCount,
+            boolean shiftDown,
+            boolean controlDown,
+            boolean altDown,
+            boolean metaDown,
+            boolean primaryButtonDown,
+            boolean middleButtonDown,
+            boolean secondaryButtonDown,
+            boolean synthesized,
+            boolean popupTrigger) {
+        this(eventType, x, y, screenX, screenY, button, clickCount,
+                shiftDown, controlDown, altDown, metaDown,
+                primaryButtonDown, middleButtonDown, secondaryButtonDown,
+                synthesized, popupTrigger, false);
     }
 
     /**
-     * @treatAsPrivate implementation detail
-     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
+     * Constructs new MouseEvent event with null source and target.
+     * @param eventType The type of the event.
+     * @param x The x with respect to the scene.
+     * @param y The y with respect to the scene.
+     * @param screenX The x coordinate relative to screen.
+     * @param screenY The y coordinate relative to screen.
+     * @param button the mouse button used
+     * @param clickCount number of click counts
+     * @param shiftDown true if shift modifier was pressed.
+     * @param controlDown true if control modifier was pressed.
+     * @param altDown true if alt modifier was pressed.
+     * @param metaDown true if meta modifier was pressed.
+     * @param primaryButtonDown true if primary button was pressed.
+     * @param middleButtonDown true if middle button was pressed.
+     * @param secondaryButtonDown true if secondary button was pressed.
+     * @param synthesized if this event was synthesized
+     * @param popupTrigger whether this event denotes a popup trigger for current platform
+     * @param stillSincePress see {@link #isStillSincePress() }
      */
-    @Deprecated
-    public static boolean impl_getPopupTrigger(
-            final MouseEvent mouseEvent) {
-        return mouseEvent.popupTrigger;
+    public MouseEvent(
+            EventType<? extends MouseEvent> eventType,
+            double x, double y,
+            double screenX, double screenY,
+            MouseButton button,
+            int clickCount,
+            boolean shiftDown,
+            boolean controlDown,
+            boolean altDown,
+            boolean metaDown,
+            boolean primaryButtonDown,
+            boolean middleButtonDown,
+            boolean secondaryButtonDown,
+            boolean synthesized,
+            boolean popupTrigger,
+            boolean stillSincePress) {
+        this(null, null, eventType, x, y, screenX, screenY, button, clickCount,
+                shiftDown, controlDown, altDown, metaDown,
+                primaryButtonDown, middleButtonDown, secondaryButtonDown,
+                synthesized, popupTrigger, stillSincePress);
     }
 
-    private Flags flags = new Flags();
+    /**
+     * Constructs new MouseEvent event.
+     * @param source the source of the event. Can be null.
+     * @param target the target of the event. Can be null.
+     * @param eventType The type of the event.
+     * @param x The x with respect to the source. Should be in scene coordinates if source == null or source is not a Node.
+     * @param y The y with respect to the source. Should be in scene coordinates if source == null or source is not a Node.
+     * @param screenX The x coordinate relative to screen.
+     * @param screenY The y coordinate relative to screen.
+     * @param button the mouse button used
+     * @param clickCount number of click counts
+     * @param shiftDown true if shift modifier was pressed.
+     * @param controlDown true if control modifier was pressed.
+     * @param altDown true if alt modifier was pressed.
+     * @param metaDown true if meta modifier was pressed.
+     * @param primaryButtonDown true if primary button was pressed.
+     * @param middleButtonDown true if middle button was pressed.
+     * @param secondaryButtonDown true if secondary button was pressed.
+     * @param synthesized if this event was synthesized
+     * @param popupTrigger whether this event denotes a popup trigger for current platform
+     * @param stillSincePress see {@link #isStillSincePress() }
+     */
+    public MouseEvent(Object source, EventTarget target,
+            EventType<? extends MouseEvent> eventType,
+            double x, double y,
+            double screenX, double screenY,
+            MouseButton button,
+            int clickCount,
+            boolean shiftDown,
+            boolean controlDown,
+            boolean altDown,
+            boolean metaDown,
+            boolean primaryButtonDown,
+            boolean middleButtonDown,
+            boolean secondaryButtonDown,
+            boolean synthesized,
+            boolean popupTrigger,
+            boolean stillSincePress) {
+        super(source, target, eventType);
+        this.x = x;
+        this.y = y;
+        this.screenX = screenX;
+        this.screenY = screenY;
+        this.sceneX = x;
+        this.sceneY = y;
+        this.button = button;
+        this.clickCount = clickCount;
+        this.shiftDown = shiftDown;
+        this.controlDown = controlDown;
+        this.altDown = altDown;
+        this.metaDown = metaDown;
+        this.primaryButtonDown = primaryButtonDown;
+        this.middleButtonDown = middleButtonDown;
+        this.secondaryButtonDown = secondaryButtonDown;
+        this.synthesized = synthesized;
+        this.stillSincePress = stillSincePress;
+        this.popupTrigger = popupTrigger;
+    }
+
+    /**
+     * Creates a copy of this mouse event of MouseDragEvent type
+     * @param e the mouse event to copy
+     * @param source the new source of the copied event
+     * @param target the new target of the copied event
+     * @param type the new MouseDragEvent type
+     * @param gestureSource the new source of the gesture
+     * @return new MouseDragEvent that was created from MouseEvent
+     */
+    public static MouseDragEvent copyForMouseDragEvent(
+            MouseEvent e,
+            Object source, EventTarget target,
+            EventType<MouseDragEvent> type,
+            Object gestureSource) {
+        MouseDragEvent ev = new MouseDragEvent(source, target,
+                type, e.x, e.y, e.screenX, e.screenY,
+                e.button, e.clickCount, e.shiftDown, e.controlDown,
+                e.altDown, e.metaDown, e.primaryButtonDown, e.middleButtonDown,
+                e.secondaryButtonDown, e.synthesized, e.popupTrigger, gestureSource);
+        ev.recomputeCoordinatesToSource(e, source);
+        return ev;
+    }
+    private final Flags flags = new Flags();
 
     /**
      * Determines whether this event will be followed by {@code DRAG_DETECTED}
@@ -518,7 +543,7 @@ public class MouseEvent extends InputEvent {
     /**
      * Absolute horizontal x position of the event.
      */
-    private double screenX;
+    private final double screenX;
 
     /**
      * Returns absolute horizontal position of the event.
@@ -531,7 +556,7 @@ public class MouseEvent extends InputEvent {
     /**
      * Absolute vertical y position of the event.
      */
-    private double screenY;
+    private final double screenY;
 
     /**
      * Returns absolute vertical position of the event.
@@ -547,7 +572,7 @@ public class MouseEvent extends InputEvent {
      * If the node is not in a {@code Scene}, then the value is relative to
      * the boundsInParent of the root-most parent of the MouseEvent's node.
      */
-    private double sceneX;
+    private final double sceneX;
 
     /**
      * Returns horizontal position of the event relative to the
@@ -568,7 +593,7 @@ public class MouseEvent extends InputEvent {
      * If the node is not in a {@code Scene}, then the value is relative to
      * the boundsInParent of the root-most parent of the MouseEvent's node.
      */
-    private double sceneY;
+    private final double sceneY;
 
     /**
      * Returns vertical position of the event relative to the
@@ -586,7 +611,7 @@ public class MouseEvent extends InputEvent {
     /**
      * Which, if any, of the mouse buttons is responsible for this event.
      */
-    private MouseButton button;
+    private final MouseButton button;
 
     /**
      * Which, if any, of the mouse buttons is responsible for this event.
@@ -607,7 +632,7 @@ public class MouseEvent extends InputEvent {
      * presses happen on a small region and in a small time (according 
      * to native operating system configuration).
      */
-    private int clickCount;
+    private final int clickCount;
 
     /**
      * Returns number of mouse clicks associated with this event.
@@ -629,7 +654,7 @@ public class MouseEvent extends InputEvent {
      * Whether the mouse cursor left the hysteresis region since the previous 
      * press.
      */
-    private boolean stillSincePress;
+    private final boolean stillSincePress;
     
     /**
      * Indicates whether the mouse cursor stayed in the system-provided 
@@ -655,7 +680,7 @@ public class MouseEvent extends InputEvent {
     /**
      * Whether or not the Shift modifier is down on this event.
      */
-    private boolean shiftDown;
+    private final boolean shiftDown;
 
     /**
      * Whether or not the Shift modifier is down on this event.
@@ -668,7 +693,7 @@ public class MouseEvent extends InputEvent {
     /**
      * Whether or not the Control modifier is down on this event.
      */
-    private boolean controlDown;
+    private final boolean controlDown;
 
     /**
      * Whether or not the Control modifier is down on this event.
@@ -681,7 +706,7 @@ public class MouseEvent extends InputEvent {
     /**
      * Whether or not the Alt modifier is down on this event.
      */
-    private boolean altDown;
+    private final boolean altDown;
 
     /**
      * Whether or not the Alt modifier is down on this event.
@@ -694,7 +719,7 @@ public class MouseEvent extends InputEvent {
     /**
      * Whether or not the Meta modifier is down on this event.
      */
-    private boolean metaDown;
+    private final boolean metaDown;
 
     /**
      * Whether or not the Meta modifier is down on this event.
@@ -704,7 +729,7 @@ public class MouseEvent extends InputEvent {
         return metaDown;
     }
 
-    private boolean synthesized;
+    private final boolean synthesized;
 
     /**
      * Indicates whether this event is synthesized from using a touch screen
@@ -756,7 +781,11 @@ public class MouseEvent extends InputEvent {
      * should be checked in both {@code onMousePressed}
      * and {@code mouseReleased} for proper cross-platform functionality.
      */
-    private boolean popupTrigger;
+    private final boolean popupTrigger;
+
+    public final boolean isPopupTrigger() {
+        return popupTrigger;
+    }
 
     /**
      * {@code true} if primary button (button 1, usually the left) is currently
@@ -765,7 +794,7 @@ public class MouseEvent extends InputEvent {
      * responsible for this event while this variable indicates whether the
      * primary button is depressed.
      */
-    private boolean primaryButtonDown;
+    private final boolean primaryButtonDown;
 
     /**
      * Returns {@code true} if primary button (button 1, usually the left) 
@@ -788,7 +817,7 @@ public class MouseEvent extends InputEvent {
      * responsible for this event while this variable indicates whether the
      * primary button is depressed.
      */
-    private boolean secondaryButtonDown;
+    private final boolean secondaryButtonDown;
 
     /**
      * Returns {@code true} if secondary button (button 1, usually the right) 
@@ -811,7 +840,7 @@ public class MouseEvent extends InputEvent {
      * responsible for this event while this variable indicates whether the
      * middle button is depressed.
      */
-    private boolean middleButtonDown;
+    private final boolean middleButtonDown;
 
     /**
      * Returns {@code true} if middle button (button 2) 

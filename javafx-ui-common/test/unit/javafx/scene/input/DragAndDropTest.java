@@ -1271,8 +1271,8 @@ public class DragAndDropTest {
         @Override
         public DragEvent convertDragEventToFx(Object event, Dragboard dragboard) {
             DragEvent de = (DragEvent) event;
-            return DragEvent.impl_copy(de.getSource(), de.getTarget(), 
-                    de.getGestureSource(), de.getGestureTarget(), dragboard, de);
+            return de.copyFor(de.getSource(), de.getTarget(), 
+                    de.getGestureSource(), de.getGestureTarget(), dragboard);
         }
         
         public TransferMode dragTo(double x, double y, TransferMode tm) {
