@@ -81,6 +81,7 @@ import com.sun.javafx.sg.PGShape.StrokeLineCap;
 import com.sun.javafx.sg.PGShape.StrokeLineJoin;
 import com.sun.javafx.sg.PGShape.StrokeType;
 import com.sun.javafx.sg.PGText;
+import com.sun.javafx.sg.PGWebView;
 import com.sun.scenario.DelayedRunnable;
 import com.sun.scenario.animation.AbstractMasterTimer;
 import com.sun.scenario.effect.FilterContext;
@@ -382,6 +383,11 @@ final public class DummyToolkit extends Toolkit {
 
     @Override
     public PGCanvas createPGCanvas() {
+        throw new UnsupportedOperationException("Not supported yet.");
+    }
+
+    @Override
+    public PGWebView createPGWebView() {
         throw new UnsupportedOperationException("Not supported yet.");
     }
 
