@@ -34,6 +34,9 @@ import javafx.event.EventType;
  * This event is fired on a transform when any of its properties changes.
  */
 public class TransformChangedEvent extends Event {
+
+    private static final long serialVersionUID = 20121107L;
+    
     /**
      * The only valid EventType for the TransformChangedEvent.
      */

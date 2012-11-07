@@ -128,6 +128,9 @@ import java.io.IOException;
  * </ul>
  */
 public class MouseEvent extends InputEvent {
+
+    private static final long serialVersionUID = 20121107L;
+    
     /**
      * Common supertype for all mouse event types.
      */

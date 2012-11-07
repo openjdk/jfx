@@ -48,6 +48,8 @@ import javafx.scene.Node;
  */
 public class ContextMenuEvent extends InputEvent {
 
+    private static final long serialVersionUID = 20121107L;
+
     /**
      * This event occurs when a context menu is requested.
      */
