@@ -43,7 +43,7 @@ import javafx.beans.value.ObservableValue;
 import javafx.beans.value.WeakChangeListener;
 import javafx.collections.ListChangeListener;
 import javafx.collections.WeakListChangeListener;
-import javafx.scene.input.KeyCode;
+import javafx.geometry.NodeOrientation;
 import javafx.util.Callback;
 
 public class TreeViewBehavior<T> extends BehaviorBase<TreeView<T>> {
@@ -125,7 +125,23 @@ public class TreeViewBehavior<T> extends BehaviorBase<TreeView<T>> {
         TREE_VIEW_BINDINGS.add(new KeyBinding(F2, "Edit"));
         TREE_VIEW_BINDINGS.add(new KeyBinding(ESCAPE, "CancelEdit"));
     }
-
+    
+    protected /*final*/ String matchActionForEvent(KeyEvent e) {
+        String action = super.matchActionForEvent(e);
+        if (action != null) {
+            if (e.getCode() == LEFT || e.getCode() == KP_LEFT) {
+                if (getControl().getEffectiveNodeOrientation() == NodeOrientation.RIGHT_TO_LEFT) {
+                    action = "ExpandRow";
+                }
+            } else if (e.getCode() == RIGHT || e.getCode() == KP_RIGHT) {
+                if (getControl().getEffectiveNodeOrientation() == NodeOrientation.RIGHT_TO_LEFT) {
+                    action = "CollapseRow";
+                }
+            }
+        }
+        return action;
+    }
+    
     @Override protected void callAction(String name) {
         if ("SelectPreviousRow".equals(name)) selectPreviousRow();
         else if ("SelectNextRow".equals(name)) selectNextRow();

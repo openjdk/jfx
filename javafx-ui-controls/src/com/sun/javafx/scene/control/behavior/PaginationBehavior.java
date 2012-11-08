@@ -48,7 +48,9 @@ import javafx.scene.control.Pagination;
 import com.sun.javafx.scene.control.skin.PaginationSkin;
 import java.util.ArrayList;
 import java.util.List;
+import javafx.geometry.NodeOrientation;
 import javafx.scene.input.KeyCode;
+import javafx.scene.input.KeyEvent;
 import javafx.scene.input.MouseEvent;
 
 public class PaginationBehavior extends BehaviorBase<Pagination> {
@@ -68,6 +70,22 @@ public class PaginationBehavior extends BehaviorBase<Pagination> {
 
     @Override protected List<KeyBinding> createKeyBindings() {
         return PAGINATION_BINDINGS;
+    }
+    
+    protected /*final*/ String matchActionForEvent(KeyEvent e) {
+        String action = super.matchActionForEvent(e);
+        if (action != null) {
+            if (e.getCode() == KeyCode.LEFT) {
+                if (getControl().getEffectiveNodeOrientation() == NodeOrientation.RIGHT_TO_LEFT) {
+                    action = RIGHT;
+                }
+            } else if (e.getCode() == KeyCode.RIGHT) {
+                if (getControl().getEffectiveNodeOrientation() == NodeOrientation.RIGHT_TO_LEFT) {
+                    action = LEFT;
+                }
+            }
+        }
+        return action;
     }
 
     @Override protected void callAction(String name) {

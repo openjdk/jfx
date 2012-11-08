@@ -116,7 +116,7 @@ final public class DummyToolkit extends Toolkit {
     }
 
     @Override
-    public TKStage createTKStage(StageStyle stageStyle, boolean primary, Modality modality, TKStage owner) {
+    public TKStage createTKStage(StageStyle stageStyle, boolean primary, Modality modality, TKStage owner, boolean rtl) {
         throw new UnsupportedOperationException("Not supported yet.");
     }
 

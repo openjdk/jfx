@@ -189,9 +189,10 @@ public class AccessibleNode implements AccessibleProvider
     public Object navigate(NavigateDirection direction) { // this is not focussed driven
         PlatformLogger logger = Logging.getAccessibilityLogger();
         if (logger.isLoggable(PlatformLogger.FINER)) {
-            logger.finer(this.toString()+ "navigate direction: " + direction);
+            logger.finer("this: " + this.toString());
+            logger.finer("navigate direction: " + direction);
         }
-        AccessibleNode accTemp =null;
+        AccessibleNode accTemp = null;
         switch (direction) {
             case Parent:
                 if(parent != null)
@@ -246,9 +247,18 @@ public class AccessibleNode implements AccessibleProvider
                     accTemp = children.get(children.size()-1) ;
                 break;
         }
-        if( accTemp != null )
-            return accTemp.accElement ;
-        return null;
+        if (logger.isLoggable(PlatformLogger.FINER)) {
+            if (accTemp != null) {
+                logger.finer("returning: " + accTemp.accElement);
+            } else {
+                logger.finer("returning: null");
+            }
+        }
+        if (accTemp != null) {
+            return accTemp.accElement;
+        } else {
+            return null;
+        }
     }
     
     /**

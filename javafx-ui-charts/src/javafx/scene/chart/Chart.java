@@ -52,6 +52,7 @@ import com.sun.javafx.css.StyleableObjectProperty;
 import com.sun.javafx.css.StyleableProperty;
 import com.sun.javafx.css.converters.BooleanConverter;
 import com.sun.javafx.css.converters.EnumConverter;
+import javafx.geometry.NodeOrientation;
 
 /**
  * Base class for all charts. It has 3 parts the title, legend and chartContent. The chart content is populated by the
@@ -253,6 +254,7 @@ public abstract class Chart extends Region {
     // -------------- CONSTRUCTOR --------------------------------------------------------------------------------------
 
     public Chart() {
+        setNodeOrientation(NodeOrientation.LEFT_TO_RIGHT);
         titleLabel.setAlignment(Pos.CENTER);
         getChildren().addAll(titleLabel, chartContent);
         getStyleClass().add("chart");

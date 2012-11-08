@@ -31,6 +31,7 @@ import javafx.beans.property.DoubleProperty;
 import javafx.beans.property.DoublePropertyBase;
 import javafx.beans.property.ReadOnlyBooleanProperty;
 import javafx.beans.property.ReadOnlyBooleanWrapper;
+import javafx.geometry.NodeOrientation;
 
 
 /**
@@ -85,6 +86,7 @@ public class ProgressIndicator extends Control {
      * Creates a new ProgressIndicator with the given progress value.
      */
     public ProgressIndicator(double progress) {
+        setNodeOrientation(NodeOrientation.LEFT_TO_RIGHT);
         // focusTraversable is styleable through css. Calling setFocusTraversable
         // makes it look to css like the user set the value and css will not 
         // override. Initializing focusTraversable by calling set on the 

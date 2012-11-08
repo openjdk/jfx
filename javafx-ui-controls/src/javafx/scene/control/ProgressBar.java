@@ -26,6 +26,7 @@
 package javafx.scene.control;
 
 import com.sun.javafx.css.StyleableProperty;
+import javafx.geometry.NodeOrientation;
 
 /**
  * A specialization of the ProgressIndicator which is represented as a
@@ -71,6 +72,9 @@ public class ProgressBar extends ProgressIndicator {
      * Creates a new ProgressBar with the given progress value.
      */
     public ProgressBar(double progress) {
+        if (INDETERMINATE_PROGRESS == progress) {
+            setNodeOrientation(NodeOrientation.LEFT_TO_RIGHT);
+        }
         // focusTraversable is styleable through css. Calling setFocusTraversable
         // makes it look to css like the user set the value and css will not 
         // override. Initializing focusTraversable by calling set on the 

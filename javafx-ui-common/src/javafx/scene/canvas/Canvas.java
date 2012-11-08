@@ -36,6 +36,7 @@ import com.sun.javafx.sg.PGNode;
 import com.sun.javafx.tk.Toolkit;
 import javafx.beans.property.DoubleProperty;
 import javafx.beans.property.DoublePropertyBase;
+import javafx.geometry.NodeOrientation;
 import javafx.scene.Node;
 
 /**
@@ -92,6 +93,7 @@ public class Canvas extends Node {
      * @param height height of the canvas
      */
     public Canvas(double width, double height) {
+        setNodeOrientation(NodeOrientation.LEFT_TO_RIGHT);
         setWidth(width);
         setHeight(height);
     }

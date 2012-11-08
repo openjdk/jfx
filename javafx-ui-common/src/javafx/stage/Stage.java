@@ -36,6 +36,7 @@ import javafx.beans.property.StringPropertyBase;
 import javafx.collections.FXCollections;
 import javafx.collections.ListChangeListener.Change;
 import javafx.collections.ObservableList;
+import javafx.geometry.NodeOrientation;
 import javafx.scene.Scene;
 import javafx.scene.image.Image;
 
@@ -967,8 +968,11 @@ public class Stage extends Window {
             // Setup the peer
             Window window = getOwner();
             TKStage tkStage = (window == null ? null : window.impl_getPeer());
+            Scene scene = getScene();
+            boolean rtl = scene != null && scene.getEffectiveNodeOrientation() == NodeOrientation.RIGHT_TO_LEFT;
+
             impl_peer = toolkit.createTKStage(getStyle(), isPrimary(),
-                    getModality(), tkStage);
+                    getModality(), tkStage, rtl);
             impl_peer.setImportant(isImportant());
             peerListener = new StagePeerListener(this, STAGE_ACCESSOR);
             

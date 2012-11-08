@@ -39,6 +39,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 import javafx.event.EventType;
+import javafx.geometry.NodeOrientation;
 import javafx.scene.control.Control;
 import javafx.scene.control.ScrollPane;
 import javafx.scene.input.KeyCode;
@@ -141,6 +142,23 @@ public class ScrollPaneBehavior extends BehaviorBase<ScrollPane> {
 
     @Override protected List<KeyBinding> createKeyBindings() {
         return SCROLLVIEW_BINDINGS;
+    }
+    
+    protected /*final*/ String matchActionForEvent(KeyEvent e) {
+        //TODO - untested code doesn't seem to get triggered (key eaten?)
+        String action = super.matchActionForEvent(e);
+        if (action != null) {
+            if (e.getCode() == LEFT) {
+                if (getControl().getEffectiveNodeOrientation() == NodeOrientation.RIGHT_TO_LEFT) {
+                    action = "HorizontalUnitIncrement";
+                }
+            } else if (e.getCode() == RIGHT) {
+                if (getControl().getEffectiveNodeOrientation() == NodeOrientation.RIGHT_TO_LEFT) {
+                    action = "HorizontalUnitDecrement";
+                }
+            }
+        }
+        return action;
     }
 
     @Override protected void callAction(String name) {

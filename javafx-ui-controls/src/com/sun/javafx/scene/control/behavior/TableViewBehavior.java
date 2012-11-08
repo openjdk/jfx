@@ -62,6 +62,7 @@ import javafx.beans.value.ObservableValue;
 import javafx.beans.value.WeakChangeListener;
 import javafx.collections.ListChangeListener;
 import javafx.collections.WeakListChangeListener;
+import javafx.geometry.NodeOrientation;
 import javafx.scene.control.*;
 import javafx.util.Callback;
 
@@ -181,6 +182,50 @@ public class TableViewBehavior<T> extends BehaviorBase<TableView<T>> {
         }
     }
 
+    protected /*final*/ String matchActionForEvent(KeyEvent e) {
+        String action = super.matchActionForEvent(e);
+        if (action != null) {
+            if (e.getCode() == LEFT || e.getCode() == KP_LEFT) {
+                if (getControl().getEffectiveNodeOrientation() == NodeOrientation.RIGHT_TO_LEFT) {
+                    if (e.isShiftDown()) {
+                        if (e.isShortcutDown()) {
+                            action = "DiscontinuousSelectNextColumn";
+                        } else {
+                            action = "AlsoSelectRightCell";
+                        }
+                    } else {
+                        if (e.isShortcutDown()) {
+                            action = "FocusRightCell";
+                        } else {
+                            action = "SelectRightCell";
+                            //TODO - how is this binding triggered?
+                            //TABLE_VIEW_BINDINGS.add(new KeyBinding(RIGHT, "SelectNextRow"));
+                        }
+                    }
+                }
+            } else if (e.getCode() == RIGHT || e.getCode() == KP_RIGHT) {
+                if (getControl().getEffectiveNodeOrientation() == NodeOrientation.RIGHT_TO_LEFT) {
+                    if (e.isShiftDown()) {
+                        if (e.isShortcutDown()) {
+                            action = "DiscontinuousSelectPreviousColumn";
+                        } else {
+                            action = "AlsoSelectLeftCell";
+                        }
+                    } else {
+                        if (e.isShortcutDown()) {
+                            action = "FocusLeftCell";
+                        } else {
+                            action = "SelectLeftCell";
+                            //TODO - how is this binding triggered?
+                            //TABLE_VIEW_BINDINGS.add(new KeyBinding(KP_LEFT, "TraverseLeft"));
+                        }
+                    }
+                }
+            }
+        }
+        return action;
+    }
+    
     @Override protected void callAction(String name) {
         if ("SelectPreviousRow".equals(name)) selectPreviousRow();
         else if ("SelectNextRow".equals(name)) selectNextRow();

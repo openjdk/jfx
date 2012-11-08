@@ -49,6 +49,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 import javafx.event.EventType;
+import javafx.geometry.NodeOrientation;
 import javafx.geometry.Orientation;
 import javafx.scene.control.Control;
 import javafx.scene.control.FocusModel;
@@ -189,6 +190,38 @@ public class ListViewBehavior<T> extends BehaviorBase<ListView<T>> {
         } else {
             LIST_VIEW_BINDINGS.add(new KeyBinding(BACK_SLASH, "ClearSelection").ctrl());
         }
+    }
+    
+    protected /*final*/ String matchActionForEvent(KeyEvent e) {
+        String action = super.matchActionForEvent(e);
+        if (action != null) {
+            if (e.getCode() == LEFT || e.getCode() == KP_LEFT) {
+                if (getControl().getEffectiveNodeOrientation() == NodeOrientation.RIGHT_TO_LEFT) {
+                    if (e.isShiftDown()) {
+                        action = "AlsoSelectNextRow";
+                    } else {
+                        if (e.isShortcutDown()) {
+                            action = "FocusNextRow";
+                        } else {
+                            action = getControl().getOrientation() == Orientation.HORIZONTAL ? "SelectNextRow" : "TraverseRight";
+                        }
+                    }
+                }
+            } else if (e.getCode() == RIGHT || e.getCode() == KP_RIGHT) {
+                if (getControl().getEffectiveNodeOrientation() == NodeOrientation.RIGHT_TO_LEFT) {
+                    if (e.isShiftDown()) {
+                        action = "AlsoSelectPreviousRow";
+                    } else {
+                        if (e.isShortcutDown()) {
+                            action = "FocusPreviousRow";
+                        } else {
+                            action = getControl().getOrientation() == Orientation.HORIZONTAL ? "SelectPreviousRow" : "TraverseLeft";
+                        }
+                    }
+                }
+            }
+        }
+        return action;
     }
 
     @Override protected void callAction(String name) {

@@ -43,6 +43,7 @@ import javafx.stage.Stage;
 import javafx.stage.Window;
 
 import com.sun.javafx.stage.StageHelper;
+import javafx.geometry.NodeOrientation;
 
 /**
  * Some basic utilities which need to be in java (for shifting operations or
@@ -511,12 +512,27 @@ public class Utils {
             double anchorHeight, HPos hpos, VPos vpos, double dx, double dy,
             boolean reposition)
     {
-        final double parentXOffset = getOffsetX(parent);
+        double parentXOffset = getOffsetX(parent);
         final double parentYOffset = getOffsetY(parent);
         final Bounds parentBounds = getBounds(parent);
-
-        final double layoutX = positionX(parentXOffset, parentBounds, anchorWidth, hpos) + dx;
+        
+        //TODO - fix other position computation methods to look for RTL
+        NodeOrientation orientation =  NodeOrientation.LEFT_TO_RIGHT;
+        Scene scene = parent.getScene();
+        if (scene != null) {
+            orientation = scene.getEffectiveNodeOrientation();
+        }
+        double layoutX = positionX(parentXOffset, parentBounds, anchorWidth, hpos) + dx;
         final double layoutY = positionY(parentYOffset, parentBounds, anchorHeight, vpos) + dy;
+ 
+        //TODO - testing for an instance of Stage seems wrong but works for menus
+        if (orientation == NodeOrientation.RIGHT_TO_LEFT) {
+            if (scene.getWindow() instanceof Stage) {
+                layoutX = layoutX + parentBounds.getWidth() - anchorWidth + (dx * 2);
+            } else {
+                layoutX = layoutX - parentBounds.getWidth() - anchorWidth;
+            }
+        }
 
         if (reposition) {
             return pointRelativeTo(parent, anchorWidth, anchorHeight, layoutX, layoutY, hpos, vpos);

@@ -46,6 +46,7 @@ import javafx.beans.property.StringPropertyBase;
 import javafx.beans.value.WritableValue;
 import javafx.geometry.BoundingBox;
 import javafx.geometry.Bounds;
+import javafx.geometry.NodeOrientation;
 import javafx.geometry.Point2D;
 import javafx.geometry.VPos;
 import javafx.scene.Node;
@@ -147,6 +148,7 @@ public class Text extends Shape {
      * Creates an empty instance of Text.
      */
     public Text() {
+        setNodeOrientation(NodeOrientation.LEFT_TO_RIGHT);
         if (fontLoader == null) {
             fontLoader = Toolkit.getToolkit().getFontLoader();
         }

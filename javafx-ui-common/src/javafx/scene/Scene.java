@@ -87,6 +87,8 @@ import com.sun.javafx.beans.annotations.Default;
 import com.sun.javafx.beans.event.AbstractNotifyListener;
 import com.sun.javafx.collections.TrackableObservableList;
 import com.sun.javafx.css.StyleManager;
+import com.sun.javafx.css.StyleableObjectProperty;
+import com.sun.javafx.css.StyleableProperty;
 import com.sun.javafx.cursor.CursorFrame;
 import com.sun.javafx.event.EventQueue;
 import com.sun.javafx.geom.PickRay;
@@ -122,12 +124,14 @@ import javafx.beans.property.ReadOnlyObjectWrapper;
 import javafx.geometry.Bounds;
 import javafx.geometry.Orientation;
 import javafx.scene.image.WritableImage;
+import javafx.stage.PopupWindow;
 import javafx.stage.Stage;
 import javafx.stage.StageStyle;
 import javafx.util.Callback;
 
 import static com.sun.javafx.logging.PulseLogger.PULSE_LOGGING_ENABLED;
 import static com.sun.javafx.logging.PulseLogger.PULSE_LOGGER;
+import javafx.geometry.NodeOrientation;
 
 /**
  * The JavaFX {@code Scene} class is the container for all content in a scene graph.
@@ -759,6 +763,10 @@ public class Scene implements EventTarget {
                 @Override
                 protected void invalidated() {
                     final Parent _root = getRoot();
+                    //TODO - use a better method to update mirroring
+                    if (_root.getEffectiveNodeOrientation() == NodeOrientation.RIGHT_TO_LEFT) {
+                        _root.impl_transformsChanged();
+                    }
                     if (_root.isResizable()) {
                         _root.resize(get() - _root.getLayoutX() - _root.getTranslateX(), _root.getLayoutBounds().getHeight());
                     }
@@ -5594,5 +5602,94 @@ public class Scene implements EventTarget {
             node = n;
             scene = s;
         }
+    }
+    
+    /***************************************************************************
+     *                                                                         *
+     *                       Component Orientation Properties                  *
+     *                                                                         *
+     **************************************************************************/
+
+    private static final NodeOrientation defaultNodeOrientation =
+        AccessController.doPrivileged(
+        new PrivilegedAction<Boolean>() {
+            @Override public Boolean run() {
+                return Boolean.getBoolean("javafx.scene.nodeOrientation.RTL");
+            }
+        }) ? NodeOrientation.RIGHT_TO_LEFT : NodeOrientation.INHERIT;
+
+
+    
+    private ObjectProperty<NodeOrientation> nodeOrientation;
+    
+    public final void setNodeOrientation(NodeOrientation orientation) {
+        nodeOrientationProperty().set(orientation);
+    }
+    
+    public final NodeOrientation getNodeOrientation() {        
+        return nodeOrientation == null ? defaultNodeOrientation : nodeOrientation.get();
+    }
+    
+    /**
+     * Property holding NodeOrientation.
+     * <p>
+     * Node orientation describes the flow of visual data within a node.
+     * In the English speaking world, visual data normally flows from
+     * left-to-right. In an Arabic or Hebrew world, visual data flows
+     * from right-to-left.  This is consistent with the reading order
+     * of text in both worlds.  The default value is left-to-right.
+     * </p>
+     *
+     * @return NodeOrientation
+     */
+    public final ObjectProperty<NodeOrientation> nodeOrientationProperty() {
+        if (nodeOrientation == null) {
+            nodeOrientation = new StyleableObjectProperty<NodeOrientation>(NodeOrientation.INHERIT) {       
+                @Override
+                protected void invalidated() {
+                    
+                }
+                
+                @Override
+                public Object getBean() {
+                    return Scene.this;
+                }
+
+                @Override
+                public String getName() {
+                    return "nodeOrientation";
+                }
+
+                @Override
+                public StyleableProperty getStyleableProperty() {
+                    //TODO - not yet supported
+                    throw new UnsupportedOperationException("Not supported yet.");
+                }
+            };
+        }
+        return nodeOrientation;
+    }
+
+    public final NodeOrientation getEffectiveNodeOrientation() {
+        NodeOrientation orientation = getNodeOrientation();
+        if (orientation == NodeOrientation.INHERIT) {
+            Window window = getWindow();
+            if (window != null) {
+                Window parent = null;
+                if (window instanceof Stage) {
+                    parent = ((Stage)window).getOwner();
+                } else {
+                    if (window instanceof PopupWindow) {
+                        parent = ((PopupWindow)window).getOwnerWindow();
+                    }
+                }
+                if (parent != null) {
+                    Scene scene = parent.getScene();
+                    if (scene != null) return scene.getEffectiveNodeOrientation();
+                }
+            }
+            return NodeOrientation.LEFT_TO_RIGHT;
+        }
+        return orientation;
     }
 }
