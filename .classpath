@@ -21,9 +21,12 @@
 	<classpathentry kind="src" path="javafx-ui-controls/build/builders"/>
 	<classpathentry kind="src" path="javafx-util-converter/src"/>
 	<classpathentry kind="src" path="javafx-util-converter/test"/>
+	<classpathentry kind="src" path="decora-compiler/build/gensrc"/>
+	<classpathentry kind="src" path="decora-compiler/src"/>
 	<classpathentry kind="src" path="test-stub-toolkit/src"/>
 	<classpathentry kind="con" path="org.eclipse.jdt.launching.JRE_CONTAINER"/>
 	<classpathentry kind="con" path="org.eclipse.jdt.junit.JUNIT_CONTAINER/4"/>
+	<classpathentry kind="lib" path="../import/antlr-3.1.3/antlr-3.1.3/lib/antlr-3.1.3.jar"/>
 	<classpathentry kind="src" path="/rt-closed"/>
 	<classpathentry kind="output" path="bin"/>
 </classpath>
