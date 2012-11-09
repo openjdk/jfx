@@ -42,16 +42,11 @@ final class ParentStyleManager extends StyleManager<Parent> {
      *
      * @param scene
      */
-    public ParentStyleManager(Parent parent, StyleManager ancestorStyleManager) {
-
+    public ParentStyleManager(Parent parent) {
         super(parent);
-        this.ancestorStyleManager = ancestorStyleManager;
         updateStylesheets();
     }
 
-    /** Either the Scene styleManager or the styleManager of a Parent */
-    private final StyleManager ancestorStyleManager;
-        
     /**
      * Another map from String => Stylesheet for a Parent. If a stylesheet for the 
      * given URL has already been loaded then we'll simply reuse the stylesheet
@@ -68,19 +63,28 @@ final class ParentStyleManager extends StyleManager<Parent> {
     
     @Override
     protected void updateStylesheetsImpl() {
-        
-        referencedStylesheets.addAll(ancestorStyleManager.referencedStylesheets);
-        
+                
         // RT-20643
-        CssError.setCurrentScene(owner.getScene());        
+        final Scene scene = owner.getScene();
+        CssError.setCurrentScene(scene);        
         
         // RT-20643
         CssError.setCurrentScene(null);                
         
         // create the stylesheets, one per URL supplied
-        List<String> stylesheetURLs = owner.getStylesheets();
+        List<String> sceneStylesheets = scene.getStylesheets();
+        List<String> parentStylesheets = owner.impl_getAllParentStylesheets();
         
-        for (int i = 0; i < stylesheetURLs.size(); i++) {
+        List<String> stylesheetURLs = null;
+        if (parentStylesheets != null) {
+            stylesheetURLs = parentStylesheets;
+            stylesheetURLs.addAll(sceneStylesheets);
+        } else {
+            stylesheetURLs = sceneStylesheets;
+        }
+        
+        final int iMax =  stylesheetURLs != null ? stylesheetURLs.size() : 0;
+        for (int i = 0; i < iMax; i++) {
 
             String url = stylesheetURLs.get(i);
             url = url != null ? url.trim() : null;

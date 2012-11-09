@@ -128,8 +128,8 @@ abstract public class StyleManager<T> {
         return new SceneStyleManager(scene);
     }
 
-    public static StyleManager createStyleManager(Parent parent, StyleManager ancestorStyleManager) {
-        return new ParentStyleManager(parent, ancestorStyleManager);
+    public static StyleManager createStyleManager(Parent parent) {
+        return new ParentStyleManager(parent);
     }
     
     /**
