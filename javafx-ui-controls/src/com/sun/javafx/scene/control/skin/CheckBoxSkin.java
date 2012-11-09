@@ -33,6 +33,7 @@ import javafx.scene.control.CheckBox;
 import javafx.scene.layout.StackPane;
 
 import com.sun.javafx.scene.control.behavior.ButtonBehavior;
+import javafx.geometry.NodeOrientation;
 
 /**
  * Skin for tri state selection Control.
@@ -49,6 +50,7 @@ public class CheckBoxSkin extends LabeledSkinBase<CheckBox, ButtonBehavior<Check
         box.getStyleClass().setAll("box");
         innerbox = new StackPane();
         innerbox.getStyleClass().setAll("mark");
+        innerbox.setNodeOrientation(NodeOrientation.LEFT_TO_RIGHT);
         box.getChildren().add(innerbox);
         updateChildren();
     }

@@ -206,6 +206,8 @@ public interface TKStage {
      */
     void releaseInput();
 
+    public void setRTL(boolean b);
+
     /**
      * Accessibility methods
      */

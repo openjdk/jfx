@@ -71,6 +71,7 @@ import javafx.util.Duration;
 import com.sun.javafx.css.StyleableProperty;
 import com.sun.javafx.css.StyleManager;
 import java.util.Iterator;
+import javafx.geometry.NodeOrientation;
 import javafx.stage.Window;
 
 /**
@@ -471,10 +472,18 @@ public class ContextMenuContent extends Region {
             public void handle(KeyEvent ke) {
                 switch (ke.getCode()) {
                     case LEFT:
-                        processLeftKey(ke);
+                        if (getEffectiveNodeOrientation() == NodeOrientation.RIGHT_TO_LEFT) {
+                            processRightKey(ke);
+                        } else {
+                            processLeftKey(ke);
+                        }
                         break;
                     case RIGHT:
-                        processRightKey(ke);
+                        if (getEffectiveNodeOrientation() == NodeOrientation.RIGHT_TO_LEFT) {
+                            processLeftKey(ke);
+                        } else {
+                            processRightKey(ke);
+                        }
                         break;
                     case CANCEL:
                         ke.consume();
@@ -1090,6 +1099,7 @@ public class ContextMenuContent extends Region {
                     leftPane.getChildren().add(leftNode);
                     left = leftPane;
                     getChildren().add(left);
+                    left.setNodeOrientation(NodeOrientation.LEFT_TO_RIGHT);
                 }
                 // -- add graphic to graphic pane
                 if (item.getGraphic() != null) {

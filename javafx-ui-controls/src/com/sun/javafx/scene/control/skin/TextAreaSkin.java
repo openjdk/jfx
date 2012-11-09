@@ -43,6 +43,7 @@ import javafx.event.ActionEvent;
 import javafx.event.EventHandler;
 import javafx.geometry.Bounds;
 import javafx.geometry.Insets;
+import javafx.geometry.NodeOrientation;
 import javafx.geometry.Orientation;
 import javafx.geometry.Point2D;
 import javafx.geometry.Rectangle2D;
@@ -61,6 +62,7 @@ import javafx.scene.shape.MoveTo;
 import javafx.scene.shape.Path;
 import javafx.scene.shape.PathElement;
 import javafx.scene.text.Text;
+import javafx.scene.text.TextAlignment;
 import javafx.util.Duration;
 import java.util.List;
 
@@ -419,6 +421,8 @@ public class TextAreaSkin extends TextInputControlSkin<TextArea, TextAreaBehavio
 
 //        setManaged(false);
 
+        contentView.setNodeOrientation(NodeOrientation.LEFT_TO_RIGHT);
+
         // Initialize content
         scrollPane = new ScrollPane();
         scrollPane.setMinWidth(0);
@@ -759,6 +763,10 @@ public class TextAreaSkin extends TextInputControlSkin<TextArea, TextAreaBehavio
         paragraphNode.fontProperty().bind(font);
         paragraphNode.fillProperty().bind(textFill);
         paragraphNode.impl_selectionFillProperty().bind(highlightTextFill);
+        
+        if (textArea.getEffectiveNodeOrientation() == NodeOrientation.RIGHT_TO_LEFT) {
+            paragraphNode.setTextAlignment(TextAlignment.RIGHT);
+        }
     }
 
     @Override public void layoutChildren(final double x, final double y,

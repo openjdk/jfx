@@ -110,12 +110,12 @@ public class LabeledText extends Text {
 
            @Override
            public boolean isSettable(LabeledText node) {
-               return node.labeled.fontProperty().isBound() == false;
+               return node.labeled != null ? node.labeled.fontProperty().isBound() == false : true;
            }
 
            @Override
            public WritableValue<Font> getWritableValue(LabeledText node) {
-               return node.labeled.fontProperty();
+               return node.labeled != null ? node.labeled.fontProperty() : null;
            }
        };
 

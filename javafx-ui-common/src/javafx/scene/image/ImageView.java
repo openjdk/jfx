@@ -50,6 +50,7 @@ import java.net.MalformedURLException;
 import java.net.URL;
 import javafx.beans.DefaultProperty;
 import javafx.beans.property.*;
+import javafx.geometry.NodeOrientation;
 
 /**
  * The {@code ImageView} is a {@code Node} used for painting images loaded with
@@ -142,7 +143,9 @@ public class ImageView extends Node {
     /**
      * Allocates a new ImageView object.
      */
-    public ImageView() {}
+    public ImageView() {
+        setNodeOrientation(NodeOrientation.LEFT_TO_RIGHT);
+    }
 
     /**
      * Allocates a new ImageView object with image loaded from the specified
@@ -167,6 +170,7 @@ public class ImageView extends Node {
      * @param image Image that this ImageView uses
      */
     public ImageView(Image image) {
+        setNodeOrientation(NodeOrientation.LEFT_TO_RIGHT);
         setImage(image);
     }
 

@@ -32,7 +32,7 @@ public class AccessibleControl extends AccessibleNode {
             @Override public void invalidated(Observable property) {
                 PlatformLogger logger = Logging.getAccessibilityLogger();
                 if (logger.isLoggable(PlatformLogger.FINER)) {
-                    logger.finer(this.toString()+ "AccessibleControl: Focus Change");
+                    logger.finer(this.toString() + " Focus Change");
                 }
                 fireEvent(EventIds.AUTOMATION_FOCUS_CHANGED);
         }
@@ -46,13 +46,13 @@ public class AccessibleControl extends AccessibleNode {
                 if(!t && t1)
                 {
                     if (logger.isLoggable(PlatformLogger.FINER)) {
-                        logger.finer(this.toString()+ "AccessibleControl: Focus Change : true");
+                        logger.finer(this.toString() + " Focus Change: true");
                     }
                     fireEvent(EventIds.AUTOMATION_FOCUS_CHANGED);
                 }
                 else
                     if (logger.isLoggable(PlatformLogger.FINER)) {
-                        logger.finer(this.toString()+ "AccessibleControl: Focus Change : false");
+                        logger.finer(this.toString() + " Focus Change: false");
                     }
             }
         } );        

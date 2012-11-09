@@ -26,6 +26,7 @@
 package com.sun.javafx.scene.control.behavior;
 
 import javafx.event.EventHandler;
+import javafx.geometry.NodeOrientation;
 import javafx.scene.Node;
 import javafx.scene.control.Control;
 import javafx.scene.input.KeyEvent;
@@ -139,7 +140,7 @@ public class BehaviorBase<C extends Control> {
 
     public final C getControl() { return control; }
 
-    protected /*final*/ void callActionForEvent(KeyEvent e) {
+    protected /*final*/ String matchActionForEvent(KeyEvent e) {
         KeyBinding match = null;
         int specificity = 0;
         // keyBindings may be null...
@@ -152,9 +153,28 @@ public class BehaviorBase<C extends Control> {
                 match = binding;
             }
         }
-
+        String action = null;
         if (match != null) {
-            callAction(match.getAction());
+            action = match.getAction();
+            if (e.getCode() == LEFT || e.getCode() == RIGHT) {  
+                if (control.getEffectiveNodeOrientation() == NodeOrientation.RIGHT_TO_LEFT) {
+                    if (match.getAction().equals("TraverseLeft")) {
+                        action = "TraverseRight";
+                    } else {
+                        if (match.getAction().equals("TraverseRight")) {
+                            action = "TraverseLeft";
+                        }
+                    }
+                }
+            }
+        }
+        return action;
+    }
+    
+    protected /*final*/ void callActionForEvent(KeyEvent e) {
+        String action = matchActionForEvent(e);
+        if (action != null) {
+            callAction(action);
             e.consume();
         }
     }

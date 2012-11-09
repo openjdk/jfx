@@ -114,8 +114,8 @@ public class BubbleChart<X,Y> extends XYChart<X,Y> {
                         } else {
                             return;
                         }
-                        ellipse.setRadiusX(getDoubleValue(item.getExtraValue(), 1) * Math.abs(((NumberAxis)getXAxis()).getScale()));
-                        ellipse.setRadiusY(getDoubleValue(item.getExtraValue(), 1) * Math.abs(((NumberAxis)getYAxis()).getScale()));
+                        ellipse.setRadiusX(getDoubleValue(item.getExtraValue(), 1) * ((getXAxis() instanceof NumberAxis) ? Math.abs(((NumberAxis)getXAxis()).getScale()) : 1));
+                        ellipse.setRadiusY(getDoubleValue(item.getExtraValue(), 1) * ((getYAxis() instanceof NumberAxis) ? Math.abs(((NumberAxis)getYAxis()).getScale()) : 1));
                         // Note: workaround for RT-7689 - saw this in ProgressControlSkin
                         // The region doesn't update itself when the shape is mutated in place, so we
                         // null out and then restore the shape in order to force invalidation.

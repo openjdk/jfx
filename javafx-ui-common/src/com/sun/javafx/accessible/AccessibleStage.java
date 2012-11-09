@@ -336,7 +336,12 @@ public class AccessibleStage implements AccessibleProvider,
      */
     @Override
     public Object navigate(NavigateDirection direction) {
-        AccessibleNode accTemp =null;
+        PlatformLogger logger = Logging.getAccessibilityLogger();
+        if (logger.isLoggable(PlatformLogger.FINER)) {
+            logger.finer("this: " + this.toString());
+            logger.finer("navigate direction: " + direction);
+        }
+        AccessibleNode accTemp = null;
         switch (direction) {
             case Parent:
             case NextSibling: // root doesnt have sibblings or parent
@@ -351,7 +356,10 @@ public class AccessibleStage implements AccessibleProvider,
                 accTemp = accChildren.get(accChildren.size()-1) ;
                 break;
         }
-        return accTemp.accElement ;
+        if (logger.isLoggable(PlatformLogger.FINER)) {
+            logger.finer("returning: " + accTemp.accElement);
+        }
+        return accTemp.accElement;
     }
     
     /**

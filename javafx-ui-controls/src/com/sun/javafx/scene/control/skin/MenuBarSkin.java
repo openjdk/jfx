@@ -42,6 +42,7 @@ import javafx.collections.ObservableList;
 import javafx.event.EventHandler;
 import javafx.geometry.Bounds;
 import javafx.geometry.Insets;
+import javafx.geometry.NodeOrientation;
 import javafx.scene.Node;
 import javafx.scene.Scene;
 import javafx.scene.control.CustomMenuItem;
@@ -194,33 +195,51 @@ public class MenuBarSkin extends SkinBase<MenuBar, BehaviorBase<MenuBar>> implem
                 // process right left and may be tab key events
                 if (openMenu != null) {
                     switch (event.getCode()) {
-                        case LEFT:
+                        case LEFT: {
+                            boolean isRTL = control.getEffectiveNodeOrientation() == NodeOrientation.RIGHT_TO_LEFT;
                             if (control.getScene().getWindow().isFocused()) {
                                 if (openMenu == null) return;
                                 if ( !openMenu.isShowing()) {
-                                    selectPrevMenu(); // just move the selection bar
+                                    if (isRTL) {
+                                        selectNextMenu(); // just move the selection bar
+                                    } else {
+                                        selectPrevMenu(); // just move the selection bar
+                                    }
                                     event.consume();
                                     return;
                                 }
-                                showPrevMenu();
+                                if (isRTL) {
+                                    showNextMenu();
+                                } else {
+                                    showPrevMenu();
+                                }
                             }
                             event.consume();
                             break;
-
+                        }
                         case RIGHT:
-                        case TAB:
+                        case TAB: {
+                            boolean isRTL = control.getEffectiveNodeOrientation() == NodeOrientation.RIGHT_TO_LEFT;
                             if (control.getScene().getWindow().isFocused()) {
                                 if (openMenu == null) return;
                                 if (! openMenu.isShowing()) {
-                                    selectNextMenu(); // just move the selection bar
+                                    if (isRTL) {
+                                        selectPrevMenu(); // just move the selection bar
+                                    } else {
+                                        selectNextMenu(); // just move the selection bar
+                                    }
                                     event.consume();
                                     return;
                                 }
-                                showNextMenu();
+                                if (isRTL) {
+                                    showPrevMenu();
+                                } else {
+                                    showNextMenu();
+                                }
                             }
                             event.consume();
                             break;
-
+                        }
                         case DOWN:
                         //case SPACE:
                         //case ENTER:
