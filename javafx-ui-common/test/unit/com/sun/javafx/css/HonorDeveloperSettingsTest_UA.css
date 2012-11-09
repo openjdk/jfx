@@ -9,7 +9,7 @@
 }
 
 #text {
-    -fx-font: 32pt "Amble Cn";
+    -fx-font: 32 "Amble Cn";
 }
 
 #rt-20686-ua { -fx-font-smoothing-type: gray; }

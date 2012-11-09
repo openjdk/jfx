@@ -324,6 +324,69 @@ public class HonorDeveloperSettingsTest {
         
     }
 
+    // this test is the prerequisite for the inline font style tests
+    @Test public void test_InlineFontStyleApplies() {
+        
+        // text  has id "text". still, inline style should win out. 
+        text.setStyle("-fx-font-size: 24;");
+
+        Toolkit.getToolkit().firePulse();
+
+        double size = text.getFont().getSize();
+        assertEquals(24, size, .0001);
+        
+    }
     
+    // this test is the prerequisite for the inline font style tests
+    @Test public void test_FontInheritsFromDotRootStyle() {
+        
+        String url = getClass().getResource("HonorDeveloperSettingsTest_AUTHOR.css").toExternalForm();
+        scene.getStylesheets().add(url);
+
+        // want text to get font style from .root
+        text.setId(null);
+        
+        Toolkit.getToolkit().firePulse();
+                
+        double size = text.getFont().getSize();
+        assertEquals(20, size, .0001);
+        
+    }
+    
+    @Test public void test_InlineFontStyleOverridesStylesheetStyles() {
+        
+        String url = getClass().getResource("HonorDeveloperSettingsTest_AUTHOR.css").toExternalForm();
+        scene.getStylesheets().add(url);
+
+        // want text to get font style from .root
+        // assuming here that test_FontInheritsFromDotRootStyle passed
+        text.setId(null);        
+        text.setStyle("-fx-font-size: 24;");
+
+        Toolkit.getToolkit().firePulse();
+               
+        double size = text.getFont().getSize();
+        assertEquals(24, size, .0001);
+        
+    }
+    
+    @Test public void test_InlineFontStyleFromParentOverridesStylesheetStyles() {
+        
+        String url = getClass().getResource("HonorDeveloperSettingsTest_AUTHOR.css").toExternalForm();
+        scene.getStylesheets().add(url);
+        
+        // want text to get font style from .root
+        // assuming here that test_FontInheritsFromDotRootStyle passed
+        text.setId(null);
+
+        Group g = (Group)scene.getRoot();
+        g.setStyle("-fx-font-size: 32;");
+        
+        Toolkit.getToolkit().firePulse();
+                
+        double size = text.getFont().getSize();
+        assertEquals(32, size, .0001);
+        
+    }
     
 }
