@@ -213,7 +213,6 @@ public class TreeTableRowSkin<T> extends CellSkinBase<TreeTableRow<T>, CellBehav
 
             double ph = disclosureNode.prefHeight(-1);
 
-            System.out.println("disclosure visible: " + disclosureWidth + ", " + ph);
             disclosureNode.resize(disclosureWidth, ph);
             positionInArea(disclosureNode, x, y,
                     disclosureWidth, h, /*baseline ignored*/0,
