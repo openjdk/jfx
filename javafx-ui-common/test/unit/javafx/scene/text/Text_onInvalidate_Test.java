@@ -47,16 +47,17 @@ public class Text_onInvalidate_Test extends OnInvalidateMethodsTestBase {
     @Parameters
     public static Collection<Object[]> data() {
         Object[][] data = new Object[][] {
-            {new Configuration(Text.class, "text", "cool", new DirtyBits[] {DirtyBits.NODE_CONTENTS, DirtyBits.NODE_BOUNDS })},
-            {new Configuration(Text.class, "x", 123.0, new DirtyBits[] {DirtyBits.NODE_GEOMETRY , DirtyBits.NODE_BOUNDS })},
-            {new Configuration(Text.class, "y", 123.0, new DirtyBits[] {DirtyBits.NODE_GEOMETRY , DirtyBits.NODE_BOUNDS })},
-            {new Configuration(Text.class, "font", new Font(10) , new DirtyBits[] {DirtyBits.TEXT_FONT , DirtyBits.NODE_BOUNDS })},           
-            {new Configuration(Text.class, "wrappingWidth", 5 , new DirtyBits[] {DirtyBits.TEXT_ATTRS , DirtyBits.NODE_BOUNDS })},
-            {new Configuration(Text.class, "underline", true , new DirtyBits[] {DirtyBits.TEXT_ATTRS , DirtyBits.NODE_BOUNDS })},
-            {new Configuration(Text.class, "strikethrough", true , new DirtyBits[] {DirtyBits.TEXT_ATTRS , DirtyBits.NODE_BOUNDS })},
-            {new Configuration(Text.class, "textAlignment", TextAlignment.RIGHT , new DirtyBits[] {DirtyBits.TEXT_ATTRS , DirtyBits.NODE_BOUNDS })},
-            {new Configuration(Text.class, "textOrigin", VPos.BOTTOM , new DirtyBits[] {DirtyBits.TEXT_ATTRS , DirtyBits.NODE_BOUNDS })},
-            {new Configuration(Text.class, "boundsType", TextBoundsType.VISUAL , new DirtyBits[] {DirtyBits.TEXT_ATTRS , DirtyBits.NODE_BOUNDS })}
+              //rich text aware
+              {new Configuration(Text.class, "text", "cool", new DirtyBits[] {DirtyBits.NODE_CONTENTS, DirtyBits.NODE_BOUNDS, DirtyBits.NODE_GEOMETRY})},
+              {new Configuration(Text.class, "x", 123.0, new DirtyBits[] {DirtyBits.NODE_GEOMETRY})},
+              {new Configuration(Text.class, "y", 123.0, new DirtyBits[] {DirtyBits.NODE_GEOMETRY})},
+              {new Configuration(Text.class, "font", new Font(10) , new DirtyBits[] {DirtyBits.TEXT_FONT, DirtyBits.NODE_CONTENTS, DirtyBits.NODE_BOUNDS, DirtyBits.NODE_GEOMETRY})},
+              {new Configuration(Text.class, "wrappingWidth", 5 , new DirtyBits[] {DirtyBits.NODE_BOUNDS, DirtyBits.NODE_GEOMETRY})}, //note wrapping width sometimes can also cause DirtyBits.NODE_CONTENTS, 
+              {new Configuration(Text.class, "underline", true , new DirtyBits[] {DirtyBits.TEXT_ATTRS})},
+              {new Configuration(Text.class, "strikethrough", true , new DirtyBits[] {DirtyBits.TEXT_ATTRS})},
+              {new Configuration(Text.class, "textAlignment", TextAlignment.RIGHT , new DirtyBits[] {DirtyBits.NODE_CONTENTS, DirtyBits.NODE_BOUNDS, DirtyBits.NODE_GEOMETRY})},
+              {new Configuration(Text.class, "textOrigin", VPos.BOTTOM , new DirtyBits[] {DirtyBits.NODE_BOUNDS , DirtyBits.NODE_GEOMETRY})},
+              {new Configuration(Text.class, "boundsType", TextBoundsType.VISUAL , new DirtyBits[] {DirtyBits.NODE_BOUNDS , DirtyBits.NODE_GEOMETRY})}
         };
         return Arrays.asList(data);
     }

@@ -71,6 +71,7 @@ import com.sun.javafx.perf.PerformanceTracker;
 import com.sun.javafx.runtime.async.AsyncOperation;
 import com.sun.javafx.runtime.async.AsyncOperationListener;
 import com.sun.javafx.scene.text.HitInfo;
+import com.sun.javafx.scene.text.TextLayoutFactory;
 import com.sun.javafx.sg.PGArc;
 import com.sun.javafx.sg.PGCanvas;
 import com.sun.javafx.sg.PGCircle;
@@ -90,6 +91,7 @@ import com.sun.javafx.sg.PGSVGPath;
 import com.sun.javafx.sg.PGShape.StrokeLineCap;
 import com.sun.javafx.sg.PGShape.StrokeLineJoin;
 import com.sun.javafx.sg.PGShape.StrokeType;
+import com.sun.javafx.sg.PGSpan;
 import com.sun.javafx.sg.PGText;
 import com.sun.javafx.sg.PGWebView;
 import com.sun.javafx.tk.FileChooserType;
@@ -369,6 +371,11 @@ public class StubToolkit extends Toolkit {
         return new StubFontLoader();
     }
 
+    @Override
+    public TextLayoutFactory getTextLayoutFactory() {
+        return new StubTextLayoutFactory();
+    }
+
     @Override public PGArc createPGArc() {
         return new StubArc();
     }
@@ -423,6 +430,10 @@ public class StubToolkit extends Toolkit {
 
     @Override public PGText createPGText() {
         return new StubText();
+    }
+
+    @Override public PGSpan createPGSpan() {
+        return new StubSpan();
     }
 
     /*

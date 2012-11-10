@@ -400,7 +400,6 @@ public abstract class Shape extends Node {
                 @Override public void invalidated() {
                     impl_markDirty(DirtyBits.SHAPE_FILL);
                     checkModeChanged();
-                    impl_strokeOrFillChanged();
                 }
                 
                 @Override
@@ -446,7 +445,6 @@ public abstract class Shape extends Node {
                 @Override public void invalidated() {
                     impl_markDirty(DirtyBits.SHAPE_STROKE);
                     checkModeChanged();
-                    impl_strokeOrFillChanged();
                 }
                 
                 @Override
@@ -467,15 +465,6 @@ public abstract class Shape extends Node {
         }
         return stroke;
     }
-
-
-    // Used by Text
-    /**
-     * @treatAsPrivate implementation detail
-     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
-     */
-    @Deprecated
-    protected void impl_strokeOrFillChanged() { }
 
     /**
      * Defines whether antialiasing hints are used or not for this {@code Shape}.

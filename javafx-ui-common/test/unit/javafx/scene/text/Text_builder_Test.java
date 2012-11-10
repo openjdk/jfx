@@ -59,14 +59,9 @@ public final class Text_builder_Test extends BuilderTestBase {
         impl_cfg.addProperty("impl_selectionStart", 1);
         impl_cfg.addProperty("impl_selectionEnd", 10);
 
-        BuilderTestBase.Configuration impl_shape_cfg = new BuilderTestBase.Configuration(Text.class);
-        impl_shape_cfg.addProperty("impl_caretShape", new PathElement[0]);
-        impl_shape_cfg.addProperty("impl_selectionShape", new PathElement[0]);
-
         return Arrays.asList(new Object[] {
             config(cfg),
             config(impl_cfg),
-            config(impl_shape_cfg),
         });
     }
 
