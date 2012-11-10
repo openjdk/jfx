@@ -49,6 +49,9 @@ import javafx.scene.Node;
  * for more information.
  */
 public final class InputMethodEvent extends InputEvent{
+
+    private static final long serialVersionUID = 20121107L;
+    
     /**
      * The only valid EventType for the InputMethodEvent.
      */

@@ -100,6 +100,7 @@ import com.sun.javafx.sg.PGShape;
 import com.sun.javafx.sg.PGText;
 import com.sun.javafx.PlatformUtil;
 import com.sun.javafx.sg.PGCanvas;
+import com.sun.javafx.sg.PGWebView;
 import com.sun.scenario.DelayedRunnable;
 import com.sun.scenario.animation.AbstractMasterTimer;
 import com.sun.scenario.effect.AbstractShadow.ShadowMode;
@@ -632,6 +633,7 @@ public abstract class Toolkit {
     public abstract PGText createPGText();
     public abstract PGRegion createPGRegion();
     public abstract PGCanvas createPGCanvas();
+    public abstract PGWebView createPGWebView();
 
     public abstract Object createSVGPathObject(SVGPath svgpath);
     public abstract Path2D createSVGPath2D(SVGPath svgpath);

@@ -91,6 +91,7 @@ import com.sun.javafx.sg.PGShape.StrokeLineCap;
 import com.sun.javafx.sg.PGShape.StrokeLineJoin;
 import com.sun.javafx.sg.PGShape.StrokeType;
 import com.sun.javafx.sg.PGText;
+import com.sun.javafx.sg.PGWebView;
 import com.sun.javafx.tk.FileChooserType;
 import com.sun.javafx.tk.FontLoader;
 import com.sun.javafx.tk.ImageLoader;
@@ -796,6 +797,10 @@ public class StubToolkit extends Toolkit {
     @Override
     public PGCanvas createPGCanvas() {
         return new StubCanvas();
+    }
+
+    @Override public PGWebView createPGWebView() {
+        return new StubWebView();
     }
 
     public interface DndDelegate {

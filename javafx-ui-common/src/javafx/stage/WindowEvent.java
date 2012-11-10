@@ -33,6 +33,9 @@ import javafx.event.EventType;
  * Event related to window showing/hiding actions.
  */
 public class WindowEvent extends Event {
+
+    private static final long serialVersionUID = 20121107L;
+    
     /**
      * Common supertype for all window event types.
      */
