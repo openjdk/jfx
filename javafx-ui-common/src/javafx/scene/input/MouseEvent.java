@@ -317,8 +317,7 @@ public class MouseEvent extends InputEvent {
                 _eventType, _x, _y, _screenX, _screenY,
                 _button, _clickCount,
                 _shiftDown, _controlDown, _altDown, _metaDown,
-                _primaryButtonDown, _middleButtonDown, _secondaryButtonDown, _popupTrigger,
-                _synthesized);
+                _primaryButtonDown, _middleButtonDown, _secondaryButtonDown, _synthesized, _popupTrigger);
     }
 
     /**
