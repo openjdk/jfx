@@ -82,6 +82,9 @@ import javafx.scene.input.ScrollEvent.VerticalTextScrollUnits;
  * For triggering context menus see the {@link ContextMenuEvent}.
  */
 public final class KeyEvent extends InputEvent {
+
+    private static final long serialVersionUID = 20121107L;
+    
     /**
      * Common supertype for all key event types.
      */

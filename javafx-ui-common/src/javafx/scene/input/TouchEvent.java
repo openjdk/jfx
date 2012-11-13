@@ -58,6 +58,8 @@ import javafx.event.EventType;
  */
 public final class TouchEvent extends InputEvent {
 
+    private static final long serialVersionUID = 20121107L;
+
     /**
      * Common supertype for all touch event types.
      */

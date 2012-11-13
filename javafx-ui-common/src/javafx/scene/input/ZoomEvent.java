@@ -58,6 +58,8 @@ import javafx.event.EventType;
  */
 public final class ZoomEvent extends GestureEvent {
 
+    private static final long serialVersionUID = 20121107L;
+
     /**
      * Common supertype for all zoom event types.
      */

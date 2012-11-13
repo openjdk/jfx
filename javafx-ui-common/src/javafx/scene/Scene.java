@@ -2317,9 +2317,9 @@ public class Scene implements EventTarget {
                                boolean shiftDown, boolean controlDown, boolean altDown, boolean metaDown,
                                boolean primaryDown, boolean middleDown, boolean secondaryDown)
         {
-            MouseEvent mouseEvent = MouseEvent.impl_mouseEvent(x, y, screenX, screenY, button, clickCount,
-                    shiftDown, controlDown, altDown, metaDown, popupTrigger,
-                    primaryDown, middleDown, secondaryDown, synthesized, type);
+            MouseEvent mouseEvent = new MouseEvent(type, x, y, screenX, screenY, button, clickCount,
+                    shiftDown, controlDown, altDown, metaDown,
+                    primaryDown, middleDown, secondaryDown, synthesized, popupTrigger);
             impl_processMouseEvent(mouseEvent);
         }
 

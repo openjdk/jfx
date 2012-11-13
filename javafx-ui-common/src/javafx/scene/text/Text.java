@@ -26,54 +26,59 @@
 package javafx.scene.text;
 
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
+
 import javafx.beans.DefaultProperty;
+import javafx.beans.InvalidationListener;
+import javafx.beans.Observable;
+import javafx.beans.binding.DoubleBinding;
+import javafx.beans.binding.ObjectBinding;
 import javafx.beans.property.BooleanProperty;
-import javafx.beans.property.BooleanPropertyBase;
 import javafx.beans.property.DoubleProperty;
-import javafx.beans.property.DoublePropertyBase;
 import javafx.beans.property.IntegerProperty;
-import javafx.beans.property.IntegerPropertyBase;
 import javafx.beans.property.ObjectProperty;
-import javafx.beans.property.ObjectPropertyBase;
 import javafx.beans.property.ReadOnlyDoubleProperty;
 import javafx.beans.property.ReadOnlyDoubleWrapper;
+import javafx.beans.property.ReadOnlyObjectProperty;
+import javafx.beans.property.SimpleBooleanProperty;
+import javafx.beans.property.SimpleDoubleProperty;
+import javafx.beans.property.SimpleIntegerProperty;
 import javafx.beans.property.SimpleObjectProperty;
+import javafx.beans.property.SimpleStringProperty;
 import javafx.beans.property.StringProperty;
-import javafx.beans.property.StringPropertyBase;
 import javafx.beans.value.WritableValue;
 import javafx.geometry.BoundingBox;
 import javafx.geometry.Bounds;
 import javafx.geometry.NodeOrientation;
 import javafx.geometry.Point2D;
 import javafx.geometry.VPos;
-import javafx.scene.Node;
-import javafx.scene.Scene;
 import javafx.scene.paint.Color;
 import javafx.scene.paint.Paint;
 import javafx.scene.shape.PathElement;
 import javafx.scene.shape.Shape;
-import javafx.scene.transform.Transform;
+import javafx.scene.shape.StrokeType;
+
 import com.sun.javafx.css.StyleableBooleanProperty;
 import com.sun.javafx.css.StyleableObjectProperty;
 import com.sun.javafx.css.StyleableProperty;
 import com.sun.javafx.css.converters.BooleanConverter;
 import com.sun.javafx.css.converters.EnumConverter;
 import com.sun.javafx.geom.BaseBounds;
+import com.sun.javafx.geom.Path2D;
 import com.sun.javafx.geom.RectBounds;
-import com.sun.javafx.geom.transform.Affine3D;
+import com.sun.javafx.geom.TransformedShape;
 import com.sun.javafx.geom.transform.BaseTransform;
 import com.sun.javafx.accessible.AccessibleText;
 import com.sun.javafx.scene.DirtyBits;
-import com.sun.javafx.scene.shape.PathUtils;
+import com.sun.javafx.scene.text.GlyphList;
 import com.sun.javafx.scene.text.HitInfo;
+import com.sun.javafx.scene.text.TextLayout;
+import com.sun.javafx.scene.text.TextLayoutFactory;
+import com.sun.javafx.scene.text.TextSpan;
 import com.sun.javafx.sg.PGNode;
-import com.sun.javafx.sg.PGShape;
-import com.sun.javafx.sg.PGText;
-import com.sun.javafx.sg.PGTextHelper;
-import com.sun.javafx.tk.FontLoader;
+import com.sun.javafx.sg.PGSpan;
+import com.sun.javafx.sg.PGShape.Mode;
 import com.sun.javafx.tk.Toolkit;
 import com.sun.javafx.accessible.providers.AccessibleProvider;
 import com.sun.javafx.accessible.AccessibleNode;
@@ -112,6 +117,8 @@ text.setText("The quick brown fox jumps over the lazy dog");
 @DefaultProperty("text")
 public class Text extends Shape {
 
+    private TextLayout layout;
+
     /**
      * @treatAsPrivate implementation detail
      * @deprecated This is an internal API that is not intended
@@ -120,42 +127,26 @@ public class Text extends Shape {
     @Deprecated
     @Override
     protected final PGNode impl_createPGNode() {
-        return Toolkit.getToolkit().createPGText();
+        return Toolkit.getToolkit().createPGSpan();
     }
 
-    private PGText getPGText() {
-        return (PGText) impl_getPGNode();
+    private PGSpan getPGSpan() {
+        return (PGSpan) impl_getPGNode();
     }
 
-    private PGTextHelper textHelper;
-    /* 
-     * The Text node state is synced down to *its* helper on return.
-     * This doesn't mean its synced to the peer! That happens only
-     * during the pulse.
-     */
-    private PGTextHelper getTextHelper() {
-        if (textHelper == null) {
-            Scene.impl_setAllowPGAccess(true);
-            textHelper = getPGText().getTextHelper();
-            Scene.impl_setAllowPGAccess(false);
-        }
-        updatePGTextHelper(textHelper);
-        return textHelper;
-    }
-
-    private static FontLoader fontLoader = null;
     /**
      * Creates an empty instance of Text.
      */
     public Text() {
         setNodeOrientation(NodeOrientation.LEFT_TO_RIGHT);
-        if (fontLoader == null) {
-            fontLoader = Toolkit.getToolkit().getFontLoader();
-        }
+        InvalidationListener listener = new InvalidationListener() {
+            @Override public void invalidated(Observable observable) {
+                checkSpan();
+            }
+        };
+        parentProperty().addListener(listener);
+        managedProperty().addListener(listener);
         setPickOnBounds(true);
-        getDecorationShapes();
-        setBaselineOffset(
-             fontLoader.getFontMetrics(getFontInternal()).getAscent());
     }
 
     /**
@@ -178,6 +169,170 @@ public class Text extends Shape {
         this(text);
         setX(x);
         setY(y);
+    }
+
+    private boolean isSpan;
+    private boolean isSpan() {
+        return isSpan;
+    }
+
+    private void checkSpan() {
+//        isSpan = isManaged() && getParent() instanceof TextFlow;
+    }
+
+    private void needsFullTextLayout() {
+        if (isSpan()) {
+            /* If layout bounds is already invalid the node will not 
+             * notify the parent. See Node#impl_layoutBoundsChanged()
+             */
+            getParent().requestLayout();
+        } else {
+            TextLayout layout = getTextLayout();
+            String string = getTextInternal();
+            Object font = getFontInternal();
+            layout.setContent(string, font);
+        }
+        needsTextLayout();
+    }
+
+    private void needsTextLayout() {
+        textRuns = null;
+        impl_geomChanged();
+        impl_markDirty(DirtyBits.NODE_CONTENTS);
+    }
+
+    private TextSpan textSpan;
+    TextSpan getTextSpan() {
+        if (textSpan == null) {
+            textSpan = new TextSpan() {
+                @Override public String getText() {
+                    return getTextInternal();
+                }
+                @Override public Object getFont() {
+                    return getFontInternal();
+                }
+                @Override public RectBounds getBounds() {
+                    return null;
+                }
+            };
+        }
+        return textSpan;
+    }
+
+    private TextLayout getTextLayout() {
+        if (isSpan()) {
+//            layout = null;
+//            TextFlow parent = (TextFlow)getParent();
+//            return parent.getTextLayout();
+        }
+        if (layout == null) {
+            TextLayoutFactory factory = Toolkit.getToolkit().getTextLayoutFactory();
+            layout = factory.createLayout();
+            String string = getTextInternal();
+            Object font = getFontInternal();
+            layout.setContent(string, font);
+            layout.setAlignment(getTextAlignment().ordinal());
+            layout.setWrapWidth((float)getWrappingWidth());
+        }
+        return layout;
+    }
+
+    private GlyphList[] textRuns = null;
+    private BaseBounds spanBounds = new RectBounds(); /* relative to the textlayout */
+    private boolean spanBoundsInvalid = true;
+
+    void layoutSpan(GlyphList[] runs) {
+        needsTextLayout();
+        spanBoundsInvalid = true;
+        int count = 0;
+        TextSpan span = getTextSpan();
+        for (int i = 0; i < runs.length; i++) {
+            GlyphList run = runs[i];
+            if (run.getTextSpan() == span) {
+                count++;
+            }
+        }
+        textRuns = new GlyphList[count];
+        count = 0;
+        for (int i = 0; i < runs.length; i++) {
+            GlyphList run = runs[i];
+            if (run.getTextSpan() == span) {
+                textRuns[count++] = run;
+            }
+        }
+    }
+
+    BaseBounds getSpanBounds() {
+        /* Called during the final stage of layouChildren() in the parent 
+         * but also called by other methods, should not access the runs array
+         * directly.
+         */
+        if (spanBoundsInvalid) {
+            GlyphList[] runs = getRuns();
+            if (runs.length != 0) {
+                float left = Float.POSITIVE_INFINITY;
+                float top = Float.POSITIVE_INFINITY;
+                float right = 0;
+                float bottom = 0;
+                for (int i = 0; i < runs.length; i++) {
+                    GlyphList run = runs[i];
+                    com.sun.javafx.geom.Point2D location = run.getLocation();
+                    float width = run.getWidth();
+                    float height = run.getLineBounds().getHeight();
+                    left = Math.min(location.x, left);
+                    top = Math.min(location.y, top);
+                    right = Math.max(location.x + width, right);
+                    bottom = Math.max(location.y + height, bottom);
+                }
+                spanBounds = spanBounds.deriveWithNewBounds(left, top, 0, 
+                                                            right, bottom, 0);
+            } else {
+                spanBounds = spanBounds.makeEmpty();
+            }
+            spanBoundsInvalid = false;
+        }
+        return spanBounds;
+    }
+
+    private GlyphList[] getRuns() {
+        if (textRuns != null) return textRuns;
+        if (isSpan()) {
+            /* List of run is initialized when the TextFlow layout the children */
+            getParent().layout();
+        } else {
+            TextLayout layout = getTextLayout();
+            textRuns = layout.getRuns();
+        }
+        return textRuns;
+    }
+
+    private com.sun.javafx.geom.Shape getShape() {
+        TextLayout layout = getTextLayout();
+        /* TextLayout has the text shape cached */
+        int type = TextLayout.TYPE_TEXT;
+        TextSpan filter = null;
+        if (isSpan()) {
+            /* Spans are always relative to the top */
+            type |= TextLayout.TYPE_TOP;
+            filter = getTextSpan();
+        } else {
+            /* Relative to baseline (first line)
+             * This shape can be translate in the y axis according 
+             * to text origin, see impl_configShape().
+             */
+            type |= TextLayout.TYPE_BASELINE;
+        }
+        return layout.getShape(type, filter);
+    }
+
+    private BaseBounds getVisualBounds() {
+        return getShape().getBounds();
+    }
+
+    private BaseBounds getLogicalBounds() {
+        TextLayout layout = getTextLayout();
+        /* TextLayout has the bounds cached */
+        return layout.getBounds();
     }
 
     /**
@@ -204,18 +359,14 @@ public class Text extends Shape {
 
     public final StringProperty textProperty() {
         if (text == null) {
-            text = new StringPropertyBase("") {
-
-                @Override
-                public void invalidated() {
-                    impl_markDirty(DirtyBits.NODE_CONTENTS);
-                    // If text property is invalid then text selection is also
-                    // invalid.  There are different approaches that can be
-                    // take here.  But we decided on a simplistic approach, for
-                    // now, by resetting selection (start = -1, end = -1)
+            text = new SimpleStringProperty(this, "text", "") {
+                @Override  public void invalidated() {
+                    needsFullTextLayout();
                     setImpl_selectionStart(-1);
                     setImpl_selectionEnd(-1);
-                    impl_geomChanged();
+                    setImpl_caretPosition(-1);
+                    setImpl_caretBias(true);
+
                     // MH: Functionality copied from store() method,
                     // which was removed.
                     // Wonder what should happen if text is bound
@@ -224,16 +375,6 @@ public class Text extends Shape {
                     if ((value == null) && !isBound()) {
                         set("");
                     }
-                }
-
-                @Override
-                public Object getBean() {
-                    return Text.this;
-                }
-
-                @Override
-                public String getName() {
-                    return "text";
                 }
             };
         }
@@ -247,7 +388,6 @@ public class Text extends Shape {
      */
     private DoubleProperty x;
 
-
     public final void setX(double value) {
         xProperty().set(value);
     }
@@ -258,22 +398,9 @@ public class Text extends Shape {
 
     public final DoubleProperty xProperty() {
         if (x == null) {
-            x = new DoublePropertyBase() {
-
-                @Override
-                public void invalidated() {
-                    impl_markDirty(DirtyBits.NODE_GEOMETRY);
+            x = new SimpleDoubleProperty(this, "x") {
+                @Override public void invalidated() {
                     impl_geomChanged();
-                }
-
-                @Override
-                public Object getBean() {
-                    return Text.this;
-                }
-
-                @Override
-                public String getName() {
-                    return "x";
                 }
             };
         }
@@ -287,7 +414,6 @@ public class Text extends Shape {
      */
     private DoubleProperty y;
 
-
     public final void setY(double value) {
         yProperty().set(value);
     }
@@ -298,22 +424,9 @@ public class Text extends Shape {
 
     public final DoubleProperty yProperty() {
         if (y == null) {
-            y = new DoublePropertyBase() {
-
-                @Override
-                public void invalidated() {
-                    impl_markDirty(DirtyBits.NODE_GEOMETRY);
+            y = new SimpleDoubleProperty(this, "y") {
+                @Override public void invalidated() {
                     impl_geomChanged();
-                }
-
-                @Override
-                public Object getBean() {
-                    return Text.this;
-                }
-
-                @Override
-                public String getName() {
-                    return "y";
                 }
             };
         }
@@ -340,36 +453,23 @@ public class Text extends Shape {
      *
      * @return the font
      */
-    private Font getFontInternal() {
-        final Font fontValue = getFont();
-        return (fontValue != null) ? fontValue : Font.getDefault();
+    private Object getFontInternal() {
+        Font font = getFont();
+        if (font == null) font = Font.getDefault();
+        return font.impl_getNativeFont();
     }
 
     public final ObjectProperty<Font> fontProperty() {
         if (font == null) {
             font = new StyleableObjectProperty<Font>(Font.getDefault()) {
-
-                @Override
-                public void invalidated() {
-                    impl_markDirty(DirtyBits.TEXT_FONT);
-                    impl_geomChanged();
-                    setBaselineOffset(fontLoader.getFontMetrics(
-                                          getFontInternal()).getAscent());
-                }
-
-                @Override 
-                public StyleableProperty getStyleableProperty() {
+                @Override public Object getBean() { return Text.this; }
+                @Override public String getName() { return "font"; }
+                @Override public StyleableProperty getStyleableProperty() {
                     return StyleableProperties.FONT;
                 }
-                
-                @Override
-                public Object getBean() {
-                    return Text.this;
-                }
-
-                @Override
-                public String getName() {
-                    return "font";
+                @Override public void invalidated() {
+                    needsFullTextLayout();
+                    impl_markDirty(DirtyBits.TEXT_FONT);
                 }
             };
         }
@@ -386,7 +486,6 @@ public class Text extends Shape {
      */
     private ObjectProperty<VPos> textOrigin;
 
-
     public final void setTextOrigin(VPos value) {
         textOriginProperty().set(value);
     }
@@ -398,26 +497,13 @@ public class Text extends Shape {
     public final ObjectProperty<VPos> textOriginProperty() {
         if (textOrigin == null) {
             textOrigin = new StyleableObjectProperty<VPos>(VPos.BASELINE) {
-
-                @Override
-                public void invalidated() {
-                    impl_markDirty(DirtyBits.TEXT_ATTRS);
-                    impl_geomChanged();
-                }
-
-                @Override 
-                public StyleableProperty getStyleableProperty() {
+                @Override public Object getBean() { return Text.this; }
+                @Override public String getName() { return "textOrigin"; }
+                @Override public StyleableProperty getStyleableProperty() {
                     return StyleableProperties.TEXT_ORIGIN;
                 }
-                
-                @Override
-                public Object getBean() {
-                    return Text.this;
-                }
-
-                @Override
-                public String getName() {
-                    return "textOrigin";
+                @Override public void invalidated() {
+                    impl_geomChanged();
                 }
             };
         }
@@ -445,23 +531,11 @@ public class Text extends Shape {
     public final ObjectProperty<TextBoundsType> boundsTypeProperty() {
         if (boundsType == null) {
             boundsType =
-               new ObjectPropertyBase<TextBoundsType>(TextBoundsType.LOGICAL) {
-
-                @Override
-                public void invalidated() {
-                    impl_markDirty(DirtyBits.TEXT_ATTRS);
-                    impl_geomChanged();
-                }
-
-                @Override
-                public Object getBean() {
-                    return Text.this;
-                }
-
-                @Override
-                public String getName() {
-                    return "boundsType";
-                }
+               new SimpleObjectProperty<TextBoundsType>(this, "boundsType", 
+                   TextBoundsType.LOGICAL) {
+                   @Override public void invalidated() {
+                       impl_geomChanged();
+                   }
             };
         }
         return boundsType;
@@ -487,22 +561,16 @@ public class Text extends Shape {
 
     public final DoubleProperty wrappingWidthProperty() {
         if (wrappingWidth == null) {
-            wrappingWidth = new DoublePropertyBase() {
-
-                @Override
-                public void invalidated() {
-                    impl_markDirty(DirtyBits.TEXT_ATTRS);
-                    impl_geomChanged();
-                }
-
-                @Override
-                public Object getBean() {
-                    return Text.this;
-                }
-
-                @Override
-                public String getName() {
-                    return "wrappingWidth";
+            wrappingWidth = new SimpleDoubleProperty(this, "wrappingWidth") {
+                @Override public void invalidated() {
+                    if (!isSpan()) {
+                        TextLayout layout = getTextLayout();
+                        if (layout.setWrapWidth((float)get())) {
+                            needsTextLayout();
+                        } else {
+                            impl_geomChanged();
+                        }
+                    }
                 }
             };
         }
@@ -527,26 +595,13 @@ public class Text extends Shape {
     public final BooleanProperty underlineProperty() {
         if (underline == null) {
             underline = new StyleableBooleanProperty() {
-
-                @Override
-                public void invalidated() {
-                    impl_markDirty(DirtyBits.TEXT_ATTRS);
-                    impl_geomChanged();
-                }
-
-                @Override 
-                public StyleableProperty getStyleableProperty() {
+                @Override public Object getBean() { return Text.this; }
+                @Override public String getName() { return "underline"; }
+                @Override public StyleableProperty getStyleableProperty() {
                     return StyleableProperties.UNDERLINE;
                 }
-
-                @Override
-                public Object getBean() {
-                    return Text.this;
-                }
-
-                @Override
-                public String getName() {
-                    return "underline";
+                @Override public void invalidated() {
+                    impl_markDirty(DirtyBits.TEXT_ATTRS);
                 }
             };
         }
@@ -571,27 +626,13 @@ public class Text extends Shape {
     public final BooleanProperty strikethroughProperty() {
         if (strikethrough == null) {
             strikethrough = new StyleableBooleanProperty() {
-
-                @Override
-                public void invalidated() {
-                    impl_markDirty(DirtyBits.TEXT_ATTRS);
-                    impl_geomChanged();
-                }
-
-
-                @Override 
-                public StyleableProperty getStyleableProperty() {
+                @Override public Object getBean() { return Text.this; }
+                @Override public String getName() { return "strikethrough"; }
+                @Override public StyleableProperty getStyleableProperty() {
                     return StyleableProperties.STRIKETHROUGH;
                 }
-                
-                @Override
-                public Object getBean() {
-                    return Text.this;
-                }
-
-                @Override
-                public String getName() {
-                    return "strikethrough";
+                @Override public void invalidated() {
+                    impl_markDirty(DirtyBits.TEXT_ATTRS);
                 }
             };
         }
@@ -623,26 +664,17 @@ public class Text extends Shape {
         if (textAlignment == null) {
             textAlignment =
                 new StyleableObjectProperty<TextAlignment>(TextAlignment.LEFT) {
-
-                @Override
-                public void invalidated() {
-                    impl_markDirty(DirtyBits.TEXT_ATTRS);
-                    impl_geomChanged();
-                }
-
-                @Override 
-                public StyleableProperty getStyleableProperty() {
+                @Override public Object getBean() { return Text.this; }
+                @Override public String getName() { return "textAlignment"; }
+                @Override public StyleableProperty getStyleableProperty() {
                     return StyleableProperties.TEXT_ALIGNMENT;
                 }
-
-                @Override
-                public Object getBean() {
-                    return Text.this;
-                }
-
-                @Override
-                public String getName() {
-                    return "textAlignment";
+                @Override public void invalidated() {
+                    if (!isSpan()) {
+                        TextLayout layout = getTextLayout();
+                        layout.setAlignment(get().ordinal());
+                        needsTextLayout();
+                    }
                 }
             };
         }
@@ -658,24 +690,27 @@ public class Text extends Shape {
      */
     private ReadOnlyDoubleWrapper baselineOffset;
 
-    private void setBaselineOffset(double value) {
-        baselineOffsetPropertyImpl().set(value);
-    }
-
     @Override
     public final double getBaselineOffset() {
-        return baselineOffset == null ? 0.0 : baselineOffset.get();
+        return baselineOffsetProperty().get();
     }
 
     public final ReadOnlyDoubleProperty baselineOffsetProperty() {
-        return baselineOffsetPropertyImpl().getReadOnlyProperty();
-    }
-
-    private ReadOnlyDoubleWrapper baselineOffsetPropertyImpl() {
         if (baselineOffset == null) {
-            baselineOffset = new ReadOnlyDoubleWrapper(this, "baselineOffset");
+            baselineOffset = new ReadOnlyDoubleWrapper(this, "baselineOffset") {
+                {bind(new DoubleBinding() {
+                    {bind(fontProperty());}
+                    @Override protected double computeValue() {
+                        /* This method should never be used for spans.
+                         * If it is, it will still returns the ascent 
+                         * for the first line in the layout */
+                        BaseBounds bounds = getLogicalBounds();
+                        return -bounds.getMinY();
+                    }
+                });}
+            };
         }
-        return baselineOffset;
+        return baselineOffset.getReadOnlyProperty();
     }
 
     /**
@@ -701,31 +736,18 @@ public class Text extends Shape {
 
     public final ObjectProperty<FontSmoothingType>
         fontSmoothingTypeProperty() {
-
         if (fontSmoothingType == null) {
             fontSmoothingType =
                 new StyleableObjectProperty<FontSmoothingType>
                                                (FontSmoothingType.GRAY) {
-
-                @Override
-                public void invalidated() {
-                    impl_markDirty(DirtyBits.TEXT_ATTRS);
-                    impl_geomChanged();
-                }
-
-                @Override 
-                public StyleableProperty getStyleableProperty() {
+                @Override public Object getBean() { return Text.this; }
+                @Override public String getName() { return "fontSmoothingType"; }
+                @Override public StyleableProperty getStyleableProperty() {
                     return StyleableProperties.FONT_SMOOTHING_TYPE;
                 }
-
-                @Override
-                public Object getBean() {
-                    return Text.this;
-                }
-
-                @Override
-                public String getName() {
-                    return "fontSmoothingType";
+                @Override public void invalidated() {
+                    impl_markDirty(DirtyBits.TEXT_ATTRS);
+                    impl_geomChanged();
                 }
             };
         }
@@ -758,10 +780,12 @@ public class Text extends Shape {
     @Deprecated
     @Override
     protected final void impl_geomChanged() {
-        getDecorationShapes();
         super.impl_geomChanged();
+        if (impl_caretBinding != null) impl_caretBinding.invalidate();
+        if (impl_selectionBinding != null) impl_selectionBinding.invalidate();
+        impl_markDirty(DirtyBits.NODE_GEOMETRY);
     }
-    //public-read var impl_selectionShape:PathElement[] = null;
+
     /**
      * Shape of selection in local coordinates.
      * @treatAsPrivate implementation detail
@@ -770,17 +794,7 @@ public class Text extends Shape {
      */
     @Deprecated
     private ObjectProperty<PathElement[]> impl_selectionShape;
-    //public-read var impl_selectionShape:PathElement[] = null;
-
-    /**
-     * @treatAsPrivate implementation detail
-     * @deprecated This is an internal API that is not intended
-     * for use and will be removed in the next version
-     */
-    @Deprecated
-    public final void setImpl_selectionShape(PathElement[] value) {
-        impl_selectionShapeProperty().set(value);
-    }
+    private ObjectBinding<PathElement[]> impl_selectionBinding;
 
     /**
      * @treatAsPrivate implementation detail
@@ -789,7 +803,7 @@ public class Text extends Shape {
      */
     @Deprecated
     public final PathElement[] getImpl_selectionShape() {
-        return impl_selectionShape == null ? null : impl_selectionShape.get();
+        return impl_selectionShapeProperty().get();
     }
 
     /**
@@ -798,11 +812,18 @@ public class Text extends Shape {
      * for use and will be removed in the next version
      */
     @Deprecated
-    public final ObjectProperty<PathElement[]> impl_selectionShapeProperty() {
+    public final ReadOnlyObjectProperty<PathElement[]> impl_selectionShapeProperty() {
         if (impl_selectionShape == null) {
-            impl_selectionShape = new SimpleObjectProperty<PathElement[]>(
-                                          this,
-                                          "impl_selectionShape");
+            impl_selectionBinding = new ObjectBinding<PathElement[]>() {
+                {bind(impl_selectionStartProperty(), impl_selectionEndProperty());}
+                @Override protected PathElement[] computeValue() {
+                    int start = getImpl_selectionStart();
+                    int end = getImpl_selectionEnd();
+                    return getRange(start, end, TextLayout.TYPE_TEXT);
+                }
+          };
+          impl_selectionShape = new SimpleObjectProperty<PathElement[]>(this, "impl_selectionShape");
+          impl_selectionShape.bind(impl_selectionBinding);
         }
         return impl_selectionShape;
     }
@@ -825,6 +846,7 @@ public class Text extends Shape {
      */
     @Deprecated
     public final void setImpl_selectionStart(int value) {
+        if (value == -1 && impl_selectionStart == null) return;
         impl_selectionStartProperty().set(value);
     }
 
@@ -846,23 +868,11 @@ public class Text extends Shape {
     @Deprecated
     public final IntegerProperty impl_selectionStartProperty() {
         if (impl_selectionStart == null) {
-            impl_selectionStart = new IntegerPropertyBase(-1) {
-
-                @Override
-                protected void invalidated() {
-                    impl_markDirty(DirtyBits.TEXT_SELECTION);
-                    getDecorationShapes();
-                }
-
-                @Override
-                public Object getBean() {
-                    return Text.this;
-                }
-
-                @Override
-                public String getName() {
-                    return "impl_selectionStart";
-                }
+            impl_selectionStart = 
+                new SimpleIntegerProperty(this, "impl_selectionStart", -1) {
+                    @Override protected void invalidated() {
+                        impl_markDirty(DirtyBits.TEXT_SELECTION);
+                    }
             };
         }
         return impl_selectionStart;
@@ -886,6 +896,7 @@ public class Text extends Shape {
      */
     @Deprecated
     public final void setImpl_selectionEnd(int value) {
+        if (value == -1 && impl_selectionEnd == null) return;
         impl_selectionEndProperty().set(value);
     }
 
@@ -907,37 +918,35 @@ public class Text extends Shape {
     @Deprecated
     public final IntegerProperty impl_selectionEndProperty() {
         if (impl_selectionEnd == null) {
-            impl_selectionEnd = new IntegerPropertyBase(-1) {
-
-                @Override
-                protected void invalidated() {
-                    impl_markDirty(DirtyBits.TEXT_SELECTION);
-                    getDecorationShapes();
-                }
-
-                @Override
-                public Object getBean() {
-                    return Text.this;
-                }
-
-                @Override
-                public String getName() {
-                    return "impl_selectionEnd";
-                }
-            };
+            impl_selectionEnd = 
+                new SimpleIntegerProperty(this, "impl_selectionEnd", -1) {
+                    @Override protected void invalidated() {
+                        impl_markDirty(DirtyBits.TEXT_SELECTION);
+                    }
+                };
         }
         return impl_selectionEnd;
     }
 
+    private ObjectProperty<Paint> selectionFill;
+
     /**
-     * stroke paint to be used for selected content.
      * @treatAsPrivate implementation detail
      * @deprecated This is an internal API that is not intended
      * for use and will be removed in the next version
      */
     @Deprecated
-    @Override protected final void impl_strokeOrFillChanged() {
-        impl_markDirty(DirtyBits.TEXT_SELECTION);
+    public final ObjectProperty<Paint> impl_selectionFillProperty() {
+        if (selectionFill == null) {
+            selectionFill = 
+                new SimpleObjectProperty<Paint>(this, "impl_selectionFill",
+                                                Color.WHITE) {
+                    @Override protected void invalidated() {
+                        impl_markDirty(DirtyBits.TEXT_SELECTION);
+                    }
+                };
+        }
+        return selectionFill;
     }
 
     /**
@@ -947,18 +956,8 @@ public class Text extends Shape {
      * for use and will be removed in the next version
      */
     @Deprecated
-    /*public-read*/
     private ObjectProperty<PathElement[]> impl_caretShape;
-
-    /**
-     * @treatAsPrivate implementation detail
-     * @deprecated This is an internal API that is not intended
-     * for use and will be removed in the next version
-     */
-    @Deprecated
-    public final void setImpl_caretShape(PathElement[] value) {
-        impl_caretShapeProperty().set(value);
-    }
+    private ObjectBinding<PathElement[]> impl_caretBinding;
 
     /**
      * @treatAsPrivate implementation detail
@@ -967,7 +966,7 @@ public class Text extends Shape {
      */
     @Deprecated
     public final PathElement[] getImpl_caretShape() {
-        return impl_caretShape == null ? null : impl_caretShape.get();
+        return impl_caretShapeProperty().get();
     }
 
     /**
@@ -976,11 +975,25 @@ public class Text extends Shape {
      * for use and will be removed in the next version
      */
     @Deprecated
-    public final ObjectProperty<PathElement[]> impl_caretShapeProperty() {
+    public final ReadOnlyObjectProperty<PathElement[]> impl_caretShapeProperty() {
         if (impl_caretShape == null) {
-            impl_caretShape = new SimpleObjectProperty<PathElement[]>(
-                                      this,
-                                      "impl_caretShape");
+            impl_caretBinding = new ObjectBinding<PathElement[]>() {
+                {bind(impl_caretPositionProperty(), impl_caretBiasProperty());}
+                @Override protected PathElement[] computeValue() {
+                    int pos = getImpl_caretPosition();
+                    int length = getTextInternal().length();
+                    if (0 <= pos && pos <= length) {
+                        boolean bias = isImpl_caretBias();
+                        float x = (float)getX();
+                        float y = (float)getY() - getYRendering();
+                        TextLayout layout = getTextLayout();
+                        return layout.getCaretShape(pos, bias, x, y);
+                    }
+                    return new PathElement[0];
+                }
+            };
+            impl_caretShape = new SimpleObjectProperty<PathElement[]>(this, "impl_caretShape");
+            impl_caretShape.bind(impl_caretBinding);
         }
         return impl_caretShape;
     }
@@ -1003,6 +1016,7 @@ public class Text extends Shape {
      */
     @Deprecated
     public final void setImpl_caretPosition(int value) {
+        if (value == -1 && impl_caretPosition == null) return;
         impl_caretPositionProperty().set(value);
     }
 
@@ -1024,29 +1038,15 @@ public class Text extends Shape {
     @Deprecated
     public final IntegerProperty impl_caretPositionProperty() {
         if (impl_caretPosition == null) {
-            impl_caretPosition = new IntegerPropertyBase(-1) {
-
-                @Override
-                protected void invalidated() {
-                    getDecorationShapes();
-                }
-
-                @Override
-                public Object getBean() {
-                    return Text.this;
-                }
-
-                @Override
-                public String getName() {
-                    return "impl_caretPosition";
-                }
-            };
+            impl_caretPosition = 
+                new SimpleIntegerProperty(this, "impl_caretPosition", -1);
         }
         return impl_caretPosition;
     }
 
     /**
      * caret bias in the content. true means a bias towards forward character
+     * (true=leading/false=trailing)
      *
      * @treatAsPrivate implementation detail
      * @deprecated This is an internal API that is not intended
@@ -1062,6 +1062,7 @@ public class Text extends Shape {
      */
     @Deprecated
     public final void setImpl_caretBias(boolean value) {
+        if (value && impl_caretBias == null) return;
         impl_caretBiasProperty().set(value);
     }
 
@@ -1083,23 +1084,8 @@ public class Text extends Shape {
     @Deprecated
     public final BooleanProperty impl_caretBiasProperty() {
         if (impl_caretBias == null) {
-            impl_caretBias = new BooleanPropertyBase(true) {
-
-                @Override
-                protected void invalidated() {
-                    getDecorationShapes();
-                }
-
-                @Override
-                public Object getBean() {
-                    return Text.this;
-                }
-
-                @Override
-                public String getName() {
-                    return "impl_caretBias";
-                }
-            };
+            impl_caretBias = 
+                new SimpleBooleanProperty(this, "impl_caretBias", true);
         }
         return impl_caretBias;
     }
@@ -1113,13 +1099,22 @@ public class Text extends Shape {
      */
     @Deprecated
     public final HitInfo impl_hitTestChar(Point2D point) {
-        Object hit = getTextHelper().getHitInfo((float)point.getX(),
-                                                (float)point.getY());
+        if (point == null) return null;
+        TextLayout layout = getTextLayout();
+        double x = point.getX() - getX();
+        double y = point.getY() - getY() + getYRendering();
+        return layout.getHitInfo((float)x, (float)y);
+    }
 
-        if (hit instanceof HitInfo) return (HitInfo)hit;
-
-        //Delete this in the future.
-        return Toolkit.getToolkit().convertHitInfoToFX(hit);
+    private PathElement[] getRange(int start, int end, int type) {
+        int length = getTextInternal().length();
+        if (0 <= start && start < end  && end <= length) {
+            TextLayout layout = getTextLayout();
+            float x = (float)getX();
+            float y = (float)getY() - getYRendering();
+            return layout.getRange(start, end, type, x, y);
+        }
+        return new PathElement[0];
     }
 
     /**
@@ -1131,8 +1126,7 @@ public class Text extends Shape {
      */
     @Deprecated
     public final PathElement[] impl_getRangeShape(int start, int end) {
-        Object nativeShape =  getTextHelper().getRangeShape(start, end);
-        return Toolkit.getToolkit().convertShapeToFXPath(nativeShape);
+        return getRange(start, end, TextLayout.TYPE_TEXT);
     }
 
     /**
@@ -1144,32 +1138,7 @@ public class Text extends Shape {
      */
     @Deprecated
     public final PathElement[] impl_getUnderlineShape(int start, int end) {
-        Object nativeShape =  getTextHelper().getUnderlineShape(start, end);
-        return Toolkit.getToolkit().convertShapeToFXPath(nativeShape);
-    }
-
-    /**
-     * updates decoration Shapes: selectionShape, caretShape
-     */
-    private void getDecorationShapes() {
-        if (getImpl_caretPosition() >= 0) {
-            //convert insertion position into character index
-            int charIndex = getImpl_caretPosition();
-            Object nativeShape =
-                getTextHelper().getCaretShape(charIndex, isImpl_caretBias());
-            setImpl_caretShape(
-                Toolkit.getToolkit().convertShapeToFXPath(nativeShape));
-        } else {
-            setImpl_caretShape(null);
-        }
-
-        if (getImpl_selectionStart() >= 0 && getImpl_selectionEnd() >= 0) {
-            Object nativeShape = getTextHelper().getSelectionShape();
-            setImpl_selectionShape(
-                Toolkit.getToolkit().convertShapeToFXPath(nativeShape));
-        } else {
-            setImpl_selectionShape(null);
-        }
+        return getRange(start, end, TextLayout.TYPE_UNDERLINE);
     }
 
     /**
@@ -1183,68 +1152,73 @@ public class Text extends Shape {
     public final void impl_displaySoftwareKeyboard(boolean display) {
     }
 
-    /**
-     * The cached layout bounds.
-     * This is never null, but is frequently set to be
-     * invalid whenever the bounds for the node have changed.
-     */
-    private RectBounds impl_layoutBounds = new RectBounds();
-    private boolean impl_layoutBoundsInvalid = true;
-
-    /**
-     * @treatAsPrivate implementation detail
-     * @deprecated This is an internal API that is not intended
-     * for use and will be removed in the next version
-     */
-    @Deprecated
-    @Override
-    public final void impl_notifyLayoutBoundsChanged() {
-        // REMIND: invalidate layout bounds
-        impl_layoutBoundsInvalid = true;
-        super.impl_notifyLayoutBoundsChanged();
+    private float getYAdjustment(BaseBounds bounds) {
+        VPos origin = getTextOrigin();
+        switch (origin) {
+        case TOP: return -bounds.getMinY();
+        case BASELINE: return 0;
+        case CENTER: return -bounds.getMinY() - bounds.getHeight() / 2;
+        case BOTTOM: return -bounds.getMinY() - bounds.getHeight();
+        default: return 0;
+        }
     }
 
-    /**
-     * @treatAsPrivate implementation detail
-     * @deprecated This is an internal API that is not intended
-     * for use and will be removed in the next version
-     */
-    @Deprecated
-    public final BaseBounds impl_computeLayoutBoundsInt(RectBounds bounds) {
+    private float getYRendering() {
+        /* Always logical for rendering */
+        BaseBounds bounds = getLogicalBounds();
+
+        VPos origin = getTextOrigin();
         if (getBoundsType() == TextBoundsType.VISUAL) {
-            // fast path for case where there simply isn't any text
-            if (getTextInternal().equals("")) {
-                return bounds.makeEmpty();
+            BaseBounds vBounds = getVisualBounds();
+            float delta = vBounds.getMinY() - bounds.getMinY();
+            switch (origin) {
+            case TOP: return delta;
+            case BASELINE: return -vBounds.getMinY() + delta;
+            case CENTER: return vBounds.getHeight() / 2 + delta;
+            case BOTTOM: return vBounds.getHeight() + delta;
+            default: return 0;
+            }
+        } else {
+            switch (origin) {
+            case TOP: return 0;
+            case BASELINE: return -bounds.getMinY();
+            case CENTER: return bounds.getHeight() / 2;
+            case BOTTOM: return bounds.getHeight();
+            default: return 0;
             }
         }
-        // Even if the text is empty, for logical bounds we need to
-        // return bounds which includes the height of the font.
-        return getTextHelper().computeLayoutBounds(bounds);
     }
 
     /**
-     * Returns layout bounds for a text node. Depending on bounds
-     * reporting mode for this node, this may be logical or visual bounds.
-     *
      * @treatAsPrivate implementation detail
      * @deprecated This is an internal API that is not intended
      * for use and will be removed in the next version
      */
     @Deprecated
     @Override
-    protected final Bounds impl_computeLayoutBounds()
-    {
-        if (impl_layoutBoundsInvalid) {
-            impl_computeLayoutBoundsInt(impl_layoutBounds);
-            impl_layoutBoundsInvalid = false;
+    protected final Bounds impl_computeLayoutBounds() {
+        if (isSpan()) {
+            BaseBounds bounds = getSpanBounds();
+            double width = bounds.getWidth();
+            double height = bounds.getHeight();
+            return new BoundingBox(0, 0, width, height); 
         }
-        return new BoundingBox(
-            impl_layoutBounds.getMinX(),
-            impl_layoutBounds.getMinY(),
-            impl_layoutBounds.getWidth(),
-            impl_layoutBounds.getHeight());
-    }
 
+        if (getBoundsType() == TextBoundsType.VISUAL) {
+            /* In Node the layout bounds is computed based in the geom
+             * bounds and in Shape the geom bounds is computed based 
+             * on the shape (generated here in #configShape()) */
+            return super.impl_computeLayoutBounds();
+        }
+        BaseBounds bounds = getLogicalBounds();
+        double x = bounds.getMinX() + getX();
+        double y = bounds.getMinY() + getY() + getYAdjustment(bounds);
+        double width = bounds.getWidth();
+        double height = bounds.getHeight();
+        double wrappingWidth = getWrappingWidth();
+        if (wrappingWidth != 0) width = wrappingWidth;
+        return new BoundingBox(x, y, width, height); 
+    }
 
     /**
      * @treatAsPrivate implementation detail
@@ -1255,14 +1229,56 @@ public class Text extends Shape {
     @Override
     public final BaseBounds impl_computeGeomBounds(BaseBounds bounds,
                                                    BaseTransform tx) {
-        // fast path for case where neither fill nor stroke is set or where
-        // there simply isn't any text. Applies only to VISUAL bounds.
-        if ((impl_mode == PGShape.Mode.EMPTY || getTextInternal().equals("") &&
-             getBoundsType() == TextBoundsType.VISUAL))
-        {
-            return bounds.makeEmpty();
+        if (isSpan()) {
+            if (impl_mode != Mode.FILL && getStrokeType() != StrokeType.INSIDE) {
+                return super.impl_computeGeomBounds(bounds, tx);
+            }
+
+            TextLayout layout = getTextLayout();
+            bounds = layout.getBounds(getTextSpan(), bounds);
+            BaseBounds spanBounds = getSpanBounds();
+            float minX = bounds.getMinX() - spanBounds.getMinX();
+            float minY = bounds.getMinY() - spanBounds.getMinY();
+            float maxX = minX + bounds.getWidth();
+            float maxY = minY + bounds.getHeight();
+            bounds = bounds.deriveWithNewBounds(minX, minY, 0, maxX, maxY, 0);
+            return tx.transform(bounds, bounds);
         }
-        return getTextHelper().computeContentBounds(bounds, tx);
+
+        if (getBoundsType() == TextBoundsType.VISUAL) {
+            if (getTextInternal().length() == 0 || impl_mode == Mode.EMPTY) {
+                return bounds.makeEmpty();
+            }
+
+            /* Let the super class compute the bounds using shape */
+            return super.impl_computeGeomBounds(bounds, tx);
+        }
+
+        BaseBounds textBounds = getLogicalBounds();
+        float x = textBounds.getMinX() + (float)getX();
+        float yadj = getYAdjustment(textBounds);
+        float y = textBounds.getMinY() + yadj + (float)getY();
+        float width = textBounds.getWidth();
+        float height = textBounds.getHeight();
+        float wrappingWidth = (float)getWrappingWidth();
+        if (wrappingWidth > width) width = wrappingWidth;
+        textBounds = new RectBounds(x, y, x + width, y + height);
+
+        /* handle stroked text */
+        if (impl_mode != Mode.FILL && getStrokeType() != StrokeType.INSIDE) {
+            bounds = 
+                super.impl_computeGeomBounds(bounds,
+                                             BaseTransform.IDENTITY_TRANSFORM);
+        } else {
+            TextLayout layout = getTextLayout();
+            bounds = layout.getBounds(null, bounds);
+            x = bounds.getMinX() + (float)getX();
+            width = bounds.getWidth();
+            bounds = bounds.deriveWithNewBounds(x, y, 0, x + width, y + height, 0);
+        }
+
+        bounds = bounds.deriveWithUnion(textBounds);
+        return tx.transform(bounds, bounds);
     }
 
     /**
@@ -1273,10 +1289,8 @@ public class Text extends Shape {
     @Deprecated
     @Override
     protected final boolean impl_computeContains(double localX, double localY) {
-        // Need to call the TextHelper to do glyph (geometry) based picking.
-        // Performs expensive glyph (geometry) based picking
-        // This is currently unimplemented in the peer (just returns true).
-        return getTextHelper().computeContains((float)localX, (float)localY);
+        //TODO Presently only support bounds based picking. 
+        return true;
     }
 
     /**
@@ -1287,28 +1301,20 @@ public class Text extends Shape {
     @Deprecated
     @Override
     public final com.sun.javafx.geom.Shape impl_configShape() {
-        Object nativeShape = getTextHelper().getShape();
-        final PathElement[] textPath =
-                Toolkit.getToolkit().convertShapeToFXPath(nativeShape);
-
-        return PathUtils.configShape(Arrays.asList(textPath), false);
-    }
-
-    private ObjectProperty<Paint> selectionFill;
-
-    /**
-     * @treatAsPrivate implementation detail
-     * @deprecated This is an internal API that is not intended
-     * for use and will be removed in the next version
-     */
-    @Deprecated
-    public final ObjectProperty<Paint> impl_selectionFillProperty() {
-        if (selectionFill == null) {
-            selectionFill = new SimpleObjectProperty<Paint>(this,
-                                                            "selectionFill",
-                                                            Color.WHITE);
+        if (impl_mode == Mode.EMPTY || getTextInternal().length() == 0) {
+            return new Path2D();
         }
-        return selectionFill;
+        com.sun.javafx.geom.Shape shape = getShape();
+        float x, y;
+        if (isSpan()) {
+            BaseBounds bounds = getSpanBounds();
+            x = -bounds.getMinX();
+            y = -bounds.getMinY();
+        } else {
+            x = (float)getX();
+            y = getYAdjustment(getVisualBounds()) + (float)getY();
+        }
+        return TransformedShape.translatedShape(shape, x, y);
     }
 
    /***************************************************************************
@@ -1322,7 +1328,7 @@ public class Text extends Shape {
       * @treatAsPrivate implementation detail
       */
      private static class StyleableProperties {
-         
+
          private static final StyleableProperty<Text,Font> FONT = 
             new StyleableProperty.FONT<Text>("-fx-font", Font.getDefault()) {
 
@@ -1336,7 +1342,7 @@ public class Text extends Shape {
                 return node.fontProperty();
             }
          };
-         
+
          private static final StyleableProperty<Text,Boolean> UNDERLINE = 
             new StyleableProperty<Text,Boolean>("-fx-underline",
                  BooleanConverter.getInstance(), Boolean.FALSE) {
@@ -1345,14 +1351,13 @@ public class Text extends Shape {
             public boolean isSettable(Text node) {
                 return node.underline == null || !node.underline.isBound();
             }
-                     
+
             @Override
             public WritableValue<Boolean> getWritableValue(Text node) {
                 return node.underlineProperty();
             }
-
          };
-         
+
          private static final StyleableProperty<Text,Boolean> STRIKETHROUGH = 
             new StyleableProperty<Text,Boolean>("-fx-strikethrough",
                  BooleanConverter.getInstance(), Boolean.FALSE) {
@@ -1362,14 +1367,13 @@ public class Text extends Shape {
                 return node.strikethrough == null ||
                       !node.strikethrough.isBound();
             }
-                     
+
             @Override
             public WritableValue<Boolean> getWritableValue(Text node) {
                 return node.strikethroughProperty();
             }
-
          };
-         
+
          private static final
              StyleableProperty<Text,TextAlignment> TEXT_ALIGNMENT =
                  new StyleableProperty<Text,TextAlignment>("-fx-text-alignment",
@@ -1387,7 +1391,7 @@ public class Text extends Shape {
                 return node.textAlignmentProperty();
             }
          };
-         
+
          private static final StyleableProperty<Text,VPos> TEXT_ORIGIN = 
                  new StyleableProperty<Text,VPos>("-fx-text-origin",
                  new EnumConverter<VPos>(VPos.class),
@@ -1438,7 +1442,6 @@ public class Text extends Shape {
                 FONT_SMOOTHING_TYPE
             );
             STYLEABLES = Collections.unmodifiableList(styleables);
-
          }
     }
 
@@ -1459,181 +1462,49 @@ public class Text extends Shape {
     /**
      * RT-19263
      * @treatAsPrivate implementation detail
-     * @deprecated This is an experimental API that is not intended
-     * for general use and is subject to change in future versions
+     * @deprecated This is an experimental API that is not intended for general use and is subject to change in future versions
      */
     @Deprecated
     public List<StyleableProperty> impl_getStyleableProperties() {
         return impl_CSS_STYLEABLES();
     }
 
+    @SuppressWarnings("deprecation")
     private void updatePGText() {
-        getTextHelper(); // implicitly syncs Text to Helper.
-        getPGText().updateText();
-    }
-
-    /*
-     * This skips the pivot x/y as that requires knowing the bounds
-     * but we need to sync the transform down to the helper when
-     * getting bounds. And we only need the portion of the transform
-     * that affects text size anyway.
-     */
-    private Affine3D getConcatenatedNodeTransform(Node node, Affine3D dst) {
-        if (node.getScaleX() != 1 || node.getScaleY() != 1 ||
-            node.getRotate() != 0 || node.impl_hasTransforms())
-        {
-            if (node.getRotate() != 0) {
-                dst.rotate(Math.toRadians(node.getRotate()),
-                           node.getRotationAxis().getX(),
-                           node.getRotationAxis().getY(),
-                           node.getRotationAxis().getZ());
-            }
-            if (node.getScaleX() != 1 || node.getScaleY() != 1) {
-                dst.scale(node.getScaleX(), node.getScaleY());
-            }
-            if (node.impl_hasTransforms()) {
-                for (Transform t : node.getTransforms()) {
-                    t.impl_apply(dst);
-                }
-            }
-        }
-        return dst;
-    }
-
-    private BaseTransform getCumulativeTransform() {
-        Affine3D dst = new Affine3D();
-        Node node = this;
-        do {
-            dst = getConcatenatedNodeTransform(node, dst);
-            node = node.getParent();
-        } while (node != null);
-        return dst;
-    }
-
-    private PGShape.Mode getMode() {
-        if (getFill() != null && getStroke() != null) {
-            return PGShape.Mode.STROKE_FILL;
-        } else if (getFill() != null) {
-            return PGShape.Mode.FILL;
-        } else if (getStroke() != null) {
-            return PGShape.Mode.STROKE;
-        } else {
-            return PGShape.Mode.EMPTY;
-        }
-    }
-
-    /* This method can be called outside of the pulse */
-    private void updatePGTextHelper(PGTextHelper helper) {
-
-        if (impl_isDirty(DirtyBits.NODE_GEOMETRY)) {
-            helper.setLocation((float)getX(), (float)getY());
-            impl_clearDirty(DirtyBits.NODE_GEOMETRY);
-            impl_markDirty(DirtyBits.TEXT_HELPER);
-        }
+        PGSpan peer = getPGSpan();
         if (impl_isDirty(DirtyBits.TEXT_ATTRS)) {
-            helper.setTextBoundsType(getBoundsType().ordinal());
-            helper.setTextOrigin(getTextOrigin().ordinal());
-            helper.setWrappingWidth((float)getWrappingWidth());
-            helper.setUnderline(isUnderline());
-            helper.setStrikethrough(isStrikethrough());
-            helper.setTextAlignment(getTextAlignment().ordinal());
-            helper.setFontSmoothingType(getFontSmoothingType().ordinal());
-            impl_clearDirty(DirtyBits.TEXT_ATTRS);
-            impl_markDirty(DirtyBits.TEXT_HELPER);
+            peer.setUnderline(isUnderline());
+            peer.setStrikethrough(isStrikethrough());
+            peer.setFontSmoothingType(getFontSmoothingType().ordinal());
         }
         if (impl_isDirty(DirtyBits.TEXT_FONT)) {
-            helper.setFont(getFontInternal().impl_getNativeFont());
-            impl_clearDirty(DirtyBits.TEXT_FONT);
-            impl_markDirty(DirtyBits.TEXT_HELPER);
+            peer.setFont(getFontInternal());
         }
         if (impl_isDirty(DirtyBits.NODE_CONTENTS)) {
-            helper.setText(getTextInternal());
-            impl_clearDirty(DirtyBits.NODE_CONTENTS);
-            impl_markDirty(DirtyBits.TEXT_HELPER);
+            peer.setGlyphs(getRuns());
+        }
+        if (impl_isDirty(DirtyBits.NODE_GEOMETRY)) {
+            if (isSpan()) {
+                BaseBounds spanBounds = getSpanBounds();
+                peer.setLayoutLocation(spanBounds.getMinX(), spanBounds.getMinY());
+            } else {
+                float x = (float)getX();
+                float y = (float)getY();
+                float yadj = getYRendering();
+                peer.setLayoutLocation(-x, yadj - y);
+            }
         }
         if (impl_isDirty(DirtyBits.TEXT_SELECTION)) {
-            if (getImpl_selectionStart() >= 0 && getImpl_selectionEnd() >= 0) {
-                helper.setLogicalSelection(getImpl_selectionStart(),
-                                           getImpl_selectionEnd());
-                // getStroke and getFill can be null
-                Paint strokePaint = getStroke();
-                Paint fillPaint =
-                    selectionFill == null ? null : selectionFill.get();
-                Object strokeObj = (strokePaint == null) ? null :
-                    strokePaint.impl_getPlatformPaint();
-                Object fillObj = (fillPaint == null) ? null :
-                    fillPaint.impl_getPlatformPaint();
-
-                helper.setSelectionPaint(strokeObj, fillObj);
-            } else {
-                // Deselect any PGText, in order to update selected text color
-                helper.setLogicalSelection(0, 0);
+            Object fillObj = null;
+            int start = getImpl_selectionStart();
+            int end = getImpl_selectionEnd();
+            int length = getTextInternal().length();
+            if (0 <= start && start < end  && end <= length) {
+                Paint fill = impl_selectionFillProperty().get();
+                fillObj = fill != null ? fill.impl_getPlatformPaint() : null;
             }
-            impl_clearDirty(DirtyBits.TEXT_SELECTION);
-            impl_markDirty(DirtyBits.TEXT_HELPER);
+            peer.setSelection(start, end, fillObj);
         }
-        /* Rendering state like transform, Mode, and stroke also matter
-         * for bounds calculations. Need to pass down this information too.
-         */
-        helper.setCumulativeTransform(getCumulativeTransform());
-        helper.setMode(getMode());
-        if (impl_isDirty(DirtyBits.SHAPE_STROKE) ||
-            impl_isDirty(DirtyBits.SHAPE_STROKEATTRS))
-        {
-            boolean hasStroke = getStroke() != null;
-            helper.setStroke(hasStroke);
-            /* We don't want to do this work unless there's currently
-             * a stroke set. And we also don't want to repeat it unless
-             * something changed. We know something has changed if we
-             * are here because of the dirty bits, so we then have to
-             * check if there's a stroke been set. The case this does
-             * extra work is if the stroke's Paint changes, but nothing else.
-             */
-            if (hasStroke) {
-                helper.setStrokeParameters(
-                       getPGStrokeType(),
-                       getPGStrokeDashArray(),
-                       (float)getStrokeDashOffset(),
-                       getPGStrokeLineCap(),
-                       getPGStrokeLineJoin(),
-                       Math.max((float)getStrokeMiterLimit(), 1f),
-                       Math.max((float)getStrokeWidth(), 0f));
-            }
-        }
-    }
-
-    private com.sun.javafx.sg.PGShape.StrokeType getPGStrokeType() {
-        switch (getStrokeType()) {
-            case INSIDE: return PGShape.StrokeType.INSIDE;
-            case OUTSIDE: return PGShape.StrokeType.OUTSIDE;
-            default: return PGShape.StrokeType.CENTERED;
-        }
-    }
-
-    private com.sun.javafx.sg.PGShape.StrokeLineCap getPGStrokeLineCap() {
-        switch (getStrokeLineCap()) {
-            case SQUARE: return PGShape.StrokeLineCap.SQUARE;
-            case BUTT:   return PGShape.StrokeLineCap.BUTT;
-            default: return PGShape.StrokeLineCap.ROUND;
-        }
-    }
-
-    private com.sun.javafx.sg.PGShape.StrokeLineJoin getPGStrokeLineJoin() {
-         switch (getStrokeLineJoin()) {
-             case MITER: return PGShape.StrokeLineJoin.MITER;
-             case BEVEL: return PGShape.StrokeLineJoin.BEVEL;
-             default: return PGShape.StrokeLineJoin.ROUND;
-         }
-    }
-
-    private float[] getPGStrokeDashArray() {
-        List<Double> daList = getStrokeDashArray();
-        int len = daList.size();
-        float[] strokeDashArray = new float[len];
-        for (int i=0; i<len; i++) {
-            strokeDashArray[i] = daList.get(i).floatValue();
-        }
-        return strokeDashArray;
     }
 
     /**

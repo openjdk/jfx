@@ -201,6 +201,8 @@ rect.setOnDragDropped(new EventHandler<DragEvent>() {
  */
 public final class DragEvent extends InputEvent {
 
+    private static final long serialVersionUID = 20121107L;
+    
     /**
      * Common supertype for all drag event types.
      */

@@ -80,6 +80,7 @@ import com.sun.javafx.runtime.VersionInfo;
 import com.sun.javafx.runtime.async.AsyncOperation;
 import com.sun.javafx.runtime.async.AsyncOperationListener;
 import com.sun.javafx.scene.text.HitInfo;
+import com.sun.javafx.scene.text.TextLayoutFactory;
 import com.sun.javafx.sg.PGArc;
 import com.sun.javafx.sg.PGCircle;
 import com.sun.javafx.sg.PGCubicCurve;
@@ -97,9 +98,11 @@ import com.sun.javafx.sg.PGRectangle;
 import com.sun.javafx.sg.PGRegion;
 import com.sun.javafx.sg.PGSVGPath;
 import com.sun.javafx.sg.PGShape;
+import com.sun.javafx.sg.PGSpan;
 import com.sun.javafx.sg.PGText;
 import com.sun.javafx.PlatformUtil;
 import com.sun.javafx.sg.PGCanvas;
+import com.sun.javafx.sg.PGWebView;
 import com.sun.scenario.DelayedRunnable;
 import com.sun.scenario.animation.AbstractMasterTimer;
 import com.sun.scenario.effect.AbstractShadow.ShadowMode;
@@ -614,6 +617,7 @@ public abstract class Toolkit {
     public abstract AbstractMasterTimer getMasterTimer();
 
     public abstract FontLoader getFontLoader();
+    public abstract TextLayoutFactory getTextLayoutFactory();
 
     public abstract PGArc createPGArc();
     public abstract PGCircle createPGCircle();
@@ -632,6 +636,8 @@ public abstract class Toolkit {
     public abstract PGText createPGText();
     public abstract PGRegion createPGRegion();
     public abstract PGCanvas createPGCanvas();
+    public abstract PGSpan createPGSpan();
+    public abstract PGWebView createPGWebView();
 
     public abstract Object createSVGPathObject(SVGPath svgpath);
     public abstract Path2D createSVGPath2D(SVGPath svgpath);

@@ -54,6 +54,8 @@ import javafx.event.EventType;
  */
 public final class MouseDragEvent extends MouseEvent{
 
+    private static final long serialVersionUID = 20121107L;
+
     /**
      * Common supertype for all mouse event types.
      */

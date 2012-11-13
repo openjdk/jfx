@@ -103,7 +103,7 @@ public class PlatformImpl {
         if (!taskbarApplication) {
             AccessController.doPrivileged(new PrivilegedAction<Void>() {
                 @Override public Void run() {
-                    System.setProperty("com.sun.glass.taskbarApplication", "false");
+                    System.setProperty("glass.taskbarApplication", "false");
                     return null;
                 }
             });

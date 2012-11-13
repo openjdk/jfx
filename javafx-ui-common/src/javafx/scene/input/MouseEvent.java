@@ -128,6 +128,9 @@ import java.io.IOException;
  * </ul>
  */
 public class MouseEvent extends InputEvent {
+
+    private static final long serialVersionUID = 20121107L;
+    
     /**
      * Common supertype for all mouse event types.
      */
@@ -314,8 +317,7 @@ public class MouseEvent extends InputEvent {
                 _eventType, _x, _y, _screenX, _screenY,
                 _button, _clickCount,
                 _shiftDown, _controlDown, _altDown, _metaDown,
-                _primaryButtonDown, _middleButtonDown, _secondaryButtonDown, _popupTrigger,
-                _synthesized);
+                _primaryButtonDown, _middleButtonDown, _secondaryButtonDown, _synthesized, _popupTrigger);
     }
 
     /**

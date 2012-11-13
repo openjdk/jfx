@@ -46,6 +46,8 @@ import javafx.geometry.Point2D;
  */
 public class GestureEvent extends InputEvent {
 
+    private static final long serialVersionUID = 20121107L;
+    
     /**
      * Common supertype for all gestures.
      */
