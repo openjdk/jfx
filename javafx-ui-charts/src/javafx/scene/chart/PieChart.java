@@ -303,6 +303,9 @@ public class PieChart extends Chart {
         labelLinePath.getStyleClass().add("chart-pie-label-line");
         setLegend(legend);
         setData(data);
+        // set chart content mirroring to be always false i.e. chartContent mirrorring is not done
+        // when  node orientation is right-to-left for PieChart.
+        useChartContentMirroring = false;
     }
 
     // -------------- METHODS --------------------------------------------------
