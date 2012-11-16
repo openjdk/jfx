@@ -24,7 +24,6 @@
  */
 package javafx.scene.control;
 
-import com.sun.javafx.Utils;
 import javafx.beans.property.DoubleProperty;
 import javafx.beans.property.DoublePropertyBase;
 import javafx.beans.property.ObjectProperty;
@@ -1185,7 +1184,7 @@ public class PopupControl extends PopupWindow implements Skinnable {
             }
 
             try {
-                final Class<?> skinClass = Utils.loadClass(skinClassName.get(), this);
+                final Class<?> skinClass = Control.loadClass(skinClassName.get(), this);
                 Constructor<?>[] constructors = skinClass.getConstructors();
                 Constructor<?> skinConstructor = null;
                 for (Constructor<?> c : constructors) {
