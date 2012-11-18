@@ -55,6 +55,9 @@ public class TreeTableRow<T> extends TableRow<T> {
      */
     public TreeTableRow() {
         getStyleClass().addAll(DEFAULT_STYLE_CLASS);
+        
+        // TODO remove this when in the javafx.scene.control package and we can
+        // enable the indexChanged() method instead
         indexProperty().addListener(indexListener);
     }
 
@@ -147,7 +150,7 @@ public class TreeTableRow<T> extends TableRow<T> {
     public final ObjectProperty<Node> disclosureNodeProperty() { return disclosureNode; }
     
     
-    // --- TreeView
+    // --- TreeTableView
     private ReadOnlyObjectWrapper<TreeTableView<T>> treeTableView = new ReadOnlyObjectWrapper<TreeTableView<T>>() {
         private WeakReference<TreeTableView<T>> weakTreeTableViewRef;
         @Override protected void invalidated() {
@@ -320,6 +323,26 @@ public class TreeTableRow<T> extends TableRow<T> {
      *                                                                         *
      **************************************************************************/
     
+    // TODO implement when in the javafx.scene.control package
+//    private int oldIndex = -1;
+//    
+//    /** {@inheritDoc} */
+//    @Override void indexChanged() {
+//        int newIndex = getIndex();
+//        
+//        super.indexChanged();
+//        
+//        // Below we check if the index has changed, but we always call updateItem,
+//        // as the value in the given index may have changed.
+//        updateItem(newIndex);
+//        
+//        if (oldIndex == newIndex) return;
+//        oldIndex = newIndex;
+//        
+//        updateSelection();
+//        updateFocus();
+//    }
+    
     private void updateItem() {
         TreeView<T> tv = getTreeTableView();
         if (tv == null) return;
@@ -413,22 +436,4 @@ public class TreeTableRow<T> extends TableRow<T> {
      **************************************************************************/
 
     private static final String DEFAULT_STYLE_CLASS = "tree-cell";
-
-//    private static final String PSEUDO_CLASS_EXPANDED = "expanded";
-//    private static final String PSEUDO_CLASS_COLLAPSED = "collapsed";
-
-    private static final long EXPANDED_PSEUDOCLASS_STATE = StyleManager.getPseudoclassMask("expanded");
-    private static final long COLLAPSED_PSEUDOCLASS_STATE = StyleManager.getPseudoclassMask("collapsed");
-
-   /**
-     * @treatasprivate implementation detail
-     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
-     */
-    @Deprecated @Override public long impl_getPseudoClassState() {
-        long mask = super.impl_getPseudoClassState();
-        if (getTreeItem() != null && ! getTreeItem().isLeaf()) {
-            mask |= getTreeItem().isExpanded() ? EXPANDED_PSEUDOCLASS_STATE : COLLAPSED_PSEUDOCLASS_STATE;
-        }
-        return mask;
-    }
 }
