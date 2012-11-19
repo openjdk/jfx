@@ -1,7 +1,28 @@
 /*
- * To change this template, choose Tools | Templates
- * and open the template in the editor.
+ * Copyright (c) 2012, Oracle and/or its affiliates. All rights reserved.
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ * This code is free software; you can redistribute it and/or modify it
+ * under the terms of the GNU General Public License version 2 only, as
+ * published by the Free Software Foundation.  Oracle designates this
+ * particular file as subject to the "Classpath" exception as provided
+ * by Oracle in the LICENSE file that accompanied this code.
+ *
+ * This code is distributed in the hope that it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+ * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
+ * version 2 for more details (a copy is included in the LICENSE file that
+ * accompanied this code).
+ *
+ * You should have received a copy of the GNU General Public License version
+ * 2 along with this work; if not, write to the Free Software Foundation,
+ * Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301 USA.
+ *
+ * Please contact Oracle, 500 Oracle Parkway, Redwood Shores, CA 94065 USA
+ * or visit www.oracle.com if you need additional information or have any
+ * questions.
  */
+
 package com.sun.javafx.scene.control.accessible;
 
 import com.sun.javafx.accessible.utils.OrientationType;
@@ -17,10 +38,6 @@ import com.sun.javafx.accessible.providers.AccessibleProvider;
 import com.sun.javafx.accessible.providers.GridProvider;
 import com.sun.javafx.accessible.providers.SelectionProvider;
 
-/**
- *
- * @author paru
- */
 public class AccessibleList extends AccessibleControl implements SelectionProvider,
         GridProvider {
 
@@ -84,10 +101,10 @@ public class AccessibleList extends AccessibleControl implements SelectionProvid
 
     @Override
     public Object[] getSelection() {
-        // PTB: Fix this later to allocate and fill the correctly sized array.
+        // Fix this later to allocate and fill the correctly sized array.
         //      For now it will work for single selection lists.
         Object[] selection = new Object[1];  // it'll be a Glass AccessibleBaseProvider
-      //  selection[1] = null;  // PTB: Is this needed?  Probably already null.
+      //  selection[1] = null;  // Is this needed?  Probably already null.
         Object selected = listView.getSelectionModel().getSelectedItem();
         try {
             java.lang.reflect.Method method = selected.getClass().getMethod("impl_getAccessible");
