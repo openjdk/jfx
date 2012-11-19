@@ -293,9 +293,4 @@ public class TextField extends TextInputControl {
     @Override protected List<StyleableProperty> impl_getControlStyleableProperties() {
         return impl_CSS_STYLEABLES();
     }
-    
-    @Override
-    public boolean isAutomaticallyMirrored() {
-        return false;
-    }
 }
