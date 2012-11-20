@@ -177,15 +177,17 @@ public class Text extends Shape {
     }
 
     private void checkSpan() {
-//        isSpan = isManaged() && getParent() instanceof TextFlow;
+        isSpan = isManaged() && getParent() instanceof TextFlow;
     }
 
     private void needsFullTextLayout() {
         if (isSpan()) {
-            /* If layout bounds is already invalid the node will not 
-             * notify the parent. See Node#impl_layoutBoundsChanged()
+            /* Create new text span every time the font or text changes
+             * so the text layout can see that the content has changed.
              */
-            getParent().requestLayout();
+            textSpan = null;
+
+            /* Relies on impl_geomChanged() to request text flow to relayout */
         } else {
             TextLayout layout = getTextLayout();
             String string = getTextInternal();
@@ -221,9 +223,9 @@ public class Text extends Shape {
 
     private TextLayout getTextLayout() {
         if (isSpan()) {
-//            layout = null;
-//            TextFlow parent = (TextFlow)getParent();
-//            return parent.getTextLayout();
+            layout = null;
+            TextFlow parent = (TextFlow)getParent();
+            return parent.getTextLayout();
         }
         if (layout == null) {
             TextLayoutFactory factory = Toolkit.getToolkit().getTextLayoutFactory();
@@ -242,7 +244,21 @@ public class Text extends Shape {
     private boolean spanBoundsInvalid = true;
 
     void layoutSpan(GlyphList[] runs) {
+        /* Sometimes a property change in the text node will causes layout in 
+         * text flow. In this case all the dirty bits are already clear and no 
+         * extra work is necessary. Other times the layout is caused by changes  
+         * in the text flow object (wrapping width and text alignment for example).
+         * In the second case the dirty bits must be set here using 
+         * needsTextLayout(). Note that needsTextLayout() uses impl_geomChanged() 
+         * which causes another (undesired) layout request in the parent.
+         * In general this is not a problem because shapes are not resizable and 
+         * region do not propagate layout changes to the parent.
+         * This is a special case where a shape is resized by the parent during
+         * layoutChildren().  See TextFlow#requestLayout() for information how 
+         * text flow deals with this situation.
+         */
         needsTextLayout();
+
         spanBoundsInvalid = true;
         int count = 0;
         TextSpan span = getTextSpan();
@@ -263,10 +279,6 @@ public class Text extends Shape {
     }
 
     BaseBounds getSpanBounds() {
-        /* Called during the final stage of layouChildren() in the parent 
-         * but also called by other methods, should not access the runs array
-         * directly.
-         */
         if (spanBoundsInvalid) {
             GlyphList[] runs = getRuns();
             if (runs.length != 0) {
