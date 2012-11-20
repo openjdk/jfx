@@ -411,7 +411,7 @@ public final class SequentialTransition extends Transition {
         final int newIndex = findNewIndex(newTicks);
         final Animation current = ((curIndex == BEFORE) || (curIndex == end)) ? null : cachedChildren[curIndex];
         if (toggledRate) {
-            if (current.getStatus() == Status.RUNNING) {
+            if (current != null && current.getStatus() == Status.RUNNING) {
                 offsetTicks -= Math.signum(getCurrentRate()) * (durations[curIndex] - 2 * (oldTicks - delays[curIndex] - startTimes[curIndex]));
             }
             toggledRate = false;
