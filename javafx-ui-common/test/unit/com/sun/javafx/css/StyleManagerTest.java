@@ -82,7 +82,7 @@ public class StyleManagerTest {
         Scene scene = popup.getScene();        
 
         StyleManager sm = StyleManager.getStyleManager(scene);
-        assert (rootScene == ((SceneStyleManager)sm).getPopupOwnerScene());
+        assert (rootScene == sm.getPopupOwnerScene());
     }
     
 }

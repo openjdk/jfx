@@ -84,7 +84,13 @@ public abstract class Chart extends Region {
             final double contentHeight = snapSize(height - (top + bottom));
             layoutChartChildren(snapPosition(top), snapPosition(left),contentWidth,contentHeight);
         }
+        @Override public boolean isAutomaticallyMirrored() {
+            return useChartContentMirroring;
+        }
     };
+    // Determines if chart content should be mirrored if node orientation is right-to-left.
+    boolean useChartContentMirroring = true;
+    
     /** Animator for animating stuff on the chart */
     private final ChartLayoutAnimator animator = new ChartLayoutAnimator(chartContent);
 
@@ -254,7 +260,6 @@ public abstract class Chart extends Region {
     // -------------- CONSTRUCTOR --------------------------------------------------------------------------------------
 
     public Chart() {
-        setNodeOrientation(NodeOrientation.LEFT_TO_RIGHT);
         titleLabel.setAlignment(Pos.CENTER);
         getChildren().addAll(titleLabel, chartContent);
         getStyleClass().add("chart");

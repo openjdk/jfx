@@ -136,7 +136,7 @@ final public class StyleHelper {
         // We could be here because the node changed id or styleclass, 
         // so the selector needs to be recreated. Setting it to null
         // causes the next call to getSimpleSelector() to create it anew.
-        this.simpleSelector = null;
+        this.styleClassBits = null;
         this.key = 0;
         this.smapRef = null;
         this.sharedStyleCacheRef = null;
@@ -170,7 +170,7 @@ final public class StyleHelper {
         final long[] pclassMasks = new long[depth];
         
         final StyleManager.StyleMap styleMap = styleManager != null
-                ? styleManager.findMatchingStyles(node, this.getSimpleSelector(), pclassMasks)
+                ? styleManager.findMatchingStyles(node, pclassMasks)
                 : null;
 
         
@@ -525,27 +525,18 @@ final public class StyleHelper {
     private final Node node;
     
     /** 
-     * The Node's name, id and style-class as a Selector. This is used as a 
-     * key to the StyleManager's Cache.
+     * The Node's style-class as bits.
      */
-    private SimpleSelector simpleSelector;
+    private long[] styleClassBits;
             
-    SimpleSelector getSimpleSelector() {
+    long[] getStyleClassBits() {
 
-        if (simpleSelector == null) {
+        if (styleClassBits == null) {
 
-            final String name = node.getClass().getName();
-            final int dotPos = name.lastIndexOf('.');
-            final String id = node.getId();
-            final List<String> selectorStyleClasses = node.getStyleClass();
-            simpleSelector = new SimpleSelector(
-                    name.substring(dotPos+1), // want Foo, not bada.bing.Foo
-                    selectorStyleClasses,
-                    null,
-                    id);
+            styleClassBits = SimpleSelector.getStyleClassMasks(node.getStyleClass());
         }            
         
-        return simpleSelector;
+        return styleClassBits;
     }
     
     /**

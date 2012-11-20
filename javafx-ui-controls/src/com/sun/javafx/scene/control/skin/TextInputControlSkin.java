@@ -41,6 +41,7 @@ import javafx.beans.value.WritableValue;
 import javafx.collections.ObservableList;
 import javafx.event.ActionEvent;
 import javafx.event.EventHandler;
+import javafx.geometry.NodeOrientation;
 import javafx.geometry.Point2D;
 import javafx.geometry.Rectangle2D;
 import javafx.scene.Node;
@@ -588,6 +589,10 @@ public abstract class TextInputControlSkin<T extends TextInputControl, B extends
             }
         }
     }
+
+    protected boolean isRTL() {
+        return (getSkinnable().getEffectiveNodeOrientation() == NodeOrientation.RIGHT_TO_LEFT);
+    };
 
     public void setCaretAnimating(boolean value) {
         if (value) {

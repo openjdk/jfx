@@ -107,7 +107,7 @@ public class Node_cssStyleMap_Test {
         return smap;
     }
     
-    @Test
+    @Test @org.junit.Ignore
     public void testStyleMapTracksChanges() {
                 
         final List<Declaration> declsNoState = new ArrayList<Declaration>();
