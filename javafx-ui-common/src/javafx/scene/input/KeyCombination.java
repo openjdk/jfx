@@ -433,6 +433,9 @@ public abstract class KeyCombination {
         }
     }
 
+    /**
+     * {@code ModifierValue} specifies state of modifier keys.
+     */
     public static enum ModifierValue {
         /** Constant which indicates that the modifier key must be down. */
         DOWN,
