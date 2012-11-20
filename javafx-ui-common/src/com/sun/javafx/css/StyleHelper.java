@@ -2024,6 +2024,9 @@ final public class StyleHelper {
 
         }
 
+        if (csShorthand == null) {
+            distance = nlooks;
+        }
         nlooks = 0;
         
         final long states = getPseudoClassState();
