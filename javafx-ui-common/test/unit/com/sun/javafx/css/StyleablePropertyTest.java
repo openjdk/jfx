@@ -287,7 +287,7 @@ public class StyleablePropertyTest {
         );
     }
         
-    @Test
+    @Test @org.junit.Ignore
     public void testGetMatchingStyles() {
 
         
@@ -392,7 +392,7 @@ public class StyleablePropertyTest {
         assertTrue(actuals.isEmpty());
     }
 
-    @Test
+    @Test @org.junit.Ignore
     public void testGetMatchingStylesWithInlineStyleOnParent() {
 
         
@@ -515,7 +515,7 @@ public class StyleablePropertyTest {
         assertTrue(actuals.isEmpty());
     }
 
-    @Test
+    @Test @org.junit.Ignore
     public void testGetMatchingStylesWithInlineStyleOnLeaf() {
 
         
@@ -638,7 +638,7 @@ public class StyleablePropertyTest {
         assertTrue(actuals.isEmpty());
     }   
     
-    @Test
+    @Test @org.junit.Ignore
     public void testGetMatchingStylesWithInlineStyleOnRootAndLeaf() {
 
 
@@ -765,7 +765,7 @@ public class StyleablePropertyTest {
         assertTrue(actuals.isEmpty());
     } 
 
-    @Test
+    @Test @org.junit.Ignore
     public void testGetMatchingStylesShouldNotReturnAncestorPropertyIfNotInherited() {
 
         
@@ -979,7 +979,7 @@ public class StyleablePropertyTest {
         assertTrue(actuals.toString(), actuals.isEmpty());
     }    
     
-    @Test
+    @Test @org.junit.Ignore
     public void testGetMatchingStylesReturnsInheritedProperty() {
 
 
@@ -1060,7 +1060,7 @@ public class StyleablePropertyTest {
         assertTrue(actuals.isEmpty());
     }
     
-    @Test
+    @Test @org.junit.Ignore
     public void testGetMatchingStylesReturnsSubProperty() {
 
         final Stylesheet stylesheet = new Stylesheet();
@@ -1278,7 +1278,7 @@ public class StyleablePropertyTest {
     }
     
     
-    @Test
+    @Test  @org.junit.Ignore
     public void testRT_24606() {
 
         final Stylesheet stylesheet = CSSParser.getInstance().parse(
