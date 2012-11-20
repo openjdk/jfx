@@ -36,7 +36,7 @@ import com.sun.javafx.geom.PathIterator;
 import com.sun.javafx.geom.transform.BaseTransform;
 import com.sun.javafx.sg.PGPath;
 
-
+// PENDING_DOC_REVIEW
 /**
  * A path element that forms an arc from the previous coordinates
  * to the specified x and y coordinates using the specified radius.
@@ -64,6 +64,30 @@ arcTo.setRadiusY(50.0);
 path.getElements().add(moveTo);
 path.getElements().add(arcTo);
 </PRE>
+ * 
+ * <p>
+ * Following image demonstrates {@code radiusX}, {@code radiusY} and
+ * {@code xAxisRotation} parameters: 
+ * {@code radiusX} is the horizontal radius of the full ellipse of which this arc is 
+ * a partial section, {@code radiusY} is its vertical radius. 
+ * {@code xAxisRotation} defines the rotation of the ellipse in degrees.
+ * </p>
+ * <p>
+ * <img src="doc-files/arcto.png"/>
+ * </p>
+ * <p>
+ * In most cases, there are four options of how to draw an arc from
+ * starting point to given end coordinates. They can be distinguished by  
+ * {@code largeArcFlag} and {@code sweepFlag} parameters.
+ * {@code largeArcFlag == true} means that the arc greater than 180 degrees will
+ * be drawn. {@code sweepFlag == true} means that the arc will be drawn
+ * in the positive angle direction - i.e. the angle in the
+ * ellipse formula will increase from {@code [fromX, fromY]} to {@code [x,y]}.
+ * Following images demonstrate this behavior:
+ * </p>
+ * <p>
+ * <img src="doc-files/arcto-flags.png"/>
+ * </p>
  */
 public class ArcTo extends PathElement {
 
