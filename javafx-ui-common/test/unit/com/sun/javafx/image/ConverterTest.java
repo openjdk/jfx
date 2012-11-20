@@ -45,6 +45,42 @@ import org.junit.Test;
 /**
  */
 public class ConverterTest {
+    static ByteBuffer heapByteBuffer(int off, int len) {
+        ByteBuffer bbuf = ByteBuffer.allocate(off + len);
+        if (off > 0) {
+            bbuf.position(off);
+            bbuf = bbuf.slice();
+        }
+        return bbuf;
+    }
+
+    static ByteBuffer directByteBuffer(int off, int len) {
+        ByteBuffer bbuf = ByteBuffer.allocateDirect(off + len);
+        if (off > 0) {
+            bbuf.position(off);
+            bbuf = bbuf.slice();
+        }
+        return bbuf;
+    }
+
+    static IntBuffer heapIntBuffer(int off, int len) {
+        IntBuffer ibuf = IntBuffer.allocate(off + len);
+        if (off > 0) {
+            ibuf.position(off);
+            ibuf = ibuf.slice();
+        }
+        return ibuf;
+    }
+
+    static IntBuffer directIntBuffer(int off, int len) {
+        IntBuffer ibuf = ByteBuffer.allocateDirect((off + len) * 4).asIntBuffer();
+        if (off > 0) {
+            ibuf.position(off);
+            ibuf = ibuf.slice();
+        }
+        return ibuf;
+    }
+
     static Color derive(Color c, double opacity) {
         return new Color(c.getRed(), c.getGreen(), c.getBlue(), c.getOpacity() * opacity);
     }
@@ -501,7 +537,13 @@ public class ConverterTest {
 
     @Test
     public void testByteAccessors() {
-        ByteBuffer bbuf = ByteBuffer.allocate(8);
+        testByteAccessors(heapByteBuffer(0, 8));
+        testByteAccessors(heapByteBuffer(1, 8));
+        testByteAccessors(directByteBuffer(0, 8));
+        testByteAccessors(directByteBuffer(1, 8));
+    }
+
+    private void testByteAccessors(ByteBuffer bbuf) {
         byte barr[] = new byte[8];
         for (ByteFormat bfmt : ByteFormats) {
             BytePixelGetter getter = bfmt.getGetter();
@@ -524,7 +566,13 @@ public class ConverterTest {
 
     @Test
     public void testIntAccessors() {
-        IntBuffer ibuf = IntBuffer.allocate(2);
+        testIntAccessors(heapIntBuffer(0, 2));
+        testIntAccessors(heapIntBuffer(1, 2));
+        testIntAccessors(directIntBuffer(0, 2));
+        testIntAccessors(directIntBuffer(1, 2));
+    }
+    
+    private void testIntAccessors(IntBuffer ibuf) {
         int iarr[] = new int[2];
         for (IntFormat ifmt : IntFormats) {
             IntPixelGetter getter = ifmt.getGetter();
@@ -575,11 +623,16 @@ public class ConverterTest {
 
     @Test
     public void testB2BConverterTypes() {
-        ByteBuffer srchbuf = ByteBuffer.allocate(4 * TestColors.length);
-        ByteBuffer srcdbuf = ByteBuffer.allocateDirect(4 * TestColors.length);
+        testB2BConverterTypes(0);
+        testB2BConverterTypes(1);
+    }
+    
+    private void testB2BConverterTypes(int off) {
+        ByteBuffer srchbuf = heapByteBuffer(off, 4 * TestColors.length);
+        ByteBuffer srcdbuf = directByteBuffer(off, 4 * TestColors.length);
         byte srcarr[] = new byte[4 * TestColors.length];
-        ByteBuffer dsthbuf = ByteBuffer.allocate(4 * TestColors.length);
-        ByteBuffer dstdbuf = ByteBuffer.allocateDirect(4 * TestColors.length);
+        ByteBuffer dsthbuf = heapByteBuffer(off, 4 * TestColors.length);
+        ByteBuffer dstdbuf = directByteBuffer(off, 4 * TestColors.length);
         byte dstarr[] = new byte[4 * TestColors.length];
         for (ByteFormat bfmtgetter : ByteFormats) {
             BytePixelGetter bpg = bfmtgetter.getGetter();
@@ -649,11 +702,16 @@ public class ConverterTest {
 
     @Test
     public void testB2IConverterTypes() {
-        ByteBuffer srchbuf = ByteBuffer.allocate(4 * TestColors.length);
-        ByteBuffer srcdbuf = ByteBuffer.allocateDirect(4 * TestColors.length);
+        testB2IConverterTypes(0);
+        testB2IConverterTypes(1);
+    }
+
+    private void testB2IConverterTypes(int off) {
+        ByteBuffer srchbuf = heapByteBuffer(off, 4 * TestColors.length);
+        ByteBuffer srcdbuf = directByteBuffer(off, 4 * TestColors.length);
         byte srcarr[] = new byte[4 * TestColors.length];
-        IntBuffer dsthbuf = IntBuffer.allocate(TestColors.length);
-        IntBuffer dstdbuf = IntBuffer.allocate(TestColors.length);
+        IntBuffer dsthbuf = heapIntBuffer(off, TestColors.length);
+        IntBuffer dstdbuf = directIntBuffer(off,TestColors.length);
         int dstarr[] = new int[TestColors.length];
         for (ByteFormat bfmtgetter : ByteFormats) {
             BytePixelGetter bpg = bfmtgetter.getGetter();
@@ -722,11 +780,16 @@ public class ConverterTest {
 
     @Test
     public void testI2BConverterTypes() {
-        IntBuffer srchbuf = IntBuffer.allocate(TestColors.length);
-        IntBuffer srcdbuf = IntBuffer.allocate(TestColors.length);
+        testI2BConverterTypes(0);
+        testI2BConverterTypes(1);
+    }
+
+    private void testI2BConverterTypes(int off) {
+        IntBuffer srchbuf = heapIntBuffer(off, TestColors.length);
+        IntBuffer srcdbuf = directIntBuffer(off, TestColors.length);
         int srcarr[] = new int[TestColors.length];
-        ByteBuffer dsthbuf = ByteBuffer.allocate(4 * TestColors.length);
-        ByteBuffer dstdbuf = ByteBuffer.allocateDirect(4 * TestColors.length);
+        ByteBuffer dsthbuf = heapByteBuffer(off, 4 * TestColors.length);
+        ByteBuffer dstdbuf = directByteBuffer(off, 4 * TestColors.length);
         byte dstarr[] = new byte[4 * TestColors.length];
         for (IntFormat ifmtgetter : IntFormats) {
             IntPixelGetter ipg = ifmtgetter.getGetter();
@@ -795,11 +858,16 @@ public class ConverterTest {
 
     @Test
     public void testI2IConverterTypes() {
-        IntBuffer srchbuf = IntBuffer.allocate(TestColors.length);
-        IntBuffer srcdbuf = IntBuffer.allocate(TestColors.length);
+        testI2IConverterTypes(0);
+        testI2IConverterTypes(1);
+    }
+
+    private void testI2IConverterTypes(int off) {
+        IntBuffer srchbuf = heapIntBuffer(off, TestColors.length);
+        IntBuffer srcdbuf = directIntBuffer(off, TestColors.length);
         int srcarr[] = new int[TestColors.length];
-        IntBuffer dsthbuf = IntBuffer.allocate(TestColors.length);
-        IntBuffer dstdbuf = IntBuffer.allocate(TestColors.length);
+        IntBuffer dsthbuf = heapIntBuffer(off, TestColors.length);
+        IntBuffer dstdbuf = directIntBuffer(off, TestColors.length);
         int dstarr[] = new int[TestColors.length];
         for (IntFormat ifmtgetter : IntFormats) {
             IntPixelGetter ipg = ifmtgetter.getGetter();

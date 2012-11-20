@@ -90,6 +90,8 @@ public abstract class BaseIntToIntConverter
             h = 1;
         }
         if (srcbuf.hasArray() && dstbuf.hasArray()) {
+            srcoff += srcbuf.arrayOffset();
+            dstoff += dstbuf.arrayOffset();
             doConvert(srcbuf.array(), srcoff, srcscanints,
                       dstbuf.array(), dstoff, dstscanints,
                       w, h);
@@ -113,7 +115,9 @@ public abstract class BaseIntToIntConverter
             h = 1;
         }
         if (srcbuf.hasArray()) {
-            doConvert(srcbuf.array(), srcoff, srcscanints,
+            int srcarr[] = srcbuf.array();
+            srcoff += srcbuf.arrayOffset();
+            doConvert(srcarr, srcoff, srcscanints,
                       dstarr, dstoff, dstscanints,
                       w, h);
         } else {
@@ -137,8 +141,10 @@ public abstract class BaseIntToIntConverter
             h = 1;
         }
         if (dstbuf.hasArray()) {
+            int dstarr[] = dstbuf.array();
+            dstoff += dstbuf.arrayOffset();
             doConvert(srcarr, srcoff, srcscanints,
-                      dstbuf.array(), dstoff, dstscanints,
+                      dstarr, dstoff, dstscanints,
                       w, h);
         } else {
             IntBuffer srcbuf = IntBuffer.wrap(srcarr);
