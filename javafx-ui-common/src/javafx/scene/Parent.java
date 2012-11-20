@@ -1080,13 +1080,17 @@ public abstract class Parent extends Node {
 
                 // Notify the StyleManager if stylesheets change. This Parent's
                 // styleManager will get recreated in impl_processCSS.
-                final StyleManager sm = Parent.this.styleManager;
-                if (sm != null) sm.stylesheetsChanged(c);
+                final StyleManager sm = scene.styleManager;
+                if (sm != null) {
+                    sm.stylesheetsChanged(Parent.this, c);
+                }
                 
                 // RT-9784 - if stylesheet is removed, reset styled properties to 
                 // their initial value.
                 while(c.next()) {
-                    if (c.wasRemoved() == false) continue;
+                    if (c.wasRemoved() == false) {
+                        continue;
+                    }
                     impl_cssResetInitialValues();
                     break; // no point in resetting more than once...
                 }
@@ -1105,8 +1109,6 @@ public abstract class Parent extends Node {
      * @return the list of stylesheets to use with this Parent
      */
     public final ObservableList<String> getStylesheets() { return stylesheets; }
-    
-    private StyleManager styleManager;
     
     /**
      * This method recurses up the parent chain until parent is null. As the
@@ -1136,9 +1138,12 @@ public abstract class Parent extends Node {
         }
         
         if (stylesheets != null && stylesheets.isEmpty() == false) {
-            if (list == null) list = new ArrayList<String>(stylesheets.size());
-            for (int n=0,nMax=stylesheets.size(); n<nMax; n++) 
+            if (list == null) {
+                list = new ArrayList<String>(stylesheets.size());
+            }
+            for (int n=0,nMax=stylesheets.size(); n<nMax; n++) {
                 list.add(stylesheets.get(n));
+            }
         }
         
         return list;
@@ -1158,14 +1163,9 @@ public abstract class Parent extends Node {
         // Determine whether we will need to reapply from here on down
         boolean flag = reapply || cssFlag == CSSFlags.REAPPLY;
         
-        // If we're reapplying styles, then re-create this Parent's styleManager, 
-        if (flag || this.styleManager == null) {
-            this.styleManager = null;
-                this.styleManager = StyleManager.createStyleManager(this);
-        } 
 
         // Let the super implementation handle CSS for this node
-        super.impl_processCSS(this.styleManager, flag);
+        super.impl_processCSS(styleManager, flag);
         
         // For each child, process CSS
         for (int i=0, max=children.size(); i<max; i++) {
@@ -1173,7 +1173,7 @@ public abstract class Parent extends Node {
             // If the parent styles are being updated or reapplied, then
             // make sure the children are updated or reapplied. 
             child.cssFlag = (flag ? CSSFlags.REAPPLY : CSSFlags.UPDATE);
-            child.impl_processCSS(this.styleManager, flag);
+            child.impl_processCSS(styleManager, flag);
         }
     }
     

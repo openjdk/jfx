@@ -291,17 +291,12 @@ final public class SimpleSelector extends Selector {
     @Override 
     public boolean applies(Node node) {
         
-        final StyleHelper styleHelper = node.impl_getStyleHelper();
-        final SimpleSelector selector = styleHelper.getSimpleSelector();
-        
         // if the selector has an id,
         // then bail if it doesn't match the node's id
         // (do this first since it is potentially the cheapest check)
         if (matchOnId) {
-            boolean idMatch = 
-                    selector.matchOnId 
-                    ? id.equals(selector.id) 
-                    : false;
+            final String otherId = node.getId();
+            final boolean idMatch = id.equals(otherId);
             if (!idMatch) return false;
         }
 
@@ -309,15 +304,17 @@ final public class SimpleSelector extends Selector {
         // then bail if it doesn't match the node's class name
         // if not wildcard, then match name with node's class name
         if (matchOnName) {
-            boolean classMatch = nameMatchesAtEnd(selector.name);
+            final String otherName = node.getClass().getName();
+            final boolean classMatch = nameMatchesAtEnd(otherName);
             if (!classMatch) return false;
         }
 
         if (matchOnStyleClass) {
-            boolean styleClassMatch = 
-                    selector.matchOnStyleClass 
-                    ? matchStyleClasses(selector.styleClassMasks) 
-                    : false;
+            
+            final StyleHelper styleHelper = node.impl_getStyleHelper();
+            final long[] otherStyleClassBits = styleHelper.getStyleClassBits();
+        
+            boolean styleClassMatch = matchStyleClasses(otherStyleClassBits); 
             if (!styleClassMatch) return false;
         }
         
