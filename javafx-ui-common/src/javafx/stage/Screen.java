@@ -56,14 +56,18 @@ import com.sun.javafx.tk.Toolkit;
  * </code></pre>
  * </p>
  */
-public class Screen {
+public final class Screen {
 
-    private static AtomicBoolean configurationDirty = new AtomicBoolean(true);
+    private static final AtomicBoolean configurationDirty =
+            new AtomicBoolean(true);
 
-    private static ScreenConfigurationAccessor accessor;
+    private static final ScreenConfigurationAccessor accessor;
 
     private static Screen primary;
-    private static ObservableList<Screen> screens = FXCollections.<Screen>observableArrayList();
+    private static final ObservableList<Screen> screens =
+            FXCollections.<Screen>observableArrayList();
+    private static final ObservableList<Screen> unmodifiableScreens =
+            FXCollections.unmodifiableObservableList(screens);
 
     static {
         accessor = Toolkit.getToolkit().setScreenConfigurationListener(new TKScreenConfigurationListener() {
@@ -71,6 +75,9 @@ public class Screen {
                 updateConfiguration();
             }
         });
+    }
+
+    private Screen() {
     }
 
     private static void checkDirty() {
@@ -163,7 +170,7 @@ public class Screen {
       */
     public static ObservableList<Screen> getScreens() {
         checkDirty();
-        return screens;
+        return unmodifiableScreens;
     }
 
     /**
@@ -211,7 +218,7 @@ public class Screen {
      * Gets the bounds of this {@code Screen}.
      * @return The bounds of this {@code Screen}
      */
-    public Rectangle2D getBounds() {
+    public final Rectangle2D getBounds() {
         return bounds;
     }
 
