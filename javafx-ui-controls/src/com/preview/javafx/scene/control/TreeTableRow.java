@@ -25,6 +25,7 @@
 package com.preview.javafx.scene.control;
 
 import com.sun.javafx.css.StyleManager;
+import com.sun.javafx.scene.control.skin.TreeTableRowSkin;
 import java.lang.ref.WeakReference;
 import javafx.beans.InvalidationListener;
 import javafx.beans.Observable;
@@ -312,7 +313,10 @@ public class TreeTableRow<T> extends TableRow<T> {
         }
     }
 
-
+    /** {@inheritDoc} */
+    @Override protected Skin<?> createDefaultSkin() {
+        return new TreeTableRowSkin(this);
+    }
 
     /***************************************************************************
      *                                                                         *

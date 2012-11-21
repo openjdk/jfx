@@ -25,8 +25,7 @@
 
 package javafx.scene.control;
 
-import com.sun.javafx.logging.PlatformLogger;
-import com.sun.javafx.scene.control.Logging;
+import com.sun.javafx.scene.control.skin.ListCellSkin;
 import javafx.beans.InvalidationListener;
 import javafx.beans.Observable;
 import javafx.beans.WeakInvalidationListener;
@@ -41,8 +40,6 @@ import javafx.collections.ObservableList;
 import javafx.collections.WeakListChangeListener;
 import java.lang.ref.WeakReference;
 import java.util.List;
-import javafx.beans.property.ReadOnlyObjectProperty;
-import javafx.beans.property.ReadOnlyObjectWrapper;
 
 
 /**
@@ -326,6 +323,10 @@ public class ListCell<T> extends IndexedCell<T> {
         updateFocus();
     }
 
+    /** {@inheritDoc} */
+    @Override protected Skin<?> createDefaultSkin() {
+        return new ListCellSkin(this);
+    }
 
 
     /***************************************************************************

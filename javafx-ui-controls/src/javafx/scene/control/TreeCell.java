@@ -32,6 +32,7 @@ import javafx.beans.property.SimpleObjectProperty;
 import javafx.collections.ListChangeListener;
 import javafx.scene.Node;
 import com.sun.javafx.css.StyleManager;
+import com.sun.javafx.scene.control.skin.TreeCellSkin;
 import javafx.collections.WeakListChangeListener;
 import java.lang.ref.WeakReference;
 import javafx.beans.property.ReadOnlyObjectProperty;
@@ -378,7 +379,10 @@ public class TreeCell<T> extends IndexedCell<T> {
         }
     }
 
-
+    /** {@inheritDoc} */
+    @Override protected Skin<?> createDefaultSkin() {
+        return new TreeCellSkin(this);
+    }
 
     /***************************************************************************
      *                                                                         *

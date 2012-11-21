@@ -28,6 +28,7 @@ package javafx.scene.control;
 import com.sun.javafx.css.*;
 import com.sun.javafx.css.converters.BooleanConverter;
 import com.sun.javafx.css.converters.EnumConverter;
+import com.sun.javafx.scene.control.skin.ScrollPaneSkin;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -556,6 +557,11 @@ public class ScrollPane extends Control {
      * track of the scroll bar.
      */
     // public var vblockIncrement:Number = -1;
+
+    /** {@inheritDoc} */
+    @Override protected Skin<?> createDefaultSkin() {
+        return new ScrollPaneSkin(this);
+    }
 
     /***************************************************************************
      *                                                                         *

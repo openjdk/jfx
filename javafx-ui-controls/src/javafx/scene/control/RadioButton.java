@@ -25,11 +25,11 @@
 
 package javafx.scene.control;
 
-import com.sun.javafx.css.StyleableProperty;
 import javafx.geometry.Pos;
-import com.sun.javafx.scene.control.accessible.AccessibleRadioButton;
 import com.sun.javafx.accessible.providers.AccessibleProvider;
-import static javafx.geometry.Pos.CENTER_LEFT;
+import com.sun.javafx.css.StyleableProperty;
+import com.sun.javafx.scene.control.accessible.AccessibleRadioButton;
+import com.sun.javafx.scene.control.skin.RadioButtonSkin;
 
 /**
  * <p>RadioButtons create a series of items where only one item can be
@@ -109,6 +109,12 @@ import static javafx.geometry.Pos.CENTER_LEFT;
             super.fire();
         }
     }
+
+    /** {@inheritDoc} */
+    @Override protected Skin<?> createDefaultSkin() {
+        return new RadioButtonSkin(this);
+    }
+
 
     /***************************************************************************
      *                                                                         *

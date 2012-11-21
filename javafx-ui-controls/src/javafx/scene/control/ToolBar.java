@@ -41,6 +41,7 @@ import com.sun.javafx.css.StyleManager;
 import com.sun.javafx.css.StyleableObjectProperty;
 import com.sun.javafx.css.StyleableProperty;
 import com.sun.javafx.css.converters.EnumConverter;
+import com.sun.javafx.scene.control.skin.ToolBarSkin;
 
 /**
  * <p>
@@ -167,6 +168,17 @@ public class ToolBar extends Control {
             };
         }
         return orientation;
+    }
+
+    /***************************************************************************
+     *                                                                         *
+     * Methods                                                                 *
+     *                                                                         *
+     **************************************************************************/
+
+    /** {@inheritDoc} */
+    @Override protected Skin<?> createDefaultSkin() {
+        return new ToolBarSkin(this);
     }
 
     /***************************************************************************

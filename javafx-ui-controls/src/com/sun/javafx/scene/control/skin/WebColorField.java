@@ -3,6 +3,7 @@ package com.sun.javafx.scene.control.skin;
 import com.sun.javafx.scene.control.skin.InputField;
 import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.SimpleObjectProperty;
+import javafx.scene.control.Skin;
 import javafx.scene.paint.Color;
 
 /**
@@ -23,5 +24,16 @@ class WebColorField extends InputField {
      */
     public WebColorField() {
         getStyleClass().setAll("webcolor-field");
+    }
+
+    /***************************************************************************
+     *                                                                         *
+     * Methods                                                                 *
+     *                                                                         *
+     **************************************************************************/
+
+    /** {@inheritDoc} */
+    @Override protected Skin<?> createDefaultSkin() {
+        return new WebColorFieldSkin(this);
     }
 }

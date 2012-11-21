@@ -45,6 +45,7 @@ import java.util.List;
 import com.sun.javafx.binding.ExpressionHelper;
 import com.sun.javafx.collections.ListListenerHelper;
 import com.sun.javafx.collections.NonIterableChange;
+import com.sun.javafx.scene.control.skin.TextAreaSkin;
 
 /**
  * Text input component that allows a user to enter multiple lines of
@@ -554,4 +555,15 @@ public class TextArea extends TextInputControl {
     public final DoubleProperty scrollLeftProperty() { return scrollLeft; }
     public final double getScrollLeft() { return scrollLeft.getValue(); }
     public final void setScrollLeft(double value) { scrollLeft.setValue(value); }
+
+    /***************************************************************************
+     *                                                                         *
+     * Methods                                                                 *
+     *                                                                         *
+     **************************************************************************/
+
+    /** {@inheritDoc} */
+    @Override protected Skin<?> createDefaultSkin() {
+        return new TextAreaSkin(this);
+    }
 }

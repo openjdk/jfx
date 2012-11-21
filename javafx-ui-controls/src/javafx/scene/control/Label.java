@@ -26,6 +26,7 @@
 package javafx.scene.control;
 
 import com.sun.javafx.css.StyleableProperty;
+import com.sun.javafx.scene.control.skin.LabelSkin;
 import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.ObjectPropertyBase;
 import javafx.beans.value.ChangeListener;
@@ -142,10 +143,21 @@ public class Label extends Labeled {
 
     public final void setLabelFor(Node value) { labelForProperty().setValue(value); }
     public final Node getLabelFor() { return labelFor == null ? null : labelFor.getValue(); }
-    
+
     /***************************************************************************
      *                                                                         *
-     * CSS Support                                                              *
+     * Methods                                                                 *
+     *                                                                         *
+     **************************************************************************/
+
+    /** {@inheritDoc} */
+    @Override protected Skin<?> createDefaultSkin() {
+        return new LabelSkin(this);
+    }
+
+    /***************************************************************************
+     *                                                                         *
+     * CSS Support                                                             *
      *                                                                         *
      **************************************************************************/
 

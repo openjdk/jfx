@@ -32,6 +32,7 @@ import javafx.scene.Cursor;
 import javafx.scene.Node;
 import com.sun.javafx.css.StyleManager;
 import com.sun.javafx.css.StyleableProperty;
+import com.sun.javafx.scene.control.skin.HyperlinkSkin;
 
 
 /**
@@ -144,6 +145,12 @@ public class Hyperlink extends ButtonBase {
         }
         fireEvent(new ActionEvent());
     }
+
+    /** {@inheritDoc} */
+    @Override protected Skin<?> createDefaultSkin() {
+        return new HyperlinkSkin(this);
+    }
+
 
     /***************************************************************************
      *                                                                         *

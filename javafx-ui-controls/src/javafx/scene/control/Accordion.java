@@ -36,6 +36,7 @@ import javafx.collections.ObservableList;
 
 import com.sun.javafx.collections.TrackableObservableList;
 import com.sun.javafx.css.StyleableProperty;
+import com.sun.javafx.scene.control.skin.AccordionSkin;
 
 /**
  * <p>An accordion is a group of {@link TitledPane TitlePanes}.  Only one TitledPane can be opened at
@@ -171,6 +172,11 @@ public class Accordion extends Control {
      * @return The list of TitledPane in this Accordion.
      */
     public final ObservableList<TitledPane> getPanes() { return panes; }
+
+    /** {@inheritDoc} */
+    @Override protected Skin<?> createDefaultSkin() {
+        return new AccordionSkin(this);
+    }
 
     /***************************************************************************
      *                                                                         *

@@ -27,6 +27,7 @@ package javafx.scene.control;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.scene.paint.Color;
+import com.sun.javafx.scene.control.skin.ColorPickerSkin;
 
 /**
  * <p>ColorPicker control allows the user to select a color from either a standard 
@@ -104,6 +105,18 @@ public class ColorPicker extends ComboBoxBase<Color> {
     @Override void valueInvalidated() {
         // do nothing - we dont want to fire action event when value changes.
     }
+
+    /***************************************************************************
+     *                                                                         *
+     * Methods                                                                 *
+     *                                                                         *
+     **************************************************************************/
+
+    /** {@inheritDoc} */
+    @Override protected Skin<?> createDefaultSkin() {
+        return new ColorPickerSkin(this);
+    }
+
     /***************************************************************************
      *                                                                         *
      * Stylesheet Handling                                                     *

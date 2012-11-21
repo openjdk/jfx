@@ -4,11 +4,12 @@ import javafx.beans.property.*;
 import javafx.event.ActionEvent;
 import javafx.event.EventHandler;
 import javafx.scene.control.Control;
+import javafx.scene.control.Skin;
 
 /**
  *
  */
-class InputField extends Control {
+abstract class InputField extends Control {
     /**
      * The default value for {@link #prefColumnCount}.
      */
@@ -91,7 +92,7 @@ class InputField extends Control {
         getStyleClass().setAll("input-field");
     }
 
-//    @Override protected String getUserAgentStylesheet() {
+    //    @Override protected String getUserAgentStylesheet() {
 //        return getClass().getResource("InputField.css").toExternalForm();
 //    }
 }

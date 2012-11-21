@@ -33,6 +33,7 @@ import javafx.event.ActionEvent;
 import javafx.geometry.Side;
 import javafx.scene.Node;
 import com.sun.javafx.css.StyleManager;
+import com.sun.javafx.scene.control.skin.MenuButtonSkin;
 import javafx.beans.property.ReadOnlyBooleanProperty;
 import javafx.beans.property.ReadOnlyBooleanWrapper;
 
@@ -231,6 +232,11 @@ public class MenuButton extends ButtonBase {
     @Override
     public void fire() {
         fireEvent(new ActionEvent());
+    }
+
+    /** {@inheritDoc} */
+    @Override protected Skin<?> createDefaultSkin() {
+        return new MenuButtonSkin(this);
     }
 
     /***************************************************************************

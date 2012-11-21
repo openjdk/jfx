@@ -48,6 +48,7 @@ import com.sun.javafx.css.StyleableIntegerProperty;
 import com.sun.javafx.css.StyleableProperty;
 import com.sun.javafx.css.Stylesheet.Origin;
 import com.sun.javafx.css.converters.SizeConverter;
+import com.sun.javafx.scene.control.skin.PaginationSkin;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -314,6 +315,18 @@ public class Pagination extends Control {
      * The default is null if there is no page factory set.
      */
     public final ObjectProperty<Callback<Integer, Node>> pageFactoryProperty() { return pageFactory; }
+
+
+    /***************************************************************************
+     *                                                                         *
+     * Methods                                                                 *
+     *                                                                         *
+     **************************************************************************/
+
+    /** {@inheritDoc} */
+    @Override protected Skin<?> createDefaultSkin() {
+        return new PaginationSkin(this);
+    }
 
     /***************************************************************************
      *                                                                         *

@@ -26,7 +26,9 @@ package com.preview.javafx.scene.control;
 
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
+import javafx.scene.control.Skin;
 import javafx.scene.control.TreeView;
+import com.sun.javafx.scene.control.skin.TreeTableViewSkin;
 
 /**
  *
@@ -52,4 +54,16 @@ public class TreeTableView<S> extends TreeView<S> {
     public final ObservableList<TreeTableColumn<S, ?>> getColumns() {
         return columns;
     }
+
+    /***************************************************************************
+     *                                                                         *
+     * Methods                                                                 *
+     *                                                                         *
+     **************************************************************************/
+
+    /** {@inheritDoc} */
+    @Override protected Skin<?> createDefaultSkin() {
+        return new TreeTableViewSkin(this);
+    }
+
 }

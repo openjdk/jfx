@@ -40,6 +40,7 @@ import com.sun.javafx.css.StyleManager;
 import com.sun.javafx.css.StyleableBooleanProperty;
 import com.sun.javafx.css.StyleableProperty;
 import com.sun.javafx.css.converters.BooleanConverter;
+import com.sun.javafx.scene.control.skin.TitledPaneSkin;
 import javafx.beans.DefaultProperty;
 
 /**
@@ -245,7 +246,16 @@ public class TitledPane extends Labeled {
      */
     public final BooleanProperty collapsibleProperty() { return collapsible; }
 
+    /***************************************************************************
+     *                                                                         *
+     * Methods                                                                 *
+     *                                                                         *
+     **************************************************************************/
 
+    /** {@inheritDoc} */
+    @Override protected Skin<?> createDefaultSkin() {
+        return new TitledPaneSkin(this);
+    }
 
     /***************************************************************************
      *                                                                         *

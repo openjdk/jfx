@@ -26,6 +26,7 @@
 package javafx.scene.control;
 
 import com.sun.javafx.beans.annotations.DuplicateInBuilderProperties;
+import com.sun.javafx.scene.control.skin.PasswordFieldSkin;
 
 /**
  * Text field that masks entered characters.
@@ -35,6 +36,12 @@ public class PasswordField extends TextField {
     public PasswordField() {
         getStyleClass().add("password-field");
     }
+
+    /***************************************************************************
+     *                                                                         *
+     * Methods                                                                 *
+     *                                                                         *
+     **************************************************************************/
 
     /**
      * Does nothing for PasswordField.
@@ -50,5 +57,10 @@ public class PasswordField extends TextField {
     @Override
     public void copy() {
         // No-op
+    }
+
+    /** {@inheritDoc} */
+    @Override protected Skin<?> createDefaultSkin() {
+        return new PasswordFieldSkin(this);
     }
 }

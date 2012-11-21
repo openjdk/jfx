@@ -42,6 +42,7 @@ import javafx.stage.Window;
 
 import com.sun.javafx.Utils;
 import com.sun.javafx.collections.TrackableObservableList;
+import com.sun.javafx.scene.control.skin.ContextMenuSkin;
 import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.SimpleBooleanProperty;
 
@@ -288,6 +289,11 @@ public class ContextMenu extends PopupControl {
         Event.fireEvent(this, new Event(Menu.ON_HIDING));
         super.hide();
         Event.fireEvent(this, new Event(Menu.ON_HIDDEN));
+    }
+
+    /** {@inheritDoc} */
+    @Override protected Skin<?> createDefaultSkin() {
+        return new ContextMenuSkin(this);
     }
 
     /***************************************************************************

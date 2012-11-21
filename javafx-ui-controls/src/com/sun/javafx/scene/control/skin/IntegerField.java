@@ -2,6 +2,7 @@ package com.sun.javafx.scene.control.skin;
 
 import javafx.beans.property.IntegerProperty;
 import javafx.beans.property.SimpleIntegerProperty;
+import javafx.scene.control.Skin;
 
 /**
  *
@@ -29,5 +30,16 @@ class IntegerField extends InputField {
     public IntegerField(int maxVal) {
         getStyleClass().setAll("integer-field");
         setMaxValue(maxVal);
+    }
+
+    /***************************************************************************
+     *                                                                         *
+     * Methods                                                                 *
+     *                                                                         *
+     **************************************************************************/
+
+    /** {@inheritDoc} */
+    @Override protected Skin<?> createDefaultSkin() {
+        return new IntegerFieldSkin(this);
     }
 }

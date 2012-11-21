@@ -224,7 +224,7 @@ public class SliderSkin extends javafx.scene.control.SkinBase<Slider, SliderBeha
         thumbHeight = thumb.prefHeight(-1);
         thumb.resize(thumbWidth, thumbHeight);
         // we are assuming the is common radius's for all corners on the track
-        double trackRadius = track.getBackground().getFills().size() > 0 ?
+        double trackRadius = track.getBackground() == null ? 0 : track.getBackground().getFills().size() > 0 ?
                 track.getBackground().getFills().get(0).getRadii().getTopLeftHorizontalRadius() : 0;
 
         if (getSkinnable().getOrientation() == Orientation.HORIZONTAL) {

@@ -336,6 +336,11 @@ public class ScrollBar extends Control {
         setValue(Utils.clamp(getMin(), getValue() - getUnitIncrement(), getMax()));
     }
 
+    /** {@inheritDoc} */
+    @Override protected Skin<?> createDefaultSkin() {
+        return new ScrollBarSkin(this);
+    }
+
     /***************************************************************************
      *                                                                         *
      * Stylesheet Handling                                                     *

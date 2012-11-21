@@ -26,6 +26,7 @@
 package javafx.scene.control;
 
 import javafx.event.ActionEvent;
+import com.sun.javafx.scene.control.skin.SplitMenuButtonSkin;
 
 /**
  * The SplitMenuButton, like the {@link MenuButton} is closely associated with
@@ -106,6 +107,16 @@ public class SplitMenuButton extends MenuButton {
         fireEvent(new ActionEvent());
     }
 
+    /***************************************************************************
+     *                                                                         *
+     * Methods                                                                 *
+     *                                                                         *
+     **************************************************************************/
+
+    /** {@inheritDoc} */
+    @Override protected Skin<?> createDefaultSkin() {
+        return new SplitMenuButtonSkin(this);
+    }
 
     /***************************************************************************
      *                                                                         *

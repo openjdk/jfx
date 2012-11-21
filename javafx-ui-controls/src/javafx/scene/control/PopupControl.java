@@ -876,6 +876,17 @@ public class PopupControl extends PopupWindow implements Skinnable {
         else bridge.getChildren().clear();
     }
 
+    /**
+     * Create a new instance of the default skin for this control. This is called to create a skin for the control if
+     * no skin is provided via CSS {@code -fx-skin} or set explicitly in a sub-class with {@code  setSkin(...)}.
+     *
+     * @return  new instance of default skin for this control. If null then the control will have no skin unless one
+     *          is provided by css.
+     */
+    protected Skin<?> createDefaultSkin() {
+        return null;
+    }
+
     /***************************************************************************
      *                                                                         *
      *                         StyleSheet Handling                             *
@@ -1236,6 +1247,32 @@ public class PopupControl extends PopupWindow implements Skinnable {
                     errors.add(error); // RT-19884
                 } 
                 Logging.getControlsLogger().severe(msg, e.getCause());
+            }
+        }
+
+        /**
+         * @treatAsPrivate implementation detail
+         * @deprecated This is an internal API that is not intended for use and will be removed in the next version
+         */
+        @Deprecated
+        @Override protected void impl_processCSS(StyleManager styleManager, boolean reapply) {
+            super.impl_processCSS(styleManager, reapply);
+
+            if (getSkin() == null) {
+                // try to create default skin
+                final Skin<?> defaultSkin = createDefaultSkin();
+                if (defaultSkin != null) {
+                    skinProperty().set(defaultSkin);
+                } else {
+                    final String msg = "The -fx-skin property has not been defined in CSS for " + this +
+                            " and createDefaultSkin() returned null.";
+                    final List<CssError> errors = StyleManager.getErrors();
+                    if (errors != null) {
+                        CssError error = new CssError(msg);
+                        errors.add(error); // RT-19884
+                    }
+                    Logging.getControlsLogger().severe(msg);
+                }
             }
         }
         

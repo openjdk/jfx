@@ -27,6 +27,7 @@ package javafx.scene.control;
 
 import com.sun.javafx.css.StyleManager;
 import com.sun.javafx.css.StyleableProperty;
+import com.sun.javafx.scene.control.skin.ProgressIndicatorSkin;
 import javafx.beans.property.DoubleProperty;
 import javafx.beans.property.DoublePropertyBase;
 import javafx.beans.property.ReadOnlyBooleanProperty;
@@ -183,6 +184,10 @@ public class ProgressIndicator extends Control {
      *                                                                         *
      **************************************************************************/
 
+    /** {@inheritDoc} */
+    @Override protected Skin<?> createDefaultSkin() {
+        return new ProgressIndicatorSkin(this);
+    }
 
     /***************************************************************************
      *                                                                         *

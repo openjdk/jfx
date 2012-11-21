@@ -39,6 +39,7 @@ import com.sun.javafx.css.StyleManager;
 import com.sun.javafx.css.StyleableObjectProperty;
 import com.sun.javafx.css.StyleableProperty;
 import com.sun.javafx.css.converters.EnumConverter;
+import com.sun.javafx.scene.control.skin.SeparatorSkin;
 
 /**
  * A horizontal or vertical separator line. The visual appearance of this
@@ -208,6 +209,11 @@ public class Separator extends Control {
             };
         }
         return valignment;
+    }
+
+    /** {@inheritDoc} */
+    @Override protected Skin<?> createDefaultSkin() {
+        return new SeparatorSkin(this);
     }
 
     /***************************************************************************

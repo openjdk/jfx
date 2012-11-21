@@ -146,7 +146,6 @@
  *                                                                             *
  ******************************************************************************/
 .fxvk {
-    -fx-skin: "com.sun.javafx.scene.control.skin.FXVKSkin";
     -fx-cursor: default;
     -fx-background-color: #a1a1a1, #d7d7d7, #c2c2c2;
     -fx-background-insets: 0, 1 0 0 0, 2 0 0 0;

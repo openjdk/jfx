@@ -50,6 +50,7 @@ import com.sun.javafx.css.converters.SizeConverter;
 
 import com.sun.javafx.scene.control.accessible.AccessibleSlider;
 import com.sun.javafx.accessible.providers.AccessibleProvider;
+import com.sun.javafx.scene.control.skin.SliderSkin;
 
 /**
  * The Slider Control is used to display a continuous or discrete range of
@@ -622,6 +623,11 @@ public class Slider extends Control {
         return Utils.clamp(getMin(), v, getMax());
     }
 
+    /** {@inheritDoc} */
+    @Override protected Skin<?> createDefaultSkin() {
+        return new SliderSkin(this);
+    }
+
     /***************************************************************************
      *                                                                         *
      *                         Stylesheet Handling                             *
@@ -800,7 +806,7 @@ public class Slider extends Control {
             VERTICAL_PSEUDOCLASS_STATE : HORIZONTAL_PSEUDOCLASS_STATE;
         return mask;
     }
-    
+
     private AccessibleSlider accSlider ;
     /**
      * @treatAsPrivate implementation detail

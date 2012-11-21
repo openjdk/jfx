@@ -7591,7 +7591,7 @@ public abstract class Node implements EventTarget {
         // apply the CSS immediately and not add it to the scene's queue
         // for deferred action.
         if (getParent() != null && getParent().performingLayout) {
-            impl_processCSS(getScene().styleManager, true);
+            impl_processCSS(true);
         } else if (getScene() != null) {
             notifyParentsOfInvalidatedCSS();
         }

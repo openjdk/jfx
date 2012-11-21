@@ -25,7 +25,6 @@
 
 package javafx.scene.control;
 
-import com.sun.javafx.event.EventDispatchChainImpl;
 import com.sun.javafx.scene.control.FocusableTextField;
 import javafx.collections.WeakListChangeListener;
 import com.sun.javafx.scene.control.skin.ComboBoxListViewSkin;
@@ -37,7 +36,6 @@ import javafx.beans.value.ObservableValue;
 import javafx.beans.value.WeakChangeListener;
 import javafx.collections.FXCollections;
 import javafx.collections.ListChangeListener;
-import javafx.collections.ListChangeListener.Change;
 import javafx.collections.ObservableList;
 import javafx.scene.Node;
 import javafx.util.Callback;
@@ -373,8 +371,17 @@ public class ComboBox<T> extends ComboBoxBase<T> {
         }
         return editor.getReadOnlyProperty(); 
     }
-    
-    
+
+    /***************************************************************************
+     *                                                                         *
+     * Methods                                                                 *
+     *                                                                         *
+     **************************************************************************/
+
+    /** {@inheritDoc} */
+    @Override protected Skin<?> createDefaultSkin() {
+        return new ComboBoxListViewSkin(this);
+    }
     
     /***************************************************************************
      *                                                                         *
@@ -402,9 +409,9 @@ public class ComboBox<T> extends ComboBoxBase<T> {
             }
         }
     };
-    
-    
-    
+
+
+
     /***************************************************************************
      *                                                                         *
      * Private methods                                                         *
