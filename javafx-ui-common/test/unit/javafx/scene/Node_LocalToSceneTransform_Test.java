@@ -348,4 +348,31 @@ public class Node_LocalToSceneTransform_Test {
                 0, 1, 0,  0,
                 0, 0, 1,  0);
     }
+
+    @Test
+    public void shouldNotBeReusedWhenReferenceGivenToUser() {
+
+        final Node n = new Rectangle(20, 20);
+        final Group g = new Group(n);
+
+        g.setTranslateX(200);
+        Transform t1 = n.getLocalToSceneTransform();
+        TransformHelper.assertMatrix(t1,
+                1, 0, 0, 200,
+                0, 1, 0, 0,
+                0, 0, 1, 0);
+
+        g.setTranslateX(300);
+        Transform t2 = n.getLocalToSceneTransform();
+        TransformHelper.assertMatrix(t2,
+                1, 0, 0, 300,
+                0, 1, 0, 0,
+                0, 0, 1, 0);
+
+        assertFalse(t1 == t2);
+        TransformHelper.assertMatrix(t1,
+                1, 0, 0, 200,
+                0, 1, 0, 0,
+                0, 0, 1, 0);
+    }
 }

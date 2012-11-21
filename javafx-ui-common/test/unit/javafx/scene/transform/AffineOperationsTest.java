@@ -183,105 +183,6 @@ public class AffineOperationsTest {
     private int listener2Counter;
     private double memMyx, memTy;
 
-    private static enum State2D {
-        IDENTITY(0),
-        TRANSLATE(1),
-        SCALE(2),
-        SC_TR(3),
-        SHEAR(4),
-        SH_TR(5),
-        SH_SC(6),
-        SH_SC_TR(7);
-
-        private int value;
-
-        private State2D(int value) {
-            this.value = value;
-        }
-
-        public int getValue() {
-            return value;
-        }
-    }
-
-    private static enum State3D {
-        NON_3D(0),
-        TRANSLATE(1),
-        SCALE(2),
-        SC_TR(3),
-        COMPLEX(4);
-
-        private int value;
-
-        private State3D(int value) {
-            this.value = value;
-        }
-
-        public int getValue() {
-            return value;
-        }
-    }
-
-    private State2D getExpectedState2D(Affine a) {
-        if (a.getMxy() == 0.0 && a.getMyx() == 0.0) {
-            if (a.getMxx() == 1.0 && a.getMyy() == 1.0) {
-                if (a.getTx() == 0.0 && a.getTy() == 0.0) {
-                    return State2D.IDENTITY;
-                } else {
-                    return State2D.TRANSLATE;
-                }
-            } else {
-                if (a.getTx() == 0.0 && a.getTy() == 0.0) {
-                    return State2D.SCALE;
-                } else {
-                    return State2D.SC_TR;
-                }
-            }
-        } else {
-            if (a.getMxx() == 0.0 && a.getMyy() == 0.0) {
-                if (a.getTx() == 0.0 && a.getTy() == 0.0) {
-                    return State2D.SHEAR;
-                } else {
-                    return State2D.SH_TR;
-                }
-            } else {
-                if (a.getTx() == 0.0 && a.getTy() == 0.0) {
-                    return State2D.SH_SC;
-                } else {
-                    return State2D.SH_SC_TR;
-                }
-            }
-        }
-    }
-
-    private State3D getExpectedState3D(Affine a) {
-        if (a.getMxz() == 0.0 && a.getMyz() == 0.0 &&
-                a.getMzx() == 0.0 && a.getMzy() == 0.0 &&
-                a.getMzz() == 1.0 && a.getTz() == 0.0) {
-            return State3D.NON_3D;
-        }
-
-        if (a.getMxy() != 0.0 || a.getMxz() != 0.0 ||
-                a.getMyx() != 0.0 || a.getMyz() != 0.0 ||
-                a.getMzx() != 0.0 || a.getMzy() != 0.0) {
-            return State3D.COMPLEX;
-        }
-
-        if ((a.getMxx() != 1.0 || a.getMyy() != 1.0 || a.getMzz() != 1.0) &&
-                (a.getTx() != 0.0 || a.getTy() != 0.0 || a.getTz() != 0.0)) {
-            return State3D.SC_TR;
-        }
-
-        if (a.getMxx() != 1.0 || a.getMyy() != 1.0 || a.getMzz() != 1.0) {
-            return State3D.SCALE;
-        }
-        if (a.getTx() != 0.0 || a.getTy() != 0.0 || a.getTz() != 0.0) {
-            return State3D.TRANSLATE;
-        }
-        return null;
-    }
-
-
     private void assertAffineOk(Transform expected, Affine a) {
         TransformHelper.assertMatrix(a, expected);
         assertStateOk(a);
@@ -293,19 +194,11 @@ public class AffineOperationsTest {
     }
 
     private void assertStateOk(Affine a) {
-        State3D expectedState3D = getExpectedState3D(a);
-        assertEquals(expectedState3D.getValue(), a.getState3d());
-        if (expectedState3D == State3D.NON_3D) {
-            assertEquals(getExpectedState2D(a).getValue(), a.getState2d());
-        }
+        TransformHelper.assertStateOk(a, a.getState3d(), a.getState2d());
     }
 
     private void assertStateOk(String message, Affine a) {
-        State3D expectedState3D = getExpectedState3D(a);
-        assertEquals(message, expectedState3D.getValue(), a.getState3d());
-        if (expectedState3D == State3D.NON_3D) {
-            assertEquals(message, getExpectedState2D(a).getValue(), a.getState2d());
-        }
+        TransformHelper.assertStateOk(message, a, a.getState3d(), a.getState2d());
     }
 
     private void testOperationIsAtomic(Affine a,

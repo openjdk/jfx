@@ -88,8 +88,8 @@ public class TransformOperationsTest {
     private static final Affine affine_3d_translate_only = new Affine(0, 0, 0, 10,
                                                                        0, 0, 0, 20,
                                                                        0, 0, 0, 30);
-    private static final Affine affine_3d_complex = new Affine( 2,  3,  4,  5,
-                                                          6,  7,  8,  9,
+    private static final Affine affine_3d_complex = new Affine( 7,  3,  4,  5,
+                                                          6,  7,  5,  9,
                                                          10, 11, 12, 13);
     private static final Affine affine_3d_complex_noninvertible =
                                                      new Affine( 2,  3,  4,  5,
@@ -172,26 +172,106 @@ public class TransformOperationsTest {
     private static final Rotate rotate3dNoPivot = new Rotate(97.5, new Point3D(66, 77, 88));
     private static final Rotate rotate2dPivot3d = new Rotate(97.5, 125, 126, 127, Rotate.Z_AXIS);
     private static final Rotate noRotate = new Rotate(0, Rotate.Y_AXIS);
-    private static final Transform immutable_arbitrary_nonInvertible =
-            TransformUtils.immutableTransform( 5,  6,  7,  8,
-                                              10, 11, 12, 13,
-                                              15, 16, 17, 18);
-    private static final Transform immutable_arbitrary =
-            TransformUtils.immutableTransform( 5,  6, 13,  8,
-                                              10,  4, 12, 13,
-                                              15, 16, 26, 18);
+    private static final Transform immutable_identity =
+            TransformHelper.immutableTransform(1, 0, 0, 0, 1, 0);
+    private static final Transform immutable_translate_only =
+            TransformHelper.immutableTransform(0, 0, 2, 0, 0, 3);
+    private static final Transform immutable_translate =
+            TransformHelper.immutableTransform(1, 0, 2, 0, 1, 3);
+    private static final Transform immutable_scale =
+            TransformHelper.immutableTransform(4, 0, 0, 0, 5, 0);
+    private static final Transform immutable_sc_tr =
+            TransformHelper.immutableTransform(6, 0, 8, 0, 7, 9);
+    private static final Transform immutable_shear =
+            TransformHelper.immutableTransform( 0, 10, 0, 11,  0, 0);
+    private static final Transform immutable_sh_tr =
+            TransformHelper.immutableTransform( 0, 12, 14, 13,  0, 15);
+    private static final Transform immutable_sh_sc_simple =
+            TransformHelper.immutableTransform( 1, 18, 0, 19,  1, 0);
+    private static final Transform immutable_sh_sc =
+            TransformHelper.immutableTransform(16, 18, 0, 19, 17, 0);
+    private static final Transform immutable_sh_sc_tr =
+            TransformHelper.immutableTransform(20, 21, 22, 23, 24, 25);
+    private static final Transform immutable_3d_tr =
+            TransformUtils.immutableTransform(1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 30);
+    private static final Transform immutable_3d_sc =
+            TransformUtils.immutableTransform(1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 3, 0);
+    private static final Transform immutable_3d_sc_tr =
+            TransformUtils.immutableTransform(1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 3, 30);
+    private static final Transform immutable_3d_sc2_tr3 =
+            TransformUtils.immutableTransform(1, 0, 0, 0, 0, 3, 0, 0, 0, 0, 1, 30);
+    private static final Transform immutable_3d_sc3_tr2 =
+            TransformUtils.immutableTransform(1, 0, 0, 25, 0, 1, 0, 0, 0, 0, 3, 0);
+    private static final Transform immutable_3d_withShear =
+            TransformUtils.immutableTransform(1, 5, 0, 0, 0, 1, 0, 0, 0, 0, 3, 30);
+    private static final Transform immutable_3d_only3d =
+            TransformUtils.immutableTransform(1, 0, 20, 0, 0, 1, 30, 0, 11, 12, 13, 0);
+    private static final Transform immutable_3d_translate_only =
+            TransformUtils.immutableTransform(0, 0, 0, 10, 0, 0, 0, 20, 0, 0, 0, 30);
+    private static final Transform immutable_3d_complex =
+            TransformUtils.immutableTransform(7, 3, 4, 5, 5, 7, 8, 9, 10, 11, 12, 13);
+    private static final Transform immutable_3d_complex_noninvertible =
+            TransformUtils.immutableTransform(2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13);
     private static final Transform immutable_empty =
-            TransformUtils.immutableTransform(0, 0, 0, 0,
-                                              0, 0, 0, 0,
-                                              0, 0, 0, 0);
+            TransformUtils.immutableTransform(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
     private static final Transform immutable_emptyZ =
-            TransformUtils.immutableTransform(1, 0, 0, 0,
-                                              0, 1, 0, 0,
-                                              0, 0, 0, 0);
+            TransformUtils.immutableTransform(1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0);
     private static final Transform immutable_emptyXY =
-            TransformUtils.immutableTransform(0, 0, 0, 0,
-                                              0, 0, 0, 0,
-                                              0, 0, 1, 0);
+            TransformUtils.immutableTransform(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0);
+    private static final Transform immutable_nonInv_translate_x =
+            TransformHelper.immutableTransform(0, 0, 2, 0, 0, 0);
+    private static final Transform immutable_nonInv_translate_y =
+            TransformHelper.immutableTransform(0, 0, 0, 0, 0, 4);
+    private static final Transform immutable_nonInv_translate_z =
+            TransformUtils.immutableTransform(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 4);
+    private static final Transform immutable_nonInv_scale_x =
+            TransformHelper.immutableTransform(2, 0, 0, 0, 0, 0);
+    private static final Transform immutable_nonInv_scale_y =
+            TransformHelper.immutableTransform(0, 0, 0, 0, 2, 0);
+    private static final Transform immutable_nonInv_scale_xy =
+            TransformUtils.immutableTransform(2, 0, 0, 0, 0, 2, 0, 0, 0, 0, 0, 0);
+    private static final Transform immutable_nonInv_scale_z =
+            TransformUtils.immutableTransform(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 4, 0);
+    private static final Transform immutable_nonInv_shear_x =
+            TransformHelper.immutableTransform(0, 3, 0, 0, 0, 0);
+    private static final Transform immutable_nonInv_shear_y =
+            TransformHelper.immutableTransform(0, 0, 0, 3, 0, 0);
+    private static final Transform immutable_nonInv_sh_tr_x =
+            TransformHelper.immutableTransform(0, 3, 4, 0, 0, 0);
+    private static final Transform immutable_nonInv_sh_tr_y =
+            TransformHelper.immutableTransform(0, 0, 0, 3, 0, 4);
+    private static final Transform immutable_nonInv_sh_sc_tr =
+            TransformHelper.immutableTransform(0, 0, 0, 2, 3, 4);
+    private static final Transform immutable_nonInv_sh_sc =
+            TransformHelper.immutableTransform(0, 0, 0, 2, 3, 0);
+    private static final Transform immutable_nonInv_sh_tr =
+            TransformHelper.immutableTransform(0, 0, 0, 2, 0, 5);
+    private static final Transform immutable_nonInv_sc_tr =
+            TransformHelper.immutableTransform(0, 0, 0, 0, 6, 5);
+    private static final Transform immutable_nonInv_sc_tr_x =
+            TransformHelper.immutableTransform(2, 0, 4, 0, 0, 0);
+    private static final Transform immutable_nonInv_sc_tr_y =
+            TransformHelper.immutableTransform(0, 0, 0, 0, 2, 7);
+    private static final Transform raw_arbitrary_nonInvertible =
+            TransformHelper.rawTransform( 5,  6,  7,  8,
+                                         10, 11, 12, 13,
+                                         15, 16, 17, 18);
+    private static final Transform raw_arbitrary =
+            TransformHelper.rawTransform( 5,  6, 13,  8,
+                                         10,  4, 12, 13,
+                                         15, 16, 26, 18);
+    private static final Transform raw_empty =
+            TransformHelper.rawTransform(0, 0, 0, 0,
+                                         0, 0, 0, 0,
+                                         0, 0, 0, 0);
+    private static final Transform raw_emptyZ =
+            TransformHelper.rawTransform(1, 0, 0, 0,
+                                         0, 1, 0, 0,
+                                         0, 0, 0, 0);
+    private static final Transform raw_emptyXY =
+            TransformHelper.rawTransform(0, 0, 0, 0,
+                                         0, 0, 0, 0,
+                                         0, 0, 1, 0);
 
     private boolean listenerCalled;
     private int eventCounter;
@@ -271,11 +351,51 @@ public class TransformOperationsTest {
             { rotate3dNoPivot, false, Rotate.class },           // 68
             { rotate2dPivot3d, true, Rotate.class },            // 69
             { noRotate, true, Rotate.class },                   // 70
-            { immutable_arbitrary, false, Affine.class },       // 71
-            { immutable_arbitrary_nonInvertible, false, null }, // 72
-            { immutable_empty, false, null },                   // 73
-            { immutable_emptyZ, false, null },                  // 74
-            { immutable_emptyXY, true, null },                  // 75
+            { immutable_identity, true, Affine.class },         // 71
+            { immutable_translate, true, Affine.class },        // 72
+            { immutable_translate_only, true, Affine.class },   // 73
+            { immutable_scale, true, Affine.class },            // 74
+            { immutable_sc_tr, true, Affine.class },            // 75
+            { immutable_shear, true, Affine.class },            // 76
+            { immutable_sh_tr, true, Affine.class },            // 77
+            { immutable_sh_sc_simple, true, Affine.class },     // 78
+            { immutable_sh_sc, true, Affine.class },            // 79
+            { immutable_sh_sc_tr, true, Affine.class },         // 80
+            { immutable_3d_tr, false, Affine.class },           // 81
+            { immutable_3d_sc, false, Affine.class },           // 82
+            { immutable_3d_sc_tr, false, Affine.class },        // 83
+            { immutable_3d_sc2_tr3, false, Affine.class },      // 84
+            { immutable_3d_sc3_tr2, false, Affine.class },      // 85
+            { immutable_3d_withShear, false, Affine.class },    // 86
+            { immutable_3d_only3d, false, Affine.class },       // 87
+            { immutable_3d_translate_only, false, null },       // 88
+            { immutable_3d_complex, false, Affine.class },      // 89
+            { immutable_3d_complex_noninvertible, false, null },// 90
+            { immutable_empty, false, null },                   // 91
+            { immutable_emptyZ, false, null },                  // 92
+            { immutable_emptyXY, true, null },                  // 93
+            { immutable_nonInv_translate_x, true, null },       // 94
+            { immutable_nonInv_translate_y, true, null },       // 95
+            { immutable_nonInv_translate_z, false, null },      // 96
+            { immutable_nonInv_scale_x, true, null },           // 97
+            { immutable_nonInv_scale_y, true, null },           // 98
+            { immutable_nonInv_scale_xy, false, null },         // 99
+            { immutable_nonInv_scale_z, false, null },          //100
+            { immutable_nonInv_shear_x, true, null },           //101
+            { immutable_nonInv_shear_y, true, null },           //102
+            { immutable_nonInv_sh_tr_x, true, null },           //103
+            { immutable_nonInv_sh_tr_y, true, null },           //104
+            { immutable_nonInv_sh_sc_tr, true, null },          //105
+            { immutable_nonInv_sh_sc, true, null },             //106
+            { immutable_nonInv_sh_tr, true, null },             //107
+            { immutable_nonInv_sc_tr, true, null },             //108
+            { immutable_nonInv_sc_tr_x, true, null },           //109
+            { immutable_nonInv_sc_tr_y, true, null },           //110
+            { raw_arbitrary, false, Affine.class },             //111
+            { raw_arbitrary_nonInvertible, false, null },       //112
+            { raw_empty, false, null },                         //113
+            { raw_emptyZ, false, null },                        //114
+            { raw_emptyXY, true, null },                        //115
         });
     }
 

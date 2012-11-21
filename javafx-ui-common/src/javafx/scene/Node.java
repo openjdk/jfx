@@ -137,6 +137,8 @@ import com.sun.javafx.scene.transform.TransformUtils;
 import com.sun.javafx.scene.traversal.Direction;
 import com.sun.javafx.sg.PGNode;
 import com.sun.javafx.tk.Toolkit;
+import javafx.scene.transform.Affine;
+import javafx.scene.transform.NonInvertibleTransformException;
 import javafx.geometry.NodeOrientation;
 
 /**
@@ -4531,12 +4533,22 @@ public abstract class Node implements EventTarget {
             if (localToParentTransform == null) {
                 localToParentTransform = new LazyTransformProperty() {
                     @Override
-                    protected Transform computeTransform() {
+                    protected Transform computeTransform(Transform reuse) {
                         updateLocalToParentTransform();
-                        return TransformUtils.immutableTransform(
+                        return TransformUtils.immutableTransform(reuse,
                                 localToParentTx.getMxx(), localToParentTx.getMxy(), localToParentTx.getMxz(), localToParentTx.getMxt(),
                                 localToParentTx.getMyx(), localToParentTx.getMyy(), localToParentTx.getMyz(), localToParentTx.getMyt(),
                                 localToParentTx.getMzx(), localToParentTx.getMzy(), localToParentTx.getMzz(), localToParentTx.getMzt());
+                    }
+
+                    @Override
+                    protected boolean validityKnown() {
+                        return true;
+                    }
+
+                    @Override
+                    protected int computeValidity() {
+                        return valid;
                     }
 
                     @Override
@@ -4571,18 +4583,18 @@ public abstract class Node implements EventTarget {
                     private List localToSceneListeners;
 
                     @Override
-                    protected Transform computeTransform() {
+                    protected Transform computeTransform(Transform reuse) {
                         updateLocalToParentTransform();
 
-                        Transform result = null;
                         Node parentNode = Node.this.getParent();
                         if (parentNode != null) {
-                            result = parentNode.getLocalToSceneTransform();
-                            result = result.createConcatenation(getLocalToParentTransform());
+                            return TransformUtils.immutableTransform(reuse,
+                                    ((LazyTransformProperty) parentNode.localToSceneTransformProperty()).getInternalValue(),
+                                    ((LazyTransformProperty) localToParentTransformProperty()).getInternalValue());
                         } else {
-                            result = getLocalToParentTransform();
+                            return TransformUtils.immutableTransform(reuse,
+                                    ((LazyTransformProperty) localToParentTransformProperty()).getInternalValue());
                         }
-                        return result;
                     }
 
                     @Override
@@ -4596,14 +4608,27 @@ public abstract class Node implements EventTarget {
                     }
 
                     @Override
-                    public Transform get() {
-                        Transform t = super.get();
-                        if (listenerReasons == 0) {
-                            // we don't get invalidation notifications
-                            // so we must expect it to be always invalid
-                            invalidate();
+                    protected boolean validityKnown() {
+                        return listenerReasons > 0;
+                    }
+
+                    @Override
+                    protected int computeValidity() {
+                        Node n = (Node) getBean();
+                        while (n != null) {
+                            int nValid = ((LazyTransformProperty)
+                                    n.localToSceneTransformProperty()).valid;
+
+                            if (nValid == VALID) {
+                                return VALID;
+                            } else if (nValid == INVALID) {
+                                return INVALID;
+                            }
+                            n = n.getParent();
                         }
-                        return t;
+
+                        // Everything up to the root is unknown, so there is no invalid parent
+                        return VALID;
                     }
 
                     @Override
@@ -7732,10 +7757,16 @@ public abstract class Node implements EventTarget {
 
     private static abstract class LazyTransformProperty
             extends ReadOnlyObjectProperty<Transform> {
+
+        protected static final int VALID = 0;
+        protected static final int INVALID = 1;
+        protected static final int VALIDITY_UNKNOWN = 2;
+        protected int valid = INVALID;
+
         private ExpressionHelper<Transform> helper;
-        private boolean valid;
 
         private Transform transform;
+        private boolean canReuse = false;
 
         @Override
         public void addListener(InvalidationListener listener) {
@@ -7757,24 +7788,34 @@ public abstract class Node implements EventTarget {
             helper = ExpressionHelper.removeListener(helper, listener);
         }
 
-        @Override
-        public Transform get() {
-            if (!valid) {
-                transform = computeTransform();
-                valid = true;
+        private Transform getInternalValue() {
+            if (valid == INVALID ||
+                    (valid == VALIDITY_UNKNOWN && computeValidity() == INVALID)) {
+                transform = computeTransform(canReuse ? transform : null);
+                canReuse = true;
+                valid = validityKnown() ? VALID : VALIDITY_UNKNOWN;
             }
 
             return transform;
         }
 
+        @Override
+        public Transform get() {
+            transform = getInternalValue();
+            canReuse = false;
+            return transform;
+        }
+
         public void invalidate() {
-            if (valid) {
-                valid = false;
+            if (valid != INVALID) {
+                valid = INVALID;
                 ExpressionHelper.fireValueChangedEvent(helper);
             }
         }
 
-        protected abstract Transform computeTransform();
+        protected abstract boolean validityKnown();
+        protected abstract int computeValidity();
+        protected abstract Transform computeTransform(Transform reuse);
     }
 
     private static abstract class LazyBoundsProperty

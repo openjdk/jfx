@@ -1236,19 +1236,16 @@ public abstract class Transform implements Cloneable, EventTarget {
      * @since JavaFX 8.0
      */
     public Bounds transform(Bounds bounds) {
-        final Point3D base = new Point3D(
+        final Point3D base = transform(
                 bounds.getMinX(),
                 bounds.getMinY(),
                 bounds.getMinZ());
-        final Point3D size = new Point3D(
+        final Point3D size = deltaTransform(
                 bounds.getWidth(),
                 bounds.getHeight(),
                 bounds.getDepth());
-
-        final Point3D tbase = transform(base);
-        final Point3D tsize = deltaTransform(size);
-        return new BoundingBox(tbase.getX(), tbase.getY(), tbase.getZ(),
-                tsize.getX(), tsize.getY(), tsize.getZ());
+        return new BoundingBox(base.getX(), base.getY(), base.getZ(),
+                size.getX(), size.getY(), size.getZ());
     }
 
     /**
@@ -1536,19 +1533,17 @@ public abstract class Transform implements Cloneable, EventTarget {
      */
     public Bounds inverseTransform(Bounds bounds)
             throws NonInvertibleTransformException {
-        Point3D base = new Point3D(
+
+        Point3D base = inverseTransform(
                 bounds.getMinX(),
                 bounds.getMinY(),
                 bounds.getMinZ());
-        Point3D size = new Point3D(
+        Point3D size = inverseDeltaTransform(
                 bounds.getWidth(),
                 bounds.getHeight(),
                 bounds.getDepth());
-
-        Point3D tbase = inverseTransform(base);
-        Point3D tsize = inverseDeltaTransform(size);
-        return new BoundingBox(tbase.getX(), tbase.getY(), tbase.getZ(),
-                tsize.getX(), tsize.getY(), tsize.getZ());
+        return new BoundingBox(base.getX(), base.getY(), base.getZ(),
+                size.getX(), size.getY(), size.getZ());
     }
 
     /**
