@@ -310,7 +310,7 @@ public class LineChart<X,Y> extends XYChart<X,Y> {
             for (int j=0; j < s.getData().size(); j++) {
                 final Data item = s.getData().get(j);
                 final Node node = item.getNode();
-                if(node!=null) node.getStyleClass().setAll("chart-line-symbol", "series" + i, "data" + j, s.defaultColorStyleClass);
+                if(node!=null) node.getStyleClass().addAll("chart-line-symbol", "series" + i, "data" + j, s.defaultColorStyleClass);
             }
         }
     }
@@ -456,7 +456,7 @@ public class LineChart<X,Y> extends XYChart<X,Y> {
             item.setNode(symbol);
         }
         // set symbol styles
-        if (symbol != null) symbol.getStyleClass().setAll("chart-line-symbol", "series" + seriesIndex,
+        if (symbol != null) symbol.getStyleClass().addAll("chart-line-symbol", "series" + seriesIndex,
                 "data" + itemIndex, series.defaultColorStyleClass);
         return symbol;
     }
