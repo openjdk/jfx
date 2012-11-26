@@ -534,7 +534,8 @@ public abstract class SkinBase<C extends Control, BB extends BehaviorBase<C>> im
      * @deprecated This is an internal API that is not intended for use and will be removed in the next version
      */
     @Deprecated public long impl_getPseudoClassState() {
-        return 0;
+        // check if behaviour can be null...
+        return getBehavior().impl_getPseudoClassState(); 
     }
 
     private static class StyleableProperties {

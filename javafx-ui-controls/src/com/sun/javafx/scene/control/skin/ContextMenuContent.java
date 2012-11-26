@@ -74,6 +74,8 @@ import java.util.Iterator;
 import javafx.geometry.NodeOrientation;
 import javafx.stage.Window;
 
+import com.sun.javafx.scene.control.behavior.TwoLevelFocusPopupBehavior;
+
 /**
  * This is a the SkinBase for PopupMenu based controls so that the CSS parts
  * work right, because otherwise we would have to copy the Keys from there to here.
@@ -107,6 +109,8 @@ public class ContextMenuContent extends Region {
     
     private boolean itemsDirty = true;
     
+    private TwoLevelFocusPopupBehavior tlFocus;
+
     /***************************************************************************
      * Constructors
      **************************************************************************/
@@ -137,6 +141,14 @@ public class ContextMenuContent extends Region {
                 updateItems();
             }
         });
+
+        /*
+        ** only add this if we're on an embedded
+        ** platform that supports 5-button navigation 
+        */
+        if (Utils.isEmbeddedNonTouch()) {
+            tlFocus = new TwoLevelFocusPopupBehavior(this);
+        }
     }
     
     //For access from controls

@@ -95,6 +95,8 @@ public class BehaviorBase<C extends Control> {
         TRAVERSAL_BINDINGS.add(new KeyBinding(TAB, "TraversePrevious").alt().ctrl());
     }
 
+    protected static final List<KeyBinding> EMPTY_BINDINGS = new ArrayList<KeyBinding>();
+
     /**
      * The Control with which this Behavior is used. This must be specified in
      * the constructor and must not be null.
@@ -119,7 +121,9 @@ public class BehaviorBase<C extends Control> {
 
     private final EventHandler<KeyEvent> keyEventListener = new EventHandler<KeyEvent>() {
         @Override public void handle(KeyEvent e) {
-            callActionForEvent(e);
+            if (!e.isConsumed()) {
+                callActionForEvent(e);
+            }
         }
     };
 
@@ -131,7 +135,7 @@ public class BehaviorBase<C extends Control> {
      * @return a non-null list of key bindings.
      */
     protected List<KeyBinding> createKeyBindings() {
-        return TRAVERSAL_BINDINGS;
+        return EMPTY_BINDINGS;
     }
 
     /***************************************************************************
@@ -314,5 +318,13 @@ public class BehaviorBase<C extends Control> {
      * @param e
      */
     public void mouseExited(MouseEvent e) {
+    }
+
+    /**
+     * @treatAsPrivate implementation detail
+     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
+     */
+    @Deprecated public long impl_getPseudoClassState() {
+        return 0;
     }
 }

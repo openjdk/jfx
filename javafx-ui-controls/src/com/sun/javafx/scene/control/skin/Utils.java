@@ -29,6 +29,9 @@
 
 package com.sun.javafx.scene.control.skin;
 
+import java.security.AccessController;
+import java.security.PrivilegedAction;
+
 import static javafx.scene.control.OverrunStyle.*;
 import javafx.collections.ObservableList;
 import javafx.geometry.Bounds;
@@ -842,5 +845,26 @@ public class Utils {
                return height - contentHeight;
         }
        return 0;
+    }
+
+
+    private static final boolean embeddedNonTouch;
+    static {
+        embeddedNonTouch = AccessController.doPrivileged(new PrivilegedAction<Boolean>() {
+            @Override public Boolean run() {
+                return Boolean.getBoolean("com.sun.javafx.isEmbeddedNonTouch");
+            }
+        });
+    }
+
+
+    /*
+    ** Returns true if the platform is an embedded non-touch platform.
+    ** This platform supports 5-button navigation.
+    ** This is a temporary home.
+    **
+    */
+    public static boolean isEmbeddedNonTouch() {
+        return embeddedNonTouch;
     }
 }

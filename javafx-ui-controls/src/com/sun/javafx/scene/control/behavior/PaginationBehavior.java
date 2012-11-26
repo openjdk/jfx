@@ -65,7 +65,6 @@ public class PaginationBehavior extends BehaviorBase<Pagination> {
     static {
         PAGINATION_BINDINGS.add(new KeyBinding(KeyCode.LEFT, LEFT));
         PAGINATION_BINDINGS.add(new KeyBinding(KeyCode.RIGHT, RIGHT));
-        PAGINATION_BINDINGS.addAll(TRAVERSAL_BINDINGS);
     }
 
     @Override protected List<KeyBinding> createKeyBindings() {

@@ -28,6 +28,7 @@ package com.sun.javafx.scene.control.behavior;
 import static javafx.scene.input.KeyCode.CANCEL;
 import static javafx.scene.input.KeyCode.ESCAPE;
 import static javafx.scene.input.KeyCode.SPACE;
+import static javafx.scene.input.KeyCode.ENTER;
 import static javafx.scene.input.KeyEvent.KEY_PRESSED;
 import static javafx.scene.input.KeyEvent.KEY_RELEASED;
 import static javafx.scene.input.KeyCode.DOWN;
@@ -40,6 +41,9 @@ import java.util.logging.Logger;
 import javafx.scene.control.ChoiceBox;
 import javafx.scene.control.SelectionModel;
 import javafx.scene.input.MouseEvent;
+
+import com.sun.javafx.css.StyleManager;
+import com.sun.javafx.scene.control.skin.Utils;
 
 /**
  * ChoiceBoxBehavior - default implementation
@@ -58,11 +62,16 @@ public class ChoiceBoxBehavior<T> extends BehaviorBase<ChoiceBox<T>> {
     static {
         CHOICE_BUTTON_BINDINGS.add(new KeyBinding(SPACE, KEY_PRESSED, "Press"));
         CHOICE_BUTTON_BINDINGS.add(new KeyBinding(SPACE, KEY_RELEASED, "Release"));
+
+        if (Utils.isEmbeddedNonTouch()) {
+            CHOICE_BUTTON_BINDINGS.add(new KeyBinding(ENTER, KEY_PRESSED, "Press"));
+            CHOICE_BUTTON_BINDINGS.add(new KeyBinding(ENTER, KEY_RELEASED, "Release"));
+        }
+
         CHOICE_BUTTON_BINDINGS.add(new KeyBinding(ESCAPE, KEY_RELEASED, "Cancel"));
         CHOICE_BUTTON_BINDINGS.add(new KeyBinding(DOWN, KEY_RELEASED, "Down"));
         CHOICE_BUTTON_BINDINGS.add(new KeyBinding(CANCEL, KEY_RELEASED, "Cancel"));
 
-        CHOICE_BUTTON_BINDINGS.addAll(TRAVERSAL_BINDINGS);
     }
 
     /**************************************************************************
@@ -76,8 +85,17 @@ public class ChoiceBoxBehavior<T> extends BehaviorBase<ChoiceBox<T>> {
         else super.callAction(name);
     }
 
+    private TwoLevelFocusComboBehavior tlFocus;
+
     public ChoiceBoxBehavior(ChoiceBox control) {
         super(control);
+        /*
+        ** only add this if we're on an embedded
+        ** platform that supports 5-button navigation 
+        */
+        if (Utils.isEmbeddedNonTouch()) {
+            tlFocus = new TwoLevelFocusComboBehavior(control); // needs to be last.
+        }
     }
 
     @Override protected List<KeyBinding> createKeyBindings() {
@@ -152,4 +170,22 @@ public class ChoiceBoxBehavior<T> extends BehaviorBase<ChoiceBox<T>> {
         ChoiceBox choiceButton = getControl();
         choiceButton.hide();
     }
+
+    private static final long INTERNAL_PSEUDOCLASS_STATE = StyleManager.getPseudoclassMask("internal-focus");
+    private static final long EXTERNAL_PSEUDOCLASS_STATE = StyleManager.getPseudoclassMask("external-focus");
+
+    /**
+     * @treatAsPrivate implementation detail
+     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
+     */
+    @Deprecated @Override public long impl_getPseudoClassState() {
+        long mask = super.impl_getPseudoClassState();
+        if (tlFocus != null) {
+            mask |= tlFocus.isExternalFocus() ? EXTERNAL_PSEUDOCLASS_STATE : INTERNAL_PSEUDOCLASS_STATE;
+        }
+        return mask;
+    }
+
+
+
 }

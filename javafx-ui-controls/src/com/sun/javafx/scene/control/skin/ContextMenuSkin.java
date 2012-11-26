@@ -34,6 +34,7 @@ import javafx.scene.control.Skin;
 
 import com.sun.javafx.PlatformUtil;
 import javafx.scene.layout.Region;
+import com.sun.javafx.scene.control.behavior.TwoLevelFocusPopupBehavior;
 
 /**
  * Default Skin implementation for PopupMenu. Several controls use PopupMenu in
@@ -51,6 +52,8 @@ public class ContextMenuSkin implements Skin<ContextMenu> {
     private ContextMenu popupMenu;
     
     private final Region root;
+
+    private TwoLevelFocusPopupBehavior tlFocus;
     
     /***/
     public ContextMenuSkin(final ContextMenu popupMenu) {
@@ -74,6 +77,14 @@ public class ContextMenuSkin implements Skin<ContextMenu> {
         root.idProperty().bind(popupMenu.idProperty());
         root.styleProperty().bind(popupMenu.styleProperty());
         root.getStyleClass().addAll(popupMenu.getStyleClass()); // TODO needs to handle updates
+
+        /*
+        ** only add this if we're on an embedded
+        ** platform that supports 5-button navigation 
+        */
+        if (Utils.isEmbeddedNonTouch()) {
+            tlFocus = new TwoLevelFocusPopupBehavior(popupMenu); // needs to be last.
+        }
     }
 
 //            /*

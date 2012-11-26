@@ -25,6 +25,10 @@
 
 package com.sun.javafx.scene.control.behavior;
 
+import static javafx.scene.input.KeyCode.UP;
+import static javafx.scene.input.KeyCode.DOWN;
+import static javafx.scene.input.KeyCode.LEFT;
+import static javafx.scene.input.KeyCode.RIGHT;
 import static javafx.scene.input.KeyCode.CANCEL;
 import static javafx.scene.input.KeyCode.ESCAPE;
 import static javafx.scene.input.KeyEvent.KEY_PRESSED;
@@ -74,7 +78,10 @@ public abstract class MenuButtonBehaviorBase<C extends MenuButton> extends Butto
      */
     protected static final List<KeyBinding> BASE_MENU_BUTTON_BINDINGS = new ArrayList<KeyBinding>();
     static {
-        BASE_MENU_BUTTON_BINDINGS.addAll(TRAVERSAL_BINDINGS);
+        BASE_MENU_BUTTON_BINDINGS.add(new KeyBinding(UP, "TraverseUp"));
+        BASE_MENU_BUTTON_BINDINGS.add(new KeyBinding(DOWN, "TraverseDown"));
+        BASE_MENU_BUTTON_BINDINGS.add(new KeyBinding(LEFT, "TraverseLeft"));
+        BASE_MENU_BUTTON_BINDINGS.add(new KeyBinding(RIGHT, "TraverseRight"));
         BASE_MENU_BUTTON_BINDINGS.add(new KeyBinding(ESCAPE, KEY_PRESSED, CLOSE_ACTION));
         BASE_MENU_BUTTON_BINDINGS.add(new KeyBinding(CANCEL, KEY_PRESSED, CLOSE_ACTION));
     }

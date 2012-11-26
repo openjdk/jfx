@@ -34,6 +34,7 @@ import javafx.geometry.Bounds;
 import javafx.geometry.Point2D;
 import javafx.scene.Node;
 import javafx.scene.Parent;
+import javafx.scene.Scene;
 
 import com.sun.javafx.Logging;
 import com.sun.javafx.logging.PlatformLogger;
@@ -150,6 +151,32 @@ public class TraversalEngine {
         nodes.clear();
 
         return target;
+    }
+
+
+    // get all focusable nodes in tree...
+    protected List<Node> getAllTargetNodes() {
+        final List<Node> targetNodes = new ArrayList<Node>();
+
+        /*
+        ** get top level container
+        */
+        Scene s = root.getScene();
+        
+        addFocusableChildrenToList(targetNodes, s.getRoot());
+        return targetNodes;
+    }
+    private void addFocusableChildrenToList(List<Node> list, Parent parent) {
+        List<Node> parentsNodes = parent.getChildrenUnmodifiable();
+        for (Node n : parentsNodes) {
+            if (n.isFocusTraversable() && !n.isFocused() && n.impl_isTreeVisible() && !n.isDisabled()) {
+                
+                list.add(n);
+            }
+            if (n instanceof Parent) {
+                addFocusableChildrenToList(list, (Parent)n);
+            }
+        }
     }
 
     /**

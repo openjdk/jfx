@@ -62,7 +62,10 @@ public class AccordionBehavior extends BehaviorBase<Accordion> {
 
     protected static final List<KeyBinding> ACCORDION_BINDINGS = new ArrayList<KeyBinding>();
     static {
-        ACCORDION_BINDINGS.addAll(TRAVERSAL_BINDINGS);
+        ACCORDION_BINDINGS.add(new KeyBinding(KeyCode.UP, "TraverseUp"));
+        ACCORDION_BINDINGS.add(new KeyBinding(KeyCode.DOWN, "TraverseDown"));
+        ACCORDION_BINDINGS.add(new KeyBinding(KeyCode.LEFT, "TraverseLeft"));
+        ACCORDION_BINDINGS.add(new KeyBinding(KeyCode.RIGHT, "TraverseRight"));
         ACCORDION_BINDINGS.add(new KeyBinding(KeyCode.HOME, HOME));
         ACCORDION_BINDINGS.add(new KeyBinding(KeyCode.END, END));
         ACCORDION_BINDINGS.add(new KeyBinding(KeyCode.PAGE_UP, PAGE_UP));

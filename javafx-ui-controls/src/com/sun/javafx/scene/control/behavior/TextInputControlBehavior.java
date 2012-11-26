@@ -170,7 +170,10 @@ public abstract class TextInputControlBehavior<T extends TextInputControl> exten
         setCaretAnimating(true);
 
         if (!done) {
-            super.callAction(name);
+            if ("TraverseNext".equals(name)) traverseNext();
+            else if ("TraversePrevious".equals(name)) traversePrevious();
+            else super.callAction(name);
+
         }
         // Note, I don't have to worry about "Consume" here.
     }

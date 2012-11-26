@@ -37,6 +37,7 @@ import javafx.scene.input.KeyCode;
 import javafx.scene.input.MouseEvent;
 
 import com.sun.javafx.scene.control.skin.TabPaneSkin;
+import com.sun.javafx.scene.traversal.Direction;
 import javafx.scene.control.SingleSelectionModel;
 
 public class TabPaneBehavior extends BehaviorBase<TabPane> {
@@ -53,7 +54,13 @@ public class TabPaneBehavior extends BehaviorBase<TabPane> {
 
     protected static final List<KeyBinding> TABPANE_BINDINGS = new ArrayList<KeyBinding>();
     static {
-        TABPANE_BINDINGS.addAll(TRAVERSAL_BINDINGS);
+        TABPANE_BINDINGS.add(new KeyBinding(KeyCode.UP, "TraverseUp"));
+        TABPANE_BINDINGS.add(new KeyBinding(KeyCode.DOWN, "TraverseDown"));
+        TABPANE_BINDINGS.add(new KeyBinding(KeyCode.LEFT, "TraverseLeft"));
+        TABPANE_BINDINGS.add(new KeyBinding(KeyCode.RIGHT, "TraverseRight"));
+        TABPANE_BINDINGS.add(new KeyBinding(KeyCode.TAB, "TraverseNext"));
+        TABPANE_BINDINGS.add(new KeyBinding(KeyCode.TAB, "TraversePrevious").shift());
+
         TABPANE_BINDINGS.add(new KeyBinding(KeyCode.HOME, HOME));
         TABPANE_BINDINGS.add(new KeyBinding(KeyCode.END, END));
         TABPANE_BINDINGS.add(new KeyBinding(KeyCode.PAGE_UP, CTRL_PAGE_UP).ctrl());
@@ -81,9 +88,9 @@ public class TabPaneBehavior extends BehaviorBase<TabPane> {
             TabPane tp = getControl();
             TabPaneSkin tps = (TabPaneSkin)tp.getSkin();
             if (tps.getSelectedTabContentRegion() != null) {
-                tps.getSelectedTabContentRegion().getImpl_traversalEngine().getTopLeftFocusableNode();
                 if (tps.getSelectedTabContentRegion().getImpl_traversalEngine().registeredNodes.isEmpty()) {
 
+                    tps.getSelectedTabContentRegion().getImpl_traversalEngine().getTopLeftFocusableNode();
                     Parent traversableParent = null;
                     traversableParent = getFirstPopulatedInnerTraversalEngine(tps.getSelectedTabContentRegion().getChildren());
                     if (traversableParent != null) {
@@ -103,6 +110,65 @@ public class TabPaneBehavior extends BehaviorBase<TabPane> {
                         super.callAction(name);
                     }
 
+                }
+                else {
+                    /*
+                    ** if we have the focus owner then traverse from it, otherwise
+                    ** request focus in the top-left
+                    */
+                    List<Node> children = tps.getSelectedTabContentRegion().getChildrenUnmodifiable();
+                    Node focusNode = tps.getSelectedTabContentRegion().getScene().getFocusOwner();
+                    
+                    if (focusNode != null && (isChildFocused(focusNode, children) == true)) {
+                        focusNode.impl_traverse(Direction.NEXT);
+                    }
+                    else {
+                        focusFirstChild(children);
+                    }
+                }
+            } else {
+                super.callAction(name);
+            }
+        } else if ("TraversePrevious".equals(name)) {
+            TabPane tp = getControl();
+            TabPaneSkin tps = (TabPaneSkin)tp.getSkin();
+            if (tps.getSelectedTabContentRegion() != null) {
+                if (tps.getSelectedTabContentRegion().getImpl_traversalEngine().registeredNodes.isEmpty()) {
+
+                    tps.getSelectedTabContentRegion().getImpl_traversalEngine().getTopLeftFocusableNode();
+                    Parent traversableParent = null;
+                    traversableParent = getFirstPopulatedInnerTraversalEngine(tps.getSelectedTabContentRegion().getChildren());
+                    if (traversableParent != null) {
+                        boolean nodeFound = false;
+                        for (Node n : traversableParent.getImpl_traversalEngine().registeredNodes) {
+                            if (!n.isFocused() && n.impl_isTreeVisible() && !n.isDisabled()) {
+                                n.requestFocus();
+                                nodeFound = true;
+                                break;
+                            }
+                        }
+                        if (nodeFound == false) {
+                            super.callAction(name);
+                        }
+                    }
+                    else {
+                        super.callAction(name);
+                    }
+                }
+                else {
+                    /*
+                    ** if we have the focus owner then traverse from it, otherwise
+                    ** request focus in the top-left
+                    */
+                    List<Node> children = tps.getSelectedTabContentRegion().getChildrenUnmodifiable();
+                    Node focusNode = tps.getSelectedTabContentRegion().getScene().getFocusOwner();
+
+                    if (focusNode != null && (isChildFocused(focusNode, children) == true)) {
+                        focusNode.impl_traverse(Direction.PREVIOUS);
+                    }
+                    else {
+                        focusLastChild(children);
+                    }
                 }
             } else {
                 super.callAction(name);
@@ -134,6 +200,54 @@ public class TabPaneBehavior extends BehaviorBase<TabPane> {
         } else {
             super.callAction(name);
         }
+    }
+
+    public static boolean isChildFocused(Node focusedNode, List<Node> children) {
+        boolean answer = false;
+        for(int i = 0; i < children.size(); i++) {
+            if (children.get(i) == focusedNode) {
+                answer = true;
+                break;
+            }
+            if (children.get(i) instanceof Parent) {
+                if (isChildFocused(focusedNode, ((Parent)children.get(i)).getChildrenUnmodifiable())) {
+                    return true;
+                }
+            }
+        }
+        return answer;
+    }
+
+    public static boolean focusFirstChild(List<Node> children) {
+        for(int i = 0; i < children.size(); i++) {
+            Node n = children.get(i);
+            if (n.isFocusTraversable() && n.impl_isTreeVisible() && !n.isDisabled()) {
+                n.requestFocus();
+                return true;
+            }
+            else if (n instanceof Parent) {
+                if (focusFirstChild(((Parent)n).getChildrenUnmodifiable())) {
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+
+    public static boolean focusLastChild(List<Node> children) {
+        for(int i = children.size()-1 ; i > -1; i--) {
+            Node n = children.get(i);
+            if (n.isFocusTraversable() && n.impl_isTreeVisible() && !n.isDisabled()) {
+                n.requestFocus();
+                return true;
+            }
+            else if (n instanceof Parent) {
+                if (focusFirstChild(((Parent)n).getChildrenUnmodifiable())) {
+                    return true;
+                }
+            }
+        }
+        return false;
     }
 
 

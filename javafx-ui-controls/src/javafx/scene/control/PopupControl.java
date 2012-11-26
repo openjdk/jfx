@@ -1277,4 +1277,15 @@ public class PopupControl extends PopupWindow implements Skinnable {
         }
         
     }
+
+    /**
+     * The pseudo classes associated with 2-level focus have changed.
+     * @treatAsPrivate implementation detail
+     * @deprecated This is an experimental API that is not intended for general use and is subject to change in future versions
+     */
+    @Deprecated
+    public  void impl_focusPseudoClassChanged() {
+        impl_pseudoClassStateChanged("internal-focus");
+        impl_pseudoClassStateChanged("external-focus");
+    }
 }

@@ -1266,7 +1266,8 @@ public class TabPaneSkin extends SkinBase<TabPane, TabPaneBehavior> {
     class TabContentRegion extends StackPane implements TraverseListener {
 
         private TraversalEngine engine;
-        private Direction direction;
+        private Direction direction = Direction.NEXT;
+        //private Direction direction;
         private Tab tab;
         private InvalidationListener tabListener;
 
