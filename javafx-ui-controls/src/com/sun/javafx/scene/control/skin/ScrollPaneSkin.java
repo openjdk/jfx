@@ -271,6 +271,7 @@ public class ScrollPaneSkin extends SkinBase<ScrollPane, ScrollPaneBehavior> imp
         
         if (scrollNode != null) {
             viewContent.getChildren().add(scrollNode);
+            viewRect.nodeOrientationProperty().bind(scrollNode.nodeOrientationProperty());
         }
 
         getChildren().clear();
@@ -380,6 +381,9 @@ public class ScrollPaneSkin extends SkinBase<ScrollPane, ScrollPaneBehavior> imp
                    */
                    if (hsb.getVisibleAmount() > 0.0 && hsb.getVisibleAmount() < hsb.getMax()) {
                        if (Math.abs(deltaX) > PAN_THRESHOLD) {
+                           if (isReverseNodeOrientation()) {
+                               deltaX = -deltaX;
+                           }
                            double newHVal = (ohvalue + deltaX / (nodeWidth - viewRect.getWidth()) * (hsb.getMax() - hsb.getMin()));
                            if (!PlatformUtil.isEmbedded()) {
                                if (newHVal > hsb.getMax()) {
@@ -894,6 +898,12 @@ public class ScrollPaneSkin extends SkinBase<ScrollPane, ScrollPaneBehavior> imp
         }
     }
 
+    private boolean isReverseNodeOrientation() {
+        return (scrollNode != null &&
+                getSkinnable().getEffectiveNodeOrientation() !=
+                            scrollNode.getEffectiveNodeOrientation());
+    }
+
     private boolean determineHorizontalSBVisible() {
         final double contentw = getSkinnable().getWidth() - getInsets().getLeft() - getInsets().getRight();
         if (PlatformUtil.isEmbedded()) {
@@ -982,7 +992,8 @@ public class ScrollPaneSkin extends SkinBase<ScrollPane, ScrollPaneBehavior> imp
     }
 
     private double updatePosX() {
-        viewContent.setLayoutX(snapPosition(getInsets().getLeft() - posX / (hsb.getMax() - hsb.getMin()) * (nodeWidth - contentWidth)));
+        double x = isReverseNodeOrientation() ? (hsb.getMax() - (posX - hsb.getMin())) : posX;
+        viewContent.setLayoutX(snapPosition(getInsets().getLeft() - x / (hsb.getMax() - hsb.getMin()) * (nodeWidth - contentWidth)));
         getSkinnable().setHvalue(Utils.clamp(getSkinnable().getHmin(), posX, getSkinnable().getHmax()));
         return posX;
     }
