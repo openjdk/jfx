@@ -1263,6 +1263,8 @@ public class PopupControl extends PopupWindow implements Skinnable {
                 final Skin<?> defaultSkin = createDefaultSkin();
                 if (defaultSkin != null) {
                     skinProperty().set(defaultSkin);
+                    // we have to reapply css again so that the newly set skin gets css applied as well.
+                    super.impl_processCSS(styleManager, reapply);
                 } else {
                     final String msg = "The -fx-skin property has not been defined in CSS for " + this +
                             " and createDefaultSkin() returned null.";
