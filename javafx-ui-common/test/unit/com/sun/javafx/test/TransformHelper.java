@@ -42,7 +42,7 @@ import javafx.scene.transform.Translate;
 /**
  * Helper class for transform tests.
  */
-public class TransformHelper {
+public final class TransformHelper {
 
     /**
      * Asserts the {@code matrix} equals to the specified expected values
@@ -456,5 +456,236 @@ public class TransformHelper {
         }
 
         return true;
+    }
+
+    private static enum State2D {
+        IDENTITY(0),
+        TRANSLATE(1),
+        SCALE(2),
+        SC_TR(3),
+        SHEAR(4),
+        SH_TR(5),
+        SH_SC(6),
+        SH_SC_TR(7);
+
+        private int value;
+
+        private State2D(int value) {
+            this.value = value;
+        }
+
+        public int getValue() {
+            return value;
+        }
+    }
+
+    private static enum State3D {
+        NON_3D(0),
+        TRANSLATE(1),
+        SCALE(2),
+        SC_TR(3),
+        COMPLEX(4);
+
+        private int value;
+
+        private State3D(int value) {
+            this.value = value;
+        }
+
+        public int getValue() {
+            return value;
+        }
+    }
+
+    private static State2D getExpectedState2D(Transform t) {
+        if (t.getMxy() == 0.0 && t.getMyx() == 0.0) {
+            if (t.getMxx() == 1.0 && t.getMyy() == 1.0) {
+                if (t.getTx() == 0.0 && t.getTy() == 0.0) {
+                    return State2D.IDENTITY;
+                } else {
+                    return State2D.TRANSLATE;
+                }
+            } else {
+                if (t.getTx() == 0.0 && t.getTy() == 0.0) {
+                    return State2D.SCALE;
+                } else {
+                    return State2D.SC_TR;
+                }
+            }
+        } else {
+            if (t.getMxx() == 0.0 && t.getMyy() == 0.0) {
+                if (t.getTx() == 0.0 && t.getTy() == 0.0) {
+                    return State2D.SHEAR;
+                } else {
+                    return State2D.SH_TR;
+                }
+            } else {
+                if (t.getTx() == 0.0 && t.getTy() == 0.0) {
+                    return State2D.SH_SC;
+                } else {
+                    return State2D.SH_SC_TR;
+                }
+            }
+        }
+    }
+
+    private static State3D getExpectedState3D(Transform t) {
+        if (t.getMxz() == 0.0 && t.getMyz() == 0.0 &&
+                t.getMzx() == 0.0 && t.getMzy() == 0.0 &&
+                t.getMzz() == 1.0 && t.getTz() == 0.0) {
+            return State3D.NON_3D;
+        }
+
+        if (t.getMxy() != 0.0 || t.getMxz() != 0.0 ||
+                t.getMyx() != 0.0 || t.getMyz() != 0.0 ||
+                t.getMzx() != 0.0 || t.getMzy() != 0.0) {
+            return State3D.COMPLEX;
+        }
+
+        if ((t.getMxx() != 1.0 || t.getMyy() != 1.0 || t.getMzz() != 1.0) &&
+                (t.getTx() != 0.0 || t.getTy() != 0.0 || t.getTz() != 0.0)) {
+            return State3D.SC_TR;
+        }
+
+        if (t.getMxx() != 1.0 || t.getMyy() != 1.0 || t.getMzz() != 1.0) {
+            return State3D.SCALE;
+        }
+        if (t.getTx() != 0.0 || t.getTy() != 0.0 || t.getTz() != 0.0) {
+            return State3D.TRANSLATE;
+        }
+        return null;
+    }
+
+    public static void assertStateOk(Transform t, int state3d, int state2d) {
+        TransformHelper.State3D expectedState3D = TransformHelper.getExpectedState3D(t);
+        assertEquals(expectedState3D.getValue(), state3d);
+        if (expectedState3D == TransformHelper.State3D.NON_3D) {
+            assertEquals(TransformHelper.getExpectedState2D(t).getValue(), state2d);
+        }
+    }
+
+    public static void assertStateOk(String message, Transform t, int state3d, int state2d) {
+        TransformHelper.State3D expectedState3D = TransformHelper.getExpectedState3D(t);
+        assertEquals(message, expectedState3D.getValue(), state3d);
+        if (expectedState3D == TransformHelper.State3D.NON_3D) {
+            assertEquals(message, TransformHelper.getExpectedState2D(t).getValue(), state2d);
+        }
+    }
+
+    /**
+     * Convenient factory for 2D immutable transforms.
+     */
+    public static Transform immutableTransform(
+            double mxx, double mxy, double tx,
+            double myx, double myy, double ty) {
+        return TransformUtils.immutableTransform(
+                mxx, mxy, 0.0, tx,
+                myx, myy, 0.0, ty,
+                0.0, 0.0, 1.0, 0.0);
+    }
+
+    /**
+     * Creates a raw transformation to test the Transform class.
+     */
+    public static Transform rawTransform(
+                double mxx, double mxy, double mxz, double tx,
+                double myx, double myy, double myz, double ty,
+                double mzx, double mzy, double mzz, double tz) {
+        return new RawTransform(
+                mxx, mxy, mxz, tx,
+                myx, myy, myz, ty,
+                mzx, mzy, mzz, tz);
+    }
+
+    private static class RawTransform extends Transform {
+        private final double mxx, mxy, mxz, tx;
+        private final double myx, myy, myz, ty;
+        private final double mzx, mzy, mzz, tz;
+
+        public RawTransform(
+                double mxx, double mxy, double mxz, double tx,
+                double myx, double myy, double myz, double ty,
+                double mzx, double mzy, double mzz, double tz) {
+            this.mxx = mxx;
+            this.mxy = mxy;
+            this.mxz = mxz;
+            this.tx = tx;
+            this.myx = myx;
+            this.myy = myy;
+            this.myz = myz;
+            this.ty = ty;
+            this.mzx = mzx;
+            this.mzy = mzy;
+            this.mzz = mzz;
+            this.tz = tz;
+        }
+
+        @Override
+        public double getMxx() {
+            return mxx;
+        }
+
+        @Override
+        public double getMxy() {
+            return mxy;
+        }
+
+        @Override
+        public double getMxz() {
+            return mxz;
+        }
+
+        @Override
+        public double getTx() {
+            return tx;
+        }
+
+        @Override
+        public double getMyx() {
+            return myx;
+        }
+
+        @Override
+        public double getMyy() {
+            return myy;
+        }
+
+        @Override
+        public double getMyz() {
+            return myz;
+        }
+
+        @Override
+        public double getTy() {
+            return ty;
+        }
+
+        @Override
+        public double getMzx() {
+            return mzx;
+        }
+
+        @Override
+        public double getMzy() {
+            return mzy;
+        }
+
+        @Override
+        public double getMzz() {
+            return mzz;
+        }
+
+        @Override
+        public double getTz() {
+            return tz;
+        }
+
+        @Override
+        public void impl_apply(Affine3D t) {
+            t.concatenate(
+                    getMxx(), getMxy(), getMxz(), getTx(),
+                    getMyx(), getMyy(), getMyz(), getTy(),
+                    getMzx(), getMzy(), getMzz(), getTz());
+        }
     }
 }

@@ -205,26 +205,14 @@ public abstract class Transition extends Animation {
         }
     }
 
-    /**
-     * @treatAsPrivate implementation detail
-     * @deprecated This is an internal API that is not intended for use and will
-     *             be removed in the next version
-     */
-    @Deprecated
     @Override
-    public void impl_playTo(long currentTicks, long cycleTicks) {
+    void impl_playTo(long currentTicks, long cycleTicks) {
         impl_setCurrentTicks(currentTicks);
         interpolate(calculateFraction(currentTicks, cycleTicks));
     }
 
-    /**
-     * @treatAsPrivate implementation detail
-     * @deprecated This is an internal API that is not intended for use and will
-     *             be removed in the next version
-     */
-    @Deprecated
     @Override
-    public void impl_jumpTo(long currentTicks, long cycleTicks) {
+    void impl_jumpTo(long currentTicks, long cycleTicks) {
         if (getStatus() != Status.STOPPED) {
             interpolate(calculateFraction(currentTicks, cycleTicks));
         }

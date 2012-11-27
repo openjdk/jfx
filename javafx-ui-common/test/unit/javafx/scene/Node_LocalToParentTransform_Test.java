@@ -25,6 +25,7 @@
 package javafx.scene;
 
 import com.sun.javafx.test.TransformHelper;
+import javafx.scene.transform.Transform;
 import javafx.scene.transform.Translate;
 import javafx.scene.shape.Rectangle;
 import javafx.beans.Observable;
@@ -103,5 +104,30 @@ public class Node_LocalToParentTransform_Test {
         notified = false;
         n.setTranslateY(20);
         assertTrue(notified);
+    }
+
+    @Test
+    public void shouldNotBeReusedWhenReferenceGivenToUser() {
+        final Node n = new Rectangle(20, 20);
+
+        n.setTranslateX(200);
+        Transform t1 = n.getLocalToParentTransform();
+        TransformHelper.assertMatrix(t1,
+                1, 0, 0, 200,
+                0, 1, 0, 0,
+                0, 0, 1, 0);
+
+        n.setTranslateX(300);
+        Transform t2 = n.getLocalToParentTransform();
+        TransformHelper.assertMatrix(t2,
+                1, 0, 0, 300,
+                0, 1, 0, 0,
+                0, 0, 1, 0);
+
+        assertFalse(t1 == t2);
+        TransformHelper.assertMatrix(t1,
+                1, 0, 0, 200,
+                0, 1, 0, 0,
+                0, 0, 1, 0);
     }
 }

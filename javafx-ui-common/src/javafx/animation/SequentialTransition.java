@@ -399,12 +399,7 @@ public final class SequentialTransition extends Transition {
         return false;
     }
 
-    /**
-     * @treatAsPrivate implementation detail
-     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
-     */
-    @Deprecated
-    @Override public void impl_playTo(long currentTicks, long cycleTicks) {
+    @Override void impl_playTo(long currentTicks, long cycleTicks) {
         impl_setCurrentTicks(currentTicks);
         final double frac = calculateFraction(currentTicks, cycleTicks);
         final long newTicks = Math.max(0, Math.min(getCachedInterpolator().interpolate(0, cycleTicks, frac), cycleTicks));
@@ -590,12 +585,7 @@ public final class SequentialTransition extends Transition {
         oldTicks = newTicks;
     }
 
-    /**
-     * @treatAsPrivate implementation detail
-     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
-     */
-    @Deprecated
-    @Override public void impl_jumpTo(long currentTicks, long cycleTicks) {
+    @Override void impl_jumpTo(long currentTicks, long cycleTicks) {
         impl_sync(false);
         final Status status = getStatus();
         final double frac = calculateFraction(currentTicks, cycleTicks);

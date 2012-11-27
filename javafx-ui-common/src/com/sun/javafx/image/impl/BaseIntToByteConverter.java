@@ -92,6 +92,8 @@ public abstract class BaseIntToByteConverter
             h = 1;
         }
         if (srcbuf.hasArray() && dstbuf.hasArray()) {
+            srcoff += srcbuf.arrayOffset();
+            dstoff += dstbuf.arrayOffset();
             doConvert(srcbuf.array(), srcoff, srcscanints,
                       dstbuf.array(), dstoff, dstscanbytes,
                       w, h);
@@ -115,7 +117,9 @@ public abstract class BaseIntToByteConverter
             h = 1;
         }
         if (srcbuf.hasArray()) {
-            doConvert(srcbuf.array(), srcoff, srcscanints,
+            int srcarr[] = srcbuf.array();
+            srcoff += srcbuf.arrayOffset();
+            doConvert(srcarr, srcoff, srcscanints,
                       dstarr, dstoff, dstscanbytes,
                       w, h);
         } else {
@@ -139,8 +143,10 @@ public abstract class BaseIntToByteConverter
             h = 1;
         }
         if (dstbuf.hasArray()) {
+            byte dstarr[] = dstbuf.array();
+            dstoff += dstbuf.arrayOffset();
             doConvert(srcarr, srcoff, srcscanints,
-                      dstbuf.array(), dstoff, dstscanbytes,
+                      dstarr, dstoff, dstscanbytes,
                       w, h);
         } else {
             IntBuffer srcbuf = IntBuffer.wrap(srcarr);
