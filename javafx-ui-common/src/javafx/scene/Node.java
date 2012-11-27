@@ -26,6 +26,8 @@
 package javafx.scene;
 
 
+import java.security.AccessController;
+import java.security.PrivilegedAction;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
@@ -55,6 +57,7 @@ import javafx.beans.value.ChangeListener;
 import javafx.beans.value.WritableValue;
 import javafx.collections.FXCollections;
 import javafx.collections.ListChangeListener.Change;
+import javafx.collections.MapChangeListener;
 import javafx.collections.ObservableList;
 import javafx.collections.ObservableMap;
 import javafx.event.Event;
@@ -586,6 +589,17 @@ public abstract class Node implements EventTarget {
      public final ObservableMap<Object, Object> getProperties() {
         if (properties == null) {
             properties = FXCollections.observableMap(new HashMap<Object, Object>());
+            if (PSEUDO_CLASS_OVERRIDE_ENABLED) {
+                // listen for when the user sets the PSEUDO_CLASS_OVERRIDE_KEY to new value
+                properties.addListener(new MapChangeListener<Object,Object>(){
+                    @Override public void onChanged(Change<? extends Object, ? extends Object> change) {
+                        if (PSEUDO_CLASS_OVERRIDE_KEY.equals(change.getKey()) && getScene() != null && cssFlag != CSSFlags.REAPPLY) {
+                            cssFlag = CSSFlags.UPDATE;
+                            notifyParentsOfInvalidatedCSS();
+                        }
+                    }
+                });
+            }
         }
         return properties;
     }
@@ -7602,7 +7616,7 @@ public abstract class Node implements EventTarget {
             case CLEAN:
                 break;
             case DIRTY_BRANCH:     
-                styleHelper.setTransitionState(impl_getPseudoClassState());
+                styleHelper.setTransitionState(getPseudoClassState());
                 Parent me = (Parent)this;
                 // clear the flag first in case the flag is set to something
                 // other than clean by downstream processing.
@@ -7651,7 +7665,7 @@ public abstract class Node implements EventTarget {
         }
         while (parents.isEmpty() == false) {
             parent = parents.pop();
-            parent.impl_getStyleHelper().setTransitionState(parent.impl_getPseudoClassState());
+            parent.impl_getStyleHelper().setTransitionState(((Node)parent).getPseudoClassState());
         }
         
         final boolean flag = (reapply || cssFlag == CSSFlags.REAPPLY);
@@ -7687,7 +7701,7 @@ public abstract class Node implements EventTarget {
         cssFlag = CSSFlags.CLEAN;
 
         // Transition to the new state and apply styles
-        styleHelper.setTransitionState(impl_getPseudoClassState());        
+        styleHelper.setTransitionState(getPseudoClassState());
         styleHelper.transitionToState();
     }
     
@@ -7728,6 +7742,33 @@ public abstract class Node implements EventTarget {
         if(isFocused()) mask |= FOCUSED_PSEUDOCLASS_STATE;
         if(impl_isShowMnemonics()) mask |= SHOW_MNEMONICS_PSEUDOCLASS_STATE;
         return mask;
+    }
+
+    private static final boolean PSEUDO_CLASS_OVERRIDE_ENABLED = AccessController.doPrivileged(
+            new PrivilegedAction<Boolean>() {
+                public Boolean run() {
+                    return Boolean.getBoolean("javafx.pseudoClassOverrideEnabled");
+                }
+            });
+    private static final String PSEUDO_CLASS_OVERRIDE_KEY = "javafx.scene.Node.pseudoClassOverride";
+
+    /**
+     * gets the current pseudo class state of this node, check first to see if it overridden with the
+     * PSEUDO_CLASS_OVERRIDE_KEY node property.
+     */
+    private long getPseudoClassState() {
+        if (PSEUDO_CLASS_OVERRIDE_ENABLED && hasProperties()) {
+            final Object pseudoClassOverride = getProperties().get(PSEUDO_CLASS_OVERRIDE_KEY);
+            if (pseudoClassOverride instanceof String) {
+                final String[] pseudoClasses = ((String)pseudoClassOverride).split("[\\s,]+");
+                long mask = 0;
+                for(String pc: pseudoClasses) {
+                    mask |= StyleManager.getPseudoclassMask(pc);
+                }
+                return mask;
+            }
+        }
+        return impl_getPseudoClassState();
     }
 
     private static abstract class LazyTransformProperty
