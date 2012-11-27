@@ -66,10 +66,12 @@ public class ColorPickerSkin extends ComboBoxPopupControl<Color> {
     BooleanProperty colorLabelVisible = new StyleableBooleanProperty(true) {
         
         @Override public void invalidated() {
-            if (colorLabelVisible.get()) {
-                displayNode.setText(colorValueToWeb(((ColorPicker)getSkinnable()).getValue()));
-            } else {
-                displayNode.setText("");
+            if (displayNode != null) {
+                if (colorLabelVisible.get()) {
+                    displayNode.setText(colorValueToWeb(((ColorPicker)getSkinnable()).getValue()));
+                } else {
+                    displayNode.setText("");
+                }
             }
         }
         
