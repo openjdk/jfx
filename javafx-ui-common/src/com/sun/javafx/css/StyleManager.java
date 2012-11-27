@@ -922,6 +922,11 @@ final public class StyleManager {
         // RT-20643
         CssError.setCurrentScene(scene);
 
+        if (userAgentStylesheets.isEmpty()) {
+            // default UA stylesheet is always index 0
+            // but a default hasn't been set, so leave room for it.
+            userAgentStylesheets.add(null);
+        }
         userAgentStylesheets.add(fname);
         
         Stylesheet ua_stylesheet = loadStylesheet(fname);
@@ -968,15 +973,18 @@ final public class StyleManager {
             
             if (index > 0) {
                 userAgentStylesheets.remove(index);
-                userAgentStylesheets.add(0, fname);
+                userAgentStylesheets.set(0, fname);
             }
             return;
         }
         
         // RT-20643
         CssError.setCurrentScene(scene);
-        
-        userAgentStylesheets.add(0,fname);
+        if (userAgentStylesheets.isEmpty()) {
+            userAgentStylesheets.add(fname);
+        } else {
+            userAgentStylesheets.set(0,fname);
+        }
 
         Stylesheet ua_stylesheet = loadStylesheet(fname);
         StylesheetContainer container = new StylesheetContainer(fname, ua_stylesheet);
@@ -1011,12 +1019,12 @@ final public class StyleManager {
             
             if (index > 0) {
                 userAgentStylesheets.remove(index);
-                userAgentStylesheets.add(0, fname);
+                userAgentStylesheets.set(0, fname);
             }
             return;
         }
         
-        userAgentStylesheets.add(0, fname);
+        userAgentStylesheets.set(0, fname);
         
         StylesheetContainer container = new StylesheetContainer(fname, stylesheet);
         stylesheetContainerMap.put(fname, container);
