@@ -232,8 +232,10 @@ public class Text extends Shape {
             layout = factory.createLayout();
             String string = getTextInternal();
             Object font = getFontInternal();
+            TextAlignment alignment = getTextAlignment();
+            if (alignment == null) alignment = DEFAULT_TEXT_ALIGNMENT;
             layout.setContent(string, font);
-            layout.setAlignment(getTextAlignment().ordinal());
+            layout.setAlignment(alignment.ordinal());
             layout.setWrapWidth((float)getWrappingWidth());
         }
         return layout;
@@ -1008,6 +1010,7 @@ public class Text extends Shape {
 
     private float getYAdjustment(BaseBounds bounds) {
         VPos origin = getTextOrigin();
+        if (origin == null) origin = DEFAULT_TEXT_ORIGIN;
         switch (origin) {
         case TOP: return -bounds.getMinY();
         case BASELINE: return 0;
@@ -1022,6 +1025,7 @@ public class Text extends Shape {
         BaseBounds bounds = getLogicalBounds();
 
         VPos origin = getTextOrigin();
+        if (origin == null) origin = DEFAULT_TEXT_ORIGIN;
         if (getBoundsType() == TextBoundsType.VISUAL) {
             BaseBounds vBounds = getVisualBounds();
             float delta = vBounds.getMinY() - bounds.getMinY();
@@ -1335,7 +1339,9 @@ public class Text extends Shape {
         if (impl_isDirty(DirtyBits.TEXT_ATTRS)) {
             peer.setUnderline(isUnderline());
             peer.setStrikethrough(isStrikethrough());
-            peer.setFontSmoothingType(getFontSmoothingType().ordinal());
+            FontSmoothingType smoothing = getFontSmoothingType();
+            if (smoothing == null) smoothing = FontSmoothingType.GRAY;
+            peer.setFontSmoothingType(smoothing.ordinal());
         }
         if (impl_isDirty(DirtyBits.TEXT_FONT)) {
             peer.setFont(getFontInternal());
@@ -1520,8 +1526,12 @@ public class Text extends Shape {
                     }
                     @Override public void invalidated() {
                         if (!isSpan()) {
+                            TextAlignment alignment = get();
+                            if (alignment == null) {
+                                alignment = DEFAULT_TEXT_ALIGNMENT;
+                            }
                             TextLayout layout = getTextLayout();
-                            layout.setAlignment(get().ordinal());
+                            layout.setAlignment(alignment.ordinal());
                             needsTextLayout();
                         }
                     }
