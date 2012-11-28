@@ -1,0 +1,877 @@
+/*
+    Modena
+    
+    This is the second generation theme for JavaFX after Caspian.
+*/
+
+/*
+ * Copyright (c) 2009, 2011, Oracle and/or its affiliates. All rights reserved. 
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER. 
+ *  
+ * This code is free software; you can redistribute it and/or modify it 
+ * under the terms of the GNU General Public License version 2 only, as 
+ * published by the Free Software Foundation.  Oracle designates this 
+ * particular file as subject to the "Classpath" exception as provided 
+ * by Oracle in the LICENSE file that accompanied this code. 
+ *  
+ * This code is distributed in the hope that it will be useful, but WITHOUT 
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or 
+ * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License 
+ * version 2 for more details (a copy is included in the LICENSE file that 
+ * accompanied this code). 
+ *  
+ * You should have received a copy of the GNU General Public License version 
+ * 2 along with this work; if not, write to the Free Software Foundation, 
+ * Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301 USA. 
+ *  
+ * Please contact Oracle, 500 Oracle Parkway, Redwood Shores, CA 94065 USA 
+ * or visit www.oracle.com if you need additional information or have any 
+ * questions.
+ *                                                                              
+ */
+
+/*******************************************************************************
+ *                                                                             *
+ * CSS Styles for core infrastructure bits.  The .root section provides the   *
+ * overall default font and colors used by the rest of the sections.           *
+ *                                                                             *
+ ******************************************************************************/
+
+.root {
+    /***************************************************************************
+     *                                                                         *
+     * The main color palette from which the rest of the colors are derived.   *
+     *                                                                         *
+     **************************************************************************/
+
+    /* A light grey that is the base color for objects.  Instead of using
+     * -fx-base directly, the sections in this file will typically use -fx-color.
+     */
+    /*-fx-base: #d0d0d0;*/
+    -fx-base: #ececec;
+
+    /* A very light grey used for the background of windows.  See also
+     * -fx-text-background-color, which should be used as the -fx-text-fill
+     * value for text painted on top of backgrounds colored with -fx-background.
+     */
+    -fx-background: derive(-fx-base,26.4%);
+
+    /* Used for the inside of text boxes, password boxes, lists, trees, and
+     * tables.  See also -fx-text-inner-color, which should be used as the
+     * -fx-text-fill value for text painted on top of backgrounds colored
+     * with -fx-control-inner-background.
+     */
+    -fx-control-inner-background: white;
+
+    /* One of these colors will be chosen based upon a ladder calculation
+     * that uses the brightness of a background color.  Instead of using these
+     * colors directly as -fx-text-fill values, the sections in this file should
+     * use a derived color to match the background in use.  See also:
+     *
+     * -fx-text-base-color for text on top of -fx-base, -fx-color, and -fx-body-color
+     * -fx-text-background-color for text on top of -fx-background
+     * -fx-text-inner-color for text on top of -fx-control-inner-color
+     * -fx-selection-bar-text for text on top of -fx-selection-bar
+     */
+    -fx-dark-text-color: black;
+    -fx-mid-text-color: #292929;
+    -fx-light-text-color: white;
+
+    /* A bright blue for highlighting/accenting objects.  For example: selected
+     * text; selected items in menus, lists, trees, and tables; progress bars;
+     * default buttons.
+     */
+    /*-fx-accent: #a3daee;*/
+    -fx-accent: #4fb6d6;
+
+    /* A bright blue for the focus indicator of objects. Typically used as the
+     * first color in -fx-background-color for the "focused" pseudo-class. Also
+     * typically used with insets of -1.4 to provide a glowing effect.
+     */
+    -fx-focus-color: #f25f29;
+    -fx-faint-focus-color: #f25f2933;
+
+    /* The color that is used in styling controls. The default value is based
+     * on -fx-base, but is changed by pseudoclasses to change the base color.
+     * For example, the "hover" pseudoclass will typically set -fx-color to
+     * -fx-hover-base (see below) and the "armed" pseudoclass will typically
+     * set -fx-color to -fx-pressed-base.
+     */
+    -fx-color: -fx-base;
+
+    /* The opacity level to use for the "disabled" pseudoclass.
+     */
+    -fx-disabled-opacity: 0.4;
+
+    /***************************************************************************
+     *                                                                         *
+     * Colors that are derived from the main color palette.                    *
+     *                                                                         *
+     **************************************************************************/
+
+    /* A little lighter than -fx-base and used as the -fx-color for the
+     * "hovered" pseudoclass state.
+     */
+    -fx-hover-base: ladder(
+        -fx-base,
+        derive(-fx-base,20%) 20%,
+        derive(-fx-base,30%) 35%,
+        derive(-fx-base,40%) 50%
+     );
+
+    /* A little darker than -fx-base and used as the -fx-color for the
+     * "armed" pseudoclass state.
+     *
+     * TODO: should this be renamed to -fx-armed-base?
+     */
+    -fx-pressed-base: derive(-fx-base,-6%);
+
+    /* Used to specify the body color for focused objects.  By default, it's
+     * the same as -fx-base (i.e., the body color doesn't change when a control
+     * gets focus).
+     */
+    -fx-focused-base: -fx-base;
+
+    /* The color to use for -fx-text-fill when text is to be painted on top of
+     * a background filled with the -fx-background color.
+     */
+    -fx-text-background-color: ladder(
+        -fx-background,
+        -fx-light-text-color 45%,
+        -fx-dark-text-color  46%,
+        -fx-dark-text-color  59%,
+        -fx-mid-text-color   60%
+     );
+
+    /* The default color for all text.  Sections should change the -fx-text-fill
+     * property if change the background color to something else.  See also:
+     *
+     * -fx-text-base-color for text on top of -fx-base, -fx-color, and -fx-body-color
+     * -fx-text-background-color for text on top of -fx-background
+     * -fx-text-inner-color for text on top of -fx-control-inner-color
+     * -fx-selection-bar-text for text on top of -fx-selection-bar
+     */
+    -fx-text-fill: -fx-text-background-color;
+
+    /* A little darker than -fx-color and used to draw boxes around objects such
+     * as progress bars, scroll bars, scroll panes, trees, tables, and lists.
+     */
+    -fx-box-border: ladder(
+        -fx-color,
+        black 20%,
+        derive(-fx-color,-30%) 30%
+    );
+
+    /* Darker than -fx-background and used to draw boxes around text boxes and
+     * password boxes.
+     */
+    -fx-text-box-border: ladder(
+        -fx-background,
+        black 10%,
+        derive(-fx-background, -15%) 30%
+    );
+
+    /* Typically lighter than -fx-background and used to provide a small
+     * highlight under controls and tick marks for checkboxes and radio buttons.
+     * Often used with an insets of 0 0 -1 0, and is also often the first
+     * color in a -fx-background-color list.  Also is typically replaced by
+     * -fx-focus-color with an insets of -1.4 in the "focused" pseudoclass.
+     */
+/*    -fx-shadow-highlight-color: ladder(
+        -fx-background,
+        transparent 0%,
+        derive(-fx-background,40%)   5%,
+        derive(-fx-background,60%)  70%,
+        derive(-fx-background,100%) 85%,
+        derive(-fx-background,100%) 97%,
+        derive(-fx-background,-10%) 97.5%
+      );*/
+
+    /* A gradient that goes from a little darker than -fx-color on the top to
+     * even more darker than -fx-color on the bottom.  Typically is the second
+     * color in the -fx-background-color list as the small thin border around
+     * a control. It is typically the same size as the control (i.e., insets
+     * are 0).
+     */
+    -fx-outer-border: derive(-fx-color,-20%);
+/*    -fx-outer-border: linear-gradient(
+        to bottom,
+        derive(-fx-color,-9%) 0%, 
+        derive(-fx-color,-33%) 100%
+    );*/
+
+    /* A gradient that goes from a bit lighter than -fx-color on the top to
+     * a little darker at the bottom.  Typically is the third color in the
+     * -fx-background-color list as a thin highlight inside the outer border.
+     * Insets are typically 1.
+     */
+/*    -fx-inner-border: linear-gradient(
+        to bottom,
+        ladder(-fx-color, 
+               derive(-fx-color,80%) 60%, 
+               white 82%) 0%,
+        ladder(-fx-color, 
+               derive(-fx-color,20%) 10%, 
+               derive(-fx-color,-10%) 80%) 100%
+    );*/
+    -fx-inner-border: linear-gradient(to bottom, 
+        derive(-fx-color,75%), 
+        derive(-fx-color,2%));
+
+    -fx-inner-border-horizontal: linear-gradient(
+        to right,
+        ladder(-fx-color, 
+               derive(-fx-color,80%) 60%, 
+               white 82%) 0%,
+        ladder(-fx-color, 
+               derive(-fx-color,20%) 10%, 
+               derive(-fx-color,-10%) 80%) 100%
+    );
+
+    -fx-inner-border-bottomup: linear-gradient(
+        to top,
+        ladder(-fx-color, 
+               derive(-fx-color,80%) 60%, 
+               white 82%) 0%,
+        ladder(-fx-color, 
+               derive(-fx-color,20%) 10%, 
+               derive(-fx-color,-10%) 80%) 100%);
+
+    /* A gradient that goes from a little lighter than -fx-color at the top to
+     * a little darker than -fx-color at the bottom and is used to fill the
+     * body of many controls such as buttons.  Typically is the fourth color
+     * in the -fx-background-color list and represents main body of the control.
+     * Insets are typically 2.
+     */
+/*    -fx-body-color: linear-gradient(
+        to bottom,
+        derive(-fx-color,34%) 0%,
+        derive(-fx-color,-18%) 100%
+    );*/
+    -fx-body-color: linear-gradient(to bottom, derive(-fx-color,10%) ,derive(-fx-color,-6%));
+        
+    -fx-body-color-bottomup:  linear-gradient(
+        to top,
+        derive(-fx-color,34%) 0%,
+        derive(-fx-color,-18%) 100%
+    );
+
+    /* The color to use as -fx-text-fill when painting text on top of
+     * backgrounds filled with -fx-base, -fx-color, and -fx-body-color.
+     */
+    -fx-text-base-color: ladder(
+        -fx-color,
+        -fx-light-text-color 45%,
+        -fx-dark-text-color  46%,
+        -fx-dark-text-color  59%,
+        -fx-mid-text-color   60%
+    );
+
+    /* The color to use as -fx-text-fill when painting text on top of
+     * backgrounds filled with -fx-control-inner-background.
+     */
+    -fx-text-inner-color: ladder(
+        -fx-control-inner-background,
+        -fx-light-text-color 45%,
+        -fx-dark-text-color  46%,
+        -fx-dark-text-color  59%,
+        -fx-mid-text-color   60%
+    );
+
+    /* The color to use for small mark-like objects such as checks on check
+     * boxes, filled in circles in radio buttons, arrows on scroll bars, etc.
+     */
+    -fx-mark-color: ladder(
+        -fx-color,
+        white 30%,
+        derive(-fx-color,-63%) 31%
+    );
+
+    /* The small thin light "shadow" for mark-like objects. Typically used in
+     * conjunction with -fx-mark-color with an insets of 1 0 -1 0.
+     */
+    -fx-mark-highlight-color: ladder(
+        -fx-color,
+        derive(-fx-color,80%) 60%,
+        white 70%
+    );
+
+    /* Background for items in list like things such as menus, lists, trees,
+     * and tables.
+     *
+     * TODO: it seems like this should be based upon -fx-accent and we should
+     * remove the setting -fx-background in all the sections that use
+     * -fx-selection-bar.
+     */
+    -fx-selection-bar: linear-gradient(
+        to bottom,
+        derive(-fx-background,-7%) 0%,
+        derive(-fx-background,-34%) 100%
+    );
+
+    /* The color to use as -fx-text-fill when painting text on top of
+     * backgrounds filled with -fx-selection-bar.
+     *
+     * TODO: it seems like this should be derived from -fx-selection-bar.
+     */
+    -fx-selection-bar-text: ladder(
+        -fx-background,
+        -fx-light-text-color 50%,
+        -fx-mid-text-color   51%
+    );
+
+    /* The default border color for a tab.
+     *
+     * TODO: should this be -fx-box-border or derived from some other color?
+     */
+    -fx-tab-border-color: -fx-box-border;
+
+    /* These are needed for Popup */
+    -fx-background-color: inherit;
+    -fx-background-radius: inherit;
+    -fx-background-insets: inherit;
+    -fx-padding: inherit;
+    
+    /* The color to use in ListView/TreeView/TableView to indicate hover. */
+    -fx-cell-hover-color: #cce3f4;
+    
+    -fx-cell-focus-inner-border: #85b9de;
+    
+    /* The colors to use in Pagination */
+    -fx-page-bullet-border: #acacac;    
+    -fx-page-indicator-hover-border: #accee5;
+    
+
+    /***************************************************************************
+     *                                                                         *
+     * Set the default background color for the scene                          *
+     *                                                                         *
+     **************************************************************************/
+    
+    -fx-background-color: -fx-background;
+}
+
+/* ====   LABEL   =========================================================== */
+
+.label {
+    -fx-text-fill: -fx-text-background-color;
+}
+
+/* ====   BUTTON   ========================================================== */
+
+.button {
+    -fx-background-color: -fx-outer-border, -fx-inner-border, -fx-body-color; 
+    -fx-background-insets: 0, 1, 2;
+    -fx-background-radius: 5, 4, 3;
+    -fx-padding: 0.333333em 1em 0.416667em 1em;
+    -fx-text-fill: -fx-text-base-color;
+}
+.button:hover {
+    -fx-color: -fx-hover-base;
+}
+.button:armed {
+    -fx-color: -fx-pressed-base;
+}
+.button:default {
+    -fx-base: -fx-accent;
+}
+.button:focused {
+    -fx-background-color: -fx-faint-focus-color, -fx-focus-color, -fx-inner-border, -fx-body-color; 
+    -fx-background-insets: -2, -0.3, 1, 2;
+    -fx-background-radius: 7, 6, 4, 3;
+}
+.button:disabled {
+    -fx-opacity: -fx-disabled-opacity;
+}
+.button:show-mnemonics .mnemonic-underline {
+    -fx-stroke: -fx-text-fill;
+} 
+
+/* ====   TOGGLE BUTTON   =================================================== */
+
+.toggle-button {
+    -fx-background-color: -fx-outer-border, -fx-inner-border, -fx-body-color; 
+    -fx-background-insets: 0, 1, 2;
+    -fx-background-radius: 5, 4, 3;
+    -fx-padding: 0.333333em 1em 0.416667em 1em;
+    -fx-text-fill: -fx-text-base-color;
+}
+.toggle-button.left-pill {
+    -fx-background-radius: 5 0 0 5, 4 0 0 4, 3 0 0 3;
+    -fx-background-insets: 0, 1 0 1 1, 2 1 2 2;
+}
+.toggle-button.center-pill {
+    -fx-background-radius: 0;
+    -fx-background-insets: 0, 1 0 1 1, 2 1 2 2;
+}
+.toggle-button.right-pill {
+    -fx-background-radius: 0 5 5 0, 0 4 4 0, 0 3 3 0;
+}
+.toggle-button.left-pill:focused {
+    -fx-background-radius: 7 0 0 7, 6 0 0 6, 4 0 0 4, 3 0 0 3;
+    -fx-background-insets: -2 0 -2 -2, -0.3 0 -0.3 -0.3, 1, 2;
+}
+.toggle-button.center-pill:focused {
+    -fx-background-radius: 0;
+    -fx-background-insets: -2 0 -1 0, -0.3 0 -0.3 0, 1, 2;
+}
+.toggle-button.right-pill:focused {
+    -fx-background-radius: 0 7 7 0, 0 6 6 0, 0 4 4 0, 0 3 3 0;
+    -fx-background-insets: -2 -2 -2 0, -0.3 -0.3 -0.3 0, 1, 2;
+}
+.toggle-button:focused {
+    -fx-background-color: -fx-faint-focus-color, -fx-focus-color, -fx-inner-border, -fx-body-color; 
+    -fx-background-insets: -2, -0.3, 1, 2;
+    -fx-background-radius: 7, 6, 4, 3;
+}
+.toggle-button:hover {
+    -fx-color: -fx-hover-base;
+}
+.toggle-button:armed {
+    -fx-color: -fx-pressed-base;
+}
+.toggle-button:selected {
+/*    -fx-background-color:
+        linear-gradient(to bottom, derive(-fx-color,-90%) 0%, derive(-fx-color,-60%) 100%),
+        linear-gradient(to bottom, derive(-fx-color,-60%) 0%, derive(-fx-color,-35%) 50%, derive(-fx-color,-30%) 98%, derive(-fx-color,-50%) 100%),
+        linear-gradient(to right, rgba(0,0,0,0.3) 0%, rgba(0,0,0,0) 10%, rgba(0,0,0,0) 90%, rgba(0,0,0,0.3) 100%);*/
+/*    -fx-background-color:
+        linear-gradient(to bottom, 5b656f 0%, derive(-fx-color,-60%) 100%),
+        #5b656f,
+        linear-gradient(to bottom, #646e78 0%, #77848d 100%);*/
+    -fx-background-color: 
+        /*-fx-outer-border,*/ 
+        /*linear-gradient(to bottom, derive(-fx-color,75%), derive(-fx-color,2%)),*/ 
+        linear-gradient(to bottom, derive(-fx-color,-65.1%) 0%, derive(-fx-color,-50.2%) 90%, derive(-fx-color,-45.1%) 100%), 
+        linear-gradient(to bottom, derive(-fx-color,-52.8%) 0%, derive(-fx-color,-40.8%) 90%, derive(-fx-color,-35.7%) 100%),
+        linear-gradient(to bottom, derive(-fx-color,-44.3%) 0%, derive(-fx-color,-41.7%) 2% ,derive(-fx-color,-33.6%) 98%, derive(-fx-color,-35.7%) 100%); 
+    -fx-background-insets: 0, 1, 2;
+    /* TODO: -fx-text-fill should be derived */
+    -fx-text-fill: -fx-light-text-color;
+}
+
+.toggle-button:selected:focused {
+/*    -fx-background-color:
+        -fx-focus-color,
+        linear-gradient(to bottom, derive(-fx-color,-90%) 0%, derive(-fx-color,-60%) 100%),
+        linear-gradient(to bottom, derive(-fx-color,-60%) 0%, derive(-fx-color,-35%) 50%, derive(-fx-color,-30%) 98%, derive(-fx-color,-50%) 100%),
+        linear-gradient(to right, rgba(0,0,0,0.3) 0%, rgba(0,0,0,0) 10%, rgba(0,0,0,0) 90%, rgba(0,0,0,0.3) 100%);*/
+    -fx-background-color: 
+        -fx-faint-focus-color, -fx-focus-color, 
+        linear-gradient(to bottom, derive(-fx-color,-52.8%) 0%, derive(-fx-color,-40.8%) 90%, derive(-fx-color,-35.7%) 100%),
+        linear-gradient(to bottom, derive(-fx-color,-44.3%) 0%, derive(-fx-color,-41.7%) 2% ,derive(-fx-color,-33.6%) 98%, derive(-fx-color,-35.7%) 100%); 
+    -fx-background-insets: -2, -0.3, 1, 2;
+    -fx-background-radius: 7, 6, 4, 3;
+    /*-fx-background-insets: -1.4, 0, 1, 1;*/
+}
+.toggle-button:selected .text {
+    -fx-effect: dropshadow(one-pass-box,derive(-fx-color,-90%),1,0,0,1);
+} 
+.toggle-button:disabled {
+    -fx-opacity: -fx-disabled-opacity;
+}
+.toggle-button:show-mnemonics .mnemonic-underline {
+    -fx-stroke: -fx-text-fill;
+} 
+
+/*******************************************************************************
+ *                                                                             *
+ * RadioButton                                                                 *
+ *                                                                             *
+ ******************************************************************************/
+
+.radio-button {
+    -fx-label-padding: 0.0em 0.0em 0.0em 0.416667em; /* 0 0 0 5 */
+    -fx-text-fill: -fx-text-background-color;
+}
+
+.radio-button:focused {
+    -fx-color: -fx-focused-base;
+}
+
+.radio-button .radio  {
+   -fx-background-color: -fx-outer-border, -fx-inner-border, -fx-body-color;
+   -fx-background-insets: 0,  1,  2;
+   -fx-background-radius: 1.0em; /* large value to make sure this remains circular */
+   -fx-padding: 0.333333em; /* 4 -- padding from outside edge to the inner black dot */
+}
+
+.radio-button:focused .radio {
+    -fx-background-color: -fx-faint-focus-color, -fx-focus-color, -fx-inner-border, -fx-body-color; 
+    -fx-background-radius: 1.0em; /* large value to make sure this remains circular */
+    -fx-background-insets: -2, -0.3, 1, 2;
+}
+
+.radio-button:hover .radio {
+    -fx-color: -fx-hover-base;
+}
+.radio-button:armed .radio {
+    -fx-color: -fx-pressed-base;
+}
+
+.radio-button .dot {
+   -fx-background-color: transparent;
+   -fx-background-insets: 0;
+   -fx-background-radius: 1.0em; /* large value to make sure this remains circular */
+   -fx-padding: 0.25em; /* 3 -- radius of the inner black dot when selected */
+}
+
+.radio-button:selected .dot {
+   -fx-background-color: -fx-mark-highlight-color, -fx-mark-color;
+   -fx-background-insets: 0 0 -1 0, 0;
+}
+
+.radio-button:disabled {
+    -fx-opacity: -fx-disabled-opacity;
+}
+
+.radio-button:show-mnemonics .mnemonic-underline {
+    -fx-stroke: -fx-text-fill;
+} 
+
+/*******************************************************************************
+ *                                                                             *
+ * CheckBox                                                                    *
+ *                                                                             *
+ ******************************************************************************/
+
+.check-box {
+    -fx-label-padding: 0.0em 0.0em 0.0em 0.416667em; /* 0 0 0 5 */
+    -fx-text-fill: -fx-text-background-color;
+}
+
+.check-box:focused {
+    -fx-color: -fx-focused-base;
+}
+
+.check-box .box {
+    -fx-background-color: -fx-outer-border, -fx-inner-border, -fx-body-color;
+    -fx-background-insets: 0, 1, 2;
+    -fx-background-radius: 3, 2, 1;
+    /*-fx-padding: 0.25em;  3 -- padding from the outside edge to the mark */
+    -fx-padding: -2 0 3 3;
+}
+
+.check-box:focused .box {
+    -fx-background-color: -fx-faint-focus-color, -fx-focus-color, -fx-inner-border, -fx-body-color; 
+    -fx-background-insets: -2, -0.3, 1, 2;
+    -fx-background-radius: 3.4, 3, 2, 1;
+}
+
+.check-box:hover .box {
+    -fx-color: -fx-hover-base;
+}
+
+.check-box:armed .box {
+    -fx-color: -fx-pressed-base;
+}
+
+.check-box .mark {
+    -fx-background-color: transparent;
+    -fx-background-insets: 1 0 -1 0, 0;
+    /*-fx-padding: 0.333333em;  4 -- this is half the size of the mark */
+    -fx-padding: 8 7 8 7; /* 4 -- this is half the size of the mark */
+    /*-fx-shape: "M0,4H2L3,6L6,0H8L4,8H2Z";*/
+    -fx-shape: "M-0.25,6.083c0.843-0.758,4.583,4.833,5.75,4.833S14.5-1.5,15.917-0.917c1.292,0.532-8.75,17.083-10.5,17.083C3,16.167-1.083,6.833-0.25,6.083z";
+}
+
+.check-box:indeterminate .box {
+    -fx-padding: 7 3 7 3;
+}
+.check-box:indeterminate .mark {
+    -fx-background-color: -fx-mark-highlight-color, -fx-mark-color;
+    -fx-shape: "M0,0H8V2H0Z";
+    -fx-padding: 2 6 1 5;
+    /*-fx-scale-shape: false;*/
+}
+
+.check-box:selected .mark {
+    -fx-background-color: -fx-mark-highlight-color, -fx-mark-color;
+}
+
+.check-box:disabled {
+    -fx-opacity: -fx-disabled-opacity;
+}
+
+.check-box:show-mnemonics .mnemonic-underline {
+    -fx-stroke: -fx-text-fill;
+} 
+
+/* ====   TOOLBAR   ========================================================= */
+
+.tool-bar:vertical {
+    -fx-background: derive(-fx-base,-20%);
+    -fx-background-color:
+        linear-gradient(to right, derive(-fx-base,-30%), derive(-fx-base,-60%)),
+        linear-gradient(to right, derive(-fx-base,65%) 2%, derive(-fx-base,-20%) 95%);
+    -fx-background-insets: 0, 0 1 0 1;
+    -fx-background-radius: 0 ;
+    -fx-padding: 0.833em 0.416667em 0.833em 0.416667em; /* 10 5 10 5 */
+    -fx-spacing: 0.333em; /* 4 */
+    -fx-alignment: TOP_LEFT;
+}
+.tool-bar:horizontal {
+    /*-fx-background: derive(-fx-base,-30%);*/
+    -fx-background-color:
+        linear-gradient(to bottom, derive(-fx-base,75%) 0%, derive(-fx-base,-26.0%) 90%, derive(-fx-base,-7.0%) 93%, -fx-background 100%),
+        linear-gradient(to bottom, derive(-fx-base,46.9%) 2%, derive(-fx-base,-2.1%) 95%);
+    -fx-background-insets: 0 0 0 0, 1 0 4 0;
+    -fx-background-radius: 0, 0 ;
+    -fx-padding: 0.416667em 0.833em 8px 0.833em; /* 5 10 5 10 */
+    -fx-spacing: 0.333em; /* 4 */
+    -fx-alignment: CENTER_LEFT;
+}
+
+/*
+.tool-bar .separator:vertical .line {
+    -fx-border-style: solid;
+    -fx-background-color: null;
+    -fx-border-color:  transparent derive(-fx-base,-35%) transparent transparent;
+}
+
+.tool-bar .separator:horizontal .line {
+    -fx-border-style: solid;
+    -fx-background-color: null;
+    -fx-border-color:  transparent transparent derive(-fx-base,-35%) transparent;
+}
+
+.tool-bar:vertical .separator {
+    -fx-orientation: horizontal;    
+    -fx-padding: 0.0em 0.0835em 0.0em 0.0835em;  0 1 0 1 
+}*/
+
+/*******************************************************************************
+ *                                                                             *
+ * Slider                                                                      *
+ *                                                                             *
+ ******************************************************************************/
+
+.slider .thumb {
+    -fx-background-color:
+        derive(-fx-color,-36%),
+        derive(-fx-color,73%),
+        linear-gradient(to bottom, derive(-fx-color,-19%),derive(-fx-color,61%));
+    -fx-background-insets: 0, 1, 2;
+    -fx-background-radius: 1.0em; /* makes sure this remains circular */
+    -fx-padding: 0.583333em; /* 7 */
+}
+
+.slider:focused .thumb {
+    -fx-color: -fx-focused-base;
+    -fx-background-color:
+        -fx-focus-color,
+        derive(-fx-color,-36%),
+        derive(-fx-color,73%),
+        linear-gradient(to bottom, derive(-fx-color,-19%),derive(-fx-color,61%));
+    -fx-background-insets: -1.4, 0, 1, 2;
+    -fx-background-radius: 1.0em; /* makes sure this remains circular */
+}
+
+.slider .thumb:hover {
+    -fx-color: -fx-hover-base;
+}
+
+.slider .thumb:pressed {
+    -fx-color: -fx-pressed-base;
+}
+
+.slider .track {
+    -fx-background-color:
+        derive(-fx-color,-22%),
+        linear-gradient(to bottom, derive(-fx-color,-15.5%), derive(-fx-color,34%) 30%, derive(-fx-color,68%));
+    -fx-background-insets: 0, 1;
+    -fx-background-radius: 2.5, 1.5;
+    -fx-padding: 0.208333em; /* 2.5 */
+}
+
+.slider:vertical .track {
+    -fx-background-color:
+        derive(-fx-color,-22%),
+        linear-gradient(to right, derive(-fx-color,-15.5%), derive(-fx-color,34%) 30%, derive(-fx-color,68%));
+    -fx-background-insets: 0, 1;
+}
+
+.slider .axis {
+    -fx-tick-mark-stroke: ladder(-fx-background, derive(-fx-background,30%) 40%, derive(-fx-background,-30%) 41%);
+    -fx-tick-label-font: 0.833333em System; 
+    -fx-tick-label-fill: -fx-text-background-color;
+}
+
+.slider:disabled {
+    -fx-opacity: -fx-disabled-opacity;
+}
+
+/*******************************************************************************
+ *                                                                             *
+ * ScrollBar                                                                   *
+ *                                                                             *
+ ******************************************************************************/
+
+.scroll-bar:horizontal {
+    -fx-background-color:
+        -fx-box-border,
+        linear-gradient(to bottom, derive(-fx-color,30%) 5%, derive(-fx-color,-17%) 100%);
+    -fx-background-insets: 0, 1;
+}
+
+.scroll-bar:horizontal:focused {
+    -fx-background-color:
+        -fx-focus-color,
+        -fx-box-border,
+        linear-gradient(to bottom, derive(-fx-color,30%) 5%, derive(-fx-color,-17%) 100%);
+    -fx-background-insets: -1.4, 0, 1;
+}
+
+.scroll-bar:vertical {
+    -fx-background-color:
+        -fx-box-border,
+        linear-gradient(to top, derive(-fx-color,30%) 5%, derive(-fx-color,-17%) 100%);
+    -fx-background-insets: 0, 1;
+}
+
+.scroll-bar:vertical:focused {
+    -fx-background-color:
+        -fx-focus-color,
+        -fx-box-border,
+        linear-gradient(to top, derive(-fx-color,30%) 5%, derive(-fx-color,-17%) 100%);
+    -fx-background-insets: -1.4, 0, 1;
+}
+
+.scroll-bar:horizontal .thumb {
+    -fx-background-color:
+        -fx-box-border,
+        linear-gradient(to bottom, derive(-fx-color,95%), derive(-fx-color,10%)),
+        linear-gradient(to bottom, derive(-fx-color,38%), derive(-fx-color,-16%));
+    -fx-background-insets: 0, 1, 2;
+    -fx-background-radius: 0.5em; /* makes sure this remains circular */
+}
+
+.scroll-bar:vertical .thumb {
+    -fx-background-color:
+        -fx-box-border,
+        linear-gradient(to right, derive(-fx-color,95%), derive(-fx-color,10%)),
+        linear-gradient(to right, derive(-fx-color,38%), derive(-fx-color,-16%));
+    -fx-background-insets: 0, 1, 2;
+    -fx-background-radius: 0.5em; /* makes sure this remains circular */
+}
+
+.scroll-bar:focused .thumb {
+    -fx-color: -fx-focused-base;
+}
+
+.scroll-bar .thumb:hover {
+    -fx-color: -fx-hover-base;
+}
+
+/* Uncomment when RT-10521 is fixed.
+.scroll-bar .thumb:pressed {
+    -fx-color: -fx-pressed-base;
+}
+*/
+
+.scroll-bar:horizontal .track {
+     -fx-background-color:
+        -fx-box-border,
+        linear-gradient(to bottom, derive(-fx-color,-15%), derive(-fx-color,2.2%) 20%, derive(-fx-color,60%));
+    -fx-background-insets:  0, 1;
+    -fx-background-radius: 0.5em; /* makes sure this remains circular */
+}
+
+.scroll-bar:vertical .track {
+     -fx-background-color:
+        -fx-box-border,
+        linear-gradient(to right, derive(-fx-color,-15%), derive(-fx-color,2.2%) 20%, derive(-fx-color,60%));
+    -fx-background-insets:  0, 1;
+    -fx-background-radius: 0.5em; /* makes sure this remains circular */
+}
+
+.scroll-bar .increment-button {
+    -fx-background-color:
+        -fx-box-border,
+        linear-gradient(to bottom, derive(-fx-color,30%) 5%, derive(-fx-color,-17%));
+    -fx-background-insets:  0, 1;
+    -fx-padding: 0.25em; /* 3 */
+}
+
+.scroll-bar .decrement-button {
+    -fx-background-color:
+        -fx-box-border,
+        linear-gradient(to bottom, derive(-fx-color,30%) 5%, derive(-fx-color,-17%));
+    -fx-background-insets:  0, 1;
+    -fx-padding: 0.25em; /* 3 */
+}
+
+.scroll-bar:horizontal .increment-arrow {
+    -fx-background-color: -fx-mark-highlight-color, -fx-mark-color;
+    -fx-background-insets: 1 0 -1 0, 0;
+    -fx-padding: 0.5em 0.333333em 0.0em 0.0em; /* 6 4 0 0 */
+    -fx-shape: "M 4 0 L 0 -3 L 0 3 z";
+}
+
+.scroll-bar:vertical .increment-arrow {
+    -fx-background-color: -fx-mark-highlight-color, -fx-mark-color;
+    -fx-background-insets: 1 0 -1 0, 0;
+    -fx-padding: 0.333333em 0.5em 0.0em 0.0em; /* 4 6 0 0 */
+    -fx-shape: "M -3 0 L 0 4 L 3 0 z";
+}
+
+.scroll-bar:horizontal .decrement-arrow {
+    -fx-background-color: -fx-mark-highlight-color, -fx-mark-color;
+    -fx-background-insets: 1 0 -1 0, 0;
+    -fx-padding: 0.5em 0.333333em 0.0em 0.0em; /* 6 4 0 0 */
+    -fx-shape: "M 0 0 L 4 -3 L 4 3 z";
+}
+
+.scroll-bar:vertical .decrement-arrow {
+    -fx-background-color: -fx-mark-highlight-color, -fx-mark-color;
+    -fx-background-insets: 1 0 -1 0, 0;
+    -fx-padding: 0.333333em 0.5em 0.0em 0.0em; /* 4 6 0 0 */
+    -fx-shape: "M -3 0 L 0 -4 L 3 0 z";
+}
+
+.scroll-bar:disabled {
+    -fx-opacity: -fx-disabled-opacity;
+}
+
+/* The opacity of the parent is applied to the children.  So we make the
+ * opacity 1.0 here to avoid double translucency.
+ */
+/*:disabled > * > .scroll-bar {
+    -fx-opacity: 1.0;
+}*/
+{{{
+/*******************************************************************************
+ *                                                                             *
+ * ScrollPane                                                                  *
+ *                                                                             *
+ ******************************************************************************/
+
+.scroll-pane:focused {
+    -fx-border-color: -fx-focus-color;
+}
+.scroll-pane:disabled {
+    -fx-opacity: -fx-disabled-opacity;
+}
+
+/*******************************************************************************
+ *                                                                             *
+ * Separator                                                                   *
+ *                                                                             *
+ ******************************************************************************/
+
+.separator .line {
+    -fx-border-style: segments(0.166667em, 0.166667em);
+    -fx-border-width: 0.083333em; /* 1 */
+}
+
+.separator:horizontal .line {
+    -fx-background-color: null;
+    -fx-padding: 0.083333em 0.0em 0.0em 0.0em; /* 1 0 0 0 */
+    -fx-border-color: derive(-fx-background,-20%) transparent transparent transparent;
+}
+
+.separator:vertical .line {
+    -fx-background-color: null;
+    -fx-padding: 0.0em 0.083333em 0.0em 0.0em; /* 0 1 0 0 */
+    -fx-border-color:  transparent derive(-fx-background,-20%) transparent transparent;
+}

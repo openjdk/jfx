@@ -1,0 +1,2374 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+*** GENERATED FROM TEMPLATE - DO NOT EDIT ***
+***       EDIT ../build.xml INSTEAD       ***
+-->
+
+<project name="jfx-impl" default="jfx-deployment" basedir=".." xmlns:j2seproject1="http://www.netbeans.org/ns/j2se-project/1" 
+         xmlns:j2seproject3="http://www.netbeans.org/ns/j2se-project/3" xmlns:fx="javafx:com.sun.javafx.tools.ant">
+    <description>JavaFX-specific Ant calls</description>
+
+
+    <!-- Empty placeholders for easier customization in ../build.xml -->
+    
+    <target name="-pre-jfx-jar">
+        <!-- Called right before <fx:jar> task. You can override this target in the ../build.xml file. -->
+    </target>
+
+    <target name="-post-jfx-jar">
+        <!-- Called right after <fx:jar> task. You can override this target in the ../build.xml file. -->
+    </target>
+
+    <target name="-pre-jfx-deploy">
+        <!-- Called right before <fx:deploy> task. You can override this target in the ../build.xml file. -->
+    </target>
+
+    <target name="-post-jfx-deploy">
+        <!-- Called right after <fx:deploy> task. You can override this target in the ../build.xml file. -->
+    </target>
+    
+    
+    <!-- Check system and JDK version -->
+
+    <target name="-check-operating-system">
+        <condition property="running.on.unix">
+            <os family="unix"/>
+        </condition>
+        <condition property="running.on.windows">
+            <os family="windows"/>
+        </condition>
+        <echo message="running.on.unix = ${running.on.unix}" level="verbose"/>
+        <echo message="running.on.windows = ${running.on.windows}" level="verbose"/>
+    </target>
+
+    <target name="-check-platform-home-fxsdk-java" depends="-check-property-javafx.sdk" if="javafx.sdk.defined">
+        <condition property="do.set.platform.home.fxsdk.java">
+            <and>
+                <not><isset property="active.platform.home.java.executable"/></not>
+                <or>
+                    <available file="${javafx.sdk}${file.separator}bin${file.separator}java"/>
+                    <available file="${javafx.sdk}${file.separator}bin${file.separator}java.exe"/>
+                </or>
+            </and>
+        </condition>
+    </target>
+    <target name="-set-platform-home-fxsdk-java" depends="-check-platform-home-fxsdk-java" if="do.set.platform.home.fxsdk.java">
+        <property name="active.platform.home.java.executable" value="${javafx.sdk}${file.separator}bin${file.separator}java"/>
+    </target>
+    <target name="-check-platform-home-java" if="platform.home">
+        <condition property="do.set.platform.home.java">
+            <and>
+                <not><isset property="active.platform.home.java.executable"/></not>
+                <or>
+                    <available file="${platform.home}${file.separator}bin${file.separator}java"/>
+                    <available file="${platform.home}${file.separator}bin${file.separator}java.exe"/>
+                </or>
+            </and>
+        </condition>
+    </target>
+    <target name="-set-platform-home-java" depends="-set-platform-home-fxsdk-java,-check-platform-home-java" if="do.set.platform.home.java">
+        <property name="active.platform.home.java.executable" value="${platform.home}${file.separator}bin${file.separator}java"/>
+    </target>
+    <target name="-check-platform-home-probjdk-java" unless="active.platform.home.java.executable">
+        <condition property="do.set.platform.home.probjdk.java">
+            <and>
+                <not><isset property="active.platform.home.java.executable"/></not>
+                <or>
+                    <available file="${java.home}${file.separator}..${file.separator}bin${file.separator}java"/>
+                    <available file="${java.home}${file.separator}..${file.separator}bin${file.separator}java.exe"/>
+                </or>
+            </and>
+        </condition>
+    </target>
+    <target name="-set-platform-home-probjdk-java" depends="-set-platform-home-java,-check-platform-home-probjdk-java" if="do.set.platform.home.probjdk.java">
+        <property name="active.platform.home.java.executable" value="${java.home}${file.separator}..${file.separator}bin${file.separator}java"/>
+    </target>
+    <target name="-check-platform-home-envjdk-java" unless="active.platform.home.java.executable">
+        <property environment="env"/>
+        <condition property="do.set.platform.home.envjdk.java">
+            <and>
+                <not><isset property="active.platform.home.java.executable"/></not>
+                <or>
+                    <available file="${env.JAVA_HOME}${file.separator}bin${file.separator}java"/>
+                    <available file="${env.JAVA_HOME}${file.separator}bin${file.separator}java.exe"/>
+                </or>
+            </and>
+        </condition>
+    </target>
+    <target name="-set-platform-home-envjdk-java" depends="-set-platform-home-probjdk-java,-check-platform-home-envjdk-java" if="do.set.platform.home.envjdk.java">
+        <property environment="env"/>
+        <property name="active.platform.home.java.executable" value="${env.JAVA_HOME}${file.separator}bin${file.separator}java"/>
+    </target>
+    <target name="-check-platform-home-fxrt-java" depends="-check-property-javafx.runtime" if="javafx.runtime.defined">
+        <condition property="do.set.platform.home.fxrt.java">
+            <and>
+                <not><isset property="active.platform.home.java.executable"/></not>
+                <or>
+                    <available file="${javafx.runtime}${file.separator}bin${file.separator}java"/>
+                    <available file="${javafx.runtime}${file.separator}bin${file.separator}java.exe"/>
+                </or>
+            </and>
+        </condition>
+    </target>
+    <target name="-set-platform-home-fxrt-java" depends="-set-platform-home-envjdk-java,-check-platform-home-fxrt-java" if="do.set.platform.home.fxrt.java">
+        <property name="active.platform.home.java.executable" value="${javafx.runtime}${file.separator}bin${file.separator}java"/>
+        <echo message="Warning: java executable not found in JDK, evaluating java executable in RT instead." level="info"/>
+    </target>
+    <target name="-check-platform-home-jre-java" unless="active.platform.home.java.executable">
+        <condition property="do.set.platform.home.jre.java">
+            <and>
+                <not><isset property="active.platform.home.java.executable"/></not>
+                <or>
+                    <available file="${java.home}${file.separator}bin${file.separator}java"/>
+                    <available file="${java.home}${file.separator}bin${file.separator}java.exe"/>
+                </or>
+            </and>
+        </condition>
+    </target>
+    <target name="-set-platform-home-jre-java" depends="-set-platform-home-fxrt-java,-check-platform-home-jre-java" if="do.set.platform.home.jre.java">
+        <property name="active.platform.home.java.executable" value="${java.home}${file.separator}bin${file.separator}java"/>
+        <echo message="Warning: java executable not found in JDK, evaluating java executable in RT instead." level="info"/>
+    </target>
+    <target name="-check-platform-home" depends="-set-platform-home-jre-java">
+        <echo message="active.platform.home.java.executable = ${active.platform.home.java.executable}" level="verbose"/>
+        <fail message="Error:${line.separator}java executable not found !" unless="active.platform.home.java.executable"/>
+    </target>
+        
+    <target name="-check-jdk-version" depends="-do-init,-check-platform-home" unless="jdk-version-checked-in-jfximpl">
+        <local name="version-output"/>
+        <exec executable="${active.platform.home.java.executable}" outputproperty="version-output">
+            <arg value="-version"/>
+        </exec>
+        <echo message="version-output:${line.separator}${version-output}" level="verbose"/>
+        <condition property="have-jdk-older-than-1.6">
+            <or>
+                <contains string="${version-output}" substring="java version &quot;1.0"/>
+                <contains string="${version-output}" substring="java version &quot;1.1"/>
+                <contains string="${version-output}" substring="java version &quot;1.2"/>
+                <contains string="${version-output}" substring="java version &quot;1.3"/>
+                <contains string="${version-output}" substring="java version &quot;1.4"/>
+                <contains string="${version-output}" substring="java version &quot;1.5"/>
+            </or>
+        </condition>
+        <fail message="Error:${line.separator}JavaFX 2.0+ projects require JDK version 1.6+ !" if="have-jdk-older-than-1.6"/>
+        <condition property="have-jdk-7u4or5-mac">
+            <and>
+                <or>
+                    <contains string="${version-output}" substring="java version &quot;1.7.0_04"/>
+                    <contains string="${version-output}" substring="java version &quot;1.7.0_05"/>
+                </or>
+                <os family="mac"/>
+            </and>
+        </condition>
+        <condition property="have-jdk-pre7u6">
+            <or>
+                <contains string="${version-output}" substring="java version &quot;1.6"/>
+                <contains string="${version-output}" substring="java version &quot;1.7.0&quot;"/>
+                <contains string="${version-output}" substring="java version &quot;1.7.0_01"/>
+                <contains string="${version-output}" substring="java version &quot;1.7.0_02"/>
+                <contains string="${version-output}" substring="java version &quot;1.7.0_03"/>
+                <contains string="${version-output}" substring="java version &quot;1.7.0_04"/>
+                <contains string="${version-output}" substring="java version &quot;1.7.0_05"/>
+            </or>
+        </condition>
+        <property name="jdk-version-checked-in-jfximpl" value="true"/>
+        <echo message="have-jdk-7u4or5-mac = ${have-jdk-7u4or5-mac}" level="verbose"/>
+        <echo message="have-jdk-pre7u6 = ${have-jdk-pre7u6}" level="verbose"/>
+    </target>
+        
+    <target name="-check-jdk-7u4or5-mac" depends="-check-jdk-version" if="have-jdk-7u4or5-mac">
+        <fail message="Error:${line.separator}JDK 7u4 Mac and 7u5 Mac do not support WebStart and JavaFX 2.0+ browser plugin technologies.${line.separator}Please upgrade to JDK 7u6 or later."/>
+    </target>
+
+    
+    <!-- Check availability of JavaFX SDK deployment support (ant-javafx.jar) -->
+
+    <target name="-check-endorsed-javafx-ant-classpath">
+        <condition property="endorsed-javafx-ant-classpath-available">
+            <and>
+                <isset property="endorsed.javafx.ant.classpath"/>
+                <not>
+                    <equals arg1="${endorsed.javafx.ant.classpath}" arg2=""/>
+                </not>
+            </and>
+        </condition>
+        <echo message="endorsed-javafx-ant-classpath-available = ${endorsed-javafx-ant-classpath-available}" level="verbose"/>
+    </target>
+
+    <target name="-check-property-javafx.sdk">
+        <echo message="javafx.sdk = ${javafx.sdk}" level="verbose"/>
+        <condition property="javafx.sdk.defined">
+            <and>
+                <isset property="javafx.sdk"/>
+                <not><contains string="${javafx.sdk}" substring="$${platform" casesensitive="false"/></not>
+            </and>
+        </condition>
+        <condition property="javafx.sdk.missing+default">
+            <and>
+                <equals arg1="${platform.active}" arg2="Default_JavaFX_Platform" trim="true"/>
+                <not><isset property="javafx.sdk.defined"/></not>
+            </and>
+        </condition>
+        <condition property="javafx.sdk.missing-default">
+            <and>
+                <not><equals arg1="${platform.active}" arg2="Default_JavaFX_Platform" trim="true"/></not>
+                <not><isset property="javafx.sdk.defined"/></not>
+            </and>
+        </condition>
+        <echo message="javafx.sdk.defined = ${javafx.sdk.defined}" level="verbose"/>
+        <echo message="javafx.sdk.missing+default = ${javafx.sdk.missing+default}" level="verbose"/>
+        <echo message="javafx.sdk.missing-default = ${javafx.sdk.missing-default}" level="verbose"/>
+    </target>
+
+    <target name="-check-ant-javafx-in-fxsdk-lib" depends="-check-property-javafx.sdk" if="javafx.sdk.defined">
+        <condition property="do.set.ant-javafx.in.fxsdk.lib">
+            <and>
+                <not><isset property="ant-javafx.jar.location"/></not>
+                <available file="${javafx.sdk}${file.separator}lib${file.separator}ant-javafx.jar"/>
+            </and>
+        </condition>
+    </target>
+    <target name="-set-ant-javafx-in-fxsdk-lib" depends="-check-ant-javafx-in-fxsdk-lib" if="do.set.ant-javafx.in.fxsdk.lib">
+        <property name="ant-javafx.jar.location" value="${javafx.sdk}${file.separator}lib${file.separator}ant-javafx.jar"/>
+    </target>
+    <target name="-check-ant-javafx-in-fxsdk-tools" depends="-check-property-javafx.sdk" if="javafx.sdk.defined">
+        <condition property="do.set.ant-javafx.in.fxsdk.tools">
+            <and>
+                <not><isset property="ant-javafx.jar.location"/></not>
+                <available file="${javafx.sdk}${file.separator}tools${file.separator}ant-javafx.jar"/>
+            </and>
+        </condition>
+    </target>
+    <target name="-set-ant-javafx-in-fxsdk-tools" depends="-set-ant-javafx-in-fxsdk-lib,-check-ant-javafx-in-fxsdk-tools" if="do.set.ant-javafx.in.fxsdk.tools">
+        <property name="ant-javafx.jar.location" value="${javafx.sdk}${file.separator}tools${file.separator}ant-javafx.jar"/>
+    </target>
+    <target name="-check-ant-javafx-in-platform-home-lib" if="platform.home">
+        <condition property="do.set.ant-javafx.in.platform.home.lib">
+            <and>
+                <not><isset property="ant-javafx.jar.location"/></not>
+                <available file="${platform.home}${file.separator}lib${file.separator}ant-javafx.jar"/>
+            </and>
+        </condition>
+    </target>
+    <target name="-set-ant-javafx-in-platform-home-lib" depends="-set-ant-javafx-in-fxsdk-tools,-check-ant-javafx-in-platform-home-lib" if="do.set.ant-javafx.in.platform.home.lib">
+        <property name="ant-javafx.jar.location" value="${platform.home}${file.separator}lib${file.separator}ant-javafx.jar"/>
+    </target>
+    <target name="-check-ant-javafx-in-platform-home-tools" if="platform.home">
+        <condition property="do.set.ant-javafx.in.platform.home.tools">
+            <and>
+                <not><isset property="ant-javafx.jar.location"/></not>
+                <available file="${platform.home}${file.separator}tools${file.separator}ant-javafx.jar"/>
+            </and>
+        </condition>
+    </target>
+    <target name="-set-ant-javafx-in-platform-home-tools" depends="-set-ant-javafx-in-platform-home-lib,-check-ant-javafx-in-platform-home-tools" if="do.set.ant-javafx.in.platform.home.tools">
+        <property name="ant-javafx.jar.location" value="${platform.home}${file.separator}tools${file.separator}ant-javafx.jar"/>
+    </target>
+    <target name="-check-ant-javafx-in-probjdk-lib" unless="ant-javafx.jar.location">
+        <condition property="do.set.ant-javafx.in.probjdk.lib">
+            <and>
+                <not><isset property="ant-javafx.jar.location"/></not>
+                <available file="${java.home}${file.separator}..${file.separator}lib${file.separator}ant-javafx.jar"/>
+            </and>
+        </condition>
+    </target>
+    <target name="-set-ant-javafx-in-probjdk-lib" depends="-set-ant-javafx-in-platform-home-tools,-check-ant-javafx-in-probjdk-lib" if="do.set.ant-javafx.in.probjdk.lib">
+        <property name="ant-javafx.jar.location" value="${java.home}${file.separator}..${file.separator}lib${file.separator}ant-javafx.jar"/>
+    </target>
+    <target name="-check-ant-javafx-in-probjdk-tools" unless="ant-javafx.jar.location">
+        <condition property="do.set.ant-javafx.in.probjdk.tools">
+            <and>
+                <not><isset property="ant-javafx.jar.location"/></not>
+                <available file="${java.home}${file.separator}..${file.separator}tools${file.separator}ant-javafx.jar"/>
+            </and>
+        </condition>
+    </target>
+    <target name="-set-ant-javafx-in-probjdk-tools" depends="-set-ant-javafx-in-probjdk-lib,-check-ant-javafx-in-probjdk-tools" if="do.set.ant-javafx.in.probjdk.tools">
+        <property name="ant-javafx.jar.location" value="${java.home}${file.separator}..${file.separator}tools${file.separator}ant-javafx.jar"/>
+    </target>
+    <target name="-check-ant-javafx-in-macjdk-lib" unless="ant-javafx.jar.location">
+        <condition property="do.set.ant-javafx.in.macjdk.lib">
+            <and>
+                <not><isset property="ant-javafx.jar.location"/></not>
+                <available file="${java.home}${file.separator}lib${file.separator}ant-javafx.jar"/>
+            </and>
+        </condition>
+    </target>
+    <target name="-set-ant-javafx-in-macjdk-lib" depends="-set-ant-javafx-in-probjdk-tools,-check-ant-javafx-in-macjdk-lib" if="do.set.ant-javafx.in.macjdk.lib">
+        <property name="ant-javafx.jar.location" value="${java.home}${file.separator}lib${file.separator}ant-javafx.jar"/>
+    </target>
+    <target name="-check-ant-javafx-in-envjdk-lib" unless="ant-javafx.jar.location">
+        <property environment="env"/>
+        <condition property="do.set.ant-javafx.in.envjdk.lib">
+            <and>
+                <not><isset property="ant-javafx.jar.location"/></not>
+                <available file="${env.JAVA_HOME}${file.separator}lib${file.separator}ant-javafx.jar"/>
+            </and>
+        </condition>
+    </target>
+    <target name="-set-ant-javafx-in-envjdk-lib" depends="-set-ant-javafx-in-macjdk-lib,-check-ant-javafx-in-envjdk-lib" if="do.set.ant-javafx.in.envjdk.lib">
+        <property name="ant-javafx.jar.location" value="${env.JAVA_HOME}${file.separator}lib${file.separator}ant-javafx.jar"/>
+    </target>
+    <target name="-check-ant-javafx-in-envjdk-tools" unless="ant-javafx.jar.location">
+        <property environment="env"/>
+        <condition property="do.set.ant-javafx.in.envjdk.tools">
+            <and>
+                <not><isset property="ant-javafx.jar.location"/></not>
+                <available file="${env.JAVA_HOME}${file.separator}tools${file.separator}ant-javafx.jar"/>
+            </and>
+        </condition>
+    </target>
+    <target name="-set-ant-javafx-in-envjdk-tools" depends="-set-ant-javafx-in-envjdk-lib,-check-ant-javafx-in-envjdk-tools" if="do.set.ant-javafx.in.envjdk.tools">
+        <property name="ant-javafx.jar.location" value="${env.JAVA_HOME}${file.separator}tools${file.separator}ant-javafx.jar"/>
+    </target>
+    <target name="-pre-check-ant-javafx-version" depends="-set-ant-javafx-in-envjdk-tools" unless="ant-javafx-version-already-checked-in-jfximpl">
+        <condition property="do.check.ant-javafx.version">
+            <and>
+                <isset property="ant-javafx.jar.location"/>
+                <not><isset property="ant-javafx-version-already-checked-in-jfximpl"/></not>
+            </and>
+        </condition>
+    </target>
+    <target name="-set-endorsed-javafx-ant-classpath" depends="-check-endorsed-javafx-ant-classpath,-pre-check-ant-javafx-version" if="endorsed-javafx-ant-classpath-available">
+        <property name="javafx.ant.classpath" value="${endorsed.javafx.ant.classpath}:${ant-javafx.jar.location}"/>
+    </target>
+    <target name="-set-javafx-ant-classpath" depends="-check-endorsed-javafx-ant-classpath,-pre-check-ant-javafx-version" unless="endorsed-javafx-ant-classpath-available">
+        <property name="javafx.ant.classpath" value="${ant-javafx.jar.location}"/>
+    </target>
+    <target name="-check-ant-javafx-version" depends="-pre-check-ant-javafx-version,
+            -set-endorsed-javafx-ant-classpath,-set-javafx-ant-classpath" if="do.check.ant-javafx.version">
+        <echo message="ant-javafx.jar.location = ${ant-javafx.jar.location}" level="verbose"/>
+        <echo message="javafx.ant.classpath = ${javafx.ant.classpath}" level="verbose"/>
+        <taskdef resource="com/sun/javafx/tools/ant/antlib.xml"
+            uri="javafx:com.sun.javafx.tools.ant"
+            classpath="${javafx.ant.classpath}"/>
+        <condition property="have-fx-ant-init">
+            <typefound name="javafx:com.sun.javafx.tools.ant:init-ant"/>
+        </condition>
+        <property name="ant-javafx-version-already-checked-in-jfximpl" value="true"/>
+        <echo message="have-fx-ant-init = ${have-fx-ant-init}" level="verbose"/>
+    </target>
+    <target name="-check-jfx-sdk-version-old" depends="-check-ant-javafx-version" unless="have-fx-ant-init">
+        <property name="javafx.ant.version" value="1.0"/>
+    </target>
+    <target name="-check-jfx-sdk-version-new" depends="-check-ant-javafx-version" if="have-fx-ant-init">
+        <fx:init-ant/>
+        <condition property="have-fx-ant-api-1.1">
+            <!-- new features from JavaFX 2.0.2 are available in API version 1.1 or later -->
+            <matches pattern="1.[1-9]" string="${javafx.ant.version}"/>
+        </condition>
+    </target>
+    <target name="-check-jfx-sdk-version" depends="-check-jfx-sdk-version-old, -check-jfx-sdk-version-new">
+        <echo message="Detected JavaFX Ant API version ${javafx.ant.version}" level="info"/>
+        <echo message="have-fx-ant-api-1.1 = ${have-fx-ant-api-1.1}" level="verbose"/>
+        <echo message="javafx.ant.classpath = ${javafx.ant.classpath}" level="verbose"/>
+    </target>
+
+    <target name="-check-jfx-deployment" depends="-check-jdk-version,-check-jfx-sdk-version">
+        <condition property="jfx-deployment-available">
+            <and>
+                <or>
+                    <isset property="do.set.ant-javafx.in.fxsdk.lib"/>
+                    <isset property="do.set.ant-javafx.in.fxsdk.tools"/>
+                    <isset property="do.set.ant-javafx.in.platform.home.lib"/>
+                    <isset property="do.set.ant-javafx.in.platform.home.tools"/>
+                    <isset property="do.set.ant-javafx.in.probjdk.lib"/>
+                    <isset property="do.set.ant-javafx.in.probjdk.tools"/>
+                    <isset property="do.set.ant-javafx.in.envjdk.lib"/>
+                    <isset property="do.set.ant-javafx.in.envjdk.tools"/>
+                </or>
+                <isset property="ant-javafx.jar.location"/>
+            </and>
+        </condition>
+        <condition property="jfx-deployment-missing+jdk7u6">
+            <and>
+                <not><isset property="jfx-deployment-available"/></not>
+                <not><isset property="have-jdk-pre7u6"/></not>
+            </and>
+        </condition>
+        <condition property="jfx-deployment-missing+javafx.sdk.missing+default">
+            <and>
+                <not><isset property="jfx-deployment-available"/></not>
+                <isset property="have-jdk-pre7u6"/>
+                <isset property="javafx.sdk.missing+default"/>
+            </and>
+        </condition>
+        <condition property="jfx-deployment-missing+javafx.sdk.missing-default">
+            <and>
+                <not><isset property="jfx-deployment-available"/></not>
+                <isset property="have-jdk-pre7u6"/>
+                <isset property="javafx.sdk.missing-default"/>
+            </and>
+        </condition>
+        <fail message="Error:${line.separator}JavaFX deployment library not found in active JDK.${line.separator}Please check that the JDK is correctly installed and its version is at least 7u4 on Mac or 7u6 on other systems." if="jfx-deployment-missing+jdk7u6"/>
+        <fail message="Error:${line.separator}JavaFX deployment library not found.${line.separator}JavaFX SDK path undefined. Check the definition of ${platform.active} in Java Platform Manager${line.separator}(or directly the properties platform.active and javafx.sdk in project.properties file).${line.separator}Note: If missing, the default JavaFX-enabled platform gets created automatically when creating a new FX Project." if="jfx-deployment-missing+javafx.sdk.missing+default"/>
+        <fail message="Error:${line.separator}JavaFX deployment library not found.${line.separator}JavaFX SDK path undefined. Check the definition of ${platform.active} in Java Platform Manager${line.separator}(or directly the properties platform.active and javafx.sdk in project.properties file)." if="jfx-deployment-missing+javafx.sdk.missing-default"/>
+        <fail message="Error:${line.separator}JavaFX deployment library not found." unless="jfx-deployment-available"/>
+        <echo message="jfx-deployment-available = ${jfx-deployment-available}" level="verbose"/>
+    </target>
+    
+    
+    <!-- Check availability of main JavaFX runtime jar (jfxrt.jar) -->
+
+    <target name="-check-property-javafx.runtime">
+        <echo message="javafx.runtime = ${javafx.runtime}" level="verbose"/>
+        <condition property="javafx.runtime.defined">
+            <and>
+                <isset property="javafx.runtime"/>
+                <not><contains string="${javafx.runtime}" substring="$${platform" casesensitive="false"/></not>
+            </and>
+        </condition>
+        <condition property="javafx.runtime.missing+default">
+            <and>
+                <equals arg1="${platform.active}" arg2="Default_JavaFX_Platform" trim="true"/>
+                <not><isset property="javafx.runtime.defined"/></not>
+            </and>
+        </condition>
+        <condition property="javafx.runtime.missing-default">
+            <and>
+                <not><equals arg1="${platform.active}" arg2="Default_JavaFX_Platform" trim="true"/></not>
+                <not><isset property="javafx.runtime.defined"/></not>
+            </and>
+        </condition>
+        <echo message="javafx.runtime.defined = ${javafx.runtime.defined}" level="verbose"/>
+        <echo message="javafx.runtime.missing+default = ${javafx.runtime.missing+default}" level="verbose"/>
+        <echo message="javafx.runtime.missing-default = ${javafx.runtime.missing-default}" level="verbose"/>
+    </target>
+
+    <target name="-check-jfxrt-in-fxrt" depends="-check-property-javafx.runtime" if="javafx.runtime.defined">
+        <condition property="do.set.jfxrt.in.fxrt">
+            <and>
+                <not><isset property="jfxrt.jar.location"/></not>
+                <available file="${javafx.runtime}${file.separator}lib${file.separator}jfxrt.jar"/>
+            </and>
+        </condition>
+    </target>
+    <target name="-set-jfxrt-in-fxrt" depends="-check-jfxrt-in-fxrt" if="do.set.jfxrt.in.fxrt">
+        <property name="jfxrt.jar.location" value="${javafx.runtime}${file.separator}lib${file.separator}jfxrt.jar"/>
+    </target>
+    <target name="-check-jfxrt-in-fxsdk-jre" depends="-check-property-javafx.sdk" if="javafx.sdk.defined">
+        <condition property="do.set.jfxrt.in.fxsdk.jre">
+            <and>
+                <not><isset property="jfxrt.jar.location"/></not>
+                <available file="${javafx.sdk}${file.separator}jre${file.separator}lib${file.separator}jfxrt.jar"/>
+            </and>
+        </condition>
+    </target>
+    <target name="-set-jfxrt-in-fxsdk-jre" depends="-set-jfxrt-in-fxrt,-check-jfxrt-in-fxsdk-jre" if="do.set.jfxrt.in.fxsdk.jre">
+        <property name="jfxrt.jar.location" value="${javafx.sdk}${file.separator}jre${file.separator}lib${file.separator}jfxrt.jar"/>
+    </target>
+    <target name="-check-jfxrt-in-fxsdk-rt" depends="-check-property-javafx.sdk" if="javafx.sdk.defined">
+        <condition property="do.set.jfxrt.in.fxsdk.rt">
+            <and>
+                <not><isset property="jfxrt.jar.location"/></not>
+                <available file="${javafx.sdk}${file.separator}rt${file.separator}lib${file.separator}jfxrt.jar"/>
+            </and>
+        </condition>
+    </target>
+    <target name="-set-jfxrt-in-fxsdk-rt" depends="-set-jfxrt-in-fxsdk-jre,-check-jfxrt-in-fxsdk-rt" if="do.set.jfxrt.in.fxsdk.rt">
+        <property name="jfxrt.jar.location" value="${javafx.sdk}${file.separator}rt${file.separator}lib${file.separator}jfxrt.jar"/>
+    </target>
+    <target name="-check-jfxrt-in-platform-home-jre" if="platform.home">
+        <condition property="do.set.jfxrt.in.platform.home.jre">
+            <and>
+                <not><isset property="jfxrt.jar.location"/></not>
+                <available file="${platform.home}${file.separator}jre${file.separator}lib${file.separator}jfxrt.jar"/>
+            </and>
+        </condition>
+    </target>
+    <target name="-set-jfxrt-in-platform-home-jre" depends="-set-jfxrt-in-fxsdk-rt,-check-jfxrt-in-platform-home-jre" if="do.set.jfxrt.in.platform.home.jre">
+        <property name="jfxrt.jar.location" value="${platform.home}${file.separator}jre${file.separator}lib${file.separator}jfxrt.jar"/>
+    </target>
+    <target name="-check-jfxrt-in-platform-home-rt" if="platform.home">
+        <condition property="do.set.jfxrt.in.platform.home.rt">
+            <and>
+                <not><isset property="jfxrt.jar.location"/></not>
+                <available file="${platform.home}${file.separator}rt${file.separator}lib${file.separator}jfxrt.jar"/>
+            </and>
+        </condition>
+    </target>
+    <target name="-set-jfxrt-in-platform-home-rt" depends="-set-jfxrt-in-platform-home-jre,-check-jfxrt-in-platform-home-rt" if="do.set.jfxrt.in.platform.home.rt">
+        <property name="jfxrt.jar.location" value="${platform.home}${file.separator}rt${file.separator}lib${file.separator}jfxrt.jar"/>
+    </target>
+    <target name="-check-jfxrt-in-jre" unless="jfxrt.jar.location">
+        <condition property="do.set.jfxrt.in.jre">
+            <and>
+                <not><isset property="jfxrt.jar.location"/></not>
+                <available file="${java.home}${file.separator}lib${file.separator}jfxrt.jar"/>
+            </and>
+        </condition>
+    </target>
+    <target name="-set-jfxrt-in-jre" depends="-set-jfxrt-in-platform-home-rt,-check-jfxrt-in-jre" if="do.set.jfxrt.in.jre">
+        <property name="jfxrt.jar.location" value="${java.home}${file.separator}lib${file.separator}jfxrt.jar"/>
+    </target>
+    <target name="-check-jfxrt-in-envjdk-jre" unless="jfxrt.jar.location">
+        <property environment="env"/>
+        <condition property="do.set.jfxrt.in.envjdk.jre">
+            <and>
+                <not><isset property="ant-javafx.jar.location"/></not>
+                <available file="${env.JAVA_HOME}${file.separator}jre${file.separator}lib${file.separator}jfxrt.jar"/>
+            </and>
+        </condition>
+    </target>
+    <target name="-set-jfxrt-in-envjdk-jre" depends="-set-jfxrt-in-jre,-check-jfxrt-in-envjdk-jre" if="do.set.jfxrt.in.envjdk.jre">
+        <property name="jfxrt.jar.location" value="${env.JAVA_HOME}${file.separator}jre${file.separator}lib${file.separator}jfxrt.jar"/>
+    </target>
+    <target name="-pre-check-jfx-runtime" depends="-set-jfxrt-in-envjdk-jre">
+        <echo message="jfxrt.jar.location = ${jfxrt.jar.location}" level="verbose"/>
+    </target>
+
+    <target name="-check-jfx-runtime" depends="-check-jdk-version, -pre-check-jfx-runtime">
+        <condition property="jfx-runtime-available">
+            <and>
+                <or>
+                    <isset property="do.set.jfxrt.in.fxrt"/>
+                    <isset property="do.set.jfxrt.in.fxsdk.jre"/>
+                    <isset property="do.set.jfxrt.in.fxsdk.rt"/>
+                    <isset property="do.set.jfxrt.in.platform.home.jre"/>
+                    <isset property="do.set.jfxrt.in.platform.home.rt"/>
+                    <isset property="do.set.jfxrt.in.jre"/>
+                    <isset property="do.set.jfxrt.in.envjdk.jre"/>
+                </or>
+                <isset property="jfxrt.jar.location"/>
+            </and>
+        </condition>
+        <fail message="Error:${line.separator}JavaFX runtime JAR not found." unless="jfx-runtime-available"/>
+        <echo message="jfx-runtime-available = ${jfx-runtime-available}" level="verbose"/>
+    </target>
+
+
+    <!-- Check availability of WebStart executable -->
+
+    <target name="-check-webstart-in-fxrt" depends="-check-property-javafx.runtime" if="javafx.runtime.defined">
+        <condition property="do.set.webstart.in.fxrt">
+            <and>
+                <not><isset property="active.webstart.executable"/></not>
+                <isset property="javafx.runtime.defined"/>
+                <or>
+                    <available file="${javafx.runtime}${file.separator}bin${file.separator}javaws.exe"/>
+                    <available file="${javafx.runtime}${file.separator}bin${file.separator}javaws"/>
+                </or>
+            </and>
+        </condition>
+    </target>
+    <target name="-set-webstart-in-fxrt" depends="-check-webstart-in-fxrt" if="do.set.webstart.in.fxrt">
+        <property name="active.webstart.executable" value="${javafx.runtime}${file.separator}bin${file.separator}javaws"/>
+    </target>
+    <target name="-check-webstart-in-fxsdk-jre" depends="-check-property-javafx.sdk" if="javafx.sdk.defined">
+        <condition property="do.set.webstart.in.fxsdk.jre">
+            <and>
+                <not><isset property="active.webstart.executable"/></not>
+                <isset property="javafx.sdk.defined"/>
+                <or>
+                    <available file="${javafx.sdk}${file.separator}jre${file.separator}bin${file.separator}javaws.exe"/>
+                    <available file="${javafx.sdk}${file.separator}jre${file.separator}bin${file.separator}javaws"/>
+                </or>
+            </and>
+        </condition>
+    </target>
+    <target name="-set-webstart-in-fxsdk-jre" depends="-set-webstart-in-fxrt,-check-webstart-in-fxsdk-jre" if="do.set.webstart.in.fxsdk.jre">
+        <property name="active.webstart.executable" value="${javafx.sdk}${file.separator}jre${file.separator}bin${file.separator}javaws"/>
+    </target>
+    <target name="-check-webstart-in-fxsdk" depends="-check-property-javafx.sdk" if="javafx.sdk.defined">
+        <condition property="do.set.webstart.in.fxsdk">
+            <and>
+                <not><isset property="active.webstart.executable"/></not>
+                <isset property="javafx.sdk.defined"/>
+                <or>
+                    <available file="${javafx.sdk}${file.separator}bin${file.separator}javaws.exe"/>
+                    <available file="${javafx.sdk}${file.separator}bin${file.separator}javaws"/>
+                </or>
+            </and>
+        </condition>
+    </target>
+    <target name="-set-webstart-in-fxsdk" depends="-set-webstart-in-fxsdk-jre,-check-webstart-in-fxsdk" if="do.set.webstart.in.fxsdk">
+        <property name="active.webstart.executable" value="${javafx.sdk}${file.separator}bin${file.separator}javaws"/>
+    </target>
+    <target name="-check-webstart-in-platform-home-jre" if="platform.home">
+        <condition property="do.set.webstart.in.platform.home.jre">
+            <and>
+                <not><isset property="active.webstart.executable"/></not>
+                <or>
+                    <available file="${platform.home}${file.separator}jre${file.separator}bin${file.separator}javaws.exe"/>
+                    <available file="${platform.home}${file.separator}jre${file.separator}bin${file.separator}javaws"/>
+                </or>
+            </and>
+        </condition>
+    </target>
+    <target name="-set-webstart-in-platform-home-jre" depends="-set-webstart-in-fxsdk,-check-webstart-in-platform-home-jre" if="do.set.webstart.in.platform.home.jre">
+        <property name="active.webstart.executable" value="${platform.home}${file.separator}jre${file.separator}bin${file.separator}javaws"/>
+    </target>
+    <target name="-check-webstart-in-platform-home" if="platform.home">
+        <condition property="do.set.webstart.in.platform.home">
+            <and>
+                <not><isset property="active.webstart.executable"/></not>
+                <or>
+                    <available file="${platform.home}${file.separator}bin${file.separator}javaws.exe"/>
+                    <available file="${platform.home}${file.separator}bin${file.separator}javaws"/>
+                </or>
+            </and>
+        </condition>
+    </target>
+    <target name="-set-webstart-in-platform-home" depends="-set-webstart-in-platform-home-jre,-check-webstart-in-platform-home" if="do.set.webstart.in.platform.home">
+        <property name="active.webstart.executable" value="${platform.home}${file.separator}bin${file.separator}javaws"/>
+    </target>
+    <target name="-check-webstart-in-jre" unless="active.webstart.executable">
+        <condition property="do.set.webstart.in.jre">
+            <and>
+                <not><isset property="active.webstart.executable"/></not>
+                <or>
+                    <available file="${java.home}${file.separator}bin${file.separator}javaws.exe"/>
+                    <available file="${java.home}${file.separator}bin${file.separator}javaws"/>
+                </or>
+            </and>
+        </condition>
+    </target>
+    <target name="-set-webstart-in-jre" depends="-set-webstart-in-platform-home,-check-webstart-in-jre" if="do.set.webstart.in.jre">
+        <property name="active.webstart.executable" value="${java.home}${file.separator}bin${file.separator}javaws"/>
+    </target>
+    <target name="-check-webstart-in-probjdk" unless="active.webstart.executable">
+        <condition property="do.set.webstart.in.probjdk">
+            <and>
+                <not><isset property="active.webstart.executable"/></not>
+                <or>
+                    <available file="${java.home}${file.separator}..${file.separator}bin${file.separator}javaws.exe"/>
+                    <available file="${java.home}${file.separator}..${file.separator}bin${file.separator}javaws"/>
+                </or>
+            </and>
+        </condition>
+    </target>
+    <target name="-set-webstart-in-probjdk" depends="-set-webstart-in-jre,-check-webstart-in-probjdk" if="do.set.webstart.in.probjdk">
+        <property name="active.webstart.executable" value="${java.home}${file.separator}..${file.separator}bin${file.separator}javaws"/>
+    </target>
+    <target name="-check-webstart-in-envjdk" unless="active.webstart.executable">
+        <property environment="env"/>
+        <condition property="do.set.webstart.in.envjdk">
+            <and>
+                <not><isset property="active.webstart.executable"/></not>
+                <or>
+                    <available file="${env.JAVA_HOME}${file.separator}bin${file.separator}javaws.exe"/>
+                    <available file="${env.JAVA_HOME}${file.separator}bin${file.separator}javaws"/>
+                </or>
+            </and>
+        </condition>
+    </target>
+    <target name="-set-webstart-in-envjdk" depends="-set-webstart-in-probjdk,-check-webstart-in-envjdk" if="do.set.webstart.in.envjdk">
+        <property name="active.webstart.executable" value="${env.JAVA_HOME}${file.separator}bin${file.separator}javaws"/>
+    </target>
+    <target name="-pre-check-webstart-in-unix" depends="-check-operating-system,-set-webstart-in-envjdk" unless="active.webstart.executable">
+        <condition property="running.on.unix-active.webstart.executable">
+            <and>
+                <not><isset property="active.webstart.executable"/></not>
+                <isset property="running.on.unix"/>
+            </and>
+        </condition>
+    </target>
+    <target name="-check-webstart-in-unix" depends="-pre-check-webstart-in-unix" if="running.on.unix-active.webstart.executable">
+        <local name="exec.which.javaws.result"/>
+        <exec executable="which" failifexecutionfails="false" failonerror="false" resultproperty="exec.which.javaws.result" outputproperty="exec.which.javaws.output">
+            <arg value="javaws"/>
+        </exec>
+        <condition property="do.set.webstart.in.unix">
+            <and>
+                <not><isset property="active.webstart.executable"/></not>
+                <isset property="exec.which.javaws.result"/>
+                <equals arg1="${exec.which.javaws.result}" arg2="0"/>
+                <isset property="exec.which.javaws.output"/>
+                <not><equals arg1="${exec.which.javaws.output}" arg2=""/></not>
+            </and>
+        </condition>
+        <echo message="do.set.webstart.in.unix = ${do.set.webstart.in.unix}" level="verbose"/>
+    </target>
+    <target name="-set-webstart-in-unix" depends="-set-webstart-in-envjdk,-check-webstart-in-unix" if="do.set.webstart.in.unix">
+        <property name="active.webstart.executable" value="${exec.which.javaws.output}"/>
+    </target>
+    <target name="-pre-check-jfx-webstart" depends="-set-webstart-in-unix">
+        <echo message="active.webstart.executable = ${active.webstart.executable}" level="verbose"/>
+    </target>
+
+    <target name="-check-jfx-webstart" depends="-pre-check-jfx-webstart">
+        <condition property="jfx-webstart-available">
+            <and>
+                <or>
+                    <isset property="do.set.webstart.in.fxrt"/>
+                    <isset property="do.set.webstart.in.fxsdk.jre"/>
+                    <isset property="do.set.webstart.in.fxsdk"/>
+                    <isset property="do.set.webstart.in.platform.home.jre"/>
+                    <isset property="do.set.webstart.in.platform.home"/>
+                    <isset property="do.set.webstart.in.jre"/>
+                    <isset property="do.set.webstart.in.probjdk"/>
+                    <isset property="do.set.webstart.in.envjdk"/>
+                    <isset property="do.set.webstart.in.unix"/>
+                </or>
+                <isset property="active.webstart.executable"/>
+            </and>
+        </condition>
+        <condition property="jfx-webstart-missing+jdk7u6">
+            <and>
+                <not><isset property="jfx-webstart-available"/></not>
+                <not><isset property="have-jdk-pre7u6"/></not>
+            </and>
+        </condition>
+        <condition property="jfx-webstart-missing+javafx.runtime.missing+default">
+            <and>
+                <not><isset property="jfx-webstart-available"/></not>
+                <isset property="have-jdk-pre7u6"/>
+                <isset property="javafx.runtime.missing+default"/>
+            </and>
+        </condition>
+        <condition property="jfx-webstart-missing+javafx.runtime.missing-default">
+            <and>
+                <not><isset property="jfx-webstart-available"/></not>
+                <isset property="have-jdk-pre7u6"/>
+                <isset property="javafx.runtime.missing-default"/>
+            </and>
+        </condition>
+        <fail message="Error:${line.separator}WebStart executable could not be found in active JDK.${line.separator}Please check that the JDK is correctly installed and its version is at least 7u6." if="jfx-webstart-missing+jdk7u6"/>
+        <fail message="Error:${line.separator}WebStart executable could not be found.${line.separator}JavaFX RT path undefined. Check the definition of ${platform.active} in Java Platform Manager${line.separator}(or directly the properties platform.active and javafx.runtime in project.properties file).${line.separator}Note: If missing, the default JavaFX-enabled platform gets created automatically when creating a new FX Project." if="jfx-webstart-missing+javafx.runtime.missing+default"/>
+        <fail message="Error:${line.separator}WebStart executable could not be found.${line.separator}JavaFX RT path undefined. Check the definition of ${platform.active} in Java Platform Manager${line.separator}(or directly the properties platform.active and javafx.runtime in project.properties file)." if="jfx-webstart-missing+javafx.runtime.missing-default"/>
+        <fail message="Error:${line.separator}WebStart executable could not be found." unless="jfx-webstart-available"/>
+        <echo message="jfx-webstart-available = ${jfx-webstart-available}" level="verbose"/>
+    </target>
+
+    
+    <!-- Legacy targets kept for compatibility with older build-impl.xml scripts -->
+
+    <!-- Note: target "-check-javafx" is not necessary any more but is referenced from NB 7.1 build-impl.xml -->
+    <target name="-check-javafx"/>
+    <!-- Note: target "-javafx-check-error" is not necessary any more but is referenced from NB 7.1 build-impl.xml -->
+    <target name="-javafx-check-error"/>    
+    <!-- Note: target "-init-javafx" is not necessary any more but is referenced from NB 7.1 build-impl.xml -->
+    <target name="-init-javafx"/>
+
+    
+    <!-- Check project properties -->
+    
+    <target name="-check-default-run-config" unless="config">
+        <property name="config" value="&lt;default config&gt;"/>
+    </target>
+    
+    <target name="-check-project">
+        <condition property="main-class-available">
+            <isset property="javafx.main.class"/>
+        </condition>
+        <condition property="vmargs-available">
+            <and>
+                <isset property="run.jvmargs"/>
+                <not><equals arg1="${run.jvmargs}" arg2=""/></not>
+            </and>
+        </condition>
+        <condition property="preloader-available">
+            <and>
+                <isset property="javafx.preloader.enabled"/>
+                <equals arg1="${javafx.preloader.enabled}" arg2="true"/>
+                <isset property="javafx.preloader.class"/>
+                <not><equals arg1="${javafx.preloader.class}" arg2=""/></not>
+                <isset property="javafx.preloader.jar.filename"/>
+                <not><equals arg1="${javafx.preloader.jar.filename}" arg2=""/></not>
+            </and>
+        </condition>
+        <condition property="app-with-preloader">
+            <and>
+                <istrue value="${preloader-available}"/>
+                <istrue value="${main-class-available}"/>
+            </and>
+        </condition>
+        <condition property="app-with-external-preloader-jar">
+            <and>
+                <isset property="app-with-preloader"/>
+                <isset property="javafx.preloader.type"/>
+                <equals arg1="${javafx.preloader.type}" arg2="jar" trim="true"/>
+            </and>
+        </condition>
+        <condition property="app-without-preloader">
+            <and>
+                <not>
+                    <istrue value="${preloader-available}"/>
+                </not>
+                <istrue value="${main-class-available}"/>
+            </and>
+        </condition>
+        <condition property="preloader-app">
+            <and>
+                <isset property="javafx.preloader"/>
+                <equals arg1="${javafx.preloader}" arg2="true"/>
+            </and>
+        </condition>
+        <condition property="fx-in-swing-app">
+            <and>
+                <isset property="javafx.swing"/>
+                <equals arg1="${javafx.swing}" arg2="true"/>
+            </and>
+        </condition>
+        <condition property="fx-in-swing-workaround-app">
+            <and>
+                <istrue value="${fx-in-swing-app}"/>
+                <istrue value="${preloader-app}"/>
+            </and>
+        </condition>
+        <condition property="preloader-app-no-workaround">
+            <and>
+                <istrue value="${preloader-app}"/>
+                <not><istrue value="${fx-in-swing-app}"/></not>
+            </and>
+        </condition>
+        <condition property="html-template-available">
+            <and>
+                <isset property="javafx.run.htmltemplate"/>
+                <not>
+                    <equals arg1="${javafx.run.htmltemplate}" arg2=""/>
+                </not>
+            </and>
+        </condition>
+        <condition property="icon-available">
+            <and>
+                <isset property="javafx.deploy.icon"/>
+                <not>
+                    <equals arg1="${javafx.deploy.icon}" arg2=""/>
+                </not>
+            </and>
+        </condition>
+        <condition property="dimensions-available">
+            <and>
+                <isset property="javafx.run.width"/>
+                <isset property="javafx.run.height"/>
+                <not><equals arg1="${javafx.run.width}" arg2=""/></not>
+                <not><equals arg1="${javafx.run.height}" arg2=""/></not>
+            </and>
+        </condition>
+        <condition property="update-mode-background">
+            <and>
+                <isset property="javafx.deploy.backgroundupdate"/>
+                <equals arg1="${javafx.deploy.backgroundupdate}" arg2="true" trim="true"/>
+            </and>
+        </condition>
+        <condition property="offline-allowed">
+            <and>
+                <isset property="javafx.deploy.allowoffline"/>
+                <equals arg1="${javafx.deploy.allowoffline}" arg2="true" trim="true"/>
+            </and>
+        </condition>
+        <condition property="permissions-elevated">
+            <and>
+                <isset property="javafx.deploy.permissionselevated"/>
+                <equals arg1="${javafx.deploy.permissionselevated}" arg2="true" trim="true"/>
+            </and>
+        </condition>
+        <condition property="binary-encode-css">
+            <and>
+                <isset property="javafx.binarycss"/>
+                <equals arg1="${javafx.binarycss}" arg2="true" trim="true"/>
+            </and>
+        </condition>
+        <condition property="rebase-lib-jars">
+            <and>
+                <isset property="javafx.rebase.libs"/>
+                <equals arg1="${javafx.rebase.libs}" arg2="true" trim="true"/>
+            </and>
+        </condition>
+
+        <echo message="main-class-available = ${main-class-available}" level="verbose"/>
+        <echo message="vmargs-available = ${vmargs-available}" level="verbose"/>
+        <echo message="preloader-available = ${preloader-available}" level="verbose"/>
+        <echo message="app-with-preloader = ${app-with-preloader}" level="verbose"/>
+        <echo message="app-with-preloader-without-project = ${app-with-preloader-without-project}" level="verbose"/>
+        <echo message="app-without-preloader = ${app-without-preloader}" level="verbose"/>
+        <echo message="preloader-app = ${preloader-app}" level="verbose"/>
+        <echo message="fx-in-swing-app = ${fx-in-swing-app}" level="verbose"/>
+        <echo message="fx-in-swing-workaround-app = ${fx-in-swing-workaround-app}" level="verbose"/>
+        <echo message="preloader-app-no-workaround = ${preloader-app-no-workaround}" level="verbose"/>
+        <echo message="html-template-available = ${html-template-available}" level="verbose"/>
+        <echo message="icon-available = ${icon-available}" level="verbose"/>
+        <echo message="dimensions-available = ${dimensions-available}" level="verbose"/>
+        <echo message="update-mode-background = ${update-mode-background}" level="verbose"/>
+        <echo message="offline-allowed = ${offline-allowed}" level="verbose"/>
+        <echo message="permissions-elevated = ${permissions-elevated}" level="verbose"/>
+        <echo message="binary-encode-css = ${binary-encode-css}" level="verbose"/>
+        <echo message="rebase-lib-jars = ${rebase-lib-jars}" level="verbose"/>
+    </target>
+
+    <target name="-icon-deployment-check" depends="-check-project,-check-jfx-deployment" if="icon-available">
+        <condition property="icon-deployment-may-not-be-supported">
+            <and>
+                <isset property="icon-available"/>
+                <not><isset property="have-fx-ant-api-1.1"/></not>
+            </and>
+        </condition>
+    </target>
+    <target name="-icon-warning" depends="-icon-deployment-check" if="icon-deployment-may-not-be-supported">
+        <echo message="Warning: Note that due to a bug in early JavaFX 2.0 SDK distributions the icon may not be properly set in deployment files."/>
+    </target>
+
+    <target name="-set-dimensions" depends="-check-project" if="dimensions-available">
+        <property name="javafx.width" value="${javafx.run.width}"/>
+        <property name="javafx.height" value="${javafx.run.height}"/>
+    </target>
+    <target name="-reset-dimensions" depends="-check-project" unless="dimensions-available">
+        <property name="javafx.width" value="800"/>
+        <property name="javafx.height" value="600"/>
+    </target>
+
+    <target name="-set-update-mode-background" depends="-check-project" if="update-mode-background">
+        <property name="update-mode" value="background"/>
+    </target>
+    <target name="-set-update-mode-eager" depends="-check-project" unless="update-mode-background">
+        <property name="update-mode" value="eager"/>
+    </target>
+
+    <target name="-set-permissions-elevated" depends="-check-project" if="permissions-elevated">
+        <property name="permissions.elevated" value="true"/>
+    </target>
+    <target name="-reset-permissions-elevated" depends="-check-project" unless="permissions-elevated">
+        <property name="permissions.elevated" value="false"/>
+    </target>
+
+    <target name="-set-binary-css" depends="-check-project" if="binary-encode-css">
+        <property name="css-include-ext" value="bss"/>
+        <property name="css-exclude-ext" value="css"/>
+    </target>
+    <target name="-unset-binary-css" depends="-check-project" unless="binary-encode-css">
+        <property name="css-include-ext" value="css"/>
+        <property name="css-exclude-ext" value="bss"/>
+    </target>
+    <target name="-copy-binary-css" depends="-check-project" if="binary-encode-css">
+        <fileset id="cssfiles" dir="${basedir}${file.separator}${build.classes.dir}">
+            <include name="**${file.separator}*.css"/>
+        </fileset>
+        <property name="cssfileslist" refid="cssfiles"/>
+        <echo message="css files to binary convert: " level="verbose">${cssfileslist}</echo>
+        <fx:csstobin outdir="${basedir}${file.separator}${build.classes.dir}">
+            <fileset refid="cssfiles"/>
+        </fx:csstobin>
+    </target>
+
+
+    <!-- Copy dependent libraries -->
+    
+    <!-- Note: target "-jfx-copylibs" is referenced from NB 7.1 build-impl.xml -->
+    <target name="-jfx-copylibs" depends="init,compile,-pre-pre-jar,-pre-jar">
+        <local name="run.classpath.without.build.classes.and.dist.dir"/>
+        <pathconvert property="run.classpath.without.build.classes.and.dist.dir">
+            <path path="${run.classpath}"/>
+            <map from="${basedir}${file.separator}${build.classes.dir}" to=""/>
+            <map from="${basedir}${file.separator}${dist.jar}" to=""/>
+            <map from="${javafx.runtime}${file.separator}lib${file.separator}jfxrt.jar" to=""/>
+            <map from="${javafx.runtime}${file.separator}lib${file.separator}deploy.jar" to=""/>
+            <map from="${javafx.runtime}${file.separator}lib${file.separator}javaws.jar" to=""/>
+            <map from="${javafx.runtime}${file.separator}lib${file.separator}plugin.jar" to=""/>
+        </pathconvert>
+        <!-- add possibly missing dependencies at distance 2 (build system logic thus provides transitive closure) -->
+        <local name="run.and.lib.classpath"/>
+        <script language="javascript">
+            <![CDATA[
+                var pathConvert = project.createTask("pathconvert");
+                pathConvert.setProperty("run.and.lib.classpath");
+                var classPath = project.getProperty("run.classpath.without.build.classes.and.dist.dir");
+                var fileSeparator = project.getProperty("file.separator");
+                if(classPath != null) {
+                    var classPathCopy = pathConvert.createPath();
+                    classPathCopy.setPath(classPath);
+                    if(classPath.indexOf(";") != -1) {
+                        var pathArray = classPath.split(";");
+                    } else {
+                        var pathArray = classPath.split(":");
+                    }
+                    var added = "";
+                    for (var i=0; i<pathArray.length; i++) {
+                        var index = pathArray[i].lastIndexOf(fileSeparator);
+                        if (index >=0) {
+                            var onePath = pathArray[i].substr(0,index+1) + "lib";
+                            var oneDir = new java.io.File(onePath);
+                            if(oneDir.exists()) {
+                                var fs = project.createDataType("fileset");
+                                fs.setDir( oneDir );
+                                fs.setIncludes("*.jar");
+                                var ds = fs.getDirectoryScanner(project);
+                                var srcFiles = ds.getIncludedFiles();
+                                for (j=0; j<srcFiles.length; j++) {
+                                    if(classPath.indexOf(srcFiles[j]) == -1 && added.indexOf(srcFiles[j]) == -1) {
+                                        var path = pathConvert.createPath();
+                                        path.setPath(onePath + fileSeparator + srcFiles[j]);
+                                        added += srcFiles[j];
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+                pathConvert.perform();
+            ]]>
+        </script>
+        <echo message="run.and.lib.classpath = ${run.and.lib.classpath}" level="verbose"/>
+        <delete dir="${dist.dir}${file.separator}lib" includeEmptyDirs="true" quiet="true"/>
+        <copy todir="${dist.dir}${file.separator}lib" flatten="true" preservelastmodified="true" overwrite="true">
+            <path>
+                <pathelement path="${run.and.lib.classpath}"/>
+            </path>
+        </copy>
+    </target>
+    
+    <target name="-copy-external-preloader-jar" depends="-check-project" if="app-with-external-preloader-jar">
+        <copy file="${javafx.preloader.jar.path}" todir="${dist.dir}${file.separator}lib"/>
+    </target>
+
+
+    <!-- Optional classpath re-base of dependent JAR manifests after copy to lib/, required by GlassFish -->
+
+    <macrodef name="rebase-lib">
+        <attribute name="jarfile"/>
+        <sequential>
+            <local name="tmpdir"/>
+            <property name="tmpdir" value="${java.io.tmpdir}${file.separator}${user.name}_${ant.project.name}_rebase" />
+            <echo message="tmpdir = ${tmpdir}" level="verbose"/>
+            <delete dir="${tmpdir}" quiet="true"/>
+            <mkdir dir="${tmpdir}"/>
+            <unzip src="@{jarfile}" dest="${tmpdir}">
+                <patternset>
+                    <include name="META-INF${file.separator}MANIFEST.MF"/>
+                </patternset>
+            </unzip>
+            <local name="manifest.file.temp"/>
+            <property name="manifest.file.temp" value="${tmpdir}${file.separator}META-INF${file.separator}MANIFEST.MF" />
+            <echo message="manifest.file.temp = ${manifest.file.temp}" level="verbose"/>
+            <!-- edited manifest file -->
+            <local name="manifest.file.temp.new"/>
+            <property name="manifest.file.temp.new" value="${manifest.file.temp}_new" />
+            <echo message="manifest.file.temp.new = ${manifest.file.temp.new}" level="verbose"/>
+            <script language="javascript">
+                <![CDATA[
+                    var UTF_8 = "UTF-8";
+                    var ATTR_CLASS_PATH = "Class-Path";
+                    var ATTR_CLASS_PATH_FX = "JavaFX-Class-Path";
+                    function isSigned(manifest) {        
+                        var sections = manifest.getSectionNames();
+                        while(sections.hasMoreElements()) {
+                            var sectionname = sections.nextElement();
+                            var section = manifest.getSection(sectionname);
+                            if(section != null) {
+                                var sectionKeys = section.getAttributeKeys();
+                                while (sectionKeys.hasMoreElements()) {
+                                    var element = sectionKeys.nextElement();
+                                    if (element.endsWith("-Digest") || element.endsWith("-digest")) {
+                                        return true;
+                                    }
+                                }
+                            }
+                        }
+                        return false;
+                    }
+                    var src = project.getProperty("manifest.file.temp");
+                    var srf = new java.io.File(src);
+                    try {
+                        var fis = new java.io.FileInputStream(srf);
+                        try {
+                            var isr = new java.io.InputStreamReader(fis, UTF_8);
+                            try {
+                                var manifest = new org.apache.tools.ant.taskdefs.Manifest(isr);
+                            } finally {
+                                isr.close();
+                            }
+                        } finally {
+                            fis.close();
+                        }
+                    } catch(e) {
+                        var manifest = null;
+                    }
+                    if(manifest != null) {
+                        if(isSigned(manifest)) {
+                            println("Warning: Signed JAR can not be rebased.");
+                        } else {
+                            var mainSection = manifest.getMainSection();
+                            var classPath = mainSection.getAttributeValue(ATTR_CLASS_PATH);
+                            if (classPath != null) {
+                                var classPathAttr = ATTR_CLASS_PATH;
+                            } else {
+                                classPath = mainSection.getAttributeValue(ATTR_CLASS_PATH_FX);
+                                if(classPath != null) {
+                                    var classPathAttr = ATTR_CLASS_PATH_FX;
+                                }
+                            }
+                            if(classPath != null) {
+                                var result = new java.lang.StringBuilder();
+                                var changed = false;
+                                var pathArray = classPath.split(" ");
+                                for (var i=0; i<pathArray.length; i++) {
+                                    if (result.length() > 0) {
+                                        result.append(' ');
+                                    }
+                                    var index = pathArray[i].lastIndexOf('/');
+                                    if (index >=0 && index < pathArray[i].length()-1) {
+                                        pathArray[i] = pathArray[i].substring(index+1);
+                                        changed = true;
+                                    }
+                                    result.append(pathArray[i]);
+                                }
+                                mainSection.removeAttribute(classPathAttr);
+                                mainSection.addAttributeAndCheck(new org.apache.tools.ant.taskdefs.Manifest.Attribute(classPathAttr, result.toString()));
+                                var tgt = project.getProperty("manifest.file.temp.new");
+                                var tgf = new java.io.File(tgt);
+                                try {
+                                    var fos = new java.io.FileOutputStream(tgf);
+                                    try {
+                                        var osw = new java.io.OutputStreamWriter(fos, UTF_8);
+                                        try {
+                                            var manifestOut = new java.io.PrintWriter(osw);
+                                            manifest.write(manifestOut);
+                                            manifestOut.close();
+                                        } finally {
+                                            osw.close();
+                                        }
+                                    } finally {
+                                        fos.close();
+                                    }
+                                } catch(e) {
+                                    println("Warning: problem storing rebased manifest file.");
+                                }
+                            }
+                        }
+                    }
+                ]]>
+            </script>
+            <antcall target="-move-new-manifest-if-exists">
+                <param name="move.file.from" value="${manifest.file.temp.new}"/>
+                <param name="move.file.to" value="${manifest.file.temp}"/>
+            </antcall>
+            <zip destfile="@{jarfile}" basedir="${tmpdir}" update="true"/>
+            <delete dir="${tmpdir}" quiet="true"/>
+        </sequential>
+    </macrodef>
+    
+    <target name="-new-temp-mainfest-existence">
+        <condition property="new-temp-manifest-exists">
+            <available file="${move.file.from}"/>
+        </condition>
+        <echo message="new-temp-manifest-exists = ${new-temp-manifest-exists}" level="verbose"/>
+    </target>
+    
+    <target name="-move-new-manifest-if-exists" depends="-new-temp-mainfest-existence" if="new-temp-manifest-exists">
+        <move file="${move.file.from}" tofile="${move.file.to}" failonerror="false"/>
+    </target>
+    
+    <target name="-rebase-libs-macro-call">
+        <echo message="Rebase jarfile = ${jar.file.to.rebase}" level="verbose"/>
+        <rebase-lib jarfile="${jar.file.to.rebase}"/>
+    </target>
+    
+    <!-- Note: target "-rebase-libs" is referenced from NB 7.1 build-impl.xml -->
+    <target name="-rebase-libs" depends="-check-project, -jfx-copylibs" if="rebase-lib-jars">
+        <property name="pp_rebase_dir" value="${basedir}${file.separator}${dist.dir}${file.separator}lib"/>
+        <property name="pp_rebase_fs" value="*.jar"/>
+        <script language="javascript">
+            <![CDATA[
+                var dir = project.getProperty("pp_rebase_dir");
+                var fDir = new java.io.File(dir);
+                if( fDir.exists() ) {
+                    var callTask = project.createTask("antcall");
+                    callTask.setTarget("-rebase-libs-macro-call");
+                    var param = callTask.createParam();
+                    param.setName("jar.file.to.rebase");
+                    var includes = project.getProperty("pp_rebase_fs");
+                    var fs = project.createDataType("fileset");
+                    fs.setDir( fDir );
+                    fs.setIncludes(includes);
+                    var ds = fs.getDirectoryScanner(project);
+                    var srcFiles = ds.getIncludedFiles();
+                    for (i=0; i<srcFiles.length; i++) {
+                        param.setValue(dir + "${file.separator}" + srcFiles[i]);
+                        callTask.perform();
+                    }
+                }
+            ]]>
+        </script>
+    </target>
+
+
+    <!-- Main Deployment Target -->
+
+    <!-- Note: target "jfx-deployment" is referenced from NB 7.1 build-impl.xml -->
+    <target name="jfx-deployment" depends="-check-jfx-deployment,-check-project,-icon-warning,
+        -set-dimensions,-reset-dimensions,-set-update-mode-background,-set-update-mode-eager,
+        -set-permissions-elevated,-reset-permissions-elevated,
+        -copy-external-preloader-jar,-set-binary-css,-unset-binary-css,-copy-binary-css,
+        -deploy-app-sign-nopreloader-notemplate,
+        -deploy-app-sign-preloader-notemplate,
+        -deploy-app-sign-nopreloader-template,
+        -deploy-app-sign-preloader-template,
+        -deploy-app-sign-nopreloader-notemplate-swing,
+        -deploy-app-sign-nopreloader-template-swing,
+        -deploy-app-nosign-nopreloader-notemplate,
+        -deploy-app-nosign-preloader-notemplate,
+        -deploy-app-nosign-nopreloader-template,
+        -deploy-app-nosign-preloader-template,
+        -deploy-app-nosign-nopreloader-notemplate-swing,
+        -deploy-app-nosign-nopreloader-template-swing"
+        if="jfx-deployment-available">
+    </target>
+
+
+    <!-- Security / Signing -->
+    
+    <target name="-unavailable-signjars-task" depends="-check-jfx-deployment" unless="jfx-deployment-available">
+        <echo message="Warning: Task required to sign JAR file is missing, check the availability of JavaFX 2.0 deployment tasks. JAR files will not be signed."/>
+    </target>
+
+    <target name="-security-props-check">
+        <condition property="javafx.signed.true">
+            <istrue value="${javafx.signing.enabled}"/>
+        </condition>
+    </target>
+
+    <target name="-check-signing-possible" depends="-security-props-check,-check-jfx-deployment,-unavailable-signjars-task">
+        <condition property="javafx.signed.true+signjars.task.available">
+            <and>
+                <isset property="javafx.signed.true"/>
+                <isset property="jfx-deployment-available"/>
+            </and>
+        </condition>
+    </target>
+    
+    <target name="-javafx-init-keystore" depends="-check-signing-possible,-javafx-init-signing,-javafx-init-keystore1,-javafx-init-keystore2,-check-keystore-exists" 
+            if="javafx.signed.true+signjars.task.available" unless="javafx.signjar.keystore.exists">
+        <property name="javafx.signjar.vendor" value="CN=${application.vendor}"/>
+        <echo message="Going to create default keystore in ${javafx.signjar.keystore}"/>
+        <genkey dname="${javafx.signjar.vendor}" alias="${javafx.signjar.alias}" keystore="${javafx.signjar.keystore}"
+            storepass="${javafx.signjar.storepass}" keypass="${javafx.signjar.keypass}"/>
+    </target>
+    
+    <target name="-check-keystore-exists">
+        <available property="javafx.signjar.keystore.exists" file="${javafx.signjar.keystore}"/>
+    </target>
+
+    <target name="-javafx-init-signing">
+        <condition property="generated.key.signing">
+            <equals arg1="${javafx.signing.type}" arg2="self" trim="true"/>
+        </condition>
+    </target>
+
+    <target name="-javafx-init-keystore1" depends="-javafx-init-signing" if="generated.key.signing">
+        <property name="javafx.signjar.keystore" value="${basedir}${file.separator}build${file.separator}nb-jfx.jks" />
+        <property name="javafx.signjar.storepass" value="storepass"/>
+        <property name="javafx.signjar.keypass" value="keypass"/>
+        <property name="javafx.signjar.alias" value="nb-jfx"/>
+    </target>
+
+    <target name="-javafx-init-keystore2" depends="-javafx-init-signing" unless="generated.key.signing">
+        <property name="javafx.signjar.keystore" value="${javafx.signing.keystore}" />
+        <property name="javafx.signjar.storepass" value="${javafx.signing.keystore.password}"/>
+        <property name="javafx.signjar.keypass" value="${javafx.signing.keyalias.password}"/>
+        <property name="javafx.signjar.alias" value="${javafx.signing.keyalias}"/>
+    </target>
+
+    
+    <!-- Project Deployment Macros -->
+
+    <macrodef name="deploy-defines">
+        <sequential>
+            <basename property="jfx.deployment.jar" file="${dist.jar}"/>
+            <property name="jfx.deployment.dir" location="${dist.dir}"/>
+        </sequential>
+    </macrodef>
+
+    <macrodef name="deploy-preprocess">
+        <sequential>
+            <delete includeEmptyDirs="true" quiet="true">
+                <fileset dir="${jfx.deployment.dir}${file.separator}lib">
+                    <exclude name="**${file.separator}*.jar"/>
+                </fileset>
+            </delete>
+        </sequential>
+    </macrodef>
+
+    <!-- fx:jar scripted call enables passing of arbitrarily long list of params and fx-version dependent behavior -->
+    <macrodef name="deploy-jar">
+        <sequential>
+            <antcall target="-pre-jfx-jar"/>
+            <echo message="javafx.ant.classpath = ${javafx.ant.classpath}" level="verbose"/>
+            <typedef name="fx_jar" classname="com.sun.javafx.tools.ant.FXJar" classpath="${javafx.ant.classpath}"/>
+            <echo message="Launching &lt;fx:jar&gt; task from ${ant-javafx.jar.location}" level="info"/>
+            <property name="pp_jar_destfile" value="${jfx.deployment.dir}${file.separator}${jfx.deployment.jar}"/>
+            <property name="pp_jar_buildclasses" value="${basedir}${file.separator}${build.classes.dir}"/>
+            <property name="pp_jar_cssbss" value="**${file.separator}*.${css-exclude-ext}"/>
+            <property name="pp_jar_dir" value="${jfx.deployment.dir}"/>
+            <property name="pp_jar_fs1" value="lib${file.separator}${javafx.preloader.jar.filename}"/>
+            <property name="pp_jar_fs2" value="lib${file.separator}*.jar"/>
+            <echo message="deploy_jar: pp_jar_destfile = ${pp_jar_destfile}" level="verbose"/>
+            <echo message="deploy_jar: pp_jar_buildclasses = ${pp_jar_buildclasses}" level="verbose"/>
+            <echo message="deploy_jar: pp_jar_cssbss = ${pp_jar_cssbss}" level="verbose"/>
+            <echo message="deploy_jar: pp_jar_dir = ${pp_jar_dir}" level="verbose"/>
+            <echo message="deploy_jar: pp_jar_fs1 = ${pp_jar_fs1}" level="verbose"/>
+            <echo message="deploy_jar: pp_jar_fs2 = ${pp_jar_fs2}" level="verbose"/>
+            <script language="javascript">
+                <![CDATA[
+                    var S = java.io.File.separator;
+                    var JFXPAR = "javafx.param";
+                    var JFXPARN = "name";
+                    var JFXPARV = "value";
+                    var JFXLAZY = "download.mode.lazy.jar";
+                    var withpreloader = project.getProperty("app-with-preloader");
+                    var fx_ant_api_1_1 = project.getProperty("have-fx-ant-api-1.1");
+
+                    // get jars with lazy download mode property set
+                    function getLazyJars() {
+                        var jars = new Array();
+                        var keys = project.getProperties().keys();
+                        while(keys.hasMoreElements()) {
+                            var pn = keys.nextElement();
+                            if(pn.substr(0,JFXLAZY.length) == JFXLAZY) {
+                                var fname = pn.substring(JFXLAZY.length+1);
+                                jars.push(fname);
+                            }
+                        }
+                        return jars.length > 0 ? jars : null;
+                    }
+                    // set download mode of dependent libraries
+                    function setDownloadMode(fsEager, fsLazy, jars) {
+                        for(i = 0; i < jars.length; i++) {
+                            fsEager.setExcludes("lib" + S + jars[i]);
+                            fsLazy.setIncludes("lib" + S + jars[i]);
+                        }
+                    }
+                    
+                    // fx:jar
+                    var jar = project.createTask("fx_jar");
+                    jar.setProject(project);
+                    var destfile = project.getProperty("pp_jar_destfile");
+                    jar.setDestfile(destfile);
+
+                    // fx:application
+                    var app = jar.createApplication();
+                    app.setProject(project);
+                    var title = project.getProperty("application.title");
+                    var mainclass = project.getProperty("javafx.main.class");
+                    var fallback = project.getProperty("javafx.fallback.class");
+                    app.setName(title);
+                    app.setMainClass(mainclass);
+                    app.setFallbackClass(fallback);
+                    if(withpreloader == "true") {
+                        preloaderclass = project.getProperty("javafx.preloader.class");
+                        app.setPreloaderClass(preloaderclass);
+                    }
+                    // fx:param, fx:argument
+                    var keys = project.getProperties().keys();
+                    while(keys.hasMoreElements()) {
+                        var pn = keys.nextElement();
+                        if(pn.substr(0,JFXPAR.length) == JFXPAR && pn.indexOf(JFXPARN) == (pn.length()-JFXPARN.length)) {
+                            var propn = project.getProperty(pn);
+                            if(propn != null && propn.length() > 0) {
+                                var pv = pn.substr(0,pn.indexOf(JFXPARN)) + JFXPARV;
+                                var propv = project.getProperty(pv);
+                                if(propv != null && propv.length() > 0) {
+                                    var par = app.createParam();
+                                    par.setName(propn);
+                                    par.setValue(propv);
+                                } else {
+                                    if(fx_ant_api_1_1 == "true") {
+                                        var arg = app.createArgument();
+                                        arg.addText(propn);
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    
+                    // fx:resources
+                    var res = jar.createResources();
+                    res.setProject(project);
+                    var pdir = project.getProperty("pp_jar_dir");
+                    if(withpreloader == "true") {
+                        var f1 = res.createFileSet();
+                        f1.setProject(project);
+                        f1.setDir(new java.io.File(pdir));
+                        var i1 = project.getProperty("pp_jar_fs1");
+                        f1.setIncludes(i1);
+                        f1.setRequiredFor("preloader");
+                        var f2 = res.createFileSet();
+                        f2.setProject(project);
+                        f2.setDir(new java.io.File(pdir));
+                        var i2a = project.getProperty("jfx.deployment.jar");
+                        var i2b = project.getProperty("pp_jar_fs2");
+                        var e2c = project.getProperty("pp_jar_fs1");
+                        f2.setIncludes(i2a);
+                        f2.setIncludes(i2b);
+                        f2.setExcludes(e2c);
+                        f2.setRequiredFor("startup");
+                        var lazyjars = getLazyJars();
+                        if(lazyjars != null) {
+                            var f3 = res.createFileSet();
+                            f3.setProject(project);
+                            f3.setDir(new java.io.File(pdir));
+                            f3.setRequiredFor("runtime");
+                            setDownloadMode(f2,f3,lazyjars);
+                        }
+                    } else {
+                        var fn = res.createFileSet();
+                        fn.setProject(project);
+                        fn.setDir(new java.io.File(pdir));
+                        var ia = project.getProperty("jfx.deployment.jar");
+                        var ib = project.getProperty("pp_jar_fs2");
+                        fn.setIncludes(ia);
+                        fn.setIncludes(ib);
+                        fn.setRequiredFor("startup");
+                        var lazyjars = getLazyJars();
+                        if(lazyjars != null) {
+                            var fn2 = res.createFileSet();
+                            fn2.setProject(project);
+                            fn2.setDir(new java.io.File(pdir));
+                            fn2.setRequiredFor("runtime");
+                            setDownloadMode(fn,fn2,lazyjars);
+                        }
+                    }
+                    
+                    // fileset to exclude *.css or *.bss
+                    var fs = jar.createFileSet();
+                    fs.setProject(project);
+                    var buildcls = project.getProperty("pp_jar_buildclasses");
+                    var exc = project.getProperty("pp_jar_cssbss");
+                    fs.setDir(new java.io.File(buildcls));
+                    fs.setExcludes(exc);
+                    
+                    // manifest
+                    var man = jar.createManifest();
+                    var a1val = project.getProperty("application.vendor");
+                    var a1 = new org.apache.tools.ant.taskdefs.Manifest.Attribute();
+                    a1.setName("Implementation-Vendor");
+                    a1.setValue(a1val);
+                    man.addConfiguredAttribute(a1);
+                    var a2val = project.getProperty("application.title");
+                    var a2 = new org.apache.tools.ant.taskdefs.Manifest.Attribute();
+                    a2.setName("Implementation-Title");
+                    a2.setValue(a2val);
+                    man.addConfiguredAttribute(a2);
+                    var a3 = new org.apache.tools.ant.taskdefs.Manifest.Attribute();
+                    a3.setName("Implementation-Version");
+                    a3.setValue("1.0");
+                    man.addConfiguredAttribute(a3);
+                    
+                    jar.perform();
+                ]]>
+            </script>
+            <antcall target="-post-jfx-jar"/>
+        </sequential>
+    </macrodef>
+
+    <macrodef name="deploy-sign">
+        <sequential>
+            <echo message="keystore=${javafx.signjar.keystore}" level="verbose"/>
+            <echo message="storepass=${javafx.signjar.storepass}" level="verbose"/>
+            <echo message="alias=${javafx.signjar.alias}" level="verbose"/>
+            <echo message="keypass=${javafx.signjar.keypass}" level="verbose"/>
+            <signjar keystore="${javafx.signjar.keystore}"
+                storepass="${javafx.signjar.storepass}"
+                alias="${javafx.signjar.alias}"
+                keypass="${javafx.signjar.keypass}">
+                <fileset dir="${jfx.deployment.dir}">
+                    <include name="${jfx.deployment.jar}"/>
+                    <include name="lib${file.separator}*.jar"/>
+                </fileset>
+            </signjar>
+        </sequential>
+    </macrodef>
+
+    <macrodef name="deploy-sign-preloader">
+        <sequential>
+            <echo message="keystore=${javafx.signjar.keystore}" level="verbose"/>
+            <echo message="storepass=${javafx.signjar.storepass}" level="verbose"/>
+            <echo message="alias=${javafx.signjar.alias}" level="verbose"/>
+            <echo message="keypass=${javafx.signjar.keypass}" level="verbose"/>
+            <signjar keystore="${javafx.signjar.keystore}"
+                storepass="${javafx.signjar.storepass}"
+                alias="${javafx.signjar.alias}"
+                keypass="${javafx.signjar.keypass}">
+                <fileset dir="${jfx.deployment.dir}">
+                    <include name="lib${file.separator}${javafx.preloader.jar.filename}"/>
+                </fileset>
+            </signjar>
+            <signjar keystore="${javafx.signjar.keystore}"
+                storepass="${javafx.signjar.storepass}"
+                alias="${javafx.signjar.alias}"
+                keypass="${javafx.signjar.keypass}">
+                <fileset dir="${jfx.deployment.dir}">
+                    <include name="${jfx.deployment.jar}"/>
+                    <include name="lib${file.separator}*.jar"/>
+                    <exclude name="lib${file.separator}${javafx.preloader.jar.filename}"/>
+                </fileset>
+            </signjar>
+        </sequential>
+    </macrodef>
+
+    <macrodef name="deploy-process-template">
+        <sequential>
+            <echo message="javafx.run.htmltemplate = ${javafx.run.htmltemplate}" level="verbose"/>
+            <pathconvert property="javafx.run.htmltemplate.processed">
+                <path path="${javafx.run.htmltemplate}"/>
+                <mapper>
+                     <chainedmapper>
+                          <flattenmapper/>
+                          <globmapper from="*" to="${jfx.deployment.dir}${file.separator}*" casesensitive="no"/>
+                     </chainedmapper>
+                </mapper>
+            </pathconvert>
+            <echo message="javafx.run.htmltemplate.processed = ${javafx.run.htmltemplate.processed}" level="verbose"/>
+        </sequential>
+    </macrodef>
+
+    <!-- fx:deploy scripted call enables passing of arbitrarily long lists of params, vmoptions and callbacks and fx-version dependent behavior -->
+    <macrodef name="deploy-deploy">
+        <sequential>
+            <antcall target="-pre-jfx-deploy"/>
+            <echo message="javafx.ant.classpath = ${javafx.ant.classpath}" level="verbose"/>
+            <typedef name="fx_deploy" classname="com.sun.javafx.tools.ant.DeployFXTask" classpath="${javafx.ant.classpath}"/>
+            <echo message="Launching &lt;fx:deploy&gt; task from ${ant-javafx.jar.location}" level="info"/>
+            <property name="pp_deploy_dir" value="${jfx.deployment.dir}"/>
+            <property name="pp_deploy_fs1" value="lib${file.separator}${javafx.preloader.jar.filename}"/>
+            <property name="pp_deploy_fs2" value="lib${file.separator}*.jar"/>
+            <echo message="deploy_deploy: pp_deploy_dir = ${pp_deploy_dir}" level="verbose"/>
+            <echo message="deploy_deploy: pp_deploy_fs1 = ${pp_deploy_fs1}" level="verbose"/>
+            <echo message="deploy_deploy: pp_deploy_fs2 = ${pp_deploy_fs2}" level="verbose"/>
+            <script language="javascript">
+                <![CDATA[
+                    function isTrue(prop) {
+                        return prop != null && 
+                           (prop.toLowerCase()=="true" || prop.toLowerCase()=="yes" || prop.toLowerCase()=="on");
+                    }                    
+                    var S = java.io.File.separator;
+                    var JFXPAR = "javafx.param";
+                    var JFXPARN = "name";
+                    var JFXPARV = "value";
+                    var JFXCALLB = "javafx.jscallback";
+                    var JFXLAZY = "download.mode.lazy.jar";
+                    var withpreloader = project.getProperty("app-with-preloader");
+                    var fx_ant_api_1_1 = project.getProperty("have-fx-ant-api-1.1");
+
+                    // get jars with lazy download mode property set
+                    function getLazyJars() {
+                        var jars = new Array();
+                        var keys = project.getProperties().keys();
+                        while(keys.hasMoreElements()) {
+                            var pn = keys.nextElement();
+                            if(pn.substr(0,JFXLAZY.length) == JFXLAZY) {
+                                var fname = pn.substring(JFXLAZY.length+1);
+                                jars.push(fname);
+                            }
+                        }
+                        return jars.length > 0 ? jars : null;
+                    }
+                    // set download mode of dependent libraries
+                    function setDownloadMode(fsEager, fsLazy, jars) {
+                        for(i = 0; i < jars.length; i++) {
+                            fsEager.setExcludes("lib" + S + jars[i]);
+                            fsLazy.setIncludes("lib" + S + jars[i]);
+                        }
+                    }
+                    
+                    // fx:deploy
+                    var deploy = project.createTask("fx_deploy");
+                    deploy.setProject(project);
+                    var width = project.getProperty("javafx.width");
+                    var height = project.getProperty("javafx.height");
+                    var outdir = project.getProperty("jfx.deployment.dir");
+                    var embedJNLP = project.getProperty("javafx.deploy.embedJNLP");
+                    var updatemode = project.getProperty("update-mode");
+                    var outfile = project.getProperty("application.title");
+                    var includeDT = project.getProperty("javafx.deploy.includeDT");
+                    var offline = project.getProperty("javafx.deploy.allowoffline");
+                    deploy.setWidth(width);
+                    deploy.setHeight(height);
+                    deploy.setOutdir(outdir);
+                    deploy.setEmbedJNLP(isTrue(embedJNLP));
+                    deploy.setUpdateMode(updatemode);
+                    deploy.setOutfile(outfile);
+                    deploy.setIncludeDT(isTrue(includeDT));
+                    if(offline != null) {
+                        if(fx_ant_api_1_1 == "true") {
+                            deploy.setOfflineAllowed(isTrue(offline));
+                        } else {
+                            println("Warning: offlineAllowed not supported by this version of JavaFX SDK deployment Ant task. Please upgrade JavaFX to 2.0.2 or higher.");
+                        }
+                    }
+
+                    // fx:application
+                    var app = deploy.createApplication();
+                    app.setProject(project);
+                    var title = project.getProperty("application.title");
+                    var mainclass = project.getProperty("javafx.main.class");
+                    var fallback = project.getProperty("javafx.fallback.class");
+                    app.setName(title);
+                    app.setMainClass(mainclass);
+                    app.setFallbackClass(fallback);
+                    if(withpreloader == "true") {
+                        preloaderclass = project.getProperty("javafx.preloader.class");
+                        app.setPreloaderClass(preloaderclass);
+                    }
+                    // fx:param, fx:argument
+                    var keys = project.getProperties().keys();
+                    while(keys.hasMoreElements()) {
+                        var pn = keys.nextElement();
+                        if(pn.substr(0,JFXPAR.length) == JFXPAR && pn.indexOf(JFXPARN) == (pn.length()-JFXPARN.length)) {
+                            var propn = project.getProperty(pn);
+                            if(propn != null && propn.length() > 0) {
+                                var pv = pn.substr(0,pn.indexOf(JFXPARN)) + JFXPARV;
+                                var propv = project.getProperty(pv);
+                                if(propv != null && propv.length() > 0) {
+                                    var par = app.createParam();
+                                    par.setName(propn);
+                                    par.setValue(propv);
+                                } else {
+                                    if(fx_ant_api_1_1 == "true") {
+                                        var arg = app.createArgument();
+                                        arg.addText(propn);
+                                    } else {
+                                        println("Warning: Unnamed parameters not supported by this version of JavaFX SDK deployment Ant tasks. Upgrade JavaFX to 2.0.2 or higher.");
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    
+                    // fx:resources
+                    var res = deploy.createResources();
+                    res.setProject(project);
+                    var deploydir = project.getProperty("pp_deploy_dir");
+                    if(withpreloader == "true") {
+                        var f1 = res.createFileSet();
+                        f1.setProject(project);
+                        f1.setDir(new java.io.File(deploydir));
+                        var i1 = project.getProperty("pp_deploy_fs1");
+                        f1.setIncludes(i1);
+                        f1.setRequiredFor("preloader");
+                        var f2 = res.createFileSet();
+                        f2.setProject(project);
+                        f2.setDir(new java.io.File(deploydir));
+                        var i2a = project.getProperty("jfx.deployment.jar");
+                        var i2b = project.getProperty("pp_deploy_fs2");
+                        var e2c = project.getProperty("pp_deploy_fs1");
+                        f2.setIncludes(i2a);
+                        f2.setIncludes(i2b);
+                        f2.setExcludes(e2c);
+                        f2.setRequiredFor("startup");
+                        var lazyjars = getLazyJars();
+                        if(lazyjars != null) {
+                            var f3 = res.createFileSet();
+                            f3.setProject(project);
+                            f3.setDir(new java.io.File(deploydir));
+                            f3.setRequiredFor("runtime");
+                            setDownloadMode(f2,f3,lazyjars);
+                        }
+                    } else {
+                        var fn = res.createFileSet();
+                        fn.setProject(project);
+                        fn.setDir(new java.io.File(deploydir));
+                        var ia = project.getProperty("jfx.deployment.jar");
+                        var ib = project.getProperty("pp_deploy_fs2");
+                        fn.setIncludes(ia);
+                        fn.setIncludes(ib);
+                        fn.setRequiredFor("startup");
+                        var lazyjars = getLazyJars();
+                        if(lazyjars != null) {
+                            var fn2 = res.createFileSet();
+                            fn2.setProject(project);
+                            fn2.setDir(new java.io.File(deploydir));
+                            fn2.setRequiredFor("runtime");
+                            setDownloadMode(fn,fn2,lazyjars);
+                        }
+                    }
+                    
+                    // fx:info
+                    var info = deploy.createInfo();
+                    info.setProject(project);
+                    var vendor = project.getProperty("application.vendor");
+                    info.setTitle(title); // title known from before
+                    info.setVendor(vendor);
+                    var icon = project.getProperty("javafx.deploy.icon");
+                    if(icon != null) {
+                        if(fx_ant_api_1_1 == "true") {
+                            var iicon = info.createIcon();
+                            iicon.setHref(icon);
+                        } else {
+                            println("Warning: Icon not supported by this version of JavaFX SDK deployment Ant task. Please upgrade JavaFX to 2.0.2 or higher.");
+                        }
+                    }
+                    
+                    // fx:permissions
+                    var perm = deploy.createPermissions();
+                    perm.setProject(project);
+                    var elev = project.getProperty("permissions.elevated");
+                    perm.setElevated(isTrue(elev));
+                    
+                    // fx:preferences
+                    var pref = deploy.createPreferences();
+                    pref.setProject(project);
+                    var scut = project.getProperty("javafx.deploy.adddesktopshortcut");
+                    var instp = project.getProperty("javafx.deploy.installpermanently");
+                    var smenu = project.getProperty("javafx.deploy.addstartmenushortcut");
+                    pref.setShortcut(isTrue(scut));
+                    pref.setInstall(isTrue(instp));
+                    pref.setMenu(isTrue(smenu));
+
+                    // fx:template
+                    var templ = project.getProperty("javafx.run.htmltemplate");
+                    var templp = project.getProperty("javafx.run.htmltemplate.processed");
+                    if(templ != null && templp != null && templ.length() > 0 && templp.length() > 0) {
+                        var temp = deploy.createTemplate();
+                        temp.setProject(project);
+                        temp.setFile(new java.io.File(templ));
+                        temp.setTofile(new java.io.File(templp));
+                    }
+
+                    // fx:platform
+                    var plat = deploy.createPlatform();
+                    plat.setProject(project);
+                    var jvmargs = project.getProperty("run.jvmargs");
+                    if(jvmargs != null && jvmargs.length() > 0) {
+                        var jvmargss = jvmargs.split(" ");
+                        for(i = 0; i < jvmargss.length; i++) {
+                            if(jvmargss[i] != null && jvmargss[i].length() > 0) {
+                                var vmarg = plat.createJvmarg();
+                                vmarg.setValue(jvmargss[i]);
+                            }
+                        }
+                    }
+                    
+                    // fx:callbacks
+                    var callbs = deploy.createCallbacks();
+                    callbs.setProject(project);
+                    var keys = project.getProperties().keys();
+                    while(keys.hasMoreElements()) {
+                        var pn = keys.nextElement();
+                        if(pn.substr(0,JFXCALLB.length) == JFXCALLB) {
+                            var prop = project.getProperty(pn);
+                            if(prop != null && prop.length() > 0) {
+                                var cname = pn.substring(JFXCALLB.length+1);
+                                var cb = callbs.createCallback();
+                                cb.setProject(project);
+                                cb.setName(cname);
+                                cb.addText(prop);
+                            }
+                        }
+                    }
+                    
+                    deploy.perform();
+                ]]>
+            </script>
+            <antcall target="-post-jfx-deploy"/>
+        </sequential>
+    </macrodef>
+
+    <!-- JavaFX 2.0+ deploy task as yet can not generate pre-FX jnlp which is needed for FX-in-Swing projects-->
+    <macrodef name="deploy-deploy-swing">
+        <sequential>
+            <antcall target="-pre-jfx-deploy"/>
+            <local name="permissions-elevated-token"/>
+            <condition property="permissions-elevated-token" value="${line.separator}    &lt;security&gt;${line.separator}        &lt;all-permissions/&gt;${line.separator}    &lt;/security&gt;" else="">
+                <isset property="permissions-elevated"/>
+            </condition>
+            <local name="offline-allowed-token"/>
+            <condition property="offline-allowed-token" value="${line.separator}        &lt;offline-allowed/&gt;" else="">
+                <isset property="offline-allowed"/>
+            </condition>
+            <local name="update-mode-background-token"/>
+            <condition property="update-mode-background-token" value="background" else="always">
+                <isset property="update-mode-background"/>
+            </condition>
+            <local name="html-template-processed-available"/>
+            <condition property="html-template-processed-available">
+                <and>
+                    <isset property="javafx.run.htmltemplate.processed"/>
+                    <not>
+                        <equals arg1="${javafx.run.htmltemplate.processed}" arg2=""/>
+                    </not>
+                </and>
+            </condition>
+            <local name="javafx.deploy.icon.basename"/>
+            <basename property="javafx.deploy.icon.basename" file="${javafx.deploy.icon}"/>
+            <local name="local-icon-filename-available"/>
+            <condition property="local-icon-filename-available">
+                <and>
+                    <isset property="icon-available"/>
+                    <isset property="javafx.deploy.icon.basename"/>
+                    <not><equals arg1="${javafx.deploy.icon.basename}" arg2=""/></not>
+                    <not><contains string="${javafx.deploy.icon.basename}" substring="$${javafx" casesensitive="false"/></not>
+                    <not><contains string="${javafx.deploy.icon}" substring="http:" casesensitive="false"/></not>
+                </and>
+            </condition>
+            <local name="icon-token"/>
+            <condition property="icon-token" value="${line.separator}        &lt;icon href=&quot;${javafx.deploy.icon.basename}&quot; kind=&quot;default&quot;/&gt;">
+                <isset property="local-icon-filename-available"/>
+            </condition>
+            <condition property="icon-token" value="${line.separator}        &lt;icon href=&quot;${javafx.deploy.icon}&quot; kind=&quot;default&quot;/&gt;" else="">
+                <isset property="icon-available"/>
+            </condition>
+            <basename property="dist.filename" file="${dist.jar}" suffix=".jar"/>
+            <length file="${dist.jar}" property="dist.jar.size" />
+            <local name="vmargs-token"/>
+            <condition property="vmargs-token" value="java-vm-args=&quot;${run.jvmargs}&quot; " else="">
+                <isset property="vmargs-available"/>
+            </condition>
+            <local name="applet-params-token"/>
+            <local name="application-args-token"/>
+            <script language="javascript">
+                <![CDATA[
+                    var JFXPAR = "javafx.param";
+                    var JFXPARN = "name";
+                    var JFXPARV = "value";
+
+                    var params = "";
+                    var args = "";
+                    var keys = project.getProperties().keys();
+                    while(keys.hasMoreElements()) {
+                        var pn = keys.nextElement();
+                        if(pn.substr(0,JFXPAR.length) == JFXPAR && pn.indexOf(JFXPARN) == (pn.length()-JFXPARN.length)) {
+                            var propn = project.getProperty(pn);
+                            if(propn != null && propn.length() > 0) {
+                                var pv = pn.substr(0,pn.indexOf(JFXPARN)) + JFXPARV;
+                                var propv = project.getProperty(pv);
+                                if(propv != null && propv.length() > 0) {
+                                    params += "\n        <param name=\"" + propn + "\" value=\"" + propv + "\"/>";
+                                    args += "\n        <argument>" + propn + "=" + propv + "</argument>";
+                                } else {
+                                    params += "\n        <param name=\"" + propn + "\" value=\"\"/>";
+                                    args += "\n        <argument>" + propn + "</argument>";
+                                }
+                            }
+                        }
+                    }
+                    project.setProperty("applet-params-token", params);
+                    project.setProperty("application-args-token", args);
+                ]]>
+            </script>
+            <filterchain id="jnlp.template.filter">
+                <replacetokens>
+                    <token key="NAME" value="${dist.filename}"/>
+                    <token key="MAINCLASS" value="${main.class}"/>
+                    <token key="FILESIZE" value="${dist.jar.size}"/>
+                    <token key="VENDOR" value="${application.vendor}"/>
+                    <token key="TITLE" value="${application.title}"/>
+                    <token key="WIDTH" value="${javafx.run.width}"/>
+                    <token key="HEIGHT" value="${javafx.run.height}"/>
+                    <token key="PERMISSIONS" value="${permissions-elevated-token}"/>
+                    <token key="OFFLINE" value="${offline-allowed-token}"/>
+                    <token key="UPDATEMODE" value="${update-mode-background-token}"/>
+                    <token key="ICON" value="${icon-token}"/>
+                    <token key="VMARGS" value="${vmargs-token}"/>
+                    <token key="PARAMETERS" value="${applet-params-token}"/>
+                    <token key="ARGUMENTS" value="${application-args-token}"/>
+                </replacetokens>
+            </filterchain>
+            <copy file="${basedir}${file.separator}nbproject${file.separator}templates${file.separator}FXSwingTemplateApplication.jnlp" 
+                    tofile="${dist.dir}${file.separator}${dist.filename}_application.jnlp" >
+                    <filterchain refid="jnlp.template.filter"/>
+            </copy>        
+            <copy file="${basedir}${file.separator}nbproject${file.separator}templates${file.separator}FXSwingTemplateApplet.jnlp" 
+                    tofile="${dist.dir}${file.separator}${dist.filename}_applet.jnlp" >
+                    <filterchain refid="jnlp.template.filter"/>
+            </copy>        
+            <copy file="${basedir}${file.separator}nbproject${file.separator}templates${file.separator}FXSwingTemplate.html" 
+                    tofile="${dist.dir}${file.separator}${dist.filename}.html" >
+                    <filterchain refid="jnlp.template.filter"/>
+            </copy>
+            <script language="javascript">
+                <![CDATA[
+                    var PREF = "file:";
+                    var doCopyIcon = project.getProperty("local-icon-filename-available");
+                    if(doCopyIcon != null) {
+                        var iconProp = project.getProperty("javafx.deploy.icon");
+                        if(iconProp.indexOf(PREF) == 0) {
+                            iconProp = iconProp.slice(PREF.length);
+                        }
+                        while(iconProp.charAt(0) == "/") {
+                            iconProp = iconProp.slice(1);
+                        }
+                        var S = java.io.File.separator;
+                        var baseDir = project.getProperty("basedir");
+                        var distDir = project.getProperty("dist.dir");
+                        var copyTask = project.createTask("copy");
+                        var source = new java.io.File(iconProp);
+                        var target = new java.io.File(baseDir + S + distDir);
+                        copyTask.setFile(source);
+                        copyTask.setTodir(target);
+                        copyTask.setFlatten(true);
+                        copyTask.setFailOnError(false);
+                        copyTask.perform();
+                    }
+                    var doCopyHTMLFrom = project.getProperty("html-template-available");
+                    var doCopyHTMLTo = project.getProperty("html-template-processed-available");
+                    if(doCopyHTMLFrom != null && doCopyHTMLTo != null) {
+                        var htmlFrom = project.getProperty("javafx.run.htmltemplate");
+                        if(htmlFrom.indexOf(PREF) == 0) {
+                            htmlFrom = htmlFrom.slice(PREF.length);
+                        }
+                        while(htmlFrom.charAt(0) == "/") {
+                            htmlFrom = htmlFrom.slice(1);
+                        }
+                        var htmlTo = project.getProperty("javafx.run.htmltemplate.processed");
+                        if(htmlTo.indexOf(PREF) == 0) {
+                            htmlTo = htmlTo.slice(PREF.length);
+                        }
+                        while(htmlTo.charAt(0) == "/") {
+                            htmlTo = htmlTo.slice(1);
+                        }
+                        var copyTask = project.createTask("copy");
+                        var source = new java.io.File(htmlFrom);
+                        var target = new java.io.File(htmlTo);
+                        copyTask.setFile(source);
+                        copyTask.setTofile(target);
+                        copyTask.setFailOnError(false);
+                        copyTask.perform();
+                    }
+                ]]>
+            </script>
+            <antcall target="-post-jfx-deploy"/>
+        </sequential>
+    </macrodef>
+
+
+    <!-- Project Deployment Targets -->
+
+    <target name="-check-sign" depends="-check-project,-javafx-init-keystore" if="javafx.signed.true+signjars.task.available">
+        <condition property="sign-nopreloader-notemplate">
+            <and>
+                <isset property="app-without-preloader"/>
+                <not><isset property="html-template-available"/></not>
+                <not><isset property="fx-in-swing-app"/></not>
+            </and>
+        </condition>
+        <condition property="sign-preloader-notemplate">
+            <and>
+                <isset property="app-with-preloader"/>
+                <not><isset property="html-template-available"/></not>
+                <not><isset property="fx-in-swing-app"/></not>
+            </and>
+        </condition>
+        <condition property="sign-nopreloader-template">
+            <and>
+                <isset property="app-without-preloader"/>
+                <isset property="html-template-available"/>
+                <not><isset property="fx-in-swing-app"/></not>
+            </and>
+        </condition>
+        <condition property="sign-preloader-template">
+            <and>
+                <isset property="app-with-preloader"/>
+                <isset property="html-template-available"/>
+                <not><isset property="fx-in-swing-app"/></not>
+            </and>
+        </condition>
+        <condition property="sign-nopreloader-notemplate-swing">
+            <and>
+                <isset property="app-without-preloader"/>
+                <not><isset property="html-template-available"/></not>
+                <isset property="fx-in-swing-app"/>
+            </and>
+        </condition>
+        <condition property="sign-nopreloader-template-swing">
+            <and>
+                <isset property="app-without-preloader"/>
+                <isset property="html-template-available"/>
+                <isset property="fx-in-swing-app"/>
+            </and>
+        </condition>
+    </target>
+    <target name="-check-nosign" depends="-check-project">
+        <condition property="nosign-nopreloader-notemplate">
+            <and>
+                <isset property="app-without-preloader"/>
+                <not><isset property="html-template-available"/></not>
+                <not><isset property="javafx.signed.true"/></not>
+                <not><isset property="fx-in-swing-app"/></not>
+            </and>
+        </condition>
+        <condition property="nosign-preloader-notemplate">
+            <and>
+                <isset property="app-with-preloader"/>
+                <not><isset property="html-template-available"/></not>
+                <not><isset property="javafx.signed.true"/></not>
+                <not><isset property="fx-in-swing-app"/></not>
+            </and>
+        </condition>
+        <condition property="nosign-nopreloader-template">
+            <and>
+                <isset property="app-without-preloader"/>
+                <isset property="html-template-available"/>
+                <not><isset property="javafx.signed.true"/></not>
+                <not><isset property="fx-in-swing-app"/></not>
+            </and>
+        </condition>
+        <condition property="nosign-preloader-template">
+            <and>
+                <isset property="app-with-preloader"/>
+                <isset property="html-template-available"/>
+                <not><isset property="javafx.signed.true"/></not>
+                <not><isset property="fx-in-swing-app"/></not>
+            </and>
+        </condition>
+        <condition property="nosign-nopreloader-notemplate-swing">
+            <and>
+                <isset property="app-without-preloader"/>
+                <not><isset property="html-template-available"/></not>
+                <not><isset property="javafx.signed.true"/></not>
+                <isset property="fx-in-swing-app"/>
+            </and>
+        </condition>
+        <condition property="nosign-nopreloader-template-swing">
+            <and>
+                <isset property="app-without-preloader"/>
+                <isset property="html-template-available"/>
+                <not><isset property="javafx.signed.true"/></not>
+                <isset property="fx-in-swing-app"/>
+            </and>
+        </condition>
+    </target>
+
+
+    <!-- WITH SIGNING -->
+
+    <!-- project without preloader -->
+    <!-- no html template -->
+    <target name="-deploy-app-sign-nopreloader-notemplate" depends="-check-sign" if="sign-nopreloader-notemplate" unless="preloader-app">
+        <echo message="-deploy-app-sign-nopreloader-notemplate" level="verbose"/>
+        <deploy-defines/>
+        <deploy-preprocess/>
+        <deploy-jar/>
+        <deploy-sign/>
+        <deploy-deploy/>
+    </target>
+
+    <!-- project with preloader -->
+    <!-- no html template -->
+    <target name="-deploy-app-sign-preloader-notemplate" depends="-check-sign" if="sign-preloader-notemplate" unless="preloader-app">
+        <echo message="-deploy-app-sign-preloader-notemplate" level="verbose"/>
+        <deploy-defines/>
+        <deploy-preprocess/>
+        <deploy-jar/>
+        <deploy-sign-preloader/>
+        <deploy-deploy/>
+    </target>
+
+    <!-- project without preloader -->
+    <!-- html template -->
+    <target name="-deploy-app-sign-nopreloader-template" depends="-check-sign" if="sign-nopreloader-template" unless="preloader-app">
+        <echo message="-deploy-app-sign-nopreloader-template" level="verbose"/>
+        <deploy-defines/>
+        <deploy-preprocess/>
+        <deploy-jar/>
+        <deploy-sign/>
+        <deploy-process-template/>
+        <deploy-deploy/>
+    </target>
+
+    <!-- project with preloader -->
+    <!-- html template -->
+    <target name="-deploy-app-sign-preloader-template" depends="-check-sign" if="sign-preloader-template" unless="preloader-app">
+        <echo message="-deploy-app-sign-preloader-template" level="verbose"/>
+        <deploy-defines/>
+        <deploy-preprocess/>
+        <deploy-jar/>
+        <deploy-sign-preloader/>
+        <deploy-process-template/>
+        <deploy-deploy/>
+    </target>
+
+    <!-- project without preloader -->
+    <!-- no html template -->
+    <!-- FX in Swing app -->
+    <target name="-deploy-app-sign-nopreloader-notemplate-swing" depends="-check-sign" if="sign-nopreloader-notemplate-swing" unless="preloader-app-no-workaround">
+        <echo message="-deploy-app-sign-nopreloader-notemplate-swing" level="verbose"/>
+        <deploy-defines/>
+        <deploy-preprocess/>
+        <deploy-jar/>
+        <deploy-sign/>
+        <deploy-deploy-swing/>
+    </target>
+
+    <!-- project without preloader -->
+    <!-- html template -->
+    <!-- FX in Swing app -->
+    <target name="-deploy-app-sign-nopreloader-template-swing" depends="-check-sign" if="sign-nopreloader-template-swing" unless="preloader-app-no-workaround">
+        <echo message="-deploy-app-sign-nopreloader-template-swing" level="verbose"/>
+        <deploy-defines/>
+        <deploy-preprocess/>
+        <deploy-jar/>
+        <deploy-sign/>
+        <deploy-process-template/>
+        <deploy-deploy-swing/>
+    </target>
+
+
+    <!-- NO SIGNING -->
+
+    <!-- project without preloader -->
+    <!-- no html template -->
+    <target name="-deploy-app-nosign-nopreloader-notemplate" depends="-check-nosign" if="nosign-nopreloader-notemplate" unless="preloader-app">
+        <echo message="-deploy-app-nosign-nopreloader-notemplate" level="verbose"/>
+        <deploy-defines/>
+        <deploy-preprocess/>
+        <deploy-jar/>
+        <deploy-deploy/>
+    </target>
+
+    <!-- project with preloader -->
+    <!-- no html template -->
+    <target name="-deploy-app-nosign-preloader-notemplate" depends="-check-nosign" if="nosign-preloader-notemplate" unless="preloader-app">
+        <echo message="-deploy-app-nosign-preloader-notemplate" level="verbose"/>
+        <deploy-defines/>
+        <deploy-preprocess/>
+        <deploy-jar/>
+        <deploy-deploy/>
+    </target>
+
+    <!-- project without preloader -->
+    <!-- html template -->
+    <target name="-deploy-app-nosign-nopreloader-template" depends="-check-nosign" if="nosign-nopreloader-template" unless="preloader-app">
+        <echo message="-deploy-app-nosign-nopreloader-template" level="verbose"/>
+        <deploy-defines/>
+        <deploy-preprocess/>
+        <deploy-jar/>
+        <deploy-process-template/>
+        <deploy-deploy/>
+    </target>
+
+    <!-- project with preloader -->
+    <!-- html template -->
+    <target name="-deploy-app-nosign-preloader-template" depends="-check-nosign" if="nosign-preloader-template" unless="preloader-app">
+        <echo message="-deploy-app-nosign-preloader-template" level="verbose"/>
+        <deploy-defines/>
+        <deploy-preprocess/>
+        <deploy-jar/>
+        <deploy-process-template/>
+        <deploy-deploy/>
+    </target>
+
+    <!-- project without preloader -->
+    <!-- no html template -->
+    <!-- FX in Swing app -->
+    <target name="-deploy-app-nosign-nopreloader-notemplate-swing" depends="-check-nosign" if="nosign-nopreloader-notemplate-swing" unless="preloader-app-no-workaround">
+        <echo message="-deploy-app-nosign-nopreloader-notemplate-swing" level="verbose"/>
+        <deploy-defines/>
+        <deploy-preprocess/>
+        <deploy-jar/>
+        <deploy-deploy-swing/>
+    </target>
+
+    <!-- project without preloader -->
+    <!-- html template -->
+    <!-- FX in Swing app -->
+    <target name="-deploy-app-nosign-nopreloader-template-swing" depends="-check-nosign" if="nosign-nopreloader-template-swing" unless="preloader-app-no-workaround">
+        <echo message="-deploy-app-nosign-nopreloader-template-swing" level="verbose"/>
+        <deploy-defines/>
+        <deploy-preprocess/>
+        <deploy-jar/>
+        <deploy-process-template/>
+        <deploy-deploy-swing/>
+    </target>
+
+
+    <!-- Project Run Targets -->
+
+    <target name="-warn-of-preloader" depends="-check-project" if="preloader-app-no-workaround">
+        <fail message="Error:${line.separator}JavaFX 2 Preloader Project can not be executed directly.${line.separator}Please execute instead a JavaFX Application that uses the Preloader."/>
+    </target>
+    
+
+    <!-- Running/Debugging/Profiling Standalone -->
+
+    <target name="jfxsa-run" depends="-check-jfx-runtime,-warn-of-preloader,run"/>
+
+    <target name="jfxsa-debug" depends="jar,-check-jfx-runtime,-warn-of-preloader,debug"/>
+    
+    <target name="jfxsa-profile" depends="-check-jfx-runtime,-warn-of-preloader,profile"/>
+
+
+    <!-- Shared Debugging init -->
+
+    <target name="-init-debug-args">
+        <property name="version-output" value="java version &quot;${ant.java.version}"/>
+        <condition property="have-jdk-older-than-1.4">
+            <or>
+                <contains string="${version-output}" substring="java version &quot;1.0"/>
+                <contains string="${version-output}" substring="java version &quot;1.1"/>
+                <contains string="${version-output}" substring="java version &quot;1.2"/>
+                <contains string="${version-output}" substring="java version &quot;1.3"/>
+            </or>
+        </condition>
+        <condition else="-Xdebug" property="debug-args-line" value="-Xdebug -Xnoagent -Djava.compiler=none">
+            <istrue value="${have-jdk-older-than-1.4}"/>
+        </condition>
+        <condition else="dt_socket" property="debug-transport-by-os" value="dt_shmem">
+            <os family="windows"/>
+        </condition>
+        <condition else="${debug-transport-by-os}" property="debug-transport" value="${debug.transport}">
+            <isset property="debug.transport"/>
+        </condition>
+    </target>
+
+
+    <!-- Running/Debugging/Profiling as WebStart -->
+    
+    <target name="-check-jnlp-file-fx" depends="-check-project" unless="fx-in-swing-app">
+        <basename property="jfx.deployment.base" file="${jfx.deployment.jar}" suffix=".jar"/>
+        <property name="jfx.deployment.jnlp" location="${jfx.deployment.dir}${file.separator}${jfx.deployment.base}.jnlp"/>
+    </target>
+    <target name="-check-jnlp-file-swing" depends="-check-project" if="fx-in-swing-app">
+        <basename property="jfx.deployment.base" file="${jfx.deployment.jar}" suffix=".jar"/>
+        <property name="jfx.deployment.jnlp" location="${jfx.deployment.dir}${file.separator}${jfx.deployment.base}_application.jnlp"/>
+    </target>
+    <target name="-check-jnlp-file" depends="-check-jnlp-file-fx,-check-jnlp-file-swing">
+        <condition property="jnlp-file-exists">
+            <available file="${jfx.deployment.jnlp}"/>
+        </condition>
+        <condition property="jnlp-file-exists+netbeans.home">
+            <and>
+                <isset property="jnlp-file-exists"/>
+                <isset property="netbeans.home"/>
+            </and>
+        </condition>
+    </target>
+
+    <target name="-resolve-jnlp-file" depends="-check-jnlp-file" unless="jnlp-file-exists">
+        <antcall target="jfx-deployment"/>
+        <antcall target="-check-jnlp-file"/>
+    </target>
+
+    <target name="jfxws-run" if="jnlp-file-exists" depends="-check-jdk-7u4or5-mac,jar,-check-jfx-webstart,-resolve-jnlp-file,-check-jfx-runtime" description="Start fx javaws execution">
+        <echo message="Executing ${jfx.deployment.jnlp} using ${active.webstart.executable}"/>
+        <exec executable="${active.webstart.executable}">
+            <arg file="${jfx.deployment.jnlp}"/>
+        </exec>
+    </target>
+    
+    <target name="jfxws-debug" if="jnlp-file-exists+netbeans.home" depends="-check-jdk-7u4or5-mac,jar,-check-jfx-webstart,-resolve-jnlp-file,-check-jfx-runtime,-debug-start-debugger,-debug-javaws-debuggee" 
+        description="Debug fx javaws project in IDE"/>
+        
+    <target name="-debug-javaws-debuggee" depends="-init-debug-args">
+        <echo message="Executing ${jfx.deployment.jnlp} in debug mode using ${active.webstart.executable}"/>
+        <exec executable="${active.webstart.executable}">
+            <env key="JAVAWS_VM_ARGS" value="${debug-args-line} -Xrunjdwp:transport=${debug-transport},address=${jpda.address}"/>
+            <arg value="-wait"/>
+            <arg file="${jfx.deployment.jnlp}"/>
+        </exec>
+    </target>
+    
+    <target name="-profile-check-1">
+        <condition property="profiler.configured">
+            <or>
+                <contains casesensitive="true" string="${run.jvmargs.ide}" substring="-agentpath:"/>
+                <contains casesensitive="true" string="${run.jvmargs.ide}" substring="-javaagent:"/>
+            </or>
+        </condition>
+    </target>
+    
+    <target if="jnlp-file-exists+netbeans.home" name="-profile-check-jnlp">
+        <antcall target="-profile-check-1"/>
+    </target>
+    
+    <target name="-do-jfxws-profile" depends="-check-jdk-7u4or5-mac,jar,-check-jfx-webstart,-resolve-jnlp-file,-check-jfx-runtime">
+        <echo message="Executing ${jfx.deployment.jnlp} in profile mode using ${active.webstart.executable}"/>
+        <exec executable="${active.webstart.executable}">
+            <env key="JAVAWS_VM_ARGS" value="${run.jvmargs.ide}"/>
+            <arg value="-wait"/>
+            <arg file="${jfx.deployment.jnlp}"/>
+        </exec>
+    </target>
+    
+    <target name="jfxws-profile" if="profiler.configured" 
+        depends="-profile-check-1"
+        description="Profile fx javaws project in IDE">
+        <startprofiler/>
+        
+        <antcall target="-do-jfxws-profile"/>
+    </target>
+    
+
+    <!-- Running/Debugging/Profiling in Browser -->
+
+    <target name="-check-selected-browser-path" depends="-check-default-run-config">
+        <condition property="javafx.run.inbrowser.undefined">
+            <or>
+                <and>
+                    <isset property="javafx.run.inbrowser"/>
+                    <equals arg1="${javafx.run.inbrowser}" arg2="undefined"/>
+                </and>
+                <and>
+                    <isset property="javafx.run.inbrowser.path"/>
+                    <equals arg1="${javafx.run.inbrowser.path}" arg2="undefined"/>
+                </and>
+            </or>
+        </condition>
+        <condition property="javafx.run.inbrowser.path-exists">
+            <and>
+                <isset property="javafx.run.inbrowser.path"/>
+                <available file="${javafx.run.inbrowser.path}"/>
+            </and>
+        </condition>
+        <fail message="Error:${line.separator}Browser selection not recognizable from ${config} run configuration.${line.separator}Please go to Project Properties dialog, category Run, to select a valid browser." unless="javafx.run.inbrowser.path"/>
+        <fail message="Error:${line.separator}No browser defined in ${config} run configuration.${line.separator}Please verify in Tools->Options dialog that NetBeans recognizes a valid browser, then go to Project Properties dialog, category Run, to select a valid browser." if="javafx.run.inbrowser.undefined"/>
+        <fail message="Error:${line.separator}Browser ${javafx.run.inbrowser.path} referred from ${config} run configuration can not be found.${line.separator}(This can happen, e.g, when the FX Project is transferred to another system.)${line.separator}Please go to Project Properties dialog, category Run, to select a valid browser." unless="javafx.run.inbrowser.path-exists"/>
+    </target>
+
+    <target name="-check-template-processed-html-file">
+        <condition property="html-file-exists">
+            <and>
+                <isset property="html-template-available"/>
+                <available file="${javafx.run.htmltemplate.processed}"/>
+            </and>
+        </condition>
+    </target>
+    
+    <target name="-set-template-processed-html-file" depends="-check-template-processed-html-file" if="html-file-exists">
+        <property name="jfx.deployment.html" location="${javafx.run.htmltemplate.processed}"/>
+    </target>
+    
+    <target name="-set-html-file" depends="-set-template-processed-html-file" unless="html-file-exists">
+        <basename property="jfx.deployment.base" file="${jfx.deployment.jar}" suffix=".jar"/>
+        <property name="jfx.deployment.html" location="${jfx.deployment.dir}${file.separator}${jfx.deployment.base}.html"/>
+        <condition property="html-file-exists">
+            <available file="${jfx.deployment.html}"/>
+        </condition>
+        <condition property="html-file-exists+netbeans.home">
+            <and>
+                <isset property="html-file-exists"/>
+                <isset property="netbeans.home"/>
+            </and>
+        </condition>
+    </target>
+
+    <target name="jfxbe-run" if="html-file-exists" depends="-check-jdk-7u4or5-mac,jar,-check-selected-browser-path,-set-html-file,-check-jfx-runtime" description="Start JavaFX execution in browser">
+        <echo message="Executing ${jfx.deployment.html} using ${javafx.run.inbrowser}"/>
+        <echo message="(${javafx.run.inbrowser.path})"/>
+        <exec executable="${javafx.run.inbrowser.path}">
+            <arg file="${jfx.deployment.html}"/>
+        </exec>
+    </target>
+    
+    <target name="jfxbe-debug" if="html-file-exists+netbeans.home" depends="-check-jdk-7u4or5-mac,jar,-check-selected-browser-path,-set-html-file,-check-jfx-runtime,-debug-start-debugger,-debug-jfxbe-debuggee" 
+        description="Debug JavaFX project in browser"/>
+        
+    <target name="-debug-jfxbe-debuggee" depends="-init-debug-args">
+        <echo message="Executing ${jfx.deployment.html} in debug mode using ${javafx.run.inbrowser}"/>
+        <echo message="(${javafx.run.inbrowser.path})"/>
+        <exec executable="${javafx.run.inbrowser.path}">
+            <env key="_JPI_VM_OPTIONS" value="${debug-args-line} -Xrunjdwp:transport=${debug-transport},address=${jpda.address}"/>
+            <arg file="${jfx.deployment.html}"/>
+        </exec>
+    </target>
+
+    <target if="html-file-exists+netbeans.home" name="-profile-check-html">
+        <antcall target="-profile-check-1"/>
+    </target>
+
+    <target name="-do-jfxbe-profile" depends="-check-jdk-7u4or5-mac,jar,-check-selected-browser-path,-set-html-file,-check-jfx-runtime">
+        <echo message="Executing ${jfx.deployment.html} in profile mode using ${javafx.run.inbrowser}"/>
+        <echo message="(${javafx.run.inbrowser.path})"/>
+        <exec executable="${javafx.run.inbrowser.path}">
+            <env key="_JPI_VM_OPTIONS" value="${run.jvmargs.ide}"/>
+            <arg file="${jfx.deployment.html}"/>
+        </exec>
+    </target>
+
+    <target name="jfxbe-profile" if="profiler.configured"
+        depends="-profile-check-html"
+        description="Profile JavaFX project in browser">
+        <startprofiler/>
+        
+        <antcall target="-do-jfxbe-profile"/>
+    </target>
+</project>
