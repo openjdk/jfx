@@ -246,6 +246,7 @@ public class TextFieldSkin extends TextInputControlSkin<TextField, TextFieldBeha
         caretPath.layoutXProperty().bind(textTranslateX);
         textNode.impl_caretShapeProperty().addListener(new InvalidationListener() {
             @Override public void invalidated(Observable observable) {
+                textNode.impl_caretPositionProperty().set(translateCaretPosition(textField.getCaretPosition()));
                 caretPath.getElements().setAll(textNode.impl_caretShapeProperty().get());
                 caretWidth = Math.round(caretPath.getLayoutBounds().getWidth());
             }
