@@ -27,6 +27,8 @@ package com.sun.javafx.scene.transform;
 import com.sun.javafx.test.TransformHelper;
 import javafx.scene.transform.Transform;
 import com.sun.javafx.geom.transform.Affine3D;
+import javafx.scene.transform.TransformOperationsTest;
+import javafx.scene.transform.Translate;
 import static org.junit.Assert.*;
 
 import org.junit.Test;
@@ -88,6 +90,138 @@ public class TransformUtilsTest {
 
         assertNotNull(s);
         assertFalse(s.isEmpty());
+    }
+
+    @Test public void testImmutableTransformState() {
+        int counter = 0;
+        for (Object o : TransformOperationsTest.getParams()) {
+            Object[] arr = (Object[]) o;
+            if (arr[0] instanceof TransformUtils.ImmutableTransform) {
+                TransformUtils.ImmutableTransform t =
+                        (TransformUtils.ImmutableTransform) arr[0];
+
+                TransformHelper.assertStateOk("Checking state of transform #" +
+                        (counter++) + " of TransformOperationsTest", t,
+                        t.getState3d(), t.getState2d());
+            }
+        }
+    }
+
+    @Test public void testReusedImmutableTransform() {
+        int counter = 0;
+        for (Object o : TransformOperationsTest.getParams()) {
+            Object[] arr = (Object[]) o;
+            if (arr[0] instanceof TransformUtils.ImmutableTransform) {
+
+                Transform t = (Transform) arr[0];
+
+
+                // reusing
+                Transform reuse = TransformUtils.immutableTransform(
+                        new Translate(10, 20));
+
+                Transform returned = TransformUtils.immutableTransform(reuse, t);
+
+                assertSame("Checking reusing immutable transform to values of #"
+                        + counter + " of TransformOperationsTest", reuse, returned);
+
+                TransformHelper.assertStateOk(
+                        "Checking reusing immutable transform to values of #"
+                        + counter + " of TransformOperationsTest",
+                        (TransformUtils.ImmutableTransform) returned,
+                        ((TransformUtils.ImmutableTransform) returned).getState3d(),
+                        ((TransformUtils.ImmutableTransform) returned).getState2d());
+
+                TransformHelper.assertMatrix("Checking reusing immutable "
+                        + "transform to values of #" + counter
+                        + " of TransformOperationsTest", returned, t);
+
+                // creating new
+                Transform returned2 = TransformUtils.immutableTransform(null, t);
+
+                assertNotSame("Checking reusing immutable transform to values of #"
+                        + counter + " of TransformOperationsTest", returned2, t);
+
+                TransformHelper.assertStateOk(
+                        "Checking reusing immutable transform to values of #"
+                        + counter + " of TransformOperationsTest",
+                        (TransformUtils.ImmutableTransform) returned2,
+                        ((TransformUtils.ImmutableTransform) returned2).getState3d(),
+                        ((TransformUtils.ImmutableTransform) returned2).getState2d());
+
+                TransformHelper.assertMatrix("Checking reusing immutable "
+                        + "transform to values of #" + counter
+                        + " of TransformOperationsTest", returned2, t);
+
+                counter++;
+            }
+        }
+    }
+
+    @Test public void testConcatenatedImmutableTransform() {
+        int outer = 0;
+        for (Object o : TransformOperationsTest.getParams()) {
+            int inner = 0;
+            Object[] arr = (Object[]) o;
+            if (arr[0] instanceof TransformUtils.ImmutableTransform) {
+                TransformUtils.ImmutableTransform t1 =
+                        (TransformUtils.ImmutableTransform) arr[0];
+
+                for (Object o2 : TransformOperationsTest.getParams()) {
+                    Object[] arr2 = (Object[]) o2;
+                    if (arr2[0] instanceof TransformUtils.ImmutableTransform) {
+                        TransformUtils.ImmutableTransform t2 =
+                                (TransformUtils.ImmutableTransform) arr2[0];
+
+                        // reusing
+                        Transform clone = t1.clone();
+                        Transform conc = TransformUtils.immutableTransform(
+                                clone, t1, t2);
+
+                        assertSame("Checking state of concatenation of "
+                                + "transform #" + outer + " and #" + inner +
+                                " of TransformOperationsTest", clone, conc);
+                        TransformHelper.assertStateOk(
+                                "Checking state of concatenation of "
+                                + "transform #" + outer + " and #" + inner +
+                                " of TransformOperationsTest",
+                                (TransformUtils.ImmutableTransform) conc,
+                                ((TransformUtils.ImmutableTransform) conc).getState3d(),
+                                ((TransformUtils.ImmutableTransform) conc).getState2d());
+                        TransformHelper.assertMatrix(
+                                "Checking state of concatenation of "
+                                + "transform #" + outer + " and #" + inner +
+                                " of TransformOperationsTest", conc,
+                                TransformHelper.concatenate(t1, t2));
+
+                        // creating new
+                        Transform conc2 = TransformUtils.immutableTransform(
+                                null, t1, t2);
+
+                        assertNotSame("Checking state of concatenation of "
+                                + "transform #" + outer + " and #" + inner +
+                                " of TransformOperationsTest", conc2, t1);
+                        assertNotSame("Checking state of concatenation of "
+                                + "transform #" + outer + " and #" + inner +
+                                " of TransformOperationsTest", conc2, t2);
+                        TransformHelper.assertStateOk(
+                                "Checking state of concatenation of "
+                                + "transform #" + outer + " and #" + inner +
+                                " of TransformOperationsTest",
+                                (TransformUtils.ImmutableTransform) conc2,
+                                ((TransformUtils.ImmutableTransform) conc2).getState3d(),
+                                ((TransformUtils.ImmutableTransform) conc2).getState2d());
+                        TransformHelper.assertMatrix(
+                                "Checking state of concatenation of "
+                                + "transform #" + outer + " and #" + inner +
+                                " of TransformOperationsTest", conc2,
+                                TransformHelper.concatenate(t1, t2));
+                        inner++;
+                    }
+                }
+            }
+            outer++;
+        }
     }
 
 }
