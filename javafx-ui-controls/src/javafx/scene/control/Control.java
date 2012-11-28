@@ -26,11 +26,13 @@
 package javafx.scene.control;
 
 import com.sun.javafx.Utils;
+import com.sun.javafx.application.PlatformImpl;
 import com.sun.javafx.beans.annotations.DuplicateInBuilderProperties;
 import com.sun.javafx.css.*;
 import com.sun.javafx.css.converters.StringConverter;
 import com.sun.javafx.logging.PlatformLogger;
 import com.sun.javafx.scene.control.Logging;
+import javafx.application.Application;
 import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.ObjectPropertyBase;
 import javafx.beans.property.SimpleObjectProperty;
@@ -71,14 +73,12 @@ import java.util.List;
 @DuplicateInBuilderProperties(properties = {"minHeight", "minWidth", "maxHeight", "maxWidth", "prefHeight", "prefWidth"})
 public abstract class Control extends Region implements Skinnable {
 
-
     static {
-        // Ensures that the caspian.css file is set as the user agent style sheet
-        // when the first control is created.
-        UAStylesheetLoader.doLoad();
+        // Ensures that the default application user agent stylesheet is loaded
+        if (Application.getUserAgentStylesheet() == null) {
+            PlatformImpl.setDefaultPlatformUserAgentStylesheet();
+        }
     }
-    
-    
     
     /***************************************************************************
      *                                                                         *

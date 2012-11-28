@@ -25,6 +25,7 @@
 package javafx.scene.control;
 
 import com.sun.javafx.Utils;
+import javafx.application.Application;
 import javafx.beans.property.DoubleProperty;
 import javafx.beans.property.DoublePropertyBase;
 import javafx.beans.property.ObjectProperty;
@@ -43,6 +44,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
+import com.sun.javafx.application.PlatformImpl;
 import com.sun.javafx.collections.TrackableObservableList;
 import com.sun.javafx.css.*;
 import com.sun.javafx.css.converters.StringConverter;
@@ -69,11 +71,12 @@ public class PopupControl extends PopupWindow implements Skinnable {
       * computeMaxWidth(), or computeMaxHeight().
       */
     public static final double USE_COMPUTED_SIZE = -1;
-    
-    // Ensures that the caspian.css file is set as the user agent style sheet
-    // when the first popupcontrol is created.
+
     static {
-        UAStylesheetLoader.doLoad();
+        // Ensures that the default application user agent stylesheet is loaded
+        if (Application.getUserAgentStylesheet() == null) {
+            PlatformImpl.setDefaultPlatformUserAgentStylesheet();
+        }
     }
 
     /**
