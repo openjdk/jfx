@@ -294,7 +294,9 @@ public class FXVKSkin extends SkinBase<FXVK, BehaviorBase<FXVK>> {
                         }
 
                         if (oldNode == null || oldNode.getScene() != attachedNode.getScene()) {
-//                             fxvk.setPrefWidth(VK_WIDTH);
+                            if (!inScene) { 
+                                fxvk.setPrefWidth(VK_WIDTH);
+                            }
                             fxvk.setMinWidth(USE_PREF_SIZE);
                             fxvk.setMaxWidth(USE_PREF_SIZE);
                             fxvk.setPrefHeight(VK_HEIGHT);
