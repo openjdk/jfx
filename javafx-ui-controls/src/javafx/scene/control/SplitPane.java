@@ -46,6 +46,7 @@ import com.sun.javafx.css.StyleManager;
 import com.sun.javafx.css.StyleableObjectProperty;
 import com.sun.javafx.css.StyleableProperty;
 import com.sun.javafx.css.converters.EnumConverter;
+import com.sun.javafx.scene.control.skin.SplitPaneSkin;
 
 /**
  * <p>A control that has two or more sides, each separated by a divider, which can be
@@ -355,6 +356,11 @@ public class SplitPane extends Control {
             positions[i] = dividers.get(i).getPosition();
         }
         return positions;
+    }
+
+    /** {@inheritDoc} */
+    @Override protected Skin<?> createDefaultSkin() {
+        return new SplitPaneSkin(this);
     }
 
     /***************************************************************************

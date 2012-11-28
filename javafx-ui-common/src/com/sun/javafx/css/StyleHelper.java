@@ -701,11 +701,24 @@ final public class StyleHelper {
             
             // My transitionStates include those of my parents
             final StyleHelper helper = parent.impl_getStyleHelper();
-            final long[] parentTransitionStates = helper.getTransitionStates();
+            long[] parentTransitionStates = helper.getTransitionStates();
             
             // setTransitionState should have been called on parent
             assert (parentTransitionStates != null && parentTransitionStates.length > 0);
-            
+
+            // 
+            // Fake the transition states if assertions are disabled and
+            // the assert conditions hold true.
+            // 
+            if (parentTransitionStates == null || parentTransitionStates.length == 0) {
+                int n=0;
+                while(parent != null) {
+                    n += 1;
+                    parent = parent.getParent();
+                }
+                parentTransitionStates = new long[n];
+            }
+                        
             final int nStates = 
                 (parentTransitionStates != null && parentTransitionStates.length > 0) 
                     ? parentTransitionStates.length+1 
@@ -2024,6 +2037,9 @@ final public class StyleHelper {
 
         }
 
+        if (csShorthand == null) {
+            distance = nlooks;
+        }
         nlooks = 0;
         
         final long states = getPseudoClassState();

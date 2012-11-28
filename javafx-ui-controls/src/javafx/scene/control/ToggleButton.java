@@ -25,10 +25,6 @@
 
 package javafx.scene.control;
 
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
-
 import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.BooleanPropertyBase;
 import javafx.beans.property.ObjectProperty;
@@ -36,9 +32,9 @@ import javafx.beans.property.ObjectPropertyBase;
 import javafx.event.ActionEvent;
 import javafx.geometry.Pos;
 import javafx.scene.Node;
-
 import com.sun.javafx.css.StyleManager;
 import com.sun.javafx.css.StyleableProperty;
+import com.sun.javafx.scene.control.skin.ToggleButtonSkin;
 
 /**
  * A {@code ToggleButton} is a specialized control which has the ability to be
@@ -233,6 +229,12 @@ import com.sun.javafx.css.StyleableProperty;
         setSelected(!isSelected());
         fireEvent(new ActionEvent());
     }
+
+    /** {@inheritDoc} */
+    @Override protected Skin<?> createDefaultSkin() {
+        return new ToggleButtonSkin(this);
+    }
+
 
     /***************************************************************************
      *                                                                         *

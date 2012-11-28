@@ -26,6 +26,7 @@
 package javafx.scene.control;
 
 import com.sun.javafx.css.StyleableProperty;
+import com.sun.javafx.scene.control.skin.ProgressBarSkin;
 import javafx.geometry.NodeOrientation;
 
 /**
@@ -83,6 +84,17 @@ public class ProgressBar extends ProgressIndicator {
         prop.set(this, Boolean.FALSE);            
         setProgress(progress);
         getStyleClass().setAll(DEFAULT_STYLE_CLASS);
+    }
+
+    /***************************************************************************
+     *                                                                         *
+     * Methods                                                                 *
+     *                                                                         *
+     **************************************************************************/
+
+    /** {@inheritDoc} */
+    @Override protected Skin<?> createDefaultSkin() {
+        return new ProgressBarSkin(this);
     }
 
     /***************************************************************************

@@ -213,7 +213,7 @@ public class Node_cssStyleMap_Test {
         
     }
     
-    @Test
+    @Test @org.junit.Ignore
     public void testRT_21212() {
 
         final List<Declaration> rootDecls = new ArrayList<Declaration>();

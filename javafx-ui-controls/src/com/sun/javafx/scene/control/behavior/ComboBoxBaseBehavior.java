@@ -41,6 +41,8 @@ import javafx.beans.InvalidationListener;
 import javafx.scene.Node;
 import javafx.scene.input.MouseButton;
 
+import com.sun.javafx.css.StyleManager;
+
 public class ComboBoxBaseBehavior<T> extends BehaviorBase<ComboBoxBase<T>> {
 
     /***************************************************************************
@@ -48,6 +50,8 @@ public class ComboBoxBaseBehavior<T> extends BehaviorBase<ComboBoxBase<T>> {
      * Constructors                                                            *
      *                                                                         *
      **************************************************************************/
+
+    private TwoLevelFocusComboBehavior tlFocus;
     
     /**
      * 
@@ -65,6 +69,14 @@ public class ComboBoxBaseBehavior<T> extends BehaviorBase<ComboBoxBase<T>> {
             }
         };
         getControl().focusedProperty().addListener(focusListener);
+
+        /*
+        ** only add this if we're on an embedded
+        ** platform that supports 5-button navigation 
+        */
+        if (com.sun.javafx.scene.control.skin.Utils.isEmbeddedNonTouch()) {
+            tlFocus = new TwoLevelFocusComboBehavior(comboBox); // needs to be last.
+        }
     }
 
     /***************************************************************************
@@ -98,9 +110,15 @@ public class ComboBoxBaseBehavior<T> extends BehaviorBase<ComboBoxBase<T>> {
         } else {
             COMBO_BOX_BASE_BINDINGS.add(new KeyBinding(SPACE, KEY_PRESSED, PRESS_ACTION));
             COMBO_BOX_BASE_BINDINGS.add(new KeyBinding(SPACE, KEY_RELEASED, RELEASE_ACTION));
+            if (com.sun.javafx.scene.control.skin.Utils.isEmbeddedNonTouch()) {
+                COMBO_BOX_BASE_BINDINGS.add(new KeyBinding(ENTER, KEY_PRESSED, PRESS_ACTION));
+                COMBO_BOX_BASE_BINDINGS.add(new KeyBinding(ENTER, KEY_RELEASED, RELEASE_ACTION));
+            }
         }
+
+        COMBO_BOX_BASE_BINDINGS.add(new KeyBinding(ENTER, KEY_PRESSED, PRESS_ACTION));
+        COMBO_BOX_BASE_BINDINGS.add(new KeyBinding(ENTER, KEY_RELEASED, RELEASE_ACTION));
         
-        COMBO_BOX_BASE_BINDINGS.addAll(TRAVERSAL_BINDINGS);
     }
 
     @Override protected List<KeyBinding> createKeyBindings() {
@@ -128,9 +146,17 @@ public class ComboBoxBaseBehavior<T> extends BehaviorBase<ComboBoxBase<T>> {
      * press.
      */
     private void keyPressed() {
-        if (! getControl().isPressed() && ! getControl().isArmed()) {
-            keyDown = true;
-            getControl().arm();
+        if (com.sun.javafx.scene.control.skin.Utils.isEmbeddedNonTouch()) {
+            show();
+            if (tlFocus != null) {
+                tlFocus.setExternalFocus(false);
+            }
+        }
+        else {
+            if (! getControl().isPressed() && ! getControl().isArmed()) {
+                keyDown = true;
+                getControl().arm();
+            }
         }
     }
 
@@ -139,10 +165,12 @@ public class ComboBoxBaseBehavior<T> extends BehaviorBase<ComboBoxBase<T>> {
      * to fire if it was armed by a keyPress.
      */
     private void keyReleased() {
-        if (keyDown) {
-            keyDown = false;
-            if (getControl().isArmed()) {
-                getControl().disarm();
+        if (!com.sun.javafx.scene.control.skin.Utils.isEmbeddedNonTouch()) {
+            if (keyDown) {
+                keyDown = false;
+                if (getControl().isArmed()) {
+                    getControl().disarm();
+                }
             }
         }
     }
@@ -248,4 +276,21 @@ public class ComboBoxBaseBehavior<T> extends BehaviorBase<ComboBoxBase<T>> {
             getControl().disarm();
         }
     }
+
+
+    private static final long INTERNAL_PSEUDOCLASS_STATE = StyleManager.getPseudoclassMask("internal-focus");
+    private static final long EXTERNAL_PSEUDOCLASS_STATE = StyleManager.getPseudoclassMask("external-focus");
+
+    /**
+     * @treatAsPrivate implementation detail
+     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
+     */
+    @Deprecated @Override public long impl_getPseudoClassState() {
+        long mask = super.impl_getPseudoClassState();
+        if (tlFocus != null) {
+            mask |= tlFocus.isExternalFocus() ? EXTERNAL_PSEUDOCLASS_STATE : INTERNAL_PSEUDOCLASS_STATE;
+        }
+        return mask;
+    }
+
 }

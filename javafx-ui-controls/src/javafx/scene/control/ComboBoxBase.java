@@ -423,7 +423,6 @@ public abstract class ComboBoxBase<T> extends Control {
         }
     }
     
-    
     /***************************************************************************
      *                                                                         *
      * Stylesheet Handling                                                     *

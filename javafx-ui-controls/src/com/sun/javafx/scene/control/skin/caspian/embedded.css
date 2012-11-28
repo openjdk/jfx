@@ -146,7 +146,6 @@
  *                                                                             *
  ******************************************************************************/
 .fxvk {
-    -fx-skin: "com.sun.javafx.scene.control.skin.FXVKSkin";
     -fx-cursor: default;
     -fx-background-color: #a1a1a1, #d7d7d7, #c2c2c2;
     -fx-background-insets: 0, 1 0 0 0, 2 0 0 0;
@@ -242,3 +241,106 @@
 }
 */
 
+
+/*******************************************************************************
+ *
+ * 2-level focus setting.
+ * The visuals aren't ready yet, so currently these are just placeholders.
+ *
+ ******************************************************************************/
+
+.choice-box:external-focus {
+    -fx-border-color: red; 
+    -fx-focus-color: red;
+    -fx-opacity: 0.8;
+}
+.choice-box:internal-focus {
+    -fx-border-color: null; 
+    -fx-focus-color: #0093ff;
+    -fx-opacity: 1.0;
+}
+
+.slider:external-focus {
+    -fx-border-color: red; 
+    -xfx-focus-color: red;
+    -fx-opacity: 0.8;
+}
+.slider:internal-focus {
+    -fx-border-color: null; 
+    -fx-focus-color: #0093ff;
+    -fx-opacity: 1.0;
+}
+.slider:external-focus > .thumb {
+    -xfx-border-color: red; 
+    -fx-focus-color: red;
+}
+.slider:internal-focus > .thumb {
+    -xfx-border-color: null; 
+    -fx-focus-color: #0093ff;
+}
+
+.text-field:external-focus {
+    -fx-border-color: red; 
+    -fx-focus-color: red;
+    -fx-opacity: 0.8;
+}
+.text-field:internal-focus {
+    -fx-border-color: null; 
+    -fx-focus-color: #0093ff;
+    -fx-opacity: 1.0;
+}
+
+.password-field:external-focus {
+    -fx-border-color: red; 
+    -fx-focus-color: red;
+    -fx-opacity: 0.8;
+}
+.password-field:internal-focus {
+    -fx-border-color: null; 
+    -fx-focus-color: #0093ff;
+    -fx-opacity: 1.0;
+}
+
+.text-area:external-focus {
+    -fx-border-color: red; 
+    -fx-focus-color: red;
+    -fx-opacity: 0.8;
+}
+.text-area:internal-focus {
+    -fx-border-color: null; 
+    -fx-focus-color: #0093ff;
+    -fx-opacity: 1.0;
+}
+
+.list-view:external-focus {
+    -fx-border-color: red; 
+    -fx-focus-color: red;
+    -fx-opacity: 0.8;
+}
+.list-view:internal-focus {
+    -fx-border-color: null; 
+    -fx-focus-color: #0093ff;
+    -fx-opacity: 1.0;
+}
+
+.table-view:external-focus {
+    -fx-border-color: red; 
+    -fx-focus-color: red;
+    -fx-opacity: 0.8;
+}
+.table-view:internal-focus {
+    -fx-border-color: null; 
+    -fx-focus-color: #0093ff;
+    -fx-opacity: 1.0;
+}
+
+.combo-box:external-focus {
+    -fx-border-color: red; 
+    -fx-focus-color: red;
+    -fx-opacity: 0.8;
+}
+.combo-box:internal-focus {
+    -fx-border-color: null; 
+    -fx-focus-color: #0093ff;
+    -fx-opacity: 1.0;
+}

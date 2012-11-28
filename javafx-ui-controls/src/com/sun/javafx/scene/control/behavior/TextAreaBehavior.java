@@ -44,6 +44,8 @@ import java.util.List;
 
 import com.sun.javafx.PlatformUtil;
 import com.sun.javafx.scene.control.skin.TextAreaSkin;
+import com.sun.javafx.css.StyleManager;
+import com.sun.javafx.scene.control.skin.Utils;
 import com.sun.javafx.scene.text.HitInfo;
 import static javafx.scene.input.KeyCode.*;
 import static javafx.scene.input.KeyEvent.*;
@@ -62,8 +64,6 @@ public class TextAreaBehavior extends TextInputControlBehavior<TextArea> {
      *************************************************************************/
     protected static final List<KeyBinding> TEXT_AREA_BINDINGS = new ArrayList<KeyBinding>();
     static {
-        TEXT_AREA_BINDINGS.add(new KeyBinding(TAB, KEY_PRESSED, "TraverseNext").ctrl());
-        TEXT_AREA_BINDINGS.add(new KeyBinding(TAB, KEY_PRESSED, "TraversePrevious").ctrl().shift());
         TEXT_AREA_BINDINGS.add(new KeyBinding(HOME, KEY_PRESSED, "LineStart")); // changed
         TEXT_AREA_BINDINGS.add(new KeyBinding(END, KEY_PRESSED, "LineEnd")); // changed
         TEXT_AREA_BINDINGS.add(new KeyBinding(UP, KEY_PRESSED, "PreviousLine")); // changed
@@ -131,6 +131,7 @@ public class TextAreaBehavior extends TextInputControlBehavior<TextArea> {
 
     private TextAreaSkin skin;
     private ContextMenu contextMenu;
+    private TwoLevelFocusBehavior tlFocus;
 
     /**************************************************************************
      * Constructors                                                           *
@@ -175,6 +176,14 @@ public class TextAreaBehavior extends TextInputControlBehavior<TextArea> {
                 }
             }
         });
+
+        /*
+        ** only add this if we're on an embedded
+        ** platform that supports 5-button navigation 
+        */
+        if (com.sun.javafx.scene.control.skin.Utils.isEmbeddedNonTouch()) {
+            tlFocus = new TwoLevelFocusBehavior(textArea); // needs to be last.
+        }
     }
 
     // An unholy back-reference!
@@ -470,5 +479,21 @@ public class TextAreaBehavior extends TextInputControlBehavior<TextArea> {
 //            }
 //        }
 //    }
+
+    private static final long INTERNAL_PSEUDOCLASS_STATE = StyleManager.getPseudoclassMask("internal-focus");
+    private static final long EXTERNAL_PSEUDOCLASS_STATE = StyleManager.getPseudoclassMask("external-focus");
+
+    /**
+     * @treatAsPrivate implementation detail
+     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
+     */
+    @Deprecated @Override public long impl_getPseudoClassState() {
+        long mask = super.impl_getPseudoClassState();
+        if (tlFocus != null) {
+            mask |= tlFocus.isExternalFocus() ? EXTERNAL_PSEUDOCLASS_STATE : INTERNAL_PSEUDOCLASS_STATE;
+        }
+        return mask;
+    }
+
 
 }

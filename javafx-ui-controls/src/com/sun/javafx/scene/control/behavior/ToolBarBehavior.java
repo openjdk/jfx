@@ -50,7 +50,6 @@ public class ToolBarBehavior extends BehaviorBase<ToolBar> {
     
     protected static final List<KeyBinding> TOOLBAR_BINDINGS = new ArrayList<KeyBinding>();
     static {
-        TOOLBAR_BINDINGS.addAll(TRAVERSAL_BINDINGS);
         TOOLBAR_BINDINGS.add(new KeyBinding(KeyCode.F5, CTRL_F5).ctrl());    
     }
     

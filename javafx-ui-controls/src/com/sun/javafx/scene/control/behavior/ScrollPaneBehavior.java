@@ -124,8 +124,6 @@ public class ScrollPaneBehavior extends BehaviorBase<ScrollPane> {
      */
     protected static final List<KeyBinding> SCROLLVIEW_BINDINGS = new ArrayList<KeyBinding>();
     static {
-        SCROLLVIEW_BINDINGS.add(new KeyBinding(TAB, "TraverseNext"));
-        SCROLLVIEW_BINDINGS.add(new KeyBinding(TAB, "TraversePrevious").shift());
         // TODO XXX DEBUGGING ONLY
         SCROLLVIEW_BINDINGS.add(new KeyBinding(F4, "TraverseDebug").alt().ctrl().shift());
 

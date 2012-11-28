@@ -733,6 +733,11 @@ public class ListView<T> extends Control {
             accListView = new AccessibleList(this);
         return (AccessibleProvider)accListView ;
     }
+
+    /** {@inheritDoc} */
+    @Override protected Skin<?> createDefaultSkin() {
+        return new ListViewSkin(this);
+    }
     
     /***************************************************************************
      *                                                                         *

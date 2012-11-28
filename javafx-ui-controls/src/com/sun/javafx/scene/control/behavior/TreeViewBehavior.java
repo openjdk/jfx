@@ -54,9 +54,6 @@ public class TreeViewBehavior<T> extends BehaviorBase<TreeView<T>> {
     protected static final List<KeyBinding> TREE_VIEW_BINDINGS = new ArrayList<KeyBinding>();
 
     static {
-        TREE_VIEW_BINDINGS.add(new KeyBinding(TAB, "TraverseNext"));
-        TREE_VIEW_BINDINGS.add(new KeyBinding(TAB, "TraversePrevious").shift());
-
         TREE_VIEW_BINDINGS.add(new KeyBinding(HOME, "SelectFirstRow"));
         TREE_VIEW_BINDINGS.add(new KeyBinding(END, "SelectLastRow"));
         TREE_VIEW_BINDINGS.add(new KeyBinding(HOME, "SelectAllToFirstRow").shift());

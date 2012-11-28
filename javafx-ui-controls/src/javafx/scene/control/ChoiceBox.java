@@ -40,6 +40,7 @@ import javafx.event.ActionEvent;
 import javafx.util.StringConverter;
 
 import com.sun.javafx.css.StyleManager;
+import com.sun.javafx.scene.control.skin.ChoiceBoxSkin;
 import javafx.beans.DefaultProperty;
 
 /**
@@ -308,6 +309,11 @@ public class ChoiceBox<T> extends Control {
      */
     public void hide() {
         showing.set(false);
+    }
+
+    /** {@inheritDoc} */
+    @Override protected Skin<?> createDefaultSkin() {
+        return new ChoiceBoxSkin(this);
     }
 
     /***************************************************************************

@@ -70,6 +70,9 @@ import javafx.collections.WeakListChangeListener;
 import javafx.scene.control.*;
 import javafx.util.Callback;
 
+import com.sun.javafx.css.StyleManager;
+import com.sun.javafx.scene.control.skin.Utils;
+
 /**
  *
  */
@@ -81,9 +84,6 @@ public class ListViewBehavior<T> extends BehaviorBase<ListView<T>> {
     protected static final List<KeyBinding> LIST_VIEW_BINDINGS = new ArrayList<KeyBinding>();
 
     static {
-        LIST_VIEW_BINDINGS.add(new KeyBinding(TAB, "TraverseNext"));
-        LIST_VIEW_BINDINGS.add(new KeyBinding(TAB, "TraversePrevious").shift());
-
         LIST_VIEW_BINDINGS.add(new KeyBinding(HOME, "SelectFirstRow"));
         LIST_VIEW_BINDINGS.add(new KeyBinding(END, "SelectLastRow"));
         LIST_VIEW_BINDINGS.add(new KeyBinding(HOME, "SelectAllToFirstRow").shift());
@@ -129,11 +129,6 @@ public class ListViewBehavior<T> extends BehaviorBase<ListView<T>> {
         LIST_VIEW_BINDINGS.add(new ListViewKeyBinding(DOWN, "AlsoSelectNextRow").vertical().shift());
         LIST_VIEW_BINDINGS.add(new ListViewKeyBinding(KP_DOWN, "AlsoSelectNextRow").vertical().shift());
 
-        LIST_VIEW_BINDINGS.add(new ListViewKeyBinding(LEFT, "TraverseLeft").vertical());
-        LIST_VIEW_BINDINGS.add(new ListViewKeyBinding(KP_LEFT, "TraverseLeft").vertical());
-        LIST_VIEW_BINDINGS.add(new ListViewKeyBinding(RIGHT, "TraverseRight").vertical());
-        LIST_VIEW_BINDINGS.add(new ListViewKeyBinding(KP_RIGHT, "TraverseRight").vertical());
-
         if (PlatformUtil.isMac()) {
             LIST_VIEW_BINDINGS.add(new ListViewKeyBinding(UP, "FocusPreviousRow").vertical().meta());
             LIST_VIEW_BINDINGS.add(new ListViewKeyBinding(DOWN, "FocusNextRow").vertical().meta());
@@ -169,11 +164,6 @@ public class ListViewBehavior<T> extends BehaviorBase<ListView<T>> {
         LIST_VIEW_BINDINGS.add(new ListViewKeyBinding(KP_LEFT, "AlsoSelectPreviousRow").shift());
         LIST_VIEW_BINDINGS.add(new ListViewKeyBinding(RIGHT, "AlsoSelectNextRow").shift());
         LIST_VIEW_BINDINGS.add(new ListViewKeyBinding(KP_RIGHT, "AlsoSelectNextRow").shift());
-
-        LIST_VIEW_BINDINGS.add(new ListViewKeyBinding(UP, "TraverseUp"));
-        LIST_VIEW_BINDINGS.add(new ListViewKeyBinding(KP_UP, "TraverseUp"));
-        LIST_VIEW_BINDINGS.add(new ListViewKeyBinding(DOWN, "TraverseDown"));
-        LIST_VIEW_BINDINGS.add(new ListViewKeyBinding(KP_DOWN, "TraverseDown"));
 
         if (PlatformUtil.isMac()) {
             LIST_VIEW_BINDINGS.add(new ListViewKeyBinding(LEFT, "FocusPreviousRow").meta());
@@ -376,6 +366,8 @@ public class ListViewBehavior<T> extends BehaviorBase<ListView<T>> {
             new WeakChangeListener<MultipleSelectionModel<T>>(selectionModelListener);
     
 
+    private TwoLevelFocusListBehavior tlFocus;
+
     public ListViewBehavior(ListView control) {
         super(control);
         
@@ -388,6 +380,14 @@ public class ListViewBehavior<T> extends BehaviorBase<ListView<T>> {
         getControl().selectionModelProperty().addListener(weakSelectionModelListener);
         if (control.getSelectionModel() != null) {
             control.getSelectionModel().getSelectedIndices().addListener(weakSelectedIndicesListener);
+        }
+
+        /*
+        ** only add this if we're on an embedded
+        ** platform that supports 5-button navigation 
+        */
+        if (Utils.isEmbeddedNonTouch()) {
+            tlFocus = new TwoLevelFocusListBehavior(control); // needs to be last.
         }
     }
 
@@ -867,4 +867,21 @@ public class ListViewBehavior<T> extends BehaviorBase<ListView<T>> {
             return ((ListView)control).getOrientation() == Orientation.VERTICAL;
         }
     }
+
+
+    private static final long INTERNAL_PSEUDOCLASS_STATE = StyleManager.getPseudoclassMask("internal-focus");
+    private static final long EXTERNAL_PSEUDOCLASS_STATE = StyleManager.getPseudoclassMask("external-focus");
+
+    /**
+     * @treatAsPrivate implementation detail
+     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
+     */
+    @Deprecated @Override public long impl_getPseudoClassState() {
+        long mask = super.impl_getPseudoClassState();
+        if (tlFocus != null) {
+            mask |= tlFocus.isExternalFocus() ? EXTERNAL_PSEUDOCLASS_STATE : INTERNAL_PSEUDOCLASS_STATE;
+        }
+        return mask;
+    }
+
 }

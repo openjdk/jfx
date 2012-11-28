@@ -30,6 +30,7 @@ import javafx.beans.value.ObservableValue;
 import javafx.collections.ListChangeListener;
 import javafx.scene.Node;
 import javafx.scene.control.Accordion;
+import javafx.scene.control.Skin;
 import javafx.scene.control.TitledPane;
 import javafx.scene.shape.Rectangle;
 import javafx.scene.control.SkinBase;
@@ -151,9 +152,14 @@ public class AccordionSkin extends SkinBase<Accordion, AccordionBehavior> {
 
         for(Node n: getSkinnable().getPanes()) {
             TitledPane tp = ((TitledPane)n);
-            TitledPaneSkin skin = (TitledPaneSkin) tp.getSkin();
-            skin.setMaxTitledPaneHeightForAccordion(maxTitledPaneHeight);
-            double ph = snapSize(skin.getTitledPaneHeightForAccordion());
+            Skin skin = tp.getSkin();
+            double ph;
+            if (skin instanceof TitledPaneSkin) {
+                ((TitledPaneSkin)skin).setMaxTitledPaneHeightForAccordion(maxTitledPaneHeight);
+                ph = snapSize(((TitledPaneSkin)skin).getTitledPaneHeightForAccordion());
+            } else {
+                ph = tp.prefHeight(w);
+            }
             tp.resize(w, ph);
 
             if (!resize && previousPane != null && expandedPane != null) {

@@ -30,6 +30,7 @@ import com.sun.javafx.css.converters.BooleanConverter;
 import com.sun.javafx.css.converters.EnumConverter;
 import com.sun.javafx.css.converters.SizeConverter;
 import com.sun.javafx.css.converters.StringConverter;
+import com.sun.javafx.scene.control.skin.TooltipSkin;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.util.ArrayList;
@@ -310,6 +311,17 @@ public class Tooltip extends PopupControl {
     final void setActivated(boolean value) { activated.set(value); }
     public final boolean isActivated() { return activated.get(); }
     public final ReadOnlyBooleanProperty activatedProperty() { return activated.getReadOnlyProperty(); }
+
+    /***************************************************************************
+     *                                                                         *
+     * Methods                                                                 *
+     *                                                                         *
+     **************************************************************************/
+
+    /** {@inheritDoc} */
+    @Override protected Skin<?> createDefaultSkin() {
+        return new TooltipSkin(this);
+    }
 
     /***************************************************************************
      *                                                                         *

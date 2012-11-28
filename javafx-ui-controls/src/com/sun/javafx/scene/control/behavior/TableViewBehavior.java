@@ -66,6 +66,9 @@ import javafx.geometry.NodeOrientation;
 import javafx.scene.control.*;
 import javafx.util.Callback;
 
+import com.sun.javafx.css.StyleManager;
+import com.sun.javafx.scene.control.skin.Utils;
+
 public class TableViewBehavior<T> extends BehaviorBase<TableView<T>> {
     /**************************************************************************
      *                          Setup KeyBindings                             *
@@ -73,9 +76,6 @@ public class TableViewBehavior<T> extends BehaviorBase<TableView<T>> {
     protected static final List<KeyBinding> TABLE_VIEW_BINDINGS = new ArrayList<KeyBinding>();
 
     static {
-        TABLE_VIEW_BINDINGS.add(new KeyBinding(TAB, "TraverseNext"));
-        TABLE_VIEW_BINDINGS.add(new KeyBinding(TAB, "TraversePrevious").shift());
-
         TABLE_VIEW_BINDINGS.add(new KeyBinding(HOME, "SelectFirstRow"));
         TABLE_VIEW_BINDINGS.add(new KeyBinding(END, "SelectLastRow"));
         
@@ -92,14 +92,8 @@ public class TableViewBehavior<T> extends BehaviorBase<TableView<T>> {
         TABLE_VIEW_BINDINGS.add(new KeyBinding(DOWN, "SelectNextRow"));
         TABLE_VIEW_BINDINGS.add(new KeyBinding(KP_DOWN, "SelectNextRow"));
 
-        TABLE_VIEW_BINDINGS.add(new KeyBinding(LEFT, "TraverseLeft"));
-        TABLE_VIEW_BINDINGS.add(new KeyBinding(KP_LEFT, "TraverseLeft"));
         TABLE_VIEW_BINDINGS.add(new KeyBinding(RIGHT, "SelectNextRow"));
         TABLE_VIEW_BINDINGS.add(new KeyBinding(KP_RIGHT, "SelectNextRow"));
-        TABLE_VIEW_BINDINGS.add(new KeyBinding(UP, "TraverseUp"));
-        TABLE_VIEW_BINDINGS.add(new KeyBinding(KP_UP, "TraverseUp"));
-        TABLE_VIEW_BINDINGS.add(new KeyBinding(DOWN, "TraverseDown"));
-        TABLE_VIEW_BINDINGS.add(new KeyBinding(KP_DOWN, "TraverseDown"));
 
         TABLE_VIEW_BINDINGS.add(new KeyBinding(HOME, "SelectAllToFirstRow").shift());
         TABLE_VIEW_BINDINGS.add(new KeyBinding(END, "SelectAllToLastRow").shift());
@@ -354,6 +348,8 @@ public class TableViewBehavior<T> extends BehaviorBase<TableView<T>> {
     private final WeakChangeListener<TableView.TableViewSelectionModel<T>> weakSelectionModelListener = 
             new WeakChangeListener<TableView.TableViewSelectionModel<T>>(selectionModelListener);
 
+    private TwoLevelFocusBehavior tlFocus;
+
     public TableViewBehavior(TableView control) {
         super(control);
         
@@ -361,6 +357,14 @@ public class TableViewBehavior<T> extends BehaviorBase<TableView<T>> {
         getControl().selectionModelProperty().addListener(weakSelectionModelListener);
         if (getControl().getSelectionModel() != null) {
             getControl().getSelectionModel().getSelectedCells().addListener(selectedCellsListener);
+        }
+
+        /*
+        ** only add this if we're on an embedded
+        ** platform that supports 5-button navigation 
+        */
+        if (Utils.isEmbeddedNonTouch()) {
+            tlFocus = new TwoLevelFocusBehavior(control); // needs to be last.
         }
     }
 
@@ -1210,4 +1214,20 @@ public class TableViewBehavior<T> extends BehaviorBase<TableView<T>> {
 
         if (onMoveToLastCell != null) onMoveToLastCell.run();
     }   
+
+    private static final long INTERNAL_PSEUDOCLASS_STATE = StyleManager.getPseudoclassMask("internal-focus");
+    private static final long EXTERNAL_PSEUDOCLASS_STATE = StyleManager.getPseudoclassMask("external-focus");
+
+    /**
+     * @treatAsPrivate implementation detail
+     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
+     */
+    @Deprecated @Override public long impl_getPseudoClassState() {
+        long mask = super.impl_getPseudoClassState();
+        if (tlFocus != null) {
+            mask |= tlFocus.isExternalFocus() ? EXTERNAL_PSEUDOCLASS_STATE : INTERNAL_PSEUDOCLASS_STATE;
+        }
+        return mask;
+    }
+
 }

@@ -31,13 +31,13 @@ import java.util.List;
 
 import javafx.beans.DefaultProperty;
 import javafx.beans.property.BooleanProperty;
-import javafx.beans.property.SimpleBooleanProperty;
 import javafx.beans.value.WritableValue;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 
 import com.sun.javafx.css.*;
 import com.sun.javafx.css.converters.*;
+import com.sun.javafx.scene.control.skin.MenuBarSkin;
 
 /**
  * <p>
@@ -149,7 +149,10 @@ public class MenuBar extends Control {
         return menus;
     }
 
-
+    /** {@inheritDoc} */
+    @Override protected Skin<?> createDefaultSkin() {
+        return new MenuBarSkin(this);
+    }
     
     /***************************************************************************
      *                                                                         *

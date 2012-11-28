@@ -148,6 +148,9 @@ public class TextInputControlBindings {
         // Traversal Bindings
         BINDINGS.add(new KeyBinding(TAB, "TraverseNext"));
         BINDINGS.add(new KeyBinding(TAB, "TraversePrevious").shift());
+        BINDINGS.add(new KeyBinding(TAB, "TraverseNext").ctrl());
+        BINDINGS.add(new KeyBinding(TAB, "TraversePrevious").shift().ctrl());
+
         // The following keys are forwarded to the parent container
         BINDINGS.add(new KeyBinding(ESCAPE, "ToParent"));
         BINDINGS.add(new KeyBinding(F10, "ToParent"));

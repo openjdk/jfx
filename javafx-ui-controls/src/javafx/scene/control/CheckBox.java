@@ -34,6 +34,7 @@ import javafx.geometry.Pos;
 import com.sun.javafx.css.StyleManager;
 import com.sun.javafx.scene.control.accessible.AccessibleCheckBox;
 import com.sun.javafx.accessible.providers.AccessibleProvider;
+import com.sun.javafx.scene.control.skin.CheckBoxSkin;
 
 /**
  * A tri-state selection Control typically skinned as a box with a checkmark or
@@ -227,6 +228,12 @@ public class CheckBox extends ButtonBase {
         }
         fireEvent(new ActionEvent());
     }
+
+    /** {@inheritDoc} */
+    @Override protected Skin<?> createDefaultSkin() {
+        return new CheckBoxSkin(this);
+    }
+
 
     /***************************************************************************
      *                                                                         *

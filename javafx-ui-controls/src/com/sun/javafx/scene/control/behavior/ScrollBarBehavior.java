@@ -109,9 +109,6 @@ public class ScrollBarBehavior extends BehaviorBase<ScrollBar> {
      */
     protected static final List<KeyBinding> SCROLLBAR_BINDINGS = new ArrayList<KeyBinding>();
     static {
-        SCROLLBAR_BINDINGS.add(new KeyBinding(TAB, "TraverseNext"));
-        SCROLLBAR_BINDINGS.add(new KeyBinding(TAB, "TraversePrevious").shift());
-        // TODO XXX DEBUGGING ONLY
         SCROLLBAR_BINDINGS.add(new KeyBinding(F4, "TraverseDebug").alt().ctrl().shift());
 
         SCROLLBAR_BINDINGS.add(new ScrollBarKeyBinding(LEFT, "DecrementValue"));
@@ -122,15 +119,6 @@ public class ScrollBarBehavior extends BehaviorBase<ScrollBar> {
         SCROLLBAR_BINDINGS.add(new ScrollBarKeyBinding(KP_RIGHT, "IncrementValue"));
         SCROLLBAR_BINDINGS.add(new ScrollBarKeyBinding(DOWN, "IncrementValue").vertical());
         SCROLLBAR_BINDINGS.add(new ScrollBarKeyBinding(KP_DOWN, "IncrementValue").vertical());
-
-        SCROLLBAR_BINDINGS.add(new ScrollBarKeyBinding(LEFT, "TraverseLeft").vertical());
-        SCROLLBAR_BINDINGS.add(new ScrollBarKeyBinding(KP_LEFT, "TraverseLeft").vertical());
-        SCROLLBAR_BINDINGS.add(new ScrollBarKeyBinding(UP, "TraverseUp"));
-        SCROLLBAR_BINDINGS.add(new ScrollBarKeyBinding(KP_UP, "TraverseUp"));
-        SCROLLBAR_BINDINGS.add(new ScrollBarKeyBinding(RIGHT, "TraverseRight").vertical());
-        SCROLLBAR_BINDINGS.add(new ScrollBarKeyBinding(KP_RIGHT, "TraverseRight").vertical());
-        SCROLLBAR_BINDINGS.add(new ScrollBarKeyBinding(DOWN, "TraverseDown"));
-        SCROLLBAR_BINDINGS.add(new ScrollBarKeyBinding(KP_DOWN, "TraverseDown"));
 
         SCROLLBAR_BINDINGS.add(new KeyBinding(HOME, KEY_RELEASED, "Home"));
         SCROLLBAR_BINDINGS.add(new KeyBinding(END, KEY_RELEASED, "End"));

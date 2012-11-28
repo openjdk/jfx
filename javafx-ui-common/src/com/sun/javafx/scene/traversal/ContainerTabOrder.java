@@ -65,7 +65,7 @@ public class ContainerTabOrder implements Algorithm {
             newNode = (findPreviousFocusablePeer(node));
         }
         else if (UP.equals(dir) || DOWN.equals(dir) || LEFT.equals(dir) || RIGHT.equals(dir) ) {
-            List<Node> nodes = engine.getTargetNodes();
+            List<Node> nodes = engine.getAllTargetNodes();
             List<Bounds> bounds = engine.getTargetBounds(nodes);
 
             int target = trav2D(engine.getBounds(node), dir, bounds);

@@ -49,6 +49,8 @@ import java.util.List;
 
 import com.sun.javafx.PlatformUtil;
 import com.sun.javafx.scene.control.skin.TextFieldSkin;
+import com.sun.javafx.css.StyleManager;
+import com.sun.javafx.scene.control.skin.Utils;
 import com.sun.javafx.scene.text.HitInfo;
 
 import static com.sun.javafx.PlatformUtil.*;
@@ -105,6 +107,7 @@ public class TextFieldBehavior extends TextInputControlBehavior<TextField> {
     };
 
     private ContextMenu contextMenu;
+    private TwoLevelFocusBehavior tlFocus;
 
     public TextFieldBehavior(final TextField textField) {
         super(textField);
@@ -127,6 +130,14 @@ public class TextFieldBehavior extends TextInputControlBehavior<TextField> {
                 handleFocusChange();
             }
         });
+
+        /*
+        ** only add this if we're on an embedded
+        ** platform that supports 5-button navigation 
+        */
+        if (com.sun.javafx.scene.control.skin.Utils.isEmbeddedNonTouch()) {
+            tlFocus = new TwoLevelFocusBehavior(textField); // needs to be last.
+        }
     }
 
     private void handleFocusChange() {
@@ -426,5 +437,20 @@ public class TextFieldBehavior extends TextInputControlBehavior<TextField> {
         EDITABLE_COMBO,
         TEXT_AREA;
     }
-    
+
+    private static final long INTERNAL_PSEUDOCLASS_STATE = StyleManager.getPseudoclassMask("internal-focus");
+    private static final long EXTERNAL_PSEUDOCLASS_STATE = StyleManager.getPseudoclassMask("external-focus");
+
+    /**
+     * @treatAsPrivate implementation detail
+     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
+     */
+    @Deprecated @Override public long impl_getPseudoClassState() {
+        long mask = super.impl_getPseudoClassState();
+        if (tlFocus != null) {
+            mask |= tlFocus.isExternalFocus() ? EXTERNAL_PSEUDOCLASS_STATE : INTERNAL_PSEUDOCLASS_STATE;
+        }
+        return mask;
+    }
+
 }

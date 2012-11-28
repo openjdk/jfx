@@ -52,6 +52,7 @@ import javafx.scene.input.KeyCode;
 import javafx.scene.input.KeyEvent;
 import javafx.scene.input.MouseEvent;
 
+import com.sun.javafx.css.StyleManager;
 import com.sun.javafx.Utils;
 
 public class SliderBehavior extends BehaviorBase<Slider> {
@@ -63,9 +64,6 @@ public class SliderBehavior extends BehaviorBase<Slider> {
      *************************************************************************/
     protected static final List<KeyBinding> SLIDER_BINDINGS = new ArrayList<KeyBinding>();
     static {
-        SLIDER_BINDINGS.add(new KeyBinding(TAB, "TraverseNext"));
-        SLIDER_BINDINGS.add(new KeyBinding(TAB, "TraversePrevious").shift());
-        // TODO XXX DEBUGGING ONLY
         SLIDER_BINDINGS.add(new KeyBinding(F4, "TraverseDebug").alt().ctrl().shift());
 
         SLIDER_BINDINGS.add(new SliderKeyBinding(LEFT, "DecrementValue"));
@@ -76,15 +74,6 @@ public class SliderBehavior extends BehaviorBase<Slider> {
         SLIDER_BINDINGS.add(new SliderKeyBinding(KP_RIGHT, "IncrementValue"));
         SLIDER_BINDINGS.add(new SliderKeyBinding(DOWN, "DecrementValue").vertical());
         SLIDER_BINDINGS.add(new SliderKeyBinding(KP_DOWN, "DecrementValue").vertical());
-
-        SLIDER_BINDINGS.add(new SliderKeyBinding(LEFT, "TraverseLeft").vertical());
-        SLIDER_BINDINGS.add(new SliderKeyBinding(KP_LEFT, "TraverseLeft").vertical());
-        SLIDER_BINDINGS.add(new SliderKeyBinding(UP, "TraverseUp"));
-        SLIDER_BINDINGS.add(new SliderKeyBinding(KP_UP, "TraverseUp"));
-        SLIDER_BINDINGS.add(new SliderKeyBinding(RIGHT, "TraverseRight").vertical());
-        SLIDER_BINDINGS.add(new SliderKeyBinding(KP_RIGHT, "TraverseRight").vertical());
-        SLIDER_BINDINGS.add(new SliderKeyBinding(DOWN, "TraverseDown"));
-        SLIDER_BINDINGS.add(new SliderKeyBinding(KP_DOWN, "TraverseDown"));
 
         SLIDER_BINDINGS.add(new KeyBinding(HOME, KEY_RELEASED, "Home"));
         SLIDER_BINDINGS.add(new KeyBinding(END, KEY_RELEASED, "End"));
@@ -115,8 +104,17 @@ public class SliderBehavior extends BehaviorBase<Slider> {
         else super.callAction(name);
     }
 
+    private TwoLevelFocusBehavior tlFocus;
+
     public SliderBehavior(Slider slider) {
         super(slider);
+        /*
+        ** only add this if we're on an embedded
+        ** platform that supports 5-button navigation 
+        */
+        if (com.sun.javafx.scene.control.skin.Utils.isEmbeddedNonTouch()) {
+            tlFocus = new TwoLevelFocusBehavior(slider); // needs to be last.
+        }
     }
 
     @Override protected List<KeyBinding> createKeyBindings() {
@@ -267,4 +265,22 @@ public class SliderBehavior extends BehaviorBase<Slider> {
             return ((Slider)control).getOrientation() == Orientation.VERTICAL;
         }
     }
+
+
+
+    private static final long INTERNAL_PSEUDOCLASS_STATE = StyleManager.getPseudoclassMask("internal-focus");
+    private static final long EXTERNAL_PSEUDOCLASS_STATE = StyleManager.getPseudoclassMask("external-focus");
+
+    /**
+     * @treatAsPrivate implementation detail
+     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
+     */
+    @Deprecated @Override public long impl_getPseudoClassState() {
+        long mask = super.impl_getPseudoClassState();
+        if (tlFocus != null) {
+            mask |= tlFocus.isExternalFocus() ? EXTERNAL_PSEUDOCLASS_STATE : INTERNAL_PSEUDOCLASS_STATE;
+        }
+        return mask;
+    }
+
 }

@@ -32,6 +32,7 @@ import javafx.scene.Node;
 import com.sun.javafx.css.StyleManager;
 import com.sun.javafx.scene.control.accessible.AccessibleButton;
 import com.sun.javafx.accessible.providers.AccessibleProvider;
+import com.sun.javafx.scene.control.skin.ButtonSkin;
 
 /**
  * <p>A simple button control.  The button control can contain
@@ -179,6 +180,11 @@ public class Button extends ButtonBase {
     /** {@inheritDoc} */
     @Override public void fire() {
         fireEvent(new ActionEvent());
+    }
+
+    /** {@inheritDoc} */
+    @Override protected Skin<?> createDefaultSkin() {
+        return new ButtonSkin(this);
     }
 
     /***************************************************************************

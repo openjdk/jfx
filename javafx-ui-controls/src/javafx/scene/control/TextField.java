@@ -44,6 +44,7 @@ import javafx.geometry.Pos;
 import com.sun.javafx.binding.ExpressionHelper;
 import com.sun.javafx.css.*;
 import com.sun.javafx.css.converters.*;
+import com.sun.javafx.scene.control.skin.TextFieldSkin;
 
 
 /**
@@ -240,6 +241,16 @@ public class TextField extends TextInputControl {
     public final void setAlignment(Pos value) { alignmentProperty().set(value); }
     public final Pos getAlignment() { return alignment == null ? Pos.CENTER_LEFT : alignment.get(); }
 
+    /***************************************************************************
+     *                                                                         *
+     * Methods                                                                 *
+     *                                                                         *
+     **************************************************************************/
+
+    /** {@inheritDoc} */
+    @Override protected Skin<?> createDefaultSkin() {
+        return new TextFieldSkin(this);
+    }
 
     /***************************************************************************
      *                                                                         *

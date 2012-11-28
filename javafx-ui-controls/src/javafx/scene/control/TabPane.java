@@ -43,6 +43,7 @@ import com.sun.javafx.css.StyleManager;
 import com.sun.javafx.css.StyleableDoubleProperty;
 import com.sun.javafx.css.StyleableProperty;
 import com.sun.javafx.css.converters.SizeConverter;
+import com.sun.javafx.scene.control.skin.TabPaneSkin;
 import javafx.beans.DefaultProperty;
 
 /**
@@ -479,6 +480,11 @@ public class TabPane extends Control {
             };
         }
         return tabMaxHeight;
+    }
+
+    /** {@inheritDoc} */
+    @Override protected Skin<?> createDefaultSkin() {
+        return new TabPaneSkin(this);
     }
 
     /***************************************************************************
