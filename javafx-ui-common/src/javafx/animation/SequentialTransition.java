@@ -585,7 +585,10 @@ public final class SequentialTransition extends Transition {
         oldTicks = newTicks;
     }
 
-    @Override void impl_jumpTo(long currentTicks, long cycleTicks) {
+    @Override void impl_jumpTo(long currentTicks, long cycleTicks, boolean forceJump) {
+        if (getStatus() == Status.STOPPED && !forceJump) {
+            return;
+        }
         impl_sync(false);
         final Status status = getStatus();
         final double frac = calculateFraction(currentTicks, cycleTicks);
@@ -593,12 +596,22 @@ public final class SequentialTransition extends Transition {
         final int oldIndex = curIndex;
         curIndex = findNewIndex(newTicks);
         final Animation newAnimation = cachedChildren[curIndex];
+        final double currentRate = getCurrentRate();
         if (curIndex != oldIndex) {
             if (status != Status.STOPPED) {
                 if ((oldIndex != BEFORE) && (oldIndex != end)) {
                     final Animation oldChild = cachedChildren[oldIndex];
                     if (oldChild.getStatus() != Status.STOPPED) {
                         cachedChildren[oldIndex].impl_stop();
+                    }
+                }
+                if (currentRate >= 0 && curIndex < oldIndex) {
+                    for (int i = oldIndex == end ? end - 1 : oldIndex; i > curIndex; --i) {
+                        cachedChildren[i].impl_jumpTo(0, durations[i], true);
+                    }
+                } else if (currentRate <= 0 && curIndex > oldIndex) {
+                    for (int i = oldIndex == BEFORE ? 0 : oldIndex; i < curIndex; ++i) {
+                        cachedChildren[i].impl_jumpTo(durations[i], durations[i], true);
                     }
                 }
                 startChild(newAnimation, curIndex);
@@ -608,7 +621,7 @@ public final class SequentialTransition extends Transition {
             }
         }
         // TODO: This does probably not work if animation is paused (getCurrentRate() == 0)
-        offsetTicks = (getCurrentRate() < 0)? sub(startTimes[curIndex+1], newTicks) : sub(newTicks, add(startTimes[curIndex], delays[curIndex]));
+        offsetTicks = (currentRate < 0)? sub(startTimes[curIndex+1], newTicks) : sub(newTicks, add(startTimes[curIndex], delays[curIndex]));
         newAnimation.jumpTo(toDuration(sub(newTicks, add(startTimes[curIndex], delays[curIndex])), rates[curIndex]));
         oldTicks = newTicks;
     }
@@ -622,7 +635,6 @@ public final class SequentialTransition extends Transition {
     }
 
     private long calcTimePulse(long ticks) {
-         long r =  Math.round(ticks * Math.abs(rates[curIndex])) -  offsetTicks;
-        return r > 0 ? r : 0;
+        return sub(Math.round(ticks * Math.abs(rates[curIndex])), offsetTicks);
     }
 }

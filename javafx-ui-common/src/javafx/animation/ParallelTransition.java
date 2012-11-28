@@ -453,7 +453,10 @@ public final class ParallelTransition extends Transition {
      * @deprecated This is an internal API that is not intended for use and will be removed in the next version
      */
     @Deprecated
-    @Override public void impl_jumpTo(long currentTicks, long cycleTicks) {
+    @Override public void impl_jumpTo(long currentTicks, long cycleTicks, boolean forceJump) {
+        if (getStatus() == Status.STOPPED && !forceJump) {
+            return;
+        }
         impl_sync(false);
         final double frac = calculateFraction(currentTicks, cycleTicks);
         final long newTicks = Math.max(0, Math.min(getCachedInterpolator().interpolate(0, cycleTicks, frac), cycleTicks));
@@ -491,7 +494,6 @@ public final class ParallelTransition extends Transition {
     }
     
     private long calcTimePulse(long ticks, int index) {
-        long r =  Math.round(ticks * Math.abs(rates[index])) -  offsetTicks[index];
-        return r > 0 ? r : 0;
+        return sub(Math.round(ticks * Math.abs(rates[index])), offsetTicks[index]);
     }
 }
