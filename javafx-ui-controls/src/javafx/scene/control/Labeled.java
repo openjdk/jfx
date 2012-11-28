@@ -314,6 +314,15 @@ public abstract class Labeled extends Control {
             font = new StyleableObjectProperty<Font>(Font.getDefault()) {
                 
                 @Override
+                public void set(Font value) {
+                    final Font oldValue = get();
+                    if (value == null ? oldValue == null : value.equals(oldValue)) {
+                        return;
+                    }
+                    super.set(value);
+                }
+                
+                @Override
                 protected void invalidated() {
                     // RT-20727 - if font is changed by calling setFont, then
                     // css might need to be reapplied since font size affects
