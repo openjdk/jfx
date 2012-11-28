@@ -165,7 +165,6 @@ public class Modena extends Application {
                     } else {
                         root.setStyle("-fx-base: "+color+";");
                     }
-                    root.impl_reapplyCSS();
                 }
             })
             .styleClass("color-well")

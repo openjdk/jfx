@@ -1155,25 +1155,26 @@ public abstract class Parent extends Node {
      * @deprecated This is an internal API that is not intended for use and will be removed in the next version
      */
     @Deprecated
-    @Override protected void impl_processCSS(StyleManager styleManager, boolean reapply) {
+    @Override protected void impl_processCSS() {
 
         // Nothing to do...
-        if (!reapply && (cssFlag == CSSFlags.CLEAN)) return;
+        if (cssFlag == CSSFlags.CLEAN) return;
         
-        // Determine whether we will need to reapply from here on down
-        boolean flag = reapply || cssFlag == CSSFlags.REAPPLY;
-        
+        // remember the flag we started with since super.impl_processCSS
+        // resets it to CLEAN and we need it for setting children.
+        CSSFlags flag = cssFlag;
 
         // Let the super implementation handle CSS for this node
-        super.impl_processCSS(styleManager, flag);
+        super.impl_processCSS();
         
         // For each child, process CSS
         for (int i=0, max=children.size(); i<max; i++) {
             final Node child = children.get(i);
-            // If the parent styles are being updated or reapplied, then
-            // make sure the children are updated or reapplied. 
-            child.cssFlag = (flag ? CSSFlags.REAPPLY : CSSFlags.UPDATE);
-            child.impl_processCSS(styleManager, flag);
+            
+            // If the parent styles are being updated, recalculated or 
+            // reapplied, then make sure the children get the same treatment. 
+            child.cssFlag = flag;
+            child.impl_processCSS();
         }
     }
     

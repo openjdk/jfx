@@ -133,16 +133,10 @@ final public class StyleHelper {
      */
     public void setStyles(StyleManager styleManager) {
 
-        // We could be here because the node changed id or styleclass, 
-        // so the selector needs to be recreated. Setting it to null
-        // causes the next call to getSimpleSelector() to create it anew.
-        this.styleClassBits = null;
-        this.key = 0;
-        this.smapRef = null;
-        this.sharedStyleCacheRef = null;
-        this.localStyleCache = null;
-        this.pseudoclassStateMask = 0;
-        this.transitionStates = null;
+        // Reset to initial state. If we end up with
+        // no styles, inline or otherwise, then transitionToState 
+        // will be a no-op.
+        resetToInitialState();
         
         // styleManager is not expected to be null
         assert(styleManager != null);
@@ -182,13 +176,52 @@ final public class StyleHelper {
             if (mightInherit == false && (inlineStyle == null || inlineStyle.trim().isEmpty())) {
                 return;
             }
+        }   
+        
+        setInternalState(styleManager, styleMap, pclassMasks);
+    }
+    
+    //
+    // Clear internal data structures, resetting this StyleHelper
+    // to its initial state with no mapped styles. If the style 
+    // map is not reestablished after this call, then transitionToState
+    // becomes a no-op.
+    // 
+    private void resetToInitialState() {
+        
+        styleClassBits = null;
+        key = 0;
+        if (smapRef != null) {
+            smapRef.clear();
+            smapRef = null;
         }
+        if (sharedStyleCacheRef != null) {
+            sharedStyleCacheRef.clear();
+            sharedStyleCacheRef = null;            
+        }
+        if (localStyleCache != null) {
+            localStyleCache.entries.clear();
+            localStyleCache = null;
+        }
+        pseudoclassStateMask = 0;
+        transitionStates = null;
+                
+    }
+    
+    // Set internal data structures
+    private void setInternalState(
+            StyleManager styleManager, 
+            StyleManager.StyleMap styleMap, 
+            long[] pclassMasks) {
         
-        this.smapRef = new WeakReference<Map<String, List<CascadingStyle>>>(smap);
+        final int depth = pclassMasks.length;
 
-        this.pseudoclassStateMask = pclassMasks[0];
+        final Map<String, List<CascadingStyle>> smap = styleMap != null ? styleMap.map : null;        
+        smapRef = new WeakReference<Map<String, List<CascadingStyle>>>(smap);
         
-        parent = node.getParent();
+        pseudoclassStateMask = pclassMasks[0];
+
+        Parent parent = node.getParent();
         for(int n=1; n<depth; n++) {
             final StyleHelper parentHelper = parent.impl_getStyleHelper();
             parentHelper.pseudoclassStateMask = parentHelper.pseudoclassStateMask | pclassMasks[n];
@@ -197,10 +230,10 @@ final public class StyleHelper {
         
         // TODO: move initialization of localStyleCache somewhere else.
         //       It should not be hidden down here. Maybe to getCacheEntry
-        this.localStyleCache = new StyleCacheBucket(pclassMasks);
+        localStyleCache = new StyleCacheBucket(pclassMasks);
 
         long[] keys = new long[depth];
-        this.key = keys[0] = styleMap.uniqueId;
+        key = keys[0] = styleMap.uniqueId;
         parent = node.getParent();
         for(int k=1; k<depth; k++) {
             final StyleHelper helper = parent.impl_getStyleHelper();            
@@ -218,7 +251,7 @@ final public class StyleHelper {
             sharedStyleCache = new StyleCacheBucket(pclassMasks);
             styleCache.put(styleCacheKey, sharedStyleCache);
         }
-        this.sharedStyleCacheRef = new WeakReference<StyleCacheBucket>(sharedStyleCache);
+        sharedStyleCacheRef = new WeakReference<StyleCacheBucket>(sharedStyleCache);
                      
     }
 
@@ -487,16 +520,69 @@ final public class StyleHelper {
         return localCacheEntry;
     }
 
-    private void clearLocalCache() {
-        final List<CacheEntry> entries = localStyleCache.entries;
-        final int max = entries.size();
-        for (int n=0; n<max; n++) {
-            CacheEntry entry = entries.get(n);
-            assert (entry.sharedCacheRef != null);
-            entry.values.clear();
-            entry.font = null;
+    public void inlineStyleChanged(StyleManager styleManager) {
+
+        // styleManager is not expected to be null
+        assert(styleManager != null);
+        if (styleManager == null) return;
+        
+        // Clear local cache so styles will be recalculated. 
+        // Since we're clearing the cache and getting (potentially) 
+        // new styles, reset the properties to initial values.
+        if (localStyleCache != null) {
+            
+            node.impl_cssResetInitialValues();
+            localStyleCache.entries.clear();
+            
+            // do we have any styles at all now?
+            final String inlineStyle = node.getStyle();
+            if(inlineStyle == null && inlineStyle.isEmpty()) {
+
+                final Map<String, List<CascadingStyle>> smap = getStyleMap();            
+                if (smap == null || smap.isEmpty()) {
+                    // We have no styles! Reset this StyleHelper to its
+                    // initial state so that calls to transitionToState 
+                    // become a no-op.
+                    resetToInitialState();
+                }
+                
+                // If smap isn't empty, then there are styles that
+                // apply to the node. There isn't a need to remap the styles
+                // since we've only removed an inline style and inline styles
+                // aren't part of the style map.
+            }
+
+            
+            
+            
+        } else {
+            final String inlineStyle = node.getStyle();
+            if (inlineStyle == null || inlineStyle.isEmpty()) {
+                return;
+            }
+            // if we don't have a localStyleCache, that means this 
+            // node doesn't have any applicable styles and it didn't
+            // have an inline style before. If it did have an inline
+            // style before, then there would be an smap, albeit an
+            // an empty one. See setStyles for this bit of logic. 
+            // But now the  node does have an inline style and so it
+            // needs to have an smap and localStyleCache for the logic
+            // in transitionToState to work. 
+            Node parent = node;
+            int depth = 0;
+            while(parent != null) {
+                depth++;
+                parent = parent.getParent();
+            }
+
+            final long[] pclassMasks = new long[depth];
+            Arrays.fill(pclassMasks, 0);
+            
+            setInternalState(styleManager, StyleManager.StyleMap.EMPTY_MAP, pclassMasks);
         }
+        
     }
+    
     /**
      * A map from Property Name (String) => List of Styles. This shortens
      * the lookup time for each property. The smap is shared and is owned
@@ -781,6 +867,7 @@ final public class StyleHelper {
     public void transitionToState() {
        
         if (smapRef == null || smapRef.get() == null) return;
+        
 
         //
         // The CacheEntry to choose depends on this Node's state and
@@ -842,11 +929,11 @@ final public class StyleHelper {
             // The next time transitionToState is called, we'll take the fast
             // path since all the values will have been calculated for this entry.
             //
-            fastpath = 
-                fastpath && 
-                cacheEntry.font.origin != Origin.USER && 
-                cacheEntry.font.origin != Origin.INLINE && 
-                inlineStyles == null;
+            fastpath = false;
+//                fastpath && 
+//                cacheEntry.font.origin != Origin.USER && 
+//                cacheEntry.font.origin != Origin.INLINE && 
+//                inlineStyles == null;
         } 
         
         final List<StyleableProperty> styleables = StyleableProperty.getStyleables(node);
@@ -998,12 +1085,12 @@ final public class StyleHelper {
 
         // Get all of the Styles which may apply to this particular property
         final Map<String, List<CascadingStyle>> smap = getStyleMap();
-        if (smap == null) return null;
+        if (smap == null) return inlineStyle;
 
         final List<CascadingStyle> styles = smap.get(property);
 
         // If there are no styles for this property then we can just bail
-        if ((styles == null || styles.isEmpty())&& (inlineStyle == null)) return null;
+        if ((styles == null) || styles.isEmpty()) return inlineStyle;
 
         // Go looking for the style. We do this by visiting each CascadingStyle in
         // order finding the first that matches the current node & set of
@@ -1745,9 +1832,7 @@ final public class StyleHelper {
         CascadingStyle fontSize = lookupFontSubPropertyStyle(node, "-fx-font-size",
                 isUserSet, fontShorthand, 0, !CONSIDER_INLINE_STYLES);
         
-        if (fontSize != null &&
-                // is font-size more specific than font shorthand?
-                (fontShorthand == null || fontSize.compareTo(fontShorthand) < 0)) {
+        if (fontSize != null) {
 
             final CalculatedValue cv = 
                 calculateValue(fontSize, node, dummyFontProperty, pseudoclassState, inlineStyles, 
@@ -1893,7 +1978,7 @@ final public class StyleHelper {
                     csShorthand.getStyle().getDeclaration().isImportant();
             
             final Style style = returnValue.getStyle();
-            final boolean familyImportant = 
+            final boolean returnValueIsImportant = 
                 style.getDeclaration().isImportant();
 
             if (nlooks < distance) {
@@ -1905,7 +1990,7 @@ final public class StyleHelper {
                 // important, then sub-property style wins (since, being closer
                 // to the node, it is more specific)
                 //                
-                if (shorthandImportant == true && familyImportant == false) {
+                if (shorthandImportant == true && returnValueIsImportant == false) {
                     returnValue = null;
                 } 
 
@@ -2088,9 +2173,7 @@ final public class StyleHelper {
         
         CascadingStyle csFamily = null; 
         if ((csFamily = lookupFontSubPropertyStyle(node, property+"-family",
-                isUserSet, csShorthand, distance, CONSIDER_INLINE_STYLES)) != null &&
-                // is the font-family sub property more specific than the font shorthand?
-               (csShorthand == null || csFamily.compareTo(csShorthand) < 0)) {
+                isUserSet, csShorthand, distance, CONSIDER_INLINE_STYLES)) != null) {
 
             if (styleList != null) {
                 styleList.add(csFamily.getStyle());
@@ -2111,9 +2194,7 @@ final public class StyleHelper {
         
         CascadingStyle csSize = null;
         if ((csSize = lookupFontSubPropertyStyle(node, property+"-size",
-                isUserSet, csShorthand, distance, CONSIDER_INLINE_STYLES))!= null &&
-                // is font-size more specific than font shorthand?
-               (csShorthand == null || csSize.compareTo(csShorthand) < 0)) {
+                isUserSet, csShorthand, distance, CONSIDER_INLINE_STYLES))!= null) {
        
             if (styleList != null) {
                 styleList.add(csSize.getStyle());
@@ -2136,9 +2217,7 @@ final public class StyleHelper {
         
         CascadingStyle csWeight = null;
         if ((csWeight = lookupFontSubPropertyStyle(node, property+"-weight",
-                isUserSet, csShorthand, distance, CONSIDER_INLINE_STYLES))!= null &&
-                // is font-weight more specific than font shorthand?                
-               (csShorthand == null || csWeight.compareTo(csShorthand) < 0)) {
+                isUserSet, csShorthand, distance, CONSIDER_INLINE_STYLES))!= null) {
 
             if (styleList != null) {
                 styleList.add(csWeight.getStyle());
@@ -2160,9 +2239,7 @@ final public class StyleHelper {
 
         CascadingStyle csStyle = null;
         if ((csStyle = lookupFontSubPropertyStyle(node, property+"-style",
-                isUserSet, csShorthand, distance, CONSIDER_INLINE_STYLES))!= null &&
-                // is font-style more specific than font shorthand?                
-               (csShorthand == null || csStyle.compareTo(csShorthand) < 0)) {
+                isUserSet, csShorthand, distance, CONSIDER_INLINE_STYLES))!= null) {
             
             if (styleList != null) {
                 styleList.add(csStyle.getStyle());

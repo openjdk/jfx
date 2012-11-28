@@ -171,6 +171,19 @@ public abstract class Control extends Region implements Skinnable {
             // result in reinstalling the skin
             currentSkinClassName = v == null ? null : v.getClass().getName();
             
+            // If skinClassName is null, then someone called setSkin directly
+            // rather than the skin being set via css. We know this is because 
+            // impl_processCSS ensures the skin is set, and impl_processCSS
+            // expands the skin property to see if the skin has been set. 
+            // If skinClassName is null, then we need to see if there is
+            // a UA stylesheet at this point since the logic in impl_processCSS
+            // depends on skinClassName being null. 
+            if (skinClassName == null) {
+                final String url = Control.this.getUserAgentStylesheet();
+                if (url != null) {
+                    StyleManager.addUserAgentStylesheet(url);
+                }
+            }
             // if someone calls setSkin, we need to make it look like they 
             // called set on skinClassName in order to keep CSS from overwriting
             // the skin. 
@@ -753,12 +766,15 @@ public abstract class Control extends Region implements Skinnable {
      * @deprecated This is an internal API that is not intended for use and will be removed in the next version
      */
     @Deprecated
-    @Override protected void impl_processCSS(StyleManager styleManager, boolean reapply) {
-        if (reapply && getUserAgentStylesheet() != null) {
-            styleManager.addUserAgentStylesheet(getUserAgentStylesheet());
+    @Override protected void impl_processCSS() {
+        if (skinClassNameProperty().get() == null) {
+            final String url = Control.this.getUserAgentStylesheet();
+            if (url != null) {
+                StyleManager.addUserAgentStylesheet(url);
+            }
         }
 
-        super.impl_processCSS(styleManager, reapply);
+        super.impl_processCSS();
 
         if (getSkin() == null) {
             // try to create default skin
@@ -766,7 +782,7 @@ public abstract class Control extends Region implements Skinnable {
             if (defaultSkin != null) {
                 skinProperty().set(defaultSkin);
                 // we have to reapply css again so that the newly set skin gets css applied as well.
-                super.impl_processCSS(styleManager, reapply);
+                super.impl_processCSS();
             } else {
                 final String msg = "The -fx-skin property has not been defined in CSS for " + this +
                                    " and createDefaultSkin() returned null.";

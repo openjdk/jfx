@@ -1258,8 +1258,8 @@ public class PopupControl extends PopupWindow implements Skinnable {
          * @deprecated This is an internal API that is not intended for use and will be removed in the next version
          */
         @Deprecated
-        @Override protected void impl_processCSS(StyleManager styleManager, boolean reapply) {
-            super.impl_processCSS(styleManager, reapply);
+        @Override protected void impl_processCSS() {
+            super.impl_processCSS();
 
             if (getSkin() == null) {
                 // try to create default skin
@@ -1267,7 +1267,7 @@ public class PopupControl extends PopupWindow implements Skinnable {
                 if (defaultSkin != null) {
                     skinProperty().set(defaultSkin);
                     // we have to reapply css again so that the newly set skin gets css applied as well.
-                    super.impl_processCSS(styleManager, reapply);
+                    super.impl_processCSS();
                 } else {
                     final String msg = "The -fx-skin property has not been defined in CSS for " + this +
                             " and createDefaultSkin() returned null.";

@@ -230,13 +230,6 @@ public  class CSSNode extends Node {
     public boolean applyCalled = false;
 
     @Override
-    protected void impl_processCSS(StyleManager mgr, boolean reapply) {
-        this.reapply = reapply;
-        processCalled = true;
-        super.impl_processCSS(mgr, reapply);
-    }
-
-    @Override
     public BaseBounds impl_computeGeomBounds(BaseBounds bounds, BaseTransform tx) {
         if (bounds != null) {
             bounds = bounds.deriveWithNewBounds(0, 0, 0,

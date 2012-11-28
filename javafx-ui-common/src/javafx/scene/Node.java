@@ -948,7 +948,17 @@ public abstract class Node implements EventTarget {
 
                 @Override
                 protected void invalidated() {
-                    impl_reapplyCSS();
+                    
+                    if (getScene() == null) return;
+                    
+                    // If the style has changed, then styles of this node
+                    // and child nodes might be affected. So if the cssFlag
+                    // is not already set to reapply or recalculate, make it so.
+                    if (cssFlag != CSSFlags.REAPPLY ||
+                            cssFlag != CSSFlags.RECALCULATE) {
+                        cssFlag = CSSFlags.RECALCULATE;
+                        notifyParentsOfInvalidatedCSS();
+                    }
                 }
 
                 @Override
@@ -1630,7 +1640,7 @@ public abstract class Node implements EventTarget {
             // TODO: is this the right thing to do?
             // this.impl_clearDirty(com.sun.javafx.scene.DirtyBits.NODE_CSS);
 
-            this.processCSS(getScene().styleManager);
+            this.processCSS();
         }
     }
 
@@ -7635,8 +7645,8 @@ public abstract class Node implements EventTarget {
             notifyParentsOfInvalidatedCSS();
         }
     }
-
-    void processCSS(StyleManager styleManager) {
+    
+    void processCSS() {
         switch (cssFlag) {
             case CLEAN:
                 break;
@@ -7648,13 +7658,14 @@ public abstract class Node implements EventTarget {
                 me.cssFlag = CSSFlags.CLEAN;
                 List<Node> children = me.getChildren();
                 for (int i=0, max=children.size(); i<max; i++) {
-                    children.get(i).processCSS(styleManager);
+                    children.get(i).processCSS();
                 }
                 break;
             case REAPPLY:
+            case RECALCULATE:
             case UPDATE:
             default:
-                impl_processCSS(styleManager, cssFlag == CSSFlags.REAPPLY);
+                impl_processCSS();
         }
     }
 
@@ -7695,8 +7706,7 @@ public abstract class Node implements EventTarget {
         
         final boolean flag = (reapply || cssFlag == CSSFlags.REAPPLY);
         cssFlag = flag ? CSSFlags.REAPPLY : CSSFlags.UPDATE;
-        final StyleManager styleManager = getScene().styleManager;
-        impl_processCSS(styleManager, flag);
+        impl_processCSS();
     }
     
     /**
@@ -7708,18 +7718,30 @@ public abstract class Node implements EventTarget {
      * @deprecated This is an internal API that is not intended for use and will be removed in the next version
      */
     @Deprecated // SB-dependency: RT-21206 has been filed to track this    
-    protected void impl_processCSS(StyleManager styleManager, boolean reapply) {
+    protected void impl_processCSS() {
         
         // Nothing to do...
-        if (!reapply && (cssFlag == CSSFlags.CLEAN)) return;
-        
+        if (cssFlag == CSSFlags.CLEAN) return;
+
+        final Scene scene = getScene();
+        if (scene == null) {
+            cssFlag = CSSFlags.CLEAN;
+            return;
+        }
+
         // Match new styles if I am told I need to reapply
         // or if my own flag indicates I need to reapply
-        if (reapply || (cssFlag == CSSFlags.REAPPLY)) {
+        if (cssFlag == CSSFlags.REAPPLY) {
 
+            final StyleManager styleManager = scene.styleManager;
             styleHelper.setStyles(styleManager);
 
-        } 
+        } else if (cssFlag == CSSFlags.RECALCULATE) {
+            
+            final StyleManager styleManager = scene.styleManager;
+            styleHelper.inlineStyleChanged(styleManager);
+            
+        }
         
         // Clear the flag first in case the flag is set to something
         // other than clean by downstream processing.

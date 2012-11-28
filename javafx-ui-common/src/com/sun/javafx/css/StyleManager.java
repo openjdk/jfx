@@ -1024,7 +1024,11 @@ final public class StyleManager {
             return;
         }
         
-        userAgentStylesheets.set(0, fname);
+        if (userAgentStylesheets.isEmpty()) {
+            userAgentStylesheets.add(fname);
+        } else {
+            userAgentStylesheets.set(0,fname);
+        }
         
         StylesheetContainer container = new StylesheetContainer(fname, stylesheet);
         stylesheetContainerMap.put(fname, container);
@@ -1380,7 +1384,7 @@ final public class StyleManager {
             this.map  = map;
         }
         
-        private static final StyleMap EMPTY_MAP = 
+        static final StyleMap EMPTY_MAP = 
             new StyleMap(0, Collections.EMPTY_MAP);
 
     }

@@ -448,7 +448,7 @@ public class Scene implements EventTarget {
             // The cssFlag is set to clean in either Node.processCSS or 
             // Node.impl_processCSS(boolean)
             sceneRoot.impl_clearDirty(com.sun.javafx.scene.DirtyBits.NODE_CSS);
-            sceneRoot.processCSS(styleManager);
+            sceneRoot.processCSS();
         }
     }
 

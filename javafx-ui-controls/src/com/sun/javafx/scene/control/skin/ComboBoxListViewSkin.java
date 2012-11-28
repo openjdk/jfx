@@ -516,7 +516,7 @@ public class ComboBoxListViewSkin<T> extends ComboBoxPopupControl<T> {
             }
             
             @Override 
-            public void impl_processCSS(com.sun.javafx.css.StyleManager styleManger, boolean reapply) {
+            public void impl_processCSS() {
                 
                 //
                 // If the popup doesn't have an owner window, then css won't 
@@ -526,7 +526,7 @@ public class ComboBoxListViewSkin<T> extends ComboBoxPopupControl<T> {
                 final PopupControl popup = getPopup();
                 if (popup.getOwnerWindow() == null) return;
                 
-                super.impl_processCSS(styleManger, reapply);
+                super.impl_processCSS();
             }
             
             private void doCSSCheck() {
