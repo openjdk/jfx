@@ -134,6 +134,7 @@ public abstract class LabeledSkinBase<C extends Labeled, B extends BehaviorBase<
         //consumeMouseEvents(false);
 
         // Register listeners
+        registerChangeListener(labeled.ellipsisStringProperty(), "ELLIPSIS_STRING");
         registerChangeListener(labeled.widthProperty(), "WIDTH");
         registerChangeListener(labeled.heightProperty(), "HEIGHT");
         registerChangeListener(labeled.textFillProperty(), "TEXT_FILL");
