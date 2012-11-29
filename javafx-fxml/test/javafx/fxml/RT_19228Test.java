@@ -26,18 +26,14 @@
 package javafx.fxml;
 
 import java.io.IOException;
-import java.net.URL;
 import org.junit.Test;
 
 import static org.junit.Assert.*;
 
-public class RT_22971 {
+public class RT_19228Test {
     @Test
-    public void testResourcesInjection() throws IOException {
-        URL location = getClass().getResource("rt_22971.fxml");
-        FXMLLoader fxmlLoader = new FXMLLoader(location);
-        fxmlLoader.load();
-        RT_22971Controller controller = fxmlLoader.getController();
-        assertEquals(controller.getFoo(), "bar");
+    public void testConstantValue() throws IOException {
+        Widget widget = (Widget)FXMLLoader.load(getClass().getResource("rt_19228.fxml"));
+        assertEquals(widget.getNumber(), Widget.TEN);
     }
 }

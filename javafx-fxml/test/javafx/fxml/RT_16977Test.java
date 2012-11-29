@@ -25,43 +25,14 @@
 
 package javafx.fxml;
 
-import javafx.fxml.FXMLLoader;
-
-import java.net.URL;
-
 import org.junit.Test;
 
 import static org.junit.Assert.*;
 
-public class RT_23413 {
-    private static URL LOCATION = RT_23413.class.getResource("rt_23413.fxml");
-    private static final int COUNT = 500;
-
+public class RT_16977Test {
     @Test
-    public void testTemplate() throws Exception {
-        assertTrue(testTemplate(true) < testTemplate(false));
-    }
-
-    private long testTemplate(boolean template) throws Exception {
-        FXMLLoader loader = new FXMLLoader(LOCATION);
-        loader.setTemplate(template);
-
-        long t0 = System.currentTimeMillis();
-        for (int i = 0; i < COUNT; i++) {
-            if (!template) {
-                loader.setRoot(null);
-            }
-
-            loader.load();
-        }
-
-        long t1 = System.currentTimeMillis();
-
-        long duration = t1 - t0;
-        long average = duration / COUNT;
-
-        System.out.printf("template:%b duration:%dms average:%d\n", template, duration, average);
-
-        return average;
+    public void testEmptyArrayProperty() throws Exception {
+        Widget widget = FXMLLoader.load(getClass().getResource("rt_16977.fxml"));
+        assertEquals(widget.getRatios().length, 0);
     }
 }

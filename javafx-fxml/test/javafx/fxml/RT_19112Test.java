@@ -25,19 +25,21 @@
 
 package javafx.fxml;
 
-import javafx.application.Application;
-import javafx.scene.Scene;
-import javafx.stage.Stage;
+import java.io.IOException;
+import org.junit.Test;
 
-public class RT_21559 extends Application {
-   @Override
-   public void start(Stage primaryStage) throws Exception {
-       FXMLLoader fxmlLoader = new FXMLLoader(getClass().getResource("rt_21559.fxml"));
-       primaryStage.setScene((Scene)fxmlLoader.load());
-       primaryStage.show();
-   }
+import static org.junit.Assert.*;
 
-   public static void main(String[] args) {
-       launch(args);
-   }
+public class RT_19112Test {
+    @Test
+    public void testStaticProperty() throws IOException {
+        FXMLLoader fxmlLoader = new FXMLLoader(getClass().getResource("rt_19112.fxml"));
+        fxmlLoader.load();
+
+        Widget widget1 = (Widget)fxmlLoader.getNamespace().get("widget1");
+        assertEquals(Widget.getAlignment(widget1), Alignment.LEFT);
+
+        Widget widget2 = (Widget)fxmlLoader.getNamespace().get("widget2");
+        assertEquals(Widget.getAlignment(widget2), Alignment.RIGHT);
+    }
 }
