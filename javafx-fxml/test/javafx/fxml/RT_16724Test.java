@@ -26,19 +26,12 @@
 package javafx.fxml;
 
 import java.io.IOException;
-import java.util.ResourceBundle;
 import org.junit.Test;
 
-import static org.junit.Assert.*;
-
-public class RT_16815 {
+public class RT_16724Test {
     @Test
     public void testControllerFactory() throws IOException {
-        FXMLLoader fxmlLoader = new FXMLLoader(getClass().getResource("rt_16815.fxml"),
-            ResourceBundle.getBundle("javafx/fxml/rt_16815"), null,
-            new RT_16815ControllerFactory());
-
-        Widget widget = (Widget)fxmlLoader.load();
-        assertEquals(widget.getName(), "My Widget");
+        FXMLLoader.load(getClass().getResource("rt_16724.fxml"), null, null,
+            new RT_16724ControllerFactory());
     }
 }

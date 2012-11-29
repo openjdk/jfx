@@ -25,15 +25,19 @@
 
 package javafx.fxml;
 
-import java.io.IOException;
-import org.junit.Test;
+import javafx.application.Application;
+import javafx.scene.Scene;
+import javafx.stage.Stage;
 
-import static org.junit.Assert.*;
+public class RT_22864Test extends Application {
+   @Override
+   public void start(Stage primaryStage) throws Exception {
+       FXMLLoader fxmlLoader = new FXMLLoader(getClass().getResource("rt_22864.fxml"));
+       primaryStage.setScene((Scene)fxmlLoader.load());
+       primaryStage.show();
+   }
 
-public class RT_19228 {
-    @Test
-    public void testConstantValue() throws IOException {
-        Widget widget = (Widget)FXMLLoader.load(getClass().getResource("rt_19228.fxml"));
-        assertEquals(widget.getNumber(), Widget.TEN);
-    }
+   public static void main(String[] args) {
+       launch(args);
+   }
 }

@@ -26,17 +26,12 @@
 package javafx.fxml;
 
 import java.io.IOException;
-import java.util.Arrays;
 import org.junit.Test;
 
-import static org.junit.Assert.*;
-
-public class RT_15524 {
-    @Test
-    public void testListAndArray() throws IOException {
-        Widget widget = FXMLLoader.load(getClass().getResource("rt_15524.fxml"));
-
-        assertEquals(widget.getStyles(), Arrays.asList(new String[]{"a", "b", "c"}));
-        assertTrue(Arrays.equals(widget.getRatios(), new float[] {1.0f, 2.0f, 3.0f}));
+public class RT_18933Test {
+    @Test(expected=IllegalArgumentException.class)
+    public void testDefaultListProperty() throws IOException {
+        FXMLLoader fxmlLoader = new FXMLLoader(getClass().getResource("rt_18933.fxml"));
+        fxmlLoader.load();
     }
 }

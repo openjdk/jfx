@@ -26,13 +26,25 @@
 package javafx.fxml;
 
 import java.io.IOException;
-
 import org.junit.Test;
 
-public class RT_24380 {
-    @Test
-    public void testProtectedInitializeMethod() throws IOException {
-        FXMLLoader fxmlLoader = new FXMLLoader(getClass().getResource("rt_24380.fxml"));
-        fxmlLoader.load();
+import static org.junit.Assert.*;
+
+public class RT_17646Test {
+    @Test(expected=UnsupportedOperationException.class)
+    public void testBidirectionalBinding() throws IOException {
+        FXMLLoader fxmlLoader = new FXMLLoader(getClass().getResource("rt_17646.fxml"));
+
+        Widget widget = (Widget)fxmlLoader.load();
+        RT_17646Controller controller = (RT_17646Controller)fxmlLoader.getController();
+        assertEquals(widget.getName(), controller.getName());
+
+        String name1 = "efgh";
+        controller.setName(name1);
+        assertEquals(widget.getName(), name1);
+
+        String name2 = "ijkl";
+        widget.setName(name2);
+        assertEquals(controller.getName(), name2);
     }
 }
