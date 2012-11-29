@@ -197,6 +197,7 @@ public class Text extends Shape {
         }
     }
 
+    @Override
     public boolean isAutomaticallyMirrored() {
         return false;
     }
