@@ -123,7 +123,7 @@ public final class ParallelTransition extends Transition {
             if (oldValue.doubleValue() * newValue.doubleValue() < 0) {
                 for (int i = 0; i < cachedChildren.length; ++i) {
                     Animation child = cachedChildren[i];
-                    child.setRate(rates[i] * Math.signum(newValue.doubleValue()));
+                    child.clipEnvelope.setRate(rates[i] * Math.signum(getCurrentRate()));
                 }
                 toggledRate = true;
             }
@@ -288,7 +288,7 @@ public final class ParallelTransition extends Transition {
     private boolean startChild(Animation child, int index) {
         final boolean forceSync = forceChildSync[index];
         if (child.impl_startable(forceSync)) {
-            child.setRate(rates[index] * Math.signum(getCurrentRate()));
+            child.clipEnvelope.setRate(rates[index] * Math.signum(getCurrentRate()));
             child.impl_start(forceSync);
             forceChildSync[index] = false;
             return true;
@@ -351,7 +351,7 @@ public final class ParallelTransition extends Transition {
     void impl_start(boolean forceSync) {
         super.impl_start(forceSync);
         toggledRate = false;
-        currentRateProperty().addListener(rateListener);
+        rateProperty().addListener(rateListener);
     }
 
     @Override
@@ -365,7 +365,7 @@ public final class ParallelTransition extends Transition {
         if (childrenChanged) {
             setCycleDuration(computeCycleDuration());
         }
-        currentRateProperty().removeListener(rateListener);
+        rateProperty().removeListener(rateListener);
     }
 
 
@@ -494,6 +494,6 @@ public final class ParallelTransition extends Transition {
     }
     
     private long calcTimePulse(long ticks, int index) {
-        return sub(Math.round(ticks * Math.abs(rates[index])), offsetTicks[index]);
+        return sub(ticks, offsetTicks[index]);
     }
 }
