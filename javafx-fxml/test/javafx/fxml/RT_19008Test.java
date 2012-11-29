@@ -25,14 +25,12 @@
 
 package javafx.fxml;
 
+import java.io.IOException;
 import org.junit.Test;
 
-import static org.junit.Assert.*;
-
-public class RT_19870 {
-    @Test
-    public void testCustomWidget() {
-        MyWidget myWidget = new MyWidget();
-        assertTrue(myWidget.getChildWidgetEnabledChanged());
+public class RT_19008Test {
+    @Test(expected=NullPointerException.class)
+    public void testMissingResource() throws IOException {
+        FXMLLoader.load(getClass().getResource("rt_19008.fxml"));
     }
 }

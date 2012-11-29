@@ -25,24 +25,31 @@
 
 package javafx.fxml;
 
-import java.io.IOException;
-import java.net.URL;
-import java.util.ResourceBundle;
-import org.junit.Test;
+import javafx.application.Application;
+import javafx.beans.value.ChangeListener;
+import javafx.beans.value.ObservableValue;
+import javafx.scene.Scene;
+import javafx.scene.layout.VBox;
+import javafx.stage.Stage;
 
-import static org.junit.Assert.*;
+public class RT_23244Test extends Application {
+   @Override
+   public void start(Stage primaryStage) throws Exception {
+       FXMLLoader fxmlLoader = new FXMLLoader(getClass().getResource("rt_23244.fxml"));
+       primaryStage.setScene((Scene)fxmlLoader.load());
 
-public class RT_20471 {
-    @Test
-    public void testControllerInjection() throws IOException {
-        URL location = getClass().getResource("rt_20471.fxml");
-        ResourceBundle resources = ResourceBundle.getBundle("javafx.fxml.rt_20471");
-        FXMLLoader fxmlLoader = new FXMLLoader(location, resources);
+       VBox root = (VBox)fxmlLoader.getNamespace().get("root");
+       root.hoverProperty().addListener(new ChangeListener<Boolean>() {
+           @Override
+           public void changed(ObservableValue<? extends Boolean> observable, Boolean oldValue, Boolean newValue) {
+               System.out.println("CHANGE");
+           }
+       });
 
-        fxmlLoader.load();
-        RT_20471Controller controller = fxmlLoader.getController();
-        assertEquals(controller.getLocation(), location);
-        assertEquals(controller.getResources(), resources);
-        assertTrue(controller.isInitialized());
-    }
+       primaryStage.show();
+   }
+
+   public static void main(String[] args) {
+       launch(args);
+   }
 }

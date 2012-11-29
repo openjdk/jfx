@@ -27,19 +27,20 @@ package javafx.fxml;
 
 import com.sun.javafx.fxml.LoadListener;
 import java.io.IOException;
-import java.util.Map;
 import org.junit.Test;
 
 import static org.junit.Assert.*;
 
-public class RT_18218 {
+public class RT_18046Test {
+    private String scriptValue = null;
+
     @Test
-    @SuppressWarnings({"unchecked", "deprecation"})
+    @SuppressWarnings("deprecation")
     public void testStaticScriptLoad() throws IOException {
-        FXMLLoader fxmlLoader = new FXMLLoader(getClass().getResource("rt_18218.fxml"));
+        FXMLLoader fxmlLoader = new FXMLLoader(getClass().getResource("rt_18046.fxml"));
         fxmlLoader.setStaticLoad(true);
         fxmlLoader.setLoadListener(new LoadListener() {
-            private String unknownStaticPropertyElementName = null;
+            private boolean script = false;
 
             @Override
             public void readImportProcessingInstruction(String target) {
@@ -83,11 +84,11 @@ public class RT_18218 {
 
             @Override
             public void beginUnknownStaticPropertyElement(String name) {
-                unknownStaticPropertyElementName = name;
             }
 
             @Override
             public void beginScriptElement() {
+                script = true;
             }
 
             @Override
@@ -104,8 +105,6 @@ public class RT_18218 {
 
             @Override
             public void readUnknownStaticPropertyAttribute(String name, String value) {
-                assertEquals(name, "Gadget.bar");
-                assertEquals(value, "123456");
             }
 
             @Override
@@ -114,27 +113,15 @@ public class RT_18218 {
 
             @Override
             public void endElement(Object value) {
-                if (unknownStaticPropertyElementName != null) {
-                    if (unknownStaticPropertyElementName.equals("Gadget.bar")) {
-                        assertEquals(value, "abcdef");
-                    } else if (unknownStaticPropertyElementName.equals("Gadget.baz")) {
-                        assertEquals(value.getClass(), Widget.class);
-                    } else {
-                        throw new RuntimeException();
-                    }
-
-                    unknownStaticPropertyElementName = null;
+                if (script) {
+                    scriptValue = value.toString();
                 }
+
+                script = false;
             }
         });
 
         fxmlLoader.load();
-
-        Map<String, Object> gadget = (Map<String, Object>)fxmlLoader.getNamespace().get("gadget");
-        assertNotNull(gadget);
-
-        Widget widget2 = (Widget)fxmlLoader.getNamespace().get("widget2");
-        assertNotNull(widget2);
-        assertEquals(widget2.getName(), "Widget 2");
+        assertNotNull(scriptValue);
     }
 }
