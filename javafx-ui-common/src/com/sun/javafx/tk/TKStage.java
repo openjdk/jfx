@@ -27,11 +27,18 @@ package com.sun.javafx.tk;
 import com.sun.javafx.accessible.providers.AccessibleProvider;
 import com.sun.javafx.accessible.providers.AccessibleStageProvider;
 
+import java.security.AccessControlContext;
+
 /**
  * TKStage - Peer interface for a Stage
  *
  */
 public interface TKStage {
+
+    /**
+     * This method is used to set security context of the Stage.
+     */
+    public void setSecurityContext(AccessControlContext ctx);
 
     /**
      * Listener for this stage peer to pass updates and events back to the stage
@@ -106,13 +113,6 @@ public interface TKStage {
     public void setMinimumSize(int minWidth, int minHeight);
 
     public void setMaximumSize(int maxWidth, int maxHeight);
-
-
-    /**
-     * This method is used to set security context of the Stage if needed.
-     * It is guaranteed to be called with user code on stack.
-     */
-    public void initSecurityContext();
 
     public void setFullScreen(boolean fullScreen);
 
