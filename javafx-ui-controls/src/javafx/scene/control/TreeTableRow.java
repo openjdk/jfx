@@ -25,6 +25,7 @@
 package javafx.scene.control;
 
 import com.sun.javafx.css.StyleManager;
+import com.sun.javafx.scene.control.skin.TreeTableRowSkin;
 import java.lang.ref.WeakReference;
 import javafx.beans.InvalidationListener;
 import javafx.beans.Observable;
@@ -427,5 +428,10 @@ public class TreeTableRow<T> extends IndexedCell<T> {
             mask |= getTreeItem().isExpanded() ? EXPANDED_PSEUDOCLASS_STATE : COLLAPSED_PSEUDOCLASS_STATE;
         }
         return mask;
+    }
+    
+    /** {@inheritDoc} */
+    @Override protected Skin<?> createDefaultSkin() {
+        return new TreeTableRowSkin<T>(this);
     }
 }

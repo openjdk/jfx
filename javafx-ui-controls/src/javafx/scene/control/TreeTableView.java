@@ -30,6 +30,7 @@ import com.sun.javafx.css.StyleManager;
 import com.sun.javafx.scene.control.ReadOnlyUnbackedObservableList;
 import com.sun.javafx.scene.control.TableColumnComparator;
 import com.sun.javafx.scene.control.WeakEventHandler;
+import com.sun.javafx.scene.control.skin.TreeTableViewSkin;
 import com.sun.javafx.scene.control.skin.VirtualContainerBase;
 import java.lang.ref.WeakReference;
 import java.util.ArrayList;
@@ -1438,6 +1439,11 @@ public class TreeTableView<S> extends Control {
                 CELL_SELECTION_PSEUDOCLASS_STATE : ROW_SELECTION_PSEUDOCLASS_STATE;
         }
         return mask;
+    }
+
+    /** {@inheritDoc} */
+    @Override protected Skin<?> createDefaultSkin() {
+        return new TreeTableViewSkin<S>(this);
     }
 
     

@@ -24,6 +24,7 @@
  */
 package javafx.scene.control;
 
+import com.sun.javafx.scene.control.skin.TreeTableCellSkin;
 import javafx.beans.InvalidationListener;
 import javafx.beans.Observable;
 import javafx.beans.WeakInvalidationListener;
@@ -561,4 +562,8 @@ public class TreeTableCell<S,T> extends IndexedCell<T> {
     private static final String DEFAULT_STYLE_CLASS = "tree-table-cell";
     private static final String PSEUDO_CLASS_LAST_VISIBLE = "last-visible";
 
+    /** {@inheritDoc} */
+    @Override protected Skin<?> createDefaultSkin() {
+        return new TreeTableCellSkin(this);
+    }
 }

@@ -71,14 +71,6 @@ public class TableViewBehavior<T> extends TableViewBehaviorBase<TableView<T>, T,
 
     
 
-        /*
-        ** only add this if we're on an embedded
-        ** platform that supports 5-button navigation 
-        */
-        if (Utils.isEmbeddedNonTouch()) {
-            tlFocus = new TwoLevelFocusBehavior(control); // needs to be last.
-        }
-    
     /**************************************************************************
      *                                                                        *
      * Constructors                                                           *
@@ -93,6 +85,14 @@ public class TableViewBehavior<T> extends TableViewBehaviorBase<TableView<T>, T,
         TableViewSelectionModel sm = control.getSelectionModel();
         if (sm != null) {
             sm.getSelectedCells().addListener(selectedCellsListener);
+        }
+        
+        /*
+        ** only add this if we're on an embedded
+        ** platform that supports 5-button navigation 
+        */
+        if (Utils.isEmbeddedNonTouch()) {
+            tlFocus = new TwoLevelFocusBehavior(control); // needs to be last.
         }
     }
 

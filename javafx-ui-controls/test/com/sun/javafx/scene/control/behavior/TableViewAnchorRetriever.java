@@ -10,6 +10,6 @@ public class TableViewAnchorRetriever {
 
     // can only access the getAnchor method in TableCellBehavior from this package
     public static TablePosition getAnchor(TableView tableView) {
-        return (TablePosition) TableCellBehavior.getAnchor(tableView);
+        return (TablePosition) TableCellBehaviorBase.getAnchor(tableView, null);
     }
 }
