@@ -71,7 +71,7 @@ import com.sun.javafx.scene.traversal.Direction;
 import com.sun.javafx.scene.traversal.TraversalEngine;
 import com.sun.javafx.scene.traversal.TraverseListener;
 
-public class ToolBarSkin extends SkinBase<ToolBar, ToolBarBehavior> implements TraverseListener {
+public class ToolBarSkin extends BehaviorSkinBase<ToolBar, ToolBarBehavior> implements TraverseListener {
 
     private Pane box;
     private ToolBarOverflowMenu overflowMenu;

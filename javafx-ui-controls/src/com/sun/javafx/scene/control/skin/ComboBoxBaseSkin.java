@@ -26,7 +26,6 @@
 package com.sun.javafx.scene.control.skin;
 
 import javafx.scene.control.ComboBoxBase;
-import javafx.scene.control.SkinBase;
 import com.sun.javafx.scene.control.behavior.ComboBoxBaseBehavior;
 import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
@@ -37,7 +36,7 @@ import javafx.scene.Node;
 import javafx.scene.layout.Region;
 import javafx.scene.layout.StackPane;
 
-public abstract class ComboBoxBaseSkin<T> extends SkinBase<ComboBoxBase<T>, ComboBoxBaseBehavior<T>> {
+public abstract class ComboBoxBaseSkin<T> extends BehaviorSkinBase<ComboBoxBase<T>, ComboBoxBaseBehavior<T>> {
     
     private Node displayNode; // this is normally either label or textField
     

@@ -37,7 +37,6 @@ import javafx.scene.control.ContextMenu;
 import javafx.scene.control.Menu;
 import javafx.scene.control.MenuButton;
 import javafx.scene.control.MenuItem;
-import javafx.scene.control.SkinBase;
 import javafx.scene.input.MouseEvent;
 import javafx.scene.layout.Region;
 import javafx.scene.layout.StackPane;
@@ -47,7 +46,7 @@ import com.sun.javafx.scene.control.behavior.MenuButtonBehaviorBase;
  * Base class for MenuButtonSkin and SplitMenuButtonSkin. It consists of the
  * label, the arrowButton with its arrow shape, and the popup.
  */
-public abstract class MenuButtonSkinBase<C extends MenuButton, B extends MenuButtonBehaviorBase<C>> extends SkinBase<C, B> {
+public abstract class MenuButtonSkinBase<C extends MenuButton, B extends MenuButtonBehaviorBase<C>> extends BehaviorSkinBase<C, B> {
 
     /***************************************************************************
      *                                                                         *

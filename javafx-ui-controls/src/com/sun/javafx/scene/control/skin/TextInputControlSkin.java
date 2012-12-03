@@ -93,7 +93,7 @@ import static com.sun.javafx.scene.control.skin.resources.ControlResources.*;
 /**
  * Abstract base class for text input skins.
  */
-public abstract class TextInputControlSkin<T extends TextInputControl, B extends TextInputControlBehavior<T>> extends SkinBase<T, B> {
+public abstract class TextInputControlSkin<T extends TextInputControl, B extends TextInputControlBehavior<T>> extends BehaviorSkinBase<T, B> {
 
     private static final boolean macOS = isMac();
     /**

@@ -76,7 +76,7 @@ import static javafx.scene.layout.Region.*;
 
 import static com.sun.javafx.scene.control.skin.resources.EmbeddedResources.*;
 
-public class FXVKSkin extends SkinBase<FXVK, BehaviorBase<FXVK>> {
+public class FXVKSkin extends BehaviorSkinBase<FXVK, BehaviorBase<FXVK>> {
 
     /**
      * If true, places the virtual keyboard(s) in a new root wrapper

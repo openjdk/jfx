@@ -51,7 +51,6 @@ import javafx.scene.control.MenuBar;
 import javafx.scene.control.MenuButton;
 import javafx.scene.control.MenuItem;
 import javafx.scene.control.SeparatorMenuItem;
-import javafx.scene.control.SkinBase;
 import javafx.scene.input.KeyEvent;
 import javafx.scene.input.MouseEvent;
 import javafx.scene.layout.HBox;
@@ -76,7 +75,7 @@ import javafx.scene.input.*;
  * being there is no overflow behavior and we just hide nodes which fall
  * outside the bounds.
  */
-public class MenuBarSkin extends SkinBase<MenuBar, BehaviorBase<MenuBar>> implements TraverseListener {
+public class MenuBarSkin extends BehaviorSkinBase<MenuBar, BehaviorBase<MenuBar>> implements TraverseListener {
     
     private final HBox container;
 

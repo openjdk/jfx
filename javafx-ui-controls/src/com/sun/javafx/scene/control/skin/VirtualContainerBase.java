@@ -40,7 +40,7 @@ import java.util.Map;
  * @since JavaFX 1.3
  * @profile common
  */
-public abstract class VirtualContainerBase<C extends Control, B extends BehaviorBase<C>, I extends IndexedCell> extends javafx.scene.control.SkinBase<C, B> {
+public abstract class VirtualContainerBase<C extends Control, B extends BehaviorBase<C>, I extends IndexedCell> extends BehaviorSkinBase<C, B> {
 
     public static final String SCROLL_TO_INDEX_CENTERED = "VirtualContainerBase.scrollToIndexCentered";
     public static final String SCROLL_TO_INDEX_TOP = "VirtualContainerBase.scrollToIndexTop";
