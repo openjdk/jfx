@@ -24,77 +24,120 @@
  */
 package com.sun.javafx.scene.control.skin;
 
-import com.preview.javafx.scene.control.TreeTableRow;
-import com.preview.javafx.scene.control.TreeTableView;
+import com.sun.javafx.collections.NonIterableChange;
+import com.sun.javafx.scene.control.ReadOnlyUnbackedObservableList;
+import com.sun.javafx.scene.control.WeakEventHandler;
+import javafx.scene.control.TreeTableRow;
+import javafx.scene.control.TreeTableView;
 import com.sun.javafx.scene.control.behavior.TreeTableViewBehavior;
 import java.lang.ref.WeakReference;
+import java.util.List;
+import java.util.WeakHashMap;
+import javafx.beans.property.BooleanProperty;
+import javafx.beans.property.ObjectProperty;
+import javafx.beans.property.SimpleObjectProperty;
 import javafx.collections.FXCollections;
-import javafx.collections.ListChangeListener;
-import javafx.collections.ListChangeListener.Change;
 import javafx.collections.ObservableList;
-import javafx.scene.control.SkinBase;
-import javafx.scene.control.TableColumn;
-import javafx.scene.control.TableRow;
+import javafx.event.EventHandler;
+import javafx.event.EventType;
+import javafx.scene.Node;
+import javafx.scene.control.ResizeFeaturesBase;
+import javafx.scene.control.SelectionModel;
+import javafx.scene.control.TableColumnBase;
+import javafx.scene.control.TableSelectionModel;
 import javafx.scene.control.TableView;
 import javafx.scene.control.TreeItem;
+import javafx.scene.control.TreeTableCell;
+import javafx.scene.control.TreeTableColumn;
+import javafx.scene.input.MouseEvent;
+import javafx.scene.layout.HBox;
+import javafx.scene.layout.Region;
 import javafx.scene.layout.StackPane;
 import javafx.util.Callback;
 
-/**
- *
- */
-public class TreeTableViewSkin<T> extends SkinBase<TreeTableView<T>, TreeTableViewBehavior<T>> {
+public class TreeTableViewSkin<S> extends TableViewSkinBase<S, TreeTableView<S>, TreeTableViewBehavior<S>, TreeTableRow<S>> {
     
-    private final TableView<TreeItem<T>> table;
-
-    public TreeTableViewSkin(final TreeTableView<T> control) {
-        super(control, new TreeTableViewBehavior<T>(control));
+    // basically this is a convenience map that maps from a TreeTableView to a list
+    // that is used to translate list get(int)/size() requests into results from
+    // the TreeItem hierarchy. Not the greatest solution in the world, but it'll
+    // do for now.
+    static final WeakHashMap<TreeTableView, TreeTableViewBackingList> treeItemToListMap =
+            new WeakHashMap<TreeTableView, TreeTableViewBackingList>();
+    
+    public TreeTableViewSkin(final TreeTableView<S> treeTableView) {
+        super(treeTableView, new TreeTableViewBehavior(treeTableView));
         
-        table = new TableView<TreeItem<T>>();
+        this.treeTableView = treeTableView;
+        this.tableBackingList = new TreeTableViewBackingList(treeTableView);
+        this.tableBackingListProperty = new SimpleObjectProperty<TreeTableViewBackingList<S>>(tableBackingList);
         
-        // get defined columns
-        updateColumns();
-        control.getColumns().addListener(new ListChangeListener<TableColumn<TreeItem<T>, ?>>() {
-            @Override public void onChanged(Change<? extends TableColumn<TreeItem<T>, ?>> change) {
-                updateColumns();
-            }
-        });
+        treeItemToListMap.put(treeTableView, tableBackingList);
         
-        // install custom row factory to handle indentation
-//        table.setRowFactory(new Callback<TableView<TreeItem<T>>, TreeTableRow<TreeItem<T>>>() {
-        table.setRowFactory(new Callback<TableView<TreeItem<T>>, TableRow<TreeItem<T>>>() {
-            @Override public TreeTableRow<TreeItem<T>> call(TableView<TreeItem<T>> p) {
-                TreeTableRow row = new TreeTableRow<TreeItem<T>>();
-                
-                if (row.getDisclosureNode() == null) {
-                    final StackPane disclosureNode = new StackPane();
-                    disclosureNode.getStyleClass().setAll("tree-disclosure-node");
+        super.init(treeTableView);
+        
+        setRoot(getSkinnable().getRoot());
 
-                    final StackPane disclosureNodeArrow = new StackPane();
-                    disclosureNodeArrow.getStyleClass().setAll("arrow");
-                    disclosureNode.getChildren().add(disclosureNodeArrow);
-
-                    row.setDisclosureNode(disclosureNode);
+        EventHandler<MouseEvent> ml = new EventHandler<MouseEvent>() {
+            @Override public void handle(MouseEvent event) { 
+                // RT-15127: cancel editing on scroll. This is a bit extreme
+                // (we are cancelling editing on touching the scrollbars).
+                // This can be improved at a later date.
+                if (treeTableView.getEditingCell() != null) {
+                    treeTableView.edit(-1, null);
                 }
                 
-                row.updateTreeTableView(control);
-                row.getStyleClass().add("tree-table-row");
-                return row;
+                // This ensures that the table maintains the focus, even when the vbar
+                // and hbar controls inside the flow are clicked. Without this, the
+                // focus border will not be shown when the user interacts with the
+                // scrollbars, and more importantly, keyboard navigation won't be
+                // available to the user.
+                treeTableView.requestFocus(); 
             }
+        };
+        flow.getVbar().addEventFilter(MouseEvent.MOUSE_PRESSED, ml);
+        flow.getHbar().addEventFilter(MouseEvent.MOUSE_PRESSED, ml);
+
+        // init the behavior 'closures'
+        TreeTableViewBehavior behavior = getBehavior();
+        behavior.setOnFocusPreviousRow(new Runnable() {
+            @Override public void run() { onFocusPreviousCell(); }
+        });
+        behavior.setOnFocusNextRow(new Runnable() {
+            @Override public void run() { onFocusNextCell(); }
+        });
+        behavior.setOnMoveToFirstCell(new Runnable() {
+            @Override public void run() { onMoveToFirstCell(); }
+        });
+        behavior.setOnMoveToLastCell(new Runnable() {
+            @Override public void run() { onMoveToLastCell(); }
+        });
+        behavior.setOnScrollPageDown(new Callback<Void, Integer>() {
+            @Override public Integer call(Void param) { return onScrollPageDown(); }
+        });
+        behavior.setOnScrollPageUp(new Callback<Void, Integer>() {
+            @Override public Integer call(Void param) { return onScrollPageUp(); }
+        });
+        behavior.setOnSelectPreviousRow(new Runnable() {
+            @Override public void run() { onSelectPreviousCell(); }
+        });
+        behavior.setOnSelectNextRow(new Runnable() {
+            @Override public void run() { onSelectNextCell(); }
+        });
+        behavior.setOnSelectLeftCell(new Runnable() {
+            @Override public void run() { onSelectLeftCell(); }
+        });
+        behavior.setOnSelectRightCell(new Runnable() {
+            @Override public void run() { onSelectRightCell(); }
         });
         
-        getChildren().add(table);
-        
-
-        registerChangeListener(control.rootProperty(), "ROOT");
-        registerChangeListener(control.showRootProperty(), "SHOW_ROOT");
-        registerChangeListener(control.cellFactoryProperty(), "CELL_FACTORY");
-        registerChangeListener(control.impl_treeItemCountProperty(), "TREE_ITEM_COUNT");
-//        registerChangeListener(control.focusTraversableProperty(), "FOCUS_TRAVERSABLE");
+        registerChangeListener(treeTableView.rootProperty(), "ROOT");
+        registerChangeListener(treeTableView.showRootProperty(), "SHOW_ROOT");
+        registerChangeListener(treeTableView.rowFactoryProperty(), "ROW_FACTORY");
+        registerChangeListener(treeTableView.impl_treeItemCountProperty(), "TREE_ITEM_COUNT");
         
         updateItemCount();
     }
-    
+
     @Override protected void handleControlPropertyChanged(String p) {
         super.handleControlPropertyChanged(p);
         
@@ -110,39 +153,374 @@ public class TreeTableViewSkin<T> extends SkinBase<TreeTableView<T>, TreeTableVi
                  // update the item count in the flow and behavior instances
                 updateItemCount();
             }
-        } else if ("CELL_FACTORY".equals(p)) {
+        } else if ("ROW_FACTORY".equals(p)) {
             // FIXME can't set treeview cell factory in to a table!
         } else if ("TREE_ITEM_COUNT".equals(p)) {
             updateItemCount();
-//        } else if (p == "FOCUS_TRAVERSABLE") {
-//            flow.setFocusTraversable(getSkinnable().isFocusTraversable());
         }
     }
     
-    private WeakReference<TreeItem> weakRoot;
+    /***************************************************************************
+     *                                                                         *
+     * Listeners                                                               *
+     *                                                                         *
+     **************************************************************************/
+    
+    
+    
+    /***************************************************************************
+     *                                                                         *
+     * Internal Fields                                                         *
+     *                                                                         *
+     **************************************************************************/
+
+    private final TreeTableViewBackingList<S> tableBackingList;
+    private final ObjectProperty/*<TreeTableViewBackingList<S>>*/ tableBackingListProperty;
+    private final TreeTableView<S> treeTableView;
+    private WeakReference<TreeItem> weakRootRef;
+    
+    private boolean needItemCountUpdate = false;
+    private boolean needCellsRecreated = true;
+    private boolean needCellsReconfigured = false;
+    
+    private EventHandler<TreeItem.TreeModificationEvent> rootListener = new EventHandler<TreeItem.TreeModificationEvent>() {
+        @Override public void handle(TreeItem.TreeModificationEvent e) {
+            if (e.wasAdded() && e.wasRemoved() && e.getAddedSize() == e.getRemovedSize()) {
+                // Fix for RT-14842, where the children of a TreeItem were changing,
+                // but because the overall item count was staying the same, there was 
+                // no event being fired to the skin to be informed that the items
+                // had changed. So, here we just watch for the case where the number
+                // of items being added is equal to the number of items being removed.
+                needItemCountUpdate = true;
+                requestLayout();
+            } else if (e.getEventType().equals(TreeItem.valueChangedEvent())) {
+                // Fix for RT-14971 and RT-15338. 
+                needCellsRecreated = true;
+                requestLayout();
+            } else {
+                // Fix for RT-20090. We are checking to see if the event coming
+                // from the TreeItem root is an event where the count has changed.
+                EventType eventType = e.getEventType();
+                while (eventType != null) {
+                    if (eventType.equals(TreeItem.<S>treeItemCountChangeEvent())) {
+                        needItemCountUpdate = true;
+                        requestLayout();
+                        break;
+                    }
+                    eventType = eventType.getSuperType();
+                }
+            }
+        }
+    };
+    
+    private WeakEventHandler weakRootListener;
+            
+    
+//    private WeakReference<TreeItem> weakRoot;
     private TreeItem getRoot() {
-        return weakRoot == null ? null : weakRoot.get();
+        return weakRootRef == null ? null : weakRootRef.get();
     }
     private void setRoot(TreeItem newRoot) {
-        weakRoot = new WeakReference<TreeItem>(newRoot);
+        if (getRoot() != null && weakRootListener != null) {
+            getRoot().removeEventHandler(TreeItem.<S>treeNotificationEvent(), weakRootListener);
+        }
+        weakRootRef = new WeakReference<TreeItem>(newRoot);
+        if (getRoot() != null) {
+            weakRootListener = new WeakEventHandler(getRoot(), TreeItem.<S>treeNotificationEvent(), rootListener);
+            getRoot().addEventHandler(TreeItem.<S>treeNotificationEvent(), weakRootListener);
+        }
+    }
+    
+    
+    /***************************************************************************
+     *                                                                         *
+     * Public API                                                              *
+     *                                                                         *
+     **************************************************************************/  
+    
+    /** {@inheritDoc} */
+    @Override protected ObservableList<TreeTableColumn<S, ?>> getVisibleLeafColumns() {
+        return treeTableView.getVisibleLeafColumns();
+    }
+    
+    @Override protected int getVisibleLeafIndex(TableColumnBase tc) {
+        return treeTableView.getVisibleLeafIndex((TreeTableColumn)tc);
     }
 
-    private int getItemCount() {
-        return getSkinnable().impl_getTreeItemCount();
+    @Override protected TableColumnBase getVisibleLeafColumn(int col) {
+        return treeTableView.getVisibleLeafColumn(col);
+    }
+
+    /** {@inheritDoc} */
+    @Override protected TableView.TableViewFocusModel getFocusModel() {
+//        return treeTableView.getFocusModel();
+        // TODO enable
+        return null;
+    }
+
+    /** {@inheritDoc} */
+    @Override protected TableSelectionModel getSelectionModel() {
+        return treeTableView.getSelectionModel();
+    }
+
+    /** {@inheritDoc} */
+    @Override protected ObjectProperty<Callback<TreeTableView<S>, TreeTableRow<S>>> rowFactoryProperty() {
+        return treeTableView.rowFactoryProperty();
+    }
+
+    /** {@inheritDoc} */
+    @Override protected ObjectProperty<Node> placeholderProperty() {
+        return treeTableView.placeholderProperty();
+    }
+
+    /** {@inheritDoc} */
+    @Override protected ObjectProperty<ObservableList<S>> itemsProperty() {
+        return tableBackingListProperty;
+    }
+
+    /** {@inheritDoc} */
+    @Override protected ObservableList<TreeTableColumn<S,?>> getColumns() {
+        return treeTableView.getColumns();
     }
     
-    private void updateColumns() {
-        table.getColumns().setAll(getSkinnable().getColumns());
+    /** {@inheritDoc} */
+    @Override protected BooleanProperty tableMenuButtonVisibleProperty() {
+        return treeTableView.tableMenuButtonVisibleProperty();
+    }
+
+    /** {@inheritDoc} */
+    @Override protected ObjectProperty<Callback<ResizeFeaturesBase, Boolean>> columnResizePolicyProperty() {
+        // TODO Ugly!
+        return (ObjectProperty<Callback<ResizeFeaturesBase, Boolean>>) (Object) treeTableView.columnResizePolicyProperty();
+    }
+
+    /** {@inheritDoc} */
+    @Override protected ObservableList<TreeTableColumn<S,?>> getSortOrder() {
+        return treeTableView.getSortOrder();
     }
     
-    private void updateItemCount() {
-        int size = getItemCount();
-        ObservableList<TreeItem<T>> temp = FXCollections.observableArrayList();
+    @Override protected boolean resizeColumn(TableColumnBase tc, double delta) {
+        return treeTableView.resizeColumn((TreeTableColumn)tc, delta);
+    }
+
+    /*
+     * FIXME: Naive implementation ahead
+     * Attempts to resize column based on the pref width of all items contained
+     * in this column. This can be potentially very expensive if the number of
+     * rows is large.
+     */
+    @Override protected void resizeColumnToFitContent(TableColumnBase tc, int maxRows) {
+        final TreeTableColumn col = (TreeTableColumn) tc;
+        List<?> items = itemsProperty().get();
+        if (items == null || items.isEmpty()) return;
+    
+        Callback cellFactory = col.getCellFactory();
+        if (cellFactory == null) return;
+    
+        TreeTableCell cell = (TreeTableCell) cellFactory.call(col);
+        if (cell == null) return;
         
-        for (int i = 0; i < size; i++) {
-            temp.add(getSkinnable().getTreeItem(i));
+        // set this property to tell the TableCell we want to know its actual
+        // preferred width, not the width of the associated TableColumnBase
+        cell.getProperties().put(TableCellSkin.DEFER_TO_PARENT_PREF_WIDTH, Boolean.TRUE);
+        
+        // determine cell padding
+        double padding = 10;
+        Node n = cell.getSkin() == null ? null : cell.getSkin().getNode();
+        if (n instanceof Region) {
+            Region r = (Region) n;
+            padding = r.getInsets().getLeft() + r.getInsets().getRight();
+        } 
+        
+        int rows = maxRows == -1 ? items.size() : Math.min(items.size(), maxRows);
+        double maxWidth = 0;
+        for (int row = 0; row < rows; row++) {
+            cell.updateTreeTableColumn(col);
+            cell.updateTreeTableView(treeTableView);
+            cell.updateIndex(row);
+            
+            if ((cell.getText() != null && !cell.getText().isEmpty()) || cell.getGraphic() != null) {
+                getChildren().add(cell);
+                cell.impl_processCSS(false);
+                maxWidth = Math.max(maxWidth, cell.prefWidth(-1));
+                getChildren().remove(cell);
+            }
         }
         
-        table.setItems(temp);
+        col.impl_setWidth(maxWidth + padding);
+    }
+    
+    /** {@inheritDoc} */
+    @Override public int getItemCount() {
+        return treeTableView.impl_getTreeItemCount();
+    }
+    
+    /** {@inheritDoc} */
+    @Override public TreeTableRow createCell() {
+        TreeTableRow cell;
+
+        if (treeTableView.getRowFactory() != null) {
+            cell = treeTableView.getRowFactory().call(treeTableView);
+        } else {
+            cell = createDefaultCellImpl();
+        }
+
+        // If there is no disclosure node, then add one of my own
+        if (cell.getDisclosureNode() == null) {
+            final StackPane disclosureNode = new StackPane();
+            disclosureNode.getStyleClass().setAll("tree-disclosure-node");
+
+            final StackPane disclosureNodeArrow = new StackPane();
+            disclosureNodeArrow.getStyleClass().setAll("arrow");
+            disclosureNode.getChildren().add(disclosureNodeArrow);
+
+            cell.setDisclosureNode(disclosureNode);
+        }
+
+        cell.updateTreeTableView(treeTableView);
+        return cell;
+    }
+    
+    private TreeTableRow<S> createDefaultCellImpl() {
+        return new TreeTableRow() {
+            private HBox hbox;
+            
+            @Override public void updateItem(Object item, boolean empty) {
+                super.updateItem(item, empty);
+
+                if (item == null || empty) {
+                    hbox = null;
+                    setText(null);
+                    setGraphic(null);
+                } else {
+                    // update the graphic if one is set in the TreeItem
+                    TreeItem<?> treeItem = (TreeItem<?>)getTreeItem();
+                    if (treeItem != null && treeItem.getGraphic() != null) {
+                        if (item instanceof Node) {
+                            setText(null);
+                            
+                            // the item is a Node, and the graphic exists, so 
+                            // we must insert both into an HBox and present that
+                            // to the user (see RT-15910)
+                            if (hbox == null) {
+                                hbox = new HBox(3);
+                            }
+                            hbox.getChildren().setAll(treeItem.getGraphic(), (Node)item);
+                            setGraphic(hbox);
+                        } else {
+                            hbox = null;
+                            setText(item.toString());
+                            setGraphic(treeItem.getGraphic());
+                        }
+                    } else {
+                        hbox = null;
+                        if (item instanceof Node) {
+                            setText(null);
+                            setGraphic((Node)item);
+                        } else {
+                            setText(item.toString());
+                            setGraphic(null);
+                        }
+                    }
+                }
+            }
+        };
+    }
+
+    
+    
+    /***************************************************************************
+     *                                                                         *
+     * Layout                                                                  *
+     *                                                                         *
+     **************************************************************************/    
+    
+    // handled in TreeViewSkinBase
+    @Override protected void layoutChildren(final double x, final double y,
+            final double w, final double h) {
+        if (needItemCountUpdate) {
+            updateItemCount();
+            needItemCountUpdate = false;
+        }
+        
+        if (needCellsRecreated) {
+            flow.recreateCells();
+            needCellsRecreated = false;
+        } 
+        
+        if (needCellsReconfigured) {
+            flow.reconfigureCells();
+            needCellsReconfigured = false;
+        } 
+        
+        super.layoutChildren(x, y, w, h);
+    }
+    
+    
+    /***************************************************************************
+     *                                                                         *
+     * Private methods                                                         *
+     *                                                                         *
+     **************************************************************************/
+    
+//    private TreeItem getRoot() {
+//        return weakRootRef == null ? null : weakRootRef.get();
+//    }
+//    
+//    private void setRoot(TreeItem newRoot) {
+//        weakRootRef = new WeakReference<TreeItem>(newRoot);
+//    }
+
+    private void updateItemCount() {
+//        int oldCount = flow.getCellCount();
+        tableBackingList.resetSize();
+        int newCount = getItemCount();
+        
+        // if this is not called even when the count is the same, we get a 
+        // memory leak in VirtualFlow.sheet.children. This can probably be 
+        // optimised in the future when time permits.
+        flow.setCellCount(newCount);
+        
+        // FIXME If we have this if statement here we end up not seeing sorts 
+        // occur immediately, so for now I am disabling it
+//        if (newCount != oldCount) {
+            needCellsRecreated = true;
+//        } else {
+//            needCellsReconfigured = true;
+//        }
+    }
+
+    /**
+     * A simple read only list structure that maps into the TreeTableView tree
+     * structure.
+     */
+    private static class TreeTableViewBackingList<S> extends ReadOnlyUnbackedObservableList<TreeItem<S>> {
+        private final TreeTableView<S> treeTable;
+        
+        private int size = -1;
+        
+        TreeTableViewBackingList(TreeTableView<S> treeTable) {
+            this.treeTable = treeTable;
+        }
+        
+        void resetSize() {
+            int oldSize = size;
+            size = -1;
+            
+            // TODO we can certainly make this better....but it may not really matter
+            callObservers(new NonIterableChange.GenericAddRemoveChange<TreeItem<S>>(
+                    0, oldSize, FXCollections.<TreeItem<S>>emptyObservableList(), this));
+        }
+        
+        @Override public TreeItem<S> get(int i) {
+            return treeTable.getTreeItem(i);
+        }
+
+        @Override public int size() {
+            if (size == -1) {
+                size = treeTable.impl_getTreeItemCount();
+            }
+            return size;
+        }
     }
 }

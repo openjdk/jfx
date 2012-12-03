@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2011, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -27,16 +27,21 @@ package javafx.scene.control;
 import com.sun.javafx.beans.annotations.NoBuilder;
 import com.sun.javafx.css.Styleable;
 import com.sun.javafx.css.StyleableProperty;
-import com.sun.javafx.scene.control.skin.NestedTableColumnHeader;
-import com.sun.javafx.scene.control.skin.TableColumnHeader;
-import com.sun.javafx.scene.control.skin.TableHeaderRow;
-import com.sun.javafx.scene.control.skin.TableViewSkin;
-
+import com.sun.javafx.event.EventHandlerManager;
+import java.util.Collections;
+import java.util.List;
+import javafx.beans.InvalidationListener;
+import javafx.beans.Observable;
 import javafx.beans.property.ObjectProperty;
+import javafx.beans.property.ReadOnlyObjectProperty;
+import javafx.beans.property.ReadOnlyObjectWrapper;
 import javafx.beans.property.SimpleObjectProperty;
+import javafx.beans.value.ObservableValue;
+import javafx.beans.value.WritableValue;
 import javafx.collections.FXCollections;
 import javafx.collections.ListChangeListener;
 import javafx.collections.ObservableList;
+import javafx.collections.WeakListChangeListener;
 import javafx.event.Event;
 import javafx.event.EventHandler;
 import javafx.event.EventTarget;
@@ -44,20 +49,9 @@ import javafx.event.EventType;
 import javafx.scene.Node;
 import javafx.util.Callback;
 
-import javafx.collections.WeakListChangeListener;
-import java.util.Collections;
-
-import java.util.List;
-import javafx.beans.InvalidationListener;
-import javafx.beans.Observable;
-import javafx.beans.property.ReadOnlyObjectProperty;
-import javafx.beans.property.ReadOnlyObjectWrapper;
-import javafx.beans.value.ObservableValue;
-import javafx.beans.value.WritableValue;
-
 /**
- * A {@link TableView} is made up of a number of TableColumn instances. Each
- * TableColumn in a table is responsible for displaying (and editing) the contents
+ * A {@link TreeTableView} is made up of a number of TreeTableColumn instances. Each
+ * TreeTableColumn in a tree table is responsible for displaying (and editing) the contents
  * of that column. As well as being responsible for displaying and editing data 
  * for a single column, a TableColumn also contains the necessary properties to:
  * <ul>
@@ -74,11 +68,13 @@ import javafx.beans.value.WritableValue;
  * </ul>
  * </p>
  * 
- * When creating a TableColumn instance, perhaps the two most important properties
+ * When creating a TreeTableColumn instance, perhaps the two most important properties
  * to set are the column {@link #textProperty() text} (what to show in the column
  * header area), and the column {@link #cellValueFactory cell value factory}
  * (which is used to populate individual cells in the column). This can be 
  * achieved using some variation on the following code:
+ * 
+ * <p>// TODO update example for TreeTableColumn
  * 
  * <pre>
  * {@code 
@@ -131,33 +127,34 @@ import javafx.beans.value.WritableValue;
  * @see TableCell
  * @see TablePosition
  */
-@NoBuilder  // TODO should this be here?
-public class TableColumn<S,T> extends TableColumnBase<S,T> implements EventTarget {
+@NoBuilder  // FIXME this is only here as the builder generation fails without it 
+public class TreeTableColumn<S,T> extends TableColumnBase<TreeItem<S>,T> implements EventTarget {
     
     /***************************************************************************
      *                                                                         *
      * Static properties and methods                                           *
      *                                                                         *
      **************************************************************************/
-
+    
     /**
-     * Parent event for any TableColumn edit event.
+     * Parent event for any TreeTableColumn edit event.
      */
     @SuppressWarnings("unchecked")
-    public static <S,T> EventType<CellEditEvent<S,T>> editAnyEvent() {
-        return (EventType<CellEditEvent<S,T>>) EDIT_ANY_EVENT;
+    public static <S,T> EventType<TreeTableColumn.CellEditEvent<S,T>> editAnyEvent() {
+        return (EventType<TreeTableColumn.CellEditEvent<S,T>>) EDIT_ANY_EVENT;
     }
     private static final EventType<?> EDIT_ANY_EVENT =
-            new EventType(Event.ANY, "TABLE_COLUMN_EDIT");
+            new EventType(Event.ANY, "TREE_TABLE_COLUMN_EDIT");
 
     /**
      * Indicates that the user has performed some interaction to start an edit
-     * event, or alternatively the {@link TableView#edit(int, javafx.scene.control.TableColumn)}
+     * event, or alternatively the 
+     * {@link TreeTableView#edit(int, javafx.scene.control.TreeTableColumn)}
      * method has been called.
      */
     @SuppressWarnings("unchecked")
-    public static <S,T> EventType<CellEditEvent<S,T>> editStartEvent() {
-        return (EventType<CellEditEvent<S,T>>) EDIT_START_EVENT;
+    public static <S,T> EventType<TreeTableColumn.CellEditEvent<S,T>> editStartEvent() {
+        return (EventType<TreeTableColumn.CellEditEvent<S,T>>) EDIT_START_EVENT;
     }
     private static final EventType<?> EDIT_START_EVENT =
             new EventType(editAnyEvent(), "EDIT_START");
@@ -167,8 +164,8 @@ public class TableColumn<S,T> extends TableColumnBase<S,T> implements EventTarge
      * be made to the backing data source.
      */
     @SuppressWarnings("unchecked")
-    public static <S,T> EventType<CellEditEvent<S,T>> editCancelEvent() {
-        return (EventType<CellEditEvent<S,T>>) EDIT_CANCEL_EVENT;
+    public static <S,T> EventType<TreeTableColumn.CellEditEvent<S,T>> editCancelEvent() {
+        return (EventType<TreeTableColumn.CellEditEvent<S,T>>) EDIT_CANCEL_EVENT;
     }
     private static final EventType<?> EDIT_CANCEL_EVENT =
             new EventType(editAnyEvent(), "EDIT_CANCEL");
@@ -179,8 +176,8 @@ public class TableColumn<S,T> extends TableColumnBase<S,T> implements EventTarge
      * data.
      */
     @SuppressWarnings("unchecked")
-    public static <S,T> EventType<CellEditEvent<S,T>> editCommitEvent() {
-        return (EventType<CellEditEvent<S,T>>) EDIT_COMMIT_EVENT;
+    public static <S,T> EventType<TreeTableColumn.CellEditEvent<S,T>> editCommitEvent() {
+        return (EventType<TreeTableColumn.CellEditEvent<S,T>>) EDIT_COMMIT_EVENT;
     }
     private static final EventType<?> EDIT_COMMIT_EVENT =
             new EventType(editAnyEvent(), "EDIT_COMMIT");
@@ -188,18 +185,17 @@ public class TableColumn<S,T> extends TableColumnBase<S,T> implements EventTarge
     
     
     /**
-     * If no cellFactory is specified on a TableColumn instance, then this one
+     * If no cellFactory is specified on a TreeTableColumn instance, then this one
      * will be used by default. At present it simply renders the TableCell item 
      * property within the {@link TableCell#graphicProperty() graphic} property
      * if the {@link Cell#item item} is a Node, or it simply calls 
      * <code>toString()</code> if it is not null, setting the resulting string
      * inside the {@link Cell#textProperty() text} property.
      */
-    public static final Callback<TableColumn<?,?>, TableCell<?,?>> DEFAULT_CELL_FACTORY = 
-            new Callback<TableColumn<?,?>, TableCell<?,?>>() {
-                
-        @Override public TableCell<?,?> call(TableColumn<?,?> param) {
-            return new TableCell() {
+    public static final Callback<TreeTableColumn<?,?>, TreeTableCell<?,?>> DEFAULT_CELL_FACTORY = 
+            new Callback<TreeTableColumn<?,?>, TreeTableCell<?,?>>() {
+        @Override public TreeTableCell<?,?> call(TreeTableColumn<?,?> param) {
+            return new TreeTableCell() {
                 @Override protected void updateItem(Object item, boolean empty) {
                     if (item == getItem()) return;
 
@@ -229,25 +225,25 @@ public class TableColumn<S,T> extends TableColumnBase<S,T> implements EventTarge
      **************************************************************************/    
 
     /**
-     * Creates a default TableColumn with default cell factory, comparator, and
+     * Creates a default TreeTableColumn with default cell factory, comparator, and
      * onEditCommit implementation.
      */
-    public TableColumn() {
+    public TreeTableColumn() {
         getStyleClass().add(DEFAULT_STYLE_CLASS);
         
         setOnEditCommit(DEFAULT_EDIT_COMMIT_HANDLER);
 
         // we listen to the columns list here to ensure that widths are
         // maintained properly, and to also set the column hierarchy such that
-        // all children columns know that this TableColumn is their parent.
+        // all children columns know that this TreeTableColumn is their parent.
         getColumns().addListener(weakColumnsListener);
 
-        tableViewProperty().addListener(new InvalidationListener() {
+        treeTableViewProperty().addListener(new InvalidationListener() {
             @Override public void invalidated(Observable observable) {
                 // set all children of this tableView to have the same TableView
                 // as this column
-                for (TableColumn<S, ?> tc : getColumns()) {
-                    tc.setTableView(getTableView());
+                for (TreeTableColumn<S, ?> tc : getColumns()) {
+                    tc.setTreeTableView(getTreeTableView());
                 }
                 
                 // This code was commented out due to RT-22391, with this enabled
@@ -261,11 +257,13 @@ public class TableColumn<S,T> extends TableColumnBase<S,T> implements EventTarge
     }
 
     /**
-     * Creates a TableColumn with the text set to the provided string, with
+     * Creates a TreeTableColumn with the text set to the provided string, with
      * default cell factory, comparator, and onEditCommit implementation.
-     * @param text The string to show when the TableColumn is placed within the TableView.
+     * 
+     * @param text The string to show when the TreeTableColumn is placed within
+     *      the TreeTableView.
      */
-    public TableColumn(String text) {
+    public TreeTableColumn(String text) {
         this();
         setText(text);
     }
@@ -278,27 +276,23 @@ public class TableColumn<S,T> extends TableColumnBase<S,T> implements EventTarge
      *                                                                         *
      **************************************************************************/
     
-    private EventHandler<CellEditEvent<S,T>> DEFAULT_EDIT_COMMIT_HANDLER = new EventHandler<CellEditEvent<S,T>>() {
-        @Override public void handle(CellEditEvent<S,T> t) {
-            int index = t.getTablePosition().getRow();
-            List<S> list = t.getTableView().getItems();
-            if (list == null || index < 0 || index >= list.size()) return;
-            S rowData = list.get(index);
-            ObservableValue<T> ov = getCellObservableValue(rowData);
-            
+    private EventHandler<TreeTableColumn.CellEditEvent<S,T>> DEFAULT_EDIT_COMMIT_HANDLER = 
+            new EventHandler<TreeTableColumn.CellEditEvent<S,T>>() {
+        @Override public void handle(TreeTableColumn.CellEditEvent<S,T> t) {
+            ObservableValue<T> ov = getCellObservableValue(t.getRowValue());
             if (ov instanceof WritableValue) {
                 ((WritableValue)ov).setValue(t.getNewValue());
             }
         }
     };
     
-    private ListChangeListener columnsListener = new ListChangeListener<TableColumn<S,?>>() {
-        @Override public void onChanged(Change<? extends TableColumn<S,?>> c) {
+    private ListChangeListener columnsListener = new ListChangeListener<TreeTableColumn<S,?>>() {
+        @Override public void onChanged(ListChangeListener.Change<? extends TreeTableColumn<S,?>> c) {
             while (c.next()) {
-                // update the TableColumn.tableView property
-                for (TableColumn<S,?> tc : c.getRemoved()) {
+                // update the TreeTableColumn.treeTableView property
+                for (TreeTableColumn<S,?> tc : c.getRemoved()) {
                     // Fix for RT-16978. In TableColumnHeader we add before we
-                    // remove when moving a TableColumn. This means that for
+                    // remove when moving a TreeTableColumn. This means that for
                     // a very brief moment the tc is duplicated, and we can prevent
                     // nulling out the tableview and parent column. Without this
                     // here, in a very special circumstance it is possible to null
@@ -306,11 +300,11 @@ public class TableColumn<S,T> extends TableColumnBase<S,T> implements EventTarge
                     // sorting another column.
                     if (getColumns().contains(tc)) continue;
                     
-                    tc.setTableView(null);
+                    tc.setTreeTableView(null);
                     tc.setParentColumn(null);
                 }
-                for (TableColumn<S,?> tc : c.getAddedSubList()) {
-                    tc.setTableView(getTableView());
+                for (TreeTableColumn<S,?> tc : c.getAddedSubList()) {
+                    tc.setTreeTableView(getTreeTableView());
                     tc.setVisible(isVisible()); // See visible property TODO, we probably don't want this
                 }
 
@@ -321,7 +315,6 @@ public class TableColumn<S,T> extends TableColumnBase<S,T> implements EventTarge
     
     private WeakListChangeListener weakColumnsListener = 
             new WeakListChangeListener(columnsListener);
-
     
     
     /***************************************************************************
@@ -329,10 +322,10 @@ public class TableColumn<S,T> extends TableColumnBase<S,T> implements EventTarge
      * Instance Variables                                                      *
      *                                                                         *
      **************************************************************************/
-
+    
     // Contains any children columns that should be nested within this column
-    private final ObservableList<TableColumn<S,?>> columns = FXCollections.<TableColumn<S,?>>observableArrayList();
-
+    private final ObservableList<TreeTableColumn<S,?>> columns = FXCollections.<TreeTableColumn<S,?>>observableArrayList();
+    
     
     
     /***************************************************************************
@@ -340,28 +333,32 @@ public class TableColumn<S,T> extends TableColumnBase<S,T> implements EventTarge
      * Properties                                                              *
      *                                                                         *
      **************************************************************************/
-
-    // --- TableView
+    
+    
+    // --- TreeTableView
     /**
-     * The TableView that this TableColumn belongs to.
+     * The TreeTableView that this TreeTableColumn belongs to.
      */
-    private ReadOnlyObjectWrapper<TableView<S>> tableView = new ReadOnlyObjectWrapper<TableView<S>>(this, "tableView");
-    public final ReadOnlyObjectProperty<TableView<S>> tableViewProperty() {
-        return tableView.getReadOnlyProperty();
+    private ReadOnlyObjectWrapper<TreeTableView<S>> treeTableView = 
+            new ReadOnlyObjectWrapper<TreeTableView<S>>(this, "treeTableView");
+    public final ReadOnlyObjectProperty<TreeTableView<S>> treeTableViewProperty() {
+        return treeTableView.getReadOnlyProperty();
     }
-    final void setTableView(TableView<S> value) { tableView.set(value); }
-    public final TableView<S> getTableView() { return tableView.get(); }
+    final void setTreeTableView(TreeTableView<S> value) { treeTableView.set(value); }
+    public final TreeTableView<S> getTreeTableView() { return treeTableView.get(); }
 
     
-    
+
     // --- Cell value factory
     /**
      * The cell value factory needs to be set to specify how to populate all
-     * cells within a single TableColumn. A cell value factory is a {@link Callback}
+     * cells within a single TreeTableColumn. A cell value factory is a {@link Callback}
      * that provides a {@link CellDataFeatures} instance, and expects an
      * {@link ObservableValue} to be returned. The returned ObservableValue instance
-     * will be observed internally to allow for immediate updates to the value
-     * to be reflected on screen.
+     * will be observed internally to allow for updates to the value to be 
+     * immediately reflected on screen.
+     * 
+     * <p> // TODO update example
      * 
      * An example of how to set a cell value factory is:
      * 
@@ -375,7 +372,7 @@ public class TableColumn<S,T> extends TableColumnBase<S,T> implements EventTarge
      * }
      * </code></pre>
      * 
-     * A common approach is to want to populate cells in a TableColumn using
+     * A common approach is to want to populate cells in a TreeTableColumn using
      * a single value from a Java bean. To support this common scenario, there
      * is the {@link PropertyValueFactory} class. Refer to this class for more 
      * information on how to use it, but briefly here is how the above use case
@@ -387,16 +384,16 @@ public class TableColumn<S,T> extends TableColumnBase<S,T> implements EventTarge
      * 
      * @see PropertyValueFactory
      */
-    private ObjectProperty<Callback<CellDataFeatures<S,T>, ObservableValue<T>>> cellValueFactory;
-    public final void setCellValueFactory(Callback<CellDataFeatures<S,T>, ObservableValue<T>> value) {
+    private ObjectProperty<Callback<TreeTableColumn.CellDataFeatures<S,T>, ObservableValue<T>>> cellValueFactory;
+    public final void setCellValueFactory(Callback<TreeTableColumn.CellDataFeatures<S,T>, ObservableValue<T>> value) {
         cellValueFactoryProperty().set(value);
     }
-    public final Callback<CellDataFeatures<S,T>, ObservableValue<T>> getCellValueFactory() {
+    public final Callback<TreeTableColumn.CellDataFeatures<S,T>, ObservableValue<T>> getCellValueFactory() {
         return cellValueFactory == null ? null : cellValueFactory.get();
     }
-    public final ObjectProperty<Callback<CellDataFeatures<S,T>, ObservableValue<T>>> cellValueFactoryProperty() {
+    public final ObjectProperty<Callback<TreeTableColumn.CellDataFeatures<S,T>, ObservableValue<T>>> cellValueFactoryProperty() {
         if (cellValueFactory == null) {
-            cellValueFactory = new SimpleObjectProperty<Callback<CellDataFeatures<S,T>, ObservableValue<T>>>(this, "cellValueFactory");
+            cellValueFactory = new SimpleObjectProperty<Callback<TreeTableColumn.CellDataFeatures<S,T>, ObservableValue<T>>>(this, "cellValueFactory");
         }
         return cellValueFactory;
     }
@@ -405,53 +402,50 @@ public class TableColumn<S,T> extends TableColumnBase<S,T> implements EventTarge
     // --- Cell Factory
     /**
      * The cell factory for all cells in this column. The cell factory
-     * is responsible for rendering the data contained within each TableCell for
-     * a single table column.
+     * is responsible for rendering the data contained within each TreeTableCell 
+     * for a single TreeTableColumn.
      * 
-     * <p>By default TableColumn uses the {@link #DEFAULT_CELL_FACTORY default cell
+     * <p>By default TreeTableColumn uses a {@link #DEFAULT_CELL_FACTORY default cell
      * factory}, but this can be replaced with a custom implementation, for 
-     * example to show data in a different way or to support editing.There is a 
+     * example to show data in a different way or to support editing. There is a 
      * lot of documentation on creating custom cell factories
-     * elsewhere (see {@link Cell} and {@link TableView} for example).</p>
-     *
+     * elsewhere (see {@link Cell} and {@link TreeTableView} for example).</p>
+     * 
      * <p>Finally, there are a number of pre-built cell factories available in the
      * {@link javafx.scene.control.cell} package.
+     *
      */
-    private final ObjectProperty<Callback<TableColumn<S,T>, TableCell<S,T>>> cellFactory =
-        new SimpleObjectProperty<Callback<TableColumn<S,T>, TableCell<S,T>>>(
-            this, "cellFactory", (Callback<TableColumn<S,T>, TableCell<S,T>>) ((Callback) DEFAULT_CELL_FACTORY));
-
-    public final void setCellFactory(Callback<TableColumn<S,T>, TableCell<S,T>> value) {
+    private final ObjectProperty<Callback<TreeTableColumn<S,T>, TreeTableCell<S,T>>> cellFactory =
+        new SimpleObjectProperty<Callback<TreeTableColumn<S,T>, TreeTableCell<S,T>>>(
+            this, "cellFactory", (Callback<TreeTableColumn<S,T>, TreeTableCell<S,T>>) ((Callback) DEFAULT_CELL_FACTORY));
+    public final void setCellFactory(Callback<TreeTableColumn<S,T>, TreeTableCell<S,T>> value) {
         cellFactory.set(value);
     }
-
-    public final Callback<TableColumn<S,T>, TableCell<S,T>> getCellFactory() {
+    public final Callback<TreeTableColumn<S,T>, TreeTableCell<S,T>> getCellFactory() {
         return cellFactory.get();
     }
-
-    public final ObjectProperty<Callback<TableColumn<S,T>, TableCell<S,T>>> cellFactoryProperty() {
+    public final ObjectProperty<Callback<TreeTableColumn<S,T>, TreeTableCell<S,T>>> cellFactoryProperty() {
         return cellFactory;
     }
-
     
     
     // --- On Edit Start
-    private ObjectProperty<EventHandler<CellEditEvent<S,T>>> onEditStart;
-    public final void setOnEditStart(EventHandler<CellEditEvent<S,T>> value) {
-        onEditStartProperty().set(value);
-    }
-    public final EventHandler<CellEditEvent<S,T>> getOnEditStart() {
-        return onEditStart == null ? null : onEditStart.get();
-    }
     /**
      * This event handler will be fired when the user successfully initiates
      * editing.
      */
-    public final ObjectProperty<EventHandler<CellEditEvent<S,T>>> onEditStartProperty() {
+    private ObjectProperty<EventHandler<TreeTableColumn.CellEditEvent<S,T>>> onEditStart;
+    public final void setOnEditStart(EventHandler<TreeTableColumn.CellEditEvent<S,T>> value) {
+        onEditStartProperty().set(value);
+    }
+    public final EventHandler<TreeTableColumn.CellEditEvent<S,T>> getOnEditStart() {
+        return onEditStart == null ? null : onEditStart.get();
+    }
+    public final ObjectProperty<EventHandler<TreeTableColumn.CellEditEvent<S,T>>> onEditStartProperty() {
         if (onEditStart == null) {
-            onEditStart = new SimpleObjectProperty<EventHandler<CellEditEvent<S,T>>>(this, "onEditStart") {
+            onEditStart = new SimpleObjectProperty<EventHandler<TreeTableColumn.CellEditEvent<S,T>>>(this, "onEditStart") {
                 @Override protected void invalidated() {
-                    eventHandlerManager.setEventHandler(TableColumn.<S,T>editStartEvent(), get());
+                    eventHandlerManager.setEventHandler(TreeTableColumn.<S,T>editStartEvent(), get());
                 }
             };
         }
@@ -460,22 +454,22 @@ public class TableColumn<S,T> extends TableColumnBase<S,T> implements EventTarge
 
 
     // --- On Edit Commit
-    private ObjectProperty<EventHandler<CellEditEvent<S,T>>> onEditCommit;
-    public final void setOnEditCommit(EventHandler<CellEditEvent<S,T>> value) {
-        onEditCommitProperty().set(value);
-    }
-    public final EventHandler<CellEditEvent<S,T>> getOnEditCommit() {
-        return onEditCommit == null ? null : onEditCommit.get();
-    }
     /**
      * This event handler will be fired when the user successfully commits their
      * editing.
      */
-    public final ObjectProperty<EventHandler<CellEditEvent<S,T>>> onEditCommitProperty() {
+    private ObjectProperty<EventHandler<TreeTableColumn.CellEditEvent<S,T>>> onEditCommit;
+    public final void setOnEditCommit(EventHandler<TreeTableColumn.CellEditEvent<S,T>> value) {
+        onEditCommitProperty().set(value);
+    }
+    public final EventHandler<TreeTableColumn.CellEditEvent<S,T>> getOnEditCommit() {
+        return onEditCommit == null ? null : onEditCommit.get();
+    }
+    public final ObjectProperty<EventHandler<TreeTableColumn.CellEditEvent<S,T>>> onEditCommitProperty() {
         if (onEditCommit == null) {
-            onEditCommit = new SimpleObjectProperty<EventHandler<CellEditEvent<S,T>>>(this, "onEditCommit") {
+            onEditCommit = new SimpleObjectProperty<EventHandler<TreeTableColumn.CellEditEvent<S,T>>>(this, "onEditCommit") {
                 @Override protected void invalidated() {
-                    eventHandlerManager.setEventHandler(TableColumn.<S,T>editCommitEvent(), get());
+                    eventHandlerManager.setEventHandler(TreeTableColumn.<S,T>editCommitEvent(), get());
                 }
             };
         }
@@ -484,29 +478,29 @@ public class TableColumn<S,T> extends TableColumnBase<S,T> implements EventTarge
 
 
     // --- On Edit Cancel
-    private ObjectProperty<EventHandler<CellEditEvent<S,T>>> onEditCancel;
-    public final void setOnEditCancel(EventHandler<CellEditEvent<S,T>> value) {
-        onEditCancelProperty().set(value);
-    }
-    public final EventHandler<CellEditEvent<S,T>> getOnEditCancel() {
-        return onEditCancel == null ? null : onEditCancel.get();
-    }
     /**
      * This event handler will be fired when the user cancels editing a cell.
      */
-    public final ObjectProperty<EventHandler<CellEditEvent<S,T>>> onEditCancelProperty() {
+    private ObjectProperty<EventHandler<TreeTableColumn.CellEditEvent<S,T>>> onEditCancel;
+    public final void setOnEditCancel(EventHandler<TreeTableColumn.CellEditEvent<S,T>> value) {
+        onEditCancelProperty().set(value);
+    }
+    public final EventHandler<TreeTableColumn.CellEditEvent<S,T>> getOnEditCancel() {
+        return onEditCancel == null ? null : onEditCancel.get();
+    }
+    public final ObjectProperty<EventHandler<TreeTableColumn.CellEditEvent<S,T>>> onEditCancelProperty() {
         if (onEditCancel == null) {
-            onEditCancel = new SimpleObjectProperty<EventHandler<CellEditEvent<S, T>>>(this, "onEditCancel") {
+            onEditCancel = new SimpleObjectProperty<EventHandler<TreeTableColumn.CellEditEvent<S,T>>>(this, "onEditCancel") {
                 @Override protected void invalidated() {
-                    eventHandlerManager.setEventHandler(TableColumn.<S,T>editCancelEvent(), get());
+                    eventHandlerManager.setEventHandler(TreeTableColumn.<S,T>editCancelEvent(), get());
                 }
             };
         }
         return onEditCancel;
     }
+    
+    
 
-    
-    
     /***************************************************************************
      *                                                                         *
      * Public API                                                              *
@@ -514,42 +508,47 @@ public class TableColumn<S,T> extends TableColumnBase<S,T> implements EventTarge
      **************************************************************************/    
     
     /** {@inheritDoc} */
-    @Override public final ObservableList<TableColumn<S,?>> getColumns() {
+    @Override public final ObservableList<TreeTableColumn<S,?>> getColumns() {
         return columns;
     }
-
+    
     /** {@inheritDoc} */
     @Override public final ObservableValue<T> getCellObservableValue(int index) {
         if (index < 0) return null;
         
         // Get the table
-        final TableView<S> table = getTableView();
-        if (table == null || table.getItems() == null) return null;
+        final TreeTableView<S> table = getTreeTableView();
+        if (table == null || index >= table.impl_getTreeItemCount()) return null;
         
         // Get the rowData
-        final List<S> items = table.getItems();
-        if (index >= items.size()) return null; // Out of range
-        
-        final S rowData = items.get(index);
-        return getCellObservableValue(rowData);
+        TreeItem<S> item = table.getTreeItem(index);
+        return getCellObservableValue(item);
     }
-
+    
     /** {@inheritDoc} */
-    @Override public final ObservableValue<T> getCellObservableValue(S item) {
+    @Override public final ObservableValue<T> getCellObservableValue(TreeItem<S> item) {
         // Get the factory
-        final Callback<CellDataFeatures<S,T>, ObservableValue<T>> factory = getCellValueFactory();
+        final Callback<TreeTableColumn.CellDataFeatures<S,T>, ObservableValue<T>> factory = getCellValueFactory();
         if (factory == null) return null;
         
         // Get the table
-        final TableView<S> table = getTableView();
+        final TreeTableView<S> table = getTreeTableView();
         if (table == null) return null;
         
         // Call the factory
-        final CellDataFeatures<S,T> cdf = new CellDataFeatures<S,T>(table, this, item);
+        final TreeTableColumn.CellDataFeatures<S,T> cdf = new TreeTableColumn.CellDataFeatures<S,T>(table, this, item);
         return factory.call(cdf);
     }
 
     
+    
+    /***************************************************************************
+     *                                                                         *
+     * Private Implementation                                                  *
+     *                                                                         *
+     **************************************************************************/        
+
+
     
     /***************************************************************************
      *                                                                         *
@@ -579,63 +578,57 @@ public class TableColumn<S,T> extends TableColumnBase<S,T> implements EventTarge
         
         if (styleable == null) {
             styleable = new Styleable() {
-
-                @Override
-                public String getId() {
-                    return TableColumn.this.getId();
+                @Override public String getId() {
+                    return TreeTableColumn.this.getId();
                 }
 
-                @Override
-                public List<String> getStyleClass() {
-                    return TableColumn.this.getStyleClass();
+                @Override public List<String> getStyleClass() {
+                    return TreeTableColumn.this.getStyleClass();
                 }
 
-                @Override
-                public String getStyle() {
-                    return TableColumn.this.getStyle();
+                @Override public String getStyle() {
+                    return TreeTableColumn.this.getStyle();
                 }
 
-                @Override
-                public Styleable getStyleableParent() {
-                    return getTableView() == null ? null : getTableView().impl_getStyleable();
+                @Override public Styleable getStyleableParent() {
+                    return getTreeTableView() == null ? null : getTreeTableView().impl_getStyleable();
                 }
 
-                
-                @Override
-                public List<StyleableProperty> getStyleableProperties() {
+                @Override public List<StyleableProperty> getStyleableProperties() {
                     return Collections.EMPTY_LIST;
                 }                
 
-                @Override
-                public Node getNode() {
-                    if (! (getTableView().getSkin() instanceof TableViewSkin)) return null;
-                    TableViewSkin skin = (TableViewSkin) getTableView().getSkin();
-                    
-                    TableHeaderRow tableHeader = skin.getTableHeaderRow();
-                    NestedTableColumnHeader rootHeader = tableHeader.getRootHeader();
-                    
-                    // we now need to do a search for the header. We'll go depth-first.
-                    return scan(rootHeader);
-                }
-                
-                private TableColumnHeader scan(TableColumnHeader header) {
-                    // firstly test that the parent isn't what we are looking for
-                    if (TableColumn.this.equals(header.getTableColumn())) {
-                        return header;
-                    }
-                    
-                    if (header instanceof NestedTableColumnHeader) {
-                        NestedTableColumnHeader parent = (NestedTableColumnHeader) header;
-                        for (int i = 0; i < parent.getColumnHeaders().size(); i++) {
-                            TableColumnHeader result = scan(parent.getColumnHeaders().get(i));
-                            if (result != null) {
-                                return result;
-                            }
-                        }
-                    }
-                    
+                // TODO implement
+                @Override public Node getNode() {
+//                    if (! (getTableView().getSkin() instanceof TableViewSkin)) return null;
+//                    TableViewSkin skin = (TableViewSkin) getTableView().getSkin();
+//                    
+//                    TableHeaderRow tableHeader = skin.getTableHeaderRow();
+//                    NestedTreeTableColumnHeader rootHeader = tableHeader.getRootHeader();
+//                    
+//                    // we now need to do a search for the header. We'll go depth-first.
+//                    return scan(rootHeader);
                     return null;
                 }
+                
+//                private TreeTableColumnHeader scan(TreeTableColumnHeader header) {
+//                    // firstly test that the parent isn't what we are looking for
+//                    if (TreeTableColumn.this.equals(header.getTreeTableColumn())) {
+//                        return header;
+//                    }
+//                    
+//                    if (header instanceof NestedTreeTableColumnHeader) {
+//                        NestedTreeTableColumnHeader parent = (NestedTreeTableColumnHeader) header;
+//                        for (int i = 0; i < parent.getColumnHeaders().size(); i++) {
+//                            TreeTableColumnHeader result = scan(parent.getColumnHeaders().get(i));
+//                            if (result != null) {
+//                                return result;
+//                            }
+//                        }
+//                    }
+//                    
+//                    return null;
+//                }
             };
         }
         return styleable;
@@ -650,29 +643,29 @@ public class TableColumn<S,T> extends TableColumnBase<S,T> implements EventTarge
      **************************************************************************/
 
     /**
-     * A support class used in TableColumn as a wrapper class 
+     * A support class used in TreeTableColumn as a wrapper class 
      * to provide all necessary information for a particular {@link Cell}. Once
      * instantiated, this class is immutable.
      * 
      * @param <S> The TableView type
-     * @param <T> The TableColumn type
+     * @param <T> The TreeTableColumn type
      */
     public static class CellDataFeatures<S,T> {
-        private final TableView<S> tableView;
-        private final TableColumn<S,T> tableColumn;
-        private final S value;
+        private final TreeTableView<S> treeTableView;
+        private final TreeTableColumn<S,T> tableColumn;
+        private final TreeItem<S> value;
 
         /**
          * Instantiates a CellDataFeatures instance with the given properties
          * set as read-only values of this instance.
          * 
          * @param tableView The TableView that this instance refers to.
-         * @param tableColumn The TableColumn that this instance refers to.
+         * @param tableColumn The TreeTableColumn that this instance refers to.
          * @param value The value for a row in the TableView.
          */
-        public CellDataFeatures(TableView<S> tableView,
-                TableColumn<S,T> tableColumn, S value) {
-            this.tableView = tableView;
+        public CellDataFeatures(TreeTableView<S> treeTableView,
+                TreeTableColumn<S,T> tableColumn, TreeItem<S> value) {
+            this.treeTableView = treeTableView;
             this.tableColumn = tableColumn;
             this.value = value;
         }
@@ -680,22 +673,22 @@ public class TableColumn<S,T> extends TableColumnBase<S,T> implements EventTarge
         /**
          * Returns the value passed in to the constructor.
          */
-        public S getValue() {
+        public TreeItem<S> getValue() {
             return value;
         }
 
         /**
-         * Returns the {@link TableColumn} passed in to the constructor.
+         * Returns the {@link TreeTableColumn} passed in to the constructor.
          */
-        public TableColumn<S,T> getTableColumn() {
+        public TreeTableColumn<S,T> getTreeTableColumn() {
             return tableColumn;
         }
 
         /**
          * Returns the {@link TableView} passed in to the constructor.
          */
-        public TableView<S> getTableView() {
-            return tableView;
+        public TreeTableView<S> getTreeTableView() {
+            return treeTableView;
         }
     }
     
@@ -714,7 +707,7 @@ public class TableColumn<S,T> extends TableColumnBase<S,T> implements EventTarge
         private final T newValue;
 
         // The location of the edit event
-        private transient final TablePosition<S,T> pos;
+        private transient final TreeTablePosition<S,T> pos;
 
         /**
          * Creates a new event that can be subsequently fired to the relevant listeners.
@@ -724,8 +717,8 @@ public class TableColumn<S,T> extends TableColumnBase<S,T> implements EventTarge
          * @param eventType The type of event that occurred.
          * @param newValue The value input by the end user.
          */
-        public CellEditEvent(TableView<S> table, TablePosition<S,T> pos,
-                EventType<CellEditEvent> eventType, T newValue) {
+        public CellEditEvent(TreeTableView<S> table, TreeTablePosition<S,T> pos,
+                EventType<TreeTableColumn.CellEditEvent> eventType, T newValue) {
             super(table, Event.NULL_SOURCE_TARGET, eventType);
 
             if (table == null) {
@@ -742,16 +735,16 @@ public class TableColumn<S,T> extends TableColumnBase<S,T> implements EventTarge
          * Returns the TableView upon which this event occurred.
          * @return The TableView control upon which this event occurred.
          */
-        public TableView<S> getTableView() {
-            return pos.getTableView();
+        public TreeTableView<S> getTreeTableView() {
+            return pos.getTreeTableView();
         }
 
         /**
-         * Returns the TableColumn upon which this event occurred.
+         * Returns the TreeTableColumn upon which this event occurred.
          *
-         * @return The TableColumn that the edit occurred in.
+         * @return The TreeTableColumn that the edit occurred in.
          */
-        public TableColumn<S,T> getTableColumn() {
+        public TreeTableColumn<S,T> getTableColumn() {
             return pos.getTableColumn();
         }
 
@@ -759,7 +752,7 @@ public class TableColumn<S,T> extends TableColumnBase<S,T> implements EventTarge
          * Returns the position upon which this event occurred.
          * @return The position upon which this event occurred.
          */
-        public TablePosition<S,T> getTablePosition() {
+        public TreeTablePosition<S,T> getTreeTablePosition() {
             return pos;
         }
 
@@ -784,7 +777,7 @@ public class TableColumn<S,T> extends TableColumnBase<S,T> implements EventTarge
          *     if it can not be retrieved.
          */
         public T getOldValue() {
-            S rowData = getRowValue();
+            TreeItem<S> rowData = getRowValue();
             if (rowData == null || pos.getTableColumn() == null) {
                 return null;
             }
@@ -799,14 +792,15 @@ public class TableColumn<S,T> extends TableColumnBase<S,T> implements EventTarge
          * row contained within the {@link TablePosition} returned in
          * {@link #getTablePosition()}.
          */
-        public S getRowValue() {
-            List<S> items = getTableView().getItems();
-            if (items == null) return null;
+        public TreeItem<S> getRowValue() {
+//            List<S> items = getTreeTableView().getItems();
+//            if (items == null) return null;
 
+            TreeTableView treeTable = getTreeTableView();
             int row = pos.getRow();
-            if (row < 0 || row >= items.size()) return null;
+            if (row < 0 || row >= treeTable.impl_getTreeItemCount()) return null;
 
-            return items.get(row);
+            return treeTable.getTreeItem(row);
         }
     }
 }

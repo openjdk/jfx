@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -27,71 +27,69 @@ package javafx.scene.control.cell;
 import javafx.beans.property.Property;
 import javafx.beans.property.ReadOnlyObjectWrapper;
 import javafx.beans.value.ObservableValue;
-import javafx.scene.control.TableCell;
-import javafx.scene.control.TableColumn;
-import javafx.scene.control.TableColumn.CellDataFeatures;
-import javafx.scene.control.TableView;
 import javafx.util.Callback;
 
 import com.sun.javafx.logging.PlatformLogger;
 import com.sun.javafx.property.PropertyReference;
 import com.sun.javafx.scene.control.Logging;
+import javafx.scene.control.TreeItem;
+import javafx.scene.control.TreeTableColumn;
+import javafx.scene.control.TreeTableColumn.CellDataFeatures;
 
 
 /**
  * A convenience implementation of the Callback interface, designed specifically
- * for use within the {@link TableColumn} 
- * {@link TableColumn#cellValueFactoryProperty() cell value factory}. An example
+ * for use within the {@link TreeTableColumn} 
+ * {@link TreeTableColumn#cellValueFactoryProperty() cell value factory}. An example
  * of how to use this class is:
  * 
  * <pre><code>
- * TableColumn&lt;Person,String&gt; firstNameCol = new TableColumn&lt;Person,String&gt;("First Name");
- * firstNameCol.setCellValueFactory(new PropertyValueFactory&lt;Person,String&gt;("firstName"));
+ * TreeTableColumn&lt;Person,String&gt; firstNameCol = new TreeTableColumn&lt;Person,String&gt;("First Name");
+ * firstNameCol.setCellValueFactory(new TreeItemPropertyValueFactory&lt;Person,String&gt;("firstName"));
  * </code></pre>
  * 
  * In this example, the "firstName" string is used as a reference to an assumed 
  * <code>firstNameProperty()</code> method in the <code>Person</code> class type
- * (which is the class type of the TableView 
- * {@link TableView#itemsProperty() items} list). Additionally, this method must
+ * (which is the class type of the TreeTableView). Additionally, this method must
  * return a {@link Property} instance. If a method meeting these requirements
- * is found, then the {@link TableCell} is populated with this ObservableValue<T>.
- * In addition, the TableView will automatically add an observer to the 
- * returned value, such that any changes fired will be observed by the TableView,
+ * is found, then the {@link TreeTableCell} is populated with this ObservableValue<T>.
+ * In addition, the TreeTableView will automatically add an observer to the 
+ * returned value, such that any changes fired will be observed by the TreeTableView,
  * resulting in the cell immediately updating.
  * 
  * <p>If no method matching this pattern exists, there is fall-through support
  * for attempting to call get&lt;property&gt;() or is&lt;property&gt;() (that is,
  * <code>getFirstName()</code> or <code>isFirstName()</code> in the example
  * above). If a  method matching this pattern exists, the value returned from this method
- * is wrapped in a {@link ReadOnlyObjectWrapper} and returned to the TableCell.
- * However, in this situation, this means that the TableCell will not be able
+ * is wrapped in a {@link ReadOnlyObjectWrapper} and returned to the TreeTableCell.
+ * However, in this situation, this means that the TreeTableCell will not be able
  * to observe the ObservableValue for changes (as is the case in the first 
  * approach above). 
  * 
- * <p>For reference (and as noted in the TableColumn 
- * {@link TableColumn#cellValueFactory cell value factory} documentation), the 
+ * <p>For reference (and as noted in the TreeTableColumn 
+ * {@link TreeTableColumn#cellValueFactory cell value factory} documentation), the 
  * long form of the code above would be the following:
  * 
  * <pre><code>
- * TableColumn&lt;Person,String&gt; firstNameCol = new TableColumn&lt;Person,String&gt;("First Name");
+ * TreeTableColumn&lt;Person,String&gt; firstNameCol = new TreeTableColumn&lt;Person,String&gt;("First Name");
  * firstNameCol.setCellValueFactory(new Callback&lt;CellDataFeatures&lt;Person, String&gt;, ObservableValue&lt;String&gt;&gt;() {
  *     public ObservableValue&lt;String&gt; call(CellDataFeatures&lt;Person, String&gt; p) {
- *         // p.getValue() returns the Person instance for a particular TableView row
- *         return p.getValue().firstNameProperty();
+ *         // p.getValue() returns the TreeItem<Person> instance for a particular 
+ *         // TreeTableView row, and the second getValue() call returns the 
+ *         // Person instance contained within the TreeItem.
+ *         return p.getValue().getValue().firstNameProperty();
  *     }
  *  });
  * }
  * </code></pre>
  * 
- * @see TableColumn
- * @see TableView
- * @see TableCell
- * @see TreeItemPropertyValueFactory
+ * @see TreeTableColumn
+ * @see TreeTableView
+ * @see TreeTableCell
+ * @see PropertyValueFactory
  * @see MapValueFactory
- * @param <S> The type of the class contained within the TableView.items list.
- * @param <T> The type of the class contained within the TableColumn cells.
  */
-public class PropertyValueFactory<S,T> implements Callback<CellDataFeatures<S,T>, ObservableValue<T>> {
+public class TreeItemPropertyValueFactory<S,T> implements Callback<TreeTableColumn.CellDataFeatures<S,T>, ObservableValue<T>> {
 
     private final String property;
 
@@ -106,15 +104,16 @@ public class PropertyValueFactory<S,T> implements Callback<CellDataFeatures<S,T>
      * @param property The name of the property with which to attempt to 
      *      reflectively extract a corresponding value for in a given object.
      */
-    public PropertyValueFactory(String property) {
+    public TreeItemPropertyValueFactory(String property) {
         this.property = property;
     }
 
     /** {@inheritDoc} */
-    @Override public ObservableValue<T> call(CellDataFeatures<S,T> param) {
-        return getCellDataReflectively((T)param.getValue());
+    @Override public ObservableValue<T> call(CellDataFeatures<S, T> param) {
+        TreeItem<S> treeItem = param.getValue();
+        return getCellDataReflectively((T)treeItem.getValue());
     }
-
+    
     /**
      * Returns the property name provided in the constructor.
      */
@@ -151,7 +150,7 @@ public class PropertyValueFactory<S,T> implements Callback<CellDataFeatures<S,T>
             final PlatformLogger logger = Logging.getControlsLogger();
             if (logger.isLoggable(PlatformLogger.WARNING)) {
                logger.finest("Can not retrieve property '" + getProperty() + 
-                        "' in PropertyValueFactory: " + this + 
+                        "' in TreeItemPropertyValueFactory: " + this + 
                         " with provided class type: " + rowData.getClass(), e);
             }
         }
