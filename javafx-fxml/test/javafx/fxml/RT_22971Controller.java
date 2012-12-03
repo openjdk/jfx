@@ -31,7 +31,7 @@ public class RT_22971Controller {
     private ResourceBundle resources;
 
     public RT_22971Controller() {
-        resources = ResourceBundle.getBundle(RT_22971.class.getPackage().getName()
+        resources = ResourceBundle.getBundle(RT_22971Test.class.getPackage().getName()
             + ".rt_22971");
     }
 
