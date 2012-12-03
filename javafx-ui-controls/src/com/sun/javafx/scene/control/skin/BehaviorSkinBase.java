@@ -137,6 +137,8 @@ public abstract class BehaviorSkinBase<C extends Control, BB extends BehaviorBas
         control.removeEventHandler(MouseEvent.MOUSE_DRAGGED, mouseHandler);
 
         this.behavior = null;
+        
+        super.dispose();
     }
     
     
