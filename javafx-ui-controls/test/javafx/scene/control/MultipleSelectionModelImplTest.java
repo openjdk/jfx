@@ -14,6 +14,8 @@ import javafx.scene.control.ListView.ListViewFocusModel;
 import javafx.scene.control.TableView.TableViewFocusModel;
 import javafx.scene.control.TableView.TableViewSelectionModel;
 import javafx.scene.control.TreeView.TreeViewFocusModel;
+import javafx.scene.control.TreeTableView.TreeTableViewFocusModel;
+import javafx.scene.control.TreeTableView.TreeTableViewSelectionModel;
 
 import org.junit.After;
 import org.junit.AfterClass;
@@ -58,6 +60,9 @@ public class MultipleSelectionModelImplTest {
     private static final TreeItem<String> root;
     private static final TreeItem<String> ROW_2_TREE_VALUE;
     private static final TreeItem<String> ROW_5_TREE_VALUE;
+    
+    // TreeTableView
+    private static final TreeTableView treeTableView;
 
     // TableView
     private static final TableView tableView;
@@ -84,6 +89,18 @@ public class MultipleSelectionModelImplTest {
         treeView = new TreeView(root);
         // --- TreeView init
 
+        // TreeTableView init
+//        root = new TreeItem<String>(ROW_1_VALUE);
+//        root.setExpanded(true);
+//        for (int i = 1; i < data.size(); i++) {
+//            root.getChildren().add(new TreeItem<String>(data.get(i)));
+//        }
+//        ROW_2_TREE_VALUE = root.getChildren().get(0);
+//        ROW_5_TREE_VALUE = root.getChildren().get(3);
+
+        treeTableView = new TreeTableView(root);
+        // --- TreeView init
+        
         // TableView init
         tableView = new TableView();
         tableView.setItems(data);
@@ -97,6 +114,7 @@ public class MultipleSelectionModelImplTest {
             { ListView.ListViewBitSetSelectionModel.class },
             { TreeView.TreeViewBitSetSelectionModel.class },
             { TableView.TableViewArrayListSelectionModel.class },
+            { TreeTableView.TreeTableViewArrayListSelectionModel.class },
         });
     }
 
@@ -137,6 +155,14 @@ public class MultipleSelectionModelImplTest {
                 // create a new focus model
                 focusModel = new TableViewFocusModel(tableView);
                 tableView.setFocusModel((TableViewFocusModel) focusModel);
+            } else if (TreeTableViewSelectionModel.class.isAssignableFrom(modelClass)) {
+                // recreate the selection model
+                model = modelClass.getConstructor(TreeTableView.class).newInstance(treeTableView);
+                treeTableView.setSelectionModel((TreeTableViewSelectionModel) model);
+
+                // create a new focus model
+                focusModel = new TreeTableViewFocusModel(treeTableView);
+                treeTableView.setFocusModel((TreeTableViewFocusModel) focusModel);
             }
         } catch (Exception ex) {
             ex.printStackTrace();
@@ -164,6 +190,11 @@ public class MultipleSelectionModelImplTest {
 
     private MultipleSelectionModel msModel() {
         return model;
+    }
+    
+    private boolean isTree() {
+        return model instanceof TreeView.TreeViewBitSetSelectionModel ||
+               model instanceof TreeTableView.TreeTableViewArrayListSelectionModel;
     }
 
     @Test public void ensureInEmptyState() {
@@ -292,7 +323,7 @@ public class MultipleSelectionModelImplTest {
     }
 
     @Test public void testSelectedItemsIndexOf() {
-        if (model instanceof TreeView.TreeViewBitSetSelectionModel) {
+        if (isTree()) {
             model.select(ROW_2_TREE_VALUE);
             assertEquals(1, msModel().getSelectedItems().size());
             assertEquals(0, msModel().getSelectedItems().indexOf(ROW_2_TREE_VALUE));
@@ -308,7 +339,7 @@ public class MultipleSelectionModelImplTest {
     }
 
     @Test public void testSelectedItemsLastIndexOf() {
-        if (model instanceof TreeView.TreeViewBitSetSelectionModel) {
+        if (isTree()) {
             model.select(ROW_2_TREE_VALUE);
             assertEquals(1, msModel().getSelectedItems().size());
             assertEquals(0, msModel().getSelectedItems().lastIndexOf(ROW_2_TREE_VALUE));
@@ -405,7 +436,7 @@ public class MultipleSelectionModelImplTest {
         ObservableList selectedItems = msModel().getSelectedItems();
         assertEquals(3, selectedItems.size());
 
-        if (model instanceof TreeView.TreeViewBitSetSelectionModel) {
+        if (isTree()) {
             assertFalse(selectedItems.contains(root.getChildren().get(0)));
             assertTrue(selectedItems.contains(root.getChildren().get(1)));
             assertTrue(selectedItems.contains(root.getChildren().get(2)));
@@ -424,7 +455,7 @@ public class MultipleSelectionModelImplTest {
         msModel().setSelectionMode(SelectionMode.MULTIPLE);
         model.select(3);
         assertEquals(3, model.getSelectedIndex());
-        if (model instanceof TreeView.TreeViewBitSetSelectionModel) {
+        if (isTree()) {
             assertEquals(root.getChildren().get(2), model.getSelectedItem());
         } else {
             assertEquals(data.get(3), model.getSelectedItem());
@@ -432,7 +463,7 @@ public class MultipleSelectionModelImplTest {
 
         model.select(1);
         assertEquals(1, model.getSelectedIndex());
-        if (model instanceof TreeView.TreeViewBitSetSelectionModel) {
+        if (isTree()) {
             assertEquals(root.getChildren().get(0), model.getSelectedItem());
         } else {
             assertEquals(data.get(1), model.getSelectedItem());
@@ -440,7 +471,7 @@ public class MultipleSelectionModelImplTest {
 
         model.select(5);
         assertEquals(5, model.getSelectedIndex());
-        if (model instanceof TreeView.TreeViewBitSetSelectionModel) {
+        if (isTree()) {
             assertEquals(root.getChildren().get(4), model.getSelectedItem());
         } else {
             assertEquals(data.get(5), model.getSelectedItem());
@@ -448,7 +479,7 @@ public class MultipleSelectionModelImplTest {
 
         model.select(1);
         assertEquals(1, model.getSelectedIndex());
-        if (model instanceof TreeView.TreeViewBitSetSelectionModel) {
+        if (isTree()) {
             assertEquals(root.getChildren().get(0), model.getSelectedItem());
         } else {
             assertEquals(data.get(1), model.getSelectedItem());
@@ -460,7 +491,7 @@ public class MultipleSelectionModelImplTest {
         msModel().selectIndices(3,4,5);
         assertEquals(5, model.getSelectedIndex());
 
-        if (model instanceof TreeView.TreeViewBitSetSelectionModel) {
+        if (isTree()) {
             assertEquals(root.getChildren().get(4), model.getSelectedItem());
         } else {
             assertEquals(data.get(5), model.getSelectedItem());
@@ -469,7 +500,7 @@ public class MultipleSelectionModelImplTest {
         model.select(1);
         assertEquals(1, model.getSelectedIndex());
 
-        if (model instanceof TreeView.TreeViewBitSetSelectionModel) {
+        if (isTree()) {
             assertEquals(root.getChildren().get(0), model.getSelectedItem());
         } else {
             assertEquals(data.get(1), model.getSelectedItem());
@@ -477,7 +508,7 @@ public class MultipleSelectionModelImplTest {
 
         msModel().selectIndices(8,7,6);
         assertEquals(6, model.getSelectedIndex());
-        if (model instanceof TreeView.TreeViewBitSetSelectionModel) {
+        if (isTree()) {
             assertEquals(root.getChildren().get(5), model.getSelectedItem());
         } else {
             assertEquals(data.get(6), model.getSelectedItem());
@@ -488,7 +519,7 @@ public class MultipleSelectionModelImplTest {
         msModel().setSelectionMode(SelectionMode.MULTIPLE);
         msModel().selectRange(3,10);
         assertEquals(9, model.getSelectedIndex());
-        if (model instanceof TreeView.TreeViewBitSetSelectionModel) {
+        if (isTree()) {
             assertEquals(root.getChildren().get(8), model.getSelectedItem());
         } else {
             assertEquals(data.get(9), model.getSelectedItem());
@@ -496,7 +527,7 @@ public class MultipleSelectionModelImplTest {
 
         model.select(1);
         assertEquals(1, model.getSelectedIndex());
-        if (model instanceof TreeView.TreeViewBitSetSelectionModel) {
+        if (isTree()) {
             assertEquals(root.getChildren().get(0), model.getSelectedItem());
         } else {
             assertEquals(data.get(1), model.getSelectedItem());
@@ -504,7 +535,7 @@ public class MultipleSelectionModelImplTest {
 
         msModel().selectRange(6, 8);
         assertEquals(7, model.getSelectedIndex());
-        if (model instanceof TreeView.TreeViewBitSetSelectionModel) {
+        if (isTree()) {
             assertEquals(root.getChildren().get(6), model.getSelectedItem());
         } else {
             assertEquals(data.get(7), model.getSelectedItem());
@@ -518,7 +549,7 @@ public class MultipleSelectionModelImplTest {
         assertEquals(1, msModel().getSelectedIndices().size());
         assertEquals(1, msModel().getSelectedItems().size());
 
-        if (model instanceof TreeView.TreeViewBitSetSelectionModel) {
+        if (isTree()) {
             assertEquals(root.getChildren().get(2), model.getSelectedItem());
         } else {
             assertEquals(data.get(3), model.getSelectedItem());
@@ -534,7 +565,7 @@ public class MultipleSelectionModelImplTest {
         assertEquals(1, msModel().getSelectedIndices().size());
         assertEquals(1, msModel().getSelectedItems().size());
 
-        if (model instanceof TreeView.TreeViewBitSetSelectionModel) {
+        if (isTree()) {
             assertEquals(root.getChildren().get(3), model.getSelectedItem());
         } else {
             assertEquals(data.get(4), model.getSelectedItem());
@@ -550,7 +581,7 @@ public class MultipleSelectionModelImplTest {
         assertEquals(2, msModel().getSelectedIndices().size());
         assertEquals(2, msModel().getSelectedItems().size());
 
-        if (model instanceof TreeView.TreeViewBitSetSelectionModel) {
+        if (isTree()) {
             assertEquals(root.getChildren().get(3), model.getSelectedItem());
         } else {
             assertEquals(data.get(4), model.getSelectedItem());
@@ -590,7 +621,7 @@ public class MultipleSelectionModelImplTest {
         model.selectRange(3, 10);
         assertEquals(indices(model), 7, model.getSelectedIndices().size());
         assertEquals(9, model.getSelectedIndex());
-        if (model instanceof TreeView.TreeViewBitSetSelectionModel) {
+        if (isTree()) {
             assertEquals(root.getChildren().get(8), model.getSelectedItem());
         } else {
             assertEquals(data.get(9), model.getSelectedItem());
@@ -602,7 +633,7 @@ public class MultipleSelectionModelImplTest {
         model.selectRange(10, 3);
         assertEquals(7, model.getSelectedIndices().size());
         assertEquals(indices(model), 4, model.getSelectedIndex());
-        if (model instanceof TreeView.TreeViewBitSetSelectionModel) {
+        if (isTree()) {
             assertEquals(root.getChildren().get(3), model.getSelectedItem());
         } else {
             assertEquals(data.get(4), model.getSelectedItem());

@@ -24,17 +24,15 @@
  */
 package com.sun.javafx.scene.control.behavior;
 
-import javafx.scene.control.TableCell;
-import javafx.scene.control.TableColumn;
 import javafx.scene.control.TableColumnBase;
 import javafx.scene.control.TablePositionBase;
-import javafx.scene.control.TableView;
-
-import javafx.scene.control.TableView.TableViewFocusModel;
+import javafx.scene.control.TreeTableCell;
+import javafx.scene.control.TreeTableColumn;
+import javafx.scene.control.TreeTableView;
 
 /**
  */
-public class TableCellBehavior extends TableCellBehaviorBase<TableCell> {
+public class TreeTableCellBehavior extends TableCellBehaviorBase<TreeTableCell> {
     
     /***************************************************************************
      *                                                                         *
@@ -42,7 +40,7 @@ public class TableCellBehavior extends TableCellBehaviorBase<TableCell> {
      *                                                                         *
      **************************************************************************/    
 
-    public TableCellBehavior(TableCell control) {
+    public TreeTableCellBehavior(TreeTableCell control) {
         super(control);
     }
     
@@ -55,27 +53,27 @@ public class TableCellBehavior extends TableCellBehaviorBase<TableCell> {
      **************************************************************************/          
 
     /** @{@inheritDoc} */
-    @Override TableView getTableControl() {
-        return getControl().getTableView();
+    @Override TreeTableView getTableControl() {
+        return getControl().getTreeTableView();
     }
 
     /** @{@inheritDoc} */
-    @Override TableColumn getTableColumn() {
+    @Override TreeTableColumn getTableColumn() {
         return getControl().getTableColumn();
     }
 
     /** @{@inheritDoc} */
     @Override int getItemCount() {
-        return getTableControl().getItems().size();
+        return getTableControl().impl_getTreeItemCount();
     }
 
     /** @{@inheritDoc} */
-    @Override TableView.TableViewSelectionModel getSelectionModel() {
+    @Override TreeTableView.TreeTableViewSelectionModel getSelectionModel() {
         return getTableControl().getSelectionModel();
     }
 
     /** @{@inheritDoc} */
-    @Override TableViewFocusModel getFocusModel() {
+    @Override TreeTableView.TreeTableViewFocusModel getFocusModel() {
         return getTableControl().getFocusModel();
     }
 
@@ -86,7 +84,7 @@ public class TableCellBehavior extends TableCellBehaviorBase<TableCell> {
 
     /** @{@inheritDoc} */
     @Override boolean isTableRowSelected() {
-        return getControl().getTableRow().isSelected();
+        return getControl().getTreeTableRow().isSelected();
     }
 
     /** @{@inheritDoc} */
@@ -101,11 +99,11 @@ public class TableCellBehavior extends TableCellBehaviorBase<TableCell> {
 
     /** @{@inheritDoc} */
     @Override void focus(int row, TableColumnBase tc) {
-        getFocusModel().focus(row, (TableColumn)tc);
+        getFocusModel().focus(row, (TreeTableColumn)tc);
     }
 
     /** @{@inheritDoc} */
     @Override void edit(int row, TableColumnBase tc) {
-        getTableControl().edit(row, (TableColumn)tc);
+        getTableControl().edit(row, (TreeTableColumn)tc);
     }
 }

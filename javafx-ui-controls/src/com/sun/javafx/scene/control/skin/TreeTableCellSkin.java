@@ -22,20 +22,35 @@
  * or visit www.oracle.com if you need additional information or have any
  * questions.
  */
-package com.preview.javafx.scene.control;
+package com.sun.javafx.scene.control.skin;
 
-import javafx.scene.control.TableColumn;
-import javafx.scene.control.TreeItem;
+import com.sun.javafx.scene.control.behavior.TreeTableCellBehavior;
+import javafx.beans.property.BooleanProperty;
+import javafx.beans.property.ReadOnlyDoubleProperty;
+import javafx.scene.control.TreeTableCell;
+import javafx.scene.control.TreeTableColumn;
 
 /**
- *
  */
-public class TreeTableColumn<S, T> extends TableColumn<TreeItem<S>, T> {
-
-    public TreeTableColumn() {
-    }
+public class TreeTableCellSkin extends TableCellSkinBase<TreeTableCell, TreeTableCellBehavior> {
     
-    public TreeTableColumn(String text) {
-        super(text);
+    private final TreeTableCell treeTableCell;
+    private final TreeTableColumn tableColumn;
+    
+    public TreeTableCellSkin(TreeTableCell treeTableCell) {
+        super(treeTableCell, new TreeTableCellBehavior(treeTableCell));
+        
+        this.treeTableCell = treeTableCell;
+        this.tableColumn = treeTableCell.getTableColumn();
+        
+        super.init(treeTableCell);
+    }
+
+    @Override protected BooleanProperty columnVisibleProperty() {
+        return tableColumn.visibleProperty();
+    }
+
+    @Override protected ReadOnlyDoubleProperty columnWidthProperty() {
+        return tableColumn.widthProperty();
     }
 }

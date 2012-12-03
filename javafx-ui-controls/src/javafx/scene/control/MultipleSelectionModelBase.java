@@ -46,6 +46,7 @@ import com.sun.javafx.scene.control.ReadOnlyUnbackedObservableList;
  * abstract class. However, this class is package-protected and not intended
  * for public use.
  * 
+ * @param <T> The type of the underlying data model for the UI control.
  */
 abstract class MultipleSelectionModelBase<T> extends MultipleSelectionModel<T> {
 
