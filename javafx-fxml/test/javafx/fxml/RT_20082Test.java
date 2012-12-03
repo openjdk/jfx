@@ -25,31 +25,18 @@
 
 package javafx.fxml;
 
-import javafx.application.Application;
-import javafx.beans.value.ChangeListener;
-import javafx.beans.value.ObservableValue;
-import javafx.scene.Scene;
-import javafx.scene.layout.VBox;
-import javafx.stage.Stage;
+import java.io.IOException;
+import org.junit.Test;
 
-public class RT_23244 extends Application {
-   @Override
-   public void start(Stage primaryStage) throws Exception {
-       FXMLLoader fxmlLoader = new FXMLLoader(getClass().getResource("rt_23244.fxml"));
-       primaryStage.setScene((Scene)fxmlLoader.load());
+import static org.junit.Assert.*;
 
-       VBox root = (VBox)fxmlLoader.getNamespace().get("root");
-       root.hoverProperty().addListener(new ChangeListener<Boolean>() {
-           @Override
-           public void changed(ObservableValue<? extends Boolean> observable, Boolean oldValue, Boolean newValue) {
-               System.out.println("CHANGE");
-           }
-       });
+public class RT_20082Test {
+    @Test
+    public void testInheritedClassLoader() throws IOException {
+        FXMLLoader fxmlLoader = new FXMLLoader(getClass().getResource("rt_20082.fxml"));
+        fxmlLoader.setClassLoader(new RT_20082ClassLoader());
 
-       primaryStage.show();
-   }
-
-   public static void main(String[] args) {
-       launch(args);
-   }
+        fxmlLoader.load();
+        assertEquals(RT_20082ClassLoader.loadCount, 2);
+    }
 }

@@ -25,19 +25,43 @@
 
 package javafx.fxml;
 
-import java.io.IOException;
+import javafx.fxml.FXMLLoader;
+
 import java.net.URL;
+
 import org.junit.Test;
 
 import static org.junit.Assert.*;
 
-public class RT_22971 {
+public class RT_23413Test {
+    private static URL LOCATION = RT_23413Test.class.getResource("rt_23413.fxml");
+    private static final int COUNT = 500;
+
     @Test
-    public void testResourcesInjection() throws IOException {
-        URL location = getClass().getResource("rt_22971.fxml");
-        FXMLLoader fxmlLoader = new FXMLLoader(location);
-        fxmlLoader.load();
-        RT_22971Controller controller = fxmlLoader.getController();
-        assertEquals(controller.getFoo(), "bar");
+    public void testTemplate() throws Exception {
+        assertTrue(testTemplate(true) < testTemplate(false));
+    }
+
+    private long testTemplate(boolean template) throws Exception {
+        FXMLLoader loader = new FXMLLoader(LOCATION);
+        loader.setTemplate(template);
+
+        long t0 = System.currentTimeMillis();
+        for (int i = 0; i < COUNT; i++) {
+            if (!template) {
+                loader.setRoot(null);
+            }
+
+            loader.load();
+        }
+
+        long t1 = System.currentTimeMillis();
+
+        long duration = t1 - t0;
+        long average = duration / COUNT;
+
+        System.out.printf("template:%b duration:%dms average:%d\n", template, duration, average);
+
+        return average;
     }
 }

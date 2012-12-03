@@ -28,10 +28,12 @@ package javafx.fxml;
 import java.io.IOException;
 import org.junit.Test;
 
-public class RT_16724 {
+import static org.junit.Assert.*;
+
+public class RT_19228Test {
     @Test
-    public void testControllerFactory() throws IOException {
-        FXMLLoader.load(getClass().getResource("rt_16724.fxml"), null, null,
-            new RT_16724ControllerFactory());
+    public void testConstantValue() throws IOException {
+        Widget widget = (Widget)FXMLLoader.load(getClass().getResource("rt_19228.fxml"));
+        assertEquals(widget.getNumber(), Widget.TEN);
     }
 }

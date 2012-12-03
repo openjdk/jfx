@@ -25,19 +25,20 @@
 
 package javafx.fxml;
 
-import javafx.application.Application;
-import javafx.scene.Scene;
-import javafx.stage.Stage;
+import java.io.IOException;
+import org.junit.Test;
 
-public class RT_21559 extends Application {
-   @Override
-   public void start(Stage primaryStage) throws Exception {
-       FXMLLoader fxmlLoader = new FXMLLoader(getClass().getResource("rt_21559.fxml"));
-       primaryStage.setScene((Scene)fxmlLoader.load());
-       primaryStage.show();
-   }
+import static org.junit.Assert.*;
 
-   public static void main(String[] args) {
-       launch(args);
-   }
+public class RT_16722Test {
+    @Test
+    public void testControllerInheritance() throws IOException {
+        FXMLLoader fxmlLoader = new FXMLLoader(getClass().getResource("rt_16722.fxml"));
+
+        fxmlLoader.load();
+        RT_16722ControllerB controller = (RT_16722ControllerB)fxmlLoader.getController();
+
+        assertEquals(controller.getRoot().getName(), controller.getRootName());
+        assertEquals(controller.getChild().getName(), controller.getChildName());
+    }
 }

@@ -1046,29 +1046,6 @@ public class Region extends Parent {
         }
         return centerShape;
     }
-    /**
-     * Defines whether the shape is centered within the Region's width or height.
-     * {@code true} means the shape centered within the Region's width and height,
-     * {@code false} means the shape is positioned at its source position.
-     *
-     * @default true
-     * @css position-shape      true | false
-     */
-    private BooleanProperty cacheShape = null;
-    public final void setCacheShape(boolean value) { cacheShapeProperty().set(value); }
-    public final boolean isCacheShape() { return cacheShape == null ? true : cacheShape.get(); }
-    private BooleanProperty cacheShapeProperty() {
-        if (cacheShape == null) {
-            cacheShape = new StyleableBooleanProperty(true) {
-                @Override public Object getBean() { return Region.this; }
-                @Override public String getName() { return "cacheShape"; }
-                @Override public StyleableProperty getStyleableProperty() {
-                    return StyleableProperties.CACHE_SHAPE;
-                }
-            };
-        }
-        return cacheShape;
-    }
 
     /***************************************************************************
      *                                                                         *
@@ -2335,19 +2312,6 @@ public class Region extends Parent {
             }
         };
 
-         private static final StyleableProperty<Region,Boolean> CACHE_SHAPE =
-             new StyleableProperty<Region,Boolean>("-fx-cache-shape",
-                 BooleanConverter.getInstance(), Boolean.TRUE){
-
-            @Override public boolean isSettable(Region node) {
-                return node.cacheShape == null || !node.cacheShape.isBound();
-            }
-
-            @Override public WritableValue<Boolean> getWritableValue(Region node) {
-                return node.cacheShapeProperty();
-            }
-        };
-
          private static final StyleableProperty<Region, Boolean> SNAP_TO_PIXEL =
              new StyleableProperty<Region,Boolean>("-fx-snap-to-pixel",
                  BooleanConverter.getInstance(), Boolean.TRUE){
@@ -2375,7 +2339,6 @@ public class Region extends Parent {
                     SHAPE,
                     SCALE_SHAPE,
                     POSITION_SHAPE,
-                    CACHE_SHAPE,
                     SNAP_TO_PIXEL
             );
             STYLEABLES = Collections.unmodifiableList(styleables);

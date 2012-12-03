@@ -29,7 +29,7 @@ import org.junit.Test;
 
 import static org.junit.Assert.*;
 
-public class RT_17714 {
+public class RT_17714Test {
     @Test
     public void testListEvents() throws Exception {
         FXMLLoader fxmlLoader = new FXMLLoader(getClass().getResource("rt_17714.fxml"));
