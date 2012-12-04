@@ -26,14 +26,26 @@
 package javafx.fxml;
 
 import javafx.application.Application;
+import javafx.beans.value.ChangeListener;
+import javafx.beans.value.ObservableValue;
 import javafx.scene.Scene;
+import javafx.scene.layout.VBox;
 import javafx.stage.Stage;
 
-public class RT_21559Test extends Application {
+public class RT_23244 extends Application {
    @Override
    public void start(Stage primaryStage) throws Exception {
-       FXMLLoader fxmlLoader = new FXMLLoader(getClass().getResource("rt_21559.fxml"));
+       FXMLLoader fxmlLoader = new FXMLLoader(getClass().getResource("rt_23244.fxml"));
        primaryStage.setScene((Scene)fxmlLoader.load());
+
+       VBox root = (VBox)fxmlLoader.getNamespace().get("root");
+       root.hoverProperty().addListener(new ChangeListener<Boolean>() {
+           @Override
+           public void changed(ObservableValue<? extends Boolean> observable, Boolean oldValue, Boolean newValue) {
+               System.out.println("CHANGE");
+           }
+       });
+
        primaryStage.show();
    }
 
