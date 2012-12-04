@@ -30,21 +30,16 @@ import org.junit.Test;
 
 import static org.junit.Assert.*;
 
-public class RT_17646 {
-    @Test(expected=UnsupportedOperationException.class)
-    public void testBidirectionalBinding() throws IOException {
-        FXMLLoader fxmlLoader = new FXMLLoader(getClass().getResource("rt_17646.fxml"));
+public class RT_19112Test {
+    @Test
+    public void testStaticProperty() throws IOException {
+        FXMLLoader fxmlLoader = new FXMLLoader(getClass().getResource("rt_19112.fxml"));
+        fxmlLoader.load();
 
-        Widget widget = (Widget)fxmlLoader.load();
-        RT_17646Controller controller = (RT_17646Controller)fxmlLoader.getController();
-        assertEquals(widget.getName(), controller.getName());
+        Widget widget1 = (Widget)fxmlLoader.getNamespace().get("widget1");
+        assertEquals(Widget.getAlignment(widget1), Alignment.LEFT);
 
-        String name1 = "efgh";
-        controller.setName(name1);
-        assertEquals(widget.getName(), name1);
-
-        String name2 = "ijkl";
-        widget.setName(name2);
-        assertEquals(controller.getName(), name2);
+        Widget widget2 = (Widget)fxmlLoader.getNamespace().get("widget2");
+        assertEquals(Widget.getAlignment(widget2), Alignment.RIGHT);
     }
 }

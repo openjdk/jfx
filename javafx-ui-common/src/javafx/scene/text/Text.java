@@ -138,7 +138,6 @@ public class Text extends Shape {
      * Creates an empty instance of Text.
      */
     public Text() {
-        setNodeOrientation(NodeOrientation.LEFT_TO_RIGHT);
         InvalidationListener listener = new InvalidationListener() {
             @Override public void invalidated(Observable observable) {
                 checkSpan();
@@ -178,6 +177,29 @@ public class Text extends Shape {
 
     private void checkSpan() {
         isSpan = isManaged() && getParent() instanceof TextFlow;
+    }
+
+    @Deprecated
+    public void impl_transformsChanged() {
+        super.impl_transformsChanged();
+        if (!isSpan()) {
+            /* Using impl_transformsChanged to detect for orientation change.
+             * This can be improved if EffectiveNodeOrientation becomes a
+             * property. See http://javafx-jira.kenai.com/browse/RT-26140
+             */
+            NodeOrientation orientation = getEffectiveNodeOrientation();
+            boolean rtl =  orientation == NodeOrientation.RIGHT_TO_LEFT;
+            int dir = rtl ? TextLayout.DIRECTION_RTL : TextLayout.DIRECTION_LTR;
+            TextLayout layout = getTextLayout();
+            if (layout.setDirection(dir)) {
+                needsTextLayout();
+            }
+        }
+    }
+
+    @Override
+    public boolean isAutomaticallyMirrored() {
+        return false;
     }
 
     private void needsFullTextLayout() {
@@ -232,9 +254,16 @@ public class Text extends Shape {
             layout = factory.createLayout();
             String string = getTextInternal();
             Object font = getFontInternal();
+            TextAlignment alignment = getTextAlignment();
+            if (alignment == null) alignment = DEFAULT_TEXT_ALIGNMENT;
             layout.setContent(string, font);
-            layout.setAlignment(getTextAlignment().ordinal());
+            layout.setAlignment(alignment.ordinal());
             layout.setWrapWidth((float)getWrappingWidth());
+            if (getEffectiveNodeOrientation() == NodeOrientation.RIGHT_TO_LEFT) {
+                layout.setDirection(TextLayout.DIRECTION_RTL);
+            } else {
+                layout.setDirection(TextLayout.DIRECTION_LTR);
+            }
         }
         return layout;
     }
@@ -1008,6 +1037,7 @@ public class Text extends Shape {
 
     private float getYAdjustment(BaseBounds bounds) {
         VPos origin = getTextOrigin();
+        if (origin == null) origin = DEFAULT_TEXT_ORIGIN;
         switch (origin) {
         case TOP: return -bounds.getMinY();
         case BASELINE: return 0;
@@ -1022,6 +1052,7 @@ public class Text extends Shape {
         BaseBounds bounds = getLogicalBounds();
 
         VPos origin = getTextOrigin();
+        if (origin == null) origin = DEFAULT_TEXT_ORIGIN;
         if (getBoundsType() == TextBoundsType.VISUAL) {
             BaseBounds vBounds = getVisualBounds();
             float delta = vBounds.getMinY() - bounds.getMinY();
@@ -1335,7 +1366,9 @@ public class Text extends Shape {
         if (impl_isDirty(DirtyBits.TEXT_ATTRS)) {
             peer.setUnderline(isUnderline());
             peer.setStrikethrough(isStrikethrough());
-            peer.setFontSmoothingType(getFontSmoothingType().ordinal());
+            FontSmoothingType smoothing = getFontSmoothingType();
+            if (smoothing == null) smoothing = FontSmoothingType.GRAY;
+            peer.setFontSmoothingType(smoothing.ordinal());
         }
         if (impl_isDirty(DirtyBits.TEXT_FONT)) {
             peer.setFont(getFontInternal());
@@ -1520,9 +1553,14 @@ public class Text extends Shape {
                     }
                     @Override public void invalidated() {
                         if (!isSpan()) {
+                            TextAlignment alignment = get();
+                            if (alignment == null) {
+                                alignment = DEFAULT_TEXT_ALIGNMENT;
+                            }
                             TextLayout layout = getTextLayout();
-                            layout.setAlignment(get().ordinal());
-                            needsTextLayout();
+                            if (layout.setAlignment(alignment.ordinal())) {
+                                needsTextLayout();
+                            }
                         }
                     }
                 };

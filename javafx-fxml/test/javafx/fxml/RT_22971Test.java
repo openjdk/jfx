@@ -27,22 +27,17 @@ package javafx.fxml;
 
 import java.io.IOException;
 import java.net.URL;
-import java.util.ResourceBundle;
 import org.junit.Test;
 
 import static org.junit.Assert.*;
 
-public class RT_20471 {
+public class RT_22971Test {
     @Test
-    public void testControllerInjection() throws IOException {
-        URL location = getClass().getResource("rt_20471.fxml");
-        ResourceBundle resources = ResourceBundle.getBundle("javafx.fxml.rt_20471");
-        FXMLLoader fxmlLoader = new FXMLLoader(location, resources);
-
+    public void testResourcesInjection() throws IOException {
+        URL location = getClass().getResource("rt_22971.fxml");
+        FXMLLoader fxmlLoader = new FXMLLoader(location);
         fxmlLoader.load();
-        RT_20471Controller controller = fxmlLoader.getController();
-        assertEquals(controller.getLocation(), location);
-        assertEquals(controller.getResources(), resources);
-        assertTrue(controller.isInitialized());
+        RT_22971Controller controller = fxmlLoader.getController();
+        assertEquals(controller.getFoo(), "bar");
     }
 }

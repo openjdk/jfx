@@ -26,17 +26,17 @@
 package javafx.fxml;
 
 import java.io.IOException;
-import java.util.Arrays;
 import org.junit.Test;
 
 import static org.junit.Assert.*;
 
-public class RT_19139 {
+public class RT_20082Test {
     @Test
-    public void testStaticProperty() throws IOException {
-        FXMLLoader fxmlLoader = new FXMLLoader(getClass().getResource("rt_19139.fxml"));
-        Widget widget = (Widget)fxmlLoader.load();
+    public void testInheritedClassLoader() throws IOException {
+        FXMLLoader fxmlLoader = new FXMLLoader(getClass().getResource("rt_20082.fxml"));
+        fxmlLoader.setClassLoader(new RT_20082ClassLoader());
 
-        assertEquals(widget.getValues(), Arrays.asList(new String[] {"One", "Two", "Three"}));
+        fxmlLoader.load();
+        assertEquals(RT_20082ClassLoader.loadCount, 2);
     }
 }

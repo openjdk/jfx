@@ -128,31 +128,31 @@ public class TransitionTest {
     @Test
     public void testJumpTo() {
         // not running
-        transition.impl_jumpTo(0, 2);
+        transition.impl_jumpTo(0, 2, false);
         assertEquals(0.0, transition.frac, EPSILON);
-        transition.impl_jumpTo(1, 2);
+        transition.impl_jumpTo(1, 2, false);
         assertEquals(0.0, transition.frac, EPSILON);
-        transition.impl_jumpTo(2, 2);
+        transition.impl_jumpTo(2, 2, false);
         assertEquals(0.0, transition.frac, EPSILON);
 
         // running with linear interpolator
         transition.setInterpolator(Interpolator.LINEAR);
         assertTrue(transition.impl_startable(true));
         transition.impl_start(true);
-        transition.impl_jumpTo(0, 2);
+        transition.impl_jumpTo(0, 2, false);
         assertEquals(0.0, transition.frac, EPSILON);
-        transition.impl_jumpTo(1, 2);
+        transition.impl_jumpTo(1, 2, false);
         assertEquals(0.5, transition.frac, EPSILON);
-        transition.impl_jumpTo(2, 2);
+        transition.impl_jumpTo(2, 2, false);
         assertEquals(1.0, transition.frac, EPSILON);
 
         // paused with linear interpolator
         transition.impl_pause();
-        transition.impl_jumpTo(0, 2);
+        transition.impl_jumpTo(0, 2, false);
         assertEquals(0.0, transition.frac, EPSILON);
-        transition.impl_jumpTo(1, 2);
+        transition.impl_jumpTo(1, 2, false);
         assertEquals(0.5, transition.frac, EPSILON);
-        transition.impl_jumpTo(2, 2);
+        transition.impl_jumpTo(2, 2, false);
         assertEquals(1.0, transition.frac, EPSILON);
         transition.impl_finished();
 
@@ -160,22 +160,57 @@ public class TransitionTest {
         transition.setInterpolator(Interpolator.DISCRETE);
         assertTrue(transition.impl_startable(true));
         transition.impl_start(true);
-        transition.impl_jumpTo(0, 2);
+        transition.impl_jumpTo(0, 2, false);
         assertEquals(0.0, transition.frac, EPSILON);
-        transition.impl_jumpTo(1, 2);
+        transition.impl_jumpTo(1, 2, false);
         assertEquals(0.0, transition.frac, EPSILON);
-        transition.impl_jumpTo(2, 2);
+        transition.impl_jumpTo(2, 2, false);
         assertEquals(1.0, transition.frac, EPSILON);
 
         // paused with discrete interpolator
         transition.impl_pause();
-        transition.impl_jumpTo(0, 2);
+        transition.impl_jumpTo(0, 2, false);
         assertEquals(0.0, transition.frac, EPSILON);
-        transition.impl_jumpTo(1, 2);
+        transition.impl_jumpTo(1, 2, false);
         assertEquals(0.0, transition.frac, EPSILON);
-        transition.impl_jumpTo(2, 2);
+        transition.impl_jumpTo(2, 2, false);
         assertEquals(1.0, transition.frac, EPSILON);
         transition.impl_finished();
+    }
+
+
+
+    @Test
+    public void testForcedJumpTo() {
+        transition.setInterpolator(Interpolator.LINEAR);
+        // not running
+        transition.impl_jumpTo(0, 2, true);
+        assertEquals(0.0, transition.frac, EPSILON);
+        transition.impl_jumpTo(1, 2, true);
+        assertEquals(0.5, transition.frac, EPSILON);
+        transition.impl_jumpTo(2, 2, true);
+        assertEquals(1.0, transition.frac, EPSILON);
+
+        // running with linear interpolator
+        assertTrue(transition.impl_startable(true));
+        transition.impl_start(true);
+        transition.impl_jumpTo(0, 2, true);
+        assertEquals(0.0, transition.frac, EPSILON);
+        transition.impl_jumpTo(1, 2, true);
+        assertEquals(0.5, transition.frac, EPSILON);
+        transition.impl_jumpTo(2, 2, true);
+        assertEquals(1.0, transition.frac, EPSILON);
+
+        // paused with linear interpolator
+        transition.impl_pause();
+        transition.impl_jumpTo(0, 2, true);
+        assertEquals(0.0, transition.frac, EPSILON);
+        transition.impl_jumpTo(1, 2, true);
+        assertEquals(0.5, transition.frac, EPSILON);
+        transition.impl_jumpTo(2, 2, true);
+        assertEquals(1.0, transition.frac, EPSILON);
+        transition.impl_finished();
+
     }
 
     private static class TransitionImpl extends Transition {

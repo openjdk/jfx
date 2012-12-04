@@ -17,7 +17,8 @@ public interface TextLayout {
     static final int FLAGS_HAS_COMPLEX      = 1 << 4;
     static final int FLAGS_HAS_EMBEDDED     = 1 << 5;
     static final int FLAGS_WRAPPED          = 1 << 6;
-    static final int FLAGS_LAST             = 1 << 7;
+    static final int FLAGS_RTL_BASE         = 1 << 7;
+    static final int FLAGS_LAST             = 1 << 8;
 
     static final int ANALYSIS_MASK = FLAGS_LAST - 1;
 
