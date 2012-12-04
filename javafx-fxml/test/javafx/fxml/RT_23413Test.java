@@ -25,25 +25,24 @@
 
 package javafx.fxml;
 
-import javafx.fxml.FXMLLoader;
-
 import java.net.URL;
-
+import static org.junit.Assert.assertTrue;
 import org.junit.Test;
-
-import static org.junit.Assert.*;
-import org.junit.Ignore;
 
 public class RT_23413Test {
     private static URL LOCATION = RT_23413Test.class.getResource("rt_23413.fxml");
     private static final int COUNT = 500;
-
+    
     @Test
-    @Ignore
     public void testTemplate() throws Exception {
+        //warmup
+        System.out.println("Warmup ...");
+        testTemplate(false);
+        
+        System.out.println("Testing now ...");
         assertTrue(testTemplate(true) < testTemplate(false));
     }
-
+    
     private long testTemplate(boolean template) throws Exception {
         FXMLLoader loader = new FXMLLoader(LOCATION);
         loader.setTemplate(template);
@@ -64,6 +63,6 @@ public class RT_23413Test {
 
         System.out.printf("template:%b duration:%dms average:%d\n", template, duration, average);
 
-        return average;
+        return duration;
     }
 }
