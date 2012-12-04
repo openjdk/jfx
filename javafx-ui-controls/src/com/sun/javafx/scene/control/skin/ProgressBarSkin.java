@@ -38,7 +38,6 @@ import javafx.collections.ObservableList;
 import javafx.event.ActionEvent;
 import javafx.event.EventHandler;
 import javafx.scene.control.ProgressBar;
-import javafx.scene.control.SkinBase;
 import javafx.scene.layout.StackPane;
 import javafx.scene.shape.Rectangle;
 import javafx.util.Duration;
@@ -52,9 +51,10 @@ import com.sun.javafx.scene.control.behavior.ProgressBarBehavior;
 import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.DoubleProperty;
 import javafx.beans.value.WritableValue;
+import javafx.scene.control.SkinBase;
 
 
-public class ProgressBarSkin extends SkinBase<ProgressBar, ProgressBarBehavior<ProgressBar>> {
+public class ProgressBarSkin extends BehaviorSkinBase<ProgressBar, ProgressBarBehavior<ProgressBar>> {
 
     /***************************************************************************
      *                                                                         *

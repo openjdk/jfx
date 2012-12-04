@@ -81,7 +81,7 @@ import javafx.scene.shape.Rectangle;
 import javafx.scene.text.Font;
 import javafx.util.Duration;
 
-public class PaginationSkin extends SkinBase<Pagination, PaginationBehavior>  {
+public class PaginationSkin extends BehaviorSkinBase<Pagination, PaginationBehavior>  {
 
     private static final Duration DURATION = new Duration(125.0);
     private static final double SWIPE_THRESHOLD = 0.30;

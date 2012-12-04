@@ -26,23 +26,18 @@
 package com.sun.javafx.scene.control.skin;
 
 import com.sun.javafx.PlatformUtil;
-import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.event.EventHandler;
 import javafx.geometry.Orientation;
 import javafx.geometry.Point2D;
-import javafx.scene.Node;
 import javafx.scene.control.ScrollBar;
 import javafx.scene.layout.StackPane;
 import javafx.scene.input.ScrollEvent;
 
 import com.sun.javafx.Utils;
-import com.sun.javafx.scene.control.behavior.BehaviorBase;
 import com.sun.javafx.scene.control.behavior.ScrollBarBehavior;
-import javafx.event.EventType;
-import javafx.scene.control.Control;
 
-public class ScrollBarSkin extends javafx.scene.control.SkinBase<ScrollBar, ScrollBarBehavior> {
+public class ScrollBarSkin extends BehaviorSkinBase<ScrollBar, ScrollBarBehavior> {
 
     /***************************************************************************
      *                                                                         *

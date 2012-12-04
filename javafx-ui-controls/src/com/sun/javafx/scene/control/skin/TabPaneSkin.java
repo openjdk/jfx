@@ -78,10 +78,9 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
-import javafx.scene.control.SkinBase;
 import javafx.scene.input.*;
 
-public class TabPaneSkin extends SkinBase<TabPane, TabPaneBehavior> {
+public class TabPaneSkin extends BehaviorSkinBase<TabPane, TabPaneBehavior> {
 
     private static int getRotation(Side pos) {
         switch (pos) {

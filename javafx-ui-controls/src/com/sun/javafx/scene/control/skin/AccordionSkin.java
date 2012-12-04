@@ -33,7 +33,6 @@ import javafx.scene.control.Accordion;
 import javafx.scene.control.Skin;
 import javafx.scene.control.TitledPane;
 import javafx.scene.shape.Rectangle;
-import javafx.scene.control.SkinBase;
 
 import com.sun.javafx.scene.control.behavior.AccordionBehavior;
 
@@ -41,7 +40,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-public class AccordionSkin extends SkinBase<Accordion, AccordionBehavior> {
+public class AccordionSkin extends BehaviorSkinBase<Accordion, AccordionBehavior> {
 
     private TitledPane firstTitledPane;
     private Rectangle clipRect;

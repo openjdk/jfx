@@ -48,7 +48,6 @@ import javafx.scene.Node;
 import javafx.scene.control.ScrollBar;
 import javafx.scene.control.ScrollPane;
 import javafx.scene.control.ScrollPane.ScrollBarPolicy;
-import javafx.scene.control.SkinBase;
 import javafx.scene.input.MouseEvent;
 import javafx.scene.input.ScrollEvent;
 import javafx.scene.input.TouchEvent;
@@ -64,7 +63,7 @@ import com.sun.javafx.scene.traversal.TraverseListener;
 import static com.sun.javafx.Utils.*;
 import static com.sun.javafx.scene.control.skin.Utils.*;
 
-public class ScrollPaneSkin extends SkinBase<ScrollPane, ScrollPaneBehavior> implements TraverseListener {
+public class ScrollPaneSkin extends BehaviorSkinBase<ScrollPane, ScrollPaneBehavior> implements TraverseListener {
     /***************************************************************************
      *                                                                         *
      * UI Subcomponents                                                        *
