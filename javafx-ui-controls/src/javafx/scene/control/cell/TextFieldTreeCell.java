@@ -188,6 +188,11 @@ public class TextFieldTreeCell<T> extends TreeCell<T> {
             return;
         }
         super.startEdit();
+        
+        if (textField == null) {
+            textField = CellUtils.createTextField(this, getConverter());
+        }
+        
         CellUtils.startEdit(this, textField, getConverter());
     }
 
