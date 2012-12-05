@@ -25,13 +25,13 @@
 
 package javafx.scene.control;
 
+import java.text.BreakIterator;
 import javafx.beans.DefaultProperty;
 import javafx.beans.InvalidationListener;
 import javafx.beans.Observable;
 import javafx.beans.binding.IntegerBinding;
 import javafx.beans.binding.StringBinding;
 import javafx.beans.property.BooleanProperty;
-import javafx.beans.property.IntegerProperty;
 import javafx.beans.property.ReadOnlyIntegerProperty;
 import javafx.beans.property.ReadOnlyIntegerWrapper;
 import javafx.beans.property.ReadOnlyObjectProperty;
@@ -39,7 +39,6 @@ import javafx.beans.property.ReadOnlyObjectWrapper;
 import javafx.beans.property.ReadOnlyStringProperty;
 import javafx.beans.property.ReadOnlyStringWrapper;
 import javafx.beans.property.SimpleBooleanProperty;
-import javafx.beans.property.SimpleIntegerProperty;
 import javafx.beans.property.SimpleStringProperty;
 import javafx.beans.property.StringProperty;
 import javafx.beans.value.ChangeListener;
@@ -47,8 +46,6 @@ import javafx.beans.value.ObservableStringValue;
 import javafx.beans.value.ObservableValue;
 import javafx.scene.input.Clipboard;
 import javafx.scene.input.ClipboardContent;
-import java.text.BreakIterator;
-
 import com.sun.javafx.Utils;
 import com.sun.javafx.binding.ExpressionHelper;
 import com.sun.javafx.css.StyleManager;
@@ -309,18 +306,21 @@ public abstract class TextInputControl extends Control {
     /**
      * Removes a range of characters from the content.
      *
-     * @param range
+     * @param range The range of text to delete. The range object must not be null.
      *
      * @see #deleteText(int, int)
      */
     public void deleteText(IndexRange range) {
         replaceText(range, "");
     }
+
     /**
      * Removes a range of characters from the content.
      *
-     * @param start
-     * @param end
+     * @param start The starting index in the range, inclusive. This must be &gt;= 0 and &lt; the end.
+     * @param end The ending index in the range, exclusive. This is one-past the last character to
+     *            delete (consistent with the String manipulation methods). This must be &gt; the start,
+     *            and &lt;= the length of the text.
      */
     public void deleteText(int start, int end) {
         replaceText(start, end, "");
@@ -329,8 +329,8 @@ public abstract class TextInputControl extends Control {
     /**
      * Replaces a range of characters with the given text.
      *
-     * @param range
-     * @param text
+     * @param range The range of text to replace. The range object must not be null.
+     * @param text The text that is to replace the range. This must not be null.
      *
      * @see #replaceText(int, int, String)
      */
@@ -348,9 +348,11 @@ public abstract class TextInputControl extends Control {
     /**
      * Replaces a range of characters with the given text.
      *
-     * @param start
-     * @param end
-     * @param text
+     * @param start The starting index in the range, inclusive. This must be &gt;= 0 and &lt; the end.
+     * @param end The ending index in the range, exclusive. This is one-past the last character to
+     *            delete (consistent with the String manipulation methods). This must be &gt; the start,
+     *            and &lt;= the length of the text.
+     * @param text The text that is to replace the range. This must not be null.
      */
     public void replaceText(int start, int end, String text) {
         if (start > end) {
