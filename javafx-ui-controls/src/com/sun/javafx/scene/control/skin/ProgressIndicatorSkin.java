@@ -32,6 +32,7 @@ import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.event.ActionEvent;
 import javafx.event.EventHandler;
+import javafx.geometry.NodeOrientation;
 import javafx.geometry.VPos;
 import javafx.scene.Group;
 import javafx.scene.control.ProgressIndicator;
@@ -287,6 +288,13 @@ public class ProgressIndicatorSkin extends BehaviorSkinBase<ProgressIndicator, P
             updateProgress();
         }
 
+        @Override public boolean isAutomaticallyMirrored() {
+            // This is used instead of setting NodeOrientation,
+            // allowing the Text node to inherit the current
+            // orientation.
+            return false;
+        }
+
         private void updateProgress() {
             intProgress = (int) Math.round(control.getProgress() * 100.0) ;
             text.setText((control.getProgress() >= 1) ? (DONE) : ("" + intProgress + "%"));
@@ -401,6 +409,7 @@ public class ProgressIndicatorSkin extends BehaviorSkinBase<ProgressIndicator, P
             this.control = control;
             this.skin = s;
 
+            setNodeOrientation(NodeOrientation.LEFT_TO_RIGHT);
             getStyleClass().setAll("spinner");
 
             skin.segmentColors = FXCollections.<Color>observableArrayList();
