@@ -29,7 +29,7 @@ import com.sun.javafx.collections.annotations.ReturnsUnmodifiableCollection;
 import com.sun.javafx.css.StyleManager;
 import com.sun.javafx.scene.control.ReadOnlyUnbackedObservableList;
 import com.sun.javafx.scene.control.TableColumnComparator;
-import com.sun.javafx.scene.control.WeakEventHandler;
+import javafx.event.WeakEventHandler;
 import com.sun.javafx.scene.control.skin.TreeTableViewSkin;
 import com.sun.javafx.scene.control.skin.VirtualContainerBase;
 import java.lang.ref.WeakReference;
@@ -612,7 +612,7 @@ public class TreeTableView<S> extends Control {
 
             TreeItem<S> root = getRoot();
             if (root != null) {
-                weakRootEventListener = new WeakEventHandler(root, TreeItem.<S>treeNotificationEvent(), rootEvent);
+                weakRootEventListener = new WeakEventHandler(rootEvent);
                 getRoot().addEventHandler(TreeItem.<S>treeNotificationEvent(), weakRootEventListener);
                 weakOldItem = new WeakReference<TreeItem<S>>(root);
             }
@@ -1699,7 +1699,7 @@ public class TreeTableView<S> extends Control {
             }
             
             if (newRoot != null) {
-                weakTreeItemListener = new WeakEventHandler(newRoot, TreeItem.<S>treeItemCountChangeEvent(), treeItemListener);
+                weakTreeItemListener = new WeakEventHandler(treeItemListener);
                 newRoot.addEventHandler(TreeItem.<S>treeItemCountChangeEvent(), weakTreeItemListener);
             }
         }
@@ -2269,7 +2269,7 @@ public class TreeTableView<S> extends Control {
             }
             
             if (newRoot != null) {
-                weakTreeItemListener = new WeakEventHandler(newRoot, TreeItem.<S>treeItemCountChangeEvent(), treeItemListener);
+                weakTreeItemListener = new WeakEventHandler(treeItemListener);
                 newRoot.addEventHandler(TreeItem.<S>treeItemCountChangeEvent(), weakTreeItemListener);
             }
         }

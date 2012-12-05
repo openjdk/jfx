@@ -26,7 +26,7 @@ package com.sun.javafx.scene.control.skin;
 
 import com.sun.javafx.collections.NonIterableChange;
 import com.sun.javafx.scene.control.ReadOnlyUnbackedObservableList;
-import com.sun.javafx.scene.control.WeakEventHandler;
+import javafx.event.WeakEventHandler;
 import javafx.scene.control.TreeTableRow;
 import javafx.scene.control.TreeTableView;
 import com.sun.javafx.scene.control.behavior.TreeTableViewBehavior;
@@ -226,7 +226,7 @@ public class TreeTableViewSkin<S> extends TableViewSkinBase<S, TreeTableView<S>,
         }
         weakRootRef = new WeakReference<TreeItem>(newRoot);
         if (getRoot() != null) {
-            weakRootListener = new WeakEventHandler(getRoot(), TreeItem.<S>treeNotificationEvent(), rootListener);
+            weakRootListener = new WeakEventHandler(rootListener);
             getRoot().addEventHandler(TreeItem.<S>treeNotificationEvent(), weakRootListener);
         }
     }

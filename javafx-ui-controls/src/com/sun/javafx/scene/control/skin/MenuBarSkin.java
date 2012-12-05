@@ -59,7 +59,7 @@ import javafx.beans.value.WeakChangeListener;
 
 import com.sun.javafx.menu.MenuBase;
 import com.sun.javafx.scene.control.GlobalMenuAdapter;
-import com.sun.javafx.scene.control.WeakEventHandler;
+import javafx.event.WeakEventHandler;
 import com.sun.javafx.scene.control.behavior.BehaviorBase;
 import com.sun.javafx.scene.traversal.Direction;
 import com.sun.javafx.scene.traversal.TraversalEngine;
@@ -263,8 +263,7 @@ public class MenuBarSkin extends BehaviorSkinBase<MenuBar, BehaviorBase<MenuBar>
                 }
             }
         };
-        weakSceneKeyEventHandler = new WeakEventHandler(control.getScene(), KeyEvent.KEY_PRESSED, 
-                keyEventHandler);
+        weakSceneKeyEventHandler = new WeakEventHandler(keyEventHandler);
         control.getScene().addEventFilter(KeyEvent.KEY_PRESSED, weakSceneKeyEventHandler);
         
         // When we click else where in the scene - menu selection should be cleared.
@@ -276,8 +275,7 @@ public class MenuBarSkin extends BehaviorSkinBase<MenuBar, BehaviorBase<MenuBar>
                 }
             }
         };
-        weakSceneMouseEventHandler = new WeakEventHandler(control.getScene(), MouseEvent.MOUSE_CLICKED, 
-                mouseEventHandler);
+        weakSceneMouseEventHandler = new WeakEventHandler(mouseEventHandler);
         control.getScene().addEventFilter(MouseEvent.MOUSE_CLICKED, weakSceneMouseEventHandler);
         
         // When the parent window looses focus - menu selection should be cleared
