@@ -132,24 +132,11 @@ public class SliderSkin extends BehaviorSkinBase<Slider, SliderBehavior> {
 
     StringConverter<Number> stringConverterWrapper = new StringConverter<Number>() {
         Slider slider = getSkinnable();
-        
         @Override public String toString(Number object) {
-            if (slider.getLabelFormatter() == null) {
-                tickLine.setTickLabelFormatter(null);
-                return null;
-            } else {
-                return(object != null) ? slider.getLabelFormatter().toString(object.doubleValue()) :
-                        "";
-            }
+            return(object != null) ? slider.getLabelFormatter().toString(object.doubleValue()) : "";
         }
-
         @Override public Number fromString(String string) {
-            if (slider.getLabelFormatter() == null) {
-                tickLine.setTickLabelFormatter(null);
-                return null;
-            } else {
-                return slider.getLabelFormatter().fromString(string);
-            }
+            return slider.getLabelFormatter().fromString(string);
         }
     };
     
@@ -170,7 +157,9 @@ public class SliderSkin extends BehaviorSkinBase<Slider, SliderBehavior> {
                 // add 1 to the slider minor tick count since the axis draws one
                 // less minor ticks than the number given.
                 tickLine.setMinorTickCount(Math.max(slider.getMinorTickCount(),0) + 1);
-                tickLine.setTickLabelFormatter(stringConverterWrapper);
+                if (slider.getLabelFormatter() != null) {
+                    tickLine.setTickLabelFormatter(stringConverterWrapper);
+                }
                 getChildren().clear();
                 getChildren().addAll(tickLine, track, thumb);
             } else {
@@ -190,39 +179,44 @@ public class SliderSkin extends BehaviorSkinBase<Slider, SliderBehavior> {
 
     @Override protected void handleControlPropertyChanged(String p) {
         super.handleControlPropertyChanged(p);
+        Slider slider = getSkinnable();
         if ("ORIENTATION".equals(p)) {
             if (showTickMarks && tickLine != null) {
-                tickLine.setSide(getSkinnable().getOrientation() == Orientation.VERTICAL ? Side.RIGHT : (getSkinnable().getOrientation() == null) ? Side.RIGHT: Side.BOTTOM);
+                tickLine.setSide(slider.getOrientation() == Orientation.VERTICAL ? Side.RIGHT : (slider.getOrientation() == null) ? Side.RIGHT: Side.BOTTOM);
             }
             requestLayout();
         } else if ("VALUE".equals(p)) {
             positionThumb();
         } else if ("MIN".equals(p) ) {
             if (showTickMarks && tickLine != null) {
-                tickLine.setLowerBound(getSkinnable().getMin());
+                tickLine.setLowerBound(slider.getMin());
             }
             requestLayout();
         } else if ("MAX".equals(p)) {
             if (showTickMarks && tickLine != null) {
-                tickLine.setUpperBound(getSkinnable().getMax());
+                tickLine.setUpperBound(slider.getMax());
             }
             requestLayout();
         } else if ("SHOW_TICK_MARKS".equals(p) || "SHOW_TICK_LABELS".equals(p)) {
-            setShowTickMarks(getSkinnable().isShowTickMarks(), getSkinnable().isShowTickLabels());
+            setShowTickMarks(slider.isShowTickMarks(), slider.isShowTickLabels());
         }  else if ("MAJOR_TICK_UNIT".equals(p)) {
             if (tickLine != null) {
-                tickLine.setTickUnit(getSkinnable().getMajorTickUnit());
+                tickLine.setTickUnit(slider.getMajorTickUnit());
                 requestLayout();
             }
         } else if ("MINOR_TICK_COUNT".equals(p)) {
             if (tickLine != null) {
-                tickLine.setMinorTickCount(Math.max(getSkinnable().getMinorTickCount(),0) + 1);
+                tickLine.setMinorTickCount(Math.max(slider.getMinorTickCount(),0) + 1);
                 requestLayout();
             }
         } else if ("TICK_LABEL_FORMATTER".equals(p)) {
             if (tickLine != null) {
-                tickLine.setTickLabelFormatter(stringConverterWrapper);
-                tickLine.requestAxisLayout();
+                if (slider.getLabelFormatter() == null) {
+                    tickLine.setTickLabelFormatter(null);
+                } else {
+                    tickLine.setTickLabelFormatter(stringConverterWrapper);
+                    tickLine.requestAxisLayout();
+                }
             }
         }
     }
