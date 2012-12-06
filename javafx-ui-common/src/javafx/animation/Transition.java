@@ -25,6 +25,7 @@
 
 package javafx.animation;
 
+import com.sun.scenario.animation.AbstractMasterTimer;
 import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.SimpleObjectProperty;
 import javafx.scene.Node;
@@ -132,15 +133,6 @@ public abstract class Transition extends Animation {
     }
 
     /**
-     * The parent of this {@code Transition}. If this transition has not been
-     * added to another transition, such as {@link ParallelTransition} and
-     * {@link SequentialTransition}, then parent will be null.
-     * 
-     * @defaultValue null
-     */
-    Transition parent = null;
-
-    /**
      * The constructor of {@code Transition}.
      * 
      * This constructor allows to define a {@link #targetFramerate}.
@@ -158,13 +150,19 @@ public abstract class Transition extends Animation {
     public Transition() {
     }
 
+    // For testing purposes
+    Transition(AbstractMasterTimer timer) {
+        super(timer);
+    }
+
     /**
      * Returns the target {@link Node} for animation of this {@code Transition}.
      * This method returns {@code node} if it is set, else returns its
      * {@code parent.getTargetNode()} otherwise null.
      */
     protected Node getParentTargetNode() {
-        return (parent != null) ? parent.getParentTargetNode() : null;
+        return (parent != null && parent instanceof Transition) ?
+                ((Transition)parent).getParentTargetNode() : null;
     }
 
     /**
@@ -213,6 +211,7 @@ public abstract class Transition extends Animation {
 
     @Override
     void impl_jumpTo(long currentTicks, long cycleTicks, boolean forceJump) {
+        impl_setCurrentTicks(currentTicks);
         if (getStatus() != Status.STOPPED || forceJump) {
             impl_sync(false);
             interpolate(calculateFraction(currentTicks, cycleTicks));
