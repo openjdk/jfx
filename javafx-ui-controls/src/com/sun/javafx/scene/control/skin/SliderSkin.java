@@ -34,6 +34,7 @@ import javafx.scene.control.Slider;
 import javafx.scene.layout.StackPane;
 
 import com.sun.javafx.scene.control.behavior.SliderBehavior;
+import javafx.util.StringConverter;
 
 /**
  * Region/css based skin for Slider
@@ -73,6 +74,7 @@ public class SliderSkin extends BehaviorSkinBase<Slider, SliderBehavior> {
         registerChangeListener(slider.showTickLabelsProperty(), "SHOW_TICK_LABELS");
         registerChangeListener(slider.majorTickUnitProperty(), "MAJOR_TICK_UNIT");
         registerChangeListener(slider.minorTickCountProperty(), "MINOR_TICK_COUNT");
+        registerChangeListener(slider.labelFormatterProperty(), "TICK_LABEL_FORMATTER");
     }
 
     private void initialize() {
@@ -128,6 +130,29 @@ public class SliderSkin extends BehaviorSkinBase<Slider, SliderBehavior> {
         });
     }
 
+    StringConverter<Number> stringConverterWrapper = new StringConverter<Number>() {
+        Slider slider = getSkinnable();
+        
+        @Override public String toString(Number object) {
+            if (slider.getLabelFormatter() == null) {
+                tickLine.setTickLabelFormatter(null);
+                return null;
+            } else {
+                return(object != null) ? slider.getLabelFormatter().toString(object.doubleValue()) :
+                        "";
+            }
+        }
+
+        @Override public Number fromString(String string) {
+            if (slider.getLabelFormatter() == null) {
+                tickLine.setTickLabelFormatter(null);
+                return null;
+            } else {
+                return slider.getLabelFormatter().fromString(string);
+            }
+        }
+    };
+    
      private void setShowTickMarks(boolean ticksVisible, boolean labelsVisible) {
         showTickMarks = (ticksVisible || labelsVisible);
         Slider slider = getSkinnable();
@@ -145,10 +170,7 @@ public class SliderSkin extends BehaviorSkinBase<Slider, SliderBehavior> {
                 // add 1 to the slider minor tick count since the axis draws one
                 // less minor ticks than the number given.
                 tickLine.setMinorTickCount(Math.max(slider.getMinorTickCount(),0) + 1);
-                // TODO change slider API to Integer from Number
-        //            if (slider.getLabelFormatter() != null)
-        //                tickLine.setFormatTickLabel(slider.getLabelFormatter());
-        //            tickLine.dataChanged();
+                tickLine.setTickLabelFormatter(stringConverterWrapper);
                 getChildren().clear();
                 getChildren().addAll(tickLine, track, thumb);
             } else {
@@ -197,6 +219,11 @@ public class SliderSkin extends BehaviorSkinBase<Slider, SliderBehavior> {
                 tickLine.setMinorTickCount(Math.max(getSkinnable().getMinorTickCount(),0) + 1);
                 requestLayout();
             }
+        } else if ("TICK_LABEL_FORMATTER".equals(p)) {
+            if (tickLine != null) {
+                tickLine.setTickLabelFormatter(stringConverterWrapper);
+                tickLine.requestAxisLayout();
+            }
         }
     }
 
@@ -218,7 +245,6 @@ public class SliderSkin extends BehaviorSkinBase<Slider, SliderBehavior> {
     @Override protected void layoutChildren(final double x, final double y,
             final double w, final double h) {
          // calculate the available space
-
         // resize thumb to preferred size
         thumbWidth = thumb.prefWidth(-1);
         thumbHeight = thumb.prefHeight(-1);
