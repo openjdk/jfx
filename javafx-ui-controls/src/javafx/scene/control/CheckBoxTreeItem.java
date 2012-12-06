@@ -196,9 +196,9 @@ public class CheckBoxTreeItem<T> extends TreeItem<T> {
         }
     };
     /** Sets the selected state of this CheckBoxTreeItem. */
-    public final void setSelected(Boolean value) { selectedProperty().setValue(value); }
+    public final void setSelected(boolean value) { selectedProperty().setValue(value); }
     /** Returns the selected state of this CheckBoxTreeItem. */
-    public final Boolean isSelected() { return selected == null ? false : selected.getValue(); }
+    public final boolean isSelected() { return selected == null ? false : selected.getValue(); }
     /** A {@link BooleanProperty} used to represent the selected state of this CheckBoxTreeItem. */
     public final BooleanProperty selectedProperty() { return selected; }
     
@@ -211,9 +211,9 @@ public class CheckBoxTreeItem<T> extends TreeItem<T> {
         }
     };
     /** Sets the indeterminate state of this CheckBoxTreeItem. */
-    public final void setIndeterminate(Boolean value) { indeterminateProperty().setValue(value); }
+    public final void setIndeterminate(boolean value) { indeterminateProperty().setValue(value); }
     /** Returns the indeterminate state of this CheckBoxTreeItem. */
-    public final Boolean isIndeterminate() { return indeterminate == null ? false : indeterminate.getValue(); }
+    public final boolean isIndeterminate() { return indeterminate == null ? false : indeterminate.getValue(); }
     /** A {@link BooleanProperty} used to represent the indeterminate state of this CheckBoxTreeItem. */
     public final BooleanProperty indeterminateProperty() { return indeterminate; }
     
@@ -232,8 +232,8 @@ public class CheckBoxTreeItem<T> extends TreeItem<T> {
      */
     public final BooleanProperty independentProperty() { return independent; }
     private final BooleanProperty independent = new SimpleBooleanProperty(this, "independent", false);
-    public final void setIndependent(Boolean value) { independentProperty().setValue(value); }
-    public final Boolean isIndependent() { return independent == null ? false : independent.getValue(); }
+    public final void setIndependent(boolean value) { independentProperty().setValue(value); }
+    public final boolean isIndependent() { return independent == null ? false : independent.getValue(); }
     
     
     

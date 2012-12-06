@@ -187,6 +187,11 @@ public class TextFieldTreeTableCell<S,T> extends TreeTableCell<S,T> {
             return;
         }
         super.startEdit();
+        
+        if (textField == null) {
+            textField = CellUtils.createTextField(this, getConverter());
+        }
+        
         CellUtils.startEdit(this, textField, getConverter());
     }
 

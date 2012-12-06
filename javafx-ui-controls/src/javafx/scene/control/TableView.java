@@ -1943,7 +1943,7 @@ public class TableView<S> extends Control {
                     @Override protected void invalidated() {
                         if (get() == null) return;
 
-                        if (old == null || (old != null && !old.equals(get()))) {
+                        if (old == null || !old.equals(get())) {
                             setFocusedIndex(get().getRow());
                             setFocusedItem(getModelItem(getValue().getRow()));
                             
@@ -2006,7 +2006,7 @@ public class TableView<S> extends Control {
             if (row < 0 || row >= getItemCount()) return false;
 
             TablePosition cell = getFocusedCell();
-            boolean columnMatch = column == null || (column != null && column.equals(cell.getTableColumn()));
+            boolean columnMatch = column == null || column.equals(cell.getTableColumn());
 
             return cell.getRow() == row && columnMatch;
         }

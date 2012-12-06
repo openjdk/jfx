@@ -414,7 +414,6 @@ public class ChoiceBox<T> extends Control {
          * in a ChoiceBox and select the next valid menuitem.
          */
         @Override public void select(int index) {
-            final int rowCount = getItemCount();
             // this does not sound right, we should let the superclass handle it.
             final T value = getModelItem(index);
             if (value instanceof Separator) {

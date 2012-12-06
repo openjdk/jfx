@@ -87,7 +87,7 @@ abstract class MultipleSelectionModelBase<T> extends MultipleSelectionModel<T> {
             }
 
             @Override public boolean contains(Object o) {
-                if (o instanceof Integer || o instanceof Integer) {
+                if (o instanceof Number) {
                     Number n = (Number) o;
                     int index = n.intValue();
 

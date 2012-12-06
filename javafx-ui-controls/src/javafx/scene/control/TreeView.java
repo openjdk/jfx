@@ -39,7 +39,7 @@ import javafx.event.EventType;
 import javafx.scene.control.TreeItem.TreeModificationEvent;
 import javafx.util.Callback;
 
-import com.sun.javafx.scene.control.WeakEventHandler;
+import javafx.event.WeakEventHandler;
 import com.sun.javafx.scene.control.skin.TreeViewSkin;
 import com.sun.javafx.scene.control.skin.VirtualContainerBase;
 import java.lang.ref.WeakReference;
@@ -348,7 +348,7 @@ public class TreeView<T> extends Control {
 
             TreeItem<T> root = getRoot();
             if (root != null) {
-                weakRootEventListener = new WeakEventHandler(root, TreeItem.<T>treeNotificationEvent(), rootEvent);
+                weakRootEventListener = new WeakEventHandler(rootEvent);
                 getRoot().addEventHandler(TreeItem.<T>treeNotificationEvent(), weakRootEventListener);
                 weakOldItem = new WeakReference<TreeItem<T>>(root);
             }
@@ -902,7 +902,7 @@ public class TreeView<T> extends Control {
             }
             
             if (newRoot != null) {
-                weakTreeItemListener = new WeakEventHandler(newRoot, TreeItem.<T>treeItemCountChangeEvent(), treeItemListener);
+                weakTreeItemListener = new WeakEventHandler(treeItemListener);
                 newRoot.addEventHandler(TreeItem.<T>treeItemCountChangeEvent(), weakTreeItemListener);
             }
         }
@@ -1098,7 +1098,7 @@ public class TreeView<T> extends Control {
             }
             
             if (newRoot != null) {
-                weakTreeItemListener = new WeakEventHandler(newRoot, TreeItem.<T>treeItemCountChangeEvent(), treeItemListener);
+                weakTreeItemListener = new WeakEventHandler(treeItemListener);
                 newRoot.addEventHandler(TreeItem.<T>treeItemCountChangeEvent(), weakTreeItemListener);
             }
         }

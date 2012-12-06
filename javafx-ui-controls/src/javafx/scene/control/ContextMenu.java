@@ -271,6 +271,7 @@ public class ContextMenu extends PopupControl {
         if(isImpl_showRelativeToWindow()) {
             final Scene scene = (anchor == null) ? null : anchor.getScene();
             final Window win = (scene == null) ? null : scene.getWindow();
+            if (win == null) return;
             super.show(win, screenX, screenY);
         } else {
             super.show(anchor, screenX, screenY);

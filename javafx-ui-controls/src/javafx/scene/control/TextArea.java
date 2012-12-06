@@ -271,7 +271,6 @@ public class TextArea extends TextInputControl {
                     }
 
                     // Trailing paragraph is now at the former leading paragraph's index
-                    trailingOffset = leadingOffset;
                     trailingParagraph.insert(0, leadingSegment);
                     fireParagraphListChangeEvent(leadingParagraphIndex, leadingParagraphIndex + 1,
                         Collections.singletonList((CharSequence)leadingParagraph));
