@@ -945,11 +945,9 @@ public class VirtualFlow extends Region {
                 double firstCellOffset = getCellPosition(firstCell);
                 int firstCellIndex = firstCell.getIndex();
 //                setItemCount(cellCount);
-                if (firstCell != null) {
-                    adjustPositionToIndex(firstCellIndex);
-                    double viewportTopToCellTop = -computeOffsetForCell(firstCellIndex);
-                    adjustByPixelAmount(viewportTopToCellTop - firstCellOffset);
-                }
+                adjustPositionToIndex(firstCellIndex);
+                double viewportTopToCellTop = -computeOffsetForCell(firstCellIndex);
+                adjustByPixelAmount(viewportTopToCellTop - firstCellOffset);
             }
 
             // Update the current index
