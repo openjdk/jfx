@@ -38,6 +38,10 @@ import javafx.scene.Node;
 import javafx.util.Duration;
 
 import com.sun.javafx.collections.TrackableObservableList;
+import com.sun.javafx.collections.VetoableListDecorator;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Set;
 import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
 
@@ -161,33 +165,72 @@ public final class ParallelTransition extends Transition {
         return node;
     }
 
-    private final ObservableList<Animation> children = new TrackableObservableList<Animation>() {
+    private final Set<Animation> childrenSet = new HashSet<Animation>();
+
+    private final ObservableList<Animation> children = new VetoableListDecorator<Animation>(new TrackableObservableList<Animation>() {
         @Override
         protected void onChanged(Change<Animation> c) {
-            while(c.next()) {
-            for (final Animation animation : c.getRemoved()) {
-                if (animation instanceof Transition) {
-                    final Transition transition = (Transition) animation;
-                    if (transition.parent == ParallelTransition.this) {
-                        transition.parent = null;
-                    }
+            while (c.next()) {
+                for (final Animation animation : c.getRemoved()) {
+                    animation.parent = null;
+                    animation.rateProperty().removeListener(childrenListener);
+                    animation.totalDurationProperty().removeListener(childrenListener);
+                    animation.delayProperty().removeListener(childrenListener);
                 }
-                animation.rateProperty().removeListener(childrenListener);
-                animation.totalDurationProperty().removeListener(childrenListener);
-                animation.delayProperty().removeListener(childrenListener);
-            }
-            for (final Animation animation : c.getAddedSubList()) {
-                if (animation instanceof Transition) {
-                    ((Transition) animation).parent = ParallelTransition.this;
+                for (final Animation animation : c.getAddedSubList()) {
+                    animation.parent = ParallelTransition.this;
+                    animation.rateProperty().addListener(childrenListener);
+                    animation.totalDurationProperty().addListener(childrenListener);
+                    animation.delayProperty().addListener(childrenListener);
                 }
-                animation.rateProperty().addListener(childrenListener);
-                animation.totalDurationProperty().addListener(childrenListener);
-                animation.delayProperty().addListener(childrenListener);
-            }
             }
             childrenListener.invalidated(children);
         }
+    }) {
+
+        @Override
+        protected void onProposedChange(List<Animation> toBeAdded, int... indexes) {
+            IllegalArgumentException exception = null;
+            for (int i = 0; i < indexes.length; i+=2) {
+                for (int idx = indexes[i]; idx < indexes[i+1]; ++idx) {
+                    childrenSet.remove(children.get(idx));
+                }
+            }
+            for (Animation child : toBeAdded) {
+                if (child == null) {
+                    exception = new IllegalArgumentException("Child cannot be null");
+                    break;
+                }
+                if (!childrenSet.add(child)) {
+                    exception = new IllegalArgumentException("Attempting to add a duplicate to the list of children");
+                    break;
+                }
+                if (checkCycle(child, ParallelTransition.this)) {
+                    exception = new IllegalArgumentException("This change would create cycle");
+                    break;
+                }
+            }
+
+            if (exception != null) {
+                childrenSet.clear();
+                childrenSet.addAll(children);
+                throw exception;
+            }
+        }
+
     };
+
+    private static boolean checkCycle(Animation child, Animation parent) {
+        Animation a = parent;
+        while (a != child) {
+            if (a.parent != null) {
+                a = a.parent;
+            } else {
+                return false;
+            }
+        }
+        return true;
+    }
 
     /**
      * A list of {@link javafx.animation.Animation Animations} that will be
@@ -258,8 +301,8 @@ public final class ParallelTransition extends Transition {
     @Override
     protected Node getParentTargetNode() {
         final Node node = getNode();
-        return (node != null) ? node : (parent != null) ? parent
-                .getParentTargetNode() : null;
+        return (node != null) ? node : (parent != null && parent instanceof Transition) ?
+                ((Transition)parent).getParentTargetNode() : null;
     }
 
     private Duration computeCycleDuration() {
@@ -392,7 +435,7 @@ public final class ParallelTransition extends Transition {
                 if ((newTicks >= delays[i]) && ((oldTicks <= delays[i]) || ((oldTicks < add(delays[i], durations[i])) && (animation.getStatus() == Status.STOPPED)))) {
                     final boolean enteringCycle = oldTicks <= delays[i];
                     if (enteringCycle) {
-                        animation.jumpTo(Duration.ZERO);
+                        animation.clipEnvelope.jumpTo(0);
                     }
                     if (!startChild(animation, i)) {
                         if (enteringCycle) {
@@ -421,7 +464,7 @@ public final class ParallelTransition extends Transition {
                     if ((oldTicks >= add(durations[i], delays[i])) || ((oldTicks >= delays[i]) && (animation.getStatus() == Status.STOPPED))){
                         final boolean enteringCycle = oldTicks >= add(durations[i], delays[i]);
                         if (enteringCycle) {
-                            animation.jumpTo(toDuration(durations[i], rates[i]));
+                            animation.clipEnvelope.jumpTo(Math.round(durations[i] * rates[i]));
                         }
                         if (!startChild(animation, i)) {
                             if (enteringCycle) {
@@ -454,6 +497,7 @@ public final class ParallelTransition extends Transition {
      */
     @Deprecated
     @Override public void impl_jumpTo(long currentTicks, long cycleTicks, boolean forceJump) {
+        impl_setCurrentTicks(currentTicks);
         if (getStatus() == Status.STOPPED && !forceJump) {
             return;
         }
@@ -464,13 +508,13 @@ public final class ParallelTransition extends Transition {
         for (final Animation animation : cachedChildren) {
             if (newTicks <= delays[i]) {
                 offsetTicks[i] = 0;
-                animation.jumpTo(Duration.ZERO);
+                animation.clipEnvelope.jumpTo(0);
                 if ((animation.getStatus() != Status.STOPPED) && (getCurrentRate() < 0)) {
                     animation.impl_finished();
                 }
             } else if (newTicks >= add(durations[i], delays[i])) {
                 offsetTicks[i] = 0;
-                animation.jumpTo(toDuration(durations[i], rates[i]));
+                animation.clipEnvelope.jumpTo(Math.round(durations[i] * rates[i]));
                 if ((animation.getStatus() != Status.STOPPED) && (getCurrentRate() > 0)) {
                     animation.impl_finished();
                 }
@@ -478,7 +522,7 @@ public final class ParallelTransition extends Transition {
                 // TODO: This does probably not work if animation is paused (getCurrentRate() == 0)
                 // TODO: Do I have to use newTicks or currentTicks?
                 offsetTicks[i] += (getCurrentRate() < 0)? sub(add(durations[i], delays[i]), newTicks) : sub(newTicks, delays[i]);
-                animation.jumpTo(toDuration(sub(newTicks, delays[i]), rates[i]));
+                animation.clipEnvelope.jumpTo(Math.round(sub(newTicks, delays[i]) * rates[i]));
             }
             i++;
         }
