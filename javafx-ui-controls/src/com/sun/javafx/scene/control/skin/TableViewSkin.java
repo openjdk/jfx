@@ -42,6 +42,7 @@ import javafx.beans.property.ObjectProperty;
 import javafx.scene.control.ResizeFeaturesBase;
 import javafx.scene.control.TableCell;
 import javafx.scene.control.TableColumnBase;
+import javafx.scene.control.TablePositionBase;
 import javafx.scene.control.TableSelectionModel;
 import javafx.scene.layout.Region;
 
@@ -152,6 +153,11 @@ public class TableViewSkin<T> extends TableViewSkinBase<T, TableView<T>, TableVi
         return tableView.getFocusModel();
     }
 
+    /** {@inheritDoc} */
+    @Override protected TablePositionBase getFocusedCell() {
+        return tableView.getFocusModel().getFocusedCell();
+    }
+    
     /** {@inheritDoc} */
     @Override protected TableSelectionModel getSelectionModel() {
         return tableView.getSelectionModel();

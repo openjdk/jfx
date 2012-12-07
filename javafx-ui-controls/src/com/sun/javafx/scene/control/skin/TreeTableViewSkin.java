@@ -44,6 +44,7 @@ import javafx.scene.Node;
 import javafx.scene.control.ResizeFeaturesBase;
 import javafx.scene.control.SelectionModel;
 import javafx.scene.control.TableColumnBase;
+import javafx.scene.control.TablePositionBase;
 import javafx.scene.control.TableSelectionModel;
 import javafx.scene.control.TableView;
 import javafx.scene.control.TreeItem;
@@ -252,10 +253,13 @@ public class TreeTableViewSkin<S> extends TableViewSkinBase<S, TreeTableView<S>,
     }
 
     /** {@inheritDoc} */
-    @Override protected TableView.TableViewFocusModel getFocusModel() {
-//        return treeTableView.getFocusModel();
-        // TODO enable
-        return null;
+    @Override protected TreeTableView.TreeTableViewFocusModel getFocusModel() {
+        return treeTableView.getFocusModel();
+    }
+    
+    /** {@inheritDoc} */
+    @Override protected TablePositionBase getFocusedCell() {
+        return treeTableView.getFocusModel().getFocusedCell();
     }
 
     /** {@inheritDoc} */

@@ -39,12 +39,6 @@ import javafx.scene.Node;
 import javafx.scene.control.Label;
 import javafx.scene.control.SelectionModel;
 
-// TODO remove references
-import javafx.scene.control.TableColumn;
-import javafx.scene.control.TableRow;
-import javafx.scene.control.TableView;
-import javafx.scene.control.TableView.TableViewFocusModel;
-
 import javafx.scene.layout.Region;
 import javafx.scene.layout.StackPane;
 import javafx.util.Callback;
@@ -55,7 +49,6 @@ import java.util.List;
 import javafx.beans.WeakInvalidationListener;
 import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.ObjectProperty;
-import javafx.beans.value.ObservableObjectValue;
 import javafx.beans.value.WeakChangeListener;
 import javafx.collections.ObservableMap;
 import javafx.geometry.HPos;
@@ -64,13 +57,16 @@ import javafx.scene.control.Control;
 import javafx.scene.control.IndexedCell;
 import javafx.scene.control.ResizeFeaturesBase;
 import javafx.scene.control.TableColumnBase;
+import javafx.scene.control.TableFocusModel;
+import javafx.scene.control.TablePositionBase;
 import javafx.scene.control.TableSelectionModel;
 
 public abstract class TableViewSkinBase<S, C extends Control, B extends BehaviorBase<C>, I extends IndexedCell> extends VirtualContainerBase<C, B, I> {
     
 //    protected abstract void requestControlFocus(); // tableView.requestFocus();
     protected abstract TableSelectionModel getSelectionModel(); // tableView.getSelectionModel()
-    protected abstract TableViewFocusModel getFocusModel(); // tableView.getSelectionModel()
+    protected abstract TableFocusModel getFocusModel(); // tableView.getSelectionModel()
+    protected abstract TablePositionBase getFocusedCell();
     protected abstract ObservableList<? extends TableColumnBase/*<S,?>*/> getVisibleLeafColumns();
     protected abstract int getVisibleLeafIndex(TableColumnBase tc);
     protected abstract TableColumnBase getVisibleLeafColumn(int col);
@@ -334,7 +330,7 @@ public abstract class TableViewSkinBase<S, C extends Control, B extends Behavior
      * if this is a horizontal container, then the scrolling will be to the right.
      */
     public int onScrollPageDown() {
-        TableRow lastVisibleCell = (TableRow) flow.getLastVisibleCellWithinViewPort();
+        IndexedCell lastVisibleCell = flow.getLastVisibleCellWithinViewPort();
         if (lastVisibleCell == null) return -1;
         
         int lastVisibleCellIndex = lastVisibleCell.getIndex();
@@ -348,7 +344,7 @@ public abstract class TableViewSkinBase<S, C extends Control, B extends Behavior
             // if the last visible cell is selected, we want to shift that cell up
             // to be the top-most cell, or at least as far to the top as we can go.
             flow.showAsFirst(lastVisibleCell);
-            lastVisibleCell = (TableRow) flow.getLastVisibleCellWithinViewPort();
+            lastVisibleCell = flow.getLastVisibleCellWithinViewPort();
         } 
 
         int newSelectionIndex = lastVisibleCell.getIndex();
@@ -361,7 +357,7 @@ public abstract class TableViewSkinBase<S, C extends Control, B extends Behavior
      * if this is a horizontal container, then the scrolling will be to the left.
      */
     public int onScrollPageUp() {
-        TableRow firstVisibleCell = (TableRow) flow.getFirstVisibleCellWithinViewPort();
+        IndexedCell firstVisibleCell = flow.getFirstVisibleCellWithinViewPort();
         if (firstVisibleCell == null) return -1;
         
         int firstVisibleCellIndex = firstVisibleCell.getIndex();
@@ -375,7 +371,7 @@ public abstract class TableViewSkinBase<S, C extends Control, B extends Behavior
             // if the first visible cell is selected, we want to shift that cell down
             // to be the bottom-most cell, or at least as far to the bottom as we can go.
             flow.showAsLast(firstVisibleCell);
-            firstVisibleCell = (TableRow) flow.getFirstVisibleCellWithinViewPort();
+            firstVisibleCell = flow.getFirstVisibleCellWithinViewPort();
         } 
 
         int newSelectionIndex = firstVisibleCell.getIndex();
@@ -383,7 +379,7 @@ public abstract class TableViewSkinBase<S, C extends Control, B extends Behavior
         return newSelectionIndex;
     }
     
-     boolean isColumnPartiallyOrFullyVisible(TableColumn col) {
+     boolean isColumnPartiallyOrFullyVisible(TableColumnBase col) {
         if (col == null || !col.isVisible()) return false;
         
         double scrollX = flow.getHbar().getValue(); 
@@ -656,14 +652,14 @@ public abstract class TableViewSkinBase<S, C extends Control, B extends Behavior
     }
 
     protected void onFocusPreviousCell() {
-        TableViewFocusModel fm = getFocusModel();
+        TableFocusModel fm = getFocusModel();
         if (fm == null) return;
 
         flow.show(fm.getFocusedIndex());
     }
 
     protected void onFocusNextCell() {
-        TableViewFocusModel fm = getFocusModel();
+        TableFocusModel fm = getFocusModel();
         if (fm == null) return;
 
         flow.show(fm.getFocusedIndex());
@@ -695,14 +691,14 @@ public abstract class TableViewSkinBase<S, C extends Control, B extends Behavior
     // and the newly selected cell belongs to a column which is not totally
     // visible.
     private void scrollHorizontally() {
-        TableViewFocusModel fm = getFocusModel();
+        TableFocusModel fm = getFocusModel();
         if (fm == null) return;
 
-        TableColumn col = fm.getFocusedCell().getTableColumn();
+        TableColumnBase col = getFocusedCell().getTableColumn();
         scrollHorizontally(col);
     }
     
-    private void scrollHorizontally(TableColumn col) {
+    private void scrollHorizontally(TableColumnBase col) {
         if (col == null || !col.isVisible()) return;
 
         // work out where this column header is, and it's width (start -> end)
@@ -765,7 +761,7 @@ public abstract class TableViewSkinBase<S, C extends Control, B extends Behavior
     }
     
     private boolean isCellFocused(int row) {
-        TableViewFocusModel fm = getFocusModel();
+        TableFocusModel fm = getFocusModel();
         if (fm == null) return false;
 
         int columnCount = getVisibleLeafColumns().size();
