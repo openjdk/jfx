@@ -61,7 +61,7 @@ import javafx.scene.shape.StrokeType;
 
 import com.sun.javafx.css.StyleableBooleanProperty;
 import com.sun.javafx.css.StyleableObjectProperty;
-import com.sun.javafx.css.StyleableProperty;
+import com.sun.javafx.css.StyleablePropertyMetaData;
 import com.sun.javafx.css.converters.BooleanConverter;
 import com.sun.javafx.css.converters.EnumConverter;
 import com.sun.javafx.geom.BaseBounds;
@@ -476,7 +476,7 @@ public class Text extends Shape {
             font = new StyleableObjectProperty<Font>(Font.getDefault()) {
                 @Override public Object getBean() { return Text.this; }
                 @Override public String getName() { return "font"; }
-                @Override public StyleableProperty getStyleableProperty() {
+                @Override public StyleablePropertyMetaData getStyleablePropertyMetaData() {
                     return StyleableProperties.FONT;
                 }
                 @Override public void invalidated() {
@@ -681,7 +681,7 @@ public class Text extends Shape {
                                                (FontSmoothingType.GRAY) {
                 @Override public Object getBean() { return Text.this; }
                 @Override public String getName() { return "fontSmoothingType"; }
-                @Override public StyleableProperty getStyleableProperty() {
+                @Override public StyleablePropertyMetaData getStyleablePropertyMetaData() {
                     return StyleableProperties.FONT_SMOOTHING_TYPE;
                 }
                 @Override public void invalidated() {
@@ -1183,8 +1183,8 @@ public class Text extends Shape {
       */
      private static class StyleableProperties {
 
-         private static final StyleableProperty<Text,Font> FONT =
-            new StyleableProperty.FONT<Text>("-fx-font", Font.getDefault()) {
+         private static final StyleablePropertyMetaData<Text,Font> FONT =
+            new StyleablePropertyMetaData.FONT<Text>("-fx-font", Font.getDefault()) {
 
             @Override
             public boolean isSettable(Text node) {
@@ -1197,8 +1197,8 @@ public class Text extends Shape {
             }
          };
 
-         private static final StyleableProperty<Text,Boolean> UNDERLINE =
-            new StyleableProperty<Text,Boolean>("-fx-underline",
+         private static final StyleablePropertyMetaData<Text,Boolean> UNDERLINE =
+            new StyleablePropertyMetaData<Text,Boolean>("-fx-underline",
                  BooleanConverter.getInstance(), Boolean.FALSE) {
 
             @Override
@@ -1214,8 +1214,8 @@ public class Text extends Shape {
             }
          };
 
-         private static final StyleableProperty<Text,Boolean> STRIKETHROUGH =
-            new StyleableProperty<Text,Boolean>("-fx-strikethrough",
+         private static final StyleablePropertyMetaData<Text,Boolean> STRIKETHROUGH =
+            new StyleablePropertyMetaData<Text,Boolean>("-fx-strikethrough",
                  BooleanConverter.getInstance(), Boolean.FALSE) {
 
             @Override
@@ -1232,8 +1232,8 @@ public class Text extends Shape {
          };
 
          private static final
-             StyleableProperty<Text,TextAlignment> TEXT_ALIGNMENT =
-                 new StyleableProperty<Text,TextAlignment>("-fx-text-alignment",
+             StyleablePropertyMetaData<Text,TextAlignment> TEXT_ALIGNMENT =
+                 new StyleablePropertyMetaData<Text,TextAlignment>("-fx-text-alignment",
                  new EnumConverter<TextAlignment>(TextAlignment.class),
                  TextAlignment.LEFT) {
 
@@ -1250,8 +1250,8 @@ public class Text extends Shape {
             }
          };
 
-         private static final StyleableProperty<Text,VPos> TEXT_ORIGIN =
-                 new StyleableProperty<Text,VPos>("-fx-text-origin",
+         private static final StyleablePropertyMetaData<Text,VPos> TEXT_ORIGIN =
+                 new StyleablePropertyMetaData<Text,VPos>("-fx-text-origin",
                  new EnumConverter<VPos>(VPos.class),
                  VPos.BASELINE) {
 
@@ -1268,9 +1268,9 @@ public class Text extends Shape {
             }
          };
 
-         private static final StyleableProperty<Text,FontSmoothingType>
+         private static final StyleablePropertyMetaData<Text,FontSmoothingType>
              FONT_SMOOTHING_TYPE =
-             new StyleableProperty<Text,FontSmoothingType>(
+             new StyleablePropertyMetaData<Text,FontSmoothingType>(
                  "-fx-font-smoothing-type",
                  new EnumConverter<FontSmoothingType>(FontSmoothingType.class),
                  FontSmoothingType.GRAY) {
@@ -1289,10 +1289,10 @@ public class Text extends Shape {
             }
          };
 
-         private static final List<StyleableProperty> STYLEABLES;
+         private static final List<StyleablePropertyMetaData> STYLEABLES;
          static {
-            final List<StyleableProperty> styleables =
-                new ArrayList<StyleableProperty>(Shape.impl_CSS_STYLEABLES());
+            final List<StyleablePropertyMetaData> styleables =
+                new ArrayList<StyleablePropertyMetaData>(Shape.getClassStyleablePropertyMetaData());
             Collections.addAll(styleables,
                 FONT,
                 UNDERLINE,
@@ -1309,13 +1309,13 @@ public class Text extends Shape {
      * Super-lazy instantiation pattern from Bill Pugh.
      * StyleableProperties is referenced  no earlier
      * (and therefore loaded no earlier by the class loader) than
-     * the moment that  impl_CSS_STYLEABLES() is called.
+     * the moment that  getClassStyleablePropertyMetaData() is called.
      * @treatAsPrivate implementation detail
      * @deprecated This is an internal API that is not intended
      * for use and will be removed in the next version
      */
     @Deprecated
-    public static List<StyleableProperty> impl_CSS_STYLEABLES() {
+    public static List<StyleablePropertyMetaData> getClassStyleablePropertyMetaData() {
         return Text.StyleableProperties.STYLEABLES;
     }
 
@@ -1325,8 +1325,8 @@ public class Text extends Shape {
      * @deprecated This is an experimental API that is not intended for general use and is subject to change in future versions
      */
     @Deprecated
-    public List<StyleableProperty> impl_getStyleableProperties() {
-        return impl_CSS_STYLEABLES();
+    public List<StyleablePropertyMetaData> getStyleablePropertyMetaData() {
+        return getClassStyleablePropertyMetaData();
     }
 
     @SuppressWarnings("deprecation")
@@ -1429,7 +1429,7 @@ public class Text extends Shape {
                 textOrigin = new StyleableObjectProperty<VPos>(DEFAULT_TEXT_ORIGIN) {
                     @Override public Object getBean() { return Text.this; }
                     @Override public String getName() { return "textOrigin"; }
-                    @Override public StyleableProperty getStyleableProperty() {
+                    @Override public StyleablePropertyMetaData getStyleablePropertyMetaData() {
                         return StyleableProperties.TEXT_ORIGIN;
                     }
                     @Override public void invalidated() {
@@ -1470,7 +1470,7 @@ public class Text extends Shape {
                 underline = new StyleableBooleanProperty() {
                     @Override public Object getBean() { return Text.this; }
                     @Override public String getName() { return "underline"; }
-                    @Override public StyleableProperty getStyleableProperty() {
+                    @Override public StyleablePropertyMetaData getStyleablePropertyMetaData() {
                         return StyleableProperties.UNDERLINE;
                     }
                     @Override public void invalidated() {
@@ -1492,7 +1492,7 @@ public class Text extends Shape {
                 strikethrough = new StyleableBooleanProperty() {
                     @Override public Object getBean() { return Text.this; }
                     @Override public String getName() { return "strikethrough"; }
-                    @Override public StyleableProperty getStyleableProperty() {
+                    @Override public StyleablePropertyMetaData getStyleablePropertyMetaData() {
                         return StyleableProperties.STRIKETHROUGH;
                     }
                     @Override public void invalidated() {
@@ -1515,7 +1515,7 @@ public class Text extends Shape {
                     new StyleableObjectProperty<TextAlignment>(DEFAULT_TEXT_ALIGNMENT) {
                     @Override public Object getBean() { return Text.this; }
                     @Override public String getName() { return "textAlignment"; }
-                    @Override public StyleableProperty getStyleableProperty() {
+                    @Override public StyleablePropertyMetaData getStyleablePropertyMetaData() {
                         return StyleableProperties.TEXT_ALIGNMENT;
                     }
                     @Override public void invalidated() {

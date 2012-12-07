@@ -29,7 +29,7 @@ import javafx.beans.value.ObservableValue;
 
 
 public abstract class StyleableBooleanProperty 
-    extends BooleanPropertyBase implements Property<Boolean> {
+    extends BooleanPropertyBase implements StyleableProperty<Boolean> {
 
     /**
      * The constructor of the {@code StyleableBooleanProperty}.
@@ -48,13 +48,13 @@ public abstract class StyleableBooleanProperty
         super(initialValue);
     }
     
-    Stylesheet.Origin origin = null;
+    Origin origin = null;
     
     @Override
-    public Stylesheet.Origin getOrigin() { return origin; }
+    public Origin getOrigin() { return origin; }
     
     @Override
-    public void applyStyle(Stylesheet.Origin origin, Boolean v) {
+    public void applyStyle(Origin origin, Boolean v) {
         // call set here in case it has been overridden in the javafx.beans.property
         set(v.booleanValue());
         this.origin = origin;
@@ -63,12 +63,12 @@ public abstract class StyleableBooleanProperty
     @Override
     public void bind(ObservableValue<? extends Boolean> observable) {
         super.bind(observable);
-        origin = Stylesheet.Origin.USER;
+        origin = Origin.USER;
     }
 
     @Override
     public void set(boolean v) {
         super.set(v);
-        origin = Stylesheet.Origin.USER;
+        origin = Origin.USER;
     }
 }

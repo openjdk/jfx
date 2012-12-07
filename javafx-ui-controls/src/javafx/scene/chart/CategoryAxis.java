@@ -48,7 +48,7 @@ import javafx.util.Duration;
 import com.sun.javafx.charts.ChartLayoutAnimator;
 import com.sun.javafx.css.StyleableBooleanProperty;
 import com.sun.javafx.css.StyleableDoubleProperty;
-import com.sun.javafx.css.StyleableProperty;
+import com.sun.javafx.css.StyleablePropertyMetaData;
 import com.sun.javafx.css.converters.BooleanConverter;
 import com.sun.javafx.css.converters.SizeConverter;
 import java.util.Collections;
@@ -79,7 +79,7 @@ public final class CategoryAxis extends Axis<String> {
             requestAxisLayout();
         }
 
-        @Override public StyleableProperty getStyleableProperty() {
+        @Override public StyleablePropertyMetaData getStyleablePropertyMetaData() {
             return StyleableProperties.START_MARGIN;
         }
         
@@ -104,7 +104,7 @@ public final class CategoryAxis extends Axis<String> {
         }
 
 
-        @Override public StyleableProperty getStyleableProperty() {
+        @Override public StyleablePropertyMetaData getStyleablePropertyMetaData() {
             return StyleableProperties.END_MARGIN;
         }
 
@@ -131,7 +131,7 @@ public final class CategoryAxis extends Axis<String> {
         }
 
 
-        @Override public StyleableProperty getStyleableProperty() {
+        @Override public StyleablePropertyMetaData getStyleablePropertyMetaData() {
             return StyleableProperties.GAP_START_AND_END;
         }
         
@@ -488,8 +488,8 @@ public final class CategoryAxis extends Axis<String> {
 
     /** @treatAsPrivate implementation detail */
     private static class StyleableProperties {
-        private static final StyleableProperty<CategoryAxis,Number> START_MARGIN =
-            new StyleableProperty<CategoryAxis,Number>("-fx-start-margin",
+        private static final StyleablePropertyMetaData<CategoryAxis,Number> START_MARGIN =
+            new StyleablePropertyMetaData<CategoryAxis,Number>("-fx-start-margin",
                 SizeConverter.getInstance(), 5.0) {
 
             @Override
@@ -503,8 +503,8 @@ public final class CategoryAxis extends Axis<String> {
             }
         };
         
-        private static final StyleableProperty<CategoryAxis,Number> END_MARGIN =
-            new StyleableProperty<CategoryAxis,Number>("-fx-end-margin",
+        private static final StyleablePropertyMetaData<CategoryAxis,Number> END_MARGIN =
+            new StyleablePropertyMetaData<CategoryAxis,Number>("-fx-end-margin",
                 SizeConverter.getInstance(), 5.0) {
 
             @Override
@@ -518,8 +518,8 @@ public final class CategoryAxis extends Axis<String> {
             }
         };
         
-        private static final StyleableProperty<CategoryAxis,Boolean> GAP_START_AND_END =
-            new StyleableProperty<CategoryAxis,Boolean>("-fx-gap-start-and-end",
+        private static final StyleablePropertyMetaData<CategoryAxis,Boolean> GAP_START_AND_END =
+            new StyleablePropertyMetaData<CategoryAxis,Boolean>("-fx-gap-start-and-end",
                 BooleanConverter.getInstance(), Boolean.TRUE) {
 
             @Override
@@ -533,10 +533,10 @@ public final class CategoryAxis extends Axis<String> {
             }
         };
 
-        private static final List<StyleableProperty> STYLEABLES;
+        private static final List<StyleablePropertyMetaData> STYLEABLES;
         static {
-        final List<StyleableProperty> styleables =
-            new ArrayList<StyleableProperty>(Axis.impl_CSS_STYLEABLES());
+        final List<StyleablePropertyMetaData> styleables =
+            new ArrayList<StyleablePropertyMetaData>(Axis.getClassStyleablePropertyMetaData());
             Collections.addAll(styleables,
                 START_MARGIN,
                 END_MARGIN,
@@ -551,7 +551,7 @@ public final class CategoryAxis extends Axis<String> {
      * @deprecated This is an internal API that is not intended for use and will be removed in the next version
      */
     @Deprecated
-    public static List<StyleableProperty> impl_CSS_STYLEABLES() {
+    public static List<StyleablePropertyMetaData> getClassStyleablePropertyMetaData() {
         return CategoryAxis.StyleableProperties.STYLEABLES;
     }
 
@@ -561,8 +561,8 @@ public final class CategoryAxis extends Axis<String> {
      * @deprecated This is an experimental API that is not intended for general use and is subject to change in future versions
      */
     @Deprecated
-    public List<StyleableProperty> impl_getStyleableProperties() {
-        return impl_CSS_STYLEABLES();
+    public List<StyleablePropertyMetaData> getStyleablePropertyMetaData() {
+        return getClassStyleablePropertyMetaData();
     }
 
 }

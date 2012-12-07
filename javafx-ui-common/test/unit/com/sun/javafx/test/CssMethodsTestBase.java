@@ -34,7 +34,7 @@ import javafx.scene.Node;
 import org.junit.Test;
 
 import com.sun.javafx.css.StyleConverter;
-import com.sun.javafx.css.StyleableProperty;
+import com.sun.javafx.css.StyleablePropertyMetaData;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -54,7 +54,7 @@ public abstract class CssMethodsTestBase {
     }
     
     @Test
-    public void testStyleablePropertyAndCSSPropertyReferenceEachOther() {
+    public void testCSSPropertyAndCSSPropertyReferenceEachOther() {
         configuration.cssPropertyReferenceIntegrityTest();
     }
     
@@ -115,15 +115,15 @@ public abstract class CssMethodsTestBase {
         return new Object[] { configuration };
     }
     
-    private static StyleableProperty getStyleableProperty(Node node, String cssProperty) {
+    private static StyleablePropertyMetaData getStyleablePropertyMetaData(Node node, String cssProperty) {
         
-        List<StyleableProperty> styleables = StyleableProperty.getStyleables(node);
-        for(StyleableProperty styleable : styleables) {
+        List<StyleablePropertyMetaData> styleables = StyleablePropertyMetaData.getStyleables(node);
+        for(StyleablePropertyMetaData styleable : styleables) {
             if (styleable.getProperty().equals(cssProperty)) {
                 return styleable;
             }
         }
-        fail(node.toString() + ": StyleableProperty" + cssProperty + " not found");
+        fail(node.toString() + ": CSSProperty" + cssProperty + " not found");
         return null;
     }
 
@@ -131,8 +131,8 @@ public abstract class CssMethodsTestBase {
         private static final StyleConverter<String, Object> TEST_TYPE =
                 StyleConverter.getInstance();
 
-        private static final StyleableProperty UNDEFINED_KEY =
-                new StyleableProperty<Node,Object>("U-N-D-E-F-I-N-E-D", TEST_TYPE, "") {
+        private static final StyleablePropertyMetaData UNDEFINED_KEY =
+                new StyleablePropertyMetaData<Node,Object>("U-N-D-E-F-I-N-E-D", TEST_TYPE, "") {
 
             @Override
             public boolean isSettable(Node n) {
@@ -153,7 +153,7 @@ public abstract class CssMethodsTestBase {
         
         private final Object defaultValue;
 
-        private final StyleableProperty cssPropertyKey;
+        private final StyleablePropertyMetaData cssPropertyKey;
 
         private final Object cssPropertyValue;
 
@@ -183,7 +183,7 @@ public abstract class CssMethodsTestBase {
             this(node,
                  propertyName,
                  initialValue,
-                 getStyleableProperty(node, cssPropertyKey),
+                 getStyleablePropertyMetaData(node, cssPropertyKey),
                  cssPropertyValue,
                  finalExpectedValue,
                  ValueComparator.DEFAULT);
@@ -198,7 +198,7 @@ public abstract class CssMethodsTestBase {
             this(node,
                  propertyName,
                  initialValue,
-                 getStyleableProperty(node, cssPropertyKey),
+                 getStyleablePropertyMetaData(node, cssPropertyKey),
                  cssPropertyValue,
                  cssPropertyValue,
                  comparator);
@@ -207,7 +207,7 @@ public abstract class CssMethodsTestBase {
         public Configuration(final Node node,
                              final String propertyName,
                              final Object initialValue,
-                             final StyleableProperty cssPropertyKey,
+                             final StyleablePropertyMetaData cssPropertyKey,
                              final Object cssPropertyValue,
                              final Object expectedFinalValue,
                              final ValueComparator comparator) {
@@ -266,8 +266,8 @@ public abstract class CssMethodsTestBase {
             
             WritableValue writable = cssPropertyKey.getWritableValue(node);
             
-            StyleableProperty styleable = 
-                StyleableProperty.getStyleableProperty(writable);
+            StyleablePropertyMetaData styleable = 
+                StyleablePropertyMetaData.getStyleablePropertyMetaData(writable);
             
             ValueComparator.DEFAULT.assertEquals(cssPropertyKey, styleable);
         }

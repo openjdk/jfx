@@ -61,7 +61,7 @@ import com.sun.javafx.charts.Legend.LegendItem;
 import com.sun.javafx.collections.NonIterableChange;
 import com.sun.javafx.css.StyleableBooleanProperty;
 import com.sun.javafx.css.StyleableDoubleProperty;
-import com.sun.javafx.css.StyleableProperty;
+import com.sun.javafx.css.StyleablePropertyMetaData;
 import com.sun.javafx.css.converters.BooleanConverter;
 import com.sun.javafx.css.converters.SizeConverter;
 import java.util.ArrayList;
@@ -195,7 +195,7 @@ public class PieChart extends Chart {
             return "startAngle";
         }
 
-        public StyleableProperty getStyleableProperty() {
+        public StyleablePropertyMetaData getStyleablePropertyMetaData() {
             return StyleableProperties.START_ANGLE;
         }
     };
@@ -220,7 +220,7 @@ public class PieChart extends Chart {
             return "clockwise";
         }
 
-        public StyleableProperty getStyleableProperty() {
+        public StyleablePropertyMetaData getStyleablePropertyMetaData() {
             return StyleableProperties.CLOCKWISE;
         }
     };
@@ -246,7 +246,7 @@ public class PieChart extends Chart {
             return "labelLineLength";
         }
 
-        public StyleableProperty getStyleableProperty() {
+        public StyleablePropertyMetaData getStyleablePropertyMetaData() {
             return StyleableProperties.LABEL_LINE_LENGTH;
         }
     };
@@ -271,7 +271,7 @@ public class PieChart extends Chart {
             return "labelsVisible";
         }
 
-        public StyleableProperty getStyleableProperty() {
+        public StyleablePropertyMetaData getStyleablePropertyMetaData() {
             return StyleableProperties.LABELS_VISIBLE;
         }
     };
@@ -863,8 +863,8 @@ public class PieChart extends Chart {
       * @treatAsPrivate implementation detail
       */
      private static class StyleableProperties {
-         private static final StyleableProperty<PieChart,Boolean> CLOCKWISE = 
-             new StyleableProperty<PieChart,Boolean>("-fx-clockwise",
+         private static final StyleablePropertyMetaData<PieChart,Boolean> CLOCKWISE = 
+             new StyleablePropertyMetaData<PieChart,Boolean>("-fx-clockwise",
                  BooleanConverter.getInstance(), Boolean.TRUE) {
 
             @Override
@@ -878,8 +878,8 @@ public class PieChart extends Chart {
             }
         };
          
-         private static final StyleableProperty<PieChart,Boolean> LABELS_VISIBLE = 
-             new StyleableProperty<PieChart,Boolean>("-fx-pie-label-visible",
+         private static final StyleablePropertyMetaData<PieChart,Boolean> LABELS_VISIBLE = 
+             new StyleablePropertyMetaData<PieChart,Boolean>("-fx-pie-label-visible",
                  BooleanConverter.getInstance(), Boolean.TRUE) {
 
             @Override
@@ -893,8 +893,8 @@ public class PieChart extends Chart {
             }
         };
          
-         private static final StyleableProperty<PieChart,Number> LABEL_LINE_LENGTH = 
-             new StyleableProperty<PieChart,Number>("-fx-label-line-length",
+         private static final StyleablePropertyMetaData<PieChart,Number> LABEL_LINE_LENGTH = 
+             new StyleablePropertyMetaData<PieChart,Number>("-fx-label-line-length",
                  SizeConverter.getInstance(), 20d) {
 
             @Override
@@ -908,8 +908,8 @@ public class PieChart extends Chart {
             }
         };
          
-         private static final StyleableProperty<PieChart,Number> START_ANGLE = 
-             new StyleableProperty<PieChart,Number>("-fx-start-angle",
+         private static final StyleablePropertyMetaData<PieChart,Number> START_ANGLE = 
+             new StyleablePropertyMetaData<PieChart,Number>("-fx-start-angle",
                  SizeConverter.getInstance(), 0d) {
 
             @Override
@@ -923,11 +923,11 @@ public class PieChart extends Chart {
             }
         };
 
-         private static final List<StyleableProperty> STYLEABLES;
+         private static final List<StyleablePropertyMetaData> STYLEABLES;
          static {
 
-            final List<StyleableProperty> styleables =
-                new ArrayList<StyleableProperty>(Chart.impl_CSS_STYLEABLES());
+            final List<StyleablePropertyMetaData> styleables =
+                new ArrayList<StyleablePropertyMetaData>(Chart.getClassStyleablePropertyMetaData());
             Collections.addAll(styleables,
                 CLOCKWISE,
                 LABELS_VISIBLE,
@@ -943,7 +943,7 @@ public class PieChart extends Chart {
      * @deprecated This is an internal API that is not intended for use and will be removed in the next version
      */
     @Deprecated
-    public static List<StyleableProperty> impl_CSS_STYLEABLES() {
+    public static List<StyleablePropertyMetaData> getClassStyleablePropertyMetaData() {
         return PieChart.StyleableProperties.STYLEABLES;
     }
 
@@ -953,8 +953,8 @@ public class PieChart extends Chart {
      * @deprecated This is an experimental API that is not intended for general use and is subject to change in future versions
      */
     @Deprecated
-    public List<StyleableProperty> impl_getStyleableProperties() {
-        return impl_CSS_STYLEABLES();
+    public List<StyleablePropertyMetaData> getStyleablePropertyMetaData() {
+        return getClassStyleablePropertyMetaData();
     }
 
 }

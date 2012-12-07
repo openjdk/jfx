@@ -31,7 +31,7 @@ import javafx.event.ActionEvent;
 import javafx.scene.Cursor;
 import javafx.scene.Node;
 import com.sun.javafx.css.StyleManager;
-import com.sun.javafx.css.StyleableProperty;
+import com.sun.javafx.css.StyleablePropertyMetaData;
 import com.sun.javafx.scene.control.skin.HyperlinkSkin;
 
 
@@ -87,8 +87,8 @@ public class Hyperlink extends ButtonBase {
         // cursor is styleable through css. Calling setCursor
         // makes it look to css like the user set the value and css will not 
         // override. Initializing cursor by calling set on the 
-        // StyleableProperty ensures that css will be able to override the value.        
-        final StyleableProperty prop = StyleableProperty.getStyleableProperty(cursorProperty());
+        // StyleablePropertyMetaData ensures that css will be able to override the value.        
+        final StyleablePropertyMetaData prop = StyleablePropertyMetaData.getStyleablePropertyMetaData(cursorProperty());
         prop.set(this, Cursor.HAND);
     }
     

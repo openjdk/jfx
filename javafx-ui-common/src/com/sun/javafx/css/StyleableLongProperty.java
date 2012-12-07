@@ -29,7 +29,7 @@ import javafx.beans.value.ObservableValue;
 
 
 public abstract class StyleableLongProperty 
-    extends LongPropertyBase implements Property<Long> {
+    extends LongPropertyBase implements StyleableProperty<Long> {
 
     /**
      * The constructor of the {@code StyleableLongProperty}.
@@ -48,13 +48,13 @@ public abstract class StyleableLongProperty
         super(initialValue);
     }
     
-    Stylesheet.Origin origin = null;
+    Origin origin = null;
     
     @Override
-    public Stylesheet.Origin getOrigin() { return origin; }
+    public Origin getOrigin() { return origin; }
     
     @Override
-    public void applyStyle(Stylesheet.Origin origin, Long v) {
+    public void applyStyle(Origin origin, Long v) {
         setValue(v);
         this.origin = origin;
     }
@@ -62,13 +62,13 @@ public abstract class StyleableLongProperty
     @Override
     public void bind(ObservableValue<? extends Number> observable) {
         super.bind(observable);
-        origin = Stylesheet.Origin.USER;
+        origin = Origin.USER;
     }
 
     @Override
     public void set(long v) {
         super.set(v);
-        origin = Stylesheet.Origin.USER;
+        origin = Origin.USER;
     }
     
 }

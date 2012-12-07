@@ -50,13 +50,6 @@ import javafx.collections.ObservableList;
  */
 public class Stylesheet {
 
-    public enum Origin {
-        USER_AGENT,
-        USER,
-        AUTHOR,
-        INLINE
-    }
-
     private final URL url;
     /** The URL from which the stylesheet was loaded.
      * @return The URL from which the stylesheet was loaded, or null if 

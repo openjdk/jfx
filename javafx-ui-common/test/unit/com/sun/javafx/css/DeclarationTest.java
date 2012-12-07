@@ -56,7 +56,7 @@ public class DeclarationTest {
         
         Stylesheet inlineSS = new Stylesheet() {
             {
-                setOrigin(Stylesheet.Origin.INLINE);
+                setOrigin(Origin.INLINE);
                 
                 DECLS[GI] = new Declaration("-fx-base", new ParsedValue<Color,Color>(Color.GREEN, null), false);
                 DECLS[YI] = new Declaration("-fx-color", new ParsedValue<Color,Color>(Color.YELLOW, null), false);
@@ -70,7 +70,7 @@ public class DeclarationTest {
         
         Stylesheet authorSS_1 = new Stylesheet() {
             {
-                setOrigin(Stylesheet.Origin.AUTHOR);
+                setOrigin(Origin.AUTHOR);
                 
                 DECLS[GA1] = new Declaration("-fx-base", new ParsedValue<Color,Color>(Color.GREEN, null), false);
                 DECLS[YA1] = new Declaration("-fx-color", new ParsedValue<Color,Color>(Color.YELLOW, null), false);
@@ -84,7 +84,7 @@ public class DeclarationTest {
         
         Stylesheet authorSS_2 = new Stylesheet() {
             {
-                setOrigin(Stylesheet.Origin.AUTHOR);
+                setOrigin(Origin.AUTHOR);
                 
                 DECLS[GA2] = new Declaration("-fx-base", new ParsedValue<Color,Color>(Color.GREEN, null), false);
                 DECLS[YA2] = new Declaration("-fx-color", new ParsedValue<Color,Color>(Color.YELLOW, null), false);

@@ -99,8 +99,8 @@ public class ScrollPane extends Control {
         // focusTraversable is styleable through css. Calling setFocusTraversable
         // makes it look to css like the user set the value and css will not 
         // override. Initializing focusTraversable by calling set on the 
-        // StyleableProperty ensures that css will be able to override the value.
-        final StyleableProperty prop = StyleableProperty.getStyleableProperty(focusTraversableProperty());
+        // StyleablePropertyMetaData ensures that css will be able to override the value.
+        final StyleablePropertyMetaData prop = StyleablePropertyMetaData.getStyleablePropertyMetaData(focusTraversableProperty());
         prop.set(this, Boolean.FALSE);            
     }
     /***************************************************************************
@@ -125,7 +125,7 @@ public class ScrollPane extends Control {
             hbarPolicy = new StyleableObjectProperty<ScrollBarPolicy>(ScrollBarPolicy.AS_NEEDED) {
 
                 @Override
-                public StyleableProperty getStyleableProperty() {
+                public StyleablePropertyMetaData getStyleablePropertyMetaData() {
                     return StyleableProperties.HBAR_POLICY;
                 }
 
@@ -159,7 +159,7 @@ public class ScrollPane extends Control {
             vbarPolicy = new StyleableObjectProperty<ScrollBarPolicy>(ScrollBarPolicy.AS_NEEDED) {
 
                 @Override
-                public StyleableProperty getStyleableProperty() {
+                public StyleablePropertyMetaData getStyleablePropertyMetaData() {
                     return StyleableProperties.VBAR_POLICY;
                 }
 
@@ -351,7 +351,7 @@ public class ScrollPane extends Control {
                 }
                 
                 @Override
-                public StyleableProperty getStyleableProperty() {
+                public StyleablePropertyMetaData getStyleablePropertyMetaData() {
                     return StyleableProperties.FIT_TO_WIDTH;
                 }
 
@@ -388,7 +388,7 @@ public class ScrollPane extends Control {
                 }
 
                 @Override
-                public StyleableProperty getStyleableProperty() {
+                public StyleablePropertyMetaData getStyleablePropertyMetaData() {
                     return StyleableProperties.FIT_TO_HEIGHT;
                 }
 
@@ -427,7 +427,7 @@ public class ScrollPane extends Control {
                 }
 
                 @Override
-                public StyleableProperty getStyleableProperty() {
+                public StyleablePropertyMetaData getStyleablePropertyMetaData() {
                     return StyleableProperties.PANNABLE;
                 }
                 
@@ -596,8 +596,8 @@ public class ScrollPane extends Control {
      * @treatAsPrivate
      */
     private static class StyleableProperties {
-        private static final StyleableProperty<ScrollPane,ScrollBarPolicy> HBAR_POLICY =
-            new StyleableProperty<ScrollPane,ScrollBarPolicy>("-fx-hbar-policy",
+        private static final StyleablePropertyMetaData<ScrollPane,ScrollBarPolicy> HBAR_POLICY =
+            new StyleablePropertyMetaData<ScrollPane,ScrollBarPolicy>("-fx-hbar-policy",
                  new EnumConverter<ScrollBarPolicy>(ScrollBarPolicy.class),
                         ScrollBarPolicy.AS_NEEDED){
 
@@ -612,8 +612,8 @@ public class ScrollPane extends Control {
             }
         };
                 
-        private static final StyleableProperty<ScrollPane,ScrollBarPolicy> VBAR_POLICY =
-            new StyleableProperty<ScrollPane,ScrollBarPolicy>("-fx-vbar-policy",
+        private static final StyleablePropertyMetaData<ScrollPane,ScrollBarPolicy> VBAR_POLICY =
+            new StyleablePropertyMetaData<ScrollPane,ScrollBarPolicy>("-fx-vbar-policy",
                 new EnumConverter<ScrollBarPolicy>(ScrollBarPolicy.class),
                         ScrollBarPolicy.AS_NEEDED){
 
@@ -628,8 +628,8 @@ public class ScrollPane extends Control {
             }
         };
                 
-        private static final StyleableProperty<ScrollPane,Boolean> FIT_TO_WIDTH =
-            new StyleableProperty<ScrollPane, Boolean>("-fx-fit-to-width",
+        private static final StyleablePropertyMetaData<ScrollPane,Boolean> FIT_TO_WIDTH =
+            new StyleablePropertyMetaData<ScrollPane, Boolean>("-fx-fit-to-width",
                 BooleanConverter.getInstance(), Boolean.FALSE){
 
             @Override
@@ -643,8 +643,8 @@ public class ScrollPane extends Control {
             }
         };
                 
-        private static final StyleableProperty<ScrollPane,Boolean> FIT_TO_HEIGHT =
-            new StyleableProperty<ScrollPane, Boolean>("-fx-fit-to-height",
+        private static final StyleablePropertyMetaData<ScrollPane,Boolean> FIT_TO_HEIGHT =
+            new StyleablePropertyMetaData<ScrollPane, Boolean>("-fx-fit-to-height",
                 BooleanConverter.getInstance(), Boolean.FALSE){
 
             @Override
@@ -658,8 +658,8 @@ public class ScrollPane extends Control {
             }
         };
                 
-        private static final StyleableProperty<ScrollPane,Boolean> PANNABLE =
-            new StyleableProperty<ScrollPane, Boolean>("-fx-pannable",
+        private static final StyleablePropertyMetaData<ScrollPane,Boolean> PANNABLE =
+            new StyleablePropertyMetaData<ScrollPane, Boolean>("-fx-pannable",
                 BooleanConverter.getInstance(), Boolean.FALSE){
 
             @Override
@@ -673,10 +673,10 @@ public class ScrollPane extends Control {
             }
         };
 
-        private static final List<StyleableProperty> STYLEABLES;
+        private static final List<StyleablePropertyMetaData> STYLEABLES;
         static {
-            final List<StyleableProperty> styleables = 
-                new ArrayList<StyleableProperty>(Control.impl_CSS_STYLEABLES());
+            final List<StyleablePropertyMetaData> styleables = 
+                new ArrayList<StyleablePropertyMetaData>(Control.getClassStyleablePropertyMetaData());
             Collections.addAll(styleables,
                 HBAR_POLICY,
                 VBAR_POLICY,
@@ -693,7 +693,7 @@ public class ScrollPane extends Control {
      * @deprecated This is an internal API that is not intended for use and will be removed in the next version
      */
     @Deprecated
-    public static List<StyleableProperty> impl_CSS_STYLEABLES() {
+    public static List<StyleablePropertyMetaData> getClassStyleablePropertyMetaData() {
         return ScrollPane.StyleableProperties.STYLEABLES;
     }
 
@@ -703,8 +703,8 @@ public class ScrollPane extends Control {
      * @deprecated This is an experimental API that is not intended for general use and is subject to change in future versions
      */
     @Deprecated
-    @Override protected List<StyleableProperty> impl_getControlStyleableProperties() {
-        return impl_CSS_STYLEABLES();
+    @Override protected List<StyleablePropertyMetaData> impl_getControlStyleableProperties() {
+        return getClassStyleablePropertyMetaData();
     }
 
     private static final long PANNABLE_PSEUDOCLASS_STATE =

@@ -68,7 +68,7 @@ import javafx.scene.layout.VBox;
 import javafx.scene.shape.Rectangle;
 import javafx.util.Duration;
 
-import com.sun.javafx.css.StyleableProperty;
+import com.sun.javafx.css.StyleablePropertyMetaData;
 import com.sun.javafx.css.StyleManager;
 import java.util.Iterator;
 import javafx.geometry.NodeOrientation;
@@ -891,19 +891,19 @@ public class ContextMenuContent extends Region {
      /** @treatAsPrivate */
     private static class StyleableProperties {
 
-        private static final List<StyleableProperty> STYLEABLES;
+        private static final List<StyleablePropertyMetaData> STYLEABLES;
         static {
 
-            final List<StyleableProperty> styleables =
-                new ArrayList<StyleableProperty>(Region.impl_CSS_STYLEABLES());
+            final List<StyleablePropertyMetaData> styleables =
+                new ArrayList<StyleablePropertyMetaData>(Region.getClassStyleablePropertyMetaData());
 
             //
             // SkinBase only has Region's unique StlyleableProperty's, none of Nodes
             // So, we need to add effect back in. The effect property is in a
             // private inner class, so get the property from Node the hard way.
-            final List<StyleableProperty> nodeStyleables = Node.impl_CSS_STYLEABLES();
+            final List<StyleablePropertyMetaData> nodeStyleables = Node.getClassStyleablePropertyMetaData();
             for(int n=0, max=nodeStyleables.size(); n<max; n++) {
-                StyleableProperty styleable = nodeStyleables.get(n);
+                StyleablePropertyMetaData styleable = nodeStyleables.get(n);
                 if ("effect".equals(styleable.getProperty())) {
                     styleables.add(styleable);
                     break;
@@ -918,7 +918,7 @@ public class ContextMenuContent extends Region {
      * @deprecated This is an internal API that is not intended for use and will be removed in the next version
      */
     @Deprecated
-    public static List<StyleableProperty> impl_CSS_STYLEABLES() {
+    public static List<StyleablePropertyMetaData> getClassStyleablePropertyMetaData() {
         return StyleableProperties.STYLEABLES;
     }
 
@@ -928,8 +928,8 @@ public class ContextMenuContent extends Region {
      * @deprecated This is an experimental API that is not intended for general use and is subject to change in future versions
      */
     @Deprecated
-    public List<StyleableProperty> impl_getStyleableProperties() {
-        return impl_CSS_STYLEABLES();
+    public List<StyleablePropertyMetaData> getStyleablePropertyMetaData() {
+        return getClassStyleablePropertyMetaData();
     }
 
     

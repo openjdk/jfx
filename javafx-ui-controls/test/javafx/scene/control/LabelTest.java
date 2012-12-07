@@ -3,7 +3,7 @@
  */
 package javafx.scene.control;
 
-import com.sun.javafx.css.StyleableProperty;
+import com.sun.javafx.css.StyleablePropertyMetaData;
 import static javafx.scene.control.ControlTestUtils.*;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
@@ -122,7 +122,7 @@ public class LabelTest {
     }
     
     @Test public void impl_cssSettable_AlwaysReturnsFalseForLabelFor() {
-        StyleableProperty styleable = StyleableProperty.getStyleableProperty(label.labelForProperty());
+        StyleablePropertyMetaData styleable = StyleablePropertyMetaData.getStyleablePropertyMetaData(label.labelForProperty());
         assertNull(styleable);
     }
     

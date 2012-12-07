@@ -80,7 +80,7 @@ import java.util.List;
 import com.sun.javafx.PlatformUtil;
 import com.sun.javafx.css.StyleableBooleanProperty;
 import com.sun.javafx.css.StyleableObjectProperty;
-import com.sun.javafx.css.StyleableProperty;
+import com.sun.javafx.css.StyleablePropertyMetaData;
 import com.sun.javafx.css.converters.BooleanConverter;
 import com.sun.javafx.css.converters.PaintConverter;
 import com.sun.javafx.scene.control.behavior.TextInputControlBehavior;
@@ -113,7 +113,7 @@ public abstract class TextInputControlSkin<T extends TextInputControl, B extends
         }
 
         @Override
-        public StyleableProperty getStyleableProperty() {
+        public StyleablePropertyMetaData getStyleablePropertyMetaData() {
             return StyleableProperties.FONT;
         }
     };
@@ -142,7 +142,7 @@ public abstract class TextInputControlSkin<T extends TextInputControl, B extends
         }
 
         @Override
-        public StyleableProperty getStyleableProperty() {
+        public StyleablePropertyMetaData getStyleablePropertyMetaData() {
             return StyleableProperties.TEXT_FILL;
         }
     };
@@ -160,7 +160,7 @@ public abstract class TextInputControlSkin<T extends TextInputControl, B extends
         }
 
         @Override
-        public StyleableProperty getStyleableProperty() {
+        public StyleablePropertyMetaData getStyleablePropertyMetaData() {
             return StyleableProperties.PROMPT_TEXT_FILL;
         }
     };
@@ -181,7 +181,7 @@ public abstract class TextInputControlSkin<T extends TextInputControl, B extends
         }
 
         @Override
-        public StyleableProperty getStyleableProperty() {
+        public StyleablePropertyMetaData getStyleablePropertyMetaData() {
             return StyleableProperties.HIGHLIGHT_FILL;
         }
     };
@@ -199,7 +199,7 @@ public abstract class TextInputControlSkin<T extends TextInputControl, B extends
         }
 
         @Override
-        public StyleableProperty getStyleableProperty() {
+        public StyleablePropertyMetaData getStyleablePropertyMetaData() {
             return StyleableProperties.HIGHLIGHT_TEXT_FILL;
         }
     };
@@ -217,7 +217,7 @@ public abstract class TextInputControlSkin<T extends TextInputControl, B extends
         }
 
         @Override
-        public StyleableProperty getStyleableProperty() {
+        public StyleablePropertyMetaData getStyleablePropertyMetaData() {
             return StyleableProperties.DISPLAY_CARET;
         }
     };
@@ -668,8 +668,8 @@ public abstract class TextInputControlSkin<T extends TextInputControl, B extends
     }
 
     private static class StyleableProperties {
-        private static final StyleableProperty<TextInputControl,Font> FONT =
-           new StyleableProperty.FONT<TextInputControl>("-fx-font", Font.getDefault()) {
+        private static final StyleablePropertyMetaData<TextInputControl,Font> FONT =
+           new StyleablePropertyMetaData.FONT<TextInputControl>("-fx-font", Font.getDefault()) {
 
             @Override
             public boolean isSettable(TextInputControl n) {
@@ -684,8 +684,8 @@ public abstract class TextInputControlSkin<T extends TextInputControl, B extends
             }
         };
         
-        private static final StyleableProperty<TextInputControl,Paint> TEXT_FILL =
-            new StyleableProperty<TextInputControl,Paint>("-fx-text-fill",
+        private static final StyleablePropertyMetaData<TextInputControl,Paint> TEXT_FILL =
+            new StyleablePropertyMetaData<TextInputControl,Paint>("-fx-text-fill",
                 PaintConverter.getInstance(), Color.BLACK) {
 
             @Override
@@ -701,8 +701,8 @@ public abstract class TextInputControlSkin<T extends TextInputControl, B extends
             }
         };
        
-        private static final StyleableProperty<TextInputControl,Paint> PROMPT_TEXT_FILL =
-            new StyleableProperty<TextInputControl,Paint>("-fx-prompt-text-fill",
+        private static final StyleablePropertyMetaData<TextInputControl,Paint> PROMPT_TEXT_FILL =
+            new StyleablePropertyMetaData<TextInputControl,Paint>("-fx-prompt-text-fill",
                 PaintConverter.getInstance(), Color.GRAY) {
 
             @Override
@@ -718,8 +718,8 @@ public abstract class TextInputControlSkin<T extends TextInputControl, B extends
             }
         };
         
-        private static final StyleableProperty<TextInputControl,Paint> HIGHLIGHT_FILL =
-            new StyleableProperty<TextInputControl,Paint>("-fx-highlight-fill",
+        private static final StyleablePropertyMetaData<TextInputControl,Paint> HIGHLIGHT_FILL =
+            new StyleablePropertyMetaData<TextInputControl,Paint>("-fx-highlight-fill",
                 PaintConverter.getInstance(), Color.DODGERBLUE) {
 
             @Override
@@ -735,8 +735,8 @@ public abstract class TextInputControlSkin<T extends TextInputControl, B extends
             }
         };
         
-        private static final StyleableProperty<TextInputControl,Paint> HIGHLIGHT_TEXT_FILL =
-            new StyleableProperty<TextInputControl,Paint>("-fx-highlight-text-fill",
+        private static final StyleablePropertyMetaData<TextInputControl,Paint> HIGHLIGHT_TEXT_FILL =
+            new StyleablePropertyMetaData<TextInputControl,Paint>("-fx-highlight-text-fill",
                 PaintConverter.getInstance(), Color.WHITE) {
 
             @Override
@@ -752,8 +752,8 @@ public abstract class TextInputControlSkin<T extends TextInputControl, B extends
             }
         };
         
-        private static final StyleableProperty<TextInputControl,Boolean> DISPLAY_CARET =
-            new StyleableProperty<TextInputControl,Boolean>("-fx-display-caret",
+        private static final StyleablePropertyMetaData<TextInputControl,Boolean> DISPLAY_CARET =
+            new StyleablePropertyMetaData<TextInputControl,Boolean>("-fx-display-caret",
                 BooleanConverter.getInstance(), Boolean.TRUE) {
 
             @Override
@@ -769,9 +769,9 @@ public abstract class TextInputControlSkin<T extends TextInputControl, B extends
             }
         };
 
-        private static final List<StyleableProperty> STYLEABLES;
+        private static final List<StyleablePropertyMetaData> STYLEABLES;
         static {
-            List<StyleableProperty> styleables = new ArrayList<StyleableProperty>(SkinBase.impl_CSS_STYLEABLES());
+            List<StyleablePropertyMetaData> styleables = new ArrayList<StyleablePropertyMetaData>(SkinBase.getClassStyleablePropertyMetaData());
             Collections.addAll(styleables,
                 FONT,
                 TEXT_FILL,
@@ -790,7 +790,7 @@ public abstract class TextInputControlSkin<T extends TextInputControl, B extends
      * @deprecated This is an internal API that is not intended for use and will be removed in the next version
      */
     @Deprecated
-     public static List<StyleableProperty> impl_CSS_STYLEABLES() {
+     public static List<StyleablePropertyMetaData> getClassStyleablePropertyMetaData() {
          return StyleableProperties.STYLEABLES;
      }
 
@@ -800,8 +800,8 @@ public abstract class TextInputControlSkin<T extends TextInputControl, B extends
      * @deprecated This is an experimental API that is not intended for general use and is subject to change in future versions
      */
     @Deprecated
-    public List<StyleableProperty> impl_getStyleableProperties() {
-        return impl_CSS_STYLEABLES();
+    public List<StyleablePropertyMetaData> getStyleablePropertyMetaData() {
+        return getClassStyleablePropertyMetaData();
     }
 
 }

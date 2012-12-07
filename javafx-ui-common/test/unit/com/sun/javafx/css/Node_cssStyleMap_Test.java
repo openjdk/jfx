@@ -128,7 +128,7 @@ public class Node_cssStyleMap_Test {
         Rule rule = new Rule(selsNoState, declsNoState);        
         
         Stylesheet stylesheet = new Stylesheet();
-        stylesheet.setOrigin(Stylesheet.Origin.USER_AGENT);
+        stylesheet.setOrigin(Origin.USER_AGENT);
         stylesheet.getRules().add(rule);
         
         final List<Declaration> declsDisabledState = new ArrayList<Declaration>();
@@ -231,7 +231,7 @@ public class Node_cssStyleMap_Test {
         Rule rootRule = new Rule(rootSels, rootDecls);        
         
         Stylesheet stylesheet = new Stylesheet();
-        stylesheet.setOrigin(Stylesheet.Origin.USER_AGENT);
+        stylesheet.setOrigin(Origin.USER_AGENT);
         stylesheet.getRules().add(rootRule);
 
         final List<CascadingStyle> rootStyles = createStyleList(rootDecls);

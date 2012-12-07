@@ -934,7 +934,7 @@ final public class StyleManager {
         stylesheetContainerMap.put(fname, container);
         
         if (ua_stylesheet != null) {
-            ua_stylesheet.setOrigin(Stylesheet.Origin.USER_AGENT);
+            ua_stylesheet.setOrigin(Origin.USER_AGENT);
             userAgentStylesheetsChanged();
         }
 
@@ -991,7 +991,7 @@ final public class StyleManager {
         stylesheetContainerMap.put(fname, container);
         
         if (ua_stylesheet != null) {
-            ua_stylesheet.setOrigin(Stylesheet.Origin.USER_AGENT);
+            ua_stylesheet.setOrigin(Origin.USER_AGENT);
             userAgentStylesheetsChanged();
         }
 
@@ -1033,7 +1033,7 @@ final public class StyleManager {
         StylesheetContainer container = new StylesheetContainer(fname, stylesheet);
         stylesheetContainerMap.put(fname, container);
 
-        stylesheet.setOrigin(Stylesheet.Origin.USER_AGENT);
+        stylesheet.setOrigin(Origin.USER_AGENT);
         userAgentStylesheetsChanged();
     }
 

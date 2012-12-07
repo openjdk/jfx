@@ -29,7 +29,7 @@ import javafx.beans.value.ObservableValue;
 
 
 public abstract class StyleableStringProperty 
-    extends StringPropertyBase implements Property<String> {
+    extends StringPropertyBase implements StyleableProperty<String> {
 
     /**
      * The constructor of the {@code StyleableStringProperty}.
@@ -48,13 +48,13 @@ public abstract class StyleableStringProperty
         super(initialValue);
     }
     
-    Stylesheet.Origin origin = null;
+    Origin origin = null;
     
     @Override
-    public Stylesheet.Origin getOrigin() { return origin; }
+    public Origin getOrigin() { return origin; }
     
     @Override
-    public void applyStyle(Stylesheet.Origin origin, String v) {
+    public void applyStyle(Origin origin, String v) {
         // call set here in case the set method is overriden
         set(v);
         this.origin = origin;
@@ -63,13 +63,13 @@ public abstract class StyleableStringProperty
     @Override
     public void bind(ObservableValue<? extends String> observable) {
         super.bind(observable);
-        origin = Stylesheet.Origin.USER;
+        origin = Origin.USER;
     }
 
     @Override
     public void set(String v) {
         super.set(v);
-        origin = Stylesheet.Origin.USER;
+        origin = Origin.USER;
     }
 
 }

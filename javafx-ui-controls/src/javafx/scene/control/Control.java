@@ -86,7 +86,7 @@ public abstract class Control extends Region implements Skinnable {
      *                                                                         *
      **************************************************************************/  
     
-    private List<StyleableProperty> styleableProperties;
+    private List<StyleablePropertyMetaData> styleableProperties;
 
     /**
      * A private reference directly to the SkinBase instance that is used as the
@@ -236,7 +236,7 @@ public abstract class Control extends Region implements Skinnable {
             // calling impl_reapplyCSS() as the styleable properties may now
             // be different, as we will now be able to return styleable properties 
             // belonging to the skin. If impl_reapplyCSS() is not called, the 
-            // impl_getStyleableProperties() method is never called, so the 
+            // getStyleablePropertyMetaData() method is never called, so the 
             // skin properties are never exposed.
             impl_reapplyCSS();
 
@@ -248,7 +248,7 @@ public abstract class Control extends Region implements Skinnable {
         }
 
         @Override 
-        public StyleableProperty getStyleableProperty() {
+        public StyleablePropertyMetaData getStyleablePropertyMetaData() {
             return StyleableProperties.SKIN;
         }
         
@@ -342,8 +342,8 @@ public abstract class Control extends Region implements Skinnable {
         // focusTraversable is styleable through css. Calling setFocusTraversable
         // makes it look to css like the user set the value and css will not 
         // override. Initializing focusTraversable by calling set on the 
-        // StyleableProperty ensures that css will be able to override the value.        
-        final StyleableProperty prop = StyleableProperty.getStyleableProperty(focusTraversableProperty());
+        // StyleablePropertyMetaData ensures that css will be able to override the value.        
+        final StyleablePropertyMetaData prop = StyleablePropertyMetaData.getStyleablePropertyMetaData(focusTraversableProperty());
         prop.set(this, Boolean.TRUE);  
         
         // we add a listener for menu request events to show the context menu
@@ -608,7 +608,7 @@ public abstract class Control extends Region implements Skinnable {
                 }
 
                 @Override
-                public StyleableProperty getStyleableProperty() {
+                public StyleablePropertyMetaData getStyleablePropertyMetaData() {
                     return StyleableProperties.SKIN;
                 }
                 
@@ -699,8 +699,8 @@ public abstract class Control extends Region implements Skinnable {
     }
 
     private static class StyleableProperties {
-        private static final StyleableProperty<Control,String> SKIN = 
-            new StyleableProperty<Control,String>("-fx-skin",
+        private static final StyleablePropertyMetaData<Control,String> SKIN = 
+            new StyleablePropertyMetaData<Control,String>("-fx-skin",
                 StringConverter.getInstance()) {
 
             @Override
@@ -714,10 +714,10 @@ public abstract class Control extends Region implements Skinnable {
             }
         };
 
-        private static final List<StyleableProperty> STYLEABLES;
+        private static final List<StyleablePropertyMetaData> STYLEABLES;
         static {
-            final List<StyleableProperty> styleables =
-                new ArrayList<StyleableProperty>(Region.impl_CSS_STYLEABLES());
+            final List<StyleablePropertyMetaData> styleables =
+                new ArrayList<StyleablePropertyMetaData>(Region.getClassStyleablePropertyMetaData());
             Collections.addAll(styleables,
                 SKIN
             );
@@ -730,7 +730,7 @@ public abstract class Control extends Region implements Skinnable {
      * @deprecated This is an internal API that is not intended for use and will be removed in the next version
      */
     @Deprecated
-    public static List<StyleableProperty> impl_CSS_STYLEABLES() {
+    public static List<StyleablePropertyMetaData> getClassStyleablePropertyMetaData() {
         return Control.StyleableProperties.STYLEABLES;
     }
     
@@ -739,8 +739,8 @@ public abstract class Control extends Region implements Skinnable {
      * @deprecated This is an experimental API that is not intended for general use and is subject to change in future versions
      */
     @Deprecated
-    protected List<StyleableProperty> impl_getControlStyleableProperties() {
-        return impl_CSS_STYLEABLES();
+    protected List<StyleablePropertyMetaData> impl_getControlStyleableProperties() {
+        return getClassStyleablePropertyMetaData();
     }
 
     /**
@@ -749,13 +749,13 @@ public abstract class Control extends Region implements Skinnable {
      * @deprecated This is an experimental API that is not intended for general use and is subject to change in future versions
      */
     @Deprecated
-    public List<StyleableProperty> impl_getStyleableProperties() {
+    public List<StyleablePropertyMetaData> getStyleablePropertyMetaData() {
         if (styleableProperties == null) {
-            styleableProperties = new ArrayList<StyleableProperty>();
+            styleableProperties = new ArrayList<StyleablePropertyMetaData>();
             styleableProperties.addAll(impl_getControlStyleableProperties());
             
             if (skinBase != null) {
-                styleableProperties.addAll(skinBase.impl_getStyleableProperties());
+                styleableProperties.addAll(skinBase.getStyleablePropertyMetaData());
             }
         }
         return styleableProperties;

@@ -29,7 +29,7 @@ import javafx.beans.value.ObservableValue;
 
 
 public abstract class StyleableFloatProperty 
-    extends FloatPropertyBase implements Property<Float> {
+    extends FloatPropertyBase implements StyleableProperty<Float> {
 
     /**
      * The constructor of the {@code StyleableFloatProperty}.
@@ -48,13 +48,13 @@ public abstract class StyleableFloatProperty
         super(initialValue);
     }
     
-    Stylesheet.Origin origin = null;
+    Origin origin = null;
     
     @Override
-    public Stylesheet.Origin getOrigin() { return origin; }
+    public Origin getOrigin() { return origin; }
     
     @Override
-    public void applyStyle(Stylesheet.Origin origin, Float v) {
+    public void applyStyle(Origin origin, Float v) {
         setValue(v);
         this.origin = origin;
     }
@@ -62,13 +62,13 @@ public abstract class StyleableFloatProperty
     @Override
     public void bind(ObservableValue<? extends Number> observable) {
         super.bind(observable);
-        origin = Stylesheet.Origin.USER;
+        origin = Origin.USER;
     }
 
     @Override
     public void set(float v) {
         super.set(v);
-        origin = Stylesheet.Origin.USER;
+        origin = Origin.USER;
     }
     
 }

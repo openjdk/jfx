@@ -40,7 +40,7 @@ import javafx.scene.text.FontPosture;
 import javafx.scene.text.FontWeight;
 import com.sun.javafx.Logging;
 import com.sun.javafx.Utils;
-import com.sun.javafx.css.Stylesheet.Origin;
+import com.sun.javafx.css.Origin;
 import com.sun.javafx.css.converters.FontConverter;
 import com.sun.javafx.css.parser.CSSParser;
 import com.sun.javafx.logging.PlatformLogger;
@@ -86,7 +86,7 @@ final public class StyleHelper {
         // exception:
         //
         // java.lang.ClassCastException: javafx.scene.control.PopupControl$CSSBridge cannot be cast to javafx.scene.control.Tooltip$CSSBridge
-        // at javafx.scene.control.Tooltip$StyleableProperties$1.getWritableValue(Tooltip.java:322)
+        // at javafx.scene.control.Tooltip$CSSProperties$1.getWritableValue(Tooltip.java:322)
         // at com.sun.javafx.css.StyleHelper.<init>(StyleHelper.java:99)
         // at javafx.scene.Node.<init>(Node.java:2183)
         // at javafx.scene.Parent.<init>(Parent.java:1206)
@@ -96,13 +96,13 @@ final public class StyleHelper {
         // at javafx.scene.control.Tooltip.<init>(Tooltip.java:143)
         // at helloworld.HelloTooltip.start(HelloTooltip.java:32)    
         //
-        StyleableProperty styleableFontProperty = null;
-        StyleableProperty styleableThatInherits = null;
+        StyleablePropertyMetaData styleableFontProperty = null;
+        StyleablePropertyMetaData styleableThatInherits = null;
         
-        final List<StyleableProperty> props = node.impl_getStyleableProperties();
+        final List<StyleablePropertyMetaData> props = node.getStyleablePropertyMetaData();
         final int pMax = props != null ? props.size() : 0;
         for (int p=0; p<pMax; p++) {
-            final StyleableProperty prop = props.get(p);
+            final StyleablePropertyMetaData prop = props.get(p);
             
             if (styleableFontProperty == null && "-fx-font".equals(prop.getProperty())) {                
                 styleableFontProperty = prop;
@@ -584,7 +584,7 @@ final public class StyleHelper {
     }
     
     /**
-     * A map from Property Name (String) => List of Styles. This shortens
+     * A map from StyleableProperty Name (String) => List of Styles. This shortens
      * the lookup time for each property. The smap is shared and is owned
      * by the StyleManager Cache.
      */
@@ -640,8 +640,8 @@ final public class StyleHelper {
      * Map&lt;WritableValue&gt;, List&lt;Style&gt;. 
      * See handleNoStyleFound
      */
-    private static final Map<StyleableProperty,Style> stylesFromDefaults = 
-            new HashMap<StyleableProperty,Style>();
+    private static final Map<StyleablePropertyMetaData,Style> stylesFromDefaults = 
+            new HashMap<StyleablePropertyMetaData,Style>();
     
     /**
      * The List to which Declarations fabricated from StyleablePropeerty 
@@ -936,7 +936,7 @@ final public class StyleHelper {
 //                inlineStyles == null;
         } 
         
-        final List<StyleableProperty> styleables = StyleableProperty.getStyleables(node);
+        final List<StyleablePropertyMetaData> styleables = StyleablePropertyMetaData.getStyleables(node);
         
         // Used in the for loop below, and a convenient place to stop when debugging.
         final int max = styleables.size();
@@ -948,7 +948,7 @@ final public class StyleHelper {
         // transition to that value.
         for(int n=0; n<max; n++) {
 
-            final StyleableProperty styleable = styleables.get(n);
+            final StyleablePropertyMetaData styleable = styleables.get(n);
             
             if (styleMap != null) {
                 WritableValue writable = styleable.getWritableValue(node);
@@ -1130,7 +1130,7 @@ final public class StyleHelper {
      * @param font
      * @return
      */
-    private CalculatedValue lookup(Node node, StyleableProperty styleable, 
+    private CalculatedValue lookup(Node node, StyleablePropertyMetaData styleable, 
             boolean isUserSet, long states,
             Map<String,CascadingStyle> userStyles, Node originatingNode, 
             CacheEntry cacheEntry, List<Style> styleList) {
@@ -1150,7 +1150,7 @@ final public class StyleHelper {
         // are no matching styles for this property. We will then either SKIP
         // or we will INHERIT. We will inspect the default value for the styleable,
         // and if it is INHERIT then we will inherit otherwise we just skip it.
-        final List<StyleableProperty> subProperties = styleable.getSubProperties();
+        final List<StyleablePropertyMetaData> subProperties = styleable.getSubProperties();
         final int numSubProperties = (subProperties != null) ? subProperties.size() : 0;
         final StyleConverter keyType = styleable.getConverter();
         if (style == null) {
@@ -1173,19 +1173,19 @@ final public class StyleHelper {
                 // Build up a list of all SubProperties which have a constituent part.
                 // I default the array to be the size of the number of total
                 // sub styleables to avoid having the array grow.
-                Map<StyleableProperty,Object> subs = null;
+                Map<StyleablePropertyMetaData,Object> subs = null;
                 Origin origin = null;
                 
                 boolean isRelative = false;
                 
                 for (int i=0; i<numSubProperties; i++) {
-                    StyleableProperty subkey = subProperties.get(i);
+                    StyleablePropertyMetaData subkey = subProperties.get(i);
                     CalculatedValue constituent = 
                         lookup(node, subkey, isUserSet, states, userStyles, 
                             originatingNode, cacheEntry, styleList);
                     if (constituent != SKIP) {
                         if (subs == null) {
-                            subs = new HashMap<StyleableProperty,Object>();
+                            subs = new HashMap<StyleablePropertyMetaData,Object>();
                         }
                         subs.put(subkey, constituent.value);
 
@@ -1264,7 +1264,7 @@ final public class StyleHelper {
     /**
      * Called when there is no style found.
      */
-    private CalculatedValue handleNoStyleFound(Node node, StyleableProperty styleable,
+    private CalculatedValue handleNoStyleFound(Node node, StyleablePropertyMetaData styleable,
             boolean isUserSet, Map<String,CascadingStyle> userStyles, 
             Node originatingNode, CacheEntry cacheEntry, List<Style> styleList) {
 
@@ -1335,7 +1335,7 @@ final public class StyleHelper {
     /**
      * Called when we must inherit a value from a parent node in the scenegraph.
      */
-    private CalculatedValue inherit(Node node, StyleableProperty styleable,
+    private CalculatedValue inherit(Node node, StyleablePropertyMetaData styleable,
             Map<String,CascadingStyle> userStyles, 
             Node originatingNode, CacheEntry cacheEntry, List<Style> styleList) {
         
@@ -1511,7 +1511,7 @@ final public class StyleHelper {
         return null;
     }
     
-    private String formatUnresolvedLookupMessage(Node node, StyleableProperty styleable, Style style, ParsedValue resolved) {
+    private String formatUnresolvedLookupMessage(Node node, StyleablePropertyMetaData styleable, Style style, ParsedValue resolved) {
         
         // find value that could not be looked up
         String missingLookup = resolved != null ? getUnresolvedLookup(resolved) : null;
@@ -1540,7 +1540,7 @@ final public class StyleHelper {
         return sbuf.toString();
     }
 
-    private String formatExceptionMessage(Node node, StyleableProperty styleable, Style style, Exception e) {
+    private String formatExceptionMessage(Node node, StyleablePropertyMetaData styleable, Style style, Exception e) {
         
         StringBuilder sbuf = new StringBuilder();
         sbuf.append("Caught ")
@@ -1569,7 +1569,7 @@ final public class StyleHelper {
     private CalculatedValue calculateValue(
             final CascadingStyle style, 
             final Node node, 
-            final StyleableProperty styleable, 
+            final StyleablePropertyMetaData styleable, 
             final long states,
             final Map<String,CascadingStyle> inlineStyles, 
             final Node originatingNode, 
@@ -1726,15 +1726,15 @@ final public class StyleHelper {
     }
     
     /** return true if the origin of the property is USER */
-    private boolean isUserSetProperty(Node node, StyleableProperty styleable) {
+    private boolean isUserSetProperty(Node node, StyleablePropertyMetaData styleable) {
         WritableValue writable = node != null ? styleable.getWritableValue(node) : null;
         // writable could be null if this is a sub-property
-        Origin origin = writable != null ? ((Property)writable).getOrigin() : null;
+        Origin origin = writable != null ? ((StyleableProperty)writable).getOrigin() : null;
         return (origin == Origin.USER);    
     }    
             
-    private static final StyleableProperty dummyFontProperty =
-            new StyleableProperty.FONT<Node>("-fx-font", Font.getDefault()) {
+    private static final StyleablePropertyMetaData dummyFontProperty =
+            new StyleablePropertyMetaData.FONT<Node>("-fx-font", Font.getDefault()) {
 
         @Override
         public boolean isSettable(Node node) {
@@ -1789,7 +1789,7 @@ final public class StyleHelper {
         // there is not an inline or author style.
         if (fontProp != null) {
  
-            Origin fpOrigin = StyleableProperty.getOrigin(fontProp);
+            Origin fpOrigin = StyleablePropertyMetaData.getOrigin(fontProp);
             if (fpOrigin == Origin.USER) {                
                 origin = fpOrigin;
                 foundFont = (Font)fontProp.getValue();
@@ -2039,7 +2039,7 @@ final public class StyleHelper {
      * @param styleList
      * @return 
      */
-    private CalculatedValue lookupFont(Node node, StyleableProperty styleable, 
+    private CalculatedValue lookupFont(Node node, StyleablePropertyMetaData styleable, 
             boolean isUserSet, Node originatingNode, 
             CacheEntry cacheEntry, List<Style> styleList) {
 
@@ -2301,21 +2301,21 @@ final public class StyleHelper {
     }    
     
     /**
-     * Called from StyleableProperty getMatchingStyles
+     * Called from StyleablePropertyMetaData getMatchingStyles
      * @param node
      * @param styleableProperty
      * @return 
      */
-    List<Style> getMatchingStyles(Styleable node, StyleableProperty styleableProperty) {
+    List<Style> getMatchingStyles(Styleable node, StyleablePropertyMetaData styleableProperty) {
         
         final List<CascadingStyle> styleList = new ArrayList<CascadingStyle>();
 
         getMatchingStyles(node, styleableProperty, styleList);
 
-        List<StyleableProperty> subProperties = styleableProperty.getSubProperties();
+        List<StyleablePropertyMetaData> subProperties = styleableProperty.getSubProperties();
         if (subProperties != null) {
             for (int n=0,nMax=subProperties.size(); n<nMax; n++) {
-                final StyleableProperty subProperty = subProperties.get(n);
+                final StyleablePropertyMetaData subProperty = subProperties.get(n);
                 getMatchingStyles(node, subProperty, styleList);                    
             }
         }
@@ -2331,7 +2331,7 @@ final public class StyleHelper {
         return matchingStyles;
     }
     
-    private void getMatchingStyles(Styleable node, StyleableProperty styleableProperty, List<CascadingStyle> styleList) {
+    private void getMatchingStyles(Styleable node, StyleablePropertyMetaData styleableProperty, List<CascadingStyle> styleList) {
         
         if (node != null) {
             

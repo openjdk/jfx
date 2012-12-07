@@ -1,7 +1,7 @@
 package com.sun.javafx.scene.control.skin;
 
-import com.sun.javafx.css.StyleableProperty;
-import com.sun.javafx.css.Stylesheet;
+import com.sun.javafx.css.StyleablePropertyMetaData;
+import com.sun.javafx.css.Origin;
 import com.sun.javafx.css.converters.BooleanConverter;
 import com.sun.javafx.css.converters.EnumConverter;
 import com.sun.javafx.css.converters.PaintConverter;
@@ -62,8 +62,8 @@ public class LabeledText extends Text {
     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
     */
    @Deprecated
-   @Override public List<StyleableProperty> impl_getStyleableProperties() {
-       return impl_CSS_STYLEABLES();
+   @Override public List<StyleablePropertyMetaData> getStyleablePropertyMetaData() {
+       return getClassStyleablePropertyMetaData();
    }
 
    /**
@@ -71,29 +71,29 @@ public class LabeledText extends Text {
     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
     */
    @Deprecated
-   public static List<StyleableProperty> impl_CSS_STYLEABLES() {
+   public static List<StyleablePropertyMetaData> getClassStyleablePropertyMetaData() {
        return StyleableProperties.STYLEABLES;
    }
 
    //
-   // Replace all of Text's StyleableProperty instances that overlap with Labeled
-   // with instances of StyleableProperty that redirect to Labeled. Thus, when
+   // Replace all of Text's StyleablePropertyMetaData instances that overlap with Labeled
+   // with instances of StyleablePropertyMetaData that redirect to Labeled. Thus, when
    // the Labeled is styled,
    //
    private static class StyleableProperties {
 
-       private static final StyleableProperty<LabeledText,Font> FONT =
-           new StyleableProperty.FONT<LabeledText>("-fx-font", Font.getDefault()) {
+       private static final StyleablePropertyMetaData<LabeledText,Font> FONT =
+           new StyleablePropertyMetaData.FONT<LabeledText>("-fx-font", Font.getDefault()) {
 
             @Override
-            public void set(LabeledText node, Font value, Stylesheet.Origin origin) {
+            public void set(LabeledText node, Font value, Origin origin) {
                 //
                 // In the case where the Labeled's textFill was set by an
                 // inline style, this inline style should override values
                 // from lesser origins.
                 //
                 WritableValue<Font> prop = node.labeled.fontProperty();
-                Stylesheet.Origin propOrigin = StyleableProperty.getOrigin(prop);
+                Origin propOrigin = StyleablePropertyMetaData.getOrigin(prop);
 
                 //
                 // if propOrigin is null, then the property is in init state
@@ -120,19 +120,19 @@ public class LabeledText extends Text {
        };
 
 
-       private static final StyleableProperty<LabeledText,Paint> FILL =
-           new StyleableProperty<LabeledText,Paint>("-fx-fill",
+       private static final StyleablePropertyMetaData<LabeledText,Paint> FILL =
+           new StyleablePropertyMetaData<LabeledText,Paint>("-fx-fill",
                PaintConverter.getInstance(), Color.BLACK) {
 
             @Override
-            public void set(LabeledText node, Paint value, Stylesheet.Origin origin) {
+            public void set(LabeledText node, Paint value, Origin origin) {
                 //
                 // In the case where the Labeled's textFill was set by an
                 // inline style, this inline style should override values
                 // from lesser origins.
                 //
                 WritableValue<Paint> prop = node.labeled.textFillProperty();
-                Stylesheet.Origin propOrigin = StyleableProperty.getOrigin(prop);
+                Origin propOrigin = StyleablePropertyMetaData.getOrigin(prop);
 
                 //
                 // if propOrigin is null, then the property is in init state
@@ -158,20 +158,20 @@ public class LabeledText extends Text {
            }
        };
 
-        private static final StyleableProperty<LabeledText,TextAlignment> TEXT_ALIGNMENT =
-                new StyleableProperty<LabeledText,TextAlignment>("-fx-text-alignment",
+        private static final StyleablePropertyMetaData<LabeledText,TextAlignment> TEXT_ALIGNMENT =
+                new StyleablePropertyMetaData<LabeledText,TextAlignment>("-fx-text-alignment",
                 new EnumConverter<TextAlignment>(TextAlignment.class),
                 TextAlignment.LEFT) {
 
             @Override
-            public void set(LabeledText node, TextAlignment value, Stylesheet.Origin origin) {
+            public void set(LabeledText node, TextAlignment value, Origin origin) {
                 //
                 // In the case where the Labeled's textFill was set by an
                 // inline style, this inline style should override values
                 // from lesser origins.
                 //
                 WritableValue<TextAlignment> prop = node.labeled.textAlignmentProperty();
-                Stylesheet.Origin propOrigin = StyleableProperty.getOrigin(prop);
+                Origin propOrigin = StyleablePropertyMetaData.getOrigin(prop);
 
                 //
                 // if propOrigin is null, then the property is in init state
@@ -197,20 +197,20 @@ public class LabeledText extends Text {
             }
         };
 
-        private static final StyleableProperty<LabeledText,Boolean> UNDERLINE =
-                new StyleableProperty<LabeledText,Boolean>("-fx-underline",
+        private static final StyleablePropertyMetaData<LabeledText,Boolean> UNDERLINE =
+                new StyleablePropertyMetaData<LabeledText,Boolean>("-fx-underline",
                 BooleanConverter.getInstance(),
                 Boolean.FALSE) {
 
             @Override
-            public void set(LabeledText node, Boolean value, Stylesheet.Origin origin) {
+            public void set(LabeledText node, Boolean value, Origin origin) {
                 //
                 // In the case where the Labeled's textFill was set by an
                 // inline style, this inline style should override values
                 // from lesser origins.
                 //
                 WritableValue<Boolean> prop = node.labeled.underlineProperty();
-                Stylesheet.Origin propOrigin = StyleableProperty.getOrigin(prop);
+                Origin propOrigin = StyleablePropertyMetaData.getOrigin(prop);
 
                 //
                 // if propOrigin is null, then the property is in init state
@@ -236,11 +236,11 @@ public class LabeledText extends Text {
             }
         };
 
-       private static final List<StyleableProperty> STYLEABLES;
+       private static final List<StyleablePropertyMetaData> STYLEABLES;
        static {
 
-           final List<StyleableProperty> styleables =
-               new ArrayList<StyleableProperty>(Text.impl_CSS_STYLEABLES());
+           final List<StyleablePropertyMetaData> styleables =
+               new ArrayList<StyleablePropertyMetaData>(Text.getClassStyleablePropertyMetaData());
 
            for (int n=0,nMax=styleables.size(); n<nMax; n++) {
                final String prop = styleables.get(n).getProperty();

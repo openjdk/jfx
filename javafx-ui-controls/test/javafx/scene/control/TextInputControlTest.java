@@ -3,7 +3,7 @@
  */
 package javafx.scene.control;
 
-import com.sun.javafx.css.StyleableProperty;
+import com.sun.javafx.css.StyleablePropertyMetaData;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNull;
@@ -160,9 +160,9 @@ public class TextInputControlTest {
         assertEquals("Oranges", textInput.getText());
     }
 
-    @Ignore("getStyleableProperty will return null for textProperty")
+    @Ignore("getStyleablePropertyMetaData will return null for textProperty")
     @Test public void impl_cssSettable_ReturnsFalseForTextAlways() {
-        StyleableProperty styleable = StyleableProperty.getStyleableProperty(textInput.textProperty());
+        StyleablePropertyMetaData styleable = StyleablePropertyMetaData.getStyleablePropertyMetaData(textInput.textProperty());
         assertTrue(styleable.isSettable(textInput));
         StringProperty other = new SimpleStringProperty("Apples");
         textInput.textProperty().bind(other);
@@ -170,7 +170,7 @@ public class TextInputControlTest {
     }
 
     @Test public void cannotSpecifyTextViaCSS() {
-        StyleableProperty styleable = StyleableProperty.getStyleableProperty(textInput.textProperty());
+        StyleablePropertyMetaData styleable = StyleablePropertyMetaData.getStyleablePropertyMetaData(textInput.textProperty());
         assertNull(styleable);
 //        styleable.set(textInput,"Hello");
 //        assertFalse("Hello".equals(textInput.getText()));
@@ -244,9 +244,9 @@ public class TextInputControlTest {
         assertTrue(textInput.isEditable());
     }
     
-    @Ignore("getStyleableProperty will return null for editableProperty")
+    @Ignore("getStyleablePropertyMetaData will return null for editableProperty")
     @Test public void impl_cssSettable_ReturnsFalseForEditableAlways() {
-        StyleableProperty styleable = StyleableProperty.getStyleableProperty(textInput.editableProperty());
+        StyleablePropertyMetaData styleable = StyleablePropertyMetaData.getStyleablePropertyMetaData(textInput.editableProperty());
         assertTrue(styleable.isSettable(textInput));
         StringProperty other = new SimpleStringProperty("Apples");
         textInput.textProperty().bind(other);
@@ -254,7 +254,7 @@ public class TextInputControlTest {
     }
 
     @Test public void cannotSpecifyEditableViaCSS() {
-        StyleableProperty styleable = StyleableProperty.getStyleableProperty(textInput.editableProperty());
+        StyleablePropertyMetaData styleable = StyleablePropertyMetaData.getStyleablePropertyMetaData(textInput.editableProperty());
         assertNull(styleable);
 //        styleable.set(textInput,"Hello");
 //        assertFalse("Hello".equals(textInput.getText()));

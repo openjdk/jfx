@@ -34,8 +34,8 @@ import javafx.scene.image.Image;
 import javafx.scene.paint.Color;
 import javafx.scene.paint.Paint;
 import com.sun.javafx.UnmodifiableArrayList;
-import com.sun.javafx.css.StyleableProperty;
-import com.sun.javafx.css.SubStyleableProperty;
+import com.sun.javafx.css.StyleablePropertyMetaData;
+import com.sun.javafx.css.SubCSSProperty;
 import com.sun.javafx.css.converters.InsetsConverter;
 import com.sun.javafx.css.converters.PaintConverter;
 import com.sun.javafx.css.converters.URLConverter;
@@ -66,43 +66,43 @@ import com.sun.javafx.scene.layout.region.RepeatStructConverter;
  * @since JavaFX 8
  */
 public final class Background {
-    static final StyleableProperty<Node,Paint[]> BACKGROUND_COLOR =
-            new SubStyleableProperty<Paint[]>("-fx-background-color",
+    static final StyleablePropertyMetaData<Node,Paint[]> BACKGROUND_COLOR =
+            new SubCSSProperty<Paint[]>("-fx-background-color",
                     PaintConverter.SequenceConverter.getInstance(),
                     new Paint[] {Color.TRANSPARENT});
 
-    static final StyleableProperty<Node,Insets[]> BACKGROUND_RADIUS =
-            new SubStyleableProperty<Insets[]>("-fx-background-radius",
+    static final StyleablePropertyMetaData<Node,Insets[]> BACKGROUND_RADIUS =
+            new SubCSSProperty<Insets[]>("-fx-background-radius",
                     InsetsConverter.SequenceConverter.getInstance(),
                     new Insets[] {Insets.EMPTY});
 
-    static final StyleableProperty<Node,Insets[]> BACKGROUND_INSETS =
-            new SubStyleableProperty<Insets[]>("-fx-background-insets",
+    static final StyleablePropertyMetaData<Node,Insets[]> BACKGROUND_INSETS =
+            new SubCSSProperty<Insets[]>("-fx-background-insets",
                     InsetsConverter.SequenceConverter.getInstance(),
                     new Insets[] {Insets.EMPTY});
 
-    static final StyleableProperty<Node,Image[]> BACKGROUND_IMAGE =
-            new SubStyleableProperty<Image[]>("-fx-background-image",
+    static final StyleablePropertyMetaData<Node,Image[]> BACKGROUND_IMAGE =
+            new SubCSSProperty<Image[]>("-fx-background-image",
                     URLConverter.SequenceConverter.getInstance());
 
-    static final StyleableProperty<Node,RepeatStruct[]> BACKGROUND_REPEAT =
-            new SubStyleableProperty<RepeatStruct[]>("-fx-background-repeat",
+    static final StyleablePropertyMetaData<Node,RepeatStruct[]> BACKGROUND_REPEAT =
+            new SubCSSProperty<RepeatStruct[]>("-fx-background-repeat",
                     RepeatStructConverter.getInstance(),
                     new RepeatStruct[] {new RepeatStruct(BackgroundRepeat.REPEAT,
                                                          BackgroundRepeat.REPEAT) });
 
-    static final StyleableProperty<Node,BackgroundPosition[]> BACKGROUND_POSITION =
-            new SubStyleableProperty<BackgroundPosition[]>("-fx-background-position",
+    static final StyleablePropertyMetaData<Node,BackgroundPosition[]> BACKGROUND_POSITION =
+            new SubCSSProperty<BackgroundPosition[]>("-fx-background-position",
                     LayeredBackgroundPositionConverter.getInstance(),
                     new BackgroundPosition[] { BackgroundPosition.DEFAULT });
 
-    static final StyleableProperty<Node,BackgroundSize[]> BACKGROUND_SIZE =
-            new SubStyleableProperty<BackgroundSize[]>("-fx-background-size",
+    static final StyleablePropertyMetaData<Node,BackgroundSize[]> BACKGROUND_SIZE =
+            new SubCSSProperty<BackgroundSize[]>("-fx-background-size",
                     LayeredBackgroundSizeConverter.getInstance(),
                     new BackgroundSize[] { BackgroundSize.DEFAULT } );
 
-    private static final List<StyleableProperty> STYLEABLES =
-            (List<StyleableProperty>) (List) Collections.unmodifiableList(
+    private static final List<StyleablePropertyMetaData> STYLEABLES =
+            (List<StyleablePropertyMetaData>) (List) Collections.unmodifiableList(
                     Arrays.asList(BACKGROUND_COLOR,
                             BACKGROUND_INSETS,
                             BACKGROUND_RADIUS,
@@ -115,7 +115,7 @@ public final class Background {
      * @treatAsPrivate implementation detail
      * @deprecated This is an internal API that is not intended for use and will be removed in the next version
      */
-    @Deprecated public static List<StyleableProperty> impl_CSS_STYLEABLES() {
+    @Deprecated public static List<StyleablePropertyMetaData> getClassStyleablePropertyMetaData() {
         return STYLEABLES;
     }
 

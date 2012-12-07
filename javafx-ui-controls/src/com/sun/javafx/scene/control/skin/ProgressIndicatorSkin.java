@@ -56,7 +56,7 @@ import java.util.List;
 
 import com.sun.javafx.Utils;
 import com.sun.javafx.css.StyleableObjectProperty;
-import com.sun.javafx.css.StyleableProperty;
+import com.sun.javafx.css.StyleablePropertyMetaData;
 import com.sun.javafx.css.converters.PaintConverter;
 import com.sun.javafx.scene.control.behavior.ProgressIndicatorBehavior;
 import com.sun.javafx.scene.control.skin.resources.ControlResources;
@@ -580,7 +580,7 @@ public class ProgressIndicatorSkin extends SkinBase<ProgressIndicator, ProgressI
         }
 
         @Override
-        public StyleableProperty getStyleableProperty() {
+        public StyleablePropertyMetaData getStyleablePropertyMetaData() {
             return StyleableProperties.PROGRESS_COLOR;
         }
     };
@@ -593,8 +593,8 @@ public class ProgressIndicatorSkin extends SkinBase<ProgressIndicator, ProgressI
      * @treatAsPrivate implementation detail
      */
     private static class StyleableProperties {
-        private static final StyleableProperty<ProgressIndicator,Paint> PROGRESS_COLOR =
-            new StyleableProperty<ProgressIndicator,Paint>("-fx-progress-color",
+        private static final StyleablePropertyMetaData<ProgressIndicator,Paint> PROGRESS_COLOR =
+            new StyleablePropertyMetaData<ProgressIndicator,Paint>("-fx-progress-color",
                 PaintConverter.getInstance(), Color.DODGERBLUE) {
 
             @Override
@@ -611,10 +611,10 @@ public class ProgressIndicatorSkin extends SkinBase<ProgressIndicator, ProgressI
             }
         };
 
-        public static final List<StyleableProperty> STYLEABLES;
+        public static final List<StyleablePropertyMetaData> STYLEABLES;
         static {
-            final List<StyleableProperty> styleables = 
-                new ArrayList<StyleableProperty>(SkinBase.impl_CSS_STYLEABLES());
+            final List<StyleablePropertyMetaData> styleables = 
+                new ArrayList<StyleablePropertyMetaData>(SkinBase.getClassStyleablePropertyMetaData());
             Collections.addAll(styleables,
                                PROGRESS_COLOR
             );
@@ -626,7 +626,7 @@ public class ProgressIndicatorSkin extends SkinBase<ProgressIndicator, ProgressI
      * @deprecated This is an internal API that is not intended for use and will be removed in the next version
      */
     @Deprecated
-    public static List<StyleableProperty> impl_CSS_STYLEABLES() {
+    public static List<StyleablePropertyMetaData> getClassStyleablePropertyMetaData() {
         return StyleableProperties.STYLEABLES;
     };
 
@@ -636,8 +636,8 @@ public class ProgressIndicatorSkin extends SkinBase<ProgressIndicator, ProgressI
      * @deprecated This is an experimental API that is not intended for general use and is subject to change in future versions
      */
     @Deprecated
-    public List<StyleableProperty> impl_getStyleableProperties() {
-        return impl_CSS_STYLEABLES();
+    public List<StyleablePropertyMetaData> getStyleablePropertyMetaData() {
+        return getClassStyleablePropertyMetaData();
     }
 
 }

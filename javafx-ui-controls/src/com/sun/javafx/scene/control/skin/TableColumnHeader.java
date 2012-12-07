@@ -57,7 +57,7 @@ import javafx.scene.shape.Rectangle;
 import javafx.util.Callback;
 
 import com.sun.javafx.css.StyleableDoubleProperty;
-import com.sun.javafx.css.StyleableProperty;
+import com.sun.javafx.css.StyleablePropertyMetaData;
 import com.sun.javafx.css.converters.SizeConverter;
 import com.sun.javafx.scene.control.MultiplePropertyChangeListenerHandler;
 import javafx.collections.WeakListChangeListener;
@@ -258,7 +258,7 @@ public class TableColumnHeader extends Region {
                     return "size";
                 }
 
-                @Override public StyleableProperty getStyleableProperty() {
+                @Override public StyleablePropertyMetaData getStyleablePropertyMetaData() {
                     return StyleableProperties.SIZE;
                 }
             };
@@ -837,8 +837,8 @@ public class TableColumnHeader extends Region {
       * @treatAsPrivate implementation detail
       */
      private static class StyleableProperties {
-         private static final StyleableProperty<TableColumnHeader,Number> SIZE =
-            new StyleableProperty<TableColumnHeader,Number>("-fx-size",
+         private static final StyleablePropertyMetaData<TableColumnHeader,Number> SIZE =
+            new StyleablePropertyMetaData<TableColumnHeader,Number>("-fx-size",
                  SizeConverter.getInstance(), 20.0) {
 
             @Override
@@ -852,11 +852,11 @@ public class TableColumnHeader extends Region {
             }
         };
 
-         private static final List<StyleableProperty> STYLEABLES;
+         private static final List<StyleablePropertyMetaData> STYLEABLES;
          static {
 
-            final List<StyleableProperty> styleables = 
-                new ArrayList<StyleableProperty>(Region.impl_CSS_STYLEABLES());
+            final List<StyleablePropertyMetaData> styleables = 
+                new ArrayList<StyleablePropertyMetaData>(Region.getClassStyleablePropertyMetaData());
             Collections.addAll(styleables,
                 SIZE
             );
@@ -870,7 +870,7 @@ public class TableColumnHeader extends Region {
      * @deprecated This is an internal API that is not intended for use and will be removed in the next version
      */
     @Deprecated
-    public static List<StyleableProperty> impl_CSS_STYLEABLES() {
+    public static List<StyleablePropertyMetaData> getClassStyleablePropertyMetaData() {
         return StyleableProperties.STYLEABLES;
     };
 
@@ -880,7 +880,7 @@ public class TableColumnHeader extends Region {
      * @deprecated This is an experimental API that is not intended for general use and is subject to change in future versions
      */
     @Deprecated
-    @Override public List<StyleableProperty> impl_getStyleableProperties() {
-        return impl_CSS_STYLEABLES();
+    @Override public List<StyleablePropertyMetaData> getStyleablePropertyMetaData() {
+        return getClassStyleablePropertyMetaData();
     }
 }

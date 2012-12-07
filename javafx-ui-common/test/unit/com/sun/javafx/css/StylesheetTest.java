@@ -24,7 +24,7 @@
  */
 package com.sun.javafx.css;
 
-import com.sun.javafx.css.Stylesheet.Origin;
+import com.sun.javafx.css.Origin;
 import java.net.URL;
 import java.util.Collections;
 import java.util.List;

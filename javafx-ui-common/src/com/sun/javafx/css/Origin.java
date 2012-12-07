@@ -25,30 +25,16 @@
 package com.sun.javafx.css;
 
 /**
- *
- * The various classes in <code>com.sun.javafx.css</code> that extend 
- * <code>javafx.beans.property</code>
- * classes all implement this interface which allows coordination between CSS 
- * processing and the <code>javafx.beans.property</code> mutators.
- * 
+ * Enumeration of the possible source or origin of a stylesheet and styles. 
  */
-interface Property<T> {
-    
-    /** 
-     * This method is called from CSS code to set the value of the property. 
-     */
-    void applyStyle(Stylesheet.Origin origin, T value);
-        
-    /**
-     * Tells the origin of the value of the property. This is needed to 
-     * determine whether or not CSS can override the value.
-     */
-    Stylesheet.Origin getOrigin();
-    
-    /**
-     * Reflect back the StyleableProperty that corresponds to this 
-     * <code>javafx.beans.property.Property</code>
-     */
-    StyleableProperty getStyleableProperty();
+public enum Origin {
+    /** The stylesheet is a user-agent stylesheet */
+    USER_AGENT, 
+    /** The value of a property was set by the user through a call to a set method */
+    USER, 
+    /** The stylesheet is an external file */
+    AUTHOR, 
+    /** The style is from the Node via setStyle */
+    INLINE
     
 }

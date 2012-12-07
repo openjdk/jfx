@@ -88,7 +88,7 @@ import com.sun.javafx.beans.event.AbstractNotifyListener;
 import com.sun.javafx.collections.TrackableObservableList;
 import com.sun.javafx.css.StyleManager;
 import com.sun.javafx.css.StyleableObjectProperty;
-import com.sun.javafx.css.StyleableProperty;
+import com.sun.javafx.css.StyleablePropertyMetaData;
 import com.sun.javafx.cursor.CursorFrame;
 import com.sun.javafx.event.EventQueue;
 import com.sun.javafx.geom.PickRay;
@@ -5663,7 +5663,7 @@ public class Scene implements EventTarget {
                 }
 
                 @Override
-                public StyleableProperty getStyleableProperty() {
+                public StyleablePropertyMetaData getStyleablePropertyMetaData() {
                     //TODO - not yet supported
                     throw new UnsupportedOperationException("Not supported yet.");
                 }

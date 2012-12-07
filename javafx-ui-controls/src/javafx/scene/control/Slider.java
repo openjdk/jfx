@@ -43,7 +43,7 @@ import javafx.util.StringConverter;
 
 import com.sun.javafx.Utils;
 import com.sun.javafx.css.*;
-import com.sun.javafx.css.Stylesheet.Origin;
+import com.sun.javafx.css.Origin;
 import com.sun.javafx.css.converters.BooleanConverter;
 import com.sun.javafx.css.converters.EnumConverter;
 import com.sun.javafx.css.converters.SizeConverter;
@@ -272,7 +272,7 @@ public class Slider extends Control {
                 }
                 
                 @Override 
-                public StyleableProperty getStyleableProperty() {
+                public StyleablePropertyMetaData getStyleablePropertyMetaData() {
                     return StyleableProperties.ORIENTATION;
                 }
 
@@ -311,7 +311,7 @@ public class Slider extends Control {
 
                 
                 @Override 
-                public StyleableProperty getStyleableProperty() {
+                public StyleablePropertyMetaData getStyleablePropertyMetaData() {
                     return StyleableProperties.SHOW_TICK_LABELS;
                 }
 
@@ -346,7 +346,7 @@ public class Slider extends Control {
 
                 
                 @Override 
-                public StyleableProperty getStyleableProperty() {
+                public StyleablePropertyMetaData getStyleablePropertyMetaData() {
                     return StyleableProperties.SHOW_TICK_MARKS;
                 }
 
@@ -397,7 +397,7 @@ public class Slider extends Control {
                 }
                 
                 @Override 
-                public StyleableProperty getStyleableProperty() {
+                public StyleablePropertyMetaData getStyleablePropertyMetaData() {
                     return StyleableProperties.MAJOR_TICK_UNIT;
                 }
 
@@ -434,7 +434,7 @@ public class Slider extends Control {
 
                 
                 @Override 
-                public StyleableProperty getStyleableProperty() {
+                public StyleablePropertyMetaData getStyleablePropertyMetaData() {
                     return StyleableProperties.MINOR_TICK_COUNT;
                 }
 
@@ -470,7 +470,7 @@ public class Slider extends Control {
             snapToTicks = new StyleableBooleanProperty(false) {
                 
                 @Override 
-                public StyleableProperty getStyleableProperty() {
+                public StyleablePropertyMetaData getStyleablePropertyMetaData() {
                     return StyleableProperties.SNAP_TO_TICKS;
                 }
 
@@ -529,7 +529,7 @@ public class Slider extends Control {
             blockIncrement = new StyleableDoubleProperty(10) {
 
                 @Override 
-                public StyleableProperty getStyleableProperty() {
+                public StyleablePropertyMetaData getStyleablePropertyMetaData() {
                     return StyleableProperties.BLOCK_INCREMENT;
                 }
 
@@ -639,8 +639,8 @@ public class Slider extends Control {
     private static final String PSEUDO_CLASS_HORIZONTAL = "horizontal";
 
     private static class StyleableProperties {
-        private static final StyleableProperty<Slider,Number> BLOCK_INCREMENT =
-            new StyleableProperty<Slider,Number>("-fx-block-increment",
+        private static final StyleablePropertyMetaData<Slider,Number> BLOCK_INCREMENT =
+            new StyleablePropertyMetaData<Slider,Number>("-fx-block-increment",
                 SizeConverter.getInstance(), 10.0) {
 
             @Override
@@ -654,8 +654,8 @@ public class Slider extends Control {
             }
         };
         
-        private static final StyleableProperty<Slider,Boolean> SHOW_TICK_LABELS =
-            new StyleableProperty<Slider,Boolean>("-fx-show-tick-labels",
+        private static final StyleablePropertyMetaData<Slider,Boolean> SHOW_TICK_LABELS =
+            new StyleablePropertyMetaData<Slider,Boolean>("-fx-show-tick-labels",
                 BooleanConverter.getInstance(), Boolean.FALSE) {
 
             @Override
@@ -669,8 +669,8 @@ public class Slider extends Control {
             }
         };
                     
-        private static final StyleableProperty<Slider,Boolean> SHOW_TICK_MARKS =
-            new StyleableProperty<Slider,Boolean>("-fx-show-tick-marks",
+        private static final StyleablePropertyMetaData<Slider,Boolean> SHOW_TICK_MARKS =
+            new StyleablePropertyMetaData<Slider,Boolean>("-fx-show-tick-marks",
                 BooleanConverter.getInstance(), Boolean.FALSE) {
 
             @Override
@@ -684,8 +684,8 @@ public class Slider extends Control {
             }
         };
             
-        private static final StyleableProperty<Slider,Boolean> SNAP_TO_TICKS =
-            new StyleableProperty<Slider,Boolean>("-fx-snap-to-ticks",
+        private static final StyleablePropertyMetaData<Slider,Boolean> SNAP_TO_TICKS =
+            new StyleablePropertyMetaData<Slider,Boolean>("-fx-snap-to-ticks",
                 BooleanConverter.getInstance(), Boolean.FALSE) {
 
             @Override
@@ -699,8 +699,8 @@ public class Slider extends Control {
             }
         };
         
-        private static final StyleableProperty<Slider,Number> MAJOR_TICK_UNIT =
-            new StyleableProperty<Slider,Number>("-fx-major-tick-unit",
+        private static final StyleablePropertyMetaData<Slider,Number> MAJOR_TICK_UNIT =
+            new StyleablePropertyMetaData<Slider,Number>("-fx-major-tick-unit",
                 SizeConverter.getInstance(), 25.0) {
 
             @Override
@@ -714,8 +714,8 @@ public class Slider extends Control {
             }
         };
         
-        private static final StyleableProperty<Slider,Number> MINOR_TICK_COUNT =
-            new StyleableProperty<Slider,Number>("-fx-minor-tick-count",
+        private static final StyleablePropertyMetaData<Slider,Number> MINOR_TICK_COUNT =
+            new StyleablePropertyMetaData<Slider,Number>("-fx-minor-tick-count",
                 SizeConverter.getInstance(), 3.0) {
 
             @Override public void set(Slider node, Number value, Origin origin) {
@@ -733,8 +733,8 @@ public class Slider extends Control {
             }
         };
         
-        private static final StyleableProperty<Slider,Orientation> ORIENTATION =
-            new StyleableProperty<Slider,Orientation>("-fx-orientation",
+        private static final StyleablePropertyMetaData<Slider,Orientation> ORIENTATION =
+            new StyleablePropertyMetaData<Slider,Orientation>("-fx-orientation",
                 new EnumConverter<Orientation>(Orientation.class), 
                 Orientation.HORIZONTAL) {
 
@@ -755,10 +755,10 @@ public class Slider extends Control {
             }
         };
 
-        private static final List<StyleableProperty> STYLEABLES;
+        private static final List<StyleablePropertyMetaData> STYLEABLES;
         static {
-            final List<StyleableProperty> styleables = 
-                new ArrayList<StyleableProperty>(Control.impl_CSS_STYLEABLES());
+            final List<StyleablePropertyMetaData> styleables = 
+                new ArrayList<StyleablePropertyMetaData>(Control.getClassStyleablePropertyMetaData());
             Collections.addAll(styleables,
                 BLOCK_INCREMENT,
                 SHOW_TICK_LABELS,
@@ -777,7 +777,7 @@ public class Slider extends Control {
      * @deprecated This is an internal API that is not intended for use and will be removed in the next version
      */
     @Deprecated
-    public static List<StyleableProperty> impl_CSS_STYLEABLES() {
+    public static List<StyleablePropertyMetaData> getClassStyleablePropertyMetaData() {
         return Slider.StyleableProperties.STYLEABLES;
     }
 
@@ -787,8 +787,8 @@ public class Slider extends Control {
      * @deprecated This is an experimental API that is not intended for general use and is subject to change in future versions
      */
     @Deprecated
-    @Override protected List<StyleableProperty> impl_getControlStyleableProperties() {
-        return impl_CSS_STYLEABLES();
+    @Override protected List<StyleablePropertyMetaData> impl_getControlStyleableProperties() {
+        return getClassStyleablePropertyMetaData();
     }
 
     private static final long VERTICAL_PSEUDOCLASS_STATE =

@@ -41,7 +41,7 @@ import javafx.scene.shape.*;
 import javafx.util.Duration;
 import com.sun.javafx.charts.Legend;
 import com.sun.javafx.charts.Legend.LegendItem;
-import com.sun.javafx.css.StyleableProperty;
+import com.sun.javafx.css.StyleablePropertyMetaData;
 import javafx.scene.paint.Color;
 
 /**
@@ -744,11 +744,11 @@ public class StackedAreaChart<X,Y> extends XYChart<X,Y> {
     
     private static class StyleableProperties {
 
-        private static final List<StyleableProperty> STYLEABLES;
+        private static final List<StyleablePropertyMetaData> STYLEABLES;
         
         static {
-            final List<StyleableProperty> styleables =
-                new ArrayList<StyleableProperty>(XYChart.impl_CSS_STYLEABLES());
+            final List<StyleablePropertyMetaData> styleables =
+                new ArrayList<StyleablePropertyMetaData>(XYChart.getClassStyleablePropertyMetaData());
 
             STYLEABLES = Collections.unmodifiableList(styleables);
 
@@ -760,7 +760,7 @@ public class StackedAreaChart<X,Y> extends XYChart<X,Y> {
      * @deprecated This is an internal API that is not intended for use and will be removed in the next version
      */
     @Deprecated
-     public static List<StyleableProperty> impl_CSS_STYLEABLES() {
+     public static List<StyleablePropertyMetaData> getClassStyleablePropertyMetaData() {
          return StyleableProperties.STYLEABLES;
      }
     /**
@@ -769,8 +769,8 @@ public class StackedAreaChart<X,Y> extends XYChart<X,Y> {
      * @deprecated This is an experimental API that is not intended for general use and is subject to change in future versions
      */
     @Deprecated
-    public List<StyleableProperty> impl_getStyleableProperties() {
-        return impl_CSS_STYLEABLES();
+    public List<StyleablePropertyMetaData> getStyleablePropertyMetaData() {
+        return getClassStyleablePropertyMetaData();
     }
 
 }

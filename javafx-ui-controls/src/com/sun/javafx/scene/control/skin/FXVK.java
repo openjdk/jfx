@@ -46,7 +46,7 @@ import javafx.scene.control.*;
 
 import com.sun.javafx.css.StyleManager;
 import com.sun.javafx.css.StyleableBooleanProperty;
-import com.sun.javafx.css.StyleableProperty;
+import com.sun.javafx.css.StyleablePropertyMetaData;
 import com.sun.javafx.css.converters.BooleanConverter;
 
 public class FXVK extends Control {

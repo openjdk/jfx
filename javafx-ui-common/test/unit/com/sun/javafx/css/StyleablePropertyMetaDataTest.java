@@ -60,38 +60,38 @@ import org.junit.Test;
 import static org.junit.Assert.*;
 
 
-public class StyleablePropertyTest {
+public class StyleablePropertyMetaDataTest {
 
-    public StyleablePropertyTest() {
+    public StyleablePropertyMetaDataTest() {
     }
     
-    private static StyleableProperty get(List<StyleableProperty> list, String prop) {
-        for (StyleableProperty styleable : list) {
+    private static StyleablePropertyMetaData get(List<StyleablePropertyMetaData> list, String prop) {
+        for (StyleablePropertyMetaData styleable : list) {
             if (prop.equals(styleable.getProperty())) return styleable;
         }
         return null;
     }
     /**
-     * Test of getStyleables method, of class StyleableProperty.
+     * Test of getStyleables method, of class StyleablePropertyMetaData.
      */
     @Test
     public void testGetStyleables_Node() {
         Node node = new TestNode();
-        List<StyleableProperty> expResult = TestNode.impl_CSS_STYLEABLES();
-        List result = StyleableProperty.getStyleables(node);
+        List<StyleablePropertyMetaData> expResult = TestNode.getClassStyleablePropertyMetaData();
+        List result = StyleablePropertyMetaData.getStyleables(node);
         assertEquals(expResult, result);
     }
 
     /**
-     * Test of getStyleables method, of class StyleableProperty.
+     * Test of getStyleables method, of class StyleablePropertyMetaData.
      */
     @Test
     public void testGetStyleables_Styleable() {
         Node node = new TestNode();
         Styleable styleable = node.impl_getStyleable();
         assertNotNull(styleable);
-        List<StyleableProperty> expResult = TestNode.impl_CSS_STYLEABLES();
-        List result = StyleableProperty.getStyleables(styleable);
+        List<StyleablePropertyMetaData> expResult = TestNode.getClassStyleablePropertyMetaData();
+        List result = StyleablePropertyMetaData.getStyleables(styleable);
         assertEquals(expResult, result);
     }
 
@@ -100,12 +100,12 @@ public class StyleablePropertyTest {
             TestNode testNode = new TestNode();
             WritableValue prop = TestNodeBase.StyleableProperties.TEST.getWritableValue(testNode);
             assert(prop != null);
-            StyleableProperty result = ((Property)prop).getStyleableProperty();
+            StyleablePropertyMetaData result = ((StyleableProperty)prop).getStyleablePropertyMetaData();
             assert(result == TestNodeBase.StyleableProperties.TEST);
     }
 
     /**
-     * Test of getProperty method, of class StyleableProperty.
+     * Test of getProperty method, of class StyleablePropertyMetaData.
      */
     @Test
     public void testGetProperty() {
@@ -116,7 +116,7 @@ public class StyleablePropertyTest {
     }
 
     /**
-     * Test of getConverter method, of class StyleableProperty.
+     * Test of getConverter method, of class StyleablePropertyMetaData.
      */
     @Test
     public void testGetConverter() {
@@ -127,7 +127,7 @@ public class StyleablePropertyTest {
     }
 
     /**
-     * Test of getInitialValue method, of class StyleableProperty.
+     * Test of getInitialValue method, of class StyleablePropertyMetaData.
      */
     @Test
     public void testGetInitialValue() {
@@ -140,13 +140,13 @@ public class StyleablePropertyTest {
     }
 
     /**
-     * Test of getSubProperties method, of class StyleableProperty.
+     * Test of getSubProperties method, of class StyleablePropertyMetaData.
      */
     @Test
     public void testGetSubProperties() {
         
-        StyleableProperty<TestNode,Font> fontProp = 
-                new StyleableProperty.FONT<TestNode>("-fx-font", Font.getDefault()) {
+        StyleablePropertyMetaData<TestNode,Font> fontProp = 
+                new StyleablePropertyMetaData.FONT<TestNode>("-fx-font", Font.getDefault()) {
 
             @Override
             public boolean isSettable(TestNode n) {
@@ -159,13 +159,13 @@ public class StyleablePropertyTest {
             }
         };
         
-        List<StyleableProperty> list = fontProp.getSubProperties();
+        List<StyleablePropertyMetaData> list = fontProp.getSubProperties();
         assertNotNull(list);
 
     }
 
     /**
-     * Test of isInherits method, of class StyleableProperty.
+     * Test of isInherits method, of class StyleablePropertyMetaData.
      */
     @Test
     public void testIsInherits() {
@@ -177,13 +177,13 @@ public class StyleablePropertyTest {
     }
 
     /**
-     * Test of toString method, of class StyleableProperty.
+     * Test of toString method, of class StyleablePropertyMetaData.
      */
     @Test
     public void testToString() {
 
-        StyleableProperty<TestNode,Font> fontProp = 
-                new StyleableProperty.FONT<TestNode>("-fx-font", Font.getDefault()) {
+        StyleablePropertyMetaData<TestNode,Font> fontProp = 
+                new StyleablePropertyMetaData.FONT<TestNode>("-fx-font", Font.getDefault()) {
 
             @Override
             public boolean isSettable(TestNode n) {
@@ -202,7 +202,7 @@ public class StyleablePropertyTest {
     }
 
     /**
-     * Test of equals method, of class StyleableProperty.
+     * Test of equals method, of class StyleablePropertyMetaData.
      */
     @Test
     public void testEquals() {
@@ -230,8 +230,8 @@ public class StyleablePropertyTest {
             }
         };
         
-        StyleableProperty testNodeOpacity = get(TestNode.impl_CSS_STYLEABLES(), "-fx-opacity");
-        StyleableProperty nodeOpacity = get(Node.impl_CSS_STYLEABLES(), "-fx-opacity");
+        StyleablePropertyMetaData testNodeOpacity = get(TestNode.getClassStyleablePropertyMetaData(), "-fx-opacity");
+        StyleablePropertyMetaData nodeOpacity = get(Node.getClassStyleablePropertyMetaData(), "-fx-opacity");
         
         assertTrue(testNodeOpacity.equals(nodeOpacity));
     }
@@ -292,7 +292,7 @@ public class StyleablePropertyTest {
 
         
         final Stylesheet stylesheet = new Stylesheet();
-        stylesheet.setOrigin(Stylesheet.Origin.USER_AGENT);
+        stylesheet.setOrigin(Origin.USER_AGENT);
         StyleManager.setDefaultUserAgentStylesheet(stylesheet);
         
         final List<Rule> rules = stylesheet.getRules();
@@ -377,7 +377,7 @@ public class StyleablePropertyTest {
         stage.setScene(scene);
         stage.show();
         
-        final StyleableProperty FILL = get(StyleableProperty.getStyleables(rectangle), "-fx-fill");
+        final StyleablePropertyMetaData FILL = get(StyleablePropertyMetaData.getStyleables(rectangle), "-fx-fill");
         final List<Style> actuals = FILL.getMatchingStyles(rectangle);
 
 //        System.err.println("matchingStyles: " + matchingStyles);
@@ -397,7 +397,7 @@ public class StyleablePropertyTest {
 
         
         final Stylesheet stylesheet = new Stylesheet();
-        stylesheet.setOrigin(Stylesheet.Origin.USER_AGENT);
+        stylesheet.setOrigin(Origin.USER_AGENT);
         StyleManager.setDefaultUserAgentStylesheet(stylesheet);
         
         final List<Rule> rules = stylesheet.getRules();
@@ -469,7 +469,7 @@ public class StyleablePropertyTest {
     
         Stylesheet ss = new Stylesheet() {
             {
-                setOrigin(Stylesheet.Origin.INLINE);
+                setOrigin(Origin.INLINE);
                 getRules().add(
                     new Rule(Arrays.asList(SimpleSelector.getUniversalSelector()), Arrays.asList(decl))
                 );
@@ -497,7 +497,7 @@ public class StyleablePropertyTest {
         stage.setScene(scene);
         stage.show();        
                 
-        final StyleableProperty FILL = get(StyleableProperty.getStyleables(rectangle), "-fx-fill");
+        final StyleablePropertyMetaData FILL = get(StyleablePropertyMetaData.getStyleables(rectangle), "-fx-fill");
         final List<Style> actuals = FILL.getMatchingStyles(rectangle);
 
 //        System.err.println("matchingStyles: " + matchingStyles);
@@ -520,7 +520,7 @@ public class StyleablePropertyTest {
 
         
         final Stylesheet stylesheet = new Stylesheet();
-        stylesheet.setOrigin(Stylesheet.Origin.USER_AGENT);
+        stylesheet.setOrigin(Origin.USER_AGENT);
         StyleManager.setDefaultUserAgentStylesheet(stylesheet);
         
         final List<Rule> rules = stylesheet.getRules();
@@ -592,7 +592,7 @@ public class StyleablePropertyTest {
     
         Stylesheet ss = new Stylesheet() {
             {
-                setOrigin(Stylesheet.Origin.INLINE);
+                setOrigin(Origin.INLINE);
                 getRules().add(
                     new Rule(Arrays.asList(SimpleSelector.getUniversalSelector()), Arrays.asList(decl))
                 );
@@ -620,7 +620,7 @@ public class StyleablePropertyTest {
         stage.setScene(scene);
         stage.show();
 
-        final StyleableProperty FILL = get(StyleableProperty.getStyleables(rectangle), "-fx-fill");
+        final StyleablePropertyMetaData FILL = get(StyleablePropertyMetaData.getStyleables(rectangle), "-fx-fill");
         final List<Style> actuals = FILL.getMatchingStyles(rectangle);
                 
 //        System.err.println("matchingStyles: " + matchingStyles);
@@ -643,7 +643,7 @@ public class StyleablePropertyTest {
 
 
         final Stylesheet stylesheet = new Stylesheet();
-        stylesheet.setOrigin(Stylesheet.Origin.USER_AGENT);
+        stylesheet.setOrigin(Origin.USER_AGENT);
         StyleManager.setDefaultUserAgentStylesheet(stylesheet);
         
         final List<Rule> rules = stylesheet.getRules();
@@ -716,7 +716,7 @@ public class StyleablePropertyTest {
     
         Stylesheet ss = new Stylesheet() {
             {
-                setOrigin(Stylesheet.Origin.INLINE);
+                setOrigin(Origin.INLINE);
                 Collections.addAll(getRules(),
                     new Rule(Arrays.asList(SimpleSelector.getUniversalSelector()), Arrays.asList(gdecl)),
                     new Rule(Arrays.asList(SimpleSelector.getUniversalSelector()), Arrays.asList(ydecl))
@@ -747,7 +747,7 @@ public class StyleablePropertyTest {
         stage.setScene(scene);
         stage.show();
         
-        final StyleableProperty FILL = get(StyleableProperty.getStyleables(rectangle), "-fx-fill");
+        final StyleablePropertyMetaData FILL = get(StyleablePropertyMetaData.getStyleables(rectangle), "-fx-fill");
         final List<Style> actuals = FILL.getMatchingStyles(rectangle);
 
 //        System.err.println("matchingStyles: " + matchingStyles);
@@ -770,7 +770,7 @@ public class StyleablePropertyTest {
 
         
         final Stylesheet stylesheet = new Stylesheet();
-        stylesheet.setOrigin(Stylesheet.Origin.USER_AGENT);
+        stylesheet.setOrigin(Origin.USER_AGENT);
         StyleManager.setDefaultUserAgentStylesheet(stylesheet);
         
         final List<Rule> rules = stylesheet.getRules();
@@ -858,7 +858,7 @@ public class StyleablePropertyTest {
         stage.setScene(scene);
         stage.show();
                 
-        final StyleableProperty FILL = get(StyleableProperty.getStyleables(rectangle), "-fx-fill");
+        final StyleablePropertyMetaData FILL = get(StyleablePropertyMetaData.getStyleables(rectangle), "-fx-fill");
         final List<Style> actuals = FILL.getMatchingStyles(rectangle);
 
 //        System.err.println("matchingStyles: " + matchingStyles);
@@ -878,7 +878,7 @@ public class StyleablePropertyTest {
     public void testGetMatchingStylesShouldNotReturnInlineAncestorPropertyIfNotInherited() {
         
         final Stylesheet stylesheet = new Stylesheet();
-        stylesheet.setOrigin(Stylesheet.Origin.USER_AGENT);
+        stylesheet.setOrigin(Origin.USER_AGENT);
         StyleManager.setDefaultUserAgentStylesheet(stylesheet);
         
         final List<Rule> rules = stylesheet.getRules();
@@ -966,7 +966,7 @@ public class StyleablePropertyTest {
         stage.setScene(scene);
         stage.show();
                 
-        final StyleableProperty FILL = get(StyleableProperty.getStyleables(rectangle), "-fx-fill");
+        final StyleablePropertyMetaData FILL = get(StyleablePropertyMetaData.getStyleables(rectangle), "-fx-fill");
         final List<Style> actuals = FILL.getMatchingStyles(rectangle);
 
 //        System.err.println("matchingStyles: " + matchingStyles);
@@ -984,7 +984,7 @@ public class StyleablePropertyTest {
 
 
         final Stylesheet stylesheet = new Stylesheet();
-        stylesheet.setOrigin(Stylesheet.Origin.USER_AGENT);
+        stylesheet.setOrigin(Origin.USER_AGENT);
         StyleManager.setDefaultUserAgentStylesheet(stylesheet);
         
         final List<Rule> rules = stylesheet.getRules();
@@ -1045,7 +1045,7 @@ public class StyleablePropertyTest {
         stage.setScene(scene);
         stage.show();
                 
-        final StyleableProperty FONT = get(StyleableProperty.getStyleables(text), "-fx-font");
+        final StyleablePropertyMetaData FONT = get(StyleablePropertyMetaData.getStyleables(text), "-fx-font");
         final List<Style> actuals = FONT.getMatchingStyles(text);
 
 //        System.err.println("matchingStyles: " + matchingStyles);
@@ -1064,7 +1064,7 @@ public class StyleablePropertyTest {
     public void testGetMatchingStylesReturnsSubProperty() {
 
         final Stylesheet stylesheet = new Stylesheet();
-        stylesheet.setOrigin(Stylesheet.Origin.USER_AGENT);
+        stylesheet.setOrigin(Origin.USER_AGENT);
         StyleManager.setDefaultUserAgentStylesheet(stylesheet);        
                 
         final List<Rule> rules = stylesheet.getRules();
@@ -1129,7 +1129,7 @@ public class StyleablePropertyTest {
         stage.setScene(scene);
         stage.show();
                         
-        final StyleableProperty FONT = get(StyleableProperty.getStyleables(text), "-fx-font");
+        final StyleablePropertyMetaData FONT = get(StyleablePropertyMetaData.getStyleables(text), "-fx-font");
         final List<Style> actuals = FONT.getMatchingStyles(text);
 
 //        System.err.println("matchingStyles: " + matchingStyles);
@@ -1167,10 +1167,10 @@ public class StyleablePropertyTest {
             try {
                 // should get NoSuchMethodException if ctor is not public
 //                Constructor ctor = someClass.getConstructor((Class[])null);
-                Method m = someClass.getMethod("impl_CSS_STYLEABLES", (Class[]) null);
+                Method m = someClass.getMethod("getClassStyleablePropertyMetaData", (Class[]) null);
 //                Node node = (Node)ctor.newInstance((Object[])null);
                 Node node = (Node)someClass.newInstance();
-                for (StyleableProperty styleable : (List<StyleableProperty>) m.invoke(null)) {
+                for (StyleablePropertyMetaData styleable : (List<StyleablePropertyMetaData>) m.invoke(null)) {
                     
                     what = someClass.getName() + " " + styleable.getProperty();
                     WritableValue writable = styleable.getWritableValue(node);
@@ -1248,8 +1248,8 @@ public class StyleablePropertyTest {
         Rectangle rect = new Rectangle();
         rect.setFill(c1);
         
-        StyleableProperty fill = StyleableProperty.getStyleableProperty(rect.fillProperty());
-        Stylesheet.Origin origin = StyleableProperty.getOrigin(rect.fillProperty());
+        StyleablePropertyMetaData fill = StyleablePropertyMetaData.getStyleablePropertyMetaData(rect.fillProperty());
+        Origin origin = StyleablePropertyMetaData.getOrigin(rect.fillProperty());
 
         // set should not change the value if the values are equal and origin is same
         assertEquals(c1, c2);
@@ -1262,9 +1262,9 @@ public class StyleablePropertyTest {
         assert(c2 == rect.getFill());
         
         // set should change the value if the origin is not the same
-        fill.set(rect, c2, Stylesheet.Origin.INLINE);
-        origin = StyleableProperty.getOrigin(rect.fillProperty());
-        assert(origin == Stylesheet.Origin.INLINE);
+        fill.set(rect, c2, Origin.INLINE);
+        origin = StyleablePropertyMetaData.getOrigin(rect.fillProperty());
+        assert(origin == Origin.INLINE);
         
         // set should change the value if one is null and the other is not.
         rect.setFill(null);
@@ -1286,7 +1286,7 @@ public class StyleablePropertyTest {
                 ".group { -fx-color: -fx-base; }" +
                 ".text { -fx-fill: -fx-color; }" 
         );
-        stylesheet.setOrigin(Stylesheet.Origin.USER_AGENT);
+        stylesheet.setOrigin(Origin.USER_AGENT);
         StyleManager.setDefaultUserAgentStylesheet(stylesheet);        
        
         final Text text = new Text("HelloWorld");
@@ -1305,7 +1305,7 @@ public class StyleablePropertyTest {
         stage.setScene(scene);
         stage.show();
 
-        StyleableProperty prop = StyleableProperty.getStyleableProperty(text.fillProperty());
+        StyleablePropertyMetaData prop = StyleablePropertyMetaData.getStyleablePropertyMetaData(text.fillProperty());
         List list = prop.getMatchingStyles(text);
         
         assertEquals(3, list.size(), 0);

@@ -36,7 +36,7 @@ import javafx.geometry.Bounds;
 import javafx.scene.paint.Color;
 
 import com.sun.javafx.collections.TrackableObservableList;
-import com.sun.javafx.css.StyleableProperty;
+import com.sun.javafx.css.StyleablePropertyMetaData;
 import com.sun.javafx.css.converters.PaintConverter;
 import com.sun.javafx.geom.Path2D;
 import com.sun.javafx.scene.DirtyBits;
@@ -134,9 +134,9 @@ public class Path extends Shape {
         // overriding default values for fill and stroke
         // Set through CSS property so that it appears to be a UA style rather
         // that a USER style so that fill and stroke can still be set from CSS.
-        final StyleableProperty fillProp = StyleableProperty.getStyleableProperty(fillProperty());
+        final StyleablePropertyMetaData fillProp = StyleablePropertyMetaData.getStyleablePropertyMetaData(fillProperty());
         fillProp.set(this, null);
-        final StyleableProperty strokeProp = StyleableProperty.getStyleableProperty(strokeProperty());
+        final StyleablePropertyMetaData strokeProp = StyleablePropertyMetaData.getStyleablePropertyMetaData(strokeProperty());
         strokeProp.set(this, Color.BLACK);
     }
 
@@ -374,8 +374,8 @@ public class Path extends Shape {
      * @deprecated This is an internal API that is not intended for use and will be removed in the next version
      */
     @Deprecated
-    public static List<StyleableProperty> impl_CSS_STYLEABLES() {
-        return Shape.impl_CSS_STYLEABLES();
+    public static List<StyleablePropertyMetaData> getClassStyleablePropertyMetaData() {
+        return Shape.getClassStyleablePropertyMetaData();
     }
     
     /**
@@ -384,8 +384,8 @@ public class Path extends Shape {
      * @deprecated This is an experimental API that is not intended for general use and is subject to change in future versions
      */
     @Deprecated
-    public List<StyleableProperty> impl_getStyleableProperties() {
-        return impl_CSS_STYLEABLES();
+    public List<StyleablePropertyMetaData> getStyleablePropertyMetaData() {
+        return getClassStyleablePropertyMetaData();
     }
 
 }

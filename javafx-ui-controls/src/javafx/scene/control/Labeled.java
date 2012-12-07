@@ -143,7 +143,7 @@ public abstract class Labeled extends Control {
         if (alignment == null) {
             alignment = new StyleableObjectProperty<Pos>(Pos.CENTER_LEFT) {
 
-                @Override public StyleableProperty getStyleableProperty() {
+                @Override public StyleablePropertyMetaData getStyleablePropertyMetaData() {
                     return StyleableProperties.ALIGNMENT;
                 }
 
@@ -175,7 +175,7 @@ public abstract class Labeled extends Control {
             textAlignment = new StyleableObjectProperty<TextAlignment>(TextAlignment.LEFT) {
                 
                 @Override 
-                public StyleableProperty getStyleableProperty() {
+                public StyleablePropertyMetaData getStyleablePropertyMetaData() {
                     return StyleableProperties.TEXT_ALIGNMENT;
                 }
 
@@ -205,7 +205,7 @@ public abstract class Labeled extends Control {
             textOverrun = new StyleableObjectProperty<OverrunStyle>(OverrunStyle.ELLIPSIS) {
                 
                 @Override 
-                public StyleableProperty getStyleableProperty() {
+                public StyleablePropertyMetaData getStyleablePropertyMetaData() {
                     return StyleableProperties.TEXT_OVERRUN;
                 }
 
@@ -253,7 +253,7 @@ public abstract class Labeled extends Control {
                     return "ellipsisString";
                 }
 
-                @Override public StyleableProperty getStyleableProperty() {
+                @Override public StyleablePropertyMetaData getStyleablePropertyMetaData() {
                     return StyleableProperties.ELLIPSIS_STRING;
                 }                
             };
@@ -274,7 +274,7 @@ public abstract class Labeled extends Control {
             wrapText = new StyleableBooleanProperty() {
                 
                 @Override 
-                public StyleableProperty getStyleableProperty() {
+                public StyleablePropertyMetaData getStyleablePropertyMetaData() {
                     return StyleableProperties.WRAP_TEXT;
                 }
 
@@ -327,14 +327,14 @@ public abstract class Labeled extends Control {
                     // RT-20727 - if font is changed by calling setFont, then
                     // css might need to be reapplied since font size affects
                     // calculated values for styles with relative values
-                    Stylesheet.Origin origin = StyleableProperty.getOrigin(font);
-                    if (origin == null || origin == Stylesheet.Origin.USER) {
+                    Origin origin = StyleablePropertyMetaData.getOrigin(font);
+                    if (origin == null || origin == Origin.USER) {
                         Labeled.this.impl_reapplyCSS();
                     }
                 }
                 
                 @Override 
-                public StyleableProperty getStyleableProperty() {
+                public StyleablePropertyMetaData getStyleablePropertyMetaData() {
                     return StyleableProperties.FONT;
                 }
 
@@ -430,7 +430,7 @@ public abstract class Labeled extends Control {
                 }
 
                 @Override
-                public StyleableProperty getStyleableProperty() {
+                public StyleablePropertyMetaData getStyleablePropertyMetaData() {
                     return StyleableProperties.GRAPHIC;
                 }
                 
@@ -447,7 +447,7 @@ public abstract class Labeled extends Control {
             underline = new StyleableBooleanProperty(false) {
 
                 @Override
-                public StyleableProperty getStyleableProperty() {
+                public StyleablePropertyMetaData getStyleablePropertyMetaData() {
                     return StyleableProperties.UNDERLINE;
                 }
 
@@ -476,7 +476,7 @@ public abstract class Labeled extends Control {
             contentDisplay = new StyleableObjectProperty<ContentDisplay>(ContentDisplay.LEFT) {
                 
                 @Override 
-                public StyleableProperty getStyleableProperty() {
+                public StyleablePropertyMetaData getStyleablePropertyMetaData() {
                     return StyleableProperties.CONTENT_DISPLAY;
                 }
 
@@ -524,7 +524,7 @@ public abstract class Labeled extends Control {
                 }
                 
                 @Override
-                public StyleableProperty getStyleableProperty() {
+                public StyleablePropertyMetaData getStyleablePropertyMetaData() {
                     return StyleableProperties.LABEL_PADDING;
                 }
 
@@ -553,7 +553,7 @@ public abstract class Labeled extends Control {
             graphicTextGap = new StyleableDoubleProperty(4) {
                 
                 @Override
-                public StyleableProperty getStyleableProperty() {
+                public StyleablePropertyMetaData getStyleablePropertyMetaData() {
                     return StyleableProperties.GRAPHIC_TEXT_GAP;
                 }
 
@@ -593,7 +593,7 @@ public abstract class Labeled extends Control {
             textFill = new StyleableObjectProperty<Paint>(Color.BLACK) {
                 
                 @Override 
-                public StyleableProperty getStyleableProperty() {
+                public StyleablePropertyMetaData getStyleablePropertyMetaData() {
                     return StyleableProperties.TEXT_FILL;
                 }
 
@@ -670,8 +670,8 @@ public abstract class Labeled extends Control {
       * @treatAsPrivate implementation detail
       */
     private static class StyleableProperties {
-        private static final StyleableProperty.FONT<Labeled> FONT = 
-            new StyleableProperty.FONT<Labeled>("-fx-font", Font.getDefault()) {
+        private static final StyleablePropertyMetaData.FONT<Labeled> FONT = 
+            new StyleablePropertyMetaData.FONT<Labeled>("-fx-font", Font.getDefault()) {
 
             @Override
             public boolean isSettable(Labeled n) {
@@ -684,8 +684,8 @@ public abstract class Labeled extends Control {
             }
         };
         
-        private static final StyleableProperty<Labeled,Pos> ALIGNMENT = 
-                new StyleableProperty<Labeled,Pos>("-fx-alignment",
+        private static final StyleablePropertyMetaData<Labeled,Pos> ALIGNMENT = 
+                new StyleablePropertyMetaData<Labeled,Pos>("-fx-alignment",
                 new EnumConverter<Pos>(Pos.class), Pos.CENTER_LEFT ) {
 
             @Override
@@ -704,8 +704,8 @@ public abstract class Labeled extends Control {
             }
         };
         
-        private static final StyleableProperty<Labeled,TextAlignment> TEXT_ALIGNMENT = 
-                new StyleableProperty<Labeled,TextAlignment>("-fx-text-alignment",
+        private static final StyleablePropertyMetaData<Labeled,TextAlignment> TEXT_ALIGNMENT = 
+                new StyleablePropertyMetaData<Labeled,TextAlignment>("-fx-text-alignment",
                 new EnumConverter<TextAlignment>(TextAlignment.class),
                 TextAlignment.LEFT) {
 
@@ -720,8 +720,8 @@ public abstract class Labeled extends Control {
             }
         };
         
-        private static final StyleableProperty<Labeled,Paint> TEXT_FILL = 
-                new StyleableProperty<Labeled,Paint>("-fx-text-fill",
+        private static final StyleablePropertyMetaData<Labeled,Paint> TEXT_FILL = 
+                new StyleablePropertyMetaData<Labeled,Paint>("-fx-text-fill",
                 PaintConverter.getInstance(), Color.BLACK) {
 
             @Override
@@ -735,8 +735,8 @@ public abstract class Labeled extends Control {
             }
         };
         
-        private static final StyleableProperty<Labeled,OverrunStyle> TEXT_OVERRUN = 
-                new StyleableProperty<Labeled,OverrunStyle>("-fx-text-overrun",
+        private static final StyleablePropertyMetaData<Labeled,OverrunStyle> TEXT_OVERRUN = 
+                new StyleablePropertyMetaData<Labeled,OverrunStyle>("-fx-text-overrun",
                 new EnumConverter<OverrunStyle>(OverrunStyle.class), 
                 OverrunStyle.ELLIPSIS) {
 
@@ -751,8 +751,8 @@ public abstract class Labeled extends Control {
             }
         };
 
-        private static final StyleableProperty<Labeled,String> ELLIPSIS_STRING =
-                new StyleableProperty<Labeled,String>("-fx-ellipsis-string",
+        private static final StyleablePropertyMetaData<Labeled,String> ELLIPSIS_STRING =
+                new StyleablePropertyMetaData<Labeled,String>("-fx-ellipsis-string",
                 StringConverter.getInstance(), DEFAULT_ELLIPSIS_STRING) {
 
             @Override public boolean isSettable(Labeled n) {
@@ -764,8 +764,8 @@ public abstract class Labeled extends Control {
             }
         };
 
-        private static final StyleableProperty<Labeled,Boolean> WRAP_TEXT = 
-                new StyleableProperty<Labeled,Boolean>("-fx-wrap-text",
+        private static final StyleablePropertyMetaData<Labeled,Boolean> WRAP_TEXT = 
+                new StyleablePropertyMetaData<Labeled,Boolean>("-fx-wrap-text",
                 BooleanConverter.getInstance(), false) {
 
             @Override
@@ -779,8 +779,8 @@ public abstract class Labeled extends Control {
             }
         };
         
-        private static final StyleableProperty<Labeled,String> GRAPHIC = 
-            new StyleableProperty<Labeled,String>("-fx-graphic",
+        private static final StyleablePropertyMetaData<Labeled,String> GRAPHIC = 
+            new StyleablePropertyMetaData<Labeled,String>("-fx-graphic",
                 StringConverter.getInstance()) {
 
             @Override
@@ -795,8 +795,8 @@ public abstract class Labeled extends Control {
             }
         };
         
-        private static final StyleableProperty<Labeled,Boolean> UNDERLINE = 
-            new StyleableProperty<Labeled,Boolean>("-fx-underline",
+        private static final StyleablePropertyMetaData<Labeled,Boolean> UNDERLINE = 
+            new StyleablePropertyMetaData<Labeled,Boolean>("-fx-underline",
                 BooleanConverter.getInstance(), Boolean.FALSE) {
 
             @Override
@@ -810,8 +810,8 @@ public abstract class Labeled extends Control {
             }
         };
         
-        private static final StyleableProperty<Labeled,ContentDisplay> CONTENT_DISPLAY = 
-            new StyleableProperty<Labeled,ContentDisplay>("-fx-content-display",
+        private static final StyleablePropertyMetaData<Labeled,ContentDisplay> CONTENT_DISPLAY = 
+            new StyleablePropertyMetaData<Labeled,ContentDisplay>("-fx-content-display",
                 new EnumConverter<ContentDisplay>(ContentDisplay.class), 
                 ContentDisplay.LEFT) {
 
@@ -826,8 +826,8 @@ public abstract class Labeled extends Control {
             }
         };
         
-        private static final StyleableProperty<Labeled,Insets> LABEL_PADDING = 
-            new StyleableProperty<Labeled,Insets>("-fx-label-padding",
+        private static final StyleablePropertyMetaData<Labeled,Insets> LABEL_PADDING = 
+            new StyleablePropertyMetaData<Labeled,Insets>("-fx-label-padding",
                 InsetsConverter.getInstance(), Insets.EMPTY) {
 
             @Override
@@ -841,8 +841,8 @@ public abstract class Labeled extends Control {
             }
         };
         
-        private static final StyleableProperty<Labeled,Number> GRAPHIC_TEXT_GAP = 
-            new StyleableProperty<Labeled,Number>("-fx-graphic-text-gap",
+        private static final StyleablePropertyMetaData<Labeled,Number> GRAPHIC_TEXT_GAP = 
+            new StyleablePropertyMetaData<Labeled,Number>("-fx-graphic-text-gap",
                 SizeConverter.getInstance(), 4.0) {
 
             @Override
@@ -856,10 +856,10 @@ public abstract class Labeled extends Control {
             }
         };
 
-        private static final List<StyleableProperty> STYLEABLES;
+        private static final List<StyleablePropertyMetaData> STYLEABLES;
         static {
-            final List<StyleableProperty> styleables =
-                new ArrayList<StyleableProperty>(Control.impl_CSS_STYLEABLES());
+            final List<StyleablePropertyMetaData> styleables =
+                new ArrayList<StyleablePropertyMetaData>(Control.getClassStyleablePropertyMetaData());
             Collections.addAll(styleables,
                 FONT,
                 ALIGNMENT,
@@ -883,7 +883,7 @@ public abstract class Labeled extends Control {
      * @deprecated This is an internal API that is not intended for use and will be removed in the next version
      */
     @Deprecated
-    public static List<StyleableProperty> impl_CSS_STYLEABLES() {
+    public static List<StyleablePropertyMetaData> getClassStyleablePropertyMetaData() {
         return Labeled.StyleableProperties.STYLEABLES;
     }
 
@@ -893,8 +893,8 @@ public abstract class Labeled extends Control {
      * @deprecated This is an experimental API that is not intended for general use and is subject to change in future versions
      */
     @Deprecated
-    @Override protected List<StyleableProperty> impl_getControlStyleableProperties() {
-        return impl_CSS_STYLEABLES();
+    @Override protected List<StyleablePropertyMetaData> impl_getControlStyleableProperties() {
+        return getClassStyleablePropertyMetaData();
     }
 
  }

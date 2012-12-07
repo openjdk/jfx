@@ -47,7 +47,7 @@ import javafx.util.StringConverter;
 
 import com.sun.javafx.charts.ChartLayoutAnimator;
 import com.sun.javafx.css.StyleableDoubleProperty;
-import com.sun.javafx.css.StyleableProperty;
+import com.sun.javafx.css.StyleablePropertyMetaData;
 import com.sun.javafx.css.converters.SizeConverter;
 
 /**
@@ -113,7 +113,7 @@ public final class NumberAxis extends ValueAxis<Number> {
         }
         
         @Override
-        public StyleableProperty getStyleableProperty() {
+        public StyleablePropertyMetaData getStyleablePropertyMetaData() {
             return StyleableProperties.TICK_UNIT;
         }
 
@@ -414,8 +414,8 @@ public final class NumberAxis extends ValueAxis<Number> {
 
      /** @treatAsPrivate implementation detail */
     private static class StyleableProperties {
-        private static final StyleableProperty<NumberAxis,Number> TICK_UNIT =
-            new StyleableProperty<NumberAxis,Number>("-fx-tick-unit",
+        private static final StyleablePropertyMetaData<NumberAxis,Number> TICK_UNIT =
+            new StyleablePropertyMetaData<NumberAxis,Number>("-fx-tick-unit",
                 SizeConverter.getInstance(), 5.0) {
 
             @Override
@@ -429,10 +429,10 @@ public final class NumberAxis extends ValueAxis<Number> {
             }
         };
 
-        private static final List<StyleableProperty> STYLEABLES;
+        private static final List<StyleablePropertyMetaData> STYLEABLES;
         static {
-           final List<StyleableProperty> styleables = 
-               new ArrayList<StyleableProperty>(ValueAxis.impl_CSS_STYLEABLES());
+           final List<StyleablePropertyMetaData> styleables = 
+               new ArrayList<StyleablePropertyMetaData>(ValueAxis.getClassStyleablePropertyMetaData());
            Collections.addAll(styleables,
                 TICK_UNIT
             );
@@ -446,7 +446,7 @@ public final class NumberAxis extends ValueAxis<Number> {
      */
     @Deprecated
     @SuppressWarnings({"JavaDoc"})
-    public static List<StyleableProperty> impl_CSS_STYLEABLES() {
+    public static List<StyleablePropertyMetaData> getClassStyleablePropertyMetaData() {
         return NumberAxis.StyleableProperties.STYLEABLES;
     }
 
@@ -456,8 +456,8 @@ public final class NumberAxis extends ValueAxis<Number> {
      * @deprecated This is an experimental API that is not intended for general use and is subject to change in future versions
      */
     @Deprecated
-    public List<StyleableProperty> impl_getStyleableProperties() {
-        return impl_CSS_STYLEABLES();
+    public List<StyleablePropertyMetaData> getStyleablePropertyMetaData() {
+        return getClassStyleablePropertyMetaData();
     }
 
     // -------------- INNER CLASSES ------------------------------------------------------------------------------------

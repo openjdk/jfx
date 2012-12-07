@@ -234,7 +234,7 @@ public class HBox extends Pane {
                 }
                 
                 @Override 
-                public StyleableProperty getStyleableProperty () {
+                public StyleablePropertyMetaData getStyleablePropertyMetaData () {
                     return StyleableProperties.SPACING;
                 }
 
@@ -271,7 +271,7 @@ public class HBox extends Pane {
                 }
                 
                 @Override 
-                public StyleableProperty getStyleableProperty() {
+                public StyleablePropertyMetaData getStyleablePropertyMetaData() {
                     return StyleableProperties.ALIGNMENT;
                 }
 
@@ -308,7 +308,7 @@ public class HBox extends Pane {
                 }
                                 
                 @Override
-                public StyleableProperty getStyleableProperty() {
+                public StyleablePropertyMetaData getStyleablePropertyMetaData() {
                     return StyleableProperties.FILL_HEIGHT;
                 }
 
@@ -546,8 +546,8 @@ public class HBox extends Pane {
       */
      private static class StyleableProperties {
 
-         private static final StyleableProperty<HBox,Pos> ALIGNMENT = 
-             new StyleableProperty<HBox,Pos>("-fx-alignment",
+         private static final StyleablePropertyMetaData<HBox,Pos> ALIGNMENT = 
+             new StyleablePropertyMetaData<HBox,Pos>("-fx-alignment",
                  new EnumConverter<Pos>(Pos.class), 
                  Pos.TOP_LEFT) {
 
@@ -563,8 +563,8 @@ public class HBox extends Pane {
                      
          };
          
-         private static final StyleableProperty<HBox,Boolean> FILL_HEIGHT = 
-             new StyleableProperty<HBox,Boolean>("-fx-fill-height",
+         private static final StyleablePropertyMetaData<HBox,Boolean> FILL_HEIGHT = 
+             new StyleablePropertyMetaData<HBox,Boolean>("-fx-fill-height",
                  BooleanConverter.getInstance(), Boolean.TRUE) {
 
             @Override
@@ -580,8 +580,8 @@ public class HBox extends Pane {
                      
          };
          
-         private static final StyleableProperty<HBox,Number> SPACING = 
-             new StyleableProperty<HBox,Number>("-fx-spacing",
+         private static final StyleablePropertyMetaData<HBox,Number> SPACING = 
+             new StyleablePropertyMetaData<HBox,Number>("-fx-spacing",
                  SizeConverter.getInstance(), 0.0){
 
             @Override
@@ -596,10 +596,10 @@ public class HBox extends Pane {
                      
          };
 
-         private static final List<StyleableProperty> STYLEABLES;
+         private static final List<StyleablePropertyMetaData> STYLEABLES;
          static {
-            final List<StyleableProperty> styleables =
-                new ArrayList<StyleableProperty>(Pane.impl_CSS_STYLEABLES());
+            final List<StyleablePropertyMetaData> styleables =
+                new ArrayList<StyleablePropertyMetaData>(Pane.getClassStyleablePropertyMetaData());
             Collections.addAll(styleables,
                 FILL_HEIGHT,
                 ALIGNMENT,
@@ -612,12 +612,12 @@ public class HBox extends Pane {
      /**
       * Super-lazy instantiation pattern from Bill Pugh. StyleableProperties is referenced
       * no earlier (and therefore loaded no earlier by the class loader) than
-      * the moment that  impl_CSS_STYLEABLES() is called.
+      * the moment that  getClassStyleablePropertyMetaData() is called.
       * @treatAsPrivate implementation detail
       * @deprecated This is an internal API that is not intended for use and will be removed in the next version
       */
      @Deprecated
-     public static List<StyleableProperty> impl_CSS_STYLEABLES() {
+     public static List<StyleablePropertyMetaData> getClassStyleablePropertyMetaData() {
          return HBox.StyleableProperties.STYLEABLES;
      }
 
@@ -627,8 +627,8 @@ public class HBox extends Pane {
      * @deprecated This is an experimental API that is not intended for general use and is subject to change in future versions
      */
     @Deprecated
-    public List<StyleableProperty> impl_getStyleableProperties() {
-        return impl_CSS_STYLEABLES();
+    public List<StyleablePropertyMetaData> getStyleablePropertyMetaData() {
+        return getClassStyleablePropertyMetaData();
     }
 
 }

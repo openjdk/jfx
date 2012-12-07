@@ -24,7 +24,7 @@
  */
 package javafx.scene.control;
 
-import com.sun.javafx.css.StyleableProperty;
+import com.sun.javafx.css.StyleablePropertyMetaData;
 import com.sun.javafx.scene.control.MultiplePropertyChangeListenerHandler;
 import com.sun.javafx.scene.control.behavior.BehaviorBase;
 import java.util.*;
@@ -540,14 +540,14 @@ public abstract class SkinBase<C extends Control, BB extends BehaviorBase<C>> im
 
     private static class StyleableProperties {
 
-        private static final List<StyleableProperty> STYLEABLES;
+        private static final List<StyleablePropertyMetaData> STYLEABLES;
 
         static {
-            STYLEABLES = Collections.unmodifiableList(Control.impl_CSS_STYLEABLES());
+            STYLEABLES = Collections.unmodifiableList(Control.getClassStyleablePropertyMetaData());
         }
     }
 
-    public static List<StyleableProperty> impl_CSS_STYLEABLES() {
+    public static List<StyleablePropertyMetaData> getClassStyleablePropertyMetaData() {
         return SkinBase.StyleableProperties.STYLEABLES;
     }
 
@@ -557,8 +557,8 @@ public abstract class SkinBase<C extends Control, BB extends BehaviorBase<C>> im
      * @deprecated This is an experimental API that is not intended for general use and is subject to change in future versions
      */
     @Deprecated
-    public List<StyleableProperty> impl_getStyleableProperties() {
-        return impl_CSS_STYLEABLES();
+    public List<StyleablePropertyMetaData> getStyleablePropertyMetaData() {
+        return getClassStyleablePropertyMetaData();
     }
     
     
