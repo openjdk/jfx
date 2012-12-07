@@ -41,9 +41,7 @@
 .scene {
     -fx-accent: #6ECFFF;
     -fx-mid-text-color: black;
-    -fx-selection-bar: linear (0%,0%) to (0%,100%)
-        stops (7%,-fx-background)
-        (100%,derive(-fx-background,-15%));
+    -fx-selection-bar: linear-gradient( from 0% 0% to 0% 100%, -fx-background 7%, derive(-fx-background,-15%) 100% );
 }
 
 
@@ -70,11 +68,11 @@
 .toggle-button:selected {
     -fx-background-color:
             -fx-shadow-highlight-color,
-            linear (0%,0%) to (0%,100%) stops (0%, derive(-fx-color,-90%)) (100%, derive(-fx-color,-60%)),
+            linear-gradient( from 0% 0% to 0% 100%, derive(-fx-color,-90%) 0%, derive(-fx-color,-60%) 100%),
 /*          the next line of code paints the dark vertical gradient from the top to the bottom of the selected button */
-            linear (0%,0%) to (0%,100%) stops (0%, derive(-fx-color,-80%)) (45%, derive(-fx-color,-65%)) (99%, derive(-fx-color,-50%)) (100%, derive(-fx-color,-60%)),
+			linear-gradient( from 0% 0% to 0% 100%, derive(-fx-color,-80%) 0%, derive(-fx-color,-65%) 45%, derive(-fx-color,-50%) 99%, derive(-fx-color,-60%) 100%),
 /*          the next line of code paints the dark horizontal gradient from the left and right edges toward the center of the selected button */
-            linear (0%,0%) to (100%,0%) stops (0%, rgba(0,0,0,0.3)) (10%, rgba(0,0,0,0)) (90%, rgba(0,0,0,0)) (100%, rgba(0,0,0,0.3));
+            linear-gradient( from 0% 0% to 100% 0%, rgba(0,0,0,0.3) 0%, rgba(0,0,0,0) 10%, rgba(0,0,0,0) 90%, rgba(0,0,0,0.3) 100%);
         -fx-background-insets: 0 0 -1 0, 0, 1, 1;
         -fx-text-fill: white;
     }
@@ -83,11 +81,11 @@
     -fx-color: -fx-focused-base;
     -fx-background-color:
             -fx-focus-color,
-            linear (0%,0%) to (0%,100%) stops (0%, derive(-fx-color,-90%)) (100%, derive(-fx-color,-60%)),
+            linear-gradient( from 0% 0% to 0% 100%, derive(-fx-color,-90%) 0%, derive(-fx-color,-60%) 100%),
 /*          the next line of code paints the dark vertical gradient from the top to the bottom of the selected button */
-            linear (0%,0%) to (0%,100%) stops (0%, derive(-fx-color,-80%)) (45%, derive(-fx-color,-65%)) (99%, derive(-fx-color,-50%)) (100%, derive(-fx-color,-60%)),
+            linear-gradient( from 0% 0% to 0% 100%, derive(-fx-color,-80%) 0%, derive(-fx-color,-65%) 45%, derive(-fx-color,-50%) 99%, derive(-fx-color,-60%) 100%),
 /*          the next line of code paints the dark horizontal gradient from the left and right edges toward the center of the selected button */
-            linear (0%,0%) to (100%,0%) stops (0%, rgba(0,0,0,0.3)) (10%, rgba(0,0,0,0)) (90%, rgba(0,0,0,0)) (100%, rgba(0,0,0,0.3));
+            linear-gradient( from 0%,0% to 100%,0%, rgba(0,0,0,0.3) 0%, rgba(0,0,0,0) 10%, rgba(0,0,0,0) 90%, rgba(0,0,0,0.3) 100%);
         -fx-background-insets: -1.4, 0, 1, 1;
     }
 
