@@ -33,7 +33,7 @@ import org.junit.Test;
 
 import com.sun.javafx.css.FontUnits.Weight;
 import com.sun.javafx.css.converters.FontConverter;
-
+import com.sun.javafx.css.parser.CSSParser;
 
 public class FontWeightTypeTest {
 
@@ -56,6 +56,14 @@ public class FontWeightTypeTest {
         expResult = FontWeight.NORMAL;
         result = value.convert(font);
         assertEquals(expResult, result);
+    }
+
+    @Test
+    public void test_RT_l7607() {
+	ParsedValue parsedValue = CSSParser.getInstance().parseExpr("-fx-font-weight", "600");
+	FontWeight expected = FontWeight.SEMI_BOLD;
+	FontWeight result = (FontWeight)parsedValue.convert(null);
+        assertEquals(expected, result);
     }
 
 }

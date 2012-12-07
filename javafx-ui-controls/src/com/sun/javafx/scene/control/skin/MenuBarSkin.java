@@ -51,7 +51,6 @@ import javafx.scene.control.MenuBar;
 import javafx.scene.control.MenuButton;
 import javafx.scene.control.MenuItem;
 import javafx.scene.control.SeparatorMenuItem;
-import javafx.scene.control.SkinBase;
 import javafx.scene.input.KeyEvent;
 import javafx.scene.input.MouseEvent;
 import javafx.scene.layout.HBox;
@@ -60,7 +59,7 @@ import javafx.beans.value.WeakChangeListener;
 
 import com.sun.javafx.menu.MenuBase;
 import com.sun.javafx.scene.control.GlobalMenuAdapter;
-import com.sun.javafx.scene.control.WeakEventHandler;
+import javafx.event.WeakEventHandler;
 import com.sun.javafx.scene.control.behavior.BehaviorBase;
 import com.sun.javafx.scene.traversal.Direction;
 import com.sun.javafx.scene.traversal.TraversalEngine;
@@ -76,7 +75,7 @@ import javafx.scene.input.*;
  * being there is no overflow behavior and we just hide nodes which fall
  * outside the bounds.
  */
-public class MenuBarSkin extends SkinBase<MenuBar, BehaviorBase<MenuBar>> implements TraverseListener {
+public class MenuBarSkin extends BehaviorSkinBase<MenuBar, BehaviorBase<MenuBar>> implements TraverseListener {
     
     private final HBox container;
 
@@ -264,8 +263,7 @@ public class MenuBarSkin extends SkinBase<MenuBar, BehaviorBase<MenuBar>> implem
                 }
             }
         };
-        weakSceneKeyEventHandler = new WeakEventHandler(control.getScene(), KeyEvent.KEY_PRESSED, 
-                keyEventHandler);
+        weakSceneKeyEventHandler = new WeakEventHandler(keyEventHandler);
         control.getScene().addEventFilter(KeyEvent.KEY_PRESSED, weakSceneKeyEventHandler);
         
         // When we click else where in the scene - menu selection should be cleared.
@@ -277,8 +275,7 @@ public class MenuBarSkin extends SkinBase<MenuBar, BehaviorBase<MenuBar>> implem
                 }
             }
         };
-        weakSceneMouseEventHandler = new WeakEventHandler(control.getScene(), MouseEvent.MOUSE_CLICKED, 
-                mouseEventHandler);
+        weakSceneMouseEventHandler = new WeakEventHandler(mouseEventHandler);
         control.getScene().addEventFilter(MouseEvent.MOUSE_CLICKED, weakSceneMouseEventHandler);
         
         // When the parent window looses focus - menu selection should be cleared
@@ -711,7 +708,7 @@ public class MenuBarSkin extends SkinBase<MenuBar, BehaviorBase<MenuBar>> implem
                         }
                         if (openMenu == null) return;
                         updateFocusedIndex();
-                        if (openMenu.isShowing()) {
+                        if (openMenu.isShowing() && openMenu != menu) {
                          // hide the currently visible menu, and move to the new one
                             openMenu.hide();
                             if (!isMenuEmpty(menu)) {

@@ -14,6 +14,7 @@ import javafx.scene.Parent;
 import javafx.scene.Scene;
 import javafx.scene.layout.StackPane;
 import javafx.stage.Stage;
+import javafx.util.StringConverter;
 import static org.junit.Assert.assertEquals;
 import org.junit.Assert;
 import org.junit.Before;
@@ -56,6 +57,23 @@ public class SliderTest {
         } catch (Exception e) {
             Assert.fail(e.toString());
         }
+    }
+    
+    @Test public void testSettingTickLabelFormatter() {
+        StackPane pane = new StackPane();
+        pane.getChildren().add(slider);
+        slider.setShowTickLabels(true);
+        slider.setShowTickMarks(true);
+        slider.setLabelFormatter(new StringConverter<Double>() {
+            @Override public String toString(Double t) {
+                return "Ok.";
+            }
+            @Override public Double fromString(String string) {
+                return 10.0;
+            }
+        });
+        startApp(pane);
+        assertEquals("Ok.", slider.getLabelFormatter().toString(10.0));
     }
     
 //    Slider slider;

@@ -24,10 +24,10 @@
  */
 package com.sun.javafx.scene.control.behavior;
 
-import com.preview.javafx.scene.control.TreeTableView;
-import com.preview.javafx.scene.control.TreeTableRow;
 import javafx.scene.control.MultipleSelectionModel;
 import javafx.scene.control.TreeItem;
+import javafx.scene.control.TreeTableRow;
+import javafx.scene.control.TreeTableView;
 import javafx.scene.input.MouseButton;
 import javafx.scene.input.MouseEvent;
 
@@ -40,15 +40,8 @@ public class TreeTableRowBehavior<T> extends CellBehaviorBase<TreeTableRow<T>> {
         super(control);
     }
 
-    @Override
-    public void mouseReleased(MouseEvent e) {
+    @Override public void mouseReleased(MouseEvent e) {
         super.mouseReleased(e);
-        
-//        if (e.getClickCount() == 2) {
-//            ObservableList<T> items = getControl().getTableView().getItems();
-//            TreeItem<File> treeItem = items.get(getControl.getIndex());
-//            treeItem.setExpanded(! treeItem.isExpanded());
-//        }
         
         TreeTableView<T> tv = getControl().getTreeTableView();
         TreeItem treeItem = getControl().getTreeItem();

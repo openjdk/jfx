@@ -34,9 +34,7 @@ import java.util.List;
 import javafx.beans.InvalidationListener;
 import javafx.beans.Observable;
 import javafx.beans.property.BooleanProperty;
-import javafx.beans.property.BooleanPropertyBase;
 import javafx.beans.property.ObjectProperty;
-import javafx.beans.property.ObjectPropertyBase;
 import javafx.beans.property.SimpleBooleanProperty;
 import javafx.beans.property.SimpleObjectProperty;
 import javafx.beans.value.ChangeListener;
@@ -66,7 +64,7 @@ import javafx.beans.WeakInvalidationListener;
 import javafx.beans.property.ReadOnlyObjectProperty;
 import javafx.beans.property.ReadOnlyObjectWrapper;
 import javafx.beans.value.WeakChangeListener;
-import javafx.scene.control.cell.PropertyValueFactory;
+import javafx.scene.control.cell.TreeItemPropertyValueFactory;
 
 /**
  * The TableView control is designed to visualize an unlimited number of rows
@@ -97,7 +95,7 @@ import javafx.scene.control.cell.PropertyValueFactory;
  * </ul>
  * </p>
  *
- * <p>Note that TableView is intended to be used for visualize data - it is not
+ * <p>Note that TableView is intended to be used to visualize data - it is not
  * intended to be used for laying out your user interface. If you want to lay
  * your user interface out in a grid-like fashion, consider the 
  * {@link GridPane} layout.</p>
@@ -257,54 +255,9 @@ public class TableView<S> extends Control {
     // the control and the skin. Because they are private here, the strings
     // are also duplicated in the TableViewSkin class - so any changes to these
     // strings must also be duplicated there
-    private static final String SET_CONTENT_WIDTH = "TableView.contentWidth";
-    private static final String REFRESH = "TableView.refresh";
+    static final String SET_CONTENT_WIDTH = "TableView.contentWidth";
+    static final String REFRESH = "TableView.refresh";
     
-//    /**
-//     * Parent event for any TableView edit event.
-//     */
-//    @SuppressWarnings("unchecked")
-//    public static <S> EventType<EditEvent<S>> editAnyEvent() {
-//        return (EventType<EditEvent<S>>) EDIT_ANY_EVENT;
-//    }
-//    private static final EventType<?> EDIT_ANY_EVENT =
-//            new EventType<EditEvent<Object>>(Event.ANY, "EDIT");
-//
-//    /**
-//     * Indicates that the user has performed some interaction to start an edit
-//     * event, or alternatively the {@link #edit(int, javafx.scene.control.TableColumn)}
-//     * method has been called.
-//     */
-//    @SuppressWarnings("unchecked")
-//    public static <S> EventType<EditEvent<S>> editStartEvent() {
-//        return (EventType<EditEvent<S>>) EDIT_START_EVENT;
-//    }
-//    private static final EventType<?> EDIT_START_EVENT =
-//            new EventType<EditEvent<Object>>(editAnyEvent(), "EDIT_START");
-//
-//    /**
-//     * Indicates that the editing has been canceled, meaning that no change should
-//     * be made to the backing data source.
-//     */
-//    @SuppressWarnings("unchecked")
-//    public static <S> EventType<EditEvent<S>> editCancelEvent() {
-//        return (EventType<EditEvent<S>>) EDIT_CANCEL_EVENT;
-//    }
-//    private static final EventType<?> EDIT_CANCEL_EVENT =
-//            new EventType<EditEvent<Object>>(editAnyEvent(), "EDIT_CANCEL");
-//
-//    /**
-//     * Indicates that the editing has been committed by the user, meaning that
-//     * a change should be made to the backing data source to reflect the new
-//     * data.
-//     */
-//    @SuppressWarnings("unchecked")
-//    public static <S> EventType<EditEvent<S>> editCommitEvent() {
-//        return (EventType<EditEvent<S>>) EDIT_COMMIT_EVENT;
-//    }
-//    private static final EventType<?> EDIT_COMMIT_EVENT =
-//            new EventType<EditEvent<Object>>(editAnyEvent(), "EDIT_COMMIT");
-
     /**
      * <p>Very simple resize policy that just resizes the specified column by the
      * provided delta and shifts all other columns (to the right of the given column)
@@ -322,7 +275,7 @@ public class TableView<S> extends Control {
         }
         
         @Override public Boolean call(ResizeFeatures prop) {
-            double result = resize(prop.getColumn(), prop.getDelta());
+            double result = TableUtil.resize(prop.getColumn(), prop.getDelta());
             return Double.compare(result, 0.0) == 0;
         }
     };
@@ -349,277 +302,15 @@ public class TableView<S> extends Control {
         
         @Override public Boolean call(ResizeFeatures prop) {
             TableView<?> table = prop.getTable();
-            TableColumn<?,?> column = prop.getColumn();
-            double delta = prop.getDelta();
-            
-            /*
-             * There are two phases to the constrained resize policy:
-             *   1) Ensuring internal consistency (i.e. table width == sum of all visible
-             *      columns width). This is often called when the table is resized.
-             *   2) Resizing the given column by __up to__ the given delta.
-             *
-             * It is possible that phase 1 occur and there be no need for phase 2 to
-             * occur.
-             */
-
-            boolean isShrinking;
-            double target;
-            double totalLowerBound = 0;
-            double totalUpperBound = 0;
-            
-            double tableWidth = table.contentWidth;
-            if (tableWidth == 0) return false;
-
-            /*
-             * PHASE 1: Check to ensure we have internal consistency. Based on the
-             *          Swing JTable implementation.
-             */
-            // determine the width of all visible columns, and their preferred width
-            double colWidth = 0;
-            for (TableColumn<?,?> col : table.getVisibleLeafColumns()) {
-                colWidth += col.getWidth();
-            }
-
-            if (Math.abs(colWidth - tableWidth) > 1) {
-                isShrinking = colWidth > tableWidth;
-                target = tableWidth;
-
-                if (isFirstRun) {
-                    // if we are here we have an inconsistency - these two values should be
-                    // equal when this resizing policy is being used.
-                    for (TableColumn<?,?> col : table.getVisibleLeafColumns()) {
-                        totalLowerBound += col.getMinWidth();
-                        totalUpperBound += col.getMaxWidth();
-                    }
-
-                    // We run into trouble if the numbers are set to infinity later on
-                    totalUpperBound = totalUpperBound == Double.POSITIVE_INFINITY ?
-                        Double.MAX_VALUE :
-                        (totalUpperBound == Double.NEGATIVE_INFINITY ? Double.MIN_VALUE : totalUpperBound);
-
-                    for (TableColumn<?,?> col : table.getVisibleLeafColumns()) {
-                        double lowerBound = col.getMinWidth();
-                        double upperBound = col.getMaxWidth();
-
-                        // Check for zero. This happens when the distribution of the delta
-                        // finishes early due to a series of "fixed" entries at the end.
-                        // In this case, lowerBound == upperBound, for all subsequent terms.
-                        double newSize;
-                        if (Math.abs(totalLowerBound - totalUpperBound) < .0000001) {
-                            newSize = lowerBound;
-                        } else {
-                            double f = (target - totalLowerBound) / (totalUpperBound - totalLowerBound);
-                            newSize = Math.round(lowerBound + f * (upperBound - lowerBound));
-                        }
-
-                        double remainder = resize(col, newSize - col.getWidth());
-
-                        target -= newSize + remainder;
-                        totalLowerBound -= lowerBound;
-                        totalUpperBound -= upperBound;
-                    }
-                    
-                    isFirstRun = false;
-                } else {
-                    double actualDelta = tableWidth - colWidth;
-                    List<TableColumn<?,?>> cols = ((TableView)table).getVisibleLeafColumns();
-                    resizeColumns(cols, actualDelta);
-                }
-            }
-
-            // At this point we can be happy in the knowledge that we have internal
-            // consistency, i.e. table width == sum of the width of all visible
-            // leaf columns.
-
-            /*
-             * Column may be null if we just changed the resize policy, and we
-             * just wanted to enforce internal consistency, as mentioned above.
-             */
-            if (column == null) {
-                return false;
-            }
-
-            /*
-             * PHASE 2: Handling actual column resizing (by the user). Based on my own
-             *          implementation (based on the UX spec).
-             */
-
-            isShrinking = delta < 0;
-
-            // need to find the first leaf column of the given column - it is this
-            // column that we actually resize from. If this column is a leaf, then we
-            // use it.
-            TableColumn<?,?> leafColumn = column;
-            while (leafColumn.getColumns().size() > 0) {
-                leafColumn = leafColumn.getColumns().get(0);
-            }
-
-            int colPos = table.getVisibleLeafColumns().indexOf(leafColumn);
-            int endColPos = table.getVisibleLeafColumns().size() - 1;
-
-//            System.out.println("resizing " + leafColumn.getText() + ". colPos: " + colPos + ", endColPos: " + endColPos);
-
-            // we now can split the observableArrayList into two subobservableArrayLists, representing all
-            // columns that should grow, and all columns that should shrink
-            //    var growingCols = if (isShrinking)
-            //        then table.visibleLeafColumns[colPos+1..endColPos]
-            //        else table.visibleLeafColumns[0..colPos];
-            //    var shrinkingCols = if (isShrinking)
-            //        then table.visibleLeafColumns[0..colPos]
-            //        else table.visibleLeafColumns[colPos+1..endColPos];
-
-
-            double remainingDelta = delta;
-            while (endColPos > colPos && remainingDelta != 0) {
-                TableColumn<?,?> resizingCol = table.getVisibleLeafColumns().get(endColPos);
-                endColPos--;
-
-                // if the column width is fixed, break out and try the next column
-                if (! resizingCol.isResizable()) continue;
-
-                // for convenience we discern between the shrinking and growing columns
-                TableColumn<?,?> shrinkingCol = isShrinking ? leafColumn : resizingCol;
-                TableColumn<?,?> growingCol = !isShrinking ? leafColumn : resizingCol;
-
-                //        (shrinkingCol.width == shrinkingCol.minWidth) or (growingCol.width == growingCol.maxWidth)
-
-                if (growingCol.getWidth() > growingCol.getPrefWidth()) {
-                    // growingCol is willing to be generous in this case - it goes
-                    // off to find a potentially better candidate to grow
-                    List seq = table.getVisibleLeafColumns().subList(colPos + 1, endColPos + 1);
-                    for (int i = seq.size() - 1; i >= 0; i--) {
-                        TableColumn<?,?> c = (TableColumn)seq.get(i);
-                        if (c.getWidth() < c.getPrefWidth()) {
-                            growingCol = c;
-                            break;
-                        }
-                    }
-                }
-                //
-                //        if (shrinkingCol.width < shrinkingCol.prefWidth) {
-                //            for (c in reverse table.visibleLeafColumns[colPos+1..endColPos]) {
-                //                if (c.width > c.prefWidth) {
-                //                    shrinkingCol = c;
-                //                    break;
-                //                }
-                //            }
-                //        }
-
-
-
-                double sdiff = Math.min(Math.abs(remainingDelta), shrinkingCol.getWidth() - shrinkingCol.getMinWidth());
-
-//                System.out.println("\tshrinking " + shrinkingCol.getText() + " and growing " + growingCol.getText());
-//                System.out.println("\t\tMath.min(Math.abs("+remainingDelta+"), "+shrinkingCol.getWidth()+" - "+shrinkingCol.getMinWidth()+") = " + sdiff);
-
-                double delta1 = resize(shrinkingCol, -sdiff);
-                double delta2 = resize(growingCol, sdiff);
-                remainingDelta += isShrinking ? sdiff : -sdiff;
-            }
-            return remainingDelta == 0;
+            List<? extends TableColumnBase<?,?>> visibleLeafColumns = table.getVisibleLeafColumns();
+            Boolean result = TableUtil.constrainedResize(prop, 
+                                               isFirstRun, 
+                                               table.contentWidth,
+                                               visibleLeafColumns);
+            isFirstRun = false;
+            return result;
         }
     };
-
-    // function used to actually perform the resizing of the given column,
-    // whilst ensuring it stays within the min and max bounds set on the column.
-    // Returns the remaining delta if it could not all be applied.
-    private static double resize(TableColumn<?,?> column, double delta) {
-        if (delta == 0) return 0.0F;
-        if (! column.isResizable()) return delta;
-
-        final boolean isShrinking = delta < 0;
-        final List<TableColumn<?,?>> resizingChildren = getResizableChildren(column, isShrinking);
-
-        if (resizingChildren.size() > 0) {
-            return resizeColumns(resizingChildren, delta);
-        } else {
-            double newWidth = column.getWidth() + delta;
-
-            if (newWidth > column.getMaxWidth()) {
-                column.impl_setWidth(column.getMaxWidth());
-                return newWidth - column.getMaxWidth();
-            } else if (newWidth < column.getMinWidth()) {
-                column.impl_setWidth(column.getMinWidth());
-                return newWidth - column.getMinWidth();
-            } else {
-                column.impl_setWidth(newWidth);
-                return 0.0F;
-            }
-        }
-    }
-
-    // Returns all children columns of the given column that are able to be
-    // resized. This is based on whether they are visible, resizable, and have
-    // not space before they hit the min / max values.
-    private static List<TableColumn<?,?>> getResizableChildren(TableColumn<?,?> column, boolean isShrinking) {
-        if (column == null || column.getColumns().isEmpty()) {
-            return Collections.emptyList();
-        }
-        
-        List<TableColumn<?,?>> tablecolumns = new ArrayList<TableColumn<?,?>>();
-        for (TableColumn<?,?> c : column.getColumns()) {
-            if (! c.isVisible()) continue;
-            if (! c.isResizable()) continue;
-
-            if (isShrinking && c.getWidth() > c.getMinWidth()) {
-                tablecolumns.add(c);
-            } else if (!isShrinking && c.getWidth() < c.getMaxWidth()) {
-                tablecolumns.add(c);
-            }
-        }
-        return tablecolumns;
-    }
-
-    private static double resizeColumns(List<TableColumn<?,?>> columns, double delta) {
-        // distribute space between all visible children who can be resized.
-        // To do this we need to work out if we're shrinking or growing the
-        // children, and then which children can be resized based on their
-        // min/pref/max/fixed properties. The results of this are in the
-        // resizingChildren observableArrayList above.
-        final int columnCount = columns.size();
-
-        // work out how much of the delta we should give to each child. It should
-        // be an equal amount (at present), although perhaps we'll allow for
-        // functions to calculate this at a later date.
-        double colDelta = delta / columnCount;
-
-        // we maintain a count of the amount of delta remaining to ensure that
-        // the column resize operation accurately reflects the location of the
-        // mouse pointer. Every time this value is not 0, the UI is a teeny bit
-        // more inaccurate whilst the user continues to resize.
-        double remainingDelta = delta;
-
-        // We maintain a count of the current column that we're on in case we
-        // need to redistribute the remainingDelta among remaining sibling.
-        int col = 0;
-
-        // This is a bit hacky - often times the leftOverDelta is zero, but
-        // remainingDelta doesn't quite get down to 0. In these instances we
-        // short-circuit and just return 0.0.
-        boolean isClean = true;
-        for (TableColumn<?,?> childCol : columns) {
-            col++;
-
-            // resize each child column
-            double leftOverDelta = resize(childCol, colDelta);
-
-            // calculate the remaining delta if the was anything left over in
-            // the last resize operation
-            remainingDelta = remainingDelta - colDelta + leftOverDelta;
-
-            //      println("\tResized {childCol.text} with {colDelta}, but {leftOverDelta} was left over. RemainingDelta is now {remainingDelta}");
-
-            if (leftOverDelta != 0) {
-                isClean = false;
-                // and recalculate the distribution of the remaining delta for
-                // the remaining siblings.
-                colDelta = remainingDelta / (columnCount - col);
-            }
-        }
-
-        // see isClean above for why this is done
-        return isClean ? 0.0 : remainingDelta;
-    }
     
     
     
@@ -677,8 +368,14 @@ public class TableView<S> extends Control {
                     }
 
                     // set up listeners
-                    removeTableColumnListener(c.getRemoved());
-                    addTableColumnListener(c.getAddedSubList());
+                    TableUtil.removeTableColumnListener(c.getRemoved(),
+                            weakColumnVisibleObserver,
+                            weakColumnSortableObserver,
+                            weakColumnSortTypeObserver);
+                    TableUtil.addTableColumnListener(c.getAddedSubList(),
+                            weakColumnVisibleObserver,
+                            weakColumnSortableObserver,
+                            weakColumnSortTypeObserver);
                 }
                     
                 // We don't maintain a bind for leafColumns, we simply call this update
@@ -752,15 +449,15 @@ public class TableView<S> extends Control {
      *                                                                         *
      **************************************************************************/
     
-    private final ListChangeListener columnsObserver = new ListChangeListener() {
-        @Override public void onChanged(Change c) {
+    private final ListChangeListener<TableColumn<S,?>> columnsObserver = new ListChangeListener<TableColumn<S,?>>() {
+        @Override public void onChanged(Change<? extends TableColumn<S,?>> c) {
             updateVisibleLeafColumns();
             
             // Fix for RT-15194: Need to remove removed columns from the 
             // sortOrder list.
             while (c.next()) {
-                removeColumnsListener(c.getRemoved(), weakColumnsObserver);
-                addColumnsListener(c.getAddedSubList(), weakColumnsObserver);
+                TableUtil.removeColumnsListener(c.getRemoved(), weakColumnsObserver);
+                TableUtil.addColumnsListener(c.getAddedSubList(), weakColumnsObserver);
                 
                 if (c.wasRemoved()) {
                     for (int i = 0; i < c.getRemovedSize(); i++) {
@@ -885,7 +582,7 @@ public class TableView<S> extends Control {
      */
     public final ObjectProperty<Callback<ResizeFeatures, Boolean>> columnResizePolicyProperty() {
         if (columnResizePolicy == null) {
-            columnResizePolicy = new ObjectPropertyBase<Callback<ResizeFeatures, Boolean>>(UNCONSTRAINED_RESIZE_POLICY) {
+            columnResizePolicy = new SimpleObjectProperty<Callback<ResizeFeatures, Boolean>>(this, "columnResizePolicy", UNCONSTRAINED_RESIZE_POLICY) {
                 private Callback<ResizeFeatures, Boolean> oldPolicy;
                 
                 @Override protected void invalidated() {
@@ -901,16 +598,6 @@ public class TableView<S> extends Control {
                         }
                         oldPolicy = get();
                     }
-                }
-
-                @Override
-                public Object getBean() {
-                    return TableView.this;
-                }
-
-                @Override
-                public String getName() {
-                    return "columnResizePolicy";
                 }
             };
         }
@@ -1015,6 +702,31 @@ public class TableView<S> extends Control {
     }
     
     
+    // --- Span Model
+    private ObjectProperty<SpanModel<S>> spanModel 
+            = new SimpleObjectProperty<SpanModel<S>>(this, "spanModel") {
+
+        @Override protected void invalidated() {
+            ObservableList<String> styleClass = getStyleClass();
+            if (getSpanModel() == null) {
+                styleClass.remove(CELL_SPAN_TABLE_VIEW_STYLE_CLASS);
+            } else if (! styleClass.contains(CELL_SPAN_TABLE_VIEW_STYLE_CLASS)) {
+                styleClass.add(CELL_SPAN_TABLE_VIEW_STYLE_CLASS);
+            }
+        }
+    };
+
+    public final ObjectProperty<SpanModel<S>> spanModelProperty() {
+        return spanModel;
+    }
+    public final void setSpanModel(SpanModel<S> value) {
+        spanModelProperty().set(value);
+    }
+
+    public final SpanModel<S> getSpanModel() {
+        return spanModel.get();
+    }
+    
     // --- Editable
     private BooleanProperty editable;
     public final void setEditable(boolean value) {
@@ -1060,111 +772,6 @@ public class TableView<S> extends Control {
         return editingCell;
     }
 
-
-//    // --- On Edit Start
-//    private ObjectProperty<EventHandler<EditEvent<S>>> onEditStart;
-//
-//    /**
-//     * This event handler will be fired when the user successfully initiates
-//     * editing.
-//     */
-//    public final void setOnEditStart(EventHandler<EditEvent<S>> value) {
-//        onEditStartProperty().set(value);
-//    }
-//
-//    public final EventHandler<EditEvent<S>> getOnEditStart() {
-//        return onEditStart == null ? null : onEditStart.get();
-//    }
-//
-//    public ObjectProperty<EventHandler<EditEvent<S>>> onEditStartProperty() {
-//        if (onEditStart == null) {
-//            onEditStart = new ObjectPropertyBase<EventHandler<EditEvent<S>>>() {
-//                @Override protected void invalidated() {
-//                    setEventHandler(TableView.<S>editStartEvent(), get());
-//                }
-//
-//                @Override
-//                public Object getBean() {
-//                    return TableView.this;
-//                }
-//
-//                @Override
-//                public String getName() {
-//                    return "onEditStart";
-//                }
-//            };
-//        }
-//        return onEditStart;
-//    }
-//
-//
-//    // --- On Edit Commit
-//    private ObjectProperty<EventHandler<EditEvent<S>>> onEditCommit;
-//    public final void setOnEditCommit(EventHandler<EditEvent<S>> value) {
-//        onEditCommitProperty().set(value);
-//    }
-//
-//    public final EventHandler<EditEvent<S>> getOnEditCommit() {
-//        return onEditCommit == null ? null : onEditCommit.get();
-//    }
-//
-//    public ObjectProperty<EventHandler<EditEvent<S>>> onEditCommitProperty() {
-//        if (onEditCommit == null) {
-//            onEditCommit = new ObjectPropertyBase<EventHandler<EditEvent<S>>>() {
-//                @Override protected void invalidated() {
-//                    setEventHandler(TableView.<S>editCommitEvent(), get());
-//                }
-//
-//                @Override
-//                public Object getBean() {
-//                    return TableView.this;
-//                }
-//
-//                @Override
-//                public String getName() {
-//                    return "onEditCommit";
-//                }
-//            };
-//        }
-//        return onEditCommit;
-//    }
-//
-//
-//    // --- On Edit Cancel
-//    private ObjectProperty<EventHandler<EditEvent<S>>> onEditCancel;
-//
-//    /**
-//     * This event handler will be fired when the user cancels editing a cell.
-//     */
-//    public final void setOnEditCancel(EventHandler<EditEvent<S>> value) {
-//        onEditCancelProperty().set(value);
-//    }
-//
-//    public final EventHandler<EditEvent<S>> getOnEditCancel() {
-//        return onEditCancel == null ? null : onEditCancel.get();
-//    }
-//
-//    public ObjectProperty<EventHandler<EditEvent<S>>> onEditCancelProperty() {
-//        if (onEditCancel == null) {
-//            onEditCancel = new ObjectPropertyBase<EventHandler<EditEvent<S>>>() {
-//                @Override protected void invalidated() {
-//                    setEventHandler(TableView.<S>editCancelEvent(), get());
-//                }
-//
-//                @Override
-//                public Object getBean() {
-//                    return TableView.this;
-//                }
-//
-//                @Override
-//                public String getName() {
-//                    return "onEditCancel";
-//                }
-//            };
-//        }
-//        return onEditCancel;
-//    }
-    
 
     
     /***************************************************************************
@@ -1256,7 +863,7 @@ public class TableView<S> extends Control {
      * visible leaf columns.
      */
     public int getVisibleLeafIndex(TableColumn<S,?> column) {
-        return getVisibleLeafColumns().indexOf(column);
+        return visibleLeafColumns.indexOf(column);
     }
 
     /**
@@ -1279,11 +886,6 @@ public class TableView<S> extends Control {
      *                                                                         *
      **************************************************************************/
 
-
-//    private int getRowCount() {
-//        return getItems() == null ? 0 : getItems().size();
-//    }
-    
     /**
      * Call this function to force the TableView to re-evaluate itself. This is
      * useful when the underlying data model is provided by a TableModel, and
@@ -1392,47 +994,6 @@ public class TableView<S> extends Control {
             }
         }
     }
-
-    private void removeTableColumnListener(List<? extends TableColumn<S,?>> list) {
-        if (list == null) return;
-
-        for (TableColumn<S,?> col : list) {
-            col.visibleProperty().removeListener(weakColumnVisibleObserver);
-            col.sortableProperty().removeListener(weakColumnSortableObserver);
-            col.sortTypeProperty().removeListener(weakColumnSortTypeObserver);
-
-            removeTableColumnListener(col.getColumns());
-        }
-    }
-
-    private void addTableColumnListener(List<? extends TableColumn<S,?>> list) {
-        if (list == null) return;
-        for (TableColumn<S,?> col : list) {
-            col.visibleProperty().addListener(weakColumnVisibleObserver);
-            col.sortableProperty().addListener(weakColumnSortableObserver);
-            col.sortTypeProperty().addListener(weakColumnSortTypeObserver);
-            
-            addTableColumnListener(col.getColumns());
-        }
-    }
-
-    private void removeColumnsListener(List<? extends TableColumn<S,?>> list, ListChangeListener cl) {
-        if (list == null) return;
-
-        for (TableColumn<S,?> col : list) {
-            col.getColumns().removeListener(cl);
-            removeColumnsListener(col.getColumns(), cl);
-        }
-    }
-
-    private void addColumnsListener(List<? extends TableColumn<S,?>> list, ListChangeListener cl) {
-        if (list == null) return;
-
-        for (TableColumn<S,?> col : list) {
-            col.getColumns().addListener(cl);
-            addColumnsListener(col.getColumns(), cl);
-        }
-    }
     
 
     
@@ -1443,6 +1004,7 @@ public class TableView<S> extends Control {
      **************************************************************************/
 
     private static final String DEFAULT_STYLE_CLASS = "table-view";
+    private static final String CELL_SPAN_TABLE_VIEW_STYLE_CLASS = "cell-span-table-view";
     
     private static final String PSEUDO_CLASS_CELL_SELECTION = "cell-selection";
     private static final String PSEUDO_CLASS_ROW_SELECTION = "row-selection";
@@ -1477,10 +1039,8 @@ public class TableView<S> extends Control {
       * An immutable wrapper class for use in the TableView 
      * {@link TableView#columnResizePolicyProperty() column resize} functionality.
       */
-     public static class ResizeFeatures<S> {
+     public static class ResizeFeatures<S> extends ResizeFeaturesBase<S> {
         private TableView<S> table;
-        private TableColumn<S,?> column;
-        private Double delta;
 
         /**
          * Creates an instance of this class, with the provided TableView, 
@@ -1495,9 +1055,8 @@ public class TableView<S> extends Control {
          *      resize operation.
          */
         public ResizeFeatures(TableView<S> table, TableColumn<S,?> column, Double delta) {
+            super(column, delta);
             this.table = table;
-            this.column = column;
-            this.delta = delta;
         }
         
         /**
@@ -1505,18 +1064,16 @@ public class TableView<S> extends Control {
          * if this ResizeFeatures instance was created as a result of a
          * TableView resize operation.
          */
-        public TableColumn<S,?> getColumn() { return column; }
-        
-        /**
-         * Returns the amount of horizontal space added or removed in the 
-         * resize operation.
-         */
-        public Double getDelta() { return delta; }
+        @Override public TableColumn<S,?> getColumn() { 
+            return (TableColumn) super.getColumn(); 
+        }
         
         /**
          * Returns the TableView upon which the resize operation is occurring.
          */
-        public TableView<S> getTable() { return table; }
+        public TableView<S> getTable() { 
+            return table; 
+        }
     }
 
 
@@ -1532,7 +1089,7 @@ public class TableView<S> extends Control {
      * A simple extension of the {@link SelectionModel} abstract class to
      * allow for special support for TableView controls.
      */
-    public static abstract class TableViewSelectionModel<S> extends MultipleSelectionModel<S> {
+    public static abstract class TableViewSelectionModel<S> extends TableSelectionModel<S, TableColumn<S,?>> {
 
         private final TableView<S> tableView;
 
@@ -1549,23 +1106,6 @@ public class TableView<S> extends Control {
             }
 
             this.tableView = tableView;
-            
-            selectedIndexProperty().addListener(new InvalidationListener() {
-                @Override public void invalidated(Observable valueModel) {
-                    // we used to lazily retrieve the selected item, but now we just
-                    // do it when the selection changes. This is hardly likely to be
-                    // expensive, and we still lazily handle the multiple selection
-                    // cases over in MultipleSelectionModel.
-                    if (getTableModel() == null) return;
-
-                    int index = getSelectedIndex();
-                    if (index < 0 || index >= getTableModel().size()) {
-                        setSelectedItem(null);
-                    } else {
-                        setSelectedItem(getTableModel().get(index));
-                    }
-                }
-            });
         }
 
         /**
@@ -1576,102 +1116,10 @@ public class TableView<S> extends Control {
         public abstract ObservableList<TablePosition> getSelectedCells();
 
         /**
-         * Convenience function which tests whether the given row and column index
-         * is currently selected in this TableView instance.
-         */
-        public abstract boolean isSelected(int row, TableColumn<S,?> column);
-
-        /**
-         * Selects the cell at the given row/column intersection.
-         */
-        public abstract void select(int row, TableColumn<S,?> column);
-
-        /**
-         * Clears all selection, and then selects the cell at the given row/column
-         * intersection.
-         */
-        public abstract void clearAndSelect(int row, TableColumn<S,?> column);
-
-        /**
-         * Removes selection from the specified row/column position (in view indexes).
-         * If this particular cell (or row if the column value is -1) is not selected,
-         * nothing happens.
-         */
-        public abstract void clearSelection(int row, TableColumn<S,?> column);
-
-        /**
-         * Selects the cell to the left of the currently selected cell.
-         */
-        public abstract void selectLeftCell();
-
-        /**
-         * Selects the cell to the right of the currently selected cell.
-         */
-        public abstract void selectRightCell();
-
-        /**
-         * Selects the cell directly above the currently selected cell.
-         */
-        public abstract void selectAboveCell();
-
-        /**
-         * Selects the cell directly below the currently selected cell.
-         */
-        public abstract void selectBelowCell();
-
-        /**
-         * A boolean property used to represent whether the TableView is in
-         * row or cell selection modes. By default a TableView is in row selection
-         * mode which means that individual cells can not be selected. Setting
-         * <code>cellSelectionEnabled</code> to be true results in cells being
-         * able to be selected (but not rows).
-         */
-        private BooleanProperty cellSelectionEnabled;
-        public final BooleanProperty cellSelectionEnabledProperty() {
-            if (cellSelectionEnabled == null) {
-                cellSelectionEnabled = new BooleanPropertyBase() {
-                    @Override protected void invalidated() {
-                        get();
-                        clearSelection();
-                        tableView.impl_pseudoClassStateChanged(TableView.PSEUDO_CLASS_CELL_SELECTION);
-                        tableView.impl_pseudoClassStateChanged(TableView.PSEUDO_CLASS_ROW_SELECTION);
-                    }
-
-                    @Override
-                    public Object getBean() {
-                        return TableViewSelectionModel.this;
-                    }
-
-                    @Override
-                    public String getName() {
-                        return "cellSelectionEnabled";
-                    }
-                };
-            }
-            return cellSelectionEnabled;
-        }
-        public final void setCellSelectionEnabled(boolean value) {
-            cellSelectionEnabledProperty().set(value);
-        }
-        public final boolean isCellSelectionEnabled() {
-            return cellSelectionEnabled == null ? false : cellSelectionEnabled.get();
-        }
-        
-        
-        /**
          * Returns the TableView instance that this selection model is installed in.
          */
         public TableView<S> getTableView() {
             return tableView;
-        }
-
-        /**
-         * Convenience method that returns <code>getTableView().getItems()</code>.
-         * @return The {@link TableView#itemsProperty() items} list of the current
-         *      TableView.
-         */
-        protected List<S> getTableModel() {
-            return tableView.getItems();
         }
     }
     
@@ -1693,6 +1141,15 @@ public class TableView<S> extends Control {
         public TableViewArrayListSelectionModel(final TableView<S> tableView) {
             super(tableView);
             this.tableView = tableView;
+            
+            cellSelectionEnabledProperty().addListener(new InvalidationListener() {
+                @Override public void invalidated(Observable o) {
+                    isCellSelectionEnabled();
+                    clearSelection();
+                    tableView.impl_pseudoClassStateChanged(TableView.PSEUDO_CLASS_CELL_SELECTION);
+                    tableView.impl_pseudoClassStateChanged(TableView.PSEUDO_CLASS_ROW_SELECTION);
+                }
+            });
             
             final MappingChange.Map<TablePosition,S> cellToItemsMap = new MappingChange.Map<TablePosition, S>() {
 
@@ -2005,14 +1462,12 @@ public class TableView<S> extends Control {
         }
 
         @Override public void select(S obj) {
-            if (getTableModel() == null) return;
-
             // We have no option but to iterate through the model and select the
             // first occurrence of the given object. Once we find the first one, we
             // don't proceed to select any others.
             S rowObj = null;
             for (int i = 0; i < getRowCount(); i++) {
-                rowObj = getTableModel().get(i);
+                rowObj = getModelItem(i);
                 if (rowObj == null) continue;
 
                 if (rowObj.equals(obj)) {
@@ -2096,7 +1551,6 @@ public class TableView<S> extends Control {
             if (getSelectionMode() == SelectionMode.SINGLE) return;
 
             quietClearSelection();
-            if (getTableModel() == null) return;
 
             if (isCellSelectionEnabled()) {
                 List<TablePosition> indices = new ArrayList<TablePosition>();
@@ -2329,7 +1783,7 @@ public class TableView<S> extends Control {
             setSelectedItem(getModelItem(row));
         }
         
-        private void focus(int row) {
+        @Override public void focus(int row) {
             focus(row, null);
         }
 
@@ -2343,7 +1797,7 @@ public class TableView<S> extends Control {
             getTableView().getFocusModel().focus(pos.getRow(), pos.getTableColumn());
         }
 
-        private int getFocusedIndex() {
+        @Override public int getFocusedIndex() {
             return getFocusedCell().getRow();
         }
 
@@ -2355,15 +1809,20 @@ public class TableView<S> extends Control {
         }
 
         private int getRowCount() {
-            return getTableModel() == null ? -1 : getTableModel().size();
+            List items = tableView.getItems();
+            return items == null ? -1 : items.size();
+        }
+        
+        /** {@inheritDoc} */
+        @Override protected int getItemCount() {
+            List items = tableView.getItems();
+            if (items == null) return -1;
+            return items.size();
         }
 
-        private S getModelItem(int index) {
-            if (getTableModel() == null) return null;
-
-            if (index < 0 || index >= getRowCount()) return null;
-
-            return getTableModel().get(index);
+        @Override protected S getModelItem(int index) {
+            if (index < 0 || index > getRowCount()) return null;
+            return tableView.getItems().get(index);
         }
     }
     
@@ -2376,7 +1835,7 @@ public class TableView<S> extends Control {
      * 
      * @see TableView
      */
-    public static class TableViewFocusModel<S> extends FocusModel<S> {
+    public static class TableViewFocusModel<S> extends TableFocusModel<S, TableColumn<S, ?>> {
 
         private final TableView<S> tableView;
 
@@ -2464,7 +1923,7 @@ public class TableView<S> extends Control {
 
             if (index < 0 || index >= getItemCount()) return null;
 
-            return ((List<S>)tableView.getItems()).get(index);
+            return tableView.getItems().get(index);
         }
 
         /**
@@ -2484,7 +1943,7 @@ public class TableView<S> extends Control {
                     @Override protected void invalidated() {
                         if (get() == null) return;
 
-                        if (old == null || (old != null && !old.equals(get()))) {
+                        if (old == null || !old.equals(get())) {
                             setFocusedIndex(get().getRow());
                             setFocusedItem(getModelItem(getValue().getRow()));
                             
@@ -2513,7 +1972,7 @@ public class TableView<S> extends Control {
          * @param row The row index of the item to give focus to.
          * @param column The column of the item to give focus to. Can be null.
          */
-        public void focus(int row, TableColumn<S,?> column) {
+        @Override public void focus(int row, TableColumn<S,?> column) {
             if (row < 0 || row >= getItemCount()) {
                 setFocusedCell(EMPTY_CELL);
             } else {
@@ -2543,11 +2002,11 @@ public class TableView<S> extends Control {
          * Tests whether the row / cell at the given location currently has the
          * focus within the TableView.
          */
-        public boolean isFocused(int row, TableColumn<S,?> column) {
+        @Override public boolean isFocused(int row, TableColumn<S,?> column) {
             if (row < 0 || row >= getItemCount()) return false;
 
             TablePosition cell = getFocusedCell();
-            boolean columnMatch = column == null || (column != null && column.equals(cell.getTableColumn()));
+            boolean columnMatch = column == null || column.equals(cell.getTableColumn());
 
             return cell.getRow() == row && columnMatch;
         }
@@ -2571,7 +2030,7 @@ public class TableView<S> extends Control {
         /**
          * Attempts to move focus to the cell above the currently focused cell.
          */
-        public void focusAboveCell() {
+        @Override public void focusAboveCell() {
             TablePosition cell = getFocusedCell();
 
             if (getFocusedIndex() == -1) {
@@ -2584,7 +2043,7 @@ public class TableView<S> extends Control {
         /**
          * Attempts to move focus to the cell below the currently focused cell.
          */
-        public void focusBelowCell() {
+        @Override public void focusBelowCell() {
             TablePosition cell = getFocusedCell();
             if (getFocusedIndex() == -1) {
                 focus(0, cell.getTableColumn());
@@ -2596,7 +2055,7 @@ public class TableView<S> extends Control {
         /**
          * Attempts to move focus to the cell to the left of the currently focused cell.
          */
-        public void focusLeftCell() {
+        @Override public void focusLeftCell() {
             TablePosition cell = getFocusedCell();
             if (cell.getColumn() <= 0) return;
             focus(cell.getRow(), getTableColumn(cell.getTableColumn(), -1));
@@ -2605,7 +2064,7 @@ public class TableView<S> extends Control {
         /**
          * Attempts to move focus to the cell to the right of the the currently focused cell.
          */
-        public void focusRightCell() {
+        @Override public void focusRightCell() {
             TablePosition cell = getFocusedCell();
             if (cell.getColumn() == getColumnCount() - 1) return;
             focus(cell.getRow(), getTableColumn(cell.getTableColumn(), 1));

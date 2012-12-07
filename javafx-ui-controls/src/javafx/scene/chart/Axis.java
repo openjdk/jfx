@@ -79,6 +79,9 @@ public abstract class Axis<T> extends Region {
     private double oldLength = 0;
     /** True when the current range invalid and all dependent calculations need to be updated */
     private boolean rangeValid = false;
+    /** True when labelFormatter changes programmatically - only tick marks text needs to updated */
+    boolean formatterValid = false;
+    
     double maxWidth = 0;
     double maxHeight = 0;
     // -------------- PUBLIC PROPERTIES --------------------------------------------------------------------------------
@@ -611,8 +614,7 @@ public abstract class Axis<T> extends Region {
         final double length = (Side.TOP.equals(side) || Side.BOTTOM.equals(side)) ? width : height;
         int numLabelsToSkip = 1;
         int tickIndex = 0;
-
-        if (oldLength != length || !isRangeValid()) {
+        if (oldLength != length || !isRangeValid() || formatterValid) {
             // get range
             Object range;
             if(isAutoRanging()) {
@@ -628,7 +630,6 @@ public abstract class Axis<T> extends Region {
 
              // calculate maxLabelWidth / maxLabelHeight for respective orientations
             maxWidth = 0; maxHeight = 0;
-
             if (side != null) {
                 if (Side.TOP.equals(side) || Side.BOTTOM.equals(side)) {
                     for (T value: newTickValues) {
@@ -701,13 +702,20 @@ public abstract class Axis<T> extends Region {
                     ft.play();
                 }
             }
+            if (formatterValid) {
+                // update tick's textNode text for all ticks as formatter has changed.
+                formatterValid = false;
+                for (TickMark<T> tick : tickMarks) {
+                    tick.textNode.setText(getTickMarkLabel(tick.getValue()));
+                }
+            }
            
             // call tick marks updated to inform subclasses that we have updated tick marks
             tickMarksUpdated();
             // mark all done
             oldLength = length;
             rangeValid = true;
-                }
+        }
 
         // RT-12272 : tick labels overlapping
         int numLabels = 0;

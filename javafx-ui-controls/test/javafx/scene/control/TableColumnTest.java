@@ -1253,7 +1253,7 @@ public class TableColumnTest {
         // change parent width
 
 
-    public class Person {
+    public static class Person {
         public Person() { }
         public Person(String name, int age) {
             setName(name);

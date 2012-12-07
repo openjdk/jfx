@@ -24,8 +24,6 @@
  */
 package javafx.scene.control;
 
-import java.util.Map;
-
 import javafx.beans.InvalidationListener;
 import javafx.beans.Observable;
 import javafx.beans.WeakInvalidationListener;
@@ -34,6 +32,7 @@ import javafx.collections.ListChangeListener;
 import javafx.event.Event;
 import javafx.scene.control.TableView.TableViewFocusModel;
 
+import com.sun.javafx.property.PropertyReference;
 import com.sun.javafx.scene.control.skin.TableCellSkin;
 import javafx.collections.WeakListChangeListener;
 import java.lang.ref.WeakReference;
@@ -484,31 +483,6 @@ public class TableCell<S,T> extends IndexedCell<T> {
      * This is called when we think that the data within this TableCell may have
      * changed. You'll note that this is a private function - it is only called
      * when one of the triggers above call it.
-     *
-     * We offer multiple functions to retrieve data from a data source, and there
-     * is a form of unspoken contract with the developer that stipulates the
-     * order in which we try accessing these functions. Ideally this will be
-     * formalised at some point.
-     *
-     * The basic approach is to follow the following order:
-     *  * Try to get the cell data from the table using the backing data for the
-     *      whole row. This is only attempted if rowCell != null, the
-     *      appropriate function is defined on TableColumn AND the TableModel
-     *      implementation has a getRow function defined.
-     *      This approach is taken first given the assumption that getting the
-     *      data for an individual cell is cheapest if the row backing data is
-     *      already in memory.
-     *  * Try to get the cell data from the table using the row/column values
-     *      stored in this TableCell. This is only attempted if the appropriate
-     *      function is initialized in the current TableColumn.
-     *  * Try to get the cell data from the TableModel using the row/column
-     *      values stored in this TableCell.
-     *
-     * Note: in the case of the second or third approaches being attempted,
-     * the row value stored in this TableCell will firstly be translated from a
-     * view index to a model index, such that the developer is not burdened with
-     * the need to map between view and model indexes (this is instead left to
-     * the responsibility of the TableModel developer).
      */
     private void updateItem() {
         if (currentObservableValue != null) {

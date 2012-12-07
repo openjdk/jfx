@@ -32,10 +32,10 @@ import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.event.ActionEvent;
 import javafx.event.EventHandler;
+import javafx.geometry.NodeOrientation;
 import javafx.geometry.VPos;
 import javafx.scene.Group;
 import javafx.scene.control.ProgressIndicator;
-import javafx.scene.control.SkinBase;
 import javafx.scene.layout.Region;
 import javafx.scene.layout.StackPane;
 import javafx.scene.paint.Color;
@@ -62,11 +62,9 @@ import com.sun.javafx.scene.control.behavior.ProgressIndicatorBehavior;
 import com.sun.javafx.scene.control.skin.resources.ControlResources;
 import javafx.beans.property.ObjectProperty;
 import javafx.beans.value.WritableValue;
+import javafx.scene.control.SkinBase;
 
-import javafx.beans.value.ChangeListener;
-import javafx.beans.value.ObservableValue;
-
-public class ProgressIndicatorSkin extends SkinBase<ProgressIndicator, ProgressIndicatorBehavior<ProgressIndicator>> {
+public class ProgressIndicatorSkin extends BehaviorSkinBase<ProgressIndicator, ProgressIndicatorBehavior<ProgressIndicator>> {
 
     /***************************************************************************
      *                                                                         *
@@ -290,6 +288,13 @@ public class ProgressIndicatorSkin extends SkinBase<ProgressIndicator, ProgressI
             updateProgress();
         }
 
+        @Override public boolean isAutomaticallyMirrored() {
+            // This is used instead of setting NodeOrientation,
+            // allowing the Text node to inherit the current
+            // orientation.
+            return false;
+        }
+
         private void updateProgress() {
             intProgress = (int) Math.round(control.getProgress() * 100.0) ;
             text.setText((control.getProgress() >= 1) ? (DONE) : ("" + intProgress + "%"));
@@ -404,6 +409,7 @@ public class ProgressIndicatorSkin extends SkinBase<ProgressIndicator, ProgressI
             this.control = control;
             this.skin = s;
 
+            setNodeOrientation(NodeOrientation.LEFT_TO_RIGHT);
             getStyleClass().setAll("spinner");
 
             skin.segmentColors = FXCollections.<Color>observableArrayList();

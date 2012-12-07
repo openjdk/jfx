@@ -587,10 +587,6 @@ public class TabPane extends Control {
         return getClassStyleablePropertyMetaData();
     }
 
-    // used in the impl_getPseudoClassState method below to improve performance
-    private Side cachedSide;
-    private String cachedSideString;
-
     private static final long TOP_PSEUDOCLASS_STATE = StyleManager.getPseudoclassMask("top");
     private static final long BOTTOM_PSEUDOCLASS_STATE = StyleManager.getPseudoclassMask("bottom");
     private static final long LEFT_PSEUDOCLASS_STATE = StyleManager.getPseudoclassMask("left");

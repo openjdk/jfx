@@ -1095,7 +1095,7 @@ public class PopupControl extends PopupWindow implements Skinnable {
                 // Dispose of the old skin
                 if (oldValue != null) oldValue.dispose();
                 // Get the new value, and save it off as the new oldValue
-                final Skin<?> skin = oldValue = getValue();
+                oldValue = getValue();
                 // Update the children list with the new skin node
                 updateChildren();
                 // DEBUG: Log that we've changed the skin
@@ -1133,8 +1133,6 @@ public class PopupControl extends PopupWindow implements Skinnable {
                     
                     @Override
                     public void invalidated() {
-
-                        final Skin currentSkin = skinProperty().get();
 
                         //
                         // if the current skin is not null, then 
