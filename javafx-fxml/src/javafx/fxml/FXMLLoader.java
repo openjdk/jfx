@@ -915,6 +915,15 @@ public class FXMLLoader {
             FXMLLoader fxmlLoader = new FXMLLoader(location, resources,
                 builderFactory, controllerFactory, charset,
                 loaders);
+            fxmlLoader.parentLoader = FXMLLoader.this;
+            
+            if (isCyclic(FXMLLoader.this, fxmlLoader)) {
+                throw new IOException(
+                        String.format(
+                        "Including \"%s\" in \"%s\" created cyclic reference.",
+                        fxmlLoader.location.toExternalForm(),
+                        FXMLLoader.this.location.toExternalForm()));
+            }
             fxmlLoader.setClassLoader(classLoader);
             fxmlLoader.setStaticLoad(staticLoad);
 
@@ -1566,6 +1575,8 @@ public class FXMLLoader {
     private ClassLoader classLoader = defaultClassLoader;
     private boolean staticLoad = false;
     private LoadListener loadListener = null;
+    
+    private FXMLLoader parentLoader;
 
     private XMLStreamReader xmlStreamReader = null;
     private Element current = null;
@@ -1809,6 +1820,28 @@ public class FXMLLoader {
         this.root = root;
     }
 
+    @Override
+    public boolean equals(Object obj) {
+        if (obj instanceof FXMLLoader) {
+            FXMLLoader loader = (FXMLLoader)obj;
+            return loader.location.toExternalForm().equals(
+                    location.toExternalForm());
+        }
+        return false;
+    }            
+    
+    private boolean isCyclic(
+                            FXMLLoader currentLoader, 
+                            FXMLLoader node) {
+        if (currentLoader == null) {
+            return false;
+        }
+        if (currentLoader.equals(node)) {
+            return true;
+        }        
+        return isCyclic(currentLoader.parentLoader, node);
+    }
+        
     /**
      * Returns the controller associated with the root object.
      */
