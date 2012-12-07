@@ -26,6 +26,8 @@
 package com.sun.javafx.application;
 
 import com.sun.javafx.runtime.SystemProperties;
+
+import java.security.AccessControlContext;
 import java.util.List;
 import java.util.Set;
 import java.util.concurrent.CopyOnWriteArraySet;
@@ -167,10 +169,17 @@ public class PlatformImpl {
                 return;
             }
 
+            final AccessControlContext acc = AccessController.getContext();
             Toolkit.getToolkit().defer(new Runnable() {
                 @Override public void run() {
                     try {
-                        r.run();
+                        AccessController.doPrivileged(new PrivilegedAction<Void>() {
+                            @Override
+                            public Void run() {
+                                r.run();
+                                return null;
+                            }
+                        }, acc);
                     } catch (Throwable t) {
                         System.err.println("Exception in runnable");
                         t.printStackTrace();
