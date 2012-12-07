@@ -44,6 +44,8 @@ import com.sun.javafx.scene.control.skin.TreeViewSkin;
 import com.sun.javafx.scene.control.skin.VirtualContainerBase;
 import java.lang.ref.WeakReference;
 import javafx.beans.DefaultProperty;
+import javafx.beans.property.ReadOnlyIntegerProperty;
+import javafx.beans.property.ReadOnlyIntegerWrapper;
 import javafx.beans.property.SimpleBooleanProperty;
 import javafx.beans.property.ReadOnlyObjectProperty;
 import javafx.beans.property.ReadOnlyObjectWrapper;
@@ -231,7 +233,7 @@ public class TreeView<T> extends Control {
         getStyleClass().setAll("tree-view");
 
         setRoot(root);
-        updateTreeItemCount(root);
+        updateExpandedItemCount(root);
 
         // install default selection and focus models - it's unlikely this will be changed
         // by many users.
@@ -251,7 +253,7 @@ public class TreeView<T> extends Control {
     // used in the tree item modification event listener. Used by the 
     // layoutChildren method to determine whether the tree item count should
     // be recalculated.
-    private boolean treeItemCountDirty = true;
+    private boolean expandedItemCountDirty = true;
     
     
     /***************************************************************************
@@ -270,7 +272,7 @@ public class TreeView<T> extends Control {
             EventType eventType = e.getEventType();
             boolean match = false;
             while (eventType != null) {
-                if (eventType.equals(TreeItem.<T>treeItemCountChangeEvent())) {
+                if (eventType.equals(TreeItem.<T>expandedItemCountChangeEvent())) {
                     match = true;
                     break;
                 }
@@ -278,7 +280,7 @@ public class TreeView<T> extends Control {
             }
             
             if (match) {
-                treeItemCountDirty = true;
+                expandedItemCountDirty = true;
                 requestLayout();
             }
         }
@@ -353,7 +355,7 @@ public class TreeView<T> extends Control {
                 weakOldItem = new WeakReference<TreeItem<T>>(root);
             }
 
-            treeItemCountDirty = true;
+            expandedItemCountDirty = true;
             updateRootExpanded();
         }
     };
@@ -417,7 +419,7 @@ public class TreeView<T> extends Control {
             showRoot = new SimpleBooleanProperty(this, "showRoot", true) {
                 @Override protected void invalidated() {
                     updateRootExpanded();
-                    updateTreeItemCount(getRoot());
+                    updateExpandedItemCount(getRoot());
                 }
             };
         }
@@ -490,42 +492,31 @@ public class TreeView<T> extends Control {
     }
     
     
-    // --- Tree node count
-    private IntegerProperty treeItemCount = new SimpleIntegerProperty(this, "impl_treeItemCount", 0);
-
-    private void setTreeItemCount(int value) {
-        impl_treeItemCountProperty().set(value);
-    }
-
+    // --- Expanded node count
     /**
      * <p>Represents the number of tree nodes presently able to be visible in the
-     * TreeView. This is essentially the count of all expanded tree nodes, and
+     * TreeView. This is essentially the count of all expanded tree items, and
      * their children.
      *
-     * <p>For example, if just the root node is visible, the treeItemCount will
+     * <p>For example, if just the root node is visible, the expandedItemCount will
      * be one. If the root had three children and the root was expanded, the value
      * will be four.
-     * 
-     * @treatAsPrivate implementation detail
-     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
      */
-    @Deprecated
-    public final int impl_getTreeItemCount() {
-        if (treeItemCountDirty) {
-            updateTreeItemCount(getRoot());
+    private ReadOnlyIntegerWrapper expandedItemCount = new ReadOnlyIntegerWrapper(this, "expandedItemCount", 0);
+    public final ReadOnlyIntegerProperty expandedItemCountProperty() {
+        return expandedItemCount.getReadOnlyProperty();
+    }
+    private void setExpandedItemCount(int value) {
+        expandedItemCount.set(value);
+    }
+    public final int getExpandedItemCount() {
+        if (expandedItemCountDirty) {
+            updateExpandedItemCount(getRoot());
         }
-        return treeItemCount.get();
+        return expandedItemCount.get();
     }
 
-    /**
-     * @treatAsPrivate implementation detail
-     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
-     */
-    @Deprecated
-    public final IntegerProperty impl_treeItemCountProperty() {
-        return treeItemCount;
-    }
-    
+
     
     // --- Editable
     private BooleanProperty editable;
@@ -701,8 +692,8 @@ public class TreeView<T> extends Control {
     
     /** {@inheritDoc} */
     @Override protected void layoutChildren() {
-        if (treeItemCountDirty) {
-            updateTreeItemCount(getRoot());
+        if (expandedItemCountDirty) {
+            updateExpandedItemCount(getRoot());
         }
         
         super.layoutChildren();
@@ -746,7 +737,7 @@ public class TreeView<T> extends Control {
      *      be found.
      */
     public int getRow(TreeItem<T> item) {
-        return TreeUtil.getRow(item, getRoot(), treeItemCountDirty, isShowRoot());
+        return TreeUtil.getRow(item, getRoot(), expandedItemCountDirty, isShowRoot());
     }
 
     /**
@@ -758,7 +749,7 @@ public class TreeView<T> extends Control {
     public TreeItem<T> getTreeItem(int row) {
         // normalize the requested row based on whether showRoot is set
         int r = isShowRoot() ? row : (row + 1);
-        return TreeUtil.getItem(getRoot(), r, treeItemCountDirty);
+        return TreeUtil.getItem(getRoot(), r, expandedItemCountDirty);
     }
 
     /** {@inheritDoc} */
@@ -772,9 +763,9 @@ public class TreeView<T> extends Control {
      *                                                                         *
      **************************************************************************/  
     
-    private void updateTreeItemCount(TreeItem treeItem) {
-        setTreeItemCount(TreeUtil.updateTreeItemCount(treeItem, treeItemCountDirty, isShowRoot()));
-        treeItemCountDirty = false;
+    private void updateExpandedItemCount(TreeItem treeItem) {
+        setExpandedItemCount(TreeUtil.updateExpandedItemCount(treeItem, expandedItemCountDirty, isShowRoot()));
+        expandedItemCountDirty = false;
     }
 
     private void updateRootExpanded() {
@@ -898,12 +889,12 @@ public class TreeView<T> extends Control {
         
         private void updateTreeEventListener(TreeItem<T> oldRoot, TreeItem<T> newRoot) {
             if (oldRoot != null && weakTreeItemListener != null) {
-                oldRoot.removeEventHandler(TreeItem.<T>treeItemCountChangeEvent(), weakTreeItemListener);
+                oldRoot.removeEventHandler(TreeItem.<T>expandedItemCountChangeEvent(), weakTreeItemListener);
             }
             
             if (newRoot != null) {
                 weakTreeItemListener = new WeakEventHandler(treeItemListener);
-                newRoot.addEventHandler(TreeItem.<T>treeItemCountChangeEvent(), weakTreeItemListener);
+                newRoot.addEventHandler(TreeItem.<T>expandedItemCountChangeEvent(), weakTreeItemListener);
             }
         }
         
@@ -1011,7 +1002,7 @@ public class TreeView<T> extends Control {
             
             // Fix for RT-15419. We eagerly update the tree item count, such that
             // selection occurs on the row
-            treeView.updateTreeItemCount(treeView.getRoot());
+            treeView.updateExpandedItemCount(treeView.getRoot());
             
             // We have no option but to iterate through the model and select the
             // first occurrence of the given object. Once we find the first one, we
@@ -1053,14 +1044,14 @@ public class TreeView<T> extends Control {
         
         /** {@inheritDoc} */
         @Override protected int getItemCount() {
-            return treeView == null ? 0 : treeView.impl_getTreeItemCount();
+            return treeView == null ? 0 : treeView.getExpandedItemCount();
         }
 
         /** {@inheritDoc} */
         @Override public TreeItem<T> getModelItem(int index) {
             if (treeView == null) return null;
 
-            if (index < 0 || index >= treeView.impl_getTreeItemCount()) return null;
+            if (index < 0 || index >= treeView.getExpandedItemCount()) return null;
 
             return treeView.getTreeItem(index);
         }
@@ -1094,12 +1085,12 @@ public class TreeView<T> extends Control {
         
         private void updateTreeEventListener(TreeItem<T> oldRoot, TreeItem<T> newRoot) {
             if (oldRoot != null && weakTreeItemListener != null) {
-                oldRoot.removeEventHandler(TreeItem.<T>treeItemCountChangeEvent(), weakTreeItemListener);
+                oldRoot.removeEventHandler(TreeItem.<T>expandedItemCountChangeEvent(), weakTreeItemListener);
             }
             
             if (newRoot != null) {
                 weakTreeItemListener = new WeakEventHandler(treeItemListener);
-                newRoot.addEventHandler(TreeItem.<T>treeItemCountChangeEvent(), weakTreeItemListener);
+                newRoot.addEventHandler(TreeItem.<T>expandedItemCountChangeEvent(), weakTreeItemListener);
             }
         }
         
@@ -1154,13 +1145,13 @@ public class TreeView<T> extends Control {
         private WeakEventHandler weakTreeItemListener;
 
         @Override protected int getItemCount() {
-            return treeView == null ? -1 : treeView.impl_getTreeItemCount();
+            return treeView == null ? -1 : treeView.getExpandedItemCount();
         }
 
         @Override protected TreeItem<T> getModelItem(int index) {
             if (treeView == null) return null;
 
-            if (index < 0 || index >= treeView.impl_getTreeItemCount()) return null;
+            if (index < 0 || index >= treeView.getExpandedItemCount()) return null;
 
             return treeView.getTreeItem(index);
         }

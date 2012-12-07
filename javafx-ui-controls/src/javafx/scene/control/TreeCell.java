@@ -406,7 +406,7 @@ public class TreeCell<T> extends IndexedCell<T> {
         if (tv == null) return;
         
         // Compute whether the index for this cell is for a real item
-        boolean valid = getIndex() >=0 && getIndex() < tv.impl_getTreeItemCount();
+        boolean valid = getIndex() >=0 && getIndex() < tv.getExpandedItemCount();
 
         // Cause the cell to update itself
         if (valid) {

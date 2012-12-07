@@ -518,7 +518,7 @@ public class TreeTableColumn<S,T> extends TableColumnBase<TreeItem<S>,T> impleme
         
         // Get the table
         final TreeTableView<S> table = getTreeTableView();
-        if (table == null || index >= table.impl_getTreeItemCount()) return null;
+        if (table == null || index >= table.getExpandedItemCount()) return null;
         
         // Get the rowData
         TreeItem<S> item = table.getTreeItem(index);
@@ -798,7 +798,7 @@ public class TreeTableColumn<S,T> extends TableColumnBase<TreeItem<S>,T> impleme
 
             TreeTableView treeTable = getTreeTableView();
             int row = pos.getRow();
-            if (row < 0 || row >= treeTable.impl_getTreeItemCount()) return null;
+            if (row < 0 || row >= treeTable.getExpandedItemCount()) return null;
 
             return treeTable.getTreeItem(row);
         }

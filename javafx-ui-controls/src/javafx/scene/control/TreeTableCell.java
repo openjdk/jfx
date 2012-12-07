@@ -476,7 +476,7 @@ public class TreeTableCell<S,T> extends IndexedCell<T> {
         }
         
         // get the total number of items in the data model
-        int itemCount = getTreeTableView().impl_getTreeItemCount();
+        int itemCount = getTreeTableView().getExpandedItemCount();
         
         if (getIndex() >= itemCount) {
             updateItem(null, true);
