@@ -3,6 +3,8 @@
  */
 package javafx.scene.control;
 
+import com.sun.javafx.pgstub.StubToolkit;
+import com.sun.javafx.tk.Toolkit;
 import static javafx.scene.control.ControlTestUtils.assertPseudoClassDoesNotExist;
 import static javafx.scene.control.ControlTestUtils.assertPseudoClassExists;
 import static javafx.scene.control.ControlTestUtils.assertStyleClassContains;
@@ -18,7 +20,10 @@ import javafx.beans.property.SimpleStringProperty;
 import javafx.beans.property.StringProperty;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
-import javafx.util.StringConverter;
+import javafx.scene.Parent;
+import javafx.scene.Scene;
+import javafx.scene.layout.StackPane;
+import javafx.stage.Stage;
 
 import org.junit.Before;
 import org.junit.Ignore;
@@ -26,9 +31,22 @@ import org.junit.Test;
 
 public class ChoiceBoxTest {
     private ChoiceBox<String> box;
+    private Toolkit tk;
+    private Scene scene;
+    private Stage stage;
     
     @Before public void setup() {
+        //This step is not needed (Just to make sure StubToolkit is loaded into VM)
+        tk = (StubToolkit)Toolkit.getToolkit();
         box = new ChoiceBox<String>();
+    }
+    
+    protected void startApp(Parent root) {
+        scene = new Scene(root,800,600);
+        stage = new Stage();
+        stage.setScene(scene);
+        stage.show();
+        tk.firePulse();
     }
     
     /*********************************************************************
@@ -381,5 +399,12 @@ public class ChoiceBoxTest {
         box.show();
         box.hide();
         assertPseudoClassDoesNotExist(box, "showing");
+    }
+    
+    @Test public void testAddingEmptyChoiceBoxToLiveScene() {
+        StackPane pane = new StackPane();
+        pane.getChildren().add(box);
+        startApp(pane);
+        assertEquals(0, box.getItems().size());
     }
 }

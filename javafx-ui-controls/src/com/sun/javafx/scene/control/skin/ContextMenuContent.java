@@ -409,9 +409,11 @@ public class ContextMenuContent extends Region {
     private void computeInitialSize() {
         int index = getLongestLabel();
         itemsContainer.getChildren().clear();
-        final MenuItem item = getItems().get(index);
-        MenuItemContainer menuItemContainer = new MenuItemContainer(item);
-        itemsContainer.getChildren().add(menuItemContainer);
+        if (!getItems().isEmpty()) {
+            final MenuItem item = getItems().get(index);
+            MenuItemContainer menuItemContainer = new MenuItemContainer(item);
+            itemsContainer.getChildren().add(menuItemContainer);
+        }
     }
     
     private int getLongestLabel() {
