@@ -37,7 +37,7 @@ import com.sun.javafx.scene.layout.region.RepeatStruct;
 
 /**
  */
-public class BorderConverter extends StyleConverter<ParsedValue[], Border> {
+class BorderConverter extends StyleConverter<ParsedValue[], Border> {
 
     private static final BorderConverter BORDER_IMAGE_CONVERTER =
             new BorderConverter();

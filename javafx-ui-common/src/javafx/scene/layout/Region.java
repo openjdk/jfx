@@ -2375,7 +2375,6 @@ public class Region extends Parent {
                     SHAPE,
                     SCALE_SHAPE,
                     POSITION_SHAPE,
-                    CACHE_SHAPE,
                     SNAP_TO_PIXEL
             );
             STYLEABLES = Collections.unmodifiableList(styleables);

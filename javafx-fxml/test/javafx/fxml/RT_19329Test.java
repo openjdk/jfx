@@ -28,18 +28,9 @@ package javafx.fxml;
 import java.io.IOException;
 import org.junit.Test;
 
-import static org.junit.Assert.*;
-
-public class RT_19112 {
-    @Test
-    public void testStaticProperty() throws IOException {
-        FXMLLoader fxmlLoader = new FXMLLoader(getClass().getResource("rt_19112.fxml"));
-        fxmlLoader.load();
-
-        Widget widget1 = (Widget)fxmlLoader.getNamespace().get("widget1");
-        assertEquals(Widget.getAlignment(widget1), Alignment.LEFT);
-
-        Widget widget2 = (Widget)fxmlLoader.getNamespace().get("widget2");
-        assertEquals(Widget.getAlignment(widget2), Alignment.RIGHT);
+public class RT_19329Test {
+    @Test(expected=IOException.class)
+    public void testIncludeException() throws IOException {
+        FXMLLoader.load(getClass().getResource("rt_19329.fxml"));
     }
 }

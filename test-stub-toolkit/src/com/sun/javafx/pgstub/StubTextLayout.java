@@ -41,7 +41,7 @@ public class StubTextLayout implements TextLayout {
 
     @Override
     public boolean setContent(TextSpan[] spans) {
-        return false;
+        return true;
     }
 
     private String text;
@@ -50,22 +50,22 @@ public class StubTextLayout implements TextLayout {
     public boolean setContent(String text, Object font) {
         this.text = text;
         this.font = (Font)font;
-        return false;
+        return true;
     }
 
     @Override
     public boolean setAlignment(int alignment) {
-        return false;
+        return true;
     }
 
     @Override
     public boolean setWrapWidth(float wrapWidth) {
-        return false;
+        return true;
     }
 
     @Override
     public boolean setDirection(int direction) {
-        return false;
+        return true;
     }
 
     @Override

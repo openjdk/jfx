@@ -28,17 +28,9 @@ package javafx.fxml;
 import java.io.IOException;
 import org.junit.Test;
 
-import static org.junit.Assert.*;
-
-public class RT_16722 {
-    @Test
-    public void testControllerInheritance() throws IOException {
-        FXMLLoader fxmlLoader = new FXMLLoader(getClass().getResource("rt_16722.fxml"));
-
-        fxmlLoader.load();
-        RT_16722ControllerB controller = (RT_16722ControllerB)fxmlLoader.getController();
-
-        assertEquals(controller.getRoot().getName(), controller.getRootName());
-        assertEquals(controller.getChild().getName(), controller.getChildName());
+public class RT_19008Test {
+    @Test(expected=NullPointerException.class)
+    public void testMissingResource() throws IOException {
+        FXMLLoader.load(getClass().getResource("rt_19008.fxml"));
     }
 }

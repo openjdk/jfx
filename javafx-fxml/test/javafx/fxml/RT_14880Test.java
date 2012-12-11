@@ -36,7 +36,7 @@ import com.sun.javafx.fxml.expression.KeyPath;
 import static com.sun.javafx.fxml.expression.Expression.*;
 import static org.junit.Assert.*;
 
-public class RT_14880 {
+public class RT_14880Test {
     @Test
     public void testExpression() {
         Expression add = add(3, 4);

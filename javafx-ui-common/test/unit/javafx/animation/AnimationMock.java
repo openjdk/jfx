@@ -39,7 +39,7 @@ public class AnimationMock extends Animation {
 	}
 
 	@Override
-	public void impl_jumpTo(long currentTicks, long cycleTicks) {
+	public void impl_jumpTo(long currentTicks, long cycleTicks, boolean forceJump) {
 		// TODO Auto-generated method stub
 
 	}

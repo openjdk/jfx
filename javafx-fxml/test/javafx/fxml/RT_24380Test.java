@@ -25,14 +25,14 @@
 
 package javafx.fxml;
 
+import java.io.IOException;
+
 import org.junit.Test;
 
-import static org.junit.Assert.*;
-
-public class RT_19870 {
+public class RT_24380Test {
     @Test
-    public void testCustomWidget() {
-        MyWidget myWidget = new MyWidget();
-        assertTrue(myWidget.getChildWidgetEnabledChanged());
+    public void testProtectedInitializeMethod() throws IOException {
+        FXMLLoader fxmlLoader = new FXMLLoader(getClass().getResource("rt_24380.fxml"));
+        fxmlLoader.load();
     }
 }

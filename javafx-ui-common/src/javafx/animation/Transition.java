@@ -212,8 +212,9 @@ public abstract class Transition extends Animation {
     }
 
     @Override
-    void impl_jumpTo(long currentTicks, long cycleTicks) {
-        if (getStatus() != Status.STOPPED) {
+    void impl_jumpTo(long currentTicks, long cycleTicks, boolean forceJump) {
+        if (getStatus() != Status.STOPPED || forceJump) {
+            impl_sync(false);
             interpolate(calculateFraction(currentTicks, cycleTicks));
         }
     }

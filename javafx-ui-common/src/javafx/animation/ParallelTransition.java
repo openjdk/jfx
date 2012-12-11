@@ -123,7 +123,7 @@ public final class ParallelTransition extends Transition {
             if (oldValue.doubleValue() * newValue.doubleValue() < 0) {
                 for (int i = 0; i < cachedChildren.length; ++i) {
                     Animation child = cachedChildren[i];
-                    child.setRate(rates[i] * Math.signum(newValue.doubleValue()));
+                    child.clipEnvelope.setRate(rates[i] * Math.signum(getCurrentRate()));
                 }
                 toggledRate = true;
             }
@@ -288,7 +288,7 @@ public final class ParallelTransition extends Transition {
     private boolean startChild(Animation child, int index) {
         final boolean forceSync = forceChildSync[index];
         if (child.impl_startable(forceSync)) {
-            child.setRate(rates[index] * Math.signum(getCurrentRate()));
+            child.clipEnvelope.setRate(rates[index] * Math.signum(getCurrentRate()));
             child.impl_start(forceSync);
             forceChildSync[index] = false;
             return true;
@@ -351,7 +351,7 @@ public final class ParallelTransition extends Transition {
     void impl_start(boolean forceSync) {
         super.impl_start(forceSync);
         toggledRate = false;
-        currentRateProperty().addListener(rateListener);
+        rateProperty().addListener(rateListener);
     }
 
     @Override
@@ -365,7 +365,7 @@ public final class ParallelTransition extends Transition {
         if (childrenChanged) {
             setCycleDuration(computeCycleDuration());
         }
-        currentRateProperty().removeListener(rateListener);
+        rateProperty().removeListener(rateListener);
     }
 
 
@@ -453,7 +453,10 @@ public final class ParallelTransition extends Transition {
      * @deprecated This is an internal API that is not intended for use and will be removed in the next version
      */
     @Deprecated
-    @Override public void impl_jumpTo(long currentTicks, long cycleTicks) {
+    @Override public void impl_jumpTo(long currentTicks, long cycleTicks, boolean forceJump) {
+        if (getStatus() == Status.STOPPED && !forceJump) {
+            return;
+        }
         impl_sync(false);
         final double frac = calculateFraction(currentTicks, cycleTicks);
         final long newTicks = Math.max(0, Math.min(getCachedInterpolator().interpolate(0, cycleTicks, frac), cycleTicks));
@@ -491,7 +494,6 @@ public final class ParallelTransition extends Transition {
     }
     
     private long calcTimePulse(long ticks, int index) {
-        long r =  Math.round(ticks * Math.abs(rates[index])) -  offsetTicks[index];
-        return r > 0 ? r : 0;
+        return sub(ticks, offsetTicks[index]);
     }
 }
