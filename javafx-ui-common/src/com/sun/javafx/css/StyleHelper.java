@@ -96,13 +96,13 @@ final public class StyleHelper {
         // at javafx.scene.control.Tooltip.<init>(Tooltip.java:143)
         // at helloworld.HelloTooltip.start(HelloTooltip.java:32)    
         //
-        StyleablePropertyMetaData styleableFontProperty = null;
-        StyleablePropertyMetaData styleableThatInherits = null;
+        CssMetaData styleableFontProperty = null;
+        CssMetaData styleableThatInherits = null;
         
-        final List<StyleablePropertyMetaData> props = node.getStyleablePropertyMetaData();
+        final List<CssMetaData> props = node.getCssMetaData();
         final int pMax = props != null ? props.size() : 0;
         for (int p=0; p<pMax; p++) {
-            final StyleablePropertyMetaData prop = props.get(p);
+            final CssMetaData prop = props.get(p);
             
             if (styleableFontProperty == null && "-fx-font".equals(prop.getProperty())) {                
                 styleableFontProperty = prop;
@@ -640,8 +640,8 @@ final public class StyleHelper {
      * Map&lt;WritableValue&gt;, List&lt;Style&gt;. 
      * See handleNoStyleFound
      */
-    private static final Map<StyleablePropertyMetaData,Style> stylesFromDefaults = 
-            new HashMap<StyleablePropertyMetaData,Style>();
+    private static final Map<CssMetaData,Style> stylesFromDefaults = 
+            new HashMap<CssMetaData,Style>();
     
     /**
      * The List to which Declarations fabricated from StyleablePropeerty 
@@ -936,7 +936,7 @@ final public class StyleHelper {
 //                inlineStyles == null;
         } 
         
-        final List<StyleablePropertyMetaData> styleables = StyleablePropertyMetaData.getStyleables(node);
+        final List<CssMetaData> styleables = CssMetaData.getStyleables(node);
         
         // Used in the for loop below, and a convenient place to stop when debugging.
         final int max = styleables.size();
@@ -948,7 +948,7 @@ final public class StyleHelper {
         // transition to that value.
         for(int n=0; n<max; n++) {
 
-            final StyleablePropertyMetaData styleable = styleables.get(n);
+            final CssMetaData styleable = styleables.get(n);
             
             if (styleMap != null) {
                 WritableValue writable = styleable.getWritableValue(node);
@@ -1130,7 +1130,7 @@ final public class StyleHelper {
      * @param font
      * @return
      */
-    private CalculatedValue lookup(Node node, StyleablePropertyMetaData styleable, 
+    private CalculatedValue lookup(Node node, CssMetaData styleable, 
             boolean isUserSet, long states,
             Map<String,CascadingStyle> userStyles, Node originatingNode, 
             CacheEntry cacheEntry, List<Style> styleList) {
@@ -1150,7 +1150,7 @@ final public class StyleHelper {
         // are no matching styles for this property. We will then either SKIP
         // or we will INHERIT. We will inspect the default value for the styleable,
         // and if it is INHERIT then we will inherit otherwise we just skip it.
-        final List<StyleablePropertyMetaData> subProperties = styleable.getSubProperties();
+        final List<CssMetaData> subProperties = styleable.getSubProperties();
         final int numSubProperties = (subProperties != null) ? subProperties.size() : 0;
         final StyleConverter keyType = styleable.getConverter();
         if (style == null) {
@@ -1173,19 +1173,19 @@ final public class StyleHelper {
                 // Build up a list of all SubProperties which have a constituent part.
                 // I default the array to be the size of the number of total
                 // sub styleables to avoid having the array grow.
-                Map<StyleablePropertyMetaData,Object> subs = null;
+                Map<CssMetaData,Object> subs = null;
                 Origin origin = null;
                 
                 boolean isRelative = false;
                 
                 for (int i=0; i<numSubProperties; i++) {
-                    StyleablePropertyMetaData subkey = subProperties.get(i);
+                    CssMetaData subkey = subProperties.get(i);
                     CalculatedValue constituent = 
                         lookup(node, subkey, isUserSet, states, userStyles, 
                             originatingNode, cacheEntry, styleList);
                     if (constituent != SKIP) {
                         if (subs == null) {
-                            subs = new HashMap<StyleablePropertyMetaData,Object>();
+                            subs = new HashMap<CssMetaData,Object>();
                         }
                         subs.put(subkey, constituent.value);
 
@@ -1264,7 +1264,7 @@ final public class StyleHelper {
     /**
      * Called when there is no style found.
      */
-    private CalculatedValue handleNoStyleFound(Node node, StyleablePropertyMetaData styleable,
+    private CalculatedValue handleNoStyleFound(Node node, CssMetaData styleable,
             boolean isUserSet, Map<String,CascadingStyle> userStyles, 
             Node originatingNode, CacheEntry cacheEntry, List<Style> styleList) {
 
@@ -1335,7 +1335,7 @@ final public class StyleHelper {
     /**
      * Called when we must inherit a value from a parent node in the scenegraph.
      */
-    private CalculatedValue inherit(Node node, StyleablePropertyMetaData styleable,
+    private CalculatedValue inherit(Node node, CssMetaData styleable,
             Map<String,CascadingStyle> userStyles, 
             Node originatingNode, CacheEntry cacheEntry, List<Style> styleList) {
         
@@ -1511,7 +1511,7 @@ final public class StyleHelper {
         return null;
     }
     
-    private String formatUnresolvedLookupMessage(Node node, StyleablePropertyMetaData styleable, Style style, ParsedValue resolved) {
+    private String formatUnresolvedLookupMessage(Node node, CssMetaData styleable, Style style, ParsedValue resolved) {
         
         // find value that could not be looked up
         String missingLookup = resolved != null ? getUnresolvedLookup(resolved) : null;
@@ -1540,7 +1540,7 @@ final public class StyleHelper {
         return sbuf.toString();
     }
 
-    private String formatExceptionMessage(Node node, StyleablePropertyMetaData styleable, Style style, Exception e) {
+    private String formatExceptionMessage(Node node, CssMetaData styleable, Style style, Exception e) {
         
         StringBuilder sbuf = new StringBuilder();
         sbuf.append("Caught ")
@@ -1569,7 +1569,7 @@ final public class StyleHelper {
     private CalculatedValue calculateValue(
             final CascadingStyle style, 
             final Node node, 
-            final StyleablePropertyMetaData styleable, 
+            final CssMetaData styleable, 
             final long states,
             final Map<String,CascadingStyle> inlineStyles, 
             final Node originatingNode, 
@@ -1726,15 +1726,15 @@ final public class StyleHelper {
     }
     
     /** return true if the origin of the property is USER */
-    private boolean isUserSetProperty(Node node, StyleablePropertyMetaData styleable) {
+    private boolean isUserSetProperty(Node node, CssMetaData styleable) {
         WritableValue writable = node != null ? styleable.getWritableValue(node) : null;
         // writable could be null if this is a sub-property
         Origin origin = writable != null ? ((StyleableProperty)writable).getOrigin() : null;
         return (origin == Origin.USER);    
     }    
             
-    private static final StyleablePropertyMetaData dummyFontProperty =
-            new StyleablePropertyMetaData.FONT<Node>("-fx-font", Font.getDefault()) {
+    private static final CssMetaData dummyFontProperty =
+            new CssMetaData.FONT<Node>("-fx-font", Font.getDefault()) {
 
         @Override
         public boolean isSettable(Node node) {
@@ -1789,7 +1789,7 @@ final public class StyleHelper {
         // there is not an inline or author style.
         if (fontProp != null) {
  
-            Origin fpOrigin = StyleablePropertyMetaData.getOrigin(fontProp);
+            Origin fpOrigin = CssMetaData.getOrigin(fontProp);
             if (fpOrigin == Origin.USER) {                
                 origin = fpOrigin;
                 foundFont = (Font)fontProp.getValue();
@@ -2039,7 +2039,7 @@ final public class StyleHelper {
      * @param styleList
      * @return 
      */
-    private CalculatedValue lookupFont(Node node, StyleablePropertyMetaData styleable, 
+    private CalculatedValue lookupFont(Node node, CssMetaData styleable, 
             boolean isUserSet, Node originatingNode, 
             CacheEntry cacheEntry, List<Style> styleList) {
 
@@ -2301,21 +2301,21 @@ final public class StyleHelper {
     }    
     
     /**
-     * Called from StyleablePropertyMetaData getMatchingStyles
+     * Called from CssMetaData getMatchingStyles
      * @param node
      * @param styleableProperty
      * @return 
      */
-    List<Style> getMatchingStyles(Styleable node, StyleablePropertyMetaData styleableProperty) {
+    List<Style> getMatchingStyles(Styleable node, CssMetaData styleableProperty) {
         
         final List<CascadingStyle> styleList = new ArrayList<CascadingStyle>();
 
         getMatchingStyles(node, styleableProperty, styleList);
 
-        List<StyleablePropertyMetaData> subProperties = styleableProperty.getSubProperties();
+        List<CssMetaData> subProperties = styleableProperty.getSubProperties();
         if (subProperties != null) {
             for (int n=0,nMax=subProperties.size(); n<nMax; n++) {
-                final StyleablePropertyMetaData subProperty = subProperties.get(n);
+                final CssMetaData subProperty = subProperties.get(n);
                 getMatchingStyles(node, subProperty, styleList);                    
             }
         }
@@ -2331,7 +2331,7 @@ final public class StyleHelper {
         return matchingStyles;
     }
     
-    private void getMatchingStyles(Styleable node, StyleablePropertyMetaData styleableProperty, List<CascadingStyle> styleList) {
+    private void getMatchingStyles(Styleable node, CssMetaData styleableProperty, List<CascadingStyle> styleList) {
         
         if (node != null) {
             

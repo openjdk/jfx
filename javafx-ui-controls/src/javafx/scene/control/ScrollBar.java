@@ -81,8 +81,8 @@ public class ScrollBar extends Control {
         // focusTraversable is styleable through css. Calling setFocusTraversable
         // makes it look to css like the user set the value and css will not 
         // override. Initializing focusTraversable by calling set on the 
-        // StyleablePropertyMetaData ensures that css will be able to override the value.
-        final StyleablePropertyMetaData prop = StyleablePropertyMetaData.getStyleablePropertyMetaData(focusTraversableProperty());
+        // CssMetaData ensures that css will be able to override the value.
+        final CssMetaData prop = CssMetaData.getCssMetaData(focusTraversableProperty());
         prop.set(this, Boolean.FALSE);            
     }
     /***************************************************************************
@@ -169,7 +169,7 @@ public class ScrollBar extends Control {
                 }
 
                 @Override 
-                public StyleablePropertyMetaData getStyleablePropertyMetaData() {
+                public CssMetaData getCssMetaData() {
                     return StyleableProperties.ORIENTATION;
                 }
                     
@@ -205,7 +205,7 @@ public class ScrollBar extends Control {
             unitIncrement = new StyleableDoubleProperty(1) {
 
                 @Override
-                public StyleablePropertyMetaData getStyleablePropertyMetaData() {
+                public CssMetaData getCssMetaData() {
                     return StyleableProperties.UNIT_INCREMENT;
                 }
 
@@ -240,7 +240,7 @@ public class ScrollBar extends Control {
             blockIncrement = new StyleableDoubleProperty(10) {
 
                 @Override
-                public StyleablePropertyMetaData getStyleablePropertyMetaData() {
+                public CssMetaData getCssMetaData() {
                     return StyleableProperties.BLOCK_INCREMENT;
                 }
 
@@ -366,8 +366,8 @@ public class ScrollBar extends Control {
     private static final String PSEUDO_CLASS_HORIZONTAL = "horizontal";
 
     private static class StyleableProperties {
-        private static final StyleablePropertyMetaData<ScrollBar,Orientation> ORIENTATION = 
-            new StyleablePropertyMetaData<ScrollBar,Orientation>("-fx-orientation",
+        private static final CssMetaData<ScrollBar,Orientation> ORIENTATION = 
+            new CssMetaData<ScrollBar,Orientation>("-fx-orientation",
                 new EnumConverter<Orientation>(Orientation.class),
                 Orientation.HORIZONTAL) {
 
@@ -388,8 +388,8 @@ public class ScrollBar extends Control {
             }
         };
         
-        private static final StyleablePropertyMetaData<ScrollBar,Number> UNIT_INCREMENT = 
-            new StyleablePropertyMetaData<ScrollBar,Number>("-fx-unit-increment",
+        private static final CssMetaData<ScrollBar,Number> UNIT_INCREMENT = 
+            new CssMetaData<ScrollBar,Number>("-fx-unit-increment",
                 SizeConverter.getInstance(), 1.0) {
 
             @Override
@@ -404,8 +404,8 @@ public class ScrollBar extends Control {
                     
         };
         
-        private static final StyleablePropertyMetaData<ScrollBar,Number> BLOCK_INCREMENT = 
-            new StyleablePropertyMetaData<ScrollBar,Number>("-fx-block-increment",
+        private static final CssMetaData<ScrollBar,Number> BLOCK_INCREMENT = 
+            new CssMetaData<ScrollBar,Number>("-fx-block-increment",
                 SizeConverter.getInstance(), 10.0) {
 
             @Override
@@ -420,10 +420,10 @@ public class ScrollBar extends Control {
                     
         };
         
-        private static final List<StyleablePropertyMetaData> STYLEABLES;
+        private static final List<CssMetaData> STYLEABLES;
         static {
-            final List<StyleablePropertyMetaData> styleables = 
-                new ArrayList<StyleablePropertyMetaData>(Control.getClassStyleablePropertyMetaData());
+            final List<CssMetaData> styleables = 
+                new ArrayList<CssMetaData>(Control.getClassCssMetaData());
             Collections.addAll(styleables,
                 ORIENTATION,
                 UNIT_INCREMENT,
@@ -434,22 +434,19 @@ public class ScrollBar extends Control {
     }
 
     /**
-     * @treatAsPrivate implementation detail
-     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
+     * @return The CssMetaData associated with this class, which may include the
+     * CssMetaData of its super classes.
      */
-    @Deprecated
-    public static List<StyleablePropertyMetaData> getClassStyleablePropertyMetaData() {
-        return ScrollBar.StyleableProperties.STYLEABLES;
+    public static List<CssMetaData> getClassCssMetaData() {
+        return StyleableProperties.STYLEABLES;
     }
 
     /**
-     * RT-19263
-     * @treatAsPrivate implementation detail
-     * @deprecated This is an experimental API that is not intended for general use and is subject to change in future versions
+     * {@inheritDoc}
      */
-    @Deprecated
-    @Override protected List<StyleablePropertyMetaData> impl_getControlStyleableProperties() {
-        return getClassStyleablePropertyMetaData();
+    @Override
+    public List<CssMetaData> getCssMetaData() {
+        return getClassCssMetaData();
     }
 
     private static final long VERTICAL_PSEUDOCLASS_STATE =

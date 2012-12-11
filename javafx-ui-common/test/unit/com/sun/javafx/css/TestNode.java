@@ -31,7 +31,7 @@ import java.util.List;
 import javafx.beans.property.DoubleProperty;
 import javafx.beans.value.WritableValue;
 
-/** Test Node with styleable property but no getClassStyleablePropertyMetaData method */
+/** Test Node with styleable property but no getClassCssMetaData method */
 class TestNode extends TestNodeBase {
 
     private DoubleProperty xyzzy;
@@ -50,7 +50,7 @@ class TestNode extends TestNodeBase {
                 }
 
                 @Override
-                public StyleablePropertyMetaData getStyleablePropertyMetaData() {
+                public CssMetaData getCssMetaData() {
                     return StyleableProperties.XYZZY;
                 }
                 
@@ -73,8 +73,8 @@ class TestNode extends TestNodeBase {
     
      static class StyleableProperties {
 
-         static final StyleablePropertyMetaData<TestNode, Number> XYZZY = 
-             new StyleablePropertyMetaData<TestNode, Number>("-fx-xyzzy",
+         static final CssMetaData<TestNode, Number> XYZZY = 
+             new CssMetaData<TestNode, Number>("-fx-xyzzy",
                  SizeConverter.getInstance(),
                  .5) {
 
@@ -90,30 +90,29 @@ class TestNode extends TestNodeBase {
                      
          };
             
-         private static final List<StyleablePropertyMetaData> STYLEABLES;
+         private static final List<CssMetaData> STYLEABLES;
          static {
-            final List<StyleablePropertyMetaData> styleables = 
-		new ArrayList<StyleablePropertyMetaData>(TestNodeBase.getClassStyleablePropertyMetaData());
+            final List<CssMetaData> styleables = 
+		new ArrayList<CssMetaData>(TestNodeBase.getClassCssMetaData());
             Collections.addAll(styleables, XYZZY);
             STYLEABLES = Collections.unmodifiableList(styleables);
          }
     }
 
     /**
-     * Super-lazy instantiation pattern from Bill Pugh. StyleableProperties is referenced
-     * no earlier (and therefore loaded no earlier by the class loader) than
-     * the moment that  getClassStyleablePropertyMetaData() is called.
-     * @treatAsPrivate implementation detail
-     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
+     * @return The CssMetaData associated with this class, which may include the
+     * CssMetaData of its super classes.
      */
-    @Deprecated
-    public static List<StyleablePropertyMetaData> getClassStyleablePropertyMetaData() {
-        return TestNode.StyleableProperties.STYLEABLES;
-    }    
-
-    public List<StyleablePropertyMetaData> getStyleablePropertyMetaData() {
-        return getClassStyleablePropertyMetaData();
+    public static List<CssMetaData> getClassCssMetaData() {
+        return StyleableProperties.STYLEABLES;
     }
-    
-    
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public List<CssMetaData> getCssMetaData() {
+        return getClassCssMetaData();
+    }
+
 }

@@ -33,7 +33,7 @@ import javafx.event.ActionEvent;
 import javafx.geometry.Pos;
 import javafx.scene.Node;
 import com.sun.javafx.css.StyleManager;
-import com.sun.javafx.css.StyleablePropertyMetaData;
+import com.sun.javafx.css.CssMetaData;
 import com.sun.javafx.scene.control.skin.ToggleButtonSkin;
 
 /**
@@ -121,8 +121,8 @@ import com.sun.javafx.scene.control.skin.ToggleButtonSkin;
         // alignment is styleable through css. Calling setAlignment
         // makes it look to css like the user set the value and css will not 
         // override. Initializing alignment by calling set on the 
-        // StyleablePropertyMetaData ensures that css will be able to override the value.
-        final StyleablePropertyMetaData prop = StyleablePropertyMetaData.getStyleablePropertyMetaData(alignmentProperty());
+        // CssMetaData ensures that css will be able to override the value.
+        final CssMetaData prop = CssMetaData.getCssMetaData(alignmentProperty());
         prop.set(this, Pos.CENTER);
         setMnemonicParsing(true);     // enable mnemonic auto-parsing by default
     }

@@ -27,7 +27,7 @@ package javafx.scene.control;
 
 import javafx.geometry.Pos;
 import com.sun.javafx.accessible.providers.AccessibleProvider;
-import com.sun.javafx.css.StyleablePropertyMetaData;
+import com.sun.javafx.css.CssMetaData;
 import com.sun.javafx.scene.control.accessible.AccessibleRadioButton;
 import com.sun.javafx.scene.control.skin.RadioButtonSkin;
 
@@ -88,8 +88,8 @@ import com.sun.javafx.scene.control.skin.RadioButtonSkin;
         // alignment is styleable through css. Calling setAlignment
         // makes it look to css like the user set the value and css will not 
         // override. Initializing alignment by calling set on the 
-        // StyleablePropertyMetaData ensures that css will be able to override the value.
-        final StyleablePropertyMetaData prop = StyleablePropertyMetaData.getStyleablePropertyMetaData(alignmentProperty());
+        // CssMetaData ensures that css will be able to override the value.
+        final CssMetaData prop = CssMetaData.getCssMetaData(alignmentProperty());
         prop.set(this, Pos.CENTER_LEFT);
     }
 

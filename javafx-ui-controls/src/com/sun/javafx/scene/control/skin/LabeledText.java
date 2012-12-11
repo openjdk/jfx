@@ -1,6 +1,6 @@
 package com.sun.javafx.scene.control.skin;
 
-import com.sun.javafx.css.StyleablePropertyMetaData;
+import com.sun.javafx.css.CssMetaData;
 import com.sun.javafx.css.Origin;
 import com.sun.javafx.css.converters.BooleanConverter;
 import com.sun.javafx.css.converters.EnumConverter;
@@ -57,33 +57,31 @@ public class LabeledText extends Text {
        getStyleClass().addAll("text");
    }
 
-   /**
-    * @treatAsPrivate implementation detail
-    * @deprecated This is an internal API that is not intended for use and will be removed in the next version
-    */
-   @Deprecated
-   @Override public List<StyleablePropertyMetaData> getStyleablePropertyMetaData() {
-       return getClassStyleablePropertyMetaData();
-   }
+    /**
+     * @return The CssMetaData associated with this class, which may include the
+     * CssMetaData of its super classes.
+     */
+    public static List<CssMetaData> getClassCssMetaData() {
+        return StyleableProperties.STYLEABLES;
+    }
 
-   /**
-    * @treatAsPrivate implementation detail
-    * @deprecated This is an internal API that is not intended for use and will be removed in the next version
-    */
-   @Deprecated
-   public static List<StyleablePropertyMetaData> getClassStyleablePropertyMetaData() {
-       return StyleableProperties.STYLEABLES;
-   }
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public List<CssMetaData> getCssMetaData() {
+        return getClassCssMetaData();
+    }
 
    //
-   // Replace all of Text's StyleablePropertyMetaData instances that overlap with Labeled
-   // with instances of StyleablePropertyMetaData that redirect to Labeled. Thus, when
+   // Replace all of Text's CssMetaData instances that overlap with Labeled
+   // with instances of CssMetaData that redirect to Labeled. Thus, when
    // the Labeled is styled,
    //
    private static class StyleableProperties {
 
-       private static final StyleablePropertyMetaData<LabeledText,Font> FONT =
-           new StyleablePropertyMetaData.FONT<LabeledText>("-fx-font", Font.getDefault()) {
+       private static final CssMetaData<LabeledText,Font> FONT =
+           new CssMetaData.FONT<LabeledText>("-fx-font", Font.getDefault()) {
 
             @Override
             public void set(LabeledText node, Font value, Origin origin) {
@@ -93,7 +91,7 @@ public class LabeledText extends Text {
                 // from lesser origins.
                 //
                 WritableValue<Font> prop = node.labeled.fontProperty();
-                Origin propOrigin = StyleablePropertyMetaData.getOrigin(prop);
+                Origin propOrigin = CssMetaData.getOrigin(prop);
 
                 //
                 // if propOrigin is null, then the property is in init state
@@ -120,8 +118,8 @@ public class LabeledText extends Text {
        };
 
 
-       private static final StyleablePropertyMetaData<LabeledText,Paint> FILL =
-           new StyleablePropertyMetaData<LabeledText,Paint>("-fx-fill",
+       private static final CssMetaData<LabeledText,Paint> FILL =
+           new CssMetaData<LabeledText,Paint>("-fx-fill",
                PaintConverter.getInstance(), Color.BLACK) {
 
             @Override
@@ -132,7 +130,7 @@ public class LabeledText extends Text {
                 // from lesser origins.
                 //
                 WritableValue<Paint> prop = node.labeled.textFillProperty();
-                Origin propOrigin = StyleablePropertyMetaData.getOrigin(prop);
+                Origin propOrigin = CssMetaData.getOrigin(prop);
 
                 //
                 // if propOrigin is null, then the property is in init state
@@ -158,8 +156,8 @@ public class LabeledText extends Text {
            }
        };
 
-        private static final StyleablePropertyMetaData<LabeledText,TextAlignment> TEXT_ALIGNMENT =
-                new StyleablePropertyMetaData<LabeledText,TextAlignment>("-fx-text-alignment",
+        private static final CssMetaData<LabeledText,TextAlignment> TEXT_ALIGNMENT =
+                new CssMetaData<LabeledText,TextAlignment>("-fx-text-alignment",
                 new EnumConverter<TextAlignment>(TextAlignment.class),
                 TextAlignment.LEFT) {
 
@@ -171,7 +169,7 @@ public class LabeledText extends Text {
                 // from lesser origins.
                 //
                 WritableValue<TextAlignment> prop = node.labeled.textAlignmentProperty();
-                Origin propOrigin = StyleablePropertyMetaData.getOrigin(prop);
+                Origin propOrigin = CssMetaData.getOrigin(prop);
 
                 //
                 // if propOrigin is null, then the property is in init state
@@ -197,8 +195,8 @@ public class LabeledText extends Text {
             }
         };
 
-        private static final StyleablePropertyMetaData<LabeledText,Boolean> UNDERLINE =
-                new StyleablePropertyMetaData<LabeledText,Boolean>("-fx-underline",
+        private static final CssMetaData<LabeledText,Boolean> UNDERLINE =
+                new CssMetaData<LabeledText,Boolean>("-fx-underline",
                 BooleanConverter.getInstance(),
                 Boolean.FALSE) {
 
@@ -210,7 +208,7 @@ public class LabeledText extends Text {
                 // from lesser origins.
                 //
                 WritableValue<Boolean> prop = node.labeled.underlineProperty();
-                Origin propOrigin = StyleablePropertyMetaData.getOrigin(prop);
+                Origin propOrigin = CssMetaData.getOrigin(prop);
 
                 //
                 // if propOrigin is null, then the property is in init state
@@ -236,11 +234,11 @@ public class LabeledText extends Text {
             }
         };
 
-       private static final List<StyleablePropertyMetaData> STYLEABLES;
+       private static final List<CssMetaData> STYLEABLES;
        static {
 
-           final List<StyleablePropertyMetaData> styleables =
-               new ArrayList<StyleablePropertyMetaData>(Text.getClassStyleablePropertyMetaData());
+           final List<CssMetaData> styleables =
+               new ArrayList<CssMetaData>(Text.getClassCssMetaData());
 
            for (int n=0,nMax=styleables.size(); n<nMax; n++) {
                final String prop = styleables.get(n).getProperty();

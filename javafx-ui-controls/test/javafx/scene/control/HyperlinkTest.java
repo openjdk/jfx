@@ -4,7 +4,7 @@
 
 package javafx.scene.control;
 
-import com.sun.javafx.css.StyleablePropertyMetaData;
+import com.sun.javafx.css.CssMetaData;
 import static javafx.scene.control.ControlTestUtils.assertPseudoClassDoesNotExist;
 import static javafx.scene.control.ControlTestUtils.assertPseudoClassExists;
 import static javafx.scene.control.ControlTestUtils.assertStyleClassContains;
@@ -143,14 +143,14 @@ public class HyperlinkTest {
     }
     
     @Test public void visitedPropertyIsNotStyleable() {
-        StyleablePropertyMetaData styleable = StyleablePropertyMetaData.getStyleablePropertyMetaData(link.visitedProperty());
+        CssMetaData styleable = CssMetaData.getCssMetaData(link.visitedProperty());
         assertNull(styleable);
     }
     
     @Ignore ("replaced by visitedPropertyIsNotStyleable")
     @Test public void whenVisitedIsBound_impl_cssSettable_ReturnsFalse() {
         // will return null!
-        StyleablePropertyMetaData styleable = StyleablePropertyMetaData.getStyleablePropertyMetaData(link.visitedProperty());
+        CssMetaData styleable = CssMetaData.getCssMetaData(link.visitedProperty());
         assertFalse(styleable.isSettable(link));
         BooleanProperty other = new SimpleBooleanProperty(true);
         link.visitedProperty().bind(other);
@@ -159,7 +159,7 @@ public class HyperlinkTest {
     @Ignore ("replaced by visitedPropertyIsNotStyleable")
     @Test public void whenVisitedIsSpecifiedViaCSSAndIsNotBound_impl_cssSettable_ReturnsFalse() {
         // will return null!
-        StyleablePropertyMetaData styleable = StyleablePropertyMetaData.getStyleablePropertyMetaData(link.visitedProperty());
+        CssMetaData styleable = CssMetaData.getCssMetaData(link.visitedProperty());
         styleable.set(link,true);
         assertFalse(styleable.isSettable(link));
     }
@@ -167,7 +167,7 @@ public class HyperlinkTest {
     @Ignore ("replaced by visitedPropertyIsNotStyleable")
     @Test public void cannotSpecifyVisitedViaCSS() {
         // will return null!
-        StyleablePropertyMetaData styleable = StyleablePropertyMetaData.getStyleablePropertyMetaData(link.visitedProperty());
+        CssMetaData styleable = CssMetaData.getCssMetaData(link.visitedProperty());
         styleable.set(link,true);
         assertFalse(link.isVisited());
     }

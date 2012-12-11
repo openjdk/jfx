@@ -4,7 +4,7 @@
 
 package javafx.scene.control;
 
-import com.sun.javafx.css.StyleablePropertyMetaData;
+import com.sun.javafx.css.CssMetaData;
 import static javafx.scene.control.ControlTestUtils.*;
 import com.sun.javafx.pgstub.StubToolkit;
 import com.sun.javafx.scene.control.skin.TitledPaneSkin;
@@ -181,7 +181,7 @@ public class TitledPaneTest {
      * CSS related Tests                                                 *
      ********************************************************************/
     @Test public void whenAnimatedIsBound_impl_cssSettable_ReturnsFalse() {
-        StyleablePropertyMetaData styleable = StyleablePropertyMetaData.getStyleablePropertyMetaData(titledPane.animatedProperty());
+        CssMetaData styleable = CssMetaData.getCssMetaData(titledPane.animatedProperty());
         assertTrue(styleable.isSettable(titledPane));
         BooleanProperty other = new SimpleBooleanProperty();
         titledPane.animatedProperty().bind(other);
@@ -189,13 +189,13 @@ public class TitledPaneTest {
     }
 
     @Test public void whenAnimatedIsSpecifiedViaCSSAndIsNotBound_impl_cssSettable_ReturnsTrue() {
-        StyleablePropertyMetaData styleable = StyleablePropertyMetaData.getStyleablePropertyMetaData(titledPane.animatedProperty());
+        CssMetaData styleable = CssMetaData.getCssMetaData(titledPane.animatedProperty());
         styleable.set(titledPane, false);
         assertTrue(styleable.isSettable(titledPane));
     }
 
     @Test public void whenCollapsibleIsBound_impl_cssSettable_ReturnsFalse() {
-        StyleablePropertyMetaData styleable = StyleablePropertyMetaData.getStyleablePropertyMetaData(titledPane.collapsibleProperty());
+        CssMetaData styleable = CssMetaData.getCssMetaData(titledPane.collapsibleProperty());
         assertTrue(styleable.isSettable(titledPane));
         BooleanProperty other = new SimpleBooleanProperty();
         titledPane.collapsibleProperty().bind(other);
@@ -203,7 +203,7 @@ public class TitledPaneTest {
     }
 
     @Test public void whenCollapsibleIsSpecifiedViaCSSAndIsNotBound_impl_cssSettable_ReturnsTrue() {
-        StyleablePropertyMetaData styleable = StyleablePropertyMetaData.getStyleablePropertyMetaData(titledPane.collapsibleProperty());
+        CssMetaData styleable = CssMetaData.getCssMetaData(titledPane.collapsibleProperty());
         styleable.set(titledPane, false);
         assertTrue(styleable.isSettable(titledPane));
     }

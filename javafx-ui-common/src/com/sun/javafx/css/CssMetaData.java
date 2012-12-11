@@ -48,7 +48,7 @@ import javafx.scene.text.FontPosture;
 import javafx.scene.text.FontWeight;
 
 
-public abstract class StyleablePropertyMetaData<N extends Node, V> {
+public abstract class CssMetaData<N extends Node, V> {
     
     /**
      * Set the value of the corresponding property on the given Node.
@@ -71,19 +71,19 @@ public abstract class StyleablePropertyMetaData<N extends Node, V> {
         }
     }
 
-    /** @deprecated Use {@link StyleablePropertyMetaData#set(javafx.scene.Node, java.lang.Object, com.sun.javafx.css.Stylesheet.Origin)} */
+    /** @deprecated Use {@link CssMetaData#set(javafx.scene.Node, java.lang.Object, com.sun.javafx.css.Stylesheet.Origin)} */
     public void set(N node, V value) {
         set(node, value, null);
     }    
 
     /**
-     * Return the StyleablePropertyMetaData associated with the given WritableValue. Will
+     * Return the CssMetaData associated with the given WritableValue. Will
      * return null if the WritableValue is not a StyleableProperty.
      */
-    public static StyleablePropertyMetaData getStyleablePropertyMetaData(WritableValue writableValue) {
+    public static CssMetaData getCssMetaData(WritableValue writableValue) {
         if (writableValue instanceof StyleableProperty) {
             
-            return ((StyleableProperty)writableValue).getStyleablePropertyMetaData();
+            return ((StyleableProperty)writableValue).getCssMetaData();
         }
         
         return null;
@@ -150,10 +150,10 @@ public abstract class StyleablePropertyMetaData<N extends Node, V> {
      * @param node
      * @return 
      */
-    public static List<StyleablePropertyMetaData> getStyleables(final Styleable styleable) {
+    public static List<CssMetaData> getStyleables(final Styleable styleable) {
         
         return styleable != null 
-            ? styleable.getStyleablePropertyMetaData() 
+            ? styleable.getCssMetaData() 
             : Collections.EMPTY_LIST;
     }
 
@@ -162,25 +162,25 @@ public abstract class StyleablePropertyMetaData<N extends Node, V> {
      * @param node
      * @return 
      */
-    public static List<StyleablePropertyMetaData> getStyleables(final Node node) {
+    public static List<CssMetaData> getStyleables(final Node node) {
         
         return node != null 
-            ? node.getStyleablePropertyMetaData() 
+            ? node.getCssMetaData() 
             : Collections.EMPTY_LIST;
     }
     
-    public static abstract class FONT<T extends Node> extends StyleablePropertyMetaData<T,Font> {
+    public static abstract class FONT<T extends Node> extends CssMetaData<T,Font> {
         
         public FONT(String property, Font initial) {
             super(property, FontConverter.getInstance(), initial, true, createSubProperties(property, initial));
         }
         
-        private static List<StyleablePropertyMetaData> createSubProperties(String property, Font initial) {
+        private static List<CssMetaData> createSubProperties(String property, Font initial) {
             
             Font defaultFont = initial != null ? initial : Font.getDefault();
             
-            final StyleablePropertyMetaData<Node,Size> SIZE = 
-                new StyleablePropertyMetaData<Node,Size>(property.concat("-size"),
+            final CssMetaData<Node,Size> SIZE = 
+                new CssMetaData<Node,Size>(property.concat("-size"),
                     SizeConverter.getInstance(),
                     new Size(defaultFont.getSize(), SizeUnits.PT),
                     true) {
@@ -197,8 +197,8 @@ public abstract class StyleablePropertyMetaData<N extends Node, V> {
                         
             };
 
-            final StyleablePropertyMetaData<Node,FontWeight> WEIGHT = 
-                new StyleablePropertyMetaData<Node,FontWeight>(property.concat("-weight"),
+            final CssMetaData<Node,FontWeight> WEIGHT = 
+                new CssMetaData<Node,FontWeight>(property.concat("-weight"),
                     SizeConverter.getInstance(),
                     FontWeight.NORMAL,
                     true) {
@@ -215,8 +215,8 @@ public abstract class StyleablePropertyMetaData<N extends Node, V> {
                         
             };
 
-            final StyleablePropertyMetaData<Node,FontPosture> STYLE = 
-                new StyleablePropertyMetaData<Node,FontPosture>(property.concat("-style"),
+            final CssMetaData<Node,FontPosture> STYLE = 
+                new CssMetaData<Node,FontPosture>(property.concat("-style"),
                     SizeConverter.getInstance(),
                     FontPosture.REGULAR,
                     true) {
@@ -233,8 +233,8 @@ public abstract class StyleablePropertyMetaData<N extends Node, V> {
                         
             };
 
-            final StyleablePropertyMetaData<Node,String> FAMILY = 
-                new StyleablePropertyMetaData<Node,String>(property.concat("-family"),
+            final CssMetaData<Node,String> FAMILY = 
+                new CssMetaData<Node,String>(property.concat("-family"),
                     SizeConverter.getInstance(),
                     defaultFont.getFamily(),
                     true) {
@@ -251,7 +251,7 @@ public abstract class StyleablePropertyMetaData<N extends Node, V> {
                         
             };
             
-            final List<StyleablePropertyMetaData> subProperties = new ArrayList<StyleablePropertyMetaData>();
+            final List<CssMetaData> subProperties = new ArrayList<CssMetaData>();
             Collections.addAll(subProperties, FAMILY, SIZE, STYLE, WEIGHT);
             return Collections.unmodifiableList(subProperties);
             
@@ -276,7 +276,7 @@ public abstract class StyleablePropertyMetaData<N extends Node, V> {
 
     private final V initialValue;
     /**
-     * The initial value of a StyleablePropertyMetaData corresponds to the default 
+     * The initial value of a CssMetaData corresponds to the default 
      * value of the WritableValue in code. 
      * For example, the default value of Shape.fill is Color.BLACK and the
      * initialValue of Shape.StyleableProperties.FILL is also Color.BLACK.
@@ -293,12 +293,12 @@ public abstract class StyleablePropertyMetaData<N extends Node, V> {
         return initialValue;
     }
     
-    private final List<StyleablePropertyMetaData> subProperties;
+    private final List<CssMetaData> subProperties;
     /**
      * The sub-properties refers to the constituent properties of this property,
      * if any. For example, "-fx-font-weight" is sub-property of "-fx-font".
      */
-    public final List<StyleablePropertyMetaData> getSubProperties() {
+    public final List<CssMetaData> getSubProperties() {
         return subProperties;
     }
 
@@ -314,7 +314,7 @@ public abstract class StyleablePropertyMetaData<N extends Node, V> {
     }
 
     /**
-     * Construct a StyleablePropertyMetaData with the given parameters and no sub-properties.
+     * Construct a CssMetaData with the given parameters and no sub-properties.
      * @param property the CSS property
      * @param converter the StyleConverter used to convert the CSS parsed value to a Java object.
      * @param initalValue the CSS string 
@@ -323,12 +323,12 @@ public abstract class StyleablePropertyMetaData<N extends Node, V> {
      * the -fx-font property has the sub-properties -fx-font-family, 
      * -fx-font-size, -fx-font-weight, and -fx-font-style.
      */
-    protected StyleablePropertyMetaData(
+    protected CssMetaData(
             final String property, 
             final StyleConverter converter, 
             final V initialValue, 
             boolean inherits, 
-            final List<StyleablePropertyMetaData> subProperties) {        
+            final List<CssMetaData> subProperties) {        
         
         this.property = property;
         this.converter = converter;
@@ -341,13 +341,13 @@ public abstract class StyleablePropertyMetaData<N extends Node, V> {
     }
 
     /**
-     * Construct a StyleablePropertyMetaData with the given parameters and no sub-properties.
+     * Construct a CssMetaData with the given parameters and no sub-properties.
      * @param property the CSS property
      * @param converter the StyleConverter used to convert the CSS parsed value to a Java object.
      * @param initalValue the CSS string 
      * @param inherits true if this property uses CSS inheritance
      */
-    protected StyleablePropertyMetaData(
+    protected CssMetaData(
             final String property, 
             final StyleConverter converter, 
             final V initialValue, 
@@ -356,13 +356,13 @@ public abstract class StyleablePropertyMetaData<N extends Node, V> {
     }
 
     /**
-     * Construct a StyleablePropertyMetaData with the given parameters, inherit set to
+     * Construct a CssMetaData with the given parameters, inherit set to
      * false and no sub-properties.
      * @param property the CSS property
      * @param converter the StyleConverter used to convert the CSS parsed value to a Java object.
      * @param initalValue the CSS string 
      */
-    protected StyleablePropertyMetaData(
+    protected CssMetaData(
             final String property, 
             final StyleConverter converter, 
             final V initialValue) {
@@ -370,13 +370,13 @@ public abstract class StyleablePropertyMetaData<N extends Node, V> {
     }
 
     /**
-     * Construct a StyleablePropertyMetaData with the given parameters, initialValue is
+     * Construct a CssMetaData with the given parameters, initialValue is
      * null, inherit is set to false, and no sub-properties.
      * @param property the CSS property
      * @param converter the StyleConverter used to convert the CSS parsed value to a Java object.
      * @param initalValue the CSS string 
      */
-    protected StyleablePropertyMetaData(
+    protected CssMetaData(
             final String property, 
             final StyleConverter converter) {
         this(property, converter, null, false, null);
@@ -390,7 +390,7 @@ public abstract class StyleablePropertyMetaData<N extends Node, V> {
         if (getClass() != obj.getClass()) {
             return false;
         }
-        final StyleablePropertyMetaData<N, V> other = (StyleablePropertyMetaData<N, V>) obj;
+        final CssMetaData<N, V> other = (CssMetaData<N, V>) obj;
         if ((this.property == null) ? (other.property != null) : !this.property.equals(other.property)) {
             return false;
         }

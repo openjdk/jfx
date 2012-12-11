@@ -49,7 +49,7 @@ import com.sun.javafx.collections.TrackableObservableList;
 import com.sun.javafx.css.StyleableBooleanProperty;
 import com.sun.javafx.css.StyleableDoubleProperty;
 import com.sun.javafx.css.StyleableObjectProperty;
-import com.sun.javafx.css.StyleablePropertyMetaData;
+import com.sun.javafx.css.CssMetaData;
 import com.sun.javafx.css.converters.BooleanConverter;
 import com.sun.javafx.css.converters.EnumConverter;
 import com.sun.javafx.css.converters.SizeConverter;
@@ -677,7 +677,7 @@ public class GridPane extends Pane {
                 }
 
                 @Override
-                public StyleablePropertyMetaData getStyleablePropertyMetaData() {
+                public CssMetaData getCssMetaData() {
                     return StyleableProperties.HGAP;
                 }
 
@@ -711,7 +711,7 @@ public class GridPane extends Pane {
                 }
 
                 @Override
-                public StyleablePropertyMetaData getStyleablePropertyMetaData() {
+                public CssMetaData getCssMetaData() {
                     return StyleableProperties.VGAP;
                 }
 
@@ -745,7 +745,7 @@ public class GridPane extends Pane {
                 }
 
                 @Override
-                public StyleablePropertyMetaData getStyleablePropertyMetaData() {
+                public CssMetaData getCssMetaData() {
                     return StyleableProperties.ALIGNMENT;
                 }
 
@@ -792,7 +792,7 @@ public class GridPane extends Pane {
                 }
 
                 @Override
-                public StyleablePropertyMetaData getStyleablePropertyMetaData() {
+                public CssMetaData getCssMetaData() {
                     return StyleableProperties.GRID_LINES_VISIBLE;
                 }
 
@@ -1827,8 +1827,8 @@ public class GridPane extends Pane {
       */
      private static class StyleableProperties {
 
-         private static final StyleablePropertyMetaData<GridPane,Boolean> GRID_LINES_VISIBLE =
-             new StyleablePropertyMetaData<GridPane,Boolean>("-fx-grid-lines-visible",
+         private static final CssMetaData<GridPane,Boolean> GRID_LINES_VISIBLE =
+             new CssMetaData<GridPane,Boolean>("-fx-grid-lines-visible",
                  BooleanConverter.getInstance(), Boolean.FALSE) {
 
             @Override
@@ -1843,8 +1843,8 @@ public class GridPane extends Pane {
             }
          };
 
-         private static final StyleablePropertyMetaData<GridPane,Number> HGAP =
-             new StyleablePropertyMetaData<GridPane,Number>("-fx-hgap",
+         private static final CssMetaData<GridPane,Number> HGAP =
+             new CssMetaData<GridPane,Number>("-fx-hgap",
                  SizeConverter.getInstance(), 0.0){
 
             @Override
@@ -1859,8 +1859,8 @@ public class GridPane extends Pane {
 
          };
 
-         private static final StyleablePropertyMetaData<GridPane,Pos> ALIGNMENT =
-             new StyleablePropertyMetaData<GridPane,Pos>("-fx-alignment",
+         private static final CssMetaData<GridPane,Pos> ALIGNMENT =
+             new CssMetaData<GridPane,Pos>("-fx-alignment",
                  new EnumConverter<Pos>(Pos.class), Pos.TOP_LEFT) {
 
             @Override
@@ -1875,8 +1875,8 @@ public class GridPane extends Pane {
 
          };
 
-         private static final StyleablePropertyMetaData<GridPane,Number> VGAP =
-             new StyleablePropertyMetaData<GridPane,Number>("-fx-vgap",
+         private static final CssMetaData<GridPane,Number> VGAP =
+             new CssMetaData<GridPane,Number>("-fx-vgap",
                  SizeConverter.getInstance(), 0.0){
 
             @Override
@@ -1891,11 +1891,11 @@ public class GridPane extends Pane {
 
          };
 
-         private static final List<StyleablePropertyMetaData> STYLEABLES;
+         private static final List<CssMetaData> STYLEABLES;
          static {
 
-            final List<StyleablePropertyMetaData> styleables =
-                    new ArrayList<StyleablePropertyMetaData>(Region.getClassStyleablePropertyMetaData());
+            final List<CssMetaData> styleables =
+                    new ArrayList<CssMetaData>(Region.getClassCssMetaData());
             Collections.addAll(styleables,
                 GRID_LINES_VISIBLE,
                 HGAP,
@@ -1906,26 +1906,20 @@ public class GridPane extends Pane {
          }
     }
 
-     /**
-      * Super-lazy instantiation pattern from Bill Pugh. StyleableProperties is referenced
-      * no earlier (and therefore loaded no earlier by the class loader) than
-      * the moment that  getClassStyleablePropertyMetaData() is called.
-      * @treatAsPrivate implementation detail
-      * @deprecated This is an internal API that is not intended for use and will be removed in the next version
-      */
-     @Deprecated
-     public static List<StyleablePropertyMetaData> getClassStyleablePropertyMetaData() {
-         return GridPane.StyleableProperties.STYLEABLES;
-     }
+    /**
+     * @return The CssMetaData associated with this class, which may include the
+     * CssMetaData of its super classes.
+     */
+    public static List<CssMetaData> getClassCssMetaData() {
+        return StyleableProperties.STYLEABLES;
+    }
 
     /**
-     * RT-19263
-     * @treatAsPrivate implementation detail
-     * @deprecated This is an experimental API that is not intended for general use and is subject to change in future versions
+     * {@inheritDoc}
      */
-    @Deprecated
-    public List<StyleablePropertyMetaData> getStyleablePropertyMetaData() {
-        return getClassStyleablePropertyMetaData();
+    @Override
+    public List<CssMetaData> getCssMetaData() {
+        return getClassCssMetaData();
     }
 
 }

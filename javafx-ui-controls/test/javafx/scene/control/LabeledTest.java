@@ -3,7 +3,7 @@
  */
 package javafx.scene.control;
 
-import com.sun.javafx.css.StyleablePropertyMetaData;
+import com.sun.javafx.css.CssMetaData;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
@@ -130,7 +130,7 @@ public class LabeledTest {
     @Ignore("text is not settable through css")
     @Test public void impl_cssSettable_ReturnsFalseForTextAlways() {
         // will return null!
-        StyleablePropertyMetaData styleable = StyleablePropertyMetaData.getStyleablePropertyMetaData(labeled.textProperty());
+        CssMetaData styleable = CssMetaData.getCssMetaData(labeled.textProperty());
         assertFalse(styleable.isSettable(labeled));
         StringProperty other = new SimpleStringProperty("Apples");
         labeled.textProperty().bind(other);
@@ -140,13 +140,13 @@ public class LabeledTest {
     @Ignore("text is not settable through css")
     @Test public void whenTextIsSpecifiedViaCSSAndIsNotBound_impl_cssSettable_ReturnsFalse() {
         // will return null!
-        StyleablePropertyMetaData styleable = StyleablePropertyMetaData.getStyleablePropertyMetaData(labeled.textProperty());
+        CssMetaData styleable = CssMetaData.getCssMetaData(labeled.textProperty());
         styleable.set(labeled,"Howdy");
         assertFalse(styleable.isSettable(labeled));
     }
     
     @Test public void cannotSpecifyTextViaCSS() {
-        StyleablePropertyMetaData styleable = StyleablePropertyMetaData.getStyleablePropertyMetaData(labeled.textProperty());
+        CssMetaData styleable = CssMetaData.getCssMetaData(labeled.textProperty());
         assertNull(styleable);
     }
 
@@ -190,7 +190,7 @@ public class LabeledTest {
     }
 
     @Test public void whenTextFillIsBound_impl_cssSettable_ReturnsFalse() {
-        StyleablePropertyMetaData styleable = StyleablePropertyMetaData.getStyleablePropertyMetaData(labeled.textFillProperty());
+        CssMetaData styleable = CssMetaData.getCssMetaData(labeled.textFillProperty());
         assertTrue(styleable.isSettable(labeled));
         ObjectProperty<Paint> other = new SimpleObjectProperty<Paint>(Color.RED);
         labeled.textFillProperty().bind(other);
@@ -199,13 +199,13 @@ public class LabeledTest {
     }
 
     @Test public void whenTextFillIsSpecifiedViaCSSAndIsNotBound_impl_cssSettable_ReturnsTrue() {
-        StyleablePropertyMetaData styleable = StyleablePropertyMetaData.getStyleablePropertyMetaData(labeled.textFillProperty());
+        CssMetaData styleable = CssMetaData.getCssMetaData(labeled.textFillProperty());
         styleable.set(labeled,Color.BLUE);
         assertTrue(styleable.isSettable(labeled));
     }
 
     @Test public void canSpecifyTextFillViaCSS() {
-        StyleablePropertyMetaData styleable = StyleablePropertyMetaData.getStyleablePropertyMetaData(labeled.textFillProperty());
+        CssMetaData styleable = CssMetaData.getCssMetaData(labeled.textFillProperty());
         styleable.set(labeled,Color.YELLOW);
         assertSame(Color.YELLOW, labeled.getTextFill());
     }
@@ -258,20 +258,20 @@ public class LabeledTest {
     }
     
     @Test public void whenAlignmentIsBound_impl_cssSettable_ReturnsFalse() {
-        StyleablePropertyMetaData styleable = StyleablePropertyMetaData.getStyleablePropertyMetaData(labeled.alignmentProperty());
+        CssMetaData styleable = CssMetaData.getCssMetaData(labeled.alignmentProperty());
         ObjectProperty<Pos> other = new SimpleObjectProperty<Pos>(Pos.BASELINE_RIGHT);
         labeled.alignmentProperty().bind(other);
         assertFalse(styleable.isSettable(labeled));
     }
     
     @Test public void whenAlignmentIsSpecifiedViaCSSAndIsNotBound_impl_cssSettable_ReturnsTrue() {
-        StyleablePropertyMetaData styleable = StyleablePropertyMetaData.getStyleablePropertyMetaData(labeled.alignmentProperty());
+        CssMetaData styleable = CssMetaData.getCssMetaData(labeled.alignmentProperty());
         styleable.set(labeled, Pos.CENTER);
         assertTrue(styleable.isSettable(labeled));
     }
 
     @Test public void canSpecifyAlignmentViaCSS() {
-        StyleablePropertyMetaData styleable = StyleablePropertyMetaData.getStyleablePropertyMetaData(labeled.alignmentProperty());
+        CssMetaData styleable = CssMetaData.getCssMetaData(labeled.alignmentProperty());
         styleable.set(labeled, Pos.CENTER_RIGHT);
         assertEquals(Pos.CENTER_RIGHT, labeled.getAlignment());
     }
@@ -316,7 +316,7 @@ public class LabeledTest {
     }
     
     @Test public void whenTextAlignmentIsBound_impl_cssSettable_ReturnsFalse() {
-        StyleablePropertyMetaData styleable = StyleablePropertyMetaData.getStyleablePropertyMetaData(labeled.textAlignmentProperty());
+        CssMetaData styleable = CssMetaData.getCssMetaData(labeled.textAlignmentProperty());
         assertTrue(styleable.isSettable(labeled));
         ObjectProperty<TextAlignment> other = new SimpleObjectProperty<TextAlignment>(TextAlignment.RIGHT);
         labeled.textAlignmentProperty().bind(other);
@@ -324,13 +324,13 @@ public class LabeledTest {
     }
     
     @Test public void whenTextAlignmentIsSpecifiedViaCSSAndIsNotBound_impl_cssSettable_ReturnsTrue() {
-        StyleablePropertyMetaData styleable = StyleablePropertyMetaData.getStyleablePropertyMetaData(labeled.textAlignmentProperty());
+        CssMetaData styleable = CssMetaData.getCssMetaData(labeled.textAlignmentProperty());
         styleable.set(labeled, TextAlignment.CENTER);
         assertTrue(styleable.isSettable(labeled));
     }
 
     @Test public void canSpecifyTextAlignmentViaCSS() {
-        StyleablePropertyMetaData styleable = StyleablePropertyMetaData.getStyleablePropertyMetaData(labeled.textAlignmentProperty());
+        CssMetaData styleable = CssMetaData.getCssMetaData(labeled.textAlignmentProperty());
         styleable.set(labeled, TextAlignment.JUSTIFY);
         assertEquals(TextAlignment.JUSTIFY, labeled.getTextAlignment());
     }
@@ -375,7 +375,7 @@ public class LabeledTest {
     }
     
     @Test public void whenTextOverrunIsBound_impl_cssSettable_ReturnsFalse() {
-        StyleablePropertyMetaData styleable = StyleablePropertyMetaData.getStyleablePropertyMetaData(labeled.textOverrunProperty());
+        CssMetaData styleable = CssMetaData.getCssMetaData(labeled.textOverrunProperty());
         assertTrue(styleable.isSettable(labeled));
         ObjectProperty<OverrunStyle> other = new SimpleObjectProperty<OverrunStyle>(OverrunStyle.LEADING_WORD_ELLIPSIS);
         labeled.textOverrunProperty().bind(other);
@@ -383,13 +383,13 @@ public class LabeledTest {
     }
     
     @Test public void whenTextOverrunIsSpecifiedViaCSSAndIsNotBound_impl_cssSettable_ReturnsTrue() {
-        StyleablePropertyMetaData styleable = StyleablePropertyMetaData.getStyleablePropertyMetaData(labeled.textOverrunProperty());
+        CssMetaData styleable = CssMetaData.getCssMetaData(labeled.textOverrunProperty());
         styleable.set(labeled, OverrunStyle.LEADING_WORD_ELLIPSIS);
         assertTrue(styleable.isSettable(labeled));
     }
 
     @Test public void canSpecifyTextOverrunViaCSS() {
-        StyleablePropertyMetaData styleable = StyleablePropertyMetaData.getStyleablePropertyMetaData(labeled.textOverrunProperty());
+        CssMetaData styleable = CssMetaData.getCssMetaData(labeled.textOverrunProperty());
         styleable.set(labeled, OverrunStyle.CENTER_WORD_ELLIPSIS);
         assertEquals(OverrunStyle.CENTER_WORD_ELLIPSIS, labeled.getTextOverrun());
     }
@@ -429,7 +429,7 @@ public class LabeledTest {
     }
     
     @Test public void whenWrapTextIsBound_impl_cssSettable_ReturnsFalse() {
-        StyleablePropertyMetaData styleable = StyleablePropertyMetaData.getStyleablePropertyMetaData(labeled.wrapTextProperty());
+        CssMetaData styleable = CssMetaData.getCssMetaData(labeled.wrapTextProperty());
         assertTrue(styleable.isSettable(labeled));
         BooleanProperty other = new SimpleBooleanProperty(true);
         labeled.wrapTextProperty().bind(other);
@@ -437,7 +437,7 @@ public class LabeledTest {
     }
     
     @Test public void whenWrapTextIsSpecifiedViaCSSAndIsNotBound_impl_cssSettable_ReturnsTrue() {
-        StyleablePropertyMetaData styleable = StyleablePropertyMetaData.getStyleablePropertyMetaData(labeled.wrapTextProperty());
+        CssMetaData styleable = CssMetaData.getCssMetaData(labeled.wrapTextProperty());
         styleable.set(labeled, true);
         assertTrue(styleable.isSettable(labeled));
     }
@@ -452,7 +452,7 @@ public class LabeledTest {
     }
 
     @Test public void canSpecifyWrapTextViaCSS() {
-        StyleablePropertyMetaData styleable = StyleablePropertyMetaData.getStyleablePropertyMetaData(labeled.wrapTextProperty());
+        CssMetaData styleable = CssMetaData.getCssMetaData(labeled.wrapTextProperty());
         styleable.set(labeled, true);
         assertTrue(labeled.isWrapText());
     }
@@ -502,7 +502,7 @@ public class LabeledTest {
     
     @Test public void whenFontIsBound_impl_cssSettable_ReturnsFalse() {
         final Font f = Font.font("Arial", 25);
-        StyleablePropertyMetaData styleable = StyleablePropertyMetaData.getStyleablePropertyMetaData(labeled.fontProperty());
+        CssMetaData styleable = CssMetaData.getCssMetaData(labeled.fontProperty());
         assertTrue(styleable.isSettable(labeled));
         ObjectProperty<Font> other = new SimpleObjectProperty<Font>(f);
         labeled.fontProperty().bind(other);
@@ -511,14 +511,14 @@ public class LabeledTest {
     
     @Test public void whenFontIsSpecifiedViaCSSAndIsNotBound_impl_cssSettable_ReturnsTrue() {
         final Font f = Font.font("Arial", 25);
-        StyleablePropertyMetaData styleable = StyleablePropertyMetaData.getStyleablePropertyMetaData(labeled.fontProperty());
+        CssMetaData styleable = CssMetaData.getCssMetaData(labeled.fontProperty());
         styleable.set(labeled,f);
         assertTrue(styleable.isSettable(labeled));
     }
 
     @Test public void canSpecifyFontViaCSS() {
         final Font f = Font.font("Arial", 25);
-        StyleablePropertyMetaData styleable = StyleablePropertyMetaData.getStyleablePropertyMetaData(labeled.fontProperty());
+        CssMetaData styleable = CssMetaData.getCssMetaData(labeled.fontProperty());
         styleable.set(labeled,f);
         assertEquals(f, labeled.getFont());
     }
@@ -568,7 +568,7 @@ public class LabeledTest {
     
     @Ignore ("CSS Graphic must be a URL, and then it will try to load the image. Not sure how to test.")
     @Test public void whenGraphicIsBound_impl_cssSettable_ReturnsFalse() {
-        StyleablePropertyMetaData styleable = StyleablePropertyMetaData.getStyleablePropertyMetaData(labeled.graphicProperty());
+        CssMetaData styleable = CssMetaData.getCssMetaData(labeled.graphicProperty());
         assertTrue(styleable.isSettable(labeled));
         Rectangle r = new Rectangle();
         ObjectProperty<Node> other = new SimpleObjectProperty<Node>(r);
@@ -578,14 +578,14 @@ public class LabeledTest {
     
     @Ignore ("CSS Graphic must be a URL, and then it will try to load the image. Not sure how to test.")
     @Test public void whenGraphicIsSpecifiedViaCSSAndIsNotBound_impl_cssSettable_ReturnsTrue() {
-        StyleablePropertyMetaData styleable = StyleablePropertyMetaData.getStyleablePropertyMetaData(labeled.graphicProperty());
+        CssMetaData styleable = CssMetaData.getCssMetaData(labeled.graphicProperty());
         styleable.set(labeled,"/some/url");
         assertTrue(styleable.isSettable(labeled));
     }
 
     @Ignore ("CSS Graphic must be a URL, and then it will try to load the image. Not sure how to test.")
     @Test public void canSpecifyGraphicViaCSS() {
-        StyleablePropertyMetaData styleable = StyleablePropertyMetaData.getStyleablePropertyMetaData(labeled.graphicProperty());
+        CssMetaData styleable = CssMetaData.getCssMetaData(labeled.graphicProperty());
         styleable.set(labeled,"/some/url");
         assertNotNull(labeled.getGraphic());
     }
@@ -624,7 +624,7 @@ public class LabeledTest {
     }
     
     @Test public void whenUnderlineIsBound_impl_cssSettable_ReturnsFalse() {
-        StyleablePropertyMetaData styleable = StyleablePropertyMetaData.getStyleablePropertyMetaData(labeled.underlineProperty());
+        CssMetaData styleable = CssMetaData.getCssMetaData(labeled.underlineProperty());
         assertTrue(styleable.isSettable(labeled));        
         BooleanProperty other = new SimpleBooleanProperty(true);
         labeled.underlineProperty().bind(other);
@@ -632,13 +632,13 @@ public class LabeledTest {
     }
     
     @Test public void whenUnderlineIsSpecifiedViaCSSAndIsNotBound_impl_cssSettable_ReturnsTrue() {
-        StyleablePropertyMetaData styleable = StyleablePropertyMetaData.getStyleablePropertyMetaData(labeled.underlineProperty());
+        CssMetaData styleable = CssMetaData.getCssMetaData(labeled.underlineProperty());
         styleable.set(labeled,true);
         assertTrue(styleable.isSettable(labeled));        
     }
 
     @Test public void canSpecifyUnderlineViaCSS() {
-        StyleablePropertyMetaData styleable = StyleablePropertyMetaData.getStyleablePropertyMetaData(labeled.underlineProperty());
+        CssMetaData styleable = CssMetaData.getCssMetaData(labeled.underlineProperty());
         styleable.set(labeled,true);
         assertTrue(labeled.isUnderline());
     }
@@ -683,7 +683,7 @@ public class LabeledTest {
     }
     
     @Test public void whenContentDisplayIsBound_impl_cssSettable_ReturnsFalse() {
-        StyleablePropertyMetaData styleable = StyleablePropertyMetaData.getStyleablePropertyMetaData(labeled.contentDisplayProperty());
+        CssMetaData styleable = CssMetaData.getCssMetaData(labeled.contentDisplayProperty());
         assertTrue(styleable.isSettable(labeled));        
         ObjectProperty<ContentDisplay> other = new SimpleObjectProperty<ContentDisplay>(ContentDisplay.RIGHT);
         labeled.contentDisplayProperty().bind(other);
@@ -691,13 +691,13 @@ public class LabeledTest {
     }
     
     @Test public void whenContentDisplayIsSpecifiedViaCSSAndIsNotBound_impl_cssSettable_ReturnsTrue() {
-        StyleablePropertyMetaData styleable = StyleablePropertyMetaData.getStyleablePropertyMetaData(labeled.contentDisplayProperty());
+        CssMetaData styleable = CssMetaData.getCssMetaData(labeled.contentDisplayProperty());
         styleable.set(labeled,true);
         assertTrue(styleable.isSettable(labeled));        
     }
 
     @Test public void canSpecifyContentDisplayViaCSS() {
-        StyleablePropertyMetaData styleable = StyleablePropertyMetaData.getStyleablePropertyMetaData(labeled.contentDisplayProperty());
+        CssMetaData styleable = CssMetaData.getCssMetaData(labeled.contentDisplayProperty());
         styleable.set(labeled, ContentDisplay.GRAPHIC_ONLY);
         assertTrue(styleable.isSettable(labeled));        
     }
@@ -741,7 +741,7 @@ public class LabeledTest {
     }
     
     @Test public void whenGraphicTextGapIsBound_impl_cssSettable_ReturnsFalse() {
-        StyleablePropertyMetaData styleable = StyleablePropertyMetaData.getStyleablePropertyMetaData(labeled.graphicTextGapProperty());
+        CssMetaData styleable = CssMetaData.getCssMetaData(labeled.graphicTextGapProperty());
         assertTrue(styleable.isSettable(labeled));        
         DoubleProperty other = new SimpleDoubleProperty(25);
         labeled.graphicTextGapProperty().bind(other);
@@ -749,13 +749,13 @@ public class LabeledTest {
     }
     
     @Test public void whenGraphicTextGapIsSpecifiedViaCSSAndIsNotBound_impl_cssSettable_ReturnsTrue() {
-        StyleablePropertyMetaData styleable = StyleablePropertyMetaData.getStyleablePropertyMetaData(labeled.graphicTextGapProperty());
+        CssMetaData styleable = CssMetaData.getCssMetaData(labeled.graphicTextGapProperty());
         styleable.set(labeled,8.0);
         assertTrue(styleable.isSettable(labeled));        
     }
     
     @Test public void canSpecifyGraphicTextGapViaCSS() {
-        StyleablePropertyMetaData styleable = StyleablePropertyMetaData.getStyleablePropertyMetaData(labeled.graphicTextGapProperty());
+        CssMetaData styleable = CssMetaData.getCssMetaData(labeled.graphicTextGapProperty());
         styleable.set(labeled,8.0);
         assertEquals(8, labeled.getGraphicTextGap(), 0);
     }
@@ -774,7 +774,7 @@ public class LabeledTest {
     @Ignore ("labelPaddingProperty returns read-only property")
     @Test public void canSpecifyLabelPaddingFromCSS() {
         Insets insets = new Insets(5, 4, 3, 2);
-//        StyleablePropertyMetaData styleable = StyleablePropertyMetaData.getStyleablePropertyMetaData(labeled.labelPaddingProperty());
+//        CssMetaData styleable = CssMetaData.getCssMetaData(labeled.labelPaddingProperty());
 //        styleable.set(labeled,insets);
         assertEquals(insets, labeled.getLabelPadding());
         assertEquals(insets, labeled.labelPaddingProperty().get());

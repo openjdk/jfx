@@ -30,7 +30,7 @@ import javafx.collections.ObservableList;
 import javafx.scene.paint.Color;
 
 import com.sun.javafx.collections.TrackableObservableList;
-import com.sun.javafx.css.StyleablePropertyMetaData;
+import com.sun.javafx.css.CssMetaData;
 import com.sun.javafx.css.converters.PaintConverter;
 import com.sun.javafx.geom.BaseBounds;
 import com.sun.javafx.geom.Path2D;
@@ -69,9 +69,9 @@ public  class Polyline extends Shape {
         // overriding default values for fill and stroke
         // Set through CSS property so that it appears to be a UA style rather
         // that a USER style so that fill and stroke can still be set from CSS.
-        final StyleablePropertyMetaData fillProp = StyleablePropertyMetaData.getStyleablePropertyMetaData(fillProperty());
+        final CssMetaData fillProp = CssMetaData.getCssMetaData(fillProperty());
         fillProp.set(this, null);
-        final StyleablePropertyMetaData strokeProp = StyleablePropertyMetaData.getStyleablePropertyMetaData(strokeProperty());
+        final CssMetaData strokeProp = CssMetaData.getCssMetaData(strokeProperty());
         strokeProp.set(this, Color.BLACK);
     }
 
@@ -218,24 +218,4 @@ public  class Polyline extends Shape {
         return Color.BLACK;
     }    
     
-
-    /**
-     * @treatAsPrivate implementation detail
-     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
-     */
-    @Deprecated
-    public static List<StyleablePropertyMetaData> getClassStyleablePropertyMetaData() {
-        return Shape.getClassStyleablePropertyMetaData();
-    }
-        
-    /**
-     * RT-19263
-     * @treatAsPrivate implementation detail
-     * @deprecated This is an experimental API that is not intended for general use and is subject to change in future versions
-     */
-    @Deprecated
-    public List<StyleablePropertyMetaData> getStyleablePropertyMetaData() {
-        return getClassStyleablePropertyMetaData();
-    }
-
 }

@@ -40,7 +40,7 @@ import javafx.scene.transform.Transform;
 
 import org.junit.Test;
 
-import com.sun.javafx.css.StyleablePropertyMetaData;
+import com.sun.javafx.css.CssMetaData;
 import com.sun.javafx.scene.DirtyBits;
 
 public abstract class OnInvalidateMethodsTestBase {
@@ -98,8 +98,8 @@ public abstract class OnInvalidateMethodsTestBase {
                 getSetter(clazz, sb.toString()).invoke(node, this.inValue);
                 if (this.expectedDirtyBits instanceof DirtyBits[]) {
                     assertTrue(NodeTest.isDirty(node, (DirtyBits[])this.expectedDirtyBits));
-                } else if (this.expectedDirtyBits instanceof StyleablePropertyMetaData[]) {
-                    for(StyleablePropertyMetaData key:(StyleablePropertyMetaData[])this.expectedDirtyBits) {
+                } else if (this.expectedDirtyBits instanceof CssMetaData[]) {
+                    for(CssMetaData key:(CssMetaData[])this.expectedDirtyBits) {
                         assertTrue(key.isSettable(node));
                     }
                 }
@@ -121,9 +121,9 @@ public abstract class OnInvalidateMethodsTestBase {
         }
     }
 
-//    protected static StyleablePropertyMetaData findCssKey(Class clazz, String propertyName) {
-//        final List<CSSProperty> STYLEABLES = StyleablePropertyMetaData.getStyleables(clazz);
-//        for(StyleablePropertyMetaData styleable : STYLEABLES) {
+//    protected static CssMetaData findCssKey(Class clazz, String propertyName) {
+//        final List<CSSProperty> STYLEABLES = CssMetaData.getStyleables(clazz);
+//        for(CssMetaData styleable : STYLEABLES) {
 //            if (styleable.getProperty().equals(propertyName)) return styleable;
 //        }
 //        return null;

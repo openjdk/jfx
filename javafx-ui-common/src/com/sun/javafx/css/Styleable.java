@@ -78,10 +78,10 @@ public abstract class Styleable {
     public abstract Styleable getStyleableParent();
     
     /**
-     * The StyleablePropertyMetaData's of this Styleable
+     * The CssMetaData's of this Styleable
      * @return 
      */
-    public abstract List<StyleablePropertyMetaData> getStyleablePropertyMetaData(); 
+    public abstract List<CssMetaData> getCssMetaData(); 
         
     /**
      * A Styleable typically wraps a Node that is going to be styled by CSS.

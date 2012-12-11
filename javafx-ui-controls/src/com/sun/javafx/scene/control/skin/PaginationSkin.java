@@ -47,7 +47,7 @@ package com.sun.javafx.scene.control.skin;
 import com.sun.javafx.PlatformUtil;
 import com.sun.javafx.css.StyleableBooleanProperty;
 import com.sun.javafx.css.StyleableObjectProperty;
-import com.sun.javafx.css.StyleablePropertyMetaData;
+import com.sun.javafx.css.CssMetaData;
 import com.sun.javafx.css.converters.BooleanConverter;
 import com.sun.javafx.css.converters.EnumConverter;
 import com.sun.javafx.scene.control.behavior.PaginationBehavior;
@@ -538,7 +538,7 @@ public class PaginationSkin extends BehaviorSkinBase<Pagination, PaginationBehav
                 }
 
                 @Override
-                public StyleablePropertyMetaData getStyleablePropertyMetaData() {
+                public CssMetaData getCssMetaData() {
                     return StyleableProperties.ARROWS_VISIBLE;
                 }
 
@@ -568,7 +568,7 @@ public class PaginationSkin extends BehaviorSkinBase<Pagination, PaginationBehav
                 }
 
                 @Override
-                public StyleablePropertyMetaData getStyleablePropertyMetaData() {
+                public CssMetaData getCssMetaData() {
                     return StyleableProperties.PAGE_INFORMATION_VISIBLE;
                 }
 
@@ -598,7 +598,7 @@ public class PaginationSkin extends BehaviorSkinBase<Pagination, PaginationBehav
                 }
 
                 @Override
-                public StyleablePropertyMetaData getStyleablePropertyMetaData() {
+                public CssMetaData getCssMetaData() {
                     return StyleableProperties.PAGE_INFORMATION_ALIGNMENT;
                 }
 
@@ -628,7 +628,7 @@ public class PaginationSkin extends BehaviorSkinBase<Pagination, PaginationBehav
                 }
 
                 @Override
-                public StyleablePropertyMetaData getStyleablePropertyMetaData() {
+                public CssMetaData getCssMetaData() {
                     return StyleableProperties.TOOLTIP_VISIBLE;
                 }
 
@@ -1240,8 +1240,8 @@ public class PaginationSkin extends BehaviorSkinBase<Pagination, PaginationBehav
     private static final Boolean DEFAULT_TOOLTIP_VISIBLE = Boolean.FALSE;
 
     private static class StyleableProperties {
-        private static final StyleablePropertyMetaData<Pagination,Boolean> ARROWS_VISIBLE =
-            new StyleablePropertyMetaData<Pagination,Boolean>("-fx-arrows-visible",
+        private static final CssMetaData<Pagination,Boolean> ARROWS_VISIBLE =
+            new CssMetaData<Pagination,Boolean>("-fx-arrows-visible",
                 BooleanConverter.getInstance(), DEFAULT_ARROW_VISIBLE) {
 
             @Override
@@ -1257,8 +1257,8 @@ public class PaginationSkin extends BehaviorSkinBase<Pagination, PaginationBehav
             }
         };
 
-        private static final StyleablePropertyMetaData<Pagination,Boolean> PAGE_INFORMATION_VISIBLE =
-            new StyleablePropertyMetaData<Pagination,Boolean>("-fx-page-information-visible",
+        private static final CssMetaData<Pagination,Boolean> PAGE_INFORMATION_VISIBLE =
+            new CssMetaData<Pagination,Boolean>("-fx-page-information-visible",
                 BooleanConverter.getInstance(), DEFAULT_PAGE_INFORMATION_VISIBLE) {
 
             @Override
@@ -1274,8 +1274,8 @@ public class PaginationSkin extends BehaviorSkinBase<Pagination, PaginationBehav
             }
         };
 
-        private static final StyleablePropertyMetaData<Pagination,Side> PAGE_INFORMATION_ALIGNMENT =
-            new StyleablePropertyMetaData<Pagination,Side>("-fx-page-information-alignment",
+        private static final CssMetaData<Pagination,Side> PAGE_INFORMATION_ALIGNMENT =
+            new CssMetaData<Pagination,Side>("-fx-page-information-alignment",
                 new EnumConverter<Side>(Side.class), DEFAULT_PAGE_INFORMATION_ALIGNMENT) {
 
             @Override
@@ -1291,8 +1291,8 @@ public class PaginationSkin extends BehaviorSkinBase<Pagination, PaginationBehav
             }
         };
 
-        private static final StyleablePropertyMetaData<Pagination,Boolean> TOOLTIP_VISIBLE =
-            new StyleablePropertyMetaData<Pagination,Boolean>("-fx-tooltip-visible",
+        private static final CssMetaData<Pagination,Boolean> TOOLTIP_VISIBLE =
+            new CssMetaData<Pagination,Boolean>("-fx-tooltip-visible",
                 BooleanConverter.getInstance(), DEFAULT_TOOLTIP_VISIBLE) {
 
             @Override
@@ -1308,10 +1308,10 @@ public class PaginationSkin extends BehaviorSkinBase<Pagination, PaginationBehav
             }
         };
 
-        private static final List<StyleablePropertyMetaData> STYLEABLES;
+        private static final List<CssMetaData> STYLEABLES;
         static {
-            final List<StyleablePropertyMetaData> styleables =
-                new ArrayList<StyleablePropertyMetaData>(SkinBase.getClassStyleablePropertyMetaData());
+            final List<CssMetaData> styleables =
+                new ArrayList<CssMetaData>(SkinBase.getClassCssMetaData());
             Collections.addAll(styleables,
                 ARROWS_VISIBLE,
                 PAGE_INFORMATION_VISIBLE,
@@ -1323,21 +1323,19 @@ public class PaginationSkin extends BehaviorSkinBase<Pagination, PaginationBehav
     }
 
     /**
-     * @treatAsPrivate implementation detail
-     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
+     * @return The CssMetaData associated with this class, which may include the
+     * CssMetaData of its super classes.
      */
-    @Deprecated
-    public static List<StyleablePropertyMetaData> getClassStyleablePropertyMetaData() {
+    public static List<CssMetaData> getClassCssMetaData() {
         return StyleableProperties.STYLEABLES;
-    };
+    }
 
     /**
-     * RT-19263
-     * @treatAsPrivate implementation detail
-     * @deprecated This is an experimental API that is not intended for general use and is subject to change in future versions
+     * {@inheritDoc}
      */
-    @Deprecated
-    public List<StyleablePropertyMetaData> getStyleablePropertyMetaData() {
-        return getClassStyleablePropertyMetaData();
+    @Override
+    public List<CssMetaData> getCssMetaData() {
+        return getClassCssMetaData();
     }
+
 }

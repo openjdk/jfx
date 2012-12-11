@@ -43,7 +43,7 @@ import com.sun.javafx.jmx.MXNodeAlgorithmContext;
 import com.sun.javafx.sg.PGNode;
 import javafx.beans.value.WritableValue;
 
-/** Test Node with styleable properties and an getClassStyleablePropertyMetaData method */
+/** Test Node with styleable properties and an getClassCssMetaData method */
 class TestNodeBase extends Node {
 
     protected TestNodeBase() {
@@ -80,7 +80,7 @@ class TestNodeBase extends Node {
                 }
 
                 @Override
-                public StyleablePropertyMetaData getStyleablePropertyMetaData() {
+                public CssMetaData getCssMetaData() {
                     return TestNodeBase.StyleableProperties.TEST;
                 }
                 
@@ -113,7 +113,7 @@ class TestNodeBase extends Node {
                 }
 
                 @Override
-                public StyleablePropertyMetaData getStyleablePropertyMetaData() {
+                public CssMetaData getCssMetaData() {
                     return TestNodeBase.StyleableProperties.STRING;
                 }
                 
@@ -146,7 +146,7 @@ class TestNodeBase extends Node {
                 }
 
                 @Override
-                public StyleablePropertyMetaData getStyleablePropertyMetaData() {
+                public CssMetaData getCssMetaData() {
                     return TestNodeBase.StyleableProperties.DOUBLE_PROPERTY;
                 }
                 
@@ -165,8 +165,8 @@ class TestNodeBase extends Node {
     
 
     static class StyleableProperties {
-        public final static StyleablePropertyMetaData<TestNodeBase,Boolean> TEST =
-                new StyleablePropertyMetaData<TestNodeBase,Boolean>("-fx-test", 
+        public final static CssMetaData<TestNodeBase,Boolean> TEST =
+                new CssMetaData<TestNodeBase,Boolean>("-fx-test", 
                 BooleanConverter.getInstance(), Boolean.TRUE) {
 
             @Override
@@ -180,8 +180,8 @@ class TestNodeBase extends Node {
             }
         };
 
-        public final static StyleablePropertyMetaData<TestNodeBase,String> STRING =
-                new StyleablePropertyMetaData<TestNodeBase,String>("-fx-string", 
+        public final static CssMetaData<TestNodeBase,String> STRING =
+                new CssMetaData<TestNodeBase,String>("-fx-string", 
                 StringConverter.getInstance(), "init string") {
 
             @Override
@@ -195,8 +195,8 @@ class TestNodeBase extends Node {
             }
         };
 
-        public final static StyleablePropertyMetaData<TestNodeBase,Number> DOUBLE_PROPERTY =
-                new StyleablePropertyMetaData<TestNodeBase,Number>("-fx-double-property", 
+        public final static CssMetaData<TestNodeBase,Number> DOUBLE_PROPERTY =
+                new CssMetaData<TestNodeBase,Number>("-fx-double-property", 
                 SizeConverter.getInstance(), 0) {
 
             @Override
@@ -210,10 +210,10 @@ class TestNodeBase extends Node {
             }
         };
         
-        static final List<StyleablePropertyMetaData> STYLEABLES;
+        static final List<CssMetaData> STYLEABLES;
         static {
-            List<StyleablePropertyMetaData> list = 
-                new ArrayList<StyleablePropertyMetaData>(Node.getClassStyleablePropertyMetaData());
+            List<CssMetaData> list = 
+                new ArrayList<CssMetaData>(Node.getClassCssMetaData());
             Collections.addAll(list,                
                 TEST,
                 STRING,
@@ -223,12 +223,19 @@ class TestNodeBase extends Node {
         }
     }
                 
-    public static List<StyleablePropertyMetaData> getClassStyleablePropertyMetaData() {
+    /**
+     * {@inheritDoc}
+     */
+    public static List<CssMetaData> getClassCssMetaData() {
         return StyleableProperties.STYLEABLES;
     }
-            
-    public List<StyleablePropertyMetaData> getStyleablePropertyMetaData() {
-        return getClassStyleablePropertyMetaData();
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public List<CssMetaData> getCssMetaData() {
+        return getClassCssMetaData();
     }
 
     @Override

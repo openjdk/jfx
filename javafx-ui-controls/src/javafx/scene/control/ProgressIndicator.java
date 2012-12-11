@@ -26,7 +26,7 @@
 package javafx.scene.control;
 
 import com.sun.javafx.css.StyleManager;
-import com.sun.javafx.css.StyleablePropertyMetaData;
+import com.sun.javafx.css.CssMetaData;
 import com.sun.javafx.scene.control.skin.ProgressIndicatorSkin;
 import javafx.beans.property.DoubleProperty;
 import javafx.beans.property.DoublePropertyBase;
@@ -89,8 +89,8 @@ public class ProgressIndicator extends Control {
         // focusTraversable is styleable through css. Calling setFocusTraversable
         // makes it look to css like the user set the value and css will not 
         // override. Initializing focusTraversable by calling set on the 
-        // StyleablePropertyMetaData ensures that css will be able to override the value.
-        final StyleablePropertyMetaData prop = StyleablePropertyMetaData.getStyleablePropertyMetaData(focusTraversableProperty());
+        // CssMetaData ensures that css will be able to override the value.
+        final CssMetaData prop = CssMetaData.getCssMetaData(focusTraversableProperty());
         prop.set(this, Boolean.FALSE);            
         setProgress(progress);
         getStyleClass().setAll(DEFAULT_STYLE_CLASS);

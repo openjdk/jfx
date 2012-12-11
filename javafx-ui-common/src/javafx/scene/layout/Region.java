@@ -53,7 +53,7 @@ import com.sun.javafx.TempState;
 import com.sun.javafx.binding.ExpressionHelper;
 import com.sun.javafx.css.StyleableBooleanProperty;
 import com.sun.javafx.css.StyleableObjectProperty;
-import com.sun.javafx.css.StyleablePropertyMetaData;
+import com.sun.javafx.css.CssMetaData;
 import com.sun.javafx.css.converters.BooleanConverter;
 import com.sun.javafx.css.converters.InsetsConverter;
 import com.sun.javafx.css.converters.ShapeConverter;
@@ -342,7 +342,7 @@ public class Region extends Parent {
             snapToPixel = new StyleableBooleanProperty(_snapToPixel) {
                 @Override public Object getBean() { return Region.this; }
                 @Override public String getName() { return "snapToPixel"; }
-                @Override public StyleablePropertyMetaData getStyleablePropertyMetaData() {
+                @Override public CssMetaData getCssMetaData() {
                     return StyleableProperties.SNAP_TO_PIXEL;
                 }
                 @Override public void invalidated() {
@@ -379,7 +379,7 @@ public class Region extends Parent {
 
         @Override public Object getBean() { return Region.this; }
         @Override public String getName() { return "padding"; }
-        @Override public StyleablePropertyMetaData getStyleablePropertyMetaData() {
+        @Override public CssMetaData getCssMetaData() {
             return StyleableProperties.PADDING;
         }
         @Override public void invalidated() {
@@ -409,7 +409,7 @@ public class Region extends Parent {
         private Background old = null;
         @Override public Object getBean() { return Region.this; }
         @Override public String getName() { return "background"; }
-        @Override public StyleablePropertyMetaData getStyleablePropertyMetaData() {
+        @Override public CssMetaData getCssMetaData() {
             return StyleableProperties.BACKGROUND;
         }
 
@@ -442,7 +442,7 @@ public class Region extends Parent {
         private Border old = null;
         @Override public Object getBean() { return Region.this; }
         @Override public String getName() { return "border"; }
-        @Override public StyleablePropertyMetaData getStyleablePropertyMetaData() {
+        @Override public CssMetaData getCssMetaData() {
             return StyleableProperties.BORDER;
         }
         @Override protected void invalidated() {
@@ -480,7 +480,7 @@ public class Region extends Parent {
             opaqueInsets = new StyleableObjectProperty<Insets>() {
                 @Override public Object getBean() { return Region.this; }
                 @Override public String getName() { return "opaqueInsets"; }
-                @Override public StyleablePropertyMetaData getStyleablePropertyMetaData() {
+                @Override public CssMetaData getCssMetaData() {
                     return StyleableProperties.OPAQUE_INSETS;
                 }
                 @Override protected void invalidated() {
@@ -959,7 +959,7 @@ public class Region extends Parent {
     private final class ShapeProperty extends StyleableObjectProperty<Shape> implements Runnable {
         @Override public Object getBean() { return Region.this; }
         @Override public String getName() { return "shape"; }
-        @Override public StyleablePropertyMetaData getStyleablePropertyMetaData() {
+        @Override public CssMetaData getCssMetaData() {
             return StyleableProperties.SHAPE;
         }
         @Override protected void invalidated() {
@@ -1005,7 +1005,7 @@ public class Region extends Parent {
             scaleShape = new StyleableBooleanProperty(true) {
                 @Override public Object getBean() { return Region.this; }
                 @Override public String getName() { return "scaleShape"; }
-                @Override public StyleablePropertyMetaData getStyleablePropertyMetaData() {
+                @Override public CssMetaData getCssMetaData() {
                     return StyleableProperties.SCALE_SHAPE;
                 }
                 @Override public void invalidated() {
@@ -1034,7 +1034,7 @@ public class Region extends Parent {
             centerShape = new StyleableBooleanProperty(true) {
                 @Override public Object getBean() { return Region.this; }
                 @Override public String getName() { return "centerShape"; }
-                @Override public StyleablePropertyMetaData getStyleablePropertyMetaData() {
+                @Override public CssMetaData getCssMetaData() {
                     return StyleableProperties.POSITION_SHAPE;
                 }
                 @Override public void invalidated() {
@@ -1062,7 +1062,7 @@ public class Region extends Parent {
             cacheShape = new StyleableBooleanProperty(true) {
                 @Override public Object getBean() { return Region.this; }
                 @Override public String getName() { return "cacheShape"; }
-                @Override public StyleablePropertyMetaData getStyleablePropertyMetaData() {
+                @Override public CssMetaData getCssMetaData() {
                     return StyleableProperties.CACHE_SHAPE;
                 }
             };
@@ -2234,8 +2234,8 @@ public class Region extends Parent {
       * @treatAsPrivate implementation detail
       */
      private static class StyleableProperties {
-         private static final StyleablePropertyMetaData<Region,Insets> PADDING =
-             new StyleablePropertyMetaData<Region,Insets>("-fx-padding",
+         private static final CssMetaData<Region,Insets> PADDING =
+             new CssMetaData<Region,Insets>("-fx-padding",
                  InsetsConverter.getInstance(), Insets.EMPTY) {
 
             @Override public boolean isSettable(Region node) {
@@ -2247,8 +2247,8 @@ public class Region extends Parent {
             }
          };
 
-         private static final StyleablePropertyMetaData<Region,Insets> OPAQUE_INSETS =
-                 new StyleablePropertyMetaData<Region,Insets>("-fx-opaque-insets",
+         private static final CssMetaData<Region,Insets> OPAQUE_INSETS =
+                 new CssMetaData<Region,Insets>("-fx-opaque-insets",
                          InsetsConverter.getInstance(), null) {
 
                      @Override
@@ -2263,12 +2263,12 @@ public class Region extends Parent {
 
                  };
 
-         private static final StyleablePropertyMetaData<Region,Background> BACKGROUND =
-             new StyleablePropertyMetaData<Region,Background>("-fx-region-background",
+         private static final CssMetaData<Region,Background> BACKGROUND =
+             new CssMetaData<Region,Background>("-fx-region-background",
                  BackgroundConverter.INSTANCE,
                  null,
                  false,
-                 Background.getClassStyleablePropertyMetaData()) {
+                 Background.getClassCssMetaData()) {
 
             @Override public boolean isSettable(Region node) {
                 return !node.background.isBound();
@@ -2279,12 +2279,12 @@ public class Region extends Parent {
             }
          };
 
-         private static final StyleablePropertyMetaData<Region,Border> BORDER =
-             new StyleablePropertyMetaData<Region,Border>("-fx-region-border",
+         private static final CssMetaData<Region,Border> BORDER =
+             new CssMetaData<Region,Border>("-fx-region-border",
                      BorderConverter.getInstance(),
                      null,
                      false,
-                     Border.getClassStyleablePropertyMetaData()) {
+                     Border.getClassCssMetaData()) {
 
                  @Override public boolean isSettable(Region node) {
                      return !node.background.isBound();
@@ -2295,8 +2295,8 @@ public class Region extends Parent {
                  }
              };
 
-         private static final StyleablePropertyMetaData<Region,Shape> SHAPE =
-             new StyleablePropertyMetaData<Region,Shape>("-fx-shape",
+         private static final CssMetaData<Region,Shape> SHAPE =
+             new CssMetaData<Region,Shape>("-fx-shape",
                  ShapeConverter.getInstance()) {
 
             @Override public boolean isSettable(Region node) {
@@ -2309,8 +2309,8 @@ public class Region extends Parent {
             }
          };
 
-         private static final StyleablePropertyMetaData<Region, Boolean> SCALE_SHAPE = 
-             new StyleablePropertyMetaData<Region,Boolean>("-fx-scale-shape",
+         private static final CssMetaData<Region, Boolean> SCALE_SHAPE = 
+             new CssMetaData<Region,Boolean>("-fx-scale-shape",
                  BooleanConverter.getInstance(), Boolean.TRUE){
 
             @Override public boolean isSettable(Region node) {
@@ -2322,8 +2322,8 @@ public class Region extends Parent {
             }
         };
 
-         private static final StyleablePropertyMetaData<Region,Boolean> POSITION_SHAPE = 
-             new StyleablePropertyMetaData<Region,Boolean>("-fx-position-shape",
+         private static final CssMetaData<Region,Boolean> POSITION_SHAPE = 
+             new CssMetaData<Region,Boolean>("-fx-position-shape",
                  BooleanConverter.getInstance(), Boolean.TRUE){
 
             @Override public boolean isSettable(Region node) {
@@ -2335,8 +2335,8 @@ public class Region extends Parent {
             }
         };
 
-         private static final StyleablePropertyMetaData<Region,Boolean> CACHE_SHAPE =
-             new StyleablePropertyMetaData<Region,Boolean>("-fx-cache-shape",
+         private static final CssMetaData<Region,Boolean> CACHE_SHAPE =
+             new CssMetaData<Region,Boolean>("-fx-cache-shape",
                  BooleanConverter.getInstance(), Boolean.TRUE){
 
             @Override public boolean isSettable(Region node) {
@@ -2348,8 +2348,8 @@ public class Region extends Parent {
             }
         };
 
-         private static final StyleablePropertyMetaData<Region, Boolean> SNAP_TO_PIXEL =
-             new StyleablePropertyMetaData<Region,Boolean>("-fx-snap-to-pixel",
+         private static final CssMetaData<Region, Boolean> SNAP_TO_PIXEL =
+             new CssMetaData<Region,Boolean>("-fx-snap-to-pixel",
                  BooleanConverter.getInstance(), Boolean.TRUE){
 
             @Override public boolean isSettable(Region node) {
@@ -2362,11 +2362,11 @@ public class Region extends Parent {
             }
         };
 
-         private static final List<StyleablePropertyMetaData> STYLEABLES;
+         private static final List<CssMetaData> STYLEABLES;
          static {
 
-            final List<StyleablePropertyMetaData> styleables =
-                new ArrayList<StyleablePropertyMetaData>(Parent.getClassStyleablePropertyMetaData());
+            final List<CssMetaData> styleables =
+                new ArrayList<CssMetaData>(Parent.getClassCssMetaData());
             Collections.addAll(styleables,
                     PADDING,
                     BACKGROUND,
@@ -2381,26 +2381,20 @@ public class Region extends Parent {
          }
     }
 
-     /**
-      * Super-lazy instantiation pattern from Bill Pugh. StyleableProperties is referenced
-      * no earlier (and therefore loaded no earlier by the class loader) than
-      * the moment that  getClassStyleablePropertyMetaData() is called.
-      * @treatAsPrivate implementation detail
-      * @deprecated This is an internal API that is not intended for use and will be removed in the next version
-      */
-     @Deprecated
-     public static List<StyleablePropertyMetaData> getClassStyleablePropertyMetaData() {
-         return Region.StyleableProperties.STYLEABLES;
-     }
+    /**
+     * @return The CssMetaData associated with this class, which may include the
+     * CssMetaData of its super classes.
+     */
+    public static List<CssMetaData> getClassCssMetaData() {
+        return StyleableProperties.STYLEABLES;
+    }
 
     /**
-     * RT-19263
-     * @treatAsPrivate implementation detail
-     * @deprecated This is an experimental API that is not intended for general use and is subject to change in future versions
+     * {@inheritDoc}
      */
-    @Deprecated
-    @Override public List<StyleablePropertyMetaData> getStyleablePropertyMetaData() {
-        return getClassStyleablePropertyMetaData();
+    @Override
+    public List<CssMetaData> getCssMetaData() {
+        return getClassCssMetaData();
     }
 
 }

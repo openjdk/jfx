@@ -4,7 +4,7 @@
 
 package javafx.scene.control;
 
-import com.sun.javafx.css.StyleablePropertyMetaData;
+import com.sun.javafx.css.CssMetaData;
 import static javafx.scene.control.ControlTestUtils.*;
 import com.sun.javafx.pgstub.StubToolkit;
 import com.sun.javafx.scene.control.skin.ToolBarSkin;
@@ -89,7 +89,7 @@ public class ToolbarTest {
      * CSS related Tests                                                 *
      ********************************************************************/
     @Test public void whenOrientationIsBound_impl_cssSettable_ReturnsFalse() {
-        StyleablePropertyMetaData styleable = StyleablePropertyMetaData.getStyleablePropertyMetaData(toolBar.orientationProperty());
+        CssMetaData styleable = CssMetaData.getCssMetaData(toolBar.orientationProperty());
         assertTrue(styleable.isSettable(toolBar));
         ObjectProperty<Orientation> other = new SimpleObjectProperty<Orientation>(Orientation.VERTICAL);
         toolBar.orientationProperty().bind(other);
@@ -97,13 +97,13 @@ public class ToolbarTest {
     }
 
     @Test public void whenOrientationIsSpecifiedViaCSSAndIsNotBound_impl_cssSettable_ReturnsTrue() {
-        StyleablePropertyMetaData styleable = StyleablePropertyMetaData.getStyleablePropertyMetaData(toolBar.orientationProperty());
+        CssMetaData styleable = CssMetaData.getCssMetaData(toolBar.orientationProperty());
         styleable.set(toolBar, Orientation.VERTICAL);
         assertTrue(styleable.isSettable(toolBar));
     }
 
     @Test public void canSpecifyOrientationViaCSS() {
-        StyleablePropertyMetaData styleable = StyleablePropertyMetaData.getStyleablePropertyMetaData(toolBar.orientationProperty());
+        CssMetaData styleable = CssMetaData.getCssMetaData(toolBar.orientationProperty());
         styleable.set(toolBar, Orientation.VERTICAL);
         assertSame(Orientation.VERTICAL, toolBar.getOrientation());
     }

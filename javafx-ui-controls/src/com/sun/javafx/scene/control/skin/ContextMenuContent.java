@@ -68,7 +68,7 @@ import javafx.scene.layout.VBox;
 import javafx.scene.shape.Rectangle;
 import javafx.util.Duration;
 
-import com.sun.javafx.css.StyleablePropertyMetaData;
+import com.sun.javafx.css.CssMetaData;
 import com.sun.javafx.css.StyleManager;
 import java.util.Iterator;
 import javafx.geometry.NodeOrientation;
@@ -893,19 +893,19 @@ public class ContextMenuContent extends Region {
      /** @treatAsPrivate */
     private static class StyleableProperties {
 
-        private static final List<StyleablePropertyMetaData> STYLEABLES;
+        private static final List<CssMetaData> STYLEABLES;
         static {
 
-            final List<StyleablePropertyMetaData> styleables =
-                new ArrayList<StyleablePropertyMetaData>(Region.getClassStyleablePropertyMetaData());
+            final List<CssMetaData> styleables =
+                new ArrayList<CssMetaData>(Region.getClassCssMetaData());
 
             //
             // SkinBase only has Region's unique StlyleableProperty's, none of Nodes
             // So, we need to add effect back in. The effect property is in a
             // private inner class, so get the property from Node the hard way.
-            final List<StyleablePropertyMetaData> nodeStyleables = Node.getClassStyleablePropertyMetaData();
+            final List<CssMetaData> nodeStyleables = Node.getClassCssMetaData();
             for(int n=0, max=nodeStyleables.size(); n<max; n++) {
-                StyleablePropertyMetaData styleable = nodeStyleables.get(n);
+                CssMetaData styleable = nodeStyleables.get(n);
                 if ("effect".equals(styleable.getProperty())) {
                     styleables.add(styleable);
                     break;
@@ -916,24 +916,20 @@ public class ContextMenuContent extends Region {
     }
 
     /**
-     * @treatAsPrivate implementation detail
-     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
+     * @return The CssMetaData associated with this class, which may include the
+     * CssMetaData of its super classes.
      */
-    @Deprecated
-    public static List<StyleablePropertyMetaData> getClassStyleablePropertyMetaData() {
+    public static List<CssMetaData> getClassCssMetaData() {
         return StyleableProperties.STYLEABLES;
     }
 
     /**
-     * RT-19263
-     * @treatAsPrivate implementation detail
-     * @deprecated This is an experimental API that is not intended for general use and is subject to change in future versions
+     * {@inheritDoc}
      */
-    @Deprecated
-    public List<StyleablePropertyMetaData> getStyleablePropertyMetaData() {
-        return getClassStyleablePropertyMetaData();
+    @Override
+    public List<CssMetaData> getCssMetaData() {
+        return getClassCssMetaData();
     }
-
     
     protected Label getLabelAt(int index) {
         return (Label)((MenuItemContainer)itemsContainer.getChildren().get(index)).getLabel();

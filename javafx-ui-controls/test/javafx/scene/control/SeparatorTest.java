@@ -4,7 +4,7 @@
 
 package javafx.scene.control;
 
-import com.sun.javafx.css.StyleablePropertyMetaData;
+import com.sun.javafx.css.CssMetaData;
 import static javafx.scene.control.ControlTestUtils.assertPseudoClassExists;
 import static javafx.scene.control.ControlTestUtils.assertStyleClassContains;
 import static org.junit.Assert.assertEquals;
@@ -115,7 +115,7 @@ public class SeparatorTest {
     }
 
     @Test public void whenOrientationIsBound_impl_cssSettable_ReturnsFalse() {
-        StyleablePropertyMetaData styleable = StyleablePropertyMetaData.getStyleablePropertyMetaData(separator.orientationProperty());
+        CssMetaData styleable = CssMetaData.getCssMetaData(separator.orientationProperty());
         assertTrue(styleable.isSettable(separator));
         ObjectProperty<Orientation> other = new SimpleObjectProperty<Orientation>(Orientation.VERTICAL);
         separator.orientationProperty().bind(other);
@@ -123,13 +123,13 @@ public class SeparatorTest {
     }
 
     @Test public void whenOrientationIsSpecifiedViaCSSAndIsNotBound_impl_cssSettable_ReturnsTrue() {
-        StyleablePropertyMetaData styleable = StyleablePropertyMetaData.getStyleablePropertyMetaData(separator.orientationProperty());
+        CssMetaData styleable = CssMetaData.getCssMetaData(separator.orientationProperty());
         styleable.set(separator, Orientation.VERTICAL);
         assertTrue(styleable.isSettable(separator));
     }
 
     @Test public void canSpecifyOrientationViaCSS() {
-        StyleablePropertyMetaData styleable = StyleablePropertyMetaData.getStyleablePropertyMetaData(separator.orientationProperty());
+        CssMetaData styleable = CssMetaData.getCssMetaData(separator.orientationProperty());
         styleable.set(separator, Orientation.VERTICAL);
         assertSame(Orientation.VERTICAL, separator.getOrientation());
     }
@@ -138,7 +138,7 @@ public class SeparatorTest {
             "of the function instead of the other, and no check is made " +
             "for bits set")
     @Test public void whenSettingOrientationToItsExistingValue_impl_cssSettable_ReturnsFalse() {
-        StyleablePropertyMetaData styleable = StyleablePropertyMetaData.getStyleablePropertyMetaData(separator.orientationProperty());
+        CssMetaData styleable = CssMetaData.getCssMetaData(separator.orientationProperty());
         assertTrue(styleable.isSettable(separator));
         separator.setOrientation(Orientation.HORIZONTAL);
         assertFalse(styleable.isSettable(separator));
@@ -194,7 +194,7 @@ public class SeparatorTest {
     }
 
     @Test public void whenHalignmentIsBound_impl_cssSettable_ReturnsFalse() {
-        StyleablePropertyMetaData styleable = StyleablePropertyMetaData.getStyleablePropertyMetaData(separator.halignmentProperty());
+        CssMetaData styleable = CssMetaData.getCssMetaData(separator.halignmentProperty());
         assertTrue(styleable.isSettable(separator));
         ObjectProperty<HPos> other = new SimpleObjectProperty<HPos>(HPos.RIGHT);
         separator.halignmentProperty().bind(other);
@@ -202,13 +202,13 @@ public class SeparatorTest {
     }
 
     @Test public void whenHalignmentIsSpecifiedViaCSSAndIsNotBound_impl_cssSettable_ReturnsTrue() {
-        StyleablePropertyMetaData styleable = StyleablePropertyMetaData.getStyleablePropertyMetaData(separator.halignmentProperty());
+        CssMetaData styleable = CssMetaData.getCssMetaData(separator.halignmentProperty());
         styleable.set(separator, HPos.RIGHT);
         assertTrue(styleable.isSettable(separator));
     }
 
     @Test public void canSpecifyHalignmentViaCSS() {
-        StyleablePropertyMetaData styleable = StyleablePropertyMetaData.getStyleablePropertyMetaData(separator.halignmentProperty());
+        CssMetaData styleable = CssMetaData.getCssMetaData(separator.halignmentProperty());
         styleable.set(separator, HPos.RIGHT);
         assertSame(HPos.RIGHT, separator.getHalignment());
     }
@@ -253,7 +253,7 @@ public class SeparatorTest {
     }
 
     @Test public void whenValignmentIsBound_impl_cssSettable_ReturnsFalse() {
-        StyleablePropertyMetaData styleable = StyleablePropertyMetaData.getStyleablePropertyMetaData(separator.valignmentProperty());
+        CssMetaData styleable = CssMetaData.getCssMetaData(separator.valignmentProperty());
         assertTrue(styleable.isSettable(separator));
         ObjectProperty<VPos> other = new SimpleObjectProperty<VPos>(VPos.BASELINE);
         separator.valignmentProperty().bind(other);
@@ -261,13 +261,13 @@ public class SeparatorTest {
     }
 
     @Test public void whenValignmentIsSpecifiedViaCSSAndIsNotBound_impl_cssSettable_ReturnsTrue() {
-        StyleablePropertyMetaData styleable = StyleablePropertyMetaData.getStyleablePropertyMetaData(separator.valignmentProperty());
+        CssMetaData styleable = CssMetaData.getCssMetaData(separator.valignmentProperty());
         styleable.set(separator, VPos.BASELINE);
         assertTrue(styleable.isSettable(separator));
     }
 
     @Test public void canSpecifyValignmentViaCSS() {
-        StyleablePropertyMetaData styleable = StyleablePropertyMetaData.getStyleablePropertyMetaData(separator.valignmentProperty());
+        CssMetaData styleable = CssMetaData.getCssMetaData(separator.valignmentProperty());
         styleable.set(separator, VPos.BASELINE);
         assertSame(VPos.BASELINE, separator.getValignment());
     }

@@ -61,7 +61,7 @@ import javafx.scene.shape.Rectangle;
 import javafx.util.Duration;
 
 import com.sun.javafx.css.StyleableBooleanProperty;
-import com.sun.javafx.css.StyleablePropertyMetaData;
+import com.sun.javafx.css.CssMetaData;
 import com.sun.javafx.css.converters.BooleanConverter;
 
 /**
@@ -235,7 +235,7 @@ public abstract class XYChart<X,Y> extends Chart {
         }
 
         @Override
-        public StyleablePropertyMetaData getStyleablePropertyMetaData() {
+        public CssMetaData getCssMetaData() {
             return StyleableProperties.VERTICAL_GRID_LINE_VISIBLE;
         }
     };
@@ -266,7 +266,7 @@ public abstract class XYChart<X,Y> extends Chart {
         }
         
         @Override
-        public StyleablePropertyMetaData getStyleablePropertyMetaData() {
+        public CssMetaData getCssMetaData() {
             return StyleableProperties.HORIZONTAL_GRID_LINE_VISIBLE;
         }        
     };
@@ -291,7 +291,7 @@ public abstract class XYChart<X,Y> extends Chart {
         }
 
         @Override
-        public StyleablePropertyMetaData getStyleablePropertyMetaData() {
+        public CssMetaData getCssMetaData() {
             return StyleableProperties.ALTERNATIVE_COLUMN_FILL_VISIBLE;
         }        
     };
@@ -316,7 +316,7 @@ public abstract class XYChart<X,Y> extends Chart {
         }
 
         @Override
-        public StyleablePropertyMetaData getStyleablePropertyMetaData() {
+        public CssMetaData getCssMetaData() {
             return StyleableProperties.ALTERNATIVE_ROW_FILL_VISIBLE;
         }                
     };
@@ -346,7 +346,7 @@ public abstract class XYChart<X,Y> extends Chart {
         }
 
         @Override
-        public StyleablePropertyMetaData getStyleablePropertyMetaData() {
+        public CssMetaData getCssMetaData() {
             return StyleableProperties.VERTICAL_ZERO_LINE_VISIBLE;
         }                
     };
@@ -376,7 +376,7 @@ public abstract class XYChart<X,Y> extends Chart {
         }
 
         @Override
-        public StyleablePropertyMetaData getStyleablePropertyMetaData() {
+        public CssMetaData getCssMetaData() {
             return StyleableProperties.HORIZONTAL_ZERO_LINE_VISIBLE;
         }                
     };
@@ -1038,8 +1038,8 @@ public abstract class XYChart<X,Y> extends Chart {
     // -------------- STYLESHEET HANDLING ------------------------------------------------------------------------------
 
     private static class StyleableProperties {
-        private static final StyleablePropertyMetaData<XYChart,Boolean> HORIZONTAL_GRID_LINE_VISIBLE =
-            new StyleablePropertyMetaData<XYChart,Boolean>("-fx-horizontal-grid-lines-visible",
+        private static final CssMetaData<XYChart,Boolean> HORIZONTAL_GRID_LINE_VISIBLE =
+            new CssMetaData<XYChart,Boolean>("-fx-horizontal-grid-lines-visible",
                 BooleanConverter.getInstance(), Boolean.TRUE) {
 
             @Override
@@ -1054,8 +1054,8 @@ public abstract class XYChart<X,Y> extends Chart {
             }
         };
         
-        private static final StyleablePropertyMetaData<XYChart,Boolean> HORIZONTAL_ZERO_LINE_VISIBLE =
-            new StyleablePropertyMetaData<XYChart,Boolean>("-fx-horizontal-zero-line-visible",
+        private static final CssMetaData<XYChart,Boolean> HORIZONTAL_ZERO_LINE_VISIBLE =
+            new CssMetaData<XYChart,Boolean>("-fx-horizontal-zero-line-visible",
                 BooleanConverter.getInstance(), Boolean.TRUE) {
 
             @Override
@@ -1070,8 +1070,8 @@ public abstract class XYChart<X,Y> extends Chart {
             }
         };
         
-        private static final StyleablePropertyMetaData<XYChart,Boolean> ALTERNATIVE_ROW_FILL_VISIBLE =
-            new StyleablePropertyMetaData<XYChart,Boolean>("-fx-alternative-row-fill-visible",
+        private static final CssMetaData<XYChart,Boolean> ALTERNATIVE_ROW_FILL_VISIBLE =
+            new CssMetaData<XYChart,Boolean>("-fx-alternative-row-fill-visible",
                 BooleanConverter.getInstance(), Boolean.TRUE) {
 
             @Override
@@ -1086,8 +1086,8 @@ public abstract class XYChart<X,Y> extends Chart {
             }
         };
         
-        private static final StyleablePropertyMetaData<XYChart,Boolean> VERTICAL_GRID_LINE_VISIBLE =
-            new StyleablePropertyMetaData<XYChart,Boolean>("-fx-vertical-grid-lines-visible",
+        private static final CssMetaData<XYChart,Boolean> VERTICAL_GRID_LINE_VISIBLE =
+            new CssMetaData<XYChart,Boolean>("-fx-vertical-grid-lines-visible",
                 BooleanConverter.getInstance(), Boolean.TRUE) {
 
             @Override
@@ -1102,8 +1102,8 @@ public abstract class XYChart<X,Y> extends Chart {
             }
         };
         
-        private static final StyleablePropertyMetaData<XYChart,Boolean> VERTICAL_ZERO_LINE_VISIBLE =
-            new StyleablePropertyMetaData<XYChart,Boolean>("-fx-vertical-zero-line-visible",
+        private static final CssMetaData<XYChart,Boolean> VERTICAL_ZERO_LINE_VISIBLE =
+            new CssMetaData<XYChart,Boolean>("-fx-vertical-zero-line-visible",
                 BooleanConverter.getInstance(), Boolean.TRUE) {
 
             @Override
@@ -1118,8 +1118,8 @@ public abstract class XYChart<X,Y> extends Chart {
             }
         };
         
-        private static final StyleablePropertyMetaData<XYChart,Boolean> ALTERNATIVE_COLUMN_FILL_VISIBLE =
-            new StyleablePropertyMetaData<XYChart,Boolean>("-fx-alternative-column-fill-visible",
+        private static final CssMetaData<XYChart,Boolean> ALTERNATIVE_COLUMN_FILL_VISIBLE =
+            new CssMetaData<XYChart,Boolean>("-fx-alternative-column-fill-visible",
                 BooleanConverter.getInstance(), Boolean.TRUE) {
 
             @Override
@@ -1134,10 +1134,10 @@ public abstract class XYChart<X,Y> extends Chart {
             }
         };
 
-        private static final List<StyleablePropertyMetaData> STYLEABLES;
+        private static final List<CssMetaData> STYLEABLES;
         static {
-            final List<StyleablePropertyMetaData> styleables = 
-                new ArrayList<StyleablePropertyMetaData>(Chart.getClassStyleablePropertyMetaData());
+            final List<CssMetaData> styleables = 
+                new ArrayList<CssMetaData>(Chart.getClassCssMetaData());
             Collections.addAll(styleables,
                 HORIZONTAL_GRID_LINE_VISIBLE,
                 HORIZONTAL_ZERO_LINE_VISIBLE,
@@ -1151,22 +1151,19 @@ public abstract class XYChart<X,Y> extends Chart {
     }
  
     /**
-     * @treatAsPrivate implementation detail
-     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
+     * @return The CssMetaData associated with this class, which may include the
+     * CssMetaData of its super classes.
      */
-    @Deprecated
-    public static List<StyleablePropertyMetaData> getClassStyleablePropertyMetaData() {
-        return XYChart.StyleableProperties.STYLEABLES;
+    public static List<CssMetaData> getClassCssMetaData() {
+        return StyleableProperties.STYLEABLES;
     }
 
     /**
-     * RT-19263
-     * @treatAsPrivate implementation detail
-     * @deprecated This is an experimental API that is not intended for general use and is subject to change in future versions
+     * {@inheritDoc}
      */
-    @Deprecated
-    public List<StyleablePropertyMetaData> getStyleablePropertyMetaData() {
-        return getClassStyleablePropertyMetaData();
+    @Override
+    public List<CssMetaData> getCssMetaData() {
+        return getClassCssMetaData();
     }
 
     // -------------- INNER CLASSES ------------------------------------------------------------------------------------

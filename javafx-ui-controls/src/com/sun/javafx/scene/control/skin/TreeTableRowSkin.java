@@ -36,7 +36,7 @@ import javafx.scene.Node;
 import javafx.scene.control.TreeItem;
 
 import com.sun.javafx.css.StyleableDoubleProperty;
-import com.sun.javafx.css.StyleablePropertyMetaData;
+import com.sun.javafx.css.CssMetaData;
 import com.sun.javafx.css.converters.SizeConverter;
 import com.sun.javafx.scene.control.behavior.CellBehaviorBase;
 import com.sun.javafx.scene.control.behavior.TreeTableRowBehavior;
@@ -107,7 +107,7 @@ public class TreeTableRowSkin<T> extends TableRowSkinBase<TreeItem<T>, TreeTable
                     return "indent";
                 }
 
-                @Override public StyleablePropertyMetaData getStyleablePropertyMetaData() {
+                @Override public CssMetaData getCssMetaData() {
                     return TreeTableRowSkin.StyleableProperties.INDENT;
                 }
             };
@@ -259,8 +259,8 @@ public class TreeTableRowSkin<T> extends TableRowSkinBase<TreeItem<T>, TreeTable
     /** @treatAsPrivate */
     private static class StyleableProperties {
         
-        private static final StyleablePropertyMetaData<TreeTableRow,Number> INDENT = 
-            new StyleablePropertyMetaData<TreeTableRow,Number>("-fx-indent",
+        private static final CssMetaData<TreeTableRow,Number> INDENT = 
+            new CssMetaData<TreeTableRow,Number>("-fx-indent",
                 SizeConverter.getInstance(), 10.0) {
                     
             @Override public boolean isSettable(TreeTableRow n) {
@@ -274,10 +274,10 @@ public class TreeTableRowSkin<T> extends TableRowSkinBase<TreeItem<T>, TreeTable
             }
         };
         
-        private static final List<StyleablePropertyMetaData> STYLEABLES;
+        private static final List<CssMetaData> STYLEABLES;
         static {
-            final List<StyleablePropertyMetaData> styleables =
-                new ArrayList<StyleablePropertyMetaData>(CellSkinBase.getClassStyleablePropertyMetaData());
+            final List<CssMetaData> styleables =
+                new ArrayList<CssMetaData>(CellSkinBase.getClassCssMetaData());
             Collections.addAll(styleables,
                 INDENT
             );
@@ -286,21 +286,19 @@ public class TreeTableRowSkin<T> extends TableRowSkinBase<TreeItem<T>, TreeTable
     }
     
     /**
-     * @treatAsPrivate implementation detail
-     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
+     * @return The CssMetaData associated with this class, which may include the
+     * CssMetaData of its super classes.
      */
-    @Deprecated
-    public static List<StyleablePropertyMetaData> getClassStyleablePropertyMetaData() {
-        return TreeTableRowSkin.StyleableProperties.STYLEABLES;
+    public static List<CssMetaData> getClassCssMetaData() {
+        return StyleableProperties.STYLEABLES;
     }
 
     /**
-     * RT-19263
-     * @treatAsPrivate implementation detail
-     * @deprecated This is an experimental API that is not intended for general use and is subject to change in future versions
+     * {@inheritDoc}
      */
-    @Deprecated
-    public List<StyleablePropertyMetaData> getStyleablePropertyMetaData() {
-        return getClassStyleablePropertyMetaData();
+    @Override
+    public List<CssMetaData> getCssMetaData() {
+        return getClassCssMetaData();
     }
+
 }

@@ -25,7 +25,7 @@
 package javafx.scene.control;
 
 import com.sun.javafx.css.Styleable;
-import com.sun.javafx.css.StyleablePropertyMetaData;
+import com.sun.javafx.css.CssMetaData;
 import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.ObjectPropertyBase;
@@ -732,7 +732,7 @@ public class Tab implements EventTarget {
                 }
 
                 @Override
-                public List<StyleablePropertyMetaData> getStyleablePropertyMetaData() {
+                public List<CssMetaData> getCssMetaData() {
                     return Collections.EMPTY_LIST;
                 }                
 

@@ -49,7 +49,7 @@ import com.sun.javafx.charts.ChartLayoutAnimator;
 import com.sun.javafx.charts.Legend;
 import com.sun.javafx.css.StyleableBooleanProperty;
 import com.sun.javafx.css.StyleableObjectProperty;
-import com.sun.javafx.css.StyleablePropertyMetaData;
+import com.sun.javafx.css.CssMetaData;
 import com.sun.javafx.css.converters.BooleanConverter;
 import com.sun.javafx.css.converters.EnumConverter;
 import javafx.geometry.NodeOrientation;
@@ -126,7 +126,7 @@ public abstract class Chart extends Region {
         }
         
         @Override
-        public StyleablePropertyMetaData getStyleablePropertyMetaData() {
+        public CssMetaData getCssMetaData() {
             return StyleableProperties.TITLE_SIDE;
         }
 
@@ -183,7 +183,7 @@ public abstract class Chart extends Region {
         }
             
         @Override
-        public StyleablePropertyMetaData getStyleablePropertyMetaData() {
+        public CssMetaData getCssMetaData() {
             return StyleableProperties.LEGEND_VISIBLE;
         }
 
@@ -215,7 +215,7 @@ public abstract class Chart extends Region {
         }
         
         @Override
-        public StyleablePropertyMetaData getStyleablePropertyMetaData() {
+        public CssMetaData getCssMetaData() {
             return StyleableProperties.LEGEND_SIDE;
         }
 
@@ -419,8 +419,8 @@ public abstract class Chart extends Region {
     // -------------- STYLESHEET HANDLING ------------------------------------------------------------------------------
 
     private static class StyleableProperties {
-        private static final StyleablePropertyMetaData<Chart,Side> TITLE_SIDE =
-            new StyleablePropertyMetaData<Chart,Side>("-fx-title-side",
+        private static final CssMetaData<Chart,Side> TITLE_SIDE =
+            new CssMetaData<Chart,Side>("-fx-title-side",
                 new EnumConverter<Side>(Side.class),
                 Side.TOP) {
 
@@ -435,8 +435,8 @@ public abstract class Chart extends Region {
             }
         };
         
-        private static final StyleablePropertyMetaData<Chart,Side> LEGEND_SIDE =
-            new StyleablePropertyMetaData<Chart,Side>("-fx-legend-side",
+        private static final CssMetaData<Chart,Side> LEGEND_SIDE =
+            new CssMetaData<Chart,Side>("-fx-legend-side",
                 new EnumConverter<Side>(Side.class),
                 Side.BOTTOM) {
 
@@ -451,8 +451,8 @@ public abstract class Chart extends Region {
             }
         };
         
-        private static final StyleablePropertyMetaData<Chart,Boolean> LEGEND_VISIBLE =
-            new StyleablePropertyMetaData<Chart,Boolean>("-fx-legend-visible",
+        private static final CssMetaData<Chart,Boolean> LEGEND_VISIBLE =
+            new CssMetaData<Chart,Boolean>("-fx-legend-visible",
                 BooleanConverter.getInstance(), Boolean.TRUE) {
 
             @Override
@@ -466,10 +466,10 @@ public abstract class Chart extends Region {
             }
         };
 
-        private static final List<StyleablePropertyMetaData> STYLEABLES;
+        private static final List<CssMetaData> STYLEABLES;
         static {
-            final List<StyleablePropertyMetaData> styleables = 
-                new ArrayList<StyleablePropertyMetaData>(Region.getClassStyleablePropertyMetaData());
+            final List<CssMetaData> styleables = 
+                new ArrayList<CssMetaData>(Region.getClassCssMetaData());
             Collections.addAll(styleables,
                 TITLE_SIDE,
                 LEGEND_VISIBLE,
@@ -480,22 +480,19 @@ public abstract class Chart extends Region {
     }
 
     /**
-     * @treatAsPrivate implementation detail
-     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
+     * @return The CssMetaData associated with this class, which may include the
+     * CssMetaData of its super classes.
      */
-    @Deprecated
-    public static List<StyleablePropertyMetaData> getClassStyleablePropertyMetaData() {
+    public static List<CssMetaData> getClassCssMetaData() {
         return StyleableProperties.STYLEABLES;
     }
 
     /**
-     * RT-19263
-     * @treatAsPrivate implementation detail
-     * @deprecated This is an experimental API that is not intended for general use and is subject to change in future versions
+     * {@inheritDoc}
      */
-    @Deprecated
-    public List<StyleablePropertyMetaData> getStyleablePropertyMetaData() {
-        return getClassStyleablePropertyMetaData();
+    @Override
+    public List<CssMetaData> getCssMetaData() {
+        return getClassCssMetaData();
     }
 
 }

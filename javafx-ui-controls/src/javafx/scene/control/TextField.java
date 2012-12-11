@@ -222,7 +222,7 @@ public class TextField extends TextInputControl {
         if (alignment == null) {
             alignment = new StyleableObjectProperty<Pos>(Pos.CENTER_LEFT) {
 
-                @Override public StyleablePropertyMetaData getStyleablePropertyMetaData() {
+                @Override public CssMetaData getCssMetaData() {
                     return StyleableProperties.ALIGNMENT;
                 }
 
@@ -262,8 +262,8 @@ public class TextField extends TextInputControl {
       * @treatAsPrivate implementation detail
       */
     private static class StyleableProperties {
-        private static final StyleablePropertyMetaData<TextField, Pos> ALIGNMENT =
-            new StyleablePropertyMetaData<TextField, Pos>("-fx-alignment",
+        private static final CssMetaData<TextField, Pos> ALIGNMENT =
+            new CssMetaData<TextField, Pos>("-fx-alignment",
                 new EnumConverter<Pos>(Pos.class), Pos.CENTER_LEFT ) {
 
             @Override public boolean isSettable(TextField n) {
@@ -275,10 +275,10 @@ public class TextField extends TextInputControl {
             }
         };
 
-        private static final List<StyleablePropertyMetaData> STYLEABLES;
+        private static final List<CssMetaData> STYLEABLES;
         static {
-            final List<StyleablePropertyMetaData> styleables =
-                new ArrayList<StyleablePropertyMetaData>(Control.getClassStyleablePropertyMetaData());
+            final List<CssMetaData> styleables =
+                new ArrayList<CssMetaData>(Control.getClassCssMetaData());
             Collections.addAll(styleables,
                 ALIGNMENT
             );
@@ -287,21 +287,18 @@ public class TextField extends TextInputControl {
     }
 
     /**
-     * @treatAsPrivate implementation detail
-     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
+     * @return The CssMetaData associated with this class, which may include the
+     * CssMetaData of its super classes.
      */
-    @Deprecated
-    public static List<StyleablePropertyMetaData> getClassStyleablePropertyMetaData() {
-        return TextField.StyleableProperties.STYLEABLES;
+    public static List<CssMetaData> getClassCssMetaData() {
+        return StyleableProperties.STYLEABLES;
     }
 
     /**
-     * RT-19263
-     * @treatAsPrivate implementation detail
-     * @deprecated This is an experimental API that is not intended for general use and is subject to change in future versions
+     * {@inheritDoc}
      */
-    @Deprecated
-    @Override protected List<StyleablePropertyMetaData> impl_getControlStyleableProperties() {
-        return getClassStyleablePropertyMetaData();
+    @Override
+    public List<CssMetaData> getCssMetaData() {
+        return getClassCssMetaData();
     }
 }

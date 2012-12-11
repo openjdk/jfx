@@ -37,7 +37,7 @@ import javafx.beans.value.WritableValue;
 import javafx.scene.paint.Paint;
 
 import com.sun.javafx.css.StyleableDoubleProperty;
-import com.sun.javafx.css.StyleablePropertyMetaData;
+import com.sun.javafx.css.CssMetaData;
 import com.sun.javafx.css.converters.SizeConverter;
 import com.sun.javafx.geom.BaseBounds;
 import com.sun.javafx.geom.RoundRectangle2D;
@@ -307,7 +307,7 @@ public  class Rectangle extends Shape {
                 }
                 
                 @Override 
-                public StyleablePropertyMetaData getStyleablePropertyMetaData() {
+                public CssMetaData getCssMetaData() {
                     return StyleableProperties.ARC_WIDTH;
                 }
 
@@ -354,7 +354,7 @@ public  class Rectangle extends Shape {
                 }
 
                 @Override 
-                public StyleablePropertyMetaData getStyleablePropertyMetaData() {
+                public CssMetaData getCssMetaData() {
                     return StyleableProperties.ARC_HEIGHT;
                 }
                 
@@ -397,8 +397,8 @@ public  class Rectangle extends Shape {
       * @treatAsPrivate implementation detail
       */
      private static class StyleableProperties {
-         private static final StyleablePropertyMetaData<Rectangle,Number> ARC_HEIGHT =
-            new StyleablePropertyMetaData<Rectangle,Number>("-fx-arc-height",
+         private static final CssMetaData<Rectangle,Number> ARC_HEIGHT =
+            new CssMetaData<Rectangle,Number>("-fx-arc-height",
                 SizeConverter.getInstance(), 0.0) {
 
             @Override
@@ -412,8 +412,8 @@ public  class Rectangle extends Shape {
             }
 
         };         
-         private static final StyleablePropertyMetaData<Rectangle,Number> ARC_WIDTH =
-            new StyleablePropertyMetaData<Rectangle,Number>("-fx-arc-width",
+         private static final CssMetaData<Rectangle,Number> ARC_WIDTH =
+            new CssMetaData<Rectangle,Number>("-fx-arc-width",
                 SizeConverter.getInstance(), 0.0) {
 
             @Override
@@ -428,10 +428,10 @@ public  class Rectangle extends Shape {
 
         };
          
-         private static final List<StyleablePropertyMetaData> STYLEABLES;
+         private static final List<CssMetaData> STYLEABLES;
          static {
-            final List<StyleablePropertyMetaData> styleables =
-                new ArrayList<StyleablePropertyMetaData>(Shape.getClassStyleablePropertyMetaData());
+            final List<CssMetaData> styleables =
+                new ArrayList<CssMetaData>(Shape.getClassCssMetaData());
             Collections.addAll(styleables,
                 ARC_HEIGHT,
                 ARC_WIDTH
@@ -442,25 +442,19 @@ public  class Rectangle extends Shape {
     }
      
     /**
-     * Super-lazy instantiation pattern from Bill Pugh. StyleableProperties is referenced
-     * no earlier (and therefore loaded no earlier by the class loader) than
-     * the moment that  getClassStyleablePropertyMetaData() is called.
-     * @treatAsPrivate implementation detail
-     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
+     * @return The CssMetaData associated with this class, which may include the
+     * CssMetaData of its super classes.
      */
-    @Deprecated
-    public static List<StyleablePropertyMetaData> getClassStyleablePropertyMetaData() {
-        return Rectangle.StyleableProperties.STYLEABLES;
+    public static List<CssMetaData> getClassCssMetaData() {
+        return StyleableProperties.STYLEABLES;
     }
 
     /**
-     * RT-19263
-     * @treatAsPrivate implementation detail
-     * @deprecated This is an experimental API that is not intended for general use and is subject to change in future versions
+     * {@inheritDoc}
      */
-    @Deprecated
-    public List<StyleablePropertyMetaData> getStyleablePropertyMetaData() {
-        return getClassStyleablePropertyMetaData();
+    @Override
+    public List<CssMetaData> getCssMetaData() {
+        return getClassCssMetaData();
     }
 
     /**

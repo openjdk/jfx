@@ -34,7 +34,7 @@ import javafx.beans.Observable;
 import javafx.scene.control.Label;
 import javafx.scene.control.Labeled;
 
-import com.sun.javafx.css.StyleablePropertyMetaData;
+import com.sun.javafx.css.CssMetaData;
 import com.sun.javafx.css.Origin;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -60,10 +60,10 @@ public class LabeledImpl extends Label {
         labeledImpl.setGraphic(labeled.getGraphic());
         labeled.graphicProperty().addListener(shuttler);
         
-        final List<StyleablePropertyMetaData> styleables = StyleableProperties.STYLEABLES_TO_MIRROR;
+        final List<CssMetaData> styleables = StyleableProperties.STYLEABLES_TO_MIRROR;
         
         for(int n=0, nMax=styleables.size(); n<nMax; n++) {
-            final StyleablePropertyMetaData styleable = styleables.get(n);
+            final CssMetaData styleable = styleables.get(n);
             
             // the Labeled isn't necessarily a Label, so skip the skin or
             // we'll get an argument type mismatch on the invocation of the
@@ -75,7 +75,7 @@ public class LabeledImpl extends Label {
                 // listen for changes to this property
                 ((Observable)fromVal).addListener(shuttler);
                 // set this LabeledImpl's property to the same value as the Labeled. 
-                final Origin origin = StyleablePropertyMetaData.getOrigin(fromVal);
+                final Origin origin = CssMetaData.getOrigin(fromVal);
                 styleable.set(labeledImpl, fromVal.getValue(), origin);
             }
         }
@@ -101,17 +101,17 @@ public class LabeledImpl extends Label {
                 // If the user set the graphic, then mirror that.
                 // Otherwise, the graphic was set via the imageUrlProperty which
                 // will be mirrored onto the labeledImpl by the next block.
-                Origin origin = StyleablePropertyMetaData.getOrigin(labeled.graphicProperty());
+                Origin origin = CssMetaData.getOrigin(labeled.graphicProperty());
                 if (origin == null || origin == Origin.USER) {
                     labeledImpl.setGraphic(labeled.getGraphic());
                 }
                 
             } else if (valueModel instanceof WritableValue) { 
                 WritableValue writable = (WritableValue)valueModel;
-                StyleablePropertyMetaData styleable = 
-                        StyleablePropertyMetaData.getStyleablePropertyMetaData(writable);
+                CssMetaData styleable = 
+                        CssMetaData.getCssMetaData(writable);
                 if (styleable != null) {
-                    Origin origin = StyleablePropertyMetaData.getOrigin(writable);
+                    Origin origin = CssMetaData.getOrigin(writable);
                     styleable.set(labeledImpl, writable.getValue(), origin);
                 }
             }
@@ -121,7 +121,7 @@ public class LabeledImpl extends Label {
     /** Protected for unit test purposes */
     static final class StyleableProperties {
 
-        static final List<StyleablePropertyMetaData> STYLEABLES_TO_MIRROR;
+        static final List<CssMetaData> STYLEABLES_TO_MIRROR;
         static {
             //
             // We do this as we only want to mirror the Labeled's keys,
@@ -137,10 +137,10 @@ public class LabeledImpl extends Label {
             // If just this subset were returned (by impl_CSS_STYLEABLE) then
             // -fx-opacity (for example) would be meaningless to the Labeled. 
             // 
-            final List<StyleablePropertyMetaData> labeledStyleables = Labeled.getClassStyleablePropertyMetaData();
-            final List<StyleablePropertyMetaData> parentStyleables = Region.getClassStyleablePropertyMetaData();
-            final List<StyleablePropertyMetaData> styleables = 
-                new ArrayList<StyleablePropertyMetaData>(labeledStyleables);
+            final List<CssMetaData> labeledStyleables = Labeled.getClassCssMetaData();
+            final List<CssMetaData> parentStyleables = Region.getClassCssMetaData();
+            final List<CssMetaData> styleables = 
+                new ArrayList<CssMetaData>(labeledStyleables);
             styleables.removeAll(parentStyleables);
             STYLEABLES_TO_MIRROR = Collections.unmodifiableList(styleables);
         }

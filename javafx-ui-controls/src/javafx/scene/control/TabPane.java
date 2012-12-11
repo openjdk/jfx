@@ -41,7 +41,7 @@ import javafx.geometry.Side;
 
 import com.sun.javafx.css.StyleManager;
 import com.sun.javafx.css.StyleableDoubleProperty;
-import com.sun.javafx.css.StyleablePropertyMetaData;
+import com.sun.javafx.css.CssMetaData;
 import com.sun.javafx.css.converters.SizeConverter;
 import com.sun.javafx.scene.control.skin.TabPaneSkin;
 import javafx.beans.DefaultProperty;
@@ -319,7 +319,7 @@ public class TabPane extends Control {
             tabMinWidth = new StyleableDoubleProperty(DEFAULT_TAB_MIN_WIDTH) {
 
                 @Override
-                public StyleablePropertyMetaData getStyleablePropertyMetaData() {
+                public CssMetaData getCssMetaData() {
                     return StyleableProperties.TAB_MIN_WIDTH;
                 }
 
@@ -367,7 +367,7 @@ public class TabPane extends Control {
             tabMaxWidth = new StyleableDoubleProperty(DEFAULT_TAB_MAX_WIDTH) {
 
                 @Override
-                public StyleablePropertyMetaData getStyleablePropertyMetaData() {
+                public CssMetaData getCssMetaData() {
                     return StyleableProperties.TAB_MAX_WIDTH;
                 }
 
@@ -416,7 +416,7 @@ public class TabPane extends Control {
             tabMinHeight = new StyleableDoubleProperty(DEFAULT_TAB_MIN_HEIGHT) {
 
                 @Override
-                public StyleablePropertyMetaData getStyleablePropertyMetaData() {
+                public CssMetaData getCssMetaData() {
                     return StyleableProperties.TAB_MIN_HEIGHT;
                 }
 
@@ -464,7 +464,7 @@ public class TabPane extends Control {
             tabMaxHeight = new StyleableDoubleProperty(DEFAULT_TAB_MAX_HEIGHT) {
 
                 @Override
-                public StyleablePropertyMetaData getStyleablePropertyMetaData() {
+                public CssMetaData getCssMetaData() {
                     return StyleableProperties.TAB_MAX_HEIGHT;
                 }
 
@@ -494,8 +494,8 @@ public class TabPane extends Control {
      **************************************************************************/
 
     private static class StyleableProperties {
-        private static final StyleablePropertyMetaData<TabPane,Number> TAB_MIN_WIDTH =
-                new StyleablePropertyMetaData<TabPane,Number>("-fx-tab-min-width",
+        private static final CssMetaData<TabPane,Number> TAB_MIN_WIDTH =
+                new CssMetaData<TabPane,Number>("-fx-tab-min-width",
                 SizeConverter.getInstance(), DEFAULT_TAB_MIN_WIDTH) {
 
             @Override
@@ -509,8 +509,8 @@ public class TabPane extends Control {
             }
         };
 
-        private static final StyleablePropertyMetaData<TabPane,Number> TAB_MAX_WIDTH =
-                new StyleablePropertyMetaData<TabPane,Number>("-fx-tab-max-width",
+        private static final CssMetaData<TabPane,Number> TAB_MAX_WIDTH =
+                new CssMetaData<TabPane,Number>("-fx-tab-max-width",
                 SizeConverter.getInstance(), DEFAULT_TAB_MAX_WIDTH) {
 
             @Override
@@ -524,8 +524,8 @@ public class TabPane extends Control {
             }
         };
 
-        private static final StyleablePropertyMetaData<TabPane,Number> TAB_MIN_HEIGHT =
-                new StyleablePropertyMetaData<TabPane,Number>("-fx-tab-min-height",
+        private static final CssMetaData<TabPane,Number> TAB_MIN_HEIGHT =
+                new CssMetaData<TabPane,Number>("-fx-tab-min-height",
                 SizeConverter.getInstance(), DEFAULT_TAB_MIN_HEIGHT) {
 
             @Override
@@ -539,8 +539,8 @@ public class TabPane extends Control {
             }
         };
 
-        private static final StyleablePropertyMetaData<TabPane,Number> TAB_MAX_HEIGHT =
-                new StyleablePropertyMetaData<TabPane,Number>("-fx-tab-max-height",
+        private static final CssMetaData<TabPane,Number> TAB_MAX_HEIGHT =
+                new CssMetaData<TabPane,Number>("-fx-tab-max-height",
                 SizeConverter.getInstance(), DEFAULT_TAB_MAX_HEIGHT) {
 
             @Override
@@ -554,10 +554,10 @@ public class TabPane extends Control {
             }
         };
 
-        private static final List<StyleablePropertyMetaData> STYLEABLES;
+        private static final List<CssMetaData> STYLEABLES;
         static {
-            final List<StyleablePropertyMetaData> styleables =
-                new ArrayList<StyleablePropertyMetaData>(Control.getClassStyleablePropertyMetaData());
+            final List<CssMetaData> styleables =
+                new ArrayList<CssMetaData>(Control.getClassCssMetaData());
             Collections.addAll(styleables,
                 TAB_MIN_WIDTH,
                 TAB_MAX_WIDTH,
@@ -569,22 +569,19 @@ public class TabPane extends Control {
     }
 
     /**
-     * @treatAsPrivate implementation detail
-     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
+     * @return The CssMetaData associated with this class, which may include the
+     * CssMetaData of its super classes.
      */
-    @Deprecated
-    public static List<StyleablePropertyMetaData> getClassStyleablePropertyMetaData() {
-        return TabPane.StyleableProperties.STYLEABLES;
+    public static List<CssMetaData> getClassCssMetaData() {
+        return StyleableProperties.STYLEABLES;
     }
 
     /**
-     * RT-19263
-     * @treatAsPrivate implementation detail
-     * @deprecated This is an experimental API that is not intended for general use and is subject to change in future versions
+     * {@inheritDoc}
      */
-    @Deprecated
-    @Override protected List<StyleablePropertyMetaData> impl_getControlStyleableProperties() {
-        return getClassStyleablePropertyMetaData();
+    @Override
+    public List<CssMetaData> getCssMetaData() {
+        return getClassCssMetaData();
     }
 
     private static final long TOP_PSEUDOCLASS_STATE = StyleManager.getPseudoclassMask("top");

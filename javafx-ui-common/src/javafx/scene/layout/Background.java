@@ -34,7 +34,7 @@ import javafx.scene.image.Image;
 import javafx.scene.paint.Color;
 import javafx.scene.paint.Paint;
 import com.sun.javafx.UnmodifiableArrayList;
-import com.sun.javafx.css.StyleablePropertyMetaData;
+import com.sun.javafx.css.CssMetaData;
 import com.sun.javafx.css.SubCSSProperty;
 import com.sun.javafx.css.converters.InsetsConverter;
 import com.sun.javafx.css.converters.PaintConverter;
@@ -66,43 +66,43 @@ import com.sun.javafx.scene.layout.region.RepeatStructConverter;
  * @since JavaFX 8
  */
 public final class Background {
-    static final StyleablePropertyMetaData<Node,Paint[]> BACKGROUND_COLOR =
+    static final CssMetaData<Node,Paint[]> BACKGROUND_COLOR =
             new SubCSSProperty<Paint[]>("-fx-background-color",
                     PaintConverter.SequenceConverter.getInstance(),
                     new Paint[] {Color.TRANSPARENT});
 
-    static final StyleablePropertyMetaData<Node,Insets[]> BACKGROUND_RADIUS =
+    static final CssMetaData<Node,Insets[]> BACKGROUND_RADIUS =
             new SubCSSProperty<Insets[]>("-fx-background-radius",
                     InsetsConverter.SequenceConverter.getInstance(),
                     new Insets[] {Insets.EMPTY});
 
-    static final StyleablePropertyMetaData<Node,Insets[]> BACKGROUND_INSETS =
+    static final CssMetaData<Node,Insets[]> BACKGROUND_INSETS =
             new SubCSSProperty<Insets[]>("-fx-background-insets",
                     InsetsConverter.SequenceConverter.getInstance(),
                     new Insets[] {Insets.EMPTY});
 
-    static final StyleablePropertyMetaData<Node,Image[]> BACKGROUND_IMAGE =
+    static final CssMetaData<Node,Image[]> BACKGROUND_IMAGE =
             new SubCSSProperty<Image[]>("-fx-background-image",
                     URLConverter.SequenceConverter.getInstance());
 
-    static final StyleablePropertyMetaData<Node,RepeatStruct[]> BACKGROUND_REPEAT =
+    static final CssMetaData<Node,RepeatStruct[]> BACKGROUND_REPEAT =
             new SubCSSProperty<RepeatStruct[]>("-fx-background-repeat",
                     RepeatStructConverter.getInstance(),
                     new RepeatStruct[] {new RepeatStruct(BackgroundRepeat.REPEAT,
                                                          BackgroundRepeat.REPEAT) });
 
-    static final StyleablePropertyMetaData<Node,BackgroundPosition[]> BACKGROUND_POSITION =
+    static final CssMetaData<Node,BackgroundPosition[]> BACKGROUND_POSITION =
             new SubCSSProperty<BackgroundPosition[]>("-fx-background-position",
                     LayeredBackgroundPositionConverter.getInstance(),
                     new BackgroundPosition[] { BackgroundPosition.DEFAULT });
 
-    static final StyleablePropertyMetaData<Node,BackgroundSize[]> BACKGROUND_SIZE =
+    static final CssMetaData<Node,BackgroundSize[]> BACKGROUND_SIZE =
             new SubCSSProperty<BackgroundSize[]>("-fx-background-size",
                     LayeredBackgroundSizeConverter.getInstance(),
                     new BackgroundSize[] { BackgroundSize.DEFAULT } );
 
-    private static final List<StyleablePropertyMetaData> STYLEABLES =
-            (List<StyleablePropertyMetaData>) (List) Collections.unmodifiableList(
+    private static final List<CssMetaData> STYLEABLES =
+            (List<CssMetaData>) (List) Collections.unmodifiableList(
                     Arrays.asList(BACKGROUND_COLOR,
                             BACKGROUND_INSETS,
                             BACKGROUND_RADIUS,
@@ -112,10 +112,10 @@ public final class Background {
                             BACKGROUND_SIZE));
 
     /**
-     * @treatAsPrivate implementation detail
-     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
+     * @return The CssMetaData associated with this class, which may include the
+     * CssMetaData of its super classes.
      */
-    @Deprecated public static List<StyleablePropertyMetaData> getClassStyleablePropertyMetaData() {
+    public static List<CssMetaData> getClassCssMetaData() {
         return STYLEABLES;
     }
 

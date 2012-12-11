@@ -89,7 +89,7 @@ public abstract class ValueAxis<T extends Number> extends Axis<T> {
         }
 
         @Override
-        public StyleablePropertyMetaData getStyleablePropertyMetaData() {
+        public CssMetaData getCssMetaData() {
             return StyleableProperties.MINOR_TICK_VISIBLE;
         }
     };
@@ -194,7 +194,7 @@ public abstract class ValueAxis<T extends Number> extends Axis<T> {
         }
 
         @Override
-        public StyleablePropertyMetaData getStyleablePropertyMetaData() {
+        public CssMetaData getCssMetaData() {
             return StyleableProperties.MINOR_TICK_LENGTH;
         }
     };
@@ -227,7 +227,7 @@ public abstract class ValueAxis<T extends Number> extends Axis<T> {
         }
 
         @Override
-        public StyleablePropertyMetaData getStyleablePropertyMetaData() {
+        public CssMetaData getCssMetaData() {
             return StyleableProperties.MINOR_TICK_COUNT;
         }
     };
@@ -515,8 +515,8 @@ public abstract class ValueAxis<T extends Number> extends Axis<T> {
 
      /** @treatAsPrivate implementation detail */
     private static class StyleableProperties {
-        private static final StyleablePropertyMetaData<ValueAxis,Number> MINOR_TICK_LENGTH =
-            new StyleablePropertyMetaData<ValueAxis,Number>("-fx-minor-tick-length",
+        private static final CssMetaData<ValueAxis,Number> MINOR_TICK_LENGTH =
+            new CssMetaData<ValueAxis,Number>("-fx-minor-tick-length",
                 SizeConverter.getInstance(), 5.0) {
 
             @Override
@@ -530,8 +530,8 @@ public abstract class ValueAxis<T extends Number> extends Axis<T> {
             }
         };
         
-        private static final StyleablePropertyMetaData<ValueAxis,Number> MINOR_TICK_COUNT =
-            new StyleablePropertyMetaData<ValueAxis,Number>("-fx-minor-tick-count",
+        private static final CssMetaData<ValueAxis,Number> MINOR_TICK_COUNT =
+            new CssMetaData<ValueAxis,Number>("-fx-minor-tick-count",
                 SizeConverter.getInstance(), 5) {
 
             @Override
@@ -545,8 +545,8 @@ public abstract class ValueAxis<T extends Number> extends Axis<T> {
             }
         };
         
-         private static final StyleablePropertyMetaData<ValueAxis,Boolean> MINOR_TICK_VISIBLE =
-            new StyleablePropertyMetaData<ValueAxis,Boolean>("-fx-minor-tick-visible",
+         private static final CssMetaData<ValueAxis,Boolean> MINOR_TICK_VISIBLE =
+            new CssMetaData<ValueAxis,Boolean>("-fx-minor-tick-visible",
                  BooleanConverter.getInstance(), Boolean.TRUE) {
 
             @Override
@@ -560,10 +560,10 @@ public abstract class ValueAxis<T extends Number> extends Axis<T> {
             }
         };
 
-        private static final List<StyleablePropertyMetaData> STYLEABLES;
+        private static final List<CssMetaData> STYLEABLES;
          static {
-            final List<StyleablePropertyMetaData> styleables =
-                new ArrayList<StyleablePropertyMetaData>(Axis.getClassStyleablePropertyMetaData());
+            final List<CssMetaData> styleables =
+                new ArrayList<CssMetaData>(Axis.getClassCssMetaData());
             Collections.addAll(styleables,
                  MINOR_TICK_LENGTH,
                  MINOR_TICK_COUNT,
@@ -574,22 +574,19 @@ public abstract class ValueAxis<T extends Number> extends Axis<T> {
      }
 
     /**
-     * @treatAsPrivate implementation detail
-     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
+     * @return The CssMetaData associated with this class, which may include the
+     * CssMetaData of its super classes.
      */
-    @Deprecated
-    public static List<StyleablePropertyMetaData> getClassStyleablePropertyMetaData() {
-        return ValueAxis.StyleableProperties.STYLEABLES;
+    public static List<CssMetaData> getClassCssMetaData() {
+        return StyleableProperties.STYLEABLES;
     }
 
     /**
-     * RT-19263
-     * @treatAsPrivate implementation detail
-     * @deprecated This is an experimental API that is not intended for general use and is subject to change in future versions
+     * {@inheritDoc}
      */
-    @Deprecated
-    public List<StyleablePropertyMetaData> getStyleablePropertyMetaData() {
-        return getClassStyleablePropertyMetaData();
+    @Override
+    public List<CssMetaData> getCssMetaData() {
+        return getClassCssMetaData();
     }
 
 }

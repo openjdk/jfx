@@ -41,7 +41,7 @@ import javafx.scene.shape.*;
 import javafx.util.Duration;
 import com.sun.javafx.charts.Legend;
 import com.sun.javafx.charts.Legend.LegendItem;
-import com.sun.javafx.css.StyleablePropertyMetaData;
+import com.sun.javafx.css.CssMetaData;
 import javafx.scene.paint.Color;
 
 /**
@@ -744,11 +744,11 @@ public class StackedAreaChart<X,Y> extends XYChart<X,Y> {
     
     private static class StyleableProperties {
 
-        private static final List<StyleablePropertyMetaData> STYLEABLES;
+        private static final List<CssMetaData> STYLEABLES;
         
         static {
-            final List<StyleablePropertyMetaData> styleables =
-                new ArrayList<StyleablePropertyMetaData>(XYChart.getClassStyleablePropertyMetaData());
+            final List<CssMetaData> styleables =
+                new ArrayList<CssMetaData>(XYChart.getClassCssMetaData());
 
             STYLEABLES = Collections.unmodifiableList(styleables);
 
@@ -756,21 +756,18 @@ public class StackedAreaChart<X,Y> extends XYChart<X,Y> {
     }
 
     /**
-     * @treatAsPrivate implementation detail
-     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
+     * @return The CssMetaData associated with this class, which may include the
+     * CssMetaData of its super classes.
      */
-    @Deprecated
-     public static List<StyleablePropertyMetaData> getClassStyleablePropertyMetaData() {
+     public static List<CssMetaData> getClassCssMetaData() {
          return StyleableProperties.STYLEABLES;
      }
     /**
-     * RT-19263
-     * @treatAsPrivate implementation detail
-     * @deprecated This is an experimental API that is not intended for general use and is subject to change in future versions
+     * {@inheritDoc}
      */
-    @Deprecated
-    public List<StyleablePropertyMetaData> getStyleablePropertyMetaData() {
-        return getClassStyleablePropertyMetaData();
+    @Override
+    public List<CssMetaData> getCssMetaData() {
+        return getClassCssMetaData();
     }
 
 }

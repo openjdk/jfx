@@ -39,7 +39,7 @@ import javafx.scene.Node;
 import javafx.scene.layout.Pane;
 
 import com.sun.javafx.css.StyleableObjectProperty;
-import com.sun.javafx.css.StyleablePropertyMetaData;
+import com.sun.javafx.css.CssMetaData;
 import com.sun.javafx.css.converters.EnumConverter;
 import com.sun.javafx.geom.BaseBounds;
 import com.sun.javafx.geom.Point2D;
@@ -346,7 +346,7 @@ public class TextFlow extends Pane {
                 new StyleableObjectProperty<TextAlignment>(TextAlignment.LEFT) {
                 @Override public Object getBean() { return TextFlow.this; }
                 @Override public String getName() { return "textAlignment"; }
-                @Override public StyleablePropertyMetaData getStyleablePropertyMetaData() {
+                @Override public CssMetaData getCssMetaData() {
                     return StyleableProperties.TEXT_ALIGNMENT;
                 }
                 @Override public void invalidated() {
@@ -380,8 +380,8 @@ public class TextFlow extends Pane {
      private static class StyleableProperties {
          
          private static final
-             StyleablePropertyMetaData<TextFlow, TextAlignment> TEXT_ALIGNMENT =
-                 new StyleablePropertyMetaData<TextFlow,TextAlignment>("-fx-text-alignment",
+             CssMetaData<TextFlow, TextAlignment> TEXT_ALIGNMENT =
+                 new CssMetaData<TextFlow,TextAlignment>("-fx-text-alignment",
                  new EnumConverter<TextAlignment>(TextAlignment.class),
                  TextAlignment.LEFT) {
 
@@ -397,37 +397,29 @@ public class TextFlow extends Pane {
             }
          };
 
-         private static final List<StyleablePropertyMetaData> STYLEABLES;
+         private static final List<CssMetaData> STYLEABLES;
          static {
-            final List<StyleablePropertyMetaData> styleables =
-                new ArrayList<StyleablePropertyMetaData>(Pane.getClassStyleablePropertyMetaData());
+            final List<CssMetaData> styleables =
+                new ArrayList<CssMetaData>(Pane.getClassCssMetaData());
             Collections.addAll(styleables, TEXT_ALIGNMENT);
             STYLEABLES = Collections.unmodifiableList(styleables);
          }
     }
 
     /**
-     * Super-lazy instantiation pattern from Bill Pugh.
-     * StyleableProperties is referenced  no earlier
-     * (and therefore loaded no earlier by the class loader) than
-     * the moment that  getClassStyleablePropertyMetaData() is called.
-     * @treatAsPrivate implementation detail
-     * @deprecated This is an internal API that is not intended
-     * for use and will be removed in the next version
+     * @return The CssMetaData associated with this class, which may include the
+     * CssMetaData of its super classes.
      */
-    @Deprecated
-    public static List<StyleablePropertyMetaData> getClassStyleablePropertyMetaData() {
-        return TextFlow.StyleableProperties.STYLEABLES;
+    public static List<CssMetaData> getClassCssMetaData() {
+        return StyleableProperties.STYLEABLES;
     }
 
     /**
-     * RT-19263
-     * @treatAsPrivate implementation detail
-     * @deprecated This is an experimental API that is not intended for general use and is subject to change in future versions
+     * {@inheritDoc}
      */
-    @Deprecated
-    public List<StyleablePropertyMetaData> getStyleablePropertyMetaData() {
-        return getClassStyleablePropertyMetaData();
+    @Override
+    public List<CssMetaData> getCssMetaData() {
+        return getClassCssMetaData();
     }
 
     /* The methods in this section are copied from Region due to package visibility restriction */

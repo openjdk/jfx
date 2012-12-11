@@ -40,7 +40,7 @@ import javafx.util.Duration;
 import com.sun.javafx.charts.Legend;
 import com.sun.javafx.css.StyleManager;
 import com.sun.javafx.css.StyleableDoubleProperty;
-import com.sun.javafx.css.StyleablePropertyMetaData;
+import com.sun.javafx.css.CssMetaData;
 import com.sun.javafx.css.converters.SizeConverter;
 import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
@@ -82,7 +82,7 @@ public class StackedBarChart<X, Y> extends XYChart<X, Y> {
             return "categoryGap";
         }
 
-        public StyleablePropertyMetaData getStyleablePropertyMetaData() {
+        public CssMetaData getCssMetaData() {
             return StackedBarChart.StyleableProperties.CATEGORY_GAP;
         }
     };
@@ -528,8 +528,8 @@ public class StackedBarChart<X, Y> extends XYChart<X, Y> {
     */
     private static class StyleableProperties {
 
-        private static final StyleablePropertyMetaData<StackedBarChart,Number> CATEGORY_GAP = 
-            new StyleablePropertyMetaData<StackedBarChart,Number>("-fx-category-gap",
+        private static final CssMetaData<StackedBarChart,Number> CATEGORY_GAP = 
+            new CssMetaData<StackedBarChart,Number>("-fx-category-gap",
                 SizeConverter.getInstance(), 10.0)  {
 
             @Override
@@ -543,11 +543,11 @@ public class StackedBarChart<X, Y> extends XYChart<X, Y> {
             }
         };
 
-        private static final List<StyleablePropertyMetaData> STYLEABLES;
+        private static final List<CssMetaData> STYLEABLES;
         static {
 
-            final List<StyleablePropertyMetaData> styleables =
-                new ArrayList<StyleablePropertyMetaData>(XYChart.getClassStyleablePropertyMetaData());
+            final List<CssMetaData> styleables =
+                new ArrayList<CssMetaData>(XYChart.getClassCssMetaData());
             Collections.addAll(styleables,
                 CATEGORY_GAP
             );
@@ -556,22 +556,19 @@ public class StackedBarChart<X, Y> extends XYChart<X, Y> {
     }
 
     /**
-    * @treatAsPrivate implementation detail
-    * @deprecated This is an internal API that is not intended for use and will be removed in the next version
-    */
-    @Deprecated
-    public static List<StyleablePropertyMetaData> getClassStyleablePropertyMetaData() {
-        return StackedBarChart.StyleableProperties.STYLEABLES;
+     * @return The CssMetaData associated with this class, which may include the
+     * CssMetaData of its super classes.
+     */
+    public static List<CssMetaData> getClassCssMetaData() {
+        return StyleableProperties.STYLEABLES;
     }
 
     /**
-    * RT-19263
-    * @treatAsPrivate implementation detail
-    * @deprecated This is an experimental API that is not intended for general use and is subject to change in future versions
-    */
-    @Deprecated
-    public List<StyleablePropertyMetaData> getStyleablePropertyMetaData() {
-        return getClassStyleablePropertyMetaData();
+     * {@inheritDoc}
+     */
+    @Override
+    public List<CssMetaData> getCssMetaData() {
+        return getClassCssMetaData();
     }
 
     private static final long VERTICAL_PSEUDOCLASS_STATE = StyleManager.getPseudoclassMask("vertical");

@@ -63,7 +63,7 @@ import javafx.scene.layout.VBox;
 
 import com.sun.javafx.css.StyleableDoubleProperty;
 import com.sun.javafx.css.StyleableObjectProperty;
-import com.sun.javafx.css.StyleablePropertyMetaData;
+import com.sun.javafx.css.CssMetaData;
 import com.sun.javafx.css.converters.EnumConverter;
 import com.sun.javafx.css.converters.SizeConverter;
 import com.sun.javafx.scene.control.behavior.ToolBarBehavior;
@@ -173,7 +173,7 @@ public class ToolBarSkin extends BehaviorSkinBase<ToolBar, ToolBarBehavior> impl
                 }
 
                 @Override
-                public StyleablePropertyMetaData getStyleablePropertyMetaData() {
+                public CssMetaData getCssMetaData() {
                     return StyleableProperties.SPACING;
                 }
             };
@@ -215,7 +215,7 @@ public class ToolBarSkin extends BehaviorSkinBase<ToolBar, ToolBarBehavior> impl
                 }
 
                 @Override
-                public StyleablePropertyMetaData getStyleablePropertyMetaData() {
+                public CssMetaData getCssMetaData() {
                     return StyleableProperties.ALIGNMENT;
                 }
             };
@@ -630,8 +630,8 @@ public class ToolBarSkin extends BehaviorSkinBase<ToolBar, ToolBarBehavior> impl
       * @treatAsPrivate implementation detail
       */
      private static class StyleableProperties {
-         private static final StyleablePropertyMetaData<ToolBar,Number> SPACING =
-             new StyleablePropertyMetaData<ToolBar,Number>("-fx-spacing",
+         private static final CssMetaData<ToolBar,Number> SPACING =
+             new CssMetaData<ToolBar,Number>("-fx-spacing",
                  SizeConverter.getInstance(), 0.0) {
 
             @Override
@@ -647,8 +647,8 @@ public class ToolBarSkin extends BehaviorSkinBase<ToolBar, ToolBarBehavior> impl
             }
         };
          
-        private static final StyleablePropertyMetaData<ToolBar,Pos>ALIGNMENT =
-                new StyleablePropertyMetaData<ToolBar,Pos>("-fx-alignment",
+        private static final CssMetaData<ToolBar,Pos>ALIGNMENT =
+                new CssMetaData<ToolBar,Pos>("-fx-alignment",
                 new EnumConverter<Pos>(Pos.class), Pos.TOP_LEFT ) {
 
             @Override
@@ -665,18 +665,18 @@ public class ToolBarSkin extends BehaviorSkinBase<ToolBar, ToolBarBehavior> impl
         };
 
          
-         private static final List<StyleablePropertyMetaData> STYLEABLES;
+         private static final List<CssMetaData> STYLEABLES;
          static {
 
-            final List<StyleablePropertyMetaData> styleables =
-                new ArrayList<StyleablePropertyMetaData>(SkinBase.getClassStyleablePropertyMetaData());
+            final List<CssMetaData> styleables =
+                new ArrayList<CssMetaData>(SkinBase.getClassCssMetaData());
             
             // StackPane also has -fx-alignment. Replace it with 
             // ToolBarSkin's. 
             // TODO: Really should be able to reference StackPane.StyleableProperties.ALIGNMENT
             final String alignmentProperty = ALIGNMENT.getProperty();
             for (int n=0, nMax=styleables.size(); n<nMax; n++) {
-                final StyleablePropertyMetaData prop = styleables.get(n);
+                final CssMetaData prop = styleables.get(n);
                 if (alignmentProperty.equals(prop.getProperty())) styleables.remove(prop);
             }
             
@@ -690,22 +690,19 @@ public class ToolBarSkin extends BehaviorSkinBase<ToolBar, ToolBarBehavior> impl
     }
 
     /**
-     * @treatAsPrivate implementation detail
-     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
+     * @return The CssMetaData associated with this class, which may include the
+     * CssMetaData of its super classes.
      */
-    @Deprecated
-    public static List<StyleablePropertyMetaData> getClassStyleablePropertyMetaData() {
+    public static List<CssMetaData> getClassCssMetaData() {
         return StyleableProperties.STYLEABLES;
-    };
+    }
 
     /**
-     * RT-19263
-     * @treatAsPrivate implementation detail
-     * @deprecated This is an experimental API that is not intended for general use and is subject to change in future versions
+     * {@inheritDoc}
      */
-    @Deprecated
-    public List<StyleablePropertyMetaData> getStyleablePropertyMetaData() {
-        return getClassStyleablePropertyMetaData();
+    @Override
+    public List<CssMetaData> getCssMetaData() {
+        return getClassCssMetaData();
     }
 
 }

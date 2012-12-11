@@ -46,7 +46,7 @@ import javafx.scene.Node;
 
 import com.sun.javafx.css.StyleableDoubleProperty;
 import com.sun.javafx.css.StyleableObjectProperty;
-import com.sun.javafx.css.StyleablePropertyMetaData;
+import com.sun.javafx.css.CssMetaData;
 import com.sun.javafx.css.converters.EnumConverter;
 import com.sun.javafx.css.converters.SizeConverter;
 import javafx.beans.property.Property;
@@ -243,7 +243,7 @@ public class FlowPane extends Pane {
                 }
                 
                 @Override
-                public StyleablePropertyMetaData getStyleablePropertyMetaData() {
+                public CssMetaData getCssMetaData() {
                     return StyleableProperties.ORIENTATION;
                 }
 
@@ -279,7 +279,7 @@ public class FlowPane extends Pane {
                 }
                 
                 @Override
-                public StyleablePropertyMetaData getStyleablePropertyMetaData() {
+                public CssMetaData getCssMetaData() {
                     return StyleableProperties.HGAP;
                 }
 
@@ -314,7 +314,7 @@ public class FlowPane extends Pane {
                 }
 
                 @Override
-                public StyleablePropertyMetaData getStyleablePropertyMetaData() {
+                public CssMetaData getCssMetaData() {
                     return StyleableProperties.VGAP;
                 }
 
@@ -394,7 +394,7 @@ public class FlowPane extends Pane {
                 }
                 
                 @Override
-                public StyleablePropertyMetaData getStyleablePropertyMetaData() {
+                public CssMetaData getCssMetaData() {
                     return StyleableProperties.ALIGNMENT;
                 }
 
@@ -430,7 +430,7 @@ public class FlowPane extends Pane {
                 }
                 
                 @Override
-                public StyleablePropertyMetaData getStyleablePropertyMetaData() {
+                public CssMetaData getCssMetaData() {
                     return StyleableProperties.COLUMN_HALIGNMENT;
                 }
 
@@ -468,7 +468,7 @@ public class FlowPane extends Pane {
                 }
 
                 @Override 
-                public StyleablePropertyMetaData getStyleablePropertyMetaData() {
+                public CssMetaData getCssMetaData() {
                     return StyleableProperties.ROW_VALIGNMENT;
                 }
                 
@@ -741,8 +741,8 @@ public class FlowPane extends Pane {
       */
      private static class StyleableProperties {
 
-         private static final StyleablePropertyMetaData<FlowPane,Pos> ALIGNMENT = 
-             new StyleablePropertyMetaData<FlowPane,Pos>("-fx-alignment",
+         private static final CssMetaData<FlowPane,Pos> ALIGNMENT = 
+             new CssMetaData<FlowPane,Pos>("-fx-alignment",
                  new EnumConverter<Pos>(Pos.class), Pos.TOP_LEFT) {
 
             @Override
@@ -757,8 +757,8 @@ public class FlowPane extends Pane {
                  
          };
 
-         private static final StyleablePropertyMetaData<FlowPane,HPos> COLUMN_HALIGNMENT = 
-             new StyleablePropertyMetaData<FlowPane,HPos>("-fx-column-halignment",
+         private static final CssMetaData<FlowPane,HPos> COLUMN_HALIGNMENT = 
+             new CssMetaData<FlowPane,HPos>("-fx-column-halignment",
                  new EnumConverter<HPos>(HPos.class), HPos.LEFT) {
 
             @Override
@@ -773,8 +773,8 @@ public class FlowPane extends Pane {
                      
          };
          
-         private static final StyleablePropertyMetaData<FlowPane,Number> HGAP = 
-             new StyleablePropertyMetaData<FlowPane,Number>("-fx-hgap",
+         private static final CssMetaData<FlowPane,Number> HGAP = 
+             new CssMetaData<FlowPane,Number>("-fx-hgap",
                  SizeConverter.getInstance(), 0.0){
 
             @Override
@@ -789,8 +789,8 @@ public class FlowPane extends Pane {
                      
          };
          
-         private static final StyleablePropertyMetaData<FlowPane,VPos> ROW_VALIGNMENT = 
-             new StyleablePropertyMetaData<FlowPane,VPos>("-fx-row-valignment",
+         private static final CssMetaData<FlowPane,VPos> ROW_VALIGNMENT = 
+             new CssMetaData<FlowPane,VPos>("-fx-row-valignment",
                  new EnumConverter<VPos>(VPos.class), VPos.CENTER) {
 
             @Override
@@ -805,8 +805,8 @@ public class FlowPane extends Pane {
                      
          }; 
 
-         private static final StyleablePropertyMetaData<FlowPane,Orientation> ORIENTATION = 
-             new StyleablePropertyMetaData<FlowPane,Orientation>("-fx-orientation",
+         private static final CssMetaData<FlowPane,Orientation> ORIENTATION = 
+             new CssMetaData<FlowPane,Orientation>("-fx-orientation",
                  new EnumConverter<Orientation>(Orientation.class), 
                  Orientation.HORIZONTAL) {
                 
@@ -828,8 +828,8 @@ public class FlowPane extends Pane {
                      
          };  
          
-         private static final StyleablePropertyMetaData<FlowPane,Number> VGAP = 
-             new StyleablePropertyMetaData<FlowPane,Number>("-fx-vgap",
+         private static final CssMetaData<FlowPane,Number> VGAP = 
+             new CssMetaData<FlowPane,Number>("-fx-vgap",
                  SizeConverter.getInstance(), 0.0){
 
             @Override
@@ -844,11 +844,11 @@ public class FlowPane extends Pane {
                      
          }; 
 
-         private static final List<StyleablePropertyMetaData> STYLEABLES;
+         private static final List<CssMetaData> STYLEABLES;
          static {
 
-            final List<StyleablePropertyMetaData> styleables =
-                new ArrayList<StyleablePropertyMetaData>(Region.getClassStyleablePropertyMetaData());
+            final List<CssMetaData> styleables =
+                new ArrayList<CssMetaData>(Region.getClassCssMetaData());
             Collections.addAll(styleables,
                 ALIGNMENT,
                 COLUMN_HALIGNMENT,
@@ -861,26 +861,21 @@ public class FlowPane extends Pane {
          }
     }
 
-     /**
-      * Super-lazy instantiation pattern from Bill Pugh. StyleablePropertes is referenced
-      * no earlier (and therefore loaded no earlier by the class loader) than
-      * the moment that  getClassStyleablePropertyMetaData() is called.
-      * @treatAsPrivate implementation detail
-      * @deprecated This is an internal API that is not intended for use and will be removed in the next version
-      */
-     @Deprecated
-     public static List<StyleablePropertyMetaData> getClassStyleablePropertyMetaData() {
-         return FlowPane.StyleableProperties.STYLEABLES;
-     }
 
     /**
-     * RT-19263
-     * @treatAsPrivate implementation detail
-     * @deprecated This is an experimental API that is not intended for general use and is subject to change in future versions
+     * @return The CssMetaData associated with this class, which may include the
+     * CssMetaData of its super classes.
      */
-    @Deprecated
-    public List<StyleablePropertyMetaData> getStyleablePropertyMetaData() {
-        return getClassStyleablePropertyMetaData();
+    public static List<CssMetaData> getClassCssMetaData() {
+        return StyleableProperties.STYLEABLES;
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public List<CssMetaData> getCssMetaData() {
+        return getClassCssMetaData();
     }
 
     //REMIND(aim); replace when we get mutable rects

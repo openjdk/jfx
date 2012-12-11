@@ -26,7 +26,7 @@ package javafx.scene.control;
 
 import com.sun.javafx.beans.annotations.NoBuilder;
 import com.sun.javafx.css.Styleable;
-import com.sun.javafx.css.StyleablePropertyMetaData;
+import com.sun.javafx.css.CssMetaData;
 import com.sun.javafx.event.EventHandlerManager;
 import java.util.Collections;
 import java.util.List;
@@ -594,7 +594,7 @@ public class TreeTableColumn<S,T> extends TableColumnBase<TreeItem<S>,T> impleme
                     return getTreeTableView() == null ? null : getTreeTableView().impl_getStyleable();
                 }
 
-                @Override public List<StyleablePropertyMetaData> getStyleablePropertyMetaData() {
+                @Override public List<CssMetaData> getCssMetaData() {
                     return Collections.EMPTY_LIST;
                 }                
 

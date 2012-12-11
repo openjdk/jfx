@@ -4,7 +4,7 @@
 
 package javafx.scene.control;
 
-import com.sun.javafx.css.StyleablePropertyMetaData;
+import com.sun.javafx.css.CssMetaData;
 import static javafx.scene.control.ControlTestUtils.*;
 import com.sun.javafx.pgstub.StubToolkit;
 import com.sun.javafx.scene.control.skin.SplitPaneSkin;
@@ -185,7 +185,7 @@ public class SplitPaneTest {
      * CSS related Tests                                                 *
      ********************************************************************/
     @Test public void whenOrientationIsBound_impl_cssSettable_ReturnsFalse() {
-        StyleablePropertyMetaData styleable = StyleablePropertyMetaData.getStyleablePropertyMetaData(splitPane.orientationProperty());
+        CssMetaData styleable = CssMetaData.getCssMetaData(splitPane.orientationProperty());
         assertTrue(styleable.isSettable(splitPane));
         ObjectProperty<Orientation> other = new SimpleObjectProperty<Orientation>(Orientation.VERTICAL);
         splitPane.orientationProperty().bind(other);
@@ -193,13 +193,13 @@ public class SplitPaneTest {
     }
 
     @Test public void whenOrientationIsSpecifiedViaCSSAndIsNotBound_impl_cssSettable_ReturnsTrue() {
-        StyleablePropertyMetaData styleable = StyleablePropertyMetaData.getStyleablePropertyMetaData(splitPane.orientationProperty());
+        CssMetaData styleable = CssMetaData.getCssMetaData(splitPane.orientationProperty());
         styleable.set(splitPane, Orientation.VERTICAL);
         assertTrue(styleable.isSettable(splitPane));
     }
 
     @Test public void canSpecifyOrientationViaCSS() {
-        StyleablePropertyMetaData styleable = StyleablePropertyMetaData.getStyleablePropertyMetaData(splitPane.orientationProperty());
+        CssMetaData styleable = CssMetaData.getCssMetaData(splitPane.orientationProperty());
         styleable.set(splitPane, Orientation.VERTICAL);
         assertSame(Orientation.VERTICAL, splitPane.getOrientation());
     }

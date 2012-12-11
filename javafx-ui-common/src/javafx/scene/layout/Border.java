@@ -31,7 +31,7 @@ import javafx.geometry.Insets;
 import javafx.scene.Node;
 import javafx.scene.paint.Paint;
 import com.sun.javafx.UnmodifiableArrayList;
-import com.sun.javafx.css.StyleablePropertyMetaData;
+import com.sun.javafx.css.CssMetaData;
 import com.sun.javafx.css.SubCSSProperty;
 import com.sun.javafx.css.converters.InsetsConverter;
 import com.sun.javafx.css.converters.URLConverter;
@@ -81,52 +81,52 @@ import com.sun.javafx.scene.layout.region.SliceSequenceConverter;
  * @since JavaFX 8
  */
 public final class Border {
-    static final StyleablePropertyMetaData<Node,Paint[]> BORDER_COLOR =
+    static final CssMetaData<Node,Paint[]> BORDER_COLOR =
             new SubCSSProperty<Paint[]>("-fx-border-color",
                     LayeredBorderPaintConverter.getInstance());
 
-    static final StyleablePropertyMetaData<Node,BorderStrokeStyle[][]> BORDER_STYLE =
+    static final CssMetaData<Node,BorderStrokeStyle[][]> BORDER_STYLE =
             new SubCSSProperty<BorderStrokeStyle[][]>("-fx-border-style",
                     LayeredBorderStyleConverter.getInstance());
 
-    static final StyleablePropertyMetaData<Node,Margins[]> BORDER_WIDTH =
+    static final CssMetaData<Node,Margins[]> BORDER_WIDTH =
             new SubCSSProperty<Margins[]> ("-fx-border-width",
                     Margins.SequenceConverter.getInstance());
 
-    static final StyleablePropertyMetaData<Node,Margins[]> BORDER_RADIUS =
+    static final CssMetaData<Node,Margins[]> BORDER_RADIUS =
             new SubCSSProperty<Margins[]>("-fx-border-radius",
                     Margins.SequenceConverter.getInstance());
 
-    static final StyleablePropertyMetaData<Node,Insets[]> BORDER_INSETS =
+    static final CssMetaData<Node,Insets[]> BORDER_INSETS =
             new SubCSSProperty<Insets[]>("-fx-border-insets",
                     InsetsConverter.SequenceConverter.getInstance());
 
-    static final StyleablePropertyMetaData<Node,String[]> BORDER_IMAGE_SOURCE =
+    static final CssMetaData<Node,String[]> BORDER_IMAGE_SOURCE =
             new SubCSSProperty<String[]>("-fx-border-image-source",
                     URLConverter.SequenceConverter.getInstance());
 
-    static final StyleablePropertyMetaData<Node,RepeatStruct[]> BORDER_IMAGE_REPEAT =
+    static final CssMetaData<Node,RepeatStruct[]> BORDER_IMAGE_REPEAT =
             new SubCSSProperty<RepeatStruct[]>("-fx-border-image-repeat",
                     RepeatStructConverter.getInstance(),
                     new RepeatStruct[] { new RepeatStruct(BackgroundRepeat.REPEAT, BackgroundRepeat.REPEAT) });
 
-    static final StyleablePropertyMetaData<Node,BorderImageSlices[]> BORDER_IMAGE_SLICE =
+    static final CssMetaData<Node,BorderImageSlices[]> BORDER_IMAGE_SLICE =
             new SubCSSProperty<BorderImageSlices[]> ("-fx-border-image-slice",
                     SliceSequenceConverter.getInstance(),
                     new BorderImageSlices[] { BorderImageSlices.EMPTY });
 
-    static final StyleablePropertyMetaData<Node,BorderWidths[]> BORDER_IMAGE_WIDTH =
+    static final CssMetaData<Node,BorderWidths[]> BORDER_IMAGE_WIDTH =
             new SubCSSProperty<BorderWidths[]>("-fx-border-image-width",
                     BorderImageWidthConverter.getInstance(),
                     new BorderWidths[] { BorderWidths.DEFAULT });
 
-    static final StyleablePropertyMetaData<Node,Insets[]> BORDER_IMAGE_INSETS =
+    static final CssMetaData<Node,Insets[]> BORDER_IMAGE_INSETS =
             new SubCSSProperty<Insets[]>("-fx-border-image-insets",
                     InsetsConverter.SequenceConverter.getInstance(),
                     new Insets[] {Insets.EMPTY});
 
-    private static final List<StyleablePropertyMetaData> STYLEABLES =
-            (List<StyleablePropertyMetaData>) (List) Collections.unmodifiableList(
+    private static final List<CssMetaData> STYLEABLES =
+            (List<CssMetaData>) (List) Collections.unmodifiableList(
                     Arrays.asList(BORDER_COLOR,
                             BORDER_STYLE,
                             BORDER_WIDTH,
@@ -139,10 +139,10 @@ public final class Border {
                             BORDER_IMAGE_INSETS));
 
     /**
-     * @treatAsPrivate implementation detail
-     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
+     * @return The CssMetaData associated with this class, which may include the
+     * CssMetaData of its super classes.
      */
-    @Deprecated public static List<StyleablePropertyMetaData> getClassStyleablePropertyMetaData() {
+    public static List<CssMetaData> getClassCssMetaData() {
         return STYLEABLES;
     }
 

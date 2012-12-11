@@ -60,38 +60,38 @@ import org.junit.Test;
 import static org.junit.Assert.*;
 
 
-public class StyleablePropertyMetaDataTest {
+public class CssMetaDataTest {
 
-    public StyleablePropertyMetaDataTest() {
+    public CssMetaDataTest() {
     }
     
-    private static StyleablePropertyMetaData get(List<StyleablePropertyMetaData> list, String prop) {
-        for (StyleablePropertyMetaData styleable : list) {
+    private static CssMetaData get(List<CssMetaData> list, String prop) {
+        for (CssMetaData styleable : list) {
             if (prop.equals(styleable.getProperty())) return styleable;
         }
         return null;
     }
     /**
-     * Test of getStyleables method, of class StyleablePropertyMetaData.
+     * Test of getStyleables method, of class CssMetaData.
      */
     @Test
     public void testGetStyleables_Node() {
         Node node = new TestNode();
-        List<StyleablePropertyMetaData> expResult = TestNode.getClassStyleablePropertyMetaData();
-        List result = StyleablePropertyMetaData.getStyleables(node);
+        List<CssMetaData> expResult = TestNode.getClassCssMetaData();
+        List result = CssMetaData.getStyleables(node);
         assertEquals(expResult, result);
     }
 
     /**
-     * Test of getStyleables method, of class StyleablePropertyMetaData.
+     * Test of getStyleables method, of class CssMetaData.
      */
     @Test
     public void testGetStyleables_Styleable() {
         Node node = new TestNode();
         Styleable styleable = node.impl_getStyleable();
         assertNotNull(styleable);
-        List<StyleablePropertyMetaData> expResult = TestNode.getClassStyleablePropertyMetaData();
-        List result = StyleablePropertyMetaData.getStyleables(styleable);
+        List<CssMetaData> expResult = TestNode.getClassCssMetaData();
+        List result = CssMetaData.getStyleables(styleable);
         assertEquals(expResult, result);
     }
 
@@ -100,12 +100,12 @@ public class StyleablePropertyMetaDataTest {
             TestNode testNode = new TestNode();
             WritableValue prop = TestNodeBase.StyleableProperties.TEST.getWritableValue(testNode);
             assert(prop != null);
-            StyleablePropertyMetaData result = ((StyleableProperty)prop).getStyleablePropertyMetaData();
+            CssMetaData result = ((StyleableProperty)prop).getCssMetaData();
             assert(result == TestNodeBase.StyleableProperties.TEST);
     }
 
     /**
-     * Test of getProperty method, of class StyleablePropertyMetaData.
+     * Test of getProperty method, of class CssMetaData.
      */
     @Test
     public void testGetProperty() {
@@ -116,7 +116,7 @@ public class StyleablePropertyMetaDataTest {
     }
 
     /**
-     * Test of getConverter method, of class StyleablePropertyMetaData.
+     * Test of getConverter method, of class CssMetaData.
      */
     @Test
     public void testGetConverter() {
@@ -127,7 +127,7 @@ public class StyleablePropertyMetaDataTest {
     }
 
     /**
-     * Test of getInitialValue method, of class StyleablePropertyMetaData.
+     * Test of getInitialValue method, of class CssMetaData.
      */
     @Test
     public void testGetInitialValue() {
@@ -140,13 +140,13 @@ public class StyleablePropertyMetaDataTest {
     }
 
     /**
-     * Test of getSubProperties method, of class StyleablePropertyMetaData.
+     * Test of getSubProperties method, of class CssMetaData.
      */
     @Test
     public void testGetSubProperties() {
         
-        StyleablePropertyMetaData<TestNode,Font> fontProp = 
-                new StyleablePropertyMetaData.FONT<TestNode>("-fx-font", Font.getDefault()) {
+        CssMetaData<TestNode,Font> fontProp = 
+                new CssMetaData.FONT<TestNode>("-fx-font", Font.getDefault()) {
 
             @Override
             public boolean isSettable(TestNode n) {
@@ -159,13 +159,13 @@ public class StyleablePropertyMetaDataTest {
             }
         };
         
-        List<StyleablePropertyMetaData> list = fontProp.getSubProperties();
+        List<CssMetaData> list = fontProp.getSubProperties();
         assertNotNull(list);
 
     }
 
     /**
-     * Test of isInherits method, of class StyleablePropertyMetaData.
+     * Test of isInherits method, of class CssMetaData.
      */
     @Test
     public void testIsInherits() {
@@ -177,13 +177,13 @@ public class StyleablePropertyMetaDataTest {
     }
 
     /**
-     * Test of toString method, of class StyleablePropertyMetaData.
+     * Test of toString method, of class CssMetaData.
      */
     @Test
     public void testToString() {
 
-        StyleablePropertyMetaData<TestNode,Font> fontProp = 
-                new StyleablePropertyMetaData.FONT<TestNode>("-fx-font", Font.getDefault()) {
+        CssMetaData<TestNode,Font> fontProp = 
+                new CssMetaData.FONT<TestNode>("-fx-font", Font.getDefault()) {
 
             @Override
             public boolean isSettable(TestNode n) {
@@ -202,7 +202,7 @@ public class StyleablePropertyMetaDataTest {
     }
 
     /**
-     * Test of equals method, of class StyleablePropertyMetaData.
+     * Test of equals method, of class CssMetaData.
      */
     @Test
     public void testEquals() {
@@ -230,8 +230,8 @@ public class StyleablePropertyMetaDataTest {
             }
         };
         
-        StyleablePropertyMetaData testNodeOpacity = get(TestNode.getClassStyleablePropertyMetaData(), "-fx-opacity");
-        StyleablePropertyMetaData nodeOpacity = get(Node.getClassStyleablePropertyMetaData(), "-fx-opacity");
+        CssMetaData testNodeOpacity = get(TestNode.getClassCssMetaData(), "-fx-opacity");
+        CssMetaData nodeOpacity = get(Node.getClassCssMetaData(), "-fx-opacity");
         
         assertTrue(testNodeOpacity.equals(nodeOpacity));
     }
@@ -377,7 +377,7 @@ public class StyleablePropertyMetaDataTest {
         stage.setScene(scene);
         stage.show();
         
-        final StyleablePropertyMetaData FILL = get(StyleablePropertyMetaData.getStyleables(rectangle), "-fx-fill");
+        final CssMetaData FILL = get(CssMetaData.getStyleables(rectangle), "-fx-fill");
         final List<Style> actuals = FILL.getMatchingStyles(rectangle);
 
 //        System.err.println("matchingStyles: " + matchingStyles);
@@ -497,7 +497,7 @@ public class StyleablePropertyMetaDataTest {
         stage.setScene(scene);
         stage.show();        
                 
-        final StyleablePropertyMetaData FILL = get(StyleablePropertyMetaData.getStyleables(rectangle), "-fx-fill");
+        final CssMetaData FILL = get(CssMetaData.getStyleables(rectangle), "-fx-fill");
         final List<Style> actuals = FILL.getMatchingStyles(rectangle);
 
 //        System.err.println("matchingStyles: " + matchingStyles);
@@ -620,7 +620,7 @@ public class StyleablePropertyMetaDataTest {
         stage.setScene(scene);
         stage.show();
 
-        final StyleablePropertyMetaData FILL = get(StyleablePropertyMetaData.getStyleables(rectangle), "-fx-fill");
+        final CssMetaData FILL = get(CssMetaData.getStyleables(rectangle), "-fx-fill");
         final List<Style> actuals = FILL.getMatchingStyles(rectangle);
                 
 //        System.err.println("matchingStyles: " + matchingStyles);
@@ -747,7 +747,7 @@ public class StyleablePropertyMetaDataTest {
         stage.setScene(scene);
         stage.show();
         
-        final StyleablePropertyMetaData FILL = get(StyleablePropertyMetaData.getStyleables(rectangle), "-fx-fill");
+        final CssMetaData FILL = get(CssMetaData.getStyleables(rectangle), "-fx-fill");
         final List<Style> actuals = FILL.getMatchingStyles(rectangle);
 
 //        System.err.println("matchingStyles: " + matchingStyles);
@@ -858,7 +858,7 @@ public class StyleablePropertyMetaDataTest {
         stage.setScene(scene);
         stage.show();
                 
-        final StyleablePropertyMetaData FILL = get(StyleablePropertyMetaData.getStyleables(rectangle), "-fx-fill");
+        final CssMetaData FILL = get(CssMetaData.getStyleables(rectangle), "-fx-fill");
         final List<Style> actuals = FILL.getMatchingStyles(rectangle);
 
 //        System.err.println("matchingStyles: " + matchingStyles);
@@ -966,7 +966,7 @@ public class StyleablePropertyMetaDataTest {
         stage.setScene(scene);
         stage.show();
                 
-        final StyleablePropertyMetaData FILL = get(StyleablePropertyMetaData.getStyleables(rectangle), "-fx-fill");
+        final CssMetaData FILL = get(CssMetaData.getStyleables(rectangle), "-fx-fill");
         final List<Style> actuals = FILL.getMatchingStyles(rectangle);
 
 //        System.err.println("matchingStyles: " + matchingStyles);
@@ -1045,7 +1045,7 @@ public class StyleablePropertyMetaDataTest {
         stage.setScene(scene);
         stage.show();
                 
-        final StyleablePropertyMetaData FONT = get(StyleablePropertyMetaData.getStyleables(text), "-fx-font");
+        final CssMetaData FONT = get(CssMetaData.getStyleables(text), "-fx-font");
         final List<Style> actuals = FONT.getMatchingStyles(text);
 
 //        System.err.println("matchingStyles: " + matchingStyles);
@@ -1129,7 +1129,7 @@ public class StyleablePropertyMetaDataTest {
         stage.setScene(scene);
         stage.show();
                         
-        final StyleablePropertyMetaData FONT = get(StyleablePropertyMetaData.getStyleables(text), "-fx-font");
+        final CssMetaData FONT = get(CssMetaData.getStyleables(text), "-fx-font");
         final List<Style> actuals = FONT.getMatchingStyles(text);
 
 //        System.err.println("matchingStyles: " + matchingStyles);
@@ -1167,10 +1167,10 @@ public class StyleablePropertyMetaDataTest {
             try {
                 // should get NoSuchMethodException if ctor is not public
 //                Constructor ctor = someClass.getConstructor((Class[])null);
-                Method m = someClass.getMethod("getClassStyleablePropertyMetaData", (Class[]) null);
+                Method m = someClass.getMethod("getClassCssMetaData", (Class[]) null);
 //                Node node = (Node)ctor.newInstance((Object[])null);
                 Node node = (Node)someClass.newInstance();
-                for (StyleablePropertyMetaData styleable : (List<StyleablePropertyMetaData>) m.invoke(null)) {
+                for (CssMetaData styleable : (List<CssMetaData>) m.invoke(null)) {
                     
                     what = someClass.getName() + " " + styleable.getProperty();
                     WritableValue writable = styleable.getWritableValue(node);
@@ -1248,8 +1248,8 @@ public class StyleablePropertyMetaDataTest {
         Rectangle rect = new Rectangle();
         rect.setFill(c1);
         
-        StyleablePropertyMetaData fill = StyleablePropertyMetaData.getStyleablePropertyMetaData(rect.fillProperty());
-        Origin origin = StyleablePropertyMetaData.getOrigin(rect.fillProperty());
+        CssMetaData fill = CssMetaData.getCssMetaData(rect.fillProperty());
+        Origin origin = CssMetaData.getOrigin(rect.fillProperty());
 
         // set should not change the value if the values are equal and origin is same
         assertEquals(c1, c2);
@@ -1263,7 +1263,7 @@ public class StyleablePropertyMetaDataTest {
         
         // set should change the value if the origin is not the same
         fill.set(rect, c2, Origin.INLINE);
-        origin = StyleablePropertyMetaData.getOrigin(rect.fillProperty());
+        origin = CssMetaData.getOrigin(rect.fillProperty());
         assert(origin == Origin.INLINE);
         
         // set should change the value if one is null and the other is not.
@@ -1305,7 +1305,7 @@ public class StyleablePropertyMetaDataTest {
         stage.setScene(scene);
         stage.show();
 
-        StyleablePropertyMetaData prop = StyleablePropertyMetaData.getStyleablePropertyMetaData(text.fillProperty());
+        CssMetaData prop = CssMetaData.getCssMetaData(text.fillProperty());
         List list = prop.getMatchingStyles(text);
         
         assertEquals(3, list.size(), 0);

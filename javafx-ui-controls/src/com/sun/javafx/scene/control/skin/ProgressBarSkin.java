@@ -44,7 +44,7 @@ import javafx.util.Duration;
 
 import com.sun.javafx.css.StyleableBooleanProperty;
 import com.sun.javafx.css.StyleableDoubleProperty;
-import com.sun.javafx.css.StyleablePropertyMetaData;
+import com.sun.javafx.css.CssMetaData;
 import com.sun.javafx.css.converters.BooleanConverter;
 import com.sun.javafx.css.converters.SizeConverter;
 import com.sun.javafx.scene.control.behavior.ProgressBarBehavior;
@@ -86,7 +86,7 @@ public class ProgressBarSkin extends BehaviorSkinBase<ProgressBar, ProgressBarBe
                 }
 
                 @Override
-                public StyleablePropertyMetaData getStyleablePropertyMetaData() {
+                public CssMetaData getCssMetaData() {
                     return StyleableProperties.INDETERMINATE_BAR_LENGTH;
                 }
             
@@ -116,7 +116,7 @@ public class ProgressBarSkin extends BehaviorSkinBase<ProgressBar, ProgressBarBe
                 }
 
                 @Override
-                public StyleablePropertyMetaData getStyleablePropertyMetaData() {
+                public CssMetaData getCssMetaData() {
                     return StyleableProperties.INDETERMINATE_BAR_ESCAPE;
                 }
             
@@ -147,7 +147,7 @@ public class ProgressBarSkin extends BehaviorSkinBase<ProgressBar, ProgressBarBe
                 }
 
                 @Override
-                public StyleablePropertyMetaData getStyleablePropertyMetaData() {
+                public CssMetaData getCssMetaData() {
                     return StyleableProperties.INDETERMINATE_BAR_FLIP;
                 }
                         
@@ -180,7 +180,7 @@ public class ProgressBarSkin extends BehaviorSkinBase<ProgressBar, ProgressBarBe
                 }
 
                 @Override
-                public StyleablePropertyMetaData getStyleablePropertyMetaData() {
+                public CssMetaData getCssMetaData() {
                     return StyleableProperties.INDETERMINATE_BAR_ANIMATION_TIME;
                 }
             
@@ -446,8 +446,8 @@ public class ProgressBarSkin extends BehaviorSkinBase<ProgressBar, ProgressBarBe
       * @treatAsPrivate implementation detail
       */
      private static class StyleableProperties {
-         private static final StyleablePropertyMetaData<ProgressBar,Number> INDETERMINATE_BAR_LENGTH =
-            new StyleablePropertyMetaData<ProgressBar,Number>("-fx-indeterminate-bar-length",
+         private static final CssMetaData<ProgressBar,Number> INDETERMINATE_BAR_LENGTH =
+            new CssMetaData<ProgressBar,Number>("-fx-indeterminate-bar-length",
                  SizeConverter.getInstance(), 60.0) {
 
             @Override
@@ -464,8 +464,8 @@ public class ProgressBarSkin extends BehaviorSkinBase<ProgressBar, ProgressBarBe
             }
         };
          
-         private static final StyleablePropertyMetaData<ProgressBar,Boolean> INDETERMINATE_BAR_ESCAPE =
-            new StyleablePropertyMetaData<ProgressBar,Boolean>("-fx-indeterminate-bar-escape",
+         private static final CssMetaData<ProgressBar,Boolean> INDETERMINATE_BAR_ESCAPE =
+            new CssMetaData<ProgressBar,Boolean>("-fx-indeterminate-bar-escape",
                  BooleanConverter.getInstance(), Boolean.TRUE) {
 
             @Override
@@ -482,8 +482,8 @@ public class ProgressBarSkin extends BehaviorSkinBase<ProgressBar, ProgressBarBe
             }
         };
          
-         private static final StyleablePropertyMetaData<ProgressBar,Boolean> INDETERMINATE_BAR_FLIP =
-            new StyleablePropertyMetaData<ProgressBar,Boolean>("-fx-indeterminate-bar-flip",
+         private static final CssMetaData<ProgressBar,Boolean> INDETERMINATE_BAR_FLIP =
+            new CssMetaData<ProgressBar,Boolean>("-fx-indeterminate-bar-flip",
                  BooleanConverter.getInstance(), Boolean.TRUE) {
 
             @Override
@@ -500,8 +500,8 @@ public class ProgressBarSkin extends BehaviorSkinBase<ProgressBar, ProgressBarBe
             }
         }; 
          
-         private static final StyleablePropertyMetaData<ProgressBar,Number> INDETERMINATE_BAR_ANIMATION_TIME =
-            new StyleablePropertyMetaData<ProgressBar,Number>("-fx-indeterminate-bar-animation-time",
+         private static final CssMetaData<ProgressBar,Number> INDETERMINATE_BAR_ANIMATION_TIME =
+            new CssMetaData<ProgressBar,Number>("-fx-indeterminate-bar-animation-time",
                  SizeConverter.getInstance(), 2.0) {
 
             @Override
@@ -518,11 +518,11 @@ public class ProgressBarSkin extends BehaviorSkinBase<ProgressBar, ProgressBarBe
             }
         };
 
-         private static final List<StyleablePropertyMetaData> STYLEABLES;
+         private static final List<CssMetaData> STYLEABLES;
          static {
 
-            final List<StyleablePropertyMetaData> styleables = 
-                new ArrayList<StyleablePropertyMetaData>(SkinBase.getClassStyleablePropertyMetaData());
+            final List<CssMetaData> styleables = 
+                new ArrayList<CssMetaData>(SkinBase.getClassCssMetaData());
             Collections.addAll(styleables,
                 INDETERMINATE_BAR_LENGTH,
                 INDETERMINATE_BAR_ESCAPE,
@@ -535,22 +535,19 @@ public class ProgressBarSkin extends BehaviorSkinBase<ProgressBar, ProgressBarBe
     }
 
     /**
-     * @treatAsPrivate implementation detail
-     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
+     * @return The CssMetaData associated with this class, which may include the
+     * CssMetaData of its super classes.
      */
-    @Deprecated
-    public static List<StyleablePropertyMetaData> getClassStyleablePropertyMetaData() {
+    public static List<CssMetaData> getClassCssMetaData() {
         return StyleableProperties.STYLEABLES;
-    };
+    }
 
     /**
-     * RT-19263
-     * @treatAsPrivate implementation detail
-     * @deprecated This is an experimental API that is not intended for general use and is subject to change in future versions
+     * {@inheritDoc}
      */
-    @Deprecated
-    public List<StyleablePropertyMetaData> getStyleablePropertyMetaData() {
-        return getClassStyleablePropertyMetaData();
+    @Override
+    public List<CssMetaData> getCssMetaData() {
+        return getClassCssMetaData();
     }
 
 }

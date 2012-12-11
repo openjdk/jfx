@@ -56,7 +56,7 @@ import java.util.List;
 
 import com.sun.javafx.Utils;
 import com.sun.javafx.css.StyleableObjectProperty;
-import com.sun.javafx.css.StyleablePropertyMetaData;
+import com.sun.javafx.css.CssMetaData;
 import com.sun.javafx.css.converters.PaintConverter;
 import com.sun.javafx.scene.control.behavior.ProgressIndicatorBehavior;
 import com.sun.javafx.scene.control.skin.resources.ControlResources;
@@ -586,7 +586,7 @@ public class ProgressIndicatorSkin extends BehaviorSkinBase<ProgressIndicator, P
         }
 
         @Override
-        public StyleablePropertyMetaData getStyleablePropertyMetaData() {
+        public CssMetaData getCssMetaData() {
             return StyleableProperties.PROGRESS_COLOR;
         }
     };
@@ -599,8 +599,8 @@ public class ProgressIndicatorSkin extends BehaviorSkinBase<ProgressIndicator, P
      * @treatAsPrivate implementation detail
      */
     private static class StyleableProperties {
-        private static final StyleablePropertyMetaData<ProgressIndicator,Paint> PROGRESS_COLOR =
-            new StyleablePropertyMetaData<ProgressIndicator,Paint>("-fx-progress-color",
+        private static final CssMetaData<ProgressIndicator,Paint> PROGRESS_COLOR =
+            new CssMetaData<ProgressIndicator,Paint>("-fx-progress-color",
                 PaintConverter.getInstance(), Color.DODGERBLUE) {
 
             @Override
@@ -617,33 +617,31 @@ public class ProgressIndicatorSkin extends BehaviorSkinBase<ProgressIndicator, P
             }
         };
 
-        public static final List<StyleablePropertyMetaData> STYLEABLES;
+        public static final List<CssMetaData> STYLEABLES;
         static {
-            final List<StyleablePropertyMetaData> styleables = 
-                new ArrayList<StyleablePropertyMetaData>(SkinBase.getClassStyleablePropertyMetaData());
+            final List<CssMetaData> styleables = 
+                new ArrayList<CssMetaData>(SkinBase.getClassCssMetaData());
             Collections.addAll(styleables,
                                PROGRESS_COLOR
             );
             STYLEABLES = Collections.unmodifiableList(styleables);
         }
     }
-    /**
-     * @treatAsPrivate implementation detail
-     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
-     */
-    @Deprecated
-    public static List<StyleablePropertyMetaData> getClassStyleablePropertyMetaData() {
-        return StyleableProperties.STYLEABLES;
-    };
 
     /**
-     * RT-19263
-     * @treatAsPrivate implementation detail
-     * @deprecated This is an experimental API that is not intended for general use and is subject to change in future versions
+     * @return The CssMetaData associated with this class, which may include the
+     * CssMetaData of its super classes.
      */
-    @Deprecated
-    public List<StyleablePropertyMetaData> getStyleablePropertyMetaData() {
-        return getClassStyleablePropertyMetaData();
+    public static List<CssMetaData> getClassCssMetaData() {
+        return StyleableProperties.STYLEABLES;
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public List<CssMetaData> getCssMetaData() {
+        return getClassCssMetaData();
     }
 
 }

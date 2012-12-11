@@ -41,7 +41,7 @@ import javafx.geometry.Orientation;
 import javafx.geometry.Pos;
 import javafx.scene.Node;
 
-import com.sun.javafx.css.StyleablePropertyMetaData;
+import com.sun.javafx.css.CssMetaData;
 import com.sun.javafx.css.converters.BooleanConverter;
 import com.sun.javafx.css.converters.EnumConverter;
 import com.sun.javafx.css.converters.SizeConverter;
@@ -239,7 +239,7 @@ public class VBox extends Pane {
                 }
 
                 @Override
-                public StyleablePropertyMetaData getStyleablePropertyMetaData() {
+                public CssMetaData getCssMetaData() {
                     return StyleableProperties.SPACING;
                 }
             };
@@ -273,7 +273,7 @@ public class VBox extends Pane {
                 }
 
                 @Override
-                public StyleablePropertyMetaData getStyleablePropertyMetaData() {
+                public CssMetaData getCssMetaData() {
                     return StyleableProperties.ALIGNMENT;
                 }
             };
@@ -309,7 +309,7 @@ public class VBox extends Pane {
                 }
 
                 @Override
-                public StyleablePropertyMetaData getStyleablePropertyMetaData() {
+                public CssMetaData getCssMetaData() {
                     return StyleableProperties.FILL_WIDTH;
                 }
             };
@@ -520,8 +520,8 @@ public class VBox extends Pane {
       * @treatAsPrivate implementation detail
       */
      private static class StyleableProperties {
-         private static final StyleablePropertyMetaData<VBox,Pos> ALIGNMENT = 
-             new StyleablePropertyMetaData<VBox,Pos>("-fx-alignment",
+         private static final CssMetaData<VBox,Pos> ALIGNMENT = 
+             new CssMetaData<VBox,Pos>("-fx-alignment",
                  new EnumConverter<Pos>(Pos.class), Pos.TOP_LEFT){
 
             @Override
@@ -535,8 +535,8 @@ public class VBox extends Pane {
             }
         };
          
-         private static final StyleablePropertyMetaData<VBox,Boolean> FILL_WIDTH = 
-             new StyleablePropertyMetaData<VBox,Boolean>("-fx-fill-width",
+         private static final CssMetaData<VBox,Boolean> FILL_WIDTH = 
+             new CssMetaData<VBox,Boolean>("-fx-fill-width",
                  BooleanConverter.getInstance(), Boolean.TRUE) {
 
             @Override
@@ -550,8 +550,8 @@ public class VBox extends Pane {
             }
         };
          
-         private static final StyleablePropertyMetaData<VBox,Number> SPACING = 
-             new StyleablePropertyMetaData<VBox,Number>("-fx-spacing",
+         private static final CssMetaData<VBox,Number> SPACING = 
+             new CssMetaData<VBox,Number>("-fx-spacing",
                  SizeConverter.getInstance(), 0d) {
 
             @Override
@@ -565,10 +565,10 @@ public class VBox extends Pane {
             }
         };
 
-         private static final List<StyleablePropertyMetaData> STYLEABLES;
+         private static final List<CssMetaData> STYLEABLES;
          static {
-            final List<StyleablePropertyMetaData> styleables = 
-                new ArrayList<StyleablePropertyMetaData>(Region.getClassStyleablePropertyMetaData());
+            final List<CssMetaData> styleables = 
+                new ArrayList<CssMetaData>(Region.getClassCssMetaData());
             Collections.addAll(styleables,
                 ALIGNMENT,
                 FILL_WIDTH,
@@ -579,26 +579,19 @@ public class VBox extends Pane {
     }
 
     /**
-     * Super-lazy instantiation pattern from Bill Pugh. StyleableProperties is referenced
-     * no earlier (and therefore loaded no earlier by the class loader) than
-     * the moment that  getClassStyleablePropertyMetaData() is called.
-     * @treatAsPrivate implementation detail
-     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
+     * @return The CssMetaData associated with this class, which may include the
+     * CssMetaData of its super classes.
      */
-    @Deprecated
-    public static List<StyleablePropertyMetaData> getClassStyleablePropertyMetaData() {
-        return VBox.StyleableProperties.STYLEABLES;
+    public static List<CssMetaData> getClassCssMetaData() {
+        return StyleableProperties.STYLEABLES;
     }
 
-
     /**
-     * RT-19263
-     * @treatAsPrivate implementation detail
-     * @deprecated This is an experimental API that is not intended for general use and is subject to change in future versions
+     * {@inheritDoc}
      */
-    @Deprecated
-    public List<StyleablePropertyMetaData> getStyleablePropertyMetaData() {
-        return getClassStyleablePropertyMetaData();
+    @Override
+    public List<CssMetaData> getCssMetaData() {
+        return getClassCssMetaData();
     }
 
 }

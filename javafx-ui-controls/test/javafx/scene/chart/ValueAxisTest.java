@@ -4,7 +4,7 @@
 
 package javafx.scene.chart;
 
-import com.sun.javafx.css.StyleablePropertyMetaData;
+import com.sun.javafx.css.CssMetaData;
 import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.DoubleProperty;
 import javafx.beans.property.ObjectProperty;
@@ -216,7 +216,7 @@ public class ValueAxisTest {
      * CSS related Tests                                                 *
      ********************************************************************/
     @Test public void whenMinorTickVisibleIsBound_impl_cssSettable_ReturnsFalse() {
-        StyleablePropertyMetaData styleable = StyleablePropertyMetaData.getStyleablePropertyMetaData(axis.minorTickVisibleProperty());
+        CssMetaData styleable = CssMetaData.getCssMetaData(axis.minorTickVisibleProperty());
         assertTrue(styleable.isSettable(axis));
         BooleanProperty other = new SimpleBooleanProperty();
         axis.minorTickVisibleProperty().bind(other);
@@ -224,19 +224,19 @@ public class ValueAxisTest {
     }
 
     @Test public void whenMinorTickVisibleIsSpecifiedViaCSSAndIsNotBound_impl_cssSettable_ReturnsTrue() {
-        StyleablePropertyMetaData styleable = StyleablePropertyMetaData.getStyleablePropertyMetaData(axis.minorTickVisibleProperty());
+        CssMetaData styleable = CssMetaData.getCssMetaData(axis.minorTickVisibleProperty());
         styleable.set(axis,false);
         assertTrue(styleable.isSettable(axis));
     }
 
     @Test public void canSpecifyMinorTickVisibleViaCSS() {
-        StyleablePropertyMetaData styleable = StyleablePropertyMetaData.getStyleablePropertyMetaData(axis.minorTickVisibleProperty());
+        CssMetaData styleable = CssMetaData.getCssMetaData(axis.minorTickVisibleProperty());
         styleable.set(axis,true);
         assertSame(true, axis.isMinorTickVisible());
     }
 
     @Test public void whenMinorTickLengthIsBound_impl_cssSettable_ReturnsFalse() {
-        StyleablePropertyMetaData styleable = StyleablePropertyMetaData.getStyleablePropertyMetaData(axis.minorTickLengthProperty());
+        CssMetaData styleable = CssMetaData.getCssMetaData(axis.minorTickLengthProperty());
         assertTrue(styleable.isSettable(axis));
         DoubleProperty other = new SimpleDoubleProperty();
         axis.minorTickLengthProperty().bind(other);
@@ -244,19 +244,19 @@ public class ValueAxisTest {
     }
 
     @Test public void whenMinorTickLengthIsSpecifiedViaCSSAndIsNotBound_impl_cssSettable_ReturnsTrue() {
-        StyleablePropertyMetaData styleable = StyleablePropertyMetaData.getStyleablePropertyMetaData(axis.minorTickLengthProperty());
+        CssMetaData styleable = CssMetaData.getCssMetaData(axis.minorTickLengthProperty());
         styleable.set(axis,10.9);
         assertTrue(styleable.isSettable(axis));
     }
 
     @Test public void canSpecifyMinorTickLengthViaCSS() {
-        StyleablePropertyMetaData styleable = StyleablePropertyMetaData.getStyleablePropertyMetaData(axis.minorTickLengthProperty());
+        CssMetaData styleable = CssMetaData.getCssMetaData(axis.minorTickLengthProperty());
         styleable.set(axis,10.34);
         assertEquals(10.34, axis.getMinorTickLength(), 0.0);
     }
 
     @Test public void whenMinorTickCountIsBound_impl_cssSettable_ReturnsFalse() {
-        StyleablePropertyMetaData styleable = StyleablePropertyMetaData.getStyleablePropertyMetaData(axis.minorTickCountProperty());
+        CssMetaData styleable = CssMetaData.getCssMetaData(axis.minorTickCountProperty());
         assertTrue(styleable.isSettable(axis));
         DoubleProperty other = new SimpleDoubleProperty();
         axis.minorTickCountProperty().bind(other);
@@ -264,13 +264,13 @@ public class ValueAxisTest {
     }
 
     @Test public void whenMinorTickCountIsSpecifiedViaCSSAndIsNotBound_impl_cssSettable_ReturnsTrue() {
-        StyleablePropertyMetaData styleable = StyleablePropertyMetaData.getStyleablePropertyMetaData(axis.minorTickCountProperty());
+        CssMetaData styleable = CssMetaData.getCssMetaData(axis.minorTickCountProperty());
         styleable.set(axis,10);
         assertTrue(styleable.isSettable(axis));
     }
 
     @Test public void canSpecifyMinorTickCountViaCSS() {
-        StyleablePropertyMetaData styleable = StyleablePropertyMetaData.getStyleablePropertyMetaData(axis.minorTickCountProperty());
+        CssMetaData styleable = CssMetaData.getCssMetaData(axis.minorTickCountProperty());
         styleable.set(axis,10);
         assertTrue(styleable.isSettable(axis));
     }

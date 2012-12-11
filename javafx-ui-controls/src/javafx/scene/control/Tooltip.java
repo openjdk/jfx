@@ -330,8 +330,8 @@ public class Tooltip extends PopupControl {
      **************************************************************************/
 
     private static class StyleableProperties {
-        private static final StyleablePropertyMetaData<CSSBridge,Font> FONT = 
-            new StyleablePropertyMetaData.FONT<CSSBridge>("-fx-font", Font.getDefault()) {
+        private static final CssMetaData<CSSBridge,Font> FONT = 
+            new CssMetaData.FONT<CSSBridge>("-fx-font", Font.getDefault()) {
 
             @Override
             public boolean isSettable(CSSBridge n) {
@@ -344,8 +344,8 @@ public class Tooltip extends PopupControl {
             }
         };
         
-        private static final StyleablePropertyMetaData<CSSBridge,TextAlignment> TEXT_ALIGNMENT = 
-            new StyleablePropertyMetaData<CSSBridge,TextAlignment>("-fx-text-alignment",
+        private static final CssMetaData<CSSBridge,TextAlignment> TEXT_ALIGNMENT = 
+            new CssMetaData<CSSBridge,TextAlignment>("-fx-text-alignment",
                 new EnumConverter<TextAlignment>(TextAlignment.class), 
                 TextAlignment.LEFT) {
 
@@ -360,8 +360,8 @@ public class Tooltip extends PopupControl {
             }
         };
         
-        private static final StyleablePropertyMetaData<CSSBridge,OverrunStyle> TEXT_OVERRUN = 
-            new StyleablePropertyMetaData<CSSBridge,OverrunStyle>("-fx-text-overrun",
+        private static final CssMetaData<CSSBridge,OverrunStyle> TEXT_OVERRUN = 
+            new CssMetaData<CSSBridge,OverrunStyle>("-fx-text-overrun",
                 new EnumConverter<OverrunStyle>(OverrunStyle.class),
                 OverrunStyle.ELLIPSIS) {
 
@@ -376,8 +376,8 @@ public class Tooltip extends PopupControl {
             }
         };
         
-        private static final StyleablePropertyMetaData<CSSBridge,Boolean> WRAP_TEXT = 
-            new StyleablePropertyMetaData<CSSBridge,Boolean>("-fx-wrap-text",
+        private static final CssMetaData<CSSBridge,Boolean> WRAP_TEXT = 
+            new CssMetaData<CSSBridge,Boolean>("-fx-wrap-text",
                 BooleanConverter.getInstance(), Boolean.FALSE) {
 
             @Override
@@ -391,8 +391,8 @@ public class Tooltip extends PopupControl {
             }
         };
         
-        private static final StyleablePropertyMetaData<CSSBridge,String> GRAPHIC = 
-            new StyleablePropertyMetaData<CSSBridge,String>("-fx-graphic",
+        private static final CssMetaData<CSSBridge,String> GRAPHIC = 
+            new CssMetaData<CSSBridge,String>("-fx-graphic",
                 StringConverter.getInstance()) {
 
             @Override
@@ -406,8 +406,8 @@ public class Tooltip extends PopupControl {
             }
         };
         
-        private static final StyleablePropertyMetaData<CSSBridge,ContentDisplay> CONTENT_DISPLAY = 
-            new StyleablePropertyMetaData<CSSBridge,ContentDisplay>("-fx-content-display",
+        private static final CssMetaData<CSSBridge,ContentDisplay> CONTENT_DISPLAY = 
+            new CssMetaData<CSSBridge,ContentDisplay>("-fx-content-display",
                 new EnumConverter<ContentDisplay>(ContentDisplay.class),
                 ContentDisplay.LEFT) {
 
@@ -422,8 +422,8 @@ public class Tooltip extends PopupControl {
             }
         };
     
-        private static final StyleablePropertyMetaData<CSSBridge,Number> GRAPHIC_TEXT_GAP = 
-            new StyleablePropertyMetaData<CSSBridge,Number>("-fx-graphic-text-gap",
+        private static final CssMetaData<CSSBridge,Number> GRAPHIC_TEXT_GAP = 
+            new CssMetaData<CSSBridge,Number>("-fx-graphic-text-gap",
                 SizeConverter.getInstance(), 4.0) {
 
             @Override
@@ -437,10 +437,10 @@ public class Tooltip extends PopupControl {
             }
         };
     
-        private static final List<StyleablePropertyMetaData> STYLEABLES;
+        private static final List<CssMetaData> STYLEABLES;
         static {
-            final List<StyleablePropertyMetaData> styleables =
-                new ArrayList<StyleablePropertyMetaData>(PopupControl.getClassStyleablePropertyMetaData());
+            final List<CssMetaData> styleables =
+                new ArrayList<CssMetaData>(PopupControl.getClassCssMetaData());
             Collections.addAll(styleables,
                 FONT,
                 TEXT_ALIGNMENT,
@@ -455,32 +455,29 @@ public class Tooltip extends PopupControl {
     }
 
     /**
-     * @treatAsPrivate implementation detail
-     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
+     * @return The CssMetaData associated with this class, which may include the
+     * CssMetaData of its super classes.
      */
-    @Deprecated
-    public static List<StyleablePropertyMetaData> getClassStyleablePropertyMetaData() {
-        return Tooltip.StyleableProperties.STYLEABLES;
+    public static List<CssMetaData> getClassCssMetaData() {
+        return StyleableProperties.STYLEABLES;
     }
-  
+
     /**
-     * RT-19263
-     * @treatAsPrivate implementation detail
-     * @deprecated This is an experimental API that is not intended for general use and is subject to change in future versions
+     * {@inheritDoc}
      */
-    @Deprecated
-    public List<StyleablePropertyMetaData> getStyleablePropertyMetaData() {
-        return getClassStyleablePropertyMetaData();
+    @Override
+    public List<CssMetaData> getCssMetaData() {
+        return getClassCssMetaData();
     }
- 
+
     private final class CSSBridge extends PopupControl.CSSBridge {
         
         @Override public void impl_pseudoClassStateChanged(String s) {
             super.impl_pseudoClassStateChanged(s);
         }
 
-        @Override public List<StyleablePropertyMetaData> getStyleablePropertyMetaData() {
-            return Tooltip.this.getStyleablePropertyMetaData();
+        @Override public List<CssMetaData> getCssMetaData() {
+            return Tooltip.this.getCssMetaData();
         }
         
         private ObjectProperty<TextAlignment> textAlignment;
@@ -488,7 +485,7 @@ public class Tooltip extends PopupControl {
             if (textAlignment == null) {
                 textAlignment = new StyleableObjectProperty<TextAlignment>(TextAlignment.LEFT) {
                     @Override 
-                    public StyleablePropertyMetaData getStyleablePropertyMetaData() {
+                    public CssMetaData getCssMetaData() {
                         return StyleableProperties.TEXT_ALIGNMENT;
                     }
 
@@ -511,7 +508,7 @@ public class Tooltip extends PopupControl {
             if (textOverrun == null) {
                 textOverrun = new StyleableObjectProperty<OverrunStyle>(OverrunStyle.ELLIPSIS) {
                     @Override 
-                    public StyleablePropertyMetaData getStyleablePropertyMetaData() {
+                    public CssMetaData getCssMetaData() {
                         return StyleableProperties.TEXT_OVERRUN;
                     }
 
@@ -534,7 +531,7 @@ public class Tooltip extends PopupControl {
             if (wrapText == null) {
                 wrapText = new StyleableBooleanProperty(false) {
                     @Override 
-                    public StyleablePropertyMetaData getStyleablePropertyMetaData() {
+                    public CssMetaData getCssMetaData() {
                         return StyleableProperties.WRAP_TEXT;
                     }
 
@@ -557,7 +554,7 @@ public class Tooltip extends PopupControl {
             if (font == null) {
                 font = new StyleableObjectProperty<Font>(Font.getDefault()) {
                     @Override 
-                    public StyleablePropertyMetaData getStyleablePropertyMetaData() {
+                    public CssMetaData getCssMetaData() {
                         return StyleableProperties.FONT;
                     }
 
@@ -618,7 +615,7 @@ public class Tooltip extends PopupControl {
                     }
 
                     @Override
-                    public StyleablePropertyMetaData getStyleablePropertyMetaData() {
+                    public CssMetaData getCssMetaData() {
                         return Tooltip.StyleableProperties.GRAPHIC;
                     }
 
@@ -632,7 +629,7 @@ public class Tooltip extends PopupControl {
             if (contentDisplay == null) {
                 contentDisplay = new StyleableObjectProperty<ContentDisplay>(ContentDisplay.LEFT) {
                     @Override 
-                    public StyleablePropertyMetaData getStyleablePropertyMetaData() {
+                    public CssMetaData getCssMetaData() {
                         return StyleableProperties.CONTENT_DISPLAY;
                     }
 
@@ -655,7 +652,7 @@ public class Tooltip extends PopupControl {
             if (graphicTextGap == null) {
                 graphicTextGap = new StyleableDoubleProperty(4) {
                     @Override 
-                    public StyleablePropertyMetaData getStyleablePropertyMetaData() {
+                    public CssMetaData getCssMetaData() {
                         return StyleableProperties.GRAPHIC_TEXT_GAP;
                     }
 

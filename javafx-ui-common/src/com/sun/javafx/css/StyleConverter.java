@@ -62,7 +62,7 @@ public class StyleConverter<F, T> {
      * Convert from the constituent values to the target property type.
      * Implemented by Types that have Keys with subKeys.
      */
-    public T convert(Map<StyleablePropertyMetaData,Object> convertedValues) {
+    public T convert(Map<CssMetaData,Object> convertedValues) {
         return null;
     }
 

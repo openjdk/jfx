@@ -4,7 +4,7 @@
  */
 package com.sun.javafx.scene.control.skin;
 
-import com.sun.javafx.css.StyleablePropertyMetaData;
+import com.sun.javafx.css.CssMetaData;
 import com.sun.javafx.css.Stylesheet;
 import java.util.List;
 import javafx.beans.value.ChangeListener;
@@ -224,8 +224,8 @@ public class LabeledTextTest {
         assert(labeledText.visibleProperty().get() == true);   
     }
     
-    private static StyleablePropertyMetaData getStyleablePropertyMetaData(String prop) {
-        for (StyleablePropertyMetaData styleable : LabeledText.getClassStyleablePropertyMetaData()) {
+    private static CssMetaData getCssMetaData(String prop) {
+        for (CssMetaData styleable : LabeledText.getClassCssMetaData()) {
             if (styleable.getProperty().equals(prop)) return styleable;
         }
         return null;
@@ -234,7 +234,7 @@ public class LabeledTextTest {
     @Test
     public void testLabeledTextFillIsSettableByCss() {
         
-        StyleablePropertyMetaData sp = getStyleablePropertyMetaData("-fx-fill");
+        CssMetaData sp = getCssMetaData("-fx-fill");
         assertTrue(sp.isSettable(labeledText));
     }
     
@@ -247,7 +247,7 @@ public class LabeledTextTest {
     @Test
     public void testLabeledTextTextAlignmentIsSettableByCss() {
         
-        StyleablePropertyMetaData sp = getStyleablePropertyMetaData("-fx-text-alignment");
+        CssMetaData sp = getCssMetaData("-fx-text-alignment");
         assertTrue(sp.isSettable(labeledText));
     }
     
@@ -260,7 +260,7 @@ public class LabeledTextTest {
     @Test
     public void testLabeledTextFontIsSettableByCss() {
         
-        StyleablePropertyMetaData sp = getStyleablePropertyMetaData("-fx-font");
+        CssMetaData sp = getCssMetaData("-fx-font");
         assertTrue(sp.isSettable(labeledText));
     }
     
@@ -273,7 +273,7 @@ public class LabeledTextTest {
     @Test
     public void testLabeledTextUnderlineIsSettableByCss() {
         
-        StyleablePropertyMetaData sp = getStyleablePropertyMetaData("-fx-underline");
+        CssMetaData sp = getCssMetaData("-fx-underline");
         assertTrue(sp.isSettable(labeledText));
     }
     

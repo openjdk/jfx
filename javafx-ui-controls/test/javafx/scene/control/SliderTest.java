@@ -6,7 +6,7 @@ package javafx.scene.control;
 
 
 import com.sun.javafx.css.ParsedValue;
-import com.sun.javafx.css.StyleablePropertyMetaData;
+import com.sun.javafx.css.CssMetaData;
 import com.sun.javafx.css.parser.CSSParser;
 import com.sun.javafx.pgstub.StubToolkit;
 import com.sun.javafx.tk.Toolkit;
@@ -50,7 +50,7 @@ public class SliderTest {
         
         ParsedValue pv = CSSParser.getInstance().parseExpr("-fx-minor-tick-count","2");
         Object val = pv.convert(null);        
-        StyleablePropertyMetaData prop = StyleablePropertyMetaData.getStyleablePropertyMetaData(slider.minorTickCountProperty());
+        CssMetaData prop = CssMetaData.getCssMetaData(slider.minorTickCountProperty());
         try {
             prop.set(slider, val, null);
             assertEquals(2, slider.getMinorTickCount(), 0.);

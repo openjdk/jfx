@@ -46,9 +46,9 @@ interface StyleableProperty<T> {
     Origin getOrigin();
     
     /**
-     * Reflect back the StyleablePropertyMetaData that corresponds to this 
+     * Reflect back the CssMetaData that corresponds to this 
      * <code>javafx.beans.property.StyleableProperty</code>
      */
-    StyleablePropertyMetaData getStyleablePropertyMetaData();
+    CssMetaData getCssMetaData();
     
 }

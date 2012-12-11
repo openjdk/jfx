@@ -26,7 +26,7 @@ package javafx.scene.control;
 
 import com.sun.javafx.beans.annotations.NoBuilder;
 import com.sun.javafx.css.Styleable;
-import com.sun.javafx.css.StyleablePropertyMetaData;
+import com.sun.javafx.css.CssMetaData;
 import com.sun.javafx.scene.control.skin.NestedTableColumnHeader;
 import com.sun.javafx.scene.control.skin.TableColumnHeader;
 import com.sun.javafx.scene.control.skin.TableHeaderRow;
@@ -602,7 +602,7 @@ public class TableColumn<S,T> extends TableColumnBase<S,T> implements EventTarge
 
                 
                 @Override
-                public List<StyleablePropertyMetaData> getStyleablePropertyMetaData() {
+                public List<CssMetaData> getCssMetaData() {
                     return Collections.EMPTY_LIST;
                 }                
 

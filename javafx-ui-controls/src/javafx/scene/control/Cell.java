@@ -38,7 +38,7 @@ import javafx.scene.layout.HBox;
 import javafx.scene.shape.Rectangle;
 
 import com.sun.javafx.css.StyleManager;
-import com.sun.javafx.css.StyleablePropertyMetaData;
+import com.sun.javafx.css.CssMetaData;
 import com.sun.javafx.scene.control.accessible.AccessibleListItem;
 import com.sun.javafx.accessible.providers.AccessibleProvider;
 import javafx.beans.property.ReadOnlyBooleanProperty;
@@ -284,8 +284,8 @@ public class Cell<T> extends Labeled {
         // focusTraversable is styleable through css. Calling setFocusTraversable
         // makes it look to css like the user set the value and css will not 
         // override. Initializing focusTraversable by calling set on the 
-        // StyleablePropertyMetaData ensures that css will be able to override the value.
-        final StyleablePropertyMetaData prop = StyleablePropertyMetaData.getStyleablePropertyMetaData(focusTraversableProperty());
+        // CssMetaData ensures that css will be able to override the value.
+        final CssMetaData prop = CssMetaData.getCssMetaData(focusTraversableProperty());
         prop.set(this, Boolean.FALSE);            
         getStyleClass().addAll(DEFAULT_STYLE_CLASS);
 

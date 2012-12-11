@@ -45,7 +45,7 @@
 package javafx.scene.control;
 
 import com.sun.javafx.css.StyleableIntegerProperty;
-import com.sun.javafx.css.StyleablePropertyMetaData;
+import com.sun.javafx.css.CssMetaData;
 import com.sun.javafx.css.Origin;
 import com.sun.javafx.css.converters.SizeConverter;
 import com.sun.javafx.scene.control.skin.PaginationSkin;
@@ -207,7 +207,7 @@ public class Pagination extends Control {
                 }
 
                 @Override
-                public StyleablePropertyMetaData getStyleablePropertyMetaData() {
+                public CssMetaData getCssMetaData() {
                     return StyleableProperties.MAX_PAGE_INDICATOR_COUNT;
                 }
 
@@ -337,8 +337,8 @@ public class Pagination extends Control {
     private static final String DEFAULT_STYLE_CLASS = "pagination";
 
     private static class StyleableProperties {
-        private static final StyleablePropertyMetaData<Pagination,Number> MAX_PAGE_INDICATOR_COUNT =
-            new StyleablePropertyMetaData<Pagination,Number>("-fx-max-page-indicator-count",
+        private static final CssMetaData<Pagination,Number> MAX_PAGE_INDICATOR_COUNT =
+            new CssMetaData<Pagination,Number>("-fx-max-page-indicator-count",
                 SizeConverter.getInstance(), DEFAULT_MAX_PAGE_INDICATOR_COUNT) {
 
             @Override
@@ -356,10 +356,10 @@ public class Pagination extends Control {
                 return n.maxPageIndicatorCountProperty();
             }
         };
-        private static final List<StyleablePropertyMetaData> STYLEABLES;
+        private static final List<CssMetaData> STYLEABLES;
         static {
-            final List<StyleablePropertyMetaData> styleables =
-                new ArrayList<StyleablePropertyMetaData>(Control.getClassStyleablePropertyMetaData());
+            final List<CssMetaData> styleables =
+                new ArrayList<CssMetaData>(Control.getClassCssMetaData());
             Collections.addAll(styleables,
                 MAX_PAGE_INDICATOR_COUNT
             );
@@ -368,20 +368,19 @@ public class Pagination extends Control {
     }
 
     /**
-     * @treatAsPrivate implementation detail
-     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
+     * @return The CssMetaData associated with this class, which may include the
+     * CssMetaData of its super classes.
      */
-    @Deprecated
-    public static List<StyleablePropertyMetaData> getClassStyleablePropertyMetaData() {
-        return Pagination.StyleableProperties.STYLEABLES;
+    public static List<CssMetaData> getClassCssMetaData() {
+        return StyleableProperties.STYLEABLES;
     }
 
     /**
-     * @treatAsPrivate implementation detail
-     * @deprecated This is an experimental API that is not intended for general use and is subject to change in future versions
+     * {@inheritDoc}
      */
-    @Deprecated
-    @Override protected List<StyleablePropertyMetaData> impl_getControlStyleableProperties() {
-        return getClassStyleablePropertyMetaData();
+    @Override
+    public List<CssMetaData> getCssMetaData() {
+        return getClassCssMetaData();
     }
+
 }

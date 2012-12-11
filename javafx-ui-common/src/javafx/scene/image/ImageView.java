@@ -35,7 +35,7 @@ import javafx.geometry.Rectangle2D;
 import javafx.scene.Node;
 
 import com.sun.javafx.beans.event.AbstractNotifyListener;
-import com.sun.javafx.css.StyleablePropertyMetaData;
+import com.sun.javafx.css.CssMetaData;
 import com.sun.javafx.css.StyleableStringProperty;
 import com.sun.javafx.css.converters.StringConverter;
 import com.sun.javafx.geom.BaseBounds;
@@ -276,7 +276,7 @@ public class ImageView extends Node {
                 }
 
                 @Override
-                public StyleablePropertyMetaData getStyleablePropertyMetaData() {
+                public CssMetaData getCssMetaData() {
                     return StyleableProperties.IMAGE;
                 }
                 
@@ -795,8 +795,8 @@ public class ImageView extends Node {
      private static class StyleableProperties {
         // TODO
         // "preserve-ratio","smooth","viewport","fit-width","fit-height"
-         private static final StyleablePropertyMetaData<ImageView, String> IMAGE = 
-            new StyleablePropertyMetaData<ImageView,String>("-fx-image",
+         private static final CssMetaData<ImageView, String> IMAGE = 
+            new CssMetaData<ImageView,String>("-fx-image",
                 StringConverter.getInstance()) {
 
             @Override
@@ -811,35 +811,29 @@ public class ImageView extends Node {
             }
         };
             
-         private static final List<StyleablePropertyMetaData> STYLEABLES;
+         private static final List<CssMetaData> STYLEABLES;
          static {
-            final List<StyleablePropertyMetaData> styleables = 
-		new ArrayList<StyleablePropertyMetaData>(Node.getClassStyleablePropertyMetaData());
+            final List<CssMetaData> styleables = 
+		new ArrayList<CssMetaData>(Node.getClassCssMetaData());
             Collections.addAll(styleables, IMAGE);
             STYLEABLES = Collections.unmodifiableList(styleables);
          }
     }
 
     /**
-     * Super-lazy instantiation pattern from Bill Pugh. StyleableProperties is referenced
-     * no earlier (and therefore loaded no earlier by the class loader) than
-     * the moment that  getClassStyleablePropertyMetaData() is called.
-     * @treatAsPrivate implementation detail
-     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
+     * @return The CssMetaData associated with this class, which may include the
+     * CssMetaData of its super classes.
      */
-    @Deprecated
-    public static List<StyleablePropertyMetaData> getClassStyleablePropertyMetaData() {
-        return ImageView.StyleableProperties.STYLEABLES;
+    public static List<CssMetaData> getClassCssMetaData() {
+        return StyleableProperties.STYLEABLES;
     }
 
     /**
-     * RT-19263
-     * @treatAsPrivate implementation detail
-     * @deprecated This is an experimental API that is not intended for general use and is subject to change in future versions
+     * {@inheritDoc}
      */
-    @Deprecated
-    public List<StyleablePropertyMetaData> getStyleablePropertyMetaData() {
-        return getClassStyleablePropertyMetaData();
+    @Override
+    public List<CssMetaData> getCssMetaData() {
+        return getClassCssMetaData();
     }
 
     void updateViewport() {

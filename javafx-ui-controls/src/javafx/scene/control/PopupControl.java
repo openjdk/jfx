@@ -897,8 +897,8 @@ public class PopupControl extends PopupWindow implements Skinnable {
      **************************************************************************/
 
     private static class StyleableProperties {
-        private static final StyleablePropertyMetaData<CSSBridge,String> SKIN = 
-            new StyleablePropertyMetaData<CSSBridge,String>("-fx-skin",
+        private static final CssMetaData<CSSBridge,String> SKIN = 
+            new CssMetaData<CSSBridge,String>("-fx-skin",
                 StringConverter.getInstance()) {
 
             @Override
@@ -912,10 +912,10 @@ public class PopupControl extends PopupWindow implements Skinnable {
             }
         };
 
-        private static final List<StyleablePropertyMetaData> STYLEABLES;
+        private static final List<CssMetaData> STYLEABLES;
         static {
-            final List<StyleablePropertyMetaData> styleables =
-                new ArrayList<StyleablePropertyMetaData>();
+            final List<CssMetaData> styleables =
+                new ArrayList<CssMetaData>();
             Collections.addAll(styleables,
                 SKIN
             );
@@ -924,23 +924,21 @@ public class PopupControl extends PopupWindow implements Skinnable {
     }
     
     /**
-     * @treatAsPrivate implementation detail
-     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
+     * @return The CssMetaData associated with this class, which may include the
+     * CssMetaData of its super classes.
      */
-    @Deprecated
-    public static List<StyleablePropertyMetaData> getClassStyleablePropertyMetaData() {
+    public static List<CssMetaData> getClassCssMetaData() {
         return StyleableProperties.STYLEABLES;
     }
 
-
     /**
-     * RT-19263
-     * @treatAsPrivate implementation detail
-     * @deprecated This is an experimental API that is not intended for general use and is subject to change in future versions
+     * This method should delegate to {@link Node#getClassCssMetaData()} so that
+     * a Node's CssMetaData can be accessed without the need for reflection.
+     * @return The CssMetaData associated with this node, which may include the
+     * CssMetaData of its super classes.
      */
-    @Deprecated
-    public List<StyleablePropertyMetaData> getStyleablePropertyMetaData() {
-        return getClassStyleablePropertyMetaData();
+    public List<CssMetaData> getCssMetaData() {
+        return getClassCssMetaData();
     }
 
     /**
@@ -995,8 +993,8 @@ public class PopupControl extends PopupWindow implements Skinnable {
                 * @deprecated This is an experimental API that is not intended for general use and is subject to change in future versions
                 */
                 @Deprecated @Override
-                public List<StyleablePropertyMetaData> getStyleablePropertyMetaData() {
-                    return PopupControl.this.getStyleablePropertyMetaData();
+                public List<CssMetaData> getCssMetaData() {
+                    return PopupControl.this.getCssMetaData();
                 }                
                 
                 @Override
@@ -1026,8 +1024,8 @@ public class PopupControl extends PopupWindow implements Skinnable {
         * @deprecated This is an experimental API that is not intended for general use and is subject to change in future versions
         */
         @Deprecated @Override 
-        public List<StyleablePropertyMetaData> getStyleablePropertyMetaData() {
-            return PopupControl.this.getStyleablePropertyMetaData();
+        public List<CssMetaData> getCssMetaData() {
+            return PopupControl.this.getCssMetaData();
         }
 
         /**
@@ -1168,7 +1166,7 @@ public class PopupControl extends PopupWindow implements Skinnable {
                     }
 
                     @Override
-                    public StyleablePropertyMetaData getStyleablePropertyMetaData() {
+                    public CssMetaData getCssMetaData() {
                         return StyleableProperties.SKIN;
                     }
 

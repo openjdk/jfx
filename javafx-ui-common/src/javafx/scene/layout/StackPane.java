@@ -38,7 +38,7 @@ import javafx.geometry.VPos;
 import javafx.scene.Node;
 
 import com.sun.javafx.css.StyleableObjectProperty;
-import com.sun.javafx.css.StyleablePropertyMetaData;
+import com.sun.javafx.css.CssMetaData;
 import com.sun.javafx.css.converters.EnumConverter;
 
 /**
@@ -208,7 +208,7 @@ public class StackPane extends Pane {
                 }
 
                 @Override
-                public StyleablePropertyMetaData getStyleablePropertyMetaData() {
+                public CssMetaData getCssMetaData() {
                     return StyleableProperties.ALIGNMENT;
                 }
 
@@ -346,8 +346,8 @@ public class StackPane extends Pane {
       * @treatAsPrivate implementation detail
       */
      private static class StyleableProperties {
-         private static final StyleablePropertyMetaData<StackPane,Pos> ALIGNMENT =
-             new StyleablePropertyMetaData<StackPane,Pos>("-fx-alignment",
+         private static final CssMetaData<StackPane,Pos> ALIGNMENT =
+             new CssMetaData<StackPane,Pos>("-fx-alignment",
                  new EnumConverter<Pos>(Pos.class),
                  Pos.CENTER) {
 
@@ -363,10 +363,10 @@ public class StackPane extends Pane {
             }
         };
 
-         private static final List<StyleablePropertyMetaData> STYLEABLES;
+         private static final List<CssMetaData> STYLEABLES;
          static {
-            final List<StyleablePropertyMetaData> styleables =
-                new ArrayList<StyleablePropertyMetaData>(Region.getClassStyleablePropertyMetaData());
+            final List<CssMetaData> styleables =
+                new ArrayList<CssMetaData>(Region.getClassCssMetaData());
             Collections.addAll(styleables,
                 ALIGNMENT
              );
@@ -374,26 +374,20 @@ public class StackPane extends Pane {
          }
     }
 
-     /**
-      * Super-lazy instantiation pattern from Bill Pugh. StyleableProperties is referenced
-      * no earlier (and therefore loaded no earlier by the class loader) than
-      * the moment that  getClassStyleablePropertyMetaData() is called.
-      * @treatAsPrivate implementation detail
-      * @deprecated This is an internal API that is not intended for use and will be removed in the next version
-      */
-    @Deprecated
-    public static List<StyleablePropertyMetaData> getClassStyleablePropertyMetaData() {
-        return StackPane.StyleableProperties.STYLEABLES;
+    /**
+     * @return The CssMetaData associated with this class, which may include the
+     * CssMetaData of its super classes.
+     */
+    public static List<CssMetaData> getClassCssMetaData() {
+        return StyleableProperties.STYLEABLES;
     }
 
     /**
-     * RT-19263
-     * @treatAsPrivate implementation detail
-     * @deprecated This is an experimental API that is not intended for general use and is subject to change in future versions
+     * {@inheritDoc}
      */
-    @Deprecated
-    public List<StyleablePropertyMetaData> getStyleablePropertyMetaData() {
-        return getClassStyleablePropertyMetaData();
+    @Override
+    public List<CssMetaData> getCssMetaData() {
+        return getClassCssMetaData();
     }
 
 }

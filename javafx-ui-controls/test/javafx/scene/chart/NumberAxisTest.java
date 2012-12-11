@@ -4,7 +4,7 @@
 
 package javafx.scene.chart;
 
-import com.sun.javafx.css.StyleablePropertyMetaData;
+import com.sun.javafx.css.CssMetaData;
 import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.DoubleProperty;
 import javafx.beans.property.SimpleBooleanProperty;
@@ -127,7 +127,7 @@ public class NumberAxisTest {
      ********************************************************************/
 
     @Test public void whenTickUnitIsBound_impl_cssSettable_ReturnsFalse() {
-        StyleablePropertyMetaData styleable = StyleablePropertyMetaData.getStyleablePropertyMetaData(axis.tickUnitProperty());
+        CssMetaData styleable = CssMetaData.getCssMetaData(axis.tickUnitProperty());
         assertTrue(styleable.isSettable(axis));
         DoubleProperty other = new SimpleDoubleProperty();
         axis.tickUnitProperty().bind(other);
@@ -135,13 +135,13 @@ public class NumberAxisTest {
     }
 
     @Test public void whenTickUnitIsSpecifiedViaCSSAndIsNotBound_impl_cssSettable_ReturnsTrue() {
-        StyleablePropertyMetaData styleable = StyleablePropertyMetaData.getStyleablePropertyMetaData(axis.tickUnitProperty());
+        CssMetaData styleable = CssMetaData.getCssMetaData(axis.tickUnitProperty());
         styleable.set(axis,10.9);
         assertTrue(styleable.isSettable(axis));
     }
 
     @Test public void canTickUnitViaCSS() {
-        StyleablePropertyMetaData styleable = StyleablePropertyMetaData.getStyleablePropertyMetaData(axis.tickUnitProperty());
+        CssMetaData styleable = CssMetaData.getCssMetaData(axis.tickUnitProperty());
         styleable.set(axis,10.34);
         assertEquals(10.34, axis.getTickUnit(), 0.0);
     }

@@ -32,7 +32,7 @@ import java.util.List;
 import javafx.scene.control.Cell;
 
 import com.sun.javafx.css.StyleableDoubleProperty;
-import com.sun.javafx.css.StyleablePropertyMetaData;
+import com.sun.javafx.css.CssMetaData;
 import com.sun.javafx.css.converters.SizeConverter;
 import com.sun.javafx.scene.control.behavior.CellBehaviorBase;
 import javafx.beans.property.DoubleProperty;
@@ -92,7 +92,7 @@ public class CellSkinBase<C extends Cell, B extends CellBehaviorBase<C>> extends
                 }
 
                 @Override
-                public StyleablePropertyMetaData getStyleablePropertyMetaData() {
+                public CssMetaData getCssMetaData() {
                     return StyleableProperties.CELL_SIZE;
                 }
             }; 
@@ -126,8 +126,8 @@ public class CellSkinBase<C extends Cell, B extends CellBehaviorBase<C>> extends
       * @treatAsPrivate implementation detail
       */
      private static class StyleableProperties {
-         private final static StyleablePropertyMetaData<Cell,Number> CELL_SIZE =
-                new StyleablePropertyMetaData<Cell,Number>("-fx-cell-size",
+         private final static CssMetaData<Cell,Number> CELL_SIZE =
+                new CssMetaData<Cell,Number>("-fx-cell-size",
                  SizeConverter.getInstance(), DEFAULT_CELL_SIZE) {
 
             @Override
@@ -150,11 +150,11 @@ public class CellSkinBase<C extends Cell, B extends CellBehaviorBase<C>> extends
             }
         };
 
-         private static final List<StyleablePropertyMetaData> STYLEABLES;
+         private static final List<CssMetaData> STYLEABLES;
          static {
 
-            final List<StyleablePropertyMetaData> styleables = 
-                new ArrayList<StyleablePropertyMetaData>(SkinBase.getClassStyleablePropertyMetaData());
+            final List<CssMetaData> styleables = 
+                new ArrayList<CssMetaData>(SkinBase.getClassCssMetaData());
             Collections.addAll(styleables,
                 CELL_SIZE
             );
@@ -164,22 +164,19 @@ public class CellSkinBase<C extends Cell, B extends CellBehaviorBase<C>> extends
     }
 
     /**
-     * @treatAsPrivate implementation detail
-     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
+     * @return The CssMetaData associated with this class, which may include the
+     * CssMetaData of its super classes.
      */
-    @Deprecated
-    public static List<StyleablePropertyMetaData> getClassStyleablePropertyMetaData() {
+    public static List<CssMetaData> getClassCssMetaData() {
         return StyleableProperties.STYLEABLES;
-    };
+    }
 
     /**
-     * RT-19263
-     * @treatAsPrivate implementation detail
-     * @deprecated This is an experimental API that is not intended for general use and is subject to change in future versions
+     * {@inheritDoc}
      */
-    @Deprecated
-    public List<StyleablePropertyMetaData> getStyleablePropertyMetaData() {
-        return getClassStyleablePropertyMetaData();
+    @Override
+    public List<CssMetaData> getCssMetaData() {
+        return getClassCssMetaData();
     }
 
 }

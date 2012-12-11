@@ -30,7 +30,7 @@ import javafx.scene.image.Image;
 import javafx.scene.paint.Paint;
 import com.sun.javafx.css.ParsedValue;
 import com.sun.javafx.css.StyleConverter;
-import com.sun.javafx.css.StyleablePropertyMetaData;
+import com.sun.javafx.css.CssMetaData;
 import com.sun.javafx.scene.layout.region.RepeatStruct;
 
 /**
@@ -39,7 +39,7 @@ import com.sun.javafx.scene.layout.region.RepeatStruct;
 class BackgroundConverter extends StyleConverter<ParsedValue[], Background> {
     static final BackgroundConverter INSTANCE = new BackgroundConverter();
 
-    @Override public Background convert(Map<StyleablePropertyMetaData,Object> convertedValues) {
+    @Override public Background convert(Map<CssMetaData,Object> convertedValues) {
         final Paint[] fills = (Paint[]) convertedValues.get(Background.BACKGROUND_COLOR);
         final String[] imageUrls = (String[]) convertedValues.get(Background.BACKGROUND_IMAGE);
         final boolean hasFills = fills != null && fills.length > 0;
