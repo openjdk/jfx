@@ -1208,7 +1208,7 @@
 .scroll-bar:horizontal > .track-background {
      -fx-background-color:
         -fx-box-border,
-        linear-gradient(to bottom, derive(-fx-color,-15%), derive(-fx-color,2.2%) 20%, derive(-fx-color,60%));
+        linear-gradient(to top, derive(-fx-color,-15%), derive(-fx-color,2.2%) 20%, derive(-fx-color,60%));
     -fx-background-insets:  0, 1;
 }
 
@@ -1223,23 +1223,19 @@
 .scroll-bar:vertical > .track-background {
      -fx-background-color:
         -fx-box-border,
-        linear-gradient(to right, derive(-fx-color,-15%), derive(-fx-color,2.2%) 20%, derive(-fx-color,60%));
+        linear-gradient(to left, derive(-fx-color,-15%), derive(-fx-color,2.2%) 20%, derive(-fx-color,60%));
     -fx-background-insets:  0, 1;
 }
 
 .scroll-bar > .increment-button {
-    -fx-background-color:
-        -fx-box-border,
-        linear-gradient(to bottom, derive(-fx-color,30%) 5%, derive(-fx-color,-17%));
-    -fx-background-insets:  0, 1;
+    -fx-background-color: transparent;
+    -fx-background-insets:  0;
     -fx-padding: 0.25em; /* 3 */
 }
 
 .scroll-bar > .decrement-button {
-    -fx-background-color:
-        -fx-box-border,
-        linear-gradient(to bottom, derive(-fx-color,30%) 5%, derive(-fx-color,-17%));
-    -fx-background-insets:  0, 1;
+    -fx-background-color: transparent;
+    -fx-background-insets:  0;
     -fx-padding: 0.25em; /* 3 */
 }
 

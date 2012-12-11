@@ -314,13 +314,13 @@ public interface BuilderFactory {
 <p>When processing markup for an object that will be constructed by a builder, the <span class="code">Builder</span> instances are treated like value objects - if a <span class="code">Builder</span> implements the <span class="code">Map</span> interface, the <span class="code">put()</span> method is used to set the builder's attribute values. Otherwise, the builder is wrapped in a <span class="code">BeanAdapter</span> and its properties are assumed to be exposed via standard Bean setters.</p>
 
 <h4><a name="include_elements">&lt;fx:include&gt;</a></h4>
-<p><assert id="include" group="instance_declarations">The <span class="code">&lt;fx:include&gt;</span> tag creates an object from FXML markup defined in another file.</assert> It is used as follows:</p>
+<p>The <span class="code">&lt;fx:include&gt;</span> tag creates an object from FXML markup defined in another file. It is used as follows:</p>
 
 <pre class="code">
 &lt;fx:include source="<span class="variable">filename</span>"/&gt;
 </pre>
 
-<p>where <span class="variable">filename</span> is the name of the FXML file to include. <assert id="leading_slash_character" group="instance_declarations">Values that begin with a leading slash character are treated as relative to the classpath.</assert> <assert id="no_leading_slash_character" group="instance_declarations">Values with no leading slash are considered relative to the path of the current document.</assert></p>
+<p>where <span class="variable">filename</span> is the name of the FXML file to include. <assert id="include_leading_slash_character" group="instance_declarations">Values that begin with a leading slash character are treated as relative to the classpath.</assert> <assert id="include_no_leading_slash_character" group="instance_declarations">Values with no leading slash are considered relative to the path of the current document.</assert></p>
 
 <p>For example, given the following markup:</p>
 
@@ -420,9 +420,9 @@ public interface BuilderFactory {
 <p>Property elements are generally used when the property value is a complex type that can't be represented using a simple string-based attribute value, or when the character length of the value is so long that specifying it as an attribute would have a negative impact on readability.</p>
 
 <h5>Type Coercion</h5>
-<p>FXML uses "type coercion" to convert property values to the appropriate type as needed. Type coercion is required because the only data types supported by XML are elements, text, and attributes (whose values are also text). However, Java supports a number of different data types including built-in primitive value types as well as extensible reference types.</p>
+<p><assert id="coercion" group="property_elements">FXML uses "type coercion" to convert property values to the appropriate type as needed.</assert> Type coercion is required because the only data types supported by XML are elements, text, and attributes (whose values are also text). However, Java supports a number of different data types including built-in primitive value types as well as extensible reference types.</p>
 
-<p>The FXML loader uses the <span class="code">coerce()</span> method of <span class="code">BeanAdapter</span> to perform any required type conversions. This method is capable of performing basic primitive type conversions such as <span class="code">String</span> to <span class="code">boolean</span> or <span class="code">int</span> to <span class="code">double</span>, and will also convert <span class="code">String</span> to <span class="code">Class</span> or <span class="code">String</span> to <span class="code">Enum</span>. <assert id="additional_conversions" group="property_elements">Additional conversions can be implemented by defining a static <span class="code">valueOf()</span> method on the target type.</assert></p>
+<p>The FXML loader uses the <span class="code">coerce()</span> method of <span class="code">BeanAdapter</span> to perform any required type conversions. This method is capable of performing basic primitive type conversions such as <span class="code">String</span> to <span class="code">boolean</span> or <span class="code">int</span> to <span class="code">double</span>, and will also convert <span class="code">String</span> to <span class="code">Class</span> or <span class="code">String</span> to <span class="code">Enum</span>. Additional conversions can be implemented by defining a static <span class="code">valueOf()</span> method on the target type.</p>
 
 <h4><a name="read_only_list_property_elements">Read-Only List Properties</a></h4>
 <p><assert id="read_only_list_property" group="property_elements">A read-only list property is a Bean property whose getter returns an instance of <span class="code">java.util.List</span> and has no corresponding setter method. The contents of a read-only list element are automatically added to the list as they are processed.</assert></p>
