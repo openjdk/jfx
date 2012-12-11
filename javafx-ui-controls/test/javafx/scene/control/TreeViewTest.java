@@ -233,7 +233,7 @@ public class TreeViewTest {
         // despite the fact there are children in this tree, in reality none are
         // visible as the root node has no children (only siblings), and the
         // root node is not visible.
-        assertEquals(0, treeView.impl_getTreeItemCount());
+        assertEquals(0, treeView.getExpandedItemCount());
         
         assertEquals(-1, treeView.getRow(root));
         assertEquals(-1, treeView.getRow(child1));
