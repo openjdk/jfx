@@ -1308,8 +1308,8 @@ final public class StyleManager {
             if (hasParentStylesheets) {
                 final List<StylesheetContainer<Parent>> parentStylesheets =
                     gatherParentStylesheets(((node instanceof Parent) ? (Parent) node : node.getParent()));
-
-                for(int n=0, nMax=parentStylesheets.size(); n<nMax; n++) {
+                final int nMax = parentStylesheets == null ? 0 : parentStylesheets.size();
+                for(int n=0; n<nMax; n++) {
                     final StylesheetContainer<Parent> container = parentStylesheets.get(n);
                     container.keys.add(newKey); // remember that this stylesheet was used in this cache
                     if (container.selectorPartitioning != null) {
