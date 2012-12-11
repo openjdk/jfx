@@ -349,12 +349,14 @@ public class TableColumnHeader extends Region {
     }
     
     private boolean isSortingEnabled() {
-        return ! PlatformUtil.isEmbedded();
+        // this used to check if ! PlatformUtil.isEmbedded(), but has been changed
+        // to always return true (for now), as we want to support column sorting
+        // everywhere
+        return true;
     }
     
     private boolean isColumnReorderingEnabled() {
         // we only allow for column reordering if there are more than one column,
-        // and if we are not on an embedded platform
         return ! PlatformUtil.isEmbedded() && getTableViewSkin().getVisibleLeafColumns().size() > 1;
     }
     

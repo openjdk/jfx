@@ -355,7 +355,10 @@ public class NestedTableColumnHeader extends TableColumnHeader {
     private List<Rectangle> dragRects = new ArrayList<Rectangle>();
     
     private boolean isColumnResizingEnabled() {
-        return ! PlatformUtil.isEmbedded();
+        // this used to check if ! PlatformUtil.isEmbedded(), but has been changed
+        // to always return true (for now), as we want to support column resizing
+        // everywhere
+        return true;
     }
 
     private void columnResizingStarted(double startX) {

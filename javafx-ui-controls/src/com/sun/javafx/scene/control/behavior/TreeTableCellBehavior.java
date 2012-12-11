@@ -64,7 +64,7 @@ public class TreeTableCellBehavior extends TableCellBehaviorBase<TreeTableCell> 
 
     /** @{@inheritDoc} */
     @Override int getItemCount() {
-        return getTableControl().impl_getTreeItemCount();
+        return getTableControl().getExpandedItemCount();
     }
 
     /** @{@inheritDoc} */

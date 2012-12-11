@@ -137,7 +137,7 @@ public class TreeTableViewBehavior<T> extends TableViewBehaviorBase<TreeTableVie
 
     /** {@inheritDoc}  */
     @Override protected int getItemCount() {
-        return getControl().impl_getTreeItemCount();
+        return getControl().getExpandedItemCount();
     }
 
     /** {@inheritDoc}  */

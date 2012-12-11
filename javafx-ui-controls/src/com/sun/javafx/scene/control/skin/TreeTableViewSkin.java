@@ -44,6 +44,7 @@ import javafx.scene.Node;
 import javafx.scene.control.ResizeFeaturesBase;
 import javafx.scene.control.SelectionModel;
 import javafx.scene.control.TableColumnBase;
+import javafx.scene.control.TablePositionBase;
 import javafx.scene.control.TableSelectionModel;
 import javafx.scene.control.TableView;
 import javafx.scene.control.TreeItem;
@@ -133,7 +134,7 @@ public class TreeTableViewSkin<S> extends TableViewSkinBase<S, TreeTableView<S>,
         registerChangeListener(treeTableView.rootProperty(), "ROOT");
         registerChangeListener(treeTableView.showRootProperty(), "SHOW_ROOT");
         registerChangeListener(treeTableView.rowFactoryProperty(), "ROW_FACTORY");
-        registerChangeListener(treeTableView.impl_treeItemCountProperty(), "TREE_ITEM_COUNT");
+        registerChangeListener(treeTableView.expandedItemCountProperty(), "TREE_ITEM_COUNT");
         
         updateItemCount();
     }
@@ -202,7 +203,7 @@ public class TreeTableViewSkin<S> extends TableViewSkinBase<S, TreeTableView<S>,
                 // from the TreeItem root is an event where the count has changed.
                 EventType eventType = e.getEventType();
                 while (eventType != null) {
-                    if (eventType.equals(TreeItem.<S>treeItemCountChangeEvent())) {
+                    if (eventType.equals(TreeItem.<S>expandedItemCountChangeEvent())) {
                         needItemCountUpdate = true;
                         requestLayout();
                         break;
@@ -252,10 +253,13 @@ public class TreeTableViewSkin<S> extends TableViewSkinBase<S, TreeTableView<S>,
     }
 
     /** {@inheritDoc} */
-    @Override protected TableView.TableViewFocusModel getFocusModel() {
-//        return treeTableView.getFocusModel();
-        // TODO enable
-        return null;
+    @Override protected TreeTableView.TreeTableViewFocusModel getFocusModel() {
+        return treeTableView.getFocusModel();
+    }
+    
+    /** {@inheritDoc} */
+    @Override protected TablePositionBase getFocusedCell() {
+        return treeTableView.getFocusModel().getFocusedCell();
     }
 
     /** {@inheritDoc} */
@@ -352,7 +356,7 @@ public class TreeTableViewSkin<S> extends TableViewSkinBase<S, TreeTableView<S>,
     
     /** {@inheritDoc} */
     @Override public int getItemCount() {
-        return treeTableView.impl_getTreeItemCount();
+        return treeTableView.getExpandedItemCount();
     }
     
     /** {@inheritDoc} */
@@ -518,7 +522,7 @@ public class TreeTableViewSkin<S> extends TableViewSkinBase<S, TreeTableView<S>,
 
         @Override public int size() {
             if (size == -1) {
-                size = treeTable.impl_getTreeItemCount();
+                size = treeTable.getExpandedItemCount();
             }
             return size;
         }

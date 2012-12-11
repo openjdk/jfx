@@ -167,7 +167,7 @@ public class TreeViewSkin<T> extends VirtualContainerBase<TreeView<T>, TreeViewB
                 // from the TreeItem root is an event where the count has changed.
                 EventType eventType = e.getEventType();
                 while (eventType != null) {
-                    if (eventType.equals(TreeItem.<T>treeItemCountChangeEvent())) {
+                    if (eventType.equals(TreeItem.<T>expandedItemCountChangeEvent())) {
                         needItemCountUpdate = true;
                         requestLayout();
                         break;
@@ -197,7 +197,7 @@ public class TreeViewSkin<T> extends VirtualContainerBase<TreeView<T>, TreeViewB
     }
 
     @Override public int getItemCount() {
-        return getSkinnable().impl_getTreeItemCount();
+        return getSkinnable().getExpandedItemCount();
     }
 
     private void updateItemCount() {

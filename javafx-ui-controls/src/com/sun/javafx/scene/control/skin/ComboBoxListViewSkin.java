@@ -124,8 +124,10 @@ public class ComboBoxListViewSkin<T> extends ComboBoxPopupControl<T> {
         
         // move focus in to the textfield if the comboBox is editable
         comboBox.focusedProperty().addListener(new ChangeListener<Boolean>() {
-            @Override public void changed(ObservableValue<? extends Boolean> ov, Boolean t, Boolean t1) {
-                updateFakeFocus(comboBox.isFocused());
+            @Override public void changed(ObservableValue<? extends Boolean> ov, Boolean t, Boolean hasFocus) {
+                if (comboBox.isEditable()) {
+                    updateFakeFocus(hasFocus);
+                }
             }
         });
         
@@ -350,22 +352,15 @@ public class ComboBoxListViewSkin<T> extends ComboBoxPopupControl<T> {
         // externally for people listening to the focus property.
         // Also, (for RT-21454) set the currently typed text as the value when focus 
         // is lost from the ComboBox
+        textField.addEventFilter(MouseEvent.MOUSE_CLICKED, new EventHandler<MouseEvent>() {
+            @Override public void handle(MouseEvent t) {
+                comboBox.requestFocus();
+                t.consume();
+            }
+        });
         textField.focusedProperty().addListener(new ChangeListener<Boolean>() {
             @Override public void changed(ObservableValue<? extends Boolean> ov, Boolean t, Boolean hasFocus) {
-                if (hasFocus) {
-                    // Using Platform.runLater here, as without it it seems we
-                    // enter into some form of race condition where we are 
-                    // wanting to set focus on the comboBox whilst the textField
-                    // is still notifying of its focus gain.
-                    // This issue was identified in RT-21088.
-                    Platform.runLater(new Runnable() {
-                        @Override public void run() {
-                            comboBox.requestFocus();
-                        }
-                    });
-                }
-                
-                updateFakeFocus(hasFocus);
+                if (! comboBox.isEditable()) return;
                 
                 // RT-21454 starts here
                 if (! hasFocus) {

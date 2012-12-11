@@ -333,7 +333,7 @@ public class TreeViewBehavior<T> extends BehaviorBase<TreeView<T>> {
     private void focusLastRow() {
         FocusModel fm = getControl().getFocusModel();
         if (fm == null) return;
-        fm.focus(getControl().impl_getTreeItemCount() - 1);
+        fm.focus(getControl().getExpandedItemCount() - 1);
         
         if (onMoveToLastCell != null) onMoveToLastCell.run();
     }
@@ -484,7 +484,7 @@ public class TreeViewBehavior<T> extends BehaviorBase<TreeView<T>> {
         if (fm == null) return;
 
         int focusIndex = fm.getFocusedIndex();
-        if (focusIndex == getControl().impl_getTreeItemCount() - 1) {
+        if (focusIndex == getControl().getExpandedItemCount() - 1) {
             return;
         }
 
@@ -494,14 +494,14 @@ public class TreeViewBehavior<T> extends BehaviorBase<TreeView<T>> {
     }
 
     private void selectFirstRow() {
-        if (getControl().impl_getTreeItemCount() > 0) {
+        if (getControl().getExpandedItemCount() > 0) {
             getControl().getSelectionModel().clearAndSelect(0);
             if (onMoveToFirstCell != null) onMoveToFirstCell.run();
         }
     }
 
     private void selectLastRow() {
-        getControl().getSelectionModel().clearAndSelect(getControl().impl_getTreeItemCount() - 1);
+        getControl().getSelectionModel().clearAndSelect(getControl().getExpandedItemCount() - 1);
         onMoveToLastCell.run();
     }
 
@@ -536,7 +536,7 @@ public class TreeViewBehavior<T> extends BehaviorBase<TreeView<T>> {
         }
         
         sm.clearSelection();
-        sm.selectRange(leadIndex, getControl().impl_getTreeItemCount() - 1);
+        sm.selectRange(leadIndex, getControl().getExpandedItemCount() - 1);
         
         if (isShiftDown) {
             setAnchor(leadIndex);
@@ -795,7 +795,7 @@ public class TreeViewBehavior<T> extends BehaviorBase<TreeView<T>> {
         if (fm == null) return;
 
         int index = fm.getFocusedIndex() + 1;
-        sm.selectRange(index, getControl().impl_getTreeItemCount());
+        sm.selectRange(index, getControl().getExpandedItemCount());
 
         if (onMoveToLastCell != null) onMoveToLastCell.run();
     }

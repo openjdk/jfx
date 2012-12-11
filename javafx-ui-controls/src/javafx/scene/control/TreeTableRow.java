@@ -325,7 +325,7 @@ public class TreeTableRow<T> extends IndexedCell<T> {
         if (tv == null) return;
         
         // Compute whether the index for this cell is for a real item
-        boolean valid = getIndex() >=0 && getIndex() < tv.impl_getTreeItemCount();
+        boolean valid = getIndex() >=0 && getIndex() < tv.getExpandedItemCount();
 
         // get the new treeItem that is about to go in to the TreeCell
         TreeItem<T> treeItem = valid ? tv.getTreeItem(getIndex()) : null;

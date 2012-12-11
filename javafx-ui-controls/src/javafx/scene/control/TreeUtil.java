@@ -39,7 +39,7 @@ class TreeUtil {
         return node.getExpandedDescendentCount(treeItemCountDirty);
     }
     
-    static int updateTreeItemCount(TreeItem treeItem, boolean treeItemCountDirty, boolean isShowRoot) {
+    static int updateExpandedItemCount(TreeItem treeItem, boolean treeItemCountDirty, boolean isShowRoot) {
         if (treeItem == null) {
             return 0;
         } else if (! treeItem.isExpanded()) {
