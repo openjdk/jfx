@@ -27,7 +27,7 @@
 package javafx.scene.layout;
 
 import com.sun.javafx.css.*;
-import com.sun.javafx.css.Stylesheet.Origin;
+import com.sun.javafx.css.Origin;
 import com.sun.javafx.css.converters.EnumConverter;
 import com.sun.javafx.css.converters.SizeConverter;
 import static javafx.geometry.Orientation.HORIZONTAL;
@@ -295,7 +295,7 @@ public class TilePane extends Pane {
                 }
                 
                 @Override 
-                public StyleableProperty getStyleableProperty() {
+                public StyleablePropertyMetaData getStyleablePropertyMetaData() {
                     return StyleableProperties.ORIENTATION;
                 }
 
@@ -337,7 +337,7 @@ public class TilePane extends Pane {
                 }
                 
                 @Override
-                public StyleableProperty getStyleableProperty() {
+                public StyleablePropertyMetaData getStyleablePropertyMetaData() {
                     return StyleableProperties.PREF_ROWS;
                 }
 
@@ -378,7 +378,7 @@ public class TilePane extends Pane {
                 }
                 
                 @Override
-                public StyleableProperty getStyleableProperty() {
+                public StyleablePropertyMetaData getStyleablePropertyMetaData() {
                     return StyleableProperties.PREF_COLUMNS;
                 }
 
@@ -418,7 +418,7 @@ public class TilePane extends Pane {
                 }
                 
                 @Override
-                public StyleableProperty getStyleableProperty() {
+                public StyleablePropertyMetaData getStyleablePropertyMetaData() {
                     return StyleableProperties.PREF_TILE_WIDTH;
                 }
 
@@ -459,7 +459,7 @@ public class TilePane extends Pane {
                 }
                 
                 @Override 
-                public StyleableProperty getStyleableProperty() {
+                public StyleablePropertyMetaData getStyleablePropertyMetaData() {
                     return StyleableProperties.PREF_TILE_HEIGHT;
                 }
 
@@ -526,7 +526,7 @@ public class TilePane extends Pane {
                 }
                 
                 @Override 
-                public StyleableProperty getStyleableProperty() {
+                public StyleablePropertyMetaData getStyleablePropertyMetaData() {
                     return StyleableProperties.HGAP;
                 }
 
@@ -560,7 +560,7 @@ public class TilePane extends Pane {
                 }
                 
                 @Override 
-                public StyleableProperty getStyleableProperty() {
+                public StyleablePropertyMetaData getStyleablePropertyMetaData() {
                     return StyleableProperties.VGAP;
                 }
 
@@ -601,7 +601,7 @@ public class TilePane extends Pane {
                 }
                 
                 @Override 
-                public StyleableProperty getStyleableProperty() {
+                public StyleablePropertyMetaData getStyleablePropertyMetaData() {
                     return StyleableProperties.ALIGNMENT;
                 }
 
@@ -637,7 +637,7 @@ public class TilePane extends Pane {
                 }
                 
                 @Override
-                public StyleableProperty getStyleableProperty() {
+                public StyleablePropertyMetaData getStyleablePropertyMetaData() {
                     return StyleableProperties.TILE_ALIGNMENT;
                 }
 
@@ -901,8 +901,8 @@ public class TilePane extends Pane {
       */
      private static class StyleableProperties {
 
-         private static final StyleableProperty<TilePane,Pos> ALIGNMENT = 
-             new StyleableProperty<TilePane,Pos>("-fx-alignment",
+         private static final StyleablePropertyMetaData<TilePane,Pos> ALIGNMENT = 
+             new StyleablePropertyMetaData<TilePane,Pos>("-fx-alignment",
                  new EnumConverter<Pos>(Pos.class), 
                  Pos.TOP_LEFT) {
 
@@ -917,8 +917,8 @@ public class TilePane extends Pane {
             }
         };
          
-         private static final StyleableProperty<TilePane,Number> PREF_COLUMNS = 
-             new StyleableProperty<TilePane,Number>("-fx-pref-columns",
+         private static final StyleablePropertyMetaData<TilePane,Number> PREF_COLUMNS = 
+             new StyleablePropertyMetaData<TilePane,Number>("-fx-pref-columns",
                  SizeConverter.getInstance(), 5.0) {
 
             @Override public void set(TilePane node, Number value, Origin origin) {
@@ -937,8 +937,8 @@ public class TilePane extends Pane {
             }
         };
                  
-         private static final StyleableProperty<TilePane,Number> HGAP = 
-             new StyleableProperty<TilePane,Number>("-fx-hgap",
+         private static final StyleablePropertyMetaData<TilePane,Number> HGAP = 
+             new StyleablePropertyMetaData<TilePane,Number>("-fx-hgap",
                  SizeConverter.getInstance(), 0.0) {
 
             @Override
@@ -953,8 +953,8 @@ public class TilePane extends Pane {
             }
         };
          
-         private static final StyleableProperty<TilePane,Number> PREF_ROWS = 
-             new StyleableProperty<TilePane,Number>("-fx-pref-rows",
+         private static final StyleablePropertyMetaData<TilePane,Number> PREF_ROWS = 
+             new StyleablePropertyMetaData<TilePane,Number>("-fx-pref-rows",
                  SizeConverter.getInstance(), 5.0) {
 
             @Override public void set(TilePane node, Number value, Origin origin) {
@@ -973,8 +973,8 @@ public class TilePane extends Pane {
             }
         };
 
-         private static final StyleableProperty<TilePane,Pos> TILE_ALIGNMENT = 
-             new StyleableProperty<TilePane,Pos>("-fx-tile-alignment",
+         private static final StyleablePropertyMetaData<TilePane,Pos> TILE_ALIGNMENT = 
+             new StyleablePropertyMetaData<TilePane,Pos>("-fx-tile-alignment",
                  new EnumConverter<Pos>(Pos.class), 
                  Pos.CENTER) {
 
@@ -990,8 +990,8 @@ public class TilePane extends Pane {
             }
          };
          
-         private static final StyleableProperty<TilePane,Number> PREF_TILE_WIDTH = 
-             new StyleableProperty<TilePane,Number>("-fx-pref-tile-width",
+         private static final StyleablePropertyMetaData<TilePane,Number> PREF_TILE_WIDTH = 
+             new StyleablePropertyMetaData<TilePane,Number>("-fx-pref-tile-width",
                  SizeConverter.getInstance(), USE_COMPUTED_SIZE) {
 
             @Override
@@ -1006,8 +1006,8 @@ public class TilePane extends Pane {
             }
         };
 
-         private static final StyleableProperty<TilePane,Number> PREF_TILE_HEIGHT = 
-             new StyleableProperty<TilePane,Number>("-fx-pref-tile-height",
+         private static final StyleablePropertyMetaData<TilePane,Number> PREF_TILE_HEIGHT = 
+             new StyleablePropertyMetaData<TilePane,Number>("-fx-pref-tile-height",
                  SizeConverter.getInstance(), USE_COMPUTED_SIZE) {
 
             @Override
@@ -1022,8 +1022,8 @@ public class TilePane extends Pane {
             }
          };
 
-         private static final StyleableProperty<TilePane,Orientation> ORIENTATION = 
-             new StyleableProperty<TilePane,Orientation>("-fx-orientation",
+         private static final StyleablePropertyMetaData<TilePane,Orientation> ORIENTATION = 
+             new StyleablePropertyMetaData<TilePane,Orientation>("-fx-orientation",
                  new EnumConverter<Orientation>(Orientation.class), 
                  Orientation.HORIZONTAL) {
 
@@ -1045,8 +1045,8 @@ public class TilePane extends Pane {
                 }
          };
          
-         private static final StyleableProperty<TilePane,Number> VGAP = 
-             new StyleableProperty<TilePane,Number>("-fx-vgap",
+         private static final StyleablePropertyMetaData<TilePane,Number> VGAP = 
+             new StyleablePropertyMetaData<TilePane,Number>("-fx-vgap",
                  SizeConverter.getInstance(), 0.0) {
 
             @Override
@@ -1061,10 +1061,10 @@ public class TilePane extends Pane {
             }
         };
 
-         private static final List<StyleableProperty> STYLEABLES;
+         private static final List<StyleablePropertyMetaData> STYLEABLES;
          static {
-            final List<StyleableProperty> styleables = 
-                new ArrayList<StyleableProperty>(Region.impl_CSS_STYLEABLES());
+            final List<StyleablePropertyMetaData> styleables = 
+                new ArrayList<StyleablePropertyMetaData>(Region.getClassStyleablePropertyMetaData());
             Collections.addAll(styleables,
                 ALIGNMENT,
                 HGAP,
@@ -1083,12 +1083,12 @@ public class TilePane extends Pane {
     /**
      * Super-lazy instantiation pattern from Bill Pugh. StyleableProperties is referenced
      * no earlier (and therefore loaded no earlier by the class loader) than
-     * the moment that  impl_CSS_STYLEABLES() is called.
+     * the moment that  getClassStyleablePropertyMetaData() is called.
      * @treatAsPrivate implementation detail
      * @deprecated This is an internal API that is not intended for use and will be removed in the next version
      */
     @Deprecated
-    public static List<StyleableProperty> impl_CSS_STYLEABLES() {
+    public static List<StyleablePropertyMetaData> getClassStyleablePropertyMetaData() {
         return TilePane.StyleableProperties.STYLEABLES;
     }
 
@@ -1098,8 +1098,8 @@ public class TilePane extends Pane {
      * @deprecated This is an experimental API that is not intended for general use and is subject to change in future versions
      */
     @Deprecated
-    public List<StyleableProperty> impl_getStyleableProperties() {
-        return impl_CSS_STYLEABLES();
+    public List<StyleablePropertyMetaData> getStyleablePropertyMetaData() {
+        return getClassStyleablePropertyMetaData();
     }
 
 }

@@ -5,23 +5,17 @@ package javafx.scene.control;
 
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertSame;
-import javafx.scene.control.Control;
-import javafx.scene.control.ControlStub;
 
 import org.junit.Before;
 import org.junit.Test;
 
-import com.sun.javafx.scene.control.behavior.BehaviorBase;
-
 public class SkinBaseTest {
     private ControlStub c;
-    private BehaviorBaseStub<ControlStub> b;
-    private SkinBaseStub<ControlStub, BehaviorBaseStub<ControlStub>> s;
+    private SkinBaseStub<ControlStub> s;
 
     @Before public void setup() {
         c = new ControlStub();
-        b = new BehaviorBaseStub<ControlStub>(c);
-        s = new SkinBaseStub<ControlStub, BehaviorBaseStub<ControlStub>>(c, b);
+        s = new SkinBaseStub<ControlStub>(c);
     }
     
     @Test public void skinNotAssignedToControlShouldStillHaveReferenceToControl() {
@@ -39,21 +33,9 @@ public class SkinBaseTest {
         assertNull(s.getSkinnable());
     }
 
-    @Test public void skinRemovedFromControlShouldHaveNullReferenceToBehavior() {
-        c.setSkin(s);
-        c.setSkin(null);
-        assertNull(s.getBehavior());
-    }
-
-    public static final class SkinBaseStub<C extends Control, B extends BehaviorBase<C>> extends SkinBase<C,B> {
-        public SkinBaseStub(C control, B behavior) {
-            super(control, behavior);
-        }
-    }
-    
-    public static final class BehaviorBaseStub<C extends Control> extends BehaviorBase<C> {
-        public BehaviorBaseStub(C control) {
+    public static final class SkinBaseStub<C extends Control> extends SkinBase<C> {
+        public SkinBaseStub(C control) {
             super(control);
-        }        
+        }
     }
 }

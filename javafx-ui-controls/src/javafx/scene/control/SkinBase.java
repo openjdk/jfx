@@ -24,13 +24,11 @@
  */
 package javafx.scene.control;
 
-import com.sun.javafx.css.StyleableProperty;
+import com.sun.javafx.css.StyleablePropertyMetaData;
 import com.sun.javafx.scene.control.MultiplePropertyChangeListenerHandler;
-import com.sun.javafx.scene.control.behavior.BehaviorBase;
-import java.util.*;
-import javafx.beans.value.ChangeListener;
+import java.util.Collections;
+import java.util.List;
 import javafx.beans.value.ObservableValue;
-import javafx.beans.value.WeakChangeListener;
 import javafx.collections.ObservableList;
 import javafx.event.EventHandler;
 import javafx.event.EventType;
@@ -45,7 +43,7 @@ import javafx.util.Callback;
 /**
  *
  */
-public abstract class SkinBase<C extends Control, BB extends BehaviorBase<C>> implements Skin<C> {
+public abstract class SkinBase<C extends Control> implements Skin<C> {
     
     /***************************************************************************
      *                                                                         *
@@ -65,17 +63,6 @@ public abstract class SkinBase<C extends Control, BB extends BehaviorBase<C>> im
      * A local field that directly refers to the children list inside the Control.
      */
     private ObservableList<Node> children;
-    
-    /**
-     * The {@link BehaviorBase} that encapsulates the interaction with the
-     * {@link Control} from this {@code Skin}. The {@code Skin} does not modify
-     * the {@code Control} directly, but rather redirects events into the
-     * {@code BehaviorBase} which then handles the events by modifying internal state
-     * and public state in the {@code Control}. Generally, specific
-     * {@code Skin} implementations will require specific {@code BehaviorBase}
-     * implementations. For example, a ButtonSkin might require a ButtonBehavior.
-     */
-    private BB behavior;
     
     /**
      * This is part of the workaround introduced during delomboking. We probably will
@@ -105,28 +92,6 @@ public abstract class SkinBase<C extends Control, BB extends BehaviorBase<C>> im
         }
     };
     
-    /**
-     * Forwards mouse events received by a MouseListener to the behavior.
-     * Note that we use this pattern to remove some of the anonymous inner
-     * classes which we'd otherwise have to create. When lambda expressions
-     * are supported, we could do it that way instead (or use MethodHandles).
-     */
-    private final EventHandler<MouseEvent> mouseHandler =
-            new EventHandler<MouseEvent>() {
-        @Override public void handle(MouseEvent e) {
-            final EventType<?> type = e.getEventType();
-
-            if (type == MouseEvent.MOUSE_ENTERED) behavior.mouseEntered(e);
-            else if (type == MouseEvent.MOUSE_EXITED) behavior.mouseExited(e);
-            else if (type == MouseEvent.MOUSE_PRESSED) behavior.mousePressed(e);
-            else if (type == MouseEvent.MOUSE_RELEASED) behavior.mouseReleased(e);
-            else if (type == MouseEvent.MOUSE_DRAGGED) behavior.mouseDragged(e);
-            else { // no op
-                throw new AssertionError("Unsupported event type received");
-            }
-        }
-    };
-    
     /***************************************************************************
      *                                                                         *
      * Constructor                                                             *
@@ -137,25 +102,15 @@ public abstract class SkinBase<C extends Control, BB extends BehaviorBase<C>> im
      * Constructor for all SkinBase instances.
      * 
      * @param control The control for which this Skin should attach to.
-     * @param behavior The behavior for which this Skin should defer to.
      */
-    protected SkinBase(final C control, final BB behavior) {
-        if (control == null || behavior == null) {
-            throw new IllegalArgumentException("Cannot pass null for control or behavior");
+    protected SkinBase(final C control) {
+        if (control == null) {
+            throw new IllegalArgumentException("Cannot pass null for control");
         }
 
         // Update the control and behavior
         this.control = control;
-        this.behavior = behavior;
         this.children = control.getControlChildren();
-        
-        // We will auto-add listeners for wiring up Region mouse events to
-        // be sent to the behavior
-        control.addEventHandler(MouseEvent.MOUSE_ENTERED, mouseHandler);
-        control.addEventHandler(MouseEvent.MOUSE_EXITED, mouseHandler);
-        control.addEventHandler(MouseEvent.MOUSE_PRESSED, mouseHandler);
-        control.addEventHandler(MouseEvent.MOUSE_RELEASED, mouseHandler);
-        control.addEventHandler(MouseEvent.MOUSE_DRAGGED, mouseHandler);
         
         // Default behavior for controls is to consume all mouse events
         consumeMouseEvents(true);
@@ -178,11 +133,6 @@ public abstract class SkinBase<C extends Control, BB extends BehaviorBase<C>> im
     @Override public final Node getNode() {
         return control; 
     }
-    
-    /** {@inheritDoc} */
-    public final BB getBehavior() {
-        return behavior;
-    }
 
     /** {@inheritDoc} */
     @Override public void dispose() { 
@@ -191,16 +141,9 @@ public abstract class SkinBase<C extends Control, BB extends BehaviorBase<C>> im
             changeListenerHandler.dispose();
         }
 
-        control.removeEventHandler(MouseEvent.MOUSE_ENTERED, mouseHandler);
-        control.removeEventHandler(MouseEvent.MOUSE_EXITED, mouseHandler);
-        control.removeEventHandler(MouseEvent.MOUSE_PRESSED, mouseHandler);
-        control.removeEventHandler(MouseEvent.MOUSE_RELEASED, mouseHandler);
-        control.removeEventHandler(MouseEvent.MOUSE_DRAGGED, mouseHandler);
-//        
 //        control.removeEventHandler(ContextMenuEvent.CONTEXT_MENU_REQUESTED, contextMenuHandler);
 
         this.control = null;
-        this.behavior = null;
     }
     
     
@@ -534,20 +477,19 @@ public abstract class SkinBase<C extends Control, BB extends BehaviorBase<C>> im
      * @deprecated This is an internal API that is not intended for use and will be removed in the next version
      */
     @Deprecated public long impl_getPseudoClassState() {
-        // check if behaviour can be null...
-        return getBehavior().impl_getPseudoClassState(); 
+        return 0; 
     }
 
     private static class StyleableProperties {
 
-        private static final List<StyleableProperty> STYLEABLES;
+        private static final List<StyleablePropertyMetaData> STYLEABLES;
 
         static {
-            STYLEABLES = Collections.unmodifiableList(Control.impl_CSS_STYLEABLES());
+            STYLEABLES = Collections.unmodifiableList(Control.getClassStyleablePropertyMetaData());
         }
     }
 
-    public static List<StyleableProperty> impl_CSS_STYLEABLES() {
+    public static List<StyleablePropertyMetaData> getClassStyleablePropertyMetaData() {
         return SkinBase.StyleableProperties.STYLEABLES;
     }
 
@@ -557,8 +499,8 @@ public abstract class SkinBase<C extends Control, BB extends BehaviorBase<C>> im
      * @deprecated This is an experimental API that is not intended for general use and is subject to change in future versions
      */
     @Deprecated
-    public List<StyleableProperty> impl_getStyleableProperties() {
-        return impl_CSS_STYLEABLES();
+    public List<StyleablePropertyMetaData> getStyleablePropertyMetaData() {
+        return getClassStyleablePropertyMetaData();
     }
     
     

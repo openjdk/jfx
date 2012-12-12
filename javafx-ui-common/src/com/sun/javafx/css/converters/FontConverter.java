@@ -35,7 +35,7 @@ import com.sun.javafx.Utils;
 import com.sun.javafx.css.FontUnits;
 import com.sun.javafx.css.Size;
 import com.sun.javafx.css.StyleConverter;
-import com.sun.javafx.css.StyleableProperty;
+import com.sun.javafx.css.StyleablePropertyMetaData;
 import com.sun.javafx.css.ParsedValue;
 import java.util.Map.Entry;
 
@@ -74,14 +74,14 @@ public final class FontConverter extends StyleConverter<ParsedValue[], Font> {
     }
 
     @Override
-    public Font convert(Map<StyleableProperty, Object> convertedValues) {
+    public Font convert(Map<StyleablePropertyMetaData, Object> convertedValues) {
         Font font = Font.getDefault();
         double size = font.getSize();
         String family = font.getFamily();
         FontWeight weight = FontWeight.NORMAL;
         FontPosture style = FontPosture.REGULAR;
         
-        for (Entry<StyleableProperty, Object> entry : convertedValues.entrySet()) {
+        for (Entry<StyleablePropertyMetaData, Object> entry : convertedValues.entrySet()) {
 
             Object value = entry.getValue();
             if (value == null) {

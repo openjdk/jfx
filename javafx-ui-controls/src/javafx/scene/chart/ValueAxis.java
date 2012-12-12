@@ -89,7 +89,7 @@ public abstract class ValueAxis<T extends Number> extends Axis<T> {
         }
 
         @Override
-        public StyleableProperty getStyleableProperty() {
+        public StyleablePropertyMetaData getStyleablePropertyMetaData() {
             return StyleableProperties.MINOR_TICK_VISIBLE;
         }
     };
@@ -155,6 +155,7 @@ public abstract class ValueAxis<T extends Number> extends Axis<T> {
     private final ObjectProperty<StringConverter<T>> tickLabelFormatter = new ObjectPropertyBase<StringConverter<T>>(null){
         @Override protected void invalidated() {
             invalidateRange();
+            formatterValid = true;
             requestAxisLayout();
         }
 
@@ -193,7 +194,7 @@ public abstract class ValueAxis<T extends Number> extends Axis<T> {
         }
 
         @Override
-        public StyleableProperty getStyleableProperty() {
+        public StyleablePropertyMetaData getStyleablePropertyMetaData() {
             return StyleableProperties.MINOR_TICK_LENGTH;
         }
     };
@@ -226,7 +227,7 @@ public abstract class ValueAxis<T extends Number> extends Axis<T> {
         }
 
         @Override
-        public StyleableProperty getStyleableProperty() {
+        public StyleablePropertyMetaData getStyleablePropertyMetaData() {
             return StyleableProperties.MINOR_TICK_COUNT;
         }
     };
@@ -514,8 +515,8 @@ public abstract class ValueAxis<T extends Number> extends Axis<T> {
 
      /** @treatAsPrivate implementation detail */
     private static class StyleableProperties {
-        private static final StyleableProperty<ValueAxis,Number> MINOR_TICK_LENGTH =
-            new StyleableProperty<ValueAxis,Number>("-fx-minor-tick-length",
+        private static final StyleablePropertyMetaData<ValueAxis,Number> MINOR_TICK_LENGTH =
+            new StyleablePropertyMetaData<ValueAxis,Number>("-fx-minor-tick-length",
                 SizeConverter.getInstance(), 5.0) {
 
             @Override
@@ -529,8 +530,8 @@ public abstract class ValueAxis<T extends Number> extends Axis<T> {
             }
         };
         
-        private static final StyleableProperty<ValueAxis,Number> MINOR_TICK_COUNT =
-            new StyleableProperty<ValueAxis,Number>("-fx-minor-tick-count",
+        private static final StyleablePropertyMetaData<ValueAxis,Number> MINOR_TICK_COUNT =
+            new StyleablePropertyMetaData<ValueAxis,Number>("-fx-minor-tick-count",
                 SizeConverter.getInstance(), 5) {
 
             @Override
@@ -544,8 +545,8 @@ public abstract class ValueAxis<T extends Number> extends Axis<T> {
             }
         };
         
-         private static final StyleableProperty<ValueAxis,Boolean> MINOR_TICK_VISIBLE =
-            new StyleableProperty<ValueAxis,Boolean>("-fx-minor-tick-visible",
+         private static final StyleablePropertyMetaData<ValueAxis,Boolean> MINOR_TICK_VISIBLE =
+            new StyleablePropertyMetaData<ValueAxis,Boolean>("-fx-minor-tick-visible",
                  BooleanConverter.getInstance(), Boolean.TRUE) {
 
             @Override
@@ -559,10 +560,10 @@ public abstract class ValueAxis<T extends Number> extends Axis<T> {
             }
         };
 
-        private static final List<StyleableProperty> STYLEABLES;
+        private static final List<StyleablePropertyMetaData> STYLEABLES;
          static {
-            final List<StyleableProperty> styleables =
-                new ArrayList<StyleableProperty>(Axis.impl_CSS_STYLEABLES());
+            final List<StyleablePropertyMetaData> styleables =
+                new ArrayList<StyleablePropertyMetaData>(Axis.getClassStyleablePropertyMetaData());
             Collections.addAll(styleables,
                  MINOR_TICK_LENGTH,
                  MINOR_TICK_COUNT,
@@ -577,7 +578,7 @@ public abstract class ValueAxis<T extends Number> extends Axis<T> {
      * @deprecated This is an internal API that is not intended for use and will be removed in the next version
      */
     @Deprecated
-    public static List<StyleableProperty> impl_CSS_STYLEABLES() {
+    public static List<StyleablePropertyMetaData> getClassStyleablePropertyMetaData() {
         return ValueAxis.StyleableProperties.STYLEABLES;
     }
 
@@ -587,8 +588,8 @@ public abstract class ValueAxis<T extends Number> extends Axis<T> {
      * @deprecated This is an experimental API that is not intended for general use and is subject to change in future versions
      */
     @Deprecated
-    public List<StyleableProperty> impl_getStyleableProperties() {
-        return impl_CSS_STYLEABLES();
+    public List<StyleablePropertyMetaData> getStyleablePropertyMetaData() {
+        return getClassStyleablePropertyMetaData();
     }
 
 }

@@ -32,7 +32,7 @@ import java.util.List;
 import javafx.scene.control.Cell;
 
 import com.sun.javafx.css.StyleableDoubleProperty;
-import com.sun.javafx.css.StyleableProperty;
+import com.sun.javafx.css.StyleablePropertyMetaData;
 import com.sun.javafx.css.converters.SizeConverter;
 import com.sun.javafx.scene.control.behavior.CellBehaviorBase;
 import javafx.beans.property.DoubleProperty;
@@ -92,7 +92,7 @@ public class CellSkinBase<C extends Cell, B extends CellBehaviorBase<C>> extends
                 }
 
                 @Override
-                public StyleableProperty getStyleableProperty() {
+                public StyleablePropertyMetaData getStyleablePropertyMetaData() {
                     return StyleableProperties.CELL_SIZE;
                 }
             }; 
@@ -126,8 +126,8 @@ public class CellSkinBase<C extends Cell, B extends CellBehaviorBase<C>> extends
       * @treatAsPrivate implementation detail
       */
      private static class StyleableProperties {
-         private final static StyleableProperty<Cell,Number> CELL_SIZE =
-                new StyleableProperty<Cell,Number>("-fx-cell-size",
+         private final static StyleablePropertyMetaData<Cell,Number> CELL_SIZE =
+                new StyleablePropertyMetaData<Cell,Number>("-fx-cell-size",
                  SizeConverter.getInstance(), DEFAULT_CELL_SIZE) {
 
             @Override
@@ -150,11 +150,11 @@ public class CellSkinBase<C extends Cell, B extends CellBehaviorBase<C>> extends
             }
         };
 
-         private static final List<StyleableProperty> STYLEABLES;
+         private static final List<StyleablePropertyMetaData> STYLEABLES;
          static {
 
-            final List<StyleableProperty> styleables = 
-                new ArrayList<StyleableProperty>(SkinBase.impl_CSS_STYLEABLES());
+            final List<StyleablePropertyMetaData> styleables = 
+                new ArrayList<StyleablePropertyMetaData>(SkinBase.getClassStyleablePropertyMetaData());
             Collections.addAll(styleables,
                 CELL_SIZE
             );
@@ -168,7 +168,7 @@ public class CellSkinBase<C extends Cell, B extends CellBehaviorBase<C>> extends
      * @deprecated This is an internal API that is not intended for use and will be removed in the next version
      */
     @Deprecated
-    public static List<StyleableProperty> impl_CSS_STYLEABLES() {
+    public static List<StyleablePropertyMetaData> getClassStyleablePropertyMetaData() {
         return StyleableProperties.STYLEABLES;
     };
 
@@ -178,8 +178,8 @@ public class CellSkinBase<C extends Cell, B extends CellBehaviorBase<C>> extends
      * @deprecated This is an experimental API that is not intended for general use and is subject to change in future versions
      */
     @Deprecated
-    public List<StyleableProperty> impl_getStyleableProperties() {
-        return impl_CSS_STYLEABLES();
+    public List<StyleablePropertyMetaData> getStyleablePropertyMetaData() {
+        return getClassStyleablePropertyMetaData();
     }
 
 }

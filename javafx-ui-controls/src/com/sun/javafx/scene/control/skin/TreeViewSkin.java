@@ -36,7 +36,7 @@ import javafx.scene.input.MouseEvent;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.StackPane;
 
-import com.sun.javafx.scene.control.WeakEventHandler;
+import javafx.event.WeakEventHandler;
 import com.sun.javafx.scene.control.behavior.TreeViewBehavior;
 import java.lang.ref.WeakReference;
 import javafx.collections.ObservableMap;
@@ -167,7 +167,7 @@ public class TreeViewSkin<T> extends VirtualContainerBase<TreeView<T>, TreeViewB
                 // from the TreeItem root is an event where the count has changed.
                 EventType eventType = e.getEventType();
                 while (eventType != null) {
-                    if (eventType.equals(TreeItem.<T>treeItemCountChangeEvent())) {
+                    if (eventType.equals(TreeItem.<T>expandedItemCountChangeEvent())) {
                         needItemCountUpdate = true;
                         requestLayout();
                         break;
@@ -191,13 +191,13 @@ public class TreeViewSkin<T> extends VirtualContainerBase<TreeView<T>, TreeViewB
         }
         weakRoot = new WeakReference<TreeItem>(newRoot);
         if (getRoot() != null) {
-            weakRootListener = new WeakEventHandler(getRoot(), TreeItem.<T>treeNotificationEvent(), rootListener);
+            weakRootListener = new WeakEventHandler(rootListener);
             getRoot().addEventHandler(TreeItem.<T>treeNotificationEvent(), weakRootListener);
         }
     }
 
     @Override public int getItemCount() {
-        return getSkinnable().impl_getTreeItemCount();
+        return getSkinnable().getExpandedItemCount();
     }
 
     private void updateItemCount() {

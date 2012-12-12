@@ -35,7 +35,7 @@ import javafx.collections.ObservableList;
 import javafx.event.EventHandler;
 import javafx.scene.Cursor;
 import javafx.scene.Node;
-import javafx.scene.control.TableColumn;
+import javafx.scene.control.TableColumnBase;
 import javafx.scene.control.TableView;
 import javafx.scene.input.MouseEvent;
 import javafx.scene.paint.Color;
@@ -57,14 +57,14 @@ public class NestedTableColumnHeader extends TableColumnHeader {
      *                                                                         *
      **************************************************************************/
     
-    NestedTableColumnHeader(TableView table, TableColumn tc) {
-        super(table, tc);
+    NestedTableColumnHeader(final TableViewSkinBase skin, final TableColumnBase tc) {
+        super(skin, tc);
         
         getStyleClass().setAll("nested-column-header");
         setFocusTraversable(false);
 
         // init UI
-        label = new TableColumnHeader(getTableView(), getTableColumn());
+        label = new TableColumnHeader(skin, getTableColumn());
         label.setTableHeaderRow(getTableHeaderRow());
         label.setParentHeader(getParentHeader());
         label.setNestedColumnHeader(this);
@@ -73,7 +73,7 @@ public class NestedTableColumnHeader extends TableColumnHeader {
             changeListenerHandler.registerChangeListener(getTableColumn().textProperty(), "TABLE_COLUMN_TEXT");
         }
         
-        changeListenerHandler.registerChangeListener(getTableView().columnResizePolicyProperty(), "TABLE_VIEW_COLUMN_RESIZE_POLICY");
+        changeListenerHandler.registerChangeListener(skin.columnResizePolicyProperty(), "TABLE_VIEW_COLUMN_RESIZE_POLICY");
     }
 
     
@@ -94,8 +94,8 @@ public class NestedTableColumnHeader extends TableColumnHeader {
         }
     }
     
-    private final ListChangeListener<TableColumn> columnsListener = new ListChangeListener<TableColumn>() {
-        @Override public void onChanged(Change<? extends TableColumn> c) {
+    private final ListChangeListener<TableColumnBase> columnsListener = new ListChangeListener<TableColumnBase>() {
+        @Override public void onChanged(Change<? extends TableColumnBase> c) {
             setHeadersNeedUpdate();
         }
     };
@@ -127,9 +127,9 @@ public class NestedTableColumnHeader extends TableColumnHeader {
      * Represents the actual columns directly contained in this nested column.
      * It does NOT include ANY of the children of these columns, if any exist.
      */
-    private ObservableList<? extends TableColumn> columns;
-    ObservableList<? extends TableColumn> getColumns() { return columns; }
-    void setColumns(ObservableList<? extends TableColumn> newColumns) {
+    private ObservableList<? extends TableColumnBase> columns;
+    ObservableList<? extends TableColumnBase> getColumns() { return columns; }
+    void setColumns(ObservableList<? extends TableColumnBase> newColumns) {
         if (this.columns != null) {
             this.columns.removeListener(weakColumnsListener);
         }
@@ -143,8 +143,8 @@ public class NestedTableColumnHeader extends TableColumnHeader {
     
     void updateTableColumnHeaders() {
         // watching for changes to the view columns in either table or tableColumn.
-        if (getTableColumn() == null && getTableView() != null) {
-            setColumns(getTableView().getColumns());
+        if (getTableColumn() == null && getTableViewSkin() != null) {
+            setColumns(getTableViewSkin().getColumns());
         } else if (getTableColumn() != null) {
             setColumns(getTableColumn().getColumns());
         }
@@ -174,7 +174,7 @@ public class NestedTableColumnHeader extends TableColumnHeader {
             List<TableColumnHeader> newHeaders = new ArrayList<TableColumnHeader>();
             
             for (int i = 0; i < getColumns().size(); i++) {
-                TableColumn<?,?> column = getColumns().get(i);
+                TableColumnBase<?,?> column = getColumns().get(i);
                 if (column == null) continue;
                 newHeaders.add(createColumnHeader(column));
             }
@@ -243,7 +243,7 @@ public class NestedTableColumnHeader extends TableColumnHeader {
     private static final EventHandler<MouseEvent> rectMousePressed = new EventHandler<MouseEvent>() {
         @Override public void handle(MouseEvent me) {
             Rectangle rect = (Rectangle) me.getSource();
-            TableColumn column = (TableColumn) rect.getProperties().get(TABLE_COLUMN_KEY);
+            TableColumnBase column = (TableColumnBase) rect.getProperties().get(TABLE_COLUMN_KEY);
             NestedTableColumnHeader header = (NestedTableColumnHeader) rect.getProperties().get(TABLE_COLUMN_HEADER_KEY);
             
             if (! header.isColumnResizingEnabled()) return;
@@ -251,7 +251,7 @@ public class NestedTableColumnHeader extends TableColumnHeader {
             if (me.getClickCount() == 2 && me.isPrimaryButtonDown()) {
                 // the user wants to resize the column such that its 
                 // width is equal to the widest element in the column
-                header.resizeToFit(column, -1);
+                header.getTableViewSkin().resizeColumnToFitContent(column, -1);
             } else {
                 // rather than refer to the rect variable, we just grab
                 // it from the source to prevent a small memory leak.
@@ -267,7 +267,7 @@ public class NestedTableColumnHeader extends TableColumnHeader {
     private static final EventHandler<MouseEvent> rectMouseDragged = new EventHandler<MouseEvent>() {
         @Override public void handle(MouseEvent me) {
             Rectangle rect = (Rectangle) me.getSource();
-            TableColumn column = (TableColumn) rect.getProperties().get(TABLE_COLUMN_KEY);
+            TableColumnBase column = (TableColumnBase) rect.getProperties().get(TABLE_COLUMN_KEY);
             NestedTableColumnHeader header = (NestedTableColumnHeader) rect.getProperties().get(TABLE_COLUMN_HEADER_KEY);
             
             if (! header.isColumnResizingEnabled()) return;
@@ -280,7 +280,7 @@ public class NestedTableColumnHeader extends TableColumnHeader {
     private static final EventHandler<MouseEvent> rectMouseReleased = new EventHandler<MouseEvent>() {
         @Override public void handle(MouseEvent me) {
             Rectangle rect = (Rectangle) me.getSource();
-            TableColumn column = (TableColumn) rect.getProperties().get(TABLE_COLUMN_KEY);
+            TableColumnBase column = (TableColumnBase) rect.getProperties().get(TABLE_COLUMN_KEY);
             NestedTableColumnHeader header = (NestedTableColumnHeader) rect.getProperties().get(TABLE_COLUMN_HEADER_KEY);
             
             if (! header.isColumnResizingEnabled()) return;
@@ -293,7 +293,7 @@ public class NestedTableColumnHeader extends TableColumnHeader {
     private static final EventHandler<MouseEvent> rectCursorChangeListener = new EventHandler<MouseEvent>() {
         @Override public void handle(MouseEvent me) {
             Rectangle rect = (Rectangle) me.getSource();
-            TableColumn column = (TableColumn) rect.getProperties().get(TABLE_COLUMN_KEY);
+            TableColumnBase column = (TableColumnBase) rect.getProperties().get(TABLE_COLUMN_KEY);
             NestedTableColumnHeader header = (NestedTableColumnHeader) rect.getProperties().get(TABLE_COLUMN_HEADER_KEY);
             
             rect.setCursor(header.isColumnResizingEnabled() && rect.isHover() && 
@@ -318,14 +318,14 @@ public class NestedTableColumnHeader extends TableColumnHeader {
         }
 
         boolean isConstrainedResize = TableView.CONSTRAINED_RESIZE_POLICY.equals(
-                getTableView().getColumnResizePolicy());
+                getTableViewSkin().columnResizePolicyProperty());
         
         for (int col = 0; col < getColumns().size(); col++) {
             if (isConstrainedResize && col == getColumns().size() - 1) {
                 break;
             }
             
-            final TableColumn c = getColumns().get(col);
+            final TableColumnBase c = getColumns().get(col);
             final Rectangle rect = new Rectangle();
             rect.getProperties().put(TABLE_COLUMN_KEY, c);
             rect.getProperties().put(TABLE_COLUMN_HEADER_KEY, this);
@@ -355,23 +355,26 @@ public class NestedTableColumnHeader extends TableColumnHeader {
     private List<Rectangle> dragRects = new ArrayList<Rectangle>();
     
     private boolean isColumnResizingEnabled() {
-        return ! PlatformUtil.isEmbedded();
+        // this used to check if ! PlatformUtil.isEmbedded(), but has been changed
+        // to always return true (for now), as we want to support column resizing
+        // everywhere
+        return true;
     }
 
     private void columnResizingStarted(double startX) {
         getTableHeaderRow().getColumnReorderLine().setLayoutX(startX);
     }
 
-    private void columnResizing(TableColumn col, MouseEvent me) {
+    private void columnResizing(TableColumnBase col, MouseEvent me) {
         double draggedX = me.getSceneX() - dragAnchorX;
         double delta = draggedX - lastX;
-        boolean allowed = getTableView().resizeColumn(col, delta);
+        boolean allowed = getTableViewSkin().resizeColumn(col, delta);
         if (allowed) {
             lastX = draggedX;
         }
     }
 
-    private void columnResizingComplete(TableColumn col, MouseEvent me) {
+    private void columnResizingComplete(TableColumnBase col, MouseEvent me) {
 //        getTableHeaderRow().getColumnReorderLine().setVisible(true);
         getTableHeaderRow().getColumnReorderLine().setTranslateX(0.0F);
         getTableHeaderRow().getColumnReorderLine().setLayoutX(0.0F);
@@ -474,10 +477,10 @@ public class NestedTableColumnHeader extends TableColumnHeader {
         return height + label.prefHeight(-1) + getInsets().getTop() + getInsets().getBottom();
     }
 
-    private TableColumnHeader createColumnHeader(TableColumn col) {
+    private TableColumnHeader createColumnHeader(TableColumnBase col) {
         TableColumnHeader newCol = col.getColumns().isEmpty() ?
-            new TableColumnHeader(getTableView(), col) :
-            new NestedTableColumnHeader(getTableView(), col);
+            new TableColumnHeader(getTableViewSkin(), col) :
+            new NestedTableColumnHeader(getTableViewSkin(), col);
 
         newCol.setTableHeaderRow(getTableHeaderRow());
         newCol.setParentHeader(this);

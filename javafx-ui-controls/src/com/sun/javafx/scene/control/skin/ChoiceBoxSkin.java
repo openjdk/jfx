@@ -46,7 +46,6 @@ import javafx.scene.control.RadioMenuItem;
 import javafx.scene.control.SelectionModel;
 import javafx.scene.control.Separator;
 import javafx.scene.control.SeparatorMenuItem;
-import javafx.scene.control.SkinBase;
 import javafx.scene.control.ToggleGroup;
 import javafx.scene.layout.StackPane;
 import javafx.scene.text.Text;
@@ -58,7 +57,7 @@ import javafx.collections.WeakListChangeListener;
 /**
  * ChoiceBoxSkin - default implementation
  */
-    public class ChoiceBoxSkin<T> extends SkinBase<ChoiceBox<T>, ChoiceBoxBehavior<T>> {
+    public class ChoiceBoxSkin<T> extends BehaviorSkinBase<ChoiceBox<T>, ChoiceBoxBehavior<T>> {
 
     public ChoiceBoxSkin(ChoiceBox control) {
         super(control, new ChoiceBoxBehavior(control));

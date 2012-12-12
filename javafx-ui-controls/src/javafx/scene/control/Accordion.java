@@ -35,7 +35,7 @@ import javafx.collections.ListChangeListener;
 import javafx.collections.ObservableList;
 
 import com.sun.javafx.collections.TrackableObservableList;
-import com.sun.javafx.css.StyleableProperty;
+import com.sun.javafx.css.StyleablePropertyMetaData;
 import com.sun.javafx.scene.control.skin.AccordionSkin;
 
 /**
@@ -77,8 +77,8 @@ public class Accordion extends Control {
         // focusTraversable is styleable through css. Calling setFocusTraversable
         // makes it look to css like the user set the value and css will not 
         // override. Initializing focusTraversable by calling set on the 
-        // StyleableProperty ensures that css will be able to override the value.        
-        final StyleableProperty prop = StyleableProperty.getStyleableProperty(focusTraversableProperty());
+        // StyleablePropertyMetaData ensures that css will be able to override the value.        
+        final StyleablePropertyMetaData prop = StyleablePropertyMetaData.getStyleablePropertyMetaData(focusTraversableProperty());
         prop.set(this, Boolean.FALSE);            
     }
 

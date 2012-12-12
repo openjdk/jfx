@@ -40,7 +40,7 @@ import javafx.scene.paint.Paint;
 
 import com.sun.javafx.css.StyleableFloatProperty;
 import com.sun.javafx.css.StyleableObjectProperty;
-import com.sun.javafx.css.StyleableProperty;
+import com.sun.javafx.css.StyleablePropertyMetaData;
 import com.sun.javafx.css.converters.PaintConverter;
 import com.sun.javafx.geom.BaseBounds;
 import com.sun.javafx.geom.transform.BaseTransform;
@@ -74,7 +74,7 @@ public  class CSSNode extends Node {
                 }
 
                 @Override
-                public StyleableProperty getStyleableProperty() {
+                public StyleablePropertyMetaData getStyleablePropertyMetaData() {
                     return StyleableProperties.FILL;
                 }
                 
@@ -108,7 +108,7 @@ public  class CSSNode extends Node {
                 }
 
                 @Override
-                public StyleableProperty getStyleableProperty() {
+                public StyleablePropertyMetaData getStyleablePropertyMetaData() {
                     return StyleableProperties.STROKE;
                 }
                 
@@ -159,7 +159,7 @@ public  class CSSNode extends Node {
                 }
 
                 @Override
-                public StyleableProperty getStyleableProperty() {
+                public StyleablePropertyMetaData getStyleablePropertyMetaData() {
                     return StyleableProperties.PADDING;
                 }
             };
@@ -230,13 +230,6 @@ public  class CSSNode extends Node {
     public boolean applyCalled = false;
 
     @Override
-    protected void impl_processCSS(StyleManager mgr, boolean reapply) {
-        this.reapply = reapply;
-        processCalled = true;
-        super.impl_processCSS(mgr, reapply);
-    }
-
-    @Override
     public BaseBounds impl_computeGeomBounds(BaseBounds bounds, BaseTransform tx) {
         if (bounds != null) {
             bounds = bounds.deriveWithNewBounds(0, 0, 0,
@@ -263,8 +256,8 @@ public  class CSSNode extends Node {
     
     public static class StyleableProperties {
         
-        public static final StyleableProperty<CSSNode,Paint> FILL = 
-            new StyleableProperty<CSSNode,Paint>("fill", PaintConverter.getInstance()) {
+        public static final StyleablePropertyMetaData<CSSNode,Paint> FILL = 
+            new StyleablePropertyMetaData<CSSNode,Paint>("fill", PaintConverter.getInstance()) {
 
             @Override
             public boolean isSettable(CSSNode n) {
@@ -277,8 +270,8 @@ public  class CSSNode extends Node {
             }
         };
         
-        public static final StyleableProperty<CSSNode,Paint> STROKE = 
-            new StyleableProperty<CSSNode,Paint>("stroke", PaintConverter.getInstance()) {
+        public static final StyleablePropertyMetaData<CSSNode,Paint> STROKE = 
+            new StyleablePropertyMetaData<CSSNode,Paint>("stroke", PaintConverter.getInstance()) {
 
             @Override
             public boolean isSettable(CSSNode n) {
@@ -291,8 +284,8 @@ public  class CSSNode extends Node {
             }
         };
         
-        public static final StyleableProperty<CSSNode,Number> PADDING = 
-            new StyleableProperty<CSSNode,Number>("padding", PaintConverter.getInstance()) {
+        public static final StyleablePropertyMetaData<CSSNode,Number> PADDING = 
+            new StyleablePropertyMetaData<CSSNode,Number>("padding", PaintConverter.getInstance()) {
 
             @Override
             public boolean isSettable(CSSNode n) {
@@ -305,10 +298,10 @@ public  class CSSNode extends Node {
             }
         };
         
-        private static List<StyleableProperty> STYLEABLES;
+        private static List<StyleablePropertyMetaData> STYLEABLES;
         static {
-            final List<StyleableProperty> styleables =
-                new ArrayList<StyleableProperty>(Node.impl_CSS_STYLEABLES());
+            final List<StyleablePropertyMetaData> styleables =
+                new ArrayList<StyleablePropertyMetaData>(Node.getClassStyleablePropertyMetaData());
             Collections.addAll(styleables,
                 FILL, STROKE, PADDING
             );
@@ -317,7 +310,7 @@ public  class CSSNode extends Node {
         
     }
 
-    public static List<StyleableProperty> impl_CSS_STYLEABLES() {
+    public static List<StyleablePropertyMetaData> getClassStyleablePropertyMetaData() {
         return StyleableProperties.STYLEABLES;
     }
     

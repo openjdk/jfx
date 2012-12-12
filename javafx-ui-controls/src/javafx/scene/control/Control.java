@@ -26,11 +26,13 @@
 package javafx.scene.control;
 
 import com.sun.javafx.Utils;
+import com.sun.javafx.application.PlatformImpl;
 import com.sun.javafx.beans.annotations.DuplicateInBuilderProperties;
 import com.sun.javafx.css.*;
 import com.sun.javafx.css.converters.StringConverter;
 import com.sun.javafx.logging.PlatformLogger;
 import com.sun.javafx.scene.control.Logging;
+import javafx.application.Application;
 import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.ObjectPropertyBase;
 import javafx.beans.property.SimpleObjectProperty;
@@ -71,14 +73,12 @@ import java.util.List;
 @DuplicateInBuilderProperties(properties = {"minHeight", "minWidth", "maxHeight", "maxWidth", "prefHeight", "prefWidth"})
 public abstract class Control extends Region implements Skinnable {
 
-
     static {
-        // Ensures that the caspian.css file is set as the user agent style sheet
-        // when the first control is created.
-        UAStylesheetLoader.doLoad();
+        // Ensures that the default application user agent stylesheet is loaded
+        if (Application.getUserAgentStylesheet() == null) {
+            PlatformImpl.setDefaultPlatformUserAgentStylesheet();
+        }
     }
-    
-    
     
     /***************************************************************************
      *                                                                         *
@@ -86,7 +86,7 @@ public abstract class Control extends Region implements Skinnable {
      *                                                                         *
      **************************************************************************/  
     
-    private List<StyleableProperty> styleableProperties;
+    private List<StyleablePropertyMetaData> styleableProperties;
 
     /**
      * A private reference directly to the SkinBase instance that is used as the
@@ -171,6 +171,19 @@ public abstract class Control extends Region implements Skinnable {
             // result in reinstalling the skin
             currentSkinClassName = v == null ? null : v.getClass().getName();
             
+            // If skinClassName is null, then someone called setSkin directly
+            // rather than the skin being set via css. We know this is because 
+            // impl_processCSS ensures the skin is set, and impl_processCSS
+            // expands the skin property to see if the skin has been set. 
+            // If skinClassName is null, then we need to see if there is
+            // a UA stylesheet at this point since the logic in impl_processCSS
+            // depends on skinClassName being null. 
+            if (skinClassName == null) {
+                final String url = Control.this.getUserAgentStylesheet();
+                if (url != null) {
+                    StyleManager.addUserAgentStylesheet(url);
+                }
+            }
             // if someone calls setSkin, we need to make it look like they 
             // called set on skinClassName in order to keep CSS from overwriting
             // the skin. 
@@ -223,7 +236,7 @@ public abstract class Control extends Region implements Skinnable {
             // calling impl_reapplyCSS() as the styleable properties may now
             // be different, as we will now be able to return styleable properties 
             // belonging to the skin. If impl_reapplyCSS() is not called, the 
-            // impl_getStyleableProperties() method is never called, so the 
+            // getStyleablePropertyMetaData() method is never called, so the 
             // skin properties are never exposed.
             impl_reapplyCSS();
 
@@ -235,7 +248,7 @@ public abstract class Control extends Region implements Skinnable {
         }
 
         @Override 
-        public StyleableProperty getStyleableProperty() {
+        public StyleablePropertyMetaData getStyleablePropertyMetaData() {
             return StyleableProperties.SKIN;
         }
         
@@ -329,8 +342,8 @@ public abstract class Control extends Region implements Skinnable {
         // focusTraversable is styleable through css. Calling setFocusTraversable
         // makes it look to css like the user set the value and css will not 
         // override. Initializing focusTraversable by calling set on the 
-        // StyleableProperty ensures that css will be able to override the value.        
-        final StyleableProperty prop = StyleableProperty.getStyleableProperty(focusTraversableProperty());
+        // StyleablePropertyMetaData ensures that css will be able to override the value.        
+        final StyleablePropertyMetaData prop = StyleablePropertyMetaData.getStyleablePropertyMetaData(focusTraversableProperty());
         prop.set(this, Boolean.TRUE);  
         
         // we add a listener for menu request events to show the context menu
@@ -595,7 +608,7 @@ public abstract class Control extends Region implements Skinnable {
                 }
 
                 @Override
-                public StyleableProperty getStyleableProperty() {
+                public StyleablePropertyMetaData getStyleablePropertyMetaData() {
                     return StyleableProperties.SKIN;
                 }
                 
@@ -686,8 +699,8 @@ public abstract class Control extends Region implements Skinnable {
     }
 
     private static class StyleableProperties {
-        private static final StyleableProperty<Control,String> SKIN = 
-            new StyleableProperty<Control,String>("-fx-skin",
+        private static final StyleablePropertyMetaData<Control,String> SKIN = 
+            new StyleablePropertyMetaData<Control,String>("-fx-skin",
                 StringConverter.getInstance()) {
 
             @Override
@@ -701,10 +714,10 @@ public abstract class Control extends Region implements Skinnable {
             }
         };
 
-        private static final List<StyleableProperty> STYLEABLES;
+        private static final List<StyleablePropertyMetaData> STYLEABLES;
         static {
-            final List<StyleableProperty> styleables =
-                new ArrayList<StyleableProperty>(Region.impl_CSS_STYLEABLES());
+            final List<StyleablePropertyMetaData> styleables =
+                new ArrayList<StyleablePropertyMetaData>(Region.getClassStyleablePropertyMetaData());
             Collections.addAll(styleables,
                 SKIN
             );
@@ -717,7 +730,7 @@ public abstract class Control extends Region implements Skinnable {
      * @deprecated This is an internal API that is not intended for use and will be removed in the next version
      */
     @Deprecated
-    public static List<StyleableProperty> impl_CSS_STYLEABLES() {
+    public static List<StyleablePropertyMetaData> getClassStyleablePropertyMetaData() {
         return Control.StyleableProperties.STYLEABLES;
     }
     
@@ -726,8 +739,8 @@ public abstract class Control extends Region implements Skinnable {
      * @deprecated This is an experimental API that is not intended for general use and is subject to change in future versions
      */
     @Deprecated
-    protected List<StyleableProperty> impl_getControlStyleableProperties() {
-        return impl_CSS_STYLEABLES();
+    protected List<StyleablePropertyMetaData> impl_getControlStyleableProperties() {
+        return getClassStyleablePropertyMetaData();
     }
 
     /**
@@ -736,13 +749,13 @@ public abstract class Control extends Region implements Skinnable {
      * @deprecated This is an experimental API that is not intended for general use and is subject to change in future versions
      */
     @Deprecated
-    public List<StyleableProperty> impl_getStyleableProperties() {
+    public List<StyleablePropertyMetaData> getStyleablePropertyMetaData() {
         if (styleableProperties == null) {
-            styleableProperties = new ArrayList<StyleableProperty>();
+            styleableProperties = new ArrayList<StyleablePropertyMetaData>();
             styleableProperties.addAll(impl_getControlStyleableProperties());
             
             if (skinBase != null) {
-                styleableProperties.addAll(skinBase.impl_getStyleableProperties());
+                styleableProperties.addAll(skinBase.getStyleablePropertyMetaData());
             }
         }
         return styleableProperties;
@@ -753,12 +766,15 @@ public abstract class Control extends Region implements Skinnable {
      * @deprecated This is an internal API that is not intended for use and will be removed in the next version
      */
     @Deprecated
-    @Override protected void impl_processCSS(StyleManager styleManager, boolean reapply) {
-        if (reapply && getUserAgentStylesheet() != null) {
-            styleManager.addUserAgentStylesheet(getUserAgentStylesheet());
+    @Override protected void impl_processCSS() {
+        if (skinClassNameProperty().get() == null) {
+            final String url = Control.this.getUserAgentStylesheet();
+            if (url != null) {
+                StyleManager.addUserAgentStylesheet(url);
+            }
         }
 
-        super.impl_processCSS(styleManager, reapply);
+        super.impl_processCSS();
 
         if (getSkin() == null) {
             // try to create default skin
@@ -766,7 +782,7 @@ public abstract class Control extends Region implements Skinnable {
             if (defaultSkin != null) {
                 skinProperty().set(defaultSkin);
                 // we have to reapply css again so that the newly set skin gets css applied as well.
-                super.impl_processCSS(styleManager, reapply);
+                super.impl_processCSS();
             } else {
                 final String msg = "The -fx-skin property has not been defined in CSS for " + this +
                                    " and createDefaultSkin() returned null.";

@@ -55,7 +55,7 @@ import static javafx.scene.control.ContentDisplay.*;
 import static javafx.scene.control.OverrunStyle.*;
 import javafx.scene.image.ImageView;
 
-public abstract class LabeledSkinBase<C extends Labeled, B extends BehaviorBase<C>> extends javafx.scene.control.SkinBase<C, B> {
+public abstract class LabeledSkinBase<C extends Labeled, B extends BehaviorBase<C>> extends BehaviorSkinBase<C, B> {
 
     /**
      *  The Text node used to display the text. This is package only
@@ -134,6 +134,7 @@ public abstract class LabeledSkinBase<C extends Labeled, B extends BehaviorBase<
         //consumeMouseEvents(false);
 
         // Register listeners
+        registerChangeListener(labeled.ellipsisStringProperty(), "ELLIPSIS_STRING");
         registerChangeListener(labeled.widthProperty(), "WIDTH");
         registerChangeListener(labeled.heightProperty(), "HEIGHT");
         registerChangeListener(labeled.textFillProperty(), "TEXT_FILL");

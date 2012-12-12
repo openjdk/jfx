@@ -4,7 +4,7 @@
  */
 package com.sun.javafx.scene.control.skin;
 
-import com.sun.javafx.css.StyleableProperty;
+import com.sun.javafx.css.StyleablePropertyMetaData;
 import com.sun.javafx.css.Stylesheet;
 import java.util.List;
 import javafx.beans.value.ChangeListener;
@@ -224,8 +224,8 @@ public class LabeledTextTest {
         assert(labeledText.visibleProperty().get() == true);   
     }
     
-    private static StyleableProperty getStyleableProperty(String prop) {
-        for (StyleableProperty styleable : LabeledText.impl_CSS_STYLEABLES()) {
+    private static StyleablePropertyMetaData getStyleablePropertyMetaData(String prop) {
+        for (StyleablePropertyMetaData styleable : LabeledText.getClassStyleablePropertyMetaData()) {
             if (styleable.getProperty().equals(prop)) return styleable;
         }
         return null;
@@ -234,7 +234,7 @@ public class LabeledTextTest {
     @Test
     public void testLabeledTextFillIsSettableByCss() {
         
-        StyleableProperty sp = getStyleableProperty("-fx-fill");
+        StyleablePropertyMetaData sp = getStyleablePropertyMetaData("-fx-fill");
         assertTrue(sp.isSettable(labeledText));
     }
     
@@ -247,7 +247,7 @@ public class LabeledTextTest {
     @Test
     public void testLabeledTextTextAlignmentIsSettableByCss() {
         
-        StyleableProperty sp = getStyleableProperty("-fx-text-alignment");
+        StyleablePropertyMetaData sp = getStyleablePropertyMetaData("-fx-text-alignment");
         assertTrue(sp.isSettable(labeledText));
     }
     
@@ -260,7 +260,7 @@ public class LabeledTextTest {
     @Test
     public void testLabeledTextFontIsSettableByCss() {
         
-        StyleableProperty sp = getStyleableProperty("-fx-font");
+        StyleablePropertyMetaData sp = getStyleablePropertyMetaData("-fx-font");
         assertTrue(sp.isSettable(labeledText));
     }
     
@@ -273,7 +273,7 @@ public class LabeledTextTest {
     @Test
     public void testLabeledTextUnderlineIsSettableByCss() {
         
-        StyleableProperty sp = getStyleableProperty("-fx-underline");
+        StyleablePropertyMetaData sp = getStyleablePropertyMetaData("-fx-underline");
         assertTrue(sp.isSettable(labeledText));
     }
     

@@ -45,8 +45,8 @@
 package javafx.scene.control;
 
 import com.sun.javafx.css.StyleableIntegerProperty;
-import com.sun.javafx.css.StyleableProperty;
-import com.sun.javafx.css.Stylesheet.Origin;
+import com.sun.javafx.css.StyleablePropertyMetaData;
+import com.sun.javafx.css.Origin;
 import com.sun.javafx.css.converters.SizeConverter;
 import com.sun.javafx.scene.control.skin.PaginationSkin;
 import java.util.ArrayList;
@@ -207,7 +207,7 @@ public class Pagination extends Control {
                 }
 
                 @Override
-                public StyleableProperty getStyleableProperty() {
+                public StyleablePropertyMetaData getStyleablePropertyMetaData() {
                     return StyleableProperties.MAX_PAGE_INDICATOR_COUNT;
                 }
 
@@ -337,8 +337,8 @@ public class Pagination extends Control {
     private static final String DEFAULT_STYLE_CLASS = "pagination";
 
     private static class StyleableProperties {
-        private static final StyleableProperty<Pagination,Number> MAX_PAGE_INDICATOR_COUNT =
-            new StyleableProperty<Pagination,Number>("-fx-max-page-indicator-count",
+        private static final StyleablePropertyMetaData<Pagination,Number> MAX_PAGE_INDICATOR_COUNT =
+            new StyleablePropertyMetaData<Pagination,Number>("-fx-max-page-indicator-count",
                 SizeConverter.getInstance(), DEFAULT_MAX_PAGE_INDICATOR_COUNT) {
 
             @Override
@@ -356,10 +356,10 @@ public class Pagination extends Control {
                 return n.maxPageIndicatorCountProperty();
             }
         };
-        private static final List<StyleableProperty> STYLEABLES;
+        private static final List<StyleablePropertyMetaData> STYLEABLES;
         static {
-            final List<StyleableProperty> styleables =
-                new ArrayList<StyleableProperty>(Control.impl_CSS_STYLEABLES());
+            final List<StyleablePropertyMetaData> styleables =
+                new ArrayList<StyleablePropertyMetaData>(Control.getClassStyleablePropertyMetaData());
             Collections.addAll(styleables,
                 MAX_PAGE_INDICATOR_COUNT
             );
@@ -372,7 +372,7 @@ public class Pagination extends Control {
      * @deprecated This is an internal API that is not intended for use and will be removed in the next version
      */
     @Deprecated
-    public static List<StyleableProperty> impl_CSS_STYLEABLES() {
+    public static List<StyleablePropertyMetaData> getClassStyleablePropertyMetaData() {
         return Pagination.StyleableProperties.STYLEABLES;
     }
 
@@ -381,7 +381,7 @@ public class Pagination extends Control {
      * @deprecated This is an experimental API that is not intended for general use and is subject to change in future versions
      */
     @Deprecated
-    @Override protected List<StyleableProperty> impl_getControlStyleableProperties() {
-        return impl_CSS_STYLEABLES();
+    @Override protected List<StyleablePropertyMetaData> impl_getControlStyleableProperties() {
+        return getClassStyleablePropertyMetaData();
     }
 }

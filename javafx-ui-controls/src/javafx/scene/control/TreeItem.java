@@ -42,10 +42,15 @@ import javafx.event.EventType;
 import javafx.scene.Node;
 
 import com.sun.javafx.event.EventHandlerManager;
+import com.sun.javafx.scene.control.TableColumnComparator;
+import java.util.Comparator;
 import javafx.beans.property.ReadOnlyBooleanProperty;
 import javafx.beans.property.ReadOnlyBooleanWrapper;
 import javafx.beans.property.ReadOnlyObjectProperty;
 import javafx.beans.property.ReadOnlyObjectWrapper;
+import javafx.scene.control.TreeSortMode;
+
+import static javafx.scene.control.TreeSortMode.*;
 
 /**
  * The model for a single node supplying a hierarchy of values to a control such
@@ -194,7 +199,7 @@ import javafx.beans.property.ReadOnlyObjectWrapper;
  *
  * @param <T> The type of the {@link #getValue() value} property within TreeItem.
  */
-public class TreeItem<T> implements EventTarget {
+public class TreeItem<T> implements EventTarget { //, Comparable<TreeItem<T>> {
     
     /***************************************************************************
      *                                                                         *
@@ -233,11 +238,11 @@ public class TreeItem<T> implements EventTarget {
      * @param <T> The type of the value contained within the TreeItem.
      */
     @SuppressWarnings("unchecked")
-    public static <T> EventType<TreeModificationEvent<T>> treeItemCountChangeEvent() {
-        return (EventType<TreeModificationEvent<T>>) TREE_ITEM_COUNT_CHANGE_EVENT;
+    public static <T> EventType<TreeModificationEvent<T>> expandedItemCountChangeEvent() {
+        return (EventType<TreeModificationEvent<T>>) EXPANDED_ITEM_COUNT_CHANGE_EVENT;
     }
-    private static final EventType TREE_ITEM_COUNT_CHANGE_EVENT
-            = new EventType(treeNotificationEvent(), "TreeItemCountChangeEvent");
+    private static final EventType EXPANDED_ITEM_COUNT_CHANGE_EVENT
+            = new EventType(treeNotificationEvent(), "ExpandedItemCountChangeEvent");
 
     /**
      * An EventType used when the TreeItem receives a modification to its
@@ -250,7 +255,7 @@ public class TreeItem<T> implements EventTarget {
         return (EventType<TreeModificationEvent<T>>) BRANCH_EXPANDED_EVENT;
     }
     private static final EventType<?> BRANCH_EXPANDED_EVENT
-            = new EventType(treeItemCountChangeEvent(), "BranchExpandedEvent");
+            = new EventType(expandedItemCountChangeEvent(), "BranchExpandedEvent");
 
     /**
      * An EventType used when the TreeItem receives a modification to its
@@ -263,7 +268,7 @@ public class TreeItem<T> implements EventTarget {
         return (EventType<TreeModificationEvent<T>>) BRANCH_COLLAPSED_EVENT;
     }
     private static final EventType<?> BRANCH_COLLAPSED_EVENT
-            = new EventType(treeItemCountChangeEvent(), "BranchCollapsedEvent");
+            = new EventType(expandedItemCountChangeEvent(), "BranchCollapsedEvent");
 
     /**
      * An EventType used when the TreeItem receives a direct modification to its
@@ -276,7 +281,7 @@ public class TreeItem<T> implements EventTarget {
         return (EventType<TreeModificationEvent<T>>) CHILDREN_MODIFICATION_EVENT;
     }
     private static final EventType<?> CHILDREN_MODIFICATION_EVENT
-            = new EventType(treeItemCountChangeEvent(), "ChildrenModificationEvent");
+            = new EventType(expandedItemCountChangeEvent(), "ChildrenModificationEvent");
 
     /**
      * An EventType used when the TreeItem receives a modification to its
@@ -339,7 +344,7 @@ public class TreeItem<T> implements EventTarget {
         setValue(value);
         setGraphic(graphic);
         
-        addEventHandler(TreeItem.<Object>treeItemCountChangeEvent(), itemListener);
+        addEventHandler(TreeItem.<Object>expandedItemCountChangeEvent(), itemListener);
     }
     
     private final EventHandler<TreeModificationEvent<Object>> itemListener = 
@@ -381,7 +386,11 @@ public class TreeItem<T> implements EventTarget {
     // because we obviously are also counting this node, which hasn't disappeared
     // when all children are collapsed.
     int previousExpandedDescendentCount = 1;
-
+    
+    Comparator lastComparator = null;
+    TreeSortMode lastSortMode = null;
+    
+    
 
     /***************************************************************************
      *                                                                         *
@@ -612,9 +621,16 @@ public class TreeItem<T> implements EventTarget {
             children = FXCollections.observableArrayList();
             children.addListener(childrenListener);
         }
+        
+        // we need to check if this TreeItem needs to have its children sorted.
+        // There are two different ways that this could be possible.
+        if (children.isEmpty()) return children;
+        
+        checkSortState();
+        
         return children;
     }
-
+    
 
 
     /***************************************************************************
@@ -713,6 +729,7 @@ public class TreeItem<T> implements EventTarget {
         Event.fireEvent(this, evt);
     }
 
+
     
     
     /***************************************************************************
@@ -771,6 +788,74 @@ public class TreeItem<T> implements EventTarget {
      *                                                                         *
      **************************************************************************/
     
+    void sort() {
+        sort(children, lastComparator, lastSortMode);
+    }
+    
+    private void sort(final ObservableList<TreeItem<T>> children, 
+                         final Comparator<TreeItem<T>> comparator, 
+                         final TreeSortMode sortMode) {
+        runSort(children, comparator, sortMode);
+        
+        // if we're at the root node, we'll fire an event so that the control
+        // can update its display
+        if (getParent() == null) {
+            fireEvent(new TreeItem.TreeModificationEvent<T>(TreeItem.childrenModificationEvent(), this));
+        }
+    }
+    
+    private void checkSortState() {
+        TreeItem<T> rootNode = getRoot();
+        
+        TreeSortMode sortMode = rootNode.lastSortMode;
+        Comparator comparator = rootNode.lastComparator;
+        
+        if (comparator != null && comparator != lastComparator) {
+            lastComparator = comparator;
+            runSort(children, comparator, sortMode);
+        }
+    }
+    
+    private void runSort(ObservableList<TreeItem<T>> children, Comparator comparator, TreeSortMode sortMode) {
+        if (sortMode == ALL_DESCENDANTS) {
+            doSort(children, comparator);
+        } else if (sortMode == ONLY_FIRST_LEVEL) {
+            // if we are here we presume that the current node is the root node
+            // (but we can test to see if getParent() returns null to be sure).
+            // We also know that ONLY_FIRST_LEVEL only applies to the children
+            // of the root, so we return straight after we sort these children.
+            if (getParent() == null) {
+                doSort(children, comparator);
+            }
+//        } else if (sortMode == ONLY_LEAVES) {
+//            if (isLeaf()) {
+//                // sort the parent once
+//            }
+//        } else if (sortMode == ALL_BUT_LEAVES) {
+//            
+        } else {
+            // Unknown sort mode
+            System.out.println("Unknown sort mode in TreeItem.runSort()");
+        }
+    }
+    
+    private TreeItem<T> getRoot() {
+        TreeItem<T> parent = getParent();
+        if (parent == null) return this;
+        
+        while (true) {
+            TreeItem<T> newParent = parent.getParent();
+            if (newParent == null) return parent;
+            parent = newParent;
+        }
+    }
+    
+    private void doSort(ObservableList<TreeItem<T>> children, final Comparator<TreeItem<T>> comparator) {
+        if (!isLeaf() && isExpanded()) {
+            FXCollections.sort(children, comparator);    
+        }
+    }
+    
     // This value is package accessible so that it may be retrieved from TreeView.
     int getExpandedDescendentCount(boolean reset) {
         if (reset || expandedDescendentCountDirty) {
@@ -815,7 +900,6 @@ public class TreeItem<T> implements EventTarget {
             treeItem.setParent(parent);
          }
     }
-
 
     /**
      * An {@link Event} that contains relevant information for all forms of

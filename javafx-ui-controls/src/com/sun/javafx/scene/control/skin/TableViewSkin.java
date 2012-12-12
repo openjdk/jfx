@@ -24,40 +24,29 @@
  */
 package com.sun.javafx.scene.control.skin;
 
-import java.util.List;
-
-import javafx.beans.InvalidationListener;
-import javafx.beans.Observable;
-import javafx.beans.value.ChangeListener;
-import javafx.beans.value.ObservableValue;
-import javafx.collections.FXCollections;
-import javafx.collections.ListChangeListener;
-import javafx.collections.MapChangeListener;
+import com.sun.javafx.scene.control.behavior.TableViewBehavior;
 import javafx.collections.ObservableList;
 import javafx.event.EventHandler;
-import javafx.geometry.Insets;
 import javafx.scene.Node;
-import javafx.scene.control.Label;
 import javafx.scene.control.SelectionModel;
 import javafx.scene.control.TableColumn;
 import javafx.scene.control.TableRow;
 import javafx.scene.control.TableView;
 import javafx.scene.control.TableView.TableViewFocusModel;
 import javafx.scene.input.MouseEvent;
-import javafx.scene.layout.Region;
-import javafx.scene.layout.StackPane;
 import javafx.util.Callback;
 
-import com.sun.javafx.scene.control.behavior.TableViewBehavior;
-import javafx.collections.WeakListChangeListener;
-import com.sun.javafx.scene.control.skin.resources.ControlResources;
-import javafx.beans.WeakInvalidationListener;
-import javafx.beans.value.WeakChangeListener;
-import javafx.collections.ObservableMap;
-import javafx.geometry.HPos;
-import javafx.geometry.VPos;
+import java.util.List;
+import javafx.beans.property.BooleanProperty;
+import javafx.beans.property.ObjectProperty;
+import javafx.scene.control.ResizeFeaturesBase;
+import javafx.scene.control.TableCell;
+import javafx.scene.control.TableColumnBase;
+import javafx.scene.control.TablePositionBase;
+import javafx.scene.control.TableSelectionModel;
+import javafx.scene.layout.Region;
 
-public class TableViewSkin<T> extends VirtualContainerBase<TableView<T>, TableViewBehavior<T>, TableRow<T>> {
+public class TableViewSkin<T> extends TableViewSkinBase<T, TableView<T>, TableViewBehavior<T>, TableRow<T>> {
     
     private final TableView<T> tableView;
 
@@ -65,25 +54,9 @@ public class TableViewSkin<T> extends VirtualContainerBase<TableView<T>, TableVi
         super(tableView, new TableViewBehavior(tableView));
         
         this.tableView = tableView;
+        
+        super.init(tableView);
 
-        // init the VirtualFlow
-        flow.setPannable(false);
-        flow.setFocusTraversable(tableView.isFocusTraversable());
-        flow.setCreateCell(new Callback<VirtualFlow, TableRow>() {
-            @Override public TableRow call(VirtualFlow flow) {
-                return TableViewSkin.this.createCell();
-            }
-        });
-        
-        // TEMPORARY CODE (RT-24795)
-        // we check the TableView to see if a fixed cell length is specified
-        ObservableMap p = tableView.getProperties();
-        String k = VirtualFlow.FIXED_CELL_LENGTH_KEY;
-        final double fixedCellLength = (Double) (p.containsKey(k) ? p.get(k) : 0.0);
-        final boolean fixedCellLengthEnabled = fixedCellLength > 0;
-        flow.setFixedCellLength(fixedCellLength);
-        // --- end of TEMPORARY CODE
-        
         EventHandler<MouseEvent> ml = new EventHandler<MouseEvent>() {
             @Override public void handle(MouseEvent event) { 
                 // RT-15127: cancel editing on scroll. This is a bit extreme
@@ -103,135 +76,41 @@ public class TableViewSkin<T> extends VirtualContainerBase<TableView<T>, TableVi
         };
         flow.getVbar().addEventFilter(MouseEvent.MOUSE_PRESSED, ml);
         flow.getHbar().addEventFilter(MouseEvent.MOUSE_PRESSED, ml);
-        
-        /*
-         * Listening for scrolling along the X axis, but we need to be careful
-         * to handle the situation appropriately when the hbar is invisible.
-         */
-        final InvalidationListener hbarValueListener = new InvalidationListener() {
-            @Override public void invalidated(Observable valueModel) {
-                tableHeaderRow.updateScrollX();
-                
-                if (fixedCellLengthEnabled) {
-                    flow.requestCellLayout();
-                }
-            }
-        };
-        flow.getHbar().valueProperty().addListener(hbarValueListener);
-
-        columnReorderLine = new Region();
-        columnReorderLine.getStyleClass().setAll("column-resize-line");
-        columnReorderLine.setManaged(false);
-        columnReorderLine.setVisible(false);
-
-        columnReorderOverlay = new Region();
-        columnReorderOverlay.getStyleClass().setAll("column-overlay");
-        columnReorderOverlay.setVisible(false);
-        columnReorderOverlay.setManaged(false);
-
-        tableHeaderRow = new TableHeaderRow(tableView, flow);
-        tableHeaderRow.setColumnReorderLine(columnReorderLine);
-        tableHeaderRow.setTablePadding(getInsets());
-        tableHeaderRow.setFocusTraversable(false);
-        tableView.paddingProperty().addListener(new InvalidationListener() {
-            @Override public void invalidated(Observable valueModel) {
-                tableHeaderRow.setTablePadding(getInsets());
-            }
-        });
-
-        getChildren().addAll(tableHeaderRow, flow, columnReorderOverlay, columnReorderLine);
-
-        updateVisibleColumnCount();
-        updateVisibleLeafColumnWidthListeners(tableView.getVisibleLeafColumns(), FXCollections.<TableColumn<T,?>>emptyObservableList());
-
-        tableHeaderRow.reorderingProperty().addListener(new InvalidationListener() {
-            @Override public void invalidated(Observable valueModel) {
-                requestLayout();
-            }
-        });
-
-        tableView.getVisibleLeafColumns().addListener(weakVisibleLeafColumnsListener);
-        
-        updateTableItems(null, tableView.getItems());
-        tableView.itemsProperty().addListener(weakItemsChangeListener);
-
-        tableView.getProperties().addListener(new MapChangeListener<Object, Object>() {
-            @Override public void onChanged(Change<? extends Object, ? extends Object> c) {
-                if (c.wasAdded() && "TableView.refresh".equals(c.getKey())) {
-                    refreshView();
-                    tableView.getProperties().remove("TableView.refresh");
-                }
-            }
-        });
-
-        // flow and flow.vbar width observer
-        InvalidationListener widthObserver = new InvalidationListener() {
-            @Override public void invalidated(Observable valueModel) {
-                contentWidthDirty = true;
-                requestLayout();
-            }
-        };
-        flow.widthProperty().addListener(widthObserver);
-        flow.getVbar().widthProperty().addListener(widthObserver);
 
         // init the behavior 'closures'
-        getBehavior().setOnFocusPreviousRow(new Runnable() {
+        TableViewBehavior behavior = getBehavior();
+        behavior.setOnFocusPreviousRow(new Runnable() {
             @Override public void run() { onFocusPreviousCell(); }
         });
-        getBehavior().setOnFocusNextRow(new Runnable() {
+        behavior.setOnFocusNextRow(new Runnable() {
             @Override public void run() { onFocusNextCell(); }
         });
-        getBehavior().setOnMoveToFirstCell(new Runnable() {
+        behavior.setOnMoveToFirstCell(new Runnable() {
             @Override public void run() { onMoveToFirstCell(); }
         });
-        getBehavior().setOnMoveToLastCell(new Runnable() {
+        behavior.setOnMoveToLastCell(new Runnable() {
             @Override public void run() { onMoveToLastCell(); }
         });
-        getBehavior().setOnScrollPageDown(new Callback<Void, Integer>() {
+        behavior.setOnScrollPageDown(new Callback<Void, Integer>() {
             @Override public Integer call(Void param) { return onScrollPageDown(); }
         });
-        getBehavior().setOnScrollPageUp(new Callback<Void, Integer>() {
+        behavior.setOnScrollPageUp(new Callback<Void, Integer>() {
             @Override public Integer call(Void param) { return onScrollPageUp(); }
         });
-        getBehavior().setOnSelectPreviousRow(new Runnable() {
+        behavior.setOnSelectPreviousRow(new Runnable() {
             @Override public void run() { onSelectPreviousCell(); }
         });
-        getBehavior().setOnSelectNextRow(new Runnable() {
+        behavior.setOnSelectNextRow(new Runnable() {
             @Override public void run() { onSelectNextCell(); }
         });
-        getBehavior().setOnSelectLeftCell(new Runnable() {
+        behavior.setOnSelectLeftCell(new Runnable() {
             @Override public void run() { onSelectLeftCell(); }
         });
-        getBehavior().setOnSelectRightCell(new Runnable() {
+        behavior.setOnSelectRightCell(new Runnable() {
             @Override public void run() { onSelectRightCell(); }
         });
-
-        registerChangeListener(tableView.rowFactoryProperty(), "ROW_FACTORY");
-        registerChangeListener(tableView.placeholderProperty(), "PLACEHOLDER");
-        registerChangeListener(tableView.focusTraversableProperty(), "FOCUS_TRAVERSABLE");
-        registerChangeListener(tableView.widthProperty(), "WIDTH");
     }
 
-    @Override protected void handleControlPropertyChanged(String p) {
-        super.handleControlPropertyChanged(p);
-
-        if ("ROW_FACTORY".equals(p)) {
-            Callback<TableView<T>, ? extends TableRow<T>> oldFactory = rowFactory;
-            rowFactory = tableView.getRowFactory();
-
-            // TODO tighten this up
-            if (oldFactory != rowFactory) {
-                flow.recreateCells();
-            }
-        } else if ("PLACEHOLDER".equals(p)) {
-            updatePlaceholderRegionVisibility();
-        } else if ("FOCUS_TRAVERSABLE".equals(p)) {
-            flow.setFocusTraversable(tableView.isFocusTraversable());
-        } else if ("WIDTH".equals(p)) {
-            tableHeaderRow.setTablePadding(getInsets());
-        }
-    }
-    
     
     
     /***************************************************************************
@@ -239,50 +118,6 @@ public class TableViewSkin<T> extends VirtualContainerBase<TableView<T>, TableVi
      * Listeners                                                               *
      *                                                                         *
      **************************************************************************/
-    
-    private ListChangeListener rowCountListener = new ListChangeListener() {
-        @Override public void onChanged(Change c) {
-            rowCountDirty = true;
-            requestLayout();
-        }
-    };
-    
-    private ListChangeListener<TableColumn<T,?>> visibleLeafColumnsListener = 
-        new ListChangeListener<TableColumn<T,?>>() {
-            @Override public void onChanged(Change<? extends TableColumn<T,?>> c) {
-                updateVisibleColumnCount();
-                while (c.next()) {
-                    updateVisibleLeafColumnWidthListeners(c.getAddedSubList(), c.getRemoved());
-                }
-            }
-    };
-    
-    private InvalidationListener widthListener = new InvalidationListener() {
-        @Override public void invalidated(Observable observable) {
-            // This forces the horizontal scrollbar to show when the column
-            // resizing occurs. It is not ideal, but will work for now.
-            // FIXME this is very, very inefficient, but ensures we don't run
-            // in to RT-13717.
-            flow.reconfigureCells();
-        }
-    };
-    
-    private ChangeListener<ObservableList<T>> itemsChangeListener = 
-        new ChangeListener<ObservableList<T>>() {
-            @Override public void changed(ObservableValue<? extends ObservableList<T>> observable, 
-                    ObservableList<T> oldList, ObservableList<T> newList) {
-                updateTableItems(oldList, newList);
-            }
-    };
-    
-    private WeakListChangeListener<T> weakRowCountListener =
-            new WeakListChangeListener<T>(rowCountListener);
-    private WeakListChangeListener<TableColumn<T,?>> weakVisibleLeafColumnsListener =
-            new WeakListChangeListener<TableColumn<T,?>>(visibleLeafColumnsListener);
-    private WeakInvalidationListener weakWidthListener = 
-            new WeakInvalidationListener(widthListener);
-    private WeakChangeListener<ObservableList<T>> weakItemsChangeListener = 
-            new WeakChangeListener<ObservableList<T>>(itemsChangeListener);
     
     
     
@@ -292,50 +127,6 @@ public class TableViewSkin<T> extends VirtualContainerBase<TableView<T>, TableVi
      *                                                                         *
      **************************************************************************/
 
-    private boolean rowCountDirty;
-    private boolean contentWidthDirty = true;
-    
-//    private double scrollX;
-    
-    /**
-     * This region is used to overlay atop the table when the user is performing
-     * a column resize operation or a column reordering operation. It is a line
-     * that runs the height of the table to indicate either the final width of
-     * of the selected column, or the position the column will be 'dropped' into
-     * when the reordering operation completes.
-     */
-    private Region columnReorderLine;
-
-    /**
-     * A region which is resized and positioned such that it perfectly matches
-     * the dimensions of any TableColumn that is being reordered by the user.
-     * This is useful, for example, as a semi-transparent overlay to give
-     * feedback to the user as to which column is currently being moved.
-     */
-    private Region columnReorderOverlay;
-
-    /**
-     * The entire header region for all columns. This header region handles
-     * column reordering and resizing. It also handles the positioning and
-     * resizing of thte columnReorderLine and columnReorderOverlay.
-     */
-    private TableHeaderRow tableHeaderRow;
-    
-    private Callback<TableView<T>, ? extends TableRow<T>> rowFactory;
-
-    /**
-     * Region placed over the top of the flow (and possibly the header row) if
-     * there is no data and/or there are no columns specified.
-     */
-    // TODO externalise the strings so they can be i18n
-    // FIXME this should not be a StackPane
-    private StackPane placeholderRegion;
-    private Label placeholderLabel;
-    private static final String EMPTY_TABLE_TEXT = ControlResources.getString("TableView.noContent");
-    private static final String NO_COLUMNS_TEXT = ControlResources.getString("TableView.noColumns");
-
-    private int visibleColCount;
-    
     
     
     /***************************************************************************
@@ -344,11 +135,119 @@ public class TableViewSkin<T> extends VirtualContainerBase<TableView<T>, TableVi
      *                                                                         *
      **************************************************************************/  
     
-    /**
-     * 
+    /** {@inheritDoc} */
+    @Override protected ObservableList<TableColumn<T, ?>> getVisibleLeafColumns() {
+        return tableView.getVisibleLeafColumns();
+    }
+
+    @Override protected int getVisibleLeafIndex(TableColumnBase tc) {
+        return tableView.getVisibleLeafIndex((TableColumn)tc);
+    }
+    
+    @Override protected TableColumnBase getVisibleLeafColumn(int col) {
+        return tableView.getVisibleLeafColumn(col);
+    }
+    
+    /** {@inheritDoc} */
+    @Override protected TableViewFocusModel getFocusModel() {
+        return tableView.getFocusModel();
+    }
+
+    /** {@inheritDoc} */
+    @Override protected TablePositionBase getFocusedCell() {
+        return tableView.getFocusModel().getFocusedCell();
+    }
+    
+    /** {@inheritDoc} */
+    @Override protected TableSelectionModel getSelectionModel() {
+        return tableView.getSelectionModel();
+    }
+
+    /** {@inheritDoc} */
+    @Override protected ObjectProperty<Callback<TableView<T>, TableRow<T>>> rowFactoryProperty() {
+        return tableView.rowFactoryProperty();
+    }
+
+    /** {@inheritDoc} */
+    @Override protected ObjectProperty<Node> placeholderProperty() {
+        return tableView.placeholderProperty();
+    }
+
+    /** {@inheritDoc} */
+    @Override protected ObjectProperty<ObservableList<T>> itemsProperty() {
+        return tableView.itemsProperty();
+    }
+
+    /** {@inheritDoc} */
+    @Override protected ObservableList<TableColumn<T, ?>> getColumns() {
+        return tableView.getColumns();
+    }
+
+    /** {@inheritDoc} */
+    @Override protected BooleanProperty tableMenuButtonVisibleProperty() {
+        return tableView.tableMenuButtonVisibleProperty();
+    }
+
+    /** {@inheritDoc} */
+    @Override protected ObjectProperty<Callback<ResizeFeaturesBase, Boolean>> columnResizePolicyProperty() {
+        // TODO Ugly!
+        return (ObjectProperty<Callback<ResizeFeaturesBase, Boolean>>) (Object) tableView.columnResizePolicyProperty();
+    }
+
+    /** {@inheritDoc} */
+    @Override protected ObservableList<TableColumn<T,?>> getSortOrder() {
+        return tableView.getSortOrder();
+    }
+
+    @Override protected boolean resizeColumn(TableColumnBase tc, double delta) {
+        return tableView.resizeColumn((TableColumn)tc, delta);
+    }
+
+    /*
+     * FIXME: Naive implementation ahead
+     * Attempts to resize column based on the pref width of all items contained
+     * in this column. This can be potentially very expensive if the number of
+     * rows is large.
      */
-    public TableHeaderRow getTableHeaderRow() {
-        return tableHeaderRow;
+    @Override protected void resizeColumnToFitContent(TableColumnBase tc, int maxRows) {
+        final TableColumn col = (TableColumn) tc;
+        List<?> items = itemsProperty().get();
+        if (items == null || items.isEmpty()) return;
+    
+        Callback cellFactory = col.getCellFactory();
+        if (cellFactory == null) return;
+    
+        TableCell cell = (TableCell) cellFactory.call(col);
+        if (cell == null) return;
+        
+        // set this property to tell the TableCell we want to know its actual
+        // preferred width, not the width of the associated TableColumnBase
+        cell.getProperties().put(TableCellSkin.DEFER_TO_PARENT_PREF_WIDTH, Boolean.TRUE);
+        
+        // determine cell padding
+        double padding = 10;
+        Node n = cell.getSkin() == null ? null : cell.getSkin().getNode();
+        if (n instanceof Region) {
+            Region r = (Region) n;
+            padding = r.getInsets().getLeft() + r.getInsets().getRight();
+        } 
+        
+        int rows = maxRows == -1 ? items.size() : Math.min(items.size(), maxRows);
+        double maxWidth = 0;
+        for (int row = 0; row < rows; row++) {
+            cell.updateTableColumn(col);
+            cell.updateTableView(tableView);
+            cell.updateIndex(row);
+            
+            if ((cell.getText() != null && !cell.getText().isEmpty()) || cell.getGraphic() != null) {
+                getChildren().add(cell);
+                cell.impl_processCSS(false);
+                maxWidth = Math.max(maxWidth, cell.prefWidth(-1));
+                getChildren().remove(cell);
+            }
+        }
+        
+        col.impl_setWidth(maxWidth + padding);
     }
     
     /** {@inheritDoc} */
@@ -370,82 +269,6 @@ public class TableViewSkin<T> extends VirtualContainerBase<TableView<T>, TableVi
         return cell;
     }
 
-    /**
-     * Function used to scroll the container down by one 'page', although
-     * if this is a horizontal container, then the scrolling will be to the right.
-     */
-    public int onScrollPageDown() {
-        TableRow lastVisibleCell = (TableRow) flow.getLastVisibleCellWithinViewPort();
-        if (lastVisibleCell == null) return -1;
-        
-        int lastVisibleCellIndex = lastVisibleCell.getIndex();
-        
-        boolean isSelected = lastVisibleCell.isSelected() || 
-                lastVisibleCell.isFocused() || 
-                isCellSelected(lastVisibleCellIndex) ||
-                isCellFocused(lastVisibleCellIndex);
-        
-        if (isSelected) {
-            // if the last visible cell is selected, we want to shift that cell up
-            // to be the top-most cell, or at least as far to the top as we can go.
-            flow.showAsFirst(lastVisibleCell);
-            lastVisibleCell = (TableRow) flow.getLastVisibleCellWithinViewPort();
-        } 
-
-        int newSelectionIndex = lastVisibleCell.getIndex();
-        flow.show(newSelectionIndex);
-        return newSelectionIndex;
-    }
-
-    /**
-     * Function used to scroll the container up by one 'page', although
-     * if this is a horizontal container, then the scrolling will be to the left.
-     */
-    public int onScrollPageUp() {
-        TableRow firstVisibleCell = (TableRow) flow.getFirstVisibleCellWithinViewPort();
-        if (firstVisibleCell == null) return -1;
-        
-        int firstVisibleCellIndex = firstVisibleCell.getIndex();
-        
-        boolean isSelected = firstVisibleCell.isSelected() || 
-                firstVisibleCell.isFocused() || 
-                isCellSelected(firstVisibleCellIndex) ||
-                isCellFocused(firstVisibleCellIndex);
-        
-        if (isSelected) {
-            // if the first visible cell is selected, we want to shift that cell down
-            // to be the bottom-most cell, or at least as far to the bottom as we can go.
-            flow.showAsLast(firstVisibleCell);
-            firstVisibleCell = (TableRow) flow.getFirstVisibleCellWithinViewPort();
-        } 
-
-        int newSelectionIndex = firstVisibleCell.getIndex();
-        flow.show(newSelectionIndex);
-        return newSelectionIndex;
-    }
-    
-     boolean isColumnPartiallyOrFullyVisible(TableColumn col) {
-        if (col == null || !col.isVisible()) return false;
-        
-        double scrollX = flow.getHbar().getValue(); 
-
-        // work out where this column header is, and it's width (start -> end)
-        double start = 0;
-        final TableView tableView = getSkinnable();
-        final ObservableList<TableColumn<T,?>> visibleLeafColumns = tableView.getVisibleLeafColumns();
-        for (int i = 0, max = visibleLeafColumns.size(); i < max; i++) {
-            TableColumn c = visibleLeafColumns.get(i);
-            if (c.equals(col)) break;
-            start += c.getWidth();
-        }
-        double end = start + col.getWidth();
-
-        // determine the width of the table
-        final Insets padding = getPadding();
-        double headerWidth = tableView.getWidth() - padding.getLeft() + padding.getRight();
-        
-        return (start >= scrollX || end > scrollX) && (start < (headerWidth + scrollX) || end <= (headerWidth + scrollX));
-    }
     
     
     
@@ -455,120 +278,6 @@ public class TableViewSkin<T> extends VirtualContainerBase<TableView<T>, TableVi
      *                                                                         *
      **************************************************************************/    
     
-    private static final double GOLDEN_RATIO_MULTIPLIER = 0.618033987;
-
-    @Override protected double computePrefHeight(double width) {
-        return 400;
-    }
-
-    /** {@inheritDoc} */
-    @Override protected double computePrefWidth(double height) {
-        double prefHeight = computePrefHeight(-1);
-        
-        List<TableColumn<T,?>> cols = tableView.getVisibleLeafColumns();
-        if (cols == null || cols.isEmpty()) {
-            return prefHeight * GOLDEN_RATIO_MULTIPLIER;
-        } 
-        
-        double pw = getInsets().getLeft() + getInsets().getRight();
-        for (int i = 0, max = cols.size(); i < max; i++) {
-            TableColumn tc = cols.get(i);
-            pw += Math.max(tc.getPrefWidth(), tc.getMinWidth());
-        }
-//        return pw;
-        return Math.max(pw, prefHeight * GOLDEN_RATIO_MULTIPLIER);
-    }
-    
-    /** {@inheritDoc} */
-    @Override protected void layoutChildren(final double x, double y,
-            final double w, final double h) {
-        if (rowCountDirty) {
-            updateRowCount();
-            rowCountDirty = false;
-        }
-        
-        final double baselineOffset = tableView.getLayoutBounds().getHeight() / 2;
-
-        // position the table header
-        double tableHeaderRowHeight = tableHeaderRow.prefHeight(-1);
-        layoutInArea(tableHeaderRow, x, y, w, tableHeaderRowHeight, baselineOffset, 
-                HPos.CENTER, VPos.CENTER);
-        y += tableHeaderRowHeight;
-
-        // let the virtual flow take up all remaining space
-        // TODO this calculation is to ensure the bottom border is visible when
-        // placed in a Pane. It is not ideal, but will suffice for now. See 
-        // RT-14335 for more information.
-        double flowHeight = Math.floor(h - tableHeaderRowHeight);
-        if (getItemCount() == 0 || visibleColCount == 0) {
-            // show message overlay instead of empty table
-            layoutInArea(placeholderRegion, x, y,
-                    w, flowHeight,
-                    baselineOffset, HPos.CENTER, VPos.CENTER);
-        } else {
-            layoutInArea(flow, x, y,
-                    w, flowHeight,
-                    baselineOffset, HPos.CENTER, VPos.CENTER);
-        }
-        
-        // painting the overlay over the column being reordered
-        if (tableHeaderRow.getReorderingRegion() != null) {
-            TableColumnHeader reorderingColumnHeader = tableHeaderRow.getReorderingRegion();
-            TableColumn reorderingColumn = reorderingColumnHeader.getTableColumn();
-            if (reorderingColumn != null) {
-                Node n = tableHeaderRow.getReorderingRegion();
-                
-                // determine where to draw the column header overlay, it's 
-                // either from the left-edge of the column, or 0, if the column
-                // is off the left-side of the TableView (i.e. horizontal 
-                // scrolling has occured).
-                double minX = tableHeaderRow.sceneToLocal(n.localToScene(n.getBoundsInLocal())).getMinX();
-                double overlayWidth = reorderingColumnHeader.getWidth();
-                if (minX < 0) {
-                    overlayWidth += minX;
-                }
-                minX = minX < 0 ? 0 : minX;
-                
-                // prevent the overlay going out the right-hand side of the 
-                // TableView
-                if (minX + overlayWidth > w) {
-                    overlayWidth = w - minX;
-                    
-                    if (flow.getVbar().isVisible()) {
-                        overlayWidth -= flow.getVbar().getWidth() - 1;
-                    }
-                }
-                
-                double contentAreaHeight = flowHeight;
-                if (flow.getHbar().isVisible()) {
-                    contentAreaHeight -= flow.getHbar().getHeight();
-                }
-                
-                columnReorderOverlay.resize(overlayWidth, contentAreaHeight);
-                
-                columnReorderOverlay.setLayoutX(minX);
-                columnReorderOverlay.setLayoutY(tableHeaderRow.getHeight());
-            }
-            
-            // paint the reorder line as well
-            Insets rp = columnReorderLine.getInsets();
-            double cw = rp.getLeft() + rp.getRight();
-            double lineHeight = h - (flow.getHbar().isVisible() ? flow.getHbar().getHeight() - 1 : 0);
-            columnReorderLine.resizeRelocate(0, rp.getTop(), cw, lineHeight);
-        }
-        
-        columnReorderLine.setVisible(tableHeaderRow.isReordering());
-        columnReorderOverlay.setVisible(tableHeaderRow.isReordering());
-        
-        // we test for item count here to resolve RT-14855, where the column
-        // widths weren't being resized properly when in constrained layout mode
-        // if there were no items.
-        if (contentWidthDirty || getItemCount() == 0) {
-            updateContentWidth();
-            contentWidthDirty = false;
-        }
-    }
-    
     
     
     /***************************************************************************
@@ -577,311 +286,4 @@ public class TableViewSkin<T> extends VirtualContainerBase<TableView<T>, TableVi
      *                                                                         *
      **************************************************************************/
     
-    public void updateTableItems(ObservableList<T> oldList, ObservableList<T> newList) {
-        if (oldList != null) {
-            oldList.removeListener(weakRowCountListener);
-        }
-
-        if (newList != null) {
-            newList.addListener(weakRowCountListener);
-        }
-
-        rowCountDirty = true;
-        requestLayout();
-    }
-
-    /**
-     * Keeps track of how many leaf columns are currently visible in this table.
-     */
-    private void updateVisibleColumnCount() {
-        visibleColCount = tableView.getVisibleLeafColumns().size();
-
-        updatePlaceholderRegionVisibility();
-        reconfigureCells();
-    }
-    
-    private void updateVisibleLeafColumnWidthListeners(
-            List<? extends TableColumn<T,?>> added, List<? extends TableColumn<T,?>> removed) {
-        
-        for (int i = 0, max = removed.size(); i < max; i++) {
-            TableColumn tc = removed.get(i);
-            tc.widthProperty().removeListener(weakWidthListener);
-        }
-        for (int i = 0, max = added.size(); i < max; i++) {
-            TableColumn tc = added.get(i);
-            tc.widthProperty().addListener(weakWidthListener);
-        }
-        flow.reconfigureCells();
-    }
-
-    private void updatePlaceholderRegionVisibility() {
-        boolean visible = visibleColCount == 0 || getItemCount() == 0;
-        
-        if (visible) {
-            if (placeholderRegion == null) {
-                placeholderRegion = new StackPane();
-                placeholderRegion.getStyleClass().setAll("placeholder");
-                getChildren().add(placeholderRegion);
-            }
-            
-            Node placeholderNode = tableView.getPlaceholder();
-
-            if (placeholderNode == null) {
-                if (placeholderLabel == null) {
-                    placeholderLabel = new Label();
-                }
-                String s = visibleColCount == 0 ? NO_COLUMNS_TEXT : EMPTY_TABLE_TEXT;
-                placeholderLabel.setText(s);
-
-                placeholderRegion.getChildren().setAll(placeholderLabel);
-            } else {
-                placeholderRegion.getChildren().setAll(placeholderNode);
-            }
-        }
-
-        flow.setVisible(! visible);
-        if (placeholderRegion != null) {
-            placeholderRegion.setVisible(visible);
-        }
-    }
-
-    /*
-     * It's often important to know how much width is available for content
-     * within the table, and this needs to exclude the width of any vertical
-     * scrollbar.
-     */
-    private void updateContentWidth() {
-        double contentWidth = flow.getWidth();
-        
-        if (flow.getVbar().isVisible()) {
-            contentWidth -= flow.getVbar().getWidth();
-        }
-        
-        if (contentWidth <= 0) {
-            // Fix for RT-14855 when there is no content in the TableView.
-            contentWidth = getWidth() - (getInsets().getLeft() + getInsets().getRight());
-        }
-
-        // FIXME this isn't perfect, but it prevents RT-14885, which results in
-        // undesired horizontal scrollbars when in constrained resize mode
-        tableView.getProperties().put("TableView.contentWidth", Math.floor(contentWidth));
-    }
-
-    private void refreshView() {
-        rowCountDirty = true;
-        requestLayout();
-    }
-
-    private void reconfigureCells() {
-        flow.reconfigureCells();
-    }
-
-    private void updateRowCount() {
-        updatePlaceholderRegionVisibility();
-
-        int oldCount = flow.getCellCount();
-        int newCount = getItemCount();
-        
-        // if this is not called even when the count is the same, we get a 
-        // memory leak in VirtualFlow.sheet.children. This can probably be 
-        // optimised in the future when time permits.
-        flow.setCellCount(newCount);
-        
-        if (newCount != oldCount) {
-            // FIXME updateRowCount is called _a lot_. Perhaps we can make recreateCells
-            // smarter. Imagine if items has one million items added - do we really
-            // need to recreateCells a million times?
-            flow.recreateCells();
-        } else {
-            flow.reconfigureCells();
-        }
-    }
-
-    private void onFocusPreviousCell() {
-        TableViewFocusModel fm = tableView.getFocusModel();
-        if (fm == null) return;
-
-        flow.show(fm.getFocusedIndex());
-    }
-
-    private void onFocusNextCell() {
-        TableViewFocusModel fm = tableView.getFocusModel();
-        if (fm == null) return;
-
-        flow.show(fm.getFocusedIndex());
-    }
-
-    private void onSelectPreviousCell() {
-        SelectionModel sm = tableView.getSelectionModel();
-        if (sm == null) return;
-
-        flow.show(sm.getSelectedIndex());
-    }
-
-    private void onSelectNextCell() {
-        SelectionModel sm = tableView.getSelectionModel();
-        if (sm == null) return;
-
-        flow.show(sm.getSelectedIndex());
-    }
-
-    private void onSelectLeftCell() {
-        scrollHorizontally();
-    }
-
-    private void onSelectRightCell() {
-        scrollHorizontally();
-    }
-    
-//    private void moveToLeftMostColumn() {
-//        scrollHorizontally(tableView.getVisibleLeafColumn(0));
-//    }
-//    
-//    private void moveToRightMostColumn() {
-//        scrollHorizontally(tableView.getVisibleLeafColumn(tableView.getVisibleLeafColumns().size() - 1));
-//    }
-
-    // Handles the horizontal scrolling when the selection mode is cell-based
-    // and the newly selected cell belongs to a column which is not totally
-    // visible.
-    private void scrollHorizontally() {
-        TableViewFocusModel fm = tableView.getFocusModel();
-        if (fm == null) return;
-
-        TableColumn col = fm.getFocusedCell().getTableColumn();
-        scrollHorizontally(col);
-    }
-    
-//    private double flowScrollX = -1.0;
-//    private final Map<TableColumn, Boolean> columnVisibilityMap = new HashMap<TableColumn, Boolean>();
-//    boolean isColumnPartiallyOrFullyVisible(TableColumn col) {
-//        if (col == null || !col.isVisible()) return false;
-//        
-//        double pos = flow.getHbar().getValue(); 
-//        if (pos == flowScrollX && columnVisibilityMap.containsKey(col)) {
-//            return columnVisibilityMap.get(col);
-//        } else if (pos != flowScrollX) {
-//            columnVisibilityMap.clear();
-//        }
-//
-//        // work out where this column header is, and it's width (start -> end)
-//        double start = scrollX;
-//        for (TableColumn c : tableView.getVisibleLeafColumns()) {
-//            if (c.equals(col)) break;
-//            start += c.getWidth();
-//        }
-//        double end = start + col.getWidth();
-//
-//        // determine the width of the table
-//        double headerWidth = tableView.getWidth() - getInsets().getLeft() + getInsets().getRight();
-//        
-//        boolean isVisible =(start >= pos || end > pos) && (start < (headerWidth + pos) || end <= (headerWidth + pos));
-//        
-//        columnVisibilityMap.put(col, isVisible);
-//        flowScrollX = pos;
-//        
-//        return isVisible;
-//    }
-
-//    @Override
-//    public void resize(double width, double height) {
-//        columnVisibilityMap.clear();
-//        impl_reapplyCSS();
-//        
-//        super.resize(width, height);
-//    }
-    
-    private void scrollHorizontally(TableColumn col) {
-        if (col == null || !col.isVisible()) return;
-
-        // work out where this column header is, and it's width (start -> end)
-        double start = 0;//scrollX;
-        for (TableColumn c : tableView.getVisibleLeafColumns()) {
-            if (c.equals(col)) break;
-            start += c.getWidth();
-        }
-        double end = start + col.getWidth();
-
-        // determine the width of the table
-        double headerWidth = tableView.getWidth() - getInsets().getLeft() + getInsets().getRight();
-
-        // determine by how much we need to translate the table to ensure that
-        // the start position of this column lines up with the left edge of the
-        // tableview, and also that the columns don't become detached from the
-        // right edge of the table
-        double pos = flow.getHbar().getValue();
-        double max = flow.getHbar().getMax();
-        double newPos;
-        
-        if (start < pos && start >= 0) {
-            newPos = start;
-        } else {
-            double delta = start < 0 || end > headerWidth ? start : 0;
-            newPos = pos + delta > max ? max : pos + delta;
-        }
-
-        // FIXME we should add API in VirtualFlow so we don't end up going
-        // direct to the hbar.
-        // actually shift the flow - this will result in the header moving
-        // as well
-        flow.getHbar().setValue(newPos);
-    }
-
-    private void onMoveToFirstCell() {
-        SelectionModel sm = tableView.getSelectionModel();
-        if (sm == null) return;
-
-        flow.show(0);
-        flow.setPosition(0);
-    }
-
-    private void onMoveToLastCell() {
-        SelectionModel sm = tableView.getSelectionModel();
-        if (sm == null) return;
-
-        int endPos = getItemCount();
-        flow.show(endPos);
-        flow.setPosition(1);
-    }
-
-//    private void updateSelection(TableRow tableRow) {
-//        TableViewSelectionModel sm = tableView.getSelectionModel();
-//        if (sm == null) return;
-//
-//        TableViewFocusModel fm = tableView.getFocusModel();
-//        if (fm == null) return;
-//
-//        int row = tableRow.getIndex();
-//        TableColumn<T,?> column = fm.getFocusedCell().getTableColumn();
-//
-//        sm.clearAndSelect(row, column);
-//        flow.show(tableRow);
-//    }
-    
-    private boolean isCellSelected(int row) {
-        TableView.TableViewSelectionModel sm = tableView.getSelectionModel();
-        if (sm == null) return false;
-        if (! sm.isCellSelectionEnabled()) return false;
-
-        int columnCount = tableView.getVisibleLeafColumns().size();
-        for (int col = 0; col < columnCount; col++) {
-            if (sm.isSelected(row, tableView.getVisibleLeafColumn(col))) {
-                return true;
-            }
-        }
-        return false;
-    }
-    
-    private boolean isCellFocused(int row) {
-        TableViewFocusModel fm = tableView.getFocusModel();
-        if (fm == null) return false;
-
-        int columnCount = tableView.getVisibleLeafColumns().size();
-        for (int col = 0; col < columnCount; col++) {
-            if (fm.isFocused(row, tableView.getVisibleLeafColumn(col))) {
-                return true;
-            }
-        }
-        return false;
-    }
 }

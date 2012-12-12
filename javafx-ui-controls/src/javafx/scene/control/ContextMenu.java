@@ -239,6 +239,8 @@ public class ContextMenu extends PopupControl {
         Event.fireEvent(this, new Event(Menu.ON_SHOWING));
         if (getItems().size() == 0) return;
 
+        getScene().setNodeOrientation(anchor.getEffectiveNodeOrientation());
+
         // FIXME because Side is not yet in javafx.geometry, we have to convert
         // to the old HPos/VPos API here, as Utils can not refer to Side in the
         // charting API.
@@ -264,6 +266,7 @@ public class ContextMenu extends PopupControl {
         Event.fireEvent(this, new Event(Menu.ON_SHOWING));
         if (getItems().size() == 0) return;
 
+        getScene().setNodeOrientation(anchor.getEffectiveNodeOrientation());
         doShow(anchor, screenX, screenY);
     }
 
@@ -271,6 +274,7 @@ public class ContextMenu extends PopupControl {
         if(isImpl_showRelativeToWindow()) {
             final Scene scene = (anchor == null) ? null : anchor.getScene();
             final Window win = (scene == null) ? null : scene.getWindow();
+            if (win == null) return;
             super.show(win, screenX, screenY);
         } else {
             super.show(anchor, screenX, screenY);

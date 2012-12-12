@@ -38,7 +38,7 @@ import javafx.scene.Node;
 
 import com.sun.javafx.css.StyleManager;
 import com.sun.javafx.css.StyleableBooleanProperty;
-import com.sun.javafx.css.StyleableProperty;
+import com.sun.javafx.css.StyleablePropertyMetaData;
 import com.sun.javafx.css.converters.BooleanConverter;
 import com.sun.javafx.scene.control.skin.TitledPaneSkin;
 import javafx.beans.DefaultProperty;
@@ -182,7 +182,7 @@ public class TitledPane extends Labeled {
         }
 
         @Override
-        public StyleableProperty getStyleableProperty() {
+        public StyleablePropertyMetaData getStyleablePropertyMetaData() {
             return StyleableProperties.ANIMATED;
         }
         
@@ -222,7 +222,7 @@ public class TitledPane extends Labeled {
         }
 
         @Override
-        public StyleableProperty getStyleableProperty() {
+        public StyleablePropertyMetaData getStyleablePropertyMetaData() {
             return StyleableProperties.COLLAPSIBLE;
         }
         
@@ -270,8 +270,8 @@ public class TitledPane extends Labeled {
 
     private static class StyleableProperties {
 
-       private static final StyleableProperty<TitledPane,Boolean> COLLAPSIBLE =
-           new StyleableProperty<TitledPane,Boolean>("-fx-collapsible",
+       private static final StyleablePropertyMetaData<TitledPane,Boolean> COLLAPSIBLE =
+           new StyleablePropertyMetaData<TitledPane,Boolean>("-fx-collapsible",
                BooleanConverter.getInstance(), Boolean.TRUE) {
 
             @Override
@@ -285,8 +285,8 @@ public class TitledPane extends Labeled {
             }
         };
                
-        private static final StyleableProperty<TitledPane,Boolean> ANIMATED =
-           new StyleableProperty<TitledPane,Boolean>("-fx-animated",
+        private static final StyleablePropertyMetaData<TitledPane,Boolean> ANIMATED =
+           new StyleablePropertyMetaData<TitledPane,Boolean>("-fx-animated",
                BooleanConverter.getInstance(), Boolean.TRUE) {
 
             @Override
@@ -300,10 +300,10 @@ public class TitledPane extends Labeled {
             }
         };
 
-        private static final List<StyleableProperty> STYLEABLES;
+        private static final List<StyleablePropertyMetaData> STYLEABLES;
         static {
-            final List<StyleableProperty> styleables =
-                new ArrayList<StyleableProperty>(Labeled.impl_CSS_STYLEABLES());
+            final List<StyleablePropertyMetaData> styleables =
+                new ArrayList<StyleablePropertyMetaData>(Labeled.getClassStyleablePropertyMetaData());
             Collections.addAll(styleables,
                 COLLAPSIBLE,
                 ANIMATED
@@ -317,7 +317,7 @@ public class TitledPane extends Labeled {
      * @deprecated This is an internal API that is not intended for use and will be removed in the next version
      */
     @Deprecated
-    public static List<StyleableProperty> impl_CSS_STYLEABLES() {
+    public static List<StyleablePropertyMetaData> getClassStyleablePropertyMetaData() {
         return StyleableProperties.STYLEABLES;
     }
 
@@ -327,8 +327,8 @@ public class TitledPane extends Labeled {
      * @deprecated This is an experimental API that is not intended for general use and is subject to change in future versions
      */
     @Deprecated
-    @Override protected List<StyleableProperty> impl_getControlStyleableProperties() {
-        return impl_CSS_STYLEABLES();
+    @Override protected List<StyleablePropertyMetaData> impl_getControlStyleableProperties() {
+        return getClassStyleablePropertyMetaData();
     }
 
     private static final long EXPANDED_PSEUDOCLASS_STATE =

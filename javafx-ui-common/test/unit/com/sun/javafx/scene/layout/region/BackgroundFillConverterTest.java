@@ -39,7 +39,7 @@ public class BackgroundFillConverterTest {
         -fx-background-insets:
      */
 //    @Test public void scenario1() {
-//        Map<StyleableProperty, Object> map = new HashMap<StyleableProperty, Object>();
+//        Map<CSSProperty, Object> map = new HashMap<CSSProperty, Object>();
 //        List<BackgroundFill> fills = BackgroundFillConverter.getInstance().convert(map);
 //        assertEquals(0, fills.size());
 //    }
@@ -50,7 +50,7 @@ public class BackgroundFillConverterTest {
 //        -fx-background-insets:
 //    */
 //    @Test public void scenario2() {
-//        Map<StyleableProperty, Object> map = new HashMap<StyleableProperty, Object>();
+//        Map<CSSProperty, Object> map = new HashMap<CSSProperty, Object>();
 //        map.put(BackgroundFill.BACKGROUND_COLOR, new Paint[] { Color.BLUE });
 //        List<BackgroundFill> fills = BackgroundFillConverter.getInstance().convert(map);
 //        assertEquals(1, fills.size());
@@ -66,7 +66,7 @@ public class BackgroundFillConverterTest {
 //        -fx-background-insets:
 //     */
 //    @Test public void scenario3() {
-//        Map<StyleableProperty, Object> map = new HashMap<StyleableProperty, Object>();
+//        Map<CSSProperty, Object> map = new HashMap<CSSProperty, Object>();
 //        map.put(BackgroundFill.BACKGROUND_COLOR, new Paint[] { Color.BLUE });
 //        map.put(BackgroundFill.BACKGROUND_RADIUS, new Insets[] { new Insets(10) });
 //        List<BackgroundFill> fills = BackgroundFillConverter.getInstance().convert(map);
@@ -83,7 +83,7 @@ public class BackgroundFillConverterTest {
 //        -fx-background-insets:
 //     */
 //    @Test public void scenario4() {
-//        Map<StyleableProperty, Object> map = new HashMap<StyleableProperty, Object>();
+//        Map<CSSProperty, Object> map = new HashMap<CSSProperty, Object>();
 //        map.put(BackgroundFill.BACKGROUND_COLOR, new Paint[] { Color.BLUE });
 //        map.put(BackgroundFill.BACKGROUND_RADIUS, new Insets[] { new Insets(1.0, 2.0, 3.0, 4.0) });
 //        List<BackgroundFill> fills = BackgroundFillConverter.getInstance().convert(map);
@@ -100,7 +100,7 @@ public class BackgroundFillConverterTest {
 //        -fx-background-insets: 1
 //     */
 //    @Test public void scenario5() {
-//        Map<StyleableProperty, Object> map = new HashMap<StyleableProperty, Object>();
+//        Map<CSSProperty, Object> map = new HashMap<CSSProperty, Object>();
 //        map.put(BackgroundFill.BACKGROUND_COLOR, new Paint[] { Color.BLUE });
 //        map.put(BackgroundFill.BACKGROUND_RADIUS, new Insets[] { new Insets(10) });
 //        map.put(BackgroundFill.BACKGROUND_INSETS, new Insets[] { new Insets(1) });
@@ -118,7 +118,7 @@ public class BackgroundFillConverterTest {
 //        -fx-background-insets: 1
 //     */
 //    @Test public void scenario6() {
-//        Map<StyleableProperty, Object> map = new HashMap<StyleableProperty, Object>();
+//        Map<CSSProperty, Object> map = new HashMap<CSSProperty, Object>();
 //        map.put(BackgroundFill.BACKGROUND_COLOR, new Paint[] { Color.BLUE });
 //        map.put(BackgroundFill.BACKGROUND_RADIUS, new Insets[] { new Insets(10), new Insets(20) });
 //        map.put(BackgroundFill.BACKGROUND_INSETS, new Insets[] { new Insets(1) });
@@ -136,7 +136,7 @@ public class BackgroundFillConverterTest {
 //        -fx-background-insets: 1, 2
 //     */
 //    @Test public void scenario7() {
-//        Map<StyleableProperty, Object> map = new HashMap<StyleableProperty, Object>();
+//        Map<CSSProperty, Object> map = new HashMap<CSSProperty, Object>();
 //        map.put(BackgroundFill.BACKGROUND_COLOR, new Paint[] { Color.BLUE });
 //        map.put(BackgroundFill.BACKGROUND_RADIUS, new Insets[] { new Insets(10) });
 //        map.put(BackgroundFill.BACKGROUND_INSETS, new Insets[] { new Insets(1), new Insets(2) });
@@ -154,7 +154,7 @@ public class BackgroundFillConverterTest {
 //        -fx-background-insets: 1
 //     */
 //    @Test public void scenario8() {
-//        Map<StyleableProperty, Object> map = new HashMap<StyleableProperty, Object>();
+//        Map<CSSProperty, Object> map = new HashMap<CSSProperty, Object>();
 //        map.put(BackgroundFill.BACKGROUND_COLOR, new Paint[] { Color.BLUE, Color.GREEN });
 //        map.put(BackgroundFill.BACKGROUND_RADIUS, new Insets[] { new Insets(10) });
 //        map.put(BackgroundFill.BACKGROUND_INSETS, new Insets[] { new Insets(1) });
@@ -176,7 +176,7 @@ public class BackgroundFillConverterTest {
 //        -fx-background-insets: 1
 //     */
 //    @Test public void scenario9() {
-//        Map<StyleableProperty, Object> map = new HashMap<StyleableProperty, Object>();
+//        Map<CSSProperty, Object> map = new HashMap<CSSProperty, Object>();
 //        map.put(BackgroundFill.BACKGROUND_COLOR, new Paint[] { Color.BLUE, Color.GREEN });
 //        map.put(BackgroundFill.BACKGROUND_RADIUS, new Insets[] { new Insets(10), new Insets(20) });
 //        map.put(BackgroundFill.BACKGROUND_INSETS, new Insets[] { new Insets(1) });
@@ -198,7 +198,7 @@ public class BackgroundFillConverterTest {
 //        -fx-background-insets: 1, 2
 //     */
 //    @Test public void scenario10() {
-//        Map<StyleableProperty, Object> map = new HashMap<StyleableProperty, Object>();
+//        Map<CSSProperty, Object> map = new HashMap<CSSProperty, Object>();
 //        map.put(BackgroundFill.BACKGROUND_COLOR, new Paint[] { Color.BLUE, Color.GREEN });
 //        map.put(BackgroundFill.BACKGROUND_RADIUS, new Insets[] { new Insets(10) });
 //        map.put(BackgroundFill.BACKGROUND_INSETS, new Insets[] { new Insets(1), new Insets(2) });
@@ -220,7 +220,7 @@ public class BackgroundFillConverterTest {
 //        -fx-background-insets: null
 //     */
 //    @Test public void scenario11() {
-//        Map<StyleableProperty, Object> map = new HashMap<StyleableProperty, Object>();
+//        Map<CSSProperty, Object> map = new HashMap<CSSProperty, Object>();
 //        map.put(BackgroundFill.BACKGROUND_COLOR, null);
 //        map.put(BackgroundFill.BACKGROUND_RADIUS, null);
 //        map.put(BackgroundFill.BACKGROUND_INSETS, null);
@@ -234,7 +234,7 @@ public class BackgroundFillConverterTest {
 //        -fx-background-insets: []
 //     */
 //    @Test public void scenario12() {
-//        Map<StyleableProperty, Object> map = new HashMap<StyleableProperty, Object>();
+//        Map<CSSProperty, Object> map = new HashMap<CSSProperty, Object>();
 //        map.put(BackgroundFill.BACKGROUND_COLOR, new Color[0]);
 //        map.put(BackgroundFill.BACKGROUND_RADIUS, new Insets[0]);
 //        map.put(BackgroundFill.BACKGROUND_INSETS, new Insets[0]);

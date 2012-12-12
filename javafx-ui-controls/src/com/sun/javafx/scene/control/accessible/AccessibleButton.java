@@ -26,16 +26,13 @@
 package com.sun.javafx.scene.control.accessible;
 
 import com.sun.javafx.accessible.utils.ControlTypeIds;
-import com.sun.javafx.accessible.utils.EventIds;
 import com.sun.javafx.accessible.utils.PropertyIds;
-import javafx.beans.InvalidationListener;
-import javafx.beans.Observable;
-import javafx.scene.control.Button;
+import javafx.scene.control.ButtonBase;
 
 public class AccessibleButton extends AccessibleControl  {
-    Button button ;
-    public AccessibleButton(Button button)
-    {
+    
+    ButtonBase button ;
+    public AccessibleButton(ButtonBase button) {
         super(button);
         this.button = button ;       
     }
@@ -52,9 +49,7 @@ public class AccessibleButton extends AccessibleControl  {
     //     The property value, or a null if the property is not supported by this provider,
     //     or System.Windows.Automation.AutomationElementIdentifiers.NotSupported if
     //     it is not supported at all.
-    @Override
-    public Object getPropertyValue(int propertyId)
-    {
+    @Override public Object getPropertyValue(int propertyId) {
         Object retVal = null ;
         switch(propertyId){
             case PropertyIds.NAME:
@@ -94,9 +89,7 @@ public class AccessibleButton extends AccessibleControl  {
     // Returns:
     //     Object that implements the pattern interface, or null if the pattern is not
     //     supported.
-    @Override
-    public Object getPatternProvider(int patternId)
-    {
+    @Override public Object getPatternProvider(int patternId) {
         return null ;
     }
 

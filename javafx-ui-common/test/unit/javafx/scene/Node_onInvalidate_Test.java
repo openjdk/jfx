@@ -38,7 +38,7 @@ import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 import org.junit.runners.Parameterized.Parameters;
 
-import com.sun.javafx.css.StyleableProperty;
+import com.sun.javafx.css.StyleablePropertyMetaData;
 import com.sun.javafx.scene.DirtyBits;
 import com.sun.javafx.test.OnInvalidateMethodsTestBase;
 
@@ -53,39 +53,39 @@ public class Node_onInvalidate_Test extends OnInvalidateMethodsTestBase {
     public static Collection<Object[]>data() {
         Object[][] data = new Object[][] {
             {new Configuration(Rectangle.class, "visible", false, new DirtyBits[] {DirtyBits.NODE_VISIBLE, DirtyBits.NODE_BOUNDS})},
-            {new Configuration(Rectangle.class, "cursor", Cursor.WAIT, new StyleableProperty[] {findCssStyleableProperty("-fx-cursor")})},
-            {new Configuration(Rectangle.class, "opacity", 0.5, new StyleableProperty[] {findCssStyleableProperty("-fx-opacity")})},
+            {new Configuration(Rectangle.class, "cursor", Cursor.WAIT, new StyleablePropertyMetaData[] {findCssCSSProperty("-fx-cursor")})},
+            {new Configuration(Rectangle.class, "opacity", 0.5, new StyleablePropertyMetaData[] {findCssCSSProperty("-fx-opacity")})},
             {new Configuration(Rectangle.class, "opacity", 0.5, new DirtyBits[] {DirtyBits.NODE_OPACITY})},
-            {new Configuration(Rectangle.class, "blendMode", BlendMode.DARKEN, new StyleableProperty[] {findCssStyleableProperty("-fx-blend-mode")})},
+            {new Configuration(Rectangle.class, "blendMode", BlendMode.DARKEN, new StyleablePropertyMetaData[] {findCssCSSProperty("-fx-blend-mode")})},
             {new Configuration(Rectangle.class, "blendMode", BlendMode.DARKEN, new DirtyBits[] {DirtyBits.NODE_BLENDMODE})},
             {new Configuration(Rectangle.class, "cache", true, new DirtyBits[] {DirtyBits.NODE_CACHE})},
             {new Configuration(Rectangle.class, "cacheHint", CacheHint.QUALITY, new DirtyBits[] {DirtyBits.NODE_CACHE})},
-            {new Configuration(Rectangle.class, "effect", new Shadow(), new StyleableProperty[] {findCssStyleableProperty("-fx-effect")})},
-            {new Configuration(Rectangle.class, "translateX", 1.5, new StyleableProperty[] {findCssStyleableProperty("-fx-translate-x")})},
+            {new Configuration(Rectangle.class, "effect", new Shadow(), new StyleablePropertyMetaData[] {findCssCSSProperty("-fx-effect")})},
+            {new Configuration(Rectangle.class, "translateX", 1.5, new StyleablePropertyMetaData[] {findCssCSSProperty("-fx-translate-x")})},
             {new Configuration(Rectangle.class, "translateX", 1.5, new DirtyBits[] {DirtyBits.NODE_TRANSFORM})},
-            {new Configuration(Rectangle.class, "translateY", 1.5, new StyleableProperty[] {findCssStyleableProperty("-fx-translate-y")})},
+            {new Configuration(Rectangle.class, "translateY", 1.5, new StyleablePropertyMetaData[] {findCssCSSProperty("-fx-translate-y")})},
             {new Configuration(Rectangle.class, "translateY", 1.5, new DirtyBits[] {DirtyBits.NODE_TRANSFORM})},
-            {new Configuration(Rectangle.class, "translateZ", 1.5, new StyleableProperty[] {findCssStyleableProperty("-fx-translate-z")})},
+            {new Configuration(Rectangle.class, "translateZ", 1.5, new StyleablePropertyMetaData[] {findCssCSSProperty("-fx-translate-z")})},
             {new Configuration(Rectangle.class, "translateZ", 1.5, new DirtyBits[] {DirtyBits.NODE_TRANSFORM})},
-            {new Configuration(Rectangle.class, "scaleX", 5.5, new StyleableProperty[] {findCssStyleableProperty("-fx-scale-x")})},
+            {new Configuration(Rectangle.class, "scaleX", 5.5, new StyleablePropertyMetaData[] {findCssCSSProperty("-fx-scale-x")})},
             {new Configuration(Rectangle.class, "scaleX", 5.5, new DirtyBits[] {DirtyBits.NODE_TRANSFORM})},
-            {new Configuration(Rectangle.class, "scaleY", 5.5, new StyleableProperty[] {findCssStyleableProperty("-fx-scale-y")})},
+            {new Configuration(Rectangle.class, "scaleY", 5.5, new StyleablePropertyMetaData[] {findCssCSSProperty("-fx-scale-y")})},
             {new Configuration(Rectangle.class, "scaleY", 5.5, new DirtyBits[] {DirtyBits.NODE_TRANSFORM})},
-            {new Configuration(Rectangle.class, "scaleZ", 5.5, new StyleableProperty[] {findCssStyleableProperty("-fx-scale-z")})},
+            {new Configuration(Rectangle.class, "scaleZ", 5.5, new StyleablePropertyMetaData[] {findCssCSSProperty("-fx-scale-z")})},
             {new Configuration(Rectangle.class, "scaleZ", 5.5, new DirtyBits[] {DirtyBits.NODE_TRANSFORM})},
-            {new Configuration(Rectangle.class, "rotate", 55, new StyleableProperty[] {findCssStyleableProperty("-fx-rotate")})},
+            {new Configuration(Rectangle.class, "rotate", 55, new StyleablePropertyMetaData[] {findCssCSSProperty("-fx-rotate")})},
             {new Configuration(Rectangle.class, "rotate", 55, new DirtyBits[] {DirtyBits.NODE_TRANSFORM})},
             {new Configuration(Rectangle.class, "rotationAxis", Rotate.X_AXIS, new DirtyBits[] {DirtyBits.NODE_TRANSFORM})},
             {new Configuration(Rectangle.class, "clip", new Rectangle(10, 10), new DirtyBits[] {DirtyBits.NODE_CLIP})},
-            {new Configuration(Rectangle.class, "focusTraversable", true, new StyleableProperty[] {findCssStyleableProperty("-fx-focus-traversable")})}
+            {new Configuration(Rectangle.class, "focusTraversable", true, new StyleablePropertyMetaData[] {findCssCSSProperty("-fx-focus-traversable")})}
         };
         return Arrays.asList(data);
     }
 
 
-    public static StyleableProperty findCssStyleableProperty(String propertyName) {
-        final List<StyleableProperty> keys = Node.impl_CSS_STYLEABLES();
-        for(StyleableProperty styleable : keys) {
+    public static StyleablePropertyMetaData findCssCSSProperty(String propertyName) {
+        final List<StyleablePropertyMetaData> keys = Node.getClassStyleablePropertyMetaData();
+        for(StyleablePropertyMetaData styleable : keys) {
             if (styleable.getProperty().equals(propertyName)) return styleable;
         }
         return null;

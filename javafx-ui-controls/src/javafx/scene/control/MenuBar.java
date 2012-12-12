@@ -79,8 +79,8 @@ public class MenuBar extends Control {
         // focusTraversable is styleable through css. Calling setFocusTraversable
         // makes it look to css like the user set the value and css will not 
         // override. Initializing focusTraversable by calling set on the 
-        // StyleableProperty ensures that css will be able to override the value.
-        final StyleableProperty prop = StyleableProperty.getStyleableProperty(focusTraversableProperty());
+        // StyleablePropertyMetaData ensures that css will be able to override the value.
+        final StyleablePropertyMetaData prop = StyleablePropertyMetaData.getStyleablePropertyMetaData(focusTraversableProperty());
         prop.set(this, Boolean.FALSE);            
     }
 
@@ -108,7 +108,7 @@ public class MenuBar extends Control {
             useSystemMenuBar = new StyleableBooleanProperty() {
 
                 @Override
-                public StyleableProperty getStyleableProperty() {
+                public StyleablePropertyMetaData getStyleablePropertyMetaData() {
                     return StyleableProperties.USE_SYSTEM_MENU_BAR;
                 }
 
@@ -163,8 +163,8 @@ public class MenuBar extends Control {
     private static final String DEFAULT_STYLE_CLASS = "menu-bar";
 
     private static class StyleableProperties {
-        private static final StyleableProperty<MenuBar, Boolean> USE_SYSTEM_MENU_BAR =
-                new StyleableProperty<MenuBar, Boolean>("-fx-use-system-menu-bar",
+        private static final StyleablePropertyMetaData<MenuBar, Boolean> USE_SYSTEM_MENU_BAR =
+                new StyleablePropertyMetaData<MenuBar, Boolean>("-fx-use-system-menu-bar",
                                                         BooleanConverter.getInstance(),
                                                         false) {
             @Override public boolean isSettable(MenuBar n) {
@@ -176,10 +176,10 @@ public class MenuBar extends Control {
             }
         };
 
-        private static final List<StyleableProperty> STYLEABLES;
+        private static final List<StyleablePropertyMetaData> STYLEABLES;
         static {
-            final List<StyleableProperty> styleables =
-                new ArrayList<StyleableProperty>(Control.impl_CSS_STYLEABLES());
+            final List<StyleablePropertyMetaData> styleables =
+                new ArrayList<StyleablePropertyMetaData>(Control.getClassStyleablePropertyMetaData());
             Collections.addAll(styleables,
                 USE_SYSTEM_MENU_BAR
             );
@@ -192,7 +192,7 @@ public class MenuBar extends Control {
      * @deprecated This is an internal API that is not intended for use and will be removed in the next version
      */
     @Deprecated
-    public static List<StyleableProperty> impl_CSS_STYLEABLES() {
+    public static List<StyleablePropertyMetaData> getClassStyleablePropertyMetaData() {
         return MenuBar.StyleableProperties.STYLEABLES;
     }
 
@@ -202,8 +202,8 @@ public class MenuBar extends Control {
      * @deprecated This is an experimental API that is not intended for general use and is subject to change in future versions
      */
     @Deprecated
-    @Override protected List<StyleableProperty> impl_getControlStyleableProperties() {
-        return impl_CSS_STYLEABLES();
+    @Override protected List<StyleablePropertyMetaData> impl_getControlStyleableProperties() {
+        return getClassStyleablePropertyMetaData();
     }
 
     /**

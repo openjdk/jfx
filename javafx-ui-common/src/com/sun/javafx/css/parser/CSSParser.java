@@ -3431,7 +3431,6 @@ final public class CSSParser {
         if (root == null) return null;
         final Token token = root.token;
         if (token == null ||
-            token.getType() != CSSLexer.IDENT ||
             token.getText() == null ||
             token.getText().isEmpty()) error(root, "Expected \'<font-weight>\'");
 
@@ -3465,9 +3464,8 @@ final public class CSSParser {
         } else if ("800".equals(ident)) {
             weight = FontUnits.Weight.SCALE_800;
         } else {
-            return null;
-        }
-
+	    error(root, "Expected \'<font-weight>\'");
+	}
         return new ParsedValue<FontUnits.Weight,FontWeight>(weight, FontConverter.WeightConverter.getInstance());
     }
 

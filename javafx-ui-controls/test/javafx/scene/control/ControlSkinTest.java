@@ -4,7 +4,7 @@
 
 package javafx.scene.control;
 
-import com.sun.javafx.css.StyleableProperty;
+import com.sun.javafx.css.StyleablePropertyMetaData;
 import javafx.beans.InvalidationListener;
 import javafx.beans.Observable;
 import javafx.beans.property.StringProperty;
@@ -93,7 +93,7 @@ public class ControlSkinTest {
     
     
     @Test public void shouldBeAbleToSpecifyTheSkinViaCSS() {
-        StyleableProperty styleable = StyleableProperty.getStyleableProperty(c.skinClassNameProperty());
+        StyleablePropertyMetaData styleable = StyleablePropertyMetaData.getStyleablePropertyMetaData(c.skinClassNameProperty());
         styleable.set(c, "javafx.scene.control.ControlSkinTest$MySkinStub");
         assertTrue(c.getSkin() instanceof MySkinStub);
     }
@@ -108,7 +108,7 @@ public class ControlSkinTest {
                 calledOnce = true;
             }
         });
-        StyleableProperty styleable = StyleableProperty.getStyleableProperty(skinClassName);
+        StyleablePropertyMetaData styleable = StyleablePropertyMetaData.getStyleablePropertyMetaData(skinClassName);
         styleable.set(c, "javafx.scene.control.ControlSkinTest$MySkinStub");
         Skin<?> s = c.getSkin();
         styleable.set(c, "javafx.scene.control.ControlSkinTest$MySkinStub");
@@ -116,7 +116,7 @@ public class ControlSkinTest {
     }
 
     @Test public void shouldNotSeeErrorMessageWhenSettingTheSkinToNullViaCSS() {
-        StyleableProperty styleable = StyleableProperty.getStyleableProperty(c.skinClassNameProperty());
+        StyleablePropertyMetaData styleable = StyleablePropertyMetaData.getStyleablePropertyMetaData(c.skinClassNameProperty());
         styleable.set(c, "javafx.scene.control.ControlSkinTest$MySkinStub");
         assertTrue(c.getSkin() instanceof MySkinStub);
         styleable.set(c, null);
@@ -127,7 +127,7 @@ public class ControlSkinTest {
     @Ignore ("This spits out annoying debug statements, re-enable when we can disable all logging")
     @Test public void loadSkinClassShouldIgnoreNullNames() {
         c.setSkin(s);
-        StyleableProperty styleable = StyleableProperty.getStyleableProperty(c.skinClassNameProperty());
+        StyleablePropertyMetaData styleable = StyleablePropertyMetaData.getStyleablePropertyMetaData(c.skinClassNameProperty());
         styleable.set(c, null); // indirectly calls loadSkinClass
         assertSame(s, c.getSkin()); // shouldn't have changed
     }
@@ -135,7 +135,7 @@ public class ControlSkinTest {
     @Ignore ("This spits out annoying debug statements, re-enable when we can disable all logging")
     @Test public void loadSkinClassShouldIgnoreEmptyStrings() {
         c.setSkin(s);
-        StyleableProperty styleable = StyleableProperty.getStyleableProperty(c.skinClassNameProperty());
+        StyleablePropertyMetaData styleable = StyleablePropertyMetaData.getStyleablePropertyMetaData(c.skinClassNameProperty());
         styleable.set(c, ""); // indirectly calls loadSkinClass
         assertSame(s, c.getSkin()); // shouldn't have changed
     }
@@ -143,7 +143,7 @@ public class ControlSkinTest {
     @Ignore ("This spits out annoying debug statements, re-enable when we can disable all logging")
     @Test public void loadSkinClassShouldIgnoreSkinsWithoutAProperConstructor() {
         c.setSkin(s);
-        StyleableProperty styleable = StyleableProperty.getStyleableProperty(c.skinClassNameProperty());
+        StyleablePropertyMetaData styleable = StyleablePropertyMetaData.getStyleablePropertyMetaData(c.skinClassNameProperty());
         styleable.set(c, "javafx.scene.control.ControlSkinTest$UnloadableSkinStub"); // indirectly calls loadSkinClass
         assertSame(s, c.getSkin()); // shouldn't have changed
     }
@@ -151,7 +151,7 @@ public class ControlSkinTest {
     @Ignore ("This spits out annoying debug statements, re-enable when we can disable all logging")
     @Test public void loadSkinClassShouldIgnoreBogusOrUnfindableSkins() {
         c.setSkin(s);
-        StyleableProperty styleable = StyleableProperty.getStyleableProperty(c.skinClassNameProperty());
+        StyleablePropertyMetaData styleable = StyleablePropertyMetaData.getStyleablePropertyMetaData(c.skinClassNameProperty());
         styleable.set(c, "javafx.scene.control.ControlSkinTest$FooSkinWhichDoesntExist"); // indirectly calls loadSkinClass
         assertSame(s, c.getSkin()); // shouldn't have changed
     }

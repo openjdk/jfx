@@ -24,80 +24,34 @@
  */
 package com.sun.javafx.scene.control.skin;
 
-import javafx.beans.InvalidationListener;
-import javafx.beans.Observable;
-import javafx.beans.WeakInvalidationListener;
 import javafx.scene.control.TableCell;
 
 import com.sun.javafx.scene.control.behavior.TableCellBehavior;
+import javafx.beans.property.BooleanProperty;
+import javafx.beans.property.ReadOnlyDoubleProperty;
 import javafx.scene.control.TableColumn;
-import javafx.scene.shape.Rectangle;
 
 /**
  */
-public class TableCellSkin extends CellSkinBase<TableCell, TableCellBehavior> {
+public class TableCellSkin extends TableCellSkinBase<TableCell, TableCellBehavior> {
     
-    // This property is set on the cell when we want to know its actual
-    // preferred width, not the width of the associated TableColumn.
-    // This is primarily used in NestedTableColumnHeader such that user double
-    // clicks result in the column being resized to fit the widest content in 
-    // the column
-    static final String DEFER_TO_PARENT_PREF_WIDTH = "deferToParentPrefWidth";
-    private boolean isDeferToParentForPrefWidth = false;
+    private final TableCell tableCell;
+    private final TableColumn tableColumn;
     
-    private InvalidationListener columnWidthListener = new InvalidationListener() {
-        @Override public void invalidated(Observable valueModel) {
-            requestLayout();
-        }
-    };
-    
-    private WeakInvalidationListener weakColumnWidthListener =
-            new WeakInvalidationListener(columnWidthListener);
-    
-    public TableCellSkin(TableCell control) {
-        super(control, new TableCellBehavior(control));
+    public TableCellSkin(TableCell tableCell) {
+        super(tableCell, new TableCellBehavior(tableCell));
         
-        TableCell skinnable = getSkinnable();
-        TableColumn tableColumn = skinnable.getTableColumn();
+        this.tableCell = tableCell;
+        this.tableColumn = tableCell.getTableColumn();
         
-        // RT-22038
-        Rectangle clip = new Rectangle();
-        clip.widthProperty().bind(skinnable.widthProperty());
-        clip.heightProperty().bind(skinnable.heightProperty());
-        getSkinnable().setClip(clip);
-        // --- end of RT-22038
-        
-        if (tableColumn != null) {
-            tableColumn.widthProperty().addListener(
-                new WeakInvalidationListener(weakColumnWidthListener));
-        }
-
-        registerChangeListener(control.visibleProperty(), "VISIBLE");
-        
-        if (skinnable.getProperties().containsKey(DEFER_TO_PARENT_PREF_WIDTH)) {
-            isDeferToParentForPrefWidth = true;
-        }
-    }
-    
-    @Override protected void handleControlPropertyChanged(String p) {
-        super.handleControlPropertyChanged(p);
-        if ("VISIBLE".equals(p)) {
-            getSkinnable().setVisible(getSkinnable().getTableColumn().isVisible());
-        }
-    }
-    
-    @Override protected void layoutChildren(final double x, final double y,
-            final double w, final double h) {
-        // fit the cell within this space
-        // FIXME the subtraction of bottom padding isn't right here - but it
-        // results in better visuals, so I'm leaving it in place for now.
-        layoutLabelInArea(x, y, w, h - getPadding().getBottom());
+        super.init(tableCell);
     }
 
-    @Override protected double computePrefWidth(double height) {
-        if (isDeferToParentForPrefWidth) {
-            return super.computePrefWidth(height);
-        }
-        return getSkinnable().getTableColumn().getWidth();
+    @Override protected BooleanProperty columnVisibleProperty() {
+        return tableColumn.visibleProperty();
+    }
+
+    @Override protected ReadOnlyDoubleProperty columnWidthProperty() {
+        return tableColumn.widthProperty();
     }
 }

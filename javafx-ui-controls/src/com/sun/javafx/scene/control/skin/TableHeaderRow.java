@@ -54,6 +54,7 @@ import javafx.scene.shape.Rectangle;
 import com.sun.javafx.scene.control.skin.resources.ControlResources;
 import javafx.beans.WeakInvalidationListener;
 import javafx.beans.property.BooleanPropertyBase;
+import javafx.scene.control.TableColumnBase;
 
 /**
  * Region responsible for painting the entire row of column headers.
@@ -65,7 +66,9 @@ public class TableHeaderRow extends StackPane {
     
     private final VirtualFlow flow;
     VirtualFlow getVirtualFlow() { return flow; }
-    private final TableView<?> table;
+//    private final TableView<?> table;
+    
+    private final TableViewSkinBase tableSkin;
 
     private Insets tablePadding;
     public void setTablePadding(Insets tablePadding) {
@@ -88,7 +91,7 @@ public class TableHeaderRow extends StackPane {
     private void updateTableWidth() {
         // snapping added for RT-19428
         double padding = snapSpace(getTablePadding().getLeft()) + snapSpace(getTablePadding().getRight());
-        this.tableWidth = snapSize(table.getWidth()) - padding;
+        this.tableWidth = snapSize(tableSkin.getSkinnable().getWidth()) - padding;
         clip.setWidth(tableWidth + 1);
     }
 
@@ -125,7 +128,7 @@ public class TableHeaderRow extends StackPane {
     private TableColumnHeader reorderingRegion;
     public TableColumnHeader getReorderingRegion() { return reorderingRegion; }
 
-    public void setReorderingColumn(TableColumn rc) {
+    public void setReorderingColumn(TableColumnBase rc) {
         dragHeaderLabel.setText(rc == null ? "" : rc.getText());
     }
 
@@ -184,9 +187,10 @@ public class TableHeaderRow extends StackPane {
      *                                                                         *
      **************************************************************************/
     
-    public TableHeaderRow(final TableView<?> table, final VirtualFlow flow) {
-        this.table = table;
-        this.flow = flow;
+    public TableHeaderRow(final TableViewSkinBase skin) {
+//        this.table = table;
+        this.tableSkin = skin;
+        this.flow = skin.flow;
 
         getStyleClass().setAll("column-header-background");
 
@@ -196,14 +200,14 @@ public class TableHeaderRow extends StackPane {
         setClip(clip);
 
         updateTableWidth();
-        table.widthProperty().addListener(weakTableWidthListener);
-        table.getVisibleLeafColumns().addListener(weakVisibleLeafColumnsListener);
+        tableSkin.getSkinnable().widthProperty().addListener(weakTableWidthListener);
+        skin.getVisibleLeafColumns().addListener(weakVisibleLeafColumnsListener);
 
         // --- popup menu for hiding/showing columns
         columnPopupMenu = new ContextMenu();
 
-        updateTableColumnListeners(table.getColumns(), Collections.<TableColumn<?,?>>emptyList());
-        table.getColumns().addListener(weakTableColumnsListener);
+        updateTableColumnListeners(tableSkin.getColumns(), Collections.<TableColumnBase<?,?>>emptyList());
+        tableSkin.getColumns().addListener(weakTableColumnsListener);
         // --- end of popup menu
 
         // drag header region. Used to indicate the current column being reordered
@@ -214,7 +218,7 @@ public class TableHeaderRow extends StackPane {
         dragHeader.getChildren().add(dragHeaderLabel);
 
         // the header lives inside a NestedTableColumnHeader
-        header = new NestedTableColumnHeader(table, null);
+        header = new NestedTableColumnHeader(skin, null);
         header.setFocusTraversable(false);
         header.setTableHeaderRow(this);
 
@@ -227,7 +231,7 @@ public class TableHeaderRow extends StackPane {
         // This ensures the user knows that the table has focus.
         setOnMousePressed(new EventHandler<MouseEvent>() {
             @Override public void handle(MouseEvent e) {
-                table.requestFocus();
+                skin.getSkinnable().requestFocus();
             }
         });
 
@@ -247,10 +251,10 @@ public class TableHeaderRow extends StackPane {
         };
         cornerRegion.getStyleClass().setAll("show-hide-columns-button");
         cornerRegion.getChildren().addAll(image);
-        cornerRegion.setVisible(table.isTableMenuButtonVisible());
-        table.tableMenuButtonVisibleProperty().addListener(new InvalidationListener() {
+        cornerRegion.setVisible(tableSkin.tableMenuButtonVisibleProperty().get());
+        tableSkin.tableMenuButtonVisibleProperty().addListener(new InvalidationListener() {
             @Override public void invalidated(Observable valueModel) {
-                cornerRegion.setVisible(table.isTableMenuButtonVisible());
+                cornerRegion.setVisible(tableSkin.tableMenuButtonVisibleProperty().get());
                 requestLayout();
             }
         });
@@ -308,20 +312,20 @@ public class TableHeaderRow extends StackPane {
             new WeakListChangeListener(tableColumnsListener);
     
 
-    private Map<TableColumn, CheckMenuItem> columnMenuItems = new HashMap<TableColumn, CheckMenuItem>();
-    private void updateTableColumnListeners(List<? extends TableColumn<?,?>> added, List<? extends TableColumn<?,?>> removed) {
+    private Map<TableColumnBase, CheckMenuItem> columnMenuItems = new HashMap<TableColumnBase, CheckMenuItem>();
+    private void updateTableColumnListeners(List<? extends TableColumnBase<?,?>> added, List<? extends TableColumnBase<?,?>> removed) {
         // remove binding from all removed items
-        for (TableColumn tc : removed) {
+        for (TableColumnBase tc : removed) {
             remove(tc);
         }
 
         // add listeners to all added items
-        for (final TableColumn tc : added) {
+        for (final TableColumnBase tc : added) {
             add(tc);
         }
     }
     
-    private void remove(TableColumn<?,?> col) {
+    private void remove(TableColumnBase<?,?> col) {
         if (col == null) return;
         
         if (col.getColumns().isEmpty()) {
@@ -333,13 +337,13 @@ public class TableHeaderRow extends StackPane {
 
             columnPopupMenu.getItems().remove(item);
         } else {
-            for (TableColumn tc : col.getColumns()) {
+            for (TableColumnBase tc : col.getColumns()) {
                 remove(tc);
             }
         }
     }
     
-    private void add(final TableColumn<?,?> col) {
+    private void add(final TableColumnBase<?,?> col) {
         if (col == null) return;
         
         if (col.getColumns().isEmpty()) {
@@ -361,7 +365,7 @@ public class TableHeaderRow extends StackPane {
             
             columnPopupMenu.getItems().add(item);
         } else {
-            for (TableColumn tc : col.getColumns()) {
+            for (TableColumnBase tc : col.getColumns()) {
                 add(tc);
             }
         }
@@ -384,7 +388,7 @@ public class TableHeaderRow extends StackPane {
         // position the filler region
         double border = filler.getBoundsInLocal().getWidth() - filler.getLayoutBounds().getWidth();
         double fillerWidth = tableWidth - headerWidth + border;
-        fillerWidth -= table.isTableMenuButtonVisible() ? cornerWidth : 0;
+        fillerWidth -= tableSkin.tableMenuButtonVisibleProperty().get() ? cornerWidth : 0;
         filler.setVisible(fillerWidth > 0);
         if (fillerWidth > 0) {
             filler.resizeRelocate(x + headerWidth, getInsets().getTop(), fillerWidth, prefHeight);
@@ -426,11 +430,11 @@ public class TableHeaderRow extends StackPane {
     /*
      * Function used for building the strings in the popup menu
      */
-    private String getText(String text, TableColumn col) {
+    private String getText(String text, TableColumnBase col) {
         String s = text;
-        TableColumn parentCol = col.getParentColumn();
+        TableColumnBase parentCol = col.getParentColumn();
         while (parentCol != null) {
-            if (isColumnVisibleInHeader(parentCol, table.getColumns())) {
+            if (isColumnVisibleInHeader(parentCol, tableSkin.getColumns())) {
                 s = parentCol.getText() + MENU_SEPARATOR + s;
             }
             parentCol = parentCol.getParentColumn();
@@ -442,11 +446,11 @@ public class TableHeaderRow extends StackPane {
     // not inserted into the TableView columns list, it effectively doesn't have
     // a parent column from the users perspective. As such, we shouldn't include
     // the parent column text in the menu. Fixes RT-14482.
-    private boolean isColumnVisibleInHeader(TableColumn col, List columns) {
+    private boolean isColumnVisibleInHeader(TableColumnBase col, List columns) {
         if (col == null) return false;
         
         for (int i = 0; i < columns.size(); i++) {
-            TableColumn column = (TableColumn) columns.get(i);
+            TableColumnBase column = (TableColumnBase) columns.get(i);
             if (col.equals(column)) return true;
             
             if (! column.getColumns().isEmpty()) {

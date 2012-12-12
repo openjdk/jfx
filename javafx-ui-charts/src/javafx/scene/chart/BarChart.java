@@ -52,7 +52,7 @@ import com.sun.javafx.charts.Legend;
 import com.sun.javafx.charts.Legend.LegendItem;
 import com.sun.javafx.css.StyleManager;
 import com.sun.javafx.css.StyleableDoubleProperty;
-import com.sun.javafx.css.StyleableProperty;
+import com.sun.javafx.css.StyleablePropertyMetaData;
 import com.sun.javafx.css.converters.SizeConverter;
 import javafx.beans.value.WritableValue;
 
@@ -92,7 +92,7 @@ public class BarChart<X,Y> extends XYChart<X,Y> {
             return "barGap";
         }
 
-        public StyleableProperty getStyleableProperty() {
+        public StyleablePropertyMetaData getStyleablePropertyMetaData() {
             return StyleableProperties.BAR_GAP;
         }
     };
@@ -117,7 +117,7 @@ public class BarChart<X,Y> extends XYChart<X,Y> {
             return "categoryGap";
         }
 
-        public StyleableProperty getStyleableProperty() {
+        public StyleablePropertyMetaData getStyleablePropertyMetaData() {
             return StyleableProperties.CATEGORY_GAP;
         }
     };
@@ -492,8 +492,8 @@ public class BarChart<X,Y> extends XYChart<X,Y> {
       * @treatAsPrivate implementation detail
       */
      private static class StyleableProperties {
-         private static final StyleableProperty<BarChart,Number> BAR_GAP = 
-             new StyleableProperty<BarChart,Number>("-fx-bar-gap",
+         private static final StyleablePropertyMetaData<BarChart,Number> BAR_GAP = 
+             new StyleablePropertyMetaData<BarChart,Number>("-fx-bar-gap",
                  SizeConverter.getInstance(), 4.0) {
 
             @Override
@@ -507,8 +507,8 @@ public class BarChart<X,Y> extends XYChart<X,Y> {
             }
         };
          
-         private static final StyleableProperty<BarChart,Number> CATEGORY_GAP = 
-             new StyleableProperty<BarChart,Number>("-fx-category-gap",
+         private static final StyleablePropertyMetaData<BarChart,Number> CATEGORY_GAP = 
+             new StyleablePropertyMetaData<BarChart,Number>("-fx-category-gap",
                  SizeConverter.getInstance(), 10.0)  {
 
             @Override
@@ -522,11 +522,11 @@ public class BarChart<X,Y> extends XYChart<X,Y> {
             }
         };
 
-         private static final List<StyleableProperty> STYLEABLES;
+         private static final List<StyleablePropertyMetaData> STYLEABLES;
          static {
 
-            final List<StyleableProperty> styleables =
-                new ArrayList<StyleableProperty>(XYChart.impl_CSS_STYLEABLES());
+            final List<StyleablePropertyMetaData> styleables =
+                new ArrayList<StyleablePropertyMetaData>(XYChart.getClassStyleablePropertyMetaData());
             Collections.addAll(styleables,
                 BAR_GAP,
                 CATEGORY_GAP
@@ -540,7 +540,7 @@ public class BarChart<X,Y> extends XYChart<X,Y> {
      * @deprecated This is an internal API that is not intended for use and will be removed in the next version
      */
     @Deprecated
-    public static List<StyleableProperty> impl_CSS_STYLEABLES() {
+    public static List<StyleablePropertyMetaData> getClassStyleablePropertyMetaData() {
         return BarChart.StyleableProperties.STYLEABLES;
     }
 
@@ -550,8 +550,8 @@ public class BarChart<X,Y> extends XYChart<X,Y> {
      * @deprecated This is an experimental API that is not intended for general use and is subject to change in future versions
      */
     @Deprecated
-    public List<StyleableProperty> impl_getStyleableProperties() {
-        return impl_CSS_STYLEABLES();
+    public List<StyleablePropertyMetaData> getStyleablePropertyMetaData() {
+        return getClassStyleablePropertyMetaData();
     }
 
     private static final long VERTICAL_PSEUDOCLASS_STATE = StyleManager.getPseudoclassMask("vertical");

@@ -22,7 +22,7 @@
  * or visit www.oracle.com if you need additional information or have any
  * questions.
  */
-package com.preview.javafx.scene.control;
+package javafx.scene.control;
 
 import com.sun.javafx.css.StyleManager;
 import com.sun.javafx.scene.control.skin.TreeTableRowSkin;
@@ -37,12 +37,27 @@ import javafx.beans.property.SimpleObjectProperty;
 import javafx.collections.ListChangeListener;
 import javafx.collections.WeakListChangeListener;
 import javafx.scene.Node;
-import javafx.scene.control.*;
 
 /**
+ * <p>TreeTableRow is an {@link javafx.scene.control.IndexedCell IndexedCell}, but
+ * rarely needs to be used by developers creating TreeTableView instances. The only
+ * time TreeTableRow is likely to be encountered at all by a developer is if they
+ * wish to create a custom {@link TreeTableView#rowFactoryProperty() rowFactory} 
+ * that replaces an entire row of a TreeTableView.</p>
  *
+ * <p>More often than not, it is actually easier for a developer to customize
+ * individual cells in a row, rather than the whole row itself. To do this,
+ * you can specify a custom {@link TreeTableColumn#cellFactoryProperty() cellFactory} 
+ * on each TreeTableColumn instance.</p>
+ *
+ * @see TreeTableView
+ * @see TreeTableColumn
+ * @see TreeTableCell
+ * @see IndexedCell
+ * @see Cell
+ * @param <T> The type of the item contained within the Cell.
  */
-public class TreeTableRow<T> extends TableRow<T> {
+public class TreeTableRow<T> extends IndexedCell<T> {
     
     
     /***************************************************************************
@@ -116,7 +131,7 @@ public class TreeTableRow<T> extends TableRow<T> {
     public final TreeItem<T> getTreeItem() { return treeItem.get(); }
     
     /**
-     * Each TreeCell represents at most a single {@link TreeItem}, which is
+     * Each TreeTableCell represents at most a single {@link TreeItem}, which is
      * represented by this property.
      */
     public final ReadOnlyObjectProperty<TreeItem<T>> treeItemProperty() { return treeItem.getReadOnlyProperty(); }
@@ -130,13 +145,13 @@ public class TreeTableRow<T> extends TableRow<T> {
      * The node to use as the "disclosure" triangle, or toggle, used for
      * expanding and collapsing items. This is only used in the case of
      * an item in the tree which contains child items. If not specified, the
-     * TreeCell's Skin implementation is responsible for providing a default
+     * TreeTableCell's Skin implementation is responsible for providing a default
      * disclosure node.
      */
     public final void setDisclosureNode(Node value) { disclosureNodeProperty().set(value); }
     
     /**
-     * Returns the current disclosure node set in this TreeCell.
+     * Returns the current disclosure node set in this TreeTableCell.
      */
     public final Node getDisclosureNode() { return disclosureNode.get(); }
     
@@ -149,7 +164,7 @@ public class TreeTableRow<T> extends TableRow<T> {
     
     
     // --- TreeView
-    private ReadOnlyObjectWrapper<TreeTableView<T>> treeTableView = new ReadOnlyObjectWrapper<TreeTableView<T>>() {
+    private ReadOnlyObjectWrapper<TreeTableView<T>> treeTableView = new ReadOnlyObjectWrapper<TreeTableView<T>>(this, "treeTableView") {
         private WeakReference<TreeTableView<T>> weakTreeTableViewRef;
         @Override protected void invalidated() {
             MultipleSelectionModel sm;
@@ -196,27 +211,17 @@ public class TreeTableRow<T> extends TableRow<T> {
 
             requestLayout();
         }
-
-        @Override
-        public Object getBean() {
-            return TreeTableRow.this;
-        }
-
-        @Override
-        public String getName() {
-            return "treeTableView";
-        }
     };
     
     private void setTreeTableView(TreeTableView<T> value) { treeTableView.set(value); }
 
     /**
-     * Returns the TreeView associated with this TreeCell.
+     * Returns the TreeTableView associated with this TreeTableCell.
      */
     public final TreeTableView<T> getTreeTableView() { return treeTableView.get(); }
     
     /**
-     * A TreeCell is explicitly linked to a single {@link TreeView} instance,
+     * A TreeTableCell is explicitly linked to a single {@link TreeTableView} instance,
      * which is represented by this property.
      */
     public final ReadOnlyObjectProperty<TreeTableView<T>> treeTableViewProperty() { return treeTableView.getReadOnlyProperty(); }
@@ -231,14 +236,8 @@ public class TreeTableRow<T> extends TableRow<T> {
 
     /** {@inheritDoc} */
     @Override public void startEdit() {
-        final TreeView<T> tree = getTreeTableView();
-        if (! isEditable() || (tree != null && ! tree.isEditable())) {
-//            if (Logging.getControlsLogger().isLoggable(PlatformLogger.SEVERE)) {
-//                Logging.getControlsLogger().severe(
-//                    "Can not call TreeCell.startEdit() on this TreeCell, as it "
-//                        + "is not allowed to enter its editing state (TreeCell: "
-//                        + this + ", TreeView: " + tree + ").");
-//            }
+        final TreeTableView<T> treeTable = getTreeTableView();
+        if (! isEditable() || (treeTable != null && ! treeTable.isEditable())) {
             return;
         }
         
@@ -248,14 +247,14 @@ public class TreeTableRow<T> extends TableRow<T> {
         super.startEdit();
         
          // Inform the TreeView of the edit starting.
-        if (tree != null) {
-            tree.fireEvent(new TreeView.EditEvent<T>(tree,
-                    TreeView.<T>editStartEvent(),
+        if (treeTable != null) {
+            treeTable.fireEvent(new TreeTableView.EditEvent<T>(treeTable,
+                    TreeTableView.<T>editStartEvent(),
                     getTreeItem(),
                     getItem(),
                     null));
             
-            tree.requestFocus();
+            treeTable.requestFocus();
         }
     }
 
@@ -263,11 +262,11 @@ public class TreeTableRow<T> extends TableRow<T> {
     @Override public void commitEdit(T newValue) {
         if (! isEditing()) return;
         final TreeItem treeItem = getTreeItem();
-        final TreeView tree = getTreeTableView();
-        if (tree != null) {
+        final TreeTableView treeTable = getTreeTableView();
+        if (treeTable != null) {
             // Inform the TreeView of the edit being ready to be committed.
-            tree.fireEvent(new TreeView.EditEvent<T>(tree,
-                    TreeView.<T>editCommitEvent(),
+            treeTable.fireEvent(new TreeTableView.EditEvent<T>(treeTable,
+                    TreeTableView.<T>editCommitEvent(),
                     treeItem,
                     getItem(),
                     newValue));
@@ -284,10 +283,10 @@ public class TreeTableRow<T> extends TableRow<T> {
         // out of the editing state
         super.commitEdit(newValue);
 
-        if (tree != null) {
+        if (treeTable != null) {
             // reset the editing item in the TreetView
-            tree.edit(null);
-            tree.requestFocus();
+            treeTable.edit(null);
+            treeTable.requestFocus();
         }
     }
 
@@ -295,10 +294,10 @@ public class TreeTableRow<T> extends TableRow<T> {
     @Override public void cancelEdit() {
         if (! isEditing()) return;
         
-        TreeView tree = getTreeTableView();
-        if (tree != null) {
-            tree.fireEvent(new TreeView.EditEvent<T>(tree,
-                    TreeView.<T>editCancelEvent(),
+        TreeTableView treeTable = getTreeTableView();
+        if (treeTable != null) {
+            treeTable.fireEvent(new TreeTableView.EditEvent<T>(treeTable,
+                    TreeTableView.<T>editCancelEvent(),
                     getTreeItem(),
                     getItem(),
                     null));
@@ -306,17 +305,14 @@ public class TreeTableRow<T> extends TableRow<T> {
 
         super.cancelEdit();
 
-        if (tree != null) {
+        if (treeTable != null) {
             // reset the editing index on the TreeView
-            tree.edit(null);
-            tree.requestFocus();
+            treeTable.edit(null);
+            treeTable.requestFocus();
         }
     }
 
-    /** {@inheritDoc} */
-    @Override protected Skin<?> createDefaultSkin() {
-        return new TreeTableRowSkin(this);
-    }
+
 
     /***************************************************************************
      *                                                                         *
@@ -325,11 +321,11 @@ public class TreeTableRow<T> extends TableRow<T> {
      **************************************************************************/
     
     private void updateItem() {
-        TreeView<T> tv = getTreeTableView();
+        TreeTableView<T> tv = getTreeTableView();
         if (tv == null) return;
         
         // Compute whether the index for this cell is for a real item
-        boolean valid = getIndex() >=0 && getIndex() < tv.impl_getTreeItemCount();
+        boolean valid = getIndex() >=0 && getIndex() < tv.getExpandedItemCount();
 
         // get the new treeItem that is about to go in to the TreeCell
         TreeItem<T> treeItem = valid ? tv.getTreeItem(getIndex()) : null;
@@ -384,9 +380,10 @@ public class TreeTableRow<T> extends TableRow<T> {
      **************************************************************************/
 
     /**
-     * Updates the TreeView associated with this TreeCell.
+     * Updates the TreeTableView associated with this TreeTableCell.
      * 
-     * @param tree The new TreeView that should be associated with this TreeCell.
+     * @param tree The new TreeTableView that should be associated with this 
+     *         TreeTableCell.
      * @expert This function is intended to be used by experts, primarily
      *         by those implementing new Skins. It is not common
      *         for developers or designers to access this function directly.
@@ -396,10 +393,10 @@ public class TreeTableRow<T> extends TableRow<T> {
     }
 
     /**
-     * Updates the TreeItem associated with this TreeCell.
+     * Updates the TreeItem associated with this TreeTableCell.
      *
      * @param treeItem The new TreeItem that should be associated with this 
-     *      TreeCell.
+     *      TreeTableCell.
      * @expert This function is intended to be used by experts, primarily
      *      by those implementing new Skins. It is not common
      *      for developers or designers to access this function directly.
@@ -416,10 +413,7 @@ public class TreeTableRow<T> extends TableRow<T> {
      *                                                                         *
      **************************************************************************/
 
-    private static final String DEFAULT_STYLE_CLASS = "tree-cell";
-
-//    private static final String PSEUDO_CLASS_EXPANDED = "expanded";
-//    private static final String PSEUDO_CLASS_COLLAPSED = "collapsed";
+    private static final String DEFAULT_STYLE_CLASS = "tree-table-row-cell";
 
     private static final long EXPANDED_PSEUDOCLASS_STATE = StyleManager.getPseudoclassMask("expanded");
     private static final long COLLAPSED_PSEUDOCLASS_STATE = StyleManager.getPseudoclassMask("collapsed");
@@ -434,5 +428,10 @@ public class TreeTableRow<T> extends TableRow<T> {
             mask |= getTreeItem().isExpanded() ? EXPANDED_PSEUDOCLASS_STATE : COLLAPSED_PSEUDOCLASS_STATE;
         }
         return mask;
+    }
+    
+    /** {@inheritDoc} */
+    @Override protected Skin<?> createDefaultSkin() {
+        return new TreeTableRowSkin<T>(this);
     }
 }

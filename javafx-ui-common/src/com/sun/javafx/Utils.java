@@ -515,18 +515,22 @@ public class Utils {
         double parentXOffset = getOffsetX(parent);
         final double parentYOffset = getOffsetY(parent);
         final Bounds parentBounds = getBounds(parent);
-        
-        //TODO - fix other position computation methods to look for RTL
-        NodeOrientation orientation =  NodeOrientation.LEFT_TO_RIGHT;
         Scene scene = parent.getScene();
-        if (scene != null) {
-            orientation = scene.getEffectiveNodeOrientation();
+        NodeOrientation orientation = parent.getEffectiveNodeOrientation();
+
+        if (orientation == NodeOrientation.RIGHT_TO_LEFT) {
+            if (hpos == HPos.LEFT) {
+                hpos = HPos.RIGHT;
+            } else if (hpos == HPos.RIGHT) {
+                hpos = HPos.LEFT;
+            }
         }
+
         double layoutX = positionX(parentXOffset, parentBounds, anchorWidth, hpos) + dx;
         final double layoutY = positionY(parentYOffset, parentBounds, anchorHeight, vpos) + dy;
- 
-        //TODO - testing for an instance of Stage seems wrong but works for menus
-        if (orientation == NodeOrientation.RIGHT_TO_LEFT) {
+
+        if (orientation == NodeOrientation.RIGHT_TO_LEFT && hpos == HPos.CENTER) {
+            //TODO - testing for an instance of Stage seems wrong but works for menus
             if (scene.getWindow() instanceof Stage) {
                 layoutX = layoutX + parentBounds.getWidth() - anchorWidth + (dx * 2);
             } else {

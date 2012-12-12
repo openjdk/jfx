@@ -25,7 +25,7 @@
 package com.sun.javafx.scene.control.skin;
 
 import com.sun.javafx.css.StyleableBooleanProperty;
-import com.sun.javafx.css.StyleableProperty;
+import com.sun.javafx.css.StyleablePropertyMetaData;
 import com.sun.javafx.css.converters.BooleanConverter;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -85,7 +85,7 @@ public class ColorPickerSkin extends ComboBoxPopupControl<Color> {
             return "colorLabelVisible";
         }
         
-        @Override public StyleableProperty getStyleableProperty() {
+        @Override public StyleablePropertyMetaData getStyleablePropertyMetaData() {
             return StyleableProperties.COLOR_LABEL_VISIBLE;
         }
     };
@@ -279,8 +279,8 @@ public class ColorPickerSkin extends ComboBoxPopupControl<Color> {
     **************************************************************************/
     
      private static class StyleableProperties {
-        private static final StyleableProperty<ColorPicker,Boolean> COLOR_LABEL_VISIBLE = 
-                new StyleableProperty<ColorPicker,Boolean>("-fx-color-label-visible",
+        private static final StyleablePropertyMetaData<ColorPicker,Boolean> COLOR_LABEL_VISIBLE = 
+                new StyleablePropertyMetaData<ColorPicker,Boolean>("-fx-color-label-visible",
                 BooleanConverter.getInstance(), Boolean.TRUE) {
 
             @Override public boolean isSettable(ColorPicker n) {
@@ -293,10 +293,10 @@ public class ColorPickerSkin extends ComboBoxPopupControl<Color> {
                 return skin.colorLabelVisible;
             }
         };
-        private static final List<StyleableProperty> STYLEABLES;
+        private static final List<StyleablePropertyMetaData> STYLEABLES;
         static {
-            final List<StyleableProperty> styleables =
-                new ArrayList<StyleableProperty>(ComboBoxBaseSkin.impl_CSS_STYLEABLES());
+            final List<StyleablePropertyMetaData> styleables =
+                new ArrayList<StyleablePropertyMetaData>(ComboBoxBaseSkin.getClassStyleablePropertyMetaData());
             Collections.addAll(styleables,
                 COLOR_LABEL_VISIBLE
             );
@@ -309,7 +309,7 @@ public class ColorPickerSkin extends ComboBoxPopupControl<Color> {
      * @deprecated This is an internal API that is not intended for use and will be removed in the next version
      */
     @Deprecated
-     public static List<StyleableProperty> impl_CSS_STYLEABLES() {
+     public static List<StyleablePropertyMetaData> getClassStyleablePropertyMetaData() {
          return StyleableProperties.STYLEABLES;
      }
 
@@ -319,8 +319,8 @@ public class ColorPickerSkin extends ComboBoxPopupControl<Color> {
      * @deprecated This is an experimental API that is not intended for general use and is subject to change in future versions
      */
     @Deprecated
-    public List<StyleableProperty> impl_getStyleableProperties() {
-        return impl_CSS_STYLEABLES();
+    public List<StyleablePropertyMetaData> getStyleablePropertyMetaData() {
+        return getClassStyleablePropertyMetaData();
     }
 
     

@@ -34,7 +34,6 @@ import javafx.beans.property.ReadOnlyObjectWrapper;
 
 /**
  * The abstract base class for FocusModel implementations.
- * 
  */
 public abstract class FocusModel<T> {
 

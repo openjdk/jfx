@@ -32,10 +32,10 @@ import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.event.ActionEvent;
 import javafx.event.EventHandler;
+import javafx.geometry.NodeOrientation;
 import javafx.geometry.VPos;
 import javafx.scene.Group;
 import javafx.scene.control.ProgressIndicator;
-import javafx.scene.control.SkinBase;
 import javafx.scene.layout.Region;
 import javafx.scene.layout.StackPane;
 import javafx.scene.paint.Color;
@@ -56,17 +56,15 @@ import java.util.List;
 
 import com.sun.javafx.Utils;
 import com.sun.javafx.css.StyleableObjectProperty;
-import com.sun.javafx.css.StyleableProperty;
+import com.sun.javafx.css.StyleablePropertyMetaData;
 import com.sun.javafx.css.converters.PaintConverter;
 import com.sun.javafx.scene.control.behavior.ProgressIndicatorBehavior;
 import com.sun.javafx.scene.control.skin.resources.ControlResources;
 import javafx.beans.property.ObjectProperty;
 import javafx.beans.value.WritableValue;
+import javafx.scene.control.SkinBase;
 
-import javafx.beans.value.ChangeListener;
-import javafx.beans.value.ObservableValue;
-
-public class ProgressIndicatorSkin extends SkinBase<ProgressIndicator, ProgressIndicatorBehavior<ProgressIndicator>> {
+public class ProgressIndicatorSkin extends BehaviorSkinBase<ProgressIndicator, ProgressIndicatorBehavior<ProgressIndicator>> {
 
     /***************************************************************************
      *                                                                         *
@@ -290,6 +288,13 @@ public class ProgressIndicatorSkin extends SkinBase<ProgressIndicator, ProgressI
             updateProgress();
         }
 
+        @Override public boolean isAutomaticallyMirrored() {
+            // This is used instead of setting NodeOrientation,
+            // allowing the Text node to inherit the current
+            // orientation.
+            return false;
+        }
+
         private void updateProgress() {
             intProgress = (int) Math.round(control.getProgress() * 100.0) ;
             text.setText((control.getProgress() >= 1) ? (DONE) : ("" + intProgress + "%"));
@@ -404,6 +409,7 @@ public class ProgressIndicatorSkin extends SkinBase<ProgressIndicator, ProgressI
             this.control = control;
             this.skin = s;
 
+            setNodeOrientation(NodeOrientation.LEFT_TO_RIGHT);
             getStyleClass().setAll("spinner");
 
             skin.segmentColors = FXCollections.<Color>observableArrayList();
@@ -580,7 +586,7 @@ public class ProgressIndicatorSkin extends SkinBase<ProgressIndicator, ProgressI
         }
 
         @Override
-        public StyleableProperty getStyleableProperty() {
+        public StyleablePropertyMetaData getStyleablePropertyMetaData() {
             return StyleableProperties.PROGRESS_COLOR;
         }
     };
@@ -593,8 +599,8 @@ public class ProgressIndicatorSkin extends SkinBase<ProgressIndicator, ProgressI
      * @treatAsPrivate implementation detail
      */
     private static class StyleableProperties {
-        private static final StyleableProperty<ProgressIndicator,Paint> PROGRESS_COLOR =
-            new StyleableProperty<ProgressIndicator,Paint>("-fx-progress-color",
+        private static final StyleablePropertyMetaData<ProgressIndicator,Paint> PROGRESS_COLOR =
+            new StyleablePropertyMetaData<ProgressIndicator,Paint>("-fx-progress-color",
                 PaintConverter.getInstance(), Color.DODGERBLUE) {
 
             @Override
@@ -611,10 +617,10 @@ public class ProgressIndicatorSkin extends SkinBase<ProgressIndicator, ProgressI
             }
         };
 
-        public static final List<StyleableProperty> STYLEABLES;
+        public static final List<StyleablePropertyMetaData> STYLEABLES;
         static {
-            final List<StyleableProperty> styleables = 
-                new ArrayList<StyleableProperty>(SkinBase.impl_CSS_STYLEABLES());
+            final List<StyleablePropertyMetaData> styleables = 
+                new ArrayList<StyleablePropertyMetaData>(SkinBase.getClassStyleablePropertyMetaData());
             Collections.addAll(styleables,
                                PROGRESS_COLOR
             );
@@ -626,7 +632,7 @@ public class ProgressIndicatorSkin extends SkinBase<ProgressIndicator, ProgressI
      * @deprecated This is an internal API that is not intended for use and will be removed in the next version
      */
     @Deprecated
-    public static List<StyleableProperty> impl_CSS_STYLEABLES() {
+    public static List<StyleablePropertyMetaData> getClassStyleablePropertyMetaData() {
         return StyleableProperties.STYLEABLES;
     };
 
@@ -636,8 +642,8 @@ public class ProgressIndicatorSkin extends SkinBase<ProgressIndicator, ProgressI
      * @deprecated This is an experimental API that is not intended for general use and is subject to change in future versions
      */
     @Deprecated
-    public List<StyleableProperty> impl_getStyleableProperties() {
-        return impl_CSS_STYLEABLES();
+    public List<StyleablePropertyMetaData> getStyleablePropertyMetaData() {
+        return getClassStyleablePropertyMetaData();
     }
 
 }

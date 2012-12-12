@@ -31,7 +31,7 @@ import java.util.List;
 import javafx.beans.property.DoubleProperty;
 import javafx.beans.value.WritableValue;
 
-/** Test Node with styleable property but no impl_CSS_STYLEABLES method */
+/** Test Node with styleable property but no getClassStyleablePropertyMetaData method */
 class TestNode extends TestNodeBase {
 
     private DoubleProperty xyzzy;
@@ -50,7 +50,7 @@ class TestNode extends TestNodeBase {
                 }
 
                 @Override
-                public StyleableProperty getStyleableProperty() {
+                public StyleablePropertyMetaData getStyleablePropertyMetaData() {
                     return StyleableProperties.XYZZY;
                 }
                 
@@ -73,8 +73,8 @@ class TestNode extends TestNodeBase {
     
      static class StyleableProperties {
 
-         static final StyleableProperty<TestNode, Number> XYZZY = 
-             new StyleableProperty<TestNode, Number>("-fx-xyzzy",
+         static final StyleablePropertyMetaData<TestNode, Number> XYZZY = 
+             new StyleablePropertyMetaData<TestNode, Number>("-fx-xyzzy",
                  SizeConverter.getInstance(),
                  .5) {
 
@@ -90,10 +90,10 @@ class TestNode extends TestNodeBase {
                      
          };
             
-         private static final List<StyleableProperty> STYLEABLES;
+         private static final List<StyleablePropertyMetaData> STYLEABLES;
          static {
-            final List<StyleableProperty> styleables = 
-		new ArrayList<StyleableProperty>(TestNodeBase.impl_CSS_STYLEABLES());
+            final List<StyleablePropertyMetaData> styleables = 
+		new ArrayList<StyleablePropertyMetaData>(TestNodeBase.getClassStyleablePropertyMetaData());
             Collections.addAll(styleables, XYZZY);
             STYLEABLES = Collections.unmodifiableList(styleables);
          }
@@ -102,17 +102,17 @@ class TestNode extends TestNodeBase {
     /**
      * Super-lazy instantiation pattern from Bill Pugh. StyleableProperties is referenced
      * no earlier (and therefore loaded no earlier by the class loader) than
-     * the moment that  impl_CSS_STYLEABLES() is called.
+     * the moment that  getClassStyleablePropertyMetaData() is called.
      * @treatAsPrivate implementation detail
      * @deprecated This is an internal API that is not intended for use and will be removed in the next version
      */
     @Deprecated
-    public static List<StyleableProperty> impl_CSS_STYLEABLES() {
+    public static List<StyleablePropertyMetaData> getClassStyleablePropertyMetaData() {
         return TestNode.StyleableProperties.STYLEABLES;
     }    
 
-    public List<StyleableProperty> impl_getStyleableProperties() {
-        return impl_CSS_STYLEABLES();
+    public List<StyleablePropertyMetaData> getStyleablePropertyMetaData() {
+        return getClassStyleablePropertyMetaData();
     }
     
     

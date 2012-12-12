@@ -29,7 +29,7 @@ import javafx.beans.value.ObservableValue;
 
 
 public abstract class StyleableDoubleProperty 
-    extends DoublePropertyBase implements Property<Double> {
+    extends DoublePropertyBase implements StyleableProperty<Double> {
 
     /**
      * The constructor of the {@code StyleableDoubleProperty}.
@@ -48,13 +48,13 @@ public abstract class StyleableDoubleProperty
         super(initialValue);
     }
     
-    Stylesheet.Origin origin = null;
+    Origin origin = null;
     
     @Override
-    public Stylesheet.Origin getOrigin() { return origin; }
+    public Origin getOrigin() { return origin; }
     
     @Override
-    public void applyStyle(Stylesheet.Origin origin, Double v) {
+    public void applyStyle(Origin origin, Double v) {
         setValue(v);
         this.origin = origin;
     }
@@ -62,12 +62,12 @@ public abstract class StyleableDoubleProperty
     @Override
     public void bind(ObservableValue<? extends Number> observable) {
         super.bind(observable);
-        origin = Stylesheet.Origin.USER;
+        origin = Origin.USER;
     }
 
     @Override
     public void set(double v) { 
         super.set(v);
-        origin = Stylesheet.Origin.USER;
+        origin = Origin.USER;
     }
 }

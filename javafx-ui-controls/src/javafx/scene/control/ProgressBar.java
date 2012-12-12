@@ -25,9 +25,8 @@
 
 package javafx.scene.control;
 
-import com.sun.javafx.css.StyleableProperty;
+import com.sun.javafx.css.StyleablePropertyMetaData;
 import com.sun.javafx.scene.control.skin.ProgressBarSkin;
-import javafx.geometry.NodeOrientation;
 
 /**
  * A specialization of the ProgressIndicator which is represented as a
@@ -73,14 +72,11 @@ public class ProgressBar extends ProgressIndicator {
      * Creates a new ProgressBar with the given progress value.
      */
     public ProgressBar(double progress) {
-        if (INDETERMINATE_PROGRESS == progress) {
-            setNodeOrientation(NodeOrientation.LEFT_TO_RIGHT);
-        }
         // focusTraversable is styleable through css. Calling setFocusTraversable
         // makes it look to css like the user set the value and css will not 
         // override. Initializing focusTraversable by calling set on the 
-        // StyleableProperty ensures that css will be able to override the value.
-        final StyleableProperty prop = StyleableProperty.getStyleableProperty(focusTraversableProperty());
+        // StyleablePropertyMetaData ensures that css will be able to override the value.
+        final StyleablePropertyMetaData prop = StyleablePropertyMetaData.getStyleablePropertyMetaData(focusTraversableProperty());
         prop.set(this, Boolean.FALSE);            
         setProgress(progress);
         getStyleClass().setAll(DEFAULT_STYLE_CLASS);

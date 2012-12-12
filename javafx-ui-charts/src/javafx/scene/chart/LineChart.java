@@ -55,7 +55,7 @@ import javafx.util.Duration;
 import com.sun.javafx.charts.Legend;
 import com.sun.javafx.charts.Legend.LegendItem;
 import com.sun.javafx.css.StyleableBooleanProperty;
-import com.sun.javafx.css.StyleableProperty;
+import com.sun.javafx.css.StyleablePropertyMetaData;
 import com.sun.javafx.css.converters.BooleanConverter;
 import java.util.*;
 
@@ -106,7 +106,7 @@ public class LineChart<X,Y> extends XYChart<X,Y> {
             return "createSymbols";
         }
 
-        public StyleableProperty getStyleableProperty() {
+        public StyleablePropertyMetaData getStyleablePropertyMetaData() {
             return StyleableProperties.CREATE_SYMBOLS;
         }
     };
@@ -486,8 +486,8 @@ public class LineChart<X,Y> extends XYChart<X,Y> {
     // -------------- STYLESHEET HANDLING --------------------------------------
 
     private static class StyleableProperties {
-        private static final StyleableProperty<LineChart,Boolean> CREATE_SYMBOLS = 
-            new StyleableProperty<LineChart,Boolean>("-fx-create-symbols",
+        private static final StyleablePropertyMetaData<LineChart,Boolean> CREATE_SYMBOLS = 
+            new StyleablePropertyMetaData<LineChart,Boolean>("-fx-create-symbols",
                 BooleanConverter.getInstance(), Boolean.TRUE) {
 
             @Override
@@ -501,10 +501,10 @@ public class LineChart<X,Y> extends XYChart<X,Y> {
             }
         };
 
-        private static final List<StyleableProperty> STYLEABLES;
+        private static final List<StyleablePropertyMetaData> STYLEABLES;
         static {
-            final List<StyleableProperty> styleables =
-                new ArrayList<StyleableProperty>(XYChart.impl_CSS_STYLEABLES());
+            final List<StyleablePropertyMetaData> styleables =
+                new ArrayList<StyleablePropertyMetaData>(XYChart.getClassStyleablePropertyMetaData());
             Collections.addAll(styleables,
                 CREATE_SYMBOLS
             );
@@ -517,7 +517,7 @@ public class LineChart<X,Y> extends XYChart<X,Y> {
      * @deprecated This is an internal API that is not intended for use and will be removed in the next version
      */
     @Deprecated
-    public static List<StyleableProperty> impl_CSS_STYLEABLES() {
+    public static List<StyleablePropertyMetaData> getClassStyleablePropertyMetaData() {
         return LineChart.StyleableProperties.STYLEABLES;
     }
 
@@ -527,8 +527,8 @@ public class LineChart<X,Y> extends XYChart<X,Y> {
      * @deprecated This is an experimental API that is not intended for general use and is subject to change in future versions
      */
     @Deprecated
-    public List<StyleableProperty> impl_getStyleableProperties() {
-        return impl_CSS_STYLEABLES();
+    public List<StyleablePropertyMetaData> getStyleablePropertyMetaData() {
+        return getClassStyleablePropertyMetaData();
     }
 
 }

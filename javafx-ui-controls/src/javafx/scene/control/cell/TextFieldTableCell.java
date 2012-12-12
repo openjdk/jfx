@@ -185,6 +185,11 @@ public class TextFieldTableCell<S,T> extends TableCell<S,T> {
             return;
         }
         super.startEdit();
+        
+        if (textField == null) {
+            textField = CellUtils.createTextField(this, getConverter());
+        }
+        
         CellUtils.startEdit(this, textField, getConverter());
     }
 

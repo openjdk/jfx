@@ -5,7 +5,7 @@
 package com.sun.javafx.scene.control.skin;
 
 import com.sun.javafx.css.StyleConverter;
-import com.sun.javafx.css.StyleableProperty;
+import com.sun.javafx.css.StyleablePropertyMetaData;
 import java.util.ArrayList;
 
 import java.util.Arrays;
@@ -52,7 +52,7 @@ public class LabeledImplTest {
         }        
     }
     
-    private static Configuration config(StyleableProperty styleable) {
+    private static Configuration config(StyleablePropertyMetaData styleable) {
         WritableValue source = styleable.getWritableValue(LABELED);
         WritableValue mirror   = styleable.getWritableValue(LABELED_IMPL);
         Object value = null;
@@ -128,8 +128,8 @@ public class LabeledImplTest {
 
         Collection<Configuration[]> data = new ArrayList<Configuration[]>();
         
-        List<StyleableProperty> styleables = LabeledImpl.StyleableProperties.STYLEABLES_TO_MIRROR;
-        for(StyleableProperty styleable : styleables) {
+        List<StyleablePropertyMetaData> styleables = LabeledImpl.StyleableProperties.STYLEABLES_TO_MIRROR;
+        for(StyleablePropertyMetaData styleable : styleables) {
             
             // LabeledImpl doesn't track -fx-skin since the Labeled
             // isn't necessarily a Label

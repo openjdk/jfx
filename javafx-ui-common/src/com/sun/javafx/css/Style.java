@@ -42,7 +42,7 @@ final public class Style {
     /**
      * The Declaration that is the source of the style that is about
      * to be applied or has just been applied. May be null if the
-     * value comes from the StyleableProperty's initial (default) value. 
+     * value comes from the CSSProperty's initial (default) value. 
      */
     public Declaration getDeclaration() {
         return declaration;

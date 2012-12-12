@@ -167,7 +167,7 @@ public class CssError {
     /** Encapsulates errors arising from applying a style to a Node. */
     public final static class PropertySetError extends CssError { 
         
-        public PropertySetError(StyleableProperty styleableProperty, 
+        public PropertySetError(StyleablePropertyMetaData styleableProperty, 
                 Node node, String message) {
             super(message);
             this.styleableProperty = styleableProperty;
@@ -178,11 +178,11 @@ public class CssError {
             return node;
         }
         
-        public StyleableProperty getProperty() {
+        public StyleablePropertyMetaData getProperty() {
             return styleableProperty;
         }
         
-        private final StyleableProperty styleableProperty;
+        private final StyleablePropertyMetaData styleableProperty;
         private final Node node;
         
     }

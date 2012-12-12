@@ -31,8 +31,8 @@ import javafx.geometry.Insets;
 import javafx.scene.Node;
 import javafx.scene.paint.Paint;
 import com.sun.javafx.UnmodifiableArrayList;
-import com.sun.javafx.css.StyleableProperty;
-import com.sun.javafx.css.SubStyleableProperty;
+import com.sun.javafx.css.StyleablePropertyMetaData;
+import com.sun.javafx.css.SubCSSProperty;
 import com.sun.javafx.css.converters.InsetsConverter;
 import com.sun.javafx.css.converters.URLConverter;
 import com.sun.javafx.scene.layout.region.BorderImageSlices;
@@ -81,52 +81,52 @@ import com.sun.javafx.scene.layout.region.SliceSequenceConverter;
  * @since JavaFX 8
  */
 public final class Border {
-    static final StyleableProperty<Node,Paint[]> BORDER_COLOR =
-            new SubStyleableProperty<Paint[]>("-fx-border-color",
+    static final StyleablePropertyMetaData<Node,Paint[]> BORDER_COLOR =
+            new SubCSSProperty<Paint[]>("-fx-border-color",
                     LayeredBorderPaintConverter.getInstance());
 
-    static final StyleableProperty<Node,BorderStrokeStyle[][]> BORDER_STYLE =
-            new SubStyleableProperty<BorderStrokeStyle[][]>("-fx-border-style",
+    static final StyleablePropertyMetaData<Node,BorderStrokeStyle[][]> BORDER_STYLE =
+            new SubCSSProperty<BorderStrokeStyle[][]>("-fx-border-style",
                     LayeredBorderStyleConverter.getInstance());
 
-    static final StyleableProperty<Node,Margins[]> BORDER_WIDTH =
-            new SubStyleableProperty<Margins[]> ("-fx-border-width",
+    static final StyleablePropertyMetaData<Node,Margins[]> BORDER_WIDTH =
+            new SubCSSProperty<Margins[]> ("-fx-border-width",
                     Margins.SequenceConverter.getInstance());
 
-    static final StyleableProperty<Node,Margins[]> BORDER_RADIUS =
-            new SubStyleableProperty<Margins[]>("-fx-border-radius",
+    static final StyleablePropertyMetaData<Node,Margins[]> BORDER_RADIUS =
+            new SubCSSProperty<Margins[]>("-fx-border-radius",
                     Margins.SequenceConverter.getInstance());
 
-    static final StyleableProperty<Node,Insets[]> BORDER_INSETS =
-            new SubStyleableProperty<Insets[]>("-fx-border-insets",
+    static final StyleablePropertyMetaData<Node,Insets[]> BORDER_INSETS =
+            new SubCSSProperty<Insets[]>("-fx-border-insets",
                     InsetsConverter.SequenceConverter.getInstance());
 
-    static final StyleableProperty<Node,String[]> BORDER_IMAGE_SOURCE =
-            new SubStyleableProperty<String[]>("-fx-border-image-source",
+    static final StyleablePropertyMetaData<Node,String[]> BORDER_IMAGE_SOURCE =
+            new SubCSSProperty<String[]>("-fx-border-image-source",
                     URLConverter.SequenceConverter.getInstance());
 
-    static final StyleableProperty<Node,RepeatStruct[]> BORDER_IMAGE_REPEAT =
-            new SubStyleableProperty<RepeatStruct[]>("-fx-border-image-repeat",
+    static final StyleablePropertyMetaData<Node,RepeatStruct[]> BORDER_IMAGE_REPEAT =
+            new SubCSSProperty<RepeatStruct[]>("-fx-border-image-repeat",
                     RepeatStructConverter.getInstance(),
                     new RepeatStruct[] { new RepeatStruct(BackgroundRepeat.REPEAT, BackgroundRepeat.REPEAT) });
 
-    static final StyleableProperty<Node,BorderImageSlices[]> BORDER_IMAGE_SLICE =
-            new SubStyleableProperty<BorderImageSlices[]> ("-fx-border-image-slice",
+    static final StyleablePropertyMetaData<Node,BorderImageSlices[]> BORDER_IMAGE_SLICE =
+            new SubCSSProperty<BorderImageSlices[]> ("-fx-border-image-slice",
                     SliceSequenceConverter.getInstance(),
                     new BorderImageSlices[] { BorderImageSlices.EMPTY });
 
-    static final StyleableProperty<Node,BorderWidths[]> BORDER_IMAGE_WIDTH =
-            new SubStyleableProperty<BorderWidths[]>("-fx-border-image-width",
+    static final StyleablePropertyMetaData<Node,BorderWidths[]> BORDER_IMAGE_WIDTH =
+            new SubCSSProperty<BorderWidths[]>("-fx-border-image-width",
                     BorderImageWidthConverter.getInstance(),
                     new BorderWidths[] { BorderWidths.DEFAULT });
 
-    static final StyleableProperty<Node,Insets[]> BORDER_IMAGE_INSETS =
-            new SubStyleableProperty<Insets[]>("-fx-border-image-insets",
+    static final StyleablePropertyMetaData<Node,Insets[]> BORDER_IMAGE_INSETS =
+            new SubCSSProperty<Insets[]>("-fx-border-image-insets",
                     InsetsConverter.SequenceConverter.getInstance(),
                     new Insets[] {Insets.EMPTY});
 
-    private static final List<StyleableProperty> STYLEABLES =
-            (List<StyleableProperty>) (List) Collections.unmodifiableList(
+    private static final List<StyleablePropertyMetaData> STYLEABLES =
+            (List<StyleablePropertyMetaData>) (List) Collections.unmodifiableList(
                     Arrays.asList(BORDER_COLOR,
                             BORDER_STYLE,
                             BORDER_WIDTH,
@@ -142,7 +142,7 @@ public final class Border {
      * @treatAsPrivate implementation detail
      * @deprecated This is an internal API that is not intended for use and will be removed in the next version
      */
-    @Deprecated public static List<StyleableProperty> impl_CSS_STYLEABLES() {
+    @Deprecated public static List<StyleablePropertyMetaData> getClassStyleablePropertyMetaData() {
         return STYLEABLES;
     }
 

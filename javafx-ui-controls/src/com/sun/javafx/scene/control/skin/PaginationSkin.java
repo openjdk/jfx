@@ -47,7 +47,7 @@ package com.sun.javafx.scene.control.skin;
 import com.sun.javafx.PlatformUtil;
 import com.sun.javafx.css.StyleableBooleanProperty;
 import com.sun.javafx.css.StyleableObjectProperty;
-import com.sun.javafx.css.StyleableProperty;
+import com.sun.javafx.css.StyleablePropertyMetaData;
 import com.sun.javafx.css.converters.BooleanConverter;
 import com.sun.javafx.css.converters.EnumConverter;
 import com.sun.javafx.scene.control.behavior.PaginationBehavior;
@@ -81,7 +81,7 @@ import javafx.scene.shape.Rectangle;
 import javafx.scene.text.Font;
 import javafx.util.Duration;
 
-public class PaginationSkin extends SkinBase<Pagination, PaginationBehavior>  {
+public class PaginationSkin extends BehaviorSkinBase<Pagination, PaginationBehavior>  {
 
     private static final Duration DURATION = new Duration(125.0);
     private static final double SWIPE_THRESHOLD = 0.30;
@@ -538,7 +538,7 @@ public class PaginationSkin extends SkinBase<Pagination, PaginationBehavior>  {
                 }
 
                 @Override
-                public StyleableProperty getStyleableProperty() {
+                public StyleablePropertyMetaData getStyleablePropertyMetaData() {
                     return StyleableProperties.ARROWS_VISIBLE;
                 }
 
@@ -568,7 +568,7 @@ public class PaginationSkin extends SkinBase<Pagination, PaginationBehavior>  {
                 }
 
                 @Override
-                public StyleableProperty getStyleableProperty() {
+                public StyleablePropertyMetaData getStyleablePropertyMetaData() {
                     return StyleableProperties.PAGE_INFORMATION_VISIBLE;
                 }
 
@@ -598,7 +598,7 @@ public class PaginationSkin extends SkinBase<Pagination, PaginationBehavior>  {
                 }
 
                 @Override
-                public StyleableProperty getStyleableProperty() {
+                public StyleablePropertyMetaData getStyleablePropertyMetaData() {
                     return StyleableProperties.PAGE_INFORMATION_ALIGNMENT;
                 }
 
@@ -628,7 +628,7 @@ public class PaginationSkin extends SkinBase<Pagination, PaginationBehavior>  {
                 }
 
                 @Override
-                public StyleableProperty getStyleableProperty() {
+                public StyleablePropertyMetaData getStyleablePropertyMetaData() {
                     return StyleableProperties.TOOLTIP_VISIBLE;
                 }
 
@@ -1240,8 +1240,8 @@ public class PaginationSkin extends SkinBase<Pagination, PaginationBehavior>  {
     private static final Boolean DEFAULT_TOOLTIP_VISIBLE = Boolean.FALSE;
 
     private static class StyleableProperties {
-        private static final StyleableProperty<Pagination,Boolean> ARROWS_VISIBLE =
-            new StyleableProperty<Pagination,Boolean>("-fx-arrows-visible",
+        private static final StyleablePropertyMetaData<Pagination,Boolean> ARROWS_VISIBLE =
+            new StyleablePropertyMetaData<Pagination,Boolean>("-fx-arrows-visible",
                 BooleanConverter.getInstance(), DEFAULT_ARROW_VISIBLE) {
 
             @Override
@@ -1257,8 +1257,8 @@ public class PaginationSkin extends SkinBase<Pagination, PaginationBehavior>  {
             }
         };
 
-        private static final StyleableProperty<Pagination,Boolean> PAGE_INFORMATION_VISIBLE =
-            new StyleableProperty<Pagination,Boolean>("-fx-page-information-visible",
+        private static final StyleablePropertyMetaData<Pagination,Boolean> PAGE_INFORMATION_VISIBLE =
+            new StyleablePropertyMetaData<Pagination,Boolean>("-fx-page-information-visible",
                 BooleanConverter.getInstance(), DEFAULT_PAGE_INFORMATION_VISIBLE) {
 
             @Override
@@ -1274,8 +1274,8 @@ public class PaginationSkin extends SkinBase<Pagination, PaginationBehavior>  {
             }
         };
 
-        private static final StyleableProperty<Pagination,Side> PAGE_INFORMATION_ALIGNMENT =
-            new StyleableProperty<Pagination,Side>("-fx-page-information-alignment",
+        private static final StyleablePropertyMetaData<Pagination,Side> PAGE_INFORMATION_ALIGNMENT =
+            new StyleablePropertyMetaData<Pagination,Side>("-fx-page-information-alignment",
                 new EnumConverter<Side>(Side.class), DEFAULT_PAGE_INFORMATION_ALIGNMENT) {
 
             @Override
@@ -1291,8 +1291,8 @@ public class PaginationSkin extends SkinBase<Pagination, PaginationBehavior>  {
             }
         };
 
-        private static final StyleableProperty<Pagination,Boolean> TOOLTIP_VISIBLE =
-            new StyleableProperty<Pagination,Boolean>("-fx-tooltip-visible",
+        private static final StyleablePropertyMetaData<Pagination,Boolean> TOOLTIP_VISIBLE =
+            new StyleablePropertyMetaData<Pagination,Boolean>("-fx-tooltip-visible",
                 BooleanConverter.getInstance(), DEFAULT_TOOLTIP_VISIBLE) {
 
             @Override
@@ -1308,10 +1308,10 @@ public class PaginationSkin extends SkinBase<Pagination, PaginationBehavior>  {
             }
         };
 
-        private static final List<StyleableProperty> STYLEABLES;
+        private static final List<StyleablePropertyMetaData> STYLEABLES;
         static {
-            final List<StyleableProperty> styleables =
-                new ArrayList<StyleableProperty>(SkinBase.impl_CSS_STYLEABLES());
+            final List<StyleablePropertyMetaData> styleables =
+                new ArrayList<StyleablePropertyMetaData>(SkinBase.getClassStyleablePropertyMetaData());
             Collections.addAll(styleables,
                 ARROWS_VISIBLE,
                 PAGE_INFORMATION_VISIBLE,
@@ -1327,7 +1327,7 @@ public class PaginationSkin extends SkinBase<Pagination, PaginationBehavior>  {
      * @deprecated This is an internal API that is not intended for use and will be removed in the next version
      */
     @Deprecated
-    public static List<StyleableProperty> impl_CSS_STYLEABLES() {
+    public static List<StyleablePropertyMetaData> getClassStyleablePropertyMetaData() {
         return StyleableProperties.STYLEABLES;
     };
 
@@ -1337,7 +1337,7 @@ public class PaginationSkin extends SkinBase<Pagination, PaginationBehavior>  {
      * @deprecated This is an experimental API that is not intended for general use and is subject to change in future versions
      */
     @Deprecated
-    public List<StyleableProperty> impl_getStyleableProperties() {
-        return impl_CSS_STYLEABLES();
+    public List<StyleablePropertyMetaData> getStyleablePropertyMetaData() {
+        return getClassStyleablePropertyMetaData();
     }
 }

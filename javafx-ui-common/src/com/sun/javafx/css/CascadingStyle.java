@@ -83,7 +83,7 @@ class CascadingStyle implements Comparable {
     }
     
     // Wrapper to make StyleHelper's life a little easier
-    Stylesheet.Origin getOrigin() {
+    Origin getOrigin() {
         return getRule().getOrigin();
     }
     
@@ -147,12 +147,12 @@ class CascadingStyle implements Comparable {
         final Declaration decl = style.getDeclaration();
         final boolean important = decl != null ? decl.isImportant() : false;
         final Rule rule = decl != null ? decl.getRule() : null;
-        final Stylesheet.Origin source = rule != null ? rule.getOrigin() : null;
+        final Origin source = rule != null ? rule.getOrigin() : null;
         
         final Declaration otherDecl = other.style.getDeclaration();
         final boolean otherImportant = otherDecl != null ? otherDecl.isImportant() : false;
         final Rule otherRule = otherDecl != null ? otherDecl.getRule() : null;
-        final Stylesheet.Origin otherSource = rule != null ? otherRule.getOrigin() : null;
+        final Origin otherSource = rule != null ? otherRule.getOrigin() : null;
         
         int c = 0;
         if (this.skinProp && !other.skinProp) {

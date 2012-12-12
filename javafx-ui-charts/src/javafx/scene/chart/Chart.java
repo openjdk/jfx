@@ -49,7 +49,7 @@ import com.sun.javafx.charts.ChartLayoutAnimator;
 import com.sun.javafx.charts.Legend;
 import com.sun.javafx.css.StyleableBooleanProperty;
 import com.sun.javafx.css.StyleableObjectProperty;
-import com.sun.javafx.css.StyleableProperty;
+import com.sun.javafx.css.StyleablePropertyMetaData;
 import com.sun.javafx.css.converters.BooleanConverter;
 import com.sun.javafx.css.converters.EnumConverter;
 import javafx.geometry.NodeOrientation;
@@ -126,7 +126,7 @@ public abstract class Chart extends Region {
         }
         
         @Override
-        public StyleableProperty getStyleableProperty() {
+        public StyleablePropertyMetaData getStyleablePropertyMetaData() {
             return StyleableProperties.TITLE_SIDE;
         }
 
@@ -183,7 +183,7 @@ public abstract class Chart extends Region {
         }
             
         @Override
-        public StyleableProperty getStyleableProperty() {
+        public StyleablePropertyMetaData getStyleablePropertyMetaData() {
             return StyleableProperties.LEGEND_VISIBLE;
         }
 
@@ -215,7 +215,7 @@ public abstract class Chart extends Region {
         }
         
         @Override
-        public StyleableProperty getStyleableProperty() {
+        public StyleablePropertyMetaData getStyleablePropertyMetaData() {
             return StyleableProperties.LEGEND_SIDE;
         }
 
@@ -419,8 +419,8 @@ public abstract class Chart extends Region {
     // -------------- STYLESHEET HANDLING ------------------------------------------------------------------------------
 
     private static class StyleableProperties {
-        private static final StyleableProperty<Chart,Side> TITLE_SIDE =
-            new StyleableProperty<Chart,Side>("-fx-title-side",
+        private static final StyleablePropertyMetaData<Chart,Side> TITLE_SIDE =
+            new StyleablePropertyMetaData<Chart,Side>("-fx-title-side",
                 new EnumConverter<Side>(Side.class),
                 Side.TOP) {
 
@@ -435,8 +435,8 @@ public abstract class Chart extends Region {
             }
         };
         
-        private static final StyleableProperty<Chart,Side> LEGEND_SIDE =
-            new StyleableProperty<Chart,Side>("-fx-legend-side",
+        private static final StyleablePropertyMetaData<Chart,Side> LEGEND_SIDE =
+            new StyleablePropertyMetaData<Chart,Side>("-fx-legend-side",
                 new EnumConverter<Side>(Side.class),
                 Side.BOTTOM) {
 
@@ -451,8 +451,8 @@ public abstract class Chart extends Region {
             }
         };
         
-        private static final StyleableProperty<Chart,Boolean> LEGEND_VISIBLE =
-            new StyleableProperty<Chart,Boolean>("-fx-legend-visible",
+        private static final StyleablePropertyMetaData<Chart,Boolean> LEGEND_VISIBLE =
+            new StyleablePropertyMetaData<Chart,Boolean>("-fx-legend-visible",
                 BooleanConverter.getInstance(), Boolean.TRUE) {
 
             @Override
@@ -466,10 +466,10 @@ public abstract class Chart extends Region {
             }
         };
 
-        private static final List<StyleableProperty> STYLEABLES;
+        private static final List<StyleablePropertyMetaData> STYLEABLES;
         static {
-            final List<StyleableProperty> styleables = 
-                new ArrayList<StyleableProperty>(Region.impl_CSS_STYLEABLES());
+            final List<StyleablePropertyMetaData> styleables = 
+                new ArrayList<StyleablePropertyMetaData>(Region.getClassStyleablePropertyMetaData());
             Collections.addAll(styleables,
                 TITLE_SIDE,
                 LEGEND_VISIBLE,
@@ -484,7 +484,7 @@ public abstract class Chart extends Region {
      * @deprecated This is an internal API that is not intended for use and will be removed in the next version
      */
     @Deprecated
-    public static List<StyleableProperty> impl_CSS_STYLEABLES() {
+    public static List<StyleablePropertyMetaData> getClassStyleablePropertyMetaData() {
         return StyleableProperties.STYLEABLES;
     }
 
@@ -494,8 +494,8 @@ public abstract class Chart extends Region {
      * @deprecated This is an experimental API that is not intended for general use and is subject to change in future versions
      */
     @Deprecated
-    public List<StyleableProperty> impl_getStyleableProperties() {
-        return impl_CSS_STYLEABLES();
+    public List<StyleablePropertyMetaData> getStyleablePropertyMetaData() {
+        return getClassStyleablePropertyMetaData();
     }
 
 }

@@ -239,25 +239,26 @@ public class TreeCell<T> extends IndexedCell<T> {
                 weakTreeViewRef = null;
             }
 
-            if (get() != null) {
-                sm = get().getSelectionModel();
+            TreeView treeView = get();
+            if (treeView != null) {
+                sm = treeView.getSelectionModel();
                 if (sm != null) {
                     // listening for changes to treeView.selectedIndex and IndexedCell.index,
                     // to determine if this cell is selected
                     sm.getSelectedIndices().addListener(weakSelectedListener);
                 }
 
-                fm = get().getFocusModel();
+                fm = treeView.getFocusModel();
                 if (fm != null) {
                     // similar to above, but this time for focus
                     fm.focusedIndexProperty().addListener(weakFocusedListener);
                 }
 
-                get().editingItemProperty().addListener(weakEditingListener);
-                get().focusModelProperty().addListener(weakFocusModelPropertyListener);
-                get().selectionModelProperty().addListener(weakSelectionModelPropertyListener);
+                treeView.editingItemProperty().addListener(weakEditingListener);
+                treeView.focusModelProperty().addListener(weakFocusModelPropertyListener);
+                treeView.selectionModelProperty().addListener(weakSelectionModelPropertyListener);
                 
-                weakTreeViewRef = new WeakReference<TreeView<T>>(get());
+                weakTreeViewRef = new WeakReference<TreeView<T>>(treeView);
             }
 
             updateItem();
@@ -368,7 +369,7 @@ public class TreeCell<T> extends IndexedCell<T> {
 
         if (tree != null) {
             // reset the editing index on the TreeView
-            tree.edit(null);
+            if (updateEditingIndex) tree.edit(null);
             tree.requestFocus();
         
             tree.fireEvent(new TreeView.EditEvent<T>(tree,
@@ -406,7 +407,7 @@ public class TreeCell<T> extends IndexedCell<T> {
         if (tv == null) return;
         
         // Compute whether the index for this cell is for a real item
-        boolean valid = getIndex() >=0 && getIndex() < tv.impl_getTreeItemCount();
+        boolean valid = getIndex() >=0 && getIndex() < tv.getExpandedItemCount();
 
         // Cause the cell to update itself
         if (valid) {
@@ -419,8 +420,10 @@ public class TreeCell<T> extends IndexedCell<T> {
             // likely that events will be fired where the item is null, even
             // though calling cell.getTreeItem().getValue() returns the value
             // as expected
-            updateTreeItem(_treeItem);
-            updateItem(_treeItem == null ? null : _treeItem.getValue(), false);
+            if (_treeItem == null || ! _treeItem.equals(getTreeItem())) {
+                updateTreeItem(_treeItem);
+                updateItem(_treeItem == null ? null : _treeItem.getValue(), false);
+            }
         } else {
             updateTreeItem(null);
             updateItem(null, true);
@@ -445,14 +448,32 @@ public class TreeCell<T> extends IndexedCell<T> {
         setFocused(getTreeView().getFocusModel().isFocused(getIndex()));
     }
 
+    private boolean updateEditingIndex = true;
     private void updateEditing() {
-        if (getIndex() == -1 || getTreeView() == null || getTreeItem() == null) return;
+        final int index = getIndex();
+        final TreeView tree = getTreeView();
+        final TreeItem treeItem = getTreeItem();
+        final TreeItem editItem = tree == null ? null : tree.getEditingItem();
+        final boolean editing = isEditing();
         
-        TreeItem editItem = getTreeView().getEditingItem();
-        if (! isEditing() && getTreeItem().equals(editItem)) {
+        if (index == -1 || tree == null || treeItem == null) return;
+        
+        final boolean match = treeItem.equals(editItem);
+        
+        // If my tree item is the item being edited and I'm not currently in
+        // the edit mode, then I need to enter the edit mode
+        if (match && !editing) {
             startEdit();
-        } else if (isEditing() && ! getTreeItem().equals(editItem)) {
+        } else if (match && editing) {
+            // If my tree item is not the one being edited then I need to cancel
+            // the edit. The tricky thing here is that as part of this call
+            // I cannot end up calling tree.edit(null) the way that the standard
+            // cancelEdit method would do. Yet, I need to call cancelEdit
+            // so that subclasses which override cancelEdit can execute. So,
+            // I have to use a kind of hacky flag workaround.
+            updateEditingIndex = false;
             cancelEdit();
+            updateEditingIndex = true;
         }
     }
 

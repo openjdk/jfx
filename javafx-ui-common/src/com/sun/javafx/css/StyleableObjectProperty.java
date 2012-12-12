@@ -29,7 +29,7 @@ import javafx.beans.value.ObservableValue;
 
 
 public abstract class StyleableObjectProperty<T> 
-    extends ObjectPropertyBase<T> implements Property<T> {
+    extends ObjectPropertyBase<T> implements StyleableProperty<T> {
 
     /**
      * The constructor of the {@code StyleableObjectProperty}.
@@ -48,13 +48,13 @@ public abstract class StyleableObjectProperty<T>
         super(initialValue);
     }
     
-    Stylesheet.Origin origin = null;
+    Origin origin = null;
     
     @Override
-    public Stylesheet.Origin getOrigin() { return origin; }
+    public Origin getOrigin() { return origin; }
     
     @Override
-    public void applyStyle(Stylesheet.Origin origin, T v) {
+    public void applyStyle(Origin origin, T v) {
         set(v);
         this.origin = origin;
     }
@@ -62,13 +62,13 @@ public abstract class StyleableObjectProperty<T>
     @Override
     public void bind(ObservableValue<? extends T> observable) {
         super.bind(observable);
-        origin = Stylesheet.Origin.USER;
+        origin = Origin.USER;
     }
 
     @Override
     public void set(T v) {
         super.set(v);
-        origin = Stylesheet.Origin.USER;
+        origin = Origin.USER;
     }
 
 }

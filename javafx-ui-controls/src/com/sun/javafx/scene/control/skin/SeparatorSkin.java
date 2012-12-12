@@ -27,7 +27,6 @@ package com.sun.javafx.scene.control.skin;
 import javafx.geometry.Insets;
 import javafx.geometry.Orientation;
 import javafx.scene.control.Separator;
-import javafx.scene.control.SkinBase;
 import javafx.scene.layout.Region;
 
 import com.sun.javafx.scene.control.behavior.BehaviorBase;
@@ -35,7 +34,7 @@ import com.sun.javafx.scene.control.behavior.BehaviorBase;
 /**
  *
  */
-public class SeparatorSkin extends SkinBase<Separator, BehaviorBase<Separator>> {
+public class SeparatorSkin extends BehaviorSkinBase<Separator, BehaviorBase<Separator>> {
 
     /**
      * Separator's have no intrinsic length, so we need to hard code some sort

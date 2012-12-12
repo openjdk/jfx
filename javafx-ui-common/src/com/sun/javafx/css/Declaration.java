@@ -63,7 +63,7 @@ final public class Declaration {
     }
 
     /** Helper */
-    private Stylesheet.Origin getOrigin() {
+    private Origin getOrigin() {
         Rule rule = getRule();
         if (rule != null)  {
             return rule.getOrigin();

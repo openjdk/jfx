@@ -170,9 +170,6 @@ class CellUtils {
             final Cell<T> cell, 
             TextField textField, 
             final StringConverter<T> converter) {
-        if (textField == null) {
-            textField = createTextField(cell, converter);
-        }
         textField.setText(getItemText(cell, converter));
         
         cell.setText(null);
@@ -186,7 +183,7 @@ class CellUtils {
         cell.setGraphic(null);
     }
     
-    private static <T> TextField createTextField(final Cell<T> cell, final StringConverter<T> converter) {
+    static <T> TextField createTextField(final Cell<T> cell, final StringConverter<T> converter) {
         final TextField textField = new TextField(getItemText(cell, converter));
         textField.setOnKeyReleased(new EventHandler<KeyEvent>() {
             @Override public void handle(KeyEvent t) {

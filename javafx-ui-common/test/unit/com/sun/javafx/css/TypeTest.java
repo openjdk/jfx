@@ -34,9 +34,9 @@ import org.junit.Test;
 public class TypeTest {
 
     // Key key = TypeTest.getKeyByName("-fx-cursor", Node.impl_CSS_KEYS);
-    public static StyleableProperty getStyleablePropertyByName(String name, StyleableProperty[] keys) {
-        StyleableProperty keyForName = null;
-        for (StyleableProperty k : keys) {
+    public static StyleablePropertyMetaData getStyleablePropertyMetaDataByName(String name, StyleablePropertyMetaData[] keys) {
+        StyleablePropertyMetaData keyForName = null;
+        for (StyleablePropertyMetaData k : keys) {
             if (k.getProperty().equals(name)) {
                 keyForName = k;
                 break;

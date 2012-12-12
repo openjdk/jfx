@@ -25,7 +25,7 @@
 
 package javafx.scene.shape;
 
-import com.sun.javafx.css.StyleableProperty;
+import com.sun.javafx.css.StyleablePropertyMetaData;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -129,11 +129,11 @@ public class ShapeTest {
         assertTrue(listChangeCalled);
     }
     
-    @Test public void testGetStrokeDashArrayViaStyleablePropertyIsNotNull() {
+    @Test public void testGetStrokeDashArrayViaCSSPropertyIsNotNull() {
         Rectangle rect = new Rectangle();
         Double[] actual = null;
-        List<StyleableProperty> styleables = StyleableProperty.getStyleables(rect);
-        for (StyleableProperty styleable : styleables) {
+        List<StyleablePropertyMetaData> styleables = StyleablePropertyMetaData.getStyleables(rect);
+        for (StyleablePropertyMetaData styleable : styleables) {
             if ("-fx-stroke-dash-array".equals(styleable.getProperty())) {
                 WritableValue writable = styleable.getWritableValue(rect);
                 actual = (Double[])writable.getValue();
@@ -143,14 +143,14 @@ public class ShapeTest {
         assertNotNull(actual);
     }
     
-    @Test public void testGetStrokeDashArrayViaStyleablePropertyIsSame() {
+    @Test public void testGetStrokeDashArrayViaCSSPropertyIsSame() {
         
         Rectangle rect = new Rectangle();
         rect.getStrokeDashArray().addAll(5d, 7d, 1d, 3d);
         Double[] actuals = null;
-        List<StyleableProperty> styleables = StyleableProperty.getStyleables(rect);
+        List<StyleablePropertyMetaData> styleables = StyleablePropertyMetaData.getStyleables(rect);
         
-        for (StyleableProperty styleable : styleables) {
+        for (StyleablePropertyMetaData styleable : styleables) {
             if ("-fx-stroke-dash-array".equals(styleable.getProperty())) {
                 WritableValue writable = styleable.getWritableValue(rect);
                 actuals = (Double[])writable.getValue();
@@ -161,13 +161,13 @@ public class ShapeTest {
         Assert.assertArrayEquals(expecteds, actuals);
     }
 
-    @Test public void testSetStrokeDashArrayViaStyleablePropertyIsSame() {
+    @Test public void testSetStrokeDashArrayViaCSSPropertyIsSame() {
         
         Rectangle rect = new Rectangle();
         List<Double> actual = null;
-        List<StyleableProperty> styleables = StyleableProperty.getStyleables(rect);
+        List<StyleablePropertyMetaData> styleables = StyleablePropertyMetaData.getStyleables(rect);
         
-        for (StyleableProperty styleable : styleables) {
+        for (StyleablePropertyMetaData styleable : styleables) {
             if ("-fx-stroke-dash-array".equals(styleable.getProperty())) {
                 styleable.set(rect, new Double[] {5d, 7d, 1d, 3d});
                 actual = rect.getStrokeDashArray();

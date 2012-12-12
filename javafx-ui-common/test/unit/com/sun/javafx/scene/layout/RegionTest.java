@@ -33,9 +33,9 @@ public class RegionTest {
     }
 
     @Test public void dummy() { }
-//    StyleableProperty getStyleablePropertyByName(String name, List<StyleableProperty> keys) {
-//        StyleableProperty keyForName = null;
-//        for (StyleableProperty k : keys) {
+//    CSSProperty getStyleablePropertyMetaDataByName(String name, List<CSSProperty> keys) {
+//        CSSProperty keyForName = null;
+//        for (CSSProperty k : keys) {
 //            if (k.getProperty().equals(name)) {
 //                keyForName = k;
 //                break;
@@ -58,7 +58,7 @@ public class RegionTest {
 //    }
 //
 //     @Test
-//     public void testConvertStyleablePropertysToBackgroundFills() {
+//     public void testConvertCSSPropertysToBackgroundFills() {
 //
 //         Paint[] expectedColors = new Paint[] {
 //            Color.web("#ff0000"),
@@ -86,23 +86,23 @@ public class RegionTest {
 //                        "-fx-background-insets: -1, 0, 1; " +
 //                    "}");
 //
-//        Map<StyleableProperty,Object> keyValues = new HashMap<StyleableProperty,Object>();
+//        Map<CSSProperty,Object> keyValues = new HashMap<CSSProperty,Object>();
 //
 //        ParsedValue cssColorValue = getValueFor(stylesheet, "-fx-background-color");
-//        StyleableProperty cssColorProperty = getStyleablePropertyByName("-fx-background-color", BackgroundFill.impl_CSS_STYLEABLES());
+//        CSSProperty cssColorProperty = getStyleablePropertyMetaDataByName("-fx-background-color", BackgroundFill.getClassStyleablePropertyMetaData());
 //        Object value = cssColorProperty.getConverter().convert(cssColorValue,Font.getDefault());
 //        assertTrue(value instanceof Paint[]);
 //        Paint[] cssPaints = (Paint[])value;
 //        keyValues.put(cssColorProperty, cssPaints);
 //
 //        ParsedValue cssRadiusValue = getValueFor(stylesheet, "-fx-background-radius");
-//        StyleableProperty cssRadiusProperty = getStyleablePropertyByName("-fx-background-radius", BackgroundFill.impl_CSS_STYLEABLES());
+//        CSSProperty cssRadiusProperty = getStyleablePropertyMetaDataByName("-fx-background-radius", BackgroundFill.getClassStyleablePropertyMetaData());
 //        value = cssRadiusProperty.getConverter().convert(cssRadiusValue,Font.getDefault());
 //        assertTrue(value instanceof Insets[]);
 //        keyValues.put(cssRadiusProperty, (Insets[])value);
 //
 //        ParsedValue cssInsetsValue = getValueFor(stylesheet, "-fx-background-insets");
-//        StyleableProperty cssInsetsProperty = getStyleablePropertyByName("-fx-background-insets", BackgroundFill.impl_CSS_STYLEABLES());
+//        CSSProperty cssInsetsProperty = getStyleablePropertyMetaDataByName("-fx-background-insets", BackgroundFill.getClassStyleablePropertyMetaData());
 //        value = cssInsetsProperty.getConverter().convert(cssInsetsValue,Font.getDefault());
 //        assertTrue(value instanceof Insets[]);
 //        keyValues.put(cssInsetsProperty, (Insets[])value);
@@ -124,7 +124,7 @@ public class RegionTest {
 //        }
 //
 //        try {
-//            StyleableProperty styleable = getStyleablePropertyByName("-fx-background-fills", Region.impl_CSS_STYLEABLES());
+//            CSSProperty styleable = getStyleablePropertyMetaDataByName("-fx-background-fills", Region.getClassStyleablePropertyMetaData());
 //            styleable.set(new Region(), fills);
 //        } catch (Exception e) {
 //            fail(e.toString());
@@ -132,7 +132,7 @@ public class RegionTest {
 //     }
 //
 //     @Test
-//     public void testConvertStyleablePropertysToStrokeBorders() {
+//     public void testConvertCSSPropertysToStrokeBorders() {
 //
 //        Paint[][] expectedBorderColors = {
 //            {Color.RED, Color.RED, Color.RED, Color.RED},
@@ -193,37 +193,37 @@ public class RegionTest {
 //                        "-fx-border-style: dashed dotted solid none;" +
 //                    "}");
 //
-//        Map<StyleableProperty,Object> keyValues = new HashMap<StyleableProperty,Object>();
+//        Map<CSSProperty,Object> keyValues = new HashMap<CSSProperty,Object>();
 //        ParsedValue cssColorValue = getValueFor(stylesheet, "-fx-border-color");
-//        StyleableProperty cssColorProperty = getStyleablePropertyByName("-fx-border-color", StrokeBorder.impl_CSS_STYLEABLES());
+//        CSSProperty cssColorProperty = getStyleablePropertyMetaDataByName("-fx-border-color", StrokeBorder.getClassStyleablePropertyMetaData());
 //        Object value = cssColorProperty.getConverter().convert(cssColorValue,Font.getDefault());
 //        assertTrue(value instanceof Paint[][]);
 //        Paint[][] cssPaints = (Paint[][])value;
 //        keyValues.put(cssColorProperty, cssPaints);
 //
 //        ParsedValue cssInsetsValue = getValueFor(stylesheet, "-fx-border-insets");
-//        StyleableProperty cssInsetsProperty = getStyleablePropertyByName("-fx-border-insets", StrokeBorder.impl_CSS_STYLEABLES());
+//        CSSProperty cssInsetsProperty = getStyleablePropertyMetaDataByName("-fx-border-insets", StrokeBorder.getClassStyleablePropertyMetaData());
 //        value = cssInsetsProperty.getConverter().convert(cssInsetsValue,Font.getDefault());
 //        assertTrue(value instanceof Insets[]);
 //        Insets[] cssInsets = (Insets[])value;
 //        keyValues.put(cssInsetsProperty, cssInsets);
 //
 //        ParsedValue cssRadiusValue = getValueFor(stylesheet, "-fx-border-radius");
-//        StyleableProperty cssRadiusProperty = getStyleablePropertyByName("-fx-border-radius", StrokeBorder.impl_CSS_STYLEABLES());
+//        CSSProperty cssRadiusProperty = getStyleablePropertyMetaDataByName("-fx-border-radius", StrokeBorder.getClassStyleablePropertyMetaData());
 //        value = cssRadiusProperty.getConverter().convert(cssRadiusValue,Font.getDefault());
 //        assertTrue(value instanceof Margins[]);
 //        Margins[] cssRadii = (Margins[])value;
 //        keyValues.put(cssRadiusProperty, cssRadii);
 //
 //        ParsedValue cssWidthValue = getValueFor(stylesheet, "-fx-border-width");
-//        StyleableProperty cssWidthProperty = getStyleablePropertyByName("-fx-border-width", StrokeBorder.impl_CSS_STYLEABLES());
+//        CSSProperty cssWidthProperty = getStyleablePropertyMetaDataByName("-fx-border-width", StrokeBorder.getClassStyleablePropertyMetaData());
 //        value = cssWidthProperty.getConverter().convert(cssWidthValue,Font.getDefault());
 //        assertTrue(value instanceof Margins[]);
 //        Margins[] cssWidth = (Margins[])value;
 //        keyValues.put(cssWidthProperty, cssWidth);
 //
 //        ParsedValue cssStyleValue = getValueFor(stylesheet, "-fx-border-style");
-//        StyleableProperty cssStyleProperty = getStyleablePropertyByName("-fx-border-style", StrokeBorder.impl_CSS_STYLEABLES());
+//        CSSProperty cssStyleProperty = getStyleablePropertyMetaDataByName("-fx-border-style", StrokeBorder.getClassStyleablePropertyMetaData());
 //        value = cssStyleProperty.getConverter().convert(cssStyleValue,Font.getDefault());
 //        assertTrue(value instanceof BorderStyle[][]);
 //        BorderStyle[][] cssStyle = (BorderStyle[][])value;
@@ -256,7 +256,7 @@ public class RegionTest {
 //        }
 //
 //        try {
-//            StyleableProperty styleable = getStyleablePropertyByName("-fx-stroke-borders",Region.impl_CSS_STYLEABLES());
+//            CSSProperty styleable = getStyleablePropertyMetaDataByName("-fx-stroke-borders",Region.getClassStyleablePropertyMetaData());
 //            styleable.set(new Region(), strokeBorders);
 //        } catch (Exception e) {
 //            fail(e.toString());
@@ -294,31 +294,31 @@ public class RegionTest {
 //                        "-fx-background-size: AUTO, cover; " +
 //                    "}");
 //
-//        Map<StyleableProperty,Object> keyValues = new HashMap<StyleableProperty,Object>();
+//        Map<CSSProperty,Object> keyValues = new HashMap<CSSProperty,Object>();
 //
 //        ParsedValue cssBackgroundImageValue = getValueFor(stylesheet, "-fx-background-image");
-//        StyleableProperty cssBackgroundImageProperty = getStyleablePropertyByName("-fx-background-image", BackgroundImage.impl_CSS_STYLEABLES());
+//        CSSProperty cssBackgroundImageProperty = getStyleablePropertyMetaDataByName("-fx-background-image", BackgroundImage.getClassStyleablePropertyMetaData());
 //        Object value = cssBackgroundImageProperty.getConverter().convert(cssBackgroundImageValue,Font.getDefault());
 //        assertTrue(value instanceof String[]);
 //        String[] cssBackgroundImages = (String[])value;
 //        keyValues.put(cssBackgroundImageProperty, cssBackgroundImages);
 //
 //        ParsedValue cssBackgroundRepeatValue = getValueFor(stylesheet, "-fx-background-repeat");
-//        StyleableProperty cssBackgroundRepeatProperty = getStyleablePropertyByName("-fx-background-repeat", BackgroundImage.impl_CSS_STYLEABLES());
+//        CSSProperty cssBackgroundRepeatProperty = getStyleablePropertyMetaDataByName("-fx-background-repeat", BackgroundImage.getClassStyleablePropertyMetaData());
 //        value = cssBackgroundRepeatProperty.getConverter().convert(cssBackgroundRepeatValue,Font.getDefault());
 //        assertTrue(value instanceof RepeatStruct[]);
 //        RepeatStruct[] cssBackgroundRepeats = (RepeatStruct[])value;
 //        keyValues.put(cssBackgroundRepeatProperty, cssBackgroundRepeats);
 //
 //        ParsedValue cssBackgroundPositionValue = getValueFor(stylesheet, "-fx-background-position");
-//        StyleableProperty cssBackgroundPositionProperty = getStyleablePropertyByName("-fx-background-position", BackgroundImage.impl_CSS_STYLEABLES());
+//        CSSProperty cssBackgroundPositionProperty = getStyleablePropertyMetaDataByName("-fx-background-position", BackgroundImage.getClassStyleablePropertyMetaData());
 //        value = cssBackgroundPositionProperty.getConverter().convert(cssBackgroundPositionValue,Font.getDefault());
 //        assertTrue(value instanceof BackgroundPosition[]);
 //        BackgroundPosition[] cssBackgroundPositions = (BackgroundPosition[])value;
 //        keyValues.put(cssBackgroundPositionProperty, cssBackgroundPositions);
 //
 //        ParsedValue cssBackgroundSizeValue = getValueFor(stylesheet, "-fx-background-size");
-//        StyleableProperty cssBackgroundSizeProperty = getStyleablePropertyByName("-fx-background-size", BackgroundImage.impl_CSS_STYLEABLES());
+//        CSSProperty cssBackgroundSizeProperty = getStyleablePropertyMetaDataByName("-fx-background-size", BackgroundImage.getClassStyleablePropertyMetaData());
 //        value = cssBackgroundSizeProperty.getConverter().convert(cssBackgroundSizeValue,Font.getDefault());
 //        assertTrue(value instanceof BackgroundSize[]);
 //        BackgroundSize[] cssBackgroundSizes = (BackgroundSize[])value;
@@ -345,7 +345,7 @@ public class RegionTest {
 //        }
 //
 //        try {
-//            StyleableProperty prop = getStyleablePropertyByName("-fx-background-images",Region.impl_CSS_STYLEABLES());
+//            CSSProperty prop = getStyleablePropertyMetaDataByName("-fx-background-images",Region.getClassStyleablePropertyMetaData());
 //            prop.set(new Region(), images);
 //        } catch (Exception e) {
 //            fail(e.toString());
@@ -353,7 +353,7 @@ public class RegionTest {
 //     }
 //
 //     @Test
-//     public void testConvertStyleablePropertysToImageBorder() {
+//     public void testConvertCSSPropertysToImageBorder() {
 //
 ////        URI CODEBASE = null;
 ////        try {
@@ -403,38 +403,38 @@ public class RegionTest {
 //                        "-fx-border-image-insets: -1, 1; " +
 //                    "}");
 //
-//        Map<StyleableProperty,Object> keyValues = new HashMap<StyleableProperty,Object>();
+//        Map<CSSProperty,Object> keyValues = new HashMap<CSSProperty,Object>();
 //
 //        ParsedValue cssImageBorderValue = getValueFor(stylesheet, "-fx-border-image-source");
-//        StyleableProperty cssImageBorderProperty = getStyleablePropertyByName("-fx-border-image-source", BorderImage.impl_CSS_STYLEABLES());
+//        CSSProperty cssImageBorderProperty = getStyleablePropertyMetaDataByName("-fx-border-image-source", BorderImage.getClassStyleablePropertyMetaData());
 //        Object value = cssImageBorderProperty.getConverter().convert(cssImageBorderValue,Font.getDefault());
 //        assertTrue(value instanceof String[]);
 //        String[] cssImageBorders = (String[])value;
 //        keyValues.put(cssImageBorderProperty,cssImageBorders);
 //
 //        ParsedValue cssImageRepeatValue = getValueFor(stylesheet, "-fx-border-image-repeat");
-//        StyleableProperty cssImageRepeatProperty = getStyleablePropertyByName("-fx-border-image-repeat", BorderImage.impl_CSS_STYLEABLES());
+//        CSSProperty cssImageRepeatProperty = getStyleablePropertyMetaDataByName("-fx-border-image-repeat", BorderImage.getClassStyleablePropertyMetaData());
 //        value = cssImageRepeatProperty.getConverter().convert(cssImageRepeatValue,Font.getDefault());
 //        assertTrue(value instanceof BorderImageRepeat[]);
 //        BorderImageRepeat[] cssBorderImageRepeats = (BorderImageRepeat[])value;
 //        keyValues.put(cssImageRepeatProperty, cssBorderImageRepeats);
 //
 //        ParsedValue cssSliceValue = getValueFor(stylesheet, "-fx-border-image-slice");
-//        StyleableProperty cssSliceProperty = getStyleablePropertyByName("-fx-border-image-slice", BorderImage.impl_CSS_STYLEABLES());
+//        CSSProperty cssSliceProperty = getStyleablePropertyMetaDataByName("-fx-border-image-slice", BorderImage.getClassStyleablePropertyMetaData());
 //        value = cssSliceProperty.getConverter().convert(cssSliceValue,Font.getDefault());
 //        assertTrue(value instanceof BorderImageSlices[]);
 //        BorderImageSlices[] cssBorderImageSlices = (BorderImageSlices[])value;
 //        keyValues.put(cssSliceProperty, cssBorderImageSlices);
 //
 //        ParsedValue cssWidthValue = getValueFor(stylesheet, "-fx-border-image-width");
-//        StyleableProperty cssWidthProperty = getStyleablePropertyByName("-fx-border-image-width", BorderImage.impl_CSS_STYLEABLES());
+//        CSSProperty cssWidthProperty = getStyleablePropertyMetaDataByName("-fx-border-image-width", BorderImage.getClassStyleablePropertyMetaData());
 //        value = cssWidthProperty.getConverter().convert(cssWidthValue,Font.getDefault());
 //        assertTrue(value instanceof Margins[]);
 //        Margins[] cssBorderImageWidths = (Margins[])value;
 //        keyValues.put(cssWidthProperty, cssBorderImageWidths);
 //
 //        ParsedValue cssInsetsValue = getValueFor(stylesheet, "-fx-border-image-insets");
-//        StyleableProperty cssInsetsProperty = getStyleablePropertyByName("-fx-border-image-insets", BorderImage.impl_CSS_STYLEABLES());
+//        CSSProperty cssInsetsProperty = getStyleablePropertyMetaDataByName("-fx-border-image-insets", BorderImage.getClassStyleablePropertyMetaData());
 //        value = cssInsetsProperty.getConverter().convert(cssInsetsValue,Font.getDefault());
 //        assertTrue(value instanceof Insets[]);
 //        Insets[] cssBorderImageInsets = (Insets[])value;
@@ -464,7 +464,7 @@ public class RegionTest {
 //        }
 //
 //        try {
-//            StyleableProperty styleable = getStyleablePropertyByName("-fx-image-borders", Region.impl_CSS_STYLEABLES());
+//            CSSProperty styleable = getStyleablePropertyMetaDataByName("-fx-image-borders", Region.getClassStyleablePropertyMetaData());
 //            styleable.set(new Region(), images);
 //        } catch (Exception e) {
 //            fail(e.toString());

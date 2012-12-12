@@ -5,7 +5,7 @@
 package com.sun.javafx.scene.control.skin;
 
 import com.sun.javafx.css.StyleConverter;
-import com.sun.javafx.css.StyleableProperty;
+import com.sun.javafx.css.StyleablePropertyMetaData;
 import java.net.URL;
 import java.util.ArrayList;
 

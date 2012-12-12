@@ -934,7 +934,7 @@ final public class StyleManager {
         stylesheetContainerMap.put(fname, container);
         
         if (ua_stylesheet != null) {
-            ua_stylesheet.setOrigin(Stylesheet.Origin.USER_AGENT);
+            ua_stylesheet.setOrigin(Origin.USER_AGENT);
             userAgentStylesheetsChanged();
         }
 
@@ -991,7 +991,7 @@ final public class StyleManager {
         stylesheetContainerMap.put(fname, container);
         
         if (ua_stylesheet != null) {
-            ua_stylesheet.setOrigin(Stylesheet.Origin.USER_AGENT);
+            ua_stylesheet.setOrigin(Origin.USER_AGENT);
             userAgentStylesheetsChanged();
         }
 
@@ -1024,12 +1024,16 @@ final public class StyleManager {
             return;
         }
         
-        userAgentStylesheets.set(0, fname);
+        if (userAgentStylesheets.isEmpty()) {
+            userAgentStylesheets.add(fname);
+        } else {
+            userAgentStylesheets.set(0,fname);
+        }
         
         StylesheetContainer container = new StylesheetContainer(fname, stylesheet);
         stylesheetContainerMap.put(fname, container);
 
-        stylesheet.setOrigin(Stylesheet.Origin.USER_AGENT);
+        stylesheet.setOrigin(Origin.USER_AGENT);
         userAgentStylesheetsChanged();
     }
 
@@ -1304,8 +1308,8 @@ final public class StyleManager {
             if (hasParentStylesheets) {
                 final List<StylesheetContainer<Parent>> parentStylesheets =
                     gatherParentStylesheets(((node instanceof Parent) ? (Parent) node : node.getParent()));
-
-                for(int n=0, nMax=parentStylesheets.size(); n<nMax; n++) {
+                final int nMax = parentStylesheets == null ? 0 : parentStylesheets.size();
+                for(int n=0; n<nMax; n++) {
                     final StylesheetContainer<Parent> container = parentStylesheets.get(n);
                     container.keys.add(newKey); // remember that this stylesheet was used in this cache
                     if (container.selectorPartitioning != null) {
@@ -1380,7 +1384,7 @@ final public class StyleManager {
             this.map  = map;
         }
         
-        private static final StyleMap EMPTY_MAP = 
+        static final StyleMap EMPTY_MAP = 
             new StyleMap(0, Collections.EMPTY_MAP);
 
     }

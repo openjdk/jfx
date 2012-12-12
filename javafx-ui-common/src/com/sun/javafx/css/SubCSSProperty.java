@@ -28,14 +28,14 @@ import javafx.beans.value.WritableValue;
 import javafx.scene.Node;
 
 /**
- * A StyleableProperty which is used for sub-properties, such as -fx-background-color, etc.
+ * A StyleablePropertyMetaData which is used for sub-properties, such as -fx-background-color, etc.
  */
-public class SubStyleableProperty<T> extends StyleableProperty<Node,T> {
-    public SubStyleableProperty(String property, StyleConverter converter, T initialValue) {
+public class SubCSSProperty<T> extends StyleablePropertyMetaData<Node,T> {
+    public SubCSSProperty(String property, StyleConverter converter, T initialValue) {
         super(property, converter, initialValue);
     }
 
-    public SubStyleableProperty(String property, StyleConverter converter) {
+    public SubCSSProperty(String property, StyleConverter converter) {
         super(property, converter);
     }
 

@@ -4,7 +4,7 @@
 
 package javafx.scene.control;
 
-import com.sun.javafx.css.StyleableProperty;
+import com.sun.javafx.css.StyleablePropertyMetaData;
 import com.sun.javafx.pgstub.StubToolkit;
 import static javafx.scene.control.ControlTestUtils.*;
 import javafx.scene.control.Pagination;
@@ -111,7 +111,7 @@ public class PaginationTest {
      * CSS related Tests                                                 *
      ********************************************************************/
     @Test public void whenMaxPageIndicatorCountIsBound_impl_cssSettable_ReturnsFalse() {
-        StyleableProperty styleable = StyleableProperty.getStyleableProperty(pagination.maxPageIndicatorCountProperty());
+        StyleablePropertyMetaData styleable = StyleablePropertyMetaData.getStyleablePropertyMetaData(pagination.maxPageIndicatorCountProperty());
         assertTrue(styleable.isSettable(pagination));
         IntegerProperty intPr = new SimpleIntegerProperty(10);
         pagination.maxPageIndicatorCountProperty().bind(intPr);
@@ -119,13 +119,13 @@ public class PaginationTest {
     }
 
     @Test public void whenMaxPageIndicatorCountIsSpecifiedViaCSSAndIsNotBound_impl_cssSettable_ReturnsTrue() {
-        StyleableProperty styleable = StyleableProperty.getStyleableProperty(pagination.maxPageIndicatorCountProperty());
+        StyleablePropertyMetaData styleable = StyleablePropertyMetaData.getStyleablePropertyMetaData(pagination.maxPageIndicatorCountProperty());
         styleable.set(pagination, 100);
         assertTrue(styleable.isSettable(pagination));
     }
 
     @Test public void canSpecifyMaxPageIndicatorCountViaCSS() {
-        StyleableProperty styleable = StyleableProperty.getStyleableProperty(pagination.maxPageIndicatorCountProperty());
+        StyleablePropertyMetaData styleable = StyleablePropertyMetaData.getStyleablePropertyMetaData(pagination.maxPageIndicatorCountProperty());
         styleable.set(pagination, 100);
         assertSame(100, pagination.getMaxPageIndicatorCount());
     }

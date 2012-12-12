@@ -86,7 +86,7 @@ final public class Rule {
         this.stylesheet = stylesheet;
     }
 
-    public Stylesheet.Origin getOrigin() {
+    public Origin getOrigin() {
         return stylesheet != null ? stylesheet.getOrigin() : null;
     }
 

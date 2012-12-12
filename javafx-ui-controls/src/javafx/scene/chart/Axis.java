@@ -79,6 +79,9 @@ public abstract class Axis<T> extends Region {
     private double oldLength = 0;
     /** True when the current range invalid and all dependent calculations need to be updated */
     private boolean rangeValid = false;
+    /** True when labelFormatter changes programmatically - only tick marks text needs to updated */
+    boolean formatterValid = false;
+    
     double maxWidth = 0;
     double maxHeight = 0;
     // -------------- PUBLIC PROPERTIES --------------------------------------------------------------------------------
@@ -105,7 +108,7 @@ public abstract class Axis<T> extends Region {
         }
         
         @Override
-        public StyleableProperty getStyleableProperty() {
+        public StyleablePropertyMetaData getStyleablePropertyMetaData() {
             return StyleableProperties.SIDE;
         }
 
@@ -152,7 +155,7 @@ public abstract class Axis<T> extends Region {
         }
 
         @Override
-        public StyleableProperty getStyleableProperty() {
+        public StyleablePropertyMetaData getStyleablePropertyMetaData() {
             return StyleableProperties.TICK_MARK_VISIBLE;
         }
         @Override
@@ -180,7 +183,7 @@ public abstract class Axis<T> extends Region {
         }
         
         @Override
-        public StyleableProperty getStyleableProperty() {
+        public StyleablePropertyMetaData getStyleablePropertyMetaData() {
             return StyleableProperties.TICK_LABELS_VISIBLE;
         }
 
@@ -210,7 +213,7 @@ public abstract class Axis<T> extends Region {
         }
 
         @Override
-        public StyleableProperty getStyleableProperty() {
+        public StyleablePropertyMetaData getStyleablePropertyMetaData() {
             return StyleableProperties.TICK_LENGTH;
         }        
         @Override
@@ -263,7 +266,7 @@ public abstract class Axis<T> extends Region {
         }
 
         @Override 
-        public StyleableProperty getStyleableProperty() {
+        public StyleablePropertyMetaData getStyleablePropertyMetaData() {
             return StyleableProperties.TICK_LABEL_FONT;
         }
         
@@ -288,7 +291,7 @@ public abstract class Axis<T> extends Region {
         }
 
         @Override
-        public StyleableProperty getStyleableProperty() {
+        public StyleablePropertyMetaData getStyleablePropertyMetaData() {
             return StyleableProperties.TICK_LABEL_FILL;
         }
         
@@ -313,7 +316,7 @@ public abstract class Axis<T> extends Region {
         }
 
         @Override
-        public StyleableProperty getStyleableProperty() {
+        public StyleablePropertyMetaData getStyleablePropertyMetaData() {
             return StyleableProperties.TICK_LABEL_TICK_GAP;
         }
         
@@ -611,8 +614,7 @@ public abstract class Axis<T> extends Region {
         final double length = (Side.TOP.equals(side) || Side.BOTTOM.equals(side)) ? width : height;
         int numLabelsToSkip = 1;
         int tickIndex = 0;
-
-        if (oldLength != length || !isRangeValid()) {
+        if (oldLength != length || !isRangeValid() || formatterValid) {
             // get range
             Object range;
             if(isAutoRanging()) {
@@ -628,7 +630,6 @@ public abstract class Axis<T> extends Region {
 
              // calculate maxLabelWidth / maxLabelHeight for respective orientations
             maxWidth = 0; maxHeight = 0;
-
             if (side != null) {
                 if (Side.TOP.equals(side) || Side.BOTTOM.equals(side)) {
                     for (T value: newTickValues) {
@@ -701,13 +702,20 @@ public abstract class Axis<T> extends Region {
                     ft.play();
                 }
             }
+            if (formatterValid) {
+                // update tick's textNode text for all ticks as formatter has changed.
+                formatterValid = false;
+                for (TickMark<T> tick : tickMarks) {
+                    tick.textNode.setText(getTickMarkLabel(tick.getValue()));
+                }
+            }
            
             // call tick marks updated to inform subclasses that we have updated tick marks
             tickMarksUpdated();
             // mark all done
             oldLength = length;
             rangeValid = true;
-                }
+        }
 
         // RT-12272 : tick labels overlapping
         int numLabels = 0;
@@ -1032,8 +1040,8 @@ public abstract class Axis<T> extends Region {
 
     /** @treatAsPrivate implementation detail */
     private static class StyleableProperties {
-        private static final StyleableProperty<Axis,Side> SIDE =
-            new StyleableProperty<Axis,Side>("-fx-side",
+        private static final StyleablePropertyMetaData<Axis,Side> SIDE =
+            new StyleablePropertyMetaData<Axis,Side>("-fx-side",
                 new EnumConverter<Side>(Side.class)) {
 
             @Override
@@ -1047,8 +1055,8 @@ public abstract class Axis<T> extends Region {
             }
         };
         
-        private static final StyleableProperty<Axis,Number> TICK_LENGTH =
-            new StyleableProperty<Axis,Number>("-fx-tick-length",
+        private static final StyleablePropertyMetaData<Axis,Number> TICK_LENGTH =
+            new StyleablePropertyMetaData<Axis,Number>("-fx-tick-length",
                 SizeConverter.getInstance(), 8.0) {
 
             @Override
@@ -1062,8 +1070,8 @@ public abstract class Axis<T> extends Region {
             }
         };
         
-        private static final StyleableProperty<Axis,Font> TICK_LABEL_FONT =
-            new StyleableProperty.FONT<Axis>("-fx-tick-label-font",
+        private static final StyleablePropertyMetaData<Axis,Font> TICK_LABEL_FONT =
+            new StyleablePropertyMetaData.FONT<Axis>("-fx-tick-label-font",
                 Font.font("system", 8.0)) {
 
             @Override
@@ -1077,8 +1085,8 @@ public abstract class Axis<T> extends Region {
             }
         };
 
-        private static final StyleableProperty<Axis,Paint> TICK_LABEL_FILL =
-            new StyleableProperty<Axis,Paint>("-fx-tick-label-fill",
+        private static final StyleablePropertyMetaData<Axis,Paint> TICK_LABEL_FILL =
+            new StyleablePropertyMetaData<Axis,Paint>("-fx-tick-label-fill",
                 PaintConverter.getInstance(), Color.BLACK) {
 
             @Override
@@ -1092,8 +1100,8 @@ public abstract class Axis<T> extends Region {
             }
         };
         
-        private static final StyleableProperty<Axis,Number> TICK_LABEL_TICK_GAP =
-            new StyleableProperty<Axis,Number>("-fx-tick-label-gap",
+        private static final StyleablePropertyMetaData<Axis,Number> TICK_LABEL_TICK_GAP =
+            new StyleablePropertyMetaData<Axis,Number>("-fx-tick-label-gap",
                 SizeConverter.getInstance(), 3.0) {
 
             @Override
@@ -1107,8 +1115,8 @@ public abstract class Axis<T> extends Region {
             }
         };
         
-        private static final StyleableProperty<Axis,Boolean> TICK_MARK_VISIBLE =
-            new StyleableProperty<Axis,Boolean>("-fx-tick-mark-visible",
+        private static final StyleablePropertyMetaData<Axis,Boolean> TICK_MARK_VISIBLE =
+            new StyleablePropertyMetaData<Axis,Boolean>("-fx-tick-mark-visible",
                 BooleanConverter.getInstance(), Boolean.TRUE) {
 
             @Override
@@ -1122,8 +1130,8 @@ public abstract class Axis<T> extends Region {
             }
         };
         
-        private static final StyleableProperty<Axis,Boolean> TICK_LABELS_VISIBLE =
-            new StyleableProperty<Axis,Boolean>("-fx-tick-labels-visible",
+        private static final StyleablePropertyMetaData<Axis,Boolean> TICK_LABELS_VISIBLE =
+            new StyleablePropertyMetaData<Axis,Boolean>("-fx-tick-labels-visible",
                 BooleanConverter.getInstance(), Boolean.TRUE) {
 
             @Override
@@ -1137,10 +1145,10 @@ public abstract class Axis<T> extends Region {
             }
         };
 
-        private static final List<StyleableProperty> STYLEABLES;
+        private static final List<StyleablePropertyMetaData> STYLEABLES;
         static {
-        final List<StyleableProperty> styleables =
-            new ArrayList<StyleableProperty>(Region.impl_CSS_STYLEABLES());
+        final List<StyleablePropertyMetaData> styleables =
+            new ArrayList<StyleablePropertyMetaData>(Region.getClassStyleablePropertyMetaData());
             Collections.addAll(styleables,
                 SIDE,
                 TICK_LENGTH,
@@ -1159,7 +1167,7 @@ public abstract class Axis<T> extends Region {
      * @deprecated This is an internal API that is not intended for use and will be removed in the next version
      */
     @Deprecated
-    public static List<StyleableProperty> impl_CSS_STYLEABLES() {
+    public static List<StyleablePropertyMetaData> getClassStyleablePropertyMetaData() {
         return Axis.StyleableProperties.STYLEABLES;
     }
 
@@ -1169,8 +1177,8 @@ public abstract class Axis<T> extends Region {
      * @deprecated This is an experimental API that is not intended for general use and is subject to change in future versions
      */
     @Deprecated
-    public List<StyleableProperty> impl_getStyleableProperties() {
-        return impl_CSS_STYLEABLES();
+    public List<StyleablePropertyMetaData> getStyleablePropertyMetaData() {
+        return getClassStyleablePropertyMetaData();
     }
 
     private static final long TOP_PSEUDOCLASS_STATE =

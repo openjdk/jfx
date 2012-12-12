@@ -222,7 +222,7 @@ public class TextField extends TextInputControl {
         if (alignment == null) {
             alignment = new StyleableObjectProperty<Pos>(Pos.CENTER_LEFT) {
 
-                @Override public StyleableProperty getStyleableProperty() {
+                @Override public StyleablePropertyMetaData getStyleablePropertyMetaData() {
                     return StyleableProperties.ALIGNMENT;
                 }
 
@@ -262,8 +262,8 @@ public class TextField extends TextInputControl {
       * @treatAsPrivate implementation detail
       */
     private static class StyleableProperties {
-        private static final StyleableProperty<TextField, Pos> ALIGNMENT =
-            new StyleableProperty<TextField, Pos>("-fx-alignment",
+        private static final StyleablePropertyMetaData<TextField, Pos> ALIGNMENT =
+            new StyleablePropertyMetaData<TextField, Pos>("-fx-alignment",
                 new EnumConverter<Pos>(Pos.class), Pos.CENTER_LEFT ) {
 
             @Override public boolean isSettable(TextField n) {
@@ -275,10 +275,10 @@ public class TextField extends TextInputControl {
             }
         };
 
-        private static final List<StyleableProperty> STYLEABLES;
+        private static final List<StyleablePropertyMetaData> STYLEABLES;
         static {
-            final List<StyleableProperty> styleables =
-                new ArrayList<StyleableProperty>(Control.impl_CSS_STYLEABLES());
+            final List<StyleablePropertyMetaData> styleables =
+                new ArrayList<StyleablePropertyMetaData>(Control.getClassStyleablePropertyMetaData());
             Collections.addAll(styleables,
                 ALIGNMENT
             );
@@ -291,7 +291,7 @@ public class TextField extends TextInputControl {
      * @deprecated This is an internal API that is not intended for use and will be removed in the next version
      */
     @Deprecated
-    public static List<StyleableProperty> impl_CSS_STYLEABLES() {
+    public static List<StyleablePropertyMetaData> getClassStyleablePropertyMetaData() {
         return TextField.StyleableProperties.STYLEABLES;
     }
 
@@ -301,7 +301,7 @@ public class TextField extends TextInputControl {
      * @deprecated This is an experimental API that is not intended for general use and is subject to change in future versions
      */
     @Deprecated
-    @Override protected List<StyleableProperty> impl_getControlStyleableProperties() {
-        return impl_CSS_STYLEABLES();
+    @Override protected List<StyleablePropertyMetaData> impl_getControlStyleableProperties() {
+        return getClassStyleablePropertyMetaData();
     }
 }

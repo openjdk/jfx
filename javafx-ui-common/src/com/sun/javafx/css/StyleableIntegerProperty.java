@@ -29,7 +29,7 @@ import javafx.beans.value.ObservableValue;
 
 
 public abstract class StyleableIntegerProperty 
-    extends IntegerPropertyBase implements Property<Integer> {
+    extends IntegerPropertyBase implements StyleableProperty<Integer> {
 
     /**
      * The constructor of the {@code StyleableIntegerProperty}.
@@ -48,13 +48,13 @@ public abstract class StyleableIntegerProperty
         super(initialValue);
     }
     
-    Stylesheet.Origin origin = null;
+    Origin origin = null;
     
     @Override
-    public Stylesheet.Origin getOrigin() { return origin; }
+    public Origin getOrigin() { return origin; }
     
     @Override
-    public void applyStyle(Stylesheet.Origin origin, Integer v) {
+    public void applyStyle(Origin origin, Integer v) {
         setValue(v);
         this.origin = origin;
     }
@@ -62,13 +62,13 @@ public abstract class StyleableIntegerProperty
     @Override
     public void bind(ObservableValue<? extends Number> observable) {
         super.bind(observable);
-        origin = Stylesheet.Origin.USER;
+        origin = Origin.USER;
     }
 
     @Override
     public void set(int v) {
         super.set(v);
-        origin = Stylesheet.Origin.USER;
+        origin = Origin.USER;
     }
     
 }

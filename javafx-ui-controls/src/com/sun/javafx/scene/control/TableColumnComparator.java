@@ -33,29 +33,27 @@ import java.util.Comparator;
 
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
-import javafx.scene.control.TableColumn;
-import javafx.scene.control.TableView;
+import javafx.scene.control.TableColumnBase;
 
 public class TableColumnComparator implements Comparator<Object> {
 
-    private final ObservableList<TableColumn<?,?>> columns;
+    private final ObservableList<TableColumnBase<?,?>> columns;
 
     public TableColumnComparator() {
         this.columns = FXCollections.observableArrayList();
     }
 
-    public ObservableList<TableColumn<?,?>> getColumns() {
+    public ObservableList<TableColumnBase<?,?>> getColumns() {
         return columns;
     }
 
-    @Override
-    public int compare(Object o1, Object o2) {
-        for (TableColumn tc : columns) {
+    @Override public int compare(Object o1, Object o2) {
+        for (TableColumnBase tc : columns) {
             Comparator c = tc.getComparator();
 
             Object value1 = tc.getCellData(o1);
             Object value2 = tc.getCellData(o2);
-
+            
             int result = 0;
             switch (tc.getSortType()) {
                 case ASCENDING: result = c.compare(value1, value2); break;
@@ -67,5 +65,25 @@ public class TableColumnComparator implements Comparator<Object> {
             }
         }
         return 0;
+    }
+
+    @Override public int hashCode() {
+        int hash = 7;
+        hash = 59 * hash + (this.columns != null ? this.columns.hashCode() : 0);
+        return hash;
+    }
+
+    @Override public boolean equals(Object obj) {
+        if (obj == null) {
+            return false;
+        }
+        if (getClass() != obj.getClass()) {
+            return false;
+        }
+        final TableColumnComparator other = (TableColumnComparator) obj;
+        if (this.columns != other.columns && (this.columns == null || !this.columns.equals(other.columns))) {
+            return false;
+        }
+        return true;
     }
 }

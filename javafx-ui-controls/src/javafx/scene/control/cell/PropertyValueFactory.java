@@ -86,6 +86,7 @@ import com.sun.javafx.scene.control.Logging;
  * @see TableColumn
  * @see TableView
  * @see TableCell
+ * @see TreeItemPropertyValueFactory
  * @see MapValueFactory
  * @param <S> The type of the class contained within the TableView.items list.
  * @param <T> The type of the class contained within the TableColumn cells.
@@ -150,7 +151,7 @@ public class PropertyValueFactory<S,T> implements Callback<CellDataFeatures<S,T>
             final PlatformLogger logger = Logging.getControlsLogger();
             if (logger.isLoggable(PlatformLogger.WARNING)) {
                logger.finest("Can not retrieve property '" + getProperty() + 
-                        "' in PropertyBindingFactory: " + this + 
+                        "' in PropertyValueFactory: " + this + 
                         " with provided class type: " + rowData.getClass(), e);
             }
         }

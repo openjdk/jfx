@@ -25,6 +25,7 @@
 package javafx.scene.control;
 
 import com.sun.javafx.Utils;
+import javafx.application.Application;
 import javafx.beans.property.DoubleProperty;
 import javafx.beans.property.DoublePropertyBase;
 import javafx.beans.property.ObjectProperty;
@@ -43,6 +44,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
+import com.sun.javafx.application.PlatformImpl;
 import com.sun.javafx.collections.TrackableObservableList;
 import com.sun.javafx.css.*;
 import com.sun.javafx.css.converters.StringConverter;
@@ -69,11 +71,12 @@ public class PopupControl extends PopupWindow implements Skinnable {
       * computeMaxWidth(), or computeMaxHeight().
       */
     public static final double USE_COMPUTED_SIZE = -1;
-    
-    // Ensures that the caspian.css file is set as the user agent style sheet
-    // when the first popupcontrol is created.
+
     static {
-        UAStylesheetLoader.doLoad();
+        // Ensures that the default application user agent stylesheet is loaded
+        if (Application.getUserAgentStylesheet() == null) {
+            PlatformImpl.setDefaultPlatformUserAgentStylesheet();
+        }
     }
 
     /**
@@ -894,8 +897,8 @@ public class PopupControl extends PopupWindow implements Skinnable {
      **************************************************************************/
 
     private static class StyleableProperties {
-        private static final StyleableProperty<CSSBridge,String> SKIN = 
-            new StyleableProperty<CSSBridge,String>("-fx-skin",
+        private static final StyleablePropertyMetaData<CSSBridge,String> SKIN = 
+            new StyleablePropertyMetaData<CSSBridge,String>("-fx-skin",
                 StringConverter.getInstance()) {
 
             @Override
@@ -909,10 +912,10 @@ public class PopupControl extends PopupWindow implements Skinnable {
             }
         };
 
-        private static final List<StyleableProperty> STYLEABLES;
+        private static final List<StyleablePropertyMetaData> STYLEABLES;
         static {
-            final List<StyleableProperty> styleables =
-                new ArrayList<StyleableProperty>();
+            final List<StyleablePropertyMetaData> styleables =
+                new ArrayList<StyleablePropertyMetaData>();
             Collections.addAll(styleables,
                 SKIN
             );
@@ -925,7 +928,7 @@ public class PopupControl extends PopupWindow implements Skinnable {
      * @deprecated This is an internal API that is not intended for use and will be removed in the next version
      */
     @Deprecated
-    public static List<StyleableProperty> impl_CSS_STYLEABLES() {
+    public static List<StyleablePropertyMetaData> getClassStyleablePropertyMetaData() {
         return StyleableProperties.STYLEABLES;
     }
 
@@ -936,8 +939,8 @@ public class PopupControl extends PopupWindow implements Skinnable {
      * @deprecated This is an experimental API that is not intended for general use and is subject to change in future versions
      */
     @Deprecated
-    public List<StyleableProperty> impl_getStyleableProperties() {
-        return impl_CSS_STYLEABLES();
+    public List<StyleablePropertyMetaData> getStyleablePropertyMetaData() {
+        return getClassStyleablePropertyMetaData();
     }
 
     /**
@@ -992,8 +995,8 @@ public class PopupControl extends PopupWindow implements Skinnable {
                 * @deprecated This is an experimental API that is not intended for general use and is subject to change in future versions
                 */
                 @Deprecated @Override
-                public List<StyleableProperty> getStyleableProperties() {
-                    return PopupControl.this.impl_getStyleableProperties();
+                public List<StyleablePropertyMetaData> getStyleablePropertyMetaData() {
+                    return PopupControl.this.getStyleablePropertyMetaData();
                 }                
                 
                 @Override
@@ -1023,8 +1026,8 @@ public class PopupControl extends PopupWindow implements Skinnable {
         * @deprecated This is an experimental API that is not intended for general use and is subject to change in future versions
         */
         @Deprecated @Override 
-        public List<StyleableProperty> impl_getStyleableProperties() {
-            return PopupControl.this.impl_getStyleableProperties();
+        public List<StyleablePropertyMetaData> getStyleablePropertyMetaData() {
+            return PopupControl.this.getStyleablePropertyMetaData();
         }
 
         /**
@@ -1092,7 +1095,7 @@ public class PopupControl extends PopupWindow implements Skinnable {
                 // Dispose of the old skin
                 if (oldValue != null) oldValue.dispose();
                 // Get the new value, and save it off as the new oldValue
-                final Skin<?> skin = oldValue = getValue();
+                oldValue = getValue();
                 // Update the children list with the new skin node
                 updateChildren();
                 // DEBUG: Log that we've changed the skin
@@ -1131,8 +1134,6 @@ public class PopupControl extends PopupWindow implements Skinnable {
                     @Override
                     public void invalidated() {
 
-                        final Skin currentSkin = skinProperty().get();
-
                         //
                         // if the current skin is not null, then 
                         // see if then check to see if the current skin's class name
@@ -1167,7 +1168,7 @@ public class PopupControl extends PopupWindow implements Skinnable {
                     }
 
                     @Override
-                    public StyleableProperty getStyleableProperty() {
+                    public StyleablePropertyMetaData getStyleablePropertyMetaData() {
                         return StyleableProperties.SKIN;
                     }
 
@@ -1255,8 +1256,8 @@ public class PopupControl extends PopupWindow implements Skinnable {
          * @deprecated This is an internal API that is not intended for use and will be removed in the next version
          */
         @Deprecated
-        @Override protected void impl_processCSS(StyleManager styleManager, boolean reapply) {
-            super.impl_processCSS(styleManager, reapply);
+        @Override protected void impl_processCSS() {
+            super.impl_processCSS();
 
             if (getSkin() == null) {
                 // try to create default skin
@@ -1264,7 +1265,7 @@ public class PopupControl extends PopupWindow implements Skinnable {
                 if (defaultSkin != null) {
                     skinProperty().set(defaultSkin);
                     // we have to reapply css again so that the newly set skin gets css applied as well.
-                    super.impl_processCSS(styleManager, reapply);
+                    super.impl_processCSS();
                 } else {
                     final String msg = "The -fx-skin property has not been defined in CSS for " + this +
                             " and createDefaultSkin() returned null.";

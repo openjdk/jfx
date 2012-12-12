@@ -88,7 +88,7 @@ import com.sun.javafx.beans.event.AbstractNotifyListener;
 import com.sun.javafx.collections.TrackableObservableList;
 import com.sun.javafx.css.StyleManager;
 import com.sun.javafx.css.StyleableObjectProperty;
-import com.sun.javafx.css.StyleableProperty;
+import com.sun.javafx.css.StyleablePropertyMetaData;
 import com.sun.javafx.cursor.CursorFrame;
 import com.sun.javafx.event.EventQueue;
 import com.sun.javafx.geom.PickRay;
@@ -448,7 +448,7 @@ public class Scene implements EventTarget {
             // The cssFlag is set to clean in either Node.processCSS or 
             // Node.impl_processCSS(boolean)
             sceneRoot.impl_clearDirty(com.sun.javafx.scene.DirtyBits.NODE_CSS);
-            sceneRoot.processCSS(styleManager);
+            sceneRoot.processCSS();
         }
     }
 
@@ -5663,7 +5663,7 @@ public class Scene implements EventTarget {
                 }
 
                 @Override
-                public StyleableProperty getStyleableProperty() {
+                public StyleablePropertyMetaData getStyleablePropertyMetaData() {
                     //TODO - not yet supported
                     throw new UnsupportedOperationException("Not supported yet.");
                 }

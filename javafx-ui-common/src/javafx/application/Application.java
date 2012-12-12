@@ -25,6 +25,8 @@
 
 package javafx.application;
 
+import java.security.AccessController;
+import java.security.PrivilegedAction;
 import java.util.List;
 import java.util.Map;
 
@@ -34,6 +36,8 @@ import javafx.stage.Stage;
 
 import com.sun.javafx.application.LauncherImpl;
 import com.sun.javafx.application.ParametersImpl;
+import com.sun.javafx.application.PlatformImpl;
+import com.sun.javafx.css.StyleManager;
 
 /**
  * Application class from which JavaFX applications extend.
@@ -368,4 +372,54 @@ public abstract class Application {
 
     }
 
+    private static String userAgentStylesheet = null;
+    static {
+        userAgentStylesheet = AccessController.doPrivileged(
+            new PrivilegedAction<String>() {
+                public String run() {
+                    return System.getProperty("javafx.application.userAgentStylesheet",null);
+                }
+            });
+        if (userAgentStylesheet != null) {
+            StyleManager.setDefaultUserAgentStylesheet(null, userAgentStylesheet);
+        }
+    }
+
+    /**
+     * Get the user agent stylesheet used by the whole application. This is
+     * used to provide default styling for all ui controls and other nodes.
+     * A value of null means the platform default stylesheet is being used.
+     * <p>
+     * NOTE: This method must be called on the JavaFX Application Thread.
+     * </p>
+     *
+     * @return The URL to the stylesheet as a String.
+     */
+    public static String getUserAgentStylesheet() {
+        return userAgentStylesheet;
+    }
+
+    /**
+     * Set the user agent stylesheet used by the whole application. This is used
+     * to provide default styling for all ui controls and other nodes. Each
+     * release of JavaFX may have a new default value for this so if you need
+     * to guarantee consistency you will need to call this method and choose
+     * what default you would like for your application. A value of null will
+     * restore the platform default stylesheet. This property can also be set
+     * on the command line with {@code -Djavafx.application.userAgentStylesheet=[URL]}
+     * <p>
+     * NOTE: This method must be called on the JavaFX Application Thread.
+     * </p>
+     *
+     *
+     * @param url The URL to the stylesheet as a String.
+     */
+    public static void setUserAgentStylesheet(String url) {
+        userAgentStylesheet = url;
+        if (url == null) {
+            PlatformImpl.setDefaultPlatformUserAgentStylesheet();
+        } else {
+            StyleManager.setDefaultUserAgentStylesheet(null, url);
+        }
+    }
 }

@@ -53,7 +53,7 @@ import javafx.util.Callback;
 
 import com.sun.javafx.css.StyleManager;
 import com.sun.javafx.css.StyleableObjectProperty;
-import com.sun.javafx.css.StyleableProperty;
+import com.sun.javafx.css.StyleablePropertyMetaData;
 import com.sun.javafx.css.converters.EnumConverter;
 import javafx.collections.WeakListChangeListener;
 import com.sun.javafx.scene.control.accessible.AccessibleList;
@@ -428,7 +428,7 @@ public class ListView<T> extends Control {
                 }
                 
                 @Override 
-                public StyleableProperty getStyleableProperty() {
+                public StyleablePropertyMetaData getStyleablePropertyMetaData() {
                     return ListView.StyleableProperties.ORIENTATION;
                 }
                 
@@ -760,8 +760,8 @@ public class ListView<T> extends Control {
 
     /** @treatAsPrivate */
     private static class StyleableProperties {
-        private static final StyleableProperty<ListView,Orientation> ORIENTATION = 
-            new StyleableProperty<ListView,Orientation>("-fx-orientation",
+        private static final StyleablePropertyMetaData<ListView,Orientation> ORIENTATION = 
+            new StyleablePropertyMetaData<ListView,Orientation>("-fx-orientation",
                 new EnumConverter<Orientation>(Orientation.class), 
                 Orientation.VERTICAL) {
 
@@ -782,10 +782,10 @@ public class ListView<T> extends Control {
             }
         };
             
-        private static final List<StyleableProperty> STYLEABLES;
+        private static final List<StyleablePropertyMetaData> STYLEABLES;
         static {
-            final List<StyleableProperty> styleables =
-                new ArrayList<StyleableProperty>(Control.impl_CSS_STYLEABLES());
+            final List<StyleablePropertyMetaData> styleables =
+                new ArrayList<StyleablePropertyMetaData>(Control.getClassStyleablePropertyMetaData());
             Collections.addAll(styleables,
                 ORIENTATION
             );
@@ -798,7 +798,7 @@ public class ListView<T> extends Control {
      * @deprecated This is an internal API that is not intended for use and will be removed in the next version
      */
     @Deprecated
-    public static List<StyleableProperty> impl_CSS_STYLEABLES() {
+    public static List<StyleablePropertyMetaData> getClassStyleablePropertyMetaData() {
         return ListView.StyleableProperties.STYLEABLES;
     }
 
@@ -808,8 +808,8 @@ public class ListView<T> extends Control {
      * @deprecated This is an experimental API that is not intended for general use and is subject to change in future versions
      */
     @Deprecated
-    protected List<StyleableProperty> impl_getControlStyleableProperties() {
-        return impl_CSS_STYLEABLES();
+    protected List<StyleablePropertyMetaData> impl_getControlStyleableProperties() {
+        return getClassStyleablePropertyMetaData();
     }
 
     private static final long VERTICAL_PSEUDOCLASS_STATE =
