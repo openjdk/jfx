@@ -40,7 +40,7 @@ import javafx.scene.shape.StrokeType;
  */
 public final class BorderStrokeStyle {
     private static final List<Double> DOTTED_LIST = Collections.unmodifiableList(asList(0, 2));
-    private static final List<Double> DASHED_LIST = Collections.unmodifiableList(asList(5, 3));
+    private static final List<Double> DASHED_LIST = Collections.unmodifiableList(asList(2, 1.4));
 
     /**
      * Indicates that no stroke should be drawn.
