@@ -503,7 +503,7 @@ public final class SequentialTransition extends Transition {
                             curIndex = end;
                         }
                     } else {
-                        final long localTicks = sub(sub(newTicks, offsetTicks), currentDelay);
+                        final long localTicks = sub(newTicks - currentDelay, offsetTicks);
                         current.impl_timePulse(localTicks);
                     }
                 }
@@ -526,12 +526,12 @@ public final class SequentialTransition extends Transition {
                     }
                 }
                 if (newTicks <= currentDelay) {
-                    current.impl_timePulse(add(durations[curIndex], offsetTicks));
+                    current.impl_timePulse(sub(durations[curIndex], offsetTicks));
                     if (newTicks == 0) {
                         curIndex = BEFORE;
                     }
                 } else {
-                    final long localTicks = sub(startTimes[curIndex + 1], sub(newTicks, offsetTicks));
+                    final long localTicks = sub(startTimes[curIndex + 1] - newTicks, offsetTicks);
                     current.impl_timePulse(localTicks);
                 }
             }
@@ -582,7 +582,7 @@ public final class SequentialTransition extends Transition {
                             curIndex = end;
                         }
                     } else {
-                        final long localTicks = sub(sub(newTicks, offsetTicks), add(startTimes[curIndex], delays[curIndex]));
+                        final long localTicks = sub(newTicks, add(startTimes[curIndex], delays[curIndex]));
                         newAnimation.impl_timePulse(localTicks);
                     }
                 } else {
@@ -609,7 +609,7 @@ public final class SequentialTransition extends Transition {
                         }
                     }
                     if (current.getStatus() == Status.RUNNING) {
-                        current.impl_timePulse(add(durations[curIndex], offsetTicks));
+                        current.impl_timePulse(sub(durations[curIndex], offsetTicks));
                     }
                     oldTicks = startTimes[curIndex];
                 }
@@ -637,7 +637,7 @@ public final class SequentialTransition extends Transition {
                             curIndex = BEFORE;
                         }
                     } else {
-                        final long localTicks = sub(startTimes[curIndex + 1], sub(newTicks, offsetTicks));
+                        final long localTicks = sub(startTimes[curIndex + 1], newTicks);
                         newAnimation.impl_timePulse(localTicks);
                     }
                 } else {
@@ -674,26 +674,13 @@ public final class SequentialTransition extends Transition {
                         cachedChildren[oldIndex].impl_stop();
                     }
                 }
-                if (currentRate >= 0) {
-                    if (curIndex < oldIndex) {
-                        for (int i = oldIndex == end ? end - 1 : oldIndex; i > curIndex; --i) {
-                            cachedChildren[i].impl_jumpTo(0, durations[i], true);
-                        }
-                    } else { //curIndex > oldIndex as curIndex != oldIndex
-                        for (int i = oldIndex == BEFORE? 0 : oldIndex; i < curIndex; ++i) {
-                            cachedChildren[i].impl_jumpTo(durations[i], durations[i], true);
-                        }
+                if (curIndex < oldIndex) {
+                    for (int i = oldIndex == end ? end - 1 : oldIndex; i > curIndex; --i) {
+                        cachedChildren[i].impl_jumpTo(0, durations[i], true);
                     }
-
-                } else if (currentRate <= 0) {
-                    if (curIndex > oldIndex) {
-                        for (int i = oldIndex == BEFORE ? 0 : oldIndex; i < curIndex; ++i) {
-                            cachedChildren[i].impl_jumpTo(durations[i], durations[i], true);
-                        }
-                    } else {
-                        for (int i = oldIndex == end ? end - 1: oldIndex; i > curIndex; --i) {
-                            cachedChildren[i].impl_jumpTo(0, durations[i], true);
-                        }
+                } else { //curIndex > oldIndex as curIndex != oldIndex
+                    for (int i = oldIndex == BEFORE? 0 : oldIndex; i < curIndex; ++i) {
+                        cachedChildren[i].impl_jumpTo(durations[i], durations[i], true);
                     }
                 }
                 startChild(newAnimation, curIndex);
@@ -704,9 +691,9 @@ public final class SequentialTransition extends Transition {
         }
         // TODO: This does probably not work if animation is paused (getCurrentRate() == 0)
         if (oldIndex == curIndex) {
-            offsetTicks += newTicks - oldTicks;
+            offsetTicks += currentRate > 0 ? newTicks - oldTicks : oldTicks - newTicks;
         } else {
-            offsetTicks = currentRate > 0 ? newTicks - add(startTimes[curIndex], delays[curIndex]) : newTicks - startTimes[curIndex + 1];
+            offsetTicks = currentRate > 0 ? newTicks - add(startTimes[curIndex], delays[curIndex]) : startTimes[curIndex + 1] - newTicks;
         }
         newAnimation.clipEnvelope.jumpTo(Math.round(sub(newTicks, add(startTimes[curIndex], delays[curIndex])) * rates[curIndex]));
         oldTicks = newTicks;

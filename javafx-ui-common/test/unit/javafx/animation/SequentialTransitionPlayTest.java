@@ -40,7 +40,6 @@ public class SequentialTransitionPlayTest {
     AbstractMasterTimerMock amt;
     SequentialTransition st;
     Transition child1X;
-    Transition child2X;
     Transition child1Y;
 
     @Before
@@ -56,17 +55,6 @@ public class SequentialTransitionPlayTest {
             @Override
             protected void interpolate(double d) {
                 xProperty.set(Math.round(d * 60000));
-            }
-        };
-        child2X = new Transition() {
-            {
-                setCycleDuration(Duration.seconds(30));
-                setInterpolator(Interpolator.LINEAR);
-            }
-
-            @Override
-            protected void interpolate(double d) {
-                xProperty.set(10000 + Math.round(d * 30000));
             }
         };
         child1Y = new Transition() {
@@ -557,6 +545,49 @@ public class SequentialTransitionPlayTest {
 
         assertEquals(60000, xProperty.get());
         assertEquals(Math.round(TickCalculation.toMillis(100)), yProperty.get());
+
+    }
+
+    @Test
+    public void testToggleRate_2() {
+        st.getChildren().addAll(child1X, child1Y);
+
+        st.play();
+
+        st.jumpTo(Duration.seconds(10));
+
+        amt.pulse();
+
+        assertEquals(Status.RUNNING, st.getStatus());
+        assertEquals(Status.RUNNING, child1X.getStatus());
+        assertEquals(Status.STOPPED, child1Y.getStatus());
+
+        assertEquals(10000 + Math.round(TickCalculation.toMillis(100)), xProperty.get());
+        assertEquals(0, yProperty.get());
+
+        st.setRate(-1.0);
+
+        amt.pulse();
+        amt.pulse();
+
+        assertEquals(Status.RUNNING, st.getStatus());
+        assertEquals(Status.RUNNING, child1X.getStatus());
+        assertEquals(Status.STOPPED, child1Y.getStatus());
+
+        assertEquals(10000 - Math.round(TickCalculation.toMillis(100)), xProperty.get());
+        assertEquals(0, yProperty.get());
+
+        st.setRate(1.0);
+
+        amt.pulse();
+        amt.pulse();
+
+        assertEquals(Status.RUNNING, st.getStatus());
+        assertEquals(Status.RUNNING, child1X.getStatus());
+        assertEquals(Status.STOPPED, child1Y.getStatus());
+
+        assertEquals(10000 + Math.round(TickCalculation.toMillis(100)), xProperty.get());
+        assertEquals(0, yProperty.get());
 
     }
 }
