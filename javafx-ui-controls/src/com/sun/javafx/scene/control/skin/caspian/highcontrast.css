@@ -85,7 +85,7 @@
 /*          the next line of code paints the dark vertical gradient from the top to the bottom of the selected button */
             linear-gradient( from 0% 0% to 0% 100%, derive(-fx-color,-80%) 0%, derive(-fx-color,-65%) 45%, derive(-fx-color,-50%) 99%, derive(-fx-color,-60%) 100%),
 /*          the next line of code paints the dark horizontal gradient from the left and right edges toward the center of the selected button */
-            linear-gradient( from 0%,0% to 100%,0%, rgba(0,0,0,0.3) 0%, rgba(0,0,0,0) 10%, rgba(0,0,0,0) 90%, rgba(0,0,0,0.3) 100%);
+            linear-gradient( from 0% 0% to 100% 0%, rgba(0,0,0,0.3) 0%, rgba(0,0,0,0) 10%, rgba(0,0,0,0) 90%, rgba(0,0,0,0.3) 100%);
         -fx-background-insets: -1.4, 0, 1, 1;
     }
 
