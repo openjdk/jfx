@@ -469,7 +469,90 @@ public class ParallelTransitionPlayTest {
         
         assertEquals(10000 + TICK_STEP, xProperty.get());
         assertEquals(10000, yProperty.get());
+    }
 
+    @Test
+    public void testToggleRate_2() {
+        pt.getChildren().addAll(child1X, child1Y);
+
+        pt.play();
+
+        pt.jumpTo(Duration.seconds(20));
+
+        amt.pulse();
+
+        assertEquals(Status.RUNNING, pt.getStatus());
+        assertEquals(Status.RUNNING, child1X.getStatus());
+        assertEquals(Status.STOPPED, child1Y.getStatus());
+
+        assertEquals(20000 + TICK_STEP, xProperty.get());
+        assertEquals(10000, yProperty.get());
+
+        pt.setRate(-1.0);
+
+        amt.pulse();
+        amt.pulse();
+
+        assertEquals(Status.RUNNING, pt.getStatus());
+        assertEquals(Status.RUNNING, child1X.getStatus());
+        assertEquals(Status.STOPPED, child1Y.getStatus());
+
+        assertEquals(20000 - TICK_STEP, xProperty.get());
+        assertEquals(10000, yProperty.get());
+
+        pt.setRate(1.0);
+
+        amt.pulse();
+        amt.pulse();
+
+        assertEquals(Status.RUNNING, pt.getStatus());
+        assertEquals(Status.RUNNING, child1X.getStatus());
+        assertEquals(Status.STOPPED, child1Y.getStatus());
+
+        assertEquals(20000 + TICK_STEP, xProperty.get());
+        assertEquals(10000, yProperty.get());
+    }
+
+
+    @Test
+    public void testChildWithDifferentRate() {
+        pt.getChildren().addAll(child1X, child1Y);
+        child1X.setRate(2.0);
+
+        pt.play();
+
+        amt.pulse();
+
+        assertEquals(Math.round(TICK_MILLIS * 2), xProperty.get());
+
+        pt.jumpTo(Duration.seconds(30));
+
+        assertEquals(60000, xProperty.get());
+        assertEquals(10000, yProperty.get());
+
+        pt.jumpTo(Duration.seconds(40));
+
+        assertEquals(60000, xProperty.get());
+        assertEquals(10000, yProperty.get());
+
+        pt.jumpTo(Duration.seconds(5));
+        amt.pulse();
+
+        pt.setRate(-1.0);
+
+        amt.pulse();
+        amt.pulse();
+
+        assertEquals(10000 - Math.round(TICK_MILLIS * 2), xProperty.get());
+        assertEquals(5000 - TICK_STEP, yProperty.get());
+
+        pt.setRate(1.0);
+
+        amt.pulse();
+        amt.pulse();
+
+        assertEquals(10000 + Math.round(TICK_MILLIS * 2), xProperty.get());
+        assertEquals(5000 + TICK_STEP, yProperty.get());
 
     }
 }

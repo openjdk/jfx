@@ -35,6 +35,9 @@ import static org.junit.Assert.*;
 
 public class SequentialTransitionPlayTest {
 
+    public static final double TICK_MILLIS = TickCalculation.toMillis(100);
+    public static final long TICK_STEP = Math.round(TICK_MILLIS);
+
     LongProperty xProperty = new SimpleLongProperty();
     LongProperty yProperty = new SimpleLongProperty();
     AbstractMasterTimerMock amt;
@@ -83,7 +86,7 @@ public class SequentialTransitionPlayTest {
         assertEquals(TickCalculation.toDuration(100), st.getCurrentTime());
         assertEquals(TickCalculation.toDuration(100), child1X.getCurrentTime());
         assertEquals(Duration.ZERO, child1Y.getCurrentTime());
-        assertEquals(Math.round(TickCalculation.toMillis(100)), xProperty.get());
+        assertEquals(Math.round(TICK_MILLIS), xProperty.get());
         assertEquals(0, yProperty.get());
 
         assertEquals(Status.RUNNING, st.getStatus());
@@ -95,7 +98,7 @@ public class SequentialTransitionPlayTest {
         assertEquals(Status.RUNNING, st.getStatus());
         assertEquals(Status.RUNNING, child1X.getStatus());
         assertEquals(Status.STOPPED, child1Y.getStatus());
-        assertEquals(60000 - Math.round(TickCalculation.toMillis(100)), xProperty.get());
+        assertEquals(60000 - Math.round(TICK_MILLIS), xProperty.get());
         assertEquals(0, yProperty.get());
 
         amt.pulse();
@@ -111,7 +114,7 @@ public class SequentialTransitionPlayTest {
         assertEquals(Status.STOPPED, child1X.getStatus());
         assertEquals(Status.RUNNING, child1Y.getStatus());
         assertEquals(60000, xProperty.get());
-        assertEquals(Math.round(TickCalculation.toMillis(100)), yProperty.get());
+        assertEquals(Math.round(TICK_MILLIS), yProperty.get());
 
         st.jumpTo(Duration.minutes(1).add(Duration.seconds(10)).subtract(TickCalculation.toDuration(100)));
 
@@ -119,7 +122,7 @@ public class SequentialTransitionPlayTest {
         assertEquals(Status.STOPPED, child1X.getStatus());
         assertEquals(Status.RUNNING, child1Y.getStatus());
         assertEquals(60000, xProperty.get());
-        assertEquals(10000 - Math.round(TickCalculation.toMillis(100)), yProperty.get());
+        assertEquals(10000 - Math.round(TICK_MILLIS), yProperty.get());
 
         amt.pulse();
 
@@ -150,7 +153,7 @@ public class SequentialTransitionPlayTest {
         assertEquals(Duration.seconds(60), child1X.getCurrentTime());
         assertEquals(Duration.seconds(10).subtract(TickCalculation.toDuration(100)), child1Y.getCurrentTime());
         assertEquals(60000, xProperty.get());
-        assertEquals(10000 - Math.round(TickCalculation.toMillis(100)), yProperty.get());
+        assertEquals(10000 - Math.round(TICK_MILLIS), yProperty.get());
 
         assertEquals(Status.RUNNING, st.getStatus());
         assertEquals(Status.STOPPED, child1X.getStatus());
@@ -162,7 +165,7 @@ public class SequentialTransitionPlayTest {
         assertEquals(Status.STOPPED, child1X.getStatus());
         assertEquals(Status.RUNNING, child1Y.getStatus());
         assertEquals(60000, xProperty.get());
-        assertEquals(Math.round(TickCalculation.toMillis(100)), yProperty.get());
+        assertEquals(Math.round(TICK_MILLIS), yProperty.get());
 
         amt.pulse();
         assertEquals(Status.RUNNING, st.getStatus());
@@ -176,7 +179,7 @@ public class SequentialTransitionPlayTest {
         assertEquals(Status.RUNNING, st.getStatus());
         assertEquals(Status.RUNNING, child1X.getStatus());
         assertEquals(Status.STOPPED, child1Y.getStatus());
-        assertEquals(60000 - Math.round(TickCalculation.toMillis(100)), xProperty.get());
+        assertEquals(60000 - Math.round(TICK_MILLIS), xProperty.get());
         assertEquals(0, yProperty.get());
 
         st.jumpTo(TickCalculation.toDuration(100));
@@ -184,7 +187,7 @@ public class SequentialTransitionPlayTest {
         assertEquals(Status.RUNNING, st.getStatus());
         assertEquals(Status.RUNNING, child1X.getStatus());
         assertEquals(Status.STOPPED, child1Y.getStatus());
-        assertEquals(Math.round(TickCalculation.toMillis(100)), xProperty.get());
+        assertEquals(Math.round(TICK_MILLIS), xProperty.get());
         assertEquals(0, yProperty.get());
 
         amt.pulse();
@@ -220,7 +223,7 @@ public class SequentialTransitionPlayTest {
         assertEquals(Status.STOPPED, child1X.getStatus());
         assertEquals(Status.RUNNING, child1Y.getStatus());
         assertEquals(60000, xProperty.get());
-        assertEquals(5000 + Math.round(TickCalculation.toMillis(100)), yProperty.get());
+        assertEquals(5000 + Math.round(TICK_MILLIS), yProperty.get());
 
     }
 
@@ -244,7 +247,7 @@ public class SequentialTransitionPlayTest {
         assertEquals(Status.STOPPED, child1X.getStatus());
         assertEquals(Status.RUNNING, child1Y.getStatus());
         assertEquals(60000, xProperty.get());
-        assertEquals(5000 - Math.round(TickCalculation.toMillis(100)), yProperty.get());
+        assertEquals(5000 - Math.round(TICK_MILLIS), yProperty.get());
 
     }
 
@@ -268,7 +271,7 @@ public class SequentialTransitionPlayTest {
         assertEquals(Status.STOPPED, child1X.getStatus());
         assertEquals(Status.RUNNING, child1Y.getStatus());
         assertEquals(60000, xProperty.get());
-        assertEquals(10000 - Math.round(TickCalculation.toMillis(100)), yProperty.get());
+        assertEquals(10000 - Math.round(TICK_MILLIS), yProperty.get());
 
         amt.pulse();
 
@@ -283,7 +286,7 @@ public class SequentialTransitionPlayTest {
         assertEquals(TickCalculation.toDuration(100), st.getCurrentTime());
         assertEquals(TickCalculation.toDuration(100), child1X.getCurrentTime());
         assertEquals(Duration.ZERO, child1Y.getCurrentTime());
-        assertEquals(Math.round(TickCalculation.toMillis(100)), xProperty.get());
+        assertEquals(Math.round(TICK_MILLIS), xProperty.get());
         assertEquals(0, yProperty.get());
 
         st.jumpTo(Duration.minutes(2).add(Duration.seconds(20)).subtract(TickCalculation.toDuration(100)));
@@ -292,7 +295,7 @@ public class SequentialTransitionPlayTest {
         assertEquals(Status.STOPPED, child1X.getStatus());
         assertEquals(Status.RUNNING, child1Y.getStatus());
         assertEquals(60000, xProperty.get());
-        assertEquals(10000 - Math.round(TickCalculation.toMillis(100)), yProperty.get());
+        assertEquals(10000 - Math.round(TICK_MILLIS), yProperty.get());
 
         amt.pulse();
 
@@ -323,7 +326,7 @@ public class SequentialTransitionPlayTest {
         assertEquals(Status.RUNNING, st.getStatus());
         assertEquals(Status.RUNNING, child1X.getStatus());
         assertEquals(Status.STOPPED, child1Y.getStatus());
-        assertEquals(Math.round(TickCalculation.toMillis(100)), xProperty.get());
+        assertEquals(Math.round(TICK_MILLIS), xProperty.get());
         assertEquals(0, yProperty.get());
 
         amt.pulse();
@@ -340,7 +343,7 @@ public class SequentialTransitionPlayTest {
         assertEquals(Status.STOPPED, child1X.getStatus());
         assertEquals(Status.RUNNING, child1Y.getStatus());
         assertEquals(60000, xProperty.get());
-        assertEquals(10000 - Math.round(TickCalculation.toMillis(100)), yProperty.get());
+        assertEquals(10000 - Math.round(TICK_MILLIS), yProperty.get());
 
         st.jumpTo(Duration.minutes(1).add(Duration.seconds(10)).subtract(TickCalculation.toDuration(100)));
 
@@ -348,7 +351,7 @@ public class SequentialTransitionPlayTest {
         assertEquals(Status.STOPPED, child1X.getStatus());
         assertEquals(Status.RUNNING, child1Y.getStatus());
         assertEquals(60000, xProperty.get());
-        assertEquals(10000 - Math.round(TickCalculation.toMillis(100)), yProperty.get());
+        assertEquals(10000 - Math.round(TICK_MILLIS), yProperty.get());
 
         amt.pulse();
 
@@ -391,7 +394,7 @@ public class SequentialTransitionPlayTest {
         assertEquals(Status.RUNNING, st.getStatus());
         assertEquals(Status.RUNNING, child1X.getStatus());
         assertEquals(Status.STOPPED, child1Y.getStatus());
-        assertEquals(10000 + Math.round(TickCalculation.toMillis(100)), xProperty.get());
+        assertEquals(10000 + Math.round(TICK_MILLIS), xProperty.get());
         assertEquals(0, yProperty.get());
 
         st.jumpTo(Duration.seconds(65));
@@ -448,7 +451,7 @@ public class SequentialTransitionPlayTest {
         assertEquals(Status.RUNNING, child1Y.getStatus());
 
         assertEquals(60000, xProperty.get());
-        assertEquals(10000 - Math.round(TickCalculation.toMillis(100)), yProperty.get());
+        assertEquals(10000 - Math.round(TICK_MILLIS), yProperty.get());
 
     }
 
@@ -478,7 +481,7 @@ public class SequentialTransitionPlayTest {
         assertEquals(Status.RUNNING, child1Y.getStatus());
 
         assertEquals(60000, xProperty.get());
-        assertEquals(10000 - Math.round(TickCalculation.toMillis(100)), yProperty.get());
+        assertEquals(10000 - Math.round(TICK_MILLIS), yProperty.get());
 
     }
 
@@ -491,7 +494,7 @@ public class SequentialTransitionPlayTest {
 
         amt.pulse();
 
-        assertEquals(Math.round(TickCalculation.toMillis(100) * 2), xProperty.get());
+        assertEquals(Math.round(TICK_MILLIS * 2), xProperty.get());
 
         st.jumpTo(Duration.seconds(30));
 
@@ -502,6 +505,26 @@ public class SequentialTransitionPlayTest {
 
         assertEquals(60000, xProperty.get());
         assertEquals(10000, yProperty.get());
+
+
+        st.jumpTo(Duration.seconds(5));
+        amt.pulse();
+
+        st.setRate(-1.0);
+
+        amt.pulse();
+        amt.pulse();
+
+        assertEquals(10000 - Math.round(TICK_MILLIS * 2), xProperty.get());
+        assertEquals(0, yProperty.get());
+
+        st.setRate(1.0);
+
+        amt.pulse();
+        amt.pulse();
+
+        assertEquals(10000 + Math.round(TICK_MILLIS * 2), xProperty.get());
+        assertEquals(0, yProperty.get());
 
     }
 
@@ -520,7 +543,7 @@ public class SequentialTransitionPlayTest {
         assertEquals(Status.RUNNING, child1Y.getStatus());
 
         assertEquals(60000, xProperty.get());
-        assertEquals(Math.round(TickCalculation.toMillis(100)), yProperty.get());
+        assertEquals(Math.round(TICK_MILLIS), yProperty.get());
 
         st.setRate(-1.0);
 
@@ -531,7 +554,7 @@ public class SequentialTransitionPlayTest {
         assertEquals(Status.RUNNING, child1X.getStatus());
         assertEquals(Status.STOPPED, child1Y.getStatus());
 
-        assertEquals(60000 - Math.round(TickCalculation.toMillis(100)), xProperty.get());
+        assertEquals(60000 - Math.round(TICK_MILLIS), xProperty.get());
         assertEquals(0, yProperty.get());
 
         st.setRate(1.0);
@@ -544,7 +567,7 @@ public class SequentialTransitionPlayTest {
         assertEquals(Status.RUNNING, child1Y.getStatus());
 
         assertEquals(60000, xProperty.get());
-        assertEquals(Math.round(TickCalculation.toMillis(100)), yProperty.get());
+        assertEquals(Math.round(TICK_MILLIS), yProperty.get());
 
     }
 
@@ -562,7 +585,7 @@ public class SequentialTransitionPlayTest {
         assertEquals(Status.RUNNING, child1X.getStatus());
         assertEquals(Status.STOPPED, child1Y.getStatus());
 
-        assertEquals(10000 + Math.round(TickCalculation.toMillis(100)), xProperty.get());
+        assertEquals(10000 + Math.round(TICK_MILLIS), xProperty.get());
         assertEquals(0, yProperty.get());
 
         st.setRate(-1.0);
@@ -574,7 +597,7 @@ public class SequentialTransitionPlayTest {
         assertEquals(Status.RUNNING, child1X.getStatus());
         assertEquals(Status.STOPPED, child1Y.getStatus());
 
-        assertEquals(10000 - Math.round(TickCalculation.toMillis(100)), xProperty.get());
+        assertEquals(10000 - Math.round(TICK_MILLIS), xProperty.get());
         assertEquals(0, yProperty.get());
 
         st.setRate(1.0);
@@ -586,7 +609,7 @@ public class SequentialTransitionPlayTest {
         assertEquals(Status.RUNNING, child1X.getStatus());
         assertEquals(Status.STOPPED, child1Y.getStatus());
 
-        assertEquals(10000 + Math.round(TickCalculation.toMillis(100)), xProperty.get());
+        assertEquals(10000 + Math.round(TICK_MILLIS), xProperty.get());
         assertEquals(0, yProperty.get());
 
     }
