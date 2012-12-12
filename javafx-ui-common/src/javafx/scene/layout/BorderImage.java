@@ -132,7 +132,8 @@ public class BorderImage {
      *                  A null value results in Insets.EMPTY.
      * @param slices    The slices for the image. If null, defaults to BorderImageSlices.EMPTY
      * @param repeatX    The repeat value for the border image in the x direction. If null, defaults to STRETCH.
-     * @param repeatY    The repeat value for the border image in the y direction. If null, defaults to STRETCH.
+     * @param repeatY    The repeat value for the border image in the y direction. If null, defaults to the same
+     *                   value as repeatX.
      */
     public BorderImage(
             Image image, BorderWidths widths, Insets insets, BorderWidths slices, boolean filled,
