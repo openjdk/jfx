@@ -311,8 +311,9 @@ public class PieChart extends Chart {
     // -------------- METHODS --------------------------------------------------
     
     private void dataNameChanged(Data item) {
-
+        item.textNode.setText(item.getName());
         requestChartLayout();
+        updateLegend();
     }
 
     private void dataPieValueChanged(Data item) {

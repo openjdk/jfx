@@ -4,8 +4,12 @@
  */
 package javafx.scene.chart;
 
+import java.util.logging.Level;
+import java.util.logging.Logger;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
+import javafx.scene.Node;
+import javafx.scene.text.Text;
 import org.junit.Test;
 import static org.junit.Assert.assertEquals;
 
@@ -37,5 +41,28 @@ public class PieChartTest extends ChartTestBase {
         assertEquals(false, pc.getLabelsVisible());
     }
     
+    @Test
+    public void testLegendUpdateAfterPieNameChange_RT26854() {
+        startApp();
+        data.add(new PieChart.Data("Sun", 20));
+        pc.getData().addAll(data);
+        for(Node n : pc.getChartChildren()) {
+            if (n instanceof Text) {
+                assertEquals("Sun", pc.getData().get(0).getName());
+            }
+        }
+        try {
+            Thread.sleep(100);
+        } catch (InterruptedException ex) {
+            Logger.getLogger(PieChartTest.class.getName()).log(Level.SEVERE, null, ex);
+        }
+        // change name of data item.
+        pc.getData().get(0).setName("Oracle");
+        for(Node n : pc.getChartChildren()) {
+            if (n instanceof Text) {
+                assertEquals("Oracle", pc.getData().get(0).getName());
+            }
+        }
+    }
     
 }
