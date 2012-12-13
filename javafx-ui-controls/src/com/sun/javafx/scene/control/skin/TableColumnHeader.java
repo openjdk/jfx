@@ -108,6 +108,7 @@ public class TableColumnHeader extends Region {
             changeListenerHandler.registerChangeListener(column.styleProperty(), "TABLE_COLUMN_STYLE");
             changeListenerHandler.registerChangeListener(column.widthProperty(), "TABLE_COLUMN_WIDTH");
             changeListenerHandler.registerChangeListener(column.visibleProperty(), "TABLE_COLUMN_VISIBLE");
+            changeListenerHandler.registerChangeListener(column.sortNodeProperty(), "TABLE_COLUMN_SORT_NODE");
         }
     }
     
@@ -145,6 +146,8 @@ public class TableColumnHeader extends Region {
             if (arrow != null) {
                 arrow.setRotate(column.getSortType() == ASCENDING ? 180 : 0.0);
             }
+        } else if ("TABLE_COLUMN_SORT_NODE".equals(p)) {
+            updateSortGrid();
         }
     }
     
@@ -390,7 +393,7 @@ public class TableColumnHeader extends Region {
     }
     
     private void updateSortGrid() {
-        // Fixe for RT-14488
+        // Fix for RT-14488
         if (this instanceof NestedTableColumnHeader) return;
         
         getChildren().clear();
