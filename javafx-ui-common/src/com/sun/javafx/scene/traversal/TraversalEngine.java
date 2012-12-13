@@ -38,6 +38,7 @@ import javafx.scene.Scene;
 
 import com.sun.javafx.Logging;
 import com.sun.javafx.logging.PlatformLogger;
+import com.sun.javafx.PlatformUtil;
 
 public class TraversalEngine {
     
@@ -70,8 +71,16 @@ public class TraversalEngine {
          *    algorithm = new WeightedClosestCorner();
          * for Container sequence TAB behaviour and 2d arrow behaviour use :
          *    algorithm = new ContainerTabOrder();
+         * for 2D arrow behaviour with a target biasm and a stack use :
+         *    algorithm = new Biased2DWithStack();
          */
-        algorithm = new ContainerTabOrder();
+        if (PlatformUtil.isEmbedded()) {
+            algorithm = new Hueristic2D();
+        }
+        else {
+            algorithm = new ContainerTabOrder();
+        }
+        
         initialBounds = new BoundingBox(0, 0, 1, 1);
         registeredNodes = new ArrayList<Node>();
         listeners = new LinkedList<TraverseListener>(); 
@@ -116,7 +125,7 @@ public class TraversalEngine {
     }    
 
     public int getTopLeftFocusableNode() {
-        List<Node> nodes = getTargetNodes();
+        List<Node> nodes = getAllTargetNodes();
         final int target = 0;
         Point2D zeroZero = new Point2D(0,0);
 
@@ -182,7 +191,7 @@ public class TraversalEngine {
     /**
      * Returns nodes to be processed.
      */
-    protected List<Node> getTargetNodes() {
+    protected List<Node> getContainerTargetNodes() {
         final List<Node> targetNodes = new ArrayList<Node>();
         for (Node n : registeredNodes) {
             if (!n.isFocused() && n.impl_isTreeVisible() && !n.isDisabled()) {

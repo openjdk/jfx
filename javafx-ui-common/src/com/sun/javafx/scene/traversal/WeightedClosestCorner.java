@@ -173,7 +173,7 @@ public class WeightedClosestCorner implements Algorithm {
 
     public Node traverse(Node node, Direction dir, TraversalEngine engine) {
         Node newNode = null;
-        List<Node> nodes = engine.getTargetNodes();
+        List<Node> nodes = engine.getAllTargetNodes();
         List<Bounds> bounds = engine.getTargetBounds(nodes);
 
         if (focusLogger.isLoggable(PlatformLogger.FINER)) {
