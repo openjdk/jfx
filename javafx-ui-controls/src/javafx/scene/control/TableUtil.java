@@ -248,9 +248,9 @@ class TableUtil {
             if (growingCol.getWidth() > growingCol.getPrefWidth()) {
                 // growingCol is willing to be generous in this case - it goes
                 // off to find a potentially better candidate to grow
-                List seq = visibleLeafColumns.subList(colPos + 1, endColPos + 1);
+                List<? extends TableColumnBase> seq = visibleLeafColumns.subList(colPos + 1, endColPos + 1);
                 for (int i = seq.size() - 1; i >= 0; i--) {
-                    TableColumn<?,?> c = (TableColumn)seq.get(i);
+                    TableColumnBase<?,?> c = seq.get(i);
                     if (c.getWidth() < c.getPrefWidth()) {
                         growingCol = c;
                         break;
