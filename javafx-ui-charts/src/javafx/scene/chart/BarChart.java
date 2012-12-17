@@ -471,7 +471,7 @@ public class BarChart<X,Y> extends XYChart<X,Y> {
             bar = new StackPane();
             item.setNode(bar);
         }
-        bar.getStyleClass().setAll("chart-bar", "series" + seriesIndex, "data" + itemIndex,series.defaultColorStyleClass);
+        bar.getStyleClass().addAll("chart-bar", "series" + seriesIndex, "data" + itemIndex,series.defaultColorStyleClass);
         return bar;
     }
 
