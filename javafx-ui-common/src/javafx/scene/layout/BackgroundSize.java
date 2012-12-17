@@ -53,12 +53,12 @@ public final class BackgroundSize {
     /**
      * From the CSS Specification:
      * <blockquote>
-     *   An ‘auto’ value for one dimension is resolved by using the image's intrinsic ratio and the size of the other
+     *   An "auto" value for one dimension is resolved by using the image's intrinsic ratio and the size of the other
      *   dimension, or failing that, using the image's intrinsic size, or failing that, treating it as 100%.
      *   <p>
-     *   If both values are ‘auto’ then the intrinsic width and/or height of the image should be used, if any,
-     *   the missing dimension (if any) behaving as ‘auto’ as described above. If the image has neither an intrinsic
-     *   width nor an intrinsic height, its size is determined as for ‘contain’.
+     *   If both values are "auto" then the intrinsic width and/or height of the image should be used, if any,
+     *   the missing dimension (if any) behaving as "auto" as described above. If the image has neither an intrinsic
+     *   width nor an intrinsic height, its size is determined as for "contain".
      * </blockquote>
      *
      * When set to AUTO, the values for widthAsPercentage and heightAsPercentage are ignored.
