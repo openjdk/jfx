@@ -91,6 +91,7 @@ import javafx.collections.WeakListChangeListener;
         @Override public void onChanged(Change c) {
             while (c.next()) {
                 if (c.getRemovedSize() > 0) {
+                    toggleGroup.getToggles().clear();
                     popup.getItems().clear();
                     int i = 0;
                     for (Object obj : c.getList()) {
@@ -276,6 +277,7 @@ import javafx.collections.WeakListChangeListener;
     }
 
     private void updatePopupItems() {
+        toggleGroup.getToggles().clear();
         popup.getItems().clear();
         toggleGroup.selectToggle(null);
 
