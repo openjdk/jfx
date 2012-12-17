@@ -43,6 +43,11 @@
     -fx-effect: null;
 }
 .section-label {
-    -fx-font-weight: bold;
+    -fx-font-weight: normal;
     -fx-text-fill: rgba(0,0,0,0.5);
+}
+
+.section-border {
+    -fx-border-color: rgba(0,0,0,0.1);
+    -fx-padding: 20;
 }

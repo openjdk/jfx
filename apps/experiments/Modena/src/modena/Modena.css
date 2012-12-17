@@ -737,7 +737,7 @@
     -fx-background-insets: -1.4, 0, 1;
 }
 
-.scroll-bar:horizontal .thumb {
+.scroll-bar:horizontal > .thumb {
     -fx-background-color:
         -fx-box-border,
         linear-gradient(to bottom, derive(-fx-color,95%), derive(-fx-color,10%)),
@@ -746,7 +746,7 @@
     -fx-background-radius: 0.5em; /* makes sure this remains circular */
 }
 
-.scroll-bar:vertical .thumb {
+.scroll-bar:vertical > .thumb {
     -fx-background-color:
         -fx-box-border,
         linear-gradient(to right, derive(-fx-color,95%), derive(-fx-color,10%)),
@@ -755,29 +755,34 @@
     -fx-background-radius: 0.5em; /* makes sure this remains circular */
 }
 
-.scroll-bar:focused .thumb {
+.scroll-bar:focused > .thumb {
     -fx-color: -fx-focused-base;
 }
 
-.scroll-bar .thumb:hover {
+.scroll-bar > .thumb:hover {
     -fx-color: -fx-hover-base;
 }
 
-/* Uncomment when RT-10521 is fixed.
 .scroll-bar .thumb:pressed {
     -fx-color: -fx-pressed-base;
 }
-*/
 
-.scroll-bar:horizontal .track {
+
+.scroll-bar:horizontal > .track {
      -fx-background-color:
         -fx-box-border,
         linear-gradient(to bottom, derive(-fx-color,-15%), derive(-fx-color,2.2%) 20%, derive(-fx-color,60%));
     -fx-background-insets:  0, 1;
     -fx-background-radius: 0.5em; /* makes sure this remains circular */
 }
+.scroll-bar:horizontal > .track-background {
+     -fx-background-color:
+        -fx-box-border,
+        linear-gradient(to top, derive(-fx-color,-15%), derive(-fx-color,2.2%) 20%, derive(-fx-color,60%));
+    -fx-background-insets:  0, 1;
+}
 
-.scroll-bar:vertical .track {
+.scroll-bar:vertical > .track {
      -fx-background-color:
         -fx-box-border,
         linear-gradient(to right, derive(-fx-color,-15%), derive(-fx-color,2.2%) 20%, derive(-fx-color,60%));
@@ -785,44 +790,47 @@
     -fx-background-radius: 0.5em; /* makes sure this remains circular */
 }
 
-.scroll-bar .increment-button {
-    -fx-background-color:
+.scroll-bar:vertical > .track-background {
+     -fx-background-color:
         -fx-box-border,
-        linear-gradient(to bottom, derive(-fx-color,30%) 5%, derive(-fx-color,-17%));
+        linear-gradient(to left, derive(-fx-color,-15%), derive(-fx-color,2.2%) 20%, derive(-fx-color,60%));
     -fx-background-insets:  0, 1;
+}
+
+.scroll-bar > .increment-button {
+    -fx-background-color: transparent;
+    -fx-background-insets:  0;
     -fx-padding: 0.25em; /* 3 */
 }
 
-.scroll-bar .decrement-button {
-    -fx-background-color:
-        -fx-box-border,
-        linear-gradient(to bottom, derive(-fx-color,30%) 5%, derive(-fx-color,-17%));
-    -fx-background-insets:  0, 1;
+.scroll-bar > .decrement-button {
+    -fx-background-color: transparent;
+    -fx-background-insets:  0;
     -fx-padding: 0.25em; /* 3 */
 }
 
-.scroll-bar:horizontal .increment-arrow {
+.scroll-bar:horizontal > .increment-button > .increment-arrow {
     -fx-background-color: -fx-mark-highlight-color, -fx-mark-color;
     -fx-background-insets: 1 0 -1 0, 0;
     -fx-padding: 0.5em 0.333333em 0.0em 0.0em; /* 6 4 0 0 */
     -fx-shape: "M 4 0 L 0 -3 L 0 3 z";
 }
 
-.scroll-bar:vertical .increment-arrow {
+.scroll-bar:vertical > .increment-button > .increment-arrow {
     -fx-background-color: -fx-mark-highlight-color, -fx-mark-color;
     -fx-background-insets: 1 0 -1 0, 0;
     -fx-padding: 0.333333em 0.5em 0.0em 0.0em; /* 4 6 0 0 */
     -fx-shape: "M -3 0 L 0 4 L 3 0 z";
 }
 
-.scroll-bar:horizontal .decrement-arrow {
+.scroll-bar:horizontal > .decrement-button > .decrement-arrow {
     -fx-background-color: -fx-mark-highlight-color, -fx-mark-color;
     -fx-background-insets: 1 0 -1 0, 0;
     -fx-padding: 0.5em 0.333333em 0.0em 0.0em; /* 6 4 0 0 */
     -fx-shape: "M 0 0 L 4 -3 L 4 3 z";
 }
 
-.scroll-bar:vertical .decrement-arrow {
+.scroll-bar:vertical > .decrement-button > .decrement-arrow {
     -fx-background-color: -fx-mark-highlight-color, -fx-mark-color;
     -fx-background-insets: 1 0 -1 0, 0;
     -fx-padding: 0.333333em 0.5em 0.0em 0.0em; /* 4 6 0 0 */
@@ -839,19 +847,6 @@
 /*:disabled > * > .scroll-bar {
     -fx-opacity: 1.0;
 }*/
-{{{
-/*******************************************************************************
- *                                                                             *
- * ScrollPane                                                                  *
- *                                                                             *
- ******************************************************************************/
-
-.scroll-pane:focused {
-    -fx-border-color: -fx-focus-color;
-}
-.scroll-pane:disabled {
-    -fx-opacity: -fx-disabled-opacity;
-}
 
 /*******************************************************************************
  *                                                                             *
@@ -874,4 +869,45 @@
     -fx-background-color: null;
     -fx-padding: 0.0em 0.083333em 0.0em 0.0em; /* 0 1 0 0 */
     -fx-border-color:  transparent derive(-fx-background,-20%) transparent transparent;
+}
+
+/*******************************************************************************
+ *                                                                             *
+ * ProgressBar                                                                 *
+ *                                                                             *
+ ******************************************************************************/
+
+.progress-bar {
+    -fx-background-color:
+        -fx-box-border,
+        linear-gradient(to bottom, derive(-fx-color,30%) 5%, derive(-fx-color,-17%));
+    -fx-background-insets: 0, 1;
+    -fx-indeterminate-bar-length: 60;
+    -fx-indeterminate-bar-escape: true;
+    -fx-indeterminate-bar-flip: true;
+    -fx-indeterminate-bar-animation-time: 2;
+}
+
+.progress-bar > .bar {
+    -fx-background-color:
+        -fx-box-border,
+        linear-gradient(to bottom, derive(-fx-accent,95%), derive(-fx-accent,10%)),
+        linear-gradient(to bottom, derive(-fx-accent,38%), -fx-accent);
+    -fx-background-insets: 0, 1, 2;
+    -fx-padding: 0.416667em; /* 5 */
+}
+
+.progress-bar:indeterminate > .bar {
+    -fx-background-color: linear-gradient(to left, transparent, -fx-accent);
+}
+
+.progress-bar > .track {
+     -fx-background-color:
+        -fx-box-border,
+        linear-gradient(to bottom, derive(-fx-color,-15%), derive(-fx-color,2.2%) 20%, derive(-fx-color,60%));
+    -fx-background-insets:  0, 1;
+}
+
+.progress-bar:disabled {
+    -fx-opacity: -fx-disabled-opacity;
 }

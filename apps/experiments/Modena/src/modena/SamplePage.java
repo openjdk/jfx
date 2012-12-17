@@ -6,12 +6,19 @@ package modena;
 
 import javafx.application.Platform;
 import javafx.geometry.Insets;
+import javafx.geometry.Orientation;
+import javafx.geometry.Pos;
 import javafx.scene.Node;
 import javafx.scene.control.Button;
 import javafx.scene.control.ButtonBuilder;
 import javafx.scene.control.CheckBox;
 import javafx.scene.control.Label;
+import javafx.scene.control.ProgressBar;
 import javafx.scene.control.RadioButton;
+import javafx.scene.control.ScrollBar;
+import javafx.scene.control.ScrollBarBuilder;
+import javafx.scene.control.Separator;
+import javafx.scene.control.SeparatorBuilder;
 import javafx.scene.control.Slider;
 import javafx.scene.control.ToggleButton;
 import javafx.scene.control.ToggleButtonBuilder;
@@ -19,6 +26,7 @@ import javafx.scene.control.ToggleGroup;
 import javafx.scene.layout.GridPane;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.HBoxBuilder;
+import javafx.scene.layout.VBox;
 
 /**
  * Page showing every control in every state
@@ -45,15 +53,35 @@ public class SamplePage extends GridPane {
         Label sectionLabel = new Label(name);
         sectionLabel.getStyleClass().add("section-label");
         HBox box = new HBox(10);
+        box.getStyleClass().add("section-border");
         box.getChildren().addAll(children);
         setConstraints(sectionLabel, 0, rowIndex);
         setConstraints(box, 1, rowIndex++);
         getChildren().addAll(sectionLabel,box);
     }
     
+    private void newDetailedSection(String[] labels, Node ...children) {
+        Label sectionLabel = new Label(labels[0]);
+        sectionLabel.getStyleClass().add("section-label");
+        HBox hbox = new HBox(10);
+        for (int n = 0; n < children.length; n++ ) {
+            VBox vbox = new VBox(10);
+            vbox.getStyleClass().add("section-border");
+            vbox.setAlignment(Pos.CENTER);
+            Label stateLabel = new Label(labels[n+1]);
+            stateLabel.getStyleClass().add("section-label");
+            vbox.getChildren().add(stateLabel);
+            vbox.getChildren().add(children[n]);
+            hbox.getChildren().addAll(vbox);
+        }
+        setConstraints(sectionLabel, 0, rowIndex);
+        setConstraints(hbox, 1, rowIndex++);
+        getChildren().addAll(sectionLabel,hbox);
+    }
+    
     public SamplePage() {
-        setVgap(15);
-        setHgap(15);
+        setVgap(25);
+        setHgap(25);
         setPadding(new Insets(20));
         newSection("Button:", 
                 new Button("Button"),
@@ -176,5 +204,33 @@ public class SamplePage extends GridPane {
                 withState(new Slider(0,100,50), "focused"),
                 withState(new Slider(0,100,50), "focused", ".thumb", "hover"),
                 withState(new Slider(0,100,50), "focused", ".thumb", "hover, pressed"));
+        newDetailedSection(
+                new String[] {"Scrollbar - V: ", "normal", "focused", ".thumb hover", ".thumb pressed"}, 
+                new ScrollBar(),
+                withState(new ScrollBar(), "horizontal, focused"),
+                withState(new ScrollBar(), "horizontal", ".thumb", "hover"),
+                withState(new ScrollBar(), "horizontal", ".thumb", "pressed")
+                );
+        newDetailedSection(
+                new String[] {"Scrollbar - V: ", "normal", "focused", ".thumb hover", ".thumb pressed"}, 
+                withState(ScrollBarBuilder.create().orientation(Orientation.VERTICAL).build(), "vertical"),
+                withState(ScrollBarBuilder.create().orientation(Orientation.VERTICAL).build(), "vertical, focused"),
+                withState(ScrollBarBuilder.create().orientation(Orientation.VERTICAL).build(), "vertical", ".thumb", "hover"),
+                withState(ScrollBarBuilder.create().orientation(Orientation.VERTICAL).build(), "vertical", ".thumb", "pressed")
+                );
+        newSection(      
+                "Separator - H:", 
+                new Separator()
+                );
+        newSection(      
+                "Separator - V:", 
+                SeparatorBuilder.create().orientation(Orientation.VERTICAL).build()
+                );
+        newDetailedSection(
+                new String[] {"ProgressBar: ", "normal", "disabled", "indeterminate"}, 
+                new ProgressBar(0.6F),
+                withState(new ProgressBar(), "disabled"),
+                withState(new ProgressBar(), "indeterminate")
+                );
     }
 }
