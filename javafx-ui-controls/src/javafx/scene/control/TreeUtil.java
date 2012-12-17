@@ -52,7 +52,7 @@ class TreeUtil {
         }
     }
 
-    static <T> TreeItem getItem(TreeItem<T> parent, int itemIndex, boolean treeItemCountDirty) {
+    static <T> TreeItem<T> getItem(TreeItem<T> parent, int itemIndex, boolean treeItemCountDirty) {
         if (parent == null) return null;
 
         // if itemIndex is 0 then our parent is what we were looking for
@@ -92,7 +92,7 @@ class TreeUtil {
         return null;
     }
     
-    static <S> int getRow(TreeItem<S> item, TreeItem<S> root, boolean treeItemCountDirty, boolean isShowRoot) {
+    static <T> int getRow(TreeItem<T> item, TreeItem<T> root, boolean treeItemCountDirty, boolean isShowRoot) {
         if (item == null) {
             return -1;
         } else if (isShowRoot && item.equals(root)) {
@@ -100,11 +100,11 @@ class TreeUtil {
         }
         
         int row = 0;
-        TreeItem<S> i = item;
-        TreeItem<S> p = item.getParent();
+        TreeItem<T> i = item;
+        TreeItem<T> p = item.getParent();
         
-        TreeItem<S> sibling;
-        List<TreeItem<S>> siblings;
+        TreeItem<T> sibling;
+        List<TreeItem<T>> siblings;
         
         while (!i.equals(root) && p != null) {
             siblings = p.getChildren();

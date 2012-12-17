@@ -1715,19 +1715,29 @@ public class GridPane extends Pane {
         double available = extraWidth; // will be negative in shrinking case
         boolean handleRemainder = false;
         int portion = 0;
-        while (available != 0 && adjusting.size() > 0) {            
+        
+        // RT-25684: We have to be careful that when subtracting change
+        // that we don't jump right past 0 - this leads to an infinite
+        // loop
+        final boolean wasPositive = available >= 0.0;
+        boolean isPositive = wasPositive;
+        
+        while (available != 0 && wasPositive == isPositive && adjusting.size() > 0) {            
             if (!handleRemainder) {
                 portion = (int)available / adjusting.size(); // negative in shrinking case
             }
             if (portion != 0) {
-                for (int i = 0, size = adjusting.size(); i < size; i++) {                
+                for (int i = 0, size = adjusting.size(); i < size; i++) {    
                     final int index = adjusting.get(i);
                     final double limit = (shrinking? columnMinWidth[index] : columnMaxWidth[index])
                             - columnWidths[index]; // negative in shrinking case
                     final double change = Math.abs(limit) <= Math.abs(portion)? limit : portion;
                     columnWidths[index] += change;                
-                    //if (node.id.startsWith("debug.")) println("{if (shrinking) "vshrink" else "vgrow"}: {node.id} portion({portion})=available({available})/({sizeof adjusting}) change={change}");
+
+                    // added for RT-25684, as outlined above
                     available -= change;
+                    isPositive = available >= 0.0;
+                    
                     if (Math.abs(change) < Math.abs(portion)) {
                         adjusted.add(index);
                     }

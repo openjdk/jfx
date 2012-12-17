@@ -24,6 +24,7 @@
  */
 package com.sun.javafx.scene.control.behavior;
 
+import javafx.scene.Node;
 import javafx.scene.control.MultipleSelectionModel;
 import javafx.scene.control.TreeItem;
 import javafx.scene.control.TreeTableRow;
@@ -43,12 +44,25 @@ public class TreeTableRowBehavior<T> extends CellBehaviorBase<TreeTableRow<T>> {
     @Override public void mouseReleased(MouseEvent e) {
         super.mouseReleased(e);
         
-        TreeTableView<T> tv = getControl().getTreeTableView();
-        TreeItem treeItem = getControl().getTreeItem();
-        int index = getControl().getIndex();
+        TreeTableRow<T> treeTableRow = getControl();
+        TreeTableView<T> tv = treeTableRow.getTreeTableView();
+        TreeItem treeItem = treeTableRow.getTreeItem();
+        int index = treeTableRow.getIndex();
         MultipleSelectionModel sm = tv.getSelectionModel();
         boolean isAlreadySelected = sm.isSelected(index);
 
+        // if the user has clicked on the disclosure node, we do nothing other
+        // than expand/collapse the tree item (if applicable). We do not do editing!
+        Node disclosureNode = treeTableRow.getDisclosureNode();
+        if (disclosureNode != null) {
+            if (disclosureNode.getBoundsInParent().contains(e.getX(), e.getY())) {
+                if (treeItem != null) {
+                    treeItem.setExpanded(! treeItem.isExpanded());
+                }
+                return;
+            }
+        }
+        
         tv.getSelectionModel().clearAndSelect(index);
 
         // handle editing, which only occurs with the primary mouse button
