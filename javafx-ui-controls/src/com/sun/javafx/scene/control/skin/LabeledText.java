@@ -5,6 +5,8 @@ import com.sun.javafx.css.Origin;
 import com.sun.javafx.css.converters.BooleanConverter;
 import com.sun.javafx.css.converters.EnumConverter;
 import com.sun.javafx.css.converters.PaintConverter;
+import com.sun.javafx.css.converters.SizeConverter;
+
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -43,6 +45,7 @@ public class LabeledText extends Text {
        this.setFont(this.labeled.getFont());
        this.setTextAlignment(this.labeled.getTextAlignment());
        this.setUnderline(this.labeled.isUnderline());
+       this.setLineSpacing(this.labeled.getLineSpacing());
 
        //
        // Bind the state of this Text object to that of the Labeled.
@@ -53,6 +56,7 @@ public class LabeledText extends Text {
        // do not bind text - Text doesn't have -fx-text
        this.textAlignmentProperty().bind(this.labeled.textAlignmentProperty());
        this.underlineProperty().bind(this.labeled.underlineProperty());
+       this.lineSpacingProperty().bind(this.labeled.lineSpacingProperty());
 
        getStyleClass().addAll("text");
    }
@@ -236,6 +240,45 @@ public class LabeledText extends Text {
             }
         };
 
+        private static final StyleablePropertyMetaData<LabeledText,Number> LINE_SPACING =
+                new StyleablePropertyMetaData<LabeledText,Number>("-fx-line-spacing",
+                SizeConverter.getInstance(),
+                0) {
+
+            @Override
+            public void set(LabeledText node, Number value, Origin origin) {
+                //
+                // In the case where the Labeled's textFill was set by an
+                // inline style, this inline style should override values
+                // from lesser origins.
+                //
+                WritableValue<Number> prop = node.labeled.lineSpacingProperty();
+                Origin propOrigin = StyleablePropertyMetaData.getOrigin(prop);
+
+                //
+                // if propOrigin is null, then the property is in init state
+                // if origin is null, then some code is initializing this prop
+                // if propOrigin is greater than origin, then the style should
+                //    not override
+                //
+                if (propOrigin == null ||
+                    origin == null ||
+                    propOrigin.compareTo(origin) <= 0) {
+                    super.set(node, value, origin);
+                }
+            }
+
+            @Override
+            public boolean isSettable(LabeledText node) {
+                return node.labeled.lineSpacingProperty().isBound() == false;
+            }
+
+            @Override
+            public WritableValue<Number> getWritableValue(LabeledText node) {
+                return node.labeled.lineSpacingProperty();
+            }
+        };
+
        private static final List<StyleablePropertyMetaData> STYLEABLES;
        static {
 
@@ -253,6 +296,8 @@ public class LabeledText extends Text {
                    styleables.set(n, TEXT_ALIGNMENT);
                } else if ("-fx-underline".equals(prop)) {
                    styleables.set(n, UNDERLINE);
+               } else if ("-fx-line-spacing".equals(prop)) {
+                   styleables.set(n, LINE_SPACING);
                }
            }
 
