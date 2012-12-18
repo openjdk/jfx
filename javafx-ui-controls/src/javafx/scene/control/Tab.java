@@ -24,7 +24,6 @@
  */
 package javafx.scene.control;
 
-import com.sun.javafx.css.Styleable;
 import com.sun.javafx.css.CssMetaData;
 import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.ObjectProperty;
@@ -42,12 +41,17 @@ import javafx.event.EventTarget;
 import javafx.event.EventType;
 import javafx.scene.Node;
 
+import com.sun.javafx.css.Styleable;
 import com.sun.javafx.event.EventHandlerManager;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import javafx.beans.DefaultProperty;
-import javafx.beans.property.*;
+import javafx.beans.property.BooleanPropertyBase;
+import javafx.beans.property.ReadOnlyBooleanProperty;
+import javafx.beans.property.ReadOnlyBooleanWrapper;
+import javafx.beans.property.ReadOnlyObjectProperty;
+import javafx.beans.property.ReadOnlyObjectWrapper;
 import javafx.collections.ObservableMap;
 
 /**
@@ -426,7 +430,7 @@ public class Tab implements EventTarget {
     /**
      * <p>Called when a user closes this tab. This is useful for freeing up memory.</p>
      */
-    public static final EventType<Event> CLOSED_EVENT = new EventType<Event> (Event.ANY, "TAB_CLOSED");
+    public static final EventType<Event> CLOSED_EVENT = new EventType<Event>(Event.ANY, "TAB_CLOSED");
     private ObjectProperty<EventHandler<Event>> onClosed;
 
     /**
@@ -587,10 +591,54 @@ public class Tab implements EventTarget {
         }
         return disabled;
     }
-
+    
     private void updateDisabled() {
         setDisabled(isDisable() || (getTabPane() != null && getTabPane().isDisabled()));
     }
+    
+     /**
+     * Called when there is an external request to close this {@code Tab}.
+     * The installed event handler can prevent tab closing by consuming the
+     * received event.
+     */
+    public static final EventType<Event> TAB_CLOSE_REQUEST_EVENT = new EventType<Event> (Event.ANY, "TAB_CLOSE_REQUEST_EVENT");
+   
+    /**
+     * Called when there is an external request to close this {@code Tab}.
+     * The installed event handler can prevent tab closing by consuming the
+     * received event.
+     */
+    private ObjectProperty<EventHandler<Event>> onCloseRequest;
+    public final ObjectProperty<EventHandler<Event>> onCloseRequestProperty() {
+        if (onCloseRequest == null) {
+            onCloseRequest = new ObjectPropertyBase<EventHandler<Event>>() {
+                @Override protected void invalidated() {
+                    setEventHandler(TAB_CLOSE_REQUEST_EVENT, get());
+                }
+                
+                @Override public Object getBean() {
+                    return Tab.this;
+                }
+
+                @Override public String getName() {
+                    return "onCloseRequest";
+                }
+            };
+        }
+        return onCloseRequest;
+    }
+    
+    public EventHandler<Event> getOnCloseRequest() {
+        if( onCloseRequest == null ) {
+            return null;
+        }
+        return onCloseRequest.get();
+    }
+    
+    public void setOnCloseRequest(EventHandler<Event> value) {
+        onCloseRequestProperty().set(value);
+    }
+
     
     // --- Properties
     private static final Object USER_DATA_KEY = new Object();
