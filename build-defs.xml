@@ -357,7 +357,7 @@
                     <pathelement path="${javac.classpath}"/>
                     <pathelement path="${dist.dir}/@{name}.jar"/>
                     <pathelement location="${jfx.root.dir}/rt-closed/build/deps/javafx-beans.jar"/>
-                    <pathelement location="${jfx.root.dir}/rt-closed/build/deps/javafx-annotation-processor.jar"/>
+                    <pathelement location="${jfx.root.dir}/rt/build/deps/javafx-annotation-processor.jar"/>
                 </classpath>
                 <arg value="delombok"/>
                 <arg value="-d"/>

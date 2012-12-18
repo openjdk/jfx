@@ -5,12 +5,12 @@
     <property name="runtime.dist.root.dir" value="../../rt-closed" />    
     <property name="rt.dist.root.dir" value="../../rt" />
     <path id="javac.closed.classpath.path" path="
-        ${runtime.dist.root.dir}/javafx-common/dist/javafx-common.jar:
-        ${runtime.dist.root.dir}/javafx-anim/dist/javafx-anim.jar:
-        ${runtime.dist.root.dir}/javafx-geom/dist/javafx-geom.jar:
+        ${rt.dist.root.dir}/javafx-common/dist/javafx-common.jar:
+        ${rt.dist.root.dir}/javafx-anim/dist/javafx-anim.jar:
+        ${rt.dist.root.dir}/javafx-geom/dist/javafx-geom.jar:
         ${runtime.dist.root.dir}/decora-runtime/dist/decora-runtime.jar:
         ${runtime.dist.root.dir}/prism-common/dist/prism-common.jar:
-        ${runtime.dist.root.dir}/javafx-sg-common/dist/javafx-sg-common.jar:
+        ${rt.dist.root.dir}/javafx-sg-common/dist/javafx-sg-common.jar:
         ${runtime.dist.root.dir}/javafx-accessible/dist/javafx-accessible.jar:
         ${runtime.dist.root.dir}/webkit/dist/webkit.jar:
         ${rt.dist.root.dir}/javafx-ui-common/dist/javafx-ui-common.jar" />

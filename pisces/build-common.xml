@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project name="pisces-common" default="jar" basedir=".">
+    
+  <target name="jar" depends="init">
+    <build-project/>
+  </target>
+
+  <target name="clean">
+    <clean-project/>
+  </target>
+
+</project>
