@@ -90,6 +90,7 @@ public abstract class TextInputControlBehavior<T extends TextInputControl> exten
                     // Text changed, but not by user action
                     undoManager.reset();
                 }
+                invalidateBidi();
             }
         });
     }
@@ -242,19 +243,46 @@ public abstract class TextInputControlBehavior<T extends TextInputControl> exten
         }
     }
 
+    private Bidi bidi = null;
+    private Boolean mixed = null;
+    private Boolean rtlText = null;
+
+    private void invalidateBidi() {
+        bidi = null;
+        mixed = null;
+        rtlText = null;
+    }
+
     private Bidi getBidi() {
-        return new Bidi(textInputControl.getText(),
-                        (textInputControl.getEffectiveNodeOrientation() == NodeOrientation.RIGHT_TO_LEFT)
+        if (bidi == null) {
+            bidi = new Bidi(textInputControl.getText(),
+                            (textInputControl.getEffectiveNodeOrientation() == NodeOrientation.RIGHT_TO_LEFT)
                                     ? Bidi.DIRECTION_DEFAULT_RIGHT_TO_LEFT
                                     : Bidi.DIRECTION_DEFAULT_LEFT_TO_RIGHT);
+        }
+        return bidi;
+    }
+
+    private boolean isMixed() {
+        if (mixed == null) {
+            mixed = getBidi().isMixed();
+        }
+        return mixed;
+    }
+
+    private boolean isRTLText() {
+        if (rtlText == null) {
+            Bidi bidi = getBidi();
+            rtlText = (bidi.isRightToLeft() || (isMixed() && !bidi.baseIsLeftToRight()));
+        }
+        return rtlText;
     }
 
     private void nextCharacterVisually(boolean moveRight) {
-        Bidi bidi = getBidi();
-        if (bidi.isMixed()) {
+        if (isMixed()) {
             TextInputControlSkin skin = (TextInputControlSkin)textInputControl.getSkin();
             skin.nextCharacterVisually(moveRight);
-        } else if (moveRight != bidi.isRightToLeft()) {
+        } else if (moveRight != isRTLText()) {
             textInputControl.forward();
         } else {
             textInputControl.backward();
@@ -262,8 +290,7 @@ public abstract class TextInputControlBehavior<T extends TextInputControl> exten
     }
 
     private void selectLeft() {
-        Bidi bidi = getBidi();
-        if (bidi.isRightToLeft() || (bidi.isMixed() && !bidi.baseIsLeftToRight())) {
+        if (isRTLText()) {
             textInputControl.selectForward();
         } else {
             textInputControl.selectBackward();
@@ -271,8 +298,7 @@ public abstract class TextInputControlBehavior<T extends TextInputControl> exten
     }
 
     private void selectRight() {
-        Bidi bidi = getBidi();
-        if (bidi.isRightToLeft() || (bidi.isMixed() && !bidi.baseIsLeftToRight())) {
+        if (isRTLText()) {
             textInputControl.selectBackward();
         } else {
             textInputControl.selectForward();
@@ -397,8 +423,7 @@ public abstract class TextInputControlBehavior<T extends TextInputControl> exten
     }
 
     private void selectLeftWord() {
-        Bidi bidi = getBidi();
-        if (bidi.isRightToLeft() || (bidi.isMixed() && !bidi.baseIsLeftToRight())) {
+        if (isRTLText()) {
             selectNextWord();
         } else {
             selectPreviousWord();
@@ -406,8 +431,7 @@ public abstract class TextInputControlBehavior<T extends TextInputControl> exten
     }
 
     private void selectRightWord() {
-        Bidi bidi = getBidi();
-        if (bidi.isRightToLeft() || (bidi.isMixed() && !bidi.baseIsLeftToRight())) {
+        if (isRTLText()) {
             selectPreviousWord();
         } else {
             selectNextWord();
@@ -438,8 +462,7 @@ public abstract class TextInputControlBehavior<T extends TextInputControl> exten
     }
 
     private void leftWord() {
-        Bidi bidi = getBidi();
-        if (bidi.isRightToLeft() || (bidi.isMixed() && !bidi.baseIsLeftToRight())) {
+        if (isRTLText()) {
             nextWord();
         } else {
             previousWord();
@@ -447,8 +470,7 @@ public abstract class TextInputControlBehavior<T extends TextInputControl> exten
     }
 
     private void rightWord() {
-        Bidi bidi = getBidi();
-        if (bidi.isRightToLeft() || (bidi.isMixed() && !bidi.baseIsLeftToRight())) {
+        if (isRTLText()) {
             previousWord();
         } else {
             nextWord();
