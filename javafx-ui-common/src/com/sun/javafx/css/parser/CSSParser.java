@@ -58,6 +58,7 @@ import com.sun.javafx.css.Combinator;
 import com.sun.javafx.css.CompoundSelector;
 import com.sun.javafx.css.CssError;
 import com.sun.javafx.css.Declaration;
+import com.sun.javafx.css.FontFace;
 import com.sun.javafx.css.FontUnits;
 import com.sun.javafx.css.ParsedValue;
 import com.sun.javafx.css.Rule;
@@ -3594,6 +3595,13 @@ final public class CSSParser {
         while ((currentToken != null) &&
                (currentToken.getType() != Token.EOF)) {
 
+            if (currentToken.getType() == CSSLexer.FONT_FACE) {
+                FontFace fontFace = fontFace(lexer);
+                if (fontFace != null) stylesheet.getFontFaces().add(fontFace);
+                currentToken = nextToken(lexer);
+                continue;
+            }
+
             List<Selector> selectors = selectors(lexer);
             if (selectors == null) return;
 
@@ -3642,6 +3650,145 @@ final public class CSSParser {
         }
         currentToken = null;
     }
+
+    private FontFace fontFace(CSSLexer lexer) {
+        final Map<String,String> descriptors = new HashMap<String,String>();
+        final List<FontFace.FontFaceSrc> sources = new ArrayList<FontFace.FontFaceSrc>();
+        while(true) {
+            currentToken = nextToken(lexer);
+            if (currentToken.getType() == CSSLexer.IDENT) {
+                String key = currentToken.getText();
+                // ignore the colon that follows
+                currentToken = nextToken(lexer);
+                // get the next token after colon
+                currentToken = nextToken(lexer);
+                // ignore all but "src"
+                if ("src".equalsIgnoreCase(key)) {
+                    while(true) {
+                        if((currentToken != null) && (currentToken.getType() != CSSLexer.SEMI) &&
+                                (currentToken.getType() != Token.EOF)) {
+
+                            if (currentToken.getType() == CSSLexer.IDENT) {
+                                // simple reference to other font-family
+                                sources.add(new FontFace.FontFaceSrc(FontFace.FontFaceSrcType.REFERENCE,currentToken.getText()));
+                            } else if (currentToken.getType() == CSSLexer.FUNCTION) {
+                                if ("url(".equalsIgnoreCase(currentToken.getText())) {
+                                    // consume the function token
+                                    currentToken = nextToken(lexer);
+                                    // parse function contents
+                                    final StringBuilder urlSb = new StringBuilder();
+                                    while(true) {
+                                        if((currentToken != null) && (currentToken.getType() != CSSLexer.RPAREN) &&
+                                                (currentToken.getType() != Token.EOF)) {
+                                            urlSb.append(currentToken.getText());
+                                        } else {
+                                            break;
+                                        }
+                                        currentToken = nextToken(lexer);
+                                    }
+                                    int start = 0, end = urlSb.length();
+                                    if (urlSb.charAt(start) == '\'' || urlSb.charAt(start) == '\"') start ++;
+                                    if (urlSb.charAt(end-1) == '\'' || urlSb.charAt(end-1) == '\"') end --;
+                                    final String url = urlSb.substring(start,end);
+
+                                    // consume the format() function token
+                                    currentToken = nextToken(lexer);
+                                    final StringBuilder formatSb = new StringBuilder();
+                                    currentToken = nextToken(lexer);
+                                    while(true) {
+                                        if((currentToken != null) && (currentToken.getType() != CSSLexer.RPAREN) &&
+                                                (currentToken.getType() != Token.EOF)) {
+                                            formatSb.append(currentToken.getText());
+                                        } else {
+                                            break;
+                                        }
+                                        currentToken = nextToken(lexer);
+                                    }
+                                    start = 0; end = formatSb.length();
+                                    if (formatSb.charAt(start) == '\'' || formatSb.charAt(start) == '\"') start ++;
+                                    if (formatSb.charAt(end-1) == '\'' || formatSb.charAt(end-1) == '\"') end --;
+                                    final String format = formatSb.substring(start,end);
+
+                                    sources.add(new FontFace.FontFaceSrc(FontFace.FontFaceSrcType.URL,url, format));
+
+                                } else if ("local(".equalsIgnoreCase(currentToken.getText())) {
+                                    // consume the function token
+                                    currentToken = nextToken(lexer);
+                                    // parse function contents
+                                    final StringBuilder localSb = new StringBuilder();
+                                    while(true) {
+                                        if((currentToken != null) && (currentToken.getType() != CSSLexer.RPAREN) &&
+                                                (currentToken.getType() != Token.EOF)) {
+                                            localSb.append(currentToken.getText());
+                                        } else {
+                                            break;
+                                        }
+                                        currentToken = nextToken(lexer);
+                                    }
+                                    int start = 0, end = localSb.length();
+                                    if (localSb.charAt(start) == '\'' || localSb.charAt(start) == '\"') start ++;
+                                    if (localSb.charAt(end-1) == '\'' || localSb.charAt(end-1) == '\"') end --;
+                                    final String local = localSb.substring(start,end);
+                                    sources.add(new FontFace.FontFaceSrc(FontFace.FontFaceSrcType.LOCAL,local));
+                                } else {
+                                    // error unknown fontface src type
+                                    final int line = currentToken.getLine();
+                                    final int pos = currentToken.getOffset();
+                                    final String msg = MessageFormat.format("Unknown @font-face src type ["+currentToken.getText()+")] at [{0,number,#},{1,number,#}]",line,pos);
+                                    CssError error = createError(msg);
+                                    if (LOGGER.isLoggable(PlatformLogger.WARNING)) {
+                                        LOGGER.warning(error.toString());
+                                    }
+                                    reportError(error);
+
+                                }
+                            } else  if (currentToken.getType() == CSSLexer.COMMA) {
+                                // ignore
+                            } else {
+                                // error unexpected token
+                                final int line = currentToken.getLine();
+                                final int pos = currentToken.getOffset();
+                                final String msg = MessageFormat.format("Unexpected TOKEN ["+currentToken.getText()+"] at [{0,number,#},{1,number,#}]",line,pos);
+                                CssError error = createError(msg);
+                                if (LOGGER.isLoggable(PlatformLogger.WARNING)) {
+                                    LOGGER.warning(error.toString());
+                                }
+                                reportError(error);
+                            }
+                        } else {
+                            break;
+                        }
+                        currentToken = nextToken(lexer);
+                    }
+                } else {
+                    StringBuilder descriptorVal = new StringBuilder();
+                    while(true) {
+                        if((currentToken != null) && (currentToken.getType() != CSSLexer.SEMI) &&
+                            (currentToken.getType() != Token.EOF)) {
+                            descriptorVal.append(currentToken.getText());
+                        } else {
+                            break;
+                        }
+                        currentToken = nextToken(lexer);
+                    }
+                    descriptors.put(key,descriptorVal.toString());
+                }
+                continue;
+            }
+
+            if ((currentToken != null) &&
+                    (currentToken.getType() != CSSLexer.RBRACE) &&
+                    (currentToken.getType() != Token.EOF)) {
+                continue;
+            }
+
+            // currentToken was either null or not a comma
+            // so we are done with selectors.
+            break;
+        }
+        return new FontFace(descriptors, sources);
+    }
+
 
     private List<Selector> selectors(CSSLexer lexer) {
 

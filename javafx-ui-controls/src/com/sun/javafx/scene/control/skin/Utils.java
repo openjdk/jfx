@@ -61,15 +61,21 @@ public class Utils {
         // Note that the wrapping width needs to be set to zero before
         // getting the text's real preferred width.
         helper.setWrappingWidth(0);
+        helper.setLineSpacing(0);
         double w = Math.min(helper.prefWidth(-1), wrappingWidth);
         helper.setWrappingWidth((int)Math.ceil(w));
         return Math.ceil(helper.getLayoutBounds().getWidth());
     }
 
     static double computeTextHeight(Font font, String text, double wrappingWidth) {
+        return computeTextHeight(font, text, wrappingWidth, 0);
+    }
+
+    static double computeTextHeight(Font font, String text, double wrappingWidth, double lineSpacing) {
         helper.setText(text);
         helper.setFont(font);
         helper.setWrappingWidth((int)wrappingWidth);
+        helper.setLineSpacing((int)lineSpacing);
         return helper.getLayoutBounds().getHeight();
     }
 
@@ -77,6 +83,7 @@ public class Utils {
         helper.setText(text);
         helper.setFont(font);
         helper.setWrappingWidth(0);
+        helper.setLineSpacing(0);
         // The -2 is a fudge to make sure the result more often matches
         // what we get from using computeTextWidth instead. It's not yet
         // clear what causes the small discrepancies.
@@ -307,6 +314,7 @@ public class Utils {
         helper.setText(text);
         helper.setFont(font);
         helper.setWrappingWidth((int)Math.ceil(width));
+        helper.setLineSpacing(0);
 
         boolean leading =  (truncationStyle == LEADING_ELLIPSIS ||
                             truncationStyle == LEADING_WORD_ELLIPSIS);

@@ -60,10 +60,12 @@ import javafx.scene.shape.Shape;
 import javafx.scene.shape.StrokeType;
 
 import com.sun.javafx.css.StyleableBooleanProperty;
+import com.sun.javafx.css.StyleableDoubleProperty;
 import com.sun.javafx.css.StyleableObjectProperty;
 import com.sun.javafx.css.StyleablePropertyMetaData;
 import com.sun.javafx.css.converters.BooleanConverter;
 import com.sun.javafx.css.converters.EnumConverter;
+import com.sun.javafx.css.converters.SizeConverter;
 import com.sun.javafx.geom.BaseBounds;
 import com.sun.javafx.geom.Path2D;
 import com.sun.javafx.geom.RectBounds;
@@ -258,6 +260,7 @@ public class Text extends Shape {
             if (alignment == null) alignment = DEFAULT_TEXT_ALIGNMENT;
             layout.setContent(string, font);
             layout.setAlignment(alignment.ordinal());
+            layout.setLineSpacing((float)getLineSpacing());
             layout.setWrapWidth((float)getWrappingWidth());
             if (getEffectiveNodeOrientation() == NodeOrientation.RIGHT_TO_LEFT) {
                 layout.setDirection(TextLayout.DIRECTION_RTL);
@@ -663,6 +666,28 @@ public class Text extends Shape {
      */   
     public final ObjectProperty<TextAlignment> textAlignmentProperty() {
         return getTextAttribute().textAlignmentProperty();
+    }
+
+    public final void setLineSpacing(double spacing) {
+        lineSpacingProperty().set(spacing);
+    }
+
+    public final double getLineSpacing() {
+        if (attributes == null || attributes.lineSpacing == null) {
+            return DEFAULT_LINE_SPACING;
+        }
+        return attributes.getLineSpacing();
+    }
+
+    /**
+     * Defines the vertical space in pixel between lines.
+     *
+     * @defaultValue 0
+     *
+     * @since 8.0
+     */
+    public final DoubleProperty lineSpacingProperty() {
+        return getTextAttribute().lineSpacingProperty();
     }
 
     @Override
@@ -1320,6 +1345,24 @@ public class Text extends Shape {
             }
          };
 
+         private static final
+             StyleablePropertyMetaData<Text,Number> LINE_SPACING =
+                 new StyleablePropertyMetaData<Text,Number>("-fx-line-spacing",
+                 SizeConverter.getInstance(), 0) {
+
+            @Override
+            public boolean isSettable(Text node) {
+                return node.attributes == null ||
+                       node.attributes.lineSpacing == null ||
+                      !node.attributes.lineSpacing.isBound();
+            }
+
+            @Override
+            public WritableValue<Number> getWritableValue(Text node) {
+                return node.lineSpacingProperty();
+            }
+         };
+
          private static final List<StyleablePropertyMetaData> STYLEABLES;
          static {
             final List<StyleablePropertyMetaData> styleables =
@@ -1330,7 +1373,8 @@ public class Text extends Shape {
                 STRIKETHROUGH,
                 TEXT_ALIGNMENT,
                 TEXT_ORIGIN,
-                FONT_SMOOTHING_TYPE
+                FONT_SMOOTHING_TYPE,
+                LINE_SPACING
             );
             STYLEABLES = Collections.unmodifiableList(styleables);
          }
@@ -1443,6 +1487,7 @@ public class Text extends Shape {
     private static final boolean DEFAULT_UNDERLINE = false;
     private static final boolean DEFAULT_STRIKETHROUGH = false;
     private static final TextAlignment DEFAULT_TEXT_ALIGNMENT = TextAlignment.LEFT;
+    private static final double DEFAULT_LINE_SPACING = 0;
     private static final int DEFAULT_CARET_POSITION = -1;
     private static final int DEFAULT_SELECTION_START = -1;
     private static final int DEFAULT_SELECTION_END = -1;
@@ -1568,6 +1613,34 @@ public class Text extends Shape {
             return textAlignment;
         }
         
+        private DoubleProperty lineSpacing;
+
+        public final double getLineSpacing() {
+            return lineSpacing == null ? DEFAULT_LINE_SPACING : lineSpacing.get();
+        }
+
+        public final DoubleProperty lineSpacingProperty() {
+            if (lineSpacing == null) {
+                lineSpacing =
+                    new StyleableDoubleProperty(DEFAULT_LINE_SPACING) {
+                    @Override public Object getBean() { return Text.this; }
+                    @Override public String getName() { return "lineSpacing"; }
+                    @Override public StyleablePropertyMetaData getStyleablePropertyMetaData() {
+                        return StyleableProperties.LINE_SPACING;
+                    }
+                    @Override public void invalidated() {
+                        if (!isSpan()) {
+                            TextLayout layout = getTextLayout();
+                            if (layout.setLineSpacing((float)get())) {
+                                needsTextLayout();
+                            }
+                        }
+                    }
+                };
+            }
+            return lineSpacing;
+        }
+
         private ReadOnlyDoubleWrapper baselineOffset;
 
         public final ReadOnlyDoubleProperty baselineOffsetProperty() {

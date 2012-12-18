@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project name="javafx-common" default="jar" basedir=".">
+    <description>Builds, tests, and jars the closed version of the javafx-common project.</description>
+    
+    <property name="runtime.dist.root.dir" value="../../rt-closed" />    
+    <property name="rt.dist.root.dir" value="../../rt" />    
+    <path id="javac.closed.classpath.path" path="
+        ${rt.dist.root.dir}/javafx-logging/dist/javafx-logging.jar:
+        ${runtime.dist.root.dir}/glass/glass-mat/dist/glass.jar" />
+    <property name="javac.classpath" refid="javac.closed.classpath.path"/>
+    
+    <import file="../build-defs.xml"/>
+    
+    <import file="build-common.xml"/>
+    
+    <target name="jar" depends="javafx-common-common.jar"/>
+    <target name="-pre-init" depends="javafx-common-common.-pre-init"/>
+
+</project>

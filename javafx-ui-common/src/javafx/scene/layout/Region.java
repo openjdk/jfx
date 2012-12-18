@@ -71,7 +71,7 @@ import com.sun.javafx.tk.Toolkit;
  * It is a resizable Parent node which can be styled from CSS. It can have multiple backgrounds
  * and borders. It is designed to support as much of the CSS3 specification for backgrounds
  * and borders as is relevant to JavaFX. 
- * <a href="http://www.w3.org/TR/css3-background/"> The full specification is available at css3-background</a>.
+ * The full specification is available at <a href="http://www.w3.org/TR/2012/CR-css3-background-20120724/">the W3C</a>.
  * <p/>
  * Every Region has its layout bounds, which are specified to be (0, 0, width, height). A Region might draw outside
  * these bounds. The content area of a Region is the area which is occupied for the layout of its children.

@@ -145,6 +145,9 @@ public class TextFieldBehavior extends TextInputControlBehavior<TextField> {
 
         if (textField.isFocused()) {
             if (PlatformUtil.isIOS()) {
+                // special handling of focus on iOS is required to allow to
+                // control native keyboard, because nat. keyboard is poped-up only when native 
+                // text component gets focus. When we have JFX keyboard we can remove this code
                 TextInputTypes type = TextInputTypes.TEXT_FIELD;
                 if (textField.getClass().equals(javafx.scene.control.PasswordField.class)) {
                     type = TextInputTypes.PASSWORD_FIELD;
@@ -160,6 +163,8 @@ public class TextFieldBehavior extends TextInputControlBehavior<TextField> {
 //                h -= insets.getTop() + insets.getBottom();
                 String text = textField.getText();
 
+                // we need to display native text input component on the place where JFX component is drawn
+                // all parameters needed to do that are passed to native impl. here
                 textField.getScene().getWindow().impl_getPeer().requestInput(text, type.ordinal(), w, h, 
                         trans.getMxx(), trans.getMxy(), trans.getMxz(), trans.getMxt(),// + insets.getLeft(),
                         trans.getMyx(), trans.getMyy(), trans.getMyz(), trans.getMyt(),// + insets.getTop(),
@@ -171,6 +176,7 @@ public class TextFieldBehavior extends TextInputControlBehavior<TextField> {
             }
         } else {
             if (PlatformUtil.isIOS() && textField.getScene() != null) {
+                // releasing the focus => we need to hide the native component and also native keyboard
                 textField.getScene().getWindow().impl_getPeer().releaseInput();
             }
             textField.selectRange(0, 0);
@@ -431,7 +437,12 @@ public class TextFieldBehavior extends TextInputControlBehavior<TextField> {
         getControl().selectAll();
     }
     
-    public enum TextInputTypes {
+    // Enumeration of all types of text input that can be simulated on 
+    // touch device, such as iPad. Type is passed to native code and 
+    // native text component is shown. It's used as workaround for iOS
+    // devices since keyboard control is not possible without native 
+    // text component being displayed
+    enum TextInputTypes {
         TEXT_FIELD,
         PASSWORD_FIELD,
         EDITABLE_COMBO,

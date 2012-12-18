@@ -25,7 +25,7 @@
  * questions.
  */
 --> 
-<project name="JavaFX Runtime" default="jar" basedir=".">
+<project name="JavaFX Runtime" default="dist" basedir=".">
     <description>Builds, tests, and runs the project JavaFX Runtime</description>
 
     <import file="../build-defs.xml"/>
@@ -56,11 +56,19 @@
     </fileset>
     -->
 
-    <target name="dist" depends="init">
+    <target name="jar" depends="init">
         <ant antfile="${rt.root.dir}/javafx-beans-dt/build.xml" target="jar" inheritAll="false"/>
         <ant antfile="${rt.root.dir}/javafx-util-converter/build.xml" target="jar" inheritAll="false"/>
         <ant antfile="${rt.root.dir}/javafx-concurrent/build.xml" target="jar" inheritAll="false"/>
+        <ant antfile="${rt.root.dir}/javafx-logging/build.xml" target="jar" inheritAll="false"/>
+        <ant antfile="${rt.root.dir}/javafx-anim/build.xml" target="jar" inheritAll="false"/>
+        <ant antfile="${rt.root.dir}/javafx-common/build.xml" target="jar" inheritAll="false"/>
+        <ant antfile="${rt.root.dir}/javafx-annotation-processor/build.xml" target="jar" inheritAll="false"/>
+        <ant antfile="${rt.root.dir}/javafx-sg-common/build.xml" target="jar" inheritAll="false"/>
+        <ant antfile="${rt.root.dir}/javafx-geom/build.xml" target="jar" inheritAll="false"/>
+        <ant antfile="${rt.root.dir}/javafx-sg-prism/build.xml" target="jar" inheritAll="false"/>
         <ant antfile="${rt.root.dir}/javafx-ui-common/build.xml" target="jar" inheritAll="false"/>
+        <ant antfile="${rt.root.dir}/pisces/build.xml" target="jar" inheritAll="false"/>
         <!--<ant antfile="${rt.root.dir}/javafx-designtime/build.xml" target="jar" inheritAll="false"/>-->
         <ant antfile="${rt.root.dir}/javafx-ui-controls/build.xml" target="jar" inheritAll="false"/>
         <ant antfile="${rt.root.dir}/javafx-ui-charts/build.xml" target="jar" inheritAll="false"/>
@@ -77,7 +85,15 @@
         <!--<ant antfile="${rt.root.dir}/javafx-designtime/build.xml" target="test" inheritAll="false"/>-->
         <ant antfile="${rt.root.dir}/javafx-ui-controls/build.xml" target="test" inheritAll="false"/>
         <ant antfile="${rt.root.dir}/javafx-ui-charts/build.xml" target="test" inheritAll="false"/>
+        <ant antfile="${rt.root.dir}/javafx-logging/build.xml" target="test" inheritAll="false"/>
+        <ant antfile="${rt.root.dir}/javafx-anim/build.xml" target="test" inheritAll="false"/>
+        <ant antfile="${rt.root.dir}/javafx-common/build.xml" target="test" inheritAll="false"/>
+        <ant antfile="${rt.root.dir}/javafx-annotation-processor/build.xml" target="test" inheritAll="false"/>
+        <ant antfile="${rt.root.dir}/javafx-sg-common/build.xml" target="test" inheritAll="false"/>
+        <ant antfile="${rt.root.dir}/javafx-geom/build.xml" target="test" inheritAll="false"/>
+        <ant antfile="${rt.root.dir}/javafx-sg-prism/build.xml" target="test" inheritAll="false"/>
         <ant antfile="${rt.root.dir}/javafx-ui-common/build.xml" target="test" inheritAll="false"/>
+        <ant antfile="${rt.root.dir}/pisces/build.xml" target="test" inheritAll="false"/>
         <ant antfile="${rt.root.dir}/javafx-util-converter/build.xml" target="test" inheritAll="false"/>
         <ant antfile="${rt.root.dir}/javafx-fxml/build.xml" target="test" inheritAll="false"/>
     </target>
@@ -94,7 +110,15 @@
         <!--<ant antfile="${rt.root.dir}/javafx-designtime/build.xml" target="clean" inheritAll="false"/>-->
         <ant antfile="${rt.root.dir}/javafx-ui-controls/build.xml" target="clean" inheritAll="false"/>
         <ant antfile="${rt.root.dir}/javafx-ui-charts/build.xml" target="clean" inheritAll="false"/>
+        <ant antfile="${rt.root.dir}/javafx-logging/build.xml" target="clean" inheritAll="false"/>
+        <ant antfile="${rt.root.dir}/javafx-anim/build.xml" target="clean" inheritAll="false"/>
+        <ant antfile="${rt.root.dir}/javafx-common/build.xml" target="clean" inheritAll="false"/>
+        <ant antfile="${rt.root.dir}/javafx-annotation-processor/build.xml" target="clean" inheritAll="false"/>
+        <ant antfile="${rt.root.dir}/javafx-sg-common/build.xml" target="clean" inheritAll="false"/>
+        <ant antfile="${rt.root.dir}/javafx-geom/build.xml" target="clean" inheritAll="false"/>
+        <ant antfile="${rt.root.dir}/javafx-sg-prism/build.xml" target="clean" inheritAll="false"/>
         <ant antfile="${rt.root.dir}/javafx-ui-common/build.xml" target="clean" inheritAll="false"/>
+        <ant antfile="${rt.root.dir}/pisces/build.xml" target="clean" inheritAll="false"/>
         <ant antfile="${rt.root.dir}/javafx-util-converter/build.xml" target="clean" inheritAll="false"/>
         <ant antfile="${rt.root.dir}/javafx-fxml/build.xml" target="clean" inheritAll="false"/>
     </target>
@@ -103,7 +127,7 @@
         Create an openjfxrt.jar file...
       -->   
     
-    <target name="jar" depends="dist">
+    <target name="dist" depends="jar">
         <echo>Creating merged openjfxrt.jar file</echo>
         <mkdir dir="dist" />
         <jar destfile="dist/openjfxrt.jar">
@@ -111,6 +135,6 @@
         </jar>
     </target>
     
-    <target name="default" depends="jar" />
+    <target name="default" depends="dist" />
 
 </project>

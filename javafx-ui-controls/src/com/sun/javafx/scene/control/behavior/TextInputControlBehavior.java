@@ -27,11 +27,16 @@ package com.sun.javafx.scene.control.behavior;
 
 import javafx.beans.InvalidationListener;
 import javafx.beans.Observable;
+import javafx.geometry.NodeOrientation;
 import javafx.scene.control.IndexRange;
 import javafx.scene.control.TextInputControl;
 import javafx.scene.input.KeyEvent;
+
+import java.text.Bidi;
 import java.util.ArrayList;
 import java.util.List;
+
+import com.sun.javafx.scene.control.skin.TextInputControlSkin;
 
 import static javafx.scene.input.KeyEvent.KEY_PRESSED;
 
@@ -56,6 +61,8 @@ public abstract class TextInputControlBehavior<T extends TextInputControl> exten
      * Fields                                                                 *
      *************************************************************************/
 
+    TextInputControl textInputControl;
+
     /**
      * Used to keep track of the most recent key event. This is used when
      * handling InputCharacter actions.
@@ -74,6 +81,8 @@ public abstract class TextInputControlBehavior<T extends TextInputControl> exten
      */
     public TextInputControlBehavior(T textInputControl) {
         super(textInputControl);
+
+        this.textInputControl = textInputControl;
 
         textInputControl.textProperty().addListener(new InvalidationListener() {
             @Override public void invalidated(Observable observable) {
@@ -144,16 +153,24 @@ public abstract class TextInputControlBehavior<T extends TextInputControl> exten
             if ("Copy".equals(name)) textInputControl.copy();
             else if ("SelectBackward".equals(name)) textInputControl.selectBackward();
             else if ("SelectForward".equals(name)) textInputControl.selectForward();
+            else if ("SelectLeft".equals(name)) selectLeft();
+            else if ("SelectRight".equals(name)) selectRight();
             else if ("PreviousWord".equals(name)) previousWord();
             else if ("NextWord".equals(name)) nextWord();
+            else if ("LeftWord".equals(name)) leftWord();
+            else if ("RightWord".equals(name)) rightWord();
             else if ("SelectPreviousWord".equals(name)) selectPreviousWord();
             else if ("SelectNextWord".equals(name)) selectNextWord();
+            else if ("SelectLeftWord".equals(name)) selectLeftWord();
+            else if ("SelectRightWord".equals(name)) selectRightWord();
             else if ("SelectWord".equals(name)) selectWord();
             else if ("SelectAll".equals(name)) textInputControl.selectAll();
             else if ("Home".equals(name)) textInputControl.home();
             else if ("End".equals(name)) textInputControl.end();
             else if ("Forward".equals(name)) textInputControl.forward();
             else if ("Backward".equals(name)) textInputControl.backward();
+            else if ("Right".equals(name)) nextCharacterVisually(true);
+            else if ("Left".equals(name)) nextCharacterVisually(false);
             else if ("Fire".equals(name)) fire(lastEvent);
             else if ("Unselect".equals(name)) textInputControl.deselect();
             else if ("SelectHome".equals(name)) selectHome();
@@ -162,7 +179,7 @@ public abstract class TextInputControlBehavior<T extends TextInputControl> exten
             else if ("SelectEndExtend".equals(name)) selectEndExtend();
             else if ("ToParent".equals(name)) forwardToParent(lastEvent);
             /*DEBUG*/else if ("UseVK".equals(name) && isEmbedded()) {
-                ((com.sun.javafx.scene.control.skin.TextInputControlSkin)textInputControl.getSkin()).toggleUseVK();
+                ((TextInputControlSkin)textInputControl.getSkin()).toggleUseVK();
             } else {
                 done = false;
             }
@@ -225,6 +242,43 @@ public abstract class TextInputControlBehavior<T extends TextInputControl> exten
         }
     }
 
+    private Bidi getBidi() {
+        return new Bidi(textInputControl.getText(),
+                        (textInputControl.getEffectiveNodeOrientation() == NodeOrientation.RIGHT_TO_LEFT)
+                                    ? Bidi.DIRECTION_DEFAULT_RIGHT_TO_LEFT
+                                    : Bidi.DIRECTION_DEFAULT_LEFT_TO_RIGHT);
+    }
+
+    private void nextCharacterVisually(boolean moveRight) {
+        Bidi bidi = getBidi();
+        if (bidi.isMixed()) {
+            TextInputControlSkin skin = (TextInputControlSkin)textInputControl.getSkin();
+            skin.nextCharacterVisually(moveRight);
+        } else if (moveRight != bidi.isRightToLeft()) {
+            textInputControl.forward();
+        } else {
+            textInputControl.backward();
+        }
+    }
+
+    private void selectLeft() {
+        Bidi bidi = getBidi();
+        if (bidi.isRightToLeft() || (bidi.isMixed() && !bidi.baseIsLeftToRight())) {
+            textInputControl.selectForward();
+        } else {
+            textInputControl.selectBackward();
+        }
+    }
+
+    private void selectRight() {
+        Bidi bidi = getBidi();
+        if (bidi.isRightToLeft() || (bidi.isMixed() && !bidi.baseIsLeftToRight())) {
+            textInputControl.selectBackward();
+        } else {
+            textInputControl.selectForward();
+        }
+    }
+
     private void deletePreviousChar() {
         TextInputControl textInputControl = getControl();
         IndexRange selection = textInputControl.getSelection();
@@ -234,7 +288,12 @@ public abstract class TextInputControlBehavior<T extends TextInputControl> exten
         if (start > 0 || end > start) {
             if (selection.getLength() == 0) {
                 end = start;
-                start--;
+                // Note: This can handle the case of a surrogate pair
+                // which requires two chars to be deleted. However it
+                // does not, and should not, delete any other kind of
+                // cluster as a whole, just the last char. Compare
+                // with deleteNextChar().
+                start = Character.offsetByCodePoints(textInputControl.getText(), end, -1);
             }
             undoManager.addChange(start, textInputControl.getText().substring(start, end), null);
         }
@@ -249,7 +308,12 @@ public abstract class TextInputControlBehavior<T extends TextInputControl> exten
 
         if (start < textInputControl.getLength() || end > start) {
             if (selection.getLength() == 0) {
-                end = start + 1;
+                // Note: This can handle the case of a surrogate
+                // pair which requires two chars to be deleted.
+                // TODO: It should also delete any kind of cluster as
+                // a whole, not just the first char. Compare with
+                // deletePreviousChar().
+                end = Character.offsetByCodePoints(textInputControl.getText(), start, 1);
             }
             undoManager.addChange(start, textInputControl.getText().substring(start, end), null);
         }
@@ -332,6 +396,24 @@ public abstract class TextInputControlBehavior<T extends TextInputControl> exten
         }
     }
 
+    private void selectLeftWord() {
+        Bidi bidi = getBidi();
+        if (bidi.isRightToLeft() || (bidi.isMixed() && !bidi.baseIsLeftToRight())) {
+            selectNextWord();
+        } else {
+            selectPreviousWord();
+        }
+    }
+
+    private void selectRightWord() {
+        Bidi bidi = getBidi();
+        if (bidi.isRightToLeft() || (bidi.isMixed() && !bidi.baseIsLeftToRight())) {
+            selectPreviousWord();
+        } else {
+            selectNextWord();
+        }
+    }
+
     protected void selectWord() {
         final TextInputControl textInputControl = getControl();
         textInputControl.previousWord();
@@ -352,6 +434,24 @@ public abstract class TextInputControlBehavior<T extends TextInputControl> exten
             textInputControl.endOfNextWord();
         } else {
             textInputControl.nextWord();
+        }
+    }
+
+    private void leftWord() {
+        Bidi bidi = getBidi();
+        if (bidi.isRightToLeft() || (bidi.isMixed() && !bidi.baseIsLeftToRight())) {
+            nextWord();
+        } else {
+            previousWord();
+        }
+    }
+
+    private void rightWord() {
+        Bidi bidi = getBidi();
+        if (bidi.isRightToLeft() || (bidi.isMixed() && !bidi.baseIsLeftToRight())) {
+            previousWord();
+        } else {
+            nextWord();
         }
     }
 
