@@ -73,6 +73,7 @@ final class CSSLexer {
     final static int IMPORTANT_SYM = 39;
     final static int WS = 40;
     final static int NL = 41;
+    final static int FONT_FACE = 42;
 
     private final Recognizer A = new SimpleRecognizer('a','A');
     private final Recognizer B = new SimpleRecognizer('b','B');
@@ -608,6 +609,7 @@ final class CSSLexer {
 
         try {
             while (true) {
+                charNotConsumed = false;
 
                 final LexerState[] reachableStates =
                         currentState != null ? stateMap.get(currentState) : null;
@@ -698,6 +700,7 @@ final class CSSLexer {
                             // not a comment - a SOLIDUS
                             token = new Token(SOLIDUS,"/", line, offset);
                             offset = pos;
+                            charNotConsumed = true;
                         }
                         break;
 
@@ -788,15 +791,27 @@ final class CSSLexer {
                         return tok;
 
                     case '@':
-                        // Skip over @IMPORT, etc. 
+                        // read word after '@' symbol
+                        StringBuilder keywordSB = new StringBuilder();
                         do {
                             ch = readChar();
-                        } while (ch != ';' &&
-                                 ch != Token.EOF);
-                        if (ch == ';') {
-                            ch = readChar();
-                            token = Token.SKIP_TOKEN;
+                            keywordSB.append((char)ch);
+                        } while (!WS_CHARS.recognize(ch) && ch != Token.EOF);
+                        String keyword = keywordSB.substring(0,keywordSB.length()-1);
+                        if ("font-face".equalsIgnoreCase(keyword)) {
+                            token = new Token(FONT_FACE,"@font-face", line, offset);
                             offset = pos;
+                        } else {
+                            // Skip over @IMPORT, etc.
+                            do {
+                                ch = readChar();
+                            } while (ch != ';' &&
+                                     ch != Token.EOF);
+                            if (ch == ';') {
+                                ch = readChar();
+                                token = Token.SKIP_TOKEN;
+                                offset = pos;
+                            }
                         }
                         break;
 
@@ -815,7 +830,7 @@ final class CSSLexer {
                     return token;
                 } 
 
-                if (ch != -1) ch = readChar();
+                if (ch != -1 && !charNotConsumed) ch = readChar();
 
                 final Token tok = token;
                 token = null;
@@ -828,6 +843,7 @@ final class CSSLexer {
     }
     
     private int ch;
+    private boolean charNotConsumed = false;
     private Reader reader;
     private Token token;
     private final Map<LexerState, LexerState[]> stateMap;
