@@ -57,7 +57,7 @@ public class NestedTableColumnHeader extends TableColumnHeader {
      *                                                                         *
      **************************************************************************/
     
-    NestedTableColumnHeader(final TableViewSkinBase skin, final TableColumnBase tc) {
+    public NestedTableColumnHeader(final TableViewSkinBase skin, final TableColumnBase tc) {
         super(skin, tc);
         
         getStyleClass().setAll("nested-column-header");
@@ -481,13 +481,15 @@ public class NestedTableColumnHeader extends TableColumnHeader {
     }
 
     private TableColumnHeader createColumnHeader(TableColumnBase col) {
-        TableColumnHeader newCol = col.getColumns().isEmpty() ?
-            new TableColumnHeader(getTableViewSkin(), col) :
-            new NestedTableColumnHeader(getTableViewSkin(), col);
-
+        TableColumnHeader newCol = createTableColumnHeader(col);
         newCol.setTableHeaderRow(getTableHeaderRow());
         newCol.setParentHeader(this);
-        
         return newCol;
     }
+    
+    protected TableColumnHeader createTableColumnHeader(TableColumnBase col) {
+        return col.getColumns().isEmpty() ?
+            new TableColumnHeader(getTableViewSkin(), col) :
+            new NestedTableColumnHeader(getTableViewSkin(), col);
+    } 
 }

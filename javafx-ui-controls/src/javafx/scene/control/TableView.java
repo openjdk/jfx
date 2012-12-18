@@ -56,6 +56,7 @@ import com.sun.javafx.scene.control.ReadOnlyUnbackedObservableList;
 import com.sun.javafx.scene.control.TableColumnComparator;
 import javafx.collections.WeakListChangeListener;
 import com.sun.javafx.scene.control.skin.TableViewSkin;
+import com.sun.javafx.scene.control.skin.TableViewSkinBase;
 import com.sun.javafx.scene.control.skin.VirtualContainerBase;
 import java.lang.ref.WeakReference;
 import java.util.HashMap;
@@ -256,7 +257,6 @@ public class TableView<S> extends Control {
     // are also duplicated in the TableViewSkin class - so any changes to these
     // strings must also be duplicated there
     static final String SET_CONTENT_WIDTH = "TableView.contentWidth";
-    static final String REFRESH = "TableView.refresh";
     
     /**
      * <p>Very simple resize policy that just resizes the specified column by the
@@ -895,7 +895,7 @@ public class TableView<S> extends Control {
      * the data model.
      */
     private void refresh() {
-        getProperties().put(REFRESH, Boolean.TRUE);
+        getProperties().put(TableViewSkinBase.REFRESH, Boolean.TRUE);
     }
 
     /**

@@ -29,8 +29,9 @@ import java.util.List;
 
 import javafx.collections.ObservableList;
 import javafx.event.Event;
-import javafx.scene.Parent;
 import javafx.scene.Node;
+import javafx.scene.Parent;
+import javafx.scene.control.SingleSelectionModel;
 import javafx.scene.control.Tab;
 import javafx.scene.control.TabPane;
 import javafx.scene.input.KeyCode;
@@ -38,7 +39,6 @@ import javafx.scene.input.MouseEvent;
 
 import com.sun.javafx.scene.control.skin.TabPaneSkin;
 import com.sun.javafx.scene.traversal.Direction;
-import javafx.scene.control.SingleSelectionModel;
 
 public class TabPaneBehavior extends BehaviorBase<TabPane> {
 
@@ -270,7 +270,6 @@ public class TabPaneBehavior extends BehaviorBase<TabPane> {
         return firstPopulatedEngine;
     }
 
-
     /***************************************************************************
      *                                                                         *
      * Mouse event handling                                                    *
@@ -295,6 +294,12 @@ public class TabPaneBehavior extends BehaviorBase<TabPane> {
         getControl().getSelectionModel().select(tab);
     }
 
+    public boolean canCloseTab(Tab tab) {
+        Event event = new Event(tab,tab,Tab.TAB_CLOSE_REQUEST_EVENT);
+        Event.fireEvent(tab, event);
+        return ! event.isConsumed();
+    }
+    
     public void closeTab(Tab tab) {
         TabPane tabPane = getControl();
         // only switch to another tab if the selected tab is the one we're closing

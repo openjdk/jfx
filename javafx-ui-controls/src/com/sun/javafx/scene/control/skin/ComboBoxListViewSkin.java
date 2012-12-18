@@ -347,17 +347,17 @@ public class ComboBoxListViewSkin<T> extends ComboBoxPopupControl<T> {
         textField.setFocusTraversable(true);
         textField.promptTextProperty().bind(comboBox.promptTextProperty());
         
-        // focus always goes to the comboBox, which then forwards events down 
-        // to the TextField. This ensures that the ComboBox appears focused
-        // externally for people listening to the focus property.
-        // Also, (for RT-21454) set the currently typed text as the value when focus 
-        // is lost from the ComboBox
-        textField.addEventFilter(MouseEvent.MOUSE_CLICKED, new EventHandler<MouseEvent>() {
-            @Override public void handle(MouseEvent t) {
-                comboBox.requestFocus();
-                t.consume();
-            }
-        });
+//        // focus always goes to the comboBox, which then forwards events down 
+//        // to the TextField. This ensures that the ComboBox appears focused
+//        // externally for people listening to the focus property.
+//        // Also, (for RT-21454) set the currently typed text as the value when focus 
+//        // is lost from the ComboBox
+//        textField.addEventFilter(MouseEvent.MOUSE_CLICKED, new EventHandler<MouseEvent>() {
+//            @Override public void handle(MouseEvent t) {
+//                comboBox.requestFocus();
+//                t.consume();
+//            }
+//        });
         textField.focusedProperty().addListener(new ChangeListener<Boolean>() {
             @Override public void changed(ObservableValue<? extends Boolean> ov, Boolean t, Boolean hasFocus) {
                 if (! comboBox.isEditable()) return;
