@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project name="JavaFX Man Pages" default="default" basedir=".">
+    <!-- Import common properties and definitions -->
+    <import file="../../build-defs.xml"/>
+
+    <property name="ja.suffix" value="JP.UTF-8"/>
+
+    <target name="default" depends="copy-man-pages"/>
+
+    <target name="copy-man-pages"
+            depends="-copy-man-pages-linux,-copy-man-pages-macosx">
+    </target>
+
+    <target name="-copy-man-pages-linux" if="isLinux">
+        <antcall target="-copy-man-pages-common"/>
+
+        <mkdir dir="${jfx.sdk.man.dir}/ja_${ja.suffix}/man1"/>
+        <copy todir="${jfx.sdk.man.dir}/ja_${ja.suffix}/man1">
+            <fileset dir="${basedir}/ja/man1" includes="*.1"/>
+        </copy>
+    </target>
+
+    <target name="-copy-man-pages-macosx" if="isMacOSX">
+        <antcall target="-copy-man-pages-common"/>
+    </target>
+
+    <target name="-copy-man-pages-common" unless="isWindows">
+        <delete dir="${jfx.sdk.man.dir}"/>
+        <mkdir dir="${jfx.sdk.man.dir}/man1"/>
+        <copy todir="${jfx.sdk.man.dir}/man1">
+            <fileset dir="${basedir}/man1" includes="*.1"/>
+        </copy>
+    </target>
+
+    <target name="clean">
+        <delete dir="${jfx.sdk.man.dir}"/>
+    </target>
+</project>

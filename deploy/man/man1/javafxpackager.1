@@ -1,0 +1,513 @@
+'\" t
+.\" Copyright \(co 2008, 2012, Oracle. All Rights Reserved.
+.\" Title: javafxpackager
+.\" Language: English
+.\" Date: October 2012
+.\" SectDesc: User Commands
+.\" Software: Oracle Java
+.\" Arch: Generic
+.\"
+.TH "javafxpackager" "1" "October 2012" "" ""
+.\" -----------------------------------------------------------------
+.\" * Define some portability stuff
+.\" -----------------------------------------------------------------
+.\" ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+.\" http://bugs.debian.org/507673
+.\" http://lists.gnu.org/archive/html/groff/2009-02/msg00013.html
+.\" ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+.ie \n(.g .ds Aq \(aq
+.el       .ds Aq '
+.\" -----------------------------------------------------------------
+.\" * set default formatting
+.\" -----------------------------------------------------------------
+.\" disable hyphenation
+.nh
+.\" disable justification (adjust text to left margin only)
+.ad l
+.\" -----------------------------------------------------------------
+.\" * MAIN CONTENT STARTS HERE *
+.\" -----------------------------------------------------------------
+.SH "NAME"
+javafxpackager \- A tool with commands that perform tasks related to packaging and signing JavaFX applications\&.
+.SH "SYNOPSIS"
+.sp
+.if n \{\
+.RS 4
+.\}
+.nf
+javafxpackager \fI\-taskcommand\fR \fI[\-options]\fR
+.fi
+.if n \{\
+.RE
+.\}
+.PP
+where
+\fI\-taskcommand\fR
+is one of the following:
+.PP
+\-createjar
+.RS 4
+Produces a JAR archive according to other parameters\&.
+.RE
+.PP
+\-deploy
+.RS 4
+Assembles the application package for redistribution\&. By default, the deploy task will generate the base application package, but it can also generate a self\-contained application package if requested\&.
+.RE
+.PP
+\-createbss
+.RS 4
+Converts CSS files into binary form\&.
+.RE
+.PP
+\-signJar
+.RS 4
+Signs JAR file(s) with a provided certificate\&.
+.RE
+.PP
+\-makeall
+.RS 4
+Performs compilation,
+\fIcreatejar\fR, and
+\fIdeploy\fR
+steps as one call, with most arguments predefined\&. By default, it attempts to generate all applicable self\-contained application packages\&. The source files must be located in a folder called src, and the resulting files (JAR, JNLP, HTML, and self\-contained application packages) are put in a folder called dist\&. This command can only be configured in a minimal way and is as automated as possible\&.
+.RE
+.PP
+Note that all options are case\-insensitive\&.
+.SH "OPTIONS FOR THE CREATEJAR COMMAND"
+.PP
+\-appclass \fI<application class>\fR
+.RS 4
+Qualified name of the application class to be executed\&.
+.RE
+.PP
+\-preloader \fI<preloader class>\fR
+.RS 4
+Qualified name of the preloader class to be executed\&.
+.RE
+.PP
+\-paramfile <file>
+.RS 4
+A properties file with default named application parameters\&.
+.RE
+.PP
+\-argument arg
+.RS 4
+An unnamed argument to be inserted into the JNLP file as an
+\fI<fx:argument>\fR
+element\&.
+.RE
+.PP
+\-classpath \fI<files>\fR
+.RS 4
+List of dependent JAR file names\&.
+.RE
+.PP
+\-manifestAttrs \fI<manifest attributes>\fR
+.RS 4
+List of additional manifest attributes\&. Syntax:
+.sp
+.if n \{\
+.RS 4
+.\}
+.nf
+"name1=value1,name2=value2,name3=value3"
+.fi
+.if n \{\
+.RE
+.\}
+.RE
+.PP
+\-noembedlauncher
+.RS 4
+If present, the packager will not add the JavaFX launcher classes to the JAR file\&.
+.RE
+.PP
+\-nocss2bin
+.RS 4
+The packager will not convert CSS files to binary form before copying to JAR\&.
+.RE
+.PP
+\-runtimeversion \fI<version>\fR
+.RS 4
+Version of the required JavaFX Runtime\&.
+.RE
+.PP
+\-outdir \fI<dir>\fR
+.RS 4
+Name of the directory that will receive generated output files\&.
+.RE
+.PP
+\-outfile \fI<filename>\fR
+.RS 4
+Name (without the extension) of the file that will be generated\&.
+.RE
+.PP
+\-srcdir \fI<dir>\fR
+.RS 4
+Base directory of the files to package\&.
+.RE
+.PP
+\-srcfiles \fI<files>\fR
+.RS 4
+List of files in
+\fIsrcdir\fR\&. If omitted, all files in
+\fIsrcdir\fR
+(which is a mandatory argument in this case) will be used\&.
+.RE
+.SH "OPTIONS FOR THE DEPLOY COMMAND"
+.PP
+\-title \fI<title>\fR
+.RS 4
+Title of the application\&.
+.RE
+.PP
+\-vendor \fI<vendor>\fR
+.RS 4
+Vendor of the application\&.
+.RE
+.PP
+\-description \fI<description>\fR
+.RS 4
+Description of the application\&.
+.RE
+.PP
+\-appclass \fI<application class>\fR
+.RS 4
+Qualified name of the application class to be executed\&.
+.RE
+.PP
+\-preloader \fI<preloader class>\fR
+.RS 4
+Qualified name of the preloader class to be executed\&.
+.RE
+.PP
+\-paramfile \fI<file>\fR
+.RS 4
+Properties file with default named application parameters\&.
+.RE
+.PP
+\-htmlparamfile \fI<file>\fR
+.RS 4
+Properties file with parameters for the resulting application when it is run in the browser\&.
+.RE
+.PP
+\-width \fI<width>\fR
+.RS 4
+Width of the application\&.
+.RE
+.PP
+\-height \fI<height>\fR
+.RS 4
+Height of the application\&.
+.RE
+.PP
+\-native \fI<type>\fR
+.RS 4
+Generate self\-contained application bundles (if possible)\&. If
+\fItype\fR
+is specified, then only a bundle of this type is created\&. List of supported types includes: installer, image, exe, msi, dmg, rpm, deb\&.
+.RE
+.PP
+\-name \fI<name>\fR
+.RS 4
+Name of the application\&.
+.RE
+.PP
+\-embedjnlp
+.RS 4
+If present, the JNLP file will be embedded in the HTML document\&.
+.RE
+.PP
+\-embedCertificates
+.RS 4
+If present, the certificates will be embedded in the JNLP file\&.
+.RE
+.PP
+\-allpermissions
+.RS 4
+If present, the application will require all security permissions in the JNLP file\&.
+.RE
+.PP
+\-updatemode \fI<updatemode>\fR
+.RS 4
+Sets the update mode for the JNLP file\&.
+.RE
+.PP
+\-isExtension
+.RS 4
+If present, the
+\fIsrcfiles\fR
+are treated as extensions\&.
+.RE
+.PP
+\-callbacks
+.RS 4
+Specifies user callback methods in generated HTML\&. The format is the following:
+.sp
+.if n \{\
+.RS 4
+.\}
+.nf
+"name1:value1,name2:value2,\&.\&.\&."
+.fi
+.if n \{\
+.RE
+.\}
+.RE
+.PP
+\-templateInFilename
+.RS 4
+Name of the HTML template file\&. Placeholders are in the following form:
+.sp
+.if n \{\
+.RS 4
+.\}
+.nf
+#XXXX\&.YYYY(APPID)#
+.fi
+.if n \{\
+.RE
+.\}
+.RE
+.PP
+\-templateOutFilename
+.RS 4
+Name of the HTML file that will be generated from the template\&.
+.RE
+.PP
+\-templateId
+.RS 4
+Application ID of the application for template processing\&.
+.RE
+.PP
+\-argument arg
+.RS 4
+An unnamed argument to be inserted into an
+\fI<fx:argument>\fR
+element in the JNLP file\&.
+.RE
+.PP
+\-outdir \fI<dir>\fR
+.RS 4
+Name of the directory that will receive generated output files\&.
+.RE
+.PP
+\-outfile \fI<filename>\fR
+.RS 4
+Name (without the extension) of the file that will be generated\&.
+.RE
+.PP
+\-srcdir \fI<dir>\fR
+.RS 4
+Base directory of the files to package\&.
+.RE
+.PP
+\-srcfiles \fI<files>\fR
+.RS 4
+List of files in
+\fIsrcdir\fR\&. If omitted, all files in
+\fIsrcdir\fR
+(which is a mandatory argument in this case) will be used\&.
+.RE
+.SH "OPTIONS FOR THE CREATEBSS COMMAND"
+.PP
+\-outdir \fI<dir>\fR
+.RS 4
+Name of the directory that will receive generated output files\&.
+.RE
+.PP
+\-srcdir \fI<dir>\fR
+.RS 4
+Base directory of the files to package\&.
+.RE
+.PP
+\-srcfiles \fI<files>\fR
+.RS 4
+List of files in
+\fIsrcdir\fR\&. If omitted, all files in
+\fIsrcdir\fR
+(which is a mandatory argument in this case) will be used\&.
+.RE
+.SH "OPTIONS FOR THE SIGNJAR COMMAND"
+.PP
+\-keyStore \fI<file>\fR
+.RS 4
+Keystore file name\&.
+.RE
+.PP
+\-alias
+.RS 4
+Alias for the key\&.
+.RE
+.PP
+\-storePass
+.RS 4
+Password to check integrity of the keystore or unlock the keystore
+.RE
+.PP
+\-keyPass
+.RS 4
+Password for recovering the key\&.
+.RE
+.PP
+\-storeType
+.RS 4
+Keystore type\&. The default value is "jks"\&.
+.RE
+.PP
+\-outdir \fI<dir>\fR
+.RS 4
+Name of the directory that will receive generated output files\&.
+.RE
+.PP
+\-srcdir \fI<dir>\fR
+.RS 4
+Base directory of the files to be signed\&.
+.RE
+.PP
+\-srcfiles \fI<files>\fR
+.RS 4
+List of files in
+\fIsrcdir\fR\&. If omitted, all files in
+\fIsrcdir\fR
+(which is a mandatory argument in this case) will be used\&.
+.RE
+.SH "OPTIONS FOR THE MAKEALL COMMAND"
+.PP
+\-appclass \fI<application class>\fR
+.RS 4
+Qualified name of the application class to be executed\&.
+.RE
+.PP
+\-preloader \fI<preloader class>\fR
+.RS 4
+Qualified name of the preloader class to be executed\&.
+.RE
+.PP
+\-classpath \fI<files>\fR
+.RS 4
+List of dependent JAR file names\&.
+.RE
+.PP
+\-name \fI<name>\fR
+.RS 4
+Name of the application\&.
+.RE
+.PP
+\-width \fI<width>\fR
+.RS 4
+Width of the application\&.
+.RE
+.PP
+\-height \fI<height>\fR
+.RS 4
+Height of the application\&.
+.RE
+.SH "NOTES"
+.sp
+.RS 4
+.ie n \{\
+\h'-04'\(bu\h'+03'\c
+.\}
+.el \{\
+.sp -1
+.IP \(bu 2.3
+.\}
+A
+\fI\-v \fRoption can be used with any task command to enable verbose output\&.
+.RE
+.sp
+.RS 4
+.ie n \{\
+\h'-04'\(bu\h'+03'\c
+.\}
+.el \{\
+.sp -1
+.IP \(bu 2.3
+.\}
+When the
+\fI\-srcdir\fR
+option is allowed in a command, it can be used more than once\&. If the
+\fI\-srcfiles\fR
+option is specified, the files named in the argument will be looked for in the location specified in the preceding
+\fIsrcdir\fR
+option\&. In case there is no
+\fI\-srcdir\fR
+preceding
+\fI\-srcfiles\fR, the directory where the javafxpackager command is executed will be used\&.
+.RE
+.SH "EXAMPLES"
+.PP
+\fBExample 1\fR, \-createjar Command Usage
+.RS 4
+.sp
+.if n \{\
+.RS 4
+.\}
+.nf
+javafxpackager \-createjar \-appclass package\&.ClassName
+  \-srcdir classes \-outdir out \-outfile outjar \-v
+.fi
+.if n \{\
+.RE
+.\}
+Packages the contents of the classes directory to outjar\&.jar, sets the application class to package\&.ClassName\&.
+.RE
+.PP
+\fBExample 2\fR, \-deploy Command Usage
+.RS 4
+.sp
+.if n \{\
+.RS 4
+.\}
+.nf
+javafxpackager \-deploy \-outdir outdir \-outfile outfile \-width 34 \-height 43 
+  \-name AppName \-appclass package\&.ClassName \-v \-srcdir compiled
+.fi
+.if n \{\
+.RE
+.\}
+Generates outfile\&.jnlp and the corresponding outfile\&.html files in outdir for application AppName, which is started by package\&.ClassName and has dimensions of 34 x 43\&.
+.RE
+.PP
+\fBExample 3\fR, \-makeall command Usage
+.RS 4
+.sp
+.if n \{\
+.RS 4
+.\}
+.nf
+javafxpackager \-makeall \-appclass brickbreaker\&.Main \-name BrickBreaker
+  \-width 600 \-height 600
+.fi
+.if n \{\
+.RE
+.\}
+Does all the packaging work including compilation: compile, createjar, deploy\&.
+.RE
+.PP
+\fBExample 4\fR, \-signJar Command Usage
+.RS 4
+.sp
+.if n \{\
+.RS 4
+.\}
+.nf
+javafxpackager \-signJar \-\-outdir dist \-keyStore sampleKeystore\&.jks 
+.fi
+.if n \{\
+.RE
+.\}
+.sp
+.if n \{\
+.RS 4
+.\}
+.nf
+    \-storePass **** \-alias javafx \-keypass **** \-srcdir dist
+.fi
+.if n \{\
+.RE
+.\}
+Signs all of the JAR files in the dist directory, attaches a certificate with the specified alias, keyStore and storePass, and puts the signed JAR files back into the dist directory\&.
+.RE

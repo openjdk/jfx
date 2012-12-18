@@ -1,0 +1,31 @@
+<antlib>
+    <macrodef name="init-ant">
+       <sequential>
+         <!-- This is not JavaFX version and should not be updated everytime! 
+              This is ant API version and need to be updated every time
+              ant task is updated. 
+              First number is updated if changes are not compatible. -->
+         <property name="javafx.ant.version" value="1.2"/>
+       </sequential>
+    </macrodef>
+
+    <typedef name="application"
+                 classname="com.sun.javafx.tools.ant.Application"/>
+    <typedef name="platform"
+                 classname="com.sun.javafx.tools.ant.Platform"/>
+    <typedef name="resources"
+                 classname="com.sun.javafx.tools.ant.Resources"/>
+    <typedef name="fileset"
+                 classname="com.sun.javafx.tools.ant.FileSet"/>
+    <typedef name="preferences"
+                 classname="com.sun.javafx.tools.ant.Preferences"/>
+
+    <taskdef name="jar"
+                 classname="com.sun.javafx.tools.ant.FXJar"/>
+    <taskdef name="deploy"
+                 classname="com.sun.javafx.tools.ant.DeployFXTask"/>
+    <taskdef name="signjar"
+                 classname="com.sun.javafx.tools.ant.FXSignJarTask"/>
+    <taskdef name="csstobin"
+                 classname="com.sun.javafx.tools.ant.CSSToBinTask"/>
+</antlib>
