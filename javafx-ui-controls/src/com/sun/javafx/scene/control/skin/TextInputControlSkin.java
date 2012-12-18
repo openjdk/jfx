@@ -33,6 +33,7 @@ import javafx.beans.Observable;
 import javafx.beans.binding.BooleanBinding;
 import javafx.beans.binding.ObjectBinding;
 import javafx.beans.property.BooleanProperty;
+import javafx.beans.property.BooleanPropertyBase;
 import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.SimpleBooleanProperty;
 import javafx.beans.value.ObservableBooleanValue;
@@ -221,6 +222,17 @@ public abstract class TextInputControlSkin<T extends TextInputControl, B extends
             return StyleableProperties.DISPLAY_CARET;
         }
     };
+
+    private BooleanProperty forwardBias = new SimpleBooleanProperty(this, "forwardBias", true);
+    public BooleanProperty forwardBiasProperty() {
+        return forwardBias;
+    }
+    public void setForwardBias(boolean isLeading) {
+        forwardBias.set(isLeading);
+    }
+    public boolean isForwardBias() {
+        return forwardBias.get();
+    }
 
     private BooleanProperty blink = new SimpleBooleanProperty(this, "blink", true);
     protected ObservableBooleanValue caretVisible;
@@ -530,6 +542,7 @@ public abstract class TextInputControlSkin<T extends TextInputControl, B extends
     protected abstract PathElement[] getRangeShape(int start, int end);
     protected abstract void addHighlight(List<? extends Node> nodes, int start);
     protected abstract void removeHighlight(List<? extends Node> nodes);
+    public abstract void nextCharacterVisually(boolean moveRight);
 
     private void createInputMethodAttributes(InputMethodHighlight highlight, int start, int end) {
         double minX = 0f;

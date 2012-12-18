@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project name="javafx-sg-common" default="jar" basedir=".">
+    <description>Builds, tests, and jars the closed version of the javafx-sg-common project.</description>
+    
+    <property name="runtime.dist.root.dir" value="../../rt-closed" />    
+    <property name="rt.dist.root.dir" value="../../rt" />    
+    <path id="javac.closed.classpath.path" path="
+        ${rt.dist.root.dir}/javafx-geom/dist/javafx-geom.jar:
+        ${rt.dist.root.dir}/javafx-logging/dist/javafx-logging.jar:
+        ${runtime.dist.root.dir}/decora-runtime/dist/decora-runtime.jar:
+        ${runtime.dist.root.dir}/webkit/dist/webkit.jar" />
+    <property name="javac.classpath" refid="javac.closed.classpath.path"/>
+    
+    <import file="../build-defs.xml"/>
+    <import file="build-common.xml"/>
+
+</project>

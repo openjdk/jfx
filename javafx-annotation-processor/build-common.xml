@@ -1,0 +1,97 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project name="javafx-annotation-processor-common" default="jar" basedir=".">
+
+  <import file="../build-defs.xml" />
+
+  <target name="jar" depends="init">
+    <mkdir dir="${build.classes.dir}" />
+    <!-- copy over the manifest stuff -->
+    <mkdir dir="${build.classes.dir}/META-INF" />
+    <mkdir dir="${build.classes.dir}/META-INF/services" />
+    <!--<echo file="${build.classes.dir}/META-INF/services/javax.annotation.processing.Processor">lombok.javac.apt.Processor</echo>-->
+    <build-project />
+  </target>
+
+  <target name="functional-test" depends="clean, jar">
+    <build-test-client />
+    <run-tests-on-client />
+  </target>
+  
+  <macrodef name="build-test-client">
+    <sequential>
+      <recreate dir="${test.projects.client.build.classes.dir}" />
+      <recreate dir="${test.projects.client.dist.dir}" />
+      <javac compiler="modern"
+             fork="true"
+             destdir="${test.projects.client.build.classes.dir}"
+             debug="${javac.debug}"
+             debuglevel="${javac.debuglevel}"
+             deprecation="${javac.deprecation}"
+             source="${javac.source}"
+             target="${javac.target}"
+             includeantruntime="false"
+             encoding="${source.encoding}"
+             sourcepath="">
+        <src>
+          <pathelement location="${test.projects.client.src.dir}" />
+        </src>
+        <classpath>
+          <path path="${test.projects.client.javac.classpath}" />
+        </classpath>
+        <compilerarg line="${processor.flag} ${javac.compilerargs}"/>
+      </javac>
+      <jar destfile="${test.projects.client.dist.dir}/${test.projects.client.jar.file}">
+        <fileset dir="${test.projects.client.build.classes.dir}" />
+      </jar>
+    </sequential> 
+  </macrodef>
+  
+  <macrodef name="run-tests-on-client">
+    <sequential>
+      <recreate dir="${test.projects.test.build.classes.dir}" />
+      <recreate dir="${test.projects.test.build.reports.dir}" />
+      <javac compiler="modern"
+             fork="true"
+             destdir="${test.projects.test.build.classes.dir}"
+             debug="${javac.debug}"
+             debuglevel="${javac.debuglevel}"
+             deprecation="${javac.deprecation}"
+             source="${javac.source}"
+             target="${javac.target}"
+             includeantruntime="false"
+             encoding="${source.encoding}"
+             sourcepath="">
+        <src>
+          <pathelement location="${test.projects.test.src.dir}" />
+        </src>
+        <classpath>
+          <path path="${test.projects.test.javac.classpath}" />
+        </classpath>
+        <compilerarg line="${processor.flag} ${javac.compilerargs}"/>
+      </javac>
+      <junit forkmode="perBatch"
+             printsummary="yes"
+             haltonfailure="yes"
+             haltonerror="yes">
+        <classpath>
+          <pathelement location="${test.projects.test.build.classes.dir}" />
+          <path path="${test.projects.test.javac.classpath}" />
+        </classpath>
+        <formatter type="plain" />
+        <formatter type="xml" />
+        <batchtest fork="yes" todir="${test.projects.test.build.reports.dir}">
+          <fileset dir="${test.projects.test.build.classes.dir}" includes="**/*Test.class" />
+        </batchtest>
+      </junit>
+    </sequential> 
+  </macrodef>
+
+  <macrodef name="recreate">
+    <attribute name="dir" />
+    <sequential>
+      <delete dir="@{dir}" />
+      <mkdir  dir="@{dir}" />
+    </sequential>
+  </macrodef>
+    
+</project>

@@ -29,6 +29,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
+import javafx.beans.property.DoubleProperty;
 import javafx.beans.property.ObjectProperty;
 import javafx.beans.value.WritableValue;
 import javafx.geometry.HPos;
@@ -38,9 +39,11 @@ import javafx.geometry.VPos;
 import javafx.scene.Node;
 import javafx.scene.layout.Pane;
 
+import com.sun.javafx.css.StyleableDoubleProperty;
 import com.sun.javafx.css.StyleableObjectProperty;
 import com.sun.javafx.css.CssMetaData;
 import com.sun.javafx.css.converters.EnumConverter;
+import com.sun.javafx.css.converters.SizeConverter;
 import com.sun.javafx.geom.BaseBounds;
 import com.sun.javafx.geom.Point2D;
 import com.sun.javafx.geom.RectBounds;
@@ -361,6 +364,43 @@ public class TextFlow extends Pane {
         return textAlignment;
     }
 
+    /**
+     * Defines the vertical space in pixel between lines.
+     *
+     * @defaultValue 0
+     *
+     * @since 8.0
+     */
+    private DoubleProperty lineSpacing;
+
+    public final void setLineSpacing(double spacing) {
+        lineSpacingProperty().set(spacing);
+    }
+
+    public final double getLineSpacing() {
+        return lineSpacing == null ? 0 : lineSpacing.get();
+    }
+
+    public final DoubleProperty lineSpacingProperty() {
+        if (lineSpacing == null) {
+            lineSpacing =
+                new StyleableDoubleProperty(0) {
+                @Override public Object getBean() { return TextFlow.this; }
+                @Override public String getName() { return "lineSpacing"; }
+                @Override public CssMetaData getCssMetaData() {
+                    return StyleableProperties.LINE_SPACING;
+                }
+                @Override public void invalidated() {
+                    TextLayout layout = getTextLayout();
+                    if (layout.setLineSpacing((float)get())) {
+                        requestLayout();
+                    }
+                }
+            };
+        }
+        return lineSpacing;
+    }
+
     @Override public final double getBaselineOffset() {
         Insets insets = getInsets();
         double top = snapSpace(insets.getTop());
@@ -385,23 +425,34 @@ public class TextFlow extends Pane {
                  new EnumConverter<TextAlignment>(TextAlignment.class),
                  TextAlignment.LEFT) {
 
-            @Override
-            public boolean isSettable(TextFlow node) {
-                return node.textAlignment == null ||
-                      !node.textAlignment.isBound();
+            @Override public boolean isSettable(TextFlow node) {
+                return node.textAlignment == null || !node.textAlignment.isBound();
             }
 
-            @Override
-            public WritableValue<TextAlignment> getWritableValue(TextFlow node) {
+            @Override public WritableValue<TextAlignment> getWritableValue(TextFlow node) {
                 return node.textAlignmentProperty();
             }
          };
 
-         private static final List<CssMetaData> STYLEABLES;
+         private static final
+             CssMetaData<TextFlow,Number> LINE_SPACING =
+                 new CssMetaData<TextFlow,Number>("-fx-line-spacing",
+                 SizeConverter.getInstance(), 0) {
+
+            @Override public boolean isSettable(TextFlow node) {
+                return node.lineSpacing == null || !node.lineSpacing.isBound();
+            }
+
+            @Override public WritableValue<Number> getWritableValue(TextFlow node) {
+                return node.lineSpacingProperty();
+            }
+         };
+
+	 private static final List<CssMetaData> STYLEABLES;
          static {
             final List<CssMetaData> styleables =
                 new ArrayList<CssMetaData>(Pane.getClassCssMetaData());
-            Collections.addAll(styleables, TEXT_ALIGNMENT);
+            Collections.addAll(styleables, TEXT_ALIGNMENT, LINE_SPACING);
             STYLEABLES = Collections.unmodifiableList(styleables);
          }
     }

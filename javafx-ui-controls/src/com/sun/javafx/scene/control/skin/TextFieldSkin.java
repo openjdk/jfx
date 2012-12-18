@@ -33,7 +33,6 @@ import javafx.beans.binding.IntegerBinding;
 import javafx.beans.binding.ObjectBinding;
 import javafx.beans.binding.StringBinding;
 import javafx.beans.property.BooleanProperty;
-import javafx.beans.property.BooleanPropertyBase;
 import javafx.beans.property.DoubleProperty;
 import javafx.beans.property.SimpleDoubleProperty;
 import javafx.beans.value.ChangeListener;
@@ -56,6 +55,7 @@ import javafx.scene.input.MouseEvent;
 import javafx.scene.layout.Pane;
 import javafx.scene.paint.Color;
 import javafx.scene.paint.Paint;
+import javafx.scene.shape.MoveTo;
 import javafx.scene.shape.Path;
 import javafx.scene.shape.PathElement;
 import javafx.scene.shape.Rectangle;
@@ -110,23 +110,6 @@ public class TextFieldSkin extends TextInputControlSkin<TextField, TextFieldBeha
     private ObservableBooleanValue usePromptText;
     private DoubleProperty textTranslateX = new SimpleDoubleProperty(this, "textTranslateX");
     private double caretWidth;
-    private BooleanProperty forwardBias = new BooleanPropertyBase() {
-        @Override public Object getBean() {
-            return TextFieldSkin.this;
-        }
-
-        @Override public String getName() {
-            return "forwardBias";
-        }
-
-        @Override protected void invalidated() {
-            if (getWidth() > 0) {
-                // RT-25479: Disable caret bias handling for now.
-                // textNode.impl_caretBiasProperty().set(get());
-                updateCaretOff();
-            }
-        }
-    };
 
     /**
      * Function to translate the text control's "dot" into the caret
@@ -161,10 +144,19 @@ public class TextFieldSkin extends TextInputControlSkin<TextField, TextFieldBeha
             @Override
             public void changed(ObservableValue<? extends Number> observable, Number oldValue, Number newValue) {
                 if (getWidth() > 0) {
-                    textNode.impl_caretPositionProperty().set(translateCaretPosition(textField.getCaretPosition()));
-                    if (!forwardBias.get()) {
-                        forwardBias.set(true);
+                    updateTextNodeCaretPos();
+                    if (!isForwardBias()) {
+                        setForwardBias(true);
                     }
+                    updateCaretOff();
+                }
+            }
+        });
+
+        forwardBiasProperty().addListener(new InvalidationListener() {
+            @Override public void invalidated(Observable observable) {
+                if (getWidth() > 0) {
+                    updateTextNodeCaretPos();
                     updateCaretOff();
                 }
             }
@@ -218,7 +210,7 @@ public class TextFieldSkin extends TextInputControlSkin<TextField, TextFieldBeha
             }
         });
         // updated by listener on caretPosition to ensure order
-        textNode.impl_caretPositionProperty().set(textField.getCaretPosition());
+        updateTextNodeCaretPos();
         textField.selectionProperty().addListener(new InvalidationListener() {
             @Override public void invalidated(Observable observable) {
                 updateSelection();
@@ -246,7 +238,7 @@ public class TextFieldSkin extends TextInputControlSkin<TextField, TextFieldBeha
         caretPath.layoutXProperty().bind(textTranslateX);
         textNode.impl_caretShapeProperty().addListener(new InvalidationListener() {
             @Override public void invalidated(Observable observable) {
-                textNode.impl_caretPositionProperty().set(translateCaretPosition(textField.getCaretPosition()));
+                updateTextNodeCaretPos();
                 caretPath.getElements().setAll(textNode.impl_caretShapeProperty().get());
                 caretWidth = Math.round(caretPath.getLayoutBounds().getWidth());
             }
@@ -385,6 +377,15 @@ public class TextFieldSkin extends TextInputControlSkin<TextField, TextFieldBeha
                 }
             });
         }
+    }
+
+    private void updateTextNodeCaretPos() {
+        if (isForwardBias()) {
+            textNode.setImpl_caretPosition(getSkinnable().getCaretPosition());
+        } else {
+            textNode.setImpl_caretPosition(getSkinnable().getCaretPosition() - 1);
+        }
+        textNode.impl_caretBiasProperty().set(isForwardBias());
     }
 
     private void createPromptNode() {
@@ -639,23 +640,9 @@ public class TextFieldSkin extends TextInputControlSkin<TextField, TextFieldBeha
         return textNode.impl_hitTestChar(translateCaretPosition(p));
     }
 
-    public void setForwardBias(boolean isLeading) {
-        forwardBias.set(isLeading);
-    }
-
     public void positionCaret(HitInfo hit, boolean select) {
 //         int pos = hit.getCharIndex();
         int pos = hit.getInsertionIndex();
-        boolean isNewLine =
-               (pos > 0 &&
-                pos < getSkinnable().getLength() &&
-                maskText(getSkinnable().getText()).codePointAt(pos-1) == 0x0a);
-
-        // special handling for a new line
-        if (!hit.isLeading() && isNewLine) {
-            hit.setLeading(true);
-            pos -= 1;
-        }
 
         if (select) {
             getSkinnable().selectPositionCaret(pos);
@@ -710,6 +697,26 @@ public class TextFieldSkin extends TextInputControlSkin<TextField, TextFieldBeha
 
     @Override protected void removeHighlight(List<? extends Node> nodes) {
         textGroup.getChildren().removeAll(nodes);
+    }
+
+    @Override public void nextCharacterVisually(boolean moveRight) {
+        Bounds caretBounds = caretPath.getLayoutBounds();
+        if (caretPath.getElements().size() == 4) {
+            // The caret is split
+            // TODO: Find a better way to get the primary caret position
+            // instead of depending on the internal implementation.
+            // See RT-25465.
+            caretBounds = new Path(caretPath.getElements().get(0), caretPath.getElements().get(1)).getLayoutBounds();
+        }
+        double hitX = moveRight ? caretBounds.getMaxX() : caretBounds.getMinX();
+        double hitY = (caretBounds.getMinY() + caretBounds.getMaxY()) / 2;
+        HitInfo hit = textNode.impl_hitTestChar(translateCaretPosition(new Point2D(hitX, hitY)));
+        Path charShape = new Path(textNode.impl_getRangeShape(hit.getCharIndex(), hit.getCharIndex() + 1));
+        if ((moveRight && charShape.getLayoutBounds().getMaxX() > caretBounds.getMaxX()) ||
+            (!moveRight && charShape.getLayoutBounds().getMinX() < caretBounds.getMinX())) {
+            hit.setLeading(!hit.isLeading());
+        }
+        positionCaret(hit, false);
     }
 
     @Override protected void layoutChildren(final double x, final double y,

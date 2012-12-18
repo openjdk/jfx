@@ -424,7 +424,7 @@ public abstract class TextInputControl extends Control {
         if (getCaretPosition() > 0 && getLength() > 0) {
             // because the anchor stays put, by moving the caret to the left
             // we ensure that a selection is registered and that it is correct
-            selectRange(getAnchor(), getCaretPosition() - 1);
+            selectRange(getAnchor(), Character.offsetByCodePoints(getText(), getCaretPosition(), -1));
         }
     }
 
@@ -436,7 +436,7 @@ public abstract class TextInputControl extends Control {
     public void selectForward() {
         final int textLength = getLength();
         if (textLength > 0 && getCaretPosition() < textLength) {
-            selectRange(getAnchor(), getCaretPosition() + 1);
+            selectRange(getAnchor(), Character.offsetByCodePoints(getText(), getCaretPosition(), 1));
         }
     }
 
@@ -665,25 +665,9 @@ public abstract class TextInputControl extends Control {
                 // Typically you'd only be removing a single character, but
                 // in some cases you must remove two depending on the unicode
                 // characters
-                int delChars = 1;
-
-                // only have to deal with potentially removing two chars if the
-                // caret is greater than 1
-                if (dot > 1) {
-                    // get the two chars proceeding the caret
-                    int c0 = text.codePointAt(dot - 2);
-                    int c1 = text.codePointAt(dot - 1);
-                    if (c0 >= 0xD800 && c0 <= 0xDBFF &&
-                        c1 >= 0xDC00 && c1 <= 0xDFFF) {
-                        delChars = 2;
-                    }
-                }
-
-                // remove either 1 or 2 chars
+                int p = Character.offsetByCodePoints(text, dot, -1);
                 doNotAdjustCaret = true;
-                int pos = dot; // necessary in case that pos is end of line
-                deleteText(dot - delChars, dot);
-                int p = pos - delChars;
+                deleteText(p, dot);
                 selectRange(p, p);
                 failed = false;
                 doNotAdjustCaret = false;
@@ -714,24 +698,10 @@ public abstract class TextInputControl extends Control {
                 // Typically you'd only be removing a single character, but
                 // in some cases you must remove two depending on the unicode
                 // characters
-                int delChars = 1;
-
-                // only have to deal with potentially removing two chars if the
-                // caret is greater than 1
-                if (dot < text.length() - 2) {
-                    // get the two chars proceeding the caret
-                    int c0 = text.codePointAt(dot + 2);
-                    int c1 = text.codePointAt(dot + 1);
-                    if (c0 >= 0xD800 && c0 <= 0xDBFF &&
-                        c1 >= 0xDC00 && c1 <= 0xDFFF) {
-                        delChars = 2;
-                    }
-                }
-
-                // remove either 1 or 2 chars
+                int p = Character.offsetByCodePoints(text, dot, 1);
                 doNotAdjustCaret = true;
                 //setText(text.substring(0, dot) + text.substring(dot + delChars));
-                deleteText(dot, dot + delChars);
+                deleteText(dot, p);
                 failed = false;
                 doNotAdjustCaret = false;
             }
@@ -754,7 +724,7 @@ public abstract class TextInputControl extends Control {
             int pos = Math.max(dot, mark);
             selectRange(pos, pos);
         } else if (dot < textLength && textLength > 0) {
-            int pos = dot + 1;
+            int pos = Character.offsetByCodePoints(getText(), dot, 1);
             selectRange(pos, pos);
         }
         deselect();
@@ -780,7 +750,7 @@ public abstract class TextInputControl extends Control {
             int pos = Math.min(dot, mark);
             selectRange(pos, pos);
         } else if (dot > 0 && textLength > 0) {
-            int pos = dot - 1;
+            int pos = Character.offsetByCodePoints(getText(), dot, -1);
             selectRange(pos, pos);
         }
         deselect();

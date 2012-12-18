@@ -469,6 +469,35 @@ public abstract class Labeled extends Control {
     public final boolean isUnderline() { return underline == null ? false : underline.getValue(); }
 
     /**
+     * Specifies the space in pixel between lines.
+     */
+    public final DoubleProperty lineSpacingProperty() {
+        if (lineSpacing == null) {
+            lineSpacing = new StyleableDoubleProperty(0) {
+
+                @Override
+                public CssMetaData getCssMetaData() {
+                    return StyleableProperties.LINE_SPACING;
+                }
+
+                @Override
+                public Object getBean() {
+                    return Labeled.this;
+                }
+
+                @Override
+                public String getName() {
+                    return "lineSpacing";
+                }
+            };
+        }
+        return lineSpacing;
+    }
+    private DoubleProperty lineSpacing;
+    public final void setLineSpacing(double value) { lineSpacingProperty().setValue(value); }
+    public final double getLineSpacing() { return lineSpacing == null ? 0 : lineSpacing.getValue(); }
+
+    /**
      * Specifies the positioning of the graphic relative to the text.
      */
     public final ObjectProperty<ContentDisplay> contentDisplayProperty() {
@@ -812,6 +841,19 @@ public abstract class Labeled extends Control {
         
         private static final CssMetaData<Labeled,ContentDisplay> CONTENT_DISPLAY = 
             new CssMetaData<Labeled,ContentDisplay>("-fx-content-display",
+                SizeConverter.getInstance(), 0) {
+
+            @Override
+            public boolean isSettable(Labeled n) {
+                return n.lineSpacing == null || !n.lineSpacing.isBound();
+            }
+
+            @Override
+            public WritableValue<Number> getWritableValue(Labeled n) {
+                return n.lineSpacingProperty();
+            }
+        };
+
                 new EnumConverter<ContentDisplay>(ContentDisplay.class), 
                 ContentDisplay.LEFT) {
 
@@ -870,6 +912,7 @@ public abstract class Labeled extends Control {
                 WRAP_TEXT,
                 GRAPHIC,
                 UNDERLINE,
+                LINE_SPACING,
                 CONTENT_DISPLAY,
                 LABEL_PADDING,
                 GRAPHIC_TEXT_GAP
