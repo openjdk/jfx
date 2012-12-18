@@ -137,7 +137,7 @@ public abstract class TableViewSkinBase<S, C extends Control, B extends Behavior
         columnReorderOverlay.setVisible(false);
         columnReorderOverlay.setManaged(false);
 
-        tableHeaderRow = new TableHeaderRow(this);
+        tableHeaderRow = createTableHeaderRow();
         tableHeaderRow.setColumnReorderLine(columnReorderLine);
         tableHeaderRow.setTablePadding(getInsets());
         tableHeaderRow.setFocusTraversable(false);
@@ -208,6 +208,9 @@ public abstract class TableViewSkinBase<S, C extends Control, B extends Behavior
         }
     }
     
+    protected TableHeaderRow createTableHeaderRow() {
+        return new TableHeaderRow(this);
+    } 
     
     
     /***************************************************************************
