@@ -295,7 +295,7 @@ public class TabPaneBehavior extends BehaviorBase<TabPane> {
     }
 
     public boolean canCloseTab(Tab tab) {
-        Event event = new Event(tab,tab,Tab.TAB_CLOSE_REQUEST);
+        Event event = new Event(tab,tab,Tab.TAB_CLOSE_REQUEST_EVENT);
         Event.fireEvent(tab, event);
         return ! event.isConsumed();
     }
