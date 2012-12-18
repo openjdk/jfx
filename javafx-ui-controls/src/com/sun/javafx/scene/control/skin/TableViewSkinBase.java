@@ -63,6 +63,9 @@ import javafx.scene.control.TableSelectionModel;
 
 public abstract class TableViewSkinBase<S, C extends Control, B extends BehaviorBase<C>, I extends IndexedCell> extends VirtualContainerBase<C, B, I> {
     
+    public static final String REFRESH = "tableRefreshKey";
+    public static final String RECREATE = "tableRecreateKey";
+    
 //    protected abstract void requestControlFocus(); // tableView.requestFocus();
     protected abstract TableSelectionModel getSelectionModel(); // tableView.getSelectionModel()
     protected abstract TableFocusModel getFocusModel(); // tableView.getSelectionModel()
@@ -165,9 +168,14 @@ public abstract class TableViewSkinBase<S, C extends Control, B extends Behavior
 
         control.getProperties().addListener(new MapChangeListener<Object, Object>() {
             @Override public void onChanged(MapChangeListener.Change<? extends Object, ? extends Object> c) {
-                if (c.wasAdded() && "TableView.refresh".equals(c.getKey())) {
+                if (! c.wasAdded()) return;
+                if (REFRESH.equals(c.getKey())) {
                     refreshView();
-                    control.getProperties().remove("TableView.refresh");
+                    control.getProperties().remove(REFRESH);
+                } else if (RECREATE.equals(c.getKey())) {
+                    forceCellRecreation = true;
+                    refreshView();
+                    control.getProperties().remove(RECREATE);
                 }
             }
         });
@@ -633,6 +641,8 @@ public abstract class TableViewSkinBase<S, C extends Control, B extends Behavior
         flow.reconfigureCells();
     }
 
+    private boolean forceCellRecreation = false;
+    
     private void updateRowCount() {
         updatePlaceholderRegionVisibility();
 
@@ -644,11 +654,12 @@ public abstract class TableViewSkinBase<S, C extends Control, B extends Behavior
         // optimised in the future when time permits.
         flow.setCellCount(newCount);
         
-        if (newCount != oldCount) {
+        if (forceCellRecreation || newCount != oldCount) {
             // FIXME updateRowCount is called _a lot_. Perhaps we can make recreateCells
             // smarter. Imagine if items has one million items added - do we really
             // need to recreateCells a million times?
             flow.recreateCells();
+            forceCellRecreation = false;
         } else {
             flow.reconfigureCells();
         }

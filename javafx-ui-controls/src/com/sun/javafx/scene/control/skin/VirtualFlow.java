@@ -761,6 +761,7 @@ public class VirtualFlow extends Region {
             releaseCell(accumCell);
 //            accumCell = null;
 //            accumCellParent.getChildren().clear();
+            sheet.getChildren().clear();
             cells.clear();
             pile.clear();
             needsRecreateCells = false;
