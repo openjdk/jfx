@@ -863,12 +863,14 @@ final public class StyleManager {
             }
 
             // load any fonts from @font-face
-            faceLoop: for(FontFace fontFace: stylesheet.getFontFaces()) {
-                for(FontFace.FontFaceSrc src: fontFace.getSources()) {
-                    if (src.getType() == FontFace.FontFaceSrcType.URL) {
-                        Font loadedFont = Font.loadFont(src.getSrc(),10);
-                        getLogger().info("Loaded @font-face font [" + (loadedFont == null ? "null" : loadedFont.getName()) + "]");
-                        continue faceLoop;
+            if (stylesheet != null) {
+                faceLoop: for(FontFace fontFace: stylesheet.getFontFaces()) {
+                    for(FontFace.FontFaceSrc src: fontFace.getSources()) {
+                        if (src.getType() == FontFace.FontFaceSrcType.URL) {
+                            Font loadedFont = Font.loadFont(src.getSrc(),10);
+                            getLogger().info("Loaded @font-face font [" + (loadedFont == null ? "null" : loadedFont.getName()) + "]");
+                            continue faceLoop;
+                        }
                     }
                 }
             }
