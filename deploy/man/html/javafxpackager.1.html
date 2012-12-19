@@ -1,0 +1,201 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+    "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html lang="en-US" xmlns="http://www.w3.org/1999/xhtml" xml:lang=
+"en-US">
+<head>
+<title>javafxpackager Command Line</title>
+<meta http-equiv="Content-Type" content=
+"text/html; charset=utf-8" />
+<meta name="collection" content="reference" />
+<meta name="copyright" content="2008, 2012"/>
+</head>
+
+<body>
+<h1>javafxpackager Command Line
+</h1>
+<h2>NAME</h2>
+<p><code>javafxpackager</code> - A tool with commands that perform tasks related to
+  packaging and signing JavaFX applications.</p>
+<h2>SYNOPSIS</h2>
+<p><code>javafxpackager -taskcommand [-options]</code></p>
+<p>where <code>-taskcommand</code> is one of the following:</p>
+<p><code>-createjar</code></p>
+<p>Produces a JAR archive according to other parameters.</p>
+<p><code>-deploy</code></p>
+<p>Generates the JNLP and HTML files according to other parameters.</p>
+<p><code>-createbss</code></p>
+<p>Converts CSS files into binary form.</p>
+<p><code>-signJar</code></p>
+<p>Signs JAR file(s) with a provided certificate.</p>
+<p><code>-makeall</code></p>
+<p>Performs compilation, createjar, and deploy steps as one call, with
+  most arguments predefined. The source files must be located in a
+  folder called src, and the resulting files (JAR, JNLP, HTML) are
+  put in a folder called dist. This command can only be configured in
+  a minimal way and is as automated as possible.</p>
+<h2>OPTIONS FOR THE CREATEJAR COMMAND</h2>
+<p><code>-appclass &lt;application class&gt;</code></p>
+<p>Qualified name of the application class to be executed.</p>
+<p><code>-preloader &lt;preloader class&gt;</code></p>
+<p>Qualified name of the preloader class to be executed.</p>
+<p><code>-paramfile &lt;file&gt;</code></p>
+<p>A properties file with default named application parameters.</p>
+<p><code>-argument arg</code></p>
+<p>An unnamed argument to be inserted into the JNLP file as an
+<code>&lt;fx:argument&gt;</code> element.</p>
+<p><code>-classpath &lt;files&gt;</code></p>
+<p>List of dependent JAR file names.</p>
+<p><code>-manifestAttrs &lt;manifest attributes&gt;</code></p>
+<p>List of additional manifest attributes. Syntax:</p>
+<p><code>&quot;name1=value1,name2=value2,name3=value3&quot;</code></p>
+<p><code>-noembedlauncher</code></p>
+<p>If present, the packager will not add the JavaFX launcher classes
+  to the JAR file.</p>
+<p><code>-nocss2bin</code></p>
+<p>The packager will not convert CSS files to binary form before
+  copying to JAR.</p>
+<p><code>-runtimeversion &lt;version&gt;</code></p>
+<p>Version of the required JavaFX Runtime.</p>
+<p><code>-outdir &lt;dir&gt;</code></p>
+<p>Name of the directory that will receive generated output files.</p>
+<p><code>-outfile &lt;filename&gt;</code></p>
+<p>Name (without the extension) of the file that will be generated.</p>
+<p><code>-srcdir &lt;dir&gt;</code></p>
+<p>Base directory of the files to package.</p>
+<p><code>-srcfiles &lt;files&gt;</code></p>
+<p>List of files in srcdir. If omitted, all files in <code>srcdir</code> (which is a mandatory 
+argument in this case) will be used.</p>
+<h2>OPTIONS FOR THE DEPLOY COMMAND</h2>
+<p><code>-title &lt;title&gt;</code></p>
+<p>Title of the application.</p>
+<p><code>-vendor &lt;vendor&gt;</code></p>
+<p>Vendor of the application.</p>
+<p><code>-description &lt;description&gt;</code></p>
+<p>Description of the application.</p>
+<p><code>-appclass &lt;application class&gt;</code></p>
+<p>Qualified name of the application class to be executed.</p>
+<p><code>-preloader &lt;preloader class&gt;</code></p>
+<p>Qualified name of the preloader class to be executed.</p>
+<p><code>-paramfile &lt;file&gt;</code></p>
+<p>Properties file with default named application parameters.</p>
+<p><code>-htmlparamfile &lt;file&gt;</code></p>
+<p>Properties file with parameters for the resulting application when
+  it is run in the browser.</p>
+<p><code>-width &lt;width&gt;</code></p>
+<p>Width of the application.</p>
+<p><code>-height &lt;height&gt;</code></p>
+<p>Height of the application.</p>
+<p><code>-native &lt;type&gt;</code></p>
+<p>Generate self-contained application bundles (if possible). If type
+           is specified, then only a bundle of this type is created. List of
+           supported types includes: installer, image, exe, msi, dmg, rpm,
+           deb.</p>
+<p><code>-name &lt;name&gt;</code></p>
+<p>Name of the application.</p>
+<p><code>-embedjnlp</code></p>
+<p>If present, the JNLP file will be embedded in the HTML document.</p>
+<p><code>-embedCertificates</code></p>
+<p>If present, the certificates will be embedded in the JNLP file.</p>
+<p><code>-allpermissions</code></p>
+<p>If present, the application will require all security permissions
+  in the JNLP file.</p>
+<p><code>-updatemode &lt;updatemode&gt;</code></p>
+<p>Sets the update mode for the JNLP file.</p>
+<p><code>-isExtension</code></p>
+<p>If present, the srcfiles are treated as extensions.</p>
+<p><code>-callbacks</code></p>
+<p>Specifies user callback methods in generated HTML. The format is
+  the following:</p>
+<p><code>&quot;name1:value1,name2:value2,...&quot;</code></p>
+<p><code>-templateInFilename</code></p>
+<p>Name of the HTML template file. Placeholders are in the following
+  form:<br />
+<code>#XXXX.YYYY(APPID)#</code></p>
+<p><code>-templateOutFilename</code></p>
+<p>Name of the HTML file that will be generated from the template.</p>
+<p><code>-templateId</code></p>
+<p>Application ID of the application for template processing.</p>
+<p><code>-argument arg</code></p>
+<p>An unnamed argument to be inserted into an &lt;fx:argument&gt; element in
+  the JNLP file.</p>
+<p><code>-outdir &lt;dir&gt;</code></p>
+<p>Name of the directory that will receive generated output files.</p>
+<p><code>-outfile &lt;filename&gt;</code></p>
+<p>Name (without the extension) of the file that will be generated.</p>
+<p><code>-srcdir &lt;dir&gt;</code></p>
+<p>Base directory of the files to package.</p>
+<p><code>-srcfiles &lt;files&gt;</code></p>
+<p>List of files in srcdir. If omitted, all files in <code>srcdir</code> (which is a mandatory argument in this case) will be used.</p>
+<h2>OPTIONS FOR THE CREATEBSS COMMAND</h2>
+<p><code>-outdir &lt;dir&gt;</code></p>
+<p>Name of the directory that will receive generated output files.</p>
+<p><code>-srcdir &lt;dir&gt;</code></p>
+<p>Base directory of the files to package.</p>
+<p><code>-srcfiles &lt;files&gt;</code></p>
+<p>List of files in srcdir. If omitted, all files in <code>srcdir</code> (which is a mandatory argument in this case) will be used.</p>
+<h2>OPTIONS FOR THE SIGNJAR COMMAND</h2>
+<p><code>-keyStore &lt;file&gt;</code></p>
+<p>Keystore file name.</p>
+<p><code>-alias</code></p>
+<p>Alias for the key.</p>
+<p><code>-storePass</code></p>
+<p>Password to check integrity of the keystore or unlock the keystore</p>
+<p><code>-keyPass</code></p>
+<p>Password for recovering the key.</p>
+<p><code>-storeType</code></p>
+<p>Keystore type. The default value is &quot;jks&quot;.</p>
+<p><code>-outdir &lt;dir&gt;</code></p>
+<p>Name of the directory that will receive generated output files.</p>
+<p><code>-srcdir &lt;dir&gt;</code></p>
+<p>Base directory of the files to be signed.</p>
+<p><code>-srcfiles &lt;files&gt;</code></p>
+<p>List of files in srcdir. If omitted, all files in <code>srcdir</code> (which is a mandatory argument in this case) will be used.</p>
+<h2>OPTIONS FOR THE MAKEALL COMMAND</h2>
+<p><code>-appclass &lt;application class&gt;</code></p>
+<p>Qualified name of the application class to be executed.</p>
+<p><code>-preloader &lt;preloader class&gt;</code></p>
+<p>Qualified name of the preloader class to be executed.</p>
+<p><code>-classpath &lt;files&gt;</code></p>
+<p>List of dependent JAR file names.</p>
+<p><code>-name &lt;name&gt;</code></p>
+<p>Name of the application.</p>
+<p><code>-width &lt;width&gt;</code></p>
+<p>Width of the application.</p>
+<p><code>-height &lt;height&gt;</code></p>
+<p>Height of the application.</p>
+<h2>NOTES</h2>
+<p>A <code>-v</code> option can be used with any task command to enable verbose
+  output.</p>
+<p>When the <code>-srcdir</code> option is allowed in a command, it can be used
+  more than once. If the <code>-srcfiles</code> option is specified, the files
+  named in the argument will be looked for in the location specified
+  in the preceding srcdir option. In case there is no <code>-srcdir</code>  preceding <code>-srcfiles</code>, the directory where the javafxpackager command
+  is executed will be used.</p>
+<h2>EXAMPLES</h2>
+<p>Example 1, -createjar Command Usage</p>
+<p><code>javafxpackager -createjar -appclass package.ClassName<br />
+  -srcdir classes -outdir out -outfile outjar -v</code></p>
+<p>Packages the contents of the classes directory to outjar.jar, sets
+  the application class to package.ClassName.<br /></p>
+<p> Example 2, -deploy Command Usage</p>
+<p><code>javafxpackager -deploy -outdir outdir -outfile outfile -width 34 -height 43<br />
+  -name AppName -appclass package.ClassName -v -srcdir compiled</code></p>
+<p>Generates outfile.jnlp and the corresponding outfile.html files in
+  outdir for application AppName, which is started by package.ClassName
+  and has dimensions of 34 x 43.<br /></p>
+<p>Example 3, -makeall command Usage</p>
+<p><code>javafxpackager -makeall -appclass brickbreaker.Main -name BrickBreaker<br />
+  -width 600 -height 600</code></p>
+<p>Does all the packaging work including compilation: compile,
+  createjar, deploy.<br /></p>
+<p>Example 4, -signJar Command Usage</p>
+<p><code>javafxpackager -signJar --outdir dist -keyStore sampleKeystore.jks<br />
+-storePass **** -alias javafx -keypass **** -srcdir dist</code></p>
+<p>Signs all of the JAR files in the dist directory, attaches a
+  certificate with the specified alias, keyStore and storePass, and
+  puts the signed JAR files back into the dist directory.</p>
+
+
+</body>
+</html>

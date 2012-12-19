@@ -9,8 +9,14 @@
 build/
 bin/
 dist/
+test.keystore
 ^webrev/
 ^webrev\.zip$
 nbproject/private/
 target/
 ^.*~$
+syntax: glob
+*.vcxproj.user
+*/Release/*
+*/Debug/*
+*~

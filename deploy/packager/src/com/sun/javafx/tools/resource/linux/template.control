@@ -1,0 +1,9 @@
+Package: APPLICATION_NAME
+Version: APPLICATION_VERSION
+Section: unknown
+Maintainer: APPLICATION_VENDOR
+Priority: optional
+Architecture: APPLICATION_ARCH
+Provides: APPLICATION_NAME  
+Description: APPLICATION_SUMMARY
+

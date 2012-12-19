@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<classpath>
+	<classpathentry kind="src" path="lib"/>
+	<classpathentry kind="src" path="javafx-deploy/src"/>
+	<classpathentry kind="src" path="javafx-launcher/src"/>
+	<classpathentry kind="src" path="packager/src"/>
+	<!--
+	<classpathentry kind="src" path="packager/test"/>
+	-->
+	<classpathentry kind="con" path="org.eclipse.jdt.junit.JUNIT_CONTAINER/4"/>
+	<classpathentry kind="con" path="org.eclipse.jdt.launching.JRE_CONTAINER"/>
+	<classpathentry combineaccessrules="false" kind="src" path="/rt"/>
+	<classpathentry combineaccessrules="false" kind="src" path="/rt-closed"/>
+	<classpathentry combineaccessrules="false" kind="src" path="/media"/>
+	<classpathentry combineaccessrules="false" kind="src" path="/webnode"/>
+	<classpathentry kind="output" path="bin"/>
+</classpath>

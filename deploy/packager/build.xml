@@ -1,0 +1,369 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+ * Copyright (c) 2011, 2012, Oracle and/or its affiliates. All rights reserved.
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ * This code is free software; you can redistribute it and/or modify it
+ * under the terms of the GNU General Public License version 2 only, as
+ * published by the Free Software Foundation.  Oracle designates this
+ * particular file as subject to the "Classpath" exception as provided
+ * by Oracle in the LICENSE file that accompanied this code.
+ *
+ * This code is distributed in the hope that it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+ * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
+ * version 2 for more details (a copy is included in the LICENSE file that
+ * accompanied this code).
+ *
+ * You should have received a copy of the GNU General Public License version
+ * 2 along with this work; if not, write to the Free Software Foundation,
+ * Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301 USA.
+ *
+ * Please contact Oracle, 500 Oracle Parkway, Redwood Shores, CA 94065 USA
+ * or visit www.oracle.com if you need additional information or have any
+ * questions.
+ *
+-->
+
+<project name="packager" default="default" basedir=".">
+    <description>Builds, tests, and runs the project packager.</description>
+    <import file="../../../build-defs.xml"/>
+    <import file="nbproject/build-impl.xml"/>
+    <property name="jfx.build.needs.visual.studio" value="true"/>
+    <property name="jfx.build.needs.make.utility" value="true"/>
+    <property name="winlauncher.dist.dir" value="dist"/>
+    <property name="winlauncher.build.dir" value="build"/>
+    <property name="winlauncher.makefile" value="Makefile"/>
+    <!--
+
+    There exist several targets which are by default empty and which can be
+    used for execution of your tasks. These targets are usually executed
+    before and after some main targets. They are:
+
+      -pre-init:                 called before initialization of project properties
+      -post-init:                called after initialization of project properties
+      -pre-compile:              called before javac compilation
+      -post-compile:             called after javac compilation
+      -pre-compile-single:       called before javac compilation of single file
+      -post-compile-single:      called after javac compilation of single file
+      -pre-compile-test:         called before javac compilation of JUnit tests
+      -post-compile-test:        called after javac compilation of JUnit tests
+      -pre-compile-test-single:  called before javac compilation of single JUnit test
+      -post-compile-test-single: called after javac compilation of single JUunit test
+      -pre-jar:                  called before JAR building
+      -post-jar:                 called after JAR building
+      -post-clean:               called after cleaning build products
+
+    (Targets beginning with '-' are not intended to be called on their own.)
+
+    Example of inserting an obfuscator after compilation could look like this:
+
+        <target name="-post-compile">
+            <obfuscate>
+                <fileset dir="${build.classes.dir}"/>
+            </obfuscate>
+        </target>
+
+    For list of available properties check the imported
+    nbproject/build-impl.xml file.
+
+
+    Another way to customize the build is by overriding existing main targets.
+    The targets of interest are:
+
+      -init-macrodef-javac:     defines macro for javac compilation
+      -init-macrodef-junit:     defines macro for junit execution
+      -init-macrodef-debug:     defines macro for class debugging
+      -init-macrodef-java:      defines macro for class execution
+      -do-jar-with-manifest:    JAR building (if you are using a manifest)
+      -do-jar-without-manifest: JAR building (if you are not using a manifest)
+      run:                      execution of project
+      -javadoc-build:           Javadoc generation
+      test-report:              JUnit report generation
+
+    An example of overriding the target for project execution could look like this:
+
+        <target name="run" depends="packager-impl.jar">
+            <exec dir="bin" executable="launcher.exe">
+                <arg file="${dist.jar}"/>
+            </exec>
+        </target>
+
+    Notice that the overridden target depends on the jar target and not only on
+    the compile target as the regular run target does. Again, for a list of available
+    properties which you can use, check the target you are overriding in the
+    nbproject/build-impl.xml file.
+
+    -->
+
+    <!-- location of external resources to be included into packager jar -->
+    <property name="deploy.packager.resources"
+              location="${basedir}/../build/deployfx"/>
+
+
+    <!-- hooks into netbeans ant files -->
+    <target name="-post-clean"              depends="myclean"/>
+    <target name="-pre-compile"             depends="mycompilestart"/>
+    <target name="-post-compile"            depends="mycompileend"/>
+    <target name="-do-jar-with-manifest"    depends="mymanifest"/>
+    <target name="-pre-jar"                 depends="myjarstart,mymanifest"/>
+    <target name="-post-jar"
+            depends="myjarendWin, myjarendMac, myjarendLinux">
+        <mkdir dir="${jfx.sdk.dir}/lib"/>
+        <mkdir dir="${jfx.sdk.dir}/bin"/>
+        <copy tofile="${jfx.sdk.dir}/lib/ant-javafx.jar"
+              file="../dist/packager.jar"/>
+        <antcall target="copy-javafxpackager-Win"/>
+        <antcall target="copy-javafxpackager-Mac"/>
+        <antcall target="copy-javafxpackager-Linux"/>
+    </target>
+
+    <target name="copy-javafxpackager-Win" if="isWindows">
+        <copy todir="${jfx.sdk.dir}/bin">
+           <fileset file="../dist/javafxpackager.exe" />
+        </copy>
+    </target>
+
+    <target name="copy-javafxpackager-Mac" if="isMacOSX">
+        <copy todir="${jfx.sdk.dir}/bin">
+           <fileset file="../dist/javafxpackager" />
+        </copy>
+        <chmod file="${jfx.sdk.dir}/bin/javafxpackager" perm="ugo+rx"/>
+    </target>
+
+    <target name="copy-javafxpackager-Linux" if="isLinux">
+        <copy todir="${jfx.sdk.dir}/bin">
+           <fileset file="../dist/javafxpackager" />
+        </copy>
+        <chmod file="${jfx.sdk.dir}/bin/javafxpackager" perm="ugo+rx"/>
+    </target>
+
+    <target name="myclean" depends="clean-win">
+        <delete dir="build"/>
+        <delete dir="dist"/>
+        <delete file="../dist/packager.jar"/>
+        <delete file="../dist/javafxpackager.exe"/>
+        <delete dir="../dist"/>
+        <delete file="${basedir}/test.keystore"/>
+    </target>
+
+    <target name="clean-dist">
+        <delete file="${jfx.sdk.dir}/lib/ant-javafx.jar"/>
+        <delete file="${jfx.sdk.dir}/bin/javafxpackager"/>
+        <delete file="${jfx.sdk.dir}/bin/javafxpackager.exe"/>
+    </target>
+
+    <target name="dist" depends="mycompilestart,-post-compile,mycompileend"/>
+
+    <target name="mycompilestart">
+    	<echo message="ant.home=${ant.home}"/>
+    	<mkdir dir="../dist"/>
+    </target>
+
+    <target name="mycompileend" depends="winlaunch,native-launchers" >
+        <copy todir="${build.classes.dir}">
+           <fileset dir="${deploy.packager.resources}"/>
+        </copy>
+
+        <!-- prepare test setup -->
+        <delete file="${basedir}/test.keystore"/>
+        <genkey alias="TestAlias" storepass="xyz123" keystore="test.keystore"
+           dname="CN=Deploy, OU=JavaFX Dev, O=Oracle, C=US"/>
+    </target>
+
+    <target name="native-launchers"
+            depends="launcher-mac,launcher-win,launcher-linux"/>
+
+    <!-- MAcro is borrowed from installers.
+         NOTE: This should be pushed to a higher level -->
+    <condition property="vs.build.arch" value="x64" else="Win32">
+        <equals arg1="${arch}" arg2="amd64"/>
+    </condition>
+    <macrodef name="do-vs-build-custom">
+        <!-- Does a Visual Studio project build -->
+        <attribute name="proj-dir"/>
+        <attribute name="build-type"/> <!-- Release" or "Debug" -->
+        <attribute name="build-arch"/> <!-- x64" or "Win32" -->
+        <attribute name="project"/>
+        <sequential>
+            <property file="${vs.properties}"/>
+            <property name="devenv.utility"  location="${windows.vs.DEVENVCMD}"/>
+            <echo message="STARTING: ${devenv.utility} @{proj-dir}"/>
+            <echo message="${devenv.utility} /build @{build-type}|@{build-arch} @{project}"/>
+            <exec executable="${devenv.utility}" failonerror="true"
+                  dir="@{proj-dir}">
+                <env key="VCINSTALLDIR"  value="${windows.vs.VCINSTALLDIR}"/>
+                <env key="VSINSTALLDIR"  value="${windows.vs.VSINSTALLDIR}"/>
+                <env key="DEVENVDIR"     value="${windows.vs.DEVENVDIR}"/>
+                <env key="MSVCDIR"       value="${windows.vs.MSVCDIR}"/>
+                <env key="INCLUDE"       value="${windows.vs.INCLUDE}"/>
+                <env key="LIB"           value="${windows.vs.LIB}"/>
+                <env key="LIBPATH"       value="${windows.vs.LIBPATH}"/>
+                <env key="PATH"          value="${platform.home}/bin;${windows.vs.PATH}"/>
+                <env key="CONF"          value="${build.conf}"/>
+                <env key="JAVA_HOME"     value="${platform.home}"/>
+                <env key="JDK_HOME"      value="${platform.home}"/>
+                <env key="WMSDK_DIR"     value="${wmsdk.path}"/>
+                <env key="FX_VERSION_FULL" value="${fx.version.full}"/>
+                <env key="FX_VERSION_COMMA" value="${fx.version.comma}"/>
+                <env key="FX_FAMILY_VERSION" value="${fx.family.version}"/>
+                <env key="SAMPLEVAR"
+                     value="${installer.build.env.SAMPLEVAR}"/>
+                <arg value="/build"/>
+                <arg value="@{build-type}|@{build-arch}"/>
+                <arg value="@{project}"/>
+            </exec>
+            <echo message="FINISHED: proj-dir @{proj-dir}"/>
+        </sequential>
+    </macrodef>
+
+    <!-- depend on "init" to ensure project properties are loaded -->
+    <target name="launcher-win" if="isWindows" depends="init">
+        <do-vs-build-custom
+            proj-dir="native/windows"
+            build-type="Release"
+            build-arch="${vs.build.arch}"
+            project="IconSwap.vcxproj"/>
+        <copy file="native/windows/Release/IconSwap.exe"
+              todir="${build.classes.dir}/com/sun/javafx/tools/resource/windows"/>
+        <do-vs-build-custom
+            proj-dir="native/windows"
+            build-type="Release"
+            build-arch="${vs.build.arch}"
+            project="WinLauncher.vcxproj"/>
+        <copy file="native/windows/Release/WinLauncher.exe"
+              todir="${build.classes.dir}/com/sun/javafx/tools/resource/windows"/>
+    </target>
+
+    <target name="launcher-mac" if="isMacOSX" depends="init">
+        <!-- add launcher binary to classes tree
+             jar will pick it from there -->
+        <property name="macLauncherDir"
+                  location="${build.classes.dir}/com/sun/javafx/tools/resource/mac"/>
+        <mkdir dir="${macLauncherDir}"/>
+        <exec executable="gcc" failonerror="true">
+            <arg value="-o"/>
+            <arg value="${macLauncherDir}/JavaAppLauncher"/>
+            <arg value="-framework"/>
+            <arg value="Cocoa"/>
+            <arg value="-arch"/>
+            <arg value="x86_64"/>
+            <arg value="-mmacosx-version-min=10.7"/>
+            <arg value="-std=c99"/>
+            <arg value="native/macosx/main.m"/>
+        </exec>
+    </target>
+
+    <target name="launcher-linux" if="isLinux" depends="init">
+        <!-- add launcher binary to classes tree
+             jar will pick it from there -->
+        <property name="linuxLauncherDir"
+                  location="${build.classes.dir}/com/sun/javafx/tools/resource/linux"/>
+        <mkdir dir="${linuxLauncherDir}"/>
+        <exec executable="gcc" failonerror="true">
+            <arg value='-DJAVAARCH="${os.arch}"'/>
+            <arg value="-o"/>
+            <arg value="${linuxLauncherDir}/JavaAppLauncher"/>
+            <arg value="-I${platform.home}/include"/>
+            <arg value="-I${platform.home}/include/linux"/>
+            <arg value="native/linux/launcher.c"/>
+            <arg value="-ldl"/>
+        </exec>
+    </target>
+
+    <target name="myneeds-vs-properties" if="isWindows">
+        <antcall target="needs-vs-properties"/>
+    </target>
+
+    <target name="winlaunch" if="isWindows" depends="myneeds-vs-properties" >
+        <copy file="winlauncher/javafxpackager.manifest"
+          tofile="winlauncher/build/javafxpackager.manifest">
+            <filterchain id="fx_version_filter">
+                <tokenfilter>
+                    <replacestring from="FXVERSION"
+            to="${jfx.release.major.version}.${jfx.release.minor.version}.${jfx.release.micro.version}.${hudson.current.build.number}"/>
+                </tokenfilter>
+            </filterchain>
+        </copy>
+        <get-cygwin-path/>
+        <property file="${vs.properties}"/>
+        <exec executable="${cmd.utility}" dir="winlauncher" failonerror="true">
+            <env key="FX_MAJOR_VERSION" value="${jfx.release.major.version}"/>
+            <env key="FX_MINOR_VERSION" value="${jfx.release.minor.version}"/>
+            <env key="FX_UPDATE_VERSION" value="${jfx.release.micro.version}"/>
+            <env key="FX_BUILD_NUMBER" value="${hudson.current.build.number}"/>
+            <env key="INCLUDE" value="${windows.vs.INCLUDE}"/>
+            <env key="LIB" value="${windows.vs.LIB}"/>
+            <env key="LIBPATH" value="${windows.vs.LIBPATH}"/>
+            <env key="PATH" value="${windows.vs.PATH}"/>
+            <env key="JDK_HOME" value="${short.platform.home}"/>
+            <env key="CONF" value="Release"/>
+            <env key="DIST_DIR" value="${winlauncher.dist.dir}"/>
+            <env key="BUILD_DIR" value="${winlauncher.build.dir}"/>
+            <env key="CLASS_DIR" value="${winlauncher.class.dir}"/>
+            <arg value="/C"/>
+            <arg value="${make.utility}"/>
+            <arg value="-f"/>
+            <arg value="${winlauncher.makefile}"/>
+            <arg value=""/>
+        </exec>
+        <delete file="dist/javafxpackager.exe"/>
+        <copy file="winlauncher/dist/javafxpackager.exe"
+              tofile="dist/javafxpackager.exe"/>
+    </target>
+
+    <target name="clean-win" if="isWindows">
+        <!-- cleanup embedded launcher build -->
+        <delete dir="native/windows/Release"/>
+        <delete dir="native/windows/Debug"/>
+        <delete>
+            <fileset dir="native/windows">
+                <include name="*sdf"/>
+                <include name="*.sln"/>
+                <include name="*.suo"/>
+                <include name="*.user"/>
+            </fileset>
+        </delete>
+
+        <!-- cleanup javafxpackager.exe -->
+        <get-cygwin-path/>
+        <exec executable="${cmd.utility}" dir="winlauncher" failonerror="true">
+            <env key="DIST_DIR" value="${winlauncher.dist.dir}"/>
+            <env key="BUILD_DIR" value="${winlauncher.build.dir}"/>
+            <arg value="/C"/>
+            <arg value="${make.utility}"/>
+            <arg value="-f"/>
+            <arg value="${winlauncher.makefile}"/>
+            <arg value="clean"/>
+        </exec>
+
+    </target>
+    <target name="mymanifest">
+    </target>
+
+    <target name="myjarstart">
+    </target>
+
+    <target name="myjarendWin" if="isWindows">
+      <copy todir="../dist">
+        <fileset dir="dist" includes="javafxpackager.exe"/>
+        <fileset dir="dist" includes="packager.jar"/>
+      </copy>
+    </target>
+
+    <target name="myjarendMac"  if="isMacOSX">
+      <copy todir="../dist">
+        <fileset dir="scripts" includes="javafxpackager"/>
+        <fileset dir="dist"    includes="packager.jar"/>
+      </copy>
+      <chmod file="../dist/javafxpackager" perm="755"/>
+    </target>
+
+    <target name="myjarendLinux"  if="isLinux">
+      <copy todir="../dist">
+        <fileset dir="scripts" includes="javafxpackager"/>
+        <fileset dir="dist"    includes="packager.jar"/>
+      </copy>
+      <chmod file="../dist/javafxpackager" perm="755"/>
+    </target>
+</project>

@@ -1,0 +1,370 @@
+." Copyright (c) 2008, 2012, Oracle and/or its affiliates. All rights reserved.
+."
+.TH javafxpackager 1 "02 Jul 2012"
+
+.LP
+.SH "名前" 
+.LP
+javafxpackager — JavaFXアプリケーションのパッケージ化と署名に関連するタスクを実行するコマンドを備えたツール。   
+.SH "形式"  
+.nf
+\f3
+.fl
+javafxpackager \fP\f4\-taskcommand\fP\f3 \fP\f4[\-options]\fP\f3
+.fl
+\fP
+.fi
+.LP
+ここで、\f2\-taskcommand\fPには、次のいずれかを指定します。  
+.RS 3
+.TP 3
+\-createjar 
+.LP
+他のパラメータに従ってJARアーカイブを作成します。  
+.TP 3
+\-deploy 
+.LP
+他のパラメータに従ってJNLPおよびHTMLファイルを生成します。  
+.TP 3
+\-createbss 
+.LP
+CSSファイルをバイナリ形式に変換します。  
+.TP 3
+\-signJar 
+.LP
+指定した証明書でJARファイルに署名します。  
+.TP 3
+\-makeall 
+.LP
+事前定義された引数の大半を使用して、コンパイル、createjar、deployのステップを1つの呼出しで実行します。ソース・ファイルはsrcというフォルダに配置する必要があり、生成されるファイル(JAR、JNLP、HTML)はdistというフォルダに出力されます。このコマンドでは最小限の構成のみが可能で、可能な限り自動化されています。  
+.RE
+.SH "createjarコマンドのオプション"  
+.RS 3
+.TP 3
+\-appclass <application class> 
+.LP
+実行するアプリケーション・クラスの修飾名。  
+.TP 3
+\-preloader <preloader class> 
+.LP
+実行するプリローダー・クラスの修飾名。  
+.TP 3
+\-paramfile <file> 
+.LP
+デフォルトの名前付きアプリケーション・パラメータが含まれるプロパティ・ファイル。  
+.TP 3
+\-argument arg 
+.LP
+<fx:argument>要素としてJNLPファイルに挿入される名前なし引数。  
+.TP 3
+\-classpath <files> 
+.LP
+依存するJARファイル名のリスト。  
+.TP 3
+\-manifestAttrs <manifest attributes> 
+.LP
+追加のマニフェスト属性のリスト。構文:  
+.nf
+\f3
+.fl
+"name1=value1,name2=value2,name3=value3"
+.fl
+\fP
+.fi
+.TP 3
+\-noembedlauncher 
+.LP
+指定した場合、パッケージャはJARファイルにJavaFX起動クラスを追加しません。  
+.TP 3
+\-nocss2bin 
+.LP
+パッケージャはJARにコピーする前にCSSファイルをバイナリ形式に変換しません。  
+.TP 3
+\-runtimeversion <version> 
+.LP
+必要なJavaFXランタイムのバージョン。  
+.TP 3
+\-outdir <dir> 
+.LP
+生成された出力ファイルを受け取るディレクトリの名前。  
+.TP 3
+\-outfile <filename> 
+.LP
+生成されるファイルの名前(拡張子なし)。  
+.TP 3
+\-srcdir <dir> 
+.LP
+パッケージ化するファイルのベース・ディレクトリ。  
+.TP 3
+\-srcfiles <files> 
+.LP
+srcdir内のファイルのリスト。省略すると、srcdir内のすべてのファイルがパッケージ化されます。  
+.RE
+.SH "deployコマンドのオプション"  
+.RS 3
+.TP 3
+\-title <title> 
+.LP
+アプリケーションのタイトル。  
+.TP 3
+\-vendor <vendor> 
+.LP
+アプリケーションのベンダー。  
+.TP 3
+\-description <description> 
+.LP
+アプリケーションの説明。  
+.TP 3
+\-appclass <application class> 
+.LP
+実行するアプリケーション・クラスの修飾名。  
+.TP 3
+\-preloader <preloader class> 
+.LP
+実行するプリローダー・クラスの修飾名。  
+.TP 3
+\-paramfile <file> 
+.LP
+デフォルトの名前付きアプリケーション・パラメータが含まれるプロパティ・ファイル。  
+.TP 3
+\-htmlparamfile <file> 
+.LP
+生成されるアプリケーションをブラウザで実行する場合のパラメータが含まれるプロパティ・ファイル。  
+.TP 3
+\-width <width> 
+.LP
+アプリケーションの幅。  
+.TP 3
+\-height <height> 
+.LP
+アプリケーションの高さ。  
+.TP 3
+\-native <name> 
+.LP
+プラットフォーム固有のネイティブ・バンドルを生成します(可能な場合)。  
+.TP 3
+\-name <name> 
+.LP
+アプリケーションの名前。  
+.TP 3
+\-embedjnlp 
+.LP
+指定した場合、JNLPファイルがHTMLドキュメントに埋め込まれます。  
+.TP 3
+\-embedCertificates 
+.LP
+指定した場合、証明書がJNLPファイルに埋め込まれます。  
+.TP 3
+\-allpermissions 
+.LP
+指定した場合、JNLPファイル内のすべてのセキュリティ権限がアプリケーションに必要になります。  
+.TP 3
+\-updatemode <updatemode> 
+.LP
+JNLPファイルの更新モードを設定します。  
+.TP 3
+\-isExtension 
+.LP
+指定した場合、srcfilesは拡張ファイルとして処理されます。  
+.TP 3
+\-callbacks 
+.LP
+生成後のHTMLでのユーザー・コールバック方式を指定します。形式は次のとおりです。  
+.nf
+\f3
+.fl
+"name1:value1,name2:value2,..."
+.fl
+\fP
+.fi
+.TP 3
+\-templateInFilename 
+.LP
+HTMLテンプレート・ファイルの名前。プレースホルダの形式は次のとおりです。  
+.nf
+\f3
+.fl
+#XXXX.YYYY(APPID)#
+.fl
+\fP
+.fi
+.TP 3
+\-templateOutFilename 
+.LP
+テンプレートから生成されるHTMLファイルの名前。  
+.TP 3
+\-templateId 
+.LP
+テンプレート処理を行うアプリケーションのアプリケーションID。  
+.TP 3
+\-argument arg 
+.LP
+JNLPファイルの<fx:argument>要素に挿入される名前なし引数。  
+.TP 3
+\-outdir <dir> 
+.LP
+生成された出力ファイルを受け取るディレクトリの名前。  
+.TP 3
+\-outfile <filename> 
+.LP
+生成されるファイルの名前(拡張子なし)。  
+.TP 3
+\-srcdir <dir> 
+.LP
+パッケージ化するファイルのベース・ディレクトリ。  
+.TP 3
+\-srcfiles <files> 
+.LP
+srcdir内のファイルのリスト。省略すると、srcdir内のすべてのファイルがパッケージ化されます。  
+.RE
+.SH "createbssコマンドのオプション"  
+.RS 3
+.TP 3
+\-outdir <dir> 
+.LP
+生成された出力ファイルを受け取るディレクトリの名前。  
+.TP 3
+\-srcdir <dir> 
+.LP
+パッケージ化するファイルのベース・ディレクトリ。  
+.TP 3
+\-srcfiles <files> 
+.LP
+srcdir内のファイルのリスト。省略すると、srcdir内のすべてのファイルがパッケージ化されます。  
+.RE
+.SH "signJarコマンドのオプション"  
+.RS 3
+.TP 3
+\-keyStore <file> 
+.LP
+キーストア・ファイル名。  
+.TP 3
+\-alias 
+.LP
+キーの別名。  
+.TP 3
+\-storePass 
+.LP
+キーストアの整合性を確認したり、ロックを解除するためのパスワード。  
+.TP 3
+\-keyPass 
+.LP
+キーを復元するためのパスワード。  
+.TP 3
+\-storeType 
+.LP
+キーストアのタイプ。デフォルト値は"jks"です。  
+.TP 3
+\-outdir <dir> 
+.LP
+生成された出力ファイルを受け取るディレクトリの名前。  
+.TP 3
+\-srcdir <dir> 
+.LP
+署名するファイルのベース・ディレクトリ。  
+.TP 3
+\-srcfiles <files> 
+.LP
+srcdir内のファイルのリスト。省略すると、srcdir内のすべてのファイルが署名されます。  
+.RE
+.SH "makeAllコマンドのオプション"  
+.RS 3
+.TP 3
+\-appclass <application class> 
+.LP
+実行するアプリケーション・クラスの修飾名。  
+.TP 3
+\-preloader <preloader class> 
+.LP
+実行するプリローダー・クラスの修飾名。  
+.TP 3
+\-classpath <files> 
+.LP
+依存するJARファイル名のリスト。  
+.TP 3
+\-name <name> 
+.LP
+アプリケーションの名前。  
+.TP 3
+\-width <width> 
+.LP
+アプリケーションの幅。  
+.TP 3
+\-height <height> 
+.LP
+アプリケーションの高さ。  
+.RE
+.SH "注意"  
+.RS 3
+.TP 2
+o
+.LP
+タスク・コマンドとともに\-v オプションを使用すれば、詳細な出力が有効になります。  
+.TP 2
+o
+.LP
+\-srcdirオプションをコマンドで使用できる場合は、複数回使用できます。\-srcfilesオプションを指定すると、引数に指定されたファイル名が、その前に指定されているsrcdirオプションで指定された場所で検索されます。\-srcdirが\-srcfilesの前に指定されていない場合は、javafxpackagerコマンドが実行されるディレクトリが使用されます。  
+.RE
+.SH "例"  
+.RS 3
+.TP 3
+例1: \-createjarコマンドの使用方法 
+.nf
+\f3
+.fl
+javafxpackager \-createjar \-appclass package.class  
+.fl
+  \-srcdir classes \-outdir out \-outfile outjar \-v
+.fl
+\fP
+.fi
+.LP
+classesディレクトリの内容をoutjar.jarにパッケージ化して、アプリケーション・クラスをpackage.classに設定します。  
+.TP 3
+例2: \-deployコマンドの使用方法 
+.nf
+\f3
+.fl
+javafxpackager \-deploy \-outdir outdir \-outfile outfile \-width 34 \-height 43 
+.fl
+  \-name AppName \-appclass package.class \-v \-srcdir compiled
+.fl
+\fP
+.fi
+.LP
+outfile.jnlpファイルおよび対応するoutfile.htmlファイルを、アプリケーションAppNameのoutdirに生成します。これは、package.classクラスで始まり、34 x 43の配列を持ちます。  
+.TP 3
+例: \-makeallコマンドの使用方法 
+.nf
+\f3
+.fl
+javafxpackager \-makeall \-appclass brickbreaker.Main \-name BrickBreaker
+.fl
+  \-width 600 \-height 600
+.fl
+\fP
+.fi
+.LP
+コンパイルを含むすべてのパッケージ化作業(コンパイル、Jarの作成、デプロイ)を実行します。  
+.TP 3
+例4: \-signJarコマンドの使用方法 
+.nf
+\f3
+.fl
+javafxpackager \-signJar \-\-outdir dist \-keyStore sampleKeystore.jks 
+.fl
+\fP
+.fi
+.nf
+\f3
+.fl
+    \-storePass **** \-alias javafx \-keypass **** \-srcdir dist
+.fl
+\fP
+.fi
+.LP
+distディレクトリにあるすべてのファイルに署名し、指定したalias、keyStoreおよびstorePassを指定して証明書を添付し、署名されたJARファイルをdistディレクトリに戻します。  
+.RE
+
+.LP
+ 
