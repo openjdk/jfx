@@ -24,7 +24,6 @@
  */
 package javafx.scene.control;
 
-import com.sun.javafx.beans.annotations.NoBuilder;
 import com.sun.javafx.css.Styleable;
 import com.sun.javafx.css.StyleablePropertyMetaData;
 import com.sun.javafx.scene.control.skin.NestedTableColumnHeader;
@@ -131,7 +130,6 @@ import javafx.beans.value.WritableValue;
  * @see TableCell
  * @see TablePosition
  */
-@NoBuilder  // TODO should this be here?
 public class TableColumn<S,T> extends TableColumnBase<S,T> implements EventTarget {
     
     /***************************************************************************

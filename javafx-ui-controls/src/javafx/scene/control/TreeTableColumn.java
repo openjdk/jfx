@@ -24,7 +24,6 @@
  */
 package javafx.scene.control;
 
-import com.sun.javafx.beans.annotations.NoBuilder;
 import com.sun.javafx.css.Styleable;
 import com.sun.javafx.css.StyleablePropertyMetaData;
 import com.sun.javafx.event.EventHandlerManager;
@@ -127,7 +126,6 @@ import javafx.util.Callback;
  * @see TableCell
  * @see TablePosition
  */
-@NoBuilder  // FIXME this is only here as the builder generation fails without it 
 public class TreeTableColumn<S,T> extends TableColumnBase<TreeItem<S>,T> implements EventTarget {
     
     /***************************************************************************
