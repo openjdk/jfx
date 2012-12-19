@@ -263,17 +263,20 @@ public abstract class TextInputControlBehavior<T extends TextInputControl> exten
         return bidi;
     }
 
-    private boolean isMixed() {
+    protected boolean isMixed() {
         if (mixed == null) {
             mixed = getBidi().isMixed();
         }
         return mixed;
     }
 
-    private boolean isRTLText() {
+    protected boolean isRTLText() {
         if (rtlText == null) {
             Bidi bidi = getBidi();
-            rtlText = (bidi.isRightToLeft() || (isMixed() && !bidi.baseIsLeftToRight()));
+            rtlText =
+                (bidi.isRightToLeft() ||
+                 (isMixed() &&
+                  textInputControl.getEffectiveNodeOrientation() == NodeOrientation.RIGHT_TO_LEFT));
         }
         return rtlText;
     }
