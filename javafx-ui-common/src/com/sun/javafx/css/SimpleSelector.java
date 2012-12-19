@@ -38,7 +38,6 @@ import javafx.scene.Scene;
  *
  */
 final public class SimpleSelector extends Selector {
-    static final private Object MAX_CLASS_DEPTH = 255;
     
     //
     // The Long value is a bit mask. The upper 4 bits of the mask are used to
@@ -178,17 +177,18 @@ final public class SimpleSelector extends Selector {
     }
     
     // a mask of bits corresponding to the pseudoclasses
-    final private long pclassMask;
+    final private PseudoClass.States pseudoClassStates;
     
-    long getPseudoclassMask() {
-        return pclassMask;
+    PseudoClass.States getPseudoClassStates() {
+        return pseudoClassStates;
     }
 
     /**
      * @return Immutable List&lt;String&gt; of pseudo-classes of the selector
      */
     public List<String> getPseudoclasses() {
-        return StyleManager.getPseudoclassStrings(pclassMask);
+        final List<String> pseudoClasses = pseudoClassStates.getPseudoClasses();
+        return Collections.unmodifiableList(pseudoClasses);
     }
         
     // true if name is not a wildcard
@@ -215,10 +215,7 @@ final public class SimpleSelector extends Selector {
                 : new long[0];
         this.matchOnStyleClass = (this.styleClassMasks.length > 0);
 
-        this.pclassMask = 
-                (pseudoclasses != null) 
-                ? StyleManager.getPseudoclassMask(pseudoclasses)
-                : 0;
+        this.pseudoClassStates = PseudoClass.createStatesInstance(pseudoclasses);
 
         this.id = id == null ? "" : id;
         // if id is not null and not empty, then match needs to check id
@@ -243,7 +240,7 @@ final public class SimpleSelector extends Selector {
         }
         this.matchOnStyleClass = other.matchOnStyleClass;
         
-        this.pclassMask = other.pclassMask;
+        this.pseudoClassStates = other.pseudoClassStates;
         
         this.id = other.id;
         this.matchOnId = other.matchOnId;
@@ -265,7 +262,7 @@ final public class SimpleSelector extends Selector {
             for (int n=0; n<styleClassMasks.length; n++) {
                 styleClassCount += Long.bitCount(styleClassMasks[n] & VALUE_MASK);
             }
-            return new Match(this, pclassMask, idCount, styleClassCount);
+            return new Match(this, pseudoClassStates, idCount, styleClassCount);
         }
         return null;
     }
@@ -273,7 +270,9 @@ final public class SimpleSelector extends Selector {
     @Override 
     Match matches(final Scene scene) {
         // Scene should match wildcard or specific java class name only.
-        if (!matchOnStyleClass && !matchOnId && pclassMask == 0) {
+        if (!matchOnStyleClass 
+                && !matchOnId 
+                && (pseudoClassStates == null || pseudoClassStates.isEmpty())) {
 
             final String className = scene.getClass().getName();
             final boolean classMatch =
@@ -282,7 +281,7 @@ final public class SimpleSelector extends Selector {
             if (classMatch) {
                 // we know idCount and styleClassCount are zero from
                 // the condition for entering the outer block
-                return new Match(this, pclassMask, 0, 0 );
+                return new Match(this, pseudoClassStates, 0, 0 );
             }
         }
         return null;
@@ -322,16 +321,16 @@ final public class SimpleSelector extends Selector {
     }
     
     @Override 
-    boolean applies(Node node, long[] pseudoclassBits, int bit) {
+    boolean applies(Node node, PseudoClass.States[] states, int depth) {
 
         final boolean applies = applies(node);
         //
-        // We only need the pseudoclassBits if the selector applies to the node.
+        // We only need the states if the selector applies to the node.
         // 
-        assert(pseudoclassBits == null || bit < pseudoclassBits.length);
-        if (applies && pseudoclassBits != null && bit < pseudoclassBits.length) {
-            final long mask = pseudoclassBits[bit] | this.pclassMask;
-            pseudoclassBits[bit] = mask;
+        assert(states == null || depth < states.length);
+        if (applies && states != null && depth < states.length) {
+            final PseudoClass.States mask = PseudoClass.States.unionOf(states[depth], this.pseudoClassStates);
+            states[depth] = mask;
         }
         return applies;
     }
@@ -344,8 +343,10 @@ final public class SimpleSelector extends Selector {
     }
     
     @Override
-    boolean stateMatches(final Node node, long states) {
-        return ((pclassMask & states) == pclassMask);
+    boolean stateMatches(final Node node, PseudoClass.States states) {
+        // [foo bar] matches [foo bar bang], 
+        // but [foo bar bang] doesn't match [foo bar]
+        return pseudoClassStates.isSubsetOf(states);
     }
 
     /*
@@ -427,9 +428,6 @@ final public class SimpleSelector extends Selector {
             return false;
         }
         final SimpleSelector other = (SimpleSelector) obj;
-        if (this.pclassMask != other.pclassMask) {
-            return false;
-        }
         if ((this.name == null) ? (other.name != null) : !this.name.equals(other.name)) {
             return false;
         }
@@ -441,6 +439,10 @@ final public class SimpleSelector extends Selector {
                     !Arrays.equals(this.styleClassMasks, other.styleClassMasks))) {
             return false;
         }
+        if (this.pseudoClassStates != null) {
+            return  this.pseudoClassStates.equals(other.pseudoClassStates);
+        } 
+        
         return true;
     }
 
@@ -452,7 +454,7 @@ final public class SimpleSelector extends Selector {
             hash = name.hashCode();
             hash = 31 * (hash + (styleClassMasks != null ? Arrays.hashCode(styleClassMasks) : 37));
             hash = 31 * (hash + (id != null ? id.hashCode() : 1229));
-            hash = 31 * (int)(pclassMask ^ (pclassMask >>> 32));
+            hash = 31 * (hash + (pseudoClassStates != null ? pseudoClassStates.hashCode() : 0));
         }
         return hash;
     }

@@ -24,42 +24,80 @@
  */
 package com.sun.javafx.css;
 
-import javafx.beans.property.BooleanPropertyBase;
+import javafx.beans.property.SimpleBooleanProperty;
 import javafx.beans.value.ObservableValue;
 
 /**
- * This class extends {@code BooleanPropertyBase} and provides a partial
+ * This class extends {@code SimpleBooleanProperty} and provides a full
  * implementation of a {@code StyleableProperty}. The method 
  * {@link StyleableProperty#getCssMetaData()} is not implemented. 
  * 
  * This class is used to make a {@link javafx.beans.property.BooleanProperty}, 
- * that would otherwise be implemented as a {@link BooleanPropertyBase}, 
+ * that would otherwise be implemented as a {@link SimpleBooleanProperty}, 
  * style&#8209;able by CSS.
  * 
- * @see javafx.beans.property.BooleanPropertyBase
+ * @see javafx.beans.property.SimpleBooleanProperty
  * @see CssMetaData
  * @see StyleableProperty
  */
-public abstract class StyleableBooleanProperty 
-    extends BooleanPropertyBase implements StyleableProperty<Boolean> {
+public abstract class SimpleStyleableBooleanProperty
+    extends SimpleBooleanProperty implements StyleableProperty<Boolean> {
 
     /**
-     * The constructor of the {@code StyleableBooleanProperty}.
+     * The constructor of the {@code SimpleStyleableBooleanProperty}.
+     * @param cssMetaData
+     *            the CssMetaData associated with this {@code StyleableProperty}
      */
-    public StyleableBooleanProperty() {
+    public SimpleStyleableBooleanProperty(CssMetaData cssMetaData) {
         super();
+        this.cssMetaData = cssMetaData;
     }
 
     /**
-     * The constructor of the {@code StyleableBooleanProperty}.
-     * 
+     * The constructor of the {@code SimpleStyleableBooleanProperty}.
+     *
+     * @param cssMetaData
+     *            the CssMetaData associated with this {@code StyleableProperty}
      * @param initialValue
      *            the initial value of the wrapped {@code Object}
      */
-    public StyleableBooleanProperty(boolean initialValue) {
+    public SimpleStyleableBooleanProperty(CssMetaData cssMetaData, boolean initialValue) {
         super(initialValue);
+        this.cssMetaData = cssMetaData;
     }
-    
+
+    /**
+     * The constructor of the {@code SimpleStyleableBooleanProperty}.
+     *
+     * @param cssMetaData
+     *            the CssMetaData associated with this {@code StyleableProperty}
+     * @param bean
+     *            the bean of this {@code BooleanProperty}
+     * @param name
+     *            the name of this {@code BooleanProperty}
+     */
+    public SimpleStyleableBooleanProperty(CssMetaData cssMetaData, Object bean, String name) {
+        super(bean, name);
+        this.cssMetaData = cssMetaData;
+    }
+
+    /**
+     * The constructor of the {@code SimpleStyleableBooleanProperty}.
+     *
+     * @param cssMetaData
+     *            the CssMetaData associated with this {@code StyleableProperty}
+     * @param bean
+     *            the bean of this {@code BooleanProperty}
+     * @param name
+     *            the name of this {@code BooleanProperty}
+     * @param initialValue
+     *            the initial value of the wrapped {@code Object}
+     */
+    public SimpleStyleableBooleanProperty(CssMetaData cssMetaData, Object bean, String name, boolean initialValue) {
+        super(bean, name, initialValue);
+        this.cssMetaData = cssMetaData;
+    }
+
     /** {@inheritDoc} */
     @Override
     public void applyStyle(Origin origin, Boolean v) {
@@ -67,7 +105,7 @@ public abstract class StyleableBooleanProperty
         set(v.booleanValue());
         this.origin = origin;
     }
-            
+
     /** {@inheritDoc} */
     @Override
     public void bind(ObservableValue<? extends Boolean> observable) {
@@ -81,10 +119,18 @@ public abstract class StyleableBooleanProperty
         super.set(v);
         origin = Origin.USER;
     }
-    
+
     /** {@inheritDoc} */
     @Override
     public final Origin getOrigin() { return origin; }
 
-    private Origin origin = null;    
+    /** {@inheritDoc} */
+    @Override
+    public final CssMetaData getCssMetaData() {
+        return cssMetaData;
+    }
+
+    private Origin origin = null;
+    private final CssMetaData cssMetaData;
+
 }

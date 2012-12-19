@@ -46,7 +46,12 @@ import java.util.List;
 
 import com.sun.javafx.application.PlatformImpl;
 import com.sun.javafx.collections.TrackableObservableList;
-import com.sun.javafx.css.*;
+import com.sun.javafx.css.CssError;
+import com.sun.javafx.css.CssMetaData;
+import com.sun.javafx.css.PseudoClass;
+import com.sun.javafx.css.StyleManager;
+import com.sun.javafx.css.Styleable;
+import com.sun.javafx.css.StyleableStringProperty;
 import com.sun.javafx.css.converters.StringConverter;
 import com.sun.javafx.logging.PlatformLogger;
 import com.sun.javafx.scene.control.Logging;
@@ -942,12 +947,10 @@ public class PopupControl extends PopupWindow implements Skinnable {
     }
 
     /**
-     * @treatAsPrivate implementation detail
-     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
+     * @see Node#pseudoClassStateChanged(com.sun.javafx.css.PseudoClass.State) 
      */
-    @Deprecated
-    protected void impl_pseudoClassStateChanged(String s) {
-        bridge.impl_pseudoClassStateChanged(s);
+    protected void pseudoClassStateChanged(PseudoClass.State s) {
+        bridge.pseudoClassStateChanged(s);
     }
 
     /**
@@ -1011,11 +1014,10 @@ public class PopupControl extends PopupWindow implements Skinnable {
         private String currentSkinClassName = null;
         
         /**
-        * @treatAsPrivate implementation detail
-        * @deprecated This is an internal API that is not intended for use and will be removed in the next version
+        * {@inheritDoc}
         */
-        @Deprecated @Override public void impl_pseudoClassStateChanged(String s) {
-            super.impl_pseudoClassStateChanged(s);
+        @Override protected void pseudoClassStateChanged(PseudoClass.State s) {
+            super.pseudoClassStateChanged(s);
         }
         
         /**
@@ -1279,6 +1281,8 @@ public class PopupControl extends PopupWindow implements Skinnable {
         
     }
 
+    private static final PseudoClass.State INTERNAL_FOCUS = PseudoClass.getState("internal-focus");
+    private static final PseudoClass.State EXTERNAL_FOCUS = PseudoClass.getState("external-focus");
     /**
      * The pseudo classes associated with 2-level focus have changed.
      * @treatAsPrivate implementation detail
@@ -1286,7 +1290,7 @@ public class PopupControl extends PopupWindow implements Skinnable {
      */
     @Deprecated
     public  void impl_focusPseudoClassChanged() {
-        impl_pseudoClassStateChanged("internal-focus");
-        impl_pseudoClassStateChanged("external-focus");
+        pseudoClassStateChanged(INTERNAL_FOCUS);
+        pseudoClassStateChanged(EXTERNAL_FOCUS);
     }
 }

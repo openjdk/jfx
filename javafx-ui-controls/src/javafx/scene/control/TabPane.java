@@ -39,9 +39,9 @@ import javafx.collections.ListChangeListener;
 import javafx.collections.ObservableList;
 import javafx.geometry.Side;
 
-import com.sun.javafx.css.StyleManager;
 import com.sun.javafx.css.StyleableDoubleProperty;
 import com.sun.javafx.css.CssMetaData;
+import com.sun.javafx.css.PseudoClass;
 import com.sun.javafx.css.converters.SizeConverter;
 import com.sun.javafx.scene.control.skin.TabPaneSkin;
 import javafx.beans.DefaultProperty;
@@ -184,13 +184,13 @@ public class TabPane extends Control {
                 private Side oldSide;
                 @Override protected void invalidated() {
                     if (oldSide != null) {
-                        impl_pseudoClassStateChanged(oldSide.name().toLowerCase());
+                        pseudoClassStateChanged(oldSide);
                     }
 
                     oldSide = get();
 
                     if (get() != null) {
-                        impl_pseudoClassStateChanged(get().name().toLowerCase());
+                        pseudoClassStateChanged(get());
                     }
                 }
 
@@ -584,35 +584,51 @@ public class TabPane extends Control {
         return getClassCssMetaData();
     }
 
-    private static final long TOP_PSEUDOCLASS_STATE = StyleManager.getPseudoclassMask("top");
-    private static final long BOTTOM_PSEUDOCLASS_STATE = StyleManager.getPseudoclassMask("bottom");
-    private static final long LEFT_PSEUDOCLASS_STATE = StyleManager.getPseudoclassMask("left");
-    private static final long RIGHT_PSEUDOCLASS_STATE = StyleManager.getPseudoclassMask("right");
+    private static final PseudoClass.State TOP_PSEUDOCLASS_STATE = PseudoClass.getState("top");
+    private static final PseudoClass.State BOTTOM_PSEUDOCLASS_STATE = PseudoClass.getState("bottom");
+    private static final PseudoClass.State LEFT_PSEUDOCLASS_STATE = PseudoClass.getState("left");
+    private static final PseudoClass.State RIGHT_PSEUDOCLASS_STATE = PseudoClass.getState("right");
 
     /**
-     * @treatAsPrivate implementation detail
-     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
+     * {@inheritDoc}
      */
-    @Deprecated @Override public long impl_getPseudoClassState() {
-        long mask = super.impl_getPseudoClassState();
+    @Override public PseudoClass.States getPseudoClassStates() {
+        PseudoClass.States states = super.getPseudoClassStates();
         switch(getSide()) {
             case TOP:
-                mask |= TOP_PSEUDOCLASS_STATE;
+                states.addState(TOP_PSEUDOCLASS_STATE);
                 break;
             case RIGHT:
-                mask |= RIGHT_PSEUDOCLASS_STATE;
+                states.addState(RIGHT_PSEUDOCLASS_STATE);
                 break;
             case BOTTOM:
-                mask |= BOTTOM_PSEUDOCLASS_STATE;
+                states.addState(BOTTOM_PSEUDOCLASS_STATE);
                 break;
             case LEFT:
-                mask |= LEFT_PSEUDOCLASS_STATE;
+                states.addState(LEFT_PSEUDOCLASS_STATE);
                 break;
         }
-        return mask;
+        return states;
     }
 
-
+    private void pseudoClassStateChanged(Side side) {
+        PseudoClass.State state = null;
+        switch(getSide()) {
+            case TOP:
+                pseudoClassStateChanged(TOP_PSEUDOCLASS_STATE);
+                break;
+            case RIGHT:
+                pseudoClassStateChanged(RIGHT_PSEUDOCLASS_STATE);
+                break;
+            case BOTTOM:
+                pseudoClassStateChanged(BOTTOM_PSEUDOCLASS_STATE);
+                break;
+            case LEFT:
+                pseudoClassStateChanged(LEFT_PSEUDOCLASS_STATE);
+                break;
+        }
+    }    
+    
     static class TabPaneSelectionModel extends SingleSelectionModel<Tab> {
         private final TabPane tabPane;
 

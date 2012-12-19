@@ -25,6 +25,7 @@
 package javafx.scene.control;
 
 import com.sun.javafx.css.CssMetaData;
+import com.sun.javafx.css.PseudoClass;
 import com.sun.javafx.scene.control.MultiplePropertyChangeListenerHandler;
 import java.util.Collections;
 import java.util.List;
@@ -473,11 +474,10 @@ public abstract class SkinBase<C extends Control> implements Skin<C> {
      **************************************************************************/
 
     /**
-     * @treatAsPrivate implementation detail
-     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
+     * {@inheritDoc}
      */
-    @Deprecated public long impl_getPseudoClassState() {
-        return 0; 
+    @Deprecated public PseudoClass.States getPseudoClassStates() {
+        return null; 
     }
 
     private static class StyleableProperties {

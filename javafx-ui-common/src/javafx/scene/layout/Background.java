@@ -35,7 +35,7 @@ import javafx.scene.paint.Color;
 import javafx.scene.paint.Paint;
 import com.sun.javafx.UnmodifiableArrayList;
 import com.sun.javafx.css.CssMetaData;
-import com.sun.javafx.css.SubCSSProperty;
+import com.sun.javafx.css.SubCssMetaData;
 import com.sun.javafx.css.converters.InsetsConverter;
 import com.sun.javafx.css.converters.PaintConverter;
 import com.sun.javafx.css.converters.URLConverter;
@@ -67,37 +67,37 @@ import com.sun.javafx.scene.layout.region.RepeatStructConverter;
  */
 public final class Background {
     static final CssMetaData<Node,Paint[]> BACKGROUND_COLOR =
-            new SubCSSProperty<Paint[]>("-fx-background-color",
+            new SubCssMetaData<Paint[]>("-fx-background-color",
                     PaintConverter.SequenceConverter.getInstance(),
                     new Paint[] {Color.TRANSPARENT});
 
     static final CssMetaData<Node,Insets[]> BACKGROUND_RADIUS =
-            new SubCSSProperty<Insets[]>("-fx-background-radius",
+            new SubCssMetaData<Insets[]>("-fx-background-radius",
                     InsetsConverter.SequenceConverter.getInstance(),
                     new Insets[] {Insets.EMPTY});
 
     static final CssMetaData<Node,Insets[]> BACKGROUND_INSETS =
-            new SubCSSProperty<Insets[]>("-fx-background-insets",
+            new SubCssMetaData<Insets[]>("-fx-background-insets",
                     InsetsConverter.SequenceConverter.getInstance(),
                     new Insets[] {Insets.EMPTY});
 
     static final CssMetaData<Node,Image[]> BACKGROUND_IMAGE =
-            new SubCSSProperty<Image[]>("-fx-background-image",
+            new SubCssMetaData<Image[]>("-fx-background-image",
                     URLConverter.SequenceConverter.getInstance());
 
     static final CssMetaData<Node,RepeatStruct[]> BACKGROUND_REPEAT =
-            new SubCSSProperty<RepeatStruct[]>("-fx-background-repeat",
+            new SubCssMetaData<RepeatStruct[]>("-fx-background-repeat",
                     RepeatStructConverter.getInstance(),
                     new RepeatStruct[] {new RepeatStruct(BackgroundRepeat.REPEAT,
                                                          BackgroundRepeat.REPEAT) });
 
     static final CssMetaData<Node,BackgroundPosition[]> BACKGROUND_POSITION =
-            new SubCSSProperty<BackgroundPosition[]>("-fx-background-position",
+            new SubCssMetaData<BackgroundPosition[]>("-fx-background-position",
                     LayeredBackgroundPositionConverter.getInstance(),
                     new BackgroundPosition[] { BackgroundPosition.DEFAULT });
 
     static final CssMetaData<Node,BackgroundSize[]> BACKGROUND_SIZE =
-            new SubCSSProperty<BackgroundSize[]>("-fx-background-size",
+            new SubCssMetaData<BackgroundSize[]>("-fx-background-size",
                     LayeredBackgroundSizeConverter.getInstance(),
                     new BackgroundSize[] { BackgroundSize.DEFAULT } );
 

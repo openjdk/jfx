@@ -24,42 +24,63 @@
  */
 package com.sun.javafx.css;
 
-import javafx.beans.property.StringPropertyBase;
+import javafx.beans.property.SimpleStringProperty;
 import javafx.beans.value.ObservableValue;
 
 /**
- * This class extends {@code StringPropertyBase} and provides a partial
+ * This class extends {@code SimpleStringProperty} and provides a full
  * implementation of a {@code StyleableProperty}. The method 
  * {@link StyleableProperty#getCssMetaData()} is not implemented. 
  * 
  * This class is used to make a {@link javafx.beans.property.StringProperty}, 
- * that would otherwise be implemented as a {@link StringPropertyBase}, 
+ * that would otherwise be implemented as a {@link SimpleStringProperty}, 
  * style&#8209;able by CSS.
  * 
- * @see javafx.beans.property.StringPropertyBase
+ * @see javafx.beans.property.SimpleStringProperty
  * @see CssMetaData
  * @see StyleableProperty
  */
-public abstract class StyleableStringProperty 
-    extends StringPropertyBase implements StyleableProperty<String> {
+public abstract class SimpleStyleableStringProperty
+    extends SimpleStringProperty implements StyleableProperty<String> {
 
     /**
-     * The constructor of the {@code StyleableStringProperty}.
+     * The constructor of the {@code SimpleStyleableStringProperty}.
+     * @param cssMetaData
+     *            the CssMetaData associated with this {@code StyleableProperty}
      */
-    public StyleableStringProperty() {
+    public SimpleStyleableStringProperty(CssMetaData cssMetaData) {
         super();
+        this.cssMetaData = cssMetaData;
     }
 
     /**
-     * The constructor of the {@code StyleableStringProperty}.
-     * 
+     * The constructor of the {@code SimpleStyleableStringProperty}.
+     *
+     * @param cssMetaData
+     *            the CssMetaData associated with this {@code StyleableProperty}
      * @param initialValue
      *            the initial value of the wrapped {@code Object}
      */
-    public StyleableStringProperty(String initialValue) {
+    public SimpleStyleableStringProperty(CssMetaData cssMetaData, String initialValue) {
         super(initialValue);
+        this.cssMetaData = cssMetaData;
     }
-    
+
+    /**
+     * The constructor of the {@code SimpleStyleableStringProperty}.
+     *
+     * @param cssMetaData
+     *            the CssMetaData associated with this {@code StyleableProperty}
+     * @param bean
+     *            the bean of this {@code StringProperty}
+     * @param name
+     *            the name of this {@code StringProperty}
+     */
+    public SimpleStyleableStringProperty(CssMetaData cssMetaData, Object bean, String name) {
+        super(bean, name);
+        this.cssMetaData = cssMetaData;
+    }
+
     /** {@inheritDoc} */
     @Override
     public void applyStyle(Origin origin, String v) {
@@ -67,7 +88,7 @@ public abstract class StyleableStringProperty
         set(v);
         this.origin = origin;
     }
-            
+
     /** {@inheritDoc} */
     @Override
     public void bind(ObservableValue<? extends String> observable) {
@@ -82,11 +103,17 @@ public abstract class StyleableStringProperty
         origin = Origin.USER;
     }
 
-    
     /** {@inheritDoc} */
     @Override
     public final Origin getOrigin() { return origin; }
 
-    private Origin origin = null;    
-    
+    /** {@inheritDoc} */
+    @Override
+    public final CssMetaData getCssMetaData() {
+        return cssMetaData;
+    }
+
+    private Origin origin = null;
+    private final CssMetaData cssMetaData;
+
 }

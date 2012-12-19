@@ -24,6 +24,7 @@
  */
 package com.preview.javafx.scene.control;
 
+import com.sun.javafx.css.PseudoClass;
 import javafx.beans.InvalidationListener;
 import javafx.beans.Observable;
 import javafx.event.Event;
@@ -144,7 +145,7 @@ class FXDialog extends Stage {
 
         focusedProperty().addListener(new InvalidationListener() {
             @Override public void invalidated(Observable valueModel) {
-                decoratedRoot.pseudoClassStateChanged("active");
+                decoratedRoot.pseudoClassStateChanged(RootPane.PSEUDO_CLASS_ACTIVE_MASK);
             }
         });
 
@@ -293,18 +294,18 @@ class FXDialog extends Stage {
          *                                                                         *
          **************************************************************************/
 
-        private static final long PSEUDO_CLASS_ACTIVE_MASK = StyleManager.getPseudoclassMask("active");
+        private static final PseudoClass.State PSEUDO_CLASS_ACTIVE_MASK = PseudoClass.getState("active");
 
-        @Override public long impl_getPseudoClassState() {
-            long mask = super.impl_getPseudoClassState();
+        @Override public PseudoClass.States getPseudoClassStates() {
+            PseudoClass.States states = super.getPseudoClassStates();
             if (getScene().getWindow().isFocused()) {
-                mask |= PSEUDO_CLASS_ACTIVE_MASK;
+                states.addState(PSEUDO_CLASS_ACTIVE_MASK);
             }
-            return mask;
+            return states;
         }
 
-        private void pseudoClassStateChanged(String pseudoClass) {
-            impl_pseudoClassStateChanged(pseudoClass);
+        @Override protected void pseudoClassStateChanged(PseudoClass.State pseudoClass) {
+            super.pseudoClassStateChanged(pseudoClass);
         }
     }
 }

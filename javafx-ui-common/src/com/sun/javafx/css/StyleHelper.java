@@ -161,7 +161,7 @@ final public class StyleHelper {
         // are gotten. By comparing the actual pseudoclass state to the
         // pseudoclass states that apply, a CacheEntry can be created or
         // fetched using only those pseudoclasses that matter.
-        final long[] pclassMasks = new long[depth];
+        final PseudoClass.States[] pclassMasks = new PseudoClass.States[depth];
         
         final StyleManager.StyleMap styleMap = styleManager != null
                 ? styleManager.findMatchingStyles(node, pclassMasks)
@@ -203,7 +203,7 @@ final public class StyleHelper {
             localStyleCache.entries.clear();
             localStyleCache = null;
         }
-        pseudoclassStateMask = 0;
+        pseudoClassStates = null;
         transitionStates = null;
                 
     }
@@ -212,19 +212,19 @@ final public class StyleHelper {
     private void setInternalState(
             StyleManager styleManager, 
             StyleManager.StyleMap styleMap, 
-            long[] pclassMasks) {
+            PseudoClass.States[] pclassMasks) {
         
         final int depth = pclassMasks.length;
 
         final Map<String, List<CascadingStyle>> smap = styleMap != null ? styleMap.map : null;        
         smapRef = new WeakReference<Map<String, List<CascadingStyle>>>(smap);
         
-        pseudoclassStateMask = pclassMasks[0];
+        pseudoClassStates = pclassMasks[0];
 
         Parent parent = node.getParent();
         for(int n=1; n<depth; n++) {
             final StyleHelper parentHelper = parent.impl_getStyleHelper();
-            parentHelper.pseudoclassStateMask = parentHelper.pseudoclassStateMask | pclassMasks[n];
+            parentHelper.pseudoClassStates = PseudoClass.States.unionOf(parentHelper.pseudoClassStates, pclassMasks[n]);
             parent = parent.getParent();
         } 
         
@@ -358,11 +358,11 @@ final public class StyleHelper {
     final static class StyleCacheBucket {
         
         // see comments in createStyleCacheKey
-        private final long[] pclassMask;
+        private final PseudoClass.States[] pclassMask;
         
         private final List<CacheEntry> entries;
 
-        private StyleCacheBucket(long[] pclassMask) {
+        private StyleCacheBucket(PseudoClass.States[] pclassMask) {
             this.pclassMask = pclassMask;
             this.entries = new ArrayList<CacheEntry>();
         }
@@ -374,7 +374,7 @@ final public class StyleHelper {
      */
     final static class CacheEntry {
 
-        private final long[] states;
+        private final PseudoClass.States[] states;
         private final Map<String,CalculatedValue> values;
         private CalculatedValue  font; // for use in converting relative sizes
         
@@ -386,11 +386,11 @@ final public class StyleHelper {
         // RT-23079 - weakly reference the shared CacheEntry
         private final Reference<CacheEntry> sharedCacheRef;
 
-        private CacheEntry(long[] states) {
+        private CacheEntry(PseudoClass.States[] states) {
             this(states, null);
         }
         
-        private CacheEntry(long[] states, CacheEntry sharedCache) {
+        private CacheEntry(PseudoClass.States[] states, CacheEntry sharedCache) {
             this.states = states;
             this.values = new HashMap<String,CalculatedValue>();
             this.sharedCacheRef = new WeakReference<CacheEntry>(sharedCache);
@@ -440,7 +440,7 @@ final public class StyleHelper {
 
     }
 
-    private CacheEntry getCacheEntry(Node node, long[] states) {
+    private CacheEntry getCacheEntry(Node node, PseudoClass.States[] states) {
 
         //
         // Find the entry in local cache that matches the states
@@ -456,11 +456,11 @@ final public class StyleHelper {
         // localStyleCache is created with the same pclassMask as 
         // the shared cache - see createStyleCacheKey
         //
-        final long[] pclassMask = new long[localStyleCache.pclassMask.length];
+        final PseudoClass.States[] pclassMask = new PseudoClass.States[localStyleCache.pclassMask.length];
         assert (pclassMask.length == states.length) : (pclassMask.length + " != " + states.length); 
 
         for (int n=0; n<pclassMask.length; n++) {
-            pclassMask[n] = localStyleCache.pclassMask[n] & states[n];
+            pclassMask[n] = PseudoClass.States.intersectionOf(localStyleCache.pclassMask[n], states[n]);
         }
 
         // find the entry in the list with the same pclassMask
@@ -468,7 +468,7 @@ final public class StyleHelper {
 
         for (int n=0, max=localStyleCache.entries.size(); n<max; n++) {
             final CacheEntry vce = localStyleCache.entries.get(n);
-            final long[] vceStates = vce.states;
+            final PseudoClass.States[] vceStates = vce.states;            
             if (Arrays.equals(pclassMask, vceStates)) {
                 localCacheEntry = vce;
                 break;
@@ -502,7 +502,7 @@ final public class StyleHelper {
         // TODO: same block of code as above.
         for (int n=0, max=sharedStyleCache.entries.size(); n<max; n++) {
             final CacheEntry vce = sharedStyleCache.entries.get(n);
-            final long[] vceStates = vce.states;
+            final PseudoClass.States[] vceStates = vce.states;
             if (Arrays.equals(pclassMask, vceStates)) {
                 sharedCacheEntry = vce;
                 break;
@@ -575,8 +575,8 @@ final public class StyleHelper {
                 parent = parent.getParent();
             }
 
-            final long[] pclassMasks = new long[depth];
-            Arrays.fill(pclassMasks, 0);
+            final PseudoClass.States[] pclassMasks = new PseudoClass.States[depth];
+            Arrays.fill(pclassMasks, PseudoClass.createStatesInstance());
             
             setInternalState(styleManager, StyleManager.StyleMap.EMPTY_MAP, pclassMasks);
         }
@@ -629,9 +629,10 @@ final public class StyleHelper {
      * Invoked by Node to determine whether a change to a specific pseudoclass
      * state should result in the Node being marked dirty with an UPDATE flag.
      */
-    public boolean isPseudoclassUsed(String pseudoclass) {
-        final long mask = StyleManager.getPseudoclassMask(pseudoclass);
-        return ((pseudoclassStateMask & mask) == mask);
+    public boolean isPseudoClassUsed(PseudoClass.State pseudoclass) {        
+        return pseudoClassStates != null 
+                ? pseudoClassStates.containsState(pseudoclass) :
+                false;
     }
 
     /**
@@ -691,7 +692,7 @@ final public class StyleHelper {
 
                     CascadingStyle s = new CascadingStyle(
                         new Style(Selector.getUniversalSelector(), decl),
-                        0, // no pseudo classes
+                        EMPTY_STATES, // no pseudo classes
                         0, // specificity is zero
                         // ordinal increments at declaration level since
                         // there may be more than one declaration for the
@@ -761,7 +762,7 @@ final public class StyleHelper {
      * button and all children to be update. Other pseudoclass state changes
      * that are not in this hash set are ignored.
      */
-    private long pseudoclassStateMask;
+    private PseudoClass.States pseudoClassStates;
 
     /**
      * dynamic pseudoclass state for this helper - only valid during a pulse. 
@@ -770,24 +771,23 @@ final public class StyleHelper {
      * transitionStates[1..(states.length-1)] are the pseudoclassStates for the 
      * node's parents.
      */ 
-    private long[] transitionStates;
+    private PseudoClass.States[] transitionStates;
 
-    
     // get pseudoclass state for the node 
-    long getPseudoClassState() {
+    PseudoClass.States getPseudoClassState() {
         // setTransitionState should have been called on this StyleHelper
         assert (transitionStates != null && transitionStates.length > 0);        
-        return transitionStates != null && transitionStates.length > 0 ? transitionStates[0] : 0;
+        return transitionStates != null && transitionStates.length > 0 ? transitionStates[0] : PseudoClass.createStatesInstance();
     }
     
-    public void setTransitionState(long state) {
+    public void setTransitionStates(PseudoClass.States state) {
         
         Parent parent = node.getParent();
         if (parent != null) {
             
             // My transitionStates include those of my parents
             final StyleHelper helper = parent.impl_getStyleHelper();
-            long[] parentTransitionStates = helper.getTransitionStates();
+            PseudoClass.States[] parentTransitionStates = helper.getTransitionStates();
             
             // setTransitionState should have been called on parent
             assert (parentTransitionStates != null && parentTransitionStates.length > 0);
@@ -802,7 +802,7 @@ final public class StyleHelper {
                     n += 1;
                     parent = parent.getParent();
                 }
-                parentTransitionStates = new long[n];
+                parentTransitionStates = new PseudoClass.States[n];
             }
                         
             final int nStates = 
@@ -811,7 +811,7 @@ final public class StyleHelper {
                     : 1;
             
             if (transitionStates == null || transitionStates.length != nStates) {
-                transitionStates = new long[nStates];
+                transitionStates = new PseudoClass.States[nStates];
             }
             
             // transtitionStates[0] is my state, so copy parent states to 
@@ -823,13 +823,13 @@ final public class StyleHelper {
             
         } else {
             if (transitionStates == null || transitionStates.length != 1) {
-                transitionStates = new long[1];
+                transitionStates = new PseudoClass.States[1];
             }            
         }
         transitionStates[0] = state;
     }
     
-    private long[] getTransitionStates() {
+    private PseudoClass.States[] getTransitionStates() {
         return transitionStates;
     }
 
@@ -874,7 +874,7 @@ final public class StyleHelper {
         // the state of its parents. Without the parent state, the fact that
         // this node in this state matched foo:blah bar { } is lost.
         //
-        long[] states = getTransitionStates();
+        PseudoClass.States[] states = getTransitionStates();
         
         //
         // Styles that need lookup can be cached provided none of the styles
@@ -1077,7 +1077,7 @@ final public class StyleHelper {
      * @param states
      * @return
      */
-    private CascadingStyle getStyle(Node node, String property, long states, Map<String,CascadingStyle> inlineStyles){
+    private CascadingStyle getStyle(Node node, String property, PseudoClass.States states, Map<String,CascadingStyle> inlineStyles){
 
         assert node != null && property != null: String.valueOf(node) + ", " + String.valueOf(property);
 
@@ -1131,7 +1131,7 @@ final public class StyleHelper {
      * @return
      */
     private CalculatedValue lookup(Node node, CssMetaData styleable, 
-            boolean isUserSet, long states,
+            boolean isUserSet, PseudoClass.States states,
             Map<String,CascadingStyle> userStyles, Node originatingNode, 
             CacheEntry cacheEntry, List<Style> styleList) {
 
@@ -1155,7 +1155,6 @@ final public class StyleHelper {
         final StyleConverter keyType = styleable.getConverter();
         if (style == null) {
             
-
             if (numSubProperties == 0) {
                 
                 return handleNoStyleFound(node, styleable, isUserSet, userStyles, 
@@ -1210,6 +1209,7 @@ final public class StyleHelper {
                 }
 
                 try {
+                    
                     final Object ret = keyType.convert(subs);
                     return new CalculatedValue(ret, origin, isRelative);
                 } catch (ClassCastException cce) {
@@ -1358,10 +1358,12 @@ final public class StyleHelper {
     }
 
 
+    private static final PseudoClass.States EMPTY_STATES = PseudoClass.createStatesInstance();
+    
     /**
      * Find the property among the styles that pertain to the Node
      */
-    private CascadingStyle resolveRef(Node node, String property, long states,
+    private CascadingStyle resolveRef(Node node, String property, PseudoClass.States states,
             Map<String,CascadingStyle> inlineStyles) {
         
         final CascadingStyle style = getStyle(node, property, states, inlineStyles);
@@ -1370,10 +1372,10 @@ final public class StyleHelper {
         } else {
             // if style is null, it may be because there isn't a style for this
             // node in this state, or we may need to look up the parent chain
-            if (states > 0) {
+            if (states.isEmpty() == false) {
                 // if states > 0, then we need to check this node again,
                 // but without any states.
-                return resolveRef(node,property,0,inlineStyles);
+                return resolveRef(node,property,EMPTY_STATES,inlineStyles);
             } else {
                 // TODO: This block was copied from inherit. Both should use same code somehow.
                 Node parent = node.getParent();
@@ -1399,7 +1401,7 @@ final public class StyleHelper {
     private ParsedValue resolveLookups(
             Node node, 
             ParsedValue value, 
-            long states,
+            PseudoClass.States states,
             Map<String,CascadingStyle> inlineStyles,
             ObjectProperty<Origin> whence,
             List<Style> styleList) {
@@ -1569,8 +1571,8 @@ final public class StyleHelper {
     private CalculatedValue calculateValue(
             final CascadingStyle style, 
             final Node node, 
-            final CssMetaData styleable, 
-            final long states,
+            final CssMetaData cssMetaData, 
+            final PseudoClass.States states,
             final Map<String,CascadingStyle> inlineStyles, 
             final Node originatingNode, 
             final CacheEntry cacheEntry, 
@@ -1602,7 +1604,7 @@ final public class StyleHelper {
                 // a font size of 19.5.
                 // In this situation, then, we use the font from the parent's
                 // cache entry.
-                final String property = styleable.getProperty();
+                final String property = cssMetaData.getProperty();
                 if (resolved.isNeedsFont() &&
                     (cacheEntry.font == null || cacheEntry.font.isRelative) &&
                     ("-fx-font".equals(property) ||
@@ -1670,48 +1672,48 @@ final public class StyleHelper {
                 if (resolved.getConverter() != null)
                     val = resolved.convert(font);
                 else
-                    val = styleable.getConverter().convert(resolved, font);
+                    val = cssMetaData.getConverter().convert(resolved, font);
 
                 final Origin origin = whence.get();
                 return new CalculatedValue(val, origin, resolved.isNeedsFont());
                 
             } catch (ClassCastException cce) {
-                final String msg = formatUnresolvedLookupMessage(node, styleable, style.getStyle(),resolved);
+                final String msg = formatUnresolvedLookupMessage(node, cssMetaData, style.getStyle(),resolved);
                 List<CssError> errors = null;
                 if ((errors = StyleManager.getErrors()) != null) {
-                    final CssError error = new CssError.PropertySetError(styleable, node, msg);
+                    final CssError error = new CssError.PropertySetError(cssMetaData, node, msg);
                     errors.add(error);
                 }
                 if (LOGGER.isLoggable(PlatformLogger.WARNING)) {
                     LOGGER.warning(msg);
                     LOGGER.fine("node = " + node.toString());
-                    LOGGER.fine("styleable = " + styleable);
-                    LOGGER.fine("styles = " + styleable.getMatchingStyles(node));
+                    LOGGER.fine("cssMetaData = " + cssMetaData);
+                    LOGGER.fine("styles = " + getMatchingStyles(node.impl_getStyleable(), cssMetaData));
                 }
                 return SKIP;
             } catch (IllegalArgumentException iae) {
-                final String msg = formatExceptionMessage(node, styleable, style.getStyle(), iae);
+                final String msg = formatExceptionMessage(node, cssMetaData, style.getStyle(), iae);
                 List<CssError> errors = null;
                 if ((errors = StyleManager.getErrors()) != null) {
-                    final CssError error = new CssError.PropertySetError(styleable, node, msg);
+                    final CssError error = new CssError.PropertySetError(cssMetaData, node, msg);
                     errors.add(error);
                 }
                 if (LOGGER.isLoggable(PlatformLogger.WARNING)) {
                     LOGGER.warning("caught: ", iae);
-                    LOGGER.fine("styleable = " + styleable);
+                    LOGGER.fine("styleable = " + cssMetaData);
                     LOGGER.fine("node = " + node.toString());
                 }
                 return SKIP;
             } catch (NullPointerException npe) {
-                final String msg = formatExceptionMessage(node, styleable, style.getStyle(), npe);
+                final String msg = formatExceptionMessage(node, cssMetaData, style.getStyle(), npe);
                 List<CssError> errors = null;
                 if ((errors = StyleManager.getErrors()) != null) {
-                    final CssError error = new CssError.PropertySetError(styleable, node, msg);
+                    final CssError error = new CssError.PropertySetError(cssMetaData, node, msg);
                     errors.add(error);
                 }
                 if (LOGGER.isLoggable(PlatformLogger.WARNING)) {
                     LOGGER.warning("caught: ", npe);
-                    LOGGER.fine("styleable = " + styleable);
+                    LOGGER.fine("styleable = " + cssMetaData);
                     LOGGER.fine("node = " + node.toString());
                 }
                 return SKIP;
@@ -1758,7 +1760,7 @@ final public class StyleHelper {
             parent = parent.getParent();
             if (parent != null) {
                 parentHelper = parent.impl_getStyleHelper();
-                final long[] pstates = parentHelper.getTransitionStates();
+                final PseudoClass.States[] pstates = parentHelper.getTransitionStates();
                 parentCacheEntry = parentHelper.getCacheEntry(parent, pstates);                
             }
         } while (parent != null && parentCacheEntry == null);
@@ -1769,7 +1771,7 @@ final public class StyleHelper {
     private CalculatedValue getFontForUseInConvertingRelativeSize(
              final Node node,
              final CacheEntry cacheEntry,
-            long pseudoclassState,
+            PseudoClass.States pseudoclassState,
             Map<String,CascadingStyle> inlineStyles)
      {
         
@@ -1904,7 +1906,7 @@ final public class StyleHelper {
         
         while (parent != null && (consideringInline || nlooks <= distance)) {
             
-            final long states = helper.getPseudoClassState();
+            final PseudoClass.States states = helper.getPseudoClassState();
             final Map<String,CascadingStyle> inlineStyles = StyleHelper.getInlineStyleMap(parent);
             
             CascadingStyle cascadingStyle = 
@@ -2063,7 +2065,7 @@ final public class StyleHelper {
         CascadingStyle csShorthand = null;
         while (parent != null) {
             
-            final long states = helper.getPseudoClassState();
+            final PseudoClass.States states = helper.getPseudoClassState();
             final Map<String,CascadingStyle> inlineStyles = StyleHelper.getInlineStyleMap(parent);
             
             final CascadingStyle cascadingStyle =
@@ -2127,7 +2129,7 @@ final public class StyleHelper {
         }
         nlooks = 0;
         
-        final long states = getPseudoClassState();
+        final PseudoClass.States states = getPseudoClassState();
         final Map<String,CascadingStyle> inlineStyles = getInlineStyleMap(node);
 
         String family = null;

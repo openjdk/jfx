@@ -25,8 +25,8 @@
 
 package javafx.scene.control;
 
-import com.sun.javafx.css.StyleManager;
 import com.sun.javafx.css.CssMetaData;
+import com.sun.javafx.css.PseudoClass;
 import com.sun.javafx.scene.control.skin.ProgressIndicatorSkin;
 import javafx.beans.property.DoubleProperty;
 import javafx.beans.property.DoublePropertyBase;
@@ -123,8 +123,8 @@ public class ProgressIndicator extends Control {
         if (indeterminate == null) {
             indeterminate = new ReadOnlyBooleanWrapper(true) {
                 @Override protected void invalidated() {
-                    impl_pseudoClassStateChanged(PSEUDO_CLASS_INDETERMINATE);
-                    impl_pseudoClassStateChanged(PSEUDO_CLASS_DETERMINATE);
+                    pseudoClassStateChanged(PSEUDO_CLASS_INDETERMINATE);
+                    pseudoClassStateChanged(PSEUDO_CLASS_DETERMINATE);
                 }
 
                 @Override
@@ -205,25 +205,24 @@ public class ProgressIndicator extends Control {
      * Pseudoclass indicating this is a determinate (i.e., progress can be
      * determined) progress indicator.
      */
-    private static final String PSEUDO_CLASS_DETERMINATE = "determinate";
+    private static final PseudoClass.State PSEUDO_CLASS_DETERMINATE =
+            PseudoClass.getState("determinate");
 
     /**
      * Pseudoclass indicating this is an indeterminate (i.e., progress cannot
      * be determined) progress indicator.
      */
-    private static final String PSEUDO_CLASS_INDETERMINATE = "indeterminate";
-
-    private static final long INDETERMINATE_PSEUDOCLASS_STATE = StyleManager.getPseudoclassMask("indeterminate");
-    private static final long DETERMINATE_PSEUDOCLASS_STATE = StyleManager.getPseudoclassMask("determinate");
+    private static final PseudoClass.State PSEUDO_CLASS_INDETERMINATE =
+            PseudoClass.getState("indeterminate");
 
     /**
-     * @treatAsPrivate implementation detail
-     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
+     * {@inheritDoc}
      */
-    @Deprecated @Override public long impl_getPseudoClassState() {
-        long mask = super.impl_getPseudoClassState();
-        mask |= isIndeterminate() ? INDETERMINATE_PSEUDOCLASS_STATE : DETERMINATE_PSEUDOCLASS_STATE;
-        return mask;
+    @Override public PseudoClass.States getPseudoClassStates() {
+        PseudoClass.States states = super.getPseudoClassStates();
+        if (isIndeterminate()) states.addState(PSEUDO_CLASS_INDETERMINATE);
+        else states.addState(PSEUDO_CLASS_DETERMINATE);
+        return states;
     }
     
     

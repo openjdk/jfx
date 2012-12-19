@@ -31,6 +31,7 @@ import static javafx.scene.input.KeyCode.*;
 import static javafx.scene.input.KeyEvent.*;
 
 import com.sun.javafx.Utils;
+import com.sun.javafx.css.PseudoClass;
 
 import javafx.scene.input.MouseEvent;
 
@@ -40,8 +41,6 @@ import java.util.List;
 import javafx.beans.InvalidationListener;
 import javafx.scene.Node;
 import javafx.scene.input.MouseButton;
-
-import com.sun.javafx.css.StyleManager;
 
 public class ComboBoxBaseBehavior<T> extends BehaviorBase<ComboBoxBase<T>> {
 
@@ -278,19 +277,21 @@ public class ComboBoxBaseBehavior<T> extends BehaviorBase<ComboBoxBase<T>> {
     }
 
 
-    private static final long INTERNAL_PSEUDOCLASS_STATE = StyleManager.getPseudoclassMask("internal-focus");
-    private static final long EXTERNAL_PSEUDOCLASS_STATE = StyleManager.getPseudoclassMask("external-focus");
+    private static final PseudoClass.State INTERNAL_PSEUDOCLASS_STATE = 
+            PseudoClass.getState("internal-focus");
+    private static final PseudoClass.State EXTERNAL_PSEUDOCLASS_STATE = 
+            PseudoClass.getState("external-focus");
 
     /**
-     * @treatAsPrivate implementation detail
-     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
+     * {@inheritDoc}
      */
-    @Deprecated @Override public long impl_getPseudoClassState() {
-        long mask = super.impl_getPseudoClassState();
+    @Override public PseudoClass.States getPseudoClassStates() {
+        PseudoClass.States states = super.getPseudoClassStates();
         if (tlFocus != null) {
-            mask |= tlFocus.isExternalFocus() ? EXTERNAL_PSEUDOCLASS_STATE : INTERNAL_PSEUDOCLASS_STATE;
+            if (tlFocus.isExternalFocus()) states.addState(EXTERNAL_PSEUDOCLASS_STATE);
+            else states.addState(INTERNAL_PSEUDOCLASS_STATE);
         }
-        return mask;
+        return states;
     }
 
 }

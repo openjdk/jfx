@@ -55,6 +55,7 @@ import javafx.util.Callback;
 
 import com.sun.javafx.css.StyleableDoubleProperty;
 import com.sun.javafx.css.CssMetaData;
+import com.sun.javafx.css.PseudoClass;
 import com.sun.javafx.css.converters.SizeConverter;
 import com.sun.javafx.scene.control.MultiplePropertyChangeListenerHandler;
 import javafx.collections.WeakListChangeListener;
@@ -536,7 +537,7 @@ public class TableColumnHeader extends Region {
                 columnIndex != -1 && 
                 columnIndex == getTableViewSkin().getVisibleLeafColumns().size() - 1;
         if (old != isLastVisibleColumn) {
-            impl_pseudoClassStateChanged(PSEUDO_CLASS_LAST_VISIBLE);
+            pseudoClassStateChanged(PSEUDO_CLASS_LAST_VISIBLE);
         }
     }
 
@@ -795,7 +796,8 @@ public class TableColumnHeader extends Region {
      *                                                                         *
      **************************************************************************/
     
-    private static final String PSEUDO_CLASS_LAST_VISIBLE = "last-visible";
+    private static final PseudoClass.State PSEUDO_CLASS_LAST_VISIBLE = 
+            PseudoClass.getState("last-visible");
 
     /**
       * Super-lazy instantiation pattern from Bill Pugh.

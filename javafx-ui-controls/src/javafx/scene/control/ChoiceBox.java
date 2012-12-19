@@ -39,7 +39,7 @@ import javafx.beans.property.ReadOnlyBooleanWrapper;
 import javafx.event.ActionEvent;
 import javafx.util.StringConverter;
 
-import com.sun.javafx.css.StyleManager;
+import com.sun.javafx.css.PseudoClass;
 import com.sun.javafx.scene.control.skin.ChoiceBoxSkin;
 import javafx.beans.DefaultProperty;
 
@@ -170,7 +170,7 @@ public class ChoiceBox<T> extends Control {
      */
     private ReadOnlyBooleanWrapper showing = new ReadOnlyBooleanWrapper() {
         @Override protected void invalidated() {
-            impl_pseudoClassStateChanged("showing");
+            pseudoClassStateChanged(SHOWING_PSEUDOCLASS_STATE);
         }
 
         @Override
@@ -322,17 +322,16 @@ public class ChoiceBox<T> extends Control {
      *                                                                         *
      **************************************************************************/
 
-    private static final long SHOWING_PSEUDOCLASS_STATE =
-            StyleManager.getPseudoclassMask("showing");
+    private static final PseudoClass.State SHOWING_PSEUDOCLASS_STATE =
+            PseudoClass.getState("showing");
 
     /**
-     * @treatAsPrivate implementation detail
-     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
+     * {@inheritDoc}
      */
-    @Deprecated @Override public long impl_getPseudoClassState() {
-        long mask = super.impl_getPseudoClassState();
-        if (isShowing()) mask |= SHOWING_PSEUDOCLASS_STATE;
-        return mask;
+    @Override public PseudoClass.States getPseudoClassStates() {
+        PseudoClass.States states = super.getPseudoClassStates();
+        if (isShowing()) states.addState(SHOWING_PSEUDOCLASS_STATE);
+        return states;
     }
 
     // package for testing

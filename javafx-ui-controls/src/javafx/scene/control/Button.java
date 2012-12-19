@@ -29,9 +29,9 @@ import javafx.beans.property.BooleanPropertyBase;
 import javafx.event.ActionEvent;
 import javafx.scene.Node;
 
-import com.sun.javafx.css.StyleManager;
 import com.sun.javafx.scene.control.accessible.AccessibleButton;
 import com.sun.javafx.accessible.providers.AccessibleProvider;
+import com.sun.javafx.css.PseudoClass;
 import com.sun.javafx.scene.control.skin.ButtonSkin;
 
 /**
@@ -119,7 +119,7 @@ public class Button extends ButtonBase {
         if (defaultButton == null) {
             defaultButton = new BooleanPropertyBase(false) {
                 @Override protected void invalidated() {
-                    impl_pseudoClassStateChanged(PSEUDO_CLASS_DEFAULT);
+                    pseudoClassStateChanged(PSEUDO_CLASS_DEFAULT);
                 }
 
                 @Override
@@ -153,7 +153,7 @@ public class Button extends ButtonBase {
         if (cancelButton == null) {
             cancelButton = new BooleanPropertyBase(false) {
                 @Override protected void invalidated() {
-                    impl_pseudoClassStateChanged(PSEUDO_CLASS_CANCEL);
+                    pseudoClassStateChanged(PSEUDO_CLASS_CANCEL);
                 }
 
                 @Override
@@ -200,24 +200,20 @@ public class Button extends ButtonBase {
      * this control.
      */
     private static final String DEFAULT_STYLE_CLASS = "button";
-    private static final String PSEUDO_CLASS_DEFAULT = "default";
-    private static final String PSEUDO_CLASS_CANCEL = "cancel";
 
-    private static final long PSEUDO_CLASS_DEFAULT_MASK
-            = StyleManager.getPseudoclassMask(PSEUDO_CLASS_DEFAULT);
-    private static final long PSEUDO_CLASS_CANCEL_MASK
-            = StyleManager.getPseudoclassMask(PSEUDO_CLASS_CANCEL);
+    private static final PseudoClass.State PSEUDO_CLASS_DEFAULT
+            = PseudoClass.getState("default");
+    private static final PseudoClass.State PSEUDO_CLASS_CANCEL
+            = PseudoClass.getState("cancel");
 
     /**
-     * @treatAsPrivate implementation detail
-     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
+     * {@inheritDoc}
      */
-    @Deprecated
-    @Override public long impl_getPseudoClassState() {
-        long mask = super.impl_getPseudoClassState();
-        if (isDefaultButton()) mask |= PSEUDO_CLASS_DEFAULT_MASK;
-        if (isCancelButton()) mask |= PSEUDO_CLASS_CANCEL_MASK;
-        return mask;
+    @Override public PseudoClass.States getPseudoClassStates() {
+        PseudoClass.States states = super.getPseudoClassStates();
+        if (isDefaultButton()) states.addState(PSEUDO_CLASS_DEFAULT);
+        if (isCancelButton()) states.addState(PSEUDO_CLASS_CANCEL);
+        return states;
     }
     
     private AccessibleButton accButton ;

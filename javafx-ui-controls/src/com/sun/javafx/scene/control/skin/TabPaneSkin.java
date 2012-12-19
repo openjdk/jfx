@@ -25,6 +25,7 @@
 package com.sun.javafx.scene.control.skin;
 
 import com.sun.javafx.PlatformUtil;
+import com.sun.javafx.css.PseudoClass;
 import javafx.animation.Interpolator;
 import javafx.animation.KeyFrame;
 import javafx.animation.KeyValue;
@@ -72,7 +73,6 @@ import com.sun.javafx.scene.traversal.TraverseListener;
 import javafx.scene.control.RadioMenuItem;
 import javafx.scene.control.ToggleGroup;
 
-import com.sun.javafx.css.StyleManager;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Iterator;
@@ -991,7 +991,7 @@ public class TabPaneSkin extends BehaviorSkinBase<TabPane, TabPaneBehavior> {
             tabListener = new InvalidationListener() {
                 @Override public void invalidated(Observable valueModel) {
                     if (valueModel == tab.selectedProperty()) {
-                        impl_pseudoClassStateChanged("selected");
+                        pseudoClassStateChanged(SELECTED_PSEUDOCLASS_STATE);
                         // Need to request a layout pass for inner because if the width
                         // and height didn't not change the label or close button may have
                         // changed.
@@ -1012,7 +1012,7 @@ public class TabPaneSkin extends BehaviorSkinBase<TabPane, TabPaneBehavior> {
                     } else if (valueModel == tab.styleProperty()) {
                         setStyle(tab.getStyle());
                     } else if (valueModel == tab.disableProperty()) {
-                        impl_pseudoClassStateChanged("disabled");
+                        pseudoClassStateChanged(DISABLED_PSEUDOCLASS_STATE);
                         inner.requestLayout();
                         requestLayout();
                     } else if (valueModel == tab.closableProperty()) {
@@ -1214,47 +1214,47 @@ public class TabPaneSkin extends BehaviorSkinBase<TabPane, TabPaneBehavior> {
 
 
         @Override
-        public long impl_getPseudoClassState() {
-            long mask = super.impl_getPseudoClassState();
+        public PseudoClass.States getPseudoClassStates() {
+            PseudoClass.States states = super.getPseudoClassStates();
 
             if (getTab().isDisable()) {
-                mask |= DISABLED_PSEUDOCLASS_STATE;
+                states.addState(DISABLED_PSEUDOCLASS_STATE);
             } else if (getTab().isSelected()) {
-                mask |= SELECTED_PSEUDOCLASS_STATE;
+                states.addState(SELECTED_PSEUDOCLASS_STATE);
             }
 
             switch(getSkinnable().getSide()) {
                 case TOP:
-                    mask |= TOP_PSEUDOCLASS_STATE;
+                    states.addState(TOP_PSEUDOCLASS_STATE);
                     break;
                 case RIGHT:
-                    mask |= RIGHT_PSEUDOCLASS_STATE;
+                    states.addState(RIGHT_PSEUDOCLASS_STATE);
                     break;
                 case BOTTOM:
-                    mask |= BOTTOM_PSEUDOCLASS_STATE;
+                    states.addState(BOTTOM_PSEUDOCLASS_STATE);
                     break;
                 case LEFT:
-                    mask |= LEFT_PSEUDOCLASS_STATE;
+                    states.addState(LEFT_PSEUDOCLASS_STATE);
                     break;
             }
 
-            return mask;
+            return states;
         }
 
     } /* End TabHeaderSkin */
 
-    private static final long SELECTED_PSEUDOCLASS_STATE =
-            StyleManager.getPseudoclassMask("selected");
-    private static final long TOP_PSEUDOCLASS_STATE =
-            StyleManager.getPseudoclassMask("top");
-    private static final long BOTTOM_PSEUDOCLASS_STATE =
-            StyleManager.getPseudoclassMask("bottom");
-    private static final long LEFT_PSEUDOCLASS_STATE =
-            StyleManager.getPseudoclassMask("left");
-    private static final long RIGHT_PSEUDOCLASS_STATE =
-            StyleManager.getPseudoclassMask("right");
-    private static final long DISABLED_PSEUDOCLASS_STATE =
-            StyleManager.getPseudoclassMask("disabled");    
+    private static final PseudoClass.State SELECTED_PSEUDOCLASS_STATE =
+            PseudoClass.getState("selected");
+    private static final PseudoClass.State TOP_PSEUDOCLASS_STATE =
+            PseudoClass.getState("top");
+    private static final PseudoClass.State BOTTOM_PSEUDOCLASS_STATE =
+            PseudoClass.getState("bottom");
+    private static final PseudoClass.State LEFT_PSEUDOCLASS_STATE =
+            PseudoClass.getState("left");
+    private static final PseudoClass.State RIGHT_PSEUDOCLASS_STATE =
+            PseudoClass.getState("right");
+    private static final PseudoClass.State DISABLED_PSEUDOCLASS_STATE =
+            PseudoClass.getState("disabled");    
 
 
     /**************************************************************************

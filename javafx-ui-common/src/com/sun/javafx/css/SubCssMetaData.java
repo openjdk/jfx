@@ -30,12 +30,12 @@ import javafx.scene.Node;
 /**
  * A CssMetaData which is used for sub-properties, such as -fx-background-color, etc.
  */
-public class SubCSSProperty<T> extends CssMetaData<Node,T> {
-    public SubCSSProperty(String property, StyleConverter converter, T initialValue) {
+public class SubCssMetaData<T> extends CssMetaData<Node,T> {
+    public SubCssMetaData(String property, StyleConverter converter, T initialValue) {
         super(property, converter, initialValue);
     }
 
-    public SubCSSProperty(String property, StyleConverter converter) {
+    public SubCssMetaData(String property, StyleConverter converter) {
         super(property, converter);
     }
 

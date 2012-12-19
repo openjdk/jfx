@@ -135,7 +135,7 @@ final public class Rule {
         return matches;
     }
 
-    boolean applies(Node node, long[] pseudoclassBits) {
+    boolean applies(Node node, PseudoClass.States[] pseudoclassBits) {
         for (int i = 0; i < selectors.size(); i++) {
             Selector sel = selectors.get(i);
             if (sel.applies(node, pseudoclassBits, 0)) return true;

@@ -507,17 +507,16 @@ public abstract class Control extends Region implements Skinnable {
      **************************************************************************/
 
     /**
-     * @treatAsPrivate implementation detail
-     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
+     * {@inheritDoc}
      */
-    @Deprecated @Override public long impl_getPseudoClassState() {
-        long mask = super.impl_getPseudoClassState();
+    @Override public PseudoClass.States getPseudoClassStates() {
+        PseudoClass.States states = super.getPseudoClassStates();
         
         if (skinBase != null) {
-            mask |= skinBase.impl_getPseudoClassState();
+            states = PseudoClass.States.unionOf(states, skinBase.getPseudoClassStates());
         }
         
-        return mask;
+        return states;
     }
 
     /**
@@ -811,6 +810,8 @@ public abstract class Control extends Region implements Skinnable {
         return null; // return a valid value for specific controls accessible objects
     }
 
+    private static final PseudoClass.State INTERNAL_FOCUS = PseudoClass.getState("internal-focus");
+    private static final PseudoClass.State EXTERNAL_FOCUS = PseudoClass.getState("external-focus");
     /**
      * The pseudo classes associated with 2-level focus have changed.
      * @treatAsPrivate implementation detail
@@ -818,7 +819,7 @@ public abstract class Control extends Region implements Skinnable {
      */
     @Deprecated
     public  void impl_focusPseudoClassChanged() {
-        impl_pseudoClassStateChanged("internal-focus");
-        impl_pseudoClassStateChanged("external-focus");
+        pseudoClassStateChanged(INTERNAL_FOCUS);
+        pseudoClassStateChanged(EXTERNAL_FOCUS);
     }
 }

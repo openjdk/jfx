@@ -24,6 +24,7 @@
  */
 package com.sun.javafx.scene.control.skin;
 
+import com.sun.javafx.css.PseudoClass;
 import com.sun.javafx.scene.control.behavior.BehaviorBase;
 import javafx.event.EventHandler;
 import javafx.event.EventType;
@@ -150,11 +151,10 @@ public abstract class BehaviorSkinBase<C extends Control, BB extends BehaviorBas
      **************************************************************************/
 
     /**
-     * @treatAsPrivate implementation detail
-     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
+     * {@inheritDoc}
      */
-    @Deprecated @Override public long impl_getPseudoClassState() {
+    @Override public PseudoClass.States getPseudoClassStates() {
         // check if behaviour can be null...
-        return getBehavior().impl_getPseudoClassState(); 
+        return getBehavior().getPseudoClassStates(); 
     }    
 }

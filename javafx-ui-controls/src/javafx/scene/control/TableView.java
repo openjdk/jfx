@@ -51,7 +51,7 @@ import javafx.scene.layout.GridPane;
 import javafx.util.Callback;
 
 import com.sun.javafx.collections.annotations.ReturnsUnmodifiableCollection;
-import com.sun.javafx.css.StyleManager;
+import com.sun.javafx.css.PseudoClass;
 import com.sun.javafx.scene.control.ReadOnlyUnbackedObservableList;
 import com.sun.javafx.scene.control.TableColumnComparator;
 import javafx.collections.WeakListChangeListener;
@@ -591,10 +591,12 @@ public class TableView<S> extends Control {
                         refresh();
                 
                         if (oldPolicy != null) {
-                            impl_pseudoClassStateChanged(oldPolicy.toString());
+                            PseudoClass.State state = PseudoClass.getState(oldPolicy.toString());
+                            pseudoClassStateChanged(state);
                         }
                         if (get() != null) {
-                            impl_pseudoClassStateChanged(get().toString());
+                            PseudoClass.State state = PseudoClass.getState(get().toString());
+                            pseudoClassStateChanged(state);
                         }
                         oldPolicy = get();
                     }
@@ -1006,26 +1008,21 @@ public class TableView<S> extends Control {
     private static final String DEFAULT_STYLE_CLASS = "table-view";
     private static final String CELL_SPAN_TABLE_VIEW_STYLE_CLASS = "cell-span-table-view";
     
-    private static final String PSEUDO_CLASS_CELL_SELECTION = "cell-selection";
-    private static final String PSEUDO_CLASS_ROW_SELECTION = "row-selection";
-
-
-    private static final long CELL_SELECTION_PSEUDOCLASS_STATE =
-            StyleManager.getPseudoclassMask(PSEUDO_CLASS_CELL_SELECTION);
-    private static final long ROW_SELECTION_PSEUDOCLASS_STATE =
-            StyleManager.getPseudoclassMask(PSEUDO_CLASS_ROW_SELECTION);
+    private static final PseudoClass.State PSEUDO_CLASS_CELL_SELECTION = 
+            PseudoClass.getState("cell-selection");
+    private static final PseudoClass.State PSEUDO_CLASS_ROW_SELECTION = 
+            PseudoClass.getState("row-selection");
 
     /**
-     * @treatAsPrivate implementation detail
-     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
+     * {@inheritDoc}
      */
-    @Deprecated @Override public long impl_getPseudoClassState() {
-        long mask = super.impl_getPseudoClassState();
+    @Override public PseudoClass.States getPseudoClassStates() {
+        PseudoClass.States states = super.getPseudoClassStates();
         if (getSelectionModel() != null) {
-            mask |= (getSelectionModel().isCellSelectionEnabled()) ?
-                CELL_SELECTION_PSEUDOCLASS_STATE : ROW_SELECTION_PSEUDOCLASS_STATE;
+            if (getSelectionModel().isCellSelectionEnabled()) states.addState(PSEUDO_CLASS_CELL_SELECTION);
+            else states.addState(PSEUDO_CLASS_ROW_SELECTION);
         }
-        return mask;
+        return states;
     }
 
 
@@ -1146,8 +1143,8 @@ public class TableView<S> extends Control {
                 @Override public void invalidated(Observable o) {
                     isCellSelectionEnabled();
                     clearSelection();
-                    tableView.impl_pseudoClassStateChanged(TableView.PSEUDO_CLASS_CELL_SELECTION);
-                    tableView.impl_pseudoClassStateChanged(TableView.PSEUDO_CLASS_ROW_SELECTION);
+                    tableView.pseudoClassStateChanged(TableView.PSEUDO_CLASS_CELL_SELECTION);
+                    tableView.pseudoClassStateChanged(TableView.PSEUDO_CLASS_ROW_SELECTION);
                 }
             });
             

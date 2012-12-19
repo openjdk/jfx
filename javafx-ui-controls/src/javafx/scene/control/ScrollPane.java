@@ -25,7 +25,10 @@
 
 package javafx.scene.control;
 
-import com.sun.javafx.css.*;
+import com.sun.javafx.css.CssMetaData;
+import com.sun.javafx.css.PseudoClass;
+import com.sun.javafx.css.StyleableBooleanProperty;
+import com.sun.javafx.css.StyleableObjectProperty;
 import com.sun.javafx.css.converters.BooleanConverter;
 import com.sun.javafx.css.converters.EnumConverter;
 import com.sun.javafx.scene.control.skin.ScrollPaneSkin;
@@ -347,7 +350,7 @@ public class ScrollPane extends Control {
         if (fitToWidth == null) {
             fitToWidth = new StyleableBooleanProperty(false) {
                 @Override public void invalidated() {
-                    impl_pseudoClassStateChanged(PSEUDO_CLASS_FIT_TO_WIDTH);
+                    pseudoClassStateChanged(FIT_TO_WIDTH_PSEUDOCLASS_STATE);
                 }
                 
                 @Override
@@ -384,7 +387,7 @@ public class ScrollPane extends Control {
         if (fitToHeight == null) {
             fitToHeight = new StyleableBooleanProperty(false) {
                 @Override public void invalidated() {
-                    impl_pseudoClassStateChanged(PSEUDO_CLASS_FIT_TO_HEIGHT);
+                    pseudoClassStateChanged(FIT_TO_HEIGHT_PSEUDOCLASS_STATE);
                 }
 
                 @Override
@@ -423,7 +426,7 @@ public class ScrollPane extends Control {
         if (pannable == null) {
             pannable = new StyleableBooleanProperty(false) {
                 @Override public void invalidated() {
-                    impl_pseudoClassStateChanged(PSEUDO_CLASS_PANNABLE);
+                    pseudoClassStateChanged(PANNABLE_PSEUDOCLASS_STATE);
                 }
 
                 @Override
@@ -704,29 +707,28 @@ public class ScrollPane extends Control {
         return getClassCssMetaData();
     }
 
-    private static final long PANNABLE_PSEUDOCLASS_STATE =
-            StyleManager.getPseudoclassMask("pannable");
-    private static final long FIT_TO_WIDTH_PSEUDOCLASS_STATE =
-            StyleManager.getPseudoclassMask("fitToWidth");
-    private static final long FIT_TO_HEIGHT_PSEUDOCLASS_STATE =
-            StyleManager.getPseudoclassMask("fitToHeight");
+    private static final PseudoClass.State PANNABLE_PSEUDOCLASS_STATE =
+            PseudoClass.getState("pannable");
+    private static final PseudoClass.State FIT_TO_WIDTH_PSEUDOCLASS_STATE =
+            PseudoClass.getState("fitToWidth");
+    private static final PseudoClass.State FIT_TO_HEIGHT_PSEUDOCLASS_STATE =
+            PseudoClass.getState("fitToHeight");
 
     /**
-     * @treatAsPrivate implementation detail
-     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
+     * {@inheritDoc}
      */
-    @Deprecated @Override public long impl_getPseudoClassState() {
-        long mask = super.impl_getPseudoClassState();
+    @Override public PseudoClass.States getPseudoClassStates() {
+        PseudoClass.States states = super.getPseudoClassStates();
         if (isPannable()) {
-            mask |= PANNABLE_PSEUDOCLASS_STATE;
+            states.addState(PANNABLE_PSEUDOCLASS_STATE);
         }
         if (isFitToWidth()) {
-            mask |= FIT_TO_WIDTH_PSEUDOCLASS_STATE;
+            states.addState(FIT_TO_WIDTH_PSEUDOCLASS_STATE);
         }
         if (isFitToHeight()) {
-            mask |= FIT_TO_HEIGHT_PSEUDOCLASS_STATE;
+            states.addState(FIT_TO_HEIGHT_PSEUDOCLASS_STATE);
         }
-        return mask;
+        return states;
     }
     
     

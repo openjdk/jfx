@@ -3,6 +3,7 @@
  */
 package javafx.scene.control;
 
+import com.sun.javafx.css.PseudoClass;
 import com.sun.javafx.scene.control.skin.ComboBoxListViewSkin;
 import com.sun.javafx.scene.control.skin.ListViewSkin;
 import com.sun.javafx.scene.control.skin.VirtualFlow;
@@ -566,24 +567,27 @@ public class ComboBoxTest {
     }
     
     @Test public void ensureImpl_getPseudoClassStateReturnsValidValue() {
-        long value1 = comboBox.impl_getPseudoClassState();
-        assertTrue(value1 >= 0);
+        PseudoClass.States value1 = comboBox.getPseudoClassStates();
+        assertTrue(value1.getCount() >= 0);
         
         comboBox.setEditable(true);
-        long value2 = comboBox.impl_getPseudoClassState();
-        assertTrue(value2 >= 0);
+        PseudoClass.States value2 = comboBox.getPseudoClassStates();
+        assertTrue(value2.containsState(PseudoClass.getState("editable")));
         
         comboBox.show();
-        long value3 = comboBox.impl_getPseudoClassState();
-        assertTrue(value3 >= 0);
+        PseudoClass.States value3 = comboBox.getPseudoClassStates();
+        assertTrue(value3.containsState(PseudoClass.getState("showing")));
         
         comboBox.arm();
-        long value4 = comboBox.impl_getPseudoClassState();
-        assertTrue(value4 >= 0);
+        PseudoClass.States value4 = comboBox.getPseudoClassStates();
+        assertTrue(value4.containsState(PseudoClass.getState("armed")));
         
-        assertTrue(value1 != value2 && value1 != value3 && value1 != value4
-                                    && value2 != value3 && value2 != value4
-                                                        && value3 != value4);
+        assertFalse(value1.equals(value2));
+        assertFalse(value1.equals(value3));
+        assertFalse(value1.equals(value4));
+        assertFalse(value2.equals(value3));
+        assertFalse(value2.equals(value4));
+        assertFalse(value3.equals(value4));
     }
     
     /*********************************************************************

@@ -30,8 +30,8 @@ import javafx.beans.property.BooleanPropertyBase;
 import javafx.event.ActionEvent;
 import javafx.scene.Cursor;
 import javafx.scene.Node;
-import com.sun.javafx.css.StyleManager;
 import com.sun.javafx.css.CssMetaData;
+import com.sun.javafx.css.PseudoClass;
 import com.sun.javafx.scene.control.skin.HyperlinkSkin;
 
 
@@ -104,7 +104,7 @@ public class Hyperlink extends ButtonBase {
         if (visited == null) {
             visited = new BooleanPropertyBase() {
                 @Override protected void invalidated() {
-                    impl_pseudoClassStateChanged(PSEUDO_CLASS_VISITED);
+                    pseudoClassStateChanged(PSEUDO_CLASS_VISITED);
                 }
 
                 @Override
@@ -159,20 +159,16 @@ public class Hyperlink extends ButtonBase {
      **************************************************************************/
 
     private static final String DEFAULT_STYLE_CLASS = "hyperlink";
-    private static final String PSEUDO_CLASS_VISITED = "visited";
-
-    private static final long VISITED_PSEUDOCLASS_STATE =
-            StyleManager.getPseudoclassMask("visited");
+    private static final PseudoClass.State PSEUDO_CLASS_VISITED =
+            PseudoClass.getState("visited");
 
     /**
-     * @treatAsPrivate implementation detail
-     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
+     * {@inheritDoc}
      */
-    @Deprecated
-    @Override public long impl_getPseudoClassState() {
-        long mask = super.impl_getPseudoClassState();
-        if (isVisited()) mask |= VISITED_PSEUDOCLASS_STATE;
-        return mask;
+    @Override public PseudoClass.States getPseudoClassStates() {
+        PseudoClass.States states = super.getPseudoClassStates();
+        if (isVisited()) states.addState(PSEUDO_CLASS_VISITED);
+        return states;
     }
 
      /**

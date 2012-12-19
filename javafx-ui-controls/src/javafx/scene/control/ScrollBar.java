@@ -35,7 +35,10 @@ import javafx.beans.value.WritableValue;
 import javafx.geometry.Orientation;
 
 import com.sun.javafx.Utils;
-import com.sun.javafx.css.*;
+import com.sun.javafx.css.CssMetaData;
+import com.sun.javafx.css.PseudoClass;
+import com.sun.javafx.css.StyleableDoubleProperty;
+import com.sun.javafx.css.StyleableObjectProperty;
 import com.sun.javafx.css.converters.EnumConverter;
 import com.sun.javafx.css.converters.SizeConverter;
 import com.sun.javafx.scene.control.skin.ScrollBarSkin;
@@ -164,8 +167,8 @@ public class ScrollBar extends Control {
         if (orientation == null) {
             orientation = new StyleableObjectProperty<Orientation>(Orientation.HORIZONTAL) {
                 @Override protected void invalidated() {
-                    impl_pseudoClassStateChanged(PSEUDO_CLASS_VERTICAL);
-                    impl_pseudoClassStateChanged(PSEUDO_CLASS_HORIZONTAL);
+                    pseudoClassStateChanged(VERTICAL_PSEUDOCLASS_STATE);
+                    pseudoClassStateChanged(HORIZONTAL_PSEUDOCLASS_STATE);
                 }
 
                 @Override 
@@ -355,16 +358,6 @@ public class ScrollBar extends Control {
      */
     private static final String DEFAULT_STYLE_CLASS = "scroll-bar";
 
-    /**
-     * Pseudoclass indicating this is a vertical ScrollBar.
-     */
-    private static final String PSEUDO_CLASS_VERTICAL = "vertical";
-
-    /**
-     * Pseudoclass indicating this is a horizontal ScrollBar.
-     */
-    private static final String PSEUDO_CLASS_HORIZONTAL = "horizontal";
-
     private static class StyleableProperties {
         private static final CssMetaData<ScrollBar,Orientation> ORIENTATION = 
             new CssMetaData<ScrollBar,Orientation>("-fx-orientation",
@@ -449,20 +442,26 @@ public class ScrollBar extends Control {
         return getClassCssMetaData();
     }
 
-    private static final long VERTICAL_PSEUDOCLASS_STATE =
-            StyleManager.getPseudoclassMask("vertical");
-    private static final long HORIZONTAL_PSEUDOCLASS_STATE =
-            StyleManager.getPseudoclassMask("horizontal");
+    /**
+     * Pseud-class indicating this is a vertical ScrollBar.
+     */
+    private static final PseudoClass.State VERTICAL_PSEUDOCLASS_STATE =
+            PseudoClass.getState("vertical");
 
     /**
-     * @treatAsPrivate implementation detail
-     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
+     * Pseudo-class indicating this is a horizontal ScrollBar.
      */
-    @Deprecated @Override public long impl_getPseudoClassState() {
-        long mask = super.impl_getPseudoClassState();
-        mask |= (getOrientation() == Orientation.VERTICAL) ?
-            VERTICAL_PSEUDOCLASS_STATE : HORIZONTAL_PSEUDOCLASS_STATE;
-        return mask;
+    private static final PseudoClass.State HORIZONTAL_PSEUDOCLASS_STATE =
+            PseudoClass.getState("horizontal");
+    
+    /**
+     * {@inheritDoc}
+     */
+    @Override public PseudoClass.States getPseudoClassStates() {
+        PseudoClass.States states = super.getPseudoClassStates();
+        if (getOrientation() == Orientation.VERTICAL) states.addState(VERTICAL_PSEUDOCLASS_STATE);
+        else states.addState(HORIZONTAL_PSEUDOCLASS_STATE);
+        return states;
     }
     
     /**

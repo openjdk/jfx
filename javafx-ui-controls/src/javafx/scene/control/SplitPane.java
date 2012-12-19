@@ -42,9 +42,9 @@ import javafx.geometry.Orientation;
 import javafx.scene.Node;
 
 import com.sun.javafx.collections.annotations.ReturnsUnmodifiableCollection;
-import com.sun.javafx.css.StyleManager;
 import com.sun.javafx.css.StyleableObjectProperty;
 import com.sun.javafx.css.CssMetaData;
+import com.sun.javafx.css.PseudoClass;
 import com.sun.javafx.css.converters.EnumConverter;
 import com.sun.javafx.scene.control.skin.SplitPaneSkin;
 
@@ -249,8 +249,8 @@ public class SplitPane extends Control {
         if (orientation == null) {
             orientation = new StyleableObjectProperty<Orientation>(Orientation.HORIZONTAL) {
                 @Override public void invalidated() {
-                    impl_pseudoClassStateChanged(PSEUDO_CLASS_VERTICAL);
-                    impl_pseudoClassStateChanged(PSEUDO_CLASS_HORIZONTAL);
+                    pseudoClassStateChanged(VERTICAL_PSEUDOCLASS_STATE);
+                    pseudoClassStateChanged(HORIZONTAL_PSEUDOCLASS_STATE);
                 }
                 
                 @Override public CssMetaData getCssMetaData() {
@@ -370,8 +370,6 @@ public class SplitPane extends Control {
      **************************************************************************/
 
     private static final String DEFAULT_STYLE_CLASS = "split-pane";
-    private static final String PSEUDO_CLASS_HORIZONTAL = "horizontal";
-    private static final String PSEUDO_CLASS_VERTICAL = "vertical";
 
     /** @treatAsPrivate */
     private static class StyleableProperties {
@@ -424,18 +422,17 @@ public class SplitPane extends Control {
         return getClassCssMetaData();
     }
 
-    private static final long VERTICAL_PSEUDOCLASS_STATE = StyleManager.getPseudoclassMask("vertical");
-    private static final long HORIZONTAL_PSEUDOCLASS_STATE = StyleManager.getPseudoclassMask("horizontal");
+    private static final PseudoClass.State VERTICAL_PSEUDOCLASS_STATE = PseudoClass.getState("vertical");
+    private static final PseudoClass.State HORIZONTAL_PSEUDOCLASS_STATE = PseudoClass.getState("horizontal");
 
     /**
-     * @treatAsPrivate implementation detail
-     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
+     * {@inheritDoc}
      */
-    @Deprecated @Override public long impl_getPseudoClassState() {
-        long mask = super.impl_getPseudoClassState();
-        mask |= (getOrientation() == Orientation.VERTICAL) ?
-            VERTICAL_PSEUDOCLASS_STATE : HORIZONTAL_PSEUDOCLASS_STATE;
-        return mask;
+    @Override public PseudoClass.States getPseudoClassStates() {
+        PseudoClass.States states = super.getPseudoClassStates();
+        if (getOrientation() == Orientation.VERTICAL) states.addState(VERTICAL_PSEUDOCLASS_STATE);
+        else states.addState(HORIZONTAL_PSEUDOCLASS_STATE);
+        return states;
     }
 
     

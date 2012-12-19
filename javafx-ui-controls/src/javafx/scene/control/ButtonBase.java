@@ -24,12 +24,12 @@
  */
 package javafx.scene.control;
 
+import com.sun.javafx.css.PseudoClass;
 import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.ObjectPropertyBase;
 import javafx.event.ActionEvent;
 import javafx.event.EventHandler;
 import javafx.scene.Node;
-import com.sun.javafx.css.StyleManager;
 import javafx.beans.property.ReadOnlyBooleanProperty;
 import javafx.beans.property.ReadOnlyBooleanWrapper;
 
@@ -93,7 +93,7 @@ public abstract class ButtonBase extends Labeled {
     public final boolean isArmed() { return armedProperty().get(); }
     private ReadOnlyBooleanWrapper armed = new ReadOnlyBooleanWrapper() {
         @Override protected void invalidated() {
-            impl_pseudoClassStateChanged("armed");
+            pseudoClassStateChanged(ARMED_PSEUDOCLASS_STATE);
         }
 
         @Override
@@ -179,16 +179,14 @@ public abstract class ButtonBase extends Labeled {
      *                                                                         *
      **************************************************************************/
 
-    private static final long ARMED_PSEUDOCLASS_STATE = StyleManager.getPseudoclassMask("armed");
+    private static final PseudoClass.State ARMED_PSEUDOCLASS_STATE = PseudoClass.getState("armed");
 
     /**
-     * @treatAsPrivate implementation detail
-     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
+     * {@inheritDoc}
      */
-    @Deprecated
-    @Override public long impl_getPseudoClassState() {
-        long mask = super.impl_getPseudoClassState();
-        if (isArmed()) mask |= ARMED_PSEUDOCLASS_STATE;
-        return mask;
+    @Override public PseudoClass.States getPseudoClassStates() {
+        PseudoClass.States states = super.getPseudoClassStates();
+        if (isArmed()) states.addState(ARMED_PSEUDOCLASS_STATE);
+        return states;
     }
 }

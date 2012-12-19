@@ -37,10 +37,10 @@ import javafx.scene.layout.GridPane;
 import javafx.scene.layout.HBox;
 import javafx.scene.shape.Rectangle;
 
-import com.sun.javafx.css.StyleManager;
 import com.sun.javafx.css.CssMetaData;
 import com.sun.javafx.scene.control.accessible.AccessibleListItem;
 import com.sun.javafx.accessible.providers.AccessibleProvider;
+import com.sun.javafx.css.PseudoClass;
 import javafx.beans.property.ReadOnlyBooleanProperty;
 import javafx.beans.property.ReadOnlyBooleanWrapper;
 
@@ -296,7 +296,7 @@ public class Cell<T> extends Labeled {
          */
         super.focusedProperty().addListener(new InvalidationListener() {
             @Override public void invalidated(Observable property) {
-                impl_pseudoClassStateChanged(PSEUDO_CLASS_FOCUSED); // TODO is this necessary??
+                pseudoClassStateChanged(PSEUDO_CLASS_FOCUSED); // TODO is this necessary??
 
                 // The user has shifted focus, so we should cancel the editing on this cell
                 if (!isFocused() && isEditing()) {
@@ -344,8 +344,8 @@ public class Cell<T> extends Labeled {
     // --- empty
     private ReadOnlyBooleanWrapper empty = new ReadOnlyBooleanWrapper(true) {
         @Override protected void invalidated() {
-            impl_pseudoClassStateChanged(PSEUDO_CLASS_EMPTY);
-            impl_pseudoClassStateChanged(PSEUDO_CLASS_FILLED);
+            pseudoClassStateChanged(PSEUDO_CLASS_EMPTY);
+            pseudoClassStateChanged(PSEUDO_CLASS_FILLED);
         }
 
         @Override
@@ -384,7 +384,7 @@ public class Cell<T> extends Labeled {
     // --- selected
     private ReadOnlyBooleanWrapper selected = new ReadOnlyBooleanWrapper() {
         @Override protected void invalidated() {
-            impl_pseudoClassStateChanged(PSEUDO_CLASS_SELECTED);
+            pseudoClassStateChanged(PSEUDO_CLASS_SELECTED);
         }
 
         @Override
@@ -592,28 +592,24 @@ public class Cell<T> extends Labeled {
      **************************************************************************/
 
     private static final String DEFAULT_STYLE_CLASS = "cell";
-    private static final String PSEUDO_CLASS_SELECTED = "selected";
-    private static final String PSEUDO_CLASS_FOCUSED = "focused";
-    private static final String PSEUDO_CLASS_EMPTY = "empty";
-    private static final String PSEUDO_CLASS_FILLED = "filled";
-
-
-    private static final long SELECTED_PSEUDOCLASS_STATE =
-            StyleManager.getPseudoclassMask("selected");
-    private static final long EMPTY_PSEUDOCLASS_STATE =
-            StyleManager.getPseudoclassMask("empty");
-    private static final long FILLED_PSEUDOCLASS_STATE =
-            StyleManager.getPseudoclassMask("filled");
+    private static final PseudoClass.State PSEUDO_CLASS_SELECTED =
+            PseudoClass.getState("selected");
+    private static final PseudoClass.State PSEUDO_CLASS_FOCUSED = 
+            PseudoClass.getState("focused");
+    private static final PseudoClass.State PSEUDO_CLASS_EMPTY =
+            PseudoClass.getState("empty");
+    private static final PseudoClass.State PSEUDO_CLASS_FILLED =
+            PseudoClass.getState("filled");
 
     /**
-     * @treatAsPrivate implementation detail
-     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
+     * {@inheritDoc}
      */
-    @Deprecated @Override public long impl_getPseudoClassState() {
-        long mask = super.impl_getPseudoClassState();
-        if (isSelected()) mask |= SELECTED_PSEUDOCLASS_STATE;
-        mask |= isEmpty() ? EMPTY_PSEUDOCLASS_STATE : FILLED_PSEUDOCLASS_STATE;
-        return mask;
+    @Override public PseudoClass.States getPseudoClassStates() {
+        PseudoClass.States states = super.getPseudoClassStates();
+        if (isSelected()) states.addState(PSEUDO_CLASS_SELECTED);
+        if (isEmpty()) states.addState(PSEUDO_CLASS_EMPTY);
+        else states.addState(PSEUDO_CLASS_FILLED);
+        return states;
     }
     
     /**

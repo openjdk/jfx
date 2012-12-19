@@ -24,49 +24,87 @@
  */
 package com.sun.javafx.css;
 
-import javafx.beans.property.LongPropertyBase;
+import javafx.beans.property.SimpleLongProperty;
 import javafx.beans.value.ObservableValue;
 
 /**
- * This class extends {@code LongPropertyBase} and provides a partial
+ * This class extends {@code SimpleLongProperty} and provides a full
  * implementation of a {@code StyleableProperty}. The method 
  * {@link StyleableProperty#getCssMetaData()} is not implemented. 
  * 
  * This class is used to make a {@link javafx.beans.property.LongProperty}, 
- * that would otherwise be implemented as a {@link LongPropertyBase}, 
+ * that would otherwise be implemented as a {@link SimpleLongProperty}, 
  * style&#8209;able by CSS.
  * 
- * @see javafx.beans.property.LongPropertyBase
+ * @see javafx.beans.property.SimpleLongProperty
  * @see CssMetaData
  * @see StyleableProperty
  */
-public abstract class StyleableLongProperty 
-    extends LongPropertyBase implements StyleableProperty<Long> {
+public abstract class SimpleStyleableLongProperty
+    extends SimpleLongProperty implements StyleableProperty<Long> {
 
     /**
-     * The constructor of the {@code StyleableLongProperty}.
+     * The constructor of the {@code SimpleStyleableLongProperty}.
+     * @param cssMetaData
+     *            the CssMetaData associated with this {@code StyleableProperty}
      */
-    public StyleableLongProperty() {
+    public SimpleStyleableLongProperty(CssMetaData cssMetaData) {
         super();
+        this.cssMetaData = cssMetaData;
     }
 
     /**
-     * The constructor of the {@code StyleableLongProperty}.
-     * 
+     * The constructor of the {@code SimpleStyleableLongProperty}.
+     *
+     * @param cssMetaData
+     *            the CssMetaData associated with this {@code StyleableProperty}
      * @param initialValue
      *            the initial value of the wrapped {@code Object}
      */
-    public StyleableLongProperty(long initialValue) {
+    public SimpleStyleableLongProperty(CssMetaData cssMetaData, long initialValue) {
         super(initialValue);
+        this.cssMetaData = cssMetaData;
     }
-    
+
+    /**
+     * The constructor of the {@code SimpleStyleableLongProperty}.
+     *
+     * @param cssMetaData
+     *            the CssMetaData associated with this {@code StyleableProperty}
+     * @param bean
+     *            the bean of this {@code LongProperty}
+     * @param name
+     *            the name of this {@code LongProperty}
+     */
+    public SimpleStyleableLongProperty(CssMetaData cssMetaData, Object bean, String name) {
+        super(bean, name);
+        this.cssMetaData = cssMetaData;
+    }
+
+    /**
+     * The constructor of the {@code SimpleStyleableLongProperty}.
+     *
+     * @param cssMetaData
+     *            the CssMetaData associated with this {@code StyleableProperty}
+     * @param bean
+     *            the bean of this {@code LongProperty}
+     * @param name
+     *            the name of this {@code LongProperty}
+     * @param initialValue
+     *            the initial value of the wrapped {@code Object}
+     */
+    public SimpleStyleableLongProperty(CssMetaData cssMetaData, Object bean, String name, long initialValue) {
+        super(bean, name, initialValue);
+        this.cssMetaData = cssMetaData;
+    }
+
     /** {@inheritDoc} */
     @Override
     public void applyStyle(Origin origin, Long v) {
         setValue(v);
         this.origin = origin;
     }
-    
+
     /** {@inheritDoc} */
     @Override
     public void bind(ObservableValue<? extends Number> observable) {
@@ -80,11 +118,18 @@ public abstract class StyleableLongProperty
         super.set(v);
         origin = Origin.USER;
     }
-    
+
     /** {@inheritDoc} */
     @Override
     public final Origin getOrigin() { return origin; }
 
-    private Origin origin = null;    
-    
+    /** {@inheritDoc} */
+    @Override
+    public final CssMetaData getCssMetaData() {
+        return cssMetaData;
+    }
+
+    private Origin origin = null;
+    private final CssMetaData cssMetaData;
+
 }

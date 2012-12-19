@@ -42,8 +42,13 @@ import javafx.geometry.Orientation;
 import javafx.util.StringConverter;
 
 import com.sun.javafx.Utils;
-import com.sun.javafx.css.*;
+import com.sun.javafx.css.CssMetaData;
 import com.sun.javafx.css.Origin;
+import com.sun.javafx.css.PseudoClass;
+import com.sun.javafx.css.StyleableBooleanProperty;
+import com.sun.javafx.css.StyleableDoubleProperty;
+import com.sun.javafx.css.StyleableIntegerProperty;
+import com.sun.javafx.css.StyleableObjectProperty;
 import com.sun.javafx.css.converters.BooleanConverter;
 import com.sun.javafx.css.converters.EnumConverter;
 import com.sun.javafx.css.converters.SizeConverter;
@@ -267,8 +272,8 @@ public class Slider extends Control {
         if (orientation == null) {
             orientation = new StyleableObjectProperty<Orientation>(Orientation.HORIZONTAL) {
                 @Override protected void invalidated() {
-                    impl_pseudoClassStateChanged(PSEUDO_CLASS_VERTICAL);
-                    impl_pseudoClassStateChanged(PSEUDO_CLASS_HORIZONTAL);
+                    pseudoClassStateChanged(VERTICAL_PSEUDOCLASS_STATE);
+                    pseudoClassStateChanged(HORIZONTAL_PSEUDOCLASS_STATE);
                 }
                 
                 @Override 
@@ -790,20 +795,19 @@ public class Slider extends Control {
         return getClassCssMetaData();
     }
 
-    private static final long VERTICAL_PSEUDOCLASS_STATE =
-            StyleManager.getPseudoclassMask("vertical");
-    private static final long HORIZONTAL_PSEUDOCLASS_STATE =
-            StyleManager.getPseudoclassMask("horizontal");
+    private static final PseudoClass.State VERTICAL_PSEUDOCLASS_STATE =
+            PseudoClass.getState("vertical");
+    private static final PseudoClass.State HORIZONTAL_PSEUDOCLASS_STATE =
+            PseudoClass.getState("horizontal");
 
     /**
-     * @treatAsPrivate implementation detail
-     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
+     * {@inheritDoc}
      */
-    @Deprecated @Override public long impl_getPseudoClassState() {
-        long mask = super.impl_getPseudoClassState();
-        mask |= (getOrientation() == Orientation.VERTICAL) ?
-            VERTICAL_PSEUDOCLASS_STATE : HORIZONTAL_PSEUDOCLASS_STATE;
-        return mask;
+    @Override public PseudoClass.States getPseudoClassStates() {
+        PseudoClass.States states = super.getPseudoClassStates();
+        if (getOrientation() == Orientation.VERTICAL) states.addState(VERTICAL_PSEUDOCLASS_STATE);
+        else states.addState(HORIZONTAL_PSEUDOCLASS_STATE);
+        return states;
     }
 
     private AccessibleSlider accSlider ;

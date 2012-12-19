@@ -406,7 +406,10 @@ public class ButtonTest {
 
         List<Stop> redStops3 = getStops(red);
         List<Stop> greenStops3 = getStops(green);
-        
+System.err.println("0 = " + redStops0.toString());        
+System.err.println("1 = " + redStops1.toString());        
+System.err.println("2 = " + redStops2.toString());        
+System.err.println("3 = " + redStops3.toString());        
         // did red change color after red hover=true?
         assertFalse(redStops0.equals(redStops1));
         // did red change back to original color after green hover=true?

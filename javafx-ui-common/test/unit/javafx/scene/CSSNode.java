@@ -41,6 +41,7 @@ import javafx.scene.paint.Paint;
 import com.sun.javafx.css.StyleableFloatProperty;
 import com.sun.javafx.css.StyleableObjectProperty;
 import com.sun.javafx.css.CssMetaData;
+import com.sun.javafx.css.PseudoClass;
 import com.sun.javafx.css.converters.PaintConverter;
 import com.sun.javafx.geom.BaseBounds;
 import com.sun.javafx.geom.transform.BaseTransform;
@@ -198,8 +199,8 @@ public  class CSSNode extends Node {
      * A pseudoclass state for this Node. It cannot be styled, but can
      * be used as a pseudoclass
      */
+    private PseudoClass.State SPECIAL_PSEUDO_CLASS = PseudoClass.getState("special");
     private BooleanProperty special;
-
     public final void setSpecial(boolean value) {
         specialProperty().set(value);
     }
@@ -214,7 +215,7 @@ public  class CSSNode extends Node {
 
                 @Override
                 protected void invalidated() {
-                    impl_pseudoClassStateChanged("special");
+                    pseudoClassStateChanged(SPECIAL_PSEUDO_CLASS);
                 }
             };
         }
@@ -250,7 +251,7 @@ public  class CSSNode extends Node {
     }
 
     @Override
-    boolean isPseudoclassUsed(String pseudoclass) {
+    boolean isPseudoclassUsed(PseudoClass.State pseudoclass) {
         return true;    
     }
     

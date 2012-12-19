@@ -64,17 +64,13 @@ abstract public class Selector {
     public abstract boolean applies(Node node);
     
     // same as applies, but will return pseudoclass state that it finds along the way
-    abstract boolean applies(Node node, long[] pseudoclassBits, int bit);
+    abstract boolean applies(Node node, PseudoClass.States[] pseudoclassBits, int bit);
     
     /**
      * Determines whether the current state of the node and its parents
-     * matches the pseudoclasses defined (if any) for this selector.
+     * matches the pseudo-classes defined (if any) for this selector.
      */
-    boolean stateMatches(Node node, List<String> states) {
-        long mask = StyleManager.getPseudoclassMask(states);
-        return stateMatches(node, mask);
-    }
-    abstract boolean stateMatches(Node node, long states);
+    abstract boolean stateMatches(Node node, PseudoClass.States state);
 
     private static final int TYPE_SIMPLE = 1;
     private static final int TYPE_COMPOUND = 2;

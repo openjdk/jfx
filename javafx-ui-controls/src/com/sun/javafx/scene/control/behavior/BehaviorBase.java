@@ -25,6 +25,7 @@
 
 package com.sun.javafx.scene.control.behavior;
 
+import com.sun.javafx.css.PseudoClass;
 import javafx.event.EventHandler;
 import javafx.geometry.NodeOrientation;
 import javafx.scene.Node;
@@ -321,10 +322,9 @@ public class BehaviorBase<C extends Control> {
     }
 
     /**
-     * @treatAsPrivate implementation detail
-     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
+     * @see Node#getPseudoClassStates() }
      */
-    @Deprecated public long impl_getPseudoClassState() {
-        return 0;
+    public PseudoClass.States getPseudoClassStates() {
+        return null;
     }
 }

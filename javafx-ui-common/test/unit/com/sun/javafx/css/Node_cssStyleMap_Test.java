@@ -77,7 +77,7 @@ public class Node_cssStyleMap_Test {
             styles.add(
                 new CascadingStyle(
                     new Style(decl.rule.selectors.get(0), decl), 
-                    0,
+                    PseudoClass.createStatesInstance(),
                     0, 
                     0
                 )

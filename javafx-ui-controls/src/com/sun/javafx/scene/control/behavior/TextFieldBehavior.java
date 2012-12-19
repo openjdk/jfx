@@ -54,6 +54,7 @@ import com.sun.javafx.scene.control.skin.TextFieldSkin;
 import com.sun.javafx.scene.text.HitInfo;
 
 import static com.sun.javafx.PlatformUtil.*;
+import com.sun.javafx.css.PseudoClass;
 
 /**
  * Text field behavior.
@@ -441,19 +442,21 @@ public class TextFieldBehavior extends TextInputControlBehavior<TextField> {
         TEXT_AREA;
     }
 
-    private static final long INTERNAL_PSEUDOCLASS_STATE = StyleManager.getPseudoclassMask("internal-focus");
-    private static final long EXTERNAL_PSEUDOCLASS_STATE = StyleManager.getPseudoclassMask("external-focus");
+    private static final PseudoClass.State INTERNAL_PSEUDOCLASS_STATE = 
+            PseudoClass.getState("internal-focus");
+    private static final PseudoClass.State EXTERNAL_PSEUDOCLASS_STATE = 
+            PseudoClass.getState("external-focus");
 
     /**
-     * @treatAsPrivate implementation detail
-     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
+     * {@inheritDoc}
      */
-    @Deprecated @Override public long impl_getPseudoClassState() {
-        long mask = super.impl_getPseudoClassState();
+    @Override public PseudoClass.States getPseudoClassStates() {
+        PseudoClass.States states = super.getPseudoClassStates();
         if (tlFocus != null) {
-            mask |= tlFocus.isExternalFocus() ? EXTERNAL_PSEUDOCLASS_STATE : INTERNAL_PSEUDOCLASS_STATE;
+            if (tlFocus.isExternalFocus()) states.addState(EXTERNAL_PSEUDOCLASS_STATE);
+            else states.addState(INTERNAL_PSEUDOCLASS_STATE);
         }
-        return mask;
+        return states;
     }
 
 }

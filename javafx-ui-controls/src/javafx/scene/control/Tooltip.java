@@ -472,8 +472,8 @@ public class Tooltip extends PopupControl {
 
     private final class CSSBridge extends PopupControl.CSSBridge {
         
-        @Override public void impl_pseudoClassStateChanged(String s) {
-            super.impl_pseudoClassStateChanged(s);
+        @Override public void pseudoClassStateChanged(PseudoClass.State s) {
+            super.pseudoClassStateChanged(s);
         }
 
         @Override public List<CssMetaData> getCssMetaData() {

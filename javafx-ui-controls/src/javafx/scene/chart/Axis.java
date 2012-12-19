@@ -24,7 +24,11 @@
  */
 package javafx.scene.chart;
 
-import com.sun.javafx.css.*;
+import com.sun.javafx.css.CssMetaData;
+import com.sun.javafx.css.PseudoClass;
+import com.sun.javafx.css.StyleableBooleanProperty;
+import com.sun.javafx.css.StyleableDoubleProperty;
+import com.sun.javafx.css.StyleableObjectProperty;
 import com.sun.javafx.css.converters.BooleanConverter;
 import com.sun.javafx.css.converters.EnumConverter;
 import com.sun.javafx.css.converters.PaintConverter;
@@ -100,10 +104,10 @@ public abstract class Axis<T> extends Region {
     private ObjectProperty<Side> side = new StyleableObjectProperty<Side>(){
         @Override protected void invalidated() {
             // cause refreshTickMarks
-            impl_pseudoClassStateChanged(PSEUDO_CLASS_TOP);
-            impl_pseudoClassStateChanged(PSEUDO_CLASS_RIGHT);
-            impl_pseudoClassStateChanged(PSEUDO_CLASS_BOTTOM);
-            impl_pseudoClassStateChanged(PSEUDO_CLASS_LEFT);
+            pseudoClassStateChanged(TOP_PSEUDOCLASS_STATE);
+            pseudoClassStateChanged(RIGHT_PSEUDOCLASS_STATE);
+            pseudoClassStateChanged(BOTTOM_PSEUDOCLASS_STATE);
+            pseudoClassStateChanged(LEFT_PSEUDOCLASS_STATE);
             requestAxisLayout();
         }
         
@@ -1029,15 +1033,6 @@ public abstract class Axis<T> extends Region {
 
     // -------------- STYLESHEET HANDLING ------------------------------------------------------------------------------
 
-    /** Pseudoclass indicating this is a vertical Left side Axis. */
-    private static final String PSEUDO_CLASS_TOP = "top";
-    /** Pseudoclass indicating this is a vertical Left side Axis. */
-    private static final String PSEUDO_CLASS_RIGHT = "right";
-    /** Pseudoclass indicating this is a vertical Left side Axis. */
-    private static final String PSEUDO_CLASS_BOTTOM = "bottom";
-    /** Pseudoclass indicating this is a vertical Left side Axis. */
-    private static final String PSEUDO_CLASS_LEFT = "left";
-
     /** @treatAsPrivate implementation detail */
     private static class StyleableProperties {
         private static final CssMetaData<Axis,Side> SIDE =
@@ -1178,21 +1173,24 @@ public abstract class Axis<T> extends Region {
         return getClassCssMetaData();
     }
 
-    private static final long TOP_PSEUDOCLASS_STATE =
-            StyleManager.getPseudoclassMask("top");
-    private static final long BOTTOM_PSEUDOCLASS_STATE =
-            StyleManager.getPseudoclassMask("bottom");
-    private static final long LEFT_PSEUDOCLASS_STATE =
-            StyleManager.getPseudoclassMask("left");
-    private static final long RIGHT_PSEUDOCLASS_STATE =
-            StyleManager.getPseudoclassMask("right");
+    /** Pseudoclass indicating this is a vertical Top side Axis. */
+    private static final PseudoClass.State TOP_PSEUDOCLASS_STATE =
+            PseudoClass.getState("top");
+    /** Pseudoclass indicating this is a vertical Bottom side Axis. */
+    private static final PseudoClass.State BOTTOM_PSEUDOCLASS_STATE =
+            PseudoClass.getState("bottom");
+    /** Pseudoclass indicating this is a vertical Left side Axis. */
+    private static final PseudoClass.State LEFT_PSEUDOCLASS_STATE =
+            PseudoClass.getState("left");
+    /** Pseudoclass indicating this is a vertical Right side Axis. */
+    private static final PseudoClass.State RIGHT_PSEUDOCLASS_STATE =
+            PseudoClass.getState("right");
 
     /**
-     * @treatAsPrivate implementation detail
-     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
+     * {@inheritDoc}
      */
-    @Deprecated @Override public long impl_getPseudoClassState() {
-        long mask = super.impl_getPseudoClassState();
+    @Override public PseudoClass.States getPseudoClassStates() {
+        PseudoClass.States states = super.getPseudoClassStates();
         if (getSide() == null) {
             // RT-18270 XYChart has not initialized Side values and it could be null
             // note: We do not have initial default property on creation, as the default
@@ -1202,18 +1200,18 @@ public abstract class Axis<T> extends Region {
         } 
         switch(getSide()) {
             case TOP:
-                mask |= TOP_PSEUDOCLASS_STATE;
+                states.addState(TOP_PSEUDOCLASS_STATE);
                 break;
             case RIGHT:
-                mask |= RIGHT_PSEUDOCLASS_STATE;
+                states.addState(RIGHT_PSEUDOCLASS_STATE);
                 break;
             case BOTTOM:
-                mask |= BOTTOM_PSEUDOCLASS_STATE;
+                states.addState(BOTTOM_PSEUDOCLASS_STATE);
                 break;
             case LEFT:
-                mask |= LEFT_PSEUDOCLASS_STATE;
+                states.addState(LEFT_PSEUDOCLASS_STATE);
                 break;
         }
-        return mask;
+        return states;
     }
 }

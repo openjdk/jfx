@@ -25,6 +25,7 @@
 
 package javafx.scene.control;
 
+import com.sun.javafx.css.PseudoClass;
 import com.sun.javafx.css.StyleManager;
 import javafx.beans.property.ReadOnlyIntegerProperty;
 import javafx.beans.property.ReadOnlyIntegerWrapper;
@@ -74,8 +75,8 @@ public class IndexedCell<T> extends Cell<T> {
     // --- Index
     private ReadOnlyIntegerWrapper index = new ReadOnlyIntegerWrapper(this, "index", -1) {
         @Override protected void invalidated() {
-            impl_pseudoClassStateChanged(PSEUDO_CLASS_EVEN);
-            impl_pseudoClassStateChanged(PSEUDO_CLASS_ODD);
+            pseudoClassStateChanged(PSEUDO_CLASS_EVEN);
+            pseudoClassStateChanged(PSEUDO_CLASS_ODD);
         }
     };
 
@@ -125,19 +126,19 @@ public class IndexedCell<T> extends Cell<T> {
 
     private static final String DEFAULT_STYLE_CLASS = "indexed-cell";
 
-    private static final String PSEUDO_CLASS_EVEN = "even";
-    private static final String PSEUDO_CLASS_ODD = "odd";
-
-    private static final long ODD_PSEUDOCLASS_STATE = StyleManager.getPseudoclassMask("odd");
-    private static final long EVEN_PSEUDOCLASS_STATE = StyleManager.getPseudoclassMask("even");
+    private static final PseudoClass.State PSEUDO_CLASS_ODD = PseudoClass.getState("odd");
+    private static final PseudoClass.State PSEUDO_CLASS_EVEN = PseudoClass.getState("even");
 
     /**
-     * @treatAsPrivate implementation detail
-     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
+     * {@inheritDoc}
      */
-    @Deprecated @Override public long impl_getPseudoClassState() {
-        long mask = super.impl_getPseudoClassState();
-        mask |= (getIndex() % 2 == 0) ? EVEN_PSEUDOCLASS_STATE : ODD_PSEUDOCLASS_STATE;
-        return mask;
+    @Override public PseudoClass.States getPseudoClassStates() {
+        PseudoClass.States states = super.getPseudoClassStates();
+        if (getIndex() % 2 == 0) {
+            states.addState(PSEUDO_CLASS_EVEN);
+        } else {
+            states.addState(PSEUDO_CLASS_ODD);
+        }
+        return states;
     }
 }

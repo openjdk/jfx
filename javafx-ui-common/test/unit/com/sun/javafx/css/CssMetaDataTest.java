@@ -281,7 +281,7 @@ public class CssMetaDataTest {
         }
         return new CascadingStyle(
             new Style(selector, declaration),
-            StyleManager.getPseudoclassMask(pseudoclasses),
+            PseudoClass.createStatesInstance(pseudoclasses),
             0,
             ord++
         );

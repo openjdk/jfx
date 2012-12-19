@@ -32,7 +32,7 @@ import javafx.scene.Node;
 import javafx.scene.paint.Paint;
 import com.sun.javafx.UnmodifiableArrayList;
 import com.sun.javafx.css.CssMetaData;
-import com.sun.javafx.css.SubCSSProperty;
+import com.sun.javafx.css.SubCssMetaData;
 import com.sun.javafx.css.converters.InsetsConverter;
 import com.sun.javafx.css.converters.URLConverter;
 import com.sun.javafx.scene.layout.region.BorderImageSlices;
@@ -82,46 +82,46 @@ import com.sun.javafx.scene.layout.region.SliceSequenceConverter;
  */
 public final class Border {
     static final CssMetaData<Node,Paint[]> BORDER_COLOR =
-            new SubCSSProperty<Paint[]>("-fx-border-color",
+            new SubCssMetaData<Paint[]>("-fx-border-color",
                     LayeredBorderPaintConverter.getInstance());
 
     static final CssMetaData<Node,BorderStrokeStyle[][]> BORDER_STYLE =
-            new SubCSSProperty<BorderStrokeStyle[][]>("-fx-border-style",
+            new SubCssMetaData<BorderStrokeStyle[][]>("-fx-border-style",
                     LayeredBorderStyleConverter.getInstance());
 
     static final CssMetaData<Node,Margins[]> BORDER_WIDTH =
-            new SubCSSProperty<Margins[]> ("-fx-border-width",
+            new SubCssMetaData<Margins[]> ("-fx-border-width",
                     Margins.SequenceConverter.getInstance());
 
     static final CssMetaData<Node,Margins[]> BORDER_RADIUS =
-            new SubCSSProperty<Margins[]>("-fx-border-radius",
+            new SubCssMetaData<Margins[]>("-fx-border-radius",
                     Margins.SequenceConverter.getInstance());
 
     static final CssMetaData<Node,Insets[]> BORDER_INSETS =
-            new SubCSSProperty<Insets[]>("-fx-border-insets",
+            new SubCssMetaData<Insets[]>("-fx-border-insets",
                     InsetsConverter.SequenceConverter.getInstance());
 
     static final CssMetaData<Node,String[]> BORDER_IMAGE_SOURCE =
-            new SubCSSProperty<String[]>("-fx-border-image-source",
+            new SubCssMetaData<String[]>("-fx-border-image-source",
                     URLConverter.SequenceConverter.getInstance());
 
     static final CssMetaData<Node,RepeatStruct[]> BORDER_IMAGE_REPEAT =
-            new SubCSSProperty<RepeatStruct[]>("-fx-border-image-repeat",
+            new SubCssMetaData<RepeatStruct[]>("-fx-border-image-repeat",
                     RepeatStructConverter.getInstance(),
                     new RepeatStruct[] { new RepeatStruct(BackgroundRepeat.REPEAT, BackgroundRepeat.REPEAT) });
 
     static final CssMetaData<Node,BorderImageSlices[]> BORDER_IMAGE_SLICE =
-            new SubCSSProperty<BorderImageSlices[]> ("-fx-border-image-slice",
+            new SubCssMetaData<BorderImageSlices[]> ("-fx-border-image-slice",
                     SliceSequenceConverter.getInstance(),
                     new BorderImageSlices[] { BorderImageSlices.EMPTY });
 
     static final CssMetaData<Node,BorderWidths[]> BORDER_IMAGE_WIDTH =
-            new SubCSSProperty<BorderWidths[]>("-fx-border-image-width",
+            new SubCssMetaData<BorderWidths[]>("-fx-border-image-width",
                     BorderImageWidthConverter.getInstance(),
                     new BorderWidths[] { BorderWidths.DEFAULT });
 
     static final CssMetaData<Node,Insets[]> BORDER_IMAGE_INSETS =
-            new SubCSSProperty<Insets[]>("-fx-border-image-insets",
+            new SubCssMetaData<Insets[]>("-fx-border-image-insets",
                     InsetsConverter.SequenceConverter.getInstance(),
                     new Insets[] {Insets.EMPTY});
 

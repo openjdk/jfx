@@ -25,6 +25,7 @@
 
 package javafx.scene.control;
 
+import com.sun.javafx.css.PseudoClass;
 import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.ObjectPropertyBase;
 import javafx.collections.FXCollections;
@@ -140,7 +141,7 @@ public class MenuButton extends ButtonBase {
     // --- Showing
     private ReadOnlyBooleanWrapper showing = new ReadOnlyBooleanWrapper(this, "showing", false) {
         @Override protected void invalidated() {
-            impl_pseudoClassStateChanged("showing");
+            pseudoClassStateChanged(PSEUDO_CLASS_SHOWING);
             super.invalidated();
         }
     };
@@ -178,7 +179,7 @@ public class MenuButton extends ButtonBase {
         if (popupSide == null) {
             popupSide = new ObjectPropertyBase<Side>(Side.BOTTOM) {
                 @Override protected void invalidated() {
-                    impl_pseudoClassStateChanged("openvertically");
+                    pseudoClassStateChanged(PSEUDO_CLASS_OPENVERTICALLY);
                 }
 
                 @Override
@@ -246,24 +247,22 @@ public class MenuButton extends ButtonBase {
      **************************************************************************/
 
     private static final String DEFAULT_STYLE_CLASS = "menu-button";
-    private static final String PSEUDO_CLASS_OPENVERTICALLY = "openvertically";
-    private static final String PSEUDO_CLASS_SHOWING = "showing";
-
-    private static final long OPENVERTICALLY_PSEUDOCLASS_STATE = StyleManager.getPseudoclassMask("openvertically");
-    private static final long SHOWING_PSEUDOCLASS_STATE = StyleManager.getPseudoclassMask("showing");
+    private static final PseudoClass.State PSEUDO_CLASS_OPENVERTICALLY = 
+            PseudoClass.getState("openvertically");
+    private static final PseudoClass.State PSEUDO_CLASS_SHOWING = 
+            PseudoClass.getState("showing");
 
     /**
-     * @treatAsPrivate implementation detail
-     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
+     * {@inheritDoc}
      */
-    @Deprecated @Override public long impl_getPseudoClassState() {
-        long mask = super.impl_getPseudoClassState();
+    @Override public PseudoClass.States getPseudoClassStates() {
+        PseudoClass.States states = super.getPseudoClassStates();
         if (getPopupSide() == Side.TOP || getPopupSide() == Side.BOTTOM)
-            mask |= OPENVERTICALLY_PSEUDOCLASS_STATE;
+            states.addState(PSEUDO_CLASS_OPENVERTICALLY);
         if (isShowing()) {
-            mask |= SHOWING_PSEUDOCLASS_STATE;
+            states.addState(PSEUDO_CLASS_SHOWING);
         }
-        return mask;
+        return states;
     }
 
 }

@@ -27,7 +27,19 @@ package com.sun.javafx.css;
 import javafx.beans.property.IntegerPropertyBase;
 import javafx.beans.value.ObservableValue;
 
-
+/**
+ * This class extends {@code IntegerPropertyBase} and provides a partial
+ * implementation of a {@code StyleableProperty}. The method 
+ * {@link StyleableProperty#getCssMetaData()} is not implemented. 
+ * 
+ * This class is used to make a {@link javafx.beans.property.IntegerProperty}, 
+ * that would otherwise be implemented as a {@link IntegerPropertyBase}, 
+ * style&#8209;able by CSS.
+ * 
+ * @see javafx.beans.property.IntegerPropertyBase
+ * @see CssMetaData
+ * @see StyleableProperty
+ */
 public abstract class StyleableIntegerProperty 
     extends IntegerPropertyBase implements StyleableProperty<Integer> {
 
@@ -48,27 +60,31 @@ public abstract class StyleableIntegerProperty
         super(initialValue);
     }
     
-    Origin origin = null;
-    
-    @Override
-    public Origin getOrigin() { return origin; }
-    
+    /** {@inheritDoc} */
     @Override
     public void applyStyle(Origin origin, Integer v) {
         setValue(v);
         this.origin = origin;
     }
 
+    /** {@inheritDoc} */
     @Override
     public void bind(ObservableValue<? extends Number> observable) {
         super.bind(observable);
         origin = Origin.USER;
     }
 
+    /** {@inheritDoc} */
     @Override
     public void set(int v) {
         super.set(v);
         origin = Origin.USER;
     }
+    
+    /** {@inheritDoc} */
+    @Override
+    public final Origin getOrigin() { return origin; }
+
+    private Origin origin = null;    
     
 }

@@ -51,7 +51,6 @@ import javafx.event.EventType;
 import javafx.geometry.Orientation;
 import javafx.util.Callback;
 
-import com.sun.javafx.css.StyleManager;
 import com.sun.javafx.css.StyleableObjectProperty;
 import com.sun.javafx.css.CssMetaData;
 import com.sun.javafx.css.converters.EnumConverter;
@@ -61,6 +60,7 @@ import com.sun.javafx.scene.control.skin.ListViewSkin;
 import com.sun.javafx.scene.control.skin.VirtualContainerBase;
 import java.lang.ref.WeakReference;
 import com.sun.javafx.accessible.providers.AccessibleProvider;
+import com.sun.javafx.css.PseudoClass;
 import javafx.beans.DefaultProperty;
 
 /**
@@ -423,8 +423,8 @@ public class ListView<T> extends Control {
         if (orientation == null) {
             orientation = new StyleableObjectProperty<Orientation>(Orientation.VERTICAL) {
                 @Override public void invalidated() {
-                    impl_pseudoClassStateChanged(PSEUDO_CLASS_VERTICAL);
-                    impl_pseudoClassStateChanged(PSEUDO_CLASS_HORIZONTAL);
+                    pseudoClassStateChanged(PSEUDO_CLASS_VERTICAL);
+                    pseudoClassStateChanged(PSEUDO_CLASS_HORIZONTAL);
                 }
                 
                 @Override 
@@ -755,9 +755,6 @@ public class ListView<T> extends Control {
 
     private static final String DEFAULT_STYLE_CLASS = "list-view";
 
-    private static final String PSEUDO_CLASS_VERTICAL = "vertical";
-    private static final String PSEUDO_CLASS_HORIZONTAL = "horizontal";
-
     /** @treatAsPrivate */
     private static class StyleableProperties {
         private static final CssMetaData<ListView,Orientation> ORIENTATION = 
@@ -809,20 +806,22 @@ public class ListView<T> extends Control {
         return getClassCssMetaData();
     }
 
-    private static final long VERTICAL_PSEUDOCLASS_STATE =
-            StyleManager.getPseudoclassMask("vertical");
-    private static final long HORIZONTAL_PSEUDOCLASS_STATE =
-            StyleManager.getPseudoclassMask("horizontal");
+    private static final PseudoClass.State PSEUDO_CLASS_VERTICAL =
+            PseudoClass.getState("vertical");
+    private static final PseudoClass.State PSEUDO_CLASS_HORIZONTAL =
+            PseudoClass.getState("horizontal");
 
     /**
-     * @treatAsPrivate implementation detail
-     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
+     * {@inheritDoc}
      */
-    @Deprecated @Override public long impl_getPseudoClassState() {
-        long mask = super.impl_getPseudoClassState();
-        mask |= (getOrientation() == Orientation.VERTICAL) ?
-            VERTICAL_PSEUDOCLASS_STATE : HORIZONTAL_PSEUDOCLASS_STATE;
-        return mask;
+    @Override public PseudoClass.States getPseudoClassStates() {
+        PseudoClass.States states = super.getPseudoClassStates();
+        if (getOrientation() == Orientation.VERTICAL) {
+            states.addState(PSEUDO_CLASS_VERTICAL);
+        } else {            
+            states.addState(PSEUDO_CLASS_HORIZONTAL);
+        }
+        return states;
     }
 
 

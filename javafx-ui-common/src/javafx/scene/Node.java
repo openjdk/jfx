@@ -115,7 +115,7 @@ import com.sun.javafx.css.StyleableDoubleProperty;
 import com.sun.javafx.css.StyleableObjectProperty;
 import com.sun.javafx.css.CssMetaData;
 import com.sun.javafx.css.Origin;
-import com.sun.javafx.css.Stylesheet;
+import com.sun.javafx.css.PseudoClass;
 import com.sun.javafx.css.converters.BooleanConverter;
 import com.sun.javafx.css.converters.CursorConverter;
 import com.sun.javafx.css.converters.EffectConverter;
@@ -1525,7 +1525,7 @@ public abstract class Node implements EventTarget {
 
                 @Override
                 protected void invalidated() {
-                    impl_pseudoClassStateChanged("disabled");
+                    pseudoClassStateChanged(DISABLED_PSEUDOCLASS_STATE);
                     updateCanReceiveFocus();
                     focusSetDirty(getScene());
                 }
@@ -5694,7 +5694,7 @@ public abstract class Node implements EventTarget {
                     if (logger.isLoggable(PlatformLogger.FINER)) {
                         logger.finer(this + " hover=" + get());
                     }
-                    impl_pseudoClassStateChanged("hover");
+                    pseudoClassStateChanged(HOVER_PSEUDOCLASS_STATE);
                 }
 
                 @Override
@@ -5742,7 +5742,7 @@ public abstract class Node implements EventTarget {
                     if (logger.isLoggable(PlatformLogger.FINER)) {
                         logger.finer(this + " pressed=" + get());
                     }
-                    impl_pseudoClassStateChanged("pressed");
+                    pseudoClassStateChanged(PRESSED_PSEUDOCLASS_STATE);
                 }
 
                 @Override
@@ -6506,7 +6506,7 @@ public abstract class Node implements EventTarget {
             if (valid) {
                 valid = false;
 
-                impl_pseudoClassStateChanged("focused");
+                pseudoClassStateChanged(FOCUSED_PSEUDOCLASS_STATE);
                 PlatformLogger logger = Logging.getFocusLogger();
                 if (logger.isLoggable(PlatformLogger.FINE)) {
                     logger.fine(this + " focused=" + get());
@@ -6897,7 +6897,7 @@ public abstract class Node implements EventTarget {
 
                 @Override
                 protected void invalidated() {
-                    impl_pseudoClassStateChanged("show-mnemonics");
+                    pseudoClassStateChanged(SHOW_MNEMONICS_PSEUDOCLASS_STATE);
                 }
                 @Override
                 public Object getBean() {
@@ -7538,12 +7538,8 @@ public abstract class Node implements EventTarget {
      * Used to specify that the list of which pseudoclasses apply to this
      * Node has changed. The given parameter is the name of the pseudoclass
      * that has changed.
-     *
-     * @treatAsPrivate implementation detail
-     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
      */
-    @Deprecated
-    protected void impl_pseudoClassStateChanged(String pseudoClass) {
+    protected void pseudoClassStateChanged(PseudoClass.State pseudoClass) {
         // If there is no scene, then we cannot make it dirty, so we'll leave
         // the flag alone
         if (getScene() == null) return;
@@ -7584,8 +7580,8 @@ public abstract class Node implements EventTarget {
     }
 
     // this function primarily exists as a hook to aid in testing
-    boolean isPseudoclassUsed(String pseudoclass) {
-        return (styleHelper != null) ? styleHelper.isPseudoclassUsed(pseudoclass) : false;
+    boolean isPseudoclassUsed(PseudoClass.State pseudoclass) {
+        return (styleHelper != null) ? styleHelper.isPseudoClassUsed(pseudoclass) : false;
     }
 
     /**
@@ -7653,7 +7649,7 @@ public abstract class Node implements EventTarget {
             case CLEAN:
                 break;
             case DIRTY_BRANCH:     
-                styleHelper.setTransitionState(getPseudoClassState());
+                styleHelper.setTransitionStates(getPseudoClassStates());
                 Parent me = (Parent)this;
                 // clear the flag first in case the flag is set to something
                 // other than clean by downstream processing.
@@ -7703,7 +7699,7 @@ public abstract class Node implements EventTarget {
         }
         while (parents.isEmpty() == false) {
             parent = parents.pop();
-            parent.impl_getStyleHelper().setTransitionState(((Node)parent).getPseudoClassState());
+            parent.impl_getStyleHelper().setTransitionStates(((Node)parent).getPseudoClassStates());
         }
         
         final boolean flag = (reapply || cssFlag == CSSFlags.REAPPLY);
@@ -7750,7 +7746,7 @@ public abstract class Node implements EventTarget {
         cssFlag = CSSFlags.CLEAN;
 
         // Transition to the new state and apply styles
-        styleHelper.setTransitionState(getPseudoClassState());
+        styleHelper.setTransitionStates(getPseudoClassStates());
         styleHelper.transitionToState();
     }
     
@@ -7772,24 +7768,36 @@ public abstract class Node implements EventTarget {
         return styleHelper;
     }
 
-    private static final long HOVER_PSEUDOCLASS_STATE = StyleManager.getPseudoclassMask("hover");
-    private static final long PRESSED_PSEUDOCLASS_STATE = StyleManager.getPseudoclassMask("pressed");
-    private static final long DISABLED_PSEUDOCLASS_STATE = StyleManager.getPseudoclassMask("disabled");
-    private static final long FOCUSED_PSEUDOCLASS_STATE = StyleManager.getPseudoclassMask("focused");
-    private static final long SHOW_MNEMONICS_PSEUDOCLASS_STATE = StyleManager.getPseudoclassMask("show-mnemonics");
+    private static final PseudoClass.State HOVER_PSEUDOCLASS_STATE = PseudoClass.getState("hover");
+    private static final PseudoClass.State PRESSED_PSEUDOCLASS_STATE = PseudoClass.getState("pressed");
+    private static final PseudoClass.State DISABLED_PSEUDOCLASS_STATE = PseudoClass.getState("disabled");
+    private static final PseudoClass.State FOCUSED_PSEUDOCLASS_STATE = PseudoClass.getState("focused");
+    private static final PseudoClass.State SHOW_MNEMONICS_PSEUDOCLASS_STATE = PseudoClass.getState("show-mnemonics");
 
     /**
-     * @treatAsPrivate implementation detail
-     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
+     * Gets the current {@link PseudoClass.States} of this node.
      */
-    @Deprecated
-    public long impl_getPseudoClassState() {
-        long mask = 0;
-        if(isHover()) mask |= HOVER_PSEUDOCLASS_STATE;
-        if(isPressed()) mask |= PRESSED_PSEUDOCLASS_STATE;
-        if(isDisabled()) mask |= DISABLED_PSEUDOCLASS_STATE;
-        if(isFocused()) mask |= FOCUSED_PSEUDOCLASS_STATE;
-        if(impl_isShowMnemonics()) mask |= SHOW_MNEMONICS_PSEUDOCLASS_STATE;
+    public PseudoClass.States getPseudoClassStates() {
+
+        PseudoClass.States mask = PseudoClass.createStatesInstance();
+        
+        if (PSEUDO_CLASS_OVERRIDE_ENABLED && hasProperties()) {
+            final Object pseudoClassOverride = getProperties().get(PSEUDO_CLASS_OVERRIDE_KEY);
+            if (pseudoClassOverride instanceof String) {
+                final String[] pseudoClasses = ((String)pseudoClassOverride).split("[\\s,]+");
+                for(String pc: pseudoClasses) {
+                    PseudoClass.State state = PseudoClass.getState(pc);
+                    mask.addState(state);
+                }
+                return mask;
+            }
+        }
+        
+        if(isHover()) mask.addState(HOVER_PSEUDOCLASS_STATE);
+        if(isPressed()) mask.addState(PRESSED_PSEUDOCLASS_STATE);
+        if(isDisabled()) mask.addState(DISABLED_PSEUDOCLASS_STATE);
+        if(isFocused()) mask.addState(FOCUSED_PSEUDOCLASS_STATE);
+        if(impl_isShowMnemonics()) mask.addState(SHOW_MNEMONICS_PSEUDOCLASS_STATE);
         return mask;
     }
 
@@ -7800,25 +7808,6 @@ public abstract class Node implements EventTarget {
                 }
             });
     private static final String PSEUDO_CLASS_OVERRIDE_KEY = "javafx.scene.Node.pseudoClassOverride";
-
-    /**
-     * gets the current pseudo class state of this node, check first to see if it overridden with the
-     * PSEUDO_CLASS_OVERRIDE_KEY node property.
-     */
-    private long getPseudoClassState() {
-        if (PSEUDO_CLASS_OVERRIDE_ENABLED && hasProperties()) {
-            final Object pseudoClassOverride = getProperties().get(PSEUDO_CLASS_OVERRIDE_KEY);
-            if (pseudoClassOverride instanceof String) {
-                final String[] pseudoClasses = ((String)pseudoClassOverride).split("[\\s,]+");
-                long mask = 0;
-                for(String pc: pseudoClasses) {
-                    mask |= StyleManager.getPseudoclassMask(pc);
-                }
-                return mask;
-            }
-        }
-        return impl_getPseudoClassState();
-    }
 
     private static abstract class LazyTransformProperty
             extends ReadOnlyObjectProperty<Transform> {

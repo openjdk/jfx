@@ -25,7 +25,7 @@
 
 package javafx.scene.control;
 
-import com.sun.javafx.css.StyleManager;
+import com.sun.javafx.css.PseudoClass;
 import javafx.beans.property.*;
 import javafx.event.ActionEvent;
 import javafx.event.Event;
@@ -163,7 +163,7 @@ public abstract class ComboBoxBase<T> extends Control {
     public final boolean isEditable() { return editableProperty().get(); }
     private BooleanProperty editable = new SimpleBooleanProperty(this, "editable", false) {
         @Override protected void invalidated() {
-            impl_pseudoClassStateChanged(PSEUDO_CLASS_EDITABLE);
+            pseudoClassStateChanged(PSEUDO_CLASS_EDITABLE);
         }
     };
     
@@ -188,7 +188,7 @@ public abstract class ComboBoxBase<T> extends Control {
         if (showing == null) {
             showing = new ReadOnlyBooleanWrapper(false) {
                 @Override protected void invalidated() {
-                    impl_pseudoClassStateChanged(PSEUDO_CLASS_SHOWING);
+                    pseudoClassStateChanged(PSEUDO_CLASS_SHOWING);
                 }
 
                 @Override
@@ -242,7 +242,7 @@ public abstract class ComboBoxBase<T> extends Control {
     public final boolean isArmed() { return armedProperty().get(); }
     private BooleanProperty armed = new SimpleBooleanProperty(this, "armed", false) {
         @Override protected void invalidated() {
-            impl_pseudoClassStateChanged(PSEUDO_CLASS_ARMED);
+            pseudoClassStateChanged(PSEUDO_CLASS_ARMED);
         }
     };
     
@@ -431,26 +431,21 @@ public abstract class ComboBoxBase<T> extends Control {
 
     private static final String DEFAULT_STYLE_CLASS = "combo-box-base";
     
-    private static final String PSEUDO_CLASS_EDITABLE = "editable";
-    private static final String PSEUDO_CLASS_SHOWING = "showing";
-    private static final String PSEUDO_CLASS_ARMED = "armed";
-    
-    private static final long PSEUDO_CLASS_EDITABLE_MASK
-            = StyleManager.getPseudoclassMask(PSEUDO_CLASS_EDITABLE);
-    private static final long PSEUDO_CLASS_SHOWING_MASK
-            = StyleManager.getPseudoclassMask(PSEUDO_CLASS_SHOWING);
-    private static final long PSEUDO_CLASS_ARMED_MASK
-            = StyleManager.getPseudoclassMask(PSEUDO_CLASS_ARMED);
+    private static final PseudoClass.State PSEUDO_CLASS_EDITABLE =
+            PseudoClass.getState("editable");
+    private static final PseudoClass.State PSEUDO_CLASS_SHOWING =
+            PseudoClass.getState("showing");
+    private static final PseudoClass.State PSEUDO_CLASS_ARMED =
+            PseudoClass.getState("armed");
     
     /**
-     * @treatAsPrivate implementation detail
-     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
+     * {@inheritDoc}
      */
-    @Deprecated @Override public long impl_getPseudoClassState() {
-        long mask = super.impl_getPseudoClassState();
-        if (isEditable()) mask |= PSEUDO_CLASS_EDITABLE_MASK;
-        if (isShowing()) mask |= PSEUDO_CLASS_SHOWING_MASK;
-        if (isArmed()) mask |= PSEUDO_CLASS_ARMED_MASK;
-        return mask;
+    @Override public PseudoClass.States getPseudoClassStates() {
+        PseudoClass.States states = super.getPseudoClassStates();
+        if (isEditable()) states.addState(PSEUDO_CLASS_EDITABLE);
+        if (isShowing()) states.addState(PSEUDO_CLASS_SHOWING);
+        if (isArmed()) states.addState(PSEUDO_CLASS_ARMED);
+        return states;
     }
 }

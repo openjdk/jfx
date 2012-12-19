@@ -48,7 +48,7 @@ import javafx.scene.input.Clipboard;
 import javafx.scene.input.ClipboardContent;
 import com.sun.javafx.Utils;
 import com.sun.javafx.binding.ExpressionHelper;
-import com.sun.javafx.css.StyleManager;
+import com.sun.javafx.css.PseudoClass;
 
 /**
  * Abstract base class for text input controls.
@@ -200,7 +200,7 @@ public abstract class TextInputControl extends Control {
      */
     private BooleanProperty editable = new SimpleBooleanProperty(this, "editable", true) {
         @Override protected void invalidated() {
-            impl_pseudoClassStateChanged(PSEUDO_CLASS_READONLY);
+            pseudoClassStateChanged(PSEUDO_CLASS_READONLY);
         }
     };
     public final boolean isEditable() { return editable.getValue(); }
@@ -1042,20 +1042,18 @@ public abstract class TextInputControl extends Control {
      *                                                                         *
      **************************************************************************/
 
-    private static final String PSEUDO_CLASS_READONLY = "readonly";
 
-    private static final long PSEUDO_CLASS_READONLY_MASK
-            = StyleManager.getPseudoclassMask(PSEUDO_CLASS_READONLY);
+    private static final PseudoClass.State PSEUDO_CLASS_READONLY
+            = PseudoClass.getState("readonly");
 
     /**
-     * @treatAsPrivate implementation detail
-     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
+     * {@inheritDoc}
      */
-    @Deprecated @Override public long impl_getPseudoClassState() {
-        long mask = super.impl_getPseudoClassState();
+    @Override public PseudoClass.States getPseudoClassStates() {
+        PseudoClass.States states = super.getPseudoClassStates();
 
-        if (!isEditable()) mask |= PSEUDO_CLASS_READONLY_MASK;
+        if (!isEditable()) states.addState(PSEUDO_CLASS_READONLY);
 
-        return mask;
+        return states;
     }
 }

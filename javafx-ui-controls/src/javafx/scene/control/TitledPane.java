@@ -36,7 +36,7 @@ import javafx.beans.property.SimpleObjectProperty;
 import javafx.beans.value.WritableValue;
 import javafx.scene.Node;
 
-import com.sun.javafx.css.StyleManager;
+import com.sun.javafx.css.PseudoClass;
 import com.sun.javafx.css.StyleableBooleanProperty;
 import com.sun.javafx.css.CssMetaData;
 import com.sun.javafx.css.converters.BooleanConverter;
@@ -134,8 +134,8 @@ public class TitledPane extends Labeled {
     private BooleanProperty expanded = new BooleanPropertyBase(true) {
         @Override protected void invalidated() {
             get();
-            impl_pseudoClassStateChanged(PSEUDO_CLASS_EXPANDED);
-            impl_pseudoClassStateChanged(PSEUDO_CLASS_COLLAPSED);
+            pseudoClassStateChanged(PSEUDO_CLASS_EXPANDED);
+            pseudoClassStateChanged(PSEUDO_CLASS_COLLAPSED);
         }
 
         @Override
@@ -265,8 +265,11 @@ public class TitledPane extends Labeled {
 
     private static final String DEFAULT_STYLE_CLASS = "titled-pane";
 
-    private static final String PSEUDO_CLASS_EXPANDED = "expanded";
-    private static final String PSEUDO_CLASS_COLLAPSED = "collapsed";
+    private static final PseudoClass.State PSEUDO_CLASS_EXPANDED =
+            PseudoClass.getState("expanded");
+    private static final PseudoClass.State PSEUDO_CLASS_COLLAPSED =
+            PseudoClass.getState("collapsed");
+
 
     private static class StyleableProperties {
 
@@ -328,18 +331,13 @@ public class TitledPane extends Labeled {
         return getClassCssMetaData();
     }
 
-    private static final long EXPANDED_PSEUDOCLASS_STATE =
-            StyleManager.getPseudoclassMask("expanded");
-    private static final long COLLAPSED_PSEUDOCLASS_STATE =
-            StyleManager.getPseudoclassMask("collapsed");
-
     /**
-     * @treatAsPrivate implementation detail
-     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
+     * {@inheritDoc}
      */
-    @Deprecated @Override public long impl_getPseudoClassState() {
-        long mask = super.impl_getPseudoClassState();
-        mask |= isExpanded() ? EXPANDED_PSEUDOCLASS_STATE : COLLAPSED_PSEUDOCLASS_STATE;
-        return mask;
+    @Override public PseudoClass.States getPseudoClassStates() {
+        PseudoClass.States states = super.getPseudoClassStates();
+        if (isExpanded()) states.addState(PSEUDO_CLASS_EXPANDED);
+        else states.addState(PSEUDO_CLASS_COLLAPSED);
+        return states;
     }
 }

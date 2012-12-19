@@ -40,7 +40,6 @@ public class StyleTest {
     
     private static Style createStyle(String stylesheetText) {
         
-        List<Style> styles = new ArrayList<Style>();
         Stylesheet stylesheet = CSSParser.getInstance().parse(stylesheetText);
         Rule rule = stylesheet.getRules().get(0);
         Selector sel = rule.getSelectors().get(0);

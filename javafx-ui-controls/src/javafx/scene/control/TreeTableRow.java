@@ -24,7 +24,7 @@
  */
 package javafx.scene.control;
 
-import com.sun.javafx.css.StyleManager;
+import com.sun.javafx.css.PseudoClass;
 import com.sun.javafx.scene.control.skin.TreeTableRowSkin;
 import java.lang.ref.WeakReference;
 import javafx.beans.InvalidationListener;
@@ -415,19 +415,19 @@ public class TreeTableRow<T> extends IndexedCell<T> {
 
     private static final String DEFAULT_STYLE_CLASS = "tree-table-row-cell";
 
-    private static final long EXPANDED_PSEUDOCLASS_STATE = StyleManager.getPseudoclassMask("expanded");
-    private static final long COLLAPSED_PSEUDOCLASS_STATE = StyleManager.getPseudoclassMask("collapsed");
+    private static final PseudoClass.State EXPANDED_PSEUDOCLASS_STATE = PseudoClass.getState("expanded");
+    private static final PseudoClass.State COLLAPSED_PSEUDOCLASS_STATE = PseudoClass.getState("collapsed");
 
    /**
-     * @treatasprivate implementation detail
-     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
+     * {@inheritDoc}
      */
-    @Deprecated @Override public long impl_getPseudoClassState() {
-        long mask = super.impl_getPseudoClassState();
+    @Override public PseudoClass.States getPseudoClassStates() {
+        PseudoClass.States states = super.getPseudoClassStates();
         if (getTreeItem() != null && ! getTreeItem().isLeaf()) {
-            mask |= getTreeItem().isExpanded() ? EXPANDED_PSEUDOCLASS_STATE : COLLAPSED_PSEUDOCLASS_STATE;
+            if (getTreeItem().isExpanded()) states.addState(EXPANDED_PSEUDOCLASS_STATE);
+            else states.addState(COLLAPSED_PSEUDOCLASS_STATE);
         }
-        return mask;
+        return states;
     }
     
     /** {@inheritDoc} */

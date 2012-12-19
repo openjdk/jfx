@@ -26,8 +26,11 @@
 
 package javafx.scene.layout;
 
-import com.sun.javafx.css.*;
+import com.sun.javafx.css.CssMetaData;
 import com.sun.javafx.css.Origin;
+import com.sun.javafx.css.StyleableDoubleProperty;
+import com.sun.javafx.css.StyleableIntegerProperty;
+import com.sun.javafx.css.StyleableObjectProperty;
 import com.sun.javafx.css.converters.EnumConverter;
 import com.sun.javafx.css.converters.SizeConverter;
 import static javafx.geometry.Orientation.HORIZONTAL;

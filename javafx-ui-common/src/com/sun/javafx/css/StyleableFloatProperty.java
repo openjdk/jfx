@@ -27,7 +27,19 @@ package com.sun.javafx.css;
 import javafx.beans.property.FloatPropertyBase;
 import javafx.beans.value.ObservableValue;
 
-
+/**
+ * This class extends {@code FloatPropertyBase} and provides a partial
+ * implementation of a {@code StyleableProperty}. The method 
+ * {@link StyleableProperty#getCssMetaData()} is not implemented. 
+ * 
+ * This class is used to make a {@link javafx.beans.property.FloatProperty}, 
+ * that would otherwise be implemented as a {@link FloatPropertyBase}, 
+ * style&#8209;able by CSS.
+ * 
+ * @see javafx.beans.property.FloatPropertyBase
+ * @see CssMetaData
+ * @see StyleableProperty
+ */
 public abstract class StyleableFloatProperty 
     extends FloatPropertyBase implements StyleableProperty<Float> {
 
@@ -48,27 +60,31 @@ public abstract class StyleableFloatProperty
         super(initialValue);
     }
     
-    Origin origin = null;
-    
-    @Override
-    public Origin getOrigin() { return origin; }
-    
+    /** {@inheritDoc} */
     @Override
     public void applyStyle(Origin origin, Float v) {
         setValue(v);
         this.origin = origin;
     }
             
+    /** {@inheritDoc} */
     @Override
     public void bind(ObservableValue<? extends Number> observable) {
         super.bind(observable);
         origin = Origin.USER;
     }
 
+    /** {@inheritDoc} */
     @Override
     public void set(float v) {
         super.set(v);
         origin = Origin.USER;
     }
+    
+    /** {@inheritDoc} */
+    @Override
+    public final Origin getOrigin() { return origin; }
+
+    private Origin origin = null;    
     
 }

@@ -41,7 +41,7 @@ class CascadingStyle implements Comparable {
     }
     
     /** State variables, like &quot;hover&quot; or &quot;pressed&quot; */
-    private long pseudoclasses;
+    private PseudoClass.States pseudoclasses;
 
     /* specificity of the rule that matched */
     private final int specificity;
@@ -58,7 +58,7 @@ class CascadingStyle implements Comparable {
     // internal to Style
     static private Set<String> strSet = new HashSet<String>();
 
-    CascadingStyle(final Style style, long pseudoclasses, 
+    CascadingStyle(final Style style, PseudoClass.States pseudoclasses, 
             final int specificity, final int ordinal) {
         this.style = style;
         this.pseudoclasses = pseudoclasses;
@@ -113,7 +113,7 @@ class CascadingStyle implements Comparable {
         }
         
         // is [foo bar] a subset of [foo bar bang]?
-        return ((pseudoclasses & other.pseudoclasses) ==  pseudoclasses);
+        return pseudoclasses.isSubsetOf(other.pseudoclasses);
 
     }
 
@@ -126,7 +126,7 @@ class CascadingStyle implements Comparable {
         int hash = 7;
         final String property = getProperty();
         hash = 47 * hash + (property != null ? property.hashCode() : 0);
-        hash = 47 * hash + (int) (this.pseudoclasses ^ (this.pseudoclasses >>> 32));
+        hash = 47 * hash + (pseudoclasses != null ? pseudoclasses.hashCode() : 0);
         return hash;
     }
 

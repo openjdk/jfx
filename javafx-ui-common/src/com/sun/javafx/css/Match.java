@@ -37,7 +37,7 @@ import javafx.scene.Node;
 final class Match implements Comparable {
 
     final Selector selector;
-    final long pseudoclasses;
+    final PseudoClass.States pseudoclasses;
     final int idCount;
     final int styleClassCount;
     
@@ -47,14 +47,14 @@ final class Match implements Comparable {
     // then pseudoclass count, and finally matching types (i.e., java name count)
     final int specificity;
 
-    Match(final Selector selector, long pseudoclasses,
+    Match(final Selector selector, PseudoClass.States pseudoclasses,
             final int idCount, final int styleClassCount) {
         assert selector != null;
         this.selector = selector;
         this.idCount = idCount;
         this.styleClassCount = styleClassCount;
         this.pseudoclasses = pseudoclasses;
-        int nPseudoclasses = Long.bitCount(pseudoclasses);
+        int nPseudoclasses = pseudoclasses.getCount();
         
         specificity = (idCount << 8) | (styleClassCount << 4) | nPseudoclasses;
     }
@@ -69,9 +69,9 @@ final class Match implements Comparable {
     public String toString() {
         StringBuilder sb = new StringBuilder();
         sb.append(selector);
-        for(String s : StyleManager.getPseudoclassStrings(pseudoclasses)) {
+        for(PseudoClass.State s : pseudoclasses.getStates()) {
             sb.append(":");
-            sb.append(s);
+            sb.append(s.getPseudoClass());
         }
         sb.append(", ");
         sb.append(idCount);

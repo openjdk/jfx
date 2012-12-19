@@ -24,6 +24,7 @@
  */
 package javafx.scene.control;
 
+import com.sun.javafx.css.PseudoClass;
 import com.sun.javafx.scene.control.skin.TreeTableCellSkin;
 import javafx.beans.InvalidationListener;
 import javafx.beans.Observable;
@@ -373,7 +374,7 @@ public class TreeTableCell<S,T> extends IndexedCell<T> {
                 columnIndex != -1 && 
                 columnIndex == tv.getVisibleLeafColumns().size() - 1;
         if (old != isLastVisibleColumn) {
-            impl_pseudoClassStateChanged(PSEUDO_CLASS_LAST_VISIBLE);
+            pseudoClassStateChanged(PSEUDO_CLASS_LAST_VISIBLE);
         }
     }
 
@@ -560,7 +561,8 @@ public class TreeTableCell<S,T> extends IndexedCell<T> {
      **************************************************************************/
 
     private static final String DEFAULT_STYLE_CLASS = "tree-table-cell";
-    private static final String PSEUDO_CLASS_LAST_VISIBLE = "last-visible";
+    private static final PseudoClass.State PSEUDO_CLASS_LAST_VISIBLE = 
+            PseudoClass.getState("last-visible");
 
     /** {@inheritDoc} */
     @Override protected Skin<?> createDefaultSkin() {

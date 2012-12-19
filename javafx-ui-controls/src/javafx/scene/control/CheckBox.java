@@ -31,9 +31,9 @@ import javafx.beans.property.SimpleBooleanProperty;
 
 import javafx.event.ActionEvent;
 import javafx.geometry.Pos;
-import com.sun.javafx.css.StyleManager;
 import com.sun.javafx.scene.control.accessible.AccessibleCheckBox;
 import com.sun.javafx.accessible.providers.AccessibleProvider;
+import com.sun.javafx.css.PseudoClass;
 import com.sun.javafx.scene.control.skin.CheckBoxSkin;
 
 /**
@@ -124,8 +124,8 @@ public class CheckBox extends ButtonBase {
         if (indeterminate == null) {
             indeterminate = new BooleanPropertyBase(false) {
                 @Override protected void invalidated() {
-                    impl_pseudoClassStateChanged(PSEUDO_CLASS_DETERMINATE);
-                    impl_pseudoClassStateChanged(PSEUDO_CLASS_INDETERMINATE);
+                    pseudoClassStateChanged(PSEUDO_CLASS_DETERMINATE);
+                    pseudoClassStateChanged(PSEUDO_CLASS_INDETERMINATE);
                 }
 
                 @Override
@@ -157,7 +157,7 @@ public class CheckBox extends ButtonBase {
         if (selected == null) {
             selected = new BooleanPropertyBase() {
                 @Override protected void invalidated() {
-                    impl_pseudoClassStateChanged(PSEUDO_CLASS_SELECTED);
+                    pseudoClassStateChanged(PSEUDO_CLASS_SELECTED);
                 }
 
                 @Override
@@ -242,23 +242,27 @@ public class CheckBox extends ButtonBase {
      **************************************************************************/
 
     private static final String DEFAULT_STYLE_CLASS = "check-box";
-    private static final String PSEUDO_CLASS_DETERMINATE = "determinate";
-    private static final String PSEUDO_CLASS_INDETERMINATE = "indeterminate";
-    private static final String PSEUDO_CLASS_SELECTED = "selected";
-
-    private static final long SELECTED_PSEUDOCLASS_STATE = StyleManager.getPseudoclassMask("selected");
-    private static final long INDETERMINATE_PSEUDOCLASS_STATE = StyleManager.getPseudoclassMask("indeterminate");
-    private static final long DETERMINATE_PSEUDOCLASS_STATE = StyleManager.getPseudoclassMask("determinate");
+    private static final PseudoClass.State PSEUDO_CLASS_DETERMINATE = 
+            PseudoClass.getState("determinate");
+    private static final PseudoClass.State PSEUDO_CLASS_INDETERMINATE = 
+            PseudoClass.getState("indeterminate");
+    private static final PseudoClass.State PSEUDO_CLASS_SELECTED = 
+            PseudoClass.getState("selected");
 
     /**
-     * @treatAsPrivate implementation detail
-     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
+     * {@inheritDoc}
      */
-    @Deprecated @Override public long impl_getPseudoClassState() {
-        long mask = super.impl_getPseudoClassState();
-        if (isSelected()) mask |= SELECTED_PSEUDOCLASS_STATE;
-        mask |= isIndeterminate() ? INDETERMINATE_PSEUDOCLASS_STATE : DETERMINATE_PSEUDOCLASS_STATE;
-        return mask;
+    @Override public PseudoClass.States getPseudoClassStates() {
+        PseudoClass.States states = super.getPseudoClassStates();
+        if (isSelected()) {
+            states.addState(PSEUDO_CLASS_SELECTED);
+        }
+        if (isIndeterminate()) {
+            states.addState(PSEUDO_CLASS_INDETERMINATE);
+        } else {
+            states.addState(PSEUDO_CLASS_DETERMINATE);            
+        }
+        return states;
     }
     
     private AccessibleCheckBox accCheckBox ;

@@ -25,12 +25,20 @@
 package com.sun.javafx.css;
 
 /**
- *
- * The various classes in <code>com.sun.javafx.css</code> that extend 
- * <code>javafx.beans.property</code>
- * classes all implement this interface which allows coordination between CSS 
- * processing and the <code>javafx.beans.property</code> mutators.
- * 
+ * StyleableProperty allows a {@link javafx.beans.property} to be styled from
+ * CSS. 
+ * <p>This interface allows coordination between CSS 
+ * processing and a <code>javafx.beans.property</code>. The implementations
+ * ensure that the priority for setting the value is, in increasing order
+ * and assuming equal importance,
+ * <ol>
+ * <li>a style from a user agent stylesheet in 
+ * {@link javafx.application.Application#setUserAgentStylesheet(java.lang.String)}</li>
+ * <li>value set from code, for example calling {@link javafx.scene.Node#setOpacity(double)}</li>
+ * <li>a style from an author stylesheet in {@link javafx.scene.Scene#getStylesheets()}
+ * or {@link javafx.scene.Parent#getStylesheets()}</li>
+ * <li>a style from {@link javafx.scene.Node#setStyle(java.lang.String)}</li>
+ * </ol>
  */
 interface StyleableProperty<T> {
     

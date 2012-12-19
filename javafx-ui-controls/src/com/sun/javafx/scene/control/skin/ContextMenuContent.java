@@ -69,7 +69,7 @@ import javafx.scene.shape.Rectangle;
 import javafx.util.Duration;
 
 import com.sun.javafx.css.CssMetaData;
-import com.sun.javafx.css.StyleManager;
+import com.sun.javafx.css.PseudoClass;
 import java.util.Iterator;
 import javafx.geometry.NodeOrientation;
 import javafx.stage.Window;
@@ -1319,17 +1319,17 @@ public class ContextMenuContent extends Region {
         }
 
         @Override
-        public long impl_getPseudoClassState() {
-            long mask = super.impl_getPseudoClassState();
+        public PseudoClass.States getPseudoClassStates() {
+            PseudoClass.States states = super.getPseudoClassStates();
             if (item instanceof Menu && item.equals(openSubmenu) && submenu.isShowing()) {
-                mask |= SELECTED_PSEUDOCLASS_STATE;
+                states.addState(SELECTED_PSEUDOCLASS_STATE);
             } else if (item instanceof RadioMenuItem && ((RadioMenuItem)item).isSelected()) {
-                mask |= CHECKED_PSEUDOCLASS_STATE;
+                states.addState(CHECKED_PSEUDOCLASS_STATE);
             } else if (item instanceof CheckMenuItem && ((CheckMenuItem)item).isSelected()) {
-                mask |= CHECKED_PSEUDOCLASS_STATE;
+                states.addState(CHECKED_PSEUDOCLASS_STATE);
             }
-            if (item.isDisable()) mask |= DISABLED_PSEUDOCLASS_STATE;
-            return mask;
+            if (item.isDisable()) states.addState(DISABLED_PSEUDOCLASS_STATE);
+            return states;
         }
 
 
@@ -1361,7 +1361,8 @@ public class ContextMenuContent extends Region {
         private void listen(ObservableBooleanValue property, final String pseudoClass) {
             property.addListener(new InvalidationListener() {
                 @Override public void invalidated(Observable valueModel) {
-                    impl_pseudoClassStateChanged(pseudoClass);
+                    PseudoClass.State state = PseudoClass.getState(pseudoClass);
+                    pseudoClassStateChanged(state);
                 }
             });
         }
@@ -1398,12 +1399,12 @@ public class ContextMenuContent extends Region {
     }
 
 
-    private static final long SELECTED_PSEUDOCLASS_STATE =
-            StyleManager.getPseudoclassMask("selected");
-    private static final long DISABLED_PSEUDOCLASS_STATE =
-            StyleManager.getPseudoclassMask("disabled");
-    private static final long CHECKED_PSEUDOCLASS_STATE =
-            StyleManager.getPseudoclassMask("checked");
+    private static final PseudoClass.State SELECTED_PSEUDOCLASS_STATE =
+            PseudoClass.getState("selected");
+    private static final PseudoClass.State DISABLED_PSEUDOCLASS_STATE =
+            PseudoClass.getState("disabled");
+    private static final PseudoClass.State CHECKED_PSEUDOCLASS_STATE =
+            PseudoClass.getState("checked");
 
     private class MenuLabel extends Label {
 
