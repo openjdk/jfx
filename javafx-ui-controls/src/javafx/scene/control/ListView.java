@@ -720,7 +720,7 @@ public class ListView<T> extends Control {
      *      size of the items list contained within the given ListView.
      */
     public void scrollTo(int index) {
-       getProperties().put(VirtualContainerBase.SCROLL_TO_INDEX_CENTERED, index);
+       getProperties().put(VirtualContainerBase.SCROLL_TO_INDEX_TOP, index);
     }
 
     private AccessibleList accListView ;

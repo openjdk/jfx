@@ -724,7 +724,7 @@ public class TreeView<T> extends Control {
      *      number of the visible items in the TreeView.
      */
     public void scrollTo(int index) {
-       getProperties().put(VirtualContainerBase.SCROLL_TO_INDEX_CENTERED, index);
+       getProperties().put(VirtualContainerBase.SCROLL_TO_INDEX_TOP, index);
     }
 
     /**
