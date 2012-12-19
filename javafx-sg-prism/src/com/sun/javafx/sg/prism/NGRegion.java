@@ -52,6 +52,7 @@ import com.sun.javafx.geom.Shape;
 import com.sun.javafx.geom.transform.Affine2D;
 import com.sun.javafx.geom.transform.BaseTransform;
 import com.sun.javafx.geom.transform.GeneralTransform3D;
+import com.sun.javafx.logging.PulseLogger;
 import com.sun.javafx.sg.BaseEffectFilter;
 import com.sun.javafx.sg.BaseNode;
 import com.sun.javafx.sg.NodePath;
@@ -468,9 +469,9 @@ public class NGRegion extends NGGroup implements PGRegion {
                 // RT-25013: We need to make sure that we do not use a cached image in the case of a
                 // scaled region, or things won't look right (they'll looked scaled instead of vector-resized).
                 final boolean cache = backgroundCanBeCached && g.getTransformNoClone().isTranslateOrIdentity();
-                RTTexture cached = cache ? CACHE.getImage(null, textureWidth, textureHeight, background, shape) : null;
+                RTTexture cached = cache ? CACHE.getImage(g.getAssociatedScreen(), textureWidth, textureHeight, background, shape) : null;
                 // If there is not a cached texture already, then we need to render everything
-                if (cached == null) {
+                if (cached == null || cached.getNativeDestHandle() == 0L) {
                     // We will here check to see if we CAN cache the region background. If not, then
                     // we will render as normal. If we can cache it, however, then we will setup a
                     // texture and swizzle rendering onto the RTTexture's graphics, and then at the
@@ -484,8 +485,10 @@ public class NGRegion extends NGGroup implements PGRegion {
                         // Have to move the origin such that when rendering to x=0, we actually end up rendering
                         // at x=bounds.getMinX(). Otherwise anything rendered to the left of the origin would be lost
                         g.translate(-outsetShapeBounds.getMinX(), -outsetShapeBounds.getMinY());
-                        // TODO need to pass in something like GraphicsConfiguration (RT-26923)
-                        CACHE.setImage(cached, null, textureWidth, textureHeight, background, shape);
+                        CACHE.setImage(cached, old.getAssociatedScreen(), textureWidth, textureHeight, background, shape);
+                        if (PulseLogger.PULSE_LOGGING_ENABLED) {
+                            PulseLogger.PULSE_LOGGER.renderIncrementCounter("Region shape image cached");
+                        }
                     }
 
                     // We first need to draw each background fill. We don't pay any attention
@@ -554,6 +557,9 @@ public class NGRegion extends NGGroup implements PGRegion {
                     final float srcY2 = srcY1 + textureHeight;
 
                     g.drawTexture(cached, dstX1, dstY1, dstX2, dstY2, srcX1, srcY1, srcX2, srcY2);
+                    if (PulseLogger.PULSE_LOGGING_ENABLED) {
+                        PulseLogger.PULSE_LOGGER.renderIncrementCounter("Cached Region shape image used");
+                    }
                 }
             }
 
@@ -607,7 +613,7 @@ public class NGRegion extends NGGroup implements PGRegion {
                         (width - (int)width == 0) &&
                         backgroundCanBeCached &&
                         g.getTransformNoClone().isTranslateOrIdentity();
-                RTTexture cached = cache ? CACHE.getImage(null, textureWidth, textureHeight, background) : null;
+                RTTexture cached = cache ? CACHE.getImage(g.getAssociatedScreen(), textureWidth, textureHeight, background) : null;
                 // If there is not a cached texture already, then we need to render everything
                 if (cached == null) {
                     // We will here check to see if we CAN cache the region background. If not, then
@@ -626,8 +632,10 @@ public class NGRegion extends NGGroup implements PGRegion {
                         // at x=outsets.getLeft(). Otherwise anything rendered to the left of the origin would be lost
                         // Round up to the nearest pixel
                         g.translate(roundUp(outsets.getLeft()), roundUp(outsets.getTop()));
-                        // TODO need to pass in something like GraphicsConfiguration (RT-26923)
-                        CACHE.setImage(cached, null, textureWidth, textureHeight, background);
+                        CACHE.setImage(cached, old.getAssociatedScreen(), textureWidth, textureHeight, background);
+                        if (PulseLogger.PULSE_LOGGING_ENABLED) {
+                            PulseLogger.PULSE_LOGGER.renderIncrementCounter("Region background image cached");
+                        }
                     }
 
                     // Paint in order each BackgroundFill.
@@ -709,7 +717,12 @@ public class NGRegion extends NGGroup implements PGRegion {
                         final float srcY1 = 0f;
                         final float srcX2 = srcX1 + textureWidth;
                         final float srcY2 = srcY1 + textureHeight;
+
                         g.drawTexture(cached, dstX1, dstY1, dstX2, dstY2, srcX1, srcY1, srcX2, srcY2);
+
+                        if (PulseLogger.PULSE_LOGGING_ENABLED) {
+                            PulseLogger.PULSE_LOGGER.renderIncrementCounter("Cached Region background image used");
+                        }
                     } else {
                         // We do 3-patch rendering, because our height is fixed (ie: the same background but at
                         // different heights will have different cached images)
@@ -744,6 +757,10 @@ public class NGRegion extends NGGroup implements PGRegion {
                         g.drawTexture(cached, dstX1, dstY1, dstLeftX, dstY2, srcX1, srcY1, srcLeftX, srcY2);
                         g.drawTexture(cached, dstLeftX, dstY1, dstRightX, dstY2, srcLeftX, srcY1, srcRightX, srcY2);
                         g.drawTexture(cached, dstRightX, dstY1, dstX2, dstY2, srcRightX, srcY1, srcX2, srcY2);
+
+                        if (PulseLogger.PULSE_LOGGING_ENABLED) {
+                            PulseLogger.PULSE_LOGGER.renderIncrementCounter("Cached Region background image used");
+                        }
                     }
                 }
 
