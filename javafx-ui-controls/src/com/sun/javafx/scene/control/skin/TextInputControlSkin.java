@@ -25,15 +25,16 @@
 
 package com.sun.javafx.scene.control.skin;
 
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
 import javafx.animation.KeyFrame;
 import javafx.animation.Timeline;
-import javafx.application.Platform;
 import javafx.beans.InvalidationListener;
 import javafx.beans.Observable;
 import javafx.beans.binding.BooleanBinding;
 import javafx.beans.binding.ObjectBinding;
 import javafx.beans.property.BooleanProperty;
-import javafx.beans.property.BooleanPropertyBase;
 import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.SimpleBooleanProperty;
 import javafx.beans.value.ObservableBooleanValue;
@@ -72,12 +73,7 @@ import javafx.scene.shape.Shape;
 import javafx.scene.shape.VLineTo;
 import javafx.scene.text.Font;
 import javafx.stage.Window;
-import javafx.stage.WindowEvent;
 import javafx.util.Duration;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
-
 import com.sun.javafx.PlatformUtil;
 import com.sun.javafx.css.StyleableBooleanProperty;
 import com.sun.javafx.css.StyleableObjectProperty;
@@ -171,6 +167,10 @@ public abstract class TextInputControlSkin<T extends TextInputControl, B extends
     protected final ObjectProperty<Paint> highlightFill = 
         new StyleableObjectProperty<Paint>(Color.DODGERBLUE) {
 
+        @Override protected void invalidated() {
+            updateHighlightFill();
+        }
+
         @Override
         public Object getBean() {
             return TextInputControlSkin.this;
@@ -188,6 +188,10 @@ public abstract class TextInputControlSkin<T extends TextInputControl, B extends
     };
     protected final ObjectProperty<Paint> highlightTextFill = 
         new StyleableObjectProperty<Paint>(Color.WHITE) {
+
+        @Override protected void invalidated() {
+            updateHighlightTextFill();
+        }
 
         @Override
         public Object getBean() {

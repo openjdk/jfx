@@ -25,34 +25,30 @@
 
 package com.sun.javafx.scene.control.behavior;
 
+import java.util.ArrayList;
+import java.util.List;
 import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
-import javafx.event.EventHandler;
+import javafx.geometry.Bounds;
 import javafx.geometry.Point2D;
+import javafx.geometry.Rectangle2D;
 import javafx.scene.Scene;
 import javafx.scene.control.ContextMenu;
 import javafx.scene.control.IndexRange;
 import javafx.scene.control.TextArea;
 import javafx.scene.input.MouseButton;
 import javafx.scene.input.MouseEvent;
-import javafx.scene.input.TouchEvent;
 import javafx.stage.Screen;
 import javafx.stage.Window;
-
-import java.util.ArrayList;
-import java.util.List;
-
 import com.sun.javafx.PlatformUtil;
-import com.sun.javafx.scene.control.skin.TextAreaSkin;
 import com.sun.javafx.css.StyleManager;
-import com.sun.javafx.scene.control.skin.Utils;
+import com.sun.javafx.geom.transform.Affine3D;
+import com.sun.javafx.scene.control.skin.TextAreaSkin;
 import com.sun.javafx.scene.text.HitInfo;
+
 import static javafx.scene.input.KeyCode.*;
 import static javafx.scene.input.KeyEvent.*;
 import static com.sun.javafx.PlatformUtil.*;
-import javafx.geometry.Rectangle2D;
-import com.sun.javafx.geom.transform.Affine3D;
-import javafx.geometry.Bounds;
 
 
 /**
@@ -149,15 +145,19 @@ public class TextAreaBehavior extends TextInputControlBehavior<TextArea> {
         textArea.focusedProperty().addListener(new ChangeListener<Boolean>() {
             @Override
             public void changed(ObservableValue<? extends Boolean> observable, Boolean oldValue, Boolean newValue) {
-                TextArea textArea = getControl();
+                // NOTE: The code in this method is *almost* and exact copy of what is in TextFieldBehavior.
+                // The only real difference is that TextFieldBehavior selects all the text when the control
+                // receives focus (when not gained by mouse click), whereas TextArea doesn't, and also the
+                // TextArea doesn't lose selection on focus lost, whereas the TextField does.
+                final TextArea textArea = getControl();
                 if (textArea.isFocused()) {
                     if (PlatformUtil.isIOS()) {
-                        // special handling of focus on iOS is required to allow to
-                        // control native keyboard, because nat. keyboard is poped-up only when native 
+                        // Special handling of focus on iOS is required to allow to
+                        // control native keyboard, because native keyboard is popped-up only when native
                         // text component gets focus. When we have JFX keyboard we can remove this code
-                        Bounds bnds = textArea.getBoundsInParent();
-                        double w = bnds.getWidth();
-                        double h = bnds.getHeight();
+                        final Bounds bounds = textArea.getBoundsInParent();
+                        double w = bounds.getWidth();
+                        double h = bounds.getHeight();
                         Affine3D trans = TextFieldBehavior.calculateNodeToSceneTransform(textArea);
                         String text = textArea.getText();
 
