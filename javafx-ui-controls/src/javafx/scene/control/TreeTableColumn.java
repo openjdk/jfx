@@ -421,7 +421,9 @@ public class TreeTableColumn<S,T> extends TableColumnBase<TreeItem<S>,T> impleme
         new SimpleObjectProperty<Callback<TreeTableColumn<S,T>, TreeTableCell<S,T>>>(
             this, "cellFactory", (Callback<TreeTableColumn<S,T>, TreeTableCell<S,T>>) ((Callback) DEFAULT_CELL_FACTORY)) {
                 @Override protected void invalidated() {
-                    Map properties = getTreeTableView().getProperties();
+                    TreeTableView table = getTreeTableView();
+                    if (table == null) return;
+                    Map properties = table.getProperties();
                     if (properties.containsKey(TableViewSkinBase.RECREATE)) {
                         properties.remove(TableViewSkinBase.RECREATE);
                     }

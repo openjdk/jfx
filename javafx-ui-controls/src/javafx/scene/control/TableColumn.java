@@ -423,7 +423,9 @@ public class TableColumn<S,T> extends TableColumnBase<S,T> implements EventTarge
         new SimpleObjectProperty<Callback<TableColumn<S,T>, TableCell<S,T>>>(
             this, "cellFactory", (Callback<TableColumn<S,T>, TableCell<S,T>>) ((Callback) DEFAULT_CELL_FACTORY)) {
                 @Override protected void invalidated() {
-                    Map properties = getTableView().getProperties();
+                    TableView table = getTableView();
+                    if (table == null) return;
+                    Map properties = table.getProperties();
                     if (properties.containsKey(TableViewSkinBase.RECREATE)) {
                         properties.remove(TableViewSkinBase.RECREATE);
                     }
