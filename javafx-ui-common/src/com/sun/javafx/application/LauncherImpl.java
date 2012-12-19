@@ -27,16 +27,16 @@ package com.sun.javafx.application;
 
 import com.sun.javafx.jmx.MXExtension;
 import com.sun.javafx.runtime.SystemProperties;
-import com.sun.javafx.PlatformUtil;
+import java.io.IOException;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Method;
-import java.security.AccessController;
-import java.security.PrivilegedAction;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.jar.Attributes;
+import java.util.jar.JarFile;
+import java.util.jar.Manifest;
 
 import javafx.application.Application;
-import javafx.application.ConditionalFeature;
 import javafx.application.Preloader;
 import javafx.application.Preloader.ErrorNotification;
 import javafx.application.Preloader.PreloaderNotification;
@@ -45,6 +45,23 @@ import javafx.stage.Stage;
 
 
 public class LauncherImpl {
+    /**
+     * When passed as launchMode to launchApplication, tells the method that
+     * launchName is the name of the JavaFX application class to launch.
+     */
+    public static final String LAUNCH_MODE_CLASS = "LM_CLASS";
+    
+    /**
+     * When passed as launchMode to launchApplication, tells the method that
+     * launchName is a path to a JavaFX application jar file to be launched.
+     */
+    public static final String LAUNCH_MODE_JAR = "LM_JAR";
+    
+    // set to true to debug launch issues from Java launcher
+    private static final boolean trace = false;
+
+    private static final String MF_JAVAFX_MAIN = "JavaFX-Application-Class";
+    private static final String MF_JAVAFX_PRELOADER = "JavaFX-Preloader-Class";
 
     // Set to true to simulate a slow download progress
     private static final boolean simulateSlowProgress = false;
@@ -139,6 +156,141 @@ public class LauncherImpl {
         if (launchException != null) {
             throw launchException;
         }
+    }
+
+    /**
+     * This method is called by the Java launcher. This allows us to be launched
+     * directly from the command line via "java -jar fxapp.jar" or
+     * "java -cp path some.fx.App". The launchMode argument must be one of
+     * "LM_CLASS" or "LM_JAR" or execution will abort with an error.
+     * 
+     * @param launchName Either the path to a jar file or the application class
+     * name to launch
+     * @param launchMode The method of launching the application, either LM_JAR
+     * or LM_CLASS
+     * @param args Application arguments from the command line
+     */
+    public static void launchApplication(final String launchName,
+            final String launchMode,
+            final String[] args) {
+        /*
+         * For now, just open the jar and get JavaFX-Application-Class and
+         * JavaFX-Preloader and pass them to launchApplication. In the future
+         * we'll need to load requested jar files and set up the proxy
+         */
+        String mainClassName = null;
+        String preloaderClassName = null;
+
+        if (launchMode.equals(LAUNCH_MODE_JAR)) {
+            Attributes jarAttrs = getJarAttributes(launchName);
+            if (jarAttrs == null) {
+                abort(null, "Can't get manifest attributes from jar");
+            }
+
+            mainClassName = jarAttrs.getValue(MF_JAVAFX_MAIN);
+            if (mainClassName == null) {
+                abort(null, "JavaFX jar manifest requires a valid JavaFX-Appliation-Class entry");
+            }
+            mainClassName = mainClassName.trim();
+
+            preloaderClassName = jarAttrs.getValue(MF_JAVAFX_PRELOADER);
+            if (preloaderClassName != null) {
+                preloaderClassName = preloaderClassName.trim();
+            }
+        } else if (launchMode.equals(LAUNCH_MODE_CLASS)) {
+            mainClassName = launchName;
+        } else {
+            abort(new IllegalArgumentException("The launchMode argument must be one of LM_CLASS or LM_JAR"),
+                    "Invalid launch mode: %1$s", launchMode);
+        }
+
+        if (mainClassName == null) {
+            abort(null, "No main JavaFX class to launch");
+        }
+
+        // FIXME: need to create a new classloader to support JavaFX-Class-Path
+        ClassLoader loader = ClassLoader.getSystemClassLoader();
+        if (loader == null) {
+            abort(null, "Unable to load JavaFX application class");
+        }
+
+        Class<? extends Application> appClass = null;
+        Class<? extends Preloader> preClass = null;
+        Class<?> tempClass = null;
+
+        try {
+            tempClass = loader.loadClass(mainClassName);
+        } catch (ClassNotFoundException cnfe) {
+            abort(cnfe, "Missing JavaFX application class %1$s", mainClassName);
+        }
+
+        // Verify appClass extends Application
+        if (!Application.class.isAssignableFrom(tempClass)) {
+            abort(null, "JavaFX application class %1$s does not extend javafx.application.Application", appClass.getName());
+        }
+        appClass = tempClass.asSubclass(Application.class);
+
+        if (preloaderClassName != null) {
+            try {
+                tempClass = loader.loadClass(preloaderClassName);
+            } catch (ClassNotFoundException cnfe) {
+                abort(cnfe, "Missing JavaFX preloader class %1$s", preloaderClassName);
+            }
+
+            if (!Preloader.class.isAssignableFrom(tempClass)) {
+                abort(null, "JavaFX preloader class %1$s does not extend javafx.application.Preloader", preClass.getName());
+            }
+            preClass = tempClass.asSubclass(Preloader.class);
+        }
+
+        /*
+         * FIXME: Missing support for the following Manifest attributes:
+         * JavaFX-Class-Path
+         * JavaFX-Feature-Proxy
+         * JavaFX-Version
+         * JavaFX-Fallback-Class
+         * JavaFX-Argument-XXX
+         * JavaFX-Parameter-Name-XXX, JavaFX-Parameter-Value-XXX
+         */
+
+        // For now just hand off to the other launchApplication method
+        launchApplication(appClass, preClass, args);
+    }
+
+    // FIXME: needs localization, since these are presented to the user
+    private static void abort(final Throwable cause, final String fmt, final Object... args) {
+        String msg = String.format(fmt, args);
+        if (msg != null) {
+            System.err.println(msg);
+        }
+        
+        if (trace) {
+            if (cause != null) {
+                cause.printStackTrace();
+            } else {
+                Thread.dumpStack();
+            }
+        }
+        System.exit(1);
+    }
+
+    private static Attributes getJarAttributes(String jarPath) {
+        JarFile jarFile = null;
+        try {
+            jarFile = new JarFile(jarPath);
+            Manifest manifest = jarFile.getManifest();
+            if (manifest == null) {
+                abort(null, "No manifest in jar file %1$s", jarPath);
+            }
+            return manifest.getMainAttributes();
+        } catch (IOException ioe) {
+            abort(ioe, "Error launching jar file %1%s", jarPath);
+        } finally {
+            try {
+                jarFile.close();
+            } catch (IOException ioe) {}
+        }
+        return null;
     }
 
     private static volatile boolean error = false;

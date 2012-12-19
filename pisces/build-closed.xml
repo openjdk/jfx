@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project name="pisces" default="jar" basedir=".">
+    <description>Builds, tests, and jars the closed version of the pisces project.</description>
+    
+    <property name="runtime.dist.root.dir" value="../../rt-closed" />    
+    <property name="rt.dist.root.dir" value="../../rt" />    
+    <path id="javac.closed.classpath.path" path="
+        ${rt.dist.root.dir}/javafx-common/dist/javafx-common.jar:
+        ${rt.dist.root.dir}/javafx-geom/dist/javafx-geom.jar" />
+    <property name="javac.classpath" refid="javac.closed.classpath.path"/>
+    
+    <import file="../build-defs.xml"/>
+    <import file="build-common.xml"/>
+</project>

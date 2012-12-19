@@ -92,6 +92,9 @@ public class Stylesheet {
         }
     };
 
+    /** List of all font faces */
+    private final List<FontFace> fontFaces = new ArrayList<FontFace>();
+
     /**
      * Constructs a stylesheet with the base URI defaulting to the root
      * path of the application.
@@ -125,6 +128,10 @@ public class Stylesheet {
 
     public List<Rule> getRules() {
         return rules;
+    }
+
+    public List<FontFace> getFontFaces() {
+        return fontFaces;
     }
 
     @Override public boolean equals(Object obj) {

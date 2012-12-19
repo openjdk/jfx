@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project name="javafx-sg-prism-common" default="jar" basedir=".">
+
+  <target name="debug-test-file" depends="jar">
+      <debug-selected-file-in-test/>
+  </target>
+    
+</project>

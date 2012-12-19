@@ -109,6 +109,8 @@ public class LabeledImplTest {
                 value = .5;
             } else if ("-fx-ellipsis-string".equals(prop)) {
                 value = "...";
+            } else if ("-fx-line-spacing".equals(prop)) {
+                value = 0.0;
             } else {
                 fail(prop + " not accounted for");
                 return null;

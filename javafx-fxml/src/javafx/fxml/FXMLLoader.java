@@ -630,6 +630,14 @@ public class FXMLLoader {
             if (id != null) {
                 namespace.put(id, value);
 
+                // If the value defines an ID property, set it
+                IDProperty idProperty = value.getClass().getAnnotation(IDProperty.class);
+
+                if (idProperty != null) {
+                    Map<String, Object> properties = getProperties();
+                    properties.put(idProperty.value(), id);
+                }
+                
                 // Set the controller field value
                 if (controller != null) {
                     Field field = getControllerFields().get(id);
@@ -691,15 +699,6 @@ public class FXMLLoader {
 
                     id = value;
 
-                    // If the value defines an ID property, set it
-                    if (id != null) {
-                        IDProperty idProperty = value.getClass().getAnnotation(IDProperty.class);
-
-                        if (idProperty != null) {
-                            Map<String, Object> properties = getProperties();
-                            properties.put(idProperty.value(), id);
-                        }
-                    }
                 } else if (localName.equals(FX_CONTROLLER_ATTRIBUTE)) {
                     if (current.parent != null) {
                         throw new LoadException(FX_NAMESPACE_PREFIX + ":" + FX_CONTROLLER_ATTRIBUTE

@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project name="javafx-common" default="jar" basedir=".">
+    <description>Builds, tests, and runs the OpenJFX javafx-common project.</description>
+
+    <import file="../build-defs.xml"/>
+
+    <import file="build-common.xml"/>
+
+    <target name="jar" depends="javafx-common-common.jar"/>
+    <target name="-pre-init" depends="javafx-common-common.-pre-init"/>
+</project>

@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project name="javafx-common-common" default="jar" basedir=".">
+
+  <property name="build-gensrc" location="build/gensrc/classes/com/sun/javafx/runtime"/>
+
+  <target name="-pre-init"> 
+
+    <mkdir dir="${build-gensrc}"/>
+
+    <!-- Copy VersionInfo.java file and change tags for this build -->
+    <copy file="./build-tools/VersionInfo.java"
+          todir="${build-gensrc}"
+          overwrite="true">
+        <filterset>
+            <filter token="BUILD_TIMESTAMP" value="${jfx.built.today}"/>
+            <filter token="HUDSON_BUILD_NUMBER" value="${hudson.current.build.number}"/>
+            <filter token="HUDSON_JOB_NAME" value="${hudson.current.job.basename}"/>
+            <filter token="PRODUCT_NAME" value="${jfx.product.name}"/>
+            <filter token="PROMOTED_BUILD_NUMBER" value="${jfx.promoted.build.number}"/>
+            <filter token="RAW_VERSION" value="${jfx.release.fullversion}"/>
+            <filter token="RELEASE_MILESTONE" value="${jfx.release.milestone}"/>
+            <filter token="RELEASE_NAME" value="${jfx.release.name}"/>
+        </filterset>
+    </copy>
+
+  </target>
+    
+  <target name="jar" depends="init">
+    <build-project>
+      <addedsrcdirs>
+        <pathelement location="build/gensrc/classes"/>
+      </addedsrcdirs>
+      <addedsrcfiles>
+        <fileset dir="build/gensrc/classes" excludes="${build.classes.excludes}"/>
+      </addedsrcfiles>
+    </build-project>
+  </target>
+  
+</project>

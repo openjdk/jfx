@@ -64,6 +64,11 @@ public class StubTextLayout implements TextLayout {
     }
 
     @Override
+    public boolean setLineSpacing(float spacing) {
+        return true;
+    }
+
+    @Override
     public boolean setDirection(int direction) {
         return true;
     }

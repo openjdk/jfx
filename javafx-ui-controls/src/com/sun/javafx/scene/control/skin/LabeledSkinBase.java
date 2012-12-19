@@ -150,6 +150,7 @@ public abstract class LabeledSkinBase<C extends Labeled, B extends BehaviorBase<
         registerChangeListener(labeled.textOverrunProperty(), "TEXT_OVERRUN");
         registerChangeListener(labeled.wrapTextProperty(), "WRAP_TEXT");
         registerChangeListener(labeled.underlineProperty(), "UNDERLINE");
+        registerChangeListener(labeled.lineSpacingProperty(), "LINE_SPACING");
         registerChangeListener(labeled.parentProperty(), "PARENT");
     }
 
@@ -218,6 +219,8 @@ public abstract class LabeledSkinBase<C extends Labeled, B extends BehaviorBase<
             updateWrappingWidth();
             textMetricsChanged();
         } else if ("UNDERLINE".equals(p)) {
+            textMetricsChanged();
+        } else if ("LINE_SPACING".equals(p)) {
             textMetricsChanged();
         } else if ("PARENT".equals(p)) {
             parentChanged();
@@ -714,7 +717,8 @@ public abstract class LabeledSkinBase<C extends Labeled, B extends BehaviorBase<
 
         // TODO figure out how to cache this effectively.
         // Base minimum height on one line (ignoring wrapping here).
-        final double textHeight = Utils.computeTextHeight(font, str, 0);
+        double s = labeled.getLineSpacing();
+        final double textHeight = Utils.computeTextHeight(font, str, 0, s);
 
         double h = textHeight;
 
@@ -782,7 +786,8 @@ public abstract class LabeledSkinBase<C extends Labeled, B extends BehaviorBase<
 
         // TODO figure out how to cache this effectively.
         final double textHeight = Utils.computeTextHeight(font, str,
-                                                          labeled.isWrapText() ? width : 0);
+                                                          labeled.isWrapText() ? width : 0,
+                                                          labeled.getLineSpacing());
 
         // Now we want to add on the graphic if necessary!
         double h = textHeight;

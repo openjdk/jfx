@@ -77,6 +77,13 @@ public interface TextLayout {
     public boolean setWrapWidth(float wrapWidth);
 
     /**
+     * Sets the line spacing for the TextLayout.
+     * 
+     * @return returns true is the call modifies the layout internal state.
+     */
+    public boolean setLineSpacing(float spacing);
+
+    /**
      * Sets the direction (bidi algorithm's) for the TextLayout.
      * 
      * @return returns true is the call modifies the layout internal state.

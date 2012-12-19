@@ -152,12 +152,17 @@ public class TextAreaBehavior extends TextInputControlBehavior<TextArea> {
                 TextArea textArea = getControl();
                 if (textArea.isFocused()) {
                     if (PlatformUtil.isIOS()) {
+                        // special handling of focus on iOS is required to allow to
+                        // control native keyboard, because nat. keyboard is poped-up only when native 
+                        // text component gets focus. When we have JFX keyboard we can remove this code
                         Bounds bnds = textArea.getBoundsInParent();
                         double w = bnds.getWidth();
                         double h = bnds.getHeight();
                         Affine3D trans = TextFieldBehavior.calculateNodeToSceneTransform(textArea);
                         String text = textArea.getText();
 
+                        // we need to display native text input component on the place where JFX component is drawn
+                        // all parameters needed to do that are passed to native impl. here
                         textArea.getScene().getWindow().impl_getPeer().requestInput(text, TextFieldBehavior.TextInputTypes.TEXT_AREA.ordinal(), w, h,
                                 trans.getMxx(), trans.getMxy(), trans.getMxz(), trans.getMxt(),
                                 trans.getMyx(), trans.getMyy(), trans.getMyz(), trans.getMyt(),
@@ -169,6 +174,7 @@ public class TextAreaBehavior extends TextInputControlBehavior<TextArea> {
                 } else {
 //                    skin.hideCaret();
                     if (PlatformUtil.isIOS() && textArea.getScene() != null) {
+                        // releasing the focus => we need to hide the native component and also native keyboard
                         textArea.getScene().getWindow().impl_getPeer().releaseInput();
                     }
                     focusGainedByMouseClick = false;

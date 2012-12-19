@@ -75,6 +75,8 @@ import com.sun.javafx.scene.text.HitInfo;
  */
 public class TextAreaSkin extends TextInputControlSkin<TextArea, TextAreaBehavior> {
 
+    final private TextArea textArea;
+
     // *** NOTE: Multiple node mode is not yet fully implemented *** //
     private final boolean USE_MULTIPLE_NODES = false;
 
@@ -263,7 +265,7 @@ public class TextAreaSkin extends TextInputControlSkin<TextArea, TextAreaBehavio
                         paragraphOffset -= paragraphNode.getText().length() + 1;
                     } while (anchorPos < paragraphOffset);
 
-                    paragraphNode.setImpl_caretPosition(anchorPos - paragraphOffset);
+                    updateTextNodeCaretPos(anchorPos - paragraphOffset);
                     caretPath.getElements().clear();
                     caretPath.getElements().addAll(paragraphNode.getImpl_caretShape());
                     caretPath.setLayoutX(paragraphNode.getLayoutX());
@@ -291,7 +293,7 @@ public class TextAreaSkin extends TextInputControlSkin<TextArea, TextAreaBehavio
                     paragraphOffset -= paragraphNode.getText().length() + 1;
                 } while (caretPos < paragraphOffset);
 
-                paragraphNode.setImpl_caretPosition(caretPos - paragraphOffset);
+                updateTextNodeCaretPos(caretPos - paragraphOffset);
 
                 caretPath.getElements().clear();
                 caretPath.getElements().addAll(paragraphNode.getImpl_caretShape());
@@ -406,6 +408,7 @@ public class TextAreaSkin extends TextInputControlSkin<TextArea, TextAreaBehavio
     public TextAreaSkin(final TextArea textArea) {
         super(textArea, new TextAreaBehavior(textArea));
         getBehavior().setTextAreaSkin(this);
+        this.textArea = textArea;
 
         caretPosition = new IntegerBinding() {
             { bind(textArea.caretPositionProperty()); }
@@ -416,6 +419,14 @@ public class TextAreaSkin extends TextInputControlSkin<TextArea, TextAreaBehavio
         caretPosition.addListener(new ChangeListener<Number>() {
             @Override public void changed(ObservableValue<? extends Number> observable, Number oldValue, Number newValue) {
                 targetCaretX = -1;
+            }
+        });
+
+        forwardBiasProperty().addListener(new InvalidationListener() {
+            @Override public void invalidated(Observable observable) {
+                if (getWidth() > 0) {
+                    updateTextNodeCaretPos(textArea.getCaretPosition());
+                }
             }
         });
 
@@ -887,7 +898,7 @@ public class TextAreaSkin extends TextInputControlSkin<TextArea, TextAreaBehavio
             getSkinnable().positionCaret(pos);
         }
 
-//         setForwardBias(hit.isLeading());
+        setForwardBias(hit.isLeading());
     }
 
     private double getScrollTopMax() {
@@ -993,7 +1004,9 @@ public class TextAreaSkin extends TextInputControlSkin<TextArea, TextAreaBehavio
             }
         }
 
-        scrollBoundsToVisible(new Rectangle2D(x, y, w, h));
+        if (w > 0 && h > 0) {
+            scrollBoundsToVisible(new Rectangle2D(x, y, w, h));
+        }
     }
 
     private void scrollBoundsToVisible(Rectangle2D bounds) {
@@ -1125,6 +1138,41 @@ public class TextAreaSkin extends TextInputControlSkin<TextArea, TextAreaBehavio
      */
     double targetCaretX = -1;
 
+    @Override public void nextCharacterVisually(boolean moveRight) {
+        Text textNode = getTextNode();
+        Bounds caretBounds = caretPath.getLayoutBounds();
+        if (caretPath.getElements().size() == 4) {
+            // The caret is split
+            // TODO: Find a better way to get the primary caret position
+            // instead of depending on the internal implementation.
+            // See RT-25465.
+            caretBounds = new Path(caretPath.getElements().get(0), caretPath.getElements().get(1)).getLayoutBounds();
+        }
+        double hitX = moveRight ? caretBounds.getMaxX() : caretBounds.getMinX();
+        double hitY = (caretBounds.getMinY() + caretBounds.getMaxY()) / 2;
+        HitInfo hit = textNode.impl_hitTestChar(new Point2D(hitX, hitY));
+        Path charShape = new Path(textNode.impl_getRangeShape(hit.getCharIndex(), hit.getCharIndex() + 1));
+        if ((moveRight && charShape.getLayoutBounds().getMaxX() > caretBounds.getMaxX()) ||
+            (!moveRight && charShape.getLayoutBounds().getMinX() < caretBounds.getMinX())) {
+            hit.setLeading(!hit.isLeading());
+            positionCaret(hit, false, false);
+        } else {
+            // We're at beginning or end of line. Try moving up / down.
+            int dot = textArea.getCaretPosition();
+            targetCaretX = moveRight ? 0 : Double.MAX_VALUE;
+            // TODO: Use Bidi sniffing instead of base direction here?
+            downLines((moveRight != isRTL()) ? -1 : 1, false, false);
+            targetCaretX = -1;
+            if (dot == textArea.getCaretPosition()) {
+                if (moveRight != isRTL()) {
+                    textArea.forward();
+                } else {
+                    textArea.backward();
+                }
+            }
+        }
+    }
+
     protected void downLines(int nLines, boolean select, boolean extendSelection) {
         Text textNode = getTextNode();
         Bounds caretBounds = caretPath.getLayoutBounds();
@@ -1142,8 +1190,14 @@ public class TextAreaSkin extends TextInputControlSkin<TextArea, TextAreaBehavio
                 hit.setCharIndex(pos - 1);
             }
         }
-        positionCaret(hit, select, extendSelection);
-        targetCaretX = x;
+        Path charShape = new Path(textNode.impl_getRangeShape(hit.getCharIndex(), hit.getCharIndex() + 1));
+        if (nLines == 0 ||
+            (nLines > 0 && charShape.getLayoutBounds().getMaxY() > caretBounds.getMaxY()) ||
+            (nLines < 0 && charShape.getLayoutBounds().getMinY() < caretBounds.getMinY())) {
+
+            positionCaret(hit, select, extendSelection);
+            targetCaretX = x;
+        }
     }
 
     public void previousLine(boolean select) {
@@ -1223,6 +1277,16 @@ public class TextAreaSkin extends TextInputControlSkin<TextArea, TextAreaBehavio
                 textArea.positionCaret(pos);
             }
         }
+    }
+
+    private void updateTextNodeCaretPos(int pos) {
+        Text textNode = getTextNode();
+        if (isForwardBias()) {
+            textNode.setImpl_caretPosition(pos);
+        } else {
+            textNode.setImpl_caretPosition(pos - 1);
+        }
+        textNode.impl_caretBiasProperty().set(isForwardBias());
     }
 
     @Override protected PathElement[] getUnderlineShape(int start, int end) {
