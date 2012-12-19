@@ -24,15 +24,16 @@
  */
 package com.sun.javafx.sg.prism;
 
+import java.util.List;
 import com.sun.javafx.geom.BaseBounds;
 import com.sun.javafx.geom.Point2D;
 import com.sun.javafx.geom.RectBounds;
 import com.sun.javafx.geom.Rectangle;
 import com.sun.javafx.geom.transform.BaseTransform;
 import com.sun.javafx.geom.transform.GeneralTransform3D;
-import com.sun.javafx.sg.BaseNode;
 import com.sun.javafx.sg.BaseCacheFilter;
 import com.sun.javafx.sg.BaseEffectFilter;
+import com.sun.javafx.sg.BaseNode;
 import com.sun.javafx.sg.BaseNodeEffectInput;
 import com.sun.javafx.sg.DirtyRegionContainer;
 import com.sun.javafx.sg.NodePath;
@@ -43,21 +44,19 @@ import com.sun.prism.GraphicsPipeline;
 import com.sun.prism.RTTexture;
 import com.sun.prism.ReadbackGraphics;
 import com.sun.prism.Texture;
+import com.sun.prism.Texture.WrapMode;
 import com.sun.prism.impl.PrismSettings;
 import com.sun.prism.paint.Color;
 import com.sun.scenario.effect.Blend;
 import com.sun.scenario.effect.Effect;
-import com.sun.scenario.effect.Filterable;
 import com.sun.scenario.effect.FilterContext;
+import com.sun.scenario.effect.Filterable;
 import com.sun.scenario.effect.ImageData;
 import com.sun.scenario.effect.impl.prism.PrDrawable;
 import com.sun.scenario.effect.impl.prism.PrEffectHelper;
 import com.sun.scenario.effect.impl.prism.PrFilterContext;
-import java.util.List;
 
-import static com.sun.javafx.logging.PulseLogger.PULSE_LOGGING_ENABLED;
-import static com.sun.javafx.logging.PulseLogger.PULSE_LOGGER;
-import com.sun.prism.Texture.WrapMode;
+import static com.sun.javafx.logging.PulseLogger.*;
 
 
 /**
@@ -889,9 +888,9 @@ public abstract class NGNode extends BaseNode<Graphics> {
                 if (xform != null) {
                     g.transform(xform);
                 }
-                if (((NGNode)node).getClipNode() != null) {
+                if (node.getClipNode() != null) {
                     ((NGNode)node).renderClip(g);
-                } else if (((NGNode)node).getEffectFilter() != null) {
+                } else if (node.getEffectFilter() != null) {
                     ((NGNode)node).renderEffect(g);
                 } else {
                     ((NGNode)node).renderContent(g);
